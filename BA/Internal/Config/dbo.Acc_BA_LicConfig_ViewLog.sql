@@ -1,0 +1,53 @@
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+ALTER PROCEDURE [dbo].[Acc_BA_LicConfig_ViewLog]
+@LicenseeID		INT = NULL
+AS
+/*
+Created: Henry
+Date: 20110613
+Task : View BA Commission Log
+DB: DB052.bodb_Licensee
+Original:
+
+Revisions:
+	- 20110824@Johnson: get more column commission by group for hdp, odd/even , over/under bettype.
+	- 20111118@Jim : remove ugroup variable
+Param's Explanation:
+	@LicenseeID: null means get all licensee
+*/
+BEGIN
+	SET NOCOUNT ON
+	SELECT 
+		A.LicenseeID,
+		B.LicenseeName,
+		A.groupa,
+		A.groupb,
+		A.groupc,
+		A.groupd,
+		A.[1x2Comm],
+		A.OtherComm,		
+		A.EnableBA,
+		A.IP,
+		C.username AS ModifyBy,
+		LA.ActionNameEN AS [description],
+		A.ModifyDate
+	FROM 
+		UserLog_LicenseeBAConfig A WITH (NOLOCK)
+	INNER JOIN Licensees B WITH (NOLOCK) ON A.LicenseeID = B.LicenseeID
+	INNER JOIN bodb02.dbo.Custinfo C WITH (NOLOCK) ON A.ModifyBy = C.CustID
+	INNER JOIN bodb_CustomerLog.dbo.LogAction LA  WITH (NOLOCK) ON A.ActionID = LA.ActionID
+	WHERE 
+		A.LicenseeID = COALESCE(@LicenseeID,A.LicenseeID)
+	ORDER BY A.LicenseeID, A.ModifyDate DESC
+			
+END
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_BA_LicConfig_ViewLog] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BA_LicConfig_ViewLog] TO [vnteam] 
+
+

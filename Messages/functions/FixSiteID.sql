@@ -1,0 +1,15 @@
+﻿ 
+ 
+ ALTER FUNCTION [dbo].[FixSiteID]
+(@SiteID CHAR(7))
+RETURNS CHAR(7)
+AS
+BEGIN
+return CASE LEN(@SiteID) WHEN 4 THEN LEFT(RTRIM(@SiteID),2)+'00'+RIGHT(RTRIM(@SiteID),2)+'0' ELSE @SiteID END
+end
+
+
+GO
+GRANT EXECUTE ON [dbo].[FixSiteID] TO [vnteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[FixSiteID] TO [vnteam]

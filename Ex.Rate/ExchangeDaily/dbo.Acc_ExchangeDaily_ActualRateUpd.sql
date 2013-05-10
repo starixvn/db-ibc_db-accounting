@@ -1,0 +1,89 @@
+﻿ALTER PROCEDURE [dbo].[Acc_ExchangeDaily_ActualRateUpd]
+	@ErrCode int = 0 OUTPUT,
+	@ErrMsg nvarchar(200) = '' OUTPUT
+AS
+/*
+Created: Henry
+Task : Daily update ActualRate of ExchangeDaily
+DB: DBTRANS.BODB02 
+Revisions:
+	- 20120427@Henry: get data from ExchangeDailyOanda instead of ExchangeDaily
+	- 20120516@Henry: raise error when a currency got more than 1 actual rate in bettrans table
+	
+*/		
+SET NOCOUNT ON
+DECLARE @exchange TABLE(id int identity(1,1), exchangeid int,MultipliedBy int)
+DECLARE @date smalldatetime
+DECLARE @tmpTable TABLE(currency INT, actualrate FLOAT)
+set @date = CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120)
+
+
+--1 update ExchangeDaily actualrate from table exchange for tomorrow
+UPDATE e
+SET e.actualrate = ex.actualrate
+FROM
+    ExchangeDailyOanda e WITH (ROWLOCK,UPDLOCK)
+    INNER JOIN exchange ex (NOLOCK) ON e.ExchangeId = ex.exchangeid AND e.ExchangeDate =DATEADD(dd,1,@date)
+
+--2 update ExchangeDaily actualrate from table exchange for today
+UPDATE e
+SET e.actualrate = ex.actualrate
+FROM
+    ExchangeDailyOanda e WITH (ROWLOCK,UPDLOCK)
+    INNER JOIN exchange ex (NOLOCK) ON e.ExchangeId = ex.exchangeid AND e.ExchangeDate = @date
+
+
+
+--3 update yesterday actualrate  from bettrans
+INSERT INTO @tmpTable(currency,actualrate)
+select distinct currency, actualrate
+		from bettrans with (nolock) where winlostdate = DATEADD(dd,-1,@date) 
+
+IF EXISTS(
+	select currency FROM @tmpTable
+	group by currency
+	having count(currency) > 1
+	)
+BEGIN
+	Select @ErrMsg = 'There are more than 1 actual rate for a currency in bettrans table on date: ' + DATEADD(dd,-1,@date)
+				 ,@ErrCode = 100
+			return
+	RETURN
+END	
+
+UPDATE e
+SET e.actualrate = b.actualrate
+	FROM ExchangeDailyOanda e WITH (ROWLOCK,UPDLOCK) INNER JOIN 
+	@tmpTable b
+	ON e.ExchangeId = b.currency AND e.ExchangeDate = DATEADD(dd,-1,@date)
+	
+--4 update the day before yesterday actualrate from bettrans    
+DELETE FROM @tmpTable
+INSERT INTO @tmpTable(currency,actualrate)
+select distinct currency, actualrate
+		from bettrans with (nolock) where winlostdate = DATEADD(dd,-2,@date) 
+
+IF EXISTS(
+	select currency FROM @tmpTable
+	group by currency
+	having count(currency) > 1
+	)
+BEGIN
+	Select @ErrMsg = 'There are more than 1 actual rate for a currency in bettrans table on date: ' + DATEADD(dd,-2,@date)
+				 ,@ErrCode = 100
+			return
+	RETURN
+END	
+
+UPDATE e
+SET e.actualrate = b.actualrate
+	FROM ExchangeDailyOanda e WITH (ROWLOCK,UPDLOCK) INNER JOIN 
+	@tmpTable b
+	ON e.ExchangeId = b.currency AND e.ExchangeDate = DATEADD(dd,-2,@date)	
+
+
+	
+GO
+GRANT EXECUTE ON [dbo].[Acc_ExchangeDaily_ActualRateUpd] TO [bodbAdminNet] 
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeDaily_ActualRateUpd] TO [vnteam]

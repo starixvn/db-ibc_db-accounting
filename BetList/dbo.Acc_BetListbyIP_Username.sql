@@ -1,0 +1,142 @@
+﻿
+ALTER PROCEDURE [dbo].[Acc_BetListbyIP_Username]
+	@fromdate	DATETIME,
+	@ip			VARCHAR(15)
+AS
+	/*	Created by: Phuong Dao
+		Date: 2009-03-18
+		Task: Total bet by IP and Username 
+		DB: DB06.bodb02
+		- 20100611@Henry: Change mix-parlay match from 0 to 9
+		- 20110516@Lukas: re-arrange bettype
+		- 20110802@Johnson: Add new bettype combination mix parlay
+		- 20120626@Lukas: check case of matchid = orid
+	*/
+ 
+	SET NOCOUNT ON
+	
+	DECLARE @min_date	SMALLDATETIME, 
+			@max_date	SMALLDATETIME,
+			@min_date14 SMALLDATETIME, 
+			@max_date14	SMALLDATETIME
+	
+	SELECT @min_date = min(winlostdate), @max_date = max(winlostdate) FROM bettrans with (nolock) WHERE bettype < 19001
+	SELECT @min_date14 = min(winlostdate), @max_date14 = max(winlostdate) FROM bettrans14 with (nolock) WHERE bettype < 19001
+	
+
+	CREATE TABLE #tmpUserBet(	custid		INT ,
+								soccerBet	INT DEFAULT 0,
+								totalBet	INT DEFAULT 0,
+								is14		BIT	DEFAULT 0,
+								PRIMARY KEY(CustID,is14) )
+
+	IF @fromdate >=@min_date AND @fromdate <= @max_date
+	BEGIN
+		INSERT  #tmpUserBet( custid, totalBet) 
+		SELECT	custid, COUNT(custid) 
+		FROM	dbo.bettrans WITH (NOLOCK)
+		WHERE   winlostdate = @fromdate 
+				AND bettype < 19001
+				AND ip = @ip
+		GROUP BY custid	
+		
+		UPDATE	#tmpUserBet SET soccerBet = tmpSoccerBet.totalSoccer
+		FROM	#tmpUserBet u
+				INNER JOIN
+				(
+					SELECT	custid , COUNT(custid) totalSoccer 
+					FROM	(
+								SELECT	b.custid
+								FROM	dbo.bettrans b WITH (NOLOCK)
+										INNER JOIN (
+												SELECT matchid, leagueid, 'match' as type
+												FROM dbo.match WITH (NOLOCK) 
+												UNION ALL 
+												SELECT orid, leagueid, 'outright' as type
+												FROM dbo.outright WITH (NOLOCK)
+											) m ON b.matchid = m.matchid 
+										INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+										INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
+								WHERE	b.winlostdate = @fromdate  
+										AND s.SportType = 1 
+										AND b.ip = @ip
+										AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END
+								UNION ALL 
+								SELECT	b.custid
+								FROM	bettrans b WITH (NOLOCK) 
+								WHERE   1 = CASE WHEN b.bettype = 9 AND b.matchid = 9 THEN 1
+												WHEN  b.bettype = 29 AND b.matchid = 29 THEN 1
+												ELSE 0 END
+										AND b.winlostdate = @fromdate 
+										AND b.ip = @ip 
+										AND b.refno IN (SELECT refno FROM	dbo.bettransm bm WITH (NOLOCK) 
+																			INNER JOIN dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+																	 WHERE 	m.sporttype = 1)
+								) Bet 
+					GROUP BY custid
+				) tmpSoccerBet  ON tmpSoccerBet.custid = u.custid
+	END 	
+
+	IF @fromdate >=@min_date14 AND @fromdate <= @max_date14
+	BEGIN 
+		INSERT  #tmpUserBet( custid, totalBet, is14) 
+		SELECT	custid, COUNT(custid),1 
+		FROM	dbo.bettrans14 WITH (NOLOCK)
+		WHERE   winlostdate = @fromdate 
+				AND bettype < 19001
+				AND ip = @ip
+		GROUP BY custid	
+		
+		UPDATE	#tmpUserBet SET soccerBet = tmpSoccerBet.totalSoccer
+		FROM	#tmpUserBet u
+				INNER JOIN
+				(
+					SELECT	custid , COUNT(custid) totalSoccer 
+					FROM	(
+								SELECT	b.custid
+								FROM	dbo.bettrans14 b WITH (NOLOCK)
+										INNER JOIN (
+												SELECT matchid, leagueid, 'match' as type FROM dbo.match14 WITH (NOLOCK) 
+												UNION ALL 
+												SELECT orid, leagueid, 'outright' as type FROM dbo.outright14 WITH (NOLOCK)
+											) m ON b.matchid = m.matchid 
+										INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+										INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
+								WHERE	b.winlostdate = @fromdate  
+										AND s.SportType = 1 
+										AND b.ip = @ip
+										AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END
+								UNION ALL 
+								SELECT	b.custid
+								FROM	bettrans14 b WITH (NOLOCK) 
+								WHERE  1 = CASE WHEN b.bettype = 9 AND b.matchid = 9 THEN 1
+												WHEN  b.bettype = 29 AND b.matchid = 29 THEN 1
+												ELSE 0 END
+										AND b.winlostdate = @fromdate 
+										AND b.ip = @ip 
+										AND b.refno IN (SELECT refno FROM	dbo.bettransm14 bm WITH (NOLOCK) 
+																			INNER JOIN dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+																	 WHERE 	m.sporttype = 1)
+								) Bet 
+					GROUP BY custid
+				) tmpSoccerBet  ON tmpSoccerBet.custid = u.custid AND u.is14 = 1
+	END
+
+	SELECT	c.custid, c.username, sum(soccerBet) soccerBet, sum(totalBet)- sum(soccerBet) otherBet, Sum(totalBet) totalBet 
+	FROM	#tmpUserBet u
+			INNER JOIN customer c WITH (NOLOCK) ON u.custid = c.custid 
+	GROUP BY c.custid, c.username
+	ORDER BY c.username
+  
+	DROP TABLE #tmpUserBet
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_BetListbyIP_Username] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BetListbyIP_Username] TO [vnteam]
+
+
+
+
+

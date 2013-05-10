@@ -1,0 +1,19 @@
+﻿Alter PROCEDURE [dbo].[Acc_ExchangeCurrencySel]
+AS
+/*
+Created: HuyNguyen
+Task : Get Currency Name by exchangeID
+DB: DB05.BODB02 , DB06.BODB02
+Original:Accounting site
+Revisions:
+*/		
+
+-- test 2
+	SET NOCOUNT ON
+
+	SELECT exchangeid, currency from exchange with (nolock)
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_ExchangeCurrencySel] TO [bodbAdminNet] 
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeCurrencySel] TO [vnteam]

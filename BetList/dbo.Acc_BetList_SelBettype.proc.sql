@@ -1,0 +1,97 @@
+﻿
+ALTER PROCEDURE [dbo].[Acc_BetList_SelBettype]
+@CustID int,
+@FromDate datetime,  
+@ToDate datetime,
+@MoveBetsDay datetime, 
+@BalanceUpDay datetime 
+AS 
+
+/*	Created: Henry
+	Date:28/12/2009
+	DB: DBAGE/BODB02
+	
+	Revisions:
+	- 13/01/2010@Henry: Newly created
+	- 20110516@Lukas: re-arrange bettype
+	- 20110524@Henry: change to use winlostdate instead of transdate
+	- 20130121@Dan: change linked server DB06 to DBARC
+		
+*/
+
+SET NOCOUNT ON  
+DECLARE @BettypeTable TABLE (bettype INT)
+
+Declare @TempFromDate datetime
+Declare @TempToDate datetime
+
+IF @Todate > @MoveBetsDay
+BEGIN
+	IF @FromDate <= @MoveBetsDay 
+		set @TempFromDate =  dateadd(day,1,@MoveBetsDay)
+	ELSE
+		set @TempFromDate = @FromDate
+		
+	INSERT INTO @BettypeTable
+	SELECT 
+		DISTINCT bettype 
+		FROM bettrans (nolock)
+	WHERE 
+		bettype < 19001 
+		AND custid = @CustID
+		AND winlostdate BETWEEN @TempFromDate AND @todate
+			
+END
+IF @Fromdate <= @MoveBetsDay
+BEGIN
+	IF @ToDate >= @MoveBetsDay
+		set @TempToDate = @MoveBetsDay
+	ELSE
+		set  @TempToDate = @ToDate
+	
+	IF @BalanceUpDay < @FromDate 
+		SELECT @BalanceUpDay=@FromDate
+	
+	INSERT INTO @BettypeTable
+	SELECT 
+		DISTINCT bettype 
+		FROM bettrans14 (nolock)
+	WHERE 
+		bettype < 19001 
+		AND custid = @CustID
+		AND winlostdate BETWEEN @BalanceUpDay AND @TempToDate 
+END
+
+IF @FromDate < @BalanceUpDay
+BEGIN
+	IF @todate >= DATEADD(dd, -1, @BalanceUpDay)
+		SET @TempToDate = DATEADD(dd, -1, @BalanceUpDay)
+	ELSE
+		SET @TempToDate = @todate
+	
+	INSERT INTO @BettypeTable
+	SELECT 
+		DISTINCT bettype
+	FROM DBARC.bodb_archive.dbo.bettrans_bk with (nolock)
+	WHERE 
+		bettype < 19001
+		AND custid = @CustID
+		AND winlostdate between @fromdate and @TempToDate 
+END
+
+
+
+
+select 
+	typeid,
+	typenamee
+from bettype bt (nolock)
+inner join (SELECT DISTINCT bettype FROM  @BettypeTable) btt on bt.typeid = btt.bettype
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_BetList_SelBettype] TO [bodbAdminNet]
+GO
+GRANT EXECUTE ON [dbo].[Acc_BetList_SelBettype] TO [bodbExtAccNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelBettype] TO [vnteam] 

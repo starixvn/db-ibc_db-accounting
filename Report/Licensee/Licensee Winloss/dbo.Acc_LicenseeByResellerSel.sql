@@ -1,0 +1,91 @@
+﻿ALTER  PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
+	@ResellerID int=0,
+	@ProductCode VARCHAR(10)='',
+	@ExcludeBA BIT = 0,
+	@ExcludeTest BIT = 0
+AS
+
+/*
+	Created by: [20110823@Henry]
+	Task: Get List of all licensee 
+	DB: DB052.bodb_licensee
+	Revisions:
+	- 20111117@Henry: only list licensees which have isDeposit = 1
+	- 20111122@Henry: order by ResellerName and LicenseeName
+	- 20120305@Henry: get dummy IBC Licensee
+	- 20120306@Henry: get credit Licensees
+	- 20120510@Henry: get licensees which have IsActive = 1
+	- 20120704@Henry: Map Licensee with System
+	- 20121119@Henry: Add param @ExcludeTest, if value = 1 then remove Spondemo
+	- 20130222@Scott: add filter LicenseeProduct3rd.EffectiveDate <> null
+	
+*/
+
+SET NOCOUNT ON
+
+SET @ResellerID = ISNULL(@ResellerID,0)
+SET @ProductCode = ISNULL(@ProductCode,'')
+SET @ExcludeBA = ISNULL(@ExcludeBA,0)
+SET @ExcludeTest = ISNULL(@ExcludeTest,0)
+
+CREATE TABLE #Data (ResellerID int,ResellerName varchar(50), ResellerType INT,LicenseeID INT, LicenseeName varchar(50))
+DECLARE @ProductID INT
+
+INSERT INTO #Data  (ResellerID,ResellerName, ResellerType,LicenseeID, LicenseeName)
+SELECT	
+	r.ResellerID
+	,r.ResellerName
+	,r.ResellerType
+	,l.LicenseeID
+	,l.LicenseeName	
+FROM dbo.Licensees AS l WITH(NOLOCK)	
+	INNER JOIN dbo.LicenseeReseller AS ls WITH(NOLOCK) ON l.LicenseeID=ls.LicenseeID 
+		AND (@ResellerID=0 OR ls.ResellerID=@ResellerID)
+	INNER JOIN dbo.Resellers AS r WITH(NOLOCK) ON r.ResellerID=ls.ResellerID
+	INNER JOIN SystemLicensee sl (NOLOCK) ON l.LicenseeID=sl.LicenseeID 
+	INNER JOIN Systems s (NOLOCK) ON sl.SystemID=s.ID 
+WHERE 
+	(
+		l.IsDeposit = 1 OR (l.IsDeposit=0 AND l.LicenseeID IN (SELECT DISTINCT LicenseeID FROM Labels WITH (NOLOCK)))
+	)
+	AND sl.IsActive = 1
+	AND s.SystemName='Accounting'
+	AND ((@ExcludeBA=0) OR (@ExcludeBA=1 AND r.ResellerID <> 3))
+	AND (@ExcludeTest=0 OR (@ExcludeTest=1 AND r.ResellerID <> 6 ))
+ORDER BY l.IsDeposit DESC,r.ResellerName, l.LicenseeName
+
+SET @ProductCode = ISNULL(LTRIM(RTRIM(@ProductCode)),'')
+IF @ProductCode <> '' AND EXISTS(SELECT 1 FROM Product3rd WITH (NOLOCK) WHERE ProductPrefix = @ProductCode)
+BEGIN
+	IF @ProductCode<> 'BA'
+	BEGIN
+		DELETE FROM #Data WHERE ResellerID = 3
+		SELECT @ProductID = ProductID FROM Product3rd WITH (NOLOCK) WHERE ProductPrefix = @ProductCode
+		
+		DELETE FROM #Data WHERE LicenseeID NOT IN (SELECT LicenseeID FROM LicenseeProduct3rd WITH (NOLOCK) WHERE ProductID=@ProductID) AND ResellerID NOT IN (4,8) --FDL, PIH
+	END
+	ELSE
+	BEGIN
+		DELETE FROM #Data WHERE ResellerID <> 3
+	END
+	
+	
+	IF @ProductCode='NG'
+	BEGIN
+		DELETE FROM #Data 
+		WHERE licenseeid in (select licenseeid from dbo.LicenseeProduct3rd where EffectiveDate is null and productid = 2 )
+	END
+
+END
+
+SELECT * FROM #Data
+
+DROP TABLE #Data
+
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_LicenseeByResellerSel] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_LicenseeByResellerSel] TO [vnteam]
+

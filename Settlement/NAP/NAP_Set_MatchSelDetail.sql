@@ -1,0 +1,177 @@
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail]
+	@matchid int,
+	@excludeRefundFGLG	bit = 0
+AS
+/*
+	Created by: 20120913
+	Task: Update score 
+	DB: DBTRANS.BODB02 
+	Original: [Acc_Set_MatchSelScore], Acc_Set_MatchSelForBill
+	
+	Revisions:				
+*/
+SET NOCOUNT ON 
+DECLARE @NextAllowSettleTime DATETIME, 
+	@IsExistFGLG BIT,
+	@IsExistLG BIT,
+	@IsHTOnly BIT,
+	@IsLive BIT,
+	@DelayTime INT
+	
+SELECT @IsExistLG = 0, @IsExistFGLG = 0, @DelayTime = 0, @IsHTOnly = 0, @IsLive = 0 
+
+--check whether it's at weekend peak-hour, from 7PM - 2AM (GMT+8)
+--if datename(weekday, getdate()) in ('Saturday','Sunday') and datepart(hour, getdate()) between 7 and 14
+--BEGIN
+	select @NextAllowSettleTime = VValue from SystemSettings with (nolock) where VName = 'NextAllowSettleTime' 
+	select @DelayTime = CASE WHEN DATEDIFF(ss, getdate(), @NextAllowSettleTime) < 0 THEN 0
+							ELSE DATEDIFF(ss, getdate(), @NextAllowSettleTime) END
+--END
+IF @excludeRefundFGLG=0
+BEGIN
+	IF EXISTS (select top 1 1 from bettrans with (nolock) where matchid = @matchid and bettype = 14 AND right(BETTEAM,1) = '2' AND statusID not in (101,102))
+		SELECT @IsExistLG = 1
+	ELSE
+		IF EXISTS (select top 1 1 from bettransm with (nolock) where matchid = @matchid and bettype = 14 AND right(BETTEAM,1) = '2' AND statusID not in (101,102))
+			SELECT @IsExistLG = 1
+
+	IF (@IsExistLG = 0)
+	BEGIN
+		IF EXISTS (select top 1 1 from bettrans with (nolock) where matchid = @matchid and bettype = 14 AND statusID not in (101,102))
+			SELECT @IsExistFGLG = 1
+		ELSE
+			IF EXISTS (select top 1 1 from bettransm with (nolock) where matchid = @matchid and bettype = 14 AND statusID not in (101,102))
+				SELECT @IsExistFGLG = 1
+	END
+	ELSE
+		SELECT @IsExistFGLG = 1
+END 
+ELSE
+BEGIN
+	IF EXISTS (select top 1 1 from bettrans with (nolock) where matchid = @matchid and bettype = 14 AND right(BETTEAM,1) = '2' AND statusID not in (101,102,103))
+		SELECT @IsExistLG = 1
+	ELSE
+		IF EXISTS (select top 1 1 from bettransm with (nolock) where matchid = @matchid and bettype = 14 AND right(BETTEAM,1) = '2' AND statusID not in (101,102,103))
+			SELECT @IsExistLG = 1
+
+	IF (@IsExistLG = 0)
+	BEGIN
+		IF EXISTS (select top 1 1 from bettrans with (nolock) where matchid = @matchid and bettype = 14 AND statusID not in (101,102,103))
+			SELECT @IsExistFGLG = 1
+		ELSE
+			IF EXISTS (select top 1 1 from bettransm with (nolock) where matchid = @matchid and bettype = 14 AND statusID not in (101,102,103))
+				SELECT @IsExistFGLG = 1
+	END
+	ELSE
+		SELECT @IsExistFGLG = 1
+END
+
+if
+( 
+	exists
+	(--HT Soccer
+		select	1 
+		from	DB02.BODB02.dbo.match m with (nolock) 
+				inner join DB02.BODB02.dbo.match_remark mr with (nolock) on m.matchid = mr.matchid
+		where	m.matchid=@matchid 
+				AND sporttype = 1 
+				AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) < 100
+				AND (datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 45 or isnull(ConfirmHT,0) > 0)
+				AND isnull(ConfirmFT,0) = 0
+	)
+		
+/*		OR			
+	exists(--HT Basketball & Football
+	select 1 
+	from match with (nolock) 
+	where matchid=@matchid 
+		AND sporttype IN(2,3)
+		AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) < 60
+		AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 30) 
+*/
+)		
+BEGIN
+	Select @IsHTOnly = 1
+END
+	
+/*
+if exists (select 1 from match with (nolock) where eventstatus = 'completed' and matchid = @matchid)
+BEGIN
+	Select @ErrMsg = 'This match has been completed!!',
+		@ErrCode = 101
+	Return
+END
+*/
+Declare @status TABLE ([Group] tinyint, BetCount int, InRunning int)
+INSERT INTO @status
+	SELECT
+		CASE -- 0:FT , 1:HT , 2:FGLG
+			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125) THEN 1
+			WHEN bettype = 14 THEN 2
+			ELSE 0 END,
+		--SUM(CASE WHEN [status] IN (N'VOID',N'REJECT') THEN 0 ELSE 1 END),
+		SUM(CASE WHEN [statusID] IN (101,102) THEN 0 ELSE 1 END),
+		--SUM(CASE WHEN [status] = N'running' THEN 1 ELSE 0 END)
+		SUM(CASE WHEN [statusID] = 0 THEN 1 ELSE 0 END)
+	FROM
+		bettrans with (nolock)
+	WHERE
+		matchid = @matchid
+	GROUP BY
+		CASE WHEN bettype IN (7, 8, 12, 15, 21, 30, 125) THEN 1 WHEN bettype = 14 THEN 2 ELSE 0 END
+
+IF NOT EXISTS(SELECT * FROM @status WHERE [Group] = 0) INSERT INTO @status VALUES (0,0,0)
+IF NOT EXISTS(SELECT * FROM @status WHERE [Group] = 1) INSERT INTO @status VALUES (1,0,0)
+IF NOT EXISTS(SELECT * FROM @status WHERE [Group] = 2) INSERT INTO @status VALUES (2,0,0)
+
+Declare @FTStatus nvarchar(10), @HTStatus nvarchar(10), @FGLGStatus nvarchar(10)
+
+Select @FTStatus = CASE
+		WHEN betcount  = 0 THEN N'No Ticket'
+		WHEN inRunning = 0 THEN N'Calculated'
+		ELSE N'Running' END FROM @status WHERE [Group] = 0
+Select @HTStatus = CASE
+		WHEN betcount  = 0 THEN N'No Ticket'
+		WHEN inRunning = 0 THEN N'Calculated'
+		ELSE N'Running' END FROM @status WHERE [Group] = 1
+Select @FGLGStatus = CASE
+		WHEN betcount  = 0 THEN N'No Ticket'
+		WHEN inRunning = 0 THEN N'Calculated'
+		ELSE N'Running' END FROM @status WHERE [Group] = 2
+
+IF EXISTS(select top 1 1 from bettrans (nolock) where matchid = @matchid and liveindicator = 1)
+	Select @IsLive = 1		
+
+select	match.sporttype, match.betstatus, hthomescore,htawayscore,
+		datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,	
+		match.leagueid,
+		match.matchid,  
+		match.homeid,
+		match.awayid,	
+		match.matchcode,match.kickofftime,
+		match.finalhomescore,match.finalawayscore,match.eventstatus,
+		isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,
+		isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,
+		isnull(match.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+		mr.ishtcal,
+		match.GoalRecord,
+		mr.ConfirmHT, 
+		mr.ConfirmFT,
+		@HTStatus HTStatus,
+		@FTStatus FTStatus,
+		@FGLGStatus fglgstatus,
+		@IsExistFGLG AS IsExistFGLG,
+		@IsExistLG AS IsExistLG,		
+		@IsHTOnly as IsHTOnly,	
+		@IsLive as IsLive,
+		@DelayTime DelayTime		
+from	DB02.BODB02.dbo.match with (nolock) 	
+		left outer join DB02.BODB02.dbo.match_remark mr with (nolock) on match.matchid = mr.matchid
+where match.matchid = @matchid
+--order by match.eventdate,match.matchcode
+
+GO
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [VNTeam]
+GO 

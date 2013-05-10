@@ -1,0 +1,23 @@
+﻿ 
+ 
+ 
+ALTER FUNCTION [dbo].[FixSiteID2]
+(@SiteID CHAR(7))
+RETURNS CHAR(4)
+AS
+BEGIN
+
+DECLARE @R_SiteID CHAR(4)
+SET @R_SiteID=''
+
+IF LEN(@SiteID)=7 AND SUBSTRING(@SiteID,3,2)='00'
+BEGIN
+	SET @R_SiteID=LEFT(@SiteID,2)+SUBSTRING(@SiteID,5,2)
+END
+
+return @R_SiteID
+end
+GO
+GRANT EXECUTE ON [dbo].[FixSiteID2] TO [vnteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[FixSiteID2] TO [vnteam]
