@@ -6,7 +6,7 @@ AS
 		Task: Bingo WinLost Summary report
 		DB: DB02.bodb02, DB06.bodb02
 		
-		Revisions: aa
+		Revisions:
 			   
    
 	*/
