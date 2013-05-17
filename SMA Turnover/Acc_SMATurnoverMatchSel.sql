@@ -12,6 +12,7 @@ AS
 	Revisions:
 
 	Parameter's explaination: 
+	Example: EXEC Acc_SMATurnoverMatchSel @MatchID = 4305925
 	
 */
 SET NOCOUNT ON
@@ -36,4 +37,3 @@ GRANT EXECUTE ON [dbo].[Acc_SMATurnoverMatchSel] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_SMATurnoverMatchSel] TO [vnteam]
 
---EXEC Acc_SMATurnoverMatchSel @MatchID = 4305925

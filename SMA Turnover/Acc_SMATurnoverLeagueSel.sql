@@ -13,6 +13,7 @@ AS
 	Revisions:
 
 	Parameter's explaination: 
+	Example: EXEC Acc_SMATurnoverLeagueSel @SportType = 1, @FromDate = '2013-05-10', @ToDate = '2013-05-15', @MoveBetsDay = '2013-05-05'
 	
 */
 SET NOCOUNT ON
@@ -59,4 +60,3 @@ GRANT EXECUTE ON [dbo].[Acc_SMATurnoverLeagueSel] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_SMATurnoverLeagueSel] TO [vnteam]
 
---EXEC Acc_SMATurnoverLeagueSel @SportType = 1, @FromDate = '2013-05-10', @ToDate = '2013-05-15', @MoveBetsDay = '2013-05-05'

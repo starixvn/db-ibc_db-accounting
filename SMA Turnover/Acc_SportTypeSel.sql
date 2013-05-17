@@ -11,6 +11,7 @@ AS
 
 	Parameter's explaination: @Mode  = 0: Sport of sportbook
 									 = 1: All sports
+	Example: EXEC Acc_SportTypeSel @Mode = 1									 
 	
 */
 SET NOCOUNT ON
@@ -26,4 +27,3 @@ GRANT EXECUTE ON [dbo].[Acc_SportTypeSel] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_SportTypeSel] TO [vnteam]
 
---EXEC Acc_SportTypeSel @Mode = 1

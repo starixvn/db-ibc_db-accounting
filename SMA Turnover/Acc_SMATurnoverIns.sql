@@ -14,7 +14,7 @@ AS
 	Revisions:
 
 	Parameter's explaination: 
-	
+	Example: EXEC Acc_SMATurnoverIns @UserName = '79AR', @MatchID = 4305908, @MaxTurnover = 10000
 */
 SET NOCOUNT ON
 BEGIN
@@ -74,4 +74,3 @@ GRANT EXECUTE ON [dbo].[Acc_SMATurnoverIns] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_SMATurnoverIns] TO [vnteam]
 
---EXEC Acc_SMATurnoverIns @UserName = '79AR', @MatchID = 4305908, @MaxTurnover = 10000
