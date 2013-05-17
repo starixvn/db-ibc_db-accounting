@@ -1460,9 +1460,12 @@ Begin DataProject = "Account"
       Script = "dbo.Acc_SiteSel_RNGCS.sql"
    End
    Begin Folder = "SMA Turnover"
+      Script = "Acc_SMATurnoverCheckTotalTurnover.sql"
+      Script = "Acc_SMATurnoverIns.sql"
       Script = "Acc_SMATurnoverLeagueSel.sql"
       Script = "Acc_SMATurnoverListSel.sql"
       Script = "Acc_SMATurnoverMatchSel.sql"
+      Script = "Acc_SMATurnoverUpd.sql"
       Script = "Acc_SportTypeSel.sql"
    End
    Begin Folder = "Statements"
