@@ -10,7 +10,7 @@ AS
 	Created: Elodie
 	Date: 20130515
 	Task : Check if Max Turnover is less than or equal to current SMA turnover.
-	DB: DBTXN/bodb02
+	DB: DBAGE/bodb02
 
 	Revisions:
 
@@ -25,7 +25,7 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'running' AND ruben = 0)
 	BEGIN
 		DECLARE @TotalTurnover MONEY		
-		SELECT @TotalTurnover = sum(actual_stake) FROM bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID
+		SELECT @TotalTurnover = sum(actual_stake) FROM DBTXN.bodb02.dbo.bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0
 		IF @MaxTurnover < @TotalTurnover	
 			SELECT @ErrCode = 101, @ErrMsg = 'Warning: Member will be unable to place bet if your new Max Turnover is less than or equal to current SMA turnover. Are you sure you want to proceed ?'				
 	END

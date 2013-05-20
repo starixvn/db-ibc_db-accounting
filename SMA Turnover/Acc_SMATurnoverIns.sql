@@ -2,6 +2,8 @@
 	@UserName NVARCHAR(100),
 	@MatchID INT,
 	@MaxTurnover MONEY,
+	@UserID INT,
+	@IP	VARCHAR(40),
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
@@ -9,7 +11,7 @@ AS
 	Created: Elodie
 	Date: 20130515
 	Task : Add SMA turnover
-	DB: DBTXN/bodb02
+	DB: DBAGE/bodb02
 
 	Revisions:
 
@@ -18,7 +20,16 @@ AS
 */
 SET NOCOUNT ON
 BEGIN
+	DECLARE @startRun	DATETIME,
+			@endRun		DATETIME,
+			@duration	INT
+	SET	@startRun = GETDATE()
 
+	--Check permission 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[SMATurnoverManagement]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
+		
 	IF NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE username = @UserName)
 	BEGIN
 		SELECT @ErrCode = 100, @ErrMsg = 'Invalid Username!'
@@ -47,25 +58,48 @@ BEGIN
 
 	SELECT @CustID = custid FROM custInfo WITH (NOLOCK) WHERE username = @UserName
 
+	DECLARE @LogData NVARCHAR(4000)
 	-- It has bet ticket for this match
 	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'running' AND ruben = 0)
 	BEGIN
 		DECLARE @TotalTurnover MONEY		
-		SELECT @TotalTurnover = sum(actual_stake) FROM bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID
+		SELECT @TotalTurnover = sum(actual_stake) FROM DBTXN.bodb02.dbo.bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0
 		
 		INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
-		VALUES (@CustID, @MatchID, @MaxTurnover, @TotalTurnover)
+		VALUES (@CustID, @MatchID, @MaxTurnover, @TotalTurnover)				
 		
-		UPDATE DBAGE.bodb02.dbo.DownlineTurnover_Setting
-		SET TotalTurnover = @TotalTurnover
-		WHERE CustID = @CustID AND matchid = @MatchID
+		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
+							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'TotalTurnover="' + COALESCE(CAST(@TotalTurnover AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
+							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
+							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'					
 	END
 	-- It has not bet ticket for this match
 	ELSE IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'closed' AND ruben = 0)
 	BEGIN
 		INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
 		VALUES (@CustID, @MatchID, @MaxTurnover, 0)
-	END
+		
+		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
+							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'TotalTurnover="0" '
+							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
+							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
+							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
+	END																			
+	
+	SET @endRun = GETDATE()
+	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
+	
+	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+		@Userid = @UserID,
+		@Custid = @CustID,
+		@ActionID = 636,
+		@TrackingValue = @LogData,
+		@Duration = @duration
 
 END
 

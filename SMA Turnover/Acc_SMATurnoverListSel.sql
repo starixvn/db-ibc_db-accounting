@@ -22,8 +22,8 @@ SET NOCOUNT ON
 
 IF @Todate <= @MoveBetsDay
 BEGIN	
-	SELECT c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
-	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
+	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
+	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
@@ -34,8 +34,8 @@ BEGIN
 END
 ELSE IF @FromDate > @MoveBetsDay
 BEGIN
-	SELECT c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
-	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
+	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
+	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
@@ -46,8 +46,8 @@ BEGIN
 END	
 ELSE 
 BEGIN
-	SELECT c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
-	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
+	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
+	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
@@ -55,8 +55,8 @@ BEGIN
 	WHERE m.sporttype = @SportType AND m.eventdate BETWEEN @FromDate AND @MoveBetsDay
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
 	UNION ALL
-	SELECT c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
-	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
+	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.ruben, t.MaxTurnover, t.TotalTurnover
+	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
