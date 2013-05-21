@@ -16,7 +16,9 @@ AS
 	Revisions:
 
 	Parameter's explaination: 
-	Example: EXEC Acc_SMATurnoverIns @UserName = '79AR', @MatchID = 4305908, @MaxTurnover = 10000
+	Example: DECLARE @ErrCode int, @ErrMsg nvarchar(200)
+			 EXEC Acc_SMATurnoverIns @UserName = 'FBH', @MatchID = 4496769, @MaxTurnover = 10000, @UserID = 8, @IP = '120.125.220.20', @ErrMsg = @ErrMsg OUTPUT, @ErrCode = @ErrCode OUTPUT
+			 SELECT @ErrCode, @ErrMsg
 */
 SET NOCOUNT ON
 BEGIN

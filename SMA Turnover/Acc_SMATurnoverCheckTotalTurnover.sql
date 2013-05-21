@@ -2,26 +2,21 @@
 	@CustID INT,
 	@MatchID INT,
 	@MaxTurnover MONEY,
-	@Mode BIT,
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
 /*
 	Created: Elodie
 	Date: 20130515
-	Task : Check if Max Turnover is less than or equal to current SMA turnover.
+	Task : Check if Max Turnover is less than or equal to current SMA turnover for insert case
 	DB: DBAGE/bodb02
 
 	Revisions:
 
-	Parameter's explaination: 
-		+ @Mode: 0: Check for insert case
-				 1: Check for update case
+	Parameter's explaination: 	
 	
 */
 SET NOCOUNT ON
-IF @Mode = 0
-BEGIN
 	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'running' AND ruben = 0)
 	BEGIN
 		DECLARE @TotalTurnover MONEY		
@@ -29,14 +24,6 @@ BEGIN
 		IF @MaxTurnover < @TotalTurnover	
 			SELECT @ErrCode = 101, @ErrMsg = 'Warning: Member will be unable to place bet if your new Max Turnover is less than or equal to current SMA turnover. Are you sure you want to proceed ?'				
 	END
-END
-ELSE
-BEGIN
-	IF EXISTS (SELECT 1 FROM DownlineTurnonver_Setting WITH (NOLOCK) WHERE matchid = @MatchID AND custID = @CustID AND TotalTurnover > @MaxTurnover)
-	BEGIN
-		SELECT @ErrCode = 102, @ErrMsg = 'Warning: Member will be unable to place bet if your new Max Turnover is less than or equal to current SMA turnover. Are you sure you want to proceed ?'			
-	END
-END
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_SMATurnoverCheckTotalTurnover] TO [bodbAdminNet]

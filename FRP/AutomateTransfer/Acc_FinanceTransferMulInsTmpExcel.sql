@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel_xtest]	
+﻿ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel]	
 	@UserID INT,
 	@ListTransfer XML,	
 	@ErrCode INT = 0 OUTPUT,
@@ -17,6 +17,7 @@ AS
 		- 20121224@Elodie: Get the current system exchange rate
 		- 20130201@Elodie: Change link server DB03 to DBPOLICY
 		- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
+		- 20130521@Elodie: Get more fields such as MinActualrate, MaxActualRate, MultipliedBy... to verify more new specific cases
 */
 BEGIN
 SET NOCOUNT ON
@@ -40,10 +41,15 @@ SET NOCOUNT ON
 		Seq INT,
 		FromCust VARCHAR(30),
 		ToCust VARCHAR(30),
+		FromCurrency INT,
+		ToCurrency INT,
 		Amount VARCHAR(20),
 		ExRate VARCHAR(20),
 		Description	NVARCHAR(200),
-		CurrentExRate VARCHAR(20)	
+		CurrentExRate VARCHAR(20),
+		MinActualrate SMALLMONEY, 	
+		MaxActualrate SMALLMONEY,
+		MultipliedBy INT
 	)
 
 	DECLARE @tblFail TABLE (
@@ -66,21 +72,29 @@ SET NOCOUNT ON
 	FROM @ListTransfer.nodes('/ListTransfer/Transfer') AS T(C)
 	
 	--Validate transaction
-	INSERT INTO @tblSucc(Seq, FromCust, ToCust, Amount, ExRate, Description, CurrentExRate)
+	INSERT INTO @tblSucc(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy)
 	SELECT	t.Seq,			
 			t.FromCust, 
 			t.ToCust ,	
+			c1.currency,
+			c2.currency,
 			t.Amount,	
 			t.ExRate,	
 			t.Description,
 			CASE WHEN c1.currency = c2.currency THEN 1 
 				 WHEN c2.currency = 2 THEN e1.actualrate 
-				 WHEN c1.currency = 2 THEN 1/e2.actualrate END  
+				 WHEN c1.currency = 2 THEN 1/e2.actualrate END,
+			er.MinActualRate,
+			er.MaxActualRate,
+			CASE WHEN c2.currency = 2 THEN e1.MultipliedBy 
+				 WHEN c1.currency = 2 THEN e2.MultipliedBy
+				 ELSE e1.MultipliedBy END
 	FROM	@tblCust as t
-			inner join custinfo c1 WITH (NOLOCK) on t.FromCust = c1.Username
-			inner join custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username
-			inner JOIN Exchange e1 WITH (NOLOCK) ON c1.currency = e1.exchangeid
-			inner JOIN Exchange e2 WITH (NOLOCK) ON c2.currency = e2.exchangeid
+			INNER JOIN custinfo c1 WITH (NOLOCK) on t.FromCust = c1.Username
+			INNER JOIN custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username
+			INNER JOIN Exchange e1 WITH (NOLOCK) ON c1.currency = e1.exchangeid
+			INNER JOIN Exchange e2 WITH (NOLOCK) ON c2.currency = e2.exchangeid
+			LEFT JOIN Acc_ExchangeRate er WITH (NOLOCK) ON er.FromExchangeID = e1.exchangeid and er.ToExchangeID = e2.exchangeid
 	WHERE ISNUMERIC(Amount)=1 and ISNUMERIC(ExRate)=1
 			and cast(ExRate AS FLOAT) > 0
 			and cast(Amount AS FLOAT) <> 0
