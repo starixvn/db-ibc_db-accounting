@@ -49,7 +49,8 @@ SET NOCOUNT ON
 		CurrentExRate VARCHAR(20),
 		MinActualrate SMALLMONEY, 	
 		MaxActualrate SMALLMONEY,
-		MultipliedBy INT
+		MultipliedBy INT,
+		CurrencyName VARCHAR(5)
 	)
 
 	DECLARE @tblFail TABLE (
@@ -72,7 +73,7 @@ SET NOCOUNT ON
 	FROM @ListTransfer.nodes('/ListTransfer/Transfer') AS T(C)
 	
 	--Validate transaction
-	INSERT INTO @tblSucc(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy)
+	INSERT INTO @tblSucc(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy, CurrencyName)
 	SELECT	t.Seq,			
 			t.FromCust, 
 			t.ToCust ,	
@@ -88,7 +89,10 @@ SET NOCOUNT ON
 			er.MaxActualRate,
 			CASE WHEN c2.currency = 2 THEN e1.MultipliedBy 
 				 WHEN c1.currency = 2 THEN e2.MultipliedBy
-				 ELSE e1.MultipliedBy END
+				 ELSE e1.MultipliedBy END,
+			CASE WHEN c2.currency = 2 THEN e1.currency 
+				 WHEN c1.currency = 2 THEN e2.currency
+				 ELSE e1.currency END			
 	FROM	@tblCust as t
 			INNER JOIN custinfo c1 WITH (NOLOCK) on t.FromCust = c1.Username
 			INNER JOIN custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username

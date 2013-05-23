@@ -42,7 +42,7 @@ BEGIN
 	
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<Acc_SMATurnoverUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
@@ -55,7 +55,10 @@ BEGIN
 		@Custid = @CustID,
 		@ActionID = 637,
 		@TrackingValue = @LogData,
-		@Duration = @duration							
+		@Duration = @duration	
+		
+	-- Syn data temporary
+	exec Acc_SMATurnoverSyn						
 END
 
 GO

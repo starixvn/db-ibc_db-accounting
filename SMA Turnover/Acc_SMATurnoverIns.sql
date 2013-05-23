@@ -54,11 +54,17 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 103, @ErrMsg = 'You are not allowed to add super into a settled match.'
 		RETURN
-	END
-
+	END		
+	
 	DECLARE @CustID INT
 
 	SELECT @CustID = custid FROM custInfo WITH (NOLOCK) WHERE username = @UserName
+	
+	IF EXISTS (SELECT 1 FROM DownlineTurnover_Setting WITH (NOLOCK) WHERE matchid = @MatchID AND CustID = @CustID)
+	BEGIN
+		SELECT @ErrCode = 104, @ErrMsg = 'This account is already added.'
+		RETURN
+	END
 
 	DECLARE @LogData NVARCHAR(4000)
 	-- It has bet ticket for this match
@@ -68,12 +74,12 @@ BEGIN
 		SELECT @TotalTurnover = sum(actual_stake) FROM DBTXN.bodb02.dbo.bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0
 		
 		INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
-		VALUES (@CustID, @MatchID, @MaxTurnover, @TotalTurnover)				
+		VALUES (@CustID, @MatchID, @MaxTurnover, isnull(@TotalTurnover,0))				
 		
 		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
 							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(10)), SPACE(1)) + '" ' 
-							+ 'TotalTurnover="' + COALESCE(CAST(@TotalTurnover AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
+							+ 'TotalTurnover="' + COALESCE(CAST(@TotalTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'					
@@ -86,7 +92,7 @@ BEGIN
 		
 		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
 							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(10)), SPACE(1)) + '" ' 
+							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'TotalTurnover="0" '
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
@@ -102,7 +108,9 @@ BEGIN
 		@ActionID = 636,
 		@TrackingValue = @LogData,
 		@Duration = @duration
-
+	
+	-- Syn data temporary
+	exec Acc_SMATurnoverSyn
 END
 
 GO

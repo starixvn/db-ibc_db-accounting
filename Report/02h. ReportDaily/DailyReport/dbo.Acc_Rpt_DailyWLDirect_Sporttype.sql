@@ -53,6 +53,7 @@ AS
 		- 20121017@Lukas: performance tunning - use temp table before retrieve some products	
 		- 20121102@Elodie: Use actual rate instead of virtural rate for Virtual sport		
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
+		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 							
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -215,7 +216,8 @@ BEGIN
 			sum(commission_virtualrate) AS Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,
-			SUM(turnover_virtualrate) AS Turnover,
+			SUM(turnover_actualrate) AS RealTurnover,
+			SUM(turnover_virtualrate) AS VirtualTurnover,
 			1 EnableVirtual
 	FROM	#src b WITH(NOLOCK)
 				INNER JOIN @Match m on b.matchid = m.matchid
@@ -240,7 +242,8 @@ BEGIN
 			sum(scomm) Commission,	
 			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
 			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
-			-sum((1-tpositiontaking)*ABS(stake)) Turnover,
+			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover,
 			0 EnableVirtual
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
@@ -269,7 +272,8 @@ BEGIN
 		sum(scomm) Commission,	
 		-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
 		-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
-		-sum((1-tpositiontaking)*ABS(stake)) Turnover,
+		-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+		-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover,
 		0 EnableVirtual
 	FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
@@ -295,7 +299,8 @@ BEGIN
 			SUM(commission_virtualrate) Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
-			SUM(turnover_virtualrate) Turnover,
+			SUM(turnover_actualrate) RealTurnover,
+			SUM(turnover_virtualrate) VirtualTurnover,
 			1 EnableVirtual
 	FROM	#src AS b WITH (NOLOCK)
 	WHERE	bettype = 29 
@@ -309,7 +314,8 @@ BEGIN
 			SUM(commission_virtualrate) Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
-			SUM(turnover_virtualrate) Turnover,
+			SUM(turnover_actualrate) RealTurnover,
+			SUM(turnover_virtualrate) VirtualTurnover,
 			1 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
 	WHERE	bettype = 9 
@@ -324,7 +330,8 @@ BEGIN
 			SUM(commission_virtualrate) Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
-			SUM(turnover_virtualrate) Turnover,
+			SUM(turnover_actualrate) RealTurnover,
+			SUM(turnover_virtualrate) VirtualTurnover,
 			1 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	WHERE	b.bettype BETWEEN 81 AND 120
@@ -340,7 +347,8 @@ BEGIN
 			sum(scomm*actualrate) Commission,	
 			sum(-1*(odds-scomm)*actualrate) AS RealLineTotal,
 			0 AS VirtualLineTotal,
-			0 Turnover,
+			0 RealTurnover,
+			0 VirtualTurnover,
 			0 EnableVirtual
 	from	bettrans with (nolock)
 	where 	bettrans.bettype = 1000
@@ -357,7 +365,8 @@ BEGIN
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
 			0 AS VirtualLineTotal,
-			0 Turnover,
+			0 RealTurnover,
+			0 VirtualTurnover,
 			0 EnableVirtual
 	from	#src with (nolock)
 	where 	bettype = 73
@@ -374,7 +383,8 @@ BEGIN
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
 			0 AS VirtualLineTotal,
-			SUM(turnover_actualrate) Turnover,
+			SUM(turnover_actualrate) RealTurnover,
+			0 VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
 	WHERE	b.bettype BETWEEN 1101 AND 1199
@@ -388,7 +398,8 @@ BEGIN
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
 			0 AS VirtualLineTotal,
-			0 Turnover,
+			0 RealTurnover,
+			0 VirtualTurnover,
 			0 EnableVirtual
 	from	#src with (nolock)
 	where 	bettype = 71
@@ -401,7 +412,8 @@ BEGIN
 			@RB_Comm Commission,
 			@RB_LineTotal AS RealLineTotal,
 			0 AS VirtualLineTotal,
-			@RB_TO Turnover,
+			@RB_TO RealTurnover,
+			0 VirtualTurnover,
 			0 EnableVirtual
 			
 	----VIRTUAL SPORT
@@ -413,7 +425,8 @@ BEGIN
 			SUM(commission_actualrate) Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			0 AS VirtualLineTotal,
-			SUM(turnover_actualrate) Turnover,
+			SUM(turnover_actualrate) RealTurnover,
+			0 VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	WHERE	b.bettype BETWEEN 1201 AND 1299
