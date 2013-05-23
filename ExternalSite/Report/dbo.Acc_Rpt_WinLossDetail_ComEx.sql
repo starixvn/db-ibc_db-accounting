@@ -40,10 +40,10 @@ Revisions:
 
 SET NOCOUNT ON
 
-DECLARE @tmpSuperList TABLE( custID INT)
-
+--DECLARE #tmpSuperList TABLE( custID INT)
+CREATE TABLE #tmpSuperList (custid INT)
 /*
-INSERT INTO @tmpSuperList(CustID)
+INSERT INTO #tmpSuperList(CustID)
 SELECT	custID 
 FROM	custinfo WITH (NOLOCK)
 WHERE	currency = @currency 
@@ -51,7 +51,7 @@ WHERE	currency = @currency
 		AND dbo.f_isDummySuper(custID) = 0
 */
 
-INSERT INTO @tmpSuperList(CustID)
+INSERT INTO #tmpSuperList(CustID)
 SELECT custID 
 FROM bodb_AGE.dbo.Acc_CustGroup WITH (NOLOCK)
 WHERE GroupName = @System
@@ -163,7 +163,7 @@ BEGIN
 	    SELECT
 		    SRecommend,			
 			SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then b.stake/2 else ABS(b.stake) end),	
-		    sum(case when b.bettype = 1000 THEN oddsspread else scomm/(1-tpositiontaking) end) as GrossComm,
+		    sum(case when b.bettype = 1000 THEN oddsspread else scomm/(1-tpositiontaking) end) as GrossComm,		    
 		    sum(winlost-actual_stake), --MemberWinlost
 		    sum(playercomm), -- PlayerComm
 		    isnull(sum(winlost-actual_stake), 0) + isnull(sum(playercomm), 0), --MemberTotal
@@ -178,12 +178,26 @@ BEGIN
 		    isnull(sum(swinlost), 0) + isnull(sum(scomm), 0)-sum(acomm), --SAgTotal
 		    -(isnull(sum(swinlost), 0) + isnull(sum(awinlost), 0) + isnull(sum(mwinlost), 0) + isnull(sum(scomm), 0) + isnull(sum(winlost-actual_stake), 0)) --Company				
 	    FROM
-		    dbo.bettrans b WITH (NOLOCK) INNER JOIN @TmpCond t ON b.bettype = t.bettype
-	    WHERE
-		    b.winlostdate between @FromDate and @todate and
-		    b.srecommend in (SELECT custID FROM @tmpSuperList) and
-		    b.ruben = 1 and
-		    b.statusID not in (101, 102, 103)   
+			(SELECT SRecommend, b.liveawayscore, b.bettype ,b.stake,
+					0 as oddsspread, tpositiontaking, winlost,actual_stake,
+					playercomm, awinlost, comm, mwinlost, acomm, swinlost, scomm	
+			 FROM dbo.bettrans b WITH (NOLOCK) INNER JOIN @TmpCond t ON b.bettype = t.bettype
+			 WHERE  b.winlostdate between @FromDate and @todate and
+					b.srecommend in (SELECT custID FROM #tmpSuperList) and
+					b.ruben = 1 and
+					b.statusID not in (101, 102, 103)   
+					AND t.bettype <> 1000
+			 UNION ALL
+			 SELECT SRecommend, b.liveawayscore, b.bettype, b.stake,
+					oddsspread, tpositiontaking, winlost,actual_stake,
+					playercomm, awinlost, comm, mwinlost, acomm, swinlost, scomm	
+			 FROM dbo.bettrans b WITH (NOLOCK) INNER JOIN @TmpCond t ON b.bettype = t.bettype
+			 WHERE  b.winlostdate between @FromDate and @todate and
+					b.srecommend in (SELECT custID FROM #tmpSuperList) and
+					b.ruben = 1 and
+					b.statusID not in (101, 102, 103)   
+					AND t.bettype = 1000 AND matchid = 1000
+			) b
 	    GROUP BY SRecommend, b.bettype
 		
 	if @BalanceUpDay < @FromDate
@@ -211,7 +225,7 @@ BEGIN
 		    dbo.sum_winloss b WITH (NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
 	    WHERE
 		    winlostdate between @BalanceUpDay and @todate			
-		    and SRecommend IN (SELECT custID FROM @tmpSuperList)
+		    and SRecommend IN (SELECT custID FROM #tmpSuperList)
 		    and RoleID = 4
 	    GROUP BY CustID
 END
@@ -243,7 +257,7 @@ BEGIN
 		    DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
 	    WHERE
 		    winlostdate between @fromdate and @ToDate			
-		    and SRecommend IN (SELECT custID FROM @tmpSuperList)
+		    and SRecommend IN (SELECT custID FROM #tmpSuperList)
 		    and RoleID = 4
 	    GROUP BY CustID
 
@@ -270,6 +284,10 @@ SELECT
 FROM @ComWinLossDetails w INNER JOIN custinfo c WITH(NOLOCK) ON w.CustID = c.CustID 
 Group by w.CustID, c.UserName
 order by c.Username
+
+DROP TABLE #tmpSuperList
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinLossDetail_ComEx] TO [bodbAdminNet]

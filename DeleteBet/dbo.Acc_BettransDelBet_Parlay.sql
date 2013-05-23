@@ -5,6 +5,7 @@
 	@password varchar(50),	
 	@UserID int,
 	@IP varchar(15) = '',
+	@reason nvarchar(500) ='',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 
@@ -36,7 +37,7 @@ select @ErrCode = 0
 If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
 	Select @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!', @ErrCode = 101	
-	SELECT @LogData = 'Try to delete transaction for custid ' + cast(@CustID as varchar(10)) + ' - Transid ' + cast(@transid as varchar(20)) + ' - Username ' + @username
+	SELECT @LogData = 'Try to delete transaction for custid ' + cast(@CustID as varchar(10)) + ' - Transid ' + cast(@transid as varchar(20)) + ' - Username ' + @username + ' - reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData	
 	Return
 END
@@ -136,7 +137,7 @@ BEGIN
 	EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
 END
 
-Select @LogData ='delete parlay ticket for transid ' + convert(varchar(20), @transid) + ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15))
+Select @LogData ='delete parlay ticket for transid ' + convert(varchar(20), @transid) + ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15))  + ' - reason: ' + @reason
 EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 -----
