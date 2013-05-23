@@ -29,8 +29,9 @@ ALTER PROCEDURE [dbo].[Acc_BettransDelSpecialDel_MixParlay]
     @UserName NVARCHAR(50),
     @UserPwd NVARCHAR(50),
     @IP VARCHAR(15) = '',
+    @reason NVARCHAR(500)='',
     @ErrMsg NVARCHAR(200) = '' OUTPUT,
-    @ErrCode INT = 0 OUTPUT	
+    @ErrCode INT = 0 OUTPUT	    
 AS
 /*
 	Created by: 
@@ -66,7 +67,8 @@ AS
 							. Add condition 'L' in betfrom to check Deposit
 		- 20120913@Sophia: Check for concurrent running
 		- 20130128@Elodie: Change link server DB03 to DBPOLICY
-
+		- 20130526@Johnson: Add param @reason to log the reason delete bets
+		 
 	Param's Explanation: Special bet delete option
 	
 	@@DelOption = 0: No Delete (need to remove normal bets out of #BetDelete)
@@ -105,7 +107,7 @@ BEGIN
 			AND custid = @UserID
 			AND roleid>=5)
 	BEGIN
-		SELECT @LogData ='fail to delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' for Mix Parlay Special Delete'
+		SELECT @LogData ='fail to delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' for Mix Parlay Special Delete reason: ' + @reason
 		EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 		SELECT @ErrMsg = 'Sorry. You can not process delete bet due to either wrong password or insufficient permission!', @ErrCode = 101   
@@ -595,7 +597,7 @@ BEGIN
 	END
 
 
-	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' for Mix Parlay Special Delete' + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
+	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' for Mix Parlay Special Delete' + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1)) + ' reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 	
 	

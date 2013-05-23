@@ -5,6 +5,7 @@
 	@password varchar(50),
 	@UserID int = 0, --custid of Admin,
 	@IP varchar(15) = '',
+	@reason nvarchar(500)= '',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
@@ -34,7 +35,7 @@ AS
 						   Add table TempVariableNumber to check and not to allow attempt to delete same game while it's still not finish
 						   Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 						   Write more log on DBTXN server in case of DBLOG server failure
-						   
+		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
 */
 
 SET NOCOUNT ON
@@ -50,7 +51,7 @@ DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype
 If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
 	Select @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!', @ErrCode = 101	
-	SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID as varchar(10)) + ' betlist: ' + cast(@transid as varchar(20)) + ' - Username: ' + @username
+	SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID as varchar(10)) + ' betlist: ' + cast(@transid as varchar(20)) + ' - Username: ' + @username + ' - reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData	
 	Return
 END
@@ -180,7 +181,7 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 			EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
 		END		
 			
-		SELECT @LogData = 'delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@transid as varchar(20))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15))
+		SELECT @LogData = 'delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@transid as varchar(20))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 		EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
 	END

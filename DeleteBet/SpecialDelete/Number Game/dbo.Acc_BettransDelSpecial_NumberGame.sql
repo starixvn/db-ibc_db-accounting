@@ -14,7 +14,8 @@
     @UserName		NVARCHAR(50),
     @UserPwd		NVARCHAR(50),
     @UserID			INT,
-    @IP				VARCHAR(15)		= '',   
+    @IP				VARCHAR(15)		= '', 
+    @reason			NVARCHAR(500)	= '',  
     @ErrMsg			NVARCHAR(200)	= '' OUTPUT,
     @ErrCode		INT				= 0 OUTPUT      
 AS
@@ -44,6 +45,7 @@ Revisions:
 	- 20130103@Elodie: Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table
 	- 20130128@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20130526@Johnson: Add param @reason to log the reason delete bets
 						   
 Param's Explanation: 
 
@@ -88,7 +90,7 @@ BEGIN
 						and custid = @UserID
 						and roleid>=5)
 	BEGIN
-		SELECT @LogData ='fail to delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid)
+		SELECT @LogData ='fail to delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid) + ' reason: ' + @reason
 		EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 		SELECT @ErrMsg = 'Sorry. You can not process delete bet due to either wrong password or insufficient permission!', @ErrCode = 101   
@@ -353,7 +355,7 @@ BEGIN
 	WHERE	    (a.balance - b.balance) < 0
 
 
-	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
+	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1)) + ' reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 	--after delete, return all deleted deposit bets with additional information for mailing	
