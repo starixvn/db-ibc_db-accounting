@@ -11,6 +11,7 @@ AS
 			- 20110801@Johnson: add more bettype for number game
 			- 20110824@Johnson: remove check winlostdate with '16 Dec 2010' for sumary turnover, get from stake instead actual_stake
 			- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
+			- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 	
 */
 BEGIN
@@ -23,7 +24,8 @@ BEGIN
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,	
-			sum((1-tpositiontaking)*stake*virtualrate) Turnover
+			sum((1-tpositiontaking)*stake*actualrate) RealTurnover,
+		sum((1-tpositiontaking)*stake*virtualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 	WHERE	b.winlostdate = @winlostdate
 			AND b.bettype BETWEEN 81 AND 120		

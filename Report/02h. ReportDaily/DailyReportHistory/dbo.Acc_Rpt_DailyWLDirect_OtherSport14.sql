@@ -24,6 +24,7 @@ SET NOCOUNT ON
 		- 20120628@Elodie: check case of matchid = orid
 		- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
+		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 	
 */
 	--Declare @temp table to contain all matches based on @winlostdate
@@ -50,7 +51,8 @@ SET NOCOUNT ON
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-			sum((1-tpositiontaking)* ABS(stake) *virtualrate) Turnover
+			sum((1-tpositiontaking)*ABS(stake)*actualrate) RealTurnover,
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 	WHERE

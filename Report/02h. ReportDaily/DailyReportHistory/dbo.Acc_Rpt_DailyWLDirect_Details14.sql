@@ -29,6 +29,7 @@ AS
 			- 20130307@Elodie: Remove Virtual HR from Virtual Sport (Virtual HR uses the other SP)
 			- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 			- 20130506@Elodie: Get matchid value
+			- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 	*/	
 
 	SET NOCOUNT ON
@@ -52,7 +53,8 @@ AS
 					sum(scomm*virtualrate) Commission,
 					sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 					sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-					sum((1-tpositiontaking)*stake*virtualrate) Turnover,
+					sum((1-tpositiontaking)*ABS(b.stake)*actualrate) RealTurnover,
+					sum((1-tpositiontaking)*ABS(b.stake)*virtualrate) VirtualTurnover,
 					isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 			FROM 
 					bettrans14 b with (nolock)
@@ -101,7 +103,8 @@ AS
 						sum(scomm*actualrate) Commission,
 						sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 						sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-						sum((1-tpositiontaking)*ABS(stake)*actualrate) Turnover,
+						sum((1-tpositiontaking)*ABS(b.stake)*actualrate) RealTurnover,
+						0 VirtualTurnover,
 						isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 				FROM 
 						bettrans14 b with (nolock)
@@ -147,7 +150,8 @@ AS
 						sum(scomm*virtualrate) Commission,
 						sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 						sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-						sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover,
+						sum((1-tpositiontaking)*ABS(b.stake)*actualrate) RealTurnover,
+						sum((1-tpositiontaking)*ABS(b.stake)*virtualrate) VirtualTurnover,
 						isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 				FROM 
 						bettrans14 b with (nolock)
@@ -195,7 +199,8 @@ AS
 				sum(scomm*virtualrate) Commission,
 				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-				sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover,
+				sum((1-tpositiontaking)*ABS(b.stake)*actualrate) RealTurnover,
+				sum((1-tpositiontaking)*ABS(b.stake)*virtualrate) VirtualTurnover,
 				CONVERT(BIT,0) as IsNeutral
 		FROM
 				bettrans14 b with (nolock)
