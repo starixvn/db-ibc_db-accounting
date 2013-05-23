@@ -13,7 +13,7 @@ AS
 	Revisions:
 
 	Parameter's explaination: 
-	Example: EXEC Acc_SMATurnoverLeagueSel @SportType = 1, @FromDate = '2013-05-10', @ToDate = '2013-05-15', @MoveBetsDay = '2013-05-05'
+	Example: EXEC Acc_SMATurnoverLeagueSel @SportType = 1, @FromDate = '2013-05-10', @ToDate = '2013-05-15', @MoveBetsDay = '2013-05-05' aaa
 	
 */
 SET NOCOUNT ON

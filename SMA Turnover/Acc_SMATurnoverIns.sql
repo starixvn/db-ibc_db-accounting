@@ -19,6 +19,7 @@ AS
 	Example: DECLARE @ErrCode int, @ErrMsg nvarchar(200)
 			 EXEC Acc_SMATurnoverIns @UserName = 'FBH', @MatchID = 4496769, @MaxTurnover = 10000, @UserID = 8, @IP = '120.125.220.20', @ErrMsg = @ErrMsg OUTPUT, @ErrCode = @ErrCode OUTPUT
 			 SELECT @ErrCode, @ErrMsg
+			 aaa
 */
 SET NOCOUNT ON
 BEGIN
@@ -98,7 +99,7 @@ BEGIN
 							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
 	END																			
-	
+	--aa
 	SET @endRun = GETDATE()
 	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
 	
