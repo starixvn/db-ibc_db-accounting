@@ -1,12 +1,4 @@
-﻿ USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Dot_Acc_Race_ResultUpd]    Script Date: 02/24/2009 23:49:09 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Dot_Acc_Race_ResultUpd]
+﻿ALTER PROCEDURE [dbo].[Dot_Acc_Race_ResultUpd]
 	@programID varchar(10),
 	@eventdate smalldatetime,
 	@raceNumber int,
@@ -40,11 +32,27 @@ BEGIN
 		AND matchcode = CAST(@runnerNumber as varchar(10))
 		AND oddsstatus <> 'completed'
 	
-	Declare @LogData as nvarchar(200)
-	SET @LogData = 'Update Result for Horse ID:' + @ProgramID + ' race:' + CAST(@raceNumber as nvarchar(20)) + ' runner:' + CAST(@runnerNumber as nvarchar(20))
-		+ ' winodds:' + CAST(@winOdds as nvarchar(20)) + ' PlaceOdds:' + CAST(@placeOdds as nvarchar(20))
-		+ ' IsFavor:' + CAST(@isFav as nvarchar(1)) + ' IsSCR:' + CAST(@isSCR as nvarchar(1))
-	EXEC dbo.WriteLog_UserLog @userid, @LogData
+	-- WRITE LOG
+	DECLARE @Remark VARCHAR(500)
+	BEGIN TRY
+		SET @Remark = 'Update Result for Horse ID:' + @ProgramID + ' runner:' + CAST(@runnerNumber as nvarchar(20))
+					+ ' winodds:' + CAST(@winOdds as nvarchar(20)) + ' PlaceOdds:' + CAST(@placeOdds as nvarchar(20))
+					+ ' IsFavor:' + CAST(@isFav as nvarchar(1)) + ' IsSCR:' + CAST(@isSCR as nvarchar(1))
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
+			@UserID = @userid, 
+			@MatchID = @raceNumber, 
+			@ActionID = 130, 
+			@LeagueID = 0, 
+			@EventDate = @eventdate,
+			@Remark = @Remark
+			
+	END TRY
+	BEGIN CATCH		
+		SET @Remark = 'Update Result for Horse ID:' + @ProgramID + ' race:' + CAST(@raceNumber as nvarchar(20)) + ' runner:' + CAST(@runnerNumber as nvarchar(20))
+					+ ' winodds:' + CAST(@winOdds as nvarchar(20)) + ' PlaceOdds:' + CAST(@placeOdds as nvarchar(20))
+					+ ' IsFavor:' + CAST(@isFav as nvarchar(1)) + ' IsSCR:' + CAST(@isSCR as nvarchar(1))
+		EXEC dbo.WriteLog_UserLog @userid, @Remark
+	END CATCH	
 END
 GO
 GRANT VIEW DEFINITION ON [dbo].[Dot_Acc_Race_ResultUpd] TO [vnteam]

@@ -51,7 +51,7 @@ BEGIN
 		RETURN
 	END
 
-	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND ruben = 1)
+	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND (ruben = 1 OR eventstatus = 'completed'))
 	BEGIN
 		SELECT @ErrCode = 103, @ErrMsg = 'You are not allowed to add super into a settled match.'
 		RETURN

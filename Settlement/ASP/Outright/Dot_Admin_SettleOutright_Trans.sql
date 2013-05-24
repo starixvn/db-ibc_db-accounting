@@ -21,6 +21,7 @@ Revisions:
 					   . Add @ErrCode, @ErrMsg to raise error
 	- 20130103@Elodie:  Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table
 	- 20130121@Elodie:  Write more log on DBTXN server in case of DBLOG server failure
+	- 20130524@Elodie: Write settlement log for outright
 	
 Param's Explanation:
 	- @deadheat = fraction of deadheat to divide (1,2,3  etc)
@@ -167,6 +168,28 @@ BEGIN
 			@Remark = @Remark				
 	END CATCH
 END
+
+-- WRITE LOG
+SELECT @Remark = 'Status=' + @status + 'IsDeadheat=' + CAST(@deadheat AS VARCHAR(5))
+BEGIN TRY	
+	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
+		@UserID = 5838421, 
+		@MatchID = @matchid, 
+		@ActionID = 128, 
+		@LeagueID = 0, 
+		@EventDate = @winlostdate,
+		@Remark = @Remark
+		
+END TRY
+BEGIN CATCH		
+	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
+		@UserID = 5838421, 
+		@MatchID = @matchid, 
+		@ActionID = 128, 
+		@LeagueID = 0, 
+		@EventDate = @winlostdate,
+		@Remark = @Remark					
+END CATCH		
 
 END
 

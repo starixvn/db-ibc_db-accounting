@@ -4,8 +4,7 @@
 	@ActionID int=0, 
 	@LeagueID int,
 	@EventDate datetime,
-    @Remark VARCHAR(500) = '',	
-	@IP varchar(15)=''
+    @Remark VARCHAR(500) = ''
 AS
 /*
 Creator: Elodie
@@ -26,8 +25,7 @@ INSERT INTO dbo.UserLog_SettleOutright
 	ActionID,
 	LeagueID,
 	EventDate,
-    Remark,
-	IP
+    Remark
 ) 
 VALUES
 (	
@@ -36,8 +34,7 @@ VALUES
 	@ActionID,
 	@LeagueID,
 	@EventDate,
-    @Remark,	
-	@IP
+    @Remark
 )
 
 GO
