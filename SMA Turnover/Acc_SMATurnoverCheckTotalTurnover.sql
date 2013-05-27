@@ -9,7 +9,7 @@ AS
 /*
 	Created: Elodie
 	Date: 20130515
-	Task : Check if Max Turnover is less than or equal to current SMA turnover for insert case
+	Task : Check if Max Turnover is less than or equal to current SMA turnover for insert/update case
 	DB: DBAGE/bodb02
 
 	Revisions:
@@ -31,7 +31,7 @@ SET NOCOUNT ON
 	
 	IF @Mode = 0
 	BEGIN
-		IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'running' AND ruben = 0)
+		IF EXISTS (SELECT 1 FROM bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0)
 		BEGIN
 			DECLARE @TotalTurnover MONEY		
 			SELECT @TotalTurnover = sum(actual_stake) FROM DBTXN.bodb02.dbo.bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0
