@@ -30,7 +30,7 @@ BEGIN
 	IF @ErrCode <> 0
 		RETURN
 		
-	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND ruben = 1)
+	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND (ruben = 1 OR eventstatus = 'completed'))
 	BEGIN
 		SELECT @ErrCode = 101, @ErrMsg = 'You are not allowed to update max turnover of a settled match.'
 		RETURN
