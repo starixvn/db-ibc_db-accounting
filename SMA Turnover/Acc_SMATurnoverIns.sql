@@ -51,7 +51,7 @@ BEGIN
 		RETURN
 	END
 
-	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND (ruben = 1 OR eventstatus = 'completed'))
+	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'completed')
 	BEGIN
 		SELECT @ErrCode = 103, @ErrMsg = 'You are not allowed to add super into a settled match.'
 		RETURN
@@ -69,7 +69,7 @@ BEGIN
 
 	DECLARE @LogData NVARCHAR(4000)
 	-- It has bet ticket for this match
-	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'running' AND ruben = 0)
+	IF EXISTS (SELECT 1 FROM bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0)
 	BEGIN
 		DECLARE @TotalTurnover MONEY		
 		SELECT @TotalTurnover = sum(actual_stake) FROM DBTXN.bodb02.dbo.bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0
@@ -86,7 +86,7 @@ BEGIN
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'					
 	END
 	-- It has not bet ticket for this match
-	ELSE IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'closed' AND ruben = 0)
+	ELSE 
 	BEGIN
 		INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
 		VALUES (@CustID, @MatchID, @MaxTurnover, 0)

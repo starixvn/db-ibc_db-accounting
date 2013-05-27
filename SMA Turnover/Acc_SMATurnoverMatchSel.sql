@@ -18,15 +18,18 @@ AS
 SET NOCOUNT ON
 
 IF NOT EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID)
+	AND NOT EXISTS (SELECT 1 FROM match14 WITH (NOLOCK) WHERE matchid = @MatchID)
 BEGIN
 	SELECT @ErrCode = 100, @ErrMsg = 'Match ID doesn''t exist.'
 	RETURN
 END
-IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND ruben = 1)
+IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'completed')
+	OR EXISTS (SELECT 1 FROM match14 WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'completed')
 BEGIN
 	SELECT @ErrCode = 101, @ErrMsg = 'You are not allowed to add super into a settled match.'
 	RETURN
 END
+
 
 SELECT leagueid, eventdate, homeid, awayid
 FROM match m WITH (NOLOCK)	
