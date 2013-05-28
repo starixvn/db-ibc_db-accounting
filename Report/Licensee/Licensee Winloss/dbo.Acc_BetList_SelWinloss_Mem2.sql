@@ -10,6 +10,7 @@
 	@ShowBA			BIT = 0,
 	@ShowLC			BIT = 0,
 	@ShowVS			BIT = 0,
+	@ShowCS  		BIT = 0, -- RNG Casino
 	@TotalRows INT=0 OUTPUT,
 	@SumWinlost MONEY=0 OUTPUT,
 	@SumWinlostUSD MONEY=0 OUTPUT,
@@ -43,7 +44,7 @@ Revisions:
 	- 20120816@Henry: add ShowLiveCasino 
 	- 20120912@Jim : add virtual sport 
     - 20130123@Daniel: Change link server alias
-	
+	- 20130527@Jim: support RNG Casino
 	
 Param's Explanation:
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -667,6 +668,55 @@ BEGIN
 				b.statusID IN (111,112,113)
 				
 	END
+	----- RNG Casino
+	IF @ShowCS=1
+	BEGIN
+		INSERT INTO #BetListByDateMem
+		SELECT
+			251 Sporttype, 
+			b.TransID,
+			ISNULL(b.BetID,0),
+			b.Bettype,
+			b.hdp1 AS hdp1, 
+			b.hdp2 AS hdp2,
+			modds,
+			b.oddstype,
+			b.Odds,
+			b.stake,
+			b.actual_stake, 
+			b.betteam,
+			b.status AS Status,				
+			b.refno,
+			b.Transdate,	
+			b.winlostdate,			
+			(b.winlost-actual_stake),
+			- (b.winlost-actual_stake) ,
+			comm,
+			b.playercomm  , 
+			b.Liveindicator,
+			b.Livehomescore,
+			b.Liveawayscore,
+			b.IP AS IP,
+			0 as LeagueID,
+			0 as MatchID,	
+			0 as MatchCode,
+			'' AS Race,	
+			0 as HomeID,
+			0 as AwayID, 		
+			'' as Betstatus,
+			CONVERT(BIT,0) AS IsNeutral,
+			0,0,
+			b.currency,
+			'' as showtime
+		FROM
+			dbo.bettrans AS b WITH (NOLOCK)		
+		WHERE
+			b.winlostdate BETWEEN @TempFromDate AND @tdate AND
+			b.custid=@custid AND
+			b.bettype =71 AND
+			b.statusID IN (111,112,113)
+	END
+	
 END
 
 IF @fdate <= @MoveBetsDay
@@ -1161,7 +1211,55 @@ BEGIN
 			( b.bettype BETWEEN 1201 AND 1299) AND
 			b.statusID IN (111,112,113)
 	END
-	
+	--- RNG Casino 
+	IF @ShowCS=1
+	BEGIN
+		INSERT INTO #BetListByDateMem
+		SELECT
+			251 as Sporttype, 
+			b.TransID,
+			ISNULL(b.BetID,0),
+			b.Bettype,
+			b.hdp1 AS hdp1, 
+			b.hdp2 AS hdp2,
+			modds,
+			b.Oddstype,
+			b.Odds,
+			b.stake,
+			b.actual_stake,   		
+			b.betteam,
+			b.status AS Status,				
+			b.refno,
+			b.Transdate,	
+			b.winlostdate,			
+			(b.winlost-actual_stake),
+			- (b.winlost-actual_stake),
+			comm,
+			b.playercomm ,
+			b.Liveindicator,
+			b.Livehomescore,
+			b.Liveawayscore,
+			b.IP AS IP,
+			0 as LeagueID,
+			0 as MatchID,	
+			0 as MatchCode,
+			'' AS Race,	
+			0 as HomeID,
+			0 as AwayID, 		
+			'' as Betstatus,
+			CONVERT(BIT,0) AS IsNeutral,
+			0,0,
+			b.currency,
+			'' as showtime
+		FROM
+			dbo.bettrans14 AS b WITH (NOLOCK)		
+		WHERE
+			b.winlostdate BETWEEN @BalanceUpDay AND @tdate AND
+			b.custid=@custid AND
+			b.bettype =71 AND
+			b.statusID IN (111,112,113)
+	END
+			
 	--Horse Racing
 	IF @ShowRB = 1
 	BEGIN
@@ -1713,7 +1811,55 @@ BEGIN
 		b.ruben = 1 AND
 		b.status NOT IN ('VOID', 'REJECT', 'REFUND')
 	END
-	
+	--- RNG Casino 
+	IF @ShowCS=1
+	BEGIN
+		INSERT INTO #BetListByDateMem
+		SELECT
+		251 Sporttype, 
+		b.TransID,
+		ISNULL(b.BetID,0),
+		b.Bettype,
+		b.hdp1 AS hdp1, 
+		b.hdp2 AS hdp2,
+		modds,
+		b.Oddstype,
+		b.Odds,
+		b.stake,
+		b.actual_stake,  		
+		b.betteam,
+		b.status AS Status,				
+		b.refno,
+		b.Transdate,	
+		b.winlostdate,			
+		(b.winlost-actual_stake),
+		- (b.winlost-actual_stake),
+		comm ,
+		b.playercomm , 
+		b.Liveindicator,
+		b.Livehomescore,
+		b.Liveawayscore,
+		b.IP AS IP,
+		0 as LeagueID,
+		0 as MatchID,	
+		0 as MatchCode,
+		'' AS Race,	
+		0 as HomeID,
+		0 as AwayID, 		
+		'' as Betstatus,
+		CONVERT(BIT,0) AS IsNeutral,
+		0,0,
+		b.currency,
+		'' as showtime
+	FROM
+		bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)		
+	WHERE
+		b.winlostdate BETWEEN @fdate AND @TempToDate AND
+		b.custid=@custid AND
+		b.bettype=71 AND
+		b.ruben = 1 AND
+		b.status NOT IN ('VOID', 'REJECT', 'REFUND')
+	END	
 	-- Racebook
 	IF @ShowRB = 1
 	BEGIN

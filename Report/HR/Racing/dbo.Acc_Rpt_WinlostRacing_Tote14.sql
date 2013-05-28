@@ -89,7 +89,7 @@ BEGIN
 		INSERT INTO @tmpPartner
 			SELECT 201 -- HAR-TABCORP
 		UNION ALL
-			SELECT 201 -- HAR-TABCORPNSW
+			SELECT 202 -- HAR-TABCORPNSW
 			
 		SELECT	@IBCNetIncomeAddToteFee = -1,
 				@AmountDueToAddToteFee = 1
