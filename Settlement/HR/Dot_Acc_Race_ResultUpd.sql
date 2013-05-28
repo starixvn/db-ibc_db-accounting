@@ -14,6 +14,9 @@ AS
 	Create:
 	Task:
 	DB: DB02.BODB02
+	
+	Revisions: 
+		- 20130524@Elodie: Write settlement log for horse racing
 */
 BEGIN
 	-- 20100720@Henry: Change SP Logfile to WriteLog_UserLog
@@ -48,11 +51,12 @@ BEGIN
 			
 	END TRY
 	BEGIN CATCH		
-		SET @Remark = 'Update Result for Horse ID:' + @ProgramID + ' race:' + CAST(@raceNumber as nvarchar(20)) + ' runner:' + CAST(@runnerNumber as nvarchar(20))
+		SET @Remark = 'Update Result for Horse ID:' + @ProgramID + ' race:' + CAST(@raceNumber as nvarchar(20)) + ' runner:' + CAST(@runnerNumber as nvarchar(20)) + ' eventdate:' + CAST(@eventdate as nvarchar(20))
 					+ ' winodds:' + CAST(@winOdds as nvarchar(20)) + ' PlaceOdds:' + CAST(@placeOdds as nvarchar(20))
 					+ ' IsFavor:' + CAST(@isFav as nvarchar(1)) + ' IsSCR:' + CAST(@isSCR as nvarchar(1))
 		EXEC dbo.WriteLog_UserLog @userid, @Remark
 	END CATCH	
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[Dot_Acc_Race_ResultUpd] TO [vnteam]
