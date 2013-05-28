@@ -42,21 +42,37 @@ BEGIN
 	
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<Acc_SMATurnoverUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
-							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
-							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
-							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
+					+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
+					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
+					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
+					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
 							
 	SET @endRun = GETDATE()
 	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
 	
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-		@Userid = @UserID,
-		@Custid = @CustID,
-		@ActionID = 637,
-		@TrackingValue = @LogData,
-		@Duration = @duration	
-		
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@Userid = @UserID,
+			@Custid = @CustID,
+			@ActionID = 637,
+			@TrackingValue = @LogData,
+			@Duration = @duration	
+	END TRY
+	BEGIN CATCH
+		SELECT @LogData = '<Acc_SMATurnoverUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
+						+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
+						+ 'ErrCode="'+ coalesce(cast(ERROR_NUMBER() as varchar(50)),space(1)) + '" '
+						+ 'ErrMsg="'+ coalesce(cast(ERROR_MESSAGE() as varchar(4000)),space(1))+ '" '
+						+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
+						
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@Userid = @UserID,
+			@Custid = @CustID,
+			@ActionID = 637,
+			@TrackingValue = @LogData,
+			@Duration = @duration	
+	END CATCH		
+	
 	-- Syn data temporary
 	exec Acc_SMATurnoverSyn						
 END

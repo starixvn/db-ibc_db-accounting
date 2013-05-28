@@ -35,13 +35,13 @@ SET NOCOUNT ON
 		BEGIN
 			DECLARE @TotalTurnover MONEY		
 			SELECT @TotalTurnover = sum(actual_stake) FROM DBTXN.bodb02.dbo.bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0
-			IF @MaxTurnover < @TotalTurnover	
+			IF @MaxTurnover <= @TotalTurnover	
 				SELECT @ErrCode = 101, @ErrMsg = 'Warning: Member will be unable to place bet if your new Max Turnover is less than or equal to current SMA turnover. Are you sure you want to proceed ?'				
 		END	
 	END
 	ELSE
 	BEGIN
-		IF EXISTS (SELECT 1 FROM DownlineTurnover_Setting WITH (NOLOCK) WHERE matchid = @MatchID AND custID = @CustID AND TotalTurnover > @MaxTurnover)
+		IF EXISTS (SELECT 1 FROM DownlineTurnover_Setting WITH (NOLOCK) WHERE matchid = @MatchID AND custID = @CustID AND TotalTurnover >= @MaxTurnover)
 		BEGIN
 			SELECT @ErrCode = 102, @ErrMsg = 'Warning: Member will be unable to place bet if your new Max Turnover is less than or equal to current SMA turnover. Are you sure you want to proceed ?'			
 		END
