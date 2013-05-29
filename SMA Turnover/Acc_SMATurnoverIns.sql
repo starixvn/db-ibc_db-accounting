@@ -67,48 +67,60 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE @LogData NVARCHAR(4000)
+	DECLARE @LogData NVARCHAR(4000), @TotalTurnover MONEY	
 	-- It has bet ticket for this match
 	IF EXISTS (SELECT 1 FROM bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0)
 	BEGIN
-		DECLARE @TotalTurnover MONEY		
 		SELECT @TotalTurnover = sum(actual_stake) FROM DBTXN.bodb02.dbo.bettrans WITH (NOLOCK) WHERE matchid = @MatchID and srecommend = @CustID and statusID = 0
+		SELECT @TotalTurnover = isnull(@TotalTurnover,0)
 		
 		INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
-		VALUES (@CustID, @MatchID, @MaxTurnover, isnull(@TotalTurnover,0))				
-		
-		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
-							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
-							+ 'TotalTurnover="' + COALESCE(CAST(@TotalTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
-							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
-							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
-							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'					
+		VALUES (@CustID, @MatchID, @MaxTurnover, @TotalTurnover)
+									
 	END
 	-- It has not bet ticket for this match
 	ELSE 
 	BEGIN
+		SELECT @TotalTurnover = 0
 		INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
-		VALUES (@CustID, @MatchID, @MaxTurnover, 0)
-		
-		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
-							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-							+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
-							+ 'TotalTurnover="0" '
-							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
-							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
-							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
-	END																			
-	--aa
+		VALUES (@CustID, @MatchID, @MaxTurnover, @TotalTurnover)				
+	END		
+	
+	SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
+					+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
+					+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
+					+ 'TotalTurnover="' + COALESCE(CAST(@TotalTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
+					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
+					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
+					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'																
+	
 	SET @endRun = GETDATE()
 	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
 	
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-		@Userid = @UserID,
-		@Custid = @CustID,
-		@ActionID = 636,
-		@TrackingValue = @LogData,
-		@Duration = @duration
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@Userid = @UserID,
+			@Custid = @CustID,
+			@ActionID = 636,
+			@TrackingValue = @LogData,
+			@Duration = @duration
+	END TRY
+	BEGIN CATCH
+		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
+						+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
+						+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
+						+ 'TotalTurnover="' + COALESCE(CAST(@TotalTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
+						+ 'ErrCode="'+ coalesce(cast(ERROR_NUMBER() as varchar(50)),space(1)) + '" '
+						+ 'ErrMsg="'+ coalesce(cast(ERROR_MESSAGE() as varchar(4000)),space(1))+ '" '
+						+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
+							
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@Userid = @UserID,
+			@Custid = @CustID,
+			@ActionID = 636,
+			@TrackingValue = @LogData,
+			@Duration = @duration
+	END CATCH
 	
 	-- Syn data temporary
 	exec Acc_SMATurnoverSyn

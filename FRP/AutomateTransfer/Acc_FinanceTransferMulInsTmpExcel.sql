@@ -98,7 +98,7 @@ SET NOCOUNT ON
 			INNER JOIN custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username
 			INNER JOIN Exchange e1 WITH (NOLOCK) ON c1.currency = e1.exchangeid
 			INNER JOIN Exchange e2 WITH (NOLOCK) ON c2.currency = e2.exchangeid
-			LEFT JOIN Acc_ExchangeRate er WITH (NOLOCK) ON er.FromExchangeID = e1.exchangeid and er.ToExchangeID = e2.exchangeid
+			LEFT JOIN DBPOLICY.bodb02.dbo.Acc_ExchangeRate er WITH (NOLOCK) ON er.FromExchangeID = e1.exchangeid and er.ToExchangeID = e2.exchangeid
 	WHERE ISNUMERIC(Amount)=1 and ISNUMERIC(ExRate)=1
 			and cast(ExRate AS FLOAT) > 0
 			and cast(Amount AS FLOAT) <> 0

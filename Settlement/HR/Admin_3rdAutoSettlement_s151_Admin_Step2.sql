@@ -1,16 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Admin_3rdAutoSettlement_s151_Admin_Step2]    Script Date: 09/07/2012 12:37:19 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
--- =============================================
--- Author:		<Author,,Name>
--- Create date: <Create Date,,>
--- Description:	<Description,,>
--- =============================================
-ALTER PROCEDURE [dbo].[Admin_3rdAutoSettlement_s151_Admin_Step2]
+﻿ALTER PROCEDURE [dbo].[Admin_3rdAutoSettlement_s151_Admin_Step2]
 	@LeagueID int,
 	@raceNumber int,
 	@eventdate smalldatetime,
@@ -18,17 +6,19 @@ ALTER PROCEDURE [dbo].[Admin_3rdAutoSettlement_s151_Admin_Step2]
 	@Action varchar(10) = 'CAL'
 AS
 BEGIN
-/* @Action input
-CAL: (default) settle
-REFUND: race abandon
-
-Revisions:
-	- 20100916@Jamie: Update changeTime for Outright table 
-	- 20110617@Victor: Splitting POC SP , Mark That Part for New Create SP On TranDB works 
-	- 20110902@Vivi: Add write log
-	- 20120717@Cooper: add try catch 
-	- 20120927@Elodie: No need to add dummy transaction into bettrans and backup table (bettrans2)
-*/
+	/* @Action input
+	CAL: (default) settle
+	REFUND: race abandon
+	
+	DB: DBTXN/BODB02
+	Revisions:
+		- 20100916@Jamie: Update changeTime for Outright table 
+		- 20110617@Victor: Splitting POC SP , Mark That Part for New Create SP On TranDB works 
+		- 20110902@Vivi: Add write log
+		- 20120717@Cooper: add try catch 
+		- 20120927@Elodie: No need to add dummy transaction into bettrans and backup table (bettrans2)
+		- 20130524@Elodie: Write settlement log for horse racing
+	*/
     IF @programdate='' set @programdate=@eventdate
 
 	-- Code to Log Message put here		
@@ -85,6 +75,25 @@ Revisions:
 		-- REFUND
 		EXEC dbo.Admin_3rdCalculate_s151_Refund_Admin @LeagueID, @raceNumber, @eventdate
 	END
+	
+	-- WRITE LOG
+	DECLARE @Remark varchar(500)
+	BEGIN TRY
+		SET @Remark = 'Action:' + @Action + ' ProgramDate:' + CAST(@programdate as nvarchar(20))			
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
+			@UserID = 151, 
+			@MatchID = @raceNumber, 
+			@ActionID = 132, 
+			@LeagueID = @LeagueID, 
+			@EventDate = @eventdate,
+			@Remark = @Remark
+			
+	END TRY
+	BEGIN CATCH		
+		SET @Remark = 'Action:' + @Action + ' Race:' + CAST(@raceNumber as nvarchar(20)) + ' ProgramDate:' + CAST(@programdate as nvarchar(20))
+					+ ' EventDate:' + CAST(@eventdate as nvarchar(20)) + ' LeagueID:' + CAST(@LeagueID as nvarchar(20))
+		EXEC dbo.WriteLog_UserLog 151, @Remark
+	END CATCH
 END
 
 GO
