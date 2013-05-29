@@ -336,7 +336,7 @@ BEGIN
    INNER JOIN @sporttype t ON b.sporttype = t.sporttype  
   WHERE    
    b.Winlostdate BETWEEN @FDate AND @TempToDate    
-  -- AND b.roleid = 2     
+   AND b.roleid = 2     
    AND b.statusID <> 101 --exclude REJECT bets  
    AND ISNULL(b.isBA,0) = 0  
   GROUP BY  b.winlostdate,b.currency, s.mrecommend, b.statusID  
