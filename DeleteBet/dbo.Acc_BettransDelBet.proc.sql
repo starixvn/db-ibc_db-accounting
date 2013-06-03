@@ -36,6 +36,7 @@ AS
 						   Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
+		- 20130603@Johnson: get additional information for mailing
 */
 
 SET NOCOUNT ON
@@ -148,10 +149,21 @@ where c.custid=b.custid
 IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND transid = @transid)
 	IF EXISTS (SELECT custid FROM customer (nolock) WHERE custid = @UserID)
 	BEGIN
+		-- calculate balance of customer
+		DECLARE @isNegativeBalance BIT, @totalbalance MONEY
+		
 		SELECT	@balance = (winlost - actual_stake + playercomm)
 		FROM	bettrans with (nolock)
 		WHERE	transid = @transid
-	
+		
+		
+		SELECT	@totalbalance = SUM(winlost - actual_stake + playercomm)
+		FROM	bettrans with (nolock)
+		WHERE	custid = @custid
+		
+		SELECT @isNegativeBalance = CASE WHEN @balance > 0 AND (credit + @totalbalance - @balance) < 0 THEN 1 ELSE 0 END
+		FROM custinfo WITH(NOLOCK)
+		WHERE custid = @custid 
 			
 		INSERT INTO zzzbettrans
 			(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
@@ -184,6 +196,70 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		SELECT @LogData = 'delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@transid as varchar(20))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 		EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
+		
+		--return all additional information for mailing
+		IF @keyID = 2 --outright bettype
+		BEGIN 
+			SELECT
+			MATCH.teamid AS homeid,
+			0 AS awayid,
+			MATCH.matchcode,
+			MATCH.eventdate,
+			MATCH.leagueid,
+			GETDATE() AS DATETIME,
+			CONVERT(BIT,0) AS IsNeutral
+		FROM
+			Outright AS MATCH WITH (NOLOCK)
+		WHERE 
+			MATCH.orid = @matchID
+		END   
+		ELSE
+		BEGIN
+			SELECT
+				MATCH.homeid,
+				MATCH.awayid,
+				MATCH.matchcode,
+				MATCH.eventdate,
+				MATCH.leagueid,
+				GETDATE() AS DATETIME,
+				isnull(MATCH.isNeutral, CONVERT(BIT,0)) AS IsNeutral
+			FROM
+				MATCH WITH (NOLOCK)
+			WHERE 
+				MATCH.matchid = @matchID
+		END
+		
+		SELECT
+			customer.username,
+			customer.username2,
+			b.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.transid AS refno,
+			betteam,
+			hdp1,
+			hdp2,
+			betfrom,
+			livehomescore,
+			liveawayscore,
+			cr.username creator,
+			stake,     
+			b.status,
+			b.spositiontaking,
+			b.mpositiontaking,
+			b.apositiontaking,
+			b.winlost - actual_stake as winlost,
+			b.playercomm as comm,      
+			b.currency,
+			ag.site,
+			@isNegativeBalance as isNegative
+		FROM
+			bettrans b WITH (NOLOCK)
+			INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+		WHERE b.transid = @transid
 	END
 -----
 DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
