@@ -72,9 +72,7 @@ BEGIN
 			@TrackingValue = @LogData,
 			@Duration = @duration	
 	END CATCH		
-	
-	-- Syn data temporary
-	exec Acc_SMATurnoverSyn						
+						
 END
 
 GO
