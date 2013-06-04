@@ -47,7 +47,7 @@ If @ErrCode <> 0
 	RETURN
 --end
 
-DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype int, @matchid int, @Remark VARCHAR(500)
+DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype int, @refno bigint, @matchid int, @Remark VARCHAR(500)
 
 If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
@@ -82,7 +82,7 @@ BEGIN
 	END
 END
 
-SELECT	@winlostdate = b.winlostdate, @bettype = bettype, @matchid = matchid
+SELECT	@winlostdate = b.winlostdate, @bettype = bettype, @matchid = matchid, @refno = refno
 FROM	bettrans b with (nolock)
 WHERE	b.transid = @transid
 
@@ -260,6 +260,14 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
 			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 		WHERE b.transid = @transid
+		
+		--check for live casino
+		IF @bettype IN (1101,1102)
+		BEGIN
+			SELECT @transid as refno, bg.odds, bg.stake, bg.status, bg.bettype, bg.betteam
+			FROM bettransG bg WITH(NOLOCK)	
+			WHERE bg.refno = @refno
+		END
 	END
 -----
 DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)

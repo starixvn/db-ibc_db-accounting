@@ -24,7 +24,7 @@ BEGIN
 	Date: 
 	Original: account\dele\teamlisting.asp
 	Task: Select bets transaction need to delete
-	DB: DB053.BODB02
+	DB: DBAGE/BODB02
 
 	History:
 		- ADMIN SITE
@@ -53,7 +53,7 @@ BEGIN
 		- 20120309@Sophia: Change param @transdate to @FromTransdate and @ToTransdate
 		- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype, f_GetChoice for odds, Oddstype, betteam
 		- 20120711@Sophia: Add condition 'L' in betfrom to check Deposit
-		
+		- 20130604@Johnson: change to use stake instead stakepositiontaking
 	Explanation's Param:
 	    - @SAFilter: 
 	      + 0: All tickets
@@ -68,7 +68,7 @@ BEGIN
 
 */
 	SET NOCOUNT ON
-	CREATE TABLE #SpecialDeleteBets (transid bigint,custid int,username varchar(30),odds smallmoney, OddsType int, transdate datetime,bettype smallint, betteam nvarchar(10),hdp1 smallmoney, hdp2 smallmoney,livehomescore smallint, liveawayscore smallint,creator varchar(30),StakePositiontaking money,currency tinyint,IsDeposit tinyint,site varchar(10),status nvarchar(10), mrecommend int, recommend int, SecAcceptFlag bit)
+	CREATE TABLE #SpecialDeleteBets (transid bigint,custid int,username varchar(30),odds smallmoney, OddsType int, transdate datetime,bettype smallint, betteam nvarchar(10),hdp1 smallmoney, hdp2 smallmoney,livehomescore smallint, liveawayscore smallint,creator varchar(30),Stake money,currency tinyint,IsDeposit tinyint,site varchar(10),status nvarchar(10), mrecommend int, recommend int, SecAcceptFlag bit)
 
 	IF exists( SELECT convert(int,val) FROM dbo.strSplit(@bettypes,'^') Where convert(int,val) in (4,30) )
 		insert into #SpecialDeleteBets
@@ -86,7 +86,7 @@ BEGIN
 			livehomescore,
 			liveawayscore,
 			cr.username as creator,	
-			stake as StakePositiontaking,
+			stake,
 			b.currency, 
 			case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
 			ag.site,
@@ -131,7 +131,7 @@ BEGIN
 		livehomescore,
 		liveawayscore,
 		cr.username as creator,	
-		stake as StakePositiontaking,
+		stake,
 		b.currency, 
 		case when betfrom IN ('D', 'M', 'E' ,'L') then 1 else 0 end as IsDeposit,
 		ag.site,
@@ -188,7 +188,7 @@ BEGIN
 		livehomescore,
 		liveawayscore,
 		cr.username as creator,	
-		stake as StakePositiontaking,
+		stake,
 		b.currency, 
 		case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
 		ag.site,
@@ -242,7 +242,7 @@ BEGIN
 		livehomescore,
 		liveawayscore,
 		cr.username as creator,	
-		stake as StakePositiontaking,
+		stake,
 		b.currency, 
 		case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
 		ag.site,
