@@ -22,7 +22,7 @@ AS
 						   Add table TempVariableNumber to check and not to allow attempt to delete same game while it's still not finish
 						   Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 						   Write more log on DBTXN server in case of DBLOG server failure
-
+		- 20130605@Johnson: get more additional information for mailing
 */
 SET NOCOUNT ON
 
@@ -31,7 +31,7 @@ EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[Del
 If @ErrCode <> 0
 	RETURN
 
-Declare @LogData nvarchar(200), @statusID int, @balance MONEY, @winlostdate datetime, @matchid int, @Remark VARCHAR(500)
+Declare @LogData nvarchar(200), @statusID int, @balance MONEY, @winlostdate datetime, @matchid int, @refno bigint, @Remark VARCHAR(500)
 select @ErrCode = 0
 
 If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
@@ -56,7 +56,7 @@ BEGIN
 	return
 END
 
-SELECT	@winlostdate = b.winlostdate, @matchid = matchid
+SELECT	@winlostdate = b.winlostdate, @matchid = matchid, @refno = refno
 FROM	bettrans b with (nolock)
 WHERE	b.transid = @transid
 
@@ -98,6 +98,47 @@ BEGIN
 	SELECT @ErrCode = 100, @ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
+
+--get additional information for mailing
+SELECT bm.transid,
+	bm.bettype,
+	bm.betteam,
+	bm.odds,
+	bm.hdp1,
+	bm.hdp2,
+	bm.livehomescore,
+	bm.liveawayscore,
+	bm.liveindicator,
+	m.matchid,
+	m.homeid,
+	m.awayid,
+	m.leagueid
+FROM bettransm bm WITH(NOLOCK)
+	INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
+WHERE bm.refno = @refno 
+ORDER BY bm.transid
+
+SELECT transid,
+	b.username,
+	b.custid,
+	transdate,
+	cr.username as creator,	
+	b.stake,
+	b.winlost-b.actual_stake AS winlost,
+	b.playercomm as comm,
+	b.odds,   
+	b.OddsType, 
+	b.bettype,			
+	b.status,
+	b.spositiontaking,
+	b.mpositiontaking,
+	b.apositiontaking,				
+	b.currency,		
+	ag.site	
+FROM bettrans b WITH(NOLOCK) 
+	INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+	INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
+WHERE transid = @transid and bettype = 9
 
 -- get balance
 SELECT @balance = winlost-actual_stake+playercomm

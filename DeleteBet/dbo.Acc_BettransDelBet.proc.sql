@@ -164,6 +164,79 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		SELECT @isNegativeBalance = CASE WHEN @balance > 0 AND (credit + @totalbalance - @balance) < 0 THEN 1 ELSE 0 END
 		FROM custinfo WITH(NOLOCK)
 		WHERE custid = @custid 
+		--return all additional information for mailing
+		IF @keyID = 2 --outright bettype
+		BEGIN 
+			SELECT
+			MATCH.teamid AS homeid,
+			0 AS awayid,
+			MATCH.matchcode,
+			MATCH.eventdate,
+			MATCH.leagueid,
+			GETDATE() AS DATETIME,
+			CONVERT(BIT,0) AS IsNeutral
+		FROM
+			Outright AS MATCH WITH (NOLOCK)
+		WHERE 
+			MATCH.orid = @matchID
+		END   
+		ELSE
+		BEGIN
+			SELECT
+				MATCH.homeid,
+				MATCH.awayid,
+				MATCH.matchcode,
+				MATCH.eventdate,
+				MATCH.leagueid,
+				GETDATE() AS DATETIME,
+				isnull(MATCH.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+				showtime AS GameEvent
+			FROM
+				MATCH WITH (NOLOCK)
+			WHERE 
+				MATCH.matchid = @matchID
+		END
+		
+		SELECT
+			customer.username,
+			customer.username2,
+			b.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.transid AS refno,
+			betteam,
+			hdp1,
+			hdp2,
+			betfrom,
+			livehomescore,
+			liveawayscore,
+			liveindicator,
+			cr.username creator,
+			stake,     
+			b.status,
+			b.spositiontaking,
+			b.mpositiontaking,
+			b.apositiontaking,
+			b.winlost - actual_stake as winlost,
+			b.playercomm as comm,      
+			b.currency,
+			ag.site,
+			@isNegativeBalance as isNegative
+		FROM
+			bettrans b WITH (NOLOCK)
+			INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+		WHERE b.transid = @transid
+		
+		--check for live casino
+		IF @bettype IN (1101,1102)
+		BEGIN
+			SELECT @transid as refno, bg.odds, bg.stake, bg.status, bg.bettype, bg.betteam
+			FROM bettransG bg WITH(NOLOCK)	
+			WHERE bg.refno = @refno
+		END
 			
 		INSERT INTO zzzbettrans
 			(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
@@ -196,78 +269,6 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		SELECT @LogData = 'delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@transid as varchar(20))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 		EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
-		
-		--return all additional information for mailing
-		IF @keyID = 2 --outright bettype
-		BEGIN 
-			SELECT
-			MATCH.teamid AS homeid,
-			0 AS awayid,
-			MATCH.matchcode,
-			MATCH.eventdate,
-			MATCH.leagueid,
-			GETDATE() AS DATETIME,
-			CONVERT(BIT,0) AS IsNeutral
-		FROM
-			Outright AS MATCH WITH (NOLOCK)
-		WHERE 
-			MATCH.orid = @matchID
-		END   
-		ELSE
-		BEGIN
-			SELECT
-				MATCH.homeid,
-				MATCH.awayid,
-				MATCH.matchcode,
-				MATCH.eventdate,
-				MATCH.leagueid,
-				GETDATE() AS DATETIME,
-				isnull(MATCH.isNeutral, CONVERT(BIT,0)) AS IsNeutral
-			FROM
-				MATCH WITH (NOLOCK)
-			WHERE 
-				MATCH.matchid = @matchID
-		END
-		
-		SELECT
-			customer.username,
-			customer.username2,
-			b.odds,  
-			b.OddsType, 
-			b.transdate,
-			b.bettype,
-			b.transid AS refno,
-			betteam,
-			hdp1,
-			hdp2,
-			betfrom,
-			livehomescore,
-			liveawayscore,
-			cr.username creator,
-			stake,     
-			b.status,
-			b.spositiontaking,
-			b.mpositiontaking,
-			b.apositiontaking,
-			b.winlost - actual_stake as winlost,
-			b.playercomm as comm,      
-			b.currency,
-			ag.site,
-			@isNegativeBalance as isNegative
-		FROM
-			bettrans b WITH (NOLOCK)
-			INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-		WHERE b.transid = @transid
-		
-		--check for live casino
-		IF @bettype IN (1101,1102)
-		BEGIN
-			SELECT @transid as refno, bg.odds, bg.stake, bg.status, bg.bettype, bg.betteam
-			FROM bettransG bg WITH(NOLOCK)	
-			WHERE bg.refno = @refno
-		END
 	END
 -----
 DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
