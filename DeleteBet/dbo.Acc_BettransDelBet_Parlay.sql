@@ -22,7 +22,8 @@ AS
 						   Add table TempVariableNumber to check and not to allow attempt to delete same game while it's still not finish
 						   Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 						   Write more log on DBTXN server in case of DBLOG server failure
-		- 20130605@Johnson: get more additional information for mailing
+		- 20130605@Johnson:- get more additional information for mailing
+							- Remove checking concurrent running on table TempVariableNumber by using table SystemSettings
 */
 SET NOCOUNT ON
 
@@ -66,7 +67,7 @@ If @ErrCode <> 0
 	RETURN
 
 ---- check and not allow attempt to delete same game while it's still not finish
-IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
+/*IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
 BEGIN
 	SELECT  @ErrCode = 101,
 			@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed and try again.'
@@ -97,7 +98,20 @@ ELSE
 BEGIN
 	SELECT @ErrCode = 100, @ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
-END
+END*/
+
+IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
+	BEGIN
+		SELECT @ErrCode = 101
+		SELECT @ErrMsg = 'Another parlay settlement is in progress or some parlay tickets are being deleted, please wait a few seconds until the on-going process has finished and try again.'
+		RETURN
+	END
+	ELSE 
+	BEGIN
+		UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
+			SET VValue = '1'
+		WHERE VName = 'isCalculatingParlay'
+	END
 
 --get additional information for mailing
 SELECT bm.transid,
@@ -112,7 +126,9 @@ SELECT bm.transid,
 	m.matchid,
 	m.homeid,
 	m.awayid,
-	m.leagueid
+	m.leagueid,
+	m.sporttype,	
+	isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral
 FROM bettransm bm WITH(NOLOCK)
 	INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
 WHERE bm.refno = @refno 
@@ -134,6 +150,7 @@ SELECT transid,
 	b.mpositiontaking,
 	b.apositiontaking,				
 	b.currency,		
+	GETDATE() AS DATETIME,
 	ag.site	
 FROM bettrans b WITH(NOLOCK) 
 	INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
@@ -182,6 +199,11 @@ Select @LogData ='delete parlay ticket for transid ' + convert(varchar(20), @tra
 EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 -----
+	UPDATE	systemSettings WITH (ROWLOCK, UPDLOCK)
+	SET		VValue = '0'
+    WHERE	VName = 'isCalculatingParlay'	
+			
+/*
 DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
 WHERE KeyID = 1 AND KeyValue = @matchid	
 IF (@@Error = 0)
@@ -224,6 +246,8 @@ IF (@@Error = 0)
 				@Remark = @Remark
 		END CATCH
 	END
+*/
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransDelBet_Parlay] TO [bodbAdminNet]
