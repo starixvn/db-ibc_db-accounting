@@ -393,6 +393,10 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_BettransSelSpecialDel_LiveCS.sql"
             Script = "dbo.Acc_LiveCS_SelGameByID.sql"
          End
+         Begin Folder = "NAP"
+            Script = "NAP_Rpt_TicketsListing.sql"
+            Script = "NAP_Rpt_TicketsListingDetail.sql"
+         End
          Begin Folder = "Number Game"
             Script = "dbo.Acc_BettransDelSpecial_NumberGame.sql"
             Script = "dbo.Acc_BettransRecoverBet_NumberGame.sql"
