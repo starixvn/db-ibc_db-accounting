@@ -47,7 +47,9 @@ If @ErrCode <> 0
 	RETURN
 --end
 
-DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype int, @refno bigint, @matchid int, @Remark VARCHAR(500)
+DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype int, @refno bigint, @matchid int, @Remark VARCHAR(500),
+		-- check customer for mailing live cs
+		@isDepositCust BIT, @is12EUCust BIT, @isRealCust BIT, @srecommend INT,@bet_username NVARCHAR(50), @currency INT, @betfrom NVARCHAR(1)
 
 If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
@@ -82,7 +84,7 @@ BEGIN
 	END
 END
 
-SELECT	@winlostdate = b.winlostdate, @bettype = bettype, @matchid = matchid, @refno = refno
+SELECT	@winlostdate = b.winlostdate, @bettype = bettype, @matchid = matchid, @refno = refno, @betfrom = betfrom
 FROM	bettrans b with (nolock)
 WHERE	b.transid = @transid
 
@@ -161,9 +163,13 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		FROM	bettrans with (nolock)
 		WHERE	custid = @custid
 		
-		SELECT @isNegativeBalance = CASE WHEN @balance > 0 AND (credit + @totalbalance - @balance) < 0 THEN 1 ELSE 0 END
+		SELECT @isNegativeBalance = CASE WHEN @balance > 0 AND (credit + @totalbalance - @balance) < 0 THEN 1 ELSE 0 END,
+			@bet_username = username,
+			@srecommend = srecommend,
+			@currency = currency
 		FROM custinfo WITH(NOLOCK)
 		WHERE custid = @custid 
+		
 		--return all additional information for mailing
 		IF @keyID = 2 --outright bettype
 		BEGIN 
@@ -233,7 +239,14 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		--check for live casino
 		IF @bettype IN (1101,1102)
 		BEGIN
-			SELECT @transid as refno, bg.odds, bg.stake, bg.status, bg.bettype, bg.betteam
+			SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
+			SELECT @is12EUCust	 = CASE WHEN @bet_username = '12EU' THEN 1 ELSE 0 END
+			SELECT @isRealCust = CASE WHEN @currency = 20 THEN 1
+									WHEN @currency <> 20 AND (@Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam') THEN 1 
+									ELSE 0 END
+			
+			SELECT CASE WHEN @isDepositCust = 1 THEN 1 ELSE @is12EUCust END as isDeposit,
+				@isRealCust as isRealCust, @transid as refno, bg.odds, bg.stake, bg.status, bg.bettype, bg.betteam
 			FROM bettransG bg WITH(NOLOCK)	
 			WHERE bg.refno = @refno
 		END
