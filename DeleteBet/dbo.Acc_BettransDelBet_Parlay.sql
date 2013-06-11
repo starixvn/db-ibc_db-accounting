@@ -22,7 +22,8 @@ AS
 						   Add table TempVariableNumber to check and not to allow attempt to delete same game while it's still not finish
 						   Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 						   Write more log on DBTXN server in case of DBLOG server failure
-
+		- 20130605@Johnson:- get more additional information for mailing
+							- Remove checking concurrent running on table TempVariableNumber by using table SystemSettings
 */
 SET NOCOUNT ON
 
@@ -31,7 +32,7 @@ EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[Del
 If @ErrCode <> 0
 	RETURN
 
-Declare @LogData nvarchar(200), @statusID int, @balance MONEY, @winlostdate datetime, @matchid int, @Remark VARCHAR(500)
+Declare @LogData nvarchar(200), @statusID int, @balance MONEY, @winlostdate datetime, @matchid int, @refno bigint, @Remark VARCHAR(500)
 select @ErrCode = 0
 
 If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
@@ -56,7 +57,7 @@ BEGIN
 	return
 END
 
-SELECT	@winlostdate = b.winlostdate, @matchid = matchid
+SELECT	@winlostdate = b.winlostdate, @matchid = matchid, @refno = refno
 FROM	bettrans b with (nolock)
 WHERE	b.transid = @transid
 
@@ -66,7 +67,7 @@ If @ErrCode <> 0
 	RETURN
 
 ---- check and not allow attempt to delete same game while it's still not finish
-IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
+/*IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
 BEGIN
 	SELECT  @ErrCode = 101,
 			@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed and try again.'
@@ -97,7 +98,64 @@ ELSE
 BEGIN
 	SELECT @ErrCode = 100, @ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
-END
+END*/
+
+IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
+	BEGIN
+		SELECT @ErrCode = 101
+		SELECT @ErrMsg = 'Another parlay settlement is in progress or some parlay tickets are being deleted, please wait a few seconds until the on-going process has finished and try again.'
+		RETURN
+	END
+	ELSE 
+	BEGIN
+		UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
+			SET VValue = '1'
+		WHERE VName = 'isCalculatingParlay'
+	END
+
+--get additional information for mailing
+SELECT bm.transid,
+	bm.bettype,
+	bm.betteam,
+	bm.odds,
+	bm.hdp1,
+	bm.hdp2,
+	bm.livehomescore,
+	bm.liveawayscore,
+	bm.liveindicator,
+	m.matchid,
+	m.homeid,
+	m.awayid,
+	m.leagueid,
+	m.sporttype,	
+	isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral
+FROM bettransm bm WITH(NOLOCK)
+	INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
+WHERE bm.refno = @refno 
+ORDER BY bm.transid
+
+SELECT transid,
+	b.username,
+	b.custid,
+	transdate,
+	cr.username as creator,	
+	b.stake,
+	b.winlost-b.actual_stake AS winlost,
+	b.playercomm as comm,
+	b.odds,   
+	b.OddsType, 
+	b.bettype,			
+	b.status,
+	b.spositiontaking,
+	b.mpositiontaking,
+	b.apositiontaking,				
+	b.currency,		
+	GETDATE() AS DATETIME,
+	ag.site	
+FROM bettrans b WITH(NOLOCK) 
+	INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+	INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
+WHERE transid = @transid and bettype = 9
 
 -- get balance
 SELECT @balance = winlost-actual_stake+playercomm
@@ -141,6 +199,11 @@ Select @LogData ='delete parlay ticket for transid ' + convert(varchar(20), @tra
 EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 -----
+	UPDATE	systemSettings WITH (ROWLOCK, UPDLOCK)
+	SET		VValue = '0'
+    WHERE	VName = 'isCalculatingParlay'	
+			
+/*
 DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
 WHERE KeyID = 1 AND KeyValue = @matchid	
 IF (@@Error = 0)
@@ -183,6 +246,8 @@ IF (@@Error = 0)
 				@Remark = @Remark
 		END CATCH
 	END
+*/
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransDelBet_Parlay] TO [bodbAdminNet]

@@ -744,7 +744,7 @@ Param's Explanation: Special bet delete option
 			livehomescore,
 			liveawayscore,
 			cr.username creator,
-			stake AS StakePositiontaking,           
+			stake,           
 			b.currency,
 			ag.site
 		FROM
@@ -801,7 +801,7 @@ Param's Explanation: Special bet delete option
 				livehomescore,
 				liveawayscore,
 				cr.username creator,
-				stake AS StakePositiontaking,           
+				stake,           
 				b.currency,
 				ag.site
 			FROM

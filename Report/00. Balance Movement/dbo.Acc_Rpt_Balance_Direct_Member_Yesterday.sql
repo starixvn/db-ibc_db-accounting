@@ -6,8 +6,9 @@ AS
 	Date: 203-01-31
 	Task: Direct Member Balance
 	DB: DB06.BODB02
+		
 	Revisions:	
-	
+		- 20130531@Johnson: add playercomm for bettype > 19000 to fix data summary bettype(19999)
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -24,11 +25,11 @@ BEGIN
 			LEFT JOIN (
 				SELECT	custid,
 						isnull(SUM(case when bettype < 19001 and winlostdate < @currentdate then winlost - actual_stake + playercomm
-										when bettype > 19000 then winlost - actual_stake 
+										when bettype > 19000 then winlost - actual_stake + playercomm
 									else 0 end),0) bal,
 								
 						isnull(SUM((case when bettype < 19001 and winlostdate < @currentdate then winlost - actual_stake + playercomm
-										 when bettype > 19000 then winlost - actual_stake
+										 when bettype > 19000 then winlost - actual_stake  + playercomm
 										else 0 end)* actualrate),0) as Basebal
 				FROM	bettrans with (nolock) 
 				WHERE	ruben = 1 AND 

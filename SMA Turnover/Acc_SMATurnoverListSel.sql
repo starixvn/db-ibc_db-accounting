@@ -23,7 +23,7 @@ SET NOCOUNT ON
 IF @Todate <= @MoveBetsDay
 BEGIN	
 	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
-	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
+	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
@@ -35,7 +35,7 @@ END
 ELSE IF @FromDate > @MoveBetsDay
 BEGIN
 	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
-	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
+	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
@@ -47,7 +47,7 @@ END
 ELSE 
 BEGIN
 	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
-	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
+	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
@@ -56,7 +56,7 @@ BEGIN
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
 	UNION ALL
 	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
-	FROM DBTXN.bodb02.dbo.DownlineTurnover_Setting t WITH(NOLOCK) 
+	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
 		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid

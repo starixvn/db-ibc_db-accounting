@@ -6,14 +6,14 @@
 AS
 /*
 Created: Robert
-DB: DB053.bodb02
+DB: DBAGE/bodb02
 Revisions: 
 	- 20110408@Amy: Change function to get Odds value and odds type
 	- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype, f_GetChoice for odds, Oddstype, betteam
 	- 20120821@Elodie: Check sport type of input transid to list out appropriate ticket
 					   Change DB053 server instead of DB052 server					   
 	- 20121115@Elodie: Move recover function of Number Game to new SP
-	
+	- 20130604@Johnson: use stake instead alias stakepositiontaking
 Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -62,7 +62,7 @@ BEGIN
 			b.hdp1, 
 			b.hdp2, 
 			b.odds, 
-			b.stake AS StakePositiontaking, 
+			b.stake, 
 			z.STATUS, 
 			b.livehomescore, 
 			b.liveawayscore, 
