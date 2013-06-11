@@ -394,7 +394,6 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_LiveCS_SelGameByID.sql"
          End
          Begin Folder = "NAP"
-            Script = "NAP_BetTypeSel.sql"
             Script = "NAP_Rpt_TicketsListing.sql"
             Script = "NAP_Rpt_TicketsListingDetail.sql"
          End
@@ -1210,6 +1209,7 @@ Begin DataProject = "Account"
    End
    Begin Folder = "Settlement"
       Script = "Acc_Result_MatchSelNumberGameByLeague.sql"
+      Script = "Acc_Set_ParlayWaitingSel.sql"
       Script = "Acc_Set_PrivateMessageForRefund.sql"
       Begin Folder = "ASP"
          Script = "Admin_Calculate_29.sql"
