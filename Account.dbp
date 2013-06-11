@@ -977,6 +977,7 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_SelCurrencyByLicensee.sql"
          End
          Begin Folder = "NegativeBalance"
+            Script = "Acc_LicenseeNegativeBalanceList.sql"
             Script = "Acc_Rpt_NegativeBalanceMember_Dep.sql"
          End
          Begin Folder = "PeakConCurrentUser"
