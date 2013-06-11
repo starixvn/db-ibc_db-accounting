@@ -1,5 +1,4 @@
 ﻿
-
 ALTER PROCEDURE [dbo].[Acc_Set_MatchSel]
 	@FromDate datetime,
 	@ToDate datetime,
@@ -29,7 +28,8 @@ AS
 		- 20111004@Viet: rearrange orderby part  
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match  
 		- 20120626@Jamie: Get meetings for Harness 
-		- 20130328@Lukas: move to DBTXN/bodb02 & get FGLG ticket info 
+		- 20130328@Lukas: move to DBTXN/bodb02 & get FGLG ticket info 		
+		- 20130611@Lukas: Get Parlay calculating status
 		
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
@@ -109,8 +109,8 @@ BEGIN
 		,ISNULL(mr.isUndecided,0) AS isUndecided  --Hurri@20120306
 		,CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END IsKeyscore  
 		,0
-	FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
-		LEFT JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
+	FROM DB02.bodb02.dbo.match m WITH(NOLOCK)
+		LEFT JOIN DB02.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 	WHERE m.eventdate BETWEEN @FromDate AND @ToDate  
 		AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END
 		AND (@UncalOnly = 0 OR ISNULL(mr.calculate,0) = 0)  
@@ -167,7 +167,7 @@ BEGIN
 		,0 AS isUndecided --Hurri@20120306 
 		,0 AS IsKeyscore
 		,0 AS IsFGLG
-	FROM	DBPRO.bodb02.dbo.outright o WITH(NOLOCK)
+	FROM	DB02.bodb02.dbo.outright o WITH(NOLOCK)
 			INNER JOIN league l WITH(NOLOCK) ON o.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
 			AND l.sporttype BETWEEN (CASE WHEN @sporttype = 0 THEN 151 ELSE @sporttype END ) AND (CASE WHEN @sporttype = 0 THEN 153 ELSE @sporttype END )
@@ -175,8 +175,38 @@ BEGIN
 			AND o.leagueid = CASE WHEN @leagueid = 0 THEN o.leagueid ELSE @leagueid END
 			AND (o.oddsstatus = 'completed' OR o.Foddsstatus = 'completed')  
 			
-	SELECT * 
-	FROM #matchList
+	SELECT	m.hthomescore,
+			m.htawayscore,
+			m.IsCalculated,
+			m.IsMultiCaled,
+			m.IsRefund,
+			m.IsCalRefund,
+			m.matchid,
+			m.leagueid,
+			m.homeid,
+			m.awayid,
+			m.matchcode,
+			m.kickofftime,
+			m.finalhomescore,
+			m.finalawayscore,
+			m.betstatus,
+			m.eventstatus,
+			m.Foddsstatus,
+			m.sporttype,
+			m.IsNeutral,
+			m.eventdate,
+			m.goalrecord,
+			m.suspenderHT,
+			m.suspenderFT,
+			m.IsHTCal,
+			m.calculate,
+			m.isPending,
+			m.isUndecided,
+			m.IsKeyscore,
+			m.IsFGLG,
+			ISNULL(w.IsCalculating,0) AS CalcMP			
+	FROM #matchList m
+		LEFT JOIN Parlay_WaitingList w WITH(NOLOCK) ON m.matchid = w.matchid
 	ORDER BY CASE eventstatus WHEN 'completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
 			,eventdate
 			,kickofftime
@@ -188,6 +218,7 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+ 
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet]
