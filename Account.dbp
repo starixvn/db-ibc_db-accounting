@@ -981,6 +981,7 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_SelCurrencyByLicensee.sql"
          End
          Begin Folder = "NegativeBalance"
+            Script = "Acc_LicenseeNegativeBalanceList.sql"
             Script = "Acc_Rpt_NegativeBalanceMember_Dep.sql"
          End
          Begin Folder = "PeakConCurrentUser"
@@ -1208,6 +1209,7 @@ Begin DataProject = "Account"
    End
    Begin Folder = "Settlement"
       Script = "Acc_Result_MatchSelNumberGameByLeague.sql"
+      Script = "Acc_Set_ParlayWaitingSel.sql"
       Script = "Acc_Set_PrivateMessageForRefund.sql"
       Begin Folder = "ASP"
          Script = "Admin_Calculate_29.sql"
