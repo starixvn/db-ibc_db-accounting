@@ -17,7 +17,7 @@ SET NOCOUNT ON
 	Revisions:
 	
 	Example:	DECLARE @ErrCode INT, @ErrMsg NVARCHAR(200)
-				EXEC Acc_CreditTermUpdIsViewReport @custId = 421237, @IsViewReport = 1, @UserID = 8, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+				EXEC Acc_CreditTermUpdIsViewReport @custId = 334521, @IsViewReport = 1, @UserID = 8, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
 				SELECT @ErrCode, @ErrMsg
 		
 						   
