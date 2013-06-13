@@ -1,4 +1,8 @@
-﻿ALTER  PROCEDURE [dbo].[Acc_Rpt_LicNumberGameWinloss]      
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+ALTER  PROCEDURE [dbo].[Acc_Rpt_LicNumberGameWinloss]      
 	@NormalLicensee VARCHAR(1000),  
 	@Operator  VARCHAR(1000),  
 	@FromDate  SMALLDATETIME,    
@@ -85,7 +89,7 @@ BEGIN
 		AND b.status NOT IN (-1,103)
 		AND CurrencyID<>20
 		AND bettype BETWEEN 81 AND 120
-		AND b.rptDate > isnull(p.EffectiveDate,@ToDate)
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 	GROUP BY b.rptDate,b.currencyID, lr.ResellerID, lr.licenseeid
 END
 
@@ -101,7 +105,7 @@ BEGIN
 		INNER JOIN bodb_Licensee.dbo.LicenseeProduct3rd p (NOLOCK) ON lr.LicenseeID=p.LicenseeID AND p.ProductID=2
 	WHERE
 		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
-		AND b.rptDate > isnull(p.EffectiveDate,@ToDate)
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 		AND b.status NOT IN (-1,103)
 		AND lr.ResellerID IN (4,8)
 		AND CurrencyID<>20
@@ -170,6 +174,7 @@ DROP TABLE	#Result
 
 			
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_LicNumberGameWinloss] TO [bodbAdminNet] 
