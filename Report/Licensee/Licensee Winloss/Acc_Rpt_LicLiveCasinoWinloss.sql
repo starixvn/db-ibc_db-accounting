@@ -76,7 +76,7 @@ BEGIN
 		INNER JOIN bodb_licensee.dbo.LicenseeProduct3rd p WITH (NOLOCK) ON lic.LicenseeID=p.LicenseeID AND p.ProductID=4
 	WHERE
 		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
-		AND b.rptDate > isnull(p.EffectiveDate,@ToDate)
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 		AND lr.ResellerID<>3
 		AND lic.isdeposit=1
 		AND sl.IsActive = 1
@@ -98,7 +98,7 @@ BEGIN
 		INNER JOIN bodb_licensee.dbo.LicenseeProduct3rd p WITH (NOLOCK) ON lr.LicenseeID=p.LicenseeID AND p.ProductID=4
 	WHERE
 		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
-		AND b.rptDate > isnull(p.EffectiveDate,@ToDate)
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 		AND b.status NOT IN (-1,103)
 		AND lr.ResellerID<>3
 		AND CurrencyID<>20
