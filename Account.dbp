@@ -152,16 +152,18 @@ Begin DataProject = "Account"
       Script = "dbo.Acc_BetsSelBetList_Old.proc.sql"
       Script = "dbo.Acc_BetsSelBetList_Old_xtest.sql"
    End
+   Begin Folder = "BK"
+      Begin Folder = "ConsolidatedGroup"
+         Script = "dbo.Acc_CustomerDelConsolidatedGroup.sql"
+         Script = "dbo.Acc_CustomerInsConsolidatedGroup_User.sql"
+         Script = "dbo.Acc_CustomerSelByConsolidatedGroupID.sql"
+         Script = "dbo.Acc_CustomerSelConsolidatedGroup.sql"
+         Script = "dbo.Acc_CustomerUpdConsolidatedGroup.sql"
+         Script = "dbo.Acc_CustomerUpdConsolidatedGroupHeader.sql"
+      End
+   End
    Begin Folder = "CheckDate"
       Script = "Acc_CheckSettledDate.sql"
-   End
-   Begin Folder = "ConsolidatedGroup"
-      Script = "dbo.Acc_CustomerDelConsolidatedGroup.sql"
-      Script = "dbo.Acc_CustomerInsConsolidatedGroup_User.sql"
-      Script = "dbo.Acc_CustomerSelByConsolidatedGroupID.sql"
-      Script = "dbo.Acc_CustomerSelConsolidatedGroup.sql"
-      Script = "dbo.Acc_CustomerUpdConsolidatedGroup.sql"
-      Script = "dbo.Acc_CustomerUpdConsolidatedGroupHeader.sql"
    End
    Begin Folder = "CreditTerm"
       Script = "dbo.Acc_CreditTermSelByCustID.StoredProcedure.sql"
