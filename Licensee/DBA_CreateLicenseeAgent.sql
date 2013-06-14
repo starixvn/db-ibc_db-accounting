@@ -1,4 +1,8 @@
-﻿ALTER  PROCEDURE [dbo].[DBA_CreateLicenseeAgent]
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+ALTER  PROCEDURE [dbo].[DBA_CreateLicenseeAgent]
 	@LicenseeName varchar(50),
 	@SuperWildCard varchar(50),
 	@Currency int = 0,
@@ -21,6 +25,7 @@ AS
 	Revisions:
 	- 20120509@Henry: add 1 more param: @IsDeposit (default = 1)
 	- 20120611@Henry: only get from real agent (condition: username NOT like @LicenseeName + 'ACC%')
+	- 20130603@Jim: restrict permission of Licensee User
 */
 
 declare @LicenseeID int
@@ -137,6 +142,36 @@ A.LicenseeID = B.LicenseeID
 and A.custid = B.custid 
 and A.roleid = B.roleid 
 and A.currency = B.currency)
+/*
+- Grant currencey permission to Licensee's Users
+*/
+DECLARE @tblCurrency AS TABLE (ID INT IDENTITY(1,1), CurrencyID INT)
+DECLARE @usr AS TABLE (UserID INT )
+DECLARE @count INT,@maxID INT 
+DECLARE @Cur  INT
+
+INSERT INTO @tblCurrency (CurrencyID)
+	SELECT Currency as CurrencyID
+	FROM dbo.LicenseeCust WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	EXCEPT
+	SELECT CurrencyID
+	FROM dbo.CurrencyUser WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+INSERT INTO @usr(UserID) 
+	SELECT usrID 
+	FROM dbo.CurrencyUser WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	
+SELECT @count=1,@maxID=Max(ID)
+FROM @tblCurrency
+WHILE (@Count<=@maxID)	
+	BEGIN 
+		SELECT @Cur=CurrencyID FROM @tblCurrency WHERE ID=@count
+		INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
+		SELECT userID,@LicenseeID,@Cur,1,1 ---- System=1 is default for LRF
+		FROM @usr
+	END
 
 GO
 GRANT EXECUTE ON [dbo].[DBA_CreateLicenseeAgent] TO [vnteam]

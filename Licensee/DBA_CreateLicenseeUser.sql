@@ -1,4 +1,9 @@
-﻿ALTER  PROCEDURE [dbo].[DBA_CreateLicenseeUser]
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+
+ALTER PROCEDURE [dbo].[DBA_CreateLicenseeUser]
 	@LicenseeName varchar(50),
 	@Username varchar(50),
 	@UserPwd varchar (50),
@@ -20,15 +25,22 @@ AS
 	+ @LicenseeName example: 12BET
 	+ @PageAccess: TotalBets, Forecast, Reports, ManageMember, DataWarehouse, ManageAccount
 	
-	Revisions: 
-	- 20110113@Henry: add param @PageAccess for input access
+	Revisions:
+		Daniel@20130312: Add pageaccess customer reports
+		Jim@20130603: restrict currency permission for licensee user 
 	
 */
 
 declare @LicenseeID int
 declare @UserID int
+declare @Currency as table (CurrencyID INT)
 
 select @LicenseeID = LicenseeID from Licensees (nolock) where LicenseeName = @LicenseeName
+
+insert into @currency (CurrencyID)
+select currencyID
+from dbo.CurrencyUser WITH (NOLOCK) WHERE LicenseeID=@LicenseeID
+
 
 if isnull(@LicenseeID,0) = 0
 begin
@@ -50,11 +62,16 @@ begin
 	set @UserID = @@identity
 end
 
---insert new licenseeuser
+--insert new licenseeuser and restrict currency permisson to licensee user 
 if not exists(select 1 from LicenseeUser (nolock) where LicenseeID = @LicenseeID and UserID = @UserID)
 begin
 	insert into LicenseeUser (LicenseeID, UserID, isActive)
 	values (@LicenseeID, @UserID, 1)
+	
+	insert into dbo.CurrencyUser (usrID,LicenseeID,CurrencyID,SystemID,isActive)
+	select @UserID,@LicenseeID,CurrencyID,1,1 -- systemID=1 is default from Lrf
+	from @currency
+
 end
 else
 begin
@@ -124,6 +141,14 @@ BEGIN
 	AND (f.FunctionId = 6 OR f.ParentId = 6)
 END
 
-
+IF CHARINDEX('CustomerReports', @PageAccess) > 0
+BEGIN
+	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
+	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
+	FROM [Functions] f WITH(NOLOCK)
+		INNER JOIN [LicenseeFunctions] l WITH(NOLOCK) ON f.FunctionId = l.FunctionId
+	WHERE l.LicenseeId =@LicenseeId			
+	AND (f.FunctionId = 52 OR f.ParentId = 52)
+END
 GO
 GRANT VIEW DEFINITION ON [dbo].[DBA_CreateLicenseeUser] TO [vnteam] 

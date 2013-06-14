@@ -1,4 +1,8 @@
-﻿ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
 (
 	@LicenseeName VARCHAR(50),
 	@SuperWildCard VARCHAR(100)='',
@@ -21,6 +25,7 @@ Revisions:
 	+20120716@Jim: add IsActive config for new licensee 
 	+20121205@henry: add param @SuperWildCard
 	+20130204@Jim: add param @ResellerID 
+	+20130603@Jim: grant currency permission 
 	
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
@@ -56,7 +61,6 @@ WHERE licenseename = @LicenseeName
 
 IF isnull(@licenseeid,0)=0
 RAISERROR('Could not insert new licensee, please check again',16,1)
-
 
 
 /*
@@ -123,8 +127,37 @@ BEGIN
         INSERT INTO LicenseeUser (LicenseeID,UserID,isActive,PageAccess)
         VALUES (@licenseeid,@UserID,1,'')
     END
+	
+	/*
+	- Grant currencey permission to Licensee's Users
+	*/
+	DECLARE @Currency AS TABLE (ID INT IDENTITY(1,1), CurrencyID INT)
+	DECLARE @usr AS TABLE (UserID INT )
+	DECLARE @count INT,@maxID INT 
 
+	INSERT INTO @Currency(CurrencyID)
+	SELECT Currency
+	FROM bodb_licensee.dbo.LicenseeCust WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	
+	INSERT INTO @usr
+	SELECT UserID FROM dbo.LicenseeUser WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	EXCEPT
+	SELECT usrID as UserID FROM dbo.CurrencyUser WITH (NOLOCK) 
+	WHERE LicenseeID=@LicenseeID
 
+	SELECT @Count=1,@maxID=max(ID) FROM @Currency
+		
+	WHILE (@count<=@maxID)
+	BEGIN 
+		DECLARE @Cur INT
+		SELECT @Cur=CurrencyID FROM @Currency WHERE ID=@count
+		INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
+		SELECT UserID,@LicenseeID,@Cur,1,1 ---SystemID=1 is default for Lrf
+		FROM @usr
+		SET @count=@count+1
+	END 
 	--Total bets
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
