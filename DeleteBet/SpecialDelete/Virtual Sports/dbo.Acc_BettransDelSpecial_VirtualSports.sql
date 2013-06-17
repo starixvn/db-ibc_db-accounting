@@ -34,6 +34,7 @@ Revisions:
 	- 20130103@Elodie: Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 	- 20130128@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20130617@Johnson: change alias StakePositiontaking to stake
 						   	    
 Param's Explanation: Special bet delete option
     @@DelOption = 0: No Delete (need to remove DepositBets out of #BetDelete)
@@ -457,7 +458,7 @@ BEGIN
 			livehomescore,
 			liveawayscore,
 			cr.username creator,
-			stake AS StakePositiontaking,           
+			stake,           
 			b.currency,
 			ag.site
 		FROM
@@ -509,7 +510,7 @@ BEGIN
 				livehomescore,
 				liveawayscore,
 				cr.username creator,
-				stake AS StakePositiontaking,           
+				stake,           
 				b.currency,
 				ag.site
 			FROM
