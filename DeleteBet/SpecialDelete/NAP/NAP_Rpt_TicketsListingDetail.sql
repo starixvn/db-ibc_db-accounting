@@ -1,6 +1,6 @@
-﻿ ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
+﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
 	@matchID INT,
-	@LicenseeNames VARCHAR(1000),
+	@LicenseeName VARCHAR(1000),
 	@bettypes VARCHAR(1000), 
 	@bettypesLive VARCHAR(1000) ,
 	@LiveType SMALLINT = 2,	
@@ -27,7 +27,7 @@ AS
 		1: Number Game
 		2: Virtual sports
 		3: Live casino
-	- @LicenseeNames:
+	- @LicenseeName:
 		ALL, IBC, 12bet, ...	
 	- @bettypes: String of bettype for Sportsbook, virtual sports and for Dead Ball - Number game, Live casino
 	- @bettypesLive: String of bettype ONLY for Live - Number game 
@@ -44,7 +44,7 @@ AS
       + 1: Normal tickets only
       + 2: SA tickets only	
      
-   Example: exec NAP_Rpt_TicketsListingDetail @matchID=4626986,@LicenseeNames='IBC',@bettypes='1101,1102',@bettypesLive='',@LiveType=0,@livehomescore=default,@liveawayscore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SAFilter=0
+   Example: exec NAP_Rpt_TicketsListingDetail @matchID=4626986,@LicenseeName='IBC',@bettypes='1101,1102',@bettypesLive='',@LiveType=0,@livehomescore=default,@liveawayscore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SAFilter=0
 	
 */
 SET NOCOUNT ON 
@@ -63,7 +63,7 @@ SELECT @LiveType = 0
 IF @p_bettypes <> '9' AND @bettypes <> '29' AND @bettypes <> '9,29'
 BEGIN
 ----Direct Licensee
-	IF @LicenseeNames <> 'IBC' AND @LicenseeNames <> 'ALL' 
+	IF @LicenseeName <> 'IBC' AND @LicenseeName <> 'ALL' 
 	BEGIN				 
 		SELECT	b.username,
 				b.bettype,		
@@ -91,7 +91,7 @@ BEGIN
 				ISNULL(SecAcceptFlag,0) SecAcceptFlag
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
-		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeNames) )
+		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName) )
 					AND b.statusID NOT IN (101,102, 121) ---('Void', 'Reject', 'Dummy')
 					AND b.matchid = @matchid 
 			 	   	AND
@@ -116,7 +116,7 @@ BEGIN
 	END
 
 	---IBC 
-	IF @LicenseeNames = 'IBC'  
+	IF @LicenseeName = 'IBC'  
 	BEGIN	
 		SELECT	b.username,
 				b.bettype,		
@@ -169,7 +169,7 @@ BEGIN
 	END
 
 	---ALL
-	IF @LicenseeNames= 'ALL' 
+	IF @LicenseeName= 'ALL' 
 	BEGIN 	
 		SELECT	b.username,
 				b.bettype,		
@@ -253,7 +253,7 @@ END
 IF charindex('9', @p_bettypes , 1) <> 0  
 BEGIN 
 	---Licensee
-	IF @LicenseeNames <> 'IBC' AND @LicenseeNames <> 'ALL' 
+	IF @LicenseeName <> 'IBC' AND @LicenseeName <> 'ALL' 
 	BEGIN		
 		SELECT
 				b.username,
@@ -286,7 +286,7 @@ BEGIN
 		INNER JOIN  Bettrans b WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@bettypes,',') t ON b.bettype = t.val
 		INNER JOIN  match m WITH (NOLOCK) ON m.matchid = bm.MatchID	
-		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeNames)) 
+		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName)) 
 					AND b.statusID NOT IN (101,102) --- ('Void', 'Reject' )
 					AND b.bettype IN(9,29) AND b.matchID IN (9,29)
 					AND bm.matchid = @matchid 
@@ -302,7 +302,7 @@ BEGIN
 	ELSE 
 	
 	---IBC
-	IF @LicenseeNames= 'IBC'  
+	IF @LicenseeName= 'IBC'  
 	BEGIN		
 		SELECT	b.username,
 				b.bettype,	
@@ -348,7 +348,7 @@ BEGIN
 	END 
 
 	---ALL
-	IF @LicenseeNames= 'ALL'  
+	IF @LicenseeName= 'ALL'  
 	BEGIN		
 		SELECT	b.username,
 				b.bettype,		
