@@ -1,6 +1,5 @@
 ﻿
 
-
 ALTER PROCEDURE [dbo].[Acc_LicenseeNegativeBalanceList]
 (
 	@site NVARCHAR(50)
@@ -34,7 +33,8 @@ BEGIN
 		AND c.balance - d.balance < 0  -- negative balance
 	
 	
-	SELECT	c.username,c.currency, tt.*
+	SELECT	c.username,e.currency, tt.*
+	INTO #result 
 	FROM custinfo c WITH(NOLOCK)
 		INNER JOIN (	SELECT	
 								COALESCE(br.site,@site) AS site
@@ -46,6 +46,7 @@ BEGIN
 							RIGHT JOIN #tmp t ON br.custid = t.custid AND br.site = @site
 						WHERE br.site = @site OR br.site IS NULL
 					) tt ON c.custid = tt.custid
+		INNER JOIN exchange e WITH(NOLOCK) ON e.exchangeid = c.currency 
 	WHERE c.currency <> 20
 	
 	-- update balance record
@@ -74,7 +75,20 @@ BEGIN
 			AND custid NOT IN (SELECT custid FROM #tmp)
 	END
 	
+	IF EXISTS (SELECT TOP 1 1 FROM #result WHERE isHighlight = 1)
+	BEGIN
+		SELECT *
+		FROM #result
+	END
+	ELSE 
+	BEGIN
+		SELECT *
+		FROM #result
+		WHERE site IS NULL
+	END
 END
+
+
 
 GO
 GRANT EXECUTE ON [Acc_LicenseeNegativeBalanceList] TO bodbadminNet
