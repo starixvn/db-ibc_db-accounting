@@ -18,7 +18,7 @@ AS
 	DB: DB053.BODB02
 
 	History:		
-		
+		- 20130617@Johnson: change alias StakePositiontaking to stake
 	Explanation's Param:	
 		- @betteam1201: include Handicap(1201), Over/Under(1203), Double chance(1224) of Virtual sports
 		- @betteam1205: include FT1x2(1205) of Virtual sports
@@ -28,7 +28,7 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	CREATE TABLE #SpecialDeleteBets (transid bigint,custid int,username varchar(30),odds smallmoney, transdate datetime,bettype smallint, betteam nvarchar(10),hdp1 smallmoney, hdp2 smallmoney, livehomescore smallint, liveawayscore smallint, creator varchar(30), StakePositiontaking money,currency tinyint,IsDeposit tinyint,site varchar(10),status nvarchar(10), mrecommend int, recommend int)
+	CREATE TABLE #SpecialDeleteBets (transid bigint,custid int,username varchar(30),odds smallmoney, transdate datetime,bettype smallint, betteam nvarchar(10),hdp1 smallmoney, hdp2 smallmoney, livehomescore smallint, liveawayscore smallint, creator varchar(30), Stake money,currency tinyint,IsDeposit tinyint,site varchar(10),status nvarchar(10), mrecommend int, recommend int)
 	
 	--Correct Score
 	IF exists( SELECT convert(int,val) FROM dbo.strSplit(@bettypes,'^') Where convert(int,val) = 1204)
@@ -46,7 +46,7 @@ BEGIN
 			livehomescore,
 			liveawayscore,
 			cr.username as creator,	
-			stake as StakePositiontaking,
+			stake,
 			b.currency, 
 			case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
 			ag.site,
@@ -79,7 +79,7 @@ BEGIN
 		livehomescore,
 		liveawayscore,
 		cr.username as creator,	
-		stake as StakePositiontaking,
+		stake,
 		b.currency, 
 		case when betfrom IN ('D', 'M', 'E' ,'L') then 1 else 0 end as IsDeposit,
 		ag.site,
@@ -125,7 +125,7 @@ BEGIN
 		livehomescore,
 		liveawayscore,
 		cr.username as creator,	
-		stake as StakePositiontaking,
+		stake ,
 		b.currency, 
 		case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
 		ag.site,

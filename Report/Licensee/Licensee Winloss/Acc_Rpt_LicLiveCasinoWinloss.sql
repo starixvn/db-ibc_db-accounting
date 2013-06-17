@@ -15,6 +15,7 @@ AS
  * Revisions :  
 	- 20130219@Jim: add more filter for Licensee From table LicenseeProduct3rd
 	- 20130508@Jim: add more filter gametype
+	- 20130613@Jim: change condition AffectedDate,EffectiveDate
  * Param's Explanation:    
  *  - @NormalLicensee : List of normal licensee ID separated by ','  
  *  - @Operator   : List of operator ID separated by ','  
@@ -28,7 +29,7 @@ BEGIN
 
 SET NOCOUNT ON
 
-DECLARE @tmpLicenseeReseller AS TABLE (ResellerID INT, LicenseeID INT)
+DECLARE @tmpLicenseeReseller AS TABLE (ResellerID INT, LicenseeID INT,AffectedDate Datetime)
 
 CREATE TABLE #Data (winlostdate  DATETIME, Currency  INT,bettype INT,  ResellerID int, LicenseeID int,turnover MONEY, MemberWinloss MONEY, Betcount INT)
 CREATE TABLE #Result (ResellerID INT,LicenseeID int,turnover MONEY, MemberWinloss MONEY,GrossWinloss MONEY, DistributorRevenue MONEY, Betcount INT,StarExpressRevenue MONEY, OneworksRevenue MONEY,DistributorsChargeRate MONEY, StarExpressChargeRate MONEY,OneworksChargeRate MONEY)
@@ -36,11 +37,13 @@ CREATE TABLE #Result (ResellerID INT,LicenseeID int,turnover MONEY, MemberWinlos
 --Get normal licensee list:
 IF LTRIM(RTRIM(ISNULL(@NormalLicensee,''))) <> ''
 BEGIN
-	INSERT INTO @tmpLicenseeReseller (ResellerID,LicenseeID)
-	SELECT lr.ResellerID,lr.LicenseeID
+	INSERT INTO @tmpLicenseeReseller (ResellerID,LicenseeID,AffectedDate)
+	SELECT lr.ResellerID,lr.LicenseeID,
+				CASE WHEN @fromdate<=l.AffectedDate THEN l.AffectedDate ELSE @fromdate END AffectedDate	
 	FROM	
 		bodb_licensee.dbo.LicenseeReseller lr (NOLOCK)
 		INNER JOIN bodb_licensee.dbo.Resellers r WITH (NOLOCK) ON lr.ResellerID = r.ResellerID
+		INNER JOIN bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON lr.LicenseeID=l.LicenseeID
 	WHERE
 		r.ResellerID <> 3 
 		AND lr.LicenseeID IN (SELECT RTRIM(LTRIM(VAL)) FROM strSplit(@NormalLicensee,','))	
@@ -49,11 +52,13 @@ END
 -- Operator
 IF LTRIM(RTRIM(ISNULL(@Operator,''))) <> ''
 BEGIN
-	INSERT INTO @tmpLicenseeReseller (ResellerID, LicenseeID)   
-	SELECT lr.ResellerID, lr.LicenseeID   
+	INSERT INTO @tmpLicenseeReseller (ResellerID, LicenseeID,AffectedDate)   
+	SELECT lr.ResellerID, lr.LicenseeID  ,
+			 CASE WHEN @fromdate<=l.AffectedDate THEN l.AffectedDate ELSE @fromdate END AffectedDate	
 	FROM 
 		bodb_licensee.dbo.LicenseeReseller lr (NOLOCK)
 		INNER JOIN bodb_licensee.dbo.Resellers r WITH (NOLOCK) ON lr.ResellerID = r.ResellerID
+		INNER JOIN bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON lr.LicenseeID=l.LicenseeID
 	WHERE
 		r.ResellerID IN (SELECT RTRIM(LTRIM(VAL)) FROM strSplit(@Operator,','))		
 END
@@ -70,14 +75,12 @@ BEGIN
 		INNER JOIN bodb_Licensee.dbo.Systems s (NOLOCK) ON sl.SystemID=s.ID
 		INNER JOIN bodb_licensee.dbo.LicenseeProduct3rd p WITH (NOLOCK) ON lic.LicenseeID=p.LicenseeID AND p.ProductID=4
 	WHERE
-		b.rptDate BETWEEN @FromDate AND @ToDate
-		AND b.rptDate >= isnull(p.EffectiveDate,'1999-01-01')
+		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 		AND lr.ResellerID<>3
 		AND lic.isdeposit=1
 		AND sl.IsActive = 1
 		AND s.SystemName='Accounting'
-		--AND @FromDate >= isnull(lic.AffectedDate,'1999-01-01')
-		AND b.rptDate >= isnull(lic.AffectedDate,'1999-01-01')
 		AND b.status NOT IN (-1,103)
 		AND CurrencyID<>20
 		AND bettype BETWEEN 1101 AND 1199
@@ -94,12 +97,10 @@ BEGIN
 		INNER JOIN bodb_Licensee.dbo.rpt_Betting b WITH ( NOLOCK) ON b.siteID=lb.LabelID
 		INNER JOIN bodb_licensee.dbo.LicenseeProduct3rd p WITH (NOLOCK) ON lr.LicenseeID=p.LicenseeID AND p.ProductID=4
 	WHERE
-		b.rptDate BETWEEN @FromDate AND @ToDate
-		AND b.rptDate >= isnull(p.EffectiveDate,'1999-01-01')
+		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 		AND b.status NOT IN (-1,103)
 		AND lr.ResellerID<>3
-		--AND @FromDate >= isnull(lb.AffectedDate,'1999-01-01')
-		AND b.rptDate >= isnull(lb.AffectedDate,'1999-01-01')
 		AND CurrencyID<>20
 		AND bettype BETWEEN 1101 AND 1199
 		AND b.customercategory NOT IN (27,28) 
