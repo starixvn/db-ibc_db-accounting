@@ -701,6 +701,7 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_Rpt_WinlostBI_Details14.sql"
          End
          Begin Folder = "BK"
+            Script = "dbo.Acc_Rpt_MatchWinLoss2.proc.sql"
             Script = "dbo.Acc_Rpt_WinlostMiniGames_Details.sql"
             Script = "dbo.Acc_Rpt_WinlostMiniGames_Details14.sql"
          End
@@ -708,7 +709,6 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_Rpt_WinlostCA_Details.sql"
             Script = "dbo.Acc_Rpt_WinlostCA_Details14.sql"
          End
-         Script = "dbo.Acc_Rpt_MatchWinLoss2.proc.sql"
          Script = "dbo.Acc_Rpt_MatchWinLoss2_New.sql"
          Script = "dbo.Acc_Rpt_MatchWinLoss2_New14.sql"
          Script = "dbo.Acc_Rpt_MatchWinLoss2_Sporttype.sql"

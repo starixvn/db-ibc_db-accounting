@@ -19,11 +19,12 @@ AS
 Created by: Scott  
 Date: 2012-12-17 
 Task : Report Tree Win Lost  
-DB: DB06.bodb02  
+DB: DBACC/bodb02  
 Original SP:   
 Revisions:  
 	-20130115@Scott : fix bug sum total of poker sporttype
 	-20130418@Scott : Update formula turnover of Racing
+	- 20130618@Johnson: Add NSW racing's pools from AUST
 */  
 
 SET NOCOUNT ON
@@ -88,23 +89,29 @@ BEGIN
 	BEGIN
 	
 		INSERT INTO @tmpIBCFee (partnerID, IBCFee)  
-		SELECT 1,1 --RACE-PHU  
+			SELECT 1,1 --RACE-PHU  
 		UNION ALL  
-		SELECT 2,0 --RACE-ATRUK  
+			SELECT 2,0 --RACE-ATRUK  
 		UNION ALL  
-		SELECT 3,0 --RACE-ATRIRL  
+			SELECT 3,0 --RACE-ATRIRL  
 		UNION ALL  
-		SELECT 4,0 --RACE-RUK  
+			SELECT 4,0 --RACE-RUK  
 		UNION ALL  
-		SELECT 5,1 --RACE-TABCORP  
+			SELECT 5,1 --RACE-TABCORP  
 		UNION ALL  
-		SELECT 101,1 --GREY-DTOTEUK  
+			SELECT 6,1 --RACE-TABCORPNSW  
 		UNION ALL  
-		SELECT 102,1 --GREY-DTOTEIRL  
+			SELECT 101,1 --GREY-DTOTEUK  
 		UNION ALL  
-		SELECT 103,1 --GREY-TABCORP  
+			SELECT 102,1 --GREY-DTOTEIRL  
 		UNION ALL  
-		SELECT 201,1 --HAR-TABCORP  
+			SELECT 103,1 --GREY-TABCORP
+		UNION ALL  
+			SELECT 104,1 --GREY-TABCORPNSW  
+		UNION ALL  
+			SELECT 201,1 --HAR-TABCORP
+		UNION ALL  
+			SELECT 202,1 --HAR-TABCORPNSW  
 
 		INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)  
 		SELECT DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee   
@@ -234,23 +241,29 @@ BEGIN
 	BEGIN
 	
 		INSERT INTO @tmpIBCFee (partnerID, IBCFee)  
-		SELECT 1,1 --RACE-PHU  
+			SELECT 1,1 --RACE-PHU  
 		UNION ALL  
-		SELECT 2,0 --RACE-ATRUK  
+			SELECT 2,0 --RACE-ATRUK  
 		UNION ALL  
-		SELECT 3,0 --RACE-ATRIRL  
+			SELECT 3,0 --RACE-ATRIRL  
 		UNION ALL  
-		SELECT 4,0 --RACE-RUK  
+			SELECT 4,0 --RACE-RUK  
 		UNION ALL  
-		SELECT 5,1 --RACE-TABCORP  
+			SELECT 5,1 --RACE-TABCORP  
 		UNION ALL  
-		SELECT 101,1 --GREY-DTOTEUK  
+			SELECT 6,1 --RACE-TABCORPNSW  
 		UNION ALL  
-		SELECT 102,1 --GREY-DTOTEIRL  
+			SELECT 101,1 --GREY-DTOTEUK  
 		UNION ALL  
-		SELECT 103,1 --GREY-TABCORP  
+			SELECT 102,1 --GREY-DTOTEIRL  
 		UNION ALL  
-		SELECT 201,1 --HAR-TABCORP  
+			SELECT 103,1 --GREY-TABCORP  
+		UNION ALL  
+			SELECT 104,1 --GREY-TABCORPNSW  
+		UNION ALL  
+			SELECT 201,1 --HAR-TABCORP 
+		UNION ALL  
+			SELECT 202,1 --HAR-TABCORPNSW  
 
 		INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)  
 		SELECT DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee   
