@@ -19,6 +19,7 @@ Revisions:
 	- 20130103@Elodie:  Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table					
 	- 20130121@Elodie:  Change link server DBTRANS to DBTXN
 						Write more log on UserLog table in case of DBLOG server failure
+	- 20130524@Elodie: Write settlement log for outright						
 	
 Param's Explanation:
 	- @deadheat = fraction of deadheat to divide (1,2,3  etc)
@@ -129,6 +130,26 @@ BEGIN
 							  @Doing = @LogData					
 	END CATCH
 END
+
+-- WRITE LOG
+DECLARE @Remark VARCHAR(500), @EventDate DATETIME
+SELECT @EventDate = convert(char(10),getdate(),111)
+BEGIN TRY
+	SELECT @Remark = 'Status=' + @status + 'IsDeadheat=' + CAST(@isDeadheat AS VARCHAR(5))
+	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
+		@UserID = 5838421, 
+		@MatchID = @matchid, 
+		@ActionID = 127, 
+		@LeagueID = 0, 
+		@EventDate = @EventDate,
+		@Remark = @Remark
+		
+END TRY
+BEGIN CATCH		
+	SELECT @Remark = 'MatchID=' + CAST(@matchid AS VARCHAR(10)) + 'EventDate=' + @EventDate + 'Status=' + @status + 'IsDeadheat=' + CAST(@isDeadheat AS VARCHAR(5))
+	EXEC WriteLog_UserLog @UserID = 5838421, --dbaAdmin
+						  @Doing = @Remark					
+END CATCH		
 
 GO
 GRANT EXECUTE ON [dbo].[Dot_Admin_SettleOutright_Event] TO [Dot_Admin]

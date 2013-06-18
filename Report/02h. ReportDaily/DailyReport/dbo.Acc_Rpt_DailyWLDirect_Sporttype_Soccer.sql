@@ -10,6 +10,7 @@ AS
 	 	
 	History:
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
+		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 		
 	Explanation's Param:
 		
@@ -41,7 +42,8 @@ SELECT
 		sum(scomm*virtualrate) Commission,	
 		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-		sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover
+		sum((1-tpositiontaking)*ABS(stake)*actualrate) RealTurnover,
+		sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
 WHERE	b.winlostdate = @winlostdate
@@ -63,7 +65,8 @@ SELECT
 		sum(scomm) Commission,	
 		-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
 		-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
-		-sum((1-tpositiontaking)*ABS(stake)) Turnover
+		-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+		-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
 WHERE	b.winlostdate = @winlostdate
@@ -86,7 +89,8 @@ SELECT
 	sum(scomm) Commission,	
 	-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
 	-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
-	-sum((1-tpositiontaking)*ABS(stake)) Turnover
+	-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+	-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
 WHERE	b.winlostdate = @winlostdate

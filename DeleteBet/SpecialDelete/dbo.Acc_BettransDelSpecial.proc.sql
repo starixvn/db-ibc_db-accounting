@@ -29,7 +29,8 @@
     @IP VARCHAR(15) = '',
     @DelOption_MHC TINYINT = 0,
     @transids_MHC VARCHAR(4000) = '',-- for custom delete master MHC	    
-    @SAFilter tinyint = 0 
+    @SAFilter tinyint = 0 ,
+    @reason NVARCHAR(500) = ''
 AS
 BEGIN
 /*
@@ -101,6 +102,7 @@ Revisions:
 	- 20130103@Elodie: Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 	- 20130128@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20130526@Johnson: Add param @reason to log the reason delete bets 
 		    
 Param's Explanation: Special bet delete option
     @@DelOption = 0: No Delete (need to remove DepositBets out of #BetDelete)
@@ -160,7 +162,7 @@ Param's Explanation: Special bet delete option
 						and custid = @UserID
 						and roleid>=5)
 	BEGIN
-		SELECT @LogData ='fail to delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid)
+		SELECT @LogData ='fail to delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid) + ' reason: ' + @reason
 		EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 		SELECT @ErrMsg = 'Sorry. You can not process delete bet due to either wrong password or insufficient permission!', @ErrCode = 101   
@@ -679,7 +681,7 @@ Param's Explanation: Special bet delete option
 
 ------------------***** End of Special Delete *****------------------
 
-	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
+	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' from ' + CONVERT(VARCHAR(20), @f_transid) + ' to ' + CONVERT(VARCHAR(20), @t_transid) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1)) + ' reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 ------after delete, return all deleted deposit bets and 12EU with additional information for mailing (not send mail for BETDAQ tickets)
@@ -742,7 +744,7 @@ Param's Explanation: Special bet delete option
 			livehomescore,
 			liveawayscore,
 			cr.username creator,
-			stake AS StakePositiontaking,           
+			stake,           
 			b.currency,
 			ag.site
 		FROM
@@ -799,7 +801,7 @@ Param's Explanation: Special bet delete option
 				livehomescore,
 				liveawayscore,
 				cr.username creator,
-				stake AS StakePositiontaking,           
+				stake,           
 				b.currency,
 				ag.site
 			FROM

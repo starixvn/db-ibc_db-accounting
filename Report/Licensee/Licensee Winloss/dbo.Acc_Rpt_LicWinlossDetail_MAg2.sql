@@ -10,6 +10,7 @@
  @ShowBA  BIT=0,  
  @ShowLC  BIT=0,  
  @ShowVS  BIT=0,  
+ @ShowCS  BIT=0, -- RNG Casino
  @MoveBetsDay SMALLDATETIME,  
  @IsOld BIT = 0,  
  @drawfilter SMALLINT = 1,  
@@ -22,6 +23,7 @@ AS
     DB: DB052.bodb02    
      
     Revisions:     
+	- 20130527@Jim: support RNG Casino
  Param's Explanation:    
    + @CustID: SuperID    
    + @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)  
@@ -31,6 +33,7 @@ AS
    + @ShowRB: Show RB bets  
    + @ShowNG: Show Number game bets  
    + @ShowBA: Show Bet Aggregator bets (combined with Sportsbook or Number Game)  
+   + @ShowCS: Show RNG Casino bets 
    + @MoveBetsDay: The day we move tickets to bettrans14  
     
 */
@@ -126,6 +129,14 @@ BEGIN
 	SELECT typeid FROM bettype (NOLOCK)  
 	WHERE (typeid BETWEEN 1201 AND 1299)  
 END  
+
+IF @ShowCS=1 -- RNG Casino
+BEGIN
+	INSERT INTO @sporttype(sporttype)
+	VALUES (251)
+	INSERT INTO @bettype(bettype)
+	VALUES(71)
+END
   
 DECLARE @TempFromDate DATETIME   
 DECLARE @TempToDate DATETIME   
@@ -208,7 +219,7 @@ BEGIN
 		GROUP BY b.winlostdate,s.currency,b.mrecommend, b.statusID    
 	END  
    
-	IF @ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1  
+	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1 OR @ShowCS=1)  
 	BEGIN  
 		INSERT INTO #SAgWinLoss  
 		SELECT b.winlostdate,b.mrecommend,s.currency,   
@@ -290,7 +301,7 @@ BEGIN
  END  
    
  --exclude BA tickets  
- IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1)  
+ IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1)  
  BEGIN  
   INSERT INTO #SAgWinLoss    
   SELECT   
@@ -306,7 +317,7 @@ BEGIN
     ELSE 1 END  
    ),       
    SUM(b.winlost),    
-   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
+   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
    SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,  
    0 AS AmountDueToBA,  
    - SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,  
@@ -325,7 +336,7 @@ BEGIN
    INNER JOIN @sporttype t ON b.sporttype = t.sporttype  
   WHERE    
    b.Winlostdate BETWEEN @FDate AND @TempToDate    
-  -- AND b.roleid = 2     
+   AND b.roleid = 2     
    AND b.statusID <> 101 --exclude REJECT bets  
    AND ISNULL(b.isBA,0) = 0  
   GROUP BY  b.winlostdate,b.currency, s.mrecommend, b.statusID  
@@ -382,7 +393,7 @@ BEGIN
  END  
    
  --exclude BA tickets  
- IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1)  
+ IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1)  
  BEGIN  
   INSERT INTO #SAgWinLoss    
   SELECT   
@@ -398,7 +409,7 @@ BEGIN
     ELSE 1 END  
    ),       
    SUM(b.winlost),    
-   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
+   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
    SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,  
    0 AS AmountDueToBA,  
    - SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,  

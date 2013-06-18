@@ -19,7 +19,7 @@ AS
  Date:20110715
  Original:
  Task: Get ticket information needed to be deleted for early kickoff
- DB: DB053.BODB02  
+ DB: DBAGE/BODB02  
   
  History:  
 	- 20110831@Elly: correct transid and return SubTransID more
@@ -30,7 +30,7 @@ AS
   	- 20120210@Daniel: Add filter param to list out SA (secondAccept) tickets:
   	- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype, f_GetChoice for odds, Oddstype, betteam
   	- 20120711@Sophia: Add condition 'L' in betfrom to check Deposit
-
+	- 20130604@Johnson: change to use stake instead stakepositiontaking
  Explanation's Param:  
 	@@betteam430: bettype =4: Correct Score ; bettype =30: 1st Correct Score
 	@@betteam6: bettype=6: Total Goal
@@ -47,11 +47,11 @@ BEGIN
 	
 	CREATE TABLE #SpecialDeleteBets (transid bigint,SubTransid bigint,refno bigint
 	,custid int,username varchar(30),odds smallmoney, OddsType int, transdate datetime,bettype smallint, betteam nvarchar(10),hdp1 smallmoney, hdp2 smallmoney,livehomescore smallint, liveawayscore smallint
-	,creator varchar(30),StakePositiontaking money,currency tinyint,IsDeposit bit,site varchar(10),status nvarchar(10), mrecommend int, recommend int, SecAcceptFlag bit)  
+	,creator varchar(30),Stake money,currency tinyint,IsDeposit bit,site varchar(10),status nvarchar(10), mrecommend int, recommend int, SecAcceptFlag bit)  
 	
 	CREATE TABLE #SpecialDeleteBetms (transid bigint,SubTransid bigint,refno bigint
 	,custid int,username varchar(30),odds smallmoney, OddsType int, transdate datetime,bettype smallint, betteam nvarchar(10),hdp1 smallmoney, hdp2 smallmoney,livehomescore smallint, liveawayscore smallint
-	,creator varchar(30),StakePositiontaking money,currency tinyint,IsDeposit bit,site varchar(10),status nvarchar(10), mrecommend int, recommend int, ParlayType smallint)  
+	,creator varchar(30),Stake money,currency tinyint,IsDeposit bit,site varchar(10),status nvarchar(10), mrecommend int, recommend int, ParlayType smallint)  
 
 	IF exists( SELECT convert(int,val) FROM dbo.strSplit(@bettypes,'^') Where convert(int,val) in (4,30) )	
 		INSERT INTO #SpecialDeleteBets 
@@ -71,7 +71,7 @@ BEGIN
 			b.livehomescore,  
 			b.liveawayscore,  
 			cr.username as creator,   
-			b.stake as StakePositiontaking,  
+			b.stake,  
 			b.currency,   
 			case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,  
 			ag.site,
@@ -112,7 +112,7 @@ BEGIN
 		b.livehomescore,  
 		b.liveawayscore,  
 		cr.username as creator,   
-		b.stake as StakePositiontaking,  
+		b.stake,  
 		b.currency,   
 		case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,  
 		ag.site,
@@ -164,7 +164,7 @@ BEGIN
 		b.livehomescore,  
 		b.liveawayscore,  
 		cr.username as creator,   
-		b.stake as StakePositiontaking,  
+		b.stake,  
 		b.currency,   
 		case when b.betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,  
 		ag.site,    
@@ -210,7 +210,7 @@ BEGIN
 		b.livehomescore,  
 		b.liveawayscore,  
 		cr.username as creator,   
-		b.stake as StakePositiontaking,  
+		b.stake,  
 		b.currency,   
 		case when b.betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,  
 		ag.site,    
@@ -271,7 +271,7 @@ BEGIN
 			b.livehomescore,  
 			b.liveawayscore,  
 			cr.username as creator,   
-			b.stake as StakePositiontaking,  
+			b.stake,  
 			cy.currencyID,   
 			case when b.betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,  
 			c.[site],  

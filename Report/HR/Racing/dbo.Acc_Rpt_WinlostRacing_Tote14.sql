@@ -5,7 +5,7 @@ AS
 /*	Created by: Johnson
 	Date: 2011-03-16
 	Task: Racing Daily Report 
-	DB: DB06.BODB02
+	DB: DBACC/BODB02
 
 	Revisions:
 		- 20110531@Johnson: Add horse racing for SA Tote
@@ -13,7 +13,7 @@ AS
 		- 20111226@Jamie: 
 			+ Amend formula of amount due to for Greyhound UK
 			+ Optimze the way to calculate IBC Net Income & Amount Due to Partner
-	
+		- 20130527@Johnson: Add group NSW to Aus racing
 	Parameter's Explanation:
 		- @ReportType = 1: Horse Racing Daily Report for UK
 					 = 2: Horse Racing Daily Report for AU
@@ -58,6 +58,8 @@ BEGIN
 	BEGIN
 		INSERT INTO @tmpPartner
 			SELECT 5 -- RACE-TABCORP
+		UNION ALL
+			SELECT 6 -- RACE-TABCORPNSW
 			
 		SELECT	@IBCNetIncomeAddToteFee = -1,
 				@AmountDueToAddToteFee = 1
@@ -76,6 +78,8 @@ BEGIN
 	BEGIN
 		INSERT INTO @tmpPartner
 			SELECT 103-- GREY-TABCORP
+		UNION ALL
+			SELECT 104-- GREY-TABCORPNSW
 			
 		SELECT	@IBCNetIncomeAddToteFee = -1,
 				@AmountDueToAddToteFee = 1
@@ -84,6 +88,8 @@ BEGIN
 	BEGIN
 		INSERT INTO @tmpPartner
 			SELECT 201 -- HAR-TABCORP
+		UNION ALL
+			SELECT 202 -- HAR-TABCORPNSW
 			
 		SELECT	@IBCNetIncomeAddToteFee = -1,
 				@AmountDueToAddToteFee = 1

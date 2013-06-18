@@ -1,5 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByAg]
-	@winlostdate   DATETIME,  
+	@FromDate   DATETIME,
+	@ToDate   DATETIME,  
 	@recommend INT,
 	
 	@showSB BIT=1,  
@@ -9,11 +10,8 @@
 	@showCasino BIT=0,  
 	@showP2P BIT=0,  
 	@showBI BIT=0,  
-	@showVS BIT = 0,	
+	@showVS BIT = 0
 	
-	@MoveBetDays SMALLDATETIME
-	
-
 AS
 
 /*  
@@ -79,8 +77,8 @@ IF @showVS = 1
 	FROM bettype 
 	WHERE	typeid between 1201 and 1299;	
 
-IF @winlostdate > @MoveBetDays
-BEGIN
+--IF @winlostdate > @MoveBetDays
+--BEGIN
 
 --get result for Horse Racing
 	IF @ShowRB=1
@@ -111,7 +109,7 @@ BEGIN
 			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.leagueID and p.programDate = o.programDate  
 			INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid  
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID  
-		WHERE o.eventdate = @winlostdate  
+		WHERE o.eventdate BETWEEN @FromDate AND @ToDate
 		
 		INSERT INTO #TmpResult
 		SELECT ci.custid,ci.username,b.actualrate,  
@@ -142,7 +140,7 @@ BEGIN
 		WHERE b.ruben =1   
 			and b.bettype in (31,32,33)  
 			and b.matchid >0  
-			and b.winlostdate = @winlostdate  			
+			and b.winlostdate BETWEEN @FromDate AND @ToDate
 			and b.statusID not in (101,102,103,121) 
 			and ci.recommend = @recommend
 		GROUP BY ci.custid,ci.username,b.actualrate,ci.virtualmultiplier
@@ -177,7 +175,7 @@ BEGIN
 		where b.bettype = 1000  
 			and b.matchid = 1000   
 			and b.ruben=1    
-			and b.winlostdate = @winlostdate     
+			and b.winlostdate BETWEEN @FromDate AND @ToDate
 			and statusID NOT in (101,102,103,121)  
 			and ci.recommend = @recommend
 		GROUP BY ci.custid,ci.username,b.actualrate,ci.virtualmultiplier
@@ -186,7 +184,7 @@ BEGIN
 		INSERT INTO #TmpResultAll
 		SELECT custid,username,  0  Turnover, SUM(Winloss),SUM(Commission),
 			SUM(Winloss+Commission) Total,
-			SUM(Turnover*actualrate) TurnoverRM,
+			0 TurnoverRM,
 			SUM( (Winloss+Commission)*actualrate ) TotalRM,
 			SUM( (Winloss+Commission)*actualrate ) Virtual_Total ,
 			0 Variance,virtualrate
@@ -202,7 +200,7 @@ SELECT ci.custid,ci.username,
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,
 	SUM(scomm) commission,  
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total, 
-	SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+	SUM(ABS(CASE WHEN b.bettype in(71,73) then 0 ELSE stake END)*(1 - tpositiontaking)*actualrate) TurnoverRM,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM	,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.isvirtual = 1 THEN b.virtualrate ELSE actualrate END)) Virtual_Total,
 	(SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate))-
@@ -211,7 +209,7 @@ SELECT ci.custid,ci.username,
 FROM bettrans b WITH(NOLOCK) 
 	INNER JOIN @TmpCondBettype t ON t.bettype = b.bettype 
 	INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid
-WHERE winlostdate = @winlostdate
+WHERE winlostdate BETWEEN @FromDate AND @ToDate
    and b.ruben = 1  
    AND b.statusID NOT IN (101, 102, 103)   
    and ci.recommend = @recommend
@@ -223,8 +221,8 @@ SELECT custid,username, SUM(Turnover) Turnover,SUM(Winloss) Winloss, SUM(Commiss
 	FROM #TmpResultAll
 	GROUP BY custid,username,virtualrate
 	
-END
-
+--END
+/*
 IF @winlostdate <= @MoveBetDays
 BEGIN
 
@@ -370,9 +368,10 @@ SELECT custid,username, SUM(Turnover) Turnover,SUM(Winloss) Winloss, SUM(Commiss
 	GROUP BY custid,username,virtualrate
 
 END
-GO
+*/
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [vnteam]
-GO
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [bodbAdminNet]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [vnteam]
+GO 

@@ -5,6 +5,7 @@
 	@password varchar(50),
 	@UserID int = 0, --custid of Admin,
 	@IP varchar(15) = '',
+	@reason nvarchar(500)= '',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
@@ -34,7 +35,8 @@ AS
 						   Add table TempVariableNumber to check and not to allow attempt to delete same game while it's still not finish
 						   Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table																 						   
 						   Write more log on DBTXN server in case of DBLOG server failure
-						   
+		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
+		- 20130603@Johnson: get additional information for mailing
 */
 
 SET NOCOUNT ON
@@ -45,12 +47,14 @@ If @ErrCode <> 0
 	RETURN
 --end
 
-DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype int, @matchid int, @Remark VARCHAR(500)
+DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype int, @refno bigint, @matchid int, @Remark VARCHAR(500),
+		-- check customer for mailing live cs
+		@isDepositCust BIT, @is12EUCust BIT, @isRealCust BIT, @srecommend INT,@bet_username NVARCHAR(50), @currency INT, @betfrom NVARCHAR(1)
 
 If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
 	Select @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!', @ErrCode = 101	
-	SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID as varchar(10)) + ' betlist: ' + cast(@transid as varchar(20)) + ' - Username: ' + @username
+	SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID as varchar(10)) + ' betlist: ' + cast(@transid as varchar(20)) + ' - Username: ' + @username + ' - reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData	
 	Return
 END
@@ -80,7 +84,7 @@ BEGIN
 	END
 END
 
-SELECT	@winlostdate = b.winlostdate, @bettype = bettype, @matchid = matchid
+SELECT	@winlostdate = b.winlostdate, @bettype = bettype, @matchid = matchid, @refno = refno, @betfrom = betfrom
 FROM	bettrans b with (nolock)
 WHERE	b.transid = @transid
 
@@ -147,10 +151,105 @@ where c.custid=b.custid
 IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND transid = @transid)
 	IF EXISTS (SELECT custid FROM customer (nolock) WHERE custid = @UserID)
 	BEGIN
+		-- calculate balance of customer
+		DECLARE @isNegativeBalance BIT, @totalbalance MONEY
+		
 		SELECT	@balance = (winlost - actual_stake + playercomm)
 		FROM	bettrans with (nolock)
 		WHERE	transid = @transid
-	
+		
+		
+		SELECT	@totalbalance = SUM(winlost - actual_stake + playercomm)
+		FROM	bettrans with (nolock)
+		WHERE	custid = @custid
+		
+		SELECT @isNegativeBalance = CASE WHEN @balance > 0 AND (credit + @totalbalance - @balance) < 0 THEN 1 ELSE 0 END,
+			@bet_username = username,
+			@srecommend = srecommend,
+			@currency = currency
+		FROM custinfo WITH(NOLOCK)
+		WHERE custid = @custid 
+		
+		--return all additional information for mailing
+		IF @keyID = 2 --outright bettype
+		BEGIN 
+			SELECT
+			MATCH.teamid AS homeid,
+			0 AS awayid,
+			MATCH.matchcode,
+			MATCH.eventdate,
+			MATCH.leagueid,
+			GETDATE() AS DATETIME,
+			CONVERT(BIT,0) AS IsNeutral
+		FROM
+			Outright AS MATCH WITH (NOLOCK)
+		WHERE 
+			MATCH.orid = @matchID
+		END   
+		ELSE
+		BEGIN
+			SELECT
+				MATCH.homeid,
+				MATCH.awayid,
+				MATCH.matchcode,
+				MATCH.eventdate,
+				MATCH.leagueid,
+				GETDATE() AS DATETIME,
+				isnull(MATCH.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+				showtime AS GameEvent
+			FROM
+				MATCH WITH (NOLOCK)
+			WHERE 
+				MATCH.matchid = @matchID
+		END
+		
+		SELECT
+			customer.username,
+			customer.username2,
+			b.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.transid AS refno,
+			betteam,
+			hdp1,
+			hdp2,
+			betfrom,
+			livehomescore,
+			liveawayscore,
+			liveindicator,
+			cr.username creator,
+			stake,     
+			b.status,
+			b.spositiontaking,
+			b.mpositiontaking,
+			b.apositiontaking,
+			b.winlost - actual_stake as winlost,
+			b.playercomm as comm,      
+			b.currency,
+			ag.site,
+			@isNegativeBalance as isNegative
+		FROM
+			bettrans b WITH (NOLOCK)
+			INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+		WHERE b.transid = @transid
+		
+		--check for live casino
+		IF @bettype IN (1101,1102)
+		BEGIN
+			SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
+			SELECT @is12EUCust	 = CASE WHEN @bet_username = '12EU' THEN 1 ELSE 0 END
+			SELECT @isRealCust = CASE WHEN @currency = 20 THEN 1
+									WHEN @currency <> 20 AND (@Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam') THEN 1 
+									ELSE 0 END
+			
+			SELECT CASE WHEN @isDepositCust = 1 THEN 1 ELSE @is12EUCust END as isDeposit,
+				@isRealCust as isRealCust, @transid as refno, bg.odds, bg.stake, bg.status, bg.bettype, bg.betteam
+			FROM bettransG bg WITH(NOLOCK)	
+			WHERE bg.refno = @refno
+		END
 			
 		INSERT INTO zzzbettrans
 			(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
@@ -180,7 +279,7 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 			EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
 		END		
 			
-		SELECT @LogData = 'delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@transid as varchar(20))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15))
+		SELECT @LogData = 'delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@transid as varchar(20))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 		EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
 	END

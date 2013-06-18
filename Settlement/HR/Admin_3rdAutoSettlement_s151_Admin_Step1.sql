@@ -1,21 +1,22 @@
 ﻿ALTER PROCEDURE [dbo].[Admin_3rdAutoSettlement_s151_Admin_Step1]
- @LeagueID int,
- @raceNumber int,
- @programdate smalldatetime,
- @Action varchar(10) = 'CAL' ,
- @Result int = 0 output
+	@LeagueID int,
+	@raceNumber int,
+	@programdate smalldatetime,
+	@Action varchar(10) = 'CAL' ,
+	@Result int = 0 output
 AS
 BEGIN
-/* @Action input
-CAL: (default) settle
-REFUND: race abandon
-DB: DB02.BODB02
+	/* @Action input
+	CAL: (default) settle
+	REFUND: race abandon
+	DB: DBPRO/BODB02
 
-Revisions:
- - 20100916@Jamie: Update changeTime for Outright table 
- - 20110617@Victor: Splitting POC SP , Mark That Part for New Create SP On TranDB works 
- --20120717@Cooper: add try catch 
-*/
+	Revisions:
+	 - 20100916@Jamie: Update changeTime for Outright table 
+	 - 20110617@Victor: Splitting POC SP , Mark That Part for New Create SP On TranDB works 
+	 - 20120717@Cooper: add try catch 
+	 - 20130524@Elodie: Write settlement log for horse racing
+	*/
  Declare @LogData as nvarchar(200)
 
 BEGIN TRY
@@ -58,6 +59,26 @@ BEGIN TRY
    AND ProgramDate = @programdate
  END
     set @Result = 0
+    
+    -- WRITE LOG
+	DECLARE @Remark varchar(500)
+	BEGIN TRY
+		SET @Remark = 'Action:' + @Action + ' Result:' + CAST(@Result as nvarchar(5))			
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
+			@UserID = 151, 
+			@MatchID = @raceNumber, 
+			@ActionID = 131, 
+			@LeagueID = @LeagueID, 
+			@EventDate = @programdate,
+			@Remark = @Remark
+			
+	END TRY
+	BEGIN CATCH		
+		SET @Remark = 'Action:' + @Action + ' Result:' + CAST(@Result as nvarchar(5)) + ' Race:' + CAST(@raceNumber as nvarchar(20)) + ' ProgramDate:' + CAST(@programdate as nvarchar(20))
+					+ ' LeagueID:' + CAST(@LeagueID as nvarchar(20))
+		EXEC dbo.WriteLog_UserLog 151, @Remark
+	END CATCH	
+	
 END TRY
 BEGIN CATCH
    SET @LogData = 'Admin_3rdAutoSettlement_s151_Admin_Step1_ErrorNumber:' + cast ( ERROR_NUMBER() as varchar(10) )

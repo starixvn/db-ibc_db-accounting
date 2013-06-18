@@ -29,9 +29,7 @@ BEGIN
 SET NOCOUNT ON
 
 DECLARE @sporttype TABLE(sporttype INT)
-DECLARE @tmpLicenseeReseller AS TABLE (ResellerID INT, LicenseeID INT)
-
-
+DECLARE @tmpLicenseeReseller AS TABLE (ResellerID INT, LicenseeID INT,AffectedDate Datetime)
 
 CREATE TABLE #Data (winlostdate  DATETIME, Currency  INT,  ResellerID int, LicenseeID int,turnover MONEY, MemberWinloss MONEY, Betcount INT)
 CREATE TABLE #Result (ResellerID INT,LicenseeID int,turnover MONEY, MemberWinloss MONEY,GrossWinloss MONEY,DistributorRevenue MONEY, Betcount INT,OneworksIncome MONEY,AmtDueToInspired MONEY,DistributorsChargeRate MONEY,OneworksChargeRate MONEY, InspiredChargeRate MONEY)
@@ -49,11 +47,13 @@ END
 --Get normal licensee list:
 IF LTRIM(RTRIM(ISNULL(@NormalLicensee,''))) <> ''
 BEGIN
-	INSERT INTO @tmpLicenseeReseller (ResellerID,LicenseeID)
-	SELECT lr.ResellerID,lr.LicenseeID
+	INSERT INTO @tmpLicenseeReseller (ResellerID,LicenseeID,AffectedDate)
+	SELECT lr.ResellerID,lr.LicenseeID,
+			CASE WHEN @fromdate<=l.AffectedDate THEN l.AffectedDate ELSE @fromdate END AffectedDate	
 	FROM	
 		bodb_licensee.dbo.LicenseeReseller lr (NOLOCK)
 		INNER JOIN bodb_licensee.dbo.Resellers r WITH (NOLOCK) ON lr.ResellerID = r.ResellerID
+		INNER JOIN bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON lr.LicenseeID=l.LicenseeID
 	WHERE
 		r.ResellerID <> 3 
 		AND lr.LicenseeID IN (SELECT RTRIM(LTRIM(VAL)) FROM strSplit(@NormalLicensee,','))	
@@ -62,11 +62,13 @@ END
 -- Operator
 IF LTRIM(RTRIM(ISNULL(@Operator,''))) <> ''
 BEGIN
-	INSERT INTO @tmpLicenseeReseller (ResellerID, LicenseeID)   
-	SELECT lr.ResellerID, lr.LicenseeID   
+	INSERT INTO @tmpLicenseeReseller (ResellerID, LicenseeID,AffectedDate)   
+	SELECT lr.ResellerID, lr.LicenseeID  ,
+				CASE WHEN @fromdate<=l.AffectedDate THEN l.AffectedDate ELSE @fromdate END AffectedDate	 
 	FROM 
 		bodb_licensee.dbo.LicenseeReseller lr (NOLOCK)
 		INNER JOIN bodb_licensee.dbo.Resellers r WITH (NOLOCK) ON lr.ResellerID = r.ResellerID
+		INNER JOIN bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON lr.LicenseeID=l.LicenseeID
 	WHERE
 		r.ResellerID IN (SELECT RTRIM(LTRIM(VAL)) FROM strSplit(@Operator,','))		
 END
@@ -75,21 +77,22 @@ END
 IF EXISTS(SELECT 1 FROM @tmpLicenseeReseller lr INNER JOIN bodb_licensee.dbo.licensees l WITH (nolock) ON lr.licenseeid=l.licenseeid  WHERE l.IsDeposit=1 AND lr.ResellerID<>3)
 BEGIN
 	INSERT INTO #Data
-	SELECT  b.rptDate,b.currencyID,lr.ResellerID,lr.licenseeid,SUM(Turnover) as Turnover, SUM(Winloss) AS MemberWinloss,SUM(BetCount) AS betcount
+	SELECT  b.rptDate,b.currencyID,lr.ResellerID,lr.licenseeid,SUM(Turnover) as Turnover, SUM(b.Winloss) AS MemberWinloss,SUM(BetCount) AS betcount
 	FROM @tmpLicenseeReseller lr
 		INNER JOIN bodb_licensee.dbo.licensees lic WITH ( NOLOCK) ON lic.licenseeid=lr.licenseeid
 		INNER JOIN bodb_Licensee.dbo.rpt_Betting b WITH ( NOLOCK) ON lr.LicenseeID = b.siteID
 		INNER JOIN bodb_Licensee.dbo.SystemLicensee sl (NOLOCK) ON lic.LicenseeID=sl.LicenseeID
 		INNER JOIN bodb_Licensee.dbo.Systems s (NOLOCK) ON sl.SystemID=s.ID
 		INNER JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID
+		INNER JOIN bodb_licensee.dbo.LicenseeProduct3rd p WITH (NOLOCK) ON lic.LicenseeID=p.LicenseeID AND p.ProductID=5
 	WHERE
-		b.rptDate BETWEEN @FromDate AND @ToDate
+		b.rptDate BETWEEN lr.AffectedDate  AND @ToDate
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 		AND lr.ResellerID<>3
 		AND lic.isdeposit=1
 		AND sl.IsActive = 1
 		AND s.SystemName='Accounting'
 		--AND @FromDate >= isnull(lic.AffectedDate,'1999-01-01')
-		AND b.rptDate >= isnull(lic.AffectedDate,'1999-01-01')
 		AND b.status NOT IN (-1,103)
 		AND CurrencyID<>20
 		AND bettype BETWEEN 1201 AND 1299
@@ -101,17 +104,18 @@ END
 IF EXISTS(SELECT 1 FROM @tmpLicenseeReseller lr inner JOIN bodb_licensee.dbo.licensees l WITH (nolock) ON lr.licenseeid=l.licenseeid where l.IsDeposit=0)
 BEGIN
 	INSERT INTO #Data
-	SELECT  b.rptDate,b.currencyID,lr.ResellerID,lr.licenseeid,SUM(Turnover) as Turnover, SUM(Winloss) AS MemberWinloss,SUM(BetCount) AS betcount
+	SELECT  b.rptDate,b.currencyID,lr.ResellerID,lr.licenseeid,SUM(Turnover) as Turnover, SUM(b.Winloss) AS MemberWinloss,SUM(BetCount) AS betcount
 	FROM @tmpLicenseeReseller lr
 		INNER JOIN bodb_Licensee.dbo.labels lb WITH (NOLOCK) ON lr.LicenseeID=lb.LicenseeID
 		INNER JOIN bodb_Licensee.dbo.rpt_Betting b WITH ( NOLOCK) ON b.siteID=lb.LabelID
 		INNER JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID
+		INNER JOIN bodb_licensee.dbo.LicenseeProduct3rd p WITH (NOLOCK) ON lr.LicenseeID=p.LicenseeID AND p.ProductID=5
 	WHERE
-		b.rptDate BETWEEN @FromDate AND @ToDate
+		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
+		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
 		AND b.status NOT IN (-1,103)
 		AND lr.ResellerID<>3
 		--AND @FromDate >= isnull(lb.AffectedDate,'1999-01-01')
-		AND b.rptDate >= isnull(lb.AffectedDate,'1999-01-01')
 		AND CurrencyID<>20
 		AND bettype BETWEEN 1201 AND 1299
 		AND b.customercategory NOT IN (27,28) 

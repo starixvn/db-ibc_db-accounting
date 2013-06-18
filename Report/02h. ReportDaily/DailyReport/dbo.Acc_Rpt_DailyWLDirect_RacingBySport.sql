@@ -6,7 +6,7 @@ AS
 	/*	Creator: Phuong Dao
 		Date: 2009-03-03
 		Task: Horse Racing WinLost Summary report
-		DB: DB06.bodb02
+		DB: DBACC/bodb02
 		Original: [Acc_Rpt_DailyWLDirect_HorseRacing]
 		
 		Revisions:
@@ -23,7 +23,7 @@ AS
 								 - get report by @sporttype (Horse Racing, Greyhound, Harness)
 								 - Check Tote Fee is passed to Partners or not
 			- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
-		
+			- 20130618@Johnson: Add NSW racing's pools from AUST
 	*/
 	SET NOCOUNT ON
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
@@ -49,13 +49,20 @@ AS
 	UNION ALL
 		SELECT 5,1 --RACE-TABCORP
 	UNION ALL
+		SELECT 6,1 --RACE-TABCORPNSW
+	UNION ALL
 		SELECT 101,1 --GREY-DTOTEUK
 	UNION ALL
 		SELECT 102,1 --GREY-DTOTEIRL
 	UNION ALL
 		SELECT 103,1 --GREY-TABCORP
 	UNION ALL
+		SELECT 104,1 --GREY-TABCORPNSW
+	UNION ALL
 		SELECT 201,1 --HAR-TABCORP
+	UNION ALL
+		SELECT 202,1 --HAR-TABCORPNSW
+		
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 

@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Acc_BetlistCombinationParlay_ByTransID]
+﻿ALTER PROCEDURE [dbo].[Acc_BetlistCombinationParlay_ByTransID]
 	@transid		BIGINT,
 	@custid			INT,
 	@MoveBetDay		DATETIME,
@@ -20,6 +18,7 @@ AS
 		- 20120419@Lukas: Show transid of main ticket for subticket of system parlay
 		- 20120927@Johnson: get commstatus column to check double comm losing
 		- 20130121@Dan: change linked server DB06 to DBARC
+		- 20130514@Elodie: Get odds value
 	Paramters Explanation:	
 */ 
 BEGIN
@@ -60,6 +59,7 @@ BEGIN
 			refno		BIGINT, 
 			winlostdate	SMALLDATETIME,
 			odds		SMALLMONEY,
+			modds		SMALLMONEY,
 			stake		MONEY, 
 			actual_stake MONEY, 
 			winlost		MONEY, 
@@ -166,7 +166,7 @@ BEGIN
 	
 	IF @minMatchDate < @BalanceUpDay  --- get data from bettrans_bk
 	BEGIN
-		INSERT INTO @tmpBettrans (transid,betid, transdate, refno, winlostdate, odds, stake, actual_stake, winlost, playercomm, status, comstatus, betteam, ip, spositiontaking,
+		INSERT INTO @tmpBettrans (transid,betid, transdate, refno, winlostdate, odds, modds, stake, actual_stake, winlost, playercomm, status, comstatus, betteam, ip, spositiontaking,
 			mpositiontaking, apositiontaking, swinlost,	mwinlost, awinlost,	sdiscount, adiscount, discount, scomm, acomm, comm, N, cnt, bitmap)
 		SELECT
 			transid,
@@ -174,7 +174,8 @@ BEGIN
 			transdate,
 			refno,
 			winlostdate,
-			modds as odds,
+			odds,
+			modds,
 			stake,
 			actual_stake,
 			CASE WHEN statusid NOT IN (0,1) THEN winlost - actual_stake ELSE winlost END as winlost,		
@@ -209,7 +210,7 @@ BEGIN
 	END
 	IF @minMatchdate < @MoveBetDay  --- get data from bettrans14
 	BEGIN	
-		INSERT INTO @tmpBettrans (transid,betid, transdate, refno, winlostdate, odds, stake, actual_stake, winlost, playercomm, status, comstatus, betteam, ip, spositiontaking,
+		INSERT INTO @tmpBettrans (transid,betid, transdate, refno, winlostdate, odds, modds, stake, actual_stake, winlost, playercomm, status, comstatus, betteam, ip, spositiontaking,
 			mpositiontaking, apositiontaking, swinlost,	mwinlost, awinlost,	sdiscount, adiscount, discount, scomm, acomm, comm, N, cnt, bitmap)
 		SELECT
 			transid,
@@ -217,7 +218,8 @@ BEGIN
 			transdate,
 			refno,
 			winlostdate,
-			modds as odds,
+			odds,
+			modds,
 			stake,
 			actual_stake,
 			CASE WHEN statusid NOT IN (0,1) THEN winlost - actual_stake ELSE winlost END as winlost,		
@@ -247,7 +249,7 @@ BEGIN
 	END			
 	IF @maxMatchdate > @MoveBetDay  --- get data from bettrans
 	BEGIN		
-		INSERT INTO @tmpBettrans (transid,betid, transdate, refno, winlostdate, odds, stake, actual_stake, winlost, playercomm, status, comstatus, betteam, ip, spositiontaking,
+		INSERT INTO @tmpBettrans (transid,betid, transdate, refno, winlostdate, odds, modds, stake, actual_stake, winlost, playercomm, status, comstatus, betteam, ip, spositiontaking,
 			mpositiontaking, apositiontaking, swinlost,	mwinlost, awinlost,	sdiscount, adiscount, discount, scomm, acomm, comm, N, cnt, bitmap)
 		SELECT
 			transid,
@@ -255,7 +257,8 @@ BEGIN
 			transdate,
 			refno,
 			winlostdate,
-			modds as odds,
+			odds,
+			modds,
 			stake,
 			actual_stake,
 			winlost - actual_stake as winlost,		
@@ -429,6 +432,7 @@ BEGIN
 		refno,
 		winlostdate,
 		odds,
+		modds,
 		stake,
 		actual_stake,
 		winlost,
@@ -488,8 +492,6 @@ BEGIN
 	
 	SELECT * FROM @tmpMatch	
 END
-
-
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BetlistCombinationParlay_ByTransID] TO [vnteam]

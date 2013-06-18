@@ -70,8 +70,10 @@ Revisions:
 	- 20090521@PhuongDao: Not to insert maxcredit on custinfo table 
 	- 20090703@Phuc: manual rollback
 	- 20090901@Shifu: add IsInternal
-	- 20091112@Jamie: Add the input param @DisableOutright 
+	- 20091112@Jamie: Add the input param @DisableOutright   
 	- 20100413@Viet: Remove Customer.Answer
+	-- add more
+	
 	
 Param's Explanation:
 • @ErrCode:

@@ -23,6 +23,7 @@ SET NOCOUNT ON
 		- 20120628@Elodie: check case of matchid = orid
 		- 20121018@Lukas: performance tuning 
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
+		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 		
 	Param's Explanation: 
 */		
@@ -68,7 +69,7 @@ SET NOCOUNT ON
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 	WHERE s.sporttype = 1
 
-	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype TINYINT, matchid INT, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover MONEY)
+	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype TINYINT, matchid INT, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
 	INSERT INTO #TempBettrans	
 	SELECT		
 			liveindicator,
@@ -79,7 +80,8 @@ SET NOCOUNT ON
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
-			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover
+			sum((1-tpositiontaking)*ABS(stake)*actualrate) Turnover_actualrate,
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover_virtualrate
 	FROM	bettrans14 b WITH (NOLOCK)			
 	WHERE
 			winlostdate = @winlostdate
@@ -101,7 +103,8 @@ SET NOCOUNT ON
 			sum(Commission) commission,	
 			sum(LineTotal_actualrate) RealLineTotal,
 			sum(LineTotal_virtualrate) VirtualLineTotal,
-			sum(Turnover) turnover
+			sum(Turnover_actualrate) RealTurnover,
+			sum(Turnover_virtualrate) VirtualTurnover
 	FROM	#TempBettrans b
 			INNER JOIN @Match m on b.matchid = m.matchid 	
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
