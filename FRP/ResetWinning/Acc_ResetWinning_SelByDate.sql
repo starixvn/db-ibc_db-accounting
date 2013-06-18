@@ -5,7 +5,7 @@ AS
 /*	
 	Created: 20120514@Lukas
 	Task: Reset Winning - Get data by Date
-	DB: DB054.BODB02
+	DB: DBEXT/BODB02
 	
 	Revision:
 		- 20120605@Jamie: Exclude VOID, REJECT, REFUND, DONE
