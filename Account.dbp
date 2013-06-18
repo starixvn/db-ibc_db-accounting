@@ -986,6 +986,7 @@ Begin DataProject = "Account"
          End
          Begin Folder = "NegativeBalance"
             Script = "Acc_LicenseeNegativeBalanceList.sql"
+            Script = "Acc_Rpt_NegativeBalance_LicenseebySite.sql"
             Script = "Acc_Rpt_NegativeBalanceMember_Dep.sql"
          End
          Begin Folder = "PeakConCurrentUser"
