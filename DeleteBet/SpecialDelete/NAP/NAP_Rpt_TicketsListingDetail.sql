@@ -57,14 +57,42 @@ SET @p_bettypesLive = @bettypesLive
 
 ---- If number game then don't care @livetype , so set @LiveType to zero
 IF @Type = 1 or @Type = 2 or @Type = 3
-SELECT @LiveType = 0
+	SELECT @LiveType = 0
 
 ----***** bettype <> 9 (because bettype = 9 then matchID = 9)****----
 IF @p_bettypes <> '9' AND @bettypes <> '29' AND @bettypes <> '9,29'
 BEGIN
+	CREATE TABLE #SpecialDeleteBets 
+	(
+		username VARCHAR(30),
+		bettype SMALLINT,
+		transid BIGINT,
+		homeid INT,
+		awayid INT,
+		hdp1 SMALLMONEY, 
+		hdp2 SMALLMONEY,
+		odds SMALLMONEY,
+		status NVARCHAR(10),
+		stake MONEY,
+		transdate DATETIME, 
+		betteam NVARCHAR(10),
+		livehomescore SMALLINT, 
+		liveawayscore SMALLINT,
+		liveindicator BIT,
+		ISNeutral BIT,
+		OddsType INT, 
+		CurrencyName NVARCHAR(100),
+		winlost MONEY,
+		betid BIGINT,
+		IsMP BIT,
+		SecAcceptFlag BIT,		
+		refno BIGINT
+	)
+	
 ----Direct Licensee
 	IF @LicenseeName <> 'IBC' AND @LicenseeName <> 'ALL' 
 	BEGIN				 
+		INSERT INTO #SpecialDeleteBets
 		SELECT	b.username,
 				b.bettype,		
 				b.transid,
@@ -88,7 +116,8 @@ BEGIN
 				(winlost-actual_stake )as winlost,
 				b.betid,
 				0 as isMP,
-				ISNULL(SecAcceptFlag,0) SecAcceptFlag
+				ISNULL(SecAcceptFlag,0) SecAcceptFlag,
+				b.refno
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName) )
@@ -118,6 +147,7 @@ BEGIN
 	---IBC 
 	IF @LicenseeName = 'IBC'  
 	BEGIN	
+		INSERT INTO #SpecialDeleteBets
 		SELECT	b.username,
 				b.bettype,		
 				b.transid,
@@ -141,7 +171,8 @@ BEGIN
 				(winlost-actual_stake )as winlost,
 				b.betid,
 				0 as isMP,
-				ISNULL(SecAcceptFlag,0) SecAcceptFlag
+				ISNULL(SecAcceptFlag,0) SecAcceptFlag,
+				b.refno
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 	
 		WHERE		B.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
@@ -171,6 +202,7 @@ BEGIN
 	---ALL
 	IF @LicenseeName= 'ALL' 
 	BEGIN 	
+		INSERT INTO #SpecialDeleteBets
 		SELECT	b.username,
 				b.bettype,		
 				b.transid,
@@ -194,7 +226,8 @@ BEGIN
 				(winlost-actual_stake )as winlost,
 				b.betid,
 				0 as isMP,
-				ISNULL(SecAcceptFlag,0) SecAcceptFlag				
+				ISNULL(SecAcceptFlag,0) SecAcceptFlag,
+				b.refno				
 		FROM		Bettrans b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.statusID NOT IN (101,102, 121)--('Void', 'Reject', 'Dummy') 
@@ -217,37 +250,43 @@ BEGIN
 					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 		ORDER BY transID
 	END
-
+		
+	SELECT * FROM #SpecialDeleteBets
+	
+	IF @Type = 3				
+		SELECT bg.refno, bg.odds, bg.stake, bg.status, bg.bettype, bg.betteam
+		FROM #SpecialDeleteBets b
+			INNER JOIN bettransG bg WITH(NOLOCK) ON b.refno = bg.refno
+			
 END 
 ELSE
 BEGIN 
-		SELECT	username ,
-				bettype ,				
-				transid ,
-				0 as homeID ,
-				0 as awayID ,
-				hdp1 , 
-				hdp2 , 
-				odds ,	
-				status,
-				stake ,
-				transdate ,		
-				betteam ,
-				livehomescore ,
-				liveawayscore ,
-				liveindicator , 
-				0 as IsNeutral ,
-				OddsType ,
-				CurrencyName ,
-				winlost ,
-				betid,	
-				0 as isMP,
-				0				
-		FROM bettrans WITH (NOLOCK)
-		WHERE 0 = 1
+	SELECT	username ,
+			bettype ,				
+			transid ,
+			0 as homeID ,
+			0 as awayID ,
+			hdp1 , 
+			hdp2 , 
+			odds ,	
+			status,
+			stake ,
+			transdate ,		
+			betteam ,
+			livehomescore ,
+			liveawayscore ,
+			liveindicator , 
+			0 as IsNeutral ,
+			OddsType ,
+			CurrencyName ,
+			winlost ,
+			betid,	
+			0 as isMP,
+			0,
+			refno
+	FROM bettrans WITH (NOLOCK)
+	WHERE 0 = 1
 END 
-
-
 
 ----******* If list of bettype include 9 *******
 IF charindex('9', @p_bettypes , 1) <> 0  
@@ -295,7 +334,7 @@ BEGIN
 					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									 AND	  CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND CASE when @SAFilter = 2 then 0 else 1 END = 1
+					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 
 	END
@@ -343,7 +382,7 @@ BEGIN
 					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									 AND	 CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND CASE when @SAFilter = 2 then 0 else 1 END = 1
+					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 	END 
 
@@ -388,9 +427,9 @@ BEGIN
 					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									 AND	 CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND CASE when @SAFilter = 2 then 0 else 1 END = 1
+					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
-	END 
+	END 		
 END 
 ELSE 
 BEGIN
