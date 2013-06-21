@@ -10,7 +10,7 @@ SET NOCOUNT ON
 	
 	Revisions: 		
 		- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
-		
+		- 20130618@Johnson: Add NSW racing's pools from AUST
 */
 DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 	
@@ -34,13 +34,19 @@ DECLARE @CommSetting TABLE (matchid int primary key,
 	UNION ALL
 		SELECT 5,1 --RACE-TABCORP
 	UNION ALL
+		SELECT 6,1 --RACE-TABCORPNSW
+	UNION ALL
 		SELECT 101,1 --GREY-DTOTEUK
 	UNION ALL
 		SELECT 102,1 --GREY-DTOTEIRL
 	UNION ALL
 		SELECT 103,1 --GREY-TABCORP
 	UNION ALL
+		SELECT 104,1 --GREY-TABCORPNSW
+	UNION ALL
 		SELECT 201,1 --HAR-TABCORP
+	UNION ALL
+		SELECT 202,1 --HAR-TABCORPNSW
 		
 	INSERT INTO @CommSetting
 	SELECT m.orid , t.IBCFee, l.sporttype, p.ToteCommWin, p.ToteCommPlace,(p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 

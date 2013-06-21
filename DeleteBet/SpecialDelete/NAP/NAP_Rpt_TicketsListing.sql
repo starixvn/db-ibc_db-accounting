@@ -105,7 +105,7 @@ BEGIN
 	RETURN
 END 
 ELSE
-	SELECT @matchcode as matchcode, @homeid as homeid, @awayid as awayid, @eventdate as eventdate, @matchid as matchid, @IsNeutral as IsNeutral
+	SELECT @matchcode as matchcode, @homeid as homeid, @awayid as awayid, convert(VARCHAR(12), @eventdate, 107) as eventdate, @matchid as matchid, @IsNeutral as IsNeutral
 
 ---------
 DECLARE @TmpTotal TABLE (OrderNo int, TotalTrans bigint, bettype smallint, LiveIndicator bit, LicenseeName VARCHAR(50) )

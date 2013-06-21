@@ -5,7 +5,7 @@ AS
 /*	
 	Created: 20120514@Lukas
 	Task: Reset Winning - Get data by Date
-	DB: DB054.BODB02
+	DB: DBEXT/BODB02
 	
 	Revision:
 		- 20120605@Jamie: Exclude VOID, REJECT, REFUND, DONE
@@ -15,6 +15,7 @@ AS
 		- 20120919@Sophia: Add Virtual Sports
 		- 20121102@Elodie: Add Sporting Solution into Sportbook	(bettype: 1301 -> 1334)
 						   No need execute Acc_ResetWinning_SelByDate_Original (@winlostdate < '2012-09-01')		
+		- 20130618@Johnson: Add NSW racing's pools from AUST
 	Explanation's Param:
 */
 BEGIN	
@@ -98,13 +99,19 @@ BEGIN
 	UNION ALL
 		SELECT 5,1 --RACE-TABCORP
 	UNION ALL
+		SELECT 6,1 --RACE-TABCORPNSW
+	UNION ALL
 		SELECT 101,1 --GREY-DTOTEUK
 	UNION ALL
 		SELECT 102,1 --GREY-DTOTEIRL
 	UNION ALL
 		SELECT 103,1 --GREY-TABCORP
 	UNION ALL
+		SELECT 104,1 --GREY-TABCORPNSW
+	UNION ALL
 		SELECT 201,1 --HAR-TABCORP
+	UNION ALL
+		SELECT 202,1 --HAR-TABCORPNSW
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
