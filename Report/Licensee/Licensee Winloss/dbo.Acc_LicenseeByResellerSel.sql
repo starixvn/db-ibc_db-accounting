@@ -1,11 +1,11 @@
 ﻿USE [bodb_Licensee]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_LicenseeByResellerSel]    Script Date: 06/21/2013 05:10:29 ******/
+
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.Acc_LicenseeByResellerSel    Script Date: 6/21/2013 1:32:25 PM ******/
+
 ALTER PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
 	@ResellerID int=0,
 	@ProductCode VARCHAR(10)='',
@@ -86,3 +86,9 @@ END
 SELECT DISTINCT * FROM #Data
 
 DROP TABLE #Data
+GO
+GRANT EXECUTE ON [dbo].[Acc_LicenseeByResellerSel] TO [bodbAdminNet]
+GO
+GRANT EXECUTE ON [dbo].[Acc_LicenseeByResellerSel] TO [bodbLicenseeNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_LicenseeByResellerSel] TO [vnteam]
