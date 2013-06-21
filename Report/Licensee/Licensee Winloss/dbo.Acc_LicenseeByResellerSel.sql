@@ -1,4 +1,12 @@
-﻿ALTER  PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
+﻿USE [bodb_Licensee]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_LicenseeByResellerSel]    Script Date: 06/21/2013 05:10:29 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_LicenseeByResellerSel    Script Date: 6/21/2013 1:32:25 PM ******/
+ALTER PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
 	@ResellerID int=0,
 	@ProductCode VARCHAR(10)='',
 	@ExcludeBA BIT = 0,
@@ -30,7 +38,6 @@ SET @ProductCode = ISNULL(@ProductCode,'')
 SET @ExcludeBA = ISNULL(@ExcludeBA,0)
 SET @ExcludeTest = ISNULL(@ExcludeTest,0)
 
-
 CREATE TABLE #Data (ResellerID int,ResellerName varchar(50), ResellerType INT,LicenseeID INT, LicenseeName varchar(50))
 DECLARE @ProductID INT
 
@@ -56,7 +63,6 @@ WHERE
 	AND s.SystemName='Accounting'
 	AND ((@ExcludeBA=0) OR (@ExcludeBA=1 AND r.ResellerID <> 3))
 	AND (@ExcludeTest=0 OR (@ExcludeTest=1 AND r.ResellerID <> 6 ))
-	AND ISNULL(ld.EffectiveDate,0)<>0
 	AND (ISNULL(LTRIM(RTRIM(@ProductCode)),'')='' OR ((ISNULL(LTRIM(RTRIM(@ProductCode)),''))<>'' AND ISNULL(ld.EffectiveDate,0)<>0))
 ORDER BY l.IsDeposit DESC,r.ResellerName, l.LicenseeName
 
@@ -80,11 +86,3 @@ END
 SELECT DISTINCT * FROM #Data
 
 DROP TABLE #Data
-
-
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_LicenseeByResellerSel] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_LicenseeByResellerSel] TO [vnteam]
-
