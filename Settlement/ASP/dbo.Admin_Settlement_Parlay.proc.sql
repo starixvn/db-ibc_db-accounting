@@ -34,6 +34,7 @@ AS
 		- 20130103@Lukas: Restrict settle time for matches under major leage
 		- 20130121@Elodie: Change link server DB02, DB06 to DBPRO, DBACC
 						   Write more log on DBTXN server in case of DBLOG server failure
+						   
 		- 20130624@Jamie: Add BalanceNegative 
 						   
 	Param's Explanation:
