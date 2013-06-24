@@ -289,11 +289,11 @@ END --IF @SkipBalanceUpdate = 0
 		SELECT @matchid = matchid FROM @match WHERE rn = @rn
 
 		IF @action = 'CAL'
-			EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'M'
+												EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'M'
 		ELSE IF @action = 'REFUND'
-			EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'R'
+												EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'R'
 		ELSE IF @action IN ('REFUND-FT','REFUND-HT')
-			EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'F'
+												EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'F'
 
 		---------------------------------------------------------------
 		-- update match coz m88 project using DB02.dbo.match.tstamp to know match do parlay settle (vivi@2009-8-27)	
@@ -442,7 +442,6 @@ DROP TABLE #BalanceAfter
     WHERE VName = 'isCalculatingParlay'
 
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_Parlay] TO [bodbAdminNet] AS [dbo]
 GO
