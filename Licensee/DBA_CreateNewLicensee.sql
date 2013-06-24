@@ -26,6 +26,7 @@ Revisions:
 	+20121205@henry: add param @SuperWildCard
 	+20130204@Jim: add param @ResellerID 
 	+20130603@Jim: grant currency permission 
+	+20130624@Jim: set default for new licensee on Accounting system is inactive 
 	
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
@@ -79,13 +80,17 @@ AND (@IsAllowedRB=1 OR (@IsAllowedRB=0 AND FunctionID NOT IN (22,34,35)))
 IF NOT EXISTS (SELECT 1 FROM SystemLicensee (NOLOCK) WHERE LicenseeID=@licenseeid) 
 BEGIN
 	INSERT INTO SystemLicensee
-	SELECT ID, @LicenseeID as LicenseeID, CASE WHEN ID IN (1,2,3) THEN 1 ELSE 0 END AS  IsActive 
+	SELECT ID
+		, @LicenseeID as LicenseeID
+		, CASE WHEN ID IN (1,2) THEN 1 ELSE 0 END AS  IsActive 
 	FROM Systems (NOLOCK) 
 END 
 ELSE 
 BEGIN 
 	INSERT INTO SystemLicensee
-	SELECT ID, @LicenseeID as LicenseeID, CASE WHEN ID IN (1,2,3) THEN 1 ELSE 0 END AS IsActive 
+	SELECT ID
+			, @LicenseeID as LicenseeID
+			, CASE WHEN ID IN (1,2) THEN 1 ELSE 0 END AS IsActive 
 	FROM Systems (NOLOCK) 
 	WHERE ID NOT IN (SELECT DISTINCT SystemID FROM SystemLicensee (NOLOCK) WHERE LicenseeID=@licenseeid)
 END 
