@@ -14,7 +14,7 @@ SET NOCOUNT ON
 SELECT   
 	l.LicenseeID, l.LicenseeName 
 FROM Licensees l WITH (NOLOCK)  
-	INNER JOIN dbo.SystemLicensee sl WITH (NOLOCK) ON l.LicenseeID=sl.LicenseeID AND sl.SystemID=3
+	INNER JOIN DBLIC.bodb_licensee.dbo.SystemLicensee sl WITH (NOLOCK) ON l.LicenseeID=sl.LicenseeID AND sl.SystemID=3
 	INNER JOIN LicenseeBAConfig ba WITH (NOLOCK) ON l.LicenseeID = ba.LicenseeID
 WHERE sl.isActive=1	
 
