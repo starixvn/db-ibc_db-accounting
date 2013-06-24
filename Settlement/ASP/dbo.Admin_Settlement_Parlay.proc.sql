@@ -34,6 +34,7 @@ AS
 		- 20130103@Lukas: Restrict settle time for matches under major leage
 		- 20130121@Elodie: Change link server DB02, DB06 to DBPRO, DBACC
 						   Write more log on DBTXN server in case of DBLOG server failure
+		- 20130624@Jamie: Add BalanceNegative 
 						   
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -45,11 +46,22 @@ BEGIN
 	Declare @SkipBalanceUpdate bit
 	SET @SkipBalanceUpdate = 0
 	
-
-	DECLARE @start DATETIME, @stop DATETIME, @NotKeyScoreList VARCHAR(130)
+	DECLARE @start				DATETIME
+			,@stop				DATETIME
+			,@NotKeyScoreList	VARCHAR(130)
+			,@ActionID			INT
+			
 	SELECT	@start = CURRENT_TIMESTAMP,
 			@ErrCode = 0,
 			@ErrMsg = ''
+			
+	SELECT @ActionID = CASE @Action 
+			WHEN 'CAL' THEN 104
+			WHEN 'UNDO' THEN 105
+			WHEN 'REFUND-FT' THEN 106
+			WHEN 'REFUND-HT' THEN 120
+			WHEN 'REFUND' THEN 107
+		END
 	
 	/*
 		only settled from 4:00AM - 8:00PM (GMT+8) ~ 4:00PM-8:00AM (GMT-4)
@@ -352,6 +364,29 @@ SELECT custid, balance
 FROM #Balance
 WHERE Increased = 1
 
+----
+-- Add Negative Balance into BalanceNegative table 
+----
+INSERT INTO [bodb02].[dbo].[BalanceNegative]
+           ([ExecDate]
+           ,[MatchID]
+           ,[ActionID]
+           ,[CustID]
+           ,[Balance]
+           ,[StatusID]
+           ,[Remark])
+SELECT	 GETDATE()
+		,@MatchID
+		,@ActionID
+		,CustID
+		,Balance
+		,0
+		,@matchids 
+FROM	#Balance WITH (NOLOCK)
+WHERE	Increased = 0
+		        
+---------------------------------------------------
+
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
@@ -360,8 +395,8 @@ DROP TABLE #BalanceAfter
 ---                      WRITE LOG                        ---
 ---------------------------VVVV------------------------------
 
-	Declare @LogData nvarchar(200)
-	DECLARE @ActionID varchar(30), @Remark varchar(200)
+	Declare  @LogData nvarchar(200)
+			,@Remark varchar(200)
 
 	SET @rn = 1
 	WHILE EXISTS (SELECT 1 FROM @match WHERE rn = @rn)
@@ -383,13 +418,7 @@ DROP TABLE #BalanceAfter
 		EXEC dbo.WriteLog_UserLog @creator, @LogData
 
 		--Write Log Settle
-		SELECT @ActionID = CASE @Action 
-				WHEN 'CAL' THEN 104
-				WHEN 'UNDO' THEN 105
-				WHEN 'REFUND-FT' THEN 106
-				WHEN 'REFUND-HT' THEN 120
-				WHEN 'REFUND' THEN 107
-			END
+
 		SELECT @Remark = 'Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms'
 			+ ' mpcs=' + CAST(@CalTime as nvarchar(10)) + ':' + CAST(@PreCal as nvarchar(10)) + ':' + CAST(@Calculate as nvarchar(10)) + ':' + CAST(@Summary as nvarchar(10))
 			+ ' tsu2s=' + CAST(@9Time as nvarchar(10)) + ':' + CAST(@selTime as varchar(10)) + ':' + CAST(@updTIme as varchar(10)) + ':' + CAST(@2Call as nvarchar(10)) + ':' + CAST(@29Time as nvarchar(10))
