@@ -149,7 +149,7 @@ BEGIN
 		END CATCH
 	END
 	
-	EXEC dbo.Admin_Settlement_Refund_All 
+				EXEC dbo.Admin_Settlement_Refund_All 
 			@matchid = @matchid, 
 			@creator = @adminid,
 			@IsExcludeBetdaq = @IsExcludeBetdaq,
@@ -254,7 +254,7 @@ EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command	= 'Admin_Settlement_RefundHT',
 
 IF @Rowcount > 0
 BEGIN
-	EXEC DBPRO.BODB02.dbo.updateMatch_remark @matchid, 'F'
+				EXEC DBPRO.BODB02.dbo.updateMatch_remark @matchid, 'F'
 
 	EXEC dbo.Admin_Calculate_RefundHT 
 			@matchid = @matchid,
@@ -395,8 +395,7 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
-
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_RefundHT] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]

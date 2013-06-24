@@ -217,8 +217,7 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
-
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_BetDaq] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_BetDaq] TO [vnteam] AS [dbo]

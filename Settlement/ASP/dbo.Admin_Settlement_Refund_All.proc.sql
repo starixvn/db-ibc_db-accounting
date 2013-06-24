@@ -390,6 +390,8 @@ BEGIN
 	END CATCH
 END
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_All] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]
