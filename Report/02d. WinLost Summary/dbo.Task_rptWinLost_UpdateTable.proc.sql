@@ -14,6 +14,22 @@ Revision:
 	- 20130620@Johnson: copy data to rptWinlost2
 */
 	
+	DECLARE @CommSetting TABLE
+	(	MatchID			int,
+		IBCFee			bit,
+		ToteCommWin		smallmoney,
+		ToteCommPlace	smallmoney,
+		ToteCommWP		smallmoney,
+		ToteFee			smallmoney	
+	)
+	
+	CREATE TABLE #bettransm (
+		refno bigint primary key,
+		TOIBC	money,
+		WLIBC money,
+		TOPhum money
+	)
+	
 	SELECT distinct winlostdate FROM bettrans with (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
 	IF @@ROWCOUNT = 1
 	BEGIN
@@ -23,6 +39,73 @@ Revision:
 		DELETE FROM bodb_Report.dbo.rptWinlost2
 		WHERE winlostdate = @winlostdate
 		
+		--calculate racing winlost
+		INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
+		SELECT	DISTINCT o.orid as matchid, CASE WHEN r.partnerID IN (2,3,4) THEN 0 ELSE 1 END, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
+		FROM	outright o WITH (NOLOCK)
+				INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.LeagueID AND p.programDate = o.programDate
+				INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid				
+		WHERE	o.eventdate = @winlostdate 
+		
+		INSERT INTO #bettransm (refno,TOIBC,WLIBC,TOPhum)
+		SELECT refno,
+			sum(case when bettype = 32 and liveawayscore =0 then 0 else stake*isnull(oddsspread,0) end),
+			-sum((winlost - stake)*isnull(oddsspread,0)),
+			sum(case when bettype = 32 and liveawayscore = 0 then 0 when bettype = 31 or (bettype = 32 and liveawayscore <> 0) then stake*(1 -tpositiontaking - isnull(oddsspread,0)) else 0 end)
+		FROM bettransm WITH(NOLOCK)
+		WHERE winlostdate = @winlostdate	
+			AND bettype IN (31,32)
+		GROUP BY refno
+		
+		INSERT INTO bodb_Report.dbo.rptWinlost2
+			(
+				[winlostdate]
+			   ,[matchid]
+			   ,[bettype]
+			   ,[liveindicator]
+			   ,[Status]
+			   ,[IBC]
+			   ,[RealTurnover]
+			   ,[RealWinLost]
+			   ,[RealPosition]
+			   ,[RealCommission]
+			   ,[RealLineTotal]
+			   ,[VirtualTurnover]
+			   ,[VirtualLineTotal]
+			   ,[SportType]
+			   ,[exrisk]
+			)			
+		SELECT
+			winlostdate,
+			b.matchid, bettype, liveindicator, Status,
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end ibc,
+			sum(case when b.bettype = 33 then bm.TOPhum*actualrate ELSE actual_stake*isnull(b.oddsspread,0)*actualrate END) as realturnover,
+			sum((winlost-actual_stake)* actualrate)  realwinlost,
+			sum((awinlost+mwinlost+swinlost)* actualrate) realpos,
+			sum((scomm) * actualrate) realcomm,
+			-(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
+								- sum( case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
+								+ sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
+													when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
+													when 33 then bm.TOPhum*cs.ToteCommWP  
+													else 0 end)*b.actualrate) --commIncomeIBC
+								- sum(b.scomm*b.actualrate)) as realLineTotal,
+			0 as virtualTurnover,
+			0 virtualLineTotal,			
+			0, 0
+		FROM
+			bettrans b with (nolock)
+			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid 
+			LEFT JOIN #bettransm bm ON b.transid = bm.refno
+		WHERE
+			bettype in (31,32,33)
+			AND winlostdate = @winlostdate
+			AND statusID NOT IN (101,102,103,121)--('VOID','REJECT','DONE','REFUND')
+			AND ruben = 1
+		GROUP BY
+			winlostdate, b.matchid, bettype, liveindicator, status,
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
+
 
 		INSERT INTO bodb_Report.dbo.rptWinlost2
 			(
@@ -57,7 +140,7 @@ Revision:
 		FROM
 			bettrans b with (nolock)
 		WHERE
-			bettype < 19999
+			bettype < 19999 and bettype not in (31,32,33)
 			AND winlostdate = @winlostdate
 			AND statusID NOT IN (101, 102) --('VOID', 'REJECT') 
 			AND ruben = 1
@@ -136,6 +219,73 @@ Revision:
 			DELETE FROM bodb_Report.dbo.rptWinlost2
 			WHERE winlostdate = @winlostdate
 		
+			--calculate racing winlost
+			INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
+			SELECT	DISTINCT o.orid as matchid, CASE WHEN r.partnerID IN (2,3,4) THEN 0 ELSE 1 END, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
+			FROM	outright14 o WITH (NOLOCK)
+					INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.LeagueID AND p.programDate = o.programDate
+					INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid				
+			WHERE	o.eventdate = @winlostdate 
+			
+			INSERT INTO #bettransm (refno,TOIBC,WLIBC,TOPhum)
+			SELECT refno,
+				sum(case when bettype = 32 and liveawayscore =0 then 0 else stake*isnull(oddsspread,0) end),
+				-sum((winlost - stake)*isnull(oddsspread,0)),
+				sum(case when bettype = 32 and liveawayscore = 0 then 0 when bettype = 31 or (bettype = 32 and liveawayscore <> 0) then stake*(1 -tpositiontaking - isnull(oddsspread,0)) else 0 end)
+			FROM bettransm14 WITH(NOLOCK)
+			WHERE winlostdate = @winlostdate
+				AND bettype IN (31,32)
+			GROUP BY refno
+			
+			INSERT INTO bodb_Report.dbo.rptWinlost2
+			(
+				[winlostdate]
+			   ,[matchid]
+			   ,[bettype]
+			   ,[liveindicator]
+			   ,[Status]
+			   ,[IBC]
+			   ,[RealTurnover]
+			   ,[RealWinLost]
+			   ,[RealPosition]
+			   ,[RealCommission]
+			   ,[RealLineTotal]
+			   ,[VirtualTurnover]
+			   ,[VirtualLineTotal]
+			   ,[SportType]
+			   ,[exrisk]
+			)			
+			SELECT
+				winlostdate,
+				b.matchid, bettype, liveindicator, Status,
+				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end ibc,
+				sum(case when b.bettype = 33 then bm.TOPhum*actualrate ELSE actual_stake*isnull(b.oddsspread,0)*actualrate END) as realturnover,
+				sum((winlost-actual_stake)* actualrate)  realwinlost,
+				sum((awinlost+mwinlost+swinlost)* actualrate) realpos,
+				sum((scomm) * actualrate) realcomm,
+				-(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
+									- sum( case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
+									+ sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
+														when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
+														when 33 then bm.TOPhum*cs.ToteCommWP  
+														else 0 end)*b.actualrate) --commIncomeIBC
+									- sum(b.scomm*b.actualrate)) as realLineTotal,
+				0 as virtualTurnover,
+				0 virtualLineTotal,			
+				0, 0
+			FROM
+				bettrans14 b with (nolock)
+				INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid 
+				LEFT JOIN #bettransm bm ON b.transid = bm.refno
+			WHERE
+				bettype in (31,32,33)
+				AND winlostdate = @winlostdate
+				AND statusID NOT IN (101,102,103,121)--('VOID','REJECT','DONE','REFUND')
+				AND ruben = 1
+			GROUP BY
+				winlostdate, b.matchid, bettype, liveindicator, status,
+				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
+
 
 			INSERT INTO bodb_Report.dbo.rptWinlost2
 				(
@@ -170,7 +320,7 @@ Revision:
 			FROM
 				bettrans14 b with (nolock)
 			WHERE
-				bettype < 19999
+				bettype < 19999 and bettype not in (31,32,33)
 				AND winlostdate = @winlostdate
 				AND statusID NOT IN (101, 102) --('VOID', 'REJECT') 
 				AND ruben = 1
@@ -232,12 +382,13 @@ Revision:
 				WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
 				WHEN (leaguename LIKE '%NHL%' OR leaguename LIKE '%hockey%') AND l.sporttype = 2 THEN 4
 				ELSE l.sporttype END
-			FROM outright o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
+			FROM outright14 o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
 			WHERE bodb_Report.dbo.rptWinlost2.matchid = o.orid
 			AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
 			AND bodb_Report.dbo.rptWinlost2.bettype BETWEEN 31 AND 33		
 		END
 	END
-
+	
+	DROP TABLE #bettransm
 GO
 GRANT VIEW DEFINITION ON [dbo].[Task_rptWinLost_UpdateTable] TO [vnteam]
