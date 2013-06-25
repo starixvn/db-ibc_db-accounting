@@ -731,6 +731,8 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype.sql"
          Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype_Racing.sql"
          Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype_SB.sql"
+         Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype_VirtualRacing.sql"
+         Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype_VirtualSports.sql"
          Script = "dbo.Task_rptWinLost_UpdateTable.proc.sql"
       End
       Begin Folder = "02e. Win Loss by Sport +CHART"
