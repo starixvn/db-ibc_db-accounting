@@ -59,6 +59,8 @@ AS
 		- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype,f_GetChoice for odds, Oddstype, betteam
 		- 20120927@Johnson: get commstatus column to check double comm losing
 		- 20130227@Elodie: Add Virtual HR product
+		- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
+		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
 */
@@ -220,62 +222,62 @@ BEGIN
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus);
                                       
-			-- Virtual HR
-            INSERT INTO @Data
-            SELECT r.SportType,
-                   r.LeagueID,
-                   0 as homeid,
-                   o.RacerID as awayid,
-                   '' as matchcode,
-                   b.oddsid as Race,
-                   o.EventDate,
-                   0,
-                   0,
-                   b.sdiscount,
-                   b.adiscount,
-                   b.discount,
-                   ISNULL(b.checktime, '') AS settletime,
-                   b.matchid,
-                   b.transid,
-                   ISNULL(b.BetID, 0),
-                   b.refno,
-                   b.transdate,
-                   b.oddsid,
-                   b.bettype,
-                   b.hdp1,
-                   b.hdp2,
-                   b.odds,
-                   b.modds,
-                   0 AS finalodds,
-                   0 AS finalodds2,
-                   b.oddstype,
-                   '' as betteam,
-                   b.status,
-                   '' as betstatus,
-                   CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
-                   b.stake,
-                   b.actual_stake,
-                   (b.winlost - b.actual_stake) AS winlost,
-                   b.playercomm,
-                   b.livehomescore,
-                   b.liveawayscore,
-                   0 as liveindicator,
-                   0 as finalhomescore,
-                   0 as finalawayscore,
-                   0 as hthomescore,
-                   0 as htawayscore,
-                   b.CREATOR, --creator.username creator, 
-                   b.ip,
-                   b.Username,
-                   CONVERT (BIT, 0) AS IsNeutral,
-                   '' as showtime
-            FROM   dbo.bettrans14 b WITH (NOLOCK)
-                   INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-                   INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-            WHERE  b.custid = @custid
-                   AND b.winlostdate = @fromdate
-                   AND b.bettype in (1231, 1232, 1233, 1237, 1238)
-                   AND b.statusID IN (SELECT statusID FROM @tmpStatus)
+			---- Virtual HR
+   --         INSERT INTO @Data
+   --         SELECT r.SportType,
+   --                r.LeagueID,
+   --                0 as homeid,
+   --                o.RacerID as awayid,
+   --                '' as matchcode,
+   --                b.oddsid as Race,
+   --                o.EventDate,
+   --                0,
+   --                0,
+   --                b.sdiscount,
+   --                b.adiscount,
+   --                b.discount,
+   --                ISNULL(b.checktime, '') AS settletime,
+   --                b.matchid,
+   --                b.transid,
+   --                ISNULL(b.BetID, 0),
+   --                b.refno,
+   --                b.transdate,
+   --                b.oddsid,
+   --                b.bettype,
+   --                b.hdp1,
+   --                b.hdp2,
+   --                b.odds,
+   --                b.modds,
+   --                0 AS finalodds,
+   --                0 AS finalodds2,
+   --                b.oddstype,
+   --                '' as betteam,
+   --                b.status,
+   --                '' as betstatus,
+   --                CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
+   --                b.stake,
+   --                b.actual_stake,
+   --                (b.winlost - b.actual_stake) AS winlost,
+   --                b.playercomm,
+   --                b.livehomescore,
+   --                b.liveawayscore,
+   --                0 as liveindicator,
+   --                0 as finalhomescore,
+   --                0 as finalawayscore,
+   --                0 as hthomescore,
+   --                0 as htawayscore,
+   --                b.CREATOR, --creator.username creator, 
+   --                b.ip,
+   --                b.Username,
+   --                CONVERT (BIT, 0) AS IsNeutral,
+   --                '' as showtime
+   --         FROM   dbo.bettrans14 b WITH (NOLOCK)
+   --                INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
+   --                INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+   --         WHERE  b.custid = @custid
+   --                AND b.winlostdate = @fromdate
+   --                AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+   --                AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                       						                                   
             -- CASINO 
             INSERT INTO @Data
@@ -705,62 +707,62 @@ BEGIN
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus)
 
-			-- Virtual HR
-            INSERT INTO @Data
-            SELECT r.SportType,
-                   r.LeagueID,
-                   0 as homeid,
-                   o.RacerID as awayid,
-                   '' as matchcode,
-                   b.oddsid as Race,
-                   o.EventDate,
-                   0,
-                   0,
-                   b.sdiscount,
-                   b.adiscount,
-                   b.discount,
-                   ISNULL(b.checktime, '') AS settletime,
-                   b.matchid,
-                   b.transid,
-                   ISNULL(b.BetID, 0),
-                   b.refno,
-                   b.transdate,
-                   b.oddsid,
-                   b.bettype,
-                   b.hdp1,
-                   b.hdp2,
-                   b.odds,
-                   b.modds,
-                   0 AS finalodds,
-                   0 AS finalodds2,
-                   b.oddstype,
-                   '' as betteam,
-                   b.status,
-                   '' as betstatus,
-                   CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
-                   b.stake,
-                   b.actual_stake,
-                   (b.winlost - b.actual_stake) AS winlost,
-                   b.playercomm,
-                   b.livehomescore,
-                   b.liveawayscore,
-                   0 as liveindicator,
-                   0 as finalhomescore,
-                   0 as finalawayscore,
-                   0 as hthomescore,
-                   0 as htawayscore,
-                   b.CREATOR, --creator.username creator, 
-                   b.ip,
-                   b.Username,
-                   CONVERT (BIT, 0) AS IsNeutral,
-                   '' as showtime
-            FROM   dbo.bettrans b WITH (NOLOCK)
-                   INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
-                   INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-            WHERE  b.custid = @custid
-                   AND b.winlostdate = @fromdate
-                   AND b.bettype in (1231, 1232, 1233, 1237, 1238)
-                   AND b.statusID IN (SELECT statusID FROM @tmpStatus)
+			---- Virtual HR
+   --         INSERT INTO @Data
+   --         SELECT r.SportType,
+   --                r.LeagueID,
+   --                0 as homeid,
+   --                o.RacerID as awayid,
+   --                '' as matchcode,
+   --                b.oddsid as Race,
+   --                o.EventDate,
+   --                0,
+   --                0,
+   --                b.sdiscount,
+   --                b.adiscount,
+   --                b.discount,
+   --                ISNULL(b.checktime, '') AS settletime,
+   --                b.matchid,
+   --                b.transid,
+   --                ISNULL(b.BetID, 0),
+   --                b.refno,
+   --                b.transdate,
+   --                b.oddsid,
+   --                b.bettype,
+   --                b.hdp1,
+   --                b.hdp2,
+   --                b.odds,
+   --                b.modds,
+   --                0 AS finalodds,
+   --                0 AS finalodds2,
+   --                b.oddstype,
+   --                '' as betteam,
+   --                b.status,
+   --                '' as betstatus,
+   --                CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
+   --                b.stake,
+   --                b.actual_stake,
+   --                (b.winlost - b.actual_stake) AS winlost,
+   --                b.playercomm,
+   --                b.livehomescore,
+   --                b.liveawayscore,
+   --                0 as liveindicator,
+   --                0 as finalhomescore,
+   --                0 as finalawayscore,
+   --                0 as hthomescore,
+   --                0 as htawayscore,
+   --                b.CREATOR, --creator.username creator, 
+   --                b.ip,
+   --                b.Username,
+   --                CONVERT (BIT, 0) AS IsNeutral,
+   --                '' as showtime
+   --         FROM   dbo.bettrans b WITH (NOLOCK)
+   --                INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
+   --                INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+   --         WHERE  b.custid = @custid
+   --                AND b.winlostdate = @fromdate
+   --                AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+   --                AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                                          
             -- CASINO 
             INSERT INTO @Data

@@ -6,7 +6,7 @@ AS
 /*
 Created: Phuong Dao
 Task : Bet List By IP and Other Sports
-DB: DB06.bodb02 
+DB: DBACC/bodb02 
 Original: Acc_BetListByDayAllIP
 Revisions:
 	- 20090509@Simon: Bet List For Casino
@@ -42,6 +42,7 @@ Revisions:
 	- 20120927@Johnson: get commstatus column to check double comm losing
 	- 20121029@Elodie: Get matchid column
 	- 20130227@Elodie: Add Virtual HR product
+	- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
 	
 Param's Explanation:
 • @fromdate = @winlostdate
@@ -924,111 +925,111 @@ SET NOCOUNT ON
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
-			-- Virtual HR
-			UNION ALL
-			SELECT	0 finalhomescore,
-					0 finalawayscore, 
-					b.oddsid, 
-					r.LeagueID,
-					b.bettype, 
-					b.transid,
-					'' as BetID,
-					b.refno,
-					o.RacerNum matchcode, --Horse Number
-					b.oddsid as Race, -- OutrightID
-					'' EventDate,
-					0 as virtualrate,
-					0 as isShowOTExRate,
-					b.sdiscount,
-					b.adiscount,
-					b.discount,
-					o.RacerID as homeID, 
-					0 as awayID,
-					'' checktime, 
-					b.hdp1, 
-					b.hdp2, 
-					b.odds,   
-					b.modds,
-					0 finalodds,
-					0 finalodds2,
-					'' OddsType, 					
-					b.status, 
-					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
-					b.stake, 
-					b.actual_stake,
-					b.transdate, 
-					'' as betteam, 
-					b.livehomescore,
-					b.liveawayscore,
-					0 liveindicator, 
-					(b.winlost-b.actual_stake)  winlost,
-					b.playercomm as commission, 
-					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
-					b.username,
-					0 hthomescore, 0 htawayscore,ip, 	
-					181 sporttype,
-					b.matchid,
-					0 IsNeutral,
-					r.EventTime as showtime -- race name
-			FROM 	bettrans b with (nolock)
-					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
-					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-			WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
-					AND b.winlostdate = @fromdate
-					AND b.custid = @custid		
+			---- Virtual HR
+			--UNION ALL
+			--SELECT	0 finalhomescore,
+			--		0 finalawayscore, 
+			--		b.oddsid, 
+			--		r.LeagueID,
+			--		b.bettype, 
+			--		b.transid,
+			--		'' as BetID,
+			--		b.refno,
+			--		convert(nvarchar(50),o.RacerNum) matchcode, --Horse Number
+			--		b.oddsid as Race, -- OutrightID
+			--		'' EventDate,
+			--		0 as virtualrate,
+			--		0 as isShowOTExRate,
+			--		b.sdiscount,
+			--		b.adiscount,
+			--		b.discount,
+			--		o.RacerID as homeID, 
+			--		0 as awayID,
+			--		'' checktime, 
+			--		b.hdp1, 
+			--		b.hdp2, 
+			--		b.odds,   
+			--		b.modds,
+			--		0 finalodds,
+			--		0 finalodds2,
+			--		'' OddsType, 					
+			--		b.status, 
+			--		CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+			--		b.stake, 
+			--		b.actual_stake,
+			--		b.transdate, 
+			--		'' as betteam, 
+			--		b.livehomescore,
+			--		b.liveawayscore,
+			--		0 liveindicator, 
+			--		(b.winlost-b.actual_stake)  winlost,
+			--		b.playercomm as commission, 
+			--		CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+			--		b.username,
+			--		0 hthomescore, 0 htawayscore,ip, 	
+			--		181 sporttype,
+			--		b.matchid,
+			--		0 IsNeutral,
+			--		convert(nvarchar(50), r.EventTime) as showtime -- race name
+			--FROM 	bettrans b with (nolock)
+			--		INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
+			--		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+			--WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
+			--		AND b.winlostdate = @fromdate
+			--		AND b.custid = @custid		
 			
-			-- Virtual HR 14
-			UNION ALL
-			SELECT	0 finalhomescore,
-					0 finalawayscore, 
-					b.oddsid, 
-					r.LeagueID,
-					b.bettype, 
-					b.transid,
-					'' as BetID,
-					b.refno,
-					o.RacerNum matchcode, --Horse Number
-					b.oddsid as Race, -- OutrightID
-					'' EventDate,
-					0 as virtualrate,
-					0 as isShowOTExRate,
-					b.sdiscount,
-					b.adiscount,
-					b.discount,
-					o.RacerID as homeID, 
-					0 as awayID,
-					'' checktime, 
-					b.hdp1, 
-					b.hdp2, 
-					b.odds,   
-					b.modds,
-					0 finalodds,
-					0 finalodds2,
-					'' OddsType, 					
-					b.status, 
-					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
-					b.stake, 
-					b.actual_stake,
-					b.transdate, 
-					'' as betteam, 
-					b.livehomescore,
-					b.liveawayscore,
-					0 liveindicator, 
-					(b.winlost-b.actual_stake)  winlost,
-					b.playercomm as commission, 
-					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
-					b.username,
-					0 hthomescore, 0 htawayscore,ip, 	
-					181 sporttype,
-					b.matchid,
-					0 IsNeutral,
-					r.EventTime as showtime -- race name  
-			FROM 	bettrans14 b with (nolock)
-					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-			WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
-					AND b.winlostdate = @fromdate
-					AND b.custid = @custid				
+			---- Virtual HR 14
+			--UNION ALL
+			--SELECT	0 finalhomescore,
+			--		0 finalawayscore, 
+			--		b.oddsid, 
+			--		r.LeagueID,
+			--		b.bettype, 
+			--		b.transid,
+			--		'' as BetID,
+			--		b.refno,
+			--		convert(nvarchar(50),o.RacerNum) matchcode, --Horse Number
+			--		b.oddsid as Race, -- OutrightID
+			--		'' EventDate,
+			--		0 as virtualrate,
+			--		0 as isShowOTExRate,
+			--		b.sdiscount,
+			--		b.adiscount,
+			--		b.discount,
+			--		o.RacerID as homeID, 
+			--		0 as awayID,
+			--		'' checktime, 
+			--		b.hdp1, 
+			--		b.hdp2, 
+			--		b.odds,   
+			--		b.modds,
+			--		0 finalodds,
+			--		0 finalodds2,
+			--		'' OddsType, 					
+			--		b.status, 
+			--		CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+			--		b.stake, 
+			--		b.actual_stake,
+			--		b.transdate, 
+			--		'' as betteam, 
+			--		b.livehomescore,
+			--		b.liveawayscore,
+			--		0 liveindicator, 
+			--		(b.winlost-b.actual_stake)  winlost,
+			--		b.playercomm as commission, 
+			--		CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+			--		b.username,
+			--		0 hthomescore, 0 htawayscore,ip, 	
+			--		181 sporttype,
+			--		b.matchid,
+			--		0 IsNeutral,
+			--		convert(nvarchar(50), r.EventTime) as showtime -- race name  
+			--FROM 	bettrans14 b with (nolock)
+			--		INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
+			--		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+			--WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
+			--		AND b.winlostdate = @fromdate
+			--		AND b.custid = @custid				
 	) x
 
 WHERE ip=@ip
