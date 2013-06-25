@@ -150,6 +150,7 @@ DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
 
+
 ----------------------------------------------------
 
 SELECT	@stop = CURRENT_TIMESTAMP

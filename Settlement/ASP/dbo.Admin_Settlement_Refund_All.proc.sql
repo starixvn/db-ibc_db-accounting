@@ -326,7 +326,6 @@ FROM	#Balance WITH (NOLOCK)
 WHERE	Increased = 0
 		        
 ---------------------------------------------------
-
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
