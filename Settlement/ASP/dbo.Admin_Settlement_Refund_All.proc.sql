@@ -309,6 +309,7 @@ INSERT INTO [bodb02].[dbo].[BalanceNegative]
            ([ExecDate]
            ,[MatchID]
            ,[ActionID]
+           ,[GroupID]
            ,[CustID]
            ,[Balance]
            ,[StatusID]
@@ -316,6 +317,7 @@ INSERT INTO [bodb02].[dbo].[BalanceNegative]
 SELECT	 GETDATE()
 		,@MatchID
 		,@ActionID
+		,1			-- Sportsbook Single bet Settlement 
 		,CustID
 		,Balance
 		,0
@@ -323,7 +325,7 @@ SELECT	 GETDATE()
 FROM	#Balance WITH (NOLOCK)
 WHERE	Increased = 0
 		        
-----------------------------------------------
+---------------------------------------------------
 
 
 DROP TABLE #Balance
