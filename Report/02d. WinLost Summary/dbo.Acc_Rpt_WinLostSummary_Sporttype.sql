@@ -39,9 +39,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 71
@@ -55,9 +55,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 73
@@ -71,9 +71,9 @@ SET NOCOUNT ON
 			,0 as realPosition
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 1000
@@ -87,9 +87,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype between 1101 and 1199
@@ -134,9 +134,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			, 0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 31 AND 33
@@ -151,9 +151,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 1201 AND 1299

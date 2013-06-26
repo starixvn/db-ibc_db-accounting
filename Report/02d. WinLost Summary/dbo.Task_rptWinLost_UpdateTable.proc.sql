@@ -6,7 +6,7 @@ Name : rpt_WinLost_UpdateTable
 Creator : Joe
 Created : 2007-01-29 01:30
 Task : update summary for winlost report
-DB: DB06.bodb02
+DB: DBACC/bodb02
 Revision:
 	- 20110516@Lukas: re-arrange bettype
 	- 20120420@Hurri: add tickets of member under agent BARM into IBC winlost
@@ -142,7 +142,7 @@ Revision:
 		WHERE
 			bettype < 19999 and bettype not in (31,32,33)
 			AND winlostdate = @winlostdate
-			AND statusID NOT IN (101, 102) --('VOID', 'REJECT') 
+			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
 			AND ruben = 1
 		GROUP BY
 			winlostdate, matchid, bettype, liveindicator, status,
@@ -322,7 +322,7 @@ Revision:
 			WHERE
 				bettype < 19999 and bettype not in (31,32,33)
 				AND winlostdate = @winlostdate
-				AND statusID NOT IN (101, 102) --('VOID', 'REJECT') 
+				AND statusID NOT IN (101, 102,103,121) ----('VOID','REJECT','DONE','REFUND')
 				AND ruben = 1
 			GROUP BY
 				winlostdate, matchid, bettype, liveindicator, status,
