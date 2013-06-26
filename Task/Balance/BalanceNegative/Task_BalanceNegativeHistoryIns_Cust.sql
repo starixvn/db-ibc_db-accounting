@@ -65,6 +65,7 @@ BEGIN
 			, Balance
 			, TotalBalance
 			, StatusID
+			, Site
 			, Remark
 		)
 		
@@ -77,10 +78,12 @@ BEGIN
 				, bn.Balance
 				, t.balance
 				, 0
+				, @Site
 				, bn.Remark 
 		FROM	#tmpBalanceLic t WITH (NOLOCK)
 				INNER JOIN dbo.BalanceNegative bn WITH (NOLOCK) ON t.custID = bn.CustID 
-		WHERE	MatchID IN (SELECT MatchID FROM @tmpMatch ) 
+		WHERE	bn.MatchID IN (SELECT MatchID FROM @tmpMatch ) 
+				AND bn.StatusID = 0 
 		
 	END
 
