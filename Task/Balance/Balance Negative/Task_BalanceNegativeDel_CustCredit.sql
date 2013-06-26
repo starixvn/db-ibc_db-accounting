@@ -25,7 +25,11 @@ BEGIN
 	IF EXISTS(
 		SELECT	TOP 1 1 
 		FROM	dbo.BalanceNegative WITH (NOLOCK)
-		WHERE	CustID IN (SELECT custid FROM #tmpRecommend WITH (NOLOCK))	
+		WHERE	CustID NOT IN (
+					SELECT	custid 
+					FROM	custinfo WITH(NOLOCK) 
+					WHERE	recommend IN (SELECT custid FROM #tmpRecommend WITH (NOLOCK))					
+				)
 	)
 	BEGIN
 		DELETE FROM dbo.BalanceNegative WITH (ROWLOCK)
