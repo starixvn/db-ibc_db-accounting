@@ -970,15 +970,16 @@ Begin DataProject = "DBA"
          End
       End
       Begin Folder = "Balance"
+         Begin Folder = "Balance Negative"
+            Script = "Task_BalanceNegativeDel_CustCredit.sql"
+            Script = "Task_BalanceNegativeHistoryIns_Cust.sql"
+         End
          Begin Folder = "BalanceCreditDebit"
             Script = "Task_BalanceGameResetYesterday.sql"
             Script = "Task_BalanceUpdCredit.sql"
             Script = "Task_BalanceUpdCreditGame.sql"
             Script = "Task_BalanceUpdDebit.sql"
             Script = "Task_BalanceUpdDebitGame.sql"
-         End
-         Begin Folder = "BalanceNegative"
-            Script = "Task_BalanceNegativeDel_CustCredit.sql"
          End
       End
       Begin Folder = "Bettrans"
