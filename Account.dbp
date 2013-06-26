@@ -991,6 +991,7 @@ Begin DataProject = "Account"
          End
          Begin Folder = "NegativeBalance"
             Script = "Acc_BalanceNegativeSel_BySite.sql"
+            Script = "Acc_BalanceNegativeSel_MatchLog.sql"
             Script = "Acc_BalanceNegativeUpd_StatusID.sql"
             Script = "Acc_Rpt_NegativeBalance_LicenseebySite.sql"
             Script = "Acc_Rpt_NegativeBalanceMember_Dep.sql"
