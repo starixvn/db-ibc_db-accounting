@@ -969,12 +969,17 @@ Begin DataProject = "DBA"
             Script = "Task_ABSumWinloss_Archive.sql"
          End
       End
-      Begin Folder = "BalanceCreditDebit"
-         Script = "Task_BalanceGameResetYesterday.sql"
-         Script = "Task_BalanceUpdCredit.sql"
-         Script = "Task_BalanceUpdCreditGame.sql"
-         Script = "Task_BalanceUpdDebit.sql"
-         Script = "Task_BalanceUpdDebitGame.sql"
+      Begin Folder = "Balance"
+         Begin Folder = "BalanceCreditDebit"
+            Script = "Task_BalanceGameResetYesterday.sql"
+            Script = "Task_BalanceUpdCredit.sql"
+            Script = "Task_BalanceUpdCreditGame.sql"
+            Script = "Task_BalanceUpdDebit.sql"
+            Script = "Task_BalanceUpdDebitGame.sql"
+         End
+         Begin Folder = "BalanceNegative"
+            Script = "Task_BalanceNegativeDel_CustCredit.sql"
+         End
       End
       Begin Folder = "Bettrans"
          Script = "dbo.DBA_ReInit_bettrans_forecast_agent.sql"
