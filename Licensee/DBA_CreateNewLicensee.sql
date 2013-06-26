@@ -114,7 +114,7 @@ SET @i = 0
 SELECT @MAX = MAX(id) FROM @DATA
 
 --Insert Permission for each admin user for the new licensee
-WHILE @i < @MAX
+WHILE @i <=@MAX
 BEGIN
     SET @i = @i + 1
        SELECT @UserID=UserID,@Username=Username FROM @DATA
