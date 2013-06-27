@@ -38,7 +38,8 @@ Revisions:
 	- 20120808@Sophia: Add table TempVariableNumber to check if this match is being calculated then not allow to settle until the on-going process is completed
 	- 20130103@Elodie: Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table										
 	- 20130121@Elodie: Change link server DB02 to DBPRO
-					   Write more log on DBTXN server in case of DBLOG server failure	
+					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20130624@Jamie: Add BalanceNegative 	
 Param's Explanation:
 • @matchid: matchid need to refund
 • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
@@ -58,7 +59,11 @@ BEGIN
 			@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
-DECLARE @Remark VARCHAR(500)
+DECLARE  @Remark	VARCHAR(500)
+		,@ActionID	INT
+		
+SELECT	@ActionID = 109 
+
 INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (1, @matchid)
 IF (@@Error = 0)
 BEGIN
@@ -67,7 +72,7 @@ BEGIN
 			@UserID = @creator, 
 			@Matchid = @matchid, 
 			@KeyID = 1,
-			@ActionID = 109, 
+			@ActionID = @ActionID, 
 			@Remark = 'ADD SUCCESS'
 	END TRY
 	BEGIN CATCH
@@ -76,7 +81,7 @@ BEGIN
 			@UserID = @creator, 
 			@Matchid = @matchid, 
 			@KeyID = 1,
-			@ActionID = 109, 
+			@ActionID = @ActionID, 
 			@Remark = @Remark
 	END CATCH
 END 
@@ -157,7 +162,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = 'DEL SUCCESS'
 			END TRY  
 			BEGIN CATCH	
@@ -166,7 +171,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = @Remark
 			END CATCH
 		END
@@ -177,7 +182,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = 'DEL FAILED'
 			END TRY
 			BEGIN CATCH
@@ -186,7 +191,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = @Remark
 			END CATCH
 		END
@@ -209,7 +214,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = 'DEL SUCCESS'			
 			END TRY  
 			BEGIN CATCH	
@@ -218,7 +223,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = @Remark	
 			END CATCH	
 		END
@@ -229,7 +234,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = 'DEL FAILED'
 			END TRY			
 			BEGIN CATCH	
@@ -238,7 +243,7 @@ BEGIN
 					@UserID = @creator, 
 					@Matchid = @matchid, 
 					@KeyID = 1,
-					@ActionID = 109, 
+					@ActionID = @ActionID, 
 					@Remark = @Remark
 			END CATCH
 		END
@@ -296,9 +301,38 @@ SELECT custid, balance
 FROM #Balance
 WHERE Increased = 1
 
+
+----
+-- Add Negative Balance into BalanceNegative table 
+----
+INSERT INTO [bodb02].[dbo].[BalanceNegative]
+           ([ExecDate]
+           ,[MatchID]
+           ,[ActionID]
+           ,[GroupID]
+           ,[CustID]
+           ,[Balance]
+           ,[StatusID]
+           ,[Remark])
+SELECT	 GETDATE()
+		,@MatchID
+		,@ActionID
+		,1			-- Sportsbook Single bet Settlement 
+		,CustID
+		,Balance
+		,0
+		,NULL 
+FROM	#Balance WITH (NOLOCK)
+WHERE	Increased = 0
+		        
+---------------------------------------------------
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
+
+----------------------------------------------
+
+
 
 SELECT	@stop = CURRENT_TIMESTAMP
 
@@ -319,7 +353,7 @@ BEGIN TRY
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
 		@UserID = @creator,
 		@Matchid = @matchid,
-		@ActionID = 109,
+		@ActionID = @ActionID,
 		@finalhomescore = 0,
 		@finalawayscore = 0,  
 		@hthomescore = 0,
@@ -334,7 +368,7 @@ BEGIN CATCH
 	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
 		@UserID = @creator,
 		@Matchid = @matchid,
-		@ActionID = 109,
+		@ActionID = @ActionID,
 		@finalhomescore = 0,
 		@finalawayscore = 0,  
 		@hthomescore = 0,
@@ -356,7 +390,7 @@ BEGIN
 			@UserID = @creator, 
 			@Matchid = @matchid, 
 			@KeyID = 1,
-			@ActionID = 109, 
+			@ActionID = @ActionID, 
 			@Remark = 'DEL SUCCESS'
 	END TRY
 	BEGIN CATCH
@@ -365,7 +399,7 @@ BEGIN
 			@UserID = @creator, 
 			@Matchid = @matchid, 
 			@KeyID = 1,
-			@ActionID = 109, 
+			@ActionID = @ActionID, 
 			@Remark = @Remark
 	END CATCH
 END
@@ -376,7 +410,7 @@ BEGIN
 			@UserID = @creator, 
 			@Matchid = @matchid, 
 			@KeyID = 1,
-			@ActionID = 109, 
+			@ActionID = @ActionID, 
 			@Remark = 'DEL FAILED'
 	END TRY
 	BEGIN CATCH		
@@ -385,11 +419,13 @@ BEGIN
 			@UserID = @creator, 
 			@Matchid = @matchid, 
 			@KeyID = 1,
-			@ActionID = 109, 
+			@ActionID = @ActionID, 
 			@Remark = @Remark
 	END CATCH
 END
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_All] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]

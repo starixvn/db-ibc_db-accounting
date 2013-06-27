@@ -17,7 +17,7 @@ AS
 		Revisions:
 		- 20120913@Henry: Using ProductPrefix instead of ProductName
 		- 20121006@Daniel: Only get deposit licensees
-		
+		- 20130624@Jim: support to show licensee Active only
 		
 		
 		Parameters Explanation:
@@ -26,9 +26,12 @@ SET NOCOUNT ON
 
 	SELECT l.LicenseeID, l.Licenseename
 	FROM bodb_Licensee.dbo.Product3rd p WITH (nolock)
-		INNER join bodb_Licensee.dbo.LicenseeProduct3rd lp WITH (nolock) ON lp.productid = p.productid
-		INNER join bodb_Licensee.dbo.Licensees l WITH (nolock) ON l.licenseeid = lp.licenseeid
-	WHERE  ProductPrefix = 'NG' AND IsDeposit = 1
+		INNER JOIN bodb_Licensee.dbo.LicenseeProduct3rd lp WITH (nolock) ON lp.productid = p.productid
+		INNER JOIN bodb_Licensee.dbo.Licensees l WITH (nolock) ON l.licenseeid = lp.licenseeid
+		INNER JOIN bodb_licensee.dbo.SystemLicensee sl WITH (NOLOCK) ON sl.LicenseeID=l.LicenseeID AND sl.SystemID=3
+	WHERE  ProductPrefix = 'NG' 
+		   AND IsDeposit = 1
+		   AND sl.isActive=1		
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_NumberGame_LicenseesSel] TO [bodbAdminNet]
 GO

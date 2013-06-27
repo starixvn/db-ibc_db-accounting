@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListing]
+﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListing]
 	@matchID INT,
 	@LicenseeID INT,
 	@bettypes VARCHAR(1000) ,
@@ -172,7 +172,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END	 
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND CASE when @SAFilter = 2 then 0 else 1 END = 1
+					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 			GROUP BY  b.bettype, bm.liveIndicator
 			HAVING  Count(b.Refno) >0
@@ -204,7 +204,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									 AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND CASE when @SAFilter = 2 then 0 else 1 END = 1
+					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 			GROUP BY  b.bettype, bm.liveIndicator
 			HAVING  Count(B.Refno) >0
@@ -243,7 +243,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND CASE when @SAFilter = 2 then 0 else 1 END = 1
+					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 			GROUP BY s.site, bm.liveindicator, b.bettype
 	END 

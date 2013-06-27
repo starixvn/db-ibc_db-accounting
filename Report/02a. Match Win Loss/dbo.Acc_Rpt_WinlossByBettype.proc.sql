@@ -4,7 +4,7 @@ AS
 	/*	Creator: Vinh Truong 
 		Date: 2008-03-20		
 		Task: Report winlost by bettype 
-		DB: DB06.BODB02
+		DB: DBACC/BODB02
 
 		History:
 			- 20081119@PhuongDao: Display winlost for Horse Racing
@@ -51,6 +51,7 @@ AS
 			- 20121004@Elodie: Performance tuning
 			- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 			- 20130225@Elodie: Add Virtual Horse Racing report
+			- 20130618@Johnson: Add NSW racing's pools from AUST
 	*/
 	SET NOCOUNT ON
 	-- Horse racing
@@ -76,13 +77,19 @@ AS
 	UNION ALL
 		SELECT 5,1 --RACE-TABCORP
 	UNION ALL
+		SELECT 6,1 --RACE-TABCORPNSW
+	UNION ALL
 		SELECT 101,1 --GREY-DTOTEUK
 	UNION ALL
 		SELECT 102,1 --GREY-DTOTEIRL
 	UNION ALL
 		SELECT 103,1 --GREY-TABCORP
 	UNION ALL
+		SELECT 104,1 --GREY-TABCORPNSW
+	UNION ALL
 		SELECT 201,1 --HAR-TABCORP
+	UNION ALL
+		SELECT 202,1 --HAR-TABCORPNSW
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	o.orid as MatchID, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 

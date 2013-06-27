@@ -21,7 +21,7 @@ Revisions:
 					   . Add @ErrCode, @ErrMsg to raise error
 	- 20130103@Elodie:  Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table
 	- 20130121@Elodie:  Write more log on DBTXN server in case of DBLOG server failure
-	- 20130524@Elodie: Write settlement log for outright
+	- 20130624@Jamie: Add BalanceNegative 
 	
 Param's Explanation:
 	- @deadheat = fraction of deadheat to divide (1,2,3  etc)
@@ -35,7 +35,11 @@ BEGIN
 	RETURN
 END
 
-DECLARE @Remark VARCHAR(500)
+DECLARE  @Remark VARCHAR(500)
+		,@ActionID	INT
+SELECT	@ActionID = 128 
+
+
 INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 IF (@@Error = 0)
 BEGIN
@@ -121,6 +125,31 @@ SELECT custid, balance
 FROM #Balance
 WHERE Increased = 1    
 
+----
+-- Add Negative Balance into BalanceNegative table 
+----
+INSERT INTO [bodb02].[dbo].[BalanceNegative]
+           ([ExecDate]
+           ,[MatchID]
+           ,[ActionID]
+           ,[GroupID]
+           ,[CustID]
+           ,[Balance]
+           ,[StatusID]
+           ,[Remark])
+SELECT	 GETDATE()
+		,@MatchID
+		,@ActionID
+		,3			---- Outright Settlement 
+		,CustID
+		,Balance
+		,0
+		,NULL 
+FROM	#Balance WITH (NOLOCK)
+WHERE	Increased = 0
+		        
+---------------------------------------------------
+
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
@@ -169,31 +198,10 @@ BEGIN
 	END CATCH
 END
 
--- WRITE LOG
-SELECT @Remark = 'Status=' + @status + 'IsDeadheat=' + CAST(@deadheat AS VARCHAR(5))
-BEGIN TRY	
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
-		@UserID = 5838421, 
-		@MatchID = @matchid, 
-		@ActionID = 128, 
-		@LeagueID = 0, 
-		@EventDate = @winlostdate,
-		@Remark = @Remark
-		
-END TRY
-BEGIN CATCH		
-	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
-		@UserID = 5838421, 
-		@MatchID = @matchid, 
-		@ActionID = 128, 
-		@LeagueID = 0, 
-		@EventDate = @winlostdate,
-		@Remark = @Remark					
-END CATCH		
-
 END
-
 GO
-GRANT EXECUTE ON [dbo].[Dot_Admin_SettleOutright_Trans] TO [Dot_Admin]
+GRANT EXECUTE ON [dbo].[Dot_Admin_SettleOutright_Trans] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Dot_Admin_SettleOutright_Trans] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Dot_Admin_SettleOutright_Trans] TO [Dot_Admin] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Dot_Admin_SettleOutright_Trans] TO [vnteam] AS [dbo]
