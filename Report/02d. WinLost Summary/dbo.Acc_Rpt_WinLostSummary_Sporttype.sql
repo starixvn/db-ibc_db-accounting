@@ -16,7 +16,8 @@ SET NOCOUNT ON
 		SELECT sporttype
 			,case when bettype in (1,3,7,8) then bettype else 19999 end as bettype
 			,liveindicator
-			,ibc		
+			,ibc
+			,'' status		
 			,ISNULL(SUM(realWinlost),0) as realWinlost
 			,ISNULL(SUM(realPosition),0) as realPosition
 			,ISNULL(SUM(realcommission),0) as realCommission
@@ -35,6 +36,7 @@ SET NOCOUNT ON
 			,71 bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
@@ -51,6 +53,7 @@ SET NOCOUNT ON
 			,73 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
@@ -67,6 +70,7 @@ SET NOCOUNT ON
 			,1000 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,0 as realPosition
 			,ISNULL(SUM(realCommission),0)
@@ -83,6 +87,7 @@ SET NOCOUNT ON
 			,bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
@@ -99,6 +104,7 @@ SET NOCOUNT ON
 			,9 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
@@ -109,11 +115,13 @@ SET NOCOUNT ON
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 9
+		GROUP BY status
 	UNION ALL
 		SELECT 98 --system parlay
 			,29 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
@@ -124,12 +132,14 @@ SET NOCOUNT ON
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 29
+		GROUP BY status
 	UNION ALL
 		--racing
 		SELECT sporttype
 			,0 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' as status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
@@ -147,6 +157,7 @@ SET NOCOUNT ON
 			,0 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' as status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
