@@ -16,6 +16,7 @@ AS
 	- 20130219@Jim: add more filter for Licensee From table LicenseeProduct3rd
 	- 20130508@Jim: add more filter gametype
 	- 20130613@Jim: change condition AffectedDate,EffectiveDate
+	- 20130628@Jim: add more bettype Live Baccarat,Live Roulette
  * Param's Explanation:    
  *  - @NormalLicensee : List of normal licensee ID separated by ','  
  *  - @Operator   : List of operator ID separated by ','  
@@ -133,7 +134,7 @@ FROM #Data d
 	LEFT JOIN bodb_licensee.dbo.ResellerProductChargeByDateRange STAR ON d.ResellerID = STAR.ResellerID AND STAR.PartyID = 5 AND STAR.ProductID = 4 AND d.winlostdate BETWEEN STAR.FromDate AND STAR.ToDate	
 	LEFT JOIN bodb_licensee.dbo.ResellerProductChargeByDateRange OW ON d.ResellerID = OW.ResellerID AND OW.PartyID = 1 AND OW.ProductID = 4 AND d.winlostdate BETWEEN OW.FromDate AND OW.ToDate
 	LEFT JOIN bodb_licensee.dbo.ResellerProductChargeByDateRange DI ON d.ResellerID = DI.ResellerID AND DI.PartyID = 4 AND DI.ProductID = 4 AND d.winlostdate BETWEEN DI.FromDate AND DI.ToDate
-WHERE (@GameType=0 AND d.bettype IN (1101,1102) OR (@GameType<>0 AND d.bettype=@GameType))	
+WHERE ((@GameType=0 AND d.bettype IN (1101,1102,1103,1104)) OR (@GameType<>0 AND d.bettype=@GameType))	
 GROUP BY
 	r.ResellerID,d.LicenseeID,DI.ChargeRate,STAR.ChargeRate,OW.ChargeRate
 	
