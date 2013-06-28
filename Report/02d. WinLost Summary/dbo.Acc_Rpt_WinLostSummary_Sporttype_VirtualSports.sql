@@ -38,7 +38,7 @@ SET NOCOUNT ON
 		SELECT @t_date = @todate
 		
 		INSERT INTO @RPT(
-			matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+			matchcode, homeid, awayid, bettype, leagueid, 
 			realWinlost, realPosition, realCommission, realTurnover, realLineTotal
 		)
 		SELECT matchcode
@@ -50,8 +50,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realTurnover),0)
-			,ISNULL(SUM(realLineTotal),0)	
-			,m.isNeutral			
+			,ISNULL(SUM(realLineTotal),0)					
 		FROM rptWinlost2 b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
 		WHERE winlostdate BETWEEN @f_date AND @t_date
@@ -70,7 +69,7 @@ SET NOCOUNT ON
 		SELECT @f_date = @fromdate
 	
 		INSERT INTO @RPT(
-			matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+			matchcode, homeid, awayid, bettype, leagueid, 
 			realWinlost, realPosition, realCommission, realTurnover, realLineTotal
 		)
 		SELECT matchcode
@@ -82,8 +81,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realTurnover),0)
-			,ISNULL(SUM(realLineTotal),0)	
-			,m.isNeutral			
+			,ISNULL(SUM(realLineTotal),0)							
 		FROM rptWinlost2 b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid
 		WHERE winlostdate BETWEEN @f_date AND @t_date

@@ -16,7 +16,8 @@ SET NOCOUNT ON
 		SELECT sporttype
 			,case when bettype in (1,3,7,8) then bettype else 19999 end as bettype
 			,liveindicator
-			,ibc		
+			,ibc
+			,'' status		
 			,ISNULL(SUM(realWinlost),0) as realWinlost
 			,ISNULL(SUM(realPosition),0) as realPosition
 			,ISNULL(SUM(realcommission),0) as realCommission
@@ -35,13 +36,14 @@ SET NOCOUNT ON
 			,71 bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 71
@@ -51,13 +53,14 @@ SET NOCOUNT ON
 			,73 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 73
@@ -67,13 +70,14 @@ SET NOCOUNT ON
 			,1000 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,0 as realPosition
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 1000
@@ -83,13 +87,14 @@ SET NOCOUNT ON
 			,bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype between 1101 and 1199
@@ -99,6 +104,7 @@ SET NOCOUNT ON
 			,9 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
@@ -109,11 +115,13 @@ SET NOCOUNT ON
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 9
+		GROUP BY status
 	UNION ALL
 		SELECT 98 --system parlay
 			,29 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
@@ -124,19 +132,21 @@ SET NOCOUNT ON
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 29
+		GROUP BY status
 	UNION ALL
 		--racing
 		SELECT sporttype
 			,0 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' as status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			, 0 as realTurnover
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 31 AND 33
@@ -147,13 +157,14 @@ SET NOCOUNT ON
 			,0 as bettype
 			,0 as liveindicator
 			,0 as ibc
+			,'' as status
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,0 as virtualLineTotal
+			,NULL as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
-			,0 as virtualTurnover
+			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 1201 AND 1299

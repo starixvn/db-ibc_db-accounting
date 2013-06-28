@@ -1,4 +1,5 @@
 ﻿
+
 ALTER PROCEDURE [dbo].[Acc_Set_MatchSel]
 	@FromDate datetime,
 	@ToDate datetime,
@@ -29,7 +30,6 @@ AS
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match  
 		- 20120626@Jamie: Get meetings for Harness 
 		- 20130328@Lukas: move to DBTXN/bodb02 & get FGLG ticket info 		
-		- 20130611@Lukas: Get Parlay calculating status
 		
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
@@ -203,10 +203,8 @@ BEGIN
 			m.isPending,
 			m.isUndecided,
 			m.IsKeyscore,
-			m.IsFGLG,
-			ISNULL(w.IsCalculating,0) AS CalcMP			
-	FROM #matchList m
-		LEFT JOIN Parlay_WaitingList w WITH(NOLOCK) ON m.matchid = w.matchid
+			m.IsFGLG
+	FROM #matchList m		
 	ORDER BY CASE eventstatus WHEN 'completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
 			,eventdate
 			,kickofftime
@@ -218,6 +216,9 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+ 
+
+
  
 
 GO

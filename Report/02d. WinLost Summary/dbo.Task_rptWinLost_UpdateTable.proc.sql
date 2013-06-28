@@ -6,7 +6,7 @@ Name : rpt_WinLost_UpdateTable
 Creator : Joe
 Created : 2007-01-29 01:30
 Task : update summary for winlost report
-DB: DB06.bodb02
+DB: DBACC/bodb02
 Revision:
 	- 20110516@Lukas: re-arrange bettype
 	- 20120420@Hurri: add tickets of member under agent BARM into IBC winlost
@@ -128,21 +128,24 @@ Revision:
 		SELECT
 			winlostdate,
 			matchid, bettype, liveindicator, Status,
-			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end ibc,
-			sum(case when bettype = 1000 then 0 else (1-tpositiontaking)*abs(stake)*actualrate end) as realturnover,
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end as ibc,
+			sum(case when bettype IN (71,73,1000) then 0 else (1-tpositiontaking)*abs(stake)*actualrate end) as realturnover,
 			sum((winlost-actual_stake)* actualrate)  realWinlost,
 			sum((awinlost+mwinlost+swinlost)* actualrate) realPos,
 			sum((scomm) * actualrate) realComm,
 			sum((case when bettype = 1000 then -1*(odds-scomm) else winlost-actual_stake+awinlost+mwinlost+swinlost+scomm end)*actualrate) realLineTotal,
-			sum((1-tpositiontaking)*abs(CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END)*virtualrate) as virtualTurnover,
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
+			sum((1-tpositiontaking)*abs(CASE WHEN bettype IN (71,73,1000) THEN 0 
+											WHEN bettype = 29 AND betid > 0 THEN actual_stake 
+											ELSE stake END)*virtualrate) as virtualTurnover,
+			sum(CASE WHEN bettype IN (71,73,1000) OR bettype between 1101 and 1199 OR bettype between 1201 and 1299 THEN 0 
+					ELSE (winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate END ) as virtualLineTotal,
 			0, 0
 		FROM
 			bettrans b with (nolock)
 		WHERE
 			bettype < 19999 and bettype not in (31,32,33)
 			AND winlostdate = @winlostdate
-			AND statusID NOT IN (101, 102) --('VOID', 'REJECT') 
+			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
 			AND ruben = 1
 		GROUP BY
 			winlostdate, matchid, bettype, liveindicator, status,
@@ -309,20 +312,23 @@ Revision:
 				winlostdate,
 				matchid, bettype, liveindicator, Status,
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end ibc,
-				sum((1-tpositiontaking)*abs(stake)*actualrate) realturnover,
-				sum((winlost-actual_stake)* actualrate)  realwinlost,
-				sum((awinlost+mwinlost+swinlost)* actualrate) realposition,				
-				sum((scomm) * actualrate) realcomm,
-				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) as realLineTotal,				
-				sum((1-tpositiontaking)*abs(CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END)*virtualrate) as virtualTurnover,
-				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,				
+				sum(case when bettype IN (71,73,1000) then 0 else (1-tpositiontaking)*abs(stake)*actualrate end) as realturnover,
+				sum((winlost-actual_stake)* actualrate)  realWinlost,
+				sum((awinlost+mwinlost+swinlost)* actualrate) realPos,
+				sum((scomm) * actualrate) realComm,
+				sum((case when bettype = 1000 then -1*(odds-scomm) else winlost-actual_stake+awinlost+mwinlost+swinlost+scomm end)*actualrate) realLineTotal,
+				sum((1-tpositiontaking)*abs(CASE WHEN bettype IN (71,73,1000) THEN 0 
+												WHEN bettype = 29 AND betid > 0 THEN actual_stake 
+												ELSE stake END)*virtualrate) as virtualTurnover,
+				sum(CASE WHEN bettype IN (71,73,1000) OR bettype between 1101 and 1199 OR bettype between 1201 and 1299 THEN 0 
+						ELSE (winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate END ) as virtualLineTotal,
 				0, 0
 			FROM
 				bettrans14 b with (nolock)
 			WHERE
 				bettype < 19999 and bettype not in (31,32,33)
 				AND winlostdate = @winlostdate
-				AND statusID NOT IN (101, 102) --('VOID', 'REJECT') 
+				AND statusID NOT IN (101, 102,103,121) ----('VOID','REJECT','DONE','REFUND')
 				AND ruben = 1
 			GROUP BY
 				winlostdate, matchid, bettype, liveindicator, status,

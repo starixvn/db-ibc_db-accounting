@@ -50,6 +50,7 @@ SET NOCOUNT ON
 				INNER JOIN bodb02.dbo.outright m WITH(NOLOCK) ON b.matchid = m.orid
 			WHERE b.winlostdate between @f_date and @t_date
 				AND b.sporttype = @sporttype
+			GROUP BY m.groupmatch, b.bettype, m.leagueid
 	END
 	
 	IF @fromdate <@mineventdate
@@ -76,10 +77,11 @@ SET NOCOUNT ON
 			INNER JOIN bodb02.dbo.outright14 m WITH(NOLOCK) ON b.matchid = m.orid
 		WHERE b.winlostdate between @f_date and @t_date
 			AND b.sporttype = @sporttype
+		GROUP BY m.groupmatch,b.bettype,m.leagueid
 	END
 	
 	SELECT * FROM @RPT
-	ORDER BY bettype,meetingid,CONVERT(race AS TINYINT)
+	ORDER BY bettype,meetingid,CAST(race AS TINYINT)
 	
 
 GO
