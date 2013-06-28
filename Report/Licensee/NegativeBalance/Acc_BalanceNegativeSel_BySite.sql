@@ -33,6 +33,7 @@ BEGIN
 				, h.MatchID ASC
 				, ci.Username ASC
 END 
+
 GO 
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_BySite] TO [bodbAdminNet]
 GO 
