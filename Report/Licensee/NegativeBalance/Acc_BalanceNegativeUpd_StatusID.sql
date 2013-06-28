@@ -30,5 +30,5 @@ BEGIN
 	END	
 END 
 GO 
-GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_BySite] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeUpd_StatusID] TO [bodbAdminNet]
 GO 
