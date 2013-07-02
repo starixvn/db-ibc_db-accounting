@@ -29,17 +29,18 @@ AS
 		- 20130103@Elodie: Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table										
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 						   Write more log on DBTXN server in case of DBLOG server failure
+		- 20130620@Victor: Add bettype 1103,1104
 
 	Param explanation:
 		@CardsResult: 
-				1101: the sequence of cards result 'C2,H2,D2,S2,D3,S3'
-				1102: not input this parameter
+				1101,1103: the sequence of cards result 'C2,H2,D2,S2,D3,S3'
+				1102,1104: not input this parameter
 		@betstatus: 
-				1101: '2,4,7'
-				1102: input result ball number
+				1101,1103: '2,4,7'
+				1102,1104: input result ball number
 		@CommRate:
-				1101: 0.05 ~ 0.3
-				1102: not input this parameter
+				1101,1103: 0.05 ~ 0.3
+				1102,1104: not input this parameter
 */
 BEGIN
 SET NOCOUNT ON
@@ -113,7 +114,7 @@ END
 	IF @action = 'CAL'
 	BEGIN
 		--bettye 1101,1102 all use Admin_Calculate_1101G for settle
-		IF (@bettype = 1101)
+		IF (@bettype in (1101,1103))
 		BEGIN
 			EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_s162-CAL', @Matchid = @matchid, @creator = @AdminID
 				
@@ -121,7 +122,7 @@ END
 			EXEC Admin_Calculate_1101 @matchid =@matchid 
 
 		END
-		ELSE 
+		IF (@bettype in (1102,1104))
 		BEGIN
 			EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_s162-1102-CAL', @Matchid = @matchid, @creator = @AdminID
 								
@@ -215,7 +216,7 @@ END
 	SELECT @LogData = @LogData + '(' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms)'
 	EXEC dbo.WriteLog_UserLog @AdminID, @LogData
 
-IF (@bettype = 1101)
+IF (@bettype in (1101,1103))
 BEGIN 
 	SELECT @Remark = 'Cards result: ' + @CardsResult + '; '
 					+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms; '
@@ -342,10 +343,6 @@ BEGIN
 END
 END
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_s162] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Admin_Settlement_s162] TO [bodbAdminNet]
-GO 
- GRANT EXECUTE ON [dbo].[Admin_Settlement_s162] TO [Dot_Casino]
-GO 
+GO
+GRANT EXECUTE ON [dbo].[Admin_Settlement_s162]   TO [Dot_Member]
+GO

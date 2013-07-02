@@ -1,14 +1,4 @@
-﻿USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Admin_Calculate_1101G]    Script Date: 08/31/2012 17:04:40 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Admin_Calculate_1101G]
+﻿ALTER PROCEDURE [dbo].[Admin_Calculate_1101G]
 	@matchid int,
 	@betteam varchar(100),
 	@CommRate money ,
@@ -18,7 +8,7 @@ AS
 	Created by:[Victor]
 	Date:[20111222]
 	Task: Settlement 
-	DB: DBTrans.BODB02
+	DB: DBTXN.BODB02
 
 	Revisions:
 		- 20120109@Viet: Revise SP
@@ -26,9 +16,10 @@ AS
 		- 20120222@Lukas: Calculate comm for bettransG
 		- 20120426@Lukas: Get from production & exclude DB044
 		- 20120906@victor:add bettype 1102 Live roulette
+		- 20130620@Victor: Add bettype 1103,1104
 */
 SET NOCOUNT ON
-IF (@Bettype = 1101) 
+IF (@Bettype in (1101,1103)) 
 	Begin			
 		set @betteam = replace(@betteam,',','')
 
@@ -129,7 +120,7 @@ IF (@Bettype = 1101)
 	End
 
 
-IF (@Bettype = 1102) 
+IF (@Bettype in (1102,1104)) 
 	Begin			
 		Declare @Mapping TABLE ( RBetteam NVarchar(10) primary key)
 		INSERT INTO @Mapping
@@ -186,6 +177,7 @@ IF (@Bettype = 1102)
 
 		END
 	End
-
-
+	
+GO
+GRANT EXECUTE ON [dbo].[Admin_Calculate_1101G]   TO [Dot_Member]
 GO
