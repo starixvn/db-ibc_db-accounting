@@ -11,6 +11,7 @@ AS
 	History:
 		- 20121107@Elodie:  Allow to void settled tickets 
 							Allow user to delete deposit tickets
+		- 20130702@Elodie: Add new bettype 1103, 1104							
 	Explanation's Param:
 
 */
@@ -89,7 +90,7 @@ BEGIN
 	WHERE
 		matchid=@matchid 
 		AND b.transid BETWEEN @FromRefNo AND @ToRefNo
-		and (b.bettype = 1101 OR b.bettype = 1102)
+		and b.bettype in (1101, 1102, 1103, 1104)
 		AND statusID NOT IN (0, 101, 102, 121) -- ('Running', 'Void', 'Reject', 'Dummy ticket')
 		and winlostdate = @today
 	ORDER BY IsDeposit, transid
