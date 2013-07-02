@@ -28,7 +28,7 @@ SET NOCOUNT ON
 	SELECT @mineventdate = min(eventdate) from bodb02.dbo.match with(nolock)
 		
 	
-	IF @todate > @mineventdate
+	IF @todate >= @mineventdate
 	BEGIN
 		IF @fromdate < @mineventdate
 			SELECT @f_date = @mineventdate
