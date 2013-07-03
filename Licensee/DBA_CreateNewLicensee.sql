@@ -142,7 +142,7 @@ BEGIN
 
 	INSERT INTO @Currency(LicenseeID,CurrencyID)
 	SELECT DISTINCT LicenseeID,Currency CurrencyID
-	FROM bodb_licensee.dbo.LicenseeCust WITH (NOLOCK)
+	FROM dbo.LicenseeCust WITH (NOLOCK)
 	WHERE LicenseeID=@LicenseeID
 	
 	INSERT INTO @usr (LicenseeID, UserID)
