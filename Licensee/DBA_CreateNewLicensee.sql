@@ -136,33 +136,28 @@ BEGIN
 	/*
 	- Grant currencey permission to Licensee's Users
 	*/
-	DECLARE @Currency AS TABLE (ID INT IDENTITY(1,1), CurrencyID INT)
-	DECLARE @usr AS TABLE (UserID INT )
-	DECLARE @count INT,@maxID INT 
+	DECLARE @Currency AS TABLE (LicenseeID INT, CurrencyID INT)
+	DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
 
-	INSERT INTO @Currency(CurrencyID)
-	SELECT Currency
+
+	INSERT INTO @Currency(LicenseeID,CurrencyID)
+	SELECT DISTINCT LicenseeID,Currency CurrencyID
 	FROM bodb_licensee.dbo.LicenseeCust WITH (NOLOCK)
 	WHERE LicenseeID=@LicenseeID
 	
-	INSERT INTO @usr
-	SELECT UserID FROM dbo.LicenseeUser WITH (NOLOCK)
+	INSERT INTO @usr (LicenseeID, UserID)
+	SELECT DISTINCT LicenseeID,UserID 
+	FROM dbo.LicenseeUser WITH (NOLOCK)
 	WHERE LicenseeID=@LicenseeID
 	EXCEPT
-	SELECT usrID as UserID FROM dbo.CurrencyUser WITH (NOLOCK) 
+	SELECT DISTINCT LicenseeID,usrID as UserID FROM dbo.CurrencyUser WITH (NOLOCK) 
 	WHERE LicenseeID=@LicenseeID
-
-	SELECT @Count=1,@maxID=max(ID) FROM @Currency
-		
-	WHILE (@count<=@maxID)
-	BEGIN 
-		DECLARE @Cur INT
-		SELECT @Cur=CurrencyID FROM @Currency WHERE ID=@count
-		INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
-		SELECT UserID,@LicenseeID,@Cur,1,1 ---SystemID=1 is default for Lrf
-		FROM @usr
-		SET @count=@count+1
-	END 
+	
+	INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
+	SELECT u.UserID,u.LicenseeID,c.CurrencyID,1,1 ---SystemID=1 is default for Lrf
+	FROM @usr u
+		INNER JOIN 	@Currency c ON u.LicenseeID=c.LicenseeID
+	
 	--Total bets
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 

@@ -145,33 +145,29 @@ and A.currency = B.currency)
 /*
 - Grant currencey permission to Licensee's Users
 */
-DECLARE @tblCurrency AS TABLE (ID INT IDENTITY(1,1), CurrencyID INT)
-DECLARE @usr AS TABLE (UserID INT )
-DECLARE @count INT,@maxID INT 
-DECLARE @Cur  INT
+DECLARE @tblCurrency AS TABLE ( LicenseeID INT,CurrencyID INT)
+DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
 
-INSERT INTO @tblCurrency (CurrencyID)
-	SELECT Currency as CurrencyID
-	FROM dbo.LicenseeCust WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
-	EXCEPT
-	SELECT CurrencyID
-	FROM dbo.CurrencyUser WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
-INSERT INTO @usr(UserID) 
-	SELECT usrID 
-	FROM dbo.CurrencyUser WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
+
+INSERT INTO @tblCurrency (LicenseeID ,CurrencyID)
+SELECT DISTINCT LicenseeID ,Currency as CurrencyID
+FROM dbo.LicenseeCust WITH (NOLOCK)
+WHERE LicenseeID=@LicenseeID
+EXCEPT
+SELECT DISTINCT  LicenseeID, CurrencyID
+FROM dbo.CurrencyUser WITH (NOLOCK)
+WHERE LicenseeID=@LicenseeID
+
+INSERT INTO @usr(LicenseeID ,UserID) 
+SELECT DISTINCT LicenseeID,usrID 
+FROM dbo.CurrencyUser WITH (NOLOCK)
+WHERE LicenseeID=@LicenseeID
+
+INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
+SELECT userID,u.LicenseeID,c.CurrencyID,1,1 ---- System=1 is default for LRF
+FROM @usr u
+	INNER JOIN @tblCurrency c ON u.LicenseeID=c.LicenseeID 
 	
-SELECT @count=1,@maxID=Max(ID)
-FROM @tblCurrency
-WHILE (@Count<=@maxID)	
-	BEGIN 
-		SELECT @Cur=CurrencyID FROM @tblCurrency WHERE ID=@count
-		INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
-		SELECT userID,@LicenseeID,@Cur,1,1 ---- System=1 is default for LRF
-		FROM @usr
-	END
 
 GO
 GRANT EXECUTE ON [dbo].[DBA_CreateLicenseeAgent] TO [vnteam]
