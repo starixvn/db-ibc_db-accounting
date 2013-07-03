@@ -1,7 +1,7 @@
 ﻿
 
 
-ALTER PROCEDURE Acc_Set_ParlayWaitingSel
+ALTER PROCEDURE [dbo].[Acc_Set_ParlayWaitingSel]
 AS
 /*
 	Created: 20130611@Lukas
@@ -12,11 +12,15 @@ AS
 	
 */
 BEGIN
+
+	SET NOCOUNT ON 
+	
 	SELECT matchid, isCalculating AS CalcMP
 	FROM Parlay_WaitingList WITH(NOLOCK)
 	
 END
+
 GO
-GRANT EXECUTE ON Acc_Set_ParlayWaitingSel TO bodbadminNet
+GRANT EXECUTE ON [dbo].[Acc_Set_ParlayWaitingSel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT view DEFINITION ON Acc_Set_ParlayWaitingSel TO vnteam
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_ParlayWaitingSel] TO [vnteam] AS [dbo]
