@@ -159,8 +159,8 @@ FROM dbo.CurrencyUser WITH (NOLOCK)
 WHERE LicenseeID=@LicenseeID
 
 INSERT INTO @usr(LicenseeID ,UserID) 
-SELECT DISTINCT LicenseeID,usrID 
-FROM dbo.CurrencyUser WITH (NOLOCK)
+SELECT DISTINCT LicenseeID,userID 
+FROM dbo.LicenseeUser WITH (NOLOCK)
 WHERE LicenseeID=@LicenseeID
 
 INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
