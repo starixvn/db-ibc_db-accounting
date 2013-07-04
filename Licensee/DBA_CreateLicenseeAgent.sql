@@ -154,19 +154,18 @@ SELECT DISTINCT LicenseeID ,Currency as CurrencyID
 FROM dbo.LicenseeCust WITH (NOLOCK)
 WHERE LicenseeID=@LicenseeID
 EXCEPT
-SELECT DISTINCT  LicenseeID, CurrencyID
-FROM dbo.CurrencyUser WITH (NOLOCK)
-WHERE LicenseeID=@LicenseeID
+SELECT DISTINCT LicenseeID, CurrencyID
+FROM dbo.CurrencyUser WITH (NOLOCK )
+WHERE LicenseeID=@LicenseeID 
 
 INSERT INTO @usr(LicenseeID ,UserID) 
 SELECT DISTINCT LicenseeID,userID 
 FROM dbo.LicenseeUser WITH (NOLOCK)
 WHERE LicenseeID=@LicenseeID
-EXCEPT
-SELECT DISTINCT LicenseeID,usrID as UserID FROM dbo.CurrencyUser WITH (NOLOCK) 
-WHERE LicenseeID=@LicenseeID
-INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
 
+
+
+INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
 SELECT userID,u.LicenseeID,c.CurrencyID,1,1 ---- System=1 is default for LRF
 FROM @usr u
 	INNER JOIN @tblCurrency c ON u.LicenseeID=c.LicenseeID 

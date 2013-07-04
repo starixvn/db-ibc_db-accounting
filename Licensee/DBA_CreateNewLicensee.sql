@@ -144,13 +144,14 @@ BEGIN
 	SELECT DISTINCT LicenseeID,Currency CurrencyID
 	FROM dbo.LicenseeCust WITH (NOLOCK)
 	WHERE LicenseeID=@LicenseeID
+	EXCEPT
+	SELECT DISTINCT LicenseeID, CurrencyID
+	FROM dbo.CurrencyUser WITH (NOLOCK )
+	WHERE LicenseeID=@LicenseeID 
 	
 	INSERT INTO @usr (LicenseeID, UserID)
 	SELECT DISTINCT LicenseeID,UserID 
 	FROM dbo.LicenseeUser WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
-	EXCEPT
-	SELECT DISTINCT LicenseeID,usrID as UserID FROM dbo.CurrencyUser WITH (NOLOCK) 
 	WHERE LicenseeID=@LicenseeID
 	
 	INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
