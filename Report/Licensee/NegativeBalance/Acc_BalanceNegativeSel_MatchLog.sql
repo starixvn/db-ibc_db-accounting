@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_MatchLog]
+﻿CREATE PROCEDURE [dbo].[Acc_BalanceNegativeSel_MatchLog]
  @MatchID	INT,
  @GroupID	INT = 1 
 AS
@@ -6,7 +6,7 @@ AS
 	Created by: Jamie
 	Date: 2013-06-26
 	Task: Retreive Match Info and Settlement Log 
-	DB: DBACC/bodb02 
+	DB: DBLOG/bodb_CustomerLog 
 	
 	Revisions:
 	
@@ -166,6 +166,7 @@ BEGIN
 	FROM	bodb_CustomerLog.dbo.UserLog_Settle l WITH(NOLOCK)
 			LEFT JOIN bodb_CustomerLog.dbo.LogAction la WITH (NOLOCK) ON l.ActionID = la.ActionID
 	WHERE	l.MatchID = @MatchID
+			AND @GroupID BETWEEN 1 AND 2 
 	ORDER BY	l.LogID ASC 	
 	
 END 
