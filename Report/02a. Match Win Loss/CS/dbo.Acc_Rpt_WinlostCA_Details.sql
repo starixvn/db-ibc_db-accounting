@@ -11,7 +11,7 @@ AS
 			- 20090522@PhuongDao: Add TurnOver 
 			- 20100522@Henry: Change to use StatusID instead of Status in WHERE statement
 			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
-
+			- 20130705@Kathy: Update matchid for RnG Casino (71)
 		Explanation's Param:
 
 	*/
@@ -29,7 +29,7 @@ AS
 	WHERE	winlostdate = @winlostdate 
 			AND ruben = 1 
 			AND bettrans.bettype = 71								--20120405@Hurri
-			AND bettrans.matchid = 0 
+			AND bettrans.matchid in (0, 71) 
 			--AND status NOT in ('VOID','REJECT','done')
 			AND statusID NOT IN (101,102,121)
 	GROUP BY bettype, currency, currencyName 
