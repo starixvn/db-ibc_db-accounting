@@ -133,31 +133,6 @@ BEGIN
         VALUES (@licenseeid,@UserID,1,'')
     END
 	
-	/*
-	- Grant currencey permission to Licensee's Users
-	*/
-	DECLARE @Currency AS TABLE (LicenseeID INT, CurrencyID INT)
-	DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
-
-
-	INSERT INTO @Currency(LicenseeID,CurrencyID)
-	SELECT DISTINCT LicenseeID,Currency CurrencyID
-	FROM dbo.LicenseeCust WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
-	EXCEPT
-	SELECT DISTINCT LicenseeID, CurrencyID
-	FROM dbo.CurrencyUser WITH (NOLOCK )
-	WHERE LicenseeID=@LicenseeID 
-	
-	INSERT INTO @usr (LicenseeID, UserID)
-	SELECT DISTINCT LicenseeID,UserID 
-	FROM dbo.LicenseeUser WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
-	
-	INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
-	SELECT u.UserID,u.LicenseeID,c.CurrencyID,1,1 ---SystemID=1 is default for Lrf
-	FROM @usr u
-		INNER JOIN 	@Currency c ON u.LicenseeID=c.LicenseeID
 	
 	--Total bets
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
@@ -228,6 +203,32 @@ BEGIN
 	END
 
 END
+/*
+	- Grant currencey permission to Licensee's Users
+	*/
+	DECLARE @Currency AS TABLE (LicenseeID INT, CurrencyID INT)
+	DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
+
+
+	INSERT INTO @Currency(LicenseeID,CurrencyID)
+	SELECT DISTINCT LicenseeID,Currency CurrencyID
+	FROM dbo.LicenseeCust WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	EXCEPT
+	SELECT DISTINCT LicenseeID, CurrencyID
+	FROM dbo.CurrencyUser WITH (NOLOCK )
+	WHERE LicenseeID=@LicenseeID 
+	
+	INSERT INTO @usr (LicenseeID, UserID)
+	SELECT DISTINCT LicenseeID,UserID 
+	FROM dbo.LicenseeUser WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	
+	INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
+	SELECT u.UserID,u.LicenseeID,c.CurrencyID,1,1 ---SystemID=1 is default for Lrf
+	FROM @usr u
+		INNER JOIN 	@Currency c ON u.LicenseeID=c.LicenseeID
+	
 --- Add new Licensee belong to @ResellerID 
 	IF @ResellerID<>0
 	BEGIN
