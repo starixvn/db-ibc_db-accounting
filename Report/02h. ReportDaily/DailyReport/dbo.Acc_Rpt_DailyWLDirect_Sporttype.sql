@@ -54,7 +54,8 @@ AS
 		- 20121102@Elodie: Use actual rate instead of virtural rate for Virtual sport		
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
-		- 20130618@Johnson: Add NSW racing's pools from AUST					
+		- 20130618@Johnson: Add NSW racing's pools from AUST	
+		- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)				
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -376,7 +377,7 @@ BEGIN
 			0 EnableVirtual
 	from	#src with (nolock)
 	where 	bettype = 73
-			AND matchid = 0 		
+			AND matchid in (0, 73)		
 			
 	---Live Casino
 	UNION ALL
@@ -409,7 +410,7 @@ BEGIN
 			0 EnableVirtual
 	from	#src with (nolock)
 	where 	bettype = 71
-			AND matchid = 0 
+			AND matchid in (0, 71) 
 
 	UNION ALL 
 	SELECT	105,'Racing', 151, 0,
