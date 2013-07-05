@@ -9,7 +9,6 @@ AS
 	
 		History:
 			- 20100326@Daniel: Added
-			- 20130703@Kathy: Update matchid for Bingo (73)
 		Explanation's Param:
 
 	*/
@@ -25,7 +24,7 @@ AS
 	WHERE	winlostdate = @winlostdate 
 			AND ruben = 1 
 			AND bettrans.bettype = 73
-			AND bettrans.matchid in (0, 73)
+			AND bettrans.matchid =0
 			AND status NOT in ('VOID','REJECT','done')
 	GROUP BY currency, currencyName 
 	ORDER BY currency
