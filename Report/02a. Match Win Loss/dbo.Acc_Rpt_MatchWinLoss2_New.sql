@@ -18,6 +18,7 @@ AS
 			    + Add column [IBC Turnover] into resultset
 				+ Treat [Turnover of 8RM/BARM] as negative value
 			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -399,7 +400,7 @@ BEGIN
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	#tmpbettrans with (readpast)
-	WHERE	bettype = 71 and matchid = 0  			
+	WHERE	bettype = 71 and matchid in (0, 71) 			
 	GROUP BY bettype
 	
 	    -- Bingo 
@@ -416,7 +417,7 @@ BEGIN
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	#tmpbettrans with (readpast)
-	WHERE	bettype = 73	
+	WHERE	bettype = 73 and matchid in (0, 73)
 	GROUP BY bettype			
 	
 	    -- Number Game

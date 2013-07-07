@@ -413,4 +413,6 @@ Revision:
 	
 	DROP TABLE #bettransm
 GO
+GRANT EXECUTE ON [dbo].[Task_rptWinLost_UpdateTable] TO [bodbAdminNet]
+GO
 GRANT VIEW DEFINITION ON [dbo].[Task_rptWinLost_UpdateTable] TO [vnteam]

@@ -52,6 +52,7 @@ AS
 			- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 			- 20130225@Elodie: Add Virtual Horse Racing report
 			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	*/
 	SET NOCOUNT ON
 	-- Horse racing
@@ -164,7 +165,7 @@ AS
 			sum(LineTotal) as  LineTotal_others,
 			0  VirtualLineTotal_others    
 	FROM	#tmpBettrans
-	WHERE	bettype = 71 and matchid = 0  			
+	WHERE	bettype = 71 and matchid in (0, 71) 			
 	group by bettype
 	
 	-- BINGO 
@@ -180,7 +181,7 @@ AS
 			sum(LineTotal) as  LineTotal_others,
 			0  VirtualLineTotal_others    
 	FROM	#tmpBettrans
-	WHERE	bettype = 73	
+	WHERE	bettype = 73 and matchid in (0, 73) 	
 	group by bettype			
 	
 	--NUMBER GAME

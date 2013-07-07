@@ -42,6 +42,7 @@ AS
 	- 20120927@Johnson: get commstatus column to check double comm losing  
 	- 20130121@Dan: change linked server DB06 to DBARC   
 	- 20130227@Elodie: Add Virtual HR product  
+	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	*/   
 
 SET NOCOUNT ON    
@@ -130,7 +131,7 @@ DECLARE @DetailData TABLE (
 
 IF exists(  
 select 1 from bettrans with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 1000)) --20120405@Hurri  
+where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )  
 BEGIN  
@@ -340,7 +341,7 @@ select
 from bettrans b with (nolock)     
 where     
 	b.custid = @Custid    
-	AND matchid = 0  
+	AND matchid in (0, 71)  
 	AND bettype = 71        --20120405@Hurri  
 	AND b.refno = @TransID  
 
@@ -405,7 +406,7 @@ select
 from bettrans b with (nolock)     
 where     
 	b.custid = @Custid    
-	AND matchid = 0  
+	AND matchid in (0, 73) 
 	AND bettype = 73  
 	AND b.refno = @TransID  
 
@@ -694,7 +695,7 @@ END
 --Bettrans14  
 ELSE IF exists(  
 select 1 from bettrans14 with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0, 1000)) --20120405@Hurri  
+where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )  
 BEGIN  
@@ -901,7 +902,7 @@ select
 from bettrans14 b with (nolock)     
 where     
 	b.custid = @Custid   
-	AND matchid = 0  
+	AND matchid in (0, 71) 
 	AND bettype = 71        --20120405@Hurri  
 	AND b.refno = @TransID  
 
@@ -966,7 +967,7 @@ select
 from bettrans14 b with (nolock)     
 where     
 	b.custid = @Custid   
-	AND matchid = 0  
+	AND matchid in (0, 73)  
 	AND bettype = 73  
 	AND b.refno = @TransID  
 
@@ -1253,7 +1254,7 @@ END
 --bettrans_bk  
 ELSE IF exists(  
 select 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 1000)) --20120405@Hurri  
+where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )  
 BEGIN  
@@ -1460,7 +1461,7 @@ select
 from DBARC.bodb_archive.dbo.bettrans_bk as b with (nolock)     
 where     
 	b.custid = @Custid    
-	AND matchid = 0  
+	AND matchid in (0, 71)  
 	AND bettype = 71        --20120405@Hurri  
 	AND b.refno = @TransID  
 
@@ -1525,7 +1526,7 @@ select
 from DBARC.bodb_archive.dbo.bettrans_bk as b with (nolock)     
 where     
 	b.custid = @Custid    
-	AND matchid = 0  
+	AND matchid in (0, 73)  
 	AND bettype = 73  
 	AND b.refno = @TransID  
 

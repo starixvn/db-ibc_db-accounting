@@ -384,7 +384,7 @@ SELECT	 GETDATE()
 		,CustID
 		,Balance
 		,0
-		,NULL 
+		,@matchids 
 FROM	#Balance WITH (NOLOCK)
 WHERE	Increased = 0
 		        
