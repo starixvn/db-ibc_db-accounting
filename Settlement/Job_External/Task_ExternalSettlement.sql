@@ -4,7 +4,7 @@ AS
 	Created by:Lukas
 	Date:20110112
 	Task: execute Settlement (job)
-	DB: DB053.BODB02
+	DB: DBAGE/BODB02; DBEXT/BODB02
 	
 	Revisions:
 		- 20110912@Lukas: Apply this SP for DB053
