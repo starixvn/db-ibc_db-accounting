@@ -27,7 +27,7 @@ AS
 	WHERE	winlostdate = @winlostdate 
 			AND ruben = 1 
 			AND bettrans.bettype = 73
-			AND bettrans.matchid = 0 
+			AND bettrans.matchid IN (0, 73)
 			--AND status NOT in ('VOID','REJECT','done')
 			AND statusID NOT IN (101,102,121)
 	GROUP BY bettype, currency, currencyName 
