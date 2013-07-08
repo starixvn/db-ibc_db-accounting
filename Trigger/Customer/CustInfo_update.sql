@@ -3,7 +3,7 @@ AS
 /*
 Created by: 20120731@
 Task: Trigger for updating Custinfo table 
-DB: DB053.bodb02 
+DB: DBEXT/bodb02; 
 Revisions: 
     - 20120731@Dan: add fields for Virtual soccer
     - 20120821@Elodie: add Abnormal fields to support Abnormal bets
@@ -11,6 +11,7 @@ Revisions:
     - 20121004@Johnson: add double comm losing status
     - 20130125@Tom: add fields for Virtual Tennis
     - 20130221@Elodie: add field maxpermatch181 for Virtual Horse Racing
+    - 20130604@Jamie: Add new field maxpermatch182 for Virtual Greyhound
 */
 SET NOCOUNT ON
 INSERT INTO bodb_CustomerLog.dbo.CustInfo_history (
@@ -34,6 +35,7 @@ INSERT INTO bodb_CustomerLog.dbo.CustInfo_history (
                   ,HideVirtualSports
                   ,maxpermatch180
                   ,maxpermatch181
+                  ,maxpermatch182
                   ,maxpermatch186
                   ,Abnormal
                   ,isAutoResetLiveCasino
@@ -61,6 +63,7 @@ SELECT
                   ,HideVirtualSports
                   ,maxpermatch180
                   ,maxpermatch181
+                  ,maxpermatch182
                   ,maxpermatch186
                   ,Abnormal
                   ,isAutoResetLiveCasino

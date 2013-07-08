@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Task_Licensee_BAGetListLicenseeWithLimitAmt]	
+﻿USE [bodb_Licensee]
+GO
+/****** Object:  StoredProcedure [dbo].[Task_Licensee_BAGetListLicenseeWithLimitAmt]    Script Date: 05/17/2013 02:51:57 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Task_Licensee_BAGetListLicenseeWithLimitAmt]	
 AS
 /*
 Created: 20110916@Elly
@@ -19,6 +26,7 @@ Revisions:
 	- 20130218@Daniel: Add ITCBet, LiveBet365 to the list
 	- 20130502@Kiwi: Add Aoncash to the list
 	- 20130509@Kiwi: Add Avia to the list
+	- 20130517@Daniel: Add SunGame to the list
 	
 Param's Explanation:
 */
@@ -38,21 +46,16 @@ SET NOCOUNT ON
 			WHEN l.LicenseeID=21 THEN 100000
 			WHEN l.LicenseeID in (24,22,58) THEN 80000
 			WHEN l.LicenseeID=25 THEN 100000						
+			WHEN l.LicenseeID=8 THEN 80000
 		END AS LimitAmt
 	FROM dbo.Licensees AS l WITH(NOLOCK)
 		INNER JOIN dbo.LicenseeBAConfig AS BA WITH(NOLOCK) ON l.LicenseeID=BA.LicenseeID
 			AND BA.EnableBA=1
-			AND l.LicenseeID IN (1,2,4,6,7,10,14,9,19,21,24,25,22,58) --12Bet,Asiabet88, Alog,TLC, dela, Zzun88, Bodog, Mayfair, Macaubet, ITCBet, LiveBet365, Aoncash, Avia
+			AND l.LicenseeID IN (1,2,4,6,7,8,10,14,9,19,21,24,25,22,58) --12Bet,Asiabet88, Alog,TLC, dela, Zzun88, Bodog, Mayfair, Macaubet, ITCBet, LiveBet365, Aoncash, Avia
 	
 SET NOCOUNT OFF
 
 END
 
-
-
 GO
 GRANT EXECUTE ON [dbo].[Task_Licensee_BAGetListLicenseeWithLimitAmt] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT ALTER ON [dbo].[Task_Licensee_BAGetListLicenseeWithLimitAmt] TO [vnteam] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_Licensee_BAGetListLicenseeWithLimitAmt] TO [vnteam] AS [dbo]
