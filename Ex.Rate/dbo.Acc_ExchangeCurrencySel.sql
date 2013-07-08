@@ -1,4 +1,4 @@
-﻿Alter PROCEDURE [dbo].[Acc_ExchangeCurrencySel]
+﻿ALTER PROCEDURE [dbo].[Acc_ExchangeCurrencySel]
 AS
 /*
 Created: HuyNguyen
@@ -13,7 +13,12 @@ Revisions:
 
 	SELECT exchangeid, currency from exchange with (nolock)
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_ExchangeCurrencySel] TO [bodbAdminNet] 
+GRANT EXECUTE ON [dbo].[Acc_ExchangeCurrencySel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeCurrencySel] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_ExchangeCurrencySel] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_ExchangeCurrencySel] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeCurrencySel] TO [vnteam] AS [dbo]
