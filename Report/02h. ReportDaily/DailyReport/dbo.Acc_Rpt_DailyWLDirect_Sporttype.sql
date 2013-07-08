@@ -54,7 +54,8 @@ AS
 		- 20121102@Elodie: Use actual rate instead of virtural rate for Virtual sport		
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
-		- 20130618@Johnson: Add NSW racing's pools from AUST					
+		- 20130618@Johnson: Add NSW racing's pools from AUST	
+		- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)				
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -159,7 +160,7 @@ BEGIN
 								- sum(b.scomm*b.actualrate)) ,
 			@RB_TO			= sum(case when bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end)
 			
-	FROM	bettrans b with (nolock)
+	FROM	bettrans b with (readpast)
 			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid 
 			 left join (
 				select	refno,
@@ -204,7 +205,7 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, -- don't need calculate actualrate for system parlay
 			SUM((1-tpositiontaking)*ABS(CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END)*virtualrate) turnover_virtualrate
-	FROM bettrans b WITH(NOLOCK)
+	FROM bettrans b WITH(readpast)
 	WHERE winlostdate = @winlostdate
 		AND bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
@@ -251,7 +252,7 @@ BEGIN
 			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
 			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover,
 			0 EnableVirtual
-	FROM	bettrans b WITH (NOLOCK)
+	FROM	bettrans b WITH (readpast)
 			INNER JOIN @Match m on b.matchid = m.matchid
 	WHERE	b.winlostdate = @winlostdate
 			AND b.matchid > 0 
@@ -281,7 +282,7 @@ BEGIN
 		-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
 		-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover,
 		0 EnableVirtual
-	FROM	bettrans b WITH (NOLOCK)
+	FROM	bettrans b WITH (readpast)
 		INNER JOIN @Match m on b.matchid = m.matchid
 	WHERE	b.winlostdate = @winlostdate
 		AND b.matchid > 0 
@@ -356,7 +357,7 @@ BEGIN
 			0 RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
-	from	bettrans with (nolock)
+	from	bettrans with (readpast)
 	where 	bettrans.bettype = 1000
 			AND bettrans.matchid = 1000 
 			and bettrans.ruben=1  
@@ -376,7 +377,7 @@ BEGIN
 			0 EnableVirtual
 	from	#src with (nolock)
 	where 	bettype = 73
-			AND matchid = 0 		
+			AND matchid in (0, 73)		
 			
 	---Live Casino
 	UNION ALL
@@ -409,7 +410,7 @@ BEGIN
 			0 EnableVirtual
 	from	#src with (nolock)
 	where 	bettype = 71
-			AND matchid = 0 
+			AND matchid in (0, 71) 
 
 	UNION ALL 
 	SELECT	105,'Racing', 151, 0,
@@ -444,7 +445,7 @@ BEGIN
 	WHERE	bettype NOT IN (31,32,33,1000)	
 
 	SELECT	@P2P_LineTotal = sum(-1*(odds-scomm)*actualrate)
-	from	bettrans with (nolock)
+	from	bettrans with (readpast)
 	where 	bettrans.bettype = 1000
 			AND bettrans.matchid = 1000 
 			and bettrans.ruben=1  
@@ -454,6 +455,7 @@ BEGIN
 	SELECT	@LineTotal = @LineTotal + ISNULL(@RB_LineTotal,0) + ISNULL(@P2P_LineTotal,0)
 	DROP TABLE #src
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]

@@ -18,6 +18,7 @@ AS
 			    + Add column [IBC Turnover] into resultset
 				+ Treat [Turnover of 8RM/BARM] as negative value
 			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -132,7 +133,7 @@ BEGIN
 				-isnull(sum(case when liveindicator = 0 and sporttype <> 1 then (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) else 0 end), 0) as LineTotal_others,
 				-isnull(sum((1-tpositiontaking)*abs(stake)),0) IBCTurnover
 			FROM 
-				bettrans with (nolock)
+				bettrans with (readpast)
 				inner join match with (nolock) on match.matchid = bettrans.matchid
 			WHERE 
 				recommend in (52466,5707545) and
@@ -157,7 +158,7 @@ BEGIN
 			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal,
 			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
 			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover
-	FROM	bettrans with (nolock)
+	FROM	bettrans with (readpast)
 	WHERE	winlostdate = @winlostdate
 			AND ruben = 1  
 			AND statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
@@ -194,7 +195,7 @@ BEGIN
                 sum(LineTotal) LineTotal,
                 sum(VirtualLineTotal) VirtualLineTotal,
                 sum(IBCTurnover) IBCTurnover
-	        FROM #tmpBettrans with (nolock)
+	        FROM #tmpbettrans with (readpast)
 	        GROUP BY matchid, bettype, liveindicator
 	    ) b
 		inner join match m with (nolock) on m.matchid = b.matchid
@@ -285,7 +286,7 @@ BEGIN
 			0 VirtualLineTotal, --virtualrate = actualrate
 			0 IBCTurnover,
 			'P2P' bettype 
-	FROM bettrans with (nolock)
+	FROM bettrans with (readpast)
 	WHERE 
 			bettrans.bettype = 1000
 			and bettrans.matchid = 1000 
@@ -398,8 +399,8 @@ BEGIN
 			sum(LineTotal) as  LineTotal_others,
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
-	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype = 71 and matchid = 0  			
+	FROM	#tmpbettrans with (readpast)
+	WHERE	bettype = 71 and matchid in (0, 71) 			
 	GROUP BY bettype
 	
 	    -- Bingo 
@@ -415,8 +416,8 @@ BEGIN
 			sum(LineTotal) as  LineTotal_others,
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
-	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype = 73	
+	FROM	#tmpbettrans with (readpast)
+	WHERE	bettype = 73 and matchid in (0, 73)
 	GROUP BY bettype			
 	
 	    -- Number Game
@@ -432,7 +433,7 @@ BEGIN
 			sum(case when liveindicator = 0 then LineTotal else 0 end) as LineTotal_others,
 			sum(case when liveindicator = 0 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
-	FROM	#tmpBettrans with (nolock)
+	FROM	#tmpbettrans with (readpast)
 	WHERE	bettype BETWEEN 81 AND 120			
 	GROUP BY bettype
 	
@@ -449,7 +450,7 @@ BEGIN
 			sum(LineTotal) as LineTotal_others,
 			0 as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
-	FROM	#tmpBettrans with (nolock)
+	FROM	#tmpbettrans with (readpast)
 	WHERE	bettype BETWEEN 1101 AND 1199			
 	GROUP BY bettype					
 	
@@ -489,7 +490,7 @@ BEGIN
 					isnull(sum(LineTotal), 0) as LineTotal,
 					isnull(sum(VirtualLineTotal), 0) as VirtualLineTotal,
 					isnull(sum(IBCTurnover), 0) as IBCTurnover
-			FROM	#tmpBettrans with (nolock)
+			FROM	#tmpbettrans with (readpast)
 			WHERE 
 					bettype IN (9, 29) and
 					matchid IN (9, 29)
@@ -542,7 +543,7 @@ BEGIN
 			isnull(sum(-1*(odds-scomm)*bettrans.actualrate),0)  LineTotal_others,
 			0  VirtualLineTotal_others,
 			0 IBCTurnover
-	FROM	bettrans with (nolock)
+	FROM	bettrans with (readpast)
 	WHERE	bettype = 1000
 			and matchid = 1000  
 			and winlostdate = @winlostdate

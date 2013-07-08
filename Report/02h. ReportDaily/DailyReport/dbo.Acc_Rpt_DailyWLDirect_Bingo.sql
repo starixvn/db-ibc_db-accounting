@@ -7,7 +7,7 @@ AS
 		DB: DB02.bodb02, DB06.bodb02
 		
 		Revisions:
-			   
+		- 20130705@Kathy: Update matchid for Bingo (73)		   
    
 	*/
 BEGIN
@@ -22,7 +22,7 @@ BEGIN
 	FROM	bettrans b WITH (NOLOCK)
 	WHERE	b.winlostdate = @winlostdate
 			AND b.bettype = 73
-			AND b.matchid = 0  
+			AND b.matchid in (0, 73) 
 			AND b.statusID NOT IN (102, 101,121,103) 
 			AND b.ruben = 1		
 	GROUP BY b.Bettype

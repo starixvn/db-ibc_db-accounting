@@ -8,7 +8,7 @@ AS
 		Original: 
 	
 		Revisions:
-			
+		- 20130705@Kathy: Update matchid for Bingo (73)	
 
 		Explanation's Param:
 

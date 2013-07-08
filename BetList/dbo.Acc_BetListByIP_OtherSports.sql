@@ -43,6 +43,7 @@ Revisions:
 	- 20121029@Elodie: Get matchid column
 	- 20130227@Elodie: Add Virtual HR product
 	- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
+	- 20130703@Kathy: Update matchid for RnG Casino(71) and Bingo(73)
 	
 Param's Explanation:
 • @fromdate = @winlostdate
@@ -661,7 +662,7 @@ SET NOCOUNT ON
 					'' as showtime 
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 71								--20120405@Hurri
-					AND b.matchid = 0 
+					AND b.matchid IN (0, 71)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
@@ -713,7 +714,7 @@ SET NOCOUNT ON
 					'' as showtime  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 71								--20120405@Hurri
-					AND b.matchid = 0 
+					AND b.matchid in (0, 71)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
@@ -765,7 +766,7 @@ SET NOCOUNT ON
 					'' as showtime 
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 73
-					AND b.matchid = 0 
+					AND b.matchid in (0, 73)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
@@ -817,7 +818,7 @@ SET NOCOUNT ON
 					'' as showtime  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 73
-					AND b.matchid = 0 
+					AND b.matchid in (0, 73)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					

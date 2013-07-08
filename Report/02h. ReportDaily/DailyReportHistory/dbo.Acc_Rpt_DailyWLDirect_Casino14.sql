@@ -10,6 +10,7 @@ AS
 			- 20090731@Jamie: Not to view data in range of date, but only one date at once 	
 			-- 20100525@Henry: Change to use StatusID instead of Status in WHERE statement
 			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
+			- 20130705@Kathy: Update matchid for RnG Casino (71)
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -23,7 +24,7 @@ BEGIN
 	FROM	bettrans14 b WITH (NOLOCK)
 	WHERE	b.winlostdate = @winlostdate
 			AND b.bettype = 71								--20120405@Hurri
-			AND b.matchid = 0  
+			AND b.matchid in (0, 71) 
 			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
 			AND b.statusID NOT IN (101, 102,103,121) 
 			AND b.ruben = 1		

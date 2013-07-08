@@ -97,6 +97,9 @@ SET NOCOUNT ON
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND b.sporttype = @sporttype
 				AND b.bettype = 10
+				AND CASE WHEN @bettype = 0 THEN 1
+					WHEN liveindicator = @liveindicator THEN 1
+					ELSE 0 END = 1
 			GROUP BY m.matchcode, m.teamid, b.bettype, m.leagueid	
 		END			
 	END
@@ -166,6 +169,9 @@ SET NOCOUNT ON
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND b.sporttype = @sporttype
 				AND b.bettype = 10
+				AND CASE WHEN @bettype = 0 THEN 1
+					WHEN liveindicator = @liveindicator THEN 1
+					ELSE 0 END = 1
 			GROUP BY m.matchcode, m.teamid, b.bettype, m.leagueid	
 		END			
 	END
