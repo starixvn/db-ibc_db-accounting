@@ -21,6 +21,8 @@ Revisions:
 	- 20130103@Elodie:  Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table
 	- 20130121@Elodie:  Write more log on DBTXN server in case of DBLOG server failure
 	- 20130624@Martin: Hotfix(There is already an object named 'pk_C2' in the database.Could not create constraint. See previous errors)
+	- 20130624@Jamie: Add BalanceNegative 
+	
 Param's Explanation:
 	- @deadheat = fraction of deadheat to divide (1,2,3  etc)
 */
@@ -33,7 +35,10 @@ BEGIN
 	RETURN
 END
 
-DECLARE @Remark VARCHAR(500)
+DECLARE  @Remark VARCHAR(500)
+		,@ActionID	INT
+SELECT	@ActionID = 128 
+
 INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 IF (@@Error = 0)
 BEGIN
@@ -116,6 +121,31 @@ INSERT INTO dbo.BalancePendingCredit (custid, balance)
 SELECT custid, balance
 FROM #Balance
 WHERE Increased = 1
+
+----
+-- Add Negative Balance into BalanceNegative table 
+----
+INSERT INTO [bodb02].[dbo].[BalanceNegative]
+           ([ExecDate]
+           ,[MatchID]
+           ,[ActionID]
+           ,[GroupID]
+           ,[CustID]
+           ,[Balance]
+           ,[StatusID]
+           ,[Remark])
+SELECT	 GETDATE()
+		,@MatchID
+		,@ActionID
+		,3			---- Outright Settlement 
+		,CustID
+		,Balance
+		,0
+		,NULL 
+FROM	#Balance WITH (NOLOCK)
+WHERE	Increased = 0
+		        
+---------------------------------------------------
 
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
