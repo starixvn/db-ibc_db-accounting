@@ -205,7 +205,6 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_CustomerUpdClearCredit.StoredProcedure.sql"
          Script = "dbo.Acc_CustomerUpdResetMemberCredit.proc.sql"
       End
-      Script = "dbo.Acc_CustomerInsUserInfo.sql"
       Script = "dbo.Acc_CustomerSelAllInfo.proc.sql"
       Script = "dbo.Acc_CustomerSelCheckAllowedDownlines.sql"
       Script = "dbo.Acc_CustomerSelCustomerInfo.proc.sql"
