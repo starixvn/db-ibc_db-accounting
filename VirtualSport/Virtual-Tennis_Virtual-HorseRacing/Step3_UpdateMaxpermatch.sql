@@ -43,8 +43,8 @@ END
  
 /*	 
 DECLARE @mincustid INT,@maxcustid INT
-SELECT @mincustid= 0,
-	@maxcustid= XXXX --8414563
+SELECT @mincustid= 0
+select @maxcustid = max(custid) from custinfo with(nolocK)
 	
 CREATE TABLE #temp (custid INT PRIMARY KEY, isfinished BIT)
 
