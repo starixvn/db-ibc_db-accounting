@@ -18,7 +18,7 @@
 SET NOCOUNT ON
 	
 	Declare @RPT TABLE (
-		matchcode nvarchar(50) COLLATE SQL_Latin1_General_CP1_CS_AS,
+		matchid int, matchcode nvarchar(50) COLLATE SQL_Latin1_General_CP1_CS_AS,
 		HomeId int, AwayId int,		
 		liveindicator bit, bettype smallint, leagueid int,
 		realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money,
@@ -42,10 +42,11 @@ SET NOCOUNT ON
 		SELECT @t_date = @todate
 		
 		INSERT INTO @RPT(
-			matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+			matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
 			realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
 		)
-		SELECT matchcode
+		SELECT b.matchid
+			,matchcode
 			,homeid
 			,awayid
 			,b.liveindicator
@@ -70,15 +71,16 @@ SET NOCOUNT ON
 			AND CASE WHEN @bettype = 0 THEN 1
 					WHEN liveindicator = @liveindicator THEN 1
 					ELSE 0 END = 1
-		GROUP BY matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
+		GROUP BY b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
 		
 		IF @bettype IN (0,19999) AND @sporttype <=99
 		BEGIN
 			INSERT INTO @RPT(
-				matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+				matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
 				realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
 			)
-			SELECT m.matchcode
+			SELECT b.matchid
+				,m.matchcode
 				,m.teamid as homeid
 				,0 as awayid
 				,0 as liveindicator
@@ -100,7 +102,7 @@ SET NOCOUNT ON
 				AND CASE WHEN @bettype = 0 THEN 1
 					WHEN liveindicator = @liveindicator THEN 1
 					ELSE 0 END = 1
-			GROUP BY m.matchcode, m.teamid, b.bettype, m.leagueid	
+			GROUP BY b.matchid, m.matchcode, m.teamid, b.bettype, m.leagueid	
 		END			
 	END
 	
@@ -114,10 +116,11 @@ SET NOCOUNT ON
 		SELECT @f_date = @fromdate
 		
 		INSERT INTO @RPT(
-			matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+			matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
 			realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
 		)
-		SELECT matchcode
+		SELECT b.matchid
+			,matchcode
 			,homeid
 			,awayid
 			,b.liveindicator
@@ -142,15 +145,16 @@ SET NOCOUNT ON
 			AND CASE WHEN @bettype = 0 THEN 1
 					WHEN liveindicator = @liveindicator THEN 1
 					ELSE 0 END = 1
-		GROUP BY matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
+		GROUP BY b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
 		
 		IF @bettype IN (0,19999) AND @sporttype <=99
 		BEGIN
 			INSERT INTO @RPT(
-				matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+				matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
 				realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
 			)
-			SELECT m.matchcode
+			SELECT b.matchid
+				,m.matchcode
 				,m.teamid as homeid
 				,0 as awayid
 				,0 as liveindicator
@@ -172,7 +176,7 @@ SET NOCOUNT ON
 				AND CASE WHEN @bettype = 0 THEN 1
 					WHEN liveindicator = @liveindicator THEN 1
 					ELSE 0 END = 1
-			GROUP BY m.matchcode, m.teamid, b.bettype, m.leagueid	
+			GROUP BY b.matchid, m.matchcode, m.teamid, b.bettype, m.leagueid	
 		END			
 	END
 	

@@ -22,6 +22,8 @@ SET NOCOUNT ON
 		,ISNULL(SUM(realCommission),0) as realCommission
 		,ISNULL(SUM(realLineTotal),0) as realLineTotal
 		,ISNULL(SUM(realTurnover),0) as realTurnover
+		,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
+		,ISNULL(SUM(realTurnover),0) as virtualTurnover
 	FROM rptWinlost2 b WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.VSRaceInfo r WITH(NOLOCK) ON b.matchid = r.eventid
 	WHERE b.winlostdate between @fromdate and @todate
