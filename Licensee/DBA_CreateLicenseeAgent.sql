@@ -143,7 +143,7 @@ and A.custid = B.custid
 and A.roleid = B.roleid 
 and A.currency = B.currency)
 /*
-- Grant currencey permission to Licensee's Users
+- Grant currency permission to Licensee's Users
 */
 DECLARE @tblCurrency AS TABLE ( LicenseeID INT,CurrencyID INT)
 DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
