@@ -50,11 +50,9 @@ BEGIN
 END
  
 /*
---
--- select max(custid) from custinfo with(nolocK)
 DECLARE @mincustid INT,@maxcustid INT
-SELECT @mincustid= 0,
-	@maxcustid= XXXX --8414563
+SELECT @mincustid= 0
+select @maxcustid = max(custid) from custinfo with(nolocK)
 	
 -- 1. Insert PT Setting (CustSetting3rd)
 
@@ -83,7 +81,6 @@ BEGIN
 	select @rowcnt = @@rowcount	
 
 	EXEC [Acc_ExecRep_09] @ids = @ids
-
 	
     if @rowcnt < 5000 RETURN         
  

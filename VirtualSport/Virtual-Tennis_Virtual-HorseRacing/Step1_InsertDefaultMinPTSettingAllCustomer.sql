@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_ExecRep_09]	
+﻿ALTER PROCEDURE [dbo].[Acc_ExecRep_09]	
 	@ids varchar(max)
 AS
 /*	
@@ -50,13 +50,10 @@ BEGIN
 		AND co.bettype = 1201 AND co.sporttype = 180							
 END
 
-
 /*
---
--- select max(custid) from custinfo with(nolocK)
 DECLARE @mincustid INT,@maxcustid INT
-SELECT @mincustid= 0,
-	@maxcustid= XXXX --8414563
+SELECT @mincustid= 0
+select @maxcustid = max(custid) from custinfo with(nolocK)
 	
 --1. Insert Min PT Setting (CustOverride3rd)
 
@@ -66,12 +63,11 @@ INSERT INTO #temp (custid, isfinished)
 SELECT custid, 0
 FROM dbo.Customer c WITH (NOLOCK)
 WHERE custid >= @mincustid and custid <= @maxcustid
-	and roleid in (2,3,4)
+	and roleid in (2,3,4) AND srecommend NOT IN (SELECT custid FROM dbo.f_DepSuper_1('All'))
 
 -- SELECT * FROM #temp
 
 GO
-
 declare @ids varchar(max), @rowcnt int        
 
 WHILE (1=1)

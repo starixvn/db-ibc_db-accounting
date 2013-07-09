@@ -101,11 +101,9 @@ BEGIN
 END
  
 /*
-
--- select max(custid) from custinfo with(nolocK)
 DECLARE @mincustid INT,@maxcustid INT
-SELECT @mincustid= 0,
-	@maxcustid= XXXX --8414563
+SELECT @mincustid= 0
+select @maxcustid = max(custid) from custinfo with(nolocK)
 
 -- 1. Insert PT Setting (Dep_CustSetting3rd)
 	 
