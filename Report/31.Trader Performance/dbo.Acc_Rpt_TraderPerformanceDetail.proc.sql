@@ -8,7 +8,7 @@ AS
 /*  
 Created: 20090122@[creator]  
 Task : Trader performance of operators who are handling live games for members play bet (view detail on each match)  
-DB: DB06.bodb02  
+DB: DBACC/bodb02  
 Original:  
 
 Revisions:      
@@ -268,11 +268,11 @@ BEGIN
    
  ((winlost_1sthdp + winlost_hdp + winlost_1stou + winlost_ou + winlost_1x2 + winlost_1st1x2 + winlost_oe + winlost_1stoe + winlost_1stNoOfCorners + winlost_NoOfCorners + winlost_15minOU + winlost_1stTotalBookings + winlost_TotalBookings + winlost_NextCorner
 	+ winlost_NextBooking + winlost_15minCorners + winlost_15minTotalBookings + winlost_10minOU + winlost_SingleTeamOU)   
- - (comm_1sthdp + comm_hdp + comm_1stou + comm_ou + comm_1x2 + comm_1st1x2 + comm_oe + comm_1stoe + comm_1stNoOfCorners + comm_NoOfCorners + comm_15minOU + comm_1stNoOfYellowCards + comm_NoOfYellowCards+ comm_NextCorner
+ - (comm_1sthdp + comm_hdp + comm_1stou + comm_ou + comm_1x2 + comm_1st1x2 + comm_oe + comm_1stoe + comm_1stNoOfCorners + comm_NoOfCorners + comm_15minOU + comm_1stTotalBookings + comm_TotalBookings+ comm_NextCorner
 				+ comm_NextBooking + comm_15minCorners + comm_15minTotalBookings + comm_10minOU + comm_SingleTeamOU))  
-  /(case when round((isnull(stake_1sthdp,0) + isnull(stake_hdp,0) + isnull(stake_1stou,0) + isnull(stake_ou,0) + isnull(stake_1x2,0) + isnull(stake_1st1x2,0) + isnull(stake_oe,0) + isnull(stake_1stoe,0) + isnull(stake_1stNoOfCorners,0) + isnull(stake_NoOfCorners,0) + isnull(stake_15minOU,0) + isnull(stake_1stNoOfYellowCards,0) + isnull(stake_NoOfYellowCards,0)+ isnull(stake_NextCorner,0)
+  /(case when round((isnull(stake_1sthdp,0) + isnull(stake_hdp,0) + isnull(stake_1stou,0) + isnull(stake_ou,0) + isnull(stake_1x2,0) + isnull(stake_1st1x2,0) + isnull(stake_oe,0) + isnull(stake_1stoe,0) + isnull(stake_1stNoOfCorners,0) + isnull(stake_NoOfCorners,0) + isnull(stake_15minOU,0) + isnull(stake_1stTotalBookings,0) + isnull(stake_TotalBookings,0)+ isnull(stake_NextCorner,0)
 									+ isnull(stake_NextBooking,0) + isnull(stake_15minCorners,0) + isnull(stake_15minTotalBookings,0) + isnull(stake_10minOU,0) + isnull(stake_SingleTeamOU,0)),4) = 0 then 1   
-   else (isnull(stake_1sthdp,0) + isnull(stake_hdp,0) + isnull(stake_1stou,0) +isnull(stake_ou,0) + isnull(stake_1x2,0) + isnull(stake_1st1x2,0) + isnull(stake_oe,0)+ isnull(stake_1stoe,0)+ isnull(stake_1stNoOfCorners,0) +isnull(stake_NoOfCorners,0)+ isnull(stake_15minOU,0)  + isnull(stake_1stNoOfYellowCards,0) + isnull(stake_NoOfYellowCards,0) + isnull(stake_NextCorner,0) 
+   else (isnull(stake_1sthdp,0) + isnull(stake_hdp,0) + isnull(stake_1stou,0) +isnull(stake_ou,0) + isnull(stake_1x2,0) + isnull(stake_1st1x2,0) + isnull(stake_oe,0)+ isnull(stake_1stoe,0)+ isnull(stake_1stNoOfCorners,0) +isnull(stake_NoOfCorners,0)+ isnull(stake_15minOU,0)  + isnull(stake_1stTotalBookings,0) + isnull(stake_TotalBookings,0) + isnull(stake_NextCorner,0) 
 									+ isnull(stake_NextBooking,0) + isnull(stake_15minCorners,0) + isnull(stake_15minTotalBookings,0) + isnull(stake_10minOU,0) + isnull(stake_SingleTeamOU,0)) end ) as overall_margin ,  
      
  bet_hdp, bet_ou, bet_1sthdp, bet_1stou, bet_1x2, bet_1st1x2, bet_oe, bet_1stoe, bet_1stNoOfCorners, bet_NoOfCorners, bet_15minOU, bet_1stTotalBookings, bet_TotalBookings, bet_NextCorner,
