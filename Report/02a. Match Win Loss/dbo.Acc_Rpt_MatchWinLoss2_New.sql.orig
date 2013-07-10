@@ -1,0 +1,580 @@
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
+	@winlostdate		 datetime,
+	@WinLost_8RM		 money = 0 OUTPUT,
+	@WinLost_BARM		 money = 0 OUTPUT,
+	@IBCTurnover_8RM	 money = 0 OUTPUT,
+	@IBCTurnover_BARM	 money = 0 OUTPUT
+AS
+	/*	Creator: Elodie	
+		Date: 20120827
+		Task: Report 2A
+		DB: DBACC/BODB02		
+		Original: Acc_Rpt_MatchWinLoss2
+	
+		History:
+			- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
+			- 20130305@Don: 
+			    + Solving discrepancy by returning all resultsets in one call
+			    + Add column [IBC Turnover] into resultset
+				+ Treat [Turnover of 8RM/BARM] as negative value
+			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+		Explanation's Param:
+			- @WinLost_8RM: winlost for outsource 
+			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
+			- @IBCTurnover_8RM: turnover for outsource 
+		    - @IBCTurnover_BARM: turnover for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
+
+	*/
+BEGIN	
+	SET NOCOUNT ON		
+	--insert company's comm setting that is recieved from Phumelela into this temp table.
+	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
+	
+	DECLARE @CommSetting TABLE
+	(	MatchID			int,
+		IBCFee			bit,
+		ToteCommWin		smallmoney,
+		ToteCommPlace	smallmoney,
+		ToteCommWP		smallmoney,
+		ToteFee			smallmoney	
+	)
+	
+	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
+		SELECT 1,1 --RACE-PHU
+	UNION ALL
+		SELECT 2,0 --RACE-ATRUK
+	UNION ALL
+		SELECT 3,0 --RACE-ATRIRL
+	UNION ALL
+		SELECT 4,0 --RACE-RUK
+	UNION ALL
+		SELECT 5,1 --RACE-TABCORP
+	UNION ALL
+		SELECT 6,1 --RACE-TABCORPNSW
+	UNION ALL
+		SELECT 101,1 --GREY-DTOTEUK
+	UNION ALL
+		SELECT 102,1 --GREY-DTOTEIRL
+	UNION ALL
+		SELECT 103,1 --GREY-TABCORP
+	UNION ALL
+		SELECT 104,1 --GREY-TABCORPNSW
+	UNION ALL
+		SELECT 201,1 --HAR-TABCORP
+	UNION ALL
+		SELECT 202,1 --HAR-TABCORPNSW
+		
+	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
+	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
+	FROM outright o WITH (NOLOCK)
+		INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.leagueID and p.programDate = o.programDate
+		INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid
+		INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
+	WHERE	o.eventdate = @winlostdate 
+	
+	-- Fill data of Racing, 8RM&BARM and all sports into temporary tables 
+	    -- Racing
+	SELECT	b.bettype,
+	        sum((b.winlost -b.actual_stake)*b.actualrate) Winlost,
+			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) Pos,
+			sum(b.scomm*b.actualrate) Comm,
+			0 VirtualComm,
+	        -(
+		        sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) -- PTWLIBC, 
+		        - sum(case when cs.IBCFee = 0 then 0 else
+				        (case when b.bettype = 33 then bm.TOPhum 
+					        when b.bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) -- FeeDue2 ,
+		        + sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
+							        when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
+							        when 33 then bm.TOPhum*cs.ToteCommWP 
+							        else 0 end)*b.actualrate)-- commIncomeIBC
+		        - sum(b.scomm*b.actualrate)
+	        ) LineTotal,
+			0 VirtualLineTotal,
+			sum(case when bettype = 33 then bm.TOIBC*b.actualrate else abs(b.stake)*isnull(oddsspread,0)*b.actualrate end) IBCTurnover
+    INTO #Racing
+	FROM	bettrans b with (nolock)
+			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid  
+			 left join (
+				select	refno,
+				        sum(case when bettype = 32 and liveawayscore = 0 then 0 else abs(stake)*isnull(oddsspread,0) end) TOIBC,
+						-sum((winlost - stake)*isnull(oddsspread,0)) WLIBC,
+						sum(case when bettype = 32 and liveawayscore = 0 then 0 when bettype = 31 or (bettype = 32 and liveawayscore<>0) then stake*(1 -tpositiontaking - isnull(oddsspread,0)) else 0 end) TOPhum
+				from	bettransm with (nolock)
+				group by refno
+			 )bm on b.transid = bm.refno 
+	WHERE	b.ruben = 1 
+			and b.bettype in (31,32,33)
+			and b.matchid > 0
+			and b.winlostdate = @winlostdate			
+			and b.statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
+    GROUP BY b.bettype
+    
+        -- 8RM & BARM
+    SELECT	case WHEN recommend = 52466 then 400 
+				 when recommend = 5707545 then 401 end bettype,	
+			'' Hedge,	
+			LineTotal_soccer_live,
+			LineTotal_soccer_live as VirtualLineTotal_soccer_live,
+			LineTotal_soccer,
+			LineTotal_soccer as VirtualLineTotal_soccer,
+			LineTotal_others_live,
+			LineTotal_others_live as VirtualLineTotal_others_live,		
+			LineTotal_others,
+			LineTotal_others as VirtualLineTotal_others,
+			IBCTurnover
+	INTO #R_8RM
+	FROM (
+			SELECT recommend,
+				-isnull(sum(case when liveindicator = 1 and sporttype = 1 then (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) else 0 end), 0) as LineTotal_soccer_live,
+				-isnull(sum(case when liveindicator = 0 and sporttype = 1 then (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) else 0 end), 0) as LineTotal_soccer,
+				-isnull(sum(case when liveindicator = 1 and sporttype <> 1 then (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) else 0 end), 0) as LineTotal_others_live,
+				-isnull(sum(case when liveindicator = 0 and sporttype <> 1 then (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) else 0 end), 0) as LineTotal_others,
+				-isnull(sum((1-tpositiontaking)*abs(stake)),0) IBCTurnover
+			FROM 
+				bettrans with (readpast)
+				inner join match with (nolock) on match.matchid = bettrans.matchid
+			WHERE 
+				recommend in (52466,5707545) and
+				winlostdate = @winlostdate and
+				bettrans.matchid > 0 and 
+				bettype <= 19000 and
+				bettrans.ruben = 1 and
+				statusID not in (101,102,103,121)
+			GROUP BY recommend
+	)rm
+	
+        -- All sports
+	CREATE TABLE #tmpBettrans (matchid int, bettype int, statusID int, liveindicator bit, winlost money, pos money, comm money, VirtualComm money, LineTotal money, VirtualLineTotal money, IBCTurnover money)
+	CREATE INDEX IX_bettype on #tmpBettrans(bettype)
+	
+	INSERT INTO #tmpBettrans (matchid, bettype, statusID, liveindicator, winlost, pos, comm, VirtualComm, LineTotal, VirtualLineTotal, IBCTurnover)
+	SELECT  matchid, bettype, statusID, liveindicator,
+			sum((winlost-actual_stake)*actualrate)  winlost,
+			sum((awinlost+mwinlost+swinlost)*actualrate) pos,
+			sum((scomm)*actualrate) comm,
+			sum((scomm)*virtualrate) VirtualComm,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
+			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover
+	FROM	bettrans with (readpast)
+	WHERE	winlostdate = @winlostdate
+			AND ruben = 1  
+			AND statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
+			AND bettype <= 19000
+	GROUP BY matchid, bettype, statusID, liveindicator
+	-- END - Fill data of Racing, 8RM&BARM and all sports into temporary tables 
+	
+	-- Resultset of Sportbook without Parlay and Outright
+	SELECT 
+	    UPPER(case when l.leaguenametc = '' or l.leaguenametc is null  then 'Other Sports' else l.leaguenametc end) as leaguenametc,
+		b.bettype,
+		b.liveindicator,		
+		m.matchcode,
+		m.kickofftime,
+		b.matchid,
+		m.homeid,
+		m.awayid,
+		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+        b.winlost,
+        b.pos,
+        b.comm,   
+        b.VirtualComm,
+        b.LineTotal,
+        b.VirtualLineTotal,
+        b.IBCTurnover
+	FROM 
+	    (
+	        SELECT 
+	            matchid, bettype, liveindicator,
+	            sum(winlost) winlost,
+                sum(pos) pos,
+                sum(comm) comm,
+                sum(VirtualComm) VirtualComm,
+                sum(LineTotal) LineTotal,
+                sum(VirtualLineTotal) VirtualLineTotal,
+                sum(IBCTurnover) IBCTurnover
+	        FROM #tmpbettrans with (readpast)
+	        GROUP BY matchid, bettype, liveindicator
+	    ) b
+		inner join match m with (nolock) on m.matchid = b.matchid
+		inner join league l with (nolock) on l.leagueid = m.leagueid
+	WHERE ((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
+	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc
+	
+	-- Resultset of 3rd products and Parlay, Outright
+	    -- Mix Parlay
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.VirtualLineTotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Parlay-' + case when b.statusID = 111 THEN 'DRAW'
+							 WHEN b.statusID = 113 THEN 'LOSE'
+							 WHEN b.statusID = 112 THEN 'WON' END as bettype
+	FROM	#tmpBettrans b with (nolock)
+	WHERE	bettype = 9 OR bettype = 29 	
+	GROUP BY statusID		
+	
+	    -- Outright 
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.VirtualLineTotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Out Right' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	WHERE	bettype = 10 			
+	
+	    -- Racing
+	UNION ALL	
+    SELECT	@winlostdate winlostdate,
+            isnull(sum(Winlost),0) Winlost,
+			isnull(sum(Pos),0) Pos,
+			isnull(sum(Comm),0) Comm,
+			isnull(sum(VirtualComm),0) VirtualComm,
+		    isnull(sum(LineTotal),0) LineTotal,
+			isnull(sum(VirtualLineTotal),0) VirtualLineTotal,
+			isnull(sum(IBCTurnover),0) IBCTurnover,
+			'Racing' bettype
+    FROM #Racing with (nolock)
+	
+	    -- Casino - 71
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,
+			0 IBCTurnover,
+			'Casino' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	WHERE	bettype = 71		
+
+	    -- Bingo - 73
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,
+			0 IBCTurnover,
+			'Bingo' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	WHERE	bettype = 73		
+	
+	    -- P2P Game - 1000
+	UNION ALL
+	SELECT  @winlostdate winlostdate,
+	        isnull(sum((winlost-actual_stake)*bettrans.actualrate),0)  winlost, 
+			0 pos,
+			isnull(sum(scomm*bettrans.actualrate),0) comm,
+			0 VirtualComm,
+			isnull(sum(-1*(odds-scomm)*bettrans.actualrate),0) as LineTotal,
+			0 VirtualLineTotal, --virtualrate = actualrate
+			0 IBCTurnover,
+			'P2P' bettype 
+	FROM bettrans with (readpast)
+	WHERE 
+			bettrans.bettype = 1000
+			and bettrans.matchid = 1000 
+			and bettrans.ruben = 1 
+			and bettrans.winlostdate = @winlostdate			
+			and statusID NOT in (101,102,103,121)
+	
+	 -- Number Game
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.VirtualLineTotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Number Game' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	WHERE	bettype BETWEEN 81 AND 120 			
+	
+	    -- Virtual Sports
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Virtual Sports' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	WHERE	bettype BETWEEN 1201 AND 1299			
+
+	    -- Live Casino
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Live Casino' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	WHERE	bettype BETWEEN 1101 AND 1199				
+	
+    -- Resultset of 8RM and BARM
+    SELECT  @WinLost_8RM = isnull(sum(case when bettype = 400 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
+            @WinLost_BARM = isnull(sum(case when bettype = 401 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
+            @IBCTurnover_8RM = isnull(sum(case when bettype = 400 then IBCTurnover else 0 end),0),
+            @IBCTurnover_BARM = isnull(sum(case when bettype = 401 then IBCTurnover else 0 end),0)
+	FROM	#R_8RM with (nolock)
+	-- END - Resultset of 3rd products and Parlay, Outright
+	
+	-- Resultset by bettype of 
+	    -- Sportbook without Parlay and Outright
+	SELECT	b.bettype,
+			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
+			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			
+			sum(case when liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			
+			sum(IBCTurnover) as IBCTurnover
+	FROM 	#tmpBettrans b with (nolock)
+			inner join match m with (nolock) on b.matchid = m.matchid
+	WHERE   ((bettype < 31 and bettype <> 10) 
+				OR bettype between 121 and 999 
+				OR (bettype BETWEEN 1201 and 1299 and b.bettype not in (1231, 1232, 1233, 1237, 1238))
+				OR bettype BETWEEN 1301 and 1334)	
+	GROUP BY 
+			b.bettype, 
+			case when matchcode like '%hedge%' then ' (hedge)' else '' end
+	
+	    -- Virtual HR
+	UNION ALL 
+	SELECT	bettype,
+			'' Hedge,
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,
+			sum(LineTotal) as  LineTotal_others,
+			0  VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM 	#tmpBettrans b with (nolock)
+	WHERE   b.bettype in (1231, 1232, 1233, 1237, 1238)	
+	GROUP BY bettype			
+			
+	    -- Casino
+	UNION ALL 
+	SELECT	bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,
+			sum(LineTotal) as  LineTotal_others,
+			0 VirtualLineTotal_others,
+			0 IBCTurnover
+	FROM	#tmpbettrans with (readpast)
+	WHERE	bettype = 71 and matchid in (0, 71) 			
+	GROUP BY bettype
+	
+	    -- Bingo 
+	UNION ALL
+	SELECT	bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,
+			sum(LineTotal) as  LineTotal_others,
+			0 VirtualLineTotal_others,
+			0 IBCTurnover
+	FROM	#tmpbettrans with (readpast)
+	WHERE	bettype = 73 and matchid in (0, 73)
+	GROUP BY bettype			
+	
+	    -- Number Game
+	UNION ALL
+	SELECT	bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			sum(case when liveindicator = 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when liveindicator = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,		
+			sum(case when liveindicator = 0 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when liveindicator = 0 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpbettrans with (readpast)
+	WHERE	bettype BETWEEN 81 AND 120			
+	GROUP BY bettype
+	
+	    -- Live Casino
+	UNION ALL
+	SELECT	bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			0 as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpbettrans with (readpast)
+	WHERE	bettype BETWEEN 1101 AND 1199			
+	GROUP BY bettype					
+	
+	    -- Parlay
+	UNION ALL 
+	SELECT 	m1.bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			LineTotal_soccer,
+			VirtualLineTotal_soccer,
+			
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,
+			LineTotal - LineTotal_soccer as LineTotal_others,
+			VirtualLineTotal - VirtualLineTotal_soccer as VirtualLineTotal_others,
+			
+			IBCTurnover
+	FROM
+		(
+			SELECT 	bettype,	
+					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate), 0) as LineTotal_soccer,
+					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate), 0) as VirtualLineTotal_soccer
+			FROM	bettrans with (nolock,index=CIX_matchid_bettype)
+			WHERE 
+					ruben = 1 and
+					bettype IN (9, 29) and
+					winlostdate = @winlostdate and
+					matchid IN (9, 29) and
+					statusid NOT IN (101,102,103,121)
+					and refno IN (SELECT refno FROM bettransm with (nolock) inner join match with (nolock) on bettransm.matchid = match.matchid WHERE sporttype=1)
+			GROUP BY bettype
+		) m1
+		inner join
+		(
+			SELECT 	bettype,
+					isnull(sum(LineTotal), 0) as LineTotal,
+					isnull(sum(VirtualLineTotal), 0) as VirtualLineTotal,
+					isnull(sum(IBCTurnover), 0) as IBCTurnover
+			FROM	#tmpbettrans with (readpast)
+			WHERE 
+					bettype IN (9, 29) and
+					matchid IN (9, 29)
+			GROUP BY bettype
+		) m2 on m1.bettype = m2.bettype		
+		
+	    -- Outright
+	UNION ALL 
+	SELECT	10 bettype,	
+			'' Hedge,
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,	
+			sum(case when sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,		
+			sum(case when sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM #tmpBettrans b with (nolock) 
+		inner join outright o with (nolock) on b.matchid = o.orid
+		inner join league l with (nolock) on o.leagueid = l.leagueid	
+	WHERE b.bettype = 10 
+	
+	    -- Racing
+	UNION ALL
+	SELECT	bettype,
+	        '' Hedge,
+	        0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,
+		    isnull(LineTotal,0) LineTotal,
+			0 VirtualLineTotal_others,
+			isnull(IBCTurnover,0) as IBCTurnover
+	FROM	#Racing with (nolock)
+	
+	    -- P2P Game - 1000
+	UNION ALL
+	SELECT	bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,
+			isnull(sum(-1*(odds-scomm)*bettrans.actualrate),0)  LineTotal_others,
+			0  VirtualLineTotal_others,
+			0 IBCTurnover
+	FROM	bettrans with (readpast)
+	WHERE	bettype = 1000
+			and matchid = 1000  
+			and winlostdate = @winlostdate
+			and ruben = 1
+			and statusID not in (101,102,103,121 )
+	GROUP BY bettype			
+	
+	    -- 8RM & BARM
+	UNION ALL 		
+	SELECT	bettype,	
+			Hedge,	
+			LineTotal_soccer_live,
+			VirtualLineTotal_soccer_live,
+			LineTotal_soccer,
+			VirtualLineTotal_soccer,
+			LineTotal_others_live,
+			VirtualLineTotal_others_live,		
+			LineTotal_others,
+			VirtualLineTotal_others,
+			IBCTurnover
+	FROM #R_8RM with (nolock)
+	
+	ORDER BY bettype, Hedge	
+	-- END - Resultset by bettype of 
+		
+    DROP TABLE #tmpBettrans
+	DROP TABLE #Racing
+	DROP TABLE #R_8RM
+END
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam] 
