@@ -1,6 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_BySite]
   @Site		VARCHAR(50) = 'Haifa'
- ,@isTest	BIT			= 1 
+ ,@isTest	BIT			= 0 
 
 AS
 /*
