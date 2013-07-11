@@ -1,12 +1,26 @@
-﻿
-ALTER PROCEDURE [dbo].[Task_Calculate_Parlay]
+﻿ALTER PROCEDURE [dbo].[Task_Calculate_Parlay]
 	@step int = 0
 AS
+/*
+	Created by: Viet
+	Date: 2013-07-11
+	Task: Mix Parlay Settlement 
+	DB: DBTXN/bodb02
+	
+	Revisions:
+		- 20130711@Jamie: Add BalanceNegative & SET NOCOUNT ON 
+
+*/
+
+SET NOCOUNT ON 
 
 Declare @SkipBalanceUpdate bit
 SET @SkipBalanceUpdate = 0
 
 Declare @matchid int, @statusID tinyint, @winlostdate smalldatetime
+		,@ActionID	INT
+		
+SELECT	@ActionID = 134   --Task_Calculate_Parlay
 
 -- step 1 : move data going to process into middle-table
 IF @step = 1
@@ -32,7 +46,7 @@ BEGIN
 	END
 END
 
- waitfor delay '00:00:05'
+
 -- step 2 : get the balance/update bettrans/update balance
 IF @step = 2
 BEGIN
@@ -74,22 +88,22 @@ BEGIN
 		SELECT TOP (1) @matchid = matchid, @statusID = statusID, @winlostdate = winlostdate
 		FROM dbo.bettrans_Calculate_job
 		
-		-- use this SP called when on UAT
-		EXEC dbo.Admin_Calculate_9m_xtest  -- the first 6 params were not used in case of @mode = 1
-				@matchid	= 0,
-				@fth		= 0, 
-				@fta		= 0,
-				@hth		= 0, 
-				@hta		= 0,
-				@matchdate	= '2013-01-01',
-				@mode = 1,
-				@statusID = @statusID, @winlostdate = @winlostdate,
-				@strXML = @strXML
-		
-		--EXEC dbo.Admin_Calculate_9_xtest  
-		--		@statusID = @statusID, 
-		--		@winlostdate = @winlostdate,
+		---- use this SP called when on UAT
+		--		EXEC dbo.Admin_Calculate_9m  -- the first 6 params can be passed any values in case of @mode = 1
+		--		@matchid	= 0,
+		--		@fth		= 0, 
+		--		@fta		= 0,
+		--		@hth		= 0, 
+		--		@hta		= 0,
+		--		@matchdate	= '2013-01-01',
+		--		@mode = 1,
+		--		@statusID = @statusID, @winlostdate = @winlostdate,
 		--		@strXML = @strXML
+		
+		EXEC dbo.Admin_Calculate_9 
+				@statusID = @statusID, 
+				@winlostdate = @winlostdate,
+				@strXML = @strXML
 	-------------------------------------------------------------
 	---         CAPTURE value BALANCE after settlement        ---
 	---------------------------VVVV------------------------------
@@ -129,6 +143,32 @@ BEGIN
 	SELECT custid, balance
 	FROM #Balance
 	WHERE Increased = 1
+	
+	----
+	-- Add Negative Balance into BalanceNegative table 
+	----
+	INSERT INTO [bodb02].[dbo].[BalanceNegative]
+			   ([ExecDate]
+			   ,[MatchID]
+			   ,[ActionID]
+			   ,[GroupID]
+			   ,[CustID]
+			   ,[Balance]
+			   ,[StatusID]
+			   ,[Remark])
+	SELECT	 GETDATE()
+			,@MatchID
+			,@ActionID
+			,2			-- Sportsbook Parlay Settlement 
+			,CustID
+			,Balance
+			,0
+			,NULL 
+	FROM	#Balance WITH (NOLOCK)
+	WHERE	Increased = 0
+			        
+	---------------------------------------------------	
+
 
 	DROP TABLE #Balance
 	DROP TABLE #BalanceBefore
@@ -142,4 +182,3 @@ BEGIN
 		DELETE FROM dbo.Parlay_WaitingList WHERE matchid = @matchid
 
 END
- 

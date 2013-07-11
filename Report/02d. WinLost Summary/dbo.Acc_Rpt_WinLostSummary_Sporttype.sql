@@ -129,9 +129,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,NULL as virtualLineTotal
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			, 0 as realTurnover
-			,NULL as virtualTurnover
+			,0 as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 31 AND 33
