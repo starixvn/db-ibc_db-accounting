@@ -4,13 +4,14 @@ AS
 	Created by:Lukas
 	Date:20110112
 	Task: execute Settlement (job)
-	DB: DB053.BODB02
+	DB: DBAGE/BODB02; DBEXT/BODB02
 	
 	Revisions:
 		- 20110912@Lukas: Apply this SP for DB053
 		- 20121109@Jamie: Check total tickets between the current server and DBTRANS before executing the command. 
 		- 20121120@Lukas: correct betcount in case of settle abandoned matches
 		- 20121122@Jamie: Update new range for delay execution - tickets not match 
+		- 20130708@Jamie: Update statusID = 98 in case SQL Command NULL 
 
 	Param explanation:				
 		StatusID & Status
@@ -57,9 +58,15 @@ BEGIN
 			AND StatusID <> 1  -- Running
 	ORDER BY statusID, execID
 	
-	IF @execID IS NULL OR @sql IS NULL
-		RETURN
-		
+	IF @sql IS NULL
+	BEGIN
+		UPDATE	Acc_ExternalSettlement WITH (UPDLOCK,ROWLOCK)
+		SET		 StatusID		= 98	
+				,[Status]		= 'Failed & waiting for notification'
+				,ExecutedDate	= GETDATE()
+		WHERE	execID = @execID
+		RETURN 
+	END
 
 	IF @bettype >= 1201  --Apply for bettype without checking the total tickets 
 	BEGIN 
