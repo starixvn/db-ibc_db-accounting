@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_SMATurnoverCheckList]	
+﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverCheckList]	
 	@UserID INT,
 	@ListSMA XML,		
 	@ErrCode INT = 0 OUTPUT,
@@ -22,6 +22,7 @@ SET NOCOUNT ON
 		RETURN
 
 	DECLARE @tblCust TABLE (
+		Seq INT,
 		SMAName VARCHAR(30),
 		CustID INT,
 		MatchID INT,
@@ -29,6 +30,7 @@ SET NOCOUNT ON
 	)
 	
 	DECLARE @tblSucc TABLE (
+		Seq INT,
 		SMAName VARCHAR(30),
 		CustID INT,
 		MatchID INT,
@@ -36,6 +38,7 @@ SET NOCOUNT ON
 	)
 
 	DECLARE @tblFail TABLE (
+		Seq INT,
 		SMAName VARCHAR(30),
 		CustID INT,
 		MatchID INT,
@@ -43,8 +46,9 @@ SET NOCOUNT ON
 		Reason NVARCHAR(100)
 	)
 	
-	INSERT INTO @tblCust(SMAName, MatchID, MaxTurnover)				
-	SELECT	T.C.value('./@SMAName', 'varchar(30)'),
+	INSERT INTO @tblCust(Seq, SMAName, MatchID, MaxTurnover)				
+	SELECT	T.C.value('./@Seq', 'int'),
+			T.C.value('./@SMAName', 'varchar(30)'),
 			T.C.value('./@MatchID', 'int'),
 			T.C.value('./@MaxTurnover', 'money')
 	FROM @ListSMA.nodes('/ListSMA/SMA') AS T(C)
@@ -55,23 +59,22 @@ SET NOCOUNT ON
 	WHERE username = SMAName
 	
 	--Validate transaction
-	INSERT INTO @tblSucc(SMAName, CustID, MatchID, MaxTurnover)
-	SELECT	SMAName, CustID, MatchID, MaxTurnover			
+	INSERT INTO @tblSucc(Seq, SMAName, CustID, MatchID, MaxTurnover)
+	SELECT	Seq, SMAName, CustID, MatchID, MaxTurnover			
 	FROM	@tblCust as t
 	WHERE ISNUMERIC(MaxTurnover)=1 and cast(MaxTurnover AS INT) = 1
 			AND EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID)
-			AND NOT EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID <> ds.custid and t.MatchID <> ds.matchid)
+			AND NOT EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid)
 			
 	
-	----Failed Transaction
-	--INSERT INTO @tblFail(SMAName, CustID, MatchID, MaxTurnover, Reason)
-	--SELECT	SMAName, CustID, MatchID, MaxTurnover,  
-	--		CASE WHEN ISNUMERIC(MaxTurnover)=0 or cast(MaxTurnover AS INT) = 0 THEN '<b>Invalid Max Turnover.</b>'
-	--			 WHEN ISNULL(FromCust,'') ='' and ISNULL(ToCust,'') ='' THEN '<b>Username cannot be blanked.</b>' 
-	--			 WHEN FromCust = ToCust THEN '<b>From Cust must different To Cust.</b>' 
-	--			 WHEN len(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 				 
-	--			 ELSE '<b>Invalid From Cust or To Cust.</b>' END AS Reason 	
-	--FROM	(SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS temp
+	--Failed Transaction
+	INSERT INTO @tblFail(Seq, SMAName, CustID, MatchID, MaxTurnover, Reason)
+	SELECT	Seq, SMAName, CustID, MatchID, MaxTurnover,  
+			CASE WHEN ISNUMERIC(MaxTurnover)=0 or cast(MaxTurnover AS INT) = 0 THEN '<b>Invalid Max Turnover.</b>'
+				 WHEN NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID) THEN '<b>Invalid SMA Name.</b>' 
+				 WHEN EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid) THEN '<b>The SMA already exists in match: ' + cast(t.MatchID AS VARCHAR(10)) + '.</b>'
+			END AS Reason 	
+	FROM	(SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS t
 			
 	
 	SELECT * FROM @tblSucc ORDER BY MatchID, SMAName

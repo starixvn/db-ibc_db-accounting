@@ -1,8 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverIns]
-	@UserName NVARCHAR(100),
-	@MatchID INT,
-	@MaxTurnover MONEY,
+﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverIns_xpre]
 	@UserID INT,
+	@ListSMA XML,
 	@IP	VARCHAR(40),
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
@@ -14,8 +12,10 @@ AS
 	DB: DBAGE/bodb02
 
 	Revisions:
-
+		- 20130712@Elodie: Support multiple insert
+		
 	Parameter's explaination: 
+	
 	Example: DECLARE @ErrCode int, @ErrMsg nvarchar(200)
 			 EXEC Acc_SMATurnoverIns @UserName = 'FBH', @MatchID = 4496769, @MaxTurnover = 10000, @UserID = 8, @IP = '120.125.220.20', @ErrMsg = @ErrMsg OUTPUT, @ErrCode = @ErrCode OUTPUT
 			 SELECT @ErrCode, @ErrMsg
@@ -31,51 +31,33 @@ BEGIN
 	--Check permission 
 	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[SMATurnoverManagement]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	IF @ErrCode <> 0
-		RETURN
+		RETURN		
 		
-	IF NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE username = @UserName)
-	BEGIN
-		SELECT @ErrCode = 100, @ErrMsg = 'Invalid Username!'
-		RETURN
-	END
+	DECLARE @tblCust TABLE (		
+		CustID INT,
+		MatchID INT,
+		MaxTurnover MONEY		
+	)
 
-	IF EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE username = @UserName and roleid <> 4)
-	BEGIN
-		SELECT @ErrCode = 101, @ErrMsg = 'Invalid Username!'
-		RETURN
-	END
-
-	IF NOT EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID)
-	BEGIN
-		SELECT @ErrCode = 102, @ErrMsg = 'Match ID doesn''t exist.'
-		RETURN
-	END
-
-	IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'completed')
-	BEGIN
-		SELECT @ErrCode = 103, @ErrMsg = 'You are not allowed to add super into a settled match.'
-		RETURN
-	END		
-	
-	DECLARE @CustID INT
-
-	SELECT @CustID = custid FROM custInfo WITH (NOLOCK) WHERE username = @UserName
-	
-	IF EXISTS (SELECT 1 FROM DownlineTurnover_Setting WITH (NOLOCK) WHERE matchid = @MatchID AND CustID = @CustID)
-	BEGIN
-		SELECT @ErrCode = 104, @ErrMsg = 'This account is already added.'
-		RETURN
-	END
-
-	DECLARE @LogData NVARCHAR(4000)
-		
+	INSERT INTO @tblCust(CustID, MatchID, MaxTurnover)				
+	SELECT	T.C.value('./@CustID', 'int'),
+			T.C.value('./@MatchID', 'int'),
+			T.C.value('./@MaxTurnover', 'money')
+	FROM @ListSMA.nodes('/ListSMA/SMA') AS T(C)
+				
 	INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
-	VALUES (@CustID, @MatchID, @MaxTurnover, 0)
+	SELECT CustID, MatchID, MaxTurnover, 0
+	FROM @tblCust
 	
-	SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
-					+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-					+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
-					+ 'TotalTurnover="0" '
+	IF @@Error <> 0
+	BEGIN
+		SELECT	@ErrCode = 100,
+				@ErrMsg = 'Insert SMA List unsuccessfully.'
+		RETURN
+	END
+	
+	DECLARE @LogData NVARCHAR(4000)
+	SELECT @LogData = '<Acc_SMATurnoverIns ListSMA="' + COALESCE(CAST(@ListSMA AS VARCHAR(3500)), SPACE(1)) + '" '					
 					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'																
@@ -85,24 +67,19 @@ BEGIN
 	
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-			@Userid = @UserID,
-			@Custid = @CustID,
+			@Userid = @UserID,			
 			@ActionID = 636,
 			@TrackingValue = @LogData,
 			@Duration = @duration
 	END TRY
 	BEGIN CATCH
-		SELECT @LogData = '<Acc_SMATurnoverIns Username="' + COALESCE(@username, SPACE(1)) + '" ' 
-						+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 
-						+ 'MaxTurnover="' + COALESCE(CAST(@MaxTurnover AS VARCHAR(20)), SPACE(1)) + '" ' 
-						+ 'TotalTurnover="0" '
+		SELECT @LogData = '<Acc_SMATurnoverIns ListSMA="' + COALESCE(CAST(@ListSMA AS VARCHAR(3500)), SPACE(1)) + '" '						
 						+ 'ErrCode="'+ coalesce(cast(ERROR_NUMBER() as varchar(50)),space(1)) + '" '
 						+ 'ErrMsg="'+ coalesce(cast(ERROR_MESSAGE() as varchar(4000)),space(1))+ '" '
 						+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
 							
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-			@Userid = @UserID,
-			@Custid = @CustID,
+			@Userid = @UserID,	
 			@ActionID = 636,
 			@TrackingValue = @LogData,
 			@Duration = @duration
@@ -111,7 +88,7 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_SMATurnoverIns] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_SMATurnoverIns_xpre] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_SMATurnoverIns] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_SMATurnoverIns_xpre] TO [vnteam]
 
