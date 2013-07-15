@@ -19,7 +19,7 @@ AS
 */
 SET NOCOUNT ON
 
-SELECT eventdate, homeid, awayid
+SELECT matchid, eventdate, homeid, awayid
 FROM match m WITH (NOLOCK)	
 WHERE leagueid = @LeagueID AND eventdate BETWEEN @FromDate AND @ToDate and eventstatus <> 'completed'
 order by eventdate

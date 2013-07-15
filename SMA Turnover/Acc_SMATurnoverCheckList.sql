@@ -55,14 +55,14 @@ SET NOCOUNT ON
 	
 	UPDATE @tblCust
 	SET CustID = c.custid
-	FROM custInfo c WITH (NOLOCK) 
+	FROM customer c WITH (NOLOCK) 
 	WHERE username = SMAName
 	
 	--Validate transaction
 	INSERT INTO @tblSucc(Seq, SMAName, CustID, MatchID, MaxTurnover)
 	SELECT	Seq, SMAName, CustID, MatchID, MaxTurnover			
 	FROM	@tblCust as t
-	WHERE ISNUMERIC(MaxTurnover)=1 and cast(MaxTurnover AS INT) = 1
+	WHERE ISNUMERIC(MaxTurnover)=1 and cast(MaxTurnover AS INT) >= 0
 			AND EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID)
 			AND NOT EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid)
 			
@@ -70,18 +70,22 @@ SET NOCOUNT ON
 	--Failed Transaction
 	INSERT INTO @tblFail(Seq, SMAName, CustID, MatchID, MaxTurnover, Reason)
 	SELECT	Seq, SMAName, CustID, MatchID, MaxTurnover,  
-			CASE WHEN ISNUMERIC(MaxTurnover)=0 or cast(MaxTurnover AS INT) = 0 THEN '<b>Invalid Max Turnover.</b>'
+			CASE WHEN ISNUMERIC(MaxTurnover)=0 or cast(MaxTurnover AS INT) < 0 THEN '<b>Invalid Max Turnover.</b>'
 				 WHEN NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID) THEN '<b>Invalid SMA Name.</b>' 
 				 WHEN EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid) THEN '<b>The SMA already exists in match: ' + cast(t.MatchID AS VARCHAR(10)) + '.</b>'
 			END AS Reason 	
 	FROM	(SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS t
 			
 	
-	SELECT * FROM @tblSucc ORDER BY MatchID, SMAName
+	SELECT t.Seq, t.SMAName, t.CustID, m.matchid, t.MaxTurnover, eventdate, homeid, awayid
+	FROM @tblSucc t
+		INNER JOIN match m WITH (NOLOCK) on m.matchid = t.MatchID
+	ORDER BY MatchID, SMAName
 
 	SELECT * FROM @tblFail ORDER BY MatchID, SMAName
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_SMATurnoverCheckList] TO [bodbAdminNet]
 GO

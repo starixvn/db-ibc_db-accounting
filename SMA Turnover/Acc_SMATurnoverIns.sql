@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverIns_xpre]
+﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverIns]
 	@UserID INT,
 	@ListSMA XML,
 	@IP	VARCHAR(40),
@@ -88,7 +88,7 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_SMATurnoverIns_xpre] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_SMATurnoverIns] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_SMATurnoverIns_xpre] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_SMATurnoverIns] TO [vnteam]
 
