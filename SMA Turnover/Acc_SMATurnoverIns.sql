@@ -45,6 +45,19 @@ BEGIN
 			T.C.value('./@MaxTurnover', 'money')
 	FROM @ListSMA.nodes('/ListSMA/SMA') AS T(C)
 				
+	IF EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) INNER JOIN @tblCust t ON t.CustID = ds.custid and t.MatchID = ds.matchid)				
+	BEGIN
+		SELECT username, ds.matchid
+		FROM DownlineTurnOver_Setting ds WITH (NOLOCK) 
+			INNER JOIN @tblCust t ON t.CustID = ds.custid and t.MatchID = ds.matchid
+			INNER JOIN custInfo c ON c.custid = t.CustID
+		RETURN
+	END
+	ELSE
+	BEGIN
+		SELECT '' username, 0 matchid WHERE 0 = 1
+	END	
+	
 	INSERT INTO DownlineTurnover_Setting (CustID, MatchID, MaxTurnover, TotalTurnover)
 	SELECT CustID, MatchID, MaxTurnover, 0
 	FROM @tblCust
