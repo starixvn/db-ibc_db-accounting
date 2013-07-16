@@ -10,7 +10,7 @@ AS
 		DB: DBRPT/bodb_Report
 		
 		Revisions:
-		
+			- 20130716@Johnson: get min eventdate by oddsstatus = 'completed'
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -24,7 +24,7 @@ SET NOCOUNT ON
 			@f_date datetime,
 			@t_date datetime
 	
-	SELECT @mineventdate = min(eventdate) from bodb02.dbo.outright with(nolock)
+	SELECT @mineventdate = min(eventdate) from bodb02.dbo.outright with(nolock) where oddsstatus = 'completed'
 		
 	
 	IF @todate >= @mineventdate
