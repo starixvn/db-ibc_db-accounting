@@ -55,7 +55,7 @@ SET NOCOUNT ON
 	
 	UPDATE @tblCust
 	SET CustID = c.custid
-	FROM customer c WITH (NOLOCK) 
+	FROM DBACC.bodb02.dbo.customer c WITH (NOLOCK) --use index in DBACC server
 	WHERE username = SMAName
 	
 	--Validate transaction
@@ -70,9 +70,9 @@ SET NOCOUNT ON
 	--Failed Transaction
 	INSERT INTO @tblFail(Seq, SMAName, CustID, MatchID, MaxTurnover, Reason)
 	SELECT	Seq, SMAName, CustID, MatchID, MaxTurnover,  
-			CASE WHEN ISNUMERIC(MaxTurnover)=0 or cast(MaxTurnover AS INT) < 0 THEN '<b>Invalid Max Turnover.</b>'
-				 WHEN NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID) THEN '<b>Invalid SMA Name.</b>' 
-				 WHEN EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid) THEN '<b>The SMA already exists in match: ' + cast(t.MatchID AS VARCHAR(10)) + '.</b>'
+			CASE WHEN ISNUMERIC(MaxTurnover)=0 or cast(MaxTurnover AS INT) < 0 THEN 'Invalid Max Turnover.'
+				 WHEN NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID) THEN 'Invalid SMA Name.' 
+				 WHEN EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid) THEN 'The SMA already exists in match: ' + cast(t.MatchID AS VARCHAR(10)) + '.'
 			END AS Reason 	
 	FROM	(SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS t
 			
