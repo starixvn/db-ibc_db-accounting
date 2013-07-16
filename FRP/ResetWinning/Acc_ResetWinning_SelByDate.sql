@@ -16,6 +16,7 @@ AS
 		- 20121102@Elodie: Add Sporting Solution into Sportbook	(bettype: 1301 -> 1334)
 						   No need execute Acc_ResetWinning_SelByDate_Original (@winlostdate < '2012-09-01')		
 		- 20130618@Johnson: Add NSW racing's pools from AUST
+		- 20130716@Kathy: Apply Progressive Bonus
 	Explanation's Param:
 */
 BEGIN	
@@ -170,7 +171,7 @@ BEGIN
 			END AS Product,
 			ISNULL(SUM(winlost),0) as winlost
 	FROM #source
-	WHERE (bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,73) AND bettype NOT BETWEEN 81 AND 120)
+	WHERE (bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND bettype NOT BETWEEN 81 AND 120)
 		or bettype between 1301 and 1334		
 	GROUP BY liveindicator 
 	
@@ -178,7 +179,7 @@ BEGIN
 	SELECT CASE	WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 				WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
 				WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-				WHEN bettype = 71 THEN 'Casino'
+				WHEN bettype IN (71, 72) THEN 'Casino'
 				WHEN bettype = 73 THEN 'Bingo'
 				WHEN bettype = 1000 THEN 'Poker gross income'
 				WHEN bettype = 10 THEN 'Outright'
@@ -190,13 +191,13 @@ BEGIN
 	WHERE ( bettype BETWEEN 1101 AND 1199
 			OR bettype BETWEEN 31 AND 33
 			OR bettype BETWEEN 80 AND 120
-			OR bettype IN (71,73,10,1000,9,29)
+			OR bettype IN (71,72,73,10,1000,9,29)
 			OR bettype BETWEEN 1201 AND 1299			
 			)			
 	GROUP BY CASE	WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 				WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
 				WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-				WHEN bettype = 71 THEN 'Casino'
+				WHEN bettype IN(71, 72) THEN 'Casino'
 				WHEN bettype = 73 THEN 'Bingo'
 				WHEN bettype = 1000 THEN 'Poker gross income'
 				WHEN bettype = 10 THEN 'Outright'
