@@ -26,7 +26,7 @@ SET NOCOUNT ON
 		SMAName VARCHAR(30),
 		CustID INT,
 		MatchID INT,
-		MaxTurnover MONEY		
+		MaxTurnover VARCHAR(50)		
 	)
 	
 	DECLARE @tblSucc TABLE (
@@ -42,14 +42,14 @@ SET NOCOUNT ON
 		SMAName VARCHAR(30),
 		CustID INT,
 		MatchID INT,
-		MaxTurnover MONEY,
+		MaxTurnover VARCHAR(50),
 		Reason NVARCHAR(100)
 	)
 	
 	INSERT INTO @tblCust(Seq, SMAName, MatchID, MaxTurnover)				
 	SELECT	T.C.value('./@Seq', 'int'),
 			T.C.value('./@SMAName', 'varchar(30)'),
-			T.C.value('./@MatchID', 'varchar(10)'),
+			T.C.value('./@MatchID', 'int'),
 			T.C.value('./@MaxTurnover', 'varchar(50)')
 	FROM @ListSMA.nodes('/ListSMA/SMA') AS T(C)
 	
@@ -60,9 +60,9 @@ SET NOCOUNT ON
 	
 	--Validate transaction
 	INSERT INTO @tblSucc(Seq, SMAName, CustID, MatchID, MaxTurnover)
-	SELECT	Seq, SMAName, CustID, MatchID, MaxTurnover			
+	SELECT	Seq, SMAName, CustID, MatchID, cast(MaxTurnover as money)
 	FROM	@tblCust as t
-	WHERE ISNUMERIC(MaxTurnover)=1 and cast(MaxTurnover AS INT) >= 0
+	WHERE ISNUMERIC(MaxTurnover)=1 and cast(MaxTurnover AS MONEY) >= 0
 			AND EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID)
 			AND NOT EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid)
 			
@@ -70,7 +70,7 @@ SET NOCOUNT ON
 	--Failed Transaction
 	INSERT INTO @tblFail(Seq, SMAName, CustID, MatchID, MaxTurnover, Reason)
 	SELECT	Seq, SMAName, CustID, MatchID, MaxTurnover,  
-			CASE WHEN ISNUMERIC(MaxTurnover)=0 or cast(MaxTurnover AS INT) < 0 THEN 'Invalid Max Turnover.'
+			CASE WHEN ISNUMERIC(MaxTurnover)=0 or (ISNUMERIC(MaxTurnover)=1 and cast(MaxTurnover AS money) < 0) THEN 'Invalid Max Turnover.'
 				 WHEN NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID) THEN 'Invalid SMA Name.' 
 				 WHEN EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid) THEN 'The SMA already exists in match: ' + cast(t.MatchID AS VARCHAR(10)) + '.'
 			END AS Reason 	
