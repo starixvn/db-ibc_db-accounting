@@ -49,8 +49,8 @@ SET NOCOUNT ON
 	INSERT INTO @tblCust(Seq, SMAName, MatchID, MaxTurnover)				
 	SELECT	T.C.value('./@Seq', 'int'),
 			T.C.value('./@SMAName', 'varchar(30)'),
-			T.C.value('./@MatchID', 'int'),
-			T.C.value('./@MaxTurnover', 'money')
+			T.C.value('./@MatchID', 'varchar(10)'),
+			T.C.value('./@MaxTurnover', 'varchar(50)')
 	FROM @ListSMA.nodes('/ListSMA/SMA') AS T(C)
 	
 	UPDATE @tblCust
@@ -75,14 +75,18 @@ SET NOCOUNT ON
 				 WHEN EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid) THEN 'The SMA already exists in match: ' + cast(t.MatchID AS VARCHAR(10)) + '.'
 			END AS Reason 	
 	FROM	(SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS t
+	
 			
 	
-	SELECT t.Seq, t.SMAName, t.CustID, m.matchid, t.MaxTurnover, eventdate, homeid, awayid
+	SELECT t.SMAName, t.CustID, m.matchid, t.MaxTurnover, eventdate, homeid, awayid
 	FROM @tblSucc t
 		INNER JOIN match m WITH (NOLOCK) on m.matchid = t.MatchID
 	ORDER BY MatchID, SMAName
 
-	SELECT * FROM @tblFail ORDER BY MatchID, SMAName
+	SELECT SMAName, CustID, MaxTurnover, Reason
+	FROM @tblFail 
+	GROUP BY SMAName, CustID, MaxTurnover, Reason
+	ORDER BY SMAName, Reason
 
 END
 
