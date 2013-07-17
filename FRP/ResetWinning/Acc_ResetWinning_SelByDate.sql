@@ -16,7 +16,7 @@ AS
 		- 20121102@Elodie: Add Sporting Solution into Sportbook	(bettype: 1301 -> 1334)
 						   No need execute Acc_ResetWinning_SelByDate_Original (@winlostdate < '2012-09-01')		
 		- 20130618@Johnson: Add NSW racing's pools from AUST
-		- 20130716@Kathy: Apply Progressive Bonus
+		- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 	Explanation's Param:
 */
 BEGIN	
@@ -235,6 +235,8 @@ BEGIN
 
 	DROP TABLE #source
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate] TO [bodbAdminNet]

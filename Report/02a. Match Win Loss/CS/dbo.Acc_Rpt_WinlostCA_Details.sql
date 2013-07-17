@@ -12,7 +12,7 @@ AS
 			- 20100522@Henry: Change to use StatusID instead of Status in WHERE statement
 			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
 			- 20130703@Kathy: Update matchid for RnG Casino (71) 
-			- 20130716@Kathy: Apply Progressive Bonus
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 		Explanation's Param:
 
 	*/

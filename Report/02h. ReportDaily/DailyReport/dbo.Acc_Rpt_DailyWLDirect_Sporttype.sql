@@ -55,8 +55,8 @@ AS
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 		- 20130618@Johnson: Add NSW racing's pools from AUST	
-		- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
-		- 20130716@Kathy: Apply Progressive Bonus
+		- 20130703@Kathy: Update matchid for RnG Ca			
+		- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 						
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -459,8 +459,6 @@ BEGIN
 	SELECT	@LineTotal = @LineTotal + ISNULL(@RB_LineTotal,0) + ISNULL(@P2P_LineTotal,0)
 	DROP TABLE #src
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]

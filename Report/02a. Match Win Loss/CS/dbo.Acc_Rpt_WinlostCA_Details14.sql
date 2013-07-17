@@ -11,8 +11,9 @@ AS
 			- 20090522@PhuongDao: Add TurnOver 
 			-- 20100522@Henry: Change to use StatusID instead of Status in WHERE statement
 			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
-			- 20130705@Kathy: Update matchid for RnG Casino (71)
-		
+			- 20130703@Kathy: Update matchid for RnG Casino (71) 
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+
 		Explanation's Param:
 
 	*/
@@ -29,12 +30,14 @@ AS
 	FROM	bettrans14 bettrans with (NOLOCK) 
 	WHERE	winlostdate = @winlostdate 
 			AND ruben = 1 
-			AND bettrans.bettype = 71								--20120405@Hurri
-			AND bettrans.matchid in (0, 71) 
+			AND bettrans.bettype IN(71, 72)								--20120405@Hurri
+			AND bettrans.matchid IN (0, 71)
 			--AND status NOT in ('VOID','REJECT','done')
 			AND statusID NOT IN (101,102,121)
 	GROUP BY bettype, currency, currencyName 
 	ORDER BY bettype, currency
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostCA_Details14] TO [bodbAdminNet]
