@@ -204,7 +204,7 @@ BEGIN
 
 END
 /*
-	- Grant currencey permission to Licensee's Users
+	- Grant currency permission to Licensee's Users
 	*/
 	DECLARE @Currency AS TABLE (LicenseeID INT, CurrencyID INT)
 	DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
