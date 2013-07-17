@@ -18,7 +18,7 @@ AS
 	*/
 	SET NOCOUNT ON
 
-	SELECT	bettype,
+	SELECT	71 bettype,
 			currency,
 			currencyName,
 			isnull(sum(actual_stake * bettrans.actualrate),0) Turnover,
@@ -29,13 +29,13 @@ AS
 	FROM	bettrans with (NOLOCK) 
 	WHERE	winlostdate = @winlostdate 
 			AND ruben = 1 
-			AND bettrans.bettype in (71, 72)								--20120405@Hurri
+			AND bettrans.bettype in (71, 72)		     						--20120405@Hurri
 			AND bettrans.matchid IN (0, 71)
 			--AND status NOT in ('VOID','REJECT','done')
 			AND statusID NOT IN (101,102,121)
-	GROUP BY bettype, currency, currencyName 
+	GROUP BY --bettype, 
+		currency, currencyName 
 	ORDER BY bettype, currency
-
 
 
 GO
