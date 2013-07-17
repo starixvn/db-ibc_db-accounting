@@ -1,4 +1,4 @@
-﻿alter PROCEDURE [dbo].[DBA_Casino_BetIns_CorrectMissingTickets]   
+﻿ALTER PROCEDURE [dbo].[DBA_Casino_BetIns_CorrectMissingTickets]   
  @custid    int,     
 ------------------------Casino  
  @CS_Turnover   money = 0,  
@@ -30,6 +30,7 @@ DB: DBTRANS.bodb02
 Revision:
 	- 20110513@Henry: change bettype to new range
 	- 20120405@Hurri: Exclude bettypes of P2P
+	- 20130704@Kathy: update matchid for RnG Casino (71)
 Param's Explanation:  
   
 • Full structure of Dummy accounts:  
@@ -133,7 +134,7 @@ BEGIN
   apositiontaking, mpositiontaking, spositiontaking, tpositiontaking, currency, actualrate, currencyName,   
   ruben, status,statusID,ip,betid)  
  VALUES   
- (@CustID, @username, @refno, @transdate, 0, 71, @transdesc, @cs_Winlost, @cs_Turnover, @cs_Turnover,  
+ (@CustID, @username, @refno, @transdate, 71, 71, @transdesc, @cs_Winlost, @cs_Turnover, @cs_Turnover,  
   @cs_awinlost, @cs_mwinlost, @cs_swinlost, @cs_playercomm, @cs_acomm, @cs_mcomm, @cs_scomm, @winlostdate,   
   @CustID, @Recommend, @MRecommend, @SRecommend, 0, 0, 0, 0, @CS_aposition, @CS_mposition, @CS_sposition, @CS_aposition +@CS_mposition + @CS_sposition,   
   @Currency, @actualrate, @currencyName, 1, @cs_mem_status,@cs_mem_statusID, @ip,@sessionId)  
@@ -155,7 +156,7 @@ BEGIN
    apositiontaking, mpositiontaking, spositiontaking, tpositiontaking,  
    currency, actualrate, currencyName, ruben, status,statusID,ip,betid)  
  VALUES   
-  (@dummy_custID, @dummy_username, @refno, @transdate, 0, 71, @transdesc, @cs_Turnover, @cs_Winlost,@cs_Winlost,  
+  (@dummy_custID, @dummy_username, @refno, @transdate, 71, 71, @transdesc, @cs_Turnover, @cs_Winlost,@cs_Winlost,  
    -@cs_awinlost, -@cs_mwinlost, -@cs_swinlost, -@cs_playercomm, -@cs_acomm, -@cs_mcomm, -@cs_scomm, @winlostdate, @dummy_custID,   
    @dummy_recommend, @dummy_mrecommend, @dummy_srecommend, 0, 0, 0, 0, 0, 0, 0, 0,   
    @Currency, @actualrate, @currencyName, 1, 'DONE',121, @ip,@sessionId)  
@@ -163,7 +164,7 @@ BEGIN
  IF @@ERROR <> 0  
  BEGIN     
   SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107   
-  DELETE FROM bettrans WHERE refNo = @refno AND bettype in (71,23002) and matchid = 0  
+  DELETE FROM bettrans WHERE refNo = @refno AND bettype in (71,23002) and matchid IN (0, 71)  
   RETURN  
  END  
 END  
@@ -177,9 +178,10 @@ IF @@ERROR <> 0
 BEGIN     
  SELECT @ErrMsg = 'Update transaction failed.', @ErrCode = 108   
  --delete all trans of current session  
- DELETE FROM bettrans WHERE refNo = @refno AND bettype in (71,23002) and matchid = 0  
+ DELETE FROM bettrans WHERE refNo = @refno AND bettype in (71,23002) and matchid IN (0, 71) 
  RETURN  
 END  
+  
   
 GO
 GRANT VIEW DEFINITION ON [dbo].[DBA_Casino_BetIns_CorrectMissingTickets] TO [vnteam]
