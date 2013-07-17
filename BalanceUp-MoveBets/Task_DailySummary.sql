@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Task_DailySummary_xtest]    Script Date: 03/25/2013 16:56:03 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Task_DailySummary]
+﻿ALTER PROCEDURE [dbo].[Task_DailySummary]
 	@winlostdate datetime,
 	@TestMode tinyint = 0
 AS
@@ -34,6 +27,7 @@ Revisions:
 	- 20120807@Sophia: Add Virtual Sports (sporttype = 180 for representing)
 	- 20120927@Sophia: Add column comstatus when insert into bettrans tabble
 	- 20130313@Viet: add netTurnover
+	- 20130520@Victor: add VSOutright
  */
 
 SET NOCOUNT ON
@@ -54,6 +48,12 @@ SET winlostdate = m.eventdate
 FROM dbo.bettrans b
 	INNER JOIN dbo.match m ON b.matchid = m.matchid
 WHERE b.winlostdate <> m.eventdate
+
+UPDATE b
+SET winlostdate = o.eventdate
+FROM dbo.bettrans b
+	INNER JOIN dbo.VSOutright o ON b.matchid = o.EventID
+WHERE b.winlostdate <> o.eventdate
 
 DECLARE @transid bigint
 -- ====================
@@ -158,7 +158,7 @@ BEGIN
 
 	RETURN
 END
-
+ 
 -- =====================
 -- OUTRIGHT WINLOST MOVE
 -- =====================
@@ -672,3 +672,4 @@ SET @Doing = 'Task_DailySummary : End (with Finish)'
 EXEC dbo.WriteLog_UserLog @UserID = 25520, @Doing = @Doing  
 
 PRINT CONVERT(varchar(10), @winlostdate, 120)
+
