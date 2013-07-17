@@ -18,7 +18,8 @@ SET NOCOUNT ON
 		matchcode nvarchar(50) COLLATE SQL_Latin1_General_CP1_CS_AS,
 		HomeId int, AwayId int,		
 		bettype smallint, leagueid int,
-		realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money		
+		realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money,
+		virtualLineTotal money, virtualTurnover money		
 	)
 	
 	Declare @mineventdate datetime,
@@ -28,7 +29,7 @@ SET NOCOUNT ON
 	SELECT @mineventdate = min(eventdate) from bodb02.dbo.match with(nolock)
 		
 	
-	IF @todate > @mineventdate
+	IF @todate >= @mineventdate
 	BEGIN
 		IF @fromdate < @mineventdate
 			SELECT @f_date = @mineventdate
@@ -39,7 +40,8 @@ SET NOCOUNT ON
 		
 		INSERT INTO @RPT(
 			matchcode, homeid, awayid, bettype, leagueid, 
-			realWinlost, realPosition, realCommission, realTurnover, realLineTotal
+			realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
+			virtualLineTotal, virtualTurnover
 		)
 		SELECT matchcode
 			,homeid
@@ -50,7 +52,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realTurnover),0)
-			,ISNULL(SUM(realLineTotal),0)					
+			,ISNULL(SUM(realLineTotal),0)
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
+			,ISNULL(SUM(realTurnover),0) as virtualTurnover								
 		FROM rptWinlost2 b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
 		WHERE winlostdate BETWEEN @f_date AND @t_date
@@ -70,7 +74,8 @@ SET NOCOUNT ON
 	
 		INSERT INTO @RPT(
 			matchcode, homeid, awayid, bettype, leagueid, 
-			realWinlost, realPosition, realCommission, realTurnover, realLineTotal
+			realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
+			virtualLineTotal, virtualTurnover
 		)
 		SELECT matchcode
 			,homeid
@@ -81,7 +86,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realTurnover),0)
-			,ISNULL(SUM(realLineTotal),0)							
+			,ISNULL(SUM(realLineTotal),0)
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
+			,ISNULL(SUM(realTurnover),0) as virtualTurnover							
 		FROM rptWinlost2 b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid
 		WHERE winlostdate BETWEEN @f_date AND @t_date

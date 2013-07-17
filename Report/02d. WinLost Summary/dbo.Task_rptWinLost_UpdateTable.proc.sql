@@ -208,7 +208,15 @@ Revision:
 		FROM outright o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
 		WHERE bodb_Report.dbo.rptWinlost2.matchid = o.orid
 		AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-		AND bodb_Report.dbo.rptWinlost2.bettype BETWEEN 31 AND 33			
+		AND bodb_Report.dbo.rptWinlost2.bettype BETWEEN 31 AND 33
+		
+		--Virtual Racing
+		UPDATE bodb_Report.dbo.rptWinlost2
+		SET SportType = r.sporttype
+		FROM VSRaceInfo r with (nolock)
+		WHERE bodb_Report.dbo.rptWinlost2.matchid = r.EventID
+		AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
+		AND bodb_Report.dbo.rptWinlost2.bettype in (1231, 1232, 1233, 1237, 1238)			
 	END
 	ELSE
 	BEGIN -- check from BetTrans14
@@ -391,10 +399,20 @@ Revision:
 			FROM outright14 o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
 			WHERE bodb_Report.dbo.rptWinlost2.matchid = o.orid
 			AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-			AND bodb_Report.dbo.rptWinlost2.bettype BETWEEN 31 AND 33		
+			AND bodb_Report.dbo.rptWinlost2.bettype BETWEEN 31 AND 33	
+			
+			--Virtual Racing
+			UPDATE bodb_Report.dbo.rptWinlost2
+			SET SportType = r.sporttype
+			FROM VSRaceInfo r with (nolock)
+			WHERE bodb_Report.dbo.rptWinlost2.matchid = r.EventID
+			AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
+			AND bodb_Report.dbo.rptWinlost2.bettype in (1231, 1232, 1233, 1237, 1238)	
 		END
 	END
 	
 	DROP TABLE #bettransm
+GO
+GRANT EXECUTE ON [dbo].[Task_rptWinLost_UpdateTable] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Task_rptWinLost_UpdateTable] TO [vnteam]

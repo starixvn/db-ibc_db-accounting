@@ -10,23 +10,24 @@ AS
 		DB: DBRPT/bodb_Report
 		
 		Revisions:
-		
+			- 20130716@Johnson: get min eventdate by oddsstatus = 'completed'
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
 	Declare @RPT TABLE (
 		race varchar(50), bettype smallint, meetingid int,
-		realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money		
+		realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money,
+		virtualTurnover money, virtualLineTotal money		
 	)
 	
 	Declare @mineventdate datetime,
 			@f_date datetime,
 			@t_date datetime
 	
-	SELECT @mineventdate = min(eventdate) from bodb02.dbo.outright with(nolock)
+	SELECT @mineventdate = min(eventdate) from bodb02.dbo.outright with(nolock) where oddsstatus = 'completed'
 		
 	
-	IF @todate > @mineventdate
+	IF @todate >= @mineventdate
 	BEGIN
 		IF @fromdate < @mineventdate
 				SELECT @f_date = @mineventdate
@@ -36,7 +37,8 @@ SET NOCOUNT ON
 			SELECT @t_date = @todate
 			
 			INSERT INTO @RPT(
-				race, bettype, meetingid, realWinlost, realPosition, realCommission, realTurnover, realLineTotal
+				race, bettype, meetingid, realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
+				virtualTurnover, virtualLineTotal
 			)
 			SELECT m.groupmatch as race
 				,b.bettype
@@ -46,6 +48,8 @@ SET NOCOUNT ON
 				,ISNULL(SUM(realCommission),0)
 				,ISNULL(SUM(realTurnover),0)
 				,ISNULL(SUM(realLineTotal),0)
+				,ISNULL(SUM(realTurnover),0) as virtualTurnover
+				,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			FROM rptWinlost2 b WITH(NOLOCK)
 				INNER JOIN bodb02.dbo.outright m WITH(NOLOCK) ON b.matchid = m.orid
 			WHERE b.winlostdate between @f_date and @t_date
@@ -63,7 +67,8 @@ SET NOCOUNT ON
 		SELECT @f_date = @fromdate
 				
 		INSERT INTO @RPT(
-			race, bettype, meetingid, realWinlost, realPosition, realCommission, realTurnover, realLineTotal
+			race, bettype, meetingid, realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
+			virtualTurnover, virtualLineTotal
 		)
 		SELECT m.groupmatch as race
 			,b.bettype
@@ -73,6 +78,8 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realTurnover),0)
 			,ISNULL(SUM(realLineTotal),0)
+			,ISNULL(SUM(realTurnover),0) as virtualTurnover
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 		FROM rptWinlost2 b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.outright14 m WITH(NOLOCK) ON b.matchid = m.orid
 		WHERE b.winlostdate between @f_date and @t_date

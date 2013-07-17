@@ -33,7 +33,7 @@ SET NOCOUNT ON
 	UNION ALL
 		--Casino
 		SELECT 251 as sporttype
-			,71 bettype
+			,bettype
 			,0 as liveindicator
 			,0 as ibc
 			,'' status
@@ -41,16 +41,17 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,NULL as virtualLineTotal
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal --copy data from actual value
 			,0 as realTurnover
 			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 71
+		GROUP BY bettype
 	UNION ALL
 		--Bingo
 		SELECT 252 as sporttype
-			,73 as bettype
+			,bettype
 			,0 as liveindicator
 			,0 as ibc
 			,'' status
@@ -58,29 +59,13 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,NULL as virtualLineTotal
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			,0 as realTurnover
 			,NULL as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 73
-	UNION ALL
-		--P2P
-		SELECT 253 as sporttype
-			,1000 as bettype
-			,0 as liveindicator
-			,0 as ibc
-			,'' status
-			,ISNULL(SUM(realWinlost),0)
-			,0 as realPosition
-			,ISNULL(SUM(realCommission),0)
-			,ISNULL(SUM(realLineTotal),0)
-			,NULL as virtualLineTotal
-			,0 as realTurnover
-			,NULL as virtualTurnover
-		FROM rptWinlost2 WITH(NOLOCK)
-		WHERE winlostdate BETWEEN @fromdate AND @todate
-			AND bettype = 1000
+		GROUP BY bettype
 	UNION ALL
 		--Live casino
 		SELECT 162 as sporttype
@@ -92,9 +77,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,NULL as virtualLineTotal
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
-			,NULL as virtualTurnover
+			,ISNULL(SUM(realTurnover),0) as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype between 1101 and 1199
@@ -144,9 +129,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,NULL as virtualLineTotal
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			, 0 as realTurnover
-			,NULL as virtualTurnover
+			,0 as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 31 AND 33
@@ -162,9 +147,9 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realPosition),0) 
 			,ISNULL(SUM(realCommission),0)
 			,ISNULL(SUM(realLineTotal),0)
-			,NULL as virtualLineTotal
+			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
-			,NULL as virtualTurnover
+			,ISNULL(SUM(realTurnover),0) as virtualTurnover
 		FROM rptWinlost2 WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 1201 AND 1299

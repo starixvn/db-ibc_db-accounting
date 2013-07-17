@@ -12,6 +12,7 @@ AS
 
 	History:
 		- 20121114@Elodie: Only recover today ticket
+		- 20130702@Elodie: Add new bettype 1103, 1104
 	Explanation's Param:
 
 */
@@ -31,7 +32,7 @@ BEGIN
 		RETURN
 	END
 	
-	IF @bettype not in (1101,1102)
+	IF @bettype not in (1101,1102,1103,1104)
 	BEGIN
 		SET @ErrCode = 2  
 		SET @ErrMsg ='This TransID doesn''t belong to live casino.'  

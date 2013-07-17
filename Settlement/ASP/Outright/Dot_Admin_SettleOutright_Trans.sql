@@ -6,13 +6,12 @@
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
 BEGIN
-
 /*
-Created: 
+Created:
 Task : sp for outright settlement
 
 DB: DBTXN/BODB02
-Original: 
+Original:
 
 Revisions:
 	- 20120202@Thien: receive @winlostdate param from outside SP, to resolve late replication in DBDW/2
@@ -21,6 +20,7 @@ Revisions:
 					   . Add @ErrCode, @ErrMsg to raise error
 	- 20130103@Elodie:  Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table
 	- 20130121@Elodie:  Write more log on DBTXN server in case of DBLOG server failure
+	- 20130624@Martin: Hotfix(There is already an object named 'pk_C2' in the database.Could not create constraint. See previous errors)
 	- 20130624@Jamie: Add BalanceNegative 
 	
 Param's Explanation:
@@ -39,29 +39,28 @@ DECLARE  @Remark VARCHAR(500)
 		,@ActionID	INT
 SELECT	@ActionID = 128 
 
-
 INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 IF (@@Error = 0)
 BEGIN
 	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking
 			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
+			@Matchid = @matchid,
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = 0,
 			@Remark = 'ADD SUCCESS SPName = Dot_Admin_SettleOutright_Trans'
 	END TRY
-	BEGIN CATCH		
-		SELECT @Remark = 'ADD SUCCESS SPName = Dot_Admin_SettleOutright_Trans ErrMsg='+ left(error_message(), 400)				
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	BEGIN CATCH
+		SELECT @Remark = 'ADD SUCCESS SPName = Dot_Admin_SettleOutright_Trans ErrMsg='+ left(error_message(), 400)
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking
 			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
+			@Matchid = @matchid,
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = 0,
 			@Remark = @Remark
 	END CATCH
 END
-ELSE 
+ELSE
 BEGIN
 	SELECT @ErrCode = 102, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
@@ -76,7 +75,7 @@ select @winlostdate = convert(char(10),getdate(),111)
 ---        CAPTURE value BALANCE before settlement        ---
 ---------------------------VVVV------------------------------
 CREATE TABLE #BalanceBefore (custid int PRIMARY KEY, balance money)
- 
+
     INSERT INTO #BalanceBefore
     SELECT custid,sum( winlost-actual_stake+playercomm)
     FROM dbo.bettrans with (rowlock)
@@ -89,41 +88,39 @@ EXEC Admin_Calculate_10 @matchid, @status, @deadheat, @winlostdate
 ---         CAPTURE value BALANCE after settlement        ---
 ---------------------------VVVV------------------------------
 CREATE TABLE #BalanceAfter (custid int PRIMARY KEY , balance money)
- 
+
         INSERT INTO #BalanceAfter
         SELECT custid,sum( winlost-actual_stake+playercomm)
         FROM dbo.bettrans with (rowlock)
-        WHERE matchid = @matchid and bettype = 10 
+        WHERE matchid = @matchid and bettype = 10
 			and statusID = case @status when 'won' then 112
 				when 'lose' then 113
 				when 'Refund' then 103
 				else 999 end
 		Group by custid
-       
+
 -------------------------------------------------------------
 ---                   compare BALANCE                     ---
 ---------------------------VVVV------------------------------
-CREATE TABLE #Balance (custid int not null, balance money, Increased bit not null)
-ALTER TABLE #Balance add constraint pk_C2 primary key (custid, Increased);
-CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
-
+CREATE TABLE #Balance (custid int not null , balance money, Increased bit not null , PRIMARY KEY CLUSTERED(custid, Increased))
 
 INSERT INTO #Balance
 SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
 FROM #BalanceBefore b
         INNER JOIN #BalanceAfter a ON b.custid = a.custid
 WHERE b.balance <> a.balance
- 
- 
+
+CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+
 INSERT INTO dbo.BalancePendingDebit (custid, balance)
 SELECT custid, ABS(balance)
 FROM #Balance
 WHERE Increased = 0
- 
+
 INSERT INTO dbo.BalancePendingCredit (custid, balance)
 SELECT custid, balance
 FROM #Balance
-WHERE Increased = 1    
+WHERE Increased = 1
 
 ----
 -- Add Negative Balance into BalanceNegative table 
@@ -160,41 +157,41 @@ WHERE KeyID = 2 AND KeyValue = @matchid
 IF (@@Error = 0)
 BEGIN
 	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking
 			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
+			@Matchid = @matchid,
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = 0,
 			@Remark = 'DEL SUCCESS SPName = Dot_Admin_SettleOutright_Trans'
 	END TRY
-	BEGIN CATCH		
-		SELECT @Remark = 'DEL SUCCESS SPName = Dot_Admin_SettleOutright_Trans ErrMsg='+ left(error_message(), 400)		
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	BEGIN CATCH
+		SELECT @Remark = 'DEL SUCCESS SPName = Dot_Admin_SettleOutright_Trans ErrMsg='+ left(error_message(), 400)
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking
 			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
+			@Matchid = @matchid,
 			@KeyID = 2,
-			@ActionID = 0, 
-			@Remark = @Remark			
+			@ActionID = 0,
+			@Remark = @Remark
 	END CATCH
 END
 ELSE
 BEGIN
 	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking
 			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
+			@Matchid = @matchid,
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = 0,
 			@Remark = 'DEL FAILED SPName = Dot_Admin_SettleOutright_Trans'
 	END TRY
-	BEGIN CATCH		
-		SELECT @Remark = 'DEL FAILED SPName = Dot_Admin_SettleOutright_Trans ErrMsg='+ left(error_message(), 400)		
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	BEGIN CATCH
+		SELECT @Remark = 'DEL FAILED SPName = Dot_Admin_SettleOutright_Trans ErrMsg='+ left(error_message(), 400)
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking
 			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
+			@Matchid = @matchid,
 			@KeyID = 2,
-			@ActionID = 0, 
-			@Remark = @Remark				
+			@ActionID = 0,
+			@Remark = @Remark
 	END CATCH
 END
 

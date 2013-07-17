@@ -1,5 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_BySite]
- @Site		VARCHAR(50) = 'Haifa'
+  @Site		VARCHAR(50) = 'Haifa'
+ ,@isTest	BIT			= 0 
 
 AS
 /*
@@ -10,6 +11,8 @@ AS
 	
 	Revision: 
 	
+	Param's Explanation: 
+		@isTest: 0: Exclude currency UUS; 1: All Currency 
 	
 */
 BEGIN 
@@ -25,14 +28,17 @@ BEGIN
 			, h.Site
 			, bin.CustomInfo1
 	FROM	BalanceNegativeHistory h WITH (NOLOCK)
-			LEFT JOIN DBDEPBBIN.bbin.dbo.Customer bin WITH (NOLOCK) ON h.CustID = bin.CustID
+			LEFT JOIN DBDEPBBIN.bbin.dbo.Customer bin WITH (NOLOCK) ON h.CustID = bin.IBCCustID
 			LEFT JOIN custInfo ci WITH (NOLOCK) ON h.CustID = ci.custid
 			LEFT JOIN exchange e WITH (NOLOCK) ON ci.currency = e.exchangeid
 	WHERE	h.StatusID = 0 
+			AND e.exchangeid <> CASE @isTest WHEN 0 THEN 20 ELSE 0 END
+			
 	ORDER BY	  h.LogID ASC
 				, h.MatchID ASC
 				, ci.Username ASC
 END 
+
 GO 
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_BySite] TO [bodbAdminNet]
 GO 

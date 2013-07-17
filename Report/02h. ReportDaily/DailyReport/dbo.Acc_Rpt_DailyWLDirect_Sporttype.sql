@@ -54,12 +54,17 @@ AS
 		- 20121102@Elodie: Use actual rate instead of virtural rate for Virtual sport		
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
-		- 20130618@Johnson: Add NSW racing's pools from AUST					
+		- 20130618@Johnson: Add NSW racing's pools from AUST	
+		- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+		- 20130716@Kathy: Apply Progressive Bonus
+						
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 		- DisplayOrder field:	1 -> 100: all products that enable virtual currency 
 								101 -> 200: all products that disable virtual currency 
+
+		
 
 */
 BEGIN
@@ -376,7 +381,7 @@ BEGIN
 			0 EnableVirtual
 	from	#src with (nolock)
 	where 	bettype = 73
-			AND matchid = 0 		
+			AND matchid IN (0, 73)		
 			
 	---Live Casino
 	UNION ALL
@@ -408,8 +413,8 @@ BEGIN
 			0 VirtualTurnover,
 			0 EnableVirtual
 	from	#src with (nolock)
-	where 	bettype = 71
-			AND matchid = 0 
+	where 	bettype IN(71, 72)
+			AND matchid IN (0, 71) 
 
 	UNION ALL 
 	SELECT	105,'Racing', 151, 0,
@@ -454,6 +459,8 @@ BEGIN
 	SELECT	@LineTotal = @LineTotal + ISNULL(@RB_LineTotal,0) + ISNULL(@P2P_LineTotal,0)
 	DROP TABLE #src
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]
