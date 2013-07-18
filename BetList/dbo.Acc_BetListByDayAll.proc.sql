@@ -143,7 +143,20 @@ BEGIN
         ip             NVARCHAR (15) ,
         Username       VARCHAR (50)  ,
         IsNeutral      BIT           ,
-        showtime		NVARCHAR(50)
+        showtime		NVARCHAR(50) ,
+        spositiontaking smallmoney,
+		mpositiontaking smallmoney,
+		apositiontaking smallmoney,
+		spositiontaking2 smallmoney,
+		mpositiontaking2 smallmoney,
+		apositiontaking2 smallmoney,
+		betfrom			nvarchar (1),
+		scomm			money,	
+		acomm			money,
+		comm			money,
+		awinlost		money,
+		mwinlost		money,
+		swinlost		money
         );
         
  DECLARE @DetailData TABLE (
@@ -210,7 +223,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    ISNULL(m.isNeutral, CONVERT (BIT, 0)) AS IsNeutral, --phuong.nguyen, get isneutral from Match14
-                   m.showtime
+                   m.showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.match14 AS m WITH (NOLOCK)
@@ -222,62 +248,75 @@ BEGIN
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus);
                                       
-			---- Virtual HR
-   --         INSERT INTO @Data
-   --         SELECT r.SportType,
-   --                r.LeagueID,
-   --                0 as homeid,
-   --                o.RacerID as awayid,
-   --                '' as matchcode,
-   --                b.oddsid as Race,
-   --                o.EventDate,
-   --                0,
-   --                0,
-   --                b.sdiscount,
-   --                b.adiscount,
-   --                b.discount,
-   --                ISNULL(b.checktime, '') AS settletime,
-   --                b.matchid,
-   --                b.transid,
-   --                ISNULL(b.BetID, 0),
-   --                b.refno,
-   --                b.transdate,
-   --                b.oddsid,
-   --                b.bettype,
-   --                b.hdp1,
-   --                b.hdp2,
-   --                b.odds,
-   --                b.modds,
-   --                0 AS finalodds,
-   --                0 AS finalodds2,
-   --                b.oddstype,
-   --                '' as betteam,
-   --                b.status,
-   --                '' as betstatus,
-   --                CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
-   --                b.stake,
-   --                b.actual_stake,
-   --                (b.winlost - b.actual_stake) AS winlost,
-   --                b.playercomm,
-   --                b.livehomescore,
-   --                b.liveawayscore,
-   --                0 as liveindicator,
-   --                0 as finalhomescore,
-   --                0 as finalawayscore,
-   --                0 as hthomescore,
-   --                0 as htawayscore,
-   --                b.CREATOR, --creator.username creator, 
-   --                b.ip,
-   --                b.Username,
-   --                CONVERT (BIT, 0) AS IsNeutral,
-   --                '' as showtime
-   --         FROM   dbo.bettrans14 b WITH (NOLOCK)
-   --                INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-   --                INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-   --         WHERE  b.custid = @custid
-   --                AND b.winlostdate = @fromdate
-   --                AND b.bettype in (1231, 1232, 1233, 1237, 1238)
-   --                AND b.statusID IN (SELECT statusID FROM @tmpStatus)
+			-- Virtual HR
+            INSERT INTO @Data
+            SELECT r.SportType,
+                   r.LeagueID,                   
+                   o.RacerID as homeid,
+                   0 as awayid,
+                   '' as matchcode,
+                   b.oddsid as Race,
+                   o.EventDate,
+                   0,
+                   0,
+                   b.sdiscount,
+                   b.adiscount,
+                   b.discount,
+                   ISNULL(b.checktime, '') AS settletime,
+                   b.matchid,
+                   b.transid,
+                   ISNULL(b.BetID, 0),
+                   b.refno,
+                   b.transdate,
+                   b.oddsid,
+                   b.bettype,
+                   b.hdp1,
+                   b.hdp2,
+                   b.odds,
+                   b.modds,
+                   0 AS finalodds,
+                   0 AS finalodds2,
+                   b.oddstype,
+                   '' as betteam,
+                   b.status,
+                   '' as betstatus,
+                   CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
+                   b.stake,
+                   b.actual_stake,
+                   (b.winlost - b.actual_stake) AS winlost,
+                   b.playercomm,
+                   b.livehomescore,
+                   b.liveawayscore,
+                   0 as liveindicator,
+                   0 as finalhomescore,
+                   0 as finalawayscore,
+                   0 as hthomescore,
+                   0 as htawayscore,
+                   b.CREATOR, --creator.username creator, 
+                   b.ip,
+                   b.Username,
+                   CONVERT (BIT, 0) AS IsNeutral,
+                   '' as showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
+            FROM   dbo.bettrans14 b WITH (NOLOCK)
+                   INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
+                   INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+            WHERE  b.custid = @custid
+                   AND b.winlostdate = @fromdate
+                   AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+                   AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                       						                                   
             -- CASINO 
             INSERT INTO @Data
@@ -327,7 +366,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    0 AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -383,7 +435,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    0 AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -440,7 +505,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    0 AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -497,7 +575,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    CONVERT (BIT, 0) AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -556,7 +647,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    CONVERT (BIT, 0) AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -616,7 +720,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    CONVERT (BIT, 0) AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.outright14 AS o WITH (NOLOCK)
@@ -694,7 +811,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    ISNULL(m.isNeutral, CONVERT (BIT, 0)) AS IsNeutral, --phuong.nguyen, get isneutral from Match
-                   m.showtime
+                   m.showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.match AS m WITH (NOLOCK)
@@ -707,62 +837,75 @@ BEGIN
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus)
 
-			---- Virtual HR
-   --         INSERT INTO @Data
-   --         SELECT r.SportType,
-   --                r.LeagueID,
-   --                0 as homeid,
-   --                o.RacerID as awayid,
-   --                '' as matchcode,
-   --                b.oddsid as Race,
-   --                o.EventDate,
-   --                0,
-   --                0,
-   --                b.sdiscount,
-   --                b.adiscount,
-   --                b.discount,
-   --                ISNULL(b.checktime, '') AS settletime,
-   --                b.matchid,
-   --                b.transid,
-   --                ISNULL(b.BetID, 0),
-   --                b.refno,
-   --                b.transdate,
-   --                b.oddsid,
-   --                b.bettype,
-   --                b.hdp1,
-   --                b.hdp2,
-   --                b.odds,
-   --                b.modds,
-   --                0 AS finalodds,
-   --                0 AS finalodds2,
-   --                b.oddstype,
-   --                '' as betteam,
-   --                b.status,
-   --                '' as betstatus,
-   --                CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
-   --                b.stake,
-   --                b.actual_stake,
-   --                (b.winlost - b.actual_stake) AS winlost,
-   --                b.playercomm,
-   --                b.livehomescore,
-   --                b.liveawayscore,
-   --                0 as liveindicator,
-   --                0 as finalhomescore,
-   --                0 as finalawayscore,
-   --                0 as hthomescore,
-   --                0 as htawayscore,
-   --                b.CREATOR, --creator.username creator, 
-   --                b.ip,
-   --                b.Username,
-   --                CONVERT (BIT, 0) AS IsNeutral,
-   --                '' as showtime
-   --         FROM   dbo.bettrans b WITH (NOLOCK)
-   --                INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
-   --                INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-   --         WHERE  b.custid = @custid
-   --                AND b.winlostdate = @fromdate
-   --                AND b.bettype in (1231, 1232, 1233, 1237, 1238)
-   --                AND b.statusID IN (SELECT statusID FROM @tmpStatus)
+			-- Virtual HR
+            INSERT INTO @Data
+            SELECT r.SportType,
+                   r.LeagueID,
+                   o.RacerID as homeid,
+                   0 as awayid,
+                   '' as matchcode,
+                   b.oddsid as Race,
+                   o.EventDate,
+                   0,
+                   0,
+                   b.sdiscount,
+                   b.adiscount,
+                   b.discount,
+                   ISNULL(b.checktime, '') AS settletime,
+                   b.matchid,
+                   b.transid,
+                   ISNULL(b.BetID, 0),
+                   b.refno,
+                   b.transdate,
+                   b.oddsid,
+                   b.bettype,
+                   b.hdp1,
+                   b.hdp2,
+                   b.odds,
+                   b.modds,
+                   0 AS finalodds,
+                   0 AS finalodds2,
+                   b.oddstype,
+                   '' as betteam,
+                   b.status,
+                   '' as betstatus,
+                   CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
+                   b.stake,
+                   b.actual_stake,
+                   (b.winlost - b.actual_stake) AS winlost,
+                   b.playercomm,
+                   b.livehomescore,
+                   b.liveawayscore,
+                   0 as liveindicator,
+                   0 as finalhomescore,
+                   0 as finalawayscore,
+                   0 as hthomescore,
+                   0 as htawayscore,
+                   b.CREATOR, --creator.username creator, 
+                   b.ip,
+                   b.Username,
+                   CONVERT (BIT, 0) AS IsNeutral,
+                   '' as showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
+            FROM   dbo.bettrans b WITH (NOLOCK)
+                   INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
+                   INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+            WHERE  b.custid = @custid
+                   AND b.winlostdate = @fromdate
+                   AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+                   AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                                          
             -- CASINO 
             INSERT INTO @Data
@@ -813,7 +956,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    0 AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -869,7 +1025,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    0 AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -926,7 +1095,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    0 AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -983,7 +1165,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    CONVERT (BIT, 0) AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1042,7 +1237,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    CONVERT (BIT, 0) AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1102,7 +1310,20 @@ BEGIN
                    b.ip,
                    b.Username,
                    CONVERT (BIT, 0) AS IsNeutral,
-                   '' AS showtime
+                   '' AS showtime,
+                   0 spositiontaking, -- unuse in this report
+				   0 mpositiontaking, -- unuse in this report
+				   0 apositiontaking, -- unuse in this report		
+				   0 spositiontaking2,-- unuse in this report
+				   0 mpositiontaking2,-- unuse in this report
+				   0 apositiontaking2,-- unuse in this report
+				   b.betfrom,
+				   0 scomm, -- unuse in this report			
+				   0 acomm, -- unuse in this report			
+				   0 comm,	-- unuse in this report	
+				   awinlost,		
+				   mwinlost,		
+				   swinlost
             FROM   dbo.bettrans AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.outright AS o WITH (NOLOCK)
