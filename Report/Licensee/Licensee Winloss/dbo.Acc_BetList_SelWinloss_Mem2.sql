@@ -45,6 +45,7 @@ Revisions:
 	- 20120912@Jim : add virtual sport 
     - 20130123@Daniel: Change link server alias
 	- 20130527@Jim: support RNG Casino
+	- 20130716@Jim: update matchid for RNG Casino and Bingo
 	
 Param's Explanation:
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -698,7 +699,7 @@ BEGIN
 			b.Liveawayscore,
 			b.IP AS IP,
 			0 as LeagueID,
-			0 as MatchID,	
+			71 as MatchID,	
 			0 as MatchCode,
 			'' AS Race,	
 			0 as HomeID,
@@ -1241,7 +1242,7 @@ BEGIN
 			b.Liveawayscore,
 			b.IP AS IP,
 			0 as LeagueID,
-			0 as MatchID,	
+			71 as MatchID,	
 			0 as MatchCode,
 			'' AS Race,	
 			0 as HomeID,
@@ -1841,7 +1842,7 @@ BEGIN
 		b.Liveawayscore,
 		b.IP AS IP,
 		0 as LeagueID,
-		0 as MatchID,	
+		71 as MatchID,	
 		0 as MatchCode,
 		'' AS Race,	
 		0 as HomeID,

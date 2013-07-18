@@ -10,7 +10,8 @@ AS
 			- 20090731@Jamie: Not to view data in range of date, but only one date at once 	
 			-- 20100525@Henry: Change to use StatusID instead of Status in WHERE statement
 			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
-			- 20130705@Kathy: Update matchid for RnG Casino (71)
+			- 20130703@Kathy: Update matchid for RnG Casino (71)
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -23,8 +24,8 @@ BEGIN
 			0 Turnover
 	FROM	bettrans14 b WITH (NOLOCK)
 	WHERE	b.winlostdate = @winlostdate
-			AND b.bettype = 71								--20120405@Hurri
-			AND b.matchid in (0, 71) 
+			AND b.bettype IN(71, 72)								--20120405@Hurri
+			AND b.matchid IN (0, 71)
 			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
 			AND b.statusID NOT IN (101, 102,103,121) 
 			AND b.ruben = 1		
@@ -32,6 +33,7 @@ BEGIN
 	ORDER BY b.Bettype	
 
 END 
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino14] TO [bodbAdminNet]
 GO

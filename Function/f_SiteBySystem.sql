@@ -8,7 +8,7 @@ AS
 /*
 Created: 
 Task : Get sites by system
-DB: DBTXN/bodb02; DBAGE/bodb02
+DB: DBAGE/bodb02; DBACC/bodb02
 
 Revisions:
 	- 20100819@Ethan: Get sites by System
@@ -17,6 +17,7 @@ Revisions:
 	- 20111122@Johnson: Get ACCDDD system
 	- 20120809@Elodie: Get ACCIRR system
 	- 20130404@Jamie: Put ACCUUS for testing 
+	- 20130718@Lukas: add ACCUT group
 	Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING'
 */
@@ -38,7 +39,7 @@ BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 11 --INDO
 	END
-	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCNTD','ACCIRR'))
+	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCNTD','ACCIRR','ACCUSD','ACCUT'))
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 3 --789y
@@ -55,6 +56,7 @@ BEGIN
 	END	
 	Return
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[f_SiteBySystem] TO [vnteam]
