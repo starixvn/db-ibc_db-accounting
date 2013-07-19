@@ -9,7 +9,7 @@ AS
 	Created by: [Creator]
 	Date: 2008
 	Task: Bet List 
-	DB: DB053.bodb02 
+	DB: DBAGE/bodb02 
 	Original:  account\betlist.asp  
 	
 	Revisions:
@@ -59,6 +59,7 @@ AS
 		- 20120927@Johnson: get commstatus column to check double comm losing
 		- 20130227@Elodie: Add Virtual HR product
 		- 20130405@Lukas: return value odds.teamid to alias name homeid instead of awayid
+		- 20130718@Elodie: correct value of homeid and awayid
 */		
 
 SET NOCOUNT ON  
@@ -1475,9 +1476,9 @@ BEGIN
 				CASE WHEN b.currency2 IS NULL THEN CONVERT(BIT,0) ELSE CONVERT(BIT,1) END AS isShowOTExRate,
 				b.sdiscount,
 				b.adiscount,
-				b.discount,	  
-				0 as homeid,
-				odds.teamid as awayid,
+				b.discount,	
+				odds.teamid as homeid,  
+				0 as awayid,				
 				'' settleTime, 
 				b.hdp1,
 				b.hdp2,
@@ -2460,8 +2461,8 @@ BEGIN
 				b.sdiscount,
 				b.adiscount,
 				b.discount,	
-				0 as homeid,
-				o.RacerID as awayid,
+				o.RacerID as homeid,
+				0 as awayid,				
 				ISNULL(b.checktime,'') settleTime,
 				b.hdp1,
 				b.hdp2,

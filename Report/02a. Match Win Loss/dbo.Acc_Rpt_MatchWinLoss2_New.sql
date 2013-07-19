@@ -19,7 +19,7 @@ AS
 				+ Treat [Turnover of 8RM/BARM] as negative value
 			- 20130618@Johnson: Add NSW racing's pools from AUST
 			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
-			- 20130716@Kathy: Apply Progressive Bonus
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -576,6 +576,7 @@ BEGIN
 	DROP TABLE #Racing
 	DROP TABLE #R_8RM
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
