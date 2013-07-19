@@ -18,12 +18,14 @@ AS
 			    + Add column [IBC Turnover] into resultset
 				+ Treat [Turnover of 8RM/BARM] as negative value
 			- 20130618@Johnson: Add NSW racing's pools from AUST
-			- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 		    - @IBCTurnover_8RM: turnover for outsource 
 		    - @IBCTurnover_BARM: turnover for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
+
+			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 
 	*/
 BEGIN	
@@ -259,7 +261,7 @@ BEGIN
 			0 as IBCTurnover,
 			'Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype = 71		
+	WHERE	bettype IN(71, 72)		
 
 	    -- Bingo - 73
 	UNION ALL
@@ -400,7 +402,7 @@ BEGIN
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype = 71 and matchid in (0, 71) 			
+	WHERE	bettype IN(71, 72) and matchid IN (0, 71) 			
 	GROUP BY bettype
 	
 	    -- Bingo 
@@ -417,7 +419,7 @@ BEGIN
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype = 73  and matchid in (0, 73)	
+	WHERE	bettype = 73	and matchid IN (0, 73)
 	GROUP BY bettype			
 	
 	    -- Number Game
@@ -573,6 +575,7 @@ BEGIN
 	DROP TABLE #Racing
 	DROP TABLE #R_8RM
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New14] TO [bodbAdminNet]

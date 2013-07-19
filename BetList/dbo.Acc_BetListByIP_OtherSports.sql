@@ -44,7 +44,7 @@ Revisions:
 	- 20130227@Elodie: Add Virtual HR product
 	- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
 	- 20130703@Kathy: Update matchid for RnG Casino(71) and Bingo(73)
-	
+	- 20130718@Elodie: Apply core betlist
 Param's Explanation:
 • @fromdate = @winlostdate
 */
@@ -84,16 +84,29 @@ SET NOCOUNT ON
 			actual_stake	MONEY,
 			transdate		DATETIME,
 			betteam			NVARCHAR (10),
+			spositiontaking smallmoney,
+			mpositiontaking smallmoney,
+			apositiontaking smallmoney,
+			spositiontaking2 smallmoney,
+			mpositiontaking2 smallmoney,
+			apositiontaking2 smallmoney,
 			livehomescore	INT,
 			liveawayscore	INT,
-			liveindicator	INT,
+			liveindicator	BIT,
 			winlost			MONEY, 
 			commission		MONEY, 
+			scomm			MONEY,	
+			acomm			MONEY,
+			comm			MONEY,
+			awinlost		MONEY,
+			mwinlost		MONEY,
+			swinlost		MONEY,
 			creator			VARCHAR (50),
 			username		NVARCHAR (50),
 			hthomescore		INT, 
 			htawayscore		INT,
 			ip				NVARCHAR (15),
+			betfrom			nvarchar (1),
 			sporttype		INT,
 			IsNeutral		BIT,
 			showtime		NVARCHAR (50)
@@ -112,52 +125,65 @@ SET NOCOUNT ON
 							)  
 							
 	INSERT INTO @Data
-	SELECT  finalhomescore,
-			finalawayscore,
-			oddsid,
-			leagueid,
-			bettype,
-			transid,
-			betid, 
-			refno,
-			matchid,
-			matchcode,
-			race, 
-			eventdate,
-			virtualrate, --in case OpenTote, it's currency2's exRate 
-			isShowOTExRate, --show OpenTote ExRate or not 
-			sdiscount,
-			adiscount,
-			discount,
-			homeid,
-			awayid,
-			checktime settleTime,
-			hdp1,
-			hdp2,
-			odds,   
-			modds,
-			finalodds,
-			finalodds2,
-			OddsType, 
-			status,
-			comstatus,   
-			stake,
-			actual_stake,
-			transdate,
-			betteam,
-			livehomescore,
-			liveawayscore,
-			liveindicator,
-			winlost, 
-			commission, 
-			creator creator,
-			username,
-			hthomescore, 
-			htawayscore,
-			ip,
-			sporttype,
-			IsNeutral,
-			showtime
+	SELECT  finalhomescore,	
+			finalawayscore,	
+			oddsid,			
+			leagueid,		
+			bettype,			
+			transid,			
+			betid,			
+			refno,			
+			matchid,			
+			matchcode,		
+			race,			
+			eventdate,		
+			virtualrate,		
+			isShowOTExRate,  
+			sdiscount,		
+			adiscount,		
+			discount,		
+			homeid,			
+			awayid,			
+			checktime settleTime,		
+			hdp1,			
+			hdp2,			
+			odds,			
+			modds,			
+			finalodds,		
+			finalodds2,		
+			OddsType,		
+			status,			
+			comstatus,		
+			stake,			
+			actual_stake,	
+			transdate,		
+			betteam,			
+			0 spositiontaking, -- unuse in this report
+			0 mpositiontaking, -- unuse in this report
+			0 apositiontaking, -- unuse in this report		
+			0 spositiontaking2,-- unuse in this report
+			0 mpositiontaking2,-- unuse in this report
+			0 apositiontaking2,-- unuse in this report
+			livehomescore,	
+			liveawayscore,	
+			liveindicator,	
+			winlost,			
+			commission,		
+			0 scomm, -- unuse in this report			
+			0 acomm, -- unuse in this report			
+			0 comm,	-- unuse in this report		
+			awinlost,		
+			mwinlost,		
+			swinlost,		
+			creator,			
+			username,		
+			hthomescore,		
+			htawayscore,		
+			ip,				
+			betfrom,			
+			sporttype,		
+			IsNeutral,		
+			showtime					
 	FROM (
 			SELECT
 					match.finalhomescore,
@@ -191,7 +217,7 @@ SET NOCOUNT ON
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					b.betteam,
+					b.betteam,					
 					b.livehomescore,
 					b.liveawayscore,
 					b.liveindicator,
@@ -203,7 +229,11 @@ SET NOCOUNT ON
 					match.sporttype,
 					b.matchid,
 					match.IsNeutral,
-					match.showtime
+					match.showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom
 			FROM 	bettrans14 b with (nolock) 
 					INNER JOIN match14 match with (nolock) on b.matchid= match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
@@ -245,7 +275,7 @@ SET NOCOUNT ON
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					b.betteam,
+					b.betteam,					
 					0 livehomescore, 
 					0 liveawayscore,
 					0 liveindicator,
@@ -257,7 +287,11 @@ SET NOCOUNT ON
 					0 sporttype,  
 					0 matchid,
 					0 IsNeutral,
-					'' as showtime 
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom 
 			FROM  	bettrans14 b  with (nolock) 
 					inner join custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.bettype = 9 
@@ -301,7 +335,7 @@ SET NOCOUNT ON
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					b.betteam,
+					b.betteam,					
 					0 livehomescore, 
 					0 liveawayscore,
 					0 liveindicator,
@@ -313,7 +347,11 @@ SET NOCOUNT ON
 					0 sporttype,  
 					0 matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM  	bettrans14 b  with (nolock) 
 					inner join custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.bettype = 29 
@@ -360,7 +398,7 @@ SET NOCOUNT ON
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					b.betteam,
+					b.betteam,					
 					b.livehomescore,
 					b.liveawayscore,
 					b.liveindicator,
@@ -372,7 +410,11 @@ SET NOCOUNT ON
 					match.sporttype,
 					b.matchid,
 					match.IsNeutral,
-					match.showtime 
+					match.showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN match  with (nolock) on b.matchid = match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
@@ -411,7 +453,7 @@ SET NOCOUNT ON
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					b.betteam,
+					b.betteam,					
 					0 livehomescore, 
 					0 liveawayscore,
 					0 liveindicator,
@@ -423,7 +465,11 @@ SET NOCOUNT ON
 					0 sporttype,
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime 
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -465,7 +511,7 @@ SET NOCOUNT ON
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					b.betteam,
+					b.betteam,					
 					0 livehomescore, 
 					0 liveawayscore,
 					0 liveindicator,
@@ -477,7 +523,11 @@ SET NOCOUNT ON
 					0 sporttype,
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -507,9 +557,9 @@ SET NOCOUNT ON
 					CASE WHEN b.currency2 IS NULL THEN CONVERT(BIT,0) ELSE CONVERT(BIT,1) END AS isShowOTExRate,
 					b.sdiscount,
 					b.adiscount,
-					b.discount,
-					0 homeid,
-					odds.teamid awayid,
+					b.discount,					
+					case when bettype = 10 then 0 else odds.teamid end homeid,
+					case WHEN bettype = 10 THEN odds.teamid ELSE 0 end awayid,
 					ISNULL(b.checktime,'') checktime,
 					b.hdp1, --phuong.nguyen <2008-12-30>
 					b.hdp2, --end
@@ -523,7 +573,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore, --phuong.nguyen <2008-12-30>
 					b.liveawayscore, --end
 					0 liveindicator, 
@@ -535,7 +585,11 @@ SET NOCOUNT ON
 					s.sporttype,
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM	 
 					bettrans b with (nolock)
 					INNER JOIN outright odds with (nolock) on b.matchid = odds.orid
@@ -571,8 +625,8 @@ SET NOCOUNT ON
 					b.sdiscount,
 					b.adiscount,
 					b.discount,
-					0 homeid,
-					odds.teamid awayid,
+					case when bettype = 10 then 0 else odds.teamid end homeid,
+					case WHEN bettype = 10 THEN odds.teamid ELSE 0 end awayid,
 					ISNULL(b.checktime,'') checktime, 
 					b.hdp1, --phuong.nguyen <2008-12-30>
 					b.hdp2, --end
@@ -586,7 +640,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore, --phuong.nguyen <2008-12-30>
 					b.liveawayscore, --end
 					0 liveindicator, 
@@ -598,7 +652,11 @@ SET NOCOUNT ON
 					s.sporttype,
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN outright14 odds with (nolock) on b.matchid = odds.orid
 					INNER JOIN league l with (nolock) on odds.leagueid = l.leagueid
@@ -647,7 +705,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore, --phuong.nguyen <2008-12-30>
 					b.liveawayscore, --end
 					0 liveindicator, 
@@ -659,7 +717,11 @@ SET NOCOUNT ON
 					251 AS sporttype, --sporttype, sporttype,
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime 
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom 
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 71								--20120405@Hurri
 					AND b.matchid IN (0, 71)
@@ -699,7 +761,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore, --phuong.nguyen <2008-12-30>
 					b.liveawayscore, --end
 					0 liveindicator, 
@@ -711,7 +773,11 @@ SET NOCOUNT ON
 					251 sporttype,-- sporttype
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 71								--20120405@Hurri
 					AND b.matchid in (0, 71)
@@ -751,7 +817,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore,
 					b.liveawayscore, 
 					0 liveindicator, 
@@ -763,7 +829,11 @@ SET NOCOUNT ON
 					252 AS sporttype, 
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime 
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom 
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 73
 					AND b.matchid in (0, 73)
@@ -803,7 +873,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore, 
 					b.liveawayscore,
 					0 liveindicator, 
@@ -815,7 +885,11 @@ SET NOCOUNT ON
 					252 sporttype,
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 73
 					AND b.matchid in (0, 73)
@@ -855,7 +929,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore, --phuong.nguyen <2008-12-30>
 					b.liveawayscore, --end
 					0 liveindicator, 
@@ -867,7 +941,11 @@ SET NOCOUNT ON
 					253 AS sporttype, --sporttype, sporttype,
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 1000
 					AND b.matchid = 1000 
@@ -907,7 +985,7 @@ SET NOCOUNT ON
 					b.stake, 
 					b.actual_stake,
 					b.transdate, 
-					b.betteam, 
+					b.betteam, 					
 					b.livehomescore, --phuong.nguyen <2008-12-30>
 					b.liveawayscore, --end
 					0 liveindicator, 
@@ -919,118 +997,130 @@ SET NOCOUNT ON
 					253 sporttype,-- sporttype
 					b.matchid,
 					0 IsNeutral,
-					'' as showtime  
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 1000
 					AND b.matchid = 1000 
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
-			---- Virtual HR
-			--UNION ALL
-			--SELECT	0 finalhomescore,
-			--		0 finalawayscore, 
-			--		b.oddsid, 
-			--		r.LeagueID,
-			--		b.bettype, 
-			--		b.transid,
-			--		'' as BetID,
-			--		b.refno,
-			--		convert(nvarchar(50),o.RacerNum) matchcode, --Horse Number
-			--		b.oddsid as Race, -- OutrightID
-			--		'' EventDate,
-			--		0 as virtualrate,
-			--		0 as isShowOTExRate,
-			--		b.sdiscount,
-			--		b.adiscount,
-			--		b.discount,
-			--		o.RacerID as homeID, 
-			--		0 as awayID,
-			--		'' checktime, 
-			--		b.hdp1, 
-			--		b.hdp2, 
-			--		b.odds,   
-			--		b.modds,
-			--		0 finalodds,
-			--		0 finalodds2,
-			--		'' OddsType, 					
-			--		b.status, 
-			--		CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
-			--		b.stake, 
-			--		b.actual_stake,
-			--		b.transdate, 
-			--		'' as betteam, 
-			--		b.livehomescore,
-			--		b.liveawayscore,
-			--		0 liveindicator, 
-			--		(b.winlost-b.actual_stake)  winlost,
-			--		b.playercomm as commission, 
-			--		CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
-			--		b.username,
-			--		0 hthomescore, 0 htawayscore,ip, 	
-			--		181 sporttype,
-			--		b.matchid,
-			--		0 IsNeutral,
-			--		convert(nvarchar(50), r.EventTime) as showtime -- race name
-			--FROM 	bettrans b with (nolock)
-			--		INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
-			--		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-			--WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
-			--		AND b.winlostdate = @fromdate
-			--		AND b.custid = @custid		
+			-- Virtual HR
+			UNION ALL
+			SELECT	0 finalhomescore,
+					0 finalawayscore, 
+					b.oddsid, 
+					r.LeagueID,
+					b.bettype, 
+					b.transid,
+					'' as BetID,
+					b.refno,
+					convert(nvarchar(50),o.RacerNum) matchcode, --Horse Number
+					b.oddsid as Race, -- OutrightID
+					'' EventDate,
+					0 as virtualrate,
+					0 as isShowOTExRate,
+					b.sdiscount,
+					b.adiscount,
+					b.discount,
+					o.RacerID as homeID, 
+					0 as awayID,
+					'' checktime, 
+					b.hdp1, 
+					b.hdp2, 
+					b.odds,   
+					b.modds,
+					0 finalodds,
+					0 finalodds2,
+					'' OddsType, 					
+					b.status, 
+					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+					b.stake, 
+					b.actual_stake,
+					b.transdate, 
+					'' as betteam, 					
+					b.livehomescore,
+					b.liveawayscore,
+					0 liveindicator, 
+					(b.winlost-b.actual_stake)  winlost,
+					b.playercomm as commission, 
+					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+					b.username,
+					0 hthomescore, 0 htawayscore,ip, 	
+					181 sporttype,
+					b.matchid,
+					0 IsNeutral,
+					convert(nvarchar(50), r.EventTime) as showtime, -- race name					
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom
+			FROM 	bettrans b with (nolock)
+					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
+					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+			WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
+					AND b.winlostdate = @fromdate
+					AND b.custid = @custid		
 			
-			---- Virtual HR 14
-			--UNION ALL
-			--SELECT	0 finalhomescore,
-			--		0 finalawayscore, 
-			--		b.oddsid, 
-			--		r.LeagueID,
-			--		b.bettype, 
-			--		b.transid,
-			--		'' as BetID,
-			--		b.refno,
-			--		convert(nvarchar(50),o.RacerNum) matchcode, --Horse Number
-			--		b.oddsid as Race, -- OutrightID
-			--		'' EventDate,
-			--		0 as virtualrate,
-			--		0 as isShowOTExRate,
-			--		b.sdiscount,
-			--		b.adiscount,
-			--		b.discount,
-			--		o.RacerID as homeID, 
-			--		0 as awayID,
-			--		'' checktime, 
-			--		b.hdp1, 
-			--		b.hdp2, 
-			--		b.odds,   
-			--		b.modds,
-			--		0 finalodds,
-			--		0 finalodds2,
-			--		'' OddsType, 					
-			--		b.status, 
-			--		CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
-			--		b.stake, 
-			--		b.actual_stake,
-			--		b.transdate, 
-			--		'' as betteam, 
-			--		b.livehomescore,
-			--		b.liveawayscore,
-			--		0 liveindicator, 
-			--		(b.winlost-b.actual_stake)  winlost,
-			--		b.playercomm as commission, 
-			--		CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
-			--		b.username,
-			--		0 hthomescore, 0 htawayscore,ip, 	
-			--		181 sporttype,
-			--		b.matchid,
-			--		0 IsNeutral,
-			--		convert(nvarchar(50), r.EventTime) as showtime -- race name  
-			--FROM 	bettrans14 b with (nolock)
-			--		INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-			--		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-			--WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
-			--		AND b.winlostdate = @fromdate
-			--		AND b.custid = @custid				
+			-- Virtual HR 14
+			UNION ALL
+			SELECT	0 finalhomescore,
+					0 finalawayscore, 
+					b.oddsid, 
+					r.LeagueID,
+					b.bettype, 
+					b.transid,
+					'' as BetID,
+					b.refno,
+					convert(nvarchar(50),o.RacerNum) matchcode, --Horse Number
+					b.oddsid as Race, -- OutrightID
+					'' EventDate,
+					0 as virtualrate,
+					0 as isShowOTExRate,
+					b.sdiscount,
+					b.adiscount,
+					b.discount,
+					o.RacerID as homeID, 
+					0 as awayID,
+					'' checktime, 
+					b.hdp1, 
+					b.hdp2, 
+					b.odds,   
+					b.modds,
+					0 finalodds,
+					0 finalodds2,
+					'' OddsType, 					
+					b.status, 
+					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+					b.stake, 
+					b.actual_stake,
+					b.transdate, 
+					'' as betteam, 					
+					b.livehomescore,
+					b.liveawayscore,
+					0 liveindicator, 
+					(b.winlost-b.actual_stake)  winlost,
+					b.playercomm as commission, 
+					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+					b.username,
+					0 hthomescore, 0 htawayscore,ip, 	
+					181 sporttype,
+					b.matchid,
+					0 IsNeutral,
+					convert(nvarchar(50), r.EventTime) as showtime, -- race name  					
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom
+			FROM 	bettrans14 b with (nolock)
+					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
+					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+			WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
+					AND b.winlostdate = @fromdate
+					AND b.custid = @custid				
 	) x
 
 WHERE ip=@ip
@@ -1073,6 +1163,7 @@ SELECT	* FROM @Data
 ORDER BY 4, 26
 		   
 SELECT * FROM @DetailData
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByIP_OtherSports] TO [bodbAdminNet]

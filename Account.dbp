@@ -1495,6 +1495,8 @@ Begin DataProject = "Account"
       Script = "Acc_SMATurnoverMatchSel.sql"
       Script = "Acc_SMATurnoverUpd.sql"
       Script = "Acc_SportTypeSel.sql"
+      Script = "Task_DownlineTurnOver_Setting_sum_job.sql"
+      Script = "Task_GetDownlineTurnOver_Setting_Change.sql"
    End
    Begin Folder = "Statements"
       Begin Folder = "BK"

@@ -18,6 +18,8 @@ Revisions:
 	- 20111122@Johnson: Add ACCDDD system
 	- 20120809@Elodie: Add ACCIRR system
 	- 2O130404@Jamie: Put UUS for Testing 
+	- 20130513@Lukas: add group ACCUSD
+	- 20130718@Lukas: add group ACCUT
 Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING', 'ACCINDO'
 */
@@ -67,6 +69,20 @@ BEGIN
 	BEGIN
 		INSERT INTO @tbCurrency(ExchangeID)
 		SELECT 20 --UUS
+	END
+	ELSE IF (@system = 'ACCUSD')
+	BEGIN
+		INSERT INTO @tbCurrency(ExchangeID)
+		SELECT 16	--- 	Yen
+		UNION ALL SELECT 17	--- 	NTD
+		UNION ALL SELECT 35	--- 	$US
+		UNION ALL SELECT 40	--- 	IRR
+		UNION ALL SELECT 64 ---		UT
+	END
+	ELSE IF (@system = 'ACCUT')
+	BEGIN
+		INSERT INTO @tbCurrency(ExchangeID)
+		SELECT 64	--- 	UT		
 	END
 	Return
 END

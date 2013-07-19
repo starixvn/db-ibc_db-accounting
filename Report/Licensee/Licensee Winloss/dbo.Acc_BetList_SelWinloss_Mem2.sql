@@ -1,4 +1,8 @@
-﻿ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@CustID			INT,
 	@FromDate		DATETIME,
 	@ToDate			DATETIME,
@@ -2174,3 +2178,4 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbLicenseeNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [vnteam]
+
