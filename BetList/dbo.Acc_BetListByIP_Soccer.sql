@@ -78,7 +78,7 @@ SET NOCOUNT ON
 			apositiontaking2 smallmoney, 
 			livehomescore	INT,
 			liveawayscore	INT,
-			liveindicator	INT,
+			liveindicator	BIT,
 			winlost			MONEY, 
 			commission		MONEY, 
 			scomm			MONEY,   
