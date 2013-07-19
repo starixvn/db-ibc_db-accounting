@@ -45,7 +45,6 @@ Revisions:
 	- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
 	- 20130703@Kathy: Update matchid for RnG Casino(71) and Bingo(73)
 	- 20130718@Elodie: Apply core betlist
-	
 Param's Explanation:
 • @fromdate = @winlostdate
 */
@@ -93,7 +92,7 @@ SET NOCOUNT ON
 			apositiontaking2 smallmoney,
 			livehomescore	INT,
 			liveawayscore	INT,
-			liveindicator	INT,
+			liveindicator	BIT,
 			winlost			MONEY, 
 			commission		MONEY, 
 			scomm			MONEY,	
@@ -1164,6 +1163,7 @@ SELECT	* FROM @Data
 ORDER BY 4, 26
 		   
 SELECT * FROM @DetailData
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByIP_OtherSports] TO [bodbAdminNet]
