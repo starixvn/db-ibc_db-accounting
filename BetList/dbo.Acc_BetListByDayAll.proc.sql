@@ -60,6 +60,7 @@ AS
 		- 20120927@Johnson: get commstatus column to check double comm losing
 		- 20130227@Elodie: Add Virtual HR product
 		- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
+		- 20130718@Elodie: Apply core betlist
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
