@@ -2,6 +2,8 @@
 set QUOTED_IDENTIFIER ON
 go
 
+
+
 ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@CustID			INT,
 	@FromDate		DATETIME,
