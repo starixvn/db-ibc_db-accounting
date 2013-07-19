@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Acc_Set_MatchSel]
+﻿ALTER PROCEDURE [dbo].[Acc_Set_MatchSel]
 	@FromDate datetime,
 	@ToDate datetime,
 	@LeagueID int = 0, -- 0 for ALL Leagues
@@ -30,6 +28,7 @@ AS
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match  
 		- 20120626@Jamie: Get meetings for Harness 
 		- 20130328@Lukas: move to DBTXN/bodb02 & get FGLG ticket info 		
+		- 20130719@Elodie: get result for Virtual HR
 		
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
@@ -174,6 +173,47 @@ BEGIN
 			AND @sporttype IN (0,151,152,153)
 			AND o.leagueid = CASE WHEN @leagueid = 0 THEN o.leagueid ELSE @leagueid END
 			AND (o.oddsstatus = 'completed' OR o.Foddsstatus = 'completed')  
+
+	--Virtual HR
+	INSERT INTO #matchList
+	SELECT 
+		0 hthomescore  --TF  
+		,0  htawayscore  --SCR  
+		,0  IsCalculated
+		,0  IsMultiCaled
+		,0  IsRefund 
+		,0  IsCalRefund
+		,o.EventID  matchid --Race   
+		,r.leagueid
+		,o.RacerID homeid
+		,0 awayid
+		,o.RacerNum matchcode  --Horse   
+		,r.EventTime kickofftime
+		,o.Winodds finalhomescore
+		,o.placeodds finalawayscore
+		,o.placing betstatus --Placing  
+		,o.eventstatus
+		,o.IsFavor Foddsstatus
+		,r.sporttype
+		,0 IsNeutral
+		,o.eventdate
+		,'' AS goalrecord --Phuong.Nguyen   
+		,'' AS suspenderHT  
+		,'' AS suspenderFT  
+		,0 AS IsHTCal
+		,0 AS calculate
+		,0 AS isPending
+		,0 AS isUndecided --Hurri@20120306 
+		,0 AS IsKeyscore
+		,0 AS IsFGLG
+	FROM	DB02.bodb02.dbo.VSOutright o WITH(NOLOCK)
+			INNER JOIN DB02.bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid   
+	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
+			AND l.sporttype = 181
+			AND @sporttype = 181
+			AND r.leagueid = CASE WHEN @leagueid = 0 THEN r.leagueid ELSE @leagueid END
+			AND o.eventstatus = 'completed'
 			
 	SELECT	m.hthomescore,
 			m.htawayscore,
@@ -216,10 +256,6 @@ BEGIN
 
 	DROP TABLE #matchList
 END
- 
-
-
- 
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet]
