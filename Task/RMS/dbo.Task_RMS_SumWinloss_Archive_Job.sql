@@ -7,7 +7,7 @@ AS
 		DB: DB054.bodb_RMS
 		
 		Revisions:
-		
+			-20130717@Johnson: archive old data before balance up day
 		Parameter's Explanation:	
 	*/ 
 BEGIN
@@ -24,7 +24,7 @@ BEGIN
 	FROM bodb02.dbo.bettrans WITH(NOLOCK)
 	WHERE bettype = 20000 AND matchid =0 AND custid = 3 
 	
-	WHILE (@maxDateSum_Old <= @balanceUpDay)
+	WHILE (@maxDateSum_Old < @balanceUpDay) --@Johnson: fix archive data before BUDay
 	BEGIN
 		EXEC Task_RMS_SumWinloss_Archive @winlostdate = @maxDateSum_Old, @errCode = @ErrCode OUTPUT, @errMsg = @ErrMsg OUTPUT
 		
