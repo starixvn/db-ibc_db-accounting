@@ -161,6 +161,9 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_CustomerUpdConsolidatedGroup.sql"
          Script = "dbo.Acc_CustomerUpdConsolidatedGroupHeader.sql"
       End
+      Begin Folder = "SMA Turnover"
+         Script = "Acc_SMATurnoverCheckTotalTurnover.sql"
+      End
    End
    Begin Folder = "CheckDate"
       Script = "Acc_CheckSettledDate.sql"
@@ -1495,7 +1498,6 @@ Begin DataProject = "Account"
    End
    Begin Folder = "SMA Turnover"
       Script = "Acc_SMATurnoverCheckList.sql"
-      Script = "Acc_SMATurnoverCheckTotalTurnover.sql"
       Script = "Acc_SMATurnoverIns.sql"
       Script = "Acc_SMATurnoverLeagueSel.sql"
       Script = "Acc_SMATurnoverListSel.sql"
