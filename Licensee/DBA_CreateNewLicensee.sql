@@ -26,6 +26,7 @@ Revisions:
 	+20121205@henry: add param @SuperWildCard
 	+20130204@Jim: add param @ResellerID 
 	+20130603@Jim: grant currency permission 
+	+20130624@Jim: set default for new licensee on Accounting system is inactive 
 	
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
@@ -79,13 +80,17 @@ AND (@IsAllowedRB=1 OR (@IsAllowedRB=0 AND FunctionID NOT IN (22,34,35)))
 IF NOT EXISTS (SELECT 1 FROM SystemLicensee (NOLOCK) WHERE LicenseeID=@licenseeid) 
 BEGIN
 	INSERT INTO SystemLicensee
-	SELECT ID, @LicenseeID as LicenseeID, CASE WHEN ID IN (1,2,3) THEN 1 ELSE 0 END AS  IsActive 
+	SELECT ID
+		, @LicenseeID as LicenseeID
+		, CASE WHEN ID IN (1,2) THEN 1 ELSE 0 END AS  IsActive 
 	FROM Systems (NOLOCK) 
 END 
 ELSE 
 BEGIN 
 	INSERT INTO SystemLicensee
-	SELECT ID, @LicenseeID as LicenseeID, CASE WHEN ID IN (1,2,3) THEN 1 ELSE 0 END AS IsActive 
+	SELECT ID
+			, @LicenseeID as LicenseeID
+			, CASE WHEN ID IN (1,2) THEN 1 ELSE 0 END AS IsActive 
 	FROM Systems (NOLOCK) 
 	WHERE ID NOT IN (SELECT DISTINCT SystemID FROM SystemLicensee (NOLOCK) WHERE LicenseeID=@licenseeid)
 END 
@@ -109,7 +114,7 @@ SET @i = 0
 SELECT @MAX = MAX(id) FROM @DATA
 
 --Insert Permission for each admin user for the new licensee
-WHILE @i < @MAX
+WHILE @i <=@MAX
 BEGIN
     SET @i = @i + 1
        SELECT @UserID=UserID,@Username=Username FROM @DATA
@@ -128,36 +133,7 @@ BEGIN
         VALUES (@licenseeid,@UserID,1,'')
     END
 	
-	/*
-	- Grant currencey permission to Licensee's Users
-	*/
-	DECLARE @Currency AS TABLE (ID INT IDENTITY(1,1), CurrencyID INT)
-	DECLARE @usr AS TABLE (UserID INT )
-	DECLARE @count INT,@maxID INT 
-
-	INSERT INTO @Currency(CurrencyID)
-	SELECT Currency
-	FROM bodb_licensee.dbo.LicenseeCust WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
 	
-	INSERT INTO @usr
-	SELECT UserID FROM dbo.LicenseeUser WITH (NOLOCK)
-	WHERE LicenseeID=@LicenseeID
-	EXCEPT
-	SELECT usrID as UserID FROM dbo.CurrencyUser WITH (NOLOCK) 
-	WHERE LicenseeID=@LicenseeID
-
-	SELECT @Count=1,@maxID=max(ID) FROM @Currency
-		
-	WHILE (@count<=@maxID)
-	BEGIN 
-		DECLARE @Cur INT
-		SELECT @Cur=CurrencyID FROM @Currency WHERE ID=@count
-		INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
-		SELECT UserID,@LicenseeID,@Cur,1,1 ---SystemID=1 is default for Lrf
-		FROM @usr
-		SET @count=@count+1
-	END 
 	--Total bets
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
@@ -227,6 +203,32 @@ BEGIN
 	END
 
 END
+/*
+	- Grant currency permission to Licensee's Users
+	*/
+	DECLARE @Currency AS TABLE (LicenseeID INT, CurrencyID INT)
+	DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
+
+
+	INSERT INTO @Currency(LicenseeID,CurrencyID)
+	SELECT DISTINCT LicenseeID,Currency CurrencyID
+	FROM dbo.LicenseeCust WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	EXCEPT
+	SELECT DISTINCT LicenseeID, CurrencyID
+	FROM dbo.CurrencyUser WITH (NOLOCK )
+	WHERE LicenseeID=@LicenseeID 
+	
+	INSERT INTO @usr (LicenseeID, UserID)
+	SELECT DISTINCT LicenseeID,UserID 
+	FROM dbo.LicenseeUser WITH (NOLOCK)
+	WHERE LicenseeID=@LicenseeID
+	
+	INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
+	SELECT u.UserID,u.LicenseeID,c.CurrencyID,1,1 ---SystemID=1 is default for Lrf
+	FROM @usr u
+		INNER JOIN 	@Currency c ON u.LicenseeID=c.LicenseeID
+	
 --- Add new Licensee belong to @ResellerID 
 	IF @ResellerID<>0
 	BEGIN

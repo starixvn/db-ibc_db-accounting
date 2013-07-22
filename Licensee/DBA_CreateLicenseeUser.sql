@@ -38,8 +38,8 @@ declare @Currency as table (CurrencyID INT)
 select @LicenseeID = LicenseeID from Licensees (nolock) where LicenseeName = @LicenseeName
 
 insert into @currency (CurrencyID)
-select currencyID
-from dbo.CurrencyUser WITH (NOLOCK) WHERE LicenseeID=@LicenseeID
+select currency
+from dbo.LicenseeCust WITH (NOLOCK) WHERE LicenseeID=@LicenseeID
 
 
 if isnull(@LicenseeID,0) = 0

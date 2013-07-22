@@ -711,6 +711,9 @@ Begin DataProject = "DBA"
          Script = "master_check free space.sql"
          Script = "SQL MDW_Auto Index Management.sql"
       End
+      Begin Folder = "DB053"
+         Script = "reservation.sql"
+      End
       Begin Folder = "DB054"
          Script = "bodb_ABS_Archive data for ABS.sql"
          Script = "bodb_ABS_Check copy ABS member's tickets.sql"
@@ -969,12 +972,18 @@ Begin DataProject = "DBA"
             Script = "Task_ABSumWinloss_Archive.sql"
          End
       End
-      Begin Folder = "BalanceCreditDebit"
-         Script = "Task_BalanceGameResetYesterday.sql"
-         Script = "Task_BalanceUpdCredit.sql"
-         Script = "Task_BalanceUpdCreditGame.sql"
-         Script = "Task_BalanceUpdDebit.sql"
-         Script = "Task_BalanceUpdDebitGame.sql"
+      Begin Folder = "Balance"
+         Begin Folder = "Balance Negative"
+            Script = "Task_BalanceNegativeDel_CustCredit.sql"
+            Script = "Task_BalanceNegativeHistoryIns_Cust.sql"
+         End
+         Begin Folder = "BalanceCreditDebit"
+            Script = "Task_BalanceGameResetYesterday.sql"
+            Script = "Task_BalanceUpdCredit.sql"
+            Script = "Task_BalanceUpdCreditGame.sql"
+            Script = "Task_BalanceUpdDebit.sql"
+            Script = "Task_BalanceUpdDebitGame.sql"
+         End
       End
       Begin Folder = "Bettrans"
          Script = "dbo.DBA_ReInit_bettrans_forecast_agent.sql"
@@ -1047,6 +1056,7 @@ Begin DataProject = "DBA"
    End
    Begin Folder = "Trigger"
       Begin Folder = "bettrans"
+         Script = "bettrans_DownlineTurnOver_Setting.sql"
          Script = "bettrans_forecast_INSERT.sql"
          Script = "bettrans_forecast_UPDATE.sql"
          Script = "bettrans_running_INSERT.sql"
@@ -1070,6 +1080,10 @@ Begin DataProject = "DBA"
          Script = "custsetting_update.sql"
          Script = "custsetting3rd_update.sql"
          Script = "custsettinggame_update.sql"
+      End
+      Begin Folder = "DownlineTurnover_Setting"
+         Script = "dto_setting_afterDelete.sql"
+         Script = "dto_setting_afterInsert.sql"
       End
    End
    Begin Folder = "Un-Organized"
