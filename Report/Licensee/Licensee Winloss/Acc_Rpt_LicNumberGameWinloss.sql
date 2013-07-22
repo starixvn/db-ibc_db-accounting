@@ -19,6 +19,7 @@ AS
 	- 20121213@Henry: reset official launch date for Bodog to 05/Nov/2012
 	- 20121213@henry: change to use Effectivedate from LicenseeProduct3rd instead of hard-code
 	- 20130612@Jim: change condition AffectedDate,EffectiveDate
+	- 20130719@Jim: exclude status "void","reject","done"
 		
  * Param's Explanation:    
  *  - @NormalLicensee : List of normal licensee ID separated by ','  
@@ -86,7 +87,7 @@ BEGIN
 		AND lic.isdeposit=1
 		AND sl.IsActive = 1
 		AND s.SystemName='Accounting'
-		AND b.status NOT IN (-1,103)
+		AND b.status NOT IN (-1,101,102,103,121)
 		AND CurrencyID<>20
 		AND bettype BETWEEN 81 AND 120
 		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
@@ -106,7 +107,7 @@ BEGIN
 	WHERE
 		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
 		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
-		AND b.status NOT IN (-1,103)
+		AND b.status NOT IN (-1,101,102,103,121)
 		AND lr.ResellerID IN (4,8)
 		AND CurrencyID<>20
 		AND bettype BETWEEN 81 AND 120

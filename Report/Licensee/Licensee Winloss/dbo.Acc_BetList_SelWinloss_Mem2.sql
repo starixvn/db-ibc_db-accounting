@@ -1,4 +1,10 @@
-﻿ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+
+
+ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@CustID			INT,
 	@FromDate		DATETIME,
 	@ToDate			DATETIME,
@@ -11,6 +17,7 @@
 	@ShowLC			BIT = 0,
 	@ShowVS			BIT = 0,
 	@ShowCS  		BIT = 0, -- RNG Casino
+	@BaseCurrency TINYINT = 0,
 	@TotalRows INT=0 OUTPUT,
 	@SumWinlost MONEY=0 OUTPUT,
 	@SumWinlostUSD MONEY=0 OUTPUT,
@@ -45,10 +52,11 @@ Revisions:
 	- 20120912@Jim : add virtual sport 
     - 20130123@Daniel: Change link server alias
 	- 20130527@Jim: support RNG Casino
-	- 20130716@Jim: update matchid for RNG Casino and Bingo
+	- 20130719@Victor: apply betlist core
 	
 Param's Explanation:
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
+	+ @BaseCurrency : Base currency in Result tables 0: ALL, 1: USD, 2: MYR, 3: EUR
 
 */
 
@@ -699,7 +707,7 @@ BEGIN
 			b.Liveawayscore,
 			b.IP AS IP,
 			0 as LeagueID,
-			71 as MatchID,	
+			0 as MatchID,	
 			0 as MatchCode,
 			'' AS Race,	
 			0 as HomeID,
@@ -1242,7 +1250,7 @@ BEGIN
 			b.Liveawayscore,
 			b.IP AS IP,
 			0 as LeagueID,
-			71 as MatchID,	
+			0 as MatchID,	
 			0 as MatchCode,
 			'' AS Race,	
 			0 as HomeID,
@@ -1842,7 +1850,7 @@ BEGIN
 		b.Liveawayscore,
 		b.IP AS IP,
 		0 as LeagueID,
-		71 as MatchID,	
+		0 as MatchID,	
 		0 as MatchCode,
 		'' AS Race,	
 		0 as HomeID,
@@ -1946,30 +1954,79 @@ FROM #BetListByDateMem b
 INNER JOIN 
 	#TempExchange e 
 	ON e.ExchangeDate = b.winlostdate   AND e.exchangeid = b.currency
-	
-SELECT	d.* , 
-		--BASE RM
-		d.stake*e.MYR		AS	StakeMYR,
-		d.actual_stake*e.MYR		AS	actual_stakeMYR,
-		d.winlost*e.MYR		AS	WinlostMYR,
-		d.LicenseeWL*e.MYR	AS	LicenseeWLMYR,
-		d.comm*e.MYR		AS	commMYR,
-		d.playercomm*e.MYR  AS PlayerCommMYR,
-		--BASEUSD
-		d.stake*e.USD			AS	StakeUSD,
-		d.actual_stake*e.USD	AS	actual_stakeUSD,
-		d.winlost*e.USD			AS	WinlostUSD,
-		d.LicenseeWL*e.USD		AS	LicenseeWLUSD,
-		d.comm*e.USD			AS	commUSD,
-		d.playercomm*e.USD		AS  playercommUSD,
-		--BASEEUR
-		d.stake*e.EUR			AS	StakeEUR,
-		d.actual_stake*e.EUR	AS	actual_stakeEUR,
-		d.winlost*e.EUR			AS	WinlostEUR,
-		d.LicenseeWL*e.EUR		AS	LicenseeWLEUR,
-		d.comm*e.EUR			AS	commEUR,
-		d.playercomm*e.EUR		AS PlayercommEUR
 
+-- Update Stake to Base currency
+UPDATE #BetListByDateMem
+SET stake = stake *					(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+	actual_stake = actual_stake *	(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+	winlost = winlost *				(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+	LicenseeWL = LicenseeWL *		(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+	comm = comm *					(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+	playercomm = playercomm *		(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END)
+FROM	#BetListByDateMem d 
+		INNER JOIN #TempExchange e 
+		ON e.ExchangeDate =  d.winlostdate AND e.exchangeid = d.currency
+-- Final SELECT for 1st result set
+SELECT	d.Sporttype,
+		d.TransID,
+		d.BetID,
+		d.Bettype,
+		d.hdp1,
+		d.hdp2,
+		d.Modds,
+		d.OddsType,
+		d.Odds,
+		d.Stake,
+		d.Actual_Stake,
+		d.Betteam,
+		d.[Status],
+		d.RefNO,
+		d.Transdate,
+		d.Winlostdate as eventdate,
+		d.Winlost,
+		d.LicenseeWL,
+		d.comm,
+		d.playercomm,
+		d.Liveindicator,
+		d.Livehomescore,
+		d.Liveawayscore,
+		d.IP,
+		d.LeagueID,
+		d.MatchID,
+		d.MatchCode,
+		d.Race,
+		d.HomeID,
+		d.AwayID, 	
+		d.Betstatus,
+		d.isNeutral,
+		d.virtualrate,
+		d.isShowOTExRate,
+		d.currency,
+		d.showtime,
+		0 as sdiscount,
+		0 as adiscount,
+		0 as discount,
+		CAST(0 AS DATETIME) as settleTime,
+		0 as finalodds,
+		0 as finalodds2,
+		0 as comstatus,
+		0 as spositiontaking,
+		0 as mpositiontaking,
+		0 as apositiontaking,
+		0 as spositiontaking2,
+		0 as mpositiontaking2,
+		0 as apositiontaking2,
+		@CustID as custid,
+		NULL as finalhomescore,
+		NULL as finalawayscore,
+		'' as betfrom,
+		0 as allowdelete,
+		0 as commission,
+		0 as scomm,
+		0 as acomm,
+		0 as awinlost,
+		0 as mwinlost,
+		0 as swinlost
 FROM	#BetListByDateMem d 
 		INNER JOIN #TempExchange e 
 		ON e.ExchangeDate =  d.winlostdate AND e.exchangeid = d.currency
@@ -1981,11 +2038,10 @@ DECLARE @BettransDetail TABLE(
 	stake MONEY,
 	status NVARCHAR(10),  
 	apositiontaking SMALLMONEY,  
+	mpositiontaking SMALLMONEY,
+	spositiontaking SMALLMONEY,
 	bettype SMALLINT,
-	Betteam nvarchar (10),
-	stakeMYR MONEY,
-	stakeUSD MONEY,
-	stakeEUR MONEY
+	Betteam nvarchar (10)
 	 )   
 
 IF @ShowRB = 1
@@ -1996,14 +2052,13 @@ begin
 		SELECT 
 			BM.refno, 
 			BM.odds, 
-			BM.stake,
+			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
 			BM.status, 
-			BM.apositiontaking, 
+			BM.apositiontaking,
+			0,
+			0,
 			BM.bettype  ,
-			BM.Betteam,
-			BM.stake * e.MYR as stakeMYR,
-			BM.stake * e.USD as stakeUSD,
-			BM.stake * e.EUR as stakeEUR
+			BM.Betteam
 		FROM bettransm BM WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BM.refno = B.transid
 		INNER JOIN #TempExchange e 
@@ -2017,14 +2072,13 @@ begin
 		SELECT 
 			BM.refno, 
 			BM.odds, 
-			BM.stake,
+			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
 			BM.status, 
 			BM.apositiontaking, 
+			0,
+			0,
 			BM.bettype  ,
-			BM.Betteam  ,
-			BM.stake * e.MYR as stakeMYR,
-			BM.stake * e.USD as stakeUSD,
-			BM.stake * e.EUR as stakeEUR
+			BM.Betteam 
 		FROM bettransm14 BM WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BM.refno = B.transid
 		INNER JOIN #TempExchange e 
@@ -2038,14 +2092,13 @@ begin
 		SELECT 
 			BM.refno, 
 			BM.odds, 
-			BM.stake,
+			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
 			BM.status, 
 			BM.apositiontaking, 
+			0,
+			0,
 			BM.bettype  ,
-			BM.Betteam,
-			BM.stake * e.MYR as stakeMYR,
-			BM.stake * e.USD as stakeUSD,
-			BM.stake * e.EUR as stakeEUR
+			BM.Betteam
 		FROM bodb_archive.dbo.bettransm BM WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BM.refno = B.transid
 		INNER JOIN #TempExchange e ON e.ExchangeDate = b.winlostdate   AND e.exchangeid = b.currency
@@ -2061,14 +2114,13 @@ BEGIN
 		SELECT 
 			BG.refno, 
 			BG.odds, 
-			BG.stake,
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
 			BG.status, 
 			BG.apositiontaking, 
+			0,
+			0,
 			BG.bettype  ,
-			BG.Betteam,
-			BG.stake * e.MYR as stakeMYR,
-			BG.stake * e.USD as stakeUSD,
-			BG.stake * e.EUR as stakeEUR
+			BG.Betteam
 		FROM bettransg BG WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BG.refno = B.refno and BG.custid = @CustID
 		INNER JOIN #TempExchange e 
@@ -2082,14 +2134,13 @@ BEGIN
 		SELECT 
 			BG.refno, 
 			BG.odds, 
-			BG.stake,
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
 			BG.status, 
 			BG.apositiontaking, 
+			0,
+			0,
 			BG.bettype  ,
-			BG.Betteam  ,
-			BG.stake * e.MYR as stakeMYR,
-			BG.stake * e.USD as stakeUSD,
-			BG.stake * e.EUR as stakeEUR
+			BG.Betteam
 		FROM bettransg14 BG WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BG.refno = B.refno and BG.custid = @CustID
 		INNER JOIN #TempExchange e 
@@ -2103,14 +2154,13 @@ BEGIN
 		SELECT 
 			BG.refno, 
 			BG.odds, 
-			BG.stake,
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
 			BG.status, 
-			BG.apositiontaking, 
+			BG.apositiontaking,
+			0,
+			0, 
 			BG.bettype  ,
-			BG.Betteam  ,
-			BG.stake * e.MYR as stakeMYR,
-			BG.stake * e.USD as stakeUSD,
-			BG.stake * e.EUR as stakeEUR
+			BG.Betteam
 		FROM bodb_archive.dbo.bettransG BG WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BG.refno = B.refno and BG.custid = @CustID
 		INNER JOIN #TempExchange e  ON e.ExchangeDate = b.winlostdate   AND e.exchangeid = b.currency
@@ -2130,3 +2180,4 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbLicenseeNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [vnteam]
+
