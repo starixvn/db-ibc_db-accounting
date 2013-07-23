@@ -21,7 +21,7 @@ SET NOCOUNT ON
 
 SELECT matchid, eventdate, homeid, awayid
 FROM match m WITH (NOLOCK)	
-WHERE leagueid = @LeagueID AND eventdate BETWEEN @FromDate AND @ToDate and eventstatus <> 'completed'
+WHERE leagueid = @LeagueID AND eventdate BETWEEN @FromDate AND @ToDate and eventstatus <> 'completed' and matchcode not like '%hedge%'
 order by eventdate
 
 GO
