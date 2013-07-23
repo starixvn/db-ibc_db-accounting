@@ -49,6 +49,9 @@ Revisions:
 	- 20130121@Dan: change linked server DB06 to DBARC, DB052 to DBLIC
 	- 20130322@Ethan:Get column NicknameLoginOnly for Super, Master, Agent
 	- 20130422@Johnson: get field LastChangedSecurityCodeDate
+	- 20130719@Elodie: Get DisableCasinoBonus field
+					   Correct link server DBACC instead of DBARC
+	
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -56,7 +59,7 @@ Param's Explanation:
 
 SET NOCOUNT ON
 Declare @custid int, @uplineid int, @roleid tinyint, @UsedCredit MONEY, @DisableDownlinesHR BIT, @DisableDownlinesOpenTote BIT, @DisableDownlinesFI BIT,@DisableDownlinesCS BIT,@DisableDownlinesBI BIT,
-@DisableDownlinesNumber BIT, @DisableDownlinesLiveCS BIT, @DisableDownlinesVirtualSports BIT,
+@DisableDownlinesNumber BIT, @DisableDownlinesLiveCS BIT, @DisableDownlinesVirtualSports BIT, @DisableDownlinesCasinoBonus BIT,
 @DownlinesSelectedBetting BIT, @IsInternal BIT,  @LimitPerIP tinyint,@SelectedBetting bit, @NicknameLoginOnly BIT, @LastChangedSecurityCodeDate DATETIME
 Declare @todaySuperCash money,@todayMasterCash money, @todayAgentCash money, @todayCustCash money
 Declare @currentDate DATETIME 
@@ -77,7 +80,7 @@ SET @NegativeBetEffectiveDate='2011-09-01'
 Select @currentDate = convert(varchar(10), CURRENT_TIMESTAMP, 120)
 
 --Get CustID from DB06, where got index on Username and Username2
-Exec @custid = DBARC.bodb02.dbo.f_GetCustIDFromUsername @username
+Exec @custid = DBACC.bodb02.dbo.f_GetCustIDFromUsername @username
 IF @custid is NULL
 	RETURN
 ELSE
@@ -117,7 +120,10 @@ SELECT @DisableDownlinesVirtualSports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 i
 										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableVirtualSports = 1) 											 
 										  ELSE 0 END			
 			
-			
+SELECT @DisableDownlinesCasinoBonus = CASE @roleid WHEN 4 THEN (SELECT TOP 1 isnull(DisableCasinoBonus,0) FROM custInfo WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableCasinoBonus = 1)
+										  WHEN 3 THEN (SELECT TOP 1 isnull(DisableCasinoBonus,0) FROM custInfo WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableCasinoBonus = 1) 											 
+										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableCasinoBonus,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableCasinoBonus = 1) 											 
+										  ELSE 0 END				
 										  										  							  
 -------------------------------------------------------------------------
 DECLARE @IsDeposit bit --Identify deposit customer
@@ -288,6 +294,7 @@ select c.custid, c.username, c.firstname, c.lastname,
 	isnull(@DisableDownlinesNumber,0) DisableDownlinesNumber,
 	isnull(@DisableDownlinesLiveCS,0) DisableDownlinesLiveCS,
 	isnull(@DisableDownlinesVirtualSports,0) DisableDownlinesVirtualSports,
+	isnull(@DisableDownlinesCasinoBonus,0) DisableDownlinesCasinoBonus,
 	isnull(@DownlinesSelectedBetting,0) DownlinesSelectedBetting,
 	ci.DisableBingo,
 	ci.DisableNumber,
@@ -299,6 +306,7 @@ select c.custid, c.username, c.firstname, c.lastname,
 	ci.synclivecasino,
 	ci.DisableVirtualSports,
 	ci.HideVirtualSports,
+	ISNULL(ci.DisableCasinoBonus,0) DisableCasinoBonus,
 	ci.DoubleCommLosing,
 	ci.Enabled,
 	@isBA IsBA,
