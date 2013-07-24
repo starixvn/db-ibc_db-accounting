@@ -41,7 +41,7 @@ Revisions:
 	- 20110930@Johnson: Add more groups under Won currency.
 	- 20111020@Tom:Add check P2P Game: Status, game setting, commission.
 	 -20120322@Johnson: Check live casino
-	 
+	 -20130723@Jim: change server alias name
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -195,10 +195,10 @@ BEGIN
 	return
 END
 --check an account disabled or not 
-EXEC DB053.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @membername, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
+EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @membername, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
 if @ErrCode <>0		return 
 
-EXEC DB053.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @agentname, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
+EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @agentname, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
 if @ErrCode <>0		return 
 
 if @currency_old <> @acurrency
