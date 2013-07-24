@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_StatementFinanceByRefno]
+﻿ALTER PROCEDURE [dbo].[Acc_StatementFinanceByRefno]
     @RefNo BIGINT,
     @FromDate DATETIME,
 	@ToDate DATETIME,
@@ -8,11 +7,17 @@ AS
  /*
 	Created by: 20120803@Don
 	Task: Get Statement of Finance by RefNo
-	DB: DBACC/bodb02 
+	DB: DB06.bodb02 
 	
 	Revisions:
-		- 20120215@Elodie: Change linked server DB06 to DBARC, DB053 to DBSUM
+		- 20130724@Jamie: Change Alias 
+			+ DB053 --> DBSUM
+			+ bodb_Archive --> DBARC 		
+
     Param's Explanation:
+    
+    Sample:
+		exec [dbo].[Acc_StatementFinanceByRefno] @RefNo = 200169713535,@FromDate = '2012-07-23',@ToDate = '2012-07-23'
     
  */
 
@@ -68,7 +73,7 @@ BEGIN
             tf.transid,
             tf.transdate,
             bettype.typenamee transtype,
-            tf.transdesc + ' - Ex.Rate: ' + ISNULL(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc,
+            tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc,
             (tf.winlost - tf.actual_stake),
             CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner,
             (tf.winlost - tf.actual_stake) * tf.actualrate
@@ -111,12 +116,9 @@ FROM @StatementTable tmp
 ORDER BY tmp.TransID
 
 
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinanceByRefno] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_StatementFinanceByRefno] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinanceByRefno] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_StatementFinanceByRefno] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_StatementFinanceByRefno] TO [vnteam] 
+GRANT VIEW DEFINITION ON [dbo].[Acc_StatementFinanceByRefno] TO [vnteam] AS [dbo]
