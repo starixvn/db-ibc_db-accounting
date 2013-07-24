@@ -28,7 +28,8 @@ Revisions:
 	- 20130723@Jamie: Change Alias DB03 to DBPOLICY
 						
 Param's Explanation:
-• @CustID: customer id.   
+• @CustID: customer id. 
+  
 */
 
 SET NOCOUNT ON
