@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Task_StatementFinance]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[Task_StatementFinance]
-GO
-
-CREATE PROCEDURE [dbo].[Task_StatementFinance]
+﻿ALTER PROCEDURE [dbo].[Task_StatementFinance]
 AS
  /*
 	Created by: 20120809@Don
@@ -14,8 +7,13 @@ AS
 	
 	Revisions:
 	    - 20130121@Don: Making a copy of table transfer_fi in DB054
+		- 20130724@Jamie: Change Alias 
+			+ DB053 --> DBSUM & DBSUM_STDBY for synchronizing data 
+			+ bodb_Archive --> DBARC 	
 	
  */
+ 
+SET NOCOUNT ON 
 
 CREATE TABLE #Refno_temp (refno BIGINT, winlostdate SMALLDATETIME)
 CREATE CLUSTERED INDEX [CIX_Winlostdate] ON #Refno_temp
@@ -43,7 +41,7 @@ INSERT INTO #Refno_temp
     WHERE c.isInternal = 1 AND bettype > 20000 AND matchid = 0 AND winlostdate < @BalanceUpDay
 
 
-INSERT INTO DB053.bodb_Summary.dbo.transfer_fi
+INSERT INTO DBSUM.bodb_Summary.dbo.transfer_fi
     (
         transid, 
         custid, 
@@ -89,7 +87,7 @@ INSERT INTO DB053.bodb_Summary.dbo.transfer_fi
         INNER JOIN #Refno_temp r ON b.refno = r.refno AND b.winlostdate=r.winlostdate
     WHERE b.matchid = 0 AND b.bettype > 20000
     
-INSERT INTO DB054.bodb_Summary.dbo.transfer_fi
+INSERT INTO DBSUM_STDBY.bodb_Summary.dbo.transfer_fi
     (
         transid, 
         custid, 
@@ -137,7 +135,5 @@ INSERT INTO DB054.bodb_Summary.dbo.transfer_fi
     
 DROP TABLE #Refno_temp
 
-
-
 GO
-GRANT VIEW DEFINITION ON [dbo].[Task_StatementFinance] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Task_StatementFinance] TO [vnteam] AS [dbo]
