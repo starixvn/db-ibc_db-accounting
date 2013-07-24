@@ -109,7 +109,8 @@ SET NOCOUNT ON
 			betfrom			nvarchar (1),
 			sporttype		INT,
 			IsNeutral		BIT,
-			showtime		NVARCHAR (50)
+			showtime		NVARCHAR (50),
+			winlostdate		smalldatetime
 			)
         
  DECLARE @DetailData TABLE (
@@ -183,7 +184,8 @@ SET NOCOUNT ON
 			betfrom,			
 			sporttype,		
 			IsNeutral,		
-			showtime					
+			showtime,
+			winlostdate					
 	FROM (
 			SELECT
 					match.finalhomescore,
@@ -233,7 +235,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom
+					b.betfrom,
+					b.winlostdate
 			FROM 	bettrans14 b with (nolock) 
 					INNER JOIN match14 match with (nolock) on b.matchid= match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
@@ -291,7 +294,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom 
+					b.betfrom,
+					b.winlostdate 
 			FROM  	bettrans14 b  with (nolock) 
 					inner join custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.bettype = 9 
@@ -351,7 +355,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM  	bettrans14 b  with (nolock) 
 					inner join custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.bettype = 29 
@@ -414,7 +419,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom 
+					b.betfrom,
+					b.winlostdate 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN match  with (nolock) on b.matchid = match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
@@ -469,7 +475,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom 
+					b.betfrom,
+					b.winlostdate 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -527,7 +534,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -589,7 +597,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM	 
 					bettrans b with (nolock)
 					INNER JOIN outright odds with (nolock) on b.matchid = odds.orid
@@ -656,7 +665,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN outright14 odds with (nolock) on b.matchid = odds.orid
 					INNER JOIN league l with (nolock) on odds.leagueid = l.leagueid
@@ -721,7 +731,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom 
+					b.betfrom,
+					b.winlostdate 
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 71								--20120405@Hurri
 					AND b.matchid IN (0, 71)
@@ -777,7 +788,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 71								--20120405@Hurri
 					AND b.matchid in (0, 71)
@@ -833,7 +845,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom 
+					b.betfrom,
+					b.winlostdate 
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 73
 					AND b.matchid in (0, 73)
@@ -889,7 +902,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 73
 					AND b.matchid in (0, 73)
@@ -945,7 +959,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 1000
 					AND b.matchid = 1000 
@@ -1001,7 +1016,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom  
+					b.betfrom,
+					b.winlostdate  
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 1000
 					AND b.matchid = 1000 
@@ -1057,7 +1073,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom
+					b.betfrom,
+					b.winlostdate
 			FROM 	bettrans b with (nolock)
 					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -1114,7 +1131,8 @@ SET NOCOUNT ON
 					b.awinlost,
 					b.mwinlost,
 					b.swinlost,
-					b.betfrom
+					b.betfrom,
+					b.winlostdate
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
