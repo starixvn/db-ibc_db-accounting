@@ -95,7 +95,8 @@ SET NOCOUNT ON
 			betfrom			NVARCHAR (1),
 			sporttype		INT,
 			IsNeutral		BIT,
-			showtime		NVARCHAR (50)
+			showtime		NVARCHAR (50),
+			winlostdate		smalldatetime
 			)
         
  DECLARE @DetailData TABLE (
@@ -168,7 +169,8 @@ SET NOCOUNT ON
 			betfrom,			
 			sporttype,		
 			IsNeutral,		
-			showtime		
+			showtime,
+			winlostdate		
 	FROM (
 			SELECT
 					m.finalhomescore,
@@ -227,7 +229,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2
+					0 finalodds2,
+					b.winlostdate
 			FROM 	bettrans14 b with (nolock) 
 					INNER JOIN match14 m with (nolock) on b.matchid= m.matchid
 					INNER JOIN custInfo c with (nolock) on c.custid = b.creator
@@ -294,7 +297,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2
+					0 finalodds2,
+					b.winlostdate
 			FROM  	bettrans14 b  with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.bettype = 9 
@@ -363,7 +367,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2
+					0 finalodds2,
+					b.winlostdate
 			FROM  	bettrans14 b  with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.bettype = 29 
@@ -435,7 +440,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2
+					0 finalodds2,
+					b.winlostdate
 			FROM	bettrans b with (nolock) 
 					INNER JOIN match m  with (nolock) on b.matchid = m.matchid
 					INNER JOIN custInfo c with (nolock) on c.custid = b.creator
@@ -499,7 +505,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2 
+					0 finalodds2,
+					b.winlostdate 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -566,7 +573,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2 
+					0 finalodds2,
+					b.winlostdate 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -636,7 +644,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2 
+					0 finalodds2,
+					b.winlostdate 
 			FROM	 
 					bettrans b with (nolock)
 					INNER JOIN outright odds with (nolock) on b.matchid = odds.orid
@@ -705,7 +714,8 @@ SET NOCOUNT ON
 					0 as virtualrate,
 					0 as isShowOTExRate,
 					0 finalodds,
-					0 finalodds2
+					0 finalodds2,
+					b.winlostdate
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN outright14 odds with (nolock) on b.matchid = odds.orid
 					INNER JOIN league l with (nolock) on odds.leagueid = l.leagueid

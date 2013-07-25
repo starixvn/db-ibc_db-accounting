@@ -157,7 +157,8 @@ BEGIN
 		comm			money,
 		awinlost		money,
 		mwinlost		money,
-		swinlost		money
+		swinlost		money,
+		winlostdate		smalldatetime
         );
         
  DECLARE @DetailData TABLE (
@@ -237,7 +238,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.match14 AS m WITH (NOLOCK)
@@ -255,7 +257,7 @@ BEGIN
                    r.LeagueID,                   
                    o.RacerID as homeid,
                    0 as awayid,
-                   '' as matchcode,
+                   o.RacerNum as matchcode,
                    b.oddsid as Race,
                    o.EventDate,
                    0,
@@ -310,7 +312,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 b WITH (NOLOCK)
                    INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -380,7 +383,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -449,7 +453,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -519,7 +524,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -589,7 +595,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -661,7 +668,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -734,7 +742,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.outright14 AS o WITH (NOLOCK)
@@ -825,7 +834,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.match AS m WITH (NOLOCK)
@@ -844,7 +854,7 @@ BEGIN
                    r.LeagueID,
                    o.RacerID as homeid,
                    0 as awayid,
-                   '' as matchcode,
+                   o.RacerNum as matchcode,
                    b.oddsid as Race,
                    o.EventDate,
                    0,
@@ -899,7 +909,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans b WITH (NOLOCK)
                    INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -970,7 +981,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1039,7 +1051,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1109,7 +1122,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1179,7 +1193,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1251,7 +1266,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1324,7 +1340,8 @@ BEGIN
 				   0 comm,	-- unuse in this report	
 				   awinlost,		
 				   mwinlost,		
-				   swinlost
+				   swinlost,
+				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.outright AS o WITH (NOLOCK)
