@@ -1050,8 +1050,7 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_Rpt_ParlayWon.sql"
       End
       Begin Folder = "SMA total & active member"
-         Script = "Acc_CustStatusHistoryBk.sql"
-         Script = "Acc_CustStatusHistoryUpd.sql"
+         Script = "Acc_CustStatusHistoryUpd_Job.sql"
          Script = "Acc_rpt_CustStatus.sql"
          Script = "Acc_rpt_CustStatusDetails.sql"
       End
