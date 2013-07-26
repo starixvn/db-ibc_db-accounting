@@ -16,7 +16,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	SELECT		
-			b.bettype bettype,
+			71 bettype,
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 			sum(scomm*actualrate) Commission,	
