@@ -45,6 +45,7 @@ AS
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	- 20130724@Elodie: Get winlostdate field
 	- 20130726@Elodie: Define data for bettrans, bettrans14 or bettrans_bk by winlostdate field
+					   Enhance performance
 	*/   
 
 SET NOCOUNT ON    
@@ -130,9 +131,9 @@ DECLARE @DetailData TABLE (
 		betteam   nvarchar(50)  
 		)  
 
-DECLARE @WinlostDate smalldatetime, @MoveBetsDay smalldatetime, @BalanceUpDay smalldatetime
-DECLARE @tmp TABLE (MoveBetsDay smalldatetime, BalanceUpDay smalldatetime) 
-INSERT INTO @tmp
+DECLARE @WinlostDate smalldatetime, @MoveBetsDay smalldatetime, @BalanceUpDay smalldatetime, @bettype int
+DECLARE @tmp TABLE (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime) 
+INSERT INTO @tmp(BalanceUpDay, MoveBetsDay)
 EXEC Age_SelBalanceUpDay
 
 SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
@@ -142,23 +143,33 @@ select 1 from bettrans with (nolock)
 where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )  
-	SELECT @WinlostDate = winlostdate from bettrans with (nolock) where transid = @TransID
+	SELECT @WinlostDate = winlostdate, @bettype = bettype
+	from bettrans with (nolock)   
+	where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
+	AND custid = @Custid
 ELSE IF exists(  
 select 1 from bettrans14 with (nolock)   
 where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )
-	SELECT @WinlostDate = winlostdate from bettrans14 with (nolock) where transid = @TransID
+	SELECT @WinlostDate = winlostdate, @bettype = bettype 
+	from bettrans14 with (nolock)   
+	where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
+	AND custid = @Custid
 ELSE IF exists(  
 select 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
 where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )
-	SELECT @WinlostDate = winlostdate from DBARC.bodb_archive.dbo.bettrans_bk with (nolock) where transid = @TransID
+	SELECT @WinlostDate = winlostdate, @bettype = bettype 
+	from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
+	where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
+	AND custid = @Custid  
 
 --Bettrans
 IF @WinlostDate > @MoveBetsDay  
 BEGIN  
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
 --Sportbooks  
 INSERT INTO @Data  
 	select   
@@ -230,7 +241,8 @@ where
 	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and   
 	b.transid = @TransID  
  
---Mix Parlay  
+--Mix Parlay 
+IF @bettype = 9 
 INSERT INTO @Data  
 	select   
 	9 bettype,     
@@ -297,6 +309,7 @@ where
 	and bettype = 9    
 	and b.transid = @TransID  
 
+IF @bettype = 29
 --Combination Mix Parlay  
 SELECT @refno = refno  
 FROM bettrans b WITH(NOLOCK)  
@@ -307,6 +320,7 @@ WHERE b.custid = @Custid
 	and b.transid = @TransID  
   
 --- Casino  
+IF @bettype = 71
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -373,6 +387,7 @@ where
 	AND b.refno = @TransID  
 
 --IBC Bingo  
+IF @bettype = 73
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -439,6 +454,7 @@ where
 	AND b.refno = @TransID  
 
 --- P2P  
+IF @bettype = 1000
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -505,6 +521,7 @@ where
 	AND b.transid = @TransID  
  
 --Outright  
+IF @bettype = 10
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -572,6 +589,7 @@ where b.bettype = 10
 	and b.transid = @TransID  
  
 --HR  
+IF @bettype in (31,32,33,41,42,43)  
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -648,6 +666,7 @@ where b.bettype in (31,32,33,41,42,43)
 order by b.transid    
 
 -- Virtual HR  
+IF @bettype in (1231, 1232, 1233, 1237, 1238) 
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -727,6 +746,7 @@ END
 --Bettrans14  
 ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay 
 BEGIN  
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
 --Sportbooks  
 INSERT INTO @Data  
 select   
@@ -796,6 +816,7 @@ where
 	b.transid = @TransID  
  
 --Mix Parlay  
+IF @bettype = 9
 INSERT INTO @Data  
 select   
 	9 bettype,     
@@ -862,7 +883,8 @@ where
 	and bettype = 9    
 	and b.transid = @TransID  
 
---Combination Mix Parlay  
+--Combination Mix Parlay 
+IF @bettype = 29 
 SELECT @refno = refno  
 FROM bettrans14 b WITH(NOLOCK)  
 WHERE b.custid = @Custid    
@@ -872,6 +894,7 @@ WHERE b.custid = @Custid
 	and b.transid = @TransID   
  
 --- Casino  
+IF @bettype = 71
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -938,6 +961,7 @@ where
 	AND b.refno = @TransID  
 
 --IBC Bingo  
+IF @bettype = 73
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -1004,6 +1028,7 @@ where
 	AND b.refno = @TransID  
 
 --- P2P  
+IF @bettype = 1000
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -1070,6 +1095,7 @@ where
 	AND b.transid = @TransID  
 
 --Outright  
+IF @bettype = 10
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1136,6 +1162,7 @@ where b.bettype = 10
 	and b.transid = @TransID  
  
 --HR  
+IF @bettype in (31,32,33,41,42,43)  
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1211,6 +1238,7 @@ where b.bettype in (31,32,33,41,42,43)
 order by b.transid    
 
 -- Virtual HR  
+IF @bettype in (1231, 1232, 1233, 1237, 1238)
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1291,6 +1319,7 @@ END
 ELSE IF @WinlostDate < @BalanceUpDay 
 BEGIN  
 --Sportbooks  
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231, 1232, 1233, 1237, 1238)
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1359,6 +1388,7 @@ where
 	b.transid = @TransID  
  
 --Mix Parlay  
+IF @bettype = 9
 INSERT INTO @Data  
 select   
 	9 bettype,     
@@ -1425,7 +1455,8 @@ where
 	and bettype = 9    
 	and b.transid = @TransID  
 
---Combination Mix Parlay  
+--Combination Mix Parlay 
+IF @bettype = 29 
 SELECT @refno = refno  
 FROM DBARC.bodb_archive.dbo.bettrans_bk b WITH(NOLOCK)  
 WHERE b.custid = @Custid    
@@ -1435,6 +1466,7 @@ WHERE b.custid = @Custid
 	and b.transid = @TransID  
 
 --- Casino  
+IF @bettype = 71
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -1500,7 +1532,8 @@ where
 	AND bettype = 71        --20120405@Hurri  
 	AND b.refno = @TransID  
 
---- IBC Bingo  
+--- IBC Bingo 
+IF @bettype = 73 
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -1567,6 +1600,7 @@ where
 	AND b.refno = @TransID  
 
 --- P2P  
+IF @bettype = 1000
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -1634,6 +1668,7 @@ where
  
 
 --Outright  
+IF @bettype = 10
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1700,6 +1735,7 @@ where b.bettype = 10
 	and b.transid = @TransID     
 
 --HR  
+IF @bettype in (31,32,33,41,42,43)  
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1775,6 +1811,7 @@ where b.bettype in (31,32,33,41,42,43)
 order by b.transid   
 
 -- Virtual HR  
+IF @bettype in (1231, 1232, 1233, 1237, 1238)
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1852,7 +1889,7 @@ where
 END  
 
 ---- get data of systemp parlay  
-IF @refno IS NOT NULL  
+IF @refno IS NOT NULL 
 BEGIN  
 -- tickets in bettrans   
 INSERT INTO @Data  
@@ -2058,51 +2095,53 @@ END
 SELECT * FROM @Data  
 ORDER BY transid    
 
+IF @bettype between 1101 and 1199 
+BEGIN
+	INSERT INTO @DetailData  
+	SELECT   
+		BG.refno,   
+		BG.odds,   
+		BG.stake,  
+		BG.status,  
+		BG.apositiontaking,   
+		BG.mpositiontaking,   
+		BG.spositiontaking,  
+		BG.bettype,  
+		BG.betteam    
+	FROM bettransg BG with (NOLOCK)  
+		INNER JOIN @Data B ON BG.refno = B.refno  
+	WHERE B.Bettype between 1101 and 1199  
+	   
 
-INSERT INTO @DetailData  
-SELECT   
-	BG.refno,   
-	BG.odds,   
-	BG.stake,  
-	BG.status,  
-	BG.apositiontaking,   
-	BG.mpositiontaking,   
-	BG.spositiontaking,  
-	BG.bettype,  
-	BG.betteam    
-FROM bettransg BG with (NOLOCK)  
-	INNER JOIN @Data B ON BG.refno = B.refno  
-WHERE B.Bettype between 1101 and 1199  
-   
+	INSERT INTO @DetailData  
+	SELECT   
+		BG.refno,   
+		BG.odds,   
+		BG.stake,  
+		BG.status,  
+		BG.apositiontaking,   
+		BG.mpositiontaking,   
+		BG.spositiontaking,  
+		BG.bettype,  
+		BG.betteam    
+	FROM bettransg14 BG with (NOLOCK)  
+		INNER JOIN @Data B ON BG.refno = B.refno  
+	WHERE B.Bettype between 1101 and 1199  
 
-INSERT INTO @DetailData  
-SELECT   
-	BG.refno,   
-	BG.odds,   
-	BG.stake,  
-	BG.status,  
-	BG.apositiontaking,   
-	BG.mpositiontaking,   
-	BG.spositiontaking,  
-	BG.bettype,  
-	BG.betteam    
-FROM bettransg14 BG with (NOLOCK)  
-	INNER JOIN @Data B ON BG.refno = B.refno  
-WHERE B.Bettype between 1101 and 1199  
-
-INSERT INTO @DetailData  
-SELECT   
-	BG.refno,   
-	BG.odds,   
-	BG.stake,  
-	BG.status,  
-	BG.apositiontaking,   
-	BG.mpositiontaking,   
-	BG.spositiontaking,  
-	BG.bettype,  
-	BG.betteam    
-FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)  
-	INNER JOIN @Data B ON BG.refno = B.refno  
-WHERE B.Bettype between 1101 and 1199  
+	INSERT INTO @DetailData  
+	SELECT   
+		BG.refno,   
+		BG.odds,   
+		BG.stake,  
+		BG.status,  
+		BG.apositiontaking,   
+		BG.mpositiontaking,   
+		BG.spositiontaking,  
+		BG.bettype,  
+		BG.betteam    
+	FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)  
+		INNER JOIN @Data B ON BG.refno = B.refno  
+	WHERE B.Bettype between 1101 and 1199  
+END
    
 SELECT * FROM @DetailData  
