@@ -76,7 +76,7 @@ SET NOCOUNT ON
  WHERE ISNUMERIC(MaxTurnover)=1 and cast(MaxTurnover AS FLOAT) <= 999999999999 and cast(MaxTurnover AS FLOAT) >= 0 and round(MaxTurnover,0) = MaxTurnover  
   AND EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID)  
   AND NOT EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid)  
-  AND CustID NOT IN (SELECT CustID FROM @tmpDuplicateCust)       
+  AND CustID NOT IN (SELECT CustID FROM @tmpDuplicateCust where CustID IS NOT NULL)       
    
  --Failed Transaction  
  INSERT INTO @tblFail(Seq, SMAName, CustID, MatchID, MaxTurnover, Reason)  
@@ -84,7 +84,7 @@ SET NOCOUNT ON
    CASE WHEN ISNUMERIC(MaxTurnover)=0 or (ISNUMERIC(MaxTurnover)=1 and (cast(MaxTurnover AS FLOAT) < 0 or cast(MaxTurnover AS FLOAT) > 999999999999)) or round(MaxTurnover,0) <> MaxTurnover THEN 'Invalid Max Turnover.'  
      WHEN NOT EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE roleid = 4 and custInfo.custid = t.CustID) THEN 'Invalid SMA Name.'   
      WHEN EXISTS (SELECT 1 FROM DownlineTurnOver_Setting ds WITH (NOLOCK) WHERE t.CustID = ds.custid and t.MatchID = ds.matchid) THEN 'The SMA already exists in match: ' + cast(t.MatchID AS VARCHAR(10)) + '.'  
-     WHEN CustID IN (SELECT CustID FROM @tmpDuplicateCust) THEN 'Duplicate SMA Name.'  
+     WHEN CustID IN (SELECT CustID FROM @tmpDuplicateCust where CustID IS NOT NULL) THEN 'Duplicate SMA Name.'  
    END AS Reason    
  FROM (SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS t        
          
