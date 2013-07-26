@@ -44,6 +44,7 @@ AS
 	- 20130227@Elodie: Add Virtual HR product  
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	- 20130724@Elodie: Get winlostdate field
+	- 20130726@Elodie: Define data for bettrans, bettrans14 or bettrans_bk by winlostdate field
 	*/   
 
 SET NOCOUNT ON    
@@ -129,14 +130,34 @@ DECLARE @DetailData TABLE (
 		betteam   nvarchar(50)  
 		)  
 
+DECLARE @WinlostDate smalldatetime, @MoveBetsDay smalldatetime, @BalanceUpDay smalldatetime
+DECLARE @tmp TABLE (MoveBetsDay smalldatetime, BalanceUpDay smalldatetime) 
+INSERT INTO @tmp
+EXEC Age_SelBalanceUpDay
 
---Bettrans  
+SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
 
 IF exists(  
 select 1 from bettrans with (nolock)   
 where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )  
+	SELECT @WinlostDate = winlostdate from bettrans with (nolock) where transid = @TransID
+ELSE IF exists(  
+select 1 from bettrans14 with (nolock)   
+where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
+AND custid = @Custid  
+)
+	SELECT @WinlostDate = winlostdate from bettrans14 with (nolock) where transid = @TransID
+ELSE IF exists(  
+select 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
+where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
+AND custid = @Custid  
+)
+	SELECT @WinlostDate = winlostdate from DBARC.bodb_archive.dbo.bettrans_bk with (nolock) where transid = @TransID
+
+--Bettrans
+IF @WinlostDate > @MoveBetsDay  
 BEGIN  
 --Sportbooks  
 INSERT INTO @Data  
@@ -704,11 +725,7 @@ where
 END  
 
 --Bettrans14  
-ELSE IF exists(  
-select 1 from bettrans14 with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
-AND custid = @Custid  
-)  
+ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay 
 BEGIN  
 --Sportbooks  
 INSERT INTO @Data  
@@ -1271,11 +1288,7 @@ where
  
 END  
 --bettrans_bk  
-ELSE IF exists(  
-select 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
-AND custid = @Custid  
-)  
+ELSE IF @WinlostDate < @BalanceUpDay 
 BEGIN  
 --Sportbooks  
 INSERT INTO @Data  
