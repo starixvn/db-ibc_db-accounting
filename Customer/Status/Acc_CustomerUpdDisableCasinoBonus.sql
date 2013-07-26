@@ -157,7 +157,7 @@ End
 
 declare @LogSPData varchar(2000)
 
-Select @LogSPData = '<Acc_CustomerUpdDisableVS CustID="'+ coalesce(cast(@CustID as varchar(50)),space(1)) + '" '+
+Select @LogSPData = '<Acc_CustomerUpdDisableCasinoBonus CustID="'+ coalesce(cast(@CustID as varchar(50)),space(1)) + '" '+
 					'Disable="'+ coalesce(cast(@Disable as varchar(50)),space(1)) + '" '+
 					'DisableDownlines="'+ coalesce(cast(@DisableDownlines as varchar(50)),space(1)) + '" '+
 					'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1)) + '" '+
@@ -170,7 +170,6 @@ Select @LogSPData = '<Acc_CustomerUpdDisableVS CustID="'+ coalesce(cast(@CustID 
 set @endRun = getdate()
 set @duration  = datediff (millisecond,@startRun,@endRun)
 
-/*1107	Acc_CustomerUpdDisableHR	Update Enabled/Disabled Horse racing status*/
 BEGIN TRY
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID = @UserID,
