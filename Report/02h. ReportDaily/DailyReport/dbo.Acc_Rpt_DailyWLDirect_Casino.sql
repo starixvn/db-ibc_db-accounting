@@ -17,7 +17,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	SELECT		
-			b.bettype bettype,
+			71 bettype,
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 			sum(scomm*actualrate) Commission,	
@@ -32,7 +32,9 @@ BEGIN
 			AND b.ruben = 1		
 	GROUP BY b.Bettype
 	ORDER BY b.Bettype	
+
 END 
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino] TO [bodbAdminNet]
