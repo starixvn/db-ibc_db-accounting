@@ -286,6 +286,7 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_CustomerUpdMoveSite.sql"
       End
       Begin Folder = "Status"
+         Script = "Acc_CustomerSelCasinoBonusStatus.sql"
          Script = "Acc_CustomerUpdDisableCasinoBonus.sql"
          Begin Folder = "AutoSuspend"
             Script = "dbo.Acc_CustomerUpdAutoSuspend.proc.sql"
