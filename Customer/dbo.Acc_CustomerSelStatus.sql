@@ -25,6 +25,7 @@ Revisions:
 						- Add DisableLiveCasino, SyncLiveCasino
 	- 20120808@Sophia: Add DisableVirtualSports, HideVirtualSports	
 	- 20120927@Sophia: Get DoubleCommLosing	
+	- 20130719@Elodie: Get DisableCasinoBonus field  
 	- 20130723@Jamie: Change Alias DB03 to DBPOLICY
 						
 Param's Explanation:
@@ -122,10 +123,12 @@ SELECT ISNULL(reject,0) AS Suspend,
 	   @IsInternal AS IsInternal,
 	   ISNULL(DisableVirtualSports,0) as DisableVirtualSports,
 	   ISNULL(HideVirtualSports,0) as HideVirtualSports,
+	   ISNULL(DisableCasinoBonus,0) as DisableCasinoBonus,  
 	   ISNULL(DoubleCommLosing,0) as DoubleCommLosing
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 WHERE ci.CustID = @CustID
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
 GO
