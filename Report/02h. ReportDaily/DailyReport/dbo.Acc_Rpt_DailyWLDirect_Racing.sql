@@ -6,11 +6,12 @@ SET NOCOUNT ON
 /*	Created: Johnson
 	Date: 2011-03-14
 	Task: Winloss Summary History for Racing
-	DB: DB06.bodb02
+	DB: DBACC/bodb02
 	
 	Revisions: 		
 		- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
 		- 20130618@Johnson: Add NSW racing's pools from AUST
+		- 20130730@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				
 */
 DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 	
@@ -58,6 +59,7 @@ DECLARE @CommSetting TABLE (matchid int primary key,
 	WHERE m.eventdate = @winlostdate and l.sporttype between 151 and 153
 		
 	SELECT	cs.sporttype,
+			case when dep.custid is null then 1 else 2 end as site,
 			sum((b.winlost -b.actual_stake)*b.actualrate) winlost,
 			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) position,
 			sum(b.scomm*b.actualrate) commission,
@@ -80,6 +82,7 @@ DECLARE @CommSetting TABLE (matchid int primary key,
 				from	bettransm with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
+			 left join (SELECT custid FROM f_DepSuper_1('All')) dep ON b.srecommend = dep.custid
 	WHERE	b.ruben =1 
 			and b.bettype in (31,32,33)
 			and b.matchid >0
@@ -87,8 +90,8 @@ DECLARE @CommSetting TABLE (matchid int primary key,
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')
 			and b.statusID NOT IN (101,102,103,121)
 
-	GROUP BY cs.sporttype 
-	ORDER BY cs.sporttype
+	GROUP BY cs.sporttype ,case when dep.custid is null then 1 else 2 end
+	ORDER BY cs.sporttype, site
 	
 	
 	
