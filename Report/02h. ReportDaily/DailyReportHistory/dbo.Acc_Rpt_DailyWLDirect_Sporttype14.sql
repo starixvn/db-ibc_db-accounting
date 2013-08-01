@@ -53,7 +53,8 @@ AS
 		- 20121102@Elodie: Use actual rate instead of virtural rate for Virtual sport	]
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
-		- 20130618@Johnson: Add NSW racing's pools from AUST	
+		- 20130618@Johnson: Add NSW racing's pools from AUST
+		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -73,21 +74,28 @@ BEGIN
 			@HR_TO			money,
 			@P2P_LineTotal  money
 			
-			
-			CREATE TABLE #src(	
-							matchid INT, 
-							bettype INT, 
-							winlost_actualrate MONEY, 
-							winlost_virtualrate MONEY,
-							position_actualrate MONEY, 
-							position_virtualrate MONEY, 
-							commission_actualrate MONEY, 
-							commission_virtualrate MONEY, 
-							Linetotal_actualrate MONEY,
-							Linetotal_virtualrate MONEY,
-							turnover_actualrate MONEY,
-							turnover_virtualrate MONEY
-						)
+	DECLARE @RBWinlost TABLE(site tinyint,
+							winlost money,
+							pos money,
+							comm money,
+							linetotal money,
+							turnover money
+						)		
+						
+	CREATE TABLE #src(	
+					matchid INT, 
+					bettype INT, 
+					winlost_actualrate MONEY, 
+					winlost_virtualrate MONEY,
+					position_actualrate MONEY, 
+					position_virtualrate MONEY, 
+					commission_actualrate MONEY, 
+					commission_virtualrate MONEY, 
+					Linetotal_actualrate MONEY,
+					Linetotal_virtualrate MONEY,
+					turnover_actualrate MONEY,
+					turnover_virtualrate MONEY
+				)
 	----------------------------------------------------------------------
 
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
@@ -151,18 +159,19 @@ BEGIN
 									   WHERE c.username ='FI3rdShare'+ e.currency)*/
 
 	----------------------------------------------------------------------
-
-	SELECT	@HR_Winlost		= sum((b.winlost -b.actual_stake)*b.actualrate),
-			@HR_Pos			= sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate),
-			@HR_Comm		= sum(b.scomm*b.actualrate),
-			@HR_LineTotal	= -(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
+	INSERT INTO @RBWinlost (site, winlost, pos, comm, linetotal, turnover)
+	SELECT	case when dep.custid is null then 1 else 2 end as site,
+		sum((b.winlost -b.actual_stake)*b.actualrate) as winlost,
+		sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) as pos,
+		sum(b.scomm*b.actualrate) as comm,
+		-(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
 								- sum(case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
 								+ sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
 													when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
 													when 33 then bm.TOPhum*cs.ToteCommWP 
 													else 0 end)*b.actualrate) --commIncomeIBC
-								- sum(b.scomm*b.actualrate)) ,
-			@HR_TO			= sum(case when bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end)
+								- sum(b.scomm*b.actualrate)) as linetotal,
+		sum(case when bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end) as turnover
 			
 	FROM	bettrans14 b with (nolock)
 			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid  
@@ -173,13 +182,15 @@ BEGIN
 						sum(case when bettype = 32 and liveawayscore = 0 then 0 when bettype = 31 or (bettype = 32 and liveawayscore <> 0) then stake*(1 -tpositiontaking - isnull(oddsspread,0)) else 0 end) TOPhum
 				from	bettransm14 with (nolock)
 				group by refno
-			 )bm on b.transid = bm.refno 
+			 )bm on b.transid = bm.refno
+			 left join (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 
 	WHERE	b.ruben =1 
 			and b.bettype in (31,32,33)
 			and b.matchid >0
 			and b.winlostdate = @winlostdate
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')	
-			and b.statusID not in (101,102,103,121)	
+			and b.statusID not in (101,102,103,121)
+	GROUP BY case when dep.custid is null then 1 else 2 end
 	---------------------------------------------------------------------------------------
 
 	--Declare @temp table to contain all matches based on @winlostdate
@@ -198,7 +209,8 @@ BEGIN
 
 	--------------------------------------------------------------------------------
 	INSERT INTO #src
-	SELECT	matchid, bettype, 
+	SELECT	matchid, bettype,
+			CASE WHEN dep.custid is null then 1 else 2 end as site, 
 			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
 			SUM((winlost-actual_stake)*virtualrate) winlost_virtualrate,
 			SUM((awinlost+mwinlost+swinlost)* actualrate) position_actualrate,
@@ -210,11 +222,12 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, -- don't need calculate actualrate for system parlay
 			SUM((1-tpositiontaking)*ABS(CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END)*virtualrate) turnover_virtualrate
 	FROM bettrans14 b WITH(NOLOCK)
+		left join (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 
 	WHERE winlostdate = @winlostdate
 		AND bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
-	GROUP BY matchid, bettype 
+	GROUP BY matchid, bettype, CASE WHEN dep.custid is null then 1 else 2 end 
 	
 	--Section 2: all products that enable virtual currency, DisplayOrder field:	1 -> 100
 	SELECT
@@ -222,6 +235,7 @@ BEGIN
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
 			case when m.sporttype> 1 then 2 else 1 end as SportType,			
 			0 ibc,
+			site,
 			SUM(winLost_virtualrate) AS winlost,
 			SUM(position_virtualrate) AS Position,
 			sum(commission_virtualrate) AS Commission,	
@@ -239,7 +253,8 @@ BEGIN
 	GROUP BY		
 			case when m.sporttype> 1 THEN 2 ELSE 1 end,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
-			case when m.sporttype> 1 then 2 else 1 end
+			case when m.sporttype> 1 then 2 else 1 end,
+			site
 
 	-- Get win lost of agent '8RM'
 	UNION ALL
@@ -248,6 +263,7 @@ BEGIN
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
 			case when m.sporttype> 1 then 2 else 1 end as SportType,	
 			1 ibc,
+			0 as site,
 			-sum(winlost-actual_stake) WinLost,
 			-sum(awinlost+mwinlost+swinlost) Position,
 			sum(scomm) Commission,				
@@ -278,6 +294,7 @@ BEGIN
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
 			case when m.sporttype> 1 then 2 else 1 end as SportType,	
 			2 ibc,
+			0 as site,
 			-sum(winlost-actual_stake) WinLost,
 			-sum(awinlost+mwinlost+swinlost) Position,
 			sum(scomm) Commission,	
@@ -303,7 +320,7 @@ BEGIN
 
 	UNION ALL
 	SELECT 
-			3,'System Parlay', 98, 0,
+			3,'System Parlay', 98, 0,site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -315,10 +332,11 @@ BEGIN
 	FROM	#src AS b WITH (NOLOCK)
 	WHERE	bettype = 29 
 			AND matchid = 29
+	GROUP BY site
 			
 	UNION ALL
 	SELECT 
-			4,'Mix Parlay', 99, 0,
+			4,'Mix Parlay', 99, 0,site
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -330,11 +348,12 @@ BEGIN
 	FROM	#src b WITH (NOLOCK)
 	WHERE	bettype = 9 
 			AND matchid = 9
+	GROUP BY site
 			
 	----NUMBER GAME
 	UNION ALL
 	SELECT
-			5,'Number Game', 161, 0,
+			5,'Number Game', 161, 0, site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -345,6 +364,7 @@ BEGIN
 			1 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	WHERE	b.bettype BETWEEN 81 AND 120
+	GROUP BY site
 
 	--------------------------------------------------------------------------------
 	--Section 1: all products that disable virtual currency, DisplayOrder field: 101 -> 200
@@ -352,6 +372,7 @@ BEGIN
 	--P2P 
 	UNION ALL
 	SELECT	101,'P2P', 253, 0,
+			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			0 Position,
 			sum(scomm *actualrate) Commission,	
@@ -361,15 +382,17 @@ BEGIN
 			0 VirtualTurnover,
 			0 EnableVirtual
 	from	bettrans14 bettrans with (nolock)
+		left join (select custid from f_DepSuper_1('All')) dep ON bettrans.srecommend = dep.custid 
 	where 	bettrans.bettype = 1000
 			AND bettrans.matchid = 1000 
 			and bettrans.ruben=1  
 			and	bettrans.winlostdate = @winlostdate
 			AND bettrans.statusID NOT IN (101, 102,103,121) 
+	group by case when dep.custid is null then 1 else 2 end			
 			
 	--BINGO
 	UNION ALL
-	SELECT	102,'Bingo', 252, 0,
+	SELECT	102,'Bingo', 252, 0,site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -381,6 +404,7 @@ BEGIN
 	from	#src with (nolock)
 	where 	bettype = 73
 			AND matchid IN (0, 73)	
+	group by site
 			
 	---Live Casino
 	UNION ALL
@@ -388,6 +412,7 @@ BEGIN
 			103,'Live Casino',
 			162,		
 			0 ibc,--case recommend when 52466 then 1 else 0 end ibc,
+			site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -399,10 +424,11 @@ BEGIN
 	FROM	#src b WITH (NOLOCK)
 	WHERE	b.bettype BETWEEN 1101 AND 1199
 			AND b.matchid > 0
+	GROUP BY site
 			
 	----CASINO
 	UNION ALL
-	SELECT	104,'Casino', 251, 0,
+	SELECT	104,'Casino', 251, 0,site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -414,22 +440,24 @@ BEGIN
 	from	#src with (nolock)
 	where 	bettype IN (71, 72)
 			AND matchid IN (0, 71)
+	group by site
 			
 	UNION ALL 
-	SELECT	105,'Racing', 151, 0,
-			@HR_Winlost WinLost,
-			@HR_Pos Position,
-			@HR_Comm Commission,
-			@HR_LineTotal AS RealLineTotal,
+	SELECT	105,'Racing', 151, 0,site,
+			Winlost,
+			Pos Position,
+			Comm Commission,
+			LineTotal AS RealLineTotal,
 			0 AS VirtualLineTotal,
-			@HR_TO RealTurnover,
+			turnover RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
+	FROM @RBWinlost
 				
 	----VIRTUAL SPORT
 	UNION ALL
 	SELECT
-			106,'Virtual Sports', 180, 0,
+			106,'Virtual Sports', 180, 0, site,
 			SUM(winlost_actualrate) WinLost,
 			SUM(position_actualrate) Position,
 			SUM(commission_actualrate) Commission,	
@@ -441,7 +469,7 @@ BEGIN
 	FROM	#src b WITH (NOLOCK)			
 	WHERE	b.bettype BETWEEN 1201 AND 1299
 	
-	ORDER BY DisplayOrder desc, ibc
+	ORDER BY DisplayOrder desc, ibc, site
 				
 	SELECT	@LineTotal = ISNULL(SUM(LineTotal_actualrate), 0) 
 	FROM	#src b WITH (NOLOCK)
@@ -455,7 +483,8 @@ BEGIN
 			and	bettrans.winlostdate = @winlostdate
 			AND bettrans.statusID NOT IN (101, 102,103,121) 
 
-	SELECT	@LineTotal = @LineTotal + ISNULL(@HR_LineTotal,0) + ISNULL(@P2P_lineTotal,0)
+	SELECT	@LineTotal = @LineTotal + ISNULL(SUM(LineTotal),0) + ISNULL(@P2P_lineTotal,0)
+	FROM @RBWinlost
 	
 	DROP TABLE #src
 END

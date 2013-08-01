@@ -11,9 +11,12 @@ SET NOCOUNT ON
 	Revisions: 
 		- 20121102@Elodie: Use actual rate instead of virtural rate for Virtual sport		
 		- 20130225@Elodie: Add Virtual Horse Racing report
+		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
+		
 */
 SELECT
 		m.sporttype SportType,
+		case when dep.custid is null then 1 else 2 end as site,
 		sum((winlost-actual_stake)*actualrate) WinLost,
 		sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 		sum(scomm*actualrate) Commission,	
@@ -21,18 +24,20 @@ SELECT
 		sum((1-tpositiontaking)*stake*actualrate) Turnover
 FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN match14 m on b.matchid = m.matchid
+		LEFT JOIN  (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 		
 WHERE
 		b.winlostdate = @winlostdate
 		AND b.bettype BETWEEN 1201 AND 1299 AND b.bettype not in (1231, 1232, 1233, 1237, 1238)
 		AND b.matchid > 0 
 		AND b.statusID NOT IN (101, 102,103) --('VOID', 'REJECT','REFUND')  
 		AND b.ruben = 1		
-GROUP BY m.sporttype
+GROUP BY m.sporttype, case when dep.custid is null then 1 else 2 end 
 
 -- Virtual HR
 UNION ALL
 SELECT
 		r.SportType SportType,
+		case when dep.custid is null then 1 else 2 end as site,
 		sum((winlost-actual_stake)*actualrate) WinLost,
 		sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 		sum(scomm*actualrate) Commission,	
@@ -40,6 +45,7 @@ SELECT
 		sum((1-tpositiontaking)*stake*actualrate) Turnover
 FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN VSRaceInfo r ON r.EventID = b.matchid
+		LEFT JOIN  (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 		
 WHERE
 		b.winlostdate = @winlostdate
 		AND b.bettype in (1231, 1232, 1233, 1237, 1238)
@@ -47,8 +53,8 @@ WHERE
 		AND b.statusID NOT IN (101, 102,103) --('VOID', 'REJECT','REFUND') 
 		AND b.ruben = 1		
 		
-GROUP BY r.sporttype
-ORDER BY SportType
+GROUP BY r.sporttype, case when dep.custid is null then 1 else 2 end 
+ORDER BY SportType, site
 		
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_VirtualSports14] TO [bodbAdminNet]

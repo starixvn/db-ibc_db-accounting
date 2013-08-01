@@ -69,7 +69,7 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	
+	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(site tinyint,
 							winlost money,
 							pos money,
@@ -77,7 +77,7 @@ BEGIN
 							linetotal money,
 							turnover money								
 						)			
-
+	
 	CREATE TABLE #src(	site	TINYINT,
 						matchid INT, 
 						bettype INT, 
@@ -465,7 +465,7 @@ BEGIN
 	WHERE	b.bettype BETWEEN 1201 AND 1299
 	GROUP BY site			 
 	ORDER BY DisplayOrder desc, ibc	, site
-			
+					
 	SELECT	@LineTotal = ISNULL(SUM(LineTotal_actualrate), 0) 
 	FROM	#src b WITH (NOLOCK)
 	WHERE	bettype NOT IN (31,32,33,1000)	

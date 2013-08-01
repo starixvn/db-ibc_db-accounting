@@ -30,6 +30,7 @@ SET NOCOUNT ON
 		- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
+		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
 */
  
 	Declare @tmpBettype table (Bettype int primary key, DisplayOrder int)
@@ -94,6 +95,7 @@ SET NOCOUNT ON
 	SELECT		
 			b.liveindicator,
 			bt.Bettype,
+			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*virtualrate) WinLost,
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
@@ -104,6 +106,7 @@ SET NOCOUNT ON
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
+			LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 		
 	WHERE
 			b.winlostdate = @winlostdate
 			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 and 1334)
@@ -115,9 +118,10 @@ SET NOCOUNT ON
 	GROUP BY		
 			b.liveindicator,
 			bt.Bettype,
-			bt.DisplayOrder
+			bt.DisplayOrder,
+			case when dep.custid is null then 1 else 2 end
 	ORDER BY
-			b.liveindicator, bt.DisplayOrder
+			b.liveindicator, bt.DisplayOrder,site
 	
 	SELECT	b.liveindicator, 
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM

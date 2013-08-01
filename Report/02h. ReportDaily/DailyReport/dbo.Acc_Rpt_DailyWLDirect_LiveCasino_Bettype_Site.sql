@@ -41,7 +41,9 @@ SET NOCOUNT ON
 	GROUP BY site
 	ORDER BY site
 
-
+	DROP TABLE #super
+	
+	
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino_Bettype_Site] TO [bodbAdminNet]
 	
