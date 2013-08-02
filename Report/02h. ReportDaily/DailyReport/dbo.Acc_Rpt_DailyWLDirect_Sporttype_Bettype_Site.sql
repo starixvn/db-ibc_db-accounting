@@ -20,13 +20,13 @@ AS
 SET NOCOUNT ON
 	--Declare @temp table to contain all matches
 	DECLARE @Match TABLE (matchid int, type varchar(10), primary key(matchid, type))
-	CREATE TABLE #super (custid int primary key , site varchar(50))
-
-	INSERT INTO #super (custid, site)
+	CREATE TABLE #DepAgent (custid int primary key , site varchar(50))
+	
+	INSERT INTO #DepAgent (custid, site)
 	SELECT c.custid, site
 	FROM customer c WITH(NOLOCK)
-		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON c.custid = dep.custid
-	WHERE roleid = 4
+		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON c.srecommend = dep.custid
+	WHERE roleid = 2
 		AND 1= CASE WHEN @site = 1 AND dep.custid IS NULL THEN 1
 					WHEN @site = 2 AND dep.custid IS NOT NULL THEN 1 ELSE 0 END
 		
@@ -43,7 +43,7 @@ SET NOCOUNT ON
 	WHERE	sp.sporttype = @sporttype 
 			AND ExRisk = 0
 			
-	SELECT s.site,
+	SELECT ag.site,
 		sum((winlost-actual_stake)*virtualrate) WinLost,
 		sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 		sum(scomm*virtualrate) Commission,	
@@ -53,7 +53,7 @@ SET NOCOUNT ON
 		sum((1-tpositiontaking)* ABS(stake) * virtualrate) VirtualTurnover
 	FROM bettrans b with(NOLOCK)
 		INNER JOIN @Match m ON b.matchid = m.matchid
-		INNER JOIN #super s ON b.srecommend = s.custid
+		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE winlostdate = @winlostdate
 		AND b.bettype = @bettype				
 		AND b.statusID NOT IN (101, 102,103) 
@@ -62,7 +62,7 @@ SET NOCOUNT ON
 	GROUP BY site
 	ORDER BY site
 	
-	DROP TABLE #super
+	DROP TABLE #DepAgent
 	
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype_Bettype_Site] TO [bodbAdminNet]

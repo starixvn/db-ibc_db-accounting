@@ -17,6 +17,14 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2
+				
 	SELECT		
 			71 bettype,
 			case when dep.custid is null then 1 else 2 end as site,
@@ -26,7 +34,7 @@ BEGIN
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
 			0 Turnover
 	FROM	bettrans14 b WITH (NOLOCK)
-		LEFT JOIN  (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 		
+		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE	b.winlostdate = @winlostdate
 			AND b.bettype IN(71, 72)								--20120405@Hurri
 			AND b.matchid IN (0, 71)
@@ -35,7 +43,8 @@ BEGIN
 			AND b.ruben = 1		
 	GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end
 	ORDER BY b.Bettype, site	
-
+	
+	DROP TABLE #DepAgent
 END 
 
 GO

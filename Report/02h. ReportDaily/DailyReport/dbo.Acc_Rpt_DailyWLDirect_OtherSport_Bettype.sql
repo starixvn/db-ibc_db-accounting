@@ -31,8 +31,14 @@ SET NOCOUNT ON
 */
 
 	Declare @tmpBettype table (Bettype int primary key, DisplayOrder int)
-
-
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2	
+		
 	Insert into @tmpBettype
 	select 1, 1 --'Handicap'
 	UNION ALL
@@ -104,7 +110,7 @@ SET NOCOUNT ON
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
-			LEFT JOIN (SELECT custid FROM f_DepSuper_1('All')) dep ON b.srecommend = dep.custid
+			LEFT JOIN (SELECT custid FROM #DepAgent) dep ON b.recommend = dep.custid
 	WHERE
 			winlostdate = @winlostdate
 			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 and 1334)
@@ -153,7 +159,11 @@ SET NOCOUNT ON
 			AND b.recommend = 5707545
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120626@Elodie: check case of matchid = orid
 	GROUP BY b.liveindicator
-
+	
+	DROP TABLE #DepAgent
+	
+	
+	
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_OtherSport_Bettype] TO [bodbAdminNet]
 GO

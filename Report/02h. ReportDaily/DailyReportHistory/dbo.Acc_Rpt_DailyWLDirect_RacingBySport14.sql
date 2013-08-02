@@ -39,6 +39,15 @@ AS
 		ToteFee			smallmoney	
 	)
 	
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2
+		
+	
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU
 	UNION ALL
@@ -97,7 +106,7 @@ AS
 				from	bettransm14 with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
-			LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 		
+			LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE	b.ruben =1 
 			and b.bettype in (31,32,33)
 			and b.matchid >0
@@ -107,6 +116,10 @@ AS
 
 	GROUP BY b.bettype, case when dep.custid is null then 1 else 2 end 
 	ORDER BY b.bettype, site 
+	
+	DROP TABLE #DepAgent
+	
+	
 	
 	GO
     GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_RacingBySport14] TO [bodbAdminNet]

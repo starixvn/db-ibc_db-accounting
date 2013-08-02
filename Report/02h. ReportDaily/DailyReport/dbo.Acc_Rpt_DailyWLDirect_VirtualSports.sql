@@ -13,6 +13,14 @@ SET NOCOUNT ON
 		- 20130225@Elodie: Add Virtual Horse Racing report
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)					   
 */
+CREATE TABLE #DepAgent (custid int primary key)
+	
+INSERT INTO #DepAgent 
+SELECT custid
+FROM custInfo with(NOLOCK)
+WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+	AND roleid = 2
+	
 SELECT
 		m.sporttype SportType,
 		case when dep.custid is null then 1 else 2 end as site,
@@ -23,7 +31,7 @@ SELECT
 		sum((1-tpositiontaking)*stake*actualrate) Turnover
 FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN match m on b.matchid = m.matchid
-		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid
+		LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid
 WHERE
 		b.winlostdate = @winlostdate
 		AND b.bettype BETWEEN 1201 AND 1299 and b.bettype not in (1231, 1232, 1233, 1237, 1238)
@@ -44,7 +52,7 @@ SELECT
 		sum((1-tpositiontaking)*stake*actualrate) Turnover
 FROM	bettrans b WITH (NOLOCK)		
 		INNER JOIN VSRaceInfo r ON b.matchid = r.EventID
-		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid
+		LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid
 WHERE
 		b.winlostdate = @winlostdate
 		AND b.bettype in (1231, 1232, 1233, 1237, 1238)
@@ -54,6 +62,9 @@ WHERE
 			
 GROUP BY r.sporttype,case when dep.custid is null then 1 else 2 end
 ORDER BY SportType, site		
+
+DROP TABLE #DepAgent
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_VirtualSports] TO [bodbAdminNet]

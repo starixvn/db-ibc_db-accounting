@@ -67,13 +67,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @HR_Winlost		money,
-			@HR_Pos			money, 
-			@HR_Comm		money,
-			@HR_LineTotal	money,
-			@HR_TO			money,
-			@P2P_LineTotal  money
-			
+	DECLARE @P2P_LineTotal  money			
 	DECLARE @RBWinlost TABLE(site tinyint,
 							winlost money,
 							pos money,
@@ -85,6 +79,7 @@ BEGIN
 	CREATE TABLE #src(	
 					matchid INT, 
 					bettype INT, 
+					site	TINYINT,
 					winlost_actualrate MONEY, 
 					winlost_virtualrate MONEY,
 					position_actualrate MONEY, 
@@ -96,6 +91,8 @@ BEGIN
 					turnover_actualrate MONEY,
 					turnover_virtualrate MONEY
 				)
+
+	CREATE TABLE #DepAgent (custid int primary key)
 	----------------------------------------------------------------------
 
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
@@ -110,6 +107,12 @@ BEGIN
 		ToteCommWP		smallmoney,
 		ToteFee			smallmoney	
 	)
+
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2
 
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU
@@ -183,7 +186,7 @@ BEGIN
 				from	bettransm14 with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno
-			 left join (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 
+			 left join (select custid from #DepAgent) dep ON b.recommend = dep.custid 
 	WHERE	b.ruben =1 
 			and b.bettype in (31,32,33)
 			and b.matchid >0
@@ -222,7 +225,7 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, -- don't need calculate actualrate for system parlay
 			SUM((1-tpositiontaking)*ABS(CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END)*virtualrate) turnover_virtualrate
 	FROM bettrans14 b WITH(NOLOCK)
-		left join (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 
+		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid 
 	WHERE winlostdate = @winlostdate
 		AND bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
@@ -336,7 +339,7 @@ BEGIN
 			
 	UNION ALL
 	SELECT 
-			4,'Mix Parlay', 99, 0,site
+			4,'Mix Parlay', 99, 0,site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -382,7 +385,7 @@ BEGIN
 			0 VirtualTurnover,
 			0 EnableVirtual
 	from	bettrans14 bettrans with (nolock)
-		left join (select custid from f_DepSuper_1('All')) dep ON bettrans.srecommend = dep.custid 
+		left join (select custid from #DepAgent) dep ON bettrans.recommend = dep.custid 
 	where 	bettrans.bettype = 1000
 			AND bettrans.matchid = 1000 
 			and bettrans.ruben=1  
@@ -468,6 +471,7 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	WHERE	b.bettype BETWEEN 1201 AND 1299
+	GROUP BY site
 	
 	ORDER BY DisplayOrder desc, ibc, site
 				
@@ -487,6 +491,7 @@ BEGIN
 	FROM @RBWinlost
 	
 	DROP TABLE #src
+	DROP TABLE #DepAgent
 END
 
 GO

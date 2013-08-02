@@ -31,6 +31,14 @@ SET NOCOUNT ON
 	--Declare @temp table to contain all matches based on @winlostdate
 	
 	DECLARE @Match TABLE (matchid int, sporttype tinyint, type varchar(10), primary key(matchid, type))
+	CREATE TABLE #DepAgent (custid int primary key)
+	
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2
+		
 	INSERT INTO @Match
 	SELECT	m.matchid,
 			sp.sporttype SportType,
@@ -57,7 +65,7 @@ SET NOCOUNT ON
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
-			LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid 		
+			LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE
 			b.winlostdate = @winlostdate
 			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334) 
@@ -107,7 +115,10 @@ SET NOCOUNT ON
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120626@Elodie: check case of matchid = orid
 	GROUP BY
 			b.liveindicator
-
+	
+	DROP TABLE #DepAgent
+	
+	
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_OtherSport14] TO [bodbAdminNet]
 GO

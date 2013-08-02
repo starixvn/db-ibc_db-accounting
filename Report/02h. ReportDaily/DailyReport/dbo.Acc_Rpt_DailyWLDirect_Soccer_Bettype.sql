@@ -31,6 +31,14 @@ SET NOCOUNT ON
 	
 	Declare @tmpBettype table (	Bettype			int primary key, 
 								DisplayOrder	int)
+	
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2								
 
 	Insert into @tmpBettype
 	select 1,  1 --'Handicap',
@@ -87,7 +95,7 @@ SET NOCOUNT ON
 			sum((1-tpositiontaking)*ABS(stake)*actualrate) Turnover_actualrate,
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover_virtualrate
 	FROM	bettrans b WITH (NOLOCK)	
-		left join (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid		
+		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid		
 	WHERE
 			winlostdate = @winlostdate
 			AND (bettype < 31 OR b.bettype BETWEEN 121 AND 999)	
@@ -97,7 +105,8 @@ SET NOCOUNT ON
 	GROUP BY		
 			liveindicator,
 			Bettype,
-			matchid	
+			matchid,
+			case when dep.custid is null then 1 else 2 end 	
 	
 	SELECT		
 			b.liveindicator,
@@ -155,6 +164,7 @@ SET NOCOUNT ON
 	GROUP BY b.liveindicator
 
 DROP TABLE #TempBettrans
+DROP TABLE #DepAgent
 
 
 GO

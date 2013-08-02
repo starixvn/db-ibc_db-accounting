@@ -13,16 +13,23 @@ SET NOCOUNT ON
 		- 20130618@Johnson: Add NSW racing's pools from AUST
 		- 20130730@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				
 */
-DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
-	
-DECLARE @CommSetting TABLE (matchid int primary key,
-					IBCFee			bit,
-					sporttype		tinyint,
-					ToteCommWin		smallmoney,
-					ToteCommPlace	smallmoney,
-					ToteCommWP		smallmoney,
-					ToteFee			smallmoney
-				)
+	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
+		
+	DECLARE @CommSetting TABLE (matchid int primary key,
+						IBCFee			bit,
+						sporttype		tinyint,
+						ToteCommWin		smallmoney,
+						ToteCommPlace	smallmoney,
+						ToteCommWP		smallmoney,
+						ToteFee			smallmoney
+					)
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+	AND roleid = 2					
 				
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU
@@ -82,7 +89,7 @@ DECLARE @CommSetting TABLE (matchid int primary key,
 				from	bettransm with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
-			 left join (SELECT custid FROM f_DepSuper_1('All')) dep ON b.srecommend = dep.custid
+			 left join (SELECT custid FROM #DepAgent) dep ON b.recommend = dep.custid
 	WHERE	b.ruben =1 
 			and b.bettype in (31,32,33)
 			and b.matchid >0
@@ -93,11 +100,11 @@ DECLARE @CommSetting TABLE (matchid int primary key,
 	GROUP BY cs.sporttype ,case when dep.custid is null then 1 else 2 end
 	ORDER BY cs.sporttype, site
 	
+	DROP TABLE #DepAgent
 	
 	
-		
-	GO
-	GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Racing] TO [bodbAdminNet]
-    GO
-	GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Racing] TO [vnteam]
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Racing] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Racing] TO [vnteam]
 

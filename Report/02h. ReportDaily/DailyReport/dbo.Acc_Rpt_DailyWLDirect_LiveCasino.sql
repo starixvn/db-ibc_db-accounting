@@ -1,4 +1,4 @@
-﻿ CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino]
+﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino]
 	@winlostdate datetime
 AS
 
@@ -14,6 +14,15 @@ AS
 */
 SET NOCOUNT ON
 
+CREATE TABLE #DepAgent (custid int primary key)
+
+INSERT INTO #DepAgent 
+SELECT custid
+FROM custInfo with(NOLOCK)
+WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+	AND roleid = 2
+
+
 SELECT	b.bettype bettype,
 		case when dep.custid is null then 1 else 2 end as site,
 		sum((winlost-actual_stake)*actualrate) WinLost,
@@ -22,13 +31,15 @@ SELECT	b.bettype bettype,
 		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
 		sum((1-tpositiontaking)*stake*actualrate) Turnover
 FROM	bettrans b WITH (NOLOCK)
-	LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON b.srecommend = dep.custid
+	LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid
 WHERE	b.winlostdate = @winlostdate
 		AND b.bettype BETWEEN 1101 AND 1199	
 		AND b.ruben = 1		
 		AND b.statusID not in (101,102,103,121)
 GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end 
 ORDER BY b.Bettype, site
+
+DROP TABLE #DepAgent
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino] TO [bodbAdminNet]

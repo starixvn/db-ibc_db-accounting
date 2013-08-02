@@ -19,6 +19,14 @@ AS
 */
 SET NOCOUNT ON
 
+CREATE TABLE #DepAgent (custid int primary key)
+	
+INSERT INTO #DepAgent 
+SELECT custid
+FROM custInfo with(NOLOCK)
+WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+	AND roleid = 2	
+	
 SELECT		
 		b.liveindicator,
 		b.bettype bettype,
@@ -31,7 +39,7 @@ SELECT
 		sum((1-tpositiontaking)*stake*actualrate) RealTurnover,
 		sum((1-tpositiontaking)*stake*virtualrate) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
-	LEFT JOIN (SELECT custid FROM f_DepSuper_1('All')) dep ON b.srecommend = dep.custid
+	LEFT JOIN (SELECT custid FROM #DepAgent) dep ON b.recommend = dep.custid
 WHERE	b.winlostdate = @winlostdate
 		AND b.bettype BETWEEN 81 AND 120	
 		AND b.ruben = 1		
@@ -39,6 +47,8 @@ WHERE	b.winlostdate = @winlostdate
 		AND b.statusID not in (101,102,103,121)
 GROUP BY b.liveindicator,b.Bettype, case when dep.custid is null then 1 else 2 end
 ORDER BY b.liveindicator,b.Bettype, site
+
+DROP TABLE #DepAgent
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_NumberGame] TO [bodbAdminNet]

@@ -16,7 +16,8 @@
 			- @site: 1: credit
 					2: deposit	
 	*/	
-SET NOCOUNT ON
+BEGIN
+	SET NOCOUNT ON
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 	
@@ -29,16 +30,15 @@ SET NOCOUNT ON
 		ToteFee			smallmoney	
 	)
 	
-	CREATE TABLE #super (custid int primary key , site varchar(50))
-
-	INSERT INTO #super (custid, site)
+	CREATE TABLE #DepAgent (custid int primary key , site varchar(50))
+	
+	INSERT INTO #DepAgent (custid, site)
 	SELECT c.custid, site
 	FROM customer c WITH(NOLOCK)
-		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON c.custid = dep.custid
-	WHERE roleid = 4
+		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON c.srecommend = dep.custid
+	WHERE roleid = 2
 		AND 1= CASE WHEN @site = 1 AND dep.custid IS NULL THEN 1
 					WHEN @site = 2 AND dep.custid IS NOT NULL THEN 1 ELSE 0 END
-		
 	
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU
@@ -99,7 +99,7 @@ SET NOCOUNT ON
 				from	bettransm with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
-			 INNER JOIN #super s ON b.srecommend = s.custid
+			 INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE	b.ruben =1 
 			and b.bettype = @bettype
 			and b.matchid >0
@@ -110,7 +110,13 @@ SET NOCOUNT ON
 	GROUP BY site
 	ORDER BY site
 	
-	DROP TABLE #super
+	DROP TABLE #DepAgent
+END
+
+
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_RacingBySport_Bettype_Site] TO [bodbAdminNet]
 
