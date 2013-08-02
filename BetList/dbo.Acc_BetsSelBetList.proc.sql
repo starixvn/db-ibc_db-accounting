@@ -2413,7 +2413,7 @@ BEGIN
 				b.refno,
 				o.RacerNum matchcode, --Horse Number
 				b.oddsid as Race, --Outright ID
-				'' eventdate,
+				o.EventDate,
 				0,
 				0,
 				b.sdiscount,
@@ -2488,7 +2488,7 @@ BEGIN
 				b.transid,
 				isnull(b.betid,0),
 				b.refno,
-				'' matchcode,
+				o.RacerNum matchcode,
 				b.oddsid as Race,
 				o.eventdate,
 				0,
@@ -2736,10 +2736,10 @@ BEGIN
 	WHERE B.Bettype between 1101 and 1199
 				   
  SELECT * FROM @DetailData
-  
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BetsSelBetList] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BetsSelBetList] TO [vnteam] AS [dbo]

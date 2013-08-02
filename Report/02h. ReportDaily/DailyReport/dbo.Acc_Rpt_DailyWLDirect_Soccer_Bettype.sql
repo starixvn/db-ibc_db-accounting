@@ -25,12 +25,20 @@ SET NOCOUNT ON
 		- 20121018@Lukas: use temp table to enhance performance
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
-		
+		- 20130731@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				  
 	Param's Explanation: 
 */		
 	
 	Declare @tmpBettype table (	Bettype			int primary key, 
 								DisplayOrder	int)
+	
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2								
 
 	Insert into @tmpBettype
 	select 1,  1 --'Handicap',
@@ -72,12 +80,13 @@ SET NOCOUNT ON
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 	WHERE s.sporttype = 1
 
-	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype TINYINT, matchid INT, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
+	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype TINYINT, matchid INT, site tinyint, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
 	INSERT INTO #TempBettrans	
 	SELECT		
 			liveindicator,
 			Bettype,			
 			matchid,
+			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*virtualrate) WinLost,
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
@@ -85,7 +94,8 @@ SET NOCOUNT ON
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			sum((1-tpositiontaking)*ABS(stake)*actualrate) Turnover_actualrate,
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover_virtualrate
-	FROM	bettrans b WITH (NOLOCK)			
+	FROM	bettrans b WITH (NOLOCK)	
+		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid		
 	WHERE
 			winlostdate = @winlostdate
 			AND (bettype < 31 OR b.bettype BETWEEN 121 AND 999)	
@@ -95,12 +105,14 @@ SET NOCOUNT ON
 	GROUP BY		
 			liveindicator,
 			Bettype,
-			matchid	
+			matchid,
+			case when dep.custid is null then 1 else 2 end 	
 	
 	SELECT		
 			b.liveindicator,
 			bt.Bettype,
 			case when m.matchcode like '%hedge%' then ' (hedge)' else '' end isHedge,
+			site,
 			sum(WinLost) winlost,
 			sum(Position) position,
 			sum(Commission) commission,	
@@ -116,10 +128,10 @@ SET NOCOUNT ON
 			b.liveindicator,
 			bt.Bettype, 
 			case when m.matchcode like '%hedge%' then ' (hedge)' else '' end ,	
-			bt.DisplayOrder
-		
+			bt.DisplayOrder,
+			site
 	ORDER BY
-			b.liveindicator, bt.DisplayOrder
+			b.liveindicator, bt.DisplayOrder,site
 
 	select	b.liveindicator, 
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
@@ -152,6 +164,7 @@ SET NOCOUNT ON
 	GROUP BY b.liveindicator
 
 DROP TABLE #TempBettrans
+DROP TABLE #DepAgent
 
 
 GO

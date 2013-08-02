@@ -69,7 +69,9 @@ BEGIN
 		isPending BIT,
 		isUndecided BIT,
 		IsKeyscore BIT,
-		IsFGLG BIT
+		IsFGLG BIT, 
+		WinOdds SMALLMONEY,
+		PlaceOdds SMALLMONEY
 	)
 
 
@@ -107,7 +109,7 @@ BEGIN
 		,ISNULL(mr.isPending,0) AS isPending  
 		,ISNULL(mr.isUndecided,0) AS isUndecided  --Hurri@20120306
 		,CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END IsKeyscore  
-		,0
+		,0,0,0
 	FROM DB02.bodb02.dbo.match m WITH(NOLOCK)
 		LEFT JOIN DB02.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 	WHERE m.eventdate BETWEEN @FromDate AND @ToDate  
@@ -149,8 +151,8 @@ BEGIN
 		,0 awayid
 		,o.matchcode  --Horse   
 		,o.kickofftime
-		,o.odds finalhomescore
-		,o.placeodds finalawayscore
+		,0 finalhomescore
+		,0 finalawayscore
 		,CASE WHEN o.placing = 0 THEN '5' ELSE ISNULL(CONVERT(VARCHAR(2),placing),5) END betstatus --Placing  
 		,o.oddsstatus eventstatus
 		,o.Foddsstatus
@@ -166,6 +168,8 @@ BEGIN
 		,0 AS isUndecided --Hurri@20120306 
 		,0 AS IsKeyscore
 		,0 AS IsFGLG
+		,o.Odds
+		,o.PlaceOdds
 	FROM	DB02.bodb02.dbo.outright o WITH(NOLOCK)
 			INNER JOIN league l WITH(NOLOCK) ON o.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
@@ -189,8 +193,8 @@ BEGIN
 		,0 awayid
 		,o.RacerNum matchcode  --Horse   
 		,r.EventTime kickofftime
-		,o.Winodds finalhomescore
-		,o.placeodds finalawayscore
+		,0 finalhomescore
+		,0 finalawayscore
 		,o.placing betstatus --Placing  
 		,o.eventstatus
 		,o.IsFavor Foddsstatus
@@ -206,6 +210,8 @@ BEGIN
 		,0 AS isUndecided --Hurri@20120306 
 		,0 AS IsKeyscore
 		,0 AS IsFGLG
+		,o.WinOdds
+		,o.PlaceOdds
 	FROM	DB02.bodb02.dbo.VSOutright o WITH(NOLOCK)
 			INNER JOIN DB02.bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid   
@@ -243,7 +249,9 @@ BEGIN
 			m.isPending,
 			m.isUndecided,
 			m.IsKeyscore,
-			m.IsFGLG
+			m.IsFGLG,
+			m.WinOdds,
+			m.PlaceOdds
 	FROM #matchList m		
 	ORDER BY CASE eventstatus WHEN 'completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
 			,eventdate

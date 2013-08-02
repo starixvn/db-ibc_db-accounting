@@ -12,6 +12,8 @@ AS
 		- 20130121@Dan: change linked server DB06 to DBARC	
 		- 20130227@Elodie: Add Virtual HR product
 		- 20130724@Elodie: Get winlostdate field
+		- 20130726@Elodie: Define data for bettrans, bettrans14 or bettrans_bk by winlostdate field
+						   Enhance performance
 */ 
 
 SET NOCOUNT ON  
@@ -89,9 +91,24 @@ DECLARE @DetailData TABLE (
 	betteam			nvarchar(50)
 )
 
---Bettrans
+DECLARE @WinlostDate smalldatetime, @MoveBetsDay smalldatetime, @BalanceUpDay smalldatetime, @bettype int
+DECLARE @tmp TABLE (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime) 
+INSERT INTO @tmp(BalanceUpDay, MoveBetsDay)
+EXEC Age_SelBalanceUpDay
+
+SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
+
 IF exists (select 1 from bettrans with (nolock) where transid = @TransID)
+	SELECT @WinlostDate = winlostdate, @bettype = bettype from bettrans with (nolock) where transid = @TransID
+ELSE IF exists(select 1 from bettrans14 with (nolock) where transid = @TransID)
+	SELECT @WinlostDate = winlostdate, @bettype = bettype from bettrans14 with (nolock) where transid = @TransID
+ELSE 
+	SELECT @WinlostDate = winlostdate, @bettype = bettype from DBARC.bodb_archive.dbo.bettrans_bk with (nolock) where transid = @TransID
+
+--Bettrans
+IF @WinlostDate > @MoveBetsDay
 BEGIN
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
 	--Sportbooks
 	INSERT INTO @Data
 	select 
@@ -162,6 +179,7 @@ BEGIN
 			b.transid = @TransID
 			
 	--Mix Parlay
+	IF @bettype = 9
 	INSERT INTO @Data
 	select 
 		 b.username,
@@ -226,6 +244,7 @@ BEGIN
 			and b.transid = @TransID
 	 
 	--Combination Mix Parlay
+	IF @bettype = 29
 	INSERT INTO @Data
 	select 
 		 b.username,
@@ -290,6 +309,7 @@ BEGIN
 			and b.transid = @TransID		
 
 	--- P2P
+	IF @bettype = 1000
 	INSERT INTO @Data
 	select 
 		 b.username,
@@ -354,6 +374,7 @@ BEGIN
 			AND b.transid = @TransID
 			
 	--Outright
+	IF @bettype = 10
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -419,6 +440,7 @@ BEGIN
 		  and b.transid = @TransID
 			
 	--HR
+	IF @bettype in (31,32,33,41,42,43)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -492,6 +514,7 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
+	IF @bettype in (1231, 1232, 1233, 1237, 1238)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -569,9 +592,10 @@ BEGIN
 END
 
 --Bettrans14
-ELSE IF exists(select 1 from bettrans14 with (nolock) where transid = @TransID)
+ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay
 BEGIN
 	--Sportbooks
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -639,6 +663,7 @@ BEGIN
 			b.transid = @TransID
 			
 	--Mix Parlay
+	IF @bettype = 9
 	INSERT INTO @Data
 	select 
 		 b.username,
@@ -703,6 +728,7 @@ BEGIN
 			and b.transid = @TransID
 	 
 	--Combination Mix Parlay
+	IF @bettype = 29
 	INSERT INTO @Data
 	select 
 		 b.username,
@@ -767,7 +793,8 @@ BEGIN
 			and bettype = 29  
 			and b.transid = @TransID				
 
---- P2P
+	--- P2P
+	IF @bettype = 1000
 	INSERT INTO @Data
 	select 
 		 b.username,
@@ -832,6 +859,7 @@ BEGIN
 			AND b.transid = @TransID
 
 	--Outright
+	IF @bettype = 10
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -897,6 +925,7 @@ BEGIN
 		  and b.transid = @TransID			
 			
 	--HR
+	IF @bettype in (31,32,33,41,42,43)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -970,6 +999,7 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
+	IF @bettype in (1231, 1232, 1233, 1237, 1238)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -1046,9 +1076,10 @@ BEGIN
 END
 
 --bettrans_bk
-ELSE IF exists(select 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock) where transid = @TransID)
+ELSE IF @WinlostDate < @BalanceUpDay
 BEGIN
 	--Sportbooks
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1117,6 +1148,7 @@ BEGIN
 			b.transid = @TransID
 			
 	--Mix Parlay
+	IF @bettype = 9
 	INSERT INTO @Data
 	select 
 		 c.username,
@@ -1183,6 +1215,7 @@ BEGIN
 			and b.transid = @TransID
 	 
 	--Combination Mix Parlay
+	IF @bettype = 29
 	INSERT INTO @Data
 	select 
 		 c.username,
@@ -1248,7 +1281,8 @@ BEGIN
 			and bettype = 29  
 			and b.transid = @TransID
 	
---- P2P
+	--- P2P
+	IF @bettype = 1000
 	INSERT INTO @Data
 	select 
 		 c.username,
@@ -1315,6 +1349,7 @@ BEGIN
 			AND b.transid = @TransID			
 	
 	--Outright
+	IF @bettype = 10
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1381,6 +1416,7 @@ BEGIN
 		  and b.transid = @TransID
 			
 	--HR
+	IF @bettype in (31,32,33,41,42,43)
 	INSERT INTO @Data
 	select 		 
 		c.username,
@@ -1455,6 +1491,7 @@ BEGIN
 	order by b.transid 
 	
 	-- Virtual HR
+	IF @bettype in (1231, 1232, 1233, 1237, 1238)
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1534,50 +1571,53 @@ END
 SELECT * FROM @Data
 ORDER BY transid  
 
-INSERT INTO @DetailData
-SELECT 
-	BG.refno, 
-	BG.odds, 
-	BG.stake,
-	BG.status,
-	BG.apositiontaking, 
-	BG.mpositiontaking, 
-	BG.spositiontaking,
-	BG.bettype,
-	BG.betteam  
-FROM bettransg BG with (NOLOCK)
-INNER JOIN @Data B ON BG.refno = B.refno
-WHERE B.Bettype between 1101 and 1199
-	   
-INSERT INTO @DetailData
-SELECT 
-	BG.refno, 
-	BG.odds, 
-	BG.stake,
-	BG.status,
-	BG.apositiontaking, 
-	BG.mpositiontaking, 
-	BG.spositiontaking,
-	BG.bettype,
-	BG.betteam  
-FROM bettransg14 BG with (NOLOCK)
-INNER JOIN @Data B ON BG.refno = B.refno
-WHERE B.Bettype between 1101 and 1199
-	
-INSERT INTO @DetailData
-SELECT 
-	BG.refno, 
-	BG.odds, 
-	BG.stake,
-	BG.status,
-	BG.apositiontaking, 
-	BG.mpositiontaking, 
-	BG.spositiontaking,
-	BG.bettype,
-	BG.betteam  
-FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)
-INNER JOIN @Data B ON BG.refno = B.refno
-WHERE B.Bettype between 1101 and 1199
+IF @bettype between 1101 and 1199 
+BEGIN
+	INSERT INTO @DetailData
+	SELECT 
+		BG.refno, 
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam  
+	FROM bettransg BG with (NOLOCK)
+	INNER JOIN @Data B ON BG.refno = B.refno
+	WHERE B.Bettype between 1101 and 1199
+		   
+	INSERT INTO @DetailData
+	SELECT 
+		BG.refno, 
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam  
+	FROM bettransg14 BG with (NOLOCK)
+	INNER JOIN @Data B ON BG.refno = B.refno
+	WHERE B.Bettype between 1101 and 1199
+		
+	INSERT INTO @DetailData
+	SELECT 
+		BG.refno, 
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam  
+	FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)
+	INNER JOIN @Data B ON BG.refno = B.refno
+	WHERE B.Bettype between 1101 and 1199
+END
 		   
 SELECT * FROM @DetailData
 
