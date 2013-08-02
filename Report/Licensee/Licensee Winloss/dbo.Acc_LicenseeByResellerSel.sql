@@ -28,6 +28,7 @@ AS
 	- 20130222@Scott: add filter LicenseeProduct3rd.EffectiveDate <> null
 	- 20130612@Jim: change codition for EffectiveDate
 	- 20130621@Jim: fix bug wrong condition when inner join table LicenseeProduct3rd
+	- 20130802@Jim: fix bug wrong LicenseeProduct3rd.EffectiveDate condition
 	
 */
 
