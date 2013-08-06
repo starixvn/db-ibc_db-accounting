@@ -4,7 +4,7 @@ AS
 	/*	Creator: Henry
 		Date: 2010-09-30
 		Task: Bingo WinLost Summary report
-		DB: DB06.bodb02
+		DB: DBACC/bodb02
 		
 		Revisions:
 		- 20130705@Kathy: Update matchid for Bingo (73)	
@@ -20,6 +20,8 @@ BEGIN
 	FROM custInfo with(NOLOCK)
 	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 		AND roleid = 2
+	UNION
+	SELECT 5707545--BARM
 	
 	SELECT		
 			b.bettype bettype,

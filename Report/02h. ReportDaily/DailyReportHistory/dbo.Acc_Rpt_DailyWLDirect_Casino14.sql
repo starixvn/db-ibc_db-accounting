@@ -4,7 +4,7 @@ AS
 	/*	Creator: Phuong Dao
 		Date: 2009-05-14
 		Task: Casino WinLost Summary report
-		DB: DB06.bodb02
+		DB: DBACC/bodb02
 		
 		Revisions:
 			- 20090731@Jamie: Not to view data in range of date, but only one date at once 	
@@ -24,6 +24,8 @@ BEGIN
 	FROM custInfo with(NOLOCK)
 	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 		AND roleid = 2
+	UNION
+	SELECT 5707545--BARM
 				
 	SELECT		
 			71 bettype,

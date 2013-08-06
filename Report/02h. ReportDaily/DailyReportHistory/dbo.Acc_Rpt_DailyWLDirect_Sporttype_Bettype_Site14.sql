@@ -3,7 +3,8 @@
 	@SportType		int = 1,
 	@liveindicator	bit,
 	@bettype		int,
-	@site			int
+	@site			int,
+	@isHedge		bit = 0
 AS
 	/*	Creator: Johnson
 		Date: 2013-08-02
@@ -14,7 +15,8 @@ AS
 		
 		Parameter's Explanation:
 			- @site: 1: credit
-					2: deposit			
+					2: deposit		
+			- @isHedge: match hedge	
 	*/
 BEGIN	
 	SET NOCOUNT ON 
@@ -29,12 +31,23 @@ BEGIN
 	WHERE roleid = 2
 		AND 1= CASE WHEN @site = 1 AND dep.custid IS NULL THEN 1
 					WHEN @site = 2 AND dep.custid IS NOT NULL THEN 1 ELSE 0 END
+		AND c.custid NOT IN (52466,5707545)--8RM, BARM
+	
+	INSERT INTO #DepAgent (custid, site)
+	SELECT 52466,'XYZBET' WHERE @site = 1--8RM
+	UNION
+	SELECT 5707545,'BEST-ODDS' WHERE @site =2 --BARM
 	
 	INSERT INTO @Match
 	SELECT	m.matchid,
 			m.type
 	FROM 
-		(	select matchid, leagueid, exrisk, 'match' as type from match14 with (nolock) where @bettype <> 10 AND eventdate = @winlostdate
+		(	select matchid, leagueid, exrisk, 'match' as type 
+			from match14 with (nolock) 
+			where @bettype <> 10 
+				AND eventdate = @winlostdate
+				AND 1 = case when @isHedge = 1 and matchcode like '%Hedge%' then 1 
+							when @isHedge = 0 and matchcode not like '%Hedge%' then 1 else 0 end
 			union all
 			select orid, leagueid, 0, 'outright' as type from outright14 with (nolock) where @bettype = 10 AND eventdate = @winlostdate
 		) m

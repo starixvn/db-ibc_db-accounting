@@ -107,11 +107,15 @@ BEGIN
 		ToteFee			smallmoney	
 	)
 	
+	--deposit agents
 	INSERT INTO #DepAgent 
 	SELECT custid
 	FROM custInfo with(NOLOCK)
 	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 		AND roleid = 2
+	UNION
+	SELECT 5707545--BARM
+			
 
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU

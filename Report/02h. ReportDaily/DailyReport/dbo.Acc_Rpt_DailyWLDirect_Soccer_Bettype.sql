@@ -39,7 +39,9 @@ SET NOCOUNT ON
 	FROM custInfo with(NOLOCK)
 	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 		AND roleid = 2								
-
+	UNION
+	SELECT 5707545--BARM	
+	
 	Insert into @tmpBettype
 	select 1,  1 --'Handicap',
 	UNION ALL

@@ -71,7 +71,13 @@ ELSE BEGIN
 	WHERE roleid = 2
 		AND 1= CASE WHEN @site = 1 AND dep.custid IS NULL THEN 1
 					WHEN @site = 2 AND dep.custid IS NOT NULL THEN 1 ELSE 0 END
+		AND c.custid NOT IN (52466,5707545)--8RM, BARM
 	
+	INSERT INTO #DepAgent (custid)
+	SELECT 52466 WHERE @site = 1--8RM
+	UNION
+	SELECT 5707545 WHERE @site =2 --BARM
+		
 	SELECT 
 			@bettype bettype, livehomescore as LiveType, liveawayscore as SportType, status, 
 			sum((winlost-actual_stake)*actualrate) WinLost,

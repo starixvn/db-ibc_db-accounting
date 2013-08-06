@@ -38,6 +38,8 @@ SET NOCOUNT ON
 	FROM custInfo with(NOLOCK)
 	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 		AND roleid = 2
+	UNION
+	SELECT 5707545--BARM
 		
 	INSERT INTO @Match
 	SELECT	m.matchid,

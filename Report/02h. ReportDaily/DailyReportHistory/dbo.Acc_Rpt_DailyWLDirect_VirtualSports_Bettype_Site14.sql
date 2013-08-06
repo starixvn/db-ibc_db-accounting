@@ -26,7 +26,12 @@ BEGIN
 	WHERE roleid = 2
 		AND 1= CASE WHEN @site = 1 AND dep.custid IS NULL THEN 1
 					WHEN @site = 2 AND dep.custid IS NOT NULL THEN 1 ELSE 0 END
+		AND c.custid NOT IN (52466,5707545)--8RM, BARM
 	
+	INSERT INTO #DepAgent (custid, site)
+	SELECT 52466,'XYZBET' WHERE @site = 1--8RM
+	UNION
+	SELECT 5707545,'BEST-ODDS' WHERE @site =2 --BARM
 	
 	IF @bettype IN  (1231, 1232, 1233, 1237, 1238)
 	BEGIN

@@ -23,6 +23,8 @@ BEGIN
 	FROM custInfo with(NOLOCK)
 	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 		AND roleid = 2
+	UNION
+	SELECT 5707545--BARM		
 		
 	SELECT		
 			b.liveindicator,
