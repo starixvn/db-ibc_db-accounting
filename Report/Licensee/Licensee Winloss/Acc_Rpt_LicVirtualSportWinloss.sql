@@ -14,7 +14,7 @@ AS
  * Original: OA_Rpt_VirtualSportWinloss
  * Revisions :  
 	- 20121129@Henry: add more columns
- 
+	- 20130805@Jim: fix bug (add more limit filter status)
  * Param's Explanation:    
  *  - @NormalLicensee : List of normal licensee ID separated by ','  
  *  - @Operator   : List of operator ID separated by ','  
@@ -93,7 +93,7 @@ BEGIN
 		AND sl.IsActive = 1
 		AND s.SystemName='Accounting'
 		--AND @FromDate >= isnull(lic.AffectedDate,'1999-01-01')
-		AND b.status NOT IN (-1,103)
+		AND b.status NOT IN (-1,103,101,102,121)
 		AND CurrencyID<>20
 		AND bettype BETWEEN 1201 AND 1299
 		AND l.Sporttype IN (SELECT sporttype FROM @sporttype)
@@ -113,7 +113,7 @@ BEGIN
 	WHERE
 		b.rptDate BETWEEN lr.AffectedDate AND @ToDate
 		AND b.rptDate >= isnull(p.EffectiveDate,DATEADD(DAY,1,@ToDate))
-		AND b.status NOT IN (-1,103)
+		AND b.status NOT IN (-1,103,101,102,121)
 		AND lr.ResellerID<>3
 		--AND @FromDate >= isnull(lb.AffectedDate,'1999-01-01')
 		AND CurrencyID<>20

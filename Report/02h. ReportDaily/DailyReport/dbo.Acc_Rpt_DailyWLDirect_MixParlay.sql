@@ -1,6 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_MixParlay]
 	@winlostdate	datetime,
-	@bettype		int
+	@bettype		int,
+	@site			tinyint = 0
 AS
 
 
@@ -21,11 +22,16 @@ AS
 		- 20110824@Johnson: remove check winlostdate with '16 Dec 2010' for sumary turnover, get from stake instead actual_stake
 		- 20110824@Elly: - Correct Turnover of sports book since Sep 01, 2011
 		- 20120210@Henry: Fix system parlay turnover bug
+		- 20130805@Johnson: filter by site
 		
 	
 	- Parameter's Explanation:
 		- @bettype - 9 : mix-parlay
 					- 29: combination mix-parlay	
+		- @site: 
+			0: all sites
+			1: credit sites
+			2: deposit sites
 */
 SET NOCOUNT ON 
 
@@ -110,66 +116,151 @@ FROM(
 WHERE sporttype <> 1 
 AND refno NOT IN (SELECT refno FROM #tmpMixSports with (NOLOCK))
 
-
-SELECT  @bettype bettype, status, 98 sporttype,
-		sum((winlost-actual_stake)*virtualrate) WinLost,
-		sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
-		sum(scomm*virtualrate) Commission,	
-		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
-		sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
-		
-FROM	bettrans WITH (NOLOCK)
-		INNER JOIN #tmpMixSports m WITH (NOLOCK) ON bettrans.refno = m.refno 
-WHERE
-		bettrans.ruben=1 and
-		bettype = @bettype AND
-		matchid = @_matchid AND 
-		bettrans.winlostdate = @winlostdate AND
-		--bettrans.matchid=0	
-		--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
-		bettrans.statusID NOT IN (101,102,103)
-GROUP BY status 
-UNION ALL
-SELECT 
-		@bettype bettype, status, 1 sporttype,
-		sum((winlost-actual_stake)*virtualrate) WinLost,
-		sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
-		sum(scomm*virtualrate) Commission,	
-		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
-		sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
-FROM	bettrans WITH (NOLOCK)
-WHERE
-		bettrans.ruben=1 AND
-		bettype = @bettype AND
-		matchid = @_matchid AND 
-		bettrans.winlostdate = @winlostdate AND
-		--bettrans.matchid=0	
-		--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
-		bettrans.statusID NOT IN (101,102,103)
-		and refno NOT IN (
-			SELECT refno FROM #tmpMixSports WITH (NOLOCK) 
-			UNION 
-			SELECT refno FROM @tmpOtherSports 
-		)
-GROUP BY status 
-UNION ALL 
-SELECT 
-		@bettype bettype, status, 99 sporttype,
-		sum((winlost-actual_stake)*virtualrate) WinLost,
-		sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
-		sum(scomm*virtualrate) Commission,	
-		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
-		sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
-FROM	bettrans WITH (NOLOCK)
-WHERE	bettrans.ruben=1 AND
-		bettype = @bettype AND
-		matchid = @_matchid AND 
-		bettrans.winlostdate = @winlostdate AND
-		--bettrans.matchid=0
-		--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
-		bettrans.statusID NOT IN (101,102,103)
-		and bettrans.refno IN (SELECT refno FROM @tmpOtherSports)
-GROUP BY status 
+IF @site = 0
+BEGIN
+	SELECT  @bettype bettype, status, 98 sporttype,
+			sum((winlost-actual_stake)*virtualrate) WinLost,
+			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
+			sum(scomm*virtualrate) Commission,	
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
+			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+			
+	FROM	bettrans WITH (NOLOCK)
+			INNER JOIN #tmpMixSports m WITH (NOLOCK) ON bettrans.refno = m.refno 
+	WHERE
+			bettrans.ruben=1 and
+			bettype = @bettype AND
+			matchid = @_matchid AND 
+			bettrans.winlostdate = @winlostdate AND
+			--bettrans.matchid=0	
+			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.statusID NOT IN (101,102,103)
+	GROUP BY status 
+	UNION ALL
+	SELECT 
+			@bettype bettype, status, 1 sporttype,
+			sum((winlost-actual_stake)*virtualrate) WinLost,
+			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
+			sum(scomm*virtualrate) Commission,	
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
+			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+	FROM	bettrans WITH (NOLOCK)
+	WHERE
+			bettrans.ruben=1 AND
+			bettype = @bettype AND
+			matchid = @_matchid AND 
+			bettrans.winlostdate = @winlostdate AND
+			--bettrans.matchid=0	
+			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.statusID NOT IN (101,102,103)
+			and refno NOT IN (
+				SELECT refno FROM #tmpMixSports WITH (NOLOCK) 
+				UNION 
+				SELECT refno FROM @tmpOtherSports 
+			)
+	GROUP BY status 
+	UNION ALL 
+	SELECT 
+			@bettype bettype, status, 99 sporttype,
+			sum((winlost-actual_stake)*virtualrate) WinLost,
+			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
+			sum(scomm*virtualrate) Commission,	
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
+			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+	FROM	bettrans WITH (NOLOCK)
+	WHERE	bettrans.ruben=1 AND
+			bettype = @bettype AND
+			matchid = @_matchid AND 
+			bettrans.winlostdate = @winlostdate AND
+			--bettrans.matchid=0
+			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.statusID NOT IN (101,102,103)
+			and bettrans.refno IN (SELECT refno FROM @tmpOtherSports)
+	GROUP BY status 
+END
+ELSE
+BEGIN
+	CREATE TABLE #DepAgent (custid int primary key)
+	
+	INSERT INTO #DepAgent (custid)
+	SELECT c.custid
+	FROM custinfo c WITH(NOLOCK)
+		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON c.srecommend = dep.custid
+	WHERE roleid = 2
+		AND 1= CASE WHEN @site = 1 AND dep.custid IS NULL THEN 1
+					WHEN @site = 2 AND dep.custid IS NOT NULL THEN 1 ELSE 0 END
+		AND c.custid NOT IN (52466,5707545)--8RM, BARM
+	
+	INSERT INTO #DepAgent (custid)
+	SELECT 52466 WHERE @site = 1--8RM
+	UNION
+	SELECT 5707545 WHERE @site =2 --BARM	
+	
+	SELECT  @bettype bettype, status, 98 sporttype,
+			sum((winlost-actual_stake)*virtualrate) WinLost,
+			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
+			sum(scomm*virtualrate) Commission,	
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
+			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+			
+	FROM	bettrans WITH (NOLOCK)
+			INNER JOIN #tmpMixSports m WITH (NOLOCK) ON bettrans.refno = m.refno 
+			INNER JOIN #DepAgent dep ON bettrans.recommend = dep.custid
+	WHERE
+			bettrans.ruben=1 and
+			bettype = @bettype AND
+			matchid = @_matchid AND 
+			bettrans.winlostdate = @winlostdate AND
+			--bettrans.matchid=0	
+			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.statusID NOT IN (101,102,103)
+	GROUP BY status 
+	UNION ALL
+	SELECT 
+			@bettype bettype, status, 1 sporttype,
+			sum((winlost-actual_stake)*virtualrate) WinLost,
+			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
+			sum(scomm*virtualrate) Commission,	
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
+			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+	FROM	bettrans WITH (NOLOCK)
+		INNER JOIN #DepAgent dep ON bettrans.recommend = dep.custid
+	WHERE
+			bettrans.ruben=1 AND
+			bettype = @bettype AND
+			matchid = @_matchid AND 
+			bettrans.winlostdate = @winlostdate AND
+			--bettrans.matchid=0	
+			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.statusID NOT IN (101,102,103)
+			and refno NOT IN (
+				SELECT refno FROM #tmpMixSports WITH (NOLOCK) 
+				UNION 
+				SELECT refno FROM @tmpOtherSports 
+			)
+	GROUP BY status 
+	UNION ALL 
+	SELECT 
+			@bettype bettype, status, 99 sporttype,
+			sum((winlost-actual_stake)*virtualrate) WinLost,
+			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
+			sum(scomm*virtualrate) Commission,	
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
+			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+	FROM	bettrans WITH (NOLOCK)
+		INNER JOIN #DepAgent dep ON bettrans.recommend = dep.custid
+	WHERE	bettrans.ruben=1 AND
+			bettype = @bettype AND
+			matchid = @_matchid AND 
+			bettrans.winlostdate = @winlostdate AND
+			--bettrans.matchid=0
+			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.statusID NOT IN (101,102,103)
+			and bettrans.refno IN (SELECT refno FROM @tmpOtherSports)
+	GROUP BY status 		
+	
+	DROP TABLE #DepAgent
+END
 
 DROP TABLE #tmpMixSports
 	-------------------

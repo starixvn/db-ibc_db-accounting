@@ -1,4 +1,4 @@
-﻿ CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Racing14]
+﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Racing14]
 	@winlostdate	datetime
 AS
 SET NOCOUNT ON
@@ -11,6 +11,7 @@ SET NOCOUNT ON
 	Revisions: 		
 		- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
 		- 20130618@Johnson: Add NSW racing's pools from AUST
+		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
 */
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 
@@ -22,6 +23,15 @@ SET NOCOUNT ON
 						ToteCommWP		smallmoney,
 						ToteFee			smallmoney
 					)
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2
+	UNION
+	SELECT 5707545--BARM
 					
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU
@@ -58,6 +68,7 @@ SET NOCOUNT ON
 	WHERE m.eventdate = @winlostdate and l.sporttype between 151 and 153
 		
 	SELECT	cs.sporttype,
+			case when dep.custid is null then 1 else 2 end as site,
 			sum((b.winlost -b.actual_stake)*b.actualrate) winlost,
 			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) position,
 			sum(b.scomm*b.actualrate) commission,
@@ -80,6 +91,7 @@ SET NOCOUNT ON
 				from	bettransm14 with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
+			 LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE	b.ruben =1 
 			and b.bettype in (31,32,33)
 			and b.matchid >0
@@ -87,10 +99,10 @@ SET NOCOUNT ON
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')
 			and b.statusID NOT IN (101,102,103,121)
 
-	GROUP BY cs.sporttype 
-	ORDER BY cs.sporttype
+	GROUP BY cs.sporttype, case when dep.custid is null then 1 else 2 end 
+	ORDER BY cs.sporttype, site
 	
-	
+	DROP TABLE #DepAgent
 	
 		
 	GO
