@@ -12,7 +12,6 @@ ALTER PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
 	@ExcludeBA BIT = 0,
 	@ExcludeTest BIT = 0
 AS
-
 /*
 	Created by: [20110823@Henry]
 	Task: Get List of all licensee 
@@ -29,7 +28,6 @@ AS
 	- 20130612@Jim: change codition for EffectiveDate
 	- 20130621@Jim: fix bug wrong condition when inner join table LicenseeProduct3rd
 	- 20130802@Jim: fix bug wrong LicenseeProduct3rd.EffectiveDate condition
-	
 */
 
 SET NOCOUNT ON
