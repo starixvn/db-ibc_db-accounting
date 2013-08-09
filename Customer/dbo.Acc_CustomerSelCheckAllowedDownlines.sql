@@ -43,7 +43,7 @@ BEGIN
 		 IF @isUpdatePT = 1 AND @sporttype = 1  -- Sportsbook Update Min/Max PT 
 		 BEGIN
 			SELECT	 @LimitDownlinesMin = 500
-					,@LimitDownlinesMax = 5000 --10000 TESTING			
+					,@LimitDownlinesMax = 5000 		
 		 END
 	END   
 	ELSE IF @isExecRep = 1  
