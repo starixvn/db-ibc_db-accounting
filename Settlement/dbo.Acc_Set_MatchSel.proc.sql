@@ -176,7 +176,7 @@ BEGIN
 			AND l.sporttype BETWEEN (CASE WHEN @sporttype = 0 THEN 151 ELSE @sporttype END ) AND (CASE WHEN @sporttype = 0 THEN 153 ELSE @sporttype END )
 			AND @sporttype IN (0, 151, 152, 153)
 			AND o.leagueid = CASE WHEN @leagueid = 0 THEN o.leagueid ELSE @leagueid END
-			AND (o.oddsstatus IN( 'completed', 'refund') OR o.Foddsstatus = 'completed' )   
+			AND (o.oddsstatus = 'completed' OR o.oddsstatus = 'refund' OR o.Foddsstatus = 'completed' )  
 			
 	SELECT m.eventstatus FROM #matchList m RETURN
 	--Virtual HR
