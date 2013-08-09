@@ -178,7 +178,6 @@ BEGIN
 			AND o.leagueid = CASE WHEN @leagueid = 0 THEN o.leagueid ELSE @leagueid END
 			AND (o.oddsstatus = 'completed' OR o.oddsstatus = 'refund' OR o.Foddsstatus = 'completed' )  
 			
-	SELECT m.eventstatus FROM #matchList m RETURN
 	--Virtual HR
 	INSERT INTO #matchList
 	SELECT 
