@@ -2026,7 +2026,8 @@ SELECT	d.Sporttype,
 		0 as acomm,
 		0 as awinlost,
 		0 as mwinlost,
-		0 as swinlost
+		0 as swinlost,
+		d.Winlostdate as winlostdate
 FROM	#BetListByDateMem d 
 		INNER JOIN #TempExchange e 
 		ON e.ExchangeDate =  d.winlostdate AND e.exchangeid = d.currency
