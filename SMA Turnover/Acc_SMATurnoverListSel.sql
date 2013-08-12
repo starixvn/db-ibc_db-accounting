@@ -22,7 +22,8 @@ SET NOCOUNT ON
 
 IF @Todate <= @MoveBetsDay
 BEGIN	
-	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
+	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
+			CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
@@ -34,7 +35,8 @@ BEGIN
 END
 ELSE IF @FromDate > @MoveBetsDay
 BEGIN
-	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
+	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
+			CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
@@ -46,7 +48,8 @@ BEGIN
 END	
 ELSE 
 BEGIN
-	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
+	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
+		CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
@@ -55,7 +58,8 @@ BEGIN
 	WHERE m.sporttype = @SportType AND m.eventdate BETWEEN @FromDate AND @MoveBetsDay
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
 	UNION ALL
-	SELECT c.custID, c.username, e.currency, l.leaguename, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover
+	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
+		CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid

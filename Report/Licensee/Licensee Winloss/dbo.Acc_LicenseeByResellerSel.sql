@@ -12,7 +12,6 @@ ALTER PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
 	@ExcludeBA BIT = 0,
 	@ExcludeTest BIT = 0
 AS
-
 /*
 	Created by: [20110823@Henry]
 	Task: Get List of all licensee 
@@ -28,7 +27,7 @@ AS
 	- 20130222@Scott: add filter LicenseeProduct3rd.EffectiveDate <> null
 	- 20130612@Jim: change codition for EffectiveDate
 	- 20130621@Jim: fix bug wrong condition when inner join table LicenseeProduct3rd
-	
+	- 20130802@Jim: fix bug wrong LicenseeProduct3rd.EffectiveDate condition
 */
 
 SET NOCOUNT ON
@@ -63,7 +62,7 @@ WHERE
 	AND s.SystemName='Accounting'
 	AND ((@ExcludeBA=0) OR (@ExcludeBA=1 AND r.ResellerID <> 3))
 	AND (@ExcludeTest=0 OR (@ExcludeTest=1 AND r.ResellerID <> 6 ))
-	AND (ISNULL(LTRIM(RTRIM(@ProductCode)),'')='' OR ((ISNULL(LTRIM(RTRIM(@ProductCode)),''))<>'' AND ISNULL(ld.EffectiveDate,0)<>0))
+	AND (ISNULL(LTRIM(RTRIM(@ProductCode)),'')='' OR ((ISNULL(LTRIM(RTRIM(@ProductCode)),''))<>''))
 ORDER BY l.IsDeposit DESC,r.ResellerName, l.LicenseeName
 
 SET @ProductCode = ISNULL(LTRIM(RTRIM(@ProductCode)),'')
@@ -74,7 +73,7 @@ BEGIN
 		DELETE FROM #Data WHERE ResellerID = 3
 		SELECT @ProductID = ProductID FROM Product3rd WITH (NOLOCK) WHERE ProductPrefix = @ProductCode
 		
-		DELETE FROM #Data WHERE LicenseeID NOT IN (SELECT LicenseeID FROM LicenseeProduct3rd WITH (NOLOCK) WHERE ProductID=@ProductID) AND ResellerID NOT IN (4,8) --FDL, PIH
+		DELETE FROM #Data WHERE LicenseeID NOT IN (SELECT LicenseeID FROM LicenseeProduct3rd WITH (NOLOCK) WHERE ProductID=@ProductID and ISNULL(EffectiveDate,0)<>0) AND ResellerID NOT IN (4,8) --FDL, PIH
 	END
 	ELSE
 	BEGIN

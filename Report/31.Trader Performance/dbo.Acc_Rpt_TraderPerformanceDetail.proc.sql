@@ -235,7 +235,7 @@ BEGIN
  IsNeutral,  
  hthomescore, htawayscore, fthomescore, ftawayscore,  
  stake_1sthdp + stake_hdp + stake_1stou + stake_ou + stake_1x2 + stake_1st1x2 + stake_oe + stake_1stoe + stake_1stNoOfCorners + stake_NoOfCorners + stake_15minOU + stake_1stTotalBookings + stake_TotalBookings+ stake_NextCorner 
-	+ stake_NextBooking + stake_15minCorners + stake_15minOU + stake_15minTotalBookings + stake_10minOU + stake_SingleTeamOU as overall_st,  
+	+ stake_NextBooking + stake_15minCorners + stake_15minTotalBookings + stake_10minOU + stake_SingleTeamOU as overall_st,  
    
  winlost_1sthdp + winlost_hdp + winlost_1stou + winlost_ou +  winlost_1x2 + winlost_1st1x2 + winlost_oe + winlost_1stoe + winlost_1stNoOfCorners +winlost_NoOfCorners + winlost_15minOU + winlost_1stTotalBookings + winlost_TotalBookings+ winlost_NextCorner
 		+ winlost_NextBooking + winlost_15minCorners + winlost_15minTotalBookings + winlost_10minOU + winlost_SingleTeamOU   

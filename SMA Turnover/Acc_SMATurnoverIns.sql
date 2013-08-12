@@ -33,14 +33,16 @@ BEGIN
 	IF @ErrCode <> 0
 		RETURN		
 		
-	DECLARE @tblCust TABLE (		
+	DECLARE @tblCust TABLE (	
+		Seq INT, 	
 		CustID INT,
 		MatchID INT,
 		MaxTurnover MONEY		
 	)
 
-	INSERT INTO @tblCust(CustID, MatchID, MaxTurnover)				
-	SELECT	T.C.value('./@CustID', 'int'),
+	INSERT INTO @tblCust(Seq, CustID, MatchID, MaxTurnover)				
+	SELECT	T.C.value('./@Seq', 'int'),  
+			T.C.value('./@CustID', 'int'),
 			T.C.value('./@MatchID', 'int'),
 			T.C.value('./@MaxTurnover', 'money')
 	FROM @ListSMA.nodes('/ListSMA/SMA') AS T(C)
@@ -69,34 +71,32 @@ BEGIN
 		RETURN
 	END
 	
-	DECLARE @LogData NVARCHAR(4000)
-	SELECT @LogData = '<Acc_SMATurnoverIns ListSMA="' + COALESCE(CAST(@ListSMA AS VARCHAR(3500)), SPACE(1)) + '" '					
-					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
-					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
-					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'																
+	DECLARE @LogData NVARCHAR(4000), @MaxSeq INT, @i INT
+	DECLARE @CustID INT, @MatchID INT, @MaxTurnover MONEY
+	SELECT @MaxSeq = max(Seq) from @tblCust		
+	SELECT @i = 1															
 	
 	SET @endRun = GETDATE()
 	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
 	
-	BEGIN TRY
+	while (@i<=@MaxSeq)
+	BEGIN			
+		SELECT @CustID = CustID, @MatchID = MatchID, @MaxTurnover = MaxTurnover from @tblCust where Seq = @i
+		
+		SELECT @LogData = '<Acc_SMATurnoverIns MatchID="'+ COALESCE(CAST(@MatchID as varchar(10)),space(1)) + '" '
+					+ 'MaxTurnover="'+ COALESCE(CAST(@MaxTurnover as varchar(20)),space(1)) + '" '
+					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
+					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" '
+					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
+					
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 			@Userid = @UserID,			
 			@ActionID = 636,
+			@CustID = @CustID,
 			@TrackingValue = @LogData,
 			@Duration = @duration
-	END TRY
-	BEGIN CATCH
-		SELECT @LogData = '<Acc_SMATurnoverIns ListSMA="' + COALESCE(CAST(@ListSMA AS VARCHAR(3500)), SPACE(1)) + '" '						
-						+ 'ErrCode="'+ coalesce(cast(ERROR_NUMBER() as varchar(50)),space(1)) + '" '
-						+ 'ErrMsg="'+ coalesce(cast(ERROR_MESSAGE() as varchar(4000)),space(1))+ '" '
-						+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1))+ '" />'
-							
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-			@Userid = @UserID,	
-			@ActionID = 636,
-			@TrackingValue = @LogData,
-			@Duration = @duration
-	END CATCH
+		SELECT @i = @i + 1 				
+	END	
 	
 END
 

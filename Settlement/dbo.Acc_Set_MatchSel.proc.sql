@@ -29,7 +29,7 @@ AS
 		- 20120626@Jamie: Get meetings for Harness 
 		- 20130328@Lukas: move to DBTXN/bodb02 & get FGLG ticket info 		
 		- 20130719@Elodie: get result for Virtual HR
-		
+		- 20130808@Kathy:  Amend to show refund game for virtual horse racing/tennis
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
   
@@ -69,7 +69,9 @@ BEGIN
 		isPending BIT,
 		isUndecided BIT,
 		IsKeyscore BIT,
-		IsFGLG BIT
+		IsFGLG BIT, 
+		WinOdds SMALLMONEY,
+		PlaceOdds SMALLMONEY
 	)
 
 
@@ -107,9 +109,9 @@ BEGIN
 		,ISNULL(mr.isPending,0) AS isPending  
 		,ISNULL(mr.isUndecided,0) AS isUndecided  --Hurri@20120306
 		,CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END IsKeyscore  
-		,0
-	FROM DB02.bodb02.dbo.match m WITH(NOLOCK)
-		LEFT JOIN DB02.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
+		,0,0,0
+	FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
+		LEFT JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 	WHERE m.eventdate BETWEEN @FromDate AND @ToDate  
 		AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END
 		AND (@UncalOnly = 0 OR ISNULL(mr.calculate,0) = 0)  
@@ -149,8 +151,8 @@ BEGIN
 		,0 awayid
 		,o.matchcode  --Horse   
 		,o.kickofftime
-		,o.odds finalhomescore
-		,o.placeodds finalawayscore
+		,0 finalhomescore
+		,0 finalawayscore
 		,CASE WHEN o.placing = 0 THEN '5' ELSE ISNULL(CONVERT(VARCHAR(2),placing),5) END betstatus --Placing  
 		,o.oddsstatus eventstatus
 		,o.Foddsstatus
@@ -166,14 +168,16 @@ BEGIN
 		,0 AS isUndecided --Hurri@20120306 
 		,0 AS IsKeyscore
 		,0 AS IsFGLG
-	FROM	DB02.bodb02.dbo.outright o WITH(NOLOCK)
+		,o.Odds
+		,o.PlaceOdds
+	FROM	DBPRO.bodb02.dbo.outright o WITH(NOLOCK)
 			INNER JOIN league l WITH(NOLOCK) ON o.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
 			AND l.sporttype BETWEEN (CASE WHEN @sporttype = 0 THEN 151 ELSE @sporttype END ) AND (CASE WHEN @sporttype = 0 THEN 153 ELSE @sporttype END )
-			AND @sporttype IN (0,151,152,153)
+			AND @sporttype IN (0, 151, 152, 153)
 			AND o.leagueid = CASE WHEN @leagueid = 0 THEN o.leagueid ELSE @leagueid END
-			AND (o.oddsstatus = 'completed' OR o.Foddsstatus = 'completed')  
-
+			AND (o.oddsstatus = 'completed' OR o.oddsstatus = 'refund' OR o.Foddsstatus = 'completed' )  
+			
 	--Virtual HR
 	INSERT INTO #matchList
 	SELECT 
@@ -189,10 +193,11 @@ BEGIN
 		,0 awayid
 		,o.RacerNum matchcode  --Horse   
 		,r.EventTime kickofftime
-		,o.Winodds finalhomescore
-		,o.placeodds finalawayscore
+		,0 finalhomescore
+		,0 finalawayscore
 		,o.placing betstatus --Placing  
-		,o.eventstatus
+		--,o.eventstatus 
+		, CASE WHEN r.betstatus LIKE 'Refund%' THEN 'Refund' ELSE o.eventstatus END eventstatus		
 		,o.IsFavor Foddsstatus
 		,r.sporttype
 		,0 IsNeutral
@@ -206,14 +211,17 @@ BEGIN
 		,0 AS isUndecided --Hurri@20120306 
 		,0 AS IsKeyscore
 		,0 AS IsFGLG
-	FROM	DB02.bodb02.dbo.VSOutright o WITH(NOLOCK)
-			INNER JOIN DB02.bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		,o.WinOdds
+		,o.PlaceOdds
+		
+	FROM	DBPRO.bodb02.dbo.VSOutright o WITH(NOLOCK)
+			INNER JOIN DBPRO.bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
 			AND l.sporttype = 181
 			AND @sporttype = 181
 			AND r.leagueid = CASE WHEN @leagueid = 0 THEN r.leagueid ELSE @leagueid END
-			AND o.eventstatus = 'completed'
+			AND o.eventstatus = 'completed' 
 			
 	SELECT	m.hthomescore,
 			m.htawayscore,
@@ -230,7 +238,7 @@ BEGIN
 			m.finalhomescore,
 			m.finalawayscore,
 			m.betstatus,
-			m.eventstatus,
+			m.eventstatus  ,
 			m.Foddsstatus,
 			m.sporttype,
 			m.IsNeutral,
@@ -243,7 +251,9 @@ BEGIN
 			m.isPending,
 			m.isUndecided,
 			m.IsKeyscore,
-			m.IsFGLG
+			m.IsFGLG,
+			m.WinOdds,
+			m.PlaceOdds
 	FROM #matchList m		
 	ORDER BY CASE eventstatus WHEN 'completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
 			,eventdate
@@ -256,6 +266,7 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet]

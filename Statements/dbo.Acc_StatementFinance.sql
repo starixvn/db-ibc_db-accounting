@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Acc_StatementFinance]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[Acc_StatementFinance]
-GO
-
--- [dbo].[Acc_StatementFinance] @RefNo = -1,@Username = 'DWLSPNL',@FilterBy = 1,@FromDate = '2012-07-21',@ToDate = '2012-08-04',@BalanceUpDay = '',@IncludeAccBal = 1
-ALTER PROCEDURE [dbo].[Acc_StatementFinance]
+﻿ALTER PROCEDURE [dbo].[Acc_StatementFinance]
     @RefNo BIGINT = 0,
 	@Username VARCHAR(30) = null,
 	@FilterBy TINYINT = null,
@@ -21,12 +13,18 @@ AS
 	DB: DBACC/bodb02 
 	
 	Revisions:
-		- 20121213@Dan: Change linked server from DB052-->DBEXT
-		- 20130226@Lukas: Change linked-server from DB053 to DBSUM
-													
+		- 20130724@Jamie: Change Alias 
+			+ DB052 --> DBEXT 
+			+ DB053/bodb_Summary --> DBSUM
+			+ bodb_Report --> DBRPT/bodb_Report
+
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
         - @IncludeAccBal: 1:include - 0:exclude
+        
+    Sample:
+		EXEC [dbo].[Acc_StatementFinance] @RefNo = -1,@Username = 'DWLSPNL',@FilterBy = 1,@FromDate = '2012-07-21',@ToDate = '2012-08-04',@BalanceUpDay = '',@IncludeAccBal = 1
+
  */
 
 SET NOCOUNT ON
@@ -150,7 +148,7 @@ BEGIN
 		            tf.refno,
 		            (tf.winlost - tf.actual_stake) totalamt,
 		            bettype.typenamee transtype,
-		            tf.transdesc + ' - Ex.Rate: ' + CAST(tf.actualrate AS VARCHAR(10)) transdesc, 
+		            tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 		            tf.creator,
 		            NULL checkerID,
 		            '' checkerName,
@@ -250,7 +248,7 @@ BEGIN
 		SELECT @_ToDate = DATEADD(day, 1, @_BalanceUpDay)
 	
 	SELECT TOP 1 @_FromDate = ISNULL(accdate,@FromDate_Bk)
-	FROM DBRPT.bodb_Report.dbo.Statement WITH(NOLOCK)
+	FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK)
 	WHERE 
 	    custid = @CustID 
 	    AND accdate <= @FromDate_Bk
@@ -285,7 +283,7 @@ BEGIN
 		    NULL checkTime,
 		    0 isAllowVerify,
 		    1 isReversal
-	    FROM DBRPT.bodb_Report.dbo.Statement WITH(NOLOCK) 
+	    FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
 	    WHERE 
 	        custid = @CustID 
 	        AND accdate >= @_FromDate AND accdate < @_ToDate
@@ -312,7 +310,7 @@ BEGIN
 		    tf.refno,
 		    (tf.winlost - tf.actual_stake) totalamt,
 		    bettype.typenamee transtype,
-		    tf.transdesc + ' - Ex.Rate: ' + CAST(tf.actualrate AS VARCHAR(10)) transdesc, 
+		    tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 		    tf.creator,
 		    NULL checkerID,
 		    '' checkerName,
@@ -466,13 +464,9 @@ IF @CustID > 0
 
 DROP TABLE #StatementTable
 
-
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinance] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_StatementFinance] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinance] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_StatementFinance] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_StatementFinance] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_StatementFinance] TO [vnteam] AS [dbo]
