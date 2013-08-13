@@ -36,8 +36,10 @@ BEGIN
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 			sum(scomm*actualrate) Commission,	
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
-			0 Turnover
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) VirtualLineTotal,
+			0 RealTurnover,
+			0 VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE	b.winlostdate = @winlostdate
