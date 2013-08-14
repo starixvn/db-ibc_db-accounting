@@ -8,6 +8,7 @@ AS
 			. To separate with the Licensee site, we not to use table bodb_Licensee.dbo.Licensees any more. And now we use the table Site.
 			. Accounting > Special Delete > Ticketslisting > Combo Licensees
 	Original sp: Acc_LicenseeSelAll
+	
 	Revisions:	
 	 
 	Param's Explanation:
