@@ -69,7 +69,7 @@ BEGIN
 				sum((1-tpositiontaking)* stake * actualrate) VirtualTurnover
 		FROM	bettrans14 b WITH (NOLOCK)
 				INNER JOIN match14 m on b.matchid = m.matchid
-				INNER JOIN #DepAgent ag ON b.recommend = s.custid
+				INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 		WHERE
 				winlostdate = @winlostdate
 				AND b.bettype = @bettype

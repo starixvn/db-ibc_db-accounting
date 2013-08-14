@@ -59,7 +59,7 @@ BEGIN
 	END
 	ELSE BEGIN	
 		SELECT		
-				s.site,
+				ag.site,
 				sum((winlost-actual_stake)*actualrate) WinLost,
 				sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 				sum(scomm*actualrate) Commission,	
@@ -77,8 +77,8 @@ BEGIN
 				AND b.statusID NOT IN (101, 102, 103) --('VOID', 'REJECT','REFUND') 
 				AND b.ruben = 1
 				and m.sporttype = @sporttype
-		GROUP BY site
-		ORDER BY site
+		GROUP BY ag.site
+		ORDER BY ag.site
 	END
 	
 	DROP TABLE #DepAgent
