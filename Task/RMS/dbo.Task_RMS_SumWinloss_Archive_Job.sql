@@ -4,10 +4,11 @@ AS
 		Created: Johnson
 		Date: 2012-12-12
 		Task: Archive RMS data
-		DB: DB054.bodb_RMS
+		DB: DBRMS/bodb_RMS
 		
 		Revisions:
 			-20130717@Johnson: archive old data before balance up day
+			- 20130814@Johnson: check data on rmSumWinloss_Old2
 		Parameter's Explanation:	
 	*/ 
 BEGIN
@@ -18,7 +19,7 @@ BEGIN
 			@errMsg			VARCHAR(1000) 
 		
 	SELECT	@maxDateSum_Old = MAX(winlostdate) + 1  ---Saturday 
-	FROM	bodb_RMS.dbo.rmSumWinloss_Old WITH (NOLOCK)
+	FROM	bodb_RMS.dbo.rmSumWinloss_Old2 WITH (NOLOCK)
 	
 	SELECT TOP 1 @balanceUpDay = winlostdate
 	FROM bodb02.dbo.bettrans WITH(NOLOCK)
