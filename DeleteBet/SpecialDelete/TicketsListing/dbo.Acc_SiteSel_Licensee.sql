@@ -3,7 +3,7 @@ AS
 
 /*	Created by: @Sophia
 	Date: 20111122
-	DB: DB06.bodb02
+	DB: DBACC/bodb02
 	Task:   . List of licensees
 			. To separate with the Licensee site, we not to use table bodb_Licensee.dbo.Licensees any more. And now we use the table Site.
 			. Accounting > Special Delete > Ticketslisting > Combo Licensees
