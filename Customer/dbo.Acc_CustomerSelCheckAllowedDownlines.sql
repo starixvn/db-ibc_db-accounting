@@ -54,7 +54,7 @@ BEGIN
 		IF @isUpdatePT = 1 AND @sporttype = 1  -- Sportsbook Update Min/Max PT 
 		BEGIN
 			SELECT	 @LimitDownlinesMin = 1000
-					,@LimitDownlinesMax = 10000 
+					,@LimitDownlinesMax = 15000 
 		END  
 	END  
 	  
