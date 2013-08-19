@@ -7,12 +7,13 @@ AS
 		Created: Johnson
 		Date: 2012-11-01
 		Task: Copy won parlay tickets into RMS
-		DB: DBCRM/bodb_RMS
+		DB: DBRMS/bodb_RMS
 		
 		Revisions:
 			- 20130124@Johnson: get data from rmTransaction_BK instead rmTransaction
 			- 20130227@Jamie: Check tickets on rmTransaction before SUM
 			- 20130228@Jamie: Get data from bettrans14 directly
+			- 20130814@Johnson: import data into rmSumWinloss2
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -31,12 +32,13 @@ SET NOCOUNT ON
 		RETURN
 	END
 	
-	IF NOT EXISTS (SELECT TOP 1 1 FROM rmSumWinloss WITH(NOLOCK) WHERE winlostdate = @winlostdate)
+	IF NOT EXISTS (SELECT TOP 1 1 FROM rmSumWinloss2 WITH(NOLOCK) WHERE winlostdate = @winlostdate)
 	BEGIN
-		INSERT INTO rmSumWinloss (winlostdate
+		INSERT INTO rmSumWinloss2 (winlostdate
 				,custid
 				,sporttype
 				,statusid
+				,combo
 				,username
 				,currency
 				,stake
@@ -50,6 +52,7 @@ SET NOCOUNT ON
 				,b.custid
 				,liveawayscore
 				,statusid
+				,CASE WHEN RIGHT(betcheck,len(betcheck)-1) >= 6 then 6 else RIGHT(betcheck,len(betcheck)-1) END as combo
 				,username
 				,currency
 				,SUM(stake)
@@ -64,7 +67,7 @@ SET NOCOUNT ON
 				AND matchid = 9
 				AND bettype = 9
 				AND b.statusid IN (111,112,113)
-		GROUP BY winlostdate, b.custid, liveawayscore, statusid, username, currency, actualrate
+		GROUP BY winlostdate, b.custid, liveawayscore, statusid, username, currency, actualrate, CASE WHEN RIGHT(betcheck,len(betcheck)-1) >= 6 then 6 else RIGHT(betcheck,len(betcheck)-1) END
 		
 		IF @@ERROR > 0
 		BEGIN			
@@ -72,5 +75,41 @@ SET NOCOUNT ON
 					,@ErrCode = 201
 			RETURN
 		END	
+		
+		INSERT INTO rmSumWinloss (winlostdate
+			,custid
+			,sporttype
+			,statusid
+			,username
+			,currency
+			,stake
+			,winlost
+			,company_stake
+			,company_winlost
+			,actualrate
+			,odds
+			,betcount)
+		SELECT winlostdate
+			,custid
+			,sporttype
+			,statusid
+			,username
+			,currency
+			,SUM(stake)
+			,SUM(winlost)
+			,SUM(company_stake)
+			,SUM(company_winlost)
+			,actualrate
+			,SUM(odds)
+			,SUM(betcount)
+		FROM rmSumWinloss WITH(NOLOCK)
+		WHERE winlostdate = @winlostdate
+		GROUP BY winlostdate
+			,custid
+			,sporttype
+			,statusid
+			,username
+			,currency
+			,actualrate
 	END	
 	
