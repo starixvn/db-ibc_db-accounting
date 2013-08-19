@@ -9,7 +9,7 @@ AS
 /*	Creator: Viet
 	Date: 2010-12-10
 	Task: Number Game WinLost Summary report
-	DB: DBRPT/bodb02
+	DB: DBACC/bodb02
 	
 	Revisions:		
 		- 16Dec2010@Viet: Correct Turnover's value
