@@ -17,7 +17,8 @@ AS
 	Param's Explanation: 
 			*@OldLicenseeName :string, Licensee whose need to rename
 			*NewLicenseeName: string,new licensee name 
-		
+	Revision:
+		-20130819@Jim: fix bug missing change LicenseeName in table bodb_licensee.dbo.Users
 */		
 
 CREATE TABLE #tblCust (CustID INT, username VARCHAR(100),username2 VARCHAR(100),roleid INT)
@@ -58,6 +59,10 @@ CREATE TABLE #tblCust (CustID INT, username VARCHAR(100),username2 VARCHAR(100),
 	IF NOT EXISTS (SELECT 1 FROM DBLIC.bodb_licensee.dbo.Licensees  WITH (NOLOCK) WHERE LicenseeName=@NewLicenseeName)
 	BEGIN
 		UPDATE DBLIC.bodb_licensee.dbo.Licensees WITH (rowlock,updlock)
+		SET LicenseeName=@NewLicenseeName
+		WHERE LicenseeName=@OldLicenseeName
+		
+		UPDATE DBLIC.bodb_licensee.dbo.Users WITH (rowlock,updlock)
 		SET LicenseeName=@NewLicenseeName
 		WHERE LicenseeName=@OldLicenseeName
 	END 
