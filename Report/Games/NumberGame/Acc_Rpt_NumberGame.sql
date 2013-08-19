@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_NumberGame]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_NumberGame]
 	@winlostdate datetime,
     @SiteID	VARCHAR(500) = '',
     @Currency VARCHAR(500) = '',
@@ -21,7 +21,7 @@ AS
 		- 20121112@Jamie: Create #tmpAge instead of @tmpAg 
 		- 20121120@Dan: optimize performance (use index when searching agent, create index after inserting) 
         - 20130123@Daniel: Change link server alias
-		
+		- 20130815@Viet: enhance sp
 		
     Param usage:
 		- @SiteID:
@@ -40,14 +40,10 @@ AS
 */
 SET NOCOUNT ON
 
---DECLARE @tmpAg TABLE(custID INT PRIMARY KEY)
-
 DECLARE	@tmpCurrency TABLE(currency INT PRIMARY KEY)
 DECLARE	@tmpSite TABLE(siteid INT)
 
-CREATE TABLE #tmpAg(custID INT)
-
---CREATE INDEX IX_tmpAg_CustID ON #tmpAg(CustID)
+DECLARE @licenseeCnt_db int, @licencseeCnt int
 
 INSERT INTO @tmpCurrency
 	SELECT val
@@ -60,28 +56,18 @@ WHERE currency = 0 -- ALL currency
 INSERT INTO @tmpSite
 	SELECT val 
 	FROM strSPlit(@siteid,',')
-	
-IF EXISTS (SELECT 1 FROM @tmpSite WHERE siteid = -1)--IBCGroup   
-BEGIN  	
-		INSERT INTO #tmpAg
-		SELECT custID FROM customer ci WITH (NOLOCK)
-		WHERE ci.custid NOT IN(SELECT custid from DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK))
-			AND ci.roleid = 2
-			AND ci.Currency IN (SELECT ISNULL(t.currency,ci.currency) FROM @tmpCurrency t)	
-END  
-IF EXISTS( SELECT 1 FROM @tmpSite WHERE siteid > 0)--Licensee   
-BEGIN  
-    INSERT INTO #tmpAg
-    SELECT custID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust lc with (nolock) 
-    WHERE LicenseeID IN (SELECT siteid FROM @tmpSite WHERE siteid > 0)
-        AND roleid = 2
-        AND lc.Currency IN (SELECT ISNULL(t.currency,lc.currency) FROM @tmpCurrency t)	
-END  
+SET @licencseeCnt = @@ROWCOUNT	
 
--- only create index after inserting data to not affect performance when inserting
-CREATE INDEX IX_tmpAg_CustID ON #tmpAg(CustID)
-
-IF EXISTS (SELECT 1 FROM @tmpSite WHERE SiteID = 0)-- ALL Site
+SELECT @licenseeCnt_db = count(distinct sl.LicenseeID)
+FROM DBLIC.bodb_Licensee.dbo.LicenseeProduct3rd lp WITH(NOLOCK)
+	INNER JOIN DBLIC.bodb_Licensee.dbo.SystemLicensee sl WITH(NOLOCK) ON lp.LicenseeID = sl.LicenseeID
+WHERE sl.IsActive = 1
+	and lp.LicenseeID <> 18 -- exclude i7, since it's in IBC already
+	and lp.ProductID = 2 --NG
+	and sl.SystemID = 3
+ 
+IF EXISTS (SELECT 1 FROM @tmpSite WHERE SiteID = 0) OR @licenseeCnt_db = @licencseeCnt-- ALL Site
+BEGIN
     SELECT			        
 	        b.bettype bettype,
 	        sum((winlost-actual_stake)*actualrate) WinLost,
@@ -90,16 +76,37 @@ IF EXISTS (SELECT 1 FROM @tmpSite WHERE SiteID = 0)-- ALL Site
 	        sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
 	        sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
 	        sum((1-tpositiontaking)*stake*actualrate) Turnover
-    FROM	bettrans b WITH (NOLOCK)
-    WHERE	b.winlostdate = @winlostdate
-	        AND b.bettype BETWEEN 81 AND 120		
-	        AND b.ruben = 1		
+    FROM dbo.bettrans b WITH (NOLOCK)
+		INNER JOIN dbo.match m with(nolock) on b.matchid = m.matchid and m.sporttype = 161 and m.eventdate = @winlostdate
+    WHERE b.bettype BETWEEN 81 AND 120		
+	        AND b.ruben = 1
 	        AND b.statusID not in (101,102,103,121)
             AND b.Currency IN (SELECT ISNULL(t.currency,b.currency) FROM @tmpCurrency t)
-            and b.liveindicator = CASE  WHEN @LiveIndicator IS NULL THEN b.liveindicator ELSE @LiveIndicator END									
+            and b.liveindicator = CASE WHEN @LiveIndicator IS NULL THEN b.liveindicator ELSE @LiveIndicator END									
     GROUP BY b.Bettype
     ORDER BY b.Bettype
+END
 ELSE
+BEGIN
+	CREATE TABLE #supers(custID INT)
+	IF EXISTS (SELECT 1 FROM @tmpSite WHERE siteid = -1)--IBCGroup   
+	BEGIN  	
+		INSERT INTO #supers (custID)
+		SELECT s.custid
+		FROM CustSuper s WITH(NOLOCK)
+			INNER JOIN custInfo c WITH(NOLOCK) on s.custid = c.custid
+		WHERE s.custid not in (SELECT custid FROM Dep_CustSuper WITH(NOLOCK))
+			AND c.currency IN (SELECT ISNULL(t.currency,c.currency) FROM @tmpCurrency t)					
+	END  
+	IF EXISTS( SELECT 1 FROM @tmpSite WHERE siteid > 0)--Licensee   
+	BEGIN  
+		INSERT INTO #supers (custID)
+		SELECT s.custid
+		FROM dbo.Dep_CustSuper s with(nolock)
+			INNER JOIN DBLIC.bodb_Licensee.dbo.Licensees l with(nolock) on s.site = l.licenseename
+		WHERE currency in (SELECT ISNULL(t.currency,s.currency) FROM @tmpCurrency t)
+	END  
+	 
     SELECT			        
 	        b.bettype bettype,
 	        sum((winlost-actual_stake)*actualrate) WinLost,
@@ -108,19 +115,22 @@ ELSE
 	        sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
 	        sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
 	        sum((1-tpositiontaking)*stake*actualrate) Turnover
-    FROM	bettrans b WITH (NOLOCK)
-    WHERE	b.winlostdate = @winlostdate
-	        AND b.bettype BETWEEN 81 AND 120		
-	        AND b.ruben = 1		
-	        AND b.statusID not in (101,102,103,121)
-	        AND recommend IN(SELECT custid FROM #tmpAg)
-	        and b.liveindicator = CASE  WHEN @LiveIndicator IS NULL THEN b.liveindicator ELSE @LiveIndicator END	        		
+    FROM dbo.bettrans b WITH (NOLOCK)
+		INNER JOIN dbo.match m with(nolock) on b.matchid = m.matchid and m.sporttype = 161 and m.eventdate = @winlostdate
+    WHERE b.bettype BETWEEN 81 AND 120		
+		AND b.ruben = 1		
+		AND b.statusID not in (101,102,103,121)	        
+		AND b.liveindicator = CASE  WHEN @LiveIndicator IS NULL THEN b.liveindicator ELSE @LiveIndicator END	      
+		AND b.srecommend IN (SELECT custid FROM #supers)		
     GROUP BY b.Bettype
     ORDER BY b.Bettype
     
-DROP TABLE #tmpAg
+    DROP TABLE #supers
+END
+    
+
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_NumberGame] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_NumberGame] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_NumberGame] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_NumberGame] TO [vnteam] AS [dbo]
