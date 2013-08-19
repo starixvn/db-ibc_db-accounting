@@ -40,8 +40,10 @@ BEGIN
 				sum((winlost-actual_stake)*actualrate) WinLost,
 				sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 				sum(scomm*actualrate) Commission,	
-				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
-				sum((1-tpositiontaking)* stake * actualrate) Turnover
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) VirtualLineTotal,
+				sum((1-tpositiontaking)* stake * actualrate) RealTurnover,
+				sum((1-tpositiontaking)* stake * actualrate) VirtualTurnover
 		FROM	bettrans b WITH (NOLOCK)
 				INNER JOIN VSRaceInfo r ON r.EventID = b.matchid
 				INNER JOIN #DepAgent ag ON b.recommend = ag.custid
@@ -57,12 +59,14 @@ BEGIN
 	END
 	ELSE BEGIN	
 		SELECT		
-				s.site,
+				ag.site,
 				sum((winlost-actual_stake)*actualrate) WinLost,
 				sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 				sum(scomm*actualrate) Commission,	
-				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
-				sum((1-tpositiontaking)* stake * actualrate) Turnover
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) VirtualLineTotal,
+				sum((1-tpositiontaking)* stake * actualrate) RealTurnover,
+				sum((1-tpositiontaking)* stake * actualrate) VirtualTurnover
 		FROM	bettrans b WITH (NOLOCK)
 				INNER JOIN match m on b.matchid = m.matchid
 				INNER JOIN #DepAgent ag ON b.recommend = ag.custid
@@ -73,8 +77,8 @@ BEGIN
 				AND b.statusID NOT IN (101, 102, 103) --('VOID', 'REJECT','REFUND') 
 				AND b.ruben = 1
 				and m.sporttype = @sporttype
-		GROUP BY site
-		ORDER BY site
+		GROUP BY ag.site
+		ORDER BY ag.site
 	END
 	
 	DROP TABLE #DepAgent
