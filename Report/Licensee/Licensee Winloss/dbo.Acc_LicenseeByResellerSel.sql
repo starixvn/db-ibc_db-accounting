@@ -30,7 +30,7 @@ AS
 	- 20130612@Jim: change codition for EffectiveDate
 	- 20130621@Jim: fix bug wrong condition when inner join table LicenseeProduct3rd
 	- 20130802@Jim: fix bug wrong LicenseeProduct3rd.EffectiveDate condition
-	- 20130819@Jim: remove PIT,Starlit if @fromdate after '2013-06-30'
+	
 */
 
 SET NOCOUNT ON
@@ -69,12 +69,6 @@ WHERE
 	AND (ISNULL(LTRIM(RTRIM(@ProductCode)),'')='' OR ((ISNULL(LTRIM(RTRIM(@ProductCode)),''))<>''))
 ORDER BY l.IsDeposit DESC,r.ResellerName, l.LicenseeName
 
-IF @FromDate>='2013-07-01'
-	BEGIN
-		DELETE FROM #Data
-		WHERE ResellerID IN (3,8) -- remove Starlit,PIH
-	END 
-	
 SET @ProductCode = ISNULL(LTRIM(RTRIM(@ProductCode)),'')
 IF @ProductCode <> '' AND EXISTS(SELECT 1 FROM Product3rd WITH (NOLOCK) WHERE ProductPrefix = @ProductCode)
 BEGIN
