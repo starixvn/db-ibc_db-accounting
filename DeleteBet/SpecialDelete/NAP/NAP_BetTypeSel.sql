@@ -8,6 +8,7 @@ DB: DBAGE/bodb02
 Original: Acc_BetTypeSel
 
 Revisions:    
+    - 20130813@Elodie: Add new bettype Live Bacarat and Live Roulette (1103,1104)
     
 Param's Explanation:
 @Mode: 
@@ -58,7 +59,7 @@ BEGIN
 	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
 	SELECT	typeid , typenamee as bettypename, 3 as type, 0 as liveindicator
 	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid between 1101 and 1102
+	WHERE	typeid between 1101 and 1199
 END
 
 IF @Mode = 4

@@ -9,6 +9,8 @@ GO
 ALTER PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
 	@ResellerID int=0,
 	@ProductCode VARCHAR(10)='',
+	@FromDate SMALLDATETIME,
+	@ToDate  SMALLDATETIME,
 	@ExcludeBA BIT = 0,
 	@ExcludeTest BIT = 0
 AS
@@ -28,6 +30,7 @@ AS
 	- 20130612@Jim: change codition for EffectiveDate
 	- 20130621@Jim: fix bug wrong condition when inner join table LicenseeProduct3rd
 	- 20130802@Jim: fix bug wrong LicenseeProduct3rd.EffectiveDate condition
+	- 20130819@Jim: remove PIT,Starlit if @fromdate after '2013-06-30'
 */
 
 SET NOCOUNT ON
@@ -36,6 +39,7 @@ SET @ResellerID = ISNULL(@ResellerID,0)
 SET @ProductCode = ISNULL(@ProductCode,'')
 SET @ExcludeBA = ISNULL(@ExcludeBA,0)
 SET @ExcludeTest = ISNULL(@ExcludeTest,0)
+SELECT @Fromdate=ltrim(rtrim(@Fromdate)),@Todate=ltrim(rtrim(@Todate))  
 
 CREATE TABLE #Data (ResellerID int,ResellerName varchar(50), ResellerType INT,LicenseeID INT, LicenseeName varchar(50))
 DECLARE @ProductID INT
@@ -65,6 +69,12 @@ WHERE
 	AND (ISNULL(LTRIM(RTRIM(@ProductCode)),'')='' OR ((ISNULL(LTRIM(RTRIM(@ProductCode)),''))<>''))
 ORDER BY l.IsDeposit DESC,r.ResellerName, l.LicenseeName
 
+IF @FromDate>='2013-07-01'
+	BEGIN
+		DELETE FROM #Data
+		WHERE ResellerID IN (3,8) -- remove Starlit,PIH
+	END 
+	
 SET @ProductCode = ISNULL(LTRIM(RTRIM(@ProductCode)),'')
 IF @ProductCode <> '' AND EXISTS(SELECT 1 FROM Product3rd WITH (NOLOCK) WHERE ProductPrefix = @ProductCode)
 BEGIN
@@ -82,7 +92,7 @@ BEGIN
 
 END
 
-SELECT DISTINCT * FROM #Data
+SELECT DISTINCT * FROM #Data ORDER BY ResellerID,ResellerType
 
 DROP TABLE #Data
 GO
