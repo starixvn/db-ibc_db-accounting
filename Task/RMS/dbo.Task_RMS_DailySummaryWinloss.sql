@@ -102,7 +102,7 @@ SET NOCOUNT ON
 			,actualrate
 			,SUM(odds)
 			,SUM(betcount)
-		FROM rmSumWinloss WITH(NOLOCK)
+		FROM rmSumWinloss2 WITH(NOLOCK)
 		WHERE winlostdate = @winlostdate
 		GROUP BY winlostdate
 			,custid
