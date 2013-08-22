@@ -9,6 +9,8 @@ GO
 ALTER PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
 	@ResellerID int=0,
 	@ProductCode VARCHAR(10)='',
+	@FromDate SMALLDATETIME,
+	@ToDate  SMALLDATETIME,
 	@ExcludeBA BIT = 0,
 	@ExcludeTest BIT = 0
 AS
@@ -28,6 +30,7 @@ AS
 	- 20130612@Jim: change codition for EffectiveDate
 	- 20130621@Jim: fix bug wrong condition when inner join table LicenseeProduct3rd
 	- 20130802@Jim: fix bug wrong LicenseeProduct3rd.EffectiveDate condition
+	
 */
 
 SET NOCOUNT ON
@@ -36,6 +39,7 @@ SET @ResellerID = ISNULL(@ResellerID,0)
 SET @ProductCode = ISNULL(@ProductCode,'')
 SET @ExcludeBA = ISNULL(@ExcludeBA,0)
 SET @ExcludeTest = ISNULL(@ExcludeTest,0)
+SELECT @Fromdate=ltrim(rtrim(@Fromdate)),@Todate=ltrim(rtrim(@Todate))  
 
 CREATE TABLE #Data (ResellerID int,ResellerName varchar(50), ResellerType INT,LicenseeID INT, LicenseeName varchar(50))
 DECLARE @ProductID INT
@@ -82,7 +86,7 @@ BEGIN
 
 END
 
-SELECT DISTINCT * FROM #Data
+SELECT DISTINCT * FROM #Data ORDER BY ResellerID,ResellerType
 
 DROP TABLE #Data
 GO
