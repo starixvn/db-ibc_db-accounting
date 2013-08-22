@@ -12,6 +12,7 @@ Revision:
 	- 20120420@Hurri: add tickets of member under agent BARM into IBC winlost
 	- 20120626@Elodie: exclude outright, HR from sportbook ( in case of matchid = orid)
 	- 20130620@Johnson: copy data to rptWinlost2
+	- 20130820@Johnson: remove table rptWinlost
 */
 	
 	DECLARE @CommSetting TABLE
@@ -32,10 +33,7 @@ Revision:
 	
 	SELECT distinct winlostdate FROM bettrans with (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
 	IF @@ROWCOUNT = 1
-	BEGIN
-		DELETE FROM bodb_Report.dbo.rptWinlost
-		WHERE winlostdate = @winlostdate
-		
+	BEGIN				
 		DELETE FROM bodb_Report.dbo.rptWinlost2
 		WHERE winlostdate = @winlostdate
 		
@@ -172,34 +170,6 @@ Revision:
 		AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
 		AND bodb_Report.dbo.rptWinlost2.bettype = 10
 		
-		INSERT INTO [bodb_report].[dbo].[rptWinLost]
-           ([winlostdate]
-           ,[matchid]
-           ,[bettype]
-           ,[liveindicator]
-           ,[Status]
-           ,[IBC]
-           ,[WinLost]
-           ,[Position]
-           ,[Commission]
-           ,[SportType]
-           ,[exrisk])
-      SELECT	
-			[winlostdate]
-           ,[matchid]
-           ,[bettype]
-           ,[liveindicator]
-           ,[Status]
-           ,[IBC]
-           ,[RealWinlost]
-           ,[RealPosition]
-           ,[RealCommission]
-           ,[SportType]
-           ,[exrisk]
-      FROM [bodb_report].[dbo].[rptWinLost2] WITH(NOLOCK)
-      WHERE winlostdate = @winlostdate
-	
-	 
 		UPDATE bodb_Report.dbo.rptWinlost2
 		SET SportType = CASE
 			WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
@@ -224,9 +194,6 @@ Revision:
 
 		IF @@ROWCOUNT = 1
 		BEGIN
-			DELETE FROM bodb_Report.dbo.rptWinlost
-			WHERE winlostdate = @winlostdate
-			
 			DELETE FROM bodb_Report.dbo.rptWinlost2
 			WHERE winlostdate = @winlostdate
 		
@@ -363,34 +330,6 @@ Revision:
 			AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
 			AND bodb_Report.dbo.rptWinlost2.bettype = 10
 			
-			INSERT INTO [bodb_report].[dbo].[rptWinLost]
-			   ([winlostdate]
-			   ,[matchid]
-			   ,[bettype]
-			   ,[liveindicator]
-			   ,[Status]
-			   ,[IBC]
-			   ,[WinLost]
-			   ,[Position]
-			   ,[Commission]
-			   ,[SportType]
-			   ,[exrisk])
-			SELECT	
-				[winlostdate]
-			   ,[matchid]
-			   ,[bettype]
-			   ,[liveindicator]
-			   ,[Status]
-			   ,[IBC]
-			   ,[RealWinlost]
-			   ,[RealPosition]
-			   ,[RealCommission]
-			   ,[SportType]
-			   ,[exrisk]
-			FROM [bodb_report].[dbo].[rptWinLost2] WITH(NOLOCK)
-			WHERE winlostdate = @winlostdate
-		
-		 
 			UPDATE bodb_Report.dbo.rptWinlost2
 			SET SportType = CASE
 				WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
@@ -412,6 +351,7 @@ Revision:
 	END
 	
 	DROP TABLE #bettransm
+
 GO
 GRANT EXECUTE ON [dbo].[Task_rptWinLost_UpdateTable] TO [bodbAdminNet]
 GO

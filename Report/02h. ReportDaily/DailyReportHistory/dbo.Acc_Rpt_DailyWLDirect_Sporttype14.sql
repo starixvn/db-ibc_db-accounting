@@ -54,14 +54,15 @@ AS
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 		- 20130618@Johnson: Add NSW racing's pools from AUST
+		- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+		- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 		- DisplayOrder field:	1 -> 100: all products that enable virtual currency 
 								101 -> 200: all products that disable virtual currency
-		- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
-		- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+		
 
 */
 BEGIN

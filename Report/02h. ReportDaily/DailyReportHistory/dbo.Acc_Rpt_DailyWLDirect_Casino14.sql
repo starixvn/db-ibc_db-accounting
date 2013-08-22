@@ -30,10 +30,10 @@ BEGIN
 	SELECT		
 			71 bettype,
 			case when dep.custid is null then 1 else 2 end as site,
-			sum((winlost-actual_stake)*actualrate) WinLost,
-			sum((awinlost+mwinlost+swinlost)*actualrate) Position,
-			sum(scomm*actualrate) Commission,	
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
+			isnull(sum((winlost-actual_stake)*actualrate), 0) WinLost,
+			isnull(sum((awinlost+mwinlost+swinlost)*actualrate), 0) Position,
+			isnull(sum(scomm*actualrate), 0) Commission,	
+			isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate), 0) LineTotal,
 			0 Turnover
 	FROM	bettrans14 b WITH (NOLOCK)
 		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
@@ -43,8 +43,10 @@ BEGIN
 			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
 			AND b.statusID NOT IN (101, 102,103,121) 
 			AND b.ruben = 1		
-	GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end
-	ORDER BY b.Bettype, site	
+	GROUP BY case when dep.custid is null then 1 else 2 end 
+	ORDER BY site	
+	--GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end 
+	--ORDER BY b.Bettype, site		
 	
 	DROP TABLE #DepAgent
 END 
