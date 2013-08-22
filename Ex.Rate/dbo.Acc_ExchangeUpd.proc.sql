@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_ExchangeUpd]    Script Date: 01/30/2010 08:36:49 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_ExchangeUpd]
+﻿ALTER PROC [dbo].[Acc_ExchangeUpd]
 	@exchangeid int,
 	@actualrate FLOAT,
 	@minbet FLOAT = 0,
@@ -28,7 +21,7 @@ AS
 Created: ?
 Task : Update ex rate
 
-DB: DBTRANS.bodb02
+DB: DBTXN/bodb02
 Original: 
 
 Revisions: 
@@ -38,7 +31,7 @@ Revisions:
 	- 20100504@Peter :  Remove the calling to SP [DB052].[Affiliate_12BET].[dbo].[Aff_AccUpdateExchange]
 	                    coz it will be updated on Affiliate Admin
 	- 20110605@Johnson: Add columns Description, MultipliedBy       
-
+	- 20130822@Lukas: change alias for DB03
 Param's Explanation:
 • @actualrate: new rate to update
 • @minbet: update new minbet 
@@ -49,7 +42,7 @@ Param's Explanation:
 SET NOCOUNT ON
 
 --Check permission for account site: @phuc20080213
-EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[ExchangeRate]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[ExchangeRate]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 If @ErrCode <> 0
 	RETURN
 --end
@@ -128,8 +121,11 @@ EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_ExchangeRate
 	@actualrate = @actualrate, 
 	@IP = @IP, 
 	@Doing = @LogData
-GO
 
-GRANT EXECUTE ON [dbo].[Acc_ExchangeUpd] TO [bodbAdminNet]
+
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeUpd] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_ExchangeUpd] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeUpd] TO [ITVivi] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeUpd] TO [vnteam] AS [dbo]

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ExchangeIns]	
+﻿ALTER PROC [dbo].[Acc_ExchangeIns]	
 	@exchangeid INT OUTPUT,
 	@actualrate FLOAT,
 	@minbet FLOAT = 0,
@@ -21,7 +21,7 @@ SET NOCOUNT ON
 /*
 Created: 
 Task : Insert new currency
-DB: DBTRANS.bodb02
+DB: DBTXN/bodb02
 Original:
 
 Revisions:
@@ -29,13 +29,14 @@ Revisions:
 	- 20090701@: add param @minbet
 	- 20100127@Khoa: add columns @GBPRate AUDRate, ZARRate, EURORate , US$Rate   
 	- 20110506@Johnson: Add columns @Description, @MultipliedBy, @Code 
+	- 20130822@Lukas: change alias for DB03
 Param's Explanation:
 	• @actualrate: specIFy exchange-rate of the currency
 	• @minbet: specIFy minbet of the currency
 
 */
 
-EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[ExchangeRate]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[ExchangeRate]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 IF @ErrCode <> 0
 	RETURN
 --END
@@ -75,8 +76,10 @@ EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_ExchangeRate
 	@IP = @IP, 
 	@Doing = @LogData
 
+
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_ExchangeIns]  TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_ExchangeIns] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeIns] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeIns] TO [ITVivi] AS [dbo]
 GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeIns] TO [vnteam] AS [dbo]
