@@ -9,7 +9,7 @@ AS
 		DB: DBRPT/bodb_Report
 		
 		Revisions:
-		
+			- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -25,7 +25,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0) as realTurnover
 			,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND (sporttype BETWEEN 1 and 99 OR sporttype = 161)
 		GROUP BY sporttype,liveindicator ,ibc
@@ -44,7 +44,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal --copy data from actual value
 			,0 as realTurnover
 			,NULL as virtualTurnover
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 71
 		GROUP BY bettype
@@ -62,7 +62,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			,0 as realTurnover
 			,NULL as virtualTurnover
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 73
 		GROUP BY bettype
@@ -80,7 +80,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
 			,ISNULL(SUM(realTurnover),0) as virtualTurnover
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype between 1101 and 1199
 		GROUP BY bettype
@@ -97,7 +97,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(virtualLineTotal),0)
 			,ISNULL(SUM(realTurnover),0)
 			,ISNULL(SUM(virtualTurnover),0)
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 9
 		GROUP BY status
@@ -114,7 +114,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(virtualLineTotal),0)
 			,ISNULL(SUM(realTurnover),0)
 			,ISNULL(SUM(virtualTurnover),0)
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype = 29
 		GROUP BY status
@@ -132,7 +132,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			, 0 as realTurnover
 			,0 as virtualTurnover
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 31 AND 33
 		GROUP BY sporttype
@@ -150,7 +150,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			,ISNULL(SUM(realTurnover),0)
 			,ISNULL(SUM(realTurnover),0) as virtualTurnover
-		FROM rptWinlost2 WITH(NOLOCK)
+		FROM rptWinlost WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 1201 AND 1299
 		GROUP BY sporttype
