@@ -19,12 +19,12 @@ BEGIN
 			and ((bettype = 1220 AND sporttype = 186) OR (bettype = 1231 AND sporttype = 181))		
 	END	
 	
-	IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Dep_CustSetting3rd')
-	BEGIN
-		DELETE Dep_CustSetting3rd WITH(ROWLOCK,UPDLOCK)
-		WHERE custid >= @mincustid and custid <= @maxcustid
-			and ((bettype = 1220 AND sporttype = 186) OR (bettype = 1231 AND sporttype = 181))
-	END	
+	--IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Dep_CustSetting3rd')
+	--BEGIN
+	--	DELETE Dep_CustSetting3rd WITH(ROWLOCK,UPDLOCK)
+	--	WHERE custid >= @mincustid and custid <= @maxcustid
+	--		and ((bettype = 1220 AND sporttype = 186) OR (bettype = 1231 AND sporttype = 181))
+	--END	
 	
 END
 GO
