@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
 	@IsSpecial BIT = 0,
 	@IsAllowedNG BIT = 0,
 	@IsAllowedRB BIT  =0,
+	@IsAllowedDW BIT  =0,
 	@ErrCode int = 0 OUTPUT , 
 	@ErrMsg nvarchar(1000) = '' OUTPUT 	
 )
@@ -27,6 +28,7 @@ Revisions:
 	+20130204@Jim: add param @ResellerID 
 	+20130603@Jim: grant currency permission 
 	+20130624@Jim: set default for new licensee on Accounting system is inactive 
+	+20130725@Jim: restrict permission for DW function 
 	
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
@@ -36,6 +38,7 @@ Param's Explanation:
 	- username ending with 04: income access
 	+ @SuperWildCard example: 12BETSuper%
 	+ @ResellerID : Reseller who new Licensee must to belong 
+	+@IsAllowedDW : offer DW :1  else :0
 */
 BEGIN
 SET NOCOUNT ON
@@ -76,6 +79,7 @@ SELECT @licenseeid, FunctionId FROM [Functions] WITH (NOLOCK)
 WHERE FunctionId NOT IN (SELECT FunctionId FROM [LicenseeFunctions] WITH (NOLOCK) WHERE LicenseeId = @LicenseeId)
 AND (@IsAllowedNG=1 OR (@IsAllowedNG=0 AND FunctionID <> 23))
 AND (@IsAllowedRB=1 OR (@IsAllowedRB=0 AND FunctionID NOT IN (22,34,35)))
+AND ((@IsAllowedDW=0 AND FunctionID NOT IN (5,44,45)) OR (@IsAllowedDW=1))
 -- add new licensee config into SystemLicensee 
 IF NOT EXISTS (SELECT 1 FROM SystemLicensee (NOLOCK) WHERE LicenseeID=@licenseeid) 
 BEGIN
@@ -169,7 +173,7 @@ BEGIN
 	WHERE l.LicenseeId =@LicenseeId			
 	AND (f.FunctionId = 4 OR f.ParentId = 4)
 	AND f.FunctionId NOT IN (SELECT FunctionId FROM LicenseeUserFunctions WHERE LicenseeId =@LicenseeId	AND UserId = @UserId)	
-	/*
+	
 	--DataWarehouse
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
@@ -178,7 +182,7 @@ BEGIN
 	WHERE l.LicenseeId =@LicenseeId			
 	AND (f.FunctionId = 5 OR f.ParentId = 5)
 	AND f.FunctionId NOT IN (SELECT FunctionId FROM LicenseeUserFunctions WHERE LicenseeId =@LicenseeId	AND UserId = @UserId)	
-	*/
+	AND (@IsAllowedDW=1)
 	--Customer Reports
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
@@ -204,7 +208,7 @@ BEGIN
 
 END
 /*
-	- Grant currencey permission to Licensee's Users
+	- Grant currency permission to Licensee's Users
 	*/
 	DECLARE @Currency AS TABLE (LicenseeID INT, CurrencyID INT)
 	DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )

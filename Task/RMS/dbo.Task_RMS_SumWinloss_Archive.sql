@@ -13,19 +13,20 @@ ALTER PROCEDURE [dbo].[Task_RMS_SumWinloss_Archive]
 		Created: Johnson
 		Date: 2012-12-12
 		Task: Archive rmSumWinloss to rmSumWinloss_Old
-		DB: DB054.bobdb_RMS
+		DB: DBRMS/bobdb_RMS
 		
 		Revisions:
-		
+			- 20130814@Johnson: archive rmSumWinloss2
 		Parameter's Explanation:
 		
 	*/
 SET NOCOUNT ON
-	INSERT INTO rmSumWinloss_old(
+	INSERT INTO rmSumWinloss_old2(
 		[winlostdate]
       ,[custid]
       ,[sporttype]
       ,[statusid]
+      ,[combo]
       ,[username]
       ,[currency]
       ,[stake]
@@ -40,6 +41,7 @@ SET NOCOUNT ON
       ,[custid]
       ,[sporttype]
       ,[statusid]
+      ,[combo]
       ,[username]
       ,[currency]
       ,[stake]
@@ -49,13 +51,44 @@ SET NOCOUNT ON
       ,[actualrate]
       ,[odds]
       ,[betcount]
-  FROM [dbo].[rmSumWinloss] WITH(NOLOCK)
+  FROM [dbo].[rmSumWinloss2] WITH(NOLOCK)
   WHERE winlostdate = @winlostdate
   
   IF @@ERROR = 0
   BEGIN
-   
-	DELETE rmSumWinloss WITH(ROWLOCK) WHERE winlostdate = @winlostdate
+		INSERT INTO rmSumWinloss_old(
+			[winlostdate]
+		  ,[custid]
+		  ,[sporttype]
+		  ,[statusid]		 
+		  ,[username]
+		  ,[currency]
+		  ,[stake]
+		  ,[winlost]
+		  ,[company_stake]
+		  ,[company_winlost]
+		  ,[actualrate]
+		  ,[odds]
+		  ,[betcount]
+		)
+		SELECT [winlostdate]
+		  ,[custid]
+		  ,[sporttype]
+		  ,[statusid]		  
+		  ,[username]
+		  ,[currency]
+		  ,[stake]
+		  ,[winlost]
+		  ,[company_stake]
+		  ,[company_winlost]
+		  ,[actualrate]
+		  ,[odds]
+		  ,[betcount]
+	  FROM [dbo].[rmSumWinloss] WITH(NOLOCK)
+	  WHERE winlostdate = @winlostdate
+	  
+	  DELETE rmSumWinloss2 WITH(ROWLOCK) WHERE winlostdate = @winlostdate	  
+	  DELETE rmSumWinloss WITH(ROWLOCK) WHERE winlostdate = @winlostdate
   END
   ELSE
   BEGIN
