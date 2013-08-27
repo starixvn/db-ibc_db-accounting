@@ -1,9 +1,6 @@
 ﻿set ANSI_NULLS ON
 set QUOTED_IDENTIFIER ON
 go
-
-
-
 ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@CustID			INT,
 	@FromDate		DATETIME,
@@ -53,6 +50,7 @@ Revisions:
     - 20130123@Daniel: Change link server alias
 	- 20130527@Jim: support RNG Casino
 	- 20130719@Victor: apply betlist core
+	- 20130716@Jim: update matchid for RNG Casino and Bingo
 	
 Param's Explanation:
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -707,7 +705,7 @@ BEGIN
 			b.Liveawayscore,
 			b.IP AS IP,
 			0 as LeagueID,
-			0 as MatchID,	
+			71 as MatchID,	
 			0 as MatchCode,
 			'' AS Race,	
 			0 as HomeID,
@@ -2175,10 +2173,10 @@ DROP TABLE #TempBetList
 DROP TABLE #BetListByDateMem
 DROP TABLE #TempExchange
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbLicenseeNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [vnteam]
 
+GO
+GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbLicenseeNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [vnteam] AS [dbo]
