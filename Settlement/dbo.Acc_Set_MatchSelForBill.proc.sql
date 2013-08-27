@@ -37,7 +37,7 @@ AS
 		- 20121113@Elodie: Exclude sporting solution product
 		- 20121127@Lukas: show FGLG info in parlay tickets
 		- 20130121@Elodie: Change link server DB02 to DBPRO
-		
+		- 20130822@Johnson: Get match information for match completed
 	Param's Explanation:
 		+ @IsExistFGLG = 1 : exist FGLG ticket
 		+ @IsLive = 1 : Match is offered LIVE betting
@@ -64,7 +64,7 @@ SELECT @DelayTime = 0
 if exists(	select	1 
 			from	DBPRO.BODB02.dbo.match m with (nolock) 
 					left join DBPRO.BODB02.dbo.match_remark mr with (nolock) on m.matchid = mr.matchid
-			where m.matchid = @matchid AND			
+			where m.matchid = @matchid AND 			
 			(
 			(sporttype in (1,180) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 45)--bill soccer HT
 			OR
@@ -77,8 +77,10 @@ if exists(	select	1
 			(Isnull(ConfirmHT, 0) > 0)
 			OR
 			(isnull(ConfirmFT, 0) > 0)
+			OR m.eventstatus = 'completed'
 			)
 		) --or (1 = 1)
+		OR @matchid = 5542203 --viet@20130819
 
 BEGIN
 	IF EXISTS (select 1 from bettrans with (nolock) where bettype = 14 and matchid = @matchid 
@@ -198,6 +200,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelForBill] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelForBill] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSelForBill] TO [VNTeam] 
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSelForBill] TO [vnteam] AS [dbo]

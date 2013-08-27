@@ -12,7 +12,7 @@
 		DB: DBRPT/bodb_Report
 		
 		Revisions:
-		
+			- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -60,7 +60,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(virtualTurnover),0)
 			,ISNULL(SUM(virtualLineTotal),0)
 			,m.isNeutral			
-		FROM rptWinlost2 b WITH(NOLOCK)
+		FROM rptWinlost b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
 		WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND b.sporttype = @sporttype
@@ -94,7 +94,7 @@ SET NOCOUNT ON
 				,ISNULL(SUM(virtualTurnover),0)
 				,ISNULL(SUM(virtualLineTotal),0)
 				,CONVERT(BIT,0) as IsNeutral	
-			FROM rptWinlost2 b WITH(NOLOCK)
+			FROM rptWinlost b WITH(NOLOCK)
 				INNER JOIN bodb02.dbo.outright m WITH(NOLOCK) ON b.matchid = m.orid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND b.sporttype = @sporttype
@@ -134,7 +134,7 @@ SET NOCOUNT ON
 			,ISNULL(SUM(virtualTurnover),0)
 			,ISNULL(SUM(virtualLineTotal),0)
 			,m.isNeutral			
-		FROM rptWinlost2 b WITH(NOLOCK)
+		FROM rptWinlost b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid
 		WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND b.sporttype = @sporttype
@@ -168,7 +168,7 @@ SET NOCOUNT ON
 				,ISNULL(SUM(virtualTurnover),0)
 				,ISNULL(SUM(virtualLineTotal),0)
 				,CONVERT(BIT,0) as IsNeutral	
-			FROM rptWinlost2 b WITH(NOLOCK)
+			FROM rptWinlost b WITH(NOLOCK)
 				INNER JOIN bodb02.dbo.outright14 m WITH(NOLOCK) ON b.matchid = m.orid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND b.sporttype = @sporttype

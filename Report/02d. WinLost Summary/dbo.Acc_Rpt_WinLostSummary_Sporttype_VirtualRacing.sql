@@ -10,7 +10,7 @@
 		DB: DBRPT/bodb_report
 		
 		Revisions:
-		
+			- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
 		Parameter's Explanation	
 	*/
 SET NOCOUNT ON
@@ -24,7 +24,7 @@ SET NOCOUNT ON
 		,ISNULL(SUM(realTurnover),0) as realTurnover
 		,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 		,ISNULL(SUM(realTurnover),0) as virtualTurnover
-	FROM rptWinlost2 b WITH(NOLOCK)
+	FROM rptWinlost b WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.VSRaceInfo r WITH(NOLOCK) ON b.matchid = r.eventid
 	WHERE b.winlostdate between @fromdate and @todate
 		AND b.sporttype = @sporttype

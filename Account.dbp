@@ -731,8 +731,10 @@ Begin DataProject = "Account"
          End
       End
       Begin Folder = "02d. WinLost Summary"
-         Script = "dbo.Acc_Rpt_WinLostDetails.StoredProcedure.sql"
-         Script = "dbo.Acc_Rpt_WinLostSummary.StoredProcedure.sql"
+         Begin Folder = "BK"
+            Script = "dbo.Acc_Rpt_WinLostDetails.StoredProcedure.sql"
+            Script = "dbo.Acc_Rpt_WinLostSummary.StoredProcedure.sql"
+         End
          Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype.sql"
          Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype_Racing.sql"
          Script = "dbo.Acc_Rpt_WinLostSummary_Sporttype_SB.sql"

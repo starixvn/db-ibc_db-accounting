@@ -12,7 +12,7 @@ Revision:
 	- 20120420@Hurri: add tickets of member under agent BARM into IBC winlost
 	- 20120626@Elodie: exclude outright, HR from sportbook ( in case of matchid = orid)
 	- 20130620@Johnson: copy data to rptWinlost2
-	- 20130820@Johnson: remove table rptWinlost
+	- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
 */
 	
 	DECLARE @CommSetting TABLE
@@ -34,7 +34,7 @@ Revision:
 	SELECT distinct winlostdate FROM bettrans with (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
 	IF @@ROWCOUNT = 1
 	BEGIN				
-		DELETE FROM bodb_Report.dbo.rptWinlost2
+		DELETE FROM bodb_Report.dbo.rptWinlost
 		WHERE winlostdate = @winlostdate
 		
 		--calculate racing winlost
@@ -55,7 +55,7 @@ Revision:
 			AND bettype IN (31,32)
 		GROUP BY refno
 		
-		INSERT INTO bodb_Report.dbo.rptWinlost2
+		INSERT INTO bodb_Report.dbo.rptWinlost
 			(
 				[winlostdate]
 			   ,[matchid]
@@ -105,7 +105,7 @@ Revision:
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
 
 
-		INSERT INTO bodb_Report.dbo.rptWinlost2
+		INSERT INTO bodb_Report.dbo.rptWinlost
 			(
 				[winlostdate]
 			   ,[matchid]
@@ -149,44 +149,44 @@ Revision:
 			winlostdate, matchid, bettype, liveindicator, status,
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
 
-		UPDATE bodb_Report.dbo.rptWinlost2
+		UPDATE bodb_Report.dbo.rptWinlost
 		SET SportType = CASE
 			WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
 			WHEN (leaguename LIKE '%NHL%' OR leaguename LIKE '%hockey%') AND l.sporttype = 2 THEN 4
 			ELSE l.sporttype END, exrisk = m.exrisk
 		FROM match m with (nolock)
 			inner join league l with (nolock) ON m.leagueid = l.leagueid
-		WHERE bodb_Report.dbo.rptWinlost2.matchid = m.matchid
-		AND m.eventdate = @winlostdate AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-		AND bodb_Report.dbo.rptWinlost2.bettype not in (10,31,32,33) --20120626@Elodie: exclude outright from sportbook
+		WHERE bodb_Report.dbo.rptWinlost.matchid = m.matchid
+		AND m.eventdate = @winlostdate AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+		AND bodb_Report.dbo.rptWinlost.bettype not in (10,31,32,33) --20120626@Elodie: exclude outright from sportbook
 
-		UPDATE bodb_Report.dbo.rptWinlost2
+		UPDATE bodb_Report.dbo.rptWinlost
 		SET SportType = CASE
 			WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
 			WHEN (leaguename LIKE '%NHL%' OR leaguename LIKE '%hockey%') AND l.sporttype = 2 THEN 4
 			ELSE l.sporttype END
 		FROM outright o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
-		WHERE bodb_Report.dbo.rptWinlost2.matchid = o.orid
-		AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-		AND bodb_Report.dbo.rptWinlost2.bettype = 10
+		WHERE bodb_Report.dbo.rptWinlost.matchid = o.orid
+		AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+		AND bodb_Report.dbo.rptWinlost.bettype = 10
 		
-		UPDATE bodb_Report.dbo.rptWinlost2
+		UPDATE bodb_Report.dbo.rptWinlost
 		SET SportType = CASE
 			WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
 			WHEN (leaguename LIKE '%NHL%' OR leaguename LIKE '%hockey%') AND l.sporttype = 2 THEN 4
 			ELSE l.sporttype END
 		FROM outright o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
-		WHERE bodb_Report.dbo.rptWinlost2.matchid = o.orid
-		AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-		AND bodb_Report.dbo.rptWinlost2.bettype BETWEEN 31 AND 33
+		WHERE bodb_Report.dbo.rptWinlost.matchid = o.orid
+		AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+		AND bodb_Report.dbo.rptWinlost.bettype BETWEEN 31 AND 33
 		
 		--Virtual Racing
-		UPDATE bodb_Report.dbo.rptWinlost2
+		UPDATE bodb_Report.dbo.rptWinlost
 		SET SportType = r.sporttype
 		FROM VSRaceInfo r with (nolock)
-		WHERE bodb_Report.dbo.rptWinlost2.matchid = r.EventID
-		AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-		AND bodb_Report.dbo.rptWinlost2.bettype in (1231, 1232, 1233, 1237, 1238)			
+		WHERE bodb_Report.dbo.rptWinlost.matchid = r.EventID
+		AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+		AND bodb_Report.dbo.rptWinlost.bettype in (1231, 1232, 1233, 1237, 1238)			
 	END
 	ELSE
 	BEGIN -- check from BetTrans14
@@ -194,7 +194,7 @@ Revision:
 
 		IF @@ROWCOUNT = 1
 		BEGIN
-			DELETE FROM bodb_Report.dbo.rptWinlost2
+			DELETE FROM bodb_Report.dbo.rptWinlost
 			WHERE winlostdate = @winlostdate
 		
 			--calculate racing winlost
@@ -215,7 +215,7 @@ Revision:
 				AND bettype IN (31,32)
 			GROUP BY refno
 			
-			INSERT INTO bodb_Report.dbo.rptWinlost2
+			INSERT INTO bodb_Report.dbo.rptWinlost
 			(
 				[winlostdate]
 			   ,[matchid]
@@ -265,7 +265,7 @@ Revision:
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
 
 
-			INSERT INTO bodb_Report.dbo.rptWinlost2
+			INSERT INTO bodb_Report.dbo.rptWinlost
 				(
 					[winlostdate]
 				   ,[matchid]
@@ -309,44 +309,44 @@ Revision:
 				winlostdate, matchid, bettype, liveindicator, status,
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
 
-			UPDATE bodb_Report.dbo.rptWinlost2
+			UPDATE bodb_Report.dbo.rptWinlost
 			SET SportType = CASE
 				WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
 				WHEN (leaguename LIKE '%NHL%' OR leaguename LIKE '%hockey%') AND l.sporttype = 2 THEN 4
 				ELSE l.sporttype END, exrisk = m.exrisk
 			FROM match14 m with (nolock)
 				inner join league l with (nolock) ON m.leagueid = l.leagueid
-			WHERE bodb_Report.dbo.rptWinlost2.matchid = m.matchid
-			AND m.eventdate = @winlostdate AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-			AND bodb_Report.dbo.rptWinlost2.bettype not in (10,31,32,33) --20120626@Elodie: exclude outright from sportbook
+			WHERE bodb_Report.dbo.rptWinlost.matchid = m.matchid
+			AND m.eventdate = @winlostdate AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+			AND bodb_Report.dbo.rptWinlost.bettype not in (10,31,32,33) --20120626@Elodie: exclude outright from sportbook
 			
-			UPDATE bodb_Report.dbo.rptWinlost2
+			UPDATE bodb_Report.dbo.rptWinlost
 			SET SportType = CASE
 				WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
 				WHEN (leaguename LIKE '%NHL%' OR leaguename LIKE '%hockey%') AND l.sporttype = 2 THEN 4
 				ELSE l.sporttype END
 			FROM outright14 o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
-			WHERE bodb_Report.dbo.rptWinlost2.matchid = o.orid
-			AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-			AND bodb_Report.dbo.rptWinlost2.bettype = 10
+			WHERE bodb_Report.dbo.rptWinlost.matchid = o.orid
+			AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+			AND bodb_Report.dbo.rptWinlost.bettype = 10
 			
-			UPDATE bodb_Report.dbo.rptWinlost2
+			UPDATE bodb_Report.dbo.rptWinlost
 			SET SportType = CASE
 				WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
 				WHEN (leaguename LIKE '%NHL%' OR leaguename LIKE '%hockey%') AND l.sporttype = 2 THEN 4
 				ELSE l.sporttype END
 			FROM outright14 o with (nolock) INNER JOIN league l with (nolock) ON o.leagueid = l.leagueid
-			WHERE bodb_Report.dbo.rptWinlost2.matchid = o.orid
-			AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-			AND bodb_Report.dbo.rptWinlost2.bettype BETWEEN 31 AND 33	
+			WHERE bodb_Report.dbo.rptWinlost.matchid = o.orid
+			AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+			AND bodb_Report.dbo.rptWinlost.bettype BETWEEN 31 AND 33	
 			
 			--Virtual Racing
-			UPDATE bodb_Report.dbo.rptWinlost2
+			UPDATE bodb_Report.dbo.rptWinlost
 			SET SportType = r.sporttype
 			FROM VSRaceInfo r with (nolock)
-			WHERE bodb_Report.dbo.rptWinlost2.matchid = r.EventID
-			AND bodb_Report.dbo.rptWinlost2.winlostdate = @winlostdate
-			AND bodb_Report.dbo.rptWinlost2.bettype in (1231, 1232, 1233, 1237, 1238)	
+			WHERE bodb_Report.dbo.rptWinlost.matchid = r.EventID
+			AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
+			AND bodb_Report.dbo.rptWinlost.bettype in (1231, 1232, 1233, 1237, 1238)	
 		END
 	END
 	
