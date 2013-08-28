@@ -28,6 +28,7 @@ AS
 	Revisions:
 		Daniel@20130312: Add pageaccess customer reports
 		Jim@20130603: restrict currency permission for licensee user 
+		Jim@20130823: fix bug duplicate currency in currency list
 	
 */
 
@@ -38,7 +39,7 @@ declare @Currency as table (CurrencyID INT)
 select @LicenseeID = LicenseeID from Licensees (nolock) where LicenseeName = @LicenseeName
 
 insert into @currency (CurrencyID)
-select currency
+select DISTINCT currency
 from dbo.LicenseeCust WITH (NOLOCK) WHERE LicenseeID=@LicenseeID
 
 
