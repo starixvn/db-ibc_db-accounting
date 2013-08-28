@@ -69,7 +69,7 @@ begin
 	values (@LicenseeID, @UserID, 1)
 	
 	insert into dbo.CurrencyUser (usrID,LicenseeID,CurrencyID,SystemID,isActive)
-	select @UserID,@LicenseeID,CurrencyID,1,1 -- systemID=1 is default from Lrf
+	select DISTINCT @UserID,@LicenseeID,CurrencyID,1,1 -- systemID=1 is default from Lrf
 	from @currency
 
 end
