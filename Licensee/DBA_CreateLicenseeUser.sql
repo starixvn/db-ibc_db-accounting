@@ -83,7 +83,7 @@ end
 
 DECLARE @isInternal BIT
 SELECT @isInternal=isInternal FROM dbo.Users (NOLOCK) WHERE  username=@Username
-WHILE (@isInternal<>0)
+
 
 --grant access
 IF CHARINDEX('TotalBets', @PageAccess) > 0 
