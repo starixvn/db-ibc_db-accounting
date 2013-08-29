@@ -81,6 +81,10 @@ begin
 	 return
 end
 
+DECLARE @isInternal BIT
+SELECT @isInternal=isInternal FROM dbo.Users (NOLOCK) WHERE  username=@Username
+WHILE (@isInternal<>0)
+
 --grant access
 IF CHARINDEX('TotalBets', @PageAccess) > 0 
 BEGIN
@@ -112,7 +116,7 @@ BEGIN
 	AND (f.FunctionId = 3 OR f.ParentId = 3)
 END
 
- IF CHARINDEX('ManageMember', @PageAccess) > 0
+IF (CHARINDEX('ManageMember', @PageAccess) > 0 AND @isInternal<>0)
 BEGIN
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
@@ -133,20 +137,14 @@ BEGIN
 	AND (f.FunctionId = 5 OR f.ParentId = 5)
 END
 
- IF CHARINDEX('ManageAccount', @PageAccess) > 0
+ IF (CHARINDEX('ManageAccount', @PageAccess) > 0 AND @isInternal<>0)
 BEGIN
-	
-	DECLARE @isInternal BIT
-	SELECT @isInternal=isInternal FROM dbo.Users (NOLOCK) WHERE  username=@Username
-	WHILE (@isInternal<>0)
-	BEGIN
 		INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 		SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
 		FROM [Functions] f WITH(NOLOCK)
 			INNER JOIN [LicenseeFunctions] l WITH(NOLOCK) ON f.FunctionId = l.FunctionId
 		WHERE l.LicenseeId =@LicenseeId			
 		AND (f.FunctionId = 6 OR f.ParentId = 6)
-	END
 END
 
 IF CHARINDEX('CustomerReports', @PageAccess) > 0
