@@ -28,7 +28,7 @@ AS
 	Revisions:
 		Daniel@20130312: Add pageaccess customer reports
 		Jim@20130603: restrict currency permission for licensee user 
-		Jim@20130823: fix bug duplicate currency in currency list
+		Jim@20130823: Internal user haven't got ManageMember 
 	
 */
 
@@ -120,6 +120,7 @@ BEGIN
 		INNER JOIN [LicenseeFunctions] l WITH(NOLOCK) ON f.FunctionId = l.FunctionId
 	WHERE l.LicenseeId =@LicenseeId			
 	AND (f.FunctionId = 4 OR f.ParentId = 4)
+	
 END
 
  IF CHARINDEX('DataWarehouse', @PageAccess) > 0
@@ -134,12 +135,18 @@ END
 
  IF CHARINDEX('ManageAccount', @PageAccess) > 0
 BEGIN
-	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
-	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
-	FROM [Functions] f WITH(NOLOCK)
-		INNER JOIN [LicenseeFunctions] l WITH(NOLOCK) ON f.FunctionId = l.FunctionId
-	WHERE l.LicenseeId =@LicenseeId			
-	AND (f.FunctionId = 6 OR f.ParentId = 6)
+	
+	DECLARE @isInternal BIT
+	SELECT @isInternal=isInternal FROM dbo.Users (NOLOCK) WHERE  username=@Username
+	WHILE (@isInternal<>0)
+	BEGIN
+		INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
+		SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
+		FROM [Functions] f WITH(NOLOCK)
+			INNER JOIN [LicenseeFunctions] l WITH(NOLOCK) ON f.FunctionId = l.FunctionId
+		WHERE l.LicenseeId =@LicenseeId			
+		AND (f.FunctionId = 6 OR f.ParentId = 6)
+	END
 END
 
 IF CHARINDEX('CustomerReports', @PageAccess) > 0
