@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  Trigger [dbo].[CustInfo_update]    Script Date: 08/28/2013 02:03:13 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER TRIGGER [dbo].[CustInfo_update] ON [dbo].[custInfo] AFTER UPDATE
+﻿ALTER TRIGGER [dbo].[CustInfo_update] ON [dbo].[custInfo] AFTER UPDATE
 AS
 /*
 Created by: 20120731@
@@ -20,6 +13,7 @@ Revisions:
     - 20130221@Elodie: add field maxpermatch181 for Virtual Horse Racing
     - 20130604@Jamie: Add new field maxpermatch182 for Virtual Greyhound
     - 20130718@Lukas: add column DisableCasinoBonus 
+    - 20130830@Jamie: Add MaxPerMatch184 for Virtual Motor Racing 
 */
 SET NOCOUNT ON
 INSERT INTO bodb_CustomerLog.dbo.CustInfo_history (
@@ -50,6 +44,7 @@ INSERT INTO bodb_CustomerLog.dbo.CustInfo_history (
                   ,MaxWinLiveCasino
                   ,DoubleCommLosing
                   ,DisableCasinoBonus 
+                  ,maxpermatch184
                 )
 SELECT
                 username, custid, currency, roleid, srecommend, mrecommend, recommend, dangercust, autosuspend, reject, credit, closed, MatchLimit,
@@ -79,4 +74,5 @@ SELECT
                   ,MaxWinLiveCasino
                   ,DoubleCommLosing
                   ,DisableCasinoBonus 
+                  ,maxpermatch184
 FROM [DELETED]
