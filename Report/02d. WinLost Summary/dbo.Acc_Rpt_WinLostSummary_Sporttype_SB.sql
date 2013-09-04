@@ -1,0 +1,195 @@
+﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype_SB]
+	@fromdate	DATETIME,
+	@todate		DATETIME,
+	@sporttype	INT = 0,
+	@bettype	INT = 0,
+	@liveindicator BIT = 0
+ AS
+	/*
+		Created: Johnson
+		Date: 2013-06-24
+		Task: Get winlost summary details by match for sportbook
+		DB: DBRPT/bodb_Report
+		
+		Revisions:
+			- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
+		Parameter's Explanation:
+	*/
+SET NOCOUNT ON
+	
+	Declare @RPT TABLE (
+		matchid int, matchcode nvarchar(50) COLLATE SQL_Latin1_General_CP1_CS_AS,
+		HomeId int, AwayId int,		
+		liveindicator bit, bettype smallint, leagueid int,
+		realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money,
+		virtualTurnover money, virtualLineTotal money, isNeutral bit
+	)
+	
+	Declare @mineventdate datetime,
+			@f_date datetime,
+			@t_date datetime
+	
+	SELECT @mineventdate = min(eventdate) from bodb02.dbo.match with(nolock)
+		
+	
+	IF @todate >= @mineventdate
+	BEGIN
+		IF @fromdate < @mineventdate
+			SELECT @f_date = @mineventdate
+		ELSE
+			SELECT @f_date = @fromdate
+			
+		SELECT @t_date = @todate
+		
+		INSERT INTO @RPT(
+			matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+			realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
+		)
+		SELECT b.matchid
+			,matchcode
+			,homeid
+			,awayid
+			,b.liveindicator
+			,b.bettype
+			,m.leagueid
+			,ISNULL(SUM(realWinlost),0) 
+			,ISNULL(SUM(realPosition),0)
+			,ISNULL(SUM(realCommission),0)
+			,ISNULL(SUM(realTurnover),0)
+			,ISNULL(SUM(realLineTotal),0)			
+			,ISNULL(SUM(virtualTurnover),0)
+			,ISNULL(SUM(virtualLineTotal),0)
+			,m.isNeutral			
+		FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
+		WHERE winlostdate BETWEEN @f_date AND @t_date
+			AND b.sporttype = @sporttype
+			AND CASE WHEN @bettype = 0 THEN 1
+					WHEN @bettype = b.bettype THEN 1
+					WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8) THEN 1
+					ELSE 0 END = 1
+			AND CASE WHEN @bettype = 0 THEN 1
+					WHEN liveindicator = @liveindicator THEN 1
+					ELSE 0 END = 1
+		GROUP BY b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
+		
+		IF @bettype IN (0,19999) AND @sporttype <=99
+		BEGIN
+			INSERT INTO @RPT(
+				matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+				realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
+			)
+			SELECT b.matchid
+				,m.matchcode
+				,m.teamid as homeid
+				,0 as awayid
+				,0 as liveindicator
+				,b.bettype
+				,m.leagueid
+				,ISNULL(SUM(realWinlost),0) 
+				,ISNULL(SUM(realPosition),0)
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realTurnover),0)
+				,ISNULL(SUM(realLineTotal),0)			
+				,ISNULL(SUM(virtualTurnover),0)
+				,ISNULL(SUM(virtualLineTotal),0)
+				,CONVERT(BIT,0) as IsNeutral	
+			FROM rptWinlost b WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.outright m WITH(NOLOCK) ON b.matchid = m.orid
+			WHERE winlostdate BETWEEN @f_date AND @t_date
+				AND b.sporttype = @sporttype
+				AND b.bettype = 10
+				AND CASE WHEN @bettype = 0 THEN 1
+					WHEN liveindicator = @liveindicator THEN 1
+					ELSE 0 END = 1
+			GROUP BY b.matchid, m.matchcode, m.teamid, b.bettype, m.leagueid	
+		END			
+	END
+	
+	IF @fromdate <@mineventdate
+	BEGIN
+		IF @todate < @mineventdate
+			SELECT @t_date = @todate
+		ELSE
+			SELECT @t_date = @mineventdate - 1
+			
+		SELECT @f_date = @fromdate
+		
+		INSERT INTO @RPT(
+			matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+			realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
+		)
+		SELECT b.matchid
+			,matchcode
+			,homeid
+			,awayid
+			,b.liveindicator
+			,b.bettype
+			,m.leagueid
+			,ISNULL(SUM(realWinlost),0) 
+			,ISNULL(SUM(realPosition),0)
+			,ISNULL(SUM(realCommission),0)
+			,ISNULL(SUM(realTurnover),0)
+			,ISNULL(SUM(realLineTotal),0)			
+			,ISNULL(SUM(virtualTurnover),0)
+			,ISNULL(SUM(virtualLineTotal),0)
+			,m.isNeutral			
+		FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid
+		WHERE winlostdate BETWEEN @f_date AND @t_date
+			AND b.sporttype = @sporttype
+			AND CASE WHEN @bettype = 0 THEN 1
+					WHEN @bettype = b.bettype THEN 1
+					WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8) THEN 1
+					ELSE 0 END = 1
+			AND CASE WHEN @bettype = 0 THEN 1
+					WHEN liveindicator = @liveindicator THEN 1
+					ELSE 0 END = 1
+		GROUP BY b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
+		
+		IF @bettype IN (0,19999) AND @sporttype <=99
+		BEGIN
+			INSERT INTO @RPT(
+				matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, 
+				realWinlost, realPosition, realCommission, realTurnover, realLineTotal, virtualTurnover, virtualLineTotal, isNeutral
+			)
+			SELECT b.matchid
+				,m.matchcode
+				,m.teamid as homeid
+				,0 as awayid
+				,0 as liveindicator
+				,b.bettype
+				,m.leagueid
+				,ISNULL(SUM(realWinlost),0) 
+				,ISNULL(SUM(realPosition),0)
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realTurnover),0)
+				,ISNULL(SUM(realLineTotal),0)			
+				,ISNULL(SUM(virtualTurnover),0)
+				,ISNULL(SUM(virtualLineTotal),0)
+				,CONVERT(BIT,0) as IsNeutral	
+			FROM rptWinlost b WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.outright14 m WITH(NOLOCK) ON b.matchid = m.orid
+			WHERE winlostdate BETWEEN @f_date AND @t_date
+				AND b.sporttype = @sporttype
+				AND b.bettype = 10
+				AND CASE WHEN @bettype = 0 THEN 1
+					WHEN liveindicator = @liveindicator THEN 1
+					ELSE 0 END = 1
+			GROUP BY b.matchid, m.matchcode, m.teamid, b.bettype, m.leagueid	
+		END			
+	END
+	
+	SELECT * FROM @RPT
+	ORDER BY
+	liveindicator DESC,
+	bettype, 
+	leagueid,
+	--leaguename,
+	CASE WHEN matchcode LIKE '%EX%' THEN 1 ELSE 0 END, 
+	matchcode, 
+	Homeid--home	
+	
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype_SB] TO [bodbAdminNet]

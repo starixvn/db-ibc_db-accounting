@@ -16,11 +16,6 @@ SELECT
 FROM Licensees l WITH (NOLOCK)  
 INNER JOIN LicenseeBAConfig ba WITH (NOLOCK) ON l.LicenseeID = ba.LicenseeID
 
-	
-	
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_LicenseeSelAll] TO [bodbAdminNet]
 GO

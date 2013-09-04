@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Parlay] 
+﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Parlay]
 (
 	@matchids	VARCHAR(2000),
 	@creator	INT,
@@ -34,7 +34,9 @@ AS
 		- 20130103@Lukas: Restrict settle time for matches under major leage
 		- 20130121@Elodie: Change link server DB02, DB06 to DBPRO, DBACC
 						   Write more log on DBTXN server in case of DBLOG server failure
-						   
+		- 20130710@Viet: Change way to Parlay Settlement 
+		- 20130711@Jamie: Add Balance Negative 
+
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		
@@ -44,56 +46,24 @@ BEGIN
 	
 	Declare @SkipBalanceUpdate bit
 	SET @SkipBalanceUpdate = 0
-	
 
-	DECLARE @start DATETIME, @stop DATETIME, @NotKeyScoreList VARCHAR(130)
+	DECLARE  @start				DATETIME
+			,@stop				DATETIME
+			,@NotKeyScoreList	VARCHAR(130)
+			,@ActionID			INT
+			
 	SELECT	@start = CURRENT_TIMESTAMP,
 			@ErrCode = 0,
 			@ErrMsg = ''
+			
+	SELECT @ActionID = CASE @Action 
+							WHEN 'CAL' THEN 104
+							WHEN 'UNDO' THEN 105
+							WHEN 'REFUND-FT' THEN 106
+							WHEN 'REFUND-HT' THEN 120
+							WHEN 'REFUND' THEN 107
+						END
 	
-	/*
-		only settled from 4:00AM - 8:00PM (GMT+8) ~ 4:00PM-8:00AM (GMT-4)
-		for matches under major leagues
-		*ENGLISH PREMIER LEAGUE	3
-		*GERMANY-BUNDESLIGA I	5
-		*ITALY SERIE A			4
-		SPAIN PRIMERA LALIGA	43
-		France Ligue 1			8
-		UEFA CHAMPIONS LEAGUE	1837
-		UEFA Europa League		10132
-	*/	
-	IF EXISTS (	SELECT TOP 1 1  
-				FROM DBPRO.BODB02.dbo.Match WITH(NOLOCK)
-				WHERE matchid IN (SELECT val FROM dbo.strSplit(@matchids,','))
-					AND leagueID IN (3,5,4,43,8,1837,10132)
-				)
-		AND DATEPART(HOUR,GETDATE()) BETWEEN 8 and 15
-	BEGIN
-		SELECT @ErrCode = 100
-		SELECT @ErrMsg = 'Inappropriate time to settle Parlay for a Major League match. Please try again later.'
-		RETURN
-	END
-	
-	IF EXISTS(SELECT 1 FROM DBACC.bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isMovingBet')
-	BEGIN
-		SELECT @ErrCode = 101
-		SELECT @ErrMsg = 'System is not ready to calculate Mix Parlay for this match. Please try again after few minutes.'
-		RETURN
-	END
-	
-	IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
-	BEGIN
-		SELECT @ErrCode = 102
-		SELECT @ErrMsg = 'Another parlay settlement is in progress, please wait a few seconds until the ongoing process has finished and try again.'
-		RETURN
-	END
-	ELSE 
-	BEGIN
-		UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-			SET VValue = '1'
-		WHERE VName = 'isCalculatingParlay'
-	END
-
 	-- GET list of matchid(s)
 	DECLARE @match TABLE (
 		rn INT PRIMARY KEY IDENTITY(1,1), 
@@ -204,7 +174,7 @@ BEGIN
 	SELECT custid, SUM(winlost-actual_stake+playercomm)
 	FROM dbo.bettrans b with (rowlock)
 		INNER JOIN refnos r ON b.refno = r.refno
-	WHERE matchid IN (9,29)
+	WHERE matchid IN (29)
 	GROUP BY custid
 
 	SET @TotalAccount = @@ROWCOUNT
@@ -234,35 +204,17 @@ END --IF @SkipBalanceUpdate = 0
 				FOR XML PATH('')
 			)
 		SET @subMatchIDs = SUBSTRING(@subMatchIDs, 1, LEN(@subMatchIDs)-1)
-		--PRINT @subMatchIDs
-		
-		--------/ 20121105@Viet : bring modds value from DBTrans to replicated servers.---
---		BEGIN TRANSACTION
---						EXEC dbo.Admin_Calculate_9  @matchids = @subMatchIDs, @matchdate = @matchdate, @selTime = @selTime OUTPUT, @updTime = @updTime OUTPUT
---		COMMIT TRANSACTION
 
 		declare @strXML_modds varchar(MAX)
 		SET @strXML_modds = ''
-		BEGIN TRANSACTION
+
 			SET @9Start = CURRENT_TIMESTAMP
-			EXEC dbo.Admin_Calculate_9  
-				@matchids = @subMatchIDs, 
-				@matchdate = @matchdate, 
-				@targetserver = 'DBTRANS', -- calculate at DBTRANS only
-				@strXML = @strXML_modds OUTPUT,
-				@selTime = @selTime OUTPUT, 
-				@updTime = @updTime OUTPUT
+			
+												EXEC dbo.Admin_Calculate_9_Cal
+				@matchid = @subMatchIDs, 
+				@matchdate = @matchdate
+				
 			SET @9Time = @9Time + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
-		COMMIT TRANSACTION
-
-		WAITFOR DELAY '000:00:00.280' -- wait for log reader before calculating at replicated servers
-
-			SET @9Start = CURRENT_TIMESTAMP
-			EXEC dbo.Admin_Calculate_9  
-				@matchids = @subMatchIDs, 
-				@matchdate = @matchdate, 
-				@targetserver = '', -- calculate at all replicated servers
-				@strXML = @strXML_modds
 			SET @2Call = @2Call + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
 		--------/ 20121105@Viet : bring modds value from DBTrans to replicated servers.---
 
@@ -289,11 +241,11 @@ END --IF @SkipBalanceUpdate = 0
 		SELECT @matchid = matchid FROM @match WHERE rn = @rn
 
 		IF @action = 'CAL'
-			EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'M'
+												EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'M'
 		ELSE IF @action = 'REFUND'
-			EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'R'
+												EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'R'
 		ELSE IF @action IN ('REFUND-FT','REFUND-HT')
-			EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'F'
+												EXEC DBPRO.BODB02.dbo.UpdateMatch_Remark @matchid = @matchid, @command = 'F'
 
 		---------------------------------------------------------------
 		-- update match coz m88 project using DB02.dbo.match.tstamp to know match do parlay settle (vivi@2009-8-27)	
@@ -322,7 +274,7 @@ BEGIN
 	SELECT custid, SUM(winlost-actual_stake+playercomm)
 	FROM dbo.bettrans b with (rowlock)
 		INNER JOIN refnos r ON b.refno = r.refno
-	WHERE matchid IN (9,29)
+	WHERE matchid IN (29)
 	GROUP BY custid
 --===
 END --IF @SkipBalanceUpdate = 0
@@ -352,6 +304,31 @@ SELECT custid, balance
 FROM #Balance
 WHERE Increased = 1
 
+----
+-- Add Negative Balance into BalanceNegative table 
+----
+INSERT INTO [bodb02].[dbo].[BalanceNegative]
+           ([ExecDate]
+           ,[MatchID]
+           ,[ActionID]
+           ,[GroupID]
+           ,[CustID]
+           ,[Balance]
+           ,[StatusID]
+           ,[Remark])
+SELECT	 GETDATE()
+		,@MatchID
+		,@ActionID
+		,2			-- Sportsbook Parlay Settlement 
+		,CustID
+		,Balance
+		,0
+		,@matchids 
+FROM	#Balance WITH (NOLOCK)
+WHERE	Increased = 0
+		        
+---------------------------------------------------
+
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
@@ -361,7 +338,7 @@ DROP TABLE #BalanceAfter
 ---------------------------VVVV------------------------------
 
 	Declare @LogData nvarchar(200)
-	DECLARE @ActionID varchar(30), @Remark varchar(200)
+	DECLARE @Remark varchar(200)
 
 	SET @rn = 1
 	WHILE EXISTS (SELECT 1 FROM @match WHERE rn = @rn)
@@ -383,13 +360,8 @@ DROP TABLE #BalanceAfter
 		EXEC dbo.WriteLog_UserLog @creator, @LogData
 
 		--Write Log Settle
-		SELECT @ActionID = CASE @Action 
-				WHEN 'CAL' THEN 104
-				WHEN 'UNDO' THEN 105
-				WHEN 'REFUND-FT' THEN 106
-				WHEN 'REFUND-HT' THEN 120
-				WHEN 'REFUND' THEN 107
-			END
+
+
 		SELECT @Remark = 'Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms'
 			+ ' mpcs=' + CAST(@CalTime as nvarchar(10)) + ':' + CAST(@PreCal as nvarchar(10)) + ':' + CAST(@Calculate as nvarchar(10)) + ':' + CAST(@Summary as nvarchar(10))
 			+ ' tsu2s=' + CAST(@9Time as nvarchar(10)) + ':' + CAST(@selTime as varchar(10)) + ':' + CAST(@updTIme as varchar(10)) + ':' + CAST(@2Call as nvarchar(10)) + ':' + CAST(@29Time as nvarchar(10))
@@ -426,22 +398,9 @@ DROP TABLE #BalanceAfter
 
 		SET @rn = @rn + 1
 
-	END
-	
-	IF @NotKeyScoreList IS NOT NULL AND @NotKeyScoreList <> ''
-	BEGIN
-		SELECT	@ErrCode = 1,
-				@ErrMsg = 'Calculate successfully, exclude these non-keyscore matches: ' + 
-				CASE WHEN LEN(@NotKeyScoreList) = 130 THEN @NotKeyScoreList + '...'
-					 ELSE @NotKeyScoreList
-				END
-	END
-
-    UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-	    SET VValue = '0'
-    WHERE VName = 'isCalculatingParlay'
-
+	END	
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_Parlay] TO [bodbAdminNet] AS [dbo]

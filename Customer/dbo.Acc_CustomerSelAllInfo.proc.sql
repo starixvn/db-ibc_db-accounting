@@ -49,6 +49,8 @@ Revisions:
 	- 20130121@Dan: change linked server DB06 to DBARC, DB052 to DBLIC
 	- 20130322@Ethan:Get column NicknameLoginOnly for Super, Master, Agent
 	- 20130422@Johnson: get field LastChangedSecurityCodeDate
+	- 20130719@Elodie: Correct link server DBACC instead of DBARC
+	
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -77,7 +79,7 @@ SET @NegativeBetEffectiveDate='2011-09-01'
 Select @currentDate = convert(varchar(10), CURRENT_TIMESTAMP, 120)
 
 --Get CustID from DB06, where got index on Username and Username2
-Exec @custid = DBARC.bodb02.dbo.f_GetCustIDFromUsername @username
+Exec @custid = DBACC.bodb02.dbo.f_GetCustIDFromUsername @username
 IF @custid is NULL
 	RETURN
 ELSE
@@ -115,9 +117,7 @@ SELECT @DisableDownlinesLiveCS = CASE @roleid WHEN 4 THEN (SELECT TOP 1 isnull(D
 SELECT @DisableDownlinesVirtualSports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableVirtualSports = 1)
 										  WHEN 3 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableVirtualSports = 1) 											 
 										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableVirtualSports = 1) 											 
-										  ELSE 0 END			
-			
-			
+										  ELSE 0 END									
 										  										  							  
 -------------------------------------------------------------------------
 DECLARE @IsDeposit bit --Identify deposit customer
@@ -524,9 +524,7 @@ SELECT  @TotalMAgentActive MAgentActive,
 		@TotalAgentSuspended AgentSuspended,
 		@TotalMemberActive MemberActive,
 		@TotalMemberClosed MemberClosed,
-		@TotalMemberSuspended MemberSuspended
-		
-		
+		@TotalMemberSuspended MemberSuspended		
 		
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]

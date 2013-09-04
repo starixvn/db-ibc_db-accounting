@@ -1,10 +1,19 @@
-﻿ALTER  PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
+﻿USE [bodb_Licensee]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_LicenseeByResellerSel]
 	@ResellerID int=0,
 	@ProductCode VARCHAR(10)='',
+	@FromDate SMALLDATETIME,
+	@ToDate  SMALLDATETIME,
 	@ExcludeBA BIT = 0,
 	@ExcludeTest BIT = 0
 AS
-
 /*
 	Created by: [20110823@Henry]
 	Task: Get List of all licensee 
@@ -19,6 +28,8 @@ AS
 	- 20121119@Henry: Add param @ExcludeTest, if value = 1 then remove Spondemo
 	- 20130222@Scott: add filter LicenseeProduct3rd.EffectiveDate <> null
 	- 20130612@Jim: change codition for EffectiveDate
+	- 20130621@Jim: fix bug wrong condition when inner join table LicenseeProduct3rd
+	- 20130802@Jim: fix bug wrong LicenseeProduct3rd.EffectiveDate condition
 	
 */
 
@@ -28,6 +39,7 @@ SET @ResellerID = ISNULL(@ResellerID,0)
 SET @ProductCode = ISNULL(@ProductCode,'')
 SET @ExcludeBA = ISNULL(@ExcludeBA,0)
 SET @ExcludeTest = ISNULL(@ExcludeTest,0)
+SELECT @Fromdate=ltrim(rtrim(@Fromdate)),@Todate=ltrim(rtrim(@Todate))  
 
 CREATE TABLE #Data (ResellerID int,ResellerName varchar(50), ResellerType INT,LicenseeID INT, LicenseeName varchar(50))
 DECLARE @ProductID INT
@@ -45,7 +57,7 @@ FROM dbo.Licensees AS l WITH(NOLOCK)
 	INNER JOIN dbo.Resellers AS r WITH(NOLOCK) ON r.ResellerID=ls.ResellerID
 	INNER JOIN SystemLicensee sl (NOLOCK) ON l.LicenseeID=sl.LicenseeID 
 	INNER JOIN Systems s (NOLOCK) ON sl.SystemID=s.ID 
-	INNER JOIN dbo.LicenseeProduct3rd ld WITH (NOLOCK)  ON l.LicenseeID=ld.LicenseeID
+	LEFT JOIN dbo.LicenseeProduct3rd ld WITH (NOLOCK)  ON l.LicenseeID=ld.LicenseeID
 WHERE 
 	(
 		l.IsDeposit = 1 OR (l.IsDeposit=0 AND l.LicenseeID IN (SELECT DISTINCT LicenseeID FROM Labels WITH (NOLOCK)))
@@ -54,7 +66,7 @@ WHERE
 	AND s.SystemName='Accounting'
 	AND ((@ExcludeBA=0) OR (@ExcludeBA=1 AND r.ResellerID <> 3))
 	AND (@ExcludeTest=0 OR (@ExcludeTest=1 AND r.ResellerID <> 6 ))
-	AND ISNULL(ld.EffectiveDate,0)<>0
+	AND (ISNULL(LTRIM(RTRIM(@ProductCode)),'')='' OR ((ISNULL(LTRIM(RTRIM(@ProductCode)),''))<>''))
 ORDER BY l.IsDeposit DESC,r.ResellerName, l.LicenseeName
 
 SET @ProductCode = ISNULL(LTRIM(RTRIM(@ProductCode)),'')
@@ -65,7 +77,7 @@ BEGIN
 		DELETE FROM #Data WHERE ResellerID = 3
 		SELECT @ProductID = ProductID FROM Product3rd WITH (NOLOCK) WHERE ProductPrefix = @ProductCode
 		
-		DELETE FROM #Data WHERE LicenseeID NOT IN (SELECT LicenseeID FROM LicenseeProduct3rd WITH (NOLOCK) WHERE ProductID=@ProductID) AND ResellerID NOT IN (4,8) --FDL, PIH
+		DELETE FROM #Data WHERE LicenseeID NOT IN (SELECT LicenseeID FROM LicenseeProduct3rd WITH (NOLOCK) WHERE ProductID=@ProductID and ISNULL(EffectiveDate,0)<>0) AND ResellerID NOT IN (4,8) --FDL, PIH
 	END
 	ELSE
 	BEGIN
@@ -74,14 +86,12 @@ BEGIN
 
 END
 
-SELECT DISTINCT * FROM #Data
+SELECT DISTINCT * FROM #Data ORDER BY ResellerID,ResellerType
 
 DROP TABLE #Data
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_LicenseeByResellerSel] TO [bodbAdminNet]
 GO
+GRANT EXECUTE ON [dbo].[Acc_LicenseeByResellerSel] TO [bodbLicenseeNet]
+GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_LicenseeByResellerSel] TO [vnteam]
-

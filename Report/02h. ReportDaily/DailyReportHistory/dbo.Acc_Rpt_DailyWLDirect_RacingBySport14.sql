@@ -24,6 +24,7 @@ AS
 								- Check Tote Fee is passed to Partners or not							
 			- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
 			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
 	*/
 	SET NOCOUNT ON
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
@@ -37,6 +38,17 @@ AS
 		ToteCommWP		smallmoney,
 		ToteFee			smallmoney	
 	)
+	
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2
+	UNION
+	SELECT 5707545--BARM
+		
 	
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU
@@ -73,6 +85,7 @@ AS
 	WHERE	o.eventdate = @winlostdate AND l.sporttype = @sporttype
 	
 	SELECT	b.bettype,
+			case when dep.custid is null then 1 else 2 end as site,
 			sum((b.winlost -b.actual_stake)*b.actualrate) winlost,
 			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) position,
 			sum(b.scomm*b.actualrate) commission,
@@ -95,6 +108,7 @@ AS
 				from	bettransm14 with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
+			LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE	b.ruben =1 
 			and b.bettype in (31,32,33)
 			and b.matchid >0
@@ -102,8 +116,12 @@ AS
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')
 			and b.statusID not in (101,102,103,121)
 
-	GROUP BY b.bettype 
-	ORDER BY b.bettype 
+	GROUP BY b.bettype, case when dep.custid is null then 1 else 2 end 
+	ORDER BY b.bettype, site 
+	
+	DROP TABLE #DepAgent
+	
+	
 	
 	GO
     GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_RacingBySport14] TO [bodbAdminNet]

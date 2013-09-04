@@ -1,0 +1,51 @@
+set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+ALTER  PROCEDURE [dbo].[Acc_ActivelicenseeSel] 
+ @System varchar(50) = 'ACCOUNTING'
+AS
+/*
+
+Created: Jim
+	Date: 20130626
+	Task : AccSite - Amend database and SPs to show the Active Licensees only
+	DB: DB052.BODB02
+
+Revisions:
+	
+*/
+SET NOCOUNT ON
+IF(@System = 'ACCOUNTING')
+BEGIN
+		WITH cte_systemlicensee
+		as 
+		(
+		select l.licenseeid,l.licenseename
+		from bodb_licensee.dbo.licensees l with (nolock)	
+			inner join bodb_licensee.dbo.systemlicensee sl with (nolock) on l.licenseeid=sl.licenseeid and sl.systemid=3
+		where sl.isActive=1	
+		)
+		SELECT [siteid], [site],  isLicensee
+		FROM [Site] s with (NOLOCK)
+			inner join cte_systemlicensee ce on ce.licenseename=s.[site]
+		WHERE s.isActive = 1
+		ORDER BY isLicensee, [site]
+END
+	ELSE
+BEGIN
+	SELECT [siteid], [site], isLicensee
+	FROM [Site] with (NOLOCK) 
+	WHERE 
+		siteid in (SELECT siteid FROM dbo.f_SiteBySystem(@System))
+		and isActive = 1
+	ORDER BY isLicensee, [site]
+END
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_ActivelicenseeSel] TO [bodbAdminNet]
+GO
+GRANT EXECUTE ON [dbo].[Acc_ActivelicenseeSel] TO [bodbExtAccNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ActivelicenseeSel] TO [vnteam]

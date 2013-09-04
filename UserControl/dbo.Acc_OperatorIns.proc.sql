@@ -1,4 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Acc_OperatorIns]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_OperatorIns]    Script Date: 10/07/2013 2:58:52 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_OperatorIns    Script Date: 5/6/2013 2:05:52 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_OperatorIns    Script Date: 4/16/2013 9:29:24 AM ******/
+
+ALTER PROCEDURE [dbo].[Acc_OperatorIns]
 	@custid INT OUTPUT, 
 	@firstname NVARCHAR (50), 
 	@lastname NVARCHAR (50), 
@@ -36,7 +46,7 @@ Revisions:
 	- 20120605@Sophia: Modify @Logdata and change the range of ActionID
 	- 20130118@Elodie: Change link server DB03 to DBPOLICY	
 					   Write more log on DBTXN server in case of DBLOG server failure
-	
+	- 20130710@Kathy: Synchronize user data between Accounting and AdminSite: Insert data to AdminSiteUser table
 Param's Explanation:
 • @ErrCode:
     = 0: super create master successfully.
@@ -91,6 +101,20 @@ IF @@ERROR <> 0
         RETURN;
     END
 COMMIT TRANSACTION;
+
+BEGIN TRY
+		IF(@roleid >4)
+			EXEC DBPRO.bodb02.dbo.Dot_Admin_Add_AdminSiteUser @custid, @username, @userpwd, @creator
+END TRY
+BEGIN CATCH
+	DELETE FROM Customer WHERE custid = @custid
+	DELETE FROM custInfo WHERE custid = @custid
+	SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'Add customer failed.' WHEN 'CS' THEN N'Add customer failed.' WHEN 'J' THEN N'Add customer failed.' ELSE N'Add customer failed.' END;
+		IF @ReturnErrCode = 0
+			RAISERROR (@ErrMsg, 16, 1);
+		RETURN;
+END catch
+	
 /**** Write to log table ***/
 SELECT @LogData =	'<Acc_OperatorIns>'+
 							'<FirstName>'+ ISNULL([dbo].[f_EncodeXMLValue](@firstname),'') +'</FirstName>'+
@@ -143,10 +167,3 @@ BEGIN CATCH
 		@actionid = 1851, 
 		@duration = @Duration
 END CATCH
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_OperatorIns] TO [bodbAdminNet]
-
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_OperatorIns] TO [vnteam]
-

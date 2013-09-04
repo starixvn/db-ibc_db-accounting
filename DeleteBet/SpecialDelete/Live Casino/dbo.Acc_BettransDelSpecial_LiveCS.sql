@@ -31,6 +31,7 @@ AS
 		- 20130128@Elodie: Change link server DB03 to DBPOLICY
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130526@Johnson: Add param @reason to log the reason delete bets
+		- 20130702@Elodie: Add new bettype 1103, 1104
 	Param's Explanation: 
 	
 */
@@ -137,7 +138,7 @@ BEGIN
 			WHERE
 				b.matchid=@matchid 						
 				AND b.transid BETWEEN @f_transid AND @t_transid		
-				AND (b.bettype = 1101 OR b.bettype = 1102)
+				and b.bettype in (1101, 1102, 1103, 1104)
 				AND winlostdate = @today
 				and (  b.transid in (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids_N, ','))
 					or b.transid in (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids_D, ','))

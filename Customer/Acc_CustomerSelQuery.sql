@@ -29,6 +29,6 @@ SET NOCOUNT ON
 	order by username
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelQuery] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelQuery] TO [vnteam]

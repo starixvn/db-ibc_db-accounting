@@ -1,7 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverMatchSel]
-	@MatchID INT,
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT
+	@LeagueID INT,
+	@FromDate DATETIME,
+	@ToDate DATETIME
 AS
 /*
 	Created: Elodie
@@ -10,30 +10,19 @@ AS
 	DB: DBAGE/bodb02
 
 	Revisions:
-
+		- 20130711@Elodie: show match by league
+	
 	Parameter's explaination: 
-	Example: EXEC Acc_SMATurnoverMatchSel @MatchID = 4305925
+	
+	Example: EXEC Acc_SMATurnoverMatchSel @@LeagueID = 4305925, @FromDate = '2013-07-06', @ToDate = '2013-07-11'
 	
 */
 SET NOCOUNT ON
 
-IF NOT EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID)
-	AND NOT EXISTS (SELECT 1 FROM match14 WITH (NOLOCK) WHERE matchid = @MatchID)
-BEGIN
-	SELECT @ErrCode = 100, @ErrMsg = 'Match ID doesn''t exist.'
-	RETURN
-END
-IF EXISTS (SELECT 1 FROM match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'completed')
-	OR EXISTS (SELECT 1 FROM match14 WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'completed')
-BEGIN
-	SELECT @ErrCode = 101, @ErrMsg = 'You are not allowed to add super into a settled match.'
-	RETURN
-END
-
-
-SELECT leagueid, eventdate, homeid, awayid
+SELECT matchid, eventdate, homeid, awayid
 FROM match m WITH (NOLOCK)	
-WHERE matchid = @MatchID	
+WHERE leagueid = @LeagueID AND eventdate BETWEEN @FromDate AND @ToDate and eventstatus <> 'completed' and matchcode not like '%hedge%'
+order by eventdate
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_SMATurnoverMatchSel] TO [bodbAdminNet]

@@ -40,6 +40,7 @@ Revisions:
 	- 20130226@Lukas: Move SP to bodb_archive	
 	- 20130227@Elodie: Add Virtual HR product
 	- 20130408@Lukas: return value odds.teamid to alias name homeid instead of awayid
+	- 20130724@Elodie: Get winlostdate field
 */	
 SET NOCOUNT ON	
 Declare @Data TABLE (
@@ -98,7 +99,8 @@ Declare @Data TABLE (
 	awinlost money,
 	mwinlost money,
 	swinlost money,
-	showtime nvarchar(50)	
+	showtime nvarchar(50),
+	winlostdate		smalldatetime	
 )
 
 DECLARE @DetailData TABLE (
@@ -125,7 +127,7 @@ BEGIN
 			b.refno,
 			m.matchcode,
 			'' as race,
-			'' as eventdate,
+			m.eventdate as eventdate,
 			0,0,
 			b.sdiscount,
 			b.adiscount,
@@ -173,7 +175,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			m.showtime						
+			m.showtime,
+			b.winlostdate						
 		from 
 			dbo.bettrans_bk as b with (nolock,index=IX_custid) 
 			inner join dbo.match_BK as m with (nolock) on b.matchid = m.matchid 
@@ -240,7 +243,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime										 
+			 '' as showtime,
+			b.winlostdate										 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -306,7 +310,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime								 
+			 '' as showtime,
+			b.winlostdate								 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -372,7 +377,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime								 
+			 '' as showtime,
+			b.winlostdate								 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -436,7 +442,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime								 
+			 '' as showtime,
+			b.winlostdate								 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -500,7 +507,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime									 
+			 '' as showtime,
+			b.winlostdate									 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -564,7 +572,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			'' as showtime									
+			'' as showtime,
+			b.winlostdate									
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 				inner join dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 				inner join bodb02.dbo.league l with (nolock) on odds.leagueid=l.leagueid     
@@ -632,7 +641,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			'' as showtime									
+			'' as showtime,
+			b.winlostdate									
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 				inner join dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 				inner join bodb02.dbo.league l with (nolock) on odds.leagueid=l.leagueid    
@@ -706,7 +716,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			r.EventTime showtime -- race name
+			r.EventTime showtime, -- race name
+			b.winlostdate
 		from 
 			bettrans_bk as b with (nolock, index=IX_custid)    
 			INNER JOIN VSOutright_bk o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -787,7 +798,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			'' as showtime									
+			'' as showtime,
+			b.winlostdate									
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 				inner join dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 				inner join bodb02.dbo.league l with (nolock) on odds.leagueid=l.leagueid    
@@ -863,7 +875,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			'' as showtime									
+			'' as showtime,
+			b.winlostdate									
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 				inner join dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 				inner join bodb02.dbo.league l with (nolock) on odds.leagueid=l.leagueid     
@@ -931,7 +944,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime								 
+			 '' as showtime,
+			b.winlostdate								 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -997,7 +1011,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime									 
+			 '' as showtime,
+			b.winlostdate									 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1064,7 +1079,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,
-			 '' as showtime									 
+			 '' as showtime,
+			 b.winlostdate									 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1131,7 +1147,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,						
-			 '' as showtime
+			 '' as showtime,
+			 b.winlostdate
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)  
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1200,7 +1217,8 @@ BEGIN
 			 b.awinlost,
 			 b.mwinlost,
 			 b.swinlost,						
-			 '' as showtime
+			 '' as showtime,
+			 b.winlostdate
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)  
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1269,7 +1287,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			r.EventTime showtime -- race name
+			r.EventTime showtime, -- race name			
+			 b.winlostdate
 		from 
 			dbo.bettrans_bk AS b with (nolock, index=IX_custid)  
 			INNER JOIN VSOutright_bk o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -1297,7 +1316,7 @@ BEGIN
 			b.refno,
 			m.matchcode,
 			'' as race,
-			'' as eventdate,
+			m.eventdate as eventdate,
 			0,0,
 			b.sdiscount,
 			b.adiscount,
@@ -1345,7 +1364,8 @@ BEGIN
 			b.awinlost,
 			b.mwinlost,
 			b.swinlost,
-			m.showtime									
+			m.showtime,
+			 b.winlostdate									
 		from 
 			dbo.bettrans_bk AS b with (nolock, index=IX_custid)
 			inner join dbo.match_BK as m with (nolock) on b.matchid = m.matchid
