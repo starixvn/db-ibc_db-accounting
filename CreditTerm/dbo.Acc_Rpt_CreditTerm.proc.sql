@@ -107,7 +107,7 @@ BEGIN
 	FROM bettrans b with(nolock, index=IX_recommend)
 		INNER JOIN custInfo c with(nolock) on c.custid = b.recommend
 		INNER JOIN custAccount a with(nolock) on c.custid = a.custid
-	WHERE roleid = 2 
+	WHERE roleid = 2 AND (PreAgreeAmount > 0 OR groupID > 0)
 	GROUP BY b.recommend, a.groupid	
 	
 	UNION ALL

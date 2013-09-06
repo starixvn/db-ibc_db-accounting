@@ -12,7 +12,7 @@ AS
 -- Admin : for Delete ticket
 -- Call via Account/deletebet.asp
 -- submit from Account/betslip.asp
- 
+ --test
 /*	Created by: [Creator]
 	Task:  Delete bet
 		   left menu (member)/Belist/Button Delete bet

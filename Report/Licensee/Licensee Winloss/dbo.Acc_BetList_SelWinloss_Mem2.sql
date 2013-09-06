@@ -661,7 +661,7 @@ BEGIN
 				0, --Betstatus
 				CONVERT(BIT,0) AS IsNeutral,
 				b.virtualrate,
-				isnumeric(m.programID),
+				CASE WHEN b.currency2 IS NULL THEN CONVERT(BIT,0) ELSE CONVERT(BIT,1) END,
 				b.currency,
 				'' As ShowTime
 			FROM
@@ -1305,7 +1305,7 @@ BEGIN
 				0, --Betstatus
 				CONVERT(BIT,0) AS isNeutral,
 				b.virtualrate,
-				isnumeric(m.programID),
+				CASE WHEN b.currency2 IS NULL THEN CONVERT(BIT,0) ELSE CONVERT(BIT,1) END,
 				b.currency,
 				'' As ShowTime
 			FROM
@@ -1905,7 +1905,7 @@ BEGIN
 			0, --Betstatus
 			CONVERT(BIT,0) AS IsNeutral,
 			b.virtualrate,
-			isnumeric(m.programID),
+			CASE WHEN b.currency2 IS NULL THEN CONVERT(BIT,0) ELSE CONVERT(BIT,1) END,
 			b.currency,
 			'' As ShowTime
 		FROM

@@ -28,6 +28,7 @@ Revisions:
 	- 20130124@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
 	- 20130307@Lukas: change linked-server alias & add more write log section
 	- 20130311@Dan: Change linked server DB053 to DBAGE
+	- 20130827@Johnson: Check enabled status on DBTXN instead of DBAGE
 */
 SET NOCOUNT ON
 
@@ -37,7 +38,7 @@ declare @duration int
 set @startRun = getdate()
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 if @ErrCode <>0 return
 --end
 
