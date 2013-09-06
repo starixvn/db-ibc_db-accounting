@@ -1,14 +1,23 @@
-﻿ALTER PROCEDURE  [dbo].[Acc_SelCurrencyByLicensee]		
-	@LicenseeID int = 0
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_SelCurrencyByLicensee]    Script Date: 9/6/2013 2:46:39 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE  [dbo].[Acc_SelCurrencyByLicensee]		
+	@LicenseeID int = 0,
+	@excludeTest BIT=0
 AS	
 /*
-Created: 20120220@Henry
+Created: 20110423@Henry
 Task : Get all the currency by a licensee
-DB: bodb_MoveBet
+DB: DB052.bodb02
 
 
 Revisions:
-  
+    - 20111028@Henry: Order by currency name
+    - 20111111@Henry: allow to choose all currency
 Param's Explanation:
 */
 
@@ -19,10 +28,10 @@ BEGIN
 	insert into @temp
 		SELECT 
 			distinct Currency 
-		FROM LicenseeCust lc (nolock)
+		FROM bodb_Licensee.dbo.LicenseeCust lc (nolock)
 		WHERE 
-			@LicenseeID = 0 OR LicenseeID = @LicenseeID
-
+			(@LicenseeID = 0 OR LicenseeID = @LicenseeID)
+			AND (@excludeTest=0 OR (@excludeTest=1 AND Currency <> 20))	
 	
 	SELECT 
 		t.currency, 
