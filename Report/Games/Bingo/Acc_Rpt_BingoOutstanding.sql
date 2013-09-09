@@ -56,7 +56,7 @@ BEGIN
 	BEGIN		
 		IF (NOT EXISTS (SELECT 1
 		FROM	CustInfo WITH (NOLOCK)
-		WHERE	Username LIKE @Username + '%' AND RoleID = 1))
+		WHERE	Username LIKE @Username + '%' AND RoleID = 1))  
 		BEGIN 
 			SELECT @ErrCode = 1, @ErrMsg = 'Invalid username.'
 			RETURN
