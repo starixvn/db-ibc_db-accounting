@@ -4,7 +4,7 @@
 	@Site VARCHAR(100)='',
 	@Currency INT = -1,
 	@ErrCode INT = 0,
-	@ErrMsg NVARCHAR(4000)= '' OUTPUT  
+	@ErrMsg NVARCHAR(4000)= '' OUTPUT 
 AS
 /*  Created:  Kathy
 	Date:  20130826
@@ -30,11 +30,10 @@ BEGIN
 		licenseeID		INT, 
 		licenseename	VARCHAR(30)
 		)
- 
+
 	DECLARE @tblTemp TABLE(
 		transid			BIGINT, 
 		custid			INT ,
-		srecommend		INT ,
 		currency		TINYINT ,
 		CurrencyName	NVARCHAR(50), 
 		Username		NVARCHAR(50), 
@@ -65,7 +64,7 @@ BEGIN
 	END
 
 	INSERT INTO @listLicensee (licenseeID, licenseename	)
-	SELECT * FROM OPENQUERY(DBEXT, 'bodb02.dbo.Acc_Licensee_Product3rdSel ''BG''')
+	SELECT licenseeID, licenseename FROM OPENQUERY(DBEXT, 'bodb_licensee.dbo.Acc_Licensee_Product3rdSel ''BG''')
 
 	IF @Site = '0'
 	BEGIN
@@ -95,7 +94,7 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM @tblSite WHERE siteId = -1)
 	BEGIN 
 		INSERT INTO @tblTemp 
-			SELECT b.transid, b.custid, b.srecommend, b.currency, b.CurrencyName,
+			SELECT b.transid, b.custid, b.currency, b.CurrencyName,
 			 b.Username, b.transdate, b.stake,b.stake*b.actualrate, 'IBC'
 			FROM bettrans b WITH(NOLOCK)
 			INNER JOIN Customer c WITH(NOLOCK) on b.custid = c.custid
@@ -107,7 +106,7 @@ BEGIN
 			AND b.currency = CASE WHEN @Currency = -1 OR @Currency = 0 THEN b.currency ELSE @Currency END 
 	END
 	INSERT INTO @tblTemp 
-		SELECT b.transid, b.custid, b.srecommend, b.currency, b.CurrencyName,
+		SELECT b.transid, b.custid, b.currency, b.CurrencyName,
 		 b.Username, b.transdate, b.stake,b.stake*b.actualrate, s.site_name
 		FROM bettrans b WITH(NOLOCK)
 		INNER JOIN Customer c WITH(NOLOCK) on c.custid = b.custid
