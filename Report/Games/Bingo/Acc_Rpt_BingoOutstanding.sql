@@ -30,7 +30,7 @@ BEGIN
 		licenseeID		INT, 
 		licenseename	VARCHAR(30)
 		)
-
+ 
 	DECLARE @tblTemp TABLE(
 		transid			BIGINT, 
 		custid			INT ,
