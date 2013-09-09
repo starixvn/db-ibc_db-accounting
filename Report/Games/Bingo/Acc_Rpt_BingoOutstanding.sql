@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_BingoOutstanding]    Script Date: 09/09/2013 9:42:39 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_BingoOutstanding]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_BingoOutstanding]
 	@Username NVARCHAR(50)= '',
 	@ExcludeTest BIT = 0,
 	@Site VARCHAR(100)='',
@@ -222,16 +215,5 @@ BEGIN
 	SELECT ISNULL(@grandTotalRM,0) 'Grand Total RM'
 END
 
-/* Test
-	DECLARE @ErrMsg varchar(30)
-	SET @ErrMsg = ''
-	EXEC Acc_Rpt_BingoOutstanding
-	@Username ='',
-	@ExcludeTest = 0,
-	@Site = '-1',
-	@Currency = 20,
-	@ErrCode  = 0,
-	@ErrMsg = @ErrMsg  OUTPUT
-	SELECT @ErrMsg
-
-*/
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_BingoOutstanding] TO [bodbAdminNet]
