@@ -114,7 +114,8 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = @KeyID AND KeyValue = @MatchId)
 	BEGIN
 		SELECT  @ErrCode = 101,
-				@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed AND try again.'
+				@ErrMsg = 'This match is being calculated or some tickets of 
+						this match are being deleted, please wait a few seconds until the on-going process is completed AND try again.'
 		RETURN
 	END
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (@KeyID, @MatchId)
@@ -139,7 +140,8 @@ BEGIN
 	ELSE 
 	BEGIN
 		SELECT @ErrCode = 100, 
-			@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed AND try again.'
+			@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, 
+						please wait a few seconds until the on-going process is completed AND try again.'
 		RETURN
 	END
 	-------------------		
@@ -499,7 +501,10 @@ BEGIN
 	WHERE	    (a.balance - b.balance) < 0
 ------------------***** End of Special Delete *****------------------
 
-	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @MatchId) + ' FROM ' + CONVERT(VARCHAR(20), @FromTransId) + ' to ' + CONVERT(VARCHAR(20), @ToTransId) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1)) + ' reason: ' + @Reason
+	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @MatchId) 
+			+ ' FROM ' + CONVERT(VARCHAR(20), @FromTransId) + ' to ' 
+			+ CONVERT(VARCHAR(20), @ToTransId) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1)) 
+			+ ' reason: ' + @Reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 ------after delete, return all deleted deposit bets AND 12EU WITH additional information for mailing (NOT send mail for BETDAQ tickets)
@@ -591,7 +596,8 @@ BEGIN
 	INNER JOIN custinfo mag (nolock) ON bd.mrecommend = mag.custid
 	INNER JOIN custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
-	-----Begin : Send mail when delete real currencies AND creator username like 'dba%' OR 'pgm%' OR 'vndbateam',  'VnQaTeam'/ OR Currency is UUS
+	-----Begin : Send mail when delete real currencies AND creator username like 'dba%' OR 'pgm%' OR 'vndbateam', 
+	----  'VnQaTeam'/ OR Currency is UUS
 	IF EXISTS(
 		SELECT 1 FROM #BetDelete 
 		INNER JOIN bettrans b ON #BetDelete.transid = b.transid
