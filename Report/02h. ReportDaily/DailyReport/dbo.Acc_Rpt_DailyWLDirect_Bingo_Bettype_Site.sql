@@ -8,7 +8,7 @@ AS
 		DB: DBACC/bodb02
 		
 		Revisions:
-				
+			- 20130906@Johnson: get virtual values by virtual rate instead of actual rate	
 		Parameter's Explanation:
 			- @site: 1: credit
 					2: deposit	
@@ -37,7 +37,7 @@ BEGIN
 			sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 			sum(scomm*actualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) VirtualLineTotal,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
 			0 RealTurnover,
 			0 VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)

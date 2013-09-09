@@ -1,4 +1,13 @@
-﻿
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BetListbyIP_Username]    Script Date: 09/03/2013 22:42:08 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_BetListbyIP_Username    Script Date: 4/10/2013 12:04:30 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_BetListbyIP_Username    Script Date: 3/25/2013 1:37:29 PM ******/
+
 ALTER PROCEDURE [dbo].[Acc_BetListbyIP_Username]
 	@fromdate	DATETIME,
 	@ip			VARCHAR(15)
@@ -11,6 +20,7 @@ AS
 		- 20110516@Lukas: re-arrange bettype
 		- 20110802@Johnson: Add new bettype combination mix parlay
 		- 20120626@Lukas: check case of matchid = orid
+		- 20130904@Daniel: Remove condition bettype < 19001 when querying bettrans14 since it's useless => optimize performance
 	*/
  
 	SET NOCOUNT ON
@@ -21,7 +31,7 @@ AS
 			@max_date14	SMALLDATETIME
 	
 	SELECT @min_date = min(winlostdate), @max_date = max(winlostdate) FROM bettrans with (nolock) WHERE bettype < 19001
-	SELECT @min_date14 = min(winlostdate), @max_date14 = max(winlostdate) FROM bettrans14 with (nolock) WHERE bettype < 19001
+	SELECT @min_date14 = min(winlostdate), @max_date14 = max(winlostdate) FROM bettrans14 with (nolock)
 	
 
 	CREATE TABLE #tmpUserBet(	custid		INT ,
@@ -83,7 +93,6 @@ AS
 		SELECT	custid, COUNT(custid),1 
 		FROM	dbo.bettrans14 WITH (NOLOCK)
 		WHERE   winlostdate = @fromdate 
-				AND bettype < 19001
 				AND ip = @ip
 		GROUP BY custid	
 		
@@ -129,14 +138,7 @@ AS
 	ORDER BY c.username
   
 	DROP TABLE #tmpUserBet
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_BetListbyIP_Username] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BetListbyIP_Username] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BetListbyIP_Username] TO [vnteam]
-
-
-
-
-
+GRANT VIEW DEFINITION ON [dbo].[Acc_BetListbyIP_Username] TO [vnteam] AS [dbo]
