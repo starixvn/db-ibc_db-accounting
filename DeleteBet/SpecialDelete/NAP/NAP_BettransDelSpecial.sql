@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial] 
+﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId INT,
 	@FromTransId BIGINT, 
 	@ToTransId BIGINT, 
@@ -20,15 +20,10 @@
     @FromTransdate DATETIME = NULL,
 	@ToTransdate DATETIME = NULL,
 	
-	@OptionCredit TINYINT = 0,
 	@TransIdsCredit VARCHAR(4000) = '', -- for custom delete (Credit bets)
-	@OptionDeposit TINYINT = 0,
 	@TransIdsDeposit VARCHAR(4000) = '', -- for custom delete (Deposit bets)
-	@OptionBetDaq TINYINT = 0,
     @TransIdsBetDaq VARCHAR(4000) = '',-- for custom delete BetDaq
-    @Option12EU TINYINT = 0,
     @TransIds12EU VARCHAR(4000) = '',-- for custom delete 12EU
-    @OptionMHC TINYINT = 0,
     @TransIdsMHC VARCHAR(4000) = '',-- for custom delete master MHC	    
 
 	@IP VARCHAR(15) = '',
@@ -47,26 +42,6 @@ AS
 	Revisions:
 
 	Param's Explanation: Special bet delete option
-		@@OptionCredit = 0: No Delete (need to remove CreditBets out of #BetDelete)
-		@@OptionCredit = 1: Delete All (no need to remove CreditBets out of #BetDelete)
-		@@OptionCredit = 2: Optional Delete (remove CreditBets WITH option)
-
-		@@OptionDeposit = 0: No Delete (need to remove DepositBets out of #BetDelete)
-		@@OptionDeposit = 1: Delete All (no need to remove DepositBets out of #BetDelete)
-		@@OptionDeposit = 2: Optional Delete (remove DepositBets WITH option)
-
-		@@OptionBetDaq = 0: No Delete (need to remove BetDaq out of #BetDelete)
-		@@OptionBetDaq = 1: Delete All (no need to remove BetDaq out of #BetDelete)
-		@@OptionBetDaq = 2: Optional Delete (remove BetDaq WITH option)
-
-		@@Option12EU = 0: No Delete (need to remove 12EU out of #BetDelete)
-		@@Option12EU = 1: Delete All (no need to remove 12EU out of #BetDelete)
-		@@Option12EU = 2: Optional Delete (remove 12EU WITH option)
-
-		@@OptionMHC = 0: No Delete (need to remove MHC out of #BetDelete)
-		@@OptionMHC = 1: Delete All (no need to remove MHC out of #BetDelete)
-		@@OptionMHC = 2: Optional Delete (remove MHC WITH option)
-
 		- @SecondAcceptFlag: 
 		  + 0: All tickets
 		  + 1: Normal tickets only
@@ -139,10 +114,10 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = @KeyID AND KeyValue = @MatchId)
 	BEGIN
 		SELECT  @ErrCode = 101,
-				@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed AND try again.'
+				@ErrMsg = 'This match is being calculated or some tickets of 
+						this match are being deleted, please wait a few seconds until the on-going process is completed AND try again.'
 		RETURN
 	END
-
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (@KeyID, @MatchId)
 	IF (@@Error = 0)
 	BEGIN TRY
@@ -151,10 +126,10 @@ BEGIN
 			@MatchId = @MatchId, 
 			@KeyID = @KeyID,
 			@ActionID = 0, 
-			@Remark = 'ADD SUCCESS SPName=Acc_BettransDelSpecial'
+			@Remark = 'ADD SUCCESS SPName=NAP_BettransDelSpecial'
 	END TRY
 	BEGIN CATCH
-		SELECT @Remark = 'ADD SUCCESS SPName=Acc_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+		SELECT @Remark = 'ADD SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 			@UserID = @UserID, 
 			@MatchId = @MatchId, 
@@ -165,7 +140,8 @@ BEGIN
 	ELSE 
 	BEGIN
 		SELECT @ErrCode = 100, 
-			@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed AND try again.'
+			@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, 
+						please wait a few seconds until the on-going process is completed AND try again.'
 		RETURN
 	END
 	-------------------		
@@ -301,7 +277,7 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END					
-													 												 								 
+										 												 								 
 ------------------***** End of insert all data into #BetDelete *****------------------
 
 ------------------***** Insert Custid of each type into its temp table *****------------------	
@@ -311,9 +287,8 @@ BEGIN
 	FROM custInfo c WITH(NOLOCK)
 	INNER JOIN #BetDelete b
 		ON b.custid = c.custid
-	WHERE b.srecommend NOT IN (SELECT b.custid FROM Dep_CustSetting  WITH(NOLOCK))
+	WHERE b.srecommend NOT IN (SELECT custid FROM Dep_CustSuper  WITH(NOLOCK))
 	AND c.roleid = 1
-	
 
  -- INSERT Deposit CUSTOMER
  INSERT INTO @DepositCust(custid, username)
@@ -358,85 +333,38 @@ BEGIN
 	SELECT 118473
 	UNION ALL
 	SELECT 105183
-
 ------------------***** Remove data no need to special delete out of #BetDelete *****------------------
 	--FOR Delete Credit
-	IF @OptionCredit = 0 or (@OptionCredit = 2 AND @TransIdsCredit = '')
-	BEGIN
-		DELETE FROM #BetDelete
-		WHERE custid IN (SELECT custid FROM @CreditCust)
-		AND custid NOT IN (SELECT custid FROM @12EUCust)
-		AND custid NOT IN (SELECT CustID FROM dbo.f_GetBetDaqCustomer(1))
-		AND mrecommend NOT IN (SELECT custid FROM @MasterMHC) 
-	END
-	IF @OptionCredit = 2 AND @TransIdsCredit <> '' 
-	BEGIN
-		DELETE FROM #BetDelete
-		WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsCredit, ','))
-			AND custid IN (SELECT custid FROM @CreditCust)
-			AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
-			AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
-			AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))					
-	END
+	DELETE FROM #BetDelete
+	WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsCredit, ','))
+		AND custid IN (SELECT custid FROM @CreditCust)
+		AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
+		AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
+		AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))					
 	
 	--FOR Delete Deposit
-	IF @OptionDeposit = 0 or (@OptionDeposit =2 AND @TransIdsDeposit='') 
-	BEGIN 
-		DELETE FROM #BetDelete
-		WHERE #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
+	DELETE FROM #BetDelete
+	WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsDeposit, ','))
+		AND #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
 		AND CustID IN (SELECT CustID FROM @DepositCust)
-		AND custid NOT IN (SELECT custid FROM @12EUCust) --12EU
-		AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq	
-		AND mrecommend NOT IN (SELECT custid FROM @MasterMHC)	
-	END
-	IF @OptionDeposit = 2 AND  @TransIdsDeposit <> ''
-	BEGIN
-		DELETE FROM #BetDelete
-		WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsDeposit, ','))
-			AND #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
-			AND CustID IN (SELECT CustID FROM @DepositCust)
-			AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
-			AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
-			AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))							
-	END
+		AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
+		AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
+		AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))							
 
 	--FOR Delete BetDaq(BQUS888,BQUSMLB,BQUSNBA,BQUS)
-	IF @OptionBetDaq = 0 or (@OptionBetDaq = 2 AND @TransIdsBetDaq = '')
-	BEGIN
-		DELETE FROM #BetDelete 
-		WHERE custid IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1))
-	END
-	IF @OptionBetDaq = 2 AND  @TransIdsBetDaq <> ''
-	BEGIN
-		DELETE FROM #BetDelete
-		WHERE custid IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1))
-			AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsBetDaq, ','))
-	END
+	DELETE FROM #BetDelete
+	WHERE custid IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1))
+		AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsBetDaq, ','))
 
 	--FOR Delete 12EU
-	IF @Option12EU = 0 or ( @Option12EU = 2 AND @TransIds12EU='')
-	BEGIN
-		DELETE FROM #BetDelete 
-		WHERE custid IN (SELECT custid FROM @12EUCust)
-	END
-	IF @Option12EU = 2 AND  @TransIds12EU <> ''
-	BEGIN
-		DELETE FROM #BetDelete
-		WHERE custid IN (SELECT custid FROM @12EUCust)
-			AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIds12EU , ','))
-	END
+	DELETE FROM #BetDelete
+	WHERE custid IN (SELECT custid FROM @12EUCust)
+		AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIds12EU , ','))
 
 	-- For Delete master MHCEU (105181), MHCRM (118473), MHCUS(105183)
-	IF @OptionMHC = 0 or ( @OptionMHC = 2 AND @TransIdsMHC ='')
-	BEGIN
-		DELETE FROM #BetDelete WHERE mrecommend IN (SELECT custid FROM @MasterMHC)
-	END
-	IF @OptionMHC = 2 AND  @TransIdsMHC <> ''
-	BEGIN
-		DELETE FROM #BetDelete
-		WHERE mrecommend IN (SELECT custid FROM @MasterMHC)
-			AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@TransIdsMHC, ','))
-	END
+	DELETE FROM #BetDelete
+	WHERE mrecommend IN (SELECT custid FROM @MasterMHC)
+		AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@TransIdsMHC, ','))
 
 	 -- 
 	 IF EXISTS (SELECT 1 FROM #BetDelete WHERE statusID IN (111,112,113) AND @username NOT IN ('steven','joe'))
@@ -452,10 +380,10 @@ BEGIN
 					@MatchId = @MatchId, 
 					@KeyID = @KeyID,
 					@ActionID = 0, 
-					@Remark = 'DEL SUCCESS SPName=Acc_BettransDelSpecial'
+					@Remark = 'DEL SUCCESS SPName=NAP_BettransDelSpecial'
 			END TRY
 			BEGIN CATCH
-				SELECT @Remark = 'DEL SUCCESS SPName=Acc_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+				SELECT @Remark = 'DEL SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
 				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 					@UserID = @UserID, 
 					@MatchId = @MatchId, 
@@ -471,10 +399,10 @@ BEGIN
 						@MatchId = @MatchId, 
 						@KeyID = @KeyID,
 						@ActionID = 0, 
-						@Remark = 'DEL FAILED SPName=Acc_BettransDelSpecial'
+						@Remark = 'DEL FAILED SPName=NAP_BettransDelSpecial'
 				END TRY
 				BEGIN CATCH
-					SELECT @Remark = 'DEL FAILED SPName=Acc_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+					SELECT @Remark = 'DEL FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
 					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 						@UserID = @UserID, 
 						@MatchId = @MatchId, 
@@ -573,7 +501,10 @@ BEGIN
 	WHERE	    (a.balance - b.balance) < 0
 ------------------***** End of Special Delete *****------------------
 
-	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @MatchId) + ' FROM ' + CONVERT(VARCHAR(20), @FromTransId) + ' to ' + CONVERT(VARCHAR(20), @ToTransId) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1)) + ' reason: ' + @Reason
+	SELECT @LogData ='delete bet for matchid ' + CONVERT(VARCHAR(20), @MatchId) 
+			+ ' FROM ' + CONVERT(VARCHAR(20), @FromTransId) + ' to ' 
+			+ CONVERT(VARCHAR(20), @ToTransId) + ' IP=' + COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1)) 
+			+ ' reason: ' + @Reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
 ------after delete, return all deleted deposit bets AND 12EU WITH additional information for mailing (NOT send mail for BETDAQ tickets)
@@ -665,7 +596,8 @@ BEGIN
 	INNER JOIN custinfo mag (nolock) ON bd.mrecommend = mag.custid
 	INNER JOIN custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
-	-----Begin : Send mail when delete real currencies AND creator username like 'dba%' OR 'pgm%' OR 'vndbateam',  'VnQaTeam'/ OR Currency is UUS
+	-----Begin : Send mail when delete real currencies AND creator username like 'dba%' OR 'pgm%' OR 'vndbateam', 
+	----  'VnQaTeam'/ OR Currency is UUS
 	IF EXISTS(
 		SELECT 1 FROM #BetDelete 
 		INNER JOIN bettrans b ON #BetDelete.transid = b.transid
@@ -717,10 +649,10 @@ BEGIN
 				@MatchId = @MatchId, 
 				@KeyID = @KeyID,
 				@ActionID = 0, 
-				@Remark = 'DEL SUCCESS SPName=Acc_BettransDelSpecial'
+				@Remark = 'DEL SUCCESS SPName=NAP_BettransDelSpecial'
 		END TRY
 		BEGIN CATCH
-			SELECT @Remark = 'DEL SUCCESS SPName=Acc_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+			SELECT @Remark = 'DEL SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @UserID, 
 				@MatchId = @MatchId, 
@@ -736,10 +668,10 @@ BEGIN
 					@MatchId = @MatchId, 
 					@KeyID = @KeyID,
 					@ActionID = 0, 
-					@Remark = 'DEL FAILED SPName=Acc_BettransDelSpecial'
+					@Remark = 'DEL FAILED SPName=NAP_BettransDelSpecial'
 			END TRY
 			BEGIN CATCH
-				SELECT @Remark = 'DEL FAILED SPName=Acc_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+				SELECT @Remark = 'DEL FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
 				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 					@UserID = @UserID, 
 					@MatchId = @MatchId, 
@@ -751,7 +683,6 @@ BEGIN
 	
 	SET NOCOUNT OFF
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
