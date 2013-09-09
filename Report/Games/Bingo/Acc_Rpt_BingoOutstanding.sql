@@ -4,7 +4,7 @@
 	@Site VARCHAR(100)='',
 	@Currency INT = -1,
 	@ErrCode INT = 0,
-	@ErrMsg NVARCHAR(4000)= '' OUTPUT 
+	@ErrMsg NVARCHAR(4000)= '' OUTPUT  
 AS
 /*  Created:  Kathy
 	Date:  20130826
