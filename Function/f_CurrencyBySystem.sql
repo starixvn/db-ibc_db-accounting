@@ -21,6 +21,7 @@ Revisions:
 	- 20130513@Lukas: add group ACCUSD
 	- 20130718@Lukas: add group ACCUT
 	- 20130909@Jamie: add group ACCYEN668
+	
 Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING', 'ACCINDO'
 */

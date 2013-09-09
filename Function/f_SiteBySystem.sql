@@ -19,6 +19,7 @@ Revisions:
 	- 20130404@Jamie: Put ACCUUS for testing 
 	- 20130718@Lukas: add ACCUT group
 	- 20130909@Jamie: ADD group ACCYEN668 
+	
 	Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING'
 */
