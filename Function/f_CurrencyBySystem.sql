@@ -20,6 +20,7 @@ Revisions:
 	- 2O130404@Jamie: Put UUS for Testing 
 	- 20130513@Lukas: add group ACCUSD
 	- 20130718@Lukas: add group ACCUT
+	- 20130909@Jamie: add group ACCYEN668
 Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING', 'ACCINDO'
 */
@@ -45,7 +46,7 @@ BEGIN
 		UNION SELECT 47 --DDD
 		UNION SELECT 15 --IN
 	END	
-	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889'))
+	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668'))
 	BEGIN
 		Insert Into @tbCurrency(exchangeID)
 		SELECT 16 --YEN		
