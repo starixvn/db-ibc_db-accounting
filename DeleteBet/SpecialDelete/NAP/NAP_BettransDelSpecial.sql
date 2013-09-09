@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial] 
 	@MatchId INT,
 	@FromTransId BIGINT, 
 	@ToTransId BIGINT, 
