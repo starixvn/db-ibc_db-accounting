@@ -1,4 +1,4 @@
-﻿ CREATE PROCEDURE [dbo].[Acc_ResetWinning_Del]
+﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_Del]
 	@winlostdate	DATETIME,
 	@userid		INT,
 	@custid		INT = 44621,--'IBC 0506'	
@@ -13,14 +13,14 @@ AS
 	DB:		DBTRANS.BODB02, DB06.BODB02
 	
 	Revision:
-	
+		- 20130910@Elodie: Use alias server DBPOLICY instead of DB03
 	Explanation's Param:
 */	
 BEGIN
 	SET NOCOUNT ON
 	
 	--Check permission for account site
-	EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid = @userID, @funcname = '[DeleteFinanceTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @userID, @funcname = '[DeleteFinanceTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
 		IF @ErrCode <> 0 
 			RETURN
 	
