@@ -20,8 +20,8 @@
 	Original: Acc_Rpt_TicketListing
 	
 	Revisions:	
-		- 20130910: Rename parameter @SAFilter to @SecondAcceptFlag
-	
+		- 20130910@Kathy: Rename parameter @SAFilter to @SecondAcceptFlag
+		- 20130911@Kathy: Always display 2 tables: match info and total transaction group by licensee
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -62,6 +62,8 @@ SET NOCOUNT ON
 DECLARE @matchcode nvarchar(100), @homeid int, @awayid int, @eventdate datetime, @IsNeutral bit, @sporttype smallint
 SET @sporttype = 0
 
+DECLARE @TmpTotal TABLE (OrderNo int, TotalTrans bigint, bettype smallint, LiveIndicator bit, LicenseeName VARCHAR(50) )
+
 ---- If number game or virtual sports, live casino then don't care @livetype , so set @LiveType to zero
 IF @Type = 1 or @Type = 2 or @Type = 3
 SELECT @LiveType = 0
@@ -71,8 +73,13 @@ SELECT	@matchcode = matchcode, @homeid = homeid, @awayid = awayid, @eventdate = 
 FROM	match  WITH (NOLOCK)
 WHERE	matchid = @MatchId
  
+
+SELECT @matchcode as matchcode, @homeid as homeid, @awayid as awayid, 
+			convert(VARCHAR(12), @eventdate, 107) as eventdate, @MatchId as matchid, @IsNeutral as IsNeutral
+
 IF ISNULL(@sporttype,0) = 0 OR (@sporttype > 99 and @sporttype <> 161 and @sporttype <> 162 and @sporttype not between 180 and 186)
-BEGIN 
+BEGIN 	
+	SELECT t.TotalTrans, t.OrderNo, t.bettype as 'bettypeId', t.LiveIndicator, t.LicenseeName FROM @TmpTotal t
 	SET @ErrCode = 1
 	SET @ErrMsg ='Invalid MatchID.'   
 	RETURN
@@ -80,6 +87,7 @@ END
 ELSE
 IF @sporttype > 99 AND @Type = 0  
 BEGIN
+	SELECT t.TotalTrans, t.OrderNo, t.bettype as 'bettypeId', t.LiveIndicator, t.LicenseeName FROM @TmpTotal t
 	SET @ErrCode = 2  
 	SET @ErrMsg ='This MatchID is not sportsbook.'  
 	RETURN
@@ -87,6 +95,7 @@ END
 ELSE
 IF @sporttype <> 161 AND @Type = 1 
 BEGIN 
+	SELECT t.TotalTrans, t.OrderNo, t.bettype as 'bettypeId', t.LiveIndicator, t.LicenseeName FROM @TmpTotal t
 	SET @ErrCode =  3  
 	SET @ErrMsg ='This MatchID is not number game.' 
 	RETURN
@@ -94,6 +103,7 @@ END
 ELSE
 IF @sporttype not between 180 and 186 AND @Type = 2
 BEGIN 
+	SELECT t.TotalTrans, t.OrderNo, t.bettype as 'bettypeId', t.LiveIndicator, t.LicenseeName FROM @TmpTotal t
 	SET @ErrCode =  4
 	SET @ErrMsg ='This MatchID is not virtual sports.' 
 	RETURN
@@ -101,15 +111,13 @@ END
 ELSE
 IF @sporttype <> 162 AND @Type = 3
 BEGIN 
+	SELECT t.TotalTrans, t.OrderNo, t.bettype as 'bettypeId', t.LiveIndicator, t.LicenseeName FROM @TmpTotal t
 	SET @ErrCode =  5
 	SET @ErrMsg ='This MatchID is not live casino.' 
 	RETURN
 END 
-ELSE
-	SELECT @matchcode as matchcode, @homeid as homeid, @awayid as awayid, convert(VARCHAR(12), @eventdate, 107) as eventdate, @MatchId as matchid, @IsNeutral as IsNeutral
 
 ---------
-DECLARE @TmpTotal TABLE (OrderNo int, TotalTrans bigint, bettype smallint, LiveIndicator bit, LicenseeName VARCHAR(50) )
 
 CREATE TABLE #TmpBettrans (srecommend int ,bettype smallint, liveindicator bit, statusID tinyint, matchid int, cnt int)
 INSERT INTO #TmpBettrans
@@ -249,13 +257,12 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 			GROUP BY s.site, bm.liveindicator, b.bettype
 	END 
 	 
-SELECT SUM (TotalTrans) TotalTrans, OrderNo, bettype, LiveIndicator,  LicenseeName 
+SELECT SUM (TotalTrans) TotalTrans, OrderNo, bettype as 'bettypeId', LiveIndicator,  LicenseeName 
 FROM @TmpTotal
 GROUP BY OrderNo, LicenseeName, bettype, LiveIndicator
 ORDER BY OrderNo, LicenseeName, bettype, LiveIndicator
 
 DROP TABLE #TmpBettrans
-
 
 
 GO
