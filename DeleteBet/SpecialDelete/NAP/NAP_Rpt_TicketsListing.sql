@@ -248,7 +248,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 			GROUP BY s.site, bm.liveindicator, b.bettype
 	END 
 	 
-SELECT SUM (TotalTrans) TotalTrans, OrderNo, bettype, LiveIndicator,  LicenseeName 
+SELECT SUM (TotalTrans) TotalTrans, OrderNo, bettype as 'bettypeId', LiveIndicator,  LicenseeName 
 FROM @TmpTotal
 GROUP BY OrderNo, LicenseeName, bettype, LiveIndicator
 ORDER BY OrderNo, LicenseeName, bettype, LiveIndicator
