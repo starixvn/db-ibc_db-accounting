@@ -17,6 +17,7 @@
     @LiveHomeScore SMALLINT = NULL,
     @LiveAwayScore SMALLINT = NULL,
 	@SecondAcceptFlag TINYINT = 0 ,
+
     @FromTransdate DATETIME = NULL,
 	@ToTransdate DATETIME = NULL,
 	
@@ -55,7 +56,6 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-
 	--Check permission for account site:	
 	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission 
 		@custid=@UserID,
@@ -94,11 +94,9 @@ BEGIN
 		EXEC WriteLog_UserLog 
 			@UserID = @UserID, 
 			@Doing = @LogData
-
 		SELECT @ErrMsg = 'Sorry. You can not process delete bet due to either wrong password or insufficient permission!', @ErrCode = 101   
 		RETURN
 	END
-		
 	---- check AND not allow attempt to delete same game while it's still not finish
 	DECLARE @Remark VARCHAR(500)
 	DECLARE @KeyID INT
@@ -141,7 +139,7 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 100, 
 			@ErrMsg = 'This match is being calculated or some tickets of this match are being deleted, 
-						please wait a few seconds until the on-going process is completed AND try again.'
+						please wait a few seconds until the on-going process is completed and try again.'
 		RETURN
 	END
 	-------------------		
@@ -180,11 +178,10 @@ BEGIN
 
  -- bettype <> 4 - Handicap(1), Over/Under(3), 1st Handicap(7), 1st Over/Under(8) - FT.1X2(5)/ 1st 1X2(15)
  INSERT INTO #BetDelete (transid, custid, recommend, mrecommend, srecommend, betfrom, statusID) 
- SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID
+	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID
 	FROM bettrans b WITH (nolock)
 		INNER JOIN dbo.strSplit(@bettypes,'^') AS bt ON bt.val=b.bettype
-	WHERE
-		b.matchid=@matchid 
+	WHERE b.matchid=@matchid 
 		AND b.transid between @FromTransId AND @ToTransId
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END 
@@ -208,8 +205,7 @@ BEGIN
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID
 	FROM bettrans b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
-	WHERE
-		b.matchid=@matchid
+	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
@@ -228,8 +224,7 @@ BEGIN
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID
 	FROM dbo.bettrans AS b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
-	WHERE
-		b.matchid=@matchid
+	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId		
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
@@ -247,8 +242,7 @@ BEGIN
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID
 	FROM bettrans b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
-	WHERE
-		b.matchid=@matchid AND           
+	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
@@ -264,8 +258,7 @@ BEGIN
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID
 	FROM dbo.bettrans AS b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam16,'^') AS bt ON bt.val=b.betteam
-	WHERE
-		b.matchid=@matchid AND           
+	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator	
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
@@ -285,8 +278,7 @@ BEGIN
  INSERT INTO @CreditCust (custid, username)
 	SELECT c.custid, c.username
 	FROM custInfo c WITH(NOLOCK)
-	INNER JOIN #BetDelete b
-		ON b.custid = c.custid
+	INNER JOIN #BetDelete b ON b.custid = c.custid
 	WHERE b.srecommend NOT IN (SELECT custid FROM Dep_CustSuper  WITH(NOLOCK))
 	AND c.roleid = 1
 
@@ -294,8 +286,7 @@ BEGIN
  INSERT INTO @DepositCust(custid, username)
 	SELECT c.custid, c.username
 	FROM custInfo c WITH (NOLOCK)
-	INNER JOIN #BetDelete b
-	ON b.custid = c.custid
+	INNER JOIN #BetDelete b ON b.custid = c.custid
 	WHERE c.srecommend IN (SELECT custid FROM Dep_CustSuper WITH(NOLOCK))
 	AND c.roleid = 1
 	AND b.betfrom IN ('D', 'M', 'E', 'L')
@@ -304,16 +295,14 @@ BEGIN
  INSERT INTO @12EUCust (custid,username)
 	SELECT INF.custid,INF.username 
 	FROM customer INF WITH (nolock)
-	INNER JOIN #BetDelete BD 
-		ON INF.Custid = BD.Custid 
+	INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 	WHERE INF.UserName = '12EU'
 
  ----INSERT UUS CUSTOMER
  INSERT INTO @UUSCust(custid,username)
 	SELECT INF.custid, INF.username 
 	FROM custinfo INF WITH(nolock) 
-	INNER JOIN #BetDelete BD 
-		ON INF.Custid = BD.Custid 
+	INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 	WHERE INF.srecommend IN( SELECT custid FROM customer WITH(nolock) WHERE CURRENCY = 20 AND roleid = 4 ) 
 		AND INF.roleid = 1
 
@@ -507,90 +496,55 @@ BEGIN
 			+ ' reason: ' + @Reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
-------after delete, return all deleted deposit bets AND 12EU WITH additional information for mailing (NOT send mail for BETDAQ tickets)
-	IF exists(
-		SELECT 1 FROM #BetDelete INNER join bettrans b ON #BetDelete.transid = b.transid
-		WHERE	( b.betfrom  IN ('D', 'M', 'E', 'L')
-				  AND #BetDelete.custid IN (SELECT custid FROM @DepositCust) 
-				) 
-			OR #BetDelete.custid IN (SELECT custid FROM @CreditCust)
-			OR #BetDelete.custid IN (SELECT custid FROM @12EUCust)  
-			OR #BetDelete.custid IN (SELECT custid FROM @UUSCust)
-			OR #BetDelete.custid IN (SELECT custid FROM @RealCurrCust)	   	
-		) 
+------after delete, return all deleted deposit bets AND 12EU WITH additional information for mailing (NOT send mail for BETDAQ tickets)	
+	IF EXISTS(SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,'^') WHERE CONVERT(INT, val) = 10)  --@bettype = 10
 	BEGIN
-		
-		IF EXISTS(SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,'^') WHERE CONVERT(INT, val) = 10)  --@bettype = 10
-		BEGIN
-			SELECT
-				MATCH.teamid AS homeid,
-				0 AS awayid,
-				MATCH.matchcode,
-				MATCH.eventdate,
-				MATCH.leagueid,
-				GETDATE() AS DATETIME,
-				CONVERT(BIT,0) AS IsNeutral
-			FROM
-				Outright AS MATCH WITH (NOLOCK)
-			WHERE 
-				MATCH.orid = @MatchId
-		END   
-		ELSE
-		BEGIN
-			SELECT
-				MATCH.homeid,
-				MATCH.awayid,
-				MATCH.matchcode,
-				MATCH.eventdate,
-				MATCH.leagueid,
-				GETDATE() AS DATETIME,
-				ISNULL(MATCH.isNeutral, CONVERT(BIT,0)) AS IsNeutral
-			FROM
-				MATCH WITH (NOLOCK)
-			WHERE 
-				MATCH.matchid = @MatchId
-		END
-	   
-		SELECT
-			customer.username,
-			customer.username2,
-			b.odds,  
-			b.OddsType, 
-			b.transdate,
-			b.bettype,
-			b.transid AS refno,
-			betteam,
-			hdp1,
-			hdp2,
-			betfrom,
-			livehomescore,
-			liveawayscore,
-			cr.username creator,
-			stake,           
-			b.currency,
-			ag.site
+		SELECT MATCH.teamid AS homeid,
+			0 AS awayid,
+			MATCH.matchcode,
+			MATCH.eventdate,
+			MATCH.leagueid,
+			GETDATE() AS DATETIME,
+			CONVERT(BIT,0) AS IsNeutral
 		FROM
-			bettrans b WITH (NOLOCK)
-			INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-		WHERE b.transid IN(SELECT transid FROM #BetDelete)
-			AND (	
-					( b.betfrom  IN ('D', 'M', 'E', 'L')
-					  AND customer.custid IN (SELECT custid FROM @DepositCust)
-					) OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
-				--	OR Customer.custid IN (SELECT custid from @CreditCust) -- Email credit if delete
-				)
-		ORDER BY transid
+			Outright AS MATCH WITH (NOLOCK)
+		WHERE 
+			MATCH.orid = @MatchId
+	END   
+	ELSE
+	BEGIN
+		SELECT MATCH.homeid,
+			MATCH.awayid,
+			MATCH.matchcode,
+			MATCH.eventdate,
+			MATCH.leagueid,
+			GETDATE() AS DATETIME,
+			ISNULL(MATCH.isNeutral, CONVERT(BIT,0)) AS IsNeutral
+		FROM
+			MATCH WITH (NOLOCK)
+		WHERE 
+			MATCH.matchid = @MatchId
 	END
 
-	SELECT transid,
-	bd.custid, mem.UserName        AS CustUserName,
-	bd.recommend, ag.UserName    AS AgUserName,
-	bd.mrecommend, mag.UserName AS MagUserName,
-	bd.srecommend, sag.Username AS SagUserName
+	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore, cr.username creator,
+		stake, b.currency, ag.site
 	FROM
-	#BetDelete bd (nolock)
+		bettrans b WITH (NOLOCK)
+		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+	WHERE b.transid IN(SELECT transid FROM #BetDelete)
+		AND (	
+				( b.betfrom  IN ('D', 'M', 'E', 'L')
+					AND customer.custid IN (SELECT custid FROM @DepositCust)
+				) OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
+			)
+	ORDER BY transid
+
+	SELECT transid, bd.custid, mem.UserName AS CustUserName, bd.recommend, ag.UserName AS AgUserName,
+	bd.mrecommend, mag.UserName AS MagUserName, bd.srecommend, sag.Username AS SagUserName
+	FROM #BetDelete bd (nolock)
 	INNER JOIN custinfo mem (nolock) ON bd.custid     = mem.custid
 	INNER JOIN custinfo ag  (nolock) ON bd.recommend  = ag.custid
 	INNER JOIN custinfo mag (nolock) ON bd.mrecommend = mag.custid
@@ -598,48 +552,22 @@ BEGIN
 	
 	-----Begin : Send mail when delete real currencies AND creator username like 'dba%' OR 'pgm%' OR 'vndbateam', 
 	----  'VnQaTeam'/ OR Currency is UUS
-	IF EXISTS(
-		SELECT 1 FROM #BetDelete 
-		INNER JOIN bettrans b ON #BetDelete.transid = b.transid
-		WHERE	#BetDelete.custid IN (SELECT custid FROM @RealCurrCust)
-				OR #BetDelete.custid IN (SELECT custid FROM @UUSCust)
-	    	)
-	BEGIN
-		    SELECT
-				customer.username,
-				customer.username2,
-				b.odds,  
-				b.OddsType, 
-				b.transdate,
-				b.bettype,
-				b.transid AS refno,
-				betteam,
-				hdp1,
-				hdp2,
-				betfrom,
-				livehomescore,
-				liveawayscore,
-				cr.username creator,
-				stake,           
-				b.currency,
-				ag.site
-			FROM
-				bettrans b WITH (NOLOCK)
-				INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-				INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-				INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-			WHERE	b.transid IN(SELECT transid FROM #BetDelete)
-					AND (customer.custid IN (SELECT custid FROM @RealCurrCust)
-					OR customer.custid IN (SELECT custid FROM @UUSCust)
-					)	     					   
-			ORDER BY transid    	   
-	END
+	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore,
+		cr.username creator, stake, b.currency, ag.site
+	FROM bettrans b WITH (NOLOCK)
+		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+	WHERE	b.transid IN(SELECT transid FROM #BetDelete)
+			AND (customer.custid IN (SELECT custid FROM @RealCurrCust)
+			OR customer.custid IN (SELECT custid FROM @UUSCust)
+			)	     					   
+	ORDER BY transid    	   
 
 	DROP TABLE #BetDelete
 	DROP TABLE #BeforeUpd
 	DROP TABLE #AfterUpd
-
-
 	DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
 	WHERE KeyID = @KeyID AND KeyValue = @MatchId	
 	IF (@@Error = 0)
@@ -679,10 +607,10 @@ BEGIN
 					@ActionID = 0, 
 					@Remark = @Remark
 			END CATCH
-		END
-	
+		END	
 	SET NOCOUNT OFF
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
