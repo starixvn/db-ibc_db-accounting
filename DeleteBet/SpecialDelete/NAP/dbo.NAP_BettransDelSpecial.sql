@@ -174,6 +174,7 @@ BEGIN
 		SELECT 113 UNION ALL -- Lose
 		SELECT 111 -- Draw
 	END
+
 	------------------***** Insert all data into #BetDelete *****------------------
 
  -- bettype <> 4 - Handicap(1), Over/Under(3), 1st Handicap(7), 1st Over/Under(8) - FT.1X2(5)/ 1st 1X2(15)
@@ -274,6 +275,7 @@ BEGIN
 ------------------***** End of insert all data into #BetDelete *****------------------
 
 ------------------***** Insert Custid of each type into its temp table *****------------------	
+	
  -- INSERT Credit CUSTOMER
  INSERT INTO @CreditCust (custid, username)
 	SELECT c.custid, c.username
@@ -321,40 +323,51 @@ BEGIN
 	UNION ALL
 	SELECT 118473
 	UNION ALL
-	SELECT 105183
+	SELECT 105183 
 ------------------***** Remove data no need to special delete out of #BetDelete *****------------------
 	--FOR Delete Credit
-	DELETE FROM #BetDelete
-	WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsCredit, ','))
-		AND custid IN (SELECT custid FROM @CreditCust)
-		AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
-		AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
-		AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))					
-	
+	IF @TransIdsCredit <> '' or @TransIdsCredit IS NOT NULL
+	BEGIN
+		DELETE FROM #BetDelete
+		WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsCredit, ','))
+			AND custid IN (SELECT custid FROM @CreditCust)
+			AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
+			AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
+			AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))					
+	END
 	--FOR Delete Deposit
-	DELETE FROM #BetDelete
-	WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsDeposit, ','))
-		AND #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
-		AND CustID IN (SELECT CustID FROM @DepositCust)
-		AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
-		AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
-		AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))							
-
+	IF @TransIdsDeposit <> '' OR @TransIdsDeposit IS NOT NULL
+	BEGIN
+		DELETE FROM #BetDelete
+		WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsDeposit, ','))
+			AND #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
+			AND CustID IN (SELECT CustID FROM @DepositCust)
+			AND (custid NOT IN (SELECT custid FROM @12EUCust) --12EU
+			AND custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
+			AND mrecommend NOT IN (SELECT custid FROM @MasterMHC))							
+	END
+	
 	--FOR Delete BetDaq(BQUS888,BQUSMLB,BQUSNBA,BQUS)
-	DELETE FROM #BetDelete
-	WHERE custid IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1))
-		AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsBetDaq, ','))
-
+	IF @TransIdsBetDaq <> '' or @TransIdsBetDaq IS NOT NULL
+	BEGIN
+		DELETE FROM #BetDelete
+		WHERE custid IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1))
+			AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIdsBetDaq, ','))
+	END
 	--FOR Delete 12EU
-	DELETE FROM #BetDelete
-	WHERE custid IN (SELECT custid FROM @12EUCust)
-		AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIds12EU , ','))
-
+	IF @TransIds12EU <> '' or @TransIds12EU IS NOT NULL
+	BEGIN
+		DELETE FROM #BetDelete
+		WHERE custid IN (SELECT custid FROM @12EUCust)
+			AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit( @TransIds12EU , ','))
+	END
 	-- For Delete master MHCEU (105181), MHCRM (118473), MHCUS(105183)
-	DELETE FROM #BetDelete
-	WHERE mrecommend IN (SELECT custid FROM @MasterMHC)
-		AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@TransIdsMHC, ','))
-
+	IF @TransIdsMHC <> '' or @TransIdsMHC IS NOT NULL
+	BEGIN
+		DELETE FROM #BetDelete
+		WHERE mrecommend IN (SELECT custid FROM @MasterMHC)
+			AND transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@TransIdsMHC, ','))
+	END
 	 -- 
 	 IF EXISTS (SELECT 1 FROM #BetDelete WHERE statusID IN (111,112,113) AND @username NOT IN ('steven','joe'))
 		BEGIN
