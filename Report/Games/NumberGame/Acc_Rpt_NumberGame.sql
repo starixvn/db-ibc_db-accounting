@@ -22,7 +22,7 @@ AS
 		- 20121120@Dan: optimize performance (use index when searching agent, create index after inserting) 
         - 20130123@Daniel: Change link server alias
 		- 20130815@Viet: enhance sp
-		- 20130917@Kathy: Fix currency's value
+		- 20130917@Kathy: Fix currency's value   
 		
     Param usage:
 		- @SiteID:
