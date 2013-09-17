@@ -21,14 +21,13 @@
 	
 	Revisions:	
 		- 20130910: Rename parameter @SAFilter to @SecondAcceptFlag
-	
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
 		1: Number Game
 		2: Virtual sports
 		3: Live casino
-	- @LicenseeId:
+	- @LicenseeID:
 	  + =0: No Site filter
 	  + >0: Filter by specific Licensee's ID
 	  + -1: Filter by IBC sites (Non-Licensee sites)
@@ -51,7 +50,7 @@
 				set @p12=0
 				declare @p13 varchar(1000)
 				set @p13=''
-				exec NAP_Rpt_TicketsListing @MatchId=4626986,@LicenseeId=0,@BetTypes='1101,1102',@BetTypesLive='',@LiveType=2,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=3,@SecondAcceptFlag=0,@ErrCode=@p12 output,@ErrMsg=@p13 output
+				exec NAP_Rpt_TicketsListing @MatchId=4626986,@LicenseeID=0,@BetTypes='1101,1102',@BetTypesLive='',@LiveType=2,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=3,@SecondAcceptFlag=0,@ErrCode=@p12 output,@ErrMsg=@p13 output
 				select @p12, @p13		
 */
 WITH RECOMPILE
@@ -138,7 +137,7 @@ WHERE matchid = @MatchId
 GROUP BY srecommend, matchid, bettype, liveindicator, statusid
  
 ----## Direct Licensee
-	IF  @LicenseeId <> 0 AND @LicenseeId <> -1   
+	IF  @LicenseeID <> 0 AND @LicenseeID <> -1   
 	BEGIN
 		DECLARE @LicenseeName VARCHAR(100)
 		SET @LicenseeName = ''
@@ -146,7 +145,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 		SELECT  @LicenseeName = site
 		FROM	site WITH(NOLOCK)
 		WHERE	isLicensee = 1 AND isActive =1 AND siteID NOT IN (29,35)
-				AND siteID = @LicenseeId
+				AND siteID = @LicenseeID
   
 		IF @BetTypes <> '9' AND @BetTypes <> '29' AND @BetTypes <> '9,29'
 			INSERT INTO @TmpTotal (OrderNo, TotalTrans, bettype, LiveIndicator, LicenseeName)
@@ -180,7 +179,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 	END 
 
 ----## IBC Group
-	IF  @LicenseeId = -1 	 
+	IF  @LicenseeID = -1 	 
 	BEGIN 
 		IF @BetTypes <> '9' AND @BetTypes <> '29' AND @BetTypes <> '9,29'
 			INSERT	INTO @TmpTotal (OrderNo, TotalTrans, bettype, LiveIndicator, LicenseeName)
@@ -212,7 +211,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 	END 	
 	 
 -----## All 
-	IF @LicenseeId = 0 
+	IF @LicenseeID = 0 
 	BEGIN
 		IF @BetTypes <> '9' AND @BetTypes <> '29' AND @BetTypes <> '9,29'
 			INSERT INTO @TmpTotal (OrderNo, TotalTrans, bettype, LiveIndicator, LicenseeName)
@@ -249,13 +248,12 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 			GROUP BY s.site, bm.liveindicator, b.bettype
 	END 
 	 
-SELECT SUM (TotalTrans) TotalTrans, OrderNo, bettype, LiveIndicator,  LicenseeName 
+SELECT SUM (TotalTrans) TotalTrans, OrderNo, bettype as 'bettypeId', LiveIndicator,  LicenseeName 
 FROM @TmpTotal
 GROUP BY OrderNo, LicenseeName, bettype, LiveIndicator
 ORDER BY OrderNo, LicenseeName, bettype, LiveIndicator
 
 DROP TABLE #TmpBettrans
-
 
 
 GO
