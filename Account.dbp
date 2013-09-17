@@ -846,7 +846,7 @@ Begin DataProject = "Account"
       Begin Folder = "Games"
          Script = "Acc_Rpt_GamesActiveMember.sql"
          Begin Folder = "Bingo"
-            Script = "Acc_Rpt_BingoOutstanding.sql"
+            Script = "dbo.Acc_Rpt_BingoOutstanding.sql"
          End
          Begin Folder = "Casino"
             Script = "dbo.Acc_CustomerSyncUpd.proc.sql"
