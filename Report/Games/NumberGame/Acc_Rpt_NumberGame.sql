@@ -47,7 +47,7 @@ DECLARE	@tmpSite TABLE(siteid INT)
 DECLARE @licenseeCnt_db int, @licencseeCnt int
 
 INSERT INTO @tmpCurrency
-	SELECT distinct(val)
+	SELECT distinct(val)  
 	FROM strSPlit(@currency,',')
 
 INSERT INTO @tmpSite
