@@ -47,11 +47,11 @@ DECLARE	@tmpSite TABLE(siteid INT)
 DECLARE @licenseeCnt_db int, @licencseeCnt int
 
 INSERT INTO @tmpCurrency
-	SELECT val
+	SELECT distinct(val)
 	FROM strSPlit(@currency,',')
 
 INSERT INTO @tmpSite
-	SELECT val 
+	SELECT val
 	FROM strSPlit(@siteid,',')
 SET @licencseeCnt = @@ROWCOUNT	
 
