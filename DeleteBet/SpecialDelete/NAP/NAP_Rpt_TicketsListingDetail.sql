@@ -1,15 +1,15 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
-	@matchID INT,
+	@MatchId INT,
 	@LicenseeName VARCHAR(1000),
-	@bettypes VARCHAR(1000), 
-	@bettypesLive VARCHAR(1000) ,
+	@BetTypes VARCHAR(1000), 
+	@BetTypesLive VARCHAR(1000) ,
 	@LiveType SMALLINT = 2,	
-	@livehomescore smallint = NULL,
-    @liveawayscore smallint = NULL,
+	@LiveHomeScore smallint = NULL,
+    @LiveAwayScore smallint = NULL,
     @FromTransdate Datetime = NULL,
 	@ToTransdate Datetime = NULL,
 	@Type SMALLINT = 0,
-    @SAFilter tinyint = 0
+    @SecondAcceptFlag tinyint = 0
 WITH RECOMPILE
 AS
 
@@ -20,6 +20,7 @@ AS
 	Original: Acc_Rpt_TicketsListingDetail
 
 	Revisions:	
+		- 20130911Kathy: Rename parameter @SAFilter to @SecondAcceptFlag
 							   
 	Param's Explanation:
 	- @Type: sports type
@@ -29,22 +30,22 @@ AS
 		3: Live casino
 	- @LicenseeName:
 		ALL, IBC, 12bet, ...	
-	- @bettypes: String of bettype for Sportsbook, virtual sports and for Dead Ball - Number game, Live casino
-	- @bettypesLive: String of bettype ONLY for Live - Number game 
+	- @BetTypes: String of bettype for Sportsbook, virtual sports and for Dead Ball - Number game, Live casino
+	- @BetTypesLive: String of bettype ONLY for Live - Number game 
 	- @LiveType: Combo Type, used only for Sportsbook
 		0: Dead ball
 		1: Live ball
 		2: All	
 	- Because the interface is separated with sportbook and number game
-		==>	SportsBook: Use @bettypes and @LiveType to indicate Live ball or Dead ball
-			Number game: Use @bettypes and @bettypesLive to indicate Live ball or Dead ball
-			Virtual sports: Use @bettypes to indicate Dead ball
-    - @SAFilter: 
+		==>	SportsBook: Use @BetTypes and @LiveType to indicate Live ball or Dead ball
+			Number game: Use @BetTypes and @BetTypesLive to indicate Live ball or Dead ball
+			Virtual sports: Use @BetTypes to indicate Dead ball
+    - @SecondAcceptFlag: 
       + 0: All tickets
       + 1: Normal tickets only
       + 2: SA tickets only	
      
-   Example: exec NAP_Rpt_TicketsListingDetail @matchID=4626986,@LicenseeName='IBC',@bettypes='1101,1102',@bettypesLive='',@LiveType=0,@livehomescore=default,@liveawayscore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SAFilter=0
+   Example: exec NAP_Rpt_TicketsListingDetail @MatchId=4626986,@LicenseeName='IBC',@BetTypes='1101,1102',@BetTypesLive='',@LiveType=0,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SecondAcceptFlag=0
 	
 */
 SET NOCOUNT ON 
@@ -52,15 +53,15 @@ SET NOCOUNT ON
 DECLARE @p_bettypes VARCHAR(1000) 
 DECLARE @p_bettypesLive VARCHAR(1000) 
 
-SET @p_bettypes = @bettypes 
-SET @p_bettypesLive = @bettypesLive
+SET @p_bettypes = @BetTypes 
+SET @p_bettypesLive = @BetTypesLive
 
 ---- If number game then don't care @livetype , so set @LiveType to zero
 IF @Type = 1 or @Type = 2 or @Type = 3
 	SELECT @LiveType = 0
 
 ----***** bettype <> 9 (because bettype = 9 then matchID = 9)****----
-IF @p_bettypes <> '9' AND @bettypes <> '29' AND @bettypes <> '9,29'
+IF @p_bettypes <> '9' AND @BetTypes <> '29' AND @BetTypes <> '9,29'
 BEGIN
 	CREATE TABLE #SpecialDeleteBets 
 	(
@@ -122,14 +123,14 @@ BEGIN
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName) )
 					AND b.statusID NOT IN (101,102, 121) ---('Void', 'Reject', 'Dummy')
-					AND b.matchid = @matchid 
+					AND b.matchid = @MatchId 
 			 	   	AND
 						(   
 							(
 								b.bettype IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@p_bettypes,','))
 								 AND CASE WHEN @LiveType <> 2 THEN liveindicator ELSE 0 END = CASE WHEN @LiveType <> 2 THEN @LiveType ELSE 0 END
-								 AND b.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @LiveType = 1 THEN @livehomescore ELSE b.livehomescore END
-								 AND b.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE b.liveawayscore END
+								 AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveType = 1 THEN @LiveHomeScore ELSE b.livehomescore END
+								 AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveType = 1 THEN @LiveAwayScore ELSE b.liveawayscore END
 								 AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE b.transdate END 
 												AND	   CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE b.transdate END  
 							)
@@ -139,7 +140,7 @@ BEGIN
 								AND b.liveindicator = 1
 							)
 						) 
-                    AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
+                    AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 		ORDER BY transID
  
 	END
@@ -177,14 +178,14 @@ BEGIN
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 	
 		WHERE		B.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
 					AND b.statusID NOT IN (101,102, 121) --- ('Void', 'Reject', 'Dummy')
-					AND b.matchid = @matchid 
+					AND b.matchid = @MatchId 
 					AND
 						(   
 							(
 								b.bettype IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@p_bettypes,','))
 								 AND CASE WHEN @LiveType <> 2 THEN liveindicator ELSE 0 END = CASE WHEN @LiveType <> 2 THEN @LiveType ELSE 0 END
-								 AND b.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @LiveType = 1 THEN @livehomescore ELSE b.livehomescore END
-								 AND b.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE b.liveawayscore END
+								 AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveType = 1 THEN @LiveHomeScore ELSE b.livehomescore END
+								 AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveType = 1 THEN @LiveAwayScore ELSE b.liveawayscore END
 								 AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE b.transdate END 
 												 AND	 CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE b.transdate END
 							)
@@ -194,7 +195,7 @@ BEGIN
 								AND b.liveindicator = 1
 							)
 						)
-						AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
+						AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 		ORDER BY transID
 
 	END
@@ -231,13 +232,13 @@ BEGIN
 		FROM		Bettrans b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.statusID NOT IN (101,102, 121)--('Void', 'Reject', 'Dummy') 
-					AND b.matchid = @matchid 
+					AND b.matchid = @MatchId 
 					AND	(   
 							(
 								b.bettype IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@p_bettypes,','))
 								 AND CASE WHEN @LiveType <> 2 THEN liveindicator ELSE 0 END = CASE WHEN @LiveType <> 2 THEN @LiveType ELSE 0 END
-								 AND b.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @LiveType = 1 THEN @livehomescore ELSE b.livehomescore END
-								 AND b.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE b.liveawayscore END
+								 AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveType = 1 THEN @LiveHomeScore ELSE b.livehomescore END
+								 AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveType = 1 THEN @LiveAwayScore ELSE b.liveawayscore END
 								 AND b.transdate	BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE b.transdate END 
 													AND	    CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE b.transdate END 
 							)
@@ -247,7 +248,7 @@ BEGIN
 								AND b.liveindicator = 1
 							)
 						)
-					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
+					AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 		ORDER BY transID
 	END
 		
@@ -323,18 +324,18 @@ BEGIN
 				0 SecAcceptFlag								 
 		FROM	bettransm bm WITH (NOLOCK)	
 		INNER JOIN  Bettrans b WITH (NOLOCK) ON b.refno = bm.refno 
-		INNER JOIN dbo.strSplit(@bettypes,',') t ON b.bettype = t.val
+		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
 		INNER JOIN  match m WITH (NOLOCK) ON m.matchid = bm.MatchID	
 		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName)) 
 					AND b.statusID NOT IN (101,102) --- ('Void', 'Reject' )
 					AND b.bettype IN(9,29) AND b.matchID IN (9,29)
-					AND bm.matchid = @matchid 
+					AND bm.matchid = @MatchId 
 					AND CASE WHEN @LiveType <> 2 THEN bm.liveindicator ELSE 0 END = CASE WHEN @LiveType <> 2 THEN @LiveType ELSE 0 END
-					AND bm.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @LiveType = 1 THEN @livehomescore ELSE bm.livehomescore END
-					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
+					AND bm.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveType = 1 THEN @LiveHomeScore ELSE bm.livehomescore END
+					AND bm.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveType = 1 THEN @LiveAwayScore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									 AND	  CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
+					AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 
 	END
@@ -371,18 +372,18 @@ BEGIN
 				0 SecAcceptFlag								
 		FROM	Bettrans b WITH (NOLOCK) 
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
-		INNER JOIN dbo.strSplit(@bettypes,',') t ON b.bettype = t.val
+		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
 		INNER JOIN  match m WITH (NOLOCK) ON m.matchid = bm.matchID
 		WHERE		b.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
 					AND b.statusID NOT IN (101,102) --('Void', 'Reject')
 					AND b.bettype IN (9,29) AND b.matchID IN (9,29)
-					AND bm.matchid = @matchid 	 
+					AND bm.matchid = @MatchId 	 
 					AND CASE WHEN @LiveType <> 2 THEN bm.liveindicator ELSE 0 END = CASE WHEN @LiveType <> 2 THEN @LiveType ELSE 0 END
-					AND bm.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @LiveType = 1 THEN @livehomescore ELSE bm.livehomescore END
-					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
+					AND bm.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveType = 1 THEN @LiveHomeScore ELSE bm.livehomescore END
+					AND bm.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveType = 1 THEN @LiveAwayScore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									 AND	 CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
+					AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 	END 
 
@@ -417,17 +418,17 @@ BEGIN
 				0 SecAcceptFlag								
 		FROM	Bettrans b WITH (NOLOCK)	
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
-		INNER JOIN dbo.strSplit(@bettypes,',') t ON b.bettype = t.val
+		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
 		INNER JOIN  match m WITH (NOLOCK) ON m.matchid = bm.matchID
 		WHERE		b.statusID NOT IN (101,102)--('Void', 'Reject')
 					AND b.bettype IN (9,29) AND b.matchID IN (9,29) 
-					AND bm.matchID = @matchID
+					AND bm.matchID = @MatchId
 					AND CASE WHEN @LiveType <> 2 THEN bm.liveindicator ELSE 0 END = CASE WHEN @LiveType <> 2 THEN @LiveType ELSE 0 END
-					AND bm.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @LiveType = 1 THEN @livehomescore ELSE bm.livehomescore END
-					AND bm.liveawayscore = CASE WHEN @liveawayscore IS NOT NULL AND @LiveType = 1 THEN @liveawayscore ELSE bm.liveawayscore END
+					AND bm.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveType = 1 THEN @LiveHomeScore ELSE bm.livehomescore END
+					AND bm.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveType = 1 THEN @LiveAwayScore ELSE bm.liveawayscore END
 					AND bm.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveType = 1 THEN @FromTransdate ELSE bm.transdate END 
 									 AND	 CASE WHEN @ToTransdate IS NOT NULL AND @LiveType = 1 THEN @ToTransdate ELSE bm.transdate END
-					AND ISNULL(SecAcceptFlag,0) = CASE @SAFilter WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
+					AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 					AND (b.betid = 0 OR b.betid IS NULL)
 	END 		
 END 
