@@ -9,6 +9,7 @@ AS
 		Revisions:
 			-20130717@Johnson: archive old data before balance up day
 			- 20130814@Johnson: check data on rmSumWinloss_Old2
+			- 20130918@Johnson: change to use table rmSumWinloss_Old instead of rmSumWinloss_Old2
 		Parameter's Explanation:	
 	*/ 
 BEGIN
@@ -19,7 +20,7 @@ BEGIN
 			@errMsg			VARCHAR(1000) 
 		
 	SELECT	@maxDateSum_Old = MAX(winlostdate) + 1  ---Saturday 
-	FROM	bodb_RMS.dbo.rmSumWinloss_Old2 WITH (NOLOCK)
+	FROM	bodb_RMS.dbo.rmSumWinloss_Old WITH (NOLOCK)
 	
 	SELECT TOP 1 @balanceUpDay = winlostdate
 	FROM bodb02.dbo.bettrans WITH(NOLOCK)

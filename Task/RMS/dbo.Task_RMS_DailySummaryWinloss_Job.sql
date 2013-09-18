@@ -9,6 +9,7 @@ AS
 		Revisions:
 			- 20130301@Jamie: standardize the ErrMsg
 			- 20130814@Johnson: check data on rmSumWinloss2
+			- 20130918@Johnson: change to use table rmSumWinloss instead of rmSumWinloss2
 		Parameter's Explanation: 
 	*/
 SET NOCOUNT ON
@@ -19,7 +20,7 @@ SET NOCOUNT ON
 	FROM bodb02.dbo.sum_winloss WITH(NOLOCK)
 	
 	SELECT @MaxWinlostDate_RM = MAX(winlostdate) + 1
-	FROM rmSumWinloss2 WITH(NOLOCK)
+	FROM rmSumWinloss WITH(NOLOCK)
 
 	IF @MaxWinlostDate_RM IS NULL
 		SELECT @MaxWinlostDate_RM = MIN(winlostdate)

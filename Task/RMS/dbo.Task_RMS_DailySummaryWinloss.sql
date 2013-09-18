@@ -14,6 +14,7 @@ AS
 			- 20130227@Jamie: Check tickets on rmTransaction before SUM
 			- 20130228@Jamie: Get data from bettrans14 directly
 			- 20130814@Johnson: import data into rmSumWinloss2
+			- 20130918@Johnson: change to use table rmSumWinloss instead of rmSumWinloss2
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -32,9 +33,9 @@ SET NOCOUNT ON
 		RETURN
 	END
 	
-	IF NOT EXISTS (SELECT TOP 1 1 FROM rmSumWinloss2 WITH(NOLOCK) WHERE winlostdate = @winlostdate)
+	IF NOT EXISTS (SELECT TOP 1 1 FROM rmSumWinloss WITH(NOLOCK) WHERE winlostdate = @winlostdate)
 	BEGIN
-		INSERT INTO rmSumWinloss2 (winlostdate
+		INSERT INTO rmSumWinloss (winlostdate
 				,custid
 				,sporttype
 				,statusid
@@ -74,42 +75,6 @@ SET NOCOUNT ON
 			SELECT	 @ErrMsg = 'FAILED:Process summary data failed for :' + CAST(@winlostdate AS VARCHAR(10))
 					,@ErrCode = 201
 			RETURN
-		END	
-		
-		INSERT INTO rmSumWinloss (winlostdate
-			,custid
-			,sporttype
-			,statusid
-			,username
-			,currency
-			,stake
-			,winlost
-			,company_stake
-			,company_winlost
-			,actualrate
-			,odds
-			,betcount)
-		SELECT winlostdate
-			,custid
-			,sporttype
-			,statusid
-			,username
-			,currency
-			,SUM(stake)
-			,SUM(winlost)
-			,SUM(company_stake)
-			,SUM(company_winlost)
-			,actualrate
-			,SUM(odds)
-			,SUM(betcount)
-		FROM rmSumWinloss2 WITH(NOLOCK)
-		WHERE winlostdate = @winlostdate
-		GROUP BY winlostdate
-			,custid
-			,sporttype
-			,statusid
-			,username
-			,currency
-			,actualrate
+		END					
 	END	
 	
