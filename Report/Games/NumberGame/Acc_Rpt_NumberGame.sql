@@ -22,6 +22,7 @@ AS
 		- 20121120@Dan: optimize performance (use index when searching agent, create index after inserting) 
         - 20130123@Daniel: Change link server alias
 		- 20130815@Viet: enhance sp
+		- 20130917@Kathy: Fix currency's value   
 		
     Param usage:
 		- @SiteID:
@@ -46,15 +47,11 @@ DECLARE	@tmpSite TABLE(siteid INT)
 DECLARE @licenseeCnt_db int, @licencseeCnt int
 
 INSERT INTO @tmpCurrency
-	SELECT val
+	SELECT DISTINCT(val)  
 	FROM strSPlit(@currency,',')
-	
-UPDATE @tmpCurrency
-SET currency = NULL
-WHERE currency = 0 -- ALL currency
 
 INSERT INTO @tmpSite
-	SELECT val 
+	SELECT val
 	FROM strSPlit(@siteid,',')
 SET @licencseeCnt = @@ROWCOUNT	
 
@@ -81,7 +78,7 @@ BEGIN
     WHERE b.bettype BETWEEN 81 AND 120		
 	        AND b.ruben = 1
 	        AND b.statusID not in (101,102,103,121)
-            AND b.Currency IN (SELECT ISNULL(t.currency,b.currency) FROM @tmpCurrency t)
+            AND b.Currency IN (SELECT t.currency FROM @tmpCurrency t)
             and b.liveindicator = CASE WHEN @LiveIndicator IS NULL THEN b.liveindicator ELSE @LiveIndicator END									
     GROUP BY b.Bettype
     ORDER BY b.Bettype
@@ -96,7 +93,7 @@ BEGIN
 		FROM CustSuper s WITH(NOLOCK)
 			INNER JOIN custInfo c WITH(NOLOCK) on s.custid = c.custid
 		WHERE s.custid not in (SELECT custid FROM Dep_CustSuper WITH(NOLOCK))
-			AND c.currency IN (SELECT ISNULL(t.currency,c.currency) FROM @tmpCurrency t)					
+			AND c.currency IN (SELECT t.currency FROM @tmpCurrency t)					
 	END  
 	IF EXISTS( SELECT 1 FROM @tmpSite WHERE siteid > 0)--Licensee   
 	BEGIN  
@@ -104,7 +101,7 @@ BEGIN
 		SELECT s.custid
 		FROM dbo.Dep_CustSuper s with(nolock)
 			INNER JOIN DBLIC.bodb_Licensee.dbo.Licensees l with(nolock) on s.site = l.licenseename
-		WHERE currency in (SELECT ISNULL(t.currency,s.currency) FROM @tmpCurrency t)
+		WHERE currency in (SELECT t.currency FROM @tmpCurrency t)
 	END  
 	 
     SELECT			        
