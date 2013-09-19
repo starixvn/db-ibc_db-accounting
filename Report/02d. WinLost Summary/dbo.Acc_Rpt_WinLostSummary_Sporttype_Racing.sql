@@ -12,6 +12,7 @@ AS
 		Revisions:
 			- 20130716@Johnson: get min eventdate by oddsstatus = 'completed'			
 			- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
+			- 20130917@Johnson: get @movebetday base on match14
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -21,17 +22,17 @@ SET NOCOUNT ON
 		virtualTurnover money, virtualLineTotal money		
 	)
 	
-	Declare @mineventdate datetime,
+	Declare @movebetsday datetime,
 			@f_date datetime,
 			@t_date datetime
 	
-	SELECT @mineventdate = min(eventdate) from bodb02.dbo.outright with(nolock) where oddsstatus = 'completed'
+	SELECT @movebetsday = max(eventdate) from bodb02.dbo.match14 with(nolock)
 		
 	
-	IF @todate >= @mineventdate
+	IF @todate > @movebetsday
 	BEGIN
-		IF @fromdate < @mineventdate
-				SELECT @f_date = @mineventdate
+		IF @fromdate <= @movebetsday
+				SELECT @f_date = @movebetsday + 1
 			ELSE
 				SELECT @f_date = @fromdate
 				
@@ -58,12 +59,12 @@ SET NOCOUNT ON
 			GROUP BY m.groupmatch, b.bettype, m.leagueid
 	END
 	
-	IF @fromdate <@mineventdate
+	IF @fromdate <=@movebetsday
 	BEGIN
-		IF @todate < @mineventdate
+		IF @todate <= @movebetsday
 			SELECT @t_date = @todate
 		ELSE
-			SELECT @t_date = @mineventdate - 1
+			SELECT @t_date = @movebetsday
 			
 		SELECT @f_date = @fromdate
 				
@@ -92,5 +93,6 @@ SET NOCOUNT ON
 	ORDER BY bettype,meetingid,CAST(race AS TINYINT)
 	
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype_Racing] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_WinLostSummary_Sporttype_Racing] TO [bodbAdminNet]

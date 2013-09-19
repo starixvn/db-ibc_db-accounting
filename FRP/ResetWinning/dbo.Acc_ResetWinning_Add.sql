@@ -1,4 +1,4 @@
-﻿  CREATE PROCEDURE [dbo].[Acc_ResetWinning_Add]
+﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_Add]
 	@winlostdate	DATETIME,
 	@userid		INT,
 	@custid		INT = 44621,
@@ -15,6 +15,7 @@ AS
 	Task:	Reset Winning- Add Adjust Transaction after Reset Winning but balance not be zero
 	DB:		DBTRANS.BODB02, DB06.BODB02	
 	Revision:
+		- 20130910@Elodie: Use alias server DBPOLICY instead of DB03
 	
 	Explanation's Param:
 */	
@@ -22,7 +23,7 @@ BEGIN
 	SET NOCOUNT ON
 	
 	--Check permission for account site
-	EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid = @userID, @funcname = '[AddFinanceTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @userID, @funcname = '[AddFinanceTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
 		IF @ErrCode <> 0 
 			RETURN
 	

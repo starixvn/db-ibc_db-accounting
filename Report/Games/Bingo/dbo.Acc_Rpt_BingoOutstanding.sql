@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_BingoOutstanding]    Script Date: 09/09/2013 9:42:39 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_BingoOutstanding]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_BingoOutstanding]
 	@Username NVARCHAR(50)= '',
 	@ExcludeTest BIT = 0,
 	@Site VARCHAR(100)='',
@@ -41,7 +34,6 @@ BEGIN
 	DECLARE @tblTemp TABLE(
 		transid			BIGINT, 
 		custid			INT ,
-		srecommend		INT ,
 		currency		TINYINT ,
 		CurrencyName	NVARCHAR(50), 
 		Username		NVARCHAR(50), 
@@ -64,7 +56,7 @@ BEGIN
 	BEGIN		
 		IF (NOT EXISTS (SELECT 1
 		FROM	CustInfo WITH (NOLOCK)
-		WHERE	Username LIKE @Username + '%' AND RoleID = 1))
+		WHERE	Username LIKE @Username + '%' AND RoleID = 1))  
 		BEGIN 
 			SELECT @ErrCode = 1, @ErrMsg = 'Invalid username.'
 			RETURN
@@ -72,7 +64,7 @@ BEGIN
 	END
 
 	INSERT INTO @listLicensee (licenseeID, licenseename	)
-	SELECT * FROM OPENQUERY(DBEXT, 'bodb02.dbo.Acc_Licensee_Product3rdSel ''BG''')
+	SELECT licenseeID, licenseename FROM OPENQUERY(DBEXT, 'bodb_licensee.dbo.Acc_Licensee_Product3rdSel ''BG''')
 
 	IF @Site = '0'
 	BEGIN
@@ -102,7 +94,7 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM @tblSite WHERE siteId = -1)
 	BEGIN 
 		INSERT INTO @tblTemp 
-			SELECT b.transid, b.custid, b.srecommend, b.currency, b.CurrencyName,
+			SELECT b.transid, b.custid, b.currency, b.CurrencyName,
 			 b.Username, b.transdate, b.stake,b.stake*b.actualrate, 'IBC'
 			FROM bettrans b WITH(NOLOCK)
 			INNER JOIN Customer c WITH(NOLOCK) on b.custid = c.custid
@@ -114,7 +106,7 @@ BEGIN
 			AND b.currency = CASE WHEN @Currency = -1 OR @Currency = 0 THEN b.currency ELSE @Currency END 
 	END
 	INSERT INTO @tblTemp 
-		SELECT b.transid, b.custid, b.srecommend, b.currency, b.CurrencyName,
+		SELECT b.transid, b.custid, b.currency, b.CurrencyName,
 		 b.Username, b.transdate, b.stake,b.stake*b.actualrate, s.site_name
 		FROM bettrans b WITH(NOLOCK)
 		INNER JOIN Customer c WITH(NOLOCK) on c.custid = b.custid
@@ -222,16 +214,5 @@ BEGIN
 	SELECT ISNULL(@grandTotalRM,0) 'Grand Total RM'
 END
 
-/* Test
-	DECLARE @ErrMsg varchar(30)
-	SET @ErrMsg = ''
-	EXEC Acc_Rpt_BingoOutstanding
-	@Username ='',
-	@ExcludeTest = 0,
-	@Site = '-1',
-	@Currency = 20,
-	@ErrCode  = 0,
-	@ErrMsg = @ErrMsg  OUTPUT
-	SELECT @ErrMsg
-
-*/
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_BingoOutstanding] TO [bodbAdminNet]
