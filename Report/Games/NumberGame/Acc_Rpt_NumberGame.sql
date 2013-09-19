@@ -22,7 +22,7 @@ AS
 		- 20121120@Dan: optimize performance (use index when searching agent, create index after inserting) 
         - 20130123@Daniel: Change link server alias
 		- 20130815@Viet: enhance sp
-		- 20130917@Kathy: Fix currency's value   
+		- 20130917@Kathy: Fix currency's value
 		
     Param usage:
 		- @SiteID:
@@ -47,11 +47,11 @@ DECLARE	@tmpSite TABLE(siteid INT)
 DECLARE @licenseeCnt_db int, @licencseeCnt int
 
 INSERT INTO @tmpCurrency
-	SELECT DISTINCT(val)  
+	SELECT distinct(val)
 	FROM strSPlit(@currency,',')
 
 INSERT INTO @tmpSite
-	SELECT val
+	SELECT val 
 	FROM strSPlit(@siteid,',')
 SET @licencseeCnt = @@ROWCOUNT	
 
@@ -102,6 +102,7 @@ BEGIN
 		FROM dbo.Dep_CustSuper s with(nolock)
 			INNER JOIN DBLIC.bodb_Licensee.dbo.Licensees l with(nolock) on s.site = l.licenseename
 		WHERE currency in (SELECT t.currency FROM @tmpCurrency t)
+			AND l.licenseeID in (SELECT siteid FROM @tmpSite)
 	END  
 	 
     SELECT			        
