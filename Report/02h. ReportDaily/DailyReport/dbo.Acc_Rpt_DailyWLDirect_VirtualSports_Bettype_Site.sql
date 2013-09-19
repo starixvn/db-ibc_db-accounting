@@ -10,7 +10,7 @@ AS
 	DB: DBACC/bodb02
 	
 	Revisions:  
-	
+		- 20130906@Johnson: get virtual values by virtual rate instead of actual rate		
 	Parameter's Explanation:
 		- @site: 1: credit
 					2: deposit	
@@ -41,9 +41,9 @@ BEGIN
 				sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 				sum(scomm*actualrate) Commission,	
 				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
-				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) VirtualLineTotal,
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
 				sum((1-tpositiontaking)* stake * actualrate) RealTurnover,
-				sum((1-tpositiontaking)* stake * actualrate) VirtualTurnover
+				sum((1-tpositiontaking)* stake * virtualrate) VirtualTurnover
 		FROM	bettrans b WITH (NOLOCK)
 				INNER JOIN VSRaceInfo r ON r.EventID = b.matchid
 				INNER JOIN #DepAgent ag ON b.recommend = ag.custid
@@ -64,9 +64,9 @@ BEGIN
 				sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 				sum(scomm*actualrate) Commission,	
 				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
-				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) VirtualLineTotal,
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
 				sum((1-tpositiontaking)* stake * actualrate) RealTurnover,
-				sum((1-tpositiontaking)* stake * actualrate) VirtualTurnover
+				sum((1-tpositiontaking)* stake * virtualrate) VirtualTurnover
 		FROM	bettrans b WITH (NOLOCK)
 				INNER JOIN match m on b.matchid = m.matchid
 				INNER JOIN #DepAgent ag ON b.recommend = ag.custid

@@ -403,6 +403,7 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_LiveCS_SelGameByID.sql"
          End
          Begin Folder = "NAP"
+            Script = "dbo.NAP_BettransDelSpecial.sql"
             Script = "NAP_BetTypeSel.sql"
             Script = "NAP_Rpt_TicketsListing.sql"
             Script = "NAP_Rpt_TicketsListingDetail.sql"
@@ -844,6 +845,9 @@ Begin DataProject = "Account"
       End
       Begin Folder = "Games"
          Script = "Acc_Rpt_GamesActiveMember.sql"
+         Begin Folder = "Bingo"
+            Script = "dbo.Acc_Rpt_BingoOutstanding.sql"
+         End
          Begin Folder = "Casino"
             Script = "dbo.Acc_CustomerSyncUpd.proc.sql"
             Script = "dbo.Acc_Rpt_CasinoSynchronise.proc.sql"

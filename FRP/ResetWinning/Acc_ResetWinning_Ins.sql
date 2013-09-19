@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_Ins]
+﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_Ins]
 	@winlostdate	datetime,
 	@userID			int,
 	@custid			int = 44621,
@@ -21,6 +20,7 @@ AS
 	
 	Revision:
 		- 20101231@Lukas: Re-arrange bettype
+		- 20130910@Elodie: Use alias server DBPOLICY instead of DB03
 	Explanation's Param:
 
 */
@@ -28,7 +28,7 @@ BEGIN
 	SET NOCOUNT ON	
 	
 	--Check permission for account site
-	EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid = @userID, @funcname = '[ResetWinning]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @userID, @funcname = '[ResetWinning]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
 		IF @ErrCode <> 0 
 			RETURN	
 

@@ -18,6 +18,8 @@ Revisions:
 	- 20120809@Elodie: Get ACCIRR system
 	- 20130404@Jamie: Put ACCUUS for testing 
 	- 20130718@Lukas: add ACCUT group
+	- 20130909@Jamie: ADD group ACCYEN668 
+	
 	Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING'
 */
@@ -39,7 +41,7 @@ BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 11 --INDO
 	END
-	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCNTD','ACCIRR','ACCUSD','ACCUT'))
+	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668','ACCNTD','ACCIRR','ACCUSD','ACCUT'))
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 3 --789y

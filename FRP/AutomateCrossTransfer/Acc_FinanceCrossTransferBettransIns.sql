@@ -25,6 +25,7 @@ AS
 		- 20121113@Viet: revise SP
 		- 20130201@Elodie: Change link server DB03 to DBPOLICY
 						   Write more log on DBTXN server in case of DBLOG server failure
+		- 20130418@Lukas: hot fix modify condition of checking valid amount
 		
 */
 BEGIN
@@ -140,7 +141,7 @@ BEGIN
 		RETURN
 	END
 
-	IF @ToAmount/@FromAmount <= 0 OR @FromExRate <=0 OR @ToExRate <=0
+	IF @ToAmount/@FromAmount < 0 OR @FromExRate <=0 OR @ToExRate <=0
 	BEGIN	
 		SELECT @ErrMsg =CASE @Language
 							WHEN 'E' THEN 'Invalid amount or exchange rate.'
@@ -383,7 +384,6 @@ BEGIN
 
 END
 
+
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_FinanceCrossTransferBettransIns]  TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceCrossTransferBettransIns] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_FinanceCrossTransferBettransIns] TO [bodbAdminNet] AS [dbo]

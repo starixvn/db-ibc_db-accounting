@@ -11,7 +11,7 @@
 		DB: DBACC/bodb02 
 		
 		Revisions:
-		
+			- 20130906@Johnson: get virtual values by virtual rate instead of actual rate			
 		Parameter's Explanation:
 			- @site: 1: credit
 					2: deposit	

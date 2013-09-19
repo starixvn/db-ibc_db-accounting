@@ -58,6 +58,7 @@ AS
 		- 20130703@Kathy: Update matchid for RnG Ca			
 		- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 		- 20130730@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				
+		- 20130910@Johnson: get virtual values for all product	
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -74,7 +75,7 @@ BEGIN
 							winlost money,
 							pos money,
 							comm money,
-							linetotal money,
+							Linetotal money,							
 							turnover money								
 						)			
 	
@@ -164,7 +165,7 @@ BEGIN
 									   WHERE c.username ='FI3rdShare'+ e.currency)*/
 
 	----------------------------------------------------------------------
-	INSERT INTO @RBWinlost (site, winlost, pos, comm, linetotal, turnover)
+	INSERT INTO @RBWinlost (site, winlost, pos, comm, Linetotal, turnover)
 	SELECT	case when dep.custid is null then 1 else 2 end as site,
 			sum((b.winlost -b.actual_stake)*b.actualrate) as winlost,
 			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) as pos,
@@ -175,7 +176,7 @@ BEGIN
 													when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
 													when 33 then bm.TOPhum*cs.ToteCommWP  
 													else 0 end)*b.actualrate) --commIncomeIBC
-								- sum(b.scomm*b.actualrate)) as linetotal,
+								- sum(b.scomm*b.actualrate)) as realLinetotal,
 			sum(case when bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end) as turnover
 			
 	FROM	bettrans b with (nolock)
@@ -383,7 +384,7 @@ BEGIN
 			0 Position,
 			sum(scomm*actualrate) Commission,	
 			sum(-1*(odds-scomm)*actualrate) AS RealLineTotal,
-			0 AS VirtualLineTotal,
+			sum(-1*(odds-scomm)*virtualrate) AS VirtualLineTotal,
 			0 RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
@@ -404,7 +405,7 @@ BEGIN
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
-			0 AS VirtualLineTotal,
+			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
 			0 RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
@@ -424,9 +425,9 @@ BEGIN
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
-			0 AS VirtualLineTotal,
+			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
 			SUM(turnover_actualrate) RealTurnover,
-			0 VirtualTurnover,
+			SUM(turnover_virtualrate) VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
 	WHERE	b.bettype BETWEEN 1101 AND 1199
@@ -440,7 +441,7 @@ BEGIN
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
-			0 AS VirtualLineTotal,
+			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
 			0 RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
@@ -455,7 +456,7 @@ BEGIN
 			Pos Position,
 			Comm Commission,
 			LineTotal AS RealLineTotal,
-			0 AS VirtualLineTotal,
+			LineTotal AS VirtualLineTotal,
 			turnover RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
@@ -469,9 +470,9 @@ BEGIN
 			SUM(position_actualrate) Position,
 			SUM(commission_actualrate) Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
-			0 AS VirtualLineTotal,
+			SUM(LineTotal_virtualrate) AS VirtualLineTotal,
 			SUM(turnover_actualrate) RealTurnover,
-			0 VirtualTurnover,
+			SUM(turnover_virtualrate) VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	WHERE	b.bettype BETWEEN 1201 AND 1299
