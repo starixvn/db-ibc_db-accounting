@@ -1,4 +1,10 @@
-﻿ALTER PROCEDURE [dbo].[DBA_ChangeCurrency] 
+﻿USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[DBA_ChangeCurrency] 
 	@UserName varchar(50),
 	@NewCurrency varchar(5),
 	@UserID	INT = 360418
@@ -20,7 +26,9 @@ Revisions:
     - 20101225@Henry: change bettype to new range
     - 20110817@Henry: include Combination Mixed Parlay (bettype = 29)
     - 20111006@Tom:	Add bet type of P2P: 1000
-    - 20120412@Hurri: Change bettype 72 -> 1000 and add more bettype 23102
+	- 20111226@Thien: not update virtual rate for transfer transaction
+	- 20130402@Kiwi: add Dep_custsuper
+	- 20130918@Jamie: Racing allowed to all currencies 
 	
 Param's Explanation: 
 
@@ -43,7 +51,7 @@ from custinfo ci with (nolock)
 inner join exchange e with (nolock) on ci.currency = e.exchangeid
 where username = @UserName
 
-
+/*
 ---Check Casino
 -- Need not to check Disable HR and FI 
 if @syncCasino = 1
@@ -58,6 +66,7 @@ BEGIN
 		RETURN
 END
 
+*/
 select @ExchangeID = ExchangeID, @actualrate = actualrate
 from Exchange with (nolock) where currency = @NewCurrency
 
@@ -67,19 +76,22 @@ BEGIN
 	
 	Update Custinfo with (updlock,rowlock) set currency = @ExchangeID where srecommend = @CustID
 	
-	if @NewCurrency NOT IN(select currency From dbo.f_GetHRAllowedCurr())
-		Update Custinfo with (updlock,rowlock) set DisableHorseracing = 1 where srecommend = @CustID
+	Update Dep_custsuper with (updlock,rowlock) set currency = @ExchangeID where custid = @CustID
+	
+	-- 20130918@Jamie: Racing allowed to all currencies 
+	--if @NewCurrency NOT IN(select currency From dbo.f_GetHRAllowedCurr())
+	--	Update Custinfo with (updlock,rowlock) set DisableHorseracing = 1 where srecommend = @CustID
 
 	Update Bettrans with (updlock,rowlock)
 		set CurrencyName = @NewCurrency,
 			currency = @ExchangeID,
 			actualrate = @actualrate,
-			virtualrate = @actualrate	
+			virtualrate = case when bettype < 20000 then @actualrate else 0 end
 	where srecommend = @CustID
 		--AND status= 'running'
 		AND actualrate is NOT NULL
 		and winlostdate >= convert(varchar(10),getdate(),112)
-		AND bettype NOT IN (71,73,31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66,1000, 23001, 23002, 23101, 23102)
+		AND bettype NOT IN (71,72,73,31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66,1000, 23001, 23002, 23101)
 	
 	Update Bettrans with (updlock,rowlock)
 		set CurrencyName = @NewCurrency,
@@ -113,7 +125,9 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 	@TrackingValue = @LogSPData	,
 	@duration = @duration
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[DBA_ChangeCurrency] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[DBA_ChangeCurrency] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[DBA_ChangeCurrency] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[DBA_ChangeCurrency] TO [vnteam] AS [dbo]
