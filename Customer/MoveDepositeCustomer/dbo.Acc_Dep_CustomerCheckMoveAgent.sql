@@ -9,22 +9,22 @@ AS
 /*
 Created: 
 Task : Move a agent to another master
-DB: DB053.bodb02
+DB: DBAGE/bodb02
 Original:
 
 Revisions:
-
+	- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+	
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
     > 0: Specific Error.
-    Max errorcode: 142
+    Max errorcode: 214
 • @ErrMsg: Error description.
 */
 
 BEGIN
-	SET NOCOUNT ON
-	
+	SET NOCOUNT ON	
 
 	declare	@srecommend			int, 
 			@mrecommend			int, 
@@ -80,7 +80,10 @@ BEGIN
 			@aDisableP2P		BIT, 
 			@mDisableP2P		BIT, 
 			@aDisableFunP2P		BIT,
-			@mDisableFunP2P		BIT
+			@mDisableFunP2P		BIT,
+			@aGivenCredit		MONEY,
+			@mGivenCredit		MONEY,
+			@mUsedCredit		MONEY
 
 
 	select	@srecommend			= srecommend, 
@@ -107,7 +110,8 @@ BEGIN
 			@mMaxTransferP2P	= MaxTransferP2P, 
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P 
+			@mDisableFunP2P		= DisableFunP2P,
+			@mGivenCredit		= credit
 	from	custinfo with (nolock) 
 	where	username = @mastername and roleid = 3
 
@@ -135,9 +139,19 @@ BEGIN
 			@aMaxTransferP2P	= MaxTransferP2P, 
 			@aIsAutoResetP2P	= IsAutoResetP2P, 
 			@aDisableP2P		= DisableP2P, 
-			@aDisableFunP2P		= DisableFunP2P 		
+			@aDisableFunP2P		= DisableFunP2P,
+			@aGivenCredit		= credit
 	from	custinfo with (NOLOCK) 
 	where	username = @agentname and roleid = 2
+	
+	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+	SELECT @mUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = @mrecommend
+	IF @mGivenCredit - @mUsedCredit < @aGivenCredit
+	BEGIN
+		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': New master credit is insufficient to move this agent.',
+			@ErrCode = 100			 
+		return
+	END
 	
 	SELECT @mSyncLiveCasino_Old = SyncLiveCasino FROM CustInfo WITH(NOLOCK) WHERE custid = @mrecommend_old
 	

@@ -9,23 +9,23 @@ AS
 	Created: Johnson
 	Date: 2012-04-03
 	Task : Check moving a master to another super
-	DB: DB053.bodb02
+	DB: DBAGE/bodb02
 	
 	Revisions:
 				- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
 				- 20120821@Dan: add virtual soccer, remove FI
-
+				- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+				
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
 		> 0: Specific Error.
-		Max errorcode 136
+		Max errorcode 210
 	• @ErrMsg: Error description.
 */
 
 BEGIN
 	SET NOCOUNT ON
-
 
 	declare @startRun datetime
 	declare @endRun datetime
@@ -80,6 +80,9 @@ BEGIN
 			@mDisableP2P		BIT, 
 			@sDisableFunP2P		BIT,
 			@mDisableFunP2P		BIT,
+			@sGivenCredit		MONEY,
+			@mGivenCredit		MONEY,
+			@sUsedCredit		MONEY,
 			@sHideVirtualSports		BIT, 
 			@mHideVirtualSports		BIT,
 			@AdminUser          varchar (50)
@@ -106,6 +109,7 @@ BEGIN
 			@sIsAutoResetP2P	= IsAutoResetP2P, 
 			@sDisableP2P		= DisableP2P, 
 			@sDisableFunP2P		= DisableFunP2P,
+			@sGivenCredit		= credit,
 			@sHideVirtualSports = HideVirtualSports 		
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @supername AND roleid = 4
@@ -133,11 +137,20 @@ BEGIN
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
 			@mDisableFunP2P		= DisableFunP2P,
+			@mGivenCredit		= credit,
 			@mHideVirtualSports = HideVirtualSports
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @mastername AND roleid = 3
 
-
+	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+	SELECT @sUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 3 AND srecommend = @srecommend
+	IF @sGivenCredit - @sUsedCredit < @mGivenCredit
+	BEGIN
+		Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': New super credit is insufficient to move this master.',
+			@ErrCode = 100			 
+		return
+	END
+	
 	IF ISNULL(@srecommend, 0) = 0
 	BEGIN
 		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super not found.',
@@ -553,7 +566,8 @@ BEGIN
 	END
 
 END
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam] AS [dbo]

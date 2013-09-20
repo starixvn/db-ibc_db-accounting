@@ -8,7 +8,7 @@
 AS
 /*
 Created: 
-Task : Move a agent to another master
+Task : Check moving a agent to another master
 DB: DBAGE/bodb02
 Original:
 
@@ -16,18 +16,18 @@ Revisions:
 			- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
 			- 20120821@Dan: add virtual soccer, remove FI
 			- 20130121@Dan: remove unneeded linked server call DB052
+			- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
     > 0: Specific Error.
-    Max errorcode: 142
+    Max errorcode: 214
 • @ErrMsg: Error description.
 */
 
 BEGIN
 	SET NOCOUNT ON
 	
-
 	declare	@srecommend			int, 
 			@mrecommend			int, 
 			@recommend			int,
@@ -81,6 +81,9 @@ BEGIN
 			@mDisableP2P		BIT, 
 			@aDisableFunP2P		BIT,
 			@mDisableFunP2P		BIT,
+			@aGivenCredit		MONEY,
+			@mGivenCredit		MONEY,
+			@mUsedCredit		MONEY,
 			@aHideVirtualSports		BIT,
 			@mHideVirtualSports		BIT,
 			@AdminUser          VARCHAR (50)
@@ -110,6 +113,7 @@ BEGIN
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
 			@mDisableFunP2P		= DisableFunP2P ,
+			@mGivenCredit		= credit,
 			@mHideVirtualSports = HideVirtualSports
 	from	custinfo with (nolock) 
 	where	username = @mastername and roleid = 3
@@ -138,10 +142,20 @@ BEGIN
 			@aIsAutoResetP2P	= IsAutoResetP2P, 
 			@aDisableP2P		= DisableP2P, 
 			@aDisableFunP2P		= DisableFunP2P,
+			@aGivenCredit		= credit,
 			@aHideVirtualSports = HideVirtualSports
 	from	custinfo with (NOLOCK) 
 	where	username = @agentname and roleid = 2
 	
+	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+	SELECT @mUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = @mrecommend
+	IF @mGivenCredit - @mUsedCredit < @aGivenCredit
+	BEGIN
+		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': New master credit is insufficient to move this agent.',
+			@ErrCode = 100			 
+		return
+	END
+		
 	SELECT @mSyncLiveCasino_Old = SyncLiveCasino FROM CustInfo WITH(NOLOCK) WHERE custid = @mrecommend_old
 	
 	select	@DisableAutoMPT = DisableAutoMPT 
@@ -673,7 +687,9 @@ BEGIN
 		return
 	END
 END
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveAgent] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveAgent] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveAgent] TO [vnteam] AS [dbo]
