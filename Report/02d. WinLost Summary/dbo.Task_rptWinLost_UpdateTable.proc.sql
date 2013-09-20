@@ -13,6 +13,7 @@ Revision:
 	- 20120626@Elodie: exclude outright, HR from sportbook ( in case of matchid = orid)
 	- 20130620@Johnson: copy data to rptWinlost2
 	- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
+	- 20130917@Johnson: correct real turnover of racing formula
 */
 	
 	DECLARE @CommSetting TABLE
@@ -77,7 +78,7 @@ Revision:
 			winlostdate,
 			b.matchid, bettype, liveindicator, Status,
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end ibc,
-			sum(case when b.bettype = 33 then bm.TOPhum*actualrate ELSE actual_stake*isnull(b.oddsspread,0)*actualrate END) as realturnover,
+			sum(case when b.bettype = 33 then bm.TOIBC*actualrate ELSE actual_stake*isnull(b.oddsspread,0)*actualrate END) as realturnover,
 			sum((winlost-actual_stake)* actualrate)  realwinlost,
 			sum((awinlost+mwinlost+swinlost)* actualrate) realpos,
 			sum((scomm) * actualrate) realcomm,
@@ -237,7 +238,7 @@ Revision:
 				winlostdate,
 				b.matchid, bettype, liveindicator, Status,
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end ibc,
-				sum(case when b.bettype = 33 then bm.TOPhum*actualrate ELSE actual_stake*isnull(b.oddsspread,0)*actualrate END) as realturnover,
+				sum(case when b.bettype = 33 then bm.TOIBC*actualrate ELSE actual_stake*isnull(b.oddsspread,0)*actualrate END) as realturnover,
 				sum((winlost-actual_stake)* actualrate)  realwinlost,
 				sum((awinlost+mwinlost+swinlost)* actualrate) realpos,
 				sum((scomm) * actualrate) realcomm,
@@ -351,6 +352,7 @@ Revision:
 	END
 	
 	DROP TABLE #bettransm
+
 
 GO
 GRANT EXECUTE ON [dbo].[Task_rptWinLost_UpdateTable] TO [bodbAdminNet]

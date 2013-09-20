@@ -1,0 +1,52 @@
+USE [bodb_licensee]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER   PROCEDURE [dbo].[Acc_Rpt_CreditSite_BetCount]
+    @datestart SMALLDATETIME ,
+    @dateend   SMALLDATETIME
+AS 
+
+/*	Creator: Don
+	Date: 2011-04-06
+	Task: Get total of bet count
+	DB: DBLIC.bodb_licensee
+	Original :GET_Acc_CreditSite_BetCount
+			   20130919@Jim: clone SP from DBDW2.bodb_dwrs
+	Revisions:
+	    
+		
+*/
+SET NOCOUNT ON
+
+SELECT
+	l.labelName AS site,
+	SUM(betcount) AS betcount
+FROM
+	dbo.rpt_betting b WITH (NOLOCK)
+	INNER JOIN dbo.Labels l WITH ( NOLOCK ) ON b.siteid = l.labelid
+		
+WHERE  rptDate BETWEEN @datestart AND @dateend
+	AND [status] NOT IN (-1,103) -- Refund
+	AND isnull(b.customercategory,-1) NOT IN ( 27,28 )-- added BARM ,8RM
+	AND currencyid <> 20
+	AND (
+	bettype < 31 
+	OR (bettype BETWEEN 121 AND 999)
+	OR (bettype BETWEEN 1301 AND 1334)
+	)
+GROUP BY l.labelName 
+
+SET NOCOUNT OFF
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_CreditSite_BetCount] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_CreditSite_BetCount] TO [bodbLicenseeNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CreditSite_BetCount] TO [vnteam] AS [dbo]
+
+
