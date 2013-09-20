@@ -1,4 +1,4 @@
-﻿ CREATE PROCEDURE [dbo].[Acc_Dep_CustomerCheckMoveMaster]
+﻿ ALTER PROCEDURE [dbo].[Acc_Dep_CustomerCheckMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
 	@userid		INT,	
@@ -9,27 +9,25 @@ AS
 	Created: Johnson
 	Date: 2012-04-03
 	Task : Check moving a master to another super
-	DB: DB053.bodb02
+	DB: DBAGE/bodb02
 	
 	Revisions:
-
+		- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
 		> 0: Specific Error.
-		Max errorcode 136
+		Max errorcode 210
 	• @ErrMsg: Error description.
 */
 
 BEGIN
 	SET NOCOUNT ON
 
-
 	declare @startRun datetime
 	declare @endRun datetime
 	declare @duration int
 	set @startRun = getdate()
-
 	
 	DECLARE @srecommend			INT, 
 			@mrecommend			INT,
@@ -79,7 +77,10 @@ BEGIN
 			@sDisableP2P		BIT, 
 			@mDisableP2P		BIT, 
 			@sDisableFunP2P		BIT,
-			@mDisableFunP2P		BIT
+			@mDisableFunP2P		BIT,
+			@sGivenCredit		MONEY,
+			@mGivenCredit		MONEY,
+			@sUsedCredit		MONEY
 
 	SELECT	@srecommend			= custid, 
 			@scurrency			= currency, 
@@ -103,7 +104,8 @@ BEGIN
 			@sMaxTransferP2P	= MaxTransferP2P, 
 			@sIsAutoResetP2P	= IsAutoResetP2P, 
 			@sDisableP2P		= DisableP2P, 
-			@sDisableFunP2P		= DisableFunP2P 		
+			@sDisableFunP2P		= DisableFunP2P,
+			@sGivenCredit		= credit		
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @supername AND roleid = 4
 
@@ -130,11 +132,20 @@ BEGIN
 			@mMaxTransferP2P	= MaxTransferP2P, 
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P 		
+			@mDisableFunP2P		= DisableFunP2P,
+			@mGivenCredit		= credit	
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @mastername AND roleid = 3
 
-
+	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+	SELECT @sUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 3 AND srecommend = @srecommend
+	IF @sGivenCredit - @sUsedCredit < @mGivenCredit
+	BEGIN
+		Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': New super credit is insufficient to move this master.',
+			@ErrCode = 100			 
+		return
+	END
+	
 	IF ISNULL(@srecommend, 0) = 0
 	BEGIN
 		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super not found.',

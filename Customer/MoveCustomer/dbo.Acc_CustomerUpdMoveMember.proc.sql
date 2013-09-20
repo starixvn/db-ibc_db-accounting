@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
 	@agentname varchar(40),
 	@membername varchar(40),
 	@userid int,
@@ -45,6 +44,7 @@ Revisions:
 	- 20120928@Johnson: check double comm losing status 
 	- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
 	- 20130307@Elodie: Add Virtual HR
+	- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 	
 Param's Explanation:
 • @ErrCode:
@@ -61,66 +61,67 @@ declare @endRun datetime
 declare @duration int
 set @startRun = getdate()
 
-
 EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherCust]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 If @ErrCode <> 0
 	RETURN
 --end
 
-
-declare @srecommend		int, 
-		@mrecommend		int, 
-		@recommend		int, 
-		@acurrency		tinyint,
+declare @srecommend				int, 
+		@mrecommend				int, 
+		@recommend				int, 
+		@acurrency				tinyint,
 		--==Member Info ==--
-		@srecommend_old int, 
-		@mrecommend_old int, 
-		@recommend_old	int, 
-		@currency_old	tinyint,
-		@custid			int, 
+		@srecommend_old 		int, 
+		@mrecommend_old 		int, 
+		@recommend_old			int, 
+		@currency_old			tinyint,
+		@custid					int, 
 		--== Enable/Disable HR  ==--- 
-		@adisable151_31	bit,-- @adisableHR -> @adisable151_31 
-		@disable151_31	bit,-- @disableHR -> @disable151_31 				
-		@aDisableOutright	bit,
-		@DisableOutright	bit,
-		@aSyncCasino	bit,
-		@SyncCasino		bit,
-		@aSyncLiveCasino bit,
-		@SyncLiveCasino  bit,
-		@aSyncBingo		bit,
-		@SyncBingo		bit,
-		@aDisable151_41	BIT,-- @aDisableOpenTote -> @aDisable151_41
-		@Disable151_41	BIT,-- @Disable151_41 -> @Disable151_41
-		@aDisable151_51	BIT,
-		@Disable151_51	BIT,
-		@aDisable152_41	BIT,
-		@Disable152_41	BIT,
-		@aDisable152_51	BIT,
-		@Disable152_51	BIT,
-		@aDisable153_51	BIT,
-		@Disable153_51	BIT,
-		@aDisableBingo	BIT,
-		@DisableBingo	BIT,
-		@aDisableNumber	BIT,
-		@DisableNumber	BIT,
-		@aClosed		BIT,
-		@Closed			BIT,
-		@aSuspended		BIT,
-		@Suspended		BIT,
-		@aMaxTransferP2P	MONEY,
-		@MaxTransferP2P	MONEY,
-		@aIsAutoResetP2P	BIT,
-		@IsAutoResetP2P	BIT,
-		@aDisableP2P		BIT, 
-		@DisableP2P		BIT, 
-		@aDisableFunP2P		BIT,
-		@DisableFunP2P		BIT,				
-		@aHideVirtualSports BIT,
+		@adisable151_31			bit,-- @adisableHR -> @adisable151_31 
+		@disable151_31			bit,-- @disableHR -> @disable151_31 				
+		@aDisableOutright		bit,
+		@DisableOutright		bit,
+		@aSyncCasino			bit,
+		@SyncCasino				bit,
+		@aSyncLiveCasino		bit,
+		@SyncLiveCasino 		bit,
+		@aSyncBingo				bit,
+		@SyncBingo				bit,
+		@aDisable151_41			BIT,-- @aDisableOpenTote -> @aDisable151_41
+		@Disable151_41			BIT,-- @Disable151_41 -> @Disable151_41
+		@aDisable151_51			BIT,
+		@Disable151_51			BIT,
+		@aDisable152_41			BIT,
+		@Disable152_41			BIT,
+		@aDisable152_51			BIT,
+		@Disable152_51			BIT,
+		@aDisable153_51			BIT,
+		@Disable153_51			BIT,
+		@aDisableBingo			BIT,
+		@DisableBingo			BIT,
+		@aDisableNumber			BIT,
+		@DisableNumber			BIT,
+		@aClosed				BIT,
+		@Closed					BIT,
+		@aSuspended				BIT,
+		@Suspended				BIT,
+		@aMaxTransferP2P		MONEY,
+		@MaxTransferP2P			MONEY,
+		@aIsAutoResetP2P		BIT,
+		@IsAutoResetP2P			BIT,
+		@aDisableP2P			BIT, 
+		@DisableP2P				BIT, 
+		@aDisableFunP2P			BIT,
+		@DisableFunP2P			BIT,				
+		@aHideVirtualSports 	BIT,
 		@HideVirtualSports		BIT, 
-		@aDisableVirtualSports		BIT, 
-		@DisableVirtualSports		BIT,
-		@aDoubleCommLosing	BIT,
-		@DoubleCommLosing	BIT 
+		@aDisableVirtualSports	BIT, 
+		@DisableVirtualSports	BIT,
+		@aDoubleCommLosing		BIT,
+		@DoubleCommLosing		BIT,
+		@aGivenCredit			MONEY,
+		@GivenCredit			MONEY,
+		@aUsedCredit			MONEY
 		
 select	@srecommend			= srecommend, 
 		@mrecommend			= mrecommend, 
@@ -146,7 +147,8 @@ select	@srecommend			= srecommend,
 		@aDisableP2P		= DisableP2P, 
 		@aDisableFunP2P		= DisableFunP2P ,
 		@aDisableVirtualSports = DisableVirtualSports,
-		@aHideVirtualSports = HideVirtualSports		
+		@aHideVirtualSports = HideVirtualSports,
+		@aGivenCredit		= credit	
 from	custinfo with (nolock)
 where	username = @agentname and roleid = 2
 
@@ -175,10 +177,19 @@ select	@custid				= custid,
 		@DisableP2P			= DisableP2P, 
 		@DisableFunP2P		= DisableFunP2P,
 		@DisableVirtualSports = DisableVirtualSports ,
-		@HideVirtualSports	= HideVirtualSports		
+		@HideVirtualSports	= HideVirtualSports,
+		@GivenCredit		= credit
 from	custinfo with (nolock) 
 where	username = @membername and roleid = 1
 
+-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+SELECT @aUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = @recommend
+IF @aGivenCredit - @aUsedCredit < @GivenCredit
+BEGIN
+	Select @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': New agent credit is insufficient to move this member.',
+		@ErrCode = 100			 
+	return
+END
 
 if isnull(@recommend, 0) = 0
 BEGIN
