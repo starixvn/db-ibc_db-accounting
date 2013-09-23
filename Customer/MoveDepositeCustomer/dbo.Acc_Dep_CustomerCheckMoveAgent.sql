@@ -12,8 +12,7 @@ Task : Move a agent to another master
 DB: DBAGE/bodb02
 Original:
 
-Revisions:
-	- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+Revisions:	
 	
 Param's Explanation:
 • @ErrCode:
@@ -80,11 +79,7 @@ BEGIN
 			@aDisableP2P		BIT, 
 			@mDisableP2P		BIT, 
 			@aDisableFunP2P		BIT,
-			@mDisableFunP2P		BIT,
-			@aGivenCredit		MONEY,
-			@mGivenCredit		MONEY,
-			@mUsedCredit		MONEY
-
+			@mDisableFunP2P		BIT			
 
 	select	@srecommend			= srecommend, 
 			@mrecommend			= custid, 
@@ -110,8 +105,7 @@ BEGIN
 			@mMaxTransferP2P	= MaxTransferP2P, 
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P,
-			@mGivenCredit		= credit
+			@mDisableFunP2P		= DisableFunP2P
 	from	custinfo with (nolock) 
 	where	username = @mastername and roleid = 3
 
@@ -139,19 +133,9 @@ BEGIN
 			@aMaxTransferP2P	= MaxTransferP2P, 
 			@aIsAutoResetP2P	= IsAutoResetP2P, 
 			@aDisableP2P		= DisableP2P, 
-			@aDisableFunP2P		= DisableFunP2P,
-			@aGivenCredit		= credit
+			@aDisableFunP2P		= DisableFunP2P
 	from	custinfo with (NOLOCK) 
-	where	username = @agentname and roleid = 2
-	
-	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
-	SELECT @mUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = @mrecommend
-	IF @mGivenCredit - @mUsedCredit < @aGivenCredit
-	BEGIN
-		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': New master credit is insufficient to move this agent.',
-			@ErrCode = 100			 
-		return
-	END
+	where	username = @agentname and roleid = 2	
 	
 	SELECT @mSyncLiveCasino_Old = SyncLiveCasino FROM CustInfo WITH(NOLOCK) WHERE custid = @mrecommend_old
 	
@@ -583,7 +567,8 @@ BEGIN
 END
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [vnteam] AS [dbo]
