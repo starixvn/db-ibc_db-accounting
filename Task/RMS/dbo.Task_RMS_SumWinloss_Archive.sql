@@ -17,11 +17,13 @@ ALTER PROCEDURE [dbo].[Task_RMS_SumWinloss_Archive]
 		
 		Revisions:
 			- 20130814@Johnson: archive rmSumWinloss2
+			- 20130918@Johnson: change to use table rmSumWinloss_Old instead of rmSumWinloss_Old2
 		Parameter's Explanation:
 		
 	*/
 SET NOCOUNT ON
-	INSERT INTO rmSumWinloss_old2(
+BEGIN
+	INSERT INTO rmSumWinloss_old(
 		[winlostdate]
       ,[custid]
       ,[sporttype]
@@ -51,51 +53,17 @@ SET NOCOUNT ON
       ,[actualrate]
       ,[odds]
       ,[betcount]
-  FROM [dbo].[rmSumWinloss2] WITH(NOLOCK)
+  FROM [dbo].[rmSumWinloss] WITH(NOLOCK)
   WHERE winlostdate = @winlostdate
   
-  IF @@ERROR = 0
-  BEGIN
-		INSERT INTO rmSumWinloss_old(
-			[winlostdate]
-		  ,[custid]
-		  ,[sporttype]
-		  ,[statusid]		 
-		  ,[username]
-		  ,[currency]
-		  ,[stake]
-		  ,[winlost]
-		  ,[company_stake]
-		  ,[company_winlost]
-		  ,[actualrate]
-		  ,[odds]
-		  ,[betcount]
-		)
-		SELECT [winlostdate]
-		  ,[custid]
-		  ,[sporttype]
-		  ,[statusid]		  
-		  ,[username]
-		  ,[currency]
-		  ,[stake]
-		  ,[winlost]
-		  ,[company_stake]
-		  ,[company_winlost]
-		  ,[actualrate]
-		  ,[odds]
-		  ,[betcount]
-	  FROM [dbo].[rmSumWinloss] WITH(NOLOCK)
-	  WHERE winlostdate = @winlostdate
-	  
-	  DELETE rmSumWinloss2 WITH(ROWLOCK) WHERE winlostdate = @winlostdate	  
-	  DELETE rmSumWinloss WITH(ROWLOCK) WHERE winlostdate = @winlostdate
-  END
-  ELSE
+  IF @@ERROR > 0  
   BEGIN
 	SELECT  @ErrCode = 100,
 			@ErrMsg = 'Archiving data failed for date :' + CONVERT(VARCHAR(10),@winlostdate,120)
 	RETURN
-  END
-  
+ END
+ 
+ 
+END  
 
 
