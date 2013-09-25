@@ -41,7 +41,6 @@ Revisions:
 	- 20111020@Tom:Add check P2P Game: Status, game setting, commission.
 	- 20120322@Johnson: Check live casino
 	- 20130723@Jim: change server alias name
-	- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.	
 	 
 Param's Explanation:
 • @ErrCode:
@@ -112,10 +111,7 @@ declare @srecommend			int,
 		@aDisableP2P		BIT, 
 		@DisableP2P			BIT, 
 		@aDisableFunP2P		BIT,
-		@DisableFunP2P		BIT,
-		@aGivenCredit		MONEY,
-		@GivenCredit		MONEY,
-		@aUsedCredit		MONEY
+		@DisableFunP2P		BIT
 		
 select	@srecommend			= srecommend, 
 		@mrecommend			= mrecommend, 
@@ -139,8 +135,7 @@ select	@srecommend			= srecommend,
 		@aMaxTransferP2P	= MaxTransferP2P, 
 		@aIsAutoResetP2P	= IsAutoResetP2P, 
 		@aDisableP2P		= DisableP2P, 
-		@aDisableFunP2P		= DisableFunP2P,
-		@aGivenCredit		= credit		
+		@aDisableFunP2P		= DisableFunP2P
 from	custinfo with (nolock)
 where	username = @agentname and roleid = 2
 
@@ -167,19 +162,9 @@ select	@custid				= custid,
 		@MaxTransferP2P		= MaxTransferP2P, 
 		@IsAutoResetP2P		= IsAutoResetP2P, 
 		@DisableP2P			= DisableP2P, 
-		@DisableFunP2P		= DisableFunP2P,
-		@GivenCredit		= credit
+		@DisableFunP2P		= DisableFunP2P
 from	custinfo with (nolock) 
 where	username = @membername and roleid = 1
-
--- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
-SELECT @aUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = @recommend
-IF @aGivenCredit - @aUsedCredit < @GivenCredit
-BEGIN
-	Select @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': New agent credit is insufficient to move this member.',
-		@ErrCode = 100			 
-	return
-END
 
 if isnull(@recommend, 0) = 0
 BEGIN

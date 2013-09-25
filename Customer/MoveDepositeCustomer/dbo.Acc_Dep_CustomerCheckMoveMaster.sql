@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Dep_CustomerCheckMoveMaster]
+﻿ALTER PROCEDURE [dbo].[Acc_Dep_CustomerCheckMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
 	@userid		INT,	
@@ -12,7 +12,7 @@ AS
 	DB: DBAGE/bodb02
 	
 	Revisions:
-		- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+	
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -77,10 +77,7 @@ BEGIN
 			@sDisableP2P		BIT, 
 			@mDisableP2P		BIT, 
 			@sDisableFunP2P		BIT,
-			@mDisableFunP2P		BIT,
-			@sGivenCredit		MONEY,
-			@mGivenCredit		MONEY,
-			@sUsedCredit		MONEY
+			@mDisableFunP2P		BIT
 
 	SELECT	@srecommend			= custid, 
 			@scurrency			= currency, 
@@ -104,8 +101,7 @@ BEGIN
 			@sMaxTransferP2P	= MaxTransferP2P, 
 			@sIsAutoResetP2P	= IsAutoResetP2P, 
 			@sDisableP2P		= DisableP2P, 
-			@sDisableFunP2P		= DisableFunP2P,
-			@sGivenCredit		= credit		
+			@sDisableFunP2P		= DisableFunP2P
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @supername AND roleid = 4
 
@@ -132,19 +128,9 @@ BEGIN
 			@mMaxTransferP2P	= MaxTransferP2P, 
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P,
-			@mGivenCredit		= credit	
+			@mDisableFunP2P		= DisableFunP2P
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @mastername AND roleid = 3
-
-	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
-	SELECT @sUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 3 AND srecommend = @srecommend
-	IF @sGivenCredit - @sUsedCredit < @mGivenCredit
-	BEGIN
-		Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': New super credit is insufficient to move this master.',
-			@ErrCode = 100			 
-		return
-	END
 	
 	IF ISNULL(@srecommend, 0) = 0
 	BEGIN
@@ -465,7 +451,8 @@ BEGIN
 
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerCheckMoveMaster] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerCheckMoveMaster] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerCheckMoveMaster] TO [vnteam] AS [dbo]
