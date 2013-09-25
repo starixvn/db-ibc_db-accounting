@@ -1,4 +1,9 @@
-﻿ALTER PROCEDURE [dbo].[Task_DailyRptLicWinloss2_archive]
+﻿set ANSI_NULLS ON
+set QUOTED_IDENTIFIER ON
+go
+
+
+ALTER PROCEDURE [dbo].[Task_DailyRptLicWinloss2_archive]
 	@winlostdate SMALLDATETIME
 AS
 /*
@@ -14,6 +19,7 @@ Revisions:
    - 20120814@Henry: sum Livecasino, games, virtual sport
    - 20120816@Henry: include betfrom "l" for smartphone
    - 20120109@Henry: sum wap & smartphone betfrom
+	- 20130903@Jim: support Virtual Horse Racing
  */
 
 SET NOCOUNT ON 
@@ -56,7 +62,8 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 			WHEN bettype = 1000 THEN 253 --games
 			WHEN bettype BETWEEN 81 AND 120 THEN 161 --Number Game 
 			WHEN bettype BETWEEN 1101 AND 1199 THEN 162 -- Live casino
-			WHEN bettype BETWEEN 1201 AND 1299 THEN 180 --Virtual Sport
+			WHEN (bettype BETWEEN 1201 AND 1299 AND bettype NOT IN (1231,1232,1233,1237,1238)) THEN 180 --Virtual Sport
+			WHEN bettype  IN (1231,1232,1233,1237,1238) THEN 181
 			WHEN bettype BETWEEN 51 AND 69 THEN 201
 			WHEN bettype IN (31,32,33,41,42,43) THEN 151
 			ELSE 0 END sporttype,
@@ -84,6 +91,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		bodb_archive.dbo.bettrans_bk bettrans WITH (NOLOCK,INDEX(CIX_winlostdate))
 		INNER JOIN bodb02.dbo.customer WITH (NOLOCK) ON bettrans.custid=customer.custid
 		LEFT JOIN db052.bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON bettrans.transid = BA.transid
+		LEFT JOIN DBRPT.bodb02.dbo.VSRaceInfo RaceInfo WITH (NOLOCK) ON bettrans.matchid = RaceInfo.EventID AND bettrans.bettype IN (1231,1232,1233,1237,1238)
 	WHERE
 		bettrans.winlostdate = @winlostdate AND
 		customer.srecommend IN (SELECT custid FROM bodb02.dbo.f_DepSuper_1('All')) AND
@@ -98,7 +106,8 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 			WHEN bettype = 1000 THEN 253 --games
 			WHEN bettype BETWEEN 81 AND 120 THEN 161 --Number Game 
 			WHEN bettype BETWEEN 1101 AND 1199 THEN 162 -- Live casino
-			WHEN bettype BETWEEN 1201 AND 1299 THEN 180 --Virtual Sport
+			WHEN (bettype BETWEEN 1201 AND 1299 AND bettype NOT IN (1231,1232,1233,1237,1238)) THEN 180 --Virtual Sport
+			WHEN bettype  IN (1231,1232,1233,1237,1238) THEN 181
 			WHEN bettype BETWEEN 51 AND 69 THEN 201
 			WHEN bettype IN (31,32,33,41,42,43) THEN 151
 			ELSE 0 END,
@@ -253,6 +262,5 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		b.isMobile,
 		b.betfrom
 		
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_DailyRptLicWinloss2_archive] TO [vnteam]
-GO
+
+
