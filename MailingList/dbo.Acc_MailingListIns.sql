@@ -1,9 +1,6 @@
-﻿
-
-
-ALTER PROCEDURE [dbo].[Acc_MailingListIns]
+﻿ALTER PROCEDURE [dbo].[Acc_MailingListIns]
 	@Userid int,		
-	@Siteid int, 
+	@Siteid int = 0, 
 	@FuncID int = 287,  -- [SpecialDeleteMailing]
 	@FuncName nvarchar(100) = '[SpecialDeleteMailing]',
 	@ToList varchar(4000), 
@@ -24,6 +21,7 @@ AS
 	Revisions: 
 		20130301@Scott: Add more parameter @funcname and change dblink from db03 -> DBPOLICY
 		20130305@Lukas: move SP to bodb_acc
+		20130920@Kathy: validate siteid for Credit and 12EU group
 */  
 
 BEGIN	
@@ -45,12 +43,13 @@ IF @ErrCode <> 0
 	RETURN
 
 --2. VALIDATE SITEID. 
-IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 )
-BEGIN
-	SELECT @ErrMsg = 'This Licensee does not exists in System.',
-			@ErrCode = 101		
-	RETURN
-END		
+IF @Siteid NOT IN (1000000, 1000001) -- Credit, 12EU
+	IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 ) AND @Siteid <> 0
+	BEGIN
+		SELECT @ErrMsg = 'This Licensee does not exists in System.',
+				@ErrCode = 101		
+		RETURN
+	END		
 	
 
 --3. VALIDATE MAILING LIST.
