@@ -8,7 +8,7 @@
 	@UserID INT = 0,
 	@SubAccID INT = 0, --Sub-AccountID
 	@LoginIP VARCHAR(20)='',
-	@Language VARCHAR(2) = 'E'
+	@Language VARCHAR(2) = 'E'  
 AS
 /*
 
