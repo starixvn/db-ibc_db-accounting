@@ -184,7 +184,7 @@ where	username = @membername and roleid = 1
 
 -- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 SELECT @aUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = @recommend
-IF @aGivenCredit - @aUsedCredit < @GivenCredit
+IF ISNULL(@aGivenCredit,0) - ISNULL(@aUsedCredit,0) < ISNULL(@GivenCredit,0)
 BEGIN
 	Select @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': New agent credit is insufficient to move this member.',
 		@ErrCode = 100			 

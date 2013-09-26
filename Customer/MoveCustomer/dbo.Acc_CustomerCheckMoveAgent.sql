@@ -149,7 +149,7 @@ BEGIN
 	
 	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 	SELECT @mUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = @mrecommend
-	IF @mGivenCredit - @mUsedCredit < @aGivenCredit
+	IF ISNULL(@mGivenCredit,0) - ISNULL(@mUsedCredit,0) < ISNULL(@aGivenCredit,0)
 	BEGIN
 		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': New master credit is insufficient to move this agent.',
 			@ErrCode = 100			 
@@ -687,7 +687,6 @@ BEGIN
 		return
 	END
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
