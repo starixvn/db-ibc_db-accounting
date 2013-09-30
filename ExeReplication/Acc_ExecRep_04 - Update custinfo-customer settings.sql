@@ -5,7 +5,12 @@
 	@virtualmultiplier smallmoney = 0,
 	@Suspended	BIT =0,
 	@Closed		BIT =0,
-	@disabledCS BIT =0		
+	@disabledCS BIT =0,
+	@DisableLiveCasino BIT = 0,
+	@DisableVS BIT = 0,
+	@EnableVS BIT = 0,
+	@DisableNumberGame BIT = 0,
+	@BingoStatus BIT = 0
 AS 
 /*
 Created: 20121126@Thien
@@ -15,6 +20,7 @@ DB: DBTRANS.bodb02
 Revisions:
 	- 20121126@Thien: implement the 'VirtualMultiplier' update
 	- 20130709@Jamie: Apply Exec Rep for Update CLOSED, SUSPENDED and RNG Casino Status
+	- 20130926@Kathy: Apply Exec Rep for Live Casino, Virtual sport status, Number Game, Bingo status
 	
 Param's Explanation:
 	@Action: 
@@ -22,6 +28,11 @@ Param's Explanation:
 		+ 'Suspended': Suspended/Reject		[@Suspended]
 		+ 'Closed': Closed					[@Closed]
 		+ 'disabledCS': RNG Casino Status	[@disabledCS]
+		+ 'DisableLiveCasino': Live Casino status [@DisableLiveCasino]
+		+ 'DisableVS': Disable Virtual Sport [@DisableVS]
+		+ 'EnableVS': Enable Virtual Sport [@EnableVS]
+		+ 'DisableNumberGame': Number game status [@DisableNumberGame]
+		+ 'BingoStatus': Bingo status [@BingoStatus]
    
 */
 SET NOCOUNT ON 
@@ -113,6 +124,91 @@ BEGIN
 		SET		DisableCasino = @disabledCS
 		WHERE	SyncCasino=1 AND recommend=@custid AND roleid = 1
 	END
+END
+ELSE IF @Action = 'DisableLiveCasino'
+BEGIN 
+	IF @roleid = 4
+			UPDATE CustInfo WITH(ROWLOCK, UPDLOCK)
+			SET DisableLiveCasino = @DisableLiveCasino
+			WHERE srecommend = @custid 
+		
+	IF @roleid = 3 
+		UPDATE CustInfo WITH(ROWLOCK, UPDLOCK)
+		SET DisableLiveCasino = @DisableLiveCasino
+		WHERE mrecommend = @custid 
+		
+	IF @roleid =2
+		UPDATE CustInfo WITH(ROWLOCK, UPDLOCK) 
+		SET DisableLiveCasino = @DisableLiveCasino
+		WHERE recommend = @custid 	
+END
+ELSE IF @Action = 'DisableVS'
+BEGIN
+	if @RoleID = 4 
+		update CustInfo with (ROWLOCK, UPDLOCK) 
+		set DisableVirtualSports = @DisableVS 
+		where SRecommend = @CustID
+
+	if @RoleID = 3 
+		update CustInfo with (ROWLOCK, UPDLOCK) 
+		set DisableVirtualSports = @DisableVS 
+		where MRecommend = @CustID
+
+	if @RoleID = 2 
+		update CustInfo with (ROWLOCK, UPDLOCK) 
+		set DisableVirtualSports = @DisableVS 
+		where Recommend = @CustID
+END
+ELSE IF @Action = 'EnableVS'
+BEGIN
+	IF @roleid = 4
+		UPDATE custinfo WITH(UPDLOCK,ROWLOCK)  
+			SET DisableVirtualSports = @DisableVS,  
+				HideVirtualSports = CASE WHEN HideVirtualSports = 1 THEN 0 ELSE HideVirtualSports END 
+		WHERE srecommend = @custid  
+	
+	IF @roleid = 3
+		UPDATE custinfo WITH(UPDLOCK,ROWLOCK)  
+			SET DisableVirtualSports = @DisableVS,  
+				HideVirtualSports = CASE WHEN HideVirtualSports = 1 THEN 0 ELSE HideVirtualSports END
+		WHERE mrecommend = @custid 
+	IF @roleid = 2
+		UPDATE custinfo WITH(UPDLOCK,ROWLOCK)  
+			SET DisableVirtualSports = @DisableVS,  
+				HideVirtualSports = CASE WHEN HideVirtualSports = 1 THEN 0 ELSE HideVirtualSports END 
+		WHERE recommend = @custid 
+END
+ELSE IF @Action = 'DisableNumberGame'
+BEGIN
+	if @RoleID = 4 
+		update CustInfo with (ROWLOCK, UPDLOCK) 
+		set DisableNumber = @DisableNumberGame 
+		where SRecommend = @CustID
+
+	if @RoleID = 3 
+		update CustInfo with (ROWLOCK, UPDLOCK) 
+		set DisableNumber = @DisableNumberGame 
+		where MRecommend = @CustID
+
+	if @RoleID = 2 
+		update CustInfo with (ROWLOCK, UPDLOCK) 
+		set DisableNumber = @DisableNumberGame 
+		where Recommend = @CustID
+END
+ELSE IF @Action = 'BingoStatus'
+BEGIN
+	IF @RoleID = 4
+		UPDATE CustInfo WITH (ROWLOCK, UPDLOCK) SET
+			DisableBingo = @BingoStatus
+		WHERE SyncBingo=1 AND srecommend=@custid AND roleid in (1,2,3)
+	IF @RoleID = 3
+		UPDATE CustInfo WITH (ROWLOCK, UPDLOCK) SET
+			DisableBingo = @BingoStatus
+		WHERE SyncBingo=1 AND mrecommend=@custid AND roleid in (1,2)
+	IF @RoleID = 2
+		UPDATE CustInfo WITH (ROWLOCK, UPDLOCK) SET
+			DisableBingo = @BingoStatus
+		WHERE SyncBingo=1 AND recommend=@custid AND roleid = 1
 END
 
 GO
