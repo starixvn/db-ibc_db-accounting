@@ -10,7 +10,8 @@
 	@DisableVS BIT = 0,
 	@EnableVS BIT = 0,
 	@DisableNumberGame BIT = 0,
-	@BingoStatus BIT = 0
+	@BingoStatus BIT = 0,
+	@rowcount INT = 0 OUTPUT
 AS 
 /*
 Created: 20121126@Thien
