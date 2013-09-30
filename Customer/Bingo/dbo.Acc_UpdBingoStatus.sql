@@ -8,7 +8,7 @@
 	@UserID INT = 0,
 	@SubAccID INT = 0, --Sub-AccountID
 	@LoginIP VARCHAR(20)='',
-	@Language VARCHAR(2) = 'E'
+	@Language VARCHAR(2) = 'E'  
 AS
 /*
 
@@ -29,6 +29,7 @@ Revisions:
 	- 20130307@Lukas: change linked-server alias & add more write log section
 	- 20130311@Dan: Change linked server DB053 to DBAGE
 	- 20130827@Johnson: Check enabled status on DBTXN instead of DBAGE
+	- 20130926@Kathy: Apply exec rep
 */
 SET NOCOUNT ON
 
@@ -60,7 +61,7 @@ IF @disabledBingo = 1 OR @enableDownline = 1
 BEGIN
 				EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
 											@roleid=@roleid,
-											@isExecRep=0,
+											@isExecRep=1,
 											@Language=@Language,
 											@ErrMsg=@ErrMsg output,
 											@ErrCode=@ErrCode output
@@ -112,34 +113,17 @@ WHERE custid=@custid
 -- Update downline
 IF @disabledBingo = 1 OR @enableDownline = 1
 BEGIN
-	IF @RoleID = 4
-	BEGIN
-		UPDATE CustInfo WITH (ROWLOCK, UPDLOCK) SET
-			DisableBingo = @disabledBingo
-		WHERE SyncBingo=1 AND srecommend=@custid AND roleid in (1,2,3)
-	END
-	IF @RoleID = 3
-	BEGIN
-		UPDATE CustInfo WITH (ROWLOCK, UPDLOCK) SET
-			DisableBingo = @disabledBingo
-		WHERE SyncBingo=1 AND mrecommend=@custid AND roleid in (1,2)
-	END
-	IF @RoleID = 2
-	BEGIN
-		UPDATE CustInfo WITH (ROWLOCK, UPDLOCK) SET
-			DisableBingo = @disabledBingo
-		WHERE SyncBingo=1 AND recommend=@custid AND roleid = 1
-	END
-END 
-	
+	--20130926@Kathy: Apply ExecRep 
+	EXEC [Acc_ExecRep_04]
+		@CustID		= @CustID,
+		@RoleID		= @RoleID,
+		@Action		= 'BingoStatus',
+		@BingoStatus = @disabledBingo    
+END 	
 END TRY
-
 BEGIN CATCH
-	SELECT @ErrCode = 103, @ErrMsg = 'System error!'
-	
+	SELECT @ErrCode = 103, @ErrMsg = 'System error!'	
 END CATCH
-
-
 
 --Log data
 --Log data
@@ -211,6 +195,7 @@ BEGIN CATCH
 		@TrackingValue2 = @TrackingValue2,
 		@duration = @duration
 END CATCH
+
 
 
 GO
