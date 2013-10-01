@@ -60,7 +60,11 @@ BEGIN
   FROM [dbo].[rmSumWinloss] WITH(NOLOCK)
   WHERE winlostdate = @winlostdate
   
-  IF @@ERROR > 0  
+  IF @@ERROR = 0
+  BEGIN   
+	DELETE rmSumWinloss WITH(ROWLOCK) WHERE winlostdate = @winlostdate
+  END
+  ELSE
   BEGIN
 	SELECT  @ErrCode = 100,
 			@ErrMsg = 'Archiving data failed for date :' + CONVERT(VARCHAR(10),@winlostdate,120)
