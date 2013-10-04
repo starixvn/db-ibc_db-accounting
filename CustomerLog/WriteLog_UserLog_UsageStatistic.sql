@@ -7,7 +7,7 @@
 AS
 /*
 	Created: 20131002@Elodie
-	Task : Write log to record usage statistic for the update functions
+	Task : Write log to record usage statistic for the update functions [Redmine:#6131]
 	DB: DBLOG/bodb_CustomerLog
 	Original:
 	
@@ -24,4 +24,4 @@ END
 GO
 GRANT EXECUTE ON [dbo].[WriteLog_UserLog_UsageStatistic] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[WriteLog_UserLog_UsageStatistic] TO [vnteam] AS [dbo] 
+GRANT VIEW DEFINITION ON [dbo].[WriteLog_UserLog_UsageStatistic] TO [vnteam] AS [dbo]
