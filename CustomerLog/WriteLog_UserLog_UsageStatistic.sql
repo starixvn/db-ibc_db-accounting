@@ -3,7 +3,7 @@
 	@RoleID TINYINT,
 	@ActionID INT,
 	@ServerID TINYINT,
-	@Device NVARCHAR(100)=''
+	@Device NVARCHAR(500)=''
 AS
 /*
 	Created: 20131002@Elodie
