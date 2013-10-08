@@ -365,6 +365,7 @@ Begin DataProject = "Account"
       Script = "WriteLog_UserLog_Settle_Checking.sql"
       Script = "WriteLog_UserLog_SettleOutright.sql"
       Script = "WriteLog_UserLog_Transfer.sql"
+      Script = "WriteLog_UserLog_UsageStatistic.sql"
       Script = "WriteLog_UserLog_UserControl.sql"
    End
    Begin DBRefFolder = "Database References"
