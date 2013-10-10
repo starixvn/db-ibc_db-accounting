@@ -20,6 +20,7 @@ AS
 			- 20130618@Johnson: Add NSW racing's pools from AUST
 			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -175,7 +176,7 @@ BEGIN
 		b.bettype,
 		b.liveindicator,		
 		m.matchcode,
-		m.kickofftime,
+		m.GlobalShowTime AS kickofftime,
 		b.matchid,
 		m.homeid,
 		m.awayid,
@@ -576,6 +577,7 @@ BEGIN
 	DROP TABLE #Racing
 	DROP TABLE #R_8RM
 END
+
 
 
 GO

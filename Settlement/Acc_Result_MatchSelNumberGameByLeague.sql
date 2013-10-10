@@ -11,7 +11,6 @@ DB: DB052.bodb02
 Original: [Age_Result_MatchSelNumberGameByLeague]  
   
 Revisions:   
-  
 */  
   
 SET NOCOUNT ON  
@@ -43,7 +42,7 @@ FROM
 			AND sporttype=161
 			AND (@LeagueID = 0 OR leagueid = @LeagueID)
 	UNION ALL  
-	SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime,homeid   
+	SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime ,homeid   
 	FROM match14 (NOLOCK)  
 	WHERE	eventdate BETWEEN  @FromDate  AND  @ToDate 
 			AND sporttype=161

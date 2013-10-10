@@ -405,6 +405,7 @@ Begin DataProject = "Account"
          End
          Begin Folder = "NAP"
             Script = "dbo.NAP_BettransDelSpecial.sql"
+            Script = "dbo.NAP_BettransSelSpecialDel.sql"
             Script = "NAP_BetTypeSel.sql"
             Script = "NAP_Rpt_TicketsListing.sql"
             Script = "NAP_Rpt_TicketsListingDetail.sql"

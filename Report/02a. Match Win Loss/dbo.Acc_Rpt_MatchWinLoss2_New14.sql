@@ -18,14 +18,17 @@ AS
 			    + Add column [IBC Turnover] into resultset
 				+ Treat [Turnover of 8RM/BARM] as negative value
 			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
+			
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 		    - @IBCTurnover_8RM: turnover for outsource 
 		    - @IBCTurnover_BARM: turnover for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 
-			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
-			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			
 
 	*/
 BEGIN	
@@ -174,7 +177,7 @@ BEGIN
 		b.bettype,
 		b.liveindicator,		
 		m.matchcode,
-		m.kickofftime,
+		m.globalshowtime AS kickofftime,
 		b.matchid,
 		m.homeid,
 		m.awayid,

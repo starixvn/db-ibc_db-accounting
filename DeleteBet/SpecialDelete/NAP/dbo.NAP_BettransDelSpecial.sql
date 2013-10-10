@@ -36,6 +36,7 @@
 AS
 	/*
 	Created by: Kathy
+	Date: 20130910
 	Task : Special Delete
 	DB: DBTXN/bodb02
 	Original:

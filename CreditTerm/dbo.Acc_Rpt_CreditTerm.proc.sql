@@ -13,6 +13,7 @@ AS
 	Revisions:		
 		- 20100105@Khoa: get currency name from cache
 		- 20130820@Viet: enhance SP
+		- 20130810@Thien: fix to show TOTAL BALANCE for Agent level, instead of Cash balance
 	Param's Explanation:
 
 */
@@ -104,9 +105,10 @@ BEGIN
 	
 	SELECT b.recommend, a.groupID,
 		ISNULL(SUM(CASE WHEN b.recommend = b.custid THEN b.winlost-b.actual_stake ELSE b.awinlost+b.comm-b.playercomm END),0)
+		+ IsNull(SUM(case when b.custid<>b.recommend AND b.ruben=1 then winlost-actual_stake+playercomm else 0 end) ,0)
 	FROM bettrans b with(nolock, index=IX_recommend)
 		INNER JOIN custInfo c with(nolock) on c.custid = b.recommend
-		INNER JOIN custAccount a with(nolock) on c.custid = a.custid
+			INNER JOIN custAccount a with(nolock) on c.custid = a.custid
 	WHERE roleid = 2 AND (PreAgreeAmount > 0 OR groupID > 0)
 	GROUP BY b.recommend, a.groupid	
 	
@@ -217,8 +219,9 @@ BEGIN
 	drop table #Balance	
 END
 
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CreditTerm] TO [vnteam] AS [dbo]
+
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CreditTerm] TO [bodbAdminNet] AS [dbo]
 GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CreditTerm] TO [vnteam] AS [dbo]
