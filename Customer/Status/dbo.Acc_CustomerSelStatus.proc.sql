@@ -26,7 +26,7 @@ Revisions:
 	- 20120808@Sophia: Add DisableVirtualSports, HideVirtualSports	
 	- 20120927@Sophia: Get DoubleCommLosing	
 	- 20130121@Dan: change linked server DB03 to DBPOLICY
-	- 20131007@Kathy: Add DisableOpusCS
+	- 20131007@Kathy: Add DisableOpusCS [Redmine:#5670]
 						
 Param's Explanation:
 • @CustID: customer id.   
