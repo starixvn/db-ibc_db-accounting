@@ -11,13 +11,15 @@ AS
 	
 		History:
 			- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
+			- 20130311@Don: Add column [IBC Turnover] into resultset
+			- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 			
 		Explanation's Param:
 
 	*/
 BEGIN	
 	SET NOCOUNT ON	
-	create table #bettrans (matchid int, bettype int, liveindicator bit, winlost money, pos money, comm money, virtualcomm money, linetotal money, virtuallinetotal money)
+	create table #bettrans (matchid int, bettype int, liveindicator bit, winlost money, pos money, comm money, virtualcomm money, linetotal money, virtuallinetotal money, IBCTurnover money)
 	create index IX_bettype on #bettrans(bettype, liveindicator)		
 	
 	insert into #bettrans
@@ -27,7 +29,8 @@ BEGIN
 		   sum((scomm)*actualrate) comm,   
 		   sum((scomm)*virtualrate) VirtualComm,
 		   sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal,
-		   sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal
+		   sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
+		   sum((1-tpositiontaking)*abs(stake)*actualrate) IBCTurnover
 	from bettrans14 b with(nolock)
 	where winlostdate = @winlostdate and b.ruben=1 and statusID NOT IN (101,102,103)
 	group by b.matchid, bettype,liveindicator
@@ -36,7 +39,7 @@ BEGIN
 		b.bettype,
 		b.liveindicator,		
 		m.matchcode,
-		m.kickofftime,
+		m.globalshowtime AS kickofftime,
 		b.matchid,
 		m.homeid,
 		m.awayid,
@@ -46,7 +49,8 @@ BEGIN
         b.comm,   
         b.VirtualComm,
         b.LineTotal,
-        b.VirtualLineTotal
+        b.VirtualLineTotal,
+        IBCTurnover
     from	#bettrans b with (nolock)
 			inner join match14 m with (nolock) on m.matchid=b.matchid
 			inner join league l with (nolock) on l.leagueid=m.leagueid

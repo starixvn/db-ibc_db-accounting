@@ -22,6 +22,7 @@ Revisions:
 	- 20120921@Elodie: Get kickofftime field
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20130226@Elodie: Show the results of Virtual HR
+	- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */
 
 SET NOCOUNT ON
@@ -40,7 +41,7 @@ SET NOCOUNT ON
 				m.homeID,
 				m.awayID,
 				m.matchcode,
-				m.kickofftime,
+				m.GlobalShowTime AS kickofftime,
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
@@ -75,7 +76,7 @@ SET NOCOUNT ON
 				m.homeID,
 				m.awayID,
 				m.matchcode,
-				m.kickofftime,
+				m.globalshowtime AS kickofftime,
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
@@ -104,13 +105,13 @@ SET NOCOUNT ON
 				m.betstatus, 
 				hthomescore,
 				htawayscore,
-				datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,
+				datediff(minute,globalshowtime,CURRENT_TIMESTAMP) playtime,
 				m.LeagueID,
 				m.matchid, 
 				m.homeID,
 				m.awayID,
 				m.matchcode,
-				m.kickofftime,
+				m.globalshowtime AS kickofftime,
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,

@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [dbo].[Acc_LiveCS_SelGameByID]
+﻿ALTER PROCEDURE [dbo].[Acc_LiveCS_SelGameByID]
 	@matchid int
 AS
 
@@ -10,7 +8,7 @@ AS
 	DB: DBTRANS.BODB02 
 	
 	Revisions:
-		
+		- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */
 BEGIN
 
@@ -20,7 +18,7 @@ BEGIN
 		matchid
 		,matchcode
 		,eventdate
-		,kickofftime
+		, GlobalShowTime AS kickofftime
 		,showtime AS GameEvent
 		,finalhomescore
 		,finalawayscore
