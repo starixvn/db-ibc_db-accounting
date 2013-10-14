@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompletedHT]	
+﻿ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompletedHT]	
 	@FromDate DATETIME,
 	@sporttype TINYINT = 0
 AS
@@ -23,6 +22,7 @@ AS
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130325@Lukas: get goalrecord & isExistFGLG
+		- 20131014@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */  
 BEGIN
 	SET NOCOUNT ON  
@@ -34,7 +34,7 @@ BEGIN
 				m.homeid,  
 				m.awayid,                  
 				m.matchcode,  
-				m.kickofftime,  
+				m.GlobalShowTime,  
 				m.finalhomescore,  
 				m.finalawayscore,  
 				m.hthomescore,  
@@ -60,7 +60,7 @@ BEGIN
 						match.homeid,  
 						match.awayid,  
 						match.matchcode,  
-						match.kickofftime,  
+						match.GlobalShowTime,  
 						match.finalhomescore,  
 						match.finalawayscore,  
 						match.hthomescore,  
@@ -75,10 +75,11 @@ BEGIN
 						ISNULL(mr.isUndecided,0) AS isUndecided,  --Hurri@20120306  
 						match.goalrecord
 				FROM  DBPRO.BODB02.dbo.match WITH(NOLOCK)
-					INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid                    
+					INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid, match m                    
 				WHERE match.eventstatus <> 'Completed'    
-					AND ((DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 45   
-					AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 100)  
+					AND ((DATEDIFF(MINUTE,match.GlobalShowTime,CURRENT_TIMESTAMP) > 45   
+							--AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 100
+					)  
 						OR  mr.confirmHT <> 0 )  
 					AND match.eventdate = @FromDate  
 					AND match.sporttype = 1  
@@ -109,7 +110,7 @@ BEGIN
 			m.homeid,  
 			m.awayid,                  
 			m.matchcode,  
-			m.kickofftime,  
+			m.GlobalShowTime,  
 			m.finalhomescore,  
 			m.finalawayscore,  
 			m.hthomescore,  
@@ -131,7 +132,7 @@ BEGIN
 				  match.homeid,  
 				  match.awayid,                  
 				  match.matchcode,  
-				  match.kickofftime,  
+				  match.GlobalShowTime,  
 				  match.finalhomescore,  
 				  match.finalawayscore,  
 				  match.hthomescore,  
@@ -146,11 +147,11 @@ BEGIN
 				  ISNULL(mr.isUndecided,0) as isUndecided,  --Hurri@20120306  
 				  match.goalrecord
 			FROM   DBPRO.BODB02.dbo.match WITH(NOLOCK)  
-				INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid                      
+				INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid, match m                      
 			WHERE  match.eventstatus <> 'Completed'    
 				AND (
-						(DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 30  
-						 AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 60
+						(DATEDIFF(MINUTE,match.GlobalShowTime,CURRENT_TIMESTAMP) > 30  
+						 AND DATEDIFF(MINUTE,match.GlobalShowTime,CURRENT_TIMESTAMP) < 60
 						)  
 						OR mr.confirmHT >0   
 					)  
