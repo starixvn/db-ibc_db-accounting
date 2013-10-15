@@ -12,7 +12,6 @@ AS
 		History:
 			- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 			- 20130311@Don: Add column [IBC Turnover] into resultset
-			- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 			
 		Explanation's Param:
 
@@ -39,7 +38,7 @@ BEGIN
 		b.bettype,
 		b.liveindicator,		
 		m.matchcode,
-		m.GlobalShowTime AS kickofftime, -- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time
+		m.kickofftime,
 		b.matchid,
 		m.homeid,
 		m.awayid,

@@ -38,7 +38,6 @@ AS
 		- 20121127@Lukas: show FGLG info in parlay tickets
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130822@Johnson: Get match information for match completed
-		- 20131014@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 	Param's Explanation:
 		+ @IsExistFGLG = 1 : exist FGLG ticket
 		+ @IsLive = 1 : Match is offered LIVE betting
@@ -67,13 +66,13 @@ if exists(	select	1
 					left join DBPRO.BODB02.dbo.match_remark mr with (nolock) on m.matchid = mr.matchid
 			where m.matchid = @matchid AND 			
 			(
-			(sporttype in (1,180) and datediff(minute,GlobalShowTime,CURRENT_TIMESTAMP) > 45)--bill soccer HT
+			(sporttype in (1,180) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 45)--bill soccer HT
 			OR
-			(sporttype in (2,3,26,32) and datediff(minute,GlobalShowTime,CURRENT_TIMESTAMP) > 30)--bill Basket, Football HT
+			(sporttype in (2,3,26,32) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 30)--bill Basket, Football HT
 			OR
-			(sporttype in (4,6,8) and datediff(minute,GlobalShowTime,CURRENT_TIMESTAMP) >= 60)
+			(sporttype in (4,6,8) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) >= 60)
 			OR
-			(sporttype in (5,7,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,33,34,35,36,37,38,39,40,41,42,99) and datediff(minute,GlobalShowTime,CURRENT_TIMESTAMP) >= 30)
+			(sporttype in (5,7,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,33,34,35,36,37,38,39,40,41,42,99) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) >= 30)
 			OR 
 			(Isnull(ConfirmHT, 0) > 0)
 			OR
@@ -102,8 +101,8 @@ BEGIN
 					inner join DBPRO.BODB02.dbo.match_remark mr with (nolock) on m.matchid = mr.matchid
 			where	m.matchid=@matchid 
 					AND sporttype = 1 
-					AND datediff(minute,GlobalShowTime,CURRENT_TIMESTAMP) < 100
-					AND (datediff(minute,GlobalShowTime,CURRENT_TIMESTAMP) > 45 or isnull(ConfirmHT,0) > 0)
+					AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) < 100
+					AND (datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 45 or isnull(ConfirmHT,0) > 0)
 					AND isnull(ConfirmFT,0) = 0
 		)
 			
@@ -174,7 +173,7 @@ BEGIN
 
 
 	select match.sporttype, match.betstatus, hthomescore,htawayscore,
-		datediff(minute,GlobalShowTime,CURRENT_TIMESTAMP) playtime,
+		datediff(minute,match.kickofftime,CURRENT_TIMESTAMP) playtime,
 		match.leagueid,		
 		match.matchid, 
 		match.homeid,
