@@ -26,7 +26,7 @@ AS
 			- @IBCTurnover_8RM: turnover for outsource 
 		    - @IBCTurnover_BARM: turnover for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 
-			   
+			     
 
 	*/
 BEGIN	
