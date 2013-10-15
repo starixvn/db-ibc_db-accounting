@@ -21,7 +21,8 @@ AS
 		- 20111003@Sophia: Add column IsPending for Pending Status  
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match
 		- 20130121@Elodie: Change link server DB02 to DBPRO
-		- 20130325@Lukas: get goalrecord & isExistFGLG   
+		- 20130325@Lukas: get goalrecord & isExistFGLG
+		- 20131014@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */  
 BEGIN 
 	SET NOCOUNT ON  
@@ -41,7 +42,7 @@ BEGIN
 	WHERE m.eventdate = @FromDate  
 		 AND m.sporttype = case when @sporttype = 0 then sporttype else @sporttype end  
 		 AND m.eventstatus <> N'Completed'  
-		 AND (m.kickofftime < dateadd(s, -6000, CURRENT_TIMESTAMP) or mr.ConfirmFT > 0)  
+		 AND (m.globalshowtime < dateadd(s, -6000, CURRENT_TIMESTAMP) or mr.ConfirmFT > 0)  
   
 	SELECT  
 		 m.matchid,  
@@ -49,7 +50,7 @@ BEGIN
 		 m.homeid,  
 		 m.awayid,  
 		 m.matchcode,  
-		 m.kickofftime,  
+		 m.globalshowtime,  
 		 m.finalhomescore,  
 		 m.finalawayscore,  
 		 m.hthomescore,  

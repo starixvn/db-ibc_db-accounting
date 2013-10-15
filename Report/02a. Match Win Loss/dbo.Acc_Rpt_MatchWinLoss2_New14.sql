@@ -18,14 +18,17 @@ AS
 			    + Add column [IBC Turnover] into resultset
 				+ Treat [Turnover of 8RM/BARM] as negative value
 			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			- 20131014@Johnson: use liveawayscore to separate sporttype for mix-parlay			
+			
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 		    - @IBCTurnover_8RM: turnover for outsource 
 		    - @IBCTurnover_BARM: turnover for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
 
-			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
-			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			
 
 	*/
 BEGIN	
@@ -148,11 +151,11 @@ BEGIN
 	)rm
 	
         -- All sports
-	CREATE TABLE #tmpBettrans (matchid int, bettype int, statusID int, liveindicator bit, winlost money, pos money, comm money, VirtualComm money, LineTotal money, VirtualLineTotal money, IBCTurnover money)
+	CREATE TABLE #tmpBettrans (matchid int, bettype int, statusID int, liveindicator bit, liveawayscore tinyint, winlost money, pos money, comm money, VirtualComm money, LineTotal money, VirtualLineTotal money, IBCTurnover money)
 	CREATE INDEX IX_bettype on #tmpBettrans(bettype)
 	
-	INSERT INTO #tmpBettrans (matchid, bettype, statusID, liveindicator, winlost, pos, comm, VirtualComm, LineTotal, VirtualLineTotal, IBCTurnover)
-	SELECT  matchid, bettype, statusID, liveindicator,
+	INSERT INTO #tmpBettrans (matchid, bettype, statusID, liveindicator, liveawayscore, winlost, pos, comm, VirtualComm, LineTotal, VirtualLineTotal, IBCTurnover)
+	SELECT  matchid, bettype, statusID, liveindicator, liveawayscore,
 			sum((winlost-actual_stake)*actualrate)  winlost,
 			sum((awinlost+mwinlost+swinlost)*actualrate) pos,
 			sum((scomm)*actualrate) comm,
@@ -165,7 +168,7 @@ BEGIN
 			AND ruben = 1  
 			AND statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
 			AND bettype <= 19000
-	GROUP BY matchid, bettype, statusID, liveindicator
+	GROUP BY matchid, bettype, statusID, liveindicator, liveawayscore
 	-- END - Fill data of Racing, 8RM&BARM and all sports into temporary tables 
 	
 	-- Resultset of Sportbook without Parlay and Outright
@@ -456,48 +459,26 @@ BEGIN
 	WHERE	bettype BETWEEN 1101 AND 1199			
 	GROUP BY bettype					
 	
-	    -- Parlay
+		  -- Parlay
 	UNION ALL 
-	SELECT 	m1.bettype,
-			'' Hedge,	
+	SELECT 	bettype,
+			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
-			LineTotal_soccer,
-			VirtualLineTotal_soccer,
+			SUM(CASE WHEN liveawayscore IN (1,3) THEN LineTotal ELSE 0 END) as LineTotal_soccer,
+			SUM(CASE WHEN liveawayscore IN (1,3) THEN VirtualLineTotal ELSE 0 END) as VirtualLineTotal_soccer,
 			
 			0 LineTotal_others_live,
 			0 VirtualLineTotal_others_live,
-			LineTotal - LineTotal_soccer as LineTotal_others,
-			VirtualLineTotal - VirtualLineTotal_soccer as VirtualLineTotal_others,
+			SUM(CASE WHEN liveawayscore = 2 THEN LineTotal ELSE 0 END) as LineTotal_others,
+			SUM(CASE WHEN liveawayscore = 2 THEN VirtualLineTotal ELSE 0 END) as VirtualLineTotal_others,
 			
-			IBCTurnover
-	FROM
-		(
-			SELECT 	bettype,	
-					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate), 0) as LineTotal_soccer,
-					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate), 0) as VirtualLineTotal_soccer
-			FROM	bettrans14 with (nolock)
-			WHERE 
-					ruben = 1 and
-					bettype IN (9, 29) and
-					winlostdate = @winlostdate and
-					matchid IN (9, 29) and
-					statusid NOT IN (101,102,103,121)
-					and refno IN (SELECT refno FROM bettransm14 with (nolock) inner join match14 with (nolock) on bettransm14.matchid = match14.matchid WHERE sporttype=1)
-			GROUP BY bettype
-		) m1
-		inner join
-		(
-			SELECT 	bettype,
-					isnull(sum(LineTotal), 0) as LineTotal,
-					isnull(sum(VirtualLineTotal), 0) as VirtualLineTotal,
-					isnull(sum(IBCTurnover), 0) as IBCTurnover
-			FROM	#tmpBettrans with (nolock)
-			WHERE 
-					bettype IN (9, 29) and
-					matchid IN (9, 29)
-			GROUP BY bettype
-		) m2 on m1.bettype = m2.bettype		
+			SUM(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans with (nolock)
+	WHERE 
+			bettype IN (9, 29) and
+			matchid IN (9, 29)
+	GROUP BY bettype
 		
 	    -- Outright
 	UNION ALL 

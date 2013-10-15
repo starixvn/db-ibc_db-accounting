@@ -173,7 +173,7 @@ BEGIN
 
 
 	select match.sporttype, match.betstatus, hthomescore,htawayscore,
-		datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,
+		datediff(minute,match.kickofftime,CURRENT_TIMESTAMP) playtime,
 		match.leagueid,		
 		match.matchid, 
 		match.homeid,
