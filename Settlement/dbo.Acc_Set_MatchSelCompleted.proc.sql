@@ -21,7 +21,7 @@ AS
 		- 20111003@Sophia: Add column IsPending for Pending Status  
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match
 		- 20130121@Elodie: Change link server DB02 to DBPRO
-		- 20130325@Lukas: get goalrecord & isExistFGLG   
+		- 20130325@Lukas: get goalrecord & isExistFGLG
 */  
 BEGIN 
 	SET NOCOUNT ON  

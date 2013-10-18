@@ -11,7 +11,7 @@ Revisions:
 -- test 2
 	SET NOCOUNT ON
 
-	SELECT exchangeid, currency from exchange with (nolock)
+	SELECT exchangeid, currency from exchange with (nolock) where exchangeid <> 20
 
 
 GO

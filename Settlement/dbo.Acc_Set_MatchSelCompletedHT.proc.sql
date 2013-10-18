@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompletedHT]	
+﻿ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompletedHT]	
 	@FromDate DATETIME,
 	@sporttype TINYINT = 0
 AS
@@ -75,10 +74,11 @@ BEGIN
 						ISNULL(mr.isUndecided,0) AS isUndecided,  --Hurri@20120306  
 						match.goalrecord
 				FROM  DBPRO.BODB02.dbo.match WITH(NOLOCK)
-					INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid                    
+					INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid, match m                    
 				WHERE match.eventstatus <> 'Completed'    
 					AND ((DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 45   
-					AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 100)  
+							--AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 100
+					)  
 						OR  mr.confirmHT <> 0 )  
 					AND match.eventdate = @FromDate  
 					AND match.sporttype = 1  
@@ -146,7 +146,7 @@ BEGIN
 				  ISNULL(mr.isUndecided,0) as isUndecided,  --Hurri@20120306  
 				  match.goalrecord
 			FROM   DBPRO.BODB02.dbo.match WITH(NOLOCK)  
-				INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid                      
+				INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid, match m                      
 			WHERE  match.eventstatus <> 'Completed'    
 				AND (
 						(DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 30  
