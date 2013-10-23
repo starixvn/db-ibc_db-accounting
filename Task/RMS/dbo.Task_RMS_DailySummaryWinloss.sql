@@ -15,6 +15,7 @@ AS
 			- 20130228@Jamie: Get data from bettrans14 directly
 			- 20130814@Johnson: import data into rmSumWinloss2
 			- 20130918@Johnson: change to use table rmSumWinloss instead of rmSumWinloss2
+			- 20130924@Johnson: add column recommend into rmSumWinloss
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -48,7 +49,8 @@ SET NOCOUNT ON
 				,company_winlost
 				,actualrate
 				,odds
-				,betcount)
+				,betcount
+				,recommend)
 		SELECT	 winlostdate
 				,b.custid
 				,liveawayscore
@@ -63,12 +65,13 @@ SET NOCOUNT ON
 				,actualrate
 				,SUM(modds)
 				,count(1)
+				,recommend 
 		FROM	bodb02.dbo.bettrans14 b WITH(NOLOCK) 
 		WHERE	b.winlostdate = @winlostdate
 				AND matchid = 9
 				AND bettype = 9
 				AND b.statusid IN (111,112,113)
-		GROUP BY winlostdate, b.custid, liveawayscore, statusid, username, currency, actualrate, CASE WHEN RIGHT(betcheck,len(betcheck)-1) >= 6 then 6 else RIGHT(betcheck,len(betcheck)-1) END
+		GROUP BY winlostdate, b.custid, liveawayscore, statusid, username, currency, actualrate, CASE WHEN RIGHT(betcheck,len(betcheck)-1) >= 6 then 6 else RIGHT(betcheck,len(betcheck)-1) END, recommend
 		
 		IF @@ERROR > 0
 		BEGIN			
