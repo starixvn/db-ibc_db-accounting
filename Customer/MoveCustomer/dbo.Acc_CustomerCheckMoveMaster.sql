@@ -361,7 +361,7 @@ BEGIN
 				OR (scs.bettype NOT IN (1,2,3,7,8) AND scs.sdiscount<mcs.adiscount)
 		)
 	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super commission is less than master commission.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Super''s commission for Sportbook is less than master''s commission.',
 			@ErrCode = 202					 
 		RETURN
 	END
@@ -375,7 +375,7 @@ BEGIN
 			WHERE scs.sdiscount<mcs.adiscount AND scs.sporttype <> 201
 		)
 	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super commission is less than master commission.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Super''s commission is less than master''s commission.',
 			@ErrCode = 203				 
 		RETURN
 	END
@@ -389,7 +389,7 @@ BEGIN
 				 AND scs.sdiscount < mcs.adiscount
 	)
 	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': super commission is less than master commission.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Live Casino is less than master''s commission.',
 				@ErrCode = 204
 		RETURN	
 	END

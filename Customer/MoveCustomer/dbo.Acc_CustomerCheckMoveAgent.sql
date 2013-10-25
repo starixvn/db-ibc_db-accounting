@@ -395,7 +395,7 @@ BEGIN
 				or (mcs.bettype not in (1,2,3,7,8) and mcs.adiscount<acs.discount)
 		)
 	BEGIN
-		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': master commission is less than agent commission.',
+		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission for Sportbook is less than agent''s commission.',
 			@ErrCode = 200					 
 		return
 	END
@@ -409,7 +409,7 @@ BEGIN
 			where mcs.adiscount<acs.discount AND mcs.sporttype <> 201 
 		)
 	BEGIN
-		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': master commission is less than agent commission.',
+		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission is less than agent''s commission.',
 			@ErrCode = 201					 
 		return
 	END
@@ -423,7 +423,7 @@ BEGIN
 				AND mcs.adiscount < acs.discount
 		)
 	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': master commission is less than agent commission.',
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission for Live Casino is less than agent''s commission.',
 			@ErrCode = 202
 		RETURN
 	END
