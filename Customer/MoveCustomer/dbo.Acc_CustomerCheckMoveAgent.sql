@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveAgent]    Script Date: 10/24/2013 17:36:39 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveAgent]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveAgent]
 	@mastername		varchar(40),
 	@agentname		varchar(40),
 	@userid			int,
@@ -371,12 +364,9 @@ BEGIN
 	END
 
 	-- Virtual sports
-	if (exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 180)
-		AND not exists(select 1 from custsetting3rd with (nolock) where custid = @mrecommend and sporttype = 180))
-		OR (exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 181)
-		AND not exists(select 1 from custsetting3rd with (nolock) where custid = @mrecommend and sporttype = 181))
-		OR (exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 186)
-		AND not exists(select 1 from custsetting3rd with (nolock) where custid = @mrecommend and sporttype = 186))
+	if exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 180)
+		AND not exists(select 1 from custsetting3rd with (nolock) where custid = @mrecommend and sporttype = 180)
+
 	BEGIN
 		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': master does not have Virtual Sports setting.',
 			@ErrCode = 124					 
@@ -516,7 +506,7 @@ BEGIN
 			inner join custsetting3rd as mcs_new with (nolock) on mcs_old.sporttype=mcs_new.sporttype and mcs_old.bettype=mcs_new.bettype						
 		where
 			mcs_old.custid = @mrecommend_old and  mcs_new.custid = @mrecommend
-			and (mcs_old.mpositiontaking > mcs_new.mpositiontaking
+			and ((mcs_old.mpositiontaking > mcs_new.mpositiontaking AND mcs_new.sporttype <> 201)
 			or (mcs_old.bettype in (85,86,87,89,90) and mcs_old.sporttype =161 and mcs_old.mlivepositiontaking > mcs_new.mlivepositiontaking)
 			)
 	)

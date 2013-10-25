@@ -146,7 +146,7 @@ select	@srecommend			= srecommend,
 		--@aMaxTransferP2P	= MaxTransferP2P, 
 		--@aIsAutoResetP2P	= IsAutoResetP2P, 
 		--@aDisableP2P		= DisableP2P, 
-		--@aDisableFunP2P		= DisableFunP2P ,
+		--@aDisableFunP2P	= DisableFunP2P ,
 		@aDisableVirtualSports = DisableVirtualSports,
 		@aHideVirtualSports = HideVirtualSports,
 		@aGivenCredit		= credit	
@@ -413,12 +413,9 @@ BEGIN
 END
 
 --VS
-if (exists(select 1 from custsetting3rd with (nolock) where custid = @custid and sporttype = 180)
-	AND not exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 180))
-	OR (exists(select 1 from custsetting3rd with (nolock) where custid = @custid and sporttype = 181)
-	AND not exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 181))
-	OR (exists(select 1 from custsetting3rd with (nolock) where custid = @custid and sporttype = 186)
-	AND not exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 186))
+if exists(select 1 from custsetting3rd with (nolock) where custid = @custid and sporttype = 180)
+	AND not exists(select 1 from custsetting3rd with (nolock) where custid = @recommend and sporttype = 180)
+
 BEGIN
 	Select @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': agent does not have Virtual Sports setting.',
 		@ErrCode = 206					 
@@ -452,9 +449,9 @@ if exists (
 	select 1 from 
 		custsetting3rd as acs_old with (nolock)
 		inner join custsetting3rd as acs_new with (nolock) on acs_old.sporttype=acs_new.sporttype and acs_old.bettype=acs_new.bettype						
-	where acs_new.sporttype <> 201 AND
+	where 
 		acs_old.custid = @recommend_old and  acs_new.custid = @recommend
-		and	( acs_old.isautompositiontaking <> acs_new.isautompositiontaking
+		and	( (acs_old.isautompositiontaking <> acs_new.isautompositiontaking AND acs_new.sporttype <> 201)
 			or acs_old.isautolivempositiontaking <> acs_new.isautolivempositiontaking
 		)
 )
