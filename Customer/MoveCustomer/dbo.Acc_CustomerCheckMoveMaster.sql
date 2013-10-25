@@ -550,20 +550,20 @@ BEGIN
 		RETURN
 	END
 
-	--Check P2P :Game Comm
-	IF exists(
-		SELECT TOP 1 1
-		FROM dbo.P2PGROUPCOMM s WITH(NOLOCK)
-			INNER JOIN dbo.P2PGROUPCOMM m WITH(NOLOCK)
-				ON m.GroupID = s.GroupID
-			WHERE  s.custid = @srecommend AND m.custid = @mrecommend
-					AND (s.sdiscount < m.adiscount )
-	)
-	BEGIN
-		Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': P2P''s commission of master is greater than P2P''s commission of new super.',
-			@ErrCode = 210
-		return
-	END
+	----Check P2P :Game Comm
+	--IF exists(
+	--	SELECT TOP 1 1
+	--	FROM dbo.P2PGROUPCOMM s WITH(NOLOCK)
+	--		INNER JOIN dbo.P2PGROUPCOMM m WITH(NOLOCK)
+	--			ON m.GroupID = s.GroupID
+	--		WHERE  s.custid = @srecommend AND m.custid = @mrecommend
+	--				AND (s.sdiscount < m.adiscount )
+	--)
+	--BEGIN
+	--	Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': P2P''s commission of master is greater than P2P''s commission of new super.',
+	--		@ErrCode = 210
+	--	return
+	--END
 
 END
 
