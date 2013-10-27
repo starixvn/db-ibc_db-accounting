@@ -15,7 +15,7 @@ AS
 				- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
 				- 20120821@Dan: add virtual soccer, remove FI
 				- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
-				
+				- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -72,14 +72,14 @@ BEGIN
 			@mClosed			BIT,
 			@sSuspended			BIT,	
 			@mSuspended			BIT,
-			@sMaxTransferP2P	MONEY,
-			@mMaxTransferP2P	MONEY,
-			@sIsAutoResetP2P	BIT,
-			@mIsAutoResetP2P	BIT,
-			@sDisableP2P		BIT, 
-			@mDisableP2P		BIT, 
-			@sDisableFunP2P		BIT,
-			@mDisableFunP2P		BIT,
+			--@sMaxTransferP2P	MONEY,
+			--@mMaxTransferP2P	MONEY,
+			--@sIsAutoResetP2P	BIT,
+			--@mIsAutoResetP2P	BIT,
+			--@sDisableP2P		BIT, 
+			--@mDisableP2P		BIT, 
+			--@sDisableFunP2P		BIT,
+			--@mDisableFunP2P		BIT,
 			@sGivenCredit		MONEY,
 			@mGivenCredit		MONEY,
 			@sUsedCredit		MONEY,
@@ -105,10 +105,10 @@ BEGIN
 			@sDisableNumber		= DisableNumber,
 			@sClosed			= closed,
 			@sSuspended			= reject,
-			@sMaxTransferP2P	= MaxTransferP2P, 
-			@sIsAutoResetP2P	= IsAutoResetP2P, 
-			@sDisableP2P		= DisableP2P, 
-			@sDisableFunP2P		= DisableFunP2P,
+			--@sMaxTransferP2P	= MaxTransferP2P, 
+			--@sIsAutoResetP2P	= IsAutoResetP2P, 
+			--@sDisableP2P		= DisableP2P, 
+			--@sDisableFunP2P		= DisableFunP2P,
 			@sGivenCredit		= credit,
 			@sHideVirtualSports = HideVirtualSports 		
 	FROM	custinfo WITH (NOLOCK) 
@@ -133,10 +133,10 @@ BEGIN
 			@mDisableNumber		= DisableNumber,
 			@mSuspended			= reject,
 			@mClosed			= closed,
-			@mMaxTransferP2P	= MaxTransferP2P, 
-			@mIsAutoResetP2P	= IsAutoResetP2P, 
-			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P,
+			--@mMaxTransferP2P	= MaxTransferP2P, 
+			--@mIsAutoResetP2P	= IsAutoResetP2P, 
+			--@mDisableP2P		= DisableP2P, 
+			--@mDisableFunP2P		= DisableFunP2P,
 			@mGivenCredit		= credit,
 			@mHideVirtualSports = HideVirtualSports
 	FROM	custinfo WITH (NOLOCK) 
@@ -361,7 +361,7 @@ BEGIN
 				OR (scs.bettype NOT IN (1,2,3,7,8) AND scs.sdiscount<mcs.adiscount)
 		)
 	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super commission is less than master commission.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Super''s commission for Sportbook is less than master''s commission.',
 			@ErrCode = 202					 
 		RETURN
 	END
@@ -372,10 +372,10 @@ BEGIN
 			FROM custsetting3rd AS scs WITH (NOLOCK)
 				INNER JOIN custsetting3rd AS mcs WITH (NOLOCK) ON scs.custid = @srecommend AND mcs.custid = @mrecommend 
 															AND scs.sporttype=mcs.sporttype AND scs.bettype=mcs.bettype 
-			WHERE scs.sdiscount<mcs.adiscount
+			WHERE scs.sdiscount<mcs.adiscount AND scs.sporttype <> 201
 		)
 	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super commission is less than master commission.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Super''s commission is less than master''s commission.',
 			@ErrCode = 203				 
 		RETURN
 	END
@@ -389,7 +389,7 @@ BEGIN
 				 AND scs.sdiscount < mcs.adiscount
 	)
 	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': super commission is less than master commission.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Live Casino is less than master''s commission.',
 				@ErrCode = 204
 		RETURN	
 	END
@@ -451,7 +451,7 @@ BEGIN
 			WHERE
 			--n4<=s3+m3<=s4	if i3=0
 			(
-				((mcs.isautopositiontaking=0) AND ((mcs.spositiontaking + mcs.mpositiontaking < sco.minpositiontaking) OR (mcs.spositiontaking + mcs.mpositiontaking > scs.spositiontaking)))
+				(scs.sporttype <> 201 AND (mcs.isautopositiontaking=0) AND ((mcs.spositiontaking + mcs.mpositiontaking < sco.minpositiontaking) OR (mcs.spositiontaking + mcs.mpositiontaking > scs.spositiontaking)))
 				OR
 				((mcs.isautolivepositiontaking=0) AND (mcs.sporttype =161) AND (mcs.bettype IN (85,86,87,89,90)) AND ((mcs.slivepositiontaking + mcs.mlivepositiontaking < sco.minlivepositiontaking) OR (mcs.slivepositiontaking + mcs.mlivepositiontaking > scs.slivepositiontaking)))
 			)
@@ -459,14 +459,14 @@ BEGIN
 			--u3+m3>=n4 if i3=1
 			OR
 			(
-				((mcs.isautopositiontaking=1) AND ((mcs.mpositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking + mcs.mpositiontaking < sco.minpositiontaking)))
+				(scs.sporttype <> 201 AND (mcs.isautopositiontaking=1) AND ((mcs.mpositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking + mcs.mpositiontaking < sco.minpositiontaking)))
 				OR
 				((mcs.isautolivepositiontaking=1) AND (mcs.sporttype =161) AND (mcs.bettype IN (85,86,87,89,90)) AND ((mcs.mlivepositiontaking > scs.slivepositiontaking) OR (mcs.autolivepositiontaking > scs.slivepositiontaking) OR (mcs.autolivepositiontaking + mcs.mlivepositiontaking < sco.minlivepositiontaking)))
 			)	
 			--m3<=m4
 			OR
 			(
-				(mcs.mpositiontaking > scs.mpositiontaking)			
+				(mcs.mpositiontaking > scs.mpositiontaking AND scs.sporttype <> 201)
 				OR
 				((mcs.sporttype =161) AND (mcs.bettype IN (85,86,87,89,90)) AND (mcs.mlivepositiontaking > scs.mlivepositiontaking))
 			)		
@@ -538,7 +538,7 @@ BEGIN
 				INNER JOIN customer AS c WITH (NOLOCK) ON c.custid = acs.custid AND c.roleid IN (1,2) 
 														AND c.mrecommend = @mrecommend --get member and agent			
 			WHERE 
-			(	(acs.apositiontaking > scs.apositiontaking	)
+			(	(acs.apositiontaking > scs.apositiontaking AND scs.sporttype <> 201)
 				OR
 				((acs.sporttype =161) AND (acs.bettype IN (85,86,87,89,90)) AND (acs.alivepositiontaking > scs.alivepositiontaking))
 			)
@@ -550,23 +550,24 @@ BEGIN
 		RETURN
 	END
 
-	--Check P2P :Game Comm
-	IF exists(
-		SELECT TOP 1 1
-		FROM dbo.P2PGROUPCOMM s WITH(NOLOCK)
-			INNER JOIN dbo.P2PGROUPCOMM m WITH(NOLOCK)
-				ON m.GroupID = s.GroupID
-			WHERE  s.custid = @srecommend AND m.custid = @mrecommend
-					AND (s.sdiscount < m.adiscount )
-	)
-	BEGIN
-		Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': P2P''s commission of master is greater than P2P''s commission of new super.',
-			@ErrCode = 210
-		return
-	END
+	----Check P2P :Game Comm
+	--IF exists(
+	--	SELECT TOP 1 1
+	--	FROM dbo.P2PGROUPCOMM s WITH(NOLOCK)
+	--		INNER JOIN dbo.P2PGROUPCOMM m WITH(NOLOCK)
+	--			ON m.GroupID = s.GroupID
+	--		WHERE  s.custid = @srecommend AND m.custid = @mrecommend
+	--				AND (s.sdiscount < m.adiscount )
+	--)
+	--BEGIN
+	--	Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': P2P''s commission of master is greater than P2P''s commission of new super.',
+	--		@ErrCode = 210
+	--	return
+	--END
 
 END
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam] AS [dbo]

@@ -22,6 +22,7 @@ AS
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130325@Lukas: get goalrecord & isExistFGLG
+		- 20131017@Elodie: Adjust the display time for HT Over Only [Redmine:#6725]
 */  
 BEGIN
 	SET NOCOUNT ON  
@@ -74,11 +75,10 @@ BEGIN
 						ISNULL(mr.isUndecided,0) AS isUndecided,  --Hurri@20120306  
 						match.goalrecord
 				FROM  DBPRO.BODB02.dbo.match WITH(NOLOCK)
-					INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid, match m                    
+					INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid                    
 				WHERE match.eventstatus <> 'Completed'    
-					AND ((DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 45   
-							--AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 100
-					)  
+					AND ((DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 40  
+					AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 100)  
 						OR  mr.confirmHT <> 0 )  
 					AND match.eventdate = @FromDate  
 					AND match.sporttype = 1  
@@ -146,10 +146,10 @@ BEGIN
 				  ISNULL(mr.isUndecided,0) as isUndecided,  --Hurri@20120306  
 				  match.goalrecord
 			FROM   DBPRO.BODB02.dbo.match WITH(NOLOCK)  
-				INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid, match m                      
+				INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK) ON match.matchid = mr.matchid                      
 			WHERE  match.eventstatus <> 'Completed'    
 				AND (
-						(DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 30  
+						(DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) > 25 
 						 AND DATEDIFF(MINUTE,match.kickofftime,CURRENT_TIMESTAMP) < 60
 						)  
 						OR mr.confirmHT >0   
@@ -178,7 +178,8 @@ BEGIN
 	END
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelCompletedHT] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSelCompletedHT] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSelCompletedHT] TO [vnteam] AS [dbo]
