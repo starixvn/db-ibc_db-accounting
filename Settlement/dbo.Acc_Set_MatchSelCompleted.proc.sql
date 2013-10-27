@@ -22,6 +22,7 @@ AS
 		- 20120306@Hurri: Add column IsUndecided for mark/unmark Undecided match
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130325@Lukas: get goalrecord & isExistFGLG
+		- 20131027@Lukas: add filter winlostdate to reduce data return
 */  
 BEGIN 
 	SET NOCOUNT ON  
@@ -80,13 +81,13 @@ BEGIN
 					,SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS isExistFGLG
 				FROM dbo.bettrans b WITH(NOLOCK)
 					INNER JOIN @m stm ON b.matchid = stm.matchid  
+				WHERE winlostdate = @FromDate
 				GROUP BY b.matchid  
 			  ) as c ON m.matchid = c.matchid  
   
 	ORDER BY  m.eventstatus, m.matchcode
 END
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelCompleted] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSelCompleted] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSelCompleted] TO [vnteam] AS [dbo]
