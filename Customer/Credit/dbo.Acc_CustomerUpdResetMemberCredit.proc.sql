@@ -4,7 +4,8 @@
 	@UserID			INT,
 	@IP				VARCHAR(15)='',
 	@ErrCode		INT = 0 OUTPUT,
-	@ErrMsg			NVARCHAR(200) = '' OUTPUT
+	@ErrMsg			NVARCHAR(200) = '' OUTPUT,
+	@system VARCHAR(50) = ''
 AS
 /*	Created by: [Creator]
 	DB: DBTXN/bodb02
@@ -17,17 +18,28 @@ AS
 		- 20100102@Kiwi: Modify Log.
 		- 20110907@Sophia: Change Linked Server from DB052 to DB053
 		- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
+		- 20131025@Lukas: add system define permission checking when call from external accounting
+		
 */
 BEGIN
 SET NOCOUNT ON 
 DECLARE @LogData VARCHAR(500), @AgentUserName VARCHAR(30)
 SET @ErrCode = 0
 
---Check permission for account site: @phuc20080213
-EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@userid,@funcname='[Credit]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-IF @ErrCode <> 0
-	RETURN
---end
+IF @system = 'EXTERNAL'
+BEGIN
+	--- no check permssion in case of calling from external accounting
+	SET @ErrMsg = ''
+END
+ELSE
+BEGIN
+	--Check permission for account site: @phuc20080213
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@userid,@funcname='[Credit]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
+	--end
+END
+
 --Check disable user
 EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @agentID, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 IF @ErrCode <>0 RETURN
@@ -68,9 +80,8 @@ END CATCH
 
 END
 GO
-
-GRANT  EXECUTE  ON [dbo].[Acc_CustomerUpdResetMemberCredit]  TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdResetMemberCredit] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdResetMemberCredit] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdResetMemberCredit] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdResetMemberCredit] TO [bodbExtAccNet]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdResetMemberCredit] TO [vnteam] AS [dbo]
