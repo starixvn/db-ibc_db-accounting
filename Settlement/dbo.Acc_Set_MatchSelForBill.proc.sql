@@ -1,4 +1,5 @@
 ﻿
+
 ALTER PROCEDURE [dbo].[Acc_Set_MatchSelForBill]
 	@matchid int,
 	@ErrCode int = 0 OUTPUT,
@@ -39,7 +40,7 @@ AS
 		- 20121127@Lukas: show FGLG info in parlay tickets
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130822@Johnson: Get match information for match completed
-		- 20131022@Lukas: add new sporttype 154 - Horse racing FixOdds [Redmine:#6505]
+		- 20131022@Lukas: add new sporttype 154 - Horse racing FixOdds
 	Param's Explanation:
 		+ @IsExistFGLG = 1 : exist FGLG ticket
 		+ @IsLive = 1 : Match is offered LIVE betting
@@ -74,8 +75,10 @@ if exists(	select	1
 			OR
 			(sporttype in (4,6,8) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) >= 60)
 			OR
-			(sporttype in (5,7,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,33,34,35,36,37,38,39,40,41,42,99,154) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) >= 30)
+			(sporttype in (5,7,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,33,34,35,36,37,38,39,40,41,42,99) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) >= 30)
 			OR 
+			(sporttype in (154) and datediff(minute,kickofftime,CURRENT_TIMESTAMP) >= 5)
+			OR
 			(Isnull(ConfirmHT, 0) > 0)
 			OR
 			(isnull(ConfirmFT, 0) > 0)
