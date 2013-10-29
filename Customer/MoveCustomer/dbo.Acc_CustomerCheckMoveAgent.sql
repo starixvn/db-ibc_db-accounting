@@ -1,4 +1,14 @@
-﻿
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveAgent]    Script Date: 10/29/2013 15:11:49 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveAgent    Script Date: 9/26/2013 4:55:24 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveAgent    Script Date: 9/26/2013 1:25:53 PM ******/
+
+
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveAgent]
 	@mastername		varchar(40),
 	@agentname		varchar(40),
@@ -386,8 +396,9 @@ IF @ErrCode <> 0 RETURN
 --EXEC dbo.Acc_CustomerUpdAgent_MinMaxPositiontaking @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend
 EXEC dbo.Acc_CustSetting_04 @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 2
 EXEC dbo.Acc_CustSetting3rd_04 @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 2, @mode = 'number'
-	
-EXEC dbo.Acc_CustomerUpdAgentHR_MinMaxPositiontaking @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend
+--EXEC dbo.Acc_CustomerUpdAgentHR_MinMaxPositiontaking @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend
+EXEC [dbo].[Acc_CustSetting3rd_04] @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 2, @mode = 'horse'
+
 EXEC dbo.Acc_CustomerUpdAgentLiveCS_MaxPositiontaking @recommend = @recommend
 EXEC dbo.Acc_CustomerUpdAgentVS_MinMaxPositiontaking  @sporttype=180, @bettype = 1201, @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend
 EXEC dbo.Acc_CustomerUpdAgentVS_MinMaxPositiontaking  @sporttype=181, @bettype = 1231, @recommend = @recommend, @mrecommend = @mrecommend, @srecommend = @srecommend
@@ -453,8 +464,9 @@ END CATCH
 	
 END
 
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveAgent] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveAgent] TO [vnteam] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveAgent] TO [vnteam] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveAgent] TO [vnteam] AS [dbo]
