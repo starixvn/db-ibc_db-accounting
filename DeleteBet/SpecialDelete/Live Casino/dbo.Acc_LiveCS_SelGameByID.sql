@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [dbo].[Acc_LiveCS_SelGameByID]
+﻿ALTER PROCEDURE [dbo].[Acc_LiveCS_SelGameByID]
 	@matchid int
 AS
 
@@ -10,7 +8,7 @@ AS
 	DB: DBTRANS.BODB02 
 	
 	Revisions:
-		
+
 */
 BEGIN
 
@@ -20,7 +18,7 @@ BEGIN
 		matchid
 		,matchcode
 		,eventdate
-		,kickofftime
+		, kickofftime
 		,showtime AS GameEvent
 		,finalhomescore
 		,finalawayscore

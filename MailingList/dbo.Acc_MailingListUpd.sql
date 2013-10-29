@@ -1,7 +1,7 @@
 ﻿
 ALTER PROCEDURE [dbo].[Acc_MailingListUpd]
 	@Userid INT,		
-	@Siteid INT, 
+	@Siteid INT = 0, 
 	@FuncID INT = 287,  -- [SpecialDeleteMailing]
 	@FuncName nvarchar(100) = '[SpecialDeleteMailing]',
 	@ToList VARCHAR(4000), 
@@ -12,15 +12,15 @@ ALTER PROCEDURE [dbo].[Acc_MailingListUpd]
 AS
 
 /*  
-	Created by: Scott  
-	Date: 2013-01-08
-	Task : Update Mailing list
-	DB: DBACC/BODB_ACC
-	Original SP:   
-	
-	Revisions: 
-		20130301@Scott: Add more parameter @funcname and change dblink from db03 -> DBPOLICY	
-		20130305@Lukas: Move SP to bodb_acc
+Created by: Scott  
+Date: 2013-01-08
+Task : Update Mailing list
+DB: DB06.bodb02  
+Original SP:   
+Revisions: 
+	20130301@Scott: Add more parameter @funcname and change dblink from db03 -> DBPOLICY	
+	20130305@Lukas: Move SP to bodb_acc
+	20130920@Kathy: Validate siteid for groups was configured on web before (12EU, IT QA, IT Support groups)
 */  
 
 BEGIN	
@@ -52,12 +52,13 @@ IF @ErrCode <> 0
 	RETURN
 
 --2. VALIDATE LICENSEE.
-IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 )
-BEGIN
-	SELECT @ErrMsg = 'This Licensee does not exists in System.',
-			@ErrCode = 101		
-	RETURN
-END		
+IF @Siteid NOT IN (1000000, 1000001, 1000002) -- 12EU, IT QA, IT Support
+	IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 ) AND @Siteid <> 0
+	BEGIN
+		SELECT @ErrMsg = 'This Licensee does not exists in System.',
+				@ErrCode = 101		
+		RETURN
+	END		
 
 --3. CHECK DATA HAVE BEEN CHANGE.
 if (@Tolist = @ToListOld and @CcList = @CclistOld and @BccList = @Bcclistold )
@@ -109,7 +110,6 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@duration = @duration		
 	
 END
-GO
 /*
 ==========Execute sample=================
 declare @errcode int, @errmsg varchar(1000)

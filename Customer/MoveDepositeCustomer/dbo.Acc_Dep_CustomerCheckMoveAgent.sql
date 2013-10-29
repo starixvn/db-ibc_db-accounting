@@ -9,22 +9,21 @@ AS
 /*
 Created: 
 Task : Move a agent to another master
-DB: DB053.bodb02
+DB: DBAGE/bodb02
 Original:
 
-Revisions:
-
+Revisions:	
+	
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
     > 0: Specific Error.
-    Max errorcode: 142
+    Max errorcode: 214
 • @ErrMsg: Error description.
 */
 
 BEGIN
-	SET NOCOUNT ON
-	
+	SET NOCOUNT ON	
 
 	declare	@srecommend			int, 
 			@mrecommend			int, 
@@ -80,8 +79,7 @@ BEGIN
 			@aDisableP2P		BIT, 
 			@mDisableP2P		BIT, 
 			@aDisableFunP2P		BIT,
-			@mDisableFunP2P		BIT
-
+			@mDisableFunP2P		BIT			
 
 	select	@srecommend			= srecommend, 
 			@mrecommend			= custid, 
@@ -107,7 +105,7 @@ BEGIN
 			@mMaxTransferP2P	= MaxTransferP2P, 
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P 
+			@mDisableFunP2P		= DisableFunP2P
 	from	custinfo with (nolock) 
 	where	username = @mastername and roleid = 3
 
@@ -135,9 +133,9 @@ BEGIN
 			@aMaxTransferP2P	= MaxTransferP2P, 
 			@aIsAutoResetP2P	= IsAutoResetP2P, 
 			@aDisableP2P		= DisableP2P, 
-			@aDisableFunP2P		= DisableFunP2P 		
+			@aDisableFunP2P		= DisableFunP2P
 	from	custinfo with (NOLOCK) 
-	where	username = @agentname and roleid = 2
+	where	username = @agentname and roleid = 2	
 	
 	SELECT @mSyncLiveCasino_Old = SyncLiveCasino FROM CustInfo WITH(NOLOCK) WHERE custid = @mrecommend_old
 	
@@ -569,7 +567,8 @@ BEGIN
 END
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerCheckMoveAgent] TO [vnteam] AS [dbo]

@@ -11,7 +11,6 @@ DB: DB052.bodb02
 Original: [Age_Result_MatchSelNumberGameByLeague]  
   
 Revisions:   
-  
 */  
   
 SET NOCOUNT ON  
@@ -34,7 +33,7 @@ SELECT
 		 ELSE m.eventstatus END AS eventstatus,
 	CASE WHEN m.betstatus LIKE 'Refund' THEN 1   
 		 ELSE 0 END AS IsRefund,
-	b.seq,
+	b,
 	b.number
 FROM  
    (SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime, homeid  
@@ -43,7 +42,7 @@ FROM
 			AND sporttype=161
 			AND (@LeagueID = 0 OR leagueid = @LeagueID)
 	UNION ALL  
-	SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime,homeid   
+	SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime ,homeid   
 	FROM match14 (NOLOCK)  
 	WHERE	eventdate BETWEEN  @FromDate  AND  @ToDate 
 			AND sporttype=161
@@ -57,6 +56,8 @@ FROM
 WHERE m.eventstatus NOT IN ('internal','running')  
 			OR (m.eventstatus = 'running' AND mr.ishtcal=1)
 ORDER BY m.leagueid, m.matchid, b.seq
+  
+  
   
   
 GO

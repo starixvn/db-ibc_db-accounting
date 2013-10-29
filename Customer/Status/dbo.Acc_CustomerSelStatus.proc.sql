@@ -26,6 +26,7 @@ Revisions:
 	- 20120808@Sophia: Add DisableVirtualSports, HideVirtualSports	
 	- 20120927@Sophia: Get DoubleCommLosing	
 	- 20130121@Dan: change linked server DB03 to DBPOLICY
+	- 20131007@Kathy: Add DisableOpusCS [Redmine:#5670]
 						
 Param's Explanation:
 • @CustID: customer id.   
@@ -121,7 +122,8 @@ SELECT ISNULL(reject,0) AS Suspend,
 	   @IsInternal AS IsInternal,
 	   ISNULL(DisableVirtualSports,0) as DisableVirtualSports,
 	   ISNULL(HideVirtualSports,0) as HideVirtualSports,
-	   ISNULL(DoubleCommLosing,0) as DoubleCommLosing
+	   ISNULL(DoubleCommLosing,0) as DoubleCommLosing,
+	   ISNULL(ci.DisableOpusCasino, 0) AS DisableOpusCS
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 WHERE ci.CustID = @CustID

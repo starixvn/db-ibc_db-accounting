@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
+﻿
+ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
 	@UserID int,
@@ -6,7 +7,8 @@
 	@Language varchar(2)= 'E',
 	@ErrMsg nvarchar(max) = '' OUTPUT,
 	@ErrCode int = 0 OUTPUT,
-	@CusStatus varchar(50)='All'
+	@CusStatus varchar(50)='All',
+	@system VARCHAR(50) = ''
 AS
 --ADMIN SITE
 --Original: \account\customerbalance_clear.asp
@@ -32,6 +34,8 @@ Revisions:
 	- 20121203@Dan: skip deleted transfer record when check existed transfer. Delay updating by batch (500 customer) to avoid affect replication
 	- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20131025@Lukas: add system define permission checking when call from external accounting
+	
 Param's Explanation:
 */ 
 SET NOCOUNT ON
@@ -39,12 +43,19 @@ SET NOCOUNT ON
 --Check permission for account site: @phuc20080213
 DECLARE @ErrMsg_temp nvarchar(4000)   
 
--- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call
-EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[CustomerBalance]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg_temp output
-SELECT @ErrMsg = @ErrMsg_temp
-If @ErrCode <> 0
-	RETURN
---end
+IF @system = 'EXTERNAL'
+BEGIN
+	--- no check permssion in case of calling from external accounting
+	SET @ErrMsg = ''
+END
+ELSE
+BEGIN
+	-- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[CustomerBalance]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg_temp output
+	SELECT @ErrMsg = @ErrMsg_temp
+	If @ErrCode <> 0
+		RETURN
+END
 
 --Check disable user
 --EXEC DB052.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @FromCustID, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
@@ -342,8 +353,10 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerInsClearBalance] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerInsClearBalance] TO [ITVivi] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerInsClearBalance] TO [vnteam] AS [dbo]

@@ -19,5 +19,7 @@ END
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelSiteByUserName] TO [bodbAdminNet]
 GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelSiteByUserName] TO [bodbExtAccNet]
+GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelSiteByUserName] TO [vnteam]
 

@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[Acc_Dep_CustomerUpdMoveMember]
+﻿ALTER PROCEDURE [dbo].[Acc_Dep_CustomerUpdMoveMember]
 	@agentname varchar(40),
 	@membername varchar(40),
 	@userid int,
@@ -11,11 +10,11 @@ AS
 /*
 Created: 
 Task : Move a member to another agent
-DB: DBTRANS.bodb02
+DB: DBTXN/bodb02
 Original:
 
 Revisions:
-    - 20080213@Tommy: Check permission for account site
+	- 20080213@Tommy: Check permission for account site
 	- 20090525@Daniel: add check contraints for Horse & Finance
 	- 20090528@Daniel: Fix check commission for all sports
 	- 20090716@Jamie: Check auto master PT on agent 
@@ -40,8 +39,9 @@ Revisions:
 	- 20110907@Sophia: Change Linked Server from DB052 to DB053	
 	- 20110930@Johnson: Add more groups under Won currency.
 	- 20111020@Tom:Add check P2P Game: Status, game setting, commission.
-	 -20120322@Johnson: Check live casino
-	 -20130723@Jim: change server alias name
+	- 20120322@Johnson: Check live casino
+	- 20130723@Jim: change server alias name
+	 
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -58,61 +58,60 @@ declare @duration int
 set @startRun = getdate()
 
 
-EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherCust]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherCust]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 If @ErrCode <> 0
 	RETURN
 --end
 
-
-declare @srecommend		int, 
-		@mrecommend		int, 
-		@recommend		int, 
-		@acurrency		tinyint,
+declare @srecommend			int, 
+		@mrecommend			int, 
+		@recommend			int, 
+		@acurrency			tinyint,
 		--==Member Info ==--
-		@srecommend_old int, 
-		@mrecommend_old int, 
-		@recommend_old	int, 
-		@currency_old	tinyint,
-		@custid			int, 
+		@srecommend_old 	int, 
+		@mrecommend_old 	int, 
+		@recommend_old		int, 
+		@currency_old		tinyint,
+		@custid				int, 
 		--== Enable/Disable HR, FI  ==--- 
-		@adisable151_31	bit,-- @adisableHR -> @adisable151_31 
-		@disable151_31	bit,-- @disableHR -> @disable151_31 
-		@adisableFI		bit, 
-		@disableFI		bit,
+		@adisable151_31		bit,-- @adisableHR -> @adisable151_31 
+		@disable151_31		bit,-- @disableHR -> @disable151_31 
+		@adisableFI			bit, 
+		@disableFI			bit,
 		@aDisableOutright	bit,
 		@DisableOutright	bit,
-		@aSyncCasino	bit,
-		@SyncCasino		bit,
-		@aSyncLiveCasino bit,
-		@SyncLiveCasino  bit,
-		@aSyncBingo		bit,
-		@SyncBingo		bit,
-		@aDisable151_41	BIT,-- @aDisableOpenTote -> @aDisable151_41
-		@Disable151_41	BIT,-- @Disable151_41 -> @Disable151_41
-		@aDisable151_51	BIT,
-		@Disable151_51	BIT,
-		@aDisable152_41	BIT,
-		@Disable152_41	BIT,
-		@aDisable152_51	BIT,
-		@Disable152_51	BIT,
-		@aDisable153_51	BIT,
-		@Disable153_51	BIT,
-		@aDisableBingo	BIT,
-		@DisableBingo	BIT,
-		@aDisableNumber	BIT,
-		@DisableNumber	BIT,
-		@aClosed		BIT,
-		@Closed			BIT,
-		@aSuspended		BIT,
-		@Suspended		BIT,
+		@aSyncCasino		bit,
+		@SyncCasino			bit,
+		@aSyncLiveCasino 	bit,
+		@SyncLiveCasino  	bit,
+		@aSyncBingo			bit,
+		@SyncBingo			bit,
+		@aDisable151_41		BIT,-- @aDisableOpenTote -> @aDisable151_41
+		@Disable151_41		BIT,-- @Disable151_41 -> @Disable151_41
+		@aDisable151_51		BIT,
+		@Disable151_51		BIT,
+		@aDisable152_41		BIT,
+		@Disable152_41		BIT,
+		@aDisable152_51		BIT,
+		@Disable152_51		BIT,
+		@aDisable153_51		BIT,
+		@Disable153_51		BIT,
+		@aDisableBingo		BIT,
+		@DisableBingo		BIT,
+		@aDisableNumber		BIT,
+		@DisableNumber		BIT,
+		@aClosed			BIT,
+		@Closed				BIT,
+		@aSuspended			BIT,
+		@Suspended			BIT,
 		@aMaxTransferP2P	MONEY,
-		@MaxTransferP2P	MONEY,
+		@MaxTransferP2P		MONEY,
 		@aIsAutoResetP2P	BIT,
-		@IsAutoResetP2P	BIT,
+		@IsAutoResetP2P		BIT,
 		@aDisableP2P		BIT, 
-		@DisableP2P		BIT, 
+		@DisableP2P			BIT, 
 		@aDisableFunP2P		BIT,
-		@DisableFunP2P		BIT		
+		@DisableFunP2P		BIT
 		
 select	@srecommend			= srecommend, 
 		@mrecommend			= mrecommend, 
@@ -136,7 +135,7 @@ select	@srecommend			= srecommend,
 		@aMaxTransferP2P	= MaxTransferP2P, 
 		@aIsAutoResetP2P	= IsAutoResetP2P, 
 		@aDisableP2P		= DisableP2P, 
-		@aDisableFunP2P		= DisableFunP2P 		
+		@aDisableFunP2P		= DisableFunP2P
 from	custinfo with (nolock)
 where	username = @agentname and roleid = 2
 
@@ -163,10 +162,9 @@ select	@custid				= custid,
 		@MaxTransferP2P		= MaxTransferP2P, 
 		@IsAutoResetP2P		= IsAutoResetP2P, 
 		@DisableP2P			= DisableP2P, 
-		@DisableFunP2P		= DisableFunP2P 
+		@DisableFunP2P		= DisableFunP2P
 from	custinfo with (nolock) 
 where	username = @membername and roleid = 1
-
 
 if isnull(@recommend, 0) = 0
 BEGIN
@@ -900,9 +898,6 @@ set @duration  = datediff (millisecond,@startRun,@endRun)
         @ActionID = 615, 
 		@TrackingValue = @LogSPData,
 		@duration = @duration
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [bodbAdminNet]
