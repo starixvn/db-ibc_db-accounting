@@ -464,8 +464,6 @@ Begin DataProject = "Account"
       Script = "Acc_ExecRep_01 - Archive Unused Accounts.sql"
       Script = "Acc_ExecRep_02 - Update Licensee Players comm.sql"
       Script = "Acc_ExecRep_04 - Update custinfo-customer settings.sql"
-      Script = "dbo.Acc_CustSetting_06.sql"
-      Script = "dbo.Acc_CustSetting3rd_06.sql"
    End
    Begin Folder = "ExternalSite"
       Script = "CustSearchEx.sql"
