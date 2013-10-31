@@ -23,11 +23,7 @@ BEGIN
 	FROM bettype WITH (NOLOCK)
 	WHERE 
 		typeid BETWEEN 1101 AND 1199
-	/*
-	1101:Party Baccarat
-	1102:Party Roulette
-
-	*/
+	
 END  
 
 GO
