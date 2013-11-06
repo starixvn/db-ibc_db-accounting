@@ -212,6 +212,7 @@ BEGIN
 
 	INSERT INTO @tblTransIdsFB
 	SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(ISNULL(@TransIdsFB,''), ',')
+
 	------------------***** Insert all data into #BetDelete *****------------------
 
  -- bettype <> 4 - Handicap(1), Over/Under(3), 1st Handicap(7), 1st Over/Under(8) - FT.1X2(5)/ 1st 1X2(15)
@@ -246,7 +247,7 @@ BEGIN
 		AND ISNULL(b.SecAcceptFlag, 0)  = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(b.SecAcceptFlag, 0)  
 														 WHEN 1 THEN 0 
 														 WHEN 2 THEN 1 END
-						 
+					 
  -- bettype = 4 -- Correct score
  INSERT INTO #BetDelete
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
@@ -572,20 +573,6 @@ BEGIN
 			MATCH.matchid = @MatchId
 	END
 
-	-- Send mail when void deposit or 12EU tickets 
-	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore, cr.username creator,
-		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag
-	FROM
-		#BetDelete b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-	WHERE ( b.betfrom  IN ('D', 'M', 'E', 'L') AND customer.custid IN (SELECT custid FROM @DepositCust)) -- Email deposit if voided
-			OR ( b.custid IN (SELECT [@12EUCust].custid FROM @12EUCust)) -- Email 12EU if voided
-			
-	ORDER BY transid
-
 	-- All ticket voided
 	SELECT transid, bd.custid, mem.UserName AS CustUserName, bd.recommend, ag.UserName AS AgUserName,
 	bd.mrecommend, mag.UserName AS MagUserName, bd.srecommend, sag.Username AS SagUserName,
@@ -596,7 +583,32 @@ BEGIN
 	INNER JOIN custinfo mag (nolock) ON bd.mrecommend = mag.custid
 	INNER JOIN custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
-	-----Send mail when void any real tickets by IT or void UUS tickets
+	-- Send mail when void deposit
+	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore, cr.username creator,
+		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+	WHERE ( b.betfrom  IN ('D', 'M', 'E', 'L') AND customer.custid IN (SELECT custid FROM @DepositCust)) -- Email deposit if voided		
+	ORDER BY transid
+
+	-- Send mail when void 12EU tickets 
+		SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore, cr.username creator,
+		stake, b.CurrencyName, '12EU' as site, b.status, b.SecAcceptFlag
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+	WHERE b.custid IN (SELECT [@12EUCust].custid FROM @12EUCust) -- Email 12EU if voided			
+	ORDER BY transid
+
+	
+	-----Send mail when void any real tickets by IT
 	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
@@ -605,14 +617,25 @@ BEGIN
 		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
 		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-	WHERE customer.custid IN (SELECT custid FROM @RealCurrCust)
-			OR customer.custid IN (SELECT custid FROM @UUSCust)				     					   
+	WHERE customer.custid IN (SELECT custid FROM @RealCurrCust)			     					   
 	ORDER BY transid    	   
+
+	-- Send mail when void UUS tickets
+		SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore,
+		cr.username creator, stake, b.CurrencyName, ag.site,
+		b.status, b.SecAcceptFlag
+	FROM #BetDelete b WITH (NOLOCK)
+		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
+		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+	WHERE customer.custid IN (SELECT custid FROM @UUSCust)				     					   
+	ORDER BY transid    
 
 		-----Send mail when void Foobet tickets
 	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore,
-		cr.username creator, stake, b.CurrencyName, ag.site,
+		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
 		b.status, b.SecAcceptFlag
 	FROM #BetDelete b WITH (NOLOCK)
 		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
@@ -667,6 +690,8 @@ BEGIN
 		END	
 	SET NOCOUNT OFF
 END
+
+
 
 
 GO
