@@ -50,6 +50,7 @@ Revisions:
 	- 20130322@Ethan:Get column NicknameLoginOnly for Super, Master, Agent
 	- 20130422@Johnson: get field LastChangedSecurityCodeDate
 	- 20130719@Elodie: Correct link server DBACC instead of DBARC
+	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -58,7 +59,7 @@ Param's Explanation:
 
 SET NOCOUNT ON
 Declare @custid int, @uplineid int, @roleid tinyint, @UsedCredit MONEY, @DisableDownlinesHR BIT, @DisableDownlinesOpenTote BIT, @DisableDownlinesFI BIT,@DisableDownlinesCS BIT,@DisableDownlinesBI BIT,
-@DisableDownlinesNumber BIT, @DisableDownlinesLiveCS BIT, @DisableDownlinesVirtualSports BIT,
+@DisableDownlinesNumber BIT, @DisableDownlinesLiveCS BIT, @DisableDownlinesHRFixedOdds BIT, @DisableDownlinesVirtualSports BIT,
 @DownlinesSelectedBetting BIT, @IsInternal BIT,  @LimitPerIP tinyint,@SelectedBetting bit, @NicknameLoginOnly BIT, @LastChangedSecurityCodeDate DATETIME
 Declare @todaySuperCash money,@todayMasterCash money, @todayAgentCash money, @todayCustCash money
 Declare @currentDate DATETIME 
@@ -113,7 +114,12 @@ SELECT @DisableDownlinesLiveCS = CASE @roleid WHEN 4 THEN (SELECT TOP 1 isnull(D
 										  WHEN 3 THEN (SELECT TOP 1 isnull(DisableLiveCasino,0) FROM custInfo WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableLiveCasino = 1) 											 
 										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableLiveCasino,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableLiveCasino = 1) 											 
 										  ELSE 0 END
-
+										  
+SELECT @DisableDownlinesHRFixedOdds= CASE @roleid WHEN 4 THEN (SELECT TOP 1 isnull(DisableHRFixedOdds,0) FROM custInfo WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableHRFixedOdds = 1)
+										  WHEN 3 THEN (SELECT TOP 1 isnull(DisableHRFixedOdds,0) FROM custInfo WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableHRFixedOdds = 1) 											 
+										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableHRFixedOdds,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableHRFixedOdds = 1) 											 
+										  ELSE 0 END
+										  
 SELECT @DisableDownlinesVirtualSports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableVirtualSports = 1)
 										  WHEN 3 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableVirtualSports = 1) 											 
 										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableVirtualSports = 1) 											 
@@ -287,6 +293,7 @@ select c.custid, c.username, c.firstname, c.lastname,
 	isnull(@DisableDownlinesBI,0) DisableDownlinesBI,
 	isnull(@DisableDownlinesNumber,0) DisableDownlinesNumber,
 	isnull(@DisableDownlinesLiveCS,0) DisableDownlinesLiveCS,
+	isnull(@DisableDownlinesHRFixedOdds,0) DisableDownlinesHRFixedOdds,
 	isnull(@DisableDownlinesVirtualSports,0) DisableDownlinesVirtualSports,
 	isnull(@DownlinesSelectedBetting,0) DownlinesSelectedBetting,
 	ci.DisableBingo,
@@ -297,6 +304,7 @@ select c.custid, c.username, c.firstname, c.lastname,
 	ci.syncbingo,
 	ci.disableLiveCasino,
 	ci.synclivecasino,
+	ci.DisableHRFixedOdds,
 	ci.DisableVirtualSports,
 	ci.HideVirtualSports,
 	ci.DoubleCommLosing,
@@ -526,21 +534,12 @@ SELECT  @TotalMAgentActive MAgentActive,
 		@TotalMemberClosed MemberClosed,
 		@TotalMemberSuspended MemberSuspended		
 		
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]		
 
-
-
-/**********************Unit Test************************************
-*																   *
-*	[dbo].[Acc_CustomerSelAllInfo] '12BETAFF006'				   *
-*																   *
-*																   *
-*																   *
-*******************************************************************/
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
