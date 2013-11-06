@@ -691,8 +691,9 @@ BEGIN
 	SET NOCOUNT OFF
 END
 
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [vnteam]
+
+ 
