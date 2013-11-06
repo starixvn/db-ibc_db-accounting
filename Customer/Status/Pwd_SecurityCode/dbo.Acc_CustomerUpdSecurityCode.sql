@@ -1,4 +1,12 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_CustomerUpdSecurityCode]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdSecurityCode]    Script Date: 10/27/2013 10:29:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdSecurityCode    Script Date: 4/23/2013 10:50:32 AM ******/
+ ALTER PROCEDURE [dbo].[Acc_CustomerUpdSecurityCode]
 	@custid		INT,
 	@userid		INT,
 	@isForcedChangeSecurityCode BIT = 1,
@@ -6,7 +14,8 @@
 	@language	VARCHAR(2) = 'E' ,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg		VARCHAR(200) = '' OUTPUT,
-	@IP			VARCHAR(20) = ''
+	@IP			VARCHAR(20) = '',
+	@system VARCHAR(50) = ''
  AS
 	/*
 		Created: Johnson
@@ -26,10 +35,17 @@ SET NOCOUNT ON
 			,@LogSPData VARCHAR(MAX)
 			
 	SET @startRun = GETDATE()
-	
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[SecurityCode]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-	If @ErrCode <> 0
-		RETURN
+	IF @system = 'EXTERNAL'
+	BEGIN
+		--- no check permssion in case of calling from external accounting
+		SET @ErrMsg = ''
+	END
+	ELSE
+	BEGIN
+		EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[SecurityCode]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+		If @ErrCode <> 0
+			RETURN
+	END
 	
 	--Check disable user
 	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
@@ -150,11 +166,5 @@ SET NOCOUNT ON
 				@duration = @duration 
 		END CATCH
 	END
-	
-	
-	
-	
-	
-	
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdSecurityCode] TO [bodbAdminNet]	
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdSecurityCode] TO [bodbAdminNet] AS [dbo]
