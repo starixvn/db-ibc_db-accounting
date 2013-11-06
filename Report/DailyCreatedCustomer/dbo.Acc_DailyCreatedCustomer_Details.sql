@@ -1,7 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_DailyCreatedCustomer_Details]
 	@Date DATETIME,
 	@RoleID INT,
-	@IsDirect INT  = 1
+	@IsDirect BIT  = 1
 AS
 
 /*	Creator: Simon
