@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_MailingListIns]
+﻿ALTER PROCEDURE [dbo].[Acc_MailingListIns]
 	@Userid int,		
 	@Siteid int = 0, 
 	@FuncID int = 287,  -- [SpecialDeleteMailing]
@@ -109,6 +108,9 @@ exec Acc_MailingListIns
 select @errcode, @errmsg	
  
 */
+
+
+
 
 
 

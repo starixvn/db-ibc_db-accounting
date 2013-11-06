@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_MailingListUpd]
+﻿ALTER PROCEDURE [dbo].[Acc_MailingListUpd]
 	@Userid INT,		
 	@Siteid INT = 0, 
 	@FuncID INT = 287,  -- [SpecialDeleteMailing]
@@ -111,21 +110,9 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@duration = @duration		
 	
 END
-/*
-==========Execute sample=================
-declare @errcode int, @errmsg varchar(1000)
-set @errcode=0
-set @errmsg = ''
-exec Acc_MailingListUpd  
-	@Userid=8,
-	@Siteid=2,
-	@FuncID=5,
-	@ToList='update.Tolist@procedure.com',
-	@ccList='update.CClist@procedure.com',
-	@bccList='update.BCClist@procedure.com',	
-	@errcode = @errcode output,	@errmsg = @errmsg output
-select @errcode, @errmsg
-*/
+
+
+
 GRANT EXECUTE ON [dbo].[Acc_MailingListUpd] TO [bodbAdminNet]
 go
 GRANT VIEW DEFINITION ON [dbo].[Acc_MailingListUpd] TO [vnteam]

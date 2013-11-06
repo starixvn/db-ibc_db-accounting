@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_MailingListSel] 
+﻿ALTER PROCEDURE [dbo].[Acc_MailingListSel] 
 	@FuncID int = 287  -- [SpecialDeleteMailing]
 AS 
 /*    
@@ -74,7 +73,6 @@ BEGIN
 		and SiteId = 1000003
 	END    
 END  
- 
 
 go
 
