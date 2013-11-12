@@ -25,8 +25,8 @@ Revisions:
 						- Add DisableLiveCasino, SyncLiveCasino
 	- 20120808@Sophia: Add DisableVirtualSports, HideVirtualSports	
 	- 20120927@Sophia: Get DoubleCommLosing	
-	- 20130121@Dan: change linked server DB03 to DBPOLICY
-	- 20131007@Kathy: Add DisableOpusCS [Redmine:#5670]
+	- 20130723@Jamie: Change Alias DB03 to DBPOLICY
+	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 						
 Param's Explanation:
 • @CustID: customer id.   
@@ -123,19 +123,20 @@ SELECT ISNULL(reject,0) AS Suspend,
 	   ISNULL(DisableVirtualSports,0) as DisableVirtualSports,
 	   ISNULL(HideVirtualSports,0) as HideVirtualSports,
 	   ISNULL(DoubleCommLosing,0) as DoubleCommLosing,
-	   ISNULL(ci.DisableOpusCasino, 0) AS DisableOpusCS
+	   ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 WHERE ci.CustID = @CustID
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus] TO vnteam
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus] TO [vnteam] AS [dbo]

@@ -22,6 +22,7 @@ AS
 		20130301@Scott: Add more parameter @funcname and change dblink from db03 -> DBPOLICY
 		20130305@Lukas: move SP to bodb_acc
 		20130920@Kathy: Validate siteid for groups was configured on web before (12EU, IT QA, IT Support groups)
+		20131101@Kathy: Add Foobet group [Redmine:#5697]
 */  
 
 BEGIN	
@@ -43,7 +44,7 @@ IF @ErrCode <> 0
 	RETURN
 
 --2. VALIDATE SITEID. 
-IF @Siteid NOT IN (1000000, 1000001, 1000002) -- 12EU, IT QA, IT Support
+IF @Siteid NOT IN (1000000, 1000001, 1000002, 1000003) -- 12EU, IT QA, IT Support, Foobet
 	IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 ) AND @Siteid <> 0
 	BEGIN
 		SELECT @ErrMsg = 'This Licensee does not exists in System.',
@@ -90,6 +91,7 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 	@TrackingValue = @LogData,
 	@Duration = @duration
 END
+
 /*
 ==========Execute sample=================
 declare @errcode int, @errmsg varchar(1000)
@@ -106,6 +108,10 @@ exec Acc_MailingListIns
 select @errcode, @errmsg	
  
 */
+
+
+
+
 
 
 

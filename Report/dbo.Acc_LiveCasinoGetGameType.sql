@@ -12,7 +12,7 @@ AS
     DB  : DB052.bodb02    
      
     Revisions:      
-
+			- 20131030@Jim: return all bettype of live casino
 */  
 
 BEGIN  
@@ -22,12 +22,8 @@ BEGIN
 		typenamee AS GametypeName
 	FROM bettype WITH (NOLOCK)
 	WHERE 
-		typeid IN (1101,1102)
-	/*
-	1101:Party Baccarat
-	1102:Party Roulette
-
-	*/
+		typeid BETWEEN 1101 AND 1199
+	
 END  
 
 GO

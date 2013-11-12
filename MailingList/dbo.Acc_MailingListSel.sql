@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_MailingListSel] 
+﻿ALTER PROCEDURE [dbo].[Acc_MailingListSel] 
 	@FuncID int = 287  -- [SpecialDeleteMailing]
 AS 
 /*    
@@ -13,6 +12,7 @@ AS
 		- 20130305@Lukas: move SP to bodb_acc
 		- 20130306@Lukas: modify to get licensees in case of no data for specific function ID		
 		- 20130920@Kathy: Add groups was configured on web before (12EU, IT QA, IT Support)
+		- 20131101@Kathy: Add Foobet group [Redmine:#5697]
 */    
 BEGIN 
 
@@ -64,10 +64,15 @@ BEGIN
 		FROM Acc_MailingList WITH(NOLOCK)
 		WHERE FuncID = @FuncID 
 		and SiteId = 1000002
+
+		UNION ALL 
+		SELECT SiteId, 'Foobet', ToList, CcList, BccList,
+			CASE WHEN tolist IS NOT NULL OR cclist IS NOT NULL OR bcclist IS NOT NULL THEN 1 ELSE 0 END isavailabe  
+		FROM Acc_MailingList WITH(NOLOCK)
+		WHERE FuncID = @FuncID 
+		and SiteId = 1000003
 	END    
 END  
-
- 
 
 go
 
