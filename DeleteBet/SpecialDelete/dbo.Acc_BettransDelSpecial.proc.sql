@@ -103,6 +103,7 @@ Revisions:
 	- 20130128@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130526@Johnson: Add param @reason to log the reason delete bets 
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call Exchange from CustDB by link database)						   
 		    
 Param's Explanation: Special bet delete option
     @@DelOption = 0: No Delete (need to remove DepositBets out of #BetDelete)
@@ -649,7 +650,7 @@ Param's Explanation: Special bet delete option
 		SUM(CASE WHEN betteam='h' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) homeTotal,
 		SUM(CASE WHEN betteam='a' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) awayTotal
 	FROM bettrans b WITH (nolock)
-		INNER JOIN exchange e WITH (nolock) ON b.currency = e.exchangeid
+		INNER JOIN CustDB.dbo.exchange e WITH (nolock) ON b.currency = e.exchangeid
 	WHERE bettype in (1,3,7,8) AND ruben = 0 AND oddsid <> 0 and matchid = @matchid
 	GROUP BY oddsid
 
@@ -869,9 +870,8 @@ Param's Explanation: Special bet delete option
 	SET NOCOUNT OFF
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial] TO [ITVivi]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial] TO [vnteam] AS [dbo]

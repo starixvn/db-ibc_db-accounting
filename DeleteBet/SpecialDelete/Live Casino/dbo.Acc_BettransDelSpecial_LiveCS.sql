@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_BettransDelSpecial_LiveCS]
+﻿ALTER PROCEDURE [dbo].[Acc_BettransDelSpecial_LiveCS]
     @matchid		INT,     
     @f_transid		BIGINT,
     @t_transid		BIGINT,
@@ -32,6 +32,7 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130526@Johnson: Add param @reason to log the reason delete bets
 		- 20130702@Elodie: Add new bettype 1103, 1104
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer from CustDB by link database)						   
 	Param's Explanation: 
 	
 */
@@ -70,7 +71,7 @@ BEGIN
 	SELECT	@ErrCode = 0
 
 	IF NOT EXISTS (	SELECT 1
-					FROM customer WITH (NOLOCK)
+					FROM CustDB.dbo.customer WITH (NOLOCK)
 					WHERE   customer.userpwd = @UserPwd
 						and custid = @UserID
 						and roleid>=5)
@@ -201,7 +202,7 @@ BEGIN
 	--INSERT DEPOSIT CUSTOMER
 	INSERT INTO @DepositCust (custid, username)
 		SELECT INF.custid, INF.username 
-		FROM custinfo INF WITH(nolock) 
+		FROM CustDB.dbo.custinfo INF WITH(nolock) 
 			INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 		WHERE	INF.srecommend in ( SELECT custid FROM Dep_CustSuper WITH (NOLOCK))						
 				  AND INF.roleid = 1
@@ -210,25 +211,25 @@ BEGIN
 	--INSERT 12EU CUSTOMER
 	INSERT INTO @12EUCust (custid,username)
 		SELECT INF.custid,INF.username 
-		FROM customer INF WITH (nolock)
+		FROM CustDB.dbo.customer INF WITH (nolock)
 			INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 			WHERE INF.username = '12EU'
 				
 	--INSERT UUS CUSTOMER
 	Insert into @UUSCust(custid,username)
 	SELECT INF.custid, INF.username 
-	FROM custinfo INF (nolock) 
+	FROM CustDB.dbo.custinfo INF (nolock) 
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 		WHERE INF.srecommend IN(
-				SELECT custid FROM customer (nolock) Where CURRENCY = 20 AND roleid = 4
+				SELECT custid FROM CustDB.dbo.customer (nolock) Where CURRENCY = 20 AND roleid = 4
 			) AND INF.roleid = 1
 
 	--INSERT CUSTOMER HAVE REAL CURRENCIES AND CREATE USERNAME LIKE 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'		
 	INSERT INTO @RealCurrCust (CustID, username)
 	SELECT		INF.custid, INF.username 
-	FROM		custinfo INF WITH (NOLOCK) 
+	FROM		CustDB.dbo.custinfo INF WITH (NOLOCK) 
 	INNER JOIN	#BetDelete BD ON INF.Custid = BD.Custid 
-	WHERE		INF.srecommend IN( SELECT custid FROM customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
+	WHERE		INF.srecommend IN( SELECT custid FROM CustDB.dbo.customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
 				AND INF.roleid = 1 
 				AND ( @Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam')	
 	
@@ -280,7 +281,7 @@ BEGIN
 			case when won.balance > 0 and (c.credit + bal.balance - won.balance) < 0 THEN 1 ELSE 0 END 
 	from #BeforeUpd won
 		inner join @BalanceCust bal on won.custid= bal.custid
-		inner join custInfo c with (NOLOCK) ON bal.custid = c.custid
+		INNER JOIN CustDB.dbo.custinfo c with (NOLOCK) ON bal.custid = c.custid
 	
 	-- Get ticket infomation to mail related department before void ticket
 	CREATE TABLE #TicketInfo(custid int, odds smallmoney, oddstype tinyint, transdate datetime, bettype int, transid bigint, betteam nvarchar(20), hdp1 smallmoney, betfrom nvarchar(2), spositiontaking smallmoney, mpositiontaking smallmoney, apositiontaking smallmoney, stake money, winlost money, comm money, status nvarchar(20), currency tinyint, liveindicator bit, creator int)
@@ -397,9 +398,9 @@ BEGIN
 		IsNegative						        
 	FROM
 		#TicketInfo b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+		INNER JOIN CustDB.dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
+		INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 		inner JOIN @NegativeBalanceCust nc on b.custid = nc.custid
 	WHERE ( b.betfrom  IN ('D', 'M', 'E', 'L') AND customer.custid IN (SELECT custid FROM @DepositCust))
 			 OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  			
@@ -421,10 +422,10 @@ BEGIN
 			bd.mrecommend, mag.UserName AS MagUserName,
 			bd.srecommend, sag.Username AS SagUserName
 	FROM #BetDelete bd (nolock)
-			INNER JOIN custinfo mem (nolock) ON bd.custid     = mem.custid
-			INNER JOIN custinfo ag  (nolock) ON bd.recommend  = ag.custid
-			INNER JOIN custinfo mag (nolock) ON bd.mrecommend = mag.custid
-			INNER JOIN custinfo sag (nolock) ON bd.srecommend = sag.custid
+			INNER JOIN CustDB.dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
+			INNER JOIN CustDB.dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
+			INNER JOIN CustDB.dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
+			INNER JOIN CustDB.dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
 	----Begin : Send mail when delete real currencies and creator username like 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'/ OR Currency is UUS	
 	SELECT
@@ -450,9 +451,9 @@ BEGIN
 		IsNegative					
 	FROM
 		#TicketInfo b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+		INNER JOIN CustDB.dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
+		INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 		inner JOIN @NegativeBalanceCust nc on b.custid = nc.custid
 	WHERE	customer.custid IN (SELECT custid FROM @UUSCust)
 			or customer.custid IN (SELECT custid FROM @RealCurrCust) 					 
@@ -513,6 +514,7 @@ BEGIN
 		END CATCH
 	END
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial_LiveCS] TO [bodbAdminNet] AS [dbo]

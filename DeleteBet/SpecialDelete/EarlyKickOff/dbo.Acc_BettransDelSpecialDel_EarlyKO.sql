@@ -65,6 +65,7 @@ Revisions:
 	20130128@Elodie: Change link server DB03 to DBPOLICY
 					 Write more log on DBTXN server in case of DBLOG server failure
 	20130526@Johnson: Add param @reason to log the reason delete bets
+	20131108@Elodie: Splitting bodb02 into CustDB (call Exchange, Customer from CustDB by link database)						   
 	
 Param's Explanation: Special bet delete option
 	@@betteam4: bettype =4: Correct Score; bettype =30: 1st Correct Score
@@ -118,7 +119,7 @@ SET NOCOUNT ON
 	SELECT @ErrCode = 0
 
 	IF not exists (SELECT 1
-		FROM dbo.customer WITH (NOLOCK)
+		FROM CustDB.dbo.customer WITH (NOLOCK)
 		WHERE   customer.userpwd = @UserPwd
 			AND custid = @UserID
 			AND roleid>=5)
@@ -360,7 +361,7 @@ SET NOCOUNT ON
 		INSERT INTO #BetmDelete (transid,refno,custid, recommend, mrecommend, srecommend, betfrom, statusID)   
 		SELECT DISTINCT b.transid,b.refno,b.custid, c.recommend, c.mrecommend, c.srecommend, b.betfrom, b.statusID
 		FROM dbo.bettransm AS b with (NOLOCK)
-			INNER JOIN dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
+			INNER JOIN CustDB.dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
 			INNER JOIN dbo.bettrans bt WITH(NOLOCK) ON b.refno = bt.refno 
 			INNER JOIN (SELECT CONVERT(SMALLINT,val) AS bettype FROM dbo.strSplit(@bettypes,'^') WHERE val IN (9,29)) t ON t.bettype = bt.bettype	
 		WHERE	b.matchid=@matchid   
@@ -452,7 +453,7 @@ SET NOCOUNT ON
 				FROM custinfo INF WITH(nolock) 
 					INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 					WHERE INF.srecommend in (
-						SELECT custid FROM Dep_CustSuper WITH (NOLOCK)
+						SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)
 						--WHERE site <> '12Bet'
 						/*
 						SELECT Custid FROM customer (nolock) WHERE UserName like 'MS88Super%' AND ROLEID=4 --mansion88
@@ -490,7 +491,7 @@ SET NOCOUNT ON
 				FROM custinfo INF WITH(nolock) 
 					INNER JOIN #BetmDelete BMD ON INF.Custid = BMD.Custid 
 					WHERE INF.srecommend in (
-						SELECT custid FROM Dep_CustSuper WITH (NOLOCK)
+						SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)
 						--WHERE site <> '12Bet'
 						/*
 						SELECT Custid FROM customer (nolock) WHERE UserName like 'MS88Super%' AND ROLEID=4 --mansion88
@@ -530,12 +531,12 @@ SET NOCOUNT ON
 	--	BEGIN
 			INSERT INTO @12EUCust (custid,username)
 			SELECT INF.custid,INF.username 
-			FROM customer INF WITH (nolock)
+			FROM CustDB.dbo.customer INF WITH (nolock)
 				INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 				WHERE INF.UserName = '12EU'
 			UNION ALL
 			SELECT INF.custid,INF.username 
-			FROM customer INF WITH (nolock)
+			FROM CustDB.dbo.customer INF WITH (nolock)
 				INNER JOIN #BetmDelete BMD ON INF.Custid = BMD.Custid 
 				WHERE INF.UserName = '12EU'
 	--	END
@@ -546,14 +547,14 @@ SET NOCOUNT ON
 	FROM custinfo INF (nolock) 
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 		WHERE INF.srecommend IN(
-				SELECT custid FROM customer (nolock) Where CURRENCY = 20 AND roleid = 4
+				SELECT custid FROM CustDB.dbo.customer (nolock) Where CURRENCY = 20 AND roleid = 4
 			) AND INF.roleid = 1
 	UNION ALL
 	SELECT INF.custid, INF.username 
 	FROM custinfo INF (nolock) 
 		INNER JOIN #BetmDelete BMD ON INF.Custid = BMD.Custid 
 		WHERE INF.srecommend IN(
-				SELECT custid FROM customer (nolock) Where CURRENCY = 20 AND roleid = 4
+				SELECT custid FROM CustDB.dbo.customer (nolock) Where CURRENCY = 20 AND roleid = 4
 			) AND INF.roleid = 1
 
 	--INSERT CUSTOMER HAVE REAL CURRENCIES AND CREATE USERNAME LIKE 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'		
@@ -561,14 +562,14 @@ SET NOCOUNT ON
 	SELECT		INF.custid, INF.username 
 	FROM		custinfo INF WITH (NOLOCK) 
 	INNER JOIN	#BetDelete BD ON INF.Custid = BD.Custid 
-	WHERE		INF.srecommend IN( SELECT custid FROM customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
+	WHERE		INF.srecommend IN( SELECT custid FROM CustDB.dbo.customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
 				AND INF.roleid = 1 
 				AND ( @Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam')		
 	UNION ALL
 	SELECT		INF.custid, INF.username 
 	FROM		custinfo INF WITH (NOLOCK) 
 	INNER JOIN	#BetmDelete BMD ON INF.Custid = BMD.Custid 
-	WHERE		INF.srecommend IN( SELECT custid FROM customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
+	WHERE		INF.srecommend IN( SELECT custid FROM CustDB.dbo.customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
 				AND INF.roleid = 1 
 				AND ( @Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam')		
 	
@@ -811,7 +812,7 @@ SET NOCOUNT ON
 		SUM(CASE WHEN betteam='h' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) homeTotal,
 		SUM(CASE WHEN betteam='a' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) awayTotal
 	FROM dbo.bettrans AS b WITH (nolock)
-		INNER JOIN dbo.exchange AS e WITH (nolock) ON b.currency = e.exchangeid
+		INNER JOIN CustDB.dbo.exchange AS e WITH (nolock) ON b.currency = e.exchangeid
 	WHERE bettype in (1,3,7,8) AND ruben = 0 AND oddsid <> 0 AND matchid = @matchid
 	GROUP BY oddsid
 	
@@ -1014,9 +1015,9 @@ SET NOCOUNT ON
 				0 as ParlayType
 			FROM
 				dbo.bettrans b WITH (NOLOCK)
-				INNER JOIN dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
-				INNER JOIN dbo.customer AS c WITH (NOLOCK) ON c.custid=b.custid				
-				INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=c.recommend
+				INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+				INNER JOIN CustDB.dbo.customer AS c WITH (NOLOCK) ON c.custid=b.custid				
+				INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=c.recommend
 				INNER JOIN #BetDelete AS d WITH(NOLOCK) ON d.transid=b.transid --AND d.refno=b.refno
 			WHERE matchid=@matchid
 				AND b.transdate>=@KickOffDate				
@@ -1056,9 +1057,9 @@ SET NOCOUNT ON
 				cy.ParlayType as ParlayType
 			FROM
 				dbo.bettransm b WITH (NOLOCK)
-				INNER JOIN dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
-				INNER JOIN dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
-				INNER JOIN dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid				
+				INNER JOIN CustDB.dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
+				INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+				INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid				
 				INNER JOIN #BetmDelete AS d WITH(NOLOCK) ON d.transid=b.transid --AND d.refno=b.refno
 				INNER JOIN #Currency AS cy WITH(NOLOCK) ON cy.refno=b.refno
 			WHERE matchid=@matchid
@@ -1141,9 +1142,9 @@ IF exists(
 				0 as ParlayType
 			FROM
 				dbo.bettrans b WITH (NOLOCK)
-				INNER JOIN dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
-				INNER JOIN dbo.customer AS c WITH (NOLOCK) ON c.custid=b.custid				
-				INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=c.recommend
+				INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+				INNER JOIN CustDB.dbo.customer AS c WITH (NOLOCK) ON c.custid=b.custid				
+				INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=c.recommend
 				INNER JOIN #BetDelete AS d WITH(NOLOCK) ON d.transid=b.transid --AND d.refno=b.refno
 			WHERE matchid=@matchid
 				AND b.transdate>=@KickOffDate				
@@ -1178,9 +1179,9 @@ IF exists(
 				cy.ParlayType as ParlayType
 			FROM
 				dbo.bettransm b WITH (NOLOCK)
-				INNER JOIN dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
-				INNER JOIN dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
-				INNER JOIN dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid				
+				INNER JOIN CustDB.dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
+				INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+				INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid				
 				INNER JOIN #BetmDelete AS d WITH(NOLOCK) ON d.transid=b.transid --AND d.refno=b.refno
 				INNER JOIN #Currency AS cy WITH(NOLOCK) ON cy.refno=b.refno
 			WHERE matchid=@matchid
@@ -1257,7 +1258,9 @@ IF exists(
 SET NOCOUNT OFF
 END
  
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecialDel_EarlyKO] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecialDel_EarlyKO] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecialDel_EarlyKO] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecialDel_EarlyKO] TO [vnteam] AS [dbo]

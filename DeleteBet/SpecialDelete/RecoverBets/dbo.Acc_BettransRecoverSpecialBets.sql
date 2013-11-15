@@ -22,6 +22,7 @@ Revisions:
 	- 20130128@Elodie: Change link server DB053 to DBAGE
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130320@Johnson: Correct value bettrans.winlost= 0 when recover bets and check balance change to update balance table					   
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call Exchange from CustDB by link database)
 						   
 Param's Explanation:
 	- @Type: sports type
@@ -200,7 +201,7 @@ BEGIN
 			SUM(CASE WHEN betteam='h' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) homeTotal,
 			SUM(CASE WHEN betteam='a' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) awayTotal
 		FROM bettrans b WITH (nolock)
-			INNER JOIN exchange e WITH (nolock) ON b.currency = e.exchangeid
+			INNER JOIN CustDB.dbo.exchange e WITH (nolock) ON b.currency = e.exchangeid
 		WHERE bettype = @bettype AND ruben = 0 AND oddsid <> 0 and matchid = @matchid
 		GROUP BY oddsid
 
@@ -271,7 +272,8 @@ BEGIN
 	--END			 
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransRecoverSpecialBets] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransRecoverSpecialBets] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransRecoverSpecialBets] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransRecoverSpecialBets] TO [vnteam] AS [dbo]

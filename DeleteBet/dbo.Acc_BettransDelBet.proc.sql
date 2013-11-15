@@ -12,7 +12,7 @@ AS
 -- Admin : for Delete ticket
 -- Call via Account/deletebet.asp
 -- submit from Account/betslip.asp
- --test
+ 
 /*	Created by: [Creator]
 	Task:  Delete bet
 		   left menu (member)/Belist/Button Delete bet
@@ -37,6 +37,7 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
 		- 20130603@Johnson: get additional information for mailing
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Get credit in CustInfo from CustDB by link database, call Dep_CustSuper by link database)						   
 */
 
 SET NOCOUNT ON
@@ -167,7 +168,7 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 			@bet_username = username,
 			@srecommend = srecommend,
 			@currency = currency
-		FROM custinfo WITH(NOLOCK)
+		FROM CustDB.dbo.custinfo WITH(NOLOCK)
 		WHERE custid = @custid 
 		
 		--return all additional information for mailing
@@ -239,7 +240,7 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		--check for live casino
 		IF @bettype IN (1101,1102)
 		BEGIN
-			SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
+			SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
 			SELECT @is12EUCust	 = CASE WHEN @bet_username = '12EU' THEN 1 ELSE 0 END
 			SELECT @isRealCust = CASE WHEN @currency = 20 THEN 1
 									WHEN @currency <> 20 AND (@Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam') THEN 1 
@@ -327,7 +328,10 @@ IF (@@Error = 0)
 		END CATCH
 	END
 	
+
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelBet] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelBet] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet] TO [vnteam] AS [dbo]

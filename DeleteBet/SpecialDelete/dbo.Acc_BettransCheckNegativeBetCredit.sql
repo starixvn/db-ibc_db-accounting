@@ -6,9 +6,10 @@ AS
 /*
 Created by: 20121108@Elodie
 Task : Check if a bet credit of customer is negative
-DB: DBTRANS.bodb02
+DB: DBTXN/bodb02
 
 Revisions:   
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Get credit in CustInfo from CustDB by link database)						   
 	
 Param's Explanation: Special bet delete option
     @transids: All ticket of customers who need to be check negative bet credit
@@ -71,13 +72,15 @@ BEGIN
 			case when wc.balance > 0 AND (c.credit + bal.balance - wc.balance) < 0 THEN 1 ELSE 0 END IsNegative
 	from #WonCust wc 
 		inner join @BalanceCust bal on wc.custid= bal.custid	
-		inner join custInfo c with (NOLOCK) ON bal.custid = c.custid
+		inner join CustDB.dbo.custInfo c with (NOLOCK) ON bal.custid = c.custid
 
 	DROP TABLE #WonCust
 	DROP TABLE #BetDelete		
 END
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransCheckNegativeBetCredit] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransCheckNegativeBetCredit] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransCheckNegativeBetCredit] TO [VNTeam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransCheckNegativeBetCredit] TO [vnteam] AS [dbo]
