@@ -29,6 +29,7 @@ AS
 		- 20121113@Viet: revise sp
 		- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					       Write more log on DBTXN server in case of DBLOG server failure
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)  					       
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -88,8 +89,8 @@ BEGIN
 		@FromMrecommend	= c.mrecommend,
 		@FromSrecommend	= c.srecommend,
 		@FromRoleID		= c.roleid
-	FROM custinfo c WITH(NOLOCK)
-			INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
+	from CustDB.dbo.Custinfo c WITH(NOLOCK)
+			INNER JOIN CustDB.dbo.Exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
 	WHERE c.custid = @FromCustID
 
 	--- Get @ToCustomer info
@@ -102,8 +103,8 @@ BEGIN
 		@ToMrecommend	= c.mrecommend,
 		@ToSrecommend	= c.srecommend,
 		@ToRoleID		= c.roleid
-	FROM custinfo c WITH(NOLOCK)
-			INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
+	from CustDB.dbo.Custinfo c WITH(NOLOCK)
+			INNER JOIN CustDB.dbo.Exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
 	WHERE c.custid = @ToCustID	
 
 	-- Get @ForexCustomer info
@@ -115,8 +116,8 @@ BEGIN
 		@ForexRecommend	= c.recommend,
 		@ForexMrecommend= c.mrecommend,
 		@ForexSrecommend= c.srecommend
-	FROM custinfo c WITH(NOLOCK)
-			INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
+	from CustDB.dbo.Custinfo c WITH(NOLOCK)
+			INNER JOIN CustDB.dbo.Exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
 	WHERE c.username = @ForexUsername
 
 	IF	@FromUsername IS NULL OR @FromUsername = '' OR
@@ -386,6 +387,8 @@ BEGIN
 		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
 	END CATCH
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsCrossTransfer] TO [bodbAdminNet] AS [dbo]

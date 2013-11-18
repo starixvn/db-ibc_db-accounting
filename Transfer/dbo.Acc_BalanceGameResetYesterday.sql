@@ -10,9 +10,10 @@ AS
 /*
 	Create: 20121001@Dan
 	Task: Reset yesterday balance for live casino
-	DB: DBTRANS.BODB02
+	DB: DBTXN/BODB02
 
 	Revisions:		
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database) 					       
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -22,7 +23,7 @@ BEGIN
 	DECLARE @isAutoResetLiveCasino BIT, @MaxWinLiveCasino SMALLMONEY
 	SELECT @isAutoResetLiveCasino = ISNULL(isAutoResetLiveCasino,0),  
 			@MaxWinLiveCasino = ISNULL(MaxWinLiveCasino,0)
-	FROM CustInfo WITH (NOLOCK)
+	from CustDB.dbo.Custinfo WITH (NOLOCK)
 	WHERE CustID=@CustID
 	
 	-- return if not weekly reset
@@ -67,9 +68,11 @@ BEGIN
 	SELECT @isResetYesterdayBalance = 1		
 END
 
+
+
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_BalanceGameResetYesterday]  TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BalanceGameResetYesterday] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_BalanceGameResetYesterday] TO [bodbDownlineNet] 
+GRANT EXECUTE ON [dbo].[Acc_BalanceGameResetYesterday] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BalanceGameResetYesterday] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BalanceGameResetYesterday] TO [vnteam] AS [dbo]

@@ -30,6 +30,7 @@ Revisions:
 	- 20121113@Viet: revise SP
 	- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					       
 					   
 Param's Explanation:
 */
@@ -60,8 +61,8 @@ select @FromUsername = c.username,
 	@FromSrecommend = c.srecommend,
 	@FromActualrate = e.actualrate,
 	@FromRoleID = c.roleid
-from custinfo c with (NOLOCK)
-	INNER JOIN Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+from CustDB.dbo.Custinfo c with (NOLOCK)
+	INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
 where c.CustID = @FromCustID
 
 
@@ -74,8 +75,8 @@ select @ToCustID = c.CustID,
 	   @ToSrecommend = c.srecommend,
 	   @ToActualrate = actualrate,
 	   @ToRoleID = c.roleid
-from custinfo c with (NOLOCK)
-	INNER JOIN Exchange e with (NOLOCK) ON c.currency = e.exchangeid 
+from CustDB.dbo.Custinfo c with (NOLOCK)
+	INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) ON c.currency = e.exchangeid 
 where c.username = @ToUserName
 
 
@@ -99,7 +100,7 @@ BEGIN
 END
 
 
-if not exists (select 1 from custinfo with (NOLOCK) where custid = @FromCustID)
+if not exists (select 1 from CustDB.dbo.Custinfo with (NOLOCK) where custid = @FromCustID)
 BEGIN
 	Select @ErrMsg = case @Language 
 							when 'E' then 'Customer does not exist.'
@@ -341,7 +342,11 @@ BEGIN CATCH
 	EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
 END CATCH
 
+
+
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_BettransInsTransfer]  TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransInsTransfer] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransfer] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransfer] TO [ITVivi] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransfer] TO [vnteam] AS [dbo]
