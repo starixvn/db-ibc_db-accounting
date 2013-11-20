@@ -404,6 +404,7 @@ Begin DataProject = "Account"
             Script = "dbo.Acc_LiveCS_SelGameByID.sql"
          End
          Begin Folder = "NAP"
+            Script = "dbo.NAP_BettransCheckNegativeBalance.sql"
             Script = "dbo.NAP_BettransDelSpecial.sql"
             Script = "dbo.NAP_BettransRecoverBet.sql"
             Script = "dbo.NAP_BettransSelRecoverBet.sql"
