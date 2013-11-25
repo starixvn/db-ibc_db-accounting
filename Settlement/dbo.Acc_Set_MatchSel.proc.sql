@@ -30,6 +30,7 @@ AS
 		- 20130328@Lukas: move to DBTXN/bodb02 & get FGLG ticket info 		
 		- 20130719@Elodie: get result for Virtual HR
 		- 20130808@Kathy:  Amend to show refund game for virtual horse racing/tennis
+		- 20131125@Elodie: get result for Virtual Greyhounds, Motor Racing
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
   
@@ -176,9 +177,9 @@ BEGIN
 			AND l.sporttype BETWEEN (CASE WHEN @sporttype = 0 THEN 151 ELSE @sporttype END ) AND (CASE WHEN @sporttype = 0 THEN 153 ELSE @sporttype END )
 			AND @sporttype IN (0, 151, 152, 153)
 			AND o.leagueid = CASE WHEN @leagueid = 0 THEN o.leagueid ELSE @leagueid END
-			AND (o.oddsstatus = 'completed' OR o.oddsstatus = 'refund' OR o.Foddsstatus = 'completed' )  
-			
-	--Virtual HR
+			AND (o.oddsstatus = 'completed' OR o.oddsstatus = 'refund' OR o.Foddsstatus = 'completed' )   
+		
+	--Virtual HR, Virtual Grey Hounds, Motor Racing
 	INSERT INTO #matchList
 	SELECT 
 		0 hthomescore  --TF  
@@ -218,8 +219,8 @@ BEGIN
 			INNER JOIN DBPRO.bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
-			AND l.sporttype = 181
-			AND @sporttype = 181
+			AND l.sporttype = CASE WHEN @sporttype = 0 THEN l.sporttype ELSE @sporttype END
+			AND @sporttype in (0,181,182,184)
 			AND r.leagueid = CASE WHEN @leagueid = 0 THEN r.leagueid ELSE @leagueid END
 			AND o.eventstatus = 'completed' 
 			
@@ -268,7 +269,11 @@ BEGIN
 END
 
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSel] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSel] TO [ITVivi] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSel] TO [vnteam] AS [dbo]

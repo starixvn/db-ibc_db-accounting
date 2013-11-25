@@ -31,6 +31,7 @@ Revisions:
 	- 20130222@Johnson: add virtual horse racing (sporttype: 181)
 	- 20130702@Kathy: Fix bug view PT, Comm for licensee
 	- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
+	- 20131121@Elodie: Add Virtual greyhounds(182), Virtual Motor Racing(184) [Redmine:#7234]
 Param's Explanation:
 • @HasComm: view Comm or view PT
 	+ 0: View PT (default)
@@ -257,7 +258,7 @@ Begin
 		END  
 	WHILE @@FETCH_STATUS = 0  
 	BEGIN 
-		if @curSporttype in (151,152,153, 201, 161, 180, 181, 186) 
+		if @curSporttype in (151,152,153, 201, 161, 180, 181, 182, 184, 186) 
 			BEGIN
 					select @l4 = MaxPositionTaking, @n4 = MinPositionTaking from CustOverride3rd with (NOLOCK) where CustID = @SRecommend and Bettype=@curBettype and Sporttype=@curSporttype  
 					select @l3 = MaxPositionTaking, @n3 = MinPositionTaking from CustOverride3rd with (NOLOCK) where CustID = @MRecommend and Bettype=@curBettype and Sporttype=@curSporttype  
