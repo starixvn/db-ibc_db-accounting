@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[NAP_BetTypeSel]
+﻿ALTER PROCEDURE [dbo].[NAP_BetTypeSel]
 	@Mode SMALLINT = 0 
 AS
 /*
