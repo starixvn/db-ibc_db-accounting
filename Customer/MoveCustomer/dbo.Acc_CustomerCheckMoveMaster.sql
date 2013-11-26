@@ -1,14 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 10/29/2013 15:10:46 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveMaster    Script Date: 9/26/2013 4:55:25 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveMaster    Script Date: 9/26/2013 1:25:53 PM ******/
-
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMaster]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
 	@userid		INT,
@@ -393,12 +383,11 @@ EXEC dbo.Acc_ExecRep_00
 IF @ErrCode <>0 RETURN
 
 --Check & update n4<=s1+m1+a1<=l4
----EXEC dbo.Acc_CustomerUpdMaster_MinMaxPositiontaking @mrecommend = @mrecommend, @srecommend = @srecommend
+--EXEC dbo.Acc_CustomerUpdMaster_MinMaxPositiontaking @mrecommend = @mrecommend, @srecommend = @srecommend
 EXEC dbo.Acc_CustSetting_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3
 EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'number'
 --EXEC dbo.Acc_CustomerUpdMasterHR_MinMaxPositiontaking @mrecommend = @mrecommend, @srecommend = @srecommend
 EXEC dbo.[Acc_CustSetting3rd_04] @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'horse'
-
 EXEC dbo.Acc_CustomerUpdMasterLiveCS_MaxPositiontaking @mrecommend = @mrecommend, @srecommend = @srecommend
 EXEC dbo.Acc_CustomerUpdMasterVS_MinMaxPositiontaking @sporttype = 180, @bettype = 1201, @mrecommend = @mrecommend, @srecommend = @srecommend
 EXEC dbo.Acc_CustomerUpdMasterVS_MinMaxPositiontaking @sporttype = 181, @bettype = 1231, @mrecommend = @mrecommend, @srecommend = @srecommend
@@ -451,6 +440,8 @@ BEGIN CATCH
 		@duration = @duration
 END CATCH
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [bodbAdminNet] AS [dbo]
