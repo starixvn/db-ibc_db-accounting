@@ -45,6 +45,7 @@ Revisions:
 	- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
 	- 20130703@Kathy: Update matchid for RnG Casino(71) and Bingo(73)
 	- 20130718@Elodie: Apply core betlist
+	- 20131126@Lukas: get sporttype column in VSRaceinfo instead of hardcode
 Param's Explanation:
 • @fromdate = @winlostdate
 */
@@ -1066,7 +1067,7 @@ SET NOCOUNT ON
 					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
 					b.username,
 					0 hthomescore, 0 htawayscore,ip, 	
-					181 sporttype,
+					r.SportType sporttype,
 					b.matchid,
 					0 IsNeutral,
 					convert(nvarchar(50), r.EventTime) as showtime, -- race name					
@@ -1081,7 +1082,7 @@ SET NOCOUNT ON
 			WHERE	b.bettype in (1231, 1232, 1233, 1237, 1238)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid		
-			
+
 			-- Virtual HR 14
 			UNION ALL
 			SELECT	0 finalhomescore,
@@ -1124,7 +1125,7 @@ SET NOCOUNT ON
 					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
 					b.username,
 					0 hthomescore, 0 htawayscore,ip, 	
-					181 sporttype,
+					r.SportType sporttype,
 					b.matchid,
 					0 IsNeutral,
 					convert(nvarchar(50), r.EventTime) as showtime, -- race name  					
@@ -1181,6 +1182,7 @@ SELECT	* FROM @Data
 ORDER BY 4, 26
 		   
 SELECT * FROM @DetailData
+
 
 
 GO
