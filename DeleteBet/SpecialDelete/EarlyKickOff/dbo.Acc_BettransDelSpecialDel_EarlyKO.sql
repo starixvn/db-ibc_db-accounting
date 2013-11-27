@@ -450,7 +450,7 @@ SET NOCOUNT ON
 	--	BEGIN
 			INSERT INTO @DepositCust (custid, username)
 			SELECT INF.Custid, INF.username 
-				FROM custinfo INF WITH(nolock) 
+				FROM CustDB.dbo.custinfo INF WITH(nolock) 
 					INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 					WHERE INF.srecommend in (
 						SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)
@@ -488,7 +488,7 @@ SET NOCOUNT ON
 						AND BD.betfrom IN ('D', 'M', 'E', 'L') 
 			UNION ALL
 				SELECT INF.Custid, INF.username 
-				FROM custinfo INF WITH(nolock) 
+				FROM CustDB.dbo.custinfo INF WITH(nolock) 
 					INNER JOIN #BetmDelete BMD ON INF.Custid = BMD.Custid 
 					WHERE INF.srecommend in (
 						SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)
@@ -544,14 +544,14 @@ SET NOCOUNT ON
 	--INSERT UUS  CUSTOMER
 	Insert into @UUSCust(custid,username)
 	SELECT INF.custid, INF.username 
-	FROM custinfo INF (nolock) 
+	FROM CustDB.dbo.custinfo INF (nolock) 
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 		WHERE INF.srecommend IN(
 				SELECT custid FROM CustDB.dbo.customer (nolock) Where CURRENCY = 20 AND roleid = 4
 			) AND INF.roleid = 1
 	UNION ALL
 	SELECT INF.custid, INF.username 
-	FROM custinfo INF (nolock) 
+	FROM CustDB.dbo.custinfo INF (nolock) 
 		INNER JOIN #BetmDelete BMD ON INF.Custid = BMD.Custid 
 		WHERE INF.srecommend IN(
 				SELECT custid FROM CustDB.dbo.customer (nolock) Where CURRENCY = 20 AND roleid = 4
@@ -560,14 +560,14 @@ SET NOCOUNT ON
 	--INSERT CUSTOMER HAVE REAL CURRENCIES AND CREATE USERNAME LIKE 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'		
 	INSERT INTO @RealCurrCust (CustID, username)
 	SELECT		INF.custid, INF.username 
-	FROM		custinfo INF WITH (NOLOCK) 
+	FROM		CustDB.dbo.custinfo INF WITH (NOLOCK) 
 	INNER JOIN	#BetDelete BD ON INF.Custid = BD.Custid 
 	WHERE		INF.srecommend IN( SELECT custid FROM CustDB.dbo.customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
 				AND INF.roleid = 1 
 				AND ( @Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam')		
 	UNION ALL
 	SELECT		INF.custid, INF.username 
-	FROM		custinfo INF WITH (NOLOCK) 
+	FROM		CustDB.dbo.custinfo INF WITH (NOLOCK) 
 	INNER JOIN	#BetmDelete BMD ON INF.Custid = BMD.Custid 
 	WHERE		INF.srecommend IN( SELECT custid FROM CustDB.dbo.customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
 				AND INF.roleid = 1 
@@ -1084,10 +1084,10 @@ SET NOCOUNT ON
 		bd.mrecommend, mag.UserName AS MagUserName,
 		bd.srecommend, sag.Username AS SagUserName
 	FROM #BetDelete bd (nolock)
-		INNER JOIN dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
-		INNER JOIN dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
-		INNER JOIN dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
-		INNER JOIN dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
+		INNER JOIN CustDB.dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
+		INNER JOIN CustDB.dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
+		INNER JOIN CustDB.dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
+		INNER JOIN CustDB.dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
 	UNION ALL
 	SELECT b.transid,
 			bd.custid, mem.UserName        AS CustUserName,
@@ -1096,10 +1096,10 @@ SET NOCOUNT ON
 			bd.srecommend, sag.Username AS SagUserName
 	FROM dbo.bettrans b WITH (NOLOCK) 
 		INNER JOIN #BetmDelete AS bd with(nolock) ON bd.refno=b.refno AND b.matchid=9 AND b.bettype=9
-		INNER JOIN dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
-		INNER JOIN dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
-		INNER JOIN dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
-		INNER JOIN dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
+		INNER JOIN CustDB.dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
+		INNER JOIN CustDB.dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
+		INNER JOIN CustDB.dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
+		INNER JOIN CustDB.dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
 -----BEGIN : Send mail Internal when delete real currencies and creator username like 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'	/OR UUS Currency
 IF exists(

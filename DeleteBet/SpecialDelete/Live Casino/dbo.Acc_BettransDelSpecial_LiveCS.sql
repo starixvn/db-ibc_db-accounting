@@ -204,7 +204,7 @@ BEGIN
 		SELECT INF.custid, INF.username 
 		FROM CustDB.dbo.custinfo INF WITH(nolock) 
 			INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
-		WHERE	INF.srecommend in ( SELECT custid FROM Dep_CustSuper WITH (NOLOCK))						
+		WHERE	INF.srecommend in ( SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK))						
 				  AND INF.roleid = 1
 				  AND BD.betfrom IN ('D', 'M', 'E', 'L')
 				  
