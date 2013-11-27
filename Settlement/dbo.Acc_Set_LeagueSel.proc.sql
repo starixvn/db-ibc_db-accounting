@@ -1,5 +1,4 @@
-﻿
-ALTER PROC [dbo].[Acc_Set_LeagueSel]
+﻿ALTER PROC [dbo].[Acc_Set_LeagueSel]
 	@FromDate datetime,
 	@ToDate datetime,
 	@sporttype tinyint = 0
@@ -17,6 +16,7 @@ AS
 		- 20111125@Jamie: Include Greyhounds and Harness 
 		- 20120208@Lukas: Exclude Live Casino
 		- 20130408@Lukas: add virtual horse racing
+		- 20131125@Elodie: Add Virtual Greyhounds, Motor Racing
 	Param's Explanation:
 		
 		
@@ -45,7 +45,7 @@ begin
 		INNER JOIN VSRaceinfo r WITH(NOLOCK) ON o.eventID = r.eventID
 		INNER JOIN league l (nolock) on r.leagueid = l.leagueid 
 	WHERE o.eventdate between @FromDate and @ToDate
-		and l.sporttype = 181
+		and l.sporttype in (181,182,184)
 	order by sporttype, leaguename
 	
 end 
@@ -58,7 +58,7 @@ begin
 		and l.sporttype =  @sporttype 
 	order by sporttype, leaguename
 end 
-else if @sporttype = 181
+else if @sporttype in (181,182,184)
 begin 
 	SELECT DISTINCT r.leagueid, l.leaguename, l.sporttype
 	FROM VSoutright o (nolock)

@@ -46,6 +46,7 @@ Revisions:
 	- 20130307@Elodie: Add Virtual HR
 	- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 	- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
+	- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	
 Param's Explanation:
 • @ErrCode:
@@ -107,79 +108,83 @@ declare @srecommend				int,
 		@aSuspended				BIT,
 		@Suspended				BIT,
 		--@aMaxTransferP2P		MONEY,
-		--@MaxTransferP2P			MONEY,
+		--@MaxTransferP2P		MONEY,
 		--@aIsAutoResetP2P		BIT,
-		--@IsAutoResetP2P			BIT,
+		--@IsAutoResetP2P		BIT,
 		--@aDisableP2P			BIT, 
-		--@DisableP2P				BIT, 
-		--@aDisableFunP2P			BIT,
-		--@DisableFunP2P			BIT,				
+		--@DisableP2P			BIT, 
+		--@aDisableFunP2P		BIT,
+		--@DisableFunP2P		BIT,				
 		@aHideVirtualSports 	BIT,
 		@HideVirtualSports		BIT, 
 		@aDisableVirtualSports	BIT, 
 		@DisableVirtualSports	BIT,
+		@aDisableHRFixedOdds	BIT,
+		@DisableHRFixedOdds		BIT,
 		@aDoubleCommLosing		BIT,
 		@DoubleCommLosing		BIT,
 		@aGivenCredit			MONEY,
 		@GivenCredit			MONEY,
 		@aUsedCredit			MONEY
 		
-select	@srecommend			= srecommend, 
-		@mrecommend			= mrecommend, 
-		@recommend			= recommend,
-		@acurrency			= currency, 
-		@adisable151_31		= DisableHorseracing, 		
-		@aDisableOutright	= DisableOutright,
-		@aSyncCasino		= syncCasino,
-		@aSyncLiveCasino	= SyncLiveCasino,
-		@aSyncBingo			= syncBingo,
-		@aDisable151_41		= DisableOpenTote,
-		@aDisable151_51		= Disable151_AU,
-		@aDisable152_41		= Disable152_UK,
-		@aDisable152_51		= Disable152_AU,
-		@aDisable153_51		= Disable153_AU,
-		@aDisableBingo		= DisableBingo,
-		@aDoubleCommLosing	= DoubleCommLosing,
-		@aDisableNumber		= DisableNumber,
-		@aClosed			= closed,
-		@aSuspended			= reject,
-		--@aMaxTransferP2P	= MaxTransferP2P, 
-		--@aIsAutoResetP2P	= IsAutoResetP2P, 
-		--@aDisableP2P		= DisableP2P, 
-		--@aDisableFunP2P	= DisableFunP2P ,
-		@aDisableVirtualSports = DisableVirtualSports,
-		@aHideVirtualSports = HideVirtualSports,
-		@aGivenCredit		= credit	
+select	@srecommend				= srecommend, 
+		@mrecommend				= mrecommend, 
+		@recommend				= recommend,
+		@acurrency				= currency, 
+		@adisable151_31			= DisableHorseracing, 		
+		@aDisableOutright		= DisableOutright,
+		@aSyncCasino			= syncCasino,
+		@aSyncLiveCasino		= SyncLiveCasino,
+		@aSyncBingo				= syncBingo,
+		@aDisable151_41			= DisableOpenTote,
+		@aDisable151_51			= Disable151_AU,
+		@aDisable152_41			= Disable152_UK,
+		@aDisable152_51			= Disable152_AU,
+		@aDisable153_51			= Disable153_AU,
+		@aDisableBingo			= DisableBingo,
+		@aDoubleCommLosing		= DoubleCommLosing,
+		@aDisableNumber			= DisableNumber,
+		@aClosed				= closed,
+		@aSuspended				= reject,
+		--@aMaxTransferP2P		= MaxTransferP2P, 
+		--@aIsAutoResetP2P		= IsAutoResetP2P, 
+		--@aDisableP2P			= DisableP2P, 
+		--@aDisableFunP2P		= DisableFunP2P ,
+		@aDisableVirtualSports	= DisableVirtualSports,
+		@aHideVirtualSports		= HideVirtualSports,
+		@aDisableHRFixedOdds	= DisableHRFixedOdds,
+		@aGivenCredit			= credit	
 from	custinfo with (nolock)
 where	username = @agentname and roleid = 2
 
-select	@custid				= custid, 
-		@recommend_old		= recommend, 
-		@srecommend_old		= srecommend, 
-		@mrecommend_old		= mrecommend,
-		@currency_old		= currency,
-		@disable151_31		= DisableHorseracing, 		
-		@DisableOutright	= DisableOutright,
-		@SyncCasino			= SyncCasino ,
-		@SyncLiveCasino		= SyncLiveCasino,
-		@SyncBingo			= SyncBingo ,
-		@Disable151_41		= DisableOpenTote,
-		@Disable151_51		= Disable151_AU,
-		@Disable152_41		= Disable152_UK,
-		@Disable152_51		= Disable152_AU,
-		@Disable153_51		= Disable153_AU,
-		@DisableBingo		= DisableBingo,
-		@DisableNumber		= DisableNumber,
-		@DoubleCommLosing	= DoubleCommLosing,
-		@Closed				= closed,
-		@Suspended			= reject,
+select	@custid					= custid, 
+		@recommend_old			= recommend, 
+		@srecommend_old			= srecommend, 
+		@mrecommend_old			= mrecommend,
+		@currency_old			= currency,
+		@disable151_31			= DisableHorseracing, 		
+		@DisableOutright		= DisableOutright,
+		@SyncCasino				= SyncCasino ,
+		@SyncLiveCasino			= SyncLiveCasino,
+		@SyncBingo				= SyncBingo ,
+		@Disable151_41			= DisableOpenTote,
+		@Disable151_51			= Disable151_AU,
+		@Disable152_41			= Disable152_UK,
+		@Disable152_51			= Disable152_AU,
+		@Disable153_51			= Disable153_AU,
+		@DisableBingo			= DisableBingo,
+		@DisableNumber			= DisableNumber,
+		@DoubleCommLosing		= DoubleCommLosing,
+		@Closed					= closed,
+		@Suspended				= reject,
 		--@MaxTransferP2P		= MaxTransferP2P, 
 		--@IsAutoResetP2P		= IsAutoResetP2P, 
 		--@DisableP2P			= DisableP2P, 
 		--@DisableFunP2P		= DisableFunP2P,
-		@DisableVirtualSports = DisableVirtualSports ,
-		@HideVirtualSports	= HideVirtualSports,
-		@GivenCredit		= credit
+		@DisableVirtualSports	= DisableVirtualSports ,
+		@HideVirtualSports		= HideVirtualSports,
+		@DisableHRFixedOdds		= DisableHRFixedOdds,
+		@GivenCredit			= credit
 from	custinfo with (nolock) 
 where	username = @membername and roleid = 1
 
@@ -352,6 +357,13 @@ BEGIN
 	return
 END
 
+if @adisableHRFixedOdds = 1 and @disableHRFixedOdds = 0
+	BEGIN
+		Select @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is enabled Horse Racing Fixed Odds but new agent is not enabled Horse Racing Fixed Odds',
+			@ErrCode = 118
+		return
+	END
+	
 IF @aSyncLiveCasino = 0 AND @SyncLiveCasino = 1
 BEGIN
 	Select @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is synchronized Live Casino but new agent is not synchronized Live Casino.',
@@ -1383,6 +1395,9 @@ BEGIN CATCH
 		@TrackingValue = @LogSPData,
 		@duration = @duration	
 END CATCH
+
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet]

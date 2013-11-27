@@ -1,15 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveAgent]    Script Date: 10/29/2013 15:11:49 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveAgent    Script Date: 9/26/2013 4:55:24 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveAgent    Script Date: 9/26/2013 1:25:53 PM ******/
-
-
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveAgent]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveAgent]
 	@mastername		varchar(40),
 	@agentname		varchar(40),
 	@userid			int,
@@ -59,6 +48,7 @@ Revisions:
 	- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
 	- 20130307@Elodie: Add Virtual HR
 	- 20131029@Lukas: Apply execRep
+	- 20131126@Kathy: Add Virtual Greyhounds/Motor Racing (182, 184) [Redmine:#7234]
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -463,6 +453,8 @@ BEGIN CATCH
 END CATCH		
 	
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveAgent] TO [bodbAdminNet] AS [dbo]
