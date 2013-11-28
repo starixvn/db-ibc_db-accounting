@@ -102,7 +102,7 @@ BEGIN
 		RETURN
 	
 	IF NOT EXISTS (SELECT 1
-		FROM dbo.customer WITH (NOLOCK)
+		FROM CustDB.dbo.customer WITH (NOLOCK)
 		WHERE	customer.userpwd = @UserPwd
 			AND custid = @UserID
 			AND roleid>=5)
@@ -202,7 +202,7 @@ BEGIN
 		,b.betteam		
 		,b.statusID
 	FROM dbo.bettransm AS b WITH(NOLOCK)		 
-		 INNER JOIN dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
+		 INNER JOIN CustDB.dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
 	WHERE b.matchid=@MatchID	
 		AND CASE WHEN @Type = 2 THEN @Type ELSE b.liveindicator END = @Type
 		AND b.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @Type = 1 THEN @livehomescore ELSE b.livehomescore END
@@ -336,7 +336,7 @@ BEGIN
 	--BEGIN
 		INSERT INTO @12EUCust (custid,username)
 		SELECT		C.custid,C.username 
-		FROM		dbo.customer C WITH (nolock)
+		FROM		CustDB.dbo.customer C WITH (nolock)
 		INNER JOIN	#REF R 
 				ON	C.custid = R.custid
 		WHERE		C.username = '12EU'
@@ -676,9 +676,9 @@ BEGIN
 	FROM dbo.bettrans AS b with (NOLOCK)
 		INNER JOIN #Ref AS r WITH(NOLOCK) ON b.refno=r.refno AND b.matchid IN (9,29) AND b.bettype IN (9,29)
 		INNER JOIN dbo.match AS m WITH(NOLOCK) ON m.matchid=@MatchID
-		--INNER JOIN dbo.customer AS ag with (NOLOCK) ON b.recommend = ag.custid
-		INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
+		--INNER JOIN CustDB.dbo.customer AS ag with (NOLOCK) ON b.recommend = ag.custid
+		INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
 	WHERE	(b.betid = 0 OR b.betid IS NULL)
 			AND 
 			(	b.custid IN (SELECT custid FROM @12EUCust)  
@@ -745,8 +745,8 @@ BEGIN
 	FROM dbo.bettrans AS b with (NOLOCK)
 		INNER JOIN #Ref AS r WITH(NOLOCK) ON b.refno=r.refno AND b.matchid IN (9,29) AND b.bettype IN (9,29)
 		INNER JOIN dbo.match AS m WITH(NOLOCK) ON m.matchid=@MatchID
-		INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
+		INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
 	WHERE	(b.betid = 0 OR b.betid IS NULL)
 			AND 
 				( b.custid IN (SELECT custid FROM @RealCurrCust)	

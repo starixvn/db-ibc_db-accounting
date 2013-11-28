@@ -8,7 +8,7 @@
 	@UserID INT = 0,
 	@SubAccID INT = 0, --Sub-AccountID
 	@LoginIP VARCHAR(20)='',
-	@Language VARCHAR(2) = 'E'  
+	@Language VARCHAR(2) = 'E'
 AS
 /*
 
@@ -30,6 +30,7 @@ Revisions:
 	- 20130311@Dan: Change linked server DB053 to DBAGE
 	- 20130827@Johnson: Check enabled status on DBTXN instead of DBAGE
 	- 20130926@Kathy: Apply exec rep
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Turn to use Acc_ExecRep_Cust_04)	
 */
 SET NOCOUNT ON
 
@@ -114,7 +115,7 @@ WHERE custid=@custid
 IF @disabledBingo = 1 OR @enableDownline = 1
 BEGIN
 	--20130926@Kathy: Apply ExecRep 
-	EXEC [Acc_ExecRep_04]
+	EXEC [Acc_ExecRep_Cust_04]
 		@CustID		= @CustID,
 		@RoleID		= @RoleID,
 		@Action		= 'BingoStatus',
@@ -199,7 +200,7 @@ END CATCH
 
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_UpdBingoStatus] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_UpdBingoStatus] TO [bodbadminNet] AS [dbo]
 GO
 GRANT EXECUTE ON [dbo].[Acc_UpdBingoStatus] TO [bodbDownlineNet] AS [dbo]
 GO
