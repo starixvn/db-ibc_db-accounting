@@ -1,9 +1,10 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
+﻿USE [bodb02]
+GO
 
-
-
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 ALTER PROCEDURE [dbo].[Task_DailyRptLicWinloss2]
 	@winlostdate DATETIME
@@ -22,6 +23,7 @@ Revisions:
 	- 20120109@Henry: sum wap & smartphone betfrom
 	- 20130903@Jim: support Virtual Horse Racing
 	- 20131014@Jim: support Virtual Tennis
+	- 20131128@Jim: revert code to Group by All Virtual Sport into sporttypeID=180
    
  */
 
@@ -65,9 +67,7 @@ SELECT @winlostdate,customer.username,customer.username2,customer.custid, 1, cus
 		WHEN bettype = 1000 THEN 253 --games
 		WHEN bettype BETWEEN 81 AND 120 THEN 161 --Number Game 
 		WHEN bettype BETWEEN 1101 AND 1199 THEN 162 -- Live casino
-		WHEN (bettype BETWEEN 1201 AND 1299 AND bettype NOT IN (1220,1235,1236,1231,1232,1233,1237,1238)) THEN 180  --Virtual Sport
-		WHEN bettype  IN (1231,1232,1233,1237,1238) THEN 181 --VHR 
-		WHEN bettype  IN (1220,1235,1236)	 THEN 186 --- virtual tennis						
+		WHEN (bettype BETWEEN 1201 AND 1299 ) THEN 180  --Virtual Sport
 		WHEN bettype BETWEEN 51 AND 69 THEN 201
 		WHEN bettype IN (31,32,33,41,42,43) THEN 151
 		ELSE 0 END sporttype,
@@ -106,9 +106,7 @@ GROUP BY
 		WHEN bettype = 1000 THEN 253 --games
 		WHEN bettype BETWEEN 81 AND 120 THEN 161 --Number Game 
 		WHEN bettype BETWEEN 1101 AND 1199 THEN 162 -- Live casino
-		WHEN (bettype BETWEEN 1201 AND 1299 AND bettype NOT IN (1220,1235,1236,1231,1232,1233,1237,1238)) THEN 180  --Virtual Sport
-		WHEN bettype  IN (1231,1232,1233,1237,1238) THEN 181 --VHR 
-		WHEN bettype  IN (1220,1235,1236)	 THEN 186 --- virtual tennis						
+		WHEN (bettype BETWEEN 1201 AND 1299 ) THEN 180  --Virtual Sport
 		WHEN bettype BETWEEN 51 AND 69 THEN 201
 		WHEN bettype IN (31,32,33,41,42,43) THEN 151
 		ELSE 0 END,
@@ -257,9 +255,5 @@ GROUP BY
 	b.isBA,
 	b.isMobile,
 	b.betfrom
-
-
-
-
-
-
+GO
+GRANT VIEW DEFINITION ON [dbo].[Task_DailyRptLicWinloss2] TO [vnteam] AS [dbo]
