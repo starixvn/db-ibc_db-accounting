@@ -94,7 +94,6 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		bodb_archive.dbo.bettrans_bk bettrans WITH (NOLOCK,INDEX(CIX_winlostdate))
 		INNER JOIN bodb02.dbo.customer WITH (NOLOCK) ON bettrans.custid=customer.custid
 		LEFT JOIN db052.bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON bettrans.transid = BA.transid
-		LEFT JOIN DBRPT.bodb02.dbo.VSRaceInfo RaceInfo WITH (NOLOCK) ON bettrans.matchid = RaceInfo.EventID AND bettrans.bettype IN (1231,1232,1233,1237,1238)
 	WHERE
 		bettrans.winlostdate = @winlostdate AND
 		customer.srecommend IN (SELECT custid FROM bodb02.dbo.f_DepSuper_1('All')) AND

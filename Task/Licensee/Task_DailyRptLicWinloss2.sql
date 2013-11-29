@@ -90,7 +90,6 @@ FROM
 	dbo.bettrans14 bettrans WITH (NOLOCK)
 	INNER JOIN dbo.customer WITH (NOLOCK) ON bettrans.custid=customer.custid
 	LEFT JOIN bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON bettrans.transid = BA.transid
-	LEFT JOIN DBRPT.bodb02.dbo.VSRaceInfo RaceInfo WITH (NOLOCK) ON bettrans.matchid = RaceInfo.EventID AND bettrans.bettype IN (1231,1232,1233,1237,1238)
 WHERE
 	bettrans.winlostdate = @winlostdate AND
 	customer.srecommend IN (SELECT custid FROM f_DepSuper_1('All')) AND
