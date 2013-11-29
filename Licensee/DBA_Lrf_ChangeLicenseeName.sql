@@ -19,8 +19,14 @@ AS
 			*NewLicenseeName: string,new licensee name 
 	Revision:
 		-20130819@Jim: fix bug missing change LicenseeName in table bodb_licensee.dbo.Users
-*/		
-
+*/	
+IF NOT EXISTS (SELECT 1 FROM DBLIC.bodb_licensee.dbo.Licensees WITH (NOLOCK) WHERE LicenseeName=@OldLicenseeName)
+	BEGIN 
+		SELECT @ErrCode = 101, @ErrMsg = 'Invalid Licensee, please check again!'
+		RETURN
+	END 
+ELSE	
+BEGIN
 CREATE TABLE #tblCust (CustID INT, username VARCHAR(100),username2 VARCHAR(100),roleid INT)
 
 -- step 0: change sitename 
@@ -145,7 +151,7 @@ CREATE TABLE #tblCust (CustID INT, username VARCHAR(100),username2 VARCHAR(100),
 	--------------------------------------------------------------------------------------------------------------------------------------------
 	DROP TABLE #tblCust
 	--------------------------------------------------------------------------------------------------------------------------------------------
-
+END
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[DBA_Lrf_ChangeLicenseeName] TO [vnteam] 
