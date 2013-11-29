@@ -163,6 +163,7 @@ BEGIN
 		odds SMALLMONEY, 
 		OddsType INT,
 		transdate DATETIME,
+		IsLiveIndicator BIT,
 		livehomescore SMALLINT, 
 		liveawayscore SMALLINT,
 		Stake money,
@@ -218,7 +219,7 @@ BEGIN
  -- bettype <> 4 - Handicap(1), Over/Under(3), 1st Handicap(7), 1st Over/Under(8) - FT.1X2(5)/ 1st 1X2(15)
  INSERT INTO #BetDelete
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
-		b.Username, b.creator, b.hdp1, b.hdp2, b.bettype, b.betteam, b.odds, b.oddstype, b.transdate, b.livehomescore, 
+		b.Username, b.creator, b.hdp1, b.hdp2, b.bettype, b.betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
 		INNER JOIN dbo.strSplit(@bettypes,'^') AS bt ON bt.val=b.bettype
@@ -251,7 +252,7 @@ BEGIN
  -- bettype = 4 -- Correct score
  INSERT INTO #BetDelete
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
@@ -279,7 +280,7 @@ BEGIN
 -- bettype = 6: Total Goal
  INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM dbo.bettrans AS b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
@@ -306,7 +307,7 @@ BEGIN
 -- bettype = 14: First Goal/Last Goal
  INSERT INTO #BetDelete  
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate,b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
@@ -331,7 +332,7 @@ BEGIN
 -- bettype = 16: HT/FT
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM dbo.bettrans AS b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam16,'^') AS bt ON bt.val=b.betteam
@@ -584,8 +585,8 @@ BEGIN
 	INNER JOIN custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
 	-- Send mail when void deposit
-	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore, cr.username creator,
+	SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag
 	FROM
 		#BetDelete b WITH (NOLOCK)
@@ -596,8 +597,8 @@ BEGIN
 	ORDER BY transid
 
 	-- Send mail when void 12EU tickets 
-		SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore, cr.username creator,
+		SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, '12EU' as site, b.status, b.SecAcceptFlag
 	FROM
 		#BetDelete b WITH (NOLOCK)
@@ -609,8 +610,8 @@ BEGIN
 
 	
 	-----Send mail when void any real tickets by IT
-	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore,
+	SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
 	FROM #BetDelete b WITH (NOLOCK)
@@ -621,8 +622,8 @@ BEGIN
 	ORDER BY transid    	   
 
 	-- Send mail when void UUS tickets
-		SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore,
+		SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
 	FROM #BetDelete b WITH (NOLOCK)
@@ -633,8 +634,8 @@ BEGIN
 	ORDER BY transid    
 
 		-----Send mail when void Foobet tickets
-	SELECT customer.username, customer.username2, b.odds, b.OddsType, b.transdate, b.bettype,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, livehomescore, liveawayscore,
+	SELECT customer.username,  b.odds, b.OddsType, b.transdate, b.bettype,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
 		b.status, b.SecAcceptFlag
 	FROM #BetDelete b WITH (NOLOCK)
@@ -690,6 +691,7 @@ BEGIN
 		END	
 	SET NOCOUNT OFF
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
