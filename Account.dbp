@@ -425,6 +425,8 @@ Begin DataProject = "Account"
             Script = "NAP_Rpt_TicketsListingDetail.sql"
             Begin Folder = "NumberGame"
                Script = "dbo.NAP_BettransDelSpecial_NumberGame.sql"
+               Script = "dbo.NAP_BettransRecoverBet_NumberGame.sql"
+               Script = "dbo.NAP_BettransSelRecoverBet_NumberGame.sql"
                Script = "dbo.NAP_BettransSelSpecialDel_NumberGame.sql"
             End
             Begin Folder = "Outright"
