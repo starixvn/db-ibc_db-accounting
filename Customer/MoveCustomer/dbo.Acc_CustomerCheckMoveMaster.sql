@@ -1,460 +1,589 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 10/29/2013 15:10:46 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveMaster    Script Date: 9/26/2013 4:55:25 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveMaster    Script Date: 9/26/2013 1:25:53 PM ******/
-
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMaster]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
-	@userid		INT,
-	@IP			VARCHAR(15)='',
+	@userid		INT,	
 	@ErrCode INT = 0 OUTPUT,
 	@ErrMsg NVARCHAR(200) = '' OUTPUT
 AS
 /*
-Created: 
-Task : Move a master to another super
-DB: DBTXN/bodb02
-Original:
-
-Revisions:
-    - 20090525@Daniel: add check contraints for Horse & Finance
-	- 20090528@Daniel: remove groupe, groupf when checking commission
-	- 20090917@Phuc: Write log to dblog	
-	- 20090923@Shifu: Remove check master synchronized casino constrain
-	- 20090924@Jamie:  Not allowing moving master see if the total tickets under master exceed 20000
-	- 20091008@Kiwi: Remove WriteLog_UserLog
-	- 20091102@Kiwi: Remove RaisError and change to check total tickets from db02 to db052
-	- 20091104@Jamie: Remove the input param @update out 
-	- 20091107@Daniel: use @temp table to cache custids for updating.
-	- 20091110@Daniel: Add check internal contraint
-	- 20091112@Jamie: Check DisableOutright before moving
-	- 200911224@Ken: Use loop to update in case number of tickets is huge
-	- 20091205@Kiwi: Move custsetting & custoverride to the separated tables (CustSetting3rd & CustOverride3rd).
-	- 20091222@Kiwi: Apply Execution Replication (use dbo.Acc_ExecRep_00)
-	- 20100114@Kiwi: Call Acc_ExecRep_00 two times to update coming bets that not replicated to subcriptions servers yet.
-	- 20100115@Jamie: Remove checking SyncCasino 
-	- 20100205@Jamie: Update the Casino status of all lines Master when Super disabled
-	- 20100208@Lewin: Change LogSP data format
-	- 20100512@Henry: Check DisableOpenTote before moving
-	- 20100911@Henry: Check Number Game + Bingo before moving
-	- 20101019@Henry: Record execution time
-	- 20110321@Johnson: Check Greyhound and Harness
-	- 20110413@Lukas: check closed/suspended
-	- 20110801@Johnson: - remove bettype dead ball over/under of number game
-						- add more bettype for nubmer game Warrior,  Next combo and Number Group
-	- 20111020@Tom:Add check P2P Game: Status, game setting, commission.
-	- 20120224@Johnson: - Separate checking and moving account
-						- Check live casino setting
-	- 20120821@Dan: add virtual soccer, remove FI
-	- 20121002@Johnson: check double comm losing status
-	- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
-	- 20130307@Elodie: Add Virtual HR
-	- 20131029@Lukas: apply execRep
-Param's Explanation:
-• @ErrCode:
-    = 0: Transaction recorded successfully.
-    > 0: Specific Error.
-    Max errorcode 136
-• @ErrMsg: Error description.
+	Created: Johnson
+	Date: 2012-04-03
+	Task : Check moving a master to another super
+	DB: DBAGE/bodb02
+	
+	Revisions:
+				- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
+				- 20120821@Dan: add virtual soccer, remove FI
+				- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+				- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
+				- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
+	Param's Explanation:
+	• @ErrCode:
+		= 0: Transaction recorded successfully.
+		> 0: Specific Error.
+		Max errorcode 210
+	• @ErrMsg: Error description.
 */
 
 BEGIN
-SET NOCOUNT ON
+	SET NOCOUNT ON
 
+	declare @startRun datetime
+	declare @endRun datetime
+	declare @duration int
+	set @startRun = getdate()
 
-declare @startRun datetime
-declare @endRun datetime
-declare @duration int
-set @startRun = getdate()
+	
+	DECLARE @srecommend				INT, 
+			@mrecommend				INT,
+			@srecommend_old			INT, 
+			@scurrency				TINYINT, 
+			@mcurrency				TINYINT,
+			@sdisable151_31			BIT,-- @sdisableHR -> @sdisable151_31 
+			@mDisable151_31			BIT,-- @mdisableHR -> @mDisable151_31 			
+			@sSyncCasino			BIT,
+			@mSyncCasino			BIT,
+			@sSyncBingo				BIT,
+			@mSyncBingo				BIT,
+			@sSyncLiveCasino		BIT,
+			@mSyncLiveCasino		BIT,
+			@sIsInternal			BIT,
+			@mIsInternal			BIT,
+			@sDisableOutright		BIT,
+			@mDisableOutright		BIT,
+			@sDisableCasino			BIT,
+			@mDisableCasino			BIT,
+			@sDisableLiveCasino		BIT,
+			@mDisableLiveCasino 	BIT,
+			@mDisable151_41			BIT,-- @mDisableOpenTote -> @mDisable151_41
+			@sDisable151_41			BIT,-- @sDisableOpenTote -> @sDisable151_41
+			@mDisable151_51			BIT,
+			@sDisable151_51			BIT,
+			@mDisable152_41			BIT,
+			@sDisable152_41			BIT,
+			@mDisable152_51			BIT,
+			@sDisable152_51			BIT,
+			@mDisable153_51			BIT,
+			@sDisable153_51			BIT,
+			@sDisableNumber			BIT,
+			@mDisableNumber			BIT,
+			@sDisableBingo			BIT,
+			@mDisableBingo			BIT,
+			@sClosed				BIT,	
+			@mClosed				BIT,
+			@sSuspended				BIT,	
+			@mSuspended				BIT,
+			--@sMaxTransferP2P		MONEY,
+			--@mMaxTransferP2P		MONEY,
+			--@sIsAutoResetP2P		BIT,
+			--@mIsAutoResetP2P		BIT,
+			--@sDisableP2P			BIT, 
+			--@mDisableP2P			BIT, 
+			--@sDisableFunP2P		BIT,
+			--@mDisableFunP2P		BIT,
+			@sDisableHRFixedOdds	BIT,
+			@mDisableHRFixedOdds	BIT,
+			@sGivenCredit			MONEY,
+			@mGivenCredit			MONEY,
+			@sUsedCredit			MONEY,
+			@sHideVirtualSports		BIT, 
+			@mHideVirtualSports		BIT,
+			@AdminUser				varchar (50)
 
---Check permission for account site: @phuc20080213
-EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherCust]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-IF @ErrCode <> 0
-	RETURN
+	SELECT	@srecommend			= custid, 
+			@scurrency			= currency, 
+			@sdisable151_31		= DisableHorseracing, 			
+			@sSyncCasino		= SyncCasino,
+			@sSyncBingo			= SyncBingo,
+			@sSyncLiveCasino	= SyncLiveCasino,
+			@sDisableOutright	= DisableOutright,
+			@sDisableCasino		= DisableCasino,
+			@sDisableLiveCasino = DisableLiveCasino,
+			@sDisable151_41		= DisableOpenTote ,
+			@sDisable151_51		= Disable151_AU,
+			@sDisable152_41		= Disable152_UK,
+			@sDisable152_51		= Disable152_AU,
+			@sDisable153_51		= Disable153_AU,
+			@sDisableBingo		= DisableBingo,
+			@sDisableNumber		= DisableNumber,
+			@sClosed			= closed,
+			@sSuspended			= reject,
+			--@sMaxTransferP2P	= MaxTransferP2P, 
+			--@sIsAutoResetP2P	= IsAutoResetP2P, 
+			--@sDisableP2P		= DisableP2P, 
+			--@sDisableFunP2P	= DisableFunP2P,
+			@sDisableHRFixedOdds= DisableHRFixedOdds,
+			@sGivenCredit		= credit,
+			@sHideVirtualSports = HideVirtualSports 		
+	FROM	custinfo WITH (NOLOCK) 
+	WHERE	username = @supername AND roleid = 4
 
-DECLARE @srecommend			INT, 
-		@mrecommend			INT,
-		@srecommend_old		INT,
-		@sDisableOutright	BIT,
-		@mDisableOutright	BIT,
-		@sDisableCasino		BIT,
-		@mDisableCasino		BIT,
-		@sDisableLiveCasino	BIT,
-		@mDisableLiveCasino BIT,
-		@sDoubleCommLosing	BIT,
-		@mDoubleCommLosing  BIT,
-		@sSuspended			BIT,	
-		@mSuspended			BIT,
-		@sMaxTransferP2P	MONEY,
-		@mMaxTransferP2P	MONEY,
-		@sIsAutoResetP2P	BIT,
-		@mIsAutoResetP2P	BIT,
-		@sDisableP2P		BIT, 
-		@mDisableP2P		BIT, 
-		@sDisableFunP2P		BIT,
-		@mDisableFunP2P		BIT,
-		@sDisableVirtualSports		BIT,
-		@mDisableVirtualSports		BIT			
+	SELECT	@mrecommend			= custid, 
+			@srecommend_old		= srecommend, 
+			@mcurrency			= currency, 
+			@mDisable151_31		= DisableHorseracing, 			
+			@mSyncCasino		= SyncCasino,
+			@mSyncLiveCasino	= SyncLiveCasino,
+			@mSyncBingo			= SyncBingo,
+			@mDisableOutright	= DisableOutright,
+			@mDisableCasino		= DisableCasino,
+			@mDisableLiveCasino = DisableLiveCasino,
+			@mDisable151_41		= DisableOpenTote,
+			@mDisable151_51		= Disable151_AU,
+			@mDisable152_41		= Disable152_UK,
+			@mDisable152_51		= Disable152_AU,
+			@mDisable153_51		= Disable153_AU,
+			@mDisableBingo		= DisableBingo,
+			@mDisableNumber		= DisableNumber,
+			@mSuspended			= reject,
+			@mClosed			= closed,
+			--@mMaxTransferP2P	= MaxTransferP2P, 
+			--@mIsAutoResetP2P	= IsAutoResetP2P, 
+			--@mDisableP2P		= DisableP2P, 
+			--@mDisableFunP2P	= DisableFunP2P,
+			@mDisableHRFixedOdds= DisableHRFixedOdds,
+			@mGivenCredit		= credit,
+			@mHideVirtualSports = HideVirtualSports
+	FROM	custinfo WITH (NOLOCK) 
+	WHERE	username = @mastername AND roleid = 3
 
-SELECT	@srecommend			= custid, 		
-		@sDisableOutright	= DisableOutright,
-		@sDisableCasino		= DisableCasino,
-		@sDisableLiveCasino = DisableLiveCasino,
-		@sDoubleCommLosing  = DoubleCommLosing,	
-		@sMaxTransferP2P	= MaxTransferP2P, 
-		@sIsAutoResetP2P	= IsAutoResetP2P, 
-		@sDisableP2P		= DisableP2P, 
-		@sDisableFunP2P		= DisableFunP2P,
-		@sDisableVirtualSports	= DisableVirtualSports
-FROM	custinfo WITH (NOLOCK) 
-WHERE	username = @supername AND roleid = 4
-
-SELECT	@mrecommend			= custid,
-		@srecommend_old		= srecommend, 		
-		@mDisableOutright	= DisableOutright,
-		@mDisableCasino		= DisableCasino,
-		@mDisableLiveCasino = DisableLiveCasino,
-		@mDoubleCommLosing	= DoubleCommLosing,
-		@mMaxTransferP2P	= MaxTransferP2P, 
-		@mIsAutoResetP2P	= IsAutoResetP2P, 
-		@mDisableP2P		= DisableP2P, 
-		@mDisableFunP2P		= DisableFunP2P,
-		@mDisableVirtualSports	= DisableVirtualSports 		
-FROM	custinfo WITH (NOLOCK) 
-WHERE	username = @mastername AND roleid = 3
-
-EXEC DBAGE.bodb02.dbo.Acc_CustomerCheckMoveMaster @supername = @supername, @mastername = @mastername,@userid = @userid,@ErrCode = @ErrCode OUTPUT,@ErrMsg = @ErrMsg OUTPUT
-
-IF @ErrCode > 0
-	RETURN
-
---Declare @temp table to contain customer info before update.
-DECLARE @CustInfo TABLE (CustID INT)
-
-INSERT INTO @CustInfo
-SELECT custid FROM custinfo (NOLOCK)
-WHERE mrecommend = @mrecommend
-
---P2PGAMESETTING table
-UPDATE G_P
-SET stakelevel1 = CASE WHEN s.stakelevel1 = 1 AND G_P.stakelevel1 = 1 THEN 1 ELSE 0 END,
-	stakelevel2 = CASE WHEN s.stakelevel2 = 1 AND G_P.stakelevel2 = 1 THEN 1 ELSE 0 END,
-	stakelevel3 = CASE WHEN s.stakelevel3 = 1 AND G_P.stakelevel3 = 1 THEN 1 ELSE 0 END,
-	stakelevel4 = CASE WHEN s.stakelevel4 = 1 AND G_P.stakelevel4 = 1 THEN 1 ELSE 0 END,
-	stakelevel5 = CASE WHEN s.stakelevel5 = 1 AND G_P.stakelevel5 = 1 THEN 1 ELSE 0 END
-FROM P2PGameSetting G_P WITH (ROWLOCK, UPDLOCK)
-	INNER JOIN 
-		( SELECT * FROM dbo.P2PGameSetting s WITH(NOLOCK) WHERE custid = @srecommend) s
-			ON G_P.BETTYPE = s.BETTYPE
-WHERE G_P.custid IN (SELECT custid FROM @CustInfo)
-
-IF @@ERROR <> 0 
-	BEGIN		
-		SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (P2PGameSetting).',
-					@ErrCode = 300
+	-- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+	SELECT @sUsedCredit = sum(credit) FROM custinfo WITH(NOLOCK) WHERE roleid = 3 AND srecommend = @srecommend
+	IF ISNULL(@sGivenCredit,0) - ISNULL(@sUsedCredit,0) < ISNULL(@mGivenCredit,0)
+	BEGIN
+		Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': New super credit is insufficient to move this master.',
+			@ErrCode = 100			 
+		return
+	END
+	
+	IF ISNULL(@srecommend, 0) = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super not found.',
+			@ErrCode = 101					 
 		RETURN
 	END
 
-IF EXISTS (
-	SELECT TOP 1 1 FROM 
-	(SELECT * FROM dbo.P2PGameSetting m WITH(NOLOCK) WHERE m.custid = @mrecommend)  m
-	INNER JOIN
-		(SELECT * FROM dbo.P2PGameSetting s WITH(NOLOCK) WHERE s.custid = @srecommend)   s
-				ON s.BETTYPE = m.BETTYPE
-	WHERE (m.stakelevel2 = 0 AND m.stakelevel3 = 0 AND m.stakelevel4 = 0 AND m.stakelevel5 = 0 )
-	AND (s.stakelevel2 = 1 OR s.stakelevel3 = 1 OR s.stakelevel4 = 1 OR s.stakelevel5 = 1 )
-)
-BEGIN
-	UPDATE G_P
-	SET stakelevel1 = CASE WHEN s.stakelevel1 = 1 THEN 1 ELSE 0 END,
-		stakelevel2 = CASE WHEN s.stakelevel2 = 1 THEN 1 ELSE 0 END,
-		stakelevel3 = CASE WHEN s.stakelevel2 = 0 AND s.stakelevel3 = 1 THEN 1 ELSE 0 END,
-		stakelevel4 = CASE WHEN s.stakelevel2 = 0 AND s.stakelevel3 = 0 AND s.stakelevel4 = 1 THEN 1 ELSE 0 END,
-		stakelevel5 = CASE WHEN s.stakelevel2 = 0 AND s.stakelevel3 = 0 AND s.stakelevel4 = 0 AND s.stakelevel5 = 1 THEN 1 ELSE 0 END
-	FROM P2PGameSetting G_P WITH (ROWLOCK, UPDLOCK)
-		INNER JOIN 
-			( SELECT * FROM dbo.P2PGameSetting s WITH(NOLOCK) WHERE custid = @srecommend) s
-				ON G_P.BETTYPE = s.BETTYPE
-	WHERE G_P.custid = @mrecommend AND G_P.stakelevel2 = 0 AND G_P.stakelevel3 = 0 AND G_P.stakelevel4 = 0 AND G_P.stakelevel5 = 0
-	
-	IF @@ERROR <> 0 
-	BEGIN		
-			SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (P2PGameSetting).',
-					@ErrCode = 301
+	IF ISNULL(@mrecommend, 0) = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master not found.',
+			@ErrCode = 102					 	
 		RETURN
+	END
+
+	IF ISNULL(@srecommend_old, 0) = @srecommend
+	BEGIN
+		SELECT @ErrMsg = 'The master '+ @mastername +' already belongs to super '+ @supername +'.',
+			@ErrCode = 103					 
+		RETURN
+	END
+
+	--Check an account disabled or not 
+	EXEC dbo.Acc_CustomerSelCheckEnable @username = @mastername, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT 
+	IF @ErrCode <>0		RETURN 
+
+	EXEC dbo.Acc_CustomerSelCheckEnable @username = @supername, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT 
+	IF @ErrCode <>0		RETURN 
+
+
+	IF @scurrency <> @mcurrency
+	BEGIN
+		SELECT @ErrMsg = 'Currency of super and master does not match.',
+			@ErrCode = 104					 
+		RETURN
+	END
+
+	--Check Internal status
+	SELECT @sIsInternal = IsInternal FROM CustSuper with (nolock) WHERE custid = @srecommend
+	SELECT @mIsInternal = IsInternal FROM CustMaster with (nolock) WHERE custid = @mrecommend
+	IF ISNULL(@sIsInternal, 0) = 1 AND ISNULL(@mIsInternal, 0) = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error occurs. Cannot move normal(betting) master to new internal super.',
+			@ErrCode = 105					 
+		RETURN
+	END
+	
+	--20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
+
+	SELECT @AdminUser = username FROM custinfo WITH (NOLOCK) WHERE custid = @userid
+	
+	
+	IF ((ISNULL(@sIsInternal, 0) = 1 AND ISNULL(@mIsInternal, 0) = 1 AND (@AdminUser NOT LIKE 'dba%') AND (@AdminUser NOT LIKE 'pgm%') AND (@AdminUser NOT IN ('vndbateam','vnQaTeam'))))
+	BEGIN 
+			SELECT @ErrMsg = N'This function is not allowed to perform the moving for financial accounts. Please contact IT@nexcel.vn for assistance. Thanks.', 
+					@ErrCode = 119
+			RETURN
+	END
+		
+	-- check is closed
+	IF @sClosed = 1
+	BEGIN
+		SELECT @ErrMsg = 'Error occurs. Cannot move to closed super.',
+			@ErrCode = 106					 
+		RETURN
+	END
+
+	--Check Horse status:
+	IF @sdisable151_31 = 1 AND @mDisable151_31 = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master enabled SA Racing but new super not enabled SA Racing.',
+			@ErrCode = 107					 
+		RETURN
+	END
+
+	--Check OpenTote
+	IF @sDisable151_41 = 1 AND @mDisable151_41 = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master enabled UK/IRish Racing but new super not enabled UK/IRish Racing.',
+			@ErrCode = 108				 
+		RETURN
+	END
+
+	--Check Horse Racing for AU Tote
+	IF @sDisable151_51 = 1 AND @mDisable151_51 = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master enabled Aust Racing but new super not enabled Aust Racing.',
+			@ErrCode = 109			 
+		RETURN
+	END
+
+	--Check Greyhound for UK Tote
+	IF @sDisable152_41 = 1 AND @mDisable152_41 = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master enabled UK Greyhound but new super not enabled UK Greyhound.',
+			@ErrCode = 110		 
+		RETURN
+	END
+
+	--Check Greyhound for AU Tote
+	IF @sDisable152_51 = 1 AND @mDisable152_51 = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Aust Greyhound but new super not enabled Aust Greyhound.',
+			@ErrCode = 111			 
+		RETURN
+	END
+
+	--Check Harness for AU Tote
+	IF @sDisable153_51 = 1 AND @mDisable153_51 = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master enabled Aust Harness but new super not enabled Aust Harness.',
+			@ErrCode = 112			 
+		RETURN
+	END
+
+	--Check Casino sync:
+	IF @sSyncCasino = 0 AND @mSyncCasino = 1
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is synchronized Casino but new super is not synchronized Casino.',
+			@ErrCode = 114					 
+		RETURN
+	END
+	/*
+	--Check Casino enable status
+	IF @sDisableCasino = 1 AND (@mDisableCasino = 0)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enable Casino but new super is not enable Casino.',
+			@ErrCode = 115
+		RETURN
+	END
+	*/
+	--Check Bingo sync
+	IF @sSyncBingo = 0 AND @mSyncBingo = 1
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is synchronized Bingo but new super is not synchronized Bingo',
+			@ErrCode = 115				 
+		RETURN
+	END
+
+	--Check Casino sync:
+	IF @sSyncLiveCasino = 0 AND @mSyncLiveCasino = 1
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is synchronized Casino but new super is not synchronized Casino.',
+			@ErrCode = 116					 
+		RETURN
+	END
+
+	--Check
+ Bingo & Number status:
+	IF @sdisableBingo = 1 AND @mdisableBingo = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Bingo but new super is not enabled Bingo.',
+			@ErrCode = 117					 
+		RETURN
+	END
+
+
+	IF @sdisableNumber = 1 AND @mdisableNumber = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Number Game but new super is not enabled Number Game.',
+			@ErrCode = 118
+		RETURN
+	END
+	
+	if @sdisableHRFixedOdds = 1 and @mdisableHRFixedOdds = 0
+	BEGIN
+		Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Horse Racing Fixed Odds but new super is not enabled Horse Racing Fixed Odds',
+			@ErrCode = 118
+		return
+	END
+	
+	--Check Virtual sport enable status
+	if @sHideVirtualSports = 1 and @mHideVirtualSports = 0
+	BEGIN
+		SELECT @ErrMsg = 'Master is offered Virtual Sports but new super is not offered Virtual Sports.',
+			@ErrCode = 123					 
+		return
 	END	
-END
 
-if (@sDisableP2P = 1 and @mDisableP2P = 0) 
-	OR (@sIsAutoResetP2P = 0 and @mIsAutoResetP2P = 1)
-	OR (@sDisableFunP2P = 1 and @mDisableFunP2P = 0)
-	OR (@sMaxTransferP2P < @mMaxTransferP2P)
-	OR (@sDoubleCommLosing = 0 AND @mDoubleCommLosing = 1)
-BEGIN
-	UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	SET		DisableP2P = CASE WHEN @sDisableP2P = 1 THEN 1 ELSE DisableP2P END,
-			DisableFunP2P = CASE WHEN @sDisableFunP2P  = 1 THEN 1 ELSE DisableFunP2P END,
-			IsAutoResetP2P = CASE WHEN @sIsAutoResetP2P = 0 THEN 0 ELSE IsAutoResetP2P END,
-			MaxTransferP2P = CASE WHEN @sMaxTransferP2P < MaxTransferP2P THEN @sMaxTransferP2P ELSE MaxTransferP2P END,
-			DoubleCommLosing = CASE WHEN @sDoubleCommLosing = 0 THEN 0 ELSE DoubleCommLosing END
-	WHERE	custid IN(SELECT CustID FROM @CustInfo)
-	IF @@ERROR <>0
+
+	--Check Horse,  Casino sync status:
+	--no need to check for Horse
+	/*IF EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 151)
+		AND NOT EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 151)
 	BEGIN
-		Select	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 302
-		RETURN 
-	END
-END
-
---P2PGroupComm table
-UPDATE G_C 
-SET sdiscount = s.sdiscount
-FROM P2PGroupComm G_C WITH (ROWLOCK, UPDLOCK)
-	INNER JOIN 
-		( SELECT * FROM dbo.P2PGROUPCOMM s WITH(NOLOCK) WHERE custid = @srecommend) s
-		ON G_C.GroupID = s.GroupID
-WHERE G_C.custid IN (SELECT custid FROM @CustInfo)
-
-IF @@ERROR <> 0 
-BEGIN	
-	SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (P2PGroupComm).',
-				@ErrCode = 303
-	RETURN
-END
-
---customer table
-UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend 
-WHERE custid IN (SELECT CustID FROM @CustInfo)
-
-IF @@ERROR <> 0 
-BEGIN
-    --ROLLBACK TRANSACTION MANUALLY
-	UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
-	WHERE mrecommend = @mrecommend
-	
-	SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (customer).',
-		@ErrCode = 304					 
-	RETURN
-END
-
---custinfo table
-
-UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend 
-WHERE custid IN (SELECT CustID FROM @CustInfo)
-
-IF @@ERROR <> 0 
-BEGIN
-     --ROLLBACK TRANSACTION MANUALLY
-	UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
-	WHERE mrecommend = @mrecommend
-	
-	UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
-	WHERE mrecommend = @mrecommend
-	
-	SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-		@ErrCode = 305				 
-	RETURN
-END
-
---- update suspended status
-IF @sSuspended = 1 AND @mSuspended = 0
-BEGIN
-	UPDATE Custinfo WITH (UPDLOCK, ROWLOCK)
-	SET	reject = 1 
-	WHERE	custid IN(SELECT CustID FROM @CustInfo)
-	IF @@ERROR <>0
-	BEGIN
-		SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 306
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super does not have Horse Racing setting.',
+			@ErrCode = 110					 
 		RETURN
-	END
-END
-
-IF @sDisableOutright = 1 AND (@sDisableOutright <> @mDisableOutright)
-BEGIN
-
-	UPDATE Custinfo WITH (UPDLOCK, ROWLOCK)
-	SET	DisableOutright = 1 
-	WHERE	custid IN(SELECT CustID FROM @CustInfo)
+	END*/
 	
-	IF @@ERROR <>0
+	--Check Number Game
+	IF EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 161)
+		AND NOT EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 161)
 	BEGIN
-		SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 307
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super does not have Number Game setting.',
+			@ErrCode = 201					 
 		RETURN
 	END
 
-END
+	--Check Casino Syn 
+	--Remove check Casino Sync
+	--if exists(select 1 from custinfo with (nolock) where custid = @mrecommend and SyncCasino = 1)
+	--BEGIN
+	--	Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is already Casino-synchronized.',
+	--		@ErrCode = 112					 
+	--	return
+	--END
 
-IF @sDisableCasino = 1 AND (@sDisableCasino <> @mDisableCasino)
-BEGIN
-
-	UPDATE Custinfo WITH (UPDLOCK, ROWLOCK)
-	SET	DisableCasino = 1 
-	WHERE	custid IN(SELECT CustID FROM @CustInfo)
-	IF @@ERROR <>0
+	IF EXISTS (
+			SELECT 1 
+			FROM custsetting AS scs WITH (NOLOCK)
+				INNER JOIN custsetting AS mcs WITH (NOLOCK) ON scs.custid = @srecommend AND mcs.custid = @mrecommend 
+															AND scs.sporttype=mcs.sporttype AND scs.bettype=mcs.bettype 
+			WHERE 
+				(scs.bettype IN (1,2,3,7,8) AND ((scs.groupa<mcs.groupa) OR (scs.groupb<mcs.groupb) 
+				OR (scs.groupc<mcs.groupc) OR (scs.groupd<mcs.groupd)))
+				OR (scs.bettype NOT IN (1,2,3,7,8) AND scs.sdiscount<mcs.adiscount)
+		)
 	BEGIN
-		SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 308
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Super''s commission for Sportbook is less than master''s commission.',
+			@ErrCode = 202					 
 		RETURN
 	END
 
-END
-
-IF @sDisableLiveCasino = 1 AND @sDisableLiveCasino <> @mDisableLiveCasino
-BEGIN
-	UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
-	SET DisableLiveCasino = 1
-	WHERE custid IN (SELECT custid FROM @CustInfo)
-	
-	IF @@ERROR <>0 
+	--check commission for 3rd party
+	IF EXISTS (
+			SELECT 1 
+			FROM custsetting3rd AS scs WITH (NOLOCK)
+				INNER JOIN custsetting3rd AS mcs WITH (NOLOCK) ON scs.custid = @srecommend AND mcs.custid = @mrecommend 
+															AND scs.sporttype=mcs.sporttype AND scs.bettype=mcs.bettype 
+			WHERE scs.sdiscount<mcs.adiscount AND scs.sporttype <> 201
+		)
 	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 309
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Super''s commission is less than master''s commission.',
+			@ErrCode = 203				 
 		RETURN
 	END
-END
 
--- VS
-IF @sDisableVirtualSports = 1 AND (@sDisableVirtualSports <> @mDisableVirtualSports)
-BEGIN
-	UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	SET		DisableVirtualSports = 1 
-	WHERE	custid IN(SELECT CustID FROM @CustInfo)
-	IF @@ERROR <>0
+	--Check commission for live casino 
+	IF EXISTS(
+			SELECT 1 
+			FROM CustSettingGame AS scs WITH(NOLOCK)
+				INNER JOIN CustSettingGame mcs WITH(NOLOCK) ON mcs.custid = @mrecommend AND scs.sporttype = mcs.sporttype AND scs.bettype = mcs.bettype
+			WHERE scs.custid = @srecommend AND scs.sporttype = 162 AND scs.bettype = 1101
+				 AND scs.sdiscount < mcs.adiscount
+	)
 	BEGIN
-		Select	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 310
-		RETURN 
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Live Casino is less than master''s commission.',
+				@ErrCode = 204
+		RETURN	
 	END
+
+	--Check Position Taking
+		--n4<=s3+m3<=s4		if i3=0
+		--m3<=s4 and u3<=s4	if i3=1
+		--u3+m3>=n4 if i3=1
+		--m3<=m4
+
+	IF EXISTS (
+			SELECT 1 FROM 
+				custsetting AS scs WITH (NOLOCK)
+				INNER JOIN custsetting AS mcs WITH (NOLOCK) ON scs.custid = @srecommend AND mcs.custid = @mrecommend
+																AND scs.sporttype=mcs.sporttype AND scs.bettype=mcs.bettype
+				INNER JOIN custoverride AS sco WITH (NOLOCK) ON scs.custid = sco.custid AND scs.sporttype = sco.sporttype AND scs.bettype = sco.bettype
+			WHERE	
+			--n4<=s3+m3<=s4	if i3=0
+			(
+				((mcs.isautopositiontaking=0) AND ((mcs.spositiontaking + mcs.mpositiontaking < sco.minpositiontaking) OR (mcs.spositiontaking + mcs.mpositiontaking > scs.spositiontaking)))
+				OR
+				((mcs.isautolivepositiontaking=0) AND (mcs.sporttype =1) AND (mcs.bettype IN (1,3,7,8)) AND ((mcs.slivepositiontaking + mcs.mlivepositiontaking < sco.minlivepositiontaking) OR (mcs.slivepositiontaking + mcs.mlivepositiontaking > scs.slivepositiontaking)))
+			)
+			--m3<=s4 and u3<=s4	if i3=1
+			--u3+m3>=n4 if i3=1
+			OR
+			(
+				((mcs.isautopositiontaking=1) AND ((mcs.mpositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking + mcs.mpositiontaking < sco.minpositiontaking)))
+				OR
+				((mcs.isautolivepositiontaking=1) AND (mcs.sporttype =1) AND (mcs.bettype IN (1,3,7,8)) AND ((mcs.mlivepositiontaking > scs.slivepositiontaking) OR (mcs.autolivepositiontaking > scs.slivepositiontaking) OR (mcs.autolivepositiontaking + mcs.mlivepositiontaking < sco.minlivepositiontaking)))
+			)	
+			--m3<=m4
+			OR
+			(
+				(mcs.mpositiontaking > scs.mpositiontaking)
+				OR
+				((mcs.sporttype =1) AND (mcs.bettype IN (1,3,7,8)) AND (mcs.mlivepositiontaking > scs.mlivepositiontaking))
+			)	
+	)
+	BEGIN
+		
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super position taking.',
+			@ErrCode = 205				 
+		RETURN
+	END
+
+	--Check Position Taking for 3rd party
+		--n4<=s3+m3<=s4		if i3=0
+		--m3<=s4 and u3<=s4	if i3=1
+		--u3+m3>=n4 if i3=1
+		--m3<=m4
+
+	IF EXISTS (
+			SELECT 1 FROM 
+				custsetting3rd AS scs WITH (NOLOCK)
+				INNER JOIN custsetting3rd AS mcs WITH (NOLOCK) ON scs.custid = @srecommend AND mcs.custid = @mrecommend
+																AND scs.sporttype=mcs.sporttype AND scs.bettype=mcs.bettype
+				INNER JOIN custoverride3rd AS sco WITH (NOLOCK) ON scs.custid = sco.custid AND scs.sporttype = sco.sporttype AND scs.bettype = sco.bettype
+			WHERE
+			--n4<=s3+m3<=s4	if i3=0
+			(
+				(scs.sporttype <> 201 AND (mcs.isautopositiontaking=0) AND ((mcs.spositiontaking + mcs.mpositiontaking < sco.minpositiontaking) OR (mcs.spositiontaking + mcs.mpositiontaking > scs.spositiontaking)))
+				OR
+				((mcs.isautolivepositiontaking=0) AND (mcs.sporttype =161) AND (mcs.bettype IN (85,86,87,89,90)) AND ((mcs.slivepositiontaking + mcs.mlivepositiontaking < sco.minlivepositiontaking) OR (mcs.slivepositiontaking + mcs.mlivepositiontaking > scs.slivepositiontaking)))
+			)
+			--m3<=s4 and u3<=s4	if i3=1
+			--u3+m3>=n4 if i3=1
+			OR
+			(
+				(scs.sporttype <> 201 AND (mcs.isautopositiontaking=1) AND ((mcs.mpositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking > scs.spositiontaking) OR (mcs.autopositiontaking + mcs.mpositiontaking < sco.minpositiontaking)))
+				OR
+				((mcs.isautolivepositiontaking=1) AND (mcs.sporttype =161) AND (mcs.bettype IN (85,86,87,89,90)) AND ((mcs.mlivepositiontaking > scs.slivepositiontaking) OR (mcs.autolivepositiontaking > scs.slivepositiontaking) OR (mcs.autolivepositiontaking + mcs.mlivepositiontaking < sco.minlivepositiontaking)))
+			)	
+			--m3<=m4
+			OR
+			(
+				(mcs.mpositiontaking > scs.mpositiontaking AND scs.sporttype <> 201)
+				OR
+				((mcs.sporttype =161) AND (mcs.bettype IN (85,86,87,89,90)) AND (mcs.mlivepositiontaking > scs.mlivepositiontaking))
+			)		
+				
+	)
+	BEGIN
+		
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super position taking.',
+			@ErrCode = 206				 
+		RETURN
+	END
+
+	--Check Position Taking for Live Casino
+		--n4<=s3+m3<=s4		if i3=0
+		--m3<=s4 and u3<=s4	if i3=1
+		--u3+m3>=n4 if i3=1
+	IF @mSyncLiveCasino = 1 AND @sSyncLiveCasino = 1 AND EXISTS (
+		SELECT 1
+		FROM CustSettingGame scs WITH(NOLOCK) 
+			INNER JOIN CustSettingGame mcs WITH(NOLOCK) ON mcs.custid = @mrecommend AND mcs.sporttype = scs.sporttype AND mcs.bettype = scs.bettype 
+			INNER JOIN CustOverrideGame sco WITH(NOLOCK) ON sco.custid = @srecommend AND sco.sporttype = scs.sporttype AND sco.bettype = scs.bettype
+		WHERE scs.custid = @srecommend AND scs.sporttype = 162 AND scs.bettype = 1101	
+		AND (
+		--n4<=s3+m3<=s4	if i3=0
+		(mcs.isautopositiontaking = 0 AND ((mcs.mpositiontaking + mcs.spositiontaking < sco.minpositiontaking) OR (mcs.mpositiontaking + mcs.spositiontaking > scs.spositiontaking)))
+		OR --m3<=s4 and u3<=s4	if i3=1
+		(mcs.isautopositiontaking = 1 AND (mcs.mpositiontaking > scs.spositiontaking OR mcs.autopositiontaking > scs.spositiontaking OR mcs.mpositiontaking + mcs.autopositiontaking < sco.minpositiontaking))	 
+		)	
+	)	
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super position taking.',
+			@ErrCode = 207				 
+		RETURN
+	END
+
+	--Check Position Taking	
+		--all a2<=a4
+		--all a1<=a4
+	IF EXISTS (
+			SELECT 1 FROM 
+				custsetting AS scs WITH (NOLOCK)
+				INNER JOIN custsetting AS acs WITH (NOLOCK) ON scs.custid = @srecommend  
+																AND scs.sporttype=acs.sporttype AND scs.bettype=acs.bettype
+				INNER JOIN customer AS c WITH (NOLOCK) ON c.custid = acs.custid AND c.roleid IN (1,2) 
+														AND c.mrecommend = @mrecommend --get member and agent			
+			WHERE
+			--all a<=a4
+			(
+				(acs.apositiontaking > scs.apositiontaking)
+				OR
+				((acs.sporttype =1) AND (acs.bettype IN (1,3,7,8)) AND (acs.alivepositiontaking > scs.alivepositiontaking))
+			)		
+	)
+	BEGIN
+		
+		SELECT @ErrMsg
+ = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+			@ErrCode = 208				 
+		RETURN
+	END
+
+	--Check Position Taking	for 3rd party
+		--all a2<=a4
+		--all a1<=a4
+	IF EXISTS (
+			SELECT 1 FROM 
+				custsetting3rd AS scs WITH (NOLOCK)
+				INNER JOIN custsetting3rd AS acs WITH (NOLOCK) ON scs.custid = @srecommend  
+																AND scs.sporttype=acs.sporttype AND scs.bettype=acs.bettype
+				INNER JOIN customer AS c WITH (NOLOCK) ON c.custid = acs.custid AND c.roleid IN (1,2) 
+														AND c.mrecommend = @mrecommend --get member and agent			
+			WHERE 
+			(	(acs.apositiontaking > scs.apositiontaking AND scs.sporttype <> 201)
+				OR
+				((acs.sporttype =161) AND (acs.bettype IN (85,86,87,89,90)) AND (acs.alivepositiontaking > scs.alivepositiontaking))
+			)
+	)
+	BEGIN
+		
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+			@ErrCode = 209					 
+		RETURN
+	END
+
+	----Check P2P :Game Comm
+	--IF exists(
+	--	SELECT TOP 1 1
+	--	FROM dbo.P2PGROUPCOMM s WITH(NOLOCK)
+	--		INNER JOIN dbo.P2PGROUPCOMM m WITH(NOLOCK)
+	--			ON m.GroupID = s.GroupID
+	--		WHERE  s.custid = @srecommend AND m.custid = @mrecommend
+	--				AND (s.sdiscount < m.adiscount )
+	--)
+	--BEGIN
+	--	Select @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': P2P''s commission of master is greater than P2P''s commission of new super.',
+	--		@ErrCode = 210
+	--	return
+	--END
+
 END
 
 
-/*
-IF @sDisableBingo = 1 AND (@sDisableBingo <> @mDisableBingo)
-BEGIN
-
-	UPDATE Custinfo WITH (UPDLOCK, ROWLOCK)
-	SET	DisableBingo = 1 
-	WHERE	custid IN(SELECT CustID FROM @CustInfo)
-	IF @@ERROR <>0
-		SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 132
-	RETURN
-
-END
-
-IF @sDisableNumber = 1 AND (@sDisableNumber <> @mDisableNumber)
-BEGIN
-
-	UPDATE Custinfo WITH (UPDLOCK, ROWLOCK)
-	SET	DisableNumber = 1 
-	WHERE	custid IN(SELECT CustID FROM @CustInfo)
-	IF @@ERROR <>0
-		SELECT	@ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-				@ErrCode = 133
-	RETURN
-
-END
-*/
-
---Apply ExeReplication
--- call Acc_ExecRep_00 two times to update coming bets that not replicated to subcriptions servers yet.
-EXEC dbo.Acc_ExecRep_00 
-	@custid = 0,
-	@recommend = 0,
-	@recommend_old = 0,
-	@mrecommend = @mrecommend,
-	@mrecommend_old = 0,
-	@srecommend = @srecommend,
-	@srecommend_old = @srecommend_old,
-	@roleid = 3,
-	@ErrCode = @ErrCode OUTPUT,
-	@ErrMsg = @ErrMsg OUTPUT
-IF @ErrCode <>0 RETURN
-
-EXEC dbo.Acc_ExecRep_00 
-	@custid = 0,
-	@recommend = 0,
-	@recommend_old = 0,
-	@mrecommend = @mrecommend,
-	@mrecommend_old = 0,
-	@srecommend = @srecommend,
-	@srecommend_old = @srecommend_old,
-	@roleid = 3,
-	@ErrCode = @ErrCode OUTPUT,
-	@ErrMsg = @ErrMsg OUTPUT
-IF @ErrCode <>0 RETURN
-
---Check & update n4<=s1+m1+a1<=l4
----EXEC dbo.Acc_CustomerUpdMaster_MinMaxPositiontaking @mrecommend = @mrecommend, @srecommend = @srecommend
-EXEC dbo.Acc_CustSetting_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3
-EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'number'
---EXEC dbo.Acc_CustomerUpdMasterHR_MinMaxPositiontaking @mrecommend = @mrecommend, @srecommend = @srecommend
-EXEC dbo.[Acc_CustSetting3rd_04] @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'horse'
-
-EXEC dbo.Acc_CustomerUpdMasterLiveCS_MaxPositiontaking @mrecommend = @mrecommend, @srecommend = @srecommend
-EXEC dbo.Acc_CustomerUpdMasterVS_MinMaxPositiontaking @sporttype = 180, @bettype = 1201, @mrecommend = @mrecommend, @srecommend = @srecommend
-EXEC dbo.Acc_CustomerUpdMasterVS_MinMaxPositiontaking @sporttype = 181, @bettype = 1231, @mrecommend = @mrecommend, @srecommend = @srecommend
-EXEC dbo.Acc_CustomerUpdMasterVS_MinMaxPositiontaking @sporttype = 186, @bettype = 1220, @mrecommend = @mrecommend, @srecommend = @srecommend
-
---when separate code we must update db07.bodb02.dbo.custsetting 
-update custsetting with (ROWLOCK, UPDLOCK) set sdiscount=adiscount 
-where custid in (select custid from custinfo with (NOLOCK) where mrecommend = @mrecommend and roleid=1) and isnull(sdiscount, 0) < adiscount
-
-update custsetting3rd with (ROWLOCK, UPDLOCK) set sdiscount=adiscount 
-where custid in (select custid from custinfo with (NOLOCK) where mrecommend = @mrecommend and roleid=1) and isnull(sdiscount, 0) < adiscount
-
-UPDATE CustSettingGame WITH(ROWLOCK, UPDLOCK) SET sdiscount = adiscount
-WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE mrecommend = @mrecommend AND roleid =1) AND ISNULL(sdiscount,0) < adiscount
-
-DECLARE @LogSPData VARCHAR(8000)
-
-SELECT  @LogSPData = '<Acc_CustomerUpdMoveMaster  MasterName="' + @mastername + '" OldSuperId="'
-        + CONVERT(VARCHAR(20), @srecommend_old) + '" NewSuperName="'
-        + @supername + '" NewSuperId="' + CONVERT(VARCHAR(20), @srecommend) + '" '+ '
-        UserId="' + COALESCE(CAST(@userid AS VARCHAR(20)), SPACE(1)) + '" IP="' + @IP + '" />'
-
-
-set @endRun = getdate()
-set @duration  = datediff (millisecond,@startRun,@endRun)
-
-BEGIN TRY
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-		@UserID = @UserID,
-		@CustID = @mrecommend,
-		@ActionID = 607,
-		@TrackingValue = @LogSPData,
-		@duration = @duration
-END TRY
-BEGIN CATCH
-	SELECT  @LogSPData = '<Acc_CustomerUpdMoveMaster  MasterName="' + @mastername 
-		+ '" OldSuperId="' + CONVERT(VARCHAR(20), @srecommend_old) 
-		+ '" NewSuperName="' + @supername 
-		+ '" NewSuperId="' + CONVERT(VARCHAR(20), @srecommend) 
-		+ '" UserId="' + COALESCE(CAST(@userid AS VARCHAR(20)), SPACE(1)) 
-		+ '" IP="' + @IP + 
-		+ '" ErrCode="' + coalesce(cast(ERROR_NUMBER() as varchar(50)),space(1)) + 
-		+ '" ErrMsg="' + coalesce(ERROR_MESSAGE(),space(1)) + '" />'
-        
-	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-		@UserID = @UserID,
-		@CustID = @mrecommend,
-		@ActionID = 607,
-		@TrackingValue = @LogSPData,
-		@duration = @duration
-END CATCH
-END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [vnteam] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMaster] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam] AS [dbo]

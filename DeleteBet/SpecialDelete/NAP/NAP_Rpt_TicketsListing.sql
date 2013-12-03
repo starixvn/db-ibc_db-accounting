@@ -20,7 +20,8 @@
 	Original: Acc_Rpt_TicketListing
 	
 	Revisions:	
-		- 20130910: Rename parameter @SAFilter to @SecondAcceptFlag
+		- 20130910@Kathy: Rename parameter @SAFilter to @SecondAcceptFlag
+		- 20131129@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -70,14 +71,14 @@ SELECT	@matchcode = matchcode, @homeid = homeid, @awayid = awayid, @eventdate = 
 FROM	match  WITH (NOLOCK)
 WHERE	matchid = @MatchId
  
-IF ISNULL(@sporttype,0) = 0 OR (@sporttype > 99 and @sporttype <> 161 and @sporttype <> 162 and @sporttype not between 180 and 186)
+IF ISNULL(@sporttype,0) = 0 OR (@sporttype > 99 and @sporttype <> 154 and @sporttype <> 161 and @sporttype <> 162 and @sporttype not between 180 and 186)
 BEGIN 
 	SET @ErrCode = 1
 	SET @ErrMsg ='Invalid MatchID.'   
 	RETURN
 END
 ELSE
-IF @sporttype > 99 AND @Type = 0  
+IF @sporttype > 99 and @sporttype <> 154 AND @Type = 0  
 BEGIN
 	SET @ErrCode = 2  
 	SET @ErrMsg ='This MatchID is not sportsbook.'  
@@ -254,6 +255,8 @@ GROUP BY OrderNo, LicenseeName, bettype, LiveIndicator
 ORDER BY OrderNo, LicenseeName, bettype, LiveIndicator
 
 DROP TABLE #TmpBettrans
+
+
 
 
 GO
