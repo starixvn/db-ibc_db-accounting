@@ -14,6 +14,7 @@ Revision:
 	- 20130620@Johnson: copy data to rptWinlost2
 	- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
 	- 20130917@Johnson: correct real turnover of racing formula
+	- 20131203@Daniel: exclude UUS tickets to avoid zero data inserted
 */
 	
 	DECLARE @CommSetting TABLE
@@ -101,6 +102,7 @@ Revision:
 			AND winlostdate = @winlostdate
 			AND statusID NOT IN (101,102,103,121)--('VOID','REJECT','DONE','REFUND')
 			AND ruben = 1
+			AND currency <> 20
 		GROUP BY
 			winlostdate, b.matchid, bettype, liveindicator, status,
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
@@ -146,6 +148,7 @@ Revision:
 			AND winlostdate = @winlostdate
 			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
 			AND ruben = 1
+			AND currency <> 20
 		GROUP BY
 			winlostdate, matchid, bettype, liveindicator, status,
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
@@ -261,6 +264,7 @@ Revision:
 				AND winlostdate = @winlostdate
 				AND statusID NOT IN (101,102,103,121)--('VOID','REJECT','DONE','REFUND')
 				AND ruben = 1
+				AND currency <> 20
 			GROUP BY
 				winlostdate, b.matchid, bettype, liveindicator, status,
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
@@ -306,6 +310,7 @@ Revision:
 				AND winlostdate = @winlostdate
 				AND statusID NOT IN (101, 102,103,121) ----('VOID','REJECT','DONE','REFUND')
 				AND ruben = 1
+				AND currency <> 20
 			GROUP BY
 				winlostdate, matchid, bettype, liveindicator, status,
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end

@@ -47,7 +47,7 @@ Revisions:
 	- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 	- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
 	- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
-	
+	- 20131126@Kathy: Add Virtual Greyhounds/Motor Racing (182, 184) [Redmine:#7234]
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -593,6 +593,8 @@ DECLARE
 	--VS
 	@v180apositiontaking_1201 SMALLMONEY,
 	@v181apositiontaking_1231 SMALLMONEY,
+	@v182apositiontaking_1231 SMALLMONEY,
+	@v184apositiontaking_1231 SMALLMONEY,
 	@v186apositiontaking_1220 SMALLMONEY
 	
 
@@ -969,6 +971,60 @@ EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
 	@sporttype	= 181,
 	@bettype = 1231 ,
 	@a1 = @v181apositiontaking_1231,
+	
+	@UserID	= @UserID,	
+	@ErrCode = @ErrCode_1 OUTPUT,
+	@ErrMsg	 = @ErrMsg OUTPUT	
+
+IF CHARINDEX('-101', @ErrCode_1) = 0
+BEGIN
+	--ROLLBACK TRANSACTION MANUALLY
+	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	if @ReturnErrCode = 0
+		RaisError (@ErrMsg, 16, 1)	
+	return
+END
+
+-- Virtual Greyhounds 
+EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
+	@custid  = @custid,
+	@sporttype	= 182,
+	@bettype = 1231 ,
+	@a1 = @v182apositiontaking_1231,
+	
+	@UserID	= @UserID,	
+	@ErrCode = @ErrCode_1 OUTPUT,
+	@ErrMsg	 = @ErrMsg OUTPUT	
+
+IF CHARINDEX('-101', @ErrCode_1) = 0
+BEGIN
+	--ROLLBACK TRANSACTION MANUALLY
+	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	if @ReturnErrCode = 0
+		RaisError (@ErrMsg, 16, 1)	
+	return
+END
+
+-- Virtual Motor Racing
+EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
+	@custid  = @custid,
+	@sporttype	= 184,
+	@bettype = 1231 ,
+	@a1 = @v184apositiontaking_1231,
 	
 	@UserID	= @UserID,	
 	@ErrCode = @ErrCode_1 OUTPUT,
