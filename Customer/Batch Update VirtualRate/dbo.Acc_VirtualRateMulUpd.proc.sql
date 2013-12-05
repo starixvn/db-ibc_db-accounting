@@ -39,7 +39,7 @@ BEGIN
     DECLARE @tmpStatus TABLE
         (
           custid INT PRIMARY KEY ,
-          username VARCHAR(20) ,
+          username VARCHAR(50) ,
           rate SMALLMONEY
         )
 
