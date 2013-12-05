@@ -1,4 +1,4 @@
-﻿ALTER PROC [dbo].[Acc_VirtualRateMulSelCheck]	
+﻿ALTER PROCEDURE [dbo].[Acc_VirtualRateMulSelCheck]	
 	@UserID INT,
 	@ErrCode INT = 0 OUTPUT,
 	@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -14,6 +14,7 @@ AS
 		- 20100112@Simon: improve performance by using @tmpExistUser table to check exist in the system.
 		- 20130224@Lukas: move sp to new database bodb_ACC
 						& change linked-server from db03 to DBPOLICY
+		- 20131203@Elodie: Expand size of string	
 */
 BEGIN
 SET NOCOUNT ON
@@ -24,18 +25,18 @@ SET NOCOUNT ON
 		RETURN
 	
 	DECLARE @tmpFail TABLE (
-		UserName	NVARCHAR(20),
+		UserName	NVARCHAR(50),
 		Reason		NVARCHAR(80)
 	)
 
 	-- The table contents username exist in custinfo
 	DECLARE @tmpExistUser TABLE (
-		UserName	NVARCHAR(20) PRIMARY KEY
+		UserName	NVARCHAR(50) PRIMARY KEY
 	)
 	INSERT INTO @tmpExistUser
 	SELECT 	v.UserName
 	FROM	dbo.Acc_CustVirtualRate v WITH (NOLOCK) 
-			INNER JOIN custinfo c WITH (NOLOCK) ON c.username=v.username
+			INNER JOIN bodb02.dbo.custinfo c WITH (NOLOCK) ON c.username=v.username
 	GROUP BY v.UserName
 
 
@@ -68,8 +69,5 @@ SET NOCOUNT ON
 
 END
 
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_VirtualRateMulSelCheck] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_VirtualRateMulSelCheck] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_VirtualRateMulSelCheck] TO [vnteam] AS [dbo]
