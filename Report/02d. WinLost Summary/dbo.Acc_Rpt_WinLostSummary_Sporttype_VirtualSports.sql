@@ -11,6 +11,7 @@ AS
 		
 		Revisions:
 			- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
+			- 20131204@Johnson: get @movebetday base on match14
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON 
@@ -22,17 +23,17 @@ SET NOCOUNT ON
 		virtualLineTotal money, virtualTurnover money		
 	)
 	
-	Declare @mineventdate datetime,
+	Declare @movebetdate datetime,
 			@f_date datetime,
 			@t_date datetime
 	
-	SELECT @mineventdate = min(eventdate) from bodb02.dbo.match with(nolock)
+	SELECT @movebetdate = max(eventdate) from bodb02.dbo.match14 with(nolock)
 		
 	
-	IF @todate >= @mineventdate
+	IF @todate > @movebetdate
 	BEGIN
-		IF @fromdate < @mineventdate
-			SELECT @f_date = @mineventdate
+		IF @fromdate <= @movebetdate
+			SELECT @f_date = @movebetdate + 1
 		ELSE
 			SELECT @f_date = @fromdate
 			
@@ -63,12 +64,12 @@ SET NOCOUNT ON
 		
 	END
 	
-	IF @fromdate <@mineventdate
+	IF @fromdate <= @movebetdate
 	BEGIN
-		IF @todate < @mineventdate
+		IF @todate <= @movebetdate
 			SELECT @t_date = @todate
 		ELSE
-			SELECT @t_date = @mineventdate - 1
+			SELECT @t_date = @movebetdate
 			
 		SELECT @f_date = @fromdate
 	
