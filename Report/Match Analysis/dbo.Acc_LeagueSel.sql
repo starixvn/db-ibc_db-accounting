@@ -1,4 +1,4 @@
-ALTER PROCEDURE dbo.[Acc_LeagueSel]
+ALTER PROCEDURE [dbo].[Acc_LeagueSel]
 	@eventdate datetime,
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME	
@@ -14,6 +14,7 @@ AS
 		- 20120914@Sophia: Revise condition of sporttype: support sportbook, number games, live casino
 		- 20120920@Sophia: Only support sportbook
 		- 20120215@Elodie: Change linked server DB06 to DBARC
+		- 20131204@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 	Parameters Explanations:			
 */
 SET NOCOUNT ON
@@ -25,7 +26,7 @@ BEGIN
 	INNER JOIN dbo.league l WITH (NOLOCK) 
 			ON l.leagueid = m.leagueid	
 	WHERE eventdate = @eventdate
-		and m.sporttype <=99  --support sportbook
+		and (m.sporttype <=99 OR m.sporttype = 154)  --support sportbook
 		and m.matchcode not like '%hedge%'	--exclude hedge match
 		and m.eventstatus = 'completed'
 		and m.betstatus <> 'Refund'
@@ -40,7 +41,7 @@ BEGIN
 	INNER JOIN dbo.league l WITH (NOLOCK) 
 			ON l.leagueid = m.leagueid 
 	WHERE eventdate = @eventdate
-		and m.sporttype <=99  --support sportbook
+		and (m.sporttype <=99 OR m.sporttype = 154)  --support sportbook
 		and m.matchcode not like '%hedge%'	--exclude hedge match
 		and m.eventstatus = 'completed'
 		and m.betstatus <> 'Refund'
@@ -55,13 +56,14 @@ BEGIN
 	INNER JOIN dbo.league l WITH (NOLOCK) 
 			ON l.leagueid = m.leagueid
 	WHERE eventdate = @eventdate
-		and m.sporttype <=99  --support sportbook
+		and (m.sporttype <=99 OR m.sporttype = 154)  --support sportbook
 		and m.matchcode not like '%hedge%'	--exclude hedge match
 		and m.eventstatus = 'completed'
 		and m.betstatus <> 'Refund'
 		and l.isTest = 0
 	ORDER BY m.sporttype, m.leagueid
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_LeagueSel] TO [bodbAdminNet]

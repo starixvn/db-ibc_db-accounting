@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
 	@fromdate	DATETIME,
 	@todate		DATETIME	
 AS
@@ -10,6 +10,7 @@ AS
 		
 		Revisions:
 			- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
+			- 20131206@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -154,7 +155,28 @@ SET NOCOUNT ON
 		WHERE winlostdate BETWEEN @fromdate AND @todate
 			AND bettype BETWEEN 1201 AND 1299
 		GROUP BY sporttype
+
+	UNION ALL
+		-- HR Fixed Odds
+		SELECT sporttype
+			,bettype
+			,liveindicator
+			,ibc
+			,'' status		
+			,ISNULL(SUM(realWinlost),0) as realWinlost
+			,ISNULL(SUM(realPosition),0) as realPosition
+			,ISNULL(SUM(realcommission),0) as realCommission
+			,ISNULL(SUM(realLineTotal),0) as realLineTotal
+			,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+			,ISNULL(SUM(realTurnover),0) as realTurnover
+			,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+		FROM rptWinlost WITH(NOLOCK)
+		WHERE winlostdate BETWEEN @fromdate AND @todate
+			AND sporttype = 154
+		GROUP BY sporttype,bettype, liveindicator ,ibc
+				
 	ORDER BY 1,3 DESC,2,4
+	
 	
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
