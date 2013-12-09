@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompleted]
+﻿ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompleted]
 	@FromDate datetime,
 	@sporttype tinyint = 0
 AS
@@ -23,6 +21,7 @@ AS
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130325@Lukas: get goalrecord & isExistFGLG
 		- 20131027@Lukas: add filter winlostdate to reduce data return
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 */  
 BEGIN 
 	SET NOCOUNT ON  
@@ -37,8 +36,8 @@ BEGIN
 	FROM  
 		 DBPRO.BODB02.dbo.match m with (nolock)  
 		 INNER JOIN DBPRO.BODB02.dbo.match_remark mr with (nolock) ON m.matchid = mr.matchid  
-		 LEFT OUTER JOIN dbo.custinfo ht with (nolock) ON mr.ConfirmHT = ht.custid  
-		 LEFT OUTER JOIN dbo.custinfo ft with (nolock) ON mr.ConfirmFT = ft.custid  
+		 LEFT OUTER JOIN CustDB.dbo.custinfo ht with (nolock) ON mr.ConfirmHT = ht.custid  
+		 LEFT OUTER JOIN CustDB.dbo.custinfo ft with (nolock) ON mr.ConfirmFT = ft.custid  
 	WHERE m.eventdate = @FromDate  
 		 AND m.sporttype = case when @sporttype = 0 then sporttype else @sporttype end  
 		 AND m.eventstatus <> N'Completed'  
@@ -87,6 +86,7 @@ BEGIN
   
 	ORDER BY  m.eventstatus, m.matchcode
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO

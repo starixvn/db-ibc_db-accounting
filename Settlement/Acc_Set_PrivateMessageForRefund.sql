@@ -15,7 +15,7 @@ AS
 	
 	Revisions:
 		- 20130121@Elodie: Change link server DB07 to DBMSG
-		
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 */
 
 SET NOCOUNT ON
@@ -47,7 +47,7 @@ SELECT DISTINCT srecommend, 4 FROM #TempData
 UPDATE t
 SET username = c.username
 FROM @TempMember t
-	inner join Custinfo c with(nolock) on t.custid = c.custid
+	inner join CustDB.dbo.Custinfo c with(nolock) on t.custid = c.custid
 
 DECLARE @custID int, @MessageId int, @username varchar(30), @roleid tinyint, @transidList varchar(2000)
 
@@ -106,9 +106,8 @@ BEGIN
 		@BetTransId = @transidList
 
 	FETCH NEXT FROM player_cursor into @custID, @username, @roleid
-END	
-
+END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Set_PrivateMessageForRefund] TO [bodbadminnet]
+GRANT EXECUTE ON [dbo].[Acc_Set_PrivateMessageForRefund] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_PrivateMessageForRefund] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_PrivateMessageForRefund] TO [vnteam] AS [dbo]

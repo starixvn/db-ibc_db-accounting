@@ -23,6 +23,7 @@ AS
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130325@Lukas: get goalrecord & isExistFGLG
 		- 20131017@Elodie: Adjust the display time for HT Over Only [Redmine:#6725]
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 */  
 BEGIN
 	SET NOCOUNT ON  
@@ -47,7 +48,7 @@ BEGIN
 				m.betstatus,  
 				m.IsNeutral,  
 				C.betcount,  
-				CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) END suspenderHT,  
+				CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) END suspenderHT,  
 				m.IsHTCal,   
 				m.calculate,  
 				m.isPending,
@@ -118,7 +119,7 @@ BEGIN
 			m.betstatus,  
 			m.IsNeutral,        
 			C.betcount,  
-			CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) end suspenderHT,  
+			CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) end suspenderHT,  
 			m.IsHTCal,   
 			m.calculate,  
 			m.isPending,
@@ -177,7 +178,6 @@ BEGIN
 		ORDER BY eventstatus, matchcode  
 	END
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
