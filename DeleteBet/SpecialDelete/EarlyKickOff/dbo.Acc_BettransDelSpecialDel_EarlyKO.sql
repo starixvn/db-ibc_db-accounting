@@ -65,6 +65,7 @@ Revisions:
 	20130128@Elodie: Change link server DB03 to DBPOLICY
 					 Write more log on DBTXN server in case of DBLOG server failure
 	20130526@Johnson: Add param @reason to log the reason delete bets
+	20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 	
 Param's Explanation: Special bet delete option
 	@@betteam4: bettype =4: Correct Score; bettype =30: 1st Correct Score
@@ -484,7 +485,7 @@ SET NOCOUNT ON
 						SELECT Custid FROM customer (nolock) WHERE UserName like 'VwinSuper%' AND ROLEID=4 --Vwin
 						*/
 					)	AND INF.ROLEID = 1
-						AND BD.betfrom IN ('D', 'M', 'E', 'L') 
+						--AND BD.betfrom IN ('D', 'M', 'E', 'L') 
 			UNION ALL
 				SELECT INF.Custid, INF.username 
 				FROM custinfo INF WITH(nolock) 
@@ -522,7 +523,7 @@ SET NOCOUNT ON
 						SELECT Custid FROM customer (nolock) WHERE UserName like 'VwinSuper%' AND ROLEID=4 --Vwin
 						*/
 					)	AND INF.ROLEID = 1
-						AND BMD.betfrom IN ('D', 'M', 'E', 'L') 
+						--AND BMD.betfrom IN ('D', 'M', 'E', 'L') 
 		--END
 
 	----INSERT 12EU CUSTOMER
@@ -591,8 +592,7 @@ SET NOCOUNT ON
 	IF @DelOption = 0 or (@DelOption=2 AND @transids='')
 	BEGIN
 		DELETE FROM #BetDelete
-		WHERE #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
-			AND CustID IN (SELECT CustID FROM @DepositCust)
+		WHERE CustID IN (SELECT CustID FROM @DepositCust)
 			--AND custid not in (SELECT custid FROM #SpecialCust)
 			AND custid not in (SELECT custid FROM @12EUCust) --12EU
 			--        AND custid not in (SELECT custid FROM @Mansion88Cust) --MANSION88
@@ -600,8 +600,7 @@ SET NOCOUNT ON
 			AND mrecommend not in (SELECT custid FROM @MasterMHC)		
 		
 		DELETE FROM #BetmDelete
-		WHERE betfrom IN ('D', 'M', 'E', 'L')
-			AND CustID IN (SELECT CustID FROM @DepositCust)
+		WHERE CustID IN (SELECT CustID FROM @DepositCust)
 			--AND custid not in (SELECT custid FROM #SpecialCust)
 			AND custid not in (SELECT custid FROM @12EUCust) --12EU
 			--        AND custid not in (SELECT custid FROM @Mansion88Cust) --MANSION88
@@ -613,7 +612,7 @@ SET NOCOUNT ON
 		DELETE FROM #BetDelete
 		WHERE
 			transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids, ','))
-			AND #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
+			--AND #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
 			AND CustID IN (SELECT CustID FROM @DepositCust)
 			------AND custid not in (SELECT custid FROM #SpecialCust)
 			AND (custid not in (SELECT custid FROM @12EUCust) --12EU
@@ -624,7 +623,7 @@ SET NOCOUNT ON
 		DELETE FROM #BetmDelete
 		WHERE
 			transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids, ','))
-			AND betfrom IN ('D', 'M', 'E', 'L')
+			--AND betfrom IN ('D', 'M', 'E', 'L')
 			AND CustID IN (SELECT CustID FROM @DepositCust)
 			------AND custid not in (SELECT custid FROM #SpecialCust)
 			AND (custid not in (SELECT custid FROM @12EUCust) --12EU
@@ -938,9 +937,8 @@ SET NOCOUNT ON
 		SELECT 1 
 		FROM #BetDelete AS d WITH(NOLOCK) 
 			INNER JOIN dbo.bettrans b ON D.transid = b.transid
-		WHERE ( b.betfrom  IN ('D', 'M', 'E', 'L') 
-				AND d.custid in (SELECT custid FROM @DepositCust)
-			  )	OR d.custid in (SELECT custid FROM @12EUCust)  
+		WHERE  d.custid in (SELECT custid FROM @DepositCust)
+			OR d.custid in (SELECT custid FROM @12EUCust)  
 --			or d.custid in (SELECT custid FROM @12EUCust)  
 --			or d.custid in (SELECT custid FROM @DepositCust)
 			or d.custid IN (SELECT custid FROM @UUSCust)
@@ -949,9 +947,8 @@ SET NOCOUNT ON
 		SELECT 1 
 		FROM #BetmDelete AS d WITH(NOLOCK) 
 			INNER JOIN dbo.bettransm AS b WITH(NOLOCK) ON D.transid = b.transid
-		WHERE ( b.betfrom  IN ('D', 'M', 'E', 'L') 
-				AND d.custid in (SELECT custid FROM @DepositCust)
-			  )	OR d.custid in (SELECT custid FROM @12EUCust)  			
+		WHERE  d.custid in (SELECT custid FROM @DepositCust)
+			OR d.custid in (SELECT custid FROM @12EUCust)  			
 --			or d.custid in (SELECT custid FROM @12EUCust)  
 --			or d.custid in (SELECT custid FROM @DepositCust)
 			or d.custid IN (SELECT custid FROM @UUSCust)
@@ -1021,10 +1018,8 @@ SET NOCOUNT ON
 			WHERE matchid=@matchid
 				AND b.transdate>=@KickOffDate				
 				AND b.liveindicator=0		
-				AND (
-						(b.betfrom  IN ('D', 'M', 'E', 'L')
-						 AND c.custid IN (SELECT custid FROM @DepositCust)
-						)OR  c.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete
+				AND (c.custid IN (SELECT custid FROM @DepositCust)
+						OR  c.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete
 					)
 					--or  c.custid IN (SELECT custid FROM #SpecialCust WHERE username = '12EU') --Email 12EU if delete
 --					or  c.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete
@@ -1064,10 +1059,8 @@ SET NOCOUNT ON
 			WHERE matchid=@matchid
 				AND b.transdate>=@KickOffDate				
 				AND b.liveindicator=0		
-				AND (  
-						( b.betfrom  IN ('D', 'M', 'E', 'L')
-						  AND customer.custid IN (SELECT custid FROM @DepositCust)
-						) OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete
+				AND (  customer.custid IN (SELECT custid FROM @DepositCust)
+						OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete
 					)
 					--or  customer.custid IN (SELECT custid FROM #SpecialCust WHERE username = '12EU') --Email 12EU if delete
 --					or customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete

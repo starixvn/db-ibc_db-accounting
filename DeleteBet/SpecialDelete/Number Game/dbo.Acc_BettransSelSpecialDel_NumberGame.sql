@@ -18,6 +18,7 @@ History:
 	- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype,f_GetChoice for odds, Oddstype, betteam  
 	- 20120716@Sophia: Add condition 'L' in betfrom to check Deposit  
 	- 20121107@Elodie: Allow to void settled tickets   
+	- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 Explanation's Param:  
   
 */  
@@ -72,7 +73,8 @@ BEGIN
 		b.winlost - b.actual_stake as winlost,  
 		b.playercomm as comm,   
 		b.currency,   
-		CASE WHEN betfrom IN ('D', 'M', 'E', 'L') THEN 1 ELSE 0 END AS IsDeposit,  
+		--CASE WHEN betfrom IN ('D', 'M', 'E', 'L') THEN 1 ELSE 0 END AS IsDeposit,  
+		CASE WHEN b.srecommend IN (SELECT custid from Dep_CustSuper with(NOLOCK)) then 1 ELSE 0 END as IsDeposit,
 		ag.site,  
 		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'  
 			ELSE b.status END as status,  
@@ -138,7 +140,7 @@ BEGIN
 	WHERE mrecommend in (105181, 118473, 105183)  
 
 	DROP TABLE #SpecialDeleteBets  
-END  
+END
   
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel_NumberGame] TO [vnteam]

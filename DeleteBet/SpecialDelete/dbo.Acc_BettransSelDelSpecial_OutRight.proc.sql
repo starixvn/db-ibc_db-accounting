@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE Acc_BettransSelDelSpecial_Outright
+﻿ALTER PROC [dbo].[Acc_BettransSelDelSpecial_Outright]
 	@OutrightID int = 0,
 	@FromRefNo bigint,
 	@ToRefNo bigint,
@@ -23,6 +23,7 @@ SET NOCOUNT ON
 		- 20100917@Robert: include betfrom='e' into deposit group
 		- 20101001@Henry: Using f_GetBetDaqCustomer to query betdaq customer
 		- 20120717@Sophia: Add condition 'L' in betfrom to check Deposit
+		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 	
 	Explanation's Param:
 
@@ -40,7 +41,8 @@ select
 	cr.username as creator,
 	stake,
 	b.currency, 
-	case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+	--case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+	CASE WHEN b.srecommend IN (SELECT custid from Dep_CustSuper with(NOLOCK)) then 1 ELSE 0 END as IsDeposit,
 	ag.site,
 	b.status,
 	b.mrecommend
@@ -96,8 +98,6 @@ mrecommend  in (105181, 118473, 105183)
 
 
 DROP TABLE #OutrightDeleteBets
-
-
 
 
 GO

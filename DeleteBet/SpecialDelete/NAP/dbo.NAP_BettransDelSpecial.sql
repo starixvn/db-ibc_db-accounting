@@ -372,17 +372,14 @@ BEGIN
 		INNER JOIN #BetDelete b ON b.custid = c.custid
 		WHERE c.srecommend IN (SELECT custid FROM Dep_CustSuper WITH(NOLOCK))
 		AND c.roleid = 1
-		AND b.betfrom IN ('D', 'M', 'E', 'L')
-		--AND @UserID NOT IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1) -- not in IT group
-
+		
 	 ---- get 12EU tickets voided 
 	 INSERT INTO @12EUCust (custid)
 		SELECT INF.custid 
 		FROM customer INF WITH (nolock)
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 		WHERE INF.UserName = '12EU'
-		--AND @UserID NOT IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
-
+		
 	 ---- get UUS tickets 
 	 INSERT INTO @UUSCust(custid)
 		SELECT INF.custid 
@@ -600,7 +597,7 @@ BEGIN
 		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
 		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-	WHERE ( b.betfrom  IN ('D', 'M', 'E', 'L') AND customer.custid IN (SELECT custid FROM @DepositCust)) -- Email deposit if voided		
+	WHERE customer.custid IN (SELECT custid FROM @DepositCust) -- Email deposit if voided		
 	ORDER BY transid
 
 	-- Send mail when void 12EU tickets 
@@ -698,6 +695,7 @@ BEGIN
 		END	
 	SET NOCOUNT OFF
 END
+
 
 
 
