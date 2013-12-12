@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Task_ResetWinning_3rdParty_Add]
+﻿ALTER PROCEDURE [dbo].[Task_ResetWinning_3rdParty_Add]
 (
 	@winlostdate DATETIME,
 	@custid INT,
@@ -13,6 +12,9 @@ AS
 	Created: 20120729@Lukas
 	Task: insert reset winning transaction into bettrans
 	DB: DBTRANS.BODB02
+	
+	Revision:
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Exchange by link database)
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -35,8 +37,8 @@ BEGIN
 
 	Select @Curr = c.Currency, @actualrate = e.actualrate, @currName = e.currency,@username = c.username,  
 		   @Recommend = c.Recommend, @MRecommend = c.MRecommend, @SRecommend = c.SRecommend , @roleID = roleid
-	from Custinfo c with (NOLOCK) 
-		INNER JOIN Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+	FROM CustDB.dbo.custinfo c with (NOLOCK) 
+		INNER JOIN CustDB.dbo.exchange e with (NOLOCK) on c.currency = e.exchangeid 
 	where c.CustID = @custid  
 	
 	----Insert transaction
@@ -53,5 +55,7 @@ BEGIN
 	        
 END
 
+
+
 GO
-GRANT VIEW DEFINITION ON [Task_ResetWinning_3rdParty_Add] TO vnteam
+GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_3rdParty_Add] TO [vnteam] AS [dbo]

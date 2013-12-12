@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Task_ResetWinning_3rdParty]    Script Date: 08/01/2012 06:47:34 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Task_ResetWinning_3rdParty]
+﻿ALTER PROCEDURE [dbo].[Task_ResetWinning_3rdParty]
 (
 	@winlostdate DATETIME
 )
@@ -227,7 +219,5 @@ BEGIN
 
      
 END
-
-
 GO
-GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_3rdParty] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_3rdParty] TO [vnteam] AS [dbo]

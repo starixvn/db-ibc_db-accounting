@@ -1,5 +1,12 @@
 ﻿ALTER PROCEDURE [dbo].[Task_DailySummary_Job]
 AS
+
+	CHECKPOINT
+
+	--DBCC DROPCLEANBUFFERS
+	--EXEC sp_updatestats
+	--DBCC FREEPROCCACHE
+
 	Declare @WeekDay tinyint
 	SET @WeekDay = DATEPART(weekday, CURRENT_TIMESTAMP)
 
@@ -11,13 +18,13 @@ AS
 
 	-- Server Time : Monday (2)
 	-- Local Time  : Tuesday's morning
-	--IF @WeekDay = 2
-	--BEGIN
-		
-	--END
+	IF @WeekDay = 2
+	BEGIN
+		EXEC dbo.Task_DailySummary @Todaym4 -- Thursday
+	END
 	-- Server Time : Tuesday (3)
 	-- Local Time  : Wednesday's morning
-	IF @WeekDay = 3
+	ELSE IF @WeekDay = 3
 	BEGIN
 		EXEC dbo.Task_DailySummary @Todaym4 -- Friday
 		EXEC dbo.Task_DailySummary @Todaym3 -- Saturday
@@ -35,7 +42,7 @@ AS
 	BEGIN
 		EXEC dbo.Task_DailySummary @Todaym3 -- Tuesday
 		EXEC dbo.Task_DailySummary @Todaym2 -- Wednesday
-		EXEC dbo.Task_DailySummary @Todaym1 -- Thursday
+		--EXEC dbo.Task_DailySummary @Todaym1 -- Thursday
 	END
 
 	ELSE
@@ -43,5 +50,6 @@ AS
 		RETURN -1
 	END
 
+
 GO
-GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary_Job] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary_Job] TO [vnteam] AS [dbo]

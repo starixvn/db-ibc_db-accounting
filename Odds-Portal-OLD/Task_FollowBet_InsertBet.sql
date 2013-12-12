@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Task_FollowBet_InsertBet]
+﻿ALTER PROCEDURE [dbo].[Task_FollowBet_InsertBet]
 AS
 /*
 	Create:  
@@ -9,6 +8,7 @@ AS
 	Revisions:
 		- 20120529@Sophia: . Update credit/debit balance
 						   . Check @@Error to rollback
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Exchange by link database)						   
 */
 SET NOCOUNT ON
 
@@ -47,11 +47,11 @@ FROM dbo.Task_FollowBet_Details
 			@Username = username, @recommend = IsNull(recommend,0), @mrecommend = IsNull(mrecommend,0), @srecommend = IsNull(srecommend,0),
 			@currency = currency, @VirtualMultiplier = IsNull(VirtualMultiplier, 1),
 			@autosuspend = IsNull(autosuspend, 0)
-		FROM dbo.custinfo (nolock)
+		FROM CustDB.dbo.custinfo (nolock)
 		WHERE custid = @custid AND roleid = 1
 
 		SELECT @betactualrate = actualrate, @virtualrate = @VirtualMultiplier * actualrate, @CurrencyName = currency
-		FROM dbo.exchange (nolock)
+		FROM CustDB.dbo.exchange (nolock)
 		WHERE exchangeid = @currency
 
 	--=====================================
@@ -142,3 +142,7 @@ FROM dbo.Task_FollowBet_Details
 DELETE FROM dbo.Task_FollowBet_Details
 WHERE transid = @follow_transid
 
+
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[Task_FollowBet_InsertBet] TO [vnteam] AS [dbo]

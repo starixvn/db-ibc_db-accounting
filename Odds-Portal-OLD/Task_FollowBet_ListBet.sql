@@ -1,6 +1,10 @@
-﻿ ALTER PROCEDURE [dbo].[Task_FollowBet_ListBet]
+﻿ALTER PROCEDURE [dbo].[Task_FollowBet_ListBet]
 
 AS
+/*
+	Revision:
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustSetting by link database)
+*/
 Declare @start datetime, @df int
 Declare @LastTransID bigint, @maxTransID bigint, @CNT int
 Declare @bettype smallint, @sporttype tinyint
@@ -28,7 +32,7 @@ SELECT
 FROM
 	dbo.bettrans b with (nolock)
 	INNER JOIN dbo.match m with (nolock) ON b.matchid = m.matchid
-	INNER JOIN dbo.cust_FollowBet c with (nolock) ON b.custid = c.custid
+	INNER JOIN CustDB.dbo.cust_FollowBet c with (nolock) ON b.custid = c.custid
 WHERE
 	transid > @LastTransID AND transid <= @maxTransID
 	AND sporttype = 1
@@ -71,7 +75,7 @@ SET apos = CASE liveindicator WHEN 0 THEN apositiontaking ELSE alivepositiontaki
 	adis = adiscount,
 	sdis = sdiscount
 FROM dbo.Task_FollowBet_Details D 
-	INNER JOIN dbo.custsetting cs with (nolock) ON D.custid = cs.custid
+	INNER JOIN CustDB.dbo.custsetting cs with (nolock) ON D.custid = cs.custid
 	AND D.csbettype = cs.bettype AND D.cssporttype = cs.sporttype
 	
 SELECT @df = DATEDIFF(millisecond, @start, CURRENT_TIMESTAMP)
@@ -80,4 +84,6 @@ PRINT '** from ' + CAST(@lastTransID as varchar(30)) + ' until ' + CAST(@maxTran
 	+ CAST(@df as varchar(10)) + ' ms) **'
 
 
- 
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[Task_FollowBet_ListBet] TO [vnteam] AS [dbo]

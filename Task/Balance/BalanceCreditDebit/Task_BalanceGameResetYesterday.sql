@@ -3,11 +3,11 @@ AS
 /*
 		Created: Dan	
 		Date: 20121009
-		Task: reset yesterday balance for live casino
+		Task: reset yesterday balance for love casino
 		DB: DBTRANS.BODB02
 		
 		Revisions:
-			
+			- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 		Parameters Explanation:	
 */
 SET NOCOUNT ON	
@@ -15,7 +15,7 @@ CREATE TABLE #WeeklyResetCustomer(custid INT)
 
 INSERT INTO #WeeklyResetCustomer(custid)
 SELECT custid  
-FROM custinfo WITH (NOLOCK)
+FROM CustDB.dbo.custinfo WITH (NOLOCK)
 WHERE roleid=1 AND MaxWinLiveCasino>0 AND isAutoResetLiveCasino = 0
 
 DECLARE @today smalldatetime
@@ -45,5 +45,7 @@ WHERE NOT EXISTS(SELECT 1
 				FROM dbo.BalanceDebitGame bal WITH (NOLOCK)
 				WHERE bal.custid=cust.custid AND bal.winlostdate=@today)
 
+
+
 GO
-GRANT VIEW DEFINITION ON [dbo].[Task_BalanceGameResetYesterday] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Task_BalanceGameResetYesterday] TO [vnteam] AS [dbo]

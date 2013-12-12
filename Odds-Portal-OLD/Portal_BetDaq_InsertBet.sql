@@ -11,11 +11,12 @@ AS
 /*
 	Create: Joe
 	Task: Use for portal servers
-	DB: DBTRANS.BODB02
+	DB: DBTXN/BODB02
 
 	Revisions:
 		- 20120529@Sophia: . Update credit/debit balance
 						   . Check @@Error to rollback
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, CustSetting, Exchange by link database)					
 */
 
 SET NOCOUNT ON
@@ -87,11 +88,11 @@ BEGIN
 			@Username = username, @recommend = IsNull(recommend,0), @mrecommend = IsNull(mrecommend,0), @srecommend = IsNull(srecommend,0),
 			@currency = currency, @VirtualMultiplier = IsNull(VirtualMultiplier, 1),
 			@autosuspend = IsNull(autosuspend, 0)
-		FROM dbo.custinfo (nolock)
+		FROM CustDB.dbo.custinfo (nolock)
 		WHERE custid = @custid AND roleid = 1
 
 		SELECT @betactualrate = actualrate, @virtualrate = @VirtualMultiplier * actualrate, @CurrencyName = currency
-		FROM dbo.exchange (nolock)
+		FROM CustDB.dbo.exchange (nolock)
 		WHERE exchangeid = @currency
 
 	--=====================================
@@ -134,7 +135,7 @@ BEGIN
 			else @CustSettingBettype end
 
 		SELECT
-			@apos = IsNull(CASE @sporttype WHEN 1 THEN case @liveindicator when 1 then CASE @bettype WHEN 2 THEN apositiontaking ELSE alivepositiontaking END else apositiontaking end ELSE apositiontaking END,0),			@mpos = IsNull(CASE @sporttype WHEN 1 THEN case @liveindicator when 1 then CASE @bettype WHEN 2 THEN mpositiontaking ELSE mlivepositiontaking END else mpositiontaking end ELSE mpositiontaking END,0),
+			@apos = IsNull(CASE @sporttype WHEN 1 THEN case @liveindicator when 1 then CASE @bettype WHEN 2 THEN apositiontaking ELSE alivepositiontaking END else apositiontaking end ELSE apositiontaking END,0),			@mpos = IsNull(CASE @sporttype WHEN 1 THEN case @liveindicator when 1 then CASE @bettype WHEN 2 THEN mpositiontaking ELSE mlivepositiontaking END else mpositiontaking end ELSE mpositiontaking END,0),
 			@spos = CASE
 					WHEN @srecommend <= 100 THEN 0
 					ELSE IsNull(CASE @sporttype WHEN 1 THEN case @liveindicator when 1 then CASE @bettype WHEN 2 THEN spositiontaking ELSE slivepositiontaking END else spositiontaking end ELSE spositiontaking END,0)
@@ -143,7 +144,7 @@ BEGIN
 			@adiscount = IsNull(discount,0),
 			@mdiscount = IsNull(adiscount,0),
 			@sdiscount = IsNull(CASE WHEN @srecommend <= 100 THEN adiscount ELSE sdiscount END,0)
-		FROM dbo.custsetting (nolock)
+		FROM CustDB.dbo.custsetting (nolock)
 		WHERE custid =@custid 
 			AND bettype=@CustSettingBettype		
 			AND sporttype=@CustSettingSporttype 
@@ -167,7 +168,7 @@ BEGIN
 		INSERT bettrans   
 		(   
 		custid, oddsid, oddsspread, hdp1, hdp2,odds, stake, actual_stake, 
-		[status], statusID, livehomescore, liveawayscore, liveindicator, betfrom, betteam, creator, refno, 
+		[status], statusID, livehomescore, liveawayscore, liveindicator, betfrom, betteam, creator, refno, comstatus,
 		tpositiontaking, apositiontaking, mpositiontaking, spositiontaking,  
 		playerdiscount, discount, adiscount, sdiscount, actualrate, virtualrate,  
 		matchid, recommend, mrecommend, srecommend, scomm, swinlost,  
@@ -175,7 +176,7 @@ BEGIN
 		VALUES   
 		(  
 		@custid ,@oddsid, 0, @hdp1, @hdp2, @odds, @betstake, @betactual_stake, 
-		N'running', 0, 0, 0, @liveindicator, 'i', @betteam,  @custid, 100000000000 ,  
+		N'running', 0, 0, 0, @liveindicator, 'i', @betteam,  @custid, 100000000000 , '0',
 		@tpos, @apos, @mpos, @spos, @playerdiscount, @adiscount, @mdiscount, @sdiscount, @betactualrate, @virtualrate,  
 		@matchid, @recommend, @mrecommend, @srecommend, 0, 0,  
 		@bettype,@currency,   
@@ -216,7 +217,7 @@ BEGIN
 				@odds = @odds,
 				@bettype = @bettype,
 				@betteam = @betteam,
-				@betfrom = 'i',
+				--@betfrom = 'i',
 				@stake_to_company = @stake_to_company,
 				@currency = @currency,
 				@autosuspend = @autosuspend,
@@ -236,7 +237,7 @@ BEGIN
 				@odds = @odds,
 				@bettype = @bettype,
 				@betteam = @betteam,
-				@betfrom = 'i',
+				--@betfrom = 'i',
 				@stake_to_company = @stake_to_company,
 				@currency = @currency,
 				@autosuspend = @autosuspend,
@@ -251,7 +252,7 @@ BEGIN
 				@odds = @odds,
 				@bettype = @bettype,
 				@betteam = @betteam,
-				@betfrom = 'i',
+				--@betfrom = 'i',
 				@stake_to_company = @stake_to_company,
 				@currency = @currency,
 				@autosuspend = @autosuspend,
@@ -271,9 +272,5 @@ END
 
 EXEC dbo.logfile @custid, @logdata
 
-
-
 GO
-GRANT EXECUTE ON [dbo].[Portal_BetDaq_InsertBet] TO [Portal]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Portal_BetDaq_InsertBet] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Portal_BetDaq_InsertBet] TO [vnteam] AS [dbo]

@@ -8,6 +8,7 @@ AS
 	DB: DBTXN/BODB02
 	
 	Revision: 
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo by link database)
 */
 BEGIN 
 	SET NOCOUNT ON 
@@ -25,7 +26,7 @@ BEGIN
 	)
 
 	SELECT	c.custid INTO #tmpRecommend
-	FROM	custinfo c WITH(NOLOCK)
+	FROM	CustDB.dbo.custinfo c WITH(NOLOCK)
 			INNER JOIN DBLIC.bodb_licensee.dbo.LicenseeCust lc WITH(NOLOCK) ON c.custid = lc.custid
 	WHERE	srecommend IN (SELECT custid FROM f_depsuper_1(@site))
 			AND c.roleid = 2
@@ -37,7 +38,7 @@ BEGIN
 	WHERE	StatusID = 0
 			AND CustID IN (	
 				SELECT	CustID
-				FROM	custInfo WITH (NOLOCK)
+				FROM	CustDB.dbo.custInfo WITH (NOLOCK)
 				WHERE	Recommend IN (SELECT custid FROM #tmpRecommend WITH (NOLOCK))			
 			)
 
@@ -48,7 +49,7 @@ BEGIN
 	FROM	balanceCredit c WITH(NOLOCK)
 			INNER JOIN balanceDebit d WITH(NOLOCK) ON c.custid = d.custid
 	WHERE	c.custid IN (	SELECT	custid 
-							FROM	custinfo WITH(NOLOCK) 
+							FROM	CustDB.dbo.custinfo WITH(NOLOCK) 
 							WHERE	recommend IN (SELECT custid FROM #tmpRecommend WITH (NOLOCK))
 						)
 			AND c.balance - d.balance < 0  -- negative balance
