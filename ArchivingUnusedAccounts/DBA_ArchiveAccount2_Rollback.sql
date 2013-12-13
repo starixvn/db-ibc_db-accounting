@@ -29,6 +29,7 @@ AS
 		- 20121015@Dan: add fields for LCS-WinLimit (isAutoResetLiveCasino,MaxWinLiveCasino)
 		- 20121204@Scott: add fields for virtual tennis (maxpermatch186)
 		- 20130121@Johnson: change linked server DB05 to DBARCCUST
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Insert BalanceCredit, BalanceDebit by DBA_ArchiveAccount2_Rollback_Balance SP)
 	NOTE: 
 	--Review the SP again once executing as maybe new fields were added to customer or custinfo table
 	--Generate and Run custsetting data manually, by using Local 204 Db or ask the backup DB from Joe
@@ -137,16 +138,7 @@ SELECT	@Step = 1000
 --Copy back the customer and custinfo
 WHILE (@minCustID + @Step*@index <= @maxCustID )
 BEGIN
-	INSERT INTO BalanceCredit
-			SELECT custid, 0
-			FROM #Member WITH (NOLOCK) 
-			WHERE custid between @minCustID + @Step*@index and (@minCustID - 1) + @Step*(@index + 1)	
-
-
-	INSERT INTO BalanceDebit
-			SELECT custid, 0
-			FROM #Member WITH (NOLOCK) 
-			WHERE custid between @minCustID + @Step*@index and (@minCustID - 1) + @Step*(@index + 1)	
+	EXEC bodb02.dbo.DBA_ArchiveAccount2_Rollback_Balance @minCustID = @minCustID, @Step = @Step, @index = @index, @AgentID = @AgentID, @roleid = @roleid
 
 	SET IDENTITY_INSERT customer ON
 		insert into customer (
@@ -443,8 +435,9 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 	@TrackingValue = @LogSPData	,
 	@duration = @duration
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[DBA_ArchiveAccount2_Rollback] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[DBA_ArchiveAccount2_Rollback] TO [bodbadminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[DBA_ArchiveAccount2_Rollback] TO [vnTeam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[DBA_ArchiveAccount2_Rollback] TO [vnteam] AS [dbo]

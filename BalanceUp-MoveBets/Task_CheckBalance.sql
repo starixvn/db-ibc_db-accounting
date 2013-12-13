@@ -174,3 +174,6 @@ BEGIN
 		c.currency = 20 AND bp.remark = ''
 */
 END
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[Task_CheckBalance] TO [vnteam] AS [dbo]

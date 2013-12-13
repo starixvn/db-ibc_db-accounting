@@ -28,6 +28,7 @@ Revisions:
 	- 20120927@Sophia: Add column comstatus when insert into bettrans tabble
 	- 20130313@Viet: add netTurnover
 	- 20130520@Victor: add VSOutright
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo, Customer, Exchange by link database)
  */
 
 SET NOCOUNT ON
@@ -243,7 +244,7 @@ WHERE winlostdate = @winlostdate AND bettype <=19000
 
 UPDATE @Exchange
 SET CurrencyName = e.currency
-FROM @Exchange ex, dbo.exchange e with (nolock)
+FROM @Exchange ex, CustDB.dbo.exchange e with (nolock)
 WHERE ex.currency = e.exchangeid
 
 -- Generate SUM record
@@ -340,7 +341,7 @@ BEGIN
 	from 
 		bettranssum b with (nolock)
 		INNER JOIN @Exchange e ON b.currency = e.currency
-		INNER JOIN dbo.custinfo c with (nolock) ON b.custid = c.custid AND c.roleid = 1
+		INNER JOIN CustDB.dbo.custinfo c with (nolock) ON b.custid = c.custid AND c.roleid = 1
 	where
 		winlostdate=@winlostdate
 		AND b.recommend = @recommend
@@ -411,7 +412,7 @@ INSERT INTO dbo.sum_winloss_tmp
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype, 
 		0 -- netTurnover
 	FROM
-		dbo.customer with (nolock),
+		CustDB.dbo.customer with (nolock),
 		dbo.bettrans14 bettrans with (nolock)
 	WHERE
 		bettrans.custid=customer.custid and 
@@ -473,8 +474,8 @@ INSERT INTO dbo.sum_winloss_tmp
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype,
 		sum(case when liveawayscore = 0 and bettype in(33,43) then ABS(stake*apositiontaking)/2 else ABS(stake*apositiontaking) end) --netTurnover
 	FROM
-		dbo.customer with (nolock),
-		dbo.customer ag with (nolock),
+		CustDB.dbo.customer with (nolock),
+		CustDB.dbo.customer ag with (nolock),
 		dbo.bettrans14 bettrans with (nolock)
 	WHERE
 		bettrans.custid=customer.custid and 
@@ -538,8 +539,8 @@ INSERT INTO dbo.sum_winloss_tmp
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype,
 		sum(case when liveawayscore = 0 and bettype in(33,43) then ABS(stake*mpositiontaking)/2 else ABS(stake*mpositiontaking) end) --netTurnover
 	FROM
-		dbo.customer with (nolock),
-		dbo.customer ma with (nolock),
+		CustDB.dbo.customer with (nolock),
+		CustDB.dbo.customer ma with (nolock),
 		dbo.bettrans14 bettrans with (nolock)
 	WHERE
 		bettrans.custid=customer.custid and 
@@ -603,8 +604,8 @@ INSERT INTO dbo.sum_winloss_tmp
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype,
 		sum(case when liveawayscore = 0 and bettype in(33,43) then ABS(stake*spositiontaking)/2 else ABS(stake*spositiontaking) end) --netTurnover
 	FROM
-		dbo.customer with (nolock),
-		dbo.customer sa with (nolock),
+		CustDB.dbo.customer with (nolock),
+		CustDB.dbo.customer sa with (nolock),
 		dbo.bettrans14 bettrans with (nolock)
 	WHERE
 		bettrans.custid=customer.custid and 
@@ -673,3 +674,9 @@ EXEC dbo.WriteLog_UserLog @UserID = 25520, @Doing = @Doing
 
 PRINT CONVERT(varchar(10), @winlostdate, 120)
 
+
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary] TO [ITVivi] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary] TO [vnteam] AS [dbo]
