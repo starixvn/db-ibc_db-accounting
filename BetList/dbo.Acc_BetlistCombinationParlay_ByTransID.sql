@@ -19,6 +19,7 @@ AS
 		- 20120927@Johnson: get commstatus column to check double comm losing
 		- 20130121@Dan: change linked server DB06 to DBARC
 		- 20130514@Elodie: Get odds value
+		- 20131216@Kathy: Get data from bettrans14 if @minMatchdate = @MoveBetDay
 	Paramters Explanation:	
 */ 
 BEGIN
@@ -208,7 +209,7 @@ BEGIN
 				FROM DBARC.bodb_archive.dbo.betparlayresult b WITH(NOLOCK) 
 				WHERE refno = @refno
 	END
-	IF @minMatchdate < @MoveBetDay  --- get data from bettrans14
+	IF @minMatchdate <= @MoveBetDay  --- get data from bettrans14
 	BEGIN	
 		INSERT INTO @tmpBettrans (transid,betid, transdate, refno, winlostdate, odds, modds, stake, actual_stake, winlost, playercomm, status, comstatus, betteam, ip, spositiontaking,
 			mpositiontaking, apositiontaking, swinlost,	mwinlost, awinlost,	sdiscount, adiscount, discount, scomm, acomm, comm, N, cnt, bitmap)
@@ -402,7 +403,7 @@ BEGIN
 				INNER JOIN @betParlayDetail b ON p.Serial = b.Serial
 				INNER JOIN DBARC.BODB_Archive.dbo.match_bk m WITH(NOLOCK) ON b.matchid = m.matchid	
 		END
-		IF @MinMatchdate < @MoveBetDay
+		IF @MinMatchdate <= @MoveBetDay
 		BEGIN
 			INSERT INTO @tmpMatch
 			SELECT
@@ -492,6 +493,8 @@ BEGIN
 	
 	SELECT * FROM @tmpMatch	
 END
+
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BetlistCombinationParlay_ByTransID] TO [vnteam]
