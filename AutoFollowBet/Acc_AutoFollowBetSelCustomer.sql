@@ -1,58 +1,76 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_AutoFollowBetSelCustomer]	
-	@status	INT=0
+	@Username		VARCHAR(50),
+	@Source			INT = 2,
+	@BAStatus		INT = 2,
+	@FollowLive		INT = 3,
+	@Handicap		INT = 2,
+	@1stHandicap	INT = 2,
+	@OverUnder		INT = 2,
+	@1stOverUnder	INT = 2
 AS
 /*
 Created: Viet @ 4-Jul-2012
 DB: DBTXN/bodb02
 Revisions:  
 	- 20130201@Daniel: Change link server alias
-  
+	- 20131212@Kathy: - Remove @status, add new @param
+					  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144]
 		
 	Param's Explanation:  
-	  +	@status: 0 - All; 1 - BA Enabled; 2 - BA Disabled
+	  + @Source:		0 - Manual		 1 - Auto;			2 - All;
+	  +	@BAStatus:		0 - BA Disabled; 1 - BA Enabled 	2 - All;		
+	  + @FollowLive:	0 - Non live;	 1 - Live;			2 - Both		3 - All
+	  + @Handicap:		0 - Not follow   1 - Follow;		2 - All
+	  + @1stHandicap:	0 - Not follow;	 1 - Follow;		2 - All
+	  + @OverUnder:		0 - Not follow;	 1 - Follow;		2 - All
+	  + @1stOverUnder:	0 - Not follow;	 1 - Follow;		2 - All
+
+
 */
-SET NOCOUNT ON
-
-CREATE TABLE #TempBACust (CustID INT)
-INSERT INTO #TempBACust (CustID)
-SELECT CustID 
-FROM DBLIC.bodb_licensee.dbo.LicenseeBAHistory WITH(NOLOCK) 
-WHERE 
-	status = 'running'
-
-IF @status = 0
 BEGIN
-	SELECT 
-		c.custid, ci.username, c.rate ,
-		CASE WHEN ba.CustID IS NULL THEN 0 ELSE 1 END AS IsBA
-	FROM Cust_FollowBet c WITH(NOLOCK)
-		INNER JOIN custinfo ci WITH(NOLOCK) ON c.custid = ci.custid
-		LEFT JOIN #TempBACust ba ON c.custid = ba.custid
-	ORDER BY ci.username	
-END
-ELSE IF @status = 1
-BEGIN
-	SELECT 
-		c.custid, ci.username, c.rate ,
-		1 AS IsBA
-	FROM Cust_FollowBet c WITH(NOLOCK)
-		INNER JOIN custinfo ci WITH(NOLOCK) ON c.custid = ci.custid
-		INNER JOIN #TempBACust ba ON c.custid = ba.custid
-	ORDER BY ci.username
-END
-ELSE IF @status = 2
-BEGIN
-	SELECT 
-		c.custid, ci.username, c.rate ,
-		0 AS IsBA
-	FROM Cust_FollowBet c WITH(NOLOCK)
-		INNER JOIN custinfo ci WITH(NOLOCK) ON c.custid = ci.custid
-		LEFT JOIN #TempBACust ba ON c.custid = ba.custid
-	WHERE ba.CustID IS NULL
-	ORDER BY ci.username
-END
+	SET NOCOUNT ON
 
-DROP TABLE #TempBACust
+	DECLARE @tblBACust TABLE (CustId INT PRIMARY KEY)
+	INSERT INTO @tblBACust (CustId)
+	SELECT l.custid
+	FROM DBLIC.bodb_licensee.dbo.LicenseeBAHistory l WITH(NOLOCK) 
+	WHERE l.status = 'running'
+
+	SELECT c.username, 
+			f.src, 
+			f.Rate, 
+			f.FollowLive, 
+			f.Follow1, 
+			f.Follow3, 
+			f.Follow7, 
+			f.Follow8,
+			CASE WHEN f.custid IN (SELECT [@tblBACust].CustId FROM @tblBACust) THEN 1 ELSE 0 END as IsBA
+	FROM Cust_FollowBet f WITH(NOLOCK)
+	INNER JOIN Customer c WITH(NOLOCK)
+		ON c.custid = f.custid
+	WHERE (ISNULL(@Username,'') = '' OR c.username = @Username)
+	AND (@Source = 2 OR f.src = @Source)
+	AND (@FollowLive = 3 OR f.FollowLive = @FollowLive)
+	AND (@Handicap = 2 OR f.Follow1 = @Handicap)
+	AND (@1stHandicap = 2 OR f.Follow7 = @1stHandicap)
+	AND (@OverUnder = 2 OR f.Follow3 = @OverUnder)
+	AND (@1stOverUnder = 2 OR f.Follow8 = @1stOverUnder)
+	AND (
+		  (@BAStatus = 0
+			AND @BAStatus = CASE WHEN f.custid NOT IN (SELECT CustId FROM @tblBACust) 
+									THEN 0
+								 ELSE 1
+							END) 
+		  OR ( @BAStatus = 1
+			AND @BAStatus = CASE WHEN f.custid IN (SELECT CustId FROM @tblBACust) 
+									THEN 1
+								 ELSE 0
+							END) 
+		  OR @BAStatus = 2
+		)
+	ORDER BY c.username
+	   
+END
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetSelCustomer] TO [bodbAdminNet]
