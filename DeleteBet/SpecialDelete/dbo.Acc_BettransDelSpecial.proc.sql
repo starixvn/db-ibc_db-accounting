@@ -104,6 +104,7 @@ Revisions:
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130526@Johnson: Add param @reason to log the reason delete bets 
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call Exchange, Customer, CustInfo from CustDB by link database)						   
+	- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 		    
 Param's Explanation: Special bet delete option
     @@DelOption = 0: No Delete (need to remove DepositBets out of #BetDelete)
@@ -463,7 +464,7 @@ Param's Explanation: Special bet delete option
 						*/
 					) 
 					AND INF.ROLEID = 1
-					AND BD.betfrom IN ('D', 'M', 'E', 'L')
+					--AND BD.betfrom IN ('D', 'M', 'E', 'L') -- not use 
 					
 		--END
 
@@ -524,9 +525,7 @@ Param's Explanation: Special bet delete option
 	IF @DelOption = 0 or (@DelOption=2 and @transids='') 
 		BEGIN
 			DELETE FROM #BetDelete
-			WHERE 
-			#BetDelete.betfrom IN ('D', 'M', 'E', 'L')
-			AND CustID IN (SELECT CustID FROM @DepositCust)
+			WHERE CustID IN (SELECT CustID FROM @DepositCust)
 			--AND custid not in (SELECT custid FROM #SpecialCust)
 			and custid not in (SELECT custid FROM @12EUCust) --12EU
 	        --and custid not in (SELECT custid FROM @Mansion88Cust) --MANSION88
@@ -539,7 +538,7 @@ Param's Explanation: Special bet delete option
 			DELETE FROM #BetDelete
 			WHERE
 				transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids, ','))
-				and #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
+
 				AND CustID IN (SELECT CustID FROM @DepositCust)
 	            --AND custid not in (SELECT custid FROM #SpecialCust)
 				and (custid not in (SELECT custid FROM @12EUCust) --12EU
@@ -688,8 +687,7 @@ Param's Explanation: Special bet delete option
 ------after delete, return all deleted deposit bets and 12EU with additional information for mailing (not send mail for BETDAQ tickets)
 	IF exists(
 		SELECT 1 FROM #BetDelete INNER join bettrans b ON #BetDelete.transid = b.transid
-		WHERE	( b.betfrom  IN ('D', 'M', 'E', 'L')
-				  AND #BetDelete.custid IN (SELECT custid FROM @DepositCust) 
+		WHERE	( #BetDelete.custid IN (SELECT custid FROM @DepositCust) 
 				) OR #BetDelete.custid IN (SELECT custid FROM @12EUCust)  
 			--or  #BetDelete.custid in (SELECT custid FROM #SpecialCust WHERE username = '12EU')  
 --			or #BetDelete.custid IN (SELECT custid FROM @12EUCust)  
@@ -754,10 +752,8 @@ Param's Explanation: Special bet delete option
 			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 			INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 		WHERE b.transid IN(SELECT transid FROM #BetDelete)
-			and (	
-					( b.betfrom  IN ('D', 'M', 'E', 'L')
-					  AND customer.custid IN (SELECT custid FROM @DepositCust)
-					) OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
+			and (	 customer.custid IN (SELECT custid FROM @DepositCust)
+					 OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
 				)
 			--or  customer.custid IN (SELECT custid FROM #SpecialCust WHERE username = '12EU') --Email 12EU if delete
 --			or customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete

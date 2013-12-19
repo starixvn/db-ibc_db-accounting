@@ -68,6 +68,7 @@ AS
 		- 20130128@Elodie: Change link server DB03 to DBPOLICY
 		- 20130526@Johnson: Add param @reason to log the reason delete bets
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer, CustInfo from CustDB by link database)						   
+		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 		 
 	Param's Explanation: Special bet delete option
 	
@@ -328,7 +329,7 @@ BEGIN
 			SELECT Custid FROM dbo.customer (nolock) WHERE UserName like 'VwinSuper%' AND ROLEID=4 --Vwin		
 			*/
 		) AND C.roleid = 1
-		  AND R.betfrom IN ('D', 'M', 'E', 'L') 
+		 -- AND R.betfrom IN ('D', 'M', 'E', 'L') 
 	--END 
 		
 	----INSERT 12EU CUSTOMER
@@ -386,7 +387,7 @@ BEGIN
 			LEFT JOIN @12EUCust AS c12 ON r.custid=c12.custid
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
-		WHERE r.betfrom NOT IN ('D', 'M', 'E', 'L')
+		WHERE r.srecommend not IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
 			AND d.custID IS NULL
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
@@ -400,7 +401,7 @@ BEGIN
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
 			LEFT JOIN dbo.strSplit(@transids, ',') AS t ON t.val=r.transid
-		WHERE r.betfrom NOT IN ('D', 'M', 'E', 'L')
+		WHERE r.srecommend not IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
 			AND d.custID IS NULL
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
@@ -415,7 +416,7 @@ BEGIN
 			LEFT JOIN @12EUCust AS c12 ON r.custid=c12.custid
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
-		WHERE r.betfrom IN ('D', 'M', 'E', 'L')
+		WHERE r.srecommend IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
 			AND m.custid IS NULL--not in
@@ -428,7 +429,7 @@ BEGIN
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
 			LEFT JOIN dbo.strSplit(@transids_D, ',') AS t ON t.val=r.transid
-		WHERE r.betfrom IN ('D', 'M', 'E', 'L')
+		WHERE r.srecommend IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
 			AND m.custid IS NULL--not in
@@ -682,9 +683,7 @@ BEGIN
 	WHERE	(b.betid = 0 OR b.betid IS NULL)
 			AND 
 			(	b.custid IN (SELECT custid FROM @12EUCust)  
-				OR	(	r.betfrom  IN ('D', 'M', 'E', 'L')
-						AND b.custid IN (SELECT custid FROM @DepositCust)
-					)  
+				OR b.custid IN (SELECT custid FROM @DepositCust)
 			)
 --			or b.custid IN (SELECT custid FROM @DepositCust)			
 --		  )
@@ -765,6 +764,7 @@ BEGIN
 			
 	SET NOCOUNT OFF
 END
+
 
 
 GO
