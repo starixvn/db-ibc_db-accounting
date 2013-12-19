@@ -406,7 +406,17 @@ Begin DataProject = "Account"
          End
          Begin Folder = "NAP"
             Script = "dbo.NAP_BettransDelSpecial.sql"
+            Script = "dbo.NAP_BettransSelRecoverBet.sql"
             Script = "dbo.NAP_BettransSelSpecialDel.sql"
+            Begin Folder = "Early KO"
+               Script = "dbo.NAP_BettransDelSpecialDel_EarlyKO.sql"
+               Script = "dbo.NAP_BettransSelSpecialDel_EarlyKO.sql"
+            End
+            Begin Folder = "Mix Parlay"
+               Script = "dbo.NAP_BettransDelSpecialDel_MixParlay.sql"
+               Script = "dbo.NAP_BettransSelDetailSpecialDel_MixParlay.sql"
+               Script = "dbo.NAP_BettransSelSpecialDel_MixParlay.sql"
+            End
             Script = "NAP_BetTypeSel.sql"
             Script = "NAP_Rpt_TicketsListing.sql"
             Script = "NAP_Rpt_TicketsListingDetail.sql"
