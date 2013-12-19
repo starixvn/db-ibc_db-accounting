@@ -1,5 +1,4 @@
-﻿ 
-ALTER PROCEDURE [dbo].[Acc_BettransSelDelSpecial_MixParlay]
+﻿ ALTER PROC [dbo].[Acc_BettransSelDelSpecial_MixParlay]
 	@MatchID int,
 	@bettype smallint = 0,
 	@Type smallint = 0, 
@@ -43,7 +42,8 @@ AS
 		- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype, f_GetChoice for odds, Oddstype, betteam
 		- 20120709@Dan: improve performance when getting data for system parlay and mixparlay at the same time (@bettype=0)
 		- 20120711@Sophia: Add condition 'L' in betfrom to check Deposit
-	
+		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
+
 	Param's Explanation:
 			@Type
 				0	Dead
@@ -230,8 +230,9 @@ BEGIN
    b.mpositiontaking,  
    b.apositiontaking,      
    b.currency,     
-   b.mrecommend,     
-   case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit  
+   b.mrecommend,   
+   CASE WHEN b.srecommend in (SELECT custid FROM Dep_CustSuper with(NOLOCK)) THEN 1 ELSE 0 END as IsDeposit 
+   --case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit  
    ,r.bettype AS choice_bettype  
    ,m.homeid  
    ,m.awayid  
@@ -299,7 +300,7 @@ BEGIN
      
      
  SET NOCOUNT OFF  
-END  
+END
 
 
 

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].Acc_BettransSelSpecialDel_LiveCS
+﻿ALTER PROCEDURE [dbo].[Acc_BettransSelSpecialDel_LiveCS]
 	@MatchID	INT,
 	@FromRefNo	BIGINT,
 	@ToRefNo	BIGINT
@@ -11,7 +11,8 @@ AS
 	History:
 		- 20121107@Elodie:  Allow to void settled tickets 
 							Allow user to delete deposit tickets
-		- 20130702@Elodie: Add new bettype 1103, 1104							
+		- 20130702@Elodie: Add new bettype 1103, 1104				
+		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]			
 	Explanation's Param:
 
 */
@@ -80,7 +81,8 @@ BEGIN
 		b.winlost - b.actual_stake as winlost,
 		b.playercomm as comm,		
 		b.currency, 
-		CASE WHEN betfrom IN ('D', 'M', 'E', 'L') THEN 1 ELSE 0 END AS IsDeposit,
+		--CASE WHEN betfrom IN ('D', 'M', 'E', 'L') THEN 1 ELSE 0 END AS IsDeposit,
+		CASE WHEN b.srecommend IN (SELECT custid from Dep_CustSuper with(NOLOCK)) then 1 ELSE 0 END as IsDeposit,
 		ag.site,
 		b.status,
 		b.mrecommend
@@ -141,6 +143,8 @@ BEGIN
 	DROP TABLE #SpecialDeleteBets
 	DROP TABLE #BettransDetail
 END
+
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel_LiveCS] TO [vnteam]

@@ -54,6 +54,7 @@ BEGIN
 		- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype, f_GetChoice for odds, Oddstype, betteam
 		- 20120711@Sophia: Add condition 'L' in betfrom to check Deposit
 		- 20130604@Johnson: change to use stake instead stakepositiontaking
+		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 	Explanation's Param:
 	    - @SAFilter: 
 	      + 0: All tickets
@@ -88,7 +89,8 @@ BEGIN
 			cr.username as creator,	
 			stake,
 			b.currency, 
-			case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+			--case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+			case WHEN b.srecommend IN (SELECT Dep_CustSuper.custid FROM Dep_CustSuper with(NOLOCK)) then 1 ELSE 0 end as IsDeposit,
 			ag.site,
 			CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 				 ELSE b.status 
@@ -133,7 +135,8 @@ BEGIN
 		cr.username as creator,	
 		stake,
 		b.currency, 
-		case when betfrom IN ('D', 'M', 'E' ,'L') then 1 else 0 end as IsDeposit,
+		--case when betfrom IN ('D', 'M', 'E' ,'L') then 1 else 0 end as IsDeposit,
+		case WHEN b.srecommend IN (SELECT Dep_CustSuper.custid FROM Dep_CustSuper with(NOLOCK)) then 1 ELSE 0 end as IsDeposit,
 		ag.site,
 		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 			 ELSE b.status 
@@ -190,7 +193,8 @@ BEGIN
 		cr.username as creator,	
 		stake,
 		b.currency, 
-		case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+		--case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+		case WHEN b.srecommend IN (SELECT Dep_CustSuper.custid FROM Dep_CustSuper with(NOLOCK)) then 1 ELSE 0 end as IsDeposit,
 		ag.site,
 		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 			 ELSE b.status 
@@ -244,7 +248,8 @@ BEGIN
 		cr.username as creator,	
 		stake,
 		b.currency, 
-		case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+		--case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+		case WHEN b.srecommend IN (SELECT Dep_CustSuper.custid FROM Dep_CustSuper with(NOLOCK)) then 1 ELSE 0 end as IsDeposit,
 		ag.site,
 		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 			 ELSE b.status 
@@ -317,6 +322,7 @@ BEGIN
 /*
 */
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel] TO [bodbAdminNet]
 GO
