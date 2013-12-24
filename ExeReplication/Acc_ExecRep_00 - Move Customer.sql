@@ -54,10 +54,18 @@ DECLARE @CustInfo TABLE (CustID INT PRIMARY KEY)
 
 IF (@roleid = 3 and @IsExistCustinfo = 1) --Perform to move master agent
 BEGIN
-	
-	INSERT INTO @CustInfo
-	SELECT custid FROM CustDB.dbo.custinfo (NOLOCK)
-	WHERE mrecommend = @mrecommend
+	IF @@SERVERNAME = 'DBTRANS'
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM CustDB.dbo.custinfo (NOLOCK)
+		WHERE mrecommend = @mrecommend
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM dbo.custinfo (NOLOCK)
+		WHERE mrecommend = @mrecommend
+	END
 	
 	--bettrans table
 	IF (@IsExistBettrans = 1)
@@ -211,9 +219,18 @@ END
 ELSE IF (@roleid = 2 and @IsExistCustinfo = 1) --Perform to move agent
 BEGIN
 	
-	INSERT INTO @CustInfo
-	SELECT custid FROM CustDB.dbo.custinfo (NOLOCK)
-	WHERE recommend = @recommend	
+	IF @@SERVERNAME = 'DBTRANS'
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM CustDB.dbo.custinfo (NOLOCK)
+		WHERE mrecommend = @mrecommend
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM dbo.custinfo (NOLOCK)
+		WHERE mrecommend = @mrecommend
+	END
 	
 	--bettrans table
 	IF (@IsExistBettrans = 1)
@@ -529,7 +546,6 @@ BEGIN
 		END
 	END
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_ExecRep_00] TO [bodbAdminNet] AS [dbo]

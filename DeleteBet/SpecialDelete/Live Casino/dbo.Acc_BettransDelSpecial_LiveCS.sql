@@ -32,7 +32,8 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130526@Johnson: Add param @reason to log the reason delete bets
 		- 20130702@Elodie: Add new bettype 1103, 1104
-		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer from CustDB by link database)						   
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer from CustDB by link database)
+		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]	
 	Param's Explanation: 
 	
 */
@@ -206,7 +207,7 @@ BEGIN
 			INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 		WHERE	INF.srecommend in ( SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK))						
 				  AND INF.roleid = 1
-				  AND BD.betfrom IN ('D', 'M', 'E', 'L')
+				 -- AND BD.betfrom IN ('D', 'M', 'E', 'L')
 				  
 	--INSERT 12EU CUSTOMER
 	INSERT INTO @12EUCust (custid,username)
@@ -402,7 +403,7 @@ BEGIN
 		INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 		inner JOIN @NegativeBalanceCust nc on b.custid = nc.custid
-	WHERE ( b.betfrom  IN ('D', 'M', 'E', 'L') AND customer.custid IN (SELECT custid FROM @DepositCust))
+	WHERE customer.custid IN (SELECT custid FROM @DepositCust)
 			 OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  			
 	ORDER BY transid		
 
@@ -411,9 +412,8 @@ BEGIN
 		INNER JOIN bettrans b WITH(NOLOCK) ON bg.refno = b.refno
 	WHERE b.transid IN(SELECT transid FROM #BetDelete)	
 		and (	
-				( b.betfrom  IN ('D', 'M', 'E', 'L')
-				  AND b.custid IN (SELECT custid FROM @DepositCust)
-				) OR b.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
+			b.custid IN (SELECT custid FROM @DepositCust)
+			OR b.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
 			)	
 	
 	SELECT	transid,
@@ -514,7 +514,6 @@ BEGIN
 		END CATCH
 	END
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial_LiveCS] TO [bodbAdminNet] AS [dbo]
