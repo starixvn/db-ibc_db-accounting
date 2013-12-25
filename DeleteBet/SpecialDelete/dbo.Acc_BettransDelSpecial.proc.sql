@@ -103,7 +103,11 @@ Revisions:
 	- 20130128@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130526@Johnson: Add param @reason to log the reason delete bets 
+<<<<<<< HEAD
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call Exchange, Customer, CustInfo from CustDB by link database)
+=======
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call Exchange, Customer, CustInfo from CustDB by link database)						   
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 	- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 		    
 Param's Explanation: Special bet delete option
@@ -538,6 +542,10 @@ Param's Explanation: Special bet delete option
 			DELETE FROM #BetDelete
 			WHERE
 				transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids, ','))
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 				AND CustID IN (SELECT CustID FROM @DepositCust)
 	            --AND custid not in (SELECT custid FROM #SpecialCust)
 				and (custid not in (SELECT custid FROM @12EUCust) --12EU

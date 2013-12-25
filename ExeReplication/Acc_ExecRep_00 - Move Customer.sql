@@ -223,13 +223,13 @@ BEGIN
 	BEGIN
 		INSERT INTO @CustInfo (custid)
 		SELECT custid FROM CustDB.dbo.custinfo (NOLOCK)
-		WHERE mrecommend = @mrecommend
+		WHERE recommend = @recommend
 	END
 	ELSE
 	BEGIN
 		INSERT INTO @CustInfo (custid)
 		SELECT custid FROM dbo.custinfo (NOLOCK)
-		WHERE mrecommend = @mrecommend
+		WHERE recommend = @recommend
 	END
 	
 	--bettrans table
@@ -546,6 +546,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_ExecRep_00] TO [bodbAdminNet] AS [dbo]

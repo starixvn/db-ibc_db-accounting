@@ -1250,6 +1250,10 @@ IF exists(
 	
 SET NOCOUNT OFF
 END
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecialDel_EarlyKO] TO [bodbAdminNet] AS [dbo]

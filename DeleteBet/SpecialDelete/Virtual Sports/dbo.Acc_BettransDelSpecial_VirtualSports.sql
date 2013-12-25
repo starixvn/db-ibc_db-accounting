@@ -307,6 +307,10 @@ BEGIN
 	BEGIN
 		DELETE FROM #BetDelete
 		WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids, ','))
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 				AND CustID IN (SELECT CustID FROM @DepositCust)
 				and (custid not in (SELECT custid FROM @12EUCust) --12EU
 				and custid not in (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
