@@ -76,9 +76,13 @@ BEGIN
 		PlaceOdds SMALLMONEY
 	)
 	
-	DECLARE @matchid NVARCHAR(MAX),
-			@betstatus NVARCHAR(MAX),
-			@intDocHandle INT
+	DECLARE @matchid VARCHAR(MAX),
+			@betstatus VARCHAR(8000),
+			@intDocHandle INT,
+			@rowcount INT,
+			@max_matchid INT
+			
+	DECLARE @tmp_match TABLE(matchid INT)
 
 	INSERT INTO #matchList
 	SELECT 
@@ -126,28 +130,49 @@ BEGIN
 					WHEN @UncalMultiOnly = 1 THEN hthomescore*htawayscore*finalhomescore*finalawayscore  
 			END IS NOT NULL  
 		AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END
-	
-	SELECT @matchid = (
-		SELECT matchid 
-		FROM #matchList
-		FOR XML PATH('match'), ROOT('root')
-	)
-	
-	EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @betstatus = @betstatus OUTPUT
-	
-	--Create an internal representation of the XML document.      
-	EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
-	
-	UPDATE m
-	SET IsFGLG = CASE WHEN rs.cnt = 0 OR rs.cnt IS NULL THEN 0 ELSE 1 END
-	FROM #matchList m
-		LEFT JOIN (
-				SELECT matchid, cnt
-				FROM OPENXML(@intDocHandle,'/root/match',2)
-				with (matchid INT,
-					cnt INT) 
-		)rs ON m.matchid = rs.matchid
 		
+	SELECT @rowcount = 0, @max_matchid = 0
+	
+	WHILE @rowcount < 100
+	BEGIN
+		DELETE @tmp_match
+		
+		INSERT INTO @tmp_match(matchid)
+		SELECT TOP 100 matchid
+		FROM #matchList
+		WHERE matchid > @max_matchid
+		ORDER BY  matchid ASC
+		
+		SELECT @rowcount = @@rowcount
+		
+		IF @rowcount = 0
+			break;
+		
+		SELECT @max_matchid = MAX(matchid)
+		FROM @tmp_match
+		
+		SELECT @matchid = (
+			SELECT matchid 
+			FROM @tmp_match
+			FOR XML PATH('match'), ROOT('root')
+		)
+		
+		EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @betstatus = @betstatus OUTPUT
+		
+		--Create an internal representation of the XML document.      
+		EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
+		
+		UPDATE m
+		SET IsFGLG = CASE WHEN rs.cnt = 0 OR rs.cnt IS NULL THEN 0 ELSE 1 END
+		FROM #matchList m
+			INNER JOIN @tmp_match t ON m.matchid = t.matchid
+			LEFT JOIN (
+					SELECT matchid, cnt
+					FROM OPENXML(@intDocHandle,'/root/match',2)
+					with (matchid INT,
+						cnt INT) 
+			)rs ON m.matchid = rs.matchid
+	END		
 	
 	-- outright table
 	INSERT INTO #matchList
@@ -285,7 +310,5 @@ END
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSel] TO [ITVivi] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSel] TO [vnteam] AS [dbo]

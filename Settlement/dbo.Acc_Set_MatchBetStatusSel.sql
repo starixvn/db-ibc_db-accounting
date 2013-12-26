@@ -1,6 +1,6 @@
 ﻿ALTER PROCEDURE dbo.Acc_Set_MatchBetStatusSel
-	@matchid NVARCHAR(max),
-	@betstatus NVARCHAR(max) = '' OUTPUT
+	@matchid VARCHAR(max),
+	@betstatus VARCHAR(8000) = '' OUTPUT
 AS
 	/*
 		Crated: Johnson
@@ -21,7 +21,7 @@ BEGIN
 	
 	;WITH t AS
 	(
-		SELECT matchid, COUNT(1) AS cnt
+		SELECT matchid , COUNT(1) AS cnt
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE matchid IN (
 							SELECT matchid
