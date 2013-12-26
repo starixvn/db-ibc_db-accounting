@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Admin_Settlement_Parlay_Job]
+﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Parlay_Job]
 AS
 /*
 	Created: 20130625@Lukas
@@ -38,8 +36,10 @@ BEGIN
 						ORDER BY TryCount, starttime 
 					)
 
+	IF @@ROWCOUNT = 0 RETURN	
+	
 	BEGIN TRY
-		EXEC [Admin_Settlement_Parlay_xtest]
+			EXEC [Admin_Settlement_Parlay]
 				@matchids	= @matchids,
 				@creator	= @creator,
 				@action		= @action,

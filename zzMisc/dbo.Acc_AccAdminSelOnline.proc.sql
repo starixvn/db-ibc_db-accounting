@@ -1,11 +1,9 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_AccAdminSelOnline]
+﻿ALTER PROCEDURE [dbo].[Acc_AccAdminSelOnline]
 	@ServerID int
 AS
-
+/*
+	DB: DBONUSER/ON_USER
+*/
 if @ServerID = 200001
 BEGIN
 	select DISTINCT null as roleid, c.custid

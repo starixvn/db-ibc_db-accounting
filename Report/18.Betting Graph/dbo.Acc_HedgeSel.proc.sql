@@ -1,4 +1,4 @@
-﻿Alter PROCEDURE [dbo].[Acc_HedgeSel]
+﻿ALTER PROCEDURE [dbo].[Acc_HedgeSel]
 	@transid bigint
 AS
 
@@ -12,6 +12,7 @@ Revisions:
 		- 20101007@Henry: Change column transid from INT to BIGINT
 		- 20101102@Jamie: SET NOCOUNT 
 		- 20111202@Sophia: Add new bettype 124, 125 for 1x2 HDP
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo by link database)
 Param's Explanation:
 
 */
@@ -35,15 +36,14 @@ SELECT
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 FROM
 	dbo.BetHedgeRecord b with (nolock)
-	INNER JOIN dbo.custinfo c with (nolock) ON b.custid = c.custid AND c.roleid = 1
-	INNER JOIN dbo.custinfo cr with (nolock) ON b.creator = cr.custid AND cr.roleid > 4
+	INNER JOIN CustDB.dbo.custinfo c with (nolock) ON b.custid = c.custid AND c.roleid = 1
+	INNER JOIN CustDB.dbo.custinfo cr with (nolock) ON b.creator = cr.custid AND cr.roleid > 4
 	INNER JOIN dbo.match m with (nolock) ON b.matchid = m.matchid
 WHERE
 	b.transid=@transid
 ORDER BY m.eventdate, c.username, b.bettype, m.matchcode
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_HedgeSel] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_HedgeSel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_HedgeSel] TO [VNTeam]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[Acc_HedgeSel] TO [vnteam] AS [dbo]

@@ -21,6 +21,7 @@ Revisions:
 	- 20130201@Elodie: Change link server DB03 to DBPOLICY, DB06 to DBACC
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
 */
 BEGIN
     SET NOCOUNT ON		
@@ -56,7 +57,7 @@ BEGIN
             a.Description,
 			seq
     FROM DBACC.bodb_acc.dbo.Acc_CustFinanceTransfer a with(nolock)
-		left join CustInfo c with(nolock) on a.FromCust = c.Username
+		left join CustDB.dbo.CustInfo c with(nolock) on a.FromCust = c.Username
     WHERE UserId = @UserId    
 
     --Transfer Code    
@@ -133,7 +134,8 @@ BEGIN
     END CATCH
 END	
 	
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_FinanceTransferMulUpd] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_FinanceTransferMulUpd] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceTransferMulUpd] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceTransferMulUpd] TO [vnteam] AS [dbo]

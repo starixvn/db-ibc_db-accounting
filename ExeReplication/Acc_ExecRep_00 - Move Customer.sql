@@ -13,11 +13,12 @@ AS
 /*
 Created: 20091222@Kiwi
 Task : Move accounts
-DB: DBTRANS.bodb02
+DB: DBTXN/bodb02
 Original: Acc_CustomerUpdMoveMaster, Acc_CustomerUpdMoveAgent, Acc_CustomerUpdMoveMember
 
 Revisions:
 	- 20100114@Kiwi: Put in "AND srecommend = @srecommend_old" when we update sum_winloss table
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo, customer table in main SP)  
    
 Param's Explanation:
 • @ErrCode:
@@ -30,17 +31,17 @@ Param's Explanation:
 --IF @@ServerName <> 'DB02'
 --	WAITFOR DELAY '00:00:30.000'
 
---Retrieve data to check exested tables (custinfo, customer, bettrans, bettrans14, sum_winloss) before moving
-DECLARE @IsExistCust TINYINT,
+--Retrieve data to check existed tables (custinfo, customer, bettrans, bettrans14, sum_winloss) before moving
+DECLARE --@IsExistCust TINYINT,
 		@IsExistBettrans BIT,
 		@IsExistBettrans14 BIT,
 		@IsExistSum_Winloss BIT,
 		@IsExistCustinfo BIT
 
-SELECT @IsExistCust = COUNT(*) FROM dbo.sysobjects
-WHERE	name IN ('custinfo','customer')
-		AND xtype = 'U'
-HAVING COUNT(*) = 2
+--SELECT @IsExistCust = COUNT(*) FROM dbo.sysobjects
+--WHERE	name IN ('custinfo','customer')
+--		AND xtype = 'U'
+--HAVING COUNT(*) = 2
 
 SELECT @IsExistCustinfo = COUNT(*) FROM dbo.sysobjects WHERE name = 'custinfo'
 SELECT @IsExistBettrans = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans'
@@ -53,10 +54,18 @@ DECLARE @CustInfo TABLE (CustID INT PRIMARY KEY)
 
 IF (@roleid = 3 and @IsExistCustinfo = 1) --Perform to move master agent
 BEGIN
-	
-	INSERT INTO @CustInfo
-	SELECT custid FROM custinfo (NOLOCK)
-	WHERE mrecommend = @mrecommend
+	IF @@SERVERNAME = 'DBTRANS'
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM CustDB.dbo.custinfo (NOLOCK)
+		WHERE mrecommend = @mrecommend
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM dbo.custinfo (NOLOCK)
+		WHERE mrecommend = @mrecommend
+	END
 	
 	--bettrans table
 	IF (@IsExistBettrans = 1)
@@ -73,8 +82,10 @@ BEGIN
 		END
 	
 		IF (@@ERROR <> 0)
-		BEGIN
-			 --ROLLBACK TRANSACTION MANUALLY
+		BEGIN			
+			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
@@ -83,6 +94,7 @@ BEGIN
 				UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
 				WHERE mrecommend = @mrecommend
 			END
+			*/
 			WHILE (1=1)
 			BEGIN
 				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
@@ -117,6 +129,8 @@ BEGIN
 		IF (@@ERROR <> 0)
 		BEGIN
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
@@ -125,6 +139,7 @@ BEGIN
 				UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
 				WHERE mrecommend = @mrecommend
 			END
+			*/
 			WHILE (1=1 AND @IsExistBettrans = 1)
 			BEGIN
 				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
@@ -161,6 +176,8 @@ BEGIN
 		IF (@@ERROR <> 0) 
 		BEGIN
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
@@ -169,6 +186,7 @@ BEGIN
 				UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old
 				WHERE mrecommend = @mrecommend
 			END
+			*/
 			WHILE (1=1 AND @IsExistBettrans = 1)
 			BEGIN
 				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
@@ -201,9 +219,18 @@ END
 ELSE IF (@roleid = 2 and @IsExistCustinfo = 1) --Perform to move agent
 BEGIN
 	
-	INSERT INTO @CustInfo
-	SELECT custid FROM custinfo (NOLOCK)
-	WHERE recommend = @recommend	
+	IF @@SERVERNAME = 'DBTRANS'
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM CustDB.dbo.custinfo (NOLOCK)
+		WHERE recommend = @recommend
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @CustInfo (custid)
+		SELECT custid FROM dbo.custinfo (NOLOCK)
+		WHERE recommend = @recommend
+	END
 	
 	--bettrans table
 	IF (@IsExistBettrans = 1)
@@ -222,6 +249,8 @@ BEGIN
 		IF @@ERROR <> 0 
 		BEGIN
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
@@ -230,6 +259,7 @@ BEGIN
 				UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
 				WHERE custid IN(SELECT CustID FROM @CustInfo)
 			END
+			*/			
 			WHILE (1=1)
 			BEGIN
 				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
@@ -264,6 +294,8 @@ BEGIN
 		IF @@ERROR <> 0 
 		BEGIN
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
@@ -272,6 +304,7 @@ BEGIN
 				UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
 				WHERE custid IN(SELECT CustID FROM @CustInfo)
 			END
+			*/
 			WHILE (1=1 AND @IsExistBettrans = 1)
 			BEGIN
 				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
@@ -292,7 +325,6 @@ BEGIN
 				
 				IF @@ROWCOUNT < 1000
 					BREAK
-
 			END			
 			
 			SELECT @ErrMsg = 'Error agent ' + CAST(@recommend AS VARCHAR) + ': update unsuccessfully (bettrans14).',
@@ -311,6 +343,8 @@ BEGIN
 		IF @@ERROR <> 0 
 		BEGIN
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
@@ -319,6 +353,7 @@ BEGIN
 				UPDATE custinfo WITH (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
 				WHERE custid IN(SELECT CustID FROM @CustInfo)
 			END
+			*/
 			WHILE (1=1 AND @IsExistBettrans = 1)
 			BEGIN
 				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
@@ -370,6 +405,8 @@ BEGIN
 		IF @@ERROR <> 0 
 		BEGIN
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) 
@@ -380,6 +417,8 @@ BEGIN
 				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
 				WHERE custid = @custid
 			END
+			*/
+			
 			--rollback bettrans
 			WHILE (1=1)
 			BEGIN
@@ -411,6 +450,8 @@ BEGIN
 		IF @@ERROR <> 0 
 		BEGIN
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) 
@@ -421,6 +462,7 @@ BEGIN
 				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
 				WHERE custid = @custid
 			END
+			*/
 			--rollback bettrans
 			WHILE (1=1 AND @IsExistBettrans = 1)
 			BEGIN
@@ -456,9 +498,10 @@ BEGIN
 		WHERE	custid = @custid 
 				AND recommend = @recommend_old
 		IF @@ERROR <> 0 
-		BEGIN
-			
+		BEGIN			
 			--ROLLBACK TRANSACTION MANUALLY
+			-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  			
+			/*
 			IF (@IsExistCust = 2)
 			BEGIN 
 				UPDATE customer WITH (ROWLOCK, UPDLOCK) 
@@ -469,6 +512,8 @@ BEGIN
 				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
 				WHERE custid = @custid
 			END
+			*/
+			
 			--rollback bettrans
 			WHILE (1=1 AND @IsExistBettrans = 1)
 			BEGIN
@@ -502,5 +547,8 @@ BEGIN
 	END
 END
 
+
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_ExecRep_00] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_ExecRep_00] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExecRep_00] TO [vnteam] AS [dbo]

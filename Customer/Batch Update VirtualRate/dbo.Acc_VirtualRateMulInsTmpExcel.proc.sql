@@ -16,6 +16,7 @@ AS
 		- 20091116@Daniel: Change to check permission on dedicated function [UploadVR]
 		- 20130224@Lukas: move SP to new database bodb_ACC
 						& change linked-server from db03 to DBPOLICY
+		- 20131203@Elodie: Expand size of string						
 */
 BEGIN
 SET NOCOUNT ON
@@ -26,14 +27,14 @@ SET NOCOUNT ON
 		RETURN
 
 	DECLARE @tblCust TABLE (
-		UserName	NVARCHAR(20),
+		UserName	NVARCHAR(50),
 		VirtualRate	NVARCHAR(10)
 	)
 
 	DECLARE @tblFail TABLE (
-		UserName	NVARCHAR(20),
+		UserName	NVARCHAR(50),
 		VirtualRate	NVARCHAR(10),
-		Reason		NVARCHAR(80)
+		Reason		NVARCHAR(100)
 	)
 
 	INSERT INTO @tblCust(username, virtualrate)

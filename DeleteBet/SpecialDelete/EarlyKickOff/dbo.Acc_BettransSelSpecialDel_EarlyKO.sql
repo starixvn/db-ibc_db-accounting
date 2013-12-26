@@ -393,6 +393,9 @@ BEGIN
 END
 
 
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel_EarlyKO] TO [bodbAdminNet]
 GO

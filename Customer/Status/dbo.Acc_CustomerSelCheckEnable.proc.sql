@@ -4,15 +4,6 @@
 ,@ErrCode	int = 0 output
 ,@ErrMsg	nvarchar(200) ='' output 	
 AS
-/*
-Created: 20101203@Henry
-Task: check enable of a customer
-DB: DB05.bodb02
-Original: 
-
-Revisions:
-	20120516@Dom: add username to error message
-*/
 BEGIN
 SET NOCOUNT ON
 declare @isEnable bit
@@ -24,25 +15,25 @@ begin
 end 
 else if @username is null 
 begin
-	select @isEnable = isnull(enabled,0), @username = username from custinfo with (nolock)
+	select @isEnable = isnull(enabled,0) from custinfo with (nolock)
 	where custid = @custid 
 end
 
 if @isEnable = 0 or @@rowcount =0
 begin
-	select @ErrMsg = 'Account '+@username+' was disabled!'
+	select @ErrMsg = 'This account was disabled!'
 		, @ErrCode = 600
 	return
 end
-END 
+END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelCheckEnable] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckEnable] TO [bodbDownlineNetView]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelCheckEnable] TO [vnteam] AS [dbo]

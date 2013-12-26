@@ -47,7 +47,8 @@ Revisions:
 	- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 	- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
 	- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
-	- 20131126@Kathy: Add Virtual Greyhounds/Motor Racing (182, 184) [Redmine:#7234]
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo,customer table in main SP)  			
+	
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -593,8 +594,6 @@ DECLARE
 	--VS
 	@v180apositiontaking_1201 SMALLMONEY,
 	@v181apositiontaking_1231 SMALLMONEY,
-	@v182apositiontaking_1231 SMALLMONEY,
-	@v184apositiontaking_1231 SMALLMONEY,
 	@v186apositiontaking_1220 SMALLMONEY
 	
 
@@ -992,60 +991,6 @@ BEGIN
 	return
 END
 
--- Virtual Greyhounds 
-EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
-	@custid  = @custid,
-	@sporttype	= 182,
-	@bettype = 1231 ,
-	@a1 = @v182apositiontaking_1231,
-	
-	@UserID	= @UserID,	
-	@ErrCode = @ErrCode_1 OUTPUT,
-	@ErrMsg	 = @ErrMsg OUTPUT	
-
-IF CHARINDEX('-101', @ErrCode_1) = 0
-BEGIN
-	--ROLLBACK TRANSACTION MANUALLY
-	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
-											recommend = @recommend_old
-	where custid = @custid
-	
-	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
-											recommend = @recommend_old
-	where custid = @custid
-	
-	if @ReturnErrCode = 0
-		RaisError (@ErrMsg, 16, 1)	
-	return
-END
-
--- Virtual Motor Racing
-EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
-	@custid  = @custid,
-	@sporttype	= 184,
-	@bettype = 1231 ,
-	@a1 = @v184apositiontaking_1231,
-	
-	@UserID	= @UserID,	
-	@ErrCode = @ErrCode_1 OUTPUT,
-	@ErrMsg	 = @ErrMsg OUTPUT	
-
-IF CHARINDEX('-101', @ErrCode_1) = 0
-BEGIN
-	--ROLLBACK TRANSACTION MANUALLY
-	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
-											recommend = @recommend_old
-	where custid = @custid
-	
-	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
-											recommend = @recommend_old
-	where custid = @custid
-	
-	if @ReturnErrCode = 0
-		RaisError (@ErrMsg, 16, 1)	
-	return
-END
-
 -- Virtual Tennis
 EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
 	@custid  = @custid,
@@ -1141,7 +1086,7 @@ END
 
 --Apply ExeReplication
 -- call Acc_ExecRep_00 two times to update coming bets that not replicated to subcriptions servers yet.
-EXEC dbo.Acc_ExecRep_00 
+EXEC DBTXN.bodb02.dbo.Acc_ExecRep_00 
 	@custid = @custid,
 	@recommend = @recommend,
 	@recommend_old = @recommend_old,
@@ -1152,9 +1097,24 @@ EXEC dbo.Acc_ExecRep_00
 	@roleid = 1,
 	@ErrCode = @ErrCode OUTPUT,
 	@ErrMsg = @ErrMsg OUTPUT
-IF @ErrCode<>0 RETURN
+IF @ErrCode <> 0
+BEGIN			
+	-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  				
+	--ROLLBACK TRANSACTION MANUALLY     
+    UPDATE customer WITH (ROWLOCK, UPDLOCK) 
+    SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	UPDATE custinfo WITH (ROWLOCK, UPDLOCK) 
+	SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	IF @ReturnErrCode = 0
+		RAISERROR (@ErrMsg, 16, 1)                  
+    RETURN
+END	
 
-EXEC dbo.Acc_ExecRep_00 
+EXEC DBTXN.bodb02.dbo.Acc_ExecRep_00 
 	@custid = @custid,
 	@recommend = @recommend,
 	@recommend_old = @recommend_old,
@@ -1165,7 +1125,22 @@ EXEC dbo.Acc_ExecRep_00
 	@roleid = 1,
 	@ErrCode = @ErrCode OUTPUT,
 	@ErrMsg = @ErrMsg OUTPUT
-IF @ErrCode<>0 RETURN
+IF @ErrCode <> 0
+BEGIN			
+	-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  				
+	--ROLLBACK TRANSACTION MANUALLY     
+    UPDATE customer WITH (ROWLOCK, UPDLOCK) 
+    SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	UPDATE custinfo WITH (ROWLOCK, UPDLOCK) 
+	SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	IF @ReturnErrCode = 0
+		RAISERROR (@ErrMsg, 16, 1)                  
+    RETURN
+END	
 
 --Update Member's Comm
 DECLARE	@ugroup VARCHAR(5)
@@ -1454,8 +1429,9 @@ END CATCH
 
 
 
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbadminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam] AS [dbo]

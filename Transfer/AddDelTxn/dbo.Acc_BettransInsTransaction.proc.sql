@@ -35,6 +35,7 @@ Revisions:
 	- 20121103@Viet: revise sp
 	- 20130201@Elodie: Change link server DB03 to DBPOLICY, DB053 to DBAGE
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)  								   
 					   
 Param's Explanation:
 */
@@ -109,8 +110,8 @@ END
 
 Select @Curr = c.Currency, @actualrate = e.actualrate, @currName = e.currency,@username = c.username,  
 	   @Recommend = c.Recommend, @MRecommend = c.MRecommend, @SRecommend = c.SRecommend , @roleID = roleid
-from Custinfo c with (NOLOCK) 
-	INNER JOIN Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+from CustDB.dbo.Custinfo c with (NOLOCK) 
+	INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
 where c.CustID = @CustID
 if @@rowcount = 0
 BEGIN
@@ -187,5 +188,9 @@ BEGIN CATCH
 	EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
 END CATCH
 
+
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsTransaction] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransaction] TO [vnteam] AS [dbo]

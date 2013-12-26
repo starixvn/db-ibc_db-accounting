@@ -11,7 +11,7 @@ AS
 	Created by: []  
 	Date: 2008  
 	Task: Match results  
-	DB: DBPRO/BODB02  
+	DB: DBTXN/BODB02  
 
 	Revisions:  
 		- 20090116@Vinh: add filter by sporttype  
@@ -31,7 +31,7 @@ AS
 		- 20130719@Elodie: get result for Virtual HR
 		- 20130808@Kathy:  Amend to show refund game for virtual horse racing/tennis
 		- 20131125@Elodie: get result for Virtual Greyhounds, Motor Racing
-		- 20131212@Johnson: move sp to DBPRO.bodb02
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
   
@@ -75,10 +75,7 @@ BEGIN
 		WinOdds SMALLMONEY,
 		PlaceOdds SMALLMONEY
 	)
-	
-	DECLARE @matchid NVARCHAR(MAX),
-			@betstatus NVARCHAR(MAX),
-			@intDocHandle INT
+
 
 	INSERT INTO #matchList
 	SELECT 
@@ -107,16 +104,16 @@ BEGIN
 		,ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
 		,m.eventdate
 		,m.goalrecord --Phuong.Nguyen  
-		,CASE mr.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmHT ) END suspenderHT
-		,CASE mr.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmFT ) END suspenderFT
+		,CASE mr.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmHT ) END suspenderHT
+		,CASE mr.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmFT ) END suspenderFT
 		,ISNULL(mr.IsHTCal,0) AS IsHTCal
 		,ISNULL(mr.calculate,0) AS calculate
 		,ISNULL(mr.isPending,0) AS isPending  
 		,ISNULL(mr.isUndecided,0) AS isUndecided  --Hurri@20120306
 		,CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END IsKeyscore  
 		,0,0,0
-	FROM dbo.match m WITH(NOLOCK)
-		LEFT JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
+	FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
+		LEFT JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 	WHERE m.eventdate BETWEEN @FromDate AND @ToDate  
 		AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END
 		AND (@UncalOnly = 0 OR ISNULL(mr.calculate,0) = 0)  
@@ -126,27 +123,19 @@ BEGIN
 					WHEN @UncalMultiOnly = 1 THEN hthomescore*htawayscore*finalhomescore*finalawayscore  
 			END IS NOT NULL  
 		AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END
-	
-	SELECT @matchid = (
-		SELECT matchid 
-		FROM #matchList
-		FOR XML PATH('match'), ROOT('root')
+		
+	;WITH rs AS
+	(
+		SELECT matchid, COUNT(1) AS cnt
+		FROM bettrans WITH(NOLOCK)
+		WHERE matchid IN (SELECT matchid FROM #matchList)
+			AND bettype = 14
+		GROUP BY matchid 
 	)
-	
-	EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @betstatus = @betstatus OUTPUT
-	
-	--Create an internal representation of the XML document.      
-	EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
-	
 	UPDATE m
 	SET IsFGLG = CASE WHEN rs.cnt = 0 OR rs.cnt IS NULL THEN 0 ELSE 1 END
 	FROM #matchList m
-		LEFT JOIN (
-				SELECT matchid, cnt
-				FROM OPENXML(@intDocHandle,'/root/match',2)
-				with (matchid INT,
-					cnt INT) 
-		)rs ON m.matchid = rs.matchid
+		LEFT JOIN rs ON m.matchid = rs.matchid
 		
 	
 	-- outright table
@@ -183,7 +172,7 @@ BEGIN
 		,0 AS IsFGLG
 		,o.Odds
 		,o.PlaceOdds
-	FROM	dbo.outright o WITH(NOLOCK)
+	FROM	DBPRO.bodb02.dbo.outright o WITH(NOLOCK)
 			INNER JOIN league l WITH(NOLOCK) ON o.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
 			AND l.sporttype BETWEEN (CASE WHEN @sporttype = 0 THEN 151 ELSE @sporttype END ) AND (CASE WHEN @sporttype = 0 THEN 153 ELSE @sporttype END )
@@ -227,8 +216,8 @@ BEGIN
 		,o.WinOdds
 		,o.PlaceOdds
 		
-	FROM	dbo.VSOutright o WITH(NOLOCK)
-			INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+	FROM	DBPRO.bodb02.dbo.VSOutright o WITH(NOLOCK)
+			INNER JOIN DBPRO.bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
 			AND l.sporttype = CASE WHEN @sporttype = 0 THEN l.sporttype ELSE @sporttype END
@@ -280,12 +269,7 @@ BEGIN
 	DROP TABLE #matchList
 END
 
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSel] TO [ITVivi] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Set_MatchSel] TO [vnteam] AS [dbo]

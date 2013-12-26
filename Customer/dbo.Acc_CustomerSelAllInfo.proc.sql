@@ -51,6 +51,7 @@ Revisions:
 	- 20130422@Johnson: get field LastChangedSecurityCodeDate
 	- 20130719@Elodie: Correct link server DBACC instead of DBARC
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call CustLoginInfo, CustLoginInfo_Member by link server DBTXN.CustDB)
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -138,7 +139,7 @@ BEGIN
 	SET @IsDeposit =1
 	
 	SELECT @LastChangedSecurityCodeDate = LastChangedSecurityCodeDate
-	FROM DBTXN.bodb02.dbo.CustLoginInfo WITH(NOLOCK)
+	FROM DBTXN.CustDB.dbo.CustLoginInfo WITH(NOLOCK)
 	WHERE custid = @custid
 END
 
@@ -158,7 +159,7 @@ BEGIN
 	SET @IsDeposit =1
 	
 	SELECT @LastChangedSecurityCodeDate = LastChangedDate
-	FROM DBTXN.bodb02.dbo.CustLoginInfo_Member WITH(NOLOCK)
+	FROM DBTXN.CustDB.dbo.CustLoginInfo_Member WITH(NOLOCK)
 	WHERE custid = @custid
 END
 

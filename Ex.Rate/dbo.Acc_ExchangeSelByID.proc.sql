@@ -1,10 +1,11 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_ExchangeSelByID]
-	@ExchangeID int
+	@ExchangeID [int]
+WITH EXECUTE AS CALLER
 AS
 /*
 Created: 
 Task : Select currency by Id
-DB: DB052.bodb02/DB02 [DB02: used for Deposite]
+DB: DB052.bodb02/DBTXN.CustDB [DBTXN: used for Deposite]
 Original:
 
 Revisions:
@@ -22,8 +23,7 @@ BEGIN
 	WHERE exchangeid = @ExchangeID
 END
 
-
+GO
 GRANT  EXECUTE  ON [dbo].[Acc_ExchangeSelByID]  TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeSelByID] TO [vnteam]
-GO
+GRANT EXECUTE ON [dbo].[Acc_ExchangeSelByID] TO [bodbAdminNet] AS [dbo]

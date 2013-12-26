@@ -100,6 +100,7 @@ mrecommend  in (105181, 118473, 105183)
 DROP TABLE #OutrightDeleteBets
 
 
+
 GO
 GRANT EXECUTE ON [dbo].Acc_BettransSelDelSpecial_Outright TO [bodbAdminNet]
 

@@ -13,6 +13,7 @@ AS
 	Revisions:   				   
 		- 20130128@Elodie: Change link server DB03 to DBPOLICY, DB053 to DBAGE
 						   Write more log on DBTXN server in case of DBLOG server failure
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Get credit in CustInfo from CustDB by link database)						   
 	Param's Explanation:
 */
 
@@ -229,7 +230,7 @@ BEGIN
 	
 	select @IsNegativeBal = CASE WHEN c.credit + @TotalBalance - b.actual_stake < 0 then 1 ELSE 0 end
 	FROM	bettrans b WITH (NOLOCK)
-			inner join custInfo c with (NOLOCK) ON b.custid = c.custid	
+			inner join CustDB.dbo.custInfo c with (NOLOCK) ON b.custid = c.custid	
 	WHERE	b.transid = @transid
 	
 ----Get data before update	
@@ -324,9 +325,9 @@ BEGIN
 	
 END
 
-GO
-GRANT VIEW DEFINITION ON [Acc_BettransRecoverBet_NumberGame] TO vnteam
-GO
-GRANT EXECUTE ON [Acc_BettransRecoverBet_NumberGame] TO bodbAdminNet
 
- 
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_BettransRecoverBet_NumberGame] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransRecoverBet_NumberGame] TO [vnteam] AS [dbo]

@@ -67,6 +67,7 @@ AS
 		- 20120913@Sophia: Check for concurrent running
 		- 20130128@Elodie: Change link server DB03 to DBPOLICY
 		- 20130526@Johnson: Add param @reason to log the reason delete bets
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer, CustInfo from CustDB by link database)						   
 		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 		 
 	Param's Explanation: Special bet delete option
@@ -102,7 +103,7 @@ BEGIN
 		RETURN
 	
 	IF NOT EXISTS (SELECT 1
-		FROM dbo.customer WITH (NOLOCK)
+		FROM CustDB.dbo.customer WITH (NOLOCK)
 		WHERE	customer.userpwd = @UserPwd
 			AND custid = @UserID
 			AND roleid>=5)
@@ -202,7 +203,7 @@ BEGIN
 		,b.betteam		
 		,b.statusID
 	FROM dbo.bettransm AS b WITH(NOLOCK)		 
-		 INNER JOIN dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
+		 INNER JOIN CustDB.dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
 	WHERE b.matchid=@MatchID	
 		AND CASE WHEN @Type = 2 THEN @Type ELSE b.liveindicator END = @Type
 		AND b.livehomescore = CASE WHEN @livehomescore IS NOT NULL AND @Type = 1 THEN @livehomescore ELSE b.livehomescore END
@@ -292,11 +293,11 @@ BEGIN
 	--BEGIN
 		INSERT INTO @DepositCust (custid, username)
 		SELECT		C.custid, C.username 
-		FROM		dbo.custinfo C (nolock) 
+		FROM		CustDB.dbo.custinfo C (nolock) 
 		INNER JOIN	#REF R 
 				ON	C.custid = R.custid 
 		WHERE C.srecommend in (
-			SELECT custid FROM Dep_CustSuper WITH (NOLOCK)
+			SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)
 			--WHERE site <> '12Bet'
 			/*
 			SELECT custid FROM dbo.customer(nolock) WHERE UserName like 'MS88Super%' AND roleid=4 --mansion88
@@ -336,7 +337,7 @@ BEGIN
 	--BEGIN
 		INSERT INTO @12EUCust (custid,username)
 		SELECT		C.custid,C.username 
-		FROM		dbo.customer C WITH (nolock)
+		FROM		CustDB.dbo.customer C WITH (nolock)
 		INNER JOIN	#REF R 
 				ON	C.custid = R.custid
 		WHERE		C.username = '12EU'
@@ -345,20 +346,20 @@ BEGIN
 	--INSERT UUS  CUSTOMER
 	Insert into @UUSCust(custid,username)
 	SELECT		C.custid, C.username 
-	FROM		custinfo C WITH (nolock) 
+	FROM		CustDB.dbo.custinfo C WITH (nolock) 
 	INNER JOIN	#REF R 
 			ON	C.custid = R.custid
 	WHERE C.srecommend in (
-		SELECT custid FROM customer (nolock) Where CURRENCY = 20 and roleid = 4
+		SELECT custid FROM CustDB.dbo.customer (nolock) Where CURRENCY = 20 and roleid = 4
 	) and C.roleid = 1
 	
 	
 	--INSERT CUSTOMER HAVE REAL CURRENCIES AND CREATE USERNAME LIKE 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'		
 	INSERT INTO @RealCurrCust (CustID, username)
 	SELECT		INF.custid, INF.username 
-	FROM		custinfo INF WITH (NOLOCK) 
+	FROM		CustDB.dbo.custinfo INF WITH (NOLOCK) 
 	INNER JOIN	#REF BD ON INF.Custid = BD.Custid 
-	WHERE		INF.srecommend IN( SELECT custid FROM customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
+	WHERE		INF.srecommend IN( SELECT custid FROM CustDB.dbo.customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
 				AND INF.roleid = 1 
 				AND ( @Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam')			
 			
@@ -386,7 +387,11 @@ BEGIN
 			LEFT JOIN @12EUCust AS c12 ON r.custid=c12.custid
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
-		WHERE r.srecommend not IN (SELECT custid FROM Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
+<<<<<<< HEAD
+		WHERE r.srecommend not IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
+=======
+		WHERE r.srecommend not IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND d.custID IS NULL
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
@@ -400,7 +405,11 @@ BEGIN
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
 			LEFT JOIN dbo.strSplit(@transids, ',') AS t ON t.val=r.transid
-		WHERE r.srecommend not IN (SELECT custid FROM Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
+<<<<<<< HEAD
+		WHERE r.srecommend not IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
+=======
+		WHERE r.srecommend not IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND d.custID IS NULL
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
@@ -415,7 +424,11 @@ BEGIN
 			LEFT JOIN @12EUCust AS c12 ON r.custid=c12.custid
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
-		WHERE r.srecommend IN (SELECT custid FROM Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
+<<<<<<< HEAD
+		WHERE r.srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
+=======
+		WHERE r.srecommend IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
 			AND m.custid IS NULL--not in
@@ -428,7 +441,11 @@ BEGIN
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
 			LEFT JOIN dbo.strSplit(@transids_D, ',') AS t ON t.val=r.transid
-		WHERE r.srecommend IN (SELECT custid FROM Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
+<<<<<<< HEAD
+		WHERE r.srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
+=======
+		WHERE r.srecommend IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
 			AND m.custid IS NULL--not in
@@ -676,9 +693,9 @@ BEGIN
 	FROM dbo.bettrans AS b with (NOLOCK)
 		INNER JOIN #Ref AS r WITH(NOLOCK) ON b.refno=r.refno AND b.matchid IN (9,29) AND b.bettype IN (9,29)
 		INNER JOIN dbo.match AS m WITH(NOLOCK) ON m.matchid=@MatchID
-		--INNER JOIN dbo.customer AS ag with (NOLOCK) ON b.recommend = ag.custid
-		INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
+		--INNER JOIN CustDB.dbo.customer AS ag with (NOLOCK) ON b.recommend = ag.custid
+		INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
 	WHERE	(b.betid = 0 OR b.betid IS NULL)
 			AND 
 			(	b.custid IN (SELECT custid FROM @12EUCust)  
@@ -697,10 +714,10 @@ BEGIN
 		r.srecommend, sag.Username AS SagUserName
 	FROM dbo.bettrans AS b WITH(NOLOCK) 
 		INNER JOIN #Ref AS r WITH(nolock) ON b.refno=r.refno AND b.matchid IN (9,29) AND b.bettype IN (9,29)
-		INNER JOIN dbo.custinfo mem (nolock) ON r.custid     = mem.custid
-		INNER JOIN dbo.custinfo ag  (nolock) ON r.recommend  = ag.custid
-		INNER JOIN dbo.custinfo mag (nolock) ON r.mrecommend = mag.custid
-		INNER JOIN dbo.custinfo sag (nolock) ON r.srecommend = sag.custid
+		INNER JOIN CustDB.dbo.custinfo mem (nolock) ON r.custid     = mem.custid
+		INNER JOIN CustDB.dbo.custinfo ag  (nolock) ON r.recommend  = ag.custid
+		INNER JOIN CustDB.dbo.custinfo mag (nolock) ON r.mrecommend = mag.custid
+		INNER JOIN CustDB.dbo.custinfo sag (nolock) ON r.srecommend = sag.custid
 	
 -----BEGIN : Send mail when delete real currencies and creator username like 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam' / OR Currency is UUS
 		SELECT
@@ -743,8 +760,8 @@ BEGIN
 	FROM dbo.bettrans AS b with (NOLOCK)
 		INNER JOIN #Ref AS r WITH(NOLOCK) ON b.refno=r.refno AND b.matchid IN (9,29) AND b.bettype IN (9,29)
 		INNER JOIN dbo.match AS m WITH(NOLOCK) ON m.matchid=@MatchID
-		INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
+		INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
 	WHERE	(b.betid = 0 OR b.betid IS NULL)
 			AND 
 				( b.custid IN (SELECT custid FROM @RealCurrCust)	
@@ -764,10 +781,12 @@ BEGIN
 	SET NOCOUNT OFF
 END
 
+<<<<<<< HEAD
+=======
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecialDel_MixParlay] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecialDel_MixParlay] TO [vnteam]
-go
 
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
+GO
+GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecialDel_MixParlay] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecialDel_MixParlay] TO [vnteam] AS [dbo]

@@ -19,6 +19,7 @@ AS
 
 	History:		
 		- 20130617@Johnson: change alias StakePositiontaking to stake
+		- 20131211@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]	
 	Explanation's Param:	
 		- @betteam1201: include Handicap(1201), Over/Under(1203), Double chance(1224) of Virtual sports
 		- @betteam1205: include FT1x2(1205) of Virtual sports
@@ -48,7 +49,8 @@ BEGIN
 			cr.username as creator,	
 			stake,
 			b.currency, 
-			case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+			case when b.srecommend in (select custid from dep_custsuper with(nolock)) then 1 else 0 end as IsDeposit,
+			--case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
 			ag.site,
 			b.status,
 			b.mrecommend,
@@ -81,7 +83,8 @@ BEGIN
 		cr.username as creator,	
 		stake,
 		b.currency, 
-		case when betfrom IN ('D', 'M', 'E' ,'L') then 1 else 0 end as IsDeposit,
+		--case when betfrom IN ('D', 'M', 'E' ,'L') then 1 else 0 end as IsDeposit,
+		case when b.srecommend in (select custid from dep_custsuper with(nolock)) then 1 else 0 end as IsDeposit,
 		ag.site,
 		b.status,
 		b.mrecommend,
@@ -127,7 +130,8 @@ BEGIN
 		cr.username as creator,	
 		stake ,
 		b.currency, 
-		case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+		--case when betfrom IN ('D', 'M', 'E', 'L') then 1 else 0 end as IsDeposit,
+		case when b.srecommend in (select custid from dep_custsuper with(nolock)) then 1 else 0 end as IsDeposit,
 		ag.site,
 		b.status,
 		b.mrecommend,
@@ -182,6 +186,7 @@ BEGIN
 	
 	SET NOCOUNT OFF
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel_VirtualSports] TO [bodbAdminNet]
