@@ -302,8 +302,7 @@ BEGIN
 		RETURN
 	END
 
-	--Check
- Bingo & Number status:
+	--Check Bingo & Number status:
 	IF @sdisableBingo = 1 AND @mdisableBingo = 0
 	BEGIN
 		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Bingo but new super is not enabled Bingo.',
@@ -535,8 +534,7 @@ BEGIN
 	)
 	BEGIN
 		
-		SELECT @ErrMsg
- = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
 			@ErrCode = 208				 
 		RETURN
 	END

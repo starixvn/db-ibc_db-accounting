@@ -1,4 +1,4 @@
-﻿ALTER PROC [dbo].[Acc_BettransSelDelSpecial_MixParlay]
+﻿ ALTER PROC [dbo].[Acc_BettransSelDelSpecial_MixParlay]
 	@MatchID int,
 	@bettype smallint = 0,
 	@Type smallint = 0, 
@@ -301,6 +301,8 @@ BEGIN
      
  SET NOCOUNT OFF  
 END
+
+
 
 
 

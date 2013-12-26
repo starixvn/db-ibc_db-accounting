@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
 	@UserID int,
@@ -35,6 +34,7 @@ Revisions:
 	- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20131025@Lukas: add system define permission checking when call from external accounting
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Call Customer, Exchange by link database)  								   
 	
 Param's Explanation:
 */ 
@@ -82,7 +82,7 @@ CREATE TABLE #Member (	custid int PRIMARY KEY,
 						UNIQUE(memberBalance,custid)
 					 ) 
 
-if not exists (select 1 from customer with (NOLOCK) where custid = @FromCustID)
+if not exists (select 1 FROM CustDB.dbo.customer with (NOLOCK) where custid = @FromCustID)
 BEGIN
 	Select @ErrMsg = case @Language 
 							when 'E' then 'Customer does not exist.'
@@ -101,8 +101,8 @@ Select @LogData = 'Admin ' + cast(@UserID as varchar(20))
 SELECT @AgentID = @FromCustID
 SELECT @currency = c.currency, @actualrate = e.actualrate, @currName = e.currency ,
 	   @agUser = c.username, @MRecommend1 = c.mrecommend ,@Recommend1 = c.recommend,@srecommend1 = c.srecommend
-FROM customer c with (nolock) 
-	INNER JOIN Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+FROM CustDB.dbo.customer c with (nolock) 
+	INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
 WHERE custid = @agentid AND roleid = 2
 
 IF( @CusStatus <> '' or @CusStatus <> null)
@@ -115,7 +115,7 @@ BEGIN
 								  else 0 
 								  end , 0)), 0) memberBal
 	FROM  Bettrans AS b with (NOLOCK)
-	INNER JOIN Customer as c with (NOLOCK) on b.custid = c.custid 
+	INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 	WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1
 	GROUP BY b.custid ,c.username
 END 
@@ -128,7 +128,7 @@ BEGIN
 								 else 0 
 								 end , 0)), 0) memberBal
 	FROM  Bettrans AS b with (NOLOCK)
-	INNER JOIN Customer as c with (NOLOCK) on b.custid = c.custid 
+	INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 	WHERE b.custid in (Select convert(int, val) from dbo.strSplit (@ToCustIDs, ',' ))
 		  and c.recommend = @AgentID and b.ruben = 1 
 	GROUP BY b.custid ,c.username
@@ -352,11 +352,10 @@ BEGIN
 	  end  
 END
 
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerInsClearBalance] TO [ITVivi] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerInsClearBalance] TO [vnteam] AS [dbo]

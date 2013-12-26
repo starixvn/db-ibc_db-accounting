@@ -2,7 +2,7 @@
 	@Username		VARCHAR(50),
 	@Source			INT = 2,
 	@BAStatus		INT = 2,
-	@FollowLive		INT = 3,
+	@FollowLive		VARCHAR(10) = '0,1,2',
 	@Handicap		INT = 2,
 	@1stHandicap	INT = 2,
 	@OverUnder		INT = 2,
@@ -19,7 +19,7 @@ Revisions:
 	Param's Explanation:  
 	  + @Source:		0 - Manual		 1 - Auto;			2 - All;
 	  +	@BAStatus:		0 - BA Disabled; 1 - BA Enabled 	2 - All;		
-	  + @FollowLive:	0 - Non live;	 1 - Live;			2 - Both		3 - All
+	  + @FollowLive:	0 - Non live;	 1 - Live;			2 - Both		
 	  + @Handicap:		0 - Not follow   1 - Follow;		2 - All
 	  + @1stHandicap:	0 - Not follow;	 1 - Follow;		2 - All
 	  + @OverUnder:		0 - Not follow;	 1 - Follow;		2 - All
@@ -50,7 +50,7 @@ BEGIN
 		ON c.custid = f.custid
 	WHERE (ISNULL(@Username,'') = '' OR c.username = @Username)
 	AND (@Source = 2 OR f.src = @Source)
-	AND (@FollowLive = 3 OR f.FollowLive = @FollowLive)
+	AND (f.FollowLive IN (SELECT s.val FROM dbo.strSplit(@FollowLive, ',') s))
 	AND (@Handicap = 2 OR f.Follow1 = @Handicap)
 	AND (@1stHandicap = 2 OR f.Follow7 = @1stHandicap)
 	AND (@OverUnder = 2 OR f.Follow3 = @OverUnder)

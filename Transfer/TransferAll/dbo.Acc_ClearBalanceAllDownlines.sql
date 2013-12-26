@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
+﻿ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	
 	@UserID int = 8,
 	@IP nvarchar(15)='', 
@@ -28,6 +27,7 @@ AS
 		- 20121203@Dan: skip deleted transfer record when check existed transfer. Delay updating by batch (500 customer) to avoid affect replication
 		- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					       Write more log on DBTXN server in case of DBLOG server failure
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
 */ 
@@ -74,7 +74,7 @@ DECLARE @WinlostDate datetime
 SELECT @WinlostDate = convert(nvarchar(10),current_timestamp,120) 
 
 SELECT @roleid = roleid, @AgentID = custid
-FROM custinfo (nolock)
+from CustDB.dbo.Custinfo (nolock)
 WHERE username = @AgentName
 
 if isnull(@AgentID,0) = 0 or @roleid NOT in (2,3,4)
@@ -116,9 +116,9 @@ BEGIN
 		membername, agentname)
 	SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.currency,e.actualrate, e.currency,
 			c.username, ag.username
-	FROM custinfo c with(nolock)
-		inner join custinfo ag with(nolock) on c.recommend = ag.custid
-		inner join exchange e with(nolock) on c.currency = e.exchangeid 
+	from CustDB.dbo.Custinfo c with(nolock)
+		INNER JOIN CustDB.dbo.custinfo ag with(nolock) on c.recommend = ag.custid
+		INNER JOIN CustDB.dbo.Exchange e with(nolock) on c.currency = e.exchangeid 
 	WHERE  c.recommend = @AgentID AND c.roleid = 1
 	
 END
@@ -128,18 +128,18 @@ BEGIN
 						membername, agentname)
 	SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency,
 			c.username, ag.username
-	FROM custinfo c with(nolock)
-		inner join custinfo ag with(nolock) on c.recommend = ag.custid
-		inner join exchange e with(nolock) on c.currency = e.exchangeid 
+	from CustDB.dbo.Custinfo c with(nolock)
+		INNER JOIN CustDB.dbo.custinfo ag with(nolock) on c.recommend = ag.custid
+		INNER JOIN CustDB.dbo.Exchange e with(nolock) on c.currency = e.exchangeid 
 	WHERE c.mrecommend = @AgentID AND c.roleid = 1
 	
 	INSERT INTO #Agent (recommend, mrecommend, srecommend, currency,actualrate, currencyName, 
 					agentname, mastername)
 	SELECT distinct c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency,
 					c.username, mag.username 
-	FROM custinfo c with(nolock)			
-		inner join custinfo mag with(nolock) on c.mrecommend = mag.custid
-		inner join exchange e with(nolock) on c.currency = e.exchangeid 
+	from CustDB.dbo.Custinfo c with(nolock)			
+		INNER JOIN CustDB.dbo.custinfo mag with(nolock) on c.mrecommend = mag.custid
+		INNER JOIN CustDB.dbo.Exchange e with(nolock) on c.currency = e.exchangeid 
 	WHERE  c.mrecommend = @AgentID AND c.roleid = 2
 	
 END
@@ -149,27 +149,27 @@ BEGIN
 						membername, agentname)
 	SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency,
 			c.username, ag.username
-	FROM custinfo c with(nolock)
-		inner join custinfo ag with(nolock) on c.recommend = ag.custid
-		inner join exchange e with(nolock) on c.currency = e.exchangeid 
+	from CustDB.dbo.Custinfo c with(nolock)
+		INNER JOIN CustDB.dbo.custinfo ag with(nolock) on c.recommend = ag.custid
+		INNER JOIN CustDB.dbo.Exchange e with(nolock) on c.currency = e.exchangeid 
 	WHERE c.srecommend = @AgentID AND c.roleid = 1
 	
 	INSERT INTO #Agent (recommend, mrecommend, srecommend, currency,actualrate, currencyName, 
 					agentname, mastername)
 	SELECT distinct c.recommend, c.mrecommend, c.srecommend, c.currency,e.actualrate, e.currency,
 			c.username, mag.username 
-	FROM custinfo c with(nolock)			
-		inner join custinfo mag with(nolock) on c.mrecommend = mag.custid
-		inner join exchange e with(nolock) on c.currency = e.exchangeid 
+	from CustDB.dbo.Custinfo c with(nolock)			
+		INNER JOIN CustDB.dbo.custinfo mag with(nolock) on c.mrecommend = mag.custid
+		INNER JOIN CustDB.dbo.Exchange e with(nolock) on c.currency = e.exchangeid 
 	WHERE  c.srecommend = @AgentID AND c.roleid = 2
 	
 	INSERT INTO #Master (mrecommend, srecommend, currency, actualrate, currencyName,
 						mastername, supername)
 	SELECT distinct c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency,
 		c.username, sag.username
-	FROM custinfo c with(nolock)			
-		inner join custinfo sag with(nolock) on c.srecommend = sag.custid
-		inner join exchange e with(nolock) on c.currency = e.exchangeid 
+	from CustDB.dbo.Custinfo c with(nolock)			
+		INNER JOIN CustDB.dbo.custinfo sag with(nolock) on c.srecommend = sag.custid
+		INNER JOIN CustDB.dbo.Exchange e with(nolock) on c.currency = e.exchangeid 
 	WHERE  c.srecommend = @AgentID AND c.roleid = 3
 END
 	
@@ -576,7 +576,7 @@ BEGIN
 				+ IsNull(sum(case when b.custid=b.recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) 
 				- IsNull(sum(case when bettype < 19999 and winlostdate >= @WinlostDate and ruben =1 then winlost-actual_stake + mwinlost + acomm + awinlost else 0 end),0) as masterBalance
 		FROM bettrans b with(nolock, index=IX_custid)
-			INNER JOIN Custinfo c on c.custid = b.custid
+			INNER JOIN CustDB.dbo.custinfo c on c.custid = b.custid
 		WHERE c.mrecommend in (select mrecommend from #Master)			
 		GROUP BY b.mrecommend
 	)
@@ -757,9 +757,11 @@ BEGIN
 	return
 END
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_ClearBalanceAllDownlines] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_ClearBalanceAllDownlines] TO [vnteam] AS [dbo]

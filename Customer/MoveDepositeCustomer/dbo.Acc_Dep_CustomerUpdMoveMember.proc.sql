@@ -10,7 +10,7 @@ AS
 /*
 Created: 
 Task : Move a member to another agent
-DB: DBTXN/bodb02
+DB: DBTXN/CustDB
 Original:
 
 Revisions:
@@ -41,6 +41,7 @@ Revisions:
 	- 20111020@Tom:Add check P2P Game: Status, game setting, commission.
 	- 20120322@Johnson: Check live casino
 	- 20130723@Jim: change server alias name
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo,customer table in main SP)  			
 	 
 Param's Explanation:
 • @ErrCode:
@@ -135,7 +136,7 @@ select	@srecommend			= srecommend,
 		@aMaxTransferP2P	= MaxTransferP2P, 
 		@aIsAutoResetP2P	= IsAutoResetP2P, 
 		@aDisableP2P		= DisableP2P, 
-		@aDisableFunP2P		= DisableFunP2P
+		@aDisableFunP2P		= DisableFunP2P	
 from	custinfo with (nolock)
 where	username = @agentname and roleid = 2
 
@@ -720,7 +721,7 @@ END
 
 --Apply ExeReplication
 -- call Acc_ExecRep_00 two times to update coming bets that not replicated to subcriptions servers yet.
-EXEC dbo.Acc_ExecRep_00 
+EXEC DBTXN.bodb02.dbo.Acc_ExecRep_00 
 	@custid = @custid,
 	@recommend = @recommend,
 	@recommend_old = @recommend_old,
@@ -731,9 +732,24 @@ EXEC dbo.Acc_ExecRep_00
 	@roleid = 1,
 	@ErrCode = @ErrCode OUTPUT,
 	@ErrMsg = @ErrMsg OUTPUT
-IF @ErrCode<>0 RETURN
+IF @ErrCode <> 0
+BEGIN			
+	-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  				
+	--ROLLBACK TRANSACTION MANUALLY     
+    UPDATE customer WITH (ROWLOCK, UPDLOCK) 
+    SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	UPDATE custinfo WITH (ROWLOCK, UPDLOCK) 
+	SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	IF @ReturnErrCode = 0
+		RAISERROR (@ErrMsg, 16, 1)                  
+    RETURN
+END	
 
-EXEC dbo.Acc_ExecRep_00 
+EXEC DBTXN.bodb02.dbo.Acc_ExecRep_00 
 	@custid = @custid,
 	@recommend = @recommend,
 	@recommend_old = @recommend_old,
@@ -744,10 +760,24 @@ EXEC dbo.Acc_ExecRep_00
 	@roleid = 1,
 	@ErrCode = @ErrCode OUTPUT,
 	@ErrMsg = @ErrMsg OUTPUT
-IF @ErrCode<>0 RETURN
+IF @ErrCode <> 0
+BEGIN			
+	-- 20130808@Elodie: Splitting DBTXN into DBCUST (Roll back updates on custinfo,customer table in main SP)  				
+	--ROLLBACK TRANSACTION MANUALLY     
+    UPDATE customer WITH (ROWLOCK, UPDLOCK) 
+    SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	UPDATE custinfo WITH (ROWLOCK, UPDLOCK) 
+	SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+	WHERE custid = @custid
+	
+	IF @ReturnErrCode = 0
+		RAISERROR (@ErrMsg, 16, 1)                  
+    RETURN
+END	
 
 --super 3rd
-
 UPDATE	cs WITH (UPDLOCK,ROWLOCK)
 SET		sdiscount = scs.sdiscount
 FROM	Dep_CustSetting3rd scs WITH (NOLOCK)
@@ -899,7 +929,9 @@ set @duration  = datediff (millisecond,@startRun,@endRun)
 		@TrackingValue = @LogSPData,
 		@duration = @duration
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [bodbadminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [vnteam] AS [dbo]

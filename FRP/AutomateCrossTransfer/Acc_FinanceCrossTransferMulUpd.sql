@@ -17,6 +17,7 @@ AS
 		- 20130201@Elodie: Change link server DB03 to DBPOLICY, DB06 to DBACC
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
 */
 BEGIN
     SET NOCOUNT ON		
@@ -71,8 +72,8 @@ BEGIN
 			a.ToAmount,            
             a.Description
     FROM DBACC.bodb_acc.dbo.Acc_CustFinanceTransfer a WITH(NOLOCK)
-		INNER JOIN custinfo c1 WITH(NOLOCK) ON a.FromCust = c1.Username
-		INNER JOIN custinfo c2 WITH(NOLOCK) ON a.ToCust = c2.Username
+		INNER JOIN CustDB.dbo.custinfo c1 WITH(NOLOCK) ON a.FromCust = c1.Username
+		INNER JOIN CustDB.dbo.custinfo c2 WITH(NOLOCK) ON a.ToCust = c2.Username
     WHERE UserId = @UserId
     
     
@@ -152,9 +153,9 @@ BEGIN
 		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @TotalUsers, @ToCustID = 0, @IP = @IP, @Doing = @Doing
 	END CATCH
 END			
-		
+
 
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_FinanceCrossTransferMulUpd]  TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_FinanceCrossTransferMulUpd] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceCrossTransferMulUpd] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceCrossTransferMulUpd] TO [vnteam] AS [dbo]

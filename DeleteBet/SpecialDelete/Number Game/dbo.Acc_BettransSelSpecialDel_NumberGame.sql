@@ -141,6 +141,7 @@ BEGIN
 
 	DROP TABLE #SpecialDeleteBets  
 END
+
   
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel_NumberGame] TO [vnteam]

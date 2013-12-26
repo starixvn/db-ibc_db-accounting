@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
+﻿ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
  @AgentName varchar(50),  
  @UserID int,  
  @IP nvarchar(15)='',  
@@ -27,6 +25,7 @@ Revisions:
 	- 20121203@Dan: skip deleted transfer record when check existed transfer. Delay updating by batch (500 customer) to avoid affect replication
 	- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					   
 	
 Param's Explanation:
 */ 
@@ -48,7 +47,7 @@ If @ErrCode <> 0
  SELECT @batch=200, @count=0 	
   
  SELECT @roleid = roleid, @AgentID = custid 
- FROM custinfo (nolock)  
+ from CustDB.dbo.Custinfo (nolock)  
  WHERE username = @AgentName  
   
  if isnull(@AgentID,0) = 0 or @roleid NOT in (2,3,4)  
@@ -78,8 +77,8 @@ if @ErrCode <>0 return
  BEGIN
 	INSERT INTO #Member( custid,recommend,mrecommend, srecommend, memberName, agentName, memBalance)
 	SELECT ci.custid, ci.recommend,ci.mrecommend, ci.srecommend, ci.username,ag.username, 0
-	FROM Custinfo ci with (NOLOCK)
-		INNER JOIN Custinfo ag with (NOLOCK) on ci.recommend = ag.custid 
+	from CustDB.dbo.Custinfo ci with (NOLOCK)
+		INNER JOIN CustDB.dbo.custinfo ag with (NOLOCK) on ci.recommend = ag.custid 
 	WHERE ci.recommend = @AgentID and ci.roleid =1 
  END 
  
@@ -87,8 +86,8 @@ if @ErrCode <>0 return
  BEGIN
 	INSERT INTO #Member( custid,recommend,mrecommend, srecommend, memberName,agentName, memBalance)
 	SELECT ci.custid, ci.recommend,ci.mrecommend, ci.srecommend, ci.username, ag.username, 0
-	FROM Custinfo ci with (NOLOCK)
-		INNER JOIN Custinfo ag with (NOLOCK) on ci.recommend = ag.custid 
+	from CustDB.dbo.Custinfo ci with (NOLOCK)
+		INNER JOIN CustDB.dbo.custinfo ag with (NOLOCK) on ci.recommend = ag.custid 
 	WHERE ci.mrecommend = @AgentID and ci.roleid =1 
  END 
  
@@ -96,8 +95,8 @@ if @ErrCode <>0 return
  BEGIN 
 	INSERT INTO #Member( custid,recommend,mrecommend, srecommend, memberName, agentName, memBalance)
 	SELECT ci.custid, ci.recommend,ci.mrecommend, ci.srecommend, ci.username,ag.username, 0
-	FROM Custinfo ci with (NOLOCK)
-		INNER JOIN Custinfo ag with (NOLOCK) on ci.recommend = ag.custid 
+	from CustDB.dbo.Custinfo ci with (NOLOCK)
+		INNER JOIN CustDB.dbo.custinfo ag with (NOLOCK) on ci.recommend = ag.custid 
 	WHERE ci.srecommend = @AgentID and ci.roleid =1  
  END 
  -- Mark for A/C which need to transfer  
@@ -156,8 +155,8 @@ if @ErrCode <>0 return
   DECLARE @refno bigint, @grefno int
   
   SELECT @currency = ci.currency, @actualrate = e.actualrate ,@currName = e.currency 
-  FROM Custinfo ci with (NOLOCK) 
-	INNER JOIN Exchange e with (NOLOCK) on ci.currency = e.exchangeid
+  from CustDB.dbo.Custinfo ci with (NOLOCK) 
+	INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on ci.currency = e.exchangeid
   WHERE custid = @agentid 
 	
    -- Start Transfer (CURSOR Loop)
@@ -358,9 +357,13 @@ BEGIN
 	Select @ErrMsg = N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s): ' + @ErrItems
 END
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransferAllMembers] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransferAllMembers] TO [ITVivi] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransferAllMembers] TO [vnteam] AS [dbo]

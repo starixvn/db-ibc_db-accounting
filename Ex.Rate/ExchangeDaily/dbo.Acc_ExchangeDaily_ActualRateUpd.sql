@@ -9,6 +9,7 @@ DB: DBTRANS.BODB02
 Revisions:
 	- 20120427@Henry: get data from ExchangeDailyOanda instead of ExchangeDaily
 	- 20120516@Henry: raise error when a currency got more than 1 actual rate in bettrans table
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call bettrans by link database)
 	
 */		
 SET NOCOUNT ON
@@ -37,7 +38,7 @@ FROM
 --3 update yesterday actualrate  from bettrans
 INSERT INTO @tmpTable(currency,actualrate)
 select distinct currency, actualrate
-		from bettrans with (nolock) where winlostdate = DATEADD(dd,-1,@date) 
+		from bodb02.dbo.bettrans with (nolock) where winlostdate = DATEADD(dd,-1,@date) 
 
 IF EXISTS(
 	select currency FROM @tmpTable
@@ -61,7 +62,7 @@ SET e.actualrate = b.actualrate
 DELETE FROM @tmpTable
 INSERT INTO @tmpTable(currency,actualrate)
 select distinct currency, actualrate
-		from bettrans with (nolock) where winlostdate = DATEADD(dd,-2,@date) 
+		from bodb02.dbo.bettrans with (nolock) where winlostdate = DATEADD(dd,-2,@date) 
 
 IF EXISTS(
 	select currency FROM @tmpTable
@@ -79,11 +80,9 @@ UPDATE e
 SET e.actualrate = b.actualrate
 	FROM ExchangeDailyOanda e WITH (ROWLOCK,UPDLOCK) INNER JOIN 
 	@tmpTable b
-	ON e.ExchangeId = b.currency AND e.ExchangeDate = DATEADD(dd,-2,@date)	
+	ON e.ExchangeId = b.currency AND e.ExchangeDate = DATEADD(dd,-2,@date)
 
-
-	
 GO
-GRANT EXECUTE ON [dbo].[Acc_ExchangeDaily_ActualRateUpd] TO [bodbAdminNet] 
+GRANT EXECUTE ON [dbo].[Acc_ExchangeDaily_ActualRateUpd] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeDaily_ActualRateUpd] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeDaily_ActualRateUpd] TO [vnteam] AS [dbo]

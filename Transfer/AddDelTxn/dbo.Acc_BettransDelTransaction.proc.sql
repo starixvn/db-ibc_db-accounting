@@ -29,6 +29,7 @@ AS
 		- 20120810@Sophia: Use @transdesc to avoid SQL insert error
 		- 20130201@Elodie: Change link server DB03 to DBPOLICY
 						   Write more log on DBTXN server in case of DBLOG server failure
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)  								   						   
 */
 SET NOCOUNT ON 
 --Check permission for account site: @phuc20080213
@@ -139,7 +140,7 @@ END
 	INSERT INTO #BeforeUpd (custid, balance)
 	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
 	FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN	custInfo c WITH (NOLOCK) 
+		INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
 		ON	b.custid = c.custID
 	WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
 			AND c.roleid = 1
@@ -184,7 +185,7 @@ END
 	INSERT INTO #AfterUpd (custid, balance)
 	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
 	FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN	custInfo c WITH (NOLOCK) 
+		INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
 		ON	b.custid = c.custID
 	WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
 			AND c.roleid = 1
@@ -222,7 +223,9 @@ END
 
 END
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelTransaction] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelTransaction] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelTransaction] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelTransaction] TO [vnteam] AS [dbo]

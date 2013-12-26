@@ -12,7 +12,7 @@ AS
 -- Admin : for Delete ticket
 -- Call via Account/deletebet.asp
 -- submit from Account/betslip.asp
- --test
+ 
 /*	Created by: [Creator]
 	Task:  Delete bet
 		   left menu (member)/Belist/Button Delete bet
@@ -37,6 +37,7 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
 		- 20130603@Johnson: get additional information for mailing
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Customer, Dep_CustSuper, Exchange by link database)						   
 */
 
 SET NOCOUNT ON
@@ -51,7 +52,7 @@ DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype
 		-- check customer for mailing live cs
 		@isDepositCust BIT, @is12EUCust BIT, @isRealCust BIT, @srecommend INT,@bet_username NVARCHAR(50), @currency INT, @betfrom NVARCHAR(1)
 
-If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
+If NOT EXISTS (select 1 from CustDB.dbo.customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
 	Select @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!', @ErrCode = 101	
 	SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID as varchar(10)) + ' betlist: ' + cast(@transid as varchar(20)) + ' - Username: ' + @username + ' - reason: ' + @reason
@@ -141,15 +142,15 @@ END
 update odds set 
 	hometotal=hometotal-(case when b.betteam='h' then case when abs(b.odds)>1 then b.stake*e.actualrate*abs(b.odds)*(1-b.tpositiontaking) else b.stake*e.actualrate*(1-b.tpositiontaking) end  else 0 end ),
 	awaytotal=awaytotal-(case when b.betteam='a' then case when abs(b.odds)>1 then b.stake*e.actualrate*abs(b.odds)*(1-b.tpositiontaking) else b.stake*e.actualrate*(1-b.tpositiontaking) end  else 0 end ) 
-from odds o with (rowlock), bettrans b with (nolock), customer c with (nolock), exchange e with (nolock) 
-where c.custid=b.custid 
-	and o.oddsid=b.oddsid
-	and c.currency=e.exchangeid
-	and b.transid = @transid
+from odds o with (rowlock)
+	INNER JOIN bettrans b with (nolock) ON o.oddsid=b.oddsid
+	INNER JOIN CustDB.dbo.customer c with (nolock) ON c.custid=b.custid
+	INNER JOIN CustDB.dbo.exchange e with (nolock) ON c.currency=e.exchangeid
+where b.transid = @transid
 
 
 IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND transid = @transid)
-	IF EXISTS (SELECT custid FROM customer (nolock) WHERE custid = @UserID)
+	IF EXISTS (SELECT custid FROM  CustDB.dbo.customer (nolock) WHERE custid = @UserID)
 	BEGIN
 		-- calculate balance of customer
 		DECLARE @isNegativeBalance BIT, @totalbalance MONEY
@@ -167,7 +168,7 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 			@bet_username = username,
 			@srecommend = srecommend,
 			@currency = currency
-		FROM custinfo WITH(NOLOCK)
+		FROM CustDB.dbo.custinfo WITH(NOLOCK)
 		WHERE custid = @custid 
 		
 		--return all additional information for mailing
@@ -231,15 +232,15 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 			@isNegativeBalance as isNegative
 		FROM
 			bettrans b WITH (NOLOCK)
-			INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+			INNER JOIN CustDB.dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
+			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+			INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 		WHERE b.transid = @transid
 		
 		--check for live casino
 		IF @bettype IN (1101,1102)
 		BEGIN
-			SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
+			SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
 			SELECT @is12EUCust	 = CASE WHEN @bet_username = '12EU' THEN 1 ELSE 0 END
 			SELECT @isRealCust = CASE WHEN @currency = 20 THEN 1
 									WHEN @currency <> 20 AND (@Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam') THEN 1 
@@ -327,7 +328,11 @@ IF (@@Error = 0)
 		END CATCH
 	END
 	
+
+
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelBet] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelBet] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet] TO [vnteam] AS [dbo]

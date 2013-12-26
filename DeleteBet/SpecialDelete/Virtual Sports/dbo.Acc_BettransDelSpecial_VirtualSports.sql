@@ -35,6 +35,8 @@ Revisions:
 	- 20130128@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130617@Johnson: change alias StakePositiontaking to stake
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer, CustInfo, Dep_CustSuper from CustDB by link database)						   
+	- 20131211@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]	
 						   	    
 Param's Explanation: Special bet delete option
     @@DelOption = 0: No Delete (need to remove DepositBets out of #BetDelete)
@@ -83,7 +85,7 @@ BEGIN
 	SELECT @ErrCode = 0
 
 	IF not exists ( SELECT 1
-					FROM customer WITH (NOLOCK)
+					FROM CustDB.dbo.customer WITH (NOLOCK)
 					WHERE   customer.userpwd = @UserPwd
 						and custid = @UserID
 						and roleid>=5)
@@ -248,33 +250,33 @@ BEGIN
 	--INSERT Deposit CUSTOMER	
 	INSERT INTO @DepositCust (custid, username)
 	SELECT INF.Custid, INF.username 
-	FROM custinfo INF WITH(nolock) 
+	FROM CustDB.dbo.custinfo INF WITH(nolock) 
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
-		WHERE INF.srecommend in (SELECT custid FROM Dep_CustSuper WITH (NOLOCK)) 
+		WHERE INF.srecommend in (SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)) 
 				AND INF.ROLEID = 1
-				AND BD.betfrom IN ('D', 'M', 'E', 'L')
+				--AND BD.betfrom IN ('D', 'M', 'E', 'L')
 
 	--INSERT 12EU CUSTOMER	
 	INSERT INTO @12EUCust (custid,username)
 	SELECT INF.custid,INF.username 
-	FROM customer INF WITH (nolock)
+	FROM CustDB.dbo.customer INF WITH (nolock)
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
 		WHERE INF.UserName = '12EU'
 		
 	----INSERT UUS  CUSTOMER
 	Insert into @UUSCust(custid,username)
 	SELECT INF.custid, INF.username 
-	FROM custinfo INF (nolock) 
+	FROM CustDB.dbo.custinfo INF (nolock) 
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
-		WHERE INF.srecommend IN(SELECT custid FROM customer (nolock) Where CURRENCY = 20 AND roleid = 4) 
+		WHERE INF.srecommend IN(SELECT custid FROM CustDB.dbo.customer (nolock) Where CURRENCY = 20 AND roleid = 4) 
 				AND INF.roleid = 1
 	
 	----INSERT CUSTOMER HAVE REAL CURRENCIES AND CREATE USERNAME LIKE 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'		
 	INSERT INTO @RealCurrCust (CustID, username)
 	SELECT INF.custid, INF.username 
-	FROM custinfo INF WITH (NOLOCK) 
+	FROM CustDB.dbo.custinfo INF WITH (NOLOCK) 
 		INNER JOIN	#BetDelete BD ON INF.Custid = BD.Custid 
-	WHERE INF.srecommend IN( SELECT custid FROM customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
+	WHERE INF.srecommend IN( SELECT custid FROM CustDB.dbo.customer WITH(NOLOCK) Where CURRENCY <> 20 AND roleid = 4)	
 			AND INF.roleid = 1 
 			AND ( @Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam')					
 			
@@ -294,8 +296,7 @@ BEGIN
 	IF @DelOption = 0 or (@DelOption=2 and @transids='') 
 	BEGIN
 		DELETE FROM #BetDelete
-		WHERE #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
-				AND CustID IN (SELECT CustID FROM @DepositCust)
+		WHERE CustID IN (SELECT CustID FROM @DepositCust)
 				and custid not in (SELECT custid FROM @12EUCust) --12EU
 				and custid not in (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq	       
 				and mrecommend not in (SELECT custid FROM @MasterMHC)		
@@ -306,7 +307,10 @@ BEGIN
 	BEGIN
 		DELETE FROM #BetDelete
 		WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids, ','))
-				and #BetDelete.betfrom IN ('D', 'M', 'E', 'L')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 				AND CustID IN (SELECT CustID FROM @DepositCust)
 				and (custid not in (SELECT custid FROM @12EUCust) --12EU
 				and custid not in (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
@@ -424,9 +428,8 @@ BEGIN
 ------after delete, return all deleted deposit bets and 12EU with additional information for mailing (not send mail for BETDAQ tickets)
 	IF exists(
 		SELECT 1 FROM #BetDelete INNER join bettrans b ON #BetDelete.transid = b.transid
-		WHERE	( b.betfrom  IN ('D', 'M', 'E', 'L')
-				  AND #BetDelete.custid IN (SELECT custid FROM @DepositCust) 
-				) OR #BetDelete.custid IN (SELECT custid FROM @12EUCust)  			
+		WHERE #BetDelete.custid IN (SELECT custid FROM @DepositCust) 
+		    OR #BetDelete.custid IN (SELECT custid FROM @12EUCust)  			
 			or #BetDelete.custid IN (SELECT custid FROM @UUSCust)
 			or #BetDelete.custid IN (SELECT custid FROM @RealCurrCust)	    
 		) 
@@ -463,14 +466,12 @@ BEGIN
 			ag.site
 		FROM
 			bettrans b WITH (NOLOCK)
-			INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-			INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-			INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+			INNER JOIN CustDB.dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
+			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+			INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 		WHERE b.transid IN(SELECT transid FROM #BetDelete)
-			and (	
-					( b.betfrom  IN ('D', 'M', 'E', 'L')
-					  AND customer.custid IN (SELECT custid FROM @DepositCust)
-					) OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
+			and ( customer.custid IN (SELECT custid FROM @DepositCust)
+				 OR customer.custid IN (SELECT custid FROM @12EUCust) --Email 12EU if delete  
 				)								      
 		ORDER BY transid
 		
@@ -483,10 +484,10 @@ BEGIN
 			bd.srecommend, sag.Username AS SagUserName
 	FROM
 		#BetDelete bd (nolock)
-		INNER JOIN custinfo mem (nolock) ON bd.custid     = mem.custid
-		INNER JOIN custinfo ag  (nolock) ON bd.recommend  = ag.custid
-		INNER JOIN custinfo mag (nolock) ON bd.mrecommend = mag.custid
-		INNER JOIN custinfo sag (nolock) ON bd.srecommend = sag.custid
+		INNER JOIN CustDB.dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
+		INNER JOIN CustDB.dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
+		INNER JOIN CustDB.dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
+		INNER JOIN CustDB.dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
 	-----Begin : Send mail when delete real currencies and creator username like 'dba%' or 'pgm%' or 'vndbateam',  'VnQaTeam'/ OR Currency is UUS
 	IF exists(
@@ -515,9 +516,9 @@ BEGIN
 				ag.site
 			FROM
 				bettrans b WITH (NOLOCK)
-				INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-				INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-				INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+				INNER JOIN CustDB.dbo.customer  WITH (NOLOCK) ON customer.custid=b.custid
+				INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+				INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
 			WHERE	b.transid IN(SELECT transid FROM #BetDelete)
 					and (customer.custid IN (SELECT custid FROM @RealCurrCust)
 					or customer.custid IN (SELECT custid FROM @UUSCust)
@@ -575,6 +576,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial_VirtualSports] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial_VirtualSports] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial_VirtualSports] TO [vnteam] 
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial_VirtualSports] TO [vnteam] AS [dbo]

@@ -85,8 +85,8 @@ BEGIN
 	-- Check password
 	DECLARE @LogData NVARCHAR(500)
 	IF not exists (SELECT 1
-					FROM customer WITH (NOLOCK)
-					WHERE   customer.userpwd = @UserPassword
+					FROM custDB.dbo.customer WITH (NOLOCK)
+					WHERE   userpwd = @UserPassword
 						AND custid = @UserID
 						AND roleid>=5)
 	BEGIN
@@ -368,39 +368,39 @@ BEGIN
 	 -- get deposit tickets voided 
 	 INSERT INTO @DepositCust(custid)
 		SELECT c.custid
-		FROM custInfo c WITH (NOLOCK)
+		FROM custDB.dbo.custInfo c WITH (NOLOCK)
 		INNER JOIN #BetDelete b ON b.custid = c.custid
-		WHERE c.srecommend IN (SELECT custid FROM Dep_CustSuper WITH(NOLOCK))
+		WHERE c.srecommend IN (SELECT custid FROM custDB.dbo.Dep_CustSuper WITH(NOLOCK))
 		AND c.roleid = 1
 		
 	 ---- get 12EU tickets voided 
 	 INSERT INTO @12EUCust (custid)
 		SELECT INF.custid 
-		FROM customer INF WITH (nolock)
-		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
+		FROM custDB.dbo.customer INF WITH (nolock)
+		INNER JOIN #BetDelete BD ON INF.custid = BD.custid 
 		WHERE INF.UserName = '12EU'
 		
 	 ---- get UUS tickets 
 	 INSERT INTO @UUSCust(custid)
 		SELECT INF.custid 
-		FROM custinfo INF WITH(nolock) 
-		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
-		WHERE INF.srecommend IN( SELECT custid FROM customer WITH(nolock) WHERE CURRENCY = 20 AND roleid = 4 ) 
+		FROM custDB.dbo.custinfo INF WITH(nolock) 
+		INNER JOIN #BetDelete BD ON INF.Custid = BD.custid 
+		WHERE INF.srecommend IN( SELECT custid FROM custDB.dbo.customer WITH(nolock) WHERE CURRENCY = 20 AND roleid = 4 ) 
 		AND INF.roleid = 1
 
 	 ---- get any real tickets voided by IT
 	 INSERT INTO @RealCurrCust (CustID)
 		SELECT INF.custid 
-		FROM custinfo INF WITH (NOLOCK) 
+		FROM custDB.dbo.custInfo INF WITH (NOLOCK) 
 		INNER JOIN #BetDelete BD ON INF.Custid = BD.Custid 
-		WHERE INF.srecommend IN( SELECT custid FROM customer WITH(NOLOCK) WHERE CURRENCY <> 20 AND roleid = 4)	
+		WHERE INF.srecommend IN( SELECT custid FROM custDB.dbo.customer WITH(NOLOCK) WHERE CURRENCY <> 20 AND roleid = 4)	
 		AND INF.roleid = 1 
 		AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1) -- Check UserID in IT group
 
 	-- get Foobet tickets
 	INSERT INTO @FoobetCust (custid)
 		SELECT bd.custid
-		FROM custInfo ci with(NOLOCK)
+		FROM custDB.dbo.custInfo ci with(NOLOCK)
 		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
 		where bd.recommend = 11196380
 		and ci.roleid = 1 
@@ -509,7 +509,7 @@ BEGIN
 			SUM(CASE WHEN betteam='a' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) 
 					 ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) awayTotal
 		FROM bettrans b WITH (nolock)
-			INNER JOIN exchange e WITH (nolock) ON b.currency = e.exchangeid
+			INNER JOIN custDB.dbo.exchange e WITH (nolock) ON b.currency = e.exchangeid
 		WHERE bettype IN (1,3,7,8) AND ruben = 0 AND oddsid <> 0 AND matchid = @MatchId
 		GROUP BY oddsid
 
@@ -583,70 +583,70 @@ BEGIN
 	bd.mrecommend, mag.UserName AS MagUserName, bd.srecommend, sag.Username AS SagUserName,
 	bd.status, bd.SecAcceptFlag
 	FROM #BetDelete bd (nolock)
-	INNER JOIN custinfo mem (nolock) ON bd.custid     = mem.custid
-	INNER JOIN custinfo ag  (nolock) ON bd.recommend  = ag.custid
-	INNER JOIN custinfo mag (nolock) ON bd.mrecommend = mag.custid
-	INNER JOIN custinfo sag (nolock) ON bd.srecommend = sag.custid
+	INNER JOIN custDB.dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
+	INNER JOIN custDB.dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
+	INNER JOIN custDB.dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
+	INNER JOIN custDB.dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
 	-- Send mail when void deposit
-	SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag
 	FROM
 		#BetDelete b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-	WHERE customer.custid IN (SELECT custid FROM @DepositCust) -- Email deposit if voided		
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE c.custid IN (SELECT custid FROM @DepositCust) -- Email deposit if voided		
 	ORDER BY transid
 
 	-- Send mail when void 12EU tickets 
-		SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, '12EU' as site, b.status, b.SecAcceptFlag
 	FROM
 		#BetDelete b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
+		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
 	WHERE b.custid IN (SELECT [@12EUCust].custid FROM @12EUCust) -- Email 12EU if voided			
 	ORDER BY transid
 
 	
 	-----Send mail when void any real tickets by IT
-	SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
 	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-	WHERE customer.custid IN (SELECT custid FROM @RealCurrCust)			     					   
+		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE c.custid IN (SELECT custid FROM @RealCurrCust)			     					   
 	ORDER BY transid    	   
 
 	-- Send mail when void UUS tickets
-		SELECT customer.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
 	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-	WHERE customer.custid IN (SELECT custid FROM @UUSCust)				     					   
+		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE c.custid IN (SELECT custid FROM @UUSCust)				     					   
 	ORDER BY transid    
 
 		-----Send mail when void Foobet tickets
-	SELECT customer.username,  b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username,  b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
 		b.status, b.SecAcceptFlag
 	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN customer  WITH (NOLOCK) ON customer.custid=b.custid
-		INNER JOIN customer cr WITH (NOLOCK) ON cr.custid = b.creator
-		INNER JOIN customer ag WITH (NOLOCK) ON customer.recommend = ag.custid
-	WHERE customer.custid IN (SELECT custid FROM @FoobetCust)			     					   
+		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE c.custid IN (SELECT custid FROM @FoobetCust)			     					   
 	ORDER BY transid    
 
 	DROP TABLE #BetDelete
@@ -698,11 +698,5 @@ END
 
 
 
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [vnteam]
-
- 

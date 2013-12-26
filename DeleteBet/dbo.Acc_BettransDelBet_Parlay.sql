@@ -24,6 +24,7 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130605@Johnson:- get more additional information for mailing
 							- Remove checking concurrent running on table TempVariableNumber by using table SystemSettings
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer by link database)						   							
 */
 SET NOCOUNT ON
 
@@ -35,7 +36,7 @@ If @ErrCode <> 0
 Declare @LogData nvarchar(200), @statusID int, @balance MONEY, @winlostdate datetime, @matchid int, @refno bigint, @Remark VARCHAR(500)
 select @ErrCode = 0
 
-If NOT EXISTS (select 1 from customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
+If NOT EXISTS (select 1 from CustDB.dbo.customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
 	Select @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!', @ErrCode = 101	
 	SELECT @LogData = 'Try to delete transaction for custid ' + cast(@CustID as varchar(10)) + ' - Transid ' + cast(@transid as varchar(20)) + ' - Username ' + @username + ' - reason: ' + @reason
@@ -153,8 +154,8 @@ SELECT transid,
 	GETDATE() AS DATETIME,
 	ag.site	
 FROM bettrans b WITH(NOLOCK) 
-	INNER JOIN dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
-	INNER JOIN dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
+	INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+	INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
 WHERE transid = @transid and bettype = 9
 
 -- get balance
@@ -249,7 +250,8 @@ IF (@@Error = 0)
 */
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelBet_Parlay] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelBet_Parlay] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet_Parlay] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet_Parlay] TO [vnteam] AS [dbo]
