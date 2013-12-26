@@ -8,6 +8,7 @@ AS
 	DB: DBTRANS.BODB02
 	Revisions:
         - 20131108@Elodie: Splitting bodb02 into CustDB (call exchange by link database)	
+						   Use DBPRO instead of DB02
 */
 
 SET NOCOUNT ON
@@ -30,7 +31,7 @@ SET NOCOUNT ON
 			
 	UPDATE O
 	SET eventdate = @winlostdate, changeTime = CURRENT_TIMESTAMP
-	FROM DB02.bodb02.dbo.outright O WITH (UPDLOCK, ROWLOCK)
+	FROM DBPRO.bodb02.dbo.outright O WITH (UPDLOCK, ROWLOCK)
 	WHERE orid IN (SELECT orid FROM @outright)
 
 	UPDATE b
@@ -50,6 +51,7 @@ SET NOCOUNT ON
 
 	EXEC dbo.WriteLog_UserLog @UserID = 862400, @Doing = @Doing 
  
+
 
 
 GO

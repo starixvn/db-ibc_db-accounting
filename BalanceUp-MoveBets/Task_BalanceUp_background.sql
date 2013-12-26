@@ -16,7 +16,8 @@ Original:
 Revisions:
 	- 20110523@Henry: change bettype to new range
 	- 20130603@Sophia: Put the deleting-match code into [Acc_Apl_ExecRep_03]
-	- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo, Customer, Exchange, ExchangeDailyOanda by link database)		
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo, Customer, Exchange, ExchangeDailyOanda, by link database)		
+					   Use DBACC instead of DB06
 	
 Param's Explanation: 
 
@@ -148,7 +149,7 @@ IF @step = 2
 BEGIN
 -- ================== Clear BalanceTable and Perform Backup
 
-	UPDATE DB06.bodb02.dbo.SystemSettings
+	UPDATE DBACC.bodb02.dbo.SystemSettings
 	SET VValue = '1'
 	WHERE VName = 'isArchivingBet' 
 
@@ -341,7 +342,7 @@ BEGIN
 
 	EXEC dbo.balancecheck @fdate, 21
 
-	UPDATE DB06.bodb02.dbo.SystemSettings
+	UPDATE DBACC.bodb02.dbo.SystemSettings
 	SET VValue = '0'
 	WHERE VName = 'isArchivingBet' 
 
@@ -350,6 +351,7 @@ BEGIN
 -- ================== END STEP : 6
 END
 -- ================== Finishing
+
 
 
 GO

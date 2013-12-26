@@ -28,7 +28,9 @@ Revisions:
 	- 20120927@Sophia: Add column comstatus when insert into bettrans tabble
 	- 20130313@Viet: add netTurnover
 	- 20130520@Victor: add VSOutright
+	- 20130715@Dan: delete match_log, outright_log
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo, Customer, Exchange by link database)
+					   Use DBPRO instead of DB02, DBACC instead of DB06
  */
 
 SET NOCOUNT ON
@@ -181,7 +183,7 @@ BEGIN
 
 	UPDATE O
 	SET eventdate = DATEADD(day, 1, @winlostdate), changeTime = GETDATE()
-	FROM DB02.bodb02.dbo.outright O WITH (UPDLOCK, ROWLOCK)
+	FROM DBPRO.bodb02.dbo.outright O WITH (UPDLOCK, ROWLOCK)
 	WHERE orid IN (SELECT orid FROM @outright)
 
 	UPDATE bettrans WITH (UPDLOCK, ROWLOCK) SET winlostdate = DATEADD(day, 1, @winlostdate)
@@ -228,7 +230,7 @@ END
 -- Daily Summary Process
 -- =====================
 -- Re-Summary WinLost Report : Added on 2007-03-16 (Joe)
-EXEC DB06.bodb02.dbo.Task_rptWinLost_UpdateTable @winlostdate
+EXEC DBACC.bodb02.dbo.Task_rptWinLost_UpdateTable @winlostdate
 WAITFOR DELAY '000:00:30'
 -- Clear deleted/cancel record (custid = 0)
 DELETE FROM bettrans WHERE winlostdate=@winlostdate AND custid = 0
@@ -272,18 +274,18 @@ GROUP BY
 -- move match/odds/outright into [14] table
 	UPDATE O
 	SET eventdate = @winlostdate, changeTime = GETDATE()
-	FROM DB02.bodb02.dbo.Outright O WITH (UPDLOCK, ROWLOCK)
+	FROM DBPRO.bodb02.dbo.Outright O WITH (UPDLOCK, ROWLOCK)
 	WHERE orid IN 
 		(SELECT distinct matchid 
 		FROM bettrans with (nolock) 
 		WHERE bettype = 10 AND winlostdate = @winlostdate AND statusID <> 0 --AND status <> 'running'
 		)
 
-EXEC DB02.bodb02.dbo.Task_DailySummary_DB02_Copy @winlostdate
+EXEC DBPRO.bodb02.dbo.Task_DailySummary_DB02_Copy @winlostdate
 EXEC dbo.Task_BalanceCheck @winlostdate, 1
 
 -- viet ----
-UPDATE DB06.bodb02.dbo.SystemSettings
+UPDATE DBACC.bodb02.dbo.SystemSettings
 SET VValue = '1'
 WHERE VName = 'isMovingBet' 
 
@@ -362,7 +364,7 @@ SET @Doing = 'Task_DailySummary : MoveBet done'
 EXEC dbo.WriteLog_UserLog @UserID = 25520, @Doing = @Doing 
 
 -- viet ----
-UPDATE DB06.bodb02.dbo.SystemSettings
+UPDATE DBACC.bodb02.dbo.SystemSettings
 SET VValue = '0'
 WHERE VName = 'isMovingBet' 
  
@@ -667,7 +669,13 @@ END
 SET NOCOUNT OFF
 
 -- =====================
-EXEC DB02.bodb02.dbo.Task_DailySummary_DB02_Delete @winlostdate
+Delete Match_Log where matchID IN (Select matchID From Match WITH (NOLOCK) Where eventdate=@winlostdate)
+
+Delete from outright_log
+where orid in (select orid from outright where eventdate = @winlostdate AND oddsstatus = 'Completed')
+
+-- =====================
+EXEC DBPRO.bodb02.dbo.Task_DailySummary_DB02_Delete @winlostdate
 
 SET @Doing = 'Task_DailySummary : End (with Finish)'
 EXEC dbo.WriteLog_UserLog @UserID = 25520, @Doing = @Doing  
@@ -675,8 +683,8 @@ EXEC dbo.WriteLog_UserLog @UserID = 25520, @Doing = @Doing
 PRINT CONVERT(varchar(10), @winlostdate, 120)
 
 
-
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary] TO [ITVivi] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary] TO [vnteam] AS [dbo]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary] TO [ITVivi]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary] TO [vnteam]
+GO 
