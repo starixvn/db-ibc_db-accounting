@@ -12,7 +12,7 @@
 AS
 /*
 Created: Viet @ 4-Jul-2012
-DB: DBTrans.bodb02
+DB: DBTrans.CustDB
 Revison:
 	- 20131212@Kathy: - Remove @status, add new @param
 					  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144] 

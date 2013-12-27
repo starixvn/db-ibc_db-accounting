@@ -5,7 +5,7 @@
 AS
 /*
 Created: Viet @ 4-Jul-2012
-DB: DBTrans.bodb02
+DB: DBTrans.CustDB
 
 	
 Param's Explanation:	

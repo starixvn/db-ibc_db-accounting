@@ -10,7 +10,7 @@
 AS
 /*
 Created: Viet @ 4-Jul-2012
-DB: DBTXN/bodb02
+DB: DBTXN/CustDB
 Revisions:  
 	- 20130201@Daniel: Change link server alias
 	- 20131212@Kathy: - Remove @status, add new @param
