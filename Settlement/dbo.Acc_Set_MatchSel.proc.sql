@@ -112,8 +112,8 @@ BEGIN
 		,ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
 		,m.eventdate
 		,m.goalrecord --Phuong.Nguyen  
-		,CASE mr.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmHT ) END suspenderHT
-		,CASE mr.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmFT ) END suspenderFT
+		,CASE mr.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmHT ) END suspenderHT
+		,CASE mr.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmFT ) END suspenderFT
 		,ISNULL(mr.IsHTCal,0) AS IsHTCal
 		,ISNULL(mr.calculate,0) AS calculate
 		,ISNULL(mr.isPending,0) AS isPending  
@@ -134,7 +134,7 @@ BEGIN
 		
 	SELECT @rowcount = 0, @max_matchid = 0
 	
-	WHILE @rowcount < 100
+	WHILE (1=1)
 	BEGIN
 		DELETE @tmp_match
 		
