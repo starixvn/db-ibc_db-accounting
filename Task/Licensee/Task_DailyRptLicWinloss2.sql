@@ -30,7 +30,7 @@ Revisions:
 SET NOCOUNT ON 
 
 IF NOT EXISTS(SELECT TOP 1 1 FROM bettrans14 with(nolock) WHERE winlostdate = @winlostdate)
-OR EXISTS(SELECT 1 FROM DB06.bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VValue = '1' AND VName in ('isMovingBet','isArchivingBet'))
+OR EXISTS(SELECT 1 FROM DBACC.bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VValue = '1' AND VName in ('isMovingBet','isArchivingBet'))
 BEGIN
 	print 'data not in bettrans14 OR movebet/archive process is now running!!!!'
 	RETURN
