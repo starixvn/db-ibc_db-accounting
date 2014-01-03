@@ -24,6 +24,7 @@ Revisions:
 	- 20130903@Jim: support Virtual Horse Racing
 	- 20131014@Jim: support Virtual Tennis
 	- 20131128@Jim: revert code to Group by All Virtual Sport into sporttypeID=180
+	- 20131230@Jim: user alias server instead of DB06
    
  */
 
