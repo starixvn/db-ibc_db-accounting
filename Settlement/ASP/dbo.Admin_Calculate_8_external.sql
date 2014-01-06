@@ -1,15 +1,15 @@
-﻿
-ALTER PROCEDURE [dbo].[Admin_Calculate_8_external] 
+﻿ALTER PROCEDURE [dbo].[Admin_Calculate_8_external] 
 	@matchid INT,
 	@bettype SMALLINT,
 	@totalht SMALLMONEY,
-	@IsSettleAbandonedMatch bit =0
+	@IsSettleAbandonedMatch bit =0,
+	@IsSettleAbandonedMatchBetFair bit =0
 AS
 /*
 	Created by:Lukas
 	Date:20110112
 	Task: Settlement 
-	DB: DBO52.BODB02
+	DB: DBO52/BODB02
 	Original: DBO2.BODB02.dbo.[Admin_Calculate_8]
 	
 	Revisions:
@@ -24,15 +24,17 @@ AS
 		- 20111021@Joe: Apply rounding winlost amount to 2 decimal places
 		- 20120215@Jamie: Settle Determined tickets for Over/Under BetDaq
 		- 20121019@Johnson: Check double comm losing status
+		- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
+
 	Param's Explanation:
 		+ @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
-
+		+ @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
 */
 BEGIN
 	SET NOCOUNT ON
 	Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
 
-	IF @IsSettleAbandonedMatch = 1
+	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
 	BEGIN
 			UPDATE dbo.bettrans with (ROWLOCK, UPDLOCK)
 			SET @modds = modds = CASE betteam
@@ -96,8 +98,10 @@ BEGIN
 				bettype=@bettype AND			
 				--status NOT IN (N'VOID', N'REJECT')
 				statusID NOT IN (101,102) AND 
-				(custid IN (50057, 879241, 103873, 78761, 1077687) or recommend = 1688156) AND
-				(hdp1 <= @totalht - 0.5)
+				1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 1077687) or recommend = 1688156) THEN 1
+					 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687) THEN 1
+					 ELSE 0 END 
+				AND (hdp1 <= @totalht - 0.5)
 	END 
 	ELSE 
 	BEGIN
@@ -216,6 +220,5 @@ BEGIN
 		DROP TABLE #tmpRecommend
 	END
 END
-
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_8_external] TO [vnteam] 
+GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_8_external] TO [vnteam] AS [dbo]

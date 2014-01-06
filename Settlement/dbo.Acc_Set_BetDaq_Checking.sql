@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Set_BetDaq_Checking]
+﻿ALTER PROC [dbo].[Acc_Set_BetDaq_Checking]
 	@matchid				int = 0,
 	@IsMovebetdaq			bit = 0 output,
 	@IsExcludeBetdaq		bit =0 output,
@@ -9,7 +9,7 @@ AS
 /*
 Created: 20090911@KhoaTran
 Task : Checking exists betdatd tickets or not
-DB: DBTRANS.bodb02
+DB: DBTXN/bodb02
 Original: 
 
 Revisions: 
@@ -18,16 +18,18 @@ Revisions:
 	- 20101013@Henry: add custid 1077687 (BFOS as betdaq member)
 	- 20120215@Jamie: Add param @IsSettleAbandonedMatch to indicate "Settle determined tickets" shown or not
 	- 20120313@Jamie: Show checkbox when not existing Full time Over/Under BETDAQ settled 
+	- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
 
 Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 	* List of BetDaq Customers 
 			custid	--- username	-	roleid
-			1077687	---	BFOS		-	1
 			50057	---	BQUS888		-	1
 			879241	---	BQUSMLB		-	1
 			103873	---	BQUSNBA		-	1
 			78761	---	ITibc101	-	1
 			1688156	---	MTEST0101	-	2
+			851668  --- BDUS01      -   1
+			878902  --- BDUS016     -   1
 
 Param's Explanation:
 • @matchid: matchid of match to checking
@@ -57,10 +59,10 @@ BEGIN
 				SELECT 1 
 				FROM bettrans WITH (NOLOCK) 
 				WHERE 
-						(	custid IN (50057, 879241, 103873, 78761, 1077687) 
+						(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 								OR recommend = 1688156	)
 						AND matchid = @matchid 
-						AND ruben = 0						
+						AND ruben = 0
 			   )
 	BEGIN
 		SELECT	@isMoveBetDaq = 1, @isExcludeBetDaq = 1, @IsRefundRunningBetDaq = 1  	
@@ -71,7 +73,7 @@ BEGIN
 				SELECT 1 
 				FROM bettrans WITH (NOLOCK) 
 				WHERE 
-						(	custid IN (50057, 879241, 103873, 78761, 1077687) 
+						(	custid IN (50057, 879241, 103873, 78761, 851668, 878902)
 							OR recommend = 1688156	)
 						AND matchid = @matchid 
 						AND bettype IN (3,8)  --Over/Under 
@@ -84,7 +86,7 @@ BEGIN
 					SELECT 1 
 					FROM bettrans WITH (NOLOCK) 
 					WHERE 
-							(	custid IN (50057, 879241, 103873, 78761, 1077687) 
+							(	custid IN (50057, 879241, 103873, 78761, 851668, 878902)
 								OR recommend = 1688156	)
 							AND matchid = @matchid 
 							AND bettype = 3  --Over/Under 
@@ -99,7 +101,6 @@ BEGIN
 	
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Set_BetDaq_Checking] TO [bodbadminnet]
+GRANT EXECUTE ON [dbo].[Acc_Set_BetDaq_Checking] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Set_BetDaq_Checking] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Set_BetDaq_Checking] TO [vnteam] AS [dbo]

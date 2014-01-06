@@ -3,6 +3,8 @@
 	@adminid int,
 	@IsExcludeBetdaq bit = 0,
 	@IsSettleAbandonedMatch bit = 0,
+	@IsExcludeBetfair bit = 0,
+	@IsSettleAbandonedMatchBetFair bit = 0,
 	@hth int = NULL,
 	@hta int = NULL,
 	@IP varchar(15) = '',
@@ -37,11 +39,14 @@ Revisions:
 	- 20130121@Elodie: Change link server DB02 to DBPRO
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130624@Jamie: Add BalanceNegative 
+	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 	
 Param's Explanation:
 • @matchid: matchid of match to Refund HT
 • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
-• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
+• @IsSettleAbandonedMatch: Is Settlement for Betdaq ticket of Abandoned/postponed match or not
+• @IsExcludeBetfair: Is Exclude betfair tickets or not
+• @@IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
 
 */
 SET NOCOUNT ON 
@@ -105,6 +110,7 @@ WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125)
 GROUP BY custid
 
 IF @IsSettleAbandonedMatch = 1 SELECT @IsExcludeBetdaq = 1 
+IF @IsSettleAbandonedMatchBetFair = 1 SELECT @IsExcludeBetfair = 1 
 
 --Check if match already Refund FT => refund whole match
 
@@ -154,11 +160,13 @@ BEGIN
 		END CATCH
 	END
 	
-				EXEC dbo.Admin_Settlement_Refund_All 
+		EXEC dbo.Admin_Settlement_Refund_All 
 			@matchid = @matchid, 
 			@creator = @adminid,
 			@IsExcludeBetdaq = @IsExcludeBetdaq,
 			@IsSettleAbandonedMatch = @IsSettleAbandonedMatch,
+			@IsExcludeBetfair = @IsExcludeBetfair ,
+			@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair,
 			@hth = @hth,
 			@hta = @hta, 
 			@fth = NULL,
@@ -317,6 +325,7 @@ FROM	#Balance WITH (NOLOCK)
 WHERE	Increased = 0
 		        
 ---------------------------------------------------
+
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
@@ -426,5 +435,9 @@ BEGIN
 END
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [bodbAdminNet2] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [ibc_admin] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]

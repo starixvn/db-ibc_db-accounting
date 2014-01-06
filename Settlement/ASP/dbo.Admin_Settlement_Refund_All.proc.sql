@@ -3,6 +3,8 @@
 	@creator int, 	
 	@IsExcludeBetdaq bit = 0,
 	@IsSettleAbandonedMatch bit = 0,
+	@IsExcludeBetfair bit = 0,
+	@IsSettleAbandonedMatchBetFair bit = 0,
 	@hth int = NULL,
 	@hta int = NULL,
 	@fth int = NULL,
@@ -40,14 +42,28 @@ Revisions:
 	- 20130121@Elodie: Change link server DB02 to DBPRO
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130624@Jamie: Add BalanceNegative 	
+	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
+
 Param's Explanation:
 • @matchid: matchid need to refund
 • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
 • @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
-BetDaq account: 
-			BQUS888:50057
-			BQUSMLB:879241
-			BQUSNBA:103873 
+• @IsExcludeBetfair: Is Exclude betfair tickets or not
+• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+* List of BetDaq Customers 
+			custid	--- username	-	roleid
+			50057	---	BQUS888		-	1
+			879241	---	BQUSMLB		-	1
+			103873	---	BQUSNBA		-	1
+			78761	---	ITibc101	-	1
+			1688156	---	MTEST0101	-	2
+			851668  --- BDUS01      -   1
+			878902  --- BDUS016     -   1
+* List of Betfair Customers 
+			custid	--- username	-	roleid
+			2331	---	BF		    -	1
+			1077687	---	BFOS		-	1
+
 */
 
 SET NOCOUNT ON
@@ -111,14 +127,8 @@ WHERE	matchid = @matchid
 		AND bettype <> 14
 GROUP BY custid
 
-/*
-	Settle Abandoned Match for Over/Under 
-*/
-
-IF @IsSettleAbandonedMatch = 1 
+IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
 BEGIN 
-	SELECT	@IsExcludeBetdaq = 1 
-	
 	DECLARE	@ScoreLog VARCHAR(100)
 	
 
@@ -249,9 +259,15 @@ BEGIN
 		END
 		RETURN
 	END
- 
-
-	DECLARE @betcount_3 int, @betcount_8 int
+ END
+ /*
+	Settle Betdaq tickets Abandoned Match for Over/Under 
+*/
+DECLARE @betcount_3 int, @betcount_8 int
+ IF @IsSettleAbandonedMatch = 1
+ BEGIN
+	SELECT	@IsExcludeBetdaq = 1
+	
 	SELECT	@betcount_3 = ISNULL(SUM(case bettype when 3 then 1 else 0 end), 0),
 			@betcount_8 = ISNULL(SUM(case bettype when 8 then 1 else 0 end), 0)
 	FROM	bettrans WITH(NOLOCK) 
@@ -271,11 +287,38 @@ BEGIN
 		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = 1
 	END
 END 
-/* --- END Settle Abandoned Match ---*/
+/* --- END Settle Betdaq tickets Abandoned Match for Over/Under  ---*/
+
+ /*
+	Settle Betfair tickets Abandoned Match for Over/Under 
+*/
+ IF @IsSettleAbandonedMatchBetFair = 1
+ BEGIN
+	SELECT	@IsExcludeBetfair = 1
+
+	SELECT	@betcount_3 = ISNULL(SUM(case bettype when 3 then 1 else 0 end), 0),
+			@betcount_8 = ISNULL(SUM(case bettype when 8 then 1 else 0 end), 0)
+	FROM	bettrans WITH(NOLOCK) 
+	WHERE	matchid = @matchid
+			AND bettype in (3,8)
+			AND custid IN (2331, 1077687) 
+			AND statusID NOT IN (101, 102)
+
+	IF @Action IN ('CAL','CAL-FT')
+	BEGIN
+		EXEC dbo.Admin_Calculate_3 @matchid = @matchid, @bettype = 3, @totalgoal = @totalgoal, @betcount = @betcount_3, @IsSettleAbandonedMatchBetFair = 1
+	END
+
+	IF @Action IN ('CAL','CAL-HT')
+	BEGIN
+		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatchBetFair = 1
+	END
+END 
+/* --- END Settle Betfair tickets Abandoned Match for Over/Under  ---*/
 
 EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_Refund_All', @MatchID = @matchid, @creator = @creator
 
-EXEC dbo.Admin_Calculate_RefundAll @matchid = @matchid, @IsExcludeBetdaq = @IsExcludeBetdaq
+EXEC dbo.Admin_Calculate_RefundAll @matchid = @matchid, @IsExcludeBetdaq = @IsExcludeBetdaq, @IsExcludeBetfair = @IsExcludeBetfair
 
 INSERT INTO #BalanceAfter	
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
@@ -326,6 +369,8 @@ FROM	#Balance WITH (NOLOCK)
 WHERE	Increased = 0
 		        
 ---------------------------------------------------
+
+
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
@@ -339,15 +384,21 @@ SELECT	@stop = CURRENT_TIMESTAMP
 Declare @LogData nvarchar(200)
 SELECT @LogData = 'Calculate (Refund All) for matchid:' + CAST(@matchid as nvarchar(10))
 + CASE WHEN @IsExcludeBetdaq = 1 THEN  ', Exclude Betdaq tickets' ELSE '' END
-+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN ', Settle determined tickets' ELSE '' END
++ CASE WHEN @IsSettleAbandonedMatch = 1 THEN ', Settle determined betdaq tickets' ELSE '' END
++ CASE WHEN @IsExcludeBetfair = 1 THEN  ', Exclude Betfair tickets' ELSE '' END
++ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ', Settle determined betfair tickets' ELSE '' END
 
 EXEC dbo.WriteLog_UserLog @creator, @LogData
 
 --Write Log Settle
 SELECT @Remark = 'ExcludeBetdaqTickets=' + convert(char(1),@IsExcludeBetdaq) 
-					+ ' SettleDeterminedTickets=' + convert(char(1),@IsSettleAbandonedMatch)
+					+ ' SettleDeterminedBetdaqTickets=' + convert(char(1),@IsSettleAbandonedMatch)
 					+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN ' Action=' + @Action ELSE '' END
 					+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN @ScoreLog ELSE '' END
+					+ 'ExcludeBetfairTickets=' + convert(char(1),@IsExcludeBetfair) 
+					+ ' SettleDeterminedBetfairTickets=' + convert(char(1),@IsSettleAbandonedMatchBetFair)
+					+ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ' Action=' + @Action ELSE '' END
+					+ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN @ScoreLog ELSE '' END
 					+ ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;'
 BEGIN TRY					
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
@@ -423,6 +474,7 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
 GO
