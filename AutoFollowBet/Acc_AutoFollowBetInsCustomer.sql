@@ -12,7 +12,7 @@
 AS
 /*
 Created: Viet @ 4-Jul-2012
-DB: DBTrans.bodb02
+DB: DBTrans.CustDB
 
 Revision:
 	- 20131212@Kathy: - Remove @status, add new @param
