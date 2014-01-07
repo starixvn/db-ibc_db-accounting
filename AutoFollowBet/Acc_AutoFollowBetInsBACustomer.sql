@@ -1,8 +1,9 @@
-﻿ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsBACustomer]	
+﻿ALTER PROCEDURE [Acc_AutoFollowBetInsBACustomer]	
 	@strCustID VARCHAR(MAX),
 	@UserID int=0,
 	@IP nvarchar(50) = '',
 	@rate smallmoney,
+	@Follower		VARCHAR(30),
 	@totalRows INT = 0 OUTPUT,
 	@ErrCode int = 0 Output,
 	@ErrMsg VARCHAR(1000) = '' Output
@@ -13,8 +14,8 @@ AS
     DB: DBTXN/bodb02  
    
     Revisions:  
-        20130201@Daniel: Change link server alias & failover writelog to DBTXN  
-		
+        - 20130201@Daniel: Change link server alias & failover writelog to DBTXN  
+		- 20140106@Kathy: Add new param: @Follower [Redmine:#9144]
 	Param's Explanation:  
 	 
 	  
@@ -35,8 +36,21 @@ WHERE
 	AND status = 'running'
 	
 
-INSERT INTO Cust_followBet(custid, rate)
-SELECT c.CustID, @rate 
+DECLARE @custFollower int
+
+select @custFollower = c.custid
+from custInfo c WITH(NOLOCK)
+WHERE c.username = @Follower
+and c.roleid = 1 
+
+IF @@Rowcount = 0
+BEGIN
+	SELECT @ErrMsg = 'Invalid follower, please try again!', @ErrCode = 101			
+	RETURN
+END
+
+INSERT INTO Cust_followBet(custid, rate, Follower)
+SELECT c.CustID, @rate, @custFollower
 FROM @TempCustID c
 	LEFT JOIN Cust_followBet cf WITH (NOLOCK) ON c.custid = cf.custid
 WHERE isnull(cf.custid,0) = 0
@@ -53,6 +67,7 @@ SET @duration  = datediff (millisecond,@startRun,@endRun)
 
 SELECT @LogSPData = '<Acc_AutoFollowBetInsBACustomer CustID="'+ COALESCE(CAST(@strCustID as VARCHAR(MAX)),SPACE(1)) + '" ' +
 'rate="'+ COALESCE(CAST(@rate as VARCHAR(40)),SPACE(1)) + '" ' +
+'Follower="'+ COALESCE(CAST(@Follower as VARCHAR(30)),SPACE(1)) + '" ' +
 'UserID="'+ COALESCE(CAST(@UserID as VARCHAR(50)),SPACE(1)) + '" ' +
 'IP="'+ COALESCE(CAST(@IP as VARCHAR(40)),SPACE(1)) + '" ' +
 'ErrCode="'+ COALESCE(CAST(@ErrCode as VARCHAR(50)),SPACE(1)) + '" ' +
@@ -76,6 +91,7 @@ BEGIN CATCH
 			    @TrackingValue2 = '',
 			    @duration = @duration
 END CATCH
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsBACustomer] TO [bodbAdminNet]

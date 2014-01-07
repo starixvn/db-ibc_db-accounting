@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_AutoFollowBetSelCustomer]	
+﻿ALTER PROCEDURE [Acc_AutoFollowBetSelCustomer]	
 	@Username		VARCHAR(50),
 	@Source			INT = 2,
 	@BAStatus		INT = 2,
@@ -6,7 +6,8 @@
 	@Handicap		INT = 2,
 	@1stHandicap	INT = 2,
 	@OverUnder		INT = 2,
-	@1stOverUnder	INT = 2
+	@1stOverUnder	INT = 2,
+	@Follower		VARCHAR(30) = ''
 AS
 /*
 Created: Viet @ 4-Jul-2012
@@ -15,6 +16,7 @@ Revisions:
 	- 20130201@Daniel: Change link server alias
 	- 20131212@Kathy: - Remove @status, add new @param
 					  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144]
+	- 20140106@Kathy: Add param: @Follower [Redmine:#10329]
 		
 	Param's Explanation:  
 	  + @Source:		0 - Manual		 1 - Auto;			2 - All;
@@ -24,6 +26,7 @@ Revisions:
 	  + @1stHandicap:	0 - Not follow;	 1 - Follow;		2 - All
 	  + @OverUnder:		0 - Not follow;	 1 - Follow;		2 - All
 	  + @1stOverUnder:	0 - Not follow;	 1 - Follow;		2 - All
+
 
 
 */
@@ -44,7 +47,8 @@ BEGIN
 			f.Follow3, 
 			f.Follow7, 
 			f.Follow8,
-			CASE WHEN f.custid IN (SELECT [@tblBACust].CustId FROM @tblBACust) THEN 1 ELSE 0 END as IsBA
+			CASE WHEN f.custid IN (SELECT [@tblBACust].CustId FROM @tblBACust) THEN 1 ELSE 0 END as IsBA,
+			(SELECT c.username FROM custInfo c WITH(NOLOCK) WHERE c.custid = f.Follower AND c.roleid = 1) as Follower
 	FROM Cust_FollowBet f WITH(NOLOCK)
 	INNER JOIN Customer c WITH(NOLOCK)
 		ON c.custid = f.custid
@@ -68,6 +72,7 @@ BEGIN
 							END) 
 		  OR @BAStatus = 2
 		)
+	AND (@Follower = '' OR f.Follower = (SELECT c.custid FROM custInfo c WITH(NOLOCK) WHERE c.username = @Follower AND c.roleid = 1))
 	ORDER BY c.username
 	   
 END
