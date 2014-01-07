@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Task_FollowBet_InsertBet]
+﻿ALTER PROCEDURE [Task_FollowBet_InsertBet]
 AS
 /*
 	Create:  
@@ -8,7 +8,8 @@ AS
 	Revisions:
 		- 20120529@Sophia: . Update credit/debit balance
 						   . Check @@Error to rollback
-		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Exchange by link database)						   
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Exchange by link database)	
+		- 20130107@Kathy: Get follower from Cust_FollowBet instead of hardcoded				   
 */
 SET NOCOUNT ON
 
@@ -19,7 +20,7 @@ Declare @follow_transid bigint, @matchid int, @oddsid int,
 Declare	@apos smallmoney, @mpos smallmoney, @spos smallmoney, @tpos smallmoney,
 	@playerdiscount decimal(9,8), @adiscount decimal(9,8), @mdiscount decimal(9,8), @sdiscount decimal(9,8)
 
-Declare @custid int, @transid bigint, @rc int
+Declare @custid int, @transid bigint, @rc int, @custBet int
 Declare @LogData nvarchar(300), @Err int
 
 SELECT TOP 1
@@ -29,14 +30,19 @@ SELECT TOP 1
 	--@apos = apos, @mpos = mpos, @spos = spos,
 	@apos = 0, @mpos = 0, @spos = 0,
 	--@playerdiscount = pdis, @adiscount = dis, @mdiscount = adis, @sdiscount = sdis
-	@playerdiscount = 0, @adiscount = 0, @mdiscount = 0, @sdiscount = 0
+	@playerdiscount = 0, @adiscount = 0, @mdiscount = 0, @sdiscount = 0,
+	@custBet = custid
 FROM dbo.Task_FollowBet_Details
 
 
-	SET @custid = 
-		6153451 -- BARM001
-		--73103 -- ITK998001
-		
+	--SET @custid = 
+	--	6153451 -- BARM001
+	--	--73103 -- ITK998001
+	SELECT @custid = (SELECT Follower
+						FROM CustDB.dbo.Cust_FollowBet
+						where custid = @custBet)
+
+	SELECT ISNULL(@custid, 6153451)
 	--=====================================
 
 		Declare @currency tinyint, @recommend int, @mrecommend int, @srecommend int, @CurrencyName nvarchar(10),
