@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+﻿ALTER PROCEDURE [NAP_BettransDelSpecial]
 	@MatchId INT,
 	@FromTransId BIGINT, 
 	@ToTransId BIGINT, 
@@ -42,6 +42,7 @@ AS
 	Original:
 
 	Revisions:
+		- 20140102@Kathy: Add username2 column [Redmine:#10270]
 
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -579,17 +580,25 @@ BEGIN
 	END
 
 	-- All ticket voided
-	SELECT transid, bd.custid, mem.UserName AS CustUserName, bd.recommend, ag.UserName AS AgUserName,
-	bd.mrecommend, mag.UserName AS MagUserName, bd.srecommend, sag.Username AS SagUserName,
+	SELECT transid, 
+			bd.custid, 
+			mem.username AS CustUserName,
+			mem.username2 as CustUserName2,
+			bd.recommend, 
+			ag.UserName AS AgUserName,
+			bd.mrecommend, 
+			mag.UserName AS MagUserName, 
+			bd.srecommend, 
+			sag.Username AS SagUserName,
 	bd.status, bd.SecAcceptFlag
 	FROM #BetDelete bd (nolock)
-	INNER JOIN custDB.dbo.custinfo mem (nolock) ON bd.custid     = mem.custid
+	INNER JOIN custDB.dbo.Customer mem (nolock) ON bd.custid     = mem.custid
 	INNER JOIN custDB.dbo.custinfo ag  (nolock) ON bd.recommend  = ag.custid
 	INNER JOIN custDB.dbo.custinfo mag (nolock) ON bd.mrecommend = mag.custid
 	INNER JOIN custDB.dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
 	-- Send mail when void deposit
-	SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag
 	FROM
@@ -601,7 +610,7 @@ BEGIN
 	ORDER BY transid
 
 	-- Send mail when void 12EU tickets 
-		SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, '12EU' as site, b.status, b.SecAcceptFlag
 	FROM
@@ -614,7 +623,7 @@ BEGIN
 
 	
 	-----Send mail when void any real tickets by IT
-	SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
@@ -626,7 +635,7 @@ BEGIN
 	ORDER BY transid    	   
 
 	-- Send mail when void UUS tickets
-		SELECT c.username, b.odds, b.OddsType, b.transdate, b.bettype,
+		SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
@@ -638,7 +647,7 @@ BEGIN
 	ORDER BY transid    
 
 		-----Send mail when void Foobet tickets
-	SELECT c.username,  b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
 		b.status, b.SecAcceptFlag
@@ -696,7 +705,8 @@ BEGIN
 	SET NOCOUNT OFF
 END
 
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [VNTeam]
+
