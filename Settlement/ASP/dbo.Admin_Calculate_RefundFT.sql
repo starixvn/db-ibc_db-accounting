@@ -1,10 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Calculate_RefundFT] @matchid int,
-	@IsExcludeBetdaq bit = 0
+﻿ALTER PROCEDURE [dbo].[Admin_Calculate_RefundFT] 
+	@matchid int,
+	@IsExcludeBetdaq bit = 0,
+	@IsExcludeBetfair	bit = 0
 AS
 /*	Created by: Jamie
 	Date: 2010-06-10
 	Task: Refund FT 
-	DB: DBTRANS.BODB02
+	DB: DBTXN/BODB02
 	
 	Revisions:
 		-- 20100827@Jamie: Exclude 1st Money Line 
@@ -15,11 +17,13 @@ AS
 				apply new bet type 1st correct score on Sport Books		
 		-- 20111202@Sophia: Add new bettype 124, 125 for 1x2 HDP				
 		-- 20121022@Elodie: Exclude sporting solution product
+		-- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
+
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
 SET NOCOUNT ON
 
-IF @IsExcludeBetdaq = 0
+IF @IsExcludeBetdaq = 0 AND @IsExcludeBetfair = 0
 BEGIN
 	WHILE 1=1
 	BEGIN
@@ -64,19 +68,17 @@ BEGIN
 			scomm=0
 		where
 			matchid=@matchid
-			--AND [status] not in (N'Void', N'Reject')
 			AND statusID not in (103,101,102)
 			AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125) 
-			and custid not in (50057, 879241, 103873, 78761,1077687) 
-			--AND custid not in (Select CustID from  [f_GetBetDaqCustomer] (1))
-			AND recommend not in (1688156)
-			--AND recommend not in (Select CustID from  [f_GetBetDaqCustomer] (2))	
 			and bettype not between 1301 and 1334 -- exclude sporting solution product		
+			AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
+						 WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687) THEN 0
+					ELSE 1 END
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundFT] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundFT] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_RefundFT] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_RefundFT] TO [vnteam] AS [dbo]

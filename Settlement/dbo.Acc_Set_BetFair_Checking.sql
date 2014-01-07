@@ -2,7 +2,7 @@
 	@matchid				int = 0,
 	@IsMovebetfair			bit = 0 output,
 	@IsExcludeBetfair		bit = 0 output,
-	@IsSettleAbandonedMatch bit = 0 output,
+	@IsSettleAbandonedMatchBetfair bit = 0 output,
 	@IsRefundRunningBetfair	bit = 0 output
 AS 
 
@@ -28,7 +28,7 @@ Param's Explanation:
 • @IsExcludeBetfair:
 	= 0 hide the checkbox exclude betfair
 	= 1 show the checkbox exclude betfair
-• @IsSettleAbandonedMatch:
+• @IsSettleAbandonedMatchBetfair:
 	= 0 hide the checkbox "Settle determined tickets"
 	= 1 show the checkbox "Settle determined tickets"
 • @IsRefundRunningBetfair:
@@ -40,7 +40,7 @@ BEGIN
 	SET NOCOUNT ON
 	SELECT	@IsMovebetfair = 0, 
 			@IsExcludeBetfair = 0, 
-			@IsSettleAbandonedMatch =0 ,
+			@IsSettleAbandonedMatchBetfair =0 ,
 			@IsRefundRunningBetfair =0 
 
 	IF EXISTS (
@@ -65,7 +65,7 @@ BEGIN
 						AND ruben = 0 
 			   )
 	BEGIN
-		SELECT	@IsSettleAbandonedMatch = 1 
+		SELECT	@IsSettleAbandonedMatchBetfair = 1 
 		IF EXISTS (
 					SELECT 1 
 					FROM bettrans WITH (NOLOCK) 
@@ -76,7 +76,7 @@ BEGIN
 							AND ruben = 1 
 				   )	
 		BEGIN
-			SELECT	@IsSettleAbandonedMatch = 0
+			SELECT	@IsSettleAbandonedMatchBetfair = 0
 		END
 
 	END

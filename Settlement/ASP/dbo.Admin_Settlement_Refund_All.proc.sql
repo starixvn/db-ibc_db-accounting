@@ -127,10 +127,15 @@ WHERE	matchid = @matchid
 		AND bettype <> 14
 GROUP BY custid
 
+IF @IsSettleAbandonedMatch = 1 SELECT @IsExcludeBetdaq = 1
+IF @IsSettleAbandonedMatchBetFair = 1 SELECT @IsExcludeBetfair = 1
+
+/*
+		Settle Betdaq, Betfair tickets Abandoned Match for Over/Under 
+*/
 IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
 BEGIN 
 	DECLARE	@ScoreLog VARCHAR(100)
-	
 
 	DECLARE	@sporttype tinyint
 
@@ -259,62 +264,30 @@ BEGIN
 		END
 		RETURN
 	END
- END
- /*
-	Settle Betdaq tickets Abandoned Match for Over/Under 
-*/
-DECLARE @betcount_3 int, @betcount_8 int
- IF @IsSettleAbandonedMatch = 1
- BEGIN
-	SELECT	@IsExcludeBetdaq = 1
+ 	 
+	DECLARE @betcount_3 int, @betcount_8 int
 	
 	SELECT	@betcount_3 = ISNULL(SUM(case bettype when 3 then 1 else 0 end), 0),
 			@betcount_8 = ISNULL(SUM(case bettype when 8 then 1 else 0 end), 0)
 	FROM	bettrans WITH(NOLOCK) 
 	WHERE	matchid = @matchid
 			AND bettype in (3,8)
-			AND( custid IN (50057, 879241, 103873, 78761, 1077687) 
-					OR recommend = 1688156	)
+			AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) or recommend = 1688156) THEN 1
+						 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687) THEN 1
+					ELSE 0 END
 			AND statusID NOT IN (101, 102)
 
 	IF @Action IN ('CAL','CAL-FT')
 	BEGIN
-		EXEC dbo.Admin_Calculate_3 @matchid = @matchid, @bettype = 3, @totalgoal = @totalgoal, @betcount = @betcount_3, @IsSettleAbandonedMatch = 1
+		EXEC dbo.Admin_Calculate_3 @matchid = @matchid, @bettype = 3, @totalgoal = @totalgoal, @betcount = @betcount_3, @IsSettleAbandonedMatch = 1, @IsSettleAbandonedMatchBetFair = 1
 	END
 
 	IF @Action IN ('CAL','CAL-HT')
 	BEGIN
-		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = 1
-	END
-END 
-/* --- END Settle Betdaq tickets Abandoned Match for Over/Under  ---*/
-
- /*
-	Settle Betfair tickets Abandoned Match for Over/Under 
-*/
- IF @IsSettleAbandonedMatchBetFair = 1
- BEGIN
-	SELECT	@IsExcludeBetfair = 1
-
-	SELECT	@betcount_3 = ISNULL(SUM(case bettype when 3 then 1 else 0 end), 0),
-			@betcount_8 = ISNULL(SUM(case bettype when 8 then 1 else 0 end), 0)
-	FROM	bettrans WITH(NOLOCK) 
-	WHERE	matchid = @matchid
-			AND bettype in (3,8)
-			AND custid IN (2331, 1077687) 
-			AND statusID NOT IN (101, 102)
-
-	IF @Action IN ('CAL','CAL-FT')
-	BEGIN
-		EXEC dbo.Admin_Calculate_3 @matchid = @matchid, @bettype = 3, @totalgoal = @totalgoal, @betcount = @betcount_3, @IsSettleAbandonedMatchBetFair = 1
-	END
-
-	IF @Action IN ('CAL','CAL-HT')
-	BEGIN
-		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatchBetFair = 1
-	END
-END 
-/* --- END Settle Betfair tickets Abandoned Match for Over/Under  ---*/
+		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = 1, @IsSettleAbandonedMatchBetFair = 1
+	END	
+END
+/* --- END Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  ---*/
 
 EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_Refund_All', @MatchID = @matchid, @creator = @creator
 
