@@ -6,6 +6,7 @@ AS
 	DB: DB052.bodb02
 
 	Revision: 
+		- 20140108@Don: Add step to generate data to [bodb_LicenseeReport.rptCustomerTurnover]
 		
 		
 
@@ -14,7 +15,8 @@ BEGIN
 	SET NOCOUNT ON 
 	
 	DECLARE @maxLicWinlostdate DATETIME, 
-			@maxSumWinlostdate DATETIME
+			@maxSumWinlostdate DATETIME,
+			@customerTurnoverWinlostdate SMALLDATETIME
 
 	SELECT  @maxLicWinlostdate=Max(Winlostdate) + 1 
 	FROM	bodb_Licensee.dbo.rptLicWinloss2 WITH (NOLOCK)
@@ -30,6 +32,11 @@ BEGIN
 		BEGIN
 			PRINT @maxLicWinlostdate
 			EXEC dbo.Task_DailyRptLicWinloss2 @winlostdate = @maxLicWinlostdate
+			
+			-- bodb_LicenseeReport.rptCustomerTurnover
+			SET @customerTurnoverWinlostdate = @maxLicWinlostdate
+			EXEC dbo.Task_rptCustomerTurnOver_Bettrans14 @Date = @customerTurnoverWinlostdate
+			
 			SET @maxLicWinlostdate = @maxLicWinlostdate + 1 
 		END		
 
@@ -39,6 +46,6 @@ BEGIN
 END  
 	
 
-GO 
-GRANT VIEW DEFINITION ON [dbo].[Task_DailyRptLicWinloss2_Job] TO [VNTeam]
-GO   
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[Task_DailyRptLicWinloss2_Job] TO [vnteam] AS [dbo]
