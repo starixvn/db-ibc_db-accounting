@@ -26,6 +26,7 @@ AS
 		- 20120215@Jamie: Settle Determined tickets for Over/Under BetDaq
 		- 20120822@Dan: Add virtual soccer
 		- 20121019@Johnson: Check double comm losing status
+		- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 		- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 
 	Param's Explanation:
@@ -226,5 +227,6 @@ BEGIN
 		DROP TABLE #tmpRecommend
 	END
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_3_external] TO [vnteam] AS [dbo]

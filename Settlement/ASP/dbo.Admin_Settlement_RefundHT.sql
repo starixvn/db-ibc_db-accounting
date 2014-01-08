@@ -39,6 +39,7 @@ Revisions:
 	- 20130121@Elodie: Change link server DB02 to DBPRO
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130624@Jamie: Add BalanceNegative 
+	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 	
 Param's Explanation:

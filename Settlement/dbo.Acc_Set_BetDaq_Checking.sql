@@ -18,6 +18,7 @@ Revisions:
 	- 20101013@Henry: add custid 1077687 (BFOS as betdaq member)
 	- 20120215@Jamie: Add param @IsSettleAbandonedMatch to indicate "Settle determined tickets" shown or not
 	- 20120313@Jamie: Show checkbox when not existing Full time Over/Under BETDAQ settled 
+	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 
 	- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
 
 Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
@@ -100,6 +101,7 @@ BEGIN
 	END
 	
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_BetDaq_Checking] TO [bodbAdminNet] AS [dbo]
 GO

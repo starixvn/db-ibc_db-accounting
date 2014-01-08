@@ -13,6 +13,7 @@ AS
 				apply new bet type 1st correct score on Sport Books	
 		- 20111202@Sophia: Add new bettype 124, 125 for 1x2 HDP		
 		- 20120216@Jamie: Add one more param @IsExcludeBetdaq to indicate Refund Excluding BetDaq or not 
+		-- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 		- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 
 	Param's Explanation:

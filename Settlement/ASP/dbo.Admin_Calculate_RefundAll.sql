@@ -12,7 +12,9 @@ AS
 	-- 20101013@Henry: add custid 1077687 (BFOS as betdaq member)
 	-- 20110817@Lukas: Exclude refund FG/LG bettype
 	-- 20121022@Elodie: Exclude sporting solution product
+	-- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	-- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
+
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
 SET NOCOUNT ON 

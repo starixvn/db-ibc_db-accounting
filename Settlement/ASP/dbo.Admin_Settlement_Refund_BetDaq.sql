@@ -18,15 +18,22 @@ Revisions:
 	- 20130103@Elodie:  Write log for adding a match into TempVariableNumber table or deleting a match from TempVariableNumber table										
 	- 20130121@Elodie: Write more log on DBTXN server in case of DBLOG server failure
 	- 20130624@Jamie: Add BalanceNegative 
+	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
+	- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
 
 Param's Explanation:
 • @matchid: matchid need to refund
 • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
 • @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
 BetDaq account: 
-			BQUS888:50057
-			BQUSMLB:879241
-			BQUSNBA:103873 
+			custid	--- username	-	roleid
+			50057	---	BQUS888		-	1
+			879241	---	BQUSMLB		-	1
+			103873	---	BQUSNBA		-	1
+			78761	---	ITibc101	-	1
+			1688156	---	MTEST0101	-	2
+			851668  --- BDUS01      -   1
+			878902  --- BDUS016     -   1
 */
 
 SET NOCOUNT ON
@@ -87,7 +94,7 @@ INSERT INTO #BalanceBefore
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
 WHERE 
-		(	custid IN (50057, 879241, 103873, 78761, 1077687) 
+		(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 			OR recommend = 1688156	)
 		AND matchid = @matchid
 		AND bettype <> 14 --Exclude FGLG 
@@ -99,7 +106,7 @@ INSERT INTO #BalanceAfter
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
 WHERE 
-		(	custid IN (50057, 879241, 103873, 78761, 1077687) 
+		(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 			OR recommend = 1688156	)
 		AND matchid = @matchid
 		AND bettype <> 14 
@@ -146,10 +153,10 @@ FROM	#Balance WITH (NOLOCK)
 WHERE	Increased = 0
 		        
 ---------------------------------------------------
+
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
-
 
 ----------------------------------------------------
 
@@ -249,6 +256,7 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]
 GO

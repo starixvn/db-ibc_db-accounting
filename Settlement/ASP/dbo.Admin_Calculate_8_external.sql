@@ -24,6 +24,7 @@ AS
 		- 20111021@Joe: Apply rounding winlost amount to 2 decimal places
 		- 20120215@Jamie: Settle Determined tickets for Over/Under BetDaq
 		- 20121019@Johnson: Check double comm losing status
+		- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 		- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 
 	Param's Explanation:

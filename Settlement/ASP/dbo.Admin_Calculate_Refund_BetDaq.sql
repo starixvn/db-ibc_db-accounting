@@ -4,10 +4,12 @@ AS
 /*	Created by: Jamie
 	Date: 2012-02-16
 	Task: Refund Running BetDaq
-	DB: DBTRANS.BODB02
+	DB: DBTXN/BODB02
 	
 	Revisions:
 		- 20121022@Elodie: Exclude sporting solution product
+		- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
+		- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
 */
 SET NOCOUNT ON
 
@@ -34,7 +36,7 @@ BEGIN
 			AND ruben = 0 
 			AND bettype <> 14 --Exclude FGLG 
 			and bettype not between 1301 and 1334 -- exclude sporting solution product
-			and( custid IN (50057, 879241, 103873, 78761,1077687) 
+			and( custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 				OR  recommend IN (1688156)
 			)
 	
@@ -43,6 +45,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Admin_Calculate_Refund_BetDaq] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Admin_Calculate_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_Refund_BetDaq] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_Refund_BetDaq] TO [vnteam] AS [dbo]

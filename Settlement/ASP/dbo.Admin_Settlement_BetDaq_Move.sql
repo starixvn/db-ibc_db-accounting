@@ -19,15 +19,16 @@ AS
 			- 20100305@Daniel: Add back writelog to table Userlog
 			- 20100602@Shifu: Allow to choose destination match when Moving BetDaq tickets
 			- 20100720@Henry: Change SP Logfile to WriteLog_UserLog
-			- 20101001@Henry: Using f_GetBetDaqCustomer to query betdaq customer
+			- 20101001@Henry: Using f_GetBetDaqCustomer_xtest to query betdaq customer
 			- 20101013@Henry: add custid 1077687 (BFOS as betdaq member)
 			- 20110620@Jamie: Refer to Match/Odds on DB02 instead of DBTRANS
 			- 20130121@Elodie: Change link server DB02 to DBPRO
 							   Write more log on DBTXN server in case of DBLOG server failure
-			
+			- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
+			- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
+
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 
-	
 
 	Param's Explanation: 
 		@MatchID: current match 
@@ -94,11 +95,11 @@ BEGIN
 	FROM	bettrans b
 			INNER JOIN @tmpOdds o ON b.bettype = o.bettype 
 	WHERE	b.matchid = @MatchID 
-			AND (b.custid IN (50057, 879241, 103873, 78761,1077687) or b.recommend = 1688156)
+			AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) or b.recommend = 1688156)
 			/*
 			AND (
-				b.custid IN (Select CustID from  [f_GetBetDaqCustomer] (1)) 
-				or b.recommend IN (Select CustID from  [f_GetBetDaqCustomer] (2))
+				b.custid IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (1)) 
+				or b.recommend IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (2))
 				)
 			*/	
 			AND b.ruben = 0
@@ -179,6 +180,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_BetDaq_Move] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Admin_Settlement_BetDaq_Move] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_BetDaq_Move] TO [vnteam]  
+GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_BetDaq_Move] TO [vnteam] AS [dbo]
