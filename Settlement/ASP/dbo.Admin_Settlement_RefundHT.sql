@@ -46,7 +46,7 @@ Param's Explanation:
 • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
 • @IsSettleAbandonedMatch: Is Settlement for Betdaq ticket of Abandoned/postponed match or not
 • @IsExcludeBetfair: Is Exclude betfair tickets or not
-• @@IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
 
 */
 SET NOCOUNT ON 
@@ -180,7 +180,7 @@ BEGIN
 	RETURN
 END
 
-IF @IsSettleAbandonedMatch = 1 
+IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
 BEGIN 
 			
 	DECLARE	@ScoreLog VARCHAR(100)
@@ -249,11 +249,12 @@ BEGIN
 	FROM	bettrans WITH(NOLOCK) 
 	WHERE	matchid = @matchid
 			AND bettype =8
-			AND( custid IN (50057, 879241, 103873, 78761, 1077687) 
-					OR recommend = 1688156	)
+			AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) or recommend = 1688156) THEN 1
+						 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687) THEN 1
+					ELSE 0 END
 			AND statusID NOT IN (101, 102)
 	
-	EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = 1
+	EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = 1, @IsSettleAbandonedMatchBetFair = 1
 
 END 
 /* --- END Settle Abandoned Match ---*/
@@ -271,7 +272,8 @@ BEGIN
 
 	EXEC dbo.Admin_Calculate_RefundHT 
 			@matchid = @matchid,
-			@IsExcludeBetdaq = @IsExcludeBetdaq
+			@IsExcludeBetdaq = @IsExcludeBetdaq,
+			@IsExcludeBetfair = @IsExcludeBetfair
 	
 END
 
@@ -336,7 +338,7 @@ DROP TABLE #BalanceAfter
 SELECT @stop = CURRENT_TIMESTAMP
 
 
-IF @IsSettleAbandonedMatch = 1 OR @Rowcount > 0
+IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @Rowcount > 0
 BEGIN 
 	Declare @LogData nvarchar(300)
 	SELECT @LogData = 'Calculate (Refund HT) for matchid:' + CAST(@matchid as nvarchar(10))
@@ -355,8 +357,10 @@ BEGIN
 	 FROM	DBPRO.BODB02.dbo.Match WITH(NOLOCK) WHERE matchid = @matchid
 
 	SELECT	@Remark = 'ExcludeBetdaqTickets=' + convert(char(1),@IsExcludeBetdaq) 
-					+ ' SettleDeterminedTickets=' + convert(char(1),@IsSettleAbandonedMatch)
-					+ CASE WHEN @IsSettleAbandonedMatch =1 THEN @ScoreLog ELSE '' END 
+					+ ' SettleDeterminedBetdaqTickets=' + convert(char(1),@IsSettleAbandonedMatch)
+					+ 'ExcludeBetfairTickets=' + convert(char(1),@IsExcludeBetfair) 
+					+ ' SettleDeterminedBetfairTickets=' + convert(char(1),@IsSettleAbandonedMatchBetFair)
+					+ CASE WHEN @IsSettleAbandonedMatch =1 OR @IsSettleAbandonedMatchBetFair =1 THEN @ScoreLog ELSE '' END 
 					+ ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;'
 	BEGIN TRY	
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
@@ -433,11 +437,8 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [bodbAdminNet2] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_RefundHT] TO [ibc_admin] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]

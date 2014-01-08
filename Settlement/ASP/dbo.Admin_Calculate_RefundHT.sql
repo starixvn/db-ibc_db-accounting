@@ -26,60 +26,31 @@ AS
 */
 SET NOCOUNT ON
 
-IF @IsExcludeBetdaq = 0 AND @IsExcludeBetfair = 0
+WHILE 1=1
 BEGIN
-	WHILE 1=1
-	BEGIN
-		UPDATE TOP (10000) dbo.bettrans with (ROWLOCK, UPDLOCK)
-		SET
-			[status] = N'Refund',
-			statusID = 103,
-			ruben = 1,
-			winlost=actual_stake,
-			awinlost=0,
-			mwinlost=0,
-			swinlost=0,
-			playercomm=0,
-			comm=0,
-			acomm=0,
-			scomm=0
-		where
-			matchid=@matchid
-			--AND [status] not in (N'Void', N'Reject')
-			AND statusID not in (103,101,102)
-			AND bettype IN (7, 8, 15, 12,21,30, 125) 
+	UPDATE TOP (10000) dbo.bettrans with (ROWLOCK, UPDLOCK)
+	SET
+		[status] = N'Refund',
+		statusID = 103,
+		ruben = 1,
+		winlost=actual_stake,
+		awinlost=0,
+		mwinlost=0,
+		swinlost=0,
+		playercomm=0,
+		comm=0,
+		acomm=0,
+		scomm=0
+	where
+		matchid=@matchid
+		--AND [status] not in (N'Void', N'Reject')
+		AND statusID not in (103,101,102)
+		AND bettype IN (7, 8, 15, 12,21,30, 125) 
+		AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
+						WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687) THEN 0
+				ELSE 1 END
 			
-		IF @@ROWCOUNT < 10000 BREAK
-	END
-END 
-ELSE 
-BEGIN 
-	WHILE 1=1
-	BEGIN
-		UPDATE TOP (10000) dbo.bettrans with (ROWLOCK, UPDLOCK)
-		SET
-			[status] = N'Refund',
-			statusID = 103,
-			ruben = 1,
-			winlost=actual_stake,
-			awinlost=0,
-			mwinlost=0,
-			swinlost=0,
-			playercomm=0,
-			comm=0,
-			acomm=0,
-			scomm=0
-		where
-			matchid=@matchid
-			--AND [status] not in (N'Void', N'Reject')
-			AND statusID not in (103,101,102)
-			AND bettype IN (7, 8, 15, 12,21,30, 125) 
-			AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
-						 WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687) THEN 0
-					ELSE 1 END
-			
-		IF @@ROWCOUNT < 10000 BREAK
-	END
+	IF @@ROWCOUNT < 10000 BREAK
 END
 
 GO

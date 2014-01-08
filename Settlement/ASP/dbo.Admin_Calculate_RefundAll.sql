@@ -17,66 +17,34 @@ AS
 */
 SET NOCOUNT ON 
 
-IF @IsExcludeBetdaq = 1 OR @IsExcludeBetfair = 1
+WHILE 1=1
 BEGIN
-	WHILE 1=1
-	BEGIN
-		UPDATE TOP (10000) dbo.bettrans with (ROWLOCK, UPDLOCK)	
-		set 
-			[status]=N'Refund',
-			statusID = 103,
-			winlost=actual_stake,
-			awinlost=0,
-			mwinlost=0,
-			swinlost=0,
+	UPDATE TOP (10000) dbo.bettrans with (ROWLOCK, UPDLOCK)	
+	set 
+		[status]=N'Refund',
+		statusID = 103,
+		winlost=actual_stake,
+		awinlost=0,
+		mwinlost=0,
+		swinlost=0,
 			
-			playercomm=0,
-			comm=0,
-			acomm=0,
-			scomm=0,
+		playercomm=0,
+		comm=0,
+		acomm=0,
+		scomm=0,
 			
-			ruben=1,
-			statuswinlost=0
-		where
-			matchid=@matchid
-			AND statusID not in (103,101,102)	
-			AND bettype <> 14
-			AND bettype not between 1301 and 1334 -- exclude sporting solution product
-			AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
-						 WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687) THEN 0
-					ELSE 1 END
-		 IF @@ROWCOUNT < 10000 BREAK
-	END	
-END
-ELSE 
-BEGIN
-	WHILE 1=1
-	BEGIN
-	   UPDATE TOP (10000) dbo.bettrans with (ROWLOCK, UPDLOCK)
-	   set 
-			[status]=N'Refund',
-			statusID = 103,
-			winlost=actual_stake,
-			awinlost=0,
-			mwinlost=0,
-			swinlost=0,
-			
-			playercomm=0,
-			comm=0,
-			acomm=0,
-			scomm=0,
-			
-			ruben=1,
-			statuswinlost=0
-		where
-			matchid=@matchid
-			--and [status] not in ('Void', 'Reject')
-			AND statusID not in (103,101,102)
-			AND bettype <> 14
-			and bettype not between 1301 and 1334 -- exclude sporting solution product
+		ruben=1,
+		statuswinlost=0
+	where
+		matchid=@matchid
+		AND statusID not in (103,101,102)	
+		AND bettype <> 14
+		AND bettype not between 1301 and 1334 -- exclude sporting solution product
+		AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
+						WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687) THEN 0
+				ELSE 1 END
 		IF @@ROWCOUNT < 10000 BREAK
-	END
-END
+END	
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundAll] TO [bodbAdminNet] AS [dbo]
