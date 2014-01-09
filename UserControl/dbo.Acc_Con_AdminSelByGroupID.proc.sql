@@ -15,6 +15,7 @@ AS
 		- 20110526@Tom: Remove condition @System 
 		- 20120828@Elodie: IT admin are only be seen by IT department users.
 		- 20121129@Johnson: hard code to hide some ABS's users
+		- 20140109@Lukas: exclude user admin in external group
 	Explain @Param
 		--Search username: '%username%'
 		--Search first char:
@@ -82,6 +83,20 @@ IF @Groupid IS NULL
 				 c.username LIKE @FirstChar and				 
 				 ac.GroupID <> CASE WHEN @UserGroupID = 1 or @ShowInternalGroup = 1 THEN 0 ELSE 1 end AND
 				 ac.custid NOT IN (SELECT custid FROM @ABS)
+				 AND gi.groupid NOT IN (
+											128	, --ACCTHAI
+											134	, --ACCINDO
+											136	, --ACCYEN
+											137	, --ACCNTD
+											140	, --ACCYEN789
+											141	, --ACCYEN889
+											142	, --ACCDDD
+											148	, --ACCIRR
+											152	, --ACCUUS
+											154	, --ACCUSD
+											155	, --ACCUT
+											156	  --AccYen668
+										)
         ORDER BY isnull(ci.closed, 0), c.username, ac.groupid
     END
 ELSE
@@ -117,12 +132,24 @@ ELSE
                  ON ac.creator = ct.custid
         WHERE    c.username LIKE @Username
                  AND c.username LIKE @FirstChar and
-				 ac.GroupID <> CASE WHEN @UserGroupID = 1 or @ShowInternalGroup = 1 THEN 0 ELSE 1 end 				 
+				 ac.GroupID <> CASE WHEN @UserGroupID = 1 or @ShowInternalGroup = 1 THEN 0 ELSE 1 end 	
+				 AND gi.groupid NOT IN (
+											128	, --ACCTHAI
+											134	, --ACCINDO
+											136	, --ACCYEN
+											137	, --ACCNTD
+											140	, --ACCYEN789
+											141	, --ACCYEN889
+											142	, --ACCDDD
+											148	, --ACCIRR
+											152	, --ACCUUS
+											154	, --ACCUSD
+											155	, --ACCUT
+											156	  --AccYen668
+										)			 
         ORDER BY isnull(ci.closed, 0), c.username, ac.groupid
     END
-    
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Con_AdminSelByGroupID] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_Con_AdminSelByGroupID] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].Acc_Con_AdminSelByGroupID TO [bodbAdminNet]
-
+GRANT VIEW DEFINITION ON [dbo].[Acc_Con_AdminSelByGroupID] TO [vnteam] AS [dbo]

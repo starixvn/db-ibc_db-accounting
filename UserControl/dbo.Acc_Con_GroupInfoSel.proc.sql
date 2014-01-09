@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Con_GroupInfoSel]
+﻿
+ALTER PROCEDURE [dbo].[Acc_Con_GroupInfoSel]
 	@GroupID int = null,
 	@UserID int = 0,
 	@ShowInternalGroup bit = 1,
@@ -14,6 +15,8 @@ AS
 		- 20120828@Elodie: IT department are only be seen by IT department users.
 		- 20121129@Johnson: hard code to hide some ABS's users
 		- 20121219@Johnson: Fix to show department which not have users
+		- 20140109@Lukas: exclude external group 
+
 	Param's explanation:
 		- @ShowInternalGroup: 
 			1: Show all departments with all users
@@ -57,6 +60,20 @@ BEGIN
 		where system = @System and
 			gi.GroupID <> CASE WHEN @UserGroupID = 1 or @ShowInternalGroup = 1 THEN 0 ELSE 1 end and
 			ISNULL(ac.custid,0) NOT IN (SELECT custid FROM @ABS)
+			AND gi.groupid NOT IN (
+									128	, --ACCTHAI
+									134	, --ACCINDO
+									136	, --ACCYEN
+									137	, --ACCNTD
+									140	, --ACCYEN789
+									141	, --ACCYEN889
+									142	, --ACCDDD
+									148	, --ACCIRR
+									152	, --ACCUUS
+									154	, --ACCUSD
+									155	, --ACCUT
+									156	  --AccYen668
+								)
 		GROUP BY gi.groupid,gi.groupname,gi.groupdesc,gi.displayorder
 		ORDER BY gi.displayorder ,gi.groupname 	
 END
@@ -68,9 +85,29 @@ BEGIN
    		WHERE gi.groupid=@groupid and
    			gi.GroupID <> CASE WHEN @UserGroupID = 1 or @ShowInternalGroup = 1 THEN 0 ELSE 1 end AND
    			ISNULL(ac.custid,0) NOT IN (SELECT custid FROM @ABS)
+			AND gi.groupid NOT IN (
+									128	, --ACCTHAI
+									134	, --ACCINDO
+									136	, --ACCYEN
+									137	, --ACCNTD
+									140	, --ACCYEN789
+									141	, --ACCYEN889
+									142	, --ACCDDD
+									148	, --ACCIRR
+									152	, --ACCUUS
+									154	, --ACCUSD
+									155	, --ACCUT
+									156	  --AccYen668
+								)
 		GROUP BY gi.groupid,gi.groupname,gi.groupdesc,gi.displayorder
 		ORDER BY gi.displayorder ,gi.groupname
 END
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_Con_GroupInfoSel] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Con_GroupInfoSel] TO [vnteam] AS [dbo]
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Con_GroupInfoSel] TO [vnteam]
