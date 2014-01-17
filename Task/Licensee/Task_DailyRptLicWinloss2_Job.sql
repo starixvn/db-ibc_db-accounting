@@ -7,6 +7,7 @@ AS
 
 	Revision: 
 		- 20140108@Don: Add step to generate data to [bodb_LicenseeReport.rptCustomerTurnover]
+		- 20140117@Don: Add step to generate data to [bodb_LicenseeReport.rptWinlostbyleague]
 		
 		
 
@@ -37,6 +38,9 @@ BEGIN
 			SET @customerTurnoverWinlostdate = @maxLicWinlostdate
 			EXEC dbo.Task_rptCustomerTurnOver_Bettrans14 @Date = @customerTurnoverWinlostdate
 			
+			-- bodb_LicenseeReport.rptWinlostbyleague
+			EXEC dbo.Task_rptWinlostbyleague_Bettrans14 @Date = @customerTurnoverWinlostdate
+			
 			SET @maxLicWinlostdate = @maxLicWinlostdate + 1 
 		END		
 
@@ -45,6 +49,7 @@ BEGIN
 	
 END  
 	
+
 
 
 GO
