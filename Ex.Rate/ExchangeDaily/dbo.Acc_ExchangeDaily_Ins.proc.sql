@@ -11,6 +11,8 @@
 	@SGD float,
 	@THB float,
 	@VND float,
+	@KRW float,
+	@JPY float,
 	@rundate datetime = null,
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
@@ -18,11 +20,12 @@ AS
 /*
 Created: Henry
 Task : Insert the rate daily
-DB: DBTRANS.BODB02 
+DB: DBCUST.CustDB
 Revisions:
 	-  20110215@Henry: add to insert currency UUS to exchangedaily
 	-  20110322@Henry: add one more base currency: CNY
 	-  20120427@Henry: add to new table ExchangeDailyOanda instead of ExchangeDaily	
+	-  20120427@Dan: add new currency KRW and JPY
 */		
 SET NOCOUNT ON
 DECLARE @exchange TABLE(id int identity(1,1), exchangeid int,MultipliedBy int)
@@ -38,25 +41,27 @@ IF @Code = 'UUS'
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM ExchangeDailyOanda (nolock) WHERE ExchangeDate=@date AND ExchangeId = 20  )
 	BEGIN
-		INSERT INTO ExchangeDailyOanda (ExchangeId,ExchangeDate,Code,MYR,USD,EUR,CNY,IDR,AUD,CHF,GBP,SGD,THB,VND)
-		VALUES (20,@date,'UUS',2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101)
+		INSERT INTO ExchangeDailyOanda (ExchangeId,ExchangeDate,Code,MYR,USD,EUR,CNY,IDR,AUD,CHF,GBP,SGD,THB,VND,KRW,JPY)
+		VALUES (20,@date,'UUS',2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101,2E-101)
 	END
 	ELSE
 	BEGIN
 		UPDATE ExchangeDailyOanda with (rowlock,updlock)
-			SET 
-				MYR = 2E-101,
-				USD = 2E-101,
-				EUR = 2E-101,
-				CNY = 2E-101,
-				IDR = 2E-101,
-				AUD = 2E-101,
-				CHF = 2E-101,
-				GBP = 2E-101,
-				SGD = 2E-101,
-				THB = 2E-101,
-				VND = 2E-101
-			WHERE ExchangeId = 20 AND ExchangeDate=@date 
+		SET 
+			MYR = 2E-101,
+			USD = 2E-101,
+			EUR = 2E-101,
+			CNY = 2E-101,
+			IDR = 2E-101,
+			AUD = 2E-101,
+			CHF = 2E-101,
+			GBP = 2E-101,
+			SGD = 2E-101,
+			THB = 2E-101,
+			VND = 2E-101,
+			KRW = 2E-101,
+			JPY = 2E-101
+		WHERE ExchangeId = 20 AND ExchangeDate=@date 
 	END
 	
 	RETURN
@@ -85,7 +90,7 @@ BEGIN
 		--Check exist, if false then insert 
 		IF NOT EXISTS (SELECT 1 FROM ExchangeDailyOanda (nolock) WHERE ExchangeId = @ExchangeId AND ExchangeDate=@date AND Code=@Code )
 		BEGIN
-			INSERT INTO ExchangeDailyOanda (ExchangeId,ExchangeDate,Code,MYR,USD,EUR,CNY,IDR,AUD,CHF,GBP,SGD,THB,VND)
+			INSERT INTO ExchangeDailyOanda (ExchangeId,ExchangeDate,Code,MYR,USD,EUR,CNY,IDR,AUD,CHF,GBP,SGD,THB,VND,KRW,JPY)
 			VALUES (@ExchangeId,@date,@Code,@MYR * @MultipliedBy,@USD * @MultipliedBy,@EUR * @MultipliedBy,@CNY * @MultipliedBy
 											,@IDR * @MultipliedBy
 											,@AUD * @MultipliedBy
@@ -93,7 +98,10 @@ BEGIN
 											,@GBP * @MultipliedBy
 											,@SGD * @MultipliedBy
 											,@THB * @MultipliedBy
-											,@VND * @MultipliedBy)
+											,@VND * @MultipliedBy
+											,@KRW * @MultipliedBy
+											,@JPY * @MultipliedBy
+											)
 		END
 		ELSE
 		BEGIN
@@ -109,8 +117,9 @@ BEGIN
 				GBP = @GBP * @MultipliedBy,
 				SGD = @SGD * @MultipliedBy,
 				THB = @THB * @MultipliedBy,
-				VND = @VND * @MultipliedBy
-				
+				VND = @VND * @MultipliedBy,
+				KRW = @KRW * @MultipliedBy,
+				JPY = @JPY * @MultipliedBy				
 			WHERE ExchangeId = @ExchangeId AND ExchangeDate=@date AND Code=@Code
 		END
 		
@@ -125,7 +134,6 @@ BEGIN
 	END
 	
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_ExchangeDailyIns] TO [bodbAdminNet] 
