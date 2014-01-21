@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
+﻿AlTER PROCEDURE [NAP_Rpt_TicketsListingDetail]
 	@MatchId INT,
 	@LicenseeName VARCHAR(1000),
 	@BetTypes VARCHAR(1000), 
@@ -20,8 +20,9 @@ AS
 	Original: Acc_Rpt_TicketsListingDetail
 
 	Revisions:	
-		- 20130911Kathy: Rename parameter @SAFilter to @SecondAcceptFlag
-							   
+		- 20130911@Kathy: Rename parameter @SAFilter to @SecondAcceptFlag
+		- 20131203@Kathy: Rename column: liveindicator to IsLiveIndicator.
+						Using Dep_CustSuper table instead of f_DepSuper_1() function.					  
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -79,7 +80,7 @@ BEGIN
 		betteam NVARCHAR(10),
 		livehomescore SMALLINT, 
 		liveawayscore SMALLINT,
-		liveindicator BIT,
+		IsLiveIndicator BIT,
 		ISNeutral BIT,
 		OddsType INT, 
 		CurrencyName NVARCHAR(100),
@@ -121,7 +122,7 @@ BEGIN
 				b.refno
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
-		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName) )
+		WHERE		b.srecommend IN ( SELECT custid FROM Dep_CustSuper with(nolock) where site = @LicenseeName)
 					AND b.statusID NOT IN (101,102, 121) ---('Void', 'Reject', 'Dummy')
 					AND b.matchid = @MatchId 
 			 	   	AND
@@ -276,7 +277,7 @@ BEGIN
 			betteam ,
 			livehomescore ,
 			liveawayscore ,
-			liveindicator , 
+			liveindicator as IsLiveIndicator, 
 			0 as IsNeutral ,
 			OddsType ,
 			CurrencyName ,
@@ -315,7 +316,7 @@ BEGIN
 				bm.betteam,
 				bm.livehomescore,
 				bm.liveawayscore,
-				bm.liveindicator, 
+				bm.liveindicator IsLiveIndicator, 
 				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 				0 as OddsType,
 				b.CurrencyName,
@@ -326,7 +327,7 @@ BEGIN
 		INNER JOIN  Bettrans b WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
 		INNER JOIN  match m WITH (NOLOCK) ON m.matchid = bm.MatchID	
-		WHERE		b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName)) 
+		WHERE		b.srecommend IN ( SELECT custid FROM Dep_CustSuper with(NOLOCK) where site = @LicenseeName) 
 					AND b.statusID NOT IN (101,102) --- ('Void', 'Reject' )
 					AND b.bettype IN(9,29) AND b.matchID IN (9,29)
 					AND bm.matchid = @MatchId 
@@ -363,7 +364,7 @@ BEGIN
 				bm.betteam,
 				bm.livehomescore,
 				bm.liveawayscore,
-				bm.liveindicator, 
+				bm.liveindicator IsLiveIndicator, 
 				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 				0 as OddsType,
 				b.CurrencyName,
@@ -409,7 +410,7 @@ BEGIN
 				bm.betteam,
 				bm.livehomescore,
 				bm.liveawayscore,
-				bm.liveindicator, 
+				bm.liveindicator IsLiveIndicator, 
 				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 				0 as OddsType,
 				b.CurrencyName,
@@ -451,7 +452,7 @@ BEGIN
 				betteam ,
 				livehomescore ,
 				liveawayscore ,
-				liveindicator , 
+				liveindicator as IsLiveIndicator , 
 				0 as IsNeutral ,
 				OddsType ,
 				CurrencyName ,
@@ -462,9 +463,13 @@ BEGIN
 		WHERE 0 = 1
 END
 
-GO
-GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [vnteam]
 
- 
+GO
+
+GRANT EXECUTE ON [NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [NAP_Rpt_TicketsListingDetail] TO [vnteam] AS [dbo]
+GO
+
+

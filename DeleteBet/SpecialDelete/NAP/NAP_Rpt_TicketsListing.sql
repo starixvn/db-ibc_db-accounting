@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListing]
+﻿ALTER PROCEDURE [NAP_Rpt_TicketsListing]
 	@MatchId INT,
 	@LicenseeId INT,
 	@BetTypes VARCHAR(1000) ,
@@ -22,6 +22,8 @@
 	Revisions:	
 		- 20130910@Kathy: Rename parameter @SAFilter to @SecondAcceptFlag
 		- 20131129@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
+		- 20131203@Kathy: Add @showtime column.
+						Using Dep_CustSuper table instead of f_DepSuper_1() function.	
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -59,7 +61,7 @@ AS
 
 SET NOCOUNT ON
 --- Check MatchID
-DECLARE @matchcode nvarchar(100), @homeid int, @awayid int, @eventdate datetime, @IsNeutral bit, @sporttype smallint
+DECLARE @matchcode nvarchar(100), @homeid int, @awayid int, @eventdate datetime, @IsNeutral bit, @sporttype smallint, @showtime nvarchar(50)
 SET @sporttype = 0
 
 ---- If number game or virtual sports, live casino then don't care @livetype , so set @LiveType to zero
@@ -67,7 +69,8 @@ IF @Type = 1 or @Type = 2 or @Type = 3
 SELECT @LiveType = 0
 
 ----Show match description
-SELECT	@matchcode = matchcode, @homeid = homeid, @awayid = awayid, @eventdate = eventdate, @IsNeutral = IsNeutral, @sporttype = sporttype
+SELECT	@matchcode = matchcode, @homeid = homeid, @awayid = awayid, @eventdate = eventdate, 
+	@IsNeutral = IsNeutral, @sporttype = sporttype, @showtime = showtime
 FROM	match  WITH (NOLOCK)
 WHERE	matchid = @MatchId
  
@@ -106,7 +109,7 @@ BEGIN
 	RETURN
 END 
 ELSE
-	SELECT @matchcode as matchcode, @homeid as homeid, @awayid as awayid, convert(VARCHAR(12), @eventdate, 107) as eventdate, @MatchId as matchid, @IsNeutral as IsNeutral
+	SELECT @matchcode as matchcode, @homeid as homeid, @awayid as awayid, convert(VARCHAR(12), @eventdate, 107) as eventdate, @MatchId as matchid, @IsNeutral as IsNeutral, @showtime as showtime
 
 ---------
 DECLARE @TmpTotal TABLE (OrderNo int, TotalTrans bigint, bettype smallint, LiveIndicator bit, LicenseeName VARCHAR(50) )
@@ -154,7 +157,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 					CASE WHEN @type = 1 THEN liveindicator ELSE 0 END,  --- because liveindicator only use for indicate live or dead ball of number game. So the sportsbook don't care.
 					@LicenseeName as LicenseeName
 			FROM	#TmpBettrans WITH (NOLOCK)
-			WHERE	srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName))  
+			WHERE	srecommend IN ( SELECT custid FROM dbo.Dep_CustSuper with(NOLOCK) where site = @LicenseeName)  
  			GROUP BY bettype, LiveIndicator
 
 		---mix parlay
@@ -164,7 +167,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 			FROM	bettransm bm WITH (NOLOCK)
 				INNER JOIN Bettrans b WITH (NOLOCK) ON bm.refno= b.refno
 				INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
-			WHERE	b.srecommend IN ( SELECT custid FROM dbo.f_DepSuper_1 (@LicenseeName))  
+			WHERE	b.srecommend IN ( SELECT custid FROM dbo.Dep_CustSuper with(NOLOCK) where site = @LicenseeName)  
 					AND bm.matchid = @MatchId
 					AND b.statusID NOT IN (101,102) --('Void', 'Reject')
 					AND b.bettype IN (9,29)  AND b.matchid IN (9,29)
@@ -186,7 +189,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 			INSERT	INTO @TmpTotal (OrderNo, TotalTrans, bettype, LiveIndicator, LicenseeName)
 			SELECT	0 as OrderNo, sum(cnt) as TotalTrans, bettype, CASE WHEN @type = 1 THEN b.liveindicator ELSE 0 END, 'IBC' as LicenseeName
 			FROM	#TmpBettrans b WITH (NOLOCK)
-			WHERE	b.srecommend NOT IN ( SELECT custid FROM dbo.f_DepSuper_1 ('all'))  
+			WHERE	b.srecommend NOT IN ( SELECT custid FROM dbo.Dep_CustSuper with(NOLOCK))  
 			GROUP BY b.bettype, b.liveindicator
 
 		---mix parlay
@@ -196,7 +199,7 @@ GROUP BY srecommend, matchid, bettype, liveindicator, statusid
 			FROM	bettransm bm WITH (NOLOCK)
 				INNER JOIN Bettrans b WITH (NOLOCK) ON bm.refno= b.refno
 				INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
-			WHERE	b.srecommend NOT IN ( SELECT custid FROM dbo.f_DepSuper_1 ('all'))  
+			WHERE	b.srecommend NOT IN ( SELECT custid FROM dbo.Dep_CustSuper with(NOLOCK))  
 					AND bm.matchid = @MatchId 
 					AND b.statusID NOT IN (101,102) ---('Void', 'Reject')
 					AND b.bettype IN (9,29) AND b.matchid IN (9,29)
@@ -257,11 +260,12 @@ ORDER BY OrderNo, LicenseeName, bettype, LiveIndicator
 DROP TABLE #TmpBettrans
 
 
-
-
 GO
-GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListing] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Rpt_TicketsListing] TO [vnteam]
 
- 
+GRANT EXECUTE ON [NAP_Rpt_TicketsListing] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [NAP_Rpt_TicketsListing] TO [vnteam] AS [dbo]
+GO
+
+

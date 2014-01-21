@@ -218,6 +218,25 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = 101, @ErrMsg = 'Invalid TransIds.'
+		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
+		WHERE KeyID = @KeyID AND KeyValue = @MatchId
+		BEGIN TRY
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @UserID, 
+					@MatchId = @MatchId, 
+					@KeyID = @KeyID,
+					@ActionID = 0, 
+					@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
+		END TRY
+		BEGIN CATCH
+			SELECT @Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID = @UserID, 
+				@MatchId = @MatchId, 
+				@KeyID = @KeyID,
+				@ActionID = 0, 
+				@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
+		END CATCH
 			RETURN
 	END CATCH
 	------------------***** Insert all data into #BetDelete *****------------------
@@ -598,7 +617,7 @@ BEGIN
 	INNER JOIN custDB.dbo.custinfo sag (nolock) ON bd.srecommend = sag.custid
 	
 	-- Send mail when void deposit
-	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag
 	FROM
@@ -610,7 +629,7 @@ BEGIN
 	ORDER BY transid
 
 	-- Send mail when void 12EU tickets 
-		SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+		SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, '12EU' as site, b.status, b.SecAcceptFlag
 	FROM
@@ -623,7 +642,7 @@ BEGIN
 
 	
 	-----Send mail when void any real tickets by IT
-	SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
@@ -635,7 +654,7 @@ BEGIN
 	ORDER BY transid    	   
 
 	-- Send mail when void UUS tickets
-		SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+		SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag
@@ -647,7 +666,7 @@ BEGIN
 	ORDER BY transid    
 
 		-----Send mail when void Foobet tickets
-	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype,
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
 		b.status, b.SecAcceptFlag

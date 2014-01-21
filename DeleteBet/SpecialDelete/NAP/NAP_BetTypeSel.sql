@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BetTypeSel]
+﻿ALTER PROCEDURE [NAP_BetTypeSel]
 	@Mode SMALLINT = 0 
 AS
 /*
@@ -99,7 +99,13 @@ FROM	#TmpBettype
 ORDER BY typeid
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_BetTypeSel] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_BetTypeSel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_BetTypeSel] TO [VNTeam]
+
+GRANT VIEW DEFINITION ON [NAP_BetTypeSel] TO [vnteam] AS [dbo]
+GO
+
+
