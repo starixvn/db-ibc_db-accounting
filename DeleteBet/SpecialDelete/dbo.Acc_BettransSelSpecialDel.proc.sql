@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransSelSpecialDel]
+﻿Alter PROCEDURE [Acc_BettransSelSpecialDel]
 	@MatchID int,
 	@FromRefNo bigint,
 	@ToRefNo bigint,	
@@ -324,6 +324,11 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [Acc_BettransSelSpecialDel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [Acc_BettransSelSpecialDel] TO [vnteam] AS [dbo]
+GO
+
+

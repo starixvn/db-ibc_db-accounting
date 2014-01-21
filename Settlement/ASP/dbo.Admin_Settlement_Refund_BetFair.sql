@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Refund_BetFair]
+﻿ALTER PROCEDURE [Admin_Settlement_Refund_BetFair]
 	@matchid int,
 	@creator int, 	
 	@IP varchar(15) = '',
@@ -13,7 +13,7 @@ Original:
 DB: DBTXN/BODB02
 
 Revisions: 
-	
+	- 20140117@Kathy: Change ErrCode value
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -30,7 +30,7 @@ SET NOCOUNT ON
 -- check and not allow attempt to settlement same game while it's still not finish
 IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
 BEGIN
-	SELECT  @ErrCode = 101,
+	SELECT  @ErrCode = 1000000,
 			@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
@@ -62,7 +62,7 @@ BEGIN
 END
 ELSE 
 BEGIN
-	SELECT @ErrCode = 100, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+	SELECT @ErrCode = 1000000, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
 ---
@@ -242,7 +242,13 @@ BEGIN
 	END CATCH
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_BetFair] TO [bodbAdminNet] AS [dbo]
+
+GRANT EXECUTE ON [Admin_Settlement_Refund_BetFair] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_BetFair] TO [vnteam] AS [dbo]
+
+GRANT VIEW DEFINITION ON [Admin_Settlement_Refund_BetFair] TO [vnteam] AS [dbo]
+GO
+
+

@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_BettransDelSpecialDel_EarlyKO]
+ALTER PROCEDURE [Acc_BettransDelSpecialDel_EarlyKO]
     @matchid INT,
     @DelOption TINYINT = 0,
     @KickOffDate datetime,
@@ -1250,12 +1250,13 @@ IF exists(
 	
 SET NOCOUNT OFF
 END
-<<<<<<< HEAD
-=======
-
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecialDel_EarlyKO] TO [bodbAdminNet] AS [dbo]
+
+GRANT EXECUTE ON [Acc_BettransDelSpecialDel_EarlyKO] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecialDel_EarlyKO] TO [vnteam] AS [dbo]
+
+GRANT VIEW DEFINITION ON [Acc_BettransDelSpecialDel_EarlyKO] TO [vnteam] AS [dbo]
+GO
+
+

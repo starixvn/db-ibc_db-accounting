@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_BettransSelSpecialDel_EarlyKO]
+ALTER PROCEDURE [Acc_BettransSelSpecialDel_EarlyKO]
 	@MatchID int,  
 	@KickOffDate datetime,
 	@hdp smallmoney = 9999,  
@@ -392,12 +392,12 @@ BEGIN
 	SET NOCOUNT OFF
 END
 
-
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel_EarlyKO] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [Acc_BettransSelSpecialDel_EarlyKO] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel_EarlyKO] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [Acc_BettransSelSpecialDel_EarlyKO] TO [vnteam] AS [dbo]
 GO
+
+

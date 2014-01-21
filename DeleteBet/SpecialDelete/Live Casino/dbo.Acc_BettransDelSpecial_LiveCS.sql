@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_BettransDelSpecial_LiveCS]
+﻿ALTER PROCEDURE [Acc_BettransDelSpecial_LiveCS]
     @matchid		INT,     
     @f_transid		BIGINT,
     @t_transid		BIGINT,
@@ -32,11 +32,7 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130526@Johnson: Add param @reason to log the reason delete bets
 		- 20130702@Elodie: Add new bettype 1103, 1104
-<<<<<<< HEAD
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer from CustDB by link database)
-=======
-		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer from CustDB by link database)						   
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 		- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]	
 	Param's Explanation: 
 	
@@ -518,13 +514,12 @@ BEGIN
 		END CATCH
 	END
 END
-
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial_LiveCS] TO [bodbAdminNet] AS [dbo]
+
+GRANT EXECUTE ON [Acc_BettransDelSpecial_LiveCS] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial_LiveCS] TO [vnteam] AS [dbo]
+
+GRANT VIEW DEFINITION ON [Acc_BettransDelSpecial_LiveCS] TO [vnteam] AS [dbo]
+GO
+
+

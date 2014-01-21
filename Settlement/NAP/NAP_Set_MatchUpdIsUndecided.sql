@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[NAP_Set_MatchUpdIsUndecided]
+ALTER PROCEDURE [NAP_Set_MatchUpdIsUndecided]
 	@matchid int,
 	@IsUndecided bit,
 	@userID int 
@@ -33,7 +33,11 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchUpdIsUndecided] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_Set_MatchUpdIsUndecided] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchUpdIsUndecided] TO [VNTeam]
+
+GRANT VIEW DEFINITION ON [NAP_Set_MatchUpdIsUndecided] TO [vnteam] AS [dbo]
 GO
+
+

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Refund_All]
+﻿ALTER PROCEDURE [Admin_Settlement_Refund_All]
 	@matchid int,
 	@creator int, 	
 	@IsExcludeBetdaq bit = 0,
@@ -44,6 +44,7 @@ Revisions:
 	- 20130624@Jamie: Add BalanceNegative 	
 	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
+	- 20140117@Kathy: Change ErrCode value
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -72,7 +73,7 @@ SET NOCOUNT ON
 -- check and not allow attempt to settlement same game while it's still not finish
 IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
 BEGIN
-	SELECT  @ErrCode = 101,
+	SELECT  @ErrCode = 1000000,
 			@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
@@ -104,7 +105,7 @@ BEGIN
 END 
 ELSE 
 BEGIN
-	SELECT @ErrCode = 100, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+	SELECT @ErrCode = 1000000, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
 ---
@@ -165,7 +166,7 @@ BEGIN
 			
 	IF @Action IN ('CAL','CAL-FT') AND @totalgoal IS NULL 
 	BEGIN
-		SELECT	@ErrCode = 100
+		SELECT	@ErrCode = 1000004
 				,@ErrMsg = 'Cannot settle determined ticket(s) without FT Score!'
 				
 		-----
@@ -217,7 +218,7 @@ BEGIN
 
 	IF @Action IN ('CAL','CAL-HT') AND @totalht IS NULL 
 	BEGIN
-		SELECT	@ErrCode = 110
+		SELECT	@ErrCode = 1000005
 				,@ErrMsg = 'Cannot settle determined ticket(s) without HT Score!'
 		
 		-----
@@ -369,7 +370,7 @@ SELECT @Remark = 'ExcludeBetdaqTickets=' + convert(char(1),@IsExcludeBetdaq)
 					+ ' SettleDeterminedBetdaqTickets=' + convert(char(1),@IsSettleAbandonedMatch)
 					+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN ' Action=' + @Action ELSE '' END
 					+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN @ScoreLog ELSE '' END
-					+ 'ExcludeBetfairTickets=' + convert(char(1),@IsExcludeBetfair) 
+					+ ' ExcludeBetfairTickets=' + convert(char(1),@IsExcludeBetfair) 
 					+ ' SettleDeterminedBetfairTickets=' + convert(char(1),@IsSettleAbandonedMatchBetFair)
 					+ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ' Action=' + @Action ELSE '' END
 					+ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN @ScoreLog ELSE '' END
@@ -449,9 +450,16 @@ BEGIN
 	END CATCH
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
+
+GRANT EXECUTE ON [Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
+
+GRANT EXECUTE ON [Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]
+
+GRANT VIEW DEFINITION ON [Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]
+GO
+
+

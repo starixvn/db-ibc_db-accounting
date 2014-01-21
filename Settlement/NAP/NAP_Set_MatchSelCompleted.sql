@@ -1,9 +1,7 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted]
-	@FromDate datetime,
-	@ToDate datetime,
-	@sporttype tinyint = 0,
+ALTER PROCEDURE [NAP_Set_MatchSelCompleted]
+	@Date datetime,
+	@SportType tinyint = 0,
 	@LeagueID int = 0, -- 0 for ALL Leagues
-	@matchcode nvarchar(50) = '',
 	@isReLoad bit = 0
 AS
 
@@ -16,25 +14,12 @@ AS
 
 	Revisions:
 		@isReLoad: 1: reload partial matches of a league, 0: not reload
+		- 20131226@Kathy: Remove @param don't use (@MatchCode,@ToDate)
 */  
   
 SET NOCOUNT ON  
 
-DECLARE @matchid INT
-
-SELECT @matchcode = ISNULL(@matchcode,''), @LeagueID = ISNULL(@LeagueID,0)
--- if entering matcode, ignore other params (excep FromDate, ToDate, sport type)
-IF (@matchcode <> '')
-BEGIN
-	SELECT @LeagueID = CASE WHEN @isReLoad = 1 THEN @LeagueID ELSE 0 END -- reload partial; search on LeagueID, not reload: get all leagues
-	
-	BEGIN TRY	
-		SET @matchid = CASE WHEN ISNUMERIC(@matchcode) = 1 THEN CAST(@matchcode AS INT) ELSE NULL END
-	END TRY
-	BEGIN CATCH
-		SET @matchid=NULL
-	END CATCH		
-END
+SELECT @LeagueID = CASE WHEN @isReLoad = 1 THEN ISNULL(@LeagueID,0) ELSE 0 END -- reload partial; search on LeagueID, not reload: get all leagues
   
 Declare @m TABLE (
 		matchid int primary key, 
@@ -42,9 +27,9 @@ Declare @m TABLE (
 		IsMultiCaled bit,  
 		IsRefund bit, 
 		IsCalRefund bit,  
-		IsHTCal bit, 
-		suspenderHT varchar(20), 
-		suspenderFT varchar(20), 
+		IsHalfTimeCal bit, 
+		suspenderHalfTime varchar(20), 
+		suspenderFullTime varchar(20), 
 		calculate bit, 
 		isPending bit, 
 		isUndecided bit)  
@@ -61,15 +46,14 @@ SELECT
 		ISNULL(mr.isPending,0) as isPending,
 		ISNULL(mr.isUndecided,0) as isUndecided 
 FROM  
-	DB02.BODB02.dbo.match m with (nolock)  
-	INNER JOIN DB02.BODB02.dbo.match_remark mr with (nolock) ON m.matchid = mr.matchid  
-	LEFT OUTER JOIN dbo.custinfo ht with (nolock) ON mr.ConfirmHT = ht.custid  
-	LEFT OUTER JOIN dbo.custinfo ft with (nolock) ON mr.ConfirmFT = ft.custid  
+	DBPRO.BODB02.dbo.match m with (nolock)  
+	INNER JOIN DBPRO.BODB02.dbo.match_remark mr with (nolock) ON m.matchid = mr.matchid  
+	LEFT OUTER JOIN CustDB.dbo.custinfo ht with (nolock) ON mr.ConfirmHT = ht.custid  
+	LEFT OUTER JOIN CustDB.dbo.custinfo ft with (nolock) ON mr.ConfirmFT = ft.custid  
 WHERE
-	m.eventdate between @FromDate and @ToDate  
+	m.eventdate = @Date  
 	AND m.leagueID = case when @LeagueID <> 0 then @LeagueID else m.leagueID end  
 	AND m.sporttype = case when @sporttype = 0 then sporttype else @sporttype end 
-	AND (@matchcode = '' or (m.matchid = @matchid OR m.matchcode = @matchcode)) 
 	AND m.eventstatus <> N'Completed'  
 	AND (m.kickofftime < dateadd(s, -6000, CURRENT_TIMESTAMP) or mr.ConfirmFT > 0)  
 
@@ -78,7 +62,8 @@ FROM
 (	SELECT  
 		m.matchid,  
 		m.leagueid,  
-		hthomescore,htawayscore, 
+		hthomescore HalfTimeHomeScore,
+		htawayscore HalfTimeAwayScore, 
 		IsCalculated, IsMultiCaled,  
 		IsRefund, IsCalRefund,  
 		m.homeid,  
@@ -99,15 +84,15 @@ FROM
 		m.eventdate,  
 		m.goalrecord, 	
 		C.betcount,  	
-		suspenderHT,  
-		suspenderFT,  
-		ISNULL(tm.IsHTCal,0) as IsHTCal,  
+		suspenderHalfTime,  
+		suspenderFullTime,  
+		ISNULL(tm.IsHalfTimeCal,0) as IsHalfTimeCal,  
 		ISNULL(tm.calculate,0) as calculate,  
 		ISNULL(tm.IsPending,0) as IsPending,
 		ISNULL(tm.isUndecided,0) as isUndecided ,
 		CAST(CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore  
 	FROM  
-		DB02.BODB02.dbo.match m with (nolock)  
+		DBPRO.BODB02.dbo.match m with (nolock)  
 		INNER JOIN @m tm ON m.matchid = tm.matchid  
 		INNER JOIN  
 		(  
@@ -122,7 +107,13 @@ ORDER BY
 	CASE eventstatus WHEN 'completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END,  
 	eventdate, kickofftime, matchid, matchcode	 
 
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelCompleted] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [NAP_Set_MatchSelCompleted] TO [vnteam] AS [dbo]
+GO
+
+

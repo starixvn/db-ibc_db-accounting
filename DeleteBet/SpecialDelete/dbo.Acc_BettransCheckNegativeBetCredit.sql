@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransCheckNegativeBetCredit]    
+﻿ALTER PROCEDURE [Acc_BettransCheckNegativeBetCredit]    
     @transids	VARCHAR(MAX)	= '',
     @Type bit,
     @ExcludeRunning bit = 0
@@ -78,9 +78,12 @@ BEGIN
 	DROP TABLE #BetDelete		
 END
 
+GO
+
+GRANT EXECUTE ON [Acc_BettransCheckNegativeBetCredit] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [Acc_BettransCheckNegativeBetCredit] TO [vnteam] AS [dbo]
+GO
 
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransCheckNegativeBetCredit] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransCheckNegativeBetCredit] TO [vnteam] AS [dbo]

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransDelSpecial_VirtualSports]
+﻿ALTER PROCEDURE [Acc_BettransDelSpecial_VirtualSports]
     @matchid INT,
     @DelOption TINYINT = 0,
     @f_transid BIGINT,
@@ -307,10 +307,6 @@ BEGIN
 	BEGIN
 		DELETE FROM #BetDelete
 		WHERE transid NOT IN (SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(@transids, ','))
-<<<<<<< HEAD
-=======
-
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 				AND CustID IN (SELECT CustID FROM @DepositCust)
 				and (custid not in (SELECT custid FROM @12EUCust) --12EU
 				and custid not in (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) --Betdaq
@@ -576,6 +572,11 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial_VirtualSports] TO [bodbAdminNet] AS [dbo]
+
+GRANT EXECUTE ON [Acc_BettransDelSpecial_VirtualSports] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial_VirtualSports] TO [vnteam] AS [dbo]
+
+GRANT VIEW DEFINITION ON [Acc_BettransDelSpecial_VirtualSports] TO [vnteam] AS [dbo]
+GO
+
+

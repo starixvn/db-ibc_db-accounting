@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransDelSpecial_NumberGame]
+﻿ALTER PROCEDURE [Acc_BettransDelSpecial_NumberGame]
     @matchid		INT,
     @f_transid		BIGINT,
     @t_transid		BIGINT,
@@ -46,11 +46,7 @@ Revisions:
 	- 20130128@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130526@Johnson: Add param @reason to log the reason delete bets
-<<<<<<< HEAD
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer, CustInfo, Dep_CustSuper from CustDB by link database)
-=======
-	- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer, CustInfo, Dep_CustSuper from CustDB by link database)						   
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 	- 20131210@Kathy: Using Dep_CustSuper table to find deposit ticket instead of betfrom in ('D', 'M', 'E', 'L') [Redmine:#9321]
 						   
 Param's Explanation: 
@@ -501,8 +497,12 @@ BEGIN
 	SET		VValue = '0'
 	WHERE	VName = 'isCalculatingNGManual'	
 END
+GO
 
+GRANT EXECUTE ON [Acc_BettransDelSpecial_NumberGame] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecial_NumberGame] TO [bodbAdminNet] AS [dbo]
+
+GRANT VIEW DEFINITION ON [Acc_BettransDelSpecial_NumberGame] TO [vnteam] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecial_NumberGame] TO [vnteam] AS [dbo]
+
+

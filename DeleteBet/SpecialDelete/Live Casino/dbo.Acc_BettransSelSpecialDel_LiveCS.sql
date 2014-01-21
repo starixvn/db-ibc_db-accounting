@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransSelSpecialDel_LiveCS]
+﻿ALTER PROCEDURE [Acc_BettransSelSpecialDel_LiveCS]
 	@MatchID	INT,
 	@FromRefNo	BIGINT,
 	@ToRefNo	BIGINT
@@ -144,9 +144,12 @@ BEGIN
 	DROP TABLE #BettransDetail
 END
 
+GO
+
+GRANT EXECUTE ON [Acc_BettransSelSpecialDel_LiveCS] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [Acc_BettransSelSpecialDel_LiveCS] TO [vnteam] AS [dbo]
+GO
 
 
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel_LiveCS] TO [vnteam]
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel_LiveCS] TO [BodbAdminNet]

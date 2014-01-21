@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransSelSpecialDel_NumberGame]  
+﻿ALTER PROCEDURE [Acc_BettransSelSpecialDel_NumberGame]  
 	@MatchID INT,  
 	@FromRefNo BIGINT,  
 	@ToRefNo BIGINT,  
@@ -142,8 +142,12 @@ BEGIN
 	DROP TABLE #SpecialDeleteBets  
 END
 
-  
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel_NumberGame] TO [vnteam]
+
+GRANT EXECUTE ON [Acc_BettransSelSpecialDel_NumberGame] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel_NumberGame] TO [BodbAdminNet]
+
+GRANT VIEW DEFINITION ON [Acc_BettransSelSpecialDel_NumberGame] TO [vnteam] AS [dbo]
+GO
+
+

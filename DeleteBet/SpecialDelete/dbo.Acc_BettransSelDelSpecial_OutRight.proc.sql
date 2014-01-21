@@ -1,4 +1,4 @@
-﻿ALTER PROC [dbo].[Acc_BettransSelDelSpecial_Outright]
+﻿ALTER PROCEDURE [Acc_BettransSelDelSpecial_Outright]
 	@OutrightID int = 0,
 	@FromRefNo bigint,
 	@ToRefNo bigint,
@@ -99,10 +99,12 @@ mrecommend  in (105181, 118473, 105183)
 
 DROP TABLE #OutrightDeleteBets
 
-
-
 GO
-GRANT EXECUTE ON [dbo].Acc_BettransSelDelSpecial_Outright TO [bodbAdminNet]
 
+GRANT EXECUTE ON [Acc_BettransSelDelSpecial_Outright] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelDelSpecial_Outright] TO [VNTeam]
+
+GRANT VIEW DEFINITION ON [Acc_BettransSelDelSpecial_Outright] TO [vnteam] AS [dbo]
+GO
+
+
