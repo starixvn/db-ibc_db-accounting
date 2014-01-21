@@ -147,8 +147,3 @@ FROM dbo.Task_FollowBet_Details
 
 DELETE FROM dbo.Task_FollowBet_Details
 WHERE transid = @follow_transid
-
-
-
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_FollowBet_InsertBet] TO [vnteam] AS [dbo]
