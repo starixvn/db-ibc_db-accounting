@@ -6,6 +6,7 @@ AS
  Revisions:   
   - 20121001@viet: create SP   
   - 20130125@Johnson: move sp from DB054.bodb02 to DBRMS.bodb_RMS and use rmSettings to store setting
+  - 20140121@Johnson: add system parlay into rmTransaction
 */  
 SET NOCOUNT ON
 SET DEADLOCK_PRIORITY LOW	
@@ -138,6 +139,13 @@ BEGIN
 	WHEN NOT MATCHED AND s.bettype = 9 THEN 
 		INSERT(transid, refno, custid, combo)
 		VALUES(s.transid,s.refno,s.custid,RIGHT(s.betcheck,LEN(s.betcheck)-1))
+	; 
+	
+	MERGE	dbo.rmTransaction as dt
+	USING	#temp s on dt.transid = s.transid	
+	WHEN NOT MATCHED AND s.bettype = 29 THEN 
+		INSERT(transid, refno, custid, combo)
+		VALUES(s.transid,s.refno,s.custid,LEN(s.betteam))
 	; -- END OF MERGE rmTransaction
 	
 END
