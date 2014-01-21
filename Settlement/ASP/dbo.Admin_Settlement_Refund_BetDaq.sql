@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Refund_BetDaq]
+﻿ALTER PROCEDURE [Admin_Settlement_Refund_BetDaq]
 	@matchid int,
 	@creator int, 	
 	@IP varchar(15) = '',
@@ -20,6 +20,7 @@ Revisions:
 	- 20130624@Jamie: Add BalanceNegative 
 	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
+	- 20140117@Kathy: Change ErrCode value
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -41,7 +42,7 @@ SET NOCOUNT ON
 -- check and not allow attempt to settlement same game while it's still not finish
 IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
 BEGIN
-	SELECT  @ErrCode = 101,
+	SELECT  @ErrCode = 1000000,
 			@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
@@ -73,7 +74,7 @@ BEGIN
 END
 ELSE 
 BEGIN
-	SELECT @ErrCode = 100, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+	SELECT @ErrCode = 1000000, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
 ---
@@ -257,7 +258,13 @@ BEGIN
 	END CATCH
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]
+
+GRANT EXECUTE ON [Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_BetDaq] TO [vnteam] AS [dbo]
+
+GRANT VIEW DEFINITION ON [Admin_Settlement_Refund_BetDaq] TO [vnteam] AS [dbo]
+GO
+
+

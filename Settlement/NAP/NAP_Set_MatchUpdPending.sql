@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[NAP_Set_MatchUpdPending]
+ALTER PROCEDURE [NAP_Set_MatchUpdPending]
 	@matchid int,
 	@IsPending bit,
 	@userID int 
@@ -30,10 +30,12 @@ SELECT @LogData = 'Update Pending Match : ' + cast(@matchid as varchar(30)) + ' 
 
 EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 
+GO
+
+GRANT EXECUTE ON [NAP_Set_MatchUpdPending] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [NAP_Set_MatchUpdPending] TO [vnteam] AS [dbo]
+GO
 
 
-GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchUpdPending] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchUpdPending] TO [VNTeam]
-GO

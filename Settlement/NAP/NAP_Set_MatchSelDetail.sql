@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail]
+ALTER PROCEDURE [NAP_Set_MatchSelDetail]
 	@matchid int,
 	@excludeRefundFGLG	bit = 0
 AS
@@ -66,42 +66,22 @@ BEGIN
 		SELECT @IsExistFGLG = 1
 END
 
-if
-( 
-	exists
-	(--HT Soccer
-		select	1 
-		from	DB02.BODB02.dbo.match m with (nolock) 
-				inner join DB02.BODB02.dbo.match_remark mr with (nolock) on m.matchid = mr.matchid
-		where	m.matchid=@matchid 
-				AND sporttype = 1 
-				AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) < 100
-				AND (datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 45 or isnull(ConfirmHT,0) > 0)
-				AND isnull(ConfirmFT,0) = 0
-	)
-		
-/*		OR			
-	exists(--HT Basketball & Football
-	select 1 
-	from match with (nolock) 
-	where matchid=@matchid 
-		AND sporttype IN(2,3)
-		AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) < 60
-		AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 30) 
-*/
-)		
+if( exists
+		(--HT Soccer
+			select	1 
+			from	DBPRO.BODB02.dbo.match m with (nolock) 
+					inner join DBPRO.BODB02.dbo.match_remark mr with (nolock) on m.matchid = mr.matchid
+			where	m.matchid=@matchid 
+					AND sporttype = 1 
+					AND datediff(minute,kickofftime,CURRENT_TIMESTAMP) < 100
+					AND (datediff(minute,kickofftime,CURRENT_TIMESTAMP) > 45 or isnull(ConfirmHT,0) > 0)
+					AND isnull(ConfirmFT,0) = 0
+		)
+	)		
 BEGIN
 	Select @IsHTOnly = 1
 END
-	
-/*
-if exists (select 1 from match with (nolock) where eventstatus = 'completed' and matchid = @matchid)
-BEGIN
-	Select @ErrMsg = 'This match has been completed!!',
-		@ErrCode = 101
-	Return
-END
-*/
+
 Declare @status TABLE ([Group] tinyint, BetCount int, InRunning int)
 INSERT INTO @status
 	SELECT
@@ -116,7 +96,7 @@ INSERT INTO @status
 	FROM
 		bettrans with (nolock)
 	WHERE
-		matchid = @matchid
+		matchid = @matchid and bettype not between 1301 and 1334
 	GROUP BY
 		CASE WHEN bettype IN (7, 8, 12, 15, 21, 30, 125) THEN 1 WHEN bettype = 14 THEN 2 ELSE 0 END
 
@@ -140,38 +120,48 @@ Select @FGLGStatus = CASE
 		ELSE N'Running' END FROM @status WHERE [Group] = 2
 
 IF EXISTS(select top 1 1 from bettrans (nolock) where matchid = @matchid and liveindicator = 1)
-	Select @IsLive = 1		
+	Select @IsLive = 1	
 
-select	match.sporttype, match.betstatus, hthomescore,htawayscore,
-		datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,	
-		match.leagueid,
-		match.matchid,  
-		match.homeid,
-		match.awayid,	
-		match.matchcode,match.kickofftime,
-		match.finalhomescore,match.finalawayscore,match.eventstatus,
-		isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,
-		isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,
-		isnull(match.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-		mr.ishtcal,
-		match.GoalRecord,
-		mr.ConfirmHT, 
-		mr.ConfirmFT,
-		@HTStatus HTStatus,
-		@FTStatus FTStatus,
-		@FGLGStatus fglgstatus,
-		@IsExistFGLG AS IsExistFGLG,
-		@IsExistLG AS IsExistLG,		
-		@IsHTOnly as IsHTOnly,	
-		@IsLive as IsLive,
-		@DelayTime DelayTime		
-from	DB02.BODB02.dbo.match with (nolock) 	
-		left outer join DB02.BODB02.dbo.match_remark mr with (nolock) on match.matchid = mr.matchid
+select	match.sporttype, match.betstatus, 
+	hthomescore AS HalfTimeHomeScore,
+	htawayscore AS HalfTimeAwayScore,
+	datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,	
+	match.leagueid,
+	match.matchid,  
+	match.homeid,
+	match.awayid,	
+	match.matchcode,match.kickofftime,
+	match.finalhomescore,match.finalawayscore,match.eventstatus,
+	isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,
+	isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,
+	isnull(match.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+	mr.ishtcal AS IsHalfTimeCal,
+	match.GoalRecord,
+	mr.ConfirmHT, 
+	mr.ConfirmFT,
+	@HTStatus HTStatus,
+	@FTStatus FTStatus,
+	@FGLGStatus fglgstatus,
+	@IsExistFGLG AS IsExistFGLG,
+	@IsExistLG AS IsExistLG,		
+	@IsHTOnly as IsHTOnly,	
+	@IsLive as IsLive,
+	@DelayTime DelayTime		
+from	DBPRO.BODB02.dbo.match with (nolock) 	
+		left outer join DBPRO.BODB02.dbo.match_remark mr with (nolock) on match.matchid = mr.matchid
 where match.matchid = @matchid
+
+
 --order by match.eventdate,match.matchcode
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [VNTeam]
-GO 
+
+GRANT VIEW DEFINITION ON [NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]
+GO
+
+

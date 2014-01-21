@@ -1,9 +1,6 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Admin_Calculate_9_Cal]
+﻿ALTER PROCEDURE [Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime
-WITH RECOMPILE  
 AS  
 /*
 Created: 
@@ -32,6 +29,7 @@ Revisions:
 	- 20121018@Johnson: Merge code for checking double comm losing from production
 	- 20121105@Viet: bring modds value from DBTrans to replicated servers.
 	- 20121213@Viet: reduce the length of XML-string
+	- 20140120@Kathy: Don't delete match form Parlay_WaitingList
 
 Param's Explanation:
 ¡E @matchid: matchid of match to be settled
@@ -268,8 +266,13 @@ SELECT
 FROM @temp_bettrans_9
 WHERE IsUpdated = 1
 
-IF @@ROWCOUNT = 0
-	DELETE FROM dbo.Parlay_WaitingList WHERE matchid = @matchid	
+--IF @@ROWCOUNT = 0
+--	DELETE FROM dbo.Parlay_WaitingList WHERE matchid = @matchid
+	
 
 COMMIT TRANSACTION
 ---------------------------------------------------------------
+
+GO
+
+

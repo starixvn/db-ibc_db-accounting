@@ -1,8 +1,8 @@
-CREATE PROCEDURE [dbo].[NAP_Set_MatchSelHedge]      
+ALTER PROCEDURE [NAP_Set_MatchSelHedge]      
 	@matchid int    
 AS
 
-/* Created: 20120925@Dan
+/* Created: 20140114@Kathy
  Task: Select hedging matches correlative real matches    
  DB: DB02.bodb02    
  Original SP: [Acc_Set_MatchSelHedge]
@@ -36,10 +36,14 @@ WHERE
 	AND matchid <> @matchid
 	AND matchcode LIKE '%hedge%'
 ORDER BY
-	matchcode  
+	matchcode
 
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelHedge] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_Set_MatchSelHedge] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelHedge] TO [VNTeam]
-GO 
+
+GRANT VIEW DEFINITION ON [NAP_Set_MatchSelHedge] TO [vnteam] AS [dbo]
+GO
+
+
