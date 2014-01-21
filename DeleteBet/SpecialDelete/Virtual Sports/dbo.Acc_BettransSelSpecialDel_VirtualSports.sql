@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransSelSpecialDel_VirtualSports]
+﻿ALTER PROCEDURE [Acc_BettransSelSpecialDel_VirtualSports]
 	@MatchID int,
 	@FromRefNo bigint,
 	@ToRefNo bigint,	
@@ -187,8 +187,12 @@ BEGIN
 	SET NOCOUNT OFF
 END
 
+GO
 
+GRANT EXECUTE ON [Acc_BettransSelSpecialDel_VirtualSports] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransSelSpecialDel_VirtualSports] TO [bodbAdminNet]
+
+GRANT VIEW DEFINITION ON [Acc_BettransSelSpecialDel_VirtualSports] TO [vnteam] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelSpecialDel_VirtualSports] TO [vnteam] 
+
+

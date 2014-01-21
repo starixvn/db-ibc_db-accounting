@@ -1,4 +1,4 @@
-﻿ ALTER PROC [dbo].[Acc_BettransSelDelSpecial_MixParlay]
+﻿ALTER PROCEDURE [Acc_BettransSelDelSpecial_MixParlay]
 	@MatchID int,
 	@bettype smallint = 0,
 	@Type smallint = 0, 
@@ -302,11 +302,12 @@ BEGIN
  SET NOCOUNT OFF  
 END
 
-
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransSelDelSpecial_MixParlay] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [Acc_BettransSelDelSpecial_MixParlay] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelDelSpecial_MixParlay] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [Acc_BettransSelDelSpecial_MixParlay] TO [vnteam] AS [dbo]
+GO
+
+

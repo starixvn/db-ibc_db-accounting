@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransDelSpecialDel_MixParlay]
+﻿ALTER PROCEDURE [Acc_BettransDelSpecialDel_MixParlay]
 	@MatchID int,
 	@Type smallint = 0, 	
     @livehomescore smallint = NULL,
@@ -199,6 +199,7 @@ BEGIN
 		,b.betteam		
 		,b.livehomescore
 		,b.liveawayscore
+
 		,b.liveindicator
 		,b.betteam		
 		,b.statusID
@@ -387,11 +388,7 @@ BEGIN
 			LEFT JOIN @12EUCust AS c12 ON r.custid=c12.custid
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
-<<<<<<< HEAD
 		WHERE r.srecommend not IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
-=======
-		WHERE r.srecommend not IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND d.custID IS NULL
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
@@ -405,11 +402,7 @@ BEGIN
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
 			LEFT JOIN dbo.strSplit(@transids, ',') AS t ON t.val=r.transid
-<<<<<<< HEAD
 		WHERE r.srecommend not IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
-=======
-		WHERE r.srecommend not IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom NOT IN ('D', 'M', 'E', 'L')
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND d.custID IS NULL
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
@@ -424,11 +417,7 @@ BEGIN
 			LEFT JOIN @12EUCust AS c12 ON r.custid=c12.custid
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
-<<<<<<< HEAD
 		WHERE r.srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
-=======
-		WHERE r.srecommend IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
 			AND m.custid IS NULL--not in
@@ -441,11 +430,7 @@ BEGIN
 			LEFT JOIN dbo.f_GetBetDaqCustomer(1) AS bd ON r.custid=bd.custid
 			LEFT JOIN @MasterMHC AS m ON r.mrecommend=m.custid
 			LEFT JOIN dbo.strSplit(@transids_D, ',') AS t ON t.val=r.transid
-<<<<<<< HEAD
 		WHERE r.srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
-=======
-		WHERE r.srecommend IN (SELECT custid FROM custDB.dbo.Dep_CustSuper with(NOLOCK) ) --r.betfrom IN ('D', 'M', 'E', 'L')
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
 			AND c12.custid IS NULL--not in
 			AND bd.custid IS NULL--not in
 			AND m.custid IS NULL--not in
@@ -781,12 +766,12 @@ BEGIN
 	SET NOCOUNT OFF
 END
 
-<<<<<<< HEAD
-=======
+GO
+
+GRANT EXECUTE ON [Acc_BettransDelSpecialDel_MixParlay] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [Acc_BettransDelSpecialDel_MixParlay] TO [vnteam] AS [dbo]
+GO
 
 
->>>>>>> 0448880ae30cafa75d9183b60b49146b0d1b12ae
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelSpecialDel_MixParlay] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelSpecialDel_MixParlay] TO [vnteam] AS [dbo]
