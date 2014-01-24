@@ -39,9 +39,9 @@ BEGIN
 	BEGIN
 		SELECT @eventstatus= '', 	
 				@isRefund = NULL,
-			@LeagueID = CASE WHEN @isReLoad = 1 THEN @LeagueID ELSE 0 END, -- reload partial; search on LeagueID, not reload: get all leagues
-			@UncalOnly = CASE WHEN @filterBy in (3,1) THEN 1 ELSE 0 END,				
-			@UncalMultiOnly = CASE WHEN @filterBy in (3,2) THEN 1 ELSE 0 END			
+			@LeagueID = CASE WHEN @isReLoad = 1 THEN @LeagueID ELSE 0 END, -- reload partial; search on LeagueID, not reload: get all leagues	
+			@UncalOnly = NULL,
+			@UncalMultiOnly = NULL 		
 		BEGIN TRY	
 			SET @matchid = CASE WHEN ISNUMERIC(@matchcode) = 1 THEN CAST(@matchcode AS INT) ELSE NULL END
 		END TRY
@@ -61,7 +61,6 @@ BEGIN
 										ELSE 0	END,						
 			@UncalOnly = CASE WHEN @filterBy in (3,1) THEN 1 ELSE 0 END,				
 			@UncalMultiOnly = CASE WHEN @filterBy in (3,2) THEN 1 ELSE 0 END			
-	
 		--ignore event status if selecting filterby
 		IF (@UncalMultiOnly=1 OR @UncalOnly=1)
 			SELECT @eventstatus= '', @isRefund=NULL
@@ -87,7 +86,7 @@ BEGIN
 		betstatus NVARCHAR(50),
 		eventstatus NVARCHAR(50),                            
 		Foddsstatus VARCHAR(10),
-		sporttype INT,
+		sporttype tinyint,
 		IsNeutral BIT,
 		eventdate  DATETIME,          
 		goalrecord VARCHAR(50),                       
@@ -138,8 +137,8 @@ BEGIN
 		,ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
 		,m.eventdate
 		,m.goalrecord --Phuong.Nguyen  
-		,CASE mr.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmHT ) END suspenderHT
-		,CASE mr.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmFT ) END suspenderFT
+		,CASE mr.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM custdb.dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmHT ) END suspenderHT
+		,CASE mr.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM custdb.dbo.custinfo WITH(NOLOCK) WHERE custid = mr.ConfirmFT ) END suspenderFT
 		,ISNULL(mr.IsHTCal,0) AS IsHTCal
 		,ISNULL(mr.calculate,0) AS calculate
 		,ISNULL(mr.isPending,0) AS isPending  
@@ -150,11 +149,11 @@ BEGIN
 		LEFT JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 	WHERE m.eventdate BETWEEN @FromDate AND @ToDate  
 		AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END
-		AND (@UncalOnly = 0 OR ISNULL(mr.calculate,0) = 0)  
-		AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple,0) = 0)  
-		AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple,0) = 0)     
+		AND (@UncalOnly = 0 OR ISNULL(mr.calculate,0) = 0 OR @UncalOnly IS NULL )  
+		AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple,0) = 0 OR @UncalMultiOnly IS NULL)    
 		AND CASE	WHEN @UncalMultiOnly = 0 THEN 1   
 					WHEN @UncalMultiOnly = 1 THEN hthomescore*htawayscore*finalhomescore*finalawayscore  
+					WHEN @UncalMultiOnly IS NULL OR @UncalOnly IS NULL THEN 1
 			END IS NOT NULL  
 		AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END
 		AND (@matchcode = '' or (m.matchid = @matchid OR m.matchcode = @matchcode)) 
@@ -238,18 +237,17 @@ BEGIN
 			m.WinOdds,
 			m.PlaceOdds
 	FROM #matchList m		
-	ORDER BY CASE eventstatus WHEN 'completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
-			,eventdate
-			,kickofftime
-			,sporttype
-			,leagueid
-			,matchid
-			,betstatus
-			,matchcode  
+	ORDER BY sporttype, leagueid, 
+		CASE when eventstatus = 'Running' THEN 0
+			 when eventstatus = 'Closed' then 1
+			 WHEN eventstatus = 'completed' THEN 3
+			 WHEN eventstatus LIKE '%Refund%' THEN 3 
+		END,  
+		eventdate, 
+		kickofftime
 
 	DROP TABLE #matchList
 END
-
 
 GO
 

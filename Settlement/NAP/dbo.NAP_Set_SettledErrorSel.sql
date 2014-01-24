@@ -40,10 +40,10 @@ BEGIN
 	SELECT *
 	FROM @tblTemp
 
-	--UPDATE SettledErrorList WITH(UPDLOCK, ROWLOCK)
-	--SET isRead = 1
-	--WHERE AdminId IN (SELECT AdminId FROM @tblTemp)
-	--AND MatchId IN (SELECT MatchId FROM @tblTemp)
+	UPDATE Settled_Message WITH(UPDLOCK, ROWLOCK)
+	SET isRead = 1
+	WHERE AdminId IN (SELECT AdminId FROM @tblTemp)
+	AND MatchId IN (SELECT MatchId FROM @tblTemp)
 
 END
 

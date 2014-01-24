@@ -10,7 +10,6 @@ ALTER PROCEDURE [NAP_Admin_Settlement_Refund_All]
 	@FullTimeHome int = NULL,
 	@FullTimeAway int = NULL,
 	@BetStatus nvarchar(50) = NULL,
-	@Action varchar(10)='Refund',
 	@IP varchar(15) = '',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
@@ -49,9 +48,13 @@ Param's Explanation:
 BEGIN	
 	SET NOCOUNT ON
 
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500)
+	DECLARE @matchcode nvarchar(50),@sporttype int, 
+			@leagueid int, @sqlCommand NVARCHAR(500), 
+			@IsNested BIT, @Action varchar(20)
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
+	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, 
+			@leagueid = m.leagueid, @IsNested = 0,
+			@Action = 'Refund'
 	FROM match m with(NOLOCK)
 	where m.matchid = @MatchId
 
@@ -74,6 +77,7 @@ BEGIN
 								 ', @hth = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeHome),'NULL') +
 								 ', @hta = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeAway),'NULL') +
 								 ', @Action = ''' + CONVERT(NVARCHAR(20),@Action) + '''' +
+								 ', @IsNested = ''' + CONVERT(NVARCHAR(1),@IsNested) + '''' +
 								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
@@ -81,6 +85,7 @@ BEGIN
 	INSERT INTO Single_WaitingList(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
 	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
 END
+
 
 GO
 
