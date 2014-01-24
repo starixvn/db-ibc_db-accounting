@@ -9,7 +9,6 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON 
-	
 	IF EXISTS (SELECT TOP 1 1 FROM Parlay_WaitingList WITH(NOLOCK) WHERE IsCalculating = 1)
 	BEGIN
 		--- check Starttime if needed		
@@ -18,13 +17,12 @@ BEGIN
 	
 	DECLARE @matchid VARCHAR(2000),
 			@creator INT,
-			@action VARCHAR(10),
+			@action VARCHAR(20),
 			@IP VARCHAR(15),
 			@ErrCode INT,
 			@ErrMsg NVARCHAR(200),
 			@keyId int
 			
-	
 	UPDATE TOP (1) dbo.Parlay_WaitingList WITH(ROWLOCK, UPDLOCK)
 	SET IsCalculating = 1, 		
 		@matchID = matchid, 
@@ -38,48 +36,64 @@ BEGIN
 						ORDER BY TryCount, starttime 
 					)
 	AND IsCalculating = 0
-
+	
 	IF @@ROWCOUNT = 0 RETURN	
 	
 	BEGIN TRY
-						EXEC [Admin_Settlement_Parlay]
+				EXEC [Admin_Settlement_Parlay]
 				@matchids	= @matchid,
 				@creator	= @creator,
 				@action		= @action,
 				@IP			= @IP,
 				@ErrCode	= @ErrCode OUTPUT,
-				@ErrMsg		= @ErrMsg OUTPUT
-				
+				@ErrMsg		= @ErrMsg OUTPUT				
 	END TRY
-	BEGIN CATCH
-		UPDATE Parlay_WaitingList WITH(ROWLOCK,UPDLOCK)
-		SET IsCalculating = 0,
-			TryCount = TryCount + 1
-		WHERE keyid = @keyId
-		
-		SET @ErrMsg = @ErrMsg + '-' + ERROR_MESSAGE()
-		
-		INSERT INTO Settled_Message(AdminId, MatchId, IP, Starttime, Action, Message)
-		SELECT @creator, @matchID, @IP, GETDATE(),@Action, @ErrMsg
+	BEGIN CATCH		
+		SET @ErrMsg = ERROR_MESSAGE()
 	END CATCH
-	
-	IF @ErrCode <> 0 OR @ErrMsg <> ''  --- calculate failed set calculateing = 0 back
+	IF ISNULL(@ErrCode,0) <> 0 or ISNULL(@ErrMsg,'') <> '' --- calculate failed set calculateing = 0 back
 	BEGIN
-		UPDATE Parlay_WaitingList WITH(ROWLOCK,UPDLOCK)
-		SET IsCalculating = 0,
-			TryCount = TryCount + 1
-		WHERE keyid = @keyId
+		IF @ErrCode = 1000000
+		BEGIN
+			UPDATE Parlay_WaitingList WITH(ROWLOCK,UPDLOCK)
+			SET IsCalculating = 0,
+				TryCount = TryCount + 1
+			WHERE keyid = @keyId	
+
+			IF not exists(SELECT 1 FROM Settled_Message with(NOLOCK) 
+						WHERE AdminId = @creator AND MatchId = @MatchId 
+							AND Action = @Action AND Warning = @ErrMsg)
+			BEGIN
+				INSERT INTO Settled_Message(AdminId, MatchId, IP, Starttime, Action, Message, Warning)
+				SELECT @creator, @MatchId, @IP, GETDATE(),@Action, NULL, @ErrMsg
+			END
+		END	
+		ELSE 
+		BEGIN
+			UPDATE Parlay_WaitingList WITH(ROWLOCK,UPDLOCK)
+			SET IsCalculating = 0,
+				TryCount = TryCount + 1
+			WHERE keyid = @keyId
+
+			IF not exists(SELECT 1 FROM Settled_Message with(NOLOCK) 
+						WHERE AdminId = @creator AND MatchId = @MatchId 
+							AND Action = @Action AND Warning = @ErrMsg)
+			BEGIN
+				INSERT INTO Settled_Message(AdminId, MatchId, IP, Starttime, Action, Message, Warning)
+				SELECT @creator, @MatchId, @IP, GETDATE(),@Action, @ErrMsg, NULL
+			end 
+		END
 		
-		INSERT INTO Settled_Message(AdminId, MatchId, IP, Starttime, Action, Message)
-		SELECT @creator, @matchID, @IP, GETDATE(),@Action, @ErrMsg
 	END
-	ELSE 
-	BEGIN
-		UPDATE Parlay_WaitingList WITH(ROWLOCK,UPDLOCK)
-		SET IsCalculating = 2
-		WHERE keyid = @keyId
-	END
+	--ELSE 
+	--BEGIN
+	--	UPDATE Parlay_WaitingList WITH(ROWLOCK,UPDLOCK)
+	--	SET IsCalculating = 2
+	--	WHERE keyid = @keyId
+	--END
 END
+
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay_Job] TO [vnteam]
