@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Admin_Settlement_Refund_All]
+﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Refund_All]
 	@matchid int,
 	@creator int, 	
 	@IsExcludeBetdaq bit = 0,
@@ -281,12 +281,12 @@ BEGIN
 
 	IF @Action IN ('CAL','CAL-FT')
 	BEGIN
-		EXEC dbo.Admin_Calculate_3 @matchid = @matchid, @bettype = 3, @totalgoal = @totalgoal, @betcount = @betcount_3, @IsSettleAbandonedMatch = 1, @IsSettleAbandonedMatchBetFair = 1
+		EXEC dbo.Admin_Calculate_3 @matchid = @matchid, @bettype = 3, @totalgoal = @totalgoal, @betcount = @betcount_3, @IsSettleAbandonedMatch = @IsSettleAbandonedMatch, @IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 	END
 
 	IF @Action IN ('CAL','CAL-HT')
 	BEGIN
-		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = 1, @IsSettleAbandonedMatchBetFair = 1
+		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = @IsSettleAbandonedMatch, @IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 	END	
 END
 /* --- END Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  ---*/
@@ -450,15 +450,11 @@ BEGIN
 	END CATCH
 END
 
-
 GO
-
 GRANT EXECUTE ON [Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT EXECUTE ON [Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]
 GO
 

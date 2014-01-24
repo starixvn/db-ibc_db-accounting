@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Admin_Settlement_RefundHT]
+﻿ALTER PROCEDURE [dbo].[Admin_Settlement_RefundHT]
 	@matchid int,
 	@adminid int,
 	@IsExcludeBetdaq bit = 0,
@@ -256,7 +256,7 @@ BEGIN
 					ELSE 0 END
 			AND statusID NOT IN (101, 102)
 	
-	EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = 1, @IsSettleAbandonedMatchBetFair = 1
+	EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = @IsSettleAbandonedMatch, @IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 END 
 /* --- END Settle Abandoned Match ---*/
@@ -442,10 +442,8 @@ END
 
 
 GO
-
 GRANT EXECUTE ON [Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]
 GO
 
