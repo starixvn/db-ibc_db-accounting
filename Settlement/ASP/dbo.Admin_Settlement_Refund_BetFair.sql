@@ -82,7 +82,7 @@ CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 INSERT INTO #BalanceBefore
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
-WHERE	custid IN (2331, 1077687)
+WHERE	custid IN (2331, 1077687, 115770)
 		AND matchid = @matchid
 		AND bettype <> 14 --Exclude FGLG 
 GROUP BY custid
@@ -92,7 +92,7 @@ EXEC dbo.Admin_Calculate_Refund_BetFair @matchid = @matchid
 INSERT INTO #BalanceAfter	
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
-WHERE	custid IN (2331, 1077687)
+WHERE	custid IN (2331, 1077687, 115770)
 		AND matchid = @matchid
 		AND bettype <> 14 
 GROUP BY custid

@@ -83,7 +83,7 @@ BEGIN
 	FROM	bettrans b
 			INNER JOIN @tmpOdds o ON b.bettype = o.bettype 
 	WHERE	b.matchid = @MatchID 
-			AND b.custid IN (2331, 1077687)
+			AND b.custid IN (2331, 1077687, 115770)
 			/*
 			AND (
 				b.custid IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (1)) 

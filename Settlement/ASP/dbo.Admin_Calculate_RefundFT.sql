@@ -45,7 +45,7 @@ BEGIN
 		AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125) 
 		and bettype not between 1301 and 1334 -- exclude sporting solution product		
 		AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
-						WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687) THEN 0
+						WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
 				ELSE 1 END
 	IF @@ROWCOUNT < 10000 BREAK
 END

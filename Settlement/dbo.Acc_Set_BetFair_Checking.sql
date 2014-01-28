@@ -46,7 +46,7 @@ BEGIN
 	IF EXISTS (
 				SELECT 1 
 				FROM bettrans WITH (NOLOCK) 
-				WHERE custid IN (2331, 1077687) 
+				WHERE custid IN (2331, 1077687, 115770) 
 						AND matchid = @matchid 
 						AND ruben = 0
 			   )
@@ -58,7 +58,7 @@ BEGIN
 	IF EXISTS (
 				SELECT 1 
 				FROM bettrans WITH (NOLOCK) 
-				WHERE custid IN (2331, 1077687) 
+				WHERE custid IN (2331, 1077687, 115770) 
 						AND matchid = @matchid 
 						AND bettype IN (3,8)  --Over/Under 
 						AND statusID NOT IN (101, 102)
@@ -69,7 +69,7 @@ BEGIN
 		IF EXISTS (
 					SELECT 1 
 					FROM bettrans WITH (NOLOCK) 
-					WHERE custid IN (2331, 1077687) 
+					WHERE custid IN (2331, 1077687, 115770) 
 							AND matchid = @matchid 
 							AND bettype = 3  --Over/Under 
 							AND statusID NOT IN (101, 102)

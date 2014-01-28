@@ -33,7 +33,7 @@ BEGIN
 			AND ruben = 0 
 			AND bettype <> 14 --Exclude FGLG 
 			and bettype not between 1301 and 1334 -- exclude sporting solution product
-			and custid IN (2331, 1077687) 
+			and custid IN (2331, 1077687, 115770) 
 	
 		IF @@ROWCOUNT < 10000 BREAK
 	END
