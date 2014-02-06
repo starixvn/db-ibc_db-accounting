@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_Balance_Super_Yesterday]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_Balance_Super_Yesterday]    Script Date: 02/06/2014 00:18:47 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_Rpt_Balance_Super_Yesterday_xtest    Script Date: 7/24/2012 12:29:26 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_Rpt_Balance_Super_Yesterday    Script Date: 7/19/2012 10:30:33 AM ******/
+ALTER PROC [dbo].[Acc_Rpt_Balance_Super_Yesterday]
 	@Keyword nvarchar(50) = '',
 	@FirstChar nvarchar(6)= '',
 	@Currency int = NULL,
@@ -9,7 +18,7 @@ SET NOCOUNT ON
 /*
 Created: 
 Task : Get Yesterday Total Balance of all supers
-DB: DB06.bodb02
+DB: DBTRANS.bodb02, DB06.bodb02
 Original:
 Revisions:
 	- 20090619@Kiwi: Enhence Performance by using #SuperInfo
@@ -18,8 +27,9 @@ Revisions:
 	- 20110516@Lukas: re-arrange bettype
 	- 20120717@Elodie:  Add @IsViewTotalOnly and @Total params to show total value when user want to view total only
 						Rewrite SP to enhance performance
-						
-						
+						Change DBTRANS server instead of DB02 server
+	- 20131119@Lukas: remove running/void/reject/refund tickets
+							
 Parameters Explanation:
 	- Search keyword: '%keyword%'
 	- First char
@@ -70,6 +80,9 @@ Begin
 			- isNull (sum ((case when bettype < 19001 and winlostdate >= @currentDate  and ruben = 1 then  swinlost + scomm + mwinlost + awinlost + winlost-actual_stake else 0 end)*b.actualrate),0) AS BaseBalance
 		FROM #SuperInfo s
 			INNER JOIN bettrans b with (READPAST) ON b.srecommend = s.custid
+		WHERE 
+				ruben = 1 
+				AND statusID NOT IN (101,102,103) 
 		GROUP BY s.custid, s.username, s.currency
 		order by CASE when s.custid < 100 then 0 ELSE 1 END, s.username	
 	ELSE	
@@ -85,13 +98,16 @@ Begin
 					 - isNull (sum ((case when bettype < 19001 and winlostdate >= @currentDate  and ruben = 1 then  swinlost + scomm + mwinlost + awinlost + winlost-actual_stake else 0 end)*b.actualrate),0) as BaseBalance
 			FROM #SuperInfo s
 				INNER JOIN bettrans b with (READPAST) ON b.srecommend = s.custid
+			WHERE 
+				ruben = 1 
+				AND statusID NOT IN (101,102,103) 
 			GROUP BY b.srecommend) as bal
 	End
 	DROP TABLE #SuperInfo
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_Balance_Super_Yesterday] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_Balance_Super_Yesterday] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_Balance_Super_Yesterday] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_Balance_Super_Yesterday] TO [vnteam] AS [dbo]

@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_Balance_Member_Yesterday]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_Balance_Member_Yesterday]    Script Date: 02/06/2014 00:14:08 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_Rpt_Balance_Member_Yesterday    Script Date: 5/23/2011 6:24:12 PM ******/
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_Balance_Member_Yesterday]
 	@agentid int
 as
 /*
@@ -9,7 +18,8 @@ Original:
 Revisions:	
 	- 20090619@Kiwi: Enhence Performance
 	- 20100112@Jamie: Get currencyName from Cache 
-	- 20110106@Lukas: Re-arrange bettype
+	- 20101229@Lukas: Re-arrange bettype
+	- 20131118@Lukas: add filter to exclude running tickets
 */
 
 SET NOCOUNT ON
@@ -37,13 +47,17 @@ FROM
 									 else 0 end )*actualrate),0) Basebal
 					FROM bettrans with (nolock)
 					WHERE recommend = @agentid 
+						AND ruben = 1 
+						AND statusID NOT IN (101,102,103)
 					GROUP BY custid
 					) AS b ON c.custid = b.custid
 WHERE
 	c.roleid = 1 AND c.recommend = @agentid 
 ORDER BY c.username
+
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_Balance_Member_Yesterday] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_Balance_Member_Yesterday] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_Balance_Member_Yesterday] TO [VNTeam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_Balance_Member_Yesterday] TO [vnteam] AS [dbo]

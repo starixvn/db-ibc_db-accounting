@@ -1,4 +1,13 @@
-﻿
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_Balance_Master_Yesterday]    Script Date: 02/06/2014 00:17:45 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_Rpt_Balance_Master_Yesterday    Script Date: 5/23/2011 6:24:12 PM ******/
+
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_Balance_Master_Yesterday]
 	@superid int = 0,
 	@Keyword nvarchar(50) = '',
@@ -9,7 +18,7 @@ SET NOCOUNT ON
 /*
 Created: 
 Task : Get Master balance
-DB: DB06.bodb02
+DB: DB02/DB06.bodb02
 Original: 
 Revisions:	
 		--Balance calculated with the correct transfer date @Phuong20080927
@@ -17,7 +26,7 @@ Revisions:
 		--20090515@Jamie: Enhance for using right index
 		- 20100112@Jamie: Get currencyName from Cache
 		- 20110516@Lukas: re-arrange bettype
-
+		- 20131119@Lukas: remove running/void/reject/refund tickets
 */
 
 DECLARE @currentDate datetime, @srecommend int
@@ -84,6 +93,8 @@ FROM #MasterInfo M
 			  FROM bettrans with (nolock)
 			  WHERE mrecommend in (SELECT custid FROM #MasterInfo WITH (NOLOCK))
 					AND srecommend in (SELECT srecommend FROM #MasterInfo WITH (NOLOCK))
+					AND ruben = 1 
+					AND statusID NOT IN (101,102,103) 
 			  GROUP BY mrecommend, srecommend  
 			)as Bal ON M.custid = Bal.mrecommend 
 order by username 
@@ -91,7 +102,6 @@ DROP TABLE #MasterInfo
 
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_Balance_Master_Yesterday] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_Balance_Master_Yesterday] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_Balance_Master_Yesterday] TO [VNTeam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_Balance_Master_Yesterday] TO [vnteam] AS [dbo]
