@@ -41,6 +41,7 @@ AS
 						• 1st Total Bookings, Next Booking, Total Bookings
 						• Total Bookings 15mins O /U,Corners 15mins O/U 
 						• 10 mins O/U, Single Team O/U
+  - 20140121@Johnson: category leagues by major or minor 						
  Param's Explanation:  
  • @isSoccer  
   = 1: Soccer  
@@ -65,13 +66,14 @@ DECLARE @temp_daao TABLE
  username varchar(30),   
  matchID int,  
  bettype smallint ,  
- OUtype tinyint  
+ OUtype tinyint,
+ category varchar(10)  
 )  
   
   
 IF @isSoccer = 1 AND (@fromdate > @o_x or @todate > @o_x )   
 BEGIN  
- insert @temp_daao (custid,username,matchID, bettype,OUtype)  
+ insert @temp_daao (custid,username,matchID, bettype,OUtype,category)  
  select a.operatorid, username,  m.matchID,  
    case when (a.bettype = 1 or a.bettype=5) and (a.operatortype = 1) then 1   
      when (a.bettype = 1 and a.operatortype = 2) then 7   
@@ -95,7 +97,8 @@ BEGIN
    when leaguename LIKE '%SPECIFIC 10 MINS OVER/UNDER%' then 8
    when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
    else 0  
-  end  
+  end ,
+  l.category 
  from Dot_admin_Assignment_Operator a (nolock)  
   inner join customer c with(nolock) on a.operatorid=c.custid  
   inner join match m with(nolock) on a.matchid=m.matchid  
@@ -122,7 +125,8 @@ BEGIN
    when leaguename LIKE '%SPECIFIC 10 MINS OVER/UNDER%' then 8
    when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
    else 0  
-  end  
+  end ,
+  l.category   
  from   
   Dot_admin_Assignment_Operator a (nolock)  
   right join match m with(nolock) on a.matchid = m.matchid  
@@ -140,7 +144,7 @@ END
  -- OTHER SPORTS   
 ELSE IF @isSoccer = 0 AND (@fromdate > @o_x or @todate > @o_x )   
  BEGIN  
-  insert @temp_daao (custid,username,matchID, bettype, OUtype)  
+  insert @temp_daao (custid,username,matchID, bettype, OUtype, category)  
   select a.operatorid, username,  m.matchID,  
     case when (a.bettype = 1 or a.bettype =5)  and (a.operatortype = 1) then 1   
       when (a.bettype = 1 and a.operatortype = 2) then 7   
@@ -151,7 +155,8 @@ ELSE IF @isSoccer = 0 AND (@fromdate > @o_x or @todate > @o_x )
       --when (a.bettype = 4 and a.operatortype = 1) then 22 -- Next Goal  
       when (a.bettype = 4 and a.operatortype = 1) then 2  
       when (a.bettype = 4 and a.operatortype = 2) then 12               
-    else 0  end, 0  
+    else 0  end, 0 ,
+	l.category   
   from Dot_admin_Assignment_Operator a (nolock)  
    inner join customer c with(nolock) on a.operatorid=c.custid  
    inner join match m with(nolock) on a.matchid=m.matchid  
@@ -163,7 +168,7 @@ ELSE IF @isSoccer = 0 AND (@fromdate > @o_x or @todate > @o_x )
    and m.matchcode not like '%hedge%'  
    and a.operatortype < 3  
   UNION ALL-- include orphan matches  
-  select NULL, NULL,  m.matchID,0,0  
+  select NULL, NULL,  m.matchID,0,0 ,l.category   
   from   
    Dot_admin_Assignment_Operator a (nolock)  
    right join match m with(nolock) on a.matchid = m.matchid  
@@ -181,27 +186,52 @@ BEGIN
     create table #userMatch  
  (  
   custid int primary key,  
-  nMatch int  
+  nMatch int,  
+  Major int,
+  Minor1 int,
+  Minor2 int,
+  Minor3 int,
+  Others int
  )  
- insert #userMatch  
- select t.custid, count(distinct t.matchID) as nMatch  
- from @temp_daao t  
-  inner join bettrans b with (nolock) on b.matchid=t.matchid and b.bettype = t.bettype  
- where LiveIndicator = 1 and   
- --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
- b.statusID not in (101,102,103,121,111)   
- group by t.custid   
-   
- select @countOrphan = count(distinct t.matchID)  
+ 
+ DECLARE @countMajorOrphan int, @countMinor1Orphan int, @countMinor2Orphan int, @countMinor3Orphan int , @countOthersOrphan int
+ 
+ insert #userMatch (custid,nMatch, Major,Minor1,Minor2,Minor3,Others) 
+ SELECT custid, isnull(Major,0) + isnull(Minor1,0) + isnull(Minor2,0) + isnull(Minor3,0) + isnull(Others,0) as nMatch,isnull(Major,0), isnull(Minor1,0), isnull(Minor2,0), isnull(Minor3,0) ,isnull(Others,0)
+ FROM( 
+	 select t.custid, ISNULL(t.category,'Others') as category, count(distinct t.matchID) as cntMatch
+	 from @temp_daao t  
+	  inner join bettrans b with (nolock) on b.matchid=t.matchid and b.bettype = t.bettype  
+	 where LiveIndicator = 1 and   
+	 --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
+	 b.statusID not in (101,102,103,121,111)    
+	 group by t.custid ,ISNULL(t.category,'Others')  ) as s
+ PIVOT(
+	SUM(s.cntMatch)
+	FOR category in (Major, Minor1, Minor2, Minor3, Others)
+ ) p
+
+ ; WITH T AS(  
+ select ISNULL(t.category,'Others') category, count(distinct t.matchID) countOrphan
  from @temp_daao t  
   inner join bettrans b with (nolock) on b.matchid=t.matchid and t.bettype = 0  
  where LiveIndicator = 1 and   
  --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
  b.statusID not in (101,102,103,121,111)   
+ GROUP by ISNULL(t.category,'Others')
+ )
+ 
+ SELECT @countMajorOrphan = SUM(CASE when category = 'Major' THEN countOrphan ELSE 0 end),
+		@countMinor1Orphan = SUM(CASE when category = 'Minor1' THEN countOrphan ELSE 0 end),
+		@countMinor2Orphan = SUM(CASE when category = 'Minor2' THEN countOrphan ELSE 0 end),
+		@countMinor3Orphan = SUM(CASE when category = 'Minor3' THEN countOrphan ELSE 0 end),
+		@countOthersOrphan = SUM(CASE when category = 'Others' THEN countOrphan ELSE 0 end)
+ FROM T 
+ 
   
  select   
  custid, username, matchno,   
-   
+ a.Major, a.Minor1, a.Minor2, a.Minor3, a.Others,  
  stake_hdp, stake_ou, stake_1sthdp, stake_1stou,stake_1x2, stake_1st1x2, stake_oe,stake_1stoe,stake_1stNoOfCorners, stake_NoOfCorners, stake_15minOU,stake_1stTotalBookings,stake_TotalBookings,stake_NextCorner,  
  stake_NextBooking, stake_15minCorners, stake_15minTotalBookings, stake_10minOU, stake_SingleTeamOU,
   
@@ -279,8 +309,8 @@ BEGIN
  from   
  (  
   
-   select cm.custid,cm.username,um.nMatch as matchno,   
-      
+   select cm.custid,cm.username,um.nMatch as matchno, Major, Minor1, Minor2, Minor3, Others,
+   
    --turn over: hdp, ou, ht hdp, ht ou, 1x2, 1st1x2, ng    
         
     sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 0  
@@ -399,10 +429,10 @@ BEGIN
    where b.LiveIndicator = 1 AND b.ruben =1 and   
    --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
    b.statusID not in (101,102,103,121,111)   
-   group by cm.username,cm.custid,um.nMatch  
+   group by cm.username,cm.custid,um.nMatch , Major, Minor1, Minor2, Minor3, Others 
    UNION ALL  
-   select 0, '(Unassigned)',@countOrphan as matchno,   
-      
+   select 0, '(Unassigned)',ISNULL(@countMajorOrphan,0) + ISNULL(@countMinor1Orphan,0) + ISNULL(@countMinor2Orphan,0) + ISNULL(@countMinor3Orphan,0) + ISNULL(@countOthersOrphan ,0) as matchno, ISNULL(@countMajorOrphan,0) Major, ISNULL(@countMinor1Orphan,0), ISNULL(@countMinor2Orphan,0), ISNULL(@countMinor3Orphan,0), ISNULL(@countOthersOrphan ,0),
+     
    --turn over: hdp, ou, ht hdp, ht ou, 1x2, 1st1x2, ng    
         
     sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 0  

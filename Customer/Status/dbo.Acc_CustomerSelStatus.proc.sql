@@ -27,7 +27,7 @@ Revisions:
 	- 20120927@Sophia: Get DoubleCommLosing	
 	- 20130723@Jamie: Change Alias DB03 to DBPOLICY
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
-						
+	- 20140102@Johnson: Add opus casino					
 Param's Explanation:
 • @CustID: customer id.   
 */
@@ -123,7 +123,9 @@ SELECT ISNULL(reject,0) AS Suspend,
 	   ISNULL(DisableVirtualSports,0) as DisableVirtualSports,
 	   ISNULL(HideVirtualSports,0) as HideVirtualSports,
 	   ISNULL(DoubleCommLosing,0) as DoubleCommLosing,
-	   ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds
+	   ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds,
+	   ISNULL(DisableOpusCasino,0) AS DisableOpusCasino,
+	   ISNULL(SyncOpusCasino,0) AS SyncOpusCasino
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 WHERE ci.CustID = @CustID
