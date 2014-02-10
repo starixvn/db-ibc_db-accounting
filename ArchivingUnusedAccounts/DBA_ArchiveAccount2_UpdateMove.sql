@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[DBA_ArchiveAccount2_UpdateMove]
+﻿ALTER PROCEDURE [dbo].[DBA_ArchiveAccount2_UpdateMove]
 	@AccName varchar(50),	
 	@UserID int = 360418,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
@@ -9,7 +8,7 @@ AS
 	Created by: []
 	Date: []
 	Task: Archive unused Account in Stage 2 
-	DB: DBTRANS.BODB02 
+	DB: DBTXN/BODB02 
 	
 	Revisions:
 		- 20091224@Jamie: Separate 3rd CustSetting 
@@ -32,6 +31,8 @@ AS
 		- 20121015@Dan: add fields for LCS-WinLimit (isAutoResetLiveCasino,MaxWinLiveCasino)
 		- 20121204@Scott: add fields for virtual tennis (maxpermatch186)
 		- 20130121@Johnson: change linked server from DB05 to DBARCCUST
+		- 20130808@Elodie: Splitting DBTXN into DBCUST (Call Acc_ExecRep_Cust_01 instead of Acc_ExecRep_01, call bettrans by link database)
+		- 20140208@Thien: Revise the field list of custinfo_old table 
 
 	Note: Review the SP again once executing as maybe new fields were added to customer or custinfo table.
 */
@@ -92,7 +93,7 @@ Update #Member set transCount = b.transCount
 from #Member
 	inner join (
 		Select custid, count(*) as transCount
-		From bettrans with (NOLOCK)
+		From bodb02.dbo.bettrans with (NOLOCK)
 		group by custid
 		) b on #Member.custid = b.custid	
 
@@ -139,57 +140,27 @@ BEGIN
 END 
 
 insert into DBARCCUST.bodb_Customer.dbo.custinfo_old(
-	   [ArchiveDate]
-	  ,[username],[custid],[currency],[roleid],[srecommend]
-      ,[mrecommend],[recommend],[dangercust],[autosuspend],[reject]
-      ,[credit],[closed],[MatchLimit],[VirtualMultiplier],[maxpermatch]
-      ,[maxpermatch2],[maxpermatch3],[maxpermatch5],[maxpermatch8],[maxpermatch10]
-      ,[maxpermatch11],[maxpermatch12],[maxpermatch99]
-      ,[Enabled],[danger],[maxpermatch151],[maxpermatch201],[DisableHorseRacing]
-      ,[DisableFinancial],[DisableCasino],[SyncCasino],[danger2],[danger3]
-      ,[DisableOutright],[DisableOpenTote],[maxpermatch151_OT]
-      ,[DisableBingo]
-      ,[DisableNumber]
-      ,[SyncBingo]
-      ,[MaxPerMatch161]
-      ,[MaxPerMatch99MP]
-      ,[MaxPerBall161]
-      ,[MaxPerMatch151_AU]
-      ,[MaxPerMatch152_UK]
-      ,[MaxPerMatch152_AU]
-      ,[MaxPerMatch153_AU]
-      ,[Disable151_AU], [Disable152_UK], [Disable152_AU], [Disable153_AU]
-      , MaxtransferP2P, IsAutoResetP2P, DisableP2P, DisableFunP2P, DisableLiveCasino, SyncLiveCasino
-      , maxpermatch180, DisableVirtualSports, HideVirtualSports, maxpermatch186
-      ,Abnormal
-      ,DoubleCommLosing
-      ,isAutoResetLiveCasino, MaxWinLiveCasino   
+	   [ArchiveDate],
+	  username, custid, currency, roleid, srecommend, mrecommend, recommend, dangercust, autosuspend, reject, credit, closed, 
+                      MatchLimit, VirtualMultiplier, maxpermatch, maxpermatch2, maxpermatch3, maxpermatch5, maxpermatch8, maxpermatch10, maxpermatch11, 
+                      maxpermatch12, maxpermatch99, [Enabled], danger, maxpermatch151, maxpermatch201, DisableHorseRacing, DisableFinancial, DisableCasino, 
+                      SyncCasino, danger2, danger3, DisableOutright, DisableOpenTote, maxpermatch151_OT, DisableBingo, DisableNumber, SyncBingo, 
+                      MaxPerMatch161, MaxPerMatch99MP, MaxPerBall161, MaxPerMatch151_AU, MaxPerMatch152_UK, MaxPerMatch152_AU, MaxPerMatch153_AU, 
+                      Disable151_AU, Disable152_UK, Disable152_AU, Disable153_AU, MaxtransferP2P, IsAutoResetP2P, DisableP2P, DisableFunP2P, DisableLiveCasino, 
+                      SyncLiveCasino, DisableVirtualSports, HideVirtualSports, maxpermatch180, Abnormal, DoubleCommLosing, isAutoResetLiveCasino, 
+                      MaxWinLiveCasino, maxpermatch182, DisableCasinoBonus, maxpermatch184, DisableHRFixedOdds, maxpermatch154, autosuspend2, 
+                      maxpermatch183, maxpermatch185  
 )
 select	@Now, 
-	   [username],[custid],[currency],[roleid],[srecommend]
-      ,[mrecommend],[recommend],[dangercust],[autosuspend],[reject]
-      ,[credit],[closed],[MatchLimit],[VirtualMultiplier],[maxpermatch]
-      ,[maxpermatch2],[maxpermatch3],[maxpermatch5],[maxpermatch8],[maxpermatch10]
-      ,[maxpermatch11],[maxpermatch12],[maxpermatch99]
-      ,[Enabled],[danger],[maxpermatch151],[maxpermatch201],[DisableHorseRacing]
-      ,[DisableFinancial],[DisableCasino],[SyncCasino],[danger2],[danger3]
-      ,[DisableOutright], [DisableOpenTote],[maxpermatch151_OT]
-      ,[DisableBingo]
-      ,[DisableNumber]
-      ,[SyncBingo]
-      ,[MaxPerMatch161]
-      ,[MaxPerMatch99MP]
-      ,[MaxPerBall161]
-      ,[MaxPerMatch151_AU]
-      ,[MaxPerMatch152_UK]
-      ,[MaxPerMatch152_AU]
-      ,[MaxPerMatch153_AU]
-      ,[Disable151_AU], [Disable152_UK], [Disable152_AU], [Disable153_AU]
-      , MaxtransferP2P, IsAutoResetP2P, DisableP2P, DisableFunP2P, DisableLiveCasino, SyncLiveCasino
-      , maxpermatch180, DisableVirtualSports, HideVirtualSports, maxpermatch186
-      ,Abnormal
-      ,DoubleCommLosing
-      ,isAutoResetLiveCasino, MaxWinLiveCasino   
+	   username, custid, currency, roleid, srecommend, mrecommend, recommend, dangercust, autosuspend, reject, credit, closed, 
+                      MatchLimit, VirtualMultiplier, maxpermatch, maxpermatch2, maxpermatch3, maxpermatch5, maxpermatch8, maxpermatch10, maxpermatch11, 
+                      maxpermatch12, maxpermatch99, [Enabled], danger, maxpermatch151, maxpermatch201, DisableHorseRacing, DisableFinancial, DisableCasino, 
+                      SyncCasino, danger2, danger3, DisableOutright, DisableOpenTote, maxpermatch151_OT, DisableBingo, DisableNumber, SyncBingo, 
+                      MaxPerMatch161, MaxPerMatch99MP, MaxPerBall161, MaxPerMatch151_AU, MaxPerMatch152_UK, MaxPerMatch152_AU, MaxPerMatch153_AU, 
+                      Disable151_AU, Disable152_UK, Disable152_AU, Disable153_AU, MaxtransferP2P, IsAutoResetP2P, DisableP2P, DisableFunP2P, DisableLiveCasino, 
+                      SyncLiveCasino, DisableVirtualSports, HideVirtualSports, maxpermatch180, Abnormal, DoubleCommLosing, isAutoResetLiveCasino, 
+                      MaxWinLiveCasino, maxpermatch182, DisableCasinoBonus, maxpermatch184, DisableHRFixedOdds, maxpermatch154, autosuspend2, 
+                      maxpermatch183, maxpermatch185     
 from	custinfo (nolock) where custid IN (select custid from #Member with (nolock))
 IF @@Error<>0
 BEGIN
@@ -197,7 +168,7 @@ BEGIN
 			@ErrCode = 103
 	return
 END 
-Exec Acc_ExecRep_01 @AgentID = @AgentID, @Type = 1 
+Exec Acc_ExecRep_Cust_01 @AgentID = @AgentID, @Type = 1 
 
 print @AccName +':'+ 'Move members done:' + convert(varchar(50), getdate(), 113)	
 ----------------------------------------------------------------
@@ -221,10 +192,9 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 	@duration = @duration
 
 
-
 GO
-GRANT EXECUTE ON [dbo].[DBA_ArchiveAccount2_UpdateMove] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[DBA_ArchiveAccount2_UpdateMove] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[DBA_ArchiveAccount2_UpdateMove] TO [vnteam]
+GRANT EXECUTE ON [dbo].[DBA_ArchiveAccount2_UpdateMove] TO [vnteam] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[DBA_ArchiveAccount2_UpdateMove] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[DBA_ArchiveAccount2_UpdateMove] TO [vnteam] AS [dbo]
