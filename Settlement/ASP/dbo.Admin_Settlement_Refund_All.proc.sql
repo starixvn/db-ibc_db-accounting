@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Admin_Settlement_Refund_All]
+﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Refund_All]
 	@matchid int,
 	@creator int, 	
 	@IsExcludeBetdaq bit = 0,
@@ -145,12 +145,12 @@ BEGIN
 	SELECT	@sporttype = SportType
 	FROM	DBPRO.BODB02.dbo.Match with (nolock) 
 	WHERE	matchid = @matchid
-	
+		
 	SELECT	@ScoreLog = ' HTHScore=' + CAST(@hth AS VARCHAR(10))
 						+ ' HTAScore=' + CAST(@hta AS VARCHAR(10))
 						+ ' FTHScore=' + CAST(@fth AS VARCHAR(10))
 						+ ' FTAScore=' + CAST(@fta AS VARCHAR(10))
-						+ ' Betstatus=' + @betstatus
+						+ CASE WHEN @SportType IN (5, 6, 9, 30) then ' Betstatus=Refund;' ELSE ' Betstatus=' END + @betstatus
 
 	DECLARE @TennisTotal smallint, @T_Home smallint, @T_Away smallint
 	IF @SportType IN (5, 6, 9, 30) -- Tennis/VolleyBall/Badminton/Squash : get TotalGamesPlayed
@@ -462,13 +462,4 @@ BEGIN
 
 	EXEC dbo.WriteLog_UserLog @creator, @Log
 END 
-
-GO
-GRANT EXECUTE ON [Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]
-GO
-
 
