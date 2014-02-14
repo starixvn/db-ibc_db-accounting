@@ -21,6 +21,7 @@ Revisions:
     - 20091216@Daniel: Add check permission & error control
     - 20100720@Henry: Change SP Logfile to WriteLog_UserLog
     - 20101007@Henry: Change column transid from INT to BIGINT
+    - 20140212@Johnson: change alias server DB03 to DBPOLICY
 
 Param's Explanation:
 • @ErrCode:
@@ -31,7 +32,7 @@ Param's Explanation:
 */
 	SET NOCOUNT ON
 	--Check permission
-	EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid=@creator, @funcname='[SpecialReportBettingGraph]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@creator, @funcname='[SpecialReportBettingGraph]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 	If @ErrCode <> 0
 		RETURN
 

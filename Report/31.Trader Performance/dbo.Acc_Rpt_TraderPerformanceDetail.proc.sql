@@ -44,6 +44,8 @@ Revisions:
 						• 1st Total Bookings, Next Booking, Total Bookings
 						• Total Bookings 15mins O /U,Corners 15mins O/U 
 						• 10 mins O/U, Single Team O/U
+ - 20140211@Johnson: fix bug: incorrect margin 1stoe 
+ - 20140212@Johnson: add column maxbet into report 						
 Param's Explanation:  
 • @isSoccer  
     = 1: Soccer  
@@ -74,7 +76,12 @@ declare @temp_daao table
  IsNeutral bit,  
  OUtype tinyint  
 )  
-  
+
+--temp table for maxbet on each match
+declare @temp_maxbet table(
+	matchid int,
+	maxbet money
+) 
   
 if @isSoccer = 1 and (@fromdate > @o_x or @todate > @o_x )  
 BEGIN  
@@ -201,11 +208,22 @@ BEGIN
   and m.matchcode not like '%hedge%'  
   and a.matchid is NULL  
 END  
+
+INSERT INTO @temp_maxbet(matchid,maxbet)
+SELECT matchid, maxbet
+FROM odds with(NOLOCK)
+WHERE oddsid IN (
+					SELECT MIN(oddsid)
+					FROM odds with(NOLOCK)
+					WHERE matchid in (SELECT distinct matchid FROM @temp_daao)
+						AND bettype = 7
+						and liveindicator = 1
+				)
   
 if @fromdate > @o_x or @todate > @o_x   
 BEGIN  
  select   
- custid, username, eventdate, leagueid, matchid,  
+ custid, username, eventdate, leagueid, a.matchid, ISNULL(t.maxbet,0) as maxbet,  
  stake_hdp, stake_ou, stake_1sthdp, stake_1stou, stake_1x2, stake_1st1x2, stake_oe, stake_1stoe, stake_1stNoOfCorners, stake_NoOfCorners, stake_15minOU,stake_1stTotalBookings,stake_TotalBookings,stake_NextCorner,  
  stake_NextBooking, stake_15minCorners, stake_15minTotalBookings, stake_10minOU, stake_SingleTeamOU,
  winlost_hdp - comm_hdp as winlost_hdp,   
@@ -253,7 +271,7 @@ BEGIN
  (winlost_1st1x2 - comm_1st1x2)/(case when isnull(round(stake_1st1x2,4),0) = 0 then 1 else stake_1st1x2 end) as margin_1st1x2,  
  --(winlost_ng - comm_ng)/(case when isnull(stake_ng,0) = 0 then 1 else stake_ng end) as margin_ng,  
  (winlost_oe - comm_oe)/(case when isnull(round(stake_oe,4),0) = 0 then 1 else stake_oe end) as margin_oe,  
- (winlost_1stoe - comm_oe)/(case when isnull(round(stake_oe,4),0) = 0 then 1 else stake_oe end) as margin_1stoe,  
+ (winlost_1stoe - comm_1stoe)/(case when isnull(round(stake_1stoe,4),0) = 0 then 1 else stake_1stoe end) as margin_1stoe,  
  (winlost_1stNoOfCorners - comm_1stNoOfCorners)/(case when isnull(round(stake_1stNoOfCorners,4),0) = 0 then 1 else stake_1stNoOfCorners end) as margin_1stNoOfCorners,  
  (winlost_NoOfCorners - comm_NoOfCorners)/(case when isnull(round(stake_NoOfCorners,4),0) = 0 then 1 else stake_NoOfCorners end) as margin_NoOfCorners,  
  (winlost_15minOU - comm_15minOU)/(case when isnull(round(stake_15minOU,4),0) = 0 then 1 else stake_15minOU end) as margin_15minOU,  
@@ -530,6 +548,7 @@ BEGIN
    group by om.eventdate, om.leagueid, om.matchid,om.homeid,om.awayid,om.hthomescore,om.htawayscore,om.fthomescore,om.ftawayscore,om.IsNeutral  
   
  ) as a  
+ left JOIN @temp_maxbet t ON a.matchid = t.matchid
  order by username,eventdate, leagueid, matchid  
 END
 GO
