@@ -22,6 +22,7 @@ Revisions:
 	- 20130121@Elodie:  Write more log on DBTXN server in case of DBLOG server failure
 	- 20130624@Martin: Hotfix(There is already an object named 'pk_C2' in the database.Could not create constraint. See previous errors)
 	- 20130624@Jamie: Add BalanceNegative 
+	- 20140217@Elodie: Correct ActionID value
 	
 Param's Explanation:
 	- @deadheat = fraction of deadheat to divide (1,2,3  etc)
@@ -37,7 +38,7 @@ END
 
 DECLARE  @Remark VARCHAR(500)
 		,@ActionID	INT
-SELECT	@ActionID = 128 
+SELECT	@ActionID = 130
 
 INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 IF (@@Error = 0)
