@@ -11,7 +11,6 @@
 	@fta int = NULL,
 	@betstatus nvarchar(50) = NULL,
 	@Action varchar(10)='CAL',
-	@IsNested BIT = 1,
 	@IP varchar(15) = '',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
@@ -45,7 +44,7 @@ Revisions:
 	- 20130624@Jamie: Add BalanceNegative 	
 	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
-	- 20140117@Kathy: Change ErrCode value, add param @IsNested
+	- 20140117@Kathy: Change ErrCode value
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -146,10 +145,10 @@ BEGIN
 	FROM	DBPRO.BODB02.dbo.Match with (nolock) 
 	WHERE	matchid = @matchid
 		
-	SELECT	@ScoreLog = ' HTHScore=' + CAST(@hth AS VARCHAR(10))
-						+ ' HTAScore=' + CAST(@hta AS VARCHAR(10))
-						+ ' FTHScore=' + CAST(@fth AS VARCHAR(10))
-						+ ' FTAScore=' + CAST(@fta AS VARCHAR(10))
+	SELECT	@ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)),'')
+						+ ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)),'')
+						+ ' FTHScore=' + ISNULL(CAST(@fth AS VARCHAR(10)),'')
+						+ ' FTAScore=' + ISNULL(CAST(@fta AS VARCHAR(10)),'')
 						+ CASE WHEN @SportType IN (5, 6, 9, 30) then ' Betstatus=Refund;' ELSE ' Betstatus=' END + @betstatus
 
 	DECLARE @TennisTotal smallint, @T_Home smallint, @T_Away smallint
@@ -451,15 +450,9 @@ BEGIN
 	END CATCH
 END
 
-IF @IsNested = 0
-BEGIN
-	-- Update match_remark
-	EXEC DBPRO.BODB02.dbo.updateMatch_remark @matchid, 'F'
-
-	-- Write log
-	DECLARE @log varchar(200)
-	set @log = 'Refund for matchid: ' + CONVERT(varchar(10), @matchid)
-
-	EXEC dbo.WriteLog_UserLog @creator, @Log
-END 
-
+GO
+GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]
