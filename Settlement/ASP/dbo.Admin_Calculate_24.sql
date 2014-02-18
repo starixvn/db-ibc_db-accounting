@@ -4,8 +4,6 @@
 	@scorediff smallmoney,
 	@betcount int = 0
 AS
-IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
-
 /*
 	Created by: Jamie
 	Date:2010-11-16
@@ -16,13 +14,38 @@ IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
 		- 20120426@Lukas: Get from production & exclude DB044
 		- 20120815@Dan: Add virtual soccer
 		- 20121018@Johnson: Merge code for checking double comm losing from production
-
+		- 20140120@Lukas: insert settled command into LAS queue [Redmine:#8785]
 */
-IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043','DB044') RETURN
+BEGIN
+	IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
+	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043','DB044') RETURN
 
+	SET NOCOUNT ON
 
-SET NOCOUNT ON
-Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
+	--- LAS settlement 
+	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	BEGIN		
+
+		DECLARE @LASCommand NVARCHAR(1000),
+				@createdDate DATETIME
+
+		SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_24] @matchid = ' + CONVERT(NVARCHAR(10),@matchid) +
+								', @bettype = ' + CONVERT(NVARCHAR(10),@bettype) + 
+								', @scorediff = ' + CONVERT(NVARCHAR(10),@scorediff) + 
+								', @betcount = ' + CONVERT(NVARCHAR(10),ISNULL(@betcount,''))
+				,@createdDate = GETDATE()
+
+		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand]	 @SPName		= 'Admin_Calculate_24'
+															,@SQLCommand	= @LASCommand
+															,@CreatedDate	= @createdDate
+															,@StatusID		= 0 -- waiting
+															,@MatchID		= @matchid
+															,@Bettype		= @bettype
+															,@Status		= 'waiting'
+															,@BetCount		= @betcount
+	END	
+
+	Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
 
 	UPDATE bettrans with (ROWLOCK, UPDLOCK)
 	SET @modds = modds = CASE
@@ -117,6 +140,8 @@ Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
 		bettype=@bettype AND
 		--status NOT IN ('VOID', 'REJECT')
 		statusID NOT IN (101,102)
+
+END
 
 
 
