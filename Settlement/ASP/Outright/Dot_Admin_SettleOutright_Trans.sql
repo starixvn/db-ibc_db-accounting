@@ -3,7 +3,8 @@
 	@status nvarchar(10),
 	@deadheat float = 1,
 	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT
+	@ErrMsg nvarchar(200) = '' OUTPUT,
+	@eventdate smalldatetime = null
 AS
 BEGIN
 /*
@@ -22,8 +23,8 @@ Revisions:
 	- 20130121@Elodie:  Write more log on DBTXN server in case of DBLOG server failure
 	- 20130624@Martin: Hotfix(There is already an object named 'pk_C2' in the database.Could not create constraint. See previous errors)
 	- 20130624@Jamie: Add BalanceNegative 
+	- 20130719@Ava::Add @eventdate when user re-settle
 	- 20140217@Elodie: Correct ActionID value
-	
 Param's Explanation:
 	- @deadheat = fraction of deadheat to divide (1,2,3  etc)
 */
@@ -68,9 +69,11 @@ BEGIN
 END
 ---------
 
-declare @winlostdate smalldatetime
-
-select @winlostdate = convert(char(10),getdate(),111)
+DECLARE @winlostdate smalldatetime
+IF (@eventdate is null)
+	SET @winlostdate = convert(char(10),getdate(),111)
+ELSE
+	SET @winlostdate = convert(char(10),@eventdate,111)
 
 -------------------------------------------------------------
 ---        CAPTURE value BALANCE before settlement        ---
@@ -152,7 +155,15 @@ DROP TABLE #Balance
 DROP TABLE #BalanceBefore
 DROP TABLE #BalanceAfter
 
-----
+---------------------------------------------------
+--add log to outright_log to notify for Apollo
+EXEC bodb02.dbo.[Acc_Set_ConfirmedActionOutright] 
+	@matchid = @matchid,
+	@actionid = 31,
+	@status = @status,
+	@deadheat = @deadheat
+
+----------------------------------------------------
 DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
 WHERE KeyID = 2 AND KeyValue = @matchid
 IF (@@Error = 0)
@@ -197,6 +208,7 @@ BEGIN
 END
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Dot_Admin_SettleOutright_Trans] TO [bodbAdminNet] AS [dbo]
 GO
