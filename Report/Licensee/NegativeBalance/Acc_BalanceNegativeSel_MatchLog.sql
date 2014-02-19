@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[Acc_BalanceNegativeSel_MatchLog]
- @MatchID	INT,
- @GroupID	INT = 1 
+﻿ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_MatchLog]
+	 @MatchID	INT,
+	 @GroupID	INT = 1 
 AS
 /*
 	Created by: Jamie
@@ -156,20 +156,34 @@ BEGIN
 			,AwayID
 	FROM	@tmpMatch
 
-	SELECT	  l.logid
-			, l.logdate
-			, la.ActionNameEN
-			, l.finalhomescore
-			, l.finalawayscore
-			, l.hthomescore
-			, l.htawayscore
-	FROM	bodb_CustomerLog.dbo.UserLog_Settle l WITH(NOLOCK)
-			LEFT JOIN bodb_CustomerLog.dbo.LogAction la WITH (NOLOCK) ON l.ActionID = la.ActionID
-	WHERE	l.MatchID = @MatchID
-			AND @GroupID BETWEEN 1 AND 2 
-	ORDER BY	l.LogID ASC 	
+	IF @GroupID BETWEEN 1 AND  2 
+	BEGIN
+		SELECT	  l.logid
+				, l.logdate
+				, la.ActionNameEN
+				, l.finalhomescore
+				, l.finalawayscore
+				, l.hthomescore
+				, l.htawayscore
+		FROM	bodb_CustomerLog.dbo.UserLog_Settle l WITH(NOLOCK)
+				LEFT JOIN bodb_CustomerLog.dbo.LogAction la WITH (NOLOCK) ON l.ActionID = la.ActionID
+		WHERE	l.MatchID = @MatchID
+		ORDER BY	l.LogID ASC 	
+	END
+	ELSE IF @GroupID = 3
+	BEGIN
+		SELECT	  l.logid
+				, l.logdate
+				, la.ActionNameEN
+				, l.Remark
+		FROM	bodb_CustomerLog.dbo.UserLog_SettleOutright l WITH(NOLOCK)
+				LEFT JOIN bodb_CustomerLog.dbo.LogAction la WITH (NOLOCK) ON l.ActionID = la.ActionID
+		WHERE	l.MatchID = @MatchID
+		ORDER BY	l.LogID ASC 	
+	END
 	
 END 
+
 GO 
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_MatchLog] TO [bodbAdminNet]
 GO

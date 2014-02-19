@@ -273,9 +273,8 @@ BEGIN
 	END
 
 	-- WRITE LOG
-	SELECT @Remark = 'Status=' + @status + 'IsDeadheat=' + CAST(@deadheat AS VARCHAR(5))
-
 	BEGIN TRY
+		SELECT @Remark = 'Status=' + @status + 'Deadheat=' + CAST(@deadheat AS VARCHAR(5))
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
 			@UserID = 5838421
 			,@MatchID = @matchid
@@ -286,6 +285,7 @@ BEGIN
 	END TRY
 
 	BEGIN CATCH
+		SELECT @Remark = 'Status=' + @status + 'Deadheat=' + CAST(@deadheat AS VARCHAR(5)) + ' ErrMsg=' + left(error_message(), 400)
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
 			@UserID = 5838421
 			,@MatchID = @matchid
