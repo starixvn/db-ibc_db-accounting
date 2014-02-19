@@ -36,7 +36,14 @@ BEGIN
 	RETURN
 END
 
-DECLARE @Remark VARCHAR(500)
+DECLARE @Remark VARCHAR(500), @ActionID INT
+
+SELECT @ActionID = CASE @status 
+	WHEN 'Refund' THEN 138
+	WHEN 'Won' THEN 136
+	WHEN 'Lose' THEN 136
+END
+
 INSERT INTO DBTXN.bodb02.dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 IF (@@Error = 0)
 	BEGIN TRY
@@ -44,16 +51,16 @@ IF (@@Error = 0)
 			@UserID = 5838421, --dbaAdmin
 			@Matchid = @matchid, 
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = @ActionID, 
 			@Remark = 'ADD SUCCESS SPName = Dot_Admin_SettleOutright_Event'
 	END TRY
 	BEGIN CATCH		
 		SELECT @Remark = 'ADD SUCCESS SPName = Dot_Admin_SettleOutright_Event ErrMsg=' + left(error_message(), 400)		
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 			@UserID = 5838421, --dbaAdmin
 			@Matchid = @matchid, 
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = @ActionID, 
 			@Remark = @Remark	
 	END CATCH
 ELSE 
@@ -125,16 +132,16 @@ BEGIN
 			@UserID = 5838421, --dbaAdmin
 			@Matchid = @matchid, 
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = @ActionID, 
 			@Remark = 'DEL SUCCESS SPName = Dot_Admin_SettleOutright_Event'
 	END TRY
 	BEGIN CATCH		
 		SELECT @Remark = 'DEL SUCCESS SPName = Dot_Admin_SettleOutright_Event ErrMsg='+ left(error_message(), 400)		
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 			@UserID = 5838421, --dbaAdmin
 			@Matchid = @matchid, 
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = @ActionID, 
 			@Remark = @Remark	
 	END CATCH
 END	
@@ -145,16 +152,16 @@ BEGIN
 			@UserID = 5838421, --dbaAdmin
 			@Matchid = @matchid, 
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = @ActionID, 
 			@Remark = 'DEL FAILED SPName = Dot_Admin_SettleOutright_Event' 
 	END TRY
 	BEGIN CATCH		
 		SELECT @Remark = 'DEL FAILED SPName = Dot_Admin_SettleOutright_Event ErrMsg='+ left(error_message(), 400)		
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 			@UserID = 5838421, --dbaAdmin
 			@Matchid = @matchid, 
 			@KeyID = 2,
-			@ActionID = 0, 
+			@ActionID = @ActionID, 
 			@Remark = @Remark					
 	END CATCH
 END
@@ -165,7 +172,7 @@ BEGIN TRY
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
 		@UserID = 5838421, 
 		@MatchID = @matchid, 
-		@ActionID = 136, 
+		@ActionID = @ActionID, 
 		@LeagueID = 0, 
 		@EventDate = @EventDate,
 		@Remark = @Remark
@@ -173,10 +180,10 @@ BEGIN TRY
 END TRY
 BEGIN CATCH		
 	SELECT @Remark = 'Status=' + @status + 'IsDeadheat=' + CAST(@isDeadheat AS VARCHAR(5)) + ' ErrMsg='+ left(error_message(), 400)		
-	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
+	EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
 		@UserID = 5838421, 
 		@MatchID = @matchid, 
-		@ActionID = 136, 
+		@ActionID = @ActionID, 
 		@LeagueID = 0, 
 		@EventDate = @EventDate,
 		@Remark = @Remark					
