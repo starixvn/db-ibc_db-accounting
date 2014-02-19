@@ -1,13 +1,12 @@
 ﻿
 
+
 ALTER PROCEDURE [dbo].[Admin_Calculate_22]
 	@matchid int,
 	@bettype smallint,
 	@ResultString nvarchar(50),
 	@betcount int = 0
 AS
-IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
-
 /*
 Created: 20090203@Joe
 Task : Settlement for Next Goal Bettype  
@@ -24,15 +23,41 @@ Revisions:
 	- 20110105@Lukas: Re-arrange bettype	
 	- 20120426@Lukas: Get from production & exclude DB044
 	- 20121018@Johnson: Merge code for checking double comm losing from production
+	- 20140120@Lukas: insert settled command into LAS queue [Redmine:#8785]
 
 Param's Explanation:
 • @ResultString: + get from match.GoalRecord,
                  + uses nvarchar to avoid problem compare with varchar from betteam
 
 */
-IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
+BEGIN
+	IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
+	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
+	SET NOCOUNT ON 
 
+	--- LAS settlement 
+	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	BEGIN		
+
+		DECLARE @LASCommand NVARCHAR(1000),
+				@createdDate DATETIME
+
+		SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_22] @matchid = ' + CONVERT(NVARCHAR(10),@matchid) +
+								', @bettype = ' + CONVERT(NVARCHAR(10),@bettype) + 
+								', @ResultString = ''' + CONVERT(NVARCHAR(10),@ResultString) + '''' +
+								', @betcount = ' + CONVERT(NVARCHAR(10),ISNULL(@betcount,''))
+				,@createdDate = GETDATE()
+
+		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand]	 @SPName		= 'Admin_Calculate_22'
+															,@SQLCommand	= @LASCommand
+															,@CreatedDate	= @createdDate
+															,@StatusID		= 0 -- waiting
+															,@MatchID		= @matchid
+															,@Bettype		= @bettype
+															,@Status		= 'waiting'
+															,@BetCount		= @betcount
+	END	
 
 	Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
 	Declare @hdp smallmoney
@@ -135,7 +160,7 @@ IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 		bettype=@bettype AND
 		--[status] NOT IN (N'VOID', N'REJECT')
 		statusID NOT IN (101,102)
-
+END
 
 
 
