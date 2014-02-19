@@ -937,6 +937,12 @@ Begin DataProject = "DBA"
       Script = "20130507_ForceChangeSecurityCodeBySite.sql"
       Script = "20130507_ForceChangeSecurityCodeBySuper.sql"
    End
+   Begin Folder = "Settlement"
+      Begin Folder = "Outright"
+         Script = "DBA_SettleOutright_Undo_Event.sql"
+         Script = "DBA_SettleOutright_Undo_Trans.sql"
+      End
+   End
    Begin Folder = "Sports"
       Script = "20130131_UpdateData_Sports.sql"
    End
