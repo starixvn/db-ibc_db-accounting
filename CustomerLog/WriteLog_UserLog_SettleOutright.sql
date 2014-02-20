@@ -4,12 +4,13 @@
 	@ActionID int=0, 
 	@LeagueID int,
 	@EventDate datetime,
+	@Result VARCHAR(500) = '',
     @Remark VARCHAR(500) = ''
 AS
 /*
 Creator: Elodie
-Date: 2013-05-06
-DB: DBLOG.bodb_CustomerLog
+Date: 2014-02-20
+DB: DBLOG/bodb_CustomerLog, DBTXN/bodb_CustomerLog
 Task: Insert LOGS for settlement outright function 
 
 Revision:
@@ -25,6 +26,7 @@ INSERT INTO dbo.UserLog_SettleOutright
 	ActionID,
 	LeagueID,
 	EventDate,
+	Result,
     Remark
 ) 
 VALUES
@@ -34,6 +36,7 @@ VALUES
 	@ActionID,
 	@LeagueID,
 	@EventDate,
+	@Result,
     @Remark
 )
 

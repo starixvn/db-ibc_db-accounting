@@ -240,7 +240,6 @@ BEGIN
 
 		BEGIN CATCH
 			SELECT @Remark = 'DEL SUCCESS SPName = Dot_Admin_SettleOutright_Trans ErrMsg=' + left(error_message(), 400)
-
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = 5838421,--dbaAdmin
 				@Matchid = @matchid,
@@ -262,7 +261,6 @@ BEGIN
 
 		BEGIN CATCH
 			SELECT @Remark = 'DEL FAILED SPName = Dot_Admin_SettleOutright_Trans ErrMsg=' + left(error_message(), 400)
-
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = 5838421,--dbaAdmin
 				@Matchid = @matchid,
@@ -274,24 +272,26 @@ BEGIN
 
 	-- WRITE LOG
 	BEGIN TRY
-		SELECT @Remark = 'Status=' + @status + 'Deadheat=' + CAST(@deadheat AS VARCHAR(5))
+		SELECT @Remark = CAST(@deadheat AS VARCHAR(5))
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
 			@UserID = 5838421
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
 			,@LeagueID = 0
 			,@EventDate = @winlostdate
+			,@Result = @status
 			,@Remark = @Remark
 	END TRY
 
 	BEGIN CATCH
-		SELECT @Remark = 'Status=' + @status + 'Deadheat=' + CAST(@deadheat AS VARCHAR(5)) + ' ErrMsg=' + left(error_message(), 400)
+		SELECT @Remark = CAST(@deadheat AS VARCHAR(5)) + ' ErrMsg=' + left(error_message(), 400)
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
 			@UserID = 5838421
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
 			,@LeagueID = 0
 			,@EventDate = @winlostdate
+			,@Result = @status
 			,@Remark = @Remark
 	END CATCH
 END
