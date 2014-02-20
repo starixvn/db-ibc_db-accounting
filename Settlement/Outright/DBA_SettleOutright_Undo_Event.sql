@@ -108,17 +108,18 @@ BEGIN TRY
 		@ActionID = @ActionID, 
 		@LeagueID = 0, 
 		@EventDate = NULL,
-		@Remark = 'UNDO'
+		@Result = 'UNDO'
 		
 END TRY
 BEGIN CATCH		
-	SELECT @Remark = 'UNDO ErrMsg=' + left(error_message(), 400)		
+	SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)		
 	EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
 		@UserID = 5838421, 
 		@MatchID = @matchid, 
 		@ActionID = @ActionID, 
 		@LeagueID = 0, 
 		@EventDate = NULL,
+		@Result = 'UNDO',
 		@Remark = @Remark
 END CATCH
 
