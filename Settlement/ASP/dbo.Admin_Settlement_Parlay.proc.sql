@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Parlay]
+﻿
+ALTER PROCEDURE [dbo].[Admin_Settlement_Parlay]
 (
 	@matchids	VARCHAR(2000),
 	@creator	INT,
@@ -36,7 +37,7 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130710@Viet: Change way to Parlay Settlement 
 		- 20130711@Jamie: Add Balance Negative 
-
+		- 20140220@Lukas: insert settled command into LAS queue [Redmine:#8785]
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		
@@ -97,6 +98,35 @@ BEGIN
 		DELETE FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
 	END
+
+		--- LAS settlement 
+	DECLARE @LASCommand NVARCHAR(1000)
+		,@createdDate DATETIME
+
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + CONVERT(NVARCHAR(10), @matchids) + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) + ', @action = ' + CONVERT(NVARCHAR(10), @action)
+		,@createdDate = GETDATE()
+
+	BEGIN TRY
+		EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Settlement_Parlay'
+			,@SQLCommand = @LASCommand
+			,@CreatedDate = @createdDate
+			,@StatusID = 0 -- waiting
+			,@MatchID = @matchids
+			,@Bettype = 9
+			,@Status = 'waiting'
+			,@BetCount = 0
+		IF @@ERROR <> 0
+		BEGIN
+			SELECT	@ErrCode = 201
+					,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
+			RETURN
+		END 		
+	END TRY
+	BEGIN CATCH 
+		SELECT	@ErrCode = 201
+				,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
+		RETURN
+	END CATCH
 
 	DECLARE @rn INT,
 			@subStart datetime, @CalTime int, @selTime int, @updTime int, @9Time int, @2Call int, @29Time int,
@@ -400,6 +430,8 @@ DROP TABLE #BalanceAfter
 
 	END	
 END
+
+
 
 
 GO
