@@ -1,11 +1,5 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Admin_Settlement_s161]    Script Date: 12/9/2013 12:27:47 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Admin_Settlement_s161] @matchid INT
+﻿ALTER PROCEDURE [dbo].[Admin_Settlement_s161] 
+	@matchid INT
 	,@IsLive BIT			= 0
 	,@DrawSeq TINYINT		= 0
 	,@action VARCHAR(10)	= 'CAL'		-- CAL / CAL-HT / Refund / Refund-FT
@@ -43,7 +37,7 @@ AS
 		- 20130121@Elodie:	Change link server DB02 to DBPRO
 							Write more log on DBTXN server in case of DBLOG server failure
 		- 20131208@Viet:	Revise SPs and arrange execrep for calculation part
-						   
+		- 20140221@Elodie:	Add BalanceNegative 						   
 	Param's Explanation:
 		+ @IsLoop (used for Balance):
 			 1 : is recalled  
@@ -86,7 +80,8 @@ BEGIN
 		IF (@@Error = 0)
 		BEGIN
 			BEGIN TRY
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @AdminID
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @AdminID
 					,@Matchid = @matchid
 					,@KeyID = 1
 					,@ActionID = @ActionID
@@ -96,7 +91,8 @@ BEGIN
 			BEGIN CATCH
 				SET @Remark = 'ADD SUCCESS ErrMsg=' + left(error_message(), 400)
 				
-				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @AdminID
+				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @AdminID
 					,@Matchid = @matchid
 					,@KeyID = 1
 					,@ActionID = @ActionID
@@ -158,7 +154,8 @@ BEGIN
 
 		IF @DrawSeq = 1 -- Cal-HT
 		BEGIN
-			EXEC dbo.Admin_Settlement_s161 @matchid = @matchid
+				EXEC dbo.Admin_Settlement_s161 
+				@matchid = @matchid
 				,@action = 'CAL-HT'
 				,@IP = @IP
 				,@AdminID = @AdminID
@@ -297,6 +294,30 @@ BEGIN
 	FROM #Balance
 	WHERE Increased = 1
 
+	----
+	-- Add Negative Balance into BalanceNegative table 
+	----
+	INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+		[ExecDate]
+		,[MatchID]
+		,[ActionID]
+		,[GroupID]
+		,[CustID]
+		,[Balance]
+		,[StatusID]
+		,[Remark]
+		)
+	SELECT GETDATE()
+		,@MatchID
+		,@ActionID
+		,5
+		,CustID
+		,Balance
+		,0
+		,NULL
+	FROM #Balance WITH (NOLOCK)
+	WHERE Increased = 0
+
 	DROP TABLE #Balance
 	DROP TABLE #BalanceBefore
 	DROP TABLE #BalanceAfter
@@ -390,4 +411,3 @@ BEGIN
 		END
 	END
 END
-
