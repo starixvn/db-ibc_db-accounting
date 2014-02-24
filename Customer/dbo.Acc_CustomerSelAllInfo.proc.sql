@@ -52,7 +52,7 @@ Revisions:
 	- 20130719@Elodie: Correct link server DBACC instead of DBARC
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call CustLoginInfo, CustLoginInfo_Member by link server DBTXN.CustDB)
-	
+	- 20140220@Johnson: Add opus casino
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -60,7 +60,7 @@ Param's Explanation:
 
 SET NOCOUNT ON
 Declare @custid int, @uplineid int, @roleid tinyint, @UsedCredit MONEY, @DisableDownlinesHR BIT, @DisableDownlinesOpenTote BIT, @DisableDownlinesFI BIT,@DisableDownlinesCS BIT,@DisableDownlinesBI BIT,
-@DisableDownlinesNumber BIT, @DisableDownlinesLiveCS BIT, @DisableDownlinesHRFixedOdds BIT, @DisableDownlinesVirtualSports BIT,
+@DisableDownlinesNumber BIT, @DisableDownlinesLiveCS BIT, @DisableDownlinesHRFixedOdds BIT, @DisableDownlinesVirtualSports BIT, @DisableDownlinesOpusCasino BIT,
 @DownlinesSelectedBetting BIT, @IsInternal BIT,  @LimitPerIP tinyint,@SelectedBetting bit, @NicknameLoginOnly BIT, @LastChangedSecurityCodeDate DATETIME
 Declare @todaySuperCash money,@todayMasterCash money, @todayAgentCash money, @todayCustCash money
 Declare @currentDate DATETIME 
@@ -125,6 +125,11 @@ SELECT @DisableDownlinesVirtualSports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 i
 										  WHEN 3 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableVirtualSports = 1) 											 
 										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableVirtualSports,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableVirtualSports = 1) 											 
 										  ELSE 0 END									
+
+SELECT @DisableDownlinesOpusCasino = CASE @roleid WHEN 4 THEN (SELECT TOP 1 isnull(DisableOpusCasino,0) FROM custInfo WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableOpusCasino = 1)
+										  WHEN 3 THEN (SELECT TOP 1 isnull(DisableOpusCasino,0) FROM custInfo WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableOpusCasino = 1) 											 
+										  WHEN 2 THEN (SELECT TOP 1 isnull(DisableOpusCasino,0) FROM custInfo WITH (NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableOpusCasino = 1) 											 
+										  ELSE 0 END		
 										  										  							  
 -------------------------------------------------------------------------
 DECLARE @IsDeposit bit --Identify deposit customer
@@ -296,6 +301,7 @@ select c.custid, c.username, c.firstname, c.lastname,
 	isnull(@DisableDownlinesLiveCS,0) DisableDownlinesLiveCS,
 	isnull(@DisableDownlinesHRFixedOdds,0) DisableDownlinesHRFixedOdds,
 	isnull(@DisableDownlinesVirtualSports,0) DisableDownlinesVirtualSports,
+	isnull(@DisableDownlinesOpusCasino,0) DisableDownlinesOpusCasino,
 	isnull(@DownlinesSelectedBetting,0) DownlinesSelectedBetting,
 	ci.DisableBingo,
 	ci.DisableNumber,
@@ -305,6 +311,8 @@ select c.custid, c.username, c.firstname, c.lastname,
 	ci.syncbingo,
 	ci.disableLiveCasino,
 	ci.synclivecasino,
+	ci.DisableOpusCasino, 
+	ci.SyncOpusCasino,
 	ci.DisableHRFixedOdds,
 	ci.DisableVirtualSports,
 	ci.HideVirtualSports,
