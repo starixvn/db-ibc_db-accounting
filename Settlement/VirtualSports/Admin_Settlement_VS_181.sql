@@ -17,19 +17,53 @@ AS
 BEGIN
 SET NOCOUNT ON
 
+DECLARE @ActionID int, @Remark varchar(500) , @SportType tinyint
+SELECT @ActionID = CASE @Action 
+		WHEN 'CAL' THEN 127 
+		WHEN 'Refund' THEN 128		
+	END
+
+select @SportType = SportType from DBPRO.bodb02.dbo.VSRaceInfo nolock where EventID= @matchid 
+
+
 -- check and not allow attempt to settlement same game while it's still not finish
-IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 2 AND KeyValue = @matchid)
+IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 4 AND KeyValue = @matchid)
 BEGIN
 	SELECT  @ErrCode = 101,
 			@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 	RETURN
 END
 
-INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid) 
+INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (4, @matchid) 
+IF (@@Error = 0)
+BEGIN
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+			@UserID = @SportType, 
+			@Matchid = @matchid, 
+			@KeyID = 4,
+			@ActionID = @ActionID, 
+			@Remark = 'ADD SUCCESS'
+	END TRY
+	BEGIN CATCH	
+		SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(error_message(), 400)
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+			@UserID = @SportType, 
+			@Matchid = @matchid, 
+			@KeyID = 4,
+			@ActionID = @ActionID, 
+			@Remark = @Remark	
+	END CATCH
+END
+ELSE 
+BEGIN
+	SELECT @ErrCode = 100, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+	RETURN
+END
 
 ---------
 
-	Declare @start datetime, @stop datetime , @LogData nvarchar(200), @ActionID int, @Remark varchar(500) 
+	Declare @start datetime, @stop datetime , @LogData nvarchar(200) 
 	SELECT @start = CURRENT_TIMESTAMP
 	
 
@@ -50,21 +84,21 @@ INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 	IF @action = 'CAL'
 	BEGIN
 
-			EXEC DB02.bodb02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_VS_181-CAL', @Matchid = @matchid
+			EXEC DBPRO.bodb02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_VS_181-CAL', @Matchid = @matchid
 				
 			EXEC Admin_Calculate_181M @matchid =@matchid  
 			EXEC Admin_Calculate_181 @matchid =@matchid 
 
-		SELECT @LogData = 'Calculate for matchid:' + CAST(@matchid as nvarchar(10)), @ActionID = 127	
+		SELECT @LogData = 'Calculate for matchid:' + CAST(@matchid as nvarchar(10))
 	END
 	ELSE IF @action = 'Refund'
 	BEGIN
 
-		EXEC DB02.bodb02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_VS_181-Refund', @Matchid = @matchid
+		EXEC DBPRO.bodb02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_VS_181-Refund', @Matchid = @matchid
 		
 		EXEC Admin_Calculate_VS_181_Refund @matchid =@matchid
 						
-		SELECT @LogData = 'Refund for matchid:' + CAST(@matchid as nvarchar(10)), @ActionID = 128	
+		SELECT @LogData = 'Refund for matchid:' + CAST(@matchid as nvarchar(10))
 	END
 
 	-------------------------------------------------------------
@@ -94,6 +128,7 @@ INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
 
+
 	INSERT INTO dbo.BalancePendingDebit (custid, balance)
 	SELECT custid, ABS(balance)
 	FROM #Balance
@@ -110,31 +145,90 @@ INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
 
 
 	SELECT @stop = CURRENT_TIMESTAMP
+	
+	DECLARE @betstatus nvarchar(50)
+	SELECT @betstatus = CASE @Action WHEN 'Refund' THEN 'Refund' ELSE NULL END
 
 	SELECT @LogData = @LogData + '(' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms)'
-	EXEC dbo.WriteLog_UserLog 181, @LogData
+	EXEC dbo.WriteLog_UserLog @SportType, @LogData
 
 
 	SELECT @Remark = ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms; '
 			+ ' Bal:' + CAST(IsNull(@TotalAccount_BalanceUpdate,0) as varchar(20)) + '/' + CAST(IsNull(@TotalAccount,0) as varchar(20))
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
-		@UserID = 181, --a user is dedicted for bettype 181 to write log
-		@Matchid = @matchid,
-		@ActionID = @ActionID,
-		@finalhomescore = NULL,
-		@finalawayscore = NULL,  
-		@hthomescore = NULL,
-		@htawayscore = NULL,
-		@GoalRecord = NULL,
-		@betstatus = NULL,
-		@Remark = @Remark,
-		@IP = @IP
-
-
-
+	
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
+			@UserID = @SportType, --a user is dedicted for bettype 181 to write log
+			@Matchid = @matchid,
+			@ActionID = @ActionID,
+			@finalhomescore = NULL,
+			@finalawayscore = NULL,  
+			@hthomescore = NULL,
+			@htawayscore = NULL,
+			@GoalRecord = NULL,
+			@betstatus = @betstatus,
+			@Remark = @Remark,
+			@IP = @IP
+	END TRY  
+	BEGIN CATCH
+		SELECT @Remark = @Remark + ' ErrMsg=' + left(error_message(), 250)	
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
+			@UserID = @SportType, --a user is dedicted for bettype 181 to write log
+			@Matchid = @matchid,
+			@ActionID = @ActionID,
+			@finalhomescore = NULL,
+			@finalawayscore = NULL,  
+			@hthomescore = NULL,
+			@htawayscore = NULL,
+			@GoalRecord = NULL,
+			@betstatus = @betstatus,
+			@Remark = @Remark,
+			@IP = @IP	
+	END CATCH
 ----
 DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
-WHERE KeyID = 2 AND KeyValue = @matchid
+WHERE KeyID = 4 AND KeyValue = @matchid
+
+IF (@@Error = 0)
+BEGIN
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+			@UserID = @SportType, 
+			@Matchid = @matchid, 
+			@KeyID = 4,
+			@ActionID = @ActionID, 
+			@Remark = 'DEL SUCCESS'
+	END TRY
+	BEGIN CATCH		
+		SELECT @Remark = 'DEL SUCCESS  ErrMsg=' + left(error_message(), 400)		
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+			@UserID = @SportType, 
+			@Matchid = @matchid, 
+			@KeyID = 4,
+			@ActionID = @ActionID, 
+			@Remark = @Remark		
+	END CATCH
+END
+ELSE
+BEGIN
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+			@UserID = @SportType, 
+			@Matchid = @matchid, 
+			@KeyID = 4,
+			@ActionID = @ActionID, 
+			@Remark = 'DEL FAILED'
+	END TRY
+	BEGIN CATCH		
+		SELECT @Remark = 'DEL FAILED  ErrMsg=' + left(error_message(), 400)		
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+			@UserID = @SportType, 
+			@Matchid = @matchid, 
+			@KeyID = 4,
+			@ActionID = @ActionID, 
+			@Remark = @Remark		
+	END CATCH
+END
 
 END
 
