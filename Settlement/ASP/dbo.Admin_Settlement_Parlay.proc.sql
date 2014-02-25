@@ -103,7 +103,7 @@ BEGIN
 	DECLARE @LASCommand NVARCHAR(1000)
 		,@createdDate DATETIME
 
-	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + CONVERT(NVARCHAR(10), @matchids) + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) + ', @action = ' + CONVERT(NVARCHAR(10), @action)
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + CONVERT(NVARCHAR(10), @matchids) + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) + ', @action = ''' + @action + ''''
 		,@createdDate = GETDATE()
 
 	BEGIN TRY
