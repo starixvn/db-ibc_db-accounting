@@ -1,15 +1,16 @@
-ALTER PROCEDURE [dbo].[NAP_Get_LiveCasinoGameDetail]
+CREATE PROCEDURE [NAP_Get_LiveCasinoGameDetail]
 	@matchid int
 AS
 
 /*
-	Created by: 20121205@Dan
+	Created by: 20140121@Kathy
 	Task: get gamehand to settle
 	DB: DB02.BODB02 
 	Orifgial SP: Acc_Get_LiveCasinoGameResult
-	
+
 	Revisions:
 	
+		
 */
 BEGIN
 
@@ -36,6 +37,11 @@ END
 
 
 GO
-GRANT VIEW DEFINITION ON [NAP_Get_LiveCasinoGameDetail] TO vnteam
+
+GRANT EXECUTE ON [NAP_Get_LiveCasinoGameDetail] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [NAP_Get_LiveCasinoGameDetail] TO bodbAdminNet
+
+GRANT VIEW DEFINITION ON [NAP_Get_LiveCasinoGameDetail] TO [vnteam] AS [dbo]
+GO
+
+

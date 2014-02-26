@@ -1,5 +1,5 @@
-CREATE PROCEDURE [dbo].[NAP_UserLog_Settle_MatchSelByCode] 
-	@matchCode varchar(50) = '',
+CREATE PROCEDURE [NAP_UserLog_Settle_MatchSelByCode] 
+	@MatchCode varchar(50) = '',
 	@FromDate DATETIME = '',
 	@ToDate DATETIME = '',
 	@BalanceUpDay DATETIME = ''
@@ -19,7 +19,7 @@ SET NOCOUNT ON
 DECLARE @matchId int
 
 BEGIN TRY	
-	SET @matchid = CASE WHEN ISNUMERIC(@matchcode) = 1 THEN CAST(@matchcode AS INT) ELSE NULL END
+	SET @matchid = CASE WHEN ISNUMERIC(@MatchCode) = 1 THEN CAST(@MatchCode AS INT) ELSE NULL END
 END TRY
 BEGIN CATCH
 	SET @matchid=NULL
@@ -41,18 +41,19 @@ IF @Todate >= @BalanceUpDay
 BEGIN
 	INSERT INTO @TMP_ALL_MatchInfo
 	SELECT matchid , homeid , awayid ,  eventdate , leagueid, isneutral, sporttype, showtime, 
-		   CASE WHEN ISNULL(homeid2,0) = 0 AND sporttype = 162 THEN 1101 ELSE homeid2 END as homeid2  -- contains bettype of Live Casino 
+		   ISNULL(homeid2,0) as homeid2  -- contains bettype of Live Casino 
 	FROM match WITH (NOLOCK)
-	WHERE (matchId = @matchid or matchcode = @matchCode )
+	WHERE (matchId = @matchid or matchcode = @MatchCode )
 		and eventdate BETWEEN @FromDate and @ToDate
 
 	IF @BalanceUpDay < @FromDate     
 		SELECT @BalanceUpDay=@FromDate  
+
 	INSERT INTO @TMP_ALL_MatchInfo
 	SELECT matchid , homeid , awayid ,  eventdate , leagueid, isneutral, sporttype, showtime,
-		   CASE WHEN ISNULL(homeid2,0) = 0 AND sporttype = 162 THEN 1101 ELSE homeid2 END as homeid2  -- contains bettype of Live Casino 
+		   ISNULL(homeid2,0) as homeid2  -- contains bettype of Live Casino 
 	FROM match14 WITH (NOLOCK)
-	WHERE (matchId = @matchid or matchcode = @matchCode )
+	WHERE (matchId = @matchid or matchcode = @MatchCode )
 		and eventdate BETWEEN @BalanceUpDay and @ToDate
 END
 
@@ -63,18 +64,22 @@ BEGIN
 
 	INSERT INTO @TMP_ALL_MatchInfo
 	SELECT matchid , homeid , awayid , eventdate , leagueid, isneutral, sporttype, showtime,
-		   CASE WHEN ISNULL(homeid2,0) = 0 AND sporttype = 162 THEN 1101 ELSE homeid2 END as homeid2  -- contains bettype of Live Casino 
+		   ISNULL(homeid2,0) as homeid2  -- contains bettype of Live Casino 
 	FROM DBARC.bodb_Archive.dbo.match_BK WITH (NOLOCK) 
-	WHERE (matchId = @matchid or matchcode = @matchCode )
+	WHERE (matchId = @matchid or matchcode = @MatchCode )
 		AND eventdate BETWEEN @FromDate and @ToDate
 END
 
 SELECT t.matchid , t.homeid , t.awayid , t.eventdate , t.leagueid, isneutral, sporttype, showtime, homeid2 
 FROM @TMP_ALL_MatchInfo t
 
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_UserLog_Settle_MatchSelByCode] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_UserLog_Settle_MatchSelByCode] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_UserLog_Settle_MatchSelByCode] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [NAP_UserLog_Settle_MatchSelByCode] TO [vnteam] AS [dbo]
+GO
 
 
