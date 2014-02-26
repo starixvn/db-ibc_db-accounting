@@ -1,0 +1,153 @@
+CREATE PROCEDURE [NAP_Admin_Calculate_13]
+	@matchid int,
+	@bettype smallint,
+	@fth smallmoney,
+	@fta smallmoney,
+	@betcount int = 0
+AS
+
+
+/*
+	Created by: Kathy
+	Date: 20140211
+	Task: Settlement 
+	DB: DB02.BODB02
+	
+	Revisions:
+		
+*/
+BEGIN
+	IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
+	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
+
+	SET NOCOUNT ON
+
+	--- LAS settlement 
+	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	BEGIN		
+
+		DECLARE @LASCommand NVARCHAR(1000),
+				@createdDate DATETIME
+
+		SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_13] @matchid = ' + CONVERT(NVARCHAR(10),@matchid) +
+								', @bettype = ' + CONVERT(NVARCHAR(10),@bettype) + 
+								', @fth = ' + CONVERT(NVARCHAR(10),@fth) +
+								', @fta = ' + CONVERT(NVARCHAR(10),@fta) +
+								', @betcount = ' + CONVERT(NVARCHAR(10),ISNULL(@betcount,''))
+				,@createdDate = GETDATE()
+
+		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand]	 @SPName		= 'Admin_Calculate_13'
+															,@SQLCommand	= @LASCommand
+															,@CreatedDate	= @createdDate
+															,@StatusID		= 0 -- waiting
+															,@MatchID		= @matchid
+															,@Bettype		= @bettype
+															,@Status		= 'waiting'
+															,@BetCount		= @betcount
+	END		
+	Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
+
+	UPDATE bettrans with (ROWLOCK, UPDLOCK)
+	SET @modds = modds = CASE
+		WHEN betteam = 'hy' AND @fta = 0 THEN 1
+		WHEN betteam = 'hn' AND @fta > 0 THEN 1
+		WHEN betteam = 'ay' AND @fth = 0 THEN 1
+		WHEN betteam = 'an' AND @fth > 0 THEN 1
+		ELSE -1
+		END,
+		
+		@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
+		WHEN '0' THEN 1
+		WHEN '1' THEN 0 
+		ELSE 1 END,
+		@commLostRate = CASE comstatus
+		WHEN '0' THEN 1
+		WHEN '1' THEN 2 
+		ELSE 1 END,--'s','m'
+		
+	WinLost = CASE
+		WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end)
+		WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end) * 0.5
+		WHEN @modds =  0	THEN actual_stake
+		WHEN @modds = -0.25	THEN actual_stake * 0.5
+		WHEN @modds < -0.25	THEN 0
+		END,
+
+	aWinLost = CASE
+		WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end) * -apositiontaking
+		WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end) * -apositiontaking * 0.5
+		WHEN @modds =  0	THEN 0
+		WHEN @modds = -0.25	THEN actual_stake * apositiontaking * 0.5
+		WHEN @modds < -0.25	THEN actual_stake * apositiontaking
+		END,
+	mWinLost = CASE
+		WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end) * -mpositiontaking
+		WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end) * -mpositiontaking * 0.5
+		WHEN @modds =  0    	THEN 0
+		WHEN @modds = -0.25 	THEN actual_stake * mpositiontaking * 0.5
+		WHEN @modds < -0.25 	THEN actual_stake * mpositiontaking
+		END,
+	sWinLost = CASE
+		WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end) * -spositiontaking
+		WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,13,15,16,24,25,26,27,28) then odds-1 else odds end) end) * -spositiontaking * 0.5
+		WHEN @modds =  0    	THEN 0
+		WHEN @modds = -0.25 	THEN actual_stake * spositiontaking * 0.5
+		WHEN @modds < -0.25 	THEN actual_stake * spositiontaking
+		END,
+
+	PlayerComm = CASE
+		WHEN @modds >  0.25 	THEN @commWinRate * playerdiscount * stake
+		WHEN @modds =  0.25 	THEN @commWinRate * playerdiscount * stake * 0.5
+		WHEN @modds =  0    	THEN 0
+		WHEN @modds = -0.25 	THEN @commLostRate * playerdiscount * stake * 0.5
+		WHEN @modds < -0.25 	THEN @commLostRate * playerdiscount * stake
+		END,
+	Comm = CASE
+		WHEN @modds >  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking)
+		WHEN @modds =  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking) * 0.5
+		WHEN @modds =  0    	THEN 0
+		WHEN @modds = -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking) * 0.5
+		WHEN @modds < -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking)
+		END,
+	aComm = CASE
+		WHEN @modds >  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
+		WHEN @modds =  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
+		WHEN @modds =  0    	THEN 0
+		WHEN @modds = -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
+		WHEN @modds < -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
+		END,
+	sComm = CASE
+		WHEN @modds >  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
+		WHEN @modds =  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
+		WHEN @modds =  0    	THEN 0
+		WHEN @modds = -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
+		WHEN @modds < -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
+		END,
+
+	Status = CASE
+		WHEN @modds > 0 THEN 'WON'
+		WHEN @modds = 0 THEN 'DRAW'
+		WHEN @modds < 0 THEN 'LOSE'
+		END,
+	StatusID = CASE
+		WHEN @modds > 0 THEN 112 --WON
+		WHEN @modds = 0 THEN 111 --DRAW
+		WHEN @modds < 0 THEN 113 --LOSE
+		END,
+	ruben=1
+
+	WHERE
+		matchid=@matchid AND
+		bettype=@bettype AND
+		--status NOT IN ('VOID', 'REJECT')
+		statusID NOT IN (101,102)
+END
+
+
+
+GO
+
+GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_13] TO [vnteam] AS [dbo]
+GO
+
+

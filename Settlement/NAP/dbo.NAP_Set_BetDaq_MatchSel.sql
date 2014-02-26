@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_BetDaq_MatchSel]
+CREATE PROCEDURE [NAP_Set_BetDaq_MatchSel]
 	@MatchID		INT
 AS
 /*

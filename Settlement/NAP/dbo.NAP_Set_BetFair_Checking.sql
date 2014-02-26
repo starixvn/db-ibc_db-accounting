@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_BetFair_Checking]
+CREATE PROCEDURE [NAP_Set_BetFair_Checking]
 	@matchid				int = 0
 AS 
 
@@ -19,7 +19,7 @@ Note: For settlement SPs should hardcode the custid of betfair customer to avoid
 Param's Explanation:
 • @matchid: matchid of match to checking
 • @IsMovebetfair:
-	= 0 don't move betfair tickets to other match
+	= 0 don't move betfair tiackets to other match
 	= 1 move betfair tickets to other match
 • @IsExcludeBetfair:
 	= 0 hide the checkbox exclude betfair
@@ -88,6 +88,7 @@ BEGIN
 		@IsRefundRunningBetfair as IsRefundRunningBetfair
 		
 END
+
 
 
 

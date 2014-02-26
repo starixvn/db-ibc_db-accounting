@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_BetDaq_Checking]
+CREATE PROCEDURE [NAP_Set_BetDaq_Checking]
 	@matchid				int = 0
 AS 
 
