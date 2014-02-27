@@ -27,7 +27,7 @@ BEGIN
 	IF @@SERVERNAME IN ('DB043', 'DB044') RETURN
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	IF @@SERVERNAME IN ('DB052','DB054','DB231','DB232') AND EXISTS (SELECT * FROM sys.databases WHERE name = 'LASDB') 
 	BEGIN		
 
 		DECLARE @LASCommand NVARCHAR(1000),
@@ -47,7 +47,7 @@ BEGIN
 															,@Bettype		= 10 -- hardcode
 															,@Status		= 'waiting'
 															,@BetCount		= 0
-	RETURN 
+
 	END
 
 	DECLARE	 @commWinRate SMALLMONEY
