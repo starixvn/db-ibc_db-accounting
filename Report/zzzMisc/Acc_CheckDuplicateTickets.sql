@@ -4,6 +4,19 @@ ALTER PROCEDURE [dbo].[Acc_CheckDuplicateTickets]
 	@ShowTime bit = 0
 with recompile
 AS
+/*
+Created: 
+Task : 
+DB: DBACC/bodb02
+Original: 
+
+Revisions:
+	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
+	- 20140227@Dan: ignore refno when checking, it causes the report did not detect mix parlay case.
+	
+Param's Explanation:
+
+*/
 
 -- DB06.bodb02
 SET NOCOUNT ON
@@ -27,15 +40,16 @@ begin
 			from bettrans with(nolock)
 			where matchid > 0
 				and bettype < 19000
-				and custid not in (50057,879241,103873) --betdaq
+				and custid not in (50057,879241,103873, 851668, 878902) --betdaq
+				AND custid NOT IN (1077687) -- Betfair
 				and recommend not in (11196380) -- foobet
 				and DATEADD(dd, DATEDIFF(dd, 0, transdate), 0) = @_date
 				and winlostdate >= @_date
 				and custid > 0
 				and recommend <> 5707545 -- exclude members under BARM
 				and currency <> 20
-			group by custid, odds, stake, balance, status, bettype,winlostdate, username, refno, matchid, betteam
-			having count(*) > 1 and datediff(ss,min(transdate),max(transdate))<1
+			group by custid, odds, stake, balance, status, bettype,winlostdate, username, matchid, betteam --refno
+			having count(*) > 1 and datediff(ms,min(transdate),max(transdate))<1000
 		)
 		SELECT username, custid, typenamee,winlostdate, balance, stake, odds, status,
 			refno1, refno2, bettime1, bettime2, timediff
@@ -54,15 +68,16 @@ begin
 			from bettrans with(nolock)
 			where matchid > 0
 				and bettype < 19000
-				and custid not in (50057,879241,103873) --betdaq
+				and custid not in (50057,879241,103873, 851668, 878902) --betdaq
+				AND custid NOT IN (1077687) -- Betfair
 				and recommend not in (11196380) -- foobet
 				and DATEADD(dd, DATEDIFF(dd, 0, transdate), 0) = @_date
 				and winlostdate >= @_date
 				and custid > 0
 				and recommend <> 5707545 -- exclude members under BARM
 				and currency <> 20
-			group by custid, odds, stake, balance, status, bettype,winlostdate, username, refno, matchid, betteam
-			having count(*) > 1 and datediff(ss,min(transdate),max(transdate))<1
+			group by custid, odds, stake, balance, status, bettype,winlostdate, username, matchid, betteam --refno
+			having count(*) > 1 and datediff(ms,min(transdate),max(transdate))<1000
 		)
 		SELECT username, custid, typenamee,winlostdate, balance, stake, odds, status,
 			refno1, refno2, bettime1, bettime2, timediff, 
