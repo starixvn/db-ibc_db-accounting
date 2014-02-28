@@ -27,7 +27,7 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	IF @@SERVERNAME IN ('DB052','DB054','DB231', 'DB232')  AND EXISTS (SELECT * FROM sys.databases WHERE name = 'LASDB')
 	BEGIN		
 
 		DECLARE @LASCommand NVARCHAR(1000),
@@ -74,7 +74,6 @@ BEGIN
 	END
 
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundFT] TO [bodbAdminNet] AS [dbo]

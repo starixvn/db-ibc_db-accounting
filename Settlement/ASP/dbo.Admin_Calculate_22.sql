@@ -1,6 +1,4 @@
 ﻿
-
-
 ALTER PROCEDURE [dbo].[Admin_Calculate_22]
 	@matchid int,
 	@bettype smallint,
@@ -37,15 +35,15 @@ BEGIN
 	SET NOCOUNT ON 
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	IF @@SERVERNAME IN ('DB052','DB054','DB231', 'DB232')  AND EXISTS (SELECT * FROM sys.databases WHERE name = 'LASDB')
 	BEGIN		
 
 		DECLARE @LASCommand NVARCHAR(1000),
 				@createdDate DATETIME
 
-		SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_22] @matchid = ' + CONVERT(NVARCHAR(10),@matchid) +
+		SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_22] @matchid = ' + CONVERT(NVARCHAR(20),@matchid) +
 								', @bettype = ' + CONVERT(NVARCHAR(10),@bettype) + 
-								', @ResultString = ''' + CONVERT(NVARCHAR(10),@ResultString) + '''' +
+								', @ResultString = ''' + CONVERT(NVARCHAR(50),@ResultString) + '''' +
 								', @betcount = ' + CONVERT(NVARCHAR(10),ISNULL(@betcount,''))
 				,@createdDate = GETDATE()
 
@@ -161,8 +159,6 @@ BEGIN
 		--[status] NOT IN (N'VOID', N'REJECT')
 		statusID NOT IN (101,102)
 END
-
-
 
 
 
