@@ -9,7 +9,7 @@ AS
 	DB: DBLOG/bodb_CustomerLog 
 	
 	Revisions:
-	
+		- 20140304@Elodie: Retreive settlement log for outright
 	Param's Explanation: 
 		+ @GroupID: 1: Match Single Bet; 2: Match Parlay Bet ; 3: Outright 
 
@@ -179,7 +179,7 @@ BEGIN
 				, CASE WHEN l.ActionID = 137 AND cast(l.Remark as INT) > 1 THEN 'DeadHeat(' + l.Remark + ')' ELSE '' END
 		FROM	bodb_CustomerLog.dbo.UserLog_SettleOutright l WITH(NOLOCK)
 				LEFT JOIN bodb_CustomerLog.dbo.LogAction la WITH (NOLOCK) ON l.ActionID = la.ActionID
-		WHERE	l.MatchID = @MatchID
+		WHERE	l.MatchID = @MatchID and l.ActionID IN (137,141,139)
 		ORDER BY	l.LogID ASC 	
 	END
 	
