@@ -1,57 +1,341 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Refund_FGLG]
-	@MatchId int,
-	@AdminId int,
-	@LastGoalOnly bit,
-	@IP varchar(15) = '',
-	@IsLoopTempTable BIT = 0,
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT
+CREATE PROCEDURE [NAP_Admin_Settlement_Refund_FGLG] @matchid INT
+	,@adminid INT
+	,@LGOnly BIT
+	,@IP VARCHAR(15) = ''
+	,@IsLoopTempTable BIT = 0
+	,@ErrCode INT = 0 OUTPUT
+	,@ErrMsg NVARCHAR(200) = '' OUTPUT
 AS
-
 /*
-Created: 20140109@Kathy
-Task : Refund Half-time in case there are HT tickets bet on special matches that have 3 sets
-DB: DBTXN/BODB02
-Original: Admin_Settlement_Refund_FGLG
+	Created: Kathy
+	Date: 20140213
+	Task : Refund Half-time in case there are HT tickets bet on special matches that have 3 sets
+	DB: DBTXN/BODB02
+	Original: Admin_Settlement_Refund_FGLG
 
-Revisions:
+	Revisions:
 	
 		
-Param's Explanation:
-		+ @matchid: matchid of match to Refund HT
-		+ @IsLoopTempTable: 1 : is nested
-							0 : Normal
+	Param's Explanation:
+			+ @matchid: matchid of match to Refund HT
+			+ @IsLoopTempTable: 1 : is nested
+								0 : Normal
 
 */
+SET NOCOUNT ON
+
+DECLARE @Remark VARCHAR(500)
+	,@ActionID INT
+
+SELECT @ActionID = 112
+
+IF @IsLoopTempTable = 0
 BEGIN
-	SET NOCOUNT ON
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500), @action varchar(20)
-
-	SET @action = 'Refund-FGLG'
-
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
-	FROM match m with(NOLOCK)
-	where m.matchid = @MatchId
-
-	IF @@ROWCOUNT = 0 
+	-- check and not allow attempt to settlement same game while it's still not finish
+	IF EXISTS (
+			SELECT 1
+			FROM dbo.TempVariableNumber
+			WHERE KeyID = 1 AND KeyValue = @matchid
+			)
 	BEGIN
-		SELECT	 @ErrCode	= 1000001
-				,@ErrMsg	= 'Match does not exist!'	
-		RETURN
-	END 
+		SELECT @ErrCode = 1000000
+			,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
-	SELECT @sqlCommand = 'EXEC [dbo].[Admin_Settlement_Refund_FGLG] @matchid = ' + CONVERT(NVARCHAR(10),@MatchId) +
-								 ', @adminid = ' + CONVERT(NVARCHAR(10),@AdminId) + 
-								 ', @LGOnly= ' + CONVERT(NVARCHAR(1),@LastGoalOnly) + 
-								 ', @IsLoopTempTable = ' + CONVERT(NVARCHAR(1),@IsLoopTempTable) +		
-								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
-								 ', @ErrCode = @ErrCode OUTPUT' +
-								 ', @ErrMsg = @ErrMsg OUTPUT' 
-	INSERT INTO Single_WaitingList(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
+		RETURN
+	END
+
+	INSERT INTO dbo.TempVariableNumber (
+		KeyID
+		,KeyValue
+		)
+	VALUES (
+		1
+		,@matchid
+		)
+
+	IF (@@Error = 0)
+	BEGIN
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
+				,@Matchid = @matchid
+				,@KeyID = 1
+				,@ActionID = @ActionID
+				,@Remark = 'ADD SUCCESS'
+		END TRY
+
+		BEGIN CATCH
+			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(error_message(), 400)
+
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
+				,@Matchid = @matchid
+				,@KeyID = 1
+				,@ActionID = @ActionID
+				,@Remark = @Remark
+		END CATCH
+	END
+	ELSE
+	BEGIN
+		SELECT @ErrCode = 1000000
+			,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+
+		RETURN
+	END
+
+	CREATE TABLE #BalanceBefore (
+		custid INT PRIMARY KEY
+		,balance MONEY
+		)
+
+	DECLARE @TotalAccount INT
+		,@TotalAccount_BalanceUpdate INT
+
+	BEGIN
+		INSERT INTO #BalanceBefore
+		SELECT custid
+			,SUM(winlost - actual_stake + playercomm)
+		FROM dbo.bettrans WITH (ROWLOCK)
+		WHERE matchid = @matchid AND bettype = 14
+		GROUP BY custid
+
+		SET @TotalAccount = @@ROWCOUNT
+	END
 END
 
+------
+DECLARE @finalhomescore INT
+	,@finalawayscore INT
+	,@hthomescore INT
+	,@htawayscore INT
+	,@goalrecord VARCHAR(50)
+	,@betstatus NVARCHAR(50)
+	,@matchdate DATETIME
 
+SELECT @matchdate = eventdate
+	,@betstatus = betstatus
+FROM DBPRO.bodb02.dbo.match WITH (NOLOCK)
+WHERE matchid = @matchid
+
+IF @LGOnly = 1 ---refund last goal
+BEGIN
+	SET @betStatus = CASE 
+			WHEN CHARINDEX('FL:', @betstatus) > 0 THEN STUFF(@betStatus, LEN(@betStatus), 1, '0')
+			ELSE @betStatus
+			END -- @Lukas temporary
+END
+ELSE --- refund all FGLG
+BEGIN
+	IF @betStatus = 'Refund'
+		SET @betStatus = 'Refund;'
+	SET @betStatus = CASE 
+			WHEN CHARINDEX('FL:', @betstatus) > 0 THEN SUBSTRING(@betStatus, 1, CHARINDEX(';FL:', @betStatus)) + 'FL:0-0'
+			ELSE ISNULL(@betstatus, '') + 'FL:0-0'
+			END
+END
+
+EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Refund_FGLG'
+	,@MatchID = @matchid
+	,@BetStatus = @betstatus
+
+--EXEC dbo.NAP_Admin_Calculate_RefundFGLG @matchid = @matchid, @LGOnly=@LGOnly, @matchdate=@matchdate
+EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+	,@action = 'REFUND'
+	,@mode = 'FGLG'
+	,@LGOnly = @LGOnly
+	,@matchdate = @matchdate
+
+IF @IsLoopTempTable = 0
+BEGIN
+	-------------------------------------------------------------
+	---         CAPTURE value BALANCE after settlement        ---
+	---------------------------VVVV------------------------------
+	CREATE TABLE #BalanceAfter (
+		custid INT PRIMARY KEY
+		,balance MONEY
+		)
+
+	BEGIN
+		INSERT INTO #BalanceAfter
+		SELECT custid
+			,SUM(winlost - actual_stake + playercomm)
+		FROM dbo.bettrans WITH (ROWLOCK)
+		WHERE matchid = @matchid AND bettype = 14
+		GROUP BY custid
+	END --IF @SkipBalanceUpdate = 0
+
+	-------------------------------------------------------------
+	---                   compare BALANCE                     ---
+	---------------------------VVVV------------------------------
+	CREATE TABLE #Balance (
+		custid INT PRIMARY KEY
+		,balance MONEY
+		,Increased BIT
+		)
+
+	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+
+	INSERT INTO #Balance
+	SELECT b.custid
+		,a.balance - b.balance
+		,CASE 
+			WHEN a.balance > b.balance THEN 1
+			ELSE 0
+			END
+	FROM #BalanceBefore b
+		INNER JOIN #BalanceAfter a ON b.custid = a.custid
+	WHERE b.balance <> a.balance
+
+	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
+
+	INSERT INTO dbo.BalancePendingDebit (
+		custid
+		,balance
+		)
+	SELECT custid
+		,ABS(balance)
+	FROM #Balance
+	WHERE Increased = 0
+
+	INSERT INTO dbo.BalancePendingCredit (
+		custid
+		,balance
+		)
+	SELECT custid
+		,balance
+	FROM #Balance
+	WHERE Increased = 1
+
+	----
+	-- Add Negative Balance into BalanceNegative table 
+	----
+	INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+		[ExecDate]
+		,[MatchID]
+		,[ActionID]
+		,[GroupID]
+		,[CustID]
+		,[Balance]
+		,[StatusID]
+		,[Remark]
+		)
+	SELECT GETDATE()
+		,@MatchID
+		,@ActionID
+		,1 -- Sportsbook Single bet Settlement 
+		,CustID
+		,Balance
+		,0
+		,NULL
+	FROM #Balance WITH (NOLOCK)
+	WHERE Increased = 0
+
+	---------------------------------------------------
+	DROP TABLE #Balance
+
+	DROP TABLE #BalanceBefore
+
+	DROP TABLE #BalanceAfter
+END
+
+DECLARE @LogData NVARCHAR(200)
+
+SELECT @LogData = 'Calculate (Refund FT FGLG) for matchid:' + CAST(@matchid AS NVARCHAR(10)) + CASE 
+		WHEN @LGOnly = 1 THEN ' (LG only)'
+		ELSE ' (All)'
+		END
+
+EXEC dbo.WriteLog_UserLog @AdminID
+	,@LogData
+
+--Write Log Settle
+SELECT @finalhomescore = finalhomescore
+	,@finalawayscore = finalawayscore
+	,@hthomescore = hthomescore
+	,@htawayscore = htawayscore
+	,@goalrecord = goalrecord
+	,@betstatus = betstatus
+FROM DBPRO.bodb02.dbo.match WITH (NOLOCK)
+WHERE matchid = @matchid
+
+SELECT @Remark = 'RefundLGOnly=' + convert(CHAR(1), @LGOnly)
+
+BEGIN TRY
+	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @adminid
+		,@Matchid = @matchid
+		,@ActionID = @ActionID
+		,@finalhomescore = @finalhomescore
+		,@finalawayscore = @finalawayscore
+		,@hthomescore = @hthomescore
+		,@htawayscore = @htawayscore
+		,@GoalRecord = @goalrecord
+		,@betstatus = @betstatus
+		,@Remark = @Remark
+		,@IP = @IP
+END TRY
+
+BEGIN CATCH
+	SELECT @Remark = @Remark + ' ErrMsg=' + left(error_message(), 350)
+
+	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @adminid
+		,@Matchid = @matchid
+		,@ActionID = @ActionID
+		,@finalhomescore = @finalhomescore
+		,@finalawayscore = @finalawayscore
+		,@hthomescore = @hthomescore
+		,@htawayscore = @htawayscore
+		,@GoalRecord = @goalrecord
+		,@betstatus = @betstatus
+		,@Remark = @Remark
+		,@IP = @IP
+END CATCH
+
+-----
+IF @IsLoopTempTable = 0
+BEGIN
+	DELETE
+	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+	WHERE KeyID = 1 AND KeyValue = @matchid
+
+	IF (@@Error = 0)
+	BEGIN
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
+				,@Matchid = @matchid
+				,@KeyID = 1
+				,@ActionID = @ActionID
+				,@Remark = 'DEL SUCCESS'
+		END TRY
+
+		BEGIN CATCH
+			SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
+
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
+				,@Matchid = @matchid
+				,@KeyID = 1
+				,@ActionID = @ActionID
+				,@Remark = @Remark
+		END CATCH
+	END
+	ELSE
+	BEGIN
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
+				,@Matchid = @matchid
+				,@KeyID = 1
+				,@ActionID = @ActionID
+				,@Remark = 'DEL FAILED'
+		END TRY
+
+		BEGIN CATCH
+			SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
+
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
+				,@Matchid = @matchid
+				,@KeyID = 1
+				,@ActionID = @ActionID
+				,@Remark = @Remark
+		END CATCH
+	END
+END
 
 GO
 

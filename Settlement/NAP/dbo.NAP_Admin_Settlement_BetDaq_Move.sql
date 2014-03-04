@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_BetDaq_Move]
+CREATE PROCEDURE [NAP_Admin_Settlement_BetDaq_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
 	@AdminId		INT,

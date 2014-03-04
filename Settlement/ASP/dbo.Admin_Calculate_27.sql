@@ -22,7 +22,7 @@ BEGIN
 	
 	SET NOCOUNT ON
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	IF @@SERVERNAME IN ('DB052','DB054','DB231', 'DB232')  AND EXISTS (SELECT * FROM sys.databases WHERE name = 'LASDB')
 	BEGIN		
 
 		DECLARE @LASCommand NVARCHAR(1000),
@@ -140,9 +140,6 @@ BEGIN
 		statusID NOT IN (101,102)
 
 END
-
-
-
 
 
 GO

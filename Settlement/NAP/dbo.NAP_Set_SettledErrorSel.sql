@@ -1,8 +1,6 @@
-ALTER PROCEDURE [NAP_Set_SettledErrorSel]
-	@AdminId INT,
-	@Top	INT = 10
+CREATE PROCEDURE [NAP_Set_SettledErrorSel] @AdminId INT
+	,@Top INT = 10
 AS
-
 /*	Creator: Kathy
 	Date: 20140108
 	Task: Get error message when settlement failed
@@ -15,38 +13,83 @@ AS
 		
 */
 BEGIN
-	SET NOCOUNT ON 
-	DECLARE @tblTemp TABLE ( AdminId int, MatchId int, Action varchar(10), Message varchar(300), starttime datetime, isRead bit )
+	SET NOCOUNT ON
+
+	DECLARE @numberRow INT
+
+	SET @numberRow = 0
+
+	SELECT @numberRow = COUNT(1)
+	FROM Settled_Message WITH (NOLOCK)
+	WHERE AdminId = @AdminId
+
+	DECLARE @tblTemp TABLE (
+		AdminId INT
+		,MatchId INT
+		,Action VARCHAR(10)
+		,Message VARCHAR(300)
+		,starttime DATETIME
+		,isRead BIT
+		)
+
 	IF @Top = 0
 	BEGIN
-		Insert INTO @tblTemp (AdminId, MatchId, Action, Message, starttime, isRead)
-			SELECT AdminId, MatchId, Action, Message, Starttime, IsRead
-			FROM Settled_Message with(NOLOCK)
-			WHERE AdminId = @AdminId
-			AND Message IS NOT NULL 
-			ORDER BY IsRead DESC, Starttime DESC
-
-	END 
+		INSERT INTO @tblTemp (
+			AdminId
+			,MatchId
+			,Action
+			,Message
+			,starttime
+			,isRead
+			)
+		SELECT AdminId
+			,MatchId
+			,Action
+			,Message
+			,Starttime
+			,IsRead
+		FROM Settled_Message WITH (NOLOCK)
+		WHERE AdminId = @AdminId AND Message IS NOT NULL
+		ORDER BY IsRead
+			,Starttime DESC
+	END
 	ELSE
 	BEGIN
-		Insert INTO @tblTemp (AdminId, MatchId, Action, Message, starttime, isRead)
-			SELECT TOP(@Top) AdminId, MatchId, Action, Message, Starttime, IsRead
-			FROM Settled_Message with(NOLOCK)
-			WHERE AdminId = @AdminId
-			AND Message IS NOT NULL
-			ORDER BY IsRead DESC, Starttime DESC
+		INSERT INTO @tblTemp (
+			AdminId
+			,MatchId
+			,Action
+			,Message
+			,starttime
+			,isRead
+			)
+		SELECT TOP (@Top) AdminId
+			,MatchId
+			,Action
+			,Message
+			,Starttime
+			,IsRead
+		FROM Settled_Message WITH (NOLOCK)
+		WHERE AdminId = @AdminId AND Message IS NOT NULL
+		ORDER BY IsRead
+			,Starttime DESC
 	END
+
+	SELECT @numberRow AS NumberRow
 
 	SELECT *
 	FROM @tblTemp
 
-	UPDATE Settled_Message WITH(UPDLOCK, ROWLOCK)
+	UPDATE Settled_Message WITH (UPDLOCK, ROWLOCK)
 	SET isRead = 1
-	WHERE AdminId IN (SELECT AdminId FROM @tblTemp)
-	AND MatchId IN (SELECT MatchId FROM @tblTemp)
-
+	WHERE AdminId IN (
+			SELECT AdminId
+			FROM @tblTemp
+			) AND MatchId IN (
+			SELECT MatchId
+			FROM @tblTemp
+			)
 END
-
 
 GO
 

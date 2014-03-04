@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchSelNumberGameDetail]
+CREATE PROCEDURE [NAP_Set_MatchSelNumberGameDetail]
 	@matchid int	
 AS
 /*
@@ -37,8 +37,13 @@ FROM
 ORDER BY b.seq
   
   
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelNumberGameDetail] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_Set_MatchSelNumberGameDetail] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelNumberGameDetail] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [NAP_Set_MatchSelNumberGameDetail] TO [vnteam] AS [dbo]
 GO
+
+

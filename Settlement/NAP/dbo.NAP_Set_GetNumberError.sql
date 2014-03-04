@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_GetNumberError]
+CREATE PROCEDURE [NAP_Set_GetNumberError]
 	@AdminId		 INT,
 	@NumberError INT = 0 OUTPUT
 AS

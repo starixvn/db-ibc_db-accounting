@@ -1,0 +1,60 @@
+CREATE PROCEDURE [NAP_Admin_Calculate_Undo] 
+	@matchid int
+As
+/*
+	Created: Kathy
+	Date: 20140213
+	Task : unsettle a match, called by main SP Acc_Settlement_Undo, uses Rep execution
+	DB: DBTRANS.bodb02
+	Original: Admin_Calculate_Undo
+
+	Revisions:
+		
+	Param's Explanation:
+			• @matchid: matchid of match to be unsettled
+*/
+BEGIN
+	SET NOCOUNT ON 
+	--- LAS settlement 
+	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	BEGIN		
+
+		DECLARE @LASCommand NVARCHAR(1000),
+				@createdDate DATETIME
+
+		SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_Undo] @matchid = ' + CONVERT(NVARCHAR(10),@matchid)							
+				,@createdDate = GETDATE()
+
+		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand]	 @SPName		= 'Admin_Calculate_Undo'
+															,@SQLCommand	= @LASCommand
+															,@CreatedDate	= @createdDate
+															,@StatusID		= 0 -- waiting
+															,@MatchID		= @matchid
+															,@Bettype		= 0 -- hardcode
+															,@Status		= 'waiting'
+															,@BetCount		= 0		 
+	END
+
+	WHILE 1=1
+	BEGIN
+		UPDATE TOP (10000) dbo.bettrans with (ROWLOCK, UPDLOCK)
+		SET
+			ruben = 0, status = 'running', statusID = 0,
+			winlost = 0, awinlost = 0, mwinlost = 0, swinlost = 0,
+			playercomm = 0, comm = 0, acomm = 0, scomm = 0
+		WHERE
+			matchid = @matchid AND 
+			--status NOT IN ('running','waiting','void','reject')
+			statusID NOT IN (0,1,102,101)
+			and bettype not between 1301 and 1334 -- exclude sporting solution product
+    
+		IF @@ROWCOUNT < 10000 BREAK
+	END
+END
+
+GO
+
+GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_Undo] TO [vnteam] AS [dbo]
+GO
+
+

@@ -1,17 +1,17 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_MP] 
+CREATE PROCEDURE [NAP_Admin_Settlement_MP_Push] 
 (
 	@MatchIds	VARCHAR(4000),
 	@AdminId	INT,
-	@Action		VARCHAR(10) = 'CAL',
+	@Action		VARCHAR(20) = 'CAL',
 	@IP			VARCHAR(15) = '',
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg		NVARCHAR(200) = '' OUTPUT
 )
 AS
-/*	Creator: 20140113@Kathy
+/*	Creator: 20140213@Kathy
 	Task: Main SP for Mix parly settlement
 	DB: DBTXN/BODB02
-	ORIGINAL: 
+	ORIGINAL: Admin_Settlement_MP
 
 	Revisions:		
 						   
@@ -35,7 +35,7 @@ BEGIN
 	SELECT distinct matchid, matchcode, finalhomescore, finalawayscore, hthomescore, htawayscore
 	FROM DBPRO.BODB02.dbo.Match with(rowlock)
 	WHERE matchid IN (SELECT val FROM dbo.strSplit(@matchids,','))	
-		AND matchid NOT IN (select matchid from Parlay_WaitingList WITH(NOLOCK) WHERE IsCalculating <> 2)
+		AND matchid NOT IN (select matchid from Parlay_Calculate_Queue WITH(NOLOCK) WHERE IsCalculating <> 2)
 		
 	IF EXISTS (SELECT 1 FROM @match	WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL)
 	BEGIN			
@@ -49,7 +49,7 @@ BEGIN
 	END
 	
 
-	INSERT INTO dbo.Parlay_WaitingList (matchid, isCalculating, creator, ip, starttime, action)
+	INSERT INTO dbo.Parlay_Calculate_Queue (matchid, isCalculating, creator, ip, starttime, action)
 	SELECT matchid, 0, @AdminId, @IP, CURRENT_TIMESTAMP, @action
 	FROM @match		
 		
@@ -64,12 +64,13 @@ BEGIN
 END
 
 
+
 GO
 
-GRANT EXECUTE ON [NAP_Admin_Settlement_MP] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO
 
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_MP] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_MP_Push] TO [vnteam] AS [dbo]
 GO
 
 

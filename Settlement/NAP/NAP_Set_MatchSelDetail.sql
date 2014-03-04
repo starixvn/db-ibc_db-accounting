@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_MatchSelDetail]
+CREATE PROCEDURE [NAP_Set_MatchSelDetail]
 	@matchid int,
 	@excludeRefundFGLG	bit = 0
 AS
@@ -39,6 +39,7 @@ BEGIN
 	BEGIN
 		IF EXISTS (select top 1 1 from bettrans with (nolock) where matchid = @matchid and bettype = 14 AND statusID not in (101,102))
 			SELECT @IsExistFGLG = 1
+			
 		ELSE
 			IF EXISTS (select top 1 1 from bettransm with (nolock) where matchid = @matchid and bettype = 14 AND statusID not in (101,102))
 				SELECT @IsExistFGLG = 1

@@ -1,17 +1,16 @@
-CREATE PROCEDURE [dbo].[NAP_Set_LeagueSel]
+CREATE PROC [NAP_Set_LeagueSel]
 	@FromDate datetime,
 	@ToDate datetime,
 	@sporttype tinyint = 0
 AS
 
-/*	Creator:Dan
-	Date: 20120925
+/*	Creator: Kathy
+	Date: 20131223
 	Task: select league to settle
 	DB: DB02.bodb02
-	Original: Acc_Set_LeagueSel
 	
-	Rivision:			
-	
+	Revision:	
+		
 	Param's Explanation:
 		
 		
@@ -24,14 +23,25 @@ begin
 		inner join league with (nolock) on match.leagueid = league.leagueid
 	where match.eventdate between @FromDate and @ToDate and match.sporttype <> 162
 
-	UNION 
+	UNION ALL
 	
 	SELECT DISTINCT o.leagueid, l.leaguename, l.sporttype
 	FROM outright o (nolock)
 		INNER JOIN league l (nolock) on o.leagueid = l.leagueid 
 	WHERE o.eventdate between @FromDate and @ToDate
 		and l.sporttype BETWEEN  151 AND 153 
+	
+	
+	UNION ALL
+	--- virtual horse racing
+	SELECT DISTINCT r.leagueid, l.leaguename, l.sporttype
+	FROM VSoutright o (nolock)
+		INNER JOIN VSRaceinfo r WITH(NOLOCK) ON o.eventID = r.eventID
+		INNER JOIN league l (nolock) on r.leagueid = l.leagueid 
+	WHERE o.eventdate between @FromDate and @ToDate
+		and l.sporttype in (181,182,184)
 	order by sporttype, leaguename
+	
 end 
 else if @sporttype IN (151,152,153) 
 begin 
@@ -42,6 +52,16 @@ begin
 		and l.sporttype =  @sporttype 
 	order by sporttype, leaguename
 end 
+else if @sporttype in (181,182,184)
+begin 
+	SELECT DISTINCT r.leagueid, l.leaguename, l.sporttype
+	FROM VSoutright o (nolock)
+		INNER JOIN VSRaceinfo r WITH(NOLOCK) ON o.eventID = r.eventID
+		INNER JOIN league l (nolock) on r.leagueid = l.leagueid 
+	WHERE o.eventdate between @FromDate and @ToDate
+		and l.sporttype = @sporttype
+	order by sporttype, leaguename
+end 
 else 
 begin 
 	select DISTINCT league.leagueid, leaguename, match.sporttype
@@ -50,9 +70,14 @@ begin
 	where match.eventdate between @FromDate and @ToDate
 		and match.sporttype = @sporttype
 	order by leaguename
-end 
+end
 
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_LeagueSel] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_Set_LeagueSel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_LeagueSel] TO [VNTeam]
+
+GRANT VIEW DEFINITION ON [NAP_Set_LeagueSel] TO [vnteam] AS [dbo]
+GO
+
+

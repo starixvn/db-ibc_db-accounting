@@ -259,6 +259,7 @@ ORDER BY OrderNo, LicenseeName, bettype, LiveIndicator
 
 DROP TABLE #TmpBettrans
 
+
 GO
 
 GRANT EXECUTE ON [NAP_Rpt_TicketsListing] TO [bodbAdminNet] AS [dbo]

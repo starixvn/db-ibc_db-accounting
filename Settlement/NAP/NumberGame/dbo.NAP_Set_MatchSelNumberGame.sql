@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchSelNumberGame]
+CREATE PROCEDURE [NAP_Set_MatchSelNumberGame]
 	@FromDate		DATETIME,
 	@ToDate			DATETIME = NULL,
 	@LeagueID		INT,
@@ -35,7 +35,11 @@ SELECT @matchcode = ISNULL(@matchcode,''), @LeagueID = ISNULL(@LeagueID,0)
 -- if entering matcode, ignore other params (excep FromDate, ToDate)
 IF (@matchcode <> '')
 BEGIN
-	SELECT @eventstatus= '', @isRefund=0, 
+	SELECT @eventstatus= '', 
+			--@isRefund=CASE @statusid WHEN 4 THEN 1 
+			--						WHEN 0 THEN NULL
+			--						ELSE 0	END,  
+			@isRefund = NULL,
 			@LeagueID = CASE WHEN @isReLoad = 1 THEN @LeagueID ELSE 0 END -- reload partial; search on LeagueID, not reload: get all leagues
 	BEGIN TRY	
 		SET @matchid = CASE WHEN ISNUMERIC(@matchcode) = 1 THEN CAST(@matchcode AS INT) ELSE NULL END
@@ -102,8 +106,13 @@ WHERE (m.eventstatus NOT IN ('internal','running')
 ORDER BY m.leagueid, m.matchid, b.seq
   
   
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelNumberGame] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [NAP_Set_MatchSelNumberGame] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelNumberGame] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [NAP_Set_MatchSelNumberGame] TO [vnteam] AS [dbo]
 GO
+
+

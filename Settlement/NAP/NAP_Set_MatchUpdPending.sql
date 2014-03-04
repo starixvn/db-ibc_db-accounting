@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_MatchUpdPending]
+CREATE PROCEDURE [NAP_Set_MatchUpdPending]
 	@matchid int,
 	@IsPending bit,
 	@userID int 
@@ -21,7 +21,7 @@ SELECT	@dbisPending = isPending, @dbIsHTCal = IsHTCal, @dbcalculate = calculate
 FROM	Match_remark WITH (NOLOCK) 
 WHERE	matchid = @matchid 
 
-EXEC updateMatch_remark @matchid, 'IsP', @IsPending
+EXEC NAP_updateMatch_remark @matchid, 'IsP', @IsPending
 
 --write log
 DECLARE @LogData NVARCHAR(200)
