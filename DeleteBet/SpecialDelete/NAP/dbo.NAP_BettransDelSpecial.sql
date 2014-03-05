@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [NAP_BettransDelSpecial]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId INT,
 	@FromTransId BIGINT, 
 	@ToTransId BIGINT, 
@@ -43,6 +43,7 @@ AS
 
 	Revisions:
 		- 20140102@Kathy: Add username2 column [Redmine:#10270]
+		- 20140121@Elodie: Apply LAS system for special delete function [Redmine:#10701]
 
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -235,7 +236,7 @@ BEGIN
 				@MatchId = @MatchId, 
 				@KeyID = @KeyID,
 				@ActionID = 0, 
-				@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
+				@Remark = @Remark
 		END CATCH
 			RETURN
 	END CATCH
@@ -676,8 +677,7 @@ BEGIN
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
 	WHERE c.custid IN (SELECT custid FROM @FoobetCust)			     					   
 	ORDER BY transid    
-
-	DROP TABLE #BetDelete
+	
 	DROP TABLE #BeforeUpd
 	DROP TABLE #AfterUpd
 
@@ -721,6 +721,101 @@ BEGIN
 					@Remark = @Remark
 			END CATCH
 		END	
+
+	--20140121@Elodie: Apply LAS system for special delete function [Redmine:#10701]
+	DECLARE @TransIdsLAS VARCHAR(MAX), @strLASAgent VARCHAR(500)
+	DECLARE @tblTransLAS TABLE(transid VARCHAR(20))
+	DECLARE @LASCust TABLE (custid INT)
+	DECLARE @AgentUpline TABLE (TransID BIGINT,TargetID INT,TargetName VARCHAR(50),IsAgent BIT)
+
+	exec DBLAS.LASDB.dbo.Las_Get_recommend @StringRec = @strLASAgent output
+
+	INSERT INTO @LASCust
+	SELECT CONVERT(INT, val) FROM dbo.strSplit(ISNULL(@strLASAgent, ''), '^')
+	
+	INSERT INTO @tblTransLAS(transid)
+	SELECT cast(b.transid as varchar(20))
+	FROM #BetDelete b 
+	WHERE b.recommend IN (SELECT custid FROM @LASCust)
+		AND b.transid IN (SELECT transid FROM @tblTransDeposit)
+
+	;with tmp as
+	(Select stuff(
+			(
+			Select '^ ' + T2.transid
+			From @tblTransLAS As T2
+			Order By T2.transid
+			For Xml Path(''), type
+			).value('.', 'varchar(max)'), 1, 2, '') As val
+	From @tblTransLAS As T1
+	)
+	SELECT @TransIdsLAS = val + '^' from tmp
+	IF @TransIdsLAS IS NOT NULL
+	BEGIN
+		BEGIN TRY
+			DECLARE @ErrMsgLAS NVARCHAR(200), @ErrCodeLAS INT
+			EXEC DBLAS.LASDB.dbo.LAS_BettransDelSpecial @UserID = @UserID, @MatchID = @MatchID, @TransID = @TransIdsLAS, @IP = @IP, @ErrCode = @ErrCodeLAS OUTPUT, @ErrMsg = @ErrMsgLAS OUTPUT		
+			IF @ErrCodeLAS > 50000 -- error from LAS_BettransDelSpecial
+			BEGIN
+				SELECT @Remark = 'RUN FAILED SPName=LAS_BettransDelSpecial ErrCode=' + cast(@ErrCodeLAS as varchar(10)) + ' ErrMsg=' + @ErrMsgLAS
+				BEGIN TRY
+					EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = @Remark
+				END TRY
+				BEGIN CATCH
+					EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = @Remark
+				END CATCH
+			END
+			ELSE -- no error
+				BEGIN TRY
+					EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = 'CALL SUCCESS SPName=LAS_BettransDelSpecial'
+				END TRY
+				BEGIN CATCH
+					EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = 'CALL SUCCESS SPName=LAS_BettransDelSpecial'
+				END CATCH			
+		END TRY
+		BEGIN CATCH -- exception			
+			SELECT TransID, TargetID, TargetName, IsAgent FROM @AgentUpline
+
+			SELECT @Remark = 'CALL FAILED SPName=LAS_BettransDelSpecial ErrCode=' + cast(ERROR_NUMBER() as varchar(10)) + ' ErrMsg=' + LEFT(error_message(), 400)
+			BEGIN TRY			
+				EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = @UserID, 
+								@Matchid = @matchid, 
+								@ActionID = 2902, 
+								@Remark = @Remark
+			END TRY
+			BEGIN CATCH
+				EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = @UserID, 
+								@Matchid = @matchid, 
+								@ActionID = 2902, 
+								@Remark = @Remark
+			END CATCH
+		END CATCH
+	END
+	ELSE
+	BEGIN
+		SELECT TransID, TargetID, TargetName, IsAgent FROM @AgentUpline
+	END
+
+	DROP TABLE #BetDelete
+
 	SET NOCOUNT OFF
 END
 
