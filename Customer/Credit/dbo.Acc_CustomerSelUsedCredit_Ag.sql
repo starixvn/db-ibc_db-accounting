@@ -16,7 +16,7 @@ WHERE c.recommend = @agentID
 	AND c.roleid = 1
 ORDER BY
 	ci.closed ASC, 
-	c.Username
+	c.Username   
   
 
 GO
