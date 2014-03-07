@@ -1,28 +1,21 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_BetListbyIP_Username]    Script Date: 09/03/2013 22:42:08 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_BetListbyIP_Username    Script Date: 4/10/2013 12:04:30 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_BetListbyIP_Username    Script Date: 3/25/2013 1:37:29 PM ******/
-
-ALTER PROCEDURE [dbo].[Acc_BetListbyIP_Username]
+﻿ALTER PROCEDURE [dbo].[Acc_BetListbyIP_Username]
 	@fromdate	DATETIME,
 	@ip			VARCHAR(15)
 AS
-	/*	Created by: Phuong Dao
-		Date: 2009-03-18
-		Task: Total bet by IP and Username 
-		DB: DB06.bodb02
-		- 20100611@Henry: Change mix-parlay match from 0 to 9
-		- 20110516@Lukas: re-arrange bettype
-		- 20110802@Johnson: Add new bettype combination mix parlay
-		- 20120626@Lukas: check case of matchid = orid
-		- 20130904@Daniel: Remove condition bettype < 19001 when querying bettrans14 since it's useless => optimize performance
-	*/
- 
+/*	Created by: Phuong Dao
+	Date: 2009-03-18
+	Task: Total bet by IP and Username 
+	DB: DBACC/bodb02
+
+	Revisions:
+	- 20100611@Henry: Change mix-parlay match from 0 to 9
+	- 20110516@Lukas: re-arrange bettype
+	- 20110802@Johnson: Add new bettype combination mix parlay
+	- 20120626@Lukas: check case of matchid = orid
+	- 20130904@Daniel: Remove condition bettype < 19001 when querying bettrans14 since it's useless => optimize performance
+	- 20140303@Elodie: Add Keno product [Redmine:#12756]
+*/
+ BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE @min_date	SMALLDATETIME, 
@@ -33,6 +26,21 @@ AS
 	SELECT @min_date = min(winlostdate), @max_date = max(winlostdate) FROM bettrans with (nolock) WHERE bettype < 19001
 	SELECT @min_date14 = min(winlostdate), @max_date14 = max(winlostdate) FROM bettrans14 with (nolock)
 	
+	DECLARE @UserTicketTmp TABLE (custid INT, totalBet INT, Type TINYINT) --Type: 1: Ticket in bettrans, 2: Ticket in translog (for Keno)
+	INSERT INTO @UserTicketTmp (custid, totalBet, Type)
+	SELECT	custid, COUNT(custid), 1
+	FROM	dbo.bettrans WITH (NOLOCK)
+	WHERE   winlostdate = @fromdate 
+			AND bettype < 19001
+			AND ip = @ip
+	GROUP BY custid	
+	UNION ALL 
+	SELECT	custid, COUNT(custid), 2
+	FROM	dbo.translog WITH (NOLOCK)
+	WHERE   winlostdate = @fromdate 
+			AND gameid between 1501 and 1599
+			AND ip = @ip
+	GROUP BY custid	
 
 	CREATE TABLE #tmpUserBet(	custid		INT ,
 								soccerBet	INT DEFAULT 0,
@@ -43,11 +51,8 @@ AS
 	IF @fromdate >=@min_date AND @fromdate <= @max_date
 	BEGIN
 		INSERT  #tmpUserBet( custid, totalBet) 
-		SELECT	custid, COUNT(custid) 
-		FROM	dbo.bettrans WITH (NOLOCK)
-		WHERE   winlostdate = @fromdate 
-				AND bettype < 19001
-				AND ip = @ip
+		SELECT	custid, sum(totalBet)
+		FROM	@UserTicketTmp		
 		GROUP BY custid	
 		
 		UPDATE	#tmpUserBet SET soccerBet = tmpSoccerBet.totalSoccer
@@ -138,6 +143,8 @@ AS
 	ORDER BY c.username
   
 	DROP TABLE #tmpUserBet
+END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListbyIP_Username] TO [bodbAdminNet] AS [dbo]
 GO

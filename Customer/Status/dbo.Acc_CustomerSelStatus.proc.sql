@@ -27,9 +27,8 @@ Revisions:
 	- 20120927@Sophia: Get DoubleCommLosing	
 	- 20130723@Jamie: Change Alias DB03 to DBPOLICY
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
-	- 20140102@Johnson: Add opus casino					
-	- 20140303@Kathy: Get HideKeno (from 1501 -> 1599) [Redmine:#12691]
-
+	- 20140303@Kathy: Get HideKeno [Redmine:#12691]
+						
 Param's Explanation:
 • @CustID: customer id.   
 */
@@ -126,12 +125,12 @@ SELECT ISNULL(reject,0) AS Suspend,
 	   ISNULL(HideVirtualSports,0) as HideVirtualSports,
 	   ISNULL(DoubleCommLosing,0) as DoubleCommLosing,
 	   ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds,
-	   ISNULL(DisableOpusCasino,0) AS DisableOpusCasino,
-	   ISNULL(SyncOpusCasino,0) AS SyncOpusCasino,
-	   ISNULL(ci.HideKeno,0) as HideKeno
+	   ISNULL(ci.HideKeno,0)as HideKeno
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 WHERE ci.CustID = @CustID
+
+
 
 
 

@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_AllStatement_Full]    Script Date: 3/7/2014 4:06:55 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
 	@custid int,
 	@fromdate datetime,
 	@todate datetime,
@@ -39,6 +46,8 @@
 		- 20120817@Lukas: modify code to retrieve all transactions have accdate greater than balanceupdate
 		- 20120918@Kiwi: change to use db052
 		- 20130129@Dan: add param to show/hide exchange rate (use for external acc), change linked server DB06 to DBRPT
+		- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
+		- 20140305@Dom: Update outstanding for keno
  */
 SET NOCOUNT ON
 
@@ -114,6 +123,20 @@ BEGIN
 				ELSE 131 END,
 				CASE WHEN bettype <= 19999 THEN NULL ELSE transdate END,
 				CASE WHEN bettype <= 19999 THEN '' ELSE transdesc END
+			UNION ALL
+			SELECT winlostdate, 1501, 
+					0 StatusID,
+					NULL transdate,
+					'' transdesc,
+					SUM(stake),
+					SUM(actual_stake),
+					0,
+					0
+			FROM translog(NOLOCK)
+			WHERE custid = @custid
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
+				AND statusID = 0
+			GROUP BY winlostdate
 
 
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
@@ -140,7 +163,7 @@ BEGIN
 				'BET' transtype,3, 'Outstanding Bet' transdesc,  
 				'' Creator,	 NULL,   '', NULL,	   0
 		FROM	@bet  
-		WHERE	statusID = 0  AND bettype NOT IN (23001,23002,23101,23102) -- 20120405@Hurri
+		WHERE	statusID = 0  AND bettype NOT IN (23001,23002,23101,23102,23201,23202) -- 20120405@Hurri
 		GROUP BY winlostdate 
 
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, 
@@ -200,7 +223,7 @@ BEGIN
 		where 
 			bettype >= 20000 
 			and bettrans.custid=@custid 
-			and bettype.typeid NOT IN (23001,23002,23101,23102) AND (winlost-actual_stake) <> 0 
+			and bettype.typeid NOT IN (23001,23002,23101,23102,23201,23202) AND (winlost-actual_stake) <> 0 
 			and winlostdate between @_FromDate and @_ToDate 
 		group by typenamee,
 				transdesc + case when @showExchangeRate = 1 then ' - Ex.Rate: ' + cast(actualrate as varchar(10)) else '' end
@@ -252,6 +275,7 @@ BEGIN
 				--and eventdate between @_FromDate and @_ToDate 
 				and eventdate between @_FromDate and @MoveBetDay 
 		group by eventdate
+
 	END
 
 	-- AGENT
@@ -549,6 +573,8 @@ SELECT	accdate, refno,totalamt,transtype,transtypeid,transdesc,creator
 FROM @StatementTable
 where (accdate >= @fromdate_bk OR transdesc = 'ACCUMULATED BALANCE')
 order by accdate, case when transdesc like '%opening balance%' then 1 else 2 end, transdesc
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbAdminNet]
