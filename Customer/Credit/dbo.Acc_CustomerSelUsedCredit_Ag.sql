@@ -17,7 +17,7 @@ WHERE c.recommend = @agentID
 ORDER BY
 	ci.closed ASC, 
 	c.Username
-
+  
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelUsedCredit_Ag] TO [bodbAdminNet]
