@@ -16,7 +16,7 @@ Revisions:
 	- 20140305@Dom: Update outstanding for keno
 Param's Explanation:
 	
-*/
+*/  
  SET NOCOUNT ON 
  DECLARE @NegativeBetEffectiveDate datetime,@TranslogOT money
  SET @NegativeBetEffectiveDate='2011-09-01'
