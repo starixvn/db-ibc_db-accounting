@@ -577,7 +577,7 @@ order by accdate, case when transdesc like '%opening balance%' then 1 else 2 end
 
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbAdminNet]   
 GO
 GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbExtAccNet]
 GO
