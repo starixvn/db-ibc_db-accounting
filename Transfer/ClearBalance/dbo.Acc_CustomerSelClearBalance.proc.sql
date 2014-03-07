@@ -6,28 +6,30 @@ SET NOCOUNT ON
 /*
 Created: 
 Task : Clear Balance
-DB: DB502.bodb02
+DB: DBACC.bodb02
 Original:
 
 Revisions:
 	- 20100709@Khoa: add more column SyncCasino
 	- 20110517@Lukas: re-arrange bettype
 	- 20110830@Jamie: COUNT phonebetting's negative stake as positive number
+	- 20140305@Dom: Update outstanding for keno
 Param's Explanation:
 	
 */
  SET NOCOUNT ON 
- DECLARE @NegativeBetEffectiveDate datetime
+ DECLARE @NegativeBetEffectiveDate datetime,@TranslogOT money
  SET @NegativeBetEffectiveDate='2011-09-01'
  DECLARE @currentDate datetime 
  SELECT @currentDate = convert(varchar(10), current_timestamp, 120)
+
  SELECT 
 	c.username,
 	c.custid,
 	c.closed,
 	c.firstname,
 	c.lastname,
-	isnull(b.outstanding,0) outstanding,
+	isnull(b.outstanding,0)+ISNULL(translog.TranslogOT,0) outstanding,
 	isnull(b.balance,0) balance,
 	(isnull(b.balance,0) - isnull(today_balance.y_balance,0)) yesterday_balance,
 	c.credit AS credit,
@@ -67,11 +69,12 @@ Param's Explanation:
 				AND winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)
 		  GROUP BY custid
 		) today_balance on c.custid = today_balance.custid 
+	LEFT JOIN 
+		(
+			SELECT TranslogOT = SUM(ABS(actual_stake)),
+					custid
+			 FROM translog(NOLOCK) WHERE recommend = @custid
+			 GROUP BY custid
+		) translog on translog.custid = c.custid
 
 ORDER BY closed, username
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelClearBalance] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelClearBalance] TO [bodbExtAccNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelClearBalance] TO [vnteam]
