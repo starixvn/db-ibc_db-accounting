@@ -6,6 +6,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
+
 ALTER PROCEDURE [dbo].[Task_DailyRptLicWinloss2_archive]
 	@winlostdate SMALLDATETIME
 AS
@@ -24,6 +25,7 @@ Revisions:
    - 20120109@Henry: sum wap & smartphone betfrom
    - 20130903@Jim: support Virtual Horse Racing
    - 20131128@Jim: revert code to Group by All Virtual Sport into sporttypeID=180
+   - 20140310@Jim: offer KENO
  */
 
 SET NOCOUNT ON 
@@ -32,11 +34,11 @@ DECLARE @ABSDate SMALLDATETIME
 SET @ABSDate = '2011-09-01'
 
 --Delete old records
-DELETE FROM db052.bodb_Licensee.dbo.rptLicWinloss2 WITH (ROWLOCK,UPDLOCK)
+DELETE FROM DBLIC.bodb_Licensee.dbo.rptLicWinloss2 WITH (ROWLOCK,UPDLOCK)
 WHERE winlostdate = @winlostdate
 
 --Member Level
-INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
+INSERT INTO DBLIC.bodb_Licensee.dbo.rptLicWinloss2
 	(
 	[winlostdate],[username],[username2],[custid],[roleid],[recommend],[mrecommend],[srecommend],[turnover]
     ,[winlost],[awinlost],[mwinlost],[swinlost],[playercomm],[comm],[acomm],[scomm],[winlostvirtual],[commvirtual],[BetCount],[Currency],[sporttype],[bettype],[statusID],[isBA],[isMobile],[betfrom] 
@@ -93,7 +95,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 	FROM
 		bodb_archive.dbo.bettrans_bk bettrans WITH (NOLOCK,INDEX(CIX_winlostdate))
 		INNER JOIN bodb02.dbo.customer WITH (NOLOCK) ON bettrans.custid=customer.custid
-		LEFT JOIN db052.bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON bettrans.transid = BA.transid
+		LEFT JOIN DBLIC.bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON bettrans.transid = BA.transid
 	WHERE
 		bettrans.winlostdate = @winlostdate AND
 		customer.srecommend IN (SELECT custid FROM bodb02.dbo.f_DepSuper_1('All')) AND
@@ -132,7 +134,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 
 
 --Agent Level (sum on member)
-INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
+INSERT INTO DBLIC.bodb_Licensee.dbo.rptLicWinloss2
         (
         [winlostdate],[username],[username2],[custid],[roleid],[recommend],[mrecommend],[srecommend],[turnover]
         ,[winlost],[awinlost],[mwinlost],[swinlost],[playercomm],[comm],[acomm],[scomm],[winlostvirtual],[commvirtual],[BetCount],[Currency],[sporttype],[bettype],[statusID],[isBA],[isMobile],[betfrom]
@@ -159,7 +161,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		b.isMobile,
 		b.betfrom
     FROM
-        db052.bodb_Licensee.dbo.rptLicWinloss2 b (nolock)
+        DBLIC.bodb_Licensee.dbo.rptLicWinloss2 b (nolock)
         INNER join bodb02.dbo.customer c (nolock) ON b.recommend = c.custid
     WHERE
         b.winlostdate = @winlostdate
@@ -176,7 +178,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		b.betfrom
 
     --Master (Sum on member)
-    INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
+    INSERT INTO DBLIC.bodb_Licensee.dbo.rptLicWinloss2
         (
         [winlostdate],[username],[username2],[custid],[roleid],[recommend],[mrecommend],[srecommend],[turnover]
         ,[winlost],[awinlost],[mwinlost],[swinlost],[playercomm],[comm],[acomm],[scomm],[winlostvirtual],[commvirtual],[BetCount],[Currency],[sporttype],[bettype],[statusID],[isBA],[isMobile],[betfrom]
@@ -203,7 +205,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		b.isMobile,
 		b.betfrom
     FROM
-        db052.bodb_Licensee.dbo.rptLicWinloss2 b (nolock)
+        DBLIC.bodb_Licensee.dbo.rptLicWinloss2 b (nolock)
         INNER join bodb02.dbo.customer c (nolock) ON b.mrecommend = c.custid
     WHERE
         b.winlostdate = @winlostdate
@@ -220,7 +222,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		b.betfrom
 
     --Super
-    INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
+    INSERT INTO DBLIC.bodb_Licensee.dbo.rptLicWinloss2
         (
         [winlostdate],[username],[username2],[custid],[roleid],[recommend],[mrecommend],[srecommend],[turnover]
         ,[winlost],[awinlost],[mwinlost],[swinlost],[playercomm],[comm],[acomm],[scomm],[winlostvirtual],[commvirtual],[BetCount],[Currency],[sporttype],[bettype],[statusID],[isBA],[isMobile],[betfrom]
@@ -247,7 +249,7 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		b.isMobile,
 		b.betfrom
     FROM
-        db052.bodb_Licensee.dbo.rptLicWinloss2 b (nolock)
+        DBLIC.bodb_Licensee.dbo.rptLicWinloss2 b (nolock)
         INNER join bodb02.dbo.customer c (nolock) ON b.srecommend = c.custid
     WHERE
         b.winlostdate = @winlostdate
@@ -262,5 +264,3 @@ INSERT INTO db052.bodb_Licensee.dbo.rptLicWinloss2
 		b.isBA,
 		b.isMobile,
 		b.betfrom
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_DailyRptLicWinloss2_archive] TO [vnteam] AS [dbo]
