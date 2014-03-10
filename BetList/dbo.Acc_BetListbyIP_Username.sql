@@ -39,7 +39,7 @@ AS
 	FROM	dbo.translog WITH (NOLOCK)
 	WHERE   winlostdate = @fromdate 
 			AND gameid between 1501 and 1599
-			AND ip = @ip
+			AND ip = @ip AND statusid = 0
 	GROUP BY custid	
 
 	CREATE TABLE #tmpUserBet(	custid		INT ,
