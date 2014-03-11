@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_Old]  
+﻿CREATE PROCEDURE [dbo].[Acc_BetsSelBetList_Old]  
 	@FromDate datetime,  
 	@ToDate datetime,  
 	@CustID int,
@@ -41,6 +41,7 @@ Revisions:
 	- 20130227@Elodie: Add Virtual HR product
 	- 20130408@Lukas: return value odds.teamid to alias name homeid instead of awayid
 	- 20130724@Elodie: Get winlostdate field
+	- 20140306@Dom: Add Keno
 */	
 SET NOCOUNT ON	
 Declare @Data TABLE (
@@ -184,7 +185,7 @@ BEGIN
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid and
 				b.bettype < 19001 and
-				b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+				b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) and b.bettype NOT BETWEEN 1501 and 1599--20120626@Elodie: exclude outright, HR from sportbook
 		
 		--Mix Parlay
 		INSERT INTO @Data
@@ -449,6 +450,72 @@ BEGIN
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid  
 				AND bettype = 73
+
+		--keno
+		INSERT INTO @Data
+		select 
+			 bettype,   
+			 b.betid transid,   
+			 isnull(b.BetID,0),
+			 b.refno,
+			 CONVERT(varchar(50), b.refno) as matchcode,   
+			 '' as race,
+			 '' as eventdate, 
+			 0,0,
+			 sdiscount,
+			 adiscount,
+			 discount,	 
+			 0 as homeid,   
+			 0 as awayid,  
+			 '' settleTime, 
+			 b.hdp1,
+			 b.hdp2,
+			 b.odds,   
+			 0 finalodds,
+			 0 finalodds2,
+			 '' OddsType,  
+			 b.status,  
+			 CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus, 
+			 b.stake,  
+			 b.actual_stake, 
+			 b.transdate,   
+			 d.ChoiceId betteam,   
+			 b.spositiontaking,  
+			 b.mpositiontaking,   
+			 b.apositiontaking, 
+			 0 spositiontaking2,
+			 0 mpositiontaking2,
+			 0 apositiontaking2,   
+			 b.liveindicator,   
+			 b.modds,   
+			 b.custid,
+			 b.livehomescore, 
+			 b.liveawayscore,
+			 0 as finalhomescore, 
+			 0 as finalawayscore,  
+			 0 as leagueid,  
+			 252 as sporttype, 
+			 b.ip,
+			 b.betfrom,
+			 d.GameId matchid,
+			 CONVERT(BIT,0) as IsNeutral,
+			 0 as allowdelete,
+			 (b.winlost-b.actual_stake)  winlost,
+			 b.playercomm as commission,
+ 			 (b.scomm - b.acomm) as scomm,
+			 (b.acomm - b.comm) as acomm,
+			 (b.comm - b.playercomm) as comm,
+			 b.awinlost,
+			 b.mwinlost,
+			 b.swinlost,
+			 '' as showtime,
+			b.winlostdate								 
+		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
+		where	b.winlostdate>= @FromDate and    
+				b.winlostdate<= @ToDate and   
+				b.custid = @Custid  
+				and bettype between 1501 and 1599
 				
 		--- P2P
 		INSERT INTO @Data
@@ -1014,6 +1081,75 @@ BEGIN
 			 '' as showtime,
 			b.winlostdate									 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
+		where	b.winlostdate>= @FromDate and    
+				b.winlostdate<= @ToDate and   
+				b.custid = @Custid  
+				AND bettype = @Bettype
+	END
+
+	-- keno
+	ELSE IF @Bettype  BETWEEN 1501 and 1599
+	BEGIN
+		INSERT INTO @Data
+		select 
+			 bettype,   
+			 b.betid transid,   
+			 isnull(b.BetID,0),
+			 b.refno,
+			 CONVERT(varchar(50), b.refno) as matchcode,   
+			 '' as race,
+			 '' as eventdate, 
+			 0,0,
+			 sdiscount,
+			 adiscount,
+			 discount,	 
+			 0 as homeid,   
+			 0 as awayid,  
+			 '' settleTime, 
+			 b.hdp1,
+			 b.hdp2,
+			 b.odds,   
+			 0 finalodds,
+			 0 finalodds2,
+			 '' OddsType,  
+			 b.status,  
+			 CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus, 
+			 b.stake,  
+			 b.actual_stake, 
+			 b.transdate,   
+			 d.ChoiceId betteam,
+			 b.spositiontaking,  
+			 b.mpositiontaking,   
+			 b.apositiontaking, 
+			 0 spositiontaking2,
+			 0 mpositiontaking2,
+			 0 apositiontaking2,   
+			 b.liveindicator,   
+			 b.modds,   
+			 b.custid,
+			 b.livehomescore, 
+			 b.liveawayscore,
+			 0 as finalhomescore, 
+			 0 as finalawayscore,    
+			 0 as leagueid,  
+			 252 as sporttype, 
+			 b.ip,
+			 b.betfrom,
+			 d.GameId matchid,
+			 CONVERT(BIT,0) as IsNeutral,
+			 0 as allowdelete,
+			 (b.winlost-b.actual_stake)  winlost,
+			 b.playercomm as commission,
+			 (b.scomm - b.acomm) as scomm,
+			 (b.acomm - b.comm) as acomm,
+			 (b.comm - b.playercomm) as comm,
+			 b.awinlost,
+			 b.mwinlost,
+			 b.swinlost,
+			 '' as showtime,
+			b.winlostdate									 
+		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
+		outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid  

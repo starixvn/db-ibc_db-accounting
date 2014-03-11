@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID]    
+﻿CREATE PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID]    
 	@CustID int,  
 	@TransID bigint  
 AS    
@@ -46,6 +46,7 @@ AS
 	- 20130724@Elodie: Get winlostdate field
 	- 20130726@Elodie: Define data for bettrans, bettrans14 or bettrans_bk by winlostdate field
 					   Enhance performance
+	- 20140307@Dom: Add Keno
 	*/   
 
 SET NOCOUNT ON    
@@ -139,7 +140,7 @@ EXEC Age_SelBalanceUpDay
 SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
 
 IF exists(  
-select 1 from bettrans with (nolock)   
+select top 1 1 from bettrans with (nolock)   
 where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )  
@@ -148,7 +149,7 @@ AND custid = @Custid
 	where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 	AND custid = @Custid
 ELSE IF exists(  
-select 1 from bettrans14 with (nolock)   
+select top 1 1 from bettrans14 with (nolock)   
 where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )
@@ -157,7 +158,7 @@ AND custid = @Custid
 	where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
 	AND custid = @Custid
 ELSE IF exists(  
-select 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
+select top 1 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
 where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 AND custid = @Custid  
 )
@@ -166,10 +167,52 @@ AND custid = @Custid
 	where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
 	AND custid = @Custid  
 
+---------Process Keno----------------
+ELSE IF exists(  
+select top 1 1 from bettrans with (nolock)   
+where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
+AND custid = @Custid  
+) 
+SELECT @WinlostDate = winlostdate, @bettype = bettype
+	from bettrans with (nolock)   
+	where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
+	AND custid = @Custid
+ELSE IF exists(  
+select top 1 1 from translog with (nolock)   
+where translogid = @TransID OR (gameID BETWEEN 1501 and 1599) --Dom
+AND custid = @Custid  and statusID = 0
+) 
+SELECT @WinlostDate = winlostdate, @bettype = gameID
+	from translog with (nolock)   
+	where translogid = @TransID OR (gameID BETWEEN 1501 and 1599) --Dom
+	AND custid = @Custid and statusID = 0
+ELSE IF exists(  
+select top 1 1 from bettrans14 with (nolock)   
+where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
+AND custid = @Custid  
+)
+BEGIN
+	SELECT @WinlostDate = winlostdate, @bettype = bettype 
+	from bettrans14 with (nolock)   
+	where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
+	AND custid = @Custid
+	print 'btttt14'
+END
+ELSE IF exists(  
+select top 1 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
+where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --20120405@Hurri  
+AND custid = @Custid  
+)
+	SELECT @WinlostDate = winlostdate, @bettype = bettype 
+	from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
+	where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --20120405@Hurri  
+	AND custid = @Custid
+
+--select @WinlostDate,@bettype
 --Bettrans
 IF @WinlostDate > @MoveBetsDay  
 BEGIN  
-IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and @bettype NOT BETWEEN 1501 AND 1599
 --Sportbooks  
 INSERT INTO @Data  
 	select   
@@ -238,7 +281,7 @@ from
 	inner join match as m with (nolock) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark  
 where    
 	b.custid = @Custid and  
-	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and   
+	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and b.bettype NOT BETWEEN 1501 and 1599 and 
 	b.transid = @TransID  
  
 --Mix Parlay 
@@ -452,6 +495,139 @@ where
 	AND matchid in (0, 73) 
 	AND bettype = 73  
 	AND b.refno = @TransID  
+
+--IBC Keno  
+IF @bettype BETWEEN 1501 AND 1599
+INSERT INTO @Data  
+select   
+	bettype,     
+	b.betid transid,   
+	isnull(b.BetID,0) as BetID,    
+	b.refno,  
+	CONVERT(varchar(50), b.refno) as matchcode,     
+	'' as race,  
+	'' as eventdate,   
+	0 as virtualrate,  
+	0 as isShowOTExRate,  
+	sdiscount,  
+	adiscount,  
+	discount,    
+	0 as homeid,     
+	0 as awayid,    
+	'' settleTime,   
+	b.hdp1,  
+	b.hdp2,  
+	b.odds,     
+	0 finalodds,  
+	0 finalodds2,  
+	'' OddsType,    
+	b.status,  
+	CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,     
+	b.stake,     
+	b.actual_stake,  
+	b.transdate,     
+	d.ChoiceId betteam,   
+	b.spositiontaking,    
+	b.mpositiontaking,     
+	b.apositiontaking,   
+	0 spositiontaking2,  
+	0 mpositiontaking2,  
+	0 apositiontaking2,     
+	b.liveindicator,     
+	b.modds,     
+	b.custid,  
+	b.livehomescore,   
+	b.liveawayscore,  
+	0, 
+	0,    
+	0 as leagueid,    
+	202 as sporttype,   
+	b.ip,  
+	b.betfrom,  
+	d.GameId matchid,
+	CONVERT(BIT,0) as IsNeutral,  
+	0 as allowdelete,  
+	(b.winlost-b.actual_stake)  winlost,  
+	b.playercomm as commission,  
+	(b.scomm - b.acomm) as scomm,  
+	(b.acomm - b.comm) as acomm,  
+	(b.comm - b.playercomm) as comm,  
+	b.awinlost,  
+	b.mwinlost,  
+	b.swinlost,  
+	'' as showtime,
+	b.winlostdate       
+from bettrans b with (nolock)     
+outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
+where     
+	b.custid = @Custid    
+	AND bettype BETWEEN 1501 AND 1599
+	AND b.refno = @TransID  
+UNION ALL	-- translog
+select 
+	b.gameid bettype,   
+	0 as transid, 
+	0 as betid,
+	b.translogid ,
+	'' as matchcode,   
+	'' as race,
+	'' as eventdate, 
+	0,
+	0,
+	sdiscount,
+	adiscount,
+	discount,	 
+	0 as homeid,   
+	0 as awayid,  
+	'' settleTime, 
+	0 hdp1,
+	0 hdp2,
+	b.odds,   
+	0 finalodds,
+	0 finalodds2,
+	'' OddsType,  
+	b.status,  
+	0 as comstatus, 
+	b.stake,  
+	b.actual_stake,    
+	b.transdate,   
+	d.ChoiceId betteam,   
+	b.spositiontaking,  
+	b.mpositiontaking,   
+	b.apositiontaking, 
+	0 spositiontaking2,
+	0 mpositiontaking2,
+	0 apositiontaking2,   
+	0 liveindicator,   
+	0 modds,   
+	b.custid,
+	0 livehomescore, 
+	0 liveawayscore,
+	0 as finalhomescore, 
+	0 as finalawayscore,  
+	0 as leagueid,  
+	202 as sporttype, 
+	b.ip,
+	b.betfrom,
+	d.GameId matchid,
+	CONVERT(BIT,0) as IsNeutral,
+	0 as allowdelete,
+	(-b.actual_stake)  winlost,
+	0 as commission,
+    0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	'' as showtime,
+b.winlostdate	 
+from translog b with (nolock)   
+outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
+where	b.custid = @Custid  
+	AND b.gameID BETWEEN 1501 AND 1599
+	AND b.statusID = 0
+	AND b.translogid = @TransID  
 
 --- P2P  
 IF @bettype = 1000
@@ -746,7 +922,7 @@ END
 --Bettrans14  
 ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay 
 BEGIN  
-IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and @bettype NOT BETWEEN 1501 and 1599 
 --Sportbooks  
 INSERT INTO @Data  
 select   
@@ -812,7 +988,7 @@ from
 	inner join match14 as m with (nolock) on b.matchid = m.matchid  
 where    
 	b.custid = @Custid and  
-	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and   
+	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and b.bettype not BETWEEN 1501 and 1500 AND
 	b.transid = @TransID  
  
 --Mix Parlay  
@@ -1025,6 +1201,73 @@ where
 	b.custid = @Custid   
 	AND matchid in (0, 73)  
 	AND bettype = 73  
+	AND b.refno = @TransID  
+
+--IBC Keno
+IF @bettype BETWEEN 1501 AND 1599
+INSERT INTO @Data  
+select   
+	bettype,     
+	b.betid transid,     
+	isnull(b.BetID,0) as BetID,  
+	b.refno,  
+	CONVERT(varchar(50), b.refno) as matchcode,     
+	'' as race,  
+	'' as eventdate,   
+	0 as virtualrate,  
+	0 as isShowOTExRate,  
+	sdiscount,  
+	adiscount,  
+	discount,    
+	0 as homeid,     
+	0 as awayid,    
+	'' settleTime,   
+	b.hdp1,  
+	b.hdp2,  
+	b.odds,     
+	0 finalodds,  
+	0 finalodds2,  
+	'' OddsType,    
+	b.status,     
+	CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+	b.stake,     
+	b.actual_stake,  
+	b.transdate,     
+	d.ChoiceId betteam,   
+	b.spositiontaking,    
+	b.mpositiontaking,     
+	b.apositiontaking,   
+	0 spositiontaking2,  
+	0 mpositiontaking2,  
+	0 apositiontaking2,     
+	b.liveindicator,     
+	b.modds,     
+	b.custid,  
+	b.livehomescore,   
+	b.liveawayscore,  
+	0, 0,    
+	0 as leagueid,    
+	202 as sporttype,   
+	b.ip,  
+	b.betfrom,  
+	d.GameId matchid,
+	CONVERT(BIT,0) as IsNeutral,  
+	0 as allowdelete,  
+	(b.winlost-b.actual_stake)  winlost,  
+	b.playercomm as commission,  
+	(b.scomm - b.acomm) as scomm,  
+	(b.acomm - b.comm) as acomm,  
+	(b.comm - b.playercomm) as comm,  
+	b.awinlost,  
+	b.mwinlost,  
+	b.swinlost,  
+	'' as showtime,
+	b.winlostdate       
+from bettrans14 b with (nolock)     
+outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
+where     
+	b.custid = @Custid   
+	AND bettype BETWEEN 1501 AND 1599  
 	AND b.refno = @TransID  
 
 --- P2P  
@@ -1599,6 +1842,73 @@ where
 	AND bettype = 73  
 	AND b.refno = @TransID  
 
+--- IBC keno 
+IF @bettype BETWEEN 1501 and 1599
+INSERT INTO @Data  
+select   
+	bettype,     
+	b.betid transid,     
+	isnull(b.BetID,0) as BetID,  
+	b.refno,  
+	CONVERT(varchar(50), b.refno) as matchcode,     
+	'' as race,  
+	'' as eventdate,   
+	0 as virtualrate,  
+	0 as isShowOTExRate,  
+	sdiscount,  
+	adiscount,  
+	discount,    
+	0 as homeid,     
+	0 as awayid,    
+	'' settleTime,   
+	b.hdp1,  
+	b.hdp2,  
+	b.odds,     
+	0 finalodds,  
+	0 finalodds2,  
+	'' OddsType,    
+	b.status,     
+	CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+	b.stake,   
+	b.actual_stake,    
+	b.transdate,     
+	d.ChoiceId betteam,   
+	b.spositiontaking,    
+	b.mpositiontaking,     
+	b.apositiontaking,   
+	0 spositiontaking2,  
+	0 mpositiontaking2,  
+	0 apositiontaking2,     
+	b.liveindicator,     
+	b.modds,     
+	b.custid,  
+	b.livehomescore,   
+	b.liveawayscore,  
+	0, 0,    
+	0 as leagueid,    
+	202 as sporttype,   
+	b.ip,  
+	b.betfrom,  
+	d.GameId matchid,
+	CONVERT(BIT,0) as IsNeutral,  
+	0 as allowdelete,  
+	(b.winlost-b.actual_stake)  winlost,  
+	b.playercomm as commission,  
+	(b.scomm - b.acomm) as scomm,  
+	(b.acomm - b.comm) as acomm,  
+	(b.comm - b.playercomm) as comm,  
+	b.awinlost,  
+	b.mwinlost,  
+	b.swinlost,  
+	'' as showtime,
+	b.winlostdate      
+from DBARC.bodb_archive.dbo.bettrans_bk as b with (nolock)     
+outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
+where     
+	b.custid = @Custid    
+	AND bettype BETWEEN 1501 AND 1599
+	AND b.refno = @TransID  
+
 --- P2P  
 IF @bettype = 1000
 INSERT INTO @Data  
@@ -2145,3 +2455,10 @@ BEGIN
 END
    
 SELECT * FROM @DetailData  
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList_ByTransID] TO [bodbAdminNet]
+GO
+GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList_ByTransID] TO [bodbExtAccNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BetsSelBetList_ByTransID] TO [vnteam] 

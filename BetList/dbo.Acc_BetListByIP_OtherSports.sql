@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetListByIP_OtherSports]
+﻿CREATE PROCEDURE [dbo].[Acc_BetListByIP_OtherSports]
 	@custid		INT, 
 	@ip			VARCHAR(15),
 	@fromdate	DATETIME 
@@ -46,6 +46,7 @@ Revisions:
 	- 20130703@Kathy: Update matchid for RnG Casino(71) and Bingo(73)
 	- 20130718@Elodie: Apply core betlist
 	- 20131126@Lukas: get sporttype column in VSRaceinfo instead of hardcode
+	- 20140306@Dom: Add Keno
 Param's Explanation:
 • @fromdate = @winlostdate
 */
@@ -242,7 +243,7 @@ SET NOCOUNT ON
 					INNER JOIN match14 match with (nolock) on b.matchid= match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
 			WHERE 	b.winlostdate = @fromdate
-					AND bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+					AND bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
 					AND b.custid = @custid 
 					AND match.sporttype <> 1 
 			
@@ -426,7 +427,7 @@ SET NOCOUNT ON
 					INNER JOIN match  with (nolock) on b.matchid = match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
-					AND b.bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+					AND b.bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
 					AND match.sporttype <> 1
 					AND b.custid = @custid
 	
@@ -910,6 +911,177 @@ SET NOCOUNT ON
 					AND b.matchid in (0, 73)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
+
+			--- IBC keno
+			UNION ALL
+			SELECT	0 finalhomescore,
+					0 finalawayscore, 
+					0 oddsid, 
+					0 leagueid,
+					b.bettype, 
+					b.betid transid,
+					isnull(b.BetID,0) as BetID,
+					b.refno,
+					CONVERT(varchar(50),b.refno) matchcode, 
+					'' as race, 
+					'' as eventdate, 
+					0 as virtualrate,
+					0 as isShowOTExRate,
+					b.sdiscount,
+					b.adiscount,
+					b.discount,
+					0 homeid,
+					0 awayid,
+					ISNULL(b.checktime,'') checktime, 
+					b.hdp1, 
+					b.hdp2,
+					b.odds,  
+					b.modds,
+					0 finalodds,
+					0 finalodds2, 
+					' ' OddsType, 
+					b.status,
+					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+					b.stake, 
+					b.actual_stake,
+					b.transdate, 
+					d.ChoiceId betteam,   
+					b.livehomescore,
+					b.liveawayscore, 
+					0 liveindicator, 
+					(b.winlost-b.actual_stake)  winlost,
+					b.playercomm as commission, 
+					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+					b.username,
+					0 hthomescore, 0 htawayscore,ip, 	
+					202 AS sporttype, 
+					d.GameId matchid,
+					0 IsNeutral,
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom,
+					b.winlostdate 
+			FROM 	bettrans b with (nolock)
+			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
+			WHERE	b.bettype BETWEEN 1501 AND 1599
+					AND b.winlostdate = @fromdate
+					AND b.custid = @custid
+
+			UNION ALL -- keno translog
+			SELECT	0 finalhomescore,
+					0 finalawayscore, 
+					0 oddsid, 
+					0 leagueid,
+					b.gameid, 
+					0 transid,
+					0 as BetID,
+					b.translogid,
+					'' matchcode, 
+					'' as race, 
+					'' as eventdate, 
+					0 as virtualrate,
+					0 as isShowOTExRate,
+					b.sdiscount,
+					b.adiscount,
+					b.discount,
+					0 homeid,
+					0 awayid,
+					'' checktime, 
+					0 hdp1, 
+					0 hdp2,
+					b.odds,  
+					0 modds,
+					0 finalodds,
+					0 finalodds2, 
+					' ' OddsType, 
+					b.status,
+					0 as comstatus,  
+					b.stake, 
+					b.actual_stake,
+					b.transdate, 
+					d.ChoiceId betteam,   
+					0 livehomescore,
+					0 liveawayscore, 
+					0 liveindicator, 
+					(-b.actual_stake)  winlost,
+					0 commission, 
+					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+					b.username,
+					0 hthomescore, 0 htawayscore,ip, 	
+					202 AS sporttype, 
+					d.GameId matchid,
+					0 IsNeutral,
+					'' as showtime,
+					0 awinlost,
+					0 mwinlost,
+					0 swinlost,
+					b.betfrom,
+					b.winlostdate 
+			FROM 	translog b with (nolock)
+			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
+			WHERE	b.gameID BETWEEN 1501 AND 1599
+					AND b.winlostdate = @fromdate
+					AND b.custid = @custid
+					AND b.statusID = 0
+					
+			--- IBC keno 14
+			UNION ALL
+			SELECT	0 finalhomescore,
+					0 finalawayscore, 
+					0 oddsid, 
+					0 leagueid,
+					b.bettype, 
+					b.betid transid,
+					isnull(b.BetID,0) as BetID,
+					b.refno,
+					CONVERT(varchar(50),b.refno) matchcode,
+					'' as race, 
+					'' as eventdate, 
+					0 as virtualrate,
+					0 as isShowOTExRate,
+					b.sdiscount,
+					b.adiscount,
+					b.discount,
+					0 homeid,
+					0 awayid,
+					ISNULL(b.checktime,'') checktime, 
+					b.hdp1, 
+					b.hdp2, 
+					b.odds,   
+					b.modds,
+					0 finalodds,
+					0 finalodds2,
+					' ' OddsType, 
+					b.status, 
+					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+					b.stake, 
+					b.actual_stake,
+					b.transdate, 
+					d.ChoiceId betteam,   
+					b.livehomescore, 
+					b.liveawayscore,
+					0 liveindicator, 
+					(b.winlost-b.actual_stake)  winlost,
+					b.playercomm as commission, 
+					CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+					b.username,
+					0 hthomescore, 0 htawayscore,ip, 	
+					202 sporttype,
+					d.GameId matchid,
+					0 IsNeutral,
+					'' as showtime,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
+					b.betfrom,
+					b.winlostdate  
+			FROM 	bettrans14 b with (nolock)
+			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
+			WHERE	b.bettype BETWEEN 1501 AND 1599
+					AND b.winlostdate = @fromdate
+					AND b.custid = @custid
 					
 			--- P2P
 			UNION ALL
@@ -1182,8 +1354,6 @@ SELECT	* FROM @Data
 ORDER BY 4, 26
 		   
 SELECT * FROM @DetailData
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByIP_OtherSports] TO [bodbAdminNet]
