@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AllStatement_Full]    Script Date: 3/7/2014 4:06:55 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
+﻿ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
 	@custid int,
 	@fromdate datetime,
 	@todate datetime,
