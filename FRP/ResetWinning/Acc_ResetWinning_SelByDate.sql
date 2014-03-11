@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate]
+﻿ALTER PROCEDURE [Acc_ResetWinning_SelByDate]
 	@winlostdate	DATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
@@ -17,6 +17,7 @@ AS
 						   No need execute Acc_ResetWinning_SelByDate_Original (@winlostdate < '2012-09-01')		
 		- 20130618@Johnson: Add NSW racing's pools from AUST
 		- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+		- 20140310@Kathy: Automation of Keno's income account. [Redmine:#13106]
 	Explanation's Param:
 */
 BEGIN	
@@ -44,6 +45,7 @@ BEGIN
 	UNION ALL SELECT	7901668	, 'Poker (Due to Partners)'		----- VNM-P2P Partners MYR
 	UNION ALL SELECT	6913085	, 'Bingo'		---- DWLBingo
 	UNION ALL SELECT	8158305	, 'Virtual Sports'	---- DWLVirtualSports
+	UNION ALL SELECT	14054918, 'Keno'		---- DWLKeno
 
 	DECLARE @Winning TABLE 
 	(
@@ -54,7 +56,7 @@ BEGIN
 	CREATE TABLE #source (custid int, bettype INT, liveindicator BIT, winlost MONEY)
 	INSERT INTO #source
 	SELECT CASE WHEN custid IN (6911909,6911911,6911913,6911914,6911916,6911917,6911918,
-									6911919,6911920,6913085,7723121,7901668,8158305
+									6911919,6911920,6913085,7723121,7901668,8158305, 14054918
 								) THEN custid
 				ELSE 0 END AS custid, bettype, liveindicator,
 			SUM(winlost) AS winlost
@@ -69,7 +71,7 @@ BEGIN
 		) t 
 	GROUP BY	bettype, liveindicator,
 				CASE WHEN custid IN (6911909,6911911,6911913,6911914,6911916,6911917,6911918,
-								6911919,6911920,6913085,7723121,7901668,8158305
+								6911919,6911920,6913085,7723121,7901668,8158305, 14054918
 							)THEN custid 
 				ELSE 0 END
 			
@@ -185,6 +187,7 @@ BEGIN
 				WHEN bettype = 10 THEN 'Outright'
 				WHEN bettype IN (9,29) THEN 'Parlay'
 				WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
+				when bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			END AS Product,
 			ISNULL(SUM(winlost),0) as winlost
 	FROM #source
@@ -192,7 +195,8 @@ BEGIN
 			OR bettype BETWEEN 31 AND 33
 			OR bettype BETWEEN 80 AND 120
 			OR bettype IN (71,72,73,10,1000,9,29)
-			OR bettype BETWEEN 1201 AND 1299			
+			OR bettype BETWEEN 1201 AND 1299
+			OR bettype BETWEEN 1501 AND 1599 			
 			)			
 	GROUP BY CASE	WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 				WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
@@ -203,6 +207,7 @@ BEGIN
 				WHEN bettype = 10 THEN 'Outright'
 				WHEN bettype IN (9,29) THEN 'Parlay'
 				WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
+				when bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			END	
 	UNION ALL
 	SELECT 'Racing' AS Product, @RB_LineTotal AS winlost
@@ -235,6 +240,8 @@ BEGIN
 
 	DROP TABLE #source
 END
+
+
 
 
 
