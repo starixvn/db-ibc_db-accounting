@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
+﻿CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
 	@winlostdate	datetime,
 	@LineTotal		money OUTPUT
 AS
@@ -59,6 +59,7 @@ AS
 		- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 		- 20130730@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				
 		- 20130910@Johnson: get virtual values for all product	
+		- 20140303@Dom: Add Keno
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -376,9 +377,78 @@ BEGIN
 	--------------------------------------------------------------------------------
 	--Section 1: all products that disable virtual currency, DisplayOrder field:	101 -> 200
 
+	UNION ALL --Racing
+	SELECT	101,
+			'Racing', 
+			151, 
+			0, 
+			site,
+			WinLost,
+			Pos Position,
+			Comm Commission,
+			LineTotal AS RealLineTotal,
+			LineTotal AS VirtualLineTotal,
+			turnover RealTurnover,
+			0 VirtualTurnover,
+			0 EnableVirtual
+	FROM @RBWinlost
+
+	---Live Casino
+	UNION ALL
+	SELECT
+			102,
+			'Live Casino',
+			162,		
+			0 ibc,--case recommend when 52466 then 1 else 0 end ibc,
+			site,
+			ISNULL(SUM(winlost_actualrate),0) WinLost,
+			ISNULL(SUM(position_actualrate),0) Position,
+			ISNULL(SUM(commission_actualrate),0) Commission,
+			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
+			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
+			SUM(turnover_actualrate) RealTurnover,
+			SUM(turnover_virtualrate) VirtualTurnover,
+			0 EnableVirtual
+	FROM	#src b WITH (NOLOCK)
+	WHERE	b.bettype BETWEEN 1101 AND 1199
+			AND b.matchid > 0
+	GROUP BY site
+		
+	----VIRTUAL SPORT
+	UNION ALL
+	SELECT
+			103,'Virtual Sports', 180, 0,site,
+			SUM(winlost_actualrate) WinLost,
+			SUM(position_actualrate) Position,
+			SUM(commission_actualrate) Commission,	
+			SUM(LineTotal_actualrate) AS RealLineTotal,
+			SUM(LineTotal_virtualrate) AS VirtualLineTotal,
+			SUM(turnover_actualrate) RealTurnover,
+			SUM(turnover_virtualrate) VirtualTurnover,
+			0 EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	WHERE	b.bettype BETWEEN 1201 AND 1299
+	GROUP BY site			
+	
+	----CASINO
+	UNION ALL
+	SELECT	104,'Casino', 251, 0, site,
+			ISNULL(SUM(winlost_actualrate),0) WinLost,
+			ISNULL(SUM(position_actualrate),0) Position,
+			ISNULL(SUM(commission_actualrate),0) Commission,
+			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
+			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
+			0 RealTurnover,
+			0 VirtualTurnover,
+			0 EnableVirtual
+	from	#src with (nolock)
+	where 	bettype IN(71, 72)
+			AND matchid IN (0, 71) 
+	GROUP BY site 
+
 	--P2P
 	UNION ALL
-	SELECT	101,'P2P', 253, 0, 
+	SELECT	105,'P2P', 253, 0, 
 			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			0 Position,
@@ -400,7 +470,7 @@ BEGIN
 
 	--BINGO
 	UNION ALL
-	SELECT	102,'Bingo', 252, 0,site,
+	SELECT	106,'Bingo', 252, 0,site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -413,71 +483,23 @@ BEGIN
 	where 	bettype = 73
 			AND matchid IN (0, 73)	
 	GROUP BY site	
-			
-	---Live Casino
-	UNION ALL
-	SELECT
-			103,'Live Casino',
-			162,		
-			0 ibc,--case recommend when 52466 then 1 else 0 end ibc,
-			site,
-			ISNULL(SUM(winlost_actualrate),0) WinLost,
-			ISNULL(SUM(position_actualrate),0) Position,
-			ISNULL(SUM(commission_actualrate),0) Commission,
-			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
-			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
-			SUM(turnover_actualrate) RealTurnover,
-			SUM(turnover_virtualrate) VirtualTurnover,
-			0 EnableVirtual
-	FROM	#src b WITH (NOLOCK)
-	WHERE	b.bettype BETWEEN 1101 AND 1199
-			AND b.matchid > 0
-	GROUP BY site
-			
-	----CASINO
-	UNION ALL
-	SELECT	104,'Casino', 251, 0, site,
-			ISNULL(SUM(winlost_actualrate),0) WinLost,
-			ISNULL(SUM(position_actualrate),0) Position,
-			ISNULL(SUM(commission_actualrate),0) Commission,
-			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
-			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
-			0 RealTurnover,
-			0 VirtualTurnover,
-			0 EnableVirtual
-	from	#src with (nolock)
-	where 	bettype IN(71, 72)
-			AND matchid IN (0, 71) 
-	GROUP BY site
 
-	UNION ALL 
-	SELECT	105,'Racing', 151, 0, site,
-			WinLost,
-			Pos Position,
-			Comm Commission,
-			LineTotal AS RealLineTotal,
-			LineTotal AS VirtualLineTotal,
-			turnover RealTurnover,
-			0 VirtualTurnover,
-			0 EnableVirtual
-	FROM @RBWinlost
-			
-	----VIRTUAL SPORT
+	----KENO
 	UNION ALL
 	SELECT
-			106,'Virtual Sports', 180, 0,site,
-			SUM(winlost_actualrate) WinLost,
-			SUM(position_actualrate) Position,
-			SUM(commission_actualrate) Commission,	
-			SUM(LineTotal_actualrate) AS RealLineTotal,
-			SUM(LineTotal_virtualrate) AS VirtualLineTotal,
-			SUM(turnover_actualrate) RealTurnover,
-			SUM(turnover_virtualrate) VirtualTurnover,
+			107,'Keno', 202, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			SUM(ISNULL(commission_actualrate,0)) Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) as VirtualLineTotal,	
+			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
+			SUM(ISNULL(turnover_actualrate,0)) VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
-	WHERE	b.bettype BETWEEN 1201 AND 1299
-	GROUP BY site			 
-	ORDER BY DisplayOrder desc, ibc	, site
+	WHERE	b.bettype BETWEEN 1501 AND 1599
+	GROUP BY site
+	ORDER BY DisplayOrder asc, ibc	, site
 					
 	SELECT	@LineTotal = ISNULL(SUM(LineTotal_actualrate), 0) 
 	FROM	#src b WITH (NOLOCK)

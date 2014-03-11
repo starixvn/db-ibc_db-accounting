@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE Acc_Rpt_DailyWLDirect_Keno_Bettype_Site14
+﻿CREATE PROCEDURE Acc_Rpt_DailyWLDirect_Keno_Bettype_Site14
 	@winlostdate	datetime,	
 	@site			TINYINT
 AS
@@ -49,6 +49,7 @@ AS
 	ORDER BY ag.site
 
 DROP TABLE #DepAgent
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Keno_Bettype_Site14] TO [bodbAdminNet]

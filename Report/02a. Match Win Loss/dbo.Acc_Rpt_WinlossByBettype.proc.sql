@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_WinlossByBettype]
+﻿CREATE PROCEDURE [dbo].[Acc_Rpt_WinlossByBettype]
 	@winlostdate		datetime
 AS
 	/*	Creator: Vinh Truong 
@@ -53,6 +53,7 @@ AS
 			- 20130225@Elodie: Add Virtual Horse Racing report
 			- 20130618@Johnson: Add NSW racing's pools from AUST
 			- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+			- 20140303@Dom: Add keno
 	*/
 	SET NOCOUNT ON
 	-- Horse racing
@@ -116,7 +117,8 @@ AS
 	group by bettype, matchid, liveindicator
 
 	-- Sportbook
-	select	bettype,
+	select	10 Num,
+			bettype,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
 			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal_live else 0 end) as LineTotal_soccer_live,
 			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal_live else 0 end) as VirtualLineTotal_soccer_live,
@@ -138,7 +140,8 @@ AS
 	
 	-- Virtual sports
 	UNION ALL 
-	select	bettype,
+	select	20 Num,
+			bettype,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -154,7 +157,8 @@ AS
 			
 	-- Casino
 	UNION ALL 
-	SELECT	bettype,
+	SELECT	30 Num,
+			bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -170,7 +174,8 @@ AS
 	
 	-- BINGO 
 	UNION ALL
-	SELECT	bettype,
+	SELECT	40 Num,
+			bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -182,11 +187,29 @@ AS
 			0  VirtualLineTotal_others    
 	FROM	#tmpBettrans
 	WHERE	bettype = 73 and matchid in (0, 73)	
-	group by bettype			
+	group by bettype	
+	
+	--KENO
+	UNION ALL
+	SELECT	50 Num,
+			bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			0 VirtualLineTotal_others	
+	FROM	#tmpBettrans 
+	WHERE	bettype BETWEEN 1501 AND 1599			
+	GROUP BY bettype		
 	
 	--NUMBER GAME
 	UNION ALL
-	SELECT	bettype,
+	SELECT	60 Num,
+			bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -202,7 +225,8 @@ AS
 	
 	-- Live Casino
 	UNION ALL
-	SELECT	bettype,
+	SELECT	70 Num,
+			bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -218,7 +242,8 @@ AS
 	
 	-- Mix parlay, System parlay
 	UNION ALL 
-	select 	m1.bettype,
+	select 	80 Num,
+			m1.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -259,7 +284,8 @@ AS
 		
 	-- outright
 	UNION ALL 
-	select	10 bettype,	
+	select	90 Num,
+			10 bettype,	
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,	
@@ -276,7 +302,8 @@ AS
 	
 	-- HORSE RACING
 	UNION ALL
-	SELECT	b.bettype,
+	SELECT	100 Num,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -315,7 +342,8 @@ AS
 	
 	--P2P Game - 1000
 	UNION ALL
-	SELECT	bettype,
+	SELECT	110 Num,
+			bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -335,7 +363,8 @@ AS
 	
 	-- 8RM & BARM
 	UNION ALL 		
-	select	case WHEN recommend = 52466 then 400 
+	select	120 Num,
+			case WHEN recommend = 52466 then 400 
 				 when recommend = 5707545 then 401 end bettype,	
 			'' Hedge,	
 			LineTotal_soccer_live,
@@ -364,8 +393,9 @@ AS
 			GROUP by recommend				
 	)rm	
 	
-	order by bettype, Hedge	
+	order by 1, bettype, Hedge	
 	DROP table #tmpBettrans
+
 	
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlossByBettype] TO [bodbAdminNet] AS [dbo]
