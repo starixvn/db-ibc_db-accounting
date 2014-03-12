@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
+﻿ALTER PROCEDURE [Acc_ResetWinning_SelByDate14]
 	@winlostdate	DATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
@@ -13,7 +13,7 @@ AS
 		- 20120820@Sophia: Separate Poker into 2 rows, 1 for IBC net income and Poker (Due to Partners)
 		- 20120919@Sophia: Add Virtual Sports
 		- 20121102@Elodie: No need execute Acc_ResetWinning_SelByDate_Original (@winlostdate < '2012-09-01')		
-						
+		- 20140310@Kathy: Automation of Keno's income account. [Redmine:#13106]			
 	Explanation's Param:
 
 */
@@ -42,7 +42,7 @@ BEGIN
 	UNION ALL SELECT	7901668	, 'Poker (Due to Partners)'	 ---- VNM-P2P Partners MYR
 	UNION ALL SELECT	6913085	, 'Bingo'		---- DWLBingo
 	UNION ALL SELECT	8158305	, 'Virtual Sports'	---- DWLVirtualSports
-
+	union ALL SELECT	14054918, 'Keno'		--   DWLKeno
 	DECLARE @Winning TABLE 
 	(
 		product VARCHAR(50),
@@ -52,7 +52,7 @@ BEGIN
 	CREATE TABLE #source (custid int, bettype INT, liveindicator BIT, winlost MONEY)
 	INSERT INTO #source
 	SELECT CASE WHEN custid IN (6911909,6911911,6911913,6911914,6911916,6911917,6911918,
-									6911919,6911920,6913085,7723121,7901668,8158305
+									6911919,6911920,6913085,7723121,7901668,8158305,14054918
 								) THEN custid
 				ELSE 0 END AS custid, bettype, liveindicator,
 		SUM(winlost) AS winlost
@@ -67,7 +67,7 @@ BEGIN
 		) t 
 	GROUP BY bettype, liveindicator,
 		CASE WHEN custid IN (6911909,6911911,6911913,6911914,6911916,6911917,6911918,
-								6911919,6911920,6913085,7723121,7901668,8158305
+								6911919,6911920,6913085,7723121,7901668,8158305, 14054918
 							)THEN custid 
 			ELSE 0 END
 
@@ -104,6 +104,8 @@ BEGIN
 
 	DROP TABLE #source	
 END
+
+
 
 GO
 GRANT EXECUTE ON Acc_ResetWinning_SelByDate14 TO bodbAdminNet
