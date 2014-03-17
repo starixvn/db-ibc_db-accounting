@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE Acc_Rpt_DailyWLDirect_Keno_Bettype_Site
+﻿CREATE PROCEDURE Acc_Rpt_DailyWLDirect_Keno_Bettype_Site
 	@winlostdate	datetime,	
 	@site			TINYINT
 AS

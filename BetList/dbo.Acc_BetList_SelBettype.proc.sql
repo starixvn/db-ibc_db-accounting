@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_BetList_SelBettype]
+﻿ALTER PROCEDURE [dbo].[Acc_BetList_SelBettype]
 @CustID int,
 @FromDate datetime,  
 @ToDate datetime,
@@ -16,7 +15,7 @@ AS
 	- 20110516@Lukas: re-arrange bettype
 	- 20110524@Henry: change to use winlostdate instead of transdate
 	- 20130121@Dan: change linked server DB06 to DBARC
-		
+	- 20140311@Dom: Add keno translog
 */
 
 SET NOCOUNT ON  
@@ -40,6 +39,15 @@ BEGIN
 		bettype < 19001 
 		AND custid = @CustID
 		AND winlostdate BETWEEN @TempFromDate AND @todate
+	UNION 
+	SELECT 
+		DISTINCT gameID bettype 
+		FROM translog (nolock)
+	WHERE 
+		custid = 1176092
+		AND winlostdate BETWEEN @TempFromDate AND @todate
+		AND statusID = 0
+		
 			
 END
 IF @Fromdate <= @MoveBetsDay
@@ -78,8 +86,6 @@ BEGIN
 		AND custid = @CustID
 		AND winlostdate between @fromdate and @TempToDate 
 END
-
-
 
 
 select 
