@@ -19,6 +19,7 @@ Revisions:
 			- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
 			- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
 			- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
+			- 20140314@Elodie: Add Keno product [Redmine:#13326]
 			
 Param's Explanation:
 • @ErrCode:
@@ -91,6 +92,8 @@ BEGIN
 			@mUsedCredit			MONEY,
 			@aHideVirtualSports		BIT,
 			@mHideVirtualSports		BIT,
+			@aHideKeno				BIT,
+			@mHideKeno				BIT,
 			@AdminUser				VARCHAR (50)
 
 
@@ -120,7 +123,8 @@ BEGIN
 			--@mDisableFunP2P	= DisableFunP2P ,
 			@mDisableHRFixedOdds= DisableHRFixedOdds,
 			@mGivenCredit		= credit,
-			@mHideVirtualSports = HideVirtualSports
+			@mHideVirtualSports = HideVirtualSports,
+			@mHideKeno			= HideKeno
 	from	custinfo with (nolock) 
 	where	username = @mastername and roleid = 3
 
@@ -150,7 +154,8 @@ BEGIN
 			--@aDisableFunP2P	= DisableFunP2P,
 			@aDisableHRFixedOdds= DisableHRFixedOdds,
 			@aGivenCredit		= credit,
-			@aHideVirtualSports = HideVirtualSports
+			@aHideVirtualSports = HideVirtualSports,
+			@aHideKeno			= HideKeno
 	from	custinfo with (NOLOCK) 
 	where	username = @agentname and roleid = 2
 	
@@ -336,6 +341,14 @@ BEGIN
 		return
 	END		
 
+	--Check Virtual sport enable status
+	if @mHideKeno = 1 and @aHideKeno = 0
+	BEGIN
+		Select @ErrMsg = 'Agent is offered Keno but new master is not offered Keno.',
+			@ErrCode = 125				 
+		return
+	END		
+
 	if @mdisableBingo = 1 and @adisableBingo = 0
 	BEGIN
 		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': agent is enabled Bingo but new master is not enabled Bingo',
@@ -440,6 +453,20 @@ BEGIN
 		RETURN
 	END
 
+	--Check commission for Keno
+	IF EXISTS (
+			SELECT 1
+			FROM CustSettingGame mcs WITH(NOLOCK) 
+				INNER JOIN CustSettingGame acs WITH(NOLOCK) ON acs.custid = @recommend AND acs.sporttype = mcs.sporttype AND acs.bettype = mcs.bettype
+			WHERE mcs.custid = @mrecommend AND mcs.sporttype = 202 AND mcs.bettype between 1501 and 1599
+				AND mcs.adiscount < acs.discount
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission for Keno is less than agent''s commission.',
+			@ErrCode = 214
+		RETURN
+	END
+
 	--Check identical autoposition taking
 	if exists (
 		select 1 from 
@@ -481,7 +508,7 @@ BEGIN
 			SELECT 1
 			FROM CustSettingGame mcs_old WITH(NOLOCK)
 				INNER JOIN	CustSettingGame mcs_new WITH(NOLOCK) ON mcs_new.custid = @mrecommend AND mcs_new.sporttype = mcs_old.sporttype AND mcs_new.bettype = mcs_old.bettype 
-			WHERE mcs_old.custid = @mrecommend_old AND mcs_old.sporttype = 162 AND mcs_old.bettype = 1101
+			WHERE mcs_old.custid = @mrecommend_old AND mcs_old.sporttype in(162,202) AND (mcs_old.bettype = 1101 OR mcs_old.bettype between 1501 and 1599)
 			AND (mcs_old.isautopositiontaking <> mcs_new.isautopositiontaking)
 		)
 	BEGIN
@@ -543,6 +570,23 @@ BEGIN
 			@ErrCode = 208					 
 		return
 	END	
+
+	--Check Position Taking for Keno
+		--check m3_master_old <= m3_master_new
+	
+	IF EXISTS(
+			SELECT 1 
+			FROM CustSettingGame mcs_old WITH(NOLOCK) 
+				INNER JOIN CustSettingGame mcs_new WITH(NOLOCK) ON mcs_new.custid = @mrecommend AND mcs_new.sporttype = mcs_old.sporttype AND mcs_new.bettype = mcs_old.bettype
+			WHERE mcs_old.custid = @mrecommend_old AND mcs_old.sporttype = 202 AND mcs_old.bettype between 1501 and 1599
+				AND mcs_old.mpositiontaking > mcs_new.mpositiontaking	
+		)	
+	BEGIN
+		Select @ErrMsg = 'Error master ' + @Mastername + ': Master Position Taking of new master is less than Master Position Taking of old master.',
+			@ErrCode = 208					 
+		return
+	END
+
 		--m2+a2<=m3		
 		--check n3<=m2+a2<=l3 if im2 = 0, 
 		--a2<=l3 and um2+a2>=n3 if im2 = 1
@@ -638,7 +682,30 @@ BEGIN
 			@ErrCode = 211
 		RETURN
 	END
-		
+	
+		--Check for Keno
+		--m2+a2<=m3
+		--n3<= im = 0? m2+a2 : um2 + a2
+	IF EXISTS(
+			SELECT 1
+			FROM CustSettingGame mcs WITH(NOLOCK) 
+				INNER JOIN CustSettingGame acs WITH(NOLOCK) ON acs.custid = @recommend AND mcs.sporttype = acs.sporttype AND acs.bettype = mcs.bettype 
+				INNER JOIN CustOverrideGame mco WITH(NOLOCK) ON mco.custid = @mrecommend AND mco.sporttype = mcs.sporttype AND mco.bettype = mcs.bettype
+			WHERE mcs.custid = @mrecommend AND mcs.sporttype = 202 AND mcs.bettype between 1501 and 1599			
+				AND (-- m2+a2<=m3
+					acs.mpositiontaking + acs.apositiontaking > mcs.mpositiontaking OR 
+					--n3<=m2+a2
+					(acs.isautompositiontaking = 0 AND acs.mpositiontaking + acs.apositiontaking < mco.minpositiontaking)
+					OR
+					(acs.isautompositiontaking = 1 AND acs.autompositiontaking + acs.apositiontaking < mco.minpositiontaking)
+				)
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master position taking.',
+			@ErrCode = 211
+		RETURN
+	END
+			
 	--Check Position Taking	
 		--all a2<=a4
 		--all a1<=a4
@@ -686,6 +753,25 @@ BEGIN
 		return
 	END
 
+	--Check Position Taking	for Keno
+		--all a2<=a4
+		--all a1<=a4
+	if exists (
+			select 1 from 
+				CustSettingGame as scs with (nolock)
+				inner join CustSettingGame as acs with (nolock) on scs.custid = @srecommend  
+																and scs.sporttype=acs.sporttype and scs.bettype=acs.bettype
+				inner join customer as c with (nolock) on c.custid = acs.custid and c.roleid in (1,2) 
+														and c.recommend = @recommend --get member and agent			
+			where (acs.apositiontaking > scs.apositiontaking) AND scs.sporttype = 202	
+	)
+	BEGIN	
+		Select @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super position taking.',
+			@ErrCode = 213				 
+
+		return
+	END
+
 	--Check P2P :Game Comm
 	--IF exists(
 	--	SELECT TOP 1 1
@@ -703,8 +789,3 @@ BEGIN
 END
 
 
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveAgent] TO [vnteam] AS [dbo]
