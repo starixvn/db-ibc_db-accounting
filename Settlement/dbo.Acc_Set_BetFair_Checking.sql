@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Set_BetFair_Checking]
+﻿ALTER PROCEDURE [Acc_Set_BetFair_Checking]
 	@matchid				int = 0,
 	@IsMovebetfair			bit = 0 output,
 	@IsExcludeBetfair		bit = 0 output,
@@ -13,6 +13,7 @@ DB: DBTXN/bodb02
 Original: Acc_Set_BetDaq_Checking
 
 Revisions: 
+	- 20140313@Kathy: Execute settlement for abandoned/postponed matches (bettype: 13,26,27) [Redmine:#12049]
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
@@ -60,7 +61,7 @@ BEGIN
 				FROM bettrans WITH (NOLOCK) 
 				WHERE custid IN (2331, 1077687, 115770) 
 						AND matchid = @matchid 
-						AND bettype IN (3,8)  --Over/Under 
+						AND bettype IN (3,8,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 						AND statusID NOT IN (101, 102)
 						AND ruben = 0 
 			   )
@@ -71,7 +72,7 @@ BEGIN
 					FROM bettrans WITH (NOLOCK) 
 					WHERE custid IN (2331, 1077687, 115770) 
 							AND matchid = @matchid 
-							AND bettype = 3  --Over/Under 
+							AND bettype in(3,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
 							AND statusID NOT IN (101, 102)
 							AND ruben = 1 
 				   )	
@@ -82,6 +83,7 @@ BEGIN
 	END
 	
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_BetFair_Checking] TO [bodbAdminNet] AS [dbo]

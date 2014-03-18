@@ -1,4 +1,4 @@
-﻿ALTER PROC [dbo].[Acc_Set_BetDaq_Checking]
+﻿ALTER PROC [Acc_Set_BetDaq_Checking]
 	@matchid				int = 0,
 	@IsMovebetdaq			bit = 0 output,
 	@IsExcludeBetdaq		bit =0 output,
@@ -20,6 +20,7 @@ Revisions:
 	- 20120313@Jamie: Show checkbox when not existing Full time Over/Under BETDAQ settled 
 	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 
 	- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
+	- 20140313@Kathy: Execute settlement for abandoned/postponed matches (bettype: 13,26,27) [Redmine:#12049]
 
 Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 	* List of BetDaq Customers 
@@ -77,7 +78,7 @@ BEGIN
 						(	custid IN (50057, 879241, 103873, 78761, 851668, 878902)
 							OR recommend = 1688156	)
 						AND matchid = @matchid 
-						AND bettype IN (3,8)  --Over/Under 
+						AND bettype IN (3,8,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 						AND statusID NOT IN (101, 102)
 						AND ruben = 0 
 			   )
@@ -90,7 +91,7 @@ BEGIN
 							(	custid IN (50057, 879241, 103873, 78761, 851668, 878902)
 								OR recommend = 1688156	)
 							AND matchid = @matchid 
-							AND bettype = 3  --Over/Under 
+							AND bettype in(3,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
 							AND statusID NOT IN (101, 102)
 							AND ruben = 1 
 				   )	
@@ -101,6 +102,8 @@ BEGIN
 	END
 	
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_BetDaq_Checking] TO [bodbAdminNet] AS [dbo]
