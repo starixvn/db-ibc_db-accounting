@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_SB_Job]
+ALTER PROCEDURE [NAP_Admin_Settlement_SB_Job]
 AS
 /*
 	Created: 20130109@Kathy
@@ -29,6 +29,13 @@ BEGIN
 		,@sqlCommand NVARCHAR(max)
 		,@keyId INT
 		,@trycount INT
+		,@fth SMALLINT
+		,@fta SMALLINT
+		,@hth SMALLINT
+		,@hta SMALLINT
+		,@GoalRecord VARCHAR(50)
+		,@BetStatus NVARCHAR(50)
+		,@ActionId TINYINT
 
 	SELECT @ErrCode = 0
 		,@ErrMsg = ''
@@ -170,9 +177,40 @@ BEGIN
 					,@ErrMsg
 					,NULL
 		END
+
 		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
 		SET IsCalculating = 2
 		WHERE keyid = @keyId
+
+		SELECT @ActionId = CASE 
+								WHEN @Action = 'CAL-HT'			THEN 2
+								WHEN @Action = 'CAL-FT'			THEN 3
+								WHEN @Action = 'CAL'			THEN 4
+								WHEN @Action = 'CAL-FGLG' OR @Action = 'CAL-LG'		THEN 1
+								WHEN @Action = 'Refund-HT'		THEN 11
+								WHEN @Action = 'Refund-FT'		THEN 12
+								WHEN @Action = 'Refund'			THEN 13
+								WHEN @Action = 'Refund-FGLG'	THEN 17
+								WHEN @Action = 'Refund-LG'		THEN 18
+								WHEN @Action = 'UNDO'			THEN 0
+							END
+			,@fth = m.finalhomescore
+			,@fta = m.finalawayscore
+			,@hth = m.hthomescore
+			,@hta = m.htawayscore
+			,@GoalRecord = m.GoalRecord
+			,@BetStatus = m.betstatus
+		FROM match m WITH (NOLOCK)
+		WHERE m.matchid = @MatchId
+
+		EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
+			,@action = @ActionId
+			,@fth = @fth
+			,@fta = @fta
+			,@hth = @hth
+			,@hta = @hta
+			,@goalrecord = @GoalRecord
+			,@betstatus = @BetStatus
 	END
 END
 

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_Parlay_Job]
+ALTER PROCEDURE [NAP_Admin_Settlement_Parlay_Job]
 AS
 /*
 	Created: 20140114@Kathy
@@ -28,6 +28,7 @@ BEGIN
 		,@ErrMsg NVARCHAR(200)
 		,@keyId INT
 		,@trycount INT
+		,@ActionId TINYINT
 
 	UPDATE TOP (1) dbo.Parlay_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
 	SET IsCalculating = 1
@@ -146,7 +147,19 @@ BEGIN
 			END
 		END
 	END
+	ELSE 
+	BEGIN
+		SELECT @ActionId = CASE 
+								WHEN @Action = 'CAL'			THEN 5
+								WHEN @Action = 'REFUND-HT'		THEN 14
+								WHEN @Action = 'REFUND-FT'		THEN 15
+								WHEN @Action = 'REFUND'			THEN 16
+							END
+
+		EXEC Acc_Set_ConfirmedActionParlay @matchids = @matchid, @ActionId = @ActionId
+	END 
 END
+
 
 GO
 

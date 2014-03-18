@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_Refund_FGLG_Push]
+ALTER PROCEDURE [NAP_Admin_Settlement_Refund_FGLG_Push]
 	@MatchId int,
 	@AdminId int,
 	@LastGoalOnly bit,
@@ -25,11 +25,13 @@ Param's Explanation:
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500)
+	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500), @Action varchar(20)
 
 	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
 	FROM match m with(NOLOCK)
 	where m.matchid = @MatchId
+
+	SELECT @Action = CASE WHEN @LastGoalOnly = 1 THEN 'Refund-LG' ELSE 'Refund-FGLG' END 
 
 	IF @@ROWCOUNT = 0 
 	BEGIN
@@ -38,17 +40,16 @@ BEGIN
 		RETURN
 	END 
 
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_FGLG] @matchid = ' + CONVERT(NVARCHAR(10),@MatchId) +
-								 ', @adminid = ' + CONVERT(NVARCHAR(10),@AdminId) + 
+	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_FGLG] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+								 ', @adminid = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @LGOnly= ' + CONVERT(NVARCHAR(1),@LastGoalOnly) + 
 								 ', @IsLoopTempTable = ' + CONVERT(NVARCHAR(1),@IsLoopTempTable) +		
-								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
+								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-FGLG', @sqlCommand
+	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
 END
-
 
 
 
