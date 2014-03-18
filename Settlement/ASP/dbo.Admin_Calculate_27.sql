@@ -189,7 +189,7 @@ BEGIN
 		WHERE matchid = @matchid AND bettype = @bettype AND statusID NOT IN (101, 102) AND 1 = CASE 
 				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) OR recommend <> 1688156) THEN 1
+				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) and recommend <> 1688156) THEN 1
 				ELSE 0
 				END AND 1 = CASE 
 				WHEN betteam = 'a' AND @fth > 0 THEN 1
@@ -337,6 +337,7 @@ BEGIN
 	END
 
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_27] TO [vnteam]

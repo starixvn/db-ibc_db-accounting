@@ -71,7 +71,7 @@ BEGIN
 			AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
 							WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
 							WHEN @IsSettleAbandonedMatchIBC = 1 
-									AND (custid not IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) OR recommend <> 1688156)
+									AND (custid not IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND  recommend <> 1688156)
 									AND statusID IN (112,113)
 									 and bettype in (13,26,27)
 								THEN 0
@@ -79,7 +79,6 @@ BEGIN
 		IF @@ROWCOUNT < 10000 BREAK
 	END	
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundAll] TO [bodbAdminNet] AS [dbo]

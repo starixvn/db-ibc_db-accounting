@@ -74,7 +74,7 @@ BEGIN
 			and bettype not between 1301 and 1334 -- exclude sporting solution product		
 			AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
 							WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
-							WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) OR recommend <> 1688156) 
+							WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) 
 								AND statusID IN (112, 113) 
 								AND bettype IN (13, 26, 27) THEN 0
 					ELSE 1 END
