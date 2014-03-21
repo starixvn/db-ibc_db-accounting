@@ -1314,6 +1314,21 @@ BEGIN
 END 
 
 --Keno
+IF @aHideKeno = 0 AND (@aHideKeno <> @HideKeno)
+BEGIN
+	UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
+	SET		HideKeno = 0
+	WHERE	custid = @custid 
+	IF @@ERROR <>0
+	BEGIN
+		Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+				@ErrCode = 507
+		if @ReturnErrCode = 0
+			RaisError (@ErrMsg, 16, 1)
+		RETURN 
+	END
+END
+
 UPDATE	cg WITH (UPDLOCK,ROWLOCK)
 SET		cg.IsDisabled = 1 
 FROM CustGameType acg WITH (NOLOCK) 
@@ -1322,7 +1337,7 @@ WHERE	cg.custid = @custid AND acg.IsDisabled = 1 AND cg.IsDisabled = 0
 IF @@ERROR<>0
 BEGIN
 	Select @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
-	@ErrCode = 506
+	@ErrCode = 508
 	if @ReturnErrCode = 0
 		RaisError (@ErrMsg, 16, 1)
 	return
