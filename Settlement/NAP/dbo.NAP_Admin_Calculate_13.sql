@@ -30,20 +30,30 @@ BEGIN
 			WHERE NAME = 'LASDB'
 			)
 	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+		IF @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 AND @IsSettleAbandonedMatchIBC = 0
+			BEGIN
+			DECLARE @LASCommand NVARCHAR(1000)
+				,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_13] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @fth = ' + CONVERT(NVARCHAR(10), @fth) + ', @fta = ' + CONVERT(NVARCHAR(10), @fta) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-			,@createdDate = GETDATE()
+			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_13] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+								+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+								+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
+								+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
+								+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+								+ ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatch, 0))
+								+ ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchBetFair, 0))
+								+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0))
+				,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_13'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = @bettype
-			,@Status = 'waiting'
-			,@BetCount = @betcount
+			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_13'
+				,@SQLCommand = @LASCommand
+				,@CreatedDate = @createdDate
+				,@StatusID = 0 -- waiting
+				,@MatchID = @matchid
+				,@Bettype = @bettype
+				,@Status = 'waiting'
+				,@BetCount = @betcount
+		END
 	END
 
 	DECLARE @modds SMALLMONEY

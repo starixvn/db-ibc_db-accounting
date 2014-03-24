@@ -33,35 +33,46 @@ BEGIN
 			WHERE NAME = 'LASDB'
 			)
 	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+		IF @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 AND @IsSettleAbandonedMatchIBC = 0
+		BEGIN
+			DECLARE @LASCommand NVARCHAR(1000)
+				,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_13] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @fth = ' + CONVERT(NVARCHAR(10), @fth) + ', @fta = ' + CONVERT(NVARCHAR(10), @fta) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-			,@createdDate = GETDATE()
+			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_13] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+						+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+						+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
+						+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
+						+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, '')) 
+						+ ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatch, 0)) 
+						+ ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchBetFair, 0)) 
+						+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0))
+				,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_13'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = @bettype
-			,@Status = 'waiting'
-			,@BetCount = @betcount
+			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_13'
+				,@SQLCommand = @LASCommand
+				,@CreatedDate = @createdDate
+				,@StatusID = 0 -- waiting
+				,@MatchID = @matchid
+				,@Bettype = @bettype
+				,@Status = 'waiting'
+				,@BetCount = @betcount
+		END
 	END
 
 	DECLARE @modds SMALLMONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
+
 	SELECT @modds = 0
 
 	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetfair = 1 OR @IsSettleAbandonedMatchIBC = 1
 	BEGIN
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 		SET @modds = modds = CASE 
-				WHEN betteam = 'ay' AND @fth > 0  THEN - 1
-				WHEN betteam = 'an' AND @fth > 0  THEN 1
-				WHEN betteam = 'hy' AND @fta > 0  THEN - 1
-				WHEN betteam = 'hn' AND @fta > 0  THEN 1
+				WHEN betteam = 'ay' AND @fth > 0 THEN - 1
+				WHEN betteam = 'an' AND @fth > 0 THEN 1
+				WHEN betteam = 'hy' AND @fta > 0 THEN - 1
+				WHEN betteam = 'hn' AND @fta > 0 THEN 1
 				END
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
@@ -189,15 +200,12 @@ BEGIN
 				WHEN @modds < 0 THEN 113 --LOSE
 				END
 			,ruben = 1
-		WHERE matchid = @matchid AND bettype = @bettype AND
-			statusID NOT IN (101, 102) 
-			AND 1 = CASE 
+		WHERE matchid = @matchid AND bettype = @bettype AND statusID NOT IN (101, 102) AND 1 = CASE 
 				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
 				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
 				ELSE 0
-				END
-			AND 1 = CASE 
+				END AND 1 = CASE 
 				WHEN betteam = 'ay' AND @fth > 0 THEN 1
 				WHEN betteam = 'an' AND @fth > 0 THEN 1
 				WHEN betteam = 'hy' AND @fta > 0 THEN 1
@@ -344,8 +352,6 @@ BEGIN
 		WHERE matchid = @matchid AND bettype = @bettype AND
 			--status NOT IN ('VOID', 'REJECT')
 			statusID NOT IN (101, 102)
-
-		
 	END
 END
 
