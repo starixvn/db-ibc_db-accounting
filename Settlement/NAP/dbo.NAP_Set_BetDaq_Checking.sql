@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Set_BetDaq_Checking]
+ALTER PROCEDURE [NAP_Set_BetDaq_Checking]
 	@matchid				int = 0
 AS 
 
@@ -74,7 +74,7 @@ BEGIN
 						(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 							OR recommend = 1688156	)
 						AND matchid = @matchid 
-						AND bettype IN (3,8)  --Over/Under 
+						AND bettype IN (3,8,13,26,27)  --Over/Under ,Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 						AND statusID NOT IN (101, 102)
 						AND ruben = 0 
 			   )
@@ -87,7 +87,7 @@ BEGIN
 							(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 								OR recommend = 1688156	)
 							AND matchid = @matchid 
-							AND bettype = 3  --Over/Under 
+							AND bettype IN(3,13,26,27)   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
 							AND statusID NOT IN (101, 102)
 							AND ruben = 1 
 				   )	

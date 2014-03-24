@@ -1,10 +1,11 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_RefundFT_Push]
+ALTER PROCEDURE [NAP_Admin_Settlement_RefundFT_Push]
 	@MatchId int,
 	@AdminId int,
 	@IsExcludeBetdaq bit = 0,
 	@IsSettleAbandonedMatch bit = 0,
 	@IsExcludeBetfair bit = 0,
 	@IsSettleAbandonedMatchBetFair bit = 0,
+	@IsSettleAbandonedMatchIBC bit = 0,
 	@FullTimeHome int = NULL,
 	@FullTimeAway int = NULL,
 	@BetStatus nvarchar(50) = NULL,
@@ -42,23 +43,24 @@ BEGIN
 				,@ErrMsg	= 'Match does not exist!'	
 		RETURN
 	END 
-
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_RefundFT] @matchid = ' + CONVERT(NVARCHAR(10),@MatchId) +
-								 ', @adminid = ' + CONVERT(NVARCHAR(10),@AdminId) + 
+	
+	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_RefundFT] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+								 ', @adminid = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1),@IsExcludeBetdaq) + 
 								 ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatch) +
 								 ', @IsExcludeBetfair = ' + CONVERT(NVARCHAR(1),@IsExcludeBetfair) + 
 								 ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatchBetFair) + 
-								 ', @fth = ' + ISNULL(CONVERT(NVARCHAR(10),@FullTimeHome),'NULL') +
-								 ', @fta = ' + ISNULL(CONVERT(NVARCHAR(10),@FullTimeAway),'NULL') +
+								 ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatchIBC) + 
+								 ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeHome),'NULL') +
+								 ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeAway),'NULL') +
 								 ', @betstatus = ' + CASE when @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(nvarchar(20),@BetStatus)+ '''' END +
-								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
+								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
 	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-FT', @sqlCommand
 
-END 
+END
 
 
 

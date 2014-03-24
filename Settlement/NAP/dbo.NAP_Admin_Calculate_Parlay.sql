@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_Parlay] @matchid INT = NULL
+ALTER PROCEDURE [NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@matchids VARCHAR(2000) = NULL
 	,@mode VARCHAR(15) = 'CAL'
 	,@action VARCHAR(20) = 'ALL'
@@ -33,8 +33,14 @@ BEGIN
 		-- DB052/DB053/DB054/DB06: got servicebroker, then just send a message to service broker and then let it to handle the rest.
 		DECLARE @sMessage NVARCHAR(MAX)
 
-		SET @sMessage = '
-		EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
+		SET @sMessage = 'EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = ' + CASE 
+				WHEN @matchid IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @matchid)
+				END + '
+			,@matchids = ' + CASE 
+				WHEN @matchids IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(NVARCHAR(2000), @matchids) + ''''
+				END + '
 			,@mode = ' + CASE 
 				WHEN @mode IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @mode) + ''''
@@ -143,6 +149,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 

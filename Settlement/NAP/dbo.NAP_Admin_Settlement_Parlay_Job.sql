@@ -147,17 +147,22 @@ BEGIN
 			END
 		END
 	END
-	ELSE 
+	ELSE
 	BEGIN
-		SELECT @ActionId = CASE 
-								WHEN @Action = 'CAL'			THEN 5
-								WHEN @Action = 'REFUND-HT'		THEN 14
-								WHEN @Action = 'REFUND-FT'		THEN 15
-								WHEN @Action = 'REFUND'			THEN 16
-							END
+		IF @action = 'CAL'
+			EXEC Acc_Set_ConfirmedActionParlay @matchids = @matchid
+		ELSE
+		BEGIN
+			SELECT @ActionId = CASE 
+					WHEN @Action = 'REFUND-HT' THEN 14
+					WHEN @Action = 'REFUND-FT' THEN 15
+					WHEN @Action = 'REFUND' THEN 16
+					END
 
-		EXEC Acc_Set_ConfirmedActionParlay @matchids = @matchid, @ActionId = @ActionId
-	END 
+			EXEC Acc_Set_ConfirmedAction @matchid = @matchid
+				,@action = @ActionId
+		END
+	END
 END
 
 

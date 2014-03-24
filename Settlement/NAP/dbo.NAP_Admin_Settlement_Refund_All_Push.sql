@@ -1,10 +1,11 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_Refund_All_Push]
+ALTER PROCEDURE [NAP_Admin_Settlement_Refund_All_Push]
 	@Matchid int,
 	@AdminId int, 	
 	@IsExcludeBetdaq bit = 0,
 	@IsSettleAbandonedMatch bit = 0,
 	@IsExcludeBetfair bit = 0,
 	@IsSettleAbandonedMatchBetFair bit = 0,
+	@IsSettleAbandonedMatchIBC bit = 0,
 	@HalfTimeHome int = NULL,
 	@HalfTimeAway int = NULL,
 	@FullTimeHome int = NULL,
@@ -63,26 +64,27 @@ BEGIN
 	BEGIN
 		SELECT	 @ErrCode	= 1000001
 				,@ErrMsg	= 'Match does not exist!'	
-		RETURN
+		RETURN 
 	END 
 	
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_All] @Matchid = ' + CONVERT(NVARCHAR(10),@MatchId) +
-								 ', @creator = ' + CONVERT(NVARCHAR(10),@AdminId) + 
+	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_All] @Matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1),@IsExcludeBetdaq) + 
 								 ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatch) +
 								 ', @IsExcludeBetfair = ' + CONVERT(NVARCHAR(1),@IsExcludeBetfair) + 
 								 ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatchBetFair) + 
+								 ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatchIBC) + 
 								 ', @betstatus = ' + CASE when @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(nvarchar(20),@BetStatus)+ '''' END +
-								 ', @fth = ' + ISNULL(CONVERT(NVARCHAR(10),@FullTimeHome),'NULL') +
-								 ', @fta = ' + ISNULL(CONVERT(NVARCHAR(10),@FullTimeAway),'NULL') +
-								 ', @hth = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeHome),'NULL') +
-								 ', @hta = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeAway),'NULL') +
+								 ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeHome),'NULL') +
+								 ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeAway),'NULL') +
+								 ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50),@HalfTimeHome),'NULL') +
+								 ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50),@HalfTimeAway),'NULL') +
 								 ', @Action = ''' + CONVERT(NVARCHAR(20),@Action) + '''' +
 								 ', @IsNested = ''' + CONVERT(NVARCHAR(1),@IsNested) + '''' +
-								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
+								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
-
+								 
 	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
 	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund', @sqlCommand
 END

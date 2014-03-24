@@ -1,6 +1,6 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
-	,@mode VARCHAR(15) = 'CAL' 
-	,@action VARCHAR(20) = 'CAL' 
+ALTER PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
+	,@mode VARCHAR(15) = 'CAL'
+	,@action VARCHAR(20) = 'CAL'
 	,@fth INT = NULL
 	,@fta INT = NULL
 	,@hth INT = NULL
@@ -57,12 +57,14 @@ CREATE PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
 	,@betcount_30 INT = NULL
 	,@betcount_125 INT = NULL
 	,@betcount_14 INT = NULL
+	,@betcount_126 INT = NULL
 	,@row_count INT = NULL
 	,@ticket_count INT = NULL -- ticket number of bettype
 	,@IsSettleAbandonedMatch BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
 	,@IsExcludeBetdaq BIT = 0
 	,@IsExcludeBetfair BIT = 0
+	,@IsSettleAbandonedMatchIBC BIT = 0
 	,@LGOnly BIT = NULL
 	,@matchdate DATETIME = NULL
 	,@CalledByBrokerService BIT = 0
@@ -89,7 +91,7 @@ BEGIN
 		DECLARE @sMessage NVARCHAR(MAX)
 
 		SET @sMessage = '
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
+				EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
 			,@mode = ' + CASE 
 				WHEN @mode IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @mode) + ''''
@@ -322,6 +324,10 @@ BEGIN
 				WHEN @betcount_14 IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @betcount_14)
 				END + '
+			,@betcount_126 = ' + CASE 
+				WHEN @betcount_126 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @betcount_126)
+				END + '
 			,@row_count = ' + CASE 
 				WHEN @row_count IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @row_count)
@@ -345,6 +351,10 @@ BEGIN
 			,@IsExcludeBetfair = ' + CASE 
 				WHEN @IsExcludeBetfair IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @IsExcludeBetfair)
+				END + '
+			,@IsSettleAbandonedMatchIBC = ' + CASE 
+				WHEN @IsSettleAbandonedMatchIBC IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @IsSettleAbandonedMatchIBC)
 				END + '
 			,@LGOnly = ' + CASE 
 				WHEN @LGOnly IS NULL THEN 'NULL'
@@ -621,6 +631,12 @@ BEGIN
 					,@scorediff_ht
 					,NULL
 					,@betcount_30
+
+				-- bettype 126 : 1H Total Goal
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid
+					,126
+					,@totalht
+					,@betcount_126
 			END
 
 			IF @Mode = 'UNDO'
@@ -643,36 +659,6 @@ BEGIN
 		BEGIN
 			IF @mode = 'FT'
 			BEGIN
-				IF @row_count IS NULL
-					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
-						,@bettype = @betcount_3
-						,@totalgoal = @totalgoal
-						,@betcount = @ticket_count
-						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-				ELSE
-					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
-						,@IsExcludeBetdaq = @IsExcludeBetdaq
-						,@IsExcludeBetfair = @IsExcludeBetfair
-			END
-
-			IF @mode = 'HT'
-			BEGIN
-				IF @row_count IS NULL
-					EXEC dbo.NAP_Admin_Calculate_8 @matchid = @matchid
-						,@bettype = @betcount_8
-						,@totalht = @totalht
-						,@betcount = @ticket_count
-						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-				ELSE
-					EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
-						,@IsExcludeBetdaq = @IsExcludeBetdaq
-						,@IsExcludeBetfair = @IsExcludeBetfair
-			END
-
-			IF @mode = 'ALL'
-			BEGIN
 				IF @betcount_3 IS NOT NULL
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = @betcount_3
@@ -681,6 +667,50 @@ BEGIN
 						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
+				-- NAP_Admin_Calculate_13
+				IF @betcount_13 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+						,@bettype = 13
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatch
+
+				-- NAP_Admin_Calculate_26
+				IF @betcount_26 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+						,@bettype = 26
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				-- NAP_Admin_Calculate_27
+				IF @betcount_27 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
+						,@bettype = 27
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @row_count IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
+						,@IsExcludeBetdaq = @IsExcludeBetdaq
+						,@IsExcludeBetfair = @IsExcludeBetfair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@fth = @fth
+						,@fta = @fta
+			END
+
+			IF @mode = 'HT'
+			BEGIN
 				IF @betcount_8 IS NOT NULL
 					EXEC dbo.NAP_Admin_Calculate_8 @matchid = @matchid
 						,@bettype = @betcount_8
@@ -689,10 +719,73 @@ BEGIN
 						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
-				IF @betcount_3 IS NULL AND @betcount_8 IS NULL
+				IF @row_count IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
+						,@IsExcludeBetdaq = @IsExcludeBetdaq
+						,@IsExcludeBetfair = @IsExcludeBetfair
+			END
+
+			IF @mode = 'ALL'
+			BEGIN
+				-- NAP_Admin_Calculate_3
+				IF @betcount_3 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = @betcount_3
+						,@totalgoal = @totalgoal
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+
+				-- NAP_Admin_Calculate_8
+				IF @betcount_8 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_8 @matchid = @matchid
+						,@bettype = @betcount_8
+						,@totalht = @totalht
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+
+				-- NAP_Admin_Calculate_13
+				IF @betcount_13 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+						,@bettype = 13
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatch
+
+				-- NAP_Admin_Calculate_26
+				IF @betcount_26 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+						,@bettype = 26
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				-- NAP_Admin_Calculate_27
+				IF @betcount_27 IS NOT NULL
+					EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
+						,@bettype = 27
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @ticket_count
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				-- NAP_Admin_Calculate_RefundAll
+				IF @row_count IS NOT NULL
 					EXEC dbo.NAP_Admin_Calculate_RefundAll @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@fth = @fth
+						,@fta = @fta
 			END
 
 			IF @mode = 'FGLG'
@@ -712,7 +805,6 @@ BEGIN
 				EXEC dbo.NAP_Admin_Calculate_Refund_BetFair @matchid = @matchid
 			END
 		END
-
 	END
 END
 

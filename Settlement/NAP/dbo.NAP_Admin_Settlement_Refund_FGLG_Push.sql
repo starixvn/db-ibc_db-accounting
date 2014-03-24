@@ -51,8 +51,6 @@ BEGIN
 	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
 END
 
-
-
 GO
 
 GRANT EXECUTE ON [NAP_Admin_Settlement_Refund_FGLG_Push] TO [bodbAdminNet] AS [dbo]

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_RefundHT_Push]
+ALTER PROCEDURE [NAP_Admin_Settlement_RefundHT_Push]
 	@MatchId int,
 	@AdminId int,
 	@IsExcludeBetdaq bit = 0,
@@ -43,15 +43,15 @@ BEGIN
 		RETURN
 	END 
 
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_RefundHT] @matchid = ' + CONVERT(NVARCHAR(10),@MatchId) +
-								 ', @adminid = ' + CONVERT(NVARCHAR(10),@AdminId) + 
+	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_RefundHT] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+								 ', @adminid = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1),@IsExcludeBetdaq) + 
 								 ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatch) +
 								 ', @IsExcludeBetfair = ' + CONVERT(NVARCHAR(1),@IsExcludeBetfair) + 
 								 ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatchBetFair) + 
-								 ', @hth = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeHome),'NULL' )+
-								 ', @hta = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeAway),'NULL') +
-								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
+								 ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50),@HalfTimeHome),'NULL' )+
+								 ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50),@HalfTimeAway),'NULL') +
+								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 

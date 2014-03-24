@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_RefundHT] @matchid INT
+ALTER PROCEDURE [NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@adminid INT
 	,@IsExcludeBetdaq BIT = 0
 	,@IsSettleAbandonedMatch BIT = 0
@@ -113,7 +113,7 @@ INSERT INTO #BalanceBefore
 SELECT custid
 	,SUM(winlost - actual_stake + playercomm)
 FROM dbo.bettrans WITH (ROWLOCK)
-WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125)
+WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
 GROUP BY custid
 
 IF @IsSettleAbandonedMatch = 1
@@ -175,7 +175,7 @@ BEGIN
 		END CATCH
 	END
 
-	EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
+		EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
 		,@creator = @adminid
 		,@IsExcludeBetdaq = @IsExcludeBetdaq
 		,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
@@ -277,7 +277,7 @@ BEGIN
 	--	,@betcount = @betcount_8
 	--	,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 	--	,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 	,@action = 'REFUND'
 	,@mode = 'HT'
 	,@betcount_8 = 8 -- bettype
@@ -298,13 +298,13 @@ EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Re
 
 IF @Rowcount > 0
 BEGIN
-	EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
+		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
 		,'F'
 
 	--EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
 	--	,@IsExcludeBetdaq = @IsExcludeBetdaq
 	--	,@IsExcludeBetfair = @IsExcludeBetfair
-	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 		,@action = 'REFUND'
 		,@mode = 'HT'
 		,@IsExcludeBetdaq = @IsExcludeBetdaq
@@ -316,7 +316,7 @@ INSERT INTO #BalanceAfter
 SELECT custid
 	,SUM(winlost - actual_stake + playercomm)
 FROM dbo.bettrans WITH (ROWLOCK)
-WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125)
+WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
 GROUP BY custid
 
 -------------------------------------------------------------

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_6] @matchid INT
+ALTER PROCEDURE [NAP_Admin_Calculate_6] @matchid INT
 	,@bettype SMALLINT
 	,@totalgoal SMALLMONEY
 	,@betcount INT = 0
@@ -10,16 +10,7 @@ AS
 	DB: DBO2.BODB02
 	
 	Revisions:
-		- 20100424@Henry: Update column StatusID of Bettrans (DRAW:111, WON: 112, LOSE: 113)
-		- 20100521@Henry: Change to use StatusID instead of Status in WHERE statement
-		- 20100625@Phuc: Force SQL engine using cluster index(CIX_recommend_matchid_bettype)(version on DB05/DB052). 
-			Note: we deployed separated version for this sp one version on DB05/DB052(using CIX_recommend_matchid_bettype index)
-			and original one for other DB. When edit this sp need to edit and re-deploy main version first then version on DB05/DB052.
-		- 20110105@Lukas: Re-arrange bettype
-		- 20120426@Lukas: Get from production & exclude DB044
-		- 20120815@Dan: Add virtual soccer
-		- 20121018@Johnson: Merge code for checking double comm losing from production
-		- 20121031@Dan: update betteam for virtual soccer
+		
 */
 BEGIN
 	IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
@@ -29,7 +20,11 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+			SELECT *
+			FROM sys.databases
+			WHERE NAME = 'LASDB'
+			)
 	BEGIN
 		DECLARE @LASCommand NVARCHAR(1000)
 			,@createdDate DATETIME
@@ -57,6 +52,7 @@ BEGIN
 			WHEN betteam = '0-1' AND @totalgoal <= 1 THEN 1
 			WHEN betteam = '2-3' AND @totalgoal IN (2, 3) THEN 1
 			WHEN betteam = '4-6' AND @totalgoal IN (4, 5, 6) THEN 1
+			WHEN betteam = '4-over' AND @totalgoal >= 4 THEN 1
 			WHEN betteam = '7-over' AND @totalgoal >= 7 THEN 1
 			ELSE - 1
 			END
@@ -74,14 +70,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					)
 			WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					) * 0.5
@@ -93,14 +89,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - apositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - apositiontaking * 0.5
@@ -112,14 +108,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - mpositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - mpositiontaking * 0.5
@@ -131,14 +127,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - spositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 1206) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 126, 1206) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - spositiontaking * 0.5
@@ -189,6 +185,7 @@ BEGIN
 		--status NOT IN ('VOID', 'REJECT')
 		statusID NOT IN (101, 102)
 END
+
 
 GO
 
