@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID]    
+﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID]    
 	@CustID int,  
 	@TransID bigint  
 AS    
@@ -47,6 +47,7 @@ AS
 	- 20130726@Elodie: Define data for bettrans, bettrans14 or bettrans_bk by winlostdate field
 					   Enhance performance
 	- 20140307@Dom: Add Keno
+	- 20140318@Dom: #13487 Prevent user to delete LAS ticket in bet list accounting site
 	*/   
 
 SET NOCOUNT ON    
@@ -136,6 +137,14 @@ DECLARE @WinlostDate smalldatetime, @MoveBetsDay smalldatetime, @BalanceUpDay sm
 DECLARE @tmp TABLE (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime) 
 INSERT INTO @tmp(BalanceUpDay, MoveBetsDay)
 EXEC Age_SelBalanceUpDay
+
+--list of LAS agent not allowed to delete
+DECLARE @strLASAgent varchar(1000)
+EXEC DBLAS.LASDB.dbo.Las_Get_recommend @StringRec = @strLASAgent output
+SELECT val as CustID 
+INTO #LASAgent
+FROM dbo.strSplit(@strLASAgent,'^')
+--END 
 
 SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
 
@@ -265,7 +274,7 @@ INSERT INTO @Data
 	b.matchid,  
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,  
 	--CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or status NOT IN('running', 'waiting', 'WON', 'LOSE', 'DRAW') THEN 0 ELSE 1 END as allowdelete,  
-	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) THEN 0 ELSE 1 END as allowdelete,  
+	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) or b.recommend IN (SELECT custid from #LASAgent) THEN 0 ELSE 1 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
@@ -333,7 +342,7 @@ INSERT INTO @Data
 	b.betfrom,  
 	0 matchid,   
 	CONVERT(BIT,0) as IsNeutral,  
-	CASE WHEN statusID = 0 THEN 1 ELSE 0 END as allowdelete,  
+	CASE WHEN statusID = 0 and b.recommend NOT IN (SELECT custid from #LASAgent) THEN 1 ELSE 0 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
@@ -746,7 +755,7 @@ select
 	b.matchid,  
 	CONVERT(BIT,0) as IsNeutral,  
 	--CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or b.status NOT IN('running', 'waiting', 'WON', 'LOSE', 'DRAW') THEN 0 ELSE 1 END as allowdelete,  
-	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or b.statusID NOT IN(0, 1, 112, 113, 111) THEN 0 ELSE 1 END as allowdelete,  
+	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or b.statusID NOT IN(0, 1, 112, 113, 111)  or b.recommend IN (SELECT custid from #LASAgent) THEN 0 ELSE 1 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
@@ -815,7 +824,7 @@ select
 	b.matchid,  
 	CONVERT(BIT,0) as IsNeutral,  
 	--CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or b.status NOT IN('running', 'waiting', 'WON', 'LOSE', 'DRAW') THEN 0 ELSE 1 END as allowdelete,  
-	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or b.statusID NOT IN(0, 1, 112, 113, 111) THEN 0 ELSE 1 END as allowdelete,  
+	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or b.statusID NOT IN(0, 1, 112, 113, 111) or b.recommend IN (SELECT custid from #LASAgent) THEN 0 ELSE 1 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
@@ -891,7 +900,7 @@ select
 	b.betfrom,  
 	b.matchid,  
 	CONVERT (BIT, 0) AS IsNeutral,  
-	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) THEN 0 ELSE 1 END as allowdelete,  
+	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) or b.recommend IN (SELECT custid from #LASAgent) THEN 0 ELSE 1 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
@@ -1040,7 +1049,7 @@ select
 	b.betfrom,  
 	0 matchid,   
 	CONVERT(BIT,0) as IsNeutral,  
-	CASE WHEN statusID = 0 THEN 1 ELSE 0 END as allowdelete,  
+	CASE WHEN statusID = 0 and b.recommend NOT IN (SELECT custid from #LASAgent) THEN 1 ELSE 0 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
@@ -1530,7 +1539,7 @@ select
 	b.betfrom,  
 	b.matchid,  
 	CONVERT (BIT, 0) AS IsNeutral,  
-	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) THEN 0 ELSE 1 END as allowdelete,  
+	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) or b.recommend IN (SELECT custid from #LASAgent) THEN 0 ELSE 1 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
@@ -2170,7 +2179,7 @@ select
 	b.betfrom,  
 	b.matchid,  
 	CONVERT (BIT, 0) AS IsNeutral,  
-	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) THEN 0 ELSE 1 END as allowdelete,  
+	CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or statusID NOT IN(0, 1, 112, 113, 111) or b.recommend IN (SELECT custid from #LASAgent) THEN 0 ELSE 1 END as allowdelete,  
 	(b.winlost-b.actual_stake)  winlost,  
 	b.playercomm as commission,  
 	(b.scomm - b.acomm) as scomm,  
