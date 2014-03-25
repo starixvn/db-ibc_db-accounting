@@ -16,7 +16,7 @@
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
-
+ 
 /*
 Created: Thien
 Task : refund tickets 
