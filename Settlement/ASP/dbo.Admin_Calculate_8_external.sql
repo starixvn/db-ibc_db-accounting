@@ -221,5 +221,6 @@ BEGIN
 		DROP TABLE #tmpRecommend
 	END
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_8_external] TO [vnteam] AS [dbo]

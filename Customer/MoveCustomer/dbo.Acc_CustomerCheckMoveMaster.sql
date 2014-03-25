@@ -340,7 +340,7 @@ BEGIN
 	--Check Keno sport enable status
 	if @sHideKeno = 1 and @mHideKeno = 0
 	BEGIN
-		SELECT @ErrMsg = 'Master is offered Keno but new super is not offered Virtual Sports.',
+		SELECT @ErrMsg = 'Master is offered Keno but new super is not offered Keno.',
 			@ErrCode = 124	 
 		return
 	END
@@ -644,5 +644,3 @@ BEGIN
 	--END
 
 END
-
-
