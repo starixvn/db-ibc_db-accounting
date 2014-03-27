@@ -157,14 +157,15 @@ BEGIN
 					WHEN @Action = 'REFUND-HT' THEN 14
 					WHEN @Action = 'REFUND-FT' THEN 15
 					WHEN @Action = 'REFUND' THEN 16
+					ELSE -1
 					END
 
-			EXEC Acc_Set_ConfirmedAction @matchid = @matchid
-				,@action = @ActionId
+			IF @ActionId <> -1
+				EXEC Acc_Set_ConfirmedAction @matchid = @matchid
+					,@action = @ActionId
 		END
 	END
 END
-
 
 GO
 

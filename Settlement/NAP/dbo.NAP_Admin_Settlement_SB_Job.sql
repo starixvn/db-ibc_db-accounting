@@ -6,6 +6,7 @@ AS
 	DB: DBTXN\bodb02
 	
 	Revisions:
+		- 20140326@Kathy: Get match values from DBPRO
 */
 BEGIN
 	SET NOCOUNT ON
@@ -193,6 +194,7 @@ BEGIN
 								WHEN @Action = 'Refund-FGLG'	THEN 17
 								WHEN @Action = 'Refund-LG'		THEN 18
 								WHEN @Action = 'UNDO'			THEN 0
+							ELSE -1
 							END
 			,@fth = m.finalhomescore
 			,@fta = m.finalawayscore
@@ -200,17 +202,18 @@ BEGIN
 			,@hta = m.htawayscore
 			,@GoalRecord = m.GoalRecord
 			,@BetStatus = m.betstatus
-		FROM match m WITH (NOLOCK)
+		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
 
-		EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
-			,@action = @ActionId
-			,@fth = @fth
-			,@fta = @fta
-			,@hth = @hth
-			,@hta = @hta
-			,@goalrecord = @GoalRecord
-			,@betstatus = @BetStatus
+		IF @ActionId <> -1
+			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
+				,@action = @ActionId
+				,@fth = @fth
+				,@fta = @fta
+				,@hth = @hth
+				,@hta = @hta
+				,@goalrecord = @GoalRecord
+				,@betstatus = @BetStatus
 	END
 END
 

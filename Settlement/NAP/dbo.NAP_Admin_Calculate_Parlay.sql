@@ -151,6 +151,7 @@ BEGIN
 END
 
 
+
 GO
 
 GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_Parlay] TO [vnteam] AS [dbo]
