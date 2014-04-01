@@ -20,10 +20,10 @@ SELECT	DISTINCT ci.CustId , cs.SportType,  0
 FROM	CustInfo ci WITH (NOLOCK)
 CROSS JOIN (SELECT DISTINCT Sporttype FROM CustSetting WITH (NOLOCK) WHERE CustID = 1) cs
 WHERE   RoleID = 4
+		AND srecommend NOT IN (	SELECT custid FROM Dep_CustSuper WITH (NOLOCK))
 
 
 ---EXEC dbo.[DBA_CheckPT_Setting] @srecommend = 1, @SportType = 1
-
 --select * from #temp
 
 SET NOCOUNT ON 
