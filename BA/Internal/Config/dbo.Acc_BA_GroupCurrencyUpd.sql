@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BA_GroupCurrencyUpd]
+﻿USE [bodb_Licensee]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BA_GroupCurrencyUpd]    Script Date: 04/02/2014 02:08:09 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_BA_GroupCurrencyUpd    Script Date: 12/24/2013 2:42:35 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_BA_GroupCurrencyUpd    Script Date: 12/5/2013 10:52:37 AM ******/
+ALTER PROCEDURE [dbo].[Acc_BA_GroupCurrencyUpd]
 	@LicenseeID INT,
 	@str  VARCHAR(300),
 	@ModifyBy INT,
@@ -19,6 +28,7 @@ Revisions:
 	- 20120403@Jim: get SpecialCust from LicenseeSpecialCust replace for hard-code
 	- 20120426@Henry: fix bug due to update wrong groupcomm in LicenseeBAHistory
     - 20130123@Daniel: Change link server alias
+	- 20131113@winnie: Change link server to DBTXN.CustDB
 
 Param's Explanation:
 
@@ -112,7 +122,7 @@ BEGIN
 						
 							SELECT @BACustID=CustID FROM @CustIDList  WHERE ID=@j
 							--- Update commission for BA Member
-							EXEC DBTXN.bodb02.dbo.[Lrf_CustomerUpdMemberBAComm]
+							EXEC DBTXN.CustDB.dbo.[Lrf_CustomerUpdMemberBAComm]
 								@LicenseeID=@LicenseeID,
 								@custid=@BACustID,
 								@ModifyBy=@ModifyBy,
@@ -129,7 +139,7 @@ BEGIN
 													 WHEN ugroup='b' THEN @groupCommB
 													 WHEN ugroup='c' THEN @groupCommC
 													 WHEN ugroup='d' THEN @groupCommD ELSE '' END 					
-								FROM @SpecialCustIDList WITH (NOLOCK) 
+								FROM @SpecialCustIDList
 								WHERE CustID = 	@BACustID		
 							END
 							
@@ -153,11 +163,4 @@ BEGIN
 				SET @i=@i+1		
 			END
 		END
-	END	
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_BA_GroupCurrencyUpd] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BA_GroupCurrencyUpd] TO [vnteam] 
-
-
+	END
