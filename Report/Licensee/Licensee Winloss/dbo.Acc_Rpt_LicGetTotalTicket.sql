@@ -13,6 +13,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_LicGetTotalTicket]
 	@ShowLC			BIT=0,
 	@ShowVS			BIT=0,
 	@ShowCS			BIT=0,
+	@ShowKN  	    BIT=0,
 	@SportID		INT=0,
 	@bettype		INT=0,
 	@ReportBy		TINYINT=0,  
@@ -26,6 +27,7 @@ AS
     Original: OA_Rpt_GetTotalTicket 
     Revisions:    
 		-20130607@Jim: support RNG Casino 
+		-20140401@Hannah: offer Keno
 	Param's Explanation:    
 	+ @ReportBy 1-Live; 2-Non-Live; 0: All;  
 	+ @GroupBy 1-Daily; 2-Monthly
@@ -91,7 +93,7 @@ END
 
 --Get the data
 SELECT @sql = @sql + '--Get the data:' + char(13)
-IF (@ShowSB = 1 OR @ShowRB = 1 OR @ShowNG = 1 OR @ShowLC = 1 OR @ShowVS = 1 OR @ShowCS=1)
+IF (@ShowSB = 1 OR @ShowRB = 1 OR @ShowNG = 1 OR @ShowLC = 1 OR @ShowVS = 1 OR @ShowCS=1 OR @ShowKN=1)
 BEGIN
 	--exclude BA & IBC & PIH...
 	SELECT @sql = @sql + '--Exclude BA & IBC & PIH...:' + char(13)
@@ -116,6 +118,7 @@ BEGIN
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END + 
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END + 
 						CASE WHEN @ShowCS = 1 THEN ' OR b.bettype =71' ELSE '' END + 
+						CASE WHEN @ShowKN = 1 THEN ' OR b.bettype BETWEEN 1501 AND 1599' ELSE '' END + 
 						CASE WHEN @ShowNG = 1 THEN ' OR b.bettype BETWEEN 81 AND 120' ELSE '' END + ')' + char(13) +
 						CASE WHEN @bettype <> 0 THEN ' AND b.bettype = ' + convert(varchar(10), @Bettype)  ELSE '' END + char(13) +
 						CASE WHEN @SportID<>0 THEN 'AND b.bettype NOT IN (9,29) AND b.bettype NOT BETWEEN 31 AND 120 AND l.Sporttype = ' + convert(varchar(10), @SportID) ELSE '' END + char(13) +

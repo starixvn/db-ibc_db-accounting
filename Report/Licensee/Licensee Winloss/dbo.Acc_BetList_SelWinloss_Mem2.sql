@@ -14,6 +14,7 @@ ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@ShowLC			BIT = 0,
 	@ShowVS			BIT = 0,
 	@ShowCS  		BIT = 0, -- RNG Casino
+	@ShowKN   		BIT = 0, -- Keno
 	@BaseCurrency TINYINT = 0,
 	@TotalRows INT=0 OUTPUT,
 	@SumWinlost MONEY=0 OUTPUT,
@@ -51,7 +52,8 @@ Revisions:
 	- 20130527@Jim: support RNG Casino
 	- 20130719@Victor: apply betlist core
 	- 20130716@Jim: update matchid for RNG Casino and Bingo
-	
+	- 20140331@Hannah: offer Keno
+
 Param's Explanation:
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
 	+ @BaseCurrency : Base currency in Result tables 0: ALL, 1: USD, 2: MYR, 3: EUR
@@ -723,6 +725,55 @@ BEGIN
 			b.bettype =71 AND
 			b.statusID IN (111,112,113)
 	END
+	----- Keno
+	IF @ShowKN=1
+	BEGIN
+		INSERT INTO #BetListByDateMem
+		SELECT
+			202 Sporttype, 
+			b.TransID,
+			ISNULL(b.BetID,0),
+			b.Bettype,
+			b.hdp1 AS hdp1, 
+			b.hdp2 AS hdp2,
+			modds,
+			b.oddstype,
+			b.Odds,
+			b.stake,
+			b.actual_stake, 
+			ChoiceId AS betteam,
+			b.status AS Status,				
+			b.refno,
+			b.Transdate,	
+			b.winlostdate,			
+			(b.winlost-actual_stake),
+			- (b.winlost-actual_stake) ,
+			comm,
+			b.playercomm  , 
+			b.Liveindicator,
+			b.Livehomescore,
+			b.Liveawayscore,
+			b.IP AS IP,
+			0 as LeagueID,
+			GameId AS MMatchID,	
+			0 as MatchCode,
+			'' AS Race,	
+			0 as HomeID,
+			0 as AwayID, 		
+			'' as Betstatus,
+			CONVERT(BIT,0) AS IsNeutral,
+			0,0,
+			b.currency,
+			'' as showtime
+		FROM
+			dbo.bettrans AS b WITH (NOLOCK)		
+			CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype)
+		WHERE
+			b.winlostdate BETWEEN @TempFromDate AND @tdate AND
+			b.custid=@custid AND
+			b.bettype BETWEEN 1501 AND 1599 AND
+			b.statusID IN (111,112,113)
+	END
 	
 END
 
@@ -1264,6 +1315,55 @@ BEGIN
 			b.winlostdate BETWEEN @BalanceUpDay AND @tdate AND
 			b.custid=@custid AND
 			b.bettype =71 AND
+			b.statusID IN (111,112,113)
+	END
+	--- Keno
+	IF @ShowKN=1
+	BEGIN
+		INSERT INTO #BetListByDateMem
+		SELECT
+			202 as Sporttype, 
+			b.TransID,
+			ISNULL(b.BetID,0),
+			b.Bettype,
+			b.hdp1 AS hdp1, 
+			b.hdp2 AS hdp2,
+			modds,
+			b.Oddstype,
+			b.Odds,
+			b.stake,
+			b.actual_stake,   		
+			ChoiceID AS betteam,
+			b.status AS Status,				
+			b.refno,
+			b.Transdate,	
+			b.winlostdate,			
+			(b.winlost-actual_stake),
+			- (b.winlost-actual_stake),
+			comm,
+			b.playercomm ,
+			b.Liveindicator,
+			b.Livehomescore,
+			b.Liveawayscore,
+			b.IP AS IP,
+			0 as LeagueID,
+			GameId AS MatchID,	
+			0 as MatchCode,
+			'' AS Race,	
+			0 as HomeID,
+			0 as AwayID, 		
+			'' as Betstatus,
+			CONVERT(BIT,0) AS IsNeutral,
+			0,0,
+			b.currency,
+			'' as showtime
+		FROM
+			dbo.bettrans14 AS b WITH (NOLOCK)	
+			CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype)	
+		WHERE
+			b.winlostdate BETWEEN @BalanceUpDay AND @tdate AND
+			b.custid=@custid AND
+			b.bettype BETWEEN 1501 AND 1599 AND
 			b.statusID IN (111,112,113)
 	END
 			
@@ -1864,6 +1964,56 @@ BEGIN
 		b.winlostdate BETWEEN @fdate AND @TempToDate AND
 		b.custid=@custid AND
 		b.bettype=71 AND
+		b.ruben = 1 AND
+		b.status NOT IN ('VOID', 'REJECT', 'REFUND')
+	END	
+	--- Keno
+	IF @ShowCS=1
+	BEGIN
+		INSERT INTO #BetListByDateMem
+		SELECT
+		202 Sporttype, 
+		b.TransID,
+		ISNULL(b.BetID,0),
+		b.Bettype,
+		b.hdp1 AS hdp1, 
+		b.hdp2 AS hdp2,
+		modds,
+		b.Oddstype,
+		b.Odds,
+		b.stake,
+		b.actual_stake,  		
+		ChoiceID AS betteam,
+		b.status AS Status,				
+		b.refno,
+		b.Transdate,	
+		b.winlostdate,			
+		(b.winlost-actual_stake),
+		- (b.winlost-actual_stake),
+		comm ,
+		b.playercomm , 
+		b.Liveindicator,
+		b.Livehomescore,
+		b.Liveawayscore,
+		b.IP AS IP,
+		0 as LeagueID,
+		GameId AS MatchID,	
+		0 as MatchCode,
+		'' AS Race,	
+		0 as HomeID,
+		0 as AwayID, 		
+		'' as Betstatus,
+		CONVERT(BIT,0) AS IsNeutral,
+		0,0,
+		b.currency,
+		'' as showtime
+	FROM
+		bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)		
+		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype)
+	WHERE
+		b.winlostdate BETWEEN @fdate AND @TempToDate AND
+		b.custid=@custid AND
+		b.bettype BETWEEN 1501 AND 1599 AND
 		b.ruben = 1 AND
 		b.status NOT IN ('VOID', 'REJECT', 'REFUND')
 	END	

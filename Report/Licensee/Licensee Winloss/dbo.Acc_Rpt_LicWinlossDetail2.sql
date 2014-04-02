@@ -11,6 +11,7 @@
 	@ShowLC 	BIT=0,
 	@ShowVS		BIT=0,
 	@ShowCS  	BIT=0, -- RNG Casino
+	@ShowKN  	BIT=0, -- Keno
 	@MoveBetsDay SMALLDATETIME,
 	@IsOld BIT = 0,
 	@drawfilter SMALLINT = 1,
@@ -35,6 +36,7 @@ AS
 		- 20120816@Jim: add live casino
 		- 20120905@Henry: add Virtual Sports
 		- 20130527@Jim: support RNG Casino
+		- 20140331@Hannah: offer Keno
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  + @BaseCurrency (input currencyID): 2-MYR ; 3-USD; 6-EUR
@@ -191,6 +193,15 @@ BEGIN
 	INSERT INTO @bettype(bettype)
 	VALUES(71)
 END
+
+IF @ShowKN=1 -- Keno
+BEGIN 
+	INSERT INTO @sporttype (sporttype)
+	VALUES(202)
+	INSERT INTO @bettype(bettype)
+	SELECT typeid FROM bettype (NOLOCK)
+	WHERE (typeid BETWEEN 1501 AND 1599)
+END 
 
 DECLARE @TempFromDate DATETIME 
 DECLARE @TempToDate DATETIME 
@@ -421,7 +432,7 @@ BEGIN
 			s.currency,b.custid,b.statusID
 	END
 
-	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS = 1 OR @ShowRB = 1 OR @ShowCS=1)
+	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS = 1 OR @ShowRB = 1 OR @ShowCS=1 OR @showKN=1)
 	BEGIN
 		INSERT INTO #SAgWinLoss
 		SELECT   
@@ -639,7 +650,7 @@ BEGIN
 	END
 	
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1  OR @ShowVS=1 OR @ShowCS=1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1  OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1)
 	BEGIN
 		INSERT INTO #SAgWinLoss 
 		SELECT 
@@ -655,7 +666,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 as AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) as AmountDueToRB,
@@ -675,7 +686,7 @@ BEGIN
 			* e.MYR	
 			),     
 			SUM(b.winlost * e.MYR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.MYR) AS WinlossRBMYR,
 			0 as AmountDueToBAMYR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.MYR) as AmountDueToRBMYR,
@@ -695,7 +706,7 @@ BEGIN
 			* e.USD	
 			),     
 			SUM(b.winlost * e.USD),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.USD) AS WinlossRBUSD,
 			0 as AmountDueToBAUSD,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.USD) as AmountDueToRBUSD,
@@ -715,7 +726,7 @@ BEGIN
 			* e.EUR	
 			),     
 			SUM(b.winlost * e.EUR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.EUR) AS WinlossRBEUR,
 			0 as AmountDueToBAEUR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.EUR) as AmountDueToRBEUR,
@@ -852,7 +863,7 @@ BEGIN
 	END
 	
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1)
 	BEGIN
 		INSERT INTO #SAgWinLoss 
 		SELECT 
@@ -868,7 +879,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 as AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) as AmountDueToRB,
@@ -888,7 +899,7 @@ BEGIN
 			* e.MYR	
 			),     
 			SUM(b.winlost * e.MYR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.MYR) AS WinlossRBMYR,
 			0 as AmountDueToBAMYR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.MYR) as AmountDueToRBMYR,
@@ -908,7 +919,7 @@ BEGIN
 			* e.USD	
 			),     
 			SUM(b.winlost * e.USD),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.USD) AS WinlossRBUSD,
 			0 as AmountDueToBAUSD,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.USD) as AmountDueToRBUSD,
@@ -928,7 +939,7 @@ BEGIN
 			* e.EUR	
 			),     
 			SUM(b.winlost * e.EUR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.EUR) AS WinlossRBEUR,
 			0 as AmountDueToBAEUR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.EUR) as AmountDueToRBEUR,
