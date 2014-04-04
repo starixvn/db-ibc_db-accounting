@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_Refund_BetFair] 
+ALTER PROCEDURE [NAP_Admin_Calculate_Refund_BetFair] 
 	@matchid int
 AS
 /*	Created by: Kathy

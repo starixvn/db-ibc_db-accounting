@@ -57,7 +57,6 @@ ALTER PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
 	,@betcount_30 INT = NULL
 	,@betcount_125 INT = NULL
 	,@betcount_14 INT = NULL
-	,@betcount_126 INT = NULL
 	,@row_count INT = NULL
 	,@ticket_count INT = NULL -- ticket number of bettype
 	,@IsSettleAbandonedMatch BIT = 0
@@ -76,6 +75,7 @@ AS
 	DB: EXECREP SP (DBTrans_Bet)
 
 	Revisions:
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 
 	Param's Explanation:
 		@action			@mode
@@ -323,10 +323,6 @@ BEGIN
 			,@betcount_14 = ' + CASE 
 				WHEN @betcount_14 IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @betcount_14)
-				END + '
-			,@betcount_126 = ' + CASE 
-				WHEN @betcount_126 IS NULL THEN 'NULL'
-				ELSE CONVERT(NVARCHAR(50), @betcount_126)
 				END + '
 			,@row_count = ' + CASE 
 				WHEN @row_count IS NULL THEN 'NULL'
@@ -631,12 +627,6 @@ BEGIN
 					,@scorediff_ht
 					,NULL
 					,@betcount_30
-
-				-- bettype 126 : 1H Total Goal
-				EXEC dbo.NAP_Admin_Calculate_6 @matchid
-					,126
-					,@totalht
-					,@betcount_126
 			END
 
 			IF @Mode = 'UNDO'
@@ -675,8 +665,8 @@ BEGIN
 						,@fta = @fta
 						,@betcount = @ticket_count
 						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatch
-						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				-- NAP_Admin_Calculate_26
 				IF @betcount_26 IS NOT NULL
@@ -753,8 +743,8 @@ BEGIN
 						,@fta = @fta
 						,@betcount = @ticket_count
 						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatch
-						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				-- NAP_Admin_Calculate_26
 				IF @betcount_26 IS NOT NULL

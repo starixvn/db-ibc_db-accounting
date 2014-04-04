@@ -1,3 +1,11 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [NAP_Set_MatchSelDetail]    Script Date: 04/04/2014 1:32:36 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 3/20/2014 4:22:32 PM ******/
 ALTER PROCEDURE [NAP_Set_MatchSelDetail] @matchid INT
 	,@excludeRefundFGLG BIT = 0
 AS
@@ -7,7 +15,8 @@ AS
 	DB: DBTRANS.BODB02 
 	Original: [Acc_Set_MatchSelScore], Acc_Set_MatchSelForBill
 	
-	Revisions:				
+	Revisions:			
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 */
 SET NOCOUNT ON
 
@@ -129,7 +138,7 @@ IF (
 			SELECT 1
 			FROM bettrans WITH (NOLOCK)
 			WHERE bettype IN (13, 26, 27) AND matchid = @matchid AND statusID NOT IN (101, 102, 103) AND ruben = 0
-			AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) OR recommend <> 1688156) 
+			AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) 
 			) AND @sporttype = 1
 		)
 BEGIN
@@ -139,7 +148,7 @@ BEGIN
 			SELECT 1
 			FROM bettrans WITH (NOLOCK)
 			WHERE matchid = @matchid AND bettype IN (13, 26, 27) AND statusID NOT IN (101, 102) AND ruben = 1
-			AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) OR recommend <> 1688156)
+			AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
 			) OR @sporttype <> 1
 	BEGIN
 		SELECT @IsSettleAbandonedMatchIBC = 0
@@ -285,7 +294,6 @@ FROM DBPRO.BODB02.dbo.match WITH (NOLOCK)
 	LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 WHERE match.matchid = @matchid
 	--order by match.eventdate,match.matchcode
-
 
 GO
 

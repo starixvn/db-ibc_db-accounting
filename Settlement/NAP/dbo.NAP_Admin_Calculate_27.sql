@@ -14,7 +14,7 @@ AS
 	DB: DBTXN.BODB02
 	
 	Revisions:
-		
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 */
 BEGIN
 	IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
@@ -343,9 +343,6 @@ BEGIN
 			statusID NOT IN (101, 102)
 	END
 END
-
-
-
 
 GO
 

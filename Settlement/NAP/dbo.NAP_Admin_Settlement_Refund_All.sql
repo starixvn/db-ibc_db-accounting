@@ -24,6 +24,7 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions: 
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 	
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -31,6 +32,7 @@ AS
 	• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
 	• @IsExcludeBetfair: Is Exclude betfair tickets or not
 	• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+	  @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
 	* List of BetDaq Customers 
 				custid	--- username	-	roleid
 				50057	---	BQUS888		-	1
@@ -141,20 +143,16 @@ BEGIN
 	IF @IsSettleAbandonedMatchBetFair = 1
 		SELECT @IsExcludeBetfair = 1
 
-	DECLARE @sporttype TINYINT
+	DECLARE @ScoreLog VARCHAR(100)
+		,@sporttype TINYINT
 
 	SELECT @sporttype = SportType
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
-	/*
-		Settle Betdaq, Betfair tickets Abandoned Match for Over/Under 
-*/
-	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1
 	BEGIN
-		DECLARE @ScoreLog VARCHAR(100)
-
-		SELECT @ScoreLog = ' HTHScore=' + CAST(@hth AS VARCHAR(10)) + ' HTAScore=' + CAST(@hta AS VARCHAR(10)) + ' FTHScore=' + CAST(@fth AS VARCHAR(10)) + ' FTAScore=' + CAST(@fta AS VARCHAR(10)) + CASE 
+		SELECT @ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)), '') + ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)), '') + ' FTHScore=' + ISNULL(CAST(@fth AS VARCHAR(10)), '') + ' FTAScore=' + ISNULL(CAST(@fta AS VARCHAR(10)), '') + CASE 
 				WHEN @SportType IN (5, 6, 9, 30) THEN ' Betstatus=Refund;'
 				ELSE ' Betstatus='
 				END + @betstatus
@@ -164,7 +162,7 @@ BEGIN
 			,@T_Away SMALLINT
 
 		IF @SportType IN (5, 6, 9, 30) -- Tennis/VolleyBall/Badminton/Squash : get TotalGamesPlayed
-			EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
+			EXEC dbo.Admin_Settlement_2 @betstatus = @betstatus
 				,@Total = @TennisTotal OUTPUT
 				,@TotalHome = @T_Home OUTPUT
 				,@TotalAway = @T_Away OUTPUT
@@ -285,7 +283,13 @@ BEGIN
 
 			RETURN
 		END
+	END
 
+	/*
+		Settle Betdaq, Betfair tickets Abandoned Match for Over/Under 
+*/
+	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+	BEGIN
 		DECLARE @betcount_3 INT
 			,@betcount_8 INT
 
@@ -333,59 +337,6 @@ BEGIN
 	--	Settle tickets Abandoned Match of Soccer for Clean Sheet, Both/One/Neither team to score, To Win To Nil  	
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @action IN ('CAL', 'CAL-FT') AND @sporttype = 1
 	BEGIN
-		IF @fth IS NULL OR @fta IS NULL
-		BEGIN
-			SELECT @ErrCode = 1000004
-				,@ErrMsg = 'Cannot settle determined ticket(s) without FT Score!'
-
-			DELETE
-			FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-			WHERE KeyID = 1 AND KeyValue = @matchid
-
-			IF (@@Error = 0)
-			BEGIN
-				BEGIN TRY
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @creator
-						,@Matchid = @matchid
-						,@KeyID = 1
-						,@ActionID = @ActionID
-						,@Remark = 'DEL SUCCESS'
-				END TRY
-
-				BEGIN CATCH
-					SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
-
-					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @creator
-						,@Matchid = @matchid
-						,@KeyID = 1
-						,@ActionID = @ActionID
-						,@Remark = @Remark
-				END CATCH
-			END
-			ELSE
-			BEGIN
-				BEGIN TRY
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @creator
-						,@Matchid = @matchid
-						,@KeyID = 1
-						,@ActionID = @ActionID
-						,@Remark = 'DEL FAILED'
-				END TRY
-
-				BEGIN CATCH
-					SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
-
-					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @creator
-						,@Matchid = @matchid
-						,@KeyID = 1
-						,@ActionID = @ActionID
-						,@Remark = @Remark
-				END CATCH
-			END
-
-			RETURN
-		END
-
 		DECLARE @betcount_13 INT
 			,@betcount_26 INT
 			,@betcount_27 INT
@@ -519,28 +470,31 @@ BEGIN
 	WHERE Increased = 0
 
 	--  Betfair & Betdaq - Warning message:
-	DECLARE @movebet VARCHAR(20)
+	DECLARE @movebet VARCHAR(20), @matchcode nvarchar(50)
 
-	SELECT @movebet = convert(VARCHAR(20), DATEADD(d, 1, kickofftime), 100)
+	SELECT @movebet = convert(VARCHAR(20), DATEADD(d, 1, kickofftime), 100),
+		@matchcode = matchcode
 	FROM match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
-	IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1) AND (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
-	BEGIN
-		SELECT @ErrCode = 1000006
-			,@ErrMsg = 'Please move Betdaq and Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
-	END
-	ELSE IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1)
-	BEGIN
-		SELECT @ErrCode = 1000006
-			,@ErrMsg = 'Please move Betdaq tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
-	END
-	ELSE IF (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
-	BEGIN
-		SELECT @ErrCode = 1000006
-			,@ErrMsg = 'Please move Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
-	END
-
+	IF @matchcode not like '%Hedge%'
+	BEGIN 
+		IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1) AND (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
+		BEGIN
+			SELECT @ErrCode = 1000006
+				,@ErrMsg = 'Please move Betdaq and Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
+		END
+		ELSE IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1)
+		BEGIN
+			SELECT @ErrCode = 1000006
+				,@ErrMsg = 'Please move Betdaq tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
+		END
+		ELSE IF (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
+		BEGIN
+			SELECT @ErrCode = 1000006
+				,@ErrMsg = 'Please move Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
+		END
+	END 
 	---------------------------------------------------
 	DROP TABLE #Balance
 
@@ -554,36 +508,24 @@ BEGIN
 	DECLARE @LogData NVARCHAR(200)
 
 	SELECT @LogData = 'Calculate (Refund All) for matchid:' + CAST(@matchid AS NVARCHAR(10)) + CASE 
-			WHEN @IsExcludeBetdaq = 1 THEN ', Exclude Betdaq tickets'
-			ELSE ''
-			END + CASE 
-			WHEN @IsSettleAbandonedMatch = 1 THEN ', Settle determined betdaq tickets'
-			ELSE ''
-			END + CASE 
-			WHEN @IsExcludeBetfair = 1 THEN ', Exclude Betfair tickets'
-			ELSE ''
-			END + CASE 
-			WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ', Settle determined betfair tickets'
-			ELSE ''
-			END
+			WHEN @IsExcludeBetdaq = 1 THEN ', Exclude Betdaq tickets' ELSE '' END 
+			+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN ', Settle determined betdaq tickets' ELSE '' END 
+			+ CASE WHEN @IsExcludeBetfair = 1 THEN ', Exclude Betfair tickets' ELSE '' END 
+			+ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ', Settle determined betfair tickets' ELSE '' END
+			+ CASE WHEN @IsSettleAbandonedMatchIBC = 1 THEN ', Settle determined IBC tickets' ELSE '' END
 
 	EXEC dbo.WriteLog_UserLog @creator
 		,@LogData
 
 	--Write Log Settle
-	SELECT @Remark = 'ExcludeBetdaqTickets=' + convert(CHAR(1), @IsExcludeBetdaq) + ' SettleDeterminedBetdaqTickets=' + convert(CHAR(1), @IsSettleAbandonedMatch) + CASE 
-			WHEN @IsSettleAbandonedMatch = 1 THEN ' Action=' + @Action
-			ELSE ''
-			END + CASE 
-			WHEN @IsSettleAbandonedMatch = 1 THEN @ScoreLog
-			ELSE ''
-			END + ' ExcludeBetfairTickets=' + convert(CHAR(1), @IsExcludeBetfair) + ' SettleDeterminedBetfairTickets=' + convert(CHAR(1), @IsSettleAbandonedMatchBetFair) + CASE 
-			WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ' Action=' + @Action
-			ELSE ''
-			END + CASE 
-			WHEN @IsSettleAbandonedMatchBetFair = 1 THEN @ScoreLog
-			ELSE ''
-			END + ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms;'
+	SELECT @Remark = 'ExcludeBetdaqTickets=' + convert(char(1),@IsExcludeBetdaq) 
+					+ ' SettleDeterminedBetdaqTickets=' + convert(char(1),@IsSettleAbandonedMatch)
+					+ ' ExcludeBetfairTickets=' + convert(char(1),@IsExcludeBetfair) 
+					+ ' SettleDeterminedBetfairTickets=' + convert(char(1),@IsSettleAbandonedMatchBetFair)
+					+ ' SettleDeterminedIBCTickets=' + convert(char(1),@IsSettleAbandonedMatchIBC)
+					+ CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
+					+ ' Action=' + @Action
+					+ ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;'
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @creator

@@ -9,6 +9,7 @@ DB: DBTRANS.bodb02
 Original: [Acc_Set_BetDaq_Checking]
 
 Revisions: 
+	-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 
 
 Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem

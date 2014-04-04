@@ -60,7 +60,7 @@ BEGIN
 			,scomm = 0
 		WHERE matchid = @matchid
 			--AND [status] not in (N'Void', N'Reject')
-			AND statusID NOT IN (103, 101, 102) AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126) AND 1 = CASE 
+			AND statusID NOT IN (103, 101, 102) AND bettype IN (7, 8, 15, 12, 21, 30, 125) AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
 				ELSE 1

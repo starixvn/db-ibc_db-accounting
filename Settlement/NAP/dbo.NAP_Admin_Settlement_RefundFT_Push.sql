@@ -21,7 +21,7 @@ as
 	Original: 
 	
 	Revisions:
-	
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -61,10 +61,6 @@ BEGIN
 	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-FT', @sqlCommand
 
 END
-
-
-
-
 GO
 
 GRANT EXECUTE ON [NAP_Admin_Settlement_RefundFT_Push] TO [bodbAdminNet] AS [dbo]

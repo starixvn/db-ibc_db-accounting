@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_Refund_BetDaq] 
+ALTER PROCEDURE [NAP_Admin_Calculate_Refund_BetDaq] 
 	@matchid int
 AS
 /*	Created by: Kathy
@@ -41,7 +41,6 @@ BEGIN
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
-
 
 
 GO

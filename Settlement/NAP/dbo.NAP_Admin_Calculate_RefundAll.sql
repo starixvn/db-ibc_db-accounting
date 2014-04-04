@@ -10,7 +10,7 @@ AS
 	Task: Refund All
 	DB: DBTXN/BODB02	
 	Revisions:
-	
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */

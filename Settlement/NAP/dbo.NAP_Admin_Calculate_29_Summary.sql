@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_29_Summary]
+ALTER PROCEDURE [NAP_Admin_Calculate_29_Summary]
 AS
 /*
 	Created: Kathy
@@ -280,7 +280,6 @@ possible case
 for 1. action to perform is update
 for 2. action to perform is set existing ticket's custid to 0, before update
 */
-
 
 GO
 

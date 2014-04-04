@@ -7,6 +7,7 @@ DB: DBTXN/bodb02
 Original: Acc_Set_BetFair_Checking
 
 Revisions: 
+	-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
@@ -79,7 +80,6 @@ BEGIN
 		,@IsSettleAbandonedMatchBetfair AS IsSettleAbandonedMatchBetfair
 		,@IsRefundRunningBetfair AS IsRefundRunningBetfair
 END
-
 
 
 GO

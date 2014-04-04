@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_9_Cal]
+ALTER PROCEDURE [NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime
 AS  
@@ -255,7 +255,6 @@ IF @@ROWCOUNT = 0
 
 COMMIT TRANSACTION
 ---------------------------------------------------------------
-
 GO
 
 GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]

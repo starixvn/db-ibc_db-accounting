@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_22] @matchid INT
+ALTER PROCEDURE [NAP_Admin_Calculate_22] @matchid INT
 	,@bettype SMALLINT
 	,@ResultString NVARCHAR(50)
 	,@betcount INT = 0
@@ -24,12 +24,16 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+			SELECT *
+			FROM sys.databases
+			WHERE NAME = 'LASDB'
+			)
 	BEGIN
 		DECLARE @LASCommand NVARCHAR(1000)
 			,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_22] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @ResultString = ''' + CONVERT(NVARCHAR(10), @ResultString) + '''' + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_22] @matchid = ' + CONVERT(NVARCHAR(20), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @ResultString = ''' + CONVERT(NVARCHAR(50), @ResultString) + '''' + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
 			,@createdDate = GETDATE()
 
 		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_22'

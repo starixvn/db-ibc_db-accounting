@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_4] @matchid INT
+ALTER PROCEDURE [NAP_Admin_Calculate_4] @matchid INT
 	,@bettype SMALLINT
 	,@correctscore NVARCHAR(10)
 	,@goaldiff SMALLMONEY
@@ -27,48 +27,61 @@ BEGIN
 		,@commLostRate SMALLMONEY
 		,@matchdate DATETIME
 
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB215', 'DB231')
 	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+		DECLARE @sqlCommand NVARCHAR(MAX)
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @correctscore = ''' + @correctscore + '''' + ', @goaldiff = ' + CONVERT(NVARCHAR(10), @goaldiff) + ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-			,@createdDate = GETDATE()
+		SELECT @sqlCommand = 'EXEC [dbo].[Admin_Calculate_4_external] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @correctscore = ''' + @correctscore + '''' + ', @goaldiff = ' + CONVERT(NVARCHAR(10), @goaldiff) + ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = @bettype
-			,@Status = 'waiting'
-			,@BetCount = @betcount
+		INSERT INTO Acc_Externalsettlement (
+			SPName
+			,SQLCommand
+			,CreatedDate
+			,StatusID
+			,MatchID
+			,Bettype
+			,STATUS
+			,BetCount
+			)
+		VALUES (
+			'Admin_Calculate_4'
+			,@sqlCommand
+			,GETDATE()
+			,0
+			,@matchid
+			,@bettype
+			,'waiting'
+			,@betcount
+			)
+
+		--- LAS settlement 
+		IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+				SELECT *
+				FROM sys.databases
+				WHERE NAME = 'LASDB'
+				)
+		BEGIN
+			DECLARE @LASCommand NVARCHAR(1000)
+				,@createdDate DATETIME
+
+			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @correctscore = ''' + @correctscore + '''' + ', @goaldiff = ' + CONVERT(NVARCHAR(10), @goaldiff) + ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+				,@createdDate = GETDATE()
+
+			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
+				,@SQLCommand = @LASCommand
+				,@CreatedDate = @createdDate
+				,@StatusID = 0 -- waiting
+				,@MatchID = @matchid
+				,@Bettype = @bettype
+				,@Status = 'waiting'
+				,@BetCount = @betcount
+		END
+
+		RETURN
 	END
-
-	DECLARE @affectedagents INT
-
-	CREATE TABLE #tmpRecommend (recommend INT PRIMARY KEY)
-
-	INSERT INTO #tmpRecommend (recommend)
-	SELECT DISTINCT recommend
-	FROM dbo.bettrans(NOLOCK)
-	WHERE matchid = @matchid AND bettype = @bettype
-
-	DECLARE @currecommend TABLE (recommend INT PRIMARY KEY)
-
-	WHILE 1 = 1
+	ELSE
 	BEGIN
-		DELETE @currecommend
-
-		DELETE TOP (100)
-		FROM #tmpRecommend
-		OUTPUT DELETED.recommend
-		INTO @currecommend
-
-		SET @affectedagents = @@rowcount
-
-		UPDATE b
+		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 		SET @modds = modds = CASE 
 				WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
 				WHEN betteam = '4:0' AND @goaldiff >= 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
@@ -87,8 +100,7 @@ BEGIN
 				WHEN '1' THEN 2
 				ELSE 1
 				END
-			,--'s','m'
-			WinLost = CASE 
+			,WinLost = CASE 
 				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
@@ -203,17 +215,10 @@ BEGIN
 				WHEN @modds < 0 THEN 113 --LOSE
 				END
 			,ruben = 1
-		FROM dbo.bettrans b WITH (ROWLOCK, UPDLOCK)
-			INNER JOIN @currecommend ag ON b.recommend = ag.recommend
 		WHERE matchid = @matchid AND bettype = @bettype AND
 			--status NOT IN ('VOID', 'REJECT')
 			statusID NOT IN (101, 102)
-
-		IF @affectedagents <> 100
-			BREAK
 	END
-
-	DROP TABLE #tmpRecommend
 
 	IF @FGLG2 IS NULL OR @FGLG2 = ''
 		SET @FGLG2 = @correctscore
@@ -269,6 +274,7 @@ BEGIN
 	END
 			-------------Stop:Settle FGLG for bettransm-------------
 END
+
 
 GO
 

@@ -14,6 +14,7 @@ AS
 	DB: DB02.BODB02
 	
 	Revisions:
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		
 */
 BEGIN
@@ -356,7 +357,6 @@ BEGIN
 		
 	END
 END
-
 
 
 GO

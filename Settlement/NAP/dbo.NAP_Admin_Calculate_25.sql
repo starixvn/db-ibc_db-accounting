@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Calculate_25] @matchid INT
+ALTER PROCEDURE [NAP_Admin_Calculate_25] @matchid INT
 	,@bettype SMALLINT
 	,@scorediff SMALLMONEY
 	,@betcount INT = 0
@@ -20,7 +20,11 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+			SELECT *
+			FROM sys.databases
+			WHERE NAME = 'LASDB'
+			)
 	BEGIN
 		DECLARE @LASCommand NVARCHAR(1000)
 			,@createdDate DATETIME
@@ -190,6 +194,7 @@ BEGIN
 		--status NOT IN ('VOID', 'REJECT')
 		statusID NOT IN (101, 102)
 END
+
 
 GO
 

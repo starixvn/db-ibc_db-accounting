@@ -166,7 +166,6 @@ BEGIN
 		END
 	END
 END
-
 GO
 
 GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Parlay_Job] TO [vnteam] AS [dbo]

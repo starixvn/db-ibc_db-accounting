@@ -24,7 +24,7 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions: 
-	
+		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -88,7 +88,6 @@ BEGIN
 	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
 	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund', @sqlCommand
 END
-
 
 GO
 

@@ -216,7 +216,6 @@ BEGIN
 				,@betstatus = @BetStatus
 	END
 END
-
 GO
 
 GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_SB_Job] TO [vnteam] AS [dbo]
