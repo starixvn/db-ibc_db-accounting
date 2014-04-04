@@ -1,6 +1,10 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
+﻿USE [bodb_Licensee]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
 (
@@ -29,6 +33,7 @@ Revisions:
 	+20130603@Jim: grant currency permission 
 	+20130624@Jim: set default for new licensee on Accounting system is inactive 
 	+20130725@Jim: restrict permission for DW function 
+	+20140318@Jim: hard-code to grant 'Account managerment'	role just for 'CSD_11101'
 	
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
@@ -194,9 +199,9 @@ BEGIN
 
 	
 	------------------------------
-	IF @Username NOT LIKE 'CSD_111%'
+	IF @Username ='CSD_11101'
 	BEGIN
-		--Manage Account
+		--Manage Account role
 		INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
 		SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
 		FROM [Functions] f WITH(NOLOCK)
@@ -259,6 +264,3 @@ EXEC DBA_LicenseeBAConfig_Ins
 	
 	
 END
-
-GO
-GRANT VIEW DEFINITION ON [dbo].[DBA_CreateNewLicensee] TO [vnteam] 

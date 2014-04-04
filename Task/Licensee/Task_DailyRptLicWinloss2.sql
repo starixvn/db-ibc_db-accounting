@@ -1,10 +1,11 @@
 ﻿USE [bodb02]
 GO
-
+/****** Object:  StoredProcedure [dbo].[Task_DailyRptLicWinloss2]    Script Date: 3/10/2014 3:29:21 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.Task_DailyRptLicWinloss2    Script Date: 11/29/2013 10:40:46 AM ******/
 
 ALTER PROCEDURE [dbo].[Task_DailyRptLicWinloss2]
 	@winlostdate DATETIME
@@ -24,14 +25,14 @@ Revisions:
 	- 20130903@Jim: support Virtual Horse Racing
 	- 20131014@Jim: support Virtual Tennis
 	- 20131128@Jim: revert code to Group by All Virtual Sport into sporttypeID=180
-	- 20131230@Jim: user alias server instead of DB06
+	- 20140310@Jim: offer KENO 
    
  */
 
 SET NOCOUNT ON 
 
 IF NOT EXISTS(SELECT TOP 1 1 FROM bettrans14 with(nolock) WHERE winlostdate = @winlostdate)
-OR EXISTS(SELECT 1 FROM DBACC.bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VValue = '1' AND VName in ('isMovingBet','isArchivingBet'))
+OR EXISTS(SELECT 1 FROM DB06.bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VValue = '1' AND VName in ('isMovingBet','isArchivingBet'))
 BEGIN
 	print 'data not in bettrans14 OR movebet/archive process is now running!!!!'
 	RETURN
@@ -71,6 +72,7 @@ SELECT @winlostdate,customer.username,customer.username2,customer.custid, 1, cus
 		WHEN (bettype BETWEEN 1201 AND 1299 ) THEN 180  --Virtual Sport
 		WHEN bettype BETWEEN 51 AND 69 THEN 201
 		WHEN bettype IN (31,32,33,41,42,43) THEN 151
+		WHEN bettype BETWEEN 1501  AND 1599 THEN 202 -- Keno
 		ELSE 0 END sporttype,
 	CASE WHEN bettype IN (71,72,1000) THEN bettype ELSE 0 END bettype,
 	
@@ -109,6 +111,7 @@ GROUP BY
 		WHEN (bettype BETWEEN 1201 AND 1299 ) THEN 180  --Virtual Sport
 		WHEN bettype BETWEEN 51 AND 69 THEN 201
 		WHEN bettype IN (31,32,33,41,42,43) THEN 151
+		WHEN bettype BETWEEN 1501  AND 1599 THEN 202
 		ELSE 0 END,
 	CASE WHEN bettype IN (71,72,1000) THEN bettype ELSE 0 END,
 	CASE 
@@ -255,5 +258,3 @@ GROUP BY
 	b.isBA,
 	b.isMobile,
 	b.betfrom
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_DailyRptLicWinloss2] TO [vnteam] AS [dbo]
