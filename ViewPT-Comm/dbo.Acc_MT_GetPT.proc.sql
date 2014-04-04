@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_MT_GetPT] 
+﻿ALTER PROCEDURE [Acc_MT_GetPT] 
 	@UserName varchar(30),   
 	@Sporttype smallint = 1,  
 	@Bettype smallint = 1,  
@@ -32,6 +32,7 @@ Revisions:
 	- 20130702@Kathy: Fix bug view PT, Comm for licensee
 	- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 	- 20131121@Elodie: Add Virtual greyhounds(182), Virtual Motor Racing(184) [Redmine:#7234]
+	- 20140402@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
 Param's Explanation:
 • @HasComm: view Comm or view PT
 	+ 0: View PT (default)
@@ -258,7 +259,7 @@ Begin
 		END  
 	WHILE @@FETCH_STATUS = 0  
 	BEGIN 
-		if @curSporttype in (151,152,153, 201, 161, 180, 181, 182, 184, 186) 
+		if @curSporttype in (151,152,153, 201, 161, 180, 181, 182, 183, 184, 185, 186) 
 			BEGIN
 					select @l4 = MaxPositionTaking, @n4 = MinPositionTaking from CustOverride3rd with (NOLOCK) where CustID = @SRecommend and Bettype=@curBettype and Sporttype=@curSporttype  
 					select @l3 = MaxPositionTaking, @n3 = MinPositionTaking from CustOverride3rd with (NOLOCK) where CustID = @MRecommend and Bettype=@curBettype and Sporttype=@curSporttype  
