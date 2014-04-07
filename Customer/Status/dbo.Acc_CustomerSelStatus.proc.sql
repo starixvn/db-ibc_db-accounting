@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Acc_CustomerSelStatus]	
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus_xtest]	
 	@CustID int,
 	@AdminID int = 0,
 	@username  VARCHAR(50) = ''
@@ -28,7 +28,7 @@ Revisions:
 	- 20130723@Jamie: Change Alias DB03 to DBPOLICY
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20140303@Kathy: Get HideKeno [Redmine:#12691]
-						
+	- 20140407@Elodie: Add Keno product [Redmine:#13156]						
 Param's Explanation:
 • @CustID: customer id.   
 */
@@ -98,41 +98,73 @@ BEGIN
 	IF @ErrCode<> 0 SELECT @IsAdminCanViewVNIP = 0 ELSE SELECT @IsAdminCanViewVNIP = 1     
 END
 
-SELECT ISNULL(reject,0) AS Suspend,
-	   ISNULL (closed,0) As Closed,
-	   ISNULL (autosuspend,0) As AutoSuspend,	
-	   ISNULL (cm.DisableAutoMPT ,0) As DisableAutoMPT,	
-	   ISNULL(DisableHorseracing,0) AS DisableHorseracing,
-	   ISNULL(DisableOpenTote,0) AS DisableOpenTote,
-	   ISNULL(DisableFinancial,0) AS DisableFI,
-	   ISNULL(SyncCasino,0) AS SyncCasino,
-	   ISNULL(DisableCasino,0) AS DisableCasino,
-	   ISNULL(DisableOutright,0) AS DisableOutright,
-	   ISNULL(DisableBingo,0) AS DisableBingo,
-	   ISNULL(DisableNumber,0) AS DisableNumber,
-	   ISNULL(DisableP2P,0) AS DisableP2P,	   
-	   ISNULL(SyncBingo,0) AS SyncBingo,
-	   ISNULL(DisableLiveCasino,0) AS DisableLiveCasino,
-	   ISNULL(SyncLiveCasino,0) AS SyncLiveCasino,
-	   ISNULL(srecommend, 0) AS SRecommend,
-	   ISNULL(mrecommend, 0) AS MRecommend,
-	   ISNULL(recommend, 0) as ARecommend,
-	   ISNULL(@IsAdminCanViewVNIP,1) AS IsAdminCanViewVNIP,
-	   @LimitPerIP as LimitPerIP,
-	   @SelectedBetting as SelectedBetting,
-	   @IsInternal AS IsInternal,
-	   ISNULL(DisableVirtualSports,0) as DisableVirtualSports,
-	   ISNULL(HideVirtualSports,0) as HideVirtualSports,
-	   ISNULL(DoubleCommLosing,0) as DoubleCommLosing,
-	   ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds,
-	   ISNULL(ci.HideKeno,0)as HideKeno
+SELECT	ISNULL(reject,0) AS Suspend,
+		ISNULL (closed,0) As Closed,
+		ISNULL (autosuspend,0) As AutoSuspend,	
+		ISNULL (cm.DisableAutoMPT ,0) As DisableAutoMPT,	
+		ISNULL(DisableHorseracing,0) AS DisableHorseracing,
+		ISNULL(DisableOpenTote,0) AS DisableOpenTote,
+		ISNULL(DisableFinancial,0) AS DisableFI,
+		ISNULL(SyncCasino,0) AS SyncCasino,
+		ISNULL(DisableCasino,0) AS DisableCasino,
+		ISNULL(DisableOutright,0) AS DisableOutright,
+		ISNULL(DisableBingo,0) AS DisableBingo,
+		ISNULL(DisableNumber,0) AS DisableNumber,
+		ISNULL(DisableP2P,0) AS DisableP2P,	   
+		ISNULL(SyncBingo,0) AS SyncBingo,
+		ISNULL(DisableLiveCasino,0) AS DisableLiveCasino,
+		ISNULL(SyncLiveCasino,0) AS SyncLiveCasino,
+		ISNULL(srecommend, 0) AS SRecommend,
+		ISNULL(mrecommend, 0) AS MRecommend,
+		ISNULL(recommend, 0) as ARecommend,
+		ISNULL(@IsAdminCanViewVNIP,1) AS IsAdminCanViewVNIP,
+		@LimitPerIP as LimitPerIP,
+		@SelectedBetting as SelectedBetting,
+		@IsInternal AS IsInternal,
+		ISNULL(DisableVirtualSports,0) as DisableVirtualSports,
+		ISNULL(HideVirtualSports,0) as HideVirtualSports,
+		ISNULL(DoubleCommLosing,0) as DoubleCommLosing,
+		ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds,
+
+		ISNULL(ci.HideKeno,0) as HideKeno, 
+		max(case when g.IBCBetTypeID = 1501 then cg.IsDisabled else 0 end) as Disable1501,
+		max(case when g.IBCBetTypeID = 1503 then cg.IsDisabled else 0 end) as Disable1503,
+		max(case when g.IBCBetTypeID = 1504 then cg.IsDisabled else 0 end) as Disable1504,
+		max(case when g.IBCBetTypeID = 1505 then cg.IsDisabled else 0 end) as Disable1505,
+		max(case when g.IBCBetTypeID = 1507 then cg.IsDisabled else 0 end) as Disable1507,
+		max(case when g.IBCBetTypeID = 1508 then cg.IsDisabled else 0 end) as Disable1508,
+		max(case when g.IBCBetTypeID = 1509 then cg.IsDisabled else 0 end) as Disable1509
+
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
+	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
+	LEFT JOIN bodb02.dbo.GameType g WITH (NOLOCK) on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509)		
 WHERE ci.CustID = @CustID
-
-
-
-
+group by
+		ci.reject,
+		ci.closed,
+		ci.autosuspend,
+		cm.DisableAutoMPT,
+		ci.DisableHorseracing, 
+		ci.DisableOpenTote, 
+		ci.DisableFinancial, 
+		ci.SyncCasino, 
+		ci.DisableCasino, 
+		ci.DisableOutright, 
+		ci.DisableBingo, 
+		ci.DisableNumber, 
+		ci.DisableP2P, 
+		ci.SyncBingo, 
+		ci.DisableLiveCasino, 
+		ci.SyncLiveCasino, 
+		ci.srecommend, 
+		ci.mrecommend, 
+		ci.recommend, 
+		ci.DisableVirtualSports, 
+		ci.HideVirtualSports, 
+		ci.DoubleCommLosing, 
+		ci.DisableHRFixedOdds,
+		ci.HideKeno
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
