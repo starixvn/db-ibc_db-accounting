@@ -180,13 +180,11 @@ SET NOCOUNT ON
 				CASE WHEN BAH.CustID IS NOT NULL THEN 1 ELSE 0 END IsBA
 		FROM CheckCustDB.dbo.dep_custsetting cs WITH(NOLOCK)
 		INNER JOIN CheckCustDB.dbo.Customer me WITH(NOLOCK)
-			ON cs.custid = me.custid
-		INNER JOIN CheckCustDB.dbo.Customer ag WITH(NOLOCK)
-			ON me.recommend = ag.custid
+			ON cs.custid = me.custid		
 		INNER JOIN	#tmpAgent sup WITH(NOLOCK)
 			ON sup.custid = me.recommend
 		INNER JOIN #LicenseeBAConfig BA WITH(NOLOCK)
-			ON BA.[Site] = ag.[Site]
+			ON BA.[SiteID] = sup.[SiteID]
 		INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
 			ON tmpSport.Sportid = cs.sporttype
 		LEFT JOIN #LicenseeBAHistory BAH WITH(NOLOCK) 
@@ -256,12 +254,10 @@ SET NOCOUNT ON
 		FROM CheckCustDB.dbo.Dep_CustSetting3rd cs WITH(NOLOCK)
 		INNER JOIN CheckCustDB.dbo.Customer me WITH(NOLOCK)
 			ON cs.custid = me.custid
-		INNER JOIN CheckCustDB.dbo.Customer ag WITH(NOLOCK)
-			ON me.recommend = ag.custid		
 		INNER JOIN	#tmpAgent sup WITH(NOLOCK)
 			ON sup.custid = me.recommend
 		INNER JOIN #LicenseeBAConfig BA WITH(NOLOCK)
-			ON BA.[Site] = ag.[Site]
+			ON BA.[SiteID] = sup.[SiteID]
 		INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
 			ON tmpSport.Sportid = cs.sporttype
 		LEFT JOIN #LicenseeBAHistory BAH WITH(NOLOCK) 
