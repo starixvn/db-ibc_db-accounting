@@ -11,7 +11,7 @@ AS
 Created by:[]
 Date:
 Task: daily summary
-DB: DBTRANS.BODB02
+DB: DBTXN/BODB02
 Revisions:
     - 20100825@Lukas: Update last time modify (changetime column) for Outright table
 	- 20100914@Jamie: Modify Bingo and Number Game
@@ -31,6 +31,8 @@ Revisions:
 	- 20130715@Dan: delete match_log, outright_log
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo, Customer, Exchange by link database)
 					   Use DBPRO instead of DB02, DBACC instead of DB06
+	- 20140305@Vivi: add move translog to translog14
+	- 20140313@Elodie: Add Keno product in sum_winloss table
  */
 
 SET NOCOUNT ON
@@ -100,6 +102,19 @@ BEGIN
 	END
 
 	RAISERROR ('FAILED: Have running tickets', 16, 1)
+	RETURN
+END
+-- ========================================
+-- DATA VERIFICATION - Translog
+-- ========================================
+IF EXISTS (
+	SELECT translogid FROM translog with (nolock)
+	WHERE	statusID = 0 --[status] = 'running' 
+			AND winlostdate <= @winlostdate
+			AND currency <> 20
+)
+BEGIN
+	RAISERROR ('FAILED: translog Have running tickets', 16, 1)
 	RETURN
 END
 -- ====================
@@ -213,7 +228,7 @@ END
 		SELECT DISTINCT custid
 		FROM @custs
 		
-		EXEC dbo.[Task_CheckBalance] @step = 33, @Action = 'JustFix'
+				EXEC dbo.[Task_CheckBalance] @step = 33, @Action = 'JustFix'
 	END
 
 IF @TestMode <> 0 -- @TestMode = 2
@@ -308,6 +323,8 @@ EXEC dbo.ExecRep_09 @recommend =  0, @winlostdate = @winlostdate, @parlay = 2
 DECLARE @recommend_List TABLE (recommend int PRIMARY KEY)
 INSERT INTO @recommend_List
 SELECT DISTINCT recommend FROM bettrans (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
+UNION 
+SELECT DISTINCT recommend FROM translog (nolock) WHERE winlostdate = @winlostdate
 
 DECLARE @recommend int
 DECLARE CS_recommend
@@ -410,6 +427,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END sporttype,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype, 
 		0 -- netTurnover
@@ -434,6 +452,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END
 
@@ -472,6 +491,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END sporttype,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype,
 		sum(case when liveawayscore = 0 and bettype in(33,43) then ABS(stake*apositiontaking)/2 else ABS(stake*apositiontaking) end) --netTurnover
@@ -498,6 +518,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END
 
@@ -537,6 +558,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END sporttype,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype,
 		sum(case when liveawayscore = 0 and bettype in(33,43) then ABS(stake*mpositiontaking)/2 else ABS(stake*mpositiontaking) end) --netTurnover
@@ -563,6 +585,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END
 
@@ -602,6 +625,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END sporttype,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END bettype,
 		sum(case when liveawayscore = 0 and bettype in(33,43) then ABS(stake*spositiontaking)/2 else ABS(stake*spositiontaking) end) --netTurnover
@@ -628,6 +652,7 @@ INSERT INTO dbo.sum_winloss_tmp
 			WHEN bettype IN (71,72) THEN 251
 			WHEN bettype = 73 THEN 252 --Bingo 
 			WHEN bettype = 1000 THEN 253
+			WHEN bettype BETWEEN 1501 AND 1599 THEN 202 -- Keno
 			ELSE 0 END,
 		CASE WHEN bettype IN (71,72,73,1000) THEN bettype ELSE 0 END
 

@@ -25,6 +25,7 @@ BEGIN
 END
 
 DECLARE @Remark VARCHAR(500), @ActionID INT
+DECLARE @LogData NVARCHAR(300)
 SELECT @ActionID = 140
 
 INSERT INTO DBTXN.bodb02.dbo.TempVariableNumber (KeyID, KeyValue) VALUES (2, @matchid)
@@ -35,16 +36,12 @@ IF (@@Error = 0)
 			@Matchid = @matchid, 
 			@KeyID = 2,
 			@ActionID = @ActionID, 
-			@Remark = 'ADD SUCCESS SPName = DBA_SettleOutright_Undo_Event'
+			@Remark = 'ADD SUCCESS'
 	END TRY
-	BEGIN CATCH		
-		SELECT @Remark = 'ADD SUCCESS SPName = DBA_SettleOutright_Undo_Event ErrMsg=' + left(error_message(), 400)		
-		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
-			@KeyID = 2,
-			@ActionID = @ActionID, 
-			@Remark = @Remark	
+	BEGIN CATCH			
+		SELECT @LogData = 'ADD SUCCESS SPName = DBA_SettleOutright_Undo_Event MatchID=' + @matchid + ' KeyID=2 ErrMsg='+ left(error_message(), 70)		
+		EXEC WriteLog_UserLog @UserID = 5838421, --dbaAdmin
+							  @Doing = @LogData
 	END CATCH
 ELSE 
 BEGIN
@@ -67,16 +64,12 @@ BEGIN
 			@Matchid = @matchid, 
 			@KeyID = 2,
 			@ActionID = @ActionID, 
-			@Remark = 'DEL SUCCESS SPName = DBA_SettleOutright_Undo_Event'
+			@Remark = 'DEL SUCCESS'
 	END TRY
 	BEGIN CATCH		
-		SELECT @Remark = 'DEL SUCCESS SPName = DBA_SettleOutright_Undo_Event ErrMsg='+ left(error_message(), 400)		
-		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
-			@KeyID = 2,
-			@ActionID = @ActionID, 
-			@Remark = @Remark	
+		SELECT @LogData = 'DEL SUCCESS SPName = DBA_SettleOutright_Undo_Event MatchID=' + @matchid + ' KeyID=2 ErrMsg='+ left(error_message(), 70)		
+		EXEC WriteLog_UserLog @UserID = 5838421, --dbaAdmin
+							  @Doing = @LogData	
 	END CATCH
 END	
 ELSE
@@ -87,16 +80,12 @@ BEGIN
 			@Matchid = @matchid, 
 			@KeyID = 2,
 			@ActionID = @ActionID, 
-			@Remark = 'DEL FAILED SPName = DBA_SettleOutright_Undo_Event' 
+			@Remark = 'DEL FAILED' 
 	END TRY
 	BEGIN CATCH		
-		SELECT @Remark = 'DEL FAILED SPName = DBA_SettleOutright_Undo_Event ErrMsg='+ left(error_message(), 400)		
-		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-			@UserID = 5838421, --dbaAdmin
-			@Matchid = @matchid, 
-			@KeyID = 2,
-			@ActionID = @ActionID, 
-			@Remark = @Remark					
+		SELECT @LogData = 'DEL FAILED SPName = DBA_SettleOutright_Undo_Event MatchID=' + @matchid + ' KeyID=2 ErrMsg='+ left(error_message(), 70)		
+		EXEC WriteLog_UserLog @UserID = 5838421, --dbaAdmin
+							  @Doing = @LogData			
 	END CATCH
 END
 

@@ -51,11 +51,11 @@ BEGIN
 				@Matchid = @matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
-				@Remark = 'ADD SUCCESS SPName = DBA_SettleOutright_Undo_Trans'
+				@Remark = 'ADD SUCCESS'
 		END TRY
 
 		BEGIN CATCH
-			SELECT @Remark = 'ADD SUCCESS SPName = DBA_SettleOutright_Undo_Trans ErrMsg=' + left(error_message(), 400)
+			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = 5838421,--dbaAdmin
 				@Matchid = @matchid,
@@ -170,11 +170,11 @@ BEGIN
 				@Matchid = @matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
-				@Remark = 'DEL SUCCESS SPName = DBA_SettleOutright_Undo_Trans'
+				@Remark = 'DEL SUCCESS'
 		END TRY
 
 		BEGIN CATCH
-			SELECT @Remark = 'DEL SUCCESS SPName = DBA_SettleOutright_Undo_Trans ErrMsg=' + left(error_message(), 400)
+			SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = 5838421,--dbaAdmin
 				@Matchid = @matchid,
@@ -191,11 +191,11 @@ BEGIN
 				@Matchid = @matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
-				@Remark = 'DEL FAILED SPName = DBA_SettleOutright_Undo_Trans'
+				@Remark = 'DEL FAILED'
 		END TRY
 
 		BEGIN CATCH
-			SELECT @Remark = 'DEL FAILED SPName = DBA_SettleOutright_Undo_Trans ErrMsg=' + left(error_message(), 400)
+			SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = 5838421,--dbaAdmin
 				@Matchid = @matchid,

@@ -1,10 +1,11 @@
-﻿USE [bodb_Licensee]
+﻿USE [bodb_licensee]
 GO
-
+/****** Object:  StoredProcedure [dbo].[DBA_CreateNewLicensee_xtest]    Script Date: 4/7/2014 11:26:03 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
 (
@@ -34,7 +35,8 @@ Revisions:
 	+20130624@Jim: set default for new licensee on Accounting system is inactive 
 	+20130725@Jim: restrict permission for DW function 
 	+20140318@Jim: hard-code to grant 'Account managerment'	role just for 'CSD_11101'
-	
+	+20140404@Jim: + hard-code to grant 'Account managerment'	role for special user
+				   + hard-code to not grant Agency System Function for new licensee
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
 	- username ending with 01: normal
@@ -80,11 +82,15 @@ RAISERROR('Could not insert new licensee, please check again',16,1)
 */
 
 INSERT INTO [LicenseeFunctions](LicenseeId, FunctionId)
-SELECT @licenseeid, FunctionId FROM [Functions] WITH (NOLOCK)
+SELECT @licenseeid, FunctionId 
+FROM [Functions] WITH (NOLOCK)
 WHERE FunctionId NOT IN (SELECT FunctionId FROM [LicenseeFunctions] WITH (NOLOCK) WHERE LicenseeId = @LicenseeId)
-AND (@IsAllowedNG=1 OR (@IsAllowedNG=0 AND FunctionID <> 23))
-AND (@IsAllowedRB=1 OR (@IsAllowedRB=0 AND FunctionID NOT IN (22,34,35)))
-AND ((@IsAllowedDW=0 AND FunctionID NOT IN (5,44,45)) OR (@IsAllowedDW=1))
+	AND (@IsAllowedNG=1 OR (@IsAllowedNG=0 AND FunctionID <> 23))
+	AND (@IsAllowedRB=1 OR (@IsAllowedRB=0 AND FunctionID NOT IN (22,34,35)))
+	AND ((@IsAllowedDW=0 AND FunctionID NOT IN (5,44,45)) OR (@IsAllowedDW=1))
+---jim hard-code to not grant  AGENCY SYSTEM function 
+	AND FunctionId NOT IN (58 ,60)
+	
 -- add new licensee config into SystemLicensee 
 IF NOT EXISTS (SELECT 1 FROM SystemLicensee (NOLOCK) WHERE LicenseeID=@licenseeid) 
 BEGIN
@@ -112,12 +118,39 @@ END
 
 --Get User Admin List
 DECLARE @DATA AS  TABLE (id INT  IDENTITY,UserID INT,Username VARCHAR(50))
+DECLARE @tblSpecialUser  AS  TABLE (id INT  IDENTITY,UserID INT,Username VARCHAR(50))
 DECLARE @i INT, @MAX INT,@UserID INT, @Username VARCHAR(50)
 
 INSERT INTO @DATA(UserID,Username)
-SELECT UserID,Username FROM  Users(NOLOCK)
+SELECT UserID,Username 
+FROM  Users(NOLOCK)
 WHERE userrole = 'admin'
+	AND Status='Open'
 
+---- Jim hard-code to get list of user who have Account management role
+INSERT INTO @tblSpecialUser(UserID,Username)
+SELECT UserID,Username 
+FROM  Users(NOLOCK)
+WHERE UserID IN 
+		(
+		1,--	dbaThien
+		3,--	pgmviet
+		5,--	pgmSon
+		63,--	Martin
+		64,--	Justin
+		68,--	pgmChuong
+		74,--	pgmkiwi
+		87,--	CSD_11101
+		157,--	pgmAnn
+		160,--	Anthony
+		369,--	dbaDon
+		2939,--	standbyteam
+		3232,--	dbaVictor
+		3652,--	pgmWilliam
+		3783,--	twLesley
+		3784,--	twKai
+		3834--	dbaFrancis
+		)
 
 SET @i = 0
 SELECT @MAX = MAX(id) FROM @DATA
@@ -199,7 +232,8 @@ BEGIN
 
 	
 	------------------------------
-	IF @Username ='CSD_11101'
+	/* IF @Username NOT LIKE 'CSD_111%': old condition */
+	IF EXISTS (SELECT 1 FROM @tblSpecialUser WHERE UserID=@UserId)
 	BEGIN
 		--Manage Account role
 		INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
