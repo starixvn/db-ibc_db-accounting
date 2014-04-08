@@ -165,8 +165,8 @@ SET NOCOUNT ON
 				cs.BetType,cs.sporttype,
 				cs.playerdiscount CommP,
 				cs.discount CommA,
-				cs.adiscount CommS,
-				cs.sdiscount CommM,
+				cs.adiscount CommM,
+				cs.sdiscount CommS,
 				ISNULL(LGC.[SBComm],0.00) Comm_P_Spec,
 				CASE WHEN cs.bettype IN (1,2,3,7,8) THEN 
 					CASE WHEN RIGHT(me.ugroup,1) = 'a' THEN BA.[groupa]
@@ -183,6 +183,8 @@ SET NOCOUNT ON
 			ON cs.custid = me.custid
 		INNER JOIN CheckCustDB.dbo.Customer ag WITH(NOLOCK)
 			ON me.recommend = ag.custid
+		INNER JOIN	#tmpAgent sup WITH(NOLOCK)
+			ON sup.custid = me.recommend
 		INNER JOIN #LicenseeBAConfig BA WITH(NOLOCK)
 			ON BA.[Site] = ag.[Site]
 		INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
@@ -232,8 +234,8 @@ SET NOCOUNT ON
 				cs.BetType,cs.sporttype,
 				cs.playerdiscount CommP,
 				cs.discount CommA,
-				cs.adiscount CommS,
-				cs.sdiscount CommM,
+				cs.adiscount CommM,
+				cs.sdiscount CommS,
 				CASE WHEN cs.sporttype IN (151,152,153) THEN ISNULL(LGC.[RacingComm],0.00)
 					WHEN cs.sporttype IN (161) THEN ISNULL(LGC.[NGComm],0.00)
 					WHEN cs.sporttype IN (162) THEN ISNULL(LGC.[LCComm],0.00)
@@ -255,7 +257,9 @@ SET NOCOUNT ON
 		INNER JOIN CheckCustDB.dbo.Customer me WITH(NOLOCK)
 			ON cs.custid = me.custid
 		INNER JOIN CheckCustDB.dbo.Customer ag WITH(NOLOCK)
-			ON me.recommend = ag.custid
+			ON me.recommend = ag.custid		
+		INNER JOIN	#tmpAgent sup WITH(NOLOCK)
+			ON sup.custid = me.recommend
 		INNER JOIN #LicenseeBAConfig BA WITH(NOLOCK)
 			ON BA.[Site] = ag.[Site]
 		INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
