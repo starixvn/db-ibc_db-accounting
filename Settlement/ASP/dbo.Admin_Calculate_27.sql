@@ -42,10 +42,7 @@ BEGIN
 								+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
 								+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
 								+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
-								+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-								+ ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatch, 0))
-								+ ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchBetFair, 0))
-								+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0))
+								+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))				
 				,@createdDate = GETDATE()
 
 			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_27'
@@ -347,8 +344,6 @@ BEGIN
 	END
 
 END
-
-
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_27] TO [vnteam]

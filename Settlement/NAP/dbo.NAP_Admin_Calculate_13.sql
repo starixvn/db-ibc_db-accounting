@@ -41,9 +41,6 @@ BEGIN
 								+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
 								+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
 								+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-								+ ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatch, 0))
-								+ ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchBetFair, 0))
-								+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0))
 				,@createdDate = GETDATE()
 
 			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_13'
@@ -357,7 +354,6 @@ BEGIN
 		
 	END
 END
-
 
 GO
 
