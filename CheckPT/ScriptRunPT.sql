@@ -12,18 +12,21 @@ WHERE   RoleID = 4
  
 
 SET NOCOUNT ON 
-DECLARE @CustId INT, @SportType SMALLINT, @rowcnt INT
+DECLARE @CustId INT, @SportType SMALLINT, @Rowcnt INT
 
 WHILE (1 = 1)
 BEGIN	
-	declare @msg varchar(200)
+	DECLARE @Msg VARCHAR(200)
 	
-	UPDATE TOP(1) #temp
+	UPDATE  TOP(1) #temp
 	SET		@CustId = CustId  
 			,@SportType=SportType
 			,IsFinished = 1
 	FROM	#temp
 	WHERE	IsFinished = 0
+
+	SELECT @Rowcnt = @@ROWCOUNT	
+	IF @Rowcnt = 0 RETURN
 
 	EXEC dbo.[DBA_CheckPT_Credit] @srecommend = @CustId, @SportType = @SportType with RECOMPILE --@SportType 
 
@@ -31,12 +34,12 @@ BEGIN
 	RAISERROR (@msg,0,1) WITH NOWAIT
 
 	--WAITFOR DELAY '00:00:01'
+
 END
 
 SELECT	R.RuleName, C.* 
 FROM	CheckPTResult_Credit C 
-INNER JOIN Rule_Credit R
-		ON C.RuleId = R.RuleId
+INNER JOIN Rule_Credit R ON C.RuleId = R.RuleId
 
  
 DROP TABLE #temp
