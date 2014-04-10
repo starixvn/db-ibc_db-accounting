@@ -109,7 +109,7 @@ ON tblComm.SiteID = tblPT.SiteID
 	AND tblComm.Custid = tblPT.Custid
 ORDER BY 1,3,5
 
-
+--Licensee
 SELECT DISTINCT CASE WHEN tblComm.SportName IS NOT NULL THEN tblComm.SportName 
 			ELSE tblPT.SportName END SportName,
 		CASE WHEN tblComm.SiteID IS NOT NULL THEN tblComm.SiteID 

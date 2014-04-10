@@ -30,7 +30,7 @@ BEGIN
 
 	SELECT @srecommend = COALESCE(@srecommend + ',', '') + convert(NVARCHAR(50),ISNULL(tbl.Custid,'')) 
 	FROM CheckCustDB.dbo.Dep_CustSuper tbl WITH(NOLOCK)
-		Where Site = @Site AND Currency <> 20
+		WHERE Site = @Site AND Currency <> 20
 
 END
  

@@ -6,8 +6,7 @@ ALTER PROCEDURE [dbo].DBA_CheckPT_Dep
 (
 	@sporttype INT=NULL,
 	@srecommend VARCHAR(1000)=NULL,
-	@site VARCHAR(100)=NULL,
-	@ShowDetail BIT = 1
+	@site VARCHAR(100)=NULL
 )
 AS
 /*
@@ -79,17 +78,13 @@ SET NOCOUNT ON
 				CASE WHEN BA.custid IS NOT NULL THEN Sport_PT.PT ELSE 0.00 END PT_spec,
 				CASE WHEN (BA.custid IS NOT NULL AND (cs.apositiontaking <> 0 OR cs.mpositiontaking <> 0)) THEN 1 ELSE 0 END IsBA
 			FROM CheckCustDB.dbo.Customer co WITH(NOLOCK)
-			INNER JOIN
-				#tmpAgent sup
+			INNER JOIN	#tmpAgent sup
 					ON sup.custid = co.recommend AND co.roleid =1
-			INNER JOIN
-				#tmpSport_PT  Sport_PT 
+			INNER JOIN	#tmpSport_PT  Sport_PT 
 					ON sup.SiteID = Sport_PT.SiteID
-			INNER JOIN
-				CheckCustDB.dbo.Dep_CustSetting cs WITH(NOLOCK)
+			INNER JOIN	CheckCustDB.dbo.Dep_CustSetting cs WITH(NOLOCK)
 					ON cs.custid = co.custid AND cs.sporttype = Sport_PT.Sportid
-			LEFT JOIN 
-				#LicenseeBAHistory BA WITH(NOLOCK) 
+			LEFT JOIN 	#LicenseeBAHistory BA WITH(NOLOCK) 
 					ON co.custid = BA.custid --AND BA.[Status] = 'running'
 			WHERE
 					(BA.custid IS NULL AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT)) 
@@ -108,14 +103,11 @@ SET NOCOUNT ON
 					cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking as PT,
 					Sport_PT.PT 	 
 				FROM CheckCustDB.dbo.Customer co WITH(NOLOCK)
-				INNER JOIN
-					#tmpAgent sup
+				INNER JOIN	#tmpAgent sup
 						ON sup.custid = co.recommend
-				INNER JOIN
-					CheckCustDB.dbo.Dep_CustSetting3rd cs WITH(NOLOCK) 
+				INNER JOIN	CheckCustDB.dbo.Dep_CustSetting3rd cs WITH(NOLOCK) 
 						ON cs.custid = co.custid 
-				INNER JOIN
-					#tmpSport_PT  Sport_PT 
+				INNER JOIN	#tmpSport_PT  Sport_PT 
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 				WHERE co.roleid =1
 					AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT)
@@ -129,14 +121,11 @@ SET NOCOUNT ON
 					cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking as PT,
 					Sport_PT.PT
 				FROM CheckCustDB.dbo.Customer co WITH(NOLOCK)
-				INNER JOIN
-					#tmpAgent sup
+				INNER JOIN	#tmpAgent sup
 						ON sup.custid = co.recommend
-				INNER JOIN
-					CheckCustDB.dbo.CustSettingGame cs WITH(NOLOCK) 
+				INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH(NOLOCK) 
 						ON cs.custid = co.custid 
-				INNER JOIN
-					#tmpSport_PT  Sport_PT 
+				INNER JOIN	#tmpSport_PT  Sport_PT 
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 				WHERE co.roleid =1
 					AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT) 
@@ -153,14 +142,11 @@ SET NOCOUNT ON
 					 cs.apositiontaking as PT,
 					 Sport_PT.PT
 			FROM CheckCustDB.dbo.Customer co WITH(NOLOCK)
-			INNER JOIN
-				#tmpAgent sup
+			INNER JOIN	#tmpAgent sup
 					ON sup.custid = co.recommend
-			INNER JOIN
-				CheckCustDB.dbo.Dep_CustSetting cs WITH(NOLOCK) 
+			INNER JOIN	CheckCustDB.dbo.Dep_CustSetting cs WITH(NOLOCK) 
 					ON cs.custid = co.custid AND co.roleid =2
-			INNER JOIN
-				#tmpSport_PT  Sport_PT
+			INNER JOIN	#tmpSport_PT  Sport_PT
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 			WHERE cs.apositiontaking <> Sport_PT.PT 
 	
@@ -176,14 +162,11 @@ SET NOCOUNT ON
 						 cs.apositiontaking as PT,
 						 Sport_PT.PT
 				FROM CheckCustDB.dbo.Customer co WITH(NOLOCK)
-				INNER JOIN
-					#tmpAgent sup
+				INNER JOIN	#tmpAgent sup
 						ON sup.custid = co.recommend
-				INNER JOIN
-					CheckCustDB.dbo.Dep_CustSetting3rd cs WITH(NOLOCK) 
+				INNER JOIN	CheckCustDB.dbo.Dep_CustSetting3rd cs WITH(NOLOCK) 
 						ON cs.custid = co.custid
-				INNER JOIN
-					#tmpSport_PT  Sport_PT
+				INNER JOIN	#tmpSport_PT  Sport_PT
 						ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 				WHERE co.roleid =2 AND cs.apositiontaking <> Sport_PT.PT
 
@@ -197,14 +180,11 @@ SET NOCOUNT ON
 							 cs.apositiontaking as PT,
 							 Sport_PT.PT
 					FROM CheckCustDB.dbo.Customer co WITH(NOLOCK)
-					INNER JOIN
-						#tmpAgent sup
+					INNER JOIN	#tmpAgent sup
 							ON sup.custid = co.recommend
-					INNER JOIN
-						CheckCustDB.dbo.CustSettingGame cs WITH(NOLOCK) 
+					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH(NOLOCK) 
 							ON cs.custid = co.custid
-					INNER JOIN
-						#tmpSport_PT  Sport_PT
+					INNER JOIN	#tmpSport_PT  Sport_PT
 							ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 					WHERE co.roleid =2 AND cs.apositiontaking <> Sport_PT.PT
 	END	

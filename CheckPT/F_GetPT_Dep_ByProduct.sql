@@ -42,7 +42,7 @@ INSERT INTO @tblSite(SiteID,Site)
 Select SiteID , [Site]  From CheckCustDB.dbo.[Site] s WITH (nolock) 
 	INNER JOIN DBLIC.bodb_licensee.[dbo].[Licensees] l WITH (nolock) 
 		ON LicenseeName = [Site] 
-WHERE  @Site IS NULL OR Site =  @Site 
+WHERE ( @Site IS NULL OR Site =  @Site )
 
 IF @sporttype IN (-1,0) OR @sporttype <=99 OR @sporttype = 154--Sportbooks
 		BEGIN

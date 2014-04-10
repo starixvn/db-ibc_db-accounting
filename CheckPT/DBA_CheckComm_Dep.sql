@@ -55,7 +55,7 @@ SET NOCOUNT ON
 		@srecommend =@srecommend
 
 	INSERT INTO #tmpSport(Sportid)
-	SELECT Sportid FROM  [dbo].f_GetComm_Dep_ByProduct (@sporttype )
+	SELECT Sportid FROM [dbo].f_GetComm_Dep_ByProduct (@sporttype )
 
 	IF OBJECT_ID('tempdb..#LicenseeBAConfig') IS NOT NULL 		DROP TABLE #LicenseeBAConfig
 	IF OBJECT_ID('tempdb..#LicenseeBAHistory') IS NOT NULL 		DROP TABLE #LicenseeBAHistory

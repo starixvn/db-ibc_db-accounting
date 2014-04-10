@@ -13,7 +13,7 @@ TRUNCATE TABLE CheckResultDB.dbo.CheckCommResult_Deposit
 INSERT  INTO #temp (SITE,IsFinished)
 SELECT LicenseeName,0 FROM DBLIC.bodb_licensee.dbo.Licensees li WITH(NOLOCK)
 
-DECLARE @srecommend varchar(100),@site VARCHAR(100),@Rowcnt INT=0
+DECLARE @site VARCHAR(100),@Rowcnt INT
 DECLARE @Begin		DATETIME
 DECLARE @Duration	INT
 
