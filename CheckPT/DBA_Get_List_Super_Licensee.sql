@@ -10,7 +10,7 @@ AS
 /*
 	Created: 20131015@Tom.Vo	
 	Task :  Retrieve list Super licensee's by site
-	DB: DB052.CheckResultDB
+	DB: DB054.CheckResultDB
 	Original:
 
 	Revisions:
@@ -21,7 +21,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	IF NOT EXISTS (Select TOP 1 1  From CheckCustDB.dbo.[Site] WITH(NOLOCK) WHERE [Site] = @Site AND isLicensee = 1)
+	IF NOT EXISTS (Select TOP 1 1  From CheckCustDB.dbo.[Site] WITH(NOLOCK) WHERE [Site] = @Site)
 		BEGIN
 			RETURN
 		END

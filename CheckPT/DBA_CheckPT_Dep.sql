@@ -76,7 +76,7 @@ SET NOCOUNT ON
 				cs.SportType,
 				cs.BetType,
 				cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking as PT,
-				Sport_PT.PT,
+				CASE WHEN BA.custid IS NOT NULL THEN Sport_PT.PT ELSE 0.00 END PT_spec,
 				CASE WHEN (BA.custid IS NOT NULL AND (cs.apositiontaking <> 0 OR cs.mpositiontaking <> 0)) THEN 1 ELSE 0 END IsBA
 			FROM CheckCustDB.dbo.Customer co WITH(NOLOCK)
 			INNER JOIN
@@ -207,91 +207,7 @@ SET NOCOUNT ON
 						#tmpSport_PT  Sport_PT
 							ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 					WHERE co.roleid =2 AND cs.apositiontaking <> Sport_PT.PT
-	END
-
-	--IF @ShowDetail = 1 
-	--	BEGIN
-	--		SELECT DISTINCT data.Sportid, sp.SportName
-	--			,tblSport.SiteID LicenseeID, tblSport.Site Licensee
-	--			,e.exchangeid CurrencyCode,e.Code Currency
-	--			,co.Custid ,co.Username 
-	--			,data.PT AS PT_Invaild ,data.PT_spec
-	--		FROM #Member data
-	--		INNER JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
-	--			ON data.Custid = co.Custid
-	--		INNER JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
-	--			ON co.currency = e.exchangeid
-	--		LEFT JOIN CheckCustDB.dbo.Sports sp WITH(NOLOCK)
-	--			ON data.SportID = sp.SportType
-	--		LEFT JOIN #tmpSport_PT  tblSport 
-	--			ON data.SiteID = tblSport.SiteID AND data.Sportid = tblSport.Sportid
-	--		ORDER BY 1,2,3,4
-
-	--		SELECT DISTINCT data.Sportid, sp.SportName
-	--			,tblSport.SiteID LicenseeID, tblSport.Site AS Licensee
-	--			,e.exchangeid CurrencyCode,e.Code Currency
-	--			,co.Custid ,co.Username 
-	--			,data.PT AS PT_Invaild ,data.PT_spec
-	--		FROM #Licensee data
-	--		INNER JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
-	--			ON data.Custid = co.Custid
-	--		INNER JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
-	--			ON co.currency = e.exchangeid
-	--		LEFT JOIN CheckCustDB.dbo.Sports sp WITH(NOLOCK)
-	--			ON data.SportID = sp.SportType
-	--		LEFT JOIN #tmpSport_PT  tblSport 
-	--			ON data.SiteID = tblSport.SiteID AND data.Sportid = tblSport.Sportid
-	--		ORDER BY 1,2,3,4
-	--	END
-	--ELSE
-	--	BEGIN
-	--		SELECT DISTINCT CASE WHEN data.Sportid <=99 THEN 'Sports Book' 
-	--				WHEN data.Sportid IN (161)  THEN 'Number Game' 
-	--				WHEN data.Sportid IN (162)  THEN 'Live Casino'
-	--				WHEN data.Sportid IN (151,152,153)  THEN 'Racing'			
-	--				WHEN data.Sportid BETWEEN 180 AND 186  THEN 'Virtual Sports'
-	--				WHEN data.Sportid IN (202)  THEN 'Keno'
-	--				WHEN data.Sportid IN (251)  THEN 'RNG Casino'					
-	--			END SportName
-	--			,tblSport.SiteID LicenseeID, tblSport.Site  AS Licensee
-	--			,e.exchangeid CurrencyCode,e.Code Currency
-	--			,co.Custid ,co.Username 
-	--			,data.PT AS PT_Invaild ,data.PT_spec
-	--			,IsBA
-	--		FROM #Member data
-	--		INNER JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
-	--			ON data.Custid = co.Custid
-	--		INNER JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
-	--			ON co.currency = e.exchangeid
-	--		LEFT JOIN bodb02.dbo.Sports sp WITH(NOLOCK)
-	--			ON data.SportID = sp.SportType
-	--		LEFT JOIN #tmpSport_PT  tblSport 
-	--			ON data.SiteID = tblSport.SiteID AND data.Sportid = tblSport.Sportid 
-	--		ORDER BY 1,2,3,4
-
-	--		SELECT DISTINCT CASE WHEN data.Sportid <=99 THEN 'Sports Book' 
-	--				WHEN data.Sportid IN (151,152,153)  THEN 'Racing'
-	--				WHEN data.Sportid IN (161)  THEN 'Number Game' 
-	--				WHEN data.Sportid IN (162)  THEN 'Live Casino'				
-	--				WHEN data.Sportid BETWEEN 180 AND 186  THEN 'Virtual Sports'
-	--				WHEN data.Sportid IN (202)  THEN 'Keno'
-	--				WHEN data.Sportid IN (251)  THEN 'RNG Casino'
-	--			END SportName
-	--			,tblSport.SiteID LicenseeID,  tblSport.Site   AS Licensee
-	--			,e.exchangeid CurrencyCode,e.Code Currency
-	--			,co.Custid ,co.Username 
-	--			,data.PT AS PT_Invaild ,data.PT_spec
-	--		FROM #Licensee data
-	--		INNER JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
-	--			ON data.Custid = co.Custid
-	--		INNER JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
-	--			ON co.currency = e.exchangeid
-	--		LEFT JOIN bodb02.dbo.Sports sp WITH(NOLOCK)
-	--			ON data.SportID = sp.SportType
-	--		LEFT JOIN #tmpSport_PT  tblSport 
-	--			ON data.SiteID = tblSport.SiteID AND data.Sportid = tblSport.Sportid 
-	--		ORDER BY 1,2,3,4
-	--	END
+	END	
 
 	INSERT INTO CheckResultDB.[dbo].[CheckPTResult_Deposit]
 		(SITEID, [BetType],[SportType],[CustId],[RoleID],PT_Invalid,PT_spec,IsBA)

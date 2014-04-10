@@ -6,8 +6,7 @@ ALTER PROCEDURE [dbo].DBA_CheckComm_Dep
 (
 	@sporttype INT=NULL,
 	@srecommend VARCHAR(1000)=NULL,
-	@site VARCHAR(100)=NULL,
-	@ShowDetail BIT = 1
+	@site VARCHAR(100)=NULL
 )
 AS
 /*
@@ -168,14 +167,18 @@ SET NOCOUNT ON
 				cs.adiscount CommM,
 				cs.sdiscount CommS,
 				ISNULL(LGC.[SBComm],0.00) Comm_P_Spec,
-				CASE WHEN cs.bettype IN (1,2,3,7,8) THEN 
-					CASE WHEN RIGHT(me.ugroup,1) = 'a' THEN BA.[groupa]
-						WHEN RIGHT(me.ugroup,1) = 'b'  THEN BA.[groupb]
-						WHEN RIGHT(me.ugroup,1) = 'c'  THEN BA.[groupc]
-						WHEN RIGHT(me.ugroup,1) = 'd'  THEN BA.[groupd]
-						ELSE 0 END
-					WHEN cs.bettype IN (5) THEN BA.[1x2Comm]
-					WHEN cs.bettype IN (4,6,9,10,20,21,22) THEN BA.OtherComm
+				CASE WHEN BAH.CustID IS NOT NULL THEN
+					CASE WHEN cs.bettype IN (1,2,3,7,8) THEN 
+						CASE WHEN RIGHT(me.ugroup,1) = 'a' THEN BA.[groupa]
+							WHEN RIGHT(me.ugroup,1) = 'b'  THEN BA.[groupb]
+							WHEN RIGHT(me.ugroup,1) = 'c'  THEN BA.[groupc]
+							WHEN RIGHT(me.ugroup,1) = 'd'  THEN BA.[groupd]
+							ELSE 0 END
+						WHEN cs.bettype IN (5) THEN BA.[1x2Comm]
+						WHEN cs.bettype IN (4,6,9,10,20,21,22) THEN BA.OtherComm
+					END
+				ELSE
+					0.00
 				END Comm_SMA_Spec,
 				CASE WHEN BAH.CustID IS NOT NULL THEN 1 ELSE 0 END IsBA
 		FROM CheckCustDB.dbo.dep_custsetting cs WITH(NOLOCK)
@@ -210,7 +213,7 @@ SET NOCOUNT ON
 						END=1)
 						OR
 							(BAH.CustID IS NULL AND (cs.discount <> 0 OR cs.adiscount <> 0 OR cs.sdiscount<> 0))
-						OR (LCC.custid IS NOT NULL 
+						OR (LCC.custid IS NOT NULL  AND LGC.[id] IS NOT NULL 
 							AND ((cs.sporttype<99 OR cs.sporttype=154) AND LCC.[SBComm] <> cs.playerdiscount)
 							)					
 						)
@@ -218,10 +221,6 @@ SET NOCOUNT ON
 				OR (
 					me.roleid = 2
 					AND  cs.discount <> 0.00
-				)
-				OR (
-					LCC.custid IS NOT NULL
-					AND cs.playerdiscount <> ISNULL(LGC.[SBComm],0.00)
 				)
 	END
 
@@ -269,25 +268,26 @@ SET NOCOUNT ON
 		LEFT JOIN #LicenseeGroupComm LGC WITH (NOLOCK)
 			ON LCC.GroupCommID = LGC.[id]
 		WHERE (me.roleid IN (1,2)
-			AND cs.discount <> CASE WHEN cs.sporttype IN (151,152,153) THEN
-									CASE WHEN cs.sporttype = 151 AND cs.bettype IN (31,32,41,42) THEN 0.04
-										WHEN cs.sporttype = 151 AND cs.bettype IN (51,52) THEN 0.03
-										WHEN cs.sporttype = 152 AND cs.bettype IN (41,42) THEN 0.04
-										WHEN cs.sporttype = 152 AND cs.bettype IN (51,52) THEN 0.03
-										WHEN cs.sporttype = 153 AND cs.bettype IN (51,52) THEN 0.03
+				AND cs.discount <> CASE WHEN cs.sporttype IN (151,152,153) THEN
+										CASE WHEN cs.sporttype = 151 AND cs.bettype IN (31,32,41,42) THEN 0.04
+											WHEN cs.sporttype = 151 AND cs.bettype IN (51,52) THEN 0.03
+											WHEN cs.sporttype = 152 AND cs.bettype IN (41,42) THEN 0.04
+											WHEN cs.sporttype = 152 AND cs.bettype IN (51,52) THEN 0.03
+											WHEN cs.sporttype = 153 AND cs.bettype IN (51,52) THEN 0.03
+											ELSE 0.00
+										END 
 										ELSE 0.00
-									END 
-									ELSE 0.00
-								END
+									END
 								)
-			OR (
-			CASE WHEN cs.sporttype IN (151,152,153) THEN ISNULL(LGC.[RacingComm],0.00)
-					WHEN cs.sporttype IN (161) THEN ISNULL(LGC.[NGComm],0.00)
-					WHEN cs.sporttype IN (162) THEN ISNULL(LGC.[LCComm],0.00)
-					WHEN cs.sporttype IN (251) THEN ISNULL(LGC.[RNGComm],0.00)
-					ELSE 0.00
-				 END
-				 <> cs.playerdiscount
+			OR (LCC.custid IS NOT NULL AND LGC.[id] IS NOT NULL 
+				AND
+					CASE WHEN cs.sporttype IN (151,152,153) THEN ISNULL(LGC.[RacingComm],0.00)
+							WHEN cs.sporttype IN (161) THEN ISNULL(LGC.[NGComm],0.00)
+							WHEN cs.sporttype IN (162) THEN ISNULL(LGC.[LCComm],0.00)
+							WHEN cs.sporttype IN (251) THEN ISNULL(LGC.[RNGComm],0.00)
+							ELSE 0.00
+						 END
+						 <> cs.playerdiscount
 			)
 	END
 

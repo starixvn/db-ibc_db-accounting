@@ -16,7 +16,7 @@ AS
 /*
 	Created: 20131015@Tom.Vo	
 	Task :  Retrieve fee licensee's by product 
-	DB: DB052.CheckResultDB
+	DB: DB054.CheckResultDB
 	Original:
 
 	Revisions:
