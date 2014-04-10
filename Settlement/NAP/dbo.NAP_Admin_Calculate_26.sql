@@ -31,7 +31,7 @@ BEGIN
 			WHERE NAME = 'LASDB'
 			)
 	BEGIN
-		IF @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 AND @IsSettleAbandonedMatchIBC = 0
+		IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
 		BEGIN
 			DECLARE @LASCommand NVARCHAR(1000)
 				,@createdDate DATETIME
@@ -41,6 +41,7 @@ BEGIN
 								+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
 								+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
 								+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+								+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 						
 				,@createdDate = GETDATE()
 
 			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_26'
@@ -346,7 +347,6 @@ BEGIN
 			statusID NOT IN (101, 102)
 	END
 END
-
 
 
 GO
