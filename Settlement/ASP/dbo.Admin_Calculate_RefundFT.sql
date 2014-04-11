@@ -24,7 +24,7 @@ AS
 		- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 		- 20140120@Lukas: insert settled command into LAS queue [Redmine:#8785]
 		- 20140312@Kathy: Execute settlement for abandoned/postponed matches (bettype: 13,26,27) [Redmine:#12049]
-
+		- 20140411@Kathy: Add more LAS command
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
 BEGIN
@@ -32,22 +32,24 @@ BEGIN
 	--- LAS settlement 
 	IF @@SERVERNAME IN ('DB052','DB054','DB231', 'DB232')  AND EXISTS (SELECT * FROM sys.databases WHERE name = 'LASDB')
 	BEGIN		
+		IF (@IsExcludeBetdaq = 0 and @IsExcludeBetfair = 0) or @IsSettleAbandonedMatchIBC = 1
+		BEGIN
+			DECLARE @LASCommand NVARCHAR(1000),
+					@createdDate DATETIME
 
-		DECLARE @LASCommand NVARCHAR(1000),
-				@createdDate DATETIME
+			SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFT] @matchid = ' + CONVERT(NVARCHAR(10),@matchid)								
+									+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 											
+					,@createdDate = GETDATE()
 
-		SELECT	 @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFT] @matchid = ' + CONVERT(NVARCHAR(10),@matchid)								
-				,@createdDate = GETDATE()
-
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand]	 @SPName		= 'Admin_Calculate_RefundFT'
-															,@SQLCommand	= @LASCommand
-															,@CreatedDate	= @createdDate
-															,@StatusID		= 0 -- waiting
-															,@MatchID		= @matchid
-															,@Bettype		= 0 -- hardcode
-															,@Status		= 'waiting'
-															,@BetCount		= 0
-
+			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand]	 @SPName		= 'Admin_Calculate_RefundFT'
+																,@SQLCommand	= @LASCommand
+																,@CreatedDate	= @createdDate
+																,@StatusID		= 0 -- waiting
+																,@MatchID		= @matchid
+																,@Bettype		= 0 -- hardcode
+																,@Status		= 'waiting'
+																,@BetCount		= 0
+		END
 	END
 
 

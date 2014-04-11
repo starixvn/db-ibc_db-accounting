@@ -11,6 +11,7 @@ AS
 	DB: DBTXN/BODB02	
 	Revisions:
 		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		-20140411@Kathy: Add more LAS command
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -24,20 +25,24 @@ BEGIN
 			WHERE NAME = 'LASDB'
 			)
 	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+		IF (@IsExcludeBetdaq = 0 and @IsExcludeBetfair = 0) or @IsSettleAbandonedMatchIBC = 1
+		BEGIN
+			DECLARE @LASCommand NVARCHAR(1000)
+				,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundAll] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
-			,@createdDate = GETDATE()
+			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundAll] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
+								+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 													
+				,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundAll'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = 0 -- hardcode
-			,@Status = 'waiting'
-			,@BetCount = 0
+			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundAll'
+				,@SQLCommand = @LASCommand
+				,@CreatedDate = @createdDate
+				,@StatusID = 0 -- waiting
+				,@MatchID = @matchid
+				,@Bettype = 0 -- hardcode
+				,@Status = 'waiting'
+				,@BetCount = 0
+		END
 	END
 
 	WHILE 1 = 1
