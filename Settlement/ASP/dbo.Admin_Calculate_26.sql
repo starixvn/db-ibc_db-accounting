@@ -352,6 +352,5 @@ END
 
 
 
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_26] TO [vnteam]

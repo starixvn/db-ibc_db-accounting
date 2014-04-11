@@ -348,7 +348,6 @@ BEGIN
 	END
 END
 
-
 GO
 
 GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_26] TO [vnteam] AS [dbo]
