@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_MailingListSel] 
+﻿ALTER PROCEDURE [Acc_MailingListSel] 
 	@FuncID int = 287  -- [SpecialDeleteMailing]
 AS 
 /*    
@@ -14,6 +14,8 @@ AS
 		- 20130920@Kathy: Add groups was configured on web before (12EU, IT QA, IT Support)
 		- 20131101@Kathy: Add Foobet group [Redmine:#5697]
 		- 20131113@Kathy: Add RecoverBet group [Redmine:#6647]
+		- 20130107@Kathy: Rename 'RecoverBet' group to 'CSD Recovery' [Redmine:#10270]
+		- 20140411@Kathy: Add BetFair, OneExchange's group [Redmine:#6647]
 */    
 BEGIN 
 
@@ -74,14 +76,27 @@ BEGIN
 		and SiteId = 1000003
 
 		UNION ALL
-		SELECT SiteId, 'Recover Bet', ToList, CcList, BccList,
+		SELECT SiteId, 'CSD Recovery', ToList, CcList, BccList,
 			CASE WHEN tolist IS NOT NULL OR cclist IS NOT NULL OR bcclist IS NOT NULL THEN 1 ELSE 0 END isavailabe  
 		FROM Acc_MailingList WITH(NOLOCK)
 		WHERE FuncID = @FuncID 
 		and SiteId = 1000004
+
+		UNION ALL
+		SELECT SiteId, 'BetFair', ToList, CcList, BccList,
+			CASE WHEN tolist IS NOT NULL OR cclist IS NOT NULL OR bcclist IS NOT NULL THEN 1 ELSE 0 END isavailabe  
+		FROM Acc_MailingList WITH(NOLOCK)
+		WHERE FuncID = @FuncID 
+		and SiteId = 1000005
+
+		UNION ALL
+		SELECT SiteId, 'OneExchange', ToList, CcList, BccList,
+			CASE WHEN tolist IS NOT NULL OR cclist IS NOT NULL OR bcclist IS NOT NULL THEN 1 ELSE 0 END isavailabe  
+		FROM Acc_MailingList WITH(NOLOCK)
+		WHERE FuncID = @FuncID 
+		and SiteId = 1000006
 	END    
 END  
-
 go
 
 /*

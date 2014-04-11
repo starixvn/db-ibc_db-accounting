@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_MailingListIns]
+﻿ALTER PROCEDURE [Acc_MailingListIns]
 	@Userid int,		
 	@Siteid int = 0, 
 	@FuncID int = 287,  -- [SpecialDeleteMailing]
@@ -24,6 +24,7 @@ AS
 		20130920@Kathy: Validate siteid for groups was configured on web before (12EU, IT QA, IT Support groups)
 		20131101@Kathy: Add Foobet group [Redmine:#5697]
 		20131113@Kathy: Add RecoverBet group [Redmine:#6647]
+		20140411@Kathy: Add BetFair, OneExchange's group [Redmine:#6647]
 */  
 
 BEGIN	
@@ -45,7 +46,7 @@ IF @ErrCode <> 0
 	RETURN
 
 --2. VALIDATE SITEID. 
-IF @Siteid NOT IN (1000000, 1000001, 1000002, 1000003, 1000004) -- 12EU, IT QA, IT Support, Foobet, RecoverBet
+IF @Siteid NOT IN (1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006) -- 12EU, IT QA, IT Support, Foobet, RecoverBet, BetFair, OneExchange
 	IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 ) AND @Siteid <> 0
 	BEGIN
 		SELECT @ErrMsg = 'This Licensee does not exists in System.',
@@ -109,13 +110,6 @@ exec Acc_MailingListIns
 select @errcode, @errmsg	
  
 */
-
-
-
-
-
-
-
 
 
 GO
