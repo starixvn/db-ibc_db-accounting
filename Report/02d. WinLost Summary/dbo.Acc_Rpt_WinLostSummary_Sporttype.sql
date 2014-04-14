@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
     @fromdate    DATETIME,
     @todate        DATETIME    
 AS
@@ -15,6 +15,12 @@ AS
         Parameter's Explanation:
     */
 SET NOCOUNT ON
+
+	DECLARE @_fromdate    DATETIME,
+			@_todate      DATETIME
+
+	SELECT @_fromdate = @fromdate,
+			@_todate = @todate
 
     CREATE TABLE #TempMatch (matchid int, matchcode varchar(50))
     CREATE TABLE #TempData(sporttype int, 
@@ -45,39 +51,39 @@ SET NOCOUNT ON
             @movebetdate = max(eventdate) 
             FROM  bodb02.dbo.match14 WITH(NOLOCK)
             
-        IF @todate >= @movebetdate
+        IF @_todate >= @movebetdate
         BEGIN
-            IF @fromdate < @movebetdate
+            IF @_fromdate < @movebetdate
                 SELECT @f_date = @movebetdate
             ELSE
-                SELECT @f_date = @fromdate
+                SELECT @f_date = @_fromdate
             
-            SELECT @t_date = @todate
+            SELECT @t_date = @_todate
         
             INSERT INTO #TempMatch
             SELECT m.matchid,m.matchcode FROM bodb02.dbo.match(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
         END
 
-        IF @fromdate <@movebetdate
+        IF @_fromdate <@movebetdate
         BEGIN
-            IF @todate < @movebetdate
-                SELECT @t_date = @todate
+            IF @_todate < @movebetdate
+                SELECT @t_date = @_todate
             ELSE
                 SELECT @t_date = @movebetdate
             
-            SELECT @f_date = @fromdate
+            SELECT @f_date = @_fromdate
 
             INSERT INTO #TempMatch
             SELECT m.matchid,m.matchcode FROM bodb02.dbo.match14(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
         END
-        IF @fromdate <@balanceupdate
+        IF @_fromdate <@balanceupdate
         BEGIN
-            IF @todate < @balanceupdate
-                SELECT @t_date = @todate
+            IF @_todate < @balanceupdate
+                SELECT @t_date = @_todate
             ELSE
                 SELECT @t_date = @balanceupdate - 1
             
-            SELECT @f_date = @fromdate
+            SELECT @f_date = @_fromdate
 
             INSERT INTO #TempMatch
             SELECT m.matchid,m.matchcode FROM bodb_archive.dbo.match_bk(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
@@ -99,7 +105,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
         FROM rptWinlost b WITH(NOLOCK)
         LEFT JOIN #TempMatch m ON m.matchid = b.matchid
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND (sporttype BETWEEN 1 and 99 OR sporttype = 161)
         GROUP BY sporttype,liveindicator ,ibc
             ,case when bettype in (1,3,7,8) then bettype else 19999 end        
@@ -120,7 +126,7 @@ SET NOCOUNT ON
             ,0 as realTurnover
             ,NULL as virtualTurnover
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype = 71
         GROUP BY bettype
     UNION ALL
@@ -139,7 +145,7 @@ SET NOCOUNT ON
             ,0 as realTurnover
             ,NULL as virtualTurnover
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype = 73
         GROUP BY bettype
     UNION ALL
@@ -157,7 +163,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realTurnover),0) as realTurnover
             ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             and bettype BETWEEN 1501 AND 1599
         GROUP BY sporttype,liveindicator ,ibc
             ,bettype
@@ -177,7 +183,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realTurnover),0)
             ,ISNULL(SUM(realTurnover),0) as virtualTurnover
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype between 1101 and 1199
         GROUP BY bettype
     UNION ALL
@@ -195,7 +201,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realTurnover),0)
             ,ISNULL(SUM(virtualTurnover),0)
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype = 9
         GROUP BY status
     UNION ALL
@@ -213,7 +219,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realTurnover),0)
             ,ISNULL(SUM(virtualTurnover),0)
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype = 29
         GROUP BY status
     UNION ALL
@@ -232,7 +238,7 @@ SET NOCOUNT ON
             , 0 as realTurnover
             ,0 as virtualTurnover
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype BETWEEN 31 AND 33
         GROUP BY sporttype
     UNION ALL
@@ -251,7 +257,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realTurnover),0)
             ,ISNULL(SUM(realTurnover),0) as virtualTurnover
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype BETWEEN 1201 AND 1299
         GROUP BY sporttype
 
@@ -271,7 +277,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realTurnover),0) as realTurnover
             ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
         FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @fromdate AND @todate
+        WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND sporttype = 154
         GROUP BY sporttype,bettype, liveindicator ,ibc
                 
@@ -281,7 +287,7 @@ SET NOCOUNT ON
 
     DROP TABLE #TempMatch
     --exec Acc_Rpt_WinlostSummary_Sporttype @fromdate='2014-03-11 00:00:00',@todate='2014-03-11 00:00:00'
-	
-	
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
+
