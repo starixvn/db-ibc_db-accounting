@@ -1,6 +1,6 @@
 ALTER PROCEDURE [NAP_Admin_Calculate_RefundAll] @matchid INT
-	,@fth SMALLMONEY
-	,@fta SMALLMONEY
+	,@fth SMALLMONEY = 0
+	,@fta SMALLMONEY = 0
 	,@IsExcludeBetdaq BIT = 0
 	,@IsExcludeBetfair BIT = 0
 	,@IsSettleAbandonedMatchIBC BIT = 0
@@ -11,7 +11,7 @@ AS
 	DB: DBTXN/BODB02	
 	Revisions:
 		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
-		-20140411@Kathy: Add more LAS command
+		-20140411@Kathy: Add more param for LAS command
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -25,24 +25,21 @@ BEGIN
 			WHERE NAME = 'LASDB'
 			)
 	BEGIN
-		IF (@IsExcludeBetdaq = 0 and @IsExcludeBetfair = 0) or @IsSettleAbandonedMatchIBC = 1
-		BEGIN
-			DECLARE @LASCommand NVARCHAR(1000)
-				,@createdDate DATETIME
+		DECLARE @LASCommand NVARCHAR(1000)
+			,@createdDate DATETIME
 
-			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundAll] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
-								+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 													
-				,@createdDate = GETDATE()
+		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundAll] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
+							+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 													
+			,@createdDate = GETDATE()
 
-			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundAll'
-				,@SQLCommand = @LASCommand
-				,@CreatedDate = @createdDate
-				,@StatusID = 0 -- waiting
-				,@MatchID = @matchid
-				,@Bettype = 0 -- hardcode
-				,@Status = 'waiting'
-				,@BetCount = 0
-		END
+		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundAll'
+			,@SQLCommand = @LASCommand
+			,@CreatedDate = @createdDate
+			,@StatusID = 0 -- waiting
+			,@MatchID = @matchid
+			,@Bettype = 0 -- hardcode
+			,@Status = 'waiting'
+			,@BetCount = 0
 	END
 
 	WHILE 1 = 1
