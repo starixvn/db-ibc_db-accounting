@@ -46,7 +46,8 @@ AS
 	Revisions:
 		- 20140102@Kathy: Add username2 column [Redmine:#10270]
 		- 20140121@Elodie: Apply LAS system for special delete function [Redmine:#10701]
-		- 20140411@Kathy: Separate tickets of Bet Fair, OneExchange 3rd parties [Redmine:#10128]
+		- 20140411@Kathy: - Separate tickets of Bet Fair, OneExchange 3rd parties [Redmine:#10128]
+						  - Add 2 new bettypes 1H Total Goal and 1H First Goal/ Last Goal (126, 127) [Redmine:#14749]
 
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -281,7 +282,7 @@ BEGIN
 		AND b.betteam = CASE WHEN b.bettype IN (1,3,7,8,2,12) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
 							WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 							ELSE b.betteam END 
-		AND b.bettype not in (4,6,14,16,30)
+		AND b.bettype not in (4,6,14,16,30, 126, 127)
 		AND CASE WHEN b.bettype IN (1,3,7,8) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
 													ELSE 0 END 
@@ -343,7 +344,7 @@ BEGIN
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
 		AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 	
-		AND b.bettype = 6
+		AND b.bettype IN (6, 126)
 		AND (@betteam6='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
@@ -372,7 +373,7 @@ BEGIN
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END
 		AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-		AND b.bettype = 14
+		AND b.bettype IN (14, 127)
 		AND (@betteam14='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 
@@ -881,6 +882,7 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+
 
 
 GO
