@@ -1968,7 +1968,7 @@ BEGIN
 		b.status NOT IN ('VOID', 'REJECT', 'REFUND')
 	END	
 	--- Keno
-	IF @ShowCS=1
+	IF @ShowKN=1
 	BEGIN
 		INSERT INTO #BetListByDateMem
 		SELECT
