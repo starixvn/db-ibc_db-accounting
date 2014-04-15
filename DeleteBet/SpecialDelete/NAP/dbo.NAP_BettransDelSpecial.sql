@@ -297,6 +297,7 @@ BEGIN
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
 	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId
@@ -321,13 +322,14 @@ BEGIN
 													 WHEN 2 THEN 1 END
 
 
--- bettype = 6: Total Goal
+-- bettype = 6: Total Goal; 126: 1st Total Goal
  INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM dbo.bettrans AS b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
@@ -350,13 +352,14 @@ BEGIN
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END
 
--- bettype = 14: First Goal/Last Goal
+-- bettype = 14: First Goal/Last Goal; 127: 1st FGLG
  INSERT INTO #BetDelete  
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate,b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
@@ -882,6 +885,7 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+
 
 
 
