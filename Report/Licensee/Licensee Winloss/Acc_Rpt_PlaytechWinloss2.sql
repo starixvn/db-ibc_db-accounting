@@ -58,7 +58,7 @@ BEGIN
 	DECLARE @Super AS TABLE (custid INT PRIMARY KEY, currency INT)
 	INSERT INTO @Super(custid, currency)  
 	SELECT CustID, currency 
-	FROM Dep_CustSuper WITH (NOLOCK)  
+	FROM bodb02.dbo.Dep_CustSuper WITH (NOLOCK)  
 	WHERE site = @LicenseeName	
 
 	DECLARE @TempFromDate DATETIME 
