@@ -106,10 +106,13 @@ SET NOCOUNT ON
 					ON cs.custid = co.custid AND cs.sporttype = Sport_PT.Sportid
 			LEFT JOIN 	#LicenseeBAHistory BA WITH(NOLOCK) 
 					ON co.custid = BA.custid --AND BA.[Status] = 'running'
-			WHERE
-					(BA.custid IS NULL AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT)) 
-						OR 
-					(BA.custid IS NOT NULL AND (cs.apositiontaking <> 0 OR cs.mpositiontaking <> 0))
+			WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+					AND(
+						(BA.custid IS NULL AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT)) 
+							OR 
+						(BA.custid IS NOT NULL AND (cs.apositiontaking <> 0 OR cs.mpositiontaking <> 0))
+					)
 	END
 	
 	IF @sporttype IN (-1,151,161,162,180,202,251)--+ Racing(151) + NumberGame(161)+Live Casino(162)+ Virtual Sport(180) + Keno(202) + RnG Casino(251)
@@ -129,7 +132,9 @@ SET NOCOUNT ON
 						ON cs.custid = co.custid 
 				INNER JOIN	#tmpSport_PT  Sport_PT 
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
-				WHERE co.roleid =1
+				WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+					AND co.roleid =1
 					AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT)
 
 			IF @sporttype IN (-1,202)
@@ -147,7 +152,9 @@ SET NOCOUNT ON
 						ON cs.custid = co.custid 
 				INNER JOIN	#tmpSport_PT  Sport_PT 
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
-				WHERE co.roleid =1
+				WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+					AND co.roleid =1
 					AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT) 
 
 	END
@@ -168,7 +175,9 @@ SET NOCOUNT ON
 					ON cs.custid = co.custid
 			INNER JOIN	#tmpSport_PT  Sport_PT
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
-			WHERE cs.apositiontaking <> Sport_PT.PT 
+			WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+					AND cs.apositiontaking <> Sport_PT.PT 
 	
 	IF @sporttype IN (-1,151,161,162,180,202,251)--+ Racing(151) + NumberGame(161)+Live Casino(162)+ Virtual Sport(180) + Keno(202) + RnG Casino(251)
 	BEGIN
@@ -188,7 +197,10 @@ SET NOCOUNT ON
 						ON cs.custid = co.custid
 				INNER JOIN	#tmpSport_PT  Sport_PT
 						ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
-				WHERE co.roleid =2 AND cs.apositiontaking <> Sport_PT.PT
+				WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+						AND co.roleid =2 
+						AND cs.apositiontaking <> Sport_PT.PT
 
 		IF @sporttype IN (-1,202)
 			INSERT INTO #Licensee (SiteID,CUSTID,SPORTID,BetType,PT,PT_spec)
@@ -206,20 +218,23 @@ SET NOCOUNT ON
 							ON cs.custid = co.custid
 					INNER JOIN	#tmpSport_PT  Sport_PT
 							ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
-					WHERE co.roleid =2 AND cs.apositiontaking <> Sport_PT.PT
+					WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+						AND	co.roleid =2 
+						AND cs.apositiontaking <> Sport_PT.PT
 	END	
 
 	INSERT INTO CheckResultDB.[dbo].[CheckPTResult_Deposit]
 		(SITEID, [BetType],[SportType],[CustId],[RoleID],PT_Invalid,PT_spec,IsBA)
 	
-	SELECT Distinct SiteID,BetType,SportID,CustID,1 [RoleID] ,PT,PT_spec,IsBA
+	SELECT SiteID,BetType,SportID,CustID,1 [RoleID] ,PT,PT_spec,IsBA
 	FROM #Member m
 
 
 	INSERT INTO CheckResultDB.[dbo].[CheckPTResult_Deposit]
 		(SITEID, [BetType],[SportType],[CustId],[RoleID],PT_Invalid,PT_spec,IsBA)
 	
-	SELECT Distinct SiteID,BetType,SportID,CustID,2 [RoleID] ,PT,PT_spec,0 IsBA
+	SELECT SiteID,BetType,SportID,CustID,2 [RoleID] ,PT,PT_spec,0 IsBA
 	FROM #Licensee m
 
 	IF OBJECT_ID('tempdb..#tmpAgent') IS NOT NULL			DROP TABLE #tmpAgent
