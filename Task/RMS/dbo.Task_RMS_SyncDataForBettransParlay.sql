@@ -7,6 +7,7 @@ AS
   - 20121001@viet: create SP   
   - 20130125@Johnson: move sp from DB054.bodb02 to DBRMS.bodb_RMS and use rmSettings to store setting
   - 20140121@Johnson: add system parlay into rmTransaction
+  - 20140417@Johnson: add column combo into rmBettrans to store number of selections 
 */  
 SET NOCOUNT ON
 SET DEADLOCK_PRIORITY LOW	
@@ -28,14 +29,14 @@ BEGIN
 		liveindicator, betteam, creator, refno, comstatus, winlostdate, betfrom, betcheck, checktime, oddsspread, actualrate, matchid, 
 		recommend, mrecommend, ruben, betid, statuswinlost, modds, bettype, betdaqid, actual_stake, currency, ip, transdesc, sdiscount, 
 		scomm, spositiontaking, swinlost, srecommend, Username, CurrencyName, virtualrate, oddstype, statusID, currency2, balance, 
-		SecAcceptFlag, transid2
+		SecAcceptFlag, transid2, combo
 	)
 	SELECT transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, awinlost, mwinlost, playercomm, comm, acomm, 
 			apositiontaking, mpositiontaking, tpositiontaking, playerdiscount, discount, adiscount, livehomescore, liveawayscore, 
 			liveindicator, betteam, creator, refno, comstatus, winlostdate, betfrom, betcheck, checktime, oddsspread, actualrate, matchid, 
 			recommend, mrecommend, ruben, betid, statuswinlost, modds, bettype, betdaqid, actual_stake, currency, ip, transdesc, sdiscount, 
 			scomm, spositiontaking, swinlost, srecommend, Username, CurrencyName, virtualrate, oddstype, statusID, currency2, balance, 
-			SecAcceptFlag, transid2
+			SecAcceptFlag, transid2, CASE when matchid = 9 then RIGHT(betcheck,LEN(betcheck)-1) else LEN(betteam) end
 	FROM bodb02.dbo.bettrans with (NOLOCK)
 	WHERE matchid in (9,29)	
 END
@@ -46,7 +47,7 @@ BEGIN
 			liveindicator, betteam, creator, refno, comstatus, winlostdate, betfrom, betcheck, checktime, oddsspread, actualrate, matchid, 
 			recommend, mrecommend, ruben, betid, statuswinlost, modds, bettype, betdaqid, actual_stake, currency, ip, transdesc, sdiscount, 
 			scomm, spositiontaking, swinlost, srecommend, Username, CurrencyName, virtualrate, oddstype, statusID, currency2, balance, 
-			SecAcceptFlag, transid2
+			SecAcceptFlag, transid2, CASE when matchid = 9 then RIGHT(betcheck,LEN(betcheck)-1) else LEN(betteam) end as combo
 	INTO #temp			
 	FROM bodb02.dbo.bettrans with (NOLOCK)
 	WHERE tstamp between @tstamp_min and @tstamp_max
@@ -116,13 +117,14 @@ BEGIN
 				,balance = s.balance
 				,SecAcceptFlag = s.SecAcceptFlag
 				,transid2 = s.transid2
+				,combo = s.combo
 		WHEN NOT MATCHED THEN 
 		INSERT (transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, awinlost, mwinlost, playercomm, comm, acomm, 
 			apositiontaking, mpositiontaking, tpositiontaking, playerdiscount, discount, adiscount, livehomescore, liveawayscore, 
 			liveindicator, betteam, creator, refno, comstatus, winlostdate, betfrom, betcheck, checktime, oddsspread, actualrate, matchid, 
 			recommend, mrecommend, ruben, betid, statuswinlost, modds, bettype, betdaqid, actual_stake, currency, ip, transdesc, sdiscount, 
 			scomm, spositiontaking, swinlost, srecommend, Username, CurrencyName, virtualrate, oddstype, statusID, currency2, balance, 
-			SecAcceptFlag, transid2
+			SecAcceptFlag, transid2, combo
 			)
 		VALUES (
 			transid, s.custid, s.transdate, s.oddsid, s.hdp1, s.hdp2, s.odds, s.stake, s.status, s.winlost, s.awinlost, s.mwinlost, s.playercomm, 
@@ -130,22 +132,15 @@ BEGIN
 			s.liveawayscore, s.liveindicator, s.betteam, s.creator, s.refno, s.comstatus, s.winlostdate, s.betfrom, s.betcheck, s.checktime, 
 			s.oddsspread, s.actualrate, s.matchid, s.recommend, s.mrecommend, s.ruben, s.betid, s.statuswinlost, s.modds, s.bettype, s.betdaqid, 
 			s.actual_stake, s.currency, s.ip, s.transdesc, s.sdiscount, s.scomm, s.spositiontaking, s.swinlost, s.srecommend, s.Username, 
-			s.CurrencyName, s.virtualrate, s.oddstype, s.statusID, s.currency2, s.balance, s.SecAcceptFlag, s.transid2
+			s.CurrencyName, s.virtualrate, s.oddstype, s.statusID, s.currency2, s.balance, s.SecAcceptFlag, s.transid2, s.combo
 			)
 	;--end MERGE
 	
 	MERGE	dbo.rmTransaction as dt
 	USING	#temp s on dt.transid = s.transid	
-	WHEN NOT MATCHED AND s.bettype = 9 THEN 
+	WHEN NOT MATCHED THEN 
 		INSERT(transid, refno, custid, combo)
-		VALUES(s.transid,s.refno,s.custid,RIGHT(s.betcheck,LEN(s.betcheck)-1))
-	; 
-	
-	MERGE	dbo.rmTransaction as dt
-	USING	#temp s on dt.transid = s.transid	
-	WHEN NOT MATCHED AND s.bettype = 29 THEN 
-		INSERT(transid, refno, custid, combo)
-		VALUES(s.transid,s.refno,s.custid,LEN(s.betteam))
+		VALUES(s.transid,s.refno,s.custid,s.combo)
 	; -- END OF MERGE rmTransaction
 	
 END
