@@ -2,7 +2,7 @@ USE CheckResultDB
  
 GO 
 
-ALTER PROCEDURE [dbo].RPT_CheckSetting_Dep
+ALTER PROCEDURE [dbo].DBA_RPT_CheckSetting_Dep
 
 AS
 /*

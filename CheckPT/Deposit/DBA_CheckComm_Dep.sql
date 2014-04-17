@@ -123,28 +123,36 @@ SET NOCOUNT ON
 	INSERT INTO #LicenseeBAHistory([LicenseeID],[CustID],[OnDate],[OffDate],[OnBy],[OffBy],[GroupComm],[1x2Comm],[OtherComm],[Status],[Ugroup])
 	SELECT BA.[LicenseeID],BA.[CustID],BA.[OnDate],BA.[OffDate],BA.[OnBy],BA.[OffBy],BA.[GroupComm],BA.[1x2Comm],BA.[OtherComm],BA.[Status],BA.[Ugroup]
 	FROM DBLIC.bodb_licensee.dbo.LicenseeBAHistory BA WITH(NOLOCK) 
-		INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
-			ON BA.[LicenseeID] = BAC.[LicenseeID]
-	WHERE BA.[Status] = 'running'
+		--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
+		--	ON BA.[LicenseeID] = BAC.[LicenseeID]
+	WHERE BA.[Status] = 'running' 
+		AND EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
+			WHERE BA.[LicenseeID] = BAC.[LicenseeID])
 
 	INSERT INTO #LicenseeSpecialCust([LicenseeID],[CustID],ugroup,ugroup_old)
 	SELECT LIC.[LicenseeID],LIC.[CustID],LIC.ugroup,LIC.ugroup_old		
 	FROM DBLIC.bodb_licensee.dbo.LicenseeSpecialCust LIC WITH (NOLOCK) 
-		INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
-			ON LIC.[LicenseeID] = BAC.[LicenseeID]
+	  WHERE EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
+			WHERE LIC.[LicenseeID] = BAC.[LicenseeID])
+		--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
+			--ON LIC.[LicenseeID] = BAC.[LicenseeID]
 
 	INSERT INTO #LicenseeGroupComm([id],[Licenseeid],[GroupName],[IsActive],[SBComm],[RacingComm],[NGComm],[color],[IsDefault],[LCComm],[RNGComm])
 	SELECT LGC.[id],LGC.[Licenseeid],LGC.[GroupName],LGC.[IsActive],LGC.[SBComm],LGC.[RacingComm],LGC.[NGComm]
 		  ,LGC.[color],LGC.[IsDefault],LGC.[LCComm],LGC.[RNGComm]
 	  FROM DBLIC.bodb_licensee.dbo.[LicenseeGroupComm] LGC WITH(NOLOCK)
-		INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
-			ON LGC.[LicenseeID] = BAC.[LicenseeID]
+	  WHERE EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
+			WHERE LGC.[LicenseeID] = BAC.[LicenseeID])
+		--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
+			--ON LGC.[LicenseeID] = BAC.[LicenseeID]
 
 	INSERT INTO #LicenseeCustComm([LicenseeID],[CustID],[SBComm],[RacingComm],[NGComm],[GroupCommID],[LCComm],[RNGComm])
 	SELECT LCC.[LicenseeID],LCC.[CustID],LCC.[SBComm],LCC.[RacingComm],LCC.[NGComm],LCC.[GroupCommID],LCC.[LCComm],LCC.[RNGComm]
 	FROM DBLIC.bodb_licensee.dbo.[LicenseeCustComm] LCC WITH(NOLOCK)
-	INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK)
-			ON LCC.[LicenseeID] = BAC.[LicenseeID]
+	WHERE EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
+			WHERE LCC.[LicenseeID] = BAC.[LicenseeID])
+	--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK)
+		--	ON LCC.[LicenseeID] = BAC.[LicenseeID]
 
 	IF OBJECT_ID('tempdb..#Member') IS NOT NULL 		DROP TABLE #Member
 	CREATE TABLE #Member (SiteID INT,CustID INT,RoleID INT,Ugroup VARCHAR(5),
@@ -169,10 +177,10 @@ SET NOCOUNT ON
 				ISNULL(LGC.[SBComm],0.00) Comm_P_Spec,
 				CASE WHEN BAH.CustID IS NOT NULL THEN
 					CASE WHEN cs.bettype IN (1,2,3,7,8) THEN 
-						CASE WHEN RIGHT(me.ugroup,1) = 'a' THEN BA.[groupa]
-							WHEN RIGHT(me.ugroup,1) = 'b'  THEN BA.[groupb]
-							WHEN RIGHT(me.ugroup,1) = 'c'  THEN BA.[groupc]
-							WHEN RIGHT(me.ugroup,1) = 'd'  THEN BA.[groupd]
+						CASE WHEN me.ugroup IN ('a','dea','hka') THEN BA.[groupa]
+							WHEN me.ugroup IN ('b','deb','hkb')  THEN BA.[groupb]
+							WHEN me.ugroup IN ('c','dec','hkc')  THEN BA.[groupc]
+							WHEN me.ugroup IN ('d','ded','hkd')  THEN BA.[groupd]
 							ELSE 0 END
 						WHEN cs.bettype IN (5) THEN BA.[1x2Comm]
 						WHEN cs.bettype IN (4,6,9,10,20,21,22) THEN BA.OtherComm
@@ -183,13 +191,13 @@ SET NOCOUNT ON
 				CASE WHEN BAH.CustID IS NOT NULL THEN 1 ELSE 0 END IsBA
 		FROM CheckCustDB.dbo.dep_custsetting cs WITH(NOLOCK)
 		INNER JOIN CheckCustDB.dbo.Customer me WITH(NOLOCK)
-			ON cs.custid = me.custid		
+			ON cs.custid = me.custid
 		INNER JOIN	#tmpAgent sup WITH(NOLOCK)
 			ON sup.custid = me.recommend
-		INNER JOIN #LicenseeBAConfig BA WITH(NOLOCK)
+		LEFT JOIN #LicenseeBAConfig BA WITH(NOLOCK)
 			ON BA.[SiteID] = sup.[SiteID]
-		INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
-			ON tmpSport.Sportid = cs.sporttype
+		--INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
+		--	ON tmpSport.Sportid = cs.sporttype
 		LEFT JOIN #LicenseeBAHistory BAH WITH(NOLOCK) 
 			ON cs.custid = BAH.custid --AND BAH.[Status] = 'running'
 		LEFT JOIN #LicenseeSpecialCust LIC WITH (NOLOCK)
@@ -198,14 +206,18 @@ SET NOCOUNT ON
 			ON cs.custid = LCC.custid
 		LEFT JOIN #LicenseeGroupComm LGC WITH (NOLOCK)
 			ON LCC.GroupCommID = LGC.[id]
-		WHERE (me.roleid = 1 
+		WHERE EXISTS(SELECT TOP 1 1 FROM #tmpSport tmpSport WITH(NOLOCK)
+							WHERE tmpSport.Sportid = cs.sporttype)
+			AND EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = me.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+			AND (me.roleid = 1
 				AND (--IS BA
 						(BAH.CustID IS NOT NULL 
 						AND CASE WHEN cs.bettype IN (1,2,3,7,8) THEN 
-								CASE WHEN RIGHT(me.ugroup,1) = 'a' AND (cs.discount <> BA.[groupa] OR cs.adiscount <> BA.[groupa] OR cs.sdiscount<> BA.[groupa]) THEN 1
-									WHEN RIGHT(me.ugroup,1) = 'b' AND (cs.discount <> BA.[groupb] OR cs.adiscount <> BA.[groupb] OR cs.sdiscount<> BA.[groupb]) THEN 1
-									WHEN RIGHT(me.ugroup,1) = 'c' AND (cs.discount <> BA.[groupc] OR cs.adiscount <> BA.[groupc] OR cs.sdiscount<> BA.[groupc]) THEN 1
-									WHEN RIGHT(me.ugroup,1) = 'd' AND (cs.discount <> BA.[groupd] OR cs.adiscount <> BA.[groupd] OR cs.sdiscount<> BA.[groupd]) THEN 1
+								CASE WHEN me.ugroup IN ('a','dea','hka') AND (cs.discount <> BA.[groupa] OR cs.adiscount <> BA.[groupa] OR cs.sdiscount<> BA.[groupa]) THEN 1
+									WHEN me.ugroup IN ('b','deb','hkb')  AND (cs.discount <> BA.[groupb] OR cs.adiscount <> BA.[groupb] OR cs.sdiscount<> BA.[groupb]) THEN 1
+									WHEN me.ugroup IN ('c','dec','hkc')  AND (cs.discount <> BA.[groupc] OR cs.adiscount <> BA.[groupc] OR cs.sdiscount<> BA.[groupc]) THEN 1
+									WHEN me.ugroup IN ('d','ded','hkd')  AND (cs.discount <> BA.[groupd] OR cs.adiscount <> BA.[groupd] OR cs.sdiscount<> BA.[groupd]) THEN 1
 									ELSE 0 END
 								WHEN cs.bettype IN (5) AND (cs.discount <> BA.[1x2Comm] OR cs.adiscount <> BA.[1x2Comm] OR cs.sdiscount<> BA.[1x2Comm]) THEN 1
 								WHEN cs.bettype IN (4,6,9,10,20,21,22) AND (cs.discount <> BA.OtherComm OR cs.adiscount <> BA.OtherComm OR cs.sdiscount<> BA.OtherComm) THEN 1
@@ -255,10 +267,10 @@ SET NOCOUNT ON
 			ON cs.custid = me.custid
 		INNER JOIN	#tmpAgent sup WITH(NOLOCK)
 			ON sup.custid = me.recommend
-		INNER JOIN #LicenseeBAConfig BA WITH(NOLOCK)
+		LEFT JOIN #LicenseeBAConfig BA WITH(NOLOCK)
 			ON BA.[SiteID] = sup.[SiteID]
-		INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
-			ON tmpSport.Sportid = cs.sporttype
+		--INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
+		--	ON tmpSport.Sportid = cs.sporttype
 		LEFT JOIN #LicenseeBAHistory BAH WITH(NOLOCK) 
 			ON cs.custid = BAH.custid
 		LEFT JOIN #LicenseeSpecialCust LIC WITH (NOLOCK)
@@ -267,7 +279,11 @@ SET NOCOUNT ON
 			ON cs.custid = LCC.custid
 		LEFT JOIN #LicenseeGroupComm LGC WITH (NOLOCK)
 			ON LCC.GroupCommID = LGC.[id]
-		WHERE (me.roleid IN (1,2)
+		WHERE EXISTS(SELECT TOP 1 1 FROM #tmpSport tmpSport WITH(NOLOCK)
+							WHERE tmpSport.Sportid = cs.sporttype)
+			AND EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = me.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+			AND (me.roleid IN (1,2)
 				AND cs.discount <> CASE WHEN cs.sporttype IN (151,152,153) THEN
 										CASE WHEN cs.sporttype = 151 AND cs.bettype IN (31,32,41,42) THEN 0.04
 											WHEN cs.sporttype = 151 AND cs.bettype IN (51,52) THEN 0.03

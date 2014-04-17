@@ -1,6 +1,11 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
+﻿USE [bodb_licensee]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 
 
 ALTER PROCEDURE [dbo].[DBA_CreateLicenseeUser]
@@ -29,6 +34,7 @@ AS
 		Daniel@20130312: Add pageaccess customer reports
 		Jim@20130603: restrict currency permission for licensee user 
 		Jim@20130823: Internal user haven't got ManageMember 
+		Jim@20140416: Add more permission Filter for Legend system
 	
 */
 
@@ -155,6 +161,16 @@ BEGIN
 		INNER JOIN [LicenseeFunctions] l WITH(NOLOCK) ON f.FunctionId = l.FunctionId
 	WHERE l.LicenseeId =@LicenseeId			
 	AND (f.FunctionId = 52 OR f.ParentId = 52)
+END
+
+IF CHARINDEX('AgencySystem', @PageAccess) > 0
+BEGIN
+	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
+	SELECT DISTINCT @LicenseeId, @UserId, f.FunctionId 
+	FROM [Functions] f WITH(NOLOCK)
+		INNER JOIN [LicenseeFunctions] l WITH(NOLOCK) ON f.FunctionId = l.FunctionId
+	WHERE l.LicenseeId =@LicenseeId			
+	AND (f.FunctionId = 58 OR f.ParentId = 58)
 END
 GO
 GRANT VIEW DEFINITION ON [dbo].[DBA_CreateLicenseeUser] TO [vnteam] 
