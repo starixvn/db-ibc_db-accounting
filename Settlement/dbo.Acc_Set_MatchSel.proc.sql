@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Set_MatchSel]
+﻿ALTER PROCEDURE [Acc_Set_MatchSel]
 	@FromDate datetime,
 	@ToDate datetime,
 	@LeagueID int = 0, -- 0 for ALL Leagues
@@ -33,6 +33,7 @@ AS
 		- 20131125@Elodie: get result for Virtual Greyhounds, Motor Racing
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 		- 20131212@Johnson: move sp to DBPRO.bodb02
+		- 20140403@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
   
@@ -158,7 +159,7 @@ BEGIN
 			FOR XML PATH('match'), ROOT('root')
 		)
 		
-		EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @betstatus = @betstatus OUTPUT
+								EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @betstatus = @betstatus OUTPUT
 		
 		--Create an internal representation of the XML document.      
 		EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
@@ -218,7 +219,7 @@ BEGIN
 			AND o.leagueid = CASE WHEN @leagueid = 0 THEN o.leagueid ELSE @leagueid END
 			AND (o.oddsstatus = 'completed' OR o.oddsstatus = 'refund' OR o.Foddsstatus = 'completed' )   
 		
-	--Virtual HR, Virtual Grey Hounds, Motor Racing
+	--Virtual HR, Virtual Grey Hounds, Motor Racing, Speedway, Cycling
 	INSERT INTO #matchList
 	SELECT 
 		0 hthomescore  --TF  
@@ -259,7 +260,7 @@ BEGIN
 			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid   
 	WHERE	o.eventdate >= @FromDate AND o.eventdate <= @ToDate   
 			AND l.sporttype = CASE WHEN @sporttype = 0 THEN l.sporttype ELSE @sporttype END
-			AND @sporttype in (0,181,182,184)
+			AND @sporttype in (0,181,182, 183,184,185)
 			AND r.leagueid = CASE WHEN @leagueid = 0 THEN r.leagueid ELSE @leagueid END
 			AND o.eventstatus = 'completed' 
 			

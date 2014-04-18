@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
+﻿ALTER PROCEDURE [Acc_CustomerUpdMoveMember]
 	@agentname varchar(40),
 	@membername varchar(40),
 	@userid int,
@@ -49,6 +49,8 @@ Revisions:
 	- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo,customer table in main SP)  			
 	- 20140314@Elodie: Add Keno product [Redmine:#13326]
+	- 20140403@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
+						- Add Virtual Greyhounds/ Motor Racing (182,184)
 	
 Param's Explanation:
 • @ErrCode:
@@ -609,6 +611,10 @@ DECLARE
 	--VS
 	@v180apositiontaking_1201 SMALLMONEY,
 	@v181apositiontaking_1231 SMALLMONEY,
+	@v182apositiontaking_1231 SMALLMONEY,
+	@v183apositiontaking_1231 SMALLMONEY,
+	@v184apositiontaking_1231 SMALLMONEY,
+	@v185apositiontaking_1231 SMALLMONEY,
 	@v186apositiontaking_1220 SMALLMONEY,
 
 	--Keno
@@ -701,6 +707,10 @@ SELECT @v162apositiontaking_1101 = apositiontaking FROM CustSettingGame WITH(NOL
 
 SELECT @v180apositiontaking_1201 = apositiontaking FROM custsetting3rd WITH (NOLOCK) WHERE custid = @custid AND bettype=1201 AND sporttype=180
 SELECT @v181apositiontaking_1231 = apositiontaking FROM custsetting3rd WITH (NOLOCK) WHERE custid = @custid AND bettype=1231 AND sporttype=181
+SELECT @v182apositiontaking_1231 = apositiontaking FROM custsetting3rd WITH (NOLOCK) WHERE custid = @custid AND bettype=1231 AND sporttype=182
+SELECT @v183apositiontaking_1231 = apositiontaking FROM custsetting3rd WITH (NOLOCK) WHERE custid = @custid AND bettype=1231 AND sporttype=183
+SELECT @v184apositiontaking_1231 = apositiontaking FROM custsetting3rd WITH (NOLOCK) WHERE custid = @custid AND bettype=1231 AND sporttype=184
+SELECT @v185apositiontaking_1231 = apositiontaking FROM custsetting3rd WITH (NOLOCK) WHERE custid = @custid AND bettype=1231 AND sporttype=185
 SELECT @v186apositiontaking_1220 = apositiontaking FROM custsetting3rd WITH (NOLOCK) WHERE custid = @custid AND bettype=1220 AND sporttype=186
 
 --Keno
@@ -1005,6 +1015,115 @@ EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
 	@sporttype	= 181,
 	@bettype = 1231 ,
 	@a1 = @v181apositiontaking_1231,
+	
+	@UserID	= @UserID,	
+	@ErrCode = @ErrCode_1 OUTPUT,
+	@ErrMsg	 = @ErrMsg OUTPUT	
+
+IF CHARINDEX('-101', @ErrCode_1) = 0
+BEGIN
+	--ROLLBACK TRANSACTION MANUALLY
+	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	if @ReturnErrCode = 0
+		RaisError (@ErrMsg, 16, 1)	
+	return
+END
+
+-- 182
+EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
+	@custid  = @custid,
+	@sporttype	= 182,
+	@bettype = 1231 ,
+	@a1 = @v182apositiontaking_1231,
+	
+	@UserID	= @UserID,	
+	@ErrCode = @ErrCode_1 OUTPUT,
+	@ErrMsg	 = @ErrMsg OUTPUT	
+
+IF CHARINDEX('-101', @ErrCode_1) = 0
+BEGIN
+	--ROLLBACK TRANSACTION MANUALLY
+	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	if @ReturnErrCode = 0
+		RaisError (@ErrMsg, 16, 1)	
+	return
+END
+
+
+-- 183
+EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
+	@custid  = @custid,
+	@sporttype	= 183,
+	@bettype = 1231 ,
+	@a1 = @v183apositiontaking_1231,
+	
+	@UserID	= @UserID,	
+	@ErrCode = @ErrCode_1 OUTPUT,
+	@ErrMsg	 = @ErrMsg OUTPUT	
+
+IF CHARINDEX('-101', @ErrCode_1) = 0
+BEGIN
+	--ROLLBACK TRANSACTION MANUALLY
+	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	if @ReturnErrCode = 0
+		RaisError (@ErrMsg, 16, 1)	
+	return
+END
+
+-- 184
+EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
+	@custid  = @custid,
+	@sporttype	= 184,
+	@bettype = 1231 ,
+	@a1 = @v184apositiontaking_1231,
+	
+	@UserID	= @UserID,	
+	@ErrCode = @ErrCode_1 OUTPUT,
+	@ErrMsg	 = @ErrMsg OUTPUT	
+
+IF CHARINDEX('-101', @ErrCode_1) = 0
+BEGIN
+	--ROLLBACK TRANSACTION MANUALLY
+	update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	update custinfo with (ROWLOCK, UPDLOCK) set srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											recommend = @recommend_old
+	where custid = @custid
+	
+	if @ReturnErrCode = 0
+		RaisError (@ErrMsg, 16, 1)	
+	return
+END
+
+-- 185
+EXEC dbo.Acc_CustomerUpdMemberVS_Positiontaking
+	@custid  = @custid,
+	@sporttype	= 185,
+	@bettype = 1231 ,
+	@a1 = @v185apositiontaking_1231,
 	
 	@UserID	= @UserID,	
 	@ErrCode = @ErrCode_1 OUTPUT,
@@ -1719,6 +1838,8 @@ BEGIN CATCH
 		@TrackingValue = @LogSPData,
 		@duration = @duration	
 END CATCH
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbadminNet] AS [dbo]

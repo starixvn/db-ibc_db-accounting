@@ -1,10 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Refund_All]
+﻿ALTER PROCEDURE [Admin_Settlement_Refund_All]
 	@matchid int,
 	@creator int, 	
 	@IsExcludeBetdaq bit = 0,
 	@IsSettleAbandonedMatch bit = 0,
 	@IsExcludeBetfair bit = 0,
 	@IsSettleAbandonedMatchBetFair bit = 0,
+	@IsSettleAbandonedMatchIBC bit = 0,
 	@hth int = NULL,
 	@hta int = NULL,
 	@fth int = NULL,
@@ -15,7 +16,7 @@
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
-
+ 
 /*
 Created: Thien
 Task : refund tickets 
@@ -45,6 +46,7 @@ Revisions:
 	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 	- 20140117@Kathy: Change ErrCode value
+	- 20140312@Kathy: Execute settlement for abandoned/postponed matches of Soccer (bettype: 13,26,27) [Redmine:#12049]
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -52,6 +54,7 @@ Param's Explanation:
 • @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
 • @IsExcludeBetfair: Is Exclude betfair tickets or not
 • @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+• @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
 * List of BetDaq Customers 
 			custid	--- username	-	roleid
 			50057	---	BQUS888		-	1
@@ -69,7 +72,6 @@ Param's Explanation:
 */
 
 SET NOCOUNT ON
-
 -- check and not allow attempt to settlement same game while it's still not finish
 IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WHERE KeyID = 1 AND KeyValue = @matchid)
 BEGIN
@@ -132,19 +134,14 @@ GROUP BY custid
 IF @IsSettleAbandonedMatch = 1 SELECT @IsExcludeBetdaq = 1
 IF @IsSettleAbandonedMatchBetFair = 1 SELECT @IsExcludeBetfair = 1
 
-/*
-		Settle Betdaq, Betfair tickets Abandoned Match for Over/Under 
-*/
-IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+DECLARE	@ScoreLog VARCHAR(100),@sporttype tinyint
+
+SELECT	@sporttype = SportType
+FROM	DBPRO.BODB02.dbo.Match with (nolock) 
+WHERE	matchid = @matchid
+
+IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 or @IsSettleAbandonedMatchIBC = 1
 BEGIN 
-	DECLARE	@ScoreLog VARCHAR(100)
-
-	DECLARE	@sporttype tinyint
-
-	SELECT	@sporttype = SportType
-	FROM	DBPRO.BODB02.dbo.Match with (nolock) 
-	WHERE	matchid = @matchid
-		
 	SELECT	@ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)),'')
 						+ ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)),'')
 						+ ' FTHScore=' + ISNULL(CAST(@fth AS VARCHAR(10)),'')
@@ -163,7 +160,7 @@ BEGIN
 
 	SELECT	@totalgoal	= CASE WHEN @sporttype IN (5, 6, 9, 30) and @TennisTotal > 0 THEN @TennisTotal ELSE (@fth + @fta) END,
 			@totalht	= (@hth + @hta)
-			
+
 	IF @Action IN ('CAL','CAL-FT') AND @totalgoal IS NULL 
 	BEGIN
 		SELECT	@ErrCode = 1000004
@@ -266,7 +263,12 @@ BEGIN
 		END
 		RETURN
 	END
- 	 
+END
+/*
+		Settle Betdaq, Betfair tickets Abandoned Match for Over/Under 
+*/
+IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+BEGIN 	 	 
 	DECLARE @betcount_3 int, @betcount_8 int
 	
 	SELECT	@betcount_3 = ISNULL(SUM(case bettype when 3 then 1 else 0 end), 0),
@@ -289,11 +291,60 @@ BEGIN
 		EXEC dbo.Admin_Calculate_8 @matchid = @matchid, @bettype = 8, @totalht = @totalht, @betcount = @betcount_8, @IsSettleAbandonedMatch = @IsSettleAbandonedMatch, @IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 	END	
 END
-/* --- END Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  ---*/
+/* --- END Settle tickets Abandoned Match for Over/Under ---*/
+
+--	Settle tickets Abandoned Match of Soccer for Clean Sheet, Both/One/Neither team to score, To Win To Nil  	
+IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) 
+	and @action in ('CAL', 'CAL-FT') 
+	and @sporttype = 1
+BEGIN
+	DECLARE @betcount_13 INT
+		,@betcount_26 INT
+		,@betcount_27 INT
+
+	SELECT @betcount_13 = ISNULL(SUM(CASE b.bettype WHEN 13 THEN 1 ELSE 0 END), 0)
+		,@betcount_26 = ISNULL(SUM(CASE b.bettype WHEN 26 THEN 1 ELSE 0 END), 0)
+		,@betcount_27 = ISNULL(SUM(CASE b.bettype WHEN 27 THEN 1 ELSE 0 END), 0)
+	FROM bettrans b WITH (NOLOCK)
+	WHERE b.matchid = @matchid 
+		AND b.bettype IN (13, 26, 27) 
+		AND b.statusID NOT IN (101, 102) 
+		AND 1 = CASE WHEN @IsSettleAbandonedMatchIBC = 1  AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)  THEN 1
+					 WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) or recommend = 1688156) THEN 1
+					 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
+				     ELSE 0
+				END
+	EXEC dbo.Admin_Calculate_13 @matchid = @matchid
+		,@bettype = 13
+		,@fth = @fth
+		,@fta = @fta
+		,@betcount = @betcount_13
+		,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+		,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+		,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+	EXEC dbo.Admin_Calculate_26 @matchid = @matchid
+		,@bettype = 26
+		,@fth = @fth
+		,@fta = @fta
+		,@betcount = @betcount_26
+		,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+		,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+		,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+	EXEC dbo.Admin_Calculate_27 @matchid = @matchid
+		,@bettype = 27
+		,@fth = @fth
+		,@fta = @fta
+		,@betcount = @betcount_27
+		,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+		,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+		,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+END
 
 EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_Refund_All', @MatchID = @matchid, @creator = @creator
-
-EXEC dbo.Admin_Calculate_RefundAll @matchid = @matchid, @IsExcludeBetdaq = @IsExcludeBetdaq, @IsExcludeBetfair = @IsExcludeBetfair
+EXEC dbo.Admin_Calculate_RefundAll @matchid = @matchid, @IsExcludeBetdaq = @IsExcludeBetdaq, @IsExcludeBetfair = @IsExcludeBetfair, @IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC, @fth = @fth, @fta = @fta
 
 INSERT INTO #BalanceAfter	
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
@@ -362,18 +413,18 @@ SELECT @LogData = 'Calculate (Refund All) for matchid:' + CAST(@matchid as nvarc
 + CASE WHEN @IsSettleAbandonedMatch = 1 THEN ', Settle determined betdaq tickets' ELSE '' END
 + CASE WHEN @IsExcludeBetfair = 1 THEN  ', Exclude Betfair tickets' ELSE '' END
 + CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ', Settle determined betfair tickets' ELSE '' END
++ CASE WHEN @IsSettleAbandonedMatchIBC = 1 THEN ', Settle determined IBC tickets' ELSE '' END
 
 EXEC dbo.WriteLog_UserLog @creator, @LogData
 
 --Write Log Settle
 SELECT @Remark = 'ExcludeBetdaqTickets=' + convert(char(1),@IsExcludeBetdaq) 
 					+ ' SettleDeterminedBetdaqTickets=' + convert(char(1),@IsSettleAbandonedMatch)
-					+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN ' Action=' + @Action ELSE '' END
-					+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN @ScoreLog ELSE '' END
 					+ ' ExcludeBetfairTickets=' + convert(char(1),@IsExcludeBetfair) 
 					+ ' SettleDeterminedBetfairTickets=' + convert(char(1),@IsSettleAbandonedMatchBetFair)
-					+ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ' Action=' + @Action ELSE '' END
-					+ CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN @ScoreLog ELSE '' END
+					+ ' SettleDeterminedIBCTickets=' + convert(char(1),@IsSettleAbandonedMatchIBC)
+					+ CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
+					+ ' Action=' + @Action
 					+ ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;'
 BEGIN TRY					
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
@@ -449,6 +500,13 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
+
+
+
+
+
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]

@@ -27,6 +27,8 @@
     @TransIds12EU VARCHAR(MAX) = '',-- for custom delete 12EU
     @TransIdsMHC VARCHAR(MAX) = '',-- for custom delete master MHC	   
 	@TransIdsFB VARCHAR(MAX) = '',-- for custom delete Foobet	   
+	@TransIdsBetFair VARCHAR(MAX) = '',-- for custom delete Betfair	  
+	@TransIdsOneExchange VARCHAR(MAX) = '',-- for custom delete ONEEXCHANGE    
 
 	@IP VARCHAR(15) = '',
     @Reason NVARCHAR(500) = '',
@@ -43,6 +45,9 @@ AS
 
 	Revisions:
 		- 20140102@Kathy: Add username2 column [Redmine:#10270]
+		- 20140121@Elodie: Apply LAS system for special delete function [Redmine:#10701]
+		- 20140411@Kathy: - Separate tickets of Bet Fair, OneExchange 3rd parties [Redmine:#10128]
+						  - Add 2 new bettypes 1H Total Goal and 1H First Goal/ Last Goal (126, 127) [Redmine:#14749]
 
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -180,6 +185,8 @@ BEGIN
 	DECLARE @RealCurrCust TABLE (custid INT)
 
 	DECLARE @FoobetCust TABLE (custid INT)
+	DECLARE @BetFairCust TABLE (custid INT)
+	DECLARE @OneExchangeCust TABLE (custid INT)
 
 	DECLARE @Status TABLE (statusID TINYINT)
 	INSERT INTO @Status
@@ -195,7 +202,9 @@ BEGIN
 	DECLARE @tblTransBetDaq TABLE(transid BIGINT PRIMARY KEY)
 	DECLARE @tblTrans12EU TABLE(transid BIGINT PRIMARY KEY)
 	DECLARE @tblTransMHC TABLE(transid BIGINT PRIMARY KEY)
-	DECLARE @tblTransIdsFB TABLE(transid BIGINT PRIMARY KEY)
+	DECLARE @tblTransFB TABLE(transid BIGINT PRIMARY KEY)
+	DECLARE @tblTransBetFair TABLE(transid BIGINT PRIMARY KEY)
+	DECLARE @tblTransOneExchange TABLE(transid BIGINT PRIMARY KEY)
 
 	BEGIN TRY
 		INSERT INTO @tblTransCredit
@@ -213,8 +222,14 @@ BEGIN
 		INSERT INTO @tblTransMHC
 		SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(ISNULL(@TransIdsMHC,''), ',')
 
-		INSERT INTO @tblTransIdsFB
+		INSERT INTO @tblTransFB
 		SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(ISNULL(@TransIdsFB,''), ',')
+
+		INSERT INTO @tblTransBetFair
+		SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(ISNULL(@TransIdsBetFair,''), ',')
+
+		INSERT INTO @tblTransOneExchange
+		SELECT CONVERT(BIGINT, val) FROM dbo.strSplit(ISNULL(@TransIdsOneExchange,''), ',')
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = 101, @ErrMsg = 'Invalid TransIds.'
@@ -235,7 +250,7 @@ BEGIN
 				@MatchId = @MatchId, 
 				@KeyID = @KeyID,
 				@ActionID = 0, 
-				@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
+				@Remark = @Remark
 		END CATCH
 			RETURN
 	END CATCH
@@ -255,7 +270,9 @@ BEGIN
 			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
 			OR b.transid IN (SELECT transid FROM @tblTrans12EU )
 			OR b.transid IN (SELECT transid FROM @tblTransMHC )
-			OR b.transid IN (SELECT transid FROM @tblTransIdsFB )
+			OR b.transid IN (SELECT transid FROM @tblTransFB )
+			OR b.transid IN (SELECT transid FROM @tblTransBetFair )
+			OR b.transid IN (SELECT transid FROM @tblTransOneExchange )
 			)
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END 
@@ -265,7 +282,7 @@ BEGIN
 		AND b.betteam = CASE WHEN b.bettype IN (1,3,7,8,2,12) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
 							WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 							ELSE b.betteam END 
-		AND b.bettype not in (4,6,14,16,30)
+		AND b.bettype not in (4,6,14,16,30, 126, 127)
 		AND CASE WHEN b.bettype IN (1,3,7,8) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
 													ELSE 0 END 
@@ -280,6 +297,7 @@ BEGIN
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
 	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId
@@ -288,7 +306,9 @@ BEGIN
 			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
 			OR b.transid IN (SELECT transid FROM @tblTrans12EU )
 			OR b.transid IN (SELECT transid FROM @tblTransMHC )
-			OR b.transid IN (SELECT transid FROM @tblTransIdsFB  )
+			OR b.transid IN (SELECT transid FROM @tblTransFB  )
+			OR b.transid IN (SELECT transid FROM @tblTransBetFair )
+			OR b.transid IN (SELECT transid FROM @tblTransOneExchange )
 			)
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
@@ -302,13 +322,14 @@ BEGIN
 													 WHEN 2 THEN 1 END
 
 
--- bettype = 6: Total Goal
+-- bettype = 6: Total Goal; 126: 1st Total Goal
  INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM dbo.bettrans AS b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
@@ -316,26 +337,29 @@ BEGIN
 			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
 			OR b.transid IN (SELECT transid FROM @tblTrans12EU )
 			OR b.transid IN (SELECT transid FROM @tblTransMHC)
-			OR b.transid IN (SELECT transid FROM @tblTransIdsFB )
+			OR b.transid IN (SELECT transid FROM @tblTransFB )
+			OR b.transid IN (SELECT transid FROM @tblTransBetFair )
+			OR b.transid IN (SELECT transid FROM @tblTransOneExchange )
 			)
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
 		AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 	
-		AND b.bettype = 6
+		AND b.bettype IN (6, 126)
 		AND (@betteam6='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END
 
--- bettype = 14: First Goal/Last Goal
+-- bettype = 14: First Goal/Last Goal; 127: 1st FGLG
  INSERT INTO #BetDelete  
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate,b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
 		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
@@ -343,14 +367,16 @@ BEGIN
 			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
 			OR b.transid IN (SELECT transid FROM @tblTrans12EU )
 			OR b.transid IN (SELECT transid FROM @tblTransMHC )
-			OR b.transid IN (SELECT transid FROM @tblTransIdsFB )
+			OR b.transid IN (SELECT transid FROM @tblTransFB )
+			OR b.transid IN (SELECT transid FROM @tblTransBetFair )
+			OR b.transid IN (SELECT transid FROM @tblTransOneExchange )
 			)
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END
 		AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-		AND b.bettype = 14
+		AND b.bettype IN (14, 127)
 		AND (@betteam14='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
 
@@ -368,7 +394,9 @@ BEGIN
 			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
 			OR b.transid IN (SELECT transid FROM @tblTrans12EU )
 			OR b.transid IN (SELECT transid FROM @tblTransMHC )
-			OR b.transid IN (SELECT transid FROM @tblTransIdsFB )
+			OR b.transid IN (SELECT transid FROM @tblTransFB )
+			OR b.transid IN (SELECT transid FROM @tblTransBetFair )
+			OR b.transid IN (SELECT transid FROM @tblTransOneExchange )
 			)
 		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator	
 		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
@@ -424,6 +452,22 @@ BEGIN
 		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
 		where bd.recommend = 11196380
 		and ci.roleid = 1 
+
+	-- get Betfair tickets
+	INSERT INTO @BetFairCust (custid)
+		SELECT bd.custid
+		FROM custDB.dbo.custInfo ci with(NOLOCK)
+		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
+		where bd.custid IN (1077687, 2331, 115770) -- Betfair: BFOS, BF, ITibc102	
+		and ci.roleid = 1 
+
+	-- get OneExchange tickets
+	INSERT INTO @BetFairCust (custid)
+		SELECT bd.custid
+		FROM custDB.dbo.custInfo ci with(NOLOCK)
+		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
+		where bd.recommend = 13423967
+		and ci.roleid = 1
 
 
 	IF EXISTS (SELECT 1 FROM #BetDelete WHERE statusID IN (111,112,113))
@@ -665,7 +709,7 @@ BEGIN
 	WHERE c.custid IN (SELECT custid FROM @UUSCust)				     					   
 	ORDER BY transid    
 
-		-----Send mail when void Foobet tickets
+	-----Send mail when void Foobet tickets
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
@@ -675,9 +719,32 @@ BEGIN
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
 	WHERE c.custid IN (SELECT custid FROM @FoobetCust)			     					   
+	ORDER BY transid  
+	
+	-----Send mail when void Betfair tickets
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
+		cr.username creator, stake, b.CurrencyName, 'BetFair' as site,
+		b.status, b.SecAcceptFlag
+	FROM #BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE c.custid IN (SELECT custid FROM @BetFairCust)			     					   
 	ORDER BY transid    
 
-	DROP TABLE #BetDelete
+	-----Send mail when void OneExchange tickets
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
+		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
+		cr.username creator, stake, b.CurrencyName, 'OneExchange' as site,
+		b.status, b.SecAcceptFlag
+	FROM #BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE c.custid IN (SELECT custid FROM @OneExchangeCust)			     					   
+	ORDER BY transid    
+	
 	DROP TABLE #BeforeUpd
 	DROP TABLE #AfterUpd
 
@@ -721,8 +788,106 @@ BEGIN
 					@Remark = @Remark
 			END CATCH
 		END	
+
+	--20140121@Elodie: Apply LAS system for special delete function [Redmine:#10701]
+	DECLARE @TransIdsLAS VARCHAR(MAX), @strLASAgent VARCHAR(500)
+	DECLARE @tblTransLAS TABLE(transid VARCHAR(20))
+	DECLARE @LASCust TABLE (custid INT)
+	DECLARE @AgentUpline TABLE (TransID BIGINT,TargetID INT,TargetName VARCHAR(50),IsAgent BIT)
+
+	exec DBLAS.LASDB.dbo.Las_Get_recommend @StringRec = @strLASAgent output
+
+	INSERT INTO @LASCust
+	SELECT CONVERT(INT, val) FROM dbo.strSplit(ISNULL(@strLASAgent, ''), '^')
+	
+	INSERT INTO @tblTransLAS(transid)
+	SELECT cast(b.transid as varchar(20))
+	FROM #BetDelete b 
+	WHERE b.recommend IN (SELECT custid FROM @LASCust)
+		AND b.transid IN (SELECT transid FROM @tblTransDeposit)
+
+	;with tmp as
+	(Select stuff(
+			(
+			Select '^ ' + T2.transid
+			From @tblTransLAS As T2
+			Order By T2.transid
+			For Xml Path(''), type
+			).value('.', 'varchar(max)'), 1, 2, '') As val
+	From @tblTransLAS As T1
+	)
+	SELECT @TransIdsLAS = val + '^' from tmp
+	IF @TransIdsLAS IS NOT NULL
+	BEGIN
+		BEGIN TRY
+			DECLARE @ErrMsgLAS NVARCHAR(200), @ErrCodeLAS INT
+			EXEC DBLAS.LASDB.dbo.LAS_BettransDelSpecial @UserID = @UserID, @MatchID = @MatchID, @TransID = @TransIdsLAS, @IP = @IP, @ErrCode = @ErrCodeLAS OUTPUT, @ErrMsg = @ErrMsgLAS OUTPUT		
+			IF @ErrCodeLAS > 50000 -- error from LAS_BettransDelSpecial
+			BEGIN
+				SELECT @Remark = 'RUN FAILED SPName=LAS_BettransDelSpecial ErrCode=' + cast(@ErrCodeLAS as varchar(10)) + ' ErrMsg=' + @ErrMsgLAS
+				BEGIN TRY
+					EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = @Remark
+				END TRY
+				BEGIN CATCH
+					EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = @Remark
+				END CATCH
+			END
+			ELSE -- no error
+				BEGIN TRY
+					EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = 'CALL SUCCESS SPName=LAS_BettransDelSpecial'
+				END TRY
+				BEGIN CATCH
+					EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+									@UserID = @UserID, 
+									@Matchid = @matchid, 
+									@ActionID = 2902, 
+									@Remark = 'CALL SUCCESS SPName=LAS_BettransDelSpecial'
+				END CATCH			
+		END TRY
+		BEGIN CATCH -- exception			
+			SELECT TransID, TargetID, TargetName, IsAgent FROM @AgentUpline
+
+			SELECT @Remark = 'CALL FAILED SPName=LAS_BettransDelSpecial ErrCode=' + cast(ERROR_NUMBER() as varchar(10)) + ' ErrMsg=' + LEFT(error_message(), 400)
+			BEGIN TRY			
+				EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = @UserID, 
+								@Matchid = @matchid, 
+								@ActionID = 2902, 
+								@Remark = @Remark
+			END TRY
+			BEGIN CATCH
+				EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = @UserID, 
+								@Matchid = @matchid, 
+								@ActionID = 2902, 
+								@Remark = @Remark
+			END CATCH
+		END CATCH
+	END
+	ELSE
+	BEGIN
+		SELECT TransID, TargetID, TargetName, IsAgent FROM @AgentUpline
+	END
+
+	DROP TABLE #BetDelete
+
 	SET NOCOUNT OFF
 END
+
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]

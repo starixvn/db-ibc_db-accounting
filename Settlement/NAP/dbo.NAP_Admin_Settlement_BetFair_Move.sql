@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_BetFair_Move]
+CREATE PROCEDURE [NAP_Admin_Settlement_BetFair_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
 	@AdminId		INT,
@@ -166,6 +166,7 @@ BEGIN
 	END CATCH
 
 END
+
 
 
 

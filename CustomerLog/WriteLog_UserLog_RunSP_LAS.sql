@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[WriteLog_UserLog_RunSP_LAS]
+﻿ALTER PROCEDURE [dbo].[LAS_WriteLog_UserLog_RunSP]
 	@UserID int, 
 	@MatchID int, 
 	@ActionID int=0, 	
@@ -33,6 +33,6 @@ VALUES
 
 
 GO
-GRANT EXECUTE ON [dbo].[WriteLog_UserLog_RunSP_LAS] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[LAS_WriteLog_UserLog_RunSP] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[WriteLog_UserLog_RunSP_LAS] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[LAS_WriteLog_UserLog_RunSP] TO [vnteam] AS [dbo]

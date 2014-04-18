@@ -11,16 +11,17 @@ AS
 	
 	Revision: 
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call custInfo, exchange by link database)
+		- 20140312@Elodie: Group result by CustID, MatchId, GroupID, TotalBalance
 	Param's Explanation: 
 		@isTest: 0: Exclude currency UUS; 1: All Currency 
 	
 */
 BEGIN 
 	SET NOCOUNT ON 
-	SELECT	  h.LogID	
-			, h.LogDate
+	SELECT	  MAX(h.LogID)
+			, MAX(h.LogDate)
 			, h.MatchID
-			, h.GroupID
+			, CASE WHEN h.GroupID = 2 THEN 1 ELSE h.GroupID END AS GroupID
 			, h.CustID
 			, ci.Username
 			, h.TotalBalance
@@ -33,8 +34,10 @@ BEGIN
 			LEFT JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON ci.currency = e.exchangeid
 	WHERE	h.StatusID = 0 
 			AND e.exchangeid <> CASE @isTest WHEN 0 THEN 20 ELSE 0 END
-			
-	ORDER BY	  h.LogID ASC
+	GROUP BY h.CustID, h.MatchID, 
+			 CASE WHEN h.GroupID = 2 THEN 1 ELSE h.GroupID END,
+			 ci.UserName, TotalBalance, e.currency, Site, bin.CustomInfo1
+	ORDER BY	  MAX(h.LogID) ASC
 				, h.MatchID ASC
 				, ci.Username ASC
 END 

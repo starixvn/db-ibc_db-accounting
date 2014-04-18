@@ -1,7 +1,5 @@
-ALTER PROCEDURE [NAP_Set_BetFair_Checking]
-	@matchid				int = 0
-AS 
-
+ALTER PROCEDURE [NAP_Set_BetFair_Checking] @matchid INT = 0
+AS
 /*
 Created: 20140113@Kathy
 Task : Checking exists betfair tickets or not [Redmine:#9007]
@@ -9,6 +7,7 @@ DB: DBTXN/bodb02
 Original: Acc_Set_BetFair_Checking
 
 Revisions: 
+	-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
@@ -34,61 +33,53 @@ Param's Explanation:
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @IsMovebetfair			bit  ,
-		@IsExcludeBetfair		bit ,
-		@IsSettleAbandonedMatchBetfair bit,
-		@IsRefundRunningBetfair	bit
 
-	SELECT	@IsMovebetfair = 0, 
-			@IsExcludeBetfair = 0, 
-			@IsSettleAbandonedMatchBetfair =0 ,
-			@IsRefundRunningBetfair =0 
+	DECLARE @IsMovebetfair BIT
+		,@IsExcludeBetfair BIT
+		,@IsSettleAbandonedMatchBetfair BIT
+		,@IsRefundRunningBetfair BIT
+
+	SELECT @IsMovebetfair = 0
+		,@IsExcludeBetfair = 0
+		,@IsSettleAbandonedMatchBetfair = 0
+		,@IsRefundRunningBetfair = 0
 
 	IF EXISTS (
-				SELECT 1 
-				FROM bettrans WITH (NOLOCK) 
-				WHERE custid IN (2331, 1077687, 115770) 
-						AND matchid = @matchid 
-						AND ruben = 0
-			   )
+			SELECT 1
+			FROM bettrans WITH (NOLOCK)
+			WHERE custid IN (2331, 1077687, 115770) AND matchid = @matchid AND ruben = 0
+			)
 	BEGIN
-		SELECT	@IsMovebetfair = 1, @IsExcludeBetfair = 1, @IsRefundRunningBetfair = 1  	
+		SELECT @IsMovebetfair = 1
+			,@IsExcludeBetfair = 1
+			,@IsRefundRunningBetfair = 1
 	END
 
-
 	IF EXISTS (
-				SELECT 1 
-				FROM bettrans WITH (NOLOCK) 
-				WHERE custid IN (2331, 1077687, 115770) 
-						AND matchid = @matchid 
-						AND bettype IN (3,8)  --Over/Under 
-						AND statusID NOT IN (101, 102)
-						AND ruben = 0 
-			   )
+			SELECT 1
+			FROM bettrans WITH (NOLOCK)
+			WHERE custid IN (2331, 1077687, 115770) AND matchid = @matchid AND bettype in (3,8,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+				AND statusID NOT IN (101, 102) AND ruben = 0
+			)
 	BEGIN
-		SELECT	@IsSettleAbandonedMatchBetfair = 1 
+		SELECT @IsSettleAbandonedMatchBetfair = 1
+
 		IF EXISTS (
-					SELECT 1 
-					FROM bettrans WITH (NOLOCK) 
-					WHERE custid IN (2331, 1077687, 115770) 
-							AND matchid = @matchid 
-							AND bettype = 3  --Over/Under 
-							AND statusID NOT IN (101, 102)
-							AND ruben = 1 
-				   )	
+				SELECT 1
+				FROM bettrans WITH (NOLOCK)
+				WHERE custid IN (2331, 1077687, 115770) AND matchid = @matchid AND bettype in(3,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
+					AND statusID NOT IN (101, 102) AND ruben = 1
+				)
 		BEGIN
-			SELECT	@IsSettleAbandonedMatchBetfair = 0
+			SELECT @IsSettleAbandonedMatchBetfair = 0
 		END
-
 	END
-	
-	SELECT @IsMovebetfair as IsMovebetfair,
-		@IsExcludeBetfair as IsExcludeBetfair,
-		@IsSettleAbandonedMatchBetfair as IsSettleAbandonedMatchBetfair,
-		@IsRefundRunningBetfair as IsRefundRunningBetfair
-		
-END
 
+	SELECT @IsMovebetfair AS IsMovebetfair
+		,@IsExcludeBetfair AS IsExcludeBetfair
+		,@IsSettleAbandonedMatchBetfair AS IsSettleAbandonedMatchBetfair
+		,@IsRefundRunningBetfair AS IsRefundRunningBetfair
+END
 
 
 GO

@@ -1,12 +1,10 @@
-﻿
-
-
-ALTER PROCEDURE [dbo].[Acc_Set_MatchSelScore]
+﻿ALTER PROCEDURE [Acc_Set_MatchSelScore]
 	@matchid int,
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
 	@IsExistFGLG bit = 0 OUTPUT,
-	@IsExistLG bit = 0 OUTPUT
+	@IsExistLG bit = 0 OUTPUT,
+	@IsSettleAbandonedMatchIBC bit = 0 output
 AS
 
 /*
@@ -28,9 +26,16 @@ AS
 		- 20121113@Elodie: Exclude sporting solution product
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130401@Lukas: Get goalrecord field & correct fieldname fslgstatus -> fglgstatus
+		- 20140313@Kathy: Execute settlement for abandoned/postponed matches (bettype:13,26,27) [Redmine:#12049]
 */
 SET NOCOUNT ON 
-SELECT @IsExistLG = 0, @IsExistFGLG = 0
+DECLARE @sporttype tinyint
+SELECT @IsExistLG = 0, @IsExistFGLG = 0, @IsSettleAbandonedMatchIBC = 0
+
+SELECT @sporttype  = sporttype
+from match with(NOLOCK)
+where matchid = @matchid
+
 IF EXISTS (select top 1 1 from bettrans with (nolock) where matchid = @matchid and bettype = 14 AND right(BETTEAM,1) = '2' AND statusID not in (103,101,102))
 	SELECT @IsExistLG = 1
 ELSE
@@ -47,6 +52,28 @@ BEGIN
 END
 ELSE
 	SELECT @IsExistFGLG = 1
+
+IF (
+		EXISTS (
+			SELECT 1
+			FROM bettrans WITH (NOLOCK)
+			WHERE bettype IN (13, 26, 27) AND matchid = @matchid AND statusID NOT IN (101, 102, 103) AND ruben = 0
+			AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) 
+			) AND @sporttype = 1
+		)
+BEGIN
+	SELECT @IsSettleAbandonedMatchIBC = 1
+
+	IF EXISTS (
+			SELECT 1
+			FROM bettrans WITH (NOLOCK)
+			WHERE matchid = @matchid AND bettype IN (13, 26, 27) AND statusID NOT IN (101, 102) AND ruben = 1
+			AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
+			) OR @sporttype <> 1
+	BEGIN
+		SELECT @IsSettleAbandonedMatchIBC = 0
+	END
+END
 /*
 if exists (select 1 from match with (nolock) where eventstatus = 'completed' and matchid = @matchid)
 BEGIN
@@ -110,6 +137,8 @@ from	DBPRO.BODB02.dbo.match with (nolock)
 		left outer join DBPRO.BODB02.dbo.match_remark mr with (nolock) on match.matchid = mr.matchid
 where match.matchid = @matchid
 order by match.eventdate,match.matchcode
+
+
 
 
 

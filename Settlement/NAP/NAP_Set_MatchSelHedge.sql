@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_MatchSelHedge]      
+CREATE PROCEDURE [NAP_Set_MatchSelHedge]      
 	@matchid int    
 AS
 

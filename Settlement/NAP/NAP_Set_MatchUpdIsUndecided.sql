@@ -1,11 +1,11 @@
-ALTER PROCEDURE [NAP_Set_MatchUpdIsUndecided]
+CREATE PROCEDURE [NAP_Set_MatchUpdIsUndecided]
 	@matchid int,
 	@IsUndecided bit,
 	@userID int 
 WITH RECOMPILE
 /*	Created: 20120306@Hurri
 	Task: Update to mark/unmark a match as Undecided
-	DB: DB02.bodb02
+	DB: DBPRO.bodb02
 	Original SP:[Acc_Set_MatchUpdIsUndecided] 
 	
 	Revisions:
@@ -23,7 +23,7 @@ WHERE	matchid = @matchid
 
 IF(@dbisUndecided <> @IsUndecided)
 BEGIN
-	EXEC updateMatch_remark @matchid, 'IsU', @IsUndecided
+	EXEC NAP_updateMatch_remark @matchid, 'IsU', @IsUndecided
 
 	--write log
 	DECLARE @LogData NVARCHAR(200)

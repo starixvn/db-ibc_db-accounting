@@ -588,6 +588,8 @@ END
 
 
 
+
+
 GO
 
 GRANT EXECUTE ON [NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]

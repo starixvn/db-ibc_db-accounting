@@ -21,7 +21,7 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052','DB054','DB231')
+	IF @@SERVERNAME IN ('DB052','DB054','DB231', 'DB232')  AND EXISTS (SELECT * FROM sys.databases WHERE name = 'LASDB')
 	BEGIN		
 
 		DECLARE @LASCommand NVARCHAR(1000),
@@ -56,6 +56,5 @@ BEGIN
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_Undo] TO [vnteam]

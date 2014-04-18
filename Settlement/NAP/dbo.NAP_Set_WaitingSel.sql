@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_WaitingSel]
+CREATE PROCEDURE [NAP_Set_WaitingSel]
 	@MatchCode nvarchar(50) = '',
 	@SportType tinyint = 0,
 	@LeagueID int = 0 -- 0 for ALL Leagues
@@ -41,9 +41,10 @@ BEGIN
 		SELECT s.matchid, CASE WHEN s.IsCalculating = 1 then 1
 								when s.IsCalculating = 0 then 2
 								WHEN s.IsCalculating = 2 then 3
+								when s.IsCalculating = 3 then 4
 							END as seqS
-		FROM Single_WaitingList s WITH(NOLOCK)
-		where s.matchid NOT IN (SELECT matchid FROM Parlay_WaitingList with(NOLOCK))
+		FROM Single_Calculate_Queue s WITH(NOLOCK)
+		where s.matchid NOT IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK))
 	)
 	INSERT INTO @tblSingle
 	SELECT s.matchid, min(seqS), NULL
@@ -55,9 +56,10 @@ BEGIN
 		SELECT p.matchid, CASE WHEN p.IsCalculating = 1 then 1
 								when p.IsCalculating = 0 then 2
 								WHEN p.IsCalculating = 2 then 3
+								when p.IsCalculating = 3 then 4
 							END as seqP
-		FROM Parlay_WaitingList p WITH(NOLOCK)
-		where p.matchid NOT IN (SELECT matchid FROM Single_WaitingList with(NOLOCK))
+		FROM Parlay_Calculate_Queue p WITH(NOLOCK)
+		where p.matchid NOT IN (SELECT matchid FROM Single_Calculate_Queue with(NOLOCK))
 	)
 	INSERT INTO @tblParlay
 	SELECT p.matchid, NULL, min(seqP)
@@ -69,13 +71,15 @@ BEGIN
 		SELECT s.matchid, CASE WHEN s.IsCalculating = 1 then 1
 								when s.IsCalculating = 0 then 2
 								WHEN s.IsCalculating = 2 then 3
+								when s.IsCalculating = 3 then 4
 							END as seqS,
 						  CASE WHEN p.IsCalculating = 1 then 1
 								when p.IsCalculating = 0 then 2
 								WHEN p.IsCalculating = 2 then 3
+								when p.IsCalculating = 3 then 4
 							END as seqP
-		FROM Single_WaitingList s WITH(NOLOCK)
-		INNER JOIN Parlay_WaitingList p with(NOLOCK) ON s.matchid = p.matchid
+		FROM Single_Calculate_Queue s WITH(NOLOCK)
+		INNER JOIN Parlay_Calculate_Queue p with(NOLOCK) ON s.matchid = p.matchid
 	)
 	INSERT INTO @tblSingle_Parlay
 	SELECT matchid, min(seqS), min(seqP)
@@ -98,7 +102,7 @@ BEGIN
 			FOR XML PATH('match'), ROOT('root')
 		)
 
-	EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @strmatchid, @betstatus = @betstatus OUTPUT
+	EXEC DBTXN.bodb02.dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid, @betstatus = @betstatus OUTPUT
 		
 		--Create an internal representation of the XML document.      
 	EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
@@ -143,10 +147,12 @@ BEGIN
 		case when t.seqS = 1 THEN 1
 					WHEN t.seqS = 2 then 0
 					when t.seqS = 3 then 2 
+					when t.seqS = 4 THEN 3
 				END as IsCalculatingSingle,
 		case when t.seqP = 1 THEN 1
 					WHEN t.seqP = 2 then 0
 					when t.seqP = 3 then 2 
+					when t.seqP = 4 then 3
 				END as IsCalculatingMP,
 		convert(bit, CASE WHEN t.seqS IS NULL THEN 0 ELSE 1 END) as IsSingle,
 		convert(bit, CASE when t.seqP IS NULL THEN 0 ELSE 1 END) as IsMixParlay
@@ -157,7 +163,6 @@ BEGIN
 		AND m.sporttype = case when @sporttype = 0 then m.sporttype else @sporttype end  	  		
 		AND (@matchcode = '' or (m.matchid = @matchid OR m.matchcode = @matchcode)) 
 END
-
 
 GO
 

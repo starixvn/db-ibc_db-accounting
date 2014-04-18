@@ -28,7 +28,7 @@ BEGIN
 						VALUES('Admin_Calculate_RefundFGLG',@sqlCommand,GETDATE(), 0, @matchid, 14,'waiting',1)
 					
 		--- LAS settlement 
-		IF @@SERVERNAME IN ('DB052','DB054','DB231')
+		IF @@SERVERNAME IN ('DB052','DB054','DB231', 'DB232')  AND EXISTS (SELECT * FROM sys.databases WHERE name = 'LASDB')
 		BEGIN		
 
 			DECLARE @LASCommand NVARCHAR(1000),
@@ -111,8 +111,6 @@ BEGIN
 	END
 	-------------End: Refund FGLG for bettransm-------------
 END
-
-
 
 
 
