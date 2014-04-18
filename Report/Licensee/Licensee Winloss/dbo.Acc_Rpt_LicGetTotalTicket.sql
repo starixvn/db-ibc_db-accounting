@@ -180,6 +180,7 @@ BEGIN
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END +
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END +
 						CASE WHEN @ShowCS = 1 THEN ' OR b.bettype =71' ELSE '' END +
+						CASE WHEN @ShowKN = 1 THEN ' OR b.bettype BETWEEN 1501 AND 1599' ELSE '' END +
 						CASE WHEN @ShowNG = 1 THEN ' OR b.bettype BETWEEN 81 AND 120' ELSE '' END + ')' + char(13) +
 						CASE WHEN @bettype <> 0 THEN ' AND b.bettype = ' + convert(varchar(10), @Bettype)  ELSE '' END + char(13) +
 						CASE WHEN @SportID<>0 THEN 'AND b.bettype NOT IN (9,29) AND b.bettype NOT BETWEEN 31 AND 120 AND l.Sporttype = ' + convert(varchar(10), @SportID)  ELSE '' END + char(13) +
