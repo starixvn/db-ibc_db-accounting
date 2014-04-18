@@ -1,6 +1,7 @@
-﻿CREATE PROCEDURE Acc_Rpt_DailyWLDirect_Keno_Bettype_Site14
+﻿ALTER PROCEDURE Acc_Rpt_DailyWLDirect_Keno_Bettype_Site14
 	@winlostdate	datetime,	
-	@site			TINYINT
+	@site			TINYINT,
+	@bettype		INT
 AS
 
 /*	Creator: Dom
@@ -9,7 +10,7 @@ AS
 	DB: DBACC/bodb02
 	
 	Revisions:
-			
+			- 2014-03-04@Dom: add param @bettype
 */
 
 	SET NOCOUNT ON 
@@ -42,6 +43,7 @@ AS
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE	b.winlostdate = @winlostdate
 		AND b.bettype BETWEEN 1501 AND 1599
+		and b.bettype = @bettype
 		AND b.ruben = 1		
 		--AND b.status != 'DONE'			
 		AND b.statusID not in (101,102,103,121)

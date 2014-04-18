@@ -49,9 +49,9 @@ SET NOCOUNT ON
     
         SELECT         
             @movebetdate = max(eventdate) 
-            FROM  bodb02.dbo.match14 WITH(NOLOCK)
+        FROM  bodb02.dbo.match14 WITH(NOLOCK)
             
-        IF @_todate >= @movebetdate
+        IF @_todate > @movebetdate
         BEGIN
             IF @_fromdate < @movebetdate
                 SELECT @f_date = @movebetdate
@@ -64,7 +64,7 @@ SET NOCOUNT ON
             SELECT m.matchid,m.matchcode FROM bodb02.dbo.match(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
         END
 
-        IF @_fromdate <@movebetdate
+        IF @_fromdate <=@movebetdate
         BEGIN
             IF @_todate < @movebetdate
                 SELECT @t_date = @_todate
