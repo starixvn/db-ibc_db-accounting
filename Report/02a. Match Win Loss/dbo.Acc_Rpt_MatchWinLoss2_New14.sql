@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New14]
+ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New14]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
 	@WinLost_BARM		 money = 0 OUTPUT,
@@ -11,7 +11,7 @@ AS
 		DB: DBACC/BODB02		
 		Original: Acc_Rpt_MatchWinLoss2
 	
-		History:
+		History: 
 			- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 			- 20130306@Don: 
 			    + Solving discrepancy by returning all resultsets in one call
