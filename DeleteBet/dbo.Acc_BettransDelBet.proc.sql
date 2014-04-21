@@ -38,7 +38,7 @@ AS
 		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
 		- 20130603@Johnson: get additional information for mailing
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Customer, Dep_CustSuper, Exchange by link database)						   
-		- 20140421@Kathy: Add more account allow to void settled ticket 
+		- 20140421@Kathy: Add more account allow to void settled ticket   
 */
 
 SET NOCOUNT ON
