@@ -1,5 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[NAP_SMATurnoverLeagueControlUpd]
-	@LeagueID INT,
+﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_SMAControlByEventUpd]
+	@SMAID INT,
+	@MatchID INT,
 	@Value INT,
 
 	@UserID INT,
@@ -10,14 +11,14 @@ AS
 /*
 	Created: Elodie
 	Date: 20140416
-	Task : Update turnover setting for league
+	Task : Update configure SMA TO setting by event
 	DB: DBAGE/bodb_AGE
 
 	Revisions:
 	
 	Parameter's explaination: 
 		
-	Example: EXEC NAP_SMATurnoverLeagueControlUpd @LeagueID = 33828, @Value = 50, @UserID = 8, @IP ='10.10.8.56'
+	Example: EXEC NAP_SMATurnover_SMAControlByEventUpd @SMAID = 1176070, @MatchID = 6880531, @Value = 50, @UserID = 8, @IP ='10.10.8.56'
 	
 */
 BEGIN
@@ -29,13 +30,13 @@ BEGIN
 	SET	@startRun = GETDATE()
 	
 	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureSMATOByMatch]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
 	IF @ErrCode <> 0
 		RETURN
 	
-	IF @LeagueID <= 0
+	IF @SMAID <= 0
 	BEGIN
-		SELECT @ErrCode = 101, @ErrMsg = 'Invalid league.'
+		SELECT @ErrCode = 101, @ErrMsg = 'Invalid Super/Master/Agent.'
 		RETURN
 	END		
 
@@ -46,27 +47,25 @@ BEGIN
 	END	
 
 	DECLARE @OldValue INT
-	SELECT @OldValue = Value FROM DownlineTo_LeagueControl WITH(NOLOCK) WHERE LeagueID = @LeagueID
-	IF @OldValue IS NOT NULL AND @OldValue = @Value
+	SELECT @OldValue = Value FROM DownlineTo_Match_SMAControl WITH(NOLOCK) WHERE SMAID = @SMAID AND MatchID = @MatchID
+	IF @OldValue IS NULL OR @OldValue = @Value
 		RETURN
 
-	UPDATE DownlineTo_LeagueControl WITH (ROWLOCK,UPDLOCK)
+	UPDATE DownlineTo_Match_SMAControl WITH (ROWLOCK,UPDLOCK)
 	SET Value = @Value
-	WHERE LeagueID = @LeagueID
-			
-	IF @@ROWCOUNT = 0
-		INSERT INTO DownlineTo_LeagueControl (LeagueID, Value)
-		VALUES (@LeagueID, @Value)	
+	WHERE SMAID = @SMAID AND MatchID = @MatchID			
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
-	SELECT @LogData = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+	SELECT @LogData = '<NAP_SMATurnover_SMAControlByEventUpd SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+					+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'Value="' + COALESCE(CAST(@Value AS VARCHAR(20)), SPACE(1)) + '" ' 
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" />'
 	
-	SELECT @TrackingValue2 = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
-							+ 'Value="' + COALESCE(CAST(ISNULL(@OldValue,'') AS VARCHAR(20)), SPACE(1)) + '" ' 
+	SELECT @TrackingValue2 = '<NAP_SMATurnover_SMAControlByEventUpd SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+							+ 'Value="' + COALESCE(CAST(@OldValue AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" />'
@@ -77,27 +76,29 @@ BEGIN
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 				@Userid = @UserID,
-				@ActionID = 30001,
+				@ActionID = 30008,
 				@TrackingValue = @LogData,
 				@TrackingValue2 = @TrackingValue2,
 				@Duration = @duration		
 	END TRY
 	BEGIN CATCH
-		SELECT @LogData = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+		SELECT @LogData = '<NAP_SMATurnover_SMAControlByEventUpd SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+					+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'Value="' + COALESCE(CAST(@Value AS VARCHAR(20)), SPACE(1)) + '" ' 
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 					+ 'ErrMsg="'+ ERROR_MESSAGE() + '" />'
 		
-		SELECT @TrackingValue2 = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
-							+ 'Value="' + COALESCE(CAST(ISNULL(@OldValue,'') AS VARCHAR(20)), SPACE(1)) + '" ' 
+		SELECT @TrackingValue2 = '<NAP_SMATurnover_SMAControlByEventUpd SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+							+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+							+ 'Value="' + COALESCE(CAST(@OldValue AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 							+ 'ErrMsg="'+ ERROR_MESSAGE() + '" />'
 
 		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 				@Userid = @UserID,
-				@ActionID = 30001,
+				@ActionID = 30008,
 				@TrackingValue = @LogData,
 				@TrackingValue2 = @TrackingValue2,
 				@Duration = @duration		
@@ -105,6 +106,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[NAP_SMATurnoverLeagueControlUpd] TO [bodbadminNet]
+GRANT EXECUTE ON [dbo].[NAP_SMATurnover_SMAControlByEventUpd] TO [bodbadminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnoverLeagueControlUpd] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnover_SMAControlByEventUpd] TO [vnteam]

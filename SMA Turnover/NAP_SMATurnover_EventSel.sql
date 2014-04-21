@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_SMATurnoverEventSel]
+﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_EventSel]
 	@SportID INT = 0,
 	@LeagueID INT = 0,
 	@MatchCode NVARCHAR(50) = '',
@@ -18,7 +18,7 @@ AS
 		@ViewMode:  1: Sport view
 					2: League view
 					3: Match view
-	Example: EXEC NAP_SMATurnoverEventSel @SportID = 5, @LeagueID = 23123, @MatchCode = '', @ViewMode = 3, @OnlyShowException = 1
+	Example: EXEC NAP_SMATurnover_EventSel @SportID = 5, @LeagueID = 23123, @MatchCode = '', @ViewMode = 3, @OnlyShowException = 1
 	
 */
 BEGIN
@@ -73,6 +73,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[NAP_SMATurnoverEventSel] TO [bodbadminNet]
+GRANT EXECUTE ON [dbo].[NAP_SMATurnover_EventSel] TO [bodbadminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnoverEventSel] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnover_EventSel] TO [vnteam]

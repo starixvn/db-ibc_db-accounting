@@ -1,5 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[NAP_SMATurnoverSportControlUpd]
-	@SportID INT,
+﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_MatchControlUpd]
+	@MatchID INT,
 	@Value INT,
 
 	@UserID INT,
@@ -10,14 +10,14 @@ AS
 /*
 	Created: Elodie
 	Date: 20140416
-	Task : Update turnover setting for sport
+	Task : Update turnover setting for match
 	DB: DBAGE/bodb_AGE
 
 	Revisions:
 	
 	Parameter's explaination: 
 		
-	Example: EXEC NAP_SMATurnoverSportControlUpd @SportID = 5, @Value = 50, @UserID = 8, @IP ='10.10.8.56'
+	Example: EXEC NAP_SMATurnover_MatchControlUpd @MatchID = 6880531, @Value = 50, @UserID = 8, @IP ='10.10.8.56'
 	
 */
 BEGIN
@@ -33,11 +33,11 @@ BEGIN
 	IF @ErrCode <> 0
 		RETURN
 	
-	IF @SportID <= 0
+	IF @MatchID <= 0
 	BEGIN
-		SELECT @ErrCode = 101, @ErrMsg = 'Invalid sport.'
+		SELECT @ErrCode = 101, @ErrMsg = 'Invalid match.'
 		RETURN
-	END
+	END		
 
 	IF @Value < 0
 	BEGIN
@@ -45,66 +45,65 @@ BEGIN
 		RETURN
 	END	
 
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.match WITH (NOLOCK) WHERE matchid = @MatchID AND eventstatus = 'completed')
+	BEGIN
+		SELECT @ErrCode = 103, @ErrMsg = 'You are not allowed to update max turnover of a settled match.'
+		RETURN
+	END
+
 	DECLARE @OldValue INT
-	SELECT @OldValue = ISNULL(Value,0) FROM DownlineTo_SportControl WITH(NOLOCK) WHERE SportID = @SportID
-	IF @OldValue = @Value
+	SELECT @OldValue = Value FROM DownlineTo_MatchControl WITH(NOLOCK) WHERE MatchID = @MatchID
+	IF @OldValue IS NOT NULL AND @OldValue = @Value
 		RETURN
 
-	IF @Value > 0
-	BEGIN
-		UPDATE DownlineTo_SportControl WITH (ROWLOCK,UPDLOCK)
-		SET Value = @Value
-		WHERE SportID = @SportID
+	UPDATE DownlineTo_MatchControl WITH (ROWLOCK,UPDLOCK)
+	SET Value = @Value
+	WHERE MatchID = @MatchID
 			
-		IF @@ROWCOUNT = 0
-			INSERT INTO DownlineTo_SportControl (SportID, Value)
-			VALUES (@SportID, @Value)
-	END
-	ELSE --@Value = 0
-	BEGIN
-		DELETE DownlineTo_SportControl WHERE SportID = @SportID
-	END
+	IF @@ROWCOUNT = 0
+		INSERT INTO DownlineTo_MatchControl (MatchID, Value)
+		VALUES (@MatchID, @Value)	
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
-	SELECT @LogData = '<NAP_SMATurnoverSportControlUpd SportID="' + COALESCE(CAST(@SportID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+	SELECT @LogData = '<NAP_SMATurnover_MatchControlUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'Value="' + COALESCE(CAST(@Value AS VARCHAR(20)), SPACE(1)) + '" ' 
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" />'
-
-	SELECT @TrackingValue2 = '<NAP_SMATurnoverSportControlUpd SportID="' + COALESCE(CAST(@SportID AS VARCHAR(10)), SPACE(1)) + '" ' 					
-							+ 'Value="' + COALESCE(CAST(@OldValue AS VARCHAR(20)), SPACE(1)) + '" ' 
+	
+	SELECT @TrackingValue2 = '<NAP_SMATurnover_MatchControlUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+							+ 'Value="' + COALESCE(CAST(ISNULL(@OldValue,'') AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 							+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" />'
-							
+												
 	SET @endRun = GETDATE()
 	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
 	
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 				@Userid = @UserID,
-				@ActionID = 30000,
+				@ActionID = 30002,
 				@TrackingValue = @LogData,
 				@TrackingValue2 = @TrackingValue2,
 				@Duration = @duration		
 	END TRY
 	BEGIN CATCH
-		SELECT @LogData = '<NAP_SMATurnoverSportControlUpd SportID="' + COALESCE(CAST(@SportID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+		SELECT @LogData = '<NAP_SMATurnover_MatchControlUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'Value="' + COALESCE(CAST(@Value AS VARCHAR(20)), SPACE(1)) + '" ' 
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 					+ 'ErrMsg="'+ ERROR_MESSAGE() + '" />'
-
-		SELECT @TrackingValue2 = '<NAP_SMATurnoverSportControlUpd SportID="' + COALESCE(CAST(@SportID AS VARCHAR(10)), SPACE(1)) + '" ' 					
-							+ 'Value="' + COALESCE(CAST(@OldValue AS VARCHAR(20)), SPACE(1)) + '" ' 
+		
+		SELECT @TrackingValue2 = '<NAP_SMATurnover_MatchControlUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+							+ 'Value="' + COALESCE(CAST(ISNULL(@OldValue,'') AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 							+ 'ErrMsg="'+ ERROR_MESSAGE() + '" />'
 
 		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 				@Userid = @UserID,
-				@ActionID = 30000,
+				@ActionID = 30002,
 				@TrackingValue = @LogData,
 				@TrackingValue2 = @TrackingValue2,
 				@Duration = @duration		
@@ -112,6 +111,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[NAP_SMATurnoverSportControlUpd] TO [bodbadminNet]
+GRANT EXECUTE ON [dbo].[NAP_SMATurnover_MatchControlUpd] TO [bodbadminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnoverSportControlUpd] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnover_MatchControlUpd] TO [vnteam]
