@@ -3,7 +3,8 @@ USE CheckResultDB
 GO 
 
 ALTER PROCEDURE [dbo].DBA_RPT_CheckSetting_Dep
-
+	@iType INT=NULL,
+	@iQuery INT=NULL
 AS
 /*
 	Created: 20131015@Tom.Vo	
@@ -14,11 +15,18 @@ AS
 	Revisions:
 		
 	Param's Explanation:(5)
-
+		@iType : 
+			-1: Show all data
+			0: Show report filer by SiteID 
+			1: Show report filer by CustID
+			2: Show report filer by recommend
 	
 */
 
 SET NOCOUNT ON
+
+IF @iType IS NULL OR @iQuery IS NULL 
+	SET @iType = -1
 
 SELECT DISTINCT CASE WHEN tblComm.SportName IS NOT NULL THEN tblComm.SportName 
 			ELSE tblPT.SportName END SportName,
@@ -72,11 +80,15 @@ FROM (
 				FROM CheckResultDB.[dbo].CheckCommResult_Deposit data
 					LEFT JOIN bodb02.dbo.Site st WITH(NOLOCK)
 						ON data.SITEID=st.siteid
-					LEFT JOIN bodb02.dbo.Customer co WITH(NOLOCK)
+					LEFT JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
 						ON data.Custid = co.Custid
-					LEFT JOIN bodb02.dbo.exchange e WITH(NOLOCK) 
+					LEFT JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
 						ON co.currency = e.exchangeid
-				WHERE data.RoleId =1
+				WHERE data.RoleId =1 AND (@iType =-1 
+													OR (@iType =0 AND data.SiteID = @iQuery)  
+													OR (@iType =1 AND co.Custid = @iQuery)
+													OR (@iType =2 AND co.recommend = @iQuery)
+													)
 	) tblComm
 FULL OUTER JOIN
 	(
@@ -98,11 +110,14 @@ FULL OUTER JOIN
 				FROM CheckResultDB.[dbo].[CheckPTResult_Deposit] data
 					LEFT JOIN bodb02.dbo.Site st WITH(NOLOCK)
 						ON data.SITEID=st.siteid
-					LEFT JOIN bodb02.dbo.Customer co WITH(NOLOCK)
+					LEFT JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
 						ON data.Custid = co.Custid
-					LEFT JOIN bodb02.dbo.exchange e WITH(NOLOCK) 
+					LEFT JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
 						ON co.currency = e.exchangeid
-				WHERE data.RoleId =1
+				WHERE data.RoleId =1 AND (@iType =-1 
+													OR (@iType =0 AND data.SiteID = @iQuery)  
+													OR (@iType =1 AND co.Custid = @iQuery)
+													OR (@iType =2 AND co.recommend = @iQuery))
 	)tblPT
 ON tblComm.SiteID = tblPT.SiteID
 	AND tblComm.SportName = tblPT.SportName
@@ -150,11 +165,15 @@ FROM (
 				FROM CheckResultDB.[dbo].[CheckPTResult_Deposit] data
 					LEFT JOIN bodb02.dbo.Site st WITH(NOLOCK)
 						ON data.SITEID=st.siteid
-					LEFT JOIN bodb02.dbo.Customer co WITH(NOLOCK)
+					LEFT JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
 						ON data.Custid = co.Custid
-					LEFT JOIN bodb02.dbo.exchange e WITH(NOLOCK) 
+					LEFT JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
 						ON co.currency = e.exchangeid
-				WHERE data.RoleId =2
+				WHERE data.RoleId =2 AND (@iType =-1 
+													OR (@iType =0 AND data.SiteID = @iQuery)  
+													OR (@iType =1 AND co.Custid = @iQuery)
+													OR (@iType =2 AND co.recommend = @iQuery)
+													)
 	) tblPT
 FULL OUTER JOIN
 (
@@ -186,11 +205,15 @@ FULL OUTER JOIN
 				FROM CheckResultDB.[dbo].CheckCommResult_Deposit data
 					LEFT JOIN bodb02.dbo.Site st WITH(NOLOCK)
 						ON data.SITEID=st.siteid
-					LEFT JOIN bodb02.dbo.Customer co WITH(NOLOCK)
+					LEFT JOIN CheckCustDB.dbo.Customer co WITH(NOLOCK)
 						ON data.Custid = co.Custid
-					LEFT JOIN bodb02.dbo.exchange e WITH(NOLOCK) 
+					LEFT JOIN CheckCustDB.dbo.exchange e WITH(NOLOCK) 
 						ON co.currency = e.exchangeid
-				WHERE data.RoleId =2
+				WHERE data.RoleId =2 AND (@iType =-1 
+													OR (@iType =0 AND data.SiteID = @iQuery)  
+													OR (@iType =1 AND co.Custid = @iQuery)
+													OR (@iType =2 AND co.recommend = @iQuery)
+													)
 	)tblComm
 	ON tblComm.SiteID = tblPT.SiteID
 		AND tblComm.SportName = tblPT.SportName

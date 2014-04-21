@@ -11,7 +11,7 @@ TRUNCATE TABLE CheckResultDB.[dbo].[CheckPTResult_Deposit]
 TRUNCATE TABLE CheckResultDB.dbo.CheckCommResult_Deposit
 
 INSERT  INTO #temp (SITE,IsFinished)
-SELECT LicenseeName,0 FROM DBLIC.bodb_licensee.dbo.Licensees li WITH(NOLOCK) --WHERE LicenseeName = 'Aoncash'
+SELECT LicenseeName,0 FROM DBLIC.bodb_licensee.dbo.Licensees li WITH(NOLOCK) --WHERE LicenseeName = 'Winner99'
 
 DECLARE @site VARCHAR(100),@Rowcnt INT,@srecommend VARCHAR(1000)
 DECLARE @Begin		DATETIME,@BeginSite		DATETIME,@page_number_from INT,@page_number_to INT,@page_length INT
@@ -39,7 +39,7 @@ BEGIN
 
 	SELECT @page_number_from=COUNT(1)
 	FROM CheckCustDB.dbo.Dep_CustSuper tbl WITH(NOLOCK)		
-	Where Site = @Site AND Currency <> 20
+	Where Site = @Site AND Currency NOT IN (20,27,28)
 
 	SELECT @page_number_to=(@page_number_from/@page_length)+CASE WHEN @page_number_from%@page_length<>0 THEN 1 ELSE 0 END
 	SELECT @page_number_from=0
@@ -54,7 +54,7 @@ BEGIN
 					Row_Number() OVER (ORDER BY Custid desc) as row_num
 					,Custid 
 				FROM CheckCustDB.dbo.Dep_CustSuper tbl WITH(NOLOCK)		
-				Where Site = @Site AND Currency <> 20
+				Where Site = @Site AND Currency NOT IN (20,27,28)
 			)
 			Select @srecommend = COALESCE(@srecommend + ',', '') + convert(NVARCHAR(50),ISNULL(CTE.Custid,'')) 
 			FROM CTE

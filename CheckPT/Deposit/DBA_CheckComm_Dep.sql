@@ -40,7 +40,7 @@ SET NOCOUNT ON
 		SET @sporttype = -1
 	
 	IF OBJECT_ID('tempdb..#tmpAgent') IS NOT NULL		DROP TABLE #tmpAgent
-	IF OBJECT_ID('tempdb..#tmpSport_PT') IS NOT NULL 	DROP TABLE #tmpSport
+	IF OBJECT_ID('tempdb..#tmpSport') IS NOT NULL 	DROP TABLE #tmpSport
 	
 	CREATE TABLE #tmpAgent(CustID INT,SiteID INT)
 	CREATE TABLE #tmpSport(Sportid INT)
@@ -278,11 +278,21 @@ SET NOCOUNT ON
 		LEFT JOIN #LicenseeCustComm LCC WITH (NOLOCK)
 			ON cs.custid = LCC.custid
 		LEFT JOIN #LicenseeGroupComm LGC WITH (NOLOCK)
-			ON LCC.GroupCommID = LGC.[id]
+			ON LCC.GroupCommID = LGC.[id] 
 		WHERE EXISTS(SELECT TOP 1 1 FROM #tmpSport tmpSport WITH(NOLOCK)
 							WHERE tmpSport.Sportid = cs.sporttype)
 			AND EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
-							WHERE Info.CustID = me.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+							WHERE Info.CustID = me.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0
+									AND (Info.CustID = cs.CustID  
+										AND ((cs.sporttype = 161 AND Info.DisableNumber=0)										  
+										  OR (cs.sporttype = 151 AND Info.Disable151_AU=0)
+										  OR (cs.sporttype = 152 AND cs.bettype IN (41,42) AND Info.Disable152_UK=0)
+										  OR (cs.sporttype = 152 AND cs.bettype IN (51,52) AND Info.Disable152_AU=0)
+										  OR (cs.sporttype = 153 AND Info.Disable153_AU=0)
+										  OR (cs.sporttype >= 180 AND cs.sporttype <=186  AND Info.[DisableVirtualSports]=0)
+										  --OR (cs.sporttype NOT IN (151,152,153,161,162,180,181,182,183,184,185,186) )
+										)
+								))
 			AND (me.roleid IN (1,2)
 				AND cs.discount <> CASE WHEN cs.sporttype IN (151,152,153) THEN
 										CASE WHEN cs.sporttype = 151 AND cs.bettype IN (31,32,41,42) THEN 0.04
@@ -305,6 +315,69 @@ SET NOCOUNT ON
 						 END
 						 <> cs.playerdiscount
 			)
+
+
+INSERT INTO #Member(SiteID,CustID,RoleID,Ugroup,BetType,SportID,CommP,CommA,CommM,CommS,Comm_P_Spec,Comm_SMA_Spec,IsBA)
+		SELECT BA.SiteID,cs.CustID,me.Roleid ,RIGHT(me.ugroup,1) ugroup,
+				cs.BetType,cs.sporttype,
+				cs.playerdiscount CommP,
+				cs.discount CommA,
+				cs.adiscount CommM,
+				cs.sdiscount CommS,
+				CASE WHEN cs.sporttype IN (151,152,153) THEN ISNULL(LGC.[RacingComm],0.00)
+					WHEN cs.sporttype IN (161) THEN ISNULL(LGC.[NGComm],0.00)
+					WHEN cs.sporttype IN (162) THEN ISNULL(LGC.[LCComm],0.00)
+					WHEN cs.sporttype IN (251) THEN ISNULL(LGC.[RNGComm],0.00)
+					ELSE 0.00
+				 END Comm_P_Spec,
+				CASE WHEN cs.sporttype IN (151,152,153) THEN
+					CASE WHEN cs.sporttype = 151 AND cs.bettype IN (31,32,41,42) THEN 0.04
+						WHEN cs.sporttype = 151 AND cs.bettype IN (51,52) THEN 0.03
+						WHEN cs.sporttype = 152 AND cs.bettype IN (41,42) THEN 0.04
+						WHEN cs.sporttype = 152 AND cs.bettype IN (51,52) THEN 0.03
+						WHEN cs.sporttype = 153 AND cs.bettype IN (51,52) THEN 0.03
+						ELSE 0.00
+					END 
+				ELSE 0.00
+				END	Comm_SMA_Spec,
+				CASE WHEN BAH.CustID IS NOT NULL THEN 1 ELSE 0 END IsBA
+		FROM CheckCustDB.dbo.CustSettingGame cs WITH(NOLOCK)
+		INNER JOIN CheckCustDB.dbo.Customer me WITH(NOLOCK)
+			ON cs.custid = me.custid
+		INNER JOIN	#tmpAgent sup WITH(NOLOCK)
+			ON sup.custid = me.recommend
+		LEFT JOIN #LicenseeBAConfig BA WITH(NOLOCK)
+			ON BA.[SiteID] = sup.[SiteID]
+		--INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
+		--	ON tmpSport.Sportid = cs.sporttype
+		LEFT JOIN #LicenseeBAHistory BAH WITH(NOLOCK) 
+			ON cs.custid = BAH.custid
+		LEFT JOIN #LicenseeSpecialCust LIC WITH (NOLOCK)
+			ON cs.custid = LIC.custid 
+		LEFT JOIN #LicenseeCustComm LCC WITH (NOLOCK)
+			ON cs.custid = LCC.custid
+		LEFT JOIN #LicenseeGroupComm LGC WITH (NOLOCK)
+			ON LCC.GroupCommID = LGC.[id] 
+		WHERE EXISTS(SELECT TOP 1 1 FROM #tmpSport tmpSport WITH(NOLOCK)
+							WHERE tmpSport.Sportid = cs.sporttype)
+			AND EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
+							WHERE Info.CustID = me.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0
+									AND (Info.CustID = cs.CustID  
+									AND ( (cs.sporttype = 162 AND Info.[SyncLiveCasino]=1) 
+										OR  (cs.sporttype = 202 AND Info.HideKeNo = 0) 
+									)
+								))
+			AND (me.roleid IN (1,2) AND cs.discount <> 0.00	)
+			OR (LCC.custid IS NOT NULL AND LGC.[id] IS NOT NULL 
+				AND cs.playerdiscount<> 
+					CASE WHEN cs.sporttype IN (151,152,153) THEN ISNULL(LGC.[RacingComm],0.00)
+							WHEN cs.sporttype IN (161) THEN ISNULL(LGC.[NGComm],0.00)
+							WHEN cs.sporttype IN (162) THEN ISNULL(LGC.[LCComm],0.00)
+							WHEN cs.sporttype IN (251) THEN ISNULL(LGC.[RNGComm],0.00)
+							ELSE 0.00
+						 END
+			)
+
 	END
 
 	INSERT INTO CheckResultDB.dbo.CheckCommResult_Deposit(SiteID,CustID,RoleID,Ugroup,BetType,[SportType],CommP,CommA,CommM,CommS,Comm_P_Spec,Comm_SMA_Spec,IsBA)

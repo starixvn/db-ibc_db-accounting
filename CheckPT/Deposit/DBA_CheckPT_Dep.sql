@@ -133,11 +133,22 @@ SET NOCOUNT ON
 				INNER JOIN	#tmpSport_PT  Sport_PT 
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 				WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
-							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0
+								AND (Info.CustID = cs.CustID  
+										AND ( (cs.sporttype = 161 AND Info.DisableNumber=0)										  
+										  OR (cs.sporttype = 151 AND Info.Disable151_AU=0)
+										  OR (cs.sporttype = 152 AND cs.bettype IN (41,42) AND Info.Disable152_UK=0)
+										  OR (cs.sporttype = 152 AND cs.bettype IN (51,52) AND Info.Disable152_AU=0)
+										  OR (cs.sporttype = 153 AND Info.Disable153_AU=0)
+										  OR (cs.sporttype >= 180 AND cs.sporttype <=186  AND Info.[DisableVirtualSports]=0)
+										  --OR (cs.sporttype NOT IN (151,152,153,161,162,180,181,182,183,184,185,186) )
+										)
+								)
+							)
 					AND co.roleid =1
 					AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT)
 
-			IF @sporttype IN (-1,202)
+			IF @sporttype IN (-1,202)--+Live Casino(162)+ Keno(202) 
 				INSERT INTO #Member (SiteID,CUSTID,SPORTID,BetType,PT,PT_spec)
 				SELECT Sport_PT.SiteID,
 					co.custid,
@@ -153,7 +164,13 @@ SET NOCOUNT ON
 				INNER JOIN	#tmpSport_PT  Sport_PT 
 					ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 				WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
-							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0 
+								AND (Info.CustID = cs.CustID  
+									AND ( (cs.sporttype = 162 AND Info.[SyncLiveCasino]=1) 
+										OR  (cs.sporttype = 202 AND Info.HideKeNo = 0) 
+									)
+								)
+							)
 					AND co.roleid =1
 					AND (cs.apositiontaking + cs.mpositiontaking + cs.spositiontaking <> Sport_PT.PT) 
 
@@ -179,9 +196,9 @@ SET NOCOUNT ON
 							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
 					AND cs.apositiontaking <> Sport_PT.PT 
 	
-	IF @sporttype IN (-1,151,161,162,180,202,251)--+ Racing(151) + NumberGame(161)+Live Casino(162)+ Virtual Sport(180) + Keno(202) + RnG Casino(251)
+	IF @sporttype IN (-1,151,161,162,180,202,251)--+ Racing(151) + NumberGame(161)+ Virtual Sport(180) + RnG Casino(251)
 	BEGIN
-		IF @sporttype IN (-1,151,161,162,180,251)
+		IF @sporttype IN (-1,151,161,180,251)
 			INSERT INTO #Licensee (SiteID,CUSTID,SPORTID,BetType,PT,PT_spec)
 			SELECT   
 						Sport_PT.SiteID,
@@ -198,11 +215,21 @@ SET NOCOUNT ON
 				INNER JOIN	#tmpSport_PT  Sport_PT
 						ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 				WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
-							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0
+								AND (Info.CustID = cs.CustID  
+										AND ( (cs.sporttype = 161 AND Info.DisableNumber=0)
+										  OR (cs.sporttype = 151 AND Info.Disable151_AU=0)
+										  OR (cs.sporttype = 152 AND cs.bettype IN (41,42) AND Info.Disable152_UK=0)
+										  OR (cs.sporttype = 152 AND cs.bettype IN (51,52) AND Info.Disable152_AU=0)
+										  OR (cs.sporttype = 153 AND Info.Disable153_AU=0)
+										  OR (cs.sporttype >= 180 AND cs.sporttype <=186  AND Info.[DisableVirtualSports]=0)
+										  --OR (cs.sporttype NOT IN (151,152,153,161,162,180,181,182,183,184,185,186) )
+										)
+								))
 						AND co.roleid =2 
 						AND cs.apositiontaking <> Sport_PT.PT
 
-		IF @sporttype IN (-1,202)
+		IF @sporttype IN (-1,162,202)--+Live Casino(162)+ Keno(202) 
 			INSERT INTO #Licensee (SiteID,CUSTID,SPORTID,BetType,PT,PT_spec)
 				SELECT   
 							Sport_PT.SiteID,
@@ -219,7 +246,13 @@ SET NOCOUNT ON
 					INNER JOIN	#tmpSport_PT  Sport_PT
 							ON cs.sporttype = Sport_PT.Sportid AND sup.SiteID = Sport_PT.SiteID
 					WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
-							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
+							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0
+								AND (Info.CustID = cs.CustID  
+									AND ( (cs.sporttype = 162 AND Info.[SyncLiveCasino]=1) 
+										OR  (cs.sporttype = 202 AND Info.HideKeNo = 0) 
+									)
+								)
+							)
 						AND	co.roleid =2 
 						AND cs.apositiontaking <> Sport_PT.PT
 	END	
