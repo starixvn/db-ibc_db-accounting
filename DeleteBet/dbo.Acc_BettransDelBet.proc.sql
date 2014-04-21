@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransDelBet]
+﻿ALTER PROCEDURE [Acc_BettransDelBet]
 	@transid bigint = 0,
 	@custid int = 0,
 	@username varchar(50),
@@ -38,6 +38,7 @@ AS
 		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
 		- 20130603@Johnson: get additional information for mailing
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Customer, Dep_CustSuper, Exchange by link database)						   
+		- 20140421@Kathy: Add more account allow to void settled ticket 
 */
 
 SET NOCOUNT ON
@@ -60,11 +61,14 @@ BEGIN
 	Return
 END
 
-If @userid in (	8		-- sa
-				,25520  -- Joe
-				,1274   -- Steven
+If @userid in (	352361--Erica
+				,661969-- Erica1
+				,352362-- Jane
+				,1070340-- pgmKiwi
 				,360418 -- dbaThien
-				,633916 --twTim
+				,862400-- pgmViet
+				,8		-- sa
+				,1274   -- Steven				
 			   )
 BEGIN
 	if not exists (select * from bettrans with (nolock) where transid = @transid and custid = @custid)
@@ -327,7 +331,7 @@ IF (@@Error = 0)
 				@Remark = @Remark
 		END CATCH
 	END
-	
+
 
 
 
