@@ -41,6 +41,8 @@ BEGIN
 
 	DELETE DownlineTo_LeagueControl WHERE LeagueID = @LeagueID
 
+	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 1, @EventID = @LeagueID
+
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_LeagueControlDel LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '

@@ -55,14 +55,17 @@ BEGIN
 		UPDATE DownlineTo_SportControl WITH (ROWLOCK,UPDLOCK)
 		SET Value = @Value
 		WHERE SportID = @SportID
-			
+
 		IF @@ROWCOUNT = 0
 			INSERT INTO DownlineTo_SportControl (SportID, Value)
 			VALUES (@SportID, @Value)
+		ELSE
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = @SportID	
 	END
 	ELSE --@Value = 0
 	BEGIN
 		DELETE DownlineTo_SportControl WHERE SportID = @SportID
+		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = @SportID	
 	END
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)

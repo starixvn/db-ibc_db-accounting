@@ -43,7 +43,7 @@ BEGIN
 			FROM DownlineTo_LeagueControl lc WITH (NOLOCK) 
 				RIGHT JOIN bodb02.dbo.League l WITH (NOLOCK) ON l.leagueid = lc.LeagueID
 				LEFT JOIN DownlineTo_SportControl sc WITH (NOLOCK) ON l.sporttype = sc.SportID
-			WHERE l.sporttype = @SportID AND 
+			WHERE l.sporttype = @SportID AND l.IsActive = 1 AND 
 					l.leagueid = CASE WHEN @LeagueID = 0 THEN l.leagueid ELSE @LeagueID END AND
 					1= CASE WHEN lc.Value IS NOT NULL AND @OnlyShowException = 1 THEN 1 
 							WHEN @OnlyShowException = 0 THEN 1 ELSE 0 END 

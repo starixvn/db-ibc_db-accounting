@@ -2,17 +2,19 @@
 	@FromDate DATETIME,
 	@ToDate DATETIME,
 
-	@SportType INT,
-	@LeagueID INT,
-	@MatchID INT,
+	@SportType INT = 0,
+	@LeagueID INT = 0,
+	@MatchID INT = 0,
+	@UsedPercent INT = 0,
+	@SMAName VARCHAR(30) = '',
+	@Top INT = 20,
 
-	
 	@MoveBetsDay  DATETIME	
 AS
 /*
 	Created: Elodie
 	Date: 20130515
-	Task : Retrieve SMA Turnover list
+	Task : Retrieve SMA Turnover Monitor list
 	DB: DBAGE/bodb02
 
 	Revisions:

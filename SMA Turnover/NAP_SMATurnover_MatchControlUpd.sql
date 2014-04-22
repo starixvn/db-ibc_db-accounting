@@ -63,6 +63,8 @@ BEGIN
 	IF @@ROWCOUNT = 0
 		INSERT INTO DownlineTo_MatchControl (MatchID, Value)
 		VALUES (@MatchID, @Value)	
+	ELSE
+		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 2, @EventID = @MatchID	
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_MatchControlUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					

@@ -59,7 +59,7 @@ BEGIN
 
 	IF EXISTS (SELECT 1 FROM DownlineTo_SMAControl WHERE SMAID = @SMAID)
 	BEGIN
-			SELECT @ErrCode = 102, @ErrMsg = 'Invalid Username!'
+			SELECT @ErrCode = 102, @ErrMsg = 'The setting of this customer already existed!'
 			RETURN
 	END
 

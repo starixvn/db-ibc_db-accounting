@@ -57,6 +57,8 @@ BEGIN
 	IF @@ROWCOUNT = 0
 		INSERT INTO DownlineTo_LeagueControl (LeagueID, Value)
 		VALUES (@LeagueID, @Value)	
+	ELSE
+		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 1, @EventID = @LeagueID
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_LeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					

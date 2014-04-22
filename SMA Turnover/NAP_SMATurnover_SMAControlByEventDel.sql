@@ -41,6 +41,8 @@ BEGIN
 
 	DELETE DownlineTo_Match_SMAControl WHERE SMAID = @SMAID AND MatchID = @MatchID			
 
+	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 3, @SMAID = @SMAID, @MatchID = @MatchID
+
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_SMAControlByEventDel SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 	

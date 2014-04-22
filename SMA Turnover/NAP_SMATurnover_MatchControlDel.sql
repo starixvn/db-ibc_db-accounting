@@ -41,6 +41,8 @@ BEGIN
 
 	DELETE DownlineTo_MatchControl WHERE MatchID = @MatchID
 
+	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 2, @EventID = @MatchID	
+
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_MatchControlDel MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '

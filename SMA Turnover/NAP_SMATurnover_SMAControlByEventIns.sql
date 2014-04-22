@@ -66,12 +66,22 @@ BEGIN
 
 	IF EXISTS (SELECT 1 FROM DownlineTo_Match_SMAControl WHERE SMAID = @SMAID AND MatchID = @MatchID)
 	BEGIN
-			SELECT @ErrCode = 103, @ErrMsg = 'Invalid Username!'
+			SELECT @ErrCode = 103, @ErrMsg = 'The setting of this customer already existed!'
 			RETURN
 	END
 
 	INSERT INTO DownlineTo_Match_SMAControl (SMAID, MatchID, Value)
 	VALUES (@SMAID, @MatchID, @Value)	
+
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.DownlineTurnOver_Setting WITH (NOLOCK) WHERE SMAID = @SMAID AND MatchID = @MatchID)
+	BEGIN
+		UPDATE s
+		SET Value = ms.Value,
+			maxturnover = ms.Value * c.credit
+		FROM bodb02.dbo.DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN DownlineTo_Match_SMAControl ms WITH (NOLOCK) ON s.SMAID = ms.SMAID AND s.matchid = ms.MatchID
+			INNER JOIN bodb02.dbo.CustInfo c WITH (NOLOCK) ON c.CustID = s.SMAID
+	END
 
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_SMAControlByEventIns SMAName="' + COALESCE(@SMAName, SPACE(1)) + '" ' 					
