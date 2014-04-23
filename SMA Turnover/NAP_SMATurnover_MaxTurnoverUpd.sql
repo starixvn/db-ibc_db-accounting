@@ -1,7 +1,8 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_MaxTurnoverUpd]
 	@UpdMode BIT,
 	@EventID INT = 0,
-	@SMAID INT = 0
+	@SMAID INT = 0,
+	@Offset INT = NULL
 AS
 /*
 	Created: Elodie
@@ -18,6 +19,7 @@ AS
 				  3: Change max turnover because SMA setting by event is deleted
 				  4: Change max turnover because SMA setting by event is updated
 				  5: Change max turnover because given credit is updated
+				  6: Change max turnover because SMA offset is inserted
 		@EventID: sportID or leagueID or matchID
 	Example: EXEC NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0
 	
@@ -42,6 +44,24 @@ BEGIN
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
 		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
+	END
+	ELSE IF @UpdMode = 6
+	BEGIN
+		IF @Offset = 0
+		BEGIN
+			DELETE DownlineTurnOver_Setting WHERE SMAID = @SMAID AND matchid IN (SELECT matchid FROM  match WITH (NOLOCK) WHERE eventstatus <> 'completed')
+		END
+		ELSE
+		BEGIN
+			UPDATE s
+			SET Value = s.Value + sc.Offset,
+				maxturnover = (s.Value + sc.Offset) * c.credit
+			FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+				INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+				INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+				INNER JOIN bodb_Age.dbo.DownlineTo_SMAControl sc WITH (NOLOCK) ON sc.SMAID = s.SMAID
+			WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
+		END
 	END
 	ELSE
 	BEGIN

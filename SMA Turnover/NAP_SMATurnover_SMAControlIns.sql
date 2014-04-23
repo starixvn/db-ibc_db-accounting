@@ -66,6 +66,8 @@ BEGIN
 	INSERT INTO DownlineTo_SMAControl (SMAID, Offset)
 	VALUES (@SMAID, @Offset)	
 
+	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 6, @SMAID = @SMAID, @Offset = @Offset
+
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_SMAControlIns SMAName="' + COALESCE(@SMAName, SPACE(1)) + '" ' 					
 					+ 'Offset="' + COALESCE(CAST(@Offset AS VARCHAR(10)), SPACE(1)) + '" ' 

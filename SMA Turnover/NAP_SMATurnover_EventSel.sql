@@ -52,7 +52,7 @@ BEGIN
 	IF @ViewMode = 3
 	BEGIN
 		SELECT	@SportID AS SportID, ISNULL(sc.Value,0) AS SportValue, 
-				@LeagueID AS LeagueID, ISNULL(lc.Value,0) AS LeagueValue,  
+				@LeagueID AS LeagueID, ISNULL(lc.Value,sc.Value) AS LeagueValue,  
 				m.matchid, m.matchcode, m.homeid, m.awayid, m.eventdate, 
 				CASE WHEN mc.Value IS NULL AND lc.Value IS NULL AND sc.Value IS NULL THEN 0
 						WHEN mc.Value IS NULL AND lc.Value IS NULL THEN sc.Value
