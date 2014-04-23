@@ -17,6 +17,7 @@ AS
 				  2: Change max turnover because match setting is change
 				  3: Change max turnover because SMA setting by event is deleted
 				  4: Change max turnover because SMA setting by event is updated
+				  5: Change max turnover because given credit is updated
 		@EventID: sportID or leagueID or matchID
 	Example: EXEC NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0
 	
@@ -31,6 +32,16 @@ BEGIN
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN bodbAGE.dbo.DownlineTo_Match_SMAControl sec WITH (NOLOCK) ON s.SMAID = sec.SMAID AND s.matchid = sec.matchid
 			INNER JOIN CustInfo c WITH (NOLOCK) ON sec.SMAID = c.custid
+		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID AND s.matchid = @EventID
+	END
+	ELSE IF @UpdMode = 5
+	BEGIN
+		UPDATE s
+		SET maxturnover = s.Value * c.credit
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
 	END
 	ELSE
 	BEGIN

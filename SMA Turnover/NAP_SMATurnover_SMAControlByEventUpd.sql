@@ -55,7 +55,7 @@ BEGIN
 	SET Value = @Value
 	WHERE SMAID = @SMAID AND MatchID = @MatchID			
 
-	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 4
+	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 4, @SMAID = @SMAID, @EventID = @MatchID
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_SMAControlByEventUpd SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					
