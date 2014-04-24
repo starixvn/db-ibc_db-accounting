@@ -1,4 +1,5 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@mode VARCHAR(15) = 'CAL'
 	,@action VARCHAR(20) = 'CAL'
 	,@fth INT = NULL
@@ -75,8 +76,8 @@ AS
 	DB: EXECREP SP (DBTrans_Bet)
 
 	Revisions:
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
-
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140424@Lukas: add DBTP server 
 	Param's Explanation:
 		@action			@mode
 		 CAL			 CAL, CAL-HT, CAL-FT, UNDO, CAL-FGLG
@@ -85,13 +86,13 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DB231', 'DB232') AND @CalledByBrokerService = 0
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232') AND @CalledByBrokerService = 0
 	BEGIN
 		-- DB052/DB053/DB054/DB06: got servicebroker, then just send a message to service broker and then let it to handle the rest.
 		DECLARE @sMessage NVARCHAR(MAX)
 
 		SET @sMessage = '
-				EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
+								EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
 			,@mode = ' + CASE 
 				WHEN @mode IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @mode) + ''''
@@ -489,7 +490,7 @@ BEGIN
 
 					-- bettype 13 : Clean Sheet 
 					-- IF @betcount_13 > 0 
-					EXEC dbo.NAP_Admin_Calculate_13 @matchid
+										EXEC dbo.NAP_Admin_Calculate_13 @matchid
 						,13
 						,@fth
 						,@fta
@@ -527,7 +528,7 @@ BEGIN
 
 					-- bettype 26 : Both/One/Neither team to score  
 					-- IF @betcount_26 > 0 
-					EXEC dbo.NAP_Admin_Calculate_26 @matchid
+										EXEC dbo.NAP_Admin_Calculate_26 @matchid
 						,26
 						,@fth
 						,@fta
@@ -535,7 +536,7 @@ BEGIN
 
 					-- bettype 27 : To win to nil 
 					-- IF @betcount_27 > 0 
-					EXEC dbo.NAP_Admin_Calculate_27 @matchid
+										EXEC dbo.NAP_Admin_Calculate_27 @matchid
 						,27
 						,@fth
 						,@fta
@@ -659,7 +660,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_13
 				IF @betcount_13 IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
 						,@bettype = 13
 						,@fth = @fth
 						,@fta = @fta
@@ -670,7 +671,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_26
 				IF @betcount_26 IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 26
 						,@fth = @fth
 						,@fta = @fta
@@ -681,7 +682,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_27
 				IF @betcount_27 IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
 						,@bettype = 27
 						,@fth = @fth
 						,@fta = @fta
@@ -691,7 +692,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @row_count IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
@@ -737,7 +738,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_13
 				IF @betcount_13 IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
 						,@bettype = 13
 						,@fth = @fth
 						,@fta = @fta
@@ -748,7 +749,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_26
 				IF @betcount_26 IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 26
 						,@fth = @fth
 						,@fta = @fta
@@ -759,7 +760,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_27
 				IF @betcount_27 IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
 						,@bettype = 27
 						,@fth = @fth
 						,@fta = @fta
@@ -770,7 +771,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_RefundAll
 				IF @row_count IS NOT NULL
-					EXEC dbo.NAP_Admin_Calculate_RefundAll @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_RefundAll @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
@@ -797,10 +798,8 @@ BEGIN
 		END
 	END
 END
-
 GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Main] TO [vnteam] AS [dbo]
 
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_Main] TO [vnteam] AS [dbo]
-GO
 
 
