@@ -65,7 +65,7 @@ BEGIN
 	ELSE --@Value = 0
 	BEGIN
 		DELETE DownlineTo_SportControl WHERE SportID = @SportID
-		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = @SportID	
+		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 1, @EventID = @SportID	
 	END
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
