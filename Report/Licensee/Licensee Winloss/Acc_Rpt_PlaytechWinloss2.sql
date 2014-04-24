@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_PlaytechWinloss2]
  @Currency		INT = 0,
  @FromDate		SMALLDATETIME,  
  @ToDate		SMALLDATETIME,   
- @ReportType	TINYINT=1  
+ @ReportType	TINYINT = 1  
 AS  
 /*  Created: Hannah  
 	Date: 2014-04-14
