@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_SMATurnoverLeagueControlUpd]
+﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_LeagueControlUpd]
 	@LeagueID INT,
 	@Value INT,
 
@@ -17,7 +17,7 @@ AS
 	
 	Parameter's explaination: 
 		
-	Example: EXEC NAP_SMATurnoverLeagueControlUpd @LeagueID = 33828, @Value = 50, @UserID = 8, @IP ='10.10.8.56'
+	Example: EXEC NAP_SMATurnover_LeagueControlUpd @LeagueID = 33828, @Value = 50, @UserID = 8, @IP ='10.10.8.56'
 	
 */
 BEGIN
@@ -28,10 +28,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 	
 	IF @LeagueID <= 0
 	BEGIN
@@ -55,17 +55,42 @@ BEGIN
 	WHERE LeagueID = @LeagueID
 			
 	IF @@ROWCOUNT = 0
+	BEGIN
 		INSERT INTO DownlineTo_LeagueControl (LeagueID, Value)
 		VALUES (@LeagueID, @Value)	
+		IF @Value = 0
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 3, @EventID = @LeagueID
+		ELSE
+		BEGIN
+			IF EXISTS (	SELECT 1 
+						FROM DownlineTo_SportControl sc WITH (NOLOCK) 
+							INNER JOIN bodb02.dbo.league l WITH (NOLOCK) ON l.sporttype = sc.sportID
+						WHERE l.leagueid = @LeagueID)
+				EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 2, @EventID = @LeagueID
+		END
+	END
+	ELSE
+	BEGIN
+		IF @Value <> 0 AND @OldValue <> 0
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 4, @EventID = @LeagueID
+		IF @Value = 0 AND @OldValue <> 0
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 3, @EventID = @LeagueID
+		IF @Value <> 0 AND @OldValue = 0
+			IF EXISTS (	SELECT 1 
+						FROM DownlineTo_SportControl sc WITH (NOLOCK) 
+							INNER JOIN bodb02.dbo.league l WITH (NOLOCK) ON l.sporttype = sc.sportID
+						WHERE l.leagueid = @LeagueID)
+				EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 2, @EventID = @LeagueID		
+	END
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
-	SELECT @LogData = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+	SELECT @LogData = '<NAP_SMATurnover_LeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'Value="' + COALESCE(CAST(@Value AS VARCHAR(20)), SPACE(1)) + '" ' 
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 					+ 'ErrMsg="'+ COALESCE(CAST(@ErrMsg as varchar(200)),space(1)) + '" />'
 	
-	SELECT @TrackingValue2 = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+	SELECT @TrackingValue2 = '<NAP_SMATurnover_LeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 							+ 'Value="' + COALESCE(CAST(ISNULL(@OldValue,'') AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
@@ -83,13 +108,13 @@ BEGIN
 				@Duration = @duration		
 	END TRY
 	BEGIN CATCH
-		SELECT @LogData = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+		SELECT @LogData = '<NAP_SMATurnover_LeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'Value="' + COALESCE(CAST(@Value AS VARCHAR(20)), SPACE(1)) + '" ' 
 					+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 					+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
 					+ 'ErrMsg="'+ ERROR_MESSAGE() + '" />'
 		
-		SELECT @TrackingValue2 = '<NAP_SMATurnoverLeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
+		SELECT @TrackingValue2 = '<NAP_SMATurnover_LeagueControlUpd LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 							+ 'Value="' + COALESCE(CAST(ISNULL(@OldValue,'') AS VARCHAR(20)), SPACE(1)) + '" ' 
 							+ 'IP="'+ COALESCE(CAST(@IP as varchar(15)),space(1)) + '" '
 							+ 'ErrCode="'+ COALESCE(CAST(@ErrCode as varchar(50)),space(1)) + '" '
@@ -105,6 +130,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[NAP_SMATurnoverLeagueControlUpd] TO [bodbadminNet]
+GRANT EXECUTE ON [dbo].[NAP_SMATurnover_LeagueControlUpd] TO [bodbadminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnoverLeagueControlUpd] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnover_LeagueControlUpd] TO [vnteam]

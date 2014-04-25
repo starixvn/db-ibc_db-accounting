@@ -28,7 +28,7 @@ Revisions:
 	- 20130723@Jamie: Change Alias DB03 to DBPOLICY
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20140303@Kathy: Get HideKeno [Redmine:#12691]
-	- 20140407@Elodie: Add Keno product [Redmine:#13156]						
+	- 20140407@Elodie: Get DisableKeno [Redmine:#13156]						
 Param's Explanation:
 • @CustID: customer id.   
 */
@@ -127,13 +127,7 @@ SELECT	ISNULL(reject,0) AS Suspend,
 		ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds,
 
 		ISNULL(ci.HideKeno,0) as HideKeno, 
-		max(case when g.IBCBetTypeID = 1501 then cg.IsDisabled else 0 end) as Disable1501,
-		max(case when g.IBCBetTypeID = 1503 then cg.IsDisabled else 0 end) as Disable1503,
-		max(case when g.IBCBetTypeID = 1504 then cg.IsDisabled else 0 end) as Disable1504,
-		max(case when g.IBCBetTypeID = 1505 then cg.IsDisabled else 0 end) as Disable1505,
-		max(case when g.IBCBetTypeID = 1507 then cg.IsDisabled else 0 end) as Disable1507,
-		max(case when g.IBCBetTypeID = 1508 then cg.IsDisabled else 0 end) as Disable1508,
-		max(case when g.IBCBetTypeID = 1509 then cg.IsDisabled else 0 end) as Disable1509
+		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509) then cg.IsDisabled else 1 end) as DisableKeno	
 
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
@@ -176,3 +170,5 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbExtAccNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus] TO [vnteam] AS [dbo]
+
+
