@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Set_MatchSelCompletedHT] @Date DATETIME
+ALTER PROCEDURE [NAP_Set_MatchSelCompletedHT] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues
@@ -12,6 +12,7 @@ AS
 	Original: Acc_Set_MatchSelCompletedHT
 	
 	Revisions:
+		- 20140421@Kathy: get match status in queue
 		
 */
 BEGIN
@@ -35,42 +36,45 @@ BEGIN
 			WHEN @sporttype = 1 THEN 100
 			ELSE 60
 			END
+	DECLARE @tblSingle TABLE (matchid INT, seqS INT)
 
-	CREATE TABLE #matchList (
-		matchid INT
-		,leagueid INT
-		,HalfTimeHomeScore INT
-		,HalfTimeAwayScore INT
-		,IsCalculated BIT
-		,IsMultiCaled BIT
-		,IsRefund BIT
-		,IsCalRefund BIT
-		,homeid INT
-		,awayid INT
-		,matchcode NVARCHAR(50)
-		,kickofftime DATETIME
-		,finalhomescore INT
-		,finalawayscore INT
-		,betstatus NVARCHAR(50)
-		,eventstatus NVARCHAR(50)
-		,Foddsstatus VARCHAR(10)
-		,sporttype TINYINT
-		,IsNeutral BIT
-		,eventdate DATETIME
-		,goalrecord VARCHAR(50)
-		,suspenderHalfTime NVARCHAR(50)
-		,suspenderFullTime NVARCHAR(50)
-		,IsHalfTimeCal BIT
-		,isPending BIT
-		,isUndecided BIT
-		,IsKeyscore BIT
-		,betcount INT
-		,IsExistFGLG BIT
-		,isGroup INT
-		)
+	INSERT INTO @tblSingle
+	SELECT matchid, MAX(IsCalculating)
+	FROM Single_Calculate_Queue WITH (NOLOCK)
+	WHERE Starttime > DATEADD(HH, - 1, GETDATE()) 
+	AND IsCalculating IN (1, 0)
+	GROUP BY matchid
 
-	INSERT INTO #matchList
-	SELECT *
+	SELECT x.matchid
+		,x.leagueid
+		,x.HalfTimeHomeScore
+		,x.HalfTimeAwayScore
+		,x.IsCalculated
+		,x.IsMultiCaled
+		,x.IsRefund
+		,x.IsCalRefund
+		,x.homeid
+		,x.awayid
+		,x.matchcode
+		,x.kickofftime
+		,x.finalhomescore
+		,x.finalawayscore
+		,x.betstatus
+		,x.eventstatus
+		,x.Foddsstatus
+		,x.sporttype
+		,x.IsNeutral
+		,x.eventdate
+		,x.goalrecord
+		,x.suspenderHalfTime
+		,x.suspenderFullTime
+		,x.IsHalfTimeCal
+		,x.isPending
+		,x.isUndecided
+		,x.IsKeyscore
+		,x.betcount
+		,x.isExistFGLG
+		,t.seqS as IsCalculatingSingle
 	FROM (
 		SELECT m.matchid
 			,m.leagueid
@@ -121,7 +125,6 @@ BEGIN
 				WHEN c.cntFGLG = 0 THEN 0
 				ELSE 1
 				END AS isExistFGLG
-			,0 AS isGroup
 		FROM (
 			SELECT m.matchid
 				,m.leagueid
@@ -163,37 +166,15 @@ BEGIN
 						WHEN bettype = 14 THEN 1
 						ELSE 0
 						END) AS cntFGLG
-			FROM bettrans WITH (NOLOCK) --(NOLOCK, index=CIX_matchid_bettype),  
-				JOIN DBPRO.BODB02.dbo.match WITH (NOLOCK) ON match.matchid = bettrans.matchid
-			WHERE match.eventdate = @Date AND BETTYPE <= 19000 AND match.eventstatus IN ('Closed', 'running', 'internal') AND match.sporttype = @sporttype
+			FROM bettrans WITH (NOLOCK, index=CIX_matchid_bettype)
+				inner JOIN DBPRO.BODB02.dbo.match WITH (NOLOCK) ON match.matchid = bettrans.matchid
+			WHERE match.eventdate = @Date AND BETTYPE <= 19000 AND match.eventstatus IN ('Closed', 'running', 'internal') 
+			AND match.sporttype = @sporttype
 			GROUP BY bettrans.matchid
 			) c ON m.matchid = c.matchid
-		) x
+		) x LEFT JOIN @tblSingle t ON t.matchid = x.matchid
 
-	UPDATE #matchList
-	SET isGroup = CASE 
-			WHEN eventstatus = 'Running' THEN 1
-			WHEN eventstatus = 'Closed' THEN 2
-			WHEN eventstatus = 'completed' THEN 3
-			WHEN eventstatus LIKE '%Refund%' THEN 3
-			ELSE 0
-			END
-
-	UPDATE m
-	SET m.isGroup = ml.isGroup
-	FROM #matchList m
-		INNER JOIN #matchList ml ON ml.sporttype = m.sporttype AND ml.homeid = m.homeid AND ml.awayid = m.awayid AND ml.leagueid = m.leagueid AND ml.isGroup <> 0
-	WHERE m.isGroup = 0
-
-	SELECT *
-	FROM #matchList
-	ORDER BY sporttype
-		,leagueid
-		,isGroup
-		,eventdate
-		,kickofftime
-
-	DROP TABLE #matchList
+	ORDER BY eventstatus, matchcode
 END
 
 GO
