@@ -27,10 +27,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 	
 	IF @LeagueID <= 0
 		OR NOT EXISTS (SELECT 1 FROM DownlineTo_LeagueControl WITH (NOLOCK) WHERE LeagueID = @LeagueID)
@@ -38,10 +38,22 @@ BEGIN
 		SELECT @ErrCode = 101, @ErrMsg = 'Invalid league.'
 		RETURN
 	END			
+	
+	DECLARE @Value INT
+	SELECT @Value = Value FROM DownlineTo_LeagueControl WITH (NOLOCK) WHERE LeagueID = @LeagueID
 
 	DELETE DownlineTo_LeagueControl WHERE LeagueID = @LeagueID
 
-	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 1, @EventID = @LeagueID
+	IF @Value <> 0
+	BEGIN
+		IF NOT EXISTS (	SELECT 1 
+						FROM DownlineTo_SportControl sc WITH (NOLOCK) 
+							INNER JOIN bodb02.dbo.league l WITH (NOLOCK) ON l.sporttype = sc.sportID
+						WHERE l.leagueid = @LeagueID)
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 3, @EventID = @LeagueID
+		ELSE
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 5, @EventID = @LeagueID
+	END
 
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_LeagueControlDel LeagueID="' + COALESCE(CAST(@LeagueID AS VARCHAR(10)), SPACE(1)) + '" ' 					

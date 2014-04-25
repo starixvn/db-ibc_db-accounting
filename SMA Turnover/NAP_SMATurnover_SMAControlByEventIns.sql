@@ -29,10 +29,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureSMATOByMatch]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureSMATOByMatch]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 
 	IF @Value < 0
 	BEGIN
@@ -70,17 +70,25 @@ BEGIN
 			RETURN
 	END
 
+	DECLARE @SportID INT, @LeagueID INT
+	SELECT @SportID = m.sporttype, @LeagueID = m.leagueid 
+	FROM bodb02.dbo.match m WITH (NOLOCK) 
+	WHERE m.matchid = @MatchID
+
 	INSERT INTO DownlineTo_Match_SMAControl (SMAID, MatchID, Value)
 	VALUES (@SMAID, @MatchID, @Value)	
 
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.DownlineTurnOver_Setting WITH (NOLOCK) WHERE SMAID = @SMAID AND MatchID = @MatchID)
-	BEGIN
-		UPDATE s
-		SET Value = ms.Value,
-			maxturnover = ms.Value * c.credit
-		FROM bodb02.dbo.DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
-			INNER JOIN DownlineTo_Match_SMAControl ms WITH (NOLOCK) ON s.SMAID = ms.SMAID AND s.matchid = ms.MatchID
-			INNER JOIN bodb02.dbo.CustInfo c WITH (NOLOCK) ON c.CustID = s.SMAID
+	IF @Value = 0
+		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 11, @EventID = @MatchID, @SMAID = @SMAID
+	ELSE
+	BEGIN			
+		IF EXISTS (	SELECT 1 
+					FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
+		OR EXISTS (	SELECT 1 
+					FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID)			
+		OR EXISTS (	SELECT 1 
+					FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID)			
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 10, @EventID = @MatchID, @SMAID = @SMAID	
 	END
 
 	DECLARE @LogData NVARCHAR(4000)

@@ -23,6 +23,7 @@ BEGIN
 		FROM DownlineTo_SMAControl sma WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.custInfo c WITH (NOLOCK) ON sma.SMAID = c.custID
 			INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON e.exchangeid = c.currency
+		ORDER BY c.UserName
 	END
 	ELSE
 	BEGIN		
@@ -32,6 +33,7 @@ BEGIN
 			INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON e.exchangeid = ci.currency
 			--INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON ci.custID = c.custID
 		WHERE ci.UserName like '%' + @SMAName + '%'
+		ORDER BY ci.UserName
 	END
 END
 

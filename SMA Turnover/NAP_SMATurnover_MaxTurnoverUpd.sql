@@ -13,63 +13,225 @@ AS
 	Revisions:
 	
 	Parameter's explaination: 
-		@UpdMode: 0: Change max turnover because sport setting is updated
+		@UpdMode: --Insert/Update/Delete Sport setting
+				  0: Change max turnover because sport setting is updated
 				  1: Change max turnover because sport setting is deleted
-				  2: + Change max turnover because league setting which have sport setting is inserted a specific value (X)
-					 + Change max turnover because league setting which have sport setting is update from a unlimited value to a specific value (U -> X)
-				  3: + Change max turnover because league setting is inserted a unlimited value (U)
-					 + Change max turnover because league setting is update from a specific value to a unlimited value (X -> U)
 
-				  2: Change max turnover because match setting is change
-				  3: Change max turnover because SMA setting by event is deleted
-				  4: Change max turnover because SMA setting by event is updated
-				  5: Change max turnover because given credit is updated
-				  6: Change max turnover because SMA offset is inserted
+				  --Insert/Update/Delete League setting
+				  2: Change max turnover because league setting which have sport setting is inserted a specific value (X)					 
+				  3: + Change max turnover because league setting is inserted a unlimited value (U)
+					 + Change max turnover because league setting is updated from a specific value to a unlimited value (X -> U)
+					 + Change max turnover because league setting which does not have sport setting is deleted a specific value
+				  4: Change max turnover because league setting is updated from a specific value to a other specific value (X -> X1)
+				  5: Change max turnover because league setting which have sport setting is deleted a specific value
+
+				  --Insert/Update/Delete Match setting
+				  6: Change max turnover because match setting which have sport setting or league setting is inserted a specific value (X)					 
+				  7: + Change max turnover because match setting is inserted a unlimited value (U)
+					 + Change max turnover because match setting is updated from a specific value to a unlimited value (X -> U)
+					 + Change max turnover because match setting which does not have sport setting and league setting is deleted a specific value
+				  8: Change max turnover because match setting is updated from a specific value to a other specific value (X -> X1)
+				  9: Change max turnover because match setting which have sport setting or league setting is deleted a specific value
+
+				  --Insert/Update/Delete Match_SMA setting
+				  10: Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is inserted a specific value (X)
+				  11: + Change max turnover because Match_SMA setting is inserted a unlimited value (U)
+					  + Change max turnover because Match_SMA setting is updated from a specific value to a unlimited value (X -> U)
+					  + Change max turnover because Match_SMA setting which does not have sport setting and league setting and match setting is deleted a specific value
+				  12: Change max turnover because Match_SMA setting is updated from a specific value to a other specific value (X -> X1)
+				  13: Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is deleted a specific value
+				
 		@EventID: sportID or leagueID or matchID
-	Example: EXEC NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0
+	Example: EXEC NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = 1
 	
 */
 BEGIN
 	SET NOCOUNT ON	
 
-	IF @UpdMode = 0 --Change max turnover because sport setting is updated
+	--Change max turnover because sport setting is updated
+	IF @UpdMode = 0 
 	BEGIN
 		UPDATE s
-		SET Value = sc.Value + sma.Offset, maxturnover = (sc.Value + sma.Offset) * c.credit
+		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = (sc.Value + ISNULL(sma.Offset,0)) * c.credit
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
-			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
-			INNER JOIN bodbAGE.dbo.DownlineTo_SportControl sc WITH (NOLOCK) ON m.sporttype= sc.SportID
-			INNER JOIN bodbAGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_SportControl sc WITH (NOLOCK) ON m.sporttype= sc.SportID
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID			
 		WHERE eventstatus <> 'completed' AND m.sporttype = @EventID AND s.InheritLevel = 1
 	END
-	IF @UpdMode = 1 --Change max turnover because sport setting is deleted
+	
+	--Change max turnover because sport setting is deleted
+	IF @UpdMode = 1 
 	BEGIN
 		DELETE DownlineTurnOver_Setting 
 		WHERE InheritLevel = 1 AND matchid IN (	SELECT matchid 
 												FROM match m WITH (NOLOCK) 
 												WHERE eventstatus <> 'completed' AND m.sporttype = @EventID)
 	END
-	IF @UpdMode = 2 --Change max turnover because league setting which have sport setting is inserted a specific value 
-					--Change max turnover because league setting is update from a unlimited value to a specific value
+
+	--Change max turnover because league setting which have sport setting is inserted a specific value (X)
+	IF @UpdMode = 2 
 	BEGIN
 		UPDATE s
-		SET Value = lc.Value + sma.Offset, maxturnover = (lc.Value + sma.Offset) * c.credit, InheritLevel = 2
+		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = (lc.Value + ISNULL(sma.Offset,0)) * c.credit, InheritLevel = 2
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
-			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
-			INNER JOIN bodbAGE.dbo.DownlineTo_LeagueControl lc WITH (NOLOCK) ON m.leagueid= lc.LeagueID
-			INNER JOIN bodbAGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_LeagueControl lc WITH (NOLOCK) ON m.leagueid= lc.LeagueID
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID			
 		WHERE eventstatus <> 'completed' AND m.leagueid = @EventID AND s.InheritLevel = 1
 	END
-	IF @UpdMode = 3 --Change max turnover because league setting is inserted a unlimited value
-					--Change max turnover because league setting is update from a specific value to a unlimited value 
+
+	--Change max turnover because league setting is inserted a unlimited value (U)
+	--Change max turnover because league setting is updated from a specific value to a unlimited value (X -> U)
+	--Change max turnover because league setting which does not have sport setting is deleted
+	IF @UpdMode = 3 
 	BEGIN
 		DELETE DownlineTurnOver_Setting 
-		WHERE InheritLevel = 1 AND matchid IN (	SELECT matchid 
-												FROM match m WITH (NOLOCK) 
-												WHERE eventstatus <> 'completed' AND m.leagueid = @EventID)
+		WHERE InheritLevel NOT IN (3,4) AND matchid IN (SELECT matchid 
+														FROM match m WITH (NOLOCK) 
+														WHERE eventstatus <> 'completed' AND m.leagueid = @EventID)
 	END
+
+	--Change max turnover because league setting is updated from a specific value to a other specific value (X -> X1)
+	IF @UpdMode = 4 
+	BEGIN
+		UPDATE s
+		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = (lc.Value + ISNULL(sma.Offset,0)) * c.credit
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_LeagueControl lc WITH (NOLOCK) ON m.leagueid= lc.LeagueID
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
+		WHERE eventstatus <> 'completed' AND m.leagueid = @EventID AND s.InheritLevel = 2
+	END
+
+	--Change max turnover because league setting which have sport setting is deleted a specific value
+	IF @UpdMode = 5
+	BEGIN
+		UPDATE s
+		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = (sc.Value + ISNULL(sma.Offset,0)) * c.credit, InheritLevel = 1
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_SportControl sc WITH (NOLOCK) ON m.sporttype= sc.SportID
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
+		WHERE eventstatus <> 'completed' AND m.leagueid = @EventID AND s.InheritLevel = 2
+	END
+
+	--Change max turnover because match setting which have sport setting or league setting is inserted a specific value (X)
+	IF @UpdMode = 6
+	BEGIN
+		UPDATE s
+		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = (mc.Value + ISNULL(sma.Offset,0)) * c.credit, InheritLevel = 3
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_MatchControl mc WITH (NOLOCK) ON m.matchid= mc.MatchID
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
+		WHERE eventstatus <> 'completed' AND m.matchid = @EventID AND s.InheritLevel <> 4
+	END
+
+	--Change max turnover because match setting is inserted a unlimited value (U)
+	--Change max turnover because match setting is updated from a specific value to a unlimited value (X -> U)
+	--Change max turnover because match setting which does not have sport setting or league setting is deleted a specific value
+	IF @UpdMode = 7
+	BEGIN
+		DELETE DownlineTurnOver_Setting 
+		WHERE InheritLevel <> 4 AND matchid IN (SELECT matchid 
+												FROM match m WITH (NOLOCK) 
+												WHERE eventstatus <> 'completed' AND m.matchid = @EventID)
+	END
+
+	--Change max turnover because match setting is updated from a specific value to a other specific value (X -> X1)
+	IF @UpdMode = 8
+	BEGIN
+		UPDATE s
+		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = (mc.Value + ISNULL(sma.Offset,0)) * c.credit
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_MatchControl mc WITH (NOLOCK) ON m.matchid= mc.MatchID
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
+		WHERE eventstatus <> 'completed' AND m.matchid = @EventID AND s.InheritLevel = 3
+	END
+
+	--Change max turnover because match setting which have sport setting or league setting is deleted a specific value
+	IF @UpdMode = 9
+	BEGIN
+		UPDATE s
+		SET Value = CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0), 
+			maxturnover = (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0)) * c.credit, 
+			InheritLevel = CASE WHEN lc.Value IS NOT NULL THEN 2 ELSE 1 END
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_LeagueControl lc WITH (NOLOCK) ON lc.LeagueID= m.leagueid
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SportControl sc WITH (NOLOCK) ON sc.SportID= m.sporttype
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
+		WHERE eventstatus <> 'completed' AND m.matchid = @EventID AND s.InheritLevel = 3
+	END
+
+	--Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is inserted a specific value (X)
+	IF @UpdMode = 10
+	BEGIN
+		UPDATE s
+		SET Value = msc.Value, maxturnover = msc.Value * c.credit, InheritLevel = 4
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_Match_SMAControl msc WITH (NOLOCK) ON m.matchid= msc.MatchID AND s.SMAID = msc.SMAID
+		WHERE eventstatus <> 'completed' AND m.matchid = @EventID AND s.SMAID = @SMAID AND s.InheritLevel IN (1,2,3)
+	END
+
+	--Change max turnover because Match_SMA setting is inserted a unlimited value (U)
+	--Change max turnover because Match_SMA setting is updated from a specific value to a unlimited value (X -> U)
+	--Change max turnover because Match_SMA setting which does not have sport setting and league setting and match setting is deleted a specific value
+	IF @UpdMode = 11
+	BEGIN
+		DELETE DownlineTurnOver_Setting 
+		WHERE SMAID = @SMAID AND MatchID = @EventID 
+			AND matchid IN (SELECT matchid 
+							FROM match m WITH (NOLOCK) 
+							WHERE eventstatus <> 'completed')
+	END	  
+
+	--Change max turnover because Match_SMA setting is updated from a specific value to a other specific value (X -> X1)
+	IF @UpdMode = 12
+	BEGIN
+		UPDATE s
+		SET Value = msc.Value, maxturnover = msc.Value * c.credit
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_AGE.dbo.DownlineTo_Match_SMAControl msc WITH (NOLOCK) ON s.matchid= msc.MatchID AND s.SMAID = msc.SMAID
+		WHERE eventstatus <> 'completed' AND s.matchid = @EventID AND s.SMAID = @SMAID AND s.InheritLevel = 4
+	END
+
+	--Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is deleted a specific value
+	IF @UpdMode = 13
+	BEGIN
+		UPDATE s
+		SET Value = CASE	WHEN mc.Value IS NOT NULL THEN mc.Value
+							WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN lc.Value 
+							WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0), 
+			maxturnover = (CASE	WHEN mc.Value IS NOT NULL THEN mc.Value
+								WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN lc.Value 
+								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0)) * c.credit, 
+			InheritLevel = CASE	WHEN mc.Value IS NOT NULL THEN 3
+								WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN 2 
+								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN 1 END
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_MatchControl mc WITH (NOLOCK) ON mc.MatchID= m.matchid
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_LeagueControl lc WITH (NOLOCK) ON lc.LeagueID= m.leagueid
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SportControl sc WITH (NOLOCK) ON sc.SportID= m.sporttype
+			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
+		WHERE eventstatus <> 'completed' AND s.matchid = @EventID AND s.SMAID = @SMAID AND s.InheritLevel = 4
+	END
+
 	--IF @UpdMode = 4
 	--BEGIN
 	--	UPDATE s

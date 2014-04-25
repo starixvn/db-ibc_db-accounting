@@ -28,10 +28,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 	
 	IF @SportID <= 0
 	BEGIN

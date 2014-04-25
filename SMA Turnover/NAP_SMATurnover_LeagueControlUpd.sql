@@ -74,13 +74,7 @@ BEGIN
 		IF @Value <> 0 AND @OldValue <> 0
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 4, @EventID = @LeagueID
 		IF @Value = 0 AND @OldValue <> 0
-			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 3, @EventID = @LeagueID
-		IF @Value <> 0 AND @OldValue = 0
-			IF EXISTS (	SELECT 1 
-						FROM DownlineTo_SportControl sc WITH (NOLOCK) 
-							INNER JOIN bodb02.dbo.league l WITH (NOLOCK) ON l.sporttype = sc.sportID
-						WHERE l.leagueid = @LeagueID)
-				EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 2, @EventID = @LeagueID		
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 3, @EventID = @LeagueID			
 	END
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
