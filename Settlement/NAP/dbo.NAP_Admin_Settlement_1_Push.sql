@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_1_Push]
+ALTER PROCEDURE [NAP_Admin_Settlement_1_Push]
 	@AdminId int,
 	@Matchid int,
 	@FullTimeHome smallint = NULL,
@@ -11,8 +11,7 @@ CREATE PROCEDURE [NAP_Admin_Settlement_1_Push]
 	@IP varchar(15) = '',
 
 	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT,
-	@DelayTime int = 0 OUTPUT
+	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
 
 /*	Creator: Kathy
@@ -29,7 +28,7 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500), @NextAllowSettleTime datetime	
 
-	SELECT @ErrCode = 0, @ErrMsg = '', @DelayTime = 0
+	SELECT @ErrCode = 0, @ErrMsg = ''
 	
 	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
 	FROM match m with(NOLOCK)
@@ -49,40 +48,22 @@ BEGIN
 		RETURN
 	END
 
-	--check whether it's at weekend peak-hour, from 7PM - 2AM (GMT+8)
-	if datename(weekday, getdate()) in ('Saturday','Sunday') and datepart(hour, getdate()) between 7 and 14  AND @matchcode NOT LIKE '%hedge%'
-	BEGIN
-		select @NextAllowSettleTime = VValue from SystemSettings with (nolock) where VName = 'NextAllowSettleTime' 
-
-		select @DelayTime = CASE WHEN DATEDIFF(ss, getdate(), @NextAllowSettleTime) < 0 THEN 0
-								ELSE DATEDIFF(ss, getdate(), @NextAllowSettleTime) END
-
-		if @DelayTime > 0
-		BEGIN
-			SELECT  @ErrCode = 1000003,
-					@ErrMsg = 'We prevent the frequent calculations during peak hour at weekend, please hold on and try again in ' + cast(@DelayTime as varchar(3)) + ' seconds. Thanks!'
-				
-			RETURN
-		END
-	END
-
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1] @matchid = ' + CONVERT(NVARCHAR(10),@MatchId) +
-								 ', @creator = ' + CONVERT(NVARCHAR(10),@AdminId) + 
-								 ', @fth = ' + ISNULL(CONVERT(NVARCHAR(10),@FullTimeHome),'NULL') +
-								 ', @fta = ' + ISNULL(CONVERT(NVARCHAR(10),@FullTimeAway),'NULL') +
-								 ', @hth = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeHome),'NULL') +
-								 ', @hta = ' + ISNULL(CONVERT(NVARCHAR(10),@HalfTimeAway),'NULL') +
+	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
+								 ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeHome),'NULL') +
+								 ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeAway),'NULL') +
+								 ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50),@HalfTimeHome),'NULL') +
+								 ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50),@HalfTimeAway),'NULL') +
 								 ', @goalrecord = '+ CASE when @GoalRecord IS NULL THEN 'NULL' ELSE '''' + CONVERT(nvarchar(50),@GoalRecord)+ '''' END +
 								 ', @betstatus = ' + CASE when @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(nvarchar(50),@BetStatus)+ '''' END +
-								 ', @action = ''' + CONVERT(NVARCHAR(20),@Action) + '''' +
-								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
+								 ', @action = ''' + CONVERT(NVARCHAR(50),@Action) + '''' +
+								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 	
 	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
 	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
 END
-
 
 
 GO

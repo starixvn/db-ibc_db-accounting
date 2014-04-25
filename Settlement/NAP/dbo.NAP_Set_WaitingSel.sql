@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Set_WaitingSel]
+ALTER PROCEDURE [NAP_Set_WaitingSel]
 	@MatchCode nvarchar(50) = '',
 	@SportType tinyint = 0,
 	@LeagueID int = 0 -- 0 for ALL Leagues
@@ -9,7 +9,8 @@ AS
 	DB: DBTXN/BODB02
 	
 	Revision:
-	
+		- 20140419@Lukas: reduce data return by excluding old matches
+		- 20140421@Kathy: Directly get IsExistFGLG value from bettrans (not use NAP_Set_MatchBetStatusSel)
 	Param's explanation:  
 		
 */
@@ -30,11 +31,7 @@ BEGIN
 	DECLARE @tblSingle table(matchid int, seqS int, seqP int) 
 	DECLARE	@tblParlay table(matchid int, seqS int,seqP int)
 	DECLARE	@tblSingle_Parlay table(matchid int, seqS int, seqP int)
-	DECLARE	@tblResult table(matchid int, seqS int, seqP int, IsExistFGLG bit)
-	DECLARE @strmatchid VARCHAR(MAX),
-			@betstatus VARCHAR(8000),
-			@intDocHandle INT
-
+	DECLARE	@tblResult table(matchid int, seqS int, seqP int)
 
 	;WITH SingleTicket AS
 	(
@@ -44,7 +41,8 @@ BEGIN
 								when s.IsCalculating = 3 then 4
 							END as seqS
 		FROM Single_Calculate_Queue s WITH(NOLOCK)
-		where s.matchid NOT IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK))
+		WHERE s.matchid NOT IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK))
+			AND Starttime > DATEADD(HH,-1,GETDATE())
 	)
 	INSERT INTO @tblSingle
 	SELECT s.matchid, min(seqS), NULL
@@ -59,7 +57,8 @@ BEGIN
 								when p.IsCalculating = 3 then 4
 							END as seqP
 		FROM Parlay_Calculate_Queue p WITH(NOLOCK)
-		where p.matchid NOT IN (SELECT matchid FROM Single_Calculate_Queue with(NOLOCK))
+		WHERE p.matchid NOT IN (SELECT matchid FROM Single_Calculate_Queue with(NOLOCK))
+			AND Starttime > DATEADD(HH,-1,GETDATE())
 	)
 	INSERT INTO @tblParlay
 	SELECT p.matchid, NULL, min(seqP)
@@ -79,7 +78,9 @@ BEGIN
 								when p.IsCalculating = 3 then 4
 							END as seqP
 		FROM Single_Calculate_Queue s WITH(NOLOCK)
-		INNER JOIN Parlay_Calculate_Queue p with(NOLOCK) ON s.matchid = p.matchid
+			INNER JOIN Parlay_Calculate_Queue p with(NOLOCK) ON s.matchid = p.matchid
+		WHERE (s.Starttime > DATEADD(HH,-1,GETDATE())
+		OR p.Starttime > DATEADD(HH,-1,GETDATE()))
 	)
 	INSERT INTO @tblSingle_Parlay
 	SELECT matchid, min(seqS), min(seqP)
@@ -87,36 +88,14 @@ BEGIN
 	group BY matchid	
 
 	INSERT INTO @tblResult
-	SELECT matchid, seqS, seqP, 0
+	SELECT matchid, seqS, seqP
 	FROM @tblSingle
 	UNION ALL
-	SELECT matchid, seqS, seqP, 0
+	SELECT matchid, seqS, seqP
 	FROM @tblParlay
 	UNION ALL
-	SELECT matchid, seqS, seqP, 0
+	SELECT matchid, seqS, seqP
 	FROM @tblSingle_Parlay
-
-	SELECT @strmatchid = (
-			SELECT matchid 
-			FROM @tblResult
-			FOR XML PATH('match'), ROOT('root')
-		)
-
-	EXEC DBTXN.bodb02.dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid, @betstatus = @betstatus OUTPUT
-		
-		--Create an internal representation of the XML document.      
-	EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
-
-	UPDATE m
-		SET IsExistFGLG = CASE WHEN rs.cnt = 0 OR rs.cnt IS NULL THEN 0 ELSE 1 END
-		FROM @tblResult m
-			LEFT JOIN (
-					SELECT matchid, cnt
-					FROM OPENXML(@intDocHandle,'/root/match',2)
-					with (matchid INT,
-						cnt INT) 
-			)rs ON m.matchid = rs.matchid
-
 	
 	select m.matchid, m.leagueid ,
 		hthomescore HalfTimeHomeScore,
@@ -143,7 +122,7 @@ BEGIN
 		ISNULL(mr.isPending,0) as isPending,  
 		ISNULL(mr.isUndecided,0) as isUndecided,  
 		CAST(CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore ,
-		t.IsExistFGLG,
+		CASE WHEN C.matchid IS NULL THEN 0 ELSE 1 END as IsExistFGLG,
 		case when t.seqS = 1 THEN 1
 					WHEN t.seqS = 2 then 0
 					when t.seqS = 3 then 2 
@@ -156,9 +135,14 @@ BEGIN
 				END as IsCalculatingMP,
 		convert(bit, CASE WHEN t.seqS IS NULL THEN 0 ELSE 1 END) as IsSingle,
 		convert(bit, CASE when t.seqP IS NULL THEN 0 ELSE 1 END) as IsMixParlay
+		
 	FROM @tblResult t
-	INNER JOIN match m with(NOLOCK) ON m.matchid = t.matchid
-	LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON t.matchid = mr.matchid
+	INNER JOIN DBPRO.bodb02.dbo.match m with(NOLOCK) ON m.matchid = t.matchid
+	LEFT JOIN (
+		SELECT b.matchid 
+		FROM bettrans b WITH(NOLOCK)where b.bettype = 14
+	) C ON C.matchid = t.matchid
+	LEFT OUTER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON t.matchid = mr.matchid
 	WHERE  m.leagueID = case when @LeagueID <> 0 then @LeagueID else m.leagueID end  
 		AND m.sporttype = case when @sporttype = 0 then m.sporttype else @sporttype end  	  		
 		AND (@matchcode = '' or (m.matchid = @matchid OR m.matchcode = @matchcode)) 
