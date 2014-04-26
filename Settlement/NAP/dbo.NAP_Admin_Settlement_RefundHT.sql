@@ -18,6 +18,7 @@ AS
 	Original: Admin_Settlement_RefundHT
 
 	Revisions:
+		- 20140421@Kathy: Add new bettype 126 [Redmine:#14449]
 	
 	
 	Param's Explanation:
@@ -114,7 +115,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -316,7 +317,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -520,6 +521,8 @@ BEGIN
 		END CATCH
 	END
 END
+
+
 
 GO
 

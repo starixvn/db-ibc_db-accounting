@@ -20,7 +20,9 @@ AS
 	Original: 
 	
 	Revisions:
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
+
 
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -115,7 +117,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype <> 14
+	WHERE matchid = @matchid AND bettype NOT IN (14, 127)
 	GROUP BY custid
 
 	DECLARE @status TABLE (
@@ -126,7 +128,7 @@ BEGIN
 
 	INSERT INTO @status
 	SELECT CASE 
-			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125) THEN 0
+			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 0
 			ELSE 1
 			END
 		,SUM(CASE 
@@ -140,7 +142,7 @@ BEGIN
 	FROM dbo.bettrans WITH (NOLOCK)
 	WHERE matchid = @matchid
 	GROUP BY CASE 
-			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125) THEN 0
+			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 0
 			ELSE 1
 			END
 
@@ -467,7 +469,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype <> 14
+	WHERE matchid = @matchid AND bettype NOT IN (14, 127)
 	GROUP BY custid
 
 	INSERT INTO #Balance
@@ -677,6 +679,8 @@ BEGIN
 		END CATCH
 	END
 END
+
+
 
 GO
 
