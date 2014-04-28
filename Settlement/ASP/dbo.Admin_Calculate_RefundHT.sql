@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Calculate_RefundHT]
+﻿ALTER PROCEDURE [Admin_Calculate_RefundHT]
 	@matchid int,
 	@IsExcludeBetdaq bit = 0,
 	@IsExcludeBetfair	bit = 0
@@ -16,6 +16,7 @@ AS
 		- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 		- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 		- 20140120@Lukas: insert settled command into LAS queue [Redmine:#8785]
+		- 20140421@Kathy: Add new bettype 126 [Redmine:#14718]
 
 	Param's Explanation:
 		+ @IsExcludeBetdaq: 
@@ -69,7 +70,7 @@ BEGIN
 			matchid=@matchid
 			--AND [status] not in (N'Void', N'Reject')
 			AND statusID not in (103,101,102)
-			AND bettype IN (7, 8, 15, 12,21,30, 125) 
+			AND bettype IN (7, 8, 15, 12,21,30, 125,126) 
 			AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
 							WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
 					ELSE 1 END
@@ -77,8 +78,6 @@ BEGIN
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO

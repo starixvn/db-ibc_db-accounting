@@ -28,10 +28,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 	
 	IF @MatchID <= 0
 	BEGIN
@@ -55,17 +55,38 @@ BEGIN
 	SELECT @OldValue = Value FROM DownlineTo_MatchControl WITH(NOLOCK) WHERE MatchID = @MatchID
 	IF @OldValue IS NOT NULL AND @OldValue = @Value
 		RETURN
+	
+	DECLARE @SportID INT, @LeagueID INT
+	SELECT @SportID = m.sporttype, @LeagueID = m.leagueid 
+	FROM bodb02.dbo.match m WITH (NOLOCK) 
+	WHERE m.matchid = @MatchID
 
 	UPDATE DownlineTo_MatchControl WITH (ROWLOCK,UPDLOCK)
 	SET Value = @Value
 	WHERE MatchID = @MatchID
 			
 	IF @@ROWCOUNT = 0
+	BEGIN
 		INSERT INTO DownlineTo_MatchControl (MatchID, Value)
 		VALUES (@MatchID, @Value)	
+		IF @Value = 0
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 7, @EventID = @MatchID	
+		ELSE
+		BEGIN			
+			IF EXISTS (	SELECT 1 
+						FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
+			OR EXISTS (	SELECT 1 
+						FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID)			
+				EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 6, @EventID = @MatchID	
+		END
+	END
 	ELSE
-		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 2, @EventID = @MatchID	
-
+	BEGIN
+		IF @Value <> 0 AND @OldValue <> 0
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 8, @EventID = @MatchID	
+		IF @Value  = 0 AND @OldValue <> 0
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 7, @EventID = @MatchID			
+	END
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_MatchControlUpd MatchID="' + COALESCE(CAST(@MatchID AS VARCHAR(10)), SPACE(1)) + '" ' 					
 					+ 'Value="' + COALESCE(CAST(@Value AS VARCHAR(20)), SPACE(1)) + '" ' 

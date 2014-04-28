@@ -8,7 +8,7 @@ AS
 	DB: DBTRANS.bodb02
 
 	Revisions:
-	   
+	   - 20140426@Kathy: Add 1H Total Goal (126) [Redmine:#14449]
 	Param's Explanation:
 	• @Mode:
 		CAL : All BetTypes
@@ -340,6 +340,7 @@ BEGIN
 		,@betcount_126 = @betcount_126
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END
+
 
 
 GO

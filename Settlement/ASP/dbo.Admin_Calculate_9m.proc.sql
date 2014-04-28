@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Admin_Calculate_9m]
+﻿ALTER PROCEDURE [Admin_Calculate_9m]
 	@matchid int,
 	@fth int, @fta int,
 	@hth int, @hta int,
@@ -7,7 +6,14 @@ ALTER PROCEDURE [dbo].[Admin_Calculate_9m]
 	@action varchar(10) = 'CAL',
 	@TennisTotal tinyint = NULL,
 	@VoidTransID varchar(2000) = '',
-	@UserID INT = 0
+	@UserID INT = 0,
+	
+	@mode int = 0, -- new parameter, remove once already convert to new version
+			-- 0 : original version, 1 : new version
+	@strXML varchar(MAX) ='' OUTPUT,
+	@statusID tinyint = 0,
+	@winlostdate smalldatetime = NULL
+	
 WITH RECOMPILE
 AS
 /*
@@ -34,9 +40,105 @@ AS
 		- 20120426@Lukas: Get from production & exclude DB044
 		- 20120801@Dan: add 4UP for 1st correct score
 		- 20121003@Dan: update betteam for 121,122
+		- 20140422@Kathy:  Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14718]
 */
 
 IF @@SERVERNAME IN ('DB042', 'DB043', 'DB044') RETURN
+
+
+IF @mode = 1
+BEGIN
+	Declare @odds smallmoney
+	Declare @commWinRate smallmoney, @commLostRate smallmoney
+	Declare @oldstatusID tinyint, @oldwinlost money, @winlost money
+	Declare @xml XML
+
+	-- get modds from XML string [edited by viet @ 20121213]
+	SET @xml = convert(xml, @strXML)
+ 	
+	declare @cal_modds as TABLE (transid bigint PRIMARY KEY, modds smallmoney, loseCnt tinyint)
+	INSERT INTO @cal_modds (transid, modds, loseCnt)
+	SELECT T.C.value('./@t', 'bigint'), -- transid
+		isnull(T.C.value('./@m', 'smallmoney'),0), -- modds
+		isnull(T.C.value('./@l', 'tinyint'),0) -- lostCnt
+	from @xml.nodes('/root/r') as T(C)	
+
+
+	UPDATE T
+	SET
+		statusID = @statusID,
+		[status] = CASE @statusID
+			WHEN 0 THEN 'running'
+			WHEN 103 THEN 'Refund'
+			WHEN 111 THEN 'DRAW'
+			WHEN 112 THEN 'WON'
+			WHEN 113 THEN 'LOSE'
+			END,
+		ruben = CASE @statusID
+			WHEN 0 THEN 0
+			ELSE 1
+			END,
+		winlostdate = @winlostdate,
+		@odds = modds = CASE
+			WHEN loseCnt > 0 THEN 0
+			WHEN @statusID = 0 THEN 0
+			ELSE m.modds
+			END,
+		
+		@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
+		WHEN '0' THEN 1
+		WHEN '1' THEN 0
+		ELSE 1 END,
+		@commLostRate = CASE comstatus
+		WHEN '0' THEN 1
+		WHEN '1' THEN 2
+		ELSE 1 END,
+		
+		@winlost = winlost = CASE
+			WHEN loseCnt > 0 THEN 0
+			WHEN @statusID = 0 THEN 0
+			ELSE stake*@odds
+			END,
+		awinlost = CASE 
+			WHEN @statusID = 113 and loseCnt > 0  THEN  stake*apositiontaking
+			WHEN @statusID IN (112, 113) THEN -stake*apositiontaking*(@odds-1)
+			ELSE 0
+			END,
+		mwinlost = CASE
+			WHEN @statusID = 113 and loseCnt > 0 THEN  stake*mpositiontaking
+			WHEN @statusID IN (112, 113) THEN -stake*mpositiontaking*(@odds-1)		 
+			ELSE 0
+			END,
+		swinlost = CASE
+			WHEN @statusID = 113 and loseCnt > 0 THEN  stake*spositiontaking 
+			WHEN @statusID IN (112, 113) THEN -stake*spositiontaking*(@odds-1)		
+			ELSE 0
+			END,
+
+		playercomm	= CASE @statusID 
+					WHEN 112 THEN @commWinRate  * stake*playerdiscount
+					WHEN 113 THEN @commLostRate * stake*playerdiscount
+					ELSE 0 END,
+		comm		= CASE @statusID
+					WHEN 112 THEN @commWinRate  * discount*stake*(1-apositiontaking)
+					WHEN 113 THEN @commLostRate * discount*stake*(1-apositiontaking)
+					ELSE 0 END,  
+		acomm		= CASE @statusID
+					WHEN 112 THEN @commWinRate  * adiscount*stake*(1-apositiontaking-mpositiontaking)
+					WHEN 113 THEN @commLostRate * adiscount*stake*(1-apositiontaking-mpositiontaking)
+					ELSE 0 END,
+		scomm		= CASE @statusID
+					WHEN 112 THEN @commWinRate  * sdiscount*stake*(1-apositiontaking-mpositiontaking-spositiontaking)
+					WHEN 113 THEN @commLostRate * sdiscount*stake*(1-apositiontaking-mpositiontaking-spositiontaking)
+					ELSE 0 END
+
+	FROM dbo.bettrans T 
+			INNER JOIN @cal_modds m ON T.transid = m.transid
+				
+
+
+		RETURN
+END -- IF @mode = 1
 
 
 -------------------------------------------------------------------------
@@ -58,13 +160,13 @@ BEGIN
 	UPDATE dbo.bettransm
 	SET winlostdate=@matchdate,[status]='Refund',statuswinlost=0,ruben=1, statusID = 103
 	WHERE matchid=@matchid
-		AND bettype <> 14
+		AND bettype NOT IN (14, 127)
 		AND statusID NOT IN (101,102)
 	
 	UPDATE dbo.BetParlayDetail
 	SET winlostdate=@matchdate,statuswinlost=0, statusID = 103
 	WHERE matchid=@matchid 
-		AND bettype <> 14
+		AND bettype NOT IN (14, 127)
 		AND statusID NOT IN (101,102)
 END
 -- ===================================================
@@ -72,12 +174,12 @@ ELSE IF @action = 'REFUND-FT'
 BEGIN
 	UPDATE dbo.bettransm
 	SET winlostdate=@matchdate,[status]='Refund',statuswinlost=0,ruben=1, statusID = 103
-	WHERE matchid=@matchid AND bettype NOT IN (7,8,12,15,21,30,14)
+	WHERE matchid=@matchid AND bettype NOT IN (7,8,12,15,21,30,14,126,127)
 		AND statusID NOT IN (101,102)
 	
 	UPDATE dbo.BetParlayDetail
 	SET winlostdate=@matchdate,statuswinlost=0, statusID = 103
-	WHERE matchid=@matchid AND bettype NOT IN (7,8,12,15,21,30,14)
+	WHERE matchid=@matchid AND bettype NOT IN (7,8,12,15,21,30,14,126,127)
 		AND statusID NOT IN (101,102)
 END
 	
@@ -85,12 +187,12 @@ ELSE IF @action = 'REFUND-HT'
 BEGIN
 	UPDATE dbo.bettransm
 	SET winlostdate=@matchdate,[status]='Refund',statuswinlost=0,ruben=1, statusID = 103
-	WHERE matchid=@matchid AND bettype IN (7,8,12,15,21,30)
+	WHERE matchid=@matchid AND bettype IN (7,8,12,15,21,30,126)
 		AND statusID NOT IN (101,102)
 
 	UPDATE dbo.BetParlayDetail
 	SET winlostdate=@matchdate,statuswinlost=0, statusID = 103
-	WHERE matchid=@matchid AND bettype IN (7,8,12,15,21,30)
+	WHERE matchid=@matchid AND bettype IN (7,8,12,15,21,30,126)
 		AND statusID NOT IN (101,102)
 END
 -- ===================================================
@@ -218,7 +320,13 @@ BEGIN
 									)
 							)  
 					then 1 else -1 end
-
+				WHEN 126 THEN -- 1H total goal
+					CASE WHEN (
+								CASE WHEN @TennisTotal IS NULL THEN @hth + @hta ELSE @TennisTotal END >= CAST(LEFT(betteam,1) AS int) AND
+								CASE WHEN @TennisTotal IS NULL then @hth + @hta ELSE @TennisTotal END <= (
+									CASE when RIGHT(betteam,1)= 'r' then 999 ELSE CAST(RIGHT(betteam,1)AS int) END 
+									)
+							) then 1 ELSE -1 END 
 				when 13 then -- Clean Sheet
 					CASE
 						WHEN betteam = 'hy' AND @fta = 0 THEN 1
@@ -323,7 +431,7 @@ BEGIN
 	FROM dbo.bettransm with (INDEX=IX_matchid)
 	WHERE 
 		matchid = @matchid
-		AND bettype <> 14
+		AND bettype NOT IN (14, 127)
 		AND statusID NOT IN (101,102)
 	
 	-- BetParlayDetail
@@ -408,6 +516,15 @@ BEGIN
 					case when (
 							case when @TennisTotal IS NULL then @fth+@fta else @TennisTotal end >= cast(left(betteam,1)as int) and
 							case when @TennisTotal IS NULL then @fth+@fta else @TennisTotal end <= (
+									case when right(betteam,1) = 'r' then 999 else 
+									cast(right(betteam,1) as int) end
+									)
+							)  
+					then 1 else -1 end
+				when 126 then -- 1H Total Goal
+					case when (
+							case when @TennisTotal IS NULL then @hth+@hta else @TennisTotal end >= cast(left(betteam,1)as int) and
+							case when @TennisTotal IS NULL then @hth+@hta else @TennisTotal end <= (
 									case when right(betteam,1) = 'r' then 999 else 
 									cast(right(betteam,1) as int) end
 									)
@@ -508,10 +625,11 @@ BEGIN
 			end
 	-- ========================
 	FROM dbo.BetParlayDetail pd with (updlock, INDEX=IX_matchid)
-	WHERE bettype <> 14 AND matchid = @matchid AND statusID NOT IN (101,102)
+	WHERE bettype not IN (14, 127) AND matchid = @matchid AND statusID NOT IN (101,102)
 END
 -- ===================================================
 -- ===================================================
+
 GO
 
 GO

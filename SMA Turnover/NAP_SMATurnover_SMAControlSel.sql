@@ -1,8 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_SMAControlSel]
-	@SMAName VARCHAR(30) = '',
-
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT
+	@SMAName VARCHAR(30) = ''
 AS
 /*
 	Created: Elodie
@@ -14,7 +11,7 @@ AS
 	
 	Parameter's explaination: 
 		
-	Example: EXEC NAP_SMATurnover_SMAControlSel @SMAName = 'SuperTest1'
+	Example: EXEC NAP_SMATurnover_SMAControlSel @SMAName = 'Super'
 	
 */
 BEGIN
@@ -22,22 +19,21 @@ BEGIN
 	
 	IF @SMAName = ''
 	BEGIN
-		SELECT c.UserName, c.custid, c.roleid, c.Currency, c.credit, sma.Offset
+		SELECT c.UserName, c.custid, c.roleid, e.currency, c.credit, sma.Offset
 		FROM DownlineTo_SMAControl sma WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.custInfo c WITH (NOLOCK) ON sma.SMAID = c.custID
+			INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON e.exchangeid = c.currency
+		ORDER BY c.UserName
 	END
 	ELSE
-	BEGIN
-		IF NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer WHERE UserName = @SMAName)
-		BEGIN
-			SELECT @ErrCode = 101, @ErrMsg = 'Username does not exists.'
-			RETURN
-		END
-		SELECT c.UserName, c.custid, c.roleid, c.Currency, ci.credit, sma.Offset
+	BEGIN		
+		SELECT ci.UserName, ci.custid, ci.roleid, e.currency, ci.credit, sma.Offset
 		FROM DownlineTo_SMAControl sma WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.custInfo ci WITH (NOLOCK) ON sma.SMAID = ci.custID
-			INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON ci.custID = c.custID
-		WHERE c.UserName = @SMAName
+			INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON e.exchangeid = ci.currency
+			--INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON ci.custID = c.custID
+		WHERE ci.UserName like '%' + @SMAName + '%'
+		ORDER BY ci.UserName
 	END
 END
 

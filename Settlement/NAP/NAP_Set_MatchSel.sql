@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Set_MatchSel] @FromDate DATETIME
+ALTER PROCEDURE [NAP_Set_MatchSel] @FromDate DATETIME
 	,@ToDate DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
@@ -15,7 +15,8 @@ AS
  DB: DB02.BODB02
  Original: Acc_Set_MatchSel
  Revisions:  
-
+		- 20140417@Kathy: re-arrange order list (follow by old system)
+		- 20140421@Kathy: get match status in queue
       
  Param explanation:  
 	@MatchCode: match code
@@ -121,7 +122,6 @@ BEGIN
 		,IsExistFGLG BIT
 		,WinOdds SMALLMONEY
 		,PlaceOdds SMALLMONEY
-		,isGroup INT
 		)
 
 	DECLARE @strmatchid VARCHAR(MAX)
@@ -162,7 +162,7 @@ BEGIN
 			WHEN 0 THEN ''
 			ELSE (
 					SELECT username
-					FROM custdb.dbo.custinfo WITH (NOLOCK)
+					FROM dbo.custinfo WITH (NOLOCK)
 					WHERE custid = mr.ConfirmHT
 					)
 			END suspenderHT
@@ -170,7 +170,7 @@ BEGIN
 			WHEN 0 THEN ''
 			ELSE (
 					SELECT username
-					FROM custdb.dbo.custinfo WITH (NOLOCK)
+					FROM dbo.custinfo WITH (NOLOCK)
 					WHERE custid = mr.ConfirmFT
 					)
 			END suspenderFT
@@ -182,8 +182,7 @@ BEGIN
 			WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1
 			ELSE 0
 			END IsKeyscore
-		,0
-		,0
+		,0 as IsExistFGLG
 		,0
 		,0
 	FROM dbo.match m WITH (NOLOCK)
@@ -199,7 +198,7 @@ BEGIN
 			WHEN @sporttype = 0 THEN m.sporttype
 			ELSE @sporttype
 			END AND (@matchcode = '' OR (m.matchid = @matchid OR m.matchcode = @matchcode)) AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) AND (@isRefund IS NULL OR (@isRefund = 1 AND betstatus LIKE 'Refund%') OR (@isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%'))
-
+	
 	SELECT @rowcount = 0
 		,@max_matchid = 0
 
@@ -249,24 +248,45 @@ BEGIN
 			) rs ON m.matchid = rs.matchid
 	END
 
-	UPDATE #matchList
-	SET isGroup = CASE 
-			WHEN eventstatus = 'Running' THEN 1
-			WHEN eventstatus = 'Closed' THEN 2
-			WHEN eventstatus = 'completed' THEN 3
-			WHEN eventstatus LIKE '%Refund%' THEN 3
-			ELSE 0
-			END
-	
-	UPDATE m
-	SET m.isGroup = ml.isGroup
-	FROM #matchList m
-	INNER JOIN #matchList ml on ml.sporttype = m.sporttype
-		AND ml.homeid = m.homeid 
-		AND ml.awayid = m.awayid
-		AND ml.leagueid = m.leagueid
-		AND ml.isGroup <> 0
-	where m.isGroup = 0
+	DECLARE @tblSingle table(matchid int, seqS int, seqP int) 
+	DECLARE	@tblParlay table(matchid int, seqS int,seqP int)
+	DECLARE	@tblSingle_Parlay table(matchid int, seqS int, seqP int)
+	DECLARE	@tblResult table(matchid int, seqS int, seqP int)
+
+	INSERT INTO @tblSingle
+	SELECT matchid, MAX(IsCalculating), NULL
+	FROM DBTXN.bodb02.dbo.Single_Calculate_Queue with(NOLOCK)
+	WHERE matchid NOT IN (SELECT matchid FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue with(NOLOCK))
+	AND Starttime > DATEADD(HH,-1,GETDATE())
+	AND IsCalculating IN (1,0)
+	group BY matchid
+
+	INSERT INTO @tblParlay
+	SELECT matchid, NULL, MAX(isCalculating)
+	FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue  WITH(NOLOCK)
+		WHERE matchid NOT IN (SELECT matchid FROM DBTXN.bodb02.dbo.Single_Calculate_Queue with(NOLOCK))
+			AND Starttime > DATEADD(HH,-1,GETDATE())	
+			AND IsCalculating IN (0, 1)
+	group BY matchid	
+
+	INSERT INTO @tblSingle_Parlay
+	SELECT s.matchid, MAX(s.IsCalculating), MAX(p.IsCalculating)
+	FROM DBTXN.bodb02.dbo.Single_Calculate_Queue s WITH(NOLOCK) 
+	INNER JOIN DBTXN.bodb02.dbo.Parlay_Calculate_Queue p WITH(NOLOCK) ON p.matchid = s.matchid
+	WHERE (p.IsCalculating IN (0, 1) or s.IsCalculating IN (0, 1))
+	and (s.Starttime > DATEADD(HH,-1,GETDATE())
+			or p.Starttime > DATEADD(HH,-1,GETDATE()))
+	group BY s.matchid	
+
+	INSERT INTO @tblResult
+	SELECT matchid, seqS, seqP
+	FROM @tblSingle
+	UNION ALL
+	SELECT matchid, seqS, seqP
+	FROM @tblParlay
+	UNION ALL
+	SELECT matchid, seqS, seqP
+	FROM @tblSingle_Parlay
 
 	SELECT m.HalfTimeHomeScore
 		,m.HalfTimeAwayScore
@@ -299,10 +319,18 @@ BEGIN
 		,m.IsExistFGLG
 		,m.WinOdds
 		,m.PlaceOdds
+		,case when ISNULL(t.seqS,0) > 1 THEN NULL ELSE t.seqS end as IsCalculatingSingle
+		,case when isnull(t.seqP,0) >1 THEN NULL ELSE t.seqP END  as IsCalculatingMP
 	FROM #matchList m
-	ORDER BY m.sporttype, m.leagueid, m.isGroup,
-		m.eventdate, 
-		m.kickofftime
+	LEFT JOIN @tblResult t ON t.matchid = m.matchid
+	ORDER BY case m.eventstatus when 'completed' then 1 when 'refund' then 1 else 0 END
+		, m.eventdate
+		,m.kickofftime
+		, m.sporttype
+		,m.leagueid
+		,m.matchid
+		,m.betstatus
+		,m.matchcode			
 
 
 	DROP TABLE #matchList

@@ -89,6 +89,7 @@ BEGIN
 				) OR (s.AdminId = @AdminId)
 			)
 	AND IsSent = 0
+	AND s.Message IS NOT NULL
 
 	UPDATE s
 	SET s.IsSent = 1
@@ -113,6 +114,7 @@ BEGIN
 				) OR (s.AdminId = @AdminId)
 			)
 	AND s.IsSent = 0
+	AND s.Message IS NOT NULL
 
 END
 

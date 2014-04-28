@@ -1,5 +1,4 @@
-CREATE PROCEDURE [NAP_SelSports]
-	@isGetAll BIT = 0
+ALTER PROCEDURE [NAP_SelSports] @isGetAll BIT = 0
 AS
 /*
 	Created by: 20131223@Kathy
@@ -13,24 +12,13 @@ AS
 		@isGetAll: 1 - get all sports for view result, 0- get only sportbook
 		
 */
-
 BEGIN
-	SET NOCOUNT ON 
-	
-	SELECT * 
-	FROM	Sports WITH (NOLOCK)
-	WHERE	sporttype not in(
-				201, --Financial 				
-				251,252,253,  --Casino, Bingo, Game 
-				162, --live casino	
-				161, -- Number game
-				180, 181, 182, 183, 184, 185, 186 --virtual sports
-			) 
-			AND
-			(@isGetAll=1 or sporttype not in(				
-				151,152,153  --Racing												
-			))
-END	
+	SET NOCOUNT ON
+
+	SELECT *
+	FROM Sports WITH (NOLOCK)
+	WHERE (SportType <= 99 OR SportType = 154) OR (@isGetAll = 1 AND SportType IN (151, 152, 153))
+END
 
 
 GO

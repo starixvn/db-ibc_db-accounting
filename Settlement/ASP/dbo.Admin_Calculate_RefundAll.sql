@@ -20,6 +20,7 @@ AS
 	- 20140120@Lukas: insert settled command into LAS queue [Redmine:#8785]
 	- 20140312@Kathy: Execute settlement for abandoned/postponed matches (bettype 13,26,27) [Redmine:#12049] 
 	- 20140411@Kathy: Add more param for LAS command
+	- 20140421@Kathy: Add 1H FGLG bettypes (127) [Redmine:#14718]
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -67,7 +68,7 @@ BEGIN
 		where
 			matchid=@matchid
 			AND statusID not in (103,101,102)	
-			AND bettype NOT In (14)
+			AND bettype NOT In (14, 127)
 			AND bettype not between 1301 and 1334 -- exclude sporting solution product
 			AND 1 = CASE WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0 
 							WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0

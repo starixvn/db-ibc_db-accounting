@@ -28,10 +28,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 	
 	IF @SportID <= 0
 	BEGIN
@@ -65,7 +65,7 @@ BEGIN
 	ELSE --@Value = 0
 	BEGIN
 		DELETE DownlineTo_SportControl WHERE SportID = @SportID
-		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = @SportID	
+		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 1, @EventID = @SportID	
 	END
 
 	DECLARE @LogData NVARCHAR(4000), @TrackingValue2 NVARCHAR(4000)

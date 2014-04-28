@@ -39,9 +39,28 @@ BEGIN
 		RETURN
 	END			
 
+	DECLARE @Value INT, @SportID INT, @LeagueID INT
+
+	SELECT @SportID = m.sporttype, @LeagueID = m.leagueid 
+	FROM bodb02.dbo.match m WITH (NOLOCK) 
+	WHERE m.matchid = @MatchID
+
+	SELECT @Value = Value FROM DownlineTo_Match_SMAControl WITH (NOLOCK) WHERE MatchID = @MatchID AND SMAID = @SMAID
+
 	DELETE DownlineTo_Match_SMAControl WHERE SMAID = @SMAID AND MatchID = @MatchID			
 
-	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 3, @SMAID = @SMAID, @MatchID = @MatchID
+	IF @Value <> 0
+	BEGIN
+		IF NOT EXISTS (	SELECT 1 
+						FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
+		AND NOT EXISTS (SELECT 1 
+						FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID)			
+		AND NOT EXISTS (SELECT 1 
+						FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID)	
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 11, @EventID = @MatchID	
+		ELSE
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 13, @EventID = @MatchID	
+	END	
 
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_SMAControlByEventDel SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					
