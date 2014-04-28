@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Admin_Match_Update]
+﻿ALTER PROCEDURE [Admin_Match_Update]
 (
 	@Command VARCHAR(100),
 	@MatchID INT,
@@ -37,6 +35,7 @@ AS
 							- Admin_Settlement_Refund_All
 							- Admin_Settlement_Refund_FGLG
 		- 20130507@Lukas: remove rollback part in 20130415@Lukas
+		- 20140423@Kathy: Modify betstatus value (Offer 1H FGLG) [Redmine:#14718]
 */
 BEGIN
 	SET @BetStatus = ISNULL(@BetStatus, N'')
@@ -71,7 +70,11 @@ BEGIN
 	BEGIN
 		UPDATE match WITH(ROWLOCK,UPDLOCK) 
 		SET eventstatus='Completed', ruben=1, finalhomescore=0, finalawayscore=0, hthomescore=0, htawayscore=0
-			,betstatus= 'Refund' + CASE WHEN CHARINDEX('FL:',ISNULL(betstatus,'')) = 0 THEN '' ELSE ';' + SUBSTRING(ISNULL(betstatus,''),CHARINDEX('FL:',ISNULL(betstatus,'')),6) END	
+			--,betstatus= 'Refund' + CASE WHEN CHARINDEX('FL:',ISNULL(betstatus,'')) = 0 THEN '' ELSE ';' + betstatus END	
+			,betstatus = 'Refund' + CASE when CHARINDEX('1FL:',ISNULL(betstatus,'')) = 0 
+										 THEN ''
+										 ELSE ';' + SUBSTRING(betstatus,CHARINDEX('1FL', betstatus),LEN(betstatus))
+									END 
 			,GoalRecord =''
 			,changetime = GETDATE(), settleTime = GETDATE()
 		WHERE matchid=@MatchID

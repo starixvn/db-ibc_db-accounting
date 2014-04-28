@@ -1,4 +1,5 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_RefundFGLG] @matchid INT
+ALTER PROCEDURE cc @matchid INT
+	,@action varchar(10) = 'CAL'
 	,@LGOnly BIT
 	,@matchdate DATETIME
 AS
@@ -8,7 +9,7 @@ AS
 	DB: DBTXN.BODB02
 
 	Revisions: 
-		
+		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 				
 */
 BEGIN
@@ -18,7 +19,10 @@ BEGIN
 	BEGIN
 		DECLARE @sqlCommand NVARCHAR(MAX)
 
-		SET @sqlCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG_External] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) + ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
+		SET @sqlCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG_External] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+						+ ', @action = ''' + CONVERT(NVARCHAR(10),@action) + ''''
+						+ ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) 
+						+ ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
 
 		INSERT INTO Acc_Externalsettlement (
 			SPName
@@ -51,7 +55,10 @@ BEGIN
 			DECLARE @LASCommand NVARCHAR(1000)
 				,@createdDate DATETIME
 
-			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + + ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) + ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
+			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+							 + ', @action = ''' + CONVERT(NVARCHAR(10),@action) + ''''
+							 + ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) 
+							 + ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
 				,@createdDate = GETDATE()
 
 			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundFGLG'
@@ -66,6 +73,13 @@ BEGIN
 
 		RETURN
 	END
+
+	DECLARE @bettype int
+
+	select @bettype = CASE WHEN @action = 'CAL-HT' then 127
+						   when @action = 'CAL-FT' then 14
+						   ELSE 0
+					  end 
 
 	WHILE 1 = 1
 	BEGIN
@@ -83,7 +97,9 @@ BEGIN
 			,ruben = 1
 		WHERE matchid = @matchid
 			--AND [status] not in ('Void', 'Reject')
-			AND statusID NOT IN (103, 101, 102) AND bettype = 14
+			AND statusID NOT IN (103, 101, 102) 
+			AND ((@bettype = 0 AND bettype IN (14,127)) 
+					OR (bettype = @bettype))
 			--AND ruben = 1 
 			AND right(betteam, 1) = CASE 
 				WHEN @LGOnly = 1 THEN '2'
@@ -104,7 +120,9 @@ BEGIN
 			,statusID = 103
 			,statuswinlost = 0
 			,ruben = 1
-		WHERE bettype = 14 AND matchid = @matchid AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
+		WHERE ((@bettype = 0 and bettype in (14, 127)) OR (bettype = @bettype))
+		AND matchid = @matchid 
+		AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
 				WHEN @LGOnly = 1 THEN '2'
 				ELSE right(betteam, 1)
 				END
@@ -114,14 +132,14 @@ BEGIN
 		SET winlostdate = @matchdate
 			,statusID = 103
 			,statuswinlost = 0
-		WHERE bettype = 14 AND matchid = @matchid AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
+		WHERE ((@bettype = 0 and bettype IN (14, 127)) OR (bettype = @bettype)) 
+		AND matchid = @matchid AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
 				WHEN @LGOnly = 1 THEN '2'
 				ELSE right(betteam, 1)
 				END
 	END
 		-------------End: Refund FGLG for bettransm-------------
 END
-
 
 GO
 

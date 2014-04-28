@@ -1,5 +1,4 @@
-
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
+ALTER PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
 	,@mode VARCHAR(15) = 'CAL'
 	,@action VARCHAR(20) = 'CAL'
 	,@fth INT = NULL
@@ -22,6 +21,8 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@HTFT NVARCHAR(10) = NULL
 	,@FGLG1 VARCHAR(10) = NULL
 	,@FGLG2 VARCHAR(10) = NULL
+	,@HT_FGLG1 VARCHAR(10) = NULL
+	,@HT_FGLG2 VARCHAR(10) = NULL
 	,@TennisTotal SMALLINT = NULL
 	,@T_Home SMALLINT = NULL
 	,@T_Away SMALLINT = NULL
@@ -57,7 +58,9 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betcount_21 INT = NULL
 	,@betcount_30 INT = NULL
 	,@betcount_125 INT = NULL
+	,@betcount_126 INT = NULL
 	,@betcount_14 INT = NULL
+	,@betcount_127 INT = NULL
 	,@row_count INT = NULL
 	,@ticket_count INT = NULL -- ticket number of bettype
 	,@IsSettleAbandonedMatch BIT = 0
@@ -66,6 +69,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@IsExcludeBetfair BIT = 0
 	,@IsSettleAbandonedMatchIBC BIT = 0
 	,@LGOnly BIT = NULL
+	,@IncludeLG BIT = NULL
 	,@matchdate DATETIME = NULL
 	,@CalledByBrokerService BIT = 0
 AS
@@ -80,8 +84,9 @@ AS
 		- 20140424@Lukas: add DBTP server 
 	Param's Explanation:
 		@action			@mode
-		 CAL			 CAL, CAL-HT, CAL-FT, UNDO, CAL-FGLG
-		 REFUND			 ALL, HT, FT, FGLG, BetDaq, BetFair
+		 CAL			 CAL, CAL-HT, CAL-FT, UNDO, HT-FGLG, FT-FGLG
+		 REFUND			 ALL, HT, FT, BetDaq, BetFair
+		 REFUND-FGLG	 CAL, CAL-HT, CAL-FT
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -180,6 +185,14 @@ BEGIN
 			,@FGLG2 = ' + CASE 
 				WHEN @FGLG2 IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @FGLG2) + ''''
+				END + '
+			,@HT_FGLG1 = ' + CASE 
+				WHEN @HT_FGLG1 IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(NVARCHAR(50), @HT_FGLG1) + ''''
+				END + '
+			,@HT_FGLG2 = ' + CASE 
+				WHEN @HT_FGLG2 IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(NVARCHAR(50), @HT_FGLG2) + ''''
 				END + '
 			,@TennisTotal = ' + CASE 
 				WHEN @TennisTotal IS NULL THEN 'NULL'
@@ -321,9 +334,17 @@ BEGIN
 				WHEN @betcount_125 IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @betcount_125)
 				END + '
+			,@betcount_126 = ' + CASE 
+				WHEN @betcount_126 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @betcount_126)
+				END + '
 			,@betcount_14 = ' + CASE 
 				WHEN @betcount_14 IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @betcount_14)
+				END + '
+			,@betcount_127 = ' + CASE 
+				WHEN @betcount_127 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @betcount_127)
 				END + '
 			,@row_count = ' + CASE 
 				WHEN @row_count IS NULL THEN 'NULL'
@@ -356,6 +377,10 @@ BEGIN
 			,@LGOnly = ' + CASE 
 				WHEN @LGOnly IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @LGOnly)
+				END + '
+			,@IncludeLG = ' + CASE 
+				WHEN @IncludeLG IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @IncludeLG)
 				END + '
 			,@matchdate = ' + CASE 
 				WHEN @matchdate IS NULL THEN 'NULL'
@@ -490,7 +515,7 @@ BEGIN
 
 					-- bettype 13 : Clean Sheet 
 					-- IF @betcount_13 > 0 
-										EXEC dbo.NAP_Admin_Calculate_13 @matchid
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid
 						,13
 						,@fth
 						,@fta
@@ -528,7 +553,7 @@ BEGIN
 
 					-- bettype 26 : Both/One/Neither team to score  
 					-- IF @betcount_26 > 0 
-										EXEC dbo.NAP_Admin_Calculate_26 @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid
 						,26
 						,@fth
 						,@fta
@@ -536,7 +561,7 @@ BEGIN
 
 					-- bettype 27 : To win to nil 
 					-- IF @betcount_27 > 0 
-										EXEC dbo.NAP_Admin_Calculate_27 @matchid
+					EXEC dbo.NAP_Admin_Calculate_27 @matchid
 						,27
 						,@fth
 						,@fta
@@ -628,6 +653,12 @@ BEGIN
 					,@scorediff_ht
 					,NULL
 					,@betcount_30
+
+				-- bettype 126 : 1H Total Goal
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid
+					,126
+					,@totalht
+					,@betcount_126
 			END
 
 			IF @Mode = 'UNDO'
@@ -635,14 +666,34 @@ BEGIN
 				EXEC dbo.NAP_Admin_Calculate_Undo @matchid
 			END
 
-			IF @Mode = 'CAL-FGLG'
+			IF @Mode = 'CAL-HTFGLG'
 			BEGIN
-				EXEC dbo.NAP_Admin_Calculate_4 @matchid
-					,@betcount_14
-					,@FGLG1
-					,0
-					,@FGLG2
-					,@ticket_count
+				EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+					,@bettype = @betcount_127
+					,@correctscore = @HT_FGLG1
+					,@goaldiff = @goaldiff
+					,@FGLG2 = @HT_FGLG2
+					,@betcount = @ticket_count
+			END
+
+			IF @mode = 'CAL-FTFGLG'
+			BEGIN
+				EXEC dbo.Admin_Calculate_4 @matchid = @matchid
+					,@bettype = @betcount_14
+					,@correctscore = @FGLG1
+					,@goaldiff = @goaldiff
+					,@FGLG2 = @FGLG2
+					,@betcount = @ticket_count
+
+				IF @IncludeLG = 0
+				BEGIN
+					EXEC dbo.Admin_Calculate_4 @matchid = @matchid
+						,@bettype = @betcount_14
+						,@correctscore = @FGLG1
+						,@goaldiff = @goaldiff
+						,@FGLG2 = @FGLG2
+						,@betcount = @ticket_count
+				END
 			END
 		END
 
@@ -660,7 +711,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_13
 				IF @betcount_13 IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
 						,@bettype = 13
 						,@fth = @fth
 						,@fta = @fta
@@ -671,7 +722,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_26
 				IF @betcount_26 IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 26
 						,@fth = @fth
 						,@fta = @fta
@@ -682,7 +733,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_27
 				IF @betcount_27 IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
 						,@bettype = 27
 						,@fth = @fth
 						,@fta = @fta
@@ -692,7 +743,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @row_count IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
@@ -738,7 +789,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_13
 				IF @betcount_13 IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
 						,@bettype = 13
 						,@fth = @fth
 						,@fta = @fta
@@ -749,7 +800,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_26
 				IF @betcount_26 IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 26
 						,@fth = @fth
 						,@fta = @fta
@@ -760,7 +811,7 @@ BEGIN
 
 				-- NAP_Admin_Calculate_27
 				IF @betcount_27 IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_27 @matchid = @matchid
 						,@bettype = 27
 						,@fth = @fth
 						,@fta = @fta
@@ -771,19 +822,12 @@ BEGIN
 
 				-- NAP_Admin_Calculate_RefundAll
 				IF @row_count IS NOT NULL
-										EXEC dbo.NAP_Admin_Calculate_RefundAll @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_RefundAll @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@fth = @fth
 						,@fta = @fta
-			END
-
-			IF @mode = 'FGLG'
-			BEGIN
-				EXEC dbo.NAP_Admin_Calculate_RefundFGLG @matchid = @matchid
-					,@LGOnly = @LGOnly
-					,@matchdate = @matchdate
 			END
 
 			IF @mode = 'BetDaq'
@@ -796,8 +840,17 @@ BEGIN
 				EXEC dbo.NAP_Admin_Calculate_Refund_BetFair @matchid = @matchid
 			END
 		END
+
+		IF @action = 'REFUND-FGLG'
+		begin
+				EXEC dbo.NAP_Admin_Calculate_RefundFGLG @matchid = @matchid
+					,@action = @mode
+					,@LGOnly = @LGOnly
+					,@matchdate = @matchdate
+		end 
 	END
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Main] TO [vnteam] AS [dbo]
 

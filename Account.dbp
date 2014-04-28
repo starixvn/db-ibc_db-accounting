@@ -263,6 +263,11 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_CustomerSelSiteByUserName.sql"
          Script = "dbo.Acc_CustomerUpdMoveSite.sql"
       End
+      Begin Folder = "SmartPunters"
+         Script = "dbo.Acc_SmartPunterDel.sql"
+         Script = "dbo.Acc_SmartPunterIns.sql"
+         Script = "dbo_Acc_SmartPunterUpd.sql"
+      End
       Begin Folder = "Status"
          Script = "Acc_CustomerSelCasinoBonusStatus.sql"
          Script = "Acc_CustomerUpdDisableCasinoBonus.sql"

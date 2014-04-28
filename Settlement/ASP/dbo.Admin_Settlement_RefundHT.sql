@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_RefundHT]
+﻿ALTER PROCEDURE [Admin_Settlement_RefundHT]
 	@matchid int,
 	@adminid int,
 	@IsExcludeBetdaq bit = 0,
@@ -42,6 +42,7 @@ Revisions:
 	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 	- 20140117@Kathy: Change ErrCode value
+	- 20140421@Kathy: Add new bettype 126
 	
 Param's Explanation:
 • @matchid: matchid of match to Refund HT
@@ -108,7 +109,7 @@ CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 INSERT INTO #BalanceBefore
 SELECT custid, SUM(winlost-actual_stake+playercomm)
 FROM dbo.bettrans with (rowlock)
-WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125)
+WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125,126)
 GROUP BY custid
 
 IF @IsSettleAbandonedMatch = 1 SELECT @IsExcludeBetdaq = 1 
@@ -282,7 +283,7 @@ END
 INSERT INTO #BalanceAfter
 SELECT custid, SUM(winlost-actual_stake+playercomm)
 FROM dbo.bettrans with (rowlock)
-WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125)
+WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125,126)
 GROUP BY custid
 
 
@@ -439,6 +440,8 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
+
+
 
 
 GO

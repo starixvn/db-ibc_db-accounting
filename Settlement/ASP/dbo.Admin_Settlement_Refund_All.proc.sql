@@ -16,7 +16,7 @@
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
- 
+
 /*
 Created: Thien
 Task : refund tickets 
@@ -47,6 +47,7 @@ Revisions:
 	- 20140106@Elodie: Option to exclude Bet Fair tickets in refund process (Redmine:#9764)
 	- 20140117@Kathy: Change ErrCode value
 	- 20140312@Kathy: Execute settlement for abandoned/postponed matches of Soccer (bettype: 13,26,27) [Redmine:#12049]
+	- 20140421@Kathy: Add 1H FGLG bettypes (127) [Redmine:#14718]
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -128,7 +129,7 @@ INSERT INTO #BalanceBefore
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
 WHERE	matchid = @matchid 
-		AND bettype <> 14
+		AND bettype not IN (14, 127)
 GROUP BY custid
 
 IF @IsSettleAbandonedMatch = 1 SELECT @IsExcludeBetdaq = 1
@@ -343,14 +344,14 @@ BEGIN
 
 END
 
-EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_Refund_All', @MatchID = @matchid, @creator = @creator
+EXEC DBPRO.BODB02.dbo.Admin_Match_Update @Command = 'Admin_Settlement_Refund_All', @MatchID = @matchid, @creator = @creator, @betstatus = @betstatus
 EXEC dbo.Admin_Calculate_RefundAll @matchid = @matchid, @IsExcludeBetdaq = @IsExcludeBetdaq, @IsExcludeBetfair = @IsExcludeBetfair, @IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC, @fth = @fth, @fta = @fta
 
 INSERT INTO #BalanceAfter	
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
 WHERE	matchid = @matchid 
-		AND bettype <> 14
+		AND bettype NOT IN (14, 127)
 GROUP BY custid
 
 
@@ -500,8 +501,6 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
-
-
 
 
 

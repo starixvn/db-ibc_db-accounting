@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Admin_Calculate_4_external]
+﻿ALTER PROCEDURE [Admin_Calculate_4_external]
 	@matchid int,
 	@bettype smallint,
 	@correctscore nvarchar(10),
@@ -32,6 +30,8 @@ AS
 		- 20120815@Dan: Add virtual soccer
 		- 20121017@Lukas: correct bettypeid 1204 for virtual sports
 		- 20121019@Johnson: Check double comm losing status
+		- 20121126@Dan: Add bettype 1235 for Virtual Tennis
+		- 20140421@Kathy: Add 1H FGLG bettypes (127) [Redmine:#14718]
 */
 
 
@@ -76,30 +76,30 @@ Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney, @m
 			ELSE 1 END,--'s','m'
 			
 		WinLost = CASE
-			WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end)
-			WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end) * 0.5
+			WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end)
+			WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * 0.5
 			WHEN @modds =  0	THEN actual_stake
 			WHEN @modds = -0.25	THEN actual_stake * 0.5
 			WHEN @modds < -0.25	THEN 0
 			END,
 
 		aWinLost = CASE
-			WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end) * -apositiontaking
-			WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end) * -apositiontaking * 0.5
+			WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -apositiontaking
+			WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -apositiontaking * 0.5
 			WHEN @modds =  0	THEN 0
 			WHEN @modds = -0.25	THEN actual_stake * apositiontaking * 0.5
 			WHEN @modds < -0.25	THEN actual_stake * apositiontaking
 			END,
 		mWinLost = CASE
-			WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end) * -mpositiontaking
-			WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end) * -mpositiontaking * 0.5
+			WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -mpositiontaking
+			WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -mpositiontaking * 0.5
 			WHEN @modds =  0    	THEN 0
 			WHEN @modds = -0.25 	THEN actual_stake * mpositiontaking * 0.5
 			WHEN @modds < -0.25 	THEN actual_stake * mpositiontaking
 			END,
 		sWinLost = CASE
-			WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end) * -spositiontaking
-			WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,1204) then odds-1 else odds end) end) * -spositiontaking * 0.5
+			WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -spositiontaking
+			WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -spositiontaking * 0.5
 			WHEN @modds =  0    	THEN 0
 			WHEN @modds = -0.25 	THEN actual_stake * spositiontaking * 0.5
 			WHEN @modds < -0.25 	THEN actual_stake * spositiontaking
@@ -164,7 +164,7 @@ Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney, @m
 		SET @FGLG2 = @correctscore
 
 	-------------Start:Settle FGLG for bettransm-------------
-	if @bettype = 14
+	if @bettype in( 14, 127)
 	BEGIN
 		select @matchdate=eventdate from match with (NOLOCK) where matchid=@matchid
 
@@ -222,6 +222,8 @@ Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney, @m
 				
 	END 
 	-------------Stop:Settle FGLG for bettransm-------------
+
+
 
 
 GO

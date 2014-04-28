@@ -25,6 +25,7 @@ AS
 
 	Revisions: 
 		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 	
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -134,7 +135,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype <> 14
+	WHERE matchid = @matchid AND bettype not IN (14, 127)
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -413,7 +414,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype <> 14
+	WHERE matchid = @matchid AND bettype NOT in (14,127)
 	GROUP BY custid
 
 	INSERT INTO #Balance
@@ -618,6 +619,7 @@ BEGIN
 			,@Log
 	END
 END
+
 
 
 GO

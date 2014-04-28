@@ -11,8 +11,9 @@ AS
 	DB: DBTXN/BODB02
 	
 	Revisions:
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
-		-20140411@Kathy: Add more param for LAS command
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140411@Kathy: Add more param for LAS command
+		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -57,7 +58,7 @@ BEGIN
 			,comm = 0
 			,acomm = 0
 			,scomm = 0
-		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
+		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 127) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
@@ -69,6 +70,7 @@ BEGIN
 			BREAK
 	END
 END
+
 
 GO
 
