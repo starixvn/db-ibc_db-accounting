@@ -23,7 +23,7 @@ AS
 				  3: + Change max turnover because league setting is inserted a unlimited value (U)
 					 + Change max turnover because league setting is updated from a specific value to a unlimited value (X -> U)
 					 + Change max turnover because league setting which does not have sport setting is deleted a specific value
-				  4: Change max turnover because league setting is updated from a specific value to a other specific value (X -> X1)
+				  4: Change max turnover because league setting is updated from a specific value to a another specific value (X -> X1)
 				  5: Change max turnover because league setting which have sport setting is deleted a specific value (X)
 
 				  --Insert/Update/Delete Match setting
@@ -31,7 +31,7 @@ AS
 				  7: + Change max turnover because match setting is inserted a unlimited value (U)
 					 + Change max turnover because match setting is updated from a specific value to a unlimited value (X -> U)
 					 + Change max turnover because match setting which does not have sport setting and league setting is deleted a specific value
-				  8: Change max turnover because match setting is updated from a specific value to a other specific value (X -> X1)
+				  8: Change max turnover because match setting is updated from a specific value to a another specific value (X -> X1)
 				  9: Change max turnover because match setting which have sport setting or league setting is deleted a specific value (X)
 
 				  --Insert/Update/Delete Match_SMA setting
@@ -39,13 +39,13 @@ AS
 				  11: + Change max turnover because Match_SMA setting is inserted a unlimited value (U)
 					  + Change max turnover because Match_SMA setting is updated from a specific value to a unlimited value (X -> U)
 					  + Change max turnover because Match_SMA setting which does not have sport setting and league setting and match setting is deleted a specific value
-				  12: Change max turnover because Match_SMA setting is updated from a specific value to a other specific value (X -> X1)
+				  12: Change max turnover because Match_SMA setting is updated from a specific value to a another specific value (X -> X1)
 				  13: Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is deleted a specific value (X)
 					
 				  --Insert/Update/Delete SMA setting
 				  14: + Change max turnover because SMA setting is inserted
 					  + Change max turnover because SMA setting is updated from a specific value to a unlimited value (X -> U) 
-				  15: Change max turnover because SMA setting is updated from a specific value to a other specific value (X -> X1) 
+				  15: Change max turnover because SMA setting is updated from a specific value to a another specific value (X -> X1) 
 				  16: Change max turnover because SMA setting is deleted a specific value (X) 
 
 		@EventID: sportID or leagueID or matchID
@@ -101,7 +101,7 @@ BEGIN
 														WHERE eventstatus <> 'completed' AND m.leagueid = @EventID)
 	END
 
-	--Change max turnover because league setting is updated from a specific value to a other specific value (X -> X1)
+	--Change max turnover because league setting is updated from a specific value to a another specific value (X -> X1)
 	IF @UpdMode = 4 
 	BEGIN
 		UPDATE s
@@ -151,7 +151,7 @@ BEGIN
 												WHERE eventstatus <> 'completed' AND m.matchid = @EventID)
 	END
 
-	--Change max turnover because match setting is updated from a specific value to a other specific value (X -> X1)
+	--Change max turnover because match setting is updated from a specific value to a another specific value (X -> X1)
 	IF @UpdMode = 8
 	BEGIN
 		UPDATE s
@@ -204,7 +204,7 @@ BEGIN
 							WHERE eventstatus <> 'completed')
 	END	  
 
-	--Change max turnover because Match_SMA setting is updated from a specific value to a other specific value (X -> X1)
+	--Change max turnover because Match_SMA setting is updated from a specific value to a another specific value (X -> X1)
 	IF @UpdMode = 12
 	BEGIN
 		UPDATE s
@@ -260,7 +260,7 @@ BEGIN
 		END
 	END
 
-	--Change max turnover because SMA setting is updated from a specific value to a other specific value (X -> X1)
+	--Change max turnover because SMA setting is updated from a specific value to a another specific value (X -> X1)
 	IF @UpdMode = 15
 	BEGIN
 		UPDATE s
