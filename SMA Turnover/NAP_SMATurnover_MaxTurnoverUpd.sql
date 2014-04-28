@@ -2,7 +2,8 @@
 	@UpdMode BIT,
 	@EventID INT = 0,
 	@SMAID INT = 0,
-	@Offset INT = NULL
+	@Offset INT = NULL,
+	@OldOffset INT = NULL
 AS
 /*
 	Created: Elodie
@@ -23,7 +24,7 @@ AS
 					 + Change max turnover because league setting is updated from a specific value to a unlimited value (X -> U)
 					 + Change max turnover because league setting which does not have sport setting is deleted a specific value
 				  4: Change max turnover because league setting is updated from a specific value to a other specific value (X -> X1)
-				  5: Change max turnover because league setting which have sport setting is deleted a specific value
+				  5: Change max turnover because league setting which have sport setting is deleted a specific value (X)
 
 				  --Insert/Update/Delete Match setting
 				  6: Change max turnover because match setting which have sport setting or league setting is inserted a specific value (X)					 
@@ -31,7 +32,7 @@ AS
 					 + Change max turnover because match setting is updated from a specific value to a unlimited value (X -> U)
 					 + Change max turnover because match setting which does not have sport setting and league setting is deleted a specific value
 				  8: Change max turnover because match setting is updated from a specific value to a other specific value (X -> X1)
-				  9: Change max turnover because match setting which have sport setting or league setting is deleted a specific value
+				  9: Change max turnover because match setting which have sport setting or league setting is deleted a specific value (X)
 
 				  --Insert/Update/Delete Match_SMA setting
 				  10: Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is inserted a specific value (X)
@@ -39,8 +40,14 @@ AS
 					  + Change max turnover because Match_SMA setting is updated from a specific value to a unlimited value (X -> U)
 					  + Change max turnover because Match_SMA setting which does not have sport setting and league setting and match setting is deleted a specific value
 				  12: Change max turnover because Match_SMA setting is updated from a specific value to a other specific value (X -> X1)
-				  13: Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is deleted a specific value
-				
+				  13: Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is deleted a specific value (X)
+					
+				  --Insert/Update/Delete SMA setting
+				  14: + Change max turnover because SMA setting is inserted
+					  + Change max turnover because SMA setting is updated from a specific value to a unlimited value (X -> U) 
+				  15: Change max turnover because SMA setting is updated from a specific value to a other specific value (X -> X1) 
+				  16: Change max turnover because SMA setting is deleted a specific value (X) 
+
 		@EventID: sportID or leagueID or matchID
 	Example: EXEC NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = 1
 	
@@ -230,6 +237,53 @@ BEGIN
 			LEFT JOIN bodb_AGE.dbo.DownlineTo_SportControl sc WITH (NOLOCK) ON sc.SportID= m.sporttype
 			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
 		WHERE eventstatus <> 'completed' AND s.matchid = @EventID AND s.SMAID = @SMAID AND s.InheritLevel = 4
+	END
+
+	--Change max turnover because SMA setting is inserted
+	--Change max turnover because SMA setting is updated from a specific value to a unlimited value (X -> U) 
+	IF @UpdMode = 14
+	BEGIN
+		IF @Offset = 0
+		BEGIN
+			DELETE DownlineTurnOver_Setting WHERE SMAID = @SMAID AND matchid IN (SELECT matchid FROM  match WITH (NOLOCK) WHERE eventstatus <> 'completed') AND InheritLevel <> 4
+		END
+		ELSE
+		BEGIN
+			UPDATE s
+			SET Value = s.Value + sc.Offset,
+				maxturnover = (s.Value + sc.Offset) * c.credit
+			FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+				INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+				INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+				INNER JOIN bodb_Age.dbo.DownlineTo_SMAControl sc WITH (NOLOCK) ON sc.SMAID = s.SMAID
+			WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID AND s.InheritLevel <> 4
+		END
+	END
+
+	--Change max turnover because SMA setting is updated from a specific value to a other specific value (X -> X1)
+	IF @UpdMode = 15
+	BEGIN
+		UPDATE s
+		SET Value = s.Value + (sc.Offset - @Offset),
+			maxturnover = (s.Value + (sc.Offset - @Offset)) * c.credit
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_Age.dbo.DownlineTo_SMAControl sc WITH (NOLOCK) ON sc.SMAID = s.SMAID
+		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID AND s.InheritLevel <> 4
+	END
+
+	--Change max turnover because SMA setting is deleted a specific value (X) 
+	IF @UpdMode = 16
+	BEGIN
+		UPDATE s
+		SET Value = s.Value - @Offset,
+			maxturnover = (s.Value - @Offset) * c.credit
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+			INNER JOIN bodb_Age.dbo.DownlineTo_SMAControl sc WITH (NOLOCK) ON sc.SMAID = s.SMAID
+		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID AND s.InheritLevel <> 4
 	END
 
 	--IF @UpdMode = 4

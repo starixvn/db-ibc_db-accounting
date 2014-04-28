@@ -27,10 +27,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 	
 	IF @SMAID <= 0 OR NOT EXISTS (SELECT 1 FROM DownlineTo_SMAControl WITH (NOLOCK) WHERE SMAID = @SMAID)
 	BEGIN
@@ -38,7 +38,14 @@ BEGIN
 		RETURN
 	END			
 
+	DECLARE @OldOffset INT
+	SELECT @OldOffset = Offset FROM DownlineTo_SMAControl WITH(NOLOCK) WHERE SMAID = @SMAID
+	IF @OldOffset IS NULL
+		RETURN
+
 	DELETE DownlineTo_SMAControl WHERE SMAID = @SMAID			
+	If @OldOffset <> 0
+		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 16, @SMAID = @SMAID, @Offset = @OldOffset
 
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_SMAControlDel SMAID="' + COALESCE(CAST(@SMAID AS VARCHAR(10)), SPACE(1)) + '" ' 					

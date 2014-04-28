@@ -28,10 +28,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 
-	--Check permission 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
+	----Check permission 
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	--IF @ErrCode <> 0
+	--	RETURN
 
 	DECLARE @SMAID INT, @roleID INT, @srecommend INT, @mrecommend INT, @recommend INT
 	SELECT @SMAID = NULL
@@ -66,7 +66,7 @@ BEGIN
 	INSERT INTO DownlineTo_SMAControl (SMAID, Offset)
 	VALUES (@SMAID, @Offset)	
 
-	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 6, @SMAID = @SMAID, @Offset = @Offset
+	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 14, @SMAID = @SMAID, @Offset = @Offset
 
 	DECLARE @LogData NVARCHAR(4000)
 	SELECT @LogData = '<NAP_SMATurnover_SMAControlIns SMAName="' + COALESCE(@SMAName, SPACE(1)) + '" ' 					
