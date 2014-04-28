@@ -4,6 +4,7 @@ GO
 
 ALTER PROCEDURE [dbo].DBA_CheckComm_Dep
 (
+	@RestoreCustDB SmallDateTime,
 	@sporttype INT=NULL,
 	@srecommend VARCHAR(1000)=NULL,
 	@site VARCHAR(100)=NULL
@@ -16,7 +17,9 @@ AS
 	Original:
 
 	Revisions:
-		
+		-2014.04.22@Tom.Vo: 
+			1. Change source table : DBLIC.Licensee -> CheckLicenseeDB
+			2. Add parameter @RestoreCustDB
 	Param's Explanation:
 		@sporttype: Product Id
 			-1 : All
@@ -35,6 +38,8 @@ AS
 	
 */
 SET NOCOUNT ON
+
+	SELECT @RestoreCustDB=CONVERT(Varchar(10),@RestoreCustDB,101)
 
 	IF @sporttype IS NULL 
 		SET @sporttype = -1
@@ -113,46 +118,41 @@ SET NOCOUNT ON
 
 	INSERT INTO #LicenseeBAConfig
 	SELECT [SiteID] ,LicenseeName [Site], lb.[LicenseeID],lb.[1x2Comm],lb.[OtherComm],lb.[EnableBA],lb.[groupa],lb.[groupb],lb.[groupc],lb.[groupd]
-	FROM DBLIC.bodb_licensee.dbo.LicenseeBAConfig lb WITH(NOLOCK)
-		INNER JOIN DBLIC.bodb_licensee.dbo.Licensees li WITH(NOLOCK)
+	FROM CheckLicenseeDB.dbo.LicenseeBAConfig lb WITH(NOLOCK)
+		INNER JOIN CheckLicenseeDB.dbo.Licensees li WITH(NOLOCK)
 			ON lb.LicenseeID = li.LicenseeID
 		INNER JOIN bodb02.dbo.Site st WITH(NOLOCK)
 			ON st.Site = li.LicenseeName
-	WHERE (ISNULL(@site,'') ='' OR li.LicenseeName = @site)
+	WHERE lb.InsertDate = @RestoreCustDB AND (ISNULL(@site,'') ='' OR li.LicenseeName = @site)
 
 	INSERT INTO #LicenseeBAHistory([LicenseeID],[CustID],[OnDate],[OffDate],[OnBy],[OffBy],[GroupComm],[1x2Comm],[OtherComm],[Status],[Ugroup])
 	SELECT BA.[LicenseeID],BA.[CustID],BA.[OnDate],BA.[OffDate],BA.[OnBy],BA.[OffBy],BA.[GroupComm],BA.[1x2Comm],BA.[OtherComm],BA.[Status],BA.[Ugroup]
-	FROM DBLIC.bodb_licensee.dbo.LicenseeBAHistory BA WITH(NOLOCK) 
-		--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
-		--	ON BA.[LicenseeID] = BAC.[LicenseeID]
-	WHERE BA.[Status] = 'running' 
+	FROM CheckLicenseeDB.dbo.LicenseeBAHistory BA WITH(NOLOCK) 
+	WHERE BA.InsertDate = @RestoreCustDB AND BA.[Status] = 'running' 
 		AND EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
-			WHERE BA.[LicenseeID] = BAC.[LicenseeID])
+					WHERE BA.[LicenseeID] = BAC.[LicenseeID])
 
 	INSERT INTO #LicenseeSpecialCust([LicenseeID],[CustID],ugroup,ugroup_old)
 	SELECT LIC.[LicenseeID],LIC.[CustID],LIC.ugroup,LIC.ugroup_old		
-	FROM DBLIC.bodb_licensee.dbo.LicenseeSpecialCust LIC WITH (NOLOCK) 
-	  WHERE EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
-			WHERE LIC.[LicenseeID] = BAC.[LicenseeID])
-		--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
-			--ON LIC.[LicenseeID] = BAC.[LicenseeID]
+	FROM CheckLicenseeDB.dbo.LicenseeSpecialCust LIC WITH (NOLOCK) 
+	  WHERE LIC.InsertDate = @RestoreCustDB 
+		AND EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
+									WHERE LIC.[LicenseeID] = BAC.[LicenseeID])
 
 	INSERT INTO #LicenseeGroupComm([id],[Licenseeid],[GroupName],[IsActive],[SBComm],[RacingComm],[NGComm],[color],[IsDefault],[LCComm],[RNGComm])
 	SELECT LGC.[id],LGC.[Licenseeid],LGC.[GroupName],LGC.[IsActive],LGC.[SBComm],LGC.[RacingComm],LGC.[NGComm]
 		  ,LGC.[color],LGC.[IsDefault],LGC.[LCComm],LGC.[RNGComm]
-	  FROM DBLIC.bodb_licensee.dbo.[LicenseeGroupComm] LGC WITH(NOLOCK)
-	  WHERE EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
-			WHERE LGC.[LicenseeID] = BAC.[LicenseeID])
-		--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK) 
-			--ON LGC.[LicenseeID] = BAC.[LicenseeID]
+	  FROM CheckLicenseeDB.dbo.[LicenseeGroupComm] LGC WITH(NOLOCK)
+	  WHERE LGC.InsertDate = @RestoreCustDB 
+			AND EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
+					WHERE LGC.[LicenseeID] = BAC.[LicenseeID])
 
 	INSERT INTO #LicenseeCustComm([LicenseeID],[CustID],[SBComm],[RacingComm],[NGComm],[GroupCommID],[LCComm],[RNGComm])
 	SELECT LCC.[LicenseeID],LCC.[CustID],LCC.[SBComm],LCC.[RacingComm],LCC.[NGComm],LCC.[GroupCommID],LCC.[LCComm],LCC.[RNGComm]
-	FROM DBLIC.bodb_licensee.dbo.[LicenseeCustComm] LCC WITH(NOLOCK)
-	WHERE EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
-			WHERE LCC.[LicenseeID] = BAC.[LicenseeID])
-	--INNER JOIN #LicenseeBAConfig BAC WITH(NOLOCK)
-		--	ON LCC.[LicenseeID] = BAC.[LicenseeID]
+	FROM CheckLicenseeDB.dbo.[LicenseeCustComm] LCC WITH(NOLOCK)
+	WHERE LCC.InsertDate = @RestoreCustDB 
+		AND EXISTS(SELECT TOP 1 1 FROM #LicenseeBAConfig BAC WITH(NOLOCK)
+					WHERE LCC.[LicenseeID] = BAC.[LicenseeID])
 
 	IF OBJECT_ID('tempdb..#Member') IS NOT NULL 		DROP TABLE #Member
 	CREATE TABLE #Member (SiteID INT,CustID INT,RoleID INT,Ugroup VARCHAR(5),
@@ -196,10 +196,8 @@ SET NOCOUNT ON
 			ON sup.custid = me.recommend
 		LEFT JOIN #LicenseeBAConfig BA WITH(NOLOCK)
 			ON BA.[SiteID] = sup.[SiteID]
-		--INNER JOIN #tmpSport tmpSport WITH(NOLOCK)
-		--	ON tmpSport.Sportid = cs.sporttype
 		LEFT JOIN #LicenseeBAHistory BAH WITH(NOLOCK) 
-			ON cs.custid = BAH.custid --AND BAH.[Status] = 'running'
+			ON cs.custid = BAH.custid
 		LEFT JOIN #LicenseeSpecialCust LIC WITH (NOLOCK)
 			ON cs.custid = LIC.custid 
 		LEFT JOIN #LicenseeCustComm LCC WITH (NOLOCK)

@@ -20,7 +20,7 @@ AS
 	Original:
 
 	Revisions:
-		
+		-2014.04.22@Tom.Vo: Change source table : DBLIC.Licensee -> CheckLicenseeDB
 	Param's Explanation:
 		@sporttype: Product Id
 			-1 : All
@@ -40,7 +40,7 @@ DECLARE @tblSite TABLE (Site Varchar(100),SiteID INT)
 
 INSERT INTO @tblSite(SiteID,Site)
 Select SiteID , [Site]  From CheckCustDB.dbo.[Site] s WITH (nolock) 
-	INNER JOIN DBLIC.bodb_licensee.[dbo].[Licensees] l WITH (nolock) 
+	INNER JOIN CheckLicenseeDB.[dbo].[Licensees] l WITH (nolock) 
 		ON LicenseeName = [Site] 
 WHERE ( @Site IS NULL OR Site =  @Site )
 

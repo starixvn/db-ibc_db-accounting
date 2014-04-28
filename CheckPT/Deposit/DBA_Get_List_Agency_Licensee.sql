@@ -13,7 +13,7 @@ AS
 	Original:
 
 	Revisions:
-		
+		-2014.04.22@Tom.Vo: Exclude currency 27,28
 	Param's Explanation:
 		
 */
@@ -34,16 +34,14 @@ IF ISNULL(@srecommend ,'')<>''
 			INNER JOIN CheckCustDB.dbo.customer ag WITH (NOLOCK) ON d.custid = ag.srecommend
 			INNER JOIN @tblsrecommend sp ON ag.srecommend = sp.srecommend
 			INNER JOIN CheckCustDB.dbo.site st WITH (NOLOCK) ON st.site = ag.site
-			--INNER join DBLIC.bodb_licensee.dbo.Licensees l with (nolock) on ag.site = l.LicenseeName
 			INNER JOIN CheckCustDB.dbo.exchange e WITH (NOLOCK) ON ag.currency = e.exchangeid
-			--LEFT JOIN DBLIC.bodb_licensee.dbo.LicenseeCust lc WITH (NOLOCK) ON ag.custid = lc.custid
 		WHERE ag.roleid = 2
 			AND ag.username NOT LIKE '%Aff%'
 			AND ag.username NOT LIKE '%ACC' + e.currency + '%'
 			AND ag.username NOT LIKE '%ACC' + e.Code + '%'
 			AND ag.username NOT LIKE '%cas' + e.currency + '%'
 			AND ag.username NOT LIKE '%Bank' + e.currency + '%'
-			AND d.currency <> 20
+			AND d.currency NOT IN (20,27,28)
 	END
 ELSE
 	SELECT
@@ -52,18 +50,13 @@ ELSE
 	FROM CheckCustDB.dbo.dep_custsuper d WITH (NOLOCK)
 		INNER JOIN CheckCustDB.dbo.customer ag WITH (NOLOCK) ON d.custid = ag.srecommend
 		INNER JOIN CheckCustDB.dbo.site st WITH (NOLOCK) ON st.site = ag.site 
-		--INNER join DBLIC.bodb_licensee.dbo.Licensees l with (nolock) on ag.site = l.LicenseeName
 		INNER JOIN CheckCustDB.dbo.exchange e WITH (NOLOCK) ON ag.currency = e.exchangeid
-		--LEFT JOIN DBLIC.bodb_licensee.dbo.LicenseeCust lc WITH (NOLOCK) ON ag.custid = lc.custid
 	WHERE ag.roleid = 2		
 		AND ag.username NOT LIKE '%Aff%'
 		AND ag.username NOT LIKE '%ACC' + e.currency + '%'
 		AND ag.username NOT LIKE '%ACC' + e.Code + '%'
 		AND ag.username NOT LIKE '%cas' + e.currency + '%'
 		AND ag.username NOT LIKE '%Bank' + e.currency + '%'
-		AND d.currency <> 20
+		AND d.currency NOT IN (20,27,28)
 
 END
-
-
-

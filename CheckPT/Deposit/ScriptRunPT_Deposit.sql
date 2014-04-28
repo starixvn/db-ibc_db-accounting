@@ -1,5 +1,10 @@
 USE CheckResultDB
-
+/*
+	Created: 20140215@Tom.Vo
+		
+	Revisions:
+		-2014.04.22@Tom.Vo: Change source table : DBLIC.Licensee -> CheckLicenseeDB
+*/
 SET NOCOUNT ON  
 
 IF OBJECT_ID('tempdb..#temp') IS NOT NULL		DROP TABLE #temp
@@ -11,7 +16,7 @@ TRUNCATE TABLE CheckResultDB.[dbo].[CheckPTResult_Deposit]
 TRUNCATE TABLE CheckResultDB.dbo.CheckCommResult_Deposit
 
 INSERT  INTO #temp (SITE,IsFinished)
-SELECT LicenseeName,0 FROM DBLIC.bodb_licensee.dbo.Licensees li WITH(NOLOCK) --WHERE LicenseeName = 'Winner99'
+SELECT LicenseeName,0 FROM CheckLicenseeDB.dbo.Licensees li WITH(NOLOCK) WHERE LicenseeName = '12Bet'
 
 DECLARE @site VARCHAR(100),@Rowcnt INT,@srecommend VARCHAR(1000)
 DECLARE @Begin		DATETIME,@BeginSite		DATETIME,@page_number_from INT,@page_number_to INT,@page_length INT
@@ -21,6 +26,10 @@ DECLARE @Duration	INT
 SELECT @page_length=10
 
 SELECT @BeginSite=GETDATE()
+
+DECLARE @RestoreCustDB SmallDateTime='2014-04-10'
+
+SELECT @RestoreCustDB = CONVERT(Varchar(10),@RestoreCustDB,101)
 
 WHILE (1 = 1)
 BEGIN	
@@ -64,9 +73,9 @@ BEGIN
 		
 		SELECT @srecommend=CASE WHEN LEFT(@srecommend,1)=',' THEN RIGHT(@srecommend,LEN(@srecommend)-1) ELSE @srecommend END
 
-		EXEC dbo.DBA_CheckPT_Dep  @sporttype = -1,@site = @site,@srecommend=@srecommend
+		EXEC dbo.DBA_CheckPT_Dep @RestoreCustDB = @RestoreCustDB, @sporttype = -1,@site = @site,@srecommend=@srecommend
 
-		EXEC dbo.DBA_CheckComm_Dep  @sporttype = -1 ,@site = @site,@srecommend=@srecommend
+		EXEC dbo.DBA_CheckComm_Dep  @RestoreCustDB = @RestoreCustDB,@sporttype = -1 ,@site = @site,@srecommend=@srecommend
 
 		PRINT '										Duration:' + CONVERT(VARCHAR(100),DATEDIFF(second,@Begin,GETDATE())) + ' second for srecommend:' + @srecommend
 		

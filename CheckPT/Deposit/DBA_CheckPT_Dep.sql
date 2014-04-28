@@ -4,6 +4,7 @@ GO
 
 ALTER PROCEDURE [dbo].DBA_CheckPT_Dep
 (
+	@RestoreCustDB SmallDateTime,
 	@sporttype INT=NULL,
 	@srecommend VARCHAR(1000)=NULL,
 	@site VARCHAR(100)=NULL
@@ -16,7 +17,9 @@ AS
 	Original:
 
 	Revisions:
-		
+		-2014.04.22@Tom.Vo: 
+			1. Change source table : DBLIC.Licensee -> CheckLicenseeDB
+			2. Add parameter @RestoreCustDB
 	Param's Explanation:
 		@sporttype: Product Id
 			-1 : All
@@ -29,6 +32,8 @@ AS
 			251: RnG Casino
 */
 SET NOCOUNT ON
+
+	SELECT @RestoreCustDB=CONVERT(Varchar(10),@RestoreCustDB,101)
 
 	IF @sporttype IS NULL 
 		SET @sporttype = -1
@@ -76,17 +81,17 @@ SET NOCOUNT ON
 
 	INSERT INTO #LicenseeBAHistory([LicenseeID],[CustID],[OnDate],[OffDate],[OnBy],[OffBy],[GroupComm],[1x2Comm],[OtherComm],[Status],[Ugroup])
 	SELECT [LicenseeID],[CustID],[OnDate],[OffDate],[OnBy],[OffBy],[GroupComm],[1x2Comm],[OtherComm],[Status],[Ugroup]
-	FROM DBLIC.bodb_licensee.dbo.LicenseeBAHistory BA WITH(NOLOCK) 
-	WHERE BA.[Status] = 'running'
-
+	FROM CheckLicenseeDB.dbo.LicenseeBAHistory BA WITH(NOLOCK) 
+	WHERE BA.InsertDate = @RestoreCustDB AND BA.[Status] = 'running'
+	
 	INSERT INTO #LicenseeBAConfig
 	SELECT [SiteID] ,LicenseeName [Site], lb.[LicenseeID],lb.[1x2Comm],lb.[OtherComm],lb.[EnableBA],lb.[groupa],lb.[groupb],lb.[groupc],lb.[groupd]
-	FROM DBLIC.bodb_licensee.dbo.LicenseeBAConfig lb WITH(NOLOCK)
-		INNER JOIN DBLIC.bodb_licensee.dbo.Licensees li WITH(NOLOCK)
+	FROM CheckLicenseeDB.dbo.LicenseeBAConfig lb WITH(NOLOCK)
+		INNER JOIN CheckLicenseeDB.dbo.Licensees li WITH(NOLOCK)
 			ON lb.LicenseeID = li.LicenseeID
 		INNER JOIN bodb02.dbo.Site st WITH(NOLOCK)
 			ON st.Site = li.LicenseeName
-	WHERE (ISNULL(@site,'') ='' OR li.LicenseeName = @site)
+	WHERE lb.InsertDate = @RestoreCustDB AND (ISNULL(@site,'') ='' OR li.LicenseeName = @site)
 	
 	--GET List Member is violated 
 	IF @sporttype IN (-1,0) OR @sporttype <=99 OR @sporttype =154--SportBook
@@ -105,7 +110,7 @@ SET NOCOUNT ON
 			INNER JOIN	CheckCustDB.dbo.Dep_CustSetting cs WITH(NOLOCK)
 					ON cs.custid = co.custid AND cs.sporttype = Sport_PT.Sportid
 			LEFT JOIN 	#LicenseeBAHistory BA WITH(NOLOCK) 
-					ON co.custid = BA.custid --AND BA.[Status] = 'running'
+					ON co.custid = BA.custid
 			WHERE EXISTS(SELECT TOP 1 1 FROM CheckCustDB.dbo.CustInfo Info WITH(NOLOCK)
 							WHERE Info.CustID = co.CustID AND ISNULL(Info.[reject],0) = 0 AND ISNULL(Info.[closed],0)= 0)
 					AND(
