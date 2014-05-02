@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Task_DownlineTurnOver_Setting_sum_job]    Script Date: 5/2/2014 9:52:25 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
+﻿ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
 /*
 	Created: Joe
 	Task: 
@@ -27,8 +20,8 @@ BEGIN
 
 	SET @rc1 = @@ROWCOUNT
 	
-	DECLARE @DownlineToTmp TABLE (SMAID INT,  matchid INT, SumStake SMALLMONEY)
-	DECLARE @DownlineToCal TABLE (SMAID INT, matchid INT, TotalTurnover SMALLMONEY)	
+	DECLARE @DownlineToTmp TABLE (SMAID INT,  matchid INT, SumStake MONEY)
+	DECLARE @DownlineToCal TABLE (SMAID INT, matchid INT, TotalTurnover MONEY)	
 	DECLARE @DownlineToControl TABLE (SMAID INT, matchid INT, Value INT, InheritLevel TINYINT)	
 	DECLARE @temp TABLE (SMAID INT, matchid INT)
 	DECLARE @MatchControl TABLE (Matchid INT, LeagueID INT, SportID INT, Value INT, InheritLevel TINYINT)
@@ -86,7 +79,8 @@ BEGIN
 	UPDATE dc
 	SET Value = CASE WHEN m.Value IS NULL THEN NULL
 					 WHEN m.Value = 0 OR sma.Offset = 0 THEN 0	
-					 ELSE m.Value + ISNULL(sma.Offset,0) END
+					 ELSE m.Value + ISNULL(sma.Offset,0) END,
+		InheritLevel = m.InheritLevel
 	FROM @DownlineToControl dc
 		 INNER JOIN @MatchControl m ON dc.matchid = m.matchid
 		 LEFT JOIN bodb_Age.dbo.DownlineTo_SMAControl sma ON dc.SMAID = sma.SMAID

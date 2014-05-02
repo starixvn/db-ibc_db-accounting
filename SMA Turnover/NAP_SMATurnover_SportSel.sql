@@ -1,5 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_SportSel]
-	@Mode TINYINT = 0
+	@Mode TINYINT = 0,
+	@FromDate DATETIME = NULL,
+	@ToDate DATETIME = NULL
 AS
 /*
 	Created: Elodie
@@ -11,15 +13,18 @@ AS
 
 	Parameter's explaination: @Mode  = 0: Sport which have a unsettled match
 									 = 1: All sports
-	Example: EXEC NAP_SMATurnover_SportSel @Mode = 0									 
+									 = 2: Get sport in turnover monitor list
+	Example: EXEC NAP_SMATurnover_SportSel @Mode = 0								 
 	
 */
 SET NOCOUNT ON
+
 SELECT DISTINCT s.sporttype, s.sportname 
 FROM sports s WITH(NOLOCK) 
 	INNER JOIN match m WITH (NOLOCK) ON s.sporttype = m.sporttype
 WHERE 1 = CASE  WHEN @Mode = 0 AND m.eventstatus <> 'completed' AND m.matchcode NOT LIKE '%hedge%' THEN 1
 				WHEN @Mode = 1 THEN 1
+				WHEN @Mode = 2 AND @FromDate IS NOT NULL AND @ToDate IS NOT NULL AND m.eventdate BETWEEN @FromDate AND @ToDate THEN 1
 				ELSE 0 END				
 ORDER BY s.sporttype
 
