@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Task_DownlineTurnOver_Setting_sum_job]    Script Date: 5/2/2014 9:52:25 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
 /*
 	Created: Joe
 	Task: 
@@ -69,7 +76,7 @@ BEGIN
 					 ELSE NULL END,
 		InheritLevel = CASE	 WHEN dm.Value IS NOT NULL THEN 3
 							 WHEN dl.Value IS NOT NULL AND dm.Value IS NULL THEN 2
-							 WHEN ds.Value IS NOT NULL AND dl.Value IS NULL AND dm.Value IS NULL THEN 4
+							 WHEN ds.Value IS NOT NULL AND dl.Value IS NULL AND dm.Value IS NULL THEN 1
 							 ELSE NULL END
 	FROM @MatchControl m
 		LEFT JOIN bodb_Age.dbo.DownlineTo_MatchControl dm ON m.Matchid = dm.Matchid
