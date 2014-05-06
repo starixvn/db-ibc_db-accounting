@@ -1,9 +1,8 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_MaxTurnoverUpd]
-	@UpdMode BIT,
+	@UpdMode TINYINT,
 	@EventID INT = 0,
 	@SMAID INT = 0,
-	@Offset INT = NULL,
-	@OldOffset INT = NULL
+	@Offset INT = NULL
 AS
 /*
 	Created: Elodie

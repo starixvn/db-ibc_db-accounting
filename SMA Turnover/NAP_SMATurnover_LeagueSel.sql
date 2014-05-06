@@ -19,7 +19,7 @@ AS
 	
 */
 SET NOCOUNT ON
-SELECT DISTINCT TOP 100 l.leagueid, l.leaguename 
+SELECT DISTINCT l.leagueid, l.leaguename 
 FROM League l WITH(NOLOCK) 
 	INNER JOIN match m WITH (NOLOCK) ON m.leagueid = l.leagueid
 WHERE l.sporttype = @SportID		
