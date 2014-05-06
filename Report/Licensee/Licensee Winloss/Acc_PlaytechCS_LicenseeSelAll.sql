@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Acc_PlaytechCS_LicenseeSelAll]
+ALTER PROCEDURE [dbo].[Acc_PlaytechCS_LicenseeSelAll]
 AS
 
 /*
@@ -15,9 +15,9 @@ SELECT
 	l.LicenseeID, l.LicenseeName, ISNULL(ba.EnableBA,0) as EnableBA,l.brandname  
 FROM 
 	bodb_Licensee.dbo.Licensees l WITH (NOLOCK)  
-	INNER JOIN bodb_Licensee.dbo.SystemLicensee sl (NOLOCK) ON l.LicenseeID=sl.LicenseeID 
-	INNER JOIN bodb_Licensee.dbo.Systems s (NOLOCK) ON sl.SystemID=s.ID 
-	INNER JOIN bodb_Licensee.dbo.LicenseeFunctions lf (NOLOCK) ON lf.LicenseeId=l.LicenseeID 
+	INNER JOIN bodb_Licensee.dbo.SystemLicensee sl WITH (NOLOCK) ON l.LicenseeID=sl.LicenseeID 
+	INNER JOIN bodb_Licensee.dbo.Systems s WITH (NOLOCK) ON sl.SystemID=s.ID 
+	INNER JOIN bodb_Licensee.dbo.LicenseeFunctions lf WITH (NOLOCK) ON lf.LicenseeId=l.LicenseeID 
 	LEFT JOIN bodb_Licensee.dbo.LicenseeBAConfig ba WITH (NOLOCK) ON l.LicenseeID = ba.LicenseeID
 WHERE 
 	LicenseeName <> 'IBC' AND
