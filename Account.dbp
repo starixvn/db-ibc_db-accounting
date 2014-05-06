@@ -1681,6 +1681,7 @@ Begin DataProject = "Account"
       Script = "NAP_SMATurnover_SportControlSel.sql"
       Script = "NAP_SMATurnover_SportControlUpd.sql"
       Script = "NAP_SMATurnover_SportSel.sql"
+      Script = "NAP_SMATurnover_UsageList.sql"
       Script = "Task_DownlineTurnOver_Setting_sum_job.sql"
       Script = "Task_GetDownlineTurnOver_Setting_Change.sql"
    End
