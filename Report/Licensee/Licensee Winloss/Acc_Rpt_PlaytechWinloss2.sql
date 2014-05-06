@@ -3,7 +3,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_PlaytechWinloss2]
  @Currency		INT = 0,
  @FromDate		SMALLDATETIME,  
  @ToDate		SMALLDATETIME,   
- @ReportType	TINYINT=1  
+ @ReportType	TINYINT = 1,
+ @excludeTest BIT = 0
 AS  
 /*  Created: Hannah  
 	Date: 2014-04-14
@@ -15,6 +16,7 @@ AS
 	Param's Explanation:  
 	  + @ReportType: 1-Daily; 2-Monthly;  
 	  + @BackupDay: The day we move tickets to rptDepWinlostByProduct_bk
+	  + @excludeTest: remove currency UUS
 */  
 BEGIN  
 	SET NOCOUNT ON  
@@ -50,6 +52,7 @@ BEGIN
 	WHERE 
 		LicenseeID = @LicenseeID
 		AND (@Currency = 0 OR (@Currency <> 0 AND Currency = @Currency))
+		AND (@excludeTest=0 OR (@excludeTest=1 AND Currency <> 20))	
 
 	SELECT @VNDCurrencyName = currency 
 	FROM exchange (NOLOCK) 

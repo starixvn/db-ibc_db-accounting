@@ -1,16 +1,10 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Task_GetDownlineTurnOver_Setting_Change]
+﻿ALTER PROCEDURE [dbo].[Task_GetDownlineTurnOver_Setting_Change]
 	@GetOption char(1) = '' -- C/D : Change/Delete
 AS
 /*
-	Created: Joe
-	Task: 
-	DB: DBAGE/BODB02
-	
-	Revision
+	Revisions:
+		- 20140408@Elodie: Support all super, direct master and direct agent
 */
-BEGIN
 --SELECT custid, matchid, maxturnover, totalturnover from dbo.DownlineTurnOver_Setting
 --GO
 
@@ -22,7 +16,7 @@ BEGIN
 
 	IF @GetOption = 'D'
 		DELETE D
-		OUTPUT deleted.custid, deleted.matchid INTO DownlineTurnOver_Setting_tmp (custid, matchid)
+		OUTPUT deleted.SMAID, deleted.matchid INTO DownlineTurnOver_Setting_tmp (SMAID, matchid)
 		FROM dbo.DownlineTurnOver_Setting_Delete D
 	ELSE IF @GetOption = 'C'
 	BEGIN
@@ -31,8 +25,8 @@ BEGIN
 		EXEC sp_GetGlobalVariable 'TurnOver_Last_tstamp', @GetValue OUTPUT, 1
 		SET @Last_tstamp = CONVERT(binary(8), @GetValue)
 		
-		INSERT INTO DownlineTurnOver_Setting_tmp (custid, matchid, maxturnover, totalturnover, tstamp)
-		SELECT custid, matchid, maxturnover, totalturnover, tstamp
+		INSERT INTO DownlineTurnOver_Setting_tmp (SMAID, matchid, maxturnover, totalturnover, tstamp)
+		SELECT SMAID, matchid, maxturnover, totalturnover, tstamp
 		FROM dbo.DownlineTurnOver_Setting with (nolock)
 		WHERE tstamp > @Last_tstamp
 		
@@ -43,4 +37,3 @@ BEGIN
 	END
 	
 	SET NOCOUNT OFF
-END

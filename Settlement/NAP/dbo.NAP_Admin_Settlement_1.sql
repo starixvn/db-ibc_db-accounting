@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_1]
+ALTER PROCEDURE [NAP_Admin_Settlement_1]
 	@creator int,
 	@matchid int,
 	@fth smallint = NULL,
@@ -10,8 +10,7 @@ CREATE PROCEDURE [NAP_Admin_Settlement_1]
 	@action varchar(10) = 'CAL',
 	@IP varchar(50) = '',
 	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT,
-	@DelayTime int = 0 OUTPUT
+	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
 
 /*	Creator: Kathy
@@ -21,36 +20,33 @@ AS
 	Original: Admin_Settlement_1
 	
 	Revisions:
-		
+		- 20140423@Kathy: Remove check weekend peak-hour
+		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
+
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		
 */
 
 SET NOCOUNT ON	
-Declare @SkipBalanceUpdate bit
-SET @SkipBalanceUpdate = 0
----
+Declare @SkipBalanceUpdate bit,
+		@start datetime, 
+		@stop datetime, 
+		@goalrecord_old varchar(50),
+		@LogData nvarchar(200),
+		@eventstatus nvarchar(50),
+		@sporttype tinyint,
+		@TicketCount int
 
-Declare @start datetime, @stop datetime, @goalrecord_old varchar(50)
-Declare @LogData nvarchar(200)
-Declare @eventstatus nvarchar(50)
-SELECT @start = CURRENT_TIMESTAMP
+SELECT @start = CURRENT_TIMESTAMP,
+		@SkipBalanceUpdate = 0,
+		@TicketCount = 0
 
--------------------------------------------------------------
----Put/check delay on settlement of big matches on weekend---
----------------------------VVVV------------------------------
-Declare @TicketCount int, @NewDelayValue int, @matchcode nvarchar(50), @sporttype tinyint
-DECLARE @NextAllowSettleTime datetime		
-
-SELECT @TicketCount = 0, @NewDelayValue = 0
-	
 select @TicketCount = count(1)
 from bettrans with (nolock)
-where bettype <=19000 and matchid = @matchid --20110520@Jamie: Correct the range of bet tickets
+where bettype <=19000 and matchid = @matchid
 
-SELECT @matchcode = matchcode
-	,@sporttype = sporttype
+SELECT @sporttype = sporttype
 	,@goalrecord_old = ISNULL(goalrecord,'')
 FROM match WITH(NOLOCK)
 WHERE matchid = @matchid
@@ -70,52 +66,6 @@ BEGIN
 	RETURN
 END
 
-
-
-------20111209@Sophia: Comment this code to deploy 1x2 HDP first. Then will uncomment them.
--- check allow calcualte
---declare @date datetime
---select @date = eventdate from match with(nolock) where matchid = @matchid
---
---EXEC dbo.Acc_CheckSettledDate 
---	@winlostdate = @date,
---	@UserID = @creator,
---	@ErrCode = @ErrCode OUTPUT,
---	@ErrMsg = @ErrMsg OUTPUT
---IF 	@ErrCode > 0 RETURN
--------End of comment 
-
---check whether it's at weekend peak-hour, from 7PM - 2AM (GMT+8)
-if datename(weekday, getdate()) in ('Saturday','Sunday') and datepart(hour, getdate()) between 7 and 14  AND @matchcode NOT LIKE '%hedge%'
-BEGIN
-	select @NextAllowSettleTime = VValue from SystemSettings with (nolock) where VName = 'NextAllowSettleTime' 
-
-	select @DelayTime = CASE WHEN DATEDIFF(ss, getdate(), @NextAllowSettleTime) < 0 THEN 0
-							ELSE DATEDIFF(ss, getdate(), @NextAllowSettleTime) END
-
-	if @DelayTime > 0
-	BEGIN
-		SELECT  @ErrCode = 1000003,
-				@ErrMsg = 'We prevent the frequent calculations during peak hour at weekend, please hold on and try again in ' + cast(@DelayTime as varchar(3)) + ' seconds. Thanks!'
-				
-		RETURN
-	END
-
-
-	SELECT @NewDelayValue = CASE WHEN @TicketCount > 100000 THEN 120
-								WHEN @TicketCount > 60000 THEN 60
-						ELSE 0 END	
-	IF @NewDelayValue > 0
-	BEGIN
-	    -- the calculation is executing for big match, so we block this action for 60 seconds, to prevent simultaneous calculations
-		UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-			SET VValue = convert (varchar(100), DATEADD(ss, 120, getdate()), 109)
-		WHERE VName = 'NextAllowSettleTime'
-	END
-END
----------------------------^^^^------------------------------
----Put/check delay on settlement of big matches on weekend---
--------------------------------------------------------------
 DECLARE @Remark varchar(500), @ActionID int
 SELECT @ActionID = CASE @Action 
 		WHEN 'CAL' THEN 100 
@@ -171,7 +121,7 @@ BEGIN
 	INSERT INTO #BalanceBefore
 	SELECT custid, SUM(winlost-actual_stake+playercomm)
 	FROM dbo.bettrans with (rowlock)
-	WHERE matchid = @matchid AND bettype <> 14
+	WHERE matchid = @matchid AND bettype NOT IN (14, 127)
 	GROUP BY custid
 
 	SET @TotalAccount = @@ROWCOUNT
@@ -181,7 +131,7 @@ BEGIN
 	INSERT INTO #BalanceBefore
 	SELECT custid, SUM(winlost-actual_stake+playercomm)
 	FROM dbo.bettrans with (rowlock)
-	WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125)
+	WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125,126)
 	GROUP BY custid
 
 	SET @TotalAccount = @@ROWCOUNT
@@ -201,11 +151,11 @@ END --IF @SkipBalanceUpdate = 0
 -- 20090412 : Joe : case for unsettle the game.
 IF @action = 'UNDO'
 BEGIN
-	Exec dbo.NAP_Admin_Calculate_Main @matchid = @matchid, @mode = 'UNDO' --EXEC dbo.NAP_Admin_Calculate_Undo @matchid
-	EXEC dbo.NAP_Admin_Settlement_Parlay @matchid, @creator, 'UNDO', @IP = @IP
-	EXEC DBPRO.BODB02.dbo.NAP_UpdateMAtch_Remark @matchid, 'U'
+		Exec dbo.NAP_Admin_Calculate_Main @matchid = @matchid, @mode = 'UNDO' --EXEC dbo.NAP_Admin_Calculate_Undo @matchid
+		EXEC dbo.NAP_Admin_Settlement_Parlay @matchid, @creator, 'UNDO', @IP = @IP
+		EXEC DBPRO.BODB02.dbo.NAP_UpdateMAtch_Remark @matchid, 'U'
 	
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_1-UNDO', @MatchID = @matchid, @creator = @creator 
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_1-UNDO', @MatchID = @matchid, @creator = @creator 
 	/* --20110620@Thien: replace by calling SP instead
 	-- RESET 'SaveBet' of DB06
 	DELETE FROM DB06.bodb02.dbo.Save_Jobs WHERE matchid = @matchid
@@ -214,7 +164,7 @@ BEGIN
 	INSERT INTO DB06.bodb02.dbo.SAve_Jobs (matchid, liveindicator, savetype, bettype, typename)
 	SELECT @matchid, 1, 'DEL', 0, 0
 	*/
-	EXEC DBACC.bodb02.dbo.NAP_Admin_Match_UpdateSaveBet @action = 'UNDO', @matchid = @matchid
+		EXEC DBACC.bodb02.dbo.NAP_Admin_Match_UpdateSaveBet @action = 'UNDO', @matchid = @matchid
 
 END
 ELSE
@@ -227,12 +177,12 @@ need below code to determine for mark match as calculated (all bets settled)
 	Declare @status TABLE (FTBet bit, BetCount int, InRunning int)
 	INSERT INTO @status
 	SELECT
-		CASE WHEN bettype IN (7,8,12,15,21,30,125) THEN 0 ELSE 1 END,
+		CASE WHEN bettype IN (7,8,12,15,21,30,125,126) THEN 0 ELSE 1 END,
 		SUM(CASE WHEN [statusID] IN (101,102) THEN 0 ELSE 1 END), --SUM(CASE WHEN [status] IN (N'VOID',N'REJECT') THEN 0 ELSE 1 END),
 		SUM(CASE WHEN [statusID] = 0 THEN 1 ELSE 0 END) ----SUM(CASE WHEN [status] = N'running' THEN 1 ELSE 0 END)
 	FROM dbo.bettrans with (nolock)
 	WHERE matchid = @matchid
-	GROUP BY CASE WHEN bettype IN (7,8,12,15,21,30,125) THEN 0 ELSE 1 END
+	GROUP BY CASE WHEN bettype IN (7,8,12,15,21,30,125,126) THEN 0 ELSE 1 END
 
 	IF NOT EXISTS(SELECT * FROM @status WHERE FTBet = 0) INSERT INTO @status VALUES (0,0,0)
 	IF NOT EXISTS(SELECT * FROM @status WHERE FTBet = 1) INSERT INTO @status VALUES (1,0,0)
@@ -263,7 +213,7 @@ need below code to determine for mark match as calculated (all bets settled)
 	WHERE	matchid = @matchid
 
 
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command	= 'NAP_Admin_Settlement_1-CAL', 
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command	= 'NAP_Admin_Settlement_1-CAL', 
 											@MatchID	= @matchid,
 											@FTHome		= @fth,
 											@FTAway		= @fta,
@@ -279,9 +229,9 @@ need below code to determine for mark match as calculated (all bets settled)
 	IF LEFT(@action, 3) = 'CAL' 
 	BEGIN
 		IF @sporttype in (180,181,182,183,184,185,186) --virtual sports 	
-												EXEC dbo.NAP_Admin_Settlement_3_VS @creator, @matchid, @action
+																								EXEC dbo.NAP_Admin_Settlement_3_VS @creator, @matchid, @action
 		ELSE 
-												EXEC dbo.NAP_Admin_Settlement_3 @matchid, @action
+																								EXEC dbo.NAP_Admin_Settlement_3 @matchid, @action
 	END
 
 	--Check and calc FGLG
@@ -293,19 +243,38 @@ need below code to determine for mark match as calculated (all bets settled)
 				EXEC dbo.NAP_Admin_Settlement_FGLG
 					@creator = @creator,
 					@matchid = @matchid,	
+					@action  = 'CAL-FT',
 					@betstatus = @betstatus,
 					@IncludeLG = 1,
 					@goalrecord = @goalrecord,
 					@IP = @IP,
-					@IsLoopTempTable = 1 ---Not check concurrency by TempVariableNumber table		
-	
+					@IsLoopTempTable = 1 ---Not check concurrency by TempVariableNumber table	
+	END
+
+	--Check and calc 1H FGLG
+	IF @action IN('CAL', 'CAL-HT') 	
+	BEGIN
+		IF EXISTS (select 1 from bettrans with (nolock) where bettype = 127 and matchid = @matchid)
+			OR EXISTS (select 1 from bettransm with (nolock) where bettype = 127 and matchid = @matchid)	
+				IF charindex('1FL:', @betstatus) > 0
+				begin
+					EXEC dbo.NAP_Admin_Settlement_FGLG
+						@creator = @creator,
+						@matchid = @matchid,	
+						@action = 'CAL-HT',
+						@betstatus = @betstatus,
+						@IncludeLG = 1,
+						@goalrecord = @goalrecord,
+						@IP = @IP,
+						@IsLoopTempTable = 1 ---Not check concurrency by TempVariableNumber table		
+				end
 
 	END
 
 	IF @eventstatus = 'completed'
-								EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid, 'C'
+																EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid, 'C'
 	ELSE IF @action = 'CAL-HT'
-								EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid, 'H'
+																EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid, 'H'
 				
 END -- IF @action = 'UNDO'
 
@@ -324,7 +293,7 @@ BEGIN
 	INSERT INTO #BalanceAfter
 	SELECT custid, SUM(winlost-actual_stake+playercomm)
 	FROM dbo.bettrans with (rowlock)
-	WHERE matchid = @matchid AND bettype <> 14
+	WHERE matchid = @matchid AND bettype NOT IN (14, 127)
 	GROUP BY custid
 END
 ELSE IF @Action = 'CAL-HT'
@@ -332,7 +301,7 @@ BEGIN
 	INSERT INTO #BalanceAfter
 	SELECT custid, SUM(winlost-actual_stake+playercomm)
 	FROM dbo.bettrans with (rowlock)
-	WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125)
+	WHERE matchid = @matchid AND bettype IN (7,8,12,15,21,30,125,126)
 	GROUP BY custid
 END
 ELSE IF @Action = 'UNDO'
@@ -497,21 +466,6 @@ BEGIN
 			@Remark = @Remark		
 	END CATCH
 END
-    
--------------------------------------------------------------
----Put/check delay on settlement of big matches on weekend---
----------------------------VVVV------------------------------
-
---check whether it's needed to set the Blocking time
-if @NewDelayValue > 0
-BEGIN	
-    UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-	    SET VValue = convert (varchar(100), DATEADD(ss, @NewDelayValue, getdate()), 109)
-    WHERE VName = 'NextAllowSettleTime'
-END
--------------------------------------------------------------
----Put/check delay on settlement of big matches on weekend---
--------------------------------------------------------------
 
 
 GO

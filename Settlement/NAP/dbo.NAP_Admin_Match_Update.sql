@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Match_Update]
+ALTER PROCEDURE [NAP_Admin_Match_Update]
 (
 	@Command VARCHAR(100),
 	@MatchID INT,
@@ -23,6 +23,7 @@ AS
 	Original: Admin_Match_Update
 
 	Revisions:
+		- 20140423@Kathy: Modify betstatus value (Offer 1H FGLG) [Redmine:#14449]
 		
 */
 BEGIN
@@ -58,7 +59,10 @@ BEGIN
 	BEGIN
 		UPDATE match WITH(ROWLOCK,UPDLOCK) 
 		SET eventstatus='Completed', ruben=1, finalhomescore=0, finalawayscore=0, hthomescore=0, htawayscore=0
-			,betstatus= 'Refund' + CASE WHEN CHARINDEX('FL:',ISNULL(betstatus,'')) = 0 THEN '' ELSE ';' + SUBSTRING(ISNULL(betstatus,''),CHARINDEX('FL:',ISNULL(betstatus,'')),6) END	
+			,betstatus = 'Refund' + CASE when CHARINDEX('1FL:',ISNULL(betstatus,'')) = 0 
+										 THEN ''
+										 ELSE ';' + SUBSTRING(betstatus,CHARINDEX('1FL', betstatus),LEN(betstatus))
+									END 
 			,GoalRecord =''
 			,changetime = GETDATE(), settleTime = GETDATE()
 		WHERE matchid=@MatchID
@@ -197,8 +201,6 @@ BEGIN
 		WHERE EventID = @MatchID
 	END	
 END
-
-
 GO
 
 GRANT EXECUTE ON [NAP_Admin_Match_Update] TO [bodbAdminNet] AS [dbo]

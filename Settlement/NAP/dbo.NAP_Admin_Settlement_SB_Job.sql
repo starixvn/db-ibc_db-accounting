@@ -7,6 +7,7 @@ AS
 	
 	Revisions:
 		- 20140326@Kathy: Get match values from DBPRO
+		- 20140426@Kathy: Offer new bettype 127.  [Redmine:#14449]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -187,12 +188,12 @@ BEGIN
 								WHEN @Action = 'CAL-HT'			THEN 2
 								WHEN @Action = 'CAL-FT'			THEN 3
 								WHEN @Action = 'CAL'			THEN 4
-								WHEN @Action = 'CAL-FGLG' OR @Action = 'CAL-LG'		THEN 1
+								WHEN @Action = 'CAL-FTFGLG' OR @Action = 'CAL-FTLG'		THEN 1
 								WHEN @Action = 'Refund-HT'		THEN 11
 								WHEN @Action = 'Refund-FT'		THEN 12
 								WHEN @Action = 'Refund'			THEN 13
-								WHEN @Action = 'Refund-FGLG'	THEN 17
-								WHEN @Action = 'Refund-LG'		THEN 18
+								WHEN @Action = 'Refund-FTFGLG'	THEN 17
+								WHEN @Action = 'Refund-FTLG'		THEN 18
 								WHEN @Action = 'UNDO'			THEN 0
 							ELSE -1
 							END

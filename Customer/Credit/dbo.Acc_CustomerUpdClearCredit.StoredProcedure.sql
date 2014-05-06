@@ -1,5 +1,5 @@
-CREATE PROCEDURE [dbo].[Acc_CustomerUpdClearCredit] 
-    @username varchar(40),
+ALTER PROCEDURE [dbo].[Acc_CustomerUpdClearCredit] 
+	@username varchar(40),
 	@userid int,
 	@ReturnErrCode bit = 0,
 	@ErrCode int = 0 OUTPUT,
@@ -24,6 +24,7 @@ AS
 		- 20131025@Lukas: add system define permission checking when call from external accounting
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call bettrans by link database)
 		- 20140306@Dom: add outstanding from translog
+		- 20140423@Elodie: Implement SMA Turnover [Redmine:#14426]
 */
 
 SET NOCOUNT ON
@@ -44,10 +45,12 @@ END
 
 declare @custid		int,
 		@roleid		tinyint,
-		@custLine	varchar(20)
+		@custLine	varchar(20), 
+		@mrecommend INT,
+		@recommend	INT
 declare	@tmpCust table (custid int, Credit money)
 
-select @custid = custid, @roleid = roleid from custinfo with (NOLOCK) where username = @username
+select @custid = custid, @roleid = roleid, @mrecommend = mrecommend, @recommend = recommend from custinfo with (NOLOCK) where username = @username
 
 if isnull(@custid,0) = 0 or isnull(@roleid, 0) > 4
 BEGIN
@@ -83,6 +86,23 @@ BEGIN
 	Update custinfo with (ROWLOCK, UPDLOCK) set credit = 0 
 	output deleted.custid, deleted.Credit into @tmpCust(custid, Credit)
 	where srecommend = @custid AND Credit != 0  
+
+	IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @custid) --real super
+	BEGIN
+		IF EXISTS (SELECT 1 
+					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
+						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
+					WHERE SMAID = @custid AND eventstatus <> 'completed')
+			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 5, @SMAID = @custid
+	END
+	ELSE --dummy super
+	BEGIN
+		IF EXISTS (SELECT 1 
+					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
+						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
+					WHERE SMAID = @mrecommend AND eventstatus <> 'completed')
+			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 5, @SMAID = @mrecommend
+	END
 END
 else if @roleid = 3
 BEGIN
@@ -90,6 +110,16 @@ BEGIN
 	Update custinfo with (ROWLOCK, UPDLOCK) set credit = 0 
 	output deleted.custid, deleted.Credit into @tmpCust(custid, Credit)
 	where mrecommend = @custid AND Credit != 0 
+
+	IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @custid) --dummy master
+	BEGIN
+		IF EXISTS (SELECT 1 
+					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
+						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
+					WHERE SMAID = @recommend AND eventstatus <> 'completed')
+			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 5, @SMAID = @recommend
+	END
+
 END
 else if @roleid = 2
 BEGIN
@@ -100,7 +130,7 @@ BEGIN
 END
 else if @roleid = 1
 BEGIN
-	Select @custLine =' member ' 
+	Select @custLine =' member '
 	
 	DECLARE @TotalAmt money
 	
@@ -135,7 +165,9 @@ BEGIN CATCH
 END CATCH
 
 
-
+GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdClearCredit] TO [bodbAdminNet]
+GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdClearCredit] TO [bodbExtAccNet]
+GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdClearCredit] TO [vnteam]  

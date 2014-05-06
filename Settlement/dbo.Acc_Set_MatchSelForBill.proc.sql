@@ -1,10 +1,9 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Acc_Set_MatchSelForBill]
+﻿ALTER PROCEDURE [Acc_Set_MatchSelForBill]
 	@matchid int,
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
-	@IsExistFGLG bit = 0 OUTPUT,
+	@IsExistFGLG bit = 0 OUTPUT,	
+	@IsExistHTFGLG bit = 0 OUTPUT,	
 	@IsHTOnly bit = 0 OUTPUT,
 	@IsExistsNG bit = 0 OUTPUT,
 	@IsLive bit = 0 OUTPUT,
@@ -41,8 +40,11 @@ AS
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130822@Johnson: Get match information for match completed
 		- 20131022@Lukas: add new sporttype 154 - Horse racing FixOdds
+		- 20140422@Kathy: + Add new param @IsExistHTFGLG	
+						  + Add new bettype 1H total goal, 1H FGLG (126, 127)  [Redmine:#14718]
 	Param's Explanation:
 		+ @IsExistFGLG = 1 : exist FGLG ticket
+		+ @IsExistHTFGLG = 1 : exist HT FGLG ticket
 		+ @IsLive = 1 : Match is offered LIVE betting
 		
 */
@@ -89,12 +91,19 @@ if exists(	select	1
 
 BEGIN
 	IF EXISTS (select 1 from bettrans with (nolock) where bettype = 14 and matchid = @matchid 
-				--AND [status] NOT IN ('VOID','REJECT')
 				AND [statusID] NOT IN (101,102)
 				)
-		OR EXISTS (select 1 from bettransm with (nolock) where bettype = 14 and matchid = @matchid)
+		OR EXISTS (select 1 from bettransm with (nolock) where bettype = 14 and matchid = @matchid  AND statusID not in (103,101,102))
 	BEGIN
 		SELECT @IsExistFGLG = 1
+	END
+
+	IF EXISTS (select 1 from bettrans with (nolock) where bettype = 127 and matchid = @matchid 
+				AND [statusID] NOT IN (101,102)
+				)
+		OR EXISTS (select 1 from bettransm with (nolock) where bettype = 127  and matchid = @matchid  AND statusID not in (103,101,102))
+	BEGIN
+		SELECT @IsExistHTFGLG = 1
 	END
 
 	if
@@ -127,9 +136,10 @@ BEGIN
 	Declare @status TABLE ([Group] tinyint, BetCount int, InRunning int)
 	INSERT INTO @status
 	SELECT
-		CASE -- 0:FT , 1:HT , 2:FGLG
-			WHEN bettype IN (7, 8, 12, 15, 21,30, 125) THEN 1
+		CASE -- 0:FT , 1:HT , 2:FGLG, 3: HT FGNG
+			WHEN bettype IN (7, 8, 12, 15, 21,30, 125, 126) THEN 1
 			WHEN bettype = 14 THEN 2
+			WHEN bettype = 127 THEN 3
 			ELSE 0 END,
 		--SUM(CASE WHEN [status] IN (N'VOID',N'REJECT') THEN 0 ELSE 1 END),
 		SUM(CASE WHEN [statusID] IN (101,102) THEN 0 ELSE 1 END),
@@ -140,18 +150,27 @@ BEGIN
 	WHERE
 		matchid = @matchid and bettype not between 1301 and 1334 -- 20121113@Elodie: Exclude sporting solution product
 	GROUP BY
-		CASE WHEN bettype IN (7, 8, 12, 15, 21,30, 125) THEN 1 WHEN bettype = 14 THEN 2 ELSE 0 END
+		CASE WHEN bettype IN (7, 8, 12, 15, 21,30, 125, 126) THEN 1 
+			 WHEN bettype = 14 THEN 2 
+			 WHEN bettype = 127 THEN 3 
+			 ELSE 0 END
 
 	IF NOT EXISTS(SELECT * FROM @status WHERE [Group] = 0) INSERT INTO @status VALUES (0,0,0)
 	IF NOT EXISTS(SELECT * FROM @status WHERE [Group] = 1) INSERT INTO @status VALUES (1,0,0)
 	IF NOT EXISTS(SELECT * FROM @status WHERE [Group] = 2) INSERT INTO @status VALUES (2,0,0)
+	IF NOT EXISTS(SELECT * FROM @status WHERE [Group] = 3) INSERT INTO @status VALUES (3,0,0)
 
-	Declare @FTStatus nvarchar(20), @HTStatus nvarchar(20), @FGLGStatus nvarchar(20)
+	Declare @FTStatus nvarchar(20), @HTStatus nvarchar(20), @FGLGStatus nvarchar(20), @HTFGLGStatus nvarchar(20)
 	DECLARE @ParlayRunning BIT /* NULL no ticket, 1 running, 0 settled*/
+			, @HTParlayRunning BIT
 	
 	SELECT TOP 1 @ParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
 	FROM bettransm WITH(NOLOCK)
 	WHERE matchid = @matchid AND bettype = 14 AND statusID NOT IN (101,102)
+
+	SELECT TOP 1 @HTParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
+	FROM bettransm WITH(NOLOCK)
+	WHERE matchid = @matchid AND bettype = 127 AND statusID NOT IN (101,102)
 	
 		
 	Select @FTStatus = CASE
@@ -169,6 +188,13 @@ BEGIN
 									END
 			WHEN inRunning = 0 THEN N'SETTLED'
 			ELSE N'Running' END FROM @status WHERE [Group] = 2
+	Select @HTFGLGStatus = CASE
+			WHEN betcount  = 0 THEN CASE WHEN @HTParlayRunning IS NULL THEN N'No Ticket'
+										 WHEN @HTParlayRunning = 1 THEN N'Parlay Running'	
+										 WHEN @HTParlayRunning = 0 THEN N'Parlay Settled'
+									END
+			WHEN inRunning = 0 THEN N'SETTLED'
+			ELSE N'Running' END FROM @status WHERE [Group] = 3
 
 	IF EXISTS(select 1 from bettrans (nolock) where matchid = @matchid and bettype = 22)
 		Select @IsExistsNG = 1
@@ -190,6 +216,7 @@ BEGIN
 		@HTStatus HTStatus,
 		@FTStatus FTStatus,
 		@FGLGStatus fglgstatus,
+		@HTFGLGStatus HTFGLGStatus,
 		mr.ishtcal,
 		match.GoalRecord
 	from	DBPRO.BODB02.dbo.match with (nolock) 		
@@ -203,8 +230,6 @@ BEGIN
 		@ErrCode = 101
 	Return
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelForBill] TO [bodbAdminNet] AS [dbo]

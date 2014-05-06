@@ -1,4 +1,5 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_Parlay] @matchid INT = NULL
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@matchids VARCHAR(2000) = NULL
 	,@mode VARCHAR(15) = 'CAL'
 	,@action VARCHAR(20) = 'ALL'
@@ -20,6 +21,7 @@ AS
 	DB: EXECREP SP (DBTrans_Bet)
 
 	Revisions:
+		- 20140424@Lukas: add DBTP server 
 
 	Param's Explanation:
 		@action			@mode
@@ -28,7 +30,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DB231', 'DB232') AND @CalledByBrokerService = 0
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232') AND @CalledByBrokerService = 0
 	BEGIN
 		-- DB052/DB053/DB054/DB06: got servicebroker, then just send a message to service broker and then let it to handle the rest.
 		DECLARE @sMessage NVARCHAR(MAX)
@@ -149,11 +151,7 @@ BEGIN
 		END
 	END
 END
-
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_Parlay] TO [vnteam] AS [dbo]
-GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Parlay] TO [vnteam] AS [dbo]
 
 

@@ -218,6 +218,7 @@ WHERE oddsid IN (
 					WHERE matchid in (SELECT distinct matchid FROM @temp_daao)
 						AND bettype = 7
 						and liveindicator = 1
+					GROUP BY matchid
 				)
   
 if @fromdate > @o_x or @todate > @o_x   
