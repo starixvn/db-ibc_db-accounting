@@ -47,6 +47,9 @@ AS
 				  15: Change max turnover because SMA setting is updated from a specific value to a another specific value (X -> X1) 
 				  16: Change max turnover because SMA setting is deleted a specific value (X) 
 
+				  --Update given credit
+				  17: Change max turnover because given credit is updated
+
 		@EventID: sportID or leagueID or matchID
 	Example: EXEC NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = 1
 	
@@ -58,7 +61,7 @@ BEGIN
 	IF @UpdMode = 0 
 	BEGIN
 		UPDATE s
-		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = (sc.Value + ISNULL(sma.Offset,0)) * c.credit
+		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = (sc.Value + ISNULL(sma.Offset,0)) * c.credit/100
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -80,7 +83,7 @@ BEGIN
 	IF @UpdMode = 2 
 	BEGIN
 		UPDATE s
-		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = (lc.Value + ISNULL(sma.Offset,0)) * c.credit, InheritLevel = 2
+		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = (lc.Value + ISNULL(sma.Offset,0)) * c.credit/100, InheritLevel = 2
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -104,7 +107,7 @@ BEGIN
 	IF @UpdMode = 4 
 	BEGIN
 		UPDATE s
-		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = (lc.Value + ISNULL(sma.Offset,0)) * c.credit
+		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = (lc.Value + ISNULL(sma.Offset,0)) * c.credit/100
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -117,7 +120,7 @@ BEGIN
 	IF @UpdMode = 5
 	BEGIN
 		UPDATE s
-		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = (sc.Value + ISNULL(sma.Offset,0)) * c.credit, InheritLevel = 1
+		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = (sc.Value + ISNULL(sma.Offset,0)) * c.credit/100, InheritLevel = 1
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -130,7 +133,7 @@ BEGIN
 	IF @UpdMode = 6
 	BEGIN
 		UPDATE s
-		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = (mc.Value + ISNULL(sma.Offset,0)) * c.credit, InheritLevel = 3
+		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = (mc.Value + ISNULL(sma.Offset,0)) * c.credit/100, InheritLevel = 3
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -154,7 +157,7 @@ BEGIN
 	IF @UpdMode = 8
 	BEGIN
 		UPDATE s
-		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = (mc.Value + ISNULL(sma.Offset,0)) * c.credit
+		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = (mc.Value + ISNULL(sma.Offset,0)) * c.credit/100
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -168,7 +171,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0), 
-			maxturnover = (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0)) * c.credit, 
+			maxturnover = (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0)) * c.credit/100, 
 			InheritLevel = CASE WHEN lc.Value IS NOT NULL THEN 2 ELSE 1 END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
@@ -183,7 +186,7 @@ BEGIN
 	IF @UpdMode = 10
 	BEGIN
 		UPDATE s
-		SET Value = msc.Value, maxturnover = msc.Value * c.credit, InheritLevel = 4
+		SET Value = msc.Value, maxturnover = msc.Value * c.credit/100, InheritLevel = 4
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -207,7 +210,7 @@ BEGIN
 	IF @UpdMode = 12
 	BEGIN
 		UPDATE s
-		SET Value = msc.Value, maxturnover = msc.Value * c.credit
+		SET Value = msc.Value, maxturnover = msc.Value * c.credit/100
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -224,7 +227,7 @@ BEGIN
 							WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0), 
 			maxturnover = (CASE	WHEN mc.Value IS NOT NULL THEN mc.Value
 								WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN lc.Value 
-								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0)) * c.credit, 
+								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0)) * c.credit/100, 
 			InheritLevel = CASE	WHEN mc.Value IS NOT NULL THEN 3
 								WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN 2 
 								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN 1 END
@@ -250,7 +253,7 @@ BEGIN
 		BEGIN
 			UPDATE s
 			SET Value = s.Value + sc.Offset,
-				maxturnover = (s.Value + sc.Offset) * c.credit
+				maxturnover = (s.Value + sc.Offset) * c.credit/100
 			FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 				INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 				INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -264,7 +267,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = s.Value + (sc.Offset - @Offset),
-			maxturnover = (s.Value + (sc.Offset - @Offset)) * c.credit
+			maxturnover = (s.Value + (sc.Offset - @Offset)) * c.credit/100
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -277,12 +280,23 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = s.Value - @Offset,
-			maxturnover = (s.Value - @Offset) * c.credit
+			maxturnover = (s.Value - @Offset) * c.credit/100
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
 			INNER JOIN bodb_Age.dbo.DownlineTo_SMAControl sc WITH (NOLOCK) ON sc.SMAID = s.SMAID
 		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID AND s.InheritLevel <> 4
+	END
+
+	--Change max turnover because given credit is updated
+	IF @UpdMode = 17
+	BEGIN
+		UPDATE s
+		SET maxturnover = s.Value * c.credit/100
+		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+			INNER JOIN DBTXN.CustDB.dbo.CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
+			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
 	END
 
 	--IF @UpdMode = 4

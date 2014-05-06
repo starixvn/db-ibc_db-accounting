@@ -92,7 +92,7 @@ BEGIN
 
 	INSERT INTO DownlineTurnOver_Setting (SMAID, matchid, maxturnover, totalturnover, IsNotified, Value, InheritLevel)
 	SELECT dc.SMAID, dc.matchid, 
-			dc.Value * c.credit, 
+			dc.Value * c.credit/100, 
 			cal.totalturnover, 0, dc.Value, dc.InheritLevel
 	FROM @DownlineToControl dc
 		INNER JOIN CustInfo c WITH (NOLOCK) ON dc.SMAID = c.custid

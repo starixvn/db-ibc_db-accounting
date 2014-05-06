@@ -93,7 +93,7 @@ BEGIN
 					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
 						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
 					WHERE SMAID = @custid AND eventstatus <> 'completed')
-			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 5, @SMAID = @custid
+			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 17, @SMAID = @custid
 	END
 	ELSE --dummy super
 	BEGIN
@@ -101,7 +101,7 @@ BEGIN
 					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
 						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
 					WHERE SMAID = @mrecommend AND eventstatus <> 'completed')
-			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 5, @SMAID = @mrecommend
+			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 17, @SMAID = @mrecommend
 	END
 END
 else if @roleid = 3
@@ -117,7 +117,7 @@ BEGIN
 					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
 						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
 					WHERE SMAID = @recommend AND eventstatus <> 'completed')
-			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 5, @SMAID = @recommend
+			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 17, @SMAID = @recommend
 	END
 
 END
