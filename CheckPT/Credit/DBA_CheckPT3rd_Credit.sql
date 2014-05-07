@@ -23,13 +23,24 @@ Revisions:
 	
 Param's Explanation: 
 	@RuleId = 0 : 'all'
+	
+NOTE: For Sporttypes
+	161     - Number Game
+	184     - Virtual Motorsports                         
+	152     - Greyhounds
+	153     - Harness
+	186     - Virtual Tennis
+	151     - Horse Racing
+	185     - Virtual Cycling
+	182     - Virtual Greyhounds
+	180     - Virtual Soccer
+	181     - Virtual Horse Racing
+	183     - Virtual Speedway
 
 */
 
 SET NOCOUNT ON 
 		
-IF @sporttype <> 162 OR @sporttype = 0
-BEGIN
 		---- 1. S1 < 0 OR M1 < 0 OR A1 < 0
 
 		IF @RuleId IN (0,1)
@@ -1621,7 +1632,6 @@ BEGIN
 
 END 
 
-END 
 
 GO
 
