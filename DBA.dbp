@@ -289,7 +289,7 @@ Begin DataProject = "DBA"
       Script = "Dot_MiniGame_CustomerSelInfo.sql"
       Script = "Dot_MiniGame_CustomerSelPT.sql"
    End
-   Begin Folder = "CheckPT1"
+   Begin Folder = "CheckPT"
       Begin Folder = "Credit"
          Script = "DBA_CheckPT_Credit.sql"
          Script = "DBA_CheckPT3rd_Credit.sql"
