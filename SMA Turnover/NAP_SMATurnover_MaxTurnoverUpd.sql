@@ -284,7 +284,6 @@ BEGIN
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
-			INNER JOIN bodb_Age.dbo.DownlineTo_SMAControl sc WITH (NOLOCK) ON sc.SMAID = s.SMAID
 		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID AND s.InheritLevel <> 4
 	END
 

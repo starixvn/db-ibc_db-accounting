@@ -18,7 +18,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 			
-	SELECT	m.matchid, m.matchcode, m.eventdate, m.homeid, m.awayid, c.custid, c.username, c.roleid, e.currency, c.credit, ms.Value, (c.credit * ms.Value)/100 AS MaxTurnover
+	SELECT	m.matchid, m.matchcode, m.eventdate, m.homeid, m.awayid, c.custid, c.username, c.roleid, e.currency, c.credit, ms.Value, (c.credit/100 * ms.Value) AS MaxTurnover
 	FROM DownlineTo_Match_SMAControl ms WITH (NOLOCK)
 		RIGHT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = ms.MatchID
 		LEFT JOIN bodb02.dbo.custInfo c WITH (NOLOCK) ON ms.SMAID = c.custid			
@@ -32,4 +32,3 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_SMATurnover_SMAControlByEventSel] TO [bodbadminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnover_SMAControlByEventSel] TO [vnteam]
-

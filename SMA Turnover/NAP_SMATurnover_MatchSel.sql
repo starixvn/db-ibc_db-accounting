@@ -6,7 +6,7 @@ AS
 /*
 	Created: Elodie
 	Date: 20140416
-	Task : Retrieve Match list in monitor list
+	Task : Retrieve Match list in usage list
 	DB: DBAGE/bodb02
 
 	Revisions:
@@ -18,7 +18,7 @@ AS
 SET NOCOUNT ON
 SELECT m.matchid, m.homeid, m.awayid
 FROM match m WITH (NOLOCK)
-WHERE m.leagueid = 	@LeagueID AND m.eventdate BETWEEN @FromDate AND @ToDate
+WHERE m.leagueid = 	@LeagueID AND m.eventdate BETWEEN @FromDate AND @ToDate AND matchcode NOT LIKE '%hedge%'
 ORDER BY m.matchid
 
 GO

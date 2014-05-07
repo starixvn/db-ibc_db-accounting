@@ -13,7 +13,7 @@ AS
 
 	Parameter's explaination: 
 	
-	Example: EXEC NAP_SMATurnover_MonitorList @SportType = 1, @LeagueID = 33828
+	Example: EXEC NAP_SMATurnover_MonitorList @SportType = 1, @LeagueID = 0, @UsedPercent = 5
 	
 */
 SET NOCOUNT ON
@@ -27,7 +27,7 @@ SELECT l.leagueid, m.matchid, m.matchcode, m.homeid, m.awayid, c.custID, c.usern
 		INNER JOIN exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE m.sporttype = @SportType 
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
-			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN t.totalturnover*100/t.maxturnover ELSE @UsedPercent END
+			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 0 ELSE CAST((t.totalturnover*100/t.maxturnover) AS INT) END ELSE @UsedPercent END
 			AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.kickofftime >= getdate()
 	ORDER BY l.leaguename, m.matchcode, PercentageUsed desc, c.username	
 

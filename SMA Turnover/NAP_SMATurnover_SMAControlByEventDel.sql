@@ -54,9 +54,9 @@ BEGIN
 		IF NOT EXISTS (	SELECT 1 
 						FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
 		AND NOT EXISTS (SELECT 1 
-						FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID)			
+						FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID AND Value <> 0)			
 		AND NOT EXISTS (SELECT 1 
-						FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID)	
+						FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID AND Value <> 0)	
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 11, @EventID = @MatchID, @SMAID = @SMAID
 		ELSE
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 13, @EventID = @MatchID, @SMAID = @SMAID	
