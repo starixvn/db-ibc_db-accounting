@@ -34,7 +34,7 @@ BEGIN
 	--IF @ErrCode <> 0
 	--	RETURN
 
-	IF @Value < 0
+	IF @Value < 0 OR @Value > 999
 	BEGIN
 		SELECT @ErrCode = 101, @ErrMsg = 'Invalid value.'
 		RETURN
@@ -75,6 +75,13 @@ BEGIN
 	FROM bodb02.dbo.match m WITH (NOLOCK) 
 	WHERE m.matchid = @MatchID
 
+	DECLARE @SportValue INT, @LeagueValue INT, @MatchValue INT
+	SELECT @SportValue = NULL, @LeagueValue = NULL, @MatchValue = NULL
+
+	SELECT @SportValue = Value FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID
+	SELECT @LeagueValue = Value FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID
+	SELECT @MatchValue = Value FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID
+
 	INSERT INTO DownlineTo_Match_SMAControl (SMAID, MatchID, Value)
 	VALUES (@SMAID, @MatchID, @Value)	
 
@@ -82,12 +89,9 @@ BEGIN
 		EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 11, @EventID = @MatchID, @SMAID = @SMAID
 	ELSE
 	BEGIN			
-		IF EXISTS (	SELECT 1 
-					FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
-		OR EXISTS (	SELECT 1 
-					FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID AND Value <> 0)			
-		OR EXISTS (	SELECT 1 
-					FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID AND Value <> 0)			
+		IF (@MatchValue IS NOT NULL AND @MatchValue <> 0) 
+		OR (@LeagueValue IS NOT NULL AND @LeagueValue <> 0 AND (@MatchValue <> 0 OR @MatchValue IS NULL))
+		OR (@SportValue IS NOT NULL AND (@LeagueValue <> 0 OR @LeagueValue IS NULL) AND (@MatchValue <> 0 OR @MatchValue IS NULL))
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 10, @EventID = @MatchID, @SMAID = @SMAID	
 	END
 

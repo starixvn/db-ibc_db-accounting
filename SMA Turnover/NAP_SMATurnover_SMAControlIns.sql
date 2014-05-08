@@ -33,6 +33,12 @@ BEGIN
 	--IF @ErrCode <> 0
 	--	RETURN
 
+	IF @Offset < -999 OR @Offset > 999
+	BEGIN
+		SELECT @ErrCode = 102, @ErrMsg = 'Invalid offset.'
+		RETURN
+	END	
+
 	DECLARE @SMAID INT, @roleID INT, @srecommend INT, @mrecommend INT, @recommend INT
 	SELECT @SMAID = NULL
 	SELECT @SMAID = CustID, @roleID = roleid, @srecommend = srecommend, @mrecommend = mrecommend, @recommend = recommend

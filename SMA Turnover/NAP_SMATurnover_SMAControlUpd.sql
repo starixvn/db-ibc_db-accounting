@@ -39,6 +39,12 @@ BEGIN
 		RETURN
 	END		
 
+	IF @Offset < -999 OR @Offset > 999
+	BEGIN
+		SELECT @ErrCode = 102, @ErrMsg = 'Invalid offset.'
+		RETURN
+	END	
+
 	DECLARE @OldOffset INT
 	SELECT @OldOffset = Offset FROM DownlineTo_SMAControl WITH(NOLOCK) WHERE SMAID = @SMAID
 	IF @OldOffset IS NULL OR @OldOffset = @Offset

@@ -40,7 +40,7 @@ BEGIN
 		RETURN
 	END		
 
-	IF @Value < 0
+	IF @Value < 0 OR @Value > 999
 	BEGIN
 		SELECT @ErrCode = 102, @ErrMsg = 'Invalid value.'
 		RETURN

@@ -45,21 +45,23 @@ BEGIN
 	FROM bodb02.dbo.match m WITH (NOLOCK) 
 	WHERE m.matchid = @MatchID
 
+	DECLARE @SportValue INT, @LeagueValue INT
+	SELECT @SportValue = NULL, @LeagueValue = NULL
+
+	SELECT @SportValue = Value FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID
+	SELECT @LeagueValue = Value FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID
+
 	SELECT @Value = Value FROM DownlineTo_MatchControl WITH (NOLOCK) WHERE MatchID = @MatchID
 
 	DELETE DownlineTo_MatchControl WHERE MatchID = @MatchID
 
 	IF @Value <> 0
 	BEGIN
-		IF (NOT EXISTS (SELECT 1 
-						FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
-			AND NOT EXISTS (SELECT 1 
-							FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID))
-			OR EXISTS (	SELECT 1 
-						FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID AND Value = 0)		
-			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 7, @EventID = @MatchID	
-		ELSE
+		IF (@LeagueValue IS NOT NULL AND @LeagueValue <> 0)
+			OR (@SportValue IS NOT NULL AND (@LeagueValue <> 0 OR @LeagueValue IS NULL))
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 9, @EventID = @MatchID	
+		ELSE
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 7, @EventID = @MatchID	
 	END	
 
 	DECLARE @LogData NVARCHAR(4000)

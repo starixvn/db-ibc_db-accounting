@@ -39,7 +39,7 @@ BEGIN
 		RETURN
 	END		
 
-	IF @Value < 0
+	IF @Value < 0 OR @Value > 999
 	BEGIN
 		SELECT @ErrCode = 102, @ErrMsg = 'Invalid value.'
 		RETURN
@@ -61,6 +61,12 @@ BEGIN
 	FROM bodb02.dbo.match m WITH (NOLOCK) 
 	WHERE m.matchid = @MatchID
 
+	DECLARE @SportValue INT, @LeagueValue INT
+	SELECT @SportValue = NULL, @LeagueValue = NULL
+
+	SELECT @SportValue = Value FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID
+	SELECT @LeagueValue = Value FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID
+
 	UPDATE DownlineTo_MatchControl WITH (ROWLOCK,UPDLOCK)
 	SET Value = @Value
 	WHERE MatchID = @MatchID
@@ -73,12 +79,8 @@ BEGIN
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 7, @EventID = @MatchID	
 		ELSE
 		BEGIN			
-			IF (EXISTS (SELECT 1 
-						FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
-				AND NOT EXISTS (SELECT 1 
-								FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID AND Value = 0))
-			OR EXISTS (	SELECT 1 
-						FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID AND Value <> 0)			
+			IF (@LeagueValue IS NOT NULL AND @LeagueValue <> 0)
+			OR (@SportValue IS NOT NULL AND (@LeagueValue <> 0 OR @LeagueValue IS NULL))
 				EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 6, @EventID = @MatchID	
 		END
 	END
