@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Task_DownlineTurnOver_Setting_sum_job]    Script Date: 5/9/2014 1:03:32 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
 /*
 	Created: Joe
 	Task: 
@@ -92,7 +99,7 @@ BEGIN
 
 	INSERT INTO DownlineTurnOver_Setting (SMAID, matchid, maxturnover, totalturnover, IsNotified, Value, InheritLevel)
 	SELECT dc.SMAID, dc.matchid, 
-			dc.Value/100 * c.credit, 
+			c.credit/100 * dc.Value, 
 			cal.totalturnover, 0, dc.Value, dc.InheritLevel
 	FROM #DownlineToControl dc
 		INNER JOIN CustInfo c WITH (NOLOCK) ON dc.SMAID = c.custid
