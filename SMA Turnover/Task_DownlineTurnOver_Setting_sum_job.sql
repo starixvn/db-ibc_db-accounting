@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Task_DownlineTurnOver_Setting_sum_job]    Script Date: 5/9/2014 1:03:32 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
+﻿ALTER PROCEDURE [dbo].[Task_DownlineTurnOver_Setting_sum_job]
 /*
 	Created: Joe
 	Task: 
@@ -42,6 +35,7 @@ BEGIN
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 	WHERE srecommend NOT IN (SELECT custid FROM Dep_CustSuper WITH (NOLOCK))
 		AND m.sporttype < 99 AND m.eventstatus <> 'completed' AND m.matchcode NOT LIKE '%hedge%'
+		AND recommend NOT IN (SELECT custid FROM DBACC.bodb_ACC.dbo.Acc_CustDirect)
 	
 	INSERT INTO #DownlineToCal (SMAID, matchid, TotalTurnover)
 	SELECT SMAID, matchid, SUM(sumstake) TotalTurnover

@@ -55,8 +55,8 @@ BEGIN
 	ELSE
 	BEGIN
 		IF (@roleID = 4 AND EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID))
-			OR (@roleID = 3 AND NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @srecommend))
-			OR (@roleID = 2 AND NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @mrecommend))
+			OR (@roleID = 3 AND (NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @srecommend) OR EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID)))
+			OR (@roleID = 2 AND (NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @mrecommend) OR EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID)))
 			OR @roleID = 1
 		BEGIN
 			SELECT @ErrCode = 102, @ErrMsg = 'Invalid Username!'
@@ -75,12 +75,13 @@ BEGIN
 	FROM bodb02.dbo.match m WITH (NOLOCK) 
 	WHERE m.matchid = @MatchID
 
-	DECLARE @SportValue INT, @LeagueValue INT, @MatchValue INT
-	SELECT @SportValue = NULL, @LeagueValue = NULL, @MatchValue = NULL
+	DECLARE @SportValue INT, @LeagueValue INT, @MatchValue INT, @SMAOffset INT
+	SELECT @SportValue = NULL, @LeagueValue = NULL, @MatchValue = NULL, @SMAOffset = NULL
 
 	SELECT @SportValue = Value FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID
 	SELECT @LeagueValue = Value FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID
 	SELECT @MatchValue = Value FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID
+	SELECT @SMAOffset = Offset FROM DownlineTo_SMAControl sma WITH (NOLOCK) WHERE sma.SMAID = @SMAID
 
 	INSERT INTO DownlineTo_Match_SMAControl (SMAID, MatchID, Value)
 	VALUES (@SMAID, @MatchID, @Value)	
@@ -92,6 +93,7 @@ BEGIN
 		IF (@MatchValue IS NOT NULL AND @MatchValue <> 0) 
 		OR (@LeagueValue IS NOT NULL AND @LeagueValue <> 0 AND (@MatchValue <> 0 OR @MatchValue IS NULL))
 		OR (@SportValue IS NOT NULL AND (@LeagueValue <> 0 OR @LeagueValue IS NULL) AND (@MatchValue <> 0 OR @MatchValue IS NULL))
+		AND (@SMAOffset IS NULL OR @SMAOffset <> 0)
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 10, @EventID = @MatchID, @SMAID = @SMAID	
 	END
 

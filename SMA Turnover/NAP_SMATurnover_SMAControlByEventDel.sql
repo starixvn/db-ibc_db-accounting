@@ -45,12 +45,13 @@ BEGIN
 	FROM bodb02.dbo.match m WITH (NOLOCK) 
 	WHERE m.matchid = @MatchID
 
-	DECLARE @SportValue INT, @LeagueValue INT, @MatchValue INT
-	SELECT @SportValue = NULL, @LeagueValue = NULL, @MatchValue = NULL
+	DECLARE @SportValue INT, @LeagueValue INT, @MatchValue INT, @SMAOffset INT
+	SELECT @SportValue = NULL, @LeagueValue = NULL, @MatchValue = NULL, @SMAOffset = NULL
 
 	SELECT @SportValue = Value FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID
 	SELECT @LeagueValue = Value FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID
 	SELECT @MatchValue = Value FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID
+	SELECT @SMAOffset = Offset FROM DownlineTo_SMAControl sma WITH (NOLOCK) WHERE sma.SMAID = @SMAID
 
 	SELECT @Value = Value FROM DownlineTo_Match_SMAControl WITH (NOLOCK) WHERE MatchID = @MatchID AND SMAID = @SMAID
 	
@@ -58,9 +59,10 @@ BEGIN
 
 	IF @Value <> 0
 	BEGIN
-		IF (@MatchValue IS NOT NULL AND @MatchValue <> 0) 
+		IF ((@MatchValue IS NOT NULL AND @MatchValue <> 0) 
 		OR (@LeagueValue IS NOT NULL AND @LeagueValue <> 0 AND (@MatchValue <> 0 OR @MatchValue IS NULL))
-		OR (@SportValue IS NOT NULL AND (@LeagueValue <> 0 OR @LeagueValue IS NULL) AND (@MatchValue <> 0 OR @MatchValue IS NULL))
+		OR (@SportValue IS NOT NULL AND (@LeagueValue <> 0 OR @LeagueValue IS NULL) AND (@MatchValue <> 0 OR @MatchValue IS NULL)))
+		AND (@SMAOffset IS NULL OR @SMAOffset <> 0)
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 13, @EventID = @MatchID, @SMAID = @SMAID
 		ELSE
 			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 11, @EventID = @MatchID, @SMAID = @SMAID	

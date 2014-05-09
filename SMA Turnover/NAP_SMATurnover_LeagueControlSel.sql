@@ -26,7 +26,7 @@ BEGIN
 	IF EXISTS (	SELECT 1 
 				FROM bodb02.dbo.League l WITH (NOLOCK)
 				WHERE	l.sporttype = @SportID AND l.IsActive = 1 AND 
-						l.ProgramID = CASE WHEN @ProgramID = '' THEN l.ProgramID ELSE @ProgramID END AND
+						1 = CASE WHEN @ProgramID <> '' AND l.ProgramID = @ProgramID THEN 1 ELSE 1 END AND
 						l.DisplayMode = CASE WHEN @DisplayMode = 0 THEN l.DisplayMode ELSE @DisplayMode END AND
 						l.CountryCode = CASE WHEN @CountryCode = '' THEN l.CountryCode ELSE @CountryCode END AND
 						l.IsMainMarket = CASE WHEN @AllMarket = 1 THEN l.IsMainMarket ELSE 1 END AND
@@ -43,7 +43,7 @@ BEGIN
 			RIGHT JOIN bodb02.dbo.League l WITH (NOLOCK) ON l.leagueid = lc.LeagueID
 			LEFT JOIN DownlineTo_SportControl sc WITH (NOLOCK) ON l.sporttype = sc.SportID
 		WHERE l.sporttype = @SportID AND l.IsActive = 1 AND 
-				l.ProgramID = CASE WHEN @ProgramID = '' THEN l.ProgramID ELSE @ProgramID END AND
+				1 = CASE WHEN @ProgramID <> '' AND l.ProgramID = @ProgramID THEN 1 ELSE 1 END AND
 				l.DisplayMode = CASE WHEN @DisplayMode = 0 THEN l.DisplayMode ELSE @DisplayMode END AND
 				l.CountryCode = CASE WHEN @CountryCode = '' THEN l.CountryCode ELSE @CountryCode END AND
 				l.IsMainMarket = CASE WHEN @AllMarket = 1 THEN l.IsMainMarket ELSE 1 END AND
