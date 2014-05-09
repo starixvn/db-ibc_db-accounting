@@ -72,7 +72,7 @@ BEGIN
 		SET eventstatus='Completed', ruben=1, finalhomescore=0, finalawayscore=0, hthomescore=0, htawayscore=0
 			--,betstatus= 'Refund' + CASE WHEN CHARINDEX('FL:',ISNULL(betstatus,'')) = 0 THEN '' ELSE ';' + betstatus END	
 			,betstatus = 'Refund' + CASE when CHARINDEX('1FL:',ISNULL(betstatus,'')) = 0 
-										 THEN ''
+										 THEN ';'
 										 ELSE ';' + SUBSTRING(betstatus,CHARINDEX('1FL', betstatus),LEN(betstatus))
 									END 
 			,GoalRecord =''

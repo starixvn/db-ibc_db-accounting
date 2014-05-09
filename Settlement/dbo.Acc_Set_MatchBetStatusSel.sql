@@ -1,5 +1,6 @@
-﻿ALTER PROCEDURE dbo.Acc_Set_MatchBetStatusSel
+﻿ALTER PROCEDURE [Acc_Set_MatchBetStatusSel]
 	@matchid VARCHAR(max),
+	@bettype int = 14,
 	@betstatus VARCHAR(8000) = '' OUTPUT
 AS
 	/*
@@ -9,6 +10,7 @@ AS
 		DB: DBTXN/bodb02
 
 		Revisions:
+			- 20140428@Kathy: Add @bettype [Redmine:#14718]
 
 		Parameter's Explanation:
 	*/
@@ -28,7 +30,7 @@ BEGIN
 							FROM OPENXML(@intDocHandle,'/root/match',2)
 							with (matchid INT) 
 						)
-			AND bettype = 14
+			AND bettype = @bettype
 		GROUP BY matchid 
 	)
 
