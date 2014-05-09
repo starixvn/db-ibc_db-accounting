@@ -81,7 +81,6 @@ BEGIN
 		IF @@ROWCOUNT < 10000 BREAK
 	END	
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundAll] TO [bodbAdminNet] AS [dbo]
 GO

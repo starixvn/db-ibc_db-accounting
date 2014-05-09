@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompletedHT]	
+﻿ALTER PROCEDURE [Acc_Set_MatchSelCompletedHT]	
 	@FromDate DATETIME,
 	@sporttype TINYINT = 0
 AS
@@ -23,7 +23,7 @@ AS
 		- 20130121@Elodie: Change link server DB02 to DBPRO
 		- 20130325@Lukas: get goalrecord & isExistFGLG
 		- 20131017@Elodie: Adjust the display time for HT Over Only [Redmine:#6725]
-		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
+		- 20140428@Kathy: Get 1H FGLG ticket info [Redmine:#14718]
 */  
 BEGIN
 	SET NOCOUNT ON  
@@ -48,13 +48,14 @@ BEGIN
 				m.betstatus,  
 				m.IsNeutral,  
 				C.betcount,  
-				CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) END suspenderHT,  
+				CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) END suspenderHT,  
 				m.IsHTCal,   
 				m.calculate,  
 				m.isPending,
 				m.isUndecided,  --Hurri@20120306  
 				m.goalrecord,
-				CASE WHEN c.cntFGLG = 0 THEN 0 ELSE 1 END AS isExistFGLG
+				CASE WHEN c.cntFGLG = 0 THEN 0 ELSE 1 END AS isExistFGLG,
+				CASE WHEN c.cntHTFGLG = 0 THEN 0 ELSE 1 END AS isExistHTFGLG
 		FROM    (
 				SELECT	match.matchid,  
 						match.leagueid,  
@@ -89,7 +90,8 @@ BEGIN
 				(	
 				SELECT   bettrans.matchid,  
 						COUNT(bettrans.matchid)  betcount,
-						SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG
+						SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG,
+						SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END) AS cntHTFGLG
 				FROM     bettrans WITH (NOLOCK, INDEX=CIX_matchid_bettype),  
 					 DBPRO.BODB02.dbo.match WITH(NOLOCK)
 				 WHERE    match.eventdate = @FromDate  
@@ -119,13 +121,14 @@ BEGIN
 			m.betstatus,  
 			m.IsNeutral,        
 			C.betcount,  
-			CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) end suspenderHT,  
+			CASE m.confirmHT WHEN 0 THEN '' ELSE (SELECT username FROM custinfo WITH(NOLOCK) WHERE custid = m.confirmHT) end suspenderHT,  
 			m.IsHTCal,   
 			m.calculate,  
 			m.isPending,
 			m.isUndecided,  --Hurri@20120306  
 			m.goalrecord,
-			CASE WHEN c.cntFGLG = 0 THEN 0 ELSE 1 END AS isExistFGLG
+			CASE WHEN c.cntFGLG = 0 THEN 0 ELSE 1 END AS isExistFGLG,
+			CASE WHEN c.cntHTFGLG = 0 THEN 0 ELSE 1 END AS isExistHTFGLG
 	 FROM	(
 			SELECT match.matchid,  
 				  match.leagueid,  
@@ -163,7 +166,8 @@ BEGIN
 			(
 			SELECT   bettrans.matchid,  
 				COUNT(bettrans.matchid)  betcount ,
-				SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG
+				SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG,
+				SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END) AS cntHTFGLG
 			FROM     bettrans WITH(NOLOCK,INDEX=CIX_matchid_bettype),  
 				DBPRO.BODB02.dbo.match WITH(NOLOCK)  
 			WHERE    match.eventdate = @FromDate  

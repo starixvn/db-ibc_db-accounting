@@ -505,8 +505,6 @@ END
 
 
 
-
-
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
 GO
