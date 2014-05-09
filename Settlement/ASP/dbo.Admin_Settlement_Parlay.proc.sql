@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Admin_Settlement_Parlay]
+﻿ALTER PROCEDURE [Admin_Settlement_Parlay]
 (
 	@matchids	VARCHAR(2000),
 	@creator	INT,
@@ -38,6 +37,7 @@ AS
 		- 20130710@Viet: Change way to Parlay Settlement 
 		- 20130711@Jamie: Add Balance Negative 
 		- 20140220@Lukas: insert settled command into LAS queue [Redmine:#8785]
+		- 20140509@Kathy: allow to execute undo action without score   
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		
@@ -64,7 +64,7 @@ BEGIN
 							WHEN 'REFUND-HT' THEN 120
 							WHEN 'REFUND' THEN 107
 						END
-	
+
 	-- GET list of matchid(s)
 	DECLARE @match TABLE (
 		rn INT PRIMARY KEY IDENTITY(1,1), 
@@ -87,8 +87,9 @@ BEGIN
 					SportType, betstatus, GoalRecord
 			FROM DBPRO.BODB02.dbo.Match with (rowlock)
 			WHERE matchid IN (SELECT val FROM dbo.strSplit(@matchids,','))
-
-	IF EXISTS (SELECT 1 FROM @match	WHERE fth is null or fta is null or hth is null or hta is null)
+	
+		
+	IF EXISTS (SELECT 1 FROM @match	WHERE fth is null or fta is null or hth is null or hta is null) AND @action <> 'UNDO'
 	BEGIN			
 		SELECT @NotKeyScoreList  = COALESCE(@NotKeyScoreList + ',' + matchcode,matchcode)
 		FROM @match
@@ -99,6 +100,7 @@ BEGIN
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
 	END
 
+	
 		--- LAS settlement 
 	DECLARE @LASCommand NVARCHAR(1000)
 		,@createdDate DATETIME
@@ -170,7 +172,7 @@ BEGIN
 			IF @action IN ('REFUND-FT','REFUND-HT') -- if REFUND-FT or REFUND-HT called, do 'CAL' first, before do 'REFUND-FT'
 				EXEC dbo.Admin_Calculate_9m @matchid, @finalhomescore, @finalawayscore, @hthomescore, @htawayscore, @matchdate, 'CAL', @TennisTotal
 		COMMIT TRANSACTION
-
+		
 		BEGIN TRANSACTION
 				EXEC dbo.Admin_Calculate_9m @matchid, @finalhomescore, @finalawayscore, @hthomescore, @htawayscore, @matchdate, @action, @TennisTotal
 		COMMIT TRANSACTION
@@ -262,6 +264,7 @@ END --IF @SkipBalanceUpdate = 0
 	--- insert sub-ticket into bettrans
 	SET @subStart = CURRENT_TIMESTAMP
 		EXEC dbo.Admin_Calculate_29_Summary
+		
 	SET @Summary = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
 
 	---------------------------------------------------------------
@@ -430,8 +433,6 @@ DROP TABLE #BalanceAfter
 
 	END	
 END
-
-
 
 
 GO
