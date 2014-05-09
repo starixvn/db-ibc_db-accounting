@@ -17,7 +17,7 @@ SET NOCOUNT ON
 
 SELECT DISTINCT l.CountryCode
 FROM league l WITH(NOLOCK) 
-WHERE l.IsActive = 1 AND l.CountryCode <> '0' AND l.CountryCode IS NOT NULL
+WHERE l.IsActive = 1 AND l.CountryCode <> '0' AND l.CountryCode IS NOT NULL AND l.sporttype < 99
 ORDER BY l.CountryCode
 
 GO

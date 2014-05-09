@@ -20,7 +20,7 @@ BEGIN
 
 	SET @rc1 = @@ROWCOUNT
 	
-	CREATE TABLE #DownlineToTmp (SMAID INT,  matchid INT, SumStake MONEY, CONSTRAINT [CIX_DownlineToTmp] PRIMARY KEY CLUSTERED (matchid, SMAID))
+	CREATE TABLE #DownlineToTmp (SMAID INT,  matchid INT, SumStake MONEY)
 	CREATE TABLE #DownlineToCal (SMAID INT, matchid INT, TotalTurnover MONEY, CONSTRAINT [CIX_DownlineToCal] PRIMARY KEY CLUSTERED (matchid, SMAID))	
 	CREATE TABLE #DownlineToControl (SMAID INT, matchid INT, Value INT, InheritLevel TINYINT, CONSTRAINT [CIX_DownlineToControl] PRIMARY KEY CLUSTERED (matchid, SMAID))	
 	CREATE TABLE #temp (SMAID INT, matchid INT, CONSTRAINT [CIX_temp] PRIMARY KEY CLUSTERED (matchid, SMAID))

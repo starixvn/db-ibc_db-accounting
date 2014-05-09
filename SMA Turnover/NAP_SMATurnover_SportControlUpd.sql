@@ -33,7 +33,7 @@ BEGIN
 	--IF @ErrCode <> 0
 	--	RETURN
 	
-	IF @SportID <= 0
+	IF @SportID <= 0 OR @SportID >= 99
 	BEGIN
 		SELECT @ErrCode = 101, @ErrMsg = 'Invalid sport.'
 		RETURN
