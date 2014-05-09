@@ -37,7 +37,7 @@ AS
 		- 20130710@Viet: Change way to Parlay Settlement 
 		- 20130711@Jamie: Add Balance Negative 
 		- 20140220@Lukas: insert settled command into LAS queue [Redmine:#8785]
-		- 20140509@Kathy: allow to execute undo action without score 
+		- 20140509@Kathy: allow to execute undo action without score   
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		
