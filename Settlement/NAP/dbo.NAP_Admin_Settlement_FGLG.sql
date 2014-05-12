@@ -368,12 +368,12 @@ BEGIN
 
 	DECLARE @LogData VARCHAR(200)
 
-	SELECT @LogData = 'Calculate FGLG for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' score:' + CAST(ISNULL(@finalhomescore, 0) AS NVARCHAR(10)) + '-' + CAST(ISNULL(@finalawayscore, 0) AS NVARCHAR(10)) + ' HT:' + CAST(@hthomescore AS NVARCHAR(10)) + '-' + CAST(@htawayscore AS NVARCHAR(10)) + ' GoalRecord:' + ISNULL(@goalrecord, '') + ') Remark(BetStatus=' + @betstatus + ', IncludeLG=' + convert(CHAR(1), @IncludeLG) + ', Action=' + @action + ')'
+	SELECT @LogData = 'NAP: Calculate FGLG for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' score:' + CAST(ISNULL(@finalhomescore, 0) AS NVARCHAR(10)) + '-' + CAST(ISNULL(@finalawayscore, 0) AS NVARCHAR(10)) + ' HT:' + CAST(@hthomescore AS NVARCHAR(10)) + '-' + CAST(@htawayscore AS NVARCHAR(10)) + ' GoalRecord:' + ISNULL(@goalrecord, '') + ') Remark(BetStatus=' + @betstatus + ', IncludeLG=' + convert(CHAR(1), @IncludeLG) + ', Action=' + @action + ')'
 
 	EXEC dbo.WriteLog_UserLog @creator
 		,@LogData
 
-	SELECT @Remark = 'IncludeLG=' + convert(CHAR(1), @IncludeLG) + 'Action=' + @action
+	SELECT @Remark = 'NAP: IncludeLG=' + convert(CHAR(1), @IncludeLG) + 'Action=' + @action
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @creator

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Calculate_Refund_BetDaq] 
+﻿ALTER PROCEDURE [Admin_Calculate_Refund_BetDaq] 
 	@matchid int
 AS
 /*	Created by: Jamie
@@ -10,6 +10,7 @@ AS
 		- 20121022@Elodie: Exclude sporting solution product
 		- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 		- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
+		- 20140512@Kathy: Exclude bettype 1H FGLG (127) [Redmine:#14718]
 */
 SET NOCOUNT ON
 
@@ -34,7 +35,7 @@ BEGIN
 			--AND [status] not in (N'Void', N'Reject')
 			AND statusID NOT IN (103,101,102)
 			AND ruben = 0 
-			AND bettype <> 14 --Exclude FGLG 
+			AND bettype not IN (14, 127) --Exclude FGLG , 1H FGLG
 			and bettype not between 1301 and 1334 -- exclude sporting solution product
 			and( custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 				OR  recommend IN (1688156)
@@ -43,6 +44,7 @@ BEGIN
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]

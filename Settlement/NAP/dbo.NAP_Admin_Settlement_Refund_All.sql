@@ -508,7 +508,7 @@ BEGIN
 
 	DECLARE @LogData NVARCHAR(200)
 
-	SELECT @LogData = 'Calculate (Refund All) for matchid:' + CAST(@matchid AS NVARCHAR(10)) + CASE 
+	SELECT @LogData = 'NAP: Calculate (Refund All) for matchid:' + CAST(@matchid AS NVARCHAR(10)) + CASE 
 			WHEN @IsExcludeBetdaq = 1 THEN ', Exclude Betdaq tickets' ELSE '' END 
 			+ CASE WHEN @IsSettleAbandonedMatch = 1 THEN ', Settle determined betdaq tickets' ELSE '' END 
 			+ CASE WHEN @IsExcludeBetfair = 1 THEN ', Exclude Betfair tickets' ELSE '' END 
@@ -519,7 +519,7 @@ BEGIN
 		,@LogData
 
 	--Write Log Settle
-	SELECT @Remark = 'ExcludeBetdaqTickets=' + convert(char(1),@IsExcludeBetdaq) 
+	SELECT @Remark = 'NAP: ExcludeBetdaqTickets=' + convert(char(1),@IsExcludeBetdaq) 
 					+ ' SettleDeterminedBetdaqTickets=' + convert(char(1),@IsSettleAbandonedMatch)
 					+ ' ExcludeBetfairTickets=' + convert(char(1),@IsExcludeBetfair) 
 					+ ' SettleDeterminedBetfairTickets=' + convert(char(1),@IsSettleAbandonedMatchBetFair)
@@ -613,7 +613,7 @@ BEGIN
 		-- Write log
 		DECLARE @log VARCHAR(200)
 
-		SET @log = 'Refund for matchid: ' + CONVERT(VARCHAR(10), @matchid)
+		SET @log = 'NAP: Refund for matchid: ' + CONVERT(VARCHAR(10), @matchid)
 
 		EXEC dbo.WriteLog_UserLog @creator
 			,@Log

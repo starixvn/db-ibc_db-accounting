@@ -7,6 +7,7 @@ AS
 	DB: DBTXN/BODB02
 	
 	Revisions:
+		- 20140512@Kathy: Exclude bettype 1H FGLG (127) [Redmine:#14718]
 */
 SET NOCOUNT ON
 
@@ -31,14 +32,13 @@ BEGIN
 			--AND [status] not in (N'Void', N'Reject')
 			AND statusID NOT IN (103,101,102)
 			AND ruben = 0 
-			AND bettype <> 14 --Exclude FGLG 
+			AND bettype not IN (14, 127) --Exclude FGLG , 1H FGLG
 			and bettype not between 1301 and 1334 -- exclude sporting solution product
 			and custid IN (2331, 1077687, 115770) 
 	
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
-
 
 
 GO

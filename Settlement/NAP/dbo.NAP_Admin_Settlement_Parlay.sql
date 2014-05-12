@@ -527,13 +527,13 @@ BEGIN
 		FROM @match
 		WHERE rn = @rn
 
-		SELECT @LogData = 'Calculate Multiple (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
+		SELECT @LogData = 'NAP: Calculate Multiple (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
 
 		EXEC dbo.WriteLog_UserLog @creator
 			,@LogData
 
 		--Write Log Settle
-		SELECT @Remark = 'Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
+		SELECT @Remark = 'NAP: Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
 
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @creator
