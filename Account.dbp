@@ -1658,6 +1658,8 @@ Begin DataProject = "Account"
          Script = "NAP_SMATurnover_EventSel.sql"
       End
       Script = "NAP_SMATurnover_CountrySel.sql"
+      Script = "NAP_SMATurnover_IsNotifiedSel.sql"
+      Script = "NAP_SMATurnover_IsNotifiedUpd.sql"
       Script = "NAP_SMATurnover_LeagueControlDel.sql"
       Script = "NAP_SMATurnover_LeagueControlSel.sql"
       Script = "NAP_SMATurnover_LeagueControlUpd.sql"

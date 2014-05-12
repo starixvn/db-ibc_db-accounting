@@ -25,7 +25,7 @@ BEGIN
 		LEFT JOIN bodb02.dbo.exchange e WITH (NOLOCK) ON e.exchangeid = c.currency	
 	WHERE m.leagueid = @LeagueID AND m.sporttype = @SportID AND 
 			m.eventstatus <> 'completed' AND m.matchcode NOT LIKE '%hedge%'
-	ORDER BY m.matchid, c.username
+	ORDER BY m.eventdate, m.matchcode, c.username
 END
 
 GO
