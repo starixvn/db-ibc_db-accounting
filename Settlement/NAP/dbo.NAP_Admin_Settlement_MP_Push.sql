@@ -1,12 +1,11 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_MP_Push] 
-(
-	@MatchIds	VARCHAR(4000),
-	@AdminId	INT,
-	@Action		VARCHAR(20) = 'CAL',
-	@IP			VARCHAR(15) = '',
-	@ErrCode	INT = 0 OUTPUT,
-	@ErrMsg		NVARCHAR(200) = '' OUTPUT
-)
+ALTER PROCEDURE [NAP_Admin_Settlement_MP_Push] (
+	@MatchIds VARCHAR(4000)
+	,@AdminId INT
+	,@Action VARCHAR(20) = 'CAL'
+	,@IP VARCHAR(15) = ''
+	,@ErrCode INT = 0 OUTPUT
+	,@ErrMsg NVARCHAR(200) = '' OUTPUT
+	)
 AS
 /*	Creator: 20140213@Kathy
 	Task: Main SP for Mix parly settlement
@@ -14,56 +13,84 @@ AS
 	ORIGINAL: Admin_Settlement_MP
 
 	Revisions:		
+		- 20140506@Kathy: Don't allow to calculate exists matches in queue
+		- 20140512@Kathy: allow to execute undo action without score 
 						   
 	Param's Explanation:		
 		
 */
 SET NOCOUNT ON
-BEGIN	
 
-	DECLARE @NotKeyScoreList VARCHAR(130)
-	DECLARE @match TABLE (		
-		matchid INT,
-		matchcode nvarchar(50),
-		fth SMALLINT, 
-		fta SMALLINT, 
-		hth SMALLINT, 
-		hta SMALLINT
-	)
+BEGIN
+	DECLARE @NotKeyScoreList VARCHAR(130), @NotAllowCalculating VARCHAR(200)
+	DECLARE @match TABLE (matchid INT, matchcode NVARCHAR(50), fth SMALLINT, fta SMALLINT, hth SMALLINT, hta SMALLINT)
 
-	INSERT INTO @match(matchid, matchcode, fth, fta, hth, hta)
-	SELECT distinct matchid, matchcode, finalhomescore, finalawayscore, hthomescore, htawayscore
-	FROM DBPRO.BODB02.dbo.Match with(rowlock)
-	WHERE matchid IN (SELECT val FROM dbo.strSplit(@matchids,','))	
-		AND matchid NOT IN (select matchid from Parlay_Calculate_Queue WITH(NOLOCK) WHERE IsCalculating <> 2)
-		
-	IF EXISTS (SELECT 1 FROM @match	WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL)
-	BEGIN			
-		SELECT @NotKeyScoreList  = COALESCE(@NotKeyScoreList + ',' + matchcode,matchcode)
+	INSERT INTO @match ( matchid, matchcode, fth, fta, hth, hta)
+	SELECT DISTINCT matchid
+		,matchcode
+		,finalhomescore
+		,finalawayscore
+		,hthomescore
+		,htawayscore
+	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
+	WHERE matchid IN ( SELECT val
+					   FROM dbo.strSplit(@matchids, ',') ) 
+
+	IF EXISTS (SELECT 1
+				FROM @match
+				WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL ) AND @action <> 'UNDO'
+	BEGIN
+		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
 
 		-- exclude matches were not keyscore yet
-		DELETE FROM @match
+		DELETE
+		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
 	END
-	
 
-	INSERT INTO dbo.Parlay_Calculate_Queue (matchid, isCalculating, creator, ip, starttime, action)
-	SELECT matchid, 0, @AdminId, @IP, CURRENT_TIMESTAMP, @action
-	FROM @match		
-		
-	IF (@NotKeyScoreList IS NOT NULL AND @NotKeyScoreList <> '')
-	BEGIN 
-		SELECT	@ErrCode = 100,
-				@ErrMsg = 'All matches are being calculated, except following matches (not keyed in score yet): ' + 
-				CASE WHEN LEN(@NotKeyScoreList) = 130 THEN @NotKeyScoreList 
-					 ELSE @NotKeyScoreList
-				END
-	END 
+	IF EXISTS (SELECT 1
+				FROM @match
+				WHERE matchid IN (SELECT matchid from Single_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1))
+				OR matchid IN (SELECT matchid from Parlay_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1)) )
+	BEGIN
+		SELECT @NotAllowCalculating = COALESCE(@NotAllowCalculating + ',' + matchcode, matchcode)
+		FROM @match 
+		WHERE matchid IN (SELECT matchid from Single_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1) )
+		OR matchid IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK) WHERE IsCalculating IN (0,1) ) 
+
+		-- exclude matches were not allow to calculate
+		DELETE
+		FROM @match
+		WHERE matchid IN (SELECT matchid from Single_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1) )
+		OR matchid IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK) WHERE IsCalculating IN (0,1) ) 
+	END
+
+	IF EXISTS (
+			SELECT TOP 1 1
+			FROM @match
+			)
+	BEGIN
+		INSERT INTO dbo.Parlay_Calculate_Queue (matchid, isCalculating, creator, ip, starttime, action)
+		SELECT matchid, 0, @AdminId, @IP, CURRENT_TIMESTAMP, @action
+		FROM @match
+	END
+
+	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
+	BEGIN
+		SELECT @ErrCode = 100
+			,@ErrMsg = 'All matches are being calculated, except following matches ' 
+							+ CASE WHEN ISNULL(@NotKeyScoreList, '') <> '' 
+									THEN  '(not keyed in score yet): ' + @NotKeyScoreList 
+									ELSE ''
+							  END
+							+ CASE when ISNULL(@NotAllowCalculating,'') <> ''
+									THEN  '(being calculated by another user): ' + @NotAllowCalculating
+									ELSE ''
+							  END 
+	END
 END
-
-
 
 GO
 

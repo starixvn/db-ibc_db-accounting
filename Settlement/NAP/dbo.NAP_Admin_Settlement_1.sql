@@ -375,7 +375,7 @@ DROP TABLE #BalanceAfter
 ---------------------------VVVV------------------------------
 SELECT @stop = CURRENT_TIMESTAMP
 
-SELECT @LogData = 'Calculate (' + @action + ') for matchid:' + CAST(@matchid as nvarchar(10)) 
+SELECT @LogData = 'NAP: Calculate (' + @action + ') for matchid:' + CAST(@matchid as nvarchar(10)) 
 	+ ' score:' + CAST(ISNULL(@fth,0) as nvarchar(10)) + '-' + CAST(ISNULL(@fta,0) as nvarchar(10)) + ' HT:' + CAST(@hth as nvarchar(10)) + '-' + CAST(@hta as nvarchar(10)) 
 	+ ' GoalRecord:' + ISNULL(@goalrecord, '') + '(Old:' + @goalrecord_old + ') Remark(' + @betstatus + ') (' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms)'
 EXEC dbo.WriteLog_UserLog  @creator, @LogData
@@ -388,7 +388,7 @@ EXEC dbo.WriteLog_UserLog  @creator, @LogData
 --		WHEN 'CAL-HT' THEN 102 
 --		WHEN 'UNDO' THEN 103
 --	END
-SELECT @Remark = CASE WHEN LEN(@goalrecord_old) = 0 THEN '' ELSE  'Old GoalRecord:' + @goalrecord_old  + '<br/> ' END 
+SELECT @Remark = CASE WHEN LEN(@goalrecord_old) = 0 THEN '' ELSE  'NAP: Old GoalRecord:' + @goalrecord_old  + '<br/> ' END 
 	+ 'Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;' 
 	+ ' TC:' + CAST(ISNULL(@ticketCount,0) as varchar(20)) 
 	+ ' Bal:' + CAST(IsNull(@TotalAccount_BalanceUpdate,0) as varchar(20)) + '/' + CAST(IsNull(@TotalAccount,0) as varchar(20))

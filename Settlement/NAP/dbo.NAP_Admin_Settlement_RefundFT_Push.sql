@@ -21,7 +21,8 @@ as
 	Original: 
 	
 	Revisions:
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -44,6 +45,14 @@ BEGIN
 		RETURN
 	END 
 	
+	IF EXISTS (SELECT 1 from Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
+		OR EXISTS (SELECT 1 from Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
+	BEGIN 
+		SELECT	 @ErrCode	= 1000003
+				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+		RETURN
+	END 
+
 	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_RefundFT] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
 								 ', @adminid = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1),@IsExcludeBetdaq) + 
