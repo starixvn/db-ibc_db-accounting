@@ -18,7 +18,7 @@ AS
 	
 	Revisions:
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
-		- 20140506@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
