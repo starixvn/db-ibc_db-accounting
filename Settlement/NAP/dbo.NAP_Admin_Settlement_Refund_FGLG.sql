@@ -146,17 +146,15 @@ BEGIN
 		BEGIN
 			SET @betStatus = CASE 
 					WHEN CHARINDEX('1FL:', @betstatus) > 0 THEN STUFF(@betstatus, CHARINDEX('1FL:', @betstatus), 7, '1FL:0-0')
-					ELSE ISNULL(@betstatus, '') + '1FL:0-0'
+					ELSE ISNULL(@betstatus, '') + '1FL:0-0;'
 					END
 		END
 
 		IF @action IN ('REFUND', 'REFUND-FT')
 		BEGIN
-			SELECT @betstatus
-
 			SET @betStatus = CASE 
 					WHEN CHARINDEX(';FL:', @betstatus) > 0 THEN SUBSTRING(@betStatus, 1, CHARINDEX(';FL:', @betStatus)) + 'FL:0-0'
-					ELSE ISNULL(@betstatus, '') + ';FL:0-0'
+					ELSE ISNULL(@betstatus, '') + 'FL:0-0'
 					END
 		END
 	END
@@ -366,6 +364,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 

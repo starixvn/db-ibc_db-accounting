@@ -9,7 +9,7 @@ AS
 		- 20140326@Kathy: Get match values from DBPRO
 		- 20140502@Kathy: Add new column execTime, duration for Single_Calculate_Queue
 		- 20140505@Kathy: Re-run match if time of execution more than 5 minutes
-		- 20140507@Kathy: Add more settlement actions for Apollo site
+		- 20140507@Kathy: Add more settlement actions 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -161,7 +161,7 @@ BEGIN
 				WHEN @Action = 'CAL-HT' THEN 2
 				WHEN @Action = 'CAL-FT' THEN 3
 				WHEN @Action = 'CAL' THEN 4
-				WHEN @Action = 'CAL-FTFGLG' OR @Action = 'CAL-FTLG' THEN 1
+				WHEN @Action = 'CAL-FTFGLG' OR @Action = 'CAL-HTFGLG' THEN 1
 				WHEN @Action = 'Refund-HT' THEN 11
 				WHEN @Action = 'Refund-FT' THEN 12
 				WHEN @Action = 'Refund' THEN 13
@@ -190,6 +190,7 @@ BEGIN
 				,@betstatus = @BetStatus
 	END
 END
+
 
 GO
 
