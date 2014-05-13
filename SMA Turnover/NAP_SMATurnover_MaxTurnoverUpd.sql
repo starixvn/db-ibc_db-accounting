@@ -2,7 +2,8 @@
 	@UpdMode TINYINT,
 	@EventID INT = 0,
 	@SMAID INT = 0,
-	@Offset INT = NULL
+	@Offset INT = NULL,
+	@ThresholdValue INT = 80
 AS
 /*
 	Created: Elodie
@@ -57,13 +58,14 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON	
-	DECLARE @RoleID INT
-	SELECT @RoleID = roleid FROM CustInfo WITH (NOLOCK) WHERE custid = @SMAID
+	DECLARE @RoleID INT, @srecommend INT, @mrecommend INT
+	SELECT @RoleID = roleid, @srecommend = srecommend, @mrecommend = mrecommend FROM CustInfo WITH (NOLOCK) WHERE custid = @SMAID
 	--Change max turnover because sport setting is updated
 	IF @UpdMode = 0 
 	BEGIN
 		UPDATE s
-		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (sc.Value + ISNULL(sma.Offset,0))
+		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (sc.Value + ISNULL(sma.Offset,0)),
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (sc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -85,7 +87,8 @@ BEGIN
 	IF @UpdMode = 2 
 	BEGIN
 		UPDATE s
-		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (lc.Value + ISNULL(sma.Offset,0)), InheritLevel = 2
+		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (lc.Value + ISNULL(sma.Offset,0)), InheritLevel = 2,
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (lc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -109,7 +112,8 @@ BEGIN
 	IF @UpdMode = 4 
 	BEGIN
 		UPDATE s
-		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (lc.Value + ISNULL(sma.Offset,0))
+		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (lc.Value + ISNULL(sma.Offset,0)),
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (lc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -122,7 +126,8 @@ BEGIN
 	IF @UpdMode = 5
 	BEGIN
 		UPDATE s
-		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (sc.Value + ISNULL(sma.Offset,0)), InheritLevel = 1
+		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (sc.Value + ISNULL(sma.Offset,0)), InheritLevel = 1,
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (sc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -135,7 +140,8 @@ BEGIN
 	IF @UpdMode = 6
 	BEGIN
 		UPDATE s
-		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (mc.Value + ISNULL(sma.Offset,0)), InheritLevel = 3
+		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (mc.Value + ISNULL(sma.Offset,0)), InheritLevel = 3,
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (mc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -159,7 +165,8 @@ BEGIN
 	IF @UpdMode = 8
 	BEGIN
 		UPDATE s
-		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (mc.Value + ISNULL(sma.Offset,0))
+		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (mc.Value + ISNULL(sma.Offset,0)),
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (mc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -174,7 +181,8 @@ BEGIN
 		UPDATE s
 		SET Value = CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0), 
 			maxturnover = c.credit/100 * (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0)),
-			InheritLevel = CASE WHEN lc.Value IS NOT NULL THEN 2 ELSE 1 END
+			InheritLevel = CASE WHEN lc.Value IS NOT NULL THEN 2 ELSE 1 END,
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -188,7 +196,8 @@ BEGIN
 	IF @UpdMode = 10
 	BEGIN
 		UPDATE s
-		SET Value = msc.Value, maxturnover = c.credit/100 * msc.Value, InheritLevel = 4
+		SET Value = msc.Value, maxturnover = c.credit/100 * msc.Value, InheritLevel = 4,
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * msc.Value) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -212,7 +221,8 @@ BEGIN
 	IF @UpdMode = 12
 	BEGIN
 		UPDATE s
-		SET Value = msc.Value, maxturnover = c.credit/100 * msc.Value
+		SET Value = msc.Value, maxturnover = c.credit/100 * msc.Value,
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * msc.Value) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -232,7 +242,11 @@ BEGIN
 												WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0)), 
 			InheritLevel = CASE	WHEN mc.Value IS NOT NULL THEN 3
 								WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN 2 
-								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN 1 END
+								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN 1 END,
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit*(CASE WHEN mc.Value IS NOT NULL THEN mc.Value
+																						WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN lc.Value 
+																						WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -255,7 +269,8 @@ BEGIN
 		BEGIN
 			UPDATE s
 			SET Value = s.Value + sc.Offset,
-				maxturnover = c.credit/100 * (s.Value + sc.Offset)
+				maxturnover = c.credit/100 * (s.Value + sc.Offset),
+				IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (s.Value + sc.Offset)) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 			FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 				INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 				INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -269,7 +284,8 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = s.Value + (sc.Offset - @Offset),
-			maxturnover = c.credit/100 * (s.Value + (sc.Offset - @Offset))
+			maxturnover = c.credit/100 * (s.Value + (sc.Offset - @Offset)),
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (s.Value + (sc.Offset-@Offset))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -282,7 +298,8 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = s.Value - @Offset,
-			maxturnover = c.credit/100 * (s.Value - @Offset)
+			maxturnover = c.credit/100 * (s.Value - @Offset),
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (s.Value - @Offset)) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -293,7 +310,8 @@ BEGIN
 	IF @UpdMode = 17
 	BEGIN
 		UPDATE s
-		SET maxturnover = c.credit/100 * s.Value
+		SET maxturnover = c.credit/100 * s.Value,
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * s.Value) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN DBTXN.CustDB.dbo.CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -311,7 +329,7 @@ BEGIN
 			IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 4) --real super
 			BEGIN
 				UPDATE s
-				SET maxturnover = 0
+				SET maxturnover = 0, IsNotified = 0
 				FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 					INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
 				WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
@@ -326,26 +344,24 @@ BEGIN
 				IF EXISTS (SELECT 1 FROM @DirectMaster)
 				BEGIN
 					UPDATE s
-					SET maxturnover = 0
+					SET maxturnover = 0, IsNotified = 0
 					FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 						INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
 					WHERE eventstatus <> 'completed' AND s.SMAID IN (SELECT CustID FROM @DirectMaster)
 				END
-				ELSE
-				BEGIN
-					INSERT INTO @DirectAgent (CustID)
-					SELECT CustID 
-					FROM CustInfo WITH (NOLOCK) 
-					WHERE roleid = 2 AND srecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 2)
 
-					IF EXISTS (SELECT 1 FROM @DirectAgent)
-					BEGIN
-						UPDATE s
-						SET maxturnover = 0
-						FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
-							INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
-						WHERE eventstatus <> 'completed' AND s.SMAID IN (SELECT CustID FROM @DirectAgent)
-					END
+				INSERT INTO @DirectAgent (CustID)
+				SELECT CustID 
+				FROM CustInfo WITH (NOLOCK) 
+				WHERE roleid = 2 AND srecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 2)
+
+				IF EXISTS (SELECT 1 FROM @DirectAgent)
+				BEGIN
+					UPDATE s
+					SET maxturnover = 0, IsNotified = 0
+					FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+						INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+					WHERE eventstatus <> 'completed' AND s.SMAID IN (SELECT CustID FROM @DirectAgent)
 				END
 			END
 		END
@@ -362,13 +378,33 @@ BEGIN
 				IF EXISTS (SELECT 1 FROM @DirectAgent)
 				BEGIN
 					UPDATE s
-					SET maxturnover = 0
+					SET maxturnover = 0, IsNotified = 0
 					FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 						INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
 					WHERE eventstatus <> 'completed' AND s.SMAID IN (SELECT CustID FROM @DirectAgent)
 				END
 			END
+			ELSE 
+			BEGIN
+				IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @srecommend AND roleid = 4) --direct master
+					UPDATE s
+					SET maxturnover = 0, IsNotified = 0
+					FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+						INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+					WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
+			END
 		END
+
+		IF @RoleID = 2
+		BEGIN
+			IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @mrecommend AND roleid = 3) --direct agent
+				AND NOT EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 2)
+				UPDATE s
+				SET maxturnover = 0, IsNotified = 0
+				FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+					INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+				WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
+		END	
 	END
 
 	--IF @UpdMode = 4

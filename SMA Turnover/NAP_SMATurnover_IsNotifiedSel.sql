@@ -1,4 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_IsNotifiedSel]
+	@ThresholdValue INT = 80
 AS
 /*
 	Created: 20140416@Elodie
@@ -16,7 +17,7 @@ BEGIN
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid				
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.SMAID = c.custid		
 		INNER JOIN exchange e WITH (NOLOCK) on c.currency = e.exchangeid
-	WHERE CASE WHEN t.maxturnover = 0 THEN 0 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END >= 80.0
+	WHERE CASE WHEN t.maxturnover = 0 THEN 0 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END >= @ThresholdValue
 		AND IsNotified = 0
 	ORDER BY m.sporttype, m.leagueid, m.matchcode, c.username	
 END

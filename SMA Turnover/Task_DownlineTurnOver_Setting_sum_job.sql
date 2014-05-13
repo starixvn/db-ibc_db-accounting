@@ -34,8 +34,8 @@ BEGIN
 	FROM DownlineTurnOver_Trigger_tmp t WITH (NOLOCK)
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 	WHERE srecommend NOT IN (SELECT custid FROM Dep_CustSuper WITH (NOLOCK))
-		AND m.sporttype < 99 AND m.eventstatus <> 'completed' AND m.matchcode NOT LIKE '%hedge%'
-		AND recommend NOT IN (SELECT custid FROM DBACC.bodb_ACC.dbo.Acc_CustDirect)
+		AND m.sporttype < 99 AND (m.eventstatus <> 'completed' OR m.betstatus LIKE 'Refund%') AND m.matchcode NOT LIKE '%hedge%'
+		AND recommend NOT IN (SELECT custid FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WHERE roleid = 2)
 	
 	INSERT INTO #DownlineToCal (SMAID, matchid, TotalTurnover)
 	SELECT SMAID, matchid, SUM(sumstake) TotalTurnover
