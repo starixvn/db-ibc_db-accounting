@@ -9,7 +9,8 @@ AS
 		- 20140326@Kathy: Get match values from DBPRO
 		- 20140502@Kathy: Add new column execTime, duration for Single_Calculate_Queue
 		- 20140505@Kathy: Re-run match if time of execution more than 5 minutes
-		- 20140507@Kathy: Add more settlement actions 
+		- 20140507@Kathy: - Add more settlement actions
+						  - Modify betstatus, goalrecord format before send to Apollo site
 */
 BEGIN
 	SET NOCOUNT ON
@@ -30,6 +31,7 @@ BEGIN
 		,@BetStatus NVARCHAR(50)
 		,@ActionId TINYINT
 		,@duration INT
+		,@sporttype tinyint
 
 	SELECT TOP 1 @duration = DATEDIFF(ms, execTime, GETDATE())
 		,@keyId = keyid
@@ -176,9 +178,19 @@ BEGIN
 			,@hta = m.htawayscore
 			,@GoalRecord = m.GoalRecord
 			,@BetStatus = m.betstatus
+			,@sporttype = sporttype
 		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
 
+		IF @sporttype = 1
+		BEGIN
+			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+									  ELSE @GoalRecord
+								 END ,
+					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
+									  ELSE @BetStatus
+								 END 
+		END
 		IF @ActionId <> - 1
 			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 				,@action = @ActionId
