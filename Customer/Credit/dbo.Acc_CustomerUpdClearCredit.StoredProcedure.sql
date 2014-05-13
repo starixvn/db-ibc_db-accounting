@@ -86,23 +86,6 @@ BEGIN
 	Update custinfo with (ROWLOCK, UPDLOCK) set credit = 0 
 	output deleted.custid, deleted.Credit into @tmpCust(custid, Credit)
 	where srecommend = @custid AND Credit != 0  
-
-	IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @custid) --real super
-	BEGIN
-		IF EXISTS (SELECT 1 
-					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
-						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
-					WHERE SMAID = @custid AND eventstatus <> 'completed')
-			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 17, @SMAID = @custid
-	END
-	ELSE --dummy super
-	BEGIN
-		IF EXISTS (SELECT 1 
-					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
-						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
-					WHERE SMAID = @mrecommend AND eventstatus <> 'completed')
-			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 17, @SMAID = @mrecommend
-	END
 END
 else if @roleid = 3
 BEGIN
@@ -110,16 +93,6 @@ BEGIN
 	Update custinfo with (ROWLOCK, UPDLOCK) set credit = 0 
 	output deleted.custid, deleted.Credit into @tmpCust(custid, Credit)
 	where mrecommend = @custid AND Credit != 0 
-
-	IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @custid) --dummy master
-	BEGIN
-		IF EXISTS (SELECT 1 
-					FROM DBAGE.bodb02.dbo.DownlineTurnOver_Setting s WITH (NOLOCK) 
-						INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON s.matchid = m.matchid
-					WHERE SMAID = @recommend AND eventstatus <> 'completed')
-			EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 17, @SMAID = @recommend
-	END
-
 END
 else if @roleid = 2
 BEGIN
@@ -146,6 +119,8 @@ BEGIN
 	output deleted.custid, deleted.Credit into @tmpCust(custid, Credit)
 	where custid = @custid AND Credit != 0 
 END
+
+EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 18, @SMAID = @CustID
 
 -- Write Log Credit
 Declare @LogSPCredit varchar(500)

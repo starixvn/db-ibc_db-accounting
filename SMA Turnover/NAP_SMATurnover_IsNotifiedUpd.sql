@@ -1,7 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_SMATurnover_IsNotifiedUpd]
 (
 	@matchids	VARCHAR(1000),
-	@supers		VARCHAR(1000),
+	@SMAIDs		VARCHAR(1000),
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg		NVARCHAR(200) = '' OUTPUT
 )
@@ -21,7 +21,7 @@ BEGIN
 	(
 		SELECT m.val AS matchid, c.val AS SMAID
 		FROM dbo.strSplit(@matchids,',') m
-			INNER JOIN dbo.strSplit(@supers,',') c ON m.rank = c.rank
+			INNER JOIN dbo.strSplit(@SMAIDs,',') c ON m.rank = c.rank
 	)
 	UPDATE t WITH(ROWLOCK,UPDLOCK)
 	SET t.IsNotified = 1

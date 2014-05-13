@@ -49,6 +49,7 @@ AS
 
 				  --Update given credit
 				  17: Change max turnover because given credit is updated
+				  18: Change max turnover because SMA clear credit
 
 		@EventID: sportID or leagueID or matchID
 	Example: EXEC NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 0, @EventID = 1
@@ -56,7 +57,8 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON	
-
+	DECLARE @RoleID INT
+	SELECT @RoleID = roleid FROM CustInfo WITH (NOLOCK) WHERE custid = @SMAID
 	--Change max turnover because sport setting is updated
 	IF @UpdMode = 0 
 	BEGIN
@@ -296,6 +298,77 @@ BEGIN
 			INNER JOIN DBTXN.CustDB.dbo.CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
 		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
+	END
+
+	--Change max turnover because SMA clear credit
+	IF @UpdMode = 18
+	BEGIN
+		DECLARE @DirectMaster TABLE (CustID INT)
+		DECLARE @DirectAgent TABLE (CustID INT)
+
+		IF @RoleID = 4
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 4) --real super
+			BEGIN
+				UPDATE s
+				SET maxturnover = 0
+				FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+					INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+				WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID
+			END
+			ELSE --dummy super
+			BEGIN
+				INSERT INTO @DirectMaster (CustID)
+				SELECT CustID 
+				FROM CustInfo WITH (NOLOCK) 
+				WHERE roleid = 3 AND srecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 3)
+
+				IF EXISTS (SELECT 1 FROM @DirectMaster)
+				BEGIN
+					UPDATE s
+					SET maxturnover = 0
+					FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+						INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+					WHERE eventstatus <> 'completed' AND s.SMAID IN (SELECT CustID FROM @DirectMaster)
+				END
+				ELSE
+				BEGIN
+					INSERT INTO @DirectAgent (CustID)
+					SELECT CustID 
+					FROM CustInfo WITH (NOLOCK) 
+					WHERE roleid = 2 AND srecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 2)
+
+					IF EXISTS (SELECT 1 FROM @DirectAgent)
+					BEGIN
+						UPDATE s
+						SET maxturnover = 0
+						FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+							INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+						WHERE eventstatus <> 'completed' AND s.SMAID IN (SELECT CustID FROM @DirectAgent)
+					END
+				END
+			END
+		END
+
+		IF @RoleID = 3
+		BEGIN
+			IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 3) --dummy master
+			BEGIN
+				INSERT INTO @DirectAgent (CustID)
+				SELECT CustID 
+				FROM CustInfo WITH (NOLOCK) 
+				WHERE roleid = 2 AND mrecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 2)
+
+				IF EXISTS (SELECT 1 FROM @DirectAgent)
+				BEGIN
+					UPDATE s
+					SET maxturnover = 0
+					FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
+						INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
+					WHERE eventstatus <> 'completed' AND s.SMAID IN (SELECT CustID FROM @DirectAgent)
+				END
+			END
+		END
 	END
 
 	--IF @UpdMode = 4
