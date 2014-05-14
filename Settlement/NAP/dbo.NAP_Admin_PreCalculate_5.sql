@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_PreCalculate_5]
+ALTER PROCEDURE [NAP_Admin_PreCalculate_5]
 	@matchid int,
 	@bettype smallint,
 	@whowin smallmoney
@@ -18,6 +18,7 @@ AS
 	SET @IgnoreList = 'DB04,DB042,DB043,DB044'
 
 	Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
+		,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
 
 	------------------
 	SELECT	transid, actual_stake, stake, odds, comstatus, modds,
@@ -126,6 +127,9 @@ AS
 	WHILE (1 = 1)
 	BEGIN
 		DELETE @subtable
+
+		SELECT @LASCommand = '',
+				@Remark = ''
 		
 		DELETE TOP (300) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
@@ -152,10 +156,45 @@ AS
 		) 
 		SELECT @_sXML = CONVERT(varchar(max), @_xml)
 		
-		EXEC dbo.Bet_ExecRep_05 @IgnoreList, 1, @_sXML			 				
+		EXEC dbo.Bet_ExecRep_05 @IgnoreList, 1, @_sXML	
+		
+		--- LAS settlement 
+		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_VS_5] @_sXML = ''' + @_sXML + ''''
+				,@createdDate = GETDATE()
+
+		BEGIN TRY
+			EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_VS_5'
+				,@SQLCommand = @LASCommand
+				,@CreatedDate = @createdDate
+				,@StatusID = 0 -- waiting
+				,@MatchID = @matchid
+				,@Bettype = NULL
+				,@Status = 'waiting'
+				,@BetCount = NULL
+		END TRY
+		BEGIN CATCH			
+			SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+			FROM @subtable
+
+			SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+
+			BEGIN TRY			
+				EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = NULL, 
+								@Matchid = @matchid, 
+								@ActionID = 40019, 
+								@Remark = @Remark
+			END TRY
+			BEGIN CATCH
+				EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = NULL, 
+								@Matchid = @matchid, 
+								@ActionID = 40019, 
+								@Remark = @Remark
+			END CATCH
+		END CATCH 			 				
 	END		
 	-------------------------
-
 
 GO
 

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Calculate_181M]
+﻿ALTER PROCEDURE [Admin_Calculate_181M]
 	@matchid int
 AS
 /*
@@ -8,19 +8,25 @@ AS
 	DB: DBTrans.BODB02
 
 	Revisions:
+		- 20140512@Kathy: insert settled command into LAS queue [Redmine:#14286]
 	
 */
 SET NOCOUNT ON
 DECLARE @IgnoreList varchar(200)
+	,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
+
 SET @IgnoreList = 'DB04,DB042,DB043,DB044'	
 
-DECLARE @modds smallmoney, @odds smallmoney
+SELECT @LASCommand = '',
+		@Remark = ''
+
+DECLARE @modds smallmoney
 
 DECLARE @Horse TABLE (orid int, EventID int , placing tinyint)
 
 INSERT INTO @Horse (orid, EventID, placing)
 SELECT orid, EventID, placing
-FROM DB02.bodb02.dbo.VSOutright with (nolock)
+FROM DBPRO.bodb02.dbo.VSoutright with (nolock)
 WHERE
     EventID = @matchid
 
@@ -45,16 +51,16 @@ IF @@ROWCOUNT = 0 RETURN
 UPDATE #TempData
 SET	
     @modds = CASE        
-        WHEN bettype = 1231 and isnull(h.placing,0)= 1 THEN 1 
-        WHEN bettype = 1232 and isnull(h.placing,0)> 0 THEN 1 
+        WHEN bettype = 1231 and isnull(placing,0)= 1 THEN 1 
+        WHEN bettype = 1232 and isnull(placing,0)> 0 THEN 1 
         ELSE -1 -- Other Case : lose
         END,
     -- Ticket result details        
     hdp1 = CASE bettype WHEN 1232 THEN 0 ELSE Odds   END, -- 'Place' bettype not have WinOdds value        
     hdp2 = CASE bettype WHEN 1231 THEN 0 ELSE Odds END, -- 'Win'   bettype not have PlaceOdds value
     livehomescore = CASE -- Win result : 2 = Win / 4 = Lose        
-        WHEN bettype = 1231 AND isnull(h.placing,0)= 1 THEN 2
-        WHEN bettype = 1231 AND isnull(h.placing,0)<> 1 THEN 4
+        WHEN bettype = 1231 AND isnull(placing,0)= 1 THEN 2
+        WHEN bettype = 1231 AND isnull(placing,0)<> 1 THEN 4
         ELSE 0 END,
     liveawayscore = CASE -- Place result : 0 = Refund
         WHEN bettype = 1232 AND isnull(placing,0)> 0 THEN 2
@@ -65,7 +71,7 @@ SET
 		WHEN @modds < 0 THEN 113
 		END,
 	WinLost = CASE
-		WHEN @modds >  0.25	THEN stake * @odds
+		WHEN @modds >  0.25	THEN stake * odds
 		WHEN @modds < -0.25	THEN 0
 		END,
 
@@ -109,7 +115,7 @@ WHILE (1 = 1)
 BEGIN
 	DELETE @subtable
 	
-	DELETE TOP (300) #TempData
+	DELETE TOP (20) #TempData
 	OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
 		deleted.playercomm, deleted.comm, deleted.acomm, deleted.scomm, deleted.statusid, 
 		deleted.hdp1, deleted.hdp2, deleted.livehomescore, deleted.liveawayscore
@@ -140,8 +146,46 @@ BEGIN
 	SELECT @_sXML = CONVERT(varchar(max), @_xml)
 	
 	EXEC dbo.Bet_ExecRep_05 @IgnoreList, 2, @_sXML
+
+	--- LAS settlement 
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_VS_s181M] @_sXML = ''' + @_sXML + ''''
+			,@createdDate = GETDATE()
+		
+	BEGIN TRY
+		EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_VS_s181M'
+			,@SQLCommand = @LASCommand
+			,@CreatedDate = @createdDate
+			,@StatusID = 0 -- waiting
+			,@MatchID = @matchid
+			,@Bettype = NULL
+			,@Status = 'waiting'
+			,@BetCount = NULL
+	END TRY
+	BEGIN CATCH			
+		SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+		FROM @subtable
+
+		SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+
+		BEGIN TRY			
+			EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+							@UserID = NULL, 
+							@Matchid = @matchid, 
+							@ActionID = 40022, 
+							@Remark = @Remark
+		END TRY
+		BEGIN CATCH
+			EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+							@UserID = NULL, 
+							@Matchid = @matchid, 
+							@ActionID = 40022, 
+							@Remark = @Remark
+		END CATCH
+	END CATCH
+			 				
 		 					
-END			
+END
+		
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_181M] TO [Dot_Member] AS [dbo]

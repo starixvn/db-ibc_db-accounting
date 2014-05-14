@@ -1,5 +1,4 @@
-
-ALTER PROCEDURE [dbo].[Admin_Calculate_181]
+ALTER PROCEDURE [Admin_Calculate_181]
 	@matchid int
 AS
 /*
@@ -9,10 +8,13 @@ AS
 	DB: DBTrans.BODB02
 
 	Revisions:
+		- 20140512@Kathy: insert settled command into LAS queue [Redmine:#14286]
 	
 */
 SET NOCOUNT ON
 DECLARE @IgnoreList varchar(200)
+	,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
+
 SET @IgnoreList = 'DB04,DB042,DB043,DB044'	
 
 DECLARE @modds smallmoney, @odds smallmoney, @rowcount int
@@ -165,7 +167,10 @@ WHILE (1 = 1)
 BEGIN
 	DELETE @subtable
 
-	DELETE TOP (300) #TempData
+	SELECT @LASCommand = '',
+		@Remark = ''
+
+	DELETE TOP (20) #TempData
 	OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
 		deleted.playercomm, deleted.comm, deleted.acomm, deleted.scomm, deleted.statusid, 
 		deleted.modds, deleted.hdp1, deleted.hdp2, deleted.livehomescore, deleted.liveawayscore
@@ -197,5 +202,41 @@ BEGIN
 	SELECT @_sXML = CONVERT(varchar(max), @_xml)
 	
 	EXEC dbo.Bet_ExecRep_05 @IgnoreList, 3, @_sXML
+
+	--- LAS settlement 
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_VS_s181] @_sXML = ''' + @_sXML + ''''
+			,@createdDate = GETDATE()
+		
+	BEGIN TRY
+		EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_VS_s181'
+			,@SQLCommand = @LASCommand
+			,@CreatedDate = @createdDate
+			,@StatusID = 0 -- waiting
+			,@MatchID = @matchid
+			,@Bettype = NULL
+			,@Status = 'waiting'
+			,@BetCount = NULL
+	END TRY
+	BEGIN CATCH			
+		SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+		FROM @subtable
+
+		SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+
+		BEGIN TRY			
+			EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+							@UserID = NULL, 
+							@Matchid = @matchid, 
+							@ActionID = 40023, 
+							@Remark = @Remark
+		END TRY
+		BEGIN CATCH
+			EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+							@UserID = NULL, 
+							@Matchid = @matchid, 
+							@ActionID = 40023, 
+							@Remark = @Remark
+		END CATCH
+	END CATCH
 		 					
-END			
+END
