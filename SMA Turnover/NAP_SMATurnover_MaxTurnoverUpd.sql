@@ -65,7 +65,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (sc.Value + ISNULL(sma.Offset,0)),
-		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (sc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (sc.Value + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -88,7 +88,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (lc.Value + ISNULL(sma.Offset,0)), InheritLevel = 2,
-		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (lc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (lc.Value + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -113,7 +113,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = lc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (lc.Value + ISNULL(sma.Offset,0)),
-		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (lc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (lc.Value + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -127,7 +127,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = sc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (sc.Value + ISNULL(sma.Offset,0)), InheritLevel = 1,
-		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (sc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (sc.Value + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -141,7 +141,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (mc.Value + ISNULL(sma.Offset,0)), InheritLevel = 3,
-		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (mc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (mc.Value + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -166,7 +166,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = mc.Value + ISNULL(sma.Offset,0), maxturnover = c.credit/100 * (mc.Value + ISNULL(sma.Offset,0)),
-		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (mc.Value + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+		IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (mc.Value + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -182,7 +182,7 @@ BEGIN
 		SET Value = CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0), 
 			maxturnover = c.credit/100 * (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0)),
 			InheritLevel = CASE WHEN lc.Value IS NOT NULL THEN 2 ELSE 1 END,
-			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (CASE WHEN lc.Value IS NOT NULL THEN lc.Value ELSE sc.Value END + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -197,7 +197,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = msc.Value, maxturnover = c.credit/100 * msc.Value, InheritLevel = 4,
-			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * msc.Value) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / msc.Value*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -222,7 +222,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET Value = msc.Value, maxturnover = c.credit/100 * msc.Value,
-			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * msc.Value) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / msc.Value*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -243,9 +243,9 @@ BEGIN
 			InheritLevel = CASE	WHEN mc.Value IS NOT NULL THEN 3
 								WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN 2 
 								WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN 1 END,
-			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit*(CASE WHEN mc.Value IS NOT NULL THEN mc.Value
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit/(CASE WHEN mc.Value IS NOT NULL THEN mc.Value
 																						WHEN lc.Value IS NOT NULL AND mc.Value IS NULL THEN lc.Value 
-																						WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+																						WHEN sc.Value IS NOT NULL AND lc.Value IS NULL AND mc.Value IS NULL THEN sc.Value END + ISNULL(sma.Offset,0))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
@@ -270,7 +270,7 @@ BEGIN
 			UPDATE s
 			SET Value = s.Value + sc.Offset,
 				maxturnover = c.credit/100 * (s.Value + sc.Offset),
-				IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (s.Value + sc.Offset)) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+				IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (s.Value + sc.Offset)*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 			FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 				INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 				INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -285,7 +285,7 @@ BEGIN
 		UPDATE s
 		SET Value = s.Value + (sc.Offset - @Offset),
 			maxturnover = c.credit/100 * (s.Value + (sc.Offset - @Offset)),
-			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (s.Value + (sc.Offset-@Offset))) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (s.Value + (sc.Offset-@Offset))*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -299,7 +299,7 @@ BEGIN
 		UPDATE s
 		SET Value = s.Value - @Offset,
 			maxturnover = c.credit/100 * (s.Value - @Offset),
-			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * (s.Value - @Offset)) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / (s.Value - @Offset)*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
@@ -311,7 +311,7 @@ BEGIN
 	BEGIN
 		UPDATE s
 		SET maxturnover = c.credit/100 * s.Value,
-			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit * s.Value) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
+			IsNotified = CASE WHEN c.Credit <> 0 AND CAST((totalTurnover/c.credit / s.Value*10000) AS INT) < @ThresholdValue THEN 0 ELSE IsNotified END
 		FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
 			INNER JOIN DBTXN.CustDB.dbo.CustInfo c WITH (NOLOCK) ON s.SMAID = c.custid
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid

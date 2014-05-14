@@ -27,7 +27,7 @@ WHERE l.sporttype = @SportID
 	AND 1 = CASE WHEN @Mode = 0 AND m.eventstatus <> 'completed' AND m.matchcode NOT LIKE '%hedge%' THEN 1
 				 WHEN @Mode = 1 THEN 1
 				 WHEN @Mode = 2 AND @FromDate IS NOT NULL AND @ToDate IS NOT NULL AND m.eventdate BETWEEN @FromDate AND @ToDate THEN 1
-				 WHEN @Mode = 3 AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.kickofftime >= getdate() THEN 1
+				 WHEN @Mode = 3 AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND getdate() >= m.kickofftime THEN 1
 				 ELSE 0 END	
 ORDER BY l.leaguename
 
