@@ -8,7 +8,7 @@ AS
 	DB: DBTRANS.bodb02
 	
 	Revisions:		
-		- 20140514@Kathy: insert settled command into LAS queue [Redmine:#14286]
+		- 20140514@Kathy: insert settled command into LAS queue [Redmine:#14286]  
 
 */
 SET NOCOUNT ON
