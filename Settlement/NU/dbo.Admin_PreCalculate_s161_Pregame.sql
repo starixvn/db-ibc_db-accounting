@@ -23,9 +23,6 @@ BEGIN
 	DECLARE @_xml XML, @_sXML VARCHAR(MAX) 
 		,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
 
-	SELECT @LASCommand = '',
-		@Remark = ''
-
 	DECLARE @subtable TABLE(transid BIGINT, winlost MONEY, awinlost MONEY, mwinlost MONEY, swinlost MONEY,
 		playercomm MONEY, comm MONEY, acomm MONEY, scomm MONEY, statusid TINYINT, modds SMALLMONEY)
 
@@ -106,6 +103,9 @@ BEGIN
 	WHILE (1 = 1)
 	BEGIN
 		DELETE @subtable
+		
+		SELECT @LASCommand = '',
+				@Remark = ''
 
 		DELETE TOP (20) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	

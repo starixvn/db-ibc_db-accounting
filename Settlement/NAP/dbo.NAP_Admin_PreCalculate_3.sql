@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_PreCalculate_3] 
+ALTER PROCEDURE [NAP_Admin_PreCalculate_3] 
 	@matchid int,
 	@bettype smallint,
 	@totalgoal smallmoney
@@ -18,6 +18,7 @@ SET NOCOUNT ON
 	SET @IgnoreList = 'DB04,DB042,DB043,DB044'	
 	
 	Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney
+		,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
 
 	SELECT	transid, actual_stake, stake, odds, comstatus, modds,
 			betteam, hdp1, hdp2, livehomescore, liveawayscore,
@@ -120,6 +121,9 @@ SET NOCOUNT ON
 	WHILE (1 = 1)
 	BEGIN
 		DELETE @subtable
+
+		SELECT @LASCommand = '',
+				@Remark = ''
 		
 		DELETE TOP (300) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
@@ -146,10 +150,44 @@ SET NOCOUNT ON
 		) 
 		SELECT @_sXML = CONVERT(varchar(max), @_xml)
 		
-		EXEC dbo.Bet_ExecRep_05 @IgnoreList, 1, @_sXML			 					
+		EXEC dbo.Bet_ExecRep_05 @IgnoreList, 1, @_sXML		
+		
+		--- LAS settlement 
+		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_VS_3] @_sXML = ''' + @_sXML + ''''
+				,@createdDate = GETDATE()
+
+		BEGIN TRY
+			EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_VS_3'
+				,@SQLCommand = @LASCommand
+				,@CreatedDate = @createdDate
+				,@StatusID = 0 -- waiting
+				,@MatchID = @matchid
+				,@Bettype = NULL
+				,@Status = 'waiting'
+				,@BetCount = NULL
+		END TRY
+		BEGIN CATCH			
+			SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+			FROM @subtable
+
+			SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+
+			BEGIN TRY			
+				EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = NULL, 
+								@Matchid = @matchid, 
+								@ActionID = 40017, 
+								@Remark = @Remark
+			END TRY
+			BEGIN CATCH
+				EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = NULL, 
+								@Matchid = @matchid, 
+								@ActionID = 40017, 
+								@Remark = @Remark
+			END CATCH
+		END CATCH	 					
 	END
-
-
 GO
 
 GRANT VIEW DEFINITION ON [NAP_Admin_PreCalculate_3] TO [vnteam] AS [dbo]

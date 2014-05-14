@@ -1642,12 +1642,6 @@ Begin DataProject = "Account"
          Script = "Admin_Calculate_181.sql"
          Script = "Admin_Calculate_181M.sql"
          Script = "Admin_Settlement_VS_181.sql"
-         Script = "dbo.Admin_PreCalculate_1.sql"
-         Script = "dbo.Admin_PreCalculate_24.sql"
-         Script = "dbo.Admin_PreCalculate_3.sql"
-         Script = "dbo.Admin_PreCalculate_4.sql"
-         Script = "dbo.Admin_PreCalculate_5.sql"
-         Script = "dbo.Admin_PreCalculate_6.sql"
       End
    End
    Begin Folder = "Site"
