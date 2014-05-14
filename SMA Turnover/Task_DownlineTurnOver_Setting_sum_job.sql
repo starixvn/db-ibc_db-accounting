@@ -51,9 +51,11 @@ BEGIN
 	SET @rc2 = @@ROWCOUNT
 	
 	INSERT INTO #DownlineToControl (SMAID, matchid, Value, InheritLevel)
-	SELECT SMAID, matchid, NULL, NULL
+	SELECT SMAID, dc.matchid, NULL, NULL
 	FROM #DownlineToCal dc
+	INNER JOIN match m WITH (NOLOCK) ON dc.matchid = m.matchid
 	WHERE NOT EXISTS (SELECT * FROM #temp T WHERE dc.SMAID = T.SMAID AND dc.matchid = T.matchid)
+		AND m.eventstatus <> 'completed'
 
 	IF NOT EXISTS (SELECT 1 FROM #DownlineToControl)
 		RETURN

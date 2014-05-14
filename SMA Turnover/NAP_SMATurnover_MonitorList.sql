@@ -28,7 +28,7 @@ SELECT l.leagueid, m.matchid, m.matchcode, m.homeid, m.awayid, c.custID, c.usern
 	WHERE m.sporttype = @SportType 
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
 			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 0 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END ELSE @UsedPercent END
-			AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.kickofftime >= getdate()
+			AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND getdate() >= m.kickofftime
 	ORDER BY l.leaguename, m.matchcode, PercentageUsed desc, c.username	
 
 GO
