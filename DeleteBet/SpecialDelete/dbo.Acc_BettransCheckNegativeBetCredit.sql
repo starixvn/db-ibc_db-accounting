@@ -43,7 +43,7 @@ BEGIN
 					
 	-- calculate a balance and outstanding of customer
 	INSERT INTO @BalanceCust (custid, username, Balance)
-	SELECT b.custid, b.username, sum(b.winlost - b.actual_stake + b.playercomm)
+	SELECT b.custid, b.username, sum(b.winlost - b.actual_stake + b.playercomm) + SUM(0-t.actual_stake + t.playerdiscount)
 	from bettrans b with (nolock) 	
 	LEFT JOIN translog t WITH(NOLOCK) ON t.custid = b.custid
 	where b.custid in (SELECT custid FROM #BetDelete)
