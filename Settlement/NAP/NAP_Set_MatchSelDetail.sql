@@ -23,10 +23,10 @@ BEGIN
 		,@sporttype TINYINT
 		,@IsExistHTFGLG BIT
 		,@IsExistHTLG BIT
-		,@FTStatus NVARCHAR(10)
-		,@HTStatus NVARCHAR(10)
-		,@FGLGStatus NVARCHAR(10)
-		,@HTFGLGStatus NVARCHAR(10)
+		,@FTStatus NVARCHAR(20)
+		,@HTStatus NVARCHAR(20)
+		,@FGLGStatus NVARCHAR(20)
+		,@HTFGLGStatus NVARCHAR(20)
 		,@ParlayRunning BIT
 		,@HTParlayRunning BIT
 
