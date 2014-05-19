@@ -17,7 +17,7 @@ AS
  Revisions:  
 		- 20140417@Kathy: re-arrange order list (follow by old system)
 		- 20140421@Kathy: get match status in queue
-		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14724]
+		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
       
  Param explanation:  
 	@MatchCode: match code
@@ -356,6 +356,7 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+
 GO
 
 GRANT EXECUTE ON [NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]

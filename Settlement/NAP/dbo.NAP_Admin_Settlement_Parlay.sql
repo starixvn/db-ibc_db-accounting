@@ -13,7 +13,7 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:
-		- 20140512@Kathy: allow to execute undo action without score 
+		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
 			
 	Param's Explanation:
 
