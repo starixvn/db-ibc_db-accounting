@@ -13,6 +13,7 @@ AS
 	
 	Revisions:
 		- 20140421@Kathy: get match status in queue
+		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		
 */
 BEGIN
@@ -74,6 +75,7 @@ BEGIN
 		,x.IsKeyscore
 		,x.betcount
 		,x.isExistFGLG
+		,x.isExistHTFGLG
 		,t.seqS as IsCalculatingSingle
 	FROM (
 		SELECT m.matchid
@@ -125,6 +127,10 @@ BEGIN
 				WHEN c.cntFGLG = 0 THEN 0
 				ELSE 1
 				END AS isExistFGLG
+			,CASE 
+				WHEN c.cntHTFGLG = 0 THEN 0
+				ELSE 1
+				END AS isExistHTFGLG
 		FROM (
 			SELECT m.matchid
 				,m.leagueid
@@ -166,6 +172,10 @@ BEGIN
 						WHEN bettype = 14 THEN 1
 						ELSE 0
 						END) AS cntFGLG
+				,SUM(CASE 
+						WHEN bettype = 127 THEN 1
+						ELSE 0
+						END) AS cntHTFGLG
 			FROM bettrans WITH (NOLOCK, index=CIX_matchid_bettype)
 				inner JOIN DBPRO.BODB02.dbo.match WITH (NOLOCK) ON match.matchid = bettrans.matchid
 			WHERE match.eventdate = @Date AND BETTYPE <= 19000 AND match.eventstatus IN ('Closed', 'running', 'internal') 
