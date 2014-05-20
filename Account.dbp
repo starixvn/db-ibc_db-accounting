@@ -264,6 +264,7 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_CustomerUpdMoveSite.sql"
       End
       Begin Folder = "SmartPunters"
+         Script = "dbo.Acc_CustomerSelCheckSmartPunter.sql"
          Script = "dbo.Acc_SmartPunterDel.sql"
          Script = "dbo.Acc_SmartPunterIns.sql"
          Script = "dbo_Acc_SmartPunterUpd.sql"
