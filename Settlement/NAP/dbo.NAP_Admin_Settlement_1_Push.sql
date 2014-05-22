@@ -28,11 +28,16 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500), @NextAllowSettleTime datetime	
-
-	SELECT @ErrCode = 0, @ErrMsg = ''
+	DECLARE  @matchcode nvarchar(50)
+			,@sporttype int
+			,@leagueid int
+			,@sqlCommand NVARCHAR(500)
+			,@NextAllowSettleTime datetime
+			,@procName nvarchar(50)
 	
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
+	SELECT   @matchcode = m.matchcode
+			,@sporttype = m.sporttype
+			,@leagueid = m.leagueid
 	FROM match m with(NOLOCK)
 	where m.matchid = @MatchId
 
@@ -58,7 +63,10 @@ BEGIN
 		RETURN
 	END 
 
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+	SELECT   @ErrCode = 0
+			,@ErrMsg = ''
+			,@procName = OBJECT_NAME(@@procid)
+			,@sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
 								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeHome),'NULL') +
 								 ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50),@FullTimeAway),'NULL') +
@@ -71,8 +79,67 @@ BEGIN
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 	
-	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	BEGIN
+		DECLARE @ActionId TINYINT
+
+		BEGIN TRY
+			EXEC sys.sp_executesql @sqlCommand
+				,N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
+				,@ErrMsg = @ErrMsg OUTPUT
+				,@ErrCode = @ErrCode OUTPUT
+		END TRY
+
+		BEGIN CATCH
+			SELECT  @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+				   ,@ErrCode = @ErrCode
+			RETURN
+		END CATCH
+
+		SELECT  @ActionId = CASE 
+				WHEN @Action = 'CAL-HT' THEN 2
+				WHEN @Action = 'CAL-FT' THEN 3
+				WHEN @Action = 'CAL' THEN 4
+				WHEN @Action = 'UNDO' THEN 0
+				ELSE - 1
+				END
+			,@FullTimeHome = m.finalhomescore
+			,@FullTimeAway = m.finalawayscore
+			,@HalfTimeHome = m.hthomescore
+			,@HalfTimeAway = m.htawayscore
+			,@GoalRecord = m.GoalRecord
+			,@BetStatus = m.betstatus
+			,@sporttype = sporttype
+		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
+		WHERE m.matchid = @MatchId
+
+		IF @ActionId <> -1
+		BEGIN
+			IF @sporttype = 1
+			BEGIN
+				SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+										  ELSE @GoalRecord
+									 END ,
+						@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
+										  ELSE @BetStatus
+									 END 
+			END
+
+			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
+					,@action = @ActionId
+					,@fth = @FullTimeHome
+					,@fta = @FullTimeAway
+					,@hth = @HalfTimeHome
+					,@hta = @HalfTimeAway
+					,@goalrecord = @GoalRecord
+					,@betstatus = @BetStatus
+		END
+	END 
+	ELSE
+	BEGIN
+		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
+	END 	
 END
 
 GO

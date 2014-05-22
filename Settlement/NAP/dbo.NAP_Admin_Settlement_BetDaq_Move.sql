@@ -101,7 +101,7 @@ BEGIN
 
 	
 	DECLARE	@LogData VARCHAR(200)
-	SELECT	@LogData = 'NAP: BetDaq Movement from OldMatch:' + CAST(@matchid AS VARCHAR(15))+ ', NewMatch:' + CAST(@newMatchid AS VARCHAR(15))
+	SELECT	@LogData = 'BetDaq Movement from OldMatch:' + CAST(@matchid AS VARCHAR(15))+ ', NewMatch:' + CAST(@newMatchid AS VARCHAR(15))
 	EXEC dbo.WriteLog_UserLog @userid = @AdminId, @Doing = @LogData  
 	
 	
