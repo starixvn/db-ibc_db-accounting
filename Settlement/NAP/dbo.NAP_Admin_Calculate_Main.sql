@@ -82,11 +82,13 @@ AS
 	Revisions:
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140424@Lukas: add DBTP server 
+		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
 	Param's Explanation:
 		@action			@mode
-		 CAL			 CAL, CAL-HT, CAL-FT, UNDO, HT-FGLG, FT-FGLG
+		 CAL			 CAL, CAL-HT, CAL-FT, UNDO, 
+		 CAL-FGLG		 CAL, CAL-HT, CAL-FT
 		 REFUND			 ALL, HT, FT, BetDaq, BetFair
-		 REFUND-FGLG	 CAL, CAL-HT, CAL-FT
+		 REFUND-FGLG	 REFUND-FT, REFUND-HT
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -666,7 +668,11 @@ BEGIN
 				EXEC dbo.NAP_Admin_Calculate_Undo @matchid
 			END
 
-			IF @Mode = 'CAL-HTFGLG'
+		END
+
+		IF @action = 'CAL-FGLG'
+		begin
+			IF @Mode = 'CAL-HT'
 			BEGIN
 				EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 					,@bettype = @betcount_127
@@ -676,7 +682,7 @@ BEGIN
 					,@betcount = @ticket_count
 			END
 
-			IF @mode = 'CAL-FTFGLG'
+			IF @mode = 'CAL-FT'
 			BEGIN
 				EXEC dbo.Admin_Calculate_4 @matchid = @matchid
 					,@bettype = @betcount_14
@@ -695,7 +701,7 @@ BEGIN
 						,@betcount = @ticket_count
 				END
 			END
-		END
+		END 
 
 		IF @action = 'REFUND'
 		BEGIN
@@ -843,11 +849,11 @@ BEGIN
 
 		IF @action = 'REFUND-FGLG'
 		begin
-				EXEC dbo.NAP_Admin_Calculate_RefundFGLG @matchid = @matchid
-					,@action = @mode
-					,@LGOnly = @LGOnly
-					,@matchdate = @matchdate
-		end 
+			EXEC dbo.NAP_Admin_Calculate_RefundFGLG @matchid = @matchid
+				,@action = @mode
+				,@LGOnly = @LGOnly
+				,@matchdate = @matchdate
+		END 
 	END
 END
 

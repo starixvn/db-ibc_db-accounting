@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Set_MatchGetResult] @Date DATETIME
+ALTER PROCEDURE [NAP_Set_MatchGetResult] @Date DATETIME
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues
 	@sporttype TINYINT = 0
@@ -11,7 +11,8 @@ AS
 	DB: DBPRO/BODB02  
 
 	Revisions:  
-		
+		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
+
 	Param explanation:  
 		@sporttype: show info of particular sport
 		@LeagueID: = 0: show info of all leagues    	
@@ -66,9 +67,9 @@ BEGIN
 		,isUndecided BIT
 		,IsKeyscore BIT
 		,IsExistFGLG BIT
+		,IsExistHTFGLG BIT
 		,WinOdds SMALLMONEY
 		,PlaceOdds SMALLMONEY
-		,isGroup int
 		)
 
 	DECLARE @matchid VARCHAR(MAX)
@@ -132,7 +133,7 @@ BEGIN
 		,0
 		,0
 		,0
-		,0 as isGroup
+		,0
 	FROM dbo.match m WITH (NOLOCK)
 		LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
 	WHERE m.eventdate = @Date AND m.leagueID = CASE 
@@ -171,7 +172,9 @@ BEGIN
 					,ROOT('root')
 				)
 
+		-- FGLG
 		EXEC DBTXN.bodb02.dbo.NAP_Set_MatchBetStatusSel @matchid = @matchid
+			, @bettype = 14
 			,@betstatus = @betstatus OUTPUT
 
 		--Create an internal representation of the XML document.      
@@ -180,6 +183,28 @@ BEGIN
 
 		UPDATE m
 		SET IsExistFGLG = CASE 
+				WHEN rs.cnt = 0 OR rs.cnt IS NULL THEN 0
+				ELSE 1
+				END
+		FROM #matchList m
+			INNER JOIN @tmp_match t ON m.matchid = t.matchid
+			LEFT JOIN (
+			SELECT matchid
+				,cnt
+			FROM OPENXML(@intDocHandle, '/root/match', 2) WITH (matchid INT, cnt INT)
+			) rs ON m.matchid = rs.matchid
+
+		-- 1H FGLG
+		EXEC DBTXN.bodb02.dbo.NAP_Set_MatchBetStatusSel @matchid = @matchid
+			, @bettype = 127
+			,@betstatus = @betstatus OUTPUT
+
+		--Create an internal representation of the XML document.      
+		EXEC sp_xml_preparedocument @intDocHandle OUTPUT
+			,@betstatus
+
+		UPDATE m
+		SET IsExistHTFGLG = CASE 
 				WHEN rs.cnt = 0 OR rs.cnt IS NULL THEN 0
 				ELSE 1
 				END
@@ -226,9 +251,9 @@ BEGIN
 		,0 AS isUndecided
 		,0 AS IsKeyscore
 		,0 AS IsExistFGLG
+		,0 AS IsExistHTFGLG
 		,o.Odds
 		,o.PlaceOdds
-		,0 as isGroup
 	FROM dbo.outright o WITH (NOLOCK)
 		INNER JOIN league l WITH (NOLOCK) ON o.leagueid = l.leagueid
 	WHERE o.eventdate = @Date AND l.sporttype BETWEEN (CASE 
@@ -279,16 +304,16 @@ BEGIN
 		,0 AS isUndecided 
 		,0 AS IsKeyscore
 		,0 AS IsExistFGLG
+		,0 AS IsExistHTFGLG
 		,o.WinOdds
 		,o.PlaceOdds
-		,0 as isGroup
 	FROM VSOutright o WITH (NOLOCK)
 		INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 		INNER JOIN league l WITH (NOLOCK) ON r.leagueid = l.leagueid
 	WHERE o.eventdate = @Date AND l.sporttype = CASE 
 			WHEN @sporttype = 0 THEN l.sporttype
 			ELSE @sporttype
-			END AND @sporttype IN (0, 181, 182, 184) AND r.leagueid = CASE 
+			END AND @sporttype IN (0, 181, 182, 184, 183, 185) AND r.leagueid = CASE 
 			WHEN @leagueid = 0 THEN r.leagueid
 			ELSE @leagueid
 			END AND (@eventstatus='' or o.eventstatus in (@eventstatus,'internal')) 
@@ -296,25 +321,6 @@ BEGIN
 					(@isRefund =1 and r.betstatus like 'Refund%') or
 					(@isRefund =0 and ISNULL(r.betstatus,'') not like 'Refund%') 
 				)
-
-	UPDATE #matchList
-	SET isGroup = CASE 
-			WHEN eventstatus = 'Running' THEN 1
-			WHEN eventstatus = 'Closed' THEN 2
-			WHEN eventstatus = 'completed' THEN 3
-			WHEN eventstatus LIKE '%Refund%' THEN 3
-			ELSE 0
-			END
-	
-	UPDATE m
-	SET m.isGroup = ml.isGroup
-	FROM #matchList m
-	INNER JOIN #matchList ml on ml.sporttype = m.sporttype
-		AND ml.homeid = m.homeid 
-		AND ml.awayid = m.awayid
-		AND ml.leagueid = m.leagueid
-		AND ml.isGroup <> 0
-	where m.isGroup = 0
 
 	SELECT m.HalfTimeHomeScore
 		,m.HalfTimeAwayScore
@@ -345,15 +351,21 @@ BEGIN
 		,m.isUndecided
 		,m.IsKeyscore
 		,m.IsExistFGLG
+		,m.IsExistHTFGLG
 		,m.WinOdds
 		,m.PlaceOdds
 	FROM #matchList m
-	ORDER BY m.sporttype, m.leagueid, m.isGroup,
-		m.eventdate, 
-		m.kickofftime,
-		m.betstatus
+	ORDER BY CASE eventstatus WHEN 'completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
+			,eventdate
+			,kickofftime
+			,sporttype
+			,leagueid
+			,matchid
+			,betstatus
+			,matchcode  
 	DROP TABLE #matchList
 END
+
 
 GO
 

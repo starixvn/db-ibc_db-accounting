@@ -14,7 +14,7 @@ AS
 
 	Revisions:		
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
-		- 20140512@Kathy: allow to execute undo action without score 
+		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
 						   
 	Param's Explanation:		
 		

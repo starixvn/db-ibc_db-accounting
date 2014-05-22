@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20140421@Kathy: get match status in queue
+		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 
 
 	Param explanation: 
@@ -56,6 +57,7 @@ BEGIN
 		,IsKeyscore BIT
 		,calculate BIT
 		,IsExistFGLG BIT
+		,IsExistHTFGLG BIT
 		,BetCount INT
 		)
 
@@ -166,7 +168,8 @@ BEGIN
 					ELSE 0
 					END AS BIT) AS IsKeyscore
 			,ISNULL(tm.calculate, 0) AS calculate
-			,c.isExistFGLG
+			,case when c.cntFGLG = 0 THEN 0 ELSE 1 END as isExistFGLG
+			,case when C.cntHTFGLG = 0 THEN 0 ELSE 1 END as isExistHTFGLG
 			,C.BetCount
 		FROM #m tm 
 			INNER JOIN (
@@ -175,7 +178,11 @@ BEGIN
 				,SUM(CASE 
 						WHEN bettype = 14 THEN 1
 						ELSE 0
-						END) AS isExistFGLG
+						END) AS cntFGLG
+				,SUM(CASE 
+						WHEN bettype = 127 THEN 1
+						ELSE 0
+						END) AS cntHTFGLG
 			FROM dbo.bettrans b WITH (NOLOCK,index=CIX_matchid_bettype)
 				INNER JOIN #m stm ON b.matchid = stm.matchid
 			WHERE winlostdate = @Date
@@ -221,6 +228,7 @@ BEGIN
 		,IsKeyscore 
 		,calculate 
 		,IsExistFGLG 
+		,m.IsExistHTFGLG
 		,BetCount
 		,t.seqS AS IsCalculatingSingle
 	FROM #matchList m
@@ -229,6 +237,10 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+
+
+
+
 
 GO
 

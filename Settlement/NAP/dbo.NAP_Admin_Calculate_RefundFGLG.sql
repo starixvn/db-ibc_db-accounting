@@ -1,5 +1,5 @@
-ALTER PROCEDURE cc @matchid INT
-	,@action varchar(10) = 'CAL'
+ALTER PROCEDURE [NAP_Admin_Calculate_RefundFGLG] @matchid INT
+	,@action varchar(10) = 'REFUND'
 	,@LGOnly BIT
 	,@matchdate DATETIME
 AS
@@ -76,8 +76,8 @@ BEGIN
 
 	DECLARE @bettype int
 
-	select @bettype = CASE WHEN @action = 'CAL-HT' then 127
-						   when @action = 'CAL-FT' then 14
+	select @bettype = CASE WHEN @action = 'REFUND-HT' then 127
+						   when @action = 'REFUND-FT' then 14
 						   ELSE 0
 					  end 
 
@@ -140,6 +140,7 @@ BEGIN
 	END
 		-------------End: Refund FGLG for bettransm-------------
 END
+
 
 GO
 

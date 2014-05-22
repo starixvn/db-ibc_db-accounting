@@ -125,17 +125,18 @@ BEGIN
 
 	IF @LGOnly = 1 ---refund last goal
 	BEGIN
-		IF @action IN ('REFUND', 'REFUND-FT')
-			SET @betStatus = CASE 
-					WHEN CHARINDEX('FL:', @betstatus) > 0 THEN STUFF(@betStatus, LEN(@betStatus), 1, '0')
-					ELSE @betStatus
-					END
-
-		IF @action IN ('REFUND', 'REFUND-HT')
+			IF @action IN ('REFUND', 'REFUND-HT')
 			SET @betStatus = CASE 
 					WHEN CHARINDEX('1FL:', @betstatus) > 0 THEN STUFF(@betstatus, CHARINDEX('1FL:', @betstatus) + 6, 1, '0')
 					ELSE @betStatus
 					END
+
+		IF @action IN ('REFUND', 'REFUND-FT')
+			SET @betStatus = CASE 
+					WHEN (CHARINDEX('FL:', @betstatus) > 0 and CHARINDEX('1FL:', @betstatus) = 0) 
+								OR CHARINDEX(';FL',@betstatus) > 0 THEN STUFF(@betStatus, LEN(@betStatus), 1, '0')
+					ELSE @betStatus
+					END		
 	END
 	ELSE --- refund all FGLG
 	BEGIN
