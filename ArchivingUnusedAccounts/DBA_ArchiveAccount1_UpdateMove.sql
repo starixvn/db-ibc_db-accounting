@@ -19,6 +19,7 @@ AS
 		- 20120227@Lukas: archive data for Live Casino Game
 		- 20121005@Thien: change connection of bodb_Customer to DB05
 		- 20130121@Johnson: change linked server DB05 to DBARCCUST
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call Acc_ExecRep_Cust_01 instead of Acc_ExecRep_01)
 */
     
 SET NOCOUNT ON
@@ -241,7 +242,7 @@ SELECT CustID
 FROM [dbo].[CustSettingGame] WITH(NOLOCK)
 WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
 
-Exec Acc_ExecRep_01 @AgentID = @AgentID, @Type = 0 
+Exec Acc_ExecRep_Cust_01 @AgentID = @AgentID, @Type = 0 
 ----------------------------------------------------------------
 print  @AccName +':'+ 'END:' + convert(varchar(50), getdate(), 113)
 
