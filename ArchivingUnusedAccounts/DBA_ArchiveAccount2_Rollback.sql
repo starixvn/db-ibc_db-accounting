@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[DBA_ArchiveAccount2_Rollback]
+﻿ALTER PROCEDURE [DBA_ArchiveAccount2_Rollback]
 	@AccName varchar(50),	
 	@UserID int = 360418,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
@@ -30,6 +30,7 @@ AS
 		- 20121204@Scott: add fields for virtual tennis (maxpermatch186)
 		- 20130121@Johnson: change linked server DB05 to DBARCCUST
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Insert BalanceCredit, BalanceDebit by DBA_ArchiveAccount2_Rollback_Balance SP)
+		- 20140403@Kathy: Insert data to columns: maxpermatch181,maxpermatch182,maxpermatch183,maxpermatch184,maxpermatch185 of bodb_Customer.dbo.custInfo_old
 	NOTE: 
 	--Review the SP again once executing as maybe new fields were added to customer or custinfo table
 	--Generate and Run custsetting data manually, by using Local 204 Db or ask the backup DB from Joe
@@ -178,7 +179,12 @@ BEGIN
 		  , maxpermatch180, DisableVirtualSports, HideVirtualSports, maxpermatch186
 		  , Abnormal
 		  , DoubleCommLosing
-		  ,isAutoResetLiveCasino, MaxWinLiveCasino   
+		  ,isAutoResetLiveCasino, MaxWinLiveCasino  
+		  ,maxpermatch181
+		  ,maxpermatch182
+		  ,maxpermatch183
+		  ,maxpermatch184
+		  ,maxpermatch185
           )
 			
 			
@@ -202,6 +208,11 @@ BEGIN
           , Abnormal
           , DoubleCommLosing
           ,isAutoResetLiveCasino, MaxWinLiveCasino   
+		  ,maxpermatch181
+		  ,maxpermatch182
+		  ,maxpermatch183
+		  ,maxpermatch184
+		  ,maxpermatch185
 	from	DBARCCUST.bodb_Customer.dbo.custinfo_old with(nolock)
 	where	custid IN (	select	custid from #Member WITH (NOLOCK) 
 						where	custid between @minCustID + @Step*@index and (@minCustID - 1) + @Step*(@index + 1)	
@@ -434,7 +445,6 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 	@ActionID = 1504,
 	@TrackingValue = @LogSPData	,
 	@duration = @duration
-
 
 
 GO
