@@ -637,6 +637,9 @@ Begin DataProject = "Account"
       Script = "dbo.Acc_GetIPInfo_Full.sql"
       Script = "dbo.GetIPVN.sql"
    End
+   Begin Folder = "LimitLoss"
+      Script = "Task_LimitLoss_Setting_TotalBalanceUpd_Job.sql"
+   End
    Begin Folder = "Login-OnUser"
       Script = "dbo.Acc_CheckIn.proc.sql"
       Script = "dbo.Acc_CheckOut.proc.sql"
