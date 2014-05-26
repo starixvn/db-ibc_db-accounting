@@ -5,7 +5,7 @@
 AS
 /*
 	Created: Elodie
-	Date: 20130515
+	Date: 20140515
 	Task : Retrieve SMA Turnover Monitor list
 	DB: DBAGE/bodb02
 

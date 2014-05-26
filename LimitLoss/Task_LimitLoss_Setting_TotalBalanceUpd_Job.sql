@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE Task_LimitLoss_Setting_TotalBalanceUpd_Job
+﻿ALTER PROCEDURE Task_LimitLoss_Setting_TotalBalanceUpd_Job
 AS
 /*
 	Created: Elodie
@@ -12,5 +12,57 @@ AS
 		
 */
 BEGIN
-	SET NOCOUNT ON
+	DECLARE @Cust_tmp TABLE (CustID INT, roleid TINYINT)
+	DECLARE @BalanceCust TABLE (CustID INT, NewTotalBalance MONEY, NewLevelID TINYINT)
+	DECLARE @MaxLevel TINYINT, @i TINYINT
+	SELECT @i = min(LevelID), @MaxLevel = max(LevelID) FROM LimitLoss_ActionConfig WITH (NOLOCK)
+
+	INSERT INTO @Cust_tmp (CustID, roleid)
+	SELECT s.CustID, c.roleid
+	FROM LimitLoss_Setting s WITH (NOLOCK)
+		INNER JOIN bodb02.dbo.CustInfo c WITH (NOLOCK) ON s.custid = c.custid
+	
+	;WITH tmp AS
+	(
+		SELECT Custid, sum(superCash + masterCash + agentCash + memberCash)	AS TotalBalance	
+		FROM 
+			(
+				SELECT	t.CustID,
+						sum(case when b.custid=b.srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
+						sum(case when b.custid=b.mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
+						sum(case when b.custid=b.recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
+						sum(case when b.custid <> b.recommend and b.custid <> b.mrecommend and b.custid <> b.srecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end) memberCash
+				FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
+					INNER JOIN @Cust_tmp t ON (b.srecommend = t.Custid AND t.roleid = 4) OR (b.mrecommend = t.Custid AND t.roleid = 3) OR (b.recommend = t.Custid AND t.roleid = 2)
+				GROUP BY t.CustID
+			)Balance
+		GROUP BY Custid
+	)
+	INSERT INTO @BalanceCust (CustID, NewTotalBalance, NewLevelID)
+	SELECT CustID, t.TotalBalance, 0
+	FROM tmp t
+
+	WHILE (@i<@MaxLevel)
+	BEGIN
+		UPDATE b
+		SET NewLevelID = @i
+		FROM @BalanceCust b
+			INNER JOIN LimitLoss_Setting l ON b.CustID = l.CustID
+		WHERE b.NewTotalBalance/l.MaxLoss*100 >= (SELECT Value FROM LimitLoss_ActionConfig WITH (NOLOCK) WHERE LevelID = @i)
+			AND b.NewTotalBalance/l.MaxLoss*100 < (SELECT Value FROM LimitLoss_ActionConfig WITH (NOLOCK) WHERE LevelID = @i+1)
+
+		SET @i = @i+1
+	END
+
+	UPDATE b
+	SET NewLevelID = @MaxLevel
+	FROM @BalanceCust b
+		INNER JOIN LimitLoss_Setting l ON b.CustID = l.CustID
+	WHERE b.NewTotalBalance/l.MaxLoss*100 >= (SELECT Value FROM LimitLoss_ActionConfig WITH (NOLOCK) WHERE LevelID = @MaxLevel)
+
+	UPDATE l
+	SET TotalBalance = b.NewTotalBalance,
+		LevelID = b.NewLevelID
+	FROM LimitLoss_Setting l WITH (ROWLOCK, UPDLOCK)
+		INNER JOIN @BalanceCust b ON l.CustID = b.CustID
 END
