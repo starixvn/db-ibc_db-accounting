@@ -22,16 +22,30 @@ AS
 SET NOCOUNT ON
 
 BEGIN
-	DECLARE @NotKeyScoreList VARCHAR(130), @NotAllowCalculating VARCHAR(200)
-	DECLARE @match TABLE (matchid INT, matchcode NVARCHAR(50), fth SMALLINT, fta SMALLINT, hth SMALLINT, hta SMALLINT)
+	DECLARE  @NotKeyScoreList VARCHAR(130)
+			,@NotAllowCalculating VARCHAR(200)
+			,@procName nvarchar(50)	
+			,@matchid int
+
+	DECLARE @match TABLE ( matchid INT
+						  ,matchcode NVARCHAR(50)
+						  ,fth SMALLINT
+						  ,fta SMALLINT
+						  ,hth SMALLINT
+						  ,hta SMALLINT
+						 )
+	
+	SELECT	 @ErrCode = 0
+			,@ErrMsg = ''
+			,@procName = OBJECT_NAME(@@procid)
 
 	INSERT INTO @match ( matchid, matchcode, fth, fta, hth, hta)
 	SELECT DISTINCT matchid
-		,matchcode
-		,finalhomescore
-		,finalawayscore
-		,hthomescore
-		,htawayscore
+			,matchcode
+			,finalhomescore
+			,finalawayscore
+			,hthomescore
+			,htawayscore
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid IN ( SELECT val
 					   FROM dbo.strSplit(@matchids, ',') ) 
@@ -68,27 +82,61 @@ BEGIN
 	END
 
 	IF EXISTS (
-			SELECT TOP 1 1
-			FROM @match
-			)
+				SELECT TOP 1 1
+				FROM @match
+				)
 	BEGIN
-		INSERT INTO dbo.Parlay_Calculate_Queue (matchid, isCalculating, creator, ip, starttime, action)
-		SELECT matchid, 0, @AdminId, @IP, CURRENT_TIMESTAMP, @action
-		FROM @match
-	END
+		IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
+		BEGIN
+			SELECT   @ErrCode = 100
+					,@ErrMsg = 'All matches are being calculated, except following matches ' 
+								+ CASE WHEN ISNULL(@NotKeyScoreList, '') <> '' 
+										THEN  '(not keyed in score yet): ' + @NotKeyScoreList 
+										ELSE ''
+								  END
+								+ CASE when ISNULL(@NotAllowCalculating,'') <> ''
+										THEN  '(being calculated by another user): ' + @NotAllowCalculating
+										ELSE ''
+								  END 
+		END
 
-	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
-	BEGIN
-		SELECT @ErrCode = 100
-			,@ErrMsg = 'All matches are being calculated, except following matches ' 
-							+ CASE WHEN ISNULL(@NotKeyScoreList, '') <> '' 
-									THEN  '(not keyed in score yet): ' + @NotKeyScoreList 
-									ELSE ''
-							  END
-							+ CASE when ISNULL(@NotAllowCalculating,'') <> ''
-									THEN  '(being calculated by another user): ' + @NotAllowCalculating
-									ELSE ''
-							  END 
+		IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+		BEGIN
+			WHILE(1 = 1)
+			BEGIN
+				SELECT TOP 1 @matchid = matchid
+				FROM @match
+
+				IF @@ROWCOUNT = 0
+					BREAK
+					 
+				BEGIN TRY
+					EXEC [NAP_Admin_Settlement_Parlay] @matchids = @matchid
+						,@creator = @AdminId
+						,@action  = @action
+						,@IP      = @IP
+						,@ErrCode = @ErrCode OUTPUT
+						,@ErrMsg  = @ErrMsg   OUTPUT
+				END TRY
+
+				BEGIN CATCH
+					SELECT @ErrMsg  = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+						  ,@ErrCode = @ErrCode
+					RETURN
+				END CATCH
+
+				DELETE 
+				FROM @match
+				WHERE matchid = @matchid
+			END
+			
+		END
+		ELSE
+		BEGIN		
+			INSERT INTO dbo.Parlay_Calculate_Queue (matchid, isCalculating, creator, ip, starttime, action)
+			SELECT matchid, 0, @AdminId, @IP, CURRENT_TIMESTAMP, @action
+			FROM @match
+		END
 	END
 END
 

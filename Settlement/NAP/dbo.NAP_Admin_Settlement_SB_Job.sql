@@ -15,31 +15,31 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @MatchId INT
-		,@AdminId INT
-		,@IP VARCHAR(15)
-		,@Action VARCHAR(20)
-		,@ErrCode INT
-		,@ErrMsg NVARCHAR(200)
-		,@sqlCommand NVARCHAR(max)
-		,@keyId INT
-		,@fth SMALLINT
-		,@fta SMALLINT
-		,@hth SMALLINT
-		,@hta SMALLINT
-		,@GoalRecord VARCHAR(50)
-		,@BetStatus NVARCHAR(50)
-		,@ActionId TINYINT
-		,@duration INT
-		,@sporttype tinyint
+	DECLARE  @MatchId INT
+			,@AdminId INT
+			,@IP VARCHAR(15)
+			,@Action VARCHAR(20)
+			,@ErrCode INT
+			,@ErrMsg NVARCHAR(200)
+			,@sqlCommand NVARCHAR(max)
+			,@keyId INT
+			,@fth SMALLINT
+			,@fta SMALLINT
+			,@hth SMALLINT
+			,@hta SMALLINT
+			,@GoalRecord VARCHAR(50)
+			,@BetStatus NVARCHAR(50)
+			,@ActionId TINYINT
+			,@duration INT
+			,@sporttype tinyint
 
 	SELECT TOP 1 @duration = DATEDIFF(ms, execTime, GETDATE())
-		,@keyId = keyid
-		,@matchid = matchid
+				,@keyId = keyid
+				,@matchid = matchid
 	FROM Single_Calculate_Queue WITH (NOLOCK)
 	WHERE IsCalculating = 1
 
-	IF isnull(@duration, 0) > 300000
+	IF isnull(@duration, 0) > 300000 -- 5 minutes
 	BEGIN
 		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
 		SET IsCalculating = 0
@@ -56,18 +56,18 @@ BEGIN
 	END
 
 	SELECT @ErrCode = 0
-		,@ErrMsg = ''
+		  ,@ErrMsg = ''
 
 	SET @keyId = (
 			SELECT TOP 1 keyid
 			FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
 			WHERE IsCalculating = 0
 			ORDER BY TryCount
-				,starttime
+				    ,starttime
 			)
 
 	UPDATE TOP (1) dbo.Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
-	SET IsCalculating = 1
+	SET  IsCalculating = 1
 		,execTime = GETDATE()
 		,@MatchId = matchid
 		,@Adminid = AdminId
@@ -89,7 +89,7 @@ BEGIN
 		SET @ErrMsg = @ErrMsg + ERROR_MESSAGE()
 	END CATCH
 
-	IF (ISNULL(@ErrCode, 0) <> 0 OR ISNULL(@ErrMsg, '') <> '') -- calculate failed set calculateing = 0 and back
+	IF (ISNULL(@ErrCode, 0) <> 0 OR ISNULL(@ErrMsg, '') <> '') -- calculate failed set calculating = 0 and back
 		AND ISNULL(@ErrCode, 0) <> 1000006 --- 1000006: Betfair & Betdaq - Warning message
 	BEGIN
 		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
@@ -137,7 +137,7 @@ BEGIN
 		IF @ErrCode = 1000006
 		BEGIN
 			INSERT INTO Settled_Message (
-				AdminId
+				 AdminId
 				,MatchId
 				,IP
 				,Starttime
@@ -145,13 +145,13 @@ BEGIN
 				,Message
 				,Warning
 				)
-			SELECT @AdminId
-				,@MatchId
-				,@IP
-				,GETDATE()
-				,@Action
-				,@ErrMsg
-				,NULL
+			SELECT   @AdminId
+					,@MatchId
+					,@IP
+					,GETDATE()
+					,@Action
+					,@ErrMsg
+					,NULL
 		END
 
 		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
@@ -163,7 +163,7 @@ BEGIN
 				WHEN @Action = 'CAL-HT' THEN 2
 				WHEN @Action = 'CAL-FT' THEN 3
 				WHEN @Action = 'CAL' THEN 4
-				WHEN @Action = 'CAL-FTFGLG' OR @Action = 'CAL-HTFGLG' THEN 1
+				WHEN @Action = 'CAL-FGLG' OR @Action = 'CAL-FTFGLG' OR @Action = 'CAL-HTFGLG' THEN 1
 				WHEN @Action = 'Refund-HT' THEN 11
 				WHEN @Action = 'Refund-FT' THEN 12
 				WHEN @Action = 'Refund' THEN 13
@@ -182,16 +182,18 @@ BEGIN
 		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
 
-		IF @sporttype = 1
-		BEGIN
-			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-									  ELSE @GoalRecord
-								 END ,
-					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
-									  ELSE @BetStatus
-								 END 
-		END
 		IF @ActionId <> - 1
+		BEGIN
+			IF @sporttype = 1
+			BEGIN
+				SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+										  ELSE @GoalRecord
+									 END ,
+						@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
+										  ELSE @BetStatus
+									 END 
+			END
+
 			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 				,@action = @ActionId
 				,@fth = @fth
@@ -200,9 +202,9 @@ BEGIN
 				,@hta = @hta
 				,@goalrecord = @GoalRecord
 				,@betstatus = @BetStatus
+		END
 	END
 END
-
 
 GO
 

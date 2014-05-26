@@ -18,7 +18,7 @@ AS
 	
 	Revisions:
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
-		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140507@Kathy: Add param @action (for bettype 1H FGLG (127)) [Redmine:#14449]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
@@ -28,11 +28,18 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500), @mode varchar(20)
+	DECLARE  @matchcode nvarchar(50)
+			,@sporttype int
+			,@leagueid int
+			,@sqlCommand NVARCHAR(500)
+			,@mode varchar(20)
+			,@procName nvarchar(50)			
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
+	SELECT   @matchcode = m.matchcode
+			,@sporttype = m.sporttype
+			,@leagueid = m.leagueid
 	FROM match m with(NOLOCK)
-	where m.matchid = @MatchId
+	WHERE m.matchid = @MatchId
 
 	IF @@ROWCOUNT = 0 
 	BEGIN
@@ -49,16 +56,17 @@ BEGIN
 		RETURN
 	END 
 
-	SELECT @ErrCode = 0, @ErrMsg = ''
-			,@mode = CASE when @action = 'CAL-FT' THEN CASE WHEN @IncludeLastGoal = 0 then  'CAL-FTFGLG' 
-														 ELSE 'CAL-FTLG' 
-													END
-					   ELSE CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-HTFGLG'
-								 ELSE 'CAL-HTLG'
-							END
-				 END 
-
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_FGLG] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+	SELECT   @ErrCode = 0
+			,@ErrMsg = ''
+			,@mode = CASE when @action = 'CAL-FT' THEN CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-FTFGLG' 
+														    ELSE 'CAL-FTLG' 
+													   END
+						  ELSE CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-HTFGLG'
+								    ELSE 'CAL-HTLG'
+							   END
+				     END 
+			,@procName = OBJECT_NAME(@@procid)
+			,@sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_FGLG] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
 								 ', @action = ' + CASE WHEN @action IS NULL THEN 'CAL-FT' ELSE '''' + CONVERT(NVARCHAR(50), @action) + '''' END +
 								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @goalrecord = '+ CASE when @GoalRecord IS NULL THEN 'NULL' ELSE '''' + CONVERT(nvarchar(50),@GoalRecord)+ '''' END +
@@ -69,8 +77,66 @@ BEGIN
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 
-	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @mode, @sqlCommand
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	BEGIN
+		DECLARE  @fth SMALLINT
+				,@fta SMALLINT
+				,@hth SMALLINT
+				,@hta SMALLINT
+				,@ActionId TINYINT
+
+		BEGIN TRY
+			EXEC sys.sp_executesql @sqlCommand
+				,N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
+				,@ErrMsg = @ErrMsg OUTPUT
+				,@ErrCode = @ErrCode OUTPUT
+		END TRY
+
+		BEGIN CATCH
+			SELECT  @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+				   ,@ErrCode = @ErrCode
+			RETURN
+		END CATCH
+
+		SELECT @ActionId = CASE 
+								WHEN @mode = 'CAL-FTFGLG' OR @mode = 'CAL-HTFGLG' THEN 1
+								ELSE - 1
+						   END
+			,@fth = m.finalhomescore
+			,@fta = m.finalawayscore
+			,@hth = m.hthomescore
+			,@hta = m.htawayscore
+			,@GoalRecord = m.GoalRecord
+			,@BetStatus = m.betstatus
+		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
+		WHERE m.matchid = @MatchId
+
+		IF @ActionId <> - 1
+			IF @sporttype = 1
+			BEGIN
+				SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+										  ELSE @GoalRecord
+									 END ,
+						@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
+										  ELSE @BetStatus
+									 END 
+			END
+
+			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
+				,@action = @ActionId
+				,@fth = @fth
+				,@fta = @fta
+				,@hth = @hth
+				,@hta = @hta
+				,@goalrecord = @GoalRecord
+				,@betstatus = @BetStatus
+
+	END 
+	ELSE
+	BEGIN
+		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @mode, @sqlCommand
+	END
 END
 
 GO

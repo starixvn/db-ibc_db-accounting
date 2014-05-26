@@ -32,9 +32,15 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500)	
+	DECLARE  @matchcode nvarchar(50)
+			,@sporttype int
+			,@leagueid int
+			,@sqlCommand NVARCHAR(500)
+			,@procName nvarchar(50)	
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
+	SELECT   @matchcode = m.matchcode
+			,@sporttype = m.sporttype
+			,@leagueid = m.leagueid
 	FROM match m with(NOLOCK)
 	where m.matchid = @MatchId
 
@@ -53,16 +59,36 @@ BEGIN
 		RETURN
 	END 
 
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_BetDaq] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+	SELECT   @ErrCode = 0
+			,@ErrMsg = ''
+			,@procName = OBJECT_NAME(@@procid)
+			,@sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_BetDaq] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
 								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 
-	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-Betdaq', @sqlCommand
-END
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	BEGIN
+		BEGIN TRY
+			EXEC sys.sp_executesql @sqlCommand
+				,N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
+				,@ErrMsg = @ErrMsg OUTPUT
+				,@ErrCode = @ErrCode OUTPUT
+		END TRY
 
+		BEGIN CATCH
+			SELECT   @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+					,@ErrCode = @ErrCode
+			RETURN
+		END CATCH
+	END 
+	ELSE
+	BEGIN
+		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-Betdaq', @sqlCommand
+	END
+END
 
 GO
 
