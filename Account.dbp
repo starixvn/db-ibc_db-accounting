@@ -642,6 +642,7 @@ Begin DataProject = "Account"
       Begin Folder = "BK"
          Script = "Task_LimitLoss_Setting_TotalBalanceUpd_Job.sql"
       End
+      Script = "NAP_LimitLoss_ActionConfigSel.sql"
       Script = "NAP_LimitLoss_MonitorList.sql"
       Script = "Task_LimitLoss_Setting_TotalBalanceUpd_Job.sql"
    End

@@ -20,26 +20,26 @@ BEGIN
 
 	SET @rc1 = @@ROWCOUNT
 	
-	CREATE TABLE #DownlineToTmp (SMAID INT,  matchid INT, SumStake MONEY)
 	CREATE TABLE #DownlineToCal (SMAID INT, matchid INT, TotalTurnover MONEY, CONSTRAINT [CIX_DownlineToCal] PRIMARY KEY CLUSTERED (matchid, SMAID))	
 	CREATE TABLE #DownlineToControl (SMAID INT, matchid INT, Value INT, InheritLevel TINYINT, CONSTRAINT [CIX_DownlineToControl] PRIMARY KEY CLUSTERED (matchid, SMAID))	
 	CREATE TABLE #temp (SMAID INT, matchid INT, CONSTRAINT [CIX_temp] PRIMARY KEY CLUSTERED (matchid, SMAID))
 	DECLARE @MatchControl TABLE (Matchid INT PRIMARY KEY, LeagueID INT, SportID INT, Value INT, InheritLevel TINYINT)
 	
-	INSERT INTO #DownlineToTmp (SMAID, matchid, SumStake)
-	SELECT CASE WHEN EXISTS (SELECT * FROM DBACC.bodb_ACC.dbo.Acc_CustDirect where custid = t.mrecommend) THEN recommend --Direct agent
-				WHEN EXISTS (SELECT * FROM DBACC.bodb_ACC.dbo.Acc_CustDirect where custid = t.srecommend) THEN mrecommend --Direct master
-				ELSE srecommend --super
-			END AS SMAID, t.matchid, SumStake
-	FROM DownlineTurnOver_Trigger_tmp t WITH (NOLOCK)
-		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
-	WHERE srecommend NOT IN (SELECT custid FROM Dep_CustSuper WITH (NOLOCK))
-		AND m.sporttype < 99 AND (m.eventstatus <> 'completed' OR m.betstatus LIKE 'Refund%') AND m.matchcode NOT LIKE '%hedge%'
-		AND recommend NOT IN (SELECT custid FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WHERE roleid = 2)
-	
+	;WITH DownlineToTmp AS
+	(
+		SELECT CASE WHEN EXISTS (SELECT 1 FROM dbo.Acc_CustDirect where custid = t.mrecommend AND roleid = 3) THEN recommend --Direct agent
+					WHEN EXISTS (SELECT 1 FROM dbo.Acc_CustDirect where custid = t.srecommend AND roleid = 4) THEN mrecommend --Direct master
+					ELSE srecommend --super
+				END AS SMAID, t.matchid, SumStake
+		FROM DownlineTurnOver_Trigger_tmp t WITH (NOLOCK)
+			INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
+		WHERE NOT EXISTS (SELECT 1 FROM Dep_CustSuper WITH (NOLOCK) WHERE custid = srecommend)
+			AND m.sporttype < 99 AND (m.eventstatus <> 'completed' OR m.betstatus LIKE 'Refund%') AND m.matchcode NOT LIKE '%hedge%'
+			AND NOT EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WHERE custid = t.recommend AND roleid = 2)
+	)
 	INSERT INTO #DownlineToCal (SMAID, matchid, TotalTurnover)
 	SELECT SMAID, matchid, SUM(sumstake) TotalTurnover
-	FROM #DownlineToTmp t
+	FROM DownlineToTmp t
 	GROUP BY SMAID, matchid
 	
 	UPDATE T
@@ -54,11 +54,18 @@ BEGIN
 	SELECT SMAID, dc.matchid, NULL, NULL
 	FROM #DownlineToCal dc
 	INNER JOIN match m WITH (NOLOCK) ON dc.matchid = m.matchid
-	WHERE NOT EXISTS (SELECT * FROM #temp T WHERE dc.SMAID = T.SMAID AND dc.matchid = T.matchid)
+	WHERE NOT EXISTS (SELECT 1 FROM #temp T WHERE dc.SMAID = T.SMAID AND dc.matchid = T.matchid)
 		AND m.eventstatus <> 'completed'
 
 	IF NOT EXISTS (SELECT 1 FROM #DownlineToControl)
+	BEGIN
+		PRINT '=== Delete ' + CAST(@rc1 as varchar(20)) + ' row(s), Update ' + CAST(@rc2 as varchar(20)) + ' row(s), Insert 0 row(s) ==='
+
+		DROP TABLE #DownlineToCal
+		DROP TABLE #DownlineToControl
+		DROP TABLE #temp
 		RETURN
+	END
 	
 	INSERT INTO @MatchControl (Matchid, LeagueID, SportID, Value, InheritLevel)
 	SELECT DISTINCT d.matchid, m.LeagueID, m.sporttype, NULL, NULL
@@ -106,7 +113,6 @@ BEGIN
 
 	PRINT '=== Delete ' + CAST(@rc1 as varchar(20)) + ' row(s), Update ' + CAST(@rc2 as varchar(20)) + ' row(s), Insert ' + CAST(@rc3 as varchar(20)) + ' row(s) ==='
 
-	DROP TABLE #DownlineToTmp
 	DROP TABLE #DownlineToCal
 	DROP TABLE #DownlineToControl
 	DROP TABLE #temp

@@ -15,12 +15,11 @@ AS
 */
 SET NOCOUNT ON
 
-SELECT	c.Username, c.roleid, e.currency, t.TotalBalance, t.MaxLoss, t.LevelID, a.Value,
+SELECT	c.Username, c.roleid, e.currency, t.TotalBalance, t.MaxLoss, t.LevelID,
 		CASE WHEN t.MaxLoss = 0 THEN 100 
 			 WHEN t.TotalBalance >=0 THEN 0
 			 ELSE CAST((t.TotalBalance/t.MaxLoss*100) AS INT) END AS PercentageLoss
 	FROM dbo.LimitLoss_Setting t WITH(NOLOCK) 
-		INNER JOIN dbo.LimitLoss_ActionConfig a WITH (NOLOCK) ON t.LevelID = a.LevelID
 		INNER JOIN bodb02.dbo.custInfo c WITH (NOLOCK) ON t.CustID = c.custid
 		INNER JOIN bodb02.dbo.exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE t.LevelID > 0
