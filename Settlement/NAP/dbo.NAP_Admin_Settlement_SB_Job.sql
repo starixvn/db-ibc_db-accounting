@@ -11,6 +11,7 @@ AS
 		- 20140505@Kathy: Re-run match if time of execution more than 5 minutes
 		- 20140507@Kathy: - Add more settlement actions
 						  - Modify betstatus, goalrecord format before send to Apollo site
+		- 20140528@Kathy: balance between Soccer and Othersports calculation in queue
 */
 BEGIN
 	SET NOCOUNT ON
@@ -32,6 +33,8 @@ BEGIN
 			,@ActionId TINYINT
 			,@duration INT
 			,@sporttype tinyint
+			,@pre_Sporttype tinyint 
+
 
 	SELECT TOP 1 @duration = DATEDIFF(ms, execTime, GETDATE())
 				,@keyId = keyid
@@ -43,6 +46,7 @@ BEGIN
 	BEGIN
 		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
 		SET IsCalculating = 0
+			,execTime = NULL
 		WHERE keyid = @keyId
 	END
 	ELSE IF EXISTS (
@@ -58,13 +62,23 @@ BEGIN
 	SELECT @ErrCode = 0
 		  ,@ErrMsg = ''
 
+	
+	-- get sporttype of previous calculated match
+	SELECT TOP 1 @pre_Sporttype = SportType 
+	FROM Single_Calculate_Queue with(NOLOCK)
+	WHERE IsCalculating IN (2,3)
+	ORDER BY execTime DESC
+
+	-- giving priority to calcualate the match which has sporttype <> previous calculated match
 	SET @keyId = (
-			SELECT TOP 1 keyid
-			FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
-			WHERE IsCalculating = 0
-			ORDER BY TryCount
-				    ,starttime
-			)
+					SELECT TOP 1 keyid
+					FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
+					WHERE IsCalculating = 0
+					ORDER BY CASE WHEN SportType = @pre_Sporttype THEN 1 ELSE 0 END
+							,TryCount
+							,starttime
+							,keyid
+	)	
 
 	UPDATE TOP (1) dbo.Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
 	SET  IsCalculating = 1
