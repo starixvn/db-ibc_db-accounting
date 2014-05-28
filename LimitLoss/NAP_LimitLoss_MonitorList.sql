@@ -23,7 +23,7 @@ SELECT	c.Username, c.roleid, e.currency, t.TotalBalance, t.MaxLoss, t.LevelID,
 		INNER JOIN bodb02.dbo.custInfo c WITH (NOLOCK) ON t.CustID = c.custid
 		INNER JOIN bodb02.dbo.exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE t.LevelID > 0
-	ORDER BY PercentageLoss DESC, t.TotalBalance DESC, c.username	
+	ORDER BY PercentageLoss DESC, t.TotalBalance, c.username	
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_LimitLoss_MonitorList] TO [bodbAdminNet]

@@ -27,10 +27,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	----Check permission 
-	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	--IF @ErrCode <> 0
-	--	RETURN
+	--Check permission 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ControlTOByEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
 	
 	IF @MatchID <= 0
 		OR NOT EXISTS (SELECT 1 FROM DownlineTo_MatchControl WITH (NOLOCK) WHERE MatchID = @MatchID)
