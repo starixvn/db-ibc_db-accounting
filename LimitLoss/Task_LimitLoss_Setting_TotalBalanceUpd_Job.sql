@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE Task_LimitLoss_Setting_TotalBalanceUpd_Job
+﻿ALTER PROCEDURE [dbo].[Task_LimitLoss_Setting_TotalBalanceUpd_Job]
 AS
 /*
 	Created: Elodie
@@ -13,29 +13,69 @@ AS
 */
 BEGIN
 	DECLARE @BalanceCust TABLE (CustID INT, NewTotalBalance MONEY, NewLevelID TINYINT)
+	DECLARE @Cust_tmp TABLE (srecommend INT, mrecommend INT, recommend INT, roleid TINYINT)
 	DECLARE @MaxLevel TINYINT, @i TINYINT
 	SELECT @i = min(LevelID), @MaxLevel = max(LevelID) FROM LimitLoss_ActionConfig WITH (NOLOCK)
 
-	;WITH Cust_tmp AS
-	(
-		SELECT s.CustID, c.roleid
-		FROM LimitLoss_Setting s WITH (NOLOCK)
-			INNER JOIN bodb02.dbo.CustInfo c WITH (NOLOCK) ON s.custid = c.custid
-	)
+	CREATE TABLE #Balance_tmp (srecommend int , mrecommend int, recommend int, supercash money, mastercash money, agentcash money, membercash money)
+	CREATE CLUSTERED INDEX ix_balancetmp on #Balance_tmp (srecommend, mrecommend, recommend)
+
+	INSERT INTO @Cust_tmp (srecommend, mrecommend, recommend, roleid)
+	SELECT c.srecommend, c.mrecommend, c.recommend, c.roleid
+	FROM LimitLoss_Setting s WITH (NOLOCK)
+		INNER JOIN bodb02.dbo.CustInfo c WITH (NOLOCK) ON s.custid = c.custid
+	
+	INSERT INTO #Balance_tmp
+	SELECT	b.srecommend, b.mrecommend, b.recommend,
+			sum(case when b.custid=b.srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
+			sum(case when b.custid=b.mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
+			sum(case when b.custid=b.recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
+			sum(case when b.custid <> b.recommend and b.custid <> b.mrecommend and b.custid <> b.srecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end) memberCash
+	
+	FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
+		INNER JOIN @Cust_tmp t ON (b.srecommend = t.srecommend AND t.roleid = 4)
+	GROUP BY b.srecommend, b.mrecommend, b.recommend
+	UNION ALL
+
+	SELECT	b.srecommend, b.mrecommend, b.recommend,
+			sum(case when b.custid=b.srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
+			sum(case when b.custid=b.mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
+			sum(case when b.custid=b.recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
+			sum(case when b.custid <> b.recommend and b.custid <> b.mrecommend and b.custid <> b.srecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end) memberCash
+	
+	FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
+		INNER JOIN @Cust_tmp t ON (b.srecommend = t.srecommend AND b.mrecommend = t.mrecommend AND t.roleid = 3)
+	GROUP BY b.srecommend, b.mrecommend, b.recommend
+	UNION ALL
+
+	SELECT	b.srecommend, b.mrecommend, b.recommend,
+			sum(case when b.custid=b.srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
+			sum(case when b.custid=b.mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
+			sum(case when b.custid=b.recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
+			sum(case when b.custid <> b.recommend and b.custid <> b.mrecommend and b.custid <> b.srecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end) memberCash
+	
+	FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
+		INNER JOIN @Cust_tmp t ON (b.srecommend = t.srecommend AND b.mrecommend = t.mrecommend AND b.recommend = t.recommend AND t.roleid = 2)
+	GROUP BY b.srecommend, b.mrecommend, b.recommend
+	
 	INSERT INTO @BalanceCust (CustID, NewTotalBalance, NewLevelID)
-	SELECT Custid, sum(superCash + masterCash + agentCash + memberCash)	AS TotalBalance, 0
+	SELECT t.srecommend, sum(superCash + masterCash + agentCash + memberCash)	AS TotalBalance, 0
 	FROM 
-		(
-			SELECT	t.CustID,
-					sum(case when b.custid=b.srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
-					sum(case when b.custid=b.mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
-					sum(case when b.custid=b.recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
-					sum(case when b.custid <> b.recommend and b.custid <> b.mrecommend and b.custid <> b.srecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end) memberCash
-			FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
-				INNER JOIN Cust_tmp t ON (b.srecommend = t.Custid AND t.roleid = 4) OR (b.mrecommend = t.Custid AND t.roleid = 3) OR (b.recommend = t.Custid AND t.roleid = 2)
-			GROUP BY t.CustID
-		)Balance
-	GROUP BY Custid
+		#Balance_tmp b
+			INNER JOIN @Cust_tmp t ON (b.srecommend = t.srecommend AND t.roleid = 4)
+	GROUP BY t.srecommend
+	UNION ALL
+	SELECT t.mrecommend, sum(superCash + masterCash + agentCash + memberCash)	AS TotalBalance, 0
+	FROM 
+		#Balance_tmp b
+			INNER JOIN @Cust_tmp t ON (b.mrecommend = t.mrecommend AND t.roleid = 3)
+	GROUP BY t.mrecommend
+	UNION ALL	
+	SELECT t.recommend, sum(superCash + masterCash + agentCash + memberCash)	AS TotalBalance, 0
+	FROM 
+		#Balance_tmp b
+			INNER JOIN @Cust_tmp t ON (b.recommend = t.recommend AND t.roleid = 2)
+	GROUP BY t.recommend
 
 	WHILE (@i<@MaxLevel)
 	BEGIN
@@ -60,4 +100,6 @@ BEGIN
 		LevelID = b.NewLevelID
 	FROM LimitLoss_Setting l WITH (ROWLOCK, UPDLOCK)
 		INNER JOIN @BalanceCust b ON l.CustID = b.CustID
+
+	DROP TABLE #Balance_tmp
 END
