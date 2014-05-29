@@ -1,11 +1,10 @@
 ﻿USE [bodb_licensee]
 GO
-/****** Object:  StoredProcedure [dbo].[DBA_CreateNewLicensee_xtest]    Script Date: 4/7/2014 11:26:03 AM ******/
+
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
 (
@@ -16,6 +15,7 @@ ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
 	@IsAllowedNG BIT = 0,
 	@IsAllowedRB BIT  =0,
 	@IsAllowedDW BIT  =0,
+	@IsAllowMemberComm BIT =0,
 	@ErrCode int = 0 OUTPUT , 
 	@ErrMsg nvarchar(1000) = '' OUTPUT 	
 )
@@ -37,6 +37,8 @@ Revisions:
 	+20140318@Jim: hard-code to grant 'Account managerment'	role just for 'CSD_11101'
 	+20140404@Jim: + hard-code to grant 'Account managerment'	role for special user
 				   + hard-code to not grant Agency System Function for new licensee
+	+20140527@Jim: + hard-code to restrict Member Comm Function permission
+	
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
 	- username ending with 01: normal
@@ -60,8 +62,6 @@ SET NOCOUNT ON
 IF LTRIM(RTRIM(ISNULL(@SuperWildCard,'')))=''
 	SET @SuperWildCard = @LicenseeName + 'Super%'
 	
-
-
 --/*Create all the agent for this licensee
 --This process including create new licensee*/
 EXEC DBA_CreateLicenseeAgent @LicenseeName=@LicenseeName,@SuperWildCard= @SuperWildCard, @IsSpecial=@IsSpecial
@@ -70,7 +70,7 @@ DECLARE @licenseeid INT
 SELECT @licenseeid=licenseeid FROM licensees (NOLOCK)
 WHERE licenseename = @LicenseeName
 
-IF isnull(@licenseeid,0)=0
+IF ISNULL(@licenseeid,0)=0
 RAISERROR('Could not insert new licensee, please check again',16,1)
 
 
@@ -89,7 +89,19 @@ WHERE FunctionId NOT IN (SELECT FunctionId FROM [LicenseeFunctions] WITH (NOLOCK
 	AND (@IsAllowedRB=1 OR (@IsAllowedRB=0 AND FunctionID NOT IN (22,34,35)))
 	AND ((@IsAllowedDW=0 AND FunctionID NOT IN (5,44,45)) OR (@IsAllowedDW=1))
 ---jim hard-code to not grant  AGENCY SYSTEM function 
-	AND FunctionId NOT IN (58 ,60)
+	AND FunctionId NOT IN (55,58,60)
+--- 
+IF (@IsAllowMemberComm=1)
+BEGIN 
+	UPDATE Licensees
+	SET IsAllowedMemberComm=1
+	WHERE LicenseeId=@licenseeid
+	
+	INSERT INTO [LicenseeFunctions](LicenseeId, FunctionId)
+	SELECT @licenseeid, 55 
+	WHERE NOT EXISTS (SELECT 1 FROM  LicenseeFunctions (NOLOCK) WHERE LicenseeId=@licenseeid AND FunctionId=55)
+		
+END
 	
 -- add new licensee config into SystemLicensee 
 IF NOT EXISTS (SELECT 1 FROM SystemLicensee (NOLOCK) WHERE LicenseeID=@licenseeid) 
@@ -174,7 +186,6 @@ BEGIN
         INSERT INTO LicenseeUser (LicenseeID,UserID,isActive,PageAccess)
         VALUES (@licenseeid,@UserID,1,'')
     END
-	
 	
 	--Total bets
 	INSERT INTO [LicenseeUserFunctions](LicenseeId, UserId, FunctionId)
