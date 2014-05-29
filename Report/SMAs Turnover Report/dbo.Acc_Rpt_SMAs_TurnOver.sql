@@ -214,7 +214,7 @@ BEGIN
 		--Get necessary customerIDs for performance reasons
 		INSERT INTO #TmpAvailableBetTrans
 		SELECT DISTINCT b.srecommend, b.mrecommend, b.recommend, b.custid
-		 FROM dbo.bettrans b WITH (NOLOCK,INDEX=IX_winlostdate) 
+		 FROM dbo.bettrans b WITH (NOLOCK) 
 		 WHERE b.statusID IN (111, 112, 113)
 		   AND b.winlostdate = @WinlostDate
 		   
