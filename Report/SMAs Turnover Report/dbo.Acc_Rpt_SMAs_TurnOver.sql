@@ -127,7 +127,7 @@ BEGIN
 		cust.roleid,
 		cust.currency,
 		e.currency
-	FROM dbo.Customer cust WITH(NOLOCK,INDEX=IX_custid)
+	FROM dbo.Customer cust WITH(NOLOCK)
 	INNER JOIN bodb_acc.dbo.Acc_CustDirect acccust WITH(NOLOCK) ON cust.srecommend = acccust.custid AND cust.roleid = 3	AND acccust.roleid = 4
 	INNER JOIN dbo.CustMaster csm WITH(NOLOCK) ON cust.custid = csm.custid AND csm.IsInternal = 0 AND cust.currency NOT IN (20 , 27, 28)
 	INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON cust.custid = ci.custid
@@ -160,7 +160,7 @@ BEGIN
 		cust.roleid,
 		cust.currency,
 		e.currency
-	FROM dbo.Customer cust WITH ( NOLOCK,INDEX=IX_custid)
+	FROM dbo.Customer cust WITH (NOLOCK)
 	INNER JOIN bodb_acc.dbo.Acc_CustDirect acccust WITH(NOLOCK) ON cust.mrecommend = acccust.custid AND cust.roleid = 2	AND acccust.roleid = 3
 	INNER JOIN dbo.CustAgent WITH(NOLOCK) ON cust.custid = CustAgent.custid AND CustAgent.IsInternal = 0	
 				AND cust.currency NOT IN (20 , 27 , 28)
@@ -193,7 +193,7 @@ BEGIN
 		cust.roleid,
 		cust.currency,
 		e.currency
-	FROM dbo.Customer cust WITH ( NOLOCK,INDEX=IX_custid) 
+	FROM dbo.Customer cust WITH (NOLOCK) 
 	INNER JOIN bodb_acc.dbo.Acc_CustDirect acccust ON cust.recommend = acccust.custid AND cust.roleid = 1 AND acccust.roleid = 2
 	INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON cust.custid = ci.custid
 	LEFT JOIN dbo.custAccount custacc WITH(NOLOCK) ON custacc.custid = cust.custid
@@ -214,7 +214,7 @@ BEGIN
 		--Get necessary customerIDs for performance reasons
 		INSERT INTO #TmpAvailableBetTrans
 		SELECT DISTINCT b.srecommend, b.mrecommend, b.recommend, b.custid
-		 FROM dbo.bettrans b WITH (NOLOCK) 
+		 FROM dbo.bettrans b WITH (NOLOCK,INDEX=IX_winlostdate) 
 		 WHERE b.statusID IN (111, 112, 113)
 		   AND b.winlostdate = @WinlostDate
 		   
