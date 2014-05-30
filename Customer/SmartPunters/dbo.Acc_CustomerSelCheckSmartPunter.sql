@@ -1,5 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelCheckSmartPunter]
-	@custid INT,
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelCheckSmartPunter]	
+	@custid INT = NULL,
+	@username VARCHAR(50) = '',
 	@isSmartPunter BIT = 0 OUTPUT
 AS
 	/*
@@ -11,6 +12,9 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
+	IF @custid IS NULL
+		SELECT @custid = custid FROM customer WITH(NOLOCK) WHERE username = @username
+		
 	IF EXISTS (SELECT 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @custid)
 		SELECT @isSmartPunter = 1
 	ELSE SELECT @isSmartPunter = 0
