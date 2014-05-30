@@ -29,7 +29,7 @@ SELECT  CASE WHEN getdate() >= m.kickofftime THEN 1 ELSE 0 END AS Live,
 	WHERE m.sporttype = @SportType 
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
 			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 100 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END ELSE @UsedPercent END
-			AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%'
+			AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.eventdate = CONVERT(DATE, getdate())
 	ORDER BY Live DESC, l.leaguename, m.matchcode, PercentageUsed DESC, c.username	
 
 GO
