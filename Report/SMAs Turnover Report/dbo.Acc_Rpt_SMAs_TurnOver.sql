@@ -230,9 +230,9 @@ BEGIN
 		WHERE s.RoleID=4 AND b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113) 
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
@@ -282,9 +282,9 @@ BEGIN
 		WHERE s.RoleID=3 AND b.winlostdate = @WinlostDate AND b.statusID  IN (111, 112, 113)
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
@@ -334,9 +334,9 @@ BEGIN
 			s.RoleID=2 AND b.winlostdate = @WinlostDate AND  b.statusID  IN (111, 112, 113)
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
@@ -383,9 +383,9 @@ BEGIN
 			s.RoleID=1	AND b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113)
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
@@ -437,9 +437,9 @@ BEGIN
 		WHERE b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113) 
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
@@ -489,9 +489,9 @@ BEGIN
 		WHERE b.winlostdate = @WinlostDate AND b.statusID  IN (111, 112, 113)
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
@@ -540,9 +540,9 @@ BEGIN
 		WHERE b.winlostdate = @WinlostDate AND  b.statusID  IN (111, 112, 113)
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
@@ -588,9 +588,9 @@ BEGIN
 		WHERE b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113)
 			AND	(
 					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype between 121 and CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype between 1301 and CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype between 31 and CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
+					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
+					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
+					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
 					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
 					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
 					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
