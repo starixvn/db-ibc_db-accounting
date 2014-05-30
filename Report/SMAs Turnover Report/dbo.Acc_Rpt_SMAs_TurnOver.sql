@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_SMAs_TurnOver]
+CREATE PROCEDURE [dbo].[Acc_Rpt_SMAs_TurnOver]
 	@WinlostDate	SMALLDATETIME,
 	@MoveBetsDay	SMALLDATETIME,
 	@ShowSB			BIT				=	1,
@@ -111,7 +111,7 @@ BEGIN
 		cust.custid,
 		cust.roleid,
 		cust.currency
-	FROM DBACC.bodb_acc.dbo.Acc_CustDirect acccust  WITH(NOLOCK)  
+	FROM dbo.Acc_CustDirect acccust  WITH(NOLOCK)  
 	INNER JOIN customer cust WITH(NOLOCK) ON  acccust.custid = cust.srecommEND  AND acccust.roleid = 4 AND cust.roleid = 3   
 	INNER JOIN custmaster cm WITH(NOLOCK) ON  cm.custid = cust.custid AND cm.isINTernal = 0 
 	WHERE cust.currency NOT IN (20,27,28)
@@ -126,7 +126,7 @@ BEGIN
 		cust.custid,
 		cust.roleid,
 		cust.currency
-	FROM DBACC.bodb_acc.dbo.Acc_CustDirect acccust  WITH(NOLOCK)  
+	FROM dbo.Acc_CustDirect acccust  WITH(NOLOCK)  
 	INNER JOIN customer cust WITH(NOLOCK) ON  acccust.custid = cust.mrecommEND  AND acccust.roleid = 3 AND cust.roleid = 2  
 	INNER JOIN custagent ca WITH(NOLOCK) ON  ca.custid = cust.custid AND ca.isINTernal = 0  
 	WHERE cust.currency NOT IN (20,27,28)
@@ -141,7 +141,7 @@ BEGIN
 		cust.custid,
 		cust.roleid,
 		cust.currency
-	FROM DBACC.bodb_acc.dbo.Acc_CustDirect acccust  WITH(NOLOCK)  
+	FROM dbo.Acc_CustDirect acccust  WITH(NOLOCK)  
 	INNER JOIN customer cust WITH(NOLOCK) ON  acccust.custid = cust.recommEND  AND acccust.roleid = 2 AND cust.roleid = 1  
 	INNER JOIN customer cc WITH(NOLOCK) ON  cust.recommEND  = cc.custid  
 	WHERE cust.recommend NOT IN
