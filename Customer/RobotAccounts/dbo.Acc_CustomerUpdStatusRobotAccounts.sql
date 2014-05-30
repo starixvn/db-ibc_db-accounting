@@ -1,0 +1,105 @@
+﻿ ALTER PROCEDURE [dbo].[Acc_CustomerUpdStatusRobotAccount]
+	@custid INT,
+	@status BIT,
+	@userid INT,
+	@IP		VARCHAR(30)= '',
+	@ErrCode	INT = 0 OUTPUT,
+	@ErrMsg		VARCHAR(500) = '' OUTPUT	
+AS
+	/*
+		Created: Johnson
+		Date: 2014-05-30
+		Task: update status for robot account
+		DB: DBTXN/CustDB
+	*/
+BEGIN
+	SET NOCOUNT ON 
+	DECLARE @startRun	DATETIME,
+			@endRun		DATETIME,
+			@duration	INT
+	SET	@startRun = GETDATE()
+	
+		--Check permission
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@userid,@funcname='[ManageRobot]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
+	
+	DECLARE @old_status bit
+	
+	SELECT @old_status = isActive FROM RobotList WITH(NOLOCK) WHERE custid = @custid
+	
+	IF @@ROWCOUNT = 0
+	BEGIN
+		SELECT @ErrCode = 100,
+			@ErrMsg = 'This account doesn''t exist in the monitoring list.'
+		RETURN
+	END
+	
+	IF @old_status = @status RETURN
+	
+	UPDATE RobotList WITH(UPDLOCK,ROWLOCK)
+	SET isActive = @status,
+		lastmodifyuser = @userid,
+		lastmodifytime = GETDATE()
+	WHERE custid = @custid 
+	
+	IF @@ERROR <> 0
+	BEGIN
+		SELECT @ErrCode = 101
+		SELECT @ErrMsg = 'Update account unsuccessfuly.'
+		RETURN
+	END
+	
+	-- write log
+	DECLARE @LogData VARCHAR(4000),	
+			@LogData_Old VARCHAR(4000)
+
+	SELECT @LogData = '<Acc_CustomerUpdStatusRobotAccount CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)),SPACE(1)) + '" ' 
+							+ 'status="' + COALESCE(CAST(@status AS varchar(10)),SPACE(1)) + '" '
+							+ 'ErrCode="' + coalesce(cast(@ErrCode as varchar(50)),space(1)) + '" '
+							+ 'ErrMsg="' + coalesce(@ErrMsg,space(1))+'" '
+							+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'																		
+
+	SELECT @LogData_Old = '<Acc_CustomerUpdStatusRobotAccount CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)),SPACE(1)) + '" ' 
+							+ 'status="' + COALESCE(CAST(@Old_status AS varchar(10)),SPACE(1)) + '" '	
+							+ 'ErrCode="' + coalesce(cast(@ErrCode as varchar(50)),space(1)) + '" '
+							+ 'ErrMsg="' + coalesce(@ErrMsg,space(1))+'" '
+							+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'
+	
+	SET @endRun = GETDATE()
+	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@Userid = @userid,
+			@Custid = @CustID,
+			@ActionID = 650,
+			@TrackingValue = @LogData,
+			@TrackingValue2 = @LogData_Old,
+			@Duration = @duration
+	END TRY
+	BEGIN CATCH
+		SELECT @LogData = '<Acc_CustomerUpdStatusRobotAccount CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)),SPACE(1)) + '" ' 
+							+ 'status="' + COALESCE(CAST(@status AS varchar(10)),SPACE(1)) + '" '
+							+ 'ErrCode="' + coalesce(cast(@ErrCode as varchar(50)),space(1)) + '" '
+							+ 'ErrMsg="' + coalesce(ERROR_MESSAGE(),space(1))+'" '
+							+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'																		
+
+		SELECT @LogData_Old = '<Acc_CustomerUpdStatusRobotAccount CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)),SPACE(1)) + '" ' 
+								+ 'status="' + COALESCE(CAST(@Old_status AS varchar(10)),SPACE(1)) + '" '	
+								+ 'ErrCode="' + coalesce(cast(@ErrCode as varchar(50)),space(1)) + '" '
+								+ 'ErrMsg="' + coalesce(ERROR_MESSAGE(),space(1))+'" '
+								+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'
+		
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@Userid = @userid,
+			@Custid = @CustID,
+			@ActionID = 650,
+			@TrackingValue = @LogData,
+			@TrackingValue2 = @LogData_Old,
+			@Duration = @duration								
+		
+	END CATCH
+END
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdStatusRobotAccount] TO [bodbAdminNet]
