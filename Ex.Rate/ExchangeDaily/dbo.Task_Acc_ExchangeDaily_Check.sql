@@ -68,7 +68,7 @@ begin
 
 	if (@ExchangeCount <> @OandaCount)
 	begin
-		set @error = 'ExchangeDailyOanda does not has data for job on date: ' + Cast(@tmpTomorrow  as varchar(50))
+		set @error = 'ExchangeDailyOanda does not have data for job on date: ' + Cast(@tmpTomorrow  as varchar(50))
 		RAISERROR(@error,16,1)
 	end
 end
