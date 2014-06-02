@@ -55,7 +55,7 @@ BEGIN
 	
 	IF EXISTS (SELECT TOP(1) 1 FROM RobotList WITH(NOLOCK) WHERE custid IN (SELECT custid FROM @tmpUser))
 	BEGIN
-		SELECT @ErrCode = - 100, @ErrMsg = 'There are existing members in the list: '
+		SELECT @ErrCode = - 100, @ErrMsg = 'There are existing members : '
 		
 		SELECT TOP (100) @ErrMsg = @ErrMsg + username + ','
 		FROM @tmpUser t 
