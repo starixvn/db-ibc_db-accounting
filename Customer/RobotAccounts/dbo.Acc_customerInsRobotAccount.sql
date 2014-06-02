@@ -15,7 +15,8 @@ AS
 		
 		Parameter's Explanation:
 			- ErrCode = 0: success
-					> 0 : have some accounts insert fail					
+					> 0 : have some accounts insert fail	
+					< 0 : existing customers in robotlist				
 	*/ 
 BEGIN
 	SET NOCOUNT ON 
@@ -51,6 +52,15 @@ BEGIN
 		
 		RETURN
 	END
+	
+	IF EXISTS (SELECT TOP(1) 1 FROM RobotList WITH(NOLOCK) WHERE custid IN (SELECT custid FROM @tmpUser))
+	BEGIN
+		SELECT @ErrCode = - 100, @ErrMsg = 'There are existing members in the list: '
+		
+		SELECT TOP (100) @ErrMsg = @ErrMsg + username + ','
+		FROM @tmpUser t 
+			INNER JOIN RobotList r WITH(NOLOCK) ON t.custid = r.custid
+	END
 		
 	INSERT INTO RobotList([custid]
            ,[isActive]
@@ -63,6 +73,10 @@ BEGIN
 		LEFT JOIN RobotList r WITH(NOLOCK) ON t.custid = r.custid
 	WHERE r.custid IS NULL
 	
+	IF @@ROWCOUNT <> 0
+	BEGIN
+		SELECT @ErrMsg = 'The member(s) have been saved successfully!' + @ErrMsg
+	END
 		-- write log
 	DECLARE @LogData VARCHAR(4000),	
 			@custid INT,			
