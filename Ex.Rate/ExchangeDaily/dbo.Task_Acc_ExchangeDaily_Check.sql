@@ -11,6 +11,7 @@ Revisions:
 	- 20140530@Don: 
 		+ Exclude currencies 27 & 28 when compare number of currencies between Exchange & ExchangeDailyOanda
 		+ Add a check on [3 In case, @InputDate equals today check if data for next day are ok (job runs at 11:35 PM daily)] 
+	- 20140602@Don: Include currency 20 when calculate @ExchangeCount
 */		
 SET NOCOUNT ON
 
@@ -60,7 +61,7 @@ begin
 	select @ExchangeCount = count(*) 
 	from dbo.Exchange (nolock) 
 	where exchangeid not in (27, 28)
-		and isnull(Code, '') <> ''
+		and (isnull(Code, '') <> '' or exchangeid = 20)
 
 	select @OandaCount = count(*) 
 	from dbo.ExchangeDailyOanda (nolock) 
