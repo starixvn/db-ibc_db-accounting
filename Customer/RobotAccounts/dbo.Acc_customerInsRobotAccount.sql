@@ -26,7 +26,7 @@ BEGIN
 	SET	@startRun = GETDATE()
 	
 		--Check permission
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@userid,@funcname='[ManageRobot]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@userid,@funcname='[ManageRobots]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	IF @ErrCode <> 0
 		RETURN
 	
@@ -90,6 +90,8 @@ BEGIN
 		FROM @tmpCust t 
 			INNER JOIN @tmpUser u ON t.custid = u.custid
 		WHERE islog = 0
+		
+		IF @@ROWCOUNT = 0 BREAK;
 		
 		SELECT @LogData = '<Acc_CustomerInsRobotAccount username="' + COALESCE(@log_username,SPACE(1)) + '" ' 
 								+ 'status="' + COALESCE(CAST(@status AS varchar(10)),SPACE(1)) + '" '
