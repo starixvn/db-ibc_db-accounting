@@ -12,7 +12,8 @@ AS
 	DB: DBAGE/bodb02
 
 	Revisions:
-	
+		- 20140602@Elodie: Not support to control setting by Event
+
 	Parameter's explaination: 
 		@UpdMode: --Insert/Update/Delete Sport setting
 				  0: Change max turnover because sport setting is updated
@@ -60,6 +61,7 @@ BEGIN
 	SET NOCOUNT ON	
 	DECLARE @RoleID INT, @srecommend INT, @mrecommend INT
 	SELECT @RoleID = roleid, @srecommend = srecommend, @mrecommend = mrecommend FROM CustInfo WITH (NOLOCK) WHERE custid = @SMAID
+	/*
 	--Change max turnover because sport setting is updated
 	IF @UpdMode = 0 
 	BEGIN
@@ -191,7 +193,7 @@ BEGIN
 			LEFT JOIN bodb_AGE.dbo.DownlineTo_SMAControl sma WITH (NOLOCK) ON s.SMAID = sma.SMAID
 		WHERE eventstatus <> 'completed' AND m.matchid = @EventID AND s.InheritLevel = 3
 	END
-
+	
 	--Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is inserted a specific value (X)
 	IF @UpdMode = 10
 	BEGIN
@@ -204,7 +206,7 @@ BEGIN
 			INNER JOIN bodb_AGE.dbo.DownlineTo_Match_SMAControl msc WITH (NOLOCK) ON m.matchid= msc.MatchID AND s.SMAID = msc.SMAID
 		WHERE eventstatus <> 'completed' AND m.matchid = @EventID AND s.SMAID = @SMAID AND s.InheritLevel IN (1,2,3)
 	END
-
+	*/
 	--Change max turnover because Match_SMA setting is inserted a unlimited value (U)
 	--Change max turnover because Match_SMA setting is updated from a specific value to a unlimited value (X -> U)
 	--Change max turnover because Match_SMA setting which does not have sport setting and league setting and match setting is deleted a specific value
@@ -216,7 +218,7 @@ BEGIN
 							FROM match m WITH (NOLOCK) 
 							WHERE eventstatus <> 'completed')
 	END	  
-
+	
 	--Change max turnover because Match_SMA setting is updated from a specific value to a another specific value (X -> X1)
 	IF @UpdMode = 12
 	BEGIN
@@ -229,7 +231,7 @@ BEGIN
 			INNER JOIN bodb_AGE.dbo.DownlineTo_Match_SMAControl msc WITH (NOLOCK) ON s.matchid= msc.MatchID AND s.SMAID = msc.SMAID
 		WHERE eventstatus <> 'completed' AND s.matchid = @EventID AND s.SMAID = @SMAID AND s.InheritLevel = 4
 	END
-
+	/*
 	--Change max turnover because Match_SMA setting which have sport setting or league setting or match setting is deleted a specific value
 	IF @UpdMode = 13
 	BEGIN
@@ -257,6 +259,7 @@ BEGIN
 		WHERE eventstatus <> 'completed' AND s.matchid = @EventID AND s.SMAID = @SMAID AND s.InheritLevel = 4
 	END
 
+	
 	--Change max turnover because SMA setting is inserted
 	--Change max turnover because SMA setting is updated from a specific value to a unlimited value (X -> U) 
 	IF @UpdMode = 14
@@ -305,7 +308,7 @@ BEGIN
 			INNER JOIN match m WITH (NOLOCK) ON s.matchid = m.matchid
 		WHERE eventstatus <> 'completed' AND s.SMAID = @SMAID AND s.InheritLevel <> 4
 	END
-
+	*/
 	--Change max turnover because given credit is updated
 	IF @UpdMode = 17
 	BEGIN
@@ -326,7 +329,7 @@ BEGIN
 
 		IF @RoleID = 4
 		BEGIN
-			IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 4) --real super
+			IF NOT EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 4) --real super
 			BEGIN
 				UPDATE s
 				SET maxturnover = 0, IsNotified = 0
@@ -338,8 +341,8 @@ BEGIN
 			BEGIN
 				INSERT INTO @DirectMaster (CustID)
 				SELECT CustID 
-				FROM CustInfo WITH (NOLOCK) 
-				WHERE roleid = 3 AND srecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 3)
+				FROM CustInfo c WITH (NOLOCK) 
+				WHERE roleid = 3 AND srecommend = @SMAID AND NOT EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = c.custid AND roleid = 3)
 
 				IF EXISTS (SELECT 1 FROM @DirectMaster)
 				BEGIN
@@ -352,8 +355,8 @@ BEGIN
 
 				INSERT INTO @DirectAgent (CustID)
 				SELECT CustID 
-				FROM CustInfo WITH (NOLOCK) 
-				WHERE roleid = 2 AND srecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 2)
+				FROM CustInfo c WITH (NOLOCK) 
+				WHERE roleid = 2 AND srecommend = @SMAID AND NOT EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = c.custid AND roleid = 2)
 
 				IF EXISTS (SELECT 1 FROM @DirectAgent)
 				BEGIN
@@ -368,12 +371,12 @@ BEGIN
 
 		IF @RoleID = 3
 		BEGIN
-			IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 3) --dummy master
+			IF EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 3) --dummy master
 			BEGIN
 				INSERT INTO @DirectAgent (CustID)
 				SELECT CustID 
-				FROM CustInfo WITH (NOLOCK) 
-				WHERE roleid = 2 AND mrecommend = @SMAID AND custid NOT IN (SELECT CustID FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE roleid = 2)
+				FROM CustInfo c WITH (NOLOCK) 
+				WHERE roleid = 2 AND mrecommend = @SMAID AND NOT EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = c.custid AND roleid = 2)
 
 				IF EXISTS (SELECT 1 FROM @DirectAgent)
 				BEGIN
@@ -386,7 +389,7 @@ BEGIN
 			END
 			ELSE 
 			BEGIN
-				IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @srecommend AND roleid = 4) --direct master
+				IF EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @srecommend AND roleid = 4) --direct master
 					UPDATE s
 					SET maxturnover = 0, IsNotified = 0
 					FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
@@ -397,8 +400,8 @@ BEGIN
 
 		IF @RoleID = 2
 		BEGIN
-			IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @mrecommend AND roleid = 3) --direct agent
-				AND NOT EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 2)
+			IF EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @mrecommend AND roleid = 3) --direct agent
+				AND NOT EXISTS (SELECT 1 FROM dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID AND roleid = 2)
 				UPDATE s
 				SET maxturnover = 0, IsNotified = 0
 				FROM DownlineTurnOver_Setting s WITH (ROWLOCK,UPDLOCK)
