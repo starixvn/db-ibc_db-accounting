@@ -39,7 +39,7 @@ BEGIN
 	FROM SmartPunterList WITH(NOLOCK) 
 	WHERE CustID = @CustID
 	
-	UPDATE Acc_CustAllowList WITH(ROWLOCK,UPDLOCK)
+	UPDATE SmartPunterList WITH(ROWLOCK,UPDLOCK)
 	SET	Remark = @Remark,
 		lastmodifytime = GETDATE(),
 		lastmodifyuser = @userid		
