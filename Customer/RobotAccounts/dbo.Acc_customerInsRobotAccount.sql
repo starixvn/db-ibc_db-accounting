@@ -15,8 +15,7 @@ AS
 		
 		Parameter's Explanation:
 			- ErrCode = 0: success
-					> 0 : have some accounts insert fail
-					<0 : some accounts existings in robot list
+					> 0 : have some accounts insert fail					
 	*/ 
 BEGIN
 	SET NOCOUNT ON 
@@ -52,16 +51,7 @@ BEGIN
 		
 		RETURN
 	END
-	
-	IF EXISTS (SELECT TOP(1) 1 FROM RobotList WITH(NOLOCK) WHERE custid IN (SELECT custid FROM @tmpUser))
-	BEGIN
-		SELECT @ErrCode = - 100, @ErrMsg = 'Existing customers in monitoring list: '
 		
-		SELECT TOP (100) @ErrMsg = @ErrMsg + username + ','
-		FROM @tmpUser t 
-			INNER JOIN RobotList r WITH(NOLOCK) ON t.custid = r.custid
-	END
-	
 	INSERT INTO RobotList([custid]
            ,[isActive]
            ,[creator]

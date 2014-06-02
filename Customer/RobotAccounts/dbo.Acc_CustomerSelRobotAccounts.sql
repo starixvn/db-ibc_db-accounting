@@ -28,7 +28,7 @@
 	SELECT r.custid
 	FROM RobotList r WITH(NOLOCK)
 		INNER JOIN customer c WITH(NOLOCK) ON r.custid = c.custid
-	WHERE c.username LIKE '%' + @username + '%'
+	WHERE c.username LIKE @username + '%'
 		AND isactive = ISNULL(@status,isActive)
 		
 	SELECT @totalItems = @@rowcount
