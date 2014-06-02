@@ -6,6 +6,7 @@
 	
 	Revisions:
 		- 20140408@Elodie: Support all super, direct master and direct agent
+		- 20130712@Elodie: Support multiple insert
 */
 AS
 BEGIN
@@ -23,7 +24,7 @@ BEGIN
 	CREATE TABLE #DownlineToCal (SMAID INT, matchid INT, TotalTurnover MONEY, CONSTRAINT [CIX_DownlineToCal] PRIMARY KEY CLUSTERED (matchid, SMAID))	
 	CREATE TABLE #DownlineToControl (SMAID INT, matchid INT, Value INT, InheritLevel TINYINT, CONSTRAINT [CIX_DownlineToControl] PRIMARY KEY CLUSTERED (matchid, SMAID))	
 	CREATE TABLE #temp (SMAID INT, matchid INT, CONSTRAINT [CIX_temp] PRIMARY KEY CLUSTERED (matchid, SMAID))
-	DECLARE @MatchControl TABLE (Matchid INT PRIMARY KEY, LeagueID INT, SportID INT, Value INT, InheritLevel TINYINT)
+	--DECLARE @MatchControl TABLE (Matchid INT PRIMARY KEY, LeagueID INT, SportID INT, Value INT, InheritLevel TINYINT)
 	
 	;WITH DownlineToTmp AS
 	(
@@ -67,33 +68,33 @@ BEGIN
 		RETURN
 	END
 	
-	INSERT INTO @MatchControl (Matchid, LeagueID, SportID, Value, InheritLevel)
-	SELECT DISTINCT d.matchid, m.LeagueID, m.sporttype, NULL, NULL
-	FROM #DownlineToControl d
-		INNER JOIN match m ON m.matchid = d.matchid
+	--INSERT INTO @MatchControl (Matchid, LeagueID, SportID, Value, InheritLevel)
+	--SELECT DISTINCT d.matchid, m.LeagueID, m.sporttype, NULL, NULL
+	--FROM #DownlineToControl d
+	--	INNER JOIN match m ON m.matchid = d.matchid
 
-	UPDATE m
-	SET Value = CASE WHEN dm.Value IS NOT NULL THEN dm.Value
-					 WHEN dl.Value IS NOT NULL AND dm.Value IS NULL THEN dl.Value
-					 WHEN ds.Value IS NOT NULL AND dl.Value IS NULL AND dm.Value IS NULL THEN ds.Value
-					 ELSE NULL END,
-		InheritLevel = CASE	 WHEN dm.Value IS NOT NULL THEN 3
-							 WHEN dl.Value IS NOT NULL AND dm.Value IS NULL THEN 2
-							 WHEN ds.Value IS NOT NULL AND dl.Value IS NULL AND dm.Value IS NULL THEN 1
-							 ELSE NULL END
-	FROM @MatchControl m
-		LEFT JOIN bodb_Age.dbo.DownlineTo_MatchControl dm ON m.Matchid = dm.Matchid
-		LEFT JOIN bodb_Age.dbo.DownlineTo_LeagueControl dl ON m.LeagueID = dl.LeagueID
-		LEFT JOIN bodb_Age.dbo.DownlineTo_SportControl ds ON m.SportID = ds.SportID	
+	--UPDATE m
+	--SET Value = CASE WHEN dm.Value IS NOT NULL THEN dm.Value
+	--				 WHEN dl.Value IS NOT NULL AND dm.Value IS NULL THEN dl.Value
+	--				 WHEN ds.Value IS NOT NULL AND dl.Value IS NULL AND dm.Value IS NULL THEN ds.Value
+	--				 ELSE NULL END,
+	--	InheritLevel = CASE	 WHEN dm.Value IS NOT NULL THEN 3
+	--						 WHEN dl.Value IS NOT NULL AND dm.Value IS NULL THEN 2
+	--						 WHEN ds.Value IS NOT NULL AND dl.Value IS NULL AND dm.Value IS NULL THEN 1
+	--						 ELSE NULL END
+	--FROM @MatchControl m
+	--	LEFT JOIN bodb_Age.dbo.DownlineTo_MatchControl dm ON m.Matchid = dm.Matchid
+	--	LEFT JOIN bodb_Age.dbo.DownlineTo_LeagueControl dl ON m.LeagueID = dl.LeagueID
+	--	LEFT JOIN bodb_Age.dbo.DownlineTo_SportControl ds ON m.SportID = ds.SportID	
 
-	UPDATE dc
-	SET Value = CASE WHEN m.Value IS NULL THEN NULL
-					 WHEN m.Value = 0 OR sma.Offset = 0 THEN 0	
-					 ELSE m.Value + ISNULL(sma.Offset,0) END,
-		InheritLevel = m.InheritLevel
-	FROM #DownlineToControl dc
-		 INNER JOIN @MatchControl m ON dc.matchid = m.matchid
-		 LEFT JOIN bodb_Age.dbo.DownlineTo_SMAControl sma ON dc.SMAID = sma.SMAID
+	--UPDATE dc
+	--SET Value = CASE WHEN m.Value IS NULL THEN NULL
+	--				 WHEN m.Value = 0 OR sma.Offset = 0 THEN 0	
+	--				 ELSE m.Value + ISNULL(sma.Offset,0) END,
+	--	InheritLevel = m.InheritLevel
+	--FROM #DownlineToControl dc
+	--	 INNER JOIN @MatchControl m ON dc.matchid = m.matchid
+	--	 LEFT JOIN bodb_Age.dbo.DownlineTo_SMAControl sma ON dc.SMAID = sma.SMAID
 
 	UPDATE dc
 	SET Value = sma.Value, InheritLevel = 4
