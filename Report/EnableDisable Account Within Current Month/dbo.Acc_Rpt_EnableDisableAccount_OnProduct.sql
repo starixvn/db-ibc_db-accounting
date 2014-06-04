@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_OnProduct]
-	@MoveBetsDay	SMALLDATETIME	= '2014-05-26',
-	@BalanceUpDay	SMALLDATETIME	= '2014-05-24',
+	@MoveBetsDay	SMALLDATETIME,
+	@BalanceUpDay	SMALLDATETIME,
 	@ListCurrency	NVARCHAR(150)	= 'all', 
 	@ShowRB			BIT				= 0,  
 	@ShowNG			BIT				= 0,
@@ -20,7 +20,7 @@ AS
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
-	  + @ListCurrency: The specified date used as one of the filter criterias
+	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + @ShowRB: Include RB bets 
 	  + @ShowNG: Include Number game bets 
 	  + @ShowKN: Include Keno 

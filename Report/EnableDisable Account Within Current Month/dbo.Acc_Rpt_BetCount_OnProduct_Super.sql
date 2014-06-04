@@ -1,8 +1,8 @@
 CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_OnProduct_Super]
-	@MoveBetsDay	SMALLDATETIME	= '2014-05-26',
-	@BalanceUpDay	SMALLDATETIME	= '2014-05-24',
+	@MoveBetsDay	SMALLDATETIME,
+	@BalanceUpDay	SMALLDATETIME,
 	@ListCurrency	NVARCHAR(150)	= 'all', 
-	@CustID			INT = '12033438',
+	@CustID			INT,
 	@ShowRB			BIT				= 0,  
 	@ShowNG			BIT				= 0,
 	@ShowKN			BIT				= 1,
@@ -21,7 +21,7 @@ AS
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
-	  + @ListCurrency: The specified date used as one of the filter criterias
+	  + @ListCurrency: The specified date used as one of the filter criterias,if it is 'all' then no need filtered by currenies
 	  + @CustID: SuperID
 	  + @ShowRB: Include RB bets 
 	  + @ShowNG: Include Number game bets 
