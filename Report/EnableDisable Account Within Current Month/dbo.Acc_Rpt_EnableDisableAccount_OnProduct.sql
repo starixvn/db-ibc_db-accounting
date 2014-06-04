@@ -8,10 +8,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_OnProduct]
 	@ShowLC 		BIT				= 0,
 	@ShowVS			BIT				= 0,
 	@ShowCS  		BIT				= 0,
-	@ShowBI  		BIT				= 0,
-	@PageSize		INT				= 500,
-	@PageIndex		INT				= 1,
-	@TotalPages		INT				= 0 OUTPUT
+	@ShowBI  		BIT				= 0
 AS  
 /*  Created: Dominic 
 	Date: 2014-06-02  
@@ -41,23 +38,10 @@ BEGIN
 	DECLARE @FirstDate SMALLDATETIME
 	DECLARE @TempFromDate SMALLDATETIME
 	DECLARE @TempToDate SMALLDATETIME
-	DECLARE @RowCount int, @RowStart int, @RowEnd int
-	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1 
 
 	
 	--Table of real creadit super filter by currency
 	CREATE TABLE #FiltedCreditSuper(
-			CustID INT,
-			SuperStatus BIT,
-			MasterEnabled INT,
-			MasterDisabled INT,
-			AgentEnabled INT,
-			AgentDisabled INT,
-			MemberEnabled INT,
-			MemberDisabled INT,
-			)
-			
-	CREATE TABLE #FiltedCreditSuper4Paging(
 			CustID INT,
 			SuperStatus BIT,
 			MasterEnabled INT,
@@ -91,7 +75,7 @@ BEGIN
 	SELECT @FirstDate = CONVERT(VARCHAR(25),DATEADD(dd,-(DAY(@CurrentDate)-1),@CurrentDate),101)
 	
 	--Get real credit super filterd by currencies
-	INSERT INTO #FiltedCreditSuper4Paging(CustID,SuperStatus)
+	INSERT INTO #FiltedCreditSuper(CustID,SuperStatus)
 	SELECT ci.custid,
 		CASE
 			WHEN @ShowRB = 1 THEN (ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
@@ -110,32 +94,7 @@ BEGIN
 	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN (SELECT custid from dbo.f_DepSuper_1 ('all'))
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
-              
-    --Start Paging          
-    IF @TotalPages = 0
-	BEGIN
-		SELECT 
-			@TotalPages = COUNT(1),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-		FROM #FiltedCreditSuper4Paging c 
-	END         
-      
-    INSERT INTO #FiltedCreditSuper
-    SELECT	rs.CustID,
-			rs.SuperStatus,
-			rs.MasterEnabled,
-			rs.MasterDisabled,
-			rs.AgentEnabled,
-			rs.AgentDisabled,
-			rs.MemberEnabled,
-			rs.MemberDisabled
-	FROM 
-	(
-		SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,tmp.* 
-		FROM #FiltedCreditSuper4Paging tmp
-		JOIN dbo.Customer cust WITH(NOLOCK) ON cust.custid = tmp.CustID 
-		JOIN dbo.Exchange e WITH(NOLOCK) ON e.exchangeid = cust.currency
-	) rs
-	WHERE rs.RowNum BETWEEN @RowStart AND @RowEnd          
+                
                             
     --Get data from bettrans       
 	IF @CurrentDate > @MoveBetsDay
@@ -404,7 +363,6 @@ BEGIN
 	
 	--Drop temp tables
 	DROP TABLE #FiltedCreditSuper
-	DROP TABLE #FiltedCreditSuper4Paging
 	DROP TABLE #FiltedDownlineAcc
 	DROP TABLE #AvailableMember
 	DROP TABLE #TempResult
