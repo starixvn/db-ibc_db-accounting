@@ -6,7 +6,7 @@
 	
 	Revisions:
 		- 20140408@Elodie: Support all super, direct master and direct agent
-		- 20130712@Elodie: Support multiple insert
+		- 20140602@Elodie: Not support to control setting by Event
 */
 AS
 BEGIN
