@@ -89,7 +89,7 @@ BEGIN
 			WHEN @ShowBI = 1 THEN (~ci.SyncBingo | ci.DisableBingo)
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
-	WHERE ci.roleid=4 AND ci.custid NOT IN (SELECT custid from dbo.f_DepSuper_1 ('all'))
+	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN (SELECT custid from dbo.f_DepSuper_1 ('all'))
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
                             
@@ -173,6 +173,7 @@ BEGIN
 			(ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3) 
+		WHERE ci.Enabled = 1
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -181,7 +182,7 @@ BEGIN
 			(ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid  = 1
-		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)                   
+		WHERE ci.custid IN (SELECT custid FROM #AvailableMember) AND ci.Enabled = 1                   
 	END
 	IF @ShowNG = 1
     BEGIN            
@@ -192,6 +193,7 @@ BEGIN
 			ci.DisableNumber
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3)  
+		WHERE ci.Enabled = 1
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -200,7 +202,7 @@ BEGIN
 			ci.DisableNumber
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
-		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)                     
+		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                    
 	END
 	IF @ShowLC = 1
     BEGIN            
@@ -211,7 +213,7 @@ BEGIN
 			(~ci.SyncLiveCasino | ci.DisableLiveCasino)
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3) 
-		
+		WHERE ci.Enabled = 1
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -220,7 +222,7 @@ BEGIN
 			(~ci.SyncLiveCasino | ci.DisableLiveCasino)
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
-		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)                   
+		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                  
 	END
 	IF @ShowVS = 1
     BEGIN            
@@ -231,6 +233,7 @@ BEGIN
 			ci.DisableVirtualSports
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3)  
+		WHERE ci.Enabled = 1
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -239,7 +242,7 @@ BEGIN
 			ci.DisableVirtualSports
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1   
-		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)                 
+		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                
 	END
 	IF @ShowCS = 1
     BEGIN            
@@ -250,6 +253,7 @@ BEGIN
 			(~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3)  
+		WHERE ci.Enabled = 1
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -258,7 +262,7 @@ BEGIN
 			(~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
-		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)               
+		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1             
 	END
 	IF @ShowBI = 1
     BEGIN            
@@ -269,6 +273,7 @@ BEGIN
 			(~ci.SyncBingo | ci.DisableBingo)
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3) 
+		WHERE ci.Enabled = 1
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -277,7 +282,7 @@ BEGIN
 			(~ci.SyncBingo | ci.DisableBingo)
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
-		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)                   
+		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                 
 	END
 	IF @ShowKN = 1
     BEGIN      
@@ -289,7 +294,8 @@ BEGIN
 																WHERE gt.CustID = ci.CustID
 																AND gt.IsDisabled = 0) THEN 0 ELSE 1 END
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3) 
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3)
+		WHERE ci.Enabled = 1 
 
 		
 		INSERT INTO #FiltedDownlineAcc
@@ -301,7 +307,7 @@ BEGIN
 																AND gt.IsDisabled = 0) THEN 0 ELSE 1 END
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
-		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)                   
+		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                  
 	END
 		
 	--Count enable/disable for downline
