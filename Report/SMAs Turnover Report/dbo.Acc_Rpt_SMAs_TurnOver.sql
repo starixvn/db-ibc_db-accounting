@@ -609,7 +609,7 @@ BEGIN
 	END
 	
 	--Show reported data
-	SELECT ROW_NUMBER() over(ORDER BY rs.IsAssignedGroup ASC,rs.GroupID ASC,rs.TurnOverMYR DESC) AS RowNum,
+	SELECT ROW_NUMBER() over(ORDER BY rs.IsAssignedGroup ASC,rs.GroupHeadline ASC,rs.TurnOverMYR DESC) AS RowNum,
        rs.IsAssignedGroup,
        rs.GroupID,
        rs.GroupHeadline,
