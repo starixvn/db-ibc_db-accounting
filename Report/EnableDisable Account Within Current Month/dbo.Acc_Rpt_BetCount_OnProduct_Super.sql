@@ -73,7 +73,7 @@ BEGIN
 			OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @showBI=1 THEN 73 ELSE 0 END)
 		) 
-		AND b.status IN ('WON','LOSE','DRAW','RUNNING')
+		AND b.status IN ('WON','LOSE','DRAW','RUNNING') AND b.srecommend = @CustID
 		GROUP BY b.custid,b.[status]
 	END
 	
@@ -99,7 +99,7 @@ BEGIN
 			OR smw.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
 			OR smw.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
 			OR smw.bettype BETWEEN 73 AND (CASE WHEN @showBI=1 THEN 73 ELSE 0 END)
-		)
+		) AND smw.srecommend = @CustID
 	END
 	
 	--Get data from sum_winlost_old
@@ -122,6 +122,7 @@ BEGIN
 			OR smwo.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
 			OR smwo.bettype BETWEEN 73 AND (CASE WHEN @showBI=1 THEN 73 ELSE 0 END)
 		)	
+		AND smwo.srecommend = @CustID
 	END
 	    
 	--Get data for downline list 
@@ -133,8 +134,7 @@ BEGIN
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid
-		WHERE ci.srecommend = @CustID AND ci.roleid = 1                  
+		JOIN #AvailableMember av ON av.CustID = ci.custid                 
 	END
 	IF @ShowNG = 1
     BEGIN            
@@ -144,8 +144,7 @@ BEGIN
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid
-		WHERE ci.srecommend = @CustID AND ci.roleid = 1                    
+		JOIN #AvailableMember av ON av.CustID = ci.custid                  
 	END
 	IF @ShowLC = 1
     BEGIN            
@@ -155,8 +154,7 @@ BEGIN
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid
-		WHERE ci.srecommend = @CustID AND ci.roleid = 1                
+		JOIN #AvailableMember av ON av.CustID = ci.custid               
 	END
 	IF @ShowVS = 1
     BEGIN            
@@ -166,8 +164,7 @@ BEGIN
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid
-		WHERE ci.srecommend = @CustID AND ci.roleid = 1                 
+		JOIN #AvailableMember av ON av.CustID = ci.custid               
 	END
 	IF @ShowCS = 1
     BEGIN            
@@ -177,8 +174,7 @@ BEGIN
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid
-		WHERE ci.srecommend = @CustID AND ci.roleid = 1              
+		JOIN #AvailableMember av ON av.CustID = ci.custid             
 	END
 	IF @ShowBI = 1
     BEGIN            
@@ -188,8 +184,7 @@ BEGIN
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid
-		WHERE ci.srecommend = @CustID AND ci.roleid = 1                    
+		JOIN #AvailableMember av ON av.CustID = ci.custid                   
 	END
 	IF @ShowKN = 1
     BEGIN      
@@ -201,8 +196,7 @@ BEGIN
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid
-		WHERE ci.srecommend = @CustID AND ci.roleid = 1                   
+		JOIN #AvailableMember av ON av.CustID = ci.custid                 
 	END
 
 
