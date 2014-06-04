@@ -89,7 +89,7 @@ BEGIN
 			SELECT @BalanceUpDay=@FirstDate
 			
 		INSERT INTO #AvailableMember 
-		SELECT smw.custid,'WON',smw.BetCount FROM dbo.sum_winloss smw
+		SELECT smw.custid,'SETTLED',smw.BetCount FROM dbo.sum_winloss smw
 		WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
 		AND (
 			smw.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
@@ -111,7 +111,7 @@ BEGIN
 			SET @TempToDate = @CurrentDate
 			
 		INSERT INTO #AvailableMember
-		SELECT smwo.custid,'WON',smwo.BetCount FROM bodb_Summary.dbo.sum_winloss_old smwo
+		SELECT smwo.custid,'SETTLED',smwo.BetCount FROM bodb_Summary.dbo.sum_winloss_old smwo
 		WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
 		AND (
 			smwo.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
