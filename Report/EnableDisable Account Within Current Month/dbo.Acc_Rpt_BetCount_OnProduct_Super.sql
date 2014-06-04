@@ -34,6 +34,8 @@ AS
   
 */  
 BEGIN
+	SET NOCOUNT ON
+	
 	DECLARE @CurrentDate SMALLDATETIME
 	DECLARE @FirstDate SMALLDATETIME
 	DECLARE @TempFromDate SMALLDATETIME
@@ -62,7 +64,7 @@ BEGIN
 			SET @TempFromDate = @FirstDate
 			
 		INSERT INTO #AvailableMember
-		SELECT b.custid,b.[status],COUNT(1) FROM dbo.bettrans b
+		SELECT b.custid,b.[status],COUNT(1) FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
 		AND (
 			b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
@@ -89,7 +91,7 @@ BEGIN
 			SELECT @BalanceUpDay=@FirstDate
 			
 		INSERT INTO #AvailableMember 
-		SELECT smw.custid,'SETTLED',smw.BetCount FROM dbo.sum_winloss smw
+		SELECT smw.custid,'SETTLED',smw.BetCount FROM dbo.sum_winloss smw WITH(NOLOCK)
 		WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
 		AND (
 			smw.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
@@ -111,7 +113,7 @@ BEGIN
 			SET @TempToDate = @CurrentDate
 			
 		INSERT INTO #AvailableMember
-		SELECT smwo.custid,'SETTLED',smwo.BetCount FROM bodb_Summary.dbo.sum_winloss_old smwo
+		SELECT smwo.custid,'SETTLED',smwo.BetCount FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
 		WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
 		AND (
 			smwo.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
@@ -190,9 +192,11 @@ BEGIN
     BEGIN      
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
-			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt 
-																WHERE gt.CustID = ci.CustID
-																AND gt.IsDisabled = 0) THEN 0 ELSE 1 END,
+			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+																THEN 0 
+																ELSE 1 
+																END,
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)

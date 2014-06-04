@@ -8,7 +8,10 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_OnProduct]
 	@ShowLC 		BIT				= 0,
 	@ShowVS			BIT				= 0,
 	@ShowCS  		BIT				= 0,
-	@ShowBI  		BIT				= 0
+	@ShowBI  		BIT				= 0,
+	@PageSize		INT				= 500,
+	@PageIndex		INT				= 1,
+	@TotalPages		INT				= 0 OUTPUT
 AS  
 /*  Created: Dominic  
 	Date: 2014-06-02  
@@ -32,13 +35,29 @@ AS
   
 */  
 BEGIN
+	SET NOCOUNT ON
+	
 	DECLARE @CurrentDate SMALLDATETIME
 	DECLARE @FirstDate SMALLDATETIME
 	DECLARE @TempFromDate SMALLDATETIME
 	DECLARE @TempToDate SMALLDATETIME
+	DECLARE @RowCount int, @RowStart int, @RowEnd int
+	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1 
+
 	
 	--Table of real creadit super filter by currency
 	CREATE TABLE #FiltedCreditSuper(
+			CustID INT,
+			SuperStatus BIT,
+			MasterEnabled INT,
+			MasterDisabled INT,
+			AgentEnabled INT,
+			AgentDisabled INT,
+			MemberEnabled INT,
+			MemberDisabled INT,
+			)
+			
+	CREATE TABLE #FiltedCreditSuper4Paging(
 			CustID INT,
 			SuperStatus BIT,
 			MasterEnabled INT,
@@ -72,17 +91,16 @@ BEGIN
 	SELECT @FirstDate = CONVERT(VARCHAR(25),DATEADD(dd,-(DAY(@CurrentDate)-1),@CurrentDate),101)
 	
 	--Get real credit super filterd by currencies
-	INSERT INTO #FiltedCreditSuper(CustID,SuperStatus)
+	INSERT INTO #FiltedCreditSuper4Paging(CustID,SuperStatus)
 	SELECT ci.custid,
 		CASE
 			WHEN @ShowRB = 1 THEN (ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
 			WHEN @ShowNG = 1 THEN ci.DisableNumber
-			WHEN @ShowKN = 1 THEN CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt 
-																WHERE gt.CustID = ci.CustID
-																AND gt.IsDisabled = 0)
-												THEN 0
-												ELSE 1
-												END
+			WHEN @ShowKN = 1 THEN CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+																THEN 0 
+																ELSE 1 
+																END
 			WHEN @ShowLC = 1 THEN (~ci.SyncLiveCasino | ci.DisableLiveCasino)
 			WHEN @ShowVS = 1 THEN ci.DisableVirtualSports
 			WHEN @ShowCS = 1 THEN (~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
@@ -92,6 +110,32 @@ BEGIN
 	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN (SELECT custid from dbo.f_DepSuper_1 ('all'))
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
+              
+    --Start Paging          
+    IF @TotalPages = 0
+	BEGIN
+		SELECT 
+			@TotalPages = COUNT(1),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
+		FROM #FiltedCreditSuper4Paging c 
+	END         
+      
+    INSERT INTO #FiltedCreditSuper
+    SELECT	rs.CustID,
+			rs.SuperStatus,
+			rs.MasterEnabled,
+			rs.MasterDisabled,
+			rs.AgentEnabled,
+			rs.AgentDisabled,
+			rs.MemberEnabled,
+			rs.MemberDisabled
+	FROM 
+	(
+		SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,tmp.* 
+		FROM #FiltedCreditSuper4Paging tmp
+		JOIN dbo.Customer cust WITH(NOLOCK) ON cust.custid = tmp.CustID 
+		JOIN dbo.Exchange e WITH(NOLOCK) ON e.exchangeid = cust.currency
+	) rs
+	WHERE rs.RowNum BETWEEN @RowStart AND @RowEnd          
                             
     --Get data from bettrans       
 	IF @CurrentDate > @MoveBetsDay
@@ -102,7 +146,7 @@ BEGIN
 			SET @TempFromDate = @FirstDate
 			
 		INSERT INTO #AvailableMember
-		SELECT DISTINCT b.custid FROM dbo.bettrans b
+		SELECT DISTINCT b.custid FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
 		AND (
 			b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
@@ -128,7 +172,7 @@ BEGIN
 			SELECT @BalanceUpDay=@FirstDate
 			
 		INSERT INTO #AvailableMember 
-		SELECT DISTINCT smw.custid FROM dbo.sum_winloss smw
+		SELECT DISTINCT smw.custid FROM dbo.sum_winloss smw WITH(NOLOCK)
 		WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
 		AND (
 			smw.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
@@ -150,7 +194,7 @@ BEGIN
 			SET @TempToDate = @CurrentDate
 			
 		INSERT INTO #AvailableMember
-		SELECT DISTINCT smwo.custid FROM bodb_Summary.dbo.sum_winloss_old smwo
+		SELECT DISTINCT smwo.custid FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
 		WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
 		AND (
 			smwo.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
@@ -290,9 +334,11 @@ BEGIN
 		SELECT sup.CustID,
 			ci.custid,
 			ci.roleid,
-			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt 
-																WHERE gt.CustID = ci.CustID
-																AND gt.IsDisabled = 0) THEN 0 ELSE 1 END
+			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+																THEN 0 
+																ELSE 1 
+																END
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3)
 		WHERE ci.Enabled = 1 
@@ -302,9 +348,11 @@ BEGIN
 		SELECT sup.CustID,
 			ci.custid,
 			ci.roleid,
-			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt 
-																WHERE gt.CustID = ci.CustID
-																AND gt.IsDisabled = 0) THEN 0 ELSE 1 END
+			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+																THEN 0 
+																ELSE 1 
+																END
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                  
@@ -350,12 +398,13 @@ BEGIN
 	SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,cust.username,rs.SuperStatus as IsDiable,e.currency,rs.MasterEnabled,rs.MasterDisabled,
 			rs.AgentEnabled,rs.AgentDisabled,rs.MemberEnabled,rs.MemberDisabled
 	FROM #FiltedCreditSuper rs
-	JOIN dbo.Customer cust ON cust.custid = rs.CustID 
-	JOIN dbo.Exchange e ON e.exchangeid = cust.currency
+	JOIN dbo.Customer cust WITH(NOLOCK) ON cust.custid = rs.CustID 
+	JOIN dbo.Exchange e WITH(NOLOCK) ON e.exchangeid = cust.currency
 
 	
 	--Drop temp tables
 	DROP TABLE #FiltedCreditSuper
+	DROP TABLE #FiltedCreditSuper4Paging
 	DROP TABLE #FiltedDownlineAcc
 	DROP TABLE #AvailableMember
 	DROP TABLE #TempResult
