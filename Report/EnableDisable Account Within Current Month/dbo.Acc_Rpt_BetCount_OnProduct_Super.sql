@@ -11,7 +11,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_OnProduct_Super]
 	@ShowCS  		BIT				= 0,
 	@ShowBI  		BIT				= 0
 AS  
-/*  Created: Dominic  
+/*  Created: Dominic 
 	Date: 2014-06-02  
     Task : Total settled/running bets count per Product by super within current month
     DB: DBAGE/bodb02  

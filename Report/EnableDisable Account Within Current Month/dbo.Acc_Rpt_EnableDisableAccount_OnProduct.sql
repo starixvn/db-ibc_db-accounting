@@ -13,7 +13,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_OnProduct]
 	@PageIndex		INT				= 1,
 	@TotalPages		INT				= 0 OUTPUT
 AS  
-/*  Created: Dominic  
+/*  Created: Dominic 
 	Date: 2014-06-02  
     Task : Total Credit Accounts Enabled/Disabled per Product
     DB: DBAGE/bodb02  
