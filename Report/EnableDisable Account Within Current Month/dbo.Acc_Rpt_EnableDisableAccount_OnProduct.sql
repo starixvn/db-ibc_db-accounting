@@ -347,7 +347,7 @@ BEGIN
 												#TempResult.RoleID = 1),0)
 
 	--Return result
-	SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,cust.username,rs.SuperStatus,e.currency,rs.MasterEnabled,rs.MasterDisabled,
+	SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,cust.username,rs.SuperStatus as IsDiable,e.currency,rs.MasterEnabled,rs.MasterDisabled,
 			rs.AgentEnabled,rs.AgentDisabled,rs.MemberEnabled,rs.MemberDisabled
 	FROM #FiltedCreditSuper rs
 	JOIN dbo.Customer cust ON cust.custid = rs.CustID 
