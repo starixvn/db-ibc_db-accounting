@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_OnProduct]
+CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@ListCurrency	NVARCHAR(150)	= 'all', 
@@ -368,4 +368,4 @@ BEGIN
 	DROP TABLE #TempResult
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_OnProduct] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet]

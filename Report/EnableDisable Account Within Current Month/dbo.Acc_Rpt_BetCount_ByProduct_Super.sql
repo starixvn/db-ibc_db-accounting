@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_OnProduct_Super]
+CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@ListCurrency	NVARCHAR(150)	= 'all', 
@@ -217,4 +217,4 @@ BEGIN
 	DROP TABLE #AvailableMember
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_OnProduct_Super] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
