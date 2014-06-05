@@ -43,13 +43,7 @@ BEGIN
 	--Table of real creadit super filter by currency
 	CREATE TABLE #FiltedCreditSuper(
 			CustID INT,
-			SuperStatus BIT,
-			MasterEnabled INT,
-			MasterDisabled INT,
-			AgentEnabled INT,
-			AgentDisabled INT,
-			MemberEnabled INT,
-			MemberDisabled INT,
+			SuperStatus BIT
 			)
 			
 	--Table of Super/master/Member that belong to real super above	
@@ -61,15 +55,7 @@ BEGIN
 		)
 		
 	--Table of member that played bet within current month	
-	CREATE TABLE #AvailableMember(CustID INT)	
-	
-	--Tempt table to count enable/disable
-	CREATE TABLE #TempResult(
-			SuperID		INT, 
-			RoleID		INT,
-			DisableCnt	INT,
-			EnableCnt	INT
-			)	
+	CREATE TABLE #AvailableMember(CustID INT)		
 	
 	SELECT @CurrentDate = CAST(GETDATE() AS DATE)
 	SELECT @FirstDate = CONVERT(VARCHAR(25),DATEADD(dd,-(DAY(@CurrentDate)-1),@CurrentDate),101)
@@ -116,7 +102,7 @@ BEGIN
 			OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @showBI=1 THEN 73 ELSE 0 END)
 		) 
-		AND b.status IN ('WON','LOSE','DRAW','RUNNING')
+		AND b.status IN ('WON','LOSE','DRAW','running')
 	END
 	
 	--Get data from sum_winlost
@@ -317,55 +303,34 @@ BEGIN
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                  
 	END
 		
-	--Count enable/disable for downline
-	INSERT INTO #TempResult
-	SELECT #FiltedDownlineAcc.SuperID,#FiltedDownlineAcc.RoleID,
-		SUM(CASE WHEN #FiltedDownlineAcc.IsDisable = 1 THEN 1 ELSE 0 END),
-		SUM(CASE WHEN #FiltedDownlineAcc.IsDisable = 0 THEN 1 ELSE 0 END)
-	FROM #FiltedDownlineAcc
-	GROUP BY #FiltedDownlineAcc.SuperID,#FiltedDownlineAcc.RoleID
-
-	--Update calculated enable/disable to result table
-	UPDATE #FiltedCreditSuper
-	SET
-		#FiltedCreditSuper.MasterEnabled = ISNULL((SELECT #TempResult.EnableCnt FROM #TempResult WHERE 
-												#FiltedCreditSuper.CustID = #TempResult.SuperID 
-												AND 
-												#TempResult.RoleID = 3),0),
-		#FiltedCreditSuper.MasterDisabled =  ISNULL((SELECT #TempResult.DisableCnt FROM #TempResult WHERE 
-												#FiltedCreditSuper.CustID = #TempResult.SuperID 
-												AND 
-												#TempResult.RoleID = 3),0),
-		#FiltedCreditSuper.AgentEnabled =  ISNULL((SELECT #TempResult.EnableCnt FROM #TempResult WHERE 
-												#FiltedCreditSuper.CustID = #TempResult.SuperID 
-												AND 
-												#TempResult.RoleID = 2),0),
-		#FiltedCreditSuper.AgentDisabled =  ISNULL((SELECT #TempResult.DisableCnt FROM #TempResult WHERE 
-												#FiltedCreditSuper.CustID = #TempResult.SuperID 
-												AND 
-												#TempResult.RoleID = 2),0),
-		#FiltedCreditSuper.MemberEnabled =  ISNULL((SELECT #TempResult.EnableCnt FROM #TempResult WHERE 
-												#FiltedCreditSuper.CustID = #TempResult.SuperID 
-												AND 
-												#TempResult.RoleID = 1),0),
-		#FiltedCreditSuper.MemberDisabled =  ISNULL((SELECT #TempResult.DisableCnt FROM #TempResult WHERE 
-												#FiltedCreditSuper.CustID = #TempResult.SuperID 
-												AND 
-												#TempResult.RoleID = 1),0)
 
 	--Return result
-	SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,cust.username,rs.SuperStatus as IsDiable,e.currency,rs.MasterEnabled,rs.MasterDisabled,
-			rs.AgentEnabled,rs.AgentDisabled,rs.MemberEnabled,rs.MemberDisabled
-	FROM #FiltedCreditSuper rs
-	JOIN dbo.Customer cust WITH(NOLOCK) ON cust.custid = rs.CustID 
+	SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,cust.username,sp.SuperStatus as IsDiable,e.currency,
+			ISNULL(rs.MasterEnabled,0)	MasterEnabled,
+			ISNULL(rs.MasterDisabled,0) MasterDisabled,
+			ISNULL(rs.AgentEnabled,0)	AgentEnabled,
+			ISNULL(rs.AgentDisabled,0)	AgentDisabled,
+			ISNULL(rs.MemberEnabled,0)	MemberEnabled,
+			ISNULL(rs.MemberDisabled,0)	MemberDisabled
+	FROM #FiltedCreditSuper sp
+	JOIN dbo.Customer cust WITH(NOLOCK) ON cust.custid = sp.CustID 
 	JOIN dbo.Exchange e WITH(NOLOCK) ON e.exchangeid = cust.currency
+	LEFT JOIN
+	(SELECT dl.SuperID,
+		SUM(CASE WHEN dl.IsDisable = 0 AND dl.RoleID = 3 THEN 1 ELSE 0 END) MasterEnabled,
+		SUM(CASE WHEN dl.IsDisable = 1 AND dl.RoleID = 3 THEN 1 ELSE 0 END) MasterDisabled,
+		SUM(CASE WHEN dl.IsDisable = 0 AND dl.RoleID = 2 THEN 1 ELSE 0 END) AgentEnabled,
+		SUM(CASE WHEN dl.IsDisable = 1 AND dl.RoleID = 2 THEN 1 ELSE 0 END) AgentDisabled,
+		SUM(CASE WHEN dl.IsDisable = 0 AND dl.RoleID = 1 THEN 1 ELSE 0 END) MemberEnabled,
+		SUM(CASE WHEN dl.IsDisable = 1 AND dl.RoleID = 1 THEN 1 ELSE 0 END) MemberDisabled
+	FROM #FiltedDownlineAcc dl 
+	GROUP BY dl.SuperID) rs ON sp.CustID = rs.SuperID
 
 	
 	--Drop temp tables
 	DROP TABLE #FiltedCreditSuper
 	DROP TABLE #FiltedDownlineAcc
 	DROP TABLE #AvailableMember
-	DROP TABLE #TempResult
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet]
