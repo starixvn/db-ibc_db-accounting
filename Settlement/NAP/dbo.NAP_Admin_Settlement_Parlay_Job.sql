@@ -9,7 +9,7 @@ AS
 	Revisions:
 		- 20140502@Kathy: Add new columns execTime, duration for Parlay_Calculate_Queue
 		- 20140505@Kathy: Re-run match if time of execution more than 5 minutes
-		- 20140528@Kathy: balance between Soccer and Othersports calculation in queue
+		- 20140528@Kathy: rotate calculating sports in queue
 */
 BEGIN
 	SET NOCOUNT ON
