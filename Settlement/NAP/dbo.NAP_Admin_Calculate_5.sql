@@ -20,58 +20,29 @@ BEGIN
 
 	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB231')
+	--- LAS settlement 
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+			SELECT *
+			FROM sys.databases
+			WHERE NAME = 'LASDB'
+			)
 	BEGIN
-		DECLARE @sqlCommand NVARCHAR(MAX)
+		DECLARE @LASCommand NVARCHAR(1000)
+			,@createdDate DATETIME
 
-		SELECT @sqlCommand = 'EXEC [dbo].[Admin_Calculate_5_external] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @whowin = ' + CONVERT(NVARCHAR(10), @whowin)
+		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_5] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @whowin = ' + CONVERT(NVARCHAR(10), @whowin) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+			,@createdDate = GETDATE()
 
-		INSERT INTO Acc_Externalsettlement (
-			SPName
-			,SQLCommand
-			,CreatedDate
-			,StatusID
-			,MatchID
-			,Bettype
-			,STATUS
-			,BetCount
-			)
-		VALUES (
-			'Admin_Calculate_5'
-			,@sqlCommand
-			,GETDATE()
-			,0
-			,@matchid
-			,@bettype
-			,'waiting'
-			,@betcount
-			)
-
-		--- LAS settlement 
-		IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
-				SELECT *
-				FROM sys.databases
-				WHERE NAME = 'LASDB'
-				)
-		BEGIN
-			DECLARE @LASCommand NVARCHAR(1000)
-				,@createdDate DATETIME
-
-			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_5] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @whowin = ' + CONVERT(NVARCHAR(10), @whowin) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-				,@createdDate = GETDATE()
-
-			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_5'
-				,@SQLCommand = @LASCommand
-				,@CreatedDate = @createdDate
-				,@StatusID = 0 -- waiting
-				,@MatchID = @matchid
-				,@Bettype = @bettype
-				,@Status = 'waiting'
-				,@BetCount = @betcount
-		END
-
-		RETURN
+		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_5'
+			,@SQLCommand = @LASCommand
+			,@CreatedDate = @createdDate
+			,@StatusID = 0 -- waiting
+			,@MatchID = @matchid
+			,@Bettype = @bettype
+			,@Status = 'waiting'
+			,@BetCount = @betcount
 	END
+
 
 	DECLARE @modds SMALLMONEY
 		,@commWinRate SMALLMONEY
@@ -213,6 +184,7 @@ BEGIN
 		--status NOT IN ('VOID', 'REJECT')
 		statusID NOT IN (101, 102)
 END
+
 
 GO
 

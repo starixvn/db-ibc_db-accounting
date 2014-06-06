@@ -15,63 +15,30 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB231')
+	--- LAS settlement 
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+			SELECT *
+			FROM sys.databases
+			WHERE NAME = 'LASDB'
+			)
 	BEGIN
-		DECLARE @sqlCommand NVARCHAR(MAX)
+		DECLARE @LASCommand NVARCHAR(1000)
+			,@createdDate DATETIME
 
-		SET @sqlCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG_External] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-						+ ', @action = ''' + CONVERT(NVARCHAR(10),@action) + ''''
-						+ ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) 
-						+ ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
+		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+							+ ', @action = ''' + CONVERT(NVARCHAR(10),@action) + ''''
+							+ ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) 
+							+ ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
+			,@createdDate = GETDATE()
 
-		INSERT INTO Acc_Externalsettlement (
-			SPName
-			,SQLCommand
-			,CreatedDate
-			,StatusID
-			,MatchID
-			,Bettype
-			,STATUS
-			,BetCount
-			)
-		VALUES (
-			'Admin_Calculate_RefundFGLG'
-			,@sqlCommand
-			,GETDATE()
-			,0
-			,@matchid
-			,14
-			,'waiting'
-			,1
-			)
-
-		--- LAS settlement 
-		IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
-				SELECT *
-				FROM sys.databases
-				WHERE NAME = 'LASDB'
-				)
-		BEGIN
-			DECLARE @LASCommand NVARCHAR(1000)
-				,@createdDate DATETIME
-
-			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-							 + ', @action = ''' + CONVERT(NVARCHAR(10),@action) + ''''
-							 + ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) 
-							 + ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
-				,@createdDate = GETDATE()
-
-			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundFGLG'
-				,@SQLCommand = @LASCommand
-				,@CreatedDate = @createdDate
-				,@StatusID = 0 -- waiting
-				,@MatchID = @matchid
-				,@Bettype = 0 -- hardcode
-				,@Status = 'waiting'
-				,@BetCount = 0
-		END
-
-		RETURN
+		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundFGLG'
+			,@SQLCommand = @LASCommand
+			,@CreatedDate = @createdDate
+			,@StatusID = 0 -- waiting
+			,@MatchID = @matchid
+			,@Bettype = 0 -- hardcode
+			,@Status = 'waiting'
+			,@BetCount = 0
 	END
 
 	DECLARE @bettype int
