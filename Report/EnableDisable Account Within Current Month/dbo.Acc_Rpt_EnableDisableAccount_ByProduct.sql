@@ -2,13 +2,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@ListCurrency	NVARCHAR(150)	= 'all', 
-	@ShowRB			BIT				= 0,  
-	@ShowNG			BIT				= 0,
-	@ShowKN			BIT				= 1,
-	@ShowLC 		BIT				= 0,
-	@ShowVS			BIT				= 0,
-	@ShowCS  		BIT				= 0,
-	@ShowBI  		BIT				= 0
+	@SportType		INT
 AS  
 /*  Created: Dominic 
 	Date: 2014-06-02  
@@ -21,13 +15,7 @@ AS
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
-	  + @ShowRB: Include RB bets 
-	  + @ShowNG: Include Number game bets 
-	  + @ShowKN: Include Keno 
-	  + @ShowLC: Include Live Casino 
-	  + @ShowVS: Include Virtual Sports 
-	  +	@ShowCS: Include RNG Casino 
-	  +	@ShowBI: Include Bingo 
+	  + {1:Casino, 2:Racing, 3:Bingo, 4:Number Game, 5:Live Casino, 6:Virtual Sports, 7:Keno}
 
   
 */  
@@ -64,17 +52,17 @@ BEGIN
 	INSERT INTO #FiltedCreditSuper(CustID,SuperStatus)
 	SELECT ci.custid,
 		CASE
-			WHEN @ShowRB = 1 THEN (ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
-			WHEN @ShowNG = 1 THEN ci.DisableNumber
-			WHEN @ShowKN = 1 THEN CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+			WHEN @sportType = 2 THEN (ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
+			WHEN @sportType = 4 THEN ci.DisableNumber
+			WHEN @sportType = 7 THEN CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
 																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
 																THEN 0 
 																ELSE 1 
 																END
-			WHEN @ShowLC = 1 THEN (~ci.SyncLiveCasino | ci.DisableLiveCasino)
-			WHEN @ShowVS = 1 THEN ci.DisableVirtualSports
-			WHEN @ShowCS = 1 THEN (~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
-			WHEN @ShowBI = 1 THEN (~ci.SyncBingo | ci.DisableBingo)
+			WHEN @sportType = 5 THEN (~ci.SyncLiveCasino | ci.DisableLiveCasino)
+			WHEN @sportType = 6 THEN ci.DisableVirtualSports
+			WHEN @sportType = 1 THEN (~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
+			WHEN @sportType = 3 THEN (~ci.SyncBingo | ci.DisableBingo)
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
 	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN (SELECT custid from dbo.f_DepSuper_1 ('all'))
@@ -94,13 +82,13 @@ BEGIN
 		SELECT DISTINCT b.custid FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
 		AND (
-			b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-			OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-			OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-			OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-			OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-			OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-			OR b.bettype BETWEEN 73 AND (CASE WHEN @showBI=1 THEN 73 ELSE 0 END)
+			b.bettype BETWEEN 31 AND CASE WHEN @sportType=2 THEN 49 ELSE 0 END
+			OR b.bettype BETWEEN 81 AND (CASE WHEN @sportType=4 THEN 120 ELSE 0 END)
+			OR b.bettype BETWEEN 1101 AND (CASE WHEN @sportType=5 THEN 1199 ELSE 0 END)
+			OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=6 THEN 1299 ELSE 0 END)
+			OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=1 THEN 71 ELSE 0 END)
+			OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=7 THEN 1599 ELSE 0 END)
+			OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType=3 THEN 73 ELSE 0 END)
 		) 
 		AND b.status IN ('WON','LOSE','DRAW','running')
 	END
@@ -120,13 +108,13 @@ BEGIN
 		SELECT DISTINCT smw.custid FROM dbo.sum_winloss smw WITH(NOLOCK)
 		WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
 		AND (
-			smw.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-			OR smw.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-			OR smw.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-			OR smw.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-			OR smw.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-			OR smw.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-			OR smw.bettype BETWEEN 73 AND (CASE WHEN @showBI=1 THEN 73 ELSE 0 END)
+			smw.bettype BETWEEN 31 AND CASE WHEN @sportType=2 THEN 49 ELSE 0 END
+			OR smw.bettype BETWEEN 81 AND (CASE WHEN @sportType=4 THEN 120 ELSE 0 END)
+			OR smw.bettype BETWEEN 1101 AND (CASE WHEN @sportType=5 THEN 1199 ELSE 0 END)
+			OR smw.bettype BETWEEN 1201 AND (CASE WHEN @sportType=6 THEN 1299 ELSE 0 END)
+			OR smw.bettype BETWEEN 71 AND (CASE WHEN @sportType=1 THEN 71 ELSE 0 END)
+			OR smw.bettype BETWEEN 1501 AND (CASE WHEN @sportType=7 THEN 1599 ELSE 0 END)
+			OR smw.bettype BETWEEN 73 AND (CASE WHEN @sportType=3 THEN 73 ELSE 0 END)
 		)
 	END
 	
@@ -142,18 +130,18 @@ BEGIN
 		SELECT DISTINCT smwo.custid FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
 		WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
 		AND (
-			smwo.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-			OR smwo.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-			OR smwo.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-			OR smwo.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-			OR smwo.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-			OR smwo.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-			OR smwo.bettype BETWEEN 73 AND (CASE WHEN @showBI=1 THEN 73 ELSE 0 END)
+			smwo.bettype BETWEEN 31 AND CASE WHEN @sportType=2 THEN 49 ELSE 0 END
+			OR smwo.bettype BETWEEN 81 AND (CASE WHEN @sportType=4 THEN 120 ELSE 0 END)
+			OR smwo.bettype BETWEEN 1101 AND (CASE WHEN @sportType=5 THEN 1199 ELSE 0 END)
+			OR smwo.bettype BETWEEN 1201 AND (CASE WHEN @sportType=6 THEN 1299 ELSE 0 END)
+			OR smwo.bettype BETWEEN 71 AND (CASE WHEN @sportType=1 THEN 71 ELSE 0 END)
+			OR smwo.bettype BETWEEN 1501 AND (CASE WHEN @sportType=7 THEN 1599 ELSE 0 END)
+			OR smwo.bettype BETWEEN 73 AND (CASE WHEN @sportType=3 THEN 73 ELSE 0 END)
 		)	
 	END
 	    
 	--Get data for downline list 
-    IF @ShowRB = 1
+    IF @sportType = 2
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -173,7 +161,7 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid  = 1
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember) AND ci.Enabled = 1                   
 	END
-	IF @ShowNG = 1
+	IF @sportType = 4
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -193,7 +181,7 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                    
 	END
-	IF @ShowLC = 1
+	IF @sportType = 5
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -213,7 +201,7 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                  
 	END
-	IF @ShowVS = 1
+	IF @sportType = 6
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -233,7 +221,7 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1   
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                
 	END
-	IF @ShowCS = 1
+	IF @sportType = 1
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -253,7 +241,7 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1             
 	END
-	IF @ShowBI = 1
+	IF @sportType = 3
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -273,7 +261,7 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1                 
 	END
-	IF @ShowKN = 1
+	IF @sportType = 7
     BEGIN      
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
