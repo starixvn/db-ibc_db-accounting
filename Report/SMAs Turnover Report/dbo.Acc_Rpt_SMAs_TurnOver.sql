@@ -609,7 +609,7 @@ BEGIN
 	END
 	
 	--Show reported data
-	SELECT ROW_NUMBER() over(ORDER BY rs.IsAssignedGroup ASC,rs.GroupHeadline ASC,rs.TurnOverMYR DESC) AS RowNum,
+	SELECT 
        rs.IsAssignedGroup,
        rs.GroupID,
        rs.GroupHeadline,
@@ -623,6 +623,7 @@ BEGIN
        rs.TurnOverMYR MemberTurnOverMYR
 	FROM #TmpFinalResult rs
 	WHERE ABS(rs.TurnOver) <> 0
+	ORDER BY rs.IsAssignedGroup ASC,rs.GroupHeadline ASC,rs.TurnOverMYR DESC
 		
 	--Drop temp tables
 	DROP TABLE #DirectCustFilterResult
