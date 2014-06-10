@@ -305,7 +305,7 @@ BEGIN
 		
 
 	--Return result
-	SELECT cust.custid,cust.username,sp.SuperStatus as IsDiable,e.currency,
+	SELECT cust.custid,cust.username,sp.SuperStatus as IsDisable,e.currency,
 			ISNULL(rs.MasterEnabled,0)	MasterEnabled,
 			ISNULL(rs.MasterDisabled,0) MasterDisabled,
 			ISNULL(rs.AgentEnabled,0)	AgentEnabled,
