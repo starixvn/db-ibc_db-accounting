@@ -49,7 +49,7 @@ IF @sporttype IN (-1,0) OR @sporttype <=99 OR @sporttype = 154--Sportbooks
 		BEGIN
 			INSERT INTO @tblSport_PT (Sportid,PT,Site,SiteID)
 			select sp.sporttype, 
-			CASE WHEN Site  = 'Tonybet' THEN 0.925 ELSE 0.85 END PT,
+			CASE WHEN Site  = 'Tonybet' THEN 0.9 ELSE 0.85 END PT,
 			tblSite.Site Site,
 			tblSite.SiteID
 			from bodb02.dbo.sports sp with (nolock)
