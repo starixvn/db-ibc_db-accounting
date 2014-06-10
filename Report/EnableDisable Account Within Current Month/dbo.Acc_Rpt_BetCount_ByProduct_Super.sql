@@ -205,12 +205,13 @@ BEGIN
 
 
 	--Return result
-	SELECT ROW_NUMBER() over(ORDER BY cs.username) RowNum,cs.custid,cs.username,rs.IsDisable,
+	SELECT cs.custid,cs.username,rs.IsDisable,
 			SUM(CASE WHEN rs.BetStatus <> 'running' THEN rs.BetCount ELSE 0 END) SettledBets,
 			SUM(CASE WHEN rs.BetStatus = 'running' THEN rs.BetCount ELSE 0 END)  RunningBets
 	FROM #FiltedDownlineAcc rs
 	JOIN dbo.Customer cs ON cs.custid = rs.CustID
 	GROUP BY cs.custid,cs.username,rs.IsDisable
+	ORDER BY cs.username
 	
 	--Drop temp tables
 	DROP TABLE #FiltedDownlineAcc

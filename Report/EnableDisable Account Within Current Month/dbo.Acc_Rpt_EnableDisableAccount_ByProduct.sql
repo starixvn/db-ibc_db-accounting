@@ -305,7 +305,7 @@ BEGIN
 		
 
 	--Return result
-	SELECT ROW_NUMBER() OVER(ORDER BY cust.username,e.currency) As RowNum,cust.username,sp.SuperStatus as IsDiable,e.currency,
+	SELECT cust.custid,cust.username,sp.SuperStatus as IsDiable,e.currency,
 			ISNULL(rs.MasterEnabled,0)	MasterEnabled,
 			ISNULL(rs.MasterDisabled,0) MasterDisabled,
 			ISNULL(rs.AgentEnabled,0)	AgentEnabled,
@@ -325,6 +325,7 @@ BEGIN
 		SUM(CASE WHEN dl.IsDisable = 1 AND dl.RoleID = 1 THEN 1 ELSE 0 END) MemberDisabled
 	FROM #FiltedDownlineAcc dl 
 	GROUP BY dl.SuperID) rs ON sp.CustID = rs.SuperID
+	ORDER BY cust.username,e.currency
 
 	
 	--Drop temp tables
