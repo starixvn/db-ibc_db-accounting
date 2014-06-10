@@ -21,6 +21,7 @@ AS
 
 	Revisions:
 		-2014.04.22@Tom.Vo: Change source table : DBLIC.Licensee -> CheckLicenseeDB
+		-2014.06.11@Tom.Vo: Add PT setting will be 90% new Lisencee Tonybet 
 	Param's Explanation:
 		@sporttype: Product Id
 			-1 : All
@@ -47,7 +48,10 @@ WHERE ( @Site IS NULL OR Site =  @Site )
 IF @sporttype IN (-1,0) OR @sporttype <=99 OR @sporttype = 154--Sportbooks
 		BEGIN
 			INSERT INTO @tblSport_PT (Sportid,PT,Site,SiteID)
-			select sp.sporttype, 0.85 ,tblSite.Site Site,tblSite.SiteID
+			select sp.sporttype, 
+			CASE WHEN Site  = 'Tonybet' THEN 0.925 ELSE 0.85 END PT,
+			tblSite.Site Site,
+			tblSite.SiteID
 			from bodb02.dbo.sports sp with (nolock)
 				,@tblSite tblSite 
 			where (sporttype <= 99 OR sporttype = 154)
