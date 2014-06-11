@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Acc_CustomerUpdMoveMember]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
 	@agentname varchar(40),
 	@membername varchar(40),
 	@userid int,
@@ -51,6 +51,7 @@ Revisions:
 	- 20140314@Elodie: Add Keno product [Redmine:#13326]
 	- 20140403@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
 						- Add Virtual Greyhounds/ Motor Racing (182,184)
+	- 20140611@Elodie: Implement separate setting pages for Keno [Redmine:#13156]
 	
 Param's Explanation:
 • @ErrCode:
@@ -619,11 +620,11 @@ DECLARE
 
 	--Keno
 	@v202apositiontaking_1501 SMALLMONEY,
-	@v202apositiontaking_1502 SMALLMONEY,
+	@v202apositiontaking_1511 SMALLMONEY,
 	@v202apositiontaking_1503 SMALLMONEY,
 	@v202apositiontaking_1504 SMALLMONEY,
 	@v202apositiontaking_1505 SMALLMONEY,
-	@v202apositiontaking_1506 SMALLMONEY,
+	@v202apositiontaking_1513 SMALLMONEY,
 	@v202apositiontaking_1507 SMALLMONEY,
 	@v202apositiontaking_1508 SMALLMONEY,
 	@v202apositiontaking_1509 SMALLMONEY
@@ -715,11 +716,11 @@ SELECT @v186apositiontaking_1220 = apositiontaking FROM custsetting3rd WITH (NOL
 
 --Keno
 SELECT @v202apositiontaking_1501 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1501
-SELECT @v202apositiontaking_1502 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1502
+SELECT @v202apositiontaking_1511 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1511
 SELECT @v202apositiontaking_1503 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1503
 SELECT @v202apositiontaking_1504 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1504
 SELECT @v202apositiontaking_1505 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1505
-SELECT @v202apositiontaking_1506 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1506
+SELECT @v202apositiontaking_1513 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1513
 SELECT @v202apositiontaking_1507 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1507
 SELECT @v202apositiontaking_1508 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1508
 SELECT @v202apositiontaking_1509 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1509
@@ -1202,8 +1203,8 @@ END
 EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	@custid  = @custid,
 	@sporttype	= 202,
-	@bettype = 1502,
-	@apositiontaking = @v202apositiontaking_1502,
+	@bettype = 1511,
+	@apositiontaking = @v202apositiontaking_1511,
 	
 	@UserID	= @UserID,	
 	@ErrCode = @ErrCode_1 OUTPUT,
@@ -1302,8 +1303,8 @@ END
 EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	@custid  = @custid,
 	@sporttype	= 202,
-	@bettype = 1506,
-	@apositiontaking = @v202apositiontaking_1506,
+	@bettype = 1513,
+	@apositiontaking = @v202apositiontaking_1513,
 	
 	@UserID	= @UserID,	
 	@ErrCode = @ErrCode_1 OUTPUT,
@@ -1838,8 +1839,6 @@ BEGIN CATCH
 		@TrackingValue = @LogSPData,
 		@duration = @duration	
 END CATCH
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbadminNet] AS [dbo]
