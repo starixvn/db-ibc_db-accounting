@@ -10,6 +10,7 @@ AS
 
 	Revisions: 
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
 				
 */
 BEGIN
@@ -47,34 +48,88 @@ BEGIN
 						   when @action = 'REFUND-FT' then 14
 						   ELSE 0
 					  end 
-
-	WHILE 1 = 1
+	
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231')
 	BEGIN
-		UPDATE TOP (10000) dbo.bettrans WITH (ROWLOCK, UPDLOCK)
-		SET STATUS = 'Refund'
-			,statusID = 103
-			,winlost = actual_stake
-			,awinlost = 0
-			,mwinlost = 0
-			,swinlost = 0
-			,playercomm = 0
-			,comm = 0
-			,acomm = 0
-			,scomm = 0
-			,ruben = 1
-		WHERE matchid = @matchid
-			--AND [status] not in ('Void', 'Reject')
+		DECLARE @affectedagents INT
+	
+		CREATE TABLE #tmpRecommend(recommend INT  PRIMARY KEY)
+
+		INSERT INTO #tmpRecommend(recommend)
+		SELECT DISTINCT recommend
+		FROM dbo.bettrans (NOLOCK) 
+		WHERE matchid = @matchid 
+		AND ((@bettype = 0 AND bettype IN (14,127)) 
+					OR (bettype = @bettype))
+
+		DECLARE @currecommend TABLE(recommend INT PRIMARY KEY)
+
+		WHILE 1=1
+		BEGIN
+			DELETE
+			FROM @currecommend
+
+			DELETE TOP(100)
+			FROM #tmpRecommend OUTPUT DELETED.recommend INTO @currecommend
+
+			SET @affectedagents = @@rowcount
+
+			UPDATE b WITH (ROWLOCK, UPDLOCK)
+			SET STATUS = 'Refund'
+				,statusID = 103
+				,winlost = actual_stake
+				,awinlost = 0
+				,mwinlost = 0
+				,swinlost = 0
+				,playercomm = 0
+				,comm = 0
+				,acomm = 0
+				,scomm = 0
+				,ruben = 1
+			FROM dbo.bettrans b with(ROWLOCK, UPDLOCK) 
+			INNER JOIN @currecommend ag ON b.recommend = ag.recommend
+			WHERE matchid = @matchid
 			AND statusID NOT IN (103, 101, 102) 
 			AND ((@bettype = 0 AND bettype IN (14,127)) 
 					OR (bettype = @bettype))
-			--AND ruben = 1 
-			AND right(betteam, 1) = CASE 
-				WHEN @LGOnly = 1 THEN '2'
-				ELSE right(betteam, 1)
-				END
+			AND right(betteam, 1) = CASE WHEN @LGOnly = 1 THEN '2' ELSE right(betteam, 1) END
 
-		IF @@ROWCOUNT < 10000
-			BREAK
+			IF @affectedagents <> 100
+				BREAK
+		END
+
+		DROP TABLE #tmpRecommend
+	END
+	ELSE
+	BEGIN
+		WHILE 1 = 1
+		BEGIN
+			UPDATE TOP (10000) dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+			SET STATUS = 'Refund'
+				,statusID = 103
+				,winlost = actual_stake
+				,awinlost = 0
+				,mwinlost = 0
+				,swinlost = 0
+				,playercomm = 0
+				,comm = 0
+				,acomm = 0
+				,scomm = 0
+				,ruben = 1
+			WHERE matchid = @matchid
+				--AND [status] not in ('Void', 'Reject')
+				AND statusID NOT IN (103, 101, 102) 
+				AND ((@bettype = 0 AND bettype IN (14,127)) 
+						OR (bettype = @bettype))
+				--AND ruben = 1 
+				AND right(betteam, 1) = CASE 
+					WHEN @LGOnly = 1 THEN '2'
+					ELSE right(betteam, 1)
+					END
+
+			IF @@ROWCOUNT < 10000
+				BREAK
+		END
 	END
 
 	-------------Start: Refund FGLG for bettransm-------------
