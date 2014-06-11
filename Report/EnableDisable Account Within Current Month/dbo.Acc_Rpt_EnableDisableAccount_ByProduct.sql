@@ -61,11 +61,12 @@ BEGIN
 																END
 			WHEN @sportType = 162 THEN (~ci.SyncLiveCasino | ci.DisableLiveCasino)
 			WHEN @sportType = 180 THEN ci.DisableVirtualSports
-			WHEN @sportType = 251 THEN (~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
+			WHEN @sportType = 251 THEN (~ci.SyncCasino |(ci.DisableCasino))
 			WHEN @sportType = 252 THEN (~ci.SyncBingo | ci.DisableBingo)
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
-	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN (SELECT custid from dbo.f_DepSuper_1 ('all'))
+	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN ( SELECT custid
+																FROM dep_custsuper WITH(NOLOCK))
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
                 
@@ -227,7 +228,7 @@ BEGIN
 		SELECT sup.CustID,
 			ci.custid,
 			ci.roleid,
-			(~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
+			(~ci.SyncCasino |(ci.DisableCasino))
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (2,3)  
 		WHERE ci.Enabled = 1
@@ -236,7 +237,7 @@ BEGIN
 		SELECT sup.CustID,
 			ci.custid,
 			ci.roleid,
-			(~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus))
+			(~ci.SyncCasino |(ci.DisableCasino))
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.custid IN (SELECT custid FROM #AvailableMember)  AND ci.Enabled = 1             

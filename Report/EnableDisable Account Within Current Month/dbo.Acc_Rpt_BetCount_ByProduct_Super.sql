@@ -158,7 +158,7 @@ BEGIN
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
-			(~ci.SyncCasino |(ci.DisableCasino & ci.DisableCasinoBonus)),
+			(~ci.SyncCasino |(ci.DisableCasino)),
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
