@@ -87,7 +87,7 @@ BEGIN
 			OR smw.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
 			OR smw.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
 			OR smw.bettype BETWEEN 73 AND (CASE WHEN @sportType=252 THEN 73 ELSE 0 END)
-		) AND smw.srecommend = @CustID
+		) AND smw.srecommend = @CustID AND smw.roleid = 1
 	END
 	
 	--Get data from sum_winlost_old
@@ -110,7 +110,7 @@ BEGIN
 			OR smwo.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
 			OR smwo.bettype BETWEEN 73 AND (CASE WHEN @sportType=252 THEN 73 ELSE 0 END)
 		)	
-		AND smwo.srecommend = @CustID
+		AND smwo.srecommend = @CustID AND smwo.roleid = 1
 	END
 	    
 	--Get data for downline list 
