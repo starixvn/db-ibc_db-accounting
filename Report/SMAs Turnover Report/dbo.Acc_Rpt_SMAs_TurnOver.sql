@@ -114,7 +114,8 @@ BEGIN
 	FROM dbo.Acc_CustDirect acccust  WITH(NOLOCK)  
 	INNER JOIN customer cust WITH(NOLOCK) ON  acccust.custid = cust.srecommEND  AND acccust.roleid = 4 AND cust.roleid = 3   
 	INNER JOIN custmaster cm WITH(NOLOCK) ON  cm.custid = cust.custid AND cm.isINTernal = 0 
-	WHERE cust.currency NOT IN (20,27,28)
+	WHERE cust.currency NOT IN (20,27,28) 
+	AND cust.custid NOT IN (SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 3)
 	
 	--Get Direct Agent Accounts
 	INSERT INTO @DirectCusts (
@@ -130,6 +131,7 @@ BEGIN
 	INNER JOIN customer cust WITH(NOLOCK) ON  acccust.custid = cust.mrecommEND  AND acccust.roleid = 3 AND cust.roleid = 2  
 	INNER JOIN custagent ca WITH(NOLOCK) ON  ca.custid = cust.custid AND ca.isINTernal = 0  
 	WHERE cust.currency NOT IN (20,27,28)
+	AND cust.custid NOT IN (SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 2)
 	
 	--Get Direct Member Accounts
 	INSERT INTO @DirectCusts (
@@ -609,7 +611,7 @@ BEGIN
 	END
 	
 	--Show reported data
-	SELECT ROW_NUMBER() over(ORDER BY rs.IsAssignedGroup ASC,rs.GroupHeadline ASC,rs.TurnOverMYR DESC) AS RowNum,
+	SELECT 
        rs.IsAssignedGroup,
        rs.GroupID,
        rs.GroupHeadline,
@@ -623,6 +625,7 @@ BEGIN
        rs.TurnOverMYR MemberTurnOverMYR
 	FROM #TmpFinalResult rs
 	WHERE ABS(rs.TurnOver) <> 0
+	ORDER BY rs.IsAssignedGroup ASC,rs.GroupHeadline ASC,rs.TurnOverMYR DESC
 		
 	--Drop temp tables
 	DROP TABLE #DirectCustFilterResult

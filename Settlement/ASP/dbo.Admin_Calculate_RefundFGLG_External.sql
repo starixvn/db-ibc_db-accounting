@@ -13,13 +13,16 @@ AS
 
 	Revisions: 
 		- 20140421@Kathy: Add 1H FGLG bettypes (127) [Redmine:#14718]
-	
+
+	Param's Explanation:
+	@action: CAL, CAL-HT, CAL-FT: for accounting
+			 REFUND, REFUND-HT, REFUND-FT: for NAP
 */
 SET NOCOUNT ON
 DECLARE @bettype int
 
-select @bettype = CASE WHEN @action = 'CAL-HT' then 127
-						when @action = 'CAL-FT' then 14
+select @bettype = CASE WHEN @action IN('CAL-HT','REFUND-HT') then 127
+						when @action IN('CAL-FT','REFUND-FT') then 14
 						ELSE 0
 					end 
 WHILE 1=1
