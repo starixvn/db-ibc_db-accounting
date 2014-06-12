@@ -51,13 +51,14 @@ BEGIN
 			WHEN @sportType = 252 THEN (~ci.SyncBingo | ci.DisableBingo)
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
+	JOIN dbo.CustSuper cs WITH(NOLOCK) ON ci.custid = cs.custid AND cs.IsInternal = 0
 	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN ( SELECT custid
 																FROM dep_custsuper WITH(NOLOCK))
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
 	    
 	--Get data for downline list 
-    IF @sportType = 151
+        IF @sportType = 151
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -65,7 +66,27 @@ BEGIN
 			ci.roleid,
 			(ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (1,2,3) 
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3
+		WHERE ci.Enabled = 1 
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2 
+		WHERE ci.Enabled = 1 
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(ci.Disable151_AU & ci.Disable152_AU & ci.Disable152_UK & ci.Disable153_AU & ci.DisableHorseRacing & ci.DisableOpenTote)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1 
 		WHERE ci.Enabled = 1                  
 	END
 	IF @sportType = 161
@@ -76,7 +97,27 @@ BEGIN
 			ci.roleid,
 			ci.DisableNumber
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (1,2,3)  
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3  
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			ci.DisableNumber
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2 
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			ci.DisableNumber
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.Enabled = 1                  
 	END
 	IF @sportType = 162
@@ -87,8 +128,28 @@ BEGIN
 			ci.roleid,
 			(~ci.SyncLiveCasino | ci.DisableLiveCasino)
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (1,2,3) 
-		WHERE ci.Enabled = 1                
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
+		WHERE ci.Enabled = 1    
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(~ci.SyncLiveCasino | ci.DisableLiveCasino)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2 
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(~ci.SyncLiveCasino | ci.DisableLiveCasino)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1 
+		WHERE ci.Enabled = 1            
 	END
 	IF @sportType = 180
     BEGIN            
@@ -98,7 +159,27 @@ BEGIN
 			ci.roleid,
 			ci.DisableVirtualSports
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (1,2,3)  
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			ci.DisableVirtualSports
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2  
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			ci.DisableVirtualSports
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.Enabled = 1             
 	END
 	IF @sportType = 251
@@ -109,8 +190,28 @@ BEGIN
 			ci.roleid,
 			(~ci.SyncCasino |(ci.DisableCasino))
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (1,2,3)  
-		WHERE ci.Enabled = 1         
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
+		WHERE ci.Enabled = 1   
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(~ci.SyncCasino |(ci.DisableCasino))
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2  
+		WHERE ci.Enabled = 1 
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(~ci.SyncCasino |(ci.DisableCasino))
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
+		WHERE ci.Enabled = 1       
 	END
 	IF @sportType = 252
     BEGIN            
@@ -120,7 +221,27 @@ BEGIN
 			ci.roleid,
 			(~ci.SyncBingo | ci.DisableBingo)
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (1,2,3) 
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(~ci.SyncBingo | ci.DisableBingo)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(~ci.SyncBingo | ci.DisableBingo)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1 
 		WHERE ci.Enabled = 1               
 	END
 	IF @sportType = 202
@@ -135,7 +256,35 @@ BEGIN
 																ELSE 1 
 																END
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid IN (1,2,3)
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3
+		WHERE ci.Enabled = 1 
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+																THEN 0 
+																ELSE 1 
+																END
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2
+		WHERE ci.Enabled = 1 
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+																THEN 0 
+																ELSE 1 
+																END
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
 		WHERE ci.Enabled = 1              
 	END
 		
