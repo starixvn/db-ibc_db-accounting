@@ -265,9 +265,6 @@ Begin DataProject = "Account"
       End
       Begin Folder = "SmartPunters"
          Script = "dbo.Acc_CustomerSelCheckSmartPunter.sql"
-         Script = "dbo.Acc_SmartPunterDel.sql"
-         Script = "dbo.Acc_SmartPunterIns.sql"
-         Script = "dbo_Acc_SmartPunterUpd.sql"
       End
       Begin Folder = "Status"
          Script = "Acc_CustomerSelCasinoBonusStatus.sql"
