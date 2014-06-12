@@ -19,7 +19,7 @@ AS
    
     Revisions:  
 		
-	Param's Explanation:  
+	Param's Explanation:   
 	  + @winLostDate: The specified date used as one of the filter criterias
 	  + @MoveBetsDay: The day when bets are moved to bettrans14
 	  + @ShowSB: Include SportsBook bets
