@@ -94,12 +94,12 @@ BEGIN
 		Currency
 		)
 	SELECT
-		custacc.custid,
+		cust.custid,
 		cust.roleid,
 		cust.currency
-	FROM  dbo.custAccount custacc WITH(NOLOCK)
-	INNER JOIN dbo.Customer cust WITH(NOLOCK) ON custacc.custid = cust.custid AND cust.roleid = 4 AND cust.currency NOT IN (20 ,27 , 28)
-	INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON custacc.custid = cs.custid AND cs.IsInternal = 0	
+	FROM  dbo.Customer cust WITH(NOLOCK)  
+	INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON cust.custid = cs.custid AND cs.IsInternal = 0	
+	WHERE cust.roleid = 4 AND cust.currency NOT IN (20 ,27 , 28)
 		 
 	--Get Direct Master Accounts
 	INSERT INTO @DirectCusts (
@@ -167,6 +167,12 @@ BEGIN
 	FROM @DirectCusts c  
 	 INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = c.custid   
 	WHERE c.custid NOT IN (SELECT  custid FROM custaccount WITH(NOLOCK)) 
+	UNION ALL  
+	SELECT  0,NULL,'Not assigned to group' , ci.custid ,ci.username,ci.roleid,ci.currency,'' currencyname,
+		isnull(ci.reject,0) issuspend  ,isnull(ci.closed,0) isclosed, ci.[enabled] isEnable
+	FROM custaccount ca WITH(NOLOCK)    
+	 INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = ca.custid   
+	WHERE ca.groupID = 0
 
 	--Filter direct account with specified status
 	IF (@ShowOpened = 1)  
@@ -193,7 +199,7 @@ BEGIN
 
 	--Update Currency's name
 	UPDATE t
-	SET t.currencyname = e.Code
+	SET t.currencyname = e.currency
 	FROM #DirectCustFilterResult t JOIN Exchange e WITH(NOLOCK) ON e.exchangeid = t.currency
  
 	--If the specified day is after the system's movebet day then get data from bettrans table else get data from bettrans14
