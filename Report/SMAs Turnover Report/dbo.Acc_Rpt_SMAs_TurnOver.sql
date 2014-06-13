@@ -180,8 +180,9 @@ BEGIN
 	UNION ALL  
 	SELECT  0,NULL,'Not assigned to group' , ci.custid ,ci.username,ci.roleid,ci.currency,'' currencyname,
 		isnull(ci.reject,0) issuspend  ,isnull(ci.closed,0) isclosed, ci.[enabled] isEnable
-	FROM custaccount ca WITH(NOLOCK)    
-	 INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = ca.custid   
+	FROM custaccount ca WITH(NOLOCK)   
+	INNER JOIN @DirectCusts c ON c.CustID = ca.custid
+	INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = ca.custid   
 	WHERE ca.groupID = 0
 
 	--Filter direct account with specified status
