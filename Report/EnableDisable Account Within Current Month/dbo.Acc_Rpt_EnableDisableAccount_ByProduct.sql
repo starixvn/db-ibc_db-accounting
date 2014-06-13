@@ -24,6 +24,12 @@ BEGIN
 			CustID INT,
 			SuperStatus BIT
 			)
+	DECLARE @DepositDummySuper TABLE  (
+		CustID INT
+		)
+	DECLARE @DummyAcc TABLE  (
+		CustID INT
+		)
 			
 	--Table of Super/master/Member that belong to real super above	
 	CREATE TABLE #FiltedDownlineAcc(
@@ -34,7 +40,14 @@ BEGIN
 		)	
 	
 	
-	--Get real credit super filterd by currencies
+	INSERT INTO @DepositDummySuper
+	SELECT custid FROM dbo.Dep_CustSuper
+	UNION
+	SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 4
+	
+	INSERT INTO @DummyAcc
+	SELECT custid FROM dbo.Acc_CustDirect WHERE roleid IN (1,2,3)
+	--Get real credit super filterd by currencies	
 	INSERT INTO #FiltedCreditSuper(CustID,SuperStatus)
 	SELECT ci.custid,
 		CASE
@@ -56,9 +69,10 @@ BEGIN
 																FROM dep_custsuper WITH(NOLOCK))
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
+        AND ci.custid NOT IN (SELECT * FROM @DepositDummySuper)
 	    
 	--Get data for downline list 
-        IF @sportType = 151
+    IF @sportType = 151
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -69,6 +83,7 @@ BEGIN
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3
 		WHERE ci.Enabled = 1 
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -78,7 +93,8 @@ BEGIN
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2 
-		WHERE ci.Enabled = 1 
+		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc) 
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -100,6 +116,7 @@ BEGIN
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3  
 		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -110,6 +127,7 @@ BEGIN
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2 
 		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -130,7 +148,8 @@ BEGIN
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
-		WHERE ci.Enabled = 1    
+		WHERE ci.Enabled = 1   
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc) 
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -141,6 +160,7 @@ BEGIN
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2 
 		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -162,6 +182,7 @@ BEGIN
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
 		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -172,6 +193,7 @@ BEGIN
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2  
 		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -192,7 +214,8 @@ BEGIN
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
-		WHERE ci.Enabled = 1   
+		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)   
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -202,7 +225,8 @@ BEGIN
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2  
-		WHERE ci.Enabled = 1 
+		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc) 
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -224,6 +248,7 @@ BEGIN
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
 		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -234,6 +259,7 @@ BEGIN
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2
 		WHERE ci.Enabled = 1
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -259,6 +285,7 @@ BEGIN
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3
 		WHERE ci.Enabled = 1 
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -273,6 +300,7 @@ BEGIN
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2
 		WHERE ci.Enabled = 1 
+		AND ci.custid NOT IN (SELECT * FROM @DummyAcc)
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
