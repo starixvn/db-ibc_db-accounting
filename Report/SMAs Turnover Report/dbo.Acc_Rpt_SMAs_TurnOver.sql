@@ -43,6 +43,9 @@ BEGIN
 		RoleID TINYINT,
 		Currency INT
 		)
+	DECLARE @DepositDummySuper TABLE  (
+		CustID INT
+		)
 	--Contain direct account with more information	
 	DECLARE @DirectCustsAllInfo TABLE  (
 		IsAssignedGroup BIT,
@@ -88,6 +91,11 @@ BEGIN
 		)
 
 	--Get Super Accounts
+	INSERT INTO @DepositDummySuper
+	SELECT custid FROM dbo.Dep_CustSuper
+	UNION
+	SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 4
+	
 	INSERT INTO @DirectCusts (
 		CustID,
 		RoleID,
@@ -100,6 +108,7 @@ BEGIN
 	FROM  dbo.Customer cust WITH(NOLOCK)  
 	INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON cust.custid = cs.custid AND cs.IsInternal = 0	
 	WHERE cust.roleid = 4 AND cust.currency NOT IN (20 ,27 , 28)
+	AND cust.custid NOT IN (SELECT * FROM @DepositDummySuper)
 		 
 	--Get Direct Master Accounts
 	INSERT INTO @DirectCusts (
@@ -116,6 +125,7 @@ BEGIN
 	INNER JOIN custmaster cm WITH(NOLOCK) ON  cm.custid = cust.custid AND cm.isINTernal = 0 
 	WHERE cust.currency NOT IN (20,27,28) 
 	AND cust.custid NOT IN (SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 3)
+	
 	
 	--Get Direct Agent Accounts
 	INSERT INTO @DirectCusts (
