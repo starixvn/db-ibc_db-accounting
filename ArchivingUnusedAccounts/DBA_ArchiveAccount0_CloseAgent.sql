@@ -10,7 +10,7 @@ SET NOCOUNT ON
 /*Description: Close an Agent
 Create date: 
 Original SP: 
-DB: DBTRANS.bodb02
+DB: DBTRANS/CustDB
 Revisions:    
 	- 20101021@Henry: Record execution time
 */
@@ -67,6 +67,9 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 	@ActionID = 1115,
 	@TrackingValue = @LogSPData,
 	@duration = @duration
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[DBA_ArchiveAccount0_CloseAgent] TO [vnteam]
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[DBA_ArchiveAccount0_CloseAgent] TO [vnteam]

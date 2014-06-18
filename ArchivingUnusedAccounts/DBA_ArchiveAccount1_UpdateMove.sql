@@ -20,6 +20,7 @@ AS
 		- 20121005@Thien: change connection of bodb_Customer to DB05
 		- 20130121@Johnson: change linked server DB05 to DBARCCUST
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call Acc_ExecRep_Cust_01 instead of Acc_ExecRep_01)
+		- 20140618@Elodie: archive data for Keno
 */
     
 SET NOCOUNT ON
@@ -242,6 +243,12 @@ SELECT CustID
 FROM [dbo].[CustSettingGame] WITH(NOLOCK)
 WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
 
+--- copy DBTRANS.BODB02.dbo.CustGameType data to DB05.bodb_Customer.dbo.CustGameType_Old
+INSERT INTO DBARCCUST.bodb_Customer.dbo.CustGameType_Old(CustID, GameTypeID, StakeLevelList, MaxPerGameType, MinBet, MaxBet, IsDisabled)
+SELECT CustID, GameTypeID, StakeLevelList, MaxPerGameType, MinBet, MaxBet, IsDisabled
+FROM [dbo].CustGameType WITH(NOLOCK)
+WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
+
 Exec Acc_ExecRep_Cust_01 @AgentID = @AgentID, @Type = 0 
 ----------------------------------------------------------------
 print  @AccName +':'+ 'END:' + convert(varchar(50), getdate(), 113)
@@ -263,6 +270,7 @@ EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 	@ActionID = 1500,
 	@TrackingValue = @LogSPData	,
 	@duration = @duration
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[DBA_ArchiveAccount1_UpdateMove] TO [vnteam]

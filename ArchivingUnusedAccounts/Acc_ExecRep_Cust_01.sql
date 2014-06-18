@@ -11,6 +11,7 @@ AS
 	Original: Acc_ExecRep_01
 	Revision:
 		- 20131230@Elodie: Update credit = 0 when account is disabled, check correct server name 
+		- 201406180@Elodie: Remove setting of Keno
 		
 	Param's Explanation:
 		@Type: 0-Stage 1 (enabled = 0); 1-Stage 2: 
@@ -99,7 +100,20 @@ BEGIN
 					BREAK
 			END
 		END
-		
+		IF EXISTS (SELECT 1 FROM sys.tables WHERE name IN ('CustGameType'))
+		BEGIN
+			WHILE 1=1
+			BEGIN
+				DELETE TOP(10000) 
+				FROM dbo.CustGameType WITH(ROWLOCK,UPDLOCK)	
+				WHERE custid IN (SELECT custid 
+								 FROM custinfo WITH(NOLOCK) 
+								 WHERE roleid = 1 AND recommend = @AgentID
+								)
+				IF @@ROWCOUNT < 10000
+					BREAK
+			END
+		END
 	END 
 	ELSE IF @Type = 1
 	BEGIN
