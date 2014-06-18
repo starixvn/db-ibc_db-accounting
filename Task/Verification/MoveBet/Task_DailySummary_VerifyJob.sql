@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Task_DailySummary_VerifyJob]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Task_DailySummary_VerifyJob]    Script Date: 06/16/2014 22:20:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Task_DailySummary_VerifyJob]
 AS
 
 
@@ -16,12 +23,13 @@ AS
 	IF @WeekDay = 2
 	BEGIN
 		EXEC dbo.Task_DailySummary_Verify @Todaym4 -- Thursday
+		EXEC dbo.Task_DailySummary_Verify @Todaym3 -- Friday
 	END
 	-- Server Time : Tuesday (3)
 	-- Local Time  : Tuesday's afternoon
 	ELSE IF @WeekDay = 3
 	BEGIN
-		EXEC dbo.Task_DailySummary_Verify @Todaym4 -- Friday
+		--EXEC dbo.Task_DailySummary_Verify @Todaym4 -- Friday
 		EXEC dbo.Task_DailySummary_Verify @Todaym3 -- Saturday
 	END
 	-- Server Time : Wednesday (4)
@@ -44,5 +52,10 @@ AS
 	BEGIN
 		RETURN -1
 	END
+
+
+
+
+
 GO
-GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary_VerifyJob] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Task_DailySummary_VerifyJob] TO [vnteam] AS [dbo]
