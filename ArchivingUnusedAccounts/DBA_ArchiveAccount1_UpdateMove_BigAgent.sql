@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[DBA_ArchiveAccount1_UpdateMove_BigAgent]
+﻿ALTER PROCEDURE [dbo].[DBA_ArchiveAccount1_UpdateMove_BigAgent]
 	@AccName varchar(50),
 	@UserID int = 360418,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
@@ -8,7 +8,7 @@ AS
 	Created by: Theo
 	Date: 2009-30-07
 	Task: Moving data from custsetting to custsetting_old 
-	DB: DBTRANS/CustDB
+	DB: DBTRANS.BODB02
 	
 	Revisions:
 		- 20091222@Jamie: separate 3rd custsetting to custsetting3rd_old 
@@ -18,6 +18,7 @@ AS
 		- 20111007@Tom: Include table of P2P Game: P2PGameSetting_Old, P2PGroupComm_Old
 		- 20120227@Lukas: archive data for Live Casino Game
 		- 20131108@Elodie: Splitting bodb02 into CustDB (change DBARCCUST instead of DB05)
+		- 20140618@Elodie: archive data for Keno
 */
     
 SET NOCOUNT ON
@@ -242,6 +243,11 @@ SELECT CustID
 FROM [dbo].[CustSettingGame] WITH(NOLOCK)
 WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
 
+--- copy DBTRANS.BODB02.dbo.CustGameType data to DB05.bodb_Customer.dbo.CustGameType_Old
+INSERT INTO DBARCCUST.bodb_Customer.dbo.CustGameType_Old(CustID, GameTypeID, StakeLevelList, MaxPerGameType, MinBet, MaxBet, IsDisabled)
+SELECT CustID, GameTypeID, StakeLevelList, MaxPerGameType, MinBet, MaxBet, IsDisabled
+FROM [dbo].CustGameType WITH(NOLOCK)
+WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
 
 
 --Exec Acc_ExecRep_01 @AgentID = @AgentID, @Type = 0 
