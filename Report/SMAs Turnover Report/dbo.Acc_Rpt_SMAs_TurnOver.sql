@@ -166,11 +166,11 @@ BEGIN
 	INSERT INTO @DirectCustsAllInfo  
 	SELECT  1,c.groupID,cu.username,ca.custID,ci.username,ci.roleid,d.currency,'' currencyname,
 		isnull(ci.reject,0) issuspend ,isnull(ci.closed,0) isclosed, ci.[enabled] isEnable
-	FROM custaccount ca WITH(NOLOCK)  
-	 INNER JOIN custaccount c WITH(NOLOCK) ON  c.groupid = ca.groupid  AND c.isgroupheadline = 1   
-	 INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = ca.custid   
-	 INNER JOIN custinfo cu WITH(NOLOCK) ON  cu.custid = c.custid   
+	FROM custaccount ca WITH(NOLOCK)    
+	 INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = ca.custid      
 	 INNER JOIN @DirectCusts d ON d.custid = ca.custid    
+	 LEFT JOIN custaccount c WITH(NOLOCK) ON  c.groupid = ca.groupid  AND c.isgroupheadline = 1 
+	 LEFT JOIN custinfo cu WITH(NOLOCK) ON  cu.custid = c.custid
 	 UNION ALL  
 	SELECT  0,NULL,'Not assigned to group' , c.custid ,ci.username,ci.roleid,c.currency,'' currencyname,
 		isnull(ci.reject,0) issuspend  ,isnull(ci.closed,0) isclosed, ci.[enabled] isEnable
