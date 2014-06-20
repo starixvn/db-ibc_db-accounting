@@ -171,6 +171,7 @@ BEGIN
 	 INNER JOIN @DirectCusts d ON d.custid = ca.custid    
 	 LEFT JOIN custaccount c WITH(NOLOCK) ON  c.groupid = ca.groupid  AND c.isgroupheadline = 1 
 	 LEFT JOIN custinfo cu WITH(NOLOCK) ON  cu.custid = c.custid
+	 WHERE c.groupID <> 0
 	 UNION ALL  
 	SELECT  0,NULL,'Not assigned to group' , c.custid ,ci.username,ci.roleid,c.currency,'' currencyname,
 		isnull(ci.reject,0) issuspend  ,isnull(ci.closed,0) isclosed, ci.[enabled] isEnable
