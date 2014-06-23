@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Task_DailySummary_VerifyJob]    Script Date: 06/16/2014 22:20:05 ******/
+/****** Object:  StoredProcedure [dbo].[Task_DailySummary_VerifyJob]    Script Date: 06/22/2014 22:41:57 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -22,23 +22,24 @@ AS
 	-- Local Time  : Monday's afternoon
 	IF @WeekDay = 2
 	BEGIN
-		EXEC dbo.Task_DailySummary_Verify @Todaym4 -- Thursday
-		EXEC dbo.Task_DailySummary_Verify @Todaym3 -- Friday
+		EXEC dbo.Task_DailySummary_Verify @Todaym2 -- Saturday
 	END
 	-- Server Time : Tuesday (3)
 	-- Local Time  : Tuesday's afternoon
 	ELSE IF @WeekDay = 3
 	BEGIN
-		--EXEC dbo.Task_DailySummary_Verify @Todaym4 -- Friday
-		EXEC dbo.Task_DailySummary_Verify @Todaym3 -- Saturday
+		EXEC dbo.Task_DailySummary_Verify @Todaym2 -- Sunday
 	END
 	-- Server Time : Wednesday (4)
 	-- Local Time  : Wednesday's afternoon
 	ELSE IF @WeekDay = 4
 	BEGIN
-		EXEC dbo.Task_DailySummary_Verify @Todaym3 -- Sunday
 		EXEC dbo.Task_DailySummary_Verify @Todaym2 -- Monday
 	END
+	-- Server Time : Thursday (5)
+	-- Local Time  : Friday's morning
+	-- >>> SKIP, TO DO THE BALANCE UP	
+	
 	-- Server Time : Friday (6)
 	-- Local Time  : Friday's afternoon
 	ELSE IF @WeekDay = 6
@@ -47,11 +48,26 @@ AS
 		EXEC dbo.Task_DailySummary_Verify @Todaym2 -- Wednesday
 		--EXEC dbo.Task_DailySummary_Verify @Todaym1 -- Thursday
 	END
+	-- Server Time : Saturday (7)
+	-- Local Time  : Sunday's morning	
+	ELSE IF @WeekDay = 7
+	BEGIN
+		EXEC dbo.Task_DailySummary_Verify @Todaym2 -- Thursday
+	END
+	-- Server Time : Sunday (1)
+	-- Local Time  : Monday's morning
+	ELSE IF @WeekDay = 1
+	BEGIN
+		EXEC dbo.Task_DailySummary_Verify @Todaym2 -- Friday
+	END	
 
 	ELSE
 	BEGIN
 		RETURN -1
 	END
+
+
+
 
 
 
