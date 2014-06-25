@@ -188,3 +188,5 @@ BEGIN
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
+GO
+GRANT VIEW definition ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO vnteam

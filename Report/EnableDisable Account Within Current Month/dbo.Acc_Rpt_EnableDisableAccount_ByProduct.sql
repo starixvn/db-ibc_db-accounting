@@ -327,3 +327,5 @@ BEGIN
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet]
+GO
+GRANT VIEW definition ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO vnteam
