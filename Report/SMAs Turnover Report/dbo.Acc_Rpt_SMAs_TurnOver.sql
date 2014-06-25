@@ -181,14 +181,6 @@ BEGIN
 		 FROM dbo.CustAgent cag WITH(NOLOCK)
 		 WHERE cag.IsInternal = 1 )
 		 AND c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 1
-	UNION
-	SELECT --Admin Consolidated Group
-		c.custid,
-		c.roleid,
-		c.currency
-	FROM dbo.custAccount ca 
-	INNER JOIN dbo.Customer c ON c.custid = ca.custid
-	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid > 4
 	
 	--Get more information for direct accounts
 	INSERT INTO @DirectCustsAllInfo  
