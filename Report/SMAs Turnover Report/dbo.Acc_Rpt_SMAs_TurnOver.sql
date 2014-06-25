@@ -642,7 +642,7 @@ BEGIN
        rs.TurnOver MemberTurnOver,
        rs.TurnOverMYR MemberTurnOverMYR
 	FROM #TmpFinalResult rs
-	WHERE ABS(rs.TurnOver) <> 0
+	WHERE ABS(rs.TurnOver) <> 0 AND ABS(rs.TurnOverAfterPT) <> 0
 	ORDER BY rs.IsAssignedGroup ASC,rs.GroupHeadline ASC,rs.TurnOverMYR DESC
 		
 	--Drop temp tables
