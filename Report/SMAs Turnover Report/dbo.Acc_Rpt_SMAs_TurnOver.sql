@@ -109,13 +109,7 @@ BEGIN
 	INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON cust.custid = cs.custid AND cs.IsInternal = 0	
 	WHERE cust.roleid = 4 AND cust.currency NOT IN (20 ,27 , 28)
 	AND cust.custid NOT IN (SELECT * FROM @DepositDummySuper)
-		 
-	--Get Direct Master Accounts
-	INSERT INTO @DirectCusts (
-		CustID,
-		RoleID,
-		Currency
-		)
+	UNION ALL --Get Direct Master Accounts
 	SELECT 
 		cust.custid,
 		cust.roleid,
@@ -125,14 +119,7 @@ BEGIN
 	INNER JOIN custmaster cm WITH(NOLOCK) ON  cm.custid = cust.custid AND cm.isINTernal = 0 
 	WHERE cust.currency NOT IN (20,27,28) 
 	AND cust.custid NOT IN (SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 3)
-	
-	
-	--Get Direct Agent Accounts
-	INSERT INTO @DirectCusts (
-		CustID,
-		RoleID,
-		Currency
-		)
+	UNION ALL --Get Direct Agent Accounts
 	SELECT 
 		cust.custid,
 		cust.roleid,
@@ -142,14 +129,8 @@ BEGIN
 	INNER JOIN custagent ca WITH(NOLOCK) ON  ca.custid = cust.custid AND ca.isINTernal = 0  
 	WHERE cust.currency NOT IN (20,27,28)
 	AND cust.custid NOT IN (SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 2)
-	
-	--Get Direct Member Accounts
-	INSERT INTO @DirectCusts (
-		CustID,
-		RoleID,
-		Currency
-		)
-	SELECT 
+	UNION ALL
+	SELECT --Get Direct Member Accounts
 		cust.custid,
 		cust.roleid,
 		cust.currency
@@ -161,6 +142,53 @@ BEGIN
 		 FROM dbo.CustAgent cag WITH(NOLOCK)
 		 WHERE cag.IsInternal = 1 )
 		  AND cust.currency NOT IN ( 20 , 27 , 28 )
+	UNION
+	SELECT --Super Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON c.custid = cs.custid AND cs.IsInternal = 0
+	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 4
+	UNION
+	SELECT --Master Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	INNER JOIN dbo.CustMaster cm WITH(NOLOCK) ON c.custid = cm.custid AND cm.IsInternal = 0
+	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 3
+	UNION
+	SELECT --Agent Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	INNER JOIN dbo.CustAgent caa WITH(NOLOCK) ON c.custid = caa.custid AND caa.IsInternal = 0
+	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 2
+	UNION
+	SELECT --Member Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	WHERE c.recommend NOT IN
+		( SELECT cag.custid
+		 FROM dbo.CustAgent cag WITH(NOLOCK)
+		 WHERE cag.IsInternal = 1 )
+		 AND c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 1
+	UNION
+	SELECT --Admin Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid > 4
 	
 	--Get more information for direct accounts
 	INSERT INTO @DirectCustsAllInfo  
