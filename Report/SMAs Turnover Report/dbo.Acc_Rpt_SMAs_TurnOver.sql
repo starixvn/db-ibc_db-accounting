@@ -672,3 +672,5 @@ END
 GO
 
 GRANT EXECUTE ON [dbo].[Acc_Rpt_SMAs_TurnOver] TO [bodbAdminNet]
+GO
+GRANT VIEW definition ON [dbo].[Acc_Rpt_SMAs_TurnOver] TO vnteam
