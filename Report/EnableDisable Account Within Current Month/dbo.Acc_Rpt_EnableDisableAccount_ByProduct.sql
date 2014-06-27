@@ -64,6 +64,9 @@ BEGIN
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
         AND ci.custid NOT IN (SELECT * FROM @DepositDummySuper)
+        AND ci.username NOT LIKE '3rdSuper%'
+        AND ci.username NOT LIKE 'STEST%'
+        AND ci.username NOT LIKE '%ACCSuper%'
 	    
 	--Get data for downline list 
     IF @sportType = 151
