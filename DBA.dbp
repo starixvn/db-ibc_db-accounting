@@ -483,6 +483,7 @@ Begin DataProject = "DBA"
       Script = "20130510_UpdateData_MsgError.sql"
    End
    Begin Folder = "ExeReplication"
+      Script = "Bet_ExecRep_04.sql"
       Script = "ExecRep_03.sql"
       Script = "ExecRep_08.sql"
       Script = "ExecRep_09.sql"
