@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Set_MatchSelCompleted] @Date DATETIME
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues
@@ -76,7 +76,7 @@ BEGIN
 		, leagueid int
 		,homeid int 
 		,awayid int 
-		,matchcode varchar(20)
+		,matchcode nvarchar(50)
 		,kickofftime datetime
 		,finalhomescore int 
 		,finalawayscore int 
@@ -237,8 +237,6 @@ BEGIN
 
 	DROP TABLE #matchList
 END
-
-
 
 
 
