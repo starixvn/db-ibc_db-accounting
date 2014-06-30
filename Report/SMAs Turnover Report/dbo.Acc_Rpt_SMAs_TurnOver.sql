@@ -50,9 +50,9 @@ BEGIN
 	DECLARE @DirectCustsAllInfo TABLE  (
 		IsAssignedGroup BIT,
 		GroupID SMALLINT,
-		GroupHeadline NVARCHAR(30),
+		GroupHeadline NVARCHAR(50),
 		CustID INT,
-		UserName NVARCHAR(30),
+		UserName NVARCHAR(50),
 		RoleID TINYINT,
 		Currency INT,
 		CurrencyName NVARCHAR(50),
@@ -64,9 +64,9 @@ BEGIN
 	CREATE TABLE #DirectCustFilterResult(
 		IsAssignedGroup BIT,
 		GroupID SMALLINT,
-		GroupHeadline NVARCHAR(30),
+		GroupHeadline NVARCHAR(50),
 		CustID INT,
-		UserName NVARCHAR(30),
+		UserName NVARCHAR(50),
 		RoleID TINYINT,
 		Currency INT,
 		CurrencyName NVARCHAR(50),
@@ -78,9 +78,9 @@ BEGIN
 	CREATE TABLE #TmpFinalResult (
 		IsAssignedGroup BIT,
 		GroupID SMALLINT,
-		GroupHeadline NVARCHAR(30),
+		GroupHeadline NVARCHAR(50),
 		CustID INT,
-		UserName NVARCHAR(30),
+		UserName NVARCHAR(50),
 		RoleID TINYINT,
 		Currency INT,
 		CurrencyName NVARCHAR(50),
@@ -109,13 +109,7 @@ BEGIN
 	INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON cust.custid = cs.custid AND cs.IsInternal = 0	
 	WHERE cust.roleid = 4 AND cust.currency NOT IN (20 ,27 , 28)
 	AND cust.custid NOT IN (SELECT * FROM @DepositDummySuper)
-		 
-	--Get Direct Master Accounts
-	INSERT INTO @DirectCusts (
-		CustID,
-		RoleID,
-		Currency
-		)
+	UNION ALL --Get Direct Master Accounts
 	SELECT 
 		cust.custid,
 		cust.roleid,
@@ -125,14 +119,7 @@ BEGIN
 	INNER JOIN custmaster cm WITH(NOLOCK) ON  cm.custid = cust.custid AND cm.isINTernal = 0 
 	WHERE cust.currency NOT IN (20,27,28) 
 	AND cust.custid NOT IN (SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 3)
-	
-	
-	--Get Direct Agent Accounts
-	INSERT INTO @DirectCusts (
-		CustID,
-		RoleID,
-		Currency
-		)
+	UNION ALL --Get Direct Agent Accounts
 	SELECT 
 		cust.custid,
 		cust.roleid,
@@ -142,14 +129,8 @@ BEGIN
 	INNER JOIN custagent ca WITH(NOLOCK) ON  ca.custid = cust.custid AND ca.isINTernal = 0  
 	WHERE cust.currency NOT IN (20,27,28)
 	AND cust.custid NOT IN (SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 2)
-	
-	--Get Direct Member Accounts
-	INSERT INTO @DirectCusts (
-		CustID,
-		RoleID,
-		Currency
-		)
-	SELECT 
+	UNION ALL
+	SELECT --Get Direct Member Accounts
 		cust.custid,
 		cust.roleid,
 		cust.currency
@@ -161,6 +142,45 @@ BEGIN
 		 FROM dbo.CustAgent cag WITH(NOLOCK)
 		 WHERE cag.IsInternal = 1 )
 		  AND cust.currency NOT IN ( 20 , 27 , 28 )
+	UNION
+	SELECT --Super Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON c.custid = cs.custid AND cs.IsInternal = 0
+	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 4
+	UNION
+	SELECT --Master Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	INNER JOIN dbo.CustMaster cm WITH(NOLOCK) ON c.custid = cm.custid AND cm.IsInternal = 0
+	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 3
+	UNION
+	SELECT --Agent Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	INNER JOIN dbo.CustAgent caa WITH(NOLOCK) ON c.custid = caa.custid AND caa.IsInternal = 0
+	WHERE c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 2
+	UNION
+	SELECT --Member Consolidated Group
+		c.custid,
+		c.roleid,
+		c.currency
+	FROM dbo.custAccount ca 
+	INNER JOIN dbo.Customer c ON c.custid = ca.custid
+	WHERE c.recommend NOT IN
+		( SELECT cag.custid
+		 FROM dbo.CustAgent cag WITH(NOLOCK)
+		 WHERE cag.IsInternal = 1 )
+		 AND c.currency NOT IN ( 20 , 27 , 28 ) AND c.roleid = 1
 	
 	--Get more information for direct accounts
 	INSERT INTO @DirectCustsAllInfo  
@@ -171,6 +191,7 @@ BEGIN
 	 INNER JOIN @DirectCusts d ON d.custid = ca.custid    
 	 LEFT JOIN custaccount c WITH(NOLOCK) ON  c.groupid = ca.groupid  AND c.isgroupheadline = 1 
 	 LEFT JOIN custinfo cu WITH(NOLOCK) ON  cu.custid = c.custid
+	 WHERE c.groupID <> 0
 	 UNION ALL  
 	SELECT  0,NULL,'Not assigned to group' , c.custid ,ci.username,ci.roleid,c.currency,'' currencyname,
 		isnull(ci.reject,0) issuspend  ,isnull(ci.closed,0) isclosed, ci.[enabled] isEnable
@@ -641,7 +662,7 @@ BEGIN
        rs.TurnOver MemberTurnOver,
        rs.TurnOverMYR MemberTurnOverMYR
 	FROM #TmpFinalResult rs
-	WHERE ABS(rs.TurnOver) <> 0
+	WHERE ABS(rs.TurnOver) <> 0 AND ABS(rs.TurnOverAfterPT) <> 0
 	ORDER BY rs.IsAssignedGroup ASC,rs.GroupHeadline ASC,rs.TurnOverMYR DESC
 		
 	--Drop temp tables
@@ -651,3 +672,5 @@ END
 GO
 
 GRANT EXECUTE ON [dbo].[Acc_Rpt_SMAs_TurnOver] TO [bodbAdminNet]
+GO
+GRANT VIEW definition ON [dbo].[Acc_Rpt_SMAs_TurnOver] TO vnteam

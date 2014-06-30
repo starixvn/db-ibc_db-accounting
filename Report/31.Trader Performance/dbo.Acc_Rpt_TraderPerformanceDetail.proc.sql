@@ -105,7 +105,7 @@ BEGIN
   else 0 end bettype ,   
   m.isNeutral, --phuong.nguyen  
   case   
-	when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No. of Corners%' THEN 6   
+	when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No.of Corners%' THEN 6   
 	when t.teamname LIKE '%No.of Corners%' then 1  
 	when t.teamname LIKE '%Total Bookings' then 3   
 	when t.teamname LIKE '%Booking' then 5     
@@ -137,7 +137,7 @@ BEGIN
   m.hthomescore,m.htawayscore,m.finalhomescore,m.finalawayscore,0,  
   m.isNeutral, --phuong.nguyen  
   case   
-	when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No. of Corners%' THEN 6   
+	when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No.of Corners%' THEN 6   
 	when t.teamname LIKE '%No.of Corners%' then 1  
 	when t.teamname LIKE '%Total Bookings' then 3   
 	when t.teamname LIKE '%Booking' then 5     

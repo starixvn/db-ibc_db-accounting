@@ -88,7 +88,7 @@ BEGIN
      when (a.bettype = 4 and a.operatortype = 2) then 12            
    else 0  end,  
   case
-   when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No. of Corners%' THEN 6   
+   when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No.of Corners%' THEN 6   
    when t.teamname LIKE '%No.of Corners%' then 1  
    when t.teamname LIKE '%Total Bookings' then 3   
    when t.teamname LIKE '%Booking' then 5     
@@ -116,7 +116,7 @@ BEGIN
  UNION ALL-- include orphan matches  
  select NULL, NULL,  m.matchID,0,  
   case   
-   when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No. of Corners%' THEN 6   
+   when leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No.of Corners%' THEN 6   
    when t.teamname LIKE '%No.of Corners%' then 1  
    when t.teamname LIKE '%Total Bookings' then 3   
    when t.teamname LIKE '%Booking' then 5     

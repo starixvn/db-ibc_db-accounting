@@ -79,15 +79,7 @@ BEGIN
 		INSERT INTO #AvailableMember 
 		SELECT smw.custid,'SETTLED',smw.BetCount FROM dbo.sum_winloss smw WITH(NOLOCK)
 		WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
-		AND (
-			smw.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
-			OR smw.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
-			OR smw.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
-			OR smw.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
-			OR smw.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
-			OR smw.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
-			OR smw.bettype BETWEEN 73 AND (CASE WHEN @sportType=252 THEN 73 ELSE 0 END)
-		) AND smw.srecommend = @CustID AND smw.roleid = 1
+		AND smw.sporttype = @SportType AND smw.srecommend = @CustID AND smw.roleid = 1
 	END
 	
 	--Get data from sum_winlost_old
@@ -101,16 +93,7 @@ BEGIN
 		INSERT INTO #AvailableMember
 		SELECT smwo.custid,'SETTLED',smwo.BetCount FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
 		WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
-		AND (
-			smwo.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
-			OR smwo.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
-			OR smwo.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
-			OR smwo.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
-			OR smwo.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
-			OR smwo.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
-			OR smwo.bettype BETWEEN 73 AND (CASE WHEN @sportType=252 THEN 73 ELSE 0 END)
-		)	
-		AND smwo.srecommend = @CustID AND smwo.roleid = 1
+		AND smwo.sporttype = @SportType AND smwo.srecommend = @CustID AND smwo.roleid = 1
 	END
 	    
 	--Get data for downline list 
@@ -205,3 +188,5 @@ BEGIN
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
+GO
+GRANT VIEW definition ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO vnteam

@@ -8,7 +8,7 @@ AS
     DB: DBAGE/bodb02  
    
     Revisions:  
-		
+		20140627@Dominic: Exclude special super with username  LIKE '3rdSuper%','STEST%','%ACCSuper%'
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + {251:Casino, 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
@@ -64,6 +64,9 @@ BEGIN
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
                             FROM   dbo.strSplit (@ListCurrency, ','))) AND ci.currency NOT IN (20,27,28)
         AND ci.custid NOT IN (SELECT * FROM @DepositDummySuper)
+        AND ci.username NOT LIKE '3rdSuper%'
+        AND ci.username NOT LIKE 'STEST%'
+        AND ci.username NOT LIKE '%ACCSuper%'
 	    
 	--Get data for downline list 
     IF @sportType = 151
@@ -327,3 +330,5 @@ BEGIN
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet]
+GO
+GRANT VIEW definition ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO vnteam
