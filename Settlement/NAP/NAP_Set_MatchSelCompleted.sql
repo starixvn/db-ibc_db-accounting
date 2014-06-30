@@ -38,7 +38,7 @@ BEGIN
 		,IsCalRefund BIT
 		,homeid INT
 		,awayid INT
-		,matchcode NVARCHAR(50)
+		,matchcode NVARCHAR(50)  
 		,kickofftime DATETIME
 		,finalhomescore INT
 		,finalawayscore INT
