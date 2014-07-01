@@ -14,6 +14,7 @@ AS
 		- 20130507@Thien: change to use ExecRep [Bet_ExecRep_04], old SP is DBA_UpdateExRates
  		- 20131108@Elodie: Splitting bodb02 into CustDB (call custinfo, exchange by link database)
  		- 20140124@Viet: fix splitting issue
+		- 20140701@Jamie: Get virtualmultiplier of bettrans 
  		
  	Param's Explanation: 
  		@Winlostdate: the date that new rates are updated		
@@ -25,7 +26,10 @@ BEGIN
 	IF @Target = 'DBTRANS' AND @@SERVERNAME <> 'DBTRANS' RETURN
 	IF @Target = 'REPLICATED' AND @@SERVERNAME = 'DBTRANS' RETURN
 
+	PRINT 'START: Reminder of UPDATE Exchange Rate Oanda: EXEC CustDB.dbo.DBA_ExchangeDailyOandaUpd_Actualrate @ExchangeDate=''xxx'''
+
 	DECLARE @Cnt INT
+	DECLARE @virtualmultiplier SMALLMONEY
 
 	IF @@SERVERNAME = 'DBTRANS'
 	BEGIN
@@ -35,12 +39,15 @@ BEGIN
 		WHILE 1 = 1
 		BEGIN
 			UPDATE TOP (5000) b
-			SET actualrate = e.actualrate
-				,virtualrate = e.actualrate * c.virtualmultiplier
+			SET @virtualmultiplier = b.virtualrate/b.actualrate 
+				,actualrate = e.actualrate
+				,virtualrate = e.actualrate * @virtualmultiplier
+				--,virtualrate = e.actualrate * c.virtualmultiplier
 			FROM dbo.bettrans b WITH(ROWLOCK, UPDLOCK)
-				,CustDB.dbo.custinfo c WITH (NOLOCK)
+				--,CustDB.dbo.custinfo c WITH (NOLOCK)
 				,CustDB.dbo.exchange e WITH (NOLOCK)
-			WHERE b.custid = c.custid AND b.currency = e.exchangeid AND b.actualrate <> e.actualrate AND b.winlostdate >= @Winlostdate AND (b.bettype <= 30 OR b.bettype BETWEEN 50 AND 19998) AND b.actualrate <> b.virtualrate
+			WHERE --b.custid = c.custid AND 
+				b.currency = e.exchangeid AND b.actualrate <> e.actualrate AND b.winlostdate >= @Winlostdate AND (b.bettype <= 30 OR b.bettype BETWEEN 50 AND 19998) AND b.actualrate <> b.virtualrate
 
 			SELECT @Cnt = @@ROWCOUNT
 
@@ -152,12 +159,15 @@ BEGIN
 		WHILE 1 = 1
 		BEGIN
 			UPDATE TOP (5000) b
-			SET actualrate = e.actualrate
-				,virtualrate = e.actualrate * c.virtualmultiplier
+			SET @virtualmultiplier = b.virtualrate/b.actualrate 
+				,actualrate = e.actualrate
+				,virtualrate = e.actualrate * @virtualmultiplier
+				--,virtualrate = e.actualrate * c.virtualmultiplier
 			FROM dbo.bettrans b WITH(ROWLOCK, UPDLOCK)
-				,dbo.custinfo c WITH (NOLOCK)
+				--,dbo.custinfo c WITH (NOLOCK)
 				,dbo.exchange e WITH (NOLOCK)
-			WHERE b.custid = c.custid AND b.currency = e.exchangeid AND b.actualrate <> e.actualrate AND b.winlostdate >= @Winlostdate AND (b.bettype <= 30 OR b.bettype BETWEEN 50 AND 19998) AND b.actualrate <> b.virtualrate
+			WHERE --b.custid = c.custid AND 
+					b.currency = e.exchangeid AND b.actualrate <> e.actualrate AND b.winlostdate >= @Winlostdate AND (b.bettype <= 30 OR b.bettype BETWEEN 50 AND 19998) AND b.actualrate <> b.virtualrate
 
 			SELECT @Cnt = @@ROWCOUNT
 
@@ -255,6 +265,9 @@ BEGIN
 			WAITFOR DELAY '00:00:01' -- Delay 1 Seconds
 		END
 	END
+	
+	PRINT 'END: Reminder of UPDATE Exchange Rate Oanda: EXEC CustDB.dbo.DBA_ExchangeDailyOandaUpd_Actualrate @ExchangeDate=''xxx'''
+
 END
 
 
