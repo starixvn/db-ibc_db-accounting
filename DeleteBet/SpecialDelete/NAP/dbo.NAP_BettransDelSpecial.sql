@@ -1,8 +1,8 @@
-﻿ALTER PROCEDURE [NAP_BettransDelSpecial]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId INT,
 	@FromTransId BIGINT, 
 	@ToTransId BIGINT, 
-	@BetTypes VARCHAR(128) = '',
+	@BetTypes VARCHAR(1000) = '',
 	@BetTeam1378 NVARCHAR(10), 
 	@BetTeam515 NVARCHAR(10),
 	@BetTeam430 VARCHAR(120) = '',
@@ -23,7 +23,7 @@
     
 	@TransIdsCredit VARCHAR(MAX) = '', -- for custom delete (Credit bets)
 	@TransIdsDeposit VARCHAR(MAX) = '', -- for custom delete (Deposit bets)
-    @TransIdsBetDaq VARCHAR(MAX) = '',-- for custom delete BetDaq
+    @TransIdsBetDaq VARCHAR(MAX) = '',-- for custom chadelete BetDaq
     @TransIds12EU VARCHAR(MAX) = '',-- for custom delete 12EU
     @TransIdsMHC VARCHAR(MAX) = '',-- for custom delete master MHC	   
 	@TransIdsFB VARCHAR(MAX) = '',-- for custom delete Foobet	   
@@ -48,6 +48,7 @@ AS
 		- 20140121@Elodie: Apply LAS system for special delete function [Redmine:#10701]
 		- 20140411@Kathy: - Separate tickets of Bet Fair, OneExchange 3rd parties [Redmine:#10128]
 						  - Add 2 new bettypes 1H Total Goal and 1H First Goal/ Last Goal (126, 127) [Redmine:#14749]
+		- 20140701@Kathy: Apply BetRadar - change @BetTypes to varchar(1000) [Redmine:#18219]
 
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -462,7 +463,7 @@ BEGIN
 		and ci.roleid = 1 
 
 	-- get OneExchange tickets
-	INSERT INTO @BetFairCust (custid)
+	INSERT INTO @OneExchangeCust (custid)
 		SELECT bd.custid
 		FROM custDB.dbo.custInfo ci with(NOLOCK)
 		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
@@ -885,9 +886,6 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
