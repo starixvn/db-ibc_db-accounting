@@ -10,7 +10,7 @@ AS
     DB: DBAGE/bodb02  
    
     Revisions:  
-		
+		20140701@Dominic: Get running Keno bets from table Translog
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
