@@ -1,6 +1,8 @@
 CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
 	@ListCurrency	NVARCHAR(150)	= 'all', 
-	@SportType		INT
+	@SportType		INT ,
+	@ShowEnabled	BIT				=	1,
+	@ShowDisabled	BIT				=	1
 AS  
 /*  Created: Dominic 
 	Date: 2014-06-02  
@@ -9,6 +11,7 @@ AS
    
     Revisions:  
 		20140627@Dominic: Exclude special super with username  LIKE '3rdSuper%','STEST%','%ACCSuper%'
+		20140707@Dominic: Add Param @ShowEnabled/@ShowDisabled #18655
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + {251:Casino, 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
@@ -67,6 +70,23 @@ BEGIN
         AND ci.username NOT LIKE '3rdSuper%'
         AND ci.username NOT LIKE 'STEST%'
         AND ci.username NOT LIKE '%ACCSuper%'
+	    
+	IF @ShowEnabled = 1 AND @ShowDisabled = 0
+	BEGIN
+		DELETE FROM #FiltedCreditSuper
+		WHERE  SuperStatus = 1
+	END
+	
+	IF @ShowEnabled = 0 AND @ShowDisabled = 1
+	BEGIN
+		DELETE FROM #FiltedCreditSuper
+		WHERE  SuperStatus = 0
+	END
+	
+	IF @ShowEnabled = 0 AND @ShowDisabled = 0
+	BEGIN
+		DELETE FROM #FiltedCreditSuper
+	END
 	    
 	--Get data for downline list 
     IF @sportType = 151
