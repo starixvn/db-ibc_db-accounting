@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverUpd]
+﻿
+ALTER PROCEDURE [dbo].[Acc_SMATurnoverUpd]
 	@CustID INT,
 	@MatchID INT,
 	@MaxTurnover MONEY,
@@ -14,6 +15,7 @@ AS
 	DB: DBAGE/bodb02
 
 	Revisions:
+		-- 20140630@Lukas: add 1 more specific level for notification - 95% [Redmine:#18384]
 
 	Parameter's explaination: 
 	
@@ -36,8 +38,15 @@ BEGIN
 		RETURN
 	END
 
-	UPDATE DownlineTurnover_Setting WITH (ROWLOCK,UPDLOCK)
-	SET MaxTurnover = @MaxTurnover
+	UPDATE DownlineTurnover_Setting WITH(ROWLOCK,UPDLOCK)
+	SET MaxTurnover = @MaxTurnover,
+		IsNotified = CASE	WHEN @MaxTurnover <> 0 AND @MaxTurnover > MaxTurnover THEN   --- reset isNotified only in case of increasing maxturnover
+								CASE	WHEN (totalTurnover/@MaxTurnover)*100 < 80 THEN 0
+										WHEN (totalTurnover/@MaxTurnover)*100 < 95 THEN 80
+										ELSE IsNotified
+								END 
+							ELSE IsNotified 
+					END
 	WHERE CustID = @CustID AND matchid = @MatchID
 	
 	DECLARE @LogData NVARCHAR(4000)
@@ -50,14 +59,16 @@ BEGIN
 	SET @endRun = GETDATE()
 	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)
 	
+	
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-			@Userid = @UserID,
-			@Custid = @CustID,
-			@ActionID = 637,
-			@TrackingValue = @LogData,
-			@Duration = @duration				
+		@Userid = @UserID,
+		@Custid = @CustID,
+		@ActionID = 637,
+		@TrackingValue = @LogData,
+		@Duration = @duration				
 						
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_SMATurnoverUpd] TO [bodbAdminNet]
