@@ -1,10 +1,6 @@
 # Microsoft Developer Studio Project File - Database Project
 Begin DataProject = "Account"
    MSDTVersion = "80"
-   SccProjectName = "SAK"
-   SccLocalPath = "SAK"
-   SccAuxPath = "SAK"
-   SccProvider = "SAK"
    Begin Folder = "AutoFollowBet"
       Script = "Acc_AutoFollowBetDelCustomer.sql"
       Script = "Acc_AutoFollowBetInsBACustomer.sql"
