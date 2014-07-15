@@ -10,6 +10,7 @@ DB: DBTXN/bodb02
 
 Revisions:   
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Get credit in CustInfo from CustDB by link database)						   
+	- 20140515@Kathy: Calculate balance from translog (for running tickets) and bettrans
 	
 Param's Explanation: Special bet delete option
     @transids: All ticket of customers who need to be check negative bet credit
@@ -42,10 +43,12 @@ BEGIN
 					
 	-- calculate a balance and outstanding of customer
 	INSERT INTO @BalanceCust (custid, username, Balance)
-	SELECT custid, username, sum(winlost - actual_stake + playercomm)
-	from bettrans with (nolock) 			
-	where custid in (SELECT custid FROM #BetDelete)
-	group BY custid, Username
+	SELECT b.custid, b.username, sum(b.winlost - b.actual_stake + b.playercomm) + SUM(0-t.actual_stake + t.playerdiscount)
+	from bettrans b with (nolock) 	
+	LEFT JOIN translog t WITH(NOLOCK) ON t.custid = b.custid
+	where b.custid in (SELECT custid FROM #BetDelete)
+	AND t.statusID = 0
+	group BY b.custid, b.Username
 	
 	CREATE TABLE #WonCust (
 			custid		 INT,			
@@ -77,6 +80,7 @@ BEGIN
 	DROP TABLE #WonCust
 	DROP TABLE #BetDelete		
 END
+
 
 GO
 

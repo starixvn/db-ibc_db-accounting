@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_Parlay] (
+ALTER PROCEDURE [NAP_Admin_Settlement_Parlay] (
 	@matchids VARCHAR(2000)
 	,@creator INT
 	,@action VARCHAR(20) = 'CAL'
@@ -13,7 +13,8 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:
-		
+		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
+			
 	Param's Explanation:
 
 		
@@ -107,7 +108,7 @@ BEGIN
 			SELECT 1
 			FROM @match
 			WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
-			)
+			) AND @action <> 'UNDO'
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
@@ -123,7 +124,7 @@ BEGIN
 	DECLARE @LASCommand NVARCHAR(1000)
 		,@createdDate DATETIME
 
-	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + CONVERT(NVARCHAR(10), @matchids) + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) + ', @action = ' + CONVERT(NVARCHAR(10), @action)
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
 		,@createdDate = GETDATE()
 
 	BEGIN TRY
@@ -195,7 +196,7 @@ BEGIN
 		WHERE rn = @rn
 
 		IF (@SportType IN (5, 6, 9, 30)) AND @action = 'CAL' AND @betstatus <> 'Refund' -- Tennis/VolleyBall/Badminton/Squash: get TotalGamesPlayed
-			EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
+												EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
 				,@Total = @TennisTotal OUTPUT
 				,@TotalHome = @T_Home OUTPUT
 				,@TotalAway = @T_Away OUTPUT
@@ -213,7 +214,7 @@ BEGIN
 		--BEGIN TRANSACTION
 
 		--IF @action IN ('REFUND-FT', 'REFUND-HT') -- if REFUND-FT or REFUND-HT called, do 'CAL' first, before do 'REFUND-FT'
-		--	EXEC dbo.NAP_Admin_Calculate_9m @matchid, @finalhomescore, @finalawayscore, @hthomescore, @htawayscore, @matchdate, 'CAL', @TennisTotal
+		--				EXEC dbo.NAP_Admin_Calculate_9m @matchid, @finalhomescore, @finalawayscore, @hthomescore, @htawayscore, @matchdate, 'CAL', @TennisTotal
 			
 		--COMMIT TRANSACTION
 
@@ -223,7 +224,7 @@ BEGIN
 
 		--COMMIT TRANSACTION
 		
-		EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
 				,@mode = 'ALL'
 				,@action = @action
 				,@fth = @finalhomescore
@@ -245,7 +246,7 @@ BEGIN
 
 	--EXEC dbo.NAP_Admin_Calculate_29_Precal @matchids
 
-	EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
+				EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
 			,@mode = 'PRECAL-29'
 
 	SET @PreCal = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
@@ -330,7 +331,7 @@ BEGIN
 		SET @strXML_modds = ''
 		SET @9Start = CURRENT_TIMESTAMP
 
-		EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate
+								EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate
 
 		SET @9Time = @9Time + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
 		SET @2Call = @2Call + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
@@ -343,7 +344,7 @@ BEGIN
 		--EXEC dbo.NAP_Admin_Calculate_29 @matchids = @subMatchIDs
 		--	,@matchdate = @matchdate
 		
-		EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
+								EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
 			,@mode = 'CAL-29'
 			,@matchdate = @matchdate
 
@@ -358,7 +359,7 @@ BEGIN
 	--- insert sub-ticket into bettrans
 	SET @subStart = CURRENT_TIMESTAMP
 
-	EXEC dbo.NAP_Admin_Calculate_29_Summary
+				EXEC dbo.NAP_Admin_Calculate_29_Summary
 
 	SET @Summary = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
 	---------------------------------------------------------------
@@ -375,18 +376,18 @@ BEGIN
 		WHERE rn = @rn
 
 		IF @action = 'CAL'
-			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'M'
 		ELSE IF @action = 'REFUND'
-			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'R'
 		ELSE IF @action IN ('REFUND-FT', 'REFUND-HT')
-			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'F'
 
 		---------------------------------------------------------------
 		-- update match coz m88 project using DB02.dbo.match.tstamp to know match do parlay settle (vivi@2009-8-27)	
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Parlay'
+								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Parlay'
 			,@Matchid = @matchid
 			,@creator = @creator
 
@@ -526,13 +527,13 @@ BEGIN
 		FROM @match
 		WHERE rn = @rn
 
-		SELECT @LogData = 'Calculate Multiple (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
+		SELECT @LogData = 'NAP: Calculate Multiple (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
 
 		EXEC dbo.WriteLog_UserLog @creator
 			,@LogData
 
 		--Write Log Settle
-		SELECT @Remark = 'Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
+		SELECT @Remark = 'NAP: Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
 
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @creator
@@ -567,6 +568,7 @@ BEGIN
 		SET @rn = @rn + 1
 	END
 END
+
 
 GO
 

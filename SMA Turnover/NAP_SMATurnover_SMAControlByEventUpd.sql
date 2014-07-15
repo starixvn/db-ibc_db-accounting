@@ -29,10 +29,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	----Check permission 
-	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureSMATOByMatch]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	--IF @ErrCode <> 0
-	--	RETURN
+	--Check permission 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ControlTOBySMAEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
 	
 	IF @SMAID <= 0
 	BEGIN
@@ -40,7 +40,7 @@ BEGIN
 		RETURN
 	END		
 
-	IF @Value < 0
+	IF @Value < 0 OR @Value > 999
 	BEGIN
 		SELECT @ErrCode = 102, @ErrMsg = 'Invalid value.'
 		RETURN

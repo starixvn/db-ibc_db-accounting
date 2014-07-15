@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus_xtest]	
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]	
 	@CustID int,
 	@AdminID int = 0,
 	@username  VARCHAR(50) = ''
@@ -127,12 +127,12 @@ SELECT	ISNULL(reject,0) AS Suspend,
 		ISNULL(DisableHRFixedOdds,0) AS DisableHRFixedOdds,
 
 		ISNULL(ci.HideKeno,0) as HideKeno, 
-		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509) then cg.IsDisabled else 1 end) as DisableKeno	
+		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513) then cg.IsDisabled else 1 end) as DisableKeno	
 
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
-	LEFT JOIN bodb02.dbo.GameType g WITH (NOLOCK) on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509)		
+	LEFT JOIN bodb02.dbo.GameType g WITH (NOLOCK) on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
 WHERE ci.CustID = @CustID
 group by
 		ci.reject,
@@ -159,6 +159,7 @@ group by
 		ci.DoubleCommLosing, 
 		ci.DisableHRFixedOdds,
 		ci.HideKeno
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]

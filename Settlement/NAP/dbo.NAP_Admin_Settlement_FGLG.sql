@@ -16,7 +16,7 @@ AS
 	Original: Admin_Settlement_FGLG
 
 	Revisions:
-		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140426@Kathy: Add @action param (1H FGLG (bettype 127) ) [Redmine:#14449]
 	Param's Explanation:
 		+ @betstatus: FGLG status
 		+ @IsLoopTempTable: 1 : is nested
@@ -102,43 +102,37 @@ BEGIN
 	DECLARE @FGLG1 VARCHAR(10)
 		,@FGLG2 VARCHAR(10)
 		,@FLString VARCHAR(10)
-		,@Target VARCHAR(10)
 		,@HT_FGLG1 VARCHAR(10)
 		,@HT_FGLG2 VARCHAR(10)
 		,@HT_FLString VARCHAR(10)
 
 	SELECT @FGLG1 = ''
 		,@FGLG2 = ''
-		,@Target = ';FL:'
 		,@HT_FGLG1 = ''
 		,@HT_FGLG2 = ''
 
-	IF charindex(';FL:', @betstatus) > 0
-	BEGIN
-		SELECT @FLString = substring(@betstatus, charindex(';FL:', @betstatus) + 4, 3)
-
-		SELECT @FGLG1 = CASE @FLString
-				WHEN '0-0' THEN '0:0'
-				ELSE left(@FLString, 1) + ':1'
-				END
-			,@FGLG2 = CASE @FLString
-				WHEN '0-0' THEN ''
-				ELSE right(@FLString, 1) + ':2'
-				END
-	END
-
-	IF charindex('1FL:', @betstatus) > 0
-	BEGIN
-		SELECT @HT_FLString = substring(@betstatus, charindex('1FL:', @betstatus) + 4, 3)
-
-		SELECT @HT_FGLG1 = CASE @HT_FLString
-				WHEN '0-0' THEN '0:0'
-				ELSE left(@HT_FLString, 1) + ':1'
-				END
-			,@HT_FGLG2 = CASE @HT_FLString
-				WHEN '0-0' THEN ''
-				ELSE right(@HT_FLString, 1) + ':2'
-				END
+	IF (charindex('FL:',@betstatus)>0 and charindex('1FL:', @betstatus) = 0) 
+		or charindex(';FL:',@betstatus) > 0 
+	begin
+		select @FLString = substring(@betstatus, charindex(';FL:', @betstatus) + 4, 3)
+		select @FGLG1 = case @FLString when '0-0' then '0:0' 
+									   else left(@FLString,1) + ':1'
+						end,			
+			   @FGLG2 = case @FLString when '0-0' then ''
+									   else right(@FLString,1) + ':2'
+						end
+	end
+	
+	if charindex('1FL:', @betstatus) > 0
+	begin
+		select @HT_FLString = substring(@betstatus, charindex('1FL:', @betstatus) + 4, 3)
+			
+		select @HT_FGLG1 = case @HT_FLString when '0-0' then '0:0'
+											 else left(@HT_FLString,1) + ':1'
+						   end,			
+			   @HT_FGLG2 = case @HT_FLString when '0-0' then ''
+											 else right(@HT_FLString,1) + ':2'
+						   end
 	END
 
 	-------------------------
@@ -208,7 +202,8 @@ BEGIN
 	BEGIN
 		-- cal HT
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-			,@mode = 'CAL-HTFGLG'
+			,@action = 'CAL-FGLG'
+			,@mode = 'CAL-HT'
 			,@betcount_127 = 127
 			,@HT_FGLG1 = @HT_FGLG1
 			,@goaldiff = @goaldiff
@@ -218,7 +213,8 @@ BEGIN
 		IF @IncludeLG = 0
 		BEGIN
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-				,@mode = 'CAL-FTFGLG'
+				,@action = 'CAL-FGLG'
+				,@mode = 'CAL-FT'
 				,@betcount_14 = 14
 				,@FGLG1 = @FGLG1
 				,@goaldiff = @goaldiff
@@ -228,7 +224,7 @@ BEGIN
 			EXEC dbo.NAP_Admin_Settlement_Refund_FGLG --refund  all LG
 				@matchid = @matchid
 				,@adminid = @creator
-				,@action = 'CAL'
+				,@action = 'REFUND'
 				,@LGOnly = 1
 				,@IP = @IP
 				,@IsLoopTempTable = 1 ---Not check concurrency by TempVariableNumber table
@@ -239,7 +235,8 @@ BEGIN
 	BEGIN
 		-- cal FT
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-			,@mode = 'CAL-FTFGLG'
+			,@action = 'CAL-FGLG'
+			,@mode = 'CAL-FT'
 			,@betcount_14 = 14
 			,@FGLG1 = @FGLG1
 			,@goaldiff = @goaldiff
@@ -251,7 +248,7 @@ BEGIN
 			EXEC dbo.NAP_Admin_Settlement_Refund_FGLG --refund FT LG
 				@matchid = @matchid
 				,@adminid = @creator
-				,@action = @action
+				,@action = 'REFUND-FT'
 				,@LGOnly = 1
 				,@IP = @IP
 				,@IsLoopTempTable = 1 ---Not check concurrency by TempVariableNumber table
@@ -368,12 +365,12 @@ BEGIN
 
 	DECLARE @LogData VARCHAR(200)
 
-	SELECT @LogData = 'Calculate FGLG for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' score:' + CAST(ISNULL(@finalhomescore, 0) AS NVARCHAR(10)) + '-' + CAST(ISNULL(@finalawayscore, 0) AS NVARCHAR(10)) + ' HT:' + CAST(@hthomescore AS NVARCHAR(10)) + '-' + CAST(@htawayscore AS NVARCHAR(10)) + ' GoalRecord:' + ISNULL(@goalrecord, '') + ') Remark(BetStatus=' + @betstatus + ', IncludeLG=' + convert(CHAR(1), @IncludeLG) + ', Action=' + @action + ')'
+	SELECT @LogData = 'NAP: Calculate FGLG for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' score:' + CAST(ISNULL(@finalhomescore, 0) AS NVARCHAR(10)) + '-' + CAST(ISNULL(@finalawayscore, 0) AS NVARCHAR(10)) + ' HT:' + CAST(@hthomescore AS NVARCHAR(10)) + '-' + CAST(@htawayscore AS NVARCHAR(10)) + ' GoalRecord:' + ISNULL(@goalrecord, '') + ') Remark(BetStatus=' + @betstatus + ', IncludeLG=' + convert(CHAR(1), @IncludeLG) + ', Action=' + @action + ')'
 
 	EXEC dbo.WriteLog_UserLog @creator
 		,@LogData
 
-	SELECT @Remark = 'IncludeLG=' + convert(CHAR(1), @IncludeLG) + 'Action=' + @action
+	SELECT @Remark = 'NAP: IncludeLG=' + convert(CHAR(1), @IncludeLG) + 'Action=' + @action
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @creator
@@ -454,6 +451,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 

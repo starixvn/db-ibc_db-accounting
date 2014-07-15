@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_BetDaq_Move]
+ALTER PROCEDURE [NAP_Admin_Settlement_BetDaq_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
 	@AdminId		INT,
@@ -14,7 +14,7 @@ AS
 	DB: DBTXN/BODB02 
 
 	Revisions: 
-			
+			-20140512@Kathy: Add more log to distinguish between NAP and old settlement system
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 
@@ -106,8 +106,8 @@ BEGIN
 	
 	
 	--Write Log Settle
-	SELECT @Remark = 'To match ' + convert(varchar(10),@NewMatchid) +', MatchCode:' + @newMatchcode,  
-	       @Remark1 = 'From match ' + convert(varchar(10),@Matchid) + ', MatchCode:' + @matchcode 
+	SELECT @Remark = 'NAP: To match ' + convert(varchar(10),@NewMatchid) +', MatchCode:' + @newMatchcode,  
+	       @Remark1 = 'NAP: From match ' + convert(varchar(10),@Matchid) + ', MatchCode:' + @matchcode 
 	       
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle
@@ -167,8 +167,6 @@ BEGIN
 	END CATCH
 
 END
-
-
 
 GO
 

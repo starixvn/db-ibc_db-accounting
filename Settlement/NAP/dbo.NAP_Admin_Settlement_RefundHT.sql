@@ -421,7 +421,7 @@ BEGIN
 	BEGIN
 		DECLARE @LogData NVARCHAR(300)
 
-		SELECT @LogData = 'Calculate (Refund HT) for matchid:' + CAST(@matchid AS NVARCHAR(10))
+		SELECT @LogData = 'NAP: Calculate (Refund HT) for matchid:' + CAST(@matchid AS NVARCHAR(10))
 
 		EXEC dbo.WriteLog_UserLog @UserID = @AdminID
 			,@Doing = @LogData
@@ -439,7 +439,7 @@ BEGIN
 		FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 		WHERE matchid = @matchid
 
-		SELECT @Remark = 'ExcludeBetdaqTickets=' + convert(CHAR(1), @IsExcludeBetdaq) + ' SettleDeterminedBetdaqTickets=' + convert(CHAR(1), @IsSettleAbandonedMatch) + ' ExcludeBetfairTickets=' + convert(CHAR(1), @IsExcludeBetfair) + ' SettleDeterminedBetfairTickets=' + convert(CHAR(1), @IsSettleAbandonedMatchBetFair) + CASE 
+		SELECT @Remark = 'NAP: ExcludeBetdaqTickets=' + convert(CHAR(1), @IsExcludeBetdaq) + ' SettleDeterminedBetdaqTickets=' + convert(CHAR(1), @IsSettleAbandonedMatch) + ' ExcludeBetfairTickets=' + convert(CHAR(1), @IsExcludeBetfair) + ' SettleDeterminedBetfairTickets=' + convert(CHAR(1), @IsSettleAbandonedMatchBetFair) + CASE 
 				WHEN @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 THEN @ScoreLog
 				ELSE ''
 				END + ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms;'

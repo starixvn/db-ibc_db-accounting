@@ -40,7 +40,7 @@ BEGIN
 			
 			
 	SELECT @_todate = convert(varchar(10), getdate()-1, 120)
-	SELECT @_fromdate = convert(varchar(10), DATEADD(DAY, -(DAY(GETDATE()) - 1), GETDATE()),120)
+	SELECT @_fromdate = convert(varchar(10), DATEADD(DAY, -(DAY(GETDATE()-1)), GETDATE()),120)
 
     CREATE TABLE #TempYesterday (CustId INT, Winlostyesterday MONEY)
 	CREATE TABLE #TempMonthToDate (WinlostDate DATETIME,CustId int, WinlostMonthToDate money)

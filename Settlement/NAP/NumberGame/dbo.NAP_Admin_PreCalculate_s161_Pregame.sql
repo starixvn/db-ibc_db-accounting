@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_PreCalculate_s161_Pregame] 
+ALTER PROCEDURE [NAP_Admin_PreCalculate_s161_Pregame] 
 	@MatchId INT
 	,@BetType SMALLINT
 	,@BetTeam NVARCHAR(1)
@@ -12,6 +12,7 @@ AS
 	DB: DBTXN/BODB02		
 
 	Revisions:		
+		- 20140513@Kathy: insert settled command into LAS queue [Redmine:#14286]
 
 */
 BEGIN
@@ -22,6 +23,7 @@ BEGIN
 
 	DECLARE @modds SMALLMONEY, @winningOdds SMALLMONEY, @commWinRate SMALLMONEY, @commLostRate SMALLMONEY
 	DECLARE @_xml XML, @_sXML VARCHAR(MAX)
+		,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
 
 	DECLARE @subtable TABLE(transid BIGINT, winlost MONEY, awinlost MONEY, mwinlost MONEY, swinlost MONEY,
 		playercomm MONEY, comm MONEY, acomm MONEY, scomm MONEY, statusid TINYINT, modds SMALLMONEY)
@@ -104,6 +106,9 @@ BEGIN
 	BEGIN
 		DELETE @subtable
 
+		SELECT @LASCommand = '',
+				@Remark = ''
+
 		DELETE TOP (20) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
 			deleted.playercomm, deleted.comm, deleted.acomm, deleted.scomm, deleted.statusid, deleted.modds	
@@ -132,6 +137,42 @@ BEGIN
 		EXEC dbo.Bet_ExecRep_05 @IgnoreList = @IgnoreList
 			,@updatetype = 1 -- calculate
 			,@_sXML = @_sXML
+
+		--- LAS settlement
+		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_s161_Pregame] @_sXML = ''' + @_sXML + ''''
+				,@createdDate = GETDATE()
+
+		BEGIN TRY
+			EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_s161_Pregame'
+				,@SQLCommand = @LASCommand
+				,@CreatedDate = @createdDate
+				,@StatusID = 0 -- waiting
+				,@MatchID = @matchid
+				,@Bettype = NULL
+				,@Status = 'waiting'
+				,@BetCount = NULL
+		END TRY
+		BEGIN CATCH			
+			SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+			FROM @subtable
+
+			SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+
+			BEGIN TRY			
+				EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = NULL, 
+								@Matchid = @matchid, 
+								@ActionID = 40014, 
+								@Remark = @Remark
+			END TRY
+			BEGIN CATCH
+				EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+								@UserID = NULL, 
+								@Matchid = @matchid, 
+								@ActionID = 40014, 
+								@Remark = @Remark
+			END CATCH
+		END CATCH
 	END
 
 	DROP TABLE #TempData
@@ -142,9 +183,6 @@ BEGIN
 	
 	EXEC dbo.WriteLog_UserLog @UserID = 161, @Doing = @LogData
 END
-
-
-
 
 GO
 

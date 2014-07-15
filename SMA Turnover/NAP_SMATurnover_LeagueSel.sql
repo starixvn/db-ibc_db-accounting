@@ -14,8 +14,9 @@ AS
 
 	Parameter's explaination: @Mode  = 0: League which have a unsettled match
 									 = 1: All League
-									 = 2: Get League in turnover monitor list
-	Example: EXEC NAP_SMATurnover_LeagueSel @SportID = 1, @Mode = 0								 
+									 = 2: Get League in turnover usage list
+									 = 3: Get League in turnover monitor list
+	Example: EXEC NAP_SMATurnover_LeagueSel @SportID = 1, @Mode = 0						 
 	
 */
 SET NOCOUNT ON
@@ -27,7 +28,7 @@ WHERE l.sporttype = @SportID
 	AND 1 = CASE WHEN @Mode = 0 AND m.eventstatus <> 'completed' AND m.matchcode NOT LIKE '%hedge%' THEN 1
 				 WHEN @Mode = 1 THEN 1
 				 WHEN @Mode = 2 AND @FromDate IS NOT NULL AND @ToDate IS NOT NULL AND m.eventdate BETWEEN @FromDate AND @ToDate THEN 1
-				 WHEN @Mode = 3 AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.kickofftime >= getdate() THEN 1
+				 WHEN @Mode = 3 AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.eventdate = CONVERT(DATE, getdate()) THEN 1
 				 ELSE 0 END	
 ORDER BY l.leaguename
 
@@ -35,4 +36,5 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_SMATurnover_LeagueSel] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_SMATurnover_LeagueSel] TO [vnteam]
+
 

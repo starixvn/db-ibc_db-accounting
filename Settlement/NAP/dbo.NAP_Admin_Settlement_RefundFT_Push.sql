@@ -21,7 +21,8 @@ as
 	Original: 
 	
 	Revisions:
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -31,11 +32,17 @@ as
 */
 BEGIN
 	SET NOCOUNT ON 
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500)
+	DECLARE  @matchcode nvarchar(50)
+			,@sporttype int
+			,@leagueid int
+			,@sqlCommand NVARCHAR(500)
+			,@procName nvarchar(50)	
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
+	SELECT   @matchcode = m.matchcode
+			,@sporttype = m.sporttype
+			,@leagueid = m.leagueid
 	FROM match m with(NOLOCK)
-	where m.matchid = @MatchId
+	WHERE m.matchid = @MatchId
 
 	IF @@ROWCOUNT = 0 
 	BEGIN
@@ -44,7 +51,18 @@ BEGIN
 		RETURN
 	END 
 	
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_RefundFT] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+	IF EXISTS (SELECT 1 from Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
+		OR EXISTS (SELECT 1 from Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
+	BEGIN 
+		SELECT	 @ErrCode	= 1000003
+				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+		RETURN
+	END 
+
+	SELECT   @ErrCode = 0
+			,@ErrMsg = ''
+			,@procName = OBJECT_NAME(@@procid)
+			,@sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_RefundFT] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
 								 ', @adminid = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1),@IsExcludeBetdaq) + 
 								 ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatch) +
@@ -57,8 +75,61 @@ BEGIN
 								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
-	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-FT', @sqlCommand
+
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	BEGIN
+		DECLARE  @fth SMALLINT
+				,@fta SMALLINT
+				,@hth SMALLINT
+				,@hta SMALLINT
+				,@GoalRecord VARCHAR(50)
+		BEGIN TRY
+			EXEC sys.sp_executesql @sqlCommand
+				,N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
+				,@ErrMsg = @ErrMsg OUTPUT
+				,@ErrCode = @ErrCode OUTPUT
+		END TRY
+
+		BEGIN CATCH
+			SELECT  @ErrMsg = @ErrMsg + ERROR_MESSAGE()
+				   ,@ErrCode = @ErrCode
+			RETURN
+		END CATCH
+
+		SELECT	 @fth = m.finalhomescore
+				,@fta = m.finalawayscore
+				,@hth = m.hthomescore
+				,@hta = m.htawayscore
+				,@GoalRecord = m.GoalRecord
+				,@BetStatus = m.betstatus
+				,@sporttype = sporttype
+		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
+		WHERE m.matchid = @MatchId
+
+		IF @sporttype = 1
+		BEGIN
+			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+									  ELSE @GoalRecord
+								 END ,
+					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
+									  ELSE @BetStatus
+								 END 
+		END
+
+		EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
+				,@action = 12
+				,@fth = @fth
+				,@fta = @fta
+				,@hth = @hth
+				,@hta = @hta
+				,@goalrecord = @GoalRecord
+				,@betstatus = @BetStatus
+	END 
+	ELSE
+	BEGIN
+		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-FT', @sqlCommand
+	END
 
 END
 GO

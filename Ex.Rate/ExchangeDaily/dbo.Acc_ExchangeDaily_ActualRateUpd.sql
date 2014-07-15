@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ExchangeDaily_ActualRateUpd]
+﻿USE [CustDB]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_ExchangeDaily_ActualRateUpd]
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
@@ -10,7 +18,7 @@ Revisions:
 	- 20120427@Henry: get data from ExchangeDailyOanda instead of ExchangeDaily
 	- 20120516@Henry: raise error when a currency got more than 1 actual rate in bettrans table
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call bettrans by link database)
-	
+	- 20140625@Jim: fix bug Conversion failed when converting character string to smalldatetime data type. (hot fix #18216)
 */		
 SET NOCOUNT ON
 DECLARE @exchange TABLE(id int identity(1,1), exchangeid int,MultipliedBy int)
@@ -33,7 +41,7 @@ FROM
     ExchangeDailyOanda e WITH (ROWLOCK,UPDLOCK)
     INNER JOIN exchange ex (NOLOCK) ON e.ExchangeId = ex.exchangeid AND e.ExchangeDate = @date
 
-
+/* --20140625@jim: no need update old-data, we'll correct it by manually
 
 --3 update yesterday actualrate  from bettrans
 INSERT INTO @tmpTable(currency,actualrate)
@@ -46,7 +54,7 @@ IF EXISTS(
 	having count(currency) > 1
 	)
 BEGIN
-	Select @ErrMsg = 'There are more than 1 actual rate for a currency in bettrans table on date: ' + DATEADD(dd,-1,@date)
+	Select @ErrMsg = 'There are more than 1 actual rate for a currency in bettrans table on date: ' + CONVERT(VARCHAR(50),DATEADD(dd,-1,@date))
 				 ,@ErrCode = 100
 			return
 	RETURN
@@ -70,7 +78,7 @@ IF EXISTS(
 	having count(currency) > 1
 	)
 BEGIN
-	Select @ErrMsg = 'There are more than 1 actual rate for a currency in bettrans table on date: ' + DATEADD(dd,-2,@date)
+	Select @ErrMsg = 'There are more than 1 actual rate for a currency in bettrans table on date: ' + CONVERT(VARCHAR(50),DATEADD(dd,-2,@date))
 				 ,@ErrCode = 100
 			return
 	RETURN
@@ -81,7 +89,7 @@ SET e.actualrate = b.actualrate
 	FROM ExchangeDailyOanda e WITH (ROWLOCK,UPDLOCK) INNER JOIN 
 	@tmpTable b
 	ON e.ExchangeId = b.currency AND e.ExchangeDate = DATEADD(dd,-2,@date)
-
+*/
 GO
 GRANT EXECUTE ON [dbo].[Acc_ExchangeDaily_ActualRateUpd] TO [bodbAdminNet] AS [dbo]
 GO

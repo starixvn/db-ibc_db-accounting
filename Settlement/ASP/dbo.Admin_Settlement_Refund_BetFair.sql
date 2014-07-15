@@ -14,6 +14,7 @@ DB: DBTXN/BODB02
 
 Revisions: 
 	- 20140117@Kathy: Change ErrCode value
+	- 20140512@Kathy: Exclude bettype 1H FGLG (127) [Redmine:#14718]
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -84,7 +85,7 @@ SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
 WHERE	custid IN (2331, 1077687, 115770)
 		AND matchid = @matchid
-		AND bettype <> 14 --Exclude FGLG 
+		AND bettype not in (14, 127) --Exclude FGLG, 1H FGLG 
 GROUP BY custid
 
 EXEC dbo.Admin_Calculate_Refund_BetFair @matchid = @matchid 
@@ -94,7 +95,7 @@ SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
 WHERE	custid IN (2331, 1077687, 115770)
 		AND matchid = @matchid
-		AND bettype <> 14 
+		AND bettype not in (14, 127) --Exclude FGLG, 1H FGLG
 GROUP BY custid
 
 
@@ -241,6 +242,8 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
+
+
 
 
 GO

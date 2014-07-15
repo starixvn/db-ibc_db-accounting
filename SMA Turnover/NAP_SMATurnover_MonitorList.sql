@@ -5,7 +5,7 @@
 AS
 /*
 	Created: Elodie
-	Date: 20130515
+	Date: 20140515
 	Task : Retrieve SMA Turnover Monitor list
 	DB: DBAGE/bodb02
 
@@ -13,13 +13,14 @@ AS
 
 	Parameter's explaination: 
 	
-	Example: EXEC NAP_SMATurnover_MonitorList @SportType = 1, @LeagueID = 33828
+	Example: EXEC NAP_SMATurnover_MonitorList @SportType = 1, @LeagueID = 0, @UsedPercent = 0
 	
 */
 SET NOCOUNT ON
 
-SELECT l.leagueid, m.matchid, m.matchcode, m.homeid, m.awayid, c.custID, c.username, c.roleid, e.currency, c.credit, t.Value, t.MaxTurnover, t.TotalTurnover,
-		CASE WHEN t.maxturnover = 0 THEN 0 ELSE CAST((t.totalturnover*100/t.maxturnover) AS INT) END AS PercentageUsed
+SELECT  CASE WHEN getdate() >= m.kickofftime THEN 1 ELSE 0 END AS Live, 
+		l.leagueid, m.matchid, m.matchcode, m.homeid, m.awayid, c.custID, c.username, c.roleid, e.currency, c.credit, t.Value, t.MaxTurnover, t.TotalTurnover,
+		CASE WHEN t.maxturnover = 0 THEN 100 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END AS PercentageUsed, m.kickofftime
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.SMAID = c.custid
@@ -27,9 +28,9 @@ SELECT l.leagueid, m.matchid, m.matchcode, m.homeid, m.awayid, c.custID, c.usern
 		INNER JOIN exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE m.sporttype = @SportType 
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
-			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN t.totalturnover*100/t.maxturnover ELSE @UsedPercent END
-			AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.kickofftime >= getdate()
-	ORDER BY l.leaguename, m.matchcode, PercentageUsed desc, c.username	
+			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 100 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END ELSE @UsedPercent END
+			AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.eventdate = CONVERT(DATE, getdate())
+	ORDER BY Live DESC, l.leaguename, m.matchcode, PercentageUsed DESC, c.username	
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_SMATurnover_MonitorList] TO [bodbAdminNet]

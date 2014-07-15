@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Set_MatchSelCompleted]
+﻿ALTER PROCEDURE [Acc_Set_MatchSelCompleted]
 	@FromDate datetime,
 	@sporttype tinyint = 0
 AS
@@ -22,6 +22,8 @@ AS
 		- 20130325@Lukas: get goalrecord & isExistFGLG
 		- 20131027@Lukas: add filter winlostdate to reduce data return
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
+		- 20140428@Kathy: Get 1H FGLG ticket info [Redmine:#14718]
+
 */  
 BEGIN 
 	SET NOCOUNT ON  
@@ -71,13 +73,15 @@ BEGIN
 		ISNULL(tm.IsPending,0) as IsPending,
 		ISNULL(tm.isUndecided,0) as isUndecided,  --Hurri@20120306  
 		m.goalrecord,
-		c.isExistFGLG
+		CASE WHEN c.cntFGLG = 0 THEN 0 ELSE 1 END as isExistFGLG,
+		CASE WHEN c.cntHTFGLG = 0 THEN 0 ELSE 1 END as isExistHTFGLG
 	FROM  DBPRO.BODB02.dbo.match m with (nolock)  
 		INNER JOIN @m tm ON m.matchid = tm.matchid  
 		INNER JOIN  
 			  (  
 				SELECT b.matchid, COUNT(b.matchid) AS BetCount
-					,SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS isExistFGLG
+					,SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG
+					,SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END) AS cntHTFGLG
 				FROM dbo.bettrans b WITH(NOLOCK)
 					INNER JOIN @m stm ON b.matchid = stm.matchid  
 				WHERE winlostdate = @FromDate
@@ -86,6 +90,7 @@ BEGIN
   
 	ORDER BY  m.eventstatus, m.matchcode
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]

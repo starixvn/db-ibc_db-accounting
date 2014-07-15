@@ -24,7 +24,8 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions: 
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -50,13 +51,19 @@ AS
 BEGIN	
 	SET NOCOUNT ON
 
-	DECLARE @matchcode nvarchar(50),@sporttype int, 
-			@leagueid int, @sqlCommand NVARCHAR(500), 
-			@IsNested BIT, @Action varchar(20)
+	DECLARE  @matchcode nvarchar(50)
+			,@sporttype int
+			,@leagueid int
+			,@sqlCommand NVARCHAR(500)
+			,@IsNested BIT
+			,@Action varchar(20)
+			,@procName nvarchar(50)	
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, 
-			@leagueid = m.leagueid, @IsNested = 0,
-			@Action = 'CAL'
+	SELECT   @matchcode = m.matchcode
+			,@sporttype = m.sporttype
+			,@leagueid = m.leagueid
+			,@IsNested = 0
+			,@Action = 'CAL'
 	FROM match m with(NOLOCK)
 	where m.matchid = @MatchId
 
@@ -66,8 +73,19 @@ BEGIN
 				,@ErrMsg	= 'Match does not exist!'	
 		RETURN 
 	END 
+
+	IF EXISTS (SELECT 1 from Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
+		OR EXISTS (SELECT 1 from Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
+	BEGIN 
+		SELECT	 @ErrCode	= 1000000
+				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+		RETURN
+	END 
 	
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_All] @Matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+	SELECT   @ErrCode = 0
+			,@ErrMsg = ''
+			,@procName = OBJECT_NAME(@@procid)
+			,@sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_All] @Matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
 								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
 								 ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1),@IsExcludeBetdaq) + 
 								 ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(1),@IsSettleAbandonedMatch) +
@@ -85,8 +103,56 @@ BEGIN
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 								 
-	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund', @sqlCommand
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	BEGIN
+		DECLARE @GoalRecord VARCHAR(50)
+
+		BEGIN TRY
+			EXEC sys.sp_executesql @sqlCommand
+				,N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
+				,@ErrMsg = @ErrMsg OUTPUT
+				,@ErrCode = @ErrCode OUTPUT
+		END TRY
+
+		BEGIN CATCH
+			SELECT @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+				  ,@ErrCode = @ErrCode
+			RETURN
+		END CATCH
+
+		SELECT	 @FullTimeHome = m.finalhomescore
+				,@FullTimeAway = m.finalawayscore
+				,@HalfTimeHome = m.hthomescore
+				,@HalfTimeAway = m.htawayscore
+				,@GoalRecord = m.GoalRecord
+				,@BetStatus = m.betstatus
+		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
+		WHERE m.matchid = @MatchId
+
+		IF @sporttype = 1
+		BEGIN
+			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+									  ELSE @GoalRecord
+								 END ,
+					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
+									  ELSE @BetStatus
+								 END 
+		END
+
+		EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
+				,@action = 13
+				,@fth = @FullTimeHome
+				,@fta = @FullTimeAway
+				,@hth = @HalfTimeHome
+				,@hta = @HalfTimeAway
+				,@goalrecord = @GoalRecord
+				,@betstatus = @BetStatus
+	END 
+	ELSE
+	BEGIN
+		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund', @sqlCommand
+	END
 END
 
 GO

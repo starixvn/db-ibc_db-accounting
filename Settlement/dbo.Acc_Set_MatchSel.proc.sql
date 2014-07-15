@@ -34,6 +34,7 @@ AS
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 		- 20131212@Johnson: move sp to DBPRO.bodb02
 		- 20140403@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
+		- 20140428@Kathy: Get 1H FGLG ticket info [Redmine:#14718]
 	Param explanation:  
 		@LeagueID: = 0: show info of all leagues     
   
@@ -74,6 +75,7 @@ BEGIN
 		isUndecided BIT,
 		IsKeyscore BIT,
 		IsFGLG BIT, 
+		IsHTFGLG BIT, 
 		WinOdds SMALLMONEY,
 		PlaceOdds SMALLMONEY
 	)
@@ -120,7 +122,7 @@ BEGIN
 		,ISNULL(mr.isPending,0) AS isPending  
 		,ISNULL(mr.isUndecided,0) AS isUndecided  --Hurri@20120306
 		,CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END IsKeyscore  
-		,0,0,0
+		,0,0,0,0
 	FROM dbo.match m WITH(NOLOCK)
 		LEFT JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 	WHERE m.eventdate BETWEEN @FromDate AND @ToDate  
@@ -132,7 +134,8 @@ BEGIN
 					WHEN @UncalMultiOnly = 1 THEN hthomescore*htawayscore*finalhomescore*finalawayscore  
 			END IS NOT NULL  
 		AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END
-		
+	
+
 	SELECT @rowcount = 0, @max_matchid = 0
 	
 	WHILE (1=1)
@@ -159,7 +162,8 @@ BEGIN
 			FOR XML PATH('match'), ROOT('root')
 		)
 		
-								EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @betstatus = @betstatus OUTPUT
+		-- FGLG
+		EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @bettype = 14, @betstatus = @betstatus OUTPUT
 		
 		--Create an internal representation of the XML document.      
 		EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
@@ -174,6 +178,25 @@ BEGIN
 					with (matchid INT,
 						cnt INT) 
 			)rs ON m.matchid = rs.matchid
+
+		-- 1H FGLG
+		EXEC DBTXN.bodb02.dbo.Acc_Set_MatchBetStatusSel @matchid = @matchid, @bettype = 127, @betstatus = @betstatus OUTPUT
+		
+		--Create an internal representation of the XML document.      
+		EXEC sp_xml_preparedocument @intDocHandle OUTPUT, @betstatus
+		
+		UPDATE m
+		SET IsHTFGLG = CASE WHEN rs.cnt = 0 OR rs.cnt IS NULL THEN 0 ELSE 1 END
+		FROM #matchList m
+			INNER JOIN @tmp_match t ON m.matchid = t.matchid
+			LEFT JOIN (
+					SELECT matchid, cnt
+					FROM OPENXML(@intDocHandle,'/root/match',2)
+					with (matchid INT,
+						cnt INT) 
+			)rs ON m.matchid = rs.matchid
+
+
 	END		
 		
 	
@@ -209,6 +232,7 @@ BEGIN
 		,0 AS isUndecided --Hurri@20120306 
 		,0 AS IsKeyscore
 		,0 AS IsFGLG
+		,0 as IsHTFGLG
 		,o.Odds
 		,o.PlaceOdds
 	FROM	dbo.outright o WITH(NOLOCK)
@@ -252,6 +276,7 @@ BEGIN
 		,0 AS isUndecided --Hurri@20120306 
 		,0 AS IsKeyscore
 		,0 AS IsFGLG
+		,0 AS IsHTFGLG
 		,o.WinOdds
 		,o.PlaceOdds
 		
@@ -293,6 +318,7 @@ BEGIN
 			m.isUndecided,
 			m.IsKeyscore,
 			m.IsFGLG,
+			m.IsHTFGLG,
 			m.WinOdds,
 			m.PlaceOdds
 	FROM #matchList m		
@@ -307,7 +333,6 @@ BEGIN
 
 	DROP TABLE #matchList
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
 GO

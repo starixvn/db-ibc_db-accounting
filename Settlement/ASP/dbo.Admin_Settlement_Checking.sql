@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Settlement_Checking]
+﻿ALTER PROCEDURE [Admin_Settlement_Checking]
 	@matchid int,
 	@action varchar(10) = 'CAL',		
 	@ErrCode int = 0 OUTPUT,
@@ -31,6 +31,7 @@ Revisions:
 	20120210@Viet: add check RUNNING tickets' count
 	20120608@Jamie: Add DB054 checking 
 	20121022@Elodie: Exclude sporting solution product
+	20140514@Kathy: Add 2 new bettypes: 1H Total Goal and 1H FGLG (126, 127) [Redmine:#14718]
 	
 Param's Explanation:
 	- @matchid: The ID of match want to settlement
@@ -41,7 +42,7 @@ Param's Explanation:
     - @ErrCode: if @ErrCode>0 Invalid of GoalRecord and TotalGoal
     - @ErrMsg: The message will be show if @ErrCode>0
 */
-
+return 
 if exists(select 1 from bettrans with (nolock) where matchid = @matchid and bettype = 22 and (hdp1>1 or hdp2>1))
 BEGIN
 	select 
@@ -62,35 +63,35 @@ BEGIN
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
 	from bettrans with(nolock) 
-	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125)
+	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125,126,127)
 	UNION 
 	select 'DB052', 
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB052.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125)
+	from DBEXT.bodb02.dbo.bettrans with(nolock) 
+	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125,126,127)
 	UNION
 	select 'DB053', 
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB053.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125)
+	from DBAGE.bodb02.dbo.bettrans with(nolock) 
+	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125,126,127)
 	UNION
 	select 'DB054', 
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
 	from DB054.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125)
+	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125,126,127)
 	UNION
 	select 'DB06', 
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB06.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125)	
+	from DBACC.bodb02.dbo.bettrans with(nolock) 
+	where matchid = @matchid and bettype IN(7,8,12,15,21,30,125,126,127)	
 END
 ELSE IF (@action = 'CAL-FT')
 BEGIN
@@ -100,23 +101,23 @@ BEGIN
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
 	from bettrans with(nolock) 
-	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125) 
+	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125,126,127) 
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 	UNION 
 	select 'DB052', 
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB052.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125)
+	from DBEXT.bodb02.dbo.bettrans with(nolock) 
+	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125,126,127)
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 	UNION
 	select 'DB053', 
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB053.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125)
+	from DBAGE.bodb02.dbo.bettrans with(nolock) 
+	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125,126,127)
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 	UNION
 	select 'DB054', 
@@ -124,15 +125,15 @@ BEGIN
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
 	from DB054.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125)
+	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125,126,127)
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 	UNION
 	select 'DB06', 
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB06.bodb02.dbo.bettrans with(nolock) 
-	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125)	
+	from DBACC.bodb02.dbo.bettrans with(nolock) 
+	where matchid = @matchid and bettype NOT IN(7,8,12,15,21,30,125,126,127)	
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 END
 ELSE IF (@action = 'CAL')
@@ -150,7 +151,7 @@ BEGIN
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB052.bodb02.dbo.bettrans with(nolock) 
+	from DBEXT.bodb02.dbo.bettrans with(nolock) 
 	where matchid = @matchid
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 	UNION
@@ -158,7 +159,7 @@ BEGIN
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB053.bodb02.dbo.bettrans with(nolock) 
+	from DBAGE.bodb02.dbo.bettrans with(nolock) 
 	where matchid = @matchid
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 	UNION
@@ -174,7 +175,7 @@ BEGIN
 		count(transid), 
 		isnull(sum(case statusid when 0 then 1 else 0 end),0),
 		isnull(sum(case statusid when 1 then 1 else 0 end),0)
-	from DB06.bodb02.dbo.bettrans with(nolock) 
+	from DBACC.bodb02.dbo.bettrans with(nolock) 
 	where matchid = @matchid
 		and bettype not between 1301 and 1334 -- exclude sporting solution product
 END
@@ -182,7 +183,7 @@ END
 select @min1= min(betCNT), @max1 = max(betCNT), @min2= min(runningCNT), @max2=max(runningCNT), @maxWaiting = max(waitingCNT)
 from @temp
 --where db <> 'DB052'
-
+if @@servername = 'DB206' return
 IF @max1 > @min1 OR @max2 > @min2 OR @maxWaiting > 0
 BEGIN
 	select 
@@ -190,6 +191,7 @@ BEGIN
 		@ErrMsg = 'System is not ready to calculate this match. Please try again after few minutes.'    
 	return                    
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Settlement_Checking] TO [bodbAdminNet]

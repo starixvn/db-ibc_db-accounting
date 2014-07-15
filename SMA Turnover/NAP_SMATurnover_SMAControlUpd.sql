@@ -28,16 +28,22 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	----Check permission 
-	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	--IF @ErrCode <> 0
-	--	RETURN
+	--Check permission 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ControlTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
 	
 	IF @SMAID <= 0
 	BEGIN
 		SELECT @ErrCode = 101, @ErrMsg = 'Invalid Super/Master/Agent.'
 		RETURN
 	END		
+
+	IF @Offset < -999 OR @Offset > 999
+	BEGIN
+		SELECT @ErrCode = 102, @ErrMsg = 'Invalid offset.'
+		RETURN
+	END	
 
 	DECLARE @OldOffset INT
 	SELECT @OldOffset = Offset FROM DownlineTo_SMAControl WITH(NOLOCK) WHERE SMAID = @SMAID

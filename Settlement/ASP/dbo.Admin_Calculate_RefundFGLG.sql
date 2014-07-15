@@ -124,7 +124,6 @@ BEGIN
 	-------------End: Refund FGLG for bettransm-------------
 END
 
-
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_RefundFGLG] TO [bodbAdminNet]
 GO

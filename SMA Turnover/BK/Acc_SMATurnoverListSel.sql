@@ -1,6 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_SMATurnoverListSel]
 	@SportType INT = 1, -- Soccer 
 	@LeagueID INT = 0, -- All leagues
+	@UsedPercent INT = 40,
 	@FromDate DATETIME, 
 	@ToDate DATETIME,
 	@MoveBetsDay  DATETIME	
@@ -23,7 +24,7 @@ SET NOCOUNT ON
 IF @Todate <= @MoveBetsDay
 BEGIN	
 	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
-			CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
+			CASE WHEN t.maxturnover = 0 THEN 100 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
@@ -31,12 +32,13 @@ BEGIN
 		INNER JOIN exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE m.sporttype = @SportType AND m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END		
-	ORDER BY l.leaguename, t.matchid, c.username
+			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 100 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END ELSE @UsedPercent END
+	ORDER BY l.leaguename, t.matchid, PercentageUsed DESC, c.username
 END
 ELSE IF @FromDate > @MoveBetsDay
 BEGIN
 	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
-			CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
+			CASE WHEN t.maxturnover = 0 THEN 100 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
@@ -44,12 +46,13 @@ BEGIN
 		INNER JOIN exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE m.sporttype = @SportType AND m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
-	ORDER BY l.leaguename, t.matchid, c.username
+			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 100 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END ELSE @UsedPercent END
+	ORDER BY l.leaguename, t.matchid, PercentageUsed DESC, c.username
 END	
 ELSE 
 BEGIN
 	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
-		CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
+		CASE WHEN t.maxturnover = 0 THEN 100 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match14 m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
@@ -57,9 +60,10 @@ BEGIN
 		INNER JOIN exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE m.sporttype = @SportType AND m.eventdate BETWEEN @FromDate AND @MoveBetsDay
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
+			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 100 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END ELSE @UsedPercent END
 	UNION ALL
 	SELECT c.custID, c.username, e.currency, l.leaguename, l.leagueid, t.matchID, m.homeid, m.awayid, m.eventdate, m.eventstatus, t.MaxTurnover, t.TotalTurnover,
-		CASE WHEN t.maxturnover = 0 THEN 0 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
+		CASE WHEN t.maxturnover = 0 THEN 100 ELSE t.totalturnover*100/t.maxturnover END AS PercentageUsed
 	FROM DownlineTurnover_Setting t WITH(NOLOCK) 
 		INNER JOIN match m WITH (NOLOCK) ON t.matchid = m.matchid
 		INNER JOIN custInfo c WITH (NOLOCK) ON t.custID = c.custid
@@ -67,7 +71,8 @@ BEGIN
 		INNER JOIN exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE m.sporttype = @SportType AND m.eventdate BETWEEN @MoveBetsDay AND @ToDate
 			AND m.leagueid = CASE WHEN @LeagueID = 0 THEN m.leagueid ELSE @LeagueID END
-	ORDER BY l.leaguename, t.matchid, c.username
+			AND @UsedPercent <= CASE WHEN @UsedPercent <> 0 THEN CASE WHEN t.maxturnover = 0 THEN 100 ELSE CAST((t.totalturnover/t.maxturnover*100) AS INT) END ELSE @UsedPercent END
+	ORDER BY l.leaguename, t.matchid, PercentageUsed DESC, c.username
 END	
 
 GO

@@ -21,6 +21,7 @@ Revisions:
 	- 20131227@Kathy: Add more Betdaq's customer: BDUS016, BDUS01 [Redmine:#9765]
 	- 20140106@Elodie: Modify the custid of betdaq customer list [Redmine:#9764]
 	- 20140117@Kathy: Change ErrCode value
+	- 20140512@Kathy: Exclude bettype 1H FGLG (127) [Redmine:#14718]
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -98,7 +99,7 @@ WHERE
 		(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 			OR recommend = 1688156	)
 		AND matchid = @matchid
-		AND bettype <> 14 --Exclude FGLG 
+		AND bettype not in (14, 127) --Exclude FGLG, 1H FGLG 
 GROUP BY custid
 
 EXEC dbo.Admin_Calculate_Refund_BetDaq @matchid = @matchid 
@@ -110,7 +111,7 @@ WHERE
 		(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 			OR recommend = 1688156	)
 		AND matchid = @matchid
-		AND bettype <> 14 
+		AND bettype not in (14, 127) --Exclude FGLG, 1H FGLG 
 GROUP BY custid
 
 
@@ -257,6 +258,7 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
+
 
 
 GO

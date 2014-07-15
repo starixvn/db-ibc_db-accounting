@@ -1,5 +1,5 @@
 ALTER PROCEDURE [NAP_Admin_Settlement_Refund_FGLG] @matchid INT
-	,@action VARCHAR(10) = 'CAL' -- CAL, CAL-HT, CAL-FT
+	,@action VARCHAR(10) = 'REFUND' -- REFUND, REFUND-FT, REFUND-HT
 	,@adminid INT
 	,@LGOnly BIT
 	,@IP VARCHAR(15) = ''
@@ -32,8 +32,8 @@ BEGIN
 
 	SELECT @ActionID = 112
 		,@bettype = CASE 
-			WHEN @action = 'CAL-HT' THEN 127
-			WHEN @action = 'CAL-FT' THEN 14
+			WHEN @action = 'REFUND-HT' THEN 127
+			WHEN @action = 'REFUND-FT' THEN 14
 			ELSE 0
 			END
 
@@ -125,38 +125,37 @@ BEGIN
 
 	IF @LGOnly = 1 ---refund last goal
 	BEGIN
-		IF @action IN ('CAL', 'CAL-FT')
-			SET @betStatus = CASE 
-					WHEN CHARINDEX('FL:', @betstatus) > 0 THEN STUFF(@betStatus, LEN(@betStatus), 1, '0')
-					ELSE @betStatus
-					END
-
-		IF @action IN ('CAL', 'CAL-HT')
+			IF @action IN ('REFUND', 'REFUND-HT')
 			SET @betStatus = CASE 
 					WHEN CHARINDEX('1FL:', @betstatus) > 0 THEN STUFF(@betstatus, CHARINDEX('1FL:', @betstatus) + 6, 1, '0')
 					ELSE @betStatus
 					END
+
+		IF @action IN ('REFUND', 'REFUND-FT')
+			SET @betStatus = CASE 
+					WHEN (CHARINDEX('FL:', @betstatus) > 0 and CHARINDEX('1FL:', @betstatus) = 0) 
+								OR CHARINDEX(';FL',@betstatus) > 0 THEN STUFF(@betStatus, LEN(@betStatus), 1, '0')
+					ELSE @betStatus
+					END		
 	END
 	ELSE --- refund all FGLG
 	BEGIN
 		IF @betStatus = 'Refund'
 			SET @betStatus = 'Refund;'
 
-		IF @action IN ('CAL', 'CAL-HT')
+		IF @action IN ('REFUND', 'REFUND-HT')
 		BEGIN
 			SET @betStatus = CASE 
 					WHEN CHARINDEX('1FL:', @betstatus) > 0 THEN STUFF(@betstatus, CHARINDEX('1FL:', @betstatus), 7, '1FL:0-0')
-					ELSE ISNULL(@betstatus, '') + '1FL:0-0'
+					ELSE ISNULL(@betstatus, '') + '1FL:0-0;'
 					END
 		END
 
-		IF @action IN ('CAL', 'CAL-FT')
+		IF @action IN ('REFUND', 'REFUND-FT')
 		BEGIN
-			SELECT @betstatus
-
 			SET @betStatus = CASE 
 					WHEN CHARINDEX(';FL:', @betstatus) > 0 THEN SUBSTRING(@betStatus, 1, CHARINDEX(';FL:', @betStatus)) + 'FL:0-0'
-					ELSE ISNULL(@betstatus, '') + ';FL:0-0'
+					ELSE ISNULL(@betstatus, '') + 'FL:0-0'
 					END
 		END
 	END
@@ -267,7 +266,7 @@ BEGIN
 
 	DECLARE @LogData NVARCHAR(200)
 
-	SELECT @LogData = 'Calculate (Refund FGLG) for matchid:' + CAST(@matchid AS NVARCHAR(10)) + 'action: ' + @action + 'LG Only:' + CASE 
+	SELECT @LogData = 'NAP: Calculate (Refund FGLG) for matchid:' + CAST(@matchid AS NVARCHAR(10)) + 'action: ' + @action + 'LG Only:' + CASE 
 			WHEN @LGOnly = 1 THEN ' (LG only)'
 			ELSE ' (All)'
 			END
@@ -285,7 +284,7 @@ BEGIN
 	FROM DBPRO.bodb02.dbo.match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
-	SELECT @Remark = 'Action=' + @action + ' RefundLGOnly=' + convert(CHAR(1), @LGOnly)
+	SELECT @Remark = 'NAP: Action=' + @action + ' RefundLGOnly=' + convert(CHAR(1), @LGOnly)
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @adminid
@@ -366,6 +365,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 

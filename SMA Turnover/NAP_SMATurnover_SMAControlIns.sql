@@ -28,10 +28,16 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 
-	----Check permission 
-	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	--IF @ErrCode <> 0
-	--	RETURN
+	--Check permission 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ControlTOBySMA]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
+
+	IF @Offset < -999 OR @Offset > 999
+	BEGIN
+		SELECT @ErrCode = 102, @ErrMsg = 'Invalid offset.'
+		RETURN
+	END	
 
 	DECLARE @SMAID INT, @roleID INT, @srecommend INT, @mrecommend INT, @recommend INT
 	SELECT @SMAID = NULL
@@ -48,8 +54,8 @@ BEGIN
 	ELSE
 	BEGIN
 		IF (@roleID = 4 AND EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID))
-			OR (@roleID = 3 AND NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @srecommend))
-			OR (@roleID = 2 AND NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @mrecommend))
+			OR (@roleID = 3 AND (NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @srecommend) OR EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID)))
+			OR (@roleID = 2 AND (NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @mrecommend) OR EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_CustDirect WITH (NOLOCK) WHERE custid = @SMAID)))
 			OR @roleID = 1
 		BEGIN
 			SELECT @ErrCode = 101, @ErrMsg = 'Invalid Username!'

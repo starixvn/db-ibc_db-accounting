@@ -13,8 +13,8 @@ AS
 
 	Parameter's explaination: @Mode  = 0: Sport which have a unsettled match
 									 = 1: All sports
-									 = 2: Get sport in turnover monitor list
-									 = 3: Get sports which have a live match
+									 = 2: Get sport in turnover usage list
+									 = 3: Get sport in turnover monitor list
 	Example: EXEC NAP_SMATurnover_SportSel @Mode = 0								 
 	
 */
@@ -26,8 +26,9 @@ FROM sports s WITH(NOLOCK)
 WHERE 1 = CASE  WHEN @Mode = 0 AND m.eventstatus <> 'completed' AND m.matchcode NOT LIKE '%hedge%' THEN 1
 				WHEN @Mode = 1 THEN 1
 				WHEN @Mode = 2 AND @FromDate IS NOT NULL AND @ToDate IS NOT NULL AND m.eventdate BETWEEN @FromDate AND @ToDate THEN 1
-				WHEN @Mode = 3 AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.kickofftime >= getdate() THEN 1
-				ELSE 0 END				
+				WHEN @Mode = 3 AND m.eventstatus = 'running' AND m.matchcode NOT LIKE '%hedge%' AND m.eventdate = CONVERT(DATE, getdate()) THEN 1
+				ELSE 0 END
+	AND s.sporttype < 99								
 ORDER BY s.sporttype
 
 GO

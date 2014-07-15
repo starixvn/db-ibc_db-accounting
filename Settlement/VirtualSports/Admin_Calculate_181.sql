@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Admin_Calculate_181]
+﻿ALTER PROCEDURE [Admin_Calculate_181]
 	@matchid int
 AS
 /*
@@ -8,27 +8,49 @@ AS
 	DB: DBTrans.BODB02
 
 	Revisions:
+		- 20140512@Kathy: insert settled command into LAS queue [Redmine:#14286]
 	
 */
 SET NOCOUNT ON
+DECLARE @IgnoreList varchar(200)
+	,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
+
+SET @IgnoreList = 'DB04,DB042,DB043,DB044'	
+
+SELECT @LASCommand = '',
+		@Remark = ''
 
 DECLARE @modds smallmoney, @odds smallmoney, @rowcount int
 DECLARE @Horse TABLE (orid int, EventID int , placing tinyint)
 
 INSERT INTO @Horse (orid, EventID, placing)
 SELECT orid, EventID, placing
-FROM VSoutright with (nolock)
+FROM DBPRO.bodb02.dbo.VSoutright with (nolock)
 WHERE
     EventID = @matchid
 
+CREATE TABLE #TempData	(transid bigint, stake money NULL , odds smallmoney NULL , modds smallmoney NULL , 
+		hdp1 smallmoney NULL , hdp2 smallmoney NULL , livehomescore smallint NULL, liveawayscore smallint NULL,
+		apositiontaking smallmoney NULL , mpositiontaking smallmoney NULL , spositiontaking smallmoney NULL , 
+		playerdiscount decimal(9,8) null, discount decimal(9,8) null, adiscount decimal(9,8) null, sdiscount decimal(9,8) null,
+		WinLost money NULL, aWinLost money NULL, mWinLost money NULL, sWinLost money NULL, 
+		PlayerComm money NULL, comm money NULL, acomm money NULL, scomm money NULL,
+		StatusID tinyint NULL, bettype smallint NULL, placing int NULL)
+
 -- WIN & PLACE
+insert INTO #TempData 
+	(transid, stake, odds, modds, hdp1, hdp2, livehomescore, liveawayscore,
+		apositiontaking, mpositiontaking, spositiontaking, 
+		playerdiscount,discount, adiscount, sdiscount,
+		WinLost, aWinLost, mWinLost, sWinLost, 
+		PlayerComm, comm, acomm, scomm,
+		StatusID, bettype, placing)		
 SELECT	transid, stake, odds, modds, hdp1, hdp2, livehomescore, liveawayscore,
 		apositiontaking, mpositiontaking, spositiontaking, 
 		playerdiscount,discount, adiscount, sdiscount,
 		WinLost, aWinLost, mWinLost, sWinLost, 
 		PlayerComm, comm, acomm, scomm,
-		StatusID, bettype, placing		
-INTO #TempData		
+		StatusID, bettype, placing
 FROM bettrans with(rowlock) join @Horse h
 	ON bettrans.matchid = h.EventID and bettrans.oddsid = h.orid
 WHERE
@@ -107,16 +129,14 @@ INSERT INTO #TempData(transid, modds, hdp1, hdp2, livehomescore, liveawayscore,
 		StatusID, bettype  )
 SELECT	transid, 
 		modds = CASE 
-				  WHEN bm.winlost > 0 THEN 1 
-				  WHEN bm.winlost = 0 THEN 0 
+				  WHEN bm.winlost > 0 THEN 1 				  
 				  ELSE -1 END, 
 		bm.hdp1, bm.hdp2, bm.livehomescore, bm.liveawayscore,				
 		bm.WinLost, bm.aWinLost, bm.mWinLost, bm.sWinLost, 
 		bm.PlayerComm, bm.comm, bm.acomm, bm.scomm,		
-		statusID = CASE		
-					WHEN bm.winlost = 0 THEN 111 -- just for sure not missing any cases
-					WHEN bm.winlost > 0 THEN 112
-					WHEN bm.winlost < 0 THEN 113
+		statusID = CASE							
+					WHEN bm.winlost > 0 THEN 112 --WON
+					ELSE 113 -- lose
 				END	
 		, bettype
 FROM 
@@ -141,8 +161,7 @@ WHERE bettrans.bettype = 1233
 set @rowcount = @rowcount + @@ROWCOUNT
 IF @rowcount  = 0 RETURN			
 
-
-DECLARE @_xml XML, @_sXML varchar(MAX),@IgnoreList varchar(200)
+DECLARE @_xml XML, @_sXML varchar(MAX)
 DECLARE @subtable TABLE(transid bigint, winlost money, awinlost money, mwinlost money, swinlost money,
 	playercomm money, comm money, acomm money, scomm money, statusid tinyint, 
 	modds smallmoney, hdp1 smallmoney, hdp2 smallmoney,livehomescore smallint, liveawayscore smallint)
@@ -151,12 +170,12 @@ WHILE (1 = 1)
 BEGIN
 	DELETE @subtable
 
-	DELETE TOP (300) #TempData
+	DELETE TOP (20) #TempData
 	OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
 		deleted.playercomm, deleted.comm, deleted.acomm, deleted.scomm, deleted.statusid, 
 		deleted.modds, deleted.hdp1, deleted.hdp2, deleted.livehomescore, deleted.liveawayscore
-	INTO @subtable(transid, winlost, awinlost, mwinlost, swinlost, playercomm, comm, acomm, scomm, 
-			statusid, modds, hdp1, hdp2, livehomescore, liveawayscore)	
+	INTO @subtable(transid, winlost, awinlost, mwinlost, swinlost, playercomm, comm, acomm, scomm, statusid, 
+		modds, hdp1, hdp2, livehomescore, liveawayscore)	
 	
 	IF @@ROWCOUNT = 0 BREAK
 	
@@ -183,9 +202,44 @@ BEGIN
 	SELECT @_sXML = CONVERT(varchar(max), @_xml)
 	
 	EXEC dbo.Bet_ExecRep_05 @IgnoreList, 3, @_sXML
-		 					
-END			
 
+	--- LAS settlement 
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_VS_s181] @_sXML = ''' + @_sXML + ''''
+			,@createdDate = GETDATE()
+		
+	BEGIN TRY
+		EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_VS_s181'
+			,@SQLCommand = @LASCommand
+			,@CreatedDate = @createdDate
+			,@StatusID = 0 -- waiting
+			,@MatchID = @matchid
+			,@Bettype = NULL
+			,@Status = 'waiting'
+			,@BetCount = NULL
+	END TRY
+	BEGIN CATCH			
+		SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+		FROM @subtable
+
+		SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+
+		BEGIN TRY			
+			EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+							@UserID = NULL, 
+							@Matchid = @matchid, 
+							@ActionID = 40023, 
+							@Remark = @Remark
+		END TRY
+		BEGIN CATCH
+			EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+							@UserID = NULL, 
+							@Matchid = @matchid, 
+							@ActionID = 40023, 
+							@Remark = @Remark
+		END CATCH
+	END CATCH
+		 					
+END
 
 GO
 GRANT EXECUTE ON [dbo].[Admin_Calculate_181] TO [Dot_Member] AS [dbo]

@@ -14,7 +14,8 @@ AS
 	DB: DBAGE/bodb_AGE
 
 	Revisions:
-	
+		- 20140602@Elodie: Not support to control setting by Event
+
 	Parameter's explaination: 
 		
 	Example: EXEC NAP_SMATurnover_SMAControlByEventDel @SMAID = 1176070, @MatchID = 6880531, @UserID = 8, @IP ='10.10.8.56'
@@ -28,10 +29,10 @@ BEGIN
 			@duration	INT
 	SET	@startRun = GETDATE()
 	
-	----Check permission 
-	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ConfigureSMATOByMatch]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	--IF @ErrCode <> 0
-	--	RETURN
+	--Check permission 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[ControlTOBySMAEvent]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+		RETURN
 	
 	IF NOT EXISTS (SELECT 1 FROM DownlineTo_Match_SMAControl WITH (NOLOCK) WHERE SMAID = @SMAID AND MatchID = @MatchID)
 	BEGIN
@@ -39,27 +40,34 @@ BEGIN
 		RETURN
 	END			
 
-	DECLARE @Value INT, @SportID INT, @LeagueID INT
+	DECLARE @Value INT 
 
-	SELECT @SportID = m.sporttype, @LeagueID = m.leagueid 
-	FROM bodb02.dbo.match m WITH (NOLOCK) 
-	WHERE m.matchid = @MatchID
+	--DECLARE @SportID INT, @LeagueID INT
+	--SELECT @SportID = m.sporttype, @LeagueID = m.leagueid 
+	--FROM bodb02.dbo.match m WITH (NOLOCK) 
+	--WHERE m.matchid = @MatchID
+
+	--DECLARE @SportValue INT, @LeagueValue INT, @MatchValue INT, @SMAOffset INT
+	--SELECT @SportValue = NULL, @LeagueValue = NULL, @MatchValue = NULL, @SMAOffset = NULL
+
+	--SELECT @SportValue = Value FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID
+	--SELECT @LeagueValue = Value FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID
+	--SELECT @MatchValue = Value FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID
+	--SELECT @SMAOffset = Offset FROM DownlineTo_SMAControl sma WITH (NOLOCK) WHERE sma.SMAID = @SMAID
 
 	SELECT @Value = Value FROM DownlineTo_Match_SMAControl WITH (NOLOCK) WHERE MatchID = @MatchID AND SMAID = @SMAID
-
+	
 	DELETE DownlineTo_Match_SMAControl WHERE SMAID = @SMAID AND MatchID = @MatchID			
 
 	IF @Value <> 0
 	BEGIN
-		IF NOT EXISTS (	SELECT 1 
-						FROM DownlineTo_SportControl sc WITH (NOLOCK) WHERE sc.SportID = @SportID)
-		AND NOT EXISTS (SELECT 1 
-						FROM DownlineTo_LeagueControl lc WITH (NOLOCK) WHERE lc.leagueID = @LeagueID)			
-		AND NOT EXISTS (SELECT 1 
-						FROM DownlineTo_MatchControl mc WITH (NOLOCK) WHERE mc.MatchID = @MatchID)	
-			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 11, @EventID = @MatchID, @SMAID = @SMAID
-		ELSE
-			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 13, @EventID = @MatchID, @SMAID = @SMAID	
+		--IF ((@MatchValue IS NOT NULL AND @MatchValue <> 0) 
+		--OR (@LeagueValue IS NOT NULL AND @LeagueValue <> 0 AND (@MatchValue <> 0 OR @MatchValue IS NULL))
+		--OR (@SportValue IS NOT NULL AND (@LeagueValue <> 0 OR @LeagueValue IS NULL) AND (@MatchValue <> 0 OR @MatchValue IS NULL)))
+		--AND (@SMAOffset IS NULL OR @SMAOffset <> 0)
+		--	EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 13, @EventID = @MatchID, @SMAID = @SMAID
+		--ELSE
+			EXEC bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 11, @EventID = @MatchID, @SMAID = @SMAID	
 	END	
 
 	DECLARE @LogData NVARCHAR(4000)

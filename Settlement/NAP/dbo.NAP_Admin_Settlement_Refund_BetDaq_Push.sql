@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_Refund_BetDaq_Push]
+ALTER PROCEDURE [NAP_Admin_Settlement_Refund_BetDaq_Push]
 	@MatchId int,
 	@AdminId int, 	
 	@IP varchar(15) = '',
@@ -6,34 +6,41 @@ CREATE PROCEDURE [NAP_Admin_Settlement_Refund_BetDaq_Push]
 	@ErrMsg nvarchar(200) = '' OUTPUT
 AS
 
-/*
-Created: 20140218@Kathy 
-Task : Refund Running BetDaq 
-Original: 
-DB: DBTXN/BODB02
+	/*
+	Created: 20140218@Kathy 
+	Task : Refund Running BetDaq 
+	Original: 
+	DB: DBTXN/BODB02
 
-Revisions: 
+	Revisions: 
+	- 20140506@Kathy: Don't allow to calculate exists matches in queue
 	
 
-Param's Explanation:
-• @matchid: matchid need to refund
-• @IsExcludeBetdaq: Is Exclude betdaq tickets or not
-• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
-BetDaq account: 
-			custid	--- username	-	roleid
-			50057	---	BQUS888		-	1
-			879241	---	BQUSMLB		-	1
-			103873	---	BQUSNBA		-	1
-			78761	---	ITibc101	-	1
-			1688156	---	MTEST0101	-	2
-			851668  --- BDUS01      -   1
-			878902  --- BDUS016     -   1
-*/
+	Param's Explanation:
+	• @matchid: matchid need to refund
+	• @IsExcludeBetdaq: Is Exclude betdaq tickets or not
+	• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
+	BetDaq account: 
+				custid	--- username	-	roleid
+				50057	---	BQUS888		-	1
+				879241	---	BQUSMLB		-	1
+				103873	---	BQUSNBA		-	1
+				78761	---	ITibc101	-	1
+				1688156	---	MTEST0101	-	2
+				851668  --- BDUS01      -   1
+				878902  --- BDUS016     -   1
+	*/
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @matchcode nvarchar(50),@sporttype int, @leagueid int, @sqlCommand NVARCHAR(500)	
+	DECLARE  @matchcode nvarchar(50)
+			,@sporttype int
+			,@leagueid int
+			,@sqlCommand NVARCHAR(500)
+			,@procName nvarchar(50)	
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
+	SELECT   @matchcode = m.matchcode
+			,@sporttype = m.sporttype
+			,@leagueid = m.leagueid
 	FROM match m with(NOLOCK)
 	where m.matchid = @MatchId
 
@@ -44,19 +51,44 @@ BEGIN
 		RETURN
 	END 
 
-	SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_BetDaq] @matchid = ' + CONVERT(NVARCHAR(10),@MatchId) +
-								 ', @creator = ' + CONVERT(NVARCHAR(10),@AdminId) + 
-								 ', @IP = ''' + CONVERT(NVARCHAR(10),@IP) + '''' +
+	IF EXISTS (SELECT 1 from Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
+		OR EXISTS (SELECT 1 from Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
+	BEGIN 
+		SELECT	 @ErrCode	= 1000000
+				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+		RETURN
+	END 
+
+	SELECT   @ErrCode = 0
+			,@ErrMsg = ''
+			,@procName = OBJECT_NAME(@@procid)
+			,@sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_Refund_BetDaq] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
+								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
+								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 
-	INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-	SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-Betdaq', @sqlCommand
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	BEGIN
+		BEGIN TRY
+			EXEC sys.sp_executesql @sqlCommand
+				,N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
+				,@ErrMsg = @ErrMsg OUTPUT
+				,@ErrCode = @ErrCode OUTPUT
+		END TRY
+
+		BEGIN CATCH
+			SELECT   @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+					,@ErrCode = @ErrCode
+			RETURN
+		END CATCH
+	END 
+	ELSE
+	BEGIN
+		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-Betdaq', @sqlCommand
+	END
 END
-
-
-
-
 
 GO
 
