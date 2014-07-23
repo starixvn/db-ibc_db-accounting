@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Con_FuncInfoDel]
+﻿
+ALTER PROCEDURE [dbo].[Acc_Con_FuncInfoDel]
 	@FuncID int,
 	@Language VARCHAR(2)= 'E', 
 	@ErrCode int = 0 OUTPUT,
@@ -17,13 +18,14 @@ AS
 		- 20110526@Tom: Remove condition @System and Write log into table DBLog.bodb_CustomerLog.dbo.UserLog_UserControl
 		- 20120604@Elodie: Modify the content of a log in User Control
 		- 20130125@Elodie: Write more log on UserLog table in case of DBLOG server failure
+		- 20140721@Lukas: change function name from [UserControl] to [ManageFunction]	for creating new menu/function
 */ 
 SET NOCOUNT ON 
 DECLARE @LogData nvarchar(200),@Begin	DATETIME,@End	DATETIME,@Duration	INT
 SET @Begin = GETDATE();
 
 --Check permission for account site: @phuc20080213
-EXEC dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[UserControl]',@System='ACCOUNTING',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[ManageFunction]',@System='ACCOUNTING',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 If @ErrCode <> 0
 	RETURN
 --end
@@ -81,6 +83,7 @@ BEGIN CATCH
 	EXEC WriteLog_UserLog @UserID = @UserID, 
 						  @Doing = @LogData
 END CATCH
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Con_FuncInfoDel] TO [vnteam]
