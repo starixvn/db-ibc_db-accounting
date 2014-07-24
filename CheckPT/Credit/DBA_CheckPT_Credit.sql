@@ -20,8 +20,10 @@ Revisions:
 						Check LivePT
 	- 20140512@Sophia: Exclude test account (currency = 20)
 	- 20140722@Sophia: Exclude test account (currency = 28, 29)
+	- 20140723@Sophia: Fix Rule 28 for Live
 Param's Explanation: 
 	@RuleId = 0 : 'all'
+	@RuleId IN (1->29)
 
 */
 
@@ -589,7 +591,7 @@ SET NOCOUNT ON
 				AND scs.mpositiontaking < cs.autompositiontaking
 
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
-			SELECT	14 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.mpositiontaking, cs.autompositiontaking, 1
+			SELECT	14 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.mlivepositiontaking, cs.autolivempositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 				INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId
@@ -606,7 +608,7 @@ SET NOCOUNT ON
 				AND cs.Bettype IN (1,3,7,8)
 				AND scs.SportType = CASE WHEN @SportType = 0 then scs.SportType  ELSE @SportType END
 				AND scs.Bettype IN (1,3,7,8)
-				AND scs.mpositiontaking < cs.autompositiontaking
+				AND scs.mlivepositiontaking < cs.autolivempositiontaking
 		END
 
 		----15. M4 < UM1 
@@ -1355,7 +1357,7 @@ SET NOCOUNT ON
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT 28 AS RuleId, cs.BetType, cs.SportType 
 				,CASE	WHEN scs.slivepositiontaking - cs.mlivepositiontaking - cs.alivepositiontaking > (CASE WHEN cs.isautolivepositiontaking = 1 THEN cs.autolivepositiontaking	ELSE mcs.autolivepositiontaking END)			
-						THEN (	CASE	WHEN cs.isautopositiontaking = 1 
+						THEN (	CASE	WHEN cs.isautolivepositiontaking = 1 
 										THEN cs.CustId 
 										ELSE mcs.CustId 
 								END)
@@ -1369,7 +1371,7 @@ SET NOCOUNT ON
 								END)
 						ELSE scs.slivepositiontaking - cs.mlivepositiontaking - cs.alivepositiontaking
 				 END 
-				,cs.spositiontaking
+				,cs.slivepositiontaking
 				,1
 			FROM CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 				INNER JOIN CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)

@@ -20,11 +20,15 @@ Created: 20140313@Sophia
 Task: Monthly check PT setting for credit customers - 3rd setting
 DB: DBCHECK.CheckResultDB
 Revisions:
-	- 20140512@Sophia: Exclude test account (currency = 20)
-	- 20140722@Sophia: Exclude test account (currency = 28, 29)
+	- 20140512@Sophia:  Exclude test account (currency = 20)
+	- 20140722@Sophia:  Exclude test account (currency = 28, 29)
+	- 20140723@Sophia: -Fix Rule 28 for Live
+					   -Remove Greyhounds UK
+					   -Remove deadball of NumberGame - Next High/Low 
 	
 Param's Explanation: 
 	@RuleId = 0 : 'all'
+	@RuleId IN (1->29)
 	
 NOTE: For Sporttypes
 	161     - Number Game
@@ -65,9 +69,12 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
-				AND (cs.spositiontaking < 0 OR cs.mpositiontaking < 0 OR cs.apositiontaking < 0)
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND (cs.spositiontaking < 0 OR cs.mpositiontaking < 0 OR cs.apositiontaking < 0) 
 		
-
+		
+		--- Live 
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive) 
 			SELECT	1 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId,
 					CASE WHEN cs.slivepositiontaking < 0 THEN cs.slivepositiontaking 
@@ -114,9 +121,12 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
-				AND (cs.spositiontaking > 0.9 OR cs.mpositiontaking > 0.9 OR cs.apositiontaking > 0.9)
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND (cs.spositiontaking > 0.9 OR cs.mpositiontaking > 0.9 OR cs.apositiontaking > 0.9) 
 
-			
+			----Live
+
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	2 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId,
 					CASE WHEN cs.slivepositiontaking > 0.9 THEN cs.slivepositiontaking 
@@ -155,7 +165,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND cs.spositiontaking < cs.mpositiontaking 
+
+			---Live
 
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	3 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.slivepositiontaking, cs.mlivepositiontaking, 1
@@ -187,9 +201,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND cs.spositiontaking < cs.apositiontaking 
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	4 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.slivepositiontaking, cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -224,10 +240,17 @@ SET NOCOUNT ON
 				AND ci.Reject = 0
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
+
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND cs.spositiontaking < co.minpositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	5 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.slivepositiontaking, co.minlivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -270,9 +293,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.spositiontaking < cs.autopositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	6 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.slivepositiontaking , cs.autolivepositiontaking, 1
 			FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -314,9 +343,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.spositiontaking < cs.autopositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	7 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.slivepositiontaking, cs.autolivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -358,9 +393,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	8 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.slivepositiontaking, cs.slivepositiontaking + cs.mlivepositiontaking, 1
 			FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -402,9 +443,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend		
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	9 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.slivepositiontaking, cs.slivepositiontaking + cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -446,8 +493,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND sco.SportType = CASE WHEN @Sporttype = 0 then sco.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN sco.Sporttype = 152 AND sco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN sco.SportType = 161 AND sco.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND sco.minpositiontaking > cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	10 as RuleId, cs.BetType, cs.SportType, sco.CustId, ci.CustId, sco.minlivepositiontaking, cs.slivepositiontaking + cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -487,8 +541,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND cs.mpositiontaking < cs.apositiontaking 
 
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	11 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.mlivepositiontaking, cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -524,9 +581,16 @@ SET NOCOUNT ON
 				AND ci.Reject = 0
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END				
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.mpositiontaking < cs.mpositiontaking 
 
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	12 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.mlivepositiontaking, cs.mlivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -569,9 +633,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.mpositiontaking < co.minpositiontaking 
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	13 as RuleId, scs.BetType, scs.SportType, scs.CustId, ci.CustId, scs.mlivepositiontaking , co.minlivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -613,10 +683,17 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.mpositiontaking < cs.autompositiontaking
 
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
-			SELECT	14 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.mpositiontaking, cs.autompositiontaking, 1
+			SELECT	14 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.mlivepositiontaking, cs.autolivempositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 				INNER JOIN CheckCustDB.dbo.CustSetting3rd cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId
@@ -634,7 +711,7 @@ SET NOCOUNT ON
 				AND cs.BetType IN (85,86,87,89,90)
 				AND scs.SportType = 161 
 				AND scs.BetType IN (85,86,87,89,90)
-				AND scs.mpositiontaking < cs.autompositiontaking
+				AND scs.mlivepositiontaking < cs.autolivempositiontaking
 		END
 
 		----15. M4 < UM1 
@@ -656,8 +733,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.mpositiontaking < cs.autompositiontaking
 
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	15 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.mlivepositiontaking, cs.autolivempositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -699,9 +783,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	16 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.mlivepositiontaking , cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -744,9 +834,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END				
+				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND cs.mpositiontaking < co.minpositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	17 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.mlivepositiontaking, co.minlivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -788,6 +884,9 @@ SET NOCOUNT ON
 									AND ci.Reject = 0 
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
+									AND mcs.SportType = CASE WHEN @Sporttype = 0 then mcs.Sporttype  ELSE @Sporttype END
+									AND (CASE WHEN mcs.Sporttype = 152 AND mcs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+									AND (CASE WHEN mcs.SportType = 161 AND mcs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) mcs
 					ON	mcs.CustId = ci.mrecommend
 					AND mcs.SportType = cs.SportType
@@ -798,9 +897,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend 
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1				
 				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
-
+			--Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	18 as RuleId, cs.BetType, cs.SportType, mcs.CustId, ci.CustId, mcs.mlivepositiontaking, cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -850,6 +951,9 @@ SET NOCOUNT ON
 									AND ci.Reject = 0 
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
+									AND mcs.SportType = CASE WHEN @Sporttype = 0 then mcs.Sporttype  ELSE @Sporttype END
+									AND (CASE WHEN mcs.Sporttype = 152 AND mcs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+									AND (CASE WHEN mcs.SportType = 161 AND mcs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) mcs
 					ON	mcs.CustId = ci.mrecommend
 					AND mcs.SportType = cs.SportType
@@ -860,9 +964,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1		
 				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	19 as RuleId, cs.BetType, cs.SportType, mcs.CustId, ci.CustId, mcs.mlivepositiontaking, cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -914,6 +1020,9 @@ SET NOCOUNT ON
 										AND ci.Reject = 0
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND mco.SportType = CASE WHEN @Sporttype = 0 then mco.Sporttype  ELSE @Sporttype END
+										AND (CASE WHEN mco.Sporttype = 152 AND mco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+										AND (CASE WHEN mco.SportType = 161 AND mco.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) mco
 					ON	mco.CustId = ci.mrecommend
 					AND mco.SportType = cs.SportType
@@ -924,8 +1033,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND mco.minpositiontaking > cs.mpositiontaking + cs.apositiontaking
 
+			----Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	20 as RuleId, cs.BetType, cs.SportType, mco.CustId, ci.CustId, mco.minlivepositiontaking, cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -978,9 +1090,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND scs.apositiontaking < cs.apositiontaking 
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLIve)
 			SELECT	21 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.alivepositiontaking, cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1023,8 +1141,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
-				AND scs.apositiontaking < cs.apositiontaking 
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 
+				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.apositiontaking < cs.apositiontaking 
+			
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	22 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.alivepositiontaking, cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1066,9 +1191,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND cs.apositiontaking < co.minpositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	23 as RuleId, cs.BetType, cs.SportType, ci.CustId, co.CustId, cs.alivepositiontaking, co.minlivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1108,7 +1239,10 @@ SET NOCOUNT ON
 											AND ci.Closed = 0
 											AND ci.Reject = 0
 											AND ci.Currency NOT IN (20,27,28)	
-											AND ci.srecommend = @srecommend	 
+											AND ci.srecommend = @srecommend	
+											AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
+											AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+											AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1 
 							) co
 					ON	co.CustId = ci.recommend
 					AND co.SportType = cs.SportType
@@ -1119,9 +1253,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND co.minpositiontaking > cs.apositiontaking 
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	24 as RuleId, cs.BetType, cs.SportType, co.CustId, ci.CustId, co.minlivepositiontaking, cs.alivepositiontaking, 1 
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1172,9 +1308,15 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
+				AND sco.SportType = CASE WHEN @Sporttype = 0 then sco.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN sco.Sporttype = 152 AND sco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN sco.SportType = 161 AND sco.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND sco.maxpositiontaking < cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	25 as RuleId, cs.BetType, cs.SportType, sco.CustId, ci.CustId, sco.maxlivepositiontaking, cs.slivepositiontaking + cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1215,6 +1357,9 @@ SET NOCOUNT ON
 										AND ci.Reject = 0
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND mco.SportType = CASE WHEN @Sporttype = 0 then mco.Sporttype  ELSE @Sporttype END
+										AND (CASE WHEN mco.Sporttype = 152 AND mco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+										AND (CASE WHEN mco.SportType = 161 AND mco.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) mco
 					ON	mco.CustId = ci.mrecommend
 					AND mco.SportType = cs.SportType
@@ -1225,9 +1370,11 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1				
 				AND mco.maxpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
-				 
+			----Live 
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive) 
 			SELECT	26 as RuleId, cs.BetType, cs.SportType, mco.CustId, ci.CustId, mco.maxlivepositiontaking, cs.mlivepositiontaking + cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1277,6 +1424,9 @@ SET NOCOUNT ON
 											AND ci.Reject = 0
 											AND ci.Currency NOT IN (20,27,28)	
 											AND ci.srecommend = @srecommend	 
+											AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
+											AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+											AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1	
 							) co
 					ON	co.CustId = ci.recommend
 					AND co.SportType = cs.SportType
@@ -1286,10 +1436,12 @@ SET NOCOUNT ON
 				AND ci.Reject = 0
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
-				AND cs.SportType = CASE WHEN @Sporttype = 0 THEN cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1	 
 				AND co.maxpositiontaking < cs.apositiontaking 
 				 
-
+			---Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT	27 as RuleId, cs.BetType, cs.SportType, co.CustId, ci.CustId, co.maxlivepositiontaking, cs.alivepositiontaking, 1
 			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1359,6 +1511,9 @@ SET NOCOUNT ON
 										AND ci.Reject = 0
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) AS scs
 						ON	scs.sporttype = cs.sporttype
 							AND scs.bettype = cs.bettype
@@ -1372,7 +1527,10 @@ SET NOCOUNT ON
 										AND ci.Closed = 0
 										AND ci.Reject = 0
 										AND ci.Currency NOT IN (20,27,28)	
-										AND ci.srecommend = @srecommend
+										AND ci.srecommend = @srecommend										
+										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) AS mcs
 						ON	mcs.sporttype = cs.sporttype
 							AND mcs.bettype = cs.bettype
@@ -1382,7 +1540,11 @@ SET NOCOUNT ON
 				AND ci.Reject = 0
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
+				
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+
 				AND (cs.isautopositiontaking=1 OR mcs.isautopositiontaking=1)
 				AND cs.spositiontaking < CASE	WHEN scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautopositiontaking = 1 THEN cs.autopositiontaking	ELSE mcs.autopositiontaking END)			
 												THEN (	CASE	WHEN cs.isautopositiontaking = 1 
@@ -1391,12 +1553,13 @@ SET NOCOUNT ON
 														END)
 												ELSE scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking
 										 END 
-			----
+			
+			----Live
 
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT 28 AS RuleId, cs.BetType, cs.SportType 
 				,CASE	WHEN scs.slivepositiontaking - cs.mlivepositiontaking - cs.alivepositiontaking > (CASE WHEN cs.isautolivepositiontaking = 1 THEN cs.autolivepositiontaking	ELSE mcs.autolivepositiontaking END)			
-						THEN (	CASE	WHEN cs.isautopositiontaking = 1 
+						THEN (	CASE	WHEN cs.isautolivepositiontaking = 1 
 										THEN cs.CustId 
 										ELSE mcs.CustId 
 								END)
@@ -1410,7 +1573,7 @@ SET NOCOUNT ON
 								END)
 						ELSE scs.slivepositiontaking - cs.mlivepositiontaking - cs.alivepositiontaking
 				 END 
-				,cs.spositiontaking
+				,cs.slivepositiontaking
 				,1
 			FROM CheckCustDB.dbo.CustSetting3rd cs WITH (NOLOCK)
 				INNER JOIN CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
@@ -1525,6 +1688,9 @@ SET NOCOUNT ON
 										AND ci.Reject = 0
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) AS scs
 						ON	scs.sporttype = cs.sporttype
 							AND scs.bettype = cs.bettype
@@ -1539,6 +1705,9 @@ SET NOCOUNT ON
 										AND ci.Reject = 0
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) AS mcs
 						ON	mcs.sporttype = cs.sporttype
 							AND mcs.bettype = cs.bettype
@@ -1553,6 +1722,9 @@ SET NOCOUNT ON
 										AND ci.Reject = 0
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 							) AS acs
 						ON	acs.sporttype = cs.sporttype
 							AND acs.bettype = cs.bettype
@@ -1563,6 +1735,8 @@ SET NOCOUNT ON
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
+				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
 				AND ( acs.isautompositiontaking = 1	OR cs.isautompositiontaking = 1 )
 				AND cs.mpositiontaking < CASE WHEN scs.mpositiontaking > mcs.mpositiontaking 
 											  THEN CASE  WHEN mcs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautompositiontaking = 1 THEN cs.autompositiontaking ELSE acs.autompositiontaking END) 
@@ -1584,7 +1758,7 @@ SET NOCOUNT ON
 															 END
 												END
 
-			------
+			------Live
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
 			SELECT 29 AS RuleId, cs.BetType, cs.SportType 
 				,CASE WHEN scs.mlivepositiontaking > mcs.mlivepositiontaking 
@@ -1712,6 +1886,7 @@ SET NOCOUNT ON
 
 	END 
 
+ 
 END 
 
 

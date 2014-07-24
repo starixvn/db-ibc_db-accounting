@@ -15,15 +15,16 @@ Created: 20140313@Sophia
 Task: Check PT setting for credit customers - Game setting
 DB: DBCHECK.CheckResultDB
 Revisions:
+	- 20140723@Sophia: Add Keno
 	 
 Param's Explanation: 
 	@RuleId = 0 : 'all' 
-	@RuleId IN (1, 5, 6, 7, 8, 9, 10, 17, 18, 19, 20, 23, 24, 28, 30, 31 )
-
+	IF @sporttype = 162 (Live Casino) THEN @RuleId IN (1, 5, 6, 7, 8, 9, 10, 17, 18, 19, 20, 23, 24, 28, 30, 31 )
+	IF @sporttype = 202 (Keno) THEN @RuleId IN (1, 5, 6, 7, 8, 9, 10, 17, 18, 19, 20, 23, 24, 28, 31, 32 )
 */
 
 BEGIN 
-IF @sporttype = 162 OR @sporttype = 0 
+IF @sporttype IN (162, 202) OR @sporttype = 0 
 BEGIN 
 	---- 1. S1 < 0 OR M1 < 0 OR A1 < 0
 
@@ -52,29 +53,58 @@ BEGIN
 		
 		END
 
-	
-		----Live Casino: Check rule 30 instead of rule 2 
-		----2. S4 > 0.93 OR M4 > 0.93 OR A4 > 0.90 
+		----Do not check Rule 2 
+		----Live Casino: Check rule 30 
 		----30. S4 > 0.93
-
-		IF @RuleId IN (0,30)
-		BEGIN
+		IF @sporttype = 162 
+		BEGIN 
+			IF @RuleId IN (0,30)
+			BEGIN
+				INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+				SELECT	30 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.93, 0
+				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				WHERE	ci.roleid = 4
+					AND ci.closed = 0 
+					AND ci.Reject = 0
+					AND ci.SyncLiveCasino = 1
+					AND ci.Currency NOT IN (20,27,28)	
+					AND ci.srecommend = @srecommend
+					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+					AND cs.spositiontaking > 0.93
+			
+			END
+		END
+		
+		----Keno: Check rule 32
+		----32. S4 > 0.85 OR M4 > 0.85 OR A4 > 0.85
+		IF @sporttype = 202 
+		BEGIN 
+			IF @RuleId IN (0,32)
+			BEGIN
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
-			SELECT	30 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.93, 0
+			SELECT	32 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId,
+					CASE WHEN cs.spositiontaking > 0.85 THEN cs.spositiontaking 
+						 WHEN cs.mpositiontaking > 0.85 THEN cs.mpositiontaking 
+						 WHEN cs.apositiontaking > 0.85 THEN cs.apositiontaking	
+					ELSE 0.85	
+					END,
+					0.85,
+					0
 			FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 				INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId
 			WHERE	ci.roleid = 4
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
-				AND cs.spositiontaking > 0.93
-		
+				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
+				AND (cs.spositiontaking > 0.85 OR cs.mpositiontaking > 0.85 OR cs.apositiontaking > 0.85)
+			
+			END
 		END
-	
 
 		----5. S4 < N4 
  
@@ -500,7 +530,7 @@ BEGIN
 		 
 			END 
  
-		---- Check Rule 31 instead of Rule 29
+		---- Check Rule 31 instead of Rule 29 because it does not have M4, A4
 		---- 29. MIN (M4-A1, M3-A1,(IM1?UM1,UM2)) > M1 
 		---- 31. MIN (M3-A1,(IM1?UM1,UM2)) > M1 
 
