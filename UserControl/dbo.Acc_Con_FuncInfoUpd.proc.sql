@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Con_FuncInfoUpd]
+﻿
+ALTER PROCEDURE [dbo].[Acc_Con_FuncInfoUpd]
 	@FuncId int,
 	@FuncName nvarchar(50),
 	@FuncNote nvarchar(2000) = null,
@@ -21,13 +22,14 @@ Revision
 	- 20110810@Jamie: Expand size of param @FileNames to MAX 
 	- 20120604@Elodie: Modify the content of a log in User Control
 					   Only update function's infomation if any changes
-	- 20130125@Elodie: Write more log on UserLog table in case of DBLOG server failure					   
+	- 20130125@Elodie: Write more log on UserLog table in case of DBLOG server failure
+	- 20140721@Lukas: change function name from [UserControl] to [ManageFunction]	for creating new menu/function
 */
 	SET NOCOUNT ON 
 	DECLARE @LogData nvarchar(max),@Begin	DATETIME,@End	DATETIME,@Duration	INT;
 	SET @Begin = GETDATE();
 	--Check permission
-	EXEC dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[UserControl]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output, @System = 'ACCOUNTING'
+	EXEC dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[ManageFunction]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output, @System = 'ACCOUNTING'
 	If @ErrCode <> 0
 		RETURN
 	IF exists (select 1 from acc_functioninfo with (NOLOCK) where system = @System and FuncName = @FuncName and FuncId <> @FuncId)
@@ -98,7 +100,6 @@ Revision
 						      @Doing = @LogData
 		END CATCH
 	End
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Con_FuncInfoUpd] TO [bodbAdminNet]
