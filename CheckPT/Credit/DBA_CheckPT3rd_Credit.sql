@@ -13,7 +13,7 @@ ALTER PROCEDURE [dbo].[DBA_CheckPT3rd_Credit]
 	,@SportType SMALLINT = 0
 	,@RuleId	SMALLINT = 0
 AS
-
+SET NOCOUNT ON
 BEGIN 
 /*
 Created: 20140313@Sophia
@@ -70,7 +70,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND (cs.spositiontaking < 0 OR cs.mpositiontaking < 0 OR cs.apositiontaking < 0) 
 		
 		
@@ -122,7 +122,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND (cs.spositiontaking > 0.9 OR cs.mpositiontaking > 0.9 OR cs.apositiontaking > 0.9) 
 
 			----Live
@@ -166,7 +166,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND cs.spositiontaking < cs.mpositiontaking 
 
 			---Live
@@ -202,7 +202,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND cs.spositiontaking < cs.apositiontaking 
 
 			---Live
@@ -243,11 +243,11 @@ SET NOCOUNT ON
 
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND co.Bettype NOT IN (85,87,89,90)
 				AND cs.spositiontaking < co.minpositiontaking
 
 			---Live
@@ -294,11 +294,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.spositiontaking < cs.autopositiontaking
 
 			---Live
@@ -344,11 +344,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.spositiontaking < cs.autopositiontaking
 
 			---Live
@@ -394,11 +394,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking
 
 			---Live
@@ -444,11 +444,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend		
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
 			---Live
@@ -494,11 +494,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND sco.SportType = CASE WHEN @Sporttype = 0 then sco.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN sco.Sporttype = 152 AND sco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN sco.SportType = 161 AND sco.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND sco.Bettype NOT IN (85,87,89,90)
 				AND sco.minpositiontaking > cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
 			---Live
@@ -542,7 +542,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND cs.mpositiontaking < cs.apositiontaking 
 
 			---Live
@@ -583,11 +583,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END				
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.mpositiontaking < cs.mpositiontaking 
 
 			---Live
@@ -634,11 +634,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND co.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.mpositiontaking < co.minpositiontaking 
 
 			---Live
@@ -684,11 +684,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.mpositiontaking < cs.autompositiontaking
 
 			---Live
@@ -734,11 +734,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.mpositiontaking < cs.autompositiontaking
 
 			---Live
@@ -784,11 +784,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END				
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
 			---Live
@@ -835,11 +835,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END				
 				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND co.Bettype NOT IN (85,87,89,90)
 				AND cs.mpositiontaking < co.minpositiontaking
 
 			---Live
@@ -886,7 +886,7 @@ SET NOCOUNT ON
 									AND ci.srecommend = @srecommend
 									AND mcs.SportType = CASE WHEN @Sporttype = 0 then mcs.Sporttype  ELSE @Sporttype END
 									AND (CASE WHEN mcs.Sporttype = 152 AND mcs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-									AND (CASE WHEN mcs.SportType = 161 AND mcs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+									AND mcs.Bettype NOT IN (85,87,89,90)
 							) mcs
 					ON	mcs.CustId = ci.mrecommend
 					AND mcs.SportType = cs.SportType
@@ -898,7 +898,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend 
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1				
+				AND cs.Bettype NOT IN (85,87,89,90)			
 				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
 			--Live
@@ -953,7 +953,7 @@ SET NOCOUNT ON
 									AND ci.srecommend = @srecommend
 									AND mcs.SportType = CASE WHEN @Sporttype = 0 then mcs.Sporttype  ELSE @Sporttype END
 									AND (CASE WHEN mcs.Sporttype = 152 AND mcs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-									AND (CASE WHEN mcs.SportType = 161 AND mcs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+									AND mcs.Bettype NOT IN (85,87,89,90)
 							) mcs
 					ON	mcs.CustId = ci.mrecommend
 					AND mcs.SportType = cs.SportType
@@ -965,7 +965,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1		
+				AND cs.Bettype NOT IN (85,87,89,90)		
 				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
 			---Live
@@ -1022,7 +1022,7 @@ SET NOCOUNT ON
 										AND ci.srecommend = @srecommend
 										AND mco.SportType = CASE WHEN @Sporttype = 0 then mco.Sporttype  ELSE @Sporttype END
 										AND (CASE WHEN mco.Sporttype = 152 AND mco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-										AND (CASE WHEN mco.SportType = 161 AND mco.Bettype = 87 THEN 0 ELSE 1 END) = 1
+										AND mco.Bettype NOT IN (85,87,89,90)
 							) mco
 					ON	mco.CustId = ci.mrecommend
 					AND mco.SportType = cs.SportType
@@ -1034,7 +1034,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND mco.minpositiontaking > cs.mpositiontaking + cs.apositiontaking
 
 			----Live
@@ -1091,11 +1091,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.apositiontaking < cs.apositiontaking 
 
 			---Live
@@ -1142,11 +1142,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND scs.SportType = CASE WHEN @Sporttype = 0 then scs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN scs.Sporttype = 152 AND scs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN scs.SportType = 161 AND scs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND scs.Bettype NOT IN (85,87,89,90)
 				AND scs.apositiontaking < cs.apositiontaking 
 			
 			---Live
@@ -1192,11 +1192,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND co.Bettype NOT IN (85,87,89,90)
 				AND cs.apositiontaking < co.minpositiontaking
 
 			---Live
@@ -1242,7 +1242,7 @@ SET NOCOUNT ON
 											AND ci.srecommend = @srecommend	
 											AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
 											AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-											AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1 
+											AND co.Bettype NOT IN (85,87,89,90)
 							) co
 					ON	co.CustId = ci.recommend
 					AND co.SportType = cs.SportType
@@ -1254,7 +1254,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND co.minpositiontaking > cs.apositiontaking 
 
 			---Live
@@ -1309,11 +1309,11 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND sco.SportType = CASE WHEN @Sporttype = 0 then sco.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN sco.Sporttype = 152 AND sco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN sco.SportType = 161 AND sco.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND sco.Bettype NOT IN (85,87,89,90)
 				AND sco.maxpositiontaking < cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
 			---Live
@@ -1359,7 +1359,7 @@ SET NOCOUNT ON
 										AND ci.srecommend = @srecommend
 										AND mco.SportType = CASE WHEN @Sporttype = 0 then mco.Sporttype  ELSE @Sporttype END
 										AND (CASE WHEN mco.Sporttype = 152 AND mco.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-										AND (CASE WHEN mco.SportType = 161 AND mco.Bettype = 87 THEN 0 ELSE 1 END) = 1
+										AND mco.Bettype NOT IN (85,87,89,90)
 							) mco
 					ON	mco.CustId = ci.mrecommend
 					AND mco.SportType = cs.SportType
@@ -1371,7 +1371,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1				
+				AND cs.Bettype NOT IN (85,87,89,90)				
 				AND mco.maxpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
 			----Live 
@@ -1426,7 +1426,7 @@ SET NOCOUNT ON
 											AND ci.srecommend = @srecommend	 
 											AND co.SportType = CASE WHEN @Sporttype = 0 then co.Sporttype  ELSE @Sporttype END
 											AND (CASE WHEN co.Sporttype = 152 AND co.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-											AND (CASE WHEN co.SportType = 161 AND co.Bettype = 87 THEN 0 ELSE 1 END) = 1	
+											AND co.Bettype NOT IN (85,87,89,90)
 							) co
 					ON	co.CustId = ci.recommend
 					AND co.SportType = cs.SportType
@@ -1438,7 +1438,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1	 
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND co.maxpositiontaking < cs.apositiontaking 
 				 
 			---Live
@@ -1513,7 +1513,7 @@ SET NOCOUNT ON
 										AND ci.srecommend = @srecommend
 										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+										AND cs.Bettype NOT IN (85,87,89,90)
 							) AS scs
 						ON	scs.sporttype = cs.sporttype
 							AND scs.bettype = cs.bettype
@@ -1530,7 +1530,7 @@ SET NOCOUNT ON
 										AND ci.srecommend = @srecommend										
 										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+										AND cs.Bettype NOT IN (85,87,89,90)
 							) AS mcs
 						ON	mcs.sporttype = cs.sporttype
 							AND mcs.bettype = cs.bettype
@@ -1543,7 +1543,7 @@ SET NOCOUNT ON
 				
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 
 				AND (cs.isautopositiontaking=1 OR mcs.isautopositiontaking=1)
 				AND cs.spositiontaking < CASE	WHEN scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautopositiontaking = 1 THEN cs.autopositiontaking	ELSE mcs.autopositiontaking END)			
@@ -1690,7 +1690,7 @@ SET NOCOUNT ON
 										AND ci.srecommend = @srecommend
 										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+										AND cs.Bettype NOT IN (85,87,89,90)
 							) AS scs
 						ON	scs.sporttype = cs.sporttype
 							AND scs.bettype = cs.bettype
@@ -1707,7 +1707,7 @@ SET NOCOUNT ON
 										AND ci.srecommend = @srecommend
 										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+										AND cs.Bettype NOT IN (85,87,89,90)
 							) AS mcs
 						ON	mcs.sporttype = cs.sporttype
 							AND mcs.bettype = cs.bettype
@@ -1724,7 +1724,7 @@ SET NOCOUNT ON
 										AND ci.srecommend = @srecommend
 										AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 										AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-										AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+										AND cs.Bettype NOT IN (85,87,89,90)
 							) AS acs
 						ON	acs.sporttype = cs.sporttype
 							AND acs.bettype = cs.bettype
@@ -1736,7 +1736,7 @@ SET NOCOUNT ON
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
 				AND (CASE WHEN cs.Sporttype = 152 AND cs.Bettype IN (41,42) THEN 0 ELSE 1 END) = 1
-				AND (CASE WHEN cs.SportType = 161 AND cs.Bettype = 87 THEN 0 ELSE 1 END) = 1
+				AND cs.Bettype NOT IN (85,87,89,90)
 				AND ( acs.isautompositiontaking = 1	OR cs.isautompositiontaking = 1 )
 				AND cs.mpositiontaking < CASE WHEN scs.mpositiontaking > mcs.mpositiontaking 
 											  THEN CASE  WHEN mcs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautompositiontaking = 1 THEN cs.autompositiontaking ELSE acs.autompositiontaking END) 

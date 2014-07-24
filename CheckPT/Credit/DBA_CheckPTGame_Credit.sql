@@ -22,7 +22,7 @@ Param's Explanation:
 	IF @sporttype = 162 (Live Casino) THEN @RuleId IN (1, 5, 6, 7, 8, 9, 10, 17, 18, 19, 20, 23, 24, 28, 30, 31 )
 	IF @sporttype = 202 (Keno) THEN @RuleId IN (1, 5, 6, 7, 8, 9, 10, 17, 18, 19, 20, 23, 24, 28, 31, 32 )
 */
-
+SET NOCOUNT ON
 BEGIN 
 IF @sporttype IN (162, 202) OR @sporttype = 0 
 BEGIN 
