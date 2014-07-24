@@ -22,7 +22,11 @@ AS
 	Revisions:
 		-2014.04.22@Tom.Vo: Change source table : DBLIC.Licensee -> CheckLicenseeDB
 		-2014.06.11@Tom.Vo: Add PT setting will be 90% new Lisencee Tonybet 
+<<<<<<< HEAD
+		-2014.06.26@Tom.Vo: Edit Keno PT setting 90% for all Licencees (Redmine#17380)
+=======
 		-2014.06.26@Tom.Vo: Edit Keno PT setting will be 90% for ALL Lisencee (Redmine#17380)
+>>>>>>> 682c990bacc7204d27b77f72455780749402b597
 	Param's Explanation:
 		@sporttype: Product Id
 			-1 : All
@@ -105,8 +109,12 @@ IF @sporttype IN (-1,180)  	--Virtual Sport
 IF @sporttype IN (-1,202) 	--Keno
 		BEGIN
 			INSERT INTO @tblSport_PT (Sportid,PT,Site,SiteID)
+<<<<<<< HEAD
+			SELECT 202, 0.9 PT,
+=======
 			SELECT 202, 
 				0.9 AS PT,
+>>>>>>> 682c990bacc7204d27b77f72455780749402b597
 				Site,tblSite.SiteID					
 			FROM @tblSite tblSite 
 		END
