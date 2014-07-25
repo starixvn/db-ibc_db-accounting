@@ -78,31 +78,24 @@ BEGIN
 		END
 		
 		----Keno: Check rule 32
-		----32. S4 > 0.85 OR M4 > 0.85 OR A4 > 0.85
+		----32. S4 > 0.85
 		IF @sporttype = 202 
 		BEGIN 
 			IF @RuleId IN (0,32)
 			BEGIN
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
-			SELECT	32 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId,
-					CASE WHEN cs.spositiontaking > 0.85 THEN cs.spositiontaking 
-						 WHEN cs.mpositiontaking > 0.85 THEN cs.mpositiontaking 
-						 WHEN cs.apositiontaking > 0.85 THEN cs.apositiontaking	
-					ELSE 0.85	
-					END,
-					0.85,
-					0
-			FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
-				INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
-					ON	cs.CustId = ci.CustId
-			WHERE	ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
-				AND ci.Currency NOT IN (20,27,28)	
-				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
-				AND (cs.spositiontaking > 0.85 OR cs.mpositiontaking > 0.85 OR cs.apositiontaking > 0.85)
-			
+				SELECT	32 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.85, 0
+				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				WHERE	ci.roleid = 4
+					AND ci.closed = 0 
+					AND ci.Reject = 0
+					AND ci.SyncLiveCasino = 1
+					AND ci.Currency NOT IN (20,27,28)	
+					AND ci.srecommend = @srecommend
+					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+					AND cs.spositiontaking > 0.85
 			END
 		END
 
