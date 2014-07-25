@@ -1,6 +1,6 @@
 USE [CheckResultDB]
 GO
-/****** Object:  StoredProcedure [dbo].[DBA_CheckPTGame_Credit]    Script Date: 4/14/2014 2:24:06 PM ******/
+/****** Object:  StoredProcedure [dbo].[DBA_CheckPTGame_Credit]    Script Date: 7/25/2014 10:23:23 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -53,52 +53,7 @@ BEGIN
 		
 		END
 
-		----Do not check Rule 2 
-		----Live Casino: Check rule 30 
-		----30. S4 > 0.93
-		IF @sporttype = 162 
-		BEGIN 
-			IF @RuleId IN (0,30)
-			BEGIN
-				INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
-				SELECT	30 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.93, 0
-				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
-					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
-						ON	cs.CustId = ci.CustId
-				WHERE	ci.roleid = 4
-					AND ci.closed = 0 
-					AND ci.Reject = 0
-					AND ci.SyncLiveCasino = 1
-					AND ci.Currency NOT IN (20,27,28)	
-					AND ci.srecommend = @srecommend
-					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
-					AND cs.spositiontaking > 0.93
-			
-			END
-		END
 		
-		----Keno: Check rule 32
-		----32. S4 > 0.85
-		IF @sporttype = 202 
-		BEGIN 
-			IF @RuleId IN (0,32)
-			BEGIN
-			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
-				SELECT	32 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.85, 0
-				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
-					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
-						ON	cs.CustId = ci.CustId
-				WHERE	ci.roleid = 4
-					AND ci.closed = 0 
-					AND ci.Reject = 0
-					AND ci.SyncLiveCasino = 1
-					AND ci.Currency NOT IN (20,27,28)	
-					AND ci.srecommend = @srecommend
-					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
-					AND cs.spositiontaking > 0.85
-			END
-		END
-
 		----5. S4 < N4 
  
 		IF @RuleId IN (0,5)
@@ -522,11 +477,36 @@ BEGIN
 										 END 
 		 
 			END 
- 
-		---- Check Rule 31 instead of Rule 29 because it does not have M4, A4
-		---- 29. MIN (M4-A1, M3-A1,(IM1?UM1,UM2)) > M1 
-		---- 31. MIN (M3-A1,(IM1?UM1,UM2)) > M1 
 
+
+		----30. S4 > 0.93
+			-->Live Casino: Do not check Rule 2 Check rule 30 
+		
+		IF @sporttype = 162 
+		BEGIN 
+			IF @RuleId IN (0,30)
+			BEGIN
+				INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+				SELECT	30 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.93, 0
+				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				WHERE	ci.roleid = 4
+					AND ci.closed = 0 
+					AND ci.Reject = 0
+					AND ci.SyncLiveCasino = 1
+					AND ci.Currency NOT IN (20,27,28)	
+					AND ci.srecommend = @srecommend
+					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+					AND cs.spositiontaking > 0.93
+			
+			END
+		END
+
+		---- 31. MIN (M3-A1,(IM1?UM1,UM2)) > M1
+			---> Check Rule 31 instead of Rule 29 because it does not have M4, A4  [29. MIN (M4-A1, M3-A1,(IM1?UM1,UM2)) > M1]
+
+		 
 		IF @RuleId IN (0,31)
 		BEGIN 
 			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
@@ -604,5 +584,29 @@ BEGIN
 
 	END 
 		
+		
+		----32. S4 > 0.85
+			--> Keno: Do not check Rule 2 Check rule 32 
+		
+		IF @sporttype = 202 
+		BEGIN 
+			IF @RuleId IN (0,32)
+			BEGIN
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+				SELECT	32 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.85, 0
+				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				WHERE	ci.roleid = 4
+					AND ci.closed = 0 
+					AND ci.Reject = 0
+					AND ci.SyncLiveCasino = 1
+					AND ci.Currency NOT IN (20,27,28)	
+					AND ci.srecommend = @srecommend
+					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+					AND cs.spositiontaking > 0.85
+			END
+		END
+
 END
 END 
