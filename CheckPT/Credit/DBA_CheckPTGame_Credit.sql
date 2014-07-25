@@ -44,11 +44,12 @@ BEGIN
 					ON	cs.CustId = ci.CustId
 			WHERE	ci.roleid = 1
 				AND ci.closed = 0 
-				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
+				AND ci.Reject = 0				
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND (cs.spositiontaking < 0 OR cs.mpositiontaking < 0 OR cs.apositiontaking < 0)
 		
 		END
@@ -70,10 +71,11 @@ BEGIN
 			WHERE ci.roleid = 4
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND cs.spositiontaking < co.minpositiontaking
 
 
@@ -96,10 +98,11 @@ BEGIN
 			WHERE	ci.roleid = 3
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND scs.spositiontaking < cs.autopositiontaking
 
 
@@ -121,10 +124,11 @@ BEGIN
 			WHERE ci.roleid = 1
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND scs.spositiontaking < cs.autopositiontaking
 
 
@@ -147,10 +151,11 @@ BEGIN
 			WHERE ci.roleid = 3
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking
 
 
@@ -173,10 +178,11 @@ BEGIN
 			WHERE ci.roleid = 1
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend		
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
 
@@ -199,10 +205,11 @@ BEGIN
 			WHERE ci.roleid = 1
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND sco.minpositiontaking > cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
 
 			
@@ -227,10 +234,11 @@ BEGIN
 			WHERE ci.roleid = 3
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND cs.mpositiontaking < co.minpositiontaking
 
 
@@ -254,9 +262,11 @@ BEGIN
 									AND ci.RoleId = 3 
 									AND ci.closed = 0 
 									AND ci.Reject = 0 
-									AND ci.SyncLiveCasino = 1
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
+									AND mcs.SportType IN (161, 202)
+									AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+									AND CASE WHEN @Sporttype <> 0 THEN mcs.Sporttype ELSE @SportType END = @SportType
 							) mcs
 					ON	mcs.CustId = ci.mrecommend
 					AND mcs.SportType = cs.SportType
@@ -264,10 +274,11 @@ BEGIN
 			WHERE ci.roleid = 2
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend 
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
 
@@ -290,9 +301,11 @@ BEGIN
 									AND ci.RoleId = 3 
 									AND ci.closed = 0 
 									AND ci.Reject = 0 
-									AND ci.SyncLiveCasino = 1
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
+									AND mcs.SportType IN (161, 202)
+									AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+									AND CASE WHEN @Sporttype <> 0 THEN mcs.Sporttype ELSE @SportType END = @SportType
 							) mcs
 					ON	mcs.CustId = ci.mrecommend
 					AND mcs.SportType = cs.SportType
@@ -300,10 +313,11 @@ BEGIN
 			WHERE ci.roleid = 1
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
 
 
@@ -327,9 +341,11 @@ BEGIN
 										AND ci.RoleId = 3 
 										AND ci.closed= 0 
 										AND ci.Reject = 0
-										AND ci.SyncLiveCasino = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND mco.SportType IN (161, 202)
+										AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN mco.Sporttype ELSE @SportType END = @SportType
 							) mco
 					ON	mco.CustId = ci.mrecommend
 					AND mco.SportType = cs.SportType
@@ -337,10 +353,11 @@ BEGIN
 			WHERE ci.roleid = 1
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND mco.minpositiontaking > cs.mpositiontaking + cs.apositiontaking
 
 		END  
@@ -361,10 +378,11 @@ BEGIN
 			WHERE ci.roleid = 2
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				--AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND cs.apositiontaking < co.minpositiontaking
 			
 		END 
@@ -385,9 +403,11 @@ BEGIN
 											AND ci.RoleId = 2
 											AND ci.Closed = 0
 											AND ci.Reject = 0
-											AND ci.SyncLiveCasino = 1
 											AND ci.Currency NOT IN (20,27,28)	
 											AND ci.srecommend = @srecommend	 
+											AND co.SportType IN (161, 202)
+											AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+											AND CASE WHEN @Sporttype <> 0 THEN co.Sporttype ELSE @SportType END = @SportType
 							) co
 					ON	co.CustId = ci.recommend
 					AND co.SportType = cs.SportType
@@ -395,10 +415,11 @@ BEGIN
 			WHERE   ci.roleid = 1
 				AND ci.closed = 0 
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
-				AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND co.minpositiontaking > cs.apositiontaking 
 			
 		END
@@ -438,9 +459,11 @@ BEGIN
 										AND ci.RoleId = 4
 										AND ci.Closed = 0
 										AND ci.Reject = 0
-										AND ci.SyncLiveCasino = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (161, 202)
+										AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 							) AS scs
 						ON	scs.SportType = cs.SportType
 							AND scs.bettype = cs.bettype
@@ -453,9 +476,11 @@ BEGIN
 										AND ci.RoleId = 3
 										AND ci.Closed = 0
 										AND ci.Reject = 0
-										AND ci.SyncLiveCasino = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (161, 202)
+										AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 							) AS mcs
 						ON	mcs.SportType = cs.SportType
 							AND mcs.bettype = cs.bettype
@@ -463,10 +488,11 @@ BEGIN
 			WHERE ci.RoleId = 1
 				AND ci.Closed = 0
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND (cs.isautopositiontaking=1 OR mcs.isautopositiontaking=1)
 				AND cs.spositiontaking < CASE	WHEN scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautopositiontaking = 1 THEN cs.autopositiontaking	ELSE mcs.autopositiontaking END)			
 												THEN (	CASE	WHEN cs.isautopositiontaking = 1 
@@ -482,7 +508,7 @@ BEGIN
 		----30. S4 > 0.93
 			-->Live Casino: Do not check Rule 2 Check rule 30 
 		
-		IF @sporttype = 162 
+		IF @sporttype IN (0, 162)
 		BEGIN 
 			IF @RuleId IN (0,30)
 			BEGIN
@@ -494,10 +520,10 @@ BEGIN
 				WHERE	ci.roleid = 4
 					AND ci.closed = 0 
 					AND ci.Reject = 0
-					AND ci.SyncLiveCasino = 1
 					AND ci.Currency NOT IN (20,27,28)	
 					AND ci.srecommend = @srecommend
-					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+					AND cs.SportType = 162
+					AND ci.SyncLiveCasino = 1					
 					AND cs.spositiontaking > 0.93
 			
 			END
@@ -541,9 +567,11 @@ BEGIN
 										AND ci.RoleId = 3
 										AND ci.Closed = 0
 										AND ci.Reject = 0
-										AND ci.SyncLiveCasino = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (161, 202)
+										AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 							) AS mcs
 						ON	mcs.SportType = cs.SportType
 							AND mcs.bettype = cs.bettype
@@ -556,9 +584,11 @@ BEGIN
 										AND ci.RoleId = 2
 										AND ci.Closed = 0
 										AND ci.Reject = 0
-										AND ci.SyncLiveCasino = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (161, 202)
+										AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 							) AS acs
 						ON	acs.SportType = cs.SportType
 							AND acs.bettype = cs.bettype
@@ -566,10 +596,11 @@ BEGIN
 			WHERE ci.RoleId = 1
 				AND ci.Closed = 0
 				AND ci.Reject = 0
-				AND ci.SyncLiveCasino = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
-				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
+				AND cs.SportType IN (161, 202)
+				AND CASE WHEN @Sporttype = 162 THEN ci.SyncLiveCasino ELSE 0 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
 				AND ( acs.isautompositiontaking = 1	OR cs.isautompositiontaking = 1 )
 				AND cs.mpositiontaking <	CASE  WHEN mcs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautompositiontaking = 1 THEN cs.autompositiontaking ELSE acs.autompositiontaking END) 
 													THEN (CASE WHEN cs.isautompositiontaking = 1 
@@ -588,7 +619,7 @@ BEGIN
 		----32. S4 > 0.85
 			--> Keno: Do not check Rule 2 Check rule 32 
 		
-		IF @sporttype = 202 
+		IF @SportType IN (0,202)
 		BEGIN 
 			IF @RuleId IN (0,32)
 			BEGIN
@@ -600,10 +631,9 @@ BEGIN
 				WHERE	ci.roleid = 4
 					AND ci.closed = 0 
 					AND ci.Reject = 0
-					AND ci.SyncLiveCasino = 1
 					AND ci.Currency NOT IN (20,27,28)	
 					AND ci.srecommend = @srecommend
-					AND cs.SportType = CASE WHEN @Sporttype = 0 then cs.Sporttype  ELSE @Sporttype END
+					AND cs.SportType = 202					
 					AND cs.spositiontaking > 0.85
 			END
 		END
