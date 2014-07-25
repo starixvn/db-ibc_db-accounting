@@ -9,6 +9,8 @@ AS
 
 	Revisions:
 	   - 20140426@Kathy: Add 1H Total Goal (126) [Redmine:#14449]
+	   - 20140617@Kathy: Apply BetRadar [Redmine:#17142]
+
 	Param's Explanation:
 	• @Mode:
 		CAL : All BetTypes
@@ -36,10 +38,13 @@ BEGIN
 	DECLARE @correctscore NVARCHAR(10)
 	DECLARE @correctscore_ht NVARCHAR(10)
 	DECLARE @HTFT NVARCHAR(10)
+	DECLARE @isRefundHT BIT
+
 	-- for tennis
 	DECLARE @TennisTotal SMALLINT
 	DECLARE @T_Home SMALLINT
 	DECLARE @T_Away SMALLINT
+
 	--ticket count
 	DECLARE @betcount_1 INT
 	DECLARE @betcount_2 INT
@@ -75,14 +80,30 @@ BEGIN
 	DECLARE @betcount_125 INT
 	DECLARE @betcount_126 INT
 
+	-- BetRadar
+	DECLARE @betcount_133 INT
+			,@betcount_134 INT
+			,@betcount_140 INT
+			,@betcount_141 INT
+			,@betcount_142 INT	
+			,@betcount_145 INT
+			,@betcount_146 INT
+			,@betcount_147 INT
+			,@betcount_148 INT
+			,@betcount_149 INT
+			,@betcount_150 INT
+			,@betcount_151 INT
+			,@betcount_152 INT
+
 	SELECT @fth = FinalHomeScore
 		,@fta = FinalAwayScore
 		,@hth = HTHomeScore
-		,@HTA = HTAwayScore
+		,@hta = HTAwayScore
 		,@sporttype = SportType
 		,@betstatus = betstatus
-		,@GoalRecord = IsNull(GoalRecord, '')
-		,@matchCode = IsNull(matchCode, '')
+		,@isRefundHT = CASE WHEN betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END 
+		,@GoalRecord = ISNULL(GoalRecord, '')
+		,@matchCode = ISNULL(matchCode, '')
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
@@ -216,6 +237,54 @@ BEGIN
 						WHEN 124 THEN 1
 						ELSE 0
 						END), 0)
+			,@betcount_133 = ISNULL(SUM(case bettype 
+						when 133 then 1 
+						else 0
+						end), 0)
+			,@betcount_134 = ISNULL(SUM(case bettype 
+						when 134 then 1 
+						else 0 
+						end), 0)
+			,@betcount_140 = ISNULL(SUM(case bettype 
+						when 140 then 1 
+						else 0 
+						end), 0)
+			,@betcount_141 = ISNULL(SUM(case bettype 
+						when 141 then 1 
+						else 0 
+						end), 0)
+			,@betcount_142 = ISNULL(SUM(case bettype 
+						when 142 then 1 
+						else 0 
+						end), 0)
+			,@betcount_145 = ISNULL(SUM(case bettype 
+						when 145 then 1 
+						else 0 
+						end), 0)
+			,@betcount_146 = ISNULL(SUM(case bettype 
+						when 146 then 1 
+						else 0 
+						end), 0)
+			,@betcount_147 = ISNULL(SUM(case bettype 
+						when 147 then 1 
+						else 0 
+						end), 0)
+			,@betcount_148 = ISNULL(SUM(case bettype 
+						when 148 then 1 
+						else 0 
+						end), 0)
+			,@betcount_149 = ISNULL(SUM(case bettype 
+						when 149 then 1 
+						else 0 
+						end), 0)
+			,@betcount_150 = ISNULL(SUM(case bettype 
+						when 150 then 1 
+						else 0 
+						end), 0)
+			,@betcount_152 = ISNULL(SUM(case bettype 
+						when 152 then 1 
+						else 0 
+						end), 0)
 			,@betcount_1201 = ISNULL(SUM(CASE bettype
 						WHEN 1201 THEN 1
 						ELSE 0
@@ -241,7 +310,9 @@ BEGIN
 						ELSE 0
 						END), 0)
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype IN (1, 2, 3, 4, 5, 6, 13, 16, 20, 22, 24, 25, 26, 27, 28, 121, 122, 123, 124, 1201, 1203, 1204, 1205, 1206, 1224)
+		WHERE matchid = @matchid AND bettype IN (1, 2, 3, 4, 5, 6, 13, 16, 20, 22, 24, 25, 26, 27, 28, 121, 122, 123, 124, 
+												133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152,
+												1201, 1203, 1204, 1205, 1206, 1224)
 	END
 
 	IF @Mode IN ('CAL-HT', 'CAL') AND @SportType NOT IN (180, 181, 182, 183, 184, 185, 186)
@@ -278,8 +349,12 @@ BEGIN
 						WHEN 126 THEN 1
 						ELSE 0
 						END), 0)
+			,@betcount_151 = ISNULL(SUM(case bettype
+						when 151 then 1 
+						else 0 
+						end), 0)
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
+		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
 	END
 
 	-- call execrep SP
@@ -305,6 +380,7 @@ BEGIN
 		,@TennisTotal = @TennisTotal
 		,@T_Home = @T_Home
 		,@T_Away = @T_Away
+		,@isRefundHT = @isRefundHT
 		,@betcount_1 = @betcount_1
 		,@betcount_2 = @betcount_2
 		,@betcount_3 = @betcount_3
@@ -324,6 +400,18 @@ BEGIN
 		,@betcount_121 = @betcount_121
 		,@betcount_122 = @betcount_122
 		,@betcount_123 = @betcount_123
+		,@betcount_133 = @betcount_133
+		,@betcount_134 = @betcount_134
+		,@betcount_140 = @betcount_140
+		,@betcount_141 = @betcount_141
+		,@betcount_142 = @betcount_142
+		,@betcount_145 = @betcount_145
+		,@betcount_146 = @betcount_146
+		,@betcount_147 = @betcount_147
+		,@betcount_148 = @betcount_148
+		,@betcount_149 = @betcount_149
+		,@betcount_150 = @betcount_150
+		,@betcount_152 = @betcount_152
 		,@betcount_1201 = @betcount_1201
 		,@betcount_1203 = @betcount_1203
 		,@betcount_1204 = @betcount_1204
@@ -338,8 +426,11 @@ BEGIN
 		,@betcount_30 = @betcount_30
 		,@betcount_125 = @betcount_125
 		,@betcount_126 = @betcount_126
+		,@betcount_151 = @betcount_151
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END
+
+
 
 
 

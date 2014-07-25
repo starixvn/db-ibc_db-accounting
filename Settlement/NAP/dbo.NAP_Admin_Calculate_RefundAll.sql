@@ -13,6 +13,7 @@ AS
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140411@Kathy: Add more param for LAS command
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140711@Kathy: Apply BetRadar [Redmine:#17142]
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -62,7 +63,11 @@ BEGIN
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
-				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) AND statusID IN (112, 113) AND bettype IN (13, 26, 27) THEN 0
+				WHEN @IsSettleAbandonedMatchIBC = 1 
+						AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) 
+							AND recommend <> 1688156) 
+						AND statusID IN (112, 113) 
+						AND bettype IN (13, 26, 27, 133, 134, 140, 141, 145, 146, 147, 148, 149, 150, 152) THEN 0
 				ELSE 1
 				END
 
@@ -70,8 +75,6 @@ BEGIN
 			BREAK
 	END
 END
-
-
 
 
 GO

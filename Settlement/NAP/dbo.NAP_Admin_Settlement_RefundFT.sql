@@ -22,7 +22,7 @@ AS
 	Revisions:
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
-
+		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -128,7 +128,7 @@ BEGIN
 
 	INSERT INTO @status
 	SELECT CASE 
-			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 0
+			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
 			ELSE 1
 			END
 		,SUM(CASE 
@@ -142,7 +142,7 @@ BEGIN
 	FROM dbo.bettrans WITH (NOLOCK)
 	WHERE matchid = @matchid
 	GROUP BY CASE 
-			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 0
+			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
 			ELSE 1
 			END
 
@@ -272,14 +272,25 @@ BEGIN
 */
 	DECLARE @ScoreLog VARCHAR(100)
 		,@sporttype TINYINT
+		,@hth INT
+		,@hta INT 
+		,@IsHTCal BIT
+		,@IsRefundHT BIT
 
 	SELECT @sporttype = SportType
+		,@hth = hthomescore
+		,@hta = htawayscore
+		,@IsRefundHT = CASE WHEN betstatus LIKE 'Refund HT%' then 1 ELSE 0 END 
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
+	SELECT @IsHTCal = isHTCal
+	FROM DBPRO.BODB02.dbo.Match_remark WITH (NOLOCK)
+	WHERE matchid = @matchid	
+
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @HTDone = 1
 	BEGIN
-		SELECT @ScoreLog = ' FTHScore=' + CAST(@fth AS VARCHAR(10)) + ' FTAScore=' + CAST(@fta AS VARCHAR(10)) + ' BetStatus=' + @betstatus
+		SELECT @ScoreLog = ' FTHScore=' + CAST(@fth AS VARCHAR(10)) + ' FTAScore=' + CAST(@fta AS VARCHAR(10)) + ' BetStatus=' + ISNULL(@betstatus,'')
 
 		DECLARE @TennisTotal SMALLINT
 			,@T_Home SMALLINT
@@ -357,10 +368,7 @@ BEGIN
 	BEGIN
 		DECLARE @betcount_3 INT
 
-		SELECT @betcount_3 = ISNULL(SUM(CASE bettype
-						WHEN 3 THEN 1
-						ELSE 0
-						END), 0)
+		SELECT @betcount_3 = ISNULL(SUM(CASE bettype WHEN 3 THEN 1 ELSE 0 END), 0)
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype = 3 AND 1 = CASE 
 				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
@@ -372,9 +380,8 @@ BEGIN
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'FT'
-			,@betcount_3 = 3
 			,@totalgoal = @totalgoal
-			,@ticket_count = @betcount_3
+			,@betcount_3 = @betcount_3
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 	END
@@ -383,61 +390,74 @@ BEGIN
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @HTDone = 1 AND @sporttype = 1
 	BEGIN
 		DECLARE @betcount_13 INT
-			,@betcount_26 INT
-			,@betcount_27 INT
+			,@betcount_26	 INT
+			,@betcount_27	 INT
+			,@betcount_133	 INT
+			,@betcount_134	 INT
+			,@betcount_140	 INT
+			,@betcount_141	 INT
+			,@betcount_142	 INT
+			,@betcount_145	 INT
+			,@betcount_146	 INT
+			,@betcount_147	 INT
+			,@betcount_148	 INT
+			,@betcount_149	 INT
+			,@betcount_150	 INT
+			,@betcount_152	 INT
 
-		SELECT @betcount_13 = ISNULL(SUM(CASE b.bettype
-						WHEN 13 THEN 1
-						ELSE 0
-						END), 0)
-			,@betcount_26 = ISNULL(SUM(CASE b.bettype
-						WHEN 26 THEN 1
-						ELSE 0
-						END), 0)
-			,@betcount_27 = ISNULL(SUM(CASE b.bettype
-						WHEN 27 THEN 1
-						ELSE 0
-						END), 0)
+		SELECT @betcount_13 = ISNULL(SUM(CASE b.bettype WHEN 13 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_26 = ISNULL(SUM(CASE b.bettype WHEN 26 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_27 = ISNULL(SUM(CASE b.bettype WHEN 27 THEN 1 ELSE 0 END), 0)
+
+			  ,@betcount_133 = ISNULL(SUM(CASE b.bettype WHEN 133 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_134 = ISNULL(SUM(CASE b.bettype WHEN 134 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_140 = ISNULL(SUM(CASE b.bettype WHEN 140 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_141 = ISNULL(SUM(CASE b.bettype WHEN 141 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_142 = ISNULL(SUM(CASE b.bettype WHEN 142 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_145 = ISNULL(SUM(CASE b.bettype WHEN 145 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_146 = ISNULL(SUM(CASE b.bettype WHEN 146 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_147 = ISNULL(SUM(CASE b.bettype WHEN 147 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_148 = ISNULL(SUM(CASE b.bettype WHEN 148 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_149 = ISNULL(SUM(CASE b.bettype WHEN 149 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_150 = ISNULL(SUM(CASE b.bettype WHEN 150 THEN 1 ELSE 0 END), 0)
+			  ,@betcount_152 = ISNULL(SUM(CASE b.bettype WHEN 152 THEN 1 ELSE 0 END), 0)
 		FROM bettrans b WITH (NOLOCK)
-		WHERE b.matchid = @matchid AND b.bettype IN (13, 26, 27) AND b.statusID NOT IN (101, 102) AND 1 = CASE 
-				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-				WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
-				ELSE 0
+		WHERE b.matchid = @matchid 
+		AND b.bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+		AND b.statusID NOT IN (101, 102) 
+		AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
+				     WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
+				     WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
+				     ELSE 0
 				END
 
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'FT'
-			,@betcount_13 = 13
 			,@fth = @fth
 			,@fta = @fta
-			,@ticket_count = @betcount_13
+			,@hth = @hth
+			,@hta = @hta
+			,@betcount_13 = @betcount_13
+			,@betcount_26 = @betcount_26
+			,@betcount_27 = @betcount_27
+			,@betcount_133 = @betcount_133
+			,@betcount_134 = @betcount_134
+			,@betcount_140 = @betcount_140
+			,@betcount_141 = @betcount_141
+			,@betcount_142 = @betcount_142
+			,@betcount_145 = @betcount_145
+			,@betcount_146 = @betcount_146
+			,@betcount_147 = @betcount_147
+			,@betcount_148 = @betcount_148
+			,@betcount_149 = @betcount_149
+			,@betcount_150 = @betcount_150
+			,@betcount_152 = @betcount_152
+			,@IsHTCal = @IsHTCal
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-			,@action = 'REFUND'
-			,@mode = 'FT'
-			,@betcount_26 = 26
-			,@fth = @fth
-			,@fta = @fta
-			,@ticket_count = @betcount_26
-			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-			,@action = 'REFUND'
-			,@mode = 'FT'
-			,@betcount_27 = 27
-			,@fth = @fth
-			,@fta = @fta
-			,@ticket_count = @betcount_27
-			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+		
 	END
 
 	DECLARE @RowCount INT
@@ -447,12 +467,9 @@ BEGIN
 		,@HTDone = @HTDone
 		,@RowCount = @RowCount OUTPUT
 		,@creator = @adminid
-
+	
 	IF @RowCount > 0
 	BEGIN
-		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
-			,'F'
-
 		-- Calculate Refund FT
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
@@ -463,6 +480,11 @@ BEGIN
 			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 			,@fth = @fth
 			,@fta = @fta
+			,@IsHTCal = @IsHTCal
+			,@IsRefundHT = @IsRefundHT
+
+		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
+			,'F'
 	END
 
 	INSERT INTO #BalanceAfter

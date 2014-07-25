@@ -2,6 +2,7 @@ ALTER PROCEDURE [NAP_Admin_Settlement_Parlay] (
 	@matchids VARCHAR(2000)
 	,@creator INT
 	,@action VARCHAR(20) = 'CAL'
+	,@resultPS NVARCHAR(50) = ''
 	,@IP VARCHAR(15) = ''
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -13,18 +14,29 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:
+		- 20140417@Kathy: Fix LAS command
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
+		- 20140714@Kathy: Settle MP for Penalty Shootout [Redmine:#17142]
 			
 	Param's Explanation:
+	@resultPS: 1: match result of penalty shootout
 
 		
 */
 BEGIN
 	SET NOCOUNT ON
+	
+	DECLARE  @SkipBalanceUpdate BIT
+			,@procName nvarchar(50)
+			,@mode int
 
-	DECLARE @SkipBalanceUpdate BIT
+	SELECT   @SkipBalanceUpdate = 0
+			,@procName = OBJECT_NAME(@@procid)
 
-	SET @SkipBalanceUpdate = 0
+	SELECT @mode = CASE WHEN @procName LIKE '%_xtest' OR @procName LIKE '%_xpre%' THEN 1
+						ELSE 0
+				   END 
+
 
 	DECLARE @start DATETIME
 		,@stop DATETIME
@@ -67,8 +79,9 @@ BEGIN
 			WHERE KeyID = 1 AND KeyValue IN (
 					SELECT val
 					FROM dbo.strSplit(@matchids, ',')
-					) AND @action <> 'UNDO'
-			)
+					) 
+			) AND @action <> 'UNDO' AND @resultPS = ''
+					
 	BEGIN
 		SELECT @ErrCode = 1000000
 			,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
@@ -108,7 +121,7 @@ BEGIN
 			SELECT 1
 			FROM @match
 			WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
-			) AND @action <> 'UNDO'
+			) AND @action <> 'UNDO' AND @resultPS = ''
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
@@ -124,7 +137,10 @@ BEGIN
 	DECLARE @LASCommand NVARCHAR(1000)
 		,@createdDate DATETIME
 
-	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' 
+														  + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) 
+														  + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
+														  + ', @resultPS = ' + '''' + CONVERT(NVARCHAR(50), @resultPS) + ''''														 
 		,@createdDate = GETDATE()
 
 	BEGIN TRY
@@ -148,7 +164,7 @@ BEGIN
 				,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
 		RETURN
 	END CATCH
-
+	
 	DECLARE @rn INT
 		,@subStart DATETIME
 		,@CalTime INT
@@ -173,6 +189,7 @@ BEGIN
 		,@T_Home SMALLINT
 		,@T_Away SMALLINT
 		,@tmp INT
+		,@IsRefundHT BIT
 
 	SET @rn = 1
 
@@ -194,6 +211,10 @@ BEGIN
 			,@GoalRecord = GoalRecord
 		FROM @match
 		WHERE rn = @rn
+
+		SELECT @IsRefundHT = CASE WHEN betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
+		FROM match with(NOLOCK)
+		WHERE matchid = @matchid
 
 		IF (@SportType IN (5, 6, 9, 30)) AND @action = 'CAL' AND @betstatus <> 'Refund' -- Tennis/VolleyBall/Badminton/Squash: get TotalGamesPlayed
 												EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
@@ -224,15 +245,17 @@ BEGIN
 
 		--COMMIT TRANSACTION
 		
-								EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
-				,@mode = 'ALL'
-				,@action = @action
-				,@fth = @finalhomescore
-				,@fta = @finalawayscore
-				,@hth = @hthomescore
-				,@hta = @htawayscore
-				,@matchdate = @matchdate
-				,@TennisTotal = @TennisTotal
+		EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+			,@mode = 'ALL'
+			,@action = @action
+			,@resultPS = @resultPS
+			,@IsRefundHT = @IsRefundHT
+			,@fth = @finalhomescore
+			,@fta = @finalawayscore
+			,@hth = @hthomescore
+			,@hta = @htawayscore
+			,@matchdate = @matchdate
+			,@TennisTotal = @TennisTotal
 
 		UPDATE @match
 		SET CalTime = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
@@ -331,7 +354,7 @@ BEGIN
 		SET @strXML_modds = ''
 		SET @9Start = CURRENT_TIMESTAMP
 
-								EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate
+		EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate, @mode = @mode
 
 		SET @9Time = @9Time + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
 		SET @2Call = @2Call + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
@@ -375,15 +398,15 @@ BEGIN
 		FROM @match
 		WHERE rn = @rn
 
+		IF ISNULL(@resultPS,'') <> ''
+			BREAK
+
 		IF @action = 'CAL'
-												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'M'
-		ELSE IF @action = 'REFUND'
-												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+		ELSE IF @action IN ('REFUND', 'REFUND-FT', 'REFUND-HT')
+			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'R'
-		ELSE IF @action IN ('REFUND-FT', 'REFUND-HT')
-												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
-				,@command = 'F'
 
 		---------------------------------------------------------------
 		-- update match coz m88 project using DB02.dbo.match.tstamp to know match do parlay settle (vivi@2009-8-27)	
@@ -409,9 +432,7 @@ BEGIN
 	IF @SkipBalanceUpdate = 0
 	BEGIN
 		--===
-			;
-
-		WITH refnos
+		;WITH refnos
 		AS (
 			SELECT DISTINCT refno
 			FROM dbo.bettransm b WITH (NOLOCK)
@@ -514,6 +535,7 @@ BEGIN
 			WHERE rn = @rn
 			)
 	BEGIN
+		
 		SELECT @CalTime = CalTime
 			,@matchid = matchid
 			,@matchdate = eventdate
@@ -527,7 +549,7 @@ BEGIN
 		FROM @match
 		WHERE rn = @rn
 
-		SELECT @LogData = 'NAP: Calculate Multiple (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
+		SELECT @LogData = 'NAP: Calculate Multiple (' + @action + ') ' + CASE when @resultPS <> '' THEN 'PS' ELSE '' END + ' for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
 
 		EXEC dbo.WriteLog_UserLog @creator
 			,@LogData
@@ -568,7 +590,6 @@ BEGIN
 		SET @rn = @rn + 1
 	END
 END
-
 
 GO
 

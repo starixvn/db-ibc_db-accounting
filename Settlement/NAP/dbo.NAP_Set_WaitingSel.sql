@@ -11,6 +11,7 @@ AS
 	Revision:
 		- 20140419@Lukas: reduce data return by excluding old matches
 		- 20140421@Kathy: Directly get IsExistFGLG value from bettrans (not use NAP_Set_MatchBetStatusSel)
+		- 20140506@Kathy: get HT FGLG status 
 	Param's explanation:  
 		
 */
@@ -28,124 +29,113 @@ BEGIN
 		SET @matchid=NULL
 	END CATCH
 
-	DECLARE @tblSingle table(matchid int, seqS int, seqP int) 
-	DECLARE	@tblParlay table(matchid int, seqS int,seqP int)
-	DECLARE	@tblSingle_Parlay table(matchid int, seqS int, seqP int)
-	DECLARE	@tblResult table(matchid int, seqS int, seqP int)
+	declare @topn int
 
 	;WITH SingleTicket AS
 	(
-		SELECT s.matchid, CASE WHEN s.IsCalculating = 1 then 1
-								when s.IsCalculating = 0 then 2
-								WHEN s.IsCalculating = 2 then 3
-								when s.IsCalculating = 3 then 4
-							END as seqS
+		SELECT matchid, min(IsCalculating)  IsCalculating
 		FROM Single_Calculate_Queue s WITH(NOLOCK)
-		WHERE s.matchid NOT IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK))
-			AND Starttime > DATEADD(HH,-1,GETDATE())
-	)
-	INSERT INTO @tblSingle
-	SELECT s.matchid, min(seqS), NULL
-	FROM SingleTicket s
-	group BY s.matchid
-
-	;WITH ParlayTicket AS
+		WHERE Starttime > DATEADD(HH,-1,GETDATE())
+		group by matchid 
+	),
+	ParlayTicket AS
 	(
-		SELECT p.matchid, CASE WHEN p.IsCalculating = 1 then 1
-								when p.IsCalculating = 0 then 2
-								WHEN p.IsCalculating = 2 then 3
-								when p.IsCalculating = 3 then 4
-							END as seqP
+		SELECT p.matchid, min(IsCalculating)  IsCalculating
 		FROM Parlay_Calculate_Queue p WITH(NOLOCK)
-		WHERE p.matchid NOT IN (SELECT matchid FROM Single_Calculate_Queue with(NOLOCK))
-			AND Starttime > DATEADD(HH,-1,GETDATE())
-	)
-	INSERT INTO @tblParlay
-	SELECT p.matchid, NULL, min(seqP)
-	FROM ParlayTicket p 	
-	group BY p.matchid	
+		WHERE Starttime > DATEADD(HH,-1,GETDATE())
+		group by matchid 
+	)	
+	select isnull(sg.matchid, pl.matchid) matchid, 
+			sg.IsCalculating singlestatus, pl.IsCalculating parlaystatus, 
+			cast(ISNULL(sg.IsCalculating, 0) as bit) as IsSingle,
+			cast(ISNULL(pl.IsCalculating, 0) AS bit) as IsMixParlay
+	into #tempmatch
+	from SingleTicket sg
+		full outer join ParlayTicket pl on sg.matchid = pl.matchid 
+		 
+	set @topn = @@ROWCOUNT
 
-	;WITH SingleParlayTicket AS
+	select matchid,
+		leagueid,
+		HalfTimeHomeScore,
+		HalfTimeAwayScore,
+		IsCalculated,
+		IsMultiCaled,
+		IsRefund,
+		IsCalRefund,
+		homeid,
+		awayid,
+		matchcode,
+		kickofftime,
+		finalhomescore,
+		finalawayscore,
+		betstatus,
+		eventstatus,
+		Foddsstatus,
+		sporttype,
+		IsNeutral,
+		eventdate,
+		goalrecord,
+		suspenderHalfTime,
+		suspenderFullTime,
+		IsHalfTimeCal,
+		isPending,
+		isUndecided,
+		IsKeyscore,
+		IsExistFGLG,
+		IsExistHTFGLG,
+		IsCalculatingSingle,
+		IsCalculatingMP
+	from 
 	(
-		SELECT s.matchid, CASE WHEN s.IsCalculating = 1 then 1
-								when s.IsCalculating = 0 then 2
-								WHEN s.IsCalculating = 2 then 3
-								when s.IsCalculating = 3 then 4
-							END as seqS,
-						  CASE WHEN p.IsCalculating = 1 then 1
-								when p.IsCalculating = 0 then 2
-								WHEN p.IsCalculating = 2 then 3
-								when p.IsCalculating = 3 then 4
-							END as seqP
-		FROM Single_Calculate_Queue s WITH(NOLOCK)
-			INNER JOIN Parlay_Calculate_Queue p with(NOLOCK) ON s.matchid = p.matchid
-		WHERE (s.Starttime > DATEADD(HH,-1,GETDATE())
-		OR p.Starttime > DATEADD(HH,-1,GETDATE()))
-	)
-	INSERT INTO @tblSingle_Parlay
-	SELECT matchid, min(seqS), min(seqP)
-	FROM SingleParlayTicket 
-	group BY matchid	
-
-	INSERT INTO @tblResult
-	SELECT matchid, seqS, seqP
-	FROM @tblSingle
-	UNION ALL
-	SELECT matchid, seqS, seqP
-	FROM @tblParlay
-	UNION ALL
-	SELECT matchid, seqS, seqP
-	FROM @tblSingle_Parlay
-	
-	select m.matchid, m.leagueid ,
-		hthomescore HalfTimeHomeScore,
-		htawayscore HalfTimeAwayScore, 
-		isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,  
-		isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,  		
-		m.homeid, m.awayid,  
-		m.matchcode, m.kickofftime,  
-		m.finalhomescore,  
-		m.finalawayscore, m.betstatus,  
-		case when m.betstatus like 'Refund FT%' then 'Refund FT'  
-		when m.betstatus like 'Refund HT%' then 'Refund HT'  
-		when m.betstatus like 'Refund%' then 'Refund'  
-		else m.eventstatus  
-		end as eventstatus,    
-		'' as Foddsstatus,  
-		m.sporttype,  
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,  
-		m.eventdate,  
-		m.goalrecord, 
-		case mr.ConfirmHT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmHT ) end suspenderHalfTime,   
-		case mr.ConfirmFT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmFT ) end suspenderFullTime,  
-		ISNULL(mr.IsHTCal,0) as IsHalfTimeCal,  		
-		ISNULL(mr.isPending,0) as isPending,  
-		ISNULL(mr.isUndecided,0) as isUndecided,  
-		CAST(CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore ,
-		CASE WHEN C.matchid IS NULL THEN 0 ELSE 1 END as IsExistFGLG,
-		case when t.seqS = 1 THEN 1
-					WHEN t.seqS = 2 then 0
-					when t.seqS = 3 then 2 
-					when t.seqS = 4 THEN 3
-				END as IsCalculatingSingle,
-		case when t.seqP = 1 THEN 1
-					WHEN t.seqP = 2 then 0
-					when t.seqP = 3 then 2 
-					when t.seqP = 4 then 3
-				END as IsCalculatingMP,
-		convert(bit, CASE WHEN t.seqS IS NULL THEN 0 ELSE 1 END) as IsSingle,
-		convert(bit, CASE when t.seqP IS NULL THEN 0 ELSE 1 END) as IsMixParlay
-		
-	FROM @tblResult t
-	INNER JOIN DBPRO.bodb02.dbo.match m with(NOLOCK) ON m.matchid = t.matchid
-	LEFT JOIN (
-		SELECT b.matchid 
-		FROM bettrans b WITH(NOLOCK)where b.bettype = 14
-	) C ON C.matchid = t.matchid
-	LEFT OUTER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON t.matchid = mr.matchid
-	WHERE  m.leagueID = case when @LeagueID <> 0 then @LeagueID else m.leagueID end  
-		AND m.sporttype = case when @sporttype = 0 then m.sporttype else @sporttype end  	  		
-		AND (@matchcode = '' or (m.matchid = @matchid OR m.matchcode = @matchcode)) 
+		select m.matchid, m.leagueid ,
+			hthomescore HalfTimeHomeScore,
+			htawayscore HalfTimeAwayScore, 
+			isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,  
+			isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,  		
+			m.homeid, m.awayid,  
+			m.matchcode, m.kickofftime,  
+			m.finalhomescore,  
+			m.finalawayscore, m.betstatus,  
+			case when m.betstatus like 'Refund FT%' then 'Refund FT'  
+			when m.betstatus like 'Refund HT%' then 'Refund HT'  
+			when m.betstatus like 'Refund%' then 'Refund'  
+			else m.eventstatus  
+			end as eventstatus,    
+			'' as Foddsstatus,  
+			m.sporttype,  
+			isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,  
+			m.eventdate,  
+			m.goalrecord, 
+			case mr.ConfirmHT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmHT ) end suspenderHalfTime,   
+			case mr.ConfirmFT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmFT ) end suspenderFullTime,  
+			ISNULL(mr.IsHTCal,0) as IsHalfTimeCal,  		
+			ISNULL(mr.isPending,0) as isPending,  
+			ISNULL(mr.isUndecided,0) as isUndecided,  
+			CAST(CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore ,
+			case when C.cntFGLG <> 0 then 1 ELSE 0 END IsExistFGLG,
+			case when C.cntHTFGLG <> 0 then 1 ELSE 0 END IsExistHTFGLG,
+			tm.singlestatus as IsCalculatingSingle,
+			tm.parlaystatus as IsCalculatingMP
+		FROM #tempmatch tm		
+			INNER JOIN DBPRO.bodb02.dbo.match m with(NOLOCK) ON  tm.matchid = m.matchid
+			LEFT JOIN (
+							SELECT b.matchid,
+								sum(CASE when b.bettype = 14 THEN 1 ELSE 0 end) as cntFGLG  ,
+								sum(CASE when b.bettype = 127 THEN 1 ELSE 0 end)  as cntHTFGLG 
+							FROM bettrans b WITH(NOLOCK) 
+							where b.bettype in (14 , 127)
+							GROUP BY b.matchid				
+						) C ON C.matchid = m.matchid
+			LEFT OUTER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid			
+		WHERE  
+			 m.matchid in (select top (@topn) matchid from #tempmatch)
+			and mr.matchid in (select top (@topn) matchid from #tempmatch)
+	) t 
+	where 
+		t.leagueID = case when @LeagueID <> 0 then @LeagueID else t.leagueID end  
+			AND t.sporttype = case when @sporttype = 0 then t.sporttype else @sporttype end  	  		
+			AND (@matchcode = '' or (t.matchid = @matchid OR t.matchcode = @matchcode)) 	
 END
 
 GO

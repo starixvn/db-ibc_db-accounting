@@ -17,6 +17,7 @@ AS
 
 	Revisions:
 		- 20140426@Kathy: Add @action param (1H FGLG (bettype 127) ) [Redmine:#14449]
+		- 20140618@Kathy: Correct betstatus
 	Param's Explanation:
 		+ @betstatus: FGLG status
 		+ @IsLoopTempTable: 1 : is nested
@@ -105,35 +106,37 @@ BEGIN
 		,@HT_FGLG1 VARCHAR(10)
 		,@HT_FGLG2 VARCHAR(10)
 		,@HT_FLString VARCHAR(10)
+		,@temp_betstatus nvarchar(50)
 
 	SELECT @FGLG1 = ''
 		,@FGLG2 = ''
 		,@HT_FGLG1 = ''
 		,@HT_FGLG2 = ''
+		,@temp_betstatus = @betstatus
 
-	IF (charindex('FL:',@betstatus)>0 and charindex('1FL:', @betstatus) = 0) 
-		or charindex(';FL:',@betstatus) > 0 
+	IF charindex('1FL:',@temp_betstatus) > 0 
 	begin
-		select @FLString = substring(@betstatus, charindex(';FL:', @betstatus) + 4, 3)
-		select @FGLG1 = case @FLString when '0-0' then '0:0' 
+		select @HT_FLString = SUBSTRING(@temp_betstatus,charindex('1FL:',@temp_betstatus) + 4, 3)
+				,@temp_betstatus = REPLACE(@temp_betstatus,SUBSTRING(@temp_betstatus,CHARINDEX('1FL:',@temp_betstatus),7),'')
+				,@HT_FGLG1 = case @HT_FLString when '0-0' then '0:0'
+											 else left(@HT_FLString,1) + ':1'
+						   end
+				,@HT_FGLG2 = case @HT_FLString when '0-0' then ''
+											 else right(@HT_FLString,1) + ':2'
+						   end
+	end
+	IF charindex('FL:',@temp_betstatus) > 0
+	begin
+		select @FLString = SUBSTRING(@temp_betstatus,CHARINDEX('FL:',@temp_betstatus) + 3, 3)
+				,@FGLG1 = case @FLString when '0-0' then '0:0' 
 									   else left(@FLString,1) + ':1'
-						end,			
-			   @FGLG2 = case @FLString when '0-0' then ''
+						end
+				,@FGLG2 = case @FLString when '0-0' then ''
 									   else right(@FLString,1) + ':2'
 						end
 	end
+
 	
-	if charindex('1FL:', @betstatus) > 0
-	begin
-		select @HT_FLString = substring(@betstatus, charindex('1FL:', @betstatus) + 4, 3)
-			
-		select @HT_FGLG1 = case @HT_FLString when '0-0' then '0:0'
-											 else left(@HT_FLString,1) + ':1'
-						   end,			
-			   @HT_FGLG2 = case @HT_FLString when '0-0' then ''
-											 else right(@HT_FLString,1) + ':2'
-						   end
-	END
 
 	-------------------------
 	-------------------------------------------------------------
@@ -161,36 +164,37 @@ BEGIN
 	END
 
 	-- bettype 14 : First Goal Last Goal - re-use the SP of Correct Score, so we have to call it twice		
-	DECLARE @ticketcount_14 INT
-		,@ticketcount_127 INT
+	DECLARE @betcount_14 INT
+		,@betcount_127 INT
 		,@goaldiff SMALLMONEY
 
-	SELECT @ticketcount_14 = SUM(CASE 
+	SELECT @betcount_14 = SUM(CASE 
 				WHEN bettype = 14 THEN 1
 				ELSE 0
 				END)
-		,@ticketcount_127 = SUM(CASE 
+		,@betcount_127 = SUM(CASE 
 				WHEN bettype = 127 THEN 1
 				ELSE 0
 				END)
 	FROM dbo.bettrans WITH (NOLOCK)
 	WHERE matchid = @matchid
+	AND bettype IN (14, 127)
 
-	IF @ticketcount_14 = 0 OR @ticketcount_127 = 0
+	IF @betcount_14 = 0 OR @betcount_127 = 0
 	BEGIN
-		SELECT @ticketcount_14 = CASE 
-				WHEN @ticketcount_14 = 0 THEN SUM(CASE 
+		SELECT @betcount_14 = CASE 
+				WHEN @betcount_14 = 0 THEN SUM(CASE 
 							WHEN bettype = 14 THEN 1
 							ELSE 0
 							END)
-				ELSE @ticketcount_14
+				ELSE @betcount_14
 				END
-			,@ticketcount_127 = CASE 
-				WHEN @ticketcount_127 = 0 THEN SUM(CASE 
+			,@betcount_127 = CASE 
+				WHEN @betcount_127 = 0 THEN SUM(CASE 
 							WHEN bettype = 127 THEN 1
 							ELSE 0
 							END)
-				ELSE @ticketcount_127
+				ELSE @betcount_127
 				END
 		FROM dbo.bettransm WITH (NOLOCK)
 		WHERE matchid = @matchid
@@ -204,22 +208,20 @@ BEGIN
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'CAL-FGLG'
 			,@mode = 'CAL-HT'
-			,@betcount_127 = 127
 			,@HT_FGLG1 = @HT_FGLG1
 			,@goaldiff = @goaldiff
 			,@HT_FGLG2 = @HT_FGLG2
-			,@ticket_count = @ticketcount_127
+			,@betcount_127 = @betcount_127
 
 		IF @IncludeLG = 0
 		BEGIN
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'CAL-FGLG'
 				,@mode = 'CAL-FT'
-				,@betcount_14 = 14
 				,@FGLG1 = @FGLG1
 				,@goaldiff = @goaldiff
 				,@FGLG2 = @FGLG2
-				,@ticket_count = @ticketcount_14
+				,@betcount_14 = @betcount_14
 
 			EXEC dbo.NAP_Admin_Settlement_Refund_FGLG --refund  all LG
 				@matchid = @matchid
@@ -237,11 +239,10 @@ BEGIN
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'CAL-FGLG'
 			,@mode = 'CAL-FT'
-			,@betcount_14 = 14
 			,@FGLG1 = @FGLG1
 			,@goaldiff = @goaldiff
 			,@FGLG2 = @FGLG2
-			,@ticket_count = @ticketcount_14
+			,@betcount_14 = @betcount_14
 
 		IF @IncludeLG = 0
 		BEGIN

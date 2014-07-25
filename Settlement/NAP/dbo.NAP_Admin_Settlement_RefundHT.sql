@@ -19,6 +19,7 @@ AS
 
 	Revisions:
 		- 20140421@Kathy: Add new bettype 126 [Redmine:#14449]
+		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 	
 	
 	Param's Explanation:
@@ -115,7 +116,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -262,16 +263,16 @@ BEGIN
 
 		DECLARE @betcount_8 INT
 
-		SELECT @betcount_8 = ISNULL(SUM(CASE bettype
-						WHEN 8 THEN 1
-						ELSE 0
-						END), 0)
+		SELECT @betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype = 8 AND 1 = CASE 
-				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-				ELSE 0
-				END AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND bettype = 8 
+		AND 1 = CASE 
+					WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
+					WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
+					ELSE 0
+				END 
+		AND statusID NOT IN (101, 102)
 
 		--EXEC dbo.NAP_Admin_Calculate_8 @matchid = @matchid
 		--	,@bettype = 8
@@ -282,9 +283,8 @@ BEGIN
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
-			,@betcount_8 = 8 -- bettype
+			,@betcount_8 = @betcount_8 -- bettype
 			,@totalht = @totalht
-			,@ticket_count = @betcount_8 -- sum ticket of bettype 8
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 	END
@@ -317,7 +317,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -521,6 +521,7 @@ BEGIN
 		END CATCH
 	END
 END
+
 
 
 

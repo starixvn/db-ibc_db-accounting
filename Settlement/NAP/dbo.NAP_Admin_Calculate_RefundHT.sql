@@ -8,6 +8,9 @@ AS
 	DB: DBTXN/BODB02
 	Revisions:
 		- 20140426@Kathy: Add 1H total goal (126) [Redmine:#14449]
+		- 20140620@Kathy: Apply BetRadar:
+							- Add 1st Correct Score(151) 	
+							- Refund FT bettypes  [Redmine:#17142]
 
 	Param's Explanation:
 		+ @IsExcludeBetdaq: 
@@ -60,16 +63,20 @@ BEGIN
 			,scomm = 0
 		WHERE matchid = @matchid
 			--AND [status] not in (N'Void', N'Reject')
-			AND statusID NOT IN (103, 101, 102) AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126) AND 1 = CASE 
-				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
-				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
-				ELSE 1
-				END
+			AND statusID NOT IN (103, 101, 102) 			
+			AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 151, 
+							133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 ) -- BetRadar: refund FT ticket in case of 30x3 match
+			AND 1 = CASE 
+						WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
+						WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
+						ELSE 1
+					END
 
 		IF @@ROWCOUNT < 10000
 			BREAK
 	END
 END
+
 
 GO
 

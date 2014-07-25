@@ -11,6 +11,7 @@ AS
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140423@Kathy: Remove check weekend peak-hour
 		- 20140506@Kathy: Add IsExistHTFGLG, IsExistHTLG column. Offer new bettype 126, 127 (1H total goal, 1H FGLG) [Redmine:#14449]
+		- 20140623@Kathy: Apply BetRadar - Add new bettype 151 (1st Half Double Chance) [Redmine:#Feature #17142]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -29,6 +30,7 @@ BEGIN
 		,@HTFGLGStatus NVARCHAR(20)
 		,@ParlayRunning BIT
 		,@HTParlayRunning BIT
+		
 
 	SELECT @IsExistLG = 0
 		,@IsExistFGLG = 0
@@ -37,6 +39,7 @@ BEGIN
 		,@IsSettleAbandonedMatchIBC = 0
 		,@IsExistHTLG = 0
 		,@IsExistHTFGLG = 0
+		
 
 	SELECT @sporttype = sporttype
 	FROM match WITH (NOLOCK)
@@ -119,7 +122,7 @@ BEGIN
 
 		INSERT INTO @status
 		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				ELSE 0
@@ -135,7 +138,7 @@ BEGIN
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype NOT BETWEEN 1301 AND 1334
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				ELSE 0
@@ -234,6 +237,8 @@ BEGIN
 				END
 		FROM @status
 		WHERE [Group] = 3
+
+		
 	END
 	ELSE
 	BEGIN
@@ -321,20 +326,26 @@ BEGIN
 			EXISTS (
 				SELECT 1
 				FROM bettrans WITH (NOLOCK)
-				WHERE bettype IN (13, 26, 27) AND matchid = @matchid AND statusID NOT IN (101, 102, 103) AND ruben = 0 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
+				WHERE bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+				AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
+				AND ruben = 0 
+				AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
 				) AND @sporttype = 1
 			)
 	BEGIN
 		SELECT @IsSettleAbandonedMatchIBC = 1
 
-		IF EXISTS (
-				SELECT 1
-				FROM bettrans WITH (NOLOCK)
-				WHERE matchid = @matchid AND bettype IN (13, 26, 27) AND statusID NOT IN (101, 102) AND ruben = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
-				) OR @sporttype <> 1
-		BEGIN
-			SELECT @IsSettleAbandonedMatchIBC = 0
-		END
+		--IF EXISTS (
+		--		SELECT 1
+		--		FROM bettrans WITH (NOLOCK)
+		--		WHERE matchid = @matchid AND bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+		--		AND statusID NOT IN (101, 102) 
+		--		AND ruben = 1 
+		--		AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
+		--		) OR @sporttype <> 1
+		--BEGIN
+		--	SELECT @IsSettleAbandonedMatchIBC = 0
+		--END
 	END
 
 	IF EXISTS (

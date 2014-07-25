@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_updateMatch_remark]
+ALTER PROCEDURE [NAP_updateMatch_remark]
 	@matchid int,
 	@command varchar(5),
 	@ivalue bigint = NULL
@@ -89,8 +89,6 @@ IF @command = 'IsP' UPDATE match_remark WITH (ROWLOCK, UPDLOCK) SET isPending = 
   
 -- update isUndecided  
 IF @command = 'IsU' UPDATE match_remark WITH (ROWLOCK, UPDLOCK) SET isUndecided = @ivalue WHERE matchid = @matchid	--20120306@Hurri
-
-
 GO
 
 GRANT EXECUTE ON [NAP_updateMatch_remark] TO [bodbAdminNet] AS [dbo]

@@ -1,8 +1,8 @@
-
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
+ALTER PROCEDURE [NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@matchids VARCHAR(2000) = NULL
 	,@mode VARCHAR(15) = 'CAL'
 	,@action VARCHAR(20) = 'ALL'
+	,@IsRefundHT BIT = 0
 	,@fth INT = NULL
 	,@fta INT = NULL
 	,@hth INT = NULL
@@ -22,6 +22,7 @@ AS
 
 	Revisions:
 		- 20140424@Lukas: add DBTP server 
+		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
 
 	Param's Explanation:
 		@action			@mode
@@ -50,6 +51,10 @@ BEGIN
 			,@action = ' + CASE 
 				WHEN @action IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @action) + ''''
+				END + '
+			,@IsRefundHT = ' + CASE 
+				WHEN @IsRefundHT IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @IsRefundHT)
 				END + '
 			,@fth = ' + CASE 
 				WHEN @fth IS NULL THEN 'NULL'
@@ -113,6 +118,7 @@ BEGIN
 					,@hta = @hta
 					,@matchdate = @matchdate
 					,@action = 'CAL'
+					,@IsRefundHT = @IsRefundHT
 					,@TennisTotal = @TennisTotal
 			END
 
@@ -127,6 +133,7 @@ BEGIN
 				,@hta = @hta
 				,@matchdate = @matchdate
 				,@action = @action
+				,@IsRefundHT = @IsRefundHT
 				,@TennisTotal = @TennisTotal
 
 			COMMIT TRANSACTION
@@ -151,6 +158,7 @@ BEGIN
 		END
 	END
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Parlay] TO [vnteam] AS [dbo]
 

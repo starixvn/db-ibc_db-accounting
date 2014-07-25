@@ -24,8 +24,9 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions: 
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140704@Kathy: Apply BetRadar [Redmine:#17142]
 	
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -146,17 +147,25 @@ BEGIN
 
 	DECLARE @ScoreLog VARCHAR(100)
 		,@sporttype TINYINT
+		,@IsRefundHT BIT
+		,@IsHTCal BIT
 
 	SELECT @sporttype = SportType
+		,@IsRefundHT = CASE WHEN betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
+	SELECT @IsHTCal = IsHTCal
+	FROM DBPRO.BODB02.dbo.Match_remark WITH (NOLOCK)
+	WHERE matchid = @matchid
+
+	
 	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1
 	BEGIN
 		SELECT @ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)), '') + ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)), '') + ' FTHScore=' + ISNULL(CAST(@fth AS VARCHAR(10)), '') + ' FTAScore=' + ISNULL(CAST(@fta AS VARCHAR(10)), '') + CASE 
 				WHEN @SportType IN (5, 6, 9, 30) THEN ' Betstatus=Refund;'
 				ELSE ' Betstatus='
-				END + @betstatus
+				END + ISNULL(@betstatus,'')
 
 		DECLARE @TennisTotal SMALLINT
 			,@T_Home SMALLINT
@@ -286,116 +295,86 @@ BEGIN
 		END
 	END
 
-	/*
-		Settle Betdaq, Betfair tickets Abandoned Match for Over/Under 
-*/
-	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
-	BEGIN
-		DECLARE @betcount_3 INT
+	
+	DECLARE @betcount_3 INT
 			,@betcount_8 INT
+			,@betcount_13 INT
+			,@betcount_26 INT
+			,@betcount_27 INT
+			,@betcount_145 INT
+			,@betcount_152 INT
 
-		SELECT @betcount_3 = ISNULL(SUM(CASE bettype
-						WHEN 3 THEN 1
-						ELSE 0
-						END), 0)
-			,@betcount_8 = ISNULL(SUM(CASE bettype
-						WHEN 8 THEN 1
-						ELSE 0
-						END), 0)
-		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype IN (3, 8) AND 1 = CASE 
+	SELECT  @betcount_3 = ISNULL(SUM(CASE bettype WHEN 3 THEN 1 ELSE 0 END), 0)
+			,@betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
+			,@betcount_13 = ISNULL(SUM(CASE b.bettype WHEN 13 THEN 1 ELSE 0 END), 0)
+			,@betcount_26 = ISNULL(SUM(CASE b.bettype WHEN 26 THEN 1 ELSE 0 END), 0)
+			,@betcount_27 = ISNULL(SUM(CASE b.bettype WHEN 27 THEN 1 ELSE 0 END), 0)
+			,@betcount_145 = ISNULL(SUM(CASE b.bettype WHEN 145 THEN 1 ELSE 0 END), 0)
+			,@betcount_152 = ISNULL(SUM(CASE b.bettype WHEN 152 THEN 1 ELSE 0 END), 0)
+	FROM bettrans b WITH (NOLOCK)
+	WHERE b.matchid = @matchid 
+	AND b.bettype IN (3, 8, 13, 26, 27, 145, 152) 
+	AND b.statusID NOT IN (101, 102) 
+	AND 1 = CASE 
+				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
 				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
 				ELSE 0
-				END AND statusID NOT IN (101, 102)
+			END
+
+	/* 	Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  */
+	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+	BEGIN		
+		IF @Action IN ('CAL', 'CAL-HT')
+		BEGIN
+			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+				,@action = 'REFUND'
+				,@mode = 'ALL'
+				,@betcount_8 = @betcount_8 
+				,@totalht = @totalht
+				,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+		END
 
 		IF @Action IN ('CAL', 'CAL-FT')
 		BEGIN
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'REFUND'
 				,@mode = 'ALL'
-				,@betcount_3 = 3 -- bettype
-				,@totalgoal = @totalgoal
-				,@ticket_count = @betcount_3 -- sum ticket of bettype
+				,@betcount_3 = @betcount_3 
+				,@totalgoal = @totalgoal			
 				,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-		END
+		END		
+	END
+	/* --- END Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  ---*/
 
-		IF @Action IN ('CAL', 'CAL-HT')
+	--	Settle tickets Abandoned Match of Soccer 	
+
+	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @sporttype = 1
+	BEGIN
+		IF @action IN('CAL-FT', 'CAL')
 		BEGIN
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'REFUND'
 				,@mode = 'ALL'
-				,@betcount_8 = 8 -- bettype
-				,@totalht = @totalht
-				,@ticket_count = @betcount_8 -- sum ticket of bettype
+				,@betcount_13 = @betcount_13
+				,@betcount_26 = @betcount_26
+				,@betcount_27 = @betcount_27
+				,@betcount_145 = @betcount_145
+				,@betcount_152 = @betcount_152
+				,@fth = @fth
+				,@fta = @fta
+				,@hth = @hth
+				,@hta = @hta
 				,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+				,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+				,@isRefundHT = @isrefundHT
+				,@IsHTCal = @IsHTCal
 		END
 	END
-
-	/* --- END Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  ---*/
-	--	Settle tickets Abandoned Match of Soccer for Clean Sheet, Both/One/Neither team to score, To Win To Nil  	
-	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @action IN ('CAL', 'CAL-FT') AND @sporttype = 1
-	BEGIN
-		DECLARE @betcount_13 INT
-			,@betcount_26 INT
-			,@betcount_27 INT
-
-		SELECT @betcount_13 = ISNULL(SUM(CASE b.bettype
-						WHEN 13 THEN 1
-						ELSE 0
-						END), 0)
-			,@betcount_26 = ISNULL(SUM(CASE b.bettype
-						WHEN 26 THEN 1
-						ELSE 0
-						END), 0)
-			,@betcount_27 = ISNULL(SUM(CASE b.bettype
-						WHEN 27 THEN 1
-						ELSE 0
-						END), 0)
-		FROM bettrans b WITH (NOLOCK)
-		WHERE b.matchid = @matchid AND b.bettype IN (13, 26, 27) AND b.statusID NOT IN (101, 102) AND 1 = CASE 
-				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-				ELSE 0
-				END
-
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-			,@action = 'REFUND'
-			,@mode = 'ALL'
-			,@betcount_13 = 13
-			,@fth = @fth
-			,@fta = @fta
-			,@ticket_count = @betcount_13
-			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-			,@action = 'REFUND'
-			,@mode = 'ALL'
-			,@betcount_26 = 26
-			,@fth = @fth
-			,@fta = @fta
-			,@ticket_count = @betcount_26
-			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-			,@action = 'REFUND'
-			,@mode = 'ALL'
-			,@betcount_27 = 27
-			,@fth = @fth
-			,@fta = @fta
-			,@ticket_count = @betcount_27
-			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-	END
-
+	
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Refund_All'
 		,@MatchID = @matchid
 		,@creator = @creator
@@ -409,6 +388,7 @@ BEGIN
 		,@fth = @fth
 		,@fta = @fta
 		,@row_count = 1
+		,@isRefundHT = @IsRefundHT
 
 	INSERT INTO #BalanceAfter
 	SELECT custid
@@ -619,8 +599,6 @@ BEGIN
 			,@Log
 	END
 END
-
-
 
 GO
 

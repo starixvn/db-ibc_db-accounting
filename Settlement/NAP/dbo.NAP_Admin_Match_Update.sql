@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [NAP_Admin_Match_Update]
 (
 	@Command VARCHAR(100),
@@ -24,6 +26,7 @@ AS
 
 	Revisions:
 		- 20140423@Kathy: Modify betstatus value (Offer 1H FGLG) [Redmine:#14449]
+		- 20140618@Kathy: - Correct betstatus in case refund match [Redmine:#17142]
 		
 */
 BEGIN
@@ -32,7 +35,9 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_1-UNDO'
 	BEGIN
 		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK)
-		SET eventstatus = 'running', finalhomescore = NULL, finalawayscore = NULL, hthomescore = NULL, htawayscore = NULL, betstatus = N'', GoalRecord = ''
+		SET eventstatus = 'running', finalhomescore = NULL, finalawayscore = NULL, hthomescore = NULL, htawayscore = NULL
+			,betstatus = N''
+			,GoalRecord = ''
 			, changetime = GETDATE(), settleTime = GETDATE()
 		WHERE matchid = @MatchID-- and eventstatus = 'completed'
 	END
@@ -59,10 +64,11 @@ BEGIN
 	BEGIN
 		UPDATE match WITH(ROWLOCK,UPDLOCK) 
 		SET eventstatus='Completed', ruben=1, finalhomescore=0, finalawayscore=0, hthomescore=0, htawayscore=0
-			,betstatus = 'Refund' + CASE when CHARINDEX('FL:',ISNULL(betstatus,'')) = 0  THEN ''
-										 when CHARINDEX('1FL:',ISNULL(betstatus,'')) = 0 AND CHARINDEX('FL:',ISNULL(betstatus,'')) <> 0 THEN ';' + SUBSTRING(betstatus,CHARINDEX('FL:', betstatus),LEN(betstatus))
-										 ELSE ';' + SUBSTRING(betstatus,CHARINDEX('1FL', betstatus),LEN(betstatus))
-									END 
+			,betstatus = 'Refund;' + CASE  WHEN CHARINDEX('Refund;',betstatus) > 0 THEN REPLACE(betstatus,'Refund;','')
+										WHEN CHARINDEX('Refund FT;',betstatus) > 0 THEN REPLACE(betstatus,'Refund FT;','')
+										WHEN CHARINDEX('Refund HT;',betstatus)>0 THEN REPLACE(betstatus,'Refund HT;','')
+										ELSE betstatus
+									END
 			,GoalRecord =''
 			,changetime = GETDATE(), settleTime = GETDATE()
 		WHERE matchid=@MatchID
@@ -71,7 +77,13 @@ BEGIN
 	BEGIN
 		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
 		SET finalhomescore=0, finalawayscore=0, 
-			betstatus = CASE WHEN CHARINDEX('Refund;', betstatus) > 0 THEN betstatus ELSE 'Refund FT;' + replace(ISNULL(betstatus,''), 'Refund FT;', '') END ,
+			betstatus = CASE WHEN CHARINDEX('Refund;', betstatus) > 0 
+									THEN betstatus 
+							 ELSE 'Refund FT;' + CASE WHEN CHARINDEX('Refund HT;',betstatus) > 0 
+															THEN REPLACE(betstatus, 'Refund HT;', '') 
+													  ELSE REPLACE(betstatus, 'Refund FT;', '')
+												 END
+						END,
 			eventstatus = 'Completed', changetime = GETDATE(), settleTime = GETDATE()
 		WHERE matchid=@MatchID AND @HTDone = 1
 
@@ -82,7 +94,13 @@ BEGIN
 	BEGIN
 		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
 		SET hthomescore=0, htawayscore=0, 
-			betstatus = CASE WHEN CHARINDEX('Refund;', betstatus) > 0 THEN betstatus ELSE 'Refund HT;' + replace(ISNULL(betstatus,''), 'Refund HT;', '') END,
+			betstatus = CASE WHEN CHARINDEX('Refund;', betstatus) > 0 
+									THEN betstatus 
+							 ELSE 'Refund HT;' + CASE WHEN CHARINDEX('Refund FT;',betstatus) > 0 
+															THEN REPLACE(ISNULL(betstatus,''), 'Refund FT;', '') 
+													  ELSE REPLACE(betstatus, 'Refund HT;', '')
+												 END
+						END,
 			changetime = GETDATE()
 		WHERE matchid=@MatchID
 
@@ -92,7 +110,11 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_FGLG'
 	BEGIN
 		UPDATE match WITH(ROWLOCK,UPDLOCK)
-		SET	betstatus = @BetStatus, goalrecord = @GoalRecord, changetime = GETDATE()
+		SET	betstatus = case when right(@BetStatus,1) = ';' THEN @betstatus
+							 ELSE @betstatus + ';'
+						END
+			,goalrecord = @GoalRecord
+			,changetime = GETDATE()
 		WHERE matchid = @MatchID
 	END
 	IF @Command = 'NAP_Admin_Settlement_Refund_FGLG'
@@ -201,6 +223,7 @@ BEGIN
 		WHERE EventID = @MatchID
 	END	
 END
+
 GO
 
 GRANT EXECUTE ON [NAP_Admin_Match_Update] TO [bodbAdminNet] AS [dbo]

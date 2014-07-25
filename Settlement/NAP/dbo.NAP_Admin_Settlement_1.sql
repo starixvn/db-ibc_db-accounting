@@ -20,6 +20,7 @@ AS
 	Revisions:
 		- 20140423@Kathy: Remove check weekend peak-hour
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
+		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -27,7 +28,6 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-
 	DECLARE @SkipBalanceUpdate BIT
 		,@start DATETIME
 		,@stop DATETIME
@@ -158,7 +158,7 @@ BEGIN
 			SELECT custid
 				,SUM(winlost - actual_stake + playercomm)
 			FROM dbo.bettrans WITH (ROWLOCK)
-			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
+			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
 			GROUP BY custid
 
 			SET @TotalAccount = @@ROWCOUNT
@@ -219,7 +219,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		INSERT INTO @status
 		SELECT CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 0
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
 				ELSE 1
 				END
 			,SUM(CASE 
@@ -234,7 +234,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM dbo.bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 0
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
 				ELSE 1
 				END
 
@@ -320,8 +320,10 @@ need below code to determine for mark match as calculated (all bets settled)
 					,@matchid
 					,@action
 			ELSE
+			BEGIN
 				EXEC dbo.NAP_Admin_Settlement_3 @matchid
-					,@action
+					,@action						
+			END
 		END
 
 		--Check and calc 1H FGLG
@@ -405,7 +407,7 @@ need below code to determine for mark match as calculated (all bets settled)
 			SELECT custid
 				,SUM(winlost - actual_stake + playercomm)
 			FROM dbo.bettrans WITH (ROWLOCK)
-			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
+			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
 			GROUP BY custid
 		END
 		ELSE IF @Action = 'UNDO'
@@ -511,9 +513,9 @@ need below code to determine for mark match as calculated (all bets settled)
 	--		WHEN 'CAL-HT' THEN 102 
 	--		WHEN 'UNDO' THEN 103
 	--	END
-	SELECT @Remark = CASE 
+	SELECT @Remark ='NAP: '  + CASE 
 			WHEN LEN(@goalrecord_old) = 0 THEN ''
-			ELSE 'NAP: Old GoalRecord:' + @goalrecord_old + '<br/> '
+			ELSE 'Old GoalRecord:' + @goalrecord_old + '<br/> '
 			END + 'Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms;' + ' TC:' + CAST(ISNULL(@ticketCount, 0) AS VARCHAR(20)) + ' Bal:' + CAST(IsNull(@TotalAccount_BalanceUpdate, 0) AS VARCHAR(20)) + '/' + CAST(IsNull(@TotalAccount, 0) AS VARCHAR(20))
 
 	BEGIN TRY
