@@ -10,7 +10,7 @@ AS
     DB: DBAGE/bodb02  
    
     Revisions:  
-		
+		20140701@Dominic: Get running Keno bets from table Translog
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
@@ -40,7 +40,17 @@ BEGIN
 	
 	SELECT @CurrentDate = CAST(GETDATE() AS DATE)
 	SELECT @FirstDate = CONVERT(VARCHAR(25),DATEADD(dd,-(DAY(@CurrentDate)-1),@CurrentDate),101)
-                            
+    
+    --Get running Keno bet
+    IF  @sportType = 202                       
+    BEGIN
+		INSERT INTO #AvailableMember
+		SELECT tl.custid,tl.[status],COUNT(1) FROM dbo.translog tl WITH(NOLOCK)
+		WHERE tl.productID = 202 AND tl.srecommend = @CustID
+		GROUP BY tl.custid,tl.[status]
+    END
+    
+    
     --Get data from bettrans       
 	IF @CurrentDate > @MoveBetsDay
 	BEGIN

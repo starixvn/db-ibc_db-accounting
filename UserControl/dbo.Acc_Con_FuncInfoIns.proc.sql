@@ -1,4 +1,5 @@
-﻿Alter PROCEDURE  [dbo].[Acc_Con_FuncInfoIns]
+﻿
+ALTER PROCEDURE  [dbo].[Acc_Con_FuncInfoIns]
 	@FuncId int output,
 	@FuncName nvarchar(50),
 	@FuncNote nvarchar(2000) = null,
@@ -25,13 +26,14 @@ AS
 		- 20110810@Jamie: Expand size of param @FileNames to MAX 
 		- 20120604@Elodie: Modify the content of a log in User Control
 		- 20130125@Elodie: Write more log on UserLog table in case of DBLOG server failure
+		- 20140721@Lukas: change function name from [UserControl] to [ManageFunction]	for creating new menu/function
 */
 	SET NOCOUNT ON 
 	DECLARE @LogData nvarchar(max),@Begin	DATETIME,@End	DATETIME,@Duration	INT;
 	SET @Begin = GETDATE();
 
 	--Check permission for account site
-		EXEC dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[UserControl]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output, @System = 'ACCOUNTING'
+	EXEC dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[ManageFunction]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output, @System = 'ACCOUNTING'
 	If @ErrCode <> 0
 		RETURN
 	--end
@@ -137,6 +139,7 @@ AS
 		EXEC WriteLog_UserLog @UserID = @UserID, 
 						      @Doing = @LogData
 	END CATCH
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Con_FuncInfoIns] TO [bodbAdminNet]
 GO
