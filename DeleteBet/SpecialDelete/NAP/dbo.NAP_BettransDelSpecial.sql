@@ -1,4 +1,9 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+﻿/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 08/01/2014 15:14:37 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId INT,
 	@FromTransId BIGINT, 
 	@ToTransId BIGINT, 
@@ -23,7 +28,7 @@
     
 	@TransIdsCredit VARCHAR(MAX) = '', -- for custom delete (Credit bets)
 	@TransIdsDeposit VARCHAR(MAX) = '', -- for custom delete (Deposit bets)
-    @TransIdsBetDaq VARCHAR(MAX) = '',-- for custom chadelete BetDaq
+    @TransIdsBetDaq VARCHAR(MAX) = '',-- for custom delete BetDaq
     @TransIds12EU VARCHAR(MAX) = '',-- for custom delete 12EU
     @TransIdsMHC VARCHAR(MAX) = '',-- for custom delete master MHC	   
 	@TransIdsFB VARCHAR(MAX) = '',-- for custom delete Foobet	   
@@ -49,6 +54,7 @@ AS
 		- 20140411@Kathy: - Separate tickets of Bet Fair, OneExchange 3rd parties [Redmine:#10128]
 						  - Add 2 new bettypes 1H Total Goal and 1H First Goal/ Last Goal (126, 127) [Redmine:#14749]
 		- 20140701@Kathy: Apply BetRadar - change @BetTypes to varchar(1000) [Redmine:#18219]
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]		
 
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -459,7 +465,7 @@ BEGIN
 		SELECT bd.custid
 		FROM custDB.dbo.custInfo ci with(NOLOCK)
 		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
-		where bd.custid IN (1077687, 2331, 115770) -- Betfair: BFOS, BF, ITibc102	
+		where bd.custid IN (1077687, 2331, 115770, 15523642) -- Betfair: BFOS, BF, ITibc102, BF3
 		and ci.roleid = 1 
 
 	-- get OneExchange tickets
@@ -887,8 +893,8 @@ BEGIN
 	SET NOCOUNT OFF
 END
 
-GO
-GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [VNTeam]
 
+GO
+GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [vnteam] AS [dbo]
