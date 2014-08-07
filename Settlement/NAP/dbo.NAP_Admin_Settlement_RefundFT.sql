@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_RefundFT] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT]    Script Date: 08/07/2014 14:11:37 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER OFF
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT] @matchid INT
 	,@adminid INT
 	,@IsExcludeBetdaq BIT = 0
 	,@IsSettleAbandonedMatch BIT = 0
@@ -22,7 +28,9 @@ AS
 	Revisions:
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -372,7 +380,7 @@ BEGIN
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype = 3 AND 1 = CASE 
 				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
+				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
 				ELSE 0
 				END AND statusID NOT IN (101, 102)
 
@@ -426,8 +434,8 @@ BEGIN
 		AND b.bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
 		AND b.statusID NOT IN (101, 102) 
 		AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				     WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-				     WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
+				     WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
+				     WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
 				     ELSE 0
 				END
 
@@ -457,7 +465,6 @@ BEGIN
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-		
 	END
 
 	DECLARE @RowCount INT
@@ -467,7 +474,7 @@ BEGIN
 		,@HTDone = @HTDone
 		,@RowCount = @RowCount OUTPUT
 		,@creator = @adminid
-	
+
 	IF @RowCount > 0
 	BEGIN
 		-- Calculate Refund FT
@@ -485,6 +492,10 @@ BEGIN
 
 		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
 			,'F'
+
+		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid
+			,@command = 'PS'
+			,@ivalue = 3
 	END
 
 	INSERT INTO #BalanceAfter
@@ -703,13 +714,7 @@ BEGIN
 END
 
 
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_RefundFT] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundFT] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_RefundFT] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundFT] TO [vnteam] AS [dbo]

@@ -1,8 +1,18 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Parlay] (
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay]    Script Date: 08/07/2014 14:10:54 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 22/07/2014 10:30:29 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 3/20/2014 5:36:24 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 3/17/2014 4:21:09 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay] (
 	@matchids VARCHAR(2000)
 	,@creator INT
 	,@action VARCHAR(20) = 'CAL'
-	,@resultPS NVARCHAR(50) = ''
+	,@resultPS NVARCHAR(10) = NULL
 	,@IP VARCHAR(15) = ''
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -16,16 +26,16 @@ AS
 	Revisions:
 		- 20140417@Kathy: Fix LAS command
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
-		- 20140714@Kathy: Settle MP for Penalty Shootout [Redmine:#17142]
-			
+		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140717@Kathy: Settle MP for Penalty Shootout [Redmine:#17142]
 	Param's Explanation:
-	@resultPS: 1: match result of penalty shootout
+	@resultPS: match result of penalty shootout
 
 		
 */
 BEGIN
 	SET NOCOUNT ON
-	
+
 	DECLARE  @SkipBalanceUpdate BIT
 			,@procName nvarchar(50)
 			,@mode int
@@ -80,7 +90,7 @@ BEGIN
 					SELECT val
 					FROM dbo.strSplit(@matchids, ',')
 					) 
-			) AND @action <> 'UNDO' AND @resultPS = ''
+			) AND @action <> 'UNDO' AND @resultPS IS NULL 
 					
 	BEGIN
 		SELECT @ErrCode = 1000000
@@ -88,7 +98,7 @@ BEGIN
 
 		RETURN
 	END
-
+	
 	INSERT INTO @match (
 		matchid
 		,matchcode
@@ -121,7 +131,7 @@ BEGIN
 			SELECT 1
 			FROM @match
 			WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
-			) AND @action <> 'UNDO' AND @resultPS = ''
+			) AND @action <> 'UNDO' AND @resultPS IS NULL
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
@@ -140,7 +150,7 @@ BEGIN
 	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' 
 														  + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) 
 														  + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
-														  + ', @resultPS = ' + '''' + CONVERT(NVARCHAR(50), @resultPS) + ''''														 
+														  + ',@resultPS = ' + CASE WHEN @resultPS IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @resultPS) + '''' END 									 
 		,@createdDate = GETDATE()
 
 	BEGIN TRY
@@ -164,7 +174,7 @@ BEGIN
 				,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
 		RETURN
 	END CATCH
-	
+
 	DECLARE @rn INT
 		,@subStart DATETIME
 		,@CalTime INT
@@ -398,15 +408,18 @@ BEGIN
 		FROM @match
 		WHERE rn = @rn
 
-		IF ISNULL(@resultPS,'') <> ''
+		IF @resultPS IS NOT NULL
 			BREAK
 
 		IF @action = 'CAL'
-			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'M'
 		ELSE IF @action IN ('REFUND', 'REFUND-FT', 'REFUND-HT')
-			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'R'
+		--ELSE IF @action IN ('REFUND-FT', 'REFUND-HT')
+		--										EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+		--		,@command = 'F'
 
 		---------------------------------------------------------------
 		-- update match coz m88 project using DB02.dbo.match.tstamp to know match do parlay settle (vivi@2009-8-27)	
@@ -535,7 +548,6 @@ BEGIN
 			WHERE rn = @rn
 			)
 	BEGIN
-		
 		SELECT @CalTime = CalTime
 			,@matchid = matchid
 			,@matchdate = eventdate
@@ -549,7 +561,7 @@ BEGIN
 		FROM @match
 		WHERE rn = @rn
 
-		SELECT @LogData = 'NAP: Calculate Multiple (' + @action + ') ' + CASE when @resultPS <> '' THEN 'PS' ELSE '' END + ' for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
+		SELECT @LogData = 'NAP: Calculate Multiple (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)' + ' mpcs=' + CAST(@CalTime AS NVARCHAR(10)) + ':' + CAST(@PreCal AS NVARCHAR(10)) + ':' + CAST(@Calculate AS NVARCHAR(10)) + ':' + CAST(@Summary AS NVARCHAR(10)) + ' tsu2s=' + CAST(@9Time AS NVARCHAR(10)) + ':' + CAST(@selTime AS VARCHAR(10)) + ':' + CAST(@updTIme AS VARCHAR(10)) + ':' + CAST(@2Call AS NVARCHAR(10)) + ':' + CAST(@29Time AS NVARCHAR(10))
 
 		EXEC dbo.WriteLog_UserLog @creator
 			,@LogData
@@ -591,9 +603,9 @@ BEGIN
 	END
 END
 
+
+
+
+
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]

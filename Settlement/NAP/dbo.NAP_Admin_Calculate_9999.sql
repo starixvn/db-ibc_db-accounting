@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_9999] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9999]    Script Date: 08/07/2014 14:07:00 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9999] @matchid INT
 	,@bettype SMALLINT
 	,@fth	INT = NULL
 	,@fta	INT = NULL
@@ -18,6 +24,7 @@ AS
 	DB: DBTXN.BODB02
 	
 	Revisions:
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		
 */
 BEGIN
@@ -224,7 +231,7 @@ BEGIN
 													 END
 										WHEN 152 THEN
 													 CASE 
-														WHEN @IsHTCal = 0 AND @IsRefundHT = 0 THEN
+														WHEN @IsHTCal = 0 AND @IsRefundHT = 0 THEN 
 																									CASE
 																										WHEN LEFT(betteam,2) = '4+' AND (@hth + @hta) >= 4 THEN 1
 																										WHEN LEFT(betteam,2) <> '4+' AND (LEFT(LEFT(betteam,3),1) < @hth OR RIGHT(LEFT(betteam,3),1) < @hta) THEN -1
@@ -327,8 +334,8 @@ BEGIN
 					THEN 1
 				 WHEN (
 						(@IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156))
-						OR (@IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770))
-						OR (@IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156))
+						OR (@IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642))
+						OR (@IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156))
 					)			
 					THEN CASE WHEN @IsHTCal = 0 -- Suspended in 1st Half
 									AND 
@@ -381,9 +388,7 @@ END
 
 
 
+
+
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_9999] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9999] TO [vnteam] AS [dbo]

@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_13] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_13]    Script Date: 08/07/2014 13:59:24 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_13] @matchid INT
 	,@bettype SMALLINT
 	,@fth SMALLMONEY
 	,@fta SMALLMONEY
@@ -14,7 +19,8 @@ AS
 	DB: DB02.BODB02
 	
 	Revisions:
-		-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		
 */
 BEGIN
@@ -69,6 +75,7 @@ BEGIN
 				WHEN betteam = 'an' AND @fth > 0  THEN 1
 				WHEN betteam = 'hy' AND @fta > 0  THEN - 1
 				WHEN betteam = 'hn' AND @fta > 0  THEN 1
+				ELSE NULL
 				END
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
@@ -99,6 +106,7 @@ BEGIN
 				WHEN @modds = 0 THEN actual_stake
 				WHEN @modds = - 0.25 THEN actual_stake * 0.5
 				WHEN @modds < - 0.25 THEN 0
+				WHEN @modds IS NULL THEN winlost
 				END
 			,aWinLost = CASE 
 				WHEN @modds > 0.25 THEN stake * (CASE 
@@ -118,6 +126,7 @@ BEGIN
 				WHEN @modds = 0 THEN 0
 				WHEN @modds = - 0.25 THEN actual_stake * apositiontaking * 0.5
 				WHEN @modds < - 0.25 THEN actual_stake * apositiontaking
+				WHEN @modds IS NULL THEN awinlost
 				END
 			,mWinLost = CASE 
 				WHEN @modds > 0.25 THEN stake * (CASE 
@@ -137,6 +146,7 @@ BEGIN
 				WHEN @modds = 0 THEN 0
 				WHEN @modds = - 0.25 THEN actual_stake * mpositiontaking * 0.5
 				WHEN @modds < - 0.25 THEN actual_stake * mpositiontaking
+				WHEN @modds IS NULL THEN mwinlost
 				END
 			,sWinLost = CASE 
 				WHEN @modds > 0.25 THEN stake * (CASE 
@@ -156,6 +166,7 @@ BEGIN
 				WHEN @modds = 0 THEN 0
 				WHEN @modds = - 0.25 THEN actual_stake * spositiontaking * 0.5
 				WHEN @modds < - 0.25 THEN actual_stake * spositiontaking
+				WHEN @modds IS NULL THEN swinlost
 				END
 			,PlayerComm = CASE 
 				WHEN @modds > 0.25 THEN @commWinRate * playerdiscount * stake
@@ -163,6 +174,7 @@ BEGIN
 				WHEN @modds = 0 THEN 0
 				WHEN @modds = - 0.25 THEN @commLostRate * playerdiscount * stake * 0.5
 				WHEN @modds < - 0.25 THEN @commLostRate * playerdiscount * stake
+				WHEN @modds IS NULL THEN playercomm
 				END
 			,Comm = CASE 
 				WHEN @modds > 0.25 THEN @commWinRate * discount * stake * (1 - apositiontaking)
@@ -170,6 +182,7 @@ BEGIN
 				WHEN @modds = 0 THEN 0
 				WHEN @modds = - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking) * 0.5
 				WHEN @modds < - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking)
+				WHEN @modds IS NULL THEN comm
 				END
 			,aComm = CASE 
 				WHEN @modds > 0.25 THEN @commWinRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
@@ -177,6 +190,7 @@ BEGIN
 				WHEN @modds = 0 THEN 0
 				WHEN @modds = - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
 				WHEN @modds < - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
+				WHEN @modds IS NULL THEN acomm
 				END
 			,sComm = CASE 
 				WHEN @modds > 0.25 THEN @commWinRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
@@ -184,31 +198,29 @@ BEGIN
 				WHEN @modds = 0 THEN 0
 				WHEN @modds = - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
 				WHEN @modds < - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
+				WHEN @modds IS NULL THEN scomm
 				END
 			,STATUS = CASE 
 				WHEN @modds > 0 THEN 'WON'
 				WHEN @modds = 0 THEN 'DRAW'
 				WHEN @modds < 0 THEN 'LOSE'
+				WHEN @modds IS NULL THEN status
 				END
 			,StatusID = CASE 
 				WHEN @modds > 0 THEN 112 --WON
 				WHEN @modds = 0 THEN 111 --DRAW
 				WHEN @modds < 0 THEN 113 --LOSE
+				WHEN @modds IS NULL THEN statusID
 				END
-			,ruben = 1
+			,ruben = CASE WHEN @modds IS NULL THEN ruben 
+						  ELSE 1
+					 END
 		WHERE matchid = @matchid AND bettype = @bettype AND
 			statusID NOT IN (101, 102) 
 			AND 1 = CASE 
 				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
-				ELSE 0
-				END
-			AND 1 = CASE 
-				WHEN betteam = 'ay' AND @fth > 0 THEN 1
-				WHEN betteam = 'an' AND @fth > 0 THEN 1
-				WHEN betteam = 'hy' AND @fta > 0 THEN 1
-				WHEN betteam = 'hn' AND @fta > 0 THEN 1
+				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
+				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
 				ELSE 0
 				END
 	END
@@ -355,9 +367,6 @@ BEGIN
 		
 	END
 END
+
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_13] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_13] TO [vnteam] AS [dbo]

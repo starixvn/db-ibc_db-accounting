@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_FGLG] @creator INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG]    Script Date: 08/07/2014 14:10:47 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG] @creator INT
 	,@matchid INT
 	,@action VARCHAR(10) = 'CAL-FT'
 	,@betstatus NVARCHAR(50)
@@ -168,14 +173,14 @@ BEGIN
 		,@betcount_127 INT
 		,@goaldiff SMALLMONEY
 
-	SELECT @betcount_14 = SUM(CASE 
+	SELECT @betcount_14 = ISNULL(SUM(CASE 
 				WHEN bettype = 14 THEN 1
 				ELSE 0
-				END)
-		,@betcount_127 = SUM(CASE 
+				END),0)
+		,@betcount_127 = ISNULL(SUM(CASE 
 				WHEN bettype = 127 THEN 1
 				ELSE 0
-				END)
+				END),0)
 	FROM dbo.bettrans WITH (NOLOCK)
 	WHERE matchid = @matchid
 	AND bettype IN (14, 127)
@@ -183,17 +188,17 @@ BEGIN
 	IF @betcount_14 = 0 OR @betcount_127 = 0
 	BEGIN
 		SELECT @betcount_14 = CASE 
-				WHEN @betcount_14 = 0 THEN SUM(CASE 
+				WHEN @betcount_14 = 0 THEN ISNULL(SUM(CASE 
 							WHEN bettype = 14 THEN 1
 							ELSE 0
-							END)
+							END),0)
 				ELSE @betcount_14
 				END
 			,@betcount_127 = CASE 
-				WHEN @betcount_127 = 0 THEN SUM(CASE 
+				WHEN @betcount_127 = 0 THEN ISNULL(SUM(CASE 
 							WHEN bettype = 127 THEN 1
 							ELSE 0
-							END)
+							END),0)
 				ELSE @betcount_127
 				END
 		FROM dbo.bettransm WITH (NOLOCK)
@@ -454,12 +459,8 @@ BEGIN
 END
 
 
+
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_FGLG] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_FGLG] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_FGLG] TO [vnteam] AS [dbo]

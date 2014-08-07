@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_3] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_3]    Script Date: 08/07/2014 14:09:51 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] @matchid INT
 	,@mode VARCHAR(6) = 'CAL'
 AS
 /*
@@ -433,13 +438,7 @@ END
 
 
 
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_3] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_3] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_3] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_3] TO [vnteam] AS [dbo]

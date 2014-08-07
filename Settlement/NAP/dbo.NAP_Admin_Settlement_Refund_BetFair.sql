@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Refund_BetFair]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_BetFair]    Script Date: 08/07/2014 14:11:25 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetFair]
 	@matchid int,
 	@creator int, 	
 	@IP varchar(15) = '',
@@ -14,6 +19,7 @@ DB: DBTXN/BODB02
 
 Revisions: 
 	- 20140512@Kathy: Exclude 1H FGLG (127) [Redmine:#14449]
+	- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -23,6 +29,9 @@ BetFair account:
 			custid	--- username	-	roleid
 			2331	---	BF		    -	1
 			1077687	---	BFOS		-	1
+			115770  ---				-	1
+			15523642--- BF3			-	1
+
 */
 
 SET NOCOUNT ON
@@ -82,17 +91,21 @@ CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 INSERT INTO #BalanceBefore
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
-WHERE	custid IN (2331, 1077687, 115770)
+WHERE	custid IN (2331, 1077687, 115770, 15523642)
 		AND matchid = @matchid
 		AND bettype NOT IN (14, 127) --Exclude FGLG, 1H FGLG
 GROUP BY custid
 
-EXEC dbo.Admin_Calculate_Refund_BetFair @matchid = @matchid 
+EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+	,@action = 'REFUND'
+	,@mode = 'BetFair'
+
+--EXEC dbo.NAP_Admin_Calculate_Refund_BetFair @matchid = @matchid 
 
 INSERT INTO #BalanceAfter	
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
 FROM	dbo.bettrans with (rowlock)
-WHERE	custid IN (2331, 1077687, 115770)
+WHERE	custid IN (2331, 1077687, 115770, 15523642)
 		AND matchid = @matchid
 		AND bettype NOT IN (14, 127) --Exclude FGLG, 1H FGLG
 GROUP BY custid
@@ -138,6 +151,7 @@ FROM	#Balance WITH (NOLOCK)
 WHERE	Increased = 0
 		        
 ---------------------------------------------------
+
 
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
@@ -242,14 +256,7 @@ BEGIN
 	END CATCH
 END
 
-
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_Refund_BetFair] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetFair] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Refund_BetFair] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_BetFair] TO [vnteam] AS [dbo]

@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_BetDaq_Move]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_BetDaq_Move]    Script Date: 08/07/2014 14:10:24 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_BetDaq_Move    Script Date: 3/17/2014 4:21:11 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_BetDaq_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
 	@AdminId		INT,
@@ -167,13 +173,7 @@ BEGIN
 	END CATCH
 
 END
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_BetDaq_Move] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_BetDaq_Move] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_BetDaq_Move] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_BetDaq_Move] TO [vnteam] AS [dbo]

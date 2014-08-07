@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Main]    Script Date: 08/07/2014 14:07:13 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@mode VARCHAR(15) = 'CAL'
 	,@action VARCHAR(20) = 'CAL'
 	,@fth INT = NULL
@@ -49,6 +54,7 @@ ALTER PROCEDURE [NAP_Admin_Calculate_Main] @matchid INT
 	,@betcount_123 INT = NULL
 	,@betcount_133 INT = NULL
 	,@betcount_134 INT = NULL
+	,@betcount_135 INT = NULL
 	,@betcount_140 INT = NULL
 	,@betcount_141 INT = NULL
 	,@betcount_142 INT = NULL
@@ -98,12 +104,15 @@ AS
 		- 20140424@Lukas: add DBTP server 
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
 		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 	Param's Explanation:
 		@action			@mode
 		 CAL			 CAL, CAL-HT, CAL-FT, UNDO, 
 		 CAL-FGLG		 CAL, CAL-HT, CAL-FT
 		 REFUND			 ALL, HT, FT, BetDaq, BetFair
 		 REFUND-FGLG	 REFUND-FT, REFUND-HT
+		 CAL-PS			 CAL
+
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -314,6 +323,11 @@ BEGIN
 			,@betcount_134 = ' + CASE 
 				WHEN @betcount_134 IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @betcount_134)
+				END 
+				+ '
+			,@betcount_135 = ' + CASE 
+				WHEN @betcount_135 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @betcount_135)
 				END 
 				+ '
 			,@betcount_140 = ' + CASE 
@@ -883,7 +897,7 @@ BEGIN
 
 			IF @mode = 'CAL-FT'
 			BEGIN
-				EXEC dbo.Admin_Calculate_4 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 					,@bettype = 14
 					,@correctscore = @FGLG1
 					,@goaldiff = @goaldiff
@@ -892,7 +906,7 @@ BEGIN
 
 				IF @IncludeLG = 0
 				BEGIN
-					EXEC dbo.Admin_Calculate_4 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 						,@bettype = 14
 						,@correctscore = @FGLG1
 						,@goaldiff = @goaldiff
@@ -900,6 +914,15 @@ BEGIN
 						,@betcount = @betcount_14
 				END
 			END
+		END 
+
+		IF @action = 'CAL-PS'
+		BEGIN
+			IF @betcount_135 > 0
+				EXEC dbo.NAP_Admin_Calculate_135 @matchid = @matchid
+					,@bettype = 135
+					,@betcount = @betcount_135
+					,@result = @betstatus
 		END 
 
 		IF @action = 'REFUND'
@@ -1237,8 +1260,7 @@ BEGIN
 	END
 END
 
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Main] TO [vnteam] AS [dbo]
-
-
-

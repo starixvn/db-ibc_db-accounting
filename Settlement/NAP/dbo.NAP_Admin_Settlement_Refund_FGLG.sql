@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Refund_FGLG] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_FGLG]    Script Date: 08/07/2014 14:11:31 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_FGLG] @matchid INT
 	,@action VARCHAR(10) = 'REFUND' -- REFUND, REFUND-FT, REFUND-HT
 	,@adminid INT
 	,@LGOnly BIT
@@ -371,11 +377,6 @@ END
 
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_Refund_FGLG] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_FGLG] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Refund_FGLG] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_FGLG] TO [vnteam] AS [dbo]

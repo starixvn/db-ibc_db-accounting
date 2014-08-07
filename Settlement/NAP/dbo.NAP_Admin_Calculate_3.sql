@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_3] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_3]    Script Date: 08/07/2014 14:06:01 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_3    Script Date: 31/07/2014 12:58:51 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_3] @matchid INT
 	,@bettype SMALLINT
 	,@totalgoal SMALLMONEY
 	,@betcount INT = 0
@@ -15,6 +21,7 @@ AS
 
 	Revisions:
 		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054				
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 
 	Param's Explanation:
 		+ @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -145,7 +152,7 @@ BEGIN
 			--status NOT IN (N'VOID', N'REJECT')
 			statusID NOT IN (101, 102) AND 1 = CASE 
 				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
+				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
 				ELSE 0
 				END AND (hdp1 <= @totalgoal - 0.5)
 	END
@@ -359,12 +366,5 @@ BEGIN
 		END
 	END
 END
-
-
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_3] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_3] TO [vnteam] AS [dbo]

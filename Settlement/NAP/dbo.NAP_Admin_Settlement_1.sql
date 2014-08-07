@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_1] @creator INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 08/07/2014 14:08:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1] @creator INT
 	,@matchid INT
 	,@fth SMALLINT = NULL
 	,@fta SMALLINT = NULL
@@ -21,6 +26,7 @@ AS
 		- 20140423@Kathy: Remove check weekend peak-hour
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
 		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -36,12 +42,15 @@ BEGIN
 		,@eventstatus NVARCHAR(50)
 		,@sporttype TINYINT
 		,@TicketCount INT
+		,@betcount_135 INT
 
 	SELECT @start = CURRENT_TIMESTAMP
 		,@SkipBalanceUpdate = 0
 		,@TicketCount = 0
+		,@betcount_135 = 0
 
 	SELECT @TicketCount = count(1)
+		,@betcount_135 = ISNULL(SUM(CASE WHEN bettype = 135 THEN 1 ELSE 0 END),0)
 	FROM bettrans WITH (NOLOCK)
 	WHERE bettype <= 19000 AND matchid = @matchid
 
@@ -220,6 +229,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		INSERT INTO @status
 		SELECT CASE 
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
+				WHEN bettype = 135 THEN 2
 				ELSE 1
 				END
 			,SUM(CASE 
@@ -235,6 +245,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		WHERE matchid = @matchid
 		GROUP BY CASE 
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
+				WHEN bettype = 135 THEN 2
 				ELSE 1
 				END
 
@@ -374,8 +385,15 @@ need below code to determine for mark match as calculated (all bets settled)
 		END
 
 		IF @eventstatus = 'completed'
-			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
-				,'C'
+		BEGIN
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid
+				,@command = 'C'
+
+			IF @betcount_135 = 0
+				EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid 
+					,@command = 'PS'
+					,@ivalue = 3
+		END
 		ELSE IF @action = 'CAL-HT'
 			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
 				,'H'
@@ -596,12 +614,10 @@ need below code to determine for mark match as calculated (all bets settled)
 END
 
 
+
+
+
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_1] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_1] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_1] TO [vnteam] AS [dbo]

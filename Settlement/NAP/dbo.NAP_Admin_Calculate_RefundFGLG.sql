@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_RefundFGLG] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFGLG]    Script Date: 08/07/2014 14:07:56 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFGLG] @matchid INT
 	,@action varchar(10) = 'REFUND'
 	,@LGOnly BIT
 	,@matchdate DATETIME
@@ -163,13 +168,7 @@ BEGIN
 		-------------End: Refund FGLG for bettransm-------------
 END
 
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Calculate_RefundFGLG] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundFGLG] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_RefundFGLG] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_RefundFGLG] TO [vnteam] AS [dbo]

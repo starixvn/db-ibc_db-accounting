@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_9] @strXML VARCHAR(MAX) = '' OUTPUT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9]    Script Date: 08/07/2014 14:06:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.Admin_Calculate_9    Script Date: 2/26/2014 6:01:44 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9] @strXML VARCHAR(MAX) = '' OUTPUT
 	,@statusID TINYINT = 0
 	,@winlostdate SMALLDATETIME = NULL
 AS
@@ -145,11 +152,5 @@ BEGIN
 	END -- IF @mode = 1
 END
 
-
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_9] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9] TO [vnteam] AS [dbo]

@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_1] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_1]    Script Date: 08/07/2014 13:58:53 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1] @matchid INT
 	,@bettype SMALLINT
 	,@fth SMALLMONEY
 	,@fta SMALLMONEY
@@ -50,7 +55,7 @@ BEGIN
 			,@BetCount = @betcount
 	END
 
-	IF @@SERVERNAME in ('DB052', 'DB053', 'DB054','DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231')
 	BEGIN
 		DECLARE @affectedagents INT
 
@@ -310,11 +315,5 @@ BEGIN
 	END
 END
 
-
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_1] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_1] TO [vnteam] AS [dbo]

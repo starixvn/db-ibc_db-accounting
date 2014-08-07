@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_29_Summary]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29_Summary]    Script Date: 08/07/2014 14:05:55 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_29_Summary    Script Date: 3/17/2014 4:21:09 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_Summary]
 AS
 /*
 	Created: Kathy
@@ -280,10 +286,5 @@ possible case
 for 1. action to perform is update
 for 2. action to perform is set existing ticket's custid to 0, before update
 */
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_29_Summary] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29_Summary] TO [vnteam] AS [dbo]
