@@ -1582,6 +1582,9 @@ Begin DataProject = "Account"
             Script = "dbo.NAP_Set_MatchSelNumberGameDetail.sql"
             Script = "dbo.NAP_UpdateNumberGameBalls.sql"
          End
+         Begin Folder = "Outright"
+            Script = "dbo.NAP_Set_OutrightSelInfo.sql"
+         End
          Begin Folder = "Service Broker"
             Script = "sb.SBQueue_receive.sql"
             Script = "sb.SBQueue_Send.sql"
