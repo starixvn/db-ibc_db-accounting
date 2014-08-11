@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_29] @matchids VARCHAR(2000)
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29]    Script Date: 08/07/2014 14:05:41 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.Admin_Calculate_29    Script Date: 10/26/2012 10:37:04 AM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29] @matchids VARCHAR(2000)
 	,@matchdate SMALLDATETIME WITH RECOMPILE
 AS
 /*
@@ -344,10 +351,5 @@ BEGIN
 		,pr.winlostdate
 END
 
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_29] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29] TO [vnteam] AS [dbo]

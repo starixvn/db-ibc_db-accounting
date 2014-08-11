@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_Refund_BetDaq] 
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Refund_BetDaq]    Script Date: 08/07/2014 14:07:27 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_Refund_BetDaq    Script Date: 31/07/2014 12:58:51 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Refund_BetDaq] 
 	@matchid int
 AS
 /*	Created by: Kathy
@@ -42,10 +49,5 @@ BEGIN
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_Refund_BetDaq] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Refund_BetDaq] TO [vnteam] AS [dbo]

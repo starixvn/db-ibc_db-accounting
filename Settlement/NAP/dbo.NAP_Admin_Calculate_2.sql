@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_2] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_2]    Script Date: 08/07/2014 14:04:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_2] @matchid INT
 	,@bettype SMALLINT
 	,@oddeven SMALLMONEY
 	,@betcount INT = 0
@@ -356,11 +361,6 @@ BEGIN
 END
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Calculate_2] TO [ibc_admin] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_2] TO [ibc_admin] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_2] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_2] TO [vnteam] AS [dbo]

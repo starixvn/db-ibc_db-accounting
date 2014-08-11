@@ -1,9 +1,16 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_RefundFT] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFT]    Script Date: 08/07/2014 14:08:03 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFT] @matchid INT
 	,@IsExcludeBetdaq BIT = 0
 	,@IsExcludeBetfair BIT = 0
 	,@IsSettleAbandonedMatchIBC BIT = 0
 	,@fth SMALLMONEY = 0
 	,@fta SMALLMONEY = 0
+	,@IsRefundHT BIT = 0
+	,@IsHTCal BIT = 0
 AS
 /*	Created by: Kathy
 	Date: 20140213
@@ -13,8 +20,14 @@ AS
 	Revisions:
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140411@Kathy: Add more param for LAS command
-		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140426@Kathy: Add 1H FGLG, 1H Total Goal (126, 127) [Redmine:#14449]
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+		- 20140620@Kathy: Apply BetRadar [Redmine:#17142]
 
+	Param's Explanation:
+		@IsRefundHT: Indicate whether or not match has been refunded HT
+		@IsHTCal: Indicate whether or not match has been calculated HT
+					
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
 BEGIN
@@ -31,7 +44,10 @@ BEGIN
 			,@createdDate DATETIME
 
 		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFT] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
-							+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 											
+							+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 
+							+ ', @IsRefundHT = ' + CONVERT(NVARCHAR(10), ISNULL(@IsRefundHT, 0)) 											
+							+ ', @IsHTCal = ' + CONVERT(NVARCHAR(10), ISNULL(@IsHTCal, 0)) 																						
+
 			,@createdDate = GETDATE()
 
 		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundFT'
@@ -43,7 +59,7 @@ BEGIN
 			,@Status = 'waiting'
 			,@BetCount = 0
 	END
-
+	
 	WHILE 1 = 1
 	BEGIN
 		UPDATE TOP (10000) dbo.bettrans WITH (ROWLOCK, UPDLOCK)
@@ -58,11 +74,17 @@ BEGIN
 			,comm = 0
 			,acomm = 0
 			,scomm = 0
-		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 127) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
+		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) 
+			AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 126, 127, 151) 
+			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
-				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
-				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) AND statusID IN (112, 113) AND bettype IN (13, 26, 27) THEN 0
+				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
+				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
+					AND recommend <> 1688156) AND statusID IN (112, 113) 
+					AND ((bettype IN (13, 26, 27, 145) AND @IsRefundHT = 1) 
+							OR (bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) AND @IsHTCal = 1))
+					THEN 0
 				ELSE 1
 				END
 
@@ -72,12 +94,9 @@ BEGIN
 END
 
 
+
+
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Calculate_RefundFT] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundFT] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_RefundFT] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_RefundFT] TO [vnteam] AS [dbo]

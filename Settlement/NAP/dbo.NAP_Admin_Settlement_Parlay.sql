@@ -1,7 +1,18 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Parlay] (
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay]    Script Date: 08/07/2014 14:10:54 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 22/07/2014 10:30:29 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 3/20/2014 5:36:24 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 3/17/2014 4:21:09 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay] (
 	@matchids VARCHAR(2000)
 	,@creator INT
 	,@action VARCHAR(20) = 'CAL'
+	,@resultPS NVARCHAR(10) = NULL
 	,@IP VARCHAR(15) = ''
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -13,18 +24,29 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:
+		- 20140417@Kathy: Fix LAS command
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
-			
+		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140717@Kathy: Settle MP for Penalty Shootout [Redmine:#17142]
 	Param's Explanation:
+	@resultPS: match result of penalty shootout
 
 		
 */
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @SkipBalanceUpdate BIT
+	DECLARE  @SkipBalanceUpdate BIT
+			,@procName nvarchar(50)
+			,@mode int
 
-	SET @SkipBalanceUpdate = 0
+	SELECT   @SkipBalanceUpdate = 0
+			,@procName = OBJECT_NAME(@@procid)
+
+	SELECT @mode = CASE WHEN @procName LIKE '%_xtest' OR @procName LIKE '%_xpre%' THEN 1
+						ELSE 0
+				   END 
+
 
 	DECLARE @start DATETIME
 		,@stop DATETIME
@@ -67,15 +89,16 @@ BEGIN
 			WHERE KeyID = 1 AND KeyValue IN (
 					SELECT val
 					FROM dbo.strSplit(@matchids, ',')
-					) AND @action <> 'UNDO'
-			)
+					) 
+			) AND @action <> 'UNDO' AND @resultPS IS NULL 
+					
 	BEGIN
 		SELECT @ErrCode = 1000000
 			,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
 		RETURN
 	END
-
+	
 	INSERT INTO @match (
 		matchid
 		,matchcode
@@ -108,7 +131,7 @@ BEGIN
 			SELECT 1
 			FROM @match
 			WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
-			) AND @action <> 'UNDO'
+			) AND @action <> 'UNDO' AND @resultPS IS NULL
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
@@ -124,7 +147,10 @@ BEGIN
 	DECLARE @LASCommand NVARCHAR(1000)
 		,@createdDate DATETIME
 
-	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
+	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' 
+														  + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) 
+														  + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
+														  + ',@resultPS = ' + CASE WHEN @resultPS IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @resultPS) + '''' END 									 
 		,@createdDate = GETDATE()
 
 	BEGIN TRY
@@ -173,6 +199,7 @@ BEGIN
 		,@T_Home SMALLINT
 		,@T_Away SMALLINT
 		,@tmp INT
+		,@IsRefundHT BIT
 
 	SET @rn = 1
 
@@ -194,6 +221,10 @@ BEGIN
 			,@GoalRecord = GoalRecord
 		FROM @match
 		WHERE rn = @rn
+
+		SELECT @IsRefundHT = CASE WHEN betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
+		FROM match with(NOLOCK)
+		WHERE matchid = @matchid
 
 		IF (@SportType IN (5, 6, 9, 30)) AND @action = 'CAL' AND @betstatus <> 'Refund' -- Tennis/VolleyBall/Badminton/Squash: get TotalGamesPlayed
 												EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
@@ -224,15 +255,17 @@ BEGIN
 
 		--COMMIT TRANSACTION
 		
-								EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
-				,@mode = 'ALL'
-				,@action = @action
-				,@fth = @finalhomescore
-				,@fta = @finalawayscore
-				,@hth = @hthomescore
-				,@hta = @htawayscore
-				,@matchdate = @matchdate
-				,@TennisTotal = @TennisTotal
+		EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+			,@mode = 'ALL'
+			,@action = @action
+			,@resultPS = @resultPS
+			,@IsRefundHT = @IsRefundHT
+			,@fth = @finalhomescore
+			,@fta = @finalawayscore
+			,@hth = @hthomescore
+			,@hta = @htawayscore
+			,@matchdate = @matchdate
+			,@TennisTotal = @TennisTotal
 
 		UPDATE @match
 		SET CalTime = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
@@ -331,7 +364,7 @@ BEGIN
 		SET @strXML_modds = ''
 		SET @9Start = CURRENT_TIMESTAMP
 
-								EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate
+		EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate, @mode = @mode
 
 		SET @9Time = @9Time + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
 		SET @2Call = @2Call + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
@@ -375,15 +408,18 @@ BEGIN
 		FROM @match
 		WHERE rn = @rn
 
+		IF @resultPS IS NOT NULL
+			BREAK
+
 		IF @action = 'CAL'
 												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'M'
-		ELSE IF @action = 'REFUND'
+		ELSE IF @action IN ('REFUND', 'REFUND-FT', 'REFUND-HT')
 												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 				,@command = 'R'
-		ELSE IF @action IN ('REFUND-FT', 'REFUND-HT')
-												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
-				,@command = 'F'
+		--ELSE IF @action IN ('REFUND-FT', 'REFUND-HT')
+		--										EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+		--		,@command = 'F'
 
 		---------------------------------------------------------------
 		-- update match coz m88 project using DB02.dbo.match.tstamp to know match do parlay settle (vivi@2009-8-27)	
@@ -409,9 +445,7 @@ BEGIN
 	IF @SkipBalanceUpdate = 0
 	BEGIN
 		--===
-			;
-
-		WITH refnos
+		;WITH refnos
 		AS (
 			SELECT DISTINCT refno
 			FROM dbo.bettransm b WITH (NOLOCK)
@@ -570,9 +604,8 @@ BEGIN
 END
 
 
+
+
+
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]

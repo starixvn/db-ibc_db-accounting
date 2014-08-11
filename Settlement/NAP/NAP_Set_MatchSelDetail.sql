@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Set_MatchSelDetail] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/07/2014 14:49:34 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
 	,@excludeRefundFGLG BIT = 0
 AS
 /*
@@ -11,6 +16,9 @@ AS
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140423@Kathy: Remove check weekend peak-hour
 		- 20140506@Kathy: Add IsExistHTFGLG, IsExistHTLG column. Offer new bettype 126, 127 (1H total goal, 1H FGLG) [Redmine:#14449]
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+		- 20140623@Kathy: Apply BetRadar - Add new bettype 151 (1st Half Double Chance) [Redmine:#17142]
+		- 20140710@Kathy: Apply BetRadar - bettype 135 (PenaltyShootout) - check PS status [Redmine:#17142]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -27,8 +35,12 @@ BEGIN
 		,@HTStatus NVARCHAR(20)
 		,@FGLGStatus NVARCHAR(20)
 		,@HTFGLGStatus NVARCHAR(20)
-		,@ParlayRunning BIT
-		,@HTParlayRunning BIT
+		,@PSStatus NVARCHAR(20)
+		,@FGLG_FTParlayRunning BIT
+		,@FGLG_HTParlayRunning BIT
+		,@PSParlayRunning BIT
+		,@IsExistPS BIT
+		
 
 	SELECT @IsExistLG = 0
 		,@IsExistFGLG = 0
@@ -37,12 +49,15 @@ BEGIN
 		,@IsSettleAbandonedMatchIBC = 0
 		,@IsExistHTLG = 0
 		,@IsExistHTFGLG = 0
+		,@IsExistPS  = 0
+
+		
 
 	SELECT @sporttype = sporttype
 	FROM match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
-	IF @excludeRefundFGLG = 0
+	IF @excludeRefundFGLG = 0 -- Calculate page
 	BEGIN
 		-- IsExistLG
 		IF EXISTS (
@@ -110,6 +125,14 @@ BEGIN
 		ELSE
 			SELECT @IsExistHTFGLG = 1
 
+		-- IsExistPS
+		IF EXISTS (	
+			SELECT TOP 1 1
+			FROM bettrans WITH(NOLOCK)
+			WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
+		)
+			SELECT @IsExistPS = 1
+
 		-- check match status
 		DECLARE @status TABLE (
 			[Group] TINYINT
@@ -118,10 +141,11 @@ BEGIN
 			)
 
 		INSERT INTO @status
-		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 1
+		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
+				WHEN bettype = 135 THEN 4
 				ELSE 0
 				END
 			,SUM(CASE 
@@ -135,9 +159,10 @@ BEGIN
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype NOT BETWEEN 1301 AND 1334
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
+				WHEN bettype = 135 THEN 4
 				ELSE 0
 				END
 
@@ -189,13 +214,29 @@ BEGIN
 				,0
 				)
 
-		SELECT TOP 1 @ParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
+		IF NOT EXISTS (
+				SELECT *
+				FROM @status
+				WHERE [Group] = 4
+				)
+			INSERT INTO @status
+			VALUES (
+				4
+				,0
+				,0
+				)
+
+		SELECT TOP 1 @FGLG_FTParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
 		FROM bettransm WITH(NOLOCK)
 		WHERE matchid = @matchid AND bettype = 14 AND statusID NOT IN (101,102)
 
-		SELECT TOP 1 @HTParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
+		SELECT TOP 1 @FGLG_HTParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
 		FROM bettransm WITH(NOLOCK)
 		WHERE matchid = @matchid AND bettype = 127 AND statusID NOT IN (101,102)
+
+		SELECT TOP 1 @PSParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
+		FROM bettransm with(NOLOCK)
+		WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
 
 		SELECT @FTStatus = CASE 
 				WHEN betcount = 0 THEN N'No Ticket'
@@ -214,9 +255,9 @@ BEGIN
 		WHERE [Group] = 1
 		
 		SELECT @FGLGStatus = CASE 
-				WHEN betcount = 0 THEN CASE WHEN @ParlayRunning IS NULL THEN N'No Ticket'
-											WHEN @ParlayRunning = 1 then N'Parlay Running'
-											WHEN @ParlayRunning = 0 THEN N'Parlay Calculated'
+				WHEN betcount = 0 THEN CASE WHEN @FGLG_FTParlayRunning IS NULL THEN N'No Ticket'
+											WHEN @FGLG_FTParlayRunning = 1 then N'Parlay Running'
+											WHEN @FGLG_FTParlayRunning = 0 THEN N'Parlay Calculated'
 										END
 				WHEN inRunning = 0 THEN N'Calculated'
 				ELSE N'Running'
@@ -225,17 +266,29 @@ BEGIN
 		WHERE [Group] = 2
 
 		SELECT @HTFGLGStatus = CASE 
-				WHEN betcount = 0 THEN CASE WHEN  @HTParlayRunning IS NULL THEN  N'No Ticket'
-											WHEN @HTParlayRunning = 1 then N'Parlay Running'	
-											WHEN @HTParlayRunning = 0 then N'Parlay Calculated'
+				WHEN betcount = 0 THEN CASE WHEN  @FGLG_HTParlayRunning IS NULL THEN  N'No Ticket'
+											WHEN @FGLG_HTParlayRunning = 1 then N'Parlay Running'	
+											WHEN @FGLG_HTParlayRunning = 0 then N'Parlay Calculated'
 										END
 				WHEN inRunning = 0 THEN N'Calculated'
 				ELSE N'Running'
 				END
 		FROM @status
 		WHERE [Group] = 3
+
+		SELECT @PSStatus = CASE 
+				WHEN betcount = 0 THEN CASE WHEN @PSParlayRunning IS NULL THEN  N'No Ticket'
+											WHEN @PSParlayRunning = 1 then N'Parlay Running'	
+											WHEN @PSParlayRunning = 0 then N'Parlay Calculated'
+										END
+				WHEN inRunning = 0 THEN N'Calculated'
+				ELSE N'Running'
+				END
+		FROM @status
+		WHERE [Group] = 4
+		
 	END
-	ELSE
+	ELSE -- Refund page
 	BEGIN
 		-- IsExistLG
 		IF EXISTS (
@@ -321,20 +374,26 @@ BEGIN
 			EXISTS (
 				SELECT 1
 				FROM bettrans WITH (NOLOCK)
-				WHERE bettype IN (13, 26, 27) AND matchid = @matchid AND statusID NOT IN (101, 102, 103) AND ruben = 0 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
+				WHERE bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+				AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
+				AND ruben = 0 
+				AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
 				) AND @sporttype = 1
 			)
 	BEGIN
 		SELECT @IsSettleAbandonedMatchIBC = 1
 
-		IF EXISTS (
-				SELECT 1
-				FROM bettrans WITH (NOLOCK)
-				WHERE matchid = @matchid AND bettype IN (13, 26, 27) AND statusID NOT IN (101, 102) AND ruben = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
-				) OR @sporttype <> 1
-		BEGIN
-			SELECT @IsSettleAbandonedMatchIBC = 0
-		END
+		--IF EXISTS (
+		--		SELECT 1
+		--		FROM bettrans WITH (NOLOCK)
+		--		WHERE matchid = @matchid AND bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+		--		AND statusID NOT IN (101, 102) 
+		--		AND ruben = 1 
+		--		AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
+		--		) OR @sporttype <> 1
+		--BEGIN
+		--	SELECT @IsSettleAbandonedMatchIBC = 0
+		--END
 	END
 
 	IF EXISTS (
@@ -364,6 +423,7 @@ BEGIN
 		,isnull(mr.multiple, 0) IsMultiCaled
 		,isnull(match.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
 		,mr.ishtcal AS IsHalfTimeCal
+		,ISNULL(mr.SettlementStatus135,0) SettlementStatus135
 		,match.GoalRecord
 		,mr.ConfirmHT
 		,mr.ConfirmFT
@@ -371,10 +431,12 @@ BEGIN
 		,@FTStatus FTStatus
 		,@FGLGStatus fglgstatus
 		,@HTFGLGStatus HTFGLGStatus
+		,@PSStatus PSStatus
 		,@IsExistFGLG AS IsExistFGLG
 		,@IsExistLG AS IsExistLG
 		,@IsExistHTFGLG AS IsExistHTFGLG
 		,@IsExistHTLG AS IsExistHTLG
+		,@IsExistPS as IsExistPS
 		,@IsHTOnly AS IsHTOnly
 		,@IsLive AS IsLive
 		,@IsSettleAbandonedMatchIBC IsSettleAbandonedMatchIBC
@@ -383,12 +445,8 @@ BEGIN
 	WHERE match.matchid = @matchid
 END
 
+
 GO
-
-GRANT EXECUTE ON [NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]

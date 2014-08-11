@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_SB_Job]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_SB_Job]    Script Date: 08/07/2014 14:11:51 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_SB_Job]
 AS
 /*
 	Created: 20130109@Kathy
@@ -30,9 +36,9 @@ BEGIN
 			,@hta SMALLINT
 			,@GoalRecord VARCHAR(50)
 			,@BetStatus NVARCHAR(50)
-			,@ActionId TINYINT
+			,@ActionId INT
 			,@duration INT
-			,@sporttype tinyint
+			--,@sporttype tinyint
 			,@pre_Sporttype tinyint 
 
 
@@ -192,22 +198,18 @@ BEGIN
 			,@hta = m.htawayscore
 			,@GoalRecord = m.GoalRecord
 			,@BetStatus = m.betstatus
-			,@sporttype = sporttype
+			--,@sporttype = sporttype
 		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
 
 		IF @ActionId <> - 1
 		BEGIN
-			IF @sporttype = 1
-			BEGIN
-				SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-										  ELSE @GoalRecord
-									 END ,
-						@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
-										  ELSE @BetStatus
-									 END 
-			END
-
+			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+										ELSE @GoalRecord
+									END ,
+					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
+										ELSE @BetStatus
+							     END 
 			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 				,@action = @ActionId
 				,@fth = @fth
@@ -221,8 +223,4 @@ BEGIN
 END
 
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_SB_Job] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_SB_Job] TO [vnteam] AS [dbo]

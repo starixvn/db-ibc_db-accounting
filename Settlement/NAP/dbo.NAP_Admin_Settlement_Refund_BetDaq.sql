@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Refund_BetDaq]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_BetDaq]    Script Date: 08/07/2014 14:11:19 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_BetDaq    Script Date: 31/07/2014 12:58:50 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetDaq]
 	@matchid int,
 	@creator int, 	
 	@IP varchar(15) = '',
@@ -94,7 +101,11 @@ WHERE
 		AND bettype NOT IN (14, 127) --Exclude FGLG, 1H FGLG
 GROUP BY custid
 
-EXEC dbo.Admin_Calculate_Refund_BetDaq @matchid = @matchid 
+EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+	,@action = 'REFUND'
+	,@mode = 'BetDaq'
+
+--EXEC dbo.NAP_Admin_Calculate_Refund_BetDaq @matchid = @matchid 
 
 INSERT INTO #BalanceAfter	
 SELECT	custid, SUM(winlost-actual_stake+playercomm)
@@ -250,14 +261,7 @@ BEGIN
 			@Remark = @Remark
 	END CATCH
 END
-
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Refund_BetDaq] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_BetDaq] TO [vnteam] AS [dbo]

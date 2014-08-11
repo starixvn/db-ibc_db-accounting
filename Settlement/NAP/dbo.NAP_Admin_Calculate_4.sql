@@ -1,9 +1,22 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_4] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 08/07/2014 14:06:07 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@bettype SMALLINT
-	,@correctscore NVARCHAR(10)
+	,@correctscore NVARCHAR(10) 
 	,@goaldiff SMALLMONEY
 	,@FGLG2 NVARCHAR(10) = NULL
+	,@hth INT = 0
+	,@hta INT = 0
+	,@fth INT = 0
+	,@fta INT = 0
 	,@betcount INT = 0
+	,@IsSettleAbandonedMatch BIT = 0
+	,@IsSettleAbandonedMatchIBC BIT = 0
+	,@IsSettleAbandonedMatchBetFair BIT = 0
+	
 AS
 /*
 	Created by:Kathy
@@ -13,13 +26,19 @@ AS
 	
 	Revisions:
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
-		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
+		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054	
+		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30)[Redmine:#19310]
+
+	Param's Explanation:
+		
+		
 */
 BEGIN
-	--IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
-	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
-
 	SET NOCOUNT ON
+
+	--IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
+
+	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN	
 
 	DECLARE @modds SMALLMONEY
 		,@commWinRate SMALLMONEY
@@ -33,20 +52,29 @@ BEGIN
 			WHERE NAME = 'LASDB'
 			)
 	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+		IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
+			BEGIN
+				DECLARE @LASCommand NVARCHAR(1000)
+					,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @correctscore = ''' + @correctscore + '''' + ', @goaldiff = ' + CONVERT(NVARCHAR(10), @goaldiff) + ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-			,@createdDate = GETDATE()
+				SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+																+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+																+ ', @correctscore = ''' + @correctscore + '''' 
+																+ ', @goaldiff = ' + CONVERT(NVARCHAR(10), @goaldiff) 
+																+ ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' 
+																+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+																+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
+					,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = @bettype
-			,@Status = 'waiting'
-			,@BetCount = @betcount
+				EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
+					,@SQLCommand = @LASCommand
+					,@CreatedDate = @createdDate
+					,@StatusID = 0 -- waiting
+					,@MatchID = @matchid
+					,@Bettype = @bettype
+					,@Status = 'waiting'
+					,@BetCount = @betcount
+			END
 	END
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231')
@@ -61,206 +89,449 @@ BEGIN
 
 		DECLARE @currecommend TABLE(recommend INT PRIMARY KEY)
 		
-		WHILE 1=1
+		IF @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
 		BEGIN
-			DELETE
-			FROM @currecommend
+			WHILE 1=1
+			BEGIN
+				DELETE
+				FROM @currecommend
 
-			DELETE TOP(100) FROM #tmpRecommend OUTPUT DELETED.recommend INTO @currecommend
-			SET @affectedagents = @@rowcount
+				DELETE TOP(100) FROM #tmpRecommend OUTPUT DELETED.recommend INTO @currecommend
+				SET @affectedagents = @@rowcount
 
-			UPDATE b
-			SET @modds = modds = CASE
-				WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
-				WHEN betteam = '4:0' AND @goaldiff >=  4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
-				WHEN betteam = '0:4' AND @goaldiff <=  -4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
-				WHEN betteam = '5:0' AND @goaldiff >=  5 THEN 1
-				WHEN betteam = '0:5' AND @goaldiff <= -5 THEN 1
-				ELSE -1
-				END,
+				UPDATE b
+				SET @modds = modds = CASE
+					WHEN b.betteam IN ('0:4', '4:0') AND @bettype = 30 THEN -1
+					WHEN b.betteam NOT IN ('0:4', '4:0') AND @bettype = 30 AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1) ) THEN -1			
+					WHEN b.betteam IN ('0:5','5:0') AND @bettype = 4 THEN -1
+					WHEN b.betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1) ) THEN -1			
+					ELSE NULL
+					END,			
+				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
+					WHEN '0' THEN 1
+					WHEN '1' THEN 0 
+					ELSE 1 END,
+				@commLostRate = CASE comstatus
+					WHEN '0' THEN 1
+					WHEN '1' THEN 2 
+					ELSE 1 END,--'s','m'
 			
-			@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
-				WHEN '0' THEN 1
-				WHEN '1' THEN 0 
-				ELSE 1 END,
-			@commLostRate = CASE comstatus
-				WHEN '0' THEN 1
-				WHEN '1' THEN 2 
-				ELSE 1 END,--'s','m'
+				WinLost = CASE
+					WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end)
+					WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end) * 0.5
+					WHEN @modds =  0	THEN actual_stake
+					WHEN @modds = -0.25	THEN actual_stake * 0.5
+					WHEN @modds < -0.25	THEN 0
+					WHEN @modds IS NULL then winlost
+					END,
+
+				aWinLost = CASE
+					WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end) * -apositiontaking
+					WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end) * -apositiontaking * 0.5
+					WHEN @modds =  0	THEN 0
+					WHEN @modds = -0.25	THEN actual_stake * apositiontaking * 0.5
+					WHEN @modds < -0.25	THEN actual_stake * apositiontaking
+					WHEN @modds IS NULL then aWinLost
+					END,
+				mWinLost = CASE
+					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end) * -mpositiontaking
+					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end) * -mpositiontaking * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN actual_stake * mpositiontaking * 0.5
+					WHEN @modds < -0.25 	THEN actual_stake * mpositiontaking
+					WHEN @modds IS NULL then mWinLost
+					END,
+				sWinLost = CASE
+					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end) * -spositiontaking
+					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30) then odds-1 else odds end) end) * -spositiontaking * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN actual_stake * spositiontaking * 0.5
+					WHEN @modds < -0.25 	THEN actual_stake * spositiontaking
+					WHEN @modds IS NULL then sWinLost
+					END,
+
+				PlayerComm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * playerdiscount * stake
+					WHEN @modds =  0.25 	THEN @commWinRate * playerdiscount * stake * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * playerdiscount * stake * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * playerdiscount * stake
+					WHEN @modds IS NULL then PlayerComm
+					END,
+				Comm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking)
+					WHEN @modds =  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking) * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking) * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking)
+					WHEN @modds IS NULL then Comm
+					END,
+				aComm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
+					WHEN @modds =  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
+					WHEN @modds IS NULL then aComm
+					END,
+				sComm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
+					WHEN @modds =  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
+					WHEN @modds IS NULL then sComm
+					END,
+
+				Status = CASE
+					WHEN @modds > 0 THEN 'WON'
+					WHEN @modds = 0 THEN 'DRAW'
+					WHEN @modds < 0 THEN 'LOSE'
+					WHEN @modds IS NULL then Status
+					END,
+				StatusID = CASE
+					WHEN @modds > 0 THEN 112 --WON
+					WHEN @modds = 0 THEN 111 --DRAW
+					WHEN @modds < 0 THEN 113 --LOSE
+					WHEN @modds IS NULL then StatusID
+					END,
+				ruben= CASE when @modds IS NULL THEN ruben
+							ELSE 1
+					   END
+				FROM dbo.bettrans b WITH (ROWLOCK, UPDLOCK)
+					INNER JOIN @currecommend ag on b.recommend = ag.recommend
+				WHERE
+					matchid=@matchid AND
+					bettype=@bettype AND
+					statusID NOT IN (101,102)
+					AND 1 = CASE 
+								WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 1
+								WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
+								WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND b.recommend <> 1688156) THEN 1
+								ELSE 0
+							END
+				IF @affectedagents <> 100 
+					BREAK
+			END
+		END
+		ELSE
+		BEGIN
+			WHILE 1=1
+			BEGIN
+				DELETE
+				FROM @currecommend
+
+				DELETE TOP(100) FROM #tmpRecommend OUTPUT DELETED.recommend INTO @currecommend
+				SET @affectedagents = @@rowcount
+
+				UPDATE b
+				SET @modds = modds = CASE
+					WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
+					WHEN betteam = '4:0' AND @goaldiff >=  4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
+					WHEN betteam = '0:4' AND @goaldiff <=  -4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
+					WHEN betteam = '5:0' AND @goaldiff >=  5 THEN 1
+					WHEN betteam = '0:5' AND @goaldiff <= -5 THEN 1
+					ELSE -1
+					END,
 			
-			WinLost = CASE
-				WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end)
-				WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * 0.5
-				WHEN @modds =  0	THEN actual_stake
-				WHEN @modds = -0.25	THEN actual_stake * 0.5
-				WHEN @modds < -0.25	THEN 0
-				END,
+				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
+					WHEN '0' THEN 1
+					WHEN '1' THEN 0 
+					ELSE 1 END,
+				@commLostRate = CASE comstatus
+					WHEN '0' THEN 1
+					WHEN '1' THEN 2 
+					ELSE 1 END,--'s','m'
+			
+				WinLost = CASE
+					WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end)
+					WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * 0.5
+					WHEN @modds =  0	THEN actual_stake
+					WHEN @modds = -0.25	THEN actual_stake * 0.5
+					WHEN @modds < -0.25	THEN 0
+					END,
 
-			aWinLost = CASE
-				WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -apositiontaking
-				WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -apositiontaking * 0.5
-				WHEN @modds =  0	THEN 0
-				WHEN @modds = -0.25	THEN actual_stake * apositiontaking * 0.5
-				WHEN @modds < -0.25	THEN actual_stake * apositiontaking
-				END,
-			mWinLost = CASE
-				WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -mpositiontaking
-				WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -mpositiontaking * 0.5
-				WHEN @modds =  0    	THEN 0
-				WHEN @modds = -0.25 	THEN actual_stake * mpositiontaking * 0.5
-				WHEN @modds < -0.25 	THEN actual_stake * mpositiontaking
-				END,
-			sWinLost = CASE
-				WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -spositiontaking
-				WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -spositiontaking * 0.5
-				WHEN @modds =  0    	THEN 0
-				WHEN @modds = -0.25 	THEN actual_stake * spositiontaking * 0.5
-				WHEN @modds < -0.25 	THEN actual_stake * spositiontaking
-				END,
+				aWinLost = CASE
+					WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -apositiontaking
+					WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -apositiontaking * 0.5
+					WHEN @modds =  0	THEN 0
+					WHEN @modds = -0.25	THEN actual_stake * apositiontaking * 0.5
+					WHEN @modds < -0.25	THEN actual_stake * apositiontaking
+					END,
+				mWinLost = CASE
+					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -mpositiontaking
+					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -mpositiontaking * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN actual_stake * mpositiontaking * 0.5
+					WHEN @modds < -0.25 	THEN actual_stake * mpositiontaking
+					END,
+				sWinLost = CASE
+					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -spositiontaking
+					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,1204,1235) then odds-1 else odds end) end) * -spositiontaking * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN actual_stake * spositiontaking * 0.5
+					WHEN @modds < -0.25 	THEN actual_stake * spositiontaking
+					END,
 
-			PlayerComm = CASE
-				WHEN @modds >  0.25 	THEN @commWinRate * playerdiscount * stake
-				WHEN @modds =  0.25 	THEN @commWinRate * playerdiscount * stake * 0.5
-				WHEN @modds =  0    	THEN 0
-				WHEN @modds = -0.25 	THEN @commLostRate * playerdiscount * stake * 0.5
-				WHEN @modds < -0.25 	THEN @commLostRate * playerdiscount * stake
-				END,
-			Comm = CASE
-				WHEN @modds >  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking)
-				WHEN @modds =  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking) * 0.5
-				WHEN @modds =  0    	THEN 0
-				WHEN @modds = -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking) * 0.5
-				WHEN @modds < -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking)
-				END,
-			aComm = CASE
-				WHEN @modds >  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
-				WHEN @modds =  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
-				WHEN @modds =  0    	THEN 0
-				WHEN @modds = -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
-				WHEN @modds < -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
-				END,
-			sComm = CASE
-				WHEN @modds >  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
-				WHEN @modds =  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
-				WHEN @modds =  0    	THEN 0
-				WHEN @modds = -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
-				WHEN @modds < -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
-				END,
+				PlayerComm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * playerdiscount * stake
+					WHEN @modds =  0.25 	THEN @commWinRate * playerdiscount * stake * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * playerdiscount * stake * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * playerdiscount * stake
+					END,
+				Comm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking)
+					WHEN @modds =  0.25 	THEN @commWinRate * discount * stake * (1-apositiontaking) * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking) * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * discount * stake * (1-apositiontaking)
+					END,
+				aComm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
+					WHEN @modds =  0.25 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))
+					END,
+				sComm = CASE
+					WHEN @modds >  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
+					WHEN @modds =  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds =  0    	THEN 0
+					WHEN @modds = -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
+					WHEN @modds < -0.25 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
+					END,
 
-			Status = CASE
-				WHEN @modds > 0 THEN 'WON'
-				WHEN @modds = 0 THEN 'DRAW'
-				WHEN @modds < 0 THEN 'LOSE'
-				END,
-			StatusID = CASE
-				WHEN @modds > 0 THEN 112 --WON
-				WHEN @modds = 0 THEN 111 --DRAW
-				WHEN @modds < 0 THEN 113 --LOSE
-				END,
-			ruben=1
-			FROM dbo.bettrans b WITH (ROWLOCK, UPDLOCK)
-				INNER JOIN @currecommend ag on b.recommend = ag.recommend
-			WHERE
-				matchid=@matchid AND
-				bettype=@bettype AND
-				--status NOT IN ('VOID', 'REJECT')
-				statusID NOT IN (101,102)
+				Status = CASE
+					WHEN @modds > 0 THEN 'WON'
+					WHEN @modds = 0 THEN 'DRAW'
+					WHEN @modds < 0 THEN 'LOSE'
+					END,
+				StatusID = CASE
+					WHEN @modds > 0 THEN 112 --WON
+					WHEN @modds = 0 THEN 111 --DRAW
+					WHEN @modds < 0 THEN 113 --LOSE
+					END,
+				ruben=1
+				FROM dbo.bettrans b WITH (ROWLOCK, UPDLOCK)
+					INNER JOIN @currecommend ag on b.recommend = ag.recommend
+				WHERE
+					matchid=@matchid AND
+					bettype=@bettype AND
+					--status NOT IN ('VOID', 'REJECT')
+					statusID NOT IN (101,102)
 
-			IF @affectedagents <> 100 
-				BREAK
+				IF @affectedagents <> 100 
+					BREAK
+			END
 		END
 		DROP TABLE #tmpRecommend
 	END
-	ELSE
+	ELSE -- DBTrans
 	BEGIN
-		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = modds = CASE 
-				WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
-				WHEN betteam = '4:0' AND @goaldiff >= 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
-				WHEN betteam = '0:4' AND @goaldiff <= - 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
-				WHEN betteam = '5:0' AND @goaldiff >= 5 THEN 1
-				WHEN betteam = '0:5' AND @goaldiff <= - 5 THEN 1
-				ELSE - 1
-				END
-			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
-				WHEN '0' THEN 1
-				WHEN '1' THEN 0
-				ELSE 1
-				END
-			,@commLostRate = CASE comstatus
-				WHEN '0' THEN 1
-				WHEN '1' THEN 2
-				ELSE 1
-				END
-			,WinLost = CASE 
-				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END	) END )
-				WHEN @modds = 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END	) END ) * 0.5
-				WHEN @modds = 0 THEN actual_stake WHEN @modds = - 0.25 THEN actual_stake * 0.5
-				WHEN @modds < - 0.25 THEN 0
-				END
-			,aWinLost = CASE 
-				WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking
-				WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking * 0.5
-				WHEN @modds = 0 THEN 0
-				WHEN @modds = - 0.25 THEN actual_stake * apositiontaking * 0.5
-				WHEN @modds < - 0.25 THEN actual_stake * apositiontaking
-				END
-			,mWinLost = CASE 
-				WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30,127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking
-				WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking * 0.5
-				WHEN @modds = 0 THEN 0
-				WHEN @modds = - 0.25 THEN actual_stake * mpositiontaking * 0.5
-				WHEN @modds < - 0.25 THEN actual_stake * mpositiontaking
-				END
-			,sWinLost = CASE 
-				WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - spositiontaking
-				WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - spositiontaking * 0.5
-				WHEN @modds = 0 THEN 0
-				WHEN @modds = - 0.25 THEN actual_stake * spositiontaking * 0.5
-				WHEN @modds < - 0.25 THEN actual_stake * spositiontaking
-				END
-			,PlayerComm = CASE 
-				WHEN @modds > 0.25 THEN @commWinRate * playerdiscount * stake
-				WHEN @modds = 0.25 THEN @commWinRate * playerdiscount * stake * 0.5
-				WHEN @modds = 0 THEN 0
-				WHEN @modds = - 0.25 THEN @commLostRate * playerdiscount * stake * 0.5
-				WHEN @modds < - 0.25 THEN @commLostRate * playerdiscount * stake
-				END
-			,Comm = CASE 
-				WHEN @modds > 0.25 THEN @commWinRate * discount * stake * (1 - apositiontaking)
-				WHEN @modds = 0.25 THEN @commWinRate * discount * stake * (1 - apositiontaking) * 0.5
-				WHEN @modds = 0 THEN 0
-				WHEN @modds = - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking) * 0.5
-				WHEN @modds < - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking)
-				END
-			,aComm = CASE 
-				WHEN @modds > 0.25 THEN @commWinRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
-				WHEN @modds = 0.25 THEN @commWinRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
-				WHEN @modds = 0 THEN 0
-				WHEN @modds = - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
-				WHEN @modds < - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
-				END
-			,sComm = CASE 
-				WHEN @modds > 0.25 THEN @commWinRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
-				WHEN @modds = 0.25 THEN @commWinRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
-				WHEN @modds = 0 THEN 0
-				WHEN @modds = - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
-				WHEN @modds < - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
-				END
-			,STATUS = CASE 
-				WHEN @modds > 0 THEN 'WON'
-				WHEN @modds = 0 THEN 'DRAW'
-				WHEN @modds < 0 THEN 'LOSE'
-				END
-			,StatusID = CASE 
-				WHEN @modds > 0 THEN 112 --WON
-				WHEN @modds = 0 THEN 111 --DRAW
-				WHEN @modds < 0 THEN 113 --LOSE
-				END
-			,ruben = 1
-		WHERE matchid = @matchid AND bettype = @bettype AND
-			--status NOT IN ('VOID', 'REJECT')
-			statusID NOT IN (101, 102)
+		IF @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+		BEGIN
+			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
+			SET @modds = modds = CASE 
+					WHEN betteam IN ('0:4', '4:0') AND @bettype = 30 THEN -1
+					WHEN betteam NOT IN ('0:4','4:0') AND @bettype = 30 AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1)) THEN -1
+					WHEN betteam IN ('0:5','5:0') AND @bettype = 4 THEN -1
+					WHEN betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1)) THEN -1 
+					ELSE NULL 
+					END
+				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
+					WHEN '0' THEN 1
+					WHEN '1' THEN 0
+					ELSE 1
+					END
+				,@commLostRate = CASE comstatus
+					WHEN '0' THEN 1
+					WHEN '1' THEN 2
+					ELSE 1
+					END
+				,WinLost = CASE 
+					WHEN @modds > 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END	) END )
+					WHEN @modds = 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END	) END ) * 0.5
+					WHEN @modds = 0 THEN actual_stake WHEN @modds = - 0.25 THEN actual_stake * 0.5
+					WHEN @modds < - 0.25 THEN 0
+					WHEN @modds IS NULL THEN winlost
+					END
+				,aWinLost = CASE 
+					WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking
+					WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN actual_stake * apositiontaking * 0.5
+					WHEN @modds < - 0.25 THEN actual_stake * apositiontaking
+					WHEN @modds IS NULL THEN awinlost
+					END
+				,mWinLost = CASE 
+					WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30,127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking
+					WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN actual_stake * mpositiontaking * 0.5
+					WHEN @modds < - 0.25 THEN actual_stake * mpositiontaking
+					WHEN @modds IS NULL THEN mwinlost
+					END
+				,sWinLost = CASE 
+					WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - spositiontaking
+					WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - spositiontaking * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN actual_stake * spositiontaking * 0.5
+					WHEN @modds < - 0.25 THEN actual_stake * spositiontaking
+					WHEN @modds IS NULL THEN swinlost
+					END
+				,PlayerComm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * playerdiscount * stake
+					WHEN @modds = 0.25 THEN @commWinRate * playerdiscount * stake * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * playerdiscount * stake * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * playerdiscount * stake
+					WHEN @modds IS NULL THEN playercomm
+					END
+				,Comm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * discount * stake * (1 - apositiontaking)
+					WHEN @modds = 0.25 THEN @commWinRate * discount * stake * (1 - apositiontaking) * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking) * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking)
+					WHEN @modds IS NULL THEN comm
+					END
+				,aComm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
+					WHEN @modds = 0.25 THEN @commWinRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
+					WHEN @modds IS NULL THEN acomm
+					END
+				,sComm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
+					WHEN @modds = 0.25 THEN @commWinRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
+					WHEN @modds IS NULL THEN scomm
+					END
+				,STATUS = CASE 
+					WHEN @modds > 0 THEN 'WON'
+					WHEN @modds = 0 THEN 'DRAW'
+					WHEN @modds < 0 THEN 'LOSE'
+					WHEN @modds IS NULL THEN status
+					END
+				,StatusID = CASE 
+					WHEN @modds > 0 THEN 112 --WON
+					WHEN @modds = 0 THEN 111 --DRAW
+					WHEN @modds < 0 THEN 113 --LOSE
+					WHEN @modds IS NULL THEN statusID
+					END
+				,ruben = CASE when @modds IS NULL THEN ruben
+							ELSE 1
+					     END
+			WHERE matchid = @matchid AND bettype = @bettype 
+			    AND	statusID NOT IN (101, 102)
+				AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
+							 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
+							 WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
+							 ELSE 0
+						END
+				AND 1 = CASE WHEN betteam IN ('0:4', '4:0') AND @bettype = 30 THEN 1
+								WHEN betteam NOT IN ('0:4', '4:0') AND @bettype = 30 AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) then 1
+								WHEN betteam IN ('0:5','5:0') AND @bettype = 4 THEN 1
+								WHEN betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN 1
+								ELSE -1
+						END
+		END
+		ELSE
+		BEGIN
+			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
+			SET @modds = modds = CASE 
+					WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
+					WHEN betteam = '4:0' AND @goaldiff >= 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
+					WHEN betteam = '0:4' AND @goaldiff <= - 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
+					WHEN betteam = '5:0' AND @goaldiff >= 5 THEN 1
+					WHEN betteam = '0:5' AND @goaldiff <= - 5 THEN 1
+					ELSE - 1
+					END
+				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
+					WHEN '0' THEN 1
+					WHEN '1' THEN 0
+					ELSE 1
+					END
+				,@commLostRate = CASE comstatus
+					WHEN '0' THEN 1
+					WHEN '1' THEN 2
+					ELSE 1
+					END
+				,WinLost = CASE 
+					WHEN @modds > 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END	) END )
+					WHEN @modds = 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END	) END ) * 0.5
+					WHEN @modds = 0 THEN actual_stake WHEN @modds = - 0.25 THEN actual_stake * 0.5
+					WHEN @modds < - 0.25 THEN 0
+					END
+				,aWinLost = CASE 
+					WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking
+					WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN actual_stake * apositiontaking * 0.5
+					WHEN @modds < - 0.25 THEN actual_stake * apositiontaking
+					END
+				,mWinLost = CASE 
+					WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30,127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking
+					WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN actual_stake * mpositiontaking * 0.5
+					WHEN @modds < - 0.25 THEN actual_stake * mpositiontaking
+					END
+				,sWinLost = CASE 
+					WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - spositiontaking
+					WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (4, 5, 6, 14, 15, 16, 30, 127, 1204, 1235) THEN odds - 1 ELSE odds END ) END ) * - spositiontaking * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN actual_stake * spositiontaking * 0.5
+					WHEN @modds < - 0.25 THEN actual_stake * spositiontaking
+					END
+				,PlayerComm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * playerdiscount * stake
+					WHEN @modds = 0.25 THEN @commWinRate * playerdiscount * stake * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * playerdiscount * stake * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * playerdiscount * stake
+					END
+				,Comm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * discount * stake * (1 - apositiontaking)
+					WHEN @modds = 0.25 THEN @commWinRate * discount * stake * (1 - apositiontaking) * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking) * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking)
+					END
+				,aComm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
+					WHEN @modds = 0.25 THEN @commWinRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking))
+					END
+				,sComm = CASE 
+					WHEN @modds > 0.25 THEN @commWinRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
+					WHEN @modds = 0.25 THEN @commWinRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds = 0 THEN 0
+					WHEN @modds = - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
+					WHEN @modds < - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking))
+					END
+				,STATUS = CASE 
+					WHEN @modds > 0 THEN 'WON'
+					WHEN @modds = 0 THEN 'DRAW'
+					WHEN @modds < 0 THEN 'LOSE'
+					END
+				,StatusID = CASE 
+					WHEN @modds > 0 THEN 112 --WON
+					WHEN @modds = 0 THEN 111 --DRAW
+					WHEN @modds < 0 THEN 113 --LOSE
+					END
+				,ruben = 1
+			WHERE matchid = @matchid AND bettype = @bettype AND
+				--status NOT IN ('VOID', 'REJECT')
+				statusID NOT IN (101, 102)
+		END
 	END
 
 	IF @FGLG2 IS NULL OR @FGLG2 = ''
@@ -318,10 +589,5 @@ BEGIN
 	END
 END
 
-
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_4] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_4] TO [vnteam] AS [dbo]

@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_29_PreCal] (@matchids VARCHAR(2000)) WITH RECOMPILE
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29_PreCal]    Script Date: 08/07/2014 14:05:49 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_PreCal] (@matchids VARCHAR(2000)) WITH RECOMPILE
 AS
 /*
 	Created: Kathy
@@ -285,10 +290,5 @@ BEGIN
 		INNER JOIN dbo.RefCombination rc ON tb.N = rc.N AND (tb.bitmap & rc.bitmap) > 0
 END
 
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Calculate_29_PreCal] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_29_PreCal] TO [vnteam] AS [dbo]

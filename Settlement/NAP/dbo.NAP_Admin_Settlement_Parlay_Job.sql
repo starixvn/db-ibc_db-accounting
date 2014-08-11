@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Parlay_Job]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay_Job]    Script Date: 08/07/2014 14:11:04 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay_Job    Script Date: 30/05/2014 9:24:58 AM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_Job]
 AS
 /*
 	Created: 20140114@Kathy
@@ -21,7 +27,7 @@ BEGIN
 		,@ErrCode INT
 		,@ErrMsg NVARCHAR(200)
 		,@keyId INT
-		,@ActionId TINYINT
+		,@ActionId INT
 		,@duration INT
 		,@pre_Sporttype tinyint 
 		
@@ -158,8 +164,4 @@ BEGIN
 END
 
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Parlay_Job] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay_Job] TO [vnteam] AS [dbo]

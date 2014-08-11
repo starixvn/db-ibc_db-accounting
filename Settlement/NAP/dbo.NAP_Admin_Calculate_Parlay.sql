@@ -1,8 +1,14 @@
-
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Parlay]    Script Date: 08/07/2014 14:07:20 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@matchids VARCHAR(2000) = NULL
 	,@mode VARCHAR(15) = 'CAL'
 	,@action VARCHAR(20) = 'ALL'
+	,@resultPS NVARCHAR(10) = NULL
+	,@IsRefundHT BIT = 0
 	,@fth INT = NULL
 	,@fta INT = NULL
 	,@hth INT = NULL
@@ -22,6 +28,8 @@ AS
 
 	Revisions:
 		- 20140424@Lukas: add DBTP server 
+		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 
 	Param's Explanation:
 		@action			@mode
@@ -50,6 +58,14 @@ BEGIN
 			,@action = ' + CASE 
 				WHEN @action IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @action) + ''''
+				END + '
+			,@resultPS = ' + CASE 
+				WHEN @resultPS IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(NVARCHAR(50), @resultPS) + ''''
+				END + '
+			,@IsRefundHT = ' + CASE 
+				WHEN @IsRefundHT IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @IsRefundHT)
 				END + '
 			,@fth = ' + CASE 
 				WHEN @fth IS NULL THEN 'NULL'
@@ -113,6 +129,8 @@ BEGIN
 					,@hta = @hta
 					,@matchdate = @matchdate
 					,@action = 'CAL'
+					,@resultPS = @resultPS
+					,@IsRefundHT = @IsRefundHT
 					,@TennisTotal = @TennisTotal
 			END
 
@@ -127,6 +145,8 @@ BEGIN
 				,@hta = @hta
 				,@matchdate = @matchdate
 				,@action = @action
+				,@resultPS = @resultPS
+				,@IsRefundHT = @IsRefundHT
 				,@TennisTotal = @TennisTotal
 
 			COMMIT TRANSACTION
@@ -151,7 +171,9 @@ BEGIN
 		END
 	END
 END
+
+
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Parlay] TO [vnteam] AS [dbo]
-
-

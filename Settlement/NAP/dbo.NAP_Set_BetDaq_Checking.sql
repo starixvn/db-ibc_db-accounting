@@ -10,7 +10,7 @@ Original: [Acc_Set_BetDaq_Checking]
 
 Revisions: 
 	-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
-
+	-20140707@Kathy: Execute settlement for abandoned/postponed matches: BetRadar [Redmine:17142]
 
 Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 	* List of BetDaq Customers 
@@ -75,26 +75,28 @@ BEGIN
 						(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 							OR recommend = 1688156	)
 						AND matchid = @matchid 
-						AND bettype IN (3,8,13,26,27)  --Over/Under ,Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+						AND bettype IN (3,8,13,26,27, --Over/Under ,Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+								133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar
 						AND statusID NOT IN (101, 102)
 						AND ruben = 0 
 			   )
 	BEGIN
 		SELECT	@IsSettleAbandonedMatch = 1 
-		IF EXISTS (
-					SELECT 1 
-					FROM bettrans WITH (NOLOCK) 
-					WHERE 
-							(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
-								OR recommend = 1688156	)
-							AND matchid = @matchid 
-							AND bettype IN(3,13,26,27)   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
-							AND statusID NOT IN (101, 102)
-							AND ruben = 1 
-				   )	
-		BEGIN
-			SELECT	@IsSettleAbandonedMatch = 0
-		END
+		--IF EXISTS (
+		--			SELECT 1 
+		--			FROM bettrans WITH (NOLOCK) 
+		--			WHERE 
+		--					(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
+		--						OR recommend = 1688156	)
+		--					AND matchid = @matchid 
+		--					AND bettype IN(3,13,26,27,   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
+		--						133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar
+		--					AND statusID NOT IN (101, 102)
+		--					AND ruben = 1 
+		--		   )	
+		--BEGIN
+		--	SELECT	@IsSettleAbandonedMatch = 0
+		--END
 
 	END
 	SELECT @IsMovebetdaq IsMovebetdaq,
@@ -103,7 +105,6 @@ BEGIN
 		@IsRefundRunningBetDaq	IsRefundRunningBetDaq
 	
 END
-
 GO
 
 GRANT EXECUTE ON [NAP_Set_BetDaq_Checking] TO [bodbAdminNet] AS [dbo]

@@ -1,11 +1,3 @@
-USE [CustDB]
-GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[Acc_ExchangeDailyIns]
 	@Code varchar(5),
 	@MYR float,
@@ -34,13 +26,10 @@ Revisions:
 	-  20110322@Henry: add one more base currency: CNY
 	-  20120427@Henry: add to new table ExchangeDailyOanda instead of ExchangeDaily	
 	-  20120427@Dan: add new currency KRW and JPY
-	-  20140529@Jim: support to write log
 */		
 SET NOCOUNT ON
 DECLARE @exchange TABLE(id int identity(1,1), exchangeid int,MultipliedBy int)
 DECLARE @date datetime
-DECLARE @LogData NVARCHAR(500)
-DECLARE @ExchangeCode	INT
 
 IF @rundate is null
 	set @date = convert(datetime,convert(nvarchar(20), getdate(), 101))
@@ -145,34 +134,6 @@ BEGIN
 	END
 	
 END
---- Write log 
-SELECT @ExchangeCode=exchangeId
-FROM dbo.exchange (NOLOCK)
-WHERE Code=@Code
-
-SELECT @LogData = 'Insert ExchangeRate :'
-	+  ' CurrencyName='+ ISNULL(@Code,'') 
-    +  ' ,MYRRate=' + ISNULL(convert(VARCHAR(10),  @MYR),'')  
-	+  ' ,USDRate=' + ISNULL(convert(VARCHAR(10), @USD),'')  
-	+  ' ,EURRate=' + ISNULL(convert(VARCHAR(10), @EUR),'')  
-	+  ' ,CNYRate=' + ISNULL(convert(VARCHAR(10), @CNY),'')
-	+  ' ,IDRRate=' + ISNULL(convert(VARCHAR(10), @IDR),'')
-	+  ' ,AUDRate=' + ISNULL(convert(VARCHAR(10), @AUD),'')
-	+  ' ,CHFRate=' + ISNULL(convert(VARCHAR(10), @CHF),'')
-	+  ' ,GBPRate=' + ISNULL(convert(VARCHAR(10), @GBP),'')
-	+  ' ,SGDRate=' + ISNULL(convert(VARCHAR(10), @SGD),'')
-	+  ' ,THBRate=' + ISNULL(convert(VARCHAR(10), @THB),'')
-	+  ' ,VNDRate=' + ISNULL(convert(VARCHAR(10), @VND),'')
-	+  ' ,KRWRate=' + ISNULL(convert(VARCHAR(10), @KRW),'')
-	+  ' ,JPYRate=' + ISNULL(convert(VARCHAR(10), @JPY),'')
-	+  ' ,RunDate=' + ISNULL(convert(VARCHAR(10), @date),'')
-	
-EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_ExchangeRate
-	@UserID = 862400, ---pgmViet
-	@ExchangeID = @ExchangeCode, 
-	@actualrate = NULL, 
-	@IP = NULL, 
-	@Doing = @LogData
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_ExchangeDailyIns] TO [bodbAdminNet] 

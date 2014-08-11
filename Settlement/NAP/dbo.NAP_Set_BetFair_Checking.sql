@@ -8,6 +8,7 @@ Original: Acc_Set_BetFair_Checking
 
 Revisions: 
 	-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+	-20140707@Kathy: Execute settlement for abandoned/postponed matches: BetRadar [Redmine:17142]
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
@@ -58,21 +59,25 @@ BEGIN
 	IF EXISTS (
 			SELECT 1
 			FROM bettrans WITH (NOLOCK)
-			WHERE custid IN (2331, 1077687, 115770) AND matchid = @matchid AND bettype in (3,8,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil 
-				AND statusID NOT IN (101, 102) AND ruben = 0
+			WHERE custid IN (2331, 1077687, 115770) 
+			AND matchid = @matchid 
+			AND bettype in (3,8,13,26,27,   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+				133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar)
+			AND statusID NOT IN (101, 102) AND ruben = 0
 			)
 	BEGIN
 		SELECT @IsSettleAbandonedMatchBetfair = 1
 
-		IF EXISTS (
-				SELECT 1
-				FROM bettrans WITH (NOLOCK)
-				WHERE custid IN (2331, 1077687, 115770) AND matchid = @matchid AND bettype in(3,13,26,27)  --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
-					AND statusID NOT IN (101, 102) AND ruben = 1
-				)
-		BEGIN
-			SELECT @IsSettleAbandonedMatchBetfair = 0
-		END
+		--IF EXISTS (
+		--		SELECT 1
+		--		FROM bettrans WITH (NOLOCK)
+		--		WHERE custid IN (2331, 1077687, 115770) AND matchid = @matchid AND bettype in(3,13,26,27,   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
+		--		133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar)
+		--			AND statusID NOT IN (101, 102) AND ruben = 1
+		--		)
+		--BEGIN
+		--	SELECT @IsSettleAbandonedMatchBetfair = 0
+		--END
 	END
 
 	SELECT @IsMovebetfair AS IsMovebetfair

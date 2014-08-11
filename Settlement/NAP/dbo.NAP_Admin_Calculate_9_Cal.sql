@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_9_Cal]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 08/07/2014 14:06:53 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 3/17/2014 4:21:09 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime,
 	@mode int = 0 
@@ -21,7 +27,6 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-
 	Declare @subStart datetime
 	Declare @commWinRate smallmoney, @commLostRate smallmoney
 
@@ -66,7 +71,7 @@ BEGIN
 		tloseCnt [tinyint] NULL,
 		[oldruben] [tinyint] NULL, -- this field to keep previous ticket status (running or not?)
 		[oldwinlostdate] [smalldatetime] NULL
-	)   
+	)
 	--create index temp_index on @temp_bettrans_9 (TransID)  
 	-- GET list of concern Ticket
 	SET @subStart = CURRENT_TIMESTAMP
@@ -92,7 +97,7 @@ BEGIN
 			AND bettype=9    
 			AND statusID NOT IN (101,102) --('VOID','REJECT')
 			--AND refno IN (SELECT refno FROM @tmp_mrefno)
-		
+	
 	-- Results list from both bettransm & bettransm14
 	Declare @parlay
 		TABLE (refno bigint, matchid int, statuswinlost tinyint, statusID int, odds smallmoney, matchdate smalldatetime)
@@ -140,7 +145,6 @@ BEGIN
 
 	Declare @statusID tinyint, @odds money
 	Declare @oldstatusID tinyint, @oldwinlost money, @winlost money
-
 
 	UPDATE T
 	SET
@@ -381,8 +385,4 @@ BEGIN
 END
 ---------------------------------------------------------------
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]

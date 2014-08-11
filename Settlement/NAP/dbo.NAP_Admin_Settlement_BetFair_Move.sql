@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_BetFair_Move]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_BetFair_Move]    Script Date: 08/07/2014 14:10:41 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_BetFair_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
 	@AdminId		INT,
@@ -14,7 +19,8 @@ AS
 	DB: DBTXN/BODB02 
 
 	Revisions: 
-		-20140512@Kathy: Add more log to distinguish between NAP and old settlement system
+		- 20140512@Kathy: Add more log to distinguish between NAP and old settlement system
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 
 	Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 
@@ -76,7 +82,7 @@ BEGIN
 	WHERE	matchid = @NewMatchID
 			AND liveindicator = 0 
 	GROUP BY bettype 
-
+			
 	UPDATE	bettrans WITH (ROWLOCK,UPDLOCK)
 	SET		matchid		= @NewMatchID, 
 			oddsid		= o.oddsid, 
@@ -84,7 +90,7 @@ BEGIN
 	FROM	bettrans b
 			INNER JOIN @tmpOdds o ON b.bettype = o.bettype 
 	WHERE	b.matchid = @MatchID 
-			AND b.custid IN (2331, 1077687, 115770)
+			AND b.custid IN (2331, 1077687, 115770, 15523642)
 			/*
 			AND (
 				b.custid IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (1)) 
@@ -169,11 +175,6 @@ BEGIN
 END
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_BetFair_Move] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_BetFair_Move] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_BetFair_Move] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_BetFair_Move] TO [vnteam] AS [dbo]

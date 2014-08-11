@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Refund_FGLG] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_FGLG]    Script Date: 08/07/2014 14:11:31 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_FGLG] @matchid INT
 	,@action VARCHAR(10) = 'REFUND' -- REFUND, REFUND-FT, REFUND-HT
 	,@adminid INT
 	,@LGOnly BIT
@@ -16,7 +22,7 @@ AS
 
 	Revisions:
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
-		
+		- 20140618@Kathy: Correct 1FL, FL string
 	Param's Explanation:
 			+ @matchid: matchid of match to Refund HT
 			+ @IsLoopTempTable: 1 : is nested
@@ -117,48 +123,51 @@ BEGIN
 		,@goalrecord VARCHAR(50)
 		,@betstatus NVARCHAR(50)
 		,@matchdate DATETIME
+		,@betstatus1 nvarchar(50)
+		,@betstatus2 nvarchar(50)
 
 	SELECT @matchdate = eventdate
 		,@betstatus = betstatus
 	FROM DBPRO.bodb02.dbo.match WITH (NOLOCK)
 	WHERE matchid = @matchid
-
-	IF @LGOnly = 1 ---refund last goal
+	
+	SELECT @betstatus1 = CASE when CHARINDEX('1FL:',@betstatus) > 0 then SUBSTRING(@betstatus, CHARINDEX('1FL:',@betstatus),8)
+							  ELSE ''
+						END,
+			@betstatus2 = CASE when CHARINDEX('1FL:',@betstatus) > 0 THEN REPLACE(@betstatus,@betstatus1,'')
+							   ELSE @betstatus	
+						END		
+			
+	IF @LGOnly = 1 --refund last goal
 	BEGIN
-			IF @action IN ('REFUND', 'REFUND-HT')
-			SET @betStatus = CASE 
-					WHEN CHARINDEX('1FL:', @betstatus) > 0 THEN STUFF(@betstatus, CHARINDEX('1FL:', @betstatus) + 6, 1, '0')
-					ELSE @betStatus
-					END
-
-		IF @action IN ('REFUND', 'REFUND-FT')
-			SET @betStatus = CASE 
-					WHEN (CHARINDEX('FL:', @betstatus) > 0 and CHARINDEX('1FL:', @betstatus) = 0) 
-								OR CHARINDEX(';FL',@betstatus) > 0 THEN STUFF(@betStatus, LEN(@betStatus), 1, '0')
-					ELSE @betStatus
-					END		
-	END
-	ELSE --- refund all FGLG
-	BEGIN
-		IF @betStatus = 'Refund'
-			SET @betStatus = 'Refund;'
-
 		IF @action IN ('REFUND', 'REFUND-HT')
 		BEGIN
-			SET @betStatus = CASE 
-					WHEN CHARINDEX('1FL:', @betstatus) > 0 THEN STUFF(@betstatus, CHARINDEX('1FL:', @betstatus), 7, '1FL:0-0')
-					ELSE ISNULL(@betstatus, '') + '1FL:0-0;'
-					END
+			SELECT @betstatus1 = CASE WHEN @betstatus1 = '' THEN @betstatus1 -- Ex: 1FL:1-0;
+									 ELSE STUFF(@betstatus1,7,1,'0')
+								END
 		END
-
 		IF @action IN ('REFUND', 'REFUND-FT')
 		BEGIN
-			SET @betStatus = CASE 
-					WHEN CHARINDEX(';FL:', @betstatus) > 0 THEN SUBSTRING(@betStatus, 1, CHARINDEX(';FL:', @betStatus)) + 'FL:0-0'
-					ELSE ISNULL(@betstatus, '') + 'FL:0-0'
-					END
+			select @betstatus2 = CASE when CHARINDEX('FL:',@betstatus2) > 0 THEN STUFF(@betstatus2,CHARINDEX('FL:',@betstatus2)+5,1,'0')
+									  ELSE @betstatus2
+								 end -- Ex: Refund;FL:1-0;
 		END
 	END
+	ELSE -- refund all FGLG
+	BEGIN
+		IF @action IN ('REFUND', 'REFUND-HT')
+		BEGIN
+			select @betstatus1 = '1FL:0-0;'
+		END
+		IF @action IN ('REFUND', 'REFUND-FT')
+		BEGIN
+			select @betstatus2 = CASE when CHARINDEX('FL:',@betstatus2) > 0 then STUFF(@betstatus2,CHARINDEX('FL:',@betstatus2),7,'FL:0-0;')
+										ELSE @betstatus2 + 'FL:0-0;' -- Ex: Refund;FL:0-0;
+								END 
+		END
+	END
+
+	SELECT @betstatus = @betstatus2 + @betstatus1
 
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Refund_FGLG'
 		,@MatchID = @matchid
@@ -368,11 +377,6 @@ END
 
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_Refund_FGLG] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_FGLG] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Refund_FGLG] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_FGLG] TO [vnteam] AS [dbo]

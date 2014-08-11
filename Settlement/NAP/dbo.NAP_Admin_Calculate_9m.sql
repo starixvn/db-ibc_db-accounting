@@ -1,10 +1,17 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_9m] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 08/07/2014 14:07:07 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT
 	,@fta INT
 	,@hth INT
 	,@hta INT
 	,@matchdate DATETIME
 	,@action VARCHAR(10) = 'CAL'
+	,@resultPS NVARCHAR(10) = NULL -- PS:Y/N;
+	,@IsRefundHT BIT = 0
 	,@TennisTotal TINYINT = NULL
 	,@VoidTransID VARCHAR(2000) = ''
 	,@UserID INT = 0
@@ -24,7 +31,12 @@ AS
 	
 	Revision:
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
-		
+		- 20140623@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
+
+	Param's Explanation:
+		@IsRefundHT: whether or not match has been refunded HT
+		@resultPS: match result of penalty shootout
 */
 BEGIN
 	IF @@SERVERNAME IN ('DB042', 'DB043', 'DB044') RETURN
@@ -171,29 +183,39 @@ BEGIN
 			,statuswinlost = 0
 			,ruben = 1
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 151) AND statusID NOT IN (101, 102)
 
 		UPDATE dbo.BetParlayDetail
 		SET winlostdate = @matchdate
 			,statuswinlost = 0
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 151) AND statusID NOT IN (101, 102)
 	END
 	ELSE IF @action = 'REFUND-HT'
 	BEGIN
+		-- Refund sub tickets of 11 bet types (FT) from BetRadar in case '30x3' match has been suspended
 		UPDATE dbo.bettransm
 		SET winlostdate = @matchdate
 			,[status] = 'Refund'
 			,statuswinlost = 0
 			,ruben = 1
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 126) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 151) 
+				OR (bettype IN (133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
+			)
+		AND statusID NOT IN (101, 102)
 
 		UPDATE dbo.BetParlayDetail
 		SET winlostdate = @matchdate
 			,statuswinlost = 0
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 126) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 151) 
+				OR (bettype IN (133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
+			)
+		AND statusID NOT IN (101, 102)
+
 	END
 			-- ===================================================
 	ELSE IF @action = 'VOID'
@@ -248,6 +270,19 @@ BEGIN
 			-- ===================================================
 	ELSE IF @action = 'CAL'
 	BEGIN
+		DECLARE @csHTFT NVARCHAR(10) -- HT/FT correct score
+					, @penaltyshootout NVARCHAR(1)
+	
+			SELECT @csHTFT = CASE WHEN @hth + @hta >= 4 THEN '4+' 
+							 ELSE CAST(@hth AS nvarchar(1)) + ':' + CAST(@hta AS nvarchar(1))
+							 END 
+					  + '/'
+					  + CASE WHEN @fth + @fta >=4 THEN '4+'
+						     ELSE CAST(@fth AS nvarchar(1)) + ':' + CAST(@fta AS nvarchar(1))
+							 END
+				, @penaltyshootout = LEFT(RIGHT(RTRIM(@resultPS),2),1) -- @resultPS: PS:Y; 
+
+
 		UPDATE dbo.bettransm WITH (UPDLOCK)
 		SET @modds = CASE bettype
 				WHEN 1 THEN -- Handicap
@@ -433,6 +468,92 @@ BEGIN
 						WHEN betteam = 'a' AND (@fth - @fta) <> 0 THEN 1
 						ELSE - 1
 						END
+				WHEN 133 THEN -- Home To Win Both Halves
+					CASE 
+						WHEN betteam = 'y' AND (@hth > @hta) AND ((@fth - @hth) > (@fta - @hta)) THEN 1
+						WHEN betteam = 'n' AND ((@hth <= @hta) OR ((@fth - @hth) <= (@fta - @hta))) THEN 1
+						ELSE -1
+						END 
+				WHEN 134 THEN -- Away To Win Both Halves 
+					CASE 
+						WHEN betteam = 'y' AND (@hta > @hth) AND ((@fta - @hta) > (@fth - @hth)) THEN 1
+						WHEN betteam = 'n' AND ((@hta <=@hth) OR ((@fta - @hta) <= (@fth - @hth))) THEN 1
+						ELSE -1
+						END 
+				WHEN 140 THEN -- Highest Scoring Half
+					CASE 
+						WHEN betteam = '1h' AND (@hth + @hta) > (@fth - @hth + @fta - @hta) THEN 1
+						WHEN betteam = 'tie' AND (@hth + @hta) = (@fth - @hth + @fta - @hta) THEN 1
+						WHEN betteam = '2h' AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN 1
+						ELSE -1
+						END
+				WHEN 141 THEN -- Highest Scoring Half Home Team
+					CASE 
+						WHEN betteam = '1h' AND @hth > (@fth - @hth) THEN 1
+						WHEN betteam = 'tie' AND @hth = (@fth - @hth) THEN 1
+						WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
+						ELSE -1
+						END 
+				WHEN 142 THEN -- Highest Scoring Half Away Team
+					CASE 
+						WHEN betteam = '1h' AND @hta > (@fta - @hta) THEN 1
+						WHEN betteam = 'tie' AND @hta = (@fta - @hta) THEN 1
+						WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
+						ELSE -1
+						END 
+				WHEN 145 THEN -- Both Teams To Score
+					CASE 
+						WHEN betteam = 'y' AND (@fth > 0) AND (@fta > 0) THEN 1
+						WHEN betteam = 'n' AND ((@fth = 0) OR (@fta = 0)) THEN 1
+						ELSE -1
+						END 
+				WHEN 146 THEN -- 2nd Half Both Teams To Score
+					CASE 
+						WHEN betteam = 'y' AND (@fth - @hth) > 0 AND (@fta - @hta) > 0 THEN 1
+						WHEN betteam = 'n' AND ((@fth - @hth) = 0 OR (@fta - @hta) = 0) THEN 1
+						ELSE -1
+						END
+				WHEN 147 THEN -- Home To Score In Both Halves 
+					CASE 
+						WHEN betteam = 'y' AND @hth > 0 AND (@fth - @hth) > 0 THEN 1
+						WHEN betteam = 'n' AND (@hth = 0 OR (@fth - @hth) = 0) THEN 1
+						ELSE -1
+						END
+				WHEN 148 THEN -- Away To Score In Both Halves 
+					CASE 
+						WHEN betteam = 'y' AND @hta > 0 AND (@fta - @hta) > 0 THEN 1
+						WHEN betteam = 'n' AND (@hta = 0 OR (@fta - @hta) = 0) THEN 1
+						ELSE -1
+						END
+				WHEN 149 THEN -- Home To Win Either Half 
+					CASE 
+						WHEN betteam = 'y' AND ((@hth > @hta) OR (@fth - @hth) > (@fta - @hta)) THEN 1
+						WHEN betteam = 'n' AND (@hth <= @hta) AND (@fth - @hth) <=(@fta - @hta) THEN 1
+						ELSE -1
+						END
+				WHEN 150 THEN -- Away To Win Either Half
+					CASE 
+						WHEN betteam = 'y' AND ((@hta > @hth) OR (@fta - @hta) > (@fth - @hth)) THEN 1
+						WHEN betteam = 'n' AND (@hta <= @hth) AND (@fta - @hta) <= (@fth - @hth) THEN 1
+						ELSE -1
+						END 
+				WHEN 151 THEN -- 1st Half Double Chance
+					CASE 
+						WHEN betteam = '1x' AND (@hth - @hta) >= 0 THEN 1
+						WHEN betteam = '2x' AND (@hta - @hth) >= 0 THEN 1
+						WHEN betteam = '12' AND (@hth - @hta) <> 0 THEN 1
+						ELSE -1
+						END
+				WHEN 152 THEN -- Half Time/Full Time Correct Score
+					CASE 
+						WHEN betteam = @csHTFT THEN 1
+						ELSE -1
+						END 
+				WHEN 135 THEN -- Penalty Shootout
+					CASE 
+						WHEN betteam = @penaltyshootout THEN 1
+						ELSE -1
+						END							
 				ELSE NULL -- Not support bettype
 				END
 			,-- CASE bettype
@@ -464,6 +585,10 @@ BEGIN
 		-- ========================
 		FROM dbo.bettransm WITH (INDEX = IX_matchid)
 		WHERE matchid = @matchid AND bettype NOT IN (14, 127) AND statusID NOT IN (101, 102)
+		AND bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN bettype
+						   WHEN ISNULL(@resultPS, '') <> '' THEN 135
+					  END
+
 
 		-- BetParlayDetail
 		UPDATE pd
@@ -653,6 +778,92 @@ BEGIN
 						WHEN betteam = 'a' AND (@fth - @fta) <> 0 THEN 1
 						ELSE - 1
 						END
+				WHEN 133 THEN -- Home To Win Both Halves
+					CASE 
+						WHEN betteam = 'y' AND (@hth > @hta) AND ((@fth - @hth) > (@fta - @hta)) THEN 1
+						WHEN betteam = 'n' AND ((@hth <= @hta) OR ((@fth - @hth) <= (@fta - @hta))) THEN 1
+						ELSE -1
+						END 
+				WHEN 134 THEN -- Away To Win Both Halves 
+					CASE 
+						WHEN betteam = 'y' AND (@hta > @hth) AND ((@fta - @hta) > (@fth - @hth)) THEN 1
+						WHEN betteam = 'n' AND ((@hta <=@hth) OR ((@fta - @hta) <= (@fth - @hth))) THEN 1
+						ELSE -1
+						END 
+				WHEN 140 THEN -- Highest Scoring Half
+					CASE 
+						WHEN betteam = '1h' AND (@hth + @hta) > (@fth - @hth + @fta - @hta) THEN 1
+						WHEN betteam = 'tie' AND (@hth + @hta) = (@fth - @hth + @fta - @hta) THEN 1
+						WHEN betteam = '2h' AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN 1
+						ELSE -1
+						END
+				WHEN 141 THEN -- Highest Scoring Half Home Team
+					CASE 
+						WHEN betteam = '1h' AND @hth > (@fth - @hth) THEN 1
+						WHEN betteam = 'tie' AND @hth = (@fth - @hth) THEN 1
+						WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
+						ELSE -1
+						END 
+				WHEN 142 THEN -- Highest Scoring Half Away Team
+					CASE 
+						WHEN betteam = '1h' AND @hta > (@fta - @hta) THEN 1
+						WHEN betteam = 'tie' AND @hta = (@fta - @hta) THEN 1
+						WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
+						ELSE -1
+						END 
+				WHEN 145 THEN -- Both Teams To Score
+					CASE 
+						WHEN betteam = 'y' AND (@fth > 0) AND (@fta > 0) THEN 1
+						WHEN betteam = 'n' AND ((@fth = 0) OR (@fta = 0)) THEN 1
+						ELSE -1
+						END 
+				WHEN 146 THEN -- 2nd Half Both Teams To Score
+					CASE 
+						WHEN betteam = 'y' AND (@fth - @hth) > 0 AND (@fta - @hta) > 0 THEN 1
+						WHEN betteam = 'n' AND ((@fth - @hth) = 0 OR (@fta - @hta) = 0) THEN 1
+						ELSE -1
+						END
+				WHEN 147 THEN -- Home To Score In Both Halves 
+					CASE 
+						WHEN betteam = 'y' AND @hth > 0 AND (@fth - @hth) > 0 THEN 1
+						WHEN betteam = 'n' AND (@hth = 0 OR (@fth - @hth) = 0) THEN 1
+						ELSE -1
+						END
+				WHEN 148 THEN -- Away To Score In Both Halves 
+					CASE 
+						WHEN betteam = 'y' AND @hta > 0 AND (@fta - @hta) > 0 THEN 1
+						WHEN betteam = 'n' AND (@hta = 0 OR (@fta - @hta) = 0) THEN 1
+						ELSE -1
+						END
+				WHEN 149 THEN -- Home To Win Either Half 
+					CASE 
+						WHEN betteam = 'y' AND ((@hth > @hta) OR (@fth - @hth) > (@fta - @hta)) THEN 1
+						WHEN betteam = 'n' AND (@hth <= @hta) AND (@fth - @hth) <=(@fta - @hta) THEN 1
+						ELSE -1
+						END
+				WHEN 150 THEN -- Away To Win Either Half
+					CASE 
+						WHEN betteam = 'y' AND ((@hta > @hth) OR (@fta - @hta) > (@fth - @hth)) THEN 1
+						WHEN betteam = 'n' AND (@hta <= @hth) AND (@fta - @hta) <= (@fth - @hth) THEN 1
+						ELSE -1
+						END 
+				WHEN 151 THEN -- 1st Half Double Chance
+					CASE 
+						WHEN betteam = '1x' AND (@hth - @hta) >= 0 THEN 1
+						WHEN betteam = '2x' AND (@hta - @hth) >= 0 THEN 1
+						WHEN betteam = '12' AND (@hth - @hta) <> 0 THEN 1
+						ELSE -1
+						END
+				WHEN 152 THEN -- Half Time/Full Time Correct Score
+					CASE 
+						WHEN betteam = @csHTFT THEN 1
+						ELSE -1
+						END 
+				WHEN 135 THEN -- Penalty Shootout
+					CASE
+						WHEN betteam = @penaltyshootout THEN 1
+						ELSE -1
+						END
 				ELSE NULL -- Not support bettype
 				END
 			,-- CASE bettype
@@ -674,6 +885,10 @@ BEGIN
 		-- ========================
 		FROM dbo.BetParlayDetail pd WITH (UPDLOCK, INDEX = IX_matchid)
 		WHERE bettype not IN (14, 127) AND matchid = @matchid AND statusID NOT IN (101, 102)
+		AND pd.bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN pd.bettype
+							  WHEN ISNULL(@resultPS, '') <> '' THEN 135
+					     END
+
 	END
 END
 	-- ===================================================
@@ -681,9 +896,6 @@ END
 
 
 
+
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]

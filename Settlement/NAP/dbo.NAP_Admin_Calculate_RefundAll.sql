@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_RefundAll] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundAll]    Script Date: 08/07/2014 14:07:47 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER  PROCEDURE [dbo].[NAP_Admin_Calculate_RefundAll] @matchid INT
 	,@fth SMALLMONEY = 0
 	,@fta SMALLMONEY = 0
 	,@IsExcludeBetdaq BIT = 0
@@ -13,6 +18,8 @@ AS
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140411@Kathy: Add more param for LAS command
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+		- 20140711@Kathy: Apply BetRadar [Redmine:#17142]
 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -61,8 +68,12 @@ BEGIN
 		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) AND bettype NOT IN (14, 127) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
-				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770) THEN 0
-				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) AND statusID IN (112, 113) AND bettype IN (13, 26, 27) THEN 0
+				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
+				WHEN @IsSettleAbandonedMatchIBC = 1 
+						AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
+							AND recommend <> 1688156) 
+						AND statusID IN (112, 113) 
+						AND bettype IN (13, 26, 27, 133, 134, 140, 141, 145, 146, 147, 148, 149, 150, 152) THEN 0
 				ELSE 1
 				END
 
@@ -75,11 +86,6 @@ END
 
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Calculate_RefundAll] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundAll] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_RefundAll] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_RefundAll] TO [vnteam] AS [dbo]

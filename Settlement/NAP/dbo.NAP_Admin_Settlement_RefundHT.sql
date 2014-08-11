@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_RefundHT] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 08/07/2014 14:11:43 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER OFF
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@adminid INT
 	,@IsExcludeBetdaq BIT = 0
 	,@IsSettleAbandonedMatch BIT = 0
@@ -19,7 +25,9 @@ AS
 
 	Revisions:
 		- 20140421@Kathy: Add new bettype 126 [Redmine:#14449]
-	
+		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]	
 	
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -115,7 +123,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -262,29 +270,22 @@ BEGIN
 
 		DECLARE @betcount_8 INT
 
-		SELECT @betcount_8 = ISNULL(SUM(CASE bettype
-						WHEN 8 THEN 1
-						ELSE 0
-						END), 0)
+		SELECT @betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype = 8 AND 1 = CASE 
-				WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-				WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-				ELSE 0
-				END AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND bettype = 8 
+		AND 1 = CASE 
+					WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
+					WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
+					ELSE 0
+				END 
+		AND statusID NOT IN (101, 102)
 
-		--EXEC dbo.NAP_Admin_Calculate_8 @matchid = @matchid
-		--	,@bettype = 8
-		--	,@totalht = @totalht
-		--	,@betcount = @betcount_8
-		--	,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-		--	,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
-			,@betcount_8 = 8 -- bettype
+			,@betcount_8 = @betcount_8 -- bettype
 			,@totalht = @totalht
-			,@ticket_count = @betcount_8 -- sum ticket of bettype 8
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 	END
@@ -302,9 +303,6 @@ BEGIN
 		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
 			,'F'
 
-		--EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
-		--	,@IsExcludeBetdaq = @IsExcludeBetdaq
-		--	,@IsExcludeBetfair = @IsExcludeBetfair
 		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
@@ -317,7 +315,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -523,13 +521,7 @@ BEGIN
 END
 
 
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]
