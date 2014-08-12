@@ -1583,6 +1583,7 @@ Begin DataProject = "Account"
             Script = "dbo.NAP_UpdateNumberGameBalls.sql"
          End
          Begin Folder = "Outright"
+            Script = "dbo.NAP_Admin_Settlement_Outright.sql"
             Script = "dbo.NAP_Set_LeagueSelOutright.sql"
             Script = "dbo.NAP_Set_OutrightSelInfo.sql"
          End
