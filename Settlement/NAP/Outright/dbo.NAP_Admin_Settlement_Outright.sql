@@ -38,9 +38,10 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE  @Remark VARCHAR(500)
-			,@ActionID INT
-			,@LogData NVARCHAR(300)
+	DECLARE  @Remark 	VARCHAR(500)
+			,@ActionID 	INT
+			,@LogData 	NVARCHAR(300)
+			,@LeagueID	INT
 
 	SELECT	@ActionID = CASE @Action WHEN 'UNDO' THEN 145 
 									 ELSE 0 END 
@@ -81,6 +82,10 @@ BEGIN
 			,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 		RETURN
 	END	
+	
+	SELECT	@LeagueID = LeagueID
+	FROM	Outright WITH (NOLOCK)
+	WHERE	ORID = @MatchID
 	
 	IF @Action = 'UNDO'
 	BEGIN
@@ -244,7 +249,7 @@ BEGIN
 			@UserID = @Creator
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
-			,@LeagueID = 0
+			,@LeagueID = @LeagueID
 			,@EventDate = NULL
 			,@Result = @Status
 	END TRY
@@ -254,7 +259,7 @@ BEGIN
 			@UserID = @Creator
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
-			,@LeagueID = 0
+			,@LeagueID = @LeagueID
 			,@EventDate = NULL
 			,@Result = @Status
 			,@Remark = @Remark
