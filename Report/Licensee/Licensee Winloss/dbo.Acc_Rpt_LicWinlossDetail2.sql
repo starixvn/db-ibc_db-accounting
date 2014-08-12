@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail2]  
+﻿USE [bodb02]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail2]  
 	@LicenseeID	INT,
 	@Currency	INT = 0,
 	@CustID		INT = 0, --AgentID			
@@ -37,6 +45,7 @@ AS
 		- 20120905@Henry: add Virtual Sports
 		- 20130527@Jim: support RNG Casino
 		- 20140331@Hannah: offer Keno
+		- 20140704@Jim: offer sporting solution
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  + @BaseCurrency (input currencyID): 2-MYR ; 3-USD; 6-EUR
@@ -426,7 +435,7 @@ BEGIN
 		WHERE 
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
 			b.statusID  IN (111, 112, 113) AND
-			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999)) AND
+			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399)) AND
 			b.tpositiontaking <> 0
 		GROUP BY   
 			s.currency,b.custid,b.statusID
@@ -967,12 +976,7 @@ BEGIN
 	END
 	
  END
-  
- 
-
-  
-
- 
+   
  SELECT 
 	c.username,  
 	SUBSTRING(c.username2, CHARINDEX('$', c.username2) + 1,LEN(c.username2) - CHARINDEX('$',c.username2)) AS nickname,
@@ -1032,8 +1036,7 @@ BEGIN
   
 DROP TABLE #SAgWinLoss 
 
-END   
-
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail2] TO [bodbAdminNet]
 GO

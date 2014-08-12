@@ -1,6 +1,11 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
+﻿USE [bodb02]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_LicGetTotalTicket]    
 	@NormalLicensee VARCHAR(1000),
@@ -28,6 +33,8 @@ AS
     Revisions:    
 		-20130607@Jim: support RNG Casino 
 		-20140401@Hannah: offer Keno
+		-20140421@Hannah: fix bug for Keno
+		-20140704@Jim: offer Sporting solution
 	Param's Explanation:    
 	+ @ReportBy 1-Live; 2-Non-Live; 0: All;  
 	+ @GroupBy 1-Daily; 2-Monthly
@@ -36,18 +43,13 @@ AS
 	+ @ShowNG: Show Number game bets
 	+ @ShowLC: Show Live casino
 	+ @ShowVS: Show Virtual Sports
-	+ @ShowCS: Show RNG Casino 
-
-  
+	+ @ShowCS: Show RNG Casino   
 */    
 BEGIN    
-
 
 declare @sql varchar(MAX)
 
 SELECT @sql = 'SET NOCOUNT ON  ' + char(13)
-
-
 
 --declare
 SELECT @sql = @sql + '--Declare variable:' + char(13)
@@ -56,8 +58,7 @@ SELECT @sql = @sql +
 				'DECLARE @data AS TABLE (WinlostDate SMALLDATETIME ,ResellerID INT,LicenseeID INT, betcount INT) ' + char(13) +
 				'DECLARE @tmpLicenseeReseller AS TABLE (ResellerID INT ,LicenseeID INT,AffectedDate SMALLDATETIME)' + char(13) +
 				'DECLARE @i INT' + char(13) +
-				'DECLARE @tempBettype AS TABLE (bettype INT PRIMARY KEY)' + char(13) 
-				
+				'DECLARE @tempBettype AS TABLE (bettype INT PRIMARY KEY)' + char(13) 				
 		
 --Get Licensee List
 --1 Normal
@@ -88,8 +89,7 @@ BEGIN
 					'INNER JOIN bodb_licensee.dbo.Licensees l WITH (NOLOCK ) ON lr.LicenseeID=l.LicenseeID'+char(13)+
 					'WHERE  r.ResellerID = 3 AND' + char(13) +
 					'		lr.LicenseeID IN (' + @BALicensee + ')'  + char(13) 
-END
-				
+END				
 
 --Get the data
 SELECT @sql = @sql + '--Get the data:' + char(13)
@@ -113,7 +113,7 @@ BEGIN
 						--'AND b.rptDate >= isnull(lic.AffectedDate,''1999-01-01'')' + char(13) +
 						'AND b.status NOT IN (-1,103) ' + char(13) +
 						'AND CurrencyID<>20 ' + char(13) +
-						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999' ELSE '0' END +
+						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
 						CASE WHEN @ShowRB = 1 THEN ' OR b.bettype BETWEEN 31 AND 33' ELSE '' END + 
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END + 
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END + 
@@ -175,7 +175,7 @@ BEGIN
 						--'AND b.rptDate >= isnull(lb.AffectedDate,''1999-01-01'')' + char(13) +
 						'AND CurrencyID<>20 ' + char(13) +
 						'AND isnull(b.customercategory,-1) NOT IN (27,28) ' + char(13) +
-						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999' ELSE '0' END +
+						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
 						CASE WHEN @ShowRB = 1 THEN ' OR b.bettype BETWEEN 31 AND 33' ELSE '' END + 
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END +
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END +
@@ -189,11 +189,8 @@ BEGIN
 							WHEN @ReportBy=2 THEN 'AND b.IsLive=0 '
 							ELSE '' END + char(13) +
 						'GROUP BY b.rptDate,lr.ResellerID,lr.LicenseeID ' + char(13) +	
-				'END' + char(13)
-				
-		
-END	
-		
+				'END' + char(13)		
+END			
 			
 SELECT @sql = @sql + 
 			'SELECT ' + char(13) +
@@ -216,17 +213,14 @@ SELECT @sql = @sql +
 					WHEN @GroupBy = 1 THEN 'CONVERT(VARCHAR(8),d.winlostdate,112) ' 
 					WHEN @GroupBy = 2 THEN 'CONVERT(VARCHAR(6),d.winlostdate,112)'
 					END + char(13) +
-			',r.ResellerName, l.LicenseeName ' + char(13) 
-				
-				
+			',r.ResellerName, l.LicenseeName ' + char(13) 				
 
 IF (@debug = 1) PRINT @sql
 ELSE EXEC(@sql)
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_LicGetTotalTicket] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicGetTotalTicket] TO [vnteam]  
-
-

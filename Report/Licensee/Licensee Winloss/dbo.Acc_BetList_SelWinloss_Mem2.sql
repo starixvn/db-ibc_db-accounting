@@ -1,7 +1,12 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
-ALTER PROC [dbo].[Acc_BetList_SelWinloss_Mem2]
+﻿USE [bodb02]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@CustID			INT,
 	@FromDate		DATETIME,
 	@ToDate			DATETIME,
@@ -53,7 +58,7 @@ Revisions:
 	- 20130719@Victor: apply betlist core
 	- 20130716@Jim: update matchid for RNG Casino and Bingo
 	- 20140331@Hannah: offer Keno
-
+	- 20140704@Jim: support sporting solution
 Param's Explanation:
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
 	+ @BaseCurrency : Base currency in Result tables 0: ALL, 1: USD, 2: MYR, 3: EUR
@@ -225,7 +230,7 @@ BEGIN
 			#TempBetList b
 			INNER JOIN dbo.match AS m WITH (NOLOCK) ON b.matchid=m.matchid 		
 		WHERE
-			(b.bettype < 31 OR (b.Bettype BETWEEN 121 AND 999)) AND
+			(b.bettype < 31 OR (b.Bettype BETWEEN 121 AND 999)  OR (b.bettype BETWEEN 1301 AND 1399)) AND
 			b.bettype <>10
 			
 		--	Outright
@@ -367,7 +372,7 @@ BEGIN
 			WHERE
 				b.winlostdate BETWEEN @TempFromDate AND @tdate AND
 				b.custid=@custid AND
-				(b.bettype < 31 OR (b.bettype BETWEEN 121 AND 999 ))  AND
+				(b.bettype < 31 OR (b.bettype BETWEEN 121 AND 999 ) OR (b.bettype BETWEEN 1301 AND 1399))  AND
 				b.bettype NOT IN (9,29,10)	AND
 				b.matchid > 0 AND
 				b.statusID IN (111,112,113) AND
@@ -871,7 +876,7 @@ BEGIN
 			#TempBetList b
 			INNER JOIN dbo.match14 AS m WITH (NOLOCK) ON b.matchid=m.matchid 		
 		WHERE
-			(b.bettype < 31 OR (b.Bettype BETWEEN 121 AND 999 )) AND
+			(b.bettype < 31 OR (b.Bettype BETWEEN 121 AND 999 ) OR (b.bettype BETWEEN 1301 AND 1399)) AND
 			b.bettype <>10
 			
 		--	Outright
@@ -1013,7 +1018,7 @@ BEGIN
 			WHERE
 				b.winlostdate BETWEEN @BalanceUpDay AND @TempToDate AND
 				b.custid=@custid AND
-				(b.bettype < 31 OR (b.bettype BETWEEN 121 AND 999 )) AND
+				(b.bettype < 31 OR (b.bettype BETWEEN 121 AND 999 ) OR (b.bettype BETWEEN 1301 AND 1399)) AND
 				b.bettype NOT IN (9,29,10) AND
 				b.matchid>0 AND
 				b.statusID IN (111,112,113) AND
@@ -1513,7 +1518,7 @@ BEGIN
 			#TempBetList b
 			INNER JOIN bodb_archive.dbo.match_bk AS m WITH (NOLOCK) ON b.matchid=m.matchid 		
 		WHERE
-			(b.bettype < 31 OR (b.Bettype BETWEEN 121 AND 999 )) AND
+			(b.bettype < 31 OR (b.Bettype BETWEEN 121 AND 999 ) OR (b.bettype BETWEEN 1301 AND 1399)) AND
 			b.bettype NOT IN (9,29,10)
 			
 		--	Outright
@@ -1659,7 +1664,7 @@ BEGIN
 				b.custid=@custid AND
 				b.ruben = 1 AND
 				b.status NOT IN ('VOID', 'REJECT', 'REFUND') AND 
-				(b.bettype < 31 OR (b.bettype BETWEEN 121 AND 999 )) AND
+				(b.bettype < 31 OR (b.bettype BETWEEN 121 AND 999 ) OR (b.bettype BETWEEN 1301 AND 1399)) AND
 				b.bettype NOT IN (9,29, 10) AND
 				b.tpositiontaking<>0
 				
@@ -2322,7 +2327,6 @@ SELECT * FROM @BettransDetail ORDER BY RefNo,Bettype
 DROP TABLE #TempBetList	
 DROP TABLE #BetListByDateMem
 DROP TABLE #TempExchange
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbAdminNet] AS [dbo]

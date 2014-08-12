@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_SAg2]    
+﻿USE [bodb02]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_SAg2]    
  @LicenseeID INT,  
  @Currency  INT = 0,  
  @FromDate  SMALLDATETIME,    
@@ -25,6 +33,7 @@ AS
     Revisions: 
 		- 20130527@Jim: support RNG Casino
 		- 20140401@Hannah: offer Keno
+		- 20140704@Jim: support Sporting solution
  Param's Explanation:    
    + @CustID: SuperID    
    + @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)  
@@ -208,7 +217,7 @@ BEGIN
 			INNER JOIN @Super s ON b.srecommend = s.custid  
 		WHERE b.winlostdate BETWEEN @TempFromDate AND @TDate AND    
 			b.statusID  IN (111, 112, 113) AND  
-			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999)) AND  
+			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399)) AND  
 			b.tpositiontaking <> 0  
 		GROUP BY b.winlostdate,s.currency,b.srecommend, b.statusID    
 	END  
@@ -498,7 +507,7 @@ BEGIN
 DROP TABLE #SAgWinLoss   
 DROP TABLE #TempExchange  
   
-END     
+END
 GO
 
 
