@@ -104,7 +104,7 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realTurnover),0) as realTurnover
             ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
         FROM rptWinlost b WITH(NOLOCK)
-        LEFT JOIN #TempMatch m ON m.matchid = b.matchid
+        INNER JOIN #TempMatch m ON m.matchid = b.matchid
         WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND (sporttype BETWEEN 1 and 99 OR sporttype = 161)
         GROUP BY sporttype,liveindicator ,ibc
@@ -283,10 +283,36 @@ SET NOCOUNT ON
                 
     ORDER BY 1,3 DESC,2,4,5
 
-    SELECT * from #TempData
-
+    
+	
+	UPDATE #TempData SET IsHedge =1,
+						ibc = 0
+	where ibc = 1 AND IsHedge = 1
+	
+	SELECT sporttype,
+           bettype,
+           liveindicator,
+           ibc,
+           IsHedge,
+           status,
+           SUM(realWinlost) as realWinlost,
+           SUM(realPosition) as realPosition, 
+           SUM(realCommission) as realCommission,
+           SUM(realLineTotal) as realLineTotal,
+           SUM(virtualLineTotal) as virtualLineTotal,
+           SUM(realTurnover) as realTurnover,
+           SUM(virtualTurnover) as virtualTurnover 
+	FROM #TempData
+	GROUP BY sporttype,
+           bettype,
+           liveindicator,
+           ibc,
+           IsHedge,
+           status
+	
     DROP TABLE #TempMatch
-    --exec Acc_Rpt_WinlostSummary_Sporttype @fromdate='2014-03-11 00:00:00',@todate='2014-03-11 00:00:00'
+	DROP TABLE #TempData
+    --exec Acc_Rpt_WinlostSummary_Sporttype @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
