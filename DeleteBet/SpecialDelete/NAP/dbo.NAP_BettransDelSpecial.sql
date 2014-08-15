@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 08/01/2014 15:14:37 ******/
+﻿/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 08/15/2014 17:20:10 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -8,12 +8,18 @@ ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@FromTransId BIGINT, 
 	@ToTransId BIGINT, 
 	@BetTypes VARCHAR(1000) = '',
-	@BetTeam1378 NVARCHAR(10), 
-	@BetTeam515 NVARCHAR(10),
+	
+	@BetTeam1378 NVARCHAR(10) = 'ALL', 
+	@BetTeam515 NVARCHAR(10)= 'ALL',
 	@BetTeam430 VARCHAR(120) = '',
-    @BetTeam6 VARCHAR(120) = '',
+    @BetTeam6 VARCHAR(120) = '', -- 6, 126, 131, 132
 	@BetTeam14 VARCHAR(120) = '',
 	@BetTeam16 VARCHAR(120) = '',
+	@BetTeam128 VARCHAR(120) = '',
+	@BetTeam129 VARCHAR(120) = '', -- 129, 130
+	@BetTeam136 VARCHAR(10) = 'ALL', -- 136, 137, 138, 139
+	@BetTeam143 VARCHAR(120) = '', -- 143, 144
+	
 	@Handicap SMALLMONEY,
     @UserName NVARCHAR(50),
     @UserPassword NVARCHAR(50),
@@ -55,6 +61,7 @@ AS
 						  - Add 2 new bettypes 1H Total Goal and 1H First Goal/ Last Goal (126, 127) [Redmine:#14749]
 		- 20140701@Kathy: Apply BetRadar - change @BetTypes to varchar(1000) [Redmine:#18219]
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]		
+		- 20140806@Kathy: Support new 11 bettypes [Redmine:#19955]
 
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -289,7 +296,7 @@ BEGIN
 		AND b.betteam = CASE WHEN b.bettype IN (1,3,7,8,2,12) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
 							WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 							ELSE b.betteam END 
-		AND b.bettype not in (4,6,14,16,30, 126, 127)
+		AND b.bettype not in (4,6,14,16,30, 126, 127, 128, 129, 130, 131, 132, 136, 137, 138, 139, 143, 144)
 		AND CASE WHEN b.bettype IN (1,3,7,8) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
 													ELSE 0 END 
@@ -305,7 +312,7 @@ BEGIN
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
-		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
+		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON bt.val=b.betteam
 	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
@@ -329,14 +336,14 @@ BEGIN
 													 WHEN 2 THEN 1 END
 
 
--- bettype = 6: Total Goal; 126: 1st Total Goal
+-- bettype = 6: Total Goal; 126: 1st Total Goal, 131: Home Team Total Goal; 132:  Away Team Total Goal
  INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM dbo.bettrans AS b WITH (nolock)
-		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
+		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
 	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
@@ -353,7 +360,7 @@ BEGIN
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
 		AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 	
-		AND b.bettype IN (6, 126)
+		AND b.bettype IN (6, 126, 131, 132)
 		AND (@betteam6='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
@@ -365,8 +372,8 @@ BEGIN
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate,b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM bettrans b WITH (nolock)
-		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
+		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
 	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
@@ -393,6 +400,7 @@ BEGIN
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName
 	FROM dbo.bettrans AS b WITH (nolock)
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam16,'^') AS bt ON bt.val=b.betteam
 	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
@@ -415,7 +423,59 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
 													WHEN 1 THEN 0 
 													WHEN 2 THEN 1 END					
-										 												 								 
+					
+										 									
+	-- bettype = 128, 129, 130, 136, 137, 138, 139, 143, 144
+	INSERT INTO #BetDelete 
+	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
+		b.liveawayscore, b.stake, b.CurrencyName
+	FROM dbo.bettrans AS b WITH (nolock)
+		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
+	WHERE b.matchid=@matchid AND           
+		b.transid between @FromTransId AND @ToTransId		
+		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
+			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
+			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
+			OR b.transid IN (SELECT transid FROM @tblTrans12EU )
+			OR b.transid IN (SELECT transid FROM @tblTransMHC )
+			OR b.transid IN (SELECT transid FROM @tblTransFB )
+			OR b.transid IN (SELECT transid FROM @tblTransBetFair )
+			OR b.transid IN (SELECT transid FROM @tblTransOneExchange )
+			)
+		AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator	
+		AND b.livehomescore = CASE WHEN @LiveHomeScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveHomeScore ELSE b.livehomescore END
+		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
+		AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
+						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
+		AND b.bettype in (128, 129, 130, 136, 137, 138, 139, 143, 144)
+		AND(
+			(b.bettype IN(128)
+			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam128 = 'All' THEN betteam ELSE @BetTeam128 END,'^'))  
+			)			
+			OR
+			(b.bettype IN (129, 130) 
+			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam129 = 'All' THEN betteam ELSE @BetTeam129 END,'^'))  
+			)
+			OR
+			(b.bettype IN (136, 137, 138, 139) 
+			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam136 = 'All' THEN betteam ELSE @BetTeam136 END,'^'))  
+			)
+			OR
+			(b.bettype IN (143, 144) 
+			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam143 = 'All' THEN betteam ELSE @BetTeam143 END,'^'))  
+			)
+		)
+		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
+													WHEN 1 THEN 0 
+													WHEN 2 THEN 1 END					
+										 									
+			 								 
+			 								 
+			 								 
+		 								 
+			 								 
+			 								 
 ------------------***** End of insert all data into #BetDelete *****------------------
 
 ------------------***** Insert Custid of each type into its temp table *****------------------	
@@ -892,6 +952,7 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+
 
 
 GO
