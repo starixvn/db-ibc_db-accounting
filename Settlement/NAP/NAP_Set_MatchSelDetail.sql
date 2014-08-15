@@ -1,8 +1,9 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/07/2014 14:49:34 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/15/2014 13:54:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
 	,@excludeRefundFGLG BIT = 0
 AS
@@ -19,6 +20,8 @@ AS
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140623@Kathy: Apply BetRadar - Add new bettype 151 (1st Half Double Chance) [Redmine:#17142]
 		- 20140710@Kathy: Apply BetRadar - bettype 135 (PenaltyShootout) - check PS status [Redmine:#17142]
+		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30)[Redmine:#19310]
+		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -142,7 +145,7 @@ BEGIN
 
 		INSERT INTO @status
 		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
@@ -159,7 +162,7 @@ BEGIN
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype NOT BETWEEN 1301 AND 1334
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
@@ -374,7 +377,7 @@ BEGIN
 			EXISTS (
 				SELECT 1
 				FROM bettrans WITH (NOLOCK)
-				WHERE bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+				WHERE bettype IN (4, 6, 13, 26, 27, 30, 126, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
 				AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
 				AND ruben = 0 
 				AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
@@ -444,6 +447,8 @@ BEGIN
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
 END
+
+
 
 
 GO

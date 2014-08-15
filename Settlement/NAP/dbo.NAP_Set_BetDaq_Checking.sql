@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Set_BetDaq_Checking]
+/****** Object:  StoredProcedure [dbo].[NAP_Set_BetDaq_Checking]    Script Date: 08/15/2014 13:54:58 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_BetDaq_Checking]
 	@matchid				int = 0
 AS 
 
@@ -11,6 +16,8 @@ Original: [Acc_Set_BetDaq_Checking]
 Revisions: 
 	-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 	-20140707@Kathy: Execute settlement for abandoned/postponed matches: BetRadar [Redmine:17142]
+	-20140725@Kathy: Execute settlement for abandoned/postponed matches: Correct Score(4,30)[Redmine:#19310]
+	-20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 
 Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 	* List of BetDaq Customers 
@@ -76,6 +83,8 @@ BEGIN
 							OR recommend = 1688156	)
 						AND matchid = @matchid 
 						AND bettype IN (3,8,13,26,27, --Over/Under ,Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+								4, 6, 30, 126,
+								128, 129, 130, 131, 132, 143, 144,
 								133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar
 						AND statusID NOT IN (101, 102)
 						AND ruben = 0 
@@ -105,12 +114,10 @@ BEGIN
 		@IsRefundRunningBetDaq	IsRefundRunningBetDaq
 	
 END
+
+
+
 GO
-
-GRANT EXECUTE ON [NAP_Set_BetDaq_Checking] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_BetDaq_Checking] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_BetDaq_Checking] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_BetDaq_Checking] TO [vnteam] AS [dbo]

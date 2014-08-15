@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_MP_Push] (
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 08/15/2014 13:56:59 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 3/17/2014 4:21:08 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
 	,@Action VARCHAR(20) = 'CAL'
@@ -81,27 +88,36 @@ BEGIN
 		OR matchid IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK) WHERE IsCalculating IN (0,1) ) 
 	END
 
+	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
+	BEGIN
+		SELECT   @ErrCode = 100
+				,@ErrMsg = 'All matches are being calculated, except following matches ' 
+							+ CASE WHEN ISNULL(@NotKeyScoreList, '') <> '' 
+									THEN  '(not keyed in score yet): ' + @NotKeyScoreList 
+									ELSE ''
+								END
+							+ CASE when ISNULL(@NotAllowCalculating,'') <> ''
+									THEN  '(being calculated by another user): ' + @NotAllowCalculating
+									ELSE ''
+								END 
+	END
+
 	IF EXISTS (
 				SELECT TOP 1 1
 				FROM @match
 				)
 	BEGIN
-		IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
-		BEGIN
-			SELECT   @ErrCode = 100
-					,@ErrMsg = 'All matches are being calculated, except following matches ' 
-								+ CASE WHEN ISNULL(@NotKeyScoreList, '') <> '' 
-										THEN  '(not keyed in score yet): ' + @NotKeyScoreList 
-										ELSE ''
-								  END
-								+ CASE when ISNULL(@NotAllowCalculating,'') <> ''
-										THEN  '(being calculated by another user): ' + @NotAllowCalculating
-										ELSE ''
-								  END 
-		END
-
 		IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
 		BEGIN
+			DECLARE @ActionId INT
+
+			SELECT @ActionId = CASE 
+									WHEN @Action = 'REFUND-HT' THEN 14
+									WHEN @Action = 'REFUND-FT' THEN 15
+									WHEN @Action = 'REFUND' THEN 16
+									ELSE - 1
+							   END
+
 			WHILE(1 = 1)
 			BEGIN
 				SELECT TOP 1 @matchid = matchid
@@ -121,9 +137,19 @@ BEGIN
 
 				BEGIN CATCH
 					SELECT @ErrMsg  = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
-						  ,@ErrCode = @ErrCode
+						  ,@ErrCode = @@error
 					RETURN
 				END CATCH
+
+				IF @action = 'CAL'
+					EXEC Acc_Set_ConfirmedActionParlay @matchids = @matchid
+				ELSE
+				BEGIN
+
+				IF @ActionId <> - 1
+					EXEC Acc_Set_ConfirmedAction @matchid = @matchid
+						,@action = @ActionId
+				END
 
 				DELETE 
 				FROM @match
@@ -141,11 +167,6 @@ BEGIN
 END
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_MP_Push] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [vnteam] AS [dbo]

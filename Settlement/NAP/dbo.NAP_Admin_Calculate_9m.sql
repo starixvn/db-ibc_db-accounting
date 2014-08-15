@@ -1,8 +1,9 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 08/07/2014 14:07:07 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 08/15/2014 14:05:18 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT
 	,@fta INT
@@ -33,6 +34,8 @@ AS
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
 		- 20140623@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
+		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
+
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -183,13 +186,13 @@ BEGIN
 			,statuswinlost = 0
 			,ruben = 1
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 151) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) AND statusID NOT IN (101, 102)
 
 		UPDATE dbo.BetParlayDetail
 		SET winlostdate = @matchdate
 			,statuswinlost = 0
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 151) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) AND statusID NOT IN (101, 102)
 	END
 	ELSE IF @action = 'REFUND-HT'
 	BEGIN
@@ -201,8 +204,8 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 151) 
-				OR (bettype IN (133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151) 
+				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
 
@@ -211,8 +214,8 @@ BEGIN
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 151) 
-				OR (bettype IN (133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151) 
+				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
 
@@ -553,7 +556,89 @@ BEGIN
 					CASE 
 						WHEN betteam = @penaltyshootout THEN 1
 						ELSE -1
-						END							
+						END		
+				WHEN 128 THEN -- HT/FT Odd/Even
+					CASE
+						WHEN betteam = 'oo' AND (@hth + @hta) % 2 = 1 AND (@fth + @fta) % 2 = 1 THEN 1
+						WHEN betteam = 'oe' AND (@hth + @hta) % 2 = 1 AND (@fth + @fta) % 2 = 0 THEN 1
+						WHEN betteam = 'eo' AND (@hth + @hta) % 2 = 0 AND (@fth + @fta) % 2 = 1 THEN 1
+						WHEN betteam = 'ee' AND (@hth + @hta) % 2 = 0 AND (@fth + @fta) % 2 = 0 THEN 1
+						ELSE -1
+						END				
+				WHEN 129 THEN -- 1H Exact Goal
+					CASE
+						WHEN betteam = '5&over' AND (@hth + @hta) >= 5 THEN 1
+						WHEN betteam <> '5&over' AND cast(betteam as INT) = (@hth + @hta) THEN 1
+						ELSE -1
+						END
+				WHEN 130 THEN --  Exact Goal
+					CASE 
+						WHEN betteam = '7&over' AND (@fth + @fta) >= 7 THEN 1
+						WHEN betteam <> '7&over' AND cast(betteam AS INT) = (@fth + @fta) THEN 1
+						ELSE -1
+						END
+				WHEN 131 THEN -- Home Team Total Goal 
+					CASE
+						WHEN cast(LEFT(betteam,1) as INT) <= @fth 
+							AND case when right(betteam,1) = 'r' 
+										then 999 
+									 else cast(RIGHT(betteam,1) as int) 
+									 END >= @fth THEN 1
+						ELSE -1
+						END		
+				WHEN 132 THEN -- Away Team Total Goal
+					CASE 
+						WHEN cast(left(betteam,1) as int) <= @fta	
+							AND case when right(betteam,1) = 'r'
+										then 999
+									 else cast(right(betteam,1) as int)
+									 END >= @fta THEN 1
+						ELSE -1
+						END
+				WHEN 136 THEN -- 1H Home Team Odd/Even			
+					CASE	
+						WHEN betteam = 'o' and (@hth % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@hth % 2) = 0 THEN 1
+						ELSE -1
+						END
+				WHEN 137 THEN -- Home Team Odd/Even
+					CASE
+						WHEN betteam = 'o' and (@fth % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@fth % 2) = 0 THEN 1
+						ELSE -1
+						END 
+				WHEN 138 THEN -- 1H Away Team Odd/Even 			
+					CASE	
+						WHEN betteam = 'o' and (@hta % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@hta % 2) = 0 THEN 1
+						ELSE -1
+						END
+				WHEN 139 THEN -- Away Team Odd/Even
+					CASE
+						WHEN betteam = 'o' and (@fta % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@fta % 2) = 0 THEN 1
+						ELSE -1
+						END 
+				WHEN 143 THEN -- 1H Result/Total Goals
+					CASE
+						WHEN betteam = 'ho' and (@hth - @hta) > 0 and (@hth+ @hta) > hdp1 THEN 1
+						WHEN betteam = 'hu' and (@hth - @hta) > 0 and (@hth+ @hta) < hdp1 THEN 1
+						WHEN betteam = 'ao' and (@hth - @hta) < 0 AND (@hth+ @hta) > hdp1 THEN 1
+						WHEN betteam = 'au' and (@hth - @hta) < 0 AND (@hth+ @hta) < hdp1 THEN 1
+						WHEN betteam = 'do' and (@hth - @hta) = 0 AND (@hth+ @hta) > hdp1 THEN 1
+						WHEN betteam = 'du' AND (@hth - @hta) = 0 and (@hth+ @hta) < hdp1 THEN 1
+						ELSE -1
+						END	
+				WHEN 144 THEN -- Result/Total Goals
+					CASE
+						WHEN betteam = 'ho' and (@fth - @fta) > 0 and (@fth+ @fta) > hdp1 THEN 1
+						WHEN betteam = 'hu' and (@fth - @fta) > 0 and (@fth+ @fta) < hdp1 THEN 1
+						WHEN betteam = 'ao' and (@fth - @fta) < 0 AND (@fth+ @fta) > hdp1 THEN 1
+						WHEN betteam = 'au' and (@fth - @fta) < 0 AND (@fth+ @fta) < hdp1 THEN 1
+						WHEN betteam = 'do' and (@fth - @fta) = 0 AND (@fth+ @fta) > hdp1 THEN 1
+						WHEN betteam = 'du' AND (@fth - @fta) = 0 and (@fth+ @fta) < hdp1 THEN 1
+						ELSE -1
+						END					
 				ELSE NULL -- Not support bettype
 				END
 			,-- CASE bettype
@@ -864,6 +949,88 @@ BEGIN
 						WHEN betteam = @penaltyshootout THEN 1
 						ELSE -1
 						END
+				WHEN 128 THEN -- HT/FT Odd/Even
+					CASE
+						WHEN betteam = 'oo' AND (@hth + @hta) % 2 = 1 AND (@fth + @fta) % 2 = 1 THEN 1
+						WHEN betteam = 'oe' AND (@hth + @hta) % 2 = 1 AND (@fth + @fta) % 2 = 0 THEN 1
+						WHEN betteam = 'eo' AND (@hth + @hta) % 2 = 0 AND (@fth + @fta) % 2 = 1 THEN 1
+						WHEN betteam = 'ee' AND (@hth + @hta) % 2 = 0 AND (@fth + @fta) % 2 = 0 THEN 1
+						ELSE -1
+						END				
+				WHEN 129 THEN -- 1H Exact Goal
+					CASE
+						WHEN betteam = '5&over' AND (@hth + @hta) >= 5 THEN 1
+						WHEN betteam <> '5&over' AND cast(betteam as INT) = (@hth + @hta) THEN 1
+						ELSE -1
+						END
+				WHEN 130 THEN --  Exact Goal
+					CASE 
+						WHEN betteam = '7&over' AND (@fth + @fta) >= 7 THEN 1
+						WHEN betteam <> '7&over' AND cast(betteam AS INT) = (@fth + @fta) THEN 1
+						ELSE -1
+						END
+				WHEN 131 THEN -- Home Team Total Goal 
+					CASE
+						WHEN cast(LEFT(betteam,1) as INT) <= @fth 
+							AND case when right(betteam,1) = 'r' 
+										then 999 
+									 else cast(RIGHT(betteam,1) as int) 
+									 END >= @fth THEN 1
+						ELSE -1
+						END		
+				WHEN 132 THEN -- Away Team Total Goal
+					CASE 
+						WHEN cast(left(betteam,1) as int) <= @fta	
+							AND case when right(betteam,1) = 'r'
+										then 999
+									 else cast(right(betteam,1) as int)
+									 END >= @fta THEN 1
+						ELSE -1
+						END
+				WHEN 136 THEN -- 1H Home Team Odd/Even			
+					CASE	
+						WHEN betteam = 'o' and (@hth % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@hth % 2) = 0 THEN 1
+						ELSE -1
+						END
+				WHEN 137 THEN -- Home Team Odd/Even
+					CASE
+						WHEN betteam = 'o' and (@fth % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@fth % 2) = 0 THEN 1
+						ELSE -1
+						END 
+				WHEN 138 THEN -- 1H Away Team Odd/Even 			
+					CASE	
+						WHEN betteam = 'o' and (@hta % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@hta % 2) = 0 THEN 1
+						ELSE -1
+						END
+				WHEN 139 THEN -- Away Team Odd/Even
+					CASE
+						WHEN betteam = 'o' and (@fta % 2) = 1 THEN 1
+						WHEN betteam = 'e' and (@fta % 2) = 0 THEN 1
+						ELSE -1
+						END 
+				WHEN 143 THEN -- 1H Result/Total Goals
+					CASE
+						WHEN betteam = 'ho' and (@hth - @hta) > 0 and (@hth+ @hta) > hdp1 THEN 1
+						WHEN betteam = 'hu' and (@hth - @hta) > 0 and (@hth+ @hta) < hdp1 THEN 1
+						WHEN betteam = 'ao' and (@hth - @hta) < 0 AND (@hth+ @hta) > hdp1 THEN 1
+						WHEN betteam = 'au' and (@hth - @hta) < 0 AND (@hth+ @hta) < hdp1 THEN 1
+						WHEN betteam = 'do' and (@hth - @hta) = 0 AND (@hth+ @hta) > hdp1 THEN 1
+						WHEN betteam = 'du' AND (@hth - @hta) = 0 and (@hth+ @hta) < hdp1 THEN 1
+						ELSE -1
+						END	
+				WHEN 144 THEN -- Result/Total Goals
+					CASE
+						WHEN betteam = 'ho' and (@fth - @fta) > 0 and (@fth+ @fta) > hdp1 THEN 1
+						WHEN betteam = 'hu' and (@fth - @fta) > 0 and (@fth+ @fta) < hdp1 THEN 1
+						WHEN betteam = 'ao' and (@fth - @fta) < 0 AND (@fth+ @fta) > hdp1 THEN 1
+						WHEN betteam = 'au' and (@fth - @fta) < 0 AND (@fth+ @fta) < hdp1 THEN 1
+						WHEN betteam = 'do' and (@fth - @fta) = 0 AND (@fth+ @fta) > hdp1 THEN 1
+						WHEN betteam = 'du' AND (@fth - @fta) = 0 and (@fth+ @fta) < hdp1 THEN 1
+						ELSE -1
+						END					
 				ELSE NULL -- Not support bettype
 				END
 			,-- CASE bettype
@@ -893,6 +1060,8 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
+
+
 
 
 

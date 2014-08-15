@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_1_Push]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1_Push]    Script Date: 08/15/2014 13:55:53 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_1_Push    Script Date: 7/30/2014 5:52:28 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_1_Push    Script Date: 3/17/2014 4:21:08 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push]
 	@AdminId int,
 	@Matchid int,
 	@FullTimeHome smallint = NULL,
@@ -81,7 +88,7 @@ BEGIN
 	
 	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
 	BEGIN
-		DECLARE @ActionId TINYINT
+		DECLARE @ActionId INT
 
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -92,7 +99,7 @@ BEGIN
 
 		BEGIN CATCH
 			SELECT  @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
-				   ,@ErrCode = @ErrCode
+				   ,@ErrCode = @@error
 			RETURN
 		END CATCH
 
@@ -115,15 +122,12 @@ BEGIN
 
 		IF @ActionId <> -1
 		BEGIN
-			IF @sporttype = 1
-			BEGIN
-				SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-										  ELSE @GoalRecord
-									 END ,
-						@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
-										  ELSE @BetStatus
-									 END 
-			END
+			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
+										ELSE @GoalRecord
+									END ,
+					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'') -- 1FL:1:1;
+										ELSE @BetStatus
+									END 
 
 			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 					,@action = @ActionId
@@ -143,11 +147,6 @@ BEGIN
 END
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_1_Push] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_1_Push] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_1_Push] TO [vnteam] AS [dbo]
