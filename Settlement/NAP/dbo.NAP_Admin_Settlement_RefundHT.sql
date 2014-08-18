@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 08/07/2014 14:11:43 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 08/15/2014 14:01:21 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER OFF
@@ -28,6 +28,8 @@ AS
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]	
+		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
+
 	
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -123,7 +125,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -315,7 +317,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -519,6 +521,7 @@ BEGIN
 		END CATCH
 	END
 END
+
 
 
 GO

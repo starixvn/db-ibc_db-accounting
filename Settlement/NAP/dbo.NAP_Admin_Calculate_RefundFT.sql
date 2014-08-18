@@ -1,8 +1,9 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFT]    Script Date: 08/07/2014 14:08:03 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFT]    Script Date: 08/15/2014 14:05:02 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFT] @matchid INT
 	,@IsExcludeBetdaq BIT = 0
 	,@IsExcludeBetfair BIT = 0
@@ -23,6 +24,8 @@ AS
 		- 20140426@Kathy: Add 1H FGLG, 1H Total Goal (126, 127) [Redmine:#14449]
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140620@Kathy: Apply BetRadar [Redmine:#17142]
+		- 20140728@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
+		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 
 	Param's Explanation:
 		@IsRefundHT: Indicate whether or not match has been refunded HT
@@ -75,15 +78,15 @@ BEGIN
 			,acomm = 0
 			,scomm = 0
 		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) 
-			AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 126, 127, 151) 
+			AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 126, 127, 129, 136, 138, 143, 151) 
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
 				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
 					AND recommend <> 1688156) AND statusID IN (112, 113) 
-					AND ((bettype IN (13, 26, 27, 145) AND @IsRefundHT = 1) 
-							OR (bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) AND @IsHTCal = 1))
+					AND ((bettype IN (4, 6, 13, 26, 27, 130, 131, 132, 144, 145) AND @IsRefundHT = 1) 
+							OR (bettype IN (4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152) AND @IsHTCal = 1))
 					THEN 0
 				ELSE 1
 				END
@@ -92,6 +95,10 @@ BEGIN
 			BREAK
 	END
 END
+
+
+
+
 
 
 

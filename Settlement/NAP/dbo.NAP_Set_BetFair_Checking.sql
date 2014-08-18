@@ -1,4 +1,13 @@
-ALTER PROCEDURE [NAP_Set_BetFair_Checking] @matchid INT = 0
+/****** Object:  StoredProcedure [dbo].[NAP_Set_BetFair_Checking]    Script Date: 08/15/2014 13:55:23 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Set_BetFair_Checking    Script Date: 31/07/2014 12:58:50 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Set_BetFair_Checking    Script Date: 03/04/2014 4:58:06 PM ******/
+
+/****** Object:  Stored Procedure dbo.NAP_Set_BetFair_Checking    Script Date: 3/17/2014 4:21:11 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Set_BetFair_Checking] @matchid INT = 0
 AS
 /*
 Created: 20140113@Kathy
@@ -8,13 +17,17 @@ Original: Acc_Set_BetFair_Checking
 
 Revisions: 
 	-20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+	-20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 	-20140707@Kathy: Execute settlement for abandoned/postponed matches: BetRadar [Redmine:17142]
+	-20140725@Kathy: Execute settlement for abandoned/postponed matches: Correct Score(4,30)[Redmine:#19310]
+	-20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
 			custid	--- username	-	roleid
 			2331	---	BF		    -	1
 			1077687	---	BFOS		-	1
+			15523642--- BF3			-	1
 
 Param's Explanation:
 • @matchid: matchid of match to checking
@@ -48,7 +61,7 @@ BEGIN
 	IF EXISTS (
 			SELECT 1
 			FROM bettrans WITH (NOLOCK)
-			WHERE custid IN (2331, 1077687, 115770) AND matchid = @matchid AND ruben = 0
+			WHERE custid IN (2331, 1077687, 115770, 15523642) AND matchid = @matchid AND ruben = 0
 			)
 	BEGIN
 		SELECT @IsMovebetfair = 1
@@ -59,9 +72,11 @@ BEGIN
 	IF EXISTS (
 			SELECT 1
 			FROM bettrans WITH (NOLOCK)
-			WHERE custid IN (2331, 1077687, 115770) 
+			WHERE custid IN (2331, 1077687, 115770, 15523642) 
 			AND matchid = @matchid 
 			AND bettype in (3,8,13,26,27,   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+				4, 6, 30, 126,
+				128, 129, 130, 131, 132, 143, 144,
 				133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar)
 			AND statusID NOT IN (101, 102) AND ruben = 0
 			)
@@ -87,12 +102,8 @@ BEGIN
 END
 
 
+
 GO
-
-GRANT EXECUTE ON [NAP_Set_BetFair_Checking] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_BetFair_Checking] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_BetFair_Checking] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_BetFair_Checking] TO [vnteam] AS [dbo]

@@ -1,8 +1,9 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundHT]    Script Date: 08/07/2014 14:08:10 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundHT]    Script Date: 08/15/2014 14:05:10 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundHT] @matchid INT
 	,@IsExcludeBetdaq BIT = 0
 	,@IsExcludeBetfair BIT = 0
@@ -17,6 +18,8 @@ AS
 		- 20140620@Kathy: Apply BetRadar:
 							- Add 1st Correct Score(151) 	
 							- Refund FT bettypes  [Redmine:#17142]
+		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]					
+		
 
 	Param's Explanation:
 		+ @IsExcludeBetdaq: 
@@ -70,7 +73,8 @@ BEGIN
 		WHERE matchid = @matchid
 			--AND [status] not in (N'Void', N'Reject')
 			AND statusID NOT IN (103, 101, 102) 			
-			AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 151, 
+			AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+							128,
 							133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 ) -- BetRadar: refund FT ticket in case of 30x3 match
 			AND 1 = CASE 
 						WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
@@ -82,6 +86,8 @@ BEGIN
 			BREAK
 	END
 END
+
+
 
 
 

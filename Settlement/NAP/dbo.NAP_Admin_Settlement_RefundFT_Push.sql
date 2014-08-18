@@ -1,4 +1,12 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_RefundFT_Push]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT_Push]    Script Date: 08/15/2014 13:56:24 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT_Push    Script Date: 31/07/2014 12:58:50 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT_Push    Script Date: 7/30/2014 5:52:29 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT_Push    Script Date: 3/20/2014 4:22:32 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT_Push]
 	@MatchId int,
 	@AdminId int,
 	@IsExcludeBetdaq bit = 0,
@@ -92,7 +100,7 @@ BEGIN
 
 		BEGIN CATCH
 			SELECT  @ErrMsg = @ErrMsg + ERROR_MESSAGE()
-				   ,@ErrCode = @ErrCode
+				   ,@ErrCode = @@error
 			RETURN
 		END CATCH
 
@@ -132,12 +140,8 @@ BEGIN
 	END
 
 END
+
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_RefundFT_Push] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundFT_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_RefundFT_Push] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundFT_Push] TO [vnteam] AS [dbo]

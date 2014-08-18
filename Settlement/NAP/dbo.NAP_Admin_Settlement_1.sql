@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 08/07/2014 14:08:30 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 08/15/2014 13:57:31 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -27,6 +27,8 @@ AS
 		- 20140426@Kathy: Add 1H Total Goal and 1H FGLG bettypes (126, 127) [Redmine:#14449]
 		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
+		- 20140808@Kathy: Support new 11 bettypes [Redmine:#19667]
+
 
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -167,7 +169,7 @@ BEGIN
 			SELECT custid
 				,SUM(winlost - actual_stake + playercomm)
 			FROM dbo.bettrans WITH (ROWLOCK)
-			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
+			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
 			GROUP BY custid
 
 			SET @TotalAccount = @@ROWCOUNT
@@ -228,7 +230,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		INSERT INTO @status
 		SELECT CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
 				WHEN bettype = 135 THEN 2
 				ELSE 1
 				END
@@ -244,7 +246,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM dbo.bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151) THEN 0
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
 				WHEN bettype = 135 THEN 2
 				ELSE 1
 				END
@@ -425,7 +427,7 @@ need below code to determine for mark match as calculated (all bets settled)
 			SELECT custid
 				,SUM(winlost - actual_stake + playercomm)
 			FROM dbo.bettrans WITH (ROWLOCK)
-			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 151)
+			WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
 			GROUP BY custid
 		END
 		ELSE IF @Action = 'UNDO'
@@ -612,6 +614,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		END CATCH
 	END
 END
+
 
 
 

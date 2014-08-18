@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All]    Script Date: 08/07/2014 14:11:10 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All]    Script Date: 08/15/2014 13:58:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER OFF
@@ -34,6 +34,8 @@ AS
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140704@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
+		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
+		- 20140812@Kathy: Support new 11 bettypes [Redmine:#19667]
 	
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -156,6 +158,7 @@ BEGIN
 		,@sporttype TINYINT
 		,@IsRefundHT BIT
 		,@IsHTCal BIT
+		,@oddevenht SMALLMONEY
 
 	SELECT @sporttype = SportType
 		,@IsRefundHT = CASE WHEN betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
@@ -192,6 +195,7 @@ BEGIN
 				ELSE (@fth + @fta)
 				END
 			,@totalht = (@hth + @hta)
+			,@oddevenht = (@hth + @hta) % 2
 
 		IF @Action IN ('CAL', 'CAL-FT') AND @totalgoal IS NULL
 		BEGIN
@@ -304,23 +308,45 @@ BEGIN
 
 	
 	DECLARE @betcount_3 INT
+			,@betcount_4 INT
+			,@betcount_6 INT 
 			,@betcount_8 INT
 			,@betcount_13 INT
 			,@betcount_26 INT
 			,@betcount_27 INT
+			,@betcount_30 INT 
+			,@betcount_126 int
+			,@betcount_128 INT
+			,@betcount_129 INT
+			,@betcount_130 INT
+			,@betcount_131 INT
+			,@betcount_132 INT
+			,@betcount_143 INT
+			,@betcount_144 INT
 			,@betcount_145 INT
 			,@betcount_152 INT
 
 	SELECT  @betcount_3 = ISNULL(SUM(CASE bettype WHEN 3 THEN 1 ELSE 0 END), 0)
+			,@betcount_4 = ISNULL(SUM(CASE bettype WHEN 4 THEN 1 ELSE 0 END), 0)
+			,@betcount_6 = ISNULL(SUM(CASE bettype WHEN 6 THEN 1 ELSE 0 END), 0)
 			,@betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
 			,@betcount_13 = ISNULL(SUM(CASE b.bettype WHEN 13 THEN 1 ELSE 0 END), 0)
 			,@betcount_26 = ISNULL(SUM(CASE b.bettype WHEN 26 THEN 1 ELSE 0 END), 0)
 			,@betcount_27 = ISNULL(SUM(CASE b.bettype WHEN 27 THEN 1 ELSE 0 END), 0)
+			,@betcount_30 = ISNULL(SUM(CASE bettype WHEN 30 THEN 1 ELSE 0 END), 0)
+			,@betcount_126 = ISNULL(SUM(CASE bettype WHEN 126 THEN 1 ELSE 0 END), 0)
+			,@betcount_128 = ISNULL(SUM(CASE bettype WHEN 128 THEN 1 ELSE 0 END), 0)
+			,@betcount_129 = ISNULL(SUM(CASE bettype WHEN 129 THEN 1 ELSE 0 END), 0)
+			,@betcount_130 = ISNULL(SUM(CASE bettype WHEN 130 THEN 1 ELSE 0 END), 0)
+			,@betcount_131 = ISNULL(SUM(CASE bettype WHEN 131 THEN 1 ELSE 0 END), 0)
+			,@betcount_132 = ISNULL(SUM(CASE bettype WHEN 132 THEN 1 ELSE 0 END), 0)
+			,@betcount_143 = ISNULL(SUM(CASE bettype WHEN 143 THEN 1 ELSE 0 END), 0)
+			,@betcount_144 = ISNULL(SUM(CASE bettype WHEN 144 THEN 1 ELSE 0 END), 0)
 			,@betcount_145 = ISNULL(SUM(CASE b.bettype WHEN 145 THEN 1 ELSE 0 END), 0)
 			,@betcount_152 = ISNULL(SUM(CASE b.bettype WHEN 152 THEN 1 ELSE 0 END), 0)
 	FROM bettrans b WITH (NOLOCK)
 	WHERE b.matchid = @matchid 
-	AND b.bettype IN (3, 8, 13, 26, 27, 145, 152) 
+	AND b.bettype IN (3, 4, 6, 8, 13, 26, 27, 30, 126, 128, 129, 130, 131, 132, 143, 144, 145, 152) 
 	AND b.statusID NOT IN (101, 102) 
 	AND 1 = CASE 
 				WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
@@ -359,24 +385,67 @@ BEGIN
 
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @sporttype = 1
 	BEGIN
-		IF @action IN('CAL-FT', 'CAL')
+		IF @action = 'CAL-FT'
 		BEGIN
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'REFUND'
-				,@mode = 'ALL'
+				,@mode = 'FT'
+				,@betcount_4 = @betcount_4
+				,@betcount_6 = @betcount_6
 				,@betcount_13 = @betcount_13
 				,@betcount_26 = @betcount_26
 				,@betcount_27 = @betcount_27
+				,@betcount_130 = @betcount_130
+				,@betcount_131 = @betcount_131
+				,@betcount_132 = @betcount_132
+				,@betcount_144 = @betcount_144
 				,@betcount_145 = @betcount_145
 				,@betcount_152 = @betcount_152
 				,@fth = @fth
 				,@fta = @fta
 				,@hth = @hth
 				,@hta = @hta
+				,@totalgoal = @totalgoal
+				,@totalht = @totalht
+				,@oddevenht = @oddevenht
 				,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 				,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-				,@isRefundHT = @isrefundHT
+				,@IsRefundHT = @IsrefundHT
+				,@IsHTCal = @IsHTCal
+		END
+		IF @action = 'CAL'
+		BEGIN
+		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+				,@action = 'REFUND'
+				,@mode = 'ALL'
+				,@betcount_4 = @betcount_4
+				,@betcount_6 = @betcount_6
+				,@betcount_13 = @betcount_13
+				,@betcount_26 = @betcount_26
+				,@betcount_27 = @betcount_27
+				,@betcount_30 = @betcount_30
+				,@betcount_126 = @betcount_126
+				,@betcount_128 = @betcount_128
+				,@betcount_129 = @betcount_129
+				,@betcount_130 = @betcount_130
+				,@betcount_131 = @betcount_131
+				,@betcount_132 = @betcount_132
+				,@betcount_143 = @betcount_143
+				,@betcount_144 = @betcount_144
+				,@betcount_145 = @betcount_145
+				,@betcount_152 = @betcount_152
+				,@fth = @fth
+				,@fta = @fta
+				,@hth = @hth
+				,@hta = @hta
+				,@totalgoal = @totalgoal
+				,@totalht = @totalht
+				,@oddevenht = @oddevenht
+				,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+				,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+				,@IsRefundHT = @IsrefundHT
 				,@IsHTCal = @IsHTCal
 		END
 	END
@@ -610,6 +679,13 @@ BEGIN
 			,@Log
 	END
 END
+
+
+
+
+
+
+
 
 
 GO
