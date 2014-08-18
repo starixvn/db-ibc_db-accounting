@@ -1,9 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_8]    Script Date: 08/15/2014 14:04:37 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_8    Script Date: 31/07/2014 12:58:51 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_8] @matchid INT
 	,@bettype SMALLINT
 	,@totalht SMALLMONEY
@@ -25,6 +19,7 @@ AS
 		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140808@Kathy: Support new 11 bettypes: 143 [Redmine:#19667]	
+		- 20140818@Jamie: Correct settle  determined ticket 143 
 		
 
 	Param's Explanation:
@@ -84,7 +79,7 @@ BEGIN
 											END
 										END
 				ELSE CASE	
-						WHEN right(betteam,1) = 'u' AND @totalht > hdp1 THEN -1 -- 143
+						WHEN right(betteam,1) = 'u' AND (@totalht - hdp1) > 0.25 THEN -1 -- 143
 						ELSE NULL
 					 END
 				END
@@ -462,13 +457,6 @@ BEGIN
 	END
 	
 END
-
-
-
-
-
-
-
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_8] TO [vnteam] AS [dbo]
