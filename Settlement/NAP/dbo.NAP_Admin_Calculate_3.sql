@@ -318,14 +318,14 @@ BEGIN
 			SET @modds = modds = CASE 
 					WHEN betteam = N'h' THEN @totalgoal - hdp1
 					WHEN betteam = N'a' THEN hdp1 - @totalgoal
-					WHEN b.betteam = 'ho' AND @scorediff > 0 THEN @totalgoal - b.hdp1
-					WHEN b.betteam = 'hu' AND @scorediff > 0 THEN b.hdp1 - @totalgoal
-					WHEN b.betteam = 'ao' AND @scorediff < 0 THEN @totalgoal - b.hdp1
-					WHEN b.betteam = 'au' AND @scorediff < 0 THEN b.hdp1 - @totalgoal
-					WHEN b.betteam = 'do' AND @scorediff = 0 THEN @totalgoal - b.hdp1
-					WHEN b.betteam = 'du' AND @scorediff = 0 THEN b.hdp1 - @totalgoal					
+					WHEN betteam = 'ho' AND @scorediff > 0 THEN @totalgoal - hdp1
+					WHEN betteam = 'hu' AND @scorediff > 0 THEN hdp1 - @totalgoal
+					WHEN betteam = 'ao' AND @scorediff < 0 THEN @totalgoal - hdp1
+					WHEN betteam = 'au' AND @scorediff < 0 THEN hdp1 - @totalgoal
+					WHEN betteam = 'do' AND @scorediff = 0 THEN @totalgoal - hdp1
+					WHEN betteam = 'du' AND @scorediff = 0 THEN hdp1 - @totalgoal					
 					ELSE - 1					
-					END,
+					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0
