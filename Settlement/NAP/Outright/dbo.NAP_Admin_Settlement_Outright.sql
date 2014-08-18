@@ -2,7 +2,6 @@
 	 @MatchID		INT
 	,@Status		NVARCHAR(10)	= NULL 
 	,@Action		VARCHAR(10)		='CAL'	
-	,@EventDate		DATETIME		= NULL
 	,@Deadheat		FLOAT			= 1 
 	,@isDeadheat	BIT				= 0 
 	,@Creator		INT				= 0 
@@ -42,6 +41,7 @@ BEGIN
 			,@ActionID 	INT
 			,@LogData 	NVARCHAR(300)
 			,@LeagueID	INT
+			,@EventDate	DATETIME
 
 	SELECT	@ActionID = CASE @Action WHEN 'UNDO' THEN 145 
 									 ELSE 0 END 
@@ -83,7 +83,8 @@ BEGIN
 		RETURN
 	END	
 	
-	SELECT	@LeagueID = LeagueID
+	SELECT	@LeagueID	= LeagueID
+			,@EventDate	= Eventdate
 	FROM	Outright WITH (NOLOCK)
 	WHERE	ORID = @MatchID
 	
@@ -250,7 +251,7 @@ BEGIN
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
 			,@LeagueID = @LeagueID
-			,@EventDate = NULL
+			,@EventDate = @EventDate
 			,@Result = @Status
 	END TRY
 	BEGIN CATCH
@@ -260,7 +261,7 @@ BEGIN
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
 			,@LeagueID = @LeagueID
-			,@EventDate = NULL
+			,@EventDate = @EventDate
 			,@Result = @Status
 			,@Remark = @Remark
 	END CATCH		
