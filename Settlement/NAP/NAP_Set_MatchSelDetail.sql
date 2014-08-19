@@ -377,10 +377,14 @@ BEGIN
 			EXISTS (
 				SELECT 1
 				FROM bettrans WITH (NOLOCK)
-				WHERE bettype IN (4, 6, 13, 26, 27, 30, 126, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
-				AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
-				AND ruben = 0 
-				AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
+				WHERE 
+						( bettype IN (4, 6, 13, 26, 27, 30, 126) -- 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+							OR bettype BETWEEN 128 AND 134
+							OR bettype BETWEEN 140 AND 150 
+							OR bettype = 152)
+						AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
+						AND ruben = 0 
+						AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
 				) AND @sporttype = 1
 			)
 	BEGIN
