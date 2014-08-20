@@ -70,20 +70,15 @@ BEGIN
 	
 	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 or @IsSettleAbandonedMatchIBC = 1
 	BEGIN
+		DECLARE	@comparedValue SMALLMONEY	--@totalht - 0.5 -- Get tickets had result 
+		SELECT	@comparedValue = @totalht - 0.5
+
 		UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = modds = case 
-				WHEN @bettype = 8 THEN case 
-										WHEN @IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1 THEN CASE betteam
-											WHEN N'h' THEN @totalht - hdp1
-											WHEN N'a' THEN hdp1 - @totalht
-											END
-										END
-				ELSE CASE	
-						WHEN right(betteam,1) = 'u' AND (@totalht - hdp1) > 0.25 THEN -1 -- 143
-						ELSE NULL
-					 END
-				END
-											
+		SET @modds = modds = CASE WHEN betteam = 'h' THEN @totalht - hdp1
+								  WHEN betteam = 'a' THEN hdp1 - @totalht
+								  WHEN RIGHT(betteam,1) ='u' THEN hdp1 - @totalht	-- 143 
+								  ELSE NULL 
+								  END 										
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0
@@ -180,9 +175,10 @@ BEGIN
 					WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
 					ELSE 0
 				END 
-			--AND hdp1 <= CASE when bettype = 8 then @totalht - 0.5
-			--				 else hdp1
-			--			END
+			AND hdp1 <= CASE WHEN @bettype = 8 AND (@IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1)THEN @comparedValue  -- @comparedValue = @totalht - 0.5
+							 WHEN @bettype <> 8 AND @IsSettleAbandonedMatchIBC = 1 THEN @comparedValue 
+							 ELSE -1
+						END
 	END
 	ELSE
 	BEGIN
