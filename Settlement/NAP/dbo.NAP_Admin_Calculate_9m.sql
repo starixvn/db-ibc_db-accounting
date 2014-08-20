@@ -1,9 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 08/15/2014 14:05:18 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT
 	,@fta INT
@@ -35,6 +29,7 @@ AS
 		- 20140623@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
+		- 20140820@Jamie: Correct bettype 143, 144 [Redmine:#19667]
 
 
 	Param's Explanation:
@@ -621,24 +616,24 @@ BEGIN
 						END 
 				WHEN 143 THEN -- 1H Result/Total Goals
 					CASE
-						WHEN betteam = 'ho' and (@hth - @hta) > 0 and (@hth+ @hta) > hdp1 THEN 1
-						WHEN betteam = 'hu' and (@hth - @hta) > 0 and (@hth+ @hta) < hdp1 THEN 1
-						WHEN betteam = 'ao' and (@hth - @hta) < 0 AND (@hth+ @hta) > hdp1 THEN 1
-						WHEN betteam = 'au' and (@hth - @hta) < 0 AND (@hth+ @hta) < hdp1 THEN 1
-						WHEN betteam = 'do' and (@hth - @hta) = 0 AND (@hth+ @hta) > hdp1 THEN 1
-						WHEN betteam = 'du' AND (@hth - @hta) = 0 and (@hth+ @hta) < hdp1 THEN 1
+						WHEN betteam = 'ho' and (@hth - @hta) > 0 THEN (@hth+ @hta) - hdp1
+						WHEN betteam = 'hu' and (@hth - @hta) > 0 THEN hdp1 - (@hth+ @hta) 
+						WHEN betteam = 'ao' and (@hth - @hta) < 0 THEN (@hth+ @hta) - hdp1
+						WHEN betteam = 'au' and (@hth - @hta) < 0 THEN hdp1 - (@hth+ @hta) 
+						WHEN betteam = 'do' and (@hth - @hta) = 0 THEN (@hth+ @hta) - hdp1
+						WHEN betteam = 'du' AND (@hth - @hta) = 0 THEN hdp1 - (@hth+ @hta) 
 						ELSE -1
-						END	
+						END		
 				WHEN 144 THEN -- Result/Total Goals
 					CASE
-						WHEN betteam = 'ho' and (@fth - @fta) > 0 and (@fth+ @fta) > hdp1 THEN 1
-						WHEN betteam = 'hu' and (@fth - @fta) > 0 and (@fth+ @fta) < hdp1 THEN 1
-						WHEN betteam = 'ao' and (@fth - @fta) < 0 AND (@fth+ @fta) > hdp1 THEN 1
-						WHEN betteam = 'au' and (@fth - @fta) < 0 AND (@fth+ @fta) < hdp1 THEN 1
-						WHEN betteam = 'do' and (@fth - @fta) = 0 AND (@fth+ @fta) > hdp1 THEN 1
-						WHEN betteam = 'du' AND (@fth - @fta) = 0 and (@fth+ @fta) < hdp1 THEN 1
+						WHEN betteam = 'ho' and (@fth - @fta) > 0 THEN (@fth+ @fta) - hdp1
+						WHEN betteam = 'hu' and (@fth - @fta) > 0 THEN hdp1 - (@fth+ @fta)
+						WHEN betteam = 'ao' and (@fth - @fta) < 0 THEN (@fth+ @fta) - hdp1
+						WHEN betteam = 'au' and (@fth - @fta) < 0 THEN hdp1 - (@fth+ @fta)
+						WHEN betteam = 'do' and (@fth - @fta) = 0 THEN (@fth+ @fta) - hdp1
+						WHEN betteam = 'du' AND (@fth - @fta) = 0 THEN hdp1 - (@fth+ @fta)
 						ELSE -1
-						END					
+						END				
 				ELSE NULL -- Not support bettype
 				END
 			,-- CASE bettype
@@ -1013,22 +1008,22 @@ BEGIN
 						END 
 				WHEN 143 THEN -- 1H Result/Total Goals
 					CASE
-						WHEN betteam = 'ho' and (@hth - @hta) > 0 and (@hth+ @hta) > hdp1 THEN 1
-						WHEN betteam = 'hu' and (@hth - @hta) > 0 and (@hth+ @hta) < hdp1 THEN 1
-						WHEN betteam = 'ao' and (@hth - @hta) < 0 AND (@hth+ @hta) > hdp1 THEN 1
-						WHEN betteam = 'au' and (@hth - @hta) < 0 AND (@hth+ @hta) < hdp1 THEN 1
-						WHEN betteam = 'do' and (@hth - @hta) = 0 AND (@hth+ @hta) > hdp1 THEN 1
-						WHEN betteam = 'du' AND (@hth - @hta) = 0 and (@hth+ @hta) < hdp1 THEN 1
+						WHEN betteam = 'ho' and (@hth - @hta) > 0 THEN (@hth+ @hta) - hdp1
+						WHEN betteam = 'hu' and (@hth - @hta) > 0 THEN hdp1 - (@hth+ @hta) 
+						WHEN betteam = 'ao' and (@hth - @hta) < 0 THEN (@hth+ @hta) - hdp1
+						WHEN betteam = 'au' and (@hth - @hta) < 0 THEN hdp1 - (@hth+ @hta) 
+						WHEN betteam = 'do' and (@hth - @hta) = 0 THEN (@hth+ @hta) - hdp1
+						WHEN betteam = 'du' AND (@hth - @hta) = 0 THEN hdp1 - (@hth+ @hta) 
 						ELSE -1
 						END	
 				WHEN 144 THEN -- Result/Total Goals
 					CASE
-						WHEN betteam = 'ho' and (@fth - @fta) > 0 and (@fth+ @fta) > hdp1 THEN 1
-						WHEN betteam = 'hu' and (@fth - @fta) > 0 and (@fth+ @fta) < hdp1 THEN 1
-						WHEN betteam = 'ao' and (@fth - @fta) < 0 AND (@fth+ @fta) > hdp1 THEN 1
-						WHEN betteam = 'au' and (@fth - @fta) < 0 AND (@fth+ @fta) < hdp1 THEN 1
-						WHEN betteam = 'do' and (@fth - @fta) = 0 AND (@fth+ @fta) > hdp1 THEN 1
-						WHEN betteam = 'du' AND (@fth - @fta) = 0 and (@fth+ @fta) < hdp1 THEN 1
+						WHEN betteam = 'ho' and (@fth - @fta) > 0 THEN (@fth+ @fta) - hdp1
+						WHEN betteam = 'hu' and (@fth - @fta) > 0 THEN hdp1 - (@fth+ @fta)
+						WHEN betteam = 'ao' and (@fth - @fta) < 0 THEN (@fth+ @fta) - hdp1
+						WHEN betteam = 'au' and (@fth - @fta) < 0 THEN hdp1 - (@fth+ @fta)
+						WHEN betteam = 'do' and (@fth - @fta) = 0 THEN (@fth+ @fta) - hdp1
+						WHEN betteam = 'du' AND (@fth - @fta) = 0 THEN hdp1 - (@fth+ @fta)
 						ELSE -1
 						END					
 				ELSE NULL -- Not support bettype
@@ -1060,11 +1055,6 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
-
-
-
-
-
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]
