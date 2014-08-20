@@ -1,5 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
-	@username varchar(30)
+ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
+    @username varchar(30)
 AS
 
 /*
@@ -53,6 +53,7 @@ Revisions:
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call CustLoginInfo, CustLoginInfo_Member by link server DBTXN.CustDB)
 	- 20140220@Johnson: Add opus casino
+	- 20140305@Dom: Change Outstanding formula to get from Bettrans and Translog for Keno tickets
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -74,6 +75,8 @@ DECLARE @TotalMAgentActive INT,
 		@TotalMemberActive INT,
 		@TotalMemberClosed INT,
 		@TotalMemberSuspended INT
+
+DECLARE @TransLogOT money,@TransLogOTPT money
 
 DECLARE @NegativeBetEffectiveDate datetime
 SET @NegativeBetEffectiveDate='2011-09-01'
@@ -372,9 +375,12 @@ BEGIN
 	WHERE custid = @custid and ruben = 1 and bettype < 19001 
 		and winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)
 	
+	SELECT @TransLogOT = SUM(ABS(actual_stake))
+	FROM translog(NOLOCK) WHERE custid = @custid AND statusID = 0
+
 	SELECT	isnull(Balance.Cash,0) Cash,
 			isnull(Balance.Cash,0) - @todayCustCash yesterday_Cash,
-			isnull(Balance.outstanding,0) outstanding,
+			isnull(Balance.outstanding,0)+isnull(@TransLogOT,0) outstanding,
 			Balance.lastTxn lastTxn 
 	FROM(		
 		SELECT 
@@ -405,13 +411,17 @@ BEGIN
 	FROM dbo.bettrans with (NOLOCK)
 	WHERE  recommend = @custid and ruben = 1 and bettype < 19001 
 		AND winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)
+
+	SELECT @TransLogOT = SUM(actual_stake),
+			@TransLogOTPT = SUM(actual_stake * spositiontaking)
+	FROM translog(NOLOCK) WHERE recommend = @custid AND statusID = 0
 		
 	SELECT	isnull(Balance.agentCash,0) agentCash,
 			isnull(Balance.agentCash,0) - @todayAgentCash yesterday_agentCash,	
-			isnull(Balance.agentPositionTaking,0) agentPositionTaking,
+			isnull(Balance.agentPositionTaking,0)+isnull(@TransLogOTPT,0) agentPositionTaking,
 			isnull(Balance.customerCash,0) customerCash,
 			isnull(Balance.customerCash,0) - @todayCustCash yesterday_customerCash,
-			isnull(Balance.customerOutstanding,0) customerOutstanding,
+			isnull(Balance.customerOutstanding,0)+isnull(@TransLogOT,0) customerOutstanding,
 			Balance.lastTxn lastTxn,
 			@UsedCredit as agentUsedCredit
 	FROM (	
@@ -431,6 +441,10 @@ BEGIN
 	Declare @DisableAutoMPT bit
 	--Get disable auto MPT
 	SELECT @DisableAutoMPT = DisableAutoMPT FROM CustMaster (nolock) WHERE CustID = @CustID
+
+	SELECT @TransLogOT = SUM(actual_stake),
+			@TransLogOTPT = SUM(actual_stake * spositiontaking)
+	FROM translog(NOLOCK) WHERE mrecommend = @custid AND statusID = 0
 	
 	SELECT @UsedCredit = sum(credit)  
 	FROM custinfo WITH(NOLOCK) 
@@ -454,12 +468,12 @@ BEGIN
 	
 	SELECT	isnull(Balance.masterCash,0) masterCash,
 			isnull(Balance.masterCash,0) - @todayMasterCash yesterday_masterCash,
-			isnull(Balance.masterPositionTaking,0) masterPositionTaking,
+			isnull(Balance.masterPositionTaking,0) + isnull(@TransLogOTPT,0) masterPositionTaking,
 			isnull(Balance.agentCash,0) agentCash,
 			isnull(Balance.agentCash,0)- @todayAgentCash yesterday_agentCash,
 			isnull(Balance.customerCash,0) customerCash,
 			isnull(Balance.customerCash,0) - @todayCustCash yesterday_customerCash, 
-			isnull(Balance.customerOutstanding,0) customerOutstanding,
+			isnull(Balance.customerOutstanding,0) + isnull(@TransLogOT,0) customerOutstanding,
 			Balance.lastTxn lastTxn,
 			@UsedCredit as masterUsedCredit,
 			isnull(@DisableAutoMPT,0) as DisableAutoMPT
@@ -486,6 +500,7 @@ BEGIN
 END
 else if @roleid = 4
 BEGIN
+	
 	DECLARE @transid bigint, @transdate datetime
 	SELECT @UsedCredit = sum(credit) 
 	FROM custinfo WITH(NOLOCK)
@@ -504,30 +519,33 @@ BEGIN
 	WHERE srecommend = @custid and ruben = 1 and bettype < 19001 
 		and winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)		
 	
+	SELECT @TransLogOT = SUM(actual_stake),
+			@TransLogOTPT = SUM(actual_stake * spositiontaking)
+	FROM translog(NOLOCK) WHERE srecommend = @custid AND statusID = 0
+	
 	SELECT	isnull(Balance.superCash ,0) superCash,
 			isnull(Balance.superCash ,0)- @todaySuperCash yesterday_superCash,
-			isnull(Balance.superPositionTaking,0) superPositionTaking,
+			isnull(Balance.superPositionTaking,0) + isnull(@TransLogOTPT,0) superPositionTaking,
 			isnull(Balance.masterCash,0) masterCash,
 			isnull(Balance.masterCash,0) - @todayMasterCash yesterday_masterCash,
 			isnull(Balance.agentCash,0) agentCash,
 			isnull(Balance.agentCash,0) - @todayAgentCash yesterday_agentCash,
 			isnull(Balance.customerCash,0) customerCash,
 			isnull(Balance.customerCash,0) - @todayCustCash yesterday_customerCash,
-			isnull(Balance.customerOutstanding,0) customerOutstanding,
+			isnull(Balance.customerOutstanding,0) + isnull(@TransLogOT,0) customerOutstanding,
 			@transdate  as lastTxn,
 			@UsedCredit as superUsedCredit
 	
 	FROM (
 		SELECT	sum(case when custid=srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
 				sum(case when ruben=0 then actual_stake * spositiontaking else 0 end) superPositionTaking, 
-				sum(case when custid=mrecommend then winlost-actual_stake 
-											  else mwinlost+acomm-comm 
-										 end)masterCash,
+				sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end)masterCash,
 				sum(case when custid=recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
 				sum(case when custid <> recommend and custid <> mrecommend and custid <> srecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end) customerCash, 
 				sum(case when custid <> recommend and custid <> mrecommend and custid <> srecommend and ruben=0 then actual_stake else 0 end) customerOutstanding	
 		 FROM bettrans WITH(NOLOCK) 
 		 WHERE srecommend = @custid
+
 		)Balance 
  
 END
@@ -543,7 +561,6 @@ SELECT  @TotalMAgentActive MAgentActive,
 		@TotalMemberClosed MemberClosed,
 		@TotalMemberSuspended MemberSuspended		
 		
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
 GO
