@@ -28,7 +28,7 @@ AS
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054	
 		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30)[Redmine:#19310]
-
+		- 20140822@Jamie: Check @correctscore and @goaldiff NULL 
 	Param's Explanation:
 		
 		
@@ -59,8 +59,8 @@ BEGIN
 
 				SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
 																+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-																+ ', @correctscore = ''' + @correctscore + '''' 
-																+ ', @goaldiff = ' + CONVERT(NVARCHAR(10), @goaldiff) 
+																+ ', @correctscore = ' + CASE WHEN @correctscore IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @correctscore) END
+																+ ', @goaldiff = ' + CASE WHEN @goaldiff IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(10), @goaldiff) END
 																+ ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' 
 																+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
 																+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
