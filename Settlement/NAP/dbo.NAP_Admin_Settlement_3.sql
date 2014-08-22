@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_3]    Script Date: 08/15/2014 13:58:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] @matchid INT
 	,@mode VARCHAR(6) = 'CAL'
 AS
@@ -16,6 +11,7 @@ AS
 	   - 20140426@Kathy: Add 1H Total Goal (126) [Redmine:#14449]
 	   - 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 	   - 20140807@Kathy: Support new 11 bettypes [Redmine:#19667]
+	   - 20140822@Jamie: Add bet count 11 bettypes [Redmine:#19667]
 
 	Param's Explanation:
 	• @Mode:
@@ -487,11 +483,18 @@ BEGIN
 		,@betcount_121 = @betcount_121
 		,@betcount_122 = @betcount_122
 		,@betcount_123 = @betcount_123
+		,@betcount_128 = @betcount_128
+		,@betcount_130 = @betcount_130
+		,@betcount_131 = @betcount_131
+		,@betcount_132 = @betcount_132
 		,@betcount_133 = @betcount_133
 		,@betcount_134 = @betcount_134
+		,@betcount_137 = @betcount_137
+		,@betcount_139 = @betcount_139
 		,@betcount_140 = @betcount_140
 		,@betcount_141 = @betcount_141
 		,@betcount_142 = @betcount_142
+		,@betcount_144 = @betcount_144
 		,@betcount_145 = @betcount_145
 		,@betcount_146 = @betcount_146
 		,@betcount_147 = @betcount_147
@@ -513,14 +516,13 @@ BEGIN
 		,@betcount_30 = @betcount_30
 		,@betcount_125 = @betcount_125
 		,@betcount_126 = @betcount_126
+		,@betcount_129 = @betcount_129					
+		,@betcount_136 = @betcount_136				
+		,@betcount_138 = @betcount_138	
+		,@betcount_143 = @betcount_143
 		,@betcount_151 = @betcount_151
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END
-
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_3] TO [bodbAdminNet] AS [dbo]
