@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [Acc_MT_GetPT] 
+USE [bodb02]
+GO
+
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_MT_GetPT_production] 
 	@UserName varchar(30),   
 	@Sporttype smallint = 1,  
 	@Bettype smallint = 1,  
@@ -33,6 +42,8 @@ Revisions:
 	- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 	- 20131121@Elodie: Add Virtual greyhounds(182), Virtual Motor Racing(184) [Redmine:#7234]
 	- 20140402@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
+	- 20140825@Logan:   Fix bug of displaying HRFixedOdds master comm [Redmine: #19631]
+
 Param's Explanation:
 • @HasComm: view Comm or view PT
 	+ 0: View PT (default)
@@ -122,7 +133,7 @@ Begin
 	@gd3 decimal(9,8) ,
 	@othercomm3 decimal(9,8),
 	@comm_5_3 decimal(9,8),--1x2
-	@HRFixedOddsComm_3 decimal, -- HR Fixed Odds
+	@HRFixedOddsComm_3 decimal(9,8), -- HR Fixed Odds
 	@v161_comm_81_3 decimal(9,8), --number game
 	@v201_comm_3_3 decimal(9,8),
 	@v151_comm_31_3 decimal(9,8),
@@ -795,8 +806,5 @@ Begin
 			@v153_ibc_pt_51_53 as v153_ibc_pt_51_53, 
 			@v153_ibc_pt_52_53 as v153_ibc_pt_52_53
 End
+GO
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_MT_GetPT] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_MT_GetPT] TO [vnteam] AS [dbo]
