@@ -4,6 +4,7 @@
 	@IP nvarchar(15)='', 
 	@ErrMsg nvarchar(max) = '' OUTPUT,
 	@ErrCode int = 0 OUTPUT
+WITH RECOMPILE
 AS
 
  /*
@@ -27,7 +28,8 @@ AS
 		- 20121203@Dan: skip deleted transfer record when check existed transfer. Delay updating by batch (500 customer) to avoid affect replication
 		- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					       Write more log on DBTXN server in case of DBLOG server failure
-		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					       
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 	
+		- 20140825@Jamie: Put recompile 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
 */ 
