@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Parlay]    Script Date: 08/07/2014 14:07:20 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Parlay]    Script Date: 08/27/2014 14:02:25 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,6 +17,8 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@TennisTotal SMALLINT = NULL
 	,@statusID TINYINT = NULL
 	,@winlostdate SMALLDATETIME = NULL
+	,@VoidTransID VARCHAR(2000) = NULL
+	,@UserId INT = NULL
 	,@strXML VARCHAR(MAX) = NULL
 	,@CalledByBrokerService BIT = 0
 AS
@@ -30,6 +32,7 @@ AS
 		- 20140424@Lukas: add DBTP server 
 		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
+		- 20140815@Kathy: add more mode for Special Delete function
 
 	Param's Explanation:
 		@action			@mode
@@ -98,6 +101,14 @@ BEGIN
 			,@winlostdate = ' + CASE 
 				WHEN @winlostdate IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @winlostdate) + ''''
+				END + '
+			,@VoidTransID = ' + CASE 
+				WHEN @VoidTransID IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(NVARCHAR(2000), @VoidTransID) + ''''
+				END + '
+			,@UserId = ' + CASE 
+				WHEN @UserId IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @UserId)
 				END + '
 			,@strXML = ' + CASE 
 				WHEN @strXML IS NULL THEN 'NULL'
@@ -169,8 +180,24 @@ BEGIN
 				,@winlostdate = @winlostdate
 				,@strXML = @strXML
 		END
+		
+		IF @mode = 'VOID'
+		BEGIN
+			EXEC dbo.NAP_Admin_Calculate_9m 
+				@matchid	= @MatchID,
+				@fth		= 0, 
+				@fta		= 0,
+				@hth		= 0,  
+				@hta		= 0,
+				@matchdate	= @matchdate,
+				@action		= 'VOID',
+				@VoidTransID= @VoidTransID,
+				@UserId		= @UserId
+		END
 	END
 END
+
+
 
 
 

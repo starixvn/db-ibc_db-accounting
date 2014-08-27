@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_7]    Script Date: 08/07/2014 14:06:31 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_7]    Script Date: 08/27/2014 14:01:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -18,7 +18,7 @@ AS
 	DB: DBTRANS.BODB02
 	
 	Revisions:
-		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
+		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
 
 */
 BEGIN
@@ -313,6 +313,7 @@ BEGIN
 			statusID NOT IN (101, 102)
 	END
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_7] TO [vnteam] AS [dbo]

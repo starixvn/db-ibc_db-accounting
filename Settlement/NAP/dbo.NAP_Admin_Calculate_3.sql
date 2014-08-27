@@ -1,3 +1,8 @@
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_3]    Script Date: 08/27/2014 14:00:36 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_3] @matchid INT
 	,@bettype SMALLINT
 	,@totalgoal SMALLMONEY
@@ -404,6 +409,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_3] TO [vnteam] AS [dbo]

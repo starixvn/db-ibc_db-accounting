@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/15/2014 13:54:24 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/27/2014 14:09:14 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -451,6 +451,7 @@ BEGIN
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
 END
+
 
 
 

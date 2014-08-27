@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All]    Script Date: 08/15/2014 13:58:16 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_11bettypes]    Script Date: 08/27/2014 14:06:42 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER OFF
@@ -679,6 +679,12 @@ BEGIN
 			,@Log
 	END
 END
+
+
+
+
+
+
 
 
 

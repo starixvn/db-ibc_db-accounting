@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_updateMatch_remark]    Script Date: 08/07/2014 14:38:29 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_updateMatch_remark]    Script Date: 08/27/2014 14:08:49 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON

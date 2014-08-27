@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFGLG]    Script Date: 08/07/2014 14:07:56 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFGLG]    Script Date: 08/27/2014 14:03:02 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -15,7 +15,7 @@ AS
 
 	Revisions: 
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
-		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
+		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
 				
 */
 BEGIN
@@ -167,6 +167,7 @@ BEGIN
 	END
 		-------------End: Refund FGLG for bettransm-------------
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundFGLG] TO [bodbAdminNet] AS [dbo]

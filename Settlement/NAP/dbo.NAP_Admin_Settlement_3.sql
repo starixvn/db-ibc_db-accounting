@@ -1,3 +1,8 @@
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_3_11bettypes]    Script Date: 08/27/2014 14:05:12 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] @matchid INT
 	,@mode VARCHAR(6) = 'CAL'
 AS
@@ -524,7 +529,4 @@ BEGIN
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END
 
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_3] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_3] TO [vnteam] AS [dbo]
+

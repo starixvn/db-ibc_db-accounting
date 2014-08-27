@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundHT]    Script Date: 08/15/2014 14:05:10 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundHT]    Script Date: 08/27/2014 14:03:14 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON

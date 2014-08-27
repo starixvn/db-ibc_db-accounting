@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 08/07/2014 14:08:22 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 08/27/2014 14:03:22 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -30,6 +30,7 @@ AS
 	Revisions:
 		- 20140423@Kathy: Modify betstatus value (Offer 1H FGLG) [Redmine:#14449]
 		- 20140618@Kathy: Remove PenaltyShootout string, correct betstatus in case match has been refunded [Redmine:#17142]  
+		- 20140825@Kathy: Only update HT part of goalrecord when calculating HT
 						   
 		
 */
@@ -52,7 +53,9 @@ BEGIN
 			finalhomescore = @FTHome, finalawayscore = @FTAway,
 			hthomescore = @HTHome, htawayscore = @HTAway,
 			betstatus = CASE WHEN @action = 'CAL-FT' AND CHARINDEX('Refund HT;',betstatus)>0 THEN 'Refund HT;' + ISNULL(@betstatus,'') ELSE @betstatus END,
-			goalrecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord ELSE @goalrecord END,
+			goalrecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
+							  WHEN @action = 'CAL-HT' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
+							  ELSE @goalrecord END,
 			eventstatus = CASE	WHEN @action = 'CAL' THEN N'completed'
 								WHEN @action = 'CAL-HT' AND @FTDone = 1 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 THEN N'completed'
@@ -67,7 +70,7 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_Refund_All'
 	BEGIN
 		SELECT @betstatus = CASE WHEN charindex('PS:',betstatus) > 0 THEN STUFF(betstatus, CHARINDEX('PS:',betstatus),5,'') -- PS:Y; or PS:N;
-								 ELSE betstatus
+								 ELSE ISNULL(betstatus,'')
 							END
 		FROM match with(NOLOCK)
 		WHERE matchid = @matchid
@@ -86,7 +89,7 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_RefundFT'
 	BEGIN
 		SELECT @betstatus = CASE WHEN charindex('PS:',betstatus) > 0 THEN STUFF(betstatus, CHARINDEX('PS:',betstatus),5,'') -- PS:Y; or PS:N;
-								 ELSE betstatus
+								 ELSE ISNULL(betstatus, '')
 							END
 		FROM match with(NOLOCK)
 		WHERE matchid = @matchid
@@ -114,7 +117,7 @@ BEGIN
 									THEN betstatus 
 							 ELSE 'Refund HT;' + CASE WHEN CHARINDEX('Refund FT;',betstatus) > 0 
 															THEN REPLACE(ISNULL(betstatus,''), 'Refund FT;', '') 
-													  ELSE REPLACE(betstatus, 'Refund HT;', '')
+													  ELSE REPLACE(ISNULL(betstatus,''), 'Refund HT;', '')
 												 END
 						END,
 			changetime = GETDATE()
@@ -129,7 +132,11 @@ BEGIN
 		SET	betstatus = case when right(@BetStatus,1) = ';' THEN @betstatus
 							 ELSE @betstatus + ';'
 						END
-			,goalrecord = @GoalRecord
+			,GoalRecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
+							   WHEN @action = 'CAL-HT' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
+							   ELSE @goalrecord 
+						  END
+			--,goalrecord = @GoalRecord
 			,changetime = GETDATE()
 		WHERE matchid = @MatchID
 	END
@@ -249,6 +256,8 @@ BEGIN
 		WHERE EventID = @MatchID
 	END	
 END
+
+
 
 
 

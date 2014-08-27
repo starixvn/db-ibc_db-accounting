@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Admin_PreCalculate_1] 
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_PreCalculate_1]    Script Date: 08/27/2014 14:03:34 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_PreCalculate_1    Script Date: 3/17/2014 4:21:09 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_PreCalculate_1] 
 	@matchid int,
 	@bettype smallint,
 	@fth smallmoney,
@@ -193,8 +199,4 @@ SET NOCOUNT ON
 			 					
 	END
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_PreCalculate_1] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_PreCalculate_1] TO [vnteam] AS [dbo]

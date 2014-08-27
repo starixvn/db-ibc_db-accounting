@@ -1,8 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 08/07/2014 14:06:07 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 08/27/2014 14:00:47 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_4    Script Date: 12/08/2014 1:41:24 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@bettype SMALLINT
 	,@correctscore NVARCHAR(10) 
@@ -26,9 +28,10 @@ AS
 	
 	Revisions:
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
-		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054	
+		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054	
 		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30)[Redmine:#19310]
 		- 20140822@Jamie: Check @correctscore and @goaldiff NULL 
+
 	Param's Explanation:
 		
 		
@@ -59,11 +62,16 @@ BEGIN
 
 				SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
 																+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-																+ ', @correctscore = ' + CASE WHEN @correctscore IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @correctscore) END
+																+ ', @correctscore = ' + CASE WHEN @correctscore IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @correctscore) + '''' END
 																+ ', @goaldiff = ' + CASE WHEN @goaldiff IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(10), @goaldiff) END
 																+ ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' 
-																+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+																+ ', @hth = ' + CONVERT(NVARCHAR(10), @hth) 
+																+ ', @hta = ' + CONVERT(NVARCHAR(10), @hta) 
+																+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
+																+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
 																+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
+																+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+																
 					,@createdDate = GETDATE()
 
 				EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
@@ -101,9 +109,7 @@ BEGIN
 
 				UPDATE b
 				SET @modds = modds = CASE
-					WHEN b.betteam IN ('0:4', '4:0') AND @bettype = 30 THEN -1
 					WHEN b.betteam NOT IN ('0:4', '4:0') AND @bettype = 30 AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1) ) THEN -1			
-					WHEN b.betteam IN ('0:5','5:0') AND @bettype = 4 THEN -1
 					WHEN b.betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1) ) THEN -1			
 					ELSE NULL
 					END,			
@@ -206,8 +212,8 @@ BEGIN
 					statusID NOT IN (101,102)
 					AND 1 = CASE 
 								WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 1
-								WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-								WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND b.recommend <> 1688156) THEN 1
+								WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
+								WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
 								ELSE 0
 							END
 				IF @affectedagents <> 100 
@@ -333,10 +339,8 @@ BEGIN
 		BEGIN
 			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 			SET @modds = modds = CASE 
-					WHEN betteam IN ('0:4', '4:0') AND @bettype = 30 THEN -1
-					WHEN betteam NOT IN ('0:4','4:0') AND @bettype = 30 AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1)) THEN -1
-					WHEN betteam IN ('0:5','5:0') AND @bettype = 4 THEN -1
-					WHEN betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1)) THEN -1 
+					WHEN betteam NOT IN ('0:4', '4:0') AND @bettype = 30 AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) THEN -1			
+					WHEN betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN -1			
 					ELSE NULL 
 					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -430,15 +434,9 @@ BEGIN
 			WHERE matchid = @matchid AND bettype = @bettype 
 			    AND	statusID NOT IN (101, 102)
 				AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-							 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770) THEN 1
-							 WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156) THEN 1
+							 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
+							 WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
 							 ELSE 0
-						END
-				AND 1 = CASE WHEN betteam IN ('0:4', '4:0') AND @bettype = 30 THEN 1
-								WHEN betteam NOT IN ('0:4', '4:0') AND @bettype = 30 AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) then 1
-								WHEN betteam IN ('0:5','5:0') AND @bettype = 4 THEN 1
-								WHEN betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN 1
-								ELSE -1
 						END
 		END
 		ELSE
@@ -529,7 +527,6 @@ BEGIN
 					END
 				,ruben = 1
 			WHERE matchid = @matchid AND bettype = @bettype AND
-				--status NOT IN ('VOID', 'REJECT')
 				statusID NOT IN (101, 102)
 		END
 	END
@@ -588,6 +585,12 @@ BEGIN
 			-------------Stop:Settle FGLG for bettransm-------------
 	END
 END
+
+
+
+
+
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_4] TO [vnteam] AS [dbo]

@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 08/15/2014 13:57:31 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1_11bettypes]    Script Date: 08/27/2014 14:04:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -620,7 +620,5 @@ END
 
 
 
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_1] TO [vnteam] AS [dbo]
+
+

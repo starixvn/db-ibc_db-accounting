@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG]    Script Date: 08/07/2014 14:10:47 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG]    Script Date: 08/27/2014 14:06:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -99,6 +99,7 @@ BEGIN
 	---
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_FGLG'
 		,@MatchID = @matchid
+		,@Action = @action
 		,@BetStatus = @betstatus
 		,@GoalRecord = @goalrecord
 		,@creator = @creator
@@ -457,6 +458,7 @@ BEGIN
 		END
 	END
 END
+
 
 
 

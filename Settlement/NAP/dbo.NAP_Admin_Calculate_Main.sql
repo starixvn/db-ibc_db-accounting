@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Main]    Script Date: 08/15/2014 14:03:40 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Main_11bettypes]    Script Date: 08/27/2014 14:02:04 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1589,5 +1589,3 @@ END
 
 
 
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Main] TO [vnteam] AS [dbo]

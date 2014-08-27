@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_FGLG]    Script Date: 08/07/2014 14:11:31 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_FGLG]    Script Date: 08/27/2014 14:07:31 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
