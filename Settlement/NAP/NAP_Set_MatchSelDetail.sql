@@ -153,7 +153,7 @@ BEGIN
 			)
 
 		INSERT INTO @status
-		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS
+		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS  
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1  
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
