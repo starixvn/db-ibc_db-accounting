@@ -1590,6 +1590,7 @@ Begin DataProject = "Account"
             Script = "dbo.NAP_Admin_Settlement_Outright.sql"
             Script = "dbo.NAP_Set_LeagueSelOutright.sql"
             Script = "dbo.NAP_Set_OutrightSelInfo.sql"
+            Script = "dbo.NAP_Set_OutrightSelInfoByLeagueID.sql"
          End
          Begin Folder = "Service Broker"
             Script = "sb.SBQueue_receive.sql"
