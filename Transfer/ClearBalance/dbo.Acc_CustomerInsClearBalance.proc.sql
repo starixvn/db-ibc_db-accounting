@@ -8,6 +8,7 @@
 	@ErrCode int = 0 OUTPUT,
 	@CusStatus varchar(50)='All',
 	@system VARCHAR(50) = ''
+WITH RECOMPILE
 AS
 --ADMIN SITE
 --Original: \account\customerbalance_clear.asp
@@ -35,6 +36,7 @@ Revisions:
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20131025@Lukas: add system define permission checking when call from external accounting
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call Customer, Exchange by link database)  								   
+	- 20140826@Jamie: put RECOMPILE
 	
 Param's Explanation:
 */ 
