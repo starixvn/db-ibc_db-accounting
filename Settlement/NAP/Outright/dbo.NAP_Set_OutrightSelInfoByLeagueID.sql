@@ -22,6 +22,7 @@ BEGIN
 			,o.matchcode
 			,o.kickofftime
 			,o.eventdate
+			,o.IsDeadheat
 			,ISNULL(o.oddsstatus, 'Running') AS oddsstatus
 			,ISNULL(o.status, 'Running') AS status
 			,l.sporttype
