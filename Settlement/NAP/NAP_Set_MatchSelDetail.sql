@@ -1,8 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/27/2014 14:09:14 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/29/2014 17:46:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 8/29/2014 1:49:12 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 26/08/2014 2:14:09 PM ******/
 
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
 	,@excludeRefundFGLG BIT = 0
@@ -134,6 +136,13 @@ BEGIN
 			FROM bettrans WITH(NOLOCK)
 			WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
 		)
+			SELECT @IsExistPS = 1
+		ELSE IF EXISTS
+			(
+			SELECT TOP 1 1
+			FROM bettransm WITH(NOLOCK)
+			WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
+			)
 			SELECT @IsExistPS = 1
 
 		-- check match status
@@ -451,11 +460,6 @@ BEGIN
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
 END
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO
