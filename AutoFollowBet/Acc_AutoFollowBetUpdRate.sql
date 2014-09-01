@@ -1,17 +1,28 @@
-﻿ALTER PROCEDURE [Acc_AutoFollowBetUpdRate]	
-	@UserName		VARCHAR(50),
-	@Rate			SMALLMONEY,
-	@FollowLive		INT,
-	@Handicap		BIT,
-	@1stHandicap	BIT,
-	@OverUnder		BIT,
-	@1stOverUnder	BIT,
-	@Follower		VARCHAR(30),
 
-	@UserId			INT,
-	@IP				VARCHAR(50),
-	@ErrCode		INT = 0 OUTPUT,
-	@ErrMsg			NVARCHAR(200) = '' OUTPUT
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetUpdRate    Script Date: 8/29/2014 9:35:01 AM ******/
+CREATE PROCEDURE [dbo].[Acc_AutoFollowBetUpdRate]
+    @Username      VARCHAR(30)
+  , @Rate          SMALLMONEY
+  , @LiveOdds      SMALLMONEY
+  , @NonLiveOdds   SMALLMONEY
+  , @LiveHDP       TINYINT
+  , @NonLiveHDP    TINYINT
+  , @Live1stHDP    TINYINT
+  , @NonLive1stHDP TINYINT
+  , @LiveOU        TINYINT
+  , @NonLiveOU     TINYINT
+  , @Live1stOU     TINYINT
+  , @NonLive1stOU  TINYINT
+  , @Follower      VARCHAR(30)
+  , @UserId        INT
+  , @IP            VARCHAR(50) = ''
+  , @ErrCode       INT = 0 OUTPUT
+  , @ErrMsg        NVARCHAR(200) = '' OUTPUT
 AS
 /*
 Created: Viet @ 4-Jul-2012
@@ -21,125 +32,338 @@ Revison:
 					  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144] 
 					  - Write log
 	- 20140106@Kathy: Add param: @Follower [Redmine:#10329]
+	- 20140227@Kathy: Add more param: @Odds [Redmine:#12546]
+	- 20140331@Kathy: Rename xml attributes (names must not begin with a digit)
+	- 20140428@Kathy: Down minimum rate from 0.3 to 0.01 [Redmine:#15495]
+	- 20140805@Logan:   1. Separate live and nonlive setting [Redmine: #16578]
+	                    2. Allow following an agent (all members under) [Redmine: #19650]
+                        3. Do not allow member to follow himself or his agent
 
-Param's Explanation:	
+Param's Explanation:
+    
+    - For params with values = 2: those will not be updated.
+    
 
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @custid int, @custFollower int,
-			@startRun Datetime, @endRun datetime, @duration int ,
-			@oldRate smallmoney, @oldFollowLive int, @oldHandicap bit, @old1stHandicap bit,
-			@oldOverUnder bit, @old1stOverUnder bit, @oldFollower varchar(30)
 
-	SELECT @startRun = getdate(), @duration = 0
+	DECLARE @custid           INT
+		  , @custFollower     INT
+		  , @startRun         DATETIME
+		  , @endRun           DATETIME
+		  , @duration         INT
+		  , @oldRate          SMALLMONEY
+		  , @oldFollower      VARCHAR(30)
+		  , @OldLiveOdds      SMALLMONEY
+          , @OldNonLiveOdds   SMALLMONEY
+          , @OldLiveHDP       BIT
+          , @OldNonLiveHDP    BIT
+          , @OldLive1stHDP    BIT
+          , @OldNonLive1stHDP BIT
+          , @OldLiveOU        BIT
+          , @OldNonLiveOU     BIT
+          , @OldLive1stOU     BIT
+          , @OldNonLive1stOU  BIT
+          , @recommend        INT
+
+
+	SELECT @startRun = getdate()
+		 , @duration = 0
 
 	SELECT @custid = custid
-	FROM Custinfo with(nolock)
-	WHERE username = @Username
-	AND roleid = 1
+ 	  FROM Custinfo WITH(NOLOCK)
+	 WHERE username = @Username
+	   AND roleid IN (1, 2)
 
 	IF @@rowcount = 0
 	BEGIN
-		SELECT @ErrMsg = 'Invalid username, please try again!', @ErrCode = 101			
+		SELECT @ErrMsg = 'Invalid username, please try again!'
+			 , @ErrCode = 101
+
 		RETURN
 	END
 
 	SELECT @custFollower = custid
-	FROM Custinfo with(nolock)
-	WHERE username = @Follower
-	AND roleid = 1
+         , @recommend = recommend
+	  FROM Custinfo WITH(NOLOCK)
+	 WHERE username = @Follower
+	   AND roleid = 1
 
 	IF @@rowcount = 0
 	BEGIN
-		SELECT @ErrMsg = 'Invalid follower, please try again!', @ErrCode = 102	
+		SELECT @ErrMsg = 'Invalid follower, please try again!'
+			 , @ErrCode = 103
+
+		RETURN
+	END
+	
+	--Do not allow member to follow himself
+	IF @custFollower = @custid
+	BEGIN
+	    SELECT @ErrMsg = 'User and follower are identical, please try again!'
+			 , @ErrCode = 106
+
 		RETURN
 	END
 
+    --Do not allow member to follow his agent
+	IF @recommend = @custid
+	BEGIN
+	    SELECT @ErrMsg = 'Can not follow direct upline, please try again!'
+			 , @ErrCode = 107
 
-	SELECT @oldRate = f.Rate, @oldFollowLive = f.FollowLive, @oldHandicap = f.Follow1,
-			@old1stHandicap = f.Follow7, @oldOverUnder = f.Follow3, @old1stOverUnder = f.Follow8,
-			@oldFollower = (SELECT c.username FROM custInfo c with(NOLOCK) WHERE c.custid = f.Follower AND c.roleid = 1)
-	FROM Cust_FollowBet f WITH(NOLOCK)
-	WHERE f.custid = @custid
+		RETURN
+	END
 
-	UPDATE Cust_followBet WITH(UPDLOCK, ROWLOCK)
-	SET rate = @Rate,
-		FollowLive = @FollowLive,
-		Follow1 = @Handicap,
-		Follow7 = @1stHandicap,
-		Follow3 = @OverUnder,
-		Follow8 = @1stOverUnder,
-		Follower = @custFollower
-	WHERE custid = @custid
+    --Do not allow loop-following
+    SELECT 1
+      FROM Cust_followBet WITH(NOLOCK)
+     WHERE custid = @custFollower
+       AND Follower = @custid
+
+    IF @@rowcount <> 0
+	BEGIN
+		SELECT @ErrMsg = 'Do not allow loop following, please try again!'
+			 , @ErrCode = 109
+
+		RETURN
+	END
+
+	-- Rate must range between 0.01 and 3, 2 decimal digits
+	IF @Rate NOT BETWEEN 0.01 AND 3 
+	   OR (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1)))
+	BEGIN
+		SELECT @ErrMsg = 'Invalid rate! Rate must range between 0.01 and 3'
+			 , @ErrCode = 104
+
+		RETURN
+	END
+
+	-- Validate Odds
+	IF (@LiveOdds <> 2
+	    AND (@LiveOdds NOT BETWEEN -0.1 AND 0.1
+	         OR ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @LiveOdds, 2))) - ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @LiveOdds, 1))) <> 0
+	         OR ABS(@LiveOdds) * 100 < 1 AND @LiveOdds <> 0
+	        )
+	   )
+	   OR (@NonLiveOdds <> 2
+	       AND (@NonLiveOdds NOT BETWEEN -0.1 AND 0.1
+	            OR ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @NonLiveOdds, 2))) - ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @NonLiveOdds, 1))) <> 0
+	            OR ABS(@NonLiveOdds) * 100 < 1 AND @NonLiveOdds <> 0
+	           )
+	      )
+	BEGIN
+		SELECT @ErrMsg = 'Invalid odds! Odds must range between -0.1 and 0.1'
+			 , @ErrCode = 105
+
+		RETURN
+	END
+
+	SELECT @oldRate = ISNULL(f.Rate, 0)
+	     , @OldLiveOdds = ISNULL(f.Odds, 0)
+         , @OldLiveHDP = ISNULL(f.Follow1, 0)
+         , @OldLiveOU = ISNULL(f.Follow3, 0)
+         , @OldLive1stHDP = ISNULL(f.Follow7, 0)
+         , @OldLive1stOU = ISNULL(f.Follow8, 0)
+		 , @oldFollower = (SELECT ISNULL(c.username, '')
+			                 FROM custInfo c WITH(NOLOCK)
+			                WHERE c.custid = f.Follower
+			                  AND c.roleid = 1
+			              )
+	  FROM Cust_FollowBet f WITH(NOLOCK)
+	 WHERE f.custid = @custid
+	   AND f.FollowLive = 1
+
+    SELECT @OldNonLiveOdds = ISNULL(f.Odds, 0)
+         , @OldNonLiveHDP = ISNULL(f.Follow1, 0)
+         , @OldNonLiveOU = ISNULL(f.Follow3, 0)
+         , @OldNonLive1stHDP = ISNULL(f.Follow7, 0)
+         , @OldNonLive1stOU = ISNULL(f.Follow8, 0)
+	  FROM Cust_FollowBet f WITH(NOLOCK)
+	 WHERE f.custid = @custid
+	   AND f.FollowLive = 0
+
+    IF @oldRate = @Rate
+       AND @OldLiveOdds = @LiveOdds
+       AND @OldLiveHDP = @LiveHDP
+       AND @OldLiveOU = @LiveOU
+       AND @OldLive1stHDP = @Live1stHDP
+       AND @OldLive1stOU = @Live1stOU
+       AND @oldFollower = @Follower
+       AND @OldNonLiveOdds = @NonLiveOdds
+       AND @OldNonLiveHDP = @NonLiveHDP
+       AND @OldNonLiveOU = @NonLiveOU
+       AND @OldNonLive1stHDP = @NonLive1stHDP
+       AND @OldNonLive1stOU = @NonLive1stOU
+    BEGIN
+        SELECT @ErrMsg = 'There is no new data for updating, please try again!'
+			 , @ErrCode = 109
+
+		RETURN
+    END
+    
+    --Any @=2 means no update
+    SELECT @LiveOdds = CASE
+                         WHEN @LiveOdds = 2 THEN @OldLiveOdds
+                         ELSE @LiveOdds
+                       END
+         , @LiveHDP = CASE
+                        WHEN @LiveHDP = 2 THEN @OldLiveHDP
+                        ELSE @LiveHDP
+                      END
+         , @LiveOU = CASE
+                       WHEN @LiveOU = 2 THEN @OldLiveOU
+                       ELSE @LiveOU
+                     END
+         , @Live1stHDP = CASE
+                           WHEN @Live1stHDP = 2 THEN @OldLive1stHDP
+                           ELSE @Live1stHDP
+                         END
+         , @Live1stOU = CASE
+                          WHEN @Live1stOU = 2 THEN @OldLive1stOU
+                          ELSE @Live1stOU
+                        END
+         , @NonLiveOdds = CASE
+                            WHEN @NonLiveOdds = 2 THEN @OldNonLiveOdds
+                            ELSE @NonLiveOdds
+                          END
+         , @NonLiveHDP = CASE
+                           WHEN @NonLiveHDP = 2 THEN @OldNonLiveHDP
+                           ELSE @NonLiveHDP
+                         END
+         , @NonLiveOU = CASE
+                          WHEN @NonLiveOU = 2 THEN @OldNonLiveOU
+                          ELSE @NonLiveOU
+                        END
+         , @NonLive1stHDP = CASE
+                              WHEN @NonLive1stHDP = 2 THEN @OldNonLive1stHDP
+                              ELSE @NonLive1stHDP
+                            END
+         , @NonLive1stOU = CASE
+                             WHEN @NonLive1stOU = 2 THEN @OldNonLive1stOU
+                             ELSE @NonLive1stOU
+                           END
+
+
+    --Update Live
+	UPDATE Cust_FollowBet WITH(UPDLOCK, ROWLOCK)
+	   SET rate = @Rate
+		 , Follow1 = @LiveHDP
+		 , Follow7 = @Live1stHDP
+		 , Follow3 = @LiveOU
+		 , Follow8 = @Live1stOU
+		 , Follower = @custFollower
+		 , Odds = @LiveOdds
+	 WHERE custid = @custid
+	   AND FollowLive = 1
+
+    --Update Non-Live
+    UPDATE Cust_FollowBet WITH(UPDLOCK, ROWLOCK)
+	   SET rate = @Rate
+		 , Follow1 = @NonLiveHDP
+		 , Follow7 = @NonLive1stHDP
+		 , Follow3 = @NonLiveOU
+		 , Follow8 = @NonLive1stOU
+		 , Follower = @custFollower
+		 , Odds = @NonLiveOdds
+	 WHERE custid = @custid
+	   AND FollowLive = 0
 
 	-- write log
-	Declare @LogSPData varchar(MAX),@TrackingValueDB varchar(max)
+	DECLARE @LogSPData VARCHAR(MAX)
+		  , @TrackingValueDB VARCHAR(max)
 
-	SELECT	@LogSPData =  '<Acc_AutoFollowBetUpdRate Username="'+ coalesce(@Username,space(1)) + '" '+
-						  'Rate="'+ coalesce(cast(@Rate as varchar(10)),space(1)) + '" '+
-						  'FollowLive="'+ coalesce(cast(@FollowLive as varchar(1)),space(1)) + '" '+
-						  'Handicap="'+ COALESCE(CAST(@Handicap AS VARCHAR(1)),SPACE(1))+'" '+
-						  '1stHandicap="'+ coalesce(cast(@1stHandicap as varchar(1)),space(1)) + '" '+
-						  'OverUnder="'+ coalesce(cast(@OverUnder as varchar(1)),space(1))+'" '+
-						  '1stOverUnder="'+ coalesce(cast(@1stOverUnder as varchar(1)),space(1))+'" ' +
-						  'Follower="'+ coalesce(cast(@Follower as varchar(30)),space(1))+'" ' +
-						  'UserId="'+ coalesce(cast(@UserId as varchar(50)),space(1)) + '" '+
-						  'IP="'+ coalesce(cast(@IP as varchar(50)),space(1)) + '" '+
-						  'ErrCode="'+ coalesce(cast(@ErrCode as varchar(10)),space(1)) + '" '+
-						  'ErrMsg="'+ coalesce(cast(@ErrMsg as varchar(400)),space(1))+'" />'
+	SELECT @LogSPData = '<Acc_AutoFollowBetUpdRate Username="' + COALESCE(@Username, SPACE(1)) + '" '
+	                  + 'Rate="' + COALESCE(CAST(@Rate AS VARCHAR(10)), SPACE(1)) + '" '
+	                  + 'LiveHDP="' + COALESCE(CAST(@LiveHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'Live1stHDP="' + COALESCE(CAST(@Live1stHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'LiveOU="' + COALESCE(CAST(@LiveOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'Live1stOU="' + COALESCE(CAST(@Live1stOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'NonLiveHDP="' + COALESCE(CAST(@NonLiveHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'NonLive1stHDP="' + COALESCE(CAST(@NonLive1stHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'NonLiveOU="' + COALESCE(CAST(@NonLiveOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'NonLive1stOU="' + COALESCE(CAST(@NonLive1stOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                  + 'LiveOdds="' + COALESCE(CAST(@LiveOdds AS VARCHAR(30)), SPACE(1)) + '" '
+	                  + 'NonLiveOdds="' + COALESCE(CAST(@NonLiveOdds AS VARCHAR(30)), SPACE(1)) + '" '
+	                  + 'Follower="' + COALESCE(CAST(@Follower AS VARCHAR(30)), SPACE(1)) + '" '
+	                  + 'UserId="' + COALESCE(CAST(@UserId AS VARCHAR(50)), SPACE(1)) + '" '
+	                  + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" '
+	                  + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" '
+	                  + 'ErrMsg="' + COALESCE(CAST(@ErrMsg AS VARCHAR(400)), SPACE(1)) + '" />'
 
-	SELECT	@TrackingValueDB =  '<Acc_AutoFollowBetUpdRate Username="'+ coalesce(@Username,space(1)) + '" '+
-						  'Rate="'+ coalesce(cast(@oldRate as varchar(10)),space(1)) + '" '+
-						  'FollowLive="'+ coalesce(cast(@oldFollowLive as varchar(1)),space(1)) + '" '+
-						  'Handicap="'+ COALESCE(CAST(@oldHandicap AS VARCHAR(1)),SPACE(1))+'" '+
-						  '1stHandicap="'+ coalesce(cast(@old1stHandicap as varchar(1)),space(1)) + '" '+
-						  'OverUnder="'+ coalesce(cast(@oldOverUnder as varchar(1)),space(1))+'" '+
-						  '1stOverUnder="'+ coalesce(cast(@old1stOverUnder as varchar(1)),space(1))+'" ' +
-						  'Follower="'+ coalesce(cast(@oldFollower as varchar(30)),space(1))+'" ' +
-						  'UserId="'+ coalesce(cast(@UserId as varchar(50)),space(1)) + '" '+
-						  'IP="'+ coalesce(cast(@IP as varchar(50)),space(1)) + '" '+
-						  'ErrCode="'+ coalesce(cast(@ErrCode as varchar(10)),space(1)) + '" '+
-						  'ErrMsg="'+ coalesce(cast(@ErrMsg as varchar(400)),space(1))+'" />'
-	
-	set @endRun = getdate()
-	set @duration  = datediff (millisecond,@startRun,@endRun)
-	
-	BEGIN TRY											  						  	 
+	SELECT @TrackingValueDB = '<Acc_AutoFollowBetUpdRate Username="' + COALESCE(@Username, SPACE(1)) + '" '
+	                        + 'Rate="' + coalesce(cast(@oldRate AS VARCHAR(10)), space(1)) + '" '
+	                        + 'LiveHDP="' + COALESCE(CAST(@OldLiveHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'Live1stHDP="' + COALESCE(CAST(@OldLive1stHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'LiveOU="' + COALESCE(CAST(@OldLiveOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'Live1stOU="' + COALESCE(CAST(@OldLive1stOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'NonLiveHDP="' + COALESCE(CAST(@OldNonLiveHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'NonLive1stHDP="' + COALESCE(CAST(@OldNonLive1stHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'NonLiveOU="' + COALESCE(CAST(@OldNonLiveOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'NonLive1stOU="' + COALESCE(CAST(@OldNonLive1stOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                        + 'LiveOdds="' + COALESCE(CAST(@OldLiveOdds AS VARCHAR(30)), SPACE(1)) + '" '
+	                        + 'NonLiveOdds="' + COALESCE(CAST(@OldNonLiveOdds AS VARCHAR(30)), SPACE(1)) + '" '
+	                        + 'Follower="' + COALESCE(CAST(@oldFollower AS VARCHAR(30)), SPACE(1)) + '" '
+	                        + 'UserId="' + coalesce(cast(@UserId AS VARCHAR(50)), space(1)) + '" '
+	                        + 'IP="' + coalesce(cast(@IP AS VARCHAR(50)), space(1)) + '" '
+	                        + 'ErrCode="' + coalesce(cast(@ErrCode AS VARCHAR(10)), space(1)) + '" '
+	                        + 'ErrMsg="' + coalesce(cast(@ErrMsg AS VARCHAR(400)), space(1)) + '" />'
+
+	SET @endRun = getdate()
+	SET @duration = datediff(millisecond, @startRun, @endRun)
+
+	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-			@UserID = @UserID,
-			@CustID = @CustID,
-			@ActionID = 640,
-			@TrackingValue = @LogSPData	,
-			@TrackingValue2 = @TrackingValueDB,
-			@duration = @duration 
+		    @UserID = @UserID
+		  , @CustID = @CustID
+		  , @ActionID = 640
+		  , @TrackingValue = @LogSPData
+		  , @TrackingValue2 = @TrackingValueDB
+		  , @duration = @duration
 	END TRY
-	BEGIN CATCH
-		SELECT	@LogSPData =  '<Acc_AutoFollowBetUpdRate Username="'+ coalesce(@Username,space(1)) + '" '+
-						  'Rate="'+ coalesce(cast(@Rate as varchar(10)),space(1)) + '" '+
-						  'FollowLive="'+ coalesce(cast(@FollowLive as varchar(1)),space(1)) + '" '+
-						  'Handicap="'+ COALESCE(CAST(@Handicap AS VARCHAR(1)),SPACE(1))+'" '+
-						  '1stHandicap="'+ coalesce(cast(@1stHandicap as varchar(1)),space(1)) + '" '+
-						  'OverUnder="'+ coalesce(cast(@OverUnder as varchar(1)),space(1))+'" '+
-						  '1stOverUnder="'+ coalesce(cast(@1stOverUnder as varchar(1)),space(1))+'" ' +
-						  'Follower="'+ coalesce(cast(@Follower as varchar(30)),space(1))+'" ' +
-						  'UserId="'+ coalesce(cast(@UserId as varchar(50)),space(1)) + '" '+
-						  'IP="'+ coalesce(cast(@IP as varchar(50)),space(1)) + '" '+
-						  'ErrCode="'+ coalesce(cast(@ErrCode as varchar(10)),space(1)) + '" '+
-						  'ErrMsg="'+ coalesce(cast(ERROR_MESSAGE() as varchar(400)),space(1))+'" />'
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-			@UserID = @UserID,
-			@CustID = @CustID,
-			@ActionID = 640,
-			@TrackingValue = @LogSPData	,
-			@TrackingValue2 = @TrackingValueDB,
-			@duration = @duration 
-	END CATCH
 
+	BEGIN CATCH
+		SELECT @LogSPData = '<Acc_AutoFollowBetUpdRate Username="' + COALESCE(@Username, SPACE(1)) + '" '
+	                      + 'Rate="' + COALESCE(CAST(@Rate AS VARCHAR(10)), SPACE(1)) + '" '
+	                      + 'LiveHDP="' + COALESCE(CAST(@LiveHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'Live1stHDP="' + COALESCE(CAST(@Live1stHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'LiveOU="' + COALESCE(CAST(@LiveOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'Live1stOU="' + COALESCE(CAST(@Live1stOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'NonLiveHDP="' + COALESCE(CAST(@NonLiveHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'NonLive1stHDP="' + COALESCE(CAST(@NonLive1stHDP AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'NonLiveOU="' + COALESCE(CAST(@NonLiveOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'NonLive1stOU="' + COALESCE(CAST(@NonLive1stOU AS VARCHAR(1)), SPACE(1)) + '" '
+	                      + 'LiveOdds="' + COALESCE(CAST(@LiveOdds AS VARCHAR(30)), SPACE(1)) + '" '
+	                      + 'NonLiveOdds="' + COALESCE(CAST(@NonLiveOdds AS VARCHAR(30)), SPACE(1)) + '" '
+	                      + 'Follower="' + COALESCE(CAST(@Follower AS VARCHAR(30)), SPACE(1)) + '" '
+	                      + 'UserId="' + COALESCE(CAST(@UserId AS VARCHAR(50)), SPACE(1)) + '" '
+	                      + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" '
+	                      + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" '
+	                      + 'ErrMsg="' + COALESCE(CAST(@ErrMsg AS VARCHAR(400)), SPACE(1)) + '" />'
+
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+		    @UserID = @UserID
+		  , @CustID = @CustID
+		  , @ActionID = 640
+		  , @TrackingValue = @LogSPData
+		  , @TrackingValue2 = @TrackingValueDB
+		  , @duration = @duration
+
+	END CATCH
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetUpdRate] TO [bodbAdminNet]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetUpdRate] TO [VNTeam]
+SET ANSI_NULLS ON 
 GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetUpdRate] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetUpdRate] TO [bodbAdminNet]
+GO 

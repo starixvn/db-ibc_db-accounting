@@ -1,12 +1,19 @@
-﻿ALTER PROCEDURE [Acc_AutoFollowBetInsBACustomer]	
-	@strCustID VARCHAR(MAX),
-	@UserID int=0,
-	@IP nvarchar(50) = '',
-	@rate smallmoney,
-	@Follower		VARCHAR(30),
-	@totalRows INT = 0 OUTPUT,
-	@ErrCode int = 0 Output,
-	@ErrMsg VARCHAR(1000) = '' Output
+
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetInsBACustomer    Script Date: 8/29/2014 9:35:01 AM ******/
+CREATE PROCEDURE [dbo].[Acc_AutoFollowBetInsBACustomer]
+    @strCustID  VARCHAR(MAX)
+	,@UserID    INT = 0
+	,@IP        NVARCHAR(50) = ''
+	,@rate      SMALLMONEY
+	,@Follower  VARCHAR(30)
+	,@totalRows INT = 0 OUTPUT
+	,@ErrCode   INT = 0 OUTPUT
+	,@ErrMsg    VARCHAR(1000) = '' OUTPUT
 AS
 /*  Created: Henry  
 	Date: 2012-07-06
@@ -16,85 +23,169 @@ AS
     Revisions:  
         - 20130201@Daniel: Change link server alias & failover writelog to DBTXN  
 		- 20140106@Kathy: Add new param: @Follower [Redmine:#9144]
+		- 20140428@Kathy: Down minimum rate from 0.3 to 0.01 [Redmine:#15495]
+		- 20140805@Logan:   1. Separate live and non-live setting [Redmine: #16578]
+		                    2. Do not allow user to follow himself
 	Param's Explanation:  
 	 
 	  
-*/  
-DECLARE @startRun DATETIME
-DECLARE @endRun DATETIME
-DECLARE @duration INT
-SET @startRun = GETDATE()
-DECLARE @LogSPData VARCHAR(5000)
+*/
+BEGIN
+    SET NOCOUNT ON
 
-DECLARE @TempCustID  AS TABLE (CustID INT)
-INSERT INTO @TempCustID (CustID)
-SELECT c.CustID 
-FROM Custinfo c WITH (NOLOCK) 
-	INNER JOIN DBLIC.bodb_licensee.dbo.LicenseeBAHistory lba WITH(NOLOCK) ON c.custid = lba.custid
-WHERE 
-	c.CustID IN (SELECT RTRIM(LTRIM(VAL)) FROM strSplit(@strCustID,','))
-	AND status = 'running'
+	DECLARE @startRun DATETIME
+	DECLARE @endRun DATETIME
+	DECLARE @duration INT
+
+	SET @startRun = GETDATE()
+
+	DECLARE @LogSPData VARCHAR(5000)
+	CREATE TABLE #TempCustID(CustID INT)
+
+	INSERT INTO #TempCustID(CustID)
+	SELECT c.CustID
+	  FROM custInfo c WITH(NOLOCK)
+INNER JOIN DBLIC.bodb_licensee.dbo.LicenseeBAHistory lba WITH(NOLOCK) ON c.custid = lba.custid
+	 WHERE c.CustID IN (SELECT RTRIM(LTRIM(VAL))
+			              FROM strSplit(@strCustID, ',')
+			           )
+	   AND lba.status = 'running'
+
+	DECLARE @custFollower INT
+
+	SELECT @custFollower = c.custid
+	  FROM custInfo c WITH(NOLOCK)
+	 WHERE c.username = @Follower
+	   AND c.roleid = 1
+
+	IF @@Rowcount = 0
+	BEGIN
+		SELECT @ErrMsg = 'Invalid follower, please try again!'
+			 , @ErrCode = 101
+
+		RETURN
+	END
 	
+	--Do not allow member to follow himself
+	SELECT 1
+	  FROM #TempCustID
+	 WHERE CustID = @custFollower
 
-DECLARE @custFollower int
+    IF @@Rowcount <> 0
+	BEGIN
+		SELECT @ErrMsg = 'User and follower are identical, please try again!'
+			 , @ErrCode = 106
 
-select @custFollower = c.custid
-from custInfo c WITH(NOLOCK)
-WHERE c.username = @Follower
-and c.roleid = 1 
+		RETURN
+	END
 
-IF @@Rowcount = 0
-BEGIN
-	SELECT @ErrMsg = 'Invalid follower, please try again!', @ErrCode = 101			
-	RETURN
+	-- Rate must range between 0.01 and 3, 2 decimal digits
+	IF @Rate NOT BETWEEN 0.01 AND 3 
+	   OR (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1)))
+	BEGIN
+		SELECT @ErrMsg = 'Invalid rate! Rate must range between 0.01 and 3'
+			 , @ErrCode = 103
+
+		RETURN
+	END
+
+    --Live setting
+	INSERT INTO Cust_FollowBet
+	(
+	    custid
+	  , rate
+	  , FollowLive
+	  , Follower
+	)
+	SELECT c.CustID
+		 , @rate
+		 , 1
+		 , @custFollower
+	  FROM #TempCustID c
+     WHERE NOT EXISTS (SELECT 1
+                         FROM Cust_FollowBet WITH(NOLOCK)
+                        WHERE custid = c.CustID
+                      )
+
+    SELECT @totalRows = @@ROWCOUNT
+
+	IF @totalRows = 0
+	BEGIN
+		SELECT @ErrCode = 100
+			 , @ErrMsg = 'Nothing was inserted, please check again!'
+	END
+	 
+	--Non-Live setting
+	INSERT INTO Cust_FollowBet
+	(
+	    custid
+	  , rate
+	  , FollowLive
+	  , Follower
+	)
+	SELECT c.CustID
+		 , @rate
+		 , 0
+		 , @custFollower
+	  FROM #TempCustID c
+ LEFT JOIN Cust_FollowBet cf WITH(NOLOCK) ON c.custid = cf.custid
+     WHERE NOT EXISTS (SELECT 1
+                         FROM Cust_FollowBet WITH(NOLOCK)
+                        WHERE custid = c.CustID
+                          AND FollowLive = 0
+                      )
+	
+	SELECT @totalRows = @@ROWCOUNT
+
+	IF @totalRows = 0
+	BEGIN
+		SELECT @ErrCode = 100
+			 , @ErrMsg = 'Nothing was inserted, please check again!'
+	END
+
+	SET @endRun = GETDATE()
+	SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun)
+
+	SELECT @LogSPData = '<Acc_AutoFollowBetInsBACustomer CustID="' + COALESCE(CAST(@strCustID AS VARCHAR(MAX)), SPACE(1)) + '" '
+	                  + 'rate="' + COALESCE(CAST(@rate AS VARCHAR(40)), SPACE(1)) + '" '
+	                  + 'Follower="' + COALESCE(CAST(@Follower AS VARCHAR(30)), SPACE(1)) + '" '
+	                  + 'UserID="' + COALESCE(CAST(@UserID AS VARCHAR(50)), SPACE(1)) + '" '
+	                  + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(40)), SPACE(1)) + '" '
+	                  + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(50)), SPACE(1)) + '" '
+	                  + 'ErrMsg="' + COALESCE(CAST(@ErrMsg AS VARCHAR(5000)), SPACE(1)) + '" />'
+
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+		    @UserID = @UserID
+		    ,@CustID = 0
+			,@ActionID = 635
+			,@TrackingValue = @LogSPData
+			,@TrackingValue2 = ''
+			,@duration = @duration
+	END TRY
+
+	BEGIN CATCH
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+		    @UserID = @UserID
+			,@CustID = 0
+			,@ActionID = 635
+			,@TrackingValue = @LogSPData
+			,@TrackingValue2 = ''
+			,@duration = @duration
+	END CATCH
 END
-
-INSERT INTO Cust_followBet(custid, rate, Follower)
-SELECT c.CustID, @rate, @custFollower
-FROM @TempCustID c
-	LEFT JOIN Cust_followBet cf WITH (NOLOCK) ON c.custid = cf.custid
-WHERE isnull(cf.custid,0) = 0
-
-SELECT @totalRows = @@ROWCOUNT
-
-IF @totalRows=0
-BEGIN
-	SELECT @ErrCode=100,@ErrMsg='Nothing was inserted, please check again!'
-END
-
-SET @endRun = GETDATE()
-SET @duration  = datediff (millisecond,@startRun,@endRun)
-
-SELECT @LogSPData = '<Acc_AutoFollowBetInsBACustomer CustID="'+ COALESCE(CAST(@strCustID as VARCHAR(MAX)),SPACE(1)) + '" ' +
-'rate="'+ COALESCE(CAST(@rate as VARCHAR(40)),SPACE(1)) + '" ' +
-'Follower="'+ COALESCE(CAST(@Follower as VARCHAR(30)),SPACE(1)) + '" ' +
-'UserID="'+ COALESCE(CAST(@UserID as VARCHAR(50)),SPACE(1)) + '" ' +
-'IP="'+ COALESCE(CAST(@IP as VARCHAR(40)),SPACE(1)) + '" ' +
-'ErrCode="'+ COALESCE(CAST(@ErrCode as VARCHAR(50)),SPACE(1)) + '" ' +
-'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(5000)),SPACE(1))+ '" />'
-
-BEGIN TRY
-    EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-			    @UserID = @UserID,
-			    @CustID = 0,
-			    @ActionID = 635,
-			    @TrackingValue = @LogSPData,
-			    @TrackingValue2 = '',
-			    @duration = @duration
-END TRY
-BEGIN CATCH
-    EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-			    @UserID = @UserID,
-			    @CustID = 0,
-			    @ActionID = 635,
-			    @TrackingValue = @LogSPData,
-			    @TrackingValue2 = '',
-			    @duration = @duration
-END CATCH
 
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsBACustomer] TO [bodbAdminNet]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetInsBACustomer] TO [VNTeam]
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetInsBACustomer] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsBACustomer] TO [bodbAdminNet]
 GO 
