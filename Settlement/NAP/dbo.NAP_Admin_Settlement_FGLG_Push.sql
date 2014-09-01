@@ -1,4 +1,9 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_FGLG_Push]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG_Push]    Script Date: 09/01/2014 10:55:47 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG_Push]
 	@AdminId int,
 	@action VARCHAR(10) = 'CAL-FT', -- CAL-FT, CAL-HT
 	@MatchId int,	
@@ -19,6 +24,7 @@ AS
 	Revisions:
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140507@Kathy: Add param @action (for bettype 1H FGLG (127)) [Redmine:#14449]
+		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
@@ -83,7 +89,7 @@ BEGIN
 				,@fta SMALLINT
 				,@hth SMALLINT
 				,@hta SMALLINT
-				,@ActionId TINYINT
+				,@ActionId INT
 
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -94,12 +100,14 @@ BEGIN
 
 		BEGIN CATCH
 			SELECT  @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
-				   ,@ErrCode = @ErrCode
+				   ,@ErrCode = @@error
 			RETURN
 		END CATCH
 
 		SELECT @ActionId = CASE 
-								WHEN @mode = 'CAL-FTFGLG' OR @mode = 'CAL-HTFGLG' THEN 1
+								--WHEN @mode = 'CAL-FTFGLG' OR @mode = 'CAL-HTFGLG' THEN 1
+								WHEN @mode = 'CAL-FTFGLG' THEN 1
+								WHEN @mode = 'CAL-HTFGLG' THEN 7
 								ELSE - 1
 						   END
 			,@fth = m.finalhomescore
@@ -112,16 +120,6 @@ BEGIN
 		WHERE m.matchid = @MatchId
 
 		IF @ActionId <> - 1
-			IF @sporttype = 1
-			BEGIN
-				SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-										  ELSE @GoalRecord
-									 END ,
-						@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
-										  ELSE @BetStatus
-									 END 
-			END
-
 			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 				,@action = @ActionId
 				,@fth = @fth
@@ -139,12 +137,11 @@ BEGIN
 	END
 END
 
+
+
+
+
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_FGLG_Push] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_FGLG_Push] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [vnteam] AS [dbo]

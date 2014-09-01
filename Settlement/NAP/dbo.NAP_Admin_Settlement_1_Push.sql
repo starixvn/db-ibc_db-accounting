@@ -1,10 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1_Push]    Script Date: 08/15/2014 13:55:53 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_1_Push    Script Date: 7/30/2014 5:52:28 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_1_Push    Script Date: 3/17/2014 4:21:08 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push]
 	@AdminId int,
 	@Matchid int,
@@ -28,6 +21,7 @@ AS
 
 	Revisions:		
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
+		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		
 	Param's Explanation:
 
@@ -86,6 +80,7 @@ BEGIN
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 	
+ 
 	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
 	BEGIN
 		DECLARE @ActionId INT
@@ -122,13 +117,6 @@ BEGIN
 
 		IF @ActionId <> -1
 		BEGIN
-			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-										ELSE @GoalRecord
-									END ,
-					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'') -- 1FL:1:1;
-										ELSE @BetStatus
-									END 
-
 			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 					,@action = @ActionId
 					,@fth = @FullTimeHome
@@ -145,6 +133,8 @@ BEGIN
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
 	END 	
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1_Push] TO [bodbAdminNet] AS [dbo]

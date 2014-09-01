@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 08/15/2014 13:56:06 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 09/01/2014 10:56:01 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -31,6 +31,7 @@ AS
 	Revisions: 
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
+		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -134,16 +135,6 @@ BEGIN
 		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
 
-		IF @sporttype = 1
-		BEGIN
-			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-									  ELSE @GoalRecord
-								 END ,
-					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
-									  ELSE @BetStatus
-								 END 
-		END
-
 		EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 				,@action = 13
 				,@fth = @FullTimeHome
@@ -159,6 +150,8 @@ BEGIN
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund', @sqlCommand
 	END
 END
+
+
 
 
 GO

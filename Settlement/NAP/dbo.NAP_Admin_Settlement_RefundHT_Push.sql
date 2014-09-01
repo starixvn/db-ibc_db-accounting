@@ -1,11 +1,8 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT_Push]    Script Date: 08/15/2014 13:56:40 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT_Push]    Script Date: 09/01/2014 10:56:39 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT_Push    Script Date: 31/07/2014 12:58:50 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT_Push    Script Date: 7/30/2014 5:52:28 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT_Push    Script Date: 3/17/2014 4:21:08 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT_Push]
 	@MatchId int,
 	@AdminId int,
@@ -27,6 +24,7 @@ as
 
 	Revisions:
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
+		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 	
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -100,7 +98,7 @@ BEGIN
 
 		BEGIN CATCH
 			SELECT  @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
-				   ,@ErrCode = @ErrCode
+				   ,@ErrCode = @@error
 			RETURN
 		END CATCH
 
@@ -112,16 +110,6 @@ BEGIN
 				,@BetStatus = m.betstatus
 		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
-
-		IF @sporttype = 1
-		BEGIN
-			SELECT  @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-									  ELSE @GoalRecord
-								 END 
-				   ,@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
-									  ELSE @BetStatus
-								 END 
-		END
 
 		EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 				,@action = 11
@@ -139,6 +127,9 @@ BEGIN
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-HT', @sqlCommand
 	END
 END
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT_Push] TO [bodbAdminNet] AS [dbo]
 GO
