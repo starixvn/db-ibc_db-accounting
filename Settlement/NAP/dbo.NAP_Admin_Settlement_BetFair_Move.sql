@@ -21,6 +21,8 @@ AS
 	Revisions: 
 		- 20140512@Kathy: Add more log to distinguish between NAP and old settlement system
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+		- 20140901@Kathy: Support to move tickets (non-live and live) for Betfair [Redmine:#21221]
+		
 
 	Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 
@@ -82,7 +84,23 @@ BEGIN
 	WHERE	matchid = @NewMatchID
 			AND liveindicator = 0 
 	GROUP BY bettype 
-			
+	
+	IF @@rowcount = 0
+	BEGIN
+		INSERT INTO @tmpOdds ( bettype, oddsid)
+		SELECT	bettype, max(oddsid)
+		FROM	DBPRO.BODB02.dbo.odds WITH (NOLOCK)
+		WHERE	matchid = @NewMatchID
+				AND liveindicator = 1
+		GROUP BY bettype 
+		
+		IF @@rowcount = 0
+		BEGIN
+			SELECT	@ErrCode = 102,
+					@ErrMsg  =  'The selected match has not any odds for moving tickets. Please select another match with existing odds.'
+			RETURN
+		END
+	END
 	UPDATE	bettrans WITH (ROWLOCK,UPDLOCK)
 	SET		matchid		= @NewMatchID, 
 			oddsid		= o.oddsid, 
