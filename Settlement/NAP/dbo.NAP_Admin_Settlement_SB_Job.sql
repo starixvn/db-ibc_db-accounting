@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_SB_Job]    Script Date: 08/07/2014 14:11:51 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_SB_Job]    Script Date: 09/01/2014 11:34:12 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -18,6 +18,7 @@ AS
 		- 20140507@Kathy: - Add more settlement actions
 						  - Modify betstatus, goalrecord format before send to Apollo site
 		- 20140528@Kathy: rotate calculating sports in queue
+		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -180,16 +181,24 @@ BEGIN
 		WHERE keyid = @keyId
 
 		SELECT @ActionId = CASE 
-				WHEN @Action = 'CAL-HT' THEN 2
-				WHEN @Action = 'CAL-FT' THEN 3
-				WHEN @Action = 'CAL' THEN 4
-				WHEN @Action = 'CAL-FGLG' OR @Action = 'CAL-FTFGLG' OR @Action = 'CAL-HTFGLG' THEN 1
-				WHEN @Action = 'Refund-HT' THEN 11
-				WHEN @Action = 'Refund-FT' THEN 12
-				WHEN @Action = 'Refund' THEN 13
-				WHEN @Action = 'Refund-FGLG' OR @Action = 'Refund-FTFGLG' THEN 17
-				WHEN @Action = 'Refund-LG' OR @Action = 'Refund-FTLG' THEN 18
-				WHEN @Action = 'UNDO' THEN 0
+				WHEN @Action = 'CAL-HT'			THEN 2
+				WHEN @Action = 'CAL-FT'			THEN 3
+				WHEN @Action = 'CAL'			THEN 4
+				--WHEN @Action = 'CAL-FGLG' OR @Action = 'CAL-FTFGLG' OR @Action = 'CAL-HTFGLG' THEN 1
+				WHEN @Action = 'CAL-FTFGLG'		THEN 1
+				WHEN @Action = 'CAL-HTFGLG'		THEN 7
+				WHEN @Action = 'Refund-HT'		THEN 11
+				WHEN @Action = 'Refund-FT'		THEN 12
+				WHEN @Action = 'Refund'			THEN 13
+				--WHEN @Action = 'Refund-FGLG' OR @Action = 'Refund-FTFGLG' THEN 17
+				--WHEN @Action = 'Refund-LG' OR @Action = 'Refund-FTLG' THEN 18
+				WHEN @Action = 'Refund-FTFGLG'	THEN 17
+				WHEN @Action = 'Refund-FTLG'	THEN 18
+				WHEN @Action = 'Refund-HTFGLG'	THEN 19
+				WHEN @Action = 'Refund-HTLG'	THEN 21
+				WHEN @Action = 'Refund-FGLG'	THEN 20 -- Refund all FGLG
+				WHEN @Action = 'Refund-LG'		THEN 22 -- Refund all LG
+				WHEN @Action = 'UNDO'			THEN 0
 				ELSE - 1
 				END
 			,@fth = m.finalhomescore
@@ -204,12 +213,6 @@ BEGIN
 
 		IF @ActionId <> - 1
 		BEGIN
-			SELECT @GoalRecord = CASE when CHARINDEX(';',@GoalRecord) > 0 THEN REPLACE(@GoalRecord,';','')
-										ELSE @GoalRecord
-									END ,
-					@BetStatus = CASE when CHARINDEX('1FL:',@BetStatus) > 0 THEN REPLACE(@BetStatus,SUBSTRING(@BetStatus,CHARINDEX('1FL:',@BetStatus),8),'')
-										ELSE @BetStatus
-							     END 
 			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
 				,@action = @ActionId
 				,@fth = @fth
@@ -221,6 +224,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_SB_Job] TO [vnteam] AS [dbo]
