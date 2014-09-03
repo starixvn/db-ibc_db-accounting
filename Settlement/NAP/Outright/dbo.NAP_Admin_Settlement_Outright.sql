@@ -4,7 +4,7 @@
 	,@Action		VARCHAR(10)		='CAL'	
 	,@Deadheat		FLOAT			= 1 
 	,@isDeadheat	BIT				= 0 
-	,@Creator		INT				= 0 
+	,@AdminID		INT				= 0 
 	,@ErrCode		INT				= 0  OUTPUT
 	,@ErrMsg		NVARCHAR(200)	= '' OUTPUT
 AS
@@ -22,6 +22,7 @@ AS
 		+ @Status	= {WON | LOSE} | UNDO | REFUND 
 		+ @Deadheat = fraction of deadheat to divide (1,2,3  etc)	
 */
+
 BEGIN
 	SET NOCOUNT ON 
 	-- check and not allow attempt to settlement same game while it's still not finish
@@ -59,7 +60,7 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @Creator,
+				@UserID = @AdminID,
 				@Matchid = @Matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
@@ -69,7 +70,7 @@ BEGIN
 		BEGIN CATCH
 			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @Creator,
+				@UserID = @AdminID,
 				@Matchid = @Matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
@@ -205,7 +206,7 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @Creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
@@ -215,7 +216,7 @@ BEGIN
 		BEGIN CATCH
 			SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @Creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
@@ -226,7 +227,7 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @Creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
@@ -236,7 +237,7 @@ BEGIN
 		BEGIN CATCH
 			SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @Creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 2,
 				@ActionID = @ActionID,
@@ -247,7 +248,7 @@ BEGIN
 	-- WRITE LOG	
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
-			@UserID = @Creator
+			@UserID = @AdminID
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
 			,@LeagueID = @LeagueID
@@ -257,7 +258,7 @@ BEGIN
 	BEGIN CATCH
 		SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
-			@UserID = @Creator
+			@UserID = @AdminID
 			,@MatchID = @matchid
 			,@ActionID = @ActionID
 			,@LeagueID = @LeagueID
