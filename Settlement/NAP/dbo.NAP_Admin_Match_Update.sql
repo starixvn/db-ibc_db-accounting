@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 09/03/2014 15:40:27 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 09/03/2014 17:58:04 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -259,6 +259,7 @@ BEGIN
 		WHERE EventID = @MatchID
 	END	
 END
+
 
 
 
