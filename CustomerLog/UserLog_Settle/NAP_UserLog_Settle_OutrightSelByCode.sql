@@ -1,8 +1,9 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_UserLog_Settle_OutrightSelByCode] 
-	@MatchCode varchar(50) = '',
-	@FromDate DATETIME = '',
-	@ToDate DATETIME = '',
-	@BalanceUpDay DATETIME = ''
+	@MatchCode	VARCHAR(50) = NULL,
+	@MatchID	INT			= NULL,	 
+	@FromDate	DATETIME	= '',
+	@ToDate		DATETIME	= '',
+	@BalanceUpDay DATETIME	= ''
 AS
 /*
 	Created: Jamie
@@ -12,6 +13,9 @@ AS
 	Original:
 
 	Revisions: 	
+
+	Param Explanation: 
+		@MatchID = OrID 
 
 */
 BEGIN
@@ -41,7 +45,8 @@ BEGIN
 				,teamid
 				,eventdate
 		FROM	bodb02.dbo.outright WITH (NOLOCK)
-		WHERE	matchcode = @MatchCode
+		WHERE	matchcode = CASE WHEN @MatchCode IS NULL THEN matchcode ELSE @MatchCode END 
+				AND orid  = CASE WHEN @MatchID IS NULL THEN orid ELSE @MatchID END 
 				AND eventdate BETWEEN @FromDate AND @ToDate
 
 
@@ -60,7 +65,8 @@ BEGIN
 					,teamid
 					,eventdate
 			FROM	bodb02.dbo.outright14 WITH (NOLOCK)
-			WHERE	matchcode = @MatchCode
+			WHERE	matchcode = CASE WHEN @MatchCode IS NULL THEN matchcode ELSE @MatchCode END 
+					AND orid  = CASE WHEN @MatchID IS NULL THEN orid ELSE @MatchID END 
 					AND eventdate BETWEEN @FromDate AND @ToDate
 	END
 
@@ -81,7 +87,8 @@ BEGIN
 					,teamid
 					,eventdate
 			FROM	DBARC.bodb_Archive.dbo.outright_bk WITH (NOLOCK)
-			WHERE	matchcode = @MatchCode
+			WHERE	matchcode = CASE WHEN @MatchCode IS NULL THEN matchcode ELSE @MatchCode END 
+					AND orid  = CASE WHEN @MatchID IS NULL THEN orid ELSE @MatchID END 
 					AND eventdate BETWEEN @FromDate AND @ToDate
 	END
 
