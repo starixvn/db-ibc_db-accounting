@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_UserLog_Settle_OutrightSelByLeagueID]
+﻿ALTER PROCEDURE [dbo].[NAP_UserLog_Settle_OutrightSelByLeagueID]
 	@LeagueID	INT = 0 
 	,@MatchID	INT	= 0 
 	,@FromDate	DATETIME
@@ -17,7 +17,6 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-
 	SELECT	 l.logid
 			,l.logdate
 			,o.username
@@ -38,7 +37,7 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_UserLog_Settle_OutrightSelByLeagueID] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_UserLog_Settle_OutrightSelByLeagueID] TO [bodbAdminNet]
 GO
 
  
