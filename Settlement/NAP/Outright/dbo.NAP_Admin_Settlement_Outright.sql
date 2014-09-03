@@ -22,6 +22,7 @@ AS
 		+ @Status	= {WON | LOSE} | UNDO | REFUND 
 		+ @Deadheat = fraction of deadheat to divide (1,2,3  etc)	
 */
+
 BEGIN
 	SET NOCOUNT ON 
 	-- check and not allow attempt to settlement same game while it's still not finish
