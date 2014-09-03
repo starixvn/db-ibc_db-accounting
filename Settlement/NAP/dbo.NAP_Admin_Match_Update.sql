@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 08/27/2014 14:03:22 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 09/03/2014 15:40:27 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -35,6 +35,7 @@ AS
 		
 */
 BEGIN
+	select '1'
 	SET @BetStatus = ISNULL(@BetStatus, N'')
 	
 	IF @Command = 'NAP_Admin_Settlement_1-UNDO'
@@ -54,7 +55,7 @@ BEGIN
 			hthomescore = @HTHome, htawayscore = @HTAway,
 			betstatus = CASE WHEN @action = 'CAL-FT' AND CHARINDEX('Refund HT;',betstatus)>0 THEN 'Refund HT;' + ISNULL(@betstatus,'') ELSE @betstatus END,
 			goalrecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
-							  WHEN @action = 'CAL-HT' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
+							  WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> '' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
 							  ELSE @goalrecord END,
 			eventstatus = CASE	WHEN @action = 'CAL' THEN N'completed'
 								WHEN @action = 'CAL-HT' AND @FTDone = 1 THEN N'completed'
@@ -66,6 +67,7 @@ BEGIN
 							WHEN @action = 'CAL-FT' THEN GETDATE()
 							ELSE settleTime END	
 		WHERE matchid = @MatchID
+		
 	END
 	IF @Command = 'NAP_Admin_Settlement_Refund_All'
 	BEGIN
@@ -133,12 +135,13 @@ BEGIN
 							 ELSE @betstatus + ';'
 						END
 			,GoalRecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
-							   WHEN @action = 'CAL-HT' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
+							   WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> '' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
 							   ELSE @goalrecord 
 						  END
 			--,goalrecord = @GoalRecord
 			,changetime = GETDATE()
 		WHERE matchid = @MatchID
+		
 	END
 	IF @Command = 'NAP_Admin_Settlement_Refund_FGLG'
 	BEGIN
@@ -256,6 +259,7 @@ BEGIN
 		WHERE EventID = @MatchID
 	END	
 END
+
 
 
 
