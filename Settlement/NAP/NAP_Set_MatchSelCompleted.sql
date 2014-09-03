@@ -1,7 +1,12 @@
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 09/03/2014 15:07:12 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
-	,-- 0 for ALL Leagues
+	,-- 0 for ALL Leagues   
 	@isReLoad BIT = 0
 AS
 /*
@@ -14,6 +19,7 @@ AS
 	Revisions:
 		- 20140421@Kathy: get match status in queue
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
+		- 20140701@Viet: change goalrecord to varchar(50), matchcode to nvarchar(50)
 
 
 	Param explanation: 
@@ -21,7 +27,7 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-
+	
 	SELECT @LeagueID = CASE 
 			WHEN @isReLoad = 1 THEN ISNULL(@LeagueID, 0)
 			ELSE 0
@@ -38,13 +44,13 @@ BEGIN
 		,IsCalRefund BIT
 		,homeid INT
 		,awayid INT
-		,matchcode NVARCHAR(50)  
+		,matchcode NVARCHAR(50)
 		,kickofftime DATETIME
 		,finalhomescore INT
 		,finalawayscore INT
 		,betstatus NVARCHAR(50)
 		,eventstatus NVARCHAR(50)
-		,Foddsstatus VARCHAR(10)
+		,Foddsstatus NVARCHAR(50)
 		,sporttype TINYINT
 		,IsNeutral BIT
 		,eventdate DATETIME
@@ -68,25 +74,25 @@ BEGIN
 		,IsRefund BIT
 		,IsCalRefund BIT
 		,IsHalfTimeCal BIT
-		,suspenderHalfTime VARCHAR(20)
-		,suspenderFullTime VARCHAR(20)
+		,suspenderHalfTime NVARCHAR(50)
+		,suspenderFullTime NVARCHAR(50)
 		,calculate BIT
 		,isPending BIT
 		,isUndecided BIT
-		, leagueid int
+		,leagueid int
 		,homeid int 
 		,awayid int 
 		,matchcode nvarchar(50)
 		,kickofftime datetime
 		,finalhomescore int 
 		,finalawayscore int 
-		,betstatus varchar(50)
-		,eventstatus varchar(50)
-		,Foddsstatus varchar(50)
-		,sporttype int 		
+		,betstatus nvarchar(50)
+		,eventstatus nvarchar(50)
+		,Foddsstatus nvarchar(50)
+		,sporttype TINYINT 		
 		, IsNeutral bit
 		,eventdate smalldatetime
-		,goalrecord varchar(20)
+		,goalrecord varchar(50)
 		,hthomescore int 
 		,htawayscore int 		
 		)
@@ -128,14 +134,16 @@ BEGIN
 		INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ht WITH (NOLOCK) ON mr.ConfirmHT = ht.custid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ft WITH (NOLOCK) ON mr.ConfirmFT = ft.custid
-	WHERE m.eventdate = @Date AND m.leagueID = CASE 
+	WHERE m.eventdate = @Date 	AND 
+	m.leagueID = CASE 
 			WHEN @LeagueID <> 0 THEN @LeagueID
 			ELSE m.leagueID
 			END AND m.sporttype = CASE 
 			WHEN @sporttype = 0 THEN sporttype
 			ELSE @sporttype
-			END AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0)
-
+			END 
+			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0)
+	
 	INSERT INTO #matchList	
 		SELECT tm.matchid
 			,tm.leagueid
@@ -172,7 +180,7 @@ BEGIN
 			,case when C.cntHTFGLG = 0 THEN 0 ELSE 1 END as isExistHTFGLG
 			,C.BetCount
 		FROM #m tm 
-			INNER JOIN (
+			LEFT JOIN (
 			SELECT b.matchid
 				,count(b.matchid) AS BetCount
 				,SUM(CASE 
@@ -198,6 +206,7 @@ BEGIN
 	WHERE Starttime > DATEADD(HH, - 1, GETDATE()) 
 	AND IsCalculating IN (1, 0)
 	GROUP BY matchid
+
 
 	SELECT m.matchid 
 		,leagueid 
@@ -239,13 +248,7 @@ BEGIN
 END
 
 
-
 GO
-
-GRANT EXECUTE ON [NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_MatchSelCompleted] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelCompleted] TO [vnteam] AS [dbo]
