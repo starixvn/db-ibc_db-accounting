@@ -17,7 +17,6 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-
 	SELECT	 l.logid
 			,l.logdate
 			,o.username
