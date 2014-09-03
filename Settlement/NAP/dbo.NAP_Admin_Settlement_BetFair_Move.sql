@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_BetFair_Move]    Script Date: 08/07/2014 14:10:41 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_BetFair_Move]    Script Date: 09/03/2014 10:08:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_BetFair_Move]
 	@NewMatchID		INT,
 	@AdminId		INT,
 	@ErrCode		INT = 0 OUTPUT,
-	@ErrMsg			NVARCHAR(100)='' OUTPUT,  
+	@ErrMsg			NVARCHAR(200)='' OUTPUT,  
 	@NewMatchcode	NVARCHAR(20) ='' OUTPUT,
 	@IP varchar(15) = ''
 AS
@@ -42,11 +42,11 @@ BEGIN
 
 	DECLARE @finalhomescore INT, @finalawayscore INT,
 			@hthomescore INT, @htawayscore INT,
-			@betstatus nvarchar(50), @goalrecord varchar(50), @Remark varchar(50)
+			@betstatus nvarchar(50), @goalrecord varchar(50), @Remark nvarchar(100)
 
 	DECLARE @finalhomescore1 INT, @finalawayscore1 INT,
 			@hthomescore1 INT, @htawayscore1 INT,
-			@betstatus1 nvarchar(50), @goalrecord1 varchar(50), @Remark1 varchar(50)
+			@betstatus1 nvarchar(50), @goalrecord1 varchar(50), @Remark1 nvarchar(100)
 
 	DECLARE @tmpOdds TABLE (
 		bettype		INT,
@@ -191,6 +191,7 @@ BEGIN
 	END CATCH
 
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_BetFair_Move] TO [bodbAdminNet] AS [dbo]
