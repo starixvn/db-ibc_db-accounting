@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_3_11bettypes]    Script Date: 08/27/2014 14:05:12 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_3]    Script Date: 09/04/2014 13:21:42 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -156,12 +156,12 @@ BEGIN
 		,@oddevenht = ((@hth + @hta) % 2)
 		,@oddevenhome = CASE 
 						WHEN @sporttype IN (5, 6, 9, 30) AND @T_Home > 0 THEN @T_Home % 2
-						ELSE ((@fth + @fta) % 2)
+						ELSE ((@fth ) % 2)
 					  END
 		,@oddevenhome_ht = @hth % 2
 		,@oddevenaway = CASE 
 							WHEN @sporttype IN (5, 6, 9, 30) AND @T_Away > 0 THEN @T_Away % 2
-							ELSE ((@fth + @fta) % 2)
+							ELSE ((@fta) % 2)
 						END
 		,@oddevenaway_ht = @hta % 2
 		,@totalgoal = CASE 
@@ -530,3 +530,8 @@ BEGIN
 END
 
 
+
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_3] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_3] TO [vnteam] AS [dbo]
