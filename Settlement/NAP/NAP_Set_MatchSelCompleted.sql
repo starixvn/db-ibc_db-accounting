@@ -1,8 +1,11 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 09/08/2014 10:27:37 ******/
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 09/08/2014 01:53:01 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompleted    Script Date: 05/09/2014 6:55:37 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
@@ -21,6 +24,7 @@ AS
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20140701@Viet: change goalrecord to varchar(50), matchcode to nvarchar(50)
 		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
+		- 20140907@Viet: change back left join to inner join
 
 
 	Param explanation: 
@@ -249,7 +253,6 @@ BEGIN
 
 	DROP TABLE #matchList
 END
-
 
 
 GO
