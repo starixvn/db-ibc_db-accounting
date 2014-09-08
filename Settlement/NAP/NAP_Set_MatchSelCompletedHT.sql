@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Set_MatchSelCompletedHT] @Date DATETIME
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompletedHT]    Script Date: 09/08/2014 10:31:04 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompletedHT    Script Date: 3/17/2014 4:21:11 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompletedHT] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues
@@ -14,6 +21,8 @@ AS
 	Revisions:
 		- 20140421@Kathy: get match status in queue
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
+		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
+		
 		
 */
 BEGIN
@@ -180,6 +189,8 @@ BEGIN
 				inner JOIN DBPRO.BODB02.dbo.match WITH (NOLOCK) ON match.matchid = bettrans.matchid
 			WHERE match.eventdate = @Date AND BETTYPE <= 19000 AND match.eventstatus IN ('Closed', 'running', 'internal') 
 			AND match.sporttype = @sporttype
+			AND bettype NOT IN (1231, 1232, 1233)
+			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			GROUP BY bettrans.matchid
 			) c ON m.matchid = c.matchid
 		) x LEFT JOIN @tblSingle t ON t.matchid = x.matchid
@@ -188,11 +199,6 @@ BEGIN
 END
 
 GO
-
-GRANT EXECUTE ON [NAP_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_MatchSelCompletedHT] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [vnteam] AS [dbo]

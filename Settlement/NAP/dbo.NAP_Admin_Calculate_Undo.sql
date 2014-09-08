@@ -1,4 +1,12 @@
-ALTER PROCEDURE [NAP_Admin_Calculate_Undo] @matchid INT
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Undo]    Script Date: 09/08/2014 10:38:52 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_Undo    Script Date: 3/20/2014 5:36:25 PM ******/
+
+/****** Object:  Stored Procedure dbo.Admin_Calculate_Undo    Script Date: 2/26/2014 6:01:44 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Undo] @matchid INT
 AS
 /*
 	Created: Kathy
@@ -8,7 +16,7 @@ AS
 	Original: Admin_Calculate_Undo
 
 	Revisions:
-		
+		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
 	Param's Explanation:
 			• @matchid: matchid of match to be unsettled
 */
@@ -55,6 +63,7 @@ BEGIN
 		WHERE matchid = @matchid AND
 			--status NOT IN ('running','waiting','void','reject')
 			statusID NOT IN (0, 1, 102, 101) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND bettype NOT IN (1231,1232,1233)
 
 		IF @@ROWCOUNT < 10000
 			BREAK
@@ -62,8 +71,4 @@ BEGIN
 END
 
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Calculate_Undo] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Undo] TO [vnteam] AS [dbo]

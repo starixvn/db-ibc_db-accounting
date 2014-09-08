@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 08/29/2014 17:46:52 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 09/08/2014 10:36:54 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -24,6 +24,7 @@ AS
 		- 20140710@Kathy: Apply BetRadar - bettype 135 (PenaltyShootout) - check PS status [Redmine:#17142]
 		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30)[Redmine:#19310]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
+		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
 */
 BEGIN
 	SET NOCOUNT ON
@@ -153,8 +154,8 @@ BEGIN
 			)
 
 		INSERT INTO @status
-		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS  
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1  
+		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
@@ -170,6 +171,8 @@ BEGIN
 					END)
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype NOT BETWEEN 1301 AND 1334
+		AND bettype NOT IN (1231, 1232, 1233)
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		GROUP BY CASE 
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1
 				WHEN bettype = 14 THEN 2
@@ -460,6 +463,7 @@ BEGIN
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO

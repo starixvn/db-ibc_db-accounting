@@ -1,8 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundAll]    Script Date: 08/27/2014 14:02:52 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundAll]    Script Date: 09/08/2014 10:39:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_RefundAll    Script Date: 8/29/2014 1:49:58 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_RefundAll    Script Date: 26/08/2014 2:14:11 PM ******/
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundAll] @matchid INT
 	,@fth SMALLMONEY = 0
@@ -23,7 +25,8 @@ AS
 		- 20140711@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140728@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140812@Kathy: Support new 11 bettypes [Redmine:#19667]
-
+		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
+		
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
 BEGIN
@@ -68,7 +71,7 @@ BEGIN
 			,scomm = 0
 			,ruben = 1
 			,statuswinlost = 0
-		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) AND bettype NOT IN (14, 127) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) AND bettype NOT IN (14, 127,1231,1232,1233) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
@@ -84,13 +87,6 @@ BEGIN
 			BREAK
 	END
 END
-
-
-
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundAll] TO [bodbAdminNet] AS [dbo]

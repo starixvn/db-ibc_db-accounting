@@ -1,8 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFT]    Script Date: 08/27/2014 14:03:08 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFT]    Script Date: 09/08/2014 10:39:22 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_RefundFT    Script Date: 8/29/2014 1:49:52 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_RefundFT    Script Date: 26/08/2014 2:14:10 PM ******/
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFT] @matchid INT
 	,@IsExcludeBetdaq BIT = 0
@@ -26,7 +28,8 @@ AS
 		- 20140620@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140728@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
-
+		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
+		
 	Param's Explanation:
 		@IsRefundHT: Indicate whether or not match has been refunded HT
 		@IsHTCal: Indicate whether or not match has been calculated HT
@@ -78,7 +81,7 @@ BEGIN
 			,acomm = 0
 			,scomm = 0
 		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) 
-			AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 126, 127, 129, 136, 138, 143, 151) 
+			AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 126, 127, 129, 136, 138, 143, 151,1231,1232,1233) 
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
@@ -95,13 +98,6 @@ BEGIN
 			BREAK
 	END
 END
-
-
-
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundFT] TO [bodbAdminNet] AS [dbo]

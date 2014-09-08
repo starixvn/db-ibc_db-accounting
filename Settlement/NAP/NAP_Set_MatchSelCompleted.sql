@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 09/03/2014 15:07:12 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 09/08/2014 10:27:37 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -20,6 +20,7 @@ AS
 		- 20140421@Kathy: get match status in queue
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20140701@Viet: change goalrecord to varchar(50), matchcode to nvarchar(50)
+		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
 
 
 	Param explanation: 
@@ -195,6 +196,8 @@ BEGIN
 				INNER JOIN #m stm ON b.matchid = stm.matchid
 			WHERE winlostdate = @Date
 				and b.matchid in (select distinct matchid from #m)
+				AND b.bettype NOT IN (1231, 1232, 1233)
+				AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			GROUP BY b.matchid
 			) AS C ON tm.matchid = c.matchid
 
@@ -246,6 +249,7 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+
 
 
 GO
