@@ -181,7 +181,7 @@ BEGIN
 			,case when C.cntHTFGLG = 0 THEN 0 ELSE 1 END as isExistHTFGLG
 			,C.BetCount
 		FROM #m tm 
-			LEFT JOIN (
+			INNER JOIN (
 			SELECT b.matchid
 				,count(b.matchid) AS BetCount
 				,SUM(CASE 
