@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_GamesActiveMember]    Script Date: 09/09/2014 10:21:10 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
  @fromdate datetime,  
  @todate datetime,  
  @BalanceUpDay datetime
@@ -14,6 +21,7 @@ AS
     - 20110921@Johnson: Optimize peformance and re-calculate report
     - 20120231@Sophia: Add Live Casino
     - 20130121@Dan: add linked server DBSUM for bodb_Summary
+    - 20140909@Daniel: include 3-Games combinations
 */  
   
 SET NOCOUNT ON  
@@ -156,7 +164,24 @@ UNION ALL
 	SELECT count(1), 'Casino-Live Casino'
 	FROM #statistic
 	WHERE CS = 1 AND LC = 1 AND NG = 0 AND BG = 0
-	
+--3-games combinations:
+UNION ALL
+	SELECT count(1), 'Casino-Live Casino-Number Game'
+	FROM #statistic
+	WHERE CS = 1 AND LC = 1 AND NG = 1 AND BG = 0
+UNION ALL
+	SELECT count(1), 'Casino-Live Casino-Bingo'
+	FROM #statistic
+	WHERE CS = 1 AND LC = 1 AND NG = 0 AND BG = 1
+UNION ALL
+	SELECT count(1), 'Casino-Number Game-Bingo'
+	FROM #statistic
+	WHERE CS = 1 AND LC = 0 AND NG = 1 AND BG = 1
+UNION ALL
+	SELECT count(1), 'Live Casino-Number Game-Bingo'
+	FROM #statistic
+	WHERE CS = 0 AND LC = 1 AND NG = 1 AND BG = 1
+--end of 3 -games combinations ------------------------------
 UNION ALL
 	SELECT count(1), 'Number Game-Bingo-Casino-Live Casino'
 	FROM #statistic
@@ -173,7 +198,8 @@ DROP TABLE #statistic
 
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActiveMember] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActiveMember] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_GamesActiveMember] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_GamesActiveMember] TO [vnteam] AS [dbo]
