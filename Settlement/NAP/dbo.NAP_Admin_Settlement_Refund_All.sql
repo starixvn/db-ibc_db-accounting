@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_11bettypes]    Script Date: 08/27/2014 14:06:42 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All]    Script Date: 09/09/2014 13:48:20 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER OFF
@@ -36,6 +36,7 @@ AS
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140812@Kathy: Support new 11 bettypes [Redmine:#19667]
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
 	
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -145,7 +146,10 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype not IN (14, 127)
+	WHERE matchid = @matchid 
+	AND bettype NOT IN (14, 127)
+	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product	
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -469,7 +473,10 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype NOT in (14,127)
+	WHERE matchid = @matchid 
+	AND bettype NOT in (14,127)
+	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	GROUP BY custid
 
 	INSERT INTO #Balance
@@ -679,10 +686,6 @@ BEGIN
 			,@Log
 	END
 END
-
-
-
-
 
 
 

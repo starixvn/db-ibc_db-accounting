@@ -1,6 +1,4 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 09/08/2014 01:53:01 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 09/09/2014 15:03:37 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -25,6 +23,7 @@ AS
 		- 20140701@Viet: change goalrecord to varchar(50), matchcode to nvarchar(50)
 		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
 		- 20140907@Viet: change back left join to inner join
+		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33)
 
 
 	Param explanation: 
@@ -200,7 +199,7 @@ BEGIN
 				INNER JOIN #m stm ON b.matchid = stm.matchid
 			WHERE winlostdate = @Date
 				and b.matchid in (select distinct matchid from #m)
-				AND b.bettype NOT IN (1231, 1232, 1233)
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 				AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			GROUP BY b.matchid
 			) AS C ON tm.matchid = c.matchid
@@ -253,7 +252,6 @@ BEGIN
 
 	DROP TABLE #matchList
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]

@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 09/08/2014 10:36:54 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 09/09/2014 15:06:59 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -25,6 +25,7 @@ AS
 		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30)[Redmine:#19310]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
+		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33)
 */
 BEGIN
 	SET NOCOUNT ON
@@ -171,7 +172,7 @@ BEGIN
 					END)
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype NOT BETWEEN 1301 AND 1334
-		AND bettype NOT IN (1231, 1232, 1233)
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		GROUP BY CASE 
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1

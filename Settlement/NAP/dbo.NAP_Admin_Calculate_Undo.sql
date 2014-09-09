@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Undo]    Script Date: 09/08/2014 10:38:52 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Undo]    Script Date: 09/09/2014 13:43:32 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,6 +17,8 @@ AS
 
 	Revisions:
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
+		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33)
+		
 	Param's Explanation:
 			• @matchid: matchid of match to be unsettled
 */
@@ -63,7 +65,7 @@ BEGIN
 		WHERE matchid = @matchid AND
 			--status NOT IN ('running','waiting','void','reject')
 			statusID NOT IN (0, 1, 102, 101) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
-			AND bettype NOT IN (1231,1232,1233)
+			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 
 		IF @@ROWCOUNT < 10000
 			BREAK

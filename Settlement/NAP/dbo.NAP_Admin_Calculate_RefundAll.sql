@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundAll]    Script Date: 09/08/2014 10:39:40 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundAll]    Script Date: 09/09/2014 14:17:58 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -26,6 +26,7 @@ AS
 		- 20140728@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140812@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
+		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33)
 		
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -71,17 +72,20 @@ BEGIN
 			,scomm = 0
 			,ruben = 1
 			,statuswinlost = 0
-		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) AND bettype NOT IN (14, 127,1231,1232,1233) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
-			AND 1 = CASE 
-				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
-				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
-				WHEN @IsSettleAbandonedMatchIBC = 1 
-						AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
-							AND recommend <> 1688156) 
-						AND statusID IN (112, 113) 
-						AND bettype IN (4, 6, 13, 26, 27, 30, 126, 129, 130, 131, 132, 133, 134, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 152) THEN 0
-				ELSE 1
-				END
+		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) 
+		AND bettype NOT IN (14, 127) 
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND 1 = CASE 
+			WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
+			WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
+			WHEN @IsSettleAbandonedMatchIBC = 1 
+					AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
+						AND recommend <> 1688156) 
+					AND statusID IN (112, 113) 
+					AND bettype IN (4, 6, 13, 26, 27, 30, 126, 129, 130, 131, 132, 133, 134, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 152) THEN 0
+			ELSE 1
+			END
 
 		IF @@ROWCOUNT < 10000
 			BREAK

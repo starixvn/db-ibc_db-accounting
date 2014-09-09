@@ -1,4 +1,9 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_s161] 
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s161]    Script Date: 09/09/2014 14:31:48 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_s161] 
 	@MatchId INT
 	,@IsLive BIT			= 0
 	,@DrawSeq TINYINT		= 0
@@ -18,7 +23,7 @@ AS
 	Orignal: Admin_Settlement_s161
 	
 	Revisions:
-		
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
 						   
 	Param's Explanation:
 		+ @IsLoop (used for Balance):
@@ -112,6 +117,8 @@ BEGIN
 		SELECT custid, SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH(ROWLOCK)
 		WHERE matchid = @MatchId AND transid <= @MaxTransID
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -244,6 +251,8 @@ BEGIN
 		SELECT custid, SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH(ROWLOCK)
 		WHERE matchid = @matchid AND transid <= @MaxTransID
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		GROUP BY custid
 			--===
 	END
@@ -371,11 +380,8 @@ END
 
 
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_s161] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s161] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_s161] TO [vnteam] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s161] TO [Dot_Casino] AS [dbo]
 GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_s161] TO [vnteam] AS [dbo]

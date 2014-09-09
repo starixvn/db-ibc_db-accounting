@@ -1,3 +1,8 @@
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 09/09/2014 13:50:32 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT
 	,@fta INT
@@ -30,6 +35,7 @@ AS
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20140820@Jamie: Correct bettype 143, 144 [Redmine:#19667]
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
 
 
 	Param's Explanation:
@@ -164,13 +170,23 @@ BEGIN
 			,statuswinlost = 0
 			,ruben = 1
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (14, 127) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND bettype NOT IN (14, 127) 
+		AND statusID NOT IN (101, 102)
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		
 
 		UPDATE dbo.BetParlayDetail
 		SET winlostdate = @matchdate
 			,statuswinlost = 0
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (14, 127) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND bettype NOT IN (14, 127) 
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND statusID NOT IN (101, 102)
+		
 	END
 			-- ===================================================
 	ELSE IF @action = 'REFUND-FT'
@@ -181,13 +197,21 @@ BEGIN
 			,statuswinlost = 0
 			,ruben = 1
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) 
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND statusID NOT IN (101, 102)
 
 		UPDATE dbo.BetParlayDetail
 		SET winlostdate = @matchdate
 			,statuswinlost = 0
 			,statusID = 103
-		WHERE matchid = @matchid AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) 
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND statusID NOT IN (101, 102)
 	END
 	ELSE IF @action = 'REFUND-HT'
 	BEGIN
@@ -257,12 +281,18 @@ BEGIN
 			,statuswinlost = 0
 			,ruben = 0
 			,statusID = 0
-		WHERE matchid = @matchid AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND statusID NOT IN (101, 102)
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 
 		UPDATE dbo.BetParlayDetail
 		SET statuswinlost = 0
 			,statusID = 0
-		WHERE matchid = @matchid AND statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+		AND statusID NOT IN (101, 102)
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	END
 			-- ===================================================
 			-- ===================================================
@@ -1055,6 +1085,7 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]
