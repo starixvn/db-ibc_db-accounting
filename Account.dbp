@@ -441,6 +441,9 @@ Begin DataProject = "Account"
                Script = "dbo.NAP_BettransDelSpecial_OutrightSel.sql"
                Script = "dbo.NAP_BettransSelDelSpecial_Outright.sql"
             End
+            Begin Folder = "VoidBetID"
+               Script = "NAP_BettransSpecialDelBetID_Sel.sql"
+            End
          End
          Begin Folder = "Number Game"
             Script = "dbo.Acc_BettransDelSpecial_NumberGame.sql"
