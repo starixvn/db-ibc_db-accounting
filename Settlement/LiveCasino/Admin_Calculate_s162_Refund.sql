@@ -1,4 +1,8 @@
-﻿
+﻿/****** Object:  StoredProcedure [dbo].[Admin_Calculate_s162_Refund]    Script Date: 09/10/2014 09:11:37 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[Admin_Calculate_s162_Refund]
 	@matchid int	
 AS
@@ -10,6 +14,7 @@ AS
 	
 	Revisions:		
 		- 20120426@Lukas: Get from production & exclude DB044
+		- 20140910@Kathy: Include range of LC bettypes (1101 -> 1199)
 */
 SET NOCOUNT ON
 
@@ -51,7 +56,10 @@ BEGIN
 		ruben=1
 	WHERE matchid=@matchid
 		and statusID NOT IN (101,102)
+		AND bettype BETWEEN 1101 AND 1199
+		
 END
 
+
 GO
-GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_s162_Refund] TO [VNTeam]
+GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_s162_Refund] TO [vnteam] AS [dbo]

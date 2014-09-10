@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_1101]    Script Date: 09/09/2014 14:57:35 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_1101]    Script Date: 09/10/2014 09:13:38 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -13,7 +13,7 @@ AS
 	DB: DBTrans.BODB02
 
 	Revisions:
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
+		- 20140910@Kathy: Include range of LC bettypes (1101 -> 1199)
 		
 */
 
@@ -72,8 +72,7 @@ DECLARE @Temp_bettrans TABLE(
 	SELECT transid ,refno, discount, adiscount, sdiscount, playerdiscount, apositiontaking, mpositiontaking, spositiontaking
 	from bettrans WITH(NOLOCK)
 	WHERE matchid=@matchid AND statusID NOT IN (101,102)
-	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND bettype BETWEEN 1101 AND 1199
 
 	INSERT INTO @Temp_bettrans ([transid],[refno],[winlost],[awinlost],[mwinlost],[swinlost],[PlayerComm],[comm],[acomm],[scomm])
 	SELECT S.transid ,S.refno,
@@ -113,6 +112,7 @@ DECLARE @Temp_bettrans TABLE(
 	WHERE a.transid  = bettrans.transid  and
 	a.refno = bettrans.refno
 END
+
 
 
 GO

@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [dbo].[Admin_Calculate_1101]    Script Date: 09/09/2014 14:52:57 ******/
+﻿/****** Object:  StoredProcedure [dbo].[Admin_Calculate_1101]    Script Date: 09/10/2014 08:53:56 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,7 +17,7 @@ AS
 		- 20120215@Lukas: exclude VOID, REJECT tickets in bettrans 
 		- 20120222@Lukas: Sum comm amount from bettransG
 		- 20120426@Lukas: Get from production & exclude DB044
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
+		- 20140910@Kathy: Include range of LC bettypes (1101 -> 1199)
 */
 
 SET NOCOUNT ON
@@ -75,8 +75,7 @@ DECLARE @Temp_bettrans TABLE(
 	SELECT transid ,refno, discount, adiscount, sdiscount, playerdiscount, apositiontaking, mpositiontaking, spositiontaking
 	from bettrans WITH(NOLOCK)
 	WHERE matchid=@matchid AND statusID NOT IN (101,102)
-	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND bettype BETWEEN 1101 AND 1199
 
 	INSERT INTO @Temp_bettrans ([transid],[refno],[winlost],[awinlost],[mwinlost],[swinlost],[PlayerComm],[comm],[acomm],[scomm])
 	SELECT S.transid ,S.refno,
@@ -116,6 +115,7 @@ DECLARE @Temp_bettrans TABLE(
 	WHERE a.transid  = bettrans.transid  and
 	a.refno = bettrans.refno
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Admin_Calculate_1101] TO [vnteam] AS [dbo]

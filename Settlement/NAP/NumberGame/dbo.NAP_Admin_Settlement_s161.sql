@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s161]    Script Date: 09/09/2014 14:31:48 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s161]    Script Date: 09/10/2014 09:14:31 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -23,7 +23,7 @@ AS
 	Orignal: Admin_Settlement_s161
 	
 	Revisions:
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
+		- 20140910@Kathy: Include range of NG bettypes ( 81-> 120)
 						   
 	Param's Explanation:
 		+ @IsLoop (used for Balance):
@@ -117,8 +117,7 @@ BEGIN
 		SELECT custid, SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH(ROWLOCK)
 		WHERE matchid = @MatchId AND transid <= @MaxTransID
-		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype BETWEEN 81 AND 120
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -251,8 +250,7 @@ BEGIN
 		SELECT custid, SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH(ROWLOCK)
 		WHERE matchid = @matchid AND transid <= @MaxTransID
-		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype BETWEEN 81 AND 120
 		GROUP BY custid
 			--===
 	END
@@ -375,6 +373,7 @@ BEGIN
 		END
 	END
 END
+
 
 
 
