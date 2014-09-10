@@ -14,6 +14,7 @@ AS
 		- 20130724@Elodie: Get winlostdate field
 		- 20130726@Elodie: Define data for bettrans, bettrans14 or bettrans_bk by winlostdate field
 						   Enhance performance
+		- 20140907@Dom:	[Redmine #22012] update VS Condition
 */ 
 
 SET NOCOUNT ON  
@@ -108,7 +109,7 @@ ELSE
 --Bettrans
 IF @WinlostDate > @MoveBetsDay
 BEGIN
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	--Sportbooks
 	INSERT INTO @Data
 	select 
@@ -175,7 +176,8 @@ BEGIN
 		bettrans as b with (nolock) 
 		inner join match as m with (nolock) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
 	where	 
-			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and 
+			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and
+			b.bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 			b.transid = @TransID
 			
 	--Mix Parlay
@@ -514,7 +516,7 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
-	IF @bettype in (1231, 1232, 1233, 1237, 1238)
+	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -586,7 +588,7 @@ BEGIN
 			WHERE t.bettype = 1231 AND f.bettype = 1232 
 			) bm on b.refno = bm.refno  
 	where	 
-			b.bettype in (1231, 1232, 1233, 1237, 1238) and 
+			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
 			
 END
@@ -595,7 +597,7 @@ END
 ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay
 BEGIN
 	--Sportbooks
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -659,7 +661,8 @@ BEGIN
 		bettrans14 as b with (nolock) 
 		inner join match14 as m with (nolock) on b.matchid = m.matchid
 	where	 
-			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and 
+			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
+			b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 			b.transid = @TransID
 			
 	--Mix Parlay
@@ -999,7 +1002,7 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
-	IF @bettype in (1231, 1232, 1233, 1237, 1238)
+	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -1071,7 +1074,7 @@ BEGIN
 			WHERE t.bettype = 1231 AND f.bettype = 1232 
 			) bm on b.refno = bm.refno  
 	where	 
-			b.bettype in (1231, 1232, 1233, 1237, 1238) and 
+			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
 END
 
@@ -1079,7 +1082,7 @@ END
 ELSE IF @WinlostDate < @BalanceUpDay
 BEGIN
 	--Sportbooks
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238)
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1144,7 +1147,8 @@ BEGIN
 		inner join DBARC.bodb_archive.dbo.match_BK m with (nolock) on b.matchid = m.matchid
 		inner JOIN custInfo c with (NOLOCK) on c.custid = b.custid
 	where	 
-			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and 
+			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
+			b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 			b.transid = @TransID
 			
 	--Mix Parlay
@@ -1491,7 +1495,7 @@ BEGIN
 	order by b.transid 
 	
 	-- Virtual HR
-	IF @bettype in (1231, 1232, 1233, 1237, 1238)
+	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1564,7 +1568,7 @@ BEGIN
 			WHERE t.bettype = 1231 AND f.bettype = 1232 
 			) bm on b.refno = bm.refno  
 	where	 
-			b.bettype in (1231, 1232, 1233, 1237, 1238) and 
+			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
 END
 

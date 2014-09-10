@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_BetsSelBetList_Old]  
+﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_Old]  
 	@FromDate datetime,  
 	@ToDate datetime,  
 	@CustID int,
@@ -42,6 +42,7 @@ Revisions:
 	- 20130408@Lukas: return value odds.teamid to alias name homeid instead of awayid
 	- 20130724@Elodie: Get winlostdate field
 	- 20140306@Dom: Add Keno
+	- 20140908@Dom:	[Redmine #22012] Update VS conditions
 */	
 SET NOCOUNT ON	
 Declare @Data TABLE (
@@ -185,7 +186,9 @@ BEGIN
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid and
 				b.bettype < 19001 and
-				b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) and b.bettype NOT BETWEEN 1501 and 1599--20120626@Elodie: exclude outright, HR from sportbook
+				b.bettype not in (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) and 
+				b.bettype NOT BETWEEN 1501 and 1599 and --20120626@Elodie: exclude outright, HR from sportbook
+				b.bettype NOT IN (SELECT  bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 		
 		--Mix Parlay
 		INSERT INTO @Data
@@ -799,7 +802,7 @@ BEGIN
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid and
-				b.bettype in (1231, 1232, 1233, 1237, 1238)		
+				b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())		
 				
  END
  ELSE
@@ -1364,7 +1367,7 @@ BEGIN
 				and bettype = @Bettype  	
 	END
 	-- Virtual HR
-	ELSE IF @Bettype in (1231, 1232, 1233, 1237, 1238)
+	ELSE IF @Bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 	BEGIN		
 		INSERT INTO @Data
 		select 

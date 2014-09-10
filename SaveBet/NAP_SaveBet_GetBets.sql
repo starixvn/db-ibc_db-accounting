@@ -1,0 +1,122 @@
+
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_SaveBet_GetBets    Script Date: 9/10/2014 3:22:02 PM ******/
+CREATE PROCEDURE [dbo].[NAP_SaveBet_GetBets] 
+	@matchid int,
+	@bettype smallint,
+	@liveindicator bit
+AS
+
+/*
+	Created by: Dom
+	Date:2014-05-06
+	Task: Get Bets Report 
+	DB: DB06.BODB02
+	
+	Revisions:
+		
+*/
+
+-- original is Dot_Admin_cteamlist
+
+IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
+	SELECT
+		0 positiontaking, 
+		0 comm,
+		0 awinlost,
+		b.livehomescore, 
+		b.liveawayscore,
+		CASE
+			WHEN b.status = 'reject' THEN '(reject) ' + cr.username
+			WHEN b.status = 'void' THEN '(void) ' + cr.username
+			WHEN b.custid <> b.creator THEN cr.username
+			ELSE '' END creator, 
+		c.username,
+		b.odds, 
+		b.CurrencyName Currency, 
+		b.stake,
+		b.hdp1,
+		b.hdp2, 
+		b.transdate, 
+		b.transid, 
+		'' typenamee, 
+		b.betteam,
+		b.betfrom
+		,b.stake * (1- b.tpositiontaking) cpstake
+		,CAST(b.actualrate as DECIMAL(9,6)) actualrate
+		,CAST(b.virtualrate as DECIMAL(9,6)) virtualrate
+	FROM 
+	bodb02.dbo.bettrans b with (nolock)
+	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
+	INNER JOIN bodb02.dbo.customer cr with (nolock) ON b.creator = cr.custid
+	--INNER JOIN bettype bt with(nolock) ON b.bettype = bt.typeid
+	WHERE
+		b.matchid = @matchid 
+		AND b.bettype = @bettype
+		AND b.liveindicator = @liveindicator
+--AND b.bettype in (1,2,3,4,5,6,7,8,12,15,20)
+--AND b.bettype = @bettype 
+--AND b.betteam = @betteam
+--select * from bettype (nolock)
+-- exec Save_BetList 419522
+	ORDER BY b.betteam, b.transid
+ELSE
+	SELECT
+		0 positiontaking, 
+		0 comm,
+		0 awinlost,
+		b.livehomescore, 
+		b.liveawayscore,
+		CASE
+			WHEN b.status = 'reject' THEN '(reject) ' + cr.username
+			WHEN b.status = 'void' THEN '(void) ' + cr.username
+			WHEN b.custid <> b.creator THEN cr.username
+			ELSE '' END creator, 
+		c.username,
+		b.odds, 
+		b.currencyname Currency, 
+		b.stake,
+		b.hdp1,
+		b.hdp2, 
+		b.transdate, 
+		b.transid, 
+		'' typenamee, 
+		b.betteam,
+		b.betfrom
+		,b.stake * (1- b.tpositiontaking) cpstake
+		,CAST(b.actualrate as DECIMAL(9,6)) actualrate
+		,CAST(b.virtualrate as DECIMAL(9,6)) virtualrate
+	FROM 
+	bodb02.dbo.bettrans14 b with (nolock)
+	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
+	INNER JOIN bodb02.dbo.customer cr with (nolock) ON b.creator = cr.custid
+	--INNER JOIN bettype bt with(nolock) ON b.bettype = bt.typeid
+	WHERE
+		b.matchid = @matchid 
+		AND b.bettype = @bettype
+		AND b.liveindicator = @liveindicator
+--AND b.bettype in (1,2,3,4,5,6,7,8,12,15,20)
+--AND b.bettype = @bettype 
+--AND b.betteam = @betteam
+--select * from bettype (nolock)
+-- exec Save_BetList 419522
+	ORDER BY b.betteam, b.transid
+
+
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_SaveBet_GetBets] TO [bodbAdminNet]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_SaveBet_GetBets] TO [vnteam]
+GO 
