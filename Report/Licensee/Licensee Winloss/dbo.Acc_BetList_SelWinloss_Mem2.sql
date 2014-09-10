@@ -59,6 +59,7 @@ Revisions:
 	- 20130716@Jim: update matchid for RNG Casino and Bingo
 	- 20140331@Hannah: offer Keno
 	- 20140704@Jim: support sporting solution
+	- 20140909@Jim: retrict Virtual Horse Racing bettype
 Param's Explanation:
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
 	+ @BaseCurrency : Base currency in Result tables 0: ALL, 1: USD, 2: MYR, 3: EUR
@@ -627,6 +628,52 @@ BEGIN
 			b.winlostdate BETWEEN @TempFromDate AND @tdate AND
 			b.custid=@custid AND
 			(b.bettype BETWEEN 1201 AND 1299) AND
+			b.bettype NOT IN (SELECT bettype FROM dbo.f_VSHorseRacingByBettype()) AND
+			b.statusID IN (111,112,113)
+		UNION ALL 
+		SELECT 
+			r.Sporttype, 
+			b.TransID,
+			ISNULL(b.BetID,0),
+			b.Bettype,
+			b.hdp1 AS hdp1, 
+			b.hdp2 AS hdp2,
+			modds,
+			b.oddstype,
+			b.Odds,
+			b.stake,
+			b.actual_stake, 
+			b.betteam,
+			b.status AS Status,				
+			b.refno,
+			b.Transdate,	
+			b.winlostdate,			
+			(b.winlost-actual_stake),
+			- (b.winlost-actual_stake) ,
+			b.comm,
+			b.playercomm  , 
+			b.Liveindicator,
+			b.Livehomescore,
+			b.Liveawayscore,
+			b.IP AS IP,
+			r.LeagueID,
+			o.EventID MatchID,	
+			CONVERT(varchar(50),o.RacerNum) MatchCode,
+			b.oddsid  AS Race,	
+			o.RacerID HomeID,
+			0 AS  AwayID, 		
+			r.Betstatus,
+			ISNULL(0, CONVERT(BIT,0)) AS IsNeutral,
+			0,0,
+			b.currency,
+			CONVERT(VARCHAR(20),r.EventTime)  as showtime
+		FROM dbo.bettrans AS b WITH (NOLOCK)	
+			INNER JOIN VSOutright o with (nolock) ON b.oddsid=o.Orid
+			INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID	
+		WHERE
+			b.winlostdate BETWEEN @TempFromDate AND @tdate AND
+			b.custid=@custid AND
+			b.bettype IN (SELECT bettype FROM dbo.f_VSHorseRacingByBettype()) AND	
 			b.statusID IN (111,112,113)
 	END
 	
@@ -1272,6 +1319,52 @@ BEGIN
 			b.winlostdate BETWEEN @BalanceUpDay AND @tdate AND
 			b.custid=@custid AND
 			( b.bettype BETWEEN 1201 AND 1299) AND
+			b.bettype NOT IN (SELECT bettype FROM dbo.f_VSHorseRacingByBettype()) AND	
+			b.statusID IN (111,112,113)
+		UNION ALL 
+		SELECT 
+			r.Sporttype, 
+			b.TransID,
+			ISNULL(b.BetID,0),
+			b.Bettype,
+			b.hdp1 AS hdp1, 
+			b.hdp2 AS hdp2,
+			modds,
+			b.oddstype,
+			b.Odds,
+			b.stake,
+			b.actual_stake, 
+			b.betteam,
+			b.status AS Status,				
+			b.refno,
+			b.Transdate,	
+			b.winlostdate,			
+			(b.winlost-actual_stake),
+			- (b.winlost-actual_stake) ,
+			b.comm,
+			b.playercomm  , 
+			b.Liveindicator,
+			b.Livehomescore,
+			b.Liveawayscore,
+			b.IP AS IP,
+			r.LeagueID,
+			o.EventID MatchID,	
+			CONVERT(varchar(50),o.RacerNum) MatchCode,
+			b.oddsid  AS Race,	
+			o.RacerID HomeID,
+			0 AS  AwayID, 		
+			r.Betstatus,
+			ISNULL(0, CONVERT(BIT,0)) AS IsNeutral,
+			0,0,
+			b.currency,
+			CONVERT(VARCHAR(20),r.EventTime)  as showtime
+		FROM dbo.bettrans14 AS b WITH (NOLOCK)	
+			INNER JOIN VSOutright14 o with (nolock) ON b.oddsid=o.Orid
+			INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID	
+		WHERE
+			b.winlostdate BETWEEN @BalanceUpDay AND @tdate AND
+			b.custid=@custid AND
+			b.bettype IN (SELECT bettype FROM dbo.f_VSHorseRacingByBettype()) AND	
 			b.statusID IN (111,112,113)
 	END
 	--- RNG Casino 
@@ -1920,8 +2013,54 @@ BEGIN
 		b.winlostdate BETWEEN @fdate AND @TempToDate AND
 		b.custid=@custid AND
 		( b.bettype BETWEEN 1201 AND 1299) AND
+		b.bettype NOT IN (SELECT bettype FROM dbo.f_VSHorseRacingByBettype()) AND
 		b.ruben = 1 AND
 		b.status NOT IN ('VOID', 'REJECT', 'REFUND')
+	UNION ALL 
+	SELECT 
+		r.Sporttype, 
+		b.TransID,
+		ISNULL(b.BetID,0),
+		b.Bettype,
+		b.hdp1 AS hdp1, 
+		b.hdp2 AS hdp2,
+		modds,
+		b.oddstype,
+		b.Odds,
+		b.stake,
+		b.actual_stake, 
+		b.betteam,
+		b.status AS Status,				
+		b.refno,
+		b.Transdate,	
+		b.winlostdate,			
+		(b.winlost-actual_stake),
+		- (b.winlost-actual_stake) ,
+		b.comm,
+		b.playercomm  , 
+		b.Liveindicator,
+		b.Livehomescore,
+		b.Liveawayscore,
+		b.IP AS IP,
+		r.LeagueID,
+		o.EventID MatchID,	
+		CONVERT(varchar(50),o.RacerNum) MatchCode,
+		b.oddsid  AS Race,	
+		o.RacerID HomeID,
+		0 AS  AwayID, 		
+		r.Betstatus,
+		ISNULL(0, CONVERT(BIT,0)) AS IsNeutral,
+		0,0,
+		b.currency,
+		CONVERT(VARCHAR(20),r.EventTime)  as showtime
+	FROM bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)	
+		INNER JOIN DBARC.bodb_Archive.dbo.VSOutright_bk o with (nolock) ON b.oddsid=o.Orid
+		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID	
+	WHERE
+		b.winlostdate BETWEEN @fdate AND @TempToDate AND
+		b.custid=@custid AND
+		b.bettype IN (SELECT bettype FROM dbo.f_VSHorseRacingByBettype()) AND	
+		b.statusID IN (111,112,113)
 	END
 	--- RNG Casino 
 	IF @ShowCS=1
