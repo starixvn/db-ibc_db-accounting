@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 09/10/2014 09:45:11 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 09/10/2014 10:30:01 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -25,7 +25,7 @@ AS
 		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30)[Redmine:#19310]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
+		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 */
 BEGIN
@@ -172,7 +172,7 @@ BEGIN
 					ELSE 0
 					END)
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype NOT BETWEEN 1301 AND 1334
+		WHERE matchid = @matchid 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
@@ -466,6 +466,7 @@ BEGIN
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
 END
+
 
 
 GO
