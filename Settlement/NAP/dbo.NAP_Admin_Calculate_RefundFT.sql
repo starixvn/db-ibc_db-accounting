@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFT]    Script Date: 09/09/2014 14:21:54 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFT]    Script Date: 09/10/2014 09:52:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -29,7 +29,7 @@ AS
 		- 20140728@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
-		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33)
+		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		
 	Param's Explanation:
 		@IsRefundHT: Indicate whether or not match has been refunded HT
@@ -85,6 +85,7 @@ BEGIN
 			AND bettype NOT IN (7, 8, 15, 12, 21, 30, 14, 125, 126, 127, 129, 136, 138, 143, 151) 
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
@@ -100,6 +101,7 @@ BEGIN
 			BREAK
 	END
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundFT] TO [bodbAdminNet] AS [dbo]

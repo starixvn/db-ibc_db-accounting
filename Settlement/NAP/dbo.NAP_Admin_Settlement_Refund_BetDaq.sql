@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_BetDaq]    Script Date: 09/09/2014 13:48:48 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_BetDaq]    Script Date: 09/10/2014 09:56:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -21,7 +21,8 @@ AS
 
 	Revisions: 
 		- 20140512@Kathy: Exclude 1H FGLG (127) [Redmine:#14449]
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
+						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -103,6 +104,7 @@ BEGIN
 	AND bettype NOT IN (14, 127) --Exclude FGLG, 1H FGLG
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 	GROUP BY custid
 
 	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
@@ -121,6 +123,7 @@ BEGIN
 	AND bettype NOT IN (14, 127) --Exclude FGLG, 1H FGLG
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 	GROUP BY custid
 
 
@@ -268,6 +271,8 @@ BEGIN
 		END CATCH
 	END
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetDaq] TO [bodbAdminNet] AS [dbo]

@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT]    Script Date: 09/09/2014 13:49:58 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT]    Script Date: 09/10/2014 09:40:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER OFF
@@ -33,7 +33,8 @@ AS
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
+						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 
 		
 	Param's Explanation:
@@ -133,6 +134,7 @@ BEGIN
 	AND bettype NOT IN (14, 127)
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 	GROUP BY custid
 
 	DECLARE @status TABLE (
@@ -158,6 +160,7 @@ BEGIN
 	WHERE matchid = @matchid
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 	GROUP BY CASE 
 			WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
 			ELSE 1
@@ -535,6 +538,7 @@ BEGIN
 	WHERE matchid = @matchid AND bettype NOT IN (14, 127)
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 	GROUP BY custid
 
 	INSERT INTO #Balance
@@ -744,6 +748,7 @@ BEGIN
 		END CATCH
 	END
 END
+
 
 
 

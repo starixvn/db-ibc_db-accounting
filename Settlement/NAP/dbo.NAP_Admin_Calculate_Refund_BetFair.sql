@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Refund_BetFair]    Script Date: 09/09/2014 14:25:08 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Refund_BetFair]    Script Date: 09/10/2014 09:53:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -14,7 +14,8 @@ AS
 	Revisions:
 		- 20140512@Kathy: Exclude bettype 1H FGLG (127) [Redmine:#14718]
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]		
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33)
+		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
+		
 */
 SET NOCOUNT ON
 
@@ -42,11 +43,13 @@ BEGIN
 			AND bettype NOT IN (14, 127) --Exclude FGLG 
 			and bettype not between 1301 and 1334 -- exclude sporting solution product
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			and custid IN (2331, 1077687, 115770, 15523642) 
 	
 		IF @@ROWCOUNT < 10000 BREAK
 	END
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Refund_BetFair] TO [vnteam] AS [dbo]

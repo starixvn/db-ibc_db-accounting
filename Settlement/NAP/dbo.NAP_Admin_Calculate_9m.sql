@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 09/09/2014 13:50:32 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 09/10/2014 09:47:59 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -35,7 +35,8 @@ AS
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20140820@Jamie: Correct bettype 143, 144 [Redmine:#19667]
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), 
+							sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 
 
 	Param's Explanation:
@@ -175,6 +176,7 @@ BEGIN
 		AND statusID NOT IN (101, 102)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		
 
 		UPDATE dbo.BetParlayDetail
@@ -185,6 +187,7 @@ BEGIN
 		AND bettype NOT IN (14, 127) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		AND statusID NOT IN (101, 102)
 		
 	END
@@ -201,6 +204,7 @@ BEGIN
 		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		AND statusID NOT IN (101, 102)
 
 		UPDATE dbo.BetParlayDetail
@@ -211,6 +215,7 @@ BEGIN
 		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		AND statusID NOT IN (101, 102)
 	END
 	ELSE IF @action = 'REFUND-HT'
@@ -285,6 +290,7 @@ BEGIN
 		AND statusID NOT IN (101, 102)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 
 		UPDATE dbo.BetParlayDetail
 		SET statuswinlost = 0
@@ -293,6 +299,7 @@ BEGIN
 		AND statusID NOT IN (101, 102)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 	END
 			-- ===================================================
 			-- ===================================================
@@ -1085,6 +1092,7 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
+
 
 
 GO

@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompletedHT]    Script Date: 09/09/2014 15:05:10 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompletedHT]    Script Date: 09/10/2014 09:44:18 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -22,7 +22,8 @@ AS
 		- 20140421@Kathy: get match status in queue
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
-		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33)
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
+						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		
 */
 BEGIN
@@ -191,12 +192,14 @@ BEGIN
 			AND match.sporttype = @sporttype
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			GROUP BY bettrans.matchid
 			) c ON m.matchid = c.matchid
 		) x LEFT JOIN @tblSingle t ON t.matchid = x.matchid
 
 	ORDER BY eventstatus, matchcode
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]

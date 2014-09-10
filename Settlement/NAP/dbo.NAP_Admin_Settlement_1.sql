@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 09/09/2014 13:46:11 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 09/10/2014 09:22:56 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -28,7 +28,8 @@ AS
 		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140808@Kathy: Support new 11 bettypes [Redmine:#19667]
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), sportting solution (from 1301 -> 1334)
+		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
+						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -57,6 +58,7 @@ BEGIN
 	WHERE b.bettype <= 19000 AND b.matchid = @matchid
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 
 	SELECT @sporttype = sporttype
 		,@goalrecord_old = ISNULL(goalrecord, '')
@@ -164,6 +166,7 @@ BEGIN
 			AND bettype NOT IN (14, 127)
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			GROUP BY custid
 
 			SET @TotalAccount = @@ROWCOUNT
@@ -188,6 +191,7 @@ BEGIN
 			WHERE matchid = @matchid
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			GROUP BY custid
 		END
 				--===
@@ -254,6 +258,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		WHERE matchid = @matchid
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		GROUP BY CASE 
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
 				WHEN bettype = 135 THEN 2
@@ -433,6 +438,7 @@ need below code to determine for mark match as calculated (all bets settled)
 			AND bettype NOT IN (14, 127)
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			GROUP BY custid
 		END
 		ELSE IF @Action = 'CAL-HT'
@@ -454,6 +460,7 @@ need below code to determine for mark match as calculated (all bets settled)
 			WHERE matchid = @matchid
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			GROUP BY custid
 		END
 				--===
@@ -631,6 +638,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		END CATCH
 	END
 END
+
 
 
 
