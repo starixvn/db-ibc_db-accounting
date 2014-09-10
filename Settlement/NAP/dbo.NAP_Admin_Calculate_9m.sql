@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 09/10/2014 09:47:59 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 09/10/2014 11:07:25 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -705,6 +705,9 @@ BEGIN
 		AND bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN bettype
 						   WHEN ISNULL(@resultPS, '') <> '' THEN 135
 					  END
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 
 
 		-- BetParlayDetail
@@ -1087,11 +1090,15 @@ BEGIN
 		AND pd.bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN pd.bettype
 							  WHEN ISNULL(@resultPS, '') <> '' THEN 135
 					     END
-
+		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+		
 	END
 END
 	-- ===================================================
 	-- ===================================================
+
 
 
 
