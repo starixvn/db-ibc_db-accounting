@@ -160,7 +160,7 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT_Push_xtest] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT_Push] TO [bodbAdminNet] AS [dbo]
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundHT_Push_xtest] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundHT_Push] TO [vnteam] AS [dbo]
