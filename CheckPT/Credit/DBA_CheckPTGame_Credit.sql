@@ -16,6 +16,7 @@ Task: Check PT setting for credit customers - Game setting
 DB: DBCHECK.CheckResultDB
 Revisions:
 	- 20140723@Sophia: Add Keno
+	- 20140910@Sophia: Change the Filter of customer from closed = 0 and Reject = 0 to Enabled = 1
 	 
 Param's Explanation: 
 	@RuleId = 0 : 'all' 
@@ -43,8 +44,7 @@ BEGIN
 				INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId
 			WHERE	ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0				
+				AND ci.Enabled = 1			
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -69,8 +69,7 @@ BEGIN
 					AND co.SportType=cs.SportType
 					AND co.BetType=cs.BetType
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -96,8 +95,7 @@ BEGIN
 							AND scs.SportType = cs.SportType
 							AND scs.BetType = cs.BetType
 			WHERE	ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -122,8 +120,7 @@ BEGIN
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -149,8 +146,7 @@ BEGIN
 							AND scs.SportType = cs.SportType
 							AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -176,8 +172,7 @@ BEGIN
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend		
 				AND cs.SportType IN (161, 202)
@@ -203,8 +198,7 @@ BEGIN
 					AND sco.SportType = cs.SportType
 					AND sco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -232,8 +226,7 @@ BEGIN
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -259,9 +252,8 @@ BEGIN
 							 FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 								INNER JOIN CheckCustDB.dbo.CustSettingGame mcs WITH (NOLOCK)
 									ON ci.CustId = mcs.CustId
-									AND ci.RoleId = 3 
-									AND ci.closed = 0 
-									AND ci.Reject = 0 
+									AND ci.roleid = 3 
+									AND ci.Enabled = 1
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
 									AND mcs.SportType IN (161, 202)
@@ -272,8 +264,7 @@ BEGIN
 					AND mcs.SportType = cs.SportType
 					AND mcs.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend 
 				AND cs.SportType IN (161, 202)
@@ -298,9 +289,8 @@ BEGIN
 							 FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 								INNER JOIN CheckCustDB.dbo.CustSettingGame mcs WITH (NOLOCK)
 									ON ci.CustId = mcs.CustId
-									AND ci.RoleId = 3 
-									AND ci.closed = 0 
-									AND ci.Reject = 0 
+									AND ci.roleid = 3 
+									AND ci.Enabled = 1 
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
 									AND mcs.SportType IN (161, 202)
@@ -311,8 +301,7 @@ BEGIN
 					AND mcs.SportType = cs.SportType
 					AND mcs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType IN (161, 202)
@@ -338,9 +327,8 @@ BEGIN
 							FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 								 INNER JOIN CheckCustDB.dbo.CustOverrideGame mco WITH (NOLOCK)
 									ON	mco.CustID = ci.CustId
-										AND ci.RoleId = 3 
-										AND ci.closed= 0 
-										AND ci.Reject = 0
+										AND ci.roleid = 3 
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND mco.SportType IN (161, 202)
@@ -351,8 +339,7 @@ BEGIN
 					AND mco.SportType = cs.SportType
 					AND mco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType IN (161, 202)
@@ -376,8 +363,7 @@ BEGIN
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -400,9 +386,8 @@ BEGIN
 								FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 									INNER JOIN CheckCustDB.dbo.CustOverrideGame co WITH (NOLOCK)
 											ON co.CustId = ci.CustId
-											AND ci.RoleId = 2
-											AND ci.Closed = 0
-											AND ci.Reject = 0
+											AND ci.roleid = 2
+											AND ci.Enabled = 1
 											AND ci.Currency NOT IN (20,27,28)	
 											AND ci.srecommend = @srecommend	 
 											AND co.SportType IN (161, 202)
@@ -413,8 +398,7 @@ BEGIN
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE   ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType IN (161, 202)
@@ -456,9 +440,8 @@ BEGIN
 								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
-										AND ci.RoleId = 4
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.roleid = 4
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND cs.SportType IN (161, 202)
@@ -473,9 +456,8 @@ BEGIN
 								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
-										AND ci.RoleId = 3
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.roleid = 3
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND cs.SportType IN (161, 202)
@@ -485,9 +467,8 @@ BEGIN
 						ON	mcs.SportType = cs.SportType
 							AND mcs.bettype = cs.bettype
 							AND mcs.CustId = ci.mrecommend			
-			WHERE ci.RoleId = 1
-				AND ci.Closed = 0
-				AND ci.Reject = 0
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -518,8 +499,7 @@ BEGIN
 					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 						ON	cs.CustId = ci.CustId
 				WHERE	ci.roleid = 4
-					AND ci.closed = 0 
-					AND ci.Reject = 0
+					AND ci.Enabled = 1
 					AND ci.Currency NOT IN (20,27,28)	
 					AND ci.srecommend = @srecommend
 					AND cs.SportType = 162
@@ -564,9 +544,8 @@ BEGIN
 								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
-										AND ci.RoleId = 3
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.roleid = 3
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND cs.SportType IN (161, 202)
@@ -581,9 +560,8 @@ BEGIN
 								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
 									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
-										AND ci.RoleId = 2
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.roleid = 2
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND cs.SportType IN (161, 202)
@@ -593,9 +571,8 @@ BEGIN
 						ON	acs.SportType = cs.SportType
 							AND acs.bettype = cs.bettype
 							AND acs.CustId = ci.recommend
-			WHERE ci.RoleId = 1
-				AND ci.Closed = 0
-				AND ci.Reject = 0
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType IN (161, 202)
@@ -629,8 +606,7 @@ BEGIN
 					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
 						ON	cs.CustId = ci.CustId
 				WHERE	ci.roleid = 4
-					AND ci.closed = 0 
-					AND ci.Reject = 0
+					AND ci.Enabled = 1
 					AND ci.Currency NOT IN (20,27,28)	
 					AND ci.srecommend = @srecommend
 					AND cs.SportType = 202					

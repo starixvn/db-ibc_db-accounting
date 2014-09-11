@@ -7,7 +7,7 @@ CREATE TABLE #temp (CustId INT, IsFinished BIT)
 INSERT  INTO #temp (CustId, IsFinished)
 SELECT	DISTINCT ci.CustId , 0 
 FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
-WHERE   RoleID = 4 AND Closed = 0
+WHERE   RoleID = 4 
 		AND CustId NOT IN (select CustId from CheckCustDB.dbo.Dep_CustSuper WITH (NOLOCK)) 
 
 SET NOCOUNT ON 
