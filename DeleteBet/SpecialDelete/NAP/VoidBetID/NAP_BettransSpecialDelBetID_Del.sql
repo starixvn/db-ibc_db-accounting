@@ -116,7 +116,7 @@ BEGIN
 	BEGIN
 		IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
 		BEGIN
-			SELECT @ErrCode = 101
+			SELECT @ErrCode = 201
 			SELECT @ErrMsg = 'Another parlay settlement is in progress or some parlay tickets are being deleted, please wait a few seconds until the on-going process has finished and try again.'
 			RETURN
 		END
@@ -138,7 +138,7 @@ BEGIN
 		
 		))
 		BEGIN
-			SELECT  @ErrCode = 101,
+			SELECT  @ErrCode = 206,
 					@ErrMsg = 'A match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed and try again.'
 			RETURN
 		END
