@@ -1,0 +1,157 @@
+
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_SaveBet_GetTurnOver    Script Date: 9/10/2014 3:22:02 PM ******/
+CREATE PROCEDURE [dbo].[NAP_SaveBet_GetTurnOver]
+	@matchid int
+AS
+
+/*
+	Created by: Dom
+	Date:2014-05-05
+	Task: Turnover Report 
+	DB: DB06.BODB02
+	
+	Revisions:
+		
+*/
+
+
+IF EXISTS (SELECT matchid FROM bodb02.dbo.match with (nolock) WHERE matchid = @matchid)
+--SP: Dot_Admin_turnover_detail
+SELECT
+	IsNull(TotalA, 0) TotalA, IsNull(SuperA, 0) SuperA, IsNull(MasterA, 0) MasterA, IsNull(AgentA, 0) AgentA,
+	IsNull(TotalV, 0) TotalV, IsNull(SuperV, 0) SuperV, IsNull(MasterV, 0) MasterV, IsNull(AgentV, 0) AgentV
+FROM (
+	SELECT  
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate   
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate  
+		else b.stake * b.actualrate  
+		end) TotalA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.spositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.spositiontaking  
+		else b.stake * b.actualrate * b.spositiontaking  
+		end) SuperA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.mpositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.mpositiontaking  
+		else b.stake * b.actualrate * b.mpositiontaking  
+		end) MasterA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.apositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.apositiontaking  
+		else b.stake * b.actualrate * b.apositiontaking  
+		end) AgentA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate   
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate  
+		else b.stake * b.virtualrate  
+		end) TotalV,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.spositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.spositiontaking  
+		else b.stake * b.virtualrate * b.spositiontaking  
+		end) SuperV,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.mpositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.mpositiontaking  
+		else b.stake * b.virtualrate * b.mpositiontaking  
+		end) MasterV,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.apositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.apositiontaking  
+		else b.stake * b.virtualrate * b.apositiontaking  
+		end) AgentV
+	FROM
+		bodb02.dbo.bettrans b (nolock)
+	WHERE
+		matchid = @matchid
+		AND status NOT IN ('void','reject')
+) b
+
+ELSE
+
+SELECT
+	IsNull(TotalA, 0) TotalA, IsNull(SuperA, 0) SuperA, IsNull(MasterA, 0) MasterA, IsNull(AgentA, 0) AgentA,
+	IsNull(TotalV, 0) TotalV, IsNull(SuperV, 0) SuperV, IsNull(MasterV, 0) MasterV, IsNull(AgentV, 0) AgentV
+FROM (
+	SELECT  
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate   
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate  
+		else b.stake * b.actualrate  
+		end) TotalA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.spositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.spositiontaking  
+		else b.stake * b.actualrate * b.spositiontaking  
+		end) SuperA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.mpositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.mpositiontaking  
+		else b.stake * b.actualrate * b.mpositiontaking  
+		end) MasterA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.apositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.actualrate * b.apositiontaking  
+		else b.stake * b.actualrate * b.apositiontaking  
+		end) AgentA,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate   
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate  
+		else b.stake * b.virtualrate  
+		end) TotalV,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.spositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.spositiontaking  
+		else b.stake * b.virtualrate * b.spositiontaking  
+		end) SuperV,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.mpositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.mpositiontaking  
+		else b.stake * b.virtualrate * b.mpositiontaking  
+		end) MasterV,  
+
+		sum(Case betteam  
+		when 'h' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.apositiontaking  
+		when 'a' then CASE when abs(odds) > 1 then abs(odds) * b.stake else b.stake END * b.virtualrate * b.apositiontaking  
+		else b.stake * b.virtualrate * b.apositiontaking  
+		end) AgentV
+	FROM
+		bodb02.dbo.bettrans14 b (nolock)
+	WHERE
+		matchid = @matchid
+		AND status NOT IN ('void','reject')
+) b
+
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_SaveBet_GetTurnOver] TO [bodbAdminNet]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_SaveBet_GetTurnOver] TO [vnteam]
+GO 

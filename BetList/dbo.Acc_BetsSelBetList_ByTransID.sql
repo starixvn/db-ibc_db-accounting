@@ -48,6 +48,7 @@ AS
 					   Enhance performance
 	- 20140307@Dom: Add Keno
 	- 20140318@Dom: #13487 Prevent user to delete LAS ticket in bet list accounting site
+	- 20140908@Dom:	[Redmine #22012] Update VS conditions
 	*/   
 
 SET NOCOUNT ON    
@@ -221,7 +222,9 @@ AND custid = @Custid
 --Bettrans
 IF @WinlostDate > @MoveBetsDay  
 BEGIN  
-IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and @bettype NOT BETWEEN 1501 AND 1599
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+	AND @bettype NOT BETWEEN 1501 AND 1599 
+	AND @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 --Sportbooks  
 INSERT INTO @Data  
 	select   
@@ -290,7 +293,8 @@ from
 	inner join match as m with (nolock) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark  
 where    
 	b.custid = @Custid and  
-	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and b.bettype NOT BETWEEN 1501 and 1599 and 
+	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and b.bettype NOT BETWEEN 1501 and 1599 AND
+	b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) AND
 	b.transid = @TransID  
  
 --Mix Parlay 
@@ -851,7 +855,7 @@ where b.bettype in (31,32,33,41,42,43)
 order by b.transid    
 
 -- Virtual HR  
-IF @bettype in (1231, 1232, 1233, 1237, 1238) 
+IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) 
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -924,14 +928,16 @@ from
 		) bm on b.refno = bm.refno   
 where    
 	b.custid = @Custid and  
-	b.bettype in (1231, 1232, 1233, 1237, 1238) and   
+	b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and   
 	b.transid = @TransID  
 END  
 
 --Bettrans14  
 ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay 
 BEGIN  
-IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and @bettype NOT BETWEEN 1501 and 1599 
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/)
+	AND @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	AND @bettype NOT BETWEEN 1501 and 1599 
 --Sportbooks  
 INSERT INTO @Data  
 select   
@@ -997,8 +1003,10 @@ from
 	inner join match14 as m with (nolock) on b.matchid = m.matchid  
 where    
 	b.custid = @Custid and  
-	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231,1232,1233,1237,1238) and b.bettype not BETWEEN 1501 and 1500 AND
-	b.transid = @TransID  
+	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+	AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	AND b.bettype not BETWEEN 1501 and 1500
+	AND b.transid = @TransID  
  
 --Mix Parlay  
 IF @bettype = 9
@@ -1490,7 +1498,7 @@ where b.bettype in (31,32,33,41,42,43)
 order by b.transid    
 
 -- Virtual HR  
-IF @bettype in (1231, 1232, 1233, 1237, 1238)
+IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1563,7 +1571,7 @@ from
 		) bm on b.refno = bm.refno  
 where    
 	b.custid = @Custid and  
-	b.bettype in (1231, 1232, 1233, 1237, 1238) and   
+	b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and   
 	b.transid = @TransID  
  
 END  
@@ -1571,7 +1579,7 @@ END
 ELSE IF @WinlostDate < @BalanceUpDay 
 BEGIN  
 --Sportbooks  
-IF @bettype < 19001 and @bettype NOT IN (31,32,33,10, 1231, 1232, 1233, 1237, 1238)
+IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231, 1232, 1233, 1237, 1238*/) and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1636,7 +1644,8 @@ from
 	inner join DBARC.bodb_archive.dbo.match_BK as m with (nolock) on b.matchid = m.matchid  
 where    
 	b.custid = @Custid and  
-	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10, 1231, 1232, 1233, 1237, 1238) and   
+	b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231, 1232, 1233, 1237, 1238*/) and   
+	b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 	b.transid = @TransID  
  
 --Mix Parlay  
@@ -2130,7 +2139,7 @@ where b.bettype in (31,32,33,41,42,43)
 order by b.transid   
 
 -- Virtual HR  
-IF @bettype in (1231, 1232, 1233, 1237, 1238)
+IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -2203,7 +2212,7 @@ from
 		) bm on b.refno = bm.refno  
 where    
 	b.custid = @Custid and  
-	b.bettype in (1231, 1232, 1233, 1237, 1238) and   
+	b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and   
 	b.transid = @TransID  
 END  
 

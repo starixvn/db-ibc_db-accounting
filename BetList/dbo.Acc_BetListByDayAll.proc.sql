@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_BetListByDayAll]
+﻿ALTER PROCEDURE [dbo].[Acc_BetListByDayAll]
 	@custid int,
 	@fromdate smalldatetime,
 	@language nvarchar(2) = 'en',
@@ -62,6 +62,7 @@ AS
 		- 20130625@Elodie: Not apply Virtual HR for bet list by IP yet at this time	
 		- 20130718@Elodie: Apply core betlist
 		- 20140306@Dom: Add Keno
+		- 20140908@Dom:	[Redmine #22012] Update VS conditions
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -248,9 +249,10 @@ BEGIN
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND b.bettype < 19001 AND b.bettype NOT IN (10, 31, 32, 33, 41, 42, 43, 1231,1232,1233,1237,1238) and b.bettype NOT BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
-                   AND b.statusID IN (SELECT [statusID]
-                                      FROM   @tmpStatus);
+                   AND b.bettype < 19001 AND b.bettype NOT IN (10, 31, 32, 33, 41, 42, 43/*, 1231,1232,1233,1237,1238*/) and 
+				   b.bettype NOT BETWEEN 1501 and 1599 AND --20120626@Elodie: exclude outright, HR from sportbook
+				   b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+                   AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus);
                                       
 			-- Virtual HR
             INSERT INTO @Data
@@ -320,7 +322,7 @@ BEGIN
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+                   AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT bettype FROM dbo.f_VSHorseRacingByBettype())
                    AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                       						                                   
             -- CASINO 
@@ -916,9 +918,10 @@ BEGIN
             --phuong.nguyen, remove left join match_remark
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND b.bettype < 19001 AND b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
-                   AND b.statusID IN (SELECT [statusID]
-                                      FROM   @tmpStatus)
+                   AND b.bettype < 19001 AND b.bettype not in (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/)
+				   AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
+				   AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+                   AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
 
 			-- Virtual HR
             INSERT INTO @Data
@@ -988,7 +991,7 @@ BEGIN
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+                   AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
                    AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                                          
             -- CASINO 
