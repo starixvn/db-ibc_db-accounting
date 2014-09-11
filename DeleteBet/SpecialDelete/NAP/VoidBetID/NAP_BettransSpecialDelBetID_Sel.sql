@@ -1,6 +1,8 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Sel] 
-	 @CustID	INT		= NULL 	
-	,@TransID	BIGINT  = NULL 
+	 @CustID	INT			= NULL 	
+	,@TransID	BIGINT		= NULL 
+	,@FromDate	DATETIME	= NULL
+	,@ToDate	DATETIME	= NULL 
 AS
 /*  
 	Created by: Jamie  
@@ -118,12 +120,14 @@ BEGIN
 		,b.winlostdate
 	FROM bettrans AS b WITH (NOLOCK)
 		INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
-	WHERE b.custid = CASE WHEN @Custid IS NULL THEN b.CustID ELSE @CustID END 
-		AND b.transid = CASE WHEN @TransID IS NULL THEN b.TransID ELSE @TransID END 
-		AND b.bettype < 19001
-		AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
-		AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
-		AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
+	WHERE	b.custid = CASE WHEN @Custid IS NULL THEN b.CustID ELSE @CustID END 
+			AND b.transid = CASE WHEN @TransID IS NULL THEN b.TransID ELSE @TransID END 
+			AND b.winlostdate >= CASE WHEN @CustID IS NOT NULL THEN @FromDate ELSE b.winlostdate END
+			AND b.winlostdate <= CASE WHEN @CustID IS NOT NULL THEN @ToDate ELSE b.winlostdate END
+			AND b.bettype < 19001
+			AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
+			AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
+			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
 	UNION ALL 
 	SELECT 9 bettype
 		,b.transid
@@ -169,6 +173,8 @@ BEGIN
 	FROM bettrans AS b WITH (NOLOCK)
 	WHERE b.custid = CASE WHEN @Custid IS NULL THEN b.CustID ELSE @CustID END 
 		AND b.transid = CASE WHEN @TransID IS NULL THEN b.TransID ELSE @TransID END 
+		AND b.winlostdate >= CASE WHEN @CustID IS NOT NULL THEN @FromDate ELSE b.winlostdate END
+		AND b.winlostdate <= CASE WHEN @CustID IS NOT NULL THEN @ToDate ELSE b.winlostdate END
 		AND matchid = 9
 		AND bettype = 9
 	UNION ALL 
@@ -219,6 +225,8 @@ BEGIN
 	WHERE b.bettype = 10
 		AND b.custid = CASE WHEN @Custid IS NULL THEN b.CustID ELSE @CustID END 
 		AND b.transid = CASE WHEN @TransID IS NULL THEN b.TransID ELSE @TransID END 
+		AND b.winlostdate >= CASE WHEN @CustID IS NOT NULL THEN @FromDate ELSE b.winlostdate END
+		AND b.winlostdate <= CASE WHEN @CustID IS NOT NULL THEN @ToDate ELSE b.winlostdate END
 
 	SELECT *
 	FROM @Data
