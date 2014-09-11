@@ -46,7 +46,7 @@ BEGIN
 		SELECT	 @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!'
 				,@ErrCode = 101
 
-		SELECT	@LogData = 'Try to delete transaction for custid: ' + cast(@UserID AS VARCHAR(10)) + ' betlist: ' + cast(@strtransid AS VARCHAR(20)) + ' - Username: ' + @username + ' - reason: ' + @reason
+		SELECT	@LogData = 'Try to delete transaction for custid: ' + cast(@UserID AS VARCHAR(10)) + ' betlist: ' + cast(@strtransid AS VARCHAR(8000)) + ' - Username: ' + @username + ' - reason: ' + @reason
 
 		EXEC WriteLog_UserLog @UserID = @UserID ,@Doing = @LogData
 		RETURN
@@ -415,7 +415,7 @@ BEGIN
 		EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
 	END		
 			
-	SELECT @LogData = 'Delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@strTransID as varchar(2000))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
+	SELECT @LogData = 'Delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@strTransID as varchar(8000))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
 	-----
