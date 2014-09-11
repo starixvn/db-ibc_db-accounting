@@ -446,6 +446,7 @@ Begin DataProject = "Account"
             End
             Begin Folder = "VoidBetID"
                Script = "NAP_BettransSpecialDelBetID_Sel.sql"
+               Script = "NAP_BettransSpecialDelBetID_Sel_ParlayDetail.sql"
             End
          End
          Begin Folder = "Number Game"
