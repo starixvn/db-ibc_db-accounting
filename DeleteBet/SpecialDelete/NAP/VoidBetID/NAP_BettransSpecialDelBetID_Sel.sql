@@ -1,6 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Sel] 
-	 @CustID	INT		= 0 	
-	,@TransID	BIGINT  = 0 
+	 @CustID	INT		= NULL 	
+	,@TransID	BIGINT  = NULL 
 AS
 /*  
 	Created by: Jamie  
@@ -13,8 +13,8 @@ AS
 	Revisions:  
 
 	Param's Explanation:
-		+ @CustID <> 0 AND @TransID = 0: Search by CustID
-		+ @CustID = 0 AND @TransID <> 0: Search by TransID
+		+ @CustID NOT NULL: Search by CustID
+		+ @TransID NOT NULL: Search by TransID
 
 	*/
 BEGIN
@@ -45,6 +45,7 @@ BEGIN
 		,liveindicator	BIT
 		,modds			SMALLMONEY
 		,custid			INT
+		,username		VARCHAR(30)
 		,livehomescore	INT
 		,liveawayscore	INT
 		,finalhomescore INT
@@ -101,6 +102,7 @@ BEGIN
 		,b.liveindicator
 		,b.modds
 		,b.custid
+		,b.username
 		,b.livehomescore
 		,b.liveawayscore
 		,m.finalhomescore
@@ -116,8 +118,8 @@ BEGIN
 		,b.winlostdate
 	FROM bettrans AS b WITH (NOLOCK)
 		INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
-	WHERE b.custid = CASE WHEN @Custid = 0 THEN b.CustID ELSE @CustID END 
-		AND b.transid = CASE WHEN @TransID = 0 THEN b.TransID ELSE @TransID END 
+	WHERE b.custid = CASE WHEN @Custid IS NULL THEN b.CustID ELSE @CustID END 
+		AND b.transid = CASE WHEN @TransID IS NULL THEN b.TransID ELSE @TransID END 
 		AND b.bettype < 19001
 		AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
 		AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
@@ -150,6 +152,7 @@ BEGIN
 		,0 liveindicator
 		,b.modds
 		,b.custid
+		,b.username
 		,b.livehomescore
 		,b.liveawayscore
 		,0
@@ -164,8 +167,8 @@ BEGIN
 		,'' AS showtime
 		,b.winlostdate
 	FROM bettrans AS b WITH (NOLOCK)
-	WHERE b.custid = CASE WHEN @Custid = 0 THEN b.CustID ELSE @CustID END 
-		AND b.transid = CASE WHEN @TransID = 0 THEN b.TransID ELSE @TransID END 
+	WHERE b.custid = CASE WHEN @Custid IS NULL THEN b.CustID ELSE @CustID END 
+		AND b.transid = CASE WHEN @TransID IS NULL THEN b.TransID ELSE @TransID END 
 		AND matchid = 9
 		AND bettype = 9
 	UNION ALL 
@@ -196,6 +199,7 @@ BEGIN
 		,b.liveindicator
 		,b.modds
 		,b.custid
+		,b.Username
 		,b.livehomescore
 		,b.liveawayscore
 		,0
@@ -213,8 +217,8 @@ BEGIN
 		INNER JOIN outright AS odds WITH (NOLOCK) ON b.matchid = odds.orid
 		INNER JOIN league l WITH (NOLOCK) ON odds.leagueid = l.leagueid
 	WHERE b.bettype = 10
-		AND b.custid = CASE WHEN @Custid = 0 THEN b.CustID ELSE @CustID END 
-		AND b.transid = CASE WHEN @TransID = 0 THEN b.TransID ELSE @TransID END 
+		AND b.custid = CASE WHEN @Custid IS NULL THEN b.CustID ELSE @CustID END 
+		AND b.transid = CASE WHEN @TransID IS NULL THEN b.TransID ELSE @TransID END 
 
 	SELECT *
 	FROM @Data
