@@ -29,7 +29,6 @@ BEGIN
 	DECLARE @LogData NVARCHAR(500)
 			,@balance MONEY
 			,@winlostdate DATETIME
-			,@Remark VARCHAR(500)
 
 			-- check customer for mailing live cs
 			,@isDepositCust BIT
@@ -321,7 +320,7 @@ BEGIN
 		
 			
 	--check for live casino
-	IF (EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1102))
+	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1102))
 	BEGIN
 		--SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
 		SELECT @isDepositCust = CASE WHEN @srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
@@ -346,7 +345,7 @@ BEGIN
 	END
 			
 	-- Mix Parlay 
-	IF(EXISTS (SELECT TOP 1 1 FROM @tmpListTransID WHERE bettype = 9))
+	IF(@isExistParlay =1)
 	BEGIN
 		SELECT	bm.transid,
 				bm.bettype,
