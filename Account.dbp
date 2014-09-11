@@ -259,6 +259,9 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_CustomerSelSiteByUserName.sql"
          Script = "dbo.Acc_CustomerUpdMoveSite.sql"
       End
+      Begin Folder = "NAP"
+         Script = "NAP_CustomerSelInfoByUsername.sql"
+      End
       Begin Folder = "SmartPunters"
          Script = "dbo.Acc_CustomerSelCheckSmartPunter.sql"
       End
