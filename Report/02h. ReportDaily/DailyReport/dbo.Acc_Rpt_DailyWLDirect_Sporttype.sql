@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
 	@winlostdate	datetime,
 	@LineTotal		money OUTPUT
 AS
@@ -60,6 +60,8 @@ AS
 		- 20130730@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				
 		- 20130910@Johnson: get virtual values for all product	
 		- 20140303@Dom: Add Keno
+		- 20140910@Johnson: - Separate major and minor bettypes of soccer
+							- Combine Mix Parlay and System Parlay into 1 section
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -109,6 +111,8 @@ BEGIN
 		ToteFee			smallmoney	
 	)
 	
+	DECLARE @Bettype TABLE(bettype int)
+	
 	--deposit agents
 	INSERT INTO #DepAgent 
 	SELECT custid
@@ -143,6 +147,11 @@ BEGIN
 		SELECT 201,1 --HAR-TABCORP
 	UNION ALL
 		SELECT 202,1 --HAR-TABCORPNSW	
+	
+	INSERT INTO @Bettype(bettype)
+	SELECT typeid
+	FROM bettype WITH(NOLOCK)
+	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126)
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
@@ -238,9 +247,9 @@ BEGIN
 
 	--Section 2: all products that enable virtual currency, DisplayOrder field:	1 -> 100
 	SELECT
-			case when m.sporttype> 1 THEN 2 ELSE 1 end as DisplayOrder,
-			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
-			case when m.sporttype> 1 then 2 else 1 end as SportType,						
+			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as DisplayOrder,
+			case when m.sporttype> 1 then 'Other Sports' else CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END end as SportName,
+			case when m.sporttype> 1 then 3 else CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as SportType,						
 			0 ibc,
 			site,
 			SUM(winLost_virtualrate) AS winlost,
@@ -253,22 +262,23 @@ BEGIN
 			1 EnableVirtual
 	FROM	#src b WITH(NOLOCK)
 				INNER JOIN @Match m on b.matchid = m.matchid
+				LEFT JOIN @Bettype t ON b.bettype = t.bettype
 	WHERE	(b.bettype < 31 
 				OR b.bettype BETWEEN 121 AND 999
-				OR bettype BETWEEN 1301 and 1334)	
+				OR b.bettype BETWEEN 1301 and 1334)	
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY		
-			case when m.sporttype> 1 THEN 2 ELSE 1 end,
-			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
-			case when m.sporttype> 1 then 2 else 1 end,
+			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
+			case when m.sporttype> 1 then 'Other Sports' else CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END end,
+			case when m.sporttype> 1 then 3 else CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,						
 			site 		
 			
 	-- Get win lost of agent '8RM'
 	UNION ALL
 	SELECT
-			case when m.sporttype> 1 THEN 2 ELSE 1 end as DisplayOrder,
+			case when m.sporttype> 1 THEN 3 ELSE 1 end as DisplayOrder,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
-			case when m.sporttype> 1 then 2 else 1 end as SportType,	
+			case when m.sporttype> 1 then 3 else 1 end as SportType,	
 			1 ibc,
 			0 as site,
 			-sum(winlost-actual_stake) WinLost,
@@ -281,6 +291,7 @@ BEGIN
 			0 EnableVirtual
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
+			LEFT JOIN @Bettype t ON b.bettype = t.bettype
 	WHERE	b.winlostdate = @winlostdate
 			AND b.matchid > 0 
 			AND b.bettype < 19001
@@ -290,16 +301,15 @@ BEGIN
 			AND b.recommend = 52466
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY	
-			case when m.sporttype> 1 THEN 2 ELSE 1 end,
+			case when m.sporttype> 1 THEN 3 ELSE 1 end,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
-			case when m.sporttype> 1 then 2 else 1 end 
-
+			case when m.sporttype> 1 then 3 else 1 end 	
 	-- Get win lost of agent 'BARM'
 	UNION ALL
 	SELECT
-		case when m.sporttype> 1 THEN 2 ELSE 1 end as DisplayOrder,
+		case when m.sporttype> 1 THEN 3 ELSE 1 end as DisplayOrder,
 		case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
-		case when m.sporttype> 1 then 2 else 1 end as SportType,	
+		case when m.sporttype> 1 then 3 else 1 end as SportType,
 		2 ibc,
 		0 as site,
 		-sum(winlost-actual_stake) WinLost,
@@ -312,6 +322,7 @@ BEGIN
 		0 EnableVirtual
 	FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
+		LEFT JOIN @Bettype t ON b.bettype = t.bettype
 	WHERE	b.winlostdate = @winlostdate
 		AND b.matchid > 0 
 		AND b.bettype < 19001
@@ -321,30 +332,14 @@ BEGIN
 		AND b.recommend = 5707545
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY	
-		case when m.sporttype> 1 THEN 2 ELSE 1 end,
-		case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
-		case when m.sporttype> 1 then 2 else 1 end 	
-				
-
-	UNION ALL
-	SELECT 
-			3,'System Parlay', 98, 0,site,
-			SUM(winlost_virtualrate) WinLost,
-			SUM(position_virtualrate) Position,
-			SUM(commission_virtualrate) Commission,	
-			SUM(LineTotal_actualrate) AS RealLineTotal,
-			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
-			SUM(turnover_actualrate) RealTurnover,
-			SUM(turnover_virtualrate) VirtualTurnover,
-			1 EnableVirtual
-	FROM	#src AS b WITH (NOLOCK)
-	WHERE	bettype = 29 
-			AND matchid = 29
-	GROUP BY site
+		case when m.sporttype> 1 THEN 3 ELSE 1 end,
+			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
+			case when m.sporttype> 1 then 3 else 1 end 
+	
 			
 	UNION ALL
 	SELECT 
-			4,'Mix Parlay', 99, 0, site,
+			4,'Parlay', 99, 0, site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -354,8 +349,8 @@ BEGIN
 			SUM(turnover_virtualrate) VirtualTurnover,
 			1 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
-	WHERE	bettype = 9 
-			AND matchid = 9
+	WHERE	bettype IN  (9 ,29)
+			AND matchid IN (9, 29)
 	GROUP BY site
 			
 	----NUMBER GAME
