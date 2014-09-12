@@ -71,7 +71,7 @@ BEGIN
 		,betteam		NVARCHAR(50)
 		)
 
-	--Sportbooks  
+	--Search by TransID 
 	IF @CustID IS NULL 
 	BEGIN 
 		INSERT INTO @Data
@@ -222,7 +222,7 @@ BEGIN
 		WHERE b.bettype = 10
 			AND b.transid = @TransID 
 	END
-	ELSE 
+	ELSE --- Search by CustID 
 	BEGIN 
 		INSERT INTO @Data
 		SELECT b.bettype
