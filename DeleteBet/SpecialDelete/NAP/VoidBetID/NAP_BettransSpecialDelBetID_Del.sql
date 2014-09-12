@@ -26,20 +26,10 @@ BEGIN
 	If @ErrCode <> 0
 		RETURN
 
-	DECLARE @LogData		NVARCHAR(500)
-			,@balance		MONEY
-			,@winlostdate	DATETIME
-
-			-- check customer for mailing live cs
-			,@isDepositCust BIT
-			,@isCustDeposit	BIT
-			,@is12EUCust	BIT
-			,@isRealCust	BIT
-			,@currency		INT
+	DECLARE @LogData		NVARCHAR(500)	
 			,@isITAdmin		BIT
-	
-	SELECT	@isCustDeposit	= 0 
-			,@isITAdmin		= 0 
+
+	SELECT	@isITAdmin		= 0 
 
 	-- CHECK IT GROUP or NOT ? 
 	EXEC DBPOLICY.bodb02.dbo.Acc_Con_GroupInfoSel 
@@ -100,6 +90,7 @@ BEGIN
 			,@isExistMatch		BIT
 			,@isExistParlay		BIT
 			,@isExistOutright	BIT
+			,@isCustDeposit		BIT
 			,@usernameMEM		VARCHAR(30)
 			,@usernameAG		VARCHAR(30)
 			,@usernameMAG		VARCHAR(30)
@@ -107,6 +98,9 @@ BEGIN
 			,@EmailGroup		VARCHAR(30)
 			,@isNegativeBalance BIT
 			,@totalbalance		MONEY
+			,@balance			MONEY
+			,@winlostdate		DATETIME
+			,@currency			INT
 
 	SELECT	@winlostdate	= MIN(winlostdate)
 			,@CustID		= MIN(CustID)
@@ -190,7 +184,7 @@ BEGIN
 	END
 
 	SELECT	@EmailGroup = CASE	WHEN @usernameMEM = '12EU' THEN 'Group12EU'
-								WHEN @isDepositCust = 1 THEN 'GroupDeposit' 
+								WHEN @isCustDeposit = 1 THEN 'GroupDeposit' 
 								WHEN @Recommend = 11196380 THEN 'GroupFoobet'		-- FB
 								WHEN @CustID IN (1077687, 2331, 115770, 15523642) THEN 'GroupBetfair'  -- Betfair: BFOS, BF, ITibc102, BF3
 								WHEN @CustID = 13423967 THEN 'GroupOneExchange'  --1E
