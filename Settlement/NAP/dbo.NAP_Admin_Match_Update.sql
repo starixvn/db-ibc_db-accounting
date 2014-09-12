@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 09/03/2014 17:58:04 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 09/12/2014 10:55:37 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -31,11 +31,12 @@ AS
 		- 20140423@Kathy: Modify betstatus value (Offer 1H FGLG) [Redmine:#14449]
 		- 20140618@Kathy: Remove PenaltyShootout string, correct betstatus in case match has been refunded [Redmine:#17142]  
 		- 20140825@Kathy: Only update HT part of goalrecord when calculating HT
+		- 20140912@Kathy: Correct betstatus when calculate FT '3x30' match [Redmine:#22399]
 						   
 		
 */
 BEGIN
-	select '1'
+	
 	SET @BetStatus = ISNULL(@BetStatus, N'')
 	
 	IF @Command = 'NAP_Admin_Settlement_1-UNDO'
@@ -53,7 +54,8 @@ BEGIN
 		SET
 			finalhomescore = @FTHome, finalawayscore = @FTAway,
 			hthomescore = @HTHome, htawayscore = @HTAway,
-			betstatus = CASE WHEN @action = 'CAL-FT' AND CHARINDEX('Refund HT;',betstatus)>0 THEN 'Refund HT;' + ISNULL(@betstatus,'') ELSE @betstatus END,
+		--	betstatus = CASE WHEN @action = 'CAL-FT' AND CHARINDEX('Refund HT;',betstatus)>0 THEN 'Refund HT;' + ISNULL(@betstatus,'') ELSE @betstatus END,
+			betstatus = ISNULL(@betstatus,''),
 			goalrecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
 							  WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> '' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
 							  ELSE @goalrecord END,
@@ -259,6 +261,8 @@ BEGIN
 		WHERE EventID = @MatchID
 	END	
 END
+
+
 
 
 
