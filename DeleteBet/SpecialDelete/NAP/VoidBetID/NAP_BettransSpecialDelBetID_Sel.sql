@@ -26,7 +26,7 @@ BEGIN
 		bettype			INT
 		,transid		BIGINT
 		,betid			BIGINT
-		,refno			NVARCHAR(50)
+		,refno			BIGINT
 		,matchcode		NVARCHAR(50)
 		,eventdate		SMALLDATETIME
 		,homeid			INT
@@ -63,7 +63,7 @@ BEGIN
 		,winlostdate	SMALLDATETIME
 		)
 	DECLARE @DetailData TABLE (
-		refno			NVARCHAR(50)
+		refno			BIGINT
 		,odds			SMALLMONEY
 		,stake			MONEY
 		,STATUS			NVARCHAR(50)
@@ -71,7 +71,7 @@ BEGIN
 		,betteam		NVARCHAR(50)
 		)
 
-	--Sportbooks  
+	--Search by TransID 
 	IF @CustID IS NULL 
 	BEGIN 
 		INSERT INTO @Data
@@ -222,7 +222,7 @@ BEGIN
 		WHERE b.bettype = 10
 			AND b.transid = @TransID 
 	END
-	ELSE 
+	ELSE --- Search by CustID 
 	BEGIN 
 		INSERT INTO @Data
 		SELECT b.bettype
@@ -406,10 +406,9 @@ BEGIN
 		FROM bettransg14 BG WITH (NOLOCK)
 			INNER JOIN @Data B ON BG.refno = B.refno
 		WHERE B.Bettype BETWEEN 1101 AND 1199
-
-		SELECT *
-		FROM @DetailData
 	END
+	SELECT *
+	FROM @DetailData
 
 END
 

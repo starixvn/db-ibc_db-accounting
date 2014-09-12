@@ -26,19 +26,21 @@ BEGIN
 	If @ErrCode <> 0
 		RETURN
 
-	DECLARE @LogData NVARCHAR(500)
-			,@balance MONEY
-			,@winlostdate DATETIME
+	DECLARE @LogData		NVARCHAR(500)	
+			,@isITAdmin		BIT
 
-			-- check customer for mailing live cs
-			,@isDepositCust BIT
-			,@is12EUCust BIT
-			,@isRealCust BIT
-			,@srecommend INT
-			,@bet_username NVARCHAR(50)
-			,@currency INT
+	SELECT	@isITAdmin		= 0 
 
-
+	-- CHECK IT GROUP or NOT ? 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_GroupInfoSel 
+		 @GroupID = 1								-- 'IT' GROUP 
+		,@UserID = @UserID
+		,@ShowInternalGroup = 0
+		,@System = 'ACCOUNTING'
+	IF @@ROWCOUNT <> 0 
+	BEGIN
+		SELECT	@isITAdmin = 1 
+	END
 
 	If NOT EXISTS (select 1 from CustDB.dbo.customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 	BEGIN
@@ -80,31 +82,42 @@ BEGIN
 	WHERE	TransID IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))
 
 
-	DECLARE	@Recommend	INT
-			,@Site		VARCHAR(10)
-			,@Username2	VARCHAR(30)
-			,@isExistMatch	BIT
-			,@isExistParlay	BIT
+	DECLARE	@Recommend			INT
+			,@MRecommend		INT
+			,@Srecommend		INT
+			,@Site				VARCHAR(10)
+			,@Username2			VARCHAR(30)
+			,@isExistMatch		BIT
+			,@isExistParlay		BIT
 			,@isExistOutright	BIT
+			,@isCustDeposit		BIT
+			,@usernameMEM		VARCHAR(30)
+			,@usernameAG		VARCHAR(30)
+			,@usernameMAG		VARCHAR(30)
+			,@usernameSAG		VARCHAR(30)
+			,@EmailGroup		VARCHAR(30)
+			,@isNegativeBalance BIT
+			,@totalbalance		MONEY
+			,@balance			MONEY
+			,@winlostdate		DATETIME
+			,@currency			INT
 
 	SELECT	@winlostdate	= MIN(winlostdate)
 			,@CustID		= MIN(CustID)
-			,@Recommend		= MIN(Recommend)
+			,@Balance		= SUM(winlost - actual_stake + playercomm) 
 			,@isExistMatch	= MAX(CASE WHEN Bettype NOT IN (9,10) THEN 1 ELSE 0 END)
 			,@isExistParlay = MAX(CASE WHEN Bettype = 9 THEN 1 ELSE 0 END)
 			,@isExistOutright = MAX(CASE WHEN Bettype = 10 THEN 1 ELSE 0 END)
 	FROM	Bettrans WITH (NOLOCK)
 	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)
 
-	SELECT	 @Username2 = Username2
-			,@Srecommend = srecommend
+	SELECT	 @Username2		= Username2
+			,@usernameMEM	= username
+			,@Recommend		= recommend
+			,@MRecommend	= mrecommend
+			,@Srecommend	= srecommend
 	FROM	CustDB.dbo.Customer WITH (NOLOCK)
 	WHERE	CustID = @CustID
-
-	SELECT	@Site = Site
-	FROM	CustDB.dbo.Customer WITH (NOLOCK)
-	WHERE	CustID = @Recommend
-
 
 	--Check settled Date
 	EXEC dbo.Acc_CheckSettledDate @winlostdate = @winlostdate, @UserID = @UserID, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
@@ -151,6 +164,31 @@ BEGIN
 		END
 	END
 
+	SELECT	@Site = Site
+			,@usernameAG	= username
+			,@currency		= Currency 
+	FROM	CustDB.dbo.Customer WITH (NOLOCK)
+	WHERE	CustID = @Recommend
+	
+	SELECT	@usernameMAG	= Username 
+	FROM	CustDB.dbo.CustInfo WITH (NOLOCK)
+	WHERE	CustID = @MRecommend
+
+	SELECT	@usernameSAG	= Username 
+	FROM	CustDB.dbo.CustInfo WITH (NOLOCK)
+	WHERE	CustID = @SRecommend
+
+	IF (EXISTS(SELECT TOP 1 1 from CustDB.dbo.Dep_CustSuper WITH (NOLOCK) WHERE CustID =@SRecommend ))
+	BEGIN
+		SELECT @isCustDeposit = 1 
+	END
+
+	SELECT	@EmailGroup = CASE	WHEN @usernameMEM = '12EU' THEN 'Group12EU'
+								WHEN @isCustDeposit = 1 THEN 'GroupDeposit' 
+								WHEN @Recommend = 11196380 THEN 'GroupFoobet'		-- FB
+								WHEN @CustID IN (1077687, 2331, 115770, 15523642) THEN 'GroupBetfair'  -- Betfair: BFOS, BF, ITibc102, BF3
+								WHEN @CustID = 13423967 THEN 'GroupOneExchange'  --1E
+								ELSE '' END 
 	-- SINGLE BET 
 	UPDATE odds
 	SET hometotal = hometotal - (CASE WHEN b.betteam = 'h' THEN CASE	WHEN abs(b.odds) > 1 THEN b.stake * e.actualrate * abs(b.odds) * (1 - b.tpositiontaking)
@@ -169,22 +207,31 @@ BEGIN
 				WHERE	Bettype <> 9
 			)
 
-	-- calculate balance of customer
-	DECLARE @isNegativeBalance BIT, @totalbalance MONEY
-		
-	SELECT	@Balance= SUM(winlost - actual_stake + playercomm) 
-	FROM	Bettrans WITH (NOLOCK)
-	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)
-
 	SELECT	@totalbalance = SUM(winlost - actual_stake + playercomm)
 	FROM	bettrans with (nolock)
 	WHERE	custid = @CustID
 		
-	SELECT  @isNegativeBalance = CASE WHEN @Balance > 0 AND (credit + @totalbalance - @Balance) < 0 THEN 1 ELSE 0 END,
-			@bet_username = username,
-			@currency = currency
+	SELECT  @isNegativeBalance = CASE WHEN @Balance > 0 AND (credit + @totalbalance - @Balance) < 0 THEN 1 ELSE 0 END
 	FROM	CustDB.dbo.custinfo WITH(NOLOCK)
 	WHERE	custid = @CustID 
+
+
+	-- Get Upline info 
+
+	SELECT	@usernameMEM		AS UsernameMem
+			,@Username2			AS Username2
+			,@usernameAG		AS UsernameAG
+			,@Recommend			AS Recommend
+			,@usernameMAG		AS UsernameMAG
+			,@MRecommend		AS Mrecommend
+			,@usernameSAG		AS UsernameSAG
+			,@Srecommend		AS SRecommend 
+			,@currency			AS Currency 
+			,@isNegativeBalance AS isNegativeBalance
+			,@Site				AS [Site]
+			,@EmailGroup		AS EmailGroup 
+			,@isITAdmin			AS isITAdmin 
+
 		
 	--- BETS: return all additional information for mailing
 	SELECT	m.homeid,
@@ -195,9 +242,6 @@ BEGIN
 			GETDATE() AS DATETIME,
 			isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
 			showtime AS GameEvent,
-			b.username,
-			@Username2 AS Username2,
-			b.username,
 			b.custid, 
 			b.bettype,
 			b.odds,  
@@ -216,16 +260,10 @@ BEGIN
 			cr.username creator,
 			b.stake,     
 			b.status,
-			b.spositiontaking,
-			b.mpositiontaking,
-			b.apositiontaking,
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
-			b.currency,
-			@Site AS Site,
-			@isNegativeBalance as isNegative
-	FROM
-			bettrans b WITH (NOLOCK)
+			b.currency
+	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
 			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype NOT IN (10,9))
@@ -240,9 +278,6 @@ BEGIN
 			GETDATE() AS DATETIME,
 			CONVERT(BIT,0) AS IsNeutral,
 			''  AS GameEvent,
-			b.username,
-			@Username2 AS Username2,
-			b.username,
 			b.custid,
 			b.bettype,
 			b.odds,  
@@ -261,14 +296,9 @@ BEGIN
 			cr.username creator,
 			b.stake,     
 			b.status,
-			b.spositiontaking,
-			b.mpositiontaking,
-			b.apositiontaking,
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
-			b.currency,
-			@Site AS Site,
-			@isNegativeBalance as isNegative
+			b.currency
 	FROM	bettrans b WITH(NOLOCK) 
 			INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
 	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 9)
@@ -282,9 +312,6 @@ BEGIN
 			GETDATE() AS DATETIME,
 			CONVERT(BIT,0) AS IsNeutral,
 			'' AS GameEvent,				-- N/A 
-			b.username,
-			@Username2 AS Username2,
-			b.username,
 			b.custid,
 			b.bettype,
 			b.odds,  
@@ -303,14 +330,9 @@ BEGIN
 			cr.username creator,
 			b.stake,     
 			b.status,
-			b.spositiontaking,
-			b.mpositiontaking,
-			b.apositiontaking,
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
-			b.currency,
-			@Site AS Site,
-			@isNegativeBalance as isNegative
+			b.currency
 	FROM
 			bettrans b WITH (NOLOCK)
 			INNER JOIN Outright m WITH (NOLOCK) ON b.matchID = m.orid
@@ -321,19 +343,8 @@ BEGIN
 			
 	--check for live casino
 	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1102))
-	BEGIN
-		--SELECT @isDepositCust = CASE WHEN @betfrom IN ('D', 'M', 'E', 'L') AND @srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
-		SELECT @isDepositCust = CASE WHEN @srecommend IN (SELECT custid FROM CustDB.dbo.Dep_CustSuper WITH (NOLOCK)) THEN 1 ELSE 0 END 
-		SELECT @is12EUCust	 = CASE WHEN @bet_username = '12EU' THEN 1 ELSE 0 END
-		SELECT @isRealCust = CASE WHEN @currency = 20 THEN 1
-								WHEN @currency <> 20 AND (@Username LIKE 'dba%' OR @Username LIKE 'pgm%' OR @Username ='vndbateam' OR @Username = 'vnQaTeam') THEN 1 
-								ELSE 0 END
-			
-		SELECT CASE WHEN @isDepositCust = 1 AND t.Betfrom IN ('D', 'M', 'E', 'L')  THEN 1
-					ELSE @is12EUCust
-					END AS isDeposit
-				,@isRealCust AS isRealCust
-				,t.TransID AS refno
+	BEGIN		
+		SELECT 	 t.TransID 
 				,bg.odds
 				,bg.stake
 				,bg.STATUS
