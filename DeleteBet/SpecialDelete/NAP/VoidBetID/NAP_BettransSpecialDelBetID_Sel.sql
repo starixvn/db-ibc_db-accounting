@@ -128,6 +128,7 @@ BEGIN
 				AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
 				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
+				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
 		SELECT 9 bettype
 			,b.transid
@@ -174,6 +175,7 @@ BEGIN
 		WHERE	b.transid = @TransID 
 				AND b.matchid = 9
 				AND b.bettype = 9
+				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
 		SELECT b.bettype
 			,b.transid
@@ -221,6 +223,7 @@ BEGIN
 			INNER JOIN league l WITH (NOLOCK) ON odds.leagueid = l.leagueid
 		WHERE b.bettype = 10
 			AND b.transid = @TransID 
+			AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 	END
 	ELSE --- Search by CustID 
 	BEGIN 
@@ -279,6 +282,7 @@ BEGIN
 				AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
 				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
+				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
 		SELECT 9 bettype
 			,b.transid
@@ -326,6 +330,7 @@ BEGIN
 				AND b.winlostdate BETWEEN @FromDate AND @ToDate 
 				AND matchid = 9
 				AND bettype = 9
+				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
 		SELECT b.bettype
 			,b.transid
@@ -374,6 +379,7 @@ BEGIN
 		WHERE	b.bettype = 10
 				AND b.custid =@Custid 
 				AND b.winlostdate BETWEEN @FromDate AND @ToDate 
+				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 	END
 
 
