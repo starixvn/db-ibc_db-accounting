@@ -406,10 +406,9 @@ BEGIN
 		FROM bettransg14 BG WITH (NOLOCK)
 			INNER JOIN @Data B ON BG.refno = B.refno
 		WHERE B.Bettype BETWEEN 1101 AND 1199
-
-		SELECT *
-		FROM @DetailData
 	END
+	SELECT *
+	FROM @DetailData
 
 END
 
