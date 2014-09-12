@@ -26,7 +26,7 @@ BEGIN
 		bettype			INT
 		,transid		BIGINT
 		,betid			BIGINT
-		,refno			NVARCHAR(50)
+		,refno			BIGINT
 		,matchcode		NVARCHAR(50)
 		,eventdate		SMALLDATETIME
 		,homeid			INT
@@ -63,7 +63,7 @@ BEGIN
 		,winlostdate	SMALLDATETIME
 		)
 	DECLARE @DetailData TABLE (
-		refno			NVARCHAR(50)
+		refno			BIGINT
 		,odds			SMALLMONEY
 		,stake			MONEY
 		,STATUS			NVARCHAR(50)
