@@ -91,10 +91,10 @@ BEGIN
 			,@isExistParlay		BIT
 			,@isExistOutright	BIT
 			,@isCustDeposit		BIT
-			,@usernameMEM		VARCHAR(30)
-			,@usernameAG		VARCHAR(30)
-			,@usernameMAG		VARCHAR(30)
-			,@usernameSAG		VARCHAR(30)
+			,@CustUsername		VARCHAR(30)
+			,@AgUsername		VARCHAR(30)
+			,@MAgUsername		VARCHAR(30)
+			,@SAgUsername		VARCHAR(30)
 			,@EmailGroup		VARCHAR(30)
 			,@isNegativeBalance BIT
 			,@totalbalance		MONEY
@@ -112,7 +112,7 @@ BEGIN
 	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)
 
 	SELECT	 @Username2		= Username2
-			,@usernameMEM	= username
+			,@CustUsername	= username
 			,@Recommend		= recommend
 			,@MRecommend	= mrecommend
 			,@Srecommend	= srecommend
@@ -165,16 +165,16 @@ BEGIN
 	END
 
 	SELECT	@Site = Site
-			,@usernameAG	= username
+			,@AgUsername	= username
 			,@currency		= Currency 
 	FROM	CustDB.dbo.Customer WITH (NOLOCK)
 	WHERE	CustID = @Recommend
 	
-	SELECT	@usernameMAG	= Username 
+	SELECT	@MAgUsername	= Username 
 	FROM	CustDB.dbo.CustInfo WITH (NOLOCK)
 	WHERE	CustID = @MRecommend
 
-	SELECT	@usernameSAG	= Username 
+	SELECT	@SAgUsername	= Username 
 	FROM	CustDB.dbo.CustInfo WITH (NOLOCK)
 	WHERE	CustID = @SRecommend
 
@@ -183,7 +183,7 @@ BEGIN
 		SELECT @isCustDeposit = 1 
 	END
 
-	SELECT	@EmailGroup = CASE	WHEN @usernameMEM = '12EU' THEN 'Group12EU'
+	SELECT	@EmailGroup = CASE	WHEN @CustUsername = '12EU' THEN 'Group12EU'
 								WHEN @isCustDeposit = 1 THEN 'GroupDeposit' 
 								WHEN @Recommend = 11196380 THEN 'GroupFoobet'		-- FB
 								WHEN @CustID IN (1077687, 2331, 115770, 15523642) THEN 'GroupBetfair'  -- Betfair: BFOS, BF, ITibc102, BF3
@@ -218,13 +218,14 @@ BEGIN
 
 	-- Get Upline info 
 
-	SELECT	@usernameMEM		AS UsernameMem
+	SELECT	 @CustID			AS CustID 
+			,@CustUsername		AS CustUsername
 			,@Username2			AS Username2
-			,@usernameAG		AS UsernameAG
+			,@AgUsername		AS AgUsername
 			,@Recommend			AS Recommend
-			,@usernameMAG		AS UsernameMAG
+			,@MAgUsername		AS MAgUsername
 			,@MRecommend		AS Mrecommend
-			,@usernameSAG		AS UsernameSAG
+			,@SAgUsername		AS SAgUsername
 			,@Srecommend		AS SRecommend 
 			,@currency			AS Currency 
 			,@isNegativeBalance AS isNegativeBalance
@@ -242,7 +243,6 @@ BEGIN
 			GETDATE() AS DATETIME,
 			isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
 			showtime AS GameEvent,
-			b.custid, 
 			b.bettype,
 			b.odds,  
 			b.OddsType, 
@@ -278,7 +278,6 @@ BEGIN
 			GETDATE() AS DATETIME,
 			CONVERT(BIT,0) AS IsNeutral,
 			''  AS GameEvent,
-			b.custid,
 			b.bettype,
 			b.odds,  
 			b.OddsType, 
@@ -312,7 +311,6 @@ BEGIN
 			GETDATE() AS DATETIME,
 			CONVERT(BIT,0) AS IsNeutral,
 			'' AS GameEvent,				-- N/A 
-			b.custid,
 			b.bettype,
 			b.odds,  
 			b.OddsType, 
