@@ -1,5 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype14]
-	@winlostdate	datetime
+	@winlostdate	DATETIME,
+	@SoccerType		INT = 1
 AS
 SET NOCOUNT ON
 
@@ -25,7 +26,10 @@ SET NOCOUNT ON
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)		
+		- 20140711@Johnson: Separate major and minor bettypes of soccer
 	Param's Explanation: 
+		- @SoccerType= 1: Major bettypes
+					= 2: Minor bettypes	
 */		
 
 	Declare @tmpBettype table (Bettype int, DisplayOrder int)
@@ -63,6 +67,10 @@ SET NOCOUNT ON
 		FROM bettype WITH(NOLOCK)
 		WHERE (typeid > 10 AND typeid < 31) OR typeid BETWEEN 121 AND 999
 	
+	DELETE @tmpBettype 
+	WHERE 1 = CASE WHEN @SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1
+					WHEN @SoccerType = 2 AND Bettype IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1 ELSE 0 END
+		
 	--Declare @temp table to contain all matches based on @winlostdate
 	DECLARE @Match TABLE (matchid INT, matchcode NVARCHAR(50), type varchar(10), primary key(matchid, type))
 	INSERT INTO @Match 
@@ -135,6 +143,7 @@ SET NOCOUNT ON
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid 
+			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
 	WHERE
 			winlostdate = @winlostdate
 			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
@@ -151,6 +160,7 @@ SET NOCOUNT ON
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) WinlostBARM
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid 
+			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
 	WHERE
 			winlostdate = @winlostdate
 			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
