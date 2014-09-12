@@ -158,7 +158,7 @@ BEGIN
 	ELSE
 	BEGIN
 		SELECT @SettlementStatus135 = CASE	WHEN @action = 'UNDO' THEN 1 -- Running
-											ELSE 3 -- Calculated (Auto)
+											ELSE 3 -- Calculated (Manual)
 									  END
 	END
 	-------------------------------------------------------------
