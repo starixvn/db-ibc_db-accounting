@@ -82,8 +82,25 @@ declare @temp_daao table
 --temp table for maxbet on each match
 declare @temp_maxbet table(
 	matchid int,
+	custid int,
 	maxbet money
 ) 
+
+declare @bettype table(
+	bettype int,
+	priority int
+)
+
+insert into @bettype( 
+		 SELECT 	1, 1
+	UNION SELECT 	7, 2
+	UNION SELECT 	3, 3
+	UNION SELECT 	8, 4
+	UNION SELECT 	5, 5
+	UNION SELECT 	15, 6
+	UNION SELECT 	2, 7
+	UNION SELECT 	12, 8	
+)
   
 if @isSoccer = 1 and (@fromdate > @o_x or @todate > @o_x )  
 BEGIN  
@@ -211,22 +228,23 @@ BEGIN
   and a.matchid is NULL  
 END  
 
-INSERT INTO @temp_maxbet(matchid,maxbet)
-SELECT matchid, maxbet
-FROM odds with(NOLOCK)
-WHERE oddsid IN (
-					SELECT MIN(oddsid)
-					FROM odds with(NOLOCK)
-					WHERE matchid in (SELECT distinct matchid FROM @temp_daao)
-						AND bettype = 7
-						and liveindicator = 1
-					GROUP BY matchid
-				)
+INSERT INTO @temp_maxbet(matchid, custid, maxbet)
+SELECT o.matchid, t.custid, MAX(maxbet)
+FROM odds o WITH(NOLOCK)
+	INNER JOIN (
+		SELECT matchid, t.custid, MIN(b.priority) as priority
+		FROM odds o with(NOLOCK)
+			INNER JOIN @temp_daao t ON o.matchid = t.matchid AND o.bettype = t.bettype
+			INNER JOIN @bettype b ON t.bettype = b.bettype
+		GROUP BY t.matchid, t.custid
+	) t ON o.matchid = t.matchid 
+	INNER JOIN @bettype b ON b.priority = t.priority AND o.bettype = b.bettype
+	
   
 if @fromdate > @o_x or @todate > @o_x   
 BEGIN  
  select   
- custid, username, eventdate, leagueid, a.matchid, ISNULL(t.maxbet,0) as maxbet,  
+ a.custid, username, eventdate, leagueid, a.matchid, ISNULL(t.maxbet,0) as maxbet,  
  stake_hdp, stake_ou, stake_1sthdp, stake_1stou, stake_1x2, stake_1st1x2, stake_oe, stake_1stoe, stake_1stNoOfCorners, stake_NoOfCorners, stake_15minhdp, stake_15minOU, stake_15min1x2, stake_1stTotalBookings,stake_TotalBookings,stake_NextCorner,  
  stake_NextBooking, stake_15minCorners, stake_15minTotalBookings, stake_10minHdp, stake_10minOU, stake_10min1x2, stake_SingleTeamOU,
  winlost_hdp - comm_hdp as winlost_hdp,   
@@ -601,7 +619,7 @@ BEGIN
    group by om.eventdate, om.leagueid, om.matchid,om.homeid,om.awayid,om.hthomescore,om.htawayscore,om.fthomescore,om.ftawayscore,om.IsNeutral  
   
  ) as a  
- left JOIN @temp_maxbet t ON a.matchid = t.matchid
+ left JOIN @temp_maxbet t ON a.matchid = t.matchid AND a.custid = t.custid
  order by username,eventdate, leagueid, matchid  
 END
 GO

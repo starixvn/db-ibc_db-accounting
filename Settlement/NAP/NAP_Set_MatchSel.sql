@@ -1,11 +1,17 @@
-ALTER PROCEDURE [NAP_Set_MatchSel] @FromDate DATETIME
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSel]    Script Date: 09/11/2014 15:49:44 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSel    Script Date: 7/30/2014 5:52:27 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@ToDate DATETIME
 	,@SportType TINYINT = 0
-	,@LeagueID INT = 0
-	,-- 0 for ALL Leagues
-	@MatchCode NVARCHAR(50) = ''
+	,@LeagueID INT = 0 -- 0 for ALL Leagues
+	,@MatchCode NVARCHAR(50) = ''
 	,@StatusId TINYINT = 0
 	,@FilterBy TINYINT = 0
+	,@PenaltyShootoutOnly BIT = 0 
 	,@IsReLoad BIT = 0
 AS
 /*  
@@ -18,12 +24,14 @@ AS
 		- 20140417@Kathy: re-arrange order list (follow by old system)
 		- 20140421@Kathy: get match status in queue
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
+		- 20140714@Kathy: filter by running penalty shootout only [Redmine:#17142]
       
  Param explanation:  
 	@MatchCode: match code
 	@LeagueID: = 0: show info of all leagues     
 	@StatusId: 0: all, 1: running; 2: closed; 3: completed; 4: refund; 
 	@FilterBy: 0: none, 1: un-calculated game; 2: Un-calculated multiple only; 3: all
+	@PenaltyShootoutOnly: 0: none; 1: running penalty shootout only
 	@IsReLoad: 1: reload partial matches of a league, 0: not reload
 */
 BEGIN
@@ -86,7 +94,7 @@ BEGIN
 				END
 
 		--ignore event status if selecting filterby
-		IF (@UncalMultiOnly = 1 OR @UncalOnly = 1)
+		IF (@UncalMultiOnly = 1 OR @UncalOnly = 1 OR @PenaltyShootoutOnly = 1)
 			SELECT @eventstatus = ''
 				,@isRefund = NULL
 	END
@@ -108,6 +116,7 @@ BEGIN
 		,finalawayscore INT
 		,betstatus NVARCHAR(50)
 		,eventstatus NVARCHAR(50)
+		,SettlementStatus135 tinyint
 		,Foddsstatus VARCHAR(10)
 		,sporttype TINYINT
 		,IsNeutral BIT
@@ -151,6 +160,7 @@ BEGIN
 		,tmp.finalawayscore
 		,tmp.betstatus
 		,tmp.eventstatus
+		,ISNULL(mr.SettlementStatus135,0) as SettlementStatus135
 		,tmp.Foddsstatus
 		,tmp.sporttype
 		,tmp.IsNeutral
@@ -225,8 +235,10 @@ BEGIN
 	) tmp
 	LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
 	where (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
-			AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL) 
-
+	AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
+	AND ISNULL(mr.SettlementStatus135,0) = CASE when @PenaltyShootoutOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
+	
+	
 	SELECT @rowcount = 0
 		,@max_matchid = 0
 
@@ -325,6 +337,7 @@ BEGIN
 		,m.finalawayscore
 		,m.betstatus
 		,m.eventstatus
+		,m.SettlementStatus135
 		,m.Foddsstatus
 		,m.sporttype
 		,m.IsNeutral
@@ -358,11 +371,6 @@ BEGIN
 END
 
 GO
-
-GRANT EXECUTE ON [NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_MatchSel] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSel] TO [vnteam] AS [dbo]
