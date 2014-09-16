@@ -348,6 +348,7 @@ BEGIN
 				,bg.STATUS
 				,bg.bettype
 				,bg.betteam
+				,bg.refno
 		FROM	bettransG bg WITH (NOLOCK)
 				INNER JOIN @tmpListTransID t ON bg.refno = t.Refno 
 		WHERE	t.Bettype  BETWEEN 1101 AND 1102 
@@ -360,6 +361,7 @@ BEGIN
 				,NULL AS Status 
 				,0 AS Bettype
 				,NULL AS betteam 
+				,0 AS refno
 	END
 			
 	---- Mix Parlay 
