@@ -352,51 +352,60 @@ BEGIN
 				INNER JOIN @tmpListTransID t ON bg.refno = t.Refno 
 		WHERE	t.Bettype  BETWEEN 1101 AND 1102 
 	END
-			
-	-- Mix Parlay 
-	IF(@isExistParlay =1)
+	ELSE	--- Get structure for web 
 	BEGIN
-		SELECT	bm.transid,
-				bm.bettype,
-				bm.betteam,
-				bm.odds,
-				bm.hdp1,
-				bm.hdp2,
-				bm.livehomescore,
-				bm.liveawayscore,
-				bm.liveindicator,
-				m.matchid,
-				m.homeid,
-				m.awayid,
-				m.leagueid,
-				m.sporttype,	
-				isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral,
-				bm.refno	
-		FROM	bettransm bm WITH(NOLOCK)
-				INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE	bm.refno IN (SELECT Refno FROM @tmpListTransID WHERE bettype = 9)
-		UNION ALL 
-		SELECT	bm.transid,
-				bm.bettype,
-				bm.betteam,
-				bm.odds,
-				bm.hdp1,
-				bm.hdp2,
-				bm.livehomescore,
-				bm.liveawayscore,
-				bm.liveindicator,
-				m.matchid,
-				m.homeid,
-				m.awayid,
-				m.leagueid,
-				m.sporttype,	
-				isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral,
-				bm.refno	
-		FROM	bettransm14 bm WITH(NOLOCK)
-				INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE	bm.refno IN (SELECT Refno FROM @tmpListTransID WHERE bettype = 9)
-		ORDER BY bm.transid
+		SELECT	 0 AS TransID 
+				,0 AS Odds
+				,0 AS Stake
+				,NULL AS Status 
+				,0 AS Bettype
+				,NULL AS betteam 
 	END
+			
+	---- Mix Parlay 
+	--IF(@isExistParlay =1)
+	--BEGIN
+	--	SELECT	bm.transid,
+	--			bm.bettype,
+	--			bm.betteam,
+	--			bm.odds,
+	--			bm.hdp1,
+	--			bm.hdp2,
+	--			bm.livehomescore,
+	--			bm.liveawayscore,
+	--			bm.liveindicator,
+	--			m.matchid,
+	--			m.homeid,
+	--			m.awayid,
+	--			m.leagueid,
+	--			m.sporttype,	
+	--			isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+	--			bm.refno	
+	--	FROM	bettransm bm WITH(NOLOCK)
+	--			INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
+	--	WHERE	bm.refno IN (SELECT Refno FROM @tmpListTransID WHERE bettype = 9)
+	--	UNION ALL 
+	--	SELECT	bm.transid,
+	--			bm.bettype,
+	--			bm.betteam,
+	--			bm.odds,
+	--			bm.hdp1,
+	--			bm.hdp2,
+	--			bm.livehomescore,
+	--			bm.liveawayscore,
+	--			bm.liveindicator,
+	--			m.matchid,
+	--			m.homeid,
+	--			m.awayid,
+	--			m.leagueid,
+	--			m.sporttype,	
+	--			isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+	--			bm.refno	
+	--	FROM	bettransm14 bm WITH(NOLOCK)
+	--			INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
+	--	WHERE	bm.refno IN (SELECT Refno FROM @tmpListTransID WHERE bettype = 9)
+	--	ORDER BY bm.transid
+	--END
 
 	INSERT INTO zzzbettrans
 		(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
