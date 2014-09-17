@@ -31,17 +31,6 @@ BEGIN
 
 	SELECT	@isITAdmin		= 0 
 
-	-- CHECK IT GROUP or NOT ? 
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_GroupInfoSel 
-		 @GroupID = 1								-- 'IT' GROUP 
-		,@UserID = @UserID
-		,@ShowInternalGroup = 0
-		,@System = 'ACCOUNTING'
-	IF @@ROWCOUNT <> 0 
-	BEGIN
-		SELECT	@isITAdmin = 1 
-	END
-
 	If NOT EXISTS (select 1 from CustDB.dbo.customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 	BEGIN
 		SELECT	 @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!'
@@ -162,6 +151,17 @@ BEGIN
 			FROM	@tmpListTransID
 			WHERE	Bettype <> 9  
 		END
+	END
+
+	-- CHECK IT GROUP or NOT ? 
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_GroupInfoSel 
+		 @GroupID = 1								-- 'IT' GROUP 
+		,@UserID = @UserID
+		,@ShowInternalGroup = 0
+		,@System = 'ACCOUNTING'
+	IF @@ROWCOUNT <> 0 
+	BEGIN
+		SELECT	@isITAdmin = 1 
 	END
 
 	SELECT	@Site = Site

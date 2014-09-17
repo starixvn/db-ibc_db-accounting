@@ -72,6 +72,7 @@ BEGIN
 			,acomm = 0
 			,scomm = 0
 		WHERE matchid = @MatchID
+			  AND bettype = 10 
 	END 
 
 	--IF (@status='won')
