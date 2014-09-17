@@ -74,6 +74,7 @@ BEGIN
 	--Search by TransID 
 	IF @CustID IS NULL 
 	BEGIN 
+	
 		SELECT	@FromDate = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP - 3,120)		-- As defined, only get data within 3 days 
 		
 		INSERT INTO @Data
