@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [NAP_BettransSpecialDelBetID_Del]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -147,7 +147,7 @@ BEGIN
 		ELSE
 		BEGIN
 			INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
-			SELECT	KeyID, MatchID 
+			SELECT	DISTINCT KeyID, MatchID 
 			FROM	@tmpListTransID
 			WHERE	Bettype <> 9  
 		END
@@ -452,6 +452,3 @@ BEGIN
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
 END 
-GO
-GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]
-GO
