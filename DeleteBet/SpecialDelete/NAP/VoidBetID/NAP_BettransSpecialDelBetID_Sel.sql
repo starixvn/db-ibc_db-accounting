@@ -74,6 +74,8 @@ BEGIN
 	--Search by TransID 
 	IF @CustID IS NULL 
 	BEGIN 
+		SELECT	@FromDate = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP - 3,120)		-- As defined, only get data within 3 days 
+		
 		INSERT INTO @Data
 		SELECT b.bettype
 			,b.transid
@@ -124,6 +126,7 @@ BEGIN
 		FROM bettrans AS b WITH (NOLOCK)
 			INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
 		WHERE	b.transid = @TransID 
+				AND b.winlostdate >=@FromDate
 				AND b.bettype < 19001
 				AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
 				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
@@ -173,6 +176,7 @@ BEGIN
 			,b.winlostdate
 		FROM bettrans AS b WITH (NOLOCK)
 		WHERE	b.transid = @TransID 
+				AND b.winlostdate >=@FromDate
 				AND b.matchid = 9
 				AND b.bettype = 9
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
@@ -222,6 +226,7 @@ BEGIN
 			INNER JOIN outright AS odds WITH (NOLOCK) ON b.matchid = odds.orid
 			INNER JOIN league l WITH (NOLOCK) ON odds.leagueid = l.leagueid
 		WHERE b.bettype = 10
+			AND b.winlostdate >=@FromDate
 			AND b.transid = @TransID 
 			AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 	END
