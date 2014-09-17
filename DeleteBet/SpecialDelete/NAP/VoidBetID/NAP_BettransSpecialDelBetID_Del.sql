@@ -33,7 +33,7 @@ BEGIN
 
 	If NOT EXISTS (select 1 from CustDB.dbo.customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 	BEGIN
-		SELECT	 @ErrMsg = 'Wrong username/password or You do not have permission to delete this bet!!'
+		SELECT	 @ErrMsg = 'Sorry. You cannot process void bets due to either wrong password or insufficient permission!'
 				,@ErrCode = 101
 
 		SELECT	@LogData = 'Try to delete transaction for custid: ' + cast(@UserID AS VARCHAR(10)) + ' betlist: ' + cast(@strtransid AS VARCHAR(8000)) + ' - Username: ' + @username + ' - reason: ' + @reason
@@ -141,7 +141,7 @@ BEGIN
 		))
 		BEGIN
 			SELECT  @ErrCode = 206,
-					@ErrMsg = 'A match is being calculated or some tickets of this match are being deleted, please wait a few seconds until the on-going process is completed and try again.'
+					@ErrMsg = 'The selected tickets are not ready to be voided now, please wait a few seconds until the on-going process is completed and try again.'
 			RETURN
 		END
 		ELSE
