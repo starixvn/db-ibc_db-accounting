@@ -9,7 +9,7 @@ AS
 	Date: 20140908  
 	Task: Get tickets by Bet ID/CustID : 
 		  Normal SB, Outright, Mix Parlay (Allow to delete Running & Refunded), NG, and Live Casino 
-	DB: DBAGE/bodb02   
+	DB: DBTXN/bodb02   
 	Original:     
 
 	Revisions:  

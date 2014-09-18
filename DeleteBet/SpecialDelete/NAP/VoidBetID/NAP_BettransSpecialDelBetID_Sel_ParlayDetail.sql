@@ -6,7 +6,7 @@ AS
 	Created by: Jamie
 	Date: 20140911
 	Task: Get info of Mix Parlay Bets 
-	DB: DBAGE/BODB02
+	DB: DBTXN/bodb02
 	Original: Acc_BetsSelBetCheckM
 	
 	Revisions: 
