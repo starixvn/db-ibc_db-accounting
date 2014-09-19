@@ -48,6 +48,7 @@ BEGIN
 		,Bettype		INT
 		,Refno			BIGINT
 		,Betfrom		NVARCHAR(10)
+		,StatusID		TINYINT
 		,KeyID			INT 
 	)
 
@@ -57,6 +58,7 @@ BEGIN
 		,Bettype
 		,Refno
 		,Betfrom
+		,StatusID
 		,KeyID
 	)
 	SELECT	 TransID
@@ -64,12 +66,18 @@ BEGIN
 			,Bettype
 			,Refno
 			,Betfrom
+			,StatusID
 			,CASE Bettype WHEN 9 THEN -1	-- isCalculatingParlay in SystemSettings OR 1 (Single match)
 						  WHEN 10 THEN 2    -- Outright 
 						  ELSE 1 END		-- SB, NG, LiveCS 
 	FROM	Bettrans WITH (NOLOCK)
 	WHERE	TransID IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))
+			AND StatusID NOT IN (101, 102)	-- REJECT, VOID
 
+	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113)  -- DRAW, WON, LOSE 
+	BEGIN
+		DELETE FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113	-- Exclude settled Mix Parlay 
+	END
 
 	DECLARE	@Recommend			INT
 			,@MRecommend		INT
@@ -99,6 +107,7 @@ BEGIN
 			,@isExistOutright = MAX(CASE WHEN Bettype = 10 THEN 1 ELSE 0 END)
 	FROM	Bettrans WITH (NOLOCK)
 	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)
+			
 
 	SELECT	 @Username2		= Username2
 			,@CustUsername	= username
@@ -452,3 +461,6 @@ BEGIN
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
 END 
+GO
+GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet]
+GO 
