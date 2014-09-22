@@ -8,6 +8,10 @@ Begin DataProject = "Account"
       Script = "Acc_AutoFollowBetSelBACustomer.sql"
       Script = "Acc_AutoFollowBetSelCustomer.sql"
       Script = "Acc_AutoFollowBetUpdRate.sql"
+      Begin Folder = "Job"
+         Script = "dbo.Task_FollowBet_InsertBet.sql"
+         Script = "dbo.Task_FollowBet_ListBet.sql"
+      End
    End
    Begin Folder = "BA"
       Begin Folder = "Internal"
