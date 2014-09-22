@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Outright]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Outright]    Script Date: 09/21/2014 22:46:57 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Outright    Script Date: 9/19/2014 9:34:19 AM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Outright]
 	 @MatchID		INT
 	,@Status		NVARCHAR(10)	= NULL 
 	,@Action		VARCHAR(10)		='CAL'	
@@ -22,7 +30,6 @@ AS
 		+ @Status	= {WON | LOSE} | UNDO | REFUND 
 		+ @Deadheat = fraction of deadheat to divide (1,2,3  etc)	
 */
-
 BEGIN
 	SET NOCOUNT ON 
 	-- check and not allow attempt to settlement same game while it's still not finish
@@ -91,7 +98,7 @@ BEGIN
 	
 	IF @Action = 'UNDO'
 	BEGIN
-		EXEC dbo.NAP_Admin_Outright_Update 
+				EXEC DBPRO.bodb02.dbo.NAP_Admin_Outright_Update 
 			 @MatchID = @MatchID
 			,@Status = @Status
 			,@Action = @Action
@@ -118,7 +125,7 @@ BEGIN
 		and bettype = 10
 	Group by custid
 	
-	EXEC dbo.NAP_Admin_Calculate_10 
+		EXEC dbo.NAP_Admin_Calculate_10 
 		 @MatchID = @MatchID
 		,@Status = @Status
 		,@Action = @Action
@@ -268,5 +275,4 @@ BEGIN
 	END CATCH		
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Outright] TO [bodbAdminNet] 
-GO 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Outright] TO [bodbAdminNet] AS [dbo]
