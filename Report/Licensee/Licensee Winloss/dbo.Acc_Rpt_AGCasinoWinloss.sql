@@ -1,5 +1,6 @@
 USE [bodb02]
 GO
+ 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -120,8 +121,7 @@ BEGIN
 			
 	FROM #tmpResult r
 		INNER JOIN #TempExchange e ON r.Winlostdate = e.ExchangeDate AND r.currency = e.ExchangeId
-	GROUP BY r.winlostdate 
-			,CASE WHEN @ReportType = 1 THEN r.winlostdate
+	GROUP BY  CASE WHEN @ReportType = 1 THEN r.winlostdate
 			 WHEN @ReportType = 2 THEN Dateadd(d,1-DATEPART(d,r.winlostdate),r.winlostdate)--- CONVERT(VARCHAR(6),w.winlostdate,112)  
 								  ELSE '0' 
 								  END 
@@ -129,7 +129,9 @@ BEGIN
 			 ,CASE WHEN Currency=51  THEN  @VNDCurrencyName
 				 ELSE e.Code 
 				 END 		
-	ORDER BY r.Winlostdate
+	ORDER BY CASE WHEN @ReportType = 1 THEN r.winlostdate
+			WHEN @ReportType = 2 THEN Dateadd(d,1-DATEPART(d,r.winlostdate),r.winlostdate)--- CONVERT(VARCHAR(6),w.winlostdate,112)  
+			ELSE '0' END
 	---------
 	DROP TABLE #tmpResult
 	DROP TABLE #tmpAg
