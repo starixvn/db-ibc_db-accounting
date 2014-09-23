@@ -465,7 +465,8 @@ BEGIN
 		SET		VValue = '0'
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
-END 
+END
+ 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet]
 GO 
