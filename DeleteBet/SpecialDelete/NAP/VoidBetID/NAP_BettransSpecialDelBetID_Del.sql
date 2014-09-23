@@ -76,7 +76,12 @@ BEGIN
 
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113)  -- DRAW, WON, LOSE 
 	BEGIN
-		DELETE FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113	-- Exclude settled Mix Parlay 
+		DELETE FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113	-- Not allowed to delete settled(DRAW, WON, LOSE ) Mix Parlay 
+	END
+
+	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1)
+	BEGIN
+		DELETE FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1 -- Not allowed to settle the running Live CS bet 
 	END
 
 	DECLARE	@Recommend			INT
@@ -192,11 +197,11 @@ BEGIN
 		SELECT @isCustDeposit = 1 
 	END
 
-	SELECT	@EmailGroup = CASE	WHEN @CustUsername = '12EU' THEN 'Group12EU'
-								WHEN @isCustDeposit = 1 THEN 'GroupDeposit' 
-								WHEN @Recommend = 11196380 THEN 'GroupFoobet'		-- FB
-								WHEN @CustID IN (1077687, 2331, 115770, 15523642) THEN 'GroupBetfair'  -- Betfair: BFOS, BF, ITibc102, BF3
-								WHEN @CustID = 13423967 THEN 'GroupOneExchange'  --1E
+	SELECT	@EmailGroup = CASE	WHEN @CustUsername = '12EU' THEN '12EU'
+								WHEN @isCustDeposit = 1 THEN 'Deposit' 
+								WHEN @Recommend = 11196380 THEN 'Foobet'		-- FB
+								WHEN @CustID IN (1077687, 2331, 115770, 15523642) THEN 'Betfair'  -- Betfair: BFOS, BF, ITibc102, BF3
+								WHEN @CustID = 13423967 THEN 'OneExchange'  --1E
 								ELSE '' END 
 	-- SINGLE BET 
 	UPDATE odds
