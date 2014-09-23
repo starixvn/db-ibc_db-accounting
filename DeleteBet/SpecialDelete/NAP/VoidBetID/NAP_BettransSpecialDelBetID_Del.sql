@@ -201,7 +201,7 @@ BEGIN
 								WHEN @isCustDeposit = 1 THEN 'Deposit' 
 								WHEN @Recommend = 11196380 THEN 'Foobet'		-- FB
 								WHEN @CustID IN (1077687, 2331, 115770, 15523642) THEN 'Betfair'  -- Betfair: BFOS, BF, ITibc102, BF3
-								WHEN @CustID = 13423967 THEN 'OneExchange'  --1E
+								WHEN @Recommend = 13423967 THEN 'OneExchange'  --1E
 								ELSE '' END 
 	-- SINGLE BET 
 	UPDATE odds
