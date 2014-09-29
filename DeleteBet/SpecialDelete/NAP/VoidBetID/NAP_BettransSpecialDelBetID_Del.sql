@@ -354,7 +354,7 @@ BEGIN
 		
 			
 	--check for live casino
-	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1102))
+	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199))
 	BEGIN		
 		SELECT 	 t.TransID 
 				,bg.odds
@@ -365,7 +365,7 @@ BEGIN
 				,bg.refno
 		FROM	bettransG bg WITH (NOLOCK)
 				INNER JOIN @tmpListTransID t ON bg.refno = t.Refno 
-		WHERE	t.Bettype  BETWEEN 1101 AND 1102 
+		WHERE	t.Bettype  BETWEEN 1101 AND 1199
 	END
 	ELSE	--- Get structure for web 
 	BEGIN
