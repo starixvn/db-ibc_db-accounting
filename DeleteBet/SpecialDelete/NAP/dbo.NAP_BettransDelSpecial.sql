@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial_xtest]    Script Date: 09/29/2014 14:24:23 ******/
+﻿/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial_xtest]    Script Date: 09/30/2014 11:18:54 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -483,20 +483,24 @@ BEGIN
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
 		AND b.bettype in (128, 129, 130, 136, 137, 138, 139, 143, 144)
 		AND(
-			(b.bettype IN(128)
-			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam128 = 'All' THEN betteam ELSE @BetTeam128 END,'^'))  
+			(
+			  b.bettype IN(128)
+			  AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam128 = 'All' THEN betteam ELSE @BetTeam128 END,'^'))  
 			)			
 			OR
-			(b.bettype IN (129, 130) 
-			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam129 = 'All' THEN betteam ELSE @BetTeam129 END,'^'))  
+			(
+			  b.bettype IN (129, 130) 
+			  AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam129 = 'All' THEN betteam ELSE @BetTeam129 END,'^'))  
 			)
 			OR
-			(b.bettype IN (136, 137, 138, 139) 
-			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam136 = 'All' THEN betteam ELSE @BetTeam136 END,'^'))  
+			(
+			  b.bettype IN (136, 137, 138, 139) 
+			  AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam136 = 'All' THEN betteam ELSE @BetTeam136 END,'^'))  
 			)
 			OR
-			(b.bettype IN (143, 144) 
-			AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam143 = 'All' THEN betteam ELSE @BetTeam143 END,'^'))  
+			(
+			  b.bettype IN (143, 144) 
+			  AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam143 = 'All' THEN betteam ELSE @BetTeam143 END,'^'))  
 			)
 		)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
@@ -528,49 +532,40 @@ BEGIN
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
 		AND b.bettype IN (154, 155, 156, 1302, 1311, 1312, 1316, 1317, 1318, 1324)
 		AND (
-			(b.bettype IN (154, 155, 1311, 1316)	
-			AND b.betid = CASE WHEN @Set154 = 'ALL' THEN b.betid ELSE @Set154 END
-			AND (@BetTeam154 = 'ALL' OR b.betteam = @BetTeam154)
+			(
+			  b.bettype IN (154, 155, 1311, 1316)	
+			  AND b.betid = CASE WHEN @Set154 = 'ALL' THEN b.betid ELSE @Set154 END
+			  AND (@BetTeam154 = 'ALL' OR b.betteam = @BetTeam154)
 			)
 			OR
 			(
-			b.bettype IN (156, 1312)
-			AND b.betid = CASE WHEN @Set156 = 'ALL' THEN b.betid ELSE @Set156 END
-			AND (@BetTeam156 = 'ALL' OR b.betteam = @BetTeam156)
+			  b.bettype IN (156, 1312)
+			  AND b.betid = CASE WHEN @Set156 = 'ALL' THEN b.betid ELSE @Set156 END
+			  AND (@BetTeam156 = 'ALL' OR b.betteam = @BetTeam156)
 			)
 			OR
 			(
-			b.bettype = 1302 
-			AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam1302 = 'ALL' THEN b.betteam ELSE @BetTeam1302 END, '^'))
+			  b.bettype = 1302 
+			  AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam1302 = 'ALL' THEN b.betteam ELSE @BetTeam1302 END, '^'))
 			)
 			OR
 			(
-			b.bettype = 1318
-			AND b.betid = CASE WHEN @Set1318 = 'ALL' THEN b.betid ELSE @Set1318 END
-			AND (@BetTeam1318 = 'ALL' OR b.betteam = @BetTeam1318)
+			  b.bettype = 1318
+			  AND b.betid = CASE WHEN @Set1318 = 'ALL' THEN b.betid ELSE @Set1318 END
+			  AND (@BetTeam1318 = 'ALL' OR b.betteam = @BetTeam1318)
 			)
 			OR
 			(
-			b.bettype = 1317
-			AND b.betid = CASE WHEN @Set1317 = 'ALL' THEN b.betid ELSE @Set1317 END
-			AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam1317 = 'ALL' THEN b.betteam ELSE @BetTeam1317 END, '^'))
+			  b.bettype = 1317
+			  AND b.betid = CASE WHEN @Set1317 = 'ALL' THEN b.betid ELSE @Set1317 END
+			  AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam1317 = 'ALL' THEN b.betteam ELSE @BetTeam1317 END, '^'))
 			)
 			OR
 			(
-			b.bettype = 1324
-			AND LEFT(b.betid, 3) = CASE WHEN @Set1324 = 'ALL' THEN LEFT(betid, 3) ELSE @Set1324 END -- Set
-			AND (
-				(@Game1324 = 'ALL') 
-				OR 
-				(
-				@Game1324 = '13' AND RIGHT(betid,2) >=13
-				) 
-				OR 
-				(
-				RIGHT(betid, 2) = @Game1324
-				)
-				) -- Game	
-			AND (@BetTeam1324 = 'ALL' OR b.betteam = @BetTeam1324)
+			  b.bettype = 1324
+			  AND LEFT(b.betid, 3) = CASE WHEN @Set1324 = 'ALL' THEN LEFT(betid, 3) ELSE @Set1324 END -- Set
+			  AND ((@Game1324 = 'ALL') OR (@Game1324 = '13' AND RIGHT(betid,2) >=13) OR (RIGHT(betid, 2) = @Game1324)) -- Game	
+			  AND (@BetTeam1324 = 'ALL' OR b.betteam = @BetTeam1324)
 			)
 		)
 		AND 1 = CASE WHEN b.bettype IN (155, 1316) THEN CASE 
@@ -1080,6 +1075,8 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+
+
 
 
 
