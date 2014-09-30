@@ -1,4 +1,3 @@
-
 USE [CheckResultDB]
 
 ---- Execute 
@@ -27,7 +26,7 @@ BEGIN
 	SELECT @Rowcnt = @@ROWCOUNT	
 	IF @Rowcnt = 0 BREAK
 
-	EXEC dbo.[DBA_CheckPTGame_Credit] @srecommend = @CustId WITH RECOMPILE  
+	EXEC dbo.[DBA_CheckPTGame_Credit] @srecommend = @CustId 
 
 	SET @msg = 'Done for custid = ' + cast(@CustId AS VARCHAR(50))  
 	RAISERROR (@msg,0,1) WITH NOWAIT
@@ -46,4 +45,3 @@ WHERE S.Description = 'Credit - Game'
 DROP TABLE #temp
 
 GO
- 
