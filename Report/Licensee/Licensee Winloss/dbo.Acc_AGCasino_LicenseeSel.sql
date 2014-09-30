@@ -1,10 +1,12 @@
 USE [bodb_licensee]
 GO
-
+/****** Object:  StoredProcedure [dbo].[Acc_AGCasino_LicenseeSel_xtest]    Script Date: 09/25/2014 09:49:14 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
+
 ALTER PROCEDURE [dbo].[Acc_AGCasino_LicenseeSel]
 AS
 
@@ -13,7 +15,7 @@ AS
 	Task: Get List of all licensees offerred AG Casino
 	DB: DBLIC.bodb_licensee
 	Revisions:
-	
+		+20140925: add Launchdate column in the result
 */
 
 SET NOCOUNT ON
@@ -26,6 +28,7 @@ SELECT
 	l.LicenseeID
 	, l.LicenseeName
 	,CASE WHEN ISNULL(l.Brandname,'')='' THEN  l.LicenseeName ELSE  l.Brandname END Brandname
+	,lpd.EffectiveDate AS Launchdate
 FROM 
 	dbo.Licensees l WITH (NOLOCK)  
 	INNER JOIN dbo.SystemLicensee sl (NOLOCK) ON l.LicenseeID=sl.LicenseeID 

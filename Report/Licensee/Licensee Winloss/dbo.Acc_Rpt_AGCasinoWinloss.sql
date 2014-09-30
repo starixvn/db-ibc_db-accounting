@@ -1,5 +1,6 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_AGCasinoWinloss]    Script Date: 09/29/2014 17:02:27 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -30,7 +31,9 @@ exec Acc_Rpt_AGCasinoWinloss
 	  + @excludeTest: remove currency UUS
 */   
 
+
 BEGIN
+
 	CREATE TABLE #tmpResult (Winlostdate DATETIME
 							 ,Currency 		  INT
 							 ,TurnOver 		  MONEY
@@ -39,19 +42,24 @@ BEGIN
 							 ,LicenseeWinlost MONEY
 							)
 						
-	CREATE TABLE #tmpAg (CustId INT
+	CREATE TABLE #tmpAg (CustId   INT
 						,Currency INT
 						)
 		
 	DECLARE @VNDCurrencyName VARCHAR(20)
 			,@ChargeRate 	 FLOAT      
-	
+			,@EffectiveDate	 DATETIME
+			
 	SELECT @VNDCurrencyName = currency 
 		   ,@ChargeRate = 0.15
 	FROM  dbo.Exchange WITH (NOLOCK) 
 	WHERE ExchangeId = 51
-
 	
+	SELECT @EffectiveDate = EffectiveDate
+	FROM DBLIC.bodb_licensee.dbo.LicenseeProduct3rd WITH (NOLOCK)
+	WHERE LicenseeID  = @LicenseeID
+		AND ProductID = 10 --- AG Casino
+		
 	INSERT INTO #tmpAg (CustID,Currency)	
 	SELECT CustID,Currency
 	FROM DBLIC.bodb_Licensee.dbo.LicenseeCust lc WITH (NOLOCK)
@@ -59,7 +67,7 @@ BEGIN
 		AND (@Currency = 0 OR (@Currency <> 0 AND Currency = @Currency))
 		AND (@excludeTest=0 OR (@excludeTest=1 AND Currency <> 20))	
 	
-	INSERT INTO #tmpResult (Winlostdate 
+	INSERT INTO #tmpResult ( Winlostdate 
 							 ,Currency 	
 							 ,TurnOver 	
 							 ,TotalTrans
@@ -77,6 +85,7 @@ BEGIN
 		INNER JOIN dbo.Custinfo co WITH  (NOLOCK) ON c.CustID = co.CustID
 		INNER JOIN #tmpAg ag ON co.recommend = ag.CustID
 	WHERE c.Winlostdate BETWEEN @FromDate AND @ToDate 
+		  AND c.Winlostdate >= @EffectiveDate
 	GROUP BY c.Winlostdate
 		    ,co.Currency
 	
@@ -115,13 +124,12 @@ BEGIN
 		---EUR
 			,SUM(r.TurnOver*e.EUR)   	 	AS TurnOverEUR
 			,SUM(r.Winlost*e.EUR)		 	AS WinlostEUR
-			,SUM(r.LicenseeWinlost*e.EUR) AS LicenseeWLEUR
+			,SUM(r.LicenseeWinlost*e.EUR)   AS LicenseeWLEUR
 			,SUM(r.LicenseeWinlost*@ChargeRate*e.EUR)  AS AmtDueToAGCEUR
 			
 	FROM #tmpResult r
 		INNER JOIN #TempExchange e ON r.Winlostdate = e.ExchangeDate AND r.currency = e.ExchangeId
-	GROUP BY r.winlostdate 
-			,CASE WHEN @ReportType = 1 THEN r.winlostdate
+	GROUP BY  CASE WHEN @ReportType = 1 THEN r.winlostdate
 			 WHEN @ReportType = 2 THEN Dateadd(d,1-DATEPART(d,r.winlostdate),r.winlostdate)--- CONVERT(VARCHAR(6),w.winlostdate,112)  
 								  ELSE '0' 
 								  END 
@@ -129,7 +137,9 @@ BEGIN
 			 ,CASE WHEN Currency=51  THEN  @VNDCurrencyName
 				 ELSE e.Code 
 				 END 		
-	ORDER BY r.Winlostdate
+	ORDER BY CASE WHEN @ReportType = 1 THEN r.winlostdate
+			WHEN @ReportType = 2 THEN Dateadd(d,1-DATEPART(d,r.winlostdate),r.winlostdate)--- CONVERT(VARCHAR(6),w.winlostdate,112)  
+			ELSE '0' END
 	---------
 	DROP TABLE #tmpResult
 	DROP TABLE #tmpAg

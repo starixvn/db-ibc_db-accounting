@@ -9,8 +9,13 @@ Begin DataProject = "Account"
       Script = "Acc_AutoFollowBetSelCustomer.sql"
       Script = "Acc_AutoFollowBetUpdRate.sql"
       Begin Folder = "Job"
-         Script = "dbo.Task_FollowBet_InsertBet.sql"
-         Script = "dbo.Task_FollowBet_ListBet.sql"
+         Begin Folder = "BK"
+            Script = "dbo.Task_FollowBet_InsertBet.sql"
+            Script = "dbo.Task_FollowBet_ListBet.sql"
+         End
+         Script = "dbo.Task_FollowBet_Step1.sql"
+         Script = "dbo.Task_FollowBet_Step2.sql"
+         Script = "dbo.Task_FollowBet_Step2_PlaceBet.sql"
       End
    End
    Begin Folder = "BA"

@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 09/30/2014 03:04:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 9/30/2014 8:41:34 AM ******/
+ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -21,10 +29,11 @@ AS
 BEGIN 
 	SET NOCOUNT ON
 
-	--Check permission for account site
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[DeleteBets]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-	If @ErrCode <> 0
-		RETURN
+	-- As confirmed by BA, No need to check permission inside SP
+	----Check permission for account site
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[DeleteBets]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	--If @ErrCode <> 0
+	--	RETURN
 
 	DECLARE @LogData		NVARCHAR(500)	
 			,@isITAdmin		BIT
@@ -201,7 +210,7 @@ BEGIN
 								WHEN @isCustDeposit = 1 THEN 'Deposit' 
 								WHEN @Recommend = 11196380 THEN 'Foobet'		-- FB
 								WHEN @CustID IN (1077687, 2331, 115770, 15523642) THEN 'Betfair'  -- Betfair: BFOS, BF, ITibc102, BF3
-								WHEN @CustID = 13423967 THEN 'OneExchange'  --1E
+								WHEN @Recommend = 13423967 THEN 'OneExchange'  --1E
 								ELSE '' END 
 	-- SINGLE BET 
 	UPDATE odds
@@ -354,7 +363,7 @@ BEGIN
 		
 			
 	--check for live casino
-	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1102))
+	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199))
 	BEGIN		
 		SELECT 	 t.TransID 
 				,bg.odds
@@ -365,7 +374,7 @@ BEGIN
 				,bg.refno
 		FROM	bettransG bg WITH (NOLOCK)
 				INNER JOIN @tmpListTransID t ON bg.refno = t.Refno 
-		WHERE	t.Bettype  BETWEEN 1101 AND 1102 
+		WHERE	t.Bettype  BETWEEN 1101 AND 1199
 	END
 	ELSE	--- Get structure for web 
 	BEGIN
@@ -465,7 +474,6 @@ BEGIN
 		SET		VValue = '0'
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
-END 
+END
 GO
-GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet]
-GO 
+GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]
