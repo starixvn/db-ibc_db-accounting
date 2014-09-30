@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_AllStatement_Full]    Script Date: 09/29/2014 03:48:38 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_AllStatement_Full    Script Date: 3/18/2014 4:42:53 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_AllStatement_Full    Script Date: 3/10/2014 10:45:34 AM ******/
+ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
 	@custid int,
 	@fromdate datetime,
 	@todate datetime,
@@ -41,6 +50,7 @@
 		- 20130129@Dan: add param to show/hide exchange rate (use for external acc), change linked server DB06 to DBRPT
 		- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
 		- 20140305@Dom: Update outstanding for keno
+		- 20140929@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
  */
 SET NOCOUNT ON
 
@@ -546,7 +556,13 @@ BEGIN
 			from DBRPT.bodb_Report.dbo.Statement with (NOLOCK)
 			where custid = @custid AND transdesc = 'OPENING BALANCE' AND accdate <= @fromdate_bk
 			order by accdate desc
-
+			
+			--if cannot find any old BU row, get BUDate from last BUDate before @fromdate
+			if (@BUDate is NULL) 
+				select @BUDate = accdate
+				from DBRPT.bodb_Report.dbo.Statement with (NOLOCK)
+				where custid = @custid AND accdate BETWEEN DATEADD(dd, -7, @fromdate_bk) and @fromdate_bk AND DATEPART(WEEKDAY, accdate) = 7
+								
 			--get acc bal from statement old (Statement):		
 			SELECT @AccBal = isnull(SUM(totalamt),0)
 			FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
@@ -566,12 +582,9 @@ SELECT	accdate, refno,totalamt,transtype,transtypeid,transdesc,creator
 FROM @StatementTable
 where (accdate >= @fromdate_bk OR transdesc = 'ACCUMULATED BALANCE')
 order by accdate, case when transdesc like '%opening balance%' then 1 else 2 end, transdesc
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbAdminNet]   
+GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AllStatement_Full] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_AllStatement_Full] TO [vnteam] AS [dbo]
