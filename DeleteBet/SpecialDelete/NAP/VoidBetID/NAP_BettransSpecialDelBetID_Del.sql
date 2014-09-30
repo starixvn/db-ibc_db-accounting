@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 09/30/2014 03:04:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 9/30/2014 8:41:34 AM ******/
+ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -21,10 +29,11 @@ AS
 BEGIN 
 	SET NOCOUNT ON
 
-	--Check permission for account site
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[DeleteBets]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-	If @ErrCode <> 0
-		RETURN
+	-- As confirmed by BA, No need to check permission inside SP
+	----Check permission for account site
+	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[DeleteBets]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	--If @ErrCode <> 0
+	--	RETURN
 
 	DECLARE @LogData		NVARCHAR(500)	
 			,@isITAdmin		BIT
@@ -466,7 +475,5 @@ BEGIN
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
 END
- 
 GO
-GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet]
-GO 
+GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]
