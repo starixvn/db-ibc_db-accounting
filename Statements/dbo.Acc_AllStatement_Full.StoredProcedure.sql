@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AllStatement_Full]    Script Date: 09/29/2014 03:48:38 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AllStatement_Full]    Script Date: 10/01/2014 16:56:42 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -559,10 +559,11 @@ BEGIN
 			
 			--if cannot find any old BU row, get BUDate from last BUDate before @fromdate
 			if (@BUDate is NULL) 
-				select @BUDate = accdate
-				from DBRPT.bodb_Report.dbo.Statement with (NOLOCK)
-				where custid = @custid AND accdate BETWEEN DATEADD(dd, -7, @fromdate_bk) and @fromdate_bk AND DATEPART(WEEKDAY, accdate) = 7
-								
+			BEGIN
+				SET @BUDate = @fromdate_bk
+				WHILE(DATEPART(WEEKDAY, @BUDate) <> 7) SET @BUDate = DATEADD(dd, -1, @BUDate)		
+			END	
+										
 			--get acc bal from statement old (Statement):		
 			SELECT @AccBal = isnull(SUM(totalamt),0)
 			FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
@@ -582,6 +583,7 @@ SELECT	accdate, refno,totalamt,transtype,transtypeid,transdesc,creator
 FROM @StatementTable
 where (accdate >= @fromdate_bk OR transdesc = 'ACCUMULATED BALANCE')
 order by accdate, case when transdesc like '%opening balance%' then 1 else 2 end, transdesc
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbAdminNet] AS [dbo]
 GO
