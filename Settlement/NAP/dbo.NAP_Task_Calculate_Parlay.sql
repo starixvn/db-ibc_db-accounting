@@ -1,4 +1,13 @@
-CREATE PROCEDURE [NAP_Task_Calculate_Parlay] @step INT = 0
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Task_Calculate_Parlay]    Script Date: 10/03/2014 09:08:59 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Task_Calculate_Parlay    Script Date: 3/17/2014 4:21:08 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_Task_Calculate_Parlay] @step INT = 0
 AS
 /*
 	Created by: Kathy
@@ -7,6 +16,7 @@ AS
 	DB: DBTXN/bodb02
 	
 	Revisions:
+		-20140502@Kathy: Calculate the execution time
 		
 */
 SET NOCOUNT ON
@@ -123,7 +133,7 @@ BEGIN
 	--		@mode = 1,
 	--		@statusID = @statusID, @winlostdate = @winlostdate,
 	--		@strXML = @strXML
-	EXEC dbo.NAP_Admin_Calculate_Parlay @mode = 'CAL-9'
+		EXEC dbo.NAP_Admin_Calculate_Parlay @mode = 'CAL-9'
 		,@statusID = @statusID
 		,@winlostdate = @winlostdate
 		,@strXML = @strXML
@@ -237,13 +247,10 @@ BEGIN
 			WHERE matchid = @matchid
 			)
 		UPDATE dbo.Parlay_Calculate_Queue WITH (UPDLOCK, ROWLOCK)
-		SET IsCalculating = 2
+		SET IsCalculating = 2,
+			duration = DATEDIFF(ms,execTime,GETDATE())
 		WHERE matchid = @matchid AND IsCalculating = 1
 END
 
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Task_Calculate_Parlay] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Task_Calculate_Parlay] TO [vnteam] AS [dbo]

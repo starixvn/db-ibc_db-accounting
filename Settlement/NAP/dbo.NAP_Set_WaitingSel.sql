@@ -1,4 +1,12 @@
-ALTER PROCEDURE [NAP_Set_WaitingSel]
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Set_WaitingSel]    Script Date: 10/03/2014 09:13:26 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Set_WaitingSel    Script Date: 7/30/2014 5:52:28 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel]
 	@MatchCode nvarchar(50) = '',
 	@SportType tinyint = 0,
 	@LeagueID int = 0 -- 0 for ALL Leagues
@@ -12,6 +20,7 @@ AS
 		- 20140419@Lukas: reduce data return by excluding old matches
 		- 20140421@Kathy: Directly get IsExistFGLG value from bettrans (not use NAP_Set_MatchBetStatusSel)
 		- 20140506@Kathy: get HT FGLG status 
+		- 20140711@Kathy: get Penalty Shootout status
 	Param's explanation:  
 		
 */
@@ -66,18 +75,19 @@ BEGIN
 		homeid,
 		awayid,
 		matchcode,
-		kickofftime,
+		--kickofftime,
 		finalhomescore,
 		finalawayscore,
 		betstatus,
 		eventstatus,
-		Foddsstatus,
+		SettlementStatus135,
+		--Foddsstatus,
 		sporttype,
 		IsNeutral,
-		eventdate,
+		--eventdate,
 		goalrecord,
-		suspenderHalfTime,
-		suspenderFullTime,
+		--suspenderHalfTime,
+		--suspenderFullTime,
 		IsHalfTimeCal,
 		isPending,
 		isUndecided,
@@ -94,21 +104,23 @@ BEGIN
 			isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,  
 			isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,  		
 			m.homeid, m.awayid,  
-			m.matchcode, m.kickofftime,  
+			m.matchcode, 
+			--m.kickofftime,  
 			m.finalhomescore,  
 			m.finalawayscore, m.betstatus,  
 			case when m.betstatus like 'Refund FT%' then 'Refund FT'  
-			when m.betstatus like 'Refund HT%' then 'Refund HT'  
-			when m.betstatus like 'Refund%' then 'Refund'  
-			else m.eventstatus  
+				when m.betstatus like 'Refund HT%' then 'Refund HT'  
+				when m.betstatus like 'Refund%' then 'Refund'  
+				else m.eventstatus  
 			end as eventstatus,    
-			'' as Foddsstatus,  
+			ISNULL(mr.SettlementStatus135,0) SettlementStatus135,
+			--'' as Foddsstatus,  
 			m.sporttype,  
 			isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,  
-			m.eventdate,  
+			--m.eventdate,  
 			m.goalrecord, 
-			case mr.ConfirmHT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmHT ) end suspenderHalfTime,   
-			case mr.ConfirmFT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmFT ) end suspenderFullTime,  
+			--case mr.ConfirmHT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmHT ) end suspenderHalfTime,   
+			--case mr.ConfirmFT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmFT ) end suspenderFullTime,  
 			ISNULL(mr.IsHTCal,0) as IsHalfTimeCal,  		
 			ISNULL(mr.isPending,0) as isPending,  
 			ISNULL(mr.isUndecided,0) as isUndecided,  
@@ -137,13 +149,7 @@ BEGIN
 			AND t.sporttype = case when @sporttype = 0 then t.sporttype else @sporttype end  	  		
 			AND (@matchcode = '' or (t.matchid = @matchid OR t.matchcode = @matchcode)) 	
 END
-
 GO
-
-GRANT EXECUTE ON [NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_WaitingSel] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam] AS [dbo]
