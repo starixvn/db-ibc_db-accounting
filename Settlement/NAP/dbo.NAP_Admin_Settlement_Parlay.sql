@@ -28,6 +28,7 @@ AS
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
 		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140717@Kathy: Settle MP for Penalty Shootout [Redmine:#17142]
+		- 20141007@Kathy: Missing ';' in @betstatus
 	Param's Explanation:
 	@resultPS: match result of penalty shootout
 
@@ -226,7 +227,7 @@ BEGIN
 		FROM match with(NOLOCK)
 		WHERE matchid = @matchid
 
-		IF (@SportType IN (5, 6, 9, 30)) AND @action = 'CAL' AND @betstatus <> 'Refund' -- Tennis/VolleyBall/Badminton/Squash: get TotalGamesPlayed
+		IF (@SportType IN (5, 6, 9, 30)) AND @action = 'CAL' AND @betstatus <> 'Refund;' -- Tennis/VolleyBall/Badminton/Squash: get TotalGamesPlayed
 												EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
 				,@Total = @TennisTotal OUTPUT
 				,@TotalHome = @T_Home OUTPUT
