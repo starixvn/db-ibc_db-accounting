@@ -368,7 +368,6 @@ BEGIN
 		,m.betstatus
 		,m.matchcode			
 
-
 	-- Get TENNIS RESULT 
 	SELECT	MatchId
 			, ResourceId
