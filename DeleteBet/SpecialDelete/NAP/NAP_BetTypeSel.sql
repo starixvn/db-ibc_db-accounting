@@ -37,8 +37,8 @@ BEGIN
 		,type			INT -- 0:Sport Book, 1:Number Game, 2:Virtual Sports, 3:Live Casino  
 		)
 		
-	-- 1: Single bet, 2: Early kick-off, 3: Ticket listing
-	IF @Mode IN (0, 2, 3)
+	-- 1: Single bet, 2: Early kick-off, 3: Ticket listing, 4: Mix Parlay   
+	IF @Mode IN (0, 2, 3, 4)
 	BEGIN
 		INSERT INTO #TmpBettype (
 			typeid
