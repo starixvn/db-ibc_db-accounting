@@ -16,6 +16,7 @@ AS
 		- 20110928@Johnson: get column statusid to mark void sub-ticket
 		- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype,f_GetChoice for odds, Oddstype, betteam
 		- 20130121@Dan: change linked server DB06 to DBARC		
+		- 20141006@Sophia: get Betcheck
 */
 
 SET NOCOUNT ON
@@ -37,7 +38,8 @@ DECLARE @BetListMP TABLE(
 	Sporttype smallint,
 	isNeutral bit,
 	matchid int,
-	matchcode nvarchar(50)
+	matchcode nvarchar(50),
+	BetCheck Varchar(50)
 )
 
 
@@ -61,10 +63,11 @@ BEGIN
 		match.sporttype,
 		match.isNeutral,
 		match.matchid,
-		match.matchcode
+		match.matchcode,
+		bettrans.BetCheck
 	from 
 		(SELECT matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid,
-				livehomescore,liveawayscore,liveindicator
+				livehomescore,liveawayscore,liveindicator, BetCheck
 		FROM BettransM with (nolock)
 		WHERE refno=@refno ) AS bettrans
 	INNER JOIN match with (nolock) ON bettrans.matchid=match.matchid
@@ -90,10 +93,11 @@ BEGIN
 		match.sporttype,
 		match.isNeutral,
 		match.matchid,
-		match.matchcode 
+		match.matchcode ,
+		bettrans.BetCheck
 	from 
 		(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid,
-				livehomescore,liveawayscore,liveindicator
+				livehomescore,liveawayscore,liveindicator, BetCheck
 		FROM BettransM14 with (nolock)
 		WHERE refno=@refno) AS bettrans
 	INNER JOIN match14 as match with (nolock) ON bettrans.matchid=match.matchid
@@ -119,10 +123,11 @@ BEGIN
 		match.sporttype,
 		match.isNeutral,
 		match.matchid,
-		match.matchcode
+		match.matchcode,
+		bettrans.BetCheck
 	from 
 		(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid,
-				livehomescore,liveawayscore,liveindicator
+				livehomescore,liveawayscore,liveindicator, BetCheck
 		FROM DBARC.bodb_archive.dbo.BettransM with (nolock)
 		WHERE refno=@refno) AS bettrans
 	INNER JOIN DBARC.bodb_Archive.dbo.match_bk as match with (nolock) ON bettrans.matchid=match.matchid

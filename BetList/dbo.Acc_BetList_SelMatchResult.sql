@@ -1,5 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_BetList_SelMatchResult]
 	@MatchID int,
+	@Bettype SMALLINT = NULL,
+	@BetId	 BIGINT = NULL,
 	@RaceNo varchar(50)=NULL
 AS
 
@@ -22,11 +24,17 @@ Revisions:
 	- 20120921@Elodie: Get kickofftime field
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20130226@Elodie: Show the results of Virtual HR
+	- 20140930@Sophia: Get the detail information of Tennis sport
+	
+
 */
 
 SET NOCOUNT ON
 	IF(@RaceNo is NULL)
 	BEGIN
+		DECLARE @ResourceId VARCHAR(20) 
+		SELECT @ResourceId = LEFT(REPLACE(CONVERT(VARCHAR(20),@BetId), '8', '' ),2)
+
 		IF exists(SELECT 1 FROM match WITH(NOLOCK) WHERE matchid = @matchid)
 		BEGIN	
 			SELECT 
@@ -60,6 +68,21 @@ SET NOCOUNT ON
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
+			
+			SELECT	D.MatchId,
+					D.ResourceId,
+					D.HomeValue,
+					D.AwayValue,
+					D.ResultStatusID,
+					D.SettlementStatusID
+			FROM	dbo.ResultDetail D WITH (NOLOCK)			
+			WHERE	D.MatchId = @MatchId	
+					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
+							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
+								ELSE 0 END END = LEN(D.ResourceId)
+			ORDER BY ResourceId
+
+
 			RETURN
 		END
 		IF exists(SELECT 1 FROM match14 WITH(NOLOCK) WHERE matchid = @matchid)	
@@ -95,6 +118,20 @@ SET NOCOUNT ON
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
+			
+			SELECT	D.MatchId,
+					D.ResourceId,
+					D.HomeValue,
+					D.AwayValue,
+					D.ResultStatusID,
+					D.SettlementStatusID
+			FROM	dbo.ResultDetail14 D WITH (NOLOCK)			
+			WHERE	D.MatchId = @MatchId	
+					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
+							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
+								ELSE 0 END END = LEN(D.ResourceId)
+			ORDER BY ResourceId
+
 			RETURN
 		END
 		ELSE
@@ -130,6 +167,20 @@ SET NOCOUNT ON
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
+
+			
+			SELECT	D.MatchId,
+					D.ResourceId,
+					D.HomeValue,
+					D.AwayValue,
+					D.ResultStatusID,
+					D.SettlementStatusID
+			FROM	DBARC.bodb_archive.dbo.ResultDetail_BK D WITH (NOLOCK)			
+			WHERE	D.MatchId = @MatchId	
+					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
+							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
+								ELSE 0 END END = LEN(D.ResourceId)
+			ORDER BY ResourceId
 		END
 	END
 	ELSE
