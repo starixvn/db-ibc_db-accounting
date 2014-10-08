@@ -12,7 +12,7 @@ ALTER  PROCEDURE [dbo].[Acc_Rpt_AGCasinoWinloss_SAg]
  @ToDate		SMALLDATETIME,   
  @ReportType	TINYINT = 1,
  @TableType 	TINYINT = 1,
- @excludeTest   BIT = 0
+ @excludeTest BIT = 0
 AS  
 
 /*
@@ -50,11 +50,18 @@ BEGIN
 		
 	DECLARE @VNDCurrencyName VARCHAR(20)
 			,@ChargeRate 	 FLOAT  
+			,@EffectiveDate	 DATETIME
+			
 	SELECT @VNDCurrencyName = currency
 		   ,@ChargeRate = 0.15
 	FROM  dbo.Exchange WITH (NOLOCK) 
 	WHERE ExchangeId = 51
 	
+	SELECT @EffectiveDate = EffectiveDate
+	FROM DBLIC.bodb_licensee.dbo.LicenseeProduct3rd WITH (NOLOCK)
+	WHERE LicenseeID  = @LicenseeID
+		AND ProductID = 10 --- AG Casino
+		
 	INSERT INTO #tmpSAg (CustID,Currency)	
 	SELECT CustID,Currency
 	FROM dbo.Dep_CustSuper dep WITH (NOLOCK)
@@ -83,6 +90,7 @@ BEGIN
 		INNER JOIN dbo.Custinfo co WITH  (NOLOCK) ON c.CustID = co.CustID
 		INNER JOIN #tmpSAg sag ON co.srecommend = sag.CustID
 	WHERE c.Winlostdate BETWEEN @FromDate AND @ToDate 
+		  AND c.Winlostdate >= @EffectiveDate
 	GROUP BY sag.CustID
 			,c.Winlostdate
 			,co.Currency
@@ -145,3 +153,4 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_AGCasinoWinloss_SAg] TO [bodbAdminNet]  
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_AGCasinoWinloss_SAg] TO [vnteam]  
+

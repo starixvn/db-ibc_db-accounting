@@ -1,111 +1,142 @@
-﻿ALTER PROCEDURE [NAP_BetTypeSel]
-	@Mode SMALLINT = 0 
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BetTypeSel_xtest]    Script Date: 10/01/2014 15:26:47 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_BetTypeSel] 
+	@Mode		SMALLINT = 0
+	,@MatchId	INT = 0 -- remove default value when web is done for testing
 AS
-/*
-Created: 20130610@Elodie
-Task : Select bettypes for NAP's special delete
-DB: DBAGE/bodb02
-Original: Acc_BetTypeSel
-
-Revisions:    
-    - 20130813@Elodie: Add new bettype Live Bacarat and Live Roulette (1103,1104)
-    
-Param's Explanation:
-@Mode: 
-	0: Special Delete
-	1: Number game
-	2: Early Kick-Off
-	3: TicketListing
-	4: Mix Parlay 
-	5: Virtual sports
-*/		
-SET NOCOUNT ON
---type column: 0:Sport Book, 1:Number Game, 2:Virtual Sports, 3:Live Casino
-CREATE TABLE #TmpBettype (typeid INT , bettypename NVARCHAR(100), type INT, liveindicator BIT)
-
------- sportbook
-IF @Mode = 0
+/*  
+	Created: 20130610@Elodie  
+	Task : Select bettypes for NAP's special delete  
+	DB: DBAGE/bodb02  
+	Original: Acc_BetTypeSel  
+	  
+	Revisions:      
+		- 20130813@Elodie: Add new bettype Live Bacarat and Live Roulette (1103,1104)  
+		- 20140926@Kathy: Get list bettype belong to matchid [Redmine:#23129]
+	      
+	Param's Explanation:  
+	@Mode:   
+		 0: Single bet  
+		 1: Number game  
+		 2: Early Kick-Off  
+		 3: TicketListing  
+		 4: Mix Parlay   
+		 5: Virtual sports  
+*/
 BEGIN
+	SET NOCOUNT ON
 	
-	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
-	SELECT	typeid , typenamee as bettypename, 0 as type, CASE WHEN typeid IN (1,2,3,5,7,8,12,13,15,24,25,26,27,28,124,125) THEN 1 ELSE 0 END AS liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid IN (1,2,3,4,5,6,7,8,12,13,14,15,16,20,21,24,25,26,27,28,30) 
-			OR typeid between 121 and 999
-END
+	CREATE TABLE #TmpBettype (
+		typeid			INT
+		,bettypename	NVARCHAR(50)
+		,type			INT -- 0:Sport Book, 1:Number Game, 2:Virtual Sports, 3:Live Casino  
+		)
+		
+	-- 1: Single bet, 2: Early kick-off, 3: Ticket listing, 4: Mix Parlay   
+	IF @Mode IN (0, 2, 3, 4)
+	BEGIN
+		INSERT INTO #TmpBettype (
+			typeid
+			,bettypename
+			,type
+			)
+		SELECT b.typeid	AS typeid
+			, b.typenamee	AS bettypename
+			, 0				AS type
+		FROM dbo.bettype b WITH(NOLOCK) 
+		INNER JOIN dbo.odds o WITH(NOLOCK) ON b.typeid = o.bettype
+		INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = o.matchid
+		WHERE o.matchid = @matchid
+		AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)
+	END
 
-IF @Mode = 2
-BEGIN
+	 -- 2: Early Kick-Off  
+	IF @Mode = 2
+	BEGIN
+		INSERT INTO #TmpBettype (
+			typeid
+			,bettypename
+			,type
+			)
+		SELECT b.typeid
+			, b.typenamee
+			, 0
+		FROM dbo.bettype b WITH(NOLOCK)
+		WHERE b.typeid IN (9, 29)
+	END
 
-	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
-	SELECT	typeid , typenamee as bettypename, 0 as type, CASE WHEN typeid IN (1,2,3,5,7,8,12,13,15,24,25,26,27,28) THEN 1 ELSE 0 END AS liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid IN (1,2,3,4,5,6,7,8,12,13,14,15,16,20,21,24,25,26,27,28,30) 
-			OR typeid = 9 
-			OR typeid = 29
-			OR (typeid between 121 and 999 AND typeid NOT IN (124,125))
-END
-
-IF @Mode = 3
-BEGIN
-
-	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
-	SELECT	typeid , typenamee as bettypename, 0 as type, CASE WHEN typeid IN (1,2,3,5,7,8,12,13,15,24,25,26,27,28,124,125) THEN 1 ELSE 0 END AS liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid IN (1,2,3,4,5,6,7,8,12,13,14,15,16,20,21,24,25,26,27,28,30) 
-			OR typeid = 9 OR typeid = 29
-			OR typeid between 121 and 999
+	 -- 3: TicketListing  
+	IF @Mode = 3
+	BEGIN
+		INSERT INTO #TmpBettype (
+			typeid
+			,bettypename
+			,type
+			)
+		SELECT b.typeid
+			, b.typenamee
+			, 0 -- SportBook
+		FROM dbo.bettype b WITH(NOLOCK)
+		WHERE b.typeid IN (9, 29)
+		UNION ALL
+		SELECT b.typeid
+			,b.typenamee AS bettypename
+			,3 AS type -- Live Casino
+		FROM dbo.bettype b WITH(NOLOCK)
+		WHERE b.typeid BETWEEN 1101
+				AND 1199
+	END
 	
-	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
-	SELECT	typeid , typenamee as bettypename, 3 as type, 0 as liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid between 1101 and 1199
+	----- number game  
+	IF @Mode IN (1, 3)
+	BEGIN
+		INSERT INTO #TmpBettype (
+			typeid
+			,bettypename
+			,type
+			)
+		SELECT typeid
+			,typenamee AS bettypename
+			,1 AS type
+		FROM bettype WITH (NOLOCK)
+		WHERE typeid IN (81, 82, 83, 84, 86, 88, 90)
+		
+		UNION
+		SELECT typeid
+			,typenamee AS bettypename
+			,1 AS type
+		FROM bettype WITH (NOLOCK)
+		WHERE typeid IN (85, 86, 87, 89, 90)
+	END
+
+	----- virtual sports  
+	IF @Mode IN (5, 3)
+	BEGIN
+		INSERT INTO #TmpBettype (
+			typeid
+			,bettypename
+			,type
+			)
+		SELECT typeid
+			,typenamee AS bettypename
+			,2 AS type
+		FROM bettype WITH (NOLOCK)
+		WHERE typeid BETWEEN 1201
+				AND 1299
+	END
+
+	SELECT *
+	FROM #TmpBettype
+	GROUP BY typeid, bettypename, type
+	ORDER BY typeid
 END
 
-IF @Mode = 4
-BEGIN
-
-	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
-	SELECT	typeid , typenamee as bettypename, 0 as type, CASE WHEN typeid IN (1,2,3,5,7,8,12,13,15,24,25,26,27,28) THEN 1 ELSE 0 END AS liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid IN (1,2,3,4,5,6,7,8,12,13,14,15,16,20,21,24,25,26,27,28,30) 
-			OR (typeid between 121 and 999 AND typeid NOT IN (124,125))
-END
-
------ number game
-IF @Mode IN (1, 3)
-BEGIN 
-	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
-	SELECT	typeid , typenamee as bettypename, 1 as type, 0 as liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid in (81,82,83,84,86,88,90)
-	UNION
-	SELECT	typeid , typenamee as bettypename, 1 as type, 1 as liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid in (85,86,87,89,90)
-END 
- 
------ virtual sports
-IF @Mode IN (5, 3)
-BEGIN 
-	INSERT INTO #TmpBettype (typeid, bettypename, type, liveindicator)
-	SELECT	typeid , typenamee as bettypename, 2 as type, 0 as liveindicator
-	FROM	bettype WITH (NOLOCK)
-	WHERE	typeid between 1201 and 1299
-END 
-
-SELECT	* 
-FROM	#TmpBettype
-ORDER BY typeid
-
-
-
 GO
-
-GRANT EXECUTE ON [NAP_BetTypeSel] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_BetTypeSel] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_BetTypeSel] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_BetTypeSel] TO [vnteam] AS [dbo]

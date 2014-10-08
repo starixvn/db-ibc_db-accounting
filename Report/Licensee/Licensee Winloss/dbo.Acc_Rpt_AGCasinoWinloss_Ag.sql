@@ -38,6 +38,7 @@ AS
 */    
 ----------
 BEGIN
+
 	CREATE TABLE #tmpResult (CustID			  INT
 							 ,WinlostDate	  DATETIME  	
 							 ,Currency 		  INT
@@ -53,11 +54,17 @@ BEGIN
 						 	
 	DECLARE @VNDCurrencyName VARCHAR(20)
 			,@ChargeRate 	 FLOAT  
+			,@EffectiveDate	 DATETIME
 	SELECT @VNDCurrencyName = currency
 		   ,@ChargeRate = 0.15
 	FROM  dbo.Exchange WITH (NOLOCK) 
 	WHERE ExchangeId = 51
 	
+	SELECT @EffectiveDate = EffectiveDate
+	FROM DBLIC.bodb_licensee.dbo.LicenseeProduct3rd WITH (NOLOCK)
+	WHERE LicenseeID  = @LicenseeID
+		AND ProductID = 10 --- AG Casino
+		
 	INSERT INTO #tmpAg (CustID,Currency)	
 	SELECT l.custID,l.currency 
 	FROM DBLIC.bodb_Licensee.dbo.LicenseeCust l WITH (NOLOCK)	
@@ -87,6 +94,7 @@ BEGIN
 		INNER JOIN dbo.Custinfo co WITH  (NOLOCK) ON c.CustID = co.CustID
 		INNER JOIN #tmpAg ag ON co.recommend = ag.CustID
 	WHERE c.Winlostdate BETWEEN @FromDate AND @ToDate 
+		  AND c.Winlostdate >= @EffectiveDate	
 	GROUP BY ag.CustID
 			,c.Winlostdate
 			,co.Currency
@@ -144,7 +152,6 @@ BEGIN
 	DROP TABLE #TempExchange 
 	
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_AGCasinoWinloss_Ag] TO [bodbAdminNet]  
 GO

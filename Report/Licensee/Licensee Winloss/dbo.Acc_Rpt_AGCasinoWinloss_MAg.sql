@@ -12,7 +12,7 @@ ALTER   PROCEDURE [dbo].[Acc_Rpt_AGCasinoWinloss_MAg]
  @FromDate		SMALLDATETIME,  
  @ToDate		SMALLDATETIME,   
  @ReportType	TINYINT = 1,
- @excludeTest   BIT = 0
+ @excludeTest BIT = 0
 AS 
 
 /*
@@ -36,6 +36,8 @@ exec Acc_Rpt_AGCasinoWinloss_MAg
 */    
 ----------
 BEGIN
+
+
 	CREATE TABLE #tmpResult (CustID			  INT
 							 ,WinlostDate	  DATETIME  	
 							 ,Currency 		  INT
@@ -50,12 +52,18 @@ BEGIN
 						 )
 						 	
 	DECLARE @VNDCurrencyName VARCHAR(20)
-			,@ChargeRate 	 FLOAT  
+			,@ChargeRate 	 FLOAT 
+			,@EffectiveDate	 DATETIME 
 	SELECT @VNDCurrencyName = currency
 		   ,@ChargeRate = 0.15
 	FROM  dbo.Exchange WITH (NOLOCK) 
 	WHERE ExchangeId = 51
 	
+	SELECT @EffectiveDate = EffectiveDate
+	FROM DBLIC.bodb_licensee.dbo.LicenseeProduct3rd WITH (NOLOCK)
+	WHERE LicenseeID  = @LicenseeID
+		AND ProductID = 10 --- AG Casino
+		
 	INSERT INTO #tmpMAg (CustID,Currency)	
 	SELECT CustID,Currency
 	FROM  dbo.customer c WITH (NOLOCK) 
@@ -84,6 +92,7 @@ BEGIN
 		INNER JOIN dbo.Custinfo co WITH  (NOLOCK) ON c.CustID = co.CustID
 		INNER JOIN #tmpMAg mag ON co.mrecommend = mag.CustID
 	WHERE c.Winlostdate BETWEEN @FromDate AND @ToDate 
+		  AND c.Winlostdate >= @EffectiveDate
 	GROUP BY mag.CustID
 			,c.Winlostdate
 			,co.Currency
@@ -141,6 +150,7 @@ BEGIN
 	DROP TABLE #TempExchange 
 	
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_AGCasinoWinloss_MAg] TO [bodbAdminNet]  
 GO
