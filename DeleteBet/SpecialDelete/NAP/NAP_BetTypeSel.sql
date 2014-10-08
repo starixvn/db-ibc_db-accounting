@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_BetTypeSel_xtest]    Script Date: 10/01/2014 15:26:47 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_BetTypeSel] 
+﻿ALTER PROCEDURE [dbo].[NAP_BetTypeSel] 
 	@Mode		SMALLINT = 0
 	,@MatchId	INT = 0 -- remove default value when web is done for testing
 AS
@@ -35,6 +28,7 @@ BEGIN
 		typeid			INT
 		,bettypename	NVARCHAR(50)
 		,type			INT -- 0:Sport Book, 1:Number Game, 2:Virtual Sports, 3:Live Casino  
+		,liveindicator  BIT
 		)
 		
 	-- 1: Single bet, 2: Early kick-off, 3: Ticket listing, 4: Mix Parlay   
@@ -44,10 +38,12 @@ BEGIN
 			typeid
 			,bettypename
 			,type
+			,liveindicator
 			)
 		SELECT b.typeid	AS typeid
 			, b.typenamee	AS bettypename
 			, 0				AS type
+			, 0				AS liveindicator
 		FROM dbo.bettype b WITH(NOLOCK) 
 		INNER JOIN dbo.odds o WITH(NOLOCK) ON b.typeid = o.bettype
 		INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = o.matchid
@@ -62,9 +58,11 @@ BEGIN
 			typeid
 			,bettypename
 			,type
+			,liveindicator
 			)
 		SELECT b.typeid
 			, b.typenamee
+			, 0
 			, 0
 		FROM dbo.bettype b WITH(NOLOCK)
 		WHERE b.typeid IN (9, 29)
@@ -77,16 +75,19 @@ BEGIN
 			typeid
 			,bettypename
 			,type
+			,liveindicator
 			)
 		SELECT b.typeid
 			, b.typenamee
 			, 0 -- SportBook
+			, 0
 		FROM dbo.bettype b WITH(NOLOCK)
 		WHERE b.typeid IN (9, 29)
 		UNION ALL
 		SELECT b.typeid
 			,b.typenamee AS bettypename
 			,3 AS type -- Live Casino
+			,0 AS liveindicator
 		FROM dbo.bettype b WITH(NOLOCK)
 		WHERE b.typeid BETWEEN 1101
 				AND 1199
@@ -99,10 +100,12 @@ BEGIN
 			typeid
 			,bettypename
 			,type
+			,liveindicator
 			)
 		SELECT typeid
 			,typenamee AS bettypename
 			,1 AS type
+			,0 AS liveindicator
 		FROM bettype WITH (NOLOCK)
 		WHERE typeid IN (81, 82, 83, 84, 86, 88, 90)
 		
@@ -110,6 +113,7 @@ BEGIN
 		SELECT typeid
 			,typenamee AS bettypename
 			,1 AS type
+			,1 AS liveindicator
 		FROM bettype WITH (NOLOCK)
 		WHERE typeid IN (85, 86, 87, 89, 90)
 	END
@@ -121,10 +125,12 @@ BEGIN
 			typeid
 			,bettypename
 			,type
+			,liveindicator
 			)
 		SELECT typeid
 			,typenamee AS bettypename
 			,2 AS type
+			,0 AS liveindicator
 		FROM bettype WITH (NOLOCK)
 		WHERE typeid BETWEEN 1201
 				AND 1299
@@ -132,9 +138,11 @@ BEGIN
 
 	SELECT *
 	FROM #TmpBettype
-	GROUP BY typeid, bettypename, type
+	GROUP BY typeid, bettypename, type, liveindicator
 	ORDER BY typeid
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BetTypeSel] TO [bodbAdminNet] AS [dbo]
