@@ -4,7 +4,7 @@ AS
 /*
 	Created by: 20120913
 	Task: Update score 
-	DB: DBTRANS.BODB02 
+	DB: DBTXN/BODB02 
 	Original: [Acc_Set_MatchSelScore], Acc_Set_MatchSelForBill
 	
 	Revisions:			
@@ -162,11 +162,11 @@ BEGIN
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
 				WHEN bettype IN (154,155,156,1311,1312,1316,1317,1318,1324)	--- Tennis Set x 
-					THEN CASE	WHEN betid = 801 THEN 11		-- Tennis Set 1 
-								WHEN betid = 802 THEN 12		-- Tennis Set 2
-								WHEN betid = 803 THEN 13		-- Tennis Set 3
-								WHEN betid = 804 THEN 14		-- Tennis Set 4
-								WHEN betid = 805 THEN 15		-- Tennis Set 5
+					THEN CASE	WHEN CAST(betid AS VARCHAR(20)) LIKE '801%' THEN 11		-- Tennis Set 1 
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '802%' THEN 12		-- Tennis Set 2
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '803%' THEN 13		-- Tennis Set 3
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '804%' THEN 14		-- Tennis Set 4
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '805%' THEN 15		-- Tennis Set 5
 								ELSE 0 END 
 				ELSE 0
 				END
@@ -189,11 +189,11 @@ BEGIN
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
 				WHEN bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) 
-					THEN CASE	WHEN betid = 801 THEN 11		-- Tennis Set 1 
-								WHEN betid = 802 THEN 12		-- Tennis Set 2
-								WHEN betid = 803 THEN 13		-- Tennis Set 3
-								WHEN betid = 804 THEN 14		-- Tennis Set 4
-								WHEN betid = 805 THEN 15		-- Tennis Set 5
+					THEN CASE	WHEN CAST(betid AS VARCHAR(20)) LIKE '801%' THEN 11		-- Tennis Set 1 
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '802%' THEN 12		-- Tennis Set 2
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '803%' THEN 13		-- Tennis Set 3
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '804%' THEN 14		-- Tennis Set 4
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '805%' THEN 15		-- Tennis Set 5
 								ELSE 0 END 
 				ELSE 0
 				END
