@@ -83,6 +83,7 @@ BEGIN
 			, 0
 		FROM dbo.bettype b WITH(NOLOCK)
 		WHERE b.typeid IN (9, 29)
+		AND @matchid <> 0 -- for Sportbook
 		UNION ALL
 		SELECT b.typeid
 			,b.typenamee AS bettypename
@@ -91,6 +92,7 @@ BEGIN
 		FROM dbo.bettype b WITH(NOLOCK)
 		WHERE b.typeid BETWEEN 1101
 				AND 1199
+		AND @matchid = 0
 	END
 	
 	----- number game  
@@ -108,7 +110,7 @@ BEGIN
 			,0 AS liveindicator
 		FROM bettype WITH (NOLOCK)
 		WHERE typeid IN (81, 82, 83, 84, 86, 88, 90)
-		
+		AND @matchid = 0
 		UNION
 		SELECT typeid
 			,typenamee AS bettypename
@@ -116,6 +118,7 @@ BEGIN
 			,1 AS liveindicator
 		FROM bettype WITH (NOLOCK)
 		WHERE typeid IN (85, 86, 87, 89, 90)
+		AND @matchid = 0
 	END
 
 	----- virtual sports  
@@ -134,6 +137,7 @@ BEGIN
 		FROM bettype WITH (NOLOCK)
 		WHERE typeid BETWEEN 1201
 				AND 1299
+		AND @matchid = 0
 	END
 
 	SELECT *
@@ -141,9 +145,6 @@ BEGIN
 	GROUP BY typeid, bettypename, type, liveindicator
 	ORDER BY typeid
 END
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BetTypeSel] TO [bodbAdminNet] AS [dbo]
 GO
