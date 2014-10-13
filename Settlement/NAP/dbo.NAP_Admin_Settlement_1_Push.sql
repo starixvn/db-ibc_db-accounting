@@ -1,10 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1_Push]    Script Date: 09/11/2014 16:54:44 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push] 
 	@AdminId		INT
 	,@Matchid		INT
@@ -178,8 +171,6 @@ BEGIN
 	END
 END
 GO
-
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_1_Push] TO [vnteam] AS [dbo]
