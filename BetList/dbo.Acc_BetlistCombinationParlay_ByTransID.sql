@@ -20,6 +20,7 @@ AS
 		- 20130121@Dan: change linked server DB06 to DBARC
 		- 20130514@Elodie: Get odds value
 		- 20131216@Kathy: Get data from bettrans14 if @minMatchdate = @MoveBetDay
+		- 20141013@Sophia: Get betcheck of bettransm for Sportting Solution
 	Paramters Explanation:	
 */ 
 BEGIN
@@ -108,6 +109,7 @@ BEGIN
 			matchid		INT,
 			matchcode	VARCHAR(50),
 			matchdate	DATETIME,
+			Betcheck	VARCHAR(50),
 			--for generating combination parlays
 			RN TINYINT, -- set No. for selection in the combination
 			CNT TINYINT, -- total selection count, base on bettransm/14
@@ -135,10 +137,10 @@ BEGIN
 		)	
 
 	INSERT INTO @parlay_base(transid,refno,winlostdate,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid,
-						livehomescore,liveawayscore,liveindicator,leagueid,sporttype,isNeutral,matchid,matchcode,matchdate)
+						livehomescore,liveawayscore,liveindicator,leagueid,sporttype,isNeutral,matchid,matchcode,matchdate,Betcheck)
 
 	SELECT	bm.transid, bm.refno, bm.winlostdate,bm.bettype,m.homeid, m.awayid, bm.hdp1, bm.hdp2, bm.odds, bm.betteam,
-			bm.statusid, bm.livehomescore, bm.liveawayscore, bm.liveindicator, m.leagueid, m.sporttype, m.isNeutral ,m.matchid,	m.matchcode, bm.matchdate
+			bm.statusid, bm.livehomescore, bm.liveawayscore, bm.liveindicator, m.leagueid, m.sporttype, m.isNeutral ,m.matchid,	m.matchcode, bm.matchdate, bm.Betcheck
 	FROM bettransm bm WITH(NOLOCK)
 		INNER JOIN match m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE refno = @refno AND custid = @custid
@@ -146,7 +148,7 @@ BEGIN
 	UNION
 
 	SELECT	bm.transid, bm.refno, bm.winlostdate,bm.bettype,m.homeid, m.awayid, bm.hdp1, bm.hdp2, bm.odds, bm.betteam,
-			bm.statusid, bm.livehomescore, bm.liveawayscore, bm.liveindicator, m.leagueid, m.sporttype, m.isNeutral ,m.matchid,	m.matchcode, bm.matchdate
+			bm.statusid, bm.livehomescore, bm.liveawayscore, bm.liveindicator, m.leagueid, m.sporttype, m.isNeutral ,m.matchid,	m.matchcode, bm.matchdate, bm.Betcheck
 	FROM bettransm14 bm WITH(NOLOCK)
 		INNER JOIN match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE refno = @refno
@@ -154,7 +156,7 @@ BEGIN
 	UNION 
 	
 	SELECT	bm.transid, bm.refno, bm.winlostdate,bm.bettype,m.homeid, m.awayid, bm.hdp1, bm.hdp2, bm.odds, bm.betteam,
-			bm.statusid, bm.livehomescore, bm.liveawayscore, bm.liveindicator, m.leagueid, m.sporttype, m.isNeutral ,m.matchid,	m.matchcode, bm.matchdate
+			bm.statusid, bm.livehomescore, bm.liveawayscore, bm.liveindicator, m.leagueid, m.sporttype, m.isNeutral ,m.matchid,	m.matchcode, bm.matchdate, bm.Betcheck
 	FROM DBARC.bodb_archive.dbo.bettransm bm WITH(NOLOCK)
 		INNER JOIN DBARC.bodb_archive.dbo.match_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE refno = @refno
@@ -476,7 +478,8 @@ BEGIN
 		sporttype,
 		IsNeutral,
 		matchid,
-		matchcode
+		matchcode, 
+		BetCheck
 	FROM @Parlay_Base
 	
 	SELECT winlostdate, serial, modds, stake, statusid, 
