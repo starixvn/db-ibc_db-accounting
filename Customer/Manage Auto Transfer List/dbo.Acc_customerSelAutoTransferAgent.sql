@@ -1,6 +1,6 @@
 ﻿ ALTER PROCEDURE [dbo].[Acc_CustomerSelAutoTransferAgent]
-	@username	VARCHAR(50) = NULL,
-	@status		VARCHAR(30) = NULL,
+	@username	VARCHAR(50) = '',
+	@status		VARCHAR(30) = '',
 	@TotalRows	INT = 0 OUTPUT,
 	@PageSize	INT = 50,
 	@PageIndex	INT = 1
@@ -14,7 +14,8 @@ AS
 		Revisions:
 		
 		Parameter's Explanation:
-			-
+			-@username = '': get all agents
+			-@status = '' : get all status
 	*/
 BEGIN
 	SET NOCOUNT ON 
@@ -34,11 +35,10 @@ BEGIN
 		INNER JOIN Customer ci WITH(NOLOCK) ON c.custid = ci.custid
 		LEFT JOIN customer super WITH(NOLOCK) ON ci.srecommend = super.custid
 		LEFT JOIN customer master WITH(NOLOCK) ON ci.mrecommend = master.custid
-	WHERE ci.username = ISNULL(@username,ci.username)
-		AND c.status = ISNULL(@status,c.status)
+	WHERE ci.username = ISNULL(NULLIF(@username,''),ci.username)
+		AND c.status = ISNULL(NULLIF(@status,''),c.status)
 	
-	IF @TotalRows = 0
-		SELECT @TotalRows = @@ROWCOUNT
+	SELECT @TotalRows = @@ROWCOUNT
 	
 	SELECT custid
 			,username

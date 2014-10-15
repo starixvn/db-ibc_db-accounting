@@ -46,10 +46,11 @@ BEGIN
 	
 	INSERT INTO [dbo].[Acc_ClearBalanceList]
            ([custid] 
+           ,[status]
            ,[LastTransfer]           
            ,[transferType])
     OUTPUT INSERTED.custid, 0 INTO @tmpCust    
-	SELECT t.custid, GETDATE(), @TransferType
+	SELECT t.custid,'', GETDATE(), @TransferType
 	FROM @tmpUser t
 		LEFT JOIN Acc_ClearBalanceList ac WITH(NOLOCK) ON t.custid = ac.custid
 	WHERE t.custid IS NOT NULL
