@@ -17,7 +17,7 @@ AS
 	      
 	Param's Explanation:  
 	@Mode:   
-		 0: Single bet  
+		 0: Single bet     
 		 1: Number game  
 		 2: Early Kick-Off  
 		 3: TicketListing  
