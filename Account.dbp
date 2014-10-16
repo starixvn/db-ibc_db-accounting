@@ -256,6 +256,7 @@ Begin DataProject = "Account"
          Script = "dbo.Acc_CustomerInsAutoTransferAgentFromFile.sql"
          Script = "dbo.Acc_customerSelAutoTransferAgent.sql"
          Script = "dbo.Acc_CustomerUpdAutoTransferAgent.sql"
+         Script = "dbo.Acc_CustomerUpdAutoTransferAgentStatus.sql"
       End
       Begin Folder = "MoveCustomer"
          Script = "dbo.Acc_CustomerCheckMoveAgent.sql"

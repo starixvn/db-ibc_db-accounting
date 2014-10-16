@@ -1,6 +1,6 @@
 ﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype_Soccer]
 	@winlostdate	datetime,
-	@ReportType		TINYINT = 0,
+	@SoccerType		TINYINT = 0,
 	@LineTotal		money OUTPUT
 AS
 /*	Creator: Elodie
@@ -16,8 +16,9 @@ AS
 		- 20140711@Johnson: Separate major and minor bettypes of soccer		
 		- 20140930@Johnson: Add new report for soccer minor bettype
 	Explanation's Param:
-		- @ReportType =	 0: All bettype(major and minor bettype)
-					= 1: report soccer for minor bettype
+		- @SoccerType =	 0: All bettype(major and minor bettype)
+					= 1: report soccer for major bettype
+					= 2: report soccer for minor bettype
 */
 SET NOCOUNT ON
 
@@ -70,8 +71,9 @@ FROM	bettrans b WITH (NOLOCK)
 		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 		LEFT JOIN @Bettype t ON b.bettype = t.bettype
 WHERE	b.winlostdate = @winlostdate
-		AND 1= CASE WHEN @Reporttype = 1 AND t.bettype IS NULL THEN 1 
-					WHEN @ReportType = 0 THEN 1 ELSE 0 END
+		AND 1= CASE WHEN @SoccerType = 0 THEN 1
+					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
+					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
 		AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999)
 		AND b.matchid > 0		
 		AND b.statusID NOT IN (101, 102,103) 
@@ -100,8 +102,9 @@ FROM	bettrans b WITH (NOLOCK)
 		LEFT JOIN @Bettype t ON b.bettype = t.bettype		
 WHERE	b.winlostdate = @winlostdate
 		AND b.matchid > 0 
-		AND 1= CASE WHEN @Reporttype = 1 AND t.bettype IS NULL THEN 1 
-					WHEN @ReportType = 0 THEN 1 ELSE 0 END
+		AND 1= CASE WHEN @SoccerType = 0 THEN 1
+					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
+					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101, 102,103) 
 		AND b.ruben = 1	
@@ -128,8 +131,9 @@ FROM	bettrans b WITH (NOLOCK)
 		LEFT JOIN @Bettype t ON b.bettype = t.bettype		
 WHERE	b.winlostdate = @winlostdate
 	AND b.matchid > 0 
-	AND 1= CASE WHEN @Reporttype = 1 AND t.bettype IS NULL THEN 1 
-					WHEN @ReportType = 0 THEN 1 ELSE 0 END
+	AND 1= CASE WHEN @SoccerType = 0 THEN 1
+					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
+					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
 	AND b.bettype < 19001
 	AND b.statusID NOT IN (101, 102,103) 
 	AND b.ruben = 1	
@@ -144,9 +148,10 @@ FROM	bettrans b WITH (NOLOCK)
 		LEFT JOIN @Bettype t ON b.bettype = t.bettype
 WHERE
 		winlostdate = @winlostdate
-		AND bettype < 19001 
-		AND 1= CASE WHEN @Reporttype = 1 AND t.bettype IS NULL THEN 1 
-					WHEN @ReportType = 0 THEN 1 ELSE 0 END
+		AND b.bettype < 19001 
+		AND 1= CASE WHEN @SoccerType = 0 THEN 1
+					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
+					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
 		AND b.matchid >=0 
 		AND b.statusID NOT IN (101, 102,103,121) --('VOID', 'REJECT','DONE','REFUND') 
 		AND b.ruben = 1	
