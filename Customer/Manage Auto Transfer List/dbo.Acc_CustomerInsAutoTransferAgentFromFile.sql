@@ -1,5 +1,5 @@
 ﻿ ALTER PROCEDURE [dbo].[Acc_CustomerInsAutoTransferAgentFromFile]	
-	@username		VARCHAR(4000),
+	@username		VARCHAR(MAX),
 	@TransferType	TINYINT = 1,
 	@UserID			INT,
 	@IP				VARCHAR(50) = '',
@@ -50,7 +50,7 @@ BEGIN
            ,[LastTransfer]           
            ,[transferType])
     OUTPUT INSERTED.custid, 0 INTO @tmpCust    
-	SELECT t.custid,'', GETDATE(), @TransferType
+	SELECT t.custid,'', GETDATE()-1, @TransferType
 	FROM @tmpUser t
 		LEFT JOIN Acc_ClearBalanceList ac WITH(NOLOCK) ON t.custid = ac.custid
 	WHERE t.custid IS NOT NULL

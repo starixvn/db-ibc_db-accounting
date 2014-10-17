@@ -1,5 +1,5 @@
 ﻿ ALTER PROCEDURE [dbo].[Acc_CustomerCheckValidAutoTransferAgent]
-	@username	VARCHAR(4000)= ''
+	@username	VARCHAR(MAX)= ''
  AS
 	/*
 		Created: Johnson
