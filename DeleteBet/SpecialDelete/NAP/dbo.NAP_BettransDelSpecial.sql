@@ -1,15 +1,19 @@
-﻿/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial_xtest]    Script Date: 09/30/2014 11:18:54 ******/
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 10/17/2014 14:17:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_BettransDelSpecial    Script Date: 13/10/2014 12:53:16 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_BettransDelSpecial    Script Date: 13/10/2014 11:33:19 AM ******/
 ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId				INT,
 	
 	@FromTransId			BIGINT, 
 	@ToTransId				BIGINT, 
 		
-	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 153, 1303, 1308
+	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 153, 1303, 1306, 1308
 	@Handicap155			SMALLMONEY		= 9999,		-- 155, 1316 
 	@OverUnder156			SMALLMONEY		= 9999,		-- 156, 1312 
 	
@@ -330,7 +334,7 @@ BEGIN
 							ELSE b.betteam END 
 		AND b.bettype not in (4, 6, 14, 16, 30, 126, 127, 128, 129, 130, 131, 132, 136, 137, 138, 139, 143, 144,
 								154, 155, 156, 1302, 1311, 1312, 1316, 1317, 1318, 1324)
-		AND CASE WHEN b.bettype IN (1,3,7,8, 153, 1303, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
+		AND CASE WHEN b.bettype IN (1,3,7,8, 153, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
 													ELSE 0 END 
 			ELSE 1 END = 1
@@ -1075,11 +1079,6 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
-
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
