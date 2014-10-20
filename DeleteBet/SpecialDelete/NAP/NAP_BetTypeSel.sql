@@ -165,7 +165,10 @@ BEGIN
 		AND @matchid = 0
 	END
 	
-	SELECT tb.typeid, b.typenamee, tb.type, tb.liveindicator
+	SELECT tb.typeid
+		,b.typenamee AS bettypename
+		,tb.type
+		,tb.liveindicator
 	FROM #TmpBettype tb
 	INNER JOIN bettype b WITH(NOLOCK) ON tb.typeid = b.typeid
 	GROUP BY tb.typeid, b.typenamee, type, liveindicator
