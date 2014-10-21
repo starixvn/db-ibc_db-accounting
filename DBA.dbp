@@ -1020,6 +1020,9 @@ Begin DataProject = "DBA"
             Script = "Task_BalanceUpdDebit.sql"
             Script = "Task_BalanceUpdDebitGame.sql"
          End
+         Begin Folder = "Clear Balance"
+            Script = "dbo.Task_ClearBalanceAllDownlines.sql"
+         End
       End
       Begin Folder = "Bettrans"
          Script = "dbo.DBA_ReInit_bettrans_forecast_agent.sql"
