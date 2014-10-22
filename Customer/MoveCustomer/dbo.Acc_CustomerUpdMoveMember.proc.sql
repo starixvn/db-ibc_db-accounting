@@ -1192,7 +1192,7 @@ BEGIN
     END
 
     -- Keno
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1501,
@@ -1218,7 +1218,7 @@ BEGIN
 	    return
     END
 
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1511,
@@ -1243,7 +1243,7 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1503,
@@ -1268,7 +1268,7 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1504,
@@ -1293,7 +1293,7 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1505,
@@ -1318,7 +1318,7 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1513,
@@ -1343,7 +1343,7 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1507,
@@ -1368,7 +1368,7 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1508,
@@ -1393,7 +1393,7 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
-    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking_xtest
+    EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1509,
