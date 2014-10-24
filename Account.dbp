@@ -1643,6 +1643,10 @@ Begin DataProject = "Account"
             Script = "NAP_Admin_Match_Update_xtest.sql"
             Script = "NAP_Admin_Match_UpdateSaveBet_xtest.sql"
             Script = "NAP_Admin_Result_Update.sql"
+            Script = "NAP_Admin_Settlement_1_Push_xtest.sql"
+            Script = "NAP_Admin_Settlement_1_xtest.sql"
+            Script = "NAP_Admin_Settlement_4.sql"
+            Script = "NAP_updateMatch_remark_xtest.sql"
          End
       End
       Begin Folder = "NU"
