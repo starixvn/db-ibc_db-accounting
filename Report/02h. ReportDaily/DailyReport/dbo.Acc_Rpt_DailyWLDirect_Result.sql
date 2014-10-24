@@ -1,6 +1,6 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Result]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Result]
 	@MatchID int,
-	@Bettype int,
+	@Bettype int,	
 	@TraderName nvarchar(100) OUTPUT
 AS
 /*
@@ -10,9 +10,12 @@ DB: DBACC/bodb02
 Original: Acc_BetList_SelMatchResult
 
 Revisions:    
+ - 20141021@Sophia: Get data of ResultDetail (Sporting Solution) 
 	
 */
 SET NOCOUNT ON
+
+
 IF exists(SELECT 1 FROM match WITH(NOLOCK) WHERE matchid = @matchid)
 BEGIN	
 	SELECT 
@@ -57,6 +60,18 @@ BEGIN
 							WHEN bettype = 4 AND OperatorType = 1 THEN 2
 							WHEN bettype = 4 AND OperatorType = 2 THEN 12
 							END
+
+		SELECT	D.MatchId,
+				D.ResourceId,
+				D.HomeValue,
+				D.AwayValue,
+				D.ResultStatusID,
+				D.SettlementStatusID
+		FROM	dbo.ResultDetail D WITH (NOLOCK)			
+		WHERE	D.MatchId = @MatchId					
+		ORDER BY ResourceId
+
+
 END
 ELSE IF exists(SELECT 1 FROM match14 WITH(NOLOCK) WHERE matchid = @matchid)	
 BEGIN	
@@ -102,6 +117,19 @@ BEGIN
 							WHEN bettype = 4 AND OperatorType = 1 THEN 2
 							WHEN bettype = 4 AND OperatorType = 2 THEN 12
 							END
+
+
+
+		SELECT	D.MatchId,
+				D.ResourceId,
+				D.HomeValue,
+				D.AwayValue,
+				D.ResultStatusID,
+				D.SettlementStatusID
+		FROM	dbo.ResultDetail14 D WITH (NOLOCK)			
+		WHERE	D.MatchId = @MatchId					
+		ORDER BY ResourceId
+
 END
 
 GO
