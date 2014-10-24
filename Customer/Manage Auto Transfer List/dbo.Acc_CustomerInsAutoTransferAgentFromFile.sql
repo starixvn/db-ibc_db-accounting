@@ -13,7 +13,7 @@
 		DB: DBTXN/CustDB
 		
 		Revisions:
-		
+			- 20141023@Johnson: Set default transfer to 'Transfer all downlines' from upload file
 		Parameter's Explanation:
 			- @TransferType = 1: Transfer all members
 							= 2: Transfer all downlines
@@ -38,6 +38,9 @@ BEGIN
 	INSERT INTO @tmpUser(username)
 	SELECT val
 	FROM strSplit (@username,',')
+	
+	--Hardcode transfer type from file is 'Transfer all downlines'
+	SET @TransferType = 2
 	
 	UPDATE t
 	SET t.custid = c.custid

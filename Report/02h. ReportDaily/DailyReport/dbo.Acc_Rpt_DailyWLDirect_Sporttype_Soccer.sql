@@ -144,14 +144,13 @@ ORDER BY SportType
 	
 SELECT	@LineTotal = isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate), 0) 
 FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN @Match m on b.matchid = m.matchid
-		LEFT JOIN @Bettype t ON b.bettype = t.bettype
+		INNER JOIN @Match m on b.matchid = m.matchid		
 WHERE
 		winlostdate = @winlostdate
 		AND b.bettype < 19001 
 		AND 1= CASE WHEN @SoccerType = 0 THEN 1
-					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
-					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
+					WHEN @SoccerType = 1 AND bettype IN (SELECT bettype FROM @Bettype) NULL THEN 1
+					WHEN @SoccerType = 2 AND bettype NOT IN (SELECT bettype FROM @Bettype) THEN 1 ELSE 0 END
 		AND b.matchid >=0 
 		AND b.statusID NOT IN (101, 102,103,121) --('VOID', 'REJECT','DONE','REFUND') 
 		AND b.ruben = 1	

@@ -35,7 +35,7 @@ BEGIN
 	DECLARE @ErrType VARCHAR(4000)
 	
 	INSERT INTO @tmpUser(username)
-	SELECT val
+	SELECT DISTINCT val
 	FROM strSplit (@username,',')
 	
 	UPDATE t

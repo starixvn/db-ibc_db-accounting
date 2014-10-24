@@ -5,7 +5,7 @@
 		Created: Johnson
 		Date: 2014-09-29
 		Task: Check valid agents before insert into automate transfer list
-		DB: DBACC/bodb02
+		DB: DBTXN/CustDB
 		
 		Revisions:
 		
@@ -24,6 +24,13 @@ BEGIN
 	SET t.custid = c.custid
 	FROM @tmpUser t
 		LEFT JOIN customer c WITH(NOLOCK) ON t.username = c.username AND roleid > 1
+	
+	INSERT INTO @tmpResult(username,remark,isValid)
+	SELECT username, 'Duplicate Username.', 0
+	FROM @tmpUser
+	WHERE custid IS NOT NULL
+	GROUP BY username
+	HAVING COUNT(1) > 1
 	
 	INSERT INTO @tmpResult(username,remark,isValid)
 	SELECT username, 'Invalid Username.', 0
