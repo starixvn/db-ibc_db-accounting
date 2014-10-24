@@ -378,7 +378,8 @@ BEGIN
 			, SettlementStatusID
 	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
 	WHERE	@Sporttype IN (0,5 )
-			AND ResourceId LIKE '0[0-5]'  
+			AND ResourceId LIKE '0[0-5]' 
+			AND ResourceID > 0 
 			AND MatchID IN (SELECT MatchID FROM #matchList)
 
 	DROP TABLE #matchList

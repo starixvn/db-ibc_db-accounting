@@ -1,15 +1,10 @@
-﻿/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial_xtest]    Script Date: 09/30/2014 11:18:54 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId				INT,
 	
 	@FromTransId			BIGINT, 
 	@ToTransId				BIGINT, 
 		
-	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 153, 1303, 1308
+	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 153, 1303, 1306, 1308
 	@Handicap155			SMALLMONEY		= 9999,		-- 155, 1316 
 	@OverUnder156			SMALLMONEY		= 9999,		-- 156, 1312 
 	
@@ -22,7 +17,7 @@ ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	
     @BetTypes				VARCHAR(1000)	= '',
 	
-	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 153, 1301, 1303, 1305, 1306, 1308 
+	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 20, 153, 1301, 1303, 1305, 1306, 1308 
 	@BetTeam515				NVARCHAR(10)	= 'ALL',
 	@BetTeam430				VARCHAR(120) 	= '',
     @BetTeam6				VARCHAR(120) 	= '',		-- 6, 126, 131, 132
@@ -81,8 +76,9 @@ AS
 		- 20140701@Kathy: Apply BetRadar - change @BetTypes to varchar(1000) [Redmine:#18219]
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]		
 		- 20140806@Kathy: Support new 11 bettypes [Redmine:#19955]
-		- 20140929@Kathy: Offer new bettypes from Sportting Solutions and new IBC bettypes [Redmine:#23129]
-
+		- 20140929@Kathy: - Offer new bettypes from Sportting Solutions and new IBC bettypes [Redmine:#23129]
+						  - Add moneyline in filter
+						  
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
 		  + 0: All tickets
@@ -325,12 +321,12 @@ BEGIN
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END 
 		AND b.transdate between CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END
 							AND CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-		AND b.betteam = CASE WHEN b.bettype IN (1, 2, 3, 7, 8, 12, 153, 1301, 1303, 1305, 1306, 1308) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
+		AND b.betteam = CASE WHEN b.bettype IN (1, 2, 3, 7, 8, 12, 20, 153, 1301, 1303, 1305, 1306, 1308) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
 							WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 							ELSE b.betteam END 
 		AND b.bettype not in (4, 6, 14, 16, 30, 126, 127, 128, 129, 130, 131, 132, 136, 137, 138, 139, 143, 144,
 								154, 155, 156, 1302, 1311, 1312, 1316, 1317, 1318, 1324)
-		AND CASE WHEN b.bettype IN (1,3,7,8, 153, 1303, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
+		AND CASE WHEN b.bettype IN (1,3,7,8, 153, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
 													ELSE 0 END 
 			ELSE 1 END = 1
@@ -1075,12 +1071,6 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
-
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
 GO

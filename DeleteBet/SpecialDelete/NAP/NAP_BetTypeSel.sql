@@ -17,7 +17,7 @@ AS
 	      
 	Param's Explanation:  
 	@Mode:   
-		 0: Single bet     
+		 0: Single bet  
 		 1: Number game  
 		 2: Early Kick-Off  
 		 3: TicketListing  
@@ -48,28 +48,49 @@ BEGIN
 	
 	CREATE TABLE #TmpBettype (
 		typeid			INT
-		,bettypename	NVARCHAR(50)
 		,type			INT -- 0:Sport Book, 1:Number Game, 2:Virtual Sports, 3:Live Casino  
 		,liveindicator  BIT
 		)
 		
+	DECLARE @tmpConsolidatedBettypes TABLE (
+		parentid		INT
+		,typeid			INT
+	)
+	
+	INSERT INTO @tmpConsolidatedBettypes
+		SELECT 153, 1308 -- Game Handicap
+		UNION ALL
+		SELECT 154, 1311 -- Set x Winner
+		UNION ALL
+		SELECT 155, 1316 -- Set x Game Handicap
+		UNION ALL
+		SELECT 156, 1312 -- Set x Total Games
+		UNION ALL
+		SELECT 1, 1303 -- Handicap
+		UNION ALL
+		SELECT 2, 1305 -- Odd/Even
+		UNION ALL
+		SELECT 3, 1306 -- Over/Under
+		UNION ALL
+		SELECT 20, 1301 -- Moneyline
+	
 	-- @mode = 0: Single bet, 2: Early kick-off, 3: Ticket listing, 4: Mix Parlay   
 	-- type = 0: Sport Book
 	IF @Mode IN (0, 2, 3, 4)
 	BEGIN
+		
 		INSERT INTO #TmpBettype (
 			typeid
-			,bettypename
 			,type
 			,liveindicator
 			)
-		SELECT b.typeid			
-			, b.typenamee		
+		SELECT ISNULL( tb.parentid, b.typeid)
 			, 0					
 			, 0	
 		FROM dbo.bettype b WITH(NOLOCK) 
 		INNER JOIN dbo.odds o WITH(NOLOCK) ON b.typeid = o.bettype
 		INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = o.matchid
+		LEFT JOIN @tmpConsolidatedBettypes tb ON tb.typeid = b.typeid
 		WHERE m.matchid = @matchid
 		AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)
 		
@@ -77,12 +98,10 @@ BEGIN
 		BEGIN
 			INSERT INTO #TmpBettype (
 				typeid
-				,bettypename
 				,type
 				,liveindicator
 				)
 			SELECT b.typeid		
-				, b.typenamee	
 				, 0				
 				, 0				
 			FROM dbo.bettype b WITH(NOLOCK)
@@ -95,12 +114,10 @@ BEGIN
 	BEGIN
 		INSERT INTO #TmpBettype (
 				typeid
-				,bettypename
 				,type
 				,liveindicator
 				)
 		SELECT b.typeid
-			,b.typenamee AS bettypename
 			,3 AS type -- type = 3: Live Casino
 			,0 AS liveindicator
 		FROM dbo.bettype b WITH(NOLOCK)
@@ -113,12 +130,10 @@ BEGIN
 	BEGIN
 		INSERT INTO #TmpBettype (
 			typeid
-			,bettypename
 			,type
 			,liveindicator
 			)
 		SELECT typeid
-			,typenamee AS bettypename
 			,1 AS type -- type = 1: NG
 			,0 AS liveindicator
 		FROM bettype WITH (NOLOCK)
@@ -126,7 +141,6 @@ BEGIN
 		AND @matchid = 0
 		UNION
 		SELECT typeid
-			,typenamee AS bettypename
 			,1 AS type -- type = 1: NG
 			,1 AS liveindicator
 		FROM bettype WITH (NOLOCK)
@@ -140,26 +154,26 @@ BEGIN
 	BEGIN
 		INSERT INTO #TmpBettype (
 			typeid
-			,bettypename
 			,type
 			,liveindicator
 			)
 		SELECT typeid
-			,typenamee AS bettypename
 			,2 AS type -- type = 2: VS
 			,0 AS liveindicator
 		FROM bettype WITH (NOLOCK)
 		WHERE typeid BETWEEN 1201 AND 1299
 		AND @matchid = 0
 	END
-
-	SELECT *
-	FROM #TmpBettype
-	GROUP BY typeid, bettypename, type, liveindicator
-	ORDER BY typeid
+	
+	SELECT tb.typeid
+		,b.typenamee AS bettypename
+		,tb.type
+		,tb.liveindicator
+	FROM #TmpBettype tb
+	INNER JOIN bettype b WITH(NOLOCK) ON tb.typeid = b.typeid
+	GROUP BY tb.typeid, b.typenamee, type, liveindicator
+	ORDER BY tb.typeid
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BetTypeSel] TO [bodbAdminNet] AS [dbo]
 GO
