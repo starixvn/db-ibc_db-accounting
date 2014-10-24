@@ -1632,6 +1632,9 @@ Begin DataProject = "Account"
             Script = "sb.SBQueue_receive.sql"
             Script = "sb.SBQueue_Send.sql"
          End
+         Begin Folder = "SS_xtest"
+            Script = "NAP_Admin_Calculate_1_xtest.sql"
+         End
       End
       Begin Folder = "NU"
          Script = "Acc_GetNumberGameResults.sql"
