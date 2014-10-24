@@ -1640,6 +1640,9 @@ Begin DataProject = "Account"
             Script = "NAP_Admin_Calculate_4_xtest.sql"
             Script = "NAP_Admin_Calculate_Main_xtest.sql"
             Script = "NAP_Admin_Calculate_Undo_xtest.sql"
+            Script = "NAP_Admin_Match_Update_xtest.sql"
+            Script = "NAP_Admin_Match_UpdateSaveBet_xtest.sql"
+            Script = "NAP_Admin_Result_Update.sql"
          End
       End
       Begin Folder = "NU"
