@@ -5,7 +5,7 @@ SET ANSI_NULLS ON
 GO
 
 /****** Object:  Stored Procedure dbo.NAP_SaveBet_GetTurnOver    Script Date: 9/10/2014 3:22:02 PM ******/
-CREATE PROCEDURE [dbo].[NAP_SaveBet_GetTurnOver]
+ALTER PROCEDURE [dbo].[NAP_SaveBet_GetTurnOver]
 	@matchid int
 AS
 
@@ -79,6 +79,7 @@ FROM (
 	WHERE
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
+		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 ) b
 
 ELSE
@@ -140,6 +141,7 @@ FROM (
 	WHERE
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
+		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 ) b
 
 GO

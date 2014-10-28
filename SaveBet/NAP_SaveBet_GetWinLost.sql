@@ -5,7 +5,7 @@ SET ANSI_NULLS ON
 GO
 
 /****** Object:  Stored Procedure dbo.NAP_SaveBet_GetWinLost    Script Date: 9/10/2014 3:22:02 PM ******/
-CREATE PROCEDURE [dbo].[NAP_SaveBet_GetWinLost]
+ALTER PROCEDURE [dbo].[NAP_SaveBet_GetWinLost]
 	@matchid int
 AS
 
@@ -48,7 +48,8 @@ FROM
 	FROM
 		bodb02.dbo.bettrans (nolock)
 	WHERE
-		matchid = @matchid
+		matchid = @matchid 
+		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 	GROUP BY
 		bettype, liveindicator
 ) b
@@ -80,6 +81,7 @@ LEFT OUTER JOIN
 	WHERE
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
+		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 	GROUP BY
 		bettype, liveindicator
 ) t ON b.bettype = t.bettype AND b.liveindicator = t.liveindicator
@@ -121,6 +123,7 @@ FROM
 		bodb02.dbo.bettrans14 (nolock)
 	WHERE
 		matchid = @matchid
+		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 	GROUP BY
 		bettype, liveindicator
 ) b
@@ -152,6 +155,7 @@ LEFT OUTER JOIN
 	WHERE
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
+		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 	GROUP BY
 		bettype, liveindicator
 ) t ON b.bettype = t.bettype AND b.liveindicator = t.liveindicator

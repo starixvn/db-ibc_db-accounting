@@ -5,7 +5,7 @@ SET ANSI_NULLS ON
 GO
 
 /****** Object:  Stored Procedure dbo.NAP_Task_SaveBet_GenerateServiceJob    Script Date: 9/10/2014 3:22:01 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Task_SaveBet_GenerateServiceJob]
+ALTER PROCEDURE [dbo].[NAP_Task_SaveBet_GenerateServiceJob]
 AS
 
 /*
@@ -39,6 +39,7 @@ BEGIN
 	INTO #MatchBettype
 	FROM bodb02.dbo.bettrans WITH(NOLOCK)
 	WHERE matchid IN (SELECT MatchID FROM #Match)
+		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 
 	SET @ID = 1
 	SELECT @ID = 1,@Total = COUNT(*) FROM #Match
