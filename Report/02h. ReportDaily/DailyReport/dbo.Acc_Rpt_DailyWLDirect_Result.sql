@@ -68,7 +68,8 @@ BEGIN
 				D.ResultStatusID,
 				D.SettlementStatusID
 		FROM	dbo.ResultDetail D WITH (NOLOCK)			
-		WHERE	D.MatchId = @MatchId					
+		WHERE	D.MatchId = @MatchId	
+				AND D.SettlementStatusID > 0
 		ORDER BY ResourceId
 
 
@@ -127,7 +128,8 @@ BEGIN
 				D.ResultStatusID,
 				D.SettlementStatusID
 		FROM	dbo.ResultDetail14 D WITH (NOLOCK)			
-		WHERE	D.MatchId = @MatchId					
+		WHERE	D.MatchId = @MatchId	
+				AND D.SettlementStatusID > 0		
 		ORDER BY ResourceId
 
 END

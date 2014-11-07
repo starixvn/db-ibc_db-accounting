@@ -80,6 +80,7 @@ SET NOCOUNT ON
 					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
 							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
 								ELSE 0 END END = LEN(D.ResourceId)
+					AND D.SettlementStatusID > 0
 			ORDER BY ResourceId
 
 
@@ -130,6 +131,7 @@ SET NOCOUNT ON
 					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
 							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
 								ELSE 0 END END = LEN(D.ResourceId)
+					AND D.SettlementStatusID > 0
 			ORDER BY ResourceId
 
 			RETURN
@@ -180,6 +182,7 @@ SET NOCOUNT ON
 					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
 							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
 								ELSE 0 END END = LEN(D.ResourceId)
+					AND D.SettlementStatusID > 0
 			ORDER BY ResourceId
 		END
 	END
