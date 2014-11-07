@@ -20,7 +20,7 @@ IF @EVENTDATE IS NULL SET @EVENTDATE = convert(char(8),getdate ()-1,112)
 INSERT INTO #matchset1
 SELECT matchid,betstatus,0 as flag 
 FROM match with(nolock)
-WHERE sporttype = 5 and eventstatus = 'completed' and betstatus not in ('','refund;','refund')
+WHERE sporttype = 5 and eventstatus = 'completed' and (betstatus not like '%refund%' and betstatus <> '')
 	 and matchid not in ( SELECT matchid from ResultDetail with(nolock)  )
 	 and eventdate = @EVENTDATE
 
