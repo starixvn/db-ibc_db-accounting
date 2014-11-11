@@ -1,9 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Main_11bettypes]    Script Date: 08/27/2014 14:02:04 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@mode							VARCHAR(15)	= 'CAL'
 	,@action						VARCHAR(20)	= 'CAL'
@@ -38,6 +32,47 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@TennisTotal					SMALLINT 	= NULL
 	,@T_Home 						SMALLINT 	= NULL
 	,@T_Away 						SMALLINT 	= NULL
+	,@SelectedSet					VARCHAR(50) = NULL 
+	,@SelectedSettleFinishedGame	VARCHAR(50)	= NULL 
+	,@TotalGameHomeMatch			INT			= NULL
+	,@TotalGameAwayMatch			INT			= NULL
+	,@TotalGameHomeSet1				INT			= NULL 
+	,@TotalGameHomeSet2				INT			= NULL 
+	,@TotalGameHomeSet3				INT			= NULL 
+	,@TotalGameHomeSet4				INT			= NULL
+	,@TotalGameHomeSet5				INT			= NULL 
+	,@TotalGameAwaySet1				INT			= NULL 
+	,@TotalGameAwaySet2				INT			= NULL
+	,@TotalGameAwaySet3				INT			= NULL
+	,@TotalGameAwaySet4				INT			= NULL 
+	,@TotalGameAwaySet5				INT			= NULL 
+	,@TotalSetMatch					INT			= NULL
+	,@TotalGameSet1					INT			= NULL
+	,@TotalGameSet2					INT			= NULL
+	,@TotalGameSet3					INT			= NULL
+	,@TotalGameSet4					INT			= NULL
+	,@TotalGameSet5					INT			= NULL
+	,@OddEvenSetMatch				SMALLMONEY  = NULL 
+	,@OddEvenGameSet1				SMALLMONEY	= NULL
+	,@OddEvenGameSet2				SMALLMONEY	= NULL
+	,@OddEvenGameSet3				SMALLMONEY	= NULL
+	,@OddEvenGameSet4				SMALLMONEY	= NULL
+	,@OddEvenGameSet5				SMALLMONEY	= NULL
+	,@GameDiffSet1					SMALLMONEY	= NULL 
+	,@GameDiffSet2					SMALLMONEY	= NULL 
+	,@GameDiffSet3					SMALLMONEY	= NULL 
+	,@GameDiffSet4					SMALLMONEY	= NULL 
+	,@GameDiffSet5					SMALLMONEY	= NULL 
+	,@CorrectScoreSet1				NVARCHAR(10)= NULL 
+	,@CorrectScoreSet2				NVARCHAR(10)= NULL 
+	,@CorrectScoreSet3				NVARCHAR(10)= NULL 
+	,@CorrectScoreSet4				NVARCHAR(10)= NULL 
+	,@CorrectScoreSet5				NVARCHAR(10)= NULL 
+	,@SetxGameyHomeWON				VARCHAR(MAX)= NULL
+	,@SetxGameyAwayWON				VARCHAR(MAX)= NULL 
+	,@SetxGameyDRAW					VARCHAR(MAX)= NULL 
+	,@SetxGameyREFUND				VARCHAR(MAX)= NULL
+	,@SetxGameyFinishedGame			VARCHAR(MAX)= NULL 
 	,@isRefundHT					BIT 		= NULL
 	,@IsHTCal						BIT 		= NULL
 	,@betcount_1 					INT 		= NULL
@@ -99,7 +134,23 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betcount_143 					INT 		= NULL
 	,@betcount_151 					INT 		= NULL
 	,@betcount_14					INT 		= NULL
-	,@betcount_127					INT 		= NULL	
+	,@betcount_127					INT 		= NULL
+	,@betCount_153					INT 		= NULL
+	,@betCount_154					INT 		= NULL
+	,@betCount_155					INT 		= NULL
+	,@betCount_156					INT 		= NULL
+	,@betcount_1301					INT			= NULL		-- Tennis SS 
+	,@betCount_1302					INT			= NULL	
+	,@betCount_1303					INT			= NULL	
+	,@betCount_1305					INT			= NULL	
+	,@betCount_1306					INT			= NULL	
+	,@betCount_1308					INT			= NULL	
+	,@betCount_1311					INT			= NULL	
+	,@betCount_1312					INT			= NULL	
+	,@betCount_1316					INT			= NULL	
+	,@betCount_1317					INT			= NULL	
+	,@betCount_1318					INT			= NULL	
+	,@betCount_1324					INT			= NULL	
 	,@row_count						INT 		= NULL
 	,@IsSettleAbandonedMatch		BIT 		= 0
 	,@IsSettleAbandonedMatchBetFair BIT 		= 0
@@ -125,6 +176,7 @@ AS
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140728@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140807@Kathy: Support new 11 bettypes [Redmine:#19667]
+		- 20141016@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		
 	Param's Explanation:
 		@action			@mode
@@ -133,19 +185,20 @@ AS
 		 REFUND			 ALL, HT, FT, BetDaq, BetFair
 		 REFUND-FGLG	 REFUND-FT, REFUND-HT
 		 CAL-PS			 CAL
+		 CAL-SET		 CAL		--Tennis 
 
 */
 BEGIN
 	SET NOCOUNT ON;
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232')
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232','DB215')
 		AND @CalledByBrokerService = 0
 	BEGIN
 		-- DB052/DB053/DB054/DB06: got servicebroker, then just send a message to service broker and then let it to handle the rest.
 		DECLARE @sMessage NVARCHAR(MAX)
 
 		SET @sMessage = '
-								EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
+			EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
 			,@mode = ' + CASE 
 				WHEN @mode IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @mode) + ''''
@@ -278,6 +331,47 @@ BEGIN
 				WHEN @T_Away IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @T_Away)
 				END + '
+			,@SelectedSet = ' + CASE WHEN @SelectedSet IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@SelectedSet)+ '''' END + ' 
+			,@SelectedSettleFinishedGame = ' + CASE WHEN @SelectedSettleFinishedGame IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@SelectedSettleFinishedGame)+ '''' END + ' 
+			,@TotalGameHomeMatch = ' + CASE WHEN @TotalGameHomeMatch IS NULL THEN 'NULL' ELSE @TotalGameHomeMatch END + ' 
+			,@TotalGameAwayMatch = ' + CASE WHEN @TotalGameAwayMatch IS NULL THEN 'NULL' ELSE @TotalGameAwayMatch END + ' 
+			,@TotalGameHomeSet1 = ' + CASE WHEN @TotalGameHomeSet1 IS NULL THEN 'NULL' ELSE @TotalGameHomeSet1 END + ' 
+			,@TotalGameHomeSet2 = ' + CASE WHEN @TotalGameHomeSet2 IS NULL THEN 'NULL' ELSE @TotalGameHomeSet2 END + '
+			,@TotalGameHomeSet3 = ' + CASE WHEN @TotalGameHomeSet3 IS NULL THEN 'NULL' ELSE @TotalGameHomeSet3 END + '
+			,@TotalGameHomeSet4 = ' + CASE WHEN @TotalGameHomeSet4 IS NULL THEN 'NULL' ELSE @TotalGameHomeSet4 END + '
+			,@TotalGameHomeSet5 = ' + CASE WHEN @TotalGameHomeSet5 IS NULL THEN 'NULL' ELSE @TotalGameHomeSet5 END + '
+			,@TotalGameAwaySet1 = ' + CASE WHEN @TotalGameAwaySet1 IS NULL THEN 'NULL' ELSE @TotalGameAwaySet1 END + '
+			,@TotalGameAwaySet2 = ' + CASE WHEN @TotalGameAwaySet2 IS NULL THEN 'NULL' ELSE @TotalGameAwaySet2 END + '
+			,@TotalGameAwaySet3 = ' + CASE WHEN @TotalGameAwaySet3 IS NULL THEN 'NULL' ELSE @TotalGameAwaySet3 END + '
+			,@TotalGameAwaySet4 = ' + CASE WHEN @TotalGameAwaySet4 IS NULL THEN 'NULL' ELSE @TotalGameAwaySet4 END + '
+			,@TotalGameAwaySet5 = ' + CASE WHEN @TotalGameAwaySet5 IS NULL THEN 'NULL' ELSE @TotalGameAwaySet5 END + '
+			,@TotalSetMatch = ' + CASE WHEN @TotalSetMatch IS NULL THEN 'NULL' ELSE @TotalSetMatch END + '
+			,@TotalGameSet1 = ' + CASE WHEN @TotalGameSet1 IS NULL THEN 'NULL' ELSE @TotalGameSet1 END + '
+			,@TotalGameSet2 = ' + CASE WHEN @TotalGameSet2 IS NULL THEN 'NULL' ELSE @TotalGameSet2 END + '
+			,@TotalGameSet3 = ' + CASE WHEN @TotalGameSet3 IS NULL THEN 'NULL' ELSE @TotalGameSet3 END + '
+			,@TotalGameSet4 = ' + CASE WHEN @TotalGameSet4 IS NULL THEN 'NULL' ELSE @TotalGameSet4 END + '
+			,@TotalGameSet5 = ' + CASE WHEN @TotalGameSet5 IS NULL THEN 'NULL' ELSE @TotalGameSet5 END + '
+			,@OddEvenSetMatch = ' + CASE WHEN @OddEvenSetMatch IS NULL THEN 'NULL' ELSE @OddEvenSetMatch END + '
+			,@OddEvenGameSet1 = ' + CASE WHEN @OddEvenGameSet1 IS NULL THEN 'NULL' ELSE @OddEvenGameSet1 END + '
+			,@OddEvenGameSet2 = ' + CASE WHEN @OddEvenGameSet2 IS NULL THEN 'NULL' ELSE @OddEvenGameSet2 END + '
+			,@OddEvenGameSet3 = ' + CASE WHEN @OddEvenGameSet3 IS NULL THEN 'NULL' ELSE @OddEvenGameSet3 END + '
+			,@OddEvenGameSet4 = ' + CASE WHEN @OddEvenGameSet4 IS NULL THEN 'NULL' ELSE @OddEvenGameSet4 END + '
+			,@OddEvenGameSet5 = ' + CASE WHEN @OddEvenGameSet5 IS NULL THEN 'NULL' ELSE @OddEvenGameSet5 END + '
+			,@GameDiffSet1 = ' + CASE WHEN @GameDiffSet1 IS NULL THEN 'NULL' ELSE @GameDiffSet1 END + '
+			,@GameDiffSet2 = ' + CASE WHEN @GameDiffSet2 IS NULL THEN 'NULL' ELSE @GameDiffSet2 END + '
+			,@GameDiffSet3 = ' + CASE WHEN @GameDiffSet3 IS NULL THEN 'NULL' ELSE @GameDiffSet3 END + '
+			,@GameDiffSet4 = ' + CASE WHEN @GameDiffSet4 IS NULL THEN 'NULL' ELSE @GameDiffSet4 END + '
+			,@GameDiffSet5 = ' + CASE WHEN @GameDiffSet5 IS NULL THEN 'NULL' ELSE @GameDiffSet5 END + '
+			,@CorrectScoreSet1 = ' + CASE WHEN @CorrectScoreSet1 IS NULL THEN 'NULL' ELSE @CorrectScoreSet1 END + '
+			,@CorrectScoreSet2 = ' + CASE WHEN @CorrectScoreSet2 IS NULL THEN 'NULL' ELSE @CorrectScoreSet2 END + '
+			,@CorrectScoreSet3 = ' + CASE WHEN @CorrectScoreSet3 IS NULL THEN 'NULL' ELSE @CorrectScoreSet3 END + '
+			,@CorrectScoreSet4 = ' + CASE WHEN @CorrectScoreSet4 IS NULL THEN 'NULL' ELSE @CorrectScoreSet4 END + '
+			,@CorrectScoreSet5 = ' + CASE WHEN @CorrectScoreSet5 IS NULL THEN 'NULL' ELSE @CorrectScoreSet5 END + '
+			,@SetxGameyHomeWON = ' + CASE WHEN @SetxGameyHomeWON IS NULL THEN 'NULL' ELSE '''' + @SetxGameyHomeWON + ''''  END + '
+			,@SetxGameyAwayWON = ' + CASE WHEN @SetxGameyAwayWON IS NULL THEN 'NULL' ELSE '''' + @SetxGameyAwayWON + '''' END + '
+			,@SetxGameyDRAW = ' + CASE WHEN @SetxGameyDRAW IS NULL THEN 'NULL' ELSE '''' + @SetxGameyDRAW + '''' END + '
+			,@SetxGameyREFUND = ' + CASE WHEN @SetxGameyREFUND IS NULL THEN 'NULL' ELSE '''' + @SetxGameyREFUND + '''' END + '
+			,@SetxGameyFinishedGame = ' + CASE WHEN @SetxGameyFinishedGame IS NULL THEN 'NULL' ELSE '''' + @SetxGameyFinishedGame + '''' END + '
 			,@isRefundHT = ' + CASE 
 				WHEN @isRefundHT IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @isRefundHT)
@@ -473,6 +567,7 @@ BEGIN
 			,@betcount_8 = ' + CASE 
 				WHEN @betcount_8 IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @betcount_8)
+
 				END + '
 			,@betcount_12 = ' + CASE 
 				WHEN @betcount_12 IS NULL THEN 'NULL'
@@ -526,6 +621,22 @@ BEGIN
 				WHEN @betcount_127 IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @betcount_127)
 				END + '
+			,@betCount_153 = ' + CASE WHEN @betCount_153 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_153) END + ' 
+			,@betCount_154 = ' + CASE WHEN @betCount_154 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_154) END + '
+			,@betCount_155 = ' + CASE WHEN @betCount_155 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_155) END + '
+			,@betCount_156 = ' + CASE WHEN @betCount_156 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_156) END + '
+			,@betCount_1301 = ' + CASE WHEN @betCount_1301 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1301) END + '
+			,@betCount_1302 = ' + CASE WHEN @betCount_1302 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1302) END + '
+			,@betCount_1303 = ' + CASE WHEN @betCount_1303 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1303) END + '
+			,@betCount_1305 = ' + CASE WHEN @betCount_1305 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1305) END + '
+			,@betCount_1306 = ' + CASE WHEN @betCount_1306 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1306) END + '
+			,@betCount_1308 = ' + CASE WHEN @betCount_1308 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1308) END + '
+			,@betCount_1311 = ' + CASE WHEN @betCount_1311 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1311) END + '
+			,@betCount_1312 = ' + CASE WHEN @betCount_1312 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1312) END + '
+			,@betCount_1316 = ' + CASE WHEN @betCount_1316 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1316) END + '
+			,@betCount_1317 = ' + CASE WHEN @betCount_1317 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1317) END + '
+			,@betCount_1318 = ' + CASE WHEN @betCount_1318 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1318) END + '
+			,@betCount_1324 = ' + CASE WHEN @betCount_1324 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1324) END + '
 			,@row_count = ' + CASE 
 				WHEN @row_count IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @row_count)
@@ -1035,7 +1146,9 @@ BEGIN
 
 			IF @Mode = 'UNDO'
 			BEGIN
-				EXEC dbo.NAP_Admin_Calculate_Undo @matchid
+				EXEC dbo.NAP_Admin_Calculate_Undo 
+					 @matchid	  = @matchid
+					,@SelectedSet = @SelectedSet
 			END
 		END
 
@@ -1081,6 +1194,233 @@ BEGIN
 					,@result = @betstatus
 		END
 
+		IF @action ='CAL-SET'  --Tennis including Sportting Solution
+		BEGIN
+			IF @SelectedSet LIKE '%6%' -- Match Scope 
+			BEGIN 
+				IF @betcount_1 > 0  -- Handicap ~ Set Handicap 	
+					EXEC dbo.NAP_Admin_Calculate_1 
+						 @matchid = @matchid
+						,@bettype = 1
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_1
+				IF @betCount_2 > 0 -- Odd/Even 
+					EXEC dbo.NAP_Admin_Calculate_2 
+						 @matchid			= @matchid
+						,@bettype			= 2
+						,@oddeven			= @oddeven
+						,@OddEvenSetMatch	= @OddEvenSetMatch
+						,@totalgoal			= @totalgoal
+						,@betcount			= @betCount_2
+				IF @betCount_3 > 0 -- Match Total Games Over/Under
+					EXEC dbo.NAP_Admin_Calculate_3 
+						 @matchid		= @matchid
+						,@bettype		= 3
+						,@totalgoal		= @totalgoal
+						,@TotalSetMatch	= @TotalSetMatch
+						,@betcount		= @betCount_3
+
+				IF @betcount_20 > 0  -- Set Handicap 	
+					EXEC dbo.NAP_Admin_Calculate_1 
+						 @matchid = @matchid
+						,@bettype = 20
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_20
+
+				IF @betCount_153 > 0 -- Game Handicap
+				EXEC dbo.NAP_Admin_Calculate_1 
+						 @matchid = @matchid
+						,@bettype = 153
+						,@fth = @TotalGameHomeMatch
+						,@fta = @TotalGameAwayMatch
+						,@betcount = @betCount_153
+
+				IF @betcount_1301 > 0  -- Match Winner 		
+					EXEC dbo.NAP_Admin_Calculate_1 
+						 @matchid = @matchid
+						,@bettype = 1301
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_1301
+				IF @betCount_1302 > 0  -- Match Correct Score - Decimal 
+					EXEC dbo.NAP_Admin_Calculate_4 
+						 @matchid = @matchid
+						,@bettype = 1302
+						,@correctscore = @correctscore
+						,@betcount = @betcount_1302
+
+				IF @betcount_1303 > 0  -- Set Handicap 	
+					EXEC dbo.NAP_Admin_Calculate_1 
+						 @matchid = @matchid
+						,@bettype = 1303
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_1303
+
+				IF @betCount_1305 > 0 -- Match Total Games Odd/Even
+					EXEC dbo.NAP_Admin_Calculate_2 
+						 @matchid	= @matchid
+						,@bettype	= 1305
+						,@oddeven	= @oddeven
+						,@betcount = @betcount_1305
+				IF @betCount_1306 > 0 -- Match Total Games Over/Under
+					EXEC dbo.NAP_Admin_Calculate_3 
+						 @matchid = @matchid
+						,@bettype = 1306
+						,@totalgoal		= @totalgoal
+						,@betcount = @betCount_1306
+
+				IF @betCount_1308 > 0 -- Game Handicap (3rd)
+					EXEC dbo.NAP_Admin_Calculate_1 
+						 @matchid = @matchid
+						,@bettype = 1308
+						,@fth = @TotalGameHomeMatch
+						,@fta = @TotalGameAwayMatch
+						,@betcount = @betcount_1308
+			END 
+			---- END: Match Scope 
+
+			--- START: Set(s) Scope 
+			IF @SelectedSet LIKE '%[1-5]%'	
+			BEGIN
+				IF @betCount_154 > 0 -- Set x Winner
+					EXEC dbo.NAP_Admin_Calculate_1
+								 @matchid			= @matchid
+								,@bettype			= 154
+								,@fth				= @fth
+								,@fta				= @fta 
+								,@SelectedSet		= @SelectedSet
+								,@TotalGameHomeSet1 = @TotalGameHomeSet1
+								,@TotalGameHomeSet2 = @TotalGameHomeSet2
+								,@TotalGameHomeSet3 = @TotalGameHomeSet3
+								,@TotalGameHomeSet4 = @TotalGameHomeSet4
+								,@TotalGameHomeSet5 = @TotalGameHomeSet5
+								,@TotalGameAwaySet1	= @TotalGameAwaySet1
+								,@TotalGameAwaySet2	= @TotalGameAwaySet2
+								,@TotalGameAwaySet3	= @TotalGameAwaySet3
+								,@TotalGameAwaySet4	= @TotalGameAwaySet4
+								,@TotalGameAwaySet5	= @TotalGameAwaySet5
+								,@betcount			= @betCount_154
+
+				IF @betCount_155 > 0 -- Set x Game Handicap
+					EXEC dbo.NAP_Admin_Calculate_1 
+							 @matchid			= @matchid
+							,@bettype			= 155
+							,@fth				= @fth
+							,@fta				= @fta 
+							,@SelectedSet		= @SelectedSet
+							,@TotalGameHomeSet1 = @TotalGameHomeSet1
+							,@TotalGameHomeSet2 = @TotalGameHomeSet2
+							,@TotalGameHomeSet3 = @TotalGameHomeSet3
+							,@TotalGameHomeSet4 = @TotalGameHomeSet4
+							,@TotalGameHomeSet5 = @TotalGameHomeSet5
+							,@TotalGameAwaySet1	= @TotalGameAwaySet1
+							,@TotalGameAwaySet2	= @TotalGameAwaySet2
+							,@TotalGameAwaySet3	= @TotalGameAwaySet3
+							,@TotalGameAwaySet4	= @TotalGameAwaySet4
+							,@TotalGameAwaySet5	= @TotalGameAwaySet5
+							,@betcount			= @betCount_155
+
+				IF @betCount_156 > 0 -- Set x Total Games Over/Under 
+					EXEC dbo.NAP_Admin_Calculate_3 
+							 @matchid		= @matchid
+							,@bettype		= 156
+							,@SelectedSet	= @SelectedSet
+							,@TotalGameSet1	= @TotalGameSet1
+							,@TotalGameSet2	= @TotalGameSet2
+							,@TotalGameSet3	= @TotalGameSet3
+							,@TotalGameSet4	= @TotalGameSet4
+							,@TotalGameSet5	= @TotalGameSet5
+							,@betcount		= @betCount_156
+
+				IF @betCount_1311 > 0 -- Set x Winner (3rd)
+					EXEC dbo.NAP_Admin_Calculate_1 
+							 @matchid			= @matchid
+							,@bettype			= 1311
+							,@fth				= @fth
+							,@fta				= @fta 
+							,@SelectedSet		= @SelectedSet
+							,@TotalGameHomeSet1 = @TotalGameHomeSet1
+							,@TotalGameHomeSet2 = @TotalGameHomeSet2
+							,@TotalGameHomeSet3 = @TotalGameHomeSet3
+							,@TotalGameHomeSet4 = @TotalGameHomeSet4
+							,@TotalGameHomeSet5 = @TotalGameHomeSet5
+							,@TotalGameAwaySet1	= @TotalGameAwaySet1
+							,@TotalGameAwaySet2	= @TotalGameAwaySet2
+							,@TotalGameAwaySet3	= @TotalGameAwaySet3
+							,@TotalGameAwaySet4	= @TotalGameAwaySet4
+							,@TotalGameAwaySet5	= @TotalGameAwaySet5
+							,@betcount			= @betcount_1311
+
+				IF @betCount_1312 > 0 -- Set x Total Games Over/Under (3rd)
+					EXEC dbo.NAP_Admin_Calculate_3 
+							 @matchid		= @matchid
+							,@bettype		= 1312
+							,@SelectedSet	= @SelectedSet
+							,@TotalGameSet1	= @TotalGameSet1
+							,@TotalGameSet2	= @TotalGameSet2
+							,@TotalGameSet3	= @TotalGameSet3
+							,@TotalGameSet4	= @TotalGameSet4
+							,@TotalGameSet5	= @TotalGameSet5
+							,@betcount		= @betCount_1312
+				IF @betCount_1316 > 0 -- Set x Game Handicap (3rd)
+					EXEC dbo.NAP_Admin_Calculate_1 
+							 @matchid			= @matchid
+							,@bettype			= 1316
+							,@SelectedSet		= @SelectedSet
+							,@TotalGameHomeSet1 = @TotalGameHomeSet1
+							,@TotalGameHomeSet2 = @TotalGameHomeSet2
+							,@TotalGameHomeSet3 = @TotalGameHomeSet3
+							,@TotalGameHomeSet4 = @TotalGameHomeSet4
+							,@TotalGameHomeSet5 = @TotalGameHomeSet5
+							,@TotalGameAwaySet1	= @TotalGameAwaySet1
+							,@TotalGameAwaySet2	= @TotalGameAwaySet2
+							,@TotalGameAwaySet3	= @TotalGameAwaySet3
+							,@TotalGameAwaySet4	= @TotalGameAwaySet4
+							,@TotalGameAwaySet5	= @TotalGameAwaySet5
+							,@betcount = @betCount_1316
+				IF @betCount_1317 > 0 -- Set x Correct Score - - Decimal 
+					EXEC dbo.NAP_Admin_Calculate_4 
+						 @matchid			= @matchid
+						,@bettype			= 1317
+						,@SelectedSet		= @SelectedSet
+						,@CorrectScoreSet1	= @CorrectScoreSet1
+						,@CorrectScoreSet2	= @CorrectScoreSet2
+						,@CorrectScoreSet3	= @CorrectScoreSet3	
+						,@CorrectScoreSet4	= @CorrectScoreSet4	
+						,@CorrectScoreSet5	= @CorrectScoreSet5	
+						,@betcount			= @betCount_1317
+
+				IF @betCount_1318 > 0 -- Set x Total Games Odd/Even
+					EXEC dbo.NAP_Admin_Calculate_2 
+						 @matchid			= @matchid
+						,@bettype			= 1318
+						,@oddeven			= @oddeven 
+						,@oddevenht			= NULL 
+						,@SelectedSet		= @SelectedSet
+						,@OddEvenGameSet1	= @OddEvenGameSet1	
+						,@OddEvenGameSet2	= @OddEvenGameSet2	
+						,@OddEvenGameSet3	= @OddEvenGameSet3	
+						,@OddEvenGameSet4	= @OddEvenGameSet4	
+						,@OddEvenGameSet5	= @OddEvenGameSet5	
+						,@betcount			= @betCount_1318
+
+				IF @betCount_1324 > 0 -- Set x Game y Winner 
+					EXEC dbo.NAP_Admin_Calculate_1324 
+						 @matchid			= @matchid
+						,@bettype			= 1324 
+						,@SelectedSet		= @SelectedSet
+						,@SetxGameyHomeWON	= @SetxGameyHomeWON
+						,@SetxGameyAwayWON	= @SetxGameyAwayWON
+						,@SetxGameyDRAW		= @SetxGameyDRAW
+						,@SetxGameyREFUND	= @SetxGameyREFUND
+						,@betcount			= @betCount_1324
+				
+			END	
+		END
+			
 		IF @action = 'REFUND'
 		BEGIN
 			IF @mode = 'FT'
@@ -1375,8 +1715,9 @@ BEGIN
 
 			IF @mode = 'ALL'
 			BEGIN
-				IF @betcount_3 > 0
-					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+				IF @betcount_3 > 0 AND (@SelectedSet IS NULL OR @SelectedSet LIKE '%6%')
+					EXEC dbo.NAP_Admin_Calculate_3 
+						 @matchid = @matchid
 						,@bettype = 3
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_3
@@ -1384,7 +1725,8 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @betcount_4 > 0
-					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_4 
+						 @matchid = @matchid
 						,@bettype = 4
 						,@correctscore = NULL
 						,@goaldiff = NULL
@@ -1551,13 +1893,29 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 						,@IsHTCal = @IsHTCal
 
+				IF @betCount_1324 > 0 -- Set x Game y Winner 
+					EXEC dbo.NAP_Admin_Calculate_1324 
+						 @matchid						= @matchid
+						,@bettype						= 1324 
+						,@SelectedSet					= @SelectedSet
+						,@SelectedSettleFinishedGame	= @SelectedSettleFinishedGame
+						,@SetxGameyHomeWON				= @SetxGameyHomeWON
+						,@SetxGameyAwayWON				= @SetxGameyAwayWON
+						,@SetxGameyDRAW					= @SetxGameyDRAW
+						,@SetxGameyFinishedGame			= @SetxGameyFinishedGame
+						,@betcount						= @betCount_1324
+					
+
 				IF @row_count > 0
-					EXEC dbo.NAP_Admin_Calculate_RefundAll @matchid = @matchid
-						,@IsExcludeBetdaq = @IsExcludeBetdaq
-						,@IsExcludeBetfair = @IsExcludeBetfair
+					EXEC dbo.NAP_Admin_Calculate_RefundAll 
+						 @matchid					= @matchid
+						,@IsExcludeBetdaq			= @IsExcludeBetdaq
+						,@IsExcludeBetfair			= @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-						,@fth = @fth
-						,@fta = @fta
+						,@SelectedSet				= @SelectedSet
+						,@SelectedSettleFinishedGame= @SelectedSettleFinishedGame
+						,@SetxGameyFinishedGame		= @SetxGameyFinishedGame
+
 			END
 
 			IF @mode = 'BetDaq'
@@ -1578,14 +1936,9 @@ BEGIN
 				,@LGOnly = @LGOnly
 				,@matchdate = @matchdate
 		END
+
+
 	END
 END
-
-
-
-
-
-
-
-
-
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Main] TO [vnteam] AS [dbo]
