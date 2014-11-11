@@ -1,17 +1,11 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundAll]    Script Date: 09/10/2014 09:49:09 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_RefundAll    Script Date: 8/29/2014 1:49:58 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_RefundAll    Script Date: 26/08/2014 2:14:11 PM ******/
-
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundAll] @matchid INT
-	,@fth SMALLMONEY = 0
-	,@fta SMALLMONEY = 0
-	,@IsExcludeBetdaq BIT = 0
-	,@IsExcludeBetfair BIT = 0
-	,@IsSettleAbandonedMatchIBC BIT = 0
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundAll] 
+	 @matchid						INT
+	,@IsExcludeBetdaq				BIT = 0
+	,@IsExcludeBetfair				BIT = 0
+	,@IsSettleAbandonedMatchIBC		BIT = 0
+	,@SelectedSet					VARCHAR(50)	 = NULL 
+	,@SelectedSettleFinishedGame	VARCHAR(50)	 = NULL 
+	,@SetxGameyFinishedGame			VARCHAR(MAX) = NULL 
 AS
 /*	Created by: Kathy
 	Date: 20140213
@@ -27,6 +21,7 @@ AS
 		- 20140812@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
+		- 20141027@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -34,7 +29,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -73,27 +68,40 @@ BEGIN
 			,ruben = 1
 			,statuswinlost = 0
 		WHERE matchid = @matchid AND statusID NOT IN (103, 101, 102) 
-		AND bettype NOT IN (14, 127) 
-		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
-		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-		AND 1 = CASE 
-			WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
-			WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
-			WHEN @IsSettleAbandonedMatchIBC = 1 
-					AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
-						AND recommend <> 1688156) 
-					AND statusID IN (112, 113) 
-					AND bettype IN (4, 6, 13, 26, 27, 30, 126, 129, 130, 131, 132, 133, 134, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 152) THEN 0
-			ELSE 1
-			END
+			AND bettype NOT IN (14, 127) 
+			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND 1 = CASE WHEN @SelectedSet IS NULL THEN 1 
+						 WHEN @SelectedSet LIKE '%1%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 801 OR BetID BETWEEN 80101 AND 80199) THEN 1 
+						 WHEN @SelectedSet LIKE '%2%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 802 OR BetID BETWEEN 80201 AND 80299) THEN 1
+						 WHEN @SelectedSet LIKE '%3%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 803 OR BetID BETWEEN 80301 AND 80399) THEN 1
+						 WHEN @SelectedSet LIKE '%4%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 804 OR BetID BETWEEN 80401 AND 80499) THEN 1
+						 WHEN @SelectedSet LIKE '%5%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 805 OR BetID BETWEEN 80501 AND 80599) THEN 1
+						 WHEN @SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20,153,1301,1302,1303,1305,1306,1308) THEN 1 
+						 ELSE 0 END 
+			AND 1 = CASE WHEN @SelectedSettleFinishedGame LIKE '%1%' AND betID BETWEEN 80101 AND 80199 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 0 
+						 WHEN @SelectedSettleFinishedGame LIKE '%2%' AND BetID BETWEEN 80201 AND 80299 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 0  
+						 WHEN @SelectedSettleFinishedGame LIKE '%3%' AND BetID BETWEEN 80301 AND 80399 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 0  
+						 WHEN @SelectedSettleFinishedGame LIKE '%4%' AND BetID BETWEEN 80401 AND 80499 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 0   
+						 WHEN @SelectedSettleFinishedGame LIKE '%5%' AND BetID BETWEEN 80501 AND 80599 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 0 
+						 ELSE 1 END 
+			AND 1 = CASE 
+				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) 
+						AND (@SelectedSet IS NULL OR (@SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20))) THEN 0
+				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) 
+						AND (@SelectedSet IS NULL OR (@SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20))) THEN 0
+				WHEN @IsSettleAbandonedMatchIBC = 1 
+						AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
+							AND recommend <> 1688156) 
+						AND statusID IN (112, 113) 
+						AND bettype IN (4, 6, 13, 26, 27, 30, 126, 129, 130, 131, 132, 133, 134, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 152) THEN 0
+				ELSE 1
+				END
 
 		IF @@ROWCOUNT < 10000
 			BREAK
 	END
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundAll] TO [bodbAdminNet] AS [dbo]
 GO
