@@ -1,18 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 09/10/2014 10:30:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 8/29/2014 1:49:12 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 26/08/2014 2:14:09 PM ******/
-
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
 	,@excludeRefundFGLG BIT = 0
 AS
 /*
 	Created by: 20120913
 	Task: Update score 
-	DB: DBTRANS.BODB02 
+	DB: DBTXN/BODB02 
 	Original: [Acc_Set_MatchSelScore], Acc_Set_MatchSelForBill
 	
 	Revisions:			
@@ -27,6 +19,7 @@ AS
 		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
+		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -48,6 +41,13 @@ BEGIN
 		,@FGLG_HTParlayRunning BIT
 		,@PSParlayRunning BIT
 		,@IsExistPS BIT
+		-- Tennis Settlement 
+		,@TennisStatusSet1 NVARCHAR(20)
+		,@TennisStatusSet2 NVARCHAR(20)
+		,@TennisStatusSet3 NVARCHAR(20)
+		,@TennisStatusSet4 NVARCHAR(20)
+		,@TennisStatusSet5 NVARCHAR(20)
+		,@TennisStatusMatch NVARCHAR(20)	-- Match Scope 
 		
 
 	SELECT @IsExistLG = 0
@@ -161,6 +161,13 @@ BEGIN
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
+				WHEN bettype IN (154,155,156,1311,1312,1316,1317,1318,1324)	--- Tennis Set x 
+					THEN CASE	WHEN CAST(betid AS VARCHAR(20)) LIKE '801%' THEN 11		-- Tennis Set 1 
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '802%' THEN 12		-- Tennis Set 2
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '803%' THEN 13		-- Tennis Set 3
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '804%' THEN 14		-- Tennis Set 4
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '805%' THEN 15		-- Tennis Set 5
+								ELSE 0 END 
 				ELSE 0
 				END
 			,SUM(CASE 
@@ -172,15 +179,22 @@ BEGIN
 					ELSE 0
 					END)
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid 
-		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
-		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
-		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+		WHERE	matchid = @matchid 
+				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
+				--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		GROUP BY CASE 
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
+				WHEN bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) 
+					THEN CASE	WHEN CAST(betid AS VARCHAR(20)) LIKE '801%' THEN 11		-- Tennis Set 1 
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '802%' THEN 12		-- Tennis Set 2
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '803%' THEN 13		-- Tennis Set 3
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '804%' THEN 14		-- Tennis Set 4
+								WHEN CAST(betid AS VARCHAR(20)) LIKE '805%' THEN 15		-- Tennis Set 5
+								ELSE 0 END 
 				ELSE 0
 				END
 
@@ -243,6 +257,20 @@ BEGIN
 				,0
 				,0
 				)
+		IF NOT EXISTS ( SELECT * FROM @status WHERE [Group] = 11)
+			INSERT INTO @status VALUES (11,0,0)
+
+		IF NOT EXISTS ( SELECT * FROM @status WHERE [Group] = 12)
+			INSERT INTO @status VALUES (12,0,0)
+
+		IF NOT EXISTS ( SELECT * FROM @status WHERE [Group] = 13)
+			INSERT INTO @status VALUES (13,0,0)
+
+		IF NOT EXISTS ( SELECT * FROM @status WHERE [Group] = 14)
+			INSERT INTO @status VALUES (14,0,0)
+
+		IF NOT EXISTS ( SELECT * FROM @status WHERE [Group] = 15)
+			INSERT INTO @status VALUES (15,0,0)
 
 		SELECT TOP 1 @FGLG_FTParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
 		FROM bettransm WITH(NOLOCK)
@@ -304,6 +332,53 @@ BEGIN
 				END
 		FROM @status
 		WHERE [Group] = 4
+
+		--- Tennis Ticket Status 
+
+		SELECT	@TennisStatusSet1 = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 11 
+
+		SELECT	@TennisStatusSet2 = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 12
+
+		SELECT	@TennisStatusSet3 = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 13
+
+		SELECT	@TennisStatusSet4 = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 14
+
+		SELECT	@TennisStatusSet5 = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 15
+
+		SELECT	@TennisStatusMatch = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 0
+				AND @Sporttype = 5 
+	
+
 		
 	END
 	ELSE -- Refund page
@@ -462,10 +537,30 @@ BEGIN
 		,@IsHTOnly AS IsHTOnly
 		,@IsLive AS IsLive
 		,@IsSettleAbandonedMatchIBC IsSettleAbandonedMatchIBC
+		,@TennisStatusSet1	AS TennisStatusSet1
+		,@TennisStatusSet2	AS TennisStatusSet2
+		,@TennisStatusSet3	AS TennisStatusSet3
+		,@TennisStatusSet4	AS TennisStatusSet4
+		,@TennisStatusSet5	AS TennisStatusSet5
+		,@TennisStatusMatch	AS TennisStatusMatch
 	FROM DBPRO.BODB02.dbo.match WITH (NOLOCK)
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
+
+	-- GET TENNIS RESULT 
+	SELECT	MatchId
+			, ResourceId
+			, HomeValue
+			, AwayValue
+			, ResultStatusID
+			, SettlementStatusID
+	FROM	DBPRO.BODB02.dbo.[ResultDetail] WITH (NOLOCK) 
+	WHERE	MatchID = @MatchID 
+			AND @Sporttype = 5 
+
+
 END
+
 
 
 

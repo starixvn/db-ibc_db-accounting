@@ -1,11 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_WaitingSel]    Script Date: 10/03/2014 09:13:26 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Set_WaitingSel    Script Date: 7/30/2014 5:52:28 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel]
 	@MatchCode nvarchar(50) = '',
 	@SportType tinyint = 0,
@@ -21,6 +13,7 @@ AS
 		- 20140421@Kathy: Directly get IsExistFGLG value from bettrans (not use NAP_Set_MatchBetStatusSel)
 		- 20140506@Kathy: get HT FGLG status 
 		- 20140711@Kathy: get Penalty Shootout status
+		- 20141007@Jamie: Get Tennis in new table [Redmine: #23034]
 	Param's explanation:  
 		
 */
@@ -139,7 +132,7 @@ BEGIN
 							where b.bettype in (14 , 127)
 							GROUP BY b.matchid				
 						) C ON C.matchid = m.matchid
-			LEFT OUTER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid			
+			LEFT OUTER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid		
 		WHERE  
 			 m.matchid in (select top (@topn) matchid from #tempmatch)
 			and mr.matchid in (select top (@topn) matchid from #tempmatch)
@@ -147,8 +140,20 @@ BEGIN
 	where 
 		t.leagueID = case when @LeagueID <> 0 then @LeagueID else t.leagueID end  
 			AND t.sporttype = case when @sporttype = 0 then t.sporttype else @sporttype end  	  		
-			AND (@matchcode = '' or (t.matchid = @matchid OR t.matchcode = @matchcode)) 	
+			AND (@matchcode = '' or (t.matchid = @matchid OR t.matchcode = @matchcode))
+	
+	-- GET TENNIS RESULT DETAIL 
+	SELECT	MatchId
+			, ResourceId
+			, HomeValue
+			, AwayValue
+			, ResultStatusID
+			, SettlementStatusID
+	FROM	DBPRO.bodb02.dbo.[ResultDetail] WITH (NOLOCK) 
+	WHERE	MatchID IN (SELECT MatchID FROM #tempmatch)	
+			AND ResourceId LIKE '0[0-5]' 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
 GO

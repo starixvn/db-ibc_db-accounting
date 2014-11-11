@@ -1,4 +1,11 @@
-ALTER PROCEDURE [NAP_Set_MatchGetResult] @Date DATETIME
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchGetResult]    Script Date: 11/11/2014 3:10:05 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] @Date DATETIME
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues
 	@sporttype TINYINT = 0
@@ -12,6 +19,7 @@ AS
 
 	Revisions:  
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
+		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
 
 	Param explanation:  
 		@sporttype: show info of particular sport
@@ -136,13 +144,17 @@ BEGIN
 		,0
 	FROM dbo.match m WITH (NOLOCK)
 		LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
-	WHERE m.eventdate = @Date AND m.leagueID = CASE 
-			WHEN @LeagueID <> 0 THEN @LeagueID
-			ELSE m.leagueID
-			END AND m.sporttype = CASE 
-			WHEN @sporttype = 0 THEN m.sporttype
-			ELSE @sporttype
-			END AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) AND (@isRefund IS NULL OR (@isRefund = 1 AND betstatus LIKE 'Refund%') OR (@isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%'))
+		LEFT JOIN dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = R.MatchId AND r.ResourceId='00'
+	WHERE	m.eventdate = @Date 
+			AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END 
+			AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END 
+			AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) 
+			AND (@isRefund IS NULL 
+				OR (m.sporttype <> 5 AND @isRefund = 1 AND betstatus LIKE 'Refund%') 
+				OR (m.sporttype <> 5 AND @isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%')
+				OR (m.sporttype = 5 AND @isRefund = 1 AND r.SettlementStatusID BETWEEN 1 AND 3)
+				OR (m.sporttype = 5 AND @isRefund = 0 AND r.SettlementStatusID NOT BETWEEN 1 AND 3)
+			)
 
 	SELECT @rowcount = 0
 		,@max_matchid = 0
@@ -363,12 +375,23 @@ BEGIN
 			,matchid
 			,betstatus
 			,matchcode  
+
+	-- Get TENNIS RESULT 
+	SELECT	MatchId
+			, ResourceId
+			, HomeValue
+			, AwayValue
+			, ResultStatusID
+			, SettlementStatusID
+	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
+	WHERE	@Sporttype IN (0,5 )
+			AND ResourceId LIKE '0[0-5]' 
+			AND ResourceID > 0 
+			AND MatchID IN (SELECT MatchID FROM #matchList)
+
 	DROP TABLE #matchList
 END
-
-
 GO
-
 GRANT EXECUTE ON [NAP_Set_MatchGetResult] TO [bodbAdminNet] AS [dbo]
 GO
 
