@@ -1,18 +1,20 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_2]    Script Date: 08/15/2014 14:03:54 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_2] @matchid INT
-	,@bettype SMALLINT
-	,@oddeven SMALLMONEY = NULL
-	,@oddevenht SMALLMONEY = NULL
-	,@betcount INT = 0
-	,@IsSettleAbandonedMatchIBC BIT = 0
-	,@IsSettleAbandonedMatch BIT = 0
+	,@bettype						SMALLINT
+	,@oddeven						SMALLMONEY = NULL
+	,@oddevenht						SMALLMONEY = NULL
+	,@totalgoal						SMALLMONEY = NULL 
+	,@SelectedSet					VARCHAR(50) = NULL
+	,@OddEvenSetMatch				SMALLMONEY	= NULL	
+	,@OddEvenGameSet1				SMALLMONEY	= NULL
+	,@OddEvenGameSet2				SMALLMONEY	= NULL
+	,@OddEvenGameSet3				SMALLMONEY	= NULL
+	,@OddEvenGameSet4				SMALLMONEY	= NULL
+	,@OddEvenGameSet5				SMALLMONEY	= NULL
+	,@betcount						INT = 0
+	,@IsSettleAbandonedMatchIBC		BIT = 0
+	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
-	,@isRefundHT BIT = 0
+	,@isRefundHT					BIT = 0
 	-- add any params, please modify script in 'special section'
 AS
 /*
@@ -24,7 +26,7 @@ AS
 	Revisions:
 		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054	
 		- 20140808@Kathy: Support new 11 bettypes: 128, 136, 137, 138, 139 [Redmine:#19667]	
-		
+		- 20141020@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 
 */
 BEGIN
@@ -40,7 +42,7 @@ BEGIN
 		,@commLostRate SMALLMONEY
 
 	-- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232')
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215')
 		AND EXISTS (
 			SELECT *
 			FROM sys.databases
@@ -73,7 +75,7 @@ BEGIN
 			,@BetCount = @betcount
 	END
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB231','DB215')
 	BEGIN
 		DECLARE @affectedagents INT
 
@@ -100,7 +102,16 @@ BEGIN
 			SET @affectedagents = @@rowcount
 
 			UPDATE b
-			SET @modds = modds = CASE 
+			SET 
+				@oddeven	= CASE	WHEN bettype = 2 AND @SelectedSet LIKE '%6%' AND @TotalGoal = 0 THEN @OddEvenSetMatch  
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN @OddEvenGameSet1
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN @OddEvenGameSet2
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN @OddEvenGameSet3
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN @OddEvenGameSet4
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @OddEvenGameSet5
+									ELSE @oddeven END 
+			
+				,@modds = modds = CASE 
 					WHEN @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1  -- determined tickets
 							THEN CASE 
 									WHEN b.betteam IN ('oo', 'oe') AND @oddevenht = 0 THEN - 1
@@ -110,6 +121,8 @@ BEGIN
 					ELSE CASE -- normal settlement
 							WHEN betteam = 'h' AND @oddeven = 1 THEN 1
 							WHEN betteam = 'a' AND @oddeven = 0 THEN 1
+							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --1318
+							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --1318  
 							WHEN b.betteam = 'oo' AND @oddevenht = 1 AND @oddeven = 1 THEN 1 -- 128
 							WHEN b.betteam = 'oe' AND @oddevenht = 1 AND @oddeven = 0 THEN 1 -- 128
 							WHEN b.betteam = 'eo' AND @oddevenht = 0 AND @oddeven = 1 THEN 1 -- 128
@@ -262,6 +275,13 @@ BEGIN
 				INNER JOIN @currecommend ag ON b.recommend = ag.recommend
 			WHERE matchid = @matchid
 				AND bettype = @bettype
+				AND 1 = CASE WHEN @Bettype <> 1318  THEN 1 
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1 
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
+							 ELSE 0 END 
 				AND 1 = CASE WHEN @bettype = 128 and @isRefundHT = 1 THEN 0 ELSE 1 END
 				AND statusID NOT IN (101, 102)
 				AND 1 = CASE 
@@ -287,7 +307,15 @@ BEGIN
 	ELSE
 	BEGIN
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = modds =  CASE 
+		SET 
+			@oddeven	= CASE	WHEN bettype = 2 AND @SelectedSet LIKE '%6%' AND @TotalGoal = 0 THEN @OddEvenSetMatch  
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN @OddEvenGameSet1
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN @OddEvenGameSet2
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN @OddEvenGameSet3
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN @OddEvenGameSet4
+									WHEN bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @OddEvenGameSet5
+									ELSE @oddeven END 
+			,@modds = modds =  CASE 
 					WHEN @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1  -- determined tickets
 							THEN CASE 
 									WHEN betteam IN ('oo', 'oe') AND @oddevenht = 0 THEN - 1
@@ -297,6 +325,8 @@ BEGIN
 					ELSE CASE -- normal settlement
 							WHEN betteam = 'h' AND @oddeven = 1 THEN 1
 							WHEN betteam = 'a' AND @oddeven = 0 THEN 1
+							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --1318
+							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --1318  
 							WHEN betteam = 'oo' AND @oddevenht = 1 AND @oddeven = 1 THEN 1 -- 128
 							WHEN betteam = 'oe' AND @oddevenht = 1 AND @oddeven = 0 THEN 1 -- 128
 							WHEN betteam = 'eo' AND @oddevenht = 0 AND @oddeven = 1 THEN 1 -- 128
@@ -447,14 +477,16 @@ BEGIN
 		WHERE matchid = @matchid
 			AND bettype = @bettype
 			AND statusID NOT IN (101, 102)
+			AND 1 = CASE WHEN @Bettype <> 1318  THEN 1 
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1 
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
+							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
+							 ELSE 0 END
 			AND 1 = CASE WHEN @bettype = 128 and @isRefundHT = 1 THEN 0 ELSE 1 END
 	END
 END
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_2] TO [ibc_admin] AS [dbo]
 GO
