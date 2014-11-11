@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_BetFair_Move]    Script Date: 09/03/2014 10:08:29 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_BetFair_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
@@ -22,6 +17,7 @@ AS
 		- 20140512@Kathy: Add more log to distinguish between NAP and old settlement system
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140901@Kathy: Support to move tickets (non-live and live) for Betfair [Redmine:#21221]
+		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		
 
 	Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
@@ -38,7 +34,8 @@ BEGIN
 			@leagueID		INT,
 			@eventdate		DATETIME,			
 			@newEventdate	DATETIME,
-			@matchcode	VARCHAR(20)
+			@matchcode		VARCHAR(20),
+			@sporttype		INT
 
 	DECLARE @finalhomescore INT, @finalawayscore INT,
 			@hthomescore INT, @htawayscore INT,
@@ -63,7 +60,8 @@ BEGIN
 			@htawayscore = htawayscore,
 			@goalrecord = goalrecord,
 			@betstatus = betstatus,
-			@matchcode = matchcode
+			@matchcode = matchcode,
+			@sporttype = sporttype
 	FROM	DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE	matchid = @MatchID 
 
@@ -109,13 +107,16 @@ BEGIN
 			INNER JOIN @tmpOdds o ON b.bettype = o.bettype 
 	WHERE	b.matchid = @MatchID 
 			AND b.custid IN (2331, 1077687, 115770, 15523642)
+			AND b.ruben = 0
+			AND 1 = CASE WHEN @Sporttype = 5 AND b.bettype NOT IN (1,2,3,20) THEN 0 
+						 ELSE 1 END 
 			/*
 			AND (
-				b.custid IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (1)) 
-				or b.recommend IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (2))
+				b.custid IN (Select CustID from  [f_GetBetDaqCustomer] (1)) 
+				or b.recommend IN (Select CustID from  [f_GetBetDaqCustomer] (2))
 				)
 			*/	
-			AND b.ruben = 0
+			
 	IF @@ERROR <>0
 	BEGIN
 		SELECT	@ErrCode = 103,
@@ -191,8 +192,6 @@ BEGIN
 	END CATCH
 
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_BetFair_Move] TO [bodbAdminNet] AS [dbo]
 GO
