@@ -1,12 +1,14 @@
-﻿ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1324] 
-     @matchid			INT
-	,@bettype			SMALLINT
-	,@SelectedSet		VARCHAR(50)  = NULL 
-	,@SetxGameyHomeWON	VARCHAR(MAX) = NULL
-	,@SetxGameyAwayWON	VARCHAR(MAX) = NULL
-	,@SetxGameyDRAW		VARCHAR(MAX) = NULL 
-	,@SetxGameyREFUND	VARCHAR(MAX) = NULL 
-	,@betcount			INT = 0
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1324] 
+     @matchid						INT
+	,@bettype						SMALLINT
+	,@SelectedSet					VARCHAR(50)  = NULL 
+	,@SelectedSettleFinishedGame	VARCHAR(50)  = NULL 
+	,@SetxGameyHomeWON				VARCHAR(MAX) = NULL
+	,@SetxGameyAwayWON				VARCHAR(MAX) = NULL
+	,@SetxGameyDRAW					VARCHAR(MAX) = NULL 
+	,@SetxGameyREFUND				VARCHAR(MAX) = NULL 
+	,@SetxGameyFinishedGame			VARCHAR(MAX) = NULL 
+	,@betcount						INT = 0
 	-- add any params, please modify script in 'special section'
 AS
 /*
@@ -24,11 +26,11 @@ BEGIN
 
 	SET NOCOUNT ON
 
-	DECLARE @modds		SMALLMONEY
-		,@commWinRate	SMALLMONEY
-		,@commLostRate	SMALLMONEY
-		,@RemoteCount	INT
-		,@isRefundGame	BIT
+	DECLARE @modds			SMALLMONEY
+		,@commWinRate		SMALLMONEY
+		,@commLostRate		SMALLMONEY
+		,@RemoteCount		INT
+		,@isAutoRefundGame	BIT
 
 	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
@@ -55,7 +57,7 @@ BEGIN
 	--		,@BetCount = @betcount
 	--END
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
 	BEGIN
 		DECLARE @affectedagents INT
 
@@ -80,7 +82,7 @@ BEGIN
 			UPDATE b
 			SET 
 			
-			@isRefundGame	= CASE WHEN  CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 1 ELSE 0 END -- Refund: Game no score 
+			@isAutoRefundGame	= CASE WHEN  CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 1 ELSE 0 END -- Refund: Game no score 
 			
 			,@modds = modds = CASE	WHEN betteam =N'h' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyHomeWON)>0 THEN 1 
 									WHEN betteam =N'a' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyAwayWON)>0 THEN 1   
@@ -158,14 +160,14 @@ BEGIN
 
 			Status = CASE
 				WHEN @modds > 0 THEN N'WON'
-				WHEN @modds = 0 AND @isRefundGame=0 THEN N'DRAW'
-				WHEN @modds = 0 AND @isRefundGame=1 THEN N'Refund'
+				WHEN @modds = 0 AND @isAutoRefundGame=0 THEN N'DRAW'
+				WHEN @modds = 0 AND @isAutoRefundGame=1 THEN N'Refund'
 				WHEN @modds < 0 THEN N'LOSE'
 				END,
 			StatusID = CASE
 				WHEN @modds > 0 THEN 112 --WON
-				WHEN @modds = 0 AND @isRefundGame =0 THEN 111 --DRAW
-				WHEN @modds = 0 AND @isRefundGame =1 THEN 103 --REFUND
+				WHEN @modds = 0 AND @isAutoRefundGame =0 THEN 111 --DRAW
+				WHEN @modds = 0 AND @isAutoRefundGame =1 THEN 103 --REFUND
 				WHEN @modds < 0 THEN 113 --LOSE
 				END,
 			ruben=1
@@ -174,14 +176,20 @@ BEGIN
 			WHERE
 				matchid=@matchid 
 				AND bettype=@bettype 
-				AND (
-						(@SelectedSet LIKE '%1%' AND BetID BETWEEN 80101 AND 80199)
-					OR	(@SelectedSet LIKE '%2%' AND BetID BETWEEN 80201 AND 80299)
-					OR	(@SelectedSet LIKE '%3%' AND BetID BETWEEN 80301 AND 80399)
-					OR	(@SelectedSet LIKE '%4%' AND BetID BETWEEN 80401 AND 80499)
-					OR	(@SelectedSet LIKE '%5%' AND BetID BETWEEN 80501 AND 80599)
-				)
-				AND statusID NOT IN (101,102)
+				AND statusID NOT IN (101, 102)
+				AND 1 = CASE WHEN @SelectedSet LIKE '%1%' AND BetID BETWEEN 80101 AND 80199 THEN 1  -- CAL Set x Game y Winner 
+							 WHEN @SelectedSet LIKE '%2%' AND BetID BETWEEN 80201 AND 80299 THEN 1 
+							 WHEN @SelectedSet LIKE '%3%' AND BetID BETWEEN 80301 AND 80399 THEN 1 
+							 WHEN @SelectedSet LIKE '%4%' AND BetID BETWEEN 80401 AND 80499 THEN 1 
+							 WHEN @SelectedSet LIKE '%5%' AND BetID BETWEEN 80501 AND 80599 THEN 1 
+							 ELSE 0 END 
+				AND 1 = CASE WHEN @SelectedSettleFinishedGame IS NULL THEN 1 
+							 WHEN @SelectedSettleFinishedGame LIKE '%1%' AND BetID BETWEEN 80101 AND 80199 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1 
+							 WHEN @SelectedSettleFinishedGame LIKE '%2%' AND BetID BETWEEN 80201 AND 80299 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1   
+							 WHEN @SelectedSettleFinishedGame LIKE '%3%' AND BetID BETWEEN 80301 AND 80399 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1
+							 WHEN @SelectedSettleFinishedGame LIKE '%4%' AND BetID BETWEEN 80401 AND 80499 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1  
+							 WHEN @SelectedSettleFinishedGame LIKE '%5%' AND BetID BETWEEN 80501 AND 80599 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1   
+							 ELSE 0 END 	
 
 			IF @affectedagents <> 100
 				BREAK
@@ -194,7 +202,7 @@ BEGIN
 		UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
 		SET 
 		
-			@isRefundGame	= CASE WHEN  CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 1 ELSE 0 END -- Refund: Game no score 
+			@isAutoRefundGame	= CASE WHEN  CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 1 ELSE 0 END -- Refund: Game no score 
 			
 			,@modds = modds = CASE	WHEN betteam =N'h' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyHomeWON)>0 THEN 1 
 									WHEN betteam =N'a' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyAwayWON)>0 THEN 1   
@@ -318,27 +326,33 @@ BEGIN
 				END,
 			Status = CASE
 				WHEN @modds > 0 THEN N'WON'
-				WHEN @modds = 0 AND @isRefundGame=0 THEN N'DRAW'
-				WHEN @modds = 0 AND @isRefundGame=1 THEN N'Refund'
+				WHEN @modds = 0 AND @isAutoRefundGame=0 THEN N'DRAW'
+				WHEN @modds = 0 AND @isAutoRefundGame=1 THEN N'Refund'
 				WHEN @modds < 0 THEN N'LOSE'
 				END,
 			StatusID = CASE
 				WHEN @modds > 0 THEN 112 --WON
-				WHEN @modds = 0 AND @isRefundGame =0 THEN 111 --DRAW
-				WHEN @modds = 0 AND @isRefundGame =1 THEN 103 --REFUND
+				WHEN @modds = 0 AND @isAutoRefundGame =0 THEN 111 --DRAW
+				WHEN @modds = 0 AND @isAutoRefundGame =1 THEN 103 --REFUND
 				WHEN @modds < 0 THEN 113 --LOSE
 				END,
 			ruben = 1
 		WHERE	matchid = @matchid 
 				AND bettype = @bettype 
-				AND (
-						(@SelectedSet LIKE '%1%' AND BetID BETWEEN 80101 AND 80199)
-					OR	(@SelectedSet LIKE '%2%' AND BetID BETWEEN 80201 AND 80299)
-					OR	(@SelectedSet LIKE '%3%' AND BetID BETWEEN 80301 AND 80399)
-					OR	(@SelectedSet LIKE '%4%' AND BetID BETWEEN 80401 AND 80499)
-					OR	(@SelectedSet LIKE '%5%' AND BetID BETWEEN 80501 AND 80599)
-				)
 				AND statusID NOT IN (101, 102)
+				AND 1 = CASE WHEN @SelectedSet LIKE '%1%' AND BetID BETWEEN 80101 AND 80199 THEN 1  -- CAL Set x Game y Winner 
+							 WHEN @SelectedSet LIKE '%2%' AND BetID BETWEEN 80201 AND 80299 THEN 1 
+							 WHEN @SelectedSet LIKE '%3%' AND BetID BETWEEN 80301 AND 80399 THEN 1 
+							 WHEN @SelectedSet LIKE '%4%' AND BetID BETWEEN 80401 AND 80499 THEN 1 
+							 WHEN @SelectedSet LIKE '%5%' AND BetID BETWEEN 80501 AND 80599 THEN 1 
+							 ELSE 0 END 
+				AND 1 = CASE WHEN @SelectedSettleFinishedGame IS NULL THEN 1 
+							 WHEN @SelectedSettleFinishedGame LIKE '%1%' AND BetID BETWEEN 80101 AND 80199 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1 
+							 WHEN @SelectedSettleFinishedGame LIKE '%2%' AND BetID BETWEEN 80201 AND 80299 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1   
+							 WHEN @SelectedSettleFinishedGame LIKE '%3%' AND BetID BETWEEN 80301 AND 80399 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1
+							 WHEN @SelectedSettleFinishedGame LIKE '%4%' AND BetID BETWEEN 80401 AND 80499 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1  
+							 WHEN @SelectedSettleFinishedGame LIKE '%5%' AND BetID BETWEEN 80501 AND 80599 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 1   
+							 ELSE 0 END 				
 	END
 END
 GO
