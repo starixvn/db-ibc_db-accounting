@@ -41,8 +41,6 @@ AS
 		+ @SelectedSet: The list of set(s) choosen 
 		+ @SelectedSet1Game: The list of game(s) have score(s) or the score(s) changed to Blank 
 
-
-
 */
 BEGIN
 	SET NOCOUNT ON 
