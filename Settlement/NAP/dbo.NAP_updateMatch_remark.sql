@@ -1,12 +1,8 @@
-/****** Object:  StoredProcedure [dbo].[NAP_updateMatch_remark]    Script Date: 09/11/2014 14:29:34 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_updateMatch_remark]
 	@matchid int,
 	@command varchar(5),
-	@ivalue bigint = NULL
+	@ivalue bigint = NULL,
+	@SelectedSet	VARCHAR(50) = NULL 
 WITH RECOMPILE
 /*  
 	Created: Kathy
@@ -18,8 +14,8 @@ WITH RECOMPILE
 	
 	Revisions:
 		- 20140711@Kathy: Add more @command value: PS for settlement Penalty Shootout [Redmine:#17142]
-		- 20140905@Kathy: Update SettlementStatus135 = 4 if then match hasn't any PS ticket [Redmine:#21560]
-
+		- 20140905@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
+		- 20141022@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 	Param's Explanation: 
 */
 AS
@@ -70,7 +66,7 @@ BEGIN
 	END
 	
 	-- Match Refund
-	IF @command = 'F' 
+	IF @command = 'F' AND (@SelectedSet IS NULL OR @SelectedSet LIKE'%6%')
 	BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK) 
 		SET calculate		= 0
@@ -102,7 +98,7 @@ BEGIN
 	END
 	
 	-- [U]ndo settlement
-	IF @command = 'U' 
+	IF @command = 'U' AND (@SelectedSet IS NULL OR @SelectedSet LIKE'%6%')
 	BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK)
 		SET IsHTCal					= 0
@@ -300,8 +296,6 @@ BEGIN
 	END
 
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_updateMatch_remark] TO [bodbAdminNet] AS [dbo]
 GO
