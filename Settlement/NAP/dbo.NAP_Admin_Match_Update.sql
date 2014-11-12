@@ -79,38 +79,93 @@ BEGIN
 	END
 	IF @Command = 'NAP_Admin_Settlement_Refund_All'
 	BEGIN
+		DECLARE @Sporttype INT 
 		SELECT @betstatus = CASE WHEN charindex('PS:',betstatus) > 0 THEN STUFF(betstatus, CHARINDEX('PS:',betstatus),5,'') -- PS:Y; or PS:N;
 								 ELSE ISNULL(betstatus,'')
 							END
+			,@Sporttype = sporttype
 		FROM match with(NOLOCK)
 		WHERE matchid = @matchid
 
-		UPDATE match WITH(ROWLOCK,UPDLOCK) 
-		SET eventstatus= CASE WHEN Sporttype <> 5 THEN N'Completed'
-							  WHEN Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN N'Completed'
-							  ELSE eventstatus END 
-			, ruben = CASE WHEN Sporttype <> 5 THEN 1
-						   WHEN Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN 1 
-						   ELSE ruben END  
-			, finalhomescore= CASE WHEN Sporttype <> 5 THEN 0
-								   WHEN Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN 0 
-								   ELSE finalhomescore END 
-			, finalawayscore= CASE WHEN Sporttype <> 5 THEN 0
-								   WHEN Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN 0 
-								   ELSE finalawayscore END	
-			, hthomescore=0
-			, htawayscore=0 
-			,betstatus = CASE WHEN Sporttype <> 5 THEN 'Refund;' 
-							  WHEN Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN 'Refund;'
-							  ELSE '' END 
-							+ CASE  WHEN CHARINDEX('Refund;',@betstatus) > 0 AND Sporttype <>5 THEN REPLACE(@betstatus,'Refund;','')
-									WHEN CHARINDEX('Refund;',@betstatus) > 0 AND Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN REPLACE(@betstatus,'Refund;','')
-									WHEN CHARINDEX('Refund FT;',@betstatus) > 0 THEN REPLACE(@betstatus,'Refund FT;','')
-									WHEN CHARINDEX('Refund HT;',@betstatus)>0 THEN REPLACE(@betstatus,'Refund HT;','')
-									ELSE @betstatus END
-			,GoalRecord =''
-			,changetime = GETDATE(), settleTime = GETDATE()
-		WHERE matchid=@MatchID
+		IF @sporttype <> 5 
+		BEGIN
+			UPDATE match WITH(ROWLOCK,UPDLOCK) 
+			SET eventstatus='Completed', ruben=1, finalhomescore=0, finalawayscore=0, hthomescore=0, htawayscore=0 
+				,betstatus = 'Refund;' + CASE  WHEN CHARINDEX('Refund;',@betstatus) > 0 THEN REPLACE(@betstatus,'Refund;','')
+											WHEN CHARINDEX('Refund FT;',@betstatus) > 0 THEN REPLACE(@betstatus,'Refund FT;','')
+											WHEN CHARINDEX('Refund HT;',@betstatus)>0 THEN REPLACE(@betstatus,'Refund HT;','')
+											ELSE @betstatus
+										END
+				,GoalRecord =''
+				,changetime = GETDATE(), settleTime = GETDATE()
+			WHERE matchid=@MatchID
+		END 
+		ELSE 
+		BEGIN
+			IF @SelectedSet LIKE '%6%'
+			BEGIN 
+				SET @BetStatus =''
+				DECLARE	@tmpSelectedSet	TABLE(
+					 SetIndex	TINYINT IDENTITY(1,1)
+					,Score		VARCHAR(10)
+				)
+
+				DECLARE	@tmpResultSet TABLE(
+					 SetIndex	TINYINT	
+					,Score		VARCHAR(10)
+				)
+
+
+				INSERT INTO @tmpSelectedSet(Score)
+						  SELECT '0-0'
+				UNION ALL SELECT '0-0'
+				UNION ALL SELECT '0-0'
+				UNION ALL SELECT '0-0'
+				UNION ALL SELECT '0-0'
+
+
+				INSERT INTO @tmpResultSet(SetIndex,Score)
+				SELECT RIGHT(ResourceID,1),ISNULL(HomeValue,0) +'-'+ISNULL(AwayValue,0)
+				FROM	ResultDetail WITH (NOLOCK)
+				WHERE	matchID = @MatchID
+						AND SettlementStatusID > 0
+						AND ResourceID LIKE '0[1-5]'
+				UPDATE	@tmpSelectedSet
+				SET		Score = s2.Score 
+				FROM	@tmpSelectedSet s
+						INNER JOIN @tmpResultSet s2 ON s.SetIndex = s2.SetIndex 
+
+				SELECT @betstatus= @betstatus + Score + ','
+				FROM   @tmpSelectedSet
+
+				IF RIGHT(@betstatus,1)=',' 
+					SELECT @betstatus= LEFT(@betstatus,LEN(@betstatus)-1)
+
+				IF	@betstatus='0-0,0-0,0-0,0-0,0-0' 
+					SELECT @betstatus=''
+
+			END
+
+
+			UPDATE match WITH(ROWLOCK,UPDLOCK) 
+			SET eventstatus= CASE WHEN @SelectedSet LIKE '%6%' THEN N'Completed'
+								  ELSE eventstatus END 
+				, ruben = CASE WHEN @SelectedSet LIKE '%6%' THEN 1 
+							   ELSE ruben END  
+				, finalhomescore= CASE WHEN @SelectedSet LIKE '%6%' THEN 0 
+									   ELSE finalhomescore END 
+				, finalawayscore= CASE WHEN @SelectedSet LIKE '%6%' THEN 0 
+									   ELSE finalawayscore END	
+				, hthomescore=0
+				, htawayscore=0 
+				,betstatus = CASE WHEN @SelectedSet LIKE '%6%' THEN 'Refund;'
+								  ELSE '' END 
+								+ CASE	WHEN CHARINDEX('Refund;',@betstatus) > 0 AND @SelectedSet LIKE '%6%' THEN REPLACE(@betstatus,'Refund;','')
+										ELSE @betstatus END
+				,GoalRecord =''
+				,changetime = GETDATE(), settleTime = GETDATE()
+			WHERE matchid=@MatchID
+		END
 	END
 	IF @Command = 'NAP_Admin_Settlement_RefundFT'
 	BEGIN
