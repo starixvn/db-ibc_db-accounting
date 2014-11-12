@@ -21,7 +21,9 @@
  ,@SetxGameyAwayWON					VARCHAR(MAX) = ''  OUTPUT
  ,@SetxGameyDRAW					VARCHAR(MAX) = ''  OUTPUT
  ,@SetxGameyFinishedGame			VARCHAR(MAX) = ''  OUTPUT	
- ,@SetxGameyREFUND					VARCHAR(MAX) = ''  OUTPUT			
+ ,@SetxGameyREFUND					VARCHAR(MAX) = ''  OUTPUT	
+ ,@SelectedSetCAL					VARCHAR(50)  = ''  OUTPUT
+ ,@SelectedSetREFUND				VARCHAR(50)  = ''  OUTPUT 		
 
 AS
 /*
@@ -116,5 +118,13 @@ BEGIN
 	END
 
 	SELECT	@TotalGameMatch = @TotalGameHomeMatch + @TotalGameAwayMatch
+
+	---- Get Set/Match
+	SELECT	 @SelectedSetCAL	= @SelectedSetCAL + CASE WHEN SettlementStatusID = 4 THEN CASE WHEN ResourceID='00' THEN '6,' ELSE RIGHT(ResourceID,1) +',' END
+													 ELSE '' END		
+			,@SelectedSetREFUND = @SelectedSetREFUND + CASE WHEN SettlementStatusID = 1 THEN CASE WHEN ResourceID='00' THEN '6,' ELSE RIGHT(ResourceID,1) +',' END
+													 ELSE '' END											
+	FROM	@tmpResultDetail
+	WHERE	ResourceID LIKE '0[0-5]' 
 
 END
