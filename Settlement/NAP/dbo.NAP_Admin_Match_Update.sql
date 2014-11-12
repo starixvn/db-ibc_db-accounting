@@ -146,7 +146,6 @@ BEGIN
 
 			END
 
-
 			UPDATE match WITH(ROWLOCK,UPDLOCK) 
 			SET eventstatus= CASE WHEN @SelectedSet LIKE '%6%' THEN N'Completed'
 								  ELSE eventstatus END 
