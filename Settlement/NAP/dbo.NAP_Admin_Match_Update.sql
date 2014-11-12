@@ -47,7 +47,7 @@ BEGIN
 								   ELSE NULL END 
 			,hthomescore	= NULL
 			,htawayscore	= NULL
-			,betstatus		= CASE WHEN Sporttype = 5 THEN @BetStatus
+			,betstatus		= CASE WHEN Sporttype = 5 AND @SelectedSet NOT LIKE '%6%' THEN @BetStatus
 								   ELSE N'' END 
 			,GoalRecord		= ''
 			,changetime		= GETDATE(), settleTime = GETDATE()
@@ -145,6 +145,7 @@ BEGIN
 					SELECT @betstatus=''
 
 			END
+
 
 			UPDATE match WITH(ROWLOCK,UPDLOCK) 
 			SET eventstatus= CASE WHEN @SelectedSet LIKE '%6%' THEN N'Completed'
