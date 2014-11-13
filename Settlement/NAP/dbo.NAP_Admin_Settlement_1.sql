@@ -286,17 +286,11 @@ BEGIN
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-		--EXEC dbo.NAP_Admin_Settlement_Parlay_xtest 
-		--	@matchids		= @matchid
-		--	,@creator		= @creator
-		--	,@action		= 'UNDO'
-		--	,@SelectedSet	= @SelectedSet
-		--	,@IP			= @IP
-
 		EXEC dbo.NAP_Admin_Settlement_Parlay
 			@matchids		= @matchid
 			,@creator		= @creator
 			,@action		= 'UNDO'
+			,@SelectedSet	= @SelectedSet
 			,@IP			= @IP
 
 		EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
