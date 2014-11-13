@@ -2,7 +2,10 @@ ALTER PROCEDURE [dbo].[NAP_updateMatch_remark]
 	@matchid int,
 	@command varchar(5),
 	@ivalue bigint = NULL,
-	@SelectedSet	VARCHAR(50) = NULL 
+	@SelectedSet		VARCHAR(50) = NULL,
+	@SelectedSetCAL		VARCHAR(50) = NULL,
+	@SelectedSetREFUND	VARCHAR(50) = NULL
+
 WITH RECOMPILE
 /*  
 	Created: Kathy
@@ -78,7 +81,7 @@ BEGIN
 	END
 	
 	-- Mix Parlay calculated
-	IF @command = 'M' 
+	IF @command = 'M' AND (@SelectedSetCAL IS NULL OR @SelectedSetCAL LIKE '%6%')
 	BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK)
 		SET multiple		= 1
@@ -88,7 +91,7 @@ BEGIN
 	END
 	
 	-- Mix Parlay Refund
-	IF @command = 'R' 
+	IF @command = 'R' AND (@SelectedSetREFUND IS NULL OR @SelectedSetREFUND LIKE '%6%')
 	BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK) 
 		SET multiple		= 0

@@ -39,6 +39,26 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON 
+	SELECT   @TotalGameMatch		 = 0 
+			,@TotalGameHomeMatch	 = 0 
+			,@TotalGameAwayMatch	 = 0 
+			,@TotalGameHomeSet1		 = 0 
+			,@TotalGameHomeSet2		 = 0 
+			,@TotalGameHomeSet3		 = 0 
+			,@TotalGameHomeSet4		 = 0 
+			,@TotalGameHomeSet5		 = 0 
+			,@TotalGameAwaySet1		 = 0 
+			,@TotalGameAwaySet2		 = 0 
+			,@TotalGameAwaySet3		 = 0 
+			,@TotalGameAwaySet4		 = 0 
+			,@TotalGameAwaySet5		 = 0  
+			,@SetxGameyHomeWON		 = ''  
+			,@SetxGameyAwayWON		 = ''  
+			,@SetxGameyDRAW			 = ''  
+			,@SetxGameyFinishedGame	 = ''  	
+			,@SetxGameyREFUND		 = ''  	
+			,@SelectedSetCAL		 = ''  
+			,@SelectedSetREFUND		 = '' 
 
 	DECLARE	@tmpSelectedSet	TABLE(
 		 ID			TINYINT IDENTITY(1,1)
