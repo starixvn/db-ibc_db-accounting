@@ -68,7 +68,7 @@ BEGIN
 	DECLARE @matchcode	NVARCHAR(50)
 		,@sporttype		INT
 		,@leagueid		INT
-		,@sqlCommand	NVARCHAR(1000)
+		,@sqlCommand	NVARCHAR(MAX)
 		,@IsNested		BIT
 		,@Action		VARCHAR(20)
 		,@procName		NVARCHAR(50)
@@ -83,7 +83,7 @@ BEGIN
 
 	IF @@ROWCOUNT = 0
 	BEGIN
-		SELECT @ErrCode = 1000001
+		SELECT @ErrCode = 1001001
 			,@ErrMsg	= 'Match does not exist!'
 
 		RETURN
@@ -102,7 +102,7 @@ BEGIN
 				AND IsCalculating IN (0, 1)
 			)
 	BEGIN
-		SELECT @ErrCode = 1000000
+		SELECT @ErrCode = 1001010
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
 		RETURN
@@ -142,6 +142,12 @@ BEGIN
 																  + ', @ErrCode = @ErrCode OUTPUT' 
 																  + ', @ErrMsg = @ErrMsg OUTPUT'
 
+	IF LEN(@sqlCommand)> 1000 --Max Field 
+	BEGIN
+		SELECT   @ErrCode = 1001010
+				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each set/match to execute separately.'	
+		RETURN 
+	END
 
 	IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre'
 	BEGIN
