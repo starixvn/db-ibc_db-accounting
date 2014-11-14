@@ -1,10 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 08/15/2014 13:56:59 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 3/17/2014 4:21:08 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -165,7 +158,6 @@ BEGIN
 		END
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO

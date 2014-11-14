@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Parlay]    Script Date: 08/27/2014 14:02:25 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@matchids VARCHAR(2000) = NULL
 	,@mode VARCHAR(15) = 'CAL'
@@ -20,7 +15,28 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@VoidTransID VARCHAR(2000) = NULL
 	,@UserId INT = NULL
 	,@strXML VARCHAR(MAX) = NULL
-	,@CalledByBrokerService BIT = 0
+	,@SelectedSet			VARCHAR(50) = NULL 
+	,@TotalGameMatch		INT = NULL
+	,@TotalGameHomeMatch	INT = NULL
+	,@TotalGameAwayMatch	INT	= NULL 
+	,@TotalGameHomeSet1		INT	= NULL 
+	,@TotalGameHomeSet2		INT = NULL 
+	,@TotalGameHomeSet3		INT = NULL 
+	,@TotalGameHomeSet4		INT = NULL 
+	,@TotalGameHomeSet5		INT = NULL 
+	,@TotalGameAwaySet1		INT = NULL 
+	,@TotalGameAwaySet2		INT = NULL 
+	,@TotalGameAwaySet3		INT = NULL 
+	,@TotalGameAwaySet4		INT = NULL 
+	,@TotalGameAwaySet5		INT = NULL 
+	,@SetxGameyHomeWON		VARCHAR(MAX) = NULL 
+	,@SetxGameyAwayWON		VARCHAR(MAX) = NULL 
+	,@SetxGameyDRAW			VARCHAR(MAX) = NULL 
+	,@SetxGameyFinishedGame	VARCHAR(MAX) = NULL 	
+	,@SetxGameyREFUND		VARCHAR(MAX) = NULL 
+	,@SelectedSetCAL		VARCHAR(50)  = NULL
+	,@SelectedSetREFUND		VARCHAR(50)  = NULL 
+	,@CalledByBrokerService BIT = NULL 
 AS
 /*
 	Created: Kathy
@@ -41,7 +57,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232') AND @CalledByBrokerService = 0
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232','DB215') AND @CalledByBrokerService = 0
 	BEGIN
 		-- DB052/DB053/DB054/DB06: got servicebroker, then just send a message to service broker and then let it to handle the rest.
 		DECLARE @sMessage NVARCHAR(MAX)
@@ -114,6 +130,91 @@ BEGIN
 				WHEN @strXML IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(VARCHAR(max), @strXML) + ''''
 				END + '
+			,@SelectedSet = ' + CASE 
+				WHEN @SelectedSet IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(50), @SelectedSet) + ''''
+				END + '
+			,@TotalGameMatch = ' + CASE 
+				WHEN @TotalGameMatch IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameMatch)
+				END + '
+			,@TotalGameHomeMatch = ' + CASE 
+				WHEN @TotalGameHomeMatch IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameHomeMatch)
+				END + '
+
+			,@TotalGameAwayMatch = ' + CASE 
+				WHEN @TotalGameAwayMatch IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameAwayMatch)
+				END + '
+			,@TotalGameHomeSet1 = ' + CASE 
+				WHEN @TotalGameHomeSet1 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameHomeSet1)
+				END + '
+			,@TotalGameHomeSet2 = ' + CASE 
+				WHEN @TotalGameHomeSet2 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameHomeSet2)
+				END + '
+			,@TotalGameHomeSet3 = ' + CASE 
+				WHEN @TotalGameHomeSet3 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameHomeSet3)
+				END + '
+			,@TotalGameHomeSet4 = ' + CASE 
+				WHEN @TotalGameHomeSet4 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameHomeSet4)
+				END + '
+			,@TotalGameHomeSet5 = ' + CASE 
+				WHEN @TotalGameHomeSet5 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameHomeSet5)
+				END + '
+			,@TotalGameAwaySet1= ' + CASE 
+				WHEN @TotalGameAwaySet1 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameAwaySet1)
+				END + '
+			,@TotalGameAwaySet2= ' + CASE 
+				WHEN @TotalGameAwaySet2 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameAwaySet2)
+				END + '
+			,@TotalGameAwaySet3= ' + CASE 
+				WHEN @TotalGameAwaySet3 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameAwaySet3)
+				END + '
+			,@TotalGameAwaySet4= ' + CASE 
+				WHEN @TotalGameAwaySet4 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameAwaySet4)
+				END + '
+			,@TotalGameAwaySet5= ' + CASE 
+				WHEN @TotalGameAwaySet5 IS NULL THEN 'NULL'
+				ELSE CONVERT(NVARCHAR(50), @TotalGameAwaySet5)
+				END + '
+			,@SetxGameyHomeWON = ' + CASE 
+				WHEN @SetxGameyHomeWON IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyHomeWON) + ''''
+				END + '
+			,@SetxGameyAwayWON = ' + CASE 
+				WHEN @SetxGameyAwayWON IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyAwayWON) + ''''
+				END + '
+			,@SetxGameyHomeWON = ' + CASE 
+				WHEN @SetxGameyHomeWON IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyHomeWON) + ''''
+				END + '
+			,@SetxGameyDRAW = ' + CASE 
+				WHEN @SetxGameyDRAW IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyDRAW) + ''''
+				END + '
+			,@SetxGameyREFUND = ' + CASE 
+				WHEN @SetxGameyREFUND IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyREFUND) + ''''
+				END + '
+			,@SelectedSetCAL = ' + CASE 
+				WHEN @SelectedSetCAL IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(50), @SelectedSetCAL) + ''''
+				END + '
+			,@SelectedSetREFUND = ' + CASE 
+				WHEN @SelectedSetREFUND IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(50), @SelectedSetREFUND) + ''''
+				END + '
 			,@CalledByBrokerService = 1'
 
 		EXEC [sb].[SBInputMessage] @fromService = N'//Service/Calculation_send'
@@ -149,7 +250,7 @@ BEGIN
 
 			BEGIN TRANSACTION
 
-			EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+			   EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
 				,@fth = @fth
 				,@fta = @fta
 				,@hth = @hth
@@ -158,9 +259,57 @@ BEGIN
 				,@action = @action
 				,@resultPS = @resultPS
 				,@IsRefundHT = @IsRefundHT
-				,@TennisTotal = @TennisTotal
+				,@TennisTotal			= @TennisTotal
+				,@SelectedSet			= @SelectedSet
 
 			COMMIT TRANSACTION
+		END
+
+		IF @mode='CAL-SET'
+		BEGIN
+			EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+				,@fth = @fth
+				,@fta = @fta
+				,@hth = @hth
+				,@hta = @hta
+				,@matchdate = @matchdate
+				,@action = 'REFUND'
+				,@resultPS = @resultPS
+				,@IsRefundHT = @IsRefundHT
+				,@TennisTotal				= @TennisTotal
+				,@SelectedSetCAL			= @SelectedSetCAL 
+				,@SelectedSetREFUND			= @SelectedSetREFUND 
+
+			EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+				,@fth = @fth
+				,@fta = @fta
+				,@hth = @hth
+				,@hta = @hta
+				,@matchdate = @matchdate
+				,@action = 'CAL'
+				,@resultPS = @resultPS
+				,@IsRefundHT = @IsRefundHT
+				,@TennisTotal				= @TennisTotal
+				,@TotalGameMatch			= @TotalGameMatch 
+				,@TotalGameHomeMatch		= @TotalGameHomeMatch 
+				,@TotalGameAwayMatch		= @TotalGameAwayMatch 
+				,@TotalGameHomeSet1			= @TotalGameHomeSet1 
+				,@TotalGameHomeSet2			= @TotalGameHomeSet2 
+				,@TotalGameHomeSet3			= @TotalGameHomeSet3 
+				,@TotalGameHomeSet4			= @TotalGameHomeSet4 
+				,@TotalGameHomeSet5			= @TotalGameHomeSet5 
+				,@TotalGameAwaySet1			= @TotalGameAwaySet1 
+				,@TotalGameAwaySet2			= @TotalGameAwaySet2 
+				,@TotalGameAwaySet3			= @TotalGameAwaySet3 
+				,@TotalGameAwaySet4			= @TotalGameAwaySet4 
+				,@TotalGameAwaySet5			= @TotalGameAwaySet5 
+				,@SetxGameyHomeWON			= @SetxGameyHomeWON 
+				,@SetxGameyAwayWON			= @SetxGameyAwayWON 
+				,@SetxGameyDRAW				= @SetxGameyDRAW 
+				,@SetxGameyFinishedGame		= @SetxGameyFinishedGame 
+				,@SetxGameyREFUND			= @SetxGameyREFUND 
+				,@SelectedSetCAL			= @SelectedSetCAL 
+				,@SelectedSetREFUND			= @SelectedSetREFUND 
 		END
 
 		IF @mode = 'PRECAL-29'
@@ -196,11 +345,5 @@ BEGIN
 		END
 	END
 END
-
-
-
-
-
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Parlay] TO [vnteam] AS [dbo]
