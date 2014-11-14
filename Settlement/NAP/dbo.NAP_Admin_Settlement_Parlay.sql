@@ -177,13 +177,13 @@ BEGIN
 			,@BetCount = 0
 		IF @@ERROR <> 0
 		BEGIN
-			SELECT	@ErrCode = 201
+			SELECT	@ErrCode = 1001009
 					,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
 			RETURN
 		END 		
 	END TRY
 	BEGIN CATCH 
-		SELECT	@ErrCode = 201
+		SELECT	@ErrCode = 1001009
 				,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
 		RETURN
 	END CATCH

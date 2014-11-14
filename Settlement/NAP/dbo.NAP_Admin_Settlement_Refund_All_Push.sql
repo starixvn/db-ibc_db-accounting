@@ -102,7 +102,7 @@ BEGIN
 				AND IsCalculating IN (0, 1)
 			)
 	BEGIN
-		SELECT @ErrCode = 1001010
+		SELECT @ErrCode = 1001003
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
 		RETURN
