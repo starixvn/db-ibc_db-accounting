@@ -1,10 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchGetResult]    Script Date: 11/11/2014 3:10:05 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] @Date DATETIME
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues
@@ -377,17 +370,16 @@ BEGIN
 			,matchcode  
 
 	-- Get TENNIS RESULT 
-	SELECT	MatchId
-			, ResourceId
-			, HomeValue
-			, AwayValue
-			, ResultStatusID
-			, SettlementStatusID
+	SELECT	DISTINCT 
+			MatchId
+			, CASE WHEN LEN(ResourceId) > 2 THEN '0101' ELSE ResourceID END AS ResourceID 
+			, CASE WHEN LEN(ResourceID) > 2 THEN '0' ELSE HomeValue END AS HomeValue 
+			, CASE WHEN LEN(ResourceID) > 2 THEN '0' ELSE AwayValue END AS AwayValue 
+			, CASE WHEN LEN(ResourceID) > 2 THEN  4 ELSE SettlementStatusID END AS SettlementStatusID
 	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
 	WHERE	@Sporttype IN (0,5 )
-			AND ResourceId LIKE '0[0-5]' 
-			AND ResourceID > 0 
 			AND MatchID IN (SELECT MatchID FROM #matchList)
+	ORDER BY MatchID, ResourceID 
 
 	DROP TABLE #matchList
 END
