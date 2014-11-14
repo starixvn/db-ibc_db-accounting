@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Refund_BetDaq_Push]
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetDaq_Push]
 	@MatchId int,
 	@AdminId int, 	
 	@IP varchar(15) = '',
@@ -14,6 +14,7 @@ AS
 
 	Revisions: 
 	- 20140506@Kathy: Don't allow to calculate exists matches in queue
+	- 20141030@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 	
 
 	Param's Explanation:
@@ -46,7 +47,7 @@ BEGIN
 
 	IF @@ROWCOUNT = 0 
 	BEGIN
-		SELECT	 @ErrCode	= 100
+		SELECT	 @ErrCode	= 1001001
 				,@ErrMsg	= 'Match does not exist!'	
 		RETURN
 	END 
@@ -54,7 +55,7 @@ BEGIN
 	IF EXISTS (SELECT 1 from Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
 		OR EXISTS (SELECT 1 from Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
 	BEGIN 
-		SELECT	 @ErrCode	= 1000000
+		SELECT	 @ErrCode	= 1001003
 				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
 		RETURN
 	END 
@@ -68,7 +69,7 @@ BEGIN
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 
-	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	IF (@procName LIKE '%_xtest' or @procName LIKE '%_xpre')
 	BEGIN
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -89,13 +90,7 @@ BEGIN
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-Betdaq', @sqlCommand
 	END
 END
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_Refund_BetDaq_Push] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetDaq_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Refund_BetDaq_Push] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_BetDaq_Push] TO [vnteam] AS [dbo]
