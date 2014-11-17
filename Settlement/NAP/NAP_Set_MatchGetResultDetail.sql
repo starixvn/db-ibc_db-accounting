@@ -13,6 +13,8 @@ BEGIN
 	SET NOCOUNT ON
 
 	SELECT	MatchID
+			,sporttype
+			,leagueid
 			,homeid
 			,awayid
 			,kickofftime
