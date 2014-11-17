@@ -12,6 +12,16 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
+	SELECT	MatchID
+			,homeid
+			,awayid
+			,kickofftime
+			,finalhomescore
+			,finalawayscore
+			,eventstatus
+	FROM	dbo.Match WITH (NOLOCK)
+	WHERE	MatchID = @MatchID 
+
 	SELECT	 MatchId
 			,ResourceID 
 			,HomeValue 
