@@ -103,7 +103,7 @@ BEGIN
 
 	IF @@ROWCOUNT = 0
 	BEGIN
-		SELECT @ErrCode = 1000001
+		SELECT @ErrCode = 1001001
 			,@ErrMsg	= 'Match does not exist!'
 
 		RETURN
@@ -112,7 +112,7 @@ BEGIN
 	-- check result of horse racing fixodds
 	IF @action = 'CAL' AND @sporttype = 154 AND (@fth = 0 OR @fth IS NULL OR @fta = 0 OR @fta IS NULL)
 	BEGIN
-		SELECT @ErrCode = 1000002
+		SELECT @ErrCode = 1001002
 			,@ErrMsg	= 'Score is not valid.'
 
 		RETURN
@@ -663,40 +663,40 @@ need below code to determine for mark match as calculated (all bets settled)
 														+ ' GoalRecord:' + ISNULL(@goalrecord, '') 
 														+ '(Old:' + @goalrecord_old + ') Remark(' + @betstatus + ')' 
 														+ CASE	WHEN @SelectedSet IS NULL THEN ''
-																ELSE ' (Selected Set:' + @SelectedSet + ')' 
+																ELSE ' (Set:' + @SelectedSet + ')' 
 																END  
 														+ CASE	WHEN @SetResult IS NULL THEN ''
-																ELSE ' (Set Result:' + @SetResult + ')' 
+																ELSE ' (SR:' + @SetResult + ')' 
 																END
 														+ CASE	WHEN @SelectedSet1Game IS NULL THEN ''
-																ELSE ' (Selected Game Set 1:' + @SelectedSet1Game + ') ' 
+																ELSE ' (S1Game:' + @SelectedSet1Game + ') ' 
 																END   
 														+ CASE	WHEN @GameResult1 IS NULL THEN ''
-																ELSE '(Game Result Set 1:' + @GameResult1 + ') ' 
+																ELSE '(S1GR:' + @GameResult1 + ') ' 
 																END  
 														+ CASE	WHEN @SelectedSet2Game IS NULL THEN ''
-																ELSE ' (Selected Game Set 2:' + @SelectedSet2Game + ') ' 
+																ELSE ' (S2Game:' + @SelectedSet2Game + ') ' 
 																END   
 														+ CASE	WHEN @GameResult2 IS NULL THEN ''
-																ELSE '(Game Result Set 2:' + @GameResult2 + ') ' 
+																ELSE '(S2GR:' + @GameResult2 + ') ' 
 																END
 														+ CASE	WHEN @SelectedSet3Game IS NULL THEN ''
-																ELSE ' (Selected Game Set 3:' + @SelectedSet3Game + ') ' 
+																ELSE ' (S3Game:' + @SelectedSet3Game + ') ' 
 																END   
 														+ CASE	WHEN @GameResult3 IS NULL THEN ''
-																ELSE '(Game Result Set 3:' + @GameResult3 + ') ' 
+																ELSE '(S3GR:' + @GameResult3 + ') ' 
 																END
 														+ CASE	WHEN @SelectedSet4Game IS NULL THEN ''
-																ELSE ' (Selected Game Set 4:' + @SelectedSet4Game + ') ' 
+																ELSE ' (S4Game:' + @SelectedSet4Game + ') ' 
 																END   
 														+ CASE	WHEN @GameResult4 IS NULL THEN ''
-																ELSE '(Game Result Set 4:' + @GameResult1 + ') ' 
+																ELSE '(S4GR:' + @GameResult1 + ') ' 
 																END
 														+ CASE	WHEN @SelectedSet5Game IS NULL THEN ''
-																ELSE ' (Selected Game Set 5:' + @SelectedSet5Game + ') ' 
+																ELSE ' (S5Game:' + @SelectedSet5Game + ') ' 
 																END   
 														+ CASE	WHEN @GameResult5 IS NULL THEN ''
-																ELSE '(Game Result Set 5:' + @GameResult5 + ') ' 
+																ELSE '(S5GR:' + @GameResult5 + ') ' 
 																END
 														+' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 
@@ -709,40 +709,40 @@ need below code to determine for mark match as calculated (all bets settled)
 									ELSE 'Old GoalRecord:' + @goalrecord_old + '<br/> '
 									END
 							+ CASE	WHEN @SelectedSet IS NULL THEN ''
-									ELSE 'Selected Set:' + @SelectedSet + '<br/> ' 
+									ELSE 'Set:' + @SelectedSet + '<br/> ' 
 									END  
 							+ CASE	WHEN @SetResult IS NULL THEN ''
-									ELSE 'Set Result:' + @SetResult + '<br/> ' 
+									ELSE 'SR:' + @SetResult + '<br/> ' 
 									END 
 							+ CASE	WHEN @SelectedSet1Game IS NULL THEN ''
-									ELSE 'Selected Game Set 1:' + @SelectedSet1Game + '<br/> ' 
+									ELSE 'S1Game:' + @SelectedSet1Game + '<br/> ' 
 									END  
 							+ CASE	WHEN @GameResult1 IS NULL THEN ''
-									ELSE 'Game Result Set 1:' + @GameResult1 + '<br/> ' 
+									ELSE 'S1GR:' + @GameResult1 + '<br/> ' 
 									END  
 							+ CASE	WHEN @SelectedSet2Game IS NULL THEN ''
-									ELSE 'Selected Game Set 2:' + @SelectedSet2Game + '<br/> ' 
+									ELSE 'S2Game:' + @SelectedSet2Game + '<br/> ' 
 									END  
 							+ CASE	WHEN @GameResult2 IS NULL THEN ''
-									ELSE 'Game Result Set 2:' + @GameResult2 + '<br/> ' 
+									ELSE 'S2GR:' + @GameResult2 + '<br/> ' 
 									END  
 							+ CASE	WHEN @SelectedSet3Game IS NULL THEN ''
-									ELSE 'Selected Game Set 3:' + @SelectedSet3Game + '<br/> ' 
+									ELSE 'S3Game:' + @SelectedSet3Game + '<br/> ' 
 									END  
 							+ CASE	WHEN @GameResult3 IS NULL THEN ''
-									ELSE 'Game Result Set 3:' + @GameResult3 + '<br/> ' 
+									ELSE 'S3GR:' + @GameResult3 + '<br/> ' 
 									END  
 							+ CASE	WHEN @SelectedSet4Game IS NULL THEN ''
-									ELSE 'Selected Game Set 4:' + @SelectedSet4Game + '<br/> ' 
+									ELSE 'S4Game:' + @SelectedSet4Game + '<br/> ' 
 									END  
 							+ CASE	WHEN @GameResult4 IS NULL THEN ''
-									ELSE 'Game Result Set 4:' + @GameResult4 + '<br/> ' 
+									ELSE 'S4GR:' + @GameResult4 + '<br/> ' 
 									END  
 							+ CASE	WHEN @SelectedSet5Game IS NULL THEN ''
-									ELSE 'Selected Game Set 5:' + @SelectedSet5Game + '<br/> ' 
+									ELSE 'S5Game:' + @SelectedSet5Game + '<br/> ' 
 									END  
 							+ CASE	WHEN @GameResult5 IS NULL THEN ''
-									ELSE 'Game Result Set 5:' + @GameResult5 + '<br/> ' 
+									ELSE 'S5GR:' + @GameResult5 + '<br/> ' 
 									END  
 							+ 'Duration:' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + ' ms;' 
 							+ ' TC:' + CAST(ISNULL(@ticketCount, 0) AS VARCHAR(20)) 

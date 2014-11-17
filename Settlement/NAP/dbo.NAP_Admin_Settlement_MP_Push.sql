@@ -83,7 +83,7 @@ BEGIN
 
 	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
 	BEGIN
-		SELECT   @ErrCode = 100
+		SELECT   @ErrCode = 1001011
 				,@ErrMsg = 'All matches are being calculated, except following matches ' 
 							+ CASE WHEN ISNULL(@NotKeyScoreList, '') <> '' 
 									THEN  '(not keyed in score yet): ' + @NotKeyScoreList 

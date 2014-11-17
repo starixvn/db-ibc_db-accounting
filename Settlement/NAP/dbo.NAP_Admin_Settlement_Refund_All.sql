@@ -358,7 +358,7 @@ BEGIN
 
 		IF @Action IN ('CAL', 'CAL-FT') AND @totalgoal IS NULL
 		BEGIN
-			SELECT @ErrCode = 1000004
+			SELECT @ErrCode = 1001004
 				,@ErrMsg = 'Cannot settle determined ticket(s) without FT Score!'
 
 			DELETE
@@ -415,7 +415,7 @@ BEGIN
 
 		IF @Action IN ('CAL', 'CAL-HT') AND @totalht IS NULL
 		BEGIN
-			SELECT @ErrCode = 1000005
+			SELECT @ErrCode = 1001005
 				,@ErrMsg = 'Cannot settle determined ticket(s) without HT Score!'
 
 			DELETE
@@ -738,19 +738,19 @@ BEGIN
 																 + CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ', Settle determined betfair tickets'	ELSE '' END
 																 + CASE WHEN @IsSettleAbandonedMatchIBC = 1		THEN ', Settle determined IBC tickets'		ELSE '' END
 																 + CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
-																+ CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Selected Set=' + @SelectedSet + ' ' END  
-																+ CASE WHEN @SetResult IS NULL THEN '' ELSE ' Set Result=' + @SetResult + ' ' END 
-																+ CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' Selected Settle Finished Game=' + @SelectedSettleFinishedGame + ' ' END  
-																+ CASE	WHEN @SelectedSet1Game IS NULL THEN '' ELSE 'Selected Game Set 1=' + @SelectedSet1Game + ' ' END  
-																+ CASE	WHEN @GameResult1 IS NULL THEN '' ELSE ' Game Result Set 1=' + @GameResult1 + ' ' END  
-																+ CASE	WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' Selected Game Set 2=' + @SelectedSet2Game + ' ' END  
-																+ CASE	WHEN @GameResult2 IS NULL THEN '' ELSE ' Game Result Set 2:' + @GameResult2 + ' ' END  
-																+ CASE	WHEN @SelectedSet3Game IS NULL THEN '' ELSE 'Selected Game Set 3=' + @SelectedSet3Game + ' ' END  
-																+ CASE	WHEN @GameResult3 IS NULL THEN '' ELSE ' Game Result Set 3:' + @GameResult3 + ' ' END  
-																+ CASE	WHEN @SelectedSet4Game IS NULL THEN '' ELSE 'Selected Game Set 4=' + @SelectedSet4Game + ' ' END  
-																+ CASE	WHEN @GameResult4 IS NULL THEN '' ELSE ' Game Result Set 4:' + @GameResult4 + ' ' END  
-																+ CASE	WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' Selected Game Set 5=' + @SelectedSet5Game + ' ' END  
-																+ CASE	WHEN @GameResult5 IS NULL THEN '' ELSE ' Game Result Set 5=' + @GameResult5 + ' ' END  
+																+ CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Set=' + @SelectedSet + ' ' END  
+																+ CASE WHEN @SetResult IS NULL THEN '' ELSE ' SR=' + @SetResult + ' ' END 
+																+ CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' SetFG=' + @SelectedSettleFinishedGame + ' ' END  
+																+ CASE	WHEN @SelectedSet1Game IS NULL THEN '' ELSE 'S1Game=' + @SelectedSet1Game + ' ' END  
+																+ CASE	WHEN @GameResult1 IS NULL THEN '' ELSE 'S1GR=' + @GameResult1 + ' ' END  
+																+ CASE	WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' S2Game=' + @SelectedSet2Game + ' ' END  
+																+ CASE	WHEN @GameResult2 IS NULL THEN '' ELSE ' S2GR:' + @GameResult2 + ' ' END  
+																+ CASE	WHEN @SelectedSet3Game IS NULL THEN '' ELSE ' S3Game=' + @SelectedSet3Game + ' ' END  
+																+ CASE	WHEN @GameResult3 IS NULL THEN '' ELSE ' S3GR=' + @GameResult3 + ' ' END  
+																+ CASE	WHEN @SelectedSet4Game IS NULL THEN '' ELSE ' S4Game=' + @SelectedSet4Game + ' ' END  
+																+ CASE	WHEN @GameResult4 IS NULL THEN '' ELSE ' S4GR=' + @GameResult4 + ' ' END  
+																+ CASE	WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' S5Game=' + @SelectedSet5Game + ' ' END  
+																+ CASE	WHEN @GameResult5 IS NULL THEN '' ELSE ' S5GR=' + @GameResult5 + ' ' END  
 
 	EXEC dbo.WriteLog_UserLog 
 		@UserID = @creator
@@ -763,19 +763,19 @@ BEGIN
 					+ ' SettleDeterminedBetfairTickets='	+ convert(char(1),@IsSettleAbandonedMatchBetFair)
 					+ ' SettleDeterminedIBCTickets='		+ convert(char(1),@IsSettleAbandonedMatchIBC)
 					+ CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
-					+ CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Selected Set=' + @SelectedSet + '<br/> ' END  
-					+ CASE WHEN @SetResult IS NULL THEN '' ELSE ' Set Result=' + @SetResult + '<br/> ' END 
-					+ CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' Selected Settle Finished Game=' + @SelectedSettleFinishedGame + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet1Game IS NULL THEN '' ELSE 'Selected Game Set 1=' + @SelectedSet1Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult1 IS NULL THEN '' ELSE ' Game Result Set 1=' + @GameResult1 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' Selected Game Set 2=' + @SelectedSet2Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult2 IS NULL THEN '' ELSE ' Game Result Set 2:' + @GameResult2 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet3Game IS NULL THEN '' ELSE 'Selected Game Set 3=' + @SelectedSet3Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult3 IS NULL THEN '' ELSE ' Game Result Set 3:' + @GameResult3 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet4Game IS NULL THEN '' ELSE 'Selected Game Set 4=' + @SelectedSet4Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult4 IS NULL THEN '' ELSE ' Game Result Set 4:' + @GameResult4 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' Selected Game Set 5=' + @SelectedSet5Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult5 IS NULL THEN '' ELSE ' Game Result Set 5=' + @GameResult5 + '<br/> ' END  
+					+ CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Set=' + @SelectedSet + '<br/> ' END  
+					+ CASE WHEN @SetResult IS NULL THEN '' ELSE ' SR=' + @SetResult + '<br/> ' END 
+					+ CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' SetFG=' + @SelectedSettleFinishedGame + '<br/> ' END  
+					+ CASE	WHEN @SelectedSet1Game IS NULL THEN '' ELSE ' S1Game=' + @SelectedSet1Game + '<br/> ' END  
+					+ CASE	WHEN @GameResult1 IS NULL THEN '' ELSE ' S1GR=' + @GameResult1 + '<br/> ' END  
+					+ CASE	WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' S2Game=' + @SelectedSet2Game + '<br/> ' END  
+					+ CASE	WHEN @GameResult2 IS NULL THEN '' ELSE ' S2GR=' + @GameResult2 + '<br/> ' END  
+					+ CASE	WHEN @SelectedSet3Game IS NULL THEN '' ELSE ' S3Game=' + @SelectedSet3Game + '<br/> ' END  
+					+ CASE	WHEN @GameResult3 IS NULL THEN '' ELSE ' S3GR=' + @GameResult3 + '<br/> ' END  
+					+ CASE	WHEN @SelectedSet4Game IS NULL THEN '' ELSE ' S4Game=' + @SelectedSet4Game + '<br/> ' END  
+					+ CASE	WHEN @GameResult4 IS NULL THEN '' ELSE ' S4GR=' + @GameResult4 + '<br/> ' END  
+					+ CASE	WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' S5Game=' + @SelectedSet5Game + '<br/> ' END  
+					+ CASE	WHEN @GameResult5 IS NULL THEN '' ELSE ' S5GR=' + @GameResult5 + '<br/> ' END  
 					+ ' Action=' + @Action
 					+ ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;'
 
