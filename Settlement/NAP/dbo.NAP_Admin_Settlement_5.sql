@@ -282,5 +282,10 @@ BEGIN
 					,@betcount_1317		= @betCount_1317
 					,@betcount_1318		= @betCount_1318
 					,@betcount_1324		= @betCount_1324
+					,@CalledByBrokerService = 0
 	END
 END
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_5] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_5] TO [vnteam] AS [dbo]
