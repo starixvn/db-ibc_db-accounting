@@ -149,9 +149,17 @@ BEGIN
 		RETURN 
 	END
 
+	SELECT	@Action = 'Refund'  -- ALL SPORTS
+
+	IF (@SelectedSet IS NOT NULL AND @SelectedSet NOT LIKE '%6%')   -- Tennis 
+	BEGIN
+		SELECT @Action='Refund-SET'	-- Refund per SET of Tennis 		
+	END 
+
 	IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre'
 	BEGIN
 		DECLARE @GoalRecord VARCHAR(50)
+		DECLARE @ActionId INT
 
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -167,24 +175,30 @@ BEGIN
 			RETURN
 		END CATCH
 
-		SELECT @FullTimeHome	= m.finalhomescore
-			,@FullTimeAway		= m.finalawayscore
-			,@HalfTimeHome		= m.hthomescore
-			,@HalfTimeAway		= m.htawayscore
-			,@GoalRecord		= m.GoalRecord
-			,@BetStatus			= m.betstatus
+		SELECT   @ActionId			= CASE WHEN @Action = 'Refund' THEN 13 
+										   ELSE -1 
+										   END
+				,@FullTimeHome		= m.finalhomescore
+				,@FullTimeAway		= m.finalawayscore
+				,@HalfTimeHome		= m.hthomescore
+				,@HalfTimeAway		= m.htawayscore
+				,@GoalRecord		= m.GoalRecord
+				,@BetStatus			= m.betstatus
 		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
 
-		EXEC Acc_Set_ConfirmedAction 
-			@matchid		= @MatchId
-			,@action		= 13
-			,@fth 			= @FullTimeHome
-			,@fta 			= @FullTimeAway
-			,@hth 			= @HalfTimeHome
-			,@hta 			= @HalfTimeAway
-			,@goalrecord	= @GoalRecord
-			,@betstatus		= @BetStatus
+		IF @ActionId <> -1 
+		BEGIN
+			EXEC Acc_Set_ConfirmedAction 
+				@matchid		= @MatchId
+				,@action		= @ActionId
+				,@fth 			= @FullTimeHome
+				,@fta 			= @FullTimeAway
+				,@hth 			= @HalfTimeHome
+				,@hta 			= @HalfTimeAway
+				,@goalrecord	= @GoalRecord
+				,@betstatus		= @BetStatus
+		END 
 	END
 	ELSE
 	BEGIN
@@ -206,7 +220,7 @@ BEGIN
 			,@sporttype
 			,@AdminId
 			,@IP
-			,'Refund'
+			,@Action			--'Refund'
 			,@sqlCommand
 	END
 END

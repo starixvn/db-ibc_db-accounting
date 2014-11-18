@@ -138,6 +138,11 @@ BEGIN
 		RETURN 
 	END
 
+	IF (@SelectedSet IS NOT NULL AND @SelectedSet NOT LIKE '%6%')   -- Tennis 
+	BEGIN
+		SELECT @Action='CAL-SET'	-- CAL per SET of Tennis 		
+	END 
+
 	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre') 
 	BEGIN
 		DECLARE @ActionId INT
