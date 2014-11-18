@@ -60,7 +60,8 @@ AS
 				custid	--- username	-	roleid
 				2331	---	BF		    -	1
 				1077687	---	BFOS		-	1
-
+				
+				
 */
 BEGIN
 	SET NOCOUNT ON

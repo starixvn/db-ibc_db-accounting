@@ -35,8 +35,7 @@ AS
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		
 	Param's Explanation:
-
-		
+	
 */
 BEGIN
 	SET NOCOUNT ON
