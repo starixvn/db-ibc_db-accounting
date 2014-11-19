@@ -12,17 +12,17 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All_Push]
 	,@FullTimeAway					INT 			= NULL
 	,@BetStatus						NVARCHAR(50)	= NULL
 	,@SetResult						VARCHAR(50)		= NULL 
-	,@GameResult1					VARCHAR(500)	= NULL
-	,@GameResult2					VARCHAR(500)	= NULL
-	,@GameResult3					VARCHAR(500)	= NULL
-	,@GameResult4					VARCHAR(500)	= NULL
-	,@GameResult5					VARCHAR(500)	= NULL
+	,@GameResult1					VARCHAR(MAX)	= NULL
+	,@GameResult2					VARCHAR(MAX)	= NULL
+	,@GameResult3					VARCHAR(MAX)	= NULL
+	,@GameResult4					VARCHAR(MAX)	= NULL
+	,@GameResult5					VARCHAR(MAX)	= NULL
 	,@SelectedSet					VARCHAR(50)		= NULL 
-	,@SelectedSet1Game				VARCHAR(500)	= NULL 
-	,@SelectedSet2Game				VARCHAR(500)	= NULL 
-	,@SelectedSet3Game				VARCHAR(500)	= NULL 
-	,@SelectedSet4Game				VARCHAR(500)	= NULL 
-	,@SelectedSet5Game				VARCHAR(500)	= NULL
+	,@SelectedSet1Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet2Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet3Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet4Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet5Game				VARCHAR(MAX)	= NULL
 	,@SelectedSettleFinishedGame	VARCHAR(50)		= NULL 
 	,@IP							VARCHAR(15)		= ''
 	,@ErrCode						INT				= 0		OUTPUT
@@ -60,8 +60,7 @@ AS
 				custid	--- username	-	roleid
 				2331	---	BF		    -	1
 				1077687	---	BFOS		-	1
-				
-				
+
 */
 BEGIN
 	SET NOCOUNT ON
@@ -120,19 +119,19 @@ BEGIN
 																  + ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchBetFair) 
 																  + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchIBC) 
 																  + ', @betstatus = ' + CASE WHEN @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(NVARCHAR(20), @BetStatus) + '''' END 
-																  + ', @SetResult = ' + CASE WHEN @SetResult IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(50),@SetResult) + '''' END
-																  + ', @GameResult1 = ' + CASE WHEN @GameResult1 IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@GameResult1) + '''' END
-																  + ', @GameResult2 = ' + CASE WHEN @GameResult2 IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@GameResult2) + '''' END
-																  + ', @GameResult3 = ' + CASE WHEN @GameResult3 IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@GameResult3) + '''' END
-																  + ', @GameResult4 = ' + CASE WHEN @GameResult4 IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@GameResult4) + '''' END
-																  + ', @GameResult5 = ' + CASE WHEN @GameResult5 IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@GameResult5) + '''' END
-																  + ', @SelectedSet = ' + CASE WHEN @SelectedSet IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(50),@SelectedSet) + '''' END
-																  + ', @SelectedSet1Game = ' + CASE WHEN @SelectedSet1Game IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@SelectedSet1Game) + '''' END
-																  + ', @SelectedSet2Game = ' + CASE WHEN @SelectedSet2Game IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@SelectedSet2Game) + '''' END
-																  + ', @SelectedSet3Game = ' + CASE WHEN @SelectedSet3Game IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@SelectedSet3Game) + '''' END
-																  + ', @SelectedSet4Game = ' + CASE WHEN @SelectedSet4Game IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@SelectedSet4Game) + '''' END
-																  + ', @SelectedSet5Game = ' + CASE WHEN @SelectedSet5Game IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(500),@SelectedSet5Game) + '''' END
-																  + ', @SelectedSettleFinishedGame = ' + CASE WHEN @SelectedSettleFinishedGame IS NULL THEN 'NULL' ELSE '''' + CONVERT(VARCHAR(50),@SelectedSettleFinishedGame) + '''' END
+																  + ', @SetResult = ' + CASE WHEN @SetResult IS NULL THEN 'NULL' ELSE '''' + @SetResult + '''' END
+																  + ', @GameResult1 = ' + CASE WHEN @GameResult1 IS NULL THEN 'NULL' ELSE '''' + @GameResult1 + '''' END
+																  + ', @GameResult2 = ' + CASE WHEN @GameResult2 IS NULL THEN 'NULL' ELSE '''' + @GameResult2 + '''' END
+																  + ', @GameResult3 = ' + CASE WHEN @GameResult3 IS NULL THEN 'NULL' ELSE '''' + @GameResult3 + '''' END
+																  + ', @GameResult4 = ' + CASE WHEN @GameResult4 IS NULL THEN 'NULL' ELSE '''' + @GameResult4 + '''' END
+																  + ', @GameResult5 = ' + CASE WHEN @GameResult5 IS NULL THEN 'NULL' ELSE '''' + @GameResult5 + '''' END
+																  + ', @SelectedSet = ' + CASE WHEN @SelectedSet IS NULL THEN 'NULL' ELSE '''' + @SelectedSet + '''' END
+																  + ', @SelectedSet1Game = ' + CASE WHEN @SelectedSet1Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet1Game + '''' END
+																  + ', @SelectedSet2Game = ' + CASE WHEN @SelectedSet2Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet2Game + '''' END
+																  + ', @SelectedSet3Game = ' + CASE WHEN @SelectedSet3Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet3Game + '''' END
+																  + ', @SelectedSet4Game = ' + CASE WHEN @SelectedSet4Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet4Game + '''' END
+																  + ', @SelectedSet5Game = ' + CASE WHEN @SelectedSet5Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet5Game + '''' END
+																  + ', @SelectedSettleFinishedGame = ' + CASE WHEN @SelectedSettleFinishedGame IS NULL THEN 'NULL' ELSE '''' + @SelectedSettleFinishedGame + '''' END
 																  + ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeHome), 'NULL') 
 																  + ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeAway), 'NULL') 
 																  + ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeHome), 'NULL') 

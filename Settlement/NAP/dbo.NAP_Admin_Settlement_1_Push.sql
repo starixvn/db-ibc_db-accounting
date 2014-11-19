@@ -8,17 +8,17 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push]
 	,@GoalRecord			VARCHAR(50)		= NULL
 	,@BetStatus				NVARCHAR(50)	
 	,@SetResult				VARCHAR(50)		= NULL 
-	,@GameResult1			VARCHAR(500)	= NULL
-	,@GameResult2			VARCHAR(500)	= NULL
-	,@GameResult3			VARCHAR(500)	= NULL
-	,@GameResult4			VARCHAR(500)	= NULL
-	,@GameResult5			VARCHAR(500)	= NULL
+	,@GameResult1			VARCHAR(MAX)	= NULL
+	,@GameResult2			VARCHAR(MAX)	= NULL
+	,@GameResult3			VARCHAR(MAX)	= NULL
+	,@GameResult4			VARCHAR(MAX)	= NULL
+	,@GameResult5			VARCHAR(MAX)	= NULL
 	,@SelectedSet			VARCHAR(50)		= NULL 
-	,@SelectedSet1Game		VARCHAR(500)	= NULL 
-	,@SelectedSet2Game		VARCHAR(500)	= NULL 
-	,@SelectedSet3Game		VARCHAR(500)	= NULL 
-	,@SelectedSet4Game		VARCHAR(500)	= NULL 
-	,@SelectedSet5Game		VARCHAR(500)	= NULL 
+	,@SelectedSet1Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet2Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet3Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet4Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet5Game		VARCHAR(MAX)	= NULL 
 	,@Action				VARCHAR(10)		= 'CAL'
 	,@IP					VARCHAR(15)		= ''
 	,@ErrCode				INT				= 0		OUTPUT
@@ -35,7 +35,8 @@ AS
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		
 	Param's Explanation:
-	
+
+		
 */
 BEGIN
 	SET NOCOUNT ON
