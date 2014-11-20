@@ -5,7 +5,7 @@ SET ANSI_NULLS ON
 GO
 
 /****** Object:  Stored Procedure dbo.Acc_CustomerSelAllInfo    Script Date: 10/9/2014 4:58:03 PM ******/
-CREATE PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
 
@@ -62,7 +62,7 @@ Revisions:
 	- 20140305@Dom: Change Outstanding formula to get FROM Bettrans AND Translog for Keno tickets
 	- 20140820@Logan:   Add status for E-Sports [Redmine: #20531]
 	- 20140912@Logan:   Add status of Direct/Indirect Account [Redmine: #15267]
-
+	- 20141120@Johnson: correct Last transaction date for super [Redmine: #26006]
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -661,15 +661,13 @@ BEGIN
     else if @roleid = 4
     BEGIN
 
-	    DECLARE @transid bigint, @transdate DATETIME
+	    DECLARE @transdate DATETIME
 	    SELECT @UsedCredit = sum(credit) 
 	    FROM custinfo WITH(NOLOCK)
 	    WHERE roleid=3
 		     AND srecommend = @custid
-    	
-	    SELECT TOP 1 @transid = transid FROM bettrans WITH(NOLOCK) WHERE srecommend = @custid
-    	
-	    SELECT @transdate = max(transdate) FROM bettrans WITH(NOLOCK) WHERE transid = @transid
+    	    	
+	    SELECT @transdate = max(transdate) FROM bettrans WITH(NOLOCK) WHERE srecommend = @custid
     	
 	    SELECT	@todaySuperCash = ISNULL(sum(swinlost+scomm-acomm),0),
 			    @todayMasterCash = ISNULL(sum(mwinlost+acomm-comm),0),
