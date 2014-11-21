@@ -4,17 +4,17 @@
  ,@HomeValue					VARCHAR(20)	= NULL		
  ,@AwayValue					VARCHAR(20)	= NULL 
  ,@SetResult					VARCHAR(50)	= NULL 
- ,@GameResult1					VARCHAR(500)= NULL
- ,@GameResult2					VARCHAR(500)= NULL
- ,@GameResult3					VARCHAR(500)= NULL
- ,@GameResult4					VARCHAR(500)= NULL
- ,@GameResult5					VARCHAR(500)= NULL
+ ,@GameResult1					VARCHAR(MAX)= NULL
+ ,@GameResult2					VARCHAR(MAX)= NULL
+ ,@GameResult3					VARCHAR(MAX)= NULL
+ ,@GameResult4					VARCHAR(MAX)= NULL
+ ,@GameResult5					VARCHAR(MAX)= NULL
  ,@SelectedSet					VARCHAR(50)	= NULL 
- ,@SelectedSet1Game				VARCHAR(500)= NULL 
- ,@SelectedSet2Game				VARCHAR(500)= NULL 
- ,@SelectedSet3Game				VARCHAR(500)= NULL 
- ,@SelectedSet4Game				VARCHAR(500)= NULL 
- ,@SelectedSet5Game				VARCHAR(500)= NULL 
+ ,@SelectedSet1Game				VARCHAR(MAX)= NULL 
+ ,@SelectedSet2Game				VARCHAR(MAX)= NULL 
+ ,@SelectedSet3Game				VARCHAR(MAX)= NULL 
+ ,@SelectedSet4Game				VARCHAR(MAX)= NULL 
+ ,@SelectedSet5Game				VARCHAR(MAX)= NULL 
  ,@SelectedSettleFinishedGame	VARCHAR(50)	= NULL 
  ,@MaxGameSet1					INT			= NULL
  ,@MaxGameSet2					INT			= NULL
@@ -40,6 +40,8 @@ AS
 			N-N: Operator clear the score to Blank 
 		+ @SelectedSet: The list of set(s) choosen 
 		+ @SelectedSet1Game: The list of game(s) have score(s) or the score(s) changed to Blank 
+
+
 
 */
 BEGIN
@@ -462,3 +464,7 @@ BEGIN
 	END 
 	/* END - @Command = 'NAP_Admin_Settlement_Refund_All' */
 END
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Result_Update] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Result_Update] TO [vnteam] AS [dbo]
