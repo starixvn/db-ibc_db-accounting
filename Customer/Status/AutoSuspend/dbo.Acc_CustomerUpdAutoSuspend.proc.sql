@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdAutoSuspend]
+﻿USE [CustDB]
+GO
+ALTER PROCEDURE [dbo].[Acc_CustomerUpdAutoSuspend]
 	@CustID			INT,
 	@AutoSuspend	BIT = NULL, -- Auto-suspend Soccer
 	@AutoSuspendOther BIT = NULL, -- Auto-suspend non-soccer sports
@@ -11,7 +13,7 @@ AS
 /*	Created by: [Creator]
 	Date: 2008
 	Task: Update auto-suspend status of customer
-	DB: DBTXN/bodb02
+	DB: DBTXN/CustDB 
 
 	Revisions:
 		- 20090319@PhuongDao: 
@@ -30,6 +32,7 @@ AS
 							+ Add @AutoSuspendOther param
 							+ Apply execRep
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call Acc_ExecRep_Cust_04 instead of Acc_ExecRep_04)								
+		- 20141125@Jamie: Change DB location & Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]
 	Param's Explanation:
 		@IsUpdDownline: auto-suspended all downlines
 
@@ -176,7 +179,7 @@ AS
 	if @old_AutoSuspend <> @AutoSuspend and @old_AutoSuspendOther <> @AutoSuspendOther
 	begin
 		-- apply exec rep for all: Soccer and Other sports
-		EXEC [Acc_ExecRep_Cust_04]
+		EXEC [Acc_CustomerInfo_Execrep_04]
 		@CustID		= @CustID,
 		@RoleID		= @RoleID,
 		@Action		= 'AutoSuspend',
@@ -186,7 +189,7 @@ AS
 	else if @old_AutoSuspend <> @AutoSuspend
 	begin
 		-- apply exec rep for Soccer
-		EXEC [Acc_ExecRep_Cust_04]
+		EXEC [Acc_CustomerInfo_Execrep_04]
 		@CustID		= @CustID,
 		@RoleID		= @RoleID,
 		@Action		= 'AutoSuspendSoccer',
@@ -195,7 +198,7 @@ AS
 	else if @old_AutoSuspendOther <> @AutoSuspendOther
 	begin
 		-- apply exec rep for other sports
-		EXEC [Acc_ExecRep_Cust_04]
+		EXEC [Acc_CustomerInfo_Execrep_04]
 		@CustID		= @CustID,
 		@RoleID		= @RoleID,
 		@Action		= 'AutoSuspendOther',
@@ -254,9 +257,7 @@ AS
 			@duration = @duration 
 	END CATCH
 
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdAutoSuspend] TO [bodbadminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdAutoSuspend] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdAutoSuspend] TO [vnteam] AS [dbo]
