@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE dbo.NAP_BettransSpecialDelBetID_Sel_ParlayDetail
+﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Sel_ParlayDetail]
 	@refno  BIGINT
 AS
 
@@ -6,10 +6,11 @@ AS
 	Created by: Jamie
 	Date: 20140911
 	Task: Get info of Mix Parlay Bets 
-	DB: DBTXN/bodb02
+	DB: DBTXN/BODB02
 	Original: Acc_BetsSelBetCheckM
 	
 	Revisions: 
+		- 20141125@Kathy: Add betcheck column [Redmine:#26489]
 	
 */
 BEGIN
@@ -33,6 +34,7 @@ BEGIN
 		,isNeutral BIT
 		,matchid INT
 		,matchcode NVARCHAR(50)
+		,betcheck	NVARCHAR(50)
 		)
 
 	IF EXISTS (
@@ -59,6 +61,7 @@ BEGIN
 			,match.isNeutral AS IsNeutral
 			,match.matchid
 			,match.matchcode
+			,bettrans.betcheck
 		FROM (
 			SELECT matchid
 				,Bettype
@@ -71,6 +74,7 @@ BEGIN
 				,livehomescore
 				,liveawayscore
 				,liveindicator
+				,betcheck
 			FROM BettransM WITH (NOLOCK)
 			WHERE refno = @refno
 			) AS bettrans
@@ -101,6 +105,7 @@ BEGIN
 			,match.isNeutral AS IsNeutral
 			,match.matchid
 			,match.matchcode
+			,bettrans.betcheck
 		FROM (
 			SELECT matchid
 				,Bettype
@@ -113,6 +118,7 @@ BEGIN
 				,livehomescore
 				,liveawayscore
 				,liveindicator
+				,betcheck
 			FROM BettransM14 WITH (NOLOCK)
 			WHERE refno = @refno
 			) AS bettrans
@@ -123,7 +129,4 @@ BEGIN
 	ORDER BY TransID desc
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Sel_ParlayDetail] TO [bodbAdminNet]
-GO
-
- 
+GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Sel_ParlayDetail] TO [bodbAdminNet] AS [dbo]
