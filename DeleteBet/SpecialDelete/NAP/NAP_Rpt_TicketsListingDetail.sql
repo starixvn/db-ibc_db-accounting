@@ -23,8 +23,7 @@ AS
 		- 20130911@Kathy: Rename parameter @SAFilter to @SecondAcceptFlag
 		- 20131203@Kathy: Rename column: liveindicator to IsLiveIndicator.
 						Using Dep_CustSuper table instead of f_DepSuper_1() function.		
-		- 20140211@Kathy: Get more column for MixParlay	
-		- 20141125@Kathy: Add betid column [Redmine:#26489]	  
+		- 20140211@Kathy: Get more column for MixParlay		  
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -48,7 +47,7 @@ AS
       + 1: Normal tickets only
       + 2: SA tickets only	
      
-   Example:  exec NAP_Rpt_TicketsListingDetail @MatchId=4626986,@LicenseeName='IBC',@BetTypes='1101,1102',@BetTypesLive='',@LiveType=0,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SecondAcceptFlag=0
+   Example:    exec NAP_Rpt_TicketsListingDetail @MatchId=4626986,@LicenseeName='IBC',@BetTypes='1101,1102',@BetTypesLive='',@LiveType=0,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SecondAcceptFlag=0
 	
 */
 SET NOCOUNT ON 
@@ -102,9 +101,9 @@ BEGIN
         ChoiceBetTeam NVARCHAR(20),  
         ChoiceLiveHomeScore SMALLINT  ,
         ChoiceLiveAwayScore SMALLINT  ,
-        ChoiceLiveIndicator BIT , 
-        betid BIGINT
-
+        ChoiceLiveIndicator BIT  ,
+		ChoiceLeagueId INT  ,
+        ChoiceSportType SMALLINT  
 	)
 	
 ----Direct Licensee
@@ -148,8 +147,8 @@ BEGIN
 				b.livehomescore as ChoiceLiveHomeScore,
 				b.liveawayscore as ChoiceLiveAwayScore,
 				b.liveindicator as ChoiceLiveIndicator,
-				b.betid
-			
+				m.leagueid  as ChoiceLeagueId ,
+				m.sporttype as ChoiceSportType				
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.srecommend IN ( SELECT custid FROM Dep_CustSuper with(nolock) where site = @LicenseeName)
@@ -217,7 +216,8 @@ BEGIN
 				b.livehomescore as ChoiceLiveHomeScore,
 				b.liveawayscore as ChoiceLiveAwayScore,
 				b.liveindicator as ChoiceLiveIndicator,
-				b.betid
+				m.leagueid  as ChoiceLeagueId ,
+				m.sporttype as ChoiceSportType
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 	
 		WHERE		B.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
@@ -284,8 +284,9 @@ BEGIN
 				b.betteam as ChoiceBetTeam,
 				b.livehomescore as ChoiceLiveHomeScore,
 				b.liveawayscore as ChoiceLiveAwayScore,
-				b.liveindicator as ChoiceLiveIndicator,		
-				b.betid
+				b.liveindicator as ChoiceLiveIndicator	,
+				m.leagueid  as ChoiceLeagueId ,
+				m.sporttype as ChoiceSportType	
 		FROM		Bettrans b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.statusID NOT IN (101,102, 121)--('Void', 'Reject', 'Dummy') 
@@ -353,7 +354,9 @@ BEGIN
 			betteam as ChoiceBetTeam,
 			livehomescore as ChoiceLiveHomeScore,
 			liveawayscore as ChoiceLiveAwayScore,
-			liveindicator as ChoiceLiveIndicator
+			liveindicator as ChoiceLiveIndicator,
+			0  as ChoiceLeagueId ,
+			0 as ChoiceSportType
 	FROM bettrans WITH (NOLOCK)
 	WHERE 0 = 1
 END 
@@ -401,7 +404,9 @@ BEGIN
 				bm.betteam ChoiceBetTeam,
 				bm.livehomescore ChoiceLiveHomeScore,
 				bm.liveawayscore ChoiceLiveAwayScore,
-				bm.liveindicator ChoiceLiveIndicator	
+				bm.liveindicator ChoiceLiveIndicator	,
+				m.leagueid  as ChoiceLeagueId ,
+				m.sporttype as ChoiceSportType
 		FROM	bettransm bm WITH (NOLOCK)	
 		INNER JOIN  Bettrans b WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -460,7 +465,9 @@ BEGIN
 				bm.betteam ChoiceBetTeam,
 				bm.livehomescore ChoiceLiveHomeScore,
 				bm.liveawayscore ChoiceLiveAwayScore,
-				bm.liveindicator ChoiceLiveIndicator						
+				bm.liveindicator ChoiceLiveIndicator,
+				m.leagueid  as ChoiceLeagueId ,
+				m.sporttype as ChoiceSportType						
 		FROM	Bettrans b WITH (NOLOCK) 
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -517,7 +524,9 @@ BEGIN
 				bm.betteam ChoiceBetTeam,
 				bm.livehomescore ChoiceLiveHomeScore,
 				bm.liveawayscore ChoiceLiveAwayScore,
-				bm.liveindicator ChoiceLiveIndicator					
+				bm.liveindicator ChoiceLiveIndicator	,
+				m.leagueid  as ChoiceLeagueId ,
+				m.sporttype as ChoiceSportType				
 		FROM	Bettrans b WITH (NOLOCK)	
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -569,11 +578,12 @@ BEGIN
 				0 ChoiceBetTeam,
 				0 ChoiceLiveHomeScore,
 				0 ChoiceLiveAwayScore,
-				0 ChoiceLiveIndicator
+				0 ChoiceLiveIndicator,
+				0  as ChoiceLeagueId ,
+				0 as ChoiceSportType
 		FROM bettrans WITH (NOLOCK) 
 		WHERE 0 = 1
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]
 GO
