@@ -65,7 +65,7 @@ BEGIN
 		,SetIndex	TINYINT
 	)
 	INSERT INTO @tmpSelectedSet(SetIndex)
-	SELECT	Val FROM dbo.StrSplit(@SelectedSet, ',')
+	SELECT	Val FROM dbo.StrSplit(@SelectedSet, ',') WHERE ISNULL(@SelectedSet,'') <> ''
 
 	DECLARE	@tmpEachSet TABLE (
 	 	 ID			TINYINT IDENTITY(1,1)
@@ -75,7 +75,7 @@ BEGIN
 	)
 
 	INSERT INTO @tmpEachSet(SetScore,HomeValue,AwayValue) 
-	SELECT val, LEFT(Val,CHARINDEX('-',Val)-1), RIGHT(Val,LEN(Val) - CHARINDEX('-',Val)) FROM dbo.StrSplit(@SetResult, ',')
+	SELECT val, LEFT(Val,CHARINDEX('-',Val)-1), RIGHT(Val,LEN(Val) - CHARINDEX('-',Val)) FROM dbo.StrSplit(@SetResult, ',') WHERE ISNULL(@SetResult,'') <>''
 
 
 	DECLARE	@tmpResultDetail TABLE(
@@ -128,7 +128,7 @@ BEGIN
 			,@SetxGameyFinishedGame	= @SetxGameyFinishedGame + CASE WHEN SettlementStatusID = 4 THEN ResourceID +',' ELSE '' END 
 	FROM	@tmpResultDetail 
 	WHERE	SettlementStatusID > 0 
-			AND ResourceID LIKE '0[1-5][0-9][1-9]'
+			AND ResourceID LIKE '0[1-5][0-9][0-9]'
 
 	IF @IsSettleDeterminedTicketTennis = 1 
 	BEGIN

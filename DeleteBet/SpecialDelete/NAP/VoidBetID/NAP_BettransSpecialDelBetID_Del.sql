@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 09/30/2014 03:04:05 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 9/30/2014 8:41:34 AM ******/
-ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -23,6 +15,7 @@ AS
 	Original: 
 	
 	Revisions:
+		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		
 	Param's Explanation: 
 */
@@ -285,7 +278,8 @@ BEGIN
 			b.status,
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
-			b.currency
+			b.currency,
+			b.betid
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
 			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
@@ -320,7 +314,8 @@ BEGIN
 			b.status,
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
-			b.currency
+			b.currency,
+			b.betid
 	FROM	bettrans b WITH(NOLOCK) 
 			INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
 	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 9)
@@ -353,7 +348,8 @@ BEGIN
 			b.status,
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
-			b.currency
+			b.currency,
+			b.betid
 	FROM
 			bettrans b WITH (NOLOCK)
 			INNER JOIN Outright m WITH (NOLOCK) ON b.matchID = m.orid

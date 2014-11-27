@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [NAP_Rpt_TicketsListingDetail]
+﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
 	@MatchId INT,
 	@LicenseeName VARCHAR(1000),
 	@BetTypes VARCHAR(1000), 
@@ -47,7 +47,7 @@ AS
       + 1: Normal tickets only
       + 2: SA tickets only	
      
-   Example: exec NAP_Rpt_TicketsListingDetail @MatchId=4626986,@LicenseeName='IBC',@BetTypes='1101,1102',@BetTypesLive='',@LiveType=0,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SecondAcceptFlag=0
+   Example:    exec NAP_Rpt_TicketsListingDetail @MatchId=4626986,@LicenseeName='IBC',@BetTypes='1101,1102',@BetTypesLive='',@LiveType=0,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=2,@SecondAcceptFlag=0
 	
 */
 SET NOCOUNT ON 
@@ -584,18 +584,7 @@ BEGIN
 		FROM bettrans WITH (NOLOCK) 
 		WHERE 0 = 1
 END
-
-
-
-
-
-
 GO
-
-GRANT EXECUTE ON [NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Rpt_TicketsListingDetail] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [vnteam] AS [dbo]

@@ -145,8 +145,8 @@ BEGIN
 			AND (@isRefund IS NULL 
 				OR (m.sporttype <> 5 AND @isRefund = 1 AND betstatus LIKE 'Refund%') 
 				OR (m.sporttype <> 5 AND @isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%')
-				OR (m.sporttype = 5 AND @isRefund = 1 AND r.SettlementStatusID BETWEEN 1 AND 3)
-				OR (m.sporttype = 5 AND @isRefund = 0 AND r.SettlementStatusID NOT BETWEEN 1 AND 3)
+				OR (m.sporttype = 5 AND @isRefund = 1 AND ISNULL(r.SettlementStatusID,0) BETWEEN 1 AND 3)
+				OR (m.sporttype = 5 AND @isRefund = 0 AND ISNULL(r.SettlementStatusID,0) NOT BETWEEN 1 AND 3)
 			)
 
 	SELECT @rowcount = 0

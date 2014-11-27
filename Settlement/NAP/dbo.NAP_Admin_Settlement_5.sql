@@ -177,7 +177,7 @@ BEGIN
 			,@SetxGameyREFUND		= @SetxGameyREFUND + CASE WHEN SettlementStatusID = 1 THEN ResourceID +',' ELSE '' END 
 	FROM	@tmpResultDetail 
 	WHERE	SettlementStatusID > 0 
-			AND ResourceID LIKE '0[1-5][0-9][1-9]'
+			AND ResourceID LIKE '0[1-5][0-9][0-9]'
 
 	SELECT	 @CorrectScoreMatch		= CAST(@HomeValueMatch AS NVARCHAR(5)) + CAST(@AwayValueMatch AS NVARCHAR(5)) 
 			,@CorrectScoreSet1		= CAST(@TotalGameHomeSet1 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet1 AS NVARCHAR(5)) 
@@ -201,15 +201,6 @@ BEGIN
 			,@TotalGameSet4			= @TotalGameHomeSet4 + @TotalGameAwaySet4
 			,@TotalGameSet5			= @TotalGameHomeSet5 + @TotalGameAwaySet5
 			,@GameDiffMatch			= @TotalGameHomeMatch - @TotalGameAwayMatch
-
-	--SELECT @CorrectScoreSet1 CorrectScoreSet1
-	--		,@CorrectScoreMatch CorrectScoreMatch
-	--		,@OddEvenGameMatch OddEvenGameMatch
-	--		, @OddEvenGameSet1 OddEvenGameSet1
-	--		, @TotalSetMatch TotalSetMatch
-	--		,@TotalGameMatch TotalGameMatch
-	--		, @TotalGameSet1 TotalGameSet1
-	--		, @GameDiffMatch GameDiffMatch
 
 	IF @Action = 'CAL'
 	BEGIN
