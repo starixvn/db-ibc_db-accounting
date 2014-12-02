@@ -48,10 +48,16 @@ Revisions:
 	- 20131126@Lukas: get sporttype column in VSRaceinfo instead of hardcode
 	- 20140306@Dom: Add Keno
 	- 20140908@Dom:	[Redmine #22012] Update VS conditions
+	- 20141103@Dom: Apply sport bettype matrix
 Param's Explanation:
 • @fromdate = @winlostdate
 */
 SET NOCOUNT ON
+
+----Get Sport Bettype Matrix------
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 
   DECLARE @Data TABLE (
         	finalhomescore	INT,
@@ -243,11 +249,13 @@ SET NOCOUNT ON
 			FROM 	bettrans14 b with (nolock) 
 					INNER JOIN match14 match with (nolock) on b.matchid= match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
+					INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE 	b.winlostdate = @fromdate
-					AND bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) 
-					AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
-					AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-					AND b.custid = @custid 
+					and s.eventtype = 1
+					--AND bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) 
+					--AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
+					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+					--AND b.custid = @custid 
 					AND match.sporttype <> 1 
 			
 			UNION ALL 
@@ -429,10 +437,12 @@ SET NOCOUNT ON
 			FROM	bettrans b with (nolock) 
 					INNER JOIN match  with (nolock) on b.matchid = match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
+					INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE	b.winlostdate = @fromdate 
-					AND b.bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) 
-					AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
-					AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+					--AND b.bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) 
+					--AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
+					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+					AND s.eventtype = 1 and b.bettype <> 10
 					AND match.sporttype <> 1
 					AND b.custid = @custid
 	
@@ -573,8 +583,8 @@ SET NOCOUNT ON
 					b.sdiscount,
 					b.adiscount,
 					b.discount,					
-					case when bettype = 10 then 0 else odds.teamid end homeid,
-					case WHEN bettype = 10 THEN odds.teamid ELSE 0 end awayid,
+					case when b.bettype = 10 then 0 else odds.teamid end homeid,
+					case WHEN b.bettype = 10 THEN odds.teamid ELSE 0 end awayid,
 					ISNULL(b.checktime,'') checktime,
 					b.hdp1, --phuong.nguyen <2008-12-30>
 					b.hdp2, --end
@@ -611,13 +621,14 @@ SET NOCOUNT ON
 					INNER JOIN outright odds with (nolock) on b.matchid = odds.orid
 					INNER JOIN league l with (nolock) on odds.leagueid = l.leagueid
 					INNER JOIN Sports s WITH (nolock) ON l.sporttype = s.sporttype 
+					INNER JOIN @SportBettype sbt ON sbt.Bettype = b.bettype
 					LEFT JOIN (			
 						SELECT	t.refno, t.finalodds, f.finalodds finalodds2
 						FROM	bettransm t WITH (NOLOCK)
 								INNER JOIN bettransm f WITH (NOLOCK) ON t.refno = f.refno 
 						WHERE	t.bettype = 41 AND f.bettype = 42
 					)bmOdd on b.transid = bmOdd.refno 
-			WHERE	b.bettype in (10,31,32,33,41,42,43) --phuong.nguyen, get HR bet list
+			WHERE	sbt.eventtype=2 --b.bettype in (10,31,32,33,41,42,43) --phuong.nguyen, get HR bet list
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid 
 					AND s.sporttype <> 1 
@@ -641,8 +652,8 @@ SET NOCOUNT ON
 					b.sdiscount,
 					b.adiscount,
 					b.discount,
-					case when bettype = 10 then 0 else odds.teamid end homeid,
-					case WHEN bettype = 10 THEN odds.teamid ELSE 0 end awayid,
+					case when b.bettype = 10 then 0 else odds.teamid end homeid,
+					case WHEN b.bettype = 10 THEN odds.teamid ELSE 0 end awayid,
 					ISNULL(b.checktime,'') checktime, 
 					b.hdp1, --phuong.nguyen <2008-12-30>
 					b.hdp2, --end
@@ -678,13 +689,14 @@ SET NOCOUNT ON
 					INNER JOIN outright14 odds with (nolock) on b.matchid = odds.orid
 					INNER JOIN league l with (nolock) on odds.leagueid = l.leagueid
 					INNER JOIN Sports s WITH (nolock) ON l.sporttype = s.sporttype 
+					INNER JOIN @SportBettype sbt ON sbt.Bettype = b.bettype
 					LEFT JOIN (			
 						SELECT	t.refno, t.finalodds, f.finalodds finalodds2
 						FROM	bettransm14 t WITH (NOLOCK)
 								INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno 
 						WHERE	t.bettype = 41 AND f.bettype = 42
 					)bmOdd on b.transid = bmOdd.refno 
-			WHERE	b.bettype in (10,31,32,33,41,42,43)
+			WHERE	sbt.eventtype=2 --b.bettype in (10,31,32,33,41,42,43)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					AND s.SportType <>1 
@@ -741,8 +753,10 @@ SET NOCOUNT ON
 					b.betfrom,
 					b.winlostdate 
 			FROM 	bettrans b with (nolock)
-			WHERE	b.bettype = 71								--20120405@Hurri
-					AND b.matchid IN (0, 71)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			WHERE	s.ProductID = 6
+					--b.bettype = 71								--20120405@Hurri
+					--AND b.matchid IN (0, 71)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
@@ -798,8 +812,10 @@ SET NOCOUNT ON
 					b.betfrom,
 					b.winlostdate  
 			FROM 	bettrans14 b with (nolock)
-			WHERE	b.bettype = 71								--20120405@Hurri
-					AND b.matchid in (0, 71)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			WHERE	s.ProductID = 6
+					--b.bettype = 71								--20120405@Hurri
+					--AND b.matchid in (0, 71)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
@@ -855,8 +871,10 @@ SET NOCOUNT ON
 					b.betfrom,
 					b.winlostdate 
 			FROM 	bettrans b with (nolock)
-			WHERE	b.bettype = 73
-					AND b.matchid in (0, 73)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			WHERE	s.ProductID = 7
+					--b.bettype = 73
+					--AND b.matchid in (0, 73)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
@@ -912,8 +930,10 @@ SET NOCOUNT ON
 					b.betfrom,
 					b.winlostdate  
 			FROM 	bettrans14 b with (nolock)
-			WHERE	b.bettype = 73
-					AND b.matchid in (0, 73)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			WHERE	s.ProductID = 7
+					--b.bettype = 73
+					--AND b.matchid in (0, 73)
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 
@@ -969,8 +989,10 @@ SET NOCOUNT ON
 					b.betfrom,
 					b.winlostdate 
 			FROM 	bettrans b with (nolock)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
-			WHERE	b.bettype BETWEEN 1501 AND 1599
+			WHERE	s.ProductID = 8
+					--b.bettype BETWEEN 1501 AND 1599
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 
@@ -1025,8 +1047,10 @@ SET NOCOUNT ON
 					b.betfrom,
 					b.winlostdate 
 			FROM 	translog b with (nolock)
+			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
-			WHERE	b.gameID BETWEEN 1501 AND 1599
+			WHERE	s.ProductID = 8
+					--b.gameID BETWEEN 1501 AND 1599
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					AND b.statusID = 0
@@ -1083,8 +1107,10 @@ SET NOCOUNT ON
 					b.betfrom,
 					b.winlostdate  
 			FROM 	bettrans14 b with (nolock)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
-			WHERE	b.bettype BETWEEN 1501 AND 1599
+			WHERE	s.ProductID = 8
+					--b.bettype BETWEEN 1501 AND 1599
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
 					
@@ -1256,7 +1282,10 @@ SET NOCOUNT ON
 			FROM 	bettrans b with (nolock)
 					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-			WHERE	b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+					INNER JOIN @SportBettype s ON s.BetType = b.BetType 
+			WHERE	s.ProductID = 5
+					AND s.EventType = 3
+					--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid		
 
@@ -1314,7 +1343,10 @@ SET NOCOUNT ON
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-			WHERE	b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+					INNER JOIN @SportBettype s ON s.BetType = b.BetType 
+			WHERE	s.ProductID = 5
+					AND s.EventType = 3
+					--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid				
 	) x
