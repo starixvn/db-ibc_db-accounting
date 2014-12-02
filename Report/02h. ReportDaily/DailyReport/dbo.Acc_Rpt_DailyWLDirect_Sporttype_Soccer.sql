@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype_Soccer]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype_Soccer]
 	@winlostdate	datetime,
 	@SoccerType		TINYINT = 0,
 	@LineTotal		money OUTPUT,
@@ -26,9 +26,10 @@ AS
 SET NOCOUNT ON
 
 --Declare @temp table to contain all matches based on @winlostdate
-DECLARE @Match TABLE (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
+--DECLARE @Match TABLE (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
 DECLARE @Bettype TABLE(bettype int, soccerType INT)
 
+create table #Match (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
 CREATE TABLE #DepAgent (custid int primary key)
 	
 INSERT INTO #DepAgent 
@@ -54,9 +55,9 @@ BEGIN
 		SELECT val, @soccerType
 		FROM strSPlit(@IncludeBettype,',')
 END
-			
+
 						
-INSERT INTO @Match 
+INSERT INTO #Match 
 SELECT	m.matchid, 
 		s.sporttype,
 		m.type
@@ -82,7 +83,7 @@ SELECT
 		sum((1-tpositiontaking)*ABS(stake)*actualrate) RealTurnover,
 		sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN @Match m on b.matchid = m.matchid
+		INNER JOIN #Match m on b.matchid = m.matchid
 		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 		INNER JOIN @Bettype t ON b.bettype = t.bettype
 WHERE	b.winlostdate = @winlostdate
@@ -110,7 +111,7 @@ SELECT
 		-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
 		-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN @Match m on b.matchid = m.matchid
+		INNER JOIN #Match m on b.matchid = m.matchid
 		INNER JOIN @Bettype t ON b.bettype = t.bettype		
 WHERE	b.winlostdate = @winlostdate
 		AND b.matchid > 0 
@@ -136,7 +137,7 @@ SELECT
 	-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
 	-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN @Match m on b.matchid = m.matchid
+		INNER JOIN #Match m on b.matchid = m.matchid
 		INNER JOIN @Bettype t ON b.bettype = t.bettype		
 WHERE	b.winlostdate = @winlostdate
 	AND b.matchid > 0 
@@ -150,7 +151,7 @@ ORDER BY SportType
 	
 SELECT	@LineTotal = isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate), 0) 
 FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN @Match m on b.matchid = m.matchid		
+		INNER JOIN #Match m on b.matchid = m.matchid		
 WHERE
 		winlostdate = @winlostdate
 		AND b.bettype < 19001 
@@ -161,6 +162,7 @@ WHERE
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 
 DROP TABLE #DepAgent
+
 	
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype_Soccer] TO [bodbAdminNet]
