@@ -12,6 +12,7 @@ AS
 	DB: DBTXN/bodb02
 
 	Revisions:
+		- 20141204@Jamie: Sportting Solution settlement - Change rule Set x Correct Score [Redmine:#23034]
 
 	Param's Explanation: 
 
@@ -180,11 +181,26 @@ BEGIN
 			AND ResourceID LIKE '0[1-5][0-9][0-9]'
 
 	SELECT	 @CorrectScoreMatch		= CAST(@HomeValueMatch AS NVARCHAR(5)) + CAST(@AwayValueMatch AS NVARCHAR(5)) 
-			,@CorrectScoreSet1		= CAST(@TotalGameHomeSet1 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet1 AS NVARCHAR(5)) 
-			,@CorrectScoreSet2		= CAST(@TotalGameHomeSet2 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet2 AS NVARCHAR(5)) 
-			,@CorrectScoreSet3		= CAST(@TotalGameHomeSet3 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet3 AS NVARCHAR(5)) 
-			,@CorrectScoreSet4		= CAST(@TotalGameHomeSet4 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet4 AS NVARCHAR(5)) 
-			,@CorrectScoreSet5		= CAST(@TotalGameHomeSet5 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet5 AS NVARCHAR(5)) 
+			,@CorrectScoreSet1		= CASE	WHEN @TotalGameHomeSet1 > 7 AND (@TotalGameHomeSet1 - @TotalGameAwaySet1)>=2 THEN 'haos'
+											WHEN @TotalGameAwaySet1 > 7 AND (@TotalGameAwaySet1 - @TotalGameHomeSet1)>=2 THEN 'aaos'  
+											ELSE CAST(@TotalGameHomeSet1 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet1 AS NVARCHAR(5)) 
+											END 
+			,@CorrectScoreSet2		= CASE	WHEN @TotalGameHomeSet2 > 7 AND (@TotalGameHomeSet2 - @TotalGameAwaySet2)>=2 THEN 'haos'
+											WHEN @TotalGameAwaySet2 > 7 AND (@TotalGameAwaySet2 - @TotalGameHomeSet2)>=2 THEN 'aaos'  
+											ELSE CAST(@TotalGameHomeSet2 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet2 AS NVARCHAR(5)) 
+											END
+			,@CorrectScoreSet3		= CASE	WHEN @TotalGameHomeSet3 > 7 AND (@TotalGameHomeSet3 - @TotalGameAwaySet3)>=2 THEN 'haos'
+											WHEN @TotalGameAwaySet3 > 7 AND (@TotalGameAwaySet3 - @TotalGameHomeSet3)>=2 THEN 'aaos'  
+											ELSE CAST(@TotalGameHomeSet3 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet3 AS NVARCHAR(5)) 
+											END
+			,@CorrectScoreSet4		= CASE	WHEN @TotalGameHomeSet4 > 7 AND (@TotalGameHomeSet4 - @TotalGameAwaySet4)>=2 THEN 'haos'
+											WHEN @TotalGameAwaySet4 > 7 AND (@TotalGameAwaySet4 - @TotalGameHomeSet4)>=2 THEN 'aaos'  
+											ELSE CAST(@TotalGameHomeSet4 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet4 AS NVARCHAR(5)) 
+											END
+			,@CorrectScoreSet5		= CASE	WHEN @TotalGameHomeSet5 > 7 AND (@TotalGameHomeSet5 - @TotalGameAwaySet5)>=2 THEN 'haos'
+											WHEN @TotalGameAwaySet5 > 7 AND (@TotalGameAwaySet5 - @TotalGameHomeSet5)>=2 THEN 'aaos'  
+											ELSE CAST(@TotalGameHomeSet5 AS NVARCHAR(5)) + CAST(@TotalGameAwaySet5 AS NVARCHAR(5))
+											END
 			,@OddEvenGameMatch		= (@TotalGameHomeMatch + @TotalGameAwayMatch) % 2
 			,@OddEvenSetMatch		= (@HomeValueMatch + @AwayValueMatch)%2 
 			,@OddEvenGameSet1		= (@TotalGameHomeSet1 + @TotalGameAwaySet1) % 2 
@@ -201,6 +217,7 @@ BEGIN
 			,@TotalGameSet4			= @TotalGameHomeSet4 + @TotalGameAwaySet4
 			,@TotalGameSet5			= @TotalGameHomeSet5 + @TotalGameAwaySet5
 			,@GameDiffMatch			= @TotalGameHomeMatch - @TotalGameAwayMatch
+
 
 	IF @Action = 'CAL'
 	BEGIN
