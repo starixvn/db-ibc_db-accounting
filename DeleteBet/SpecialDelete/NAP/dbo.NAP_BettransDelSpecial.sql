@@ -79,7 +79,7 @@ AS
 		- 20140929@Kathy: - Offer new bettypes from Sportting Solutions and new IBC bettypes [Redmine:#23129]
 						  - Add moneyline in filter
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
-		- 20141204@Kathy: Remove permission checking code on DBPolicy [Redmine:#27058]					  
+		- 20141204@Kathy: Remove codes which are used in checking permission on DBPolicy [Redmine:#27058]					  
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
 		  + 0: All tickets
@@ -94,7 +94,7 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	--Remove permission checking code on DBPolicy [Redmine:#27058]	
+	--Remove checking permission codes on DBPolicy [Redmine:#27058]	
 	--Check permission for account site:	
 	--EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission 
 	--	@custid		= @UserID,
@@ -1074,6 +1074,7 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+
 
 
 GO
