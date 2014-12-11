@@ -15,9 +15,18 @@ AS
 		- 20130726@Elodie: Define data for bettrans, bettrans14 or bettrans_bk by winlostdate field
 						   Enhance performance
 		- 20140907@Dom:	[Redmine #22012] update VS Condition
+		- 20141103@Dom: Apply sport bettype matrix
 */ 
 
 SET NOCOUNT ON  
+
+
+----Get Sport Bettype Matrix------
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
+
 DECLARE @refno BIGINT		
 
 Declare @Data TABLE (
@@ -174,11 +183,12 @@ BEGIN
 		b.winlostdate	
 	from 
 		bettrans as b with (nolock) 
-		inner join match as m with (nolock) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
-	where	 
-			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and
-			b.bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-			b.transid = @TransID
+		INNER JOIN match as m with (nolock) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	where	s.EventType=1 
+			--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and
+			--b.bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
+			AND b.transid = @TransID
 			
 	--Mix Parlay
 	IF @bettype = 9
@@ -504,6 +514,7 @@ BEGIN
 	from	bettrans as b with (nolock)   
 			inner join outright as odds with (nolock) on b.matchid=odds.orid   
 			inner join league l with (nolock) on odds.leagueid=l.leagueid    
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			left join (			
 				SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 						f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
@@ -511,7 +522,7 @@ BEGIN
 						INNER JOIN bettransm f WITH (NOLOCK) ON t.refno = f.refno 
 				WHERE	t.bettype in (31,41) AND f.bettype in (32,42)
 			) bm on b.transid = bm.refno 
-	where	b.bettype in (31,32,33,41,42,43)
+	where	s.ProductID = 2 --b.bettype in (31,32,33,41,42,43)
 			and b.transid = @TransID
 	order by b.transid  
 	
@@ -580,6 +591,7 @@ BEGIN
 		bettrans as b with (nolock) 
 		INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
         INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		INNER JOIN @SportBettype s ON s.BetType = b.BetType 
         left join (     
 			SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 			  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
@@ -587,8 +599,9 @@ BEGIN
 			  INNER JOIN bettransm f WITH (NOLOCK) ON t.refno = f.refno   
 			WHERE t.bettype = 1231 AND f.bettype = 1232 
 			) bm on b.refno = bm.refno  
-	where	 
-			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
+	where	s.ProductID = 5 AND
+			s.EventType = 3 AND 
+			--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
 			
 END
@@ -659,11 +672,12 @@ BEGIN
 		b.winlostdate				
 	from 
 		bettrans14 as b with (nolock) 
-		inner join match14 as m with (nolock) on b.matchid = m.matchid
-	where	 
-			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
-			b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-			b.transid = @TransID
+		INNER JOIN match14 as m with (nolock) on b.matchid = m.matchid
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	where	s.EventType = 1 
+			--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
+			--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
+			AND b.transid = @TransID
 			
 	--Mix Parlay
 	IF @bettype = 9
@@ -990,6 +1004,7 @@ BEGIN
 	from	bettrans14 as b with (nolock)   
 			inner join outright14 as odds with (nolock) on b.matchid=odds.orid   
 			inner join league l with (nolock) on odds.leagueid=l.leagueid    
+			INNER JOIN @SportBettype s ON s.BetType = b.BetType 
 			left join (			
 				SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 						f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
@@ -997,7 +1012,7 @@ BEGIN
 						INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno 
 				WHERE	t.bettype in (31,41) AND f.bettype in (32,42)
 			) bm on b.transid = bm.refno 
-	where	b.bettype in (31,32,33,41,42,43)			
+	where	s.ProductID = 2 --b.bettype in (31,32,33,41,42,43)			
 			and b.transid = @TransID
 	order by b.transid  
 	
@@ -1066,6 +1081,7 @@ BEGIN
 		bettrans14 as b with (nolock) 
 		INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
         INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		INNER JOIN @SportBettype s ON s.BetType = b.BetType 
         left join (     
 			SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 			  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
@@ -1073,8 +1089,9 @@ BEGIN
 			  INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno   
 			WHERE t.bettype = 1231 AND f.bettype = 1232 
 			) bm on b.refno = bm.refno  
-	where	 
-			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
+	where	s.ProductID=5 AND
+			s.EventType=3 AND 
+			--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
 END
 
@@ -1146,9 +1163,10 @@ BEGIN
 		DBARC.bodb_archive.dbo.bettrans_bk b with (nolock) 
 		inner join DBARC.bodb_archive.dbo.match_BK m with (nolock) on b.matchid = m.matchid
 		inner JOIN custInfo c with (NOLOCK) on c.custid = b.custid
-	where	 
-			b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
-			b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
+		INNER JOIN @SportBettype s ON s.BetType = b.BetType 
+	where	s.ProductID = 2 AND 
+			--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
+			--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 			b.transid = @TransID
 			
 	--Mix Parlay
@@ -1483,6 +1501,7 @@ BEGIN
 			inner join DBARC.bodb_archive.dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 			inner join league l with (nolock) on odds.leagueid=l.leagueid    
 			inner JOIN custInfo c with (NOLOCK) ON c.custid = b.custid
+			INNER JOIN @SportBettype s ON s.BetType = b.BetType 
 			left join (			
 				SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 						f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
@@ -1490,7 +1509,7 @@ BEGIN
 						INNER JOIN DBARC.bodb_archive.dbo.bettransm f WITH (NOLOCK) ON t.refno = f.refno 
 				WHERE	t.bettype in (31,41) AND f.bettype in (32,42)
 			) bm on b.transid = bm.refno 
-	where	b.bettype in (31,32,33,41,42,43)			
+	where	s.ProductID=2 --b.bettype in (31,32,33,41,42,43)			
 			and b.transid = @TransID
 	order by b.transid 
 	
@@ -1560,6 +1579,7 @@ BEGIN
 		INNER JOIN DBARC.bodb_archive.dbo.VSOutright_bk o WITH (NOLOCK) ON b.oddsid = o.Orid
         INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
         inner JOIN custInfo c with (NOLOCK) ON c.custid = b.custid
+		INNER JOIN @SportBettype s ON s.BetType = b.BetType 
         left join (     
 			SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 			  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
@@ -1567,7 +1587,8 @@ BEGIN
 			  INNER JOIN DBARC.bodb_archive.dbo.bettransm f WITH (NOLOCK) ON t.refno = f.refno   
 			WHERE t.bettype = 1231 AND f.bettype = 1232 
 			) bm on b.refno = bm.refno  
-	where	 
+	where	s.ProductID = 5 AND
+			s.EventType = 3 AND 
 			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
 END

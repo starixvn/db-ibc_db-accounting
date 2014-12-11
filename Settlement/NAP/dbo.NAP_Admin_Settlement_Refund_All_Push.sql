@@ -1,10 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 09/11/2014 17:08:00 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All_Push] 
 	@Matchid						INT
 	,@AdminId						INT
@@ -18,6 +11,19 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All_Push]
 	,@FullTimeHome					INT 			= NULL
 	,@FullTimeAway					INT 			= NULL
 	,@BetStatus						NVARCHAR(50)	= NULL
+	,@SetResult						VARCHAR(50)		= NULL 
+	,@GameResult1					VARCHAR(MAX)	= NULL
+	,@GameResult2					VARCHAR(MAX)	= NULL
+	,@GameResult3					VARCHAR(MAX)	= NULL
+	,@GameResult4					VARCHAR(MAX)	= NULL
+	,@GameResult5					VARCHAR(MAX)	= NULL
+	,@SelectedSet					VARCHAR(50)		= NULL 
+	,@SelectedSet1Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet2Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet3Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet4Game				VARCHAR(MAX)	= NULL 
+	,@SelectedSet5Game				VARCHAR(MAX)	= NULL
+	,@SelectedSettleFinishedGame	VARCHAR(50)		= NULL 
 	,@IP							VARCHAR(15)		= ''
 	,@ErrCode						INT				= 0		OUTPUT
 	,@ErrMsg						NVARCHAR(200)	= ''	OUTPUT
@@ -33,6 +39,7 @@ AS
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
+		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -61,7 +68,7 @@ BEGIN
 	DECLARE @matchcode	NVARCHAR(50)
 		,@sporttype		INT
 		,@leagueid		INT
-		,@sqlCommand	NVARCHAR(500)
+		,@sqlCommand	NVARCHAR(MAX)
 		,@IsNested		BIT
 		,@Action		VARCHAR(20)
 		,@procName		NVARCHAR(50)
@@ -76,7 +83,7 @@ BEGIN
 
 	IF @@ROWCOUNT = 0
 	BEGIN
-		SELECT @ErrCode = 1000001
+		SELECT @ErrCode = 1001001
 			,@ErrMsg	= 'Match does not exist!'
 
 		RETURN
@@ -95,7 +102,7 @@ BEGIN
 				AND IsCalculating IN (0, 1)
 			)
 	BEGIN
-		SELECT @ErrCode = 1000000
+		SELECT @ErrCode = 1001003
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
 		RETURN
@@ -105,16 +112,26 @@ BEGIN
 		,@ErrMsg		= ''
 		,@procName		= OBJECT_NAME(@@procid)
 		,@sqlCommand	= 'EXEC [dbo].[NAP_Admin_Settlement_Refund_All] @Matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
-																   + ', @creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
-																   + ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1), @IsExcludeBetdaq) 
-																   + ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatch) 
-																   + ', @IsExcludeBetfair = ' + CONVERT(NVARCHAR(1), @IsExcludeBetfair) 
-																   + ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchBetFair) 
-																   + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchIBC) 
-																   + ', @betstatus = ' + CASE 
-																								WHEN @BetStatus IS NULL THEN 'NULL'
-																								ELSE 'N''' + CONVERT(NVARCHAR(20), @BetStatus) + ''''
-																						 END 
+																  + ', @creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
+																  + ', @IsExcludeBetdaq = ' + CONVERT(NVARCHAR(1), @IsExcludeBetdaq) 
+																  + ', @IsSettleAbandonedMatch = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatch) 
+																  + ', @IsExcludeBetfair = ' + CONVERT(NVARCHAR(1), @IsExcludeBetfair) 
+																  + ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchBetFair) 
+																  + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchIBC) 
+																  + ', @betstatus = ' + CASE WHEN @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(NVARCHAR(20), @BetStatus) + '''' END 
+																  + ', @SetResult = ' + CASE WHEN @SetResult IS NULL THEN 'NULL' ELSE '''' + @SetResult + '''' END
+																  + ', @GameResult1 = ' + CASE WHEN @GameResult1 IS NULL THEN 'NULL' ELSE '''' + @GameResult1 + '''' END
+																  + ', @GameResult2 = ' + CASE WHEN @GameResult2 IS NULL THEN 'NULL' ELSE '''' + @GameResult2 + '''' END
+																  + ', @GameResult3 = ' + CASE WHEN @GameResult3 IS NULL THEN 'NULL' ELSE '''' + @GameResult3 + '''' END
+																  + ', @GameResult4 = ' + CASE WHEN @GameResult4 IS NULL THEN 'NULL' ELSE '''' + @GameResult4 + '''' END
+																  + ', @GameResult5 = ' + CASE WHEN @GameResult5 IS NULL THEN 'NULL' ELSE '''' + @GameResult5 + '''' END
+																  + ', @SelectedSet = ' + CASE WHEN @SelectedSet IS NULL THEN 'NULL' ELSE '''' + @SelectedSet + '''' END
+																  + ', @SelectedSet1Game = ' + CASE WHEN @SelectedSet1Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet1Game + '''' END
+																  + ', @SelectedSet2Game = ' + CASE WHEN @SelectedSet2Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet2Game + '''' END
+																  + ', @SelectedSet3Game = ' + CASE WHEN @SelectedSet3Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet3Game + '''' END
+																  + ', @SelectedSet4Game = ' + CASE WHEN @SelectedSet4Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet4Game + '''' END
+																  + ', @SelectedSet5Game = ' + CASE WHEN @SelectedSet5Game IS NULL THEN 'NULL' ELSE '''' + @SelectedSet5Game + '''' END
+																  + ', @SelectedSettleFinishedGame = ' + CASE WHEN @SelectedSettleFinishedGame IS NULL THEN 'NULL' ELSE '''' + @SelectedSettleFinishedGame + '''' END
 																  + ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeHome), 'NULL') 
 																  + ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeAway), 'NULL') 
 																  + ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeHome), 'NULL') 
@@ -125,9 +142,24 @@ BEGIN
 																  + ', @ErrCode = @ErrCode OUTPUT' 
 																  + ', @ErrMsg = @ErrMsg OUTPUT'
 
+	IF LEN(@sqlCommand)> 1000 --Max Field 
+	BEGIN
+		SELECT   @ErrCode = 1001010
+				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each set/match to execute separately.'	
+		RETURN 
+	END
+
+	SELECT	@Action = 'Refund'  -- ALL SPORTS
+
+	IF (@SelectedSet IS NOT NULL AND @SelectedSet NOT LIKE '%6%')   -- Tennis 
+	BEGIN
+		SELECT @Action='Refund-SET'	-- Refund per SET of Tennis 		
+	END 
+
 	IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre'
 	BEGIN
 		DECLARE @GoalRecord VARCHAR(50)
+		DECLARE @ActionId INT
 
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -143,24 +175,30 @@ BEGIN
 			RETURN
 		END CATCH
 
-		SELECT @FullTimeHome	= m.finalhomescore
-			,@FullTimeAway		= m.finalawayscore
-			,@HalfTimeHome		= m.hthomescore
-			,@HalfTimeAway		= m.htawayscore
-			,@GoalRecord		= m.GoalRecord
-			,@BetStatus			= m.betstatus
+		SELECT   @ActionId			= CASE WHEN @Action = 'Refund' THEN 13 
+										   ELSE -1 
+										   END
+				,@FullTimeHome		= m.finalhomescore
+				,@FullTimeAway		= m.finalawayscore
+				,@HalfTimeHome		= m.hthomescore
+				,@HalfTimeAway		= m.htawayscore
+				,@GoalRecord		= m.GoalRecord
+				,@BetStatus			= m.betstatus
 		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 		WHERE m.matchid = @MatchId
 
-		EXEC Acc_Set_ConfirmedAction 
-			@matchid		= @MatchId
-			,@action		= 13
-			,@fth 			= @FullTimeHome
-			,@fta 			= @FullTimeAway
-			,@hth 			= @HalfTimeHome
-			,@hta 			= @HalfTimeAway
-			,@goalrecord	= @GoalRecord
-			,@betstatus		= @BetStatus
+		IF @ActionId <> -1 
+		BEGIN
+			EXEC Acc_Set_ConfirmedAction 
+				@matchid		= @MatchId
+				,@action		= @ActionId
+				,@fth 			= @FullTimeHome
+				,@fta 			= @FullTimeAway
+				,@hth 			= @HalfTimeHome
+				,@hta 			= @HalfTimeAway
+				,@goalrecord	= @GoalRecord
+				,@betstatus		= @BetStatus
+		END 
 	END
 	ELSE
 	BEGIN
@@ -182,13 +220,11 @@ BEGIN
 			,@sporttype
 			,@AdminId
 			,@IP
-			,'Refund'
+			,@Action			--'Refund'
 			,@sqlCommand
 	END
 END
 GO
-
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_All_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_All_Push] TO [vnteam] AS [dbo]

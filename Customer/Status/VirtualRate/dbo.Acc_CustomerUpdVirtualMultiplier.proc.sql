@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
+﻿USE [CustDB]
+GO
+ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
     @custid int,  
     @virtualmultiplier smallmoney,  
     @UserID int,  
@@ -26,6 +28,7 @@ Revisions:
     - 20121206@Scott : Check Allowed downlines during peak hour at weekend  
     - 20120306@Lukas: change linked-server alias  
     - 20131108@Elodie: Splitting bodb02 into CustDB (call Acc_ExecRep_Cust_04 instead of Acc_ExecRep_04)
+	- 20141125@Jamie: Use Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]
     
 Param's Explanation:  
 • @ErrCode:  
@@ -98,7 +101,7 @@ END
 */  
   
   
-EXEC dbo.Acc_ExecRep_Cust_04   
+EXEC dbo.Acc_CustomerInfo_Execrep_04   
         @custid = @custid,  
         @roleid = @roleid,  
         @action = 'VirtualMultiplier',  
@@ -169,11 +172,10 @@ BEGIN
             @TrackingValue = @LogSPData,  
             @duration = @duration  
     END CATCH  
-END  
-  
+END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdVirtualMultiplier] TO [bodbadminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdVirtualMultiplier] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdVirtualMultiplier] TO [bodbLicenseeNet] AS [dbo]
 GO

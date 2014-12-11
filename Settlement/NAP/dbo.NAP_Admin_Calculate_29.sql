@@ -304,7 +304,7 @@ BEGIN
 		INNER JOIN @temp_parlayResult T ON PR.refno = T.refno AND PR.serial = T.serial
 	WHERE IsUpdated = 1
 
-	IF @@SERVERNAME NOT IN ('DBTRANS', 'DB230') RETURN
+	IF @@SERVERNAME NOT IN ('DBTRANS', 'DB230','DB206') RETURN
 
 	--	 below code is just for DBTRANS to process
 	INSERT INTO dbo.BetParlayResultSummary (

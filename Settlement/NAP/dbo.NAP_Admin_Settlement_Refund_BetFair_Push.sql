@@ -1,4 +1,4 @@
-ALTER PROCEDURE [NAP_Admin_Settlement_Refund_BetFair_Push]
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push]
 	@MatchId int,
 	@AdminId int, 	
 	@IP varchar(15) = '',
@@ -41,7 +41,7 @@ BEGIN
 
 	IF @@ROWCOUNT = 0 
 	BEGIN
-		SELECT	 @ErrCode	= 1000000
+		SELECT	 @ErrCode	= 1001001
 				,@ErrMsg	= 'Match does not exist!'	
 		RETURN
 	END 
@@ -49,7 +49,7 @@ BEGIN
 	IF EXISTS (SELECT 1 from Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
 		OR EXISTS (SELECT 1 from Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
 	BEGIN 
-		SELECT	 @ErrCode	= 1000000
+		SELECT	 @ErrCode	= 1001003
 				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
 		RETURN
 	END 
@@ -85,13 +85,7 @@ BEGIN
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-BetFair', @sqlCommand
 	END 
 END
-
 GO
-
-GRANT EXECUTE ON [NAP_Admin_Settlement_Refund_BetFair_Push] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Admin_Settlement_Refund_BetFair_Push] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push] TO [vnteam] AS [dbo]

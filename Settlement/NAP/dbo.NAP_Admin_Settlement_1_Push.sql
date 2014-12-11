@@ -1,16 +1,28 @@
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push] 
-	@AdminId		INT
-	,@Matchid		INT
-	,@FullTimeHome	SMALLINT		= NULL
-	,@FullTimeAway	SMALLINT		= NULL
-	,@HalfTimeHome	SMALLINT
-	,@HalfTimeAway	SMALLINT
-	,@GoalRecord	VARCHAR(50)		= NULL
-	,@BetStatus		NVARCHAR(50)
-	,@Action		VARCHAR(10)		= 'CAL'
-	,@IP			VARCHAR(15)		= ''
-	,@ErrCode		INT				= 0		OUTPUT
-	,@ErrMsg		NVARCHAR(200)	= ''	OUTPUT
+	 @AdminId				INT
+	,@Matchid				INT
+	,@FullTimeHome			SMALLINT		= NULL
+	,@FullTimeAway			SMALLINT		= NULL
+	,@HalfTimeHome			SMALLINT		= NULL
+	,@HalfTimeAway			SMALLINT		= NULL 
+	,@GoalRecord			VARCHAR(50)		= NULL
+	,@BetStatus				NVARCHAR(50)	
+	,@SetResult				VARCHAR(50)		= NULL 
+	,@GameResult1			VARCHAR(MAX)	= NULL
+	,@GameResult2			VARCHAR(MAX)	= NULL
+	,@GameResult3			VARCHAR(MAX)	= NULL
+	,@GameResult4			VARCHAR(MAX)	= NULL
+	,@GameResult5			VARCHAR(MAX)	= NULL
+	,@SelectedSet			VARCHAR(50)		= NULL 
+	,@SelectedSet1Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet2Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet3Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet4Game		VARCHAR(MAX)	= NULL 
+	,@SelectedSet5Game		VARCHAR(MAX)	= NULL 
+	,@Action				VARCHAR(10)		= 'CAL'
+	,@IP					VARCHAR(15)		= ''
+	,@ErrCode				INT				= 0		OUTPUT
+	,@ErrMsg				NVARCHAR(200)	= ''	OUTPUT
 AS
 /*	Creator: Kathy
 	Date: 20140213
@@ -20,6 +32,7 @@ AS
 	Revisions:		
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
+		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		
 	Param's Explanation:
 
@@ -31,7 +44,7 @@ BEGIN
 	DECLARE @matchcode			NVARCHAR(50)
 		,@sporttype				INT
 		,@leagueid				INT
-		,@sqlCommand			NVARCHAR(500)
+		,@sqlCommand			NVARCHAR(MAX)  --
 		,@NextAllowSettleTime	DATETIME
 		,@procName				NVARCHAR(50)
 
@@ -43,7 +56,7 @@ BEGIN
 
 	IF @@ROWCOUNT = 0
 	BEGIN
-		SELECT @ErrCode = 1000001
+		SELECT @ErrCode = 1001001
 			,@ErrMsg	= 'Match does not exist!'
 
 		RETURN
@@ -51,7 +64,7 @@ BEGIN
 
 	IF @action = 'CAL' AND @sporttype = 154 AND (@FullTimeHome = 0 OR @FullTimeHome IS NULL OR @FullTimeAway = 0 OR @FullTimeAway IS NULL)
 	BEGIN
-		SELECT @ErrCode = 1000002
+		SELECT @ErrCode = 1001002
 			,@ErrMsg	= 'Score is not valid.'
 
 		RETURN
@@ -70,7 +83,7 @@ BEGIN
 				AND IsCalculating IN (0, 1)
 			)
 	BEGIN
-		SELECT @ErrCode = 1000000
+		SELECT @ErrCode = 1001003
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
 		RETURN
@@ -85,20 +98,52 @@ BEGIN
 														  + ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeAway), 'NULL') 
 														  + ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeHome), 'NULL') 
 														  + ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeAway), 'NULL') 
-														  + ', @goalrecord = ' + CASE 
-																					WHEN @GoalRecord IS NULL THEN 'NULL'
-																					ELSE '''' + CONVERT(NVARCHAR(50), @GoalRecord) + ''''
-																					END 
-														  + ', @betstatus = ' + CASE 
-																					WHEN @BetStatus IS NULL THEN 'NULL'
-																					ELSE 'N''' + CONVERT(NVARCHAR(50), @BetStatus) + ''''
-																				 END 
+														  + ', @goalrecord = ' + CASE WHEN @GoalRecord IS NULL THEN 'NULL'
+																					  ELSE '''' + CONVERT(NVARCHAR(50), @GoalRecord) + '''' END 
+														  + ', @betstatus = ' + CASE WHEN @BetStatus IS NULL THEN 'NULL' 
+																					 ELSE 'N''' + CONVERT(NVARCHAR(50), @BetStatus) + '''' END 
+														  + ', @SetResult = ' + CASE WHEN @SetResult IS NULL THEN 'NULL'
+																					 ELSE '''' + @SetResult + '''' END 
+														  + ', @GameResult1 = ' + CASE WHEN @GameResult1 IS NULL THEN 'NULL'
+																					   ELSE '''' + @GameResult1 + '''' END 
+														  + ', @GameResult2 = ' + CASE WHEN @GameResult2 IS NULL THEN 'NULL'	
+																					   ELSE '''' + @GameResult2+ '''' END 
+														  + ', @GameResult3 = ' + CASE WHEN @GameResult3 IS NULL THEN 'NULL'	
+																					   ELSE '''' + @GameResult3+ '''' END  
+														  + ', @GameResult4 = ' + CASE WHEN @GameResult4 IS NULL THEN 'NULL'	
+																					   ELSE '''' + @GameResult4+ '''' END 
+														  + ', @GameResult5 = ' + CASE WHEN @GameResult5 IS NULL THEN 'NULL'	
+																					   ELSE '''' + @GameResult5+ '''' END 
+														  + ', @SelectedSet = ' + CASE WHEN @SelectedSet IS NULL THEN 'NULL'	
+																					   ELSE '''' + @SelectedSet+ '''' END 
+														  + ', @SelectedSet1Game = ' + CASE WHEN @SelectedSet1Game IS NULL THEN 'NULL'	
+																					   ELSE '''' + @SelectedSet1Game+ '''' END 
+														  + ', @SelectedSet2Game = ' + CASE WHEN @SelectedSet2Game IS NULL THEN 'NULL'	
+																					   ELSE '''' + @SelectedSet2Game+ '''' END
+														  + ', @SelectedSet3Game = ' + CASE WHEN @SelectedSet3Game IS NULL THEN 'NULL'	
+																					   ELSE '''' + @SelectedSet3Game+ '''' END 
+														  + ', @SelectedSet4Game = ' + CASE WHEN @SelectedSet4Game IS NULL THEN 'NULL'	
+																					   ELSE '''' + @SelectedSet4Game+ '''' END 
+														  + ', @SelectedSet5Game = ' + CASE WHEN @SelectedSet5Game IS NULL THEN 'NULL'	
+																					   ELSE '''' + @SelectedSet5Game+ '''' END  
 														  + ', @action = ''' + CONVERT(NVARCHAR(50), @Action) + '''' 
 														  + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
 														  + ', @ErrCode = @ErrCode OUTPUT' 
 														  + ', @ErrMsg = @ErrMsg OUTPUT'
+														  
+	IF LEN(@sqlCommand)> 1000 --Max Field 
+	BEGIN
+		SELECT   @ErrCode = 1001010
+				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each set/match to execute separately.'	
+		RETURN 
+	END
 
-	IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre'
+	IF (@SelectedSet IS NOT NULL AND @SelectedSet NOT LIKE '%6%')   -- Tennis 
+	BEGIN
+		SELECT @Action='CAL-SET'	-- CAL per SET of Tennis 		
+	END 
+
+	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre') 
 	BEGIN
 		DECLARE @ActionId INT
 

@@ -1,7 +1,8 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype_Soccer14]
 	@winlostdate	datetime,
 	@SoccerType		TINYINT = 0,
-	@LineTotal		money OUTPUT
+	@LineTotal		money OUTPUT,
+	@IncludeBettype VARCHAR(MAX) = ''
 AS
 /*	Creator: Elodie
 	Date: 2012-07-11
@@ -15,17 +16,19 @@ AS
 		- 20130802@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)	
 		- 20140711@Johnson: Separate major and minor bettypes of soccer		
 		- 20140930@Johnson: Add new report for soccer minor bettype
+		- 20141111@Johnson: include additional bettypes into report
 	Explanation's Param:
 		- @SoccerType =	 0: All bettype(major and minor bettype)
 					= 1: report soccer for major bettype
 					= 2: report soccer for minor bettype
+		- @IncludeBettype: include more bettypes in some specific cases(minor bettypes soccer get some major bettypes)
 */
 SET NOCOUNT ON
 
 --Declare @temp table to contain all matches based on @winlostdate
 DECLARE @Match TABLE (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
 CREATE TABLE #DepAgent (custid int primary key)
-DECLARE @Bettype TABLE(bettype int)
+DECLARE @Bettype TABLE(bettype int, soccerType INT)
 	
 INSERT INTO #DepAgent 
 SELECT custid
@@ -35,11 +38,22 @@ WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 UNION
 SELECT 5707545--BARM
 
-INSERT INTO @Bettype(bettype)
-	SELECT typeid
-	FROM bettype WITH(NOLOCK)
-	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126)
-		
+INSERT INTO @Bettype(bettype,soccerType)
+SELECT typeid, CASE WHEN typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1 ELSE 2 END as SoccerType
+FROM bettype WITH(NOLOCK)
+WHERE (typeid < 31 OR typeid BETWEEN 121 AND 999)
+	AND 1 = CASE WHEN @SoccerType = 0 THEN 1 
+				WHEN @SoccerType = 1 AND typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1 
+				WHEN @SoccerType = 2 AND typeid NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1 
+				ELSE 0 END							
+
+IF ISNULL(@IncludeBettype,'')<>'' AND @soccerType <> 0
+BEGIN
+	INSERT INTO @Bettype(bettype,soccerType)
+		SELECT val, @soccerType
+		FROM strSPlit(@IncludeBettype,',')
+END
+			
 INSERT INTO @Match 
 SELECT	m.matchid, 
 		s.sporttype,
@@ -54,8 +68,8 @@ INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype
 WHERE s.SportType = 1 --Get matchs of Soccer
 
 SELECT
-		CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END as SportName,
-		CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END as SportType,						
+		CASE WHEN t.soccerType = 1 THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END as SportName,
+		t.soccerType as SportType,						
 		0 ibc,
 		case when dep.custid is null then 1 else 2 end as site,
 		sum((winlost-actual_stake)*virtualrate) WinLost,
@@ -68,18 +82,15 @@ SELECT
 FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
 		LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid		
-		LEFT JOIN @Bettype t ON b.bettype = t.bettype
+		INNER JOIN @Bettype t ON b.bettype = t.bettype
 WHERE	b.winlostdate = @winlostdate
-		AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999)
-		AND 1= CASE WHEN @SoccerType = 0 THEN 1
-					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
-					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
+		--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999)		
 		AND b.matchid > 0		
 		AND b.statusID NOT IN (101, 102,103) 
 		AND b.ruben = 1	
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
-GROUP BY CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END,
-		CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END,		
+GROUP BY CASE WHEN t.soccerType = 1 THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END,
+		t.soccerType,		
 		case when dep.custid is null then 1 else 2 end
 
 -- Get win lost of agent '8RM'
@@ -98,12 +109,9 @@ SELECT
 		-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
-		LEFT JOIN @Bettype t ON b.bettype = t.bettype
+		INNER JOIN @Bettype t ON b.bettype = t.bettype
 WHERE	b.winlostdate = @winlostdate
 		AND b.matchid > 0 
-		AND 1= CASE WHEN @SoccerType = 0 THEN 1
-					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
-					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101, 102,103) 
 		AND b.ruben = 1	
@@ -127,13 +135,10 @@ SELECT
 	-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
-		LEFT JOIN @Bettype t ON b.bettype = t.bettype
+		INNER JOIN @Bettype t ON b.bettype = t.bettype
 WHERE	b.winlostdate = @winlostdate
 	AND b.matchid > 0 
-	AND 1= CASE WHEN @SoccerType = 0 THEN 1
-					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
-					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
-		AND b.bettype < 19001
+	AND b.bettype < 19001
 	AND b.statusID NOT IN (101, 102,103) 
 	AND b.ruben = 1	
 	AND b.recommend = 5707545
@@ -144,13 +149,10 @@ ORDER BY SportType
 SELECT	@LineTotal = isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate), 0) 
 FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN @Match m on b.matchid = m.matchid
-		LEFT JOIN @Bettype t ON b.bettype = t.bettype
+		INNER JOIN @Bettype t ON b.bettype = t.bettype
 WHERE
 		winlostdate = @winlostdate
 		AND b.bettype < 19001 
-		AND 1= CASE WHEN @SoccerType = 0 THEN 1
-					WHEN @SoccerType = 1 AND t.bettype IS NOT NULL THEN 1
-					WHEN @SoccerType = 2 AND t.bettype IS NULL THEN 1 ELSE 0 END
 		AND b.matchid >=0 
 		AND b.statusID NOT IN (101, 102,103,121) --('VOID', 'REJECT','DONE','REFUND') 
 		AND b.ruben = 1	

@@ -1,13 +1,20 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_1]    Script Date: 08/07/2014 13:58:53 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1] @matchid INT
-	,@bettype SMALLINT
-	,@fth SMALLMONEY
-	,@fta SMALLMONEY
-	,@betcount INT = 0
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1] 
+     @matchid INT
+	,@bettype				SMALLINT
+	,@fth					SMALLMONEY	= NULL
+	,@fta					SMALLMONEY	= NULL 
+	,@SelectedSet			VARCHAR(50) = NULL 
+	,@TotalGameHomeSet1		SMALLMONEY	= NULL 
+	,@TotalGameHomeSet2		SMALLMONEY	= NULL 
+	,@TotalGameHomeSet3		SMALLMONEY	= NULL 
+	,@TotalGameHomeSet4		SMALLMONEY	= NULL 
+	,@TotalGameHomeSet5		SMALLMONEY	= NULL 
+	,@TotalGameAwaySet1		SMALLMONEY	= NULL 
+	,@TotalGameAwaySet2		SMALLMONEY	= NULL 
+	,@TotalGameAwaySet3		SMALLMONEY	= NULL 
+	,@TotalGameAwaySet4		SMALLMONEY	= NULL 
+	,@TotalGameAwaySet5		SMALLMONEY	= NULL 
+	,@betcount				INT = 0
 	-- add any params, please modify script in 'special section'
 AS
 /*
@@ -17,7 +24,8 @@ AS
 	DB: DBTRANS.BODB02
 	
 	Revisions:
-		- 20140610@Kathy: Using cluster index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
+		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
+		- 20141017@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		
 */
 BEGIN
@@ -33,7 +41,7 @@ BEGIN
 	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -55,7 +63,7 @@ BEGIN
 			,@BetCount = @betcount
 	END
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231')
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
 	BEGIN
 		DECLARE @affectedagents INT
 
@@ -78,7 +86,21 @@ BEGIN
 			SET @affectedagents = @@rowcount
 
 			UPDATE b
-			SET @modds = modds = CASE betteam
+			SET 
+			
+			@fth = CASE WHEN bettype IN (154,155,1311, 1316) AND BetID = 801 AND @SelectedSet LIKE '%1%' THEN @TotalGameHomeSet1 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 802 AND @SelectedSet LIKE '%2%' THEN @TotalGameHomeSet2 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 803 AND @SelectedSet LIKE '%3%' THEN @TotalGameHomeSet3 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameHomeSet4 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameHomeSet5
+						ELSE @fth END 
+			,@fta = CASE WHEN bettype IN (154,155,1311, 1316) AND BetID = 801 AND @SelectedSet LIKE '%1%' THEN @TotalGameAwaySet1 
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 802 AND @SelectedSet LIKE '%2%' THEN @TotalGameAwaySet2
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 803 AND @SelectedSet LIKE '%3%' THEN @TotalGameAwaySet3 
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameAwaySet4 
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameAwaySet5
+						 ELSE @fta END 	
+			,@modds = modds = CASE betteam
 				WHEN N'h' THEN (hdp2-hdp1) + (@fth - livehomescore) - (@fta - liveawayscore) 
 				WHEN N'a' THEN (hdp1-hdp2) - (@fth - livehomescore) + (@fta - liveawayscore)
 				END,
@@ -165,10 +187,16 @@ BEGIN
 			FROM dbo.bettrans b WITH (ROWLOCK, UPDLOCK)
 				INNER JOIN @currecommend ag on b.recommend = ag.recommend
 			WHERE
-				matchid=@matchid AND
-				bettype=@bettype AND
-				--[status] NOT IN (N'VOID', N'REJECT')
-				statusID NOT IN (101,102)
+				matchid=@matchid 
+				AND Bettype = @bettype
+				AND statusID NOT IN (101,102) -- REJECT & VOID 
+				AND 1 = CASE WHEN @Bettype NOT IN (154,155,1311, 1316) THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1
+							 ELSE 0 END 
 
 			IF @affectedagents <> 100
 				BREAK
@@ -179,7 +207,19 @@ BEGIN
 	ELSE
 	BEGIN
 		UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = modds = CASE betteam
+		SET @fth = CASE WHEN bettype IN (154,155,1311, 1316) AND BetID = 801 AND @SelectedSet LIKE '%1%' THEN @TotalGameHomeSet1 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 802 AND @SelectedSet LIKE '%2%' THEN @TotalGameHomeSet2 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 803 AND @SelectedSet LIKE '%3%' THEN @TotalGameHomeSet3 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameHomeSet4 
+						WHEN bettype IN (154,155,1311, 1316) AND BetID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameHomeSet5
+						ELSE @fth END 
+			,@fta = CASE WHEN bettype IN (154,155,1311, 1316) AND BetID = 801 AND @SelectedSet LIKE '%1%' THEN @TotalGameAwaySet1 
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 802 AND @SelectedSet LIKE '%2%' THEN @TotalGameAwaySet2
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 803 AND @SelectedSet LIKE '%3%' THEN @TotalGameAwaySet3 
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameAwaySet4 
+						 WHEN bettype IN (154,155,1311, 1316) AND BetID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameAwaySet5
+						 ELSE @fta END		
+			,@modds = modds = CASE betteam
 				WHEN N'h' THEN (hdp2 - hdp1) + (@fth - livehomescore) - (@fta - liveawayscore)
 				WHEN N'a' THEN (hdp1 - hdp2) - (@fth - livehomescore) + (@fta - liveawayscore)
 				END
@@ -309,11 +349,17 @@ BEGIN
 				WHEN @modds < 0 THEN 113 --LOSE
 				END
 			,ruben = 1
-		WHERE matchid = @matchid AND bettype = @bettype AND
-			--[status] NOT IN (N'VOID', N'REJECT')
-			statusID NOT IN (101, 102)
+		WHERE matchid = @matchid 
+			AND bettype = @bettype 
+			AND statusID NOT IN (101,102) -- REJECT & VOID 
+				AND 1 = CASE WHEN @Bettype NOT IN (154,155,1311, 1316) THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1
+							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1
+							 ELSE 0 END 
 	END
 END
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_1] TO [vnteam] AS [dbo]

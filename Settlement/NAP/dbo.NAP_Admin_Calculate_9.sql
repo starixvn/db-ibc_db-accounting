@@ -1,10 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9]    Script Date: 08/07/2014 14:06:46 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.Admin_Calculate_9    Script Date: 2/26/2014 6:01:44 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9] @strXML VARCHAR(MAX) = '' OUTPUT
 	,@statusID TINYINT = 0
 	,@winlostdate SMALLDATETIME = NULL
@@ -24,7 +17,7 @@ BEGIN
 	IF @@SERVERNAME IN ('DB043', 'DB044') RETURN
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'

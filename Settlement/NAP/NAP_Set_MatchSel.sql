@@ -1,9 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSel]    Script Date: 09/11/2014 15:49:44 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSel    Script Date: 7/30/2014 5:52:27 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@ToDate DATETIME
 	,@SportType TINYINT = 0
@@ -18,13 +12,14 @@ AS
  Created by: Kathy
  Date: 20131223
  Task: Match results for calculating settlement 
- DB: DB02.BODB02
+ DB: DBPRO/BODB02
  Original: Acc_Set_MatchSel
  Revisions:  
 		- 20140417@Kathy: re-arrange order list (follow by old system)
 		- 20140421@Kathy: get match status in queue
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20140714@Kathy: filter by running penalty shootout only [Redmine:#17142]
+		- 20141006@Jamie: Get ResultDetail for Tennis [Redmine:#23034]
       
  Param explanation:  
 	@MatchCode: match code
@@ -222,7 +217,8 @@ BEGIN
 			,0 as IsExistHTFGLG
 			,0 as WinOdds
 			,0 as PlaceOdds
-		FROM dbo.match m WITH (NOLOCK)
+		FROM	dbo.match m WITH (NOLOCK)
+				LEFT JOIN dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = r.MatchId AND r.ResourceId ='00'
 		WHERE m.eventdate BETWEEN @FromDate AND @ToDate 
 			AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END 			
 			AND CASE WHEN @UncalMultiOnly = 0 THEN 1 
@@ -231,7 +227,12 @@ BEGIN
 				END IS NOT NULL AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END 
 			AND (@matchcode = '' OR (m.matchid = @matchid OR m.matchcode = @matchcode)) 
 			AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) 
-			AND (@isRefund IS NULL OR (@isRefund = 1 AND betstatus LIKE 'Refund%') OR (@isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%'))
+			AND (@isRefund IS NULL 
+					OR (m.sporttype <> 5 AND @isRefund = 1 AND betstatus LIKE 'Refund%') 
+					OR (m.sporttype <> 5 AND @isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%')
+					OR (m.sporttype = 5 AND @isRefund = 1 AND ISNULL(r.SettlementStatusID,0) BETWEEN 1 AND 3)
+					OR (m.sporttype = 5 AND @isRefund = 0 AND ISNULL(r.SettlementStatusID,0) NOT BETWEEN 1 AND 3)
+				)
 	) tmp
 	LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
 	where (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
@@ -366,6 +367,18 @@ BEGIN
 		,m.matchid
 		,m.betstatus
 		,m.matchcode			
+
+	-- Get TENNIS RESULT 
+	SELECT	MatchId
+			, ResourceId
+			, HomeValue
+			, AwayValue
+			, ResultStatusID
+			, SettlementStatusID
+	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
+	WHERE	@Sporttype IN (0,5)
+			AND ResourceId LIKE '0[0-5]'  
+			AND MatchID IN (SELECT MatchID FROM #matchList)
 
 	DROP TABLE #matchList
 END

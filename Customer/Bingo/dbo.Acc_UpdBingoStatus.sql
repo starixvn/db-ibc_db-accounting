@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_UpdBingoStatus]
+﻿USE [CustDB]
+GO
+ALTER PROCEDURE [dbo].[Acc_UpdBingoStatus]
 	@custid INT,
 	@disabledBingo BIT=NULL,
 	@syncBG BIT=NULL,
@@ -31,6 +33,7 @@ Revisions:
 	- 20130827@Johnson: Check enabled status on DBTXN instead of DBAGE
 	- 20130926@Kathy: Apply exec rep
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Turn to use Acc_ExecRep_Cust_04)	
+	- 20141125@Jamie: Use Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]	
 */
 SET NOCOUNT ON
 
@@ -115,7 +118,7 @@ WHERE custid=@custid
 IF @disabledBingo = 1 OR @enableDownline = 1
 BEGIN
 	--20130926@Kathy: Apply ExecRep 
-	EXEC [Acc_ExecRep_Cust_04]
+	EXEC [Acc_CustomerInfo_Execrep_04]
 		@CustID		= @CustID,
 		@RoleID		= @RoleID,
 		@Action		= 'BingoStatus',
@@ -197,10 +200,8 @@ BEGIN CATCH
 		@duration = @duration
 END CATCH
 
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_UpdBingoStatus] TO [bodbadminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_UpdBingoStatus] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT EXECUTE ON [dbo].[Acc_UpdBingoStatus] TO [bodbDownlineNet] AS [dbo]
 GO

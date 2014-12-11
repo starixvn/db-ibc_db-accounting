@@ -1,9 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29_PreCal]    Script Date: 08/07/2014 14:05:49 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_PreCal] (@matchids VARCHAR(2000)) WITH RECOMPILE
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_Precal] (@matchids VARCHAR(2000)) WITH RECOMPILE
 AS
 /*
 	Created: Kathy
@@ -13,7 +8,7 @@ AS
 	Original: Admin_Calculate_29_PreCal
 
 	Revisions:
-		
+		- 20141030@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 	Param's Explanation:
 	@matchid: matchid of match to be settled
 */
@@ -90,6 +85,7 @@ BEGIN
 		,livehomescore SMALLINT
 		,liveawayscore SMALLINT
 		,liveindicator BIT
+		,betcheck NVARCHAR(50) 
 		,RN TINYINT
 		,-- set No. for selection in the combination
 		CNT TINYINT
@@ -113,6 +109,7 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,betcheck
 		)
 	SELECT bm.refno
 		,bm.transid
@@ -128,6 +125,7 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,bm.betcheck
 	FROM dbo.bettransm bm WITH (ROWLOCK)
 		INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
 
@@ -146,6 +144,7 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,betcheck
 		)
 	SELECT bm.refno
 		,bm.transid
@@ -161,6 +160,7 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,bm.betcheck
 	FROM dbo.bettransm14 bm WITH (ROWLOCK)
 		INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
 		-- prepare Seq of each refno
@@ -231,6 +231,7 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,betcheck
 		)
 	SELECT pb.RefNo
 		,rc.Serial
@@ -248,6 +249,7 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,pb.betcheck
 	FROM @parlay_base pb
 		INNER JOIN @temp_bettrans tb ON pb.refno = tb.refno
 		INNER JOIN dbo.RefCombination rc ON pb.RN = rc.seq AND pb.CNT = rc.N AND (tb.bitmap & rc.bitmap) > 0
@@ -289,6 +291,7 @@ BEGIN
 	FROM @temp_bettrans tb
 		INNER JOIN dbo.RefCombination rc ON tb.N = rc.N AND (tb.bitmap & rc.bitmap) > 0
 END
-
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_29_PreCal] TO [vnteam] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_29_Precal] TO [vnteam] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29_Precal] TO [vnteam] AS [dbo]

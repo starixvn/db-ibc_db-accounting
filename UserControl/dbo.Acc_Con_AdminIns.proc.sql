@@ -29,6 +29,7 @@ Revisions:
 	- 20120601@Sophia: Modify @LogData
 	- 20130118@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20141126@Dom: Synchronize user data between Accounting and AdminSite: Insert data to AdminSiteUser table
 	
 Param's Explanation:
 • @ErrCode:
@@ -79,6 +80,19 @@ IF @@ERROR <> 0
         RETURN;
     END
 COMMIT TRANSACTION;
+
+/* Insert data to AdminSiteUser */ 	
+BEGIN TRY
+	IF(@roleid >4)
+		EXEC DBPRO.bodb02.dbo.Dot_Admin_Add_AdminSiteUser @custid, @username, @userpwd, @UserID
+END TRY
+BEGIN CATCH
+	DELETE FROM Customer WHERE custid = @custid
+	DELETE FROM custInfo WHERE custid = @custid
+	SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'Add customer failed.' WHEN 'CS' THEN N'Add customer failed.' WHEN 'J' THEN N'Add customer failed.' ELSE N'Add customer failed.' END;
+		RETURN;
+END CATCH
+
 EXEC DBPOLICY.bodb02.dbo.Acc_Con_AdminPolicyIns @CustID = @Custid, @Userid = @UserID, @GroupID = @GroupID, @System = @System;
 /**************Write to Log table ********************/
 DECLARE @LogData AS NVARCHAR (500), 

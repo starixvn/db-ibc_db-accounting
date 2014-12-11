@@ -1,18 +1,9 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay]    Script Date: 08/27/2014 14:06:29 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 22/07/2014 10:30:29 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 3/20/2014 5:36:24 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 3/17/2014 4:21:09 PM ******/
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay] (
 	@matchids VARCHAR(2000)
 	,@creator INT
 	,@action VARCHAR(20) = 'CAL'
 	,@resultPS NVARCHAR(10) = NULL
+	,@SelectedSet VARCHAR(50) = NULL 
 	,@IP VARCHAR(15) = ''
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -29,6 +20,7 @@ AS
 		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140717@Kathy: Settle MP for Penalty Shootout [Redmine:#17142]
 		- 20141007@Kathy: Correct condition in case settle for sport (Tennis/VolleyBall/Badminton/Squash) [Redmine:#24073]
+		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 	Param's Explanation:
 	@resultPS: match result of penalty shootout
 
@@ -40,6 +32,26 @@ BEGIN
 	DECLARE  @SkipBalanceUpdate BIT
 			,@procName nvarchar(50)
 			,@mode int
+	DECLARE	  @TotalGameMatch			INT
+				,@TotalGameHomeMatch	INT 
+				,@TotalGameAwayMatch	INT 
+				,@TotalGameHomeSet1		INT	
+				,@TotalGameHomeSet2		INT 
+				,@TotalGameHomeSet3		INT
+				,@TotalGameHomeSet4		INT 
+				,@TotalGameHomeSet5		INT
+				,@TotalGameAwaySet1		INT 
+				,@TotalGameAwaySet2		INT 
+				,@TotalGameAwaySet3		INT
+				,@TotalGameAwaySet4		INT 
+				,@TotalGameAwaySet5		INT 
+				,@SetxGameyHomeWON		VARCHAR(MAX) 
+				,@SetxGameyAwayWON		VARCHAR(MAX)
+				,@SetxGameyDRAW			VARCHAR(MAX) 
+				,@SetxGameyFinishedGame	VARCHAR(MAX) 	
+				,@SetxGameyREFUND		VARCHAR(MAX) 	
+				,@SelectedSetCAL		VARCHAR(50)   
+				,@SelectedSetREFUND		VARCHAR(50)  
 
 	SELECT   @SkipBalanceUpdate = 0
 			,@procName = OBJECT_NAME(@@procid)
@@ -165,13 +177,13 @@ BEGIN
 			,@BetCount = 0
 		IF @@ERROR <> 0
 		BEGIN
-			SELECT	@ErrCode = 201
+			SELECT	@ErrCode = 1001009
 					,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
 			RETURN
 		END 		
 	END TRY
 	BEGIN CATCH 
-		SELECT	@ErrCode = 201
+		SELECT	@ErrCode = 1001009
 				,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
 		RETURN
 	END CATCH
@@ -227,8 +239,8 @@ BEGIN
 		FROM match with(NOLOCK)
 		WHERE matchid = @matchid
 
-		IF (@SportType IN (5, 6, 9, 30)) AND @action = 'CAL' AND @betstatus not like 'Refund%' -- Tennis/VolleyBall/Badminton/Squash: get TotalGamesPlayed
-												EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
+		IF (@SportType IN (6, 9, 30)) AND @action = 'CAL' AND @betstatus not like 'Refund%' -- Tennis/VolleyBall/Badminton/Squash: get TotalGamesPlayed
+			EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
 				,@Total = @TennisTotal OUTPUT
 				,@TotalHome = @T_Home OUTPUT
 				,@TotalAway = @T_Away OUTPUT
@@ -240,7 +252,7 @@ BEGIN
 
 			SELECT @finalawayscore = @tmp
 		END
-
+		
 		-- CALCULATE RESULT of mixparlay for each match
 		---------------------------------------------------------------
 		--BEGIN TRANSACTION
@@ -255,19 +267,83 @@ BEGIN
 		--EXEC dbo.NAP_Admin_Calculate_9m @matchid,@finalhomescore,@finalawayscore,@hthomescore,@htawayscore,@matchdate,@action,@TennisTotal
 
 		--COMMIT TRANSACTION
-		
-		EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
-			,@mode = 'ALL'
-			,@action = @action
-			,@resultPS = @resultPS
-			,@IsRefundHT = @IsRefundHT
-			,@fth = @finalhomescore
-			,@fta = @finalawayscore
-			,@hth = @hthomescore
-			,@hta = @htawayscore
-			,@matchdate = @matchdate
-			,@TennisTotal = @TennisTotal
+		IF @Sporttype = 5 AND @action IN ('REFUND','CAL')--Tennis 
+		BEGIN
+			EXEC dbo.NAP_Admin_Settlement_4
+					 @MatchID					= @MatchID
+					,@TotalGameMatch			= @TotalGameMatch OUTPUT
+					,@TotalGameHomeMatch		= @TotalGameHomeMatch OUTPUT
+					,@TotalGameAwayMatch		= @TotalGameAwayMatch OUTPUT
+					,@TotalGameHomeSet1			= @TotalGameHomeSet1 OUTPUT
+					,@TotalGameHomeSet2			= @TotalGameHomeSet2 OUTPUT
+					,@TotalGameHomeSet3			= @TotalGameHomeSet3 OUTPUT
+					,@TotalGameHomeSet4			= @TotalGameHomeSet4 OUTPUT
+					,@TotalGameHomeSet5			= @TotalGameHomeSet5 OUTPUT
+					,@TotalGameAwaySet1			= @TotalGameAwaySet1 OUTPUT
+					,@TotalGameAwaySet2			= @TotalGameAwaySet2 OUTPUT
+					,@TotalGameAwaySet3			= @TotalGameAwaySet3 OUTPUT
+					,@TotalGameAwaySet4			= @TotalGameAwaySet4 OUTPUT
+					,@TotalGameAwaySet5			= @TotalGameAwaySet5 OUTPUT
+					,@SetxGameyHomeWON			= @SetxGameyHomeWON OUTPUT
+					,@SetxGameyAwayWON			= @SetxGameyAwayWON OUTPUT
+					,@SetxGameyDRAW				= @SetxGameyDRAW OUTPUT
+					,@SetxGameyFinishedGame		= @SetxGameyFinishedGame OUTPUT
+					,@SetxGameyREFUND			= @SetxGameyREFUND OUTPUT
+					,@SelectedSetCAL			= @SelectedSetCAL OUTPUT
+					,@SelectedSetREFUND			= @SelectedSetREFUND OUTPUT
 
+
+			SELECT	 @TennisTotal	= @TotalGameMatch
+					,@T_Home		= @TotalGameHomeMatch
+					,@T_Away		= @TotalGameAwayMatch
+
+			EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+					,@mode = 'CAL-SET'
+					,@action = @action
+					,@resultPS = @resultPS
+					,@IsRefundHT = @IsRefundHT
+					,@fth = @finalhomescore
+					,@fta = @finalawayscore
+					,@hth = @hthomescore
+					,@hta = @htawayscore
+					,@matchdate = @matchdate
+					,@TennisTotal = @TennisTotal
+					,@TotalGameMatch			= @TotalGameMatch 
+					,@TotalGameHomeMatch		= @TotalGameHomeMatch 
+					,@TotalGameAwayMatch		= @TotalGameAwayMatch 
+					,@TotalGameHomeSet1			= @TotalGameHomeSet1 
+					,@TotalGameHomeSet2			= @TotalGameHomeSet2 
+					,@TotalGameHomeSet3			= @TotalGameHomeSet3 
+					,@TotalGameHomeSet4			= @TotalGameHomeSet4 
+					,@TotalGameHomeSet5			= @TotalGameHomeSet5 
+					,@TotalGameAwaySet1			= @TotalGameAwaySet1 
+					,@TotalGameAwaySet2			= @TotalGameAwaySet2 
+					,@TotalGameAwaySet3			= @TotalGameAwaySet3 
+					,@TotalGameAwaySet4			= @TotalGameAwaySet4 
+					,@TotalGameAwaySet5			= @TotalGameAwaySet5 
+					,@SetxGameyHomeWON			= @SetxGameyHomeWON 
+					,@SetxGameyAwayWON			= @SetxGameyAwayWON 
+					,@SetxGameyDRAW				= @SetxGameyDRAW 
+					,@SetxGameyFinishedGame		= @SetxGameyFinishedGame 
+					,@SetxGameyREFUND			= @SetxGameyREFUND 
+					,@SelectedSetCAL			= @SelectedSetCAL 
+					,@SelectedSetREFUND			= @SelectedSetREFUND 
+		END
+		ELSE 
+		BEGIN 		
+			EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+				,@mode = 'ALL'
+				,@action = @action
+				,@resultPS = @resultPS
+				,@IsRefundHT = @IsRefundHT
+				,@fth = @finalhomescore
+				,@fta = @finalawayscore
+				,@hth = @hthomescore
+				,@hta = @htawayscore
+				,@matchdate = @matchdate
+				,@TennisTotal = @TennisTotal
+				,@SelectedSet = @SelectedSet
+		END
 		UPDATE @match
 		SET CalTime = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
 		WHERE rn = @rn
@@ -280,7 +356,7 @@ BEGIN
 
 	--EXEC dbo.NAP_Admin_Calculate_29_Precal @matchids
 
-				EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
+		EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
 			,@mode = 'PRECAL-29'
 
 	SET @PreCal = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
@@ -378,7 +454,7 @@ BEGIN
 		--EXEC dbo.NAP_Admin_Calculate_29 @matchids = @subMatchIDs
 		--	,@matchdate = @matchdate
 		
-								EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
+																																EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
 			,@mode = 'CAL-29'
 			,@matchdate = @matchdate
 
@@ -413,18 +489,22 @@ BEGIN
 			BREAK
 
 		IF @action = 'CAL'
-												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
-				,@command = 'M'
+			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
+				 @matchid			= @matchid
+				,@command			= 'M'
+				,@SelectedSetCAL	= @SelectedSetCAL
 		ELSE IF @action IN ('REFUND', 'REFUND-FT', 'REFUND-HT')
-												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
+				 @matchid = @matchid
 				,@command = 'R'
+				,@SelectedSetREFUND = @SelectedSetREFUND
 		--ELSE IF @action IN ('REFUND-FT', 'REFUND-HT')
 		--										EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 		--		,@command = 'F'
 
 		---------------------------------------------------------------
 		-- update match coz m88 project using DB02.dbo.match.tstamp to know match do parlay settle (vivi@2009-8-27)	
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Parlay'
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Parlay'
 			,@Matchid = @matchid
 			,@creator = @creator
 
@@ -603,10 +683,5 @@ BEGIN
 		SET @rn = @rn + 1
 	END
 END
-
-
-
-
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]

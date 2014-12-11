@@ -43,6 +43,7 @@ Revisions:
 	- 20130724@Elodie: Get winlostdate field
 	- 20140306@Dom: Add Keno
 	- 20140908@Dom:	[Redmine #22012] Update VS conditions
+	- 20141103@Dom: Apply sport bettype matrix
 */	
 SET NOCOUNT ON	
 Declare @Data TABLE (
@@ -117,6 +118,11 @@ DECLARE @DetailData TABLE (
 	betteam			nvarchar(50)
 )
 
+----Get Sport Bettype Matrix------
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 
 IF @Bettype = 0
 BEGIN
@@ -182,13 +188,15 @@ BEGIN
 		from 
 			dbo.bettrans_bk as b with (nolock,index=IX_custid) 
 			inner join dbo.match_BK as m with (nolock) on b.matchid = m.matchid 
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid and
-				b.bettype < 19001 and
-				b.bettype not in (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) and 
-				b.bettype NOT BETWEEN 1501 and 1599 and --20120626@Elodie: exclude outright, HR from sportbook
-				b.bettype NOT IN (SELECT  bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
+				s.EventType = 1
+				--b.bettype < 19001 and
+				--b.bettype not in (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) and 
+				--b.bettype NOT BETWEEN 1501 and 1599 and --20120626@Elodie: exclude outright, HR from sportbook
+				--b.bettype NOT IN (SELECT  bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
 		
 		--Mix Parlay
 		INSERT INTO @Data
@@ -327,7 +335,7 @@ BEGIN
 		--- Casino
 		INSERT INTO @Data
 		select 
-			 bettype,   
+			 b.bettype,   
 			 b.betid transid,   
 			 isnull(b.BetID,0),
 			 b.refno,
@@ -384,15 +392,17 @@ BEGIN
 			 '' as showtime,
 			b.winlostdate								 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
-				b.custid = @Custid  
-				AND bettype = 71								--20120405@Hurri
+				b.custid = @Custid AND 
+				s.ProductID = 6 
+				--AND bettype = 71								--20120405@Hurri
 				
 		--IBC BIngo
 		INSERT INTO @Data
 		select 
-			 bettype,   
+			 b.bettype,   
 			 b.betid transid,   
 			 isnull(b.BetID,0),
 			 b.refno,
@@ -449,15 +459,17 @@ BEGIN
 			 '' as showtime,
 			b.winlostdate								 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
-				b.custid = @Custid  
-				AND bettype = 73
+				b.custid = @Custid AND
+				s.ProductID = 7
+				--AND bettype = 73
 
 		--keno
 		INSERT INTO @Data
 		select 
-			 bettype,   
+			 b.bettype,   
 			 b.betid transid,   
 			 isnull(b.BetID,0),
 			 b.refno,
@@ -514,11 +526,13 @@ BEGIN
 			 '' as showtime,
 			b.winlostdate								 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
-				b.custid = @Custid  
-				and bettype between 1501 and 1599
+				b.custid = @Custid and
+				s.ProductID = 8
+				--and bettype between 1501 and 1599
 				
 		--- P2P
 		INSERT INTO @Data
@@ -716,6 +730,7 @@ BEGIN
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
 				inner join dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 				inner join bodb02.dbo.league l with (nolock) on odds.leagueid=l.leagueid    
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 				left join (			
 					SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 							f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
@@ -723,7 +738,7 @@ BEGIN
 							INNER JOIN dbo.bettransm f WITH (NOLOCK) ON t.refno = f.refno 
 					WHERE	t.bettype in (31,41) AND f.bettype in (32,42)
 				) bm on b.transid = bm.refno 
-		where	b.bettype in (31,32,33,41,42,43) 
+		where	s.ProductID = 2 --b.bettype in (31,32,33,41,42,43) 
 				and b.winlostdate >= @FromDate 
 				and b.winlostdate<= @ToDate 
 				and b.custid = @Custid   
@@ -792,6 +807,7 @@ BEGIN
 			bettrans_bk as b with (nolock, index=IX_custid)    
 			INNER JOIN VSOutright_bk o WITH (NOLOCK) ON b.oddsid = o.Orid
             INNER JOIN bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+			INNER JOIN @SportBettype s ON s.BetType = b.BetType 
             left join (     
 				SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 				  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
@@ -802,7 +818,9 @@ BEGIN
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid and
-				b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())		
+				s.ProductID = 5 and
+				s.EventType = 3
+				--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())		
 				
  END
  ELSE

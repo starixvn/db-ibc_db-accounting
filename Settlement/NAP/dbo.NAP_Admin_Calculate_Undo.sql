@@ -1,12 +1,6 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Undo]    Script Date: 09/10/2014 09:47:07 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_Undo    Script Date: 3/20/2014 5:36:25 PM ******/
-
-/****** Object:  Stored Procedure dbo.Admin_Calculate_Undo    Script Date: 2/26/2014 6:01:44 PM ******/
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Undo] @matchid INT
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Undo] 
+	 @matchid INT
+	,@SelectedSet	VARCHAR(50)	= NULL
 AS
 /*
 	Created: Kathy
@@ -18,6 +12,7 @@ AS
 	Revisions:
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
+		- 20141022@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		
 	Param's Explanation:
 			• @matchid: matchid of match to be unsettled
@@ -26,7 +21,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -64,15 +59,22 @@ BEGIN
 			,scomm = 0
 		WHERE matchid = @matchid AND
 			--status NOT IN ('running','waiting','void','reject')
-			statusID NOT IN (0, 1, 102, 101) AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			statusID NOT IN (0, 1, 102, 101) 
+			--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND 1 = CASE WHEN @SelectedSet IS NULL THEN 1 
+						 WHEN @SelectedSet LIKE '%1%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 801 OR BetID BETWEEN 80101 AND 80199) THEN 1 
+						 WHEN @SelectedSet LIKE '%2%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 802 OR BetID BETWEEN 80201 AND 80299) THEN 1
+						 WHEN @SelectedSet LIKE '%3%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 803 OR BetID BETWEEN 80301 AND 80399) THEN 1
+						 WHEN @SelectedSet LIKE '%4%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 804 OR BetID BETWEEN 80401 AND 80499) THEN 1
+						 WHEN @SelectedSet LIKE '%5%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 805 OR BetID BETWEEN 80501 AND 80599) THEN 1
+						 WHEN @SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20,153,1301,1302,1303,1305,1306,1308) THEN 1 
+						 ELSE 0 END 
 
 		IF @@ROWCOUNT < 10000
 			BREAK
 	END
 END
-
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Undo] TO [vnteam] AS [dbo]

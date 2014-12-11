@@ -1,9 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_BetDaq_Move]    Script Date: 08/07/2014 14:10:24 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_BetDaq_Move    Script Date: 3/17/2014 4:21:11 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_BetDaq_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
@@ -20,8 +14,8 @@ AS
 	DB: DBTXN/BODB02 
 
 	Revisions: 
-			-20140512@Kathy: Add more log to distinguish between NAP and old settlement system
-
+			- 20140512@Kathy: Add more log to distinguish between NAP and old settlement system
+			- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 
 
@@ -36,7 +30,8 @@ BEGIN
 			@leagueID		INT,
 			@eventdate		DATETIME,			
 			@newEventdate	DATETIME,
-			@matchcode	VARCHAR(20)
+			@matchcode		VARCHAR(20),
+			@sporttype		INT 
 
 	DECLARE @finalhomescore INT, @finalawayscore INT,
 			@hthomescore INT, @htawayscore INT,
@@ -61,7 +56,8 @@ BEGIN
 			@htawayscore = htawayscore,
 			@goalrecord = goalrecord,
 			@betstatus = betstatus,
-			@matchcode = matchcode
+			@matchcode = matchcode,
+			@sporttype = sporttype
 	FROM	DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE	matchid = @MatchID 
 
@@ -91,13 +87,16 @@ BEGIN
 			INNER JOIN @tmpOdds o ON b.bettype = o.bettype 
 	WHERE	b.matchid = @MatchID 
 			AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) or b.recommend = 1688156)
+			AND b.ruben = 0
+			AND 1 = CASE WHEN @Sporttype = 5 AND b.bettype NOT IN (1,2,3,20) THEN 0 
+						 ELSE 1 END 
 			/*
 			AND (
-				b.custid IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (1)) 
-				or b.recommend IN (Select CustID from  [f_GetBetDaqCustomer_xtest] (2))
+				b.custid IN (Select CustID from  [f_GetBetDaqCustomer] (1)) 
+				or b.recommend IN (Select CustID from  [f_GetBetDaqCustomer] (2))
 				)
 			*/	
-			AND b.ruben = 0
+			
 	IF @@ERROR <>0
 	BEGIN
 		SELECT	@ErrCode = 103,

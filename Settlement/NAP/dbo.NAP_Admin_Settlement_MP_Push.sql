@@ -1,10 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 08/15/2014 13:56:59 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 3/17/2014 4:21:08 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -22,7 +15,7 @@ AS
 	Revisions:		
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
-						   
+		- 20141117@Jamie: Change ErrCode [Redmine:#23034]				   
 	Param's Explanation:		
 		
 */
@@ -90,7 +83,7 @@ BEGIN
 
 	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
 	BEGIN
-		SELECT   @ErrCode = 100
+		SELECT   @ErrCode = 1001011
 				,@ErrMsg = 'All matches are being calculated, except following matches ' 
 							+ CASE WHEN ISNULL(@NotKeyScoreList, '') <> '' 
 									THEN  '(not keyed in score yet): ' + @NotKeyScoreList 
@@ -165,7 +158,6 @@ BEGIN
 		END
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO

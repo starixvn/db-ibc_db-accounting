@@ -1,6 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype]
 	@winlostdate	datetime,
-	@SoccerType		INT = 1
+	@SoccerType		INT = 1,
+	@IncludeBettype VARCHAR(MAX) = ''
 AS
 SET NOCOUNT ON
 
@@ -28,10 +29,11 @@ SET NOCOUNT ON
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 		- 20130731@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				  
 		- 20140711@Johnson: Separate major and minor bettypes of soccer
-	
+		- 20141110@Johnson: include additional bettypes into report 
 	Param's Explanation: 
 		- @SoccerType= 1: Major bettypes
 					= 2: Minor bettypes	
+		- @IncludeBettype: include more bettypes in some specific cases(minor bettypes soccer get some major bettypes)
 */		
 	
 	Declare @tmpBettype table (	Bettype			int primary key, 
@@ -75,6 +77,15 @@ SET NOCOUNT ON
 	DELETE @tmpBettype 
 	WHERE 1 = CASE WHEN @SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1
 					WHEN @SoccerType = 2 AND Bettype IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1 ELSE 0 END
+	
+	IF ISNULL(@IncludeBettype,'') <> ''
+	BEGIN
+		INSERT INTO @tmpBettype
+		SELECT val, val
+		FROM dbo.strSplit(@IncludeBettype,',')
+			LEFT JOIN @tmpBettype t ON val = t.bettype
+		WHERE t.Bettype IS NULL
+	END
 					
 	--Declare @temp table to contain all matches based on @winlostdate
 	DECLARE @Match TABLE (matchid INT, matchcode NVARCHAR(50), type varchar(10), primary key(matchid, type))

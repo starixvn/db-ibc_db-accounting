@@ -53,7 +53,7 @@ Revisions:
 						- Add Virtual Greyhounds/ Motor Racing (182,184)
 	- 20140611@Elodie: Implement separate setting pages for Keno [Redmine:#13156]
 	- 20140828@Logan:   Add constraint for Esports status [Redmine: #20531]
-	
+	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine:#26647]
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -645,7 +645,8 @@ BEGIN
 	    @v202apositiontaking_1513 SMALLMONEY,
 	    @v202apositiontaking_1507 SMALLMONEY,
 	    @v202apositiontaking_1508 SMALLMONEY,
-	    @v202apositiontaking_1509 SMALLMONEY
+	    @v202apositiontaking_1509 SMALLMONEY,
+	    @v202apositiontaking_1514 SMALLMONEY
 
     SELECT @apositiontaking_1 = apositiontaking, @alivepositiontaking_1 = alivepositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=1 AND sporttype=1
     SELECT @apositiontaking_3 = apositiontaking, @alivepositiontaking_3 = alivepositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=3 AND sporttype=1
@@ -742,6 +743,7 @@ BEGIN
     SELECT @v202apositiontaking_1507 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1507
     SELECT @v202apositiontaking_1508 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1508
     SELECT @v202apositiontaking_1509 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1509
+    SELECT @v202apositiontaking_1514 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1514
 
     print  'Move member '+@membername+' FROM agent id '+convert(VARCHAR(20), @recommend_old)+' to agent '+@agentname+' (id ' + convert(VARCHAR(20), @recommend)+')'
 
@@ -1418,7 +1420,33 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)	
 	    return
     END
+	
+	EXEC dbo.Acc_CustomerUpdMemberKeno_Positiontaking
+	    @custid  = @custid,
+	    @sporttype	= 202,
+	    @bettype = 1514,
+	    @apositiontaking = @v202apositiontaking_1514,
+    	
+	    @UserID	= @UserID,	
+	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrMsg	 = @ErrMsg OUTPUT	
 
+    IF CHARINDEX('-101', @ErrCode_1) = 0
+    BEGIN
+	    --ROLLBACK TRANSACTION MANUALLY
+	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											    recommend = @recommend_old
+	    WHERE custid = @custid
+    	
+	    update custinfo with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											    recommend = @recommend_old
+	    WHERE custid = @custid
+    	
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)	
+	    return
+    END
+    
     --- update suspended status
     IF @aSuspended = 1 AND @Suspended = 0
     BEGIN

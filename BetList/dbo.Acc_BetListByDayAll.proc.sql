@@ -63,6 +63,7 @@ AS
 		- 20130718@Elodie: Apply core betlist
 		- 20140306@Dom: Add Keno
 		- 20140908@Dom:	[Redmine #22012] Update VS conditions
+		- 20141103@Dom: Apply sport bettype matrix
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -70,6 +71,12 @@ AS
 
 BEGIN
     SET NOCOUNT ON;
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
     DECLARE @tmpStatus TABLE (
         [statusID] TINYINT);
     IF (@transtype = 1)
@@ -243,16 +250,16 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
-                   INNER JOIN
-                   dbo.match14 AS m WITH (NOLOCK)
-                   ON b.matchid = m.matchid
+                   INNER JOIN dbo.match14 AS m WITH (NOLOCK) ON b.matchid = m.matchid
+				   INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
-                   AND b.winlostdate = @fromdate
-                   AND b.bettype < 19001 AND b.bettype NOT IN (10, 31, 32, 33, 41, 42, 43/*, 1231,1232,1233,1237,1238*/) and 
-				   b.bettype NOT BETWEEN 1501 and 1599 AND --20120626@Elodie: exclude outright, HR from sportbook
-				   b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-                   AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus);
+					AND b.winlostdate = @fromdate
+					AND s.EventType = 1
+					-- AND b.bettype < 19001 AND b.bettype NOT IN (10, 31, 32, 33, 41, 42, 43/*, 1231,1232,1233,1237,1238*/) and 
+					--b.bettype NOT BETWEEN 1501 and 1599 AND --20120626@Elodie: exclude outright, HR from sportbook
+					--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+					AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus);
                                       
 			-- Virtual HR
             INSERT INTO @Data
@@ -320,10 +327,13 @@ BEGIN
             FROM   dbo.bettrans14 b WITH (NOLOCK)
                    INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+				   INNER JOIN @SportBettype s ON s.BetType = b.BetType 
             WHERE  b.custid = @custid
-                   AND b.winlostdate = @fromdate
-                   AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT bettype FROM dbo.f_VSHorseRacingByBettype())
-                   AND b.statusID IN (SELECT statusID FROM @tmpStatus)
+					AND b.winlostdate = @fromdate
+					AND s.ProductID = 5
+					AND s.EventType = 3
+                   --AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT bettype FROM dbo.f_VSHorseRacingByBettype())
+					AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                       						                                   
             -- CASINO 
             INSERT INTO @Data
@@ -389,12 +399,13 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND bettype = 71								--20120405@Hurri
-                   AND b.statusID IN (SELECT [statusID]
-                                      FROM   @tmpStatus);
+				   AND s.ProductID = 6
+                   --AND bettype = 71								--20120405@Hurri
+                   AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
             -- IBC Bingo 
             INSERT INTO @Data
             SELECT 252, --sporttype,
@@ -459,11 +470,13 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
-                   AND b.winlostdate = @fromdate
-                   AND bettype = 73
-                   AND b.statusID IN (SELECT [statusID]
+					AND b.winlostdate = @fromdate
+					AND s.ProductID = 7
+					--AND bettype = 73
+					AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus);
 			-- IBC keno 
             INSERT INTO @Data
@@ -529,11 +542,13 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND bettype BETWEEN 1501 and 1599
+				   AND s.ProductID = 8
+                   --AND bettype BETWEEN 1501 and 1599
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus);
 			
@@ -911,17 +926,17 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
-                   INNER JOIN
-                   dbo.match AS m WITH (NOLOCK)
-                   ON b.matchid = m.matchid
+                   INNER JOIN dbo.match AS m WITH (NOLOCK) ON b.matchid = m.matchid
+				   INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             --phuong.nguyen, remove left join match_remark
             WHERE  b.custid = @custid
-                   AND b.winlostdate = @fromdate
-                   AND b.bettype < 19001 AND b.bettype not in (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/)
-				   AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
-				   AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-                   AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
+					AND b.winlostdate = @fromdate
+					AND s.EventType = 1
+					--AND b.bettype < 19001 AND b.bettype not in (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/)
+					--AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
+					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+					AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
 
 			-- Virtual HR
             INSERT INTO @Data
@@ -989,9 +1004,11 @@ BEGIN
             FROM   dbo.bettrans b WITH (NOLOCK)
                    INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+				   INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+				   AND s.ProductID = 2
+                   --AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
                    AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                                          
             -- CASINO 
@@ -1059,12 +1076,13 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND bettype = 71								--20120405@Hurri
-                   AND b.statusID IN (SELECT [statusID]
-                                      FROM   @tmpStatus);
+				   AND s.ProductID = 6
+                   --AND bettype = 71								--20120405@Hurri
+                   AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus);
             --ibc bingo	
             INSERT INTO @Data
             SELECT 252, --sporttype,
@@ -1129,12 +1147,13 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND bettype = 73
-                   AND b.statusID IN (SELECT [statusID]
-                                      FROM   @tmpStatus);
+				   AND s.ProductID = 7
+                   --AND bettype = 73
+                   AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus);
 			--ibc keno	
             INSERT INTO @Data
             SELECT 202, --sporttype,
@@ -1199,11 +1218,13 @@ BEGIN
 				   swinlost,
 				   b.winlostdate
             FROM   dbo.bettrans AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND bettype BETWEEN 1501 AND 1599
+				   AND s.ProductID = 8
+                   --AND bettype BETWEEN 1501 AND 1599
                    AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
 			UNION ALL
 			SELECT 202, --sporttype,
@@ -1268,10 +1289,12 @@ BEGIN
 				   0 swinlost,
 				   b.winlostdate
             FROM   dbo.translog AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-                   AND b.gameID BETWEEN 1501 AND 1599
+				   AND s.ProductID = 8
+                   --AND b.gameID BETWEEN 1501 AND 1599
                    AND b.statusID = 0
 				   AND EXISTS(SELECT [statusID] FROM   @tmpStatus t WHERE t.statusID = 0);
 
