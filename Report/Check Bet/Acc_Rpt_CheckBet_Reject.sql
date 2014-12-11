@@ -11,6 +11,7 @@ as
 		- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		- 20130121@Johnson: move sp from DB052.BODB02 to DBBET.BK
 		- 20130225@Elodie: Add Virtual Horse Racing report
+		- 20141211@Sophia: change the range of bettypes of Tennis (1301 -> 1399)
 	Param's explanation:		
 	
 */
@@ -28,7 +29,7 @@ Begin
 		and (bt.status<>b.status) 
 		and b.currency <> 20
 		and (
-				bt.bettype < 31  or bt.bettype between 121 AND 999 or bt.bettype between 1301 AND 1334 --sportbook
+				bt.bettype < 31  or bt.bettype between 121 AND 999 or bt.bettype between 1301 AND 1399 --sportbook
 				OR bt.bettype BETWEEN 81 AND 120 --number game					
 				OR bt.bettype IN (31,32,33,41,42,43) --racing
 				OR bt.bettype BETWEEN 1201 AND 1299 --virtual sports
