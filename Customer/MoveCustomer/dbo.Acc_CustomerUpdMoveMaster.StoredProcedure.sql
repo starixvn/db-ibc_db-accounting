@@ -494,8 +494,7 @@ INNER JOIN CustGameType mcg ON scg.CustID = @srecommend AND mcg.GameTypeID = scg
     EXEC dbo.Acc_CustomerUpdMasterVS_MinMaxPositiontaking @sporttype = 184, @bettype = 1231, @mrecommend = @mrecommend, @srecommend = @srecommend
     EXEC dbo.Acc_CustomerUpdMasterVS_MinMaxPositiontaking @sporttype = 186, @bettype = 1220, @mrecommend = @mrecommend, @srecommend = @srecommend
     */
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'horse'
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'LiveCasino'
+    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'horse'    
     EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'virtual-sports', @sporttype = 180, @bettype = 1201
     EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'virtual-sports', @sporttype = 181, @bettype = 1231
     EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'virtual-sports', @sporttype = 182, @bettype = 1231
@@ -503,16 +502,17 @@ INNER JOIN CustGameType mcg ON scg.CustID = @srecommend AND mcg.GameTypeID = scg
     EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'virtual-sports', @sporttype = 184, @bettype = 1231
     EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'virtual-sports', @sporttype = 185, @bettype = 1231
     EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'virtual-sports', @sporttype = 186, @bettype = 1220
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1501
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1511
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1503
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1504
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1505
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1513
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1507
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1508
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1509
-    EXEC dbo.Acc_CustSetting3rd_04 @mrecommend = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1514
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'LiveCasino'
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1501
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1511
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1503
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1504
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1505
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1513
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1507
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1508
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1509
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1514
 
     --when separate code we must update db07.bodb02.dbo.custsetting 
     UPDATE cs
