@@ -20,6 +20,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
+		- 20141204@Jamie: Sportting Solution settlement - GameSession to indicate the type of league [Redmine:#27027]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -41,13 +42,15 @@ BEGIN
 		,@FGLG_HTParlayRunning BIT
 		,@PSParlayRunning BIT
 		,@IsExistPS BIT
+		,@LeagueID	INT
 		-- Tennis Settlement 
-		,@TennisStatusSet1 NVARCHAR(20)
-		,@TennisStatusSet2 NVARCHAR(20)
-		,@TennisStatusSet3 NVARCHAR(20)
-		,@TennisStatusSet4 NVARCHAR(20)
-		,@TennisStatusSet5 NVARCHAR(20)
+		,@TennisStatusSet1	NVARCHAR(20)
+		,@TennisStatusSet2	NVARCHAR(20)
+		,@TennisStatusSet3	NVARCHAR(20)
+		,@TennisStatusSet4	NVARCHAR(20)
+		,@TennisStatusSet5	NVARCHAR(20)
 		,@TennisStatusMatch NVARCHAR(20)	-- Match Scope 
+		,@GameSession		TINYINT			-- Type of League 
 		
 
 	SELECT @IsExistLG = 0
@@ -58,12 +61,23 @@ BEGIN
 		,@IsExistHTLG = 0
 		,@IsExistHTFGLG = 0
 		,@IsExistPS  = 0
+		,@GameSession = 0 
 
 		
 
-	SELECT @sporttype = sporttype
-	FROM match WITH (NOLOCK)
-	WHERE matchid = @matchid
+	SELECT	 @sporttype = sporttype
+			,@LeagueID	= leagueid
+	FROM	match WITH (NOLOCK)
+	WHERE	matchid = @matchid
+
+	SELECT	@GameSession = CASE GameSession 
+								WHEN 1 THEN 1	
+								WHEN 3 THEN 3 
+								ELSE 5 
+								END 
+	FROM	dbo.League WITH (NOLOCK)
+	WHERE	LeagueID = @LeagueID
+			AND @Sporttype = 5 
 
 	IF @excludeRefundFGLG = 0 -- Calculate page
 	BEGIN
@@ -543,7 +557,8 @@ BEGIN
 		,@TennisStatusSet4	AS TennisStatusSet4
 		,@TennisStatusSet5	AS TennisStatusSet5
 		,@TennisStatusMatch	AS TennisStatusMatch
-	FROM DBPRO.BODB02.dbo.match WITH (NOLOCK)
+		,@GameSession		AS GameSession 
+ 	FROM DBPRO.BODB02.dbo.match WITH (NOLOCK)
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
 
@@ -560,9 +575,6 @@ BEGIN
 
 
 END
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]

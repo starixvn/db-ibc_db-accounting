@@ -5,6 +5,8 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_LicGetTotalTicket]    
 	@NormalLicensee VARCHAR(1000),
 	@BALicensee VARCHAR(1000),
@@ -33,7 +35,6 @@ AS
 		-20140401@Hannah: offer Keno
 		-20140421@Hannah: fix bug for Keno
 		-20140704@Jim: offer Sporting solution
-		-20141119@Jim: improve performance
 	Param's Explanation:    
 	+ @ReportBy 1-Live; 2-Non-Live; 0: All;  
 	+ @GroupBy 1-Daily; 2-Monthly
@@ -99,22 +100,20 @@ BEGIN
 	SELECT @sql = @sql + 
 				'IF EXISTS(SELECT 1 FROM @tmpLicenseeReseller lr INNER JOIN bodb_licensee.dbo.licensees l WITH (nolock) ON lr.licenseeid=l.licenseeid  WHERE l.IsDeposit=1 AND lr.ResellerID<>3)' + char(13) +
 				'BEGIN' + char(13) +
-					'SELECT 
-						  li.LicenseeId
-						  ,b.rptDate
-						  ,b.status
-						  ,b.islive
-						  ,b.betcount
-						  INTO #t
-					FROM bodb_licensee.dbo.licensees li WITH (NOLOCK)
-						INNER JOIN bodb_Licensee.dbo.rpt_Betting b WITH ( NOLOCK) ON li.LicenseeID = b.siteID
-						LEFT JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID
-					'+char(13)+
-					'WHERE'+char(13)+
-					'li.isdeposit=1'+ char(13) +
-					'AND b.status NOT IN (-1,103) ' + char(13) +
-					'AND CurrencyID<>20 ' + char(13) +
-					'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
+					'INSERT INTO @data' + char(13) +
+					'SELECT  b.rptDate,lr.ResellerID,lr.licenseeid, SUM(BetCount) AS betcount' + char(13) +
+					'FROM @tmpLicenseeReseller lr' + char(13) +
+						'INNER JOIN bodb_licensee.dbo.licensees lic WITH ( NOLOCK) ON lic.licenseeid=lr.licenseeid'+ char(13) +
+						'INNER JOIN bodb_Licensee.dbo.rpt_Betting b WITH ( NOLOCK) ON lr.LicenseeID = b.siteID' + char(13) +
+						'LEFT JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID' + char(13) +
+					'WHERE ' + char(13) +
+						'b.rptDate BETWEEN lr.AffectedDate AND  ''' + convert(varchar(10),@ToDate, 120) + '''' + char(13) +
+						'AND lr.ResellerID<>3' + char(13) + --BA
+						'AND lic.isdeposit=1'+ char(13) +
+						--'AND b.rptDate >= isnull(lic.AffectedDate,''1999-01-01'')' + char(13) +
+						'AND b.status NOT IN (-1,103) ' + char(13) +
+						'AND CurrencyID<>20 ' + char(13) +
+						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
 						CASE WHEN @ShowRB = 1 THEN ' OR b.bettype BETWEEN 31 AND 33' ELSE '' END + 
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END + 
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END + 
@@ -127,55 +126,35 @@ BEGIN
 							WHEN @ReportBy=1 THEN 'AND b.IsLive=1 AND b.bettype NOT IN (9,29,10,31,32,33) '
 							WHEN @ReportBy=2 THEN 'AND b.IsLive=0 '
 							ELSE '' END + char(13) +
-					 
-					'INSERT INTO @data' + char(13) +
-					'SELECT  b.rptDate,lr.ResellerID,lr.licenseeid, SUM(b.betcount) AS betcount' + char(13) +
-					'FROM @tmpLicenseeReseller lr' + char(13) +
-						'INNER JOIN #t b ON lr.LicenseeId = b.LicenseeId ' + char(13) +
-					'WHERE ' + char(13) +
-						'b.rptDate BETWEEN lr.AffectedDate AND  ''' + convert(varchar(10),@ToDate, 120) + '''' + char(13) +
-						'AND lr.ResellerID<>3' + char(13) + --BA
-						'GROUP BY b.rptDate,lr.ResellerID,lr.licenseeid ' + char(13) +	
-						'DROP TABLE #t' + char(13)+
+						'GROUP BY b.rptDate,lr.ResellerID,lr.licenseeid ' + char(13) +							
 				'END' + char(13) 
 	--BA
 	SELECT @sql = @sql + '--BA selection' + char(13)
-		IF @ShowSB = 1
+	IF @ShowSB = 1
 	BEGIN
-		
 		SELECT @sql = @sql + 
 				'IF EXISTS(SELECT 1 FROM @tmpLicenseeReseller WHERE ResellerID = 3)' + char(13) +
 				'BEGIN' + char(13) +
-					'SELECT lic.licenseeId
-							,b.rptDate
-							,b.betcount
-							,b.status
-							,b.islive
-						INTO #tm
-						FROM bodb_Licensee.dbo.rpt_Betting_BA b WITH ( NOLOCK) 
-							INNER JOIN bodb_licensee.dbo.licensees lic WITH ( NOLOCK) ON lic.licenseeid=b.siteID
-							LEFT JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID '+CHAR(13)+
-						'WHERE'	+CHAR(13)+
-						'lic.isdeposit=1
-						AND b.status NOT IN (-1,103)
-						AND CurrencyID<>20 
-						'+CHAR(13)+
+					'INSERT INTO @data' + char(13) +
+					'SELECT b.rptDate, lr.ResellerID,lr.licenseeid, SUM(BetCount) AS betcount ' + char(13) +
+					'FROM @tmpLicenseeReseller lr' + char(13) +
+						'INNER JOIN bodb_licensee.dbo.licensees lic WITH ( NOLOCK) ON lic.licenseeid=lr.licenseeid'+ char(13) +
+						'INNER JOIN bodb_Licensee.dbo.rpt_Betting_BA b WITH ( NOLOCK) ON lr.LicenseeID = b.siteID' + char(13) +
+						'LEFT JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID' + char(13) +
+					'WHERE ' + char(13) +
+						'b.rptDate BETWEEN lr.AffectedDate AND  ''' + convert(varchar(10),@ToDate, 120) + '''' + char(13) +
+						'AND lr.ResellerID=3'+ char(13) +
+						'AND lic.isdeposit=1'+ char(13) +
+						--'AND b.rptDate >= isnull(lic.AffectedDate,''1999-01-01'')' + char(13) +
+						'AND b.status NOT IN (-1,103) ' + char(13) +
+						'AND CurrencyID<>20 ' + char(13) +
 						CASE WHEN @bettype<>0 THEN 'AND b.bettype = ' + convert(varchar(10), @Bettype)  ELSE '' END + char(13) +	
 						CASE WHEN @SportID<>0 THEN 'AND b.bettype NOT IN (9,29)  AND l.Sporttype = ' + convert(varchar(10), @SportID)  ELSE '' END + char(13) +
 						CASE 
 							WHEN @ReportBy=1 THEN 'AND b.IsLive=1 AND b.bettype NOT IN (9,29,10) '
 							WHEN @ReportBy=2 THEN 'AND b.IsLive=0 '
-							ELSE '' END + char(13) +	
-						+ char(13) +	
-					'INSERT INTO @data' + char(13) +
-					'SELECT b.rptDate, lr.ResellerID,lr.licenseeid, SUM(BetCount) AS betcount ' + char(13) +
-					'FROM @tmpLicenseeReseller lr' + char(13) +
-						'INNER JOIN #tm b ON lr.LicenseeId = b.LicenseeId '+ char(13) +
-					'WHERE ' + char(13) +
-						'b.rptDate BETWEEN lr.AffectedDate AND  ''' + convert(varchar(10),@ToDate, 120) + '''' + char(13) +
-						'AND lr.ResellerID=3'+ char(13) +
+							ELSE '' END + char(13) +
 						'GROUP BY b.rptDate,lr.ResellerID,lr.licenseeid' + char(13) +
-						'DROP TABLE #tm'+ CHAR(13)+
 				'END' + char(13)
 	END
 	--FDL + PIH...
@@ -183,19 +162,20 @@ BEGIN
 	SELECT @sql = @sql + 
 				'IF EXISTS(SELECT 1 FROM @tmpLicenseeReseller lr inner JOIN bodb_licensee.dbo.licensees l WITH (nolock) ON lr.licenseeid=l.licenseeid where l.IsDeposit=0)' + char(13) +
 				'BEGIN' + char(13) +
-					'SELECT lb.LicenseeID
-							,b.rptDate
-							,b.siteID
-							,b.BetCount
-							INTO #tmp
-					FROM bodb_Licensee.dbo.labels lb WITH (NOLOCK)
-					INNER JOIN bodb_Licensee.dbo.rpt_Betting b WITH ( NOLOCK) ON b.siteID=lb.LabelID
-					LEFT JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID'+ char(13)+
-					'WHERE '+char(13)+
-					'b.status NOT IN (-1,103) ' + char(13) +
-					'AND CurrencyID<>20 ' + char(13) +
-					'AND isnull(b.customercategory,-1) NOT IN (27,28) ' + char(13) +
-					'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
+					'INSERT INTO @data' + char(13) +
+					'SELECT b.rptDate,lr.ResellerID,lr.LicenseeID ,SUM(BetCount) AS betcount' + char(13) +
+					'FROM @tmpLicenseeReseller lr ' + char(13) +
+					'INNER JOIN bodb_Licensee.dbo.labels lb WITH (NOLOCK) ON lr.LicenseeID=lb.LicenseeID' + char(13) +
+					'INNER JOIN bodb_Licensee.dbo.rpt_Betting b WITH ( NOLOCK) ON b.siteID=lb.LabelID' + char(13) +
+						'LEFT JOIN league l WITH (NOLOCK) ON b.LeagueID = l.LeagueID' + char(13) +
+					'WHERE ' + char(13) +
+						'b.rptDate BETWEEN lr.AffectedDate AND ''' + convert(varchar(10),@ToDate, 120) + '''' + char(13) +
+						'AND b.status NOT IN (-1,103) ' + char(13) +
+						'AND lr.ResellerID<>3' + char(13) + --BA
+						--'AND b.rptDate >= isnull(lb.AffectedDate,''1999-01-01'')' + char(13) +
+						'AND CurrencyID<>20 ' + char(13) +
+						'AND isnull(b.customercategory,-1) NOT IN (27,28) ' + char(13) +
+						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
 						CASE WHEN @ShowRB = 1 THEN ' OR b.bettype BETWEEN 31 AND 33' ELSE '' END + 
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END +
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END +
@@ -208,17 +188,7 @@ BEGIN
 							WHEN @ReportBy=1 THEN 'AND b.IsLive=1 AND b.bettype NOT IN (9,29,10,31,32,33) '
 							WHEN @ReportBy=2 THEN 'AND b.IsLive=0 '
 							ELSE '' END + char(13) +
-				
-					'INSERT INTO @data' + char(13) +
-					'SELECT lb.rptDate,lr.ResellerID,lr.LicenseeID ,SUM(lb.BetCount) AS betcount' + char(13) +
-					'FROM @tmpLicenseeReseller lr ' + char(13) +
-					'INNER JOIN #tmp lb ON lr.LicenseeID=lb.LicenseeID' + char(13) +
-					'WHERE ' + char(13) +
-						'lb.rptDate BETWEEN lr.AffectedDate AND ''' + convert(varchar(10),@ToDate, 120) + '''' + char(13) +
-						'AND lr.ResellerID<>3' + char(13) + --BA
-						'GROUP BY lb.rptDate,lr.ResellerID,lr.LicenseeID ' + char(13) +	
-						'DROP TABLE #tmp'+char(13)+
-						 
+						'GROUP BY b.rptDate,lr.ResellerID,lr.LicenseeID ' + char(13) +	
 				'END' + char(13)		
 END			
 			
@@ -249,6 +219,7 @@ IF (@debug = 1) PRINT @sql
 ELSE EXEC(@sql)
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_LicGetTotalTicket] TO [bodbAdminNet]
 GO
