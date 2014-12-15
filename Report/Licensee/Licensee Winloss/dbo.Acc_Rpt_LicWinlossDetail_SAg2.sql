@@ -34,6 +34,7 @@ AS
 		- 20130527@Jim: support RNG Casino
 		- 20140401@Hannah: offer Keno
 		- 20140704@Jim: support Sporting solution
+		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
  Param's Explanation:    
    + @CustID: SuperID    
    + @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)  
@@ -76,12 +77,12 @@ DECLARE @sporttype TABLE(sporttype INT)
 SELECT @VNDCurrencyName = currency FROM exchange (NOLOCK) WHERE ExchangeId = 51   
     
 INSERT INTO @Super(custid,currency)    
-SELECT CustID,currency FROM Dep_CustSuper WITH (NOLOCK)    
-WHERE  site = (SELECT LicenseeName FROM bodb_Licensee.dbo.Licensees (NOLOCK) WHERE LicenseeID = @LicenseeID )  
-	AND (@Currency = 0 OR (@Currency<> 0 AND Currency=@Currency))  
+SELECT DISTINCT CustID,currency FROM bodb_licensee.dbo.f_SelDepCustSuper((SELECT LicenseeName FROM bodb_Licensee.dbo.Licensees (NOLOCK) WHERE LicenseeID = @LicenseeID )  )--Dep_CustSuper WITH (NOLOCK)    
+--WHERE  site = (SELECT LicenseeName FROM bodb_Licensee.dbo.Licensees (NOLOCK) WHERE LicenseeID = @LicenseeID )  
+	--AND
+	WHERE (@Currency = 0 OR (@Currency<> 0 AND Currency=@Currency))  
 	AND (@excludeTest=0 OR (@excludeTest=1 AND Currency <> 20))   
 
-  
 IF @ShowSB = 1    
 	INSERT  INTO @sporttype( sporttype)
 	VALUES  (0)   
@@ -159,6 +160,7 @@ BEGIN
   
 	IF @ShowBA = 1  
 	BEGIN  
+	
 		INSERT INTO #SAgWinLoss    
 		SELECT b.winlostdate, b.srecommend,b.currency,   
 			SUM(stake *  
@@ -182,7 +184,7 @@ BEGIN
 									ELSE 1 END  
 								ELSE 1 END  BetCount   
 		FROM dbo.bettrans b WITH ( NOLOCK,INDEX=IX_srecommend)      
-			INNER JOIN @Super s ON b.srecommend = s.custid  
+			INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency=s.currency
 			INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON s.custid=BA.srecommend and b.transid = BA.transid     
 		WHERE	b.winlostdate BETWEEN @TempFromDate AND @TDate AND    
 			b.statusID  IN (111, 112, 113)   
@@ -191,8 +193,10 @@ BEGIN
    
 	IF @ShowSB=1  
 	BEGIN  
+	
 		INSERT INTO #SAgWinLoss  
-		SELECT b.winlostdate, b.srecommend, s.currency,   
+	
+		SELECT b.winlostdate, b.srecommend, s.currency, 
 			sum(stake *  
 				CASE WHEN @drawfilter IN (2,3) THEN  
 					CASE WHEN b.statusID = 111 THEN 0  
@@ -214,7 +218,7 @@ BEGIN
 			ELSE 1 END  
 			ELSE 1 END BetCount  
 		FROM dbo.bettrans b WITH ( NOLOCK,INDEX=IX_srecommend )   
-			INNER JOIN @Super s ON b.srecommend = s.custid  
+			INNER JOIN @Super s ON b.srecommend = s.custid  AND s.currency=b.currency
 		WHERE b.winlostdate BETWEEN @TempFromDate AND @TDate AND    
 			b.statusID  IN (111, 112, 113) AND  
 			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399)) AND  
@@ -250,7 +254,7 @@ BEGIN
 			ELSE 1 END  
 			BetCount  
 		FROM dbo.bettrans b WITH ( NOLOCK,INDEX=IX_srecommend )   
-			INNER JOIN @Super s ON b.srecommend = s.custid  
+			INNER JOIN @Super s ON b.srecommend = s.custid  AND s.currency=b.currency
 			INNER JOIN @bettype bt ON b.bettype = bt.bettype  
 		WHERE b.winlostdate BETWEEN @TempFromDate AND @TDate AND    
 			b.statusID  IN (111, 112, 113)  
@@ -294,7 +298,7 @@ BEGIN
      ELSE 1 END  
     ELSE 1 END  
   FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH ( NOLOCK )    
-   INNER JOIN @super s ON s.custid = b.srecommend  
+  INNER JOIN @Super s ON b.srecommend = s.custid AND s.currency=b.currency
   WHERE    
    b.Winlostdate BETWEEN @FDate AND @TempToDate    
    AND b.roleid = 2     
@@ -306,6 +310,7 @@ BEGIN
  --exclude BA tickets  
  IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @showKN=1)  
  BEGIN  
+
   INSERT INTO #SAgWinLoss    
   SELECT   
    b.winlostdate,    
@@ -335,7 +340,7 @@ BEGIN
     ELSE 1 END  
   FROM   
    bodb_Licensee.dbo.rptLicWinloss2 b WITH ( NOLOCK )    
-   INNER JOIN @super s ON s.custid = b.srecommend  
+   INNER JOIN @Super s ON b.srecommend = s.custid AND s.currency=b.currency
    INNER JOIN @sporttype t ON b.sporttype = t.sporttype  
   WHERE    
    b.Winlostdate BETWEEN @FDate AND @TempToDate    
@@ -386,7 +391,7 @@ BEGIN
     ELSE 1 END  
   FROM   
    bodb_Licensee.dbo.rptLicWinloss_old b WITH ( NOLOCK)    
-   INNER JOIN @super s ON s.custid = b.srecommend  
+   INNER JOIN @super s ON s.custid = b.srecommend  AND s.currency=b.Currency
   WHERE    
    b.Winlostdate BETWEEN @FDate AND @TempToDate    
    AND b.roleid = 2     
@@ -398,6 +403,7 @@ BEGIN
  --exclude BA tickets  
  IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @showKN=1)  
  BEGIN  
+
   INSERT INTO #SAgWinLoss    
   SELECT   
    b.winlostdate,    
@@ -427,7 +433,7 @@ BEGIN
     ELSE 1 END  
   FROM   
    bodb_Licensee.dbo.rptLicWinloss_old b WITH ( NOLOCK)    
-   INNER JOIN @super s ON s.custid = b.srecommend  
+   INNER JOIN @super s ON s.custid = b.srecommend  AND s.currency=b.Currency
    INNER JOIN @sporttype t ON b.sporttype = t.sporttype  
   WHERE    
    b.Winlostdate BETWEEN @FDate AND @TempToDate    
@@ -443,7 +449,7 @@ BEGIN
  SELECT * INTO #TempExchange  
  FROM Lrf_f_GetExchangeDaily (@Fdate,@Tdate)  
  WHERE exchangeid IN (SELECT DISTINCT Currency FROM #SAgWinLoss)  
-   
+
  SELECT     
  c.username,    
  w.custid,   
@@ -508,6 +514,7 @@ DROP TABLE #SAgWinLoss
 DROP TABLE #TempExchange  
   
 END
+
 GO
 
 
