@@ -7,10 +7,11 @@ Created: 20110423@Henry
 Task : Get all the currency by a licensee
 DB: DB052.bodb02
 
-
+ 
 Revisions:
     - 20111028@Henry: Order by currency name
     - 20111111@Henry: allow to choose all currency
+	- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust ( task change currency KeenOcean)
 Param's Explanation:
 */
 
@@ -21,10 +22,10 @@ BEGIN
 	insert into @temp
 		SELECT 
 			distinct Currency 
-		FROM bodb_Licensee.dbo.LicenseeCust lc (nolock)
+		FROM bodb_Licensee.dbo.f_SelLicenseeCust(@LicenseeID)--LicenseeCust lc (nolock)
 		WHERE 
-			(@LicenseeID = 0 OR LicenseeID = @LicenseeID)
-			AND (@excludeTest=0 OR (@excludeTest=1 AND Currency <> 20))	
+			--(@LicenseeID = 0 OR LicenseeID = @LicenseeID) AND
+			 (@excludeTest=0 OR (@excludeTest=1 AND Currency <> 20))	
 	
 	SELECT 
 		t.currency, 
