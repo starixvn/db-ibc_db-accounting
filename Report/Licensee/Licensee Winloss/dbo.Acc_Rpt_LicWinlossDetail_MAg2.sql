@@ -12,7 +12,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_MAg2]
  @Currency  INT = 0,  
  @FromDate  SMALLDATETIME,    
  @ToDate  SMALLDATETIME,     
- @showSB  BIT=1,    
+ @showSB  BIT=1,     
  @ShowRB  BIT=0,    
  @ShowNG  BIT=0,   
  @ShowBA  BIT=0,  

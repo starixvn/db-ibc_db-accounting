@@ -61,7 +61,7 @@ Revisions:
 	- 20140704@Jim: support sporting solution
 	- 20140909@Jim: retrict Virtual Horse Racing bettype
 	- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
-Param's Explanation:
+Param's Explanation: 
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
 	+ @BaseCurrency : Base currency in Result tables 0: ALL, 1: USD, 2: MYR, 3: EUR
 

@@ -532,7 +532,7 @@ BEGIN
 	CAST(SUM(AmtDuetoBA*e.MYR) AS MONEY) AS AmtDuetoBAMYR,
 	CAST(SUM(AmtDuetoRB*e.MYR) AS MONEY) AS AmtDuetoRBMYR,
 	CAST(SUM(Company * e.MYR) AS MONEY) AS CompanyMYR,
-	--BaseUSD  
+	--BaseUSD   
 	CAST(SUM(TurnOver*e.USD) AS MONEY)	AS TurnoverUSD,   
 	CAST(SUM(Winlost*e.USD) AS MONEY)	AS WinlostUSD,  
 	CAST(SUM(LicenseeWL*e.USD) AS MONEY) AS LicenseeWLUSD,

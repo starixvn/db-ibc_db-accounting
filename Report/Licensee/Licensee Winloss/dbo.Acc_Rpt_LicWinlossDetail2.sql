@@ -1007,7 +1007,7 @@ BEGIN
 	CAST(SUM(AmtDuetoBAMYR) AS MONEY) AS AmtDuetoBAMYR,
 	CAST(SUM(AmtDuetoRBMYR) AS MONEY) AS AmtDuetoRBMYR,
 	CAST(SUM(CompanyMYR) AS MONEY) AS CompanyMYR,
-	--BaseUSD  
+	--BaseUSD   
 	CAST(SUM(TurnOverUSD) AS MONEY)	AS TurnoverUSD,   
 	CAST(SUM(WinlostUSD) AS MONEY)	AS WinlostUSD,  
 	CAST(SUM(LicenseeWLUSD) AS MONEY) AS LicenseeWLUSD,

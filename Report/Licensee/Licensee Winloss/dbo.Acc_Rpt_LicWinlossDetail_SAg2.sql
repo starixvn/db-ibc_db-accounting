@@ -24,7 +24,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_SAg2]
  @drawfilter SMALLINT = 1,  
  @excludeTest BIT = 0  
 AS    
-/*  
+/*   
 	Created: Scott   
 	Date: 2013-02-15    
     Task : Winloss Report for Licensee Super Level  

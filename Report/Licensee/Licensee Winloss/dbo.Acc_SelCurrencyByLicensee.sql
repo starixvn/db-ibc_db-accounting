@@ -7,7 +7,7 @@ Created: 20110423@Henry
 Task : Get all the currency by a licensee
 DB: DB052.bodb02
 
-
+ 
 Revisions:
     - 20111028@Henry: Order by currency name
     - 20111111@Henry: allow to choose all currency

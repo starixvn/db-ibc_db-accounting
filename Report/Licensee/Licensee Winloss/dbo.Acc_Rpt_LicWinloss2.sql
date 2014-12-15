@@ -20,7 +20,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinloss2]
  @ShowKN		BIT=0,--Keno
  @ReportType	TINYINT=1,  
  @MoveBetsDay SMALLDATETIME,
- @IsOld BIT = 0,
+ @IsOld BIT = 0, 
  @drawfilter SMALLINT = 1  ,
  @excludeTest BIT = 0
 AS  
