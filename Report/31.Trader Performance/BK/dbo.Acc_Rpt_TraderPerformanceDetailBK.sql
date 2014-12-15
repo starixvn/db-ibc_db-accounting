@@ -235,7 +235,7 @@ BEGIN
 END  
 
 INSERT INTO @temp_maxbet(matchid, custid, maxbet)
-SELECT m.matchid, t.custid, MAX(maxbet)
+SELECT t.matchid, t.custid, MAX(maxbet)
 FROM bodb_Archive.dbo.MatchMaxBet_BK m WITH(NOLOCK)
 	INNER JOIN (
 		SELECT matchid, t.custid, MIN(b.priority) as priority
@@ -244,7 +244,7 @@ FROM bodb_Archive.dbo.MatchMaxBet_BK m WITH(NOLOCK)
 		GROUP BY t.matchid, t.custid
 	) t ON m.matchid = t.matchid 
 	INNER JOIN @bettype b ON b.priority = t.priority AND m.bettype = b.bettype
-	
+GROUP BY t.matchid, t.custid	
 	
 select * into #bettrans from bodb_archive.dbo.bettrans_bk b with (nolock)
 where LiveIndicator = 1 and   

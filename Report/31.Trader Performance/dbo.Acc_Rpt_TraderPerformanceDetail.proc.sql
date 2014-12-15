@@ -92,7 +92,7 @@ declare @bettype table(
 	priority int
 )
 
-insert into @bettype( 
+insert into @bettype 
 		 SELECT 	1, 1
 	UNION SELECT 	7, 2
 	UNION SELECT 	3, 3
@@ -101,7 +101,7 @@ insert into @bettype(
 	UNION SELECT 	15, 6
 	UNION SELECT 	2, 7
 	UNION SELECT 	12, 8	
-)
+
   
 if @isSoccer = 1 and (@fromdate > @o_x or @todate > @o_x )  
 BEGIN  
@@ -230,7 +230,7 @@ BEGIN
 END  
 
 INSERT INTO @temp_maxbet(matchid, custid, maxbet)
-SELECT m.matchid, t.custid, MAX(maxbet)
+SELECT t.matchid, t.custid, MAX(maxbet)
 FROM MatchMaxBet m WITH(NOLOCK)
 	INNER JOIN (
 		SELECT matchid, t.custid, MIN(b.priority) as priority
@@ -239,6 +239,7 @@ FROM MatchMaxBet m WITH(NOLOCK)
 		GROUP BY t.matchid, t.custid
 	) t ON m.matchid = t.matchid 
 	INNER JOIN @bettype b ON b.priority = t.priority AND m.bettype = b.bettype
+GROUP BY t.matchid, t.custid
 	
   
 if @fromdate > @o_x or @todate > @o_x   
