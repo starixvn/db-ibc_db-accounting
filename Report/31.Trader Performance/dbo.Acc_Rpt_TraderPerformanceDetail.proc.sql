@@ -48,6 +48,7 @@ Revisions:
  - 20140212@Johnson: add column maxbet into report 	
  - 20140519@Johnson: Remove bettype from league name [RedmineID:#16022]					
  - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
+ - 20141215@Johnson: get MaxBet of match by MatchMaxBet [RedmineID: #20642]
 Param's Explanation:  
 • @isSoccer  
     = 1: Soccer  
@@ -229,16 +230,15 @@ BEGIN
 END  
 
 INSERT INTO @temp_maxbet(matchid, custid, maxbet)
-SELECT o.matchid, t.custid, MAX(maxbet)
-FROM odds o WITH(NOLOCK)
+SELECT m.matchid, t.custid, MAX(maxbet)
+FROM MatchMaxBet m WITH(NOLOCK)
 	INNER JOIN (
 		SELECT matchid, t.custid, MIN(b.priority) as priority
-		FROM odds o with(NOLOCK)
-			INNER JOIN @temp_daao t ON o.matchid = t.matchid AND o.bettype = t.bettype
+		FROM @temp_daao t
 			INNER JOIN @bettype b ON t.bettype = b.bettype
 		GROUP BY t.matchid, t.custid
-	) t ON o.matchid = t.matchid 
-	INNER JOIN @bettype b ON b.priority = t.priority AND o.bettype = b.bettype
+	) t ON m.matchid = t.matchid 
+	INNER JOIN @bettype b ON b.priority = t.priority AND m.bettype = b.bettype
 	
   
 if @fromdate > @o_x or @todate > @o_x   
