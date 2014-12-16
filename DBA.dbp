@@ -1011,6 +1011,7 @@ Begin DataProject = "DBA"
       End
       Begin Folder = "Balance"
          Begin Folder = "Balance Negative"
+            Script = "Task_BalanceNegative.sql"
             Script = "Task_BalanceNegativeDel_CustCredit.sql"
             Script = "Task_BalanceNegativeHistoryIns_Cust.sql"
          End
