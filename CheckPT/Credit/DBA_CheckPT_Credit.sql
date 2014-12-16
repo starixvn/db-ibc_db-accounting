@@ -22,6 +22,7 @@ Revisions:
 	- 20140722@Sophia: Exclude test account (currency = 28, 29)
 	- 20140723@Sophia: Fix Rule 28 for Live
 	- 20140729@Sophia: Live is only apply for Soccer (bettype 1,3,7,8)
+	- 20140910@Sophia: Change the Filter of customer from closed = 0 and Reject = 0 to Enabled = 1
 Param's Explanation: 
 	@RuleId = 0 : 'all'
 	@RuleId IN (1->29)
@@ -48,8 +49,7 @@ SET NOCOUNT ON
 					ON	cs.CustId = ci.CustId
 			WHERE	ci.srecommend = @srecommend
 				AND ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0	
+				AND ci.Enabled = 1				
 				AND ci.Currency NOT IN (20,27,28)			
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
 				AND (cs.spositiontaking < 0 OR cs.mpositiontaking < 0 OR cs.apositiontaking < 0)
@@ -68,8 +68,7 @@ SET NOCOUNT ON
 				INNER JOIN	CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId
 			WHERE	ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1								
@@ -95,8 +94,7 @@ SET NOCOUNT ON
 				INNER JOIN	CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId
 			WHERE	ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -116,8 +114,7 @@ SET NOCOUNT ON
 				INNER JOIN	CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId
 			WHERE	ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1					
@@ -135,8 +132,7 @@ SET NOCOUNT ON
 				INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON cs.CustId = ci.CustId	
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -148,8 +144,7 @@ SET NOCOUNT ON
 				INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON cs.CustId = ci.CustId	
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -168,8 +163,7 @@ SET NOCOUNT ON
 				INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON cs.CustId = ci.CustId	
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -182,8 +176,7 @@ SET NOCOUNT ON
 				INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON cs.CustId = ci.CustId	
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND CASE WHEN @SportType IN (0,1) THEN 1 ELSE cs.SportType END = 1	
@@ -205,8 +198,7 @@ SET NOCOUNT ON
 					AND co.SportType=cs.SportType
 					AND co.BetType=cs.BetType
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -223,8 +215,7 @@ SET NOCOUNT ON
 					AND co.SportType=cs.SportType
 					AND co.BetType=cs.BetType
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1				
@@ -249,8 +240,7 @@ SET NOCOUNT ON
 							AND scs.SportType = cs.SportType
 							AND scs.BetType = cs.BetType
 			WHERE	ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -267,8 +257,7 @@ SET NOCOUNT ON
 							AND scs.SportType = cs.SportType
 							AND scs.BetType = cs.BetType
 			WHERE	ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1		
@@ -292,8 +281,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -310,8 +298,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -335,8 +322,7 @@ SET NOCOUNT ON
 							AND scs.SportType = cs.SportType
 							AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -353,8 +339,7 @@ SET NOCOUNT ON
 							AND scs.SportType = cs.SportType
 							AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -378,8 +363,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend		
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -396,8 +380,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend		
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -421,8 +404,7 @@ SET NOCOUNT ON
 					AND sco.SportType = cs.SportType
 					AND sco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -438,8 +420,7 @@ SET NOCOUNT ON
 					AND sco.SportType = cs.SportType
 					AND sco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -461,8 +442,7 @@ SET NOCOUNT ON
 				INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId	
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -474,8 +454,7 @@ SET NOCOUNT ON
 				INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 					ON	cs.CustId = ci.CustId	
 			WHERE ci.roleid = 4
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -498,8 +477,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -515,8 +493,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -541,8 +518,7 @@ SET NOCOUNT ON
 					AND scs.SportType = co.SportType
 					AND scs.BetType = co.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND co.SportType = CASE WHEN @SportType = 0 then co.SportType  ELSE @SportType END
@@ -559,8 +535,7 @@ SET NOCOUNT ON
 					AND scs.SportType = co.SportType
 					AND scs.BetType = co.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN co.SportType ELSE 0 END = 1
@@ -584,8 +559,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -601,8 +575,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -626,8 +599,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -643,8 +615,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -668,8 +639,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -686,8 +656,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -712,8 +681,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -730,8 +698,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE ci.roleid = 3
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1		
@@ -756,8 +723,7 @@ SET NOCOUNT ON
 								INNER JOIN CheckCustDB.dbo.CustSetting mcs WITH (NOLOCK)
 									ON ci.CustId = mcs.CustId
 									AND ci.RoleId = 3 
-									AND ci.closed = 0 
-									AND ci.Reject = 0 
+									AND ci.Enabled = 1
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
 							) mcs
@@ -765,8 +731,7 @@ SET NOCOUNT ON
 					AND mcs.SportType = cs.SportType
 					AND mcs.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend 
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -783,8 +748,7 @@ SET NOCOUNT ON
 								INNER JOIN CheckCustDB.dbo.CustSetting mcs WITH (NOLOCK)
 									ON ci.CustId = mcs.CustId
 									AND ci.RoleId = 3 
-									AND ci.closed = 0 
-									AND ci.Reject = 0 
+									AND ci.Enabled = 1
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
 									AND CASE WHEN @SportType IN (0,1) THEN mcs.SportType ELSE 0 END = 1
@@ -794,8 +758,7 @@ SET NOCOUNT ON
 					AND mcs.SportType = cs.SportType
 					AND mcs.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend 
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1			
@@ -817,8 +780,7 @@ SET NOCOUNT ON
 								INNER JOIN CheckCustDB.dbo.CustSetting mcs WITH (NOLOCK)
 									ON ci.CustId = mcs.CustId
 									AND ci.RoleId = 3 
-									AND ci.closed = 0 
-									AND ci.Reject = 0 
+									AND ci.Enabled = 1
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
 							) mcs
@@ -826,8 +788,7 @@ SET NOCOUNT ON
 					AND mcs.SportType = cs.SportType
 					AND mcs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -844,8 +805,7 @@ SET NOCOUNT ON
 								INNER JOIN CheckCustDB.dbo.CustSetting mcs WITH (NOLOCK)
 									ON ci.CustId = mcs.CustId
 									AND ci.RoleId = 3 
-									AND ci.closed = 0 
-									AND ci.Reject = 0 
+									AND ci.Enabled = 1
 									AND ci.Currency NOT IN (20,27,28)	
 									AND ci.srecommend = @srecommend
 									AND CASE WHEN @SportType IN (0,1) THEN mcs.SportType ELSE 0 END = 1
@@ -855,8 +815,7 @@ SET NOCOUNT ON
 					AND mcs.SportType = cs.SportType
 					AND mcs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1		
@@ -880,8 +839,7 @@ SET NOCOUNT ON
 								 INNER JOIN CheckCustDB.dbo.CustOverride mco WITH (NOLOCK)
 									ON	mco.CustID = ci.CustId
 										AND ci.RoleId = 3 
-										AND ci.closed= 0 
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 							) mco
@@ -889,8 +847,7 @@ SET NOCOUNT ON
 					AND mco.SportType = cs.SportType
 					AND mco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -907,8 +864,7 @@ SET NOCOUNT ON
 								 INNER JOIN CheckCustDB.dbo.CustOverride mco WITH (NOLOCK)
 									ON	mco.CustID = ci.CustId
 										AND ci.RoleId = 3 
-										AND ci.closed= 0 
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND CASE WHEN @SportType IN (0,1) THEN mco.SportType ELSE 0 END = 1
@@ -918,8 +874,7 @@ SET NOCOUNT ON
 					AND mco.SportType = cs.SportType
 					AND mco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1			
@@ -942,8 +897,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -960,8 +914,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -986,8 +939,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -1003,8 +955,7 @@ SET NOCOUNT ON
 					AND scs.SportType = cs.SportType
 					AND scs.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1028,8 +979,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -1046,8 +996,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE ci.roleid = 2
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1071,8 +1020,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustOverride co WITH (NOLOCK)
 											ON co.CustId = ci.CustId
 											AND ci.RoleId = 2
-											AND ci.Closed = 0
-											AND ci.Reject = 0
+											AND ci.Enabled = 1
 											AND ci.Currency NOT IN (20,27,28)	
 											AND ci.srecommend = @srecommend	 
 							) co
@@ -1080,8 +1028,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE   ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -1098,8 +1045,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustOverride co WITH (NOLOCK)
 											ON co.CustId = ci.CustId
 											AND ci.RoleId = 2
-											AND ci.Closed = 0
-											AND ci.Reject = 0
+											AND ci.Enabled = 1
 											AND ci.Currency NOT IN (20,27,28)	
 											AND ci.srecommend = @srecommend	 
 											AND CASE WHEN @SportType IN (0,1) THEN co.SportType ELSE 0 END = 1
@@ -1109,8 +1055,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE   ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1133,8 +1078,7 @@ SET NOCOUNT ON
 					AND sco.SportType = cs.SportType
 					AND sco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -1151,8 +1095,7 @@ SET NOCOUNT ON
 					AND sco.SportType = cs.SportType
 					AND sco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1176,8 +1119,7 @@ SET NOCOUNT ON
 								 INNER JOIN CheckCustDB.dbo.CustOverride mco WITH (NOLOCK)
 									ON	mco.CustID = ci.CustId
 										AND ci.RoleId = 3 
-										AND ci.closed= 0 
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 							) mco
@@ -1185,8 +1127,7 @@ SET NOCOUNT ON
 					AND mco.SportType = cs.SportType
 					AND mco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -1203,8 +1144,7 @@ SET NOCOUNT ON
 								 INNER JOIN CheckCustDB.dbo.CustOverride mco WITH (NOLOCK)
 									ON	mco.CustID = ci.CustId
 										AND ci.RoleId = 3 
-										AND ci.closed= 0 
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND CASE WHEN @SportType IN (0,1) THEN mco.SportType ELSE 0 END = 1
@@ -1214,8 +1154,7 @@ SET NOCOUNT ON
 					AND mco.SportType = cs.SportType
 					AND mco.BetType = cs.BetType
 			WHERE ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend	
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1238,8 +1177,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustOverride co WITH (NOLOCK)
 											ON co.CustId = ci.CustId
 											AND ci.RoleId = 2
-											AND ci.Closed = 0
-											AND ci.Reject = 0
+											AND ci.Enabled = 1
 											AND ci.Currency NOT IN (20,27,28)	
 											AND ci.srecommend = @srecommend	 
 							) co
@@ -1247,8 +1185,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE   ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND cs.SportType = CASE WHEN @SportType = 0 THEN cs.SportType  ELSE @SportType END
@@ -1265,8 +1202,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustOverride co WITH (NOLOCK)
 											ON co.CustId = ci.CustId
 											AND ci.RoleId = 2
-											AND ci.Closed = 0
-											AND ci.Reject = 0
+											AND ci.Enabled = 1
 											AND ci.Currency NOT IN (20,27,28)	
 											AND ci.srecommend = @srecommend	
 											AND CASE WHEN @SportType IN (0,1) THEN co.SportType ELSE 0 END = 1
@@ -1276,8 +1212,7 @@ SET NOCOUNT ON
 					AND co.SportType = cs.SportType
 					AND co.BetType = cs.BetType
 			WHERE   ci.roleid = 1
-				AND ci.closed = 0 
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend			
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1317,8 +1252,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 4
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 							) AS scs
@@ -1331,8 +1265,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 3
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 							) AS mcs
@@ -1340,8 +1273,7 @@ SET NOCOUNT ON
 							AND mcs.bettype = cs.bettype
 							AND mcs.CustId = ci.mrecommend			
 			WHERE ci.RoleId = 1
-				AND ci.Closed = 0
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -1383,8 +1315,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 4
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1399,8 +1330,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 3
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1410,8 +1340,7 @@ SET NOCOUNT ON
 							AND mcs.bettype = cs.bettype
 							AND mcs.CustId = ci.mrecommend			
 			WHERE ci.RoleId = 1
-				AND ci.Closed = 0
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1483,8 +1412,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 4
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 							) AS scs
@@ -1497,8 +1425,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 3
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 							) AS mcs
@@ -1511,8 +1438,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 2
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 							) AS acs
@@ -1520,8 +1446,7 @@ SET NOCOUNT ON
 							AND acs.bettype = cs.bettype
 							AND acs.CustId = ci.recommend
 			WHERE ci.RoleId = 1
-				AND ci.Closed = 0
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND cs.SportType = CASE WHEN @SportType = 0 then cs.SportType  ELSE @SportType END
@@ -1599,8 +1524,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 4
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1615,8 +1539,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 3
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1631,8 +1554,7 @@ SET NOCOUNT ON
 									INNER JOIN CheckCustDB.dbo.CustSetting cs WITH (NOLOCK)
 									ON cs.CustId = ci.CustId
 										AND ci.RoleId = 2
-										AND ci.Closed = 0
-										AND ci.Reject = 0
+										AND ci.Enabled = 1
 										AND ci.Currency NOT IN (20,27,28)	
 										AND ci.srecommend = @srecommend
 										AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1
@@ -1642,8 +1564,7 @@ SET NOCOUNT ON
 							AND acs.bettype = cs.bettype
 							AND acs.CustId = ci.recommend
 			WHERE ci.RoleId = 1
-				AND ci.Closed = 0
-				AND ci.Reject = 0
+				AND ci.Enabled = 1
 				AND ci.Currency NOT IN (20,27,28)	
 				AND ci.srecommend = @srecommend
 				AND CASE WHEN @SportType IN (0,1) THEN cs.SportType ELSE 0 END = 1

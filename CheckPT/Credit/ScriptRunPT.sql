@@ -1,4 +1,3 @@
-
 USE [CheckResultDB]
 
 ---- Execute 
@@ -7,7 +6,7 @@ CREATE TABLE #temp (CustId INT, IsFinished BIT)
 INSERT  INTO #temp (CustId, IsFinished)
 SELECT	DISTINCT ci.CustId , 0 
 FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
-WHERE   RoleID = 4 AND Closed = 0
+WHERE   RoleID = 4  
 		AND CustId NOT IN (select CustId from CheckCustDB.dbo.Dep_CustSuper WITH (NOLOCK)) 
  
 
@@ -27,7 +26,7 @@ BEGIN
 	SELECT @Rowcnt = @@ROWCOUNT	
 	IF @Rowcnt = 0 BREAK
 
-	EXEC dbo.[DBA_CheckPT_Credit] @srecommend = @CustId WITH RECOMPILE  
+	EXEC dbo.[DBA_CheckPT_Credit] @srecommend = @CustId  
 
 	SET @msg = 'Done for custid = ' + cast(@CustId AS VARCHAR(50))  
 	RAISERROR (@msg,0,1) WITH NOWAIT
@@ -44,4 +43,3 @@ INNER JOIN Rule_Credit R ON C.RuleId = R.RuleId
 DROP TABLE #temp
 
 GO
- 
