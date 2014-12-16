@@ -338,6 +338,7 @@ Begin DataProject = "DBA"
       Script = "DBA_ChangeCurrency.proc.sql"
       Script = "DBA_ChangeCurrencyAndMoveAgent.sql"
       Script = "DBA_ChangeExRate.sql"
+      Script = "DBA_ExchangeDailyOandaUpd_Actualrate.sql"
       Script = "RetrieveM88_ExchangeHistory.sql"
    End
    Begin Folder = "CustLogin"
