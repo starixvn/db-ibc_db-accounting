@@ -16,6 +16,7 @@ AS
 	-- 20140911@Lukas: add table MatchMaxbet14
 	-- 20141006@Lukas: remove table SS_GameState14
 	-- 20141024@Lukas: add table ResultDetail14
+	-- 20141225@Jamie: Add OtherInfo into ResultDetail14
 	
 	insert into odds14
 		([oddsid], [matchid], [bettype], [switch], [hdp1], [hdp2],
@@ -123,8 +124,8 @@ AS
 	FROM MatchMaxbet WITH(NOLOCK)
 	WHERE matchid IN (SELECT MatchID from Match where eventdate = @winlostdate)	
 	
-	INSERT INTO ResultDetail14(MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy)
-	SELECT MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy
+	INSERT INTO ResultDetail14(MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy, OtherInfo)
+	SELECT MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy, OtherInfo
 	FROM ResultDetail WITH(NOLOCK)
 	WHERE matchid IN (SELECT MatchID from Match where eventdate = @winlostdate)
 	

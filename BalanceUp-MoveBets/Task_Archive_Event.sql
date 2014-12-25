@@ -1,7 +1,7 @@
 ﻿USE [bodb02]
 GO
 /****** Object:  Stored Procedure dbo.Task_Archive_Event    Script Date: 12/29/2010 6:54:02 PM ******/
-ALTER PROCEDURE [dbo].[Task_Archive_Event]
+CREATE PROCEDURE [dbo].[Task_Archive_Event]
 	@winlostdate datetime
 AS
 /*
@@ -13,6 +13,7 @@ AS
 		- 20140911@Lukas: add table MatchMaxbet_bk 
 		- 20141006@Lukas: remove table SS_GameState_bk
 		- 20141024@Lukas: add table ResultDetail14
+		- 20141225@Jamie: Add OtherInfo into ResultDetail_bk
  */
 
 	INSERT INTO DB06.bodb_archive.dbo.odds_bk
@@ -77,8 +78,8 @@ AS
 	FROM matchMaxbet14 WITH(NOLOCK)
 	WHERE matchid IN (SELECT MatchID from Match14 where eventdate = @winlostdate)
 	
-	INSERT INTO DB06.bodb_Archive.dbo.[ResultDetail_bk](MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy)
-	SELECT MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy
+	INSERT INTO DB06.bodb_Archive.dbo.[ResultDetail_bk](MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy,OtherInfo)
+	SELECT MatchId, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy,OtherInfo
 	FROM ResultDetail14 WITH(NOLOCK)
 	WHERE matchid IN (SELECT MatchID from Match14 where eventdate = @winlostdate)
 	
