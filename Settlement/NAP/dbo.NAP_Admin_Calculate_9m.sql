@@ -55,7 +55,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), 
 							sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
-
+		- 20141204@Jamie: Sportting Solution settlement - Change rule Set x Correct Score [Redmine:#23034]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -809,7 +809,10 @@ BEGIN
 						END
 				WHEN 1317 THEN -- Set x Correct Score
 					CASE 
-						WHEN betteam = (CAST(@TotalGameHomeSetx AS VARCHAR(4)) + CAST(@TotalGameAwaySetx AS VARCHAR(4))) THEN 1
+						WHEN betteam = (CASE WHEN @TotalGameHomeSetx > 7 AND (@TotalGameHomeSetx - @TotalGameAwaySetx)>=2 THEN 'haos'
+											 WHEN @TotalGameAwaySetx > 7 AND (@TotalGameAwaySetx - @TotalGameHomeSetx)>=2 THEN 'aaos'
+											 ELSE (CAST(@TotalGameHomeSetx AS VARCHAR(4)) + CAST(@TotalGameAwaySetx AS VARCHAR(4))) 
+											 END) THEN 1
 						ELSE - 1
 						END
 				WHEN 1318 THEN -- Set x Total Games Odd/Even
@@ -1319,7 +1322,10 @@ BEGIN
 						END
 				WHEN 1317 THEN -- Set x Correct Score
 					CASE 
-						WHEN betteam = (CAST(@TotalGameHomeSetx AS VARCHAR(4)) + CAST(@TotalGameAwaySetx AS VARCHAR(4))) THEN 1
+						WHEN betteam = (CASE WHEN @TotalGameHomeSetx > 7 AND (@TotalGameHomeSetx - @TotalGameAwaySetx)>=2 THEN 'haos'
+											 WHEN @TotalGameAwaySetx > 7 AND (@TotalGameAwaySetx - @TotalGameHomeSetx)>=2 THEN 'aaos'
+											 ELSE (CAST(@TotalGameHomeSetx AS VARCHAR(4)) + CAST(@TotalGameAwaySetx AS VARCHAR(4))) 
+											 END) THEN 1
 						ELSE - 1
 						END
 				WHEN 1318 THEN -- Set x Total Games Odd/Even
