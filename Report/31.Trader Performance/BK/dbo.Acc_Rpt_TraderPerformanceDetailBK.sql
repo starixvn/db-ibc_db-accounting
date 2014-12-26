@@ -47,6 +47,7 @@ Revisions:
  - 20140212@Johnson: add column maxbet into report 	
  - 20140519@Johnson: Remove bettype from league name [RedmineID:#16022]					
  - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
+ - 20141215@Johnson: get MaxBet of match by MatchMaxBet [RedmineID: #20642]
 Param's Explanation:  
 • @isSoccer  
     = 1: Soccer  
@@ -83,11 +84,29 @@ declare @temp_daao table
  OUtype tinyint  
 )  
 
+
 --temp table for maxbet on each match
 declare @temp_maxbet table(
 	matchid int,
+	custid int,
 	maxbet money
-)   
+) 
+
+declare @bettype table(
+	bettype int,
+	priority int
+)
+
+insert into @bettype( 
+		 SELECT 	1, 1
+	UNION SELECT 	7, 2
+	UNION SELECT 	3, 3
+	UNION SELECT 	8, 4
+	UNION SELECT 	5, 5
+	UNION SELECT 	15, 6
+	UNION SELECT 	2, 7
+	UNION SELECT 	12, 8	
+)
   
 if @isSoccer = 1 and (@fromdate > @o_x or @todate > @o_x )  
 BEGIN  
@@ -214,17 +233,19 @@ BEGIN
   and m.matchcode not like '%hedge%'  
   and a.matchid is NULL  
 END  
-INSERT INTO @temp_maxbet(matchid,maxbet)
-SELECT matchid, maxbet
-FROM bodb_Archive.dbo.odds_bk with(NOLOCK)
-WHERE oddsid IN (
-					SELECT MIN(oddsid)
-					FROM bodb_Archive.dbo.odds_bk with(NOLOCK)
-					WHERE matchid in (SELECT distinct matchid FROM @temp_daao)
-						AND bettype = 7
-						and liveindicator = 1
-					GROUP BY matchid
-				)
+
+INSERT INTO @temp_maxbet(matchid, custid, maxbet)
+SELECT t.matchid, t.custid, MAX(maxbet)
+FROM bodb_Archive.dbo.MatchMaxBet_BK m WITH(NOLOCK)
+	INNER JOIN (
+		SELECT matchid, t.custid, MIN(b.priority) as priority
+		FROM @temp_daao t
+			INNER JOIN @bettype b ON t.bettype = b.bettype
+		GROUP BY t.matchid, t.custid
+	) t ON m.matchid = t.matchid 
+	INNER JOIN @bettype b ON b.priority = t.priority AND m.bettype = b.bettype
+GROUP BY t.matchid, t.custid	
+	
 select * into #bettrans from bodb_archive.dbo.bettrans_bk b with (nolock)
 where LiveIndicator = 1 and   
  b.statusID not in (101,102,103,121,111)    

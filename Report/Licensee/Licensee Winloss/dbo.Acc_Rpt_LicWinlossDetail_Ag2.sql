@@ -6,6 +6,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_Ag2]  
  @LicenseeID	INT,
  @mrecommend	INT=NULL,
@@ -48,6 +49,7 @@ AS
 		- 20130527@Jim: support RNG Casino 	
 		- 20140331@Hannah: offer Keno
 		- 20140704@Jim: offer Sporting solution
+		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -93,19 +95,19 @@ SELECT @VNDCurrencyName = currency FROM exchange (NOLOCK) WHERE ExchangeId = 51
 SELECT @LicenseeName = LicenseeName FROM bodb_Licensee.dbo.Licensees (NOLOCK) WHERE LicenseeID = @LicenseeID
   
 INSERT INTO @TempAg (custID,currency) 
-SELECT l.custID,l.currency 
-FROM bodb_Licensee.dbo.LicenseeCust l (NOLOCK)	
+SELECT DISTINCT l.custID,l.currency 
+FROM bodb_Licensee.dbo.f_SelLicenseeCust( @LicenseeID) l--LicenseeCust l (NOLOCK)	
 	INNER JOIN Customer c with(nolock) on l.custid = c.custid
 WHERE 
-	LicenseeID = @LicenseeID
-	AND (@Currency = 0 OR (@Currency<> 0 AND l.Currency=@Currency))
+	--LicenseeID = @LicenseeID	AND
+	 (@Currency = 0 OR (@Currency<> 0 AND l.Currency=@Currency))
 	AND (@excludeTest=0 OR (@excludeTest=1 AND l.Currency <> 20))	
 	AND c.mrecommend = @mrecommend 
   
-DECLARE @Super AS TABLE (custid int primary key, currency int)
+DECLARE @Super AS TABLE (custid int , currency int)
 INSERT INTO @Super(custid,currency)  
-SELECT CustID,currency FROM Dep_CustSuper WITH (NOLOCK)  
-WHERE  site = @LicenseeName	  
+SELECT DISTINCT CustID,currency FROM bodb_Licensee.dbo.f_SelDepCustSuper(@LicenseeName) --Dep_CustSuper WITH (NOLOCK)  
+--WHERE  site = @LicenseeName	  
 
 IF @ShowSB = 1  
 BEGIN  
@@ -217,8 +219,8 @@ BEGIN
 		   BetCount
 	FROM 
 		dbo.bettrans b WITH ( NOLOCK,INDEX=IX_srecommend)    
-		INNER JOIN @TempAg tma ON tma.CustID=b.recommend 
-		INNER JOIN @Super s ON b.srecommend = s.custid
+		INNER JOIN @TempAg tma ON tma.CustID=b.recommend AND tma.currency=b.currency
+		INNER JOIN @Super s ON b.srecommend = s.custid AND s.currency=b.currency
 		INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON s.custid=BA.srecommend and b.transid = BA.transid 	 
 	WHERE 
 		b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
@@ -259,8 +261,8 @@ BEGIN
 			   BetCount
 		FROM 
 			dbo.bettrans b WITH ( NOLOCK,INDEX=IX_srecommend ) 
-			INNER JOIN @Super s ON b.srecommend = s.custid
-			INNER JOIN @TempAg a ON b.recommend = a.custid
+			INNER JOIN @Super s ON b.srecommend = s.custid AND s.currency=b.currency
+			INNER JOIN @TempAg a ON b.recommend = a.custid AND a.currency=b.currency
 		WHERE 
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
 			b.statusID  IN (111, 112, 113) AND
@@ -303,8 +305,8 @@ BEGIN
 			   BetCount
 		FROM 
 			dbo.bettrans b WITH ( NOLOCK,INDEX=IX_srecommend ) 
-			INNER JOIN @Super s ON b.srecommend = s.custid
-			INNER JOIN @TempAg a ON b.recommend = a.custid
+			INNER JOIN @Super s ON b.srecommend = s.custid AND s.currency=b.currency
+			INNER JOIN @TempAg a ON b.recommend = a.custid AND a.currency=b.currency
 			INNER JOIN @bettype bt ON b.bettype = bt.bettype
 			
 		WHERE 
@@ -352,7 +354,7 @@ BEGIN
 					ELSE 1 END
 				ELSE 1 END
 		FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH ( NOLOCK )  
-			INNER JOIN @TempAg ag ON ag.custid = b.recommend
+			INNER JOIN @TempAg ag ON ag.custid = b.recommend AND ag.currency=b.Currency
 		WHERE  
 			b.Winlostdate BETWEEN @FDate AND @TempToDate  
 			AND b.roleid = 2   
@@ -393,7 +395,7 @@ BEGIN
 				ELSE 1 END
 		FROM 
 			bodb_Licensee.dbo.rptLicWinloss2 b WITH ( NOLOCK )  
-			INNER JOIN @TempAg ag ON ag.custid = b.recommend
+			INNER JOIN @TempAg ag ON ag.custid = b.recommend AND ag.currency=b.Currency
 			INNER JOIN @sporttype t ON b.sporttype = t.sporttype
 		WHERE  
 			b.Winlostdate BETWEEN @FDate AND @TempToDate  
@@ -444,7 +446,7 @@ BEGIN
 				ELSE 1 END
 		FROM 
 			bodb_Licensee.dbo.rptLicWinloss_old b WITH ( NOLOCK)  
-			INNER JOIN @TempAg ag ON ag.custid = b.recommend
+			INNER JOIN @TempAg ag ON ag.custid = b.recommend AND ag.currency=b.Currency
 		WHERE  
 			b.Winlostdate BETWEEN @FDate AND @TempToDate  
 			AND b.roleid = 2   
@@ -485,7 +487,7 @@ BEGIN
 				ELSE 1 END
 		FROM 
 			bodb_Licensee.dbo.rptLicWinloss_old b WITH ( NOLOCK)  
-			INNER JOIN @TempAg ag ON ag.custid = b.recommend
+			INNER JOIN @TempAg ag ON ag.custid = b.recommend AND ag.currency=b.Currency
 			INNER JOIN @sporttype t ON b.sporttype = t.sporttype
 		WHERE  
 			b.Winlostdate BETWEEN @FDate AND @TempToDate  
@@ -530,7 +532,7 @@ BEGIN
 	CAST(SUM(AmtDuetoBA*e.MYR) AS MONEY) AS AmtDuetoBAMYR,
 	CAST(SUM(AmtDuetoRB*e.MYR) AS MONEY) AS AmtDuetoRBMYR,
 	CAST(SUM(Company * e.MYR) AS MONEY) AS CompanyMYR,
-	--BaseUSD  
+	--BaseUSD   
 	CAST(SUM(TurnOver*e.USD) AS MONEY)	AS TurnoverUSD,   
 	CAST(SUM(Winlost*e.USD) AS MONEY)	AS WinlostUSD,  
 	CAST(SUM(LicenseeWL*e.USD) AS MONEY) AS LicenseeWLUSD,
