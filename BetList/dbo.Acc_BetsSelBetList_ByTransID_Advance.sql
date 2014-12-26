@@ -1164,7 +1164,7 @@ BEGIN
 		inner join DBARC.bodb_archive.dbo.match_BK m with (nolock) on b.matchid = m.matchid
 		inner JOIN custInfo c with (NOLOCK) on c.custid = b.custid
 		INNER JOIN @SportBettype s ON s.BetType = b.BetType 
-	where	s.ProductID = 2 AND 
+	where	s.EventType = 1 AND 
 			--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
 			--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 			b.transid = @TransID
