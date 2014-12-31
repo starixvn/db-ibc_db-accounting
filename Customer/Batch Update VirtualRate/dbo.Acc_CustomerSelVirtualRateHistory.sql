@@ -10,23 +10,24 @@ Revisions:
 	- 20091106@Simon: View change history of virtual rate
 	- 20100512@Kiwi: Retrieve data from TrackingValue rather than doing.
 	- 20110923@Henry: show logs that updated from LRF
+	- 20141231@Johnson: separate virtual rate settings by sporttype bettype [Redmine: #25840]
 Explanations:
 ActionID: 801, SPName: Acc_CustomerUpdVirtualMultiplier
 ActionID: 802, SPName: Acc_VirtualRateMulUpd
 */
 BEGIN
 SET NOCOUNT ON			
-	SELECT TOP 10 logdate,		
-		(CAST(CASE ActionID WHEN 802 THEN dbo.strSplitResult(TrackingValue,'Rate="', '" ') 
-				ELSE dbo.strSplitResult(TrackingValue,'NewValue="', '",') END AS FLOAT)-1)*100 VirtualRate,
+	SELECT TOP 10 logdate,	
+		ActionID,	
+		TrackingValue,
 		Username =	CASE 
-						when (ActionID = 2800) then 'LRF Admin'
+						when (ActionID IN (2800,2802)) then 'LRF Admin'
 						ELSE c.Username
 					END
 	FROM UserLog_RunSP u WITH(NOLOCK)
 	LEFT JOIN bodb02.dbo.CustInfo c WITH(NOLOCK) ON c.custid = u.userid
 	WHERE u.custid = @CustID
-		AND ActionID IN (801,802,2800)
+		AND ActionID IN (801,802,806,2800,2802)
 	ORDER BY logdate DESC
 END	
 GO
