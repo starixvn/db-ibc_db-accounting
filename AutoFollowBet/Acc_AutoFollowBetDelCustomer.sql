@@ -1,17 +1,17 @@
-
-SET QUOTED_IDENTIFIER ON 
+USE [CustDB]
 GO
-SET ANSI_NULLS ON 
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer_xtest]    Script Date: 12/31/2014 15:31:21 ******/
+SET ANSI_NULLS ON
 GO
-
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetDelCustomer    Script Date: 8/29/2014 9:35:01 AM ******/
-CREATE PROCEDURE [Acc_AutoFollowBetDelCustomer]	
-	@Username   varchar(30),
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_AutoFollowBetDelCustomer]	
+	@Username   VARCHAR(30),
 
 	@UserId		INT,
 	@IP			VARCHAR(50),
-	@ErrCode    int = 0 Output,
-	@ErrMsg     nvarchar(200) = '' Output
+	@ErrCode    INT				= 0 OUTPUT,
+	@ErrMsg     NVARCHAR(200)	= '' OUTPUT
 AS
 /*
 	Created: Viet @ 4-Jul-2012
@@ -24,33 +24,34 @@ AS
         - 20140805@Logan:   1. User can be agent (only member before) [Redmine: #19650]
                             2. Get log for live & non-live settings [Redmine: #16578]
                             2. Code aligning
-
+		- 20141230@Kathy: Update the accounts dangerous setting change to "2" for Original & Non Live [Redmine:#25770]
+		
 	Param's Explanation:	
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @custid             int
-	      , @startRun           Datetime
-	      , @endRun             datetime
-	      , @duration           int
-	      , @oldRate            smallmoney
-	      , @oldLiveOdds        smallmoney
-	      , @oldNonLiveOdds     smallmoney
-	      , @oldLiveHDP         bit
-	      , @oldLive1stHDP      bit
-	      , @oldLiveOU          bit
-	      , @oldLive1stOU       bit
-	      , @oldNonLiveHDP      bit
-	      , @oldNonLive1stHDP   bit
-	      , @oldNonLiveOU       bit
-	      , @oldNonLive1stOU    bit
-	      , @oldFollower        varchar(30)
+	DECLARE @custid             INT
+	      , @startRun           DATETIME
+	      , @endRun             DATETIME
+	      , @duration           INT
+	      , @oldRate            SMALLMONEY
+	      , @oldLiveOdds        SMALLMONEY
+	      , @oldNonLiveOdds     SMALLMONEY
+	      , @oldLiveHDP         BIT
+	      , @oldLive1stHDP      BIT
+	      , @oldLiveOU          BIT
+	      , @oldLive1stOU       BIT
+	      , @oldNonLiveHDP      BIT
+	      , @oldNonLive1stHDP   BIT
+	      , @oldNonLiveOU       BIT
+	      , @oldNonLive1stOU    BIT
+	      , @oldFollower        VARCHAR(30)
 
-	SELECT @startRun = getdate()
+	SELECT @startRun = GETDATE()
 	     , @duration = 0
 
 	SELECT @custid = custid
-	  FROM Custinfo with(nolock)
+	  FROM Custinfo WITH(nolock)
 	 WHERE username = @username
 	   and roleid IN (1, 2)
 
@@ -88,11 +89,17 @@ BEGIN
 	 WHERE f.custid = @custid
 	   AND f.FollowLive = 0
 
-	DELETE Cust_followBet
+	DELETE Cust_followBet WITH(ROWLOCK, UPDLOCK)
 	 WHERE custid = @custid
+	
+	UPDATE dbo.custInfo WITH(ROWLOCK, UPDLOCK)
+	SET danger = 0
+		,danger2 = 0
+	WHERE custid = @custid
+	AND danger <> 100 -- danger = 100: BA customer
 
 	-- write log
-	Declare @LogSPData varchar(MAX),@TrackingValueDB varchar(max)
+	Declare @LogSPData VARCHAR(MAX),@TrackingValueDB VARCHAR(max)
 
 	SELECT	@LogSPData = '<Acc_AutoFollowBetDelCustomer Username="'+ COALESCE(@Username, SPACE(1)) + '" '
 	                   + 'UserId="' + COALESCE(CAST(@UserId AS VARCHAR(50)), SPACE(1)) + '" '
@@ -118,8 +125,8 @@ BEGIN
 	                         + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" '
 	                         + 'ErrMsg="' + COALESCE(CAST(@ErrMsg AS VARCHAR(400)), SPACE(1))+'" />'
 	
-	set @endRun = getdate()
-	set @duration = datediff(millisecond, @startRun, @endRun)
+	SET @endRun = getdate()
+	SET @duration = datediff(millisecond, @startRun, @endRun)
 	
 	BEGIN TRY											  						  	 
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
@@ -147,16 +154,9 @@ BEGIN
 END
 
 
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [bodbAdminNet]
-GO 
+GO
+GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [vnteam] AS [dbo]

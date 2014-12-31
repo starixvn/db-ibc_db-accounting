@@ -1,11 +1,11 @@
-
-SET QUOTED_IDENTIFIER ON 
+USE [CustDB]
 GO
-SET ANSI_NULLS ON 
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer_xtest]    Script Date: 12/31/2014 15:31:40 ******/
+SET ANSI_NULLS ON
 GO
-
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetInsCustomer    Script Date: 8/29/2014 9:35:01 AM ******/
-CREATE PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
     @Username       VARCHAR(30)
     ,@Rate          SMALLMONEY
     ,@LiveOdds      SMALLMONEY
@@ -40,7 +40,8 @@ Revision:
 	                    2. Allow following an agent (all members under) [Redmine: #19650]
 	                    3. Do not allow member to follow himself or his agent
 	                    4. Do not allow loop following
-
+	- 20141230@Kathy: Update the accounts dangerous setting change to "2" for Original & Non Live [Redmine:#25770]
+	
 Param's Explanation:	
 */
 BEGIN
@@ -158,13 +159,11 @@ BEGIN
 		RETURN
 	END
 
-	-- Validate Odds
+	-- Validate Odds: Odds must range between -0.1 and 0.1, 2 decimal digits		
 	IF (@LiveOdds NOT BETWEEN -0.1 AND 0.1)
 	   OR (@NonLiveOdds NOT BETWEEN -0.1 AND 0.1)
-	   OR (ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @LiveOdds, 2))) - ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @LiveOdds, 1))) <> 0 )
-	   OR (ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @NonLiveOdds, 2))) - ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @NonLiveOdds, 1))) <> 0 )
-	   OR (ABS(@LiveOdds) * 100 < 1 and @LiveOdds <> 0)
-	   OR (ABS(@NonLiveOdds) * 100 < 1 and @NonLiveOdds <> 0)
+	   OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@LiveOdds * 100))) %1 <> 0)
+	   OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@NonLiveOdds * 100))) %1 <> 0)
 
 	BEGIN
 		SELECT @ErrMsg = 'Invalid odds! Odds must range between -0.1 and 0.1'
@@ -234,6 +233,14 @@ BEGIN
 		    ,@roleid
         )
     /*END*/
+    
+    -- Update the accounts dangerous setting change to "2" for Live & Non Live
+    UPDATE dbo.custInfo WITH(UPDLOCK, ROWLOCK)
+    SET danger = 2
+		,danger2 = 2
+	WHERE custid = @custid
+	AND danger <> 100 -- danger = 100: BA customer
+	    
 
 	-- write log
 	DECLARE @LogSPData VARCHAR(MAX)
@@ -297,16 +304,9 @@ BEGIN
 END
 
 
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [bodbAdminNet]
-GO 
+GO
+GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [vnteam] AS [dbo]
