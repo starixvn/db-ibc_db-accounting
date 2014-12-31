@@ -29,7 +29,8 @@ AS
 		- 20120810@Sophia: Use @transdesc to avoid SQL insert error
 		- 20130201@Elodie: Change link server DB03 to DBPOLICY
 						   Write more log on DBTXN server in case of DBLOG server failure
-		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)  								   						   
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)  	
+		- 20141226@Tom: Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day(Redmine#15274)							   						   
 */
 SET NOCOUNT ON 
 --Check permission for account site: @phuc20080213
@@ -179,6 +180,67 @@ END
 				@ErrCode = 104
 		RETURN 
 	END
+
+		-- Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day
+		DECLARE @MoveBetsDay DATETIME
+		SELECT @MoveBetsDay = MAX(eventdate)
+		FROM dbo.match14 WITH (NOLOCK)
+
+		DECLARE @amount money
+
+		IF @winlostdate <= @MoveBetsDay
+		BEGIN
+			SELECT TOP 1 @custid = custid,@amount = -(b.winlost - b.actual_stake) FROM	@Reversal b
+
+			EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
+				@custid = @custid
+				,@Amount = @amount
+				,@winlostdate = @winlostdate
+				,@ErrCode = @ErrCode OUTPUT
+				,@ErrMsg = @ErrMsg OUTPUT
+		
+			IF @ErrCode <> 0
+				BEGIN
+					DELETE  dbo.bettrans WITH (UPDLOCK, ROWLOCK) 
+					WHERE	transid IN (SELECT transid FROM @TransIDs)
+	
+					SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+							@ErrCode = 105
+					RETURN 
+				END
+					
+			SELECT TOP 1 @custid = custid,@amount = -(b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
+
+			IF @@ROWCOUNT = 1
+			BEGIN
+				EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
+					@custid = @custid
+					,@Amount = @amount
+					,@winlostdate = @winlostdate
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT		
+		
+				IF @ErrCode <> 0
+					BEGIN
+						DELETE  dbo.bettrans WITH (UPDLOCK, ROWLOCK) 
+						WHERE	transid IN (SELECT transid FROM @TransIDs)
+
+						SELECT TOP 1 @custid = custid,@amount = (b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
+
+						EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
+							@custid = @custid
+							,@Amount = @amount
+							,@winlostdate = @winlostdate
+							--,@ErrCode = @ErrCode OUTPUT
+							--,@ErrMsg = @ErrMsg OUTPUT
+	
+						SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+								@ErrCode = 106
+						RETURN 
+					END		
+			END
+		END
+
 
 
 --Get data after update
