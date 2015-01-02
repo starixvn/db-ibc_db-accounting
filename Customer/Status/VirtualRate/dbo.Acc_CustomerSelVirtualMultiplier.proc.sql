@@ -4,7 +4,7 @@ AS
 	/*
 		Created: 
 		Date: 
-		DB: DBAGE/bodb02
+		DB: DBTXN/CustDB
 		Task: Get virtual rate settings of customers
 		
 		Revisions:
@@ -22,7 +22,7 @@ BEGIN
 		
 	
 	Select @ActualRate as ActualRate, 			
-			virtualmultiplier as DisableVirtualrate, 
+			virtualmultiplier as EnableVirtualrate, 
 			-0.8 as Min_VirtualMultiplier,            ---- 0.2 - 1 
 			 0.6 as Max_VirtualMultiplier             ---- 1.6 - 1 
 	from CustInfo with (NOLOCK) where CustID = @CustID

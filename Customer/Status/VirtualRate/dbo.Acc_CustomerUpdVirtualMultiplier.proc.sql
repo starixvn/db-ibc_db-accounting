@@ -2,7 +2,7 @@
 GO
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
     @custid int,      
-    @DisableVirtualrate BIT = 0,
+    @EnableVirtualrate BIT = 0,
     @virtualmultiplier VARCHAR(MAX)='',  
     @UserID int,  
     @IP varchar(15) = '',  
@@ -77,9 +77,9 @@ BEGIN
 	--end  
 	  
 	declare @roleid tinyint,  
-			@OldDisableVirtualrate BIT  
+			@OldEnableVirtualrate BIT  
 	  
-	select @OldDisableVirtualrate = virtualmultiplier, @roleid = roleid from custinfo with (nolock) where custid = @custid  
+	select @OldEnableVirtualrate = virtualmultiplier, @roleid = roleid from custinfo with (nolock) where custid = @custid  
 	  
 	--Check Allowed downlines during peak hour at weekend      
 	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines    @custid=@custid,  
@@ -141,21 +141,73 @@ BEGIN
 	END  
 	*/  
 	  
-	  
-	EXEC dbo.Acc_CustomerInfo_Execrep_04   
-			@custid = @custid,  
-			@roleid = @roleid,  
-			@action = 'VirtualMultiplier',  
-			@DisableVirtualrate = @DisableVirtualrate,
-			@virtualmultiplier = @virtualmultiplier  
-	  
+	IF @EnableVirtualrate <> @OldEnableVirtualrate
+	BEGIN
+		EXEC dbo.Acc_CustomerInfo_Execrep_04   
+				@custid = @custid,  
+				@roleid = @roleid,  
+				@action = 'VirtualMultiplier',
+				@virtualmultiplier = @EnableVirtualrate  
+	END
+	
+	IF EXISTS(SELECT TOP 1 1 FROM @tblVirtualrate) AND @EnableVirtualrate = 1
+	BEGIN
+		IF @roleid = 4
+		BEGIN
+			UPDATE cs
+			SET  cs.VirtualMultiplier = t.VirtualMultiplier
+			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)
+				INNER JOIN CustInfo ci WITH(NOLOCK) ON cs.custid = ci.custid
+				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
+												AND cs.bettype = t.BetType
+												AND cs.isLive = t.IsLive
+			WHERE ci.srecommend = @custid
+				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
+		END
+		ELSE IF @roleid = 3
+		BEGIN
+			UPDATE cs
+			SET  cs.VirtualMultiplier = t.VirtualMultiplier
+			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)
+				INNER JOIN CustInfo ci WITH(NOLOCK) ON cs.custid = ci.custid
+				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
+												AND cs.bettype = t.BetType
+												AND cs.isLive = t.IsLive
+			WHERE ci.mrecommend = @custid
+				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
+		END 
+		IF @roleid = 2
+		BEGIN
+			UPDATE cs
+			SET  cs.VirtualMultiplier = t.VirtualMultiplier
+			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)
+				INNER JOIN CustInfo ci WITH(NOLOCK) ON cs.custid = ci.custid
+				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
+												AND cs.bettype = t.BetType
+												AND cs.isLive = t.IsLive
+			WHERE ci.recommend = @custid
+				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
+		END
+		IF @roleid = 1
+		BEGIN
+			UPDATE cs
+			SET  cs.VirtualMultiplier = t.VirtualMultiplier
+			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)				
+				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
+												AND cs.bettype = t.BetType
+												AND cs.isLive = t.IsLive
+			WHERE cs.custid = @custid
+				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
+		END
+	END 
+	 
 	Declare @LogSPData varchar(2000) = '',
 			@LogSPData2 varchar(2000)= ''  
 	
-	IF @OldDisableVirtualrate <> @DisableVirtualrate 
+	IF @OldEnableVirtualrate <> @EnableVirtualrate 
 	BEGIN
 		Select @LogSPData = '<Acc_CustomerUpdVirtualMultiplier CustID="'+ cast(@custid as varchar(50))+ '" ' +  
-						'DisableVirtualrate="'+ cast(@DisableVirtualrate as varchar(50))+ '" ' +  						
+						'EnableVirtualrate="'+ cast(@EnableVirtualrate as varchar(50))+ '" ' +  						
 						'UserID="'+ cast(@UserID as varchar(50))+ '" ' +  
 						'ErrCode="'+ cast(@ErrCode as varchar(50)) + '" '+  
 						'ErrMsg="'+ cast(@ErrMsg as varchar(50)) + '" '+  
@@ -163,7 +215,7 @@ BEGIN
 	  
 	END
 	
-	IF @DisableVirtualrate = 0
+	IF @EnableVirtualrate = 1
 	BEGIN		
 		SELECT @LogSPData2 =
 		(
@@ -201,7 +253,7 @@ BEGIN
 		END TRY
 		BEGIN CATCH  
 			Select @LogSPData = '<Acc_CustomerUpdVirtualMultiplier CustID="'+ cast(@custid as varchar(50))+ '" ' +  
-						'DisableVirtualrate="'+ cast(@DisableVirtualrate as varchar(50))+ '" ' +  						
+						'EnableVirtualrate="'+ cast(@EnableVirtualrate as varchar(50))+ '" ' +  						
 						'UserID="'+ cast(@UserID as varchar(50))+ '" ' +  
 						'ErrCode="'+ cast(@ErrCode as varchar(50)) + '" '+  
 						'ErrMsg="'+ cast(ERROR_MESSAGE() as varchar(50)) + '" '+  
@@ -246,7 +298,7 @@ BEGIN
 		END TRY
 		BEGIN CATCH  
 			Select @LogSPData = '<Acc_CustomerUpdVirtualMultiplier CustID="'+ cast(@custid as varchar(50))+ '" ' +  
-						'DisableVirtualrate="'+ cast(@DisableVirtualrate as varchar(50))+ '" ' +  						
+						'EnableVirtualrate="'+ cast(@EnableVirtualrate as varchar(50))+ '" ' +  						
 						'UserID="'+ cast(@UserID as varchar(50))+ '" ' +  
 						'ErrCode="'+ cast(@ErrCode as varchar(50)) + '" '+  
 						'ErrMsg="'+ cast(ERROR_MESSAGE() as varchar(50)) + '" '+  

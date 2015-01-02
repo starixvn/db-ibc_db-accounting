@@ -449,7 +449,7 @@ BEGIN
 	    e.exchangeid,
 	    e.actualrate,
 	    --virtual rate status
-	    ci.virtualmultiplier as DisableVirtualrate,
+	    ci.virtualmultiplier as EnableVirtualrate,
 	    important,
 	    ci.danger,
 	    ci.danger2,
