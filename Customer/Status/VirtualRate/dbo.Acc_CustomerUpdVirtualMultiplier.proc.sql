@@ -91,31 +91,34 @@ BEGIN
 	IF @ErrCode <>0 RETURN  
 	  
 	--END      
+	
+	IF @virtualmultiplier <> ''
+	BEGIN
+		-- For read xml					
+		EXEC sp_xml_preparedocument @DocHandler OUTPUT, @virtualmultiplier
 
-	-- For read xml					
-	EXEC sp_xml_preparedocument @DocHandler OUTPUT, @virtualmultiplier
+		INSERT INTO @tblVirtualrate(
+					SportType,
+					BetType,
+					IsLive,
+					VirtualMultiplier
+				)
+		SELECT
+			Data.SportType,
+			Data.BetType,
+			Data.IsLive,
+			Data.VirtualMultiplier
+		FROM OPENXML (@DocHandler, '/ROOT/Rate',1) 
+		WITH (
+			SportType	SMALLINT,
+			BetType		SMALLINT,
+			IsLive		BIT,
+			VirtualMultiplier SMALLMONEY	
+		) AS Data
 
-	INSERT INTO @tblVirtualrate(
-				SportType,
-				BetType,
-				IsLive,
-				VirtualMultiplier
-			)
-	SELECT
-		Data.SportType,
-		Data.BetType,
-		Data.IsLive,
-		Data.VirtualMultiplier
-	FROM OPENXML (@DocHandler, '/ROOT/Rate',1) 
-	WITH (
-		SportType	SMALLINT,
-		BetType		SMALLINT,
-		IsLive		BIT,
-		VirtualMultiplier SMALLMONEY	
-	) AS Data
-
-	EXEC sp_xml_removedocument @DocHandler
-	-- end read xml	
+		EXEC sp_xml_removedocument @DocHandler
+		-- end read xml	
+	END		
 		  
 	IF EXISTS (SELECT TOP 1 1
 				FROM @tblVirtualrate
@@ -141,65 +144,13 @@ BEGIN
 	END  
 	*/  
 	  
-	IF @EnableVirtualrate <> @OldEnableVirtualrate
-	BEGIN
-		EXEC dbo.Acc_CustomerInfo_Execrep_04   
-				@custid = @custid,  
-				@roleid = @roleid,  
-				@action = 'VirtualMultiplier',
-				@virtualmultiplier = @EnableVirtualrate  
-	END
 	
-	IF EXISTS(SELECT TOP 1 1 FROM @tblVirtualrate) AND @EnableVirtualrate = 1
-	BEGIN
-		IF @roleid = 4
-		BEGIN
-			UPDATE cs
-			SET  cs.VirtualMultiplier = t.VirtualMultiplier
-			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)
-				INNER JOIN CustInfo ci WITH(NOLOCK) ON cs.custid = ci.custid
-				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
-												AND cs.bettype = t.BetType
-												AND cs.isLive = t.IsLive
-			WHERE ci.srecommend = @custid
-				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
-		END
-		ELSE IF @roleid = 3
-		BEGIN
-			UPDATE cs
-			SET  cs.VirtualMultiplier = t.VirtualMultiplier
-			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)
-				INNER JOIN CustInfo ci WITH(NOLOCK) ON cs.custid = ci.custid
-				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
-												AND cs.bettype = t.BetType
-												AND cs.isLive = t.IsLive
-			WHERE ci.mrecommend = @custid
-				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
-		END 
-		IF @roleid = 2
-		BEGIN
-			UPDATE cs
-			SET  cs.VirtualMultiplier = t.VirtualMultiplier
-			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)
-				INNER JOIN CustInfo ci WITH(NOLOCK) ON cs.custid = ci.custid
-				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
-												AND cs.bettype = t.BetType
-												AND cs.isLive = t.IsLive
-			WHERE ci.recommend = @custid
-				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
-		END
-		IF @roleid = 1
-		BEGIN
-			UPDATE cs
-			SET  cs.VirtualMultiplier = t.VirtualMultiplier
-			FROM CustVirtualRate cs WITH(UPDLOCK,ROWLOCK)				
-				INNER JOIN @tblVirtualrate t ON cs.sporttype = t.SportType
-												AND cs.bettype = t.BetType
-												AND cs.isLive = t.IsLive
-			WHERE cs.custid = @custid
-				AND cs.VirtualMultiplier <> t.VirtualMultiplier	
-		END
-	END 
+	EXEC dbo.Acc_CustomerInfo_Execrep_04   
+			@custid = @custid,  
+			@roleid = @roleid,  
+			@action = 'VirtualMultiplier',
+			@EnableVirtualrate = @EnableVirtualrate,  
+			@virtualmultiplier = @virtualmultiplier 	
 	 
 	Declare @LogSPData varchar(2000) = '',
 			@LogSPData2 varchar(2000)= ''  
