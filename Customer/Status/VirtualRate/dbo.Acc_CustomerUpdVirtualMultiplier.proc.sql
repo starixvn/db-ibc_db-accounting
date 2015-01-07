@@ -2,7 +2,7 @@
 GO
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
     @custid int,      
-    @DisableVirtualrate BIT = 0,
+    @EnableVirtualrate BIT = 0,
     @virtualmultiplier VARCHAR(MAX)='',  
     @UserID int,  
     @IP varchar(15) = '',  
@@ -77,9 +77,9 @@ BEGIN
 	--end  
 	  
 	declare @roleid tinyint,  
-			@OldDisableVirtualrate BIT  
+			@OldEnableVirtualrate BIT  
 	  
-	select @OldDisableVirtualrate = virtualmultiplier, @roleid = roleid from custinfo with (nolock) where custid = @custid  
+	select @OldEnableVirtualrate = virtualmultiplier, @roleid = roleid from custinfo with (nolock) where custid = @custid  
 	  
 	--Check Allowed downlines during peak hour at weekend      
 	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines    @custid=@custid,  
@@ -91,31 +91,34 @@ BEGIN
 	IF @ErrCode <>0 RETURN  
 	  
 	--END      
+	
+	IF @virtualmultiplier <> ''
+	BEGIN
+		-- For read xml					
+		EXEC sp_xml_preparedocument @DocHandler OUTPUT, @virtualmultiplier
 
-	-- For read xml					
-	EXEC sp_xml_preparedocument @DocHandler OUTPUT, @virtualmultiplier
+		INSERT INTO @tblVirtualrate(
+					SportType,
+					BetType,
+					IsLive,
+					VirtualMultiplier
+				)
+		SELECT
+			Data.SportType,
+			Data.BetType,
+			Data.IsLive,
+			Data.VirtualMultiplier
+		FROM OPENXML (@DocHandler, '/ROOT/Rate',1) 
+		WITH (
+			SportType	SMALLINT,
+			BetType		SMALLINT,
+			IsLive		BIT,
+			VirtualMultiplier SMALLMONEY	
+		) AS Data
 
-	INSERT INTO @tblVirtualrate(
-				SportType,
-				BetType,
-				IsLive,
-				VirtualMultiplier
-			)
-	SELECT
-		Data.SportType,
-		Data.BetType,
-		Data.IsLive,
-		Data.VirtualMultiplier
-	FROM OPENXML (@DocHandler, '/ROOT/Rate',1) 
-	WITH (
-		SportType	SMALLINT,
-		BetType		SMALLINT,
-		IsLive		BIT,
-		VirtualMultiplier SMALLMONEY	
-	) AS Data
-
-	EXEC sp_xml_removedocument @DocHandler
-	-- end read xml	
+		EXEC sp_xml_removedocument @DocHandler
+		-- end read xml	
+	END		
 		  
 	IF EXISTS (SELECT TOP 1 1
 				FROM @tblVirtualrate
@@ -141,21 +144,21 @@ BEGIN
 	END  
 	*/  
 	  
-	  
+	
 	EXEC dbo.Acc_CustomerInfo_Execrep_04   
 			@custid = @custid,  
 			@roleid = @roleid,  
-			@action = 'VirtualMultiplier',  
-			@DisableVirtualrate = @DisableVirtualrate,
-			@virtualmultiplier = @virtualmultiplier  
-	  
+			@action = 'VirtualMultiplier',
+			@EnableVirtualrate = @EnableVirtualrate,  
+			@virtualmultiplier = @virtualmultiplier 	
+	 
 	Declare @LogSPData varchar(2000) = '',
 			@LogSPData2 varchar(2000)= ''  
 	
-	IF @OldDisableVirtualrate <> @DisableVirtualrate 
+	IF @OldEnableVirtualrate <> @EnableVirtualrate 
 	BEGIN
 		Select @LogSPData = '<Acc_CustomerUpdVirtualMultiplier CustID="'+ cast(@custid as varchar(50))+ '" ' +  
-						'DisableVirtualrate="'+ cast(@DisableVirtualrate as varchar(50))+ '" ' +  						
+						'EnableVirtualrate="'+ cast(@EnableVirtualrate as varchar(50))+ '" ' +  						
 						'UserID="'+ cast(@UserID as varchar(50))+ '" ' +  
 						'ErrCode="'+ cast(@ErrCode as varchar(50)) + '" '+  
 						'ErrMsg="'+ cast(@ErrMsg as varchar(50)) + '" '+  
@@ -163,7 +166,7 @@ BEGIN
 	  
 	END
 	
-	IF @DisableVirtualrate = 0
+	IF @EnableVirtualrate = 1
 	BEGIN		
 		SELECT @LogSPData2 =
 		(
@@ -201,7 +204,7 @@ BEGIN
 		END TRY
 		BEGIN CATCH  
 			Select @LogSPData = '<Acc_CustomerUpdVirtualMultiplier CustID="'+ cast(@custid as varchar(50))+ '" ' +  
-						'DisableVirtualrate="'+ cast(@DisableVirtualrate as varchar(50))+ '" ' +  						
+						'EnableVirtualrate="'+ cast(@EnableVirtualrate as varchar(50))+ '" ' +  						
 						'UserID="'+ cast(@UserID as varchar(50))+ '" ' +  
 						'ErrCode="'+ cast(@ErrCode as varchar(50)) + '" '+  
 						'ErrMsg="'+ cast(ERROR_MESSAGE() as varchar(50)) + '" '+  
@@ -246,7 +249,7 @@ BEGIN
 		END TRY
 		BEGIN CATCH  
 			Select @LogSPData = '<Acc_CustomerUpdVirtualMultiplier CustID="'+ cast(@custid as varchar(50))+ '" ' +  
-						'DisableVirtualrate="'+ cast(@DisableVirtualrate as varchar(50))+ '" ' +  						
+						'EnableVirtualrate="'+ cast(@EnableVirtualrate as varchar(50))+ '" ' +  						
 						'UserID="'+ cast(@UserID as varchar(50))+ '" ' +  
 						'ErrCode="'+ cast(@ErrCode as varchar(50)) + '" '+  
 						'ErrMsg="'+ cast(ERROR_MESSAGE() as varchar(50)) + '" '+  

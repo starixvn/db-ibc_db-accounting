@@ -672,6 +672,7 @@ Begin DataProject = "Account"
       Script = "Task_LimitLoss_Setting_TotalBalanceUpd_Job.sql"
    End
    Begin Folder = "Login-OnUser"
+      Script = "dbo.Acc_AdminGroupSel.sql"
       Script = "dbo.Acc_CheckIn.proc.sql"
       Script = "dbo.Acc_CheckOut.proc.sql"
       Script = "dbo.Acc_LoginAdmin.proc.sql"
