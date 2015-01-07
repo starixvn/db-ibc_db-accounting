@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 01/07/2015 15:17:22 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 01/07/2015 15:21:13 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -121,7 +121,6 @@ BEGIN
 
     --Do not allow loop-following
     IF EXISTS (SELECT TOP 1 1 FROM Cust_FollowBet WITH(NOLOCK) WHERE custid = @custFollow AND Follower = @custid)
-    IF @@rowcount <> 0
 	BEGIN
 		SELECT @ErrMsg ='Do not allow loop following: ''' + @Username + ''' , please try again!'
 			 , @ErrCode = 109
