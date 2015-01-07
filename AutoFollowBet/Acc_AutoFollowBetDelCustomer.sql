@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer_xtest]    Script Date: 12/31/2014 15:31:21 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 01/07/2015 15:16:54 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -57,12 +57,23 @@ BEGIN
 
 	IF @@rowcount = 0
 	BEGIN
-		SELECT @ErrMsg = 'Invalid username'
+		SELECT @ErrMsg = 'Invalid username ''' + @Username + ''', please try again!'
 		     , @ErrCode = 101
 
 		RETURN
 	END
 
+	IF NOT EXISTS (SELECT TOP 1 1
+			     FROM Cust_followBet WITH(NOLOCK)
+			    WHERE custid = @custid
+			  )
+	BEGIN
+		SELECT @ErrMsg = 'Username ''' + @Username + ''' does not exist, please try again!'
+			 , @ErrCode = 102
+
+		RETURN
+	END
+	
 	-- Get old Live value
 	SELECT @oldRate = f.Rate
 	     , @oldLiveHDP = f.Follow1
@@ -152,6 +163,9 @@ BEGIN
 			@duration = @duration 
 	END CATCH
 END
+
+
+
 
 
 

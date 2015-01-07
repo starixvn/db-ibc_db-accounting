@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer_xtest]    Script Date: 12/31/2014 15:31:40 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 01/07/2015 15:17:22 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -47,9 +47,9 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @startRun DATETIME
-		  , @endRun DATETIME
-		  , @duration INT
+	DECLARE @startRun	DATETIME
+		  , @endRun		DATETIME
+		  , @duration	INT
 
 	SELECT @startRun = getdate()
 		 , @duration = 0
@@ -70,7 +70,7 @@ BEGIN
 
 	IF @@rowcount = 0
 	BEGIN
-		SELECT @ErrMsg = 'Invalid username, please try again!'
+		SELECT @ErrMsg = 'Invalid username '''+ @Username +''', please try again!'
 			 , @ErrCode = 101
 
 		RETURN
@@ -81,7 +81,7 @@ BEGIN
 			    WHERE custid = @custid
 			  )
 	BEGIN
-		SELECT @ErrMsg = 'Username existed, please try again!'
+		SELECT @ErrMsg = 'Username ''' + @Username +''' existed, please try again!'
 			 , @ErrCode = 102
 
 		RETURN
@@ -104,7 +104,7 @@ BEGIN
 	--Do not allow member to follow himself
 	IF @custFollow = @custid
 	BEGIN
-	    SELECT @ErrMsg = 'User and follower are identical, please try again!'
+	    SELECT @ErrMsg = 'User '''+ @Username +''' and follower are identical, please try again!'
 			 , @ErrCode = 106
 
 		RETURN
@@ -113,21 +113,17 @@ BEGIN
     --Do not allow member to follow his agent
 	IF @recommend = @custid
 	BEGIN
-	    SELECT @ErrMsg = 'Can not follow direct upline, please try again!'
+	    SELECT @ErrMsg = 'Can not follow direct upline ''' + @Username + ''', please try again!'
 			 , @ErrCode = 107
 
 		RETURN
 	END
 
     --Do not allow loop-following
-    SELECT 1
-      FROM Cust_FollowBet WITH(NOLOCK)
-     WHERE custid = @custFollow
-       AND Follower = @custid
-
+    IF EXISTS (SELECT TOP 1 1 FROM Cust_FollowBet WITH(NOLOCK) WHERE custid = @custFollow AND Follower = @custid)
     IF @@rowcount <> 0
 	BEGIN
-		SELECT @ErrMsg = 'Do not allow loop following, please try again!'
+		SELECT @ErrMsg ='Do not allow loop following: ''' + @Username + ''' , please try again!'
 			 , @ErrCode = 109
 
 		RETURN
@@ -302,6 +298,10 @@ BEGIN
 			,@duration = @duration
 	END CATCH
 END
+
+
+
+
 
 
 
