@@ -4,7 +4,7 @@ AS
 	/*
 		Created: 
 		Date: 
-		DB: DBTXN/CustDB
+		DB: DBACC/bodb02
 		Task: Get virtual rate settings of customers
 		
 		Revisions:
@@ -30,6 +30,7 @@ BEGIN
 	SELECT * 
 	FROM CustVirtualRate WITH(NOLOCK)
 	WHERE custid = @Custid
+	ORDER BY sporttype,isLive DESC,bettype
 	
 END
 

@@ -11,6 +11,7 @@ AS
 	Revisions:
 		- 20101123@Jamie: Change to use acc_functioninfo instead of acc_functioninfo_1 
 		- 20110526@Tom: Remove condition @System 
+		- 20150107@Johnson: add more system 'NAPU3' [redmine: #28516]
 */
 SET NOCOUNT ON;
 SELECT   c.username,
@@ -42,6 +43,7 @@ FROM     acc_memberpolicy_1 AS mp WITH (NOLOCK)
          ON fi.funcid = fip.parentid
             AND fip.parentid <> fip.funcid
 WHERE    mp.custid = @CustID
+		AND fi.system = @system
 GROUP BY c.username, fi.funcname, fi.funcdesc, mp.funcid, mp.policy, fi.displayorder, gp.policy, fi.funcrender, fi.parentid
 ORDER BY fi.parentid, COUNT(fip.funcid) DESC, fi.displayorder;
 SELECT @GroupID = groupid
