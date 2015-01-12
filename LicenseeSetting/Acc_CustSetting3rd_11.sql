@@ -8,6 +8,18 @@
 	,@MaxPerBall MONEY = 0
 	,@ExistedMember BIT
 AS
+/*
+	Created: Elodie
+	Date: 20150108
+	Task : Licensee Setting Configuration - Update Bet Setting [#6304]
+	DB: DBTXN/CustDB
+	Original:
+
+	Revisions:
+
+	Param's Explanation:
+		
+*/ 
 BEGIN
 
 	SET NOCOUNT ON
@@ -86,7 +98,7 @@ BEGIN
 			AND 1 = CASE	WHEN @Bettype = 0 THEN 1 
 							WHEN @Bettype = 31 AND cs.bettype IN (31,32) THEN 1 
 							WHEN @Bettype = 41 AND cs.bettype IN (41,42) THEN 1 
-							WHEN @Bettype = 51 AND cs.bettype IN (51,52) THEN 1 END
+							WHEN @Bettype = 51 AND cs.bettype IN (51,52) THEN 1 ELSE 0 END
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 	END 
 
