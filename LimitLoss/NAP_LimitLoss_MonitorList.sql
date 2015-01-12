@@ -16,9 +16,9 @@ AS
 SET NOCOUNT ON
 
 SELECT	c.Username, c.roleid, e.currency, t.YesterdayBalance, t.TotalBalance, t.MaxLoss, t.LevelID,
-		CASE WHEN t.OldLevelID > t.LevelID THEN 0
+		CASE WHEN t.OldLevelID > t.LevelID THEN -1
 			 WHEN t.OldLevelID < t.LevelID THEN 1
-			 ELSE 2 END AS Movement,
+			 ELSE 0 END AS Movement,
 		CASE WHEN t.MaxLoss = 0 THEN 100 
 			 WHEN t.TotalBalance >=0 THEN 0
 			 ELSE CAST((t.TotalBalance/t.MaxLoss*100) AS INT) END AS PercentageLoss
