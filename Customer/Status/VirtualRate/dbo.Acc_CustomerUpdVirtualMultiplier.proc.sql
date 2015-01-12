@@ -1,6 +1,4 @@
-﻿USE [CustDB]
-GO
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
     @custid int,      
     @EnableVirtualrate BIT = 0,
     @virtualmultiplier VARCHAR(MAX)='',  
@@ -175,6 +173,7 @@ BEGIN
 				,IsLive
 				,VirtualMultiplier
 			FROM @tblVirtualrate
+			ORDER BY sporttype,isLive DESC,bettype
 			FOR XML  RAW('s')
 		)
 		
