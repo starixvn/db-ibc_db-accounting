@@ -1,7 +1,7 @@
-﻿CREATE PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByAg]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
-	@recommend INT,
+	@mrecommend INT,
 	
 	@showSB BIT=1,  
 	@showNG BIT=0,  
@@ -12,7 +12,7 @@
 	@showBI BIT=0,  
 	@showVS BIT = 0,
 	@showKeno BIT=0
-	
+
 AS
 
 /*  
@@ -24,27 +24,26 @@ Original SP:
 Revisions:  
 	-20130115@Scott : fix bug sum total of poker sporttype
 	-20130418@Scott : Update formula turnover of Racing
+	-20130702@Dom.Cao: Add Vanriance (+\-)
 	-20140304@TomVo: 
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
+	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]								
 */  
 
 SET NOCOUNT ON
 
 DECLARE @TmpCondBettype TABLE(bettype INT , isVirtual BIT) 
 DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)  
---DECLARE #TmpResult TABLE (custid INT ,username NVARCHAR(100),actualrate FLOAT,Turnover MONEY, Winloss MONEY,Commission MONEY,virtualrate SMALLINT)
---DECLARE #TmpResultAll TABLE (custid INT ,username NVARCHAR(100),Turnover MONEY, Winloss MONEY,Commission MONEY,Total MONEY,TurnoverRM MONEY,TotalRM MONEY,Virtual_Total MONEY,Variance MONEY, virtualrate SMALLINT)
 DECLARE @CommSetting TABLE (MatchID int, IBCFee bit, ToteCommWin smallmoney, ToteCommPlace smallmoney, ToteCommWP smallmoney, ToteFee smallmoney )
 
 
-CREATE TABLE #TmpResult (custid INT ,
+CREATE TABLE #TmpResult (recommend INT ,
 						actualrate FLOAT,
 						Turnover MONEY, 
 						Winloss MONEY,
 						Commission MONEY)
-						
-CREATE TABLE #TmpResultAll (custid INT ,
+CREATE TABLE #TmpResultAll (recommend INT ,
 							VirtualRateType INT,
 							Turnover MONEY, 
 							Winloss MONEY,
@@ -99,6 +98,7 @@ IF @showKeno = 1
 	 FROM bettype    WITH (NOLOCK)  
 	 WHERE typeid BETWEEN 1501 AND 1599
 
+
 --IF @winlostdate > @MoveBetDays
 --BEGIN
 
@@ -140,9 +140,9 @@ IF @showKeno = 1
 		WHERE o.eventdate BETWEEN @FromDate AND @ToDate
 		
 		INSERT INTO #TmpResult
-		SELECT b.custid,
+		SELECT b.recommend,
 			b.actualrate,  
-			--SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,  
+			-- SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,  
 			sum(case when bettype = 33 then bm.TOIBC else b.actual_stake*isnull(oddsspread,0) end) Turnover,
 			-(  
 			sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)) -- PTWLIBC,   
@@ -154,10 +154,10 @@ IF @showKeno = 1
 			when 33 then bm.TOPhum*cs.ToteCommWP   
 			else 0 end))-- commIncomeIBC  
 			) Winloss,  
-			SUM(scomm) Commission
+			SUM(scomm) Commission	
 		FROM bettrans b with (nolock)  
 			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid 
-			--INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid
+			--INNER JOIN custinfo cii WITH(NOLOCK) ON b.recommend = cii.custid   
 			LEFT JOIN ( select refno,
 							sum(case when bettype = 32 and liveawayscore = 0 then 0 else stake*isnull(oddsspread,0) end) TOIBC,    
 							-sum((winlost - stake)*isnull(oddsspread,0)) WLIBC,  
@@ -171,14 +171,15 @@ IF @showKeno = 1
 			and b.winlostdate BETWEEN @FromDate AND @ToDate
 			and b.statusID not in (101,102,103,121) 
 			and b.currency <> 20
-			and b.recommend = @recommend
-		GROUP BY b.custid,
-			b.actualrate
+			and b.mrecommend = @mrecommend
+		GROUP BY b.recommend,
+				b.actualrate
+				
  
  
 		INSERT INTO #TmpResultAll
-		SELECT custid,
-			0 VirtualRateType, 
+		SELECT recommend,
+			0 VirtualRateType,
 			SUM(Turnover), 
 			SUM(Winloss),
 			SUM(Commission),
@@ -189,37 +190,38 @@ IF @showKeno = 1
 			SUM( (Winloss+Commission)*actualrate ) Virtual_Total 
 			
 		FROM #TmpResult
-		GROUP BY custid
+		GROUP BY recommend
 	END
 	
 ---get result for PORKER	
 	IF @showP2P = 1  
 	BEGIN
 		
-		delete #TmpResult
+		DELETE #TmpResult
 		
 		INSERT INTO	#TmpResult
-		SELECT b.custid,
+		SELECT b.recommend,
 			b.actualrate,
 			0 Turnover,
-			isnull(sum(-odds),0)  Winlost,   
+			isnull(sum(-1*(odds)),0)  Winlost,   
 			SUM(scomm) commission
 		from bettrans b with (nolock)  
-			--INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid
+			--INNER JOIN custinfo cs WITH(NOLOCK) ON b.recommend = cs.custid   
 		where b.bettype = 1000  
 			and b.matchid = 1000   
 			and b.ruben=1    
 			and b.winlostdate BETWEEN @FromDate AND @ToDate
 			and statusID NOT in (101,102,103,121)  
 			and b.currency <> 20
-			and b.recommend = @recommend
-		GROUP BY b.custid,
+			and b.mrecommend = @mrecommend
+		GROUP BY b.recommend,
 			b.actualrate
+			
 		
 		
 		INSERT INTO #TmpResultAll
-		SELECT custid,
-			0 VirtualRateType,
+		SELECT recommend,
+			0 VirtualRateType,  
 			0  Turnover, 
 			SUM(Winloss),
 			SUM(Commission),
@@ -227,15 +229,15 @@ IF @showKeno = 1
 			0 TurnoverRM,
 			0 TurnoverIBCVirtual,
 			SUM( (Winloss+Commission)*actualrate ) TotalRM,
-			SUM( (Winloss+Commission)*actualrate ) Virtual_Total
+			SUM( (Winloss+Commission)*actualrate ) Virtual_Total 
 		FROM #TmpResult
-		GROUP BY custid
+		GROUP BY recommend
 	END
 ------------------------------
 
 
 INSERT INTO #TmpResultAll
-SELECT b.custid,
+SELECT b.recommend,
 	CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
 	SUM(ABS(CASE WHEN b.bettype in(71,73) then 0 ELSE stake END )*(1 - tpositiontaking)) Turnover,
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,
@@ -247,42 +249,67 @@ SELECT b.custid,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.isvirtual = 1 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
 FROM bettrans b WITH(NOLOCK) 
 	INNER JOIN @TmpCondBettype t ON t.bettype = b.bettype 
-	--INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid
+	--INNER JOIN custinfo ca WITH(NOLOCK) ON b.recommend = ca.custid
 WHERE winlostdate BETWEEN @FromDate AND @ToDate
    and b.ruben = 1  
    AND b.statusID NOT IN (101, 102, 103)   
    and b.currency <> 20
-   and b.recommend = @recommend
-GROUP BY b.custid ,
-	CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
-
-SELECT b.custid,
-	ci.username, 
-	SUM(Turnover) Turnover,
-	SUM(Winloss) Winloss, 
-	SUM(Commission) Commission, 
-	SUM(total) total,
-	SUM(TurnoverRM) TurnoverRM,
-	SUM(TurnoverIBCVirtual) Virtual_Turnover,
-	SUM (TotalRM) TotalRM,
-	SUM(Virtual_Total) Virtual_Total,
-	SUM(CASE WHEN virtualratetype=1 THEN totalrm-virtual_total ELSE 0 END) [WLVariance+],
-	SUM(CASE WHEN virtualratetype=-1 THEN totalrm-virtual_total ELSE 0 END) [WLVariance-],
-	SUM(CASE WHEN virtualratetype=1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance+],
-	SUM(CASE WHEN virtualratetype=-1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance-],
-	(ISNULL(ci.virtualmultiplier,1)-1)*100 virtualrate
-FROM #TmpResultAll b
-INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid
-GROUP BY b.custid,
-		ci.username,
-		(ISNULL(ci.virtualmultiplier,1)-1)*100
+   and b.mrecommend = @mrecommend
+GROUP BY b.recommend ,
+	CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END  
 
 
+SELECT b.recommend,
+		ca.username, 
+		SUM(Turnover) Turnover,
+		SUM(Winloss) Winloss, 
+		SUM(Commission) Commission, 
+		SUM(total) total,
+		SUM(TurnoverRM) TurnoverRM,
+		SUM(TurnoverIBCVirtual) Virtual_Turnover,
+		SUM (TotalRM) TotalRM,
+		SUM(Virtual_Total) Virtual_Total,
+		SUM(CASE WHEN virtualratetype=1 THEN totalrm-virtual_total ELSE 0 END) [WLVariance+],
+		SUM(CASE WHEN virtualratetype=-1 THEN totalrm-virtual_total ELSE 0 END) [WLVariance-],
+		SUM(CASE WHEN virtualratetype=1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance+],
+		SUM(CASE WHEN virtualratetype=-1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance-],
+		ISNULL(ca.virtualmultiplier,1) EnableVirtualrate
+	FROM #TmpResultAll b
+	INNER JOIN custinfo ca WITH(NOLOCK) ON b.recommend = ca.custid
+	GROUP BY b.recommend,ca.username,ISNULL(ca.virtualmultiplier,1)
+ORDER BY username	
+
+SELECT cs.username
+		,vr.custid
+		,vr.sporttype
+		,vr.bettype
+		,vr.islive
+		,vr.virtualMultiplier
+FROM custinfo cs WITH(NOLOCK) 
+	INNER JOIN CustVirtualRate vr WITH(NOLOCK) ON cs.custid = vr.custid
+WHERE cs.custid IN (SELECT DISTINCT recommend FROM #TmpResultAll)
+ORDER BY username,sporttype,islive DESC, bettype
+	
 DROP TABLE #TmpResult
 DROP TABLE #TmpResultAll
 
-
 /*
+
+[Acc_Rpt_TreeWinlostBySAg]
+	@FromDate   = '20130618',
+	@ToDate   = '20160630',  
+	@srecommend =394310,	
+	
+	@showSB =1,  
+	@showNG =1,  
+	@ShowRB =1,  
+	@showLiveCasino = 1,  
+	@showCasino =1,  
+	@showP2P =1,  
+	@showBI =1,  
+	@showVS = 1,
+	@showKeno=1
+
 [Acc_Rpt_TreeWinlostByMAg]
 	@FromDate   = '20130618',
 	@ToDate   = '20160630',  
@@ -295,25 +322,7 @@ DROP TABLE #TmpResultAll
 	@showCasino =1,  
 	@showP2P =1,  
 	@showBI =1,  
-	@showVS = 1,
-	@ShowKeno = 1
-	
-[Acc_Rpt_TreeWinlostByAg]
-	@FromDate   = '20130618',
-	@ToDate   = '20160630',  
-	@recommend =395977,	
-	
-	@showSB =1,  
-	@showNG =1,  
-	@ShowRB =1,  
-	@showLiveCasino = 1,  
-	@showCasino =1,  
-	@showP2P =1,  
-	@showBI =1,  
-	@showVS = 1	,
-	@ShowKeno = 1
-
-
+	@showVS = 1
 */
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByMAg] TO [bodbAdminNet]
