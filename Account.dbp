@@ -663,7 +663,11 @@ Begin DataProject = "Account"
       Script = "dbo.Acc_GetIPInfo_Full.sql"
       Script = "dbo.GetIPVN.sql"
    End
-   Begin Folder = "LiL"
+   Begin Folder = "LicenseeSetting"
+      Script = "Acc_CustSetting3rd_11.sql"
+      Script = "Acc_CustSetting3rd_12.sql"
+      Script = "Lrf_CustomerSelCheckAllowedDownlines.sql"
+      Script = "Lrf_LicenseeBetSettingUpd.sql"
    End
    Begin Folder = "LimitLoss"
       Begin Folder = "BK"
