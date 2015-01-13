@@ -1,5 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Con_FuncInfoSel]
-	@system varchar(50) = 'ALL'
+	@system varchar(50) = 'ACCOUNTING'
 AS
 /*
 Task: Select function Info 
@@ -9,6 +9,7 @@ Revision
 	Shifu@20100612: Get function files by system type
 	-Henry@20100714: Allow to search by System (Default: ACCOUNTING)
 	20101123@Jamie: Change to use acc_functioninfo instead of acc_functioninfo_1
+	- 20150112@Johnson: change default system is Accounting [Redmine: #28979]
 */
 
 SET NOCOUNT ON
