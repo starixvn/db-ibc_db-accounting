@@ -12,6 +12,7 @@ DB: DB03.bodb02
 Revisions:
 Param's Explanation: 
 	- 20101129@Steven: change to use acc_functioninfo instead of acc_functioninfo_1
+	- 20150112@Johnson: filter function and menu by @sytem to support NAPU3 [Redmine: #28516]
 */
 SET NOCOUNT ON
 
@@ -31,8 +32,9 @@ begin
 				   INNER JOIN acc_grouppolicy_1 gp WITH (nolock)  
 					 ON gp.groupid = ac.groupid  
 						AND gp.funcid = mp.funcid  	
-		  WHERE    mp.custid = @CustID AND  
-		  (Isnull(mp.policy,0) | Isnull(gp.policy,0)) & Isnull(fi.funcrender,0) > 0  
+		  WHERE    mp.custid = @CustID   
+			AND fi.system = @system
+			AND (Isnull(mp.policy,0) | Isnull(gp.policy,0)) & Isnull(fi.funcrender,0) > 0  
 	) as p inner join Acc_Menu m (nolock) on p.funcname = m.funcname
 	where System=@System and IsHide = 0
 	order by parentid, [order]

@@ -6,7 +6,8 @@ Task: Select function Info BY System
 DB: DB03.BODB02 
 
 Revision
-	20101123@Jamie: Change to use acc_functioninfo instead of acc_functioninfo_1
+	- 20101123@Jamie: Change to use acc_functioninfo instead of acc_functioninfo_1
+	- 20150112@Johnson: filter by @sytem to support NAPU3 [Redmine: #28516]
 */
 	SET NOCOUNT ON 
 
