@@ -668,6 +668,7 @@ Begin DataProject = "Account"
       Script = "Acc_CustSetting3rd_12.sql"
       Script = "Lrf_CustomerSelCheckAllowedDownlines.sql"
       Script = "Lrf_LicenseeBetSettingUpd.sql"
+      Script = "Lrf_LicenseePositionTakingUpd.sql"
    End
    Begin Folder = "LimitLoss"
       Begin Folder = "BK"
