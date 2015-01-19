@@ -288,6 +288,7 @@ SELECT cs.username
 FROM custinfo cs WITH(NOLOCK) 
 	INNER JOIN CustVirtualRate vr WITH(NOLOCK) ON cs.custid = vr.custid
 WHERE cs.custid IN (SELECT DISTINCT recommend FROM #TmpResultAll)
+	AND cs.virtualMultiplier = 1
 ORDER BY username,sporttype,islive DESC, bettype
 	
 DROP TABLE #TmpResult

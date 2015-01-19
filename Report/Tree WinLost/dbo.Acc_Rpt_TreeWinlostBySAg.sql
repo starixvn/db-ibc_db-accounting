@@ -247,7 +247,7 @@ WHERE winlostdate BETWEEN @FromDate AND @ToDate
    and b.srecommend = @srecommend
 GROUP BY b.mrecommend ,
 		CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END
-
+				
 SELECT b.mrecommend,
 		cm.username, 
 		SUM(Turnover) Turnover,
@@ -279,6 +279,7 @@ SELECT cs.username
 FROM custinfo cs WITH(NOLOCK) 
 	INNER JOIN CustVirtualRate vr WITH(NOLOCK) ON cs.custid = vr.custid
 WHERE cs.custid IN (SELECT DISTINCT mrecommend FROM #TmpResultAll)
+	AND cs.virtualMultiplier = 1
 ORDER BY username,sporttype,islive DESC, bettype
 
 DROP TABLE #TmpResult
