@@ -27,13 +27,13 @@ BEGIN
 		@LimitDownlines INT,  
 		@TotalDownlines INT  
 	  
-	SET @LimitDownlinesMin = 20000  
-	SET @LimitDownlinesMax = 50000  
+	SET @LimitDownlinesMin = 25000  
+	SET @LimitDownlinesMax = 100000  
 		 
 	IF @sporttype = 1  -- Sportsbook 
 	BEGIN
-		SELECT	 @LimitDownlinesMin = 3000
-				,@LimitDownlinesMax = 5000 
+		SELECT	 @LimitDownlinesMin = 5000
+				,@LimitDownlinesMax = 10000 
 	END  
 	  
 	--GET TOTALDOWNLINE  

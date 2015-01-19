@@ -65,21 +65,11 @@ BEGIN
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 	END
 
-	IF @Sporttype = 161 OR @Sporttype BETWEEN 151 AND 152 --NumberGame, Virtual sport, Racing
+	IF @Sporttype = 161 --NumberGame
 	BEGIN		
 		UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
-		SET @MaxPerMatch = CASE	--Racing
-								WHEN @Sporttype = 151 AND @Bettype = 31 THEN MaxPerMatch151
-								WHEN @Sporttype = 151 AND @Bettype = 41 THEN MaxPerMatch151_OT
-								WHEN @Sporttype = 151 AND @Bettype = 51 THEN MaxPerMatch151_AU
-								WHEN @Sporttype = 152 AND @Bettype = 41 THEN MaxPerMatch152_UK
-								WHEN @Sporttype = 152 AND @Bettype = 51 THEN MaxPerMatch152_AU
-								WHEN @Sporttype = 153 AND @Bettype = 51 THEN MaxPerMatch153_AU
-
-								--NumberGame
-								WHEN @Sporttype = 161 THEN maxpermatch161
-								END,
-			@MaxPerBall = CASE WHEN @Sporttype = 161 THEN MaxPerBall161 ELSE @MaxPerBall END
+		SET maxpermatch161 = @MaxPerMatch,
+			MaxPerBall161 = @MaxPerBall
 		WHERE custid IN (SELECT custid FROM #tblCust) 
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 
@@ -88,14 +78,10 @@ BEGIN
 		FROM dbo.Dep_CustSetting3rd cs 
 			INNER JOIN #tblCust c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype
-			AND 1 = CASE	WHEN @Bettype = 0 THEN 1 
-							WHEN @Bettype = 31 AND cs.bettype IN (31,32) THEN 1 
-							WHEN @Bettype = 41 AND cs.bettype IN (41,42) THEN 1 
-							WHEN @Bettype = 51 AND cs.bettype IN (51,52) THEN 1 ELSE 0 END
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 	END 
 
-	IF @Sporttype BETWEEN 151 AND 152 --Racing
+	IF @Sporttype BETWEEN 151 AND 153 --Racing
 	BEGIN		
 		UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
 		SET @MaxPerMatch = CASE
@@ -132,8 +118,7 @@ BEGIN
 		FROM dbo.Dep_CustSetting3rd cs 
 			INNER JOIN #tblCust c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype
-			AND 1 = CASE	WHEN @Bettype = 0 THEN 1 
-							WHEN @Bettype = 31 AND cs.bettype IN (31,32) THEN 1 
+			AND 1 = CASE	WHEN @Bettype = 31 AND cs.bettype IN (31,32) THEN 1 
 							WHEN @Bettype = 41 AND cs.bettype IN (41,42) THEN 1 
 							WHEN @Bettype = 51 AND cs.bettype IN (51,52) THEN 1 ELSE 0 END
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END

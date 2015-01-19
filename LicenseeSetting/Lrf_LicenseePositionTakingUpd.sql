@@ -45,7 +45,7 @@ BEGIN
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 			@UserID = @UserID,
 			@CustID = @CustID,
-			@ActionID = 606, 
+			@ActionID = 2717, 
 			@TrackingValue = @LogSPData,
 			@duration = @duration
 	END TRY
@@ -62,11 +62,16 @@ BEGIN
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 			@UserID = @UserID,
 			@CustID = @CustID,
-			@ActionID = 606, 
+			@ActionID = 2717, 
 			@TrackingValue = @LogSPData,
 			@duration = @duration	
 	END CATCH		
 END
+
+GO
+GRANT EXECUTE ON [dbo].[Lrf_LicenseePositionTakingUpd] TO [bodbadminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Lrf_LicenseePositionTakingUpd] TO [vnteam] AS [dbo]
 
 GO
 GRANT EXECUTE ON [dbo].[Lrf_LicenseePositionTakingUpd] TO [bodbadminNet] AS [dbo]
