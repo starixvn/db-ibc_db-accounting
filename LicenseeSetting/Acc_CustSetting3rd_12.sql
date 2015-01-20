@@ -68,6 +68,8 @@ BEGIN
 			INNER JOIN #tblCust c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype
 	END
+
+	DROP TABLE #tblCust
 END
 
 
