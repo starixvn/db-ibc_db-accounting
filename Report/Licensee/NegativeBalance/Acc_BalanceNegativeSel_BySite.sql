@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_BySite]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_BySite]
   @Site		VARCHAR(50) = 'Haifa'
  ,@isTest	BIT			= 0
 
@@ -11,7 +13,6 @@ AS
 	
 	Revision: 
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call custInfo, exchange by link database)
-		- 20140312@Elodie: Group result by CustID, MatchId, GroupID, TotalBalance
 		- 20150120@Jamie: Edit the definition of @isTest 
 	Param's Explanation: 
 		@isTest: 0: Real Currency; 1: UUS Currency 
@@ -19,10 +20,10 @@ AS
 */
 BEGIN 
 	SET NOCOUNT ON 
-	SELECT	  MAX(h.LogID)
-			, MAX(h.LogDate)
+	SELECT	  h.LogID	
+			, h.LogDate
 			, h.MatchID
-			, CASE WHEN h.GroupID = 2 THEN 1 ELSE h.GroupID END AS GroupID
+			, h.GroupID
 			, h.CustID
 			, ci.Username
 			, h.TotalBalance
@@ -38,13 +39,10 @@ BEGIN
 						 WHEN @isTest = 1 AND e.exchangeID = 20 THEN 1 
 						 ELSE 0 
 						 END  
-	GROUP BY h.CustID, h.MatchID, 
-			 CASE WHEN h.GroupID = 2 THEN 1 ELSE h.GroupID END,
-			 ci.UserName, TotalBalance, e.currency, Site, bin.CustomInfo1
-	ORDER BY	  MAX(h.LogID) ASC
+			
+	ORDER BY	  h.LogID ASC
 				, h.MatchID ASC
 				, ci.Username ASC
-END 
-
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_BySite] TO [bodbAdminNet] AS [dbo]
