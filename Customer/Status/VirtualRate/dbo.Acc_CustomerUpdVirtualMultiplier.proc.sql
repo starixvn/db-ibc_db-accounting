@@ -150,8 +150,8 @@ BEGIN
 			@EnableVirtualrate = @EnableVirtualrate,  
 			@virtualmultiplier = @virtualmultiplier 	
 	 
-	Declare @LogSPData varchar(2000) = '',
-			@LogSPData2 varchar(2000)= ''  
+	Declare @LogSPData varchar(8000) = '',
+			@LogSPData2 varchar(8000)= ''  
 	
 	IF @OldEnableVirtualrate <> @EnableVirtualrate 
 	BEGIN
