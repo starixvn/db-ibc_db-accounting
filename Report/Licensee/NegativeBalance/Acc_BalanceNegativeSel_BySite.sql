@@ -12,8 +12,9 @@ AS
 	Revision: 
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call custInfo, exchange by link database)
 		- 20140312@Elodie: Group result by CustID, MatchId, GroupID, TotalBalance
+		- 20150120@Jamie: Edit the definition of @isTest 
 	Param's Explanation: 
-		@isTest: 0: Exclude currency UUS; 1: All Currency 
+		@isTest: 0: Real Currency; 1: UUS Currency 
 	
 */
 BEGIN 
@@ -33,7 +34,10 @@ BEGIN
 			LEFT JOIN CustDB.dbo.custInfo ci WITH (NOLOCK) ON h.CustID = ci.custid
 			LEFT JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON ci.currency = e.exchangeid
 	WHERE	h.StatusID = 0 
-			AND e.exchangeid <> CASE @isTest WHEN 0 THEN 20 ELSE 0 END
+			AND 1 = CASE WHEN @isTest = 0 AND e.exchangeID <> 20 THEN 1 
+						 WHEN @isTest = 1 AND e.exchangeID = 20 THEN 1 
+						 ELSE 0 
+						 END  
 	GROUP BY h.CustID, h.MatchID, 
 			 CASE WHEN h.GroupID = 2 THEN 1 ELSE h.GroupID END,
 			 ci.UserName, TotalBalance, e.currency, Site, bin.CustomInfo1
@@ -41,7 +45,6 @@ BEGIN
 				, h.MatchID ASC
 				, ci.Username ASC
 END 
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_BySite] TO [bodbAdminNet] AS [dbo]
