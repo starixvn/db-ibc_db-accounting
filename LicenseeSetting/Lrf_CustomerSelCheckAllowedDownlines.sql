@@ -1,6 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Lrf_CustomerSelCheckAllowedDownlines]  
 	@custid			INT = 0   
 	,@sporttype		INT = 0 
+	,@isUpdatePT	BIT	= 0 
 	,@Language		VARCHAR(2) = 'E'  
 	,@ErrCode		INT = 0 OUTPUT  
 	,@ErrMsg		NVARCHAR(200) = '' OUTPUT    
@@ -27,13 +28,13 @@ BEGIN
 		@LimitDownlines INT,  
 		@TotalDownlines INT  
 	  
-	SET @LimitDownlinesMin = 25000  
-	SET @LimitDownlinesMax = 100000  
+	SET @LimitDownlinesMin = 20000  
+	SET @LimitDownlinesMax = 60000  
 		 
-	IF @sporttype = 1  -- Sportsbook 
+	IF @sporttype = 1  AND @isUpdatePT = 1 -- Sportsbook 
 	BEGIN
-		SELECT	 @LimitDownlinesMin = 5000
-				,@LimitDownlinesMax = 10000 
+		SELECT	 @LimitDownlinesMin = 3000
+				,@LimitDownlinesMax = 5000 
 	END  
 	  
 	--GET TOTALDOWNLINE  
