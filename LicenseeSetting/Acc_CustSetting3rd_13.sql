@@ -1,5 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_CustSetting3rd_13]
-	@srecommend INT	
+	@ids VARCHAR(MAX)
 	,@Sporttype INT
 	,@Bettype INT
 	,@Discount DECIMAL(9,8)
@@ -23,15 +23,16 @@ BEGIN
 	IF (SELECT COUNT(1) FROM sys.objects WHERE name IN ('Dep_Custsetting3rd','custinfo') AND type = 'U') <> 2
 		RETURN
 	
+	DECLARE @string VARCHAR(MAX), @splitter CHAR(1), @xml XML
+	SELECT @splitter = ',', @string = @ids
+
+	SET @xml = N'<root><r>' + REPLACE(@string, @splitter, '</r><r>') + '</r></root>'
+
 	--Create temp table containing all accounts belong to super, exclude fincance account
-	CREATE TABLE #tblCust (custid INT, roleid INT)
-	
-	INSERT INTO #tblCust (custid,roleid)
-	SELECT custid,roleid
-	FROM custinfo WITH(NOLOCK)	
-	WHERE srecommend = @srecommend
-			AND mrecommend NOT IN (SELECT custid FROM custinfo WITH(NOLOCK)
-									WHERE srecommend = @srecommend AND username LIKE '%Acc%' AND roleid=3)
+	CREATE TABLE #tblCust (custid INT)
+	INSERT INTO #tblCust(custid)
+	SELECT r.value('.','VARCHAR(12)')
+	FROM @xml.nodes('//root/r') AS RECORDS(r)
 
 	--Update Commission for HR
 	UPDATE cs WITH(UPDLOCK,ROWLOCK)
@@ -43,8 +44,9 @@ BEGIN
 					ELSE 0 END,
 		playerdiscount = 0		 
 		FROM Dep_CustSetting cs 
-			INNER JOIN #tblCust c ON c.custid = cs.custid
-	
+			INNER JOIN CustInfo c ON c.custid = cs.custid
+		WHERE c.custid IN (SELECT custid FROM #tblCust)
+
 	DROP TABLE #tblCust
 END
 

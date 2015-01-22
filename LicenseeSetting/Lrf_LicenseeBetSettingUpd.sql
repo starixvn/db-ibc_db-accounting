@@ -11,7 +11,7 @@
 	,@EnableDownline BIT = 0
 	,@UserID INT = 0
 	,@Language varchar(2) = 'E'
-	,@IP varchar(15)=''
+	,@IP VARCHAR(15)=''
 	,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg NVARCHAR(4000) = '' OUTPUT
 AS
@@ -24,15 +24,77 @@ BEGIN
 
 	EXEC DBAGE.bodb02.dbo.Lrf_CustomerSelCheckAllowedDownlines
 		@custid = @CustID
-		,@Sporttype = @Sporttype
 		,@Language = 'E'
 		,@ErrMsg = @ErrMsg OUTPUT
 		,@ErrCode=@ErrCode OUTPUT
 
 	IF @ErrCode <> 0 
 		RETURN 
+	
+	CREATE TABLE #temp(custid INT PRIMARY KEY, isfinished BIT DEFAULT(0))
+	INSERT INTO #temp(custid)
+	SELECT custid
+	FROM custinfo WITH(NOLOCK)	
+	WHERE srecommend = @CustID
+			AND mrecommend NOT IN (SELECT custid FROM custinfo WITH(NOLOCK)
+									WHERE srecommend = @CustID AND username LIKE '%Acc%' AND roleid=3)
+	BEGIN TRY
+		DECLARE @ids VARCHAR(MAX), @rowcnt INT
+		WHILE (1=1)
+		BEGIN
+			SELECT @ids = ''
+	
+			UPDATE TOP (10000) #temp
+			SET @ids = @ids + CASE @ids WHEN '' THEN '' ELSE ',' END + CAST(custid AS VARCHAR(12))
+				,isfinished = 1
+			FROM #temp
+			WHERE isfinished = 0
 
-	EXEC Acc_CustSetting3rd_11 @srecommend = @CustID, @Sporttype = @Sporttype, @Bettype = @Bettype, @MinBet = @MinBet, @MaxBet = @MaxBet, @MaxPerMatch = @MaxPerMatch, @MaxPerBall = @MaxPerBall, @ExistedMember = @ExistedMember, @Enable = @Enable, @EnableDownline = @EnableDownline
+			SELECT @rowcnt = @@rowcount	
+
+			EXEC Acc_CustSetting3rd_11 @ids = @ids, @srecommend = @CustID, @Sporttype = @Sporttype, @Bettype = @Bettype, @MinBet = @MinBet, @MaxBet = @MaxBet, @MaxPerMatch = @MaxPerMatch, @MaxPerBall = @MaxPerBall, @ExistedMember = @ExistedMember, @Enable = @Enable, @EnableDownline = @EnableDownline
+
+			IF @rowcnt < 10000 RETURN
+
+			WAITFOR DELAY '00:00:01'
+		END
+
+		IF @Enable = 1 AND @EnableDownline = 0 	
+		BEGIN		
+			IF @Sporttype BETWEEN 151 AND 153 --Racing
+			BEGIN
+				UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
+				SET DisableHorseracing = CASE WHEN @Sporttype = 151 AND @Bettype = 31 THEN 0 ELSE DisableHorseracing END,
+					DisableOpenTote = CASE WHEN @Sporttype = 151 AND @Bettype = 41 THEN 0 ELSE DisableOpenTote END,
+					Disable151_AU = CASE WHEN @Sporttype = 151 AND @Bettype = 51 THEN 0 ELSE Disable151_AU END,
+					Disable152_UK = CASE WHEN @Sporttype = 152 AND @Bettype = 41 THEN 0 ELSE Disable152_UK END,
+					Disable152_AU = CASE WHEN @Sporttype = 152 AND @Bettype = 51 THEN 0 ELSE Disable152_AU END,
+					Disable153_AU = CASE WHEN @Sporttype = 153 AND @Bettype = 51 THEN 0 ELSE Disable153_AU END	
+				WHERE custid = @CustID
+			END
+
+			IF @Sporttype BETWEEN 180 AND 186 --Virtual sport
+			BEGIN
+				UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
+				SET DisableVirtualSports = 0,
+					HideVirtualSports = 0
+				WHERE custid = @CustID
+			END
+			IF @Sporttype = 202 --Keno
+			BEGIN
+				UPDATE cg WITH(UPDLOCK,ROWLOCK)
+				SET	IsDisabled = 0	
+				FROM CustGameType cg 
+				WHERE cg.CustID = @CustID AND cg.GameTypeID = @Bettype - 1500
+			END
+		END
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrMsg = 'Sorry. Update process unsucessful. Please check data again'
+			,@ErrCode  = 101   
+					
+		RETURN
+	END CATCH
 
 	DECLARE @LogSPData VARCHAR(8000)
 

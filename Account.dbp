@@ -671,6 +671,7 @@ Begin DataProject = "Account"
       Script = "Lrf_LicenseeBetSettingSel.sql"
       Script = "Lrf_LicenseeBetSettingUpd.sql"
       Script = "Lrf_LicenseeCommissionSel.sql"
+      Script = "Lrf_LicenseeCommissionUpd.sql"
       Script = "Lrf_LicenseePositionTakingSel.sql"
       Script = "Lrf_LicenseePositionTakingUpd.sql"
    End

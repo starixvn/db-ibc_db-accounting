@@ -8,6 +8,23 @@
 	,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg NVARCHAR(4000) = '' OUTPUT
 AS
+/*
+	Created: Elodie
+	Date: 20150121
+	Task : Licensee Setting Configuration - Update Position taking [#6304]
+	DB: DBCUST/CustDB
+	Original:
+
+	Revisions:
+
+	Param's Explanation:
+		@Product:	1: Sportbook
+					161: Number Game
+					180: Virtual sport
+					151: Horse Racing
+					202: Keno
+		
+*/ 
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @startRun DATETIME
@@ -18,6 +35,7 @@ BEGIN
 	EXEC DBAGE.bodb02.dbo.Lrf_CustomerSelCheckAllowedDownlines
 		@custid = @CustID
 		,@Sporttype = @Sporttype
+		,@isUpdatePT = 1
 		,@Language = 'E'
 		,@ErrMsg = @ErrMsg OUTPUT
 		,@ErrCode=@ErrCode OUTPUT
@@ -25,7 +43,40 @@ BEGIN
 	IF @ErrCode <> 0 
 		RETURN 
 
-	EXEC Acc_CustSetting3rd_12 @srecommend = @CustID, @Sporttype = @Sporttype, @ptVALUE = @ptVALUE
+	CREATE TABLE #temp(custid INT PRIMARY KEY, isfinished BIT DEFAULT(0))
+	INSERT INTO #temp(custid)
+	SELECT custid
+	FROM custinfo WITH(NOLOCK)	
+	WHERE srecommend = @CustID
+			AND mrecommend NOT IN (SELECT custid FROM custinfo WITH(NOLOCK)
+									WHERE srecommend = @CustID AND username LIKE '%Acc%' AND roleid=3)
+	BEGIN TRY
+		DECLARE @ids VARCHAR(MAX), @rowcnt INT
+		WHILE (1=1)
+		BEGIN
+			SELECT @ids = ''
+	
+			UPDATE TOP (4000) #temp
+			SET @ids = @ids + CASE @ids WHEN '' THEN '' ELSE ',' END + CAST(custid AS VARCHAR(12))
+				,isfinished = 1
+			FROM #temp
+			WHERE isfinished = 0
+
+			SELECT @rowcnt = @@rowcount	
+
+			EXEC Acc_CustSetting3rd_12 @ids = @ids, @Sporttype = @Sporttype, @ptVALUE = @ptVALUE
+
+			IF @rowcnt < 4000 RETURN
+
+			WAITFOR DELAY '00:00:01'
+		END
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrMsg = 'Sorry. Update process unsucessful. Please check data again'
+			,@ErrCode  = 101   
+					
+		RETURN
+	END CATCH	
 
 	DECLARE @LogSPData VARCHAR(8000)
 
@@ -67,11 +118,6 @@ BEGIN
 			@duration = @duration	
 	END CATCH		
 END
-
-GO
-GRANT EXECUTE ON [dbo].[Lrf_LicenseePositionTakingUpd] TO [bodbadminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Lrf_LicenseePositionTakingUpd] TO [vnteam] AS [dbo]
 
 GO
 GRANT EXECUTE ON [dbo].[Lrf_LicenseePositionTakingUpd] TO [bodbadminNet] AS [dbo]

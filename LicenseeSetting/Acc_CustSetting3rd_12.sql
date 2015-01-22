@@ -1,5 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_CustSetting3rd_12]
-	@srecommend INT	
+	@ids VARCHAR(MAX)
 	,@Sporttype INT
 	,@ptVALUE MONEY
 AS
@@ -26,15 +26,16 @@ BEGIN
 	IF (SELECT COUNT(1) FROM sys.objects WHERE name IN ('Dep_Custsetting3rd','custinfo','Dep_CustSetting') AND type = 'U') <> 3
 		RETURN
 	
+	DECLARE @string VARCHAR(MAX), @splitter CHAR(1), @xml XML
+	SELECT @splitter = ',', @string = @ids
+
+	SET @xml = N'<root><r>' + REPLACE(@string, @splitter, '</r><r>') + '</r></root>'
+
 	--Create temp table containing all accounts belong to super, exclude fincance account
-	CREATE TABLE #tblCust (custid INT, roleid INT)
-	
-	INSERT INTO #tblCust (custid,roleid)
-	SELECT custid,roleid
-	FROM custinfo WITH(NOLOCK)	
-	WHERE srecommend = @srecommend
-			AND mrecommend NOT IN (SELECT custid FROM custinfo WITH(NOLOCK)
-									WHERE srecommend = @srecommend AND username LIKE '%Acc%' AND roleid=3)
+	CREATE TABLE #tblCust (custid INT)
+	INSERT INTO #tblCust(custid)
+	SELECT r.value('.','VARCHAR(12)')
+	FROM @xml.nodes('//root/r') AS RECORDS(r)
 
 	IF @Sporttype = 1 --Sportbook
 	BEGIN
@@ -43,7 +44,8 @@ BEGIN
 			  ,cs.mpositiontaking = case when roleid in (4,3)  then @ptVALUE else 0 end 
 			  ,cs.apositiontaking = case when roleid = 3  then 0 else @ptVALUE end 			 
 		FROM Dep_CustSetting cs 
-			INNER JOIN #tblCust c ON c.custid = cs.custid
+			INNER JOIN CustInfo c ON c.custid = cs.custid
+		WHERE c.custid IN (SELECT custid FROM #tblCust)
 	END
 
 	IF @Sporttype = 161 OR @Sporttype = 180 --NumberGame, Virtual sport
@@ -53,9 +55,10 @@ BEGIN
 			  ,cs.mpositiontaking = case when roleid in (4,3)  then @ptVALUE else 0 end 
 			  ,cs.apositiontaking = case when roleid = 3  then 0 else @ptVALUE end 			 
 		FROM Dep_CustSetting3rd cs 
-			INNER JOIN #tblCust c ON c.custid = cs.custid
+			INNER JOIN CustInfo c ON c.custid = cs.custid
 		WHERE 1 = CASE	WHEN @Sporttype = 161 AND cs.Sporttype = 161 THEN 1
 						WHEN @Sporttype = 180 AND cs.Sporttype BETWEEN 180 AND 186 THEN 1 ELSE 0 END
+			AND c.custid IN (SELECT custid FROM #tblCust)
 	END 
 
 	IF @Sporttype = 202 OR @Sporttype = 162 --Keno, Live Casino
@@ -65,8 +68,9 @@ BEGIN
 			  ,cs.mpositiontaking = case when roleid in (4,3)  then @ptVALUE else 0 end 
 			  ,cs.apositiontaking = case when roleid = 3  then 0 else @ptVALUE end 
 		FROM CustSettingGame cs
-			INNER JOIN #tblCust c ON c.custid = cs.custid
+			INNER JOIN CustInfo c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype
+			AND c.custid IN (SELECT custid FROM #tblCust)
 	END
 
 	DROP TABLE #tblCust

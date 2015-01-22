@@ -1,5 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_CustSetting3rd_11]
-	@srecommend INT	
+	@ids VARCHAR(MAX)
+	,@srecommend INT
 	,@Sporttype INT
 	,@Bettype INT = 0
 	,@MinBet MONEY
@@ -28,17 +29,18 @@ BEGIN
 	
 	IF (SELECT COUNT(1) FROM sys.objects WHERE name IN ('Dep_Custsetting3rd','custinfo','Dep_CustSetting') AND type = 'U') <> 3
 		RETURN
+	
+	DECLARE @string VARCHAR(MAX), @splitter CHAR(1), @xml XML
+	SELECT @splitter = ',', @string = @ids
+
+	SET @xml = N'<root><r>' + REPLACE(@string, @splitter, '</r><r>') + '</r></root>'
 
 	--Create temp table containing all accounts belong to super, exclude fincance account
-	CREATE TABLE #tblCust (custid INT, roleid INT)
+	CREATE TABLE #tblCust (custid INT)
+	INSERT INTO #tblCust(custid)
+	SELECT r.value('.','VARCHAR(12)')
+	FROM @xml.nodes('//root/r') AS RECORDS(r)
 	
-	INSERT INTO #tblCust (custid,roleid)
-	SELECT custid,roleid
-	FROM custinfo WITH(NOLOCK)	
-	WHERE srecommend = @srecommend
-			AND mrecommend NOT IN (SELECT custid FROM custinfo WITH(NOLOCK)
-									WHERE srecommend = @srecommend AND username LIKE '%Acc%' AND roleid=3)
-
 	IF @Sporttype IN (1,2,3,5,8,10,11,99,154) --Sportbook
 	BEGIN
 		UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
@@ -59,9 +61,10 @@ BEGIN
 		UPDATE cs WITH(UPDLOCK,ROWLOCK)
 		SET    cs.minbet = @MinBet, cs.maxbet = @maxbet
 		FROM dbo.Dep_CustSetting cs
-			INNER JOIN #tblCust c ON c.custid = cs.custid
+			INNER JOIN CustInfo c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype
 			AND cs.bettype = CASE WHEN @Bettype = 0 THEN cs.bettype ELSE @Bettype END
+			AND c.custid IN (SELECT custid FROM #tblCust)
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 	END
 
@@ -76,8 +79,9 @@ BEGIN
 		UPDATE cs  WITH(UPDLOCK,ROWLOCK)
 		SET    cs.minbet = @MinBet, cs.maxbet = @maxbet
 		FROM dbo.Dep_CustSetting3rd cs 
-			INNER JOIN #tblCust c ON c.custid = cs.custid
+			INNER JOIN CustInfo c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype
+			AND c.custid IN (SELECT custid FROM #tblCust)
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 	END 
 
@@ -101,26 +105,15 @@ BEGIN
 		WHERE custid IN (SELECT custid FROM #tblCust) 
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 
-		IF @Enable = 1 AND @EnableDownline = 0 
-		BEGIN
-			UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
-			SET DisableHorseracing = CASE WHEN @Sporttype = 151 AND @Bettype = 31 THEN 0 ELSE DisableHorseracing END,
-				DisableOpenTote = CASE WHEN @Sporttype = 151 AND @Bettype = 41 THEN 0 ELSE DisableOpenTote END,
-				Disable151_AU = CASE WHEN @Sporttype = 151 AND @Bettype = 51 THEN 0 ELSE Disable151_AU END,
-				Disable152_UK = CASE WHEN @Sporttype = 152 AND @Bettype = 41 THEN 0 ELSE Disable152_UK END,
-				Disable152_AU = CASE WHEN @Sporttype = 152 AND @Bettype = 51 THEN 0 ELSE Disable152_AU END,
-				Disable153_AU = CASE WHEN @Sporttype = 153 AND @Bettype = 51 THEN 0 ELSE Disable153_AU END	
-			WHERE custid = @srecommend
-		END
-
 		UPDATE cs  WITH(UPDLOCK,ROWLOCK)
 		SET    cs.minbet = @MinBet, cs.maxbet = @maxbet
 		FROM dbo.Dep_CustSetting3rd cs 
-			INNER JOIN #tblCust c ON c.custid = cs.custid
+			INNER JOIN CustInfo c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype
 			AND 1 = CASE	WHEN @Bettype = 31 AND cs.bettype IN (31,32) THEN 1 
 							WHEN @Bettype = 41 AND cs.bettype IN (41,42) THEN 1 
 							WHEN @Bettype = 51 AND cs.bettype IN (51,52) THEN 1 ELSE 0 END
+			AND c.custid IN (SELECT custid FROM #tblCust)
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 	END 
 
@@ -144,19 +137,12 @@ BEGIN
 		WHERE custid IN (SELECT custid FROM #tblCust) 
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 		
-		IF @Enable = 1 AND @EnableDownline = 0 
-		BEGIN
-			UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
-			SET DisableVirtualSports = 0,
-				HideVirtualSports = 0
-			WHERE custid = @srecommend
-		END
-
 		UPDATE cs  WITH(UPDLOCK,ROWLOCK)
 		SET    cs.minbet = @MinBet, cs.maxbet = @maxbet
 		FROM dbo.Dep_CustSetting3rd cs 
-			INNER JOIN #tblCust c ON c.custid = cs.custid
+			INNER JOIN CustInfo c ON c.custid = cs.custid
 		WHERE cs.Sporttype = @Sporttype			
+			AND c.custid IN (SELECT custid FROM #tblCust)
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 
 		-- Remove Virtual sport that having setting in Dep_CustSetting3rd
@@ -178,7 +164,7 @@ BEGIN
 				   ,[sdiscount]
 				   ,[minbet]
 				   ,[maxbet])
-		SELECT  custid
+		SELECT  t.custid
 			   ,bettype as [bettype]
 			   ,sporttype as [sporttype]
 			   ,0 [islive]
@@ -191,15 +177,17 @@ BEGIN
 			   ,0 as [sdiscount]
 			   ,@minbet
 			   ,@maxbet
-		FROM #tblCust CROSS JOIN (	SELECT 180 as sporttype, 1201 as bettype 
+		FROM #tblCust t
+			INNER JOIN CustInfo c ON t.custid = c.custid
+					CROSS JOIN (	SELECT 180 as sporttype, 1201 as bettype 
 									UNION ALL SELECT 181 as sporttype, 1231 as bettype 
 									UNION ALL SELECT 182 as sporttype, 1231 as bettype 
 									UNION ALL SELECT 183 as sporttype, 1231 as bettype 
 									UNION ALL SELECT 184 as sporttype, 1231 as bettype 
 									UNION ALL SELECT 185 as sporttype, 1231 as bettype 
 									UNION ALL SELECT 186 as sporttype, 1220 as bettype 
-								) t
-		WHERE t.sporttype = @Sporttype		
+								) s
+		WHERE s.sporttype = @Sporttype		
 	END 
 
 	IF @Sporttype = 202 --Keno
@@ -210,15 +198,11 @@ BEGIN
 			MaxPerGameType= @MaxPerMatch,
 			IsDisabled = CASE WHEN @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE IsDisabled END	
 		FROM CustGameType cg 
-			INNER JOIN #tblCust c ON c.custid = cg.custid
+			INNER JOIN CustInfo c ON c.custid = cg.custid
 		WHERE cg.GameTypeID = @Bettype - 1500
+			AND c.custid IN (SELECT custid FROM #tblCust)			
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 
-		IF @Enable = 1 AND @EnableDownline = 0
-		UPDATE cg WITH(UPDLOCK,ROWLOCK)
-		SET	IsDisabled = 0	
-		FROM CustGameType cg 
-		WHERE cg.CustID = @srecommend AND cg.GameTypeID = @Bettype - 1500
 	END
 	DROP TABLE #tblCust
 END
