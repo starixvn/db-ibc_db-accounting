@@ -1,10 +1,11 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 01/07/2015 15:16:54 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 01/23/2015 09:13:14 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetDelCustomer    Script Date: 09/01/2015 3:47:04 PM ******/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetDelCustomer]	
 	@Username   VARCHAR(30),
 
@@ -25,6 +26,7 @@ AS
                             2. Get log for live & non-live settings [Redmine: #16578]
                             2. Code aligning
 		- 20141230@Kathy: Update the accounts dangerous setting change to "2" for Original & Non Live [Redmine:#25770]
+		- 20150120@Kathy: Update Original and Nonlive danger level of BA member to 100 and 0 respectively [Redmine:#29459]
 		
 	Param's Explanation:	
 */
@@ -46,9 +48,13 @@ BEGIN
 	      , @oldNonLiveOU       BIT
 	      , @oldNonLive1stOU    BIT
 	      , @oldFollower        VARCHAR(30)
+	      ,	@oldDanger			INT
+		  ,	@oldDanger2			INT
+		  ,	@isBA				BIT
 
 	SELECT @startRun = GETDATE()
 	     , @duration = 0
+	     , @isBA = 0
 
 	SELECT @custid = custid
 	  FROM Custinfo WITH(nolock)
@@ -73,6 +79,11 @@ BEGIN
 
 		RETURN
 	END
+	
+	IF EXISTS(SELECT TOP 1 1 FROM DBLIC.bodb_licensee.dbo.LicenseeBAHistory l WITH(NOLOCK)
+				WHERE l.status = 'running'
+				AND custid = @custid)
+		SET @isBA = 1
 	
 	-- Get old Live value
 	SELECT @oldRate = f.Rate
@@ -99,15 +110,20 @@ BEGIN
 	  FROM Cust_FollowBet f WITH(NOLOCK)
 	 WHERE f.custid = @custid
 	   AND f.FollowLive = 0
+	 
+	SELECT @oldDanger		= danger
+			,@oldDanger2	= danger2
+	FROM dbo.custInfo WITH(NOLOCK)
+	WHERE custid = @custid
 
 	DELETE Cust_followBet WITH(ROWLOCK, UPDLOCK)
-	 WHERE custid = @custid
+	WHERE custid = @custid
 	
 	UPDATE dbo.custInfo WITH(ROWLOCK, UPDLOCK)
-	SET danger = 0
+	SET danger = CASE WHEN @isBA = 1 THEN 100 ELSE 0 END
 		,danger2 = 0
 	WHERE custid = @custid
-	AND danger <> 100 -- danger = 100: BA customer
+	--AND danger <> 100 -- danger = 100: BA customer
 
 	-- write log
 	Declare @LogSPData VARCHAR(MAX),@TrackingValueDB VARCHAR(max)
@@ -130,6 +146,8 @@ BEGIN
 	                         + 'oldNonLive1stHDP="' + COALESCE(CAST(@oldNonLive1stHDP AS VARCHAR(1)), SPACE(1))+'" '
 	                         + 'oldNonLiveOU="' + COALESCE(CAST(@oldNonLiveOU AS VARCHAR(1)), SPACE(1))+'" '
 	                         + 'oldNonLive1stOU="' + COALESCE(CAST(@oldNonLive1stOU AS VARCHAR(1)), SPACE(1))+'" '
+	                         + 'oldDanger="' + COALESCE(CAST(@oldDanger AS VARCHAR(10)), SPACE(1))+'" '
+	                         + 'oldDanger2="' + COALESCE(CAST(@oldDanger2 AS VARCHAR(10)), SPACE(1))+'" '
 	                         + 'Follower="' + COALESCE(CAST(@oldFollower AS VARCHAR(30)), SPACE(1))+'" '
 	                         + 'UserId="' + COALESCE(CAST(@UserId AS VARCHAR(50)), SPACE(1)) + '" '
 	                         + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" '
@@ -163,11 +181,6 @@ BEGIN
 			@duration = @duration 
 	END CATCH
 END
-
-
-
-
-
 
 
 GO

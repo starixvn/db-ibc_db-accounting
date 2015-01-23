@@ -1,10 +1,11 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 01/07/2015 15:21:13 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 01/20/2015 15:17:00 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetInsCustomer    Script Date: 09/01/2015 3:47:03 PM ******/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
     @Username       VARCHAR(30)
     ,@Rate          SMALLMONEY
@@ -41,6 +42,7 @@ Revision:
 	                    3. Do not allow member to follow himself or his agent
 	                    4. Do not allow loop following
 	- 20141230@Kathy: Update the accounts dangerous setting change to "2" for Original & Non Live [Redmine:#25770]
+	- 20150120@Kathy: Update Original and Nonlive danger level of BA member to 2 [Redmine:#29459]
 	
 Param's Explanation:	
 */
@@ -50,6 +52,8 @@ BEGIN
 	DECLARE @startRun	DATETIME
 		  , @endRun		DATETIME
 		  , @duration	INT
+		  , @oldDanger	INT
+		  ,	@oldDanger2	INT
 
 	SELECT @startRun = getdate()
 		 , @duration = 0
@@ -234,11 +238,17 @@ BEGIN
     SET danger = 2
 		,danger2 = 2
 	WHERE custid = @custid
-	AND danger <> 100 -- danger = 100: BA customer
+	--AND danger <> 100 -- danger = 100: BA customer
 	    
 
 	-- write log
-	DECLARE @LogSPData VARCHAR(MAX)
+	DECLARE @LogSPData			VARCHAR(MAX)
+			,@TrackingValueDB	VARCHAR(max)
+	
+	SELECT @oldDanger		= danger
+			,@oldDanger2	= danger2
+	FROM dbo.custInfo WITH(NOLOCK)
+	WHERE custid = @custid
 
 	SELECT @LogSPData = '<Acc_AutoFollowBetInsCustomer Username="' + COALESCE(@Username, SPACE(1)) + '" '
 	                  + 'Rate="' + COALESCE(CAST(@Rate AS VARCHAR(10)), SPACE(1)) + '" '
@@ -257,7 +267,10 @@ BEGIN
 	                  + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" '
 	                  + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" '
 	                  + 'ErrMsg="' + COALESCE(CAST(@ErrMsg AS VARCHAR(400)), SPACE(1)) + '" />'
-
+	
+	SELECT @TrackingValueDB = '<Acc_AutoFollowBetInsCustomer Danger="' + COALESCE(CAST(@oldDanger AS VARCHAR(10)), SPACE(1)) + '" '	          
+	                        + 'Danger2="' + COALESCE(CAST(@oldDanger2 AS VARCHAR(10)), SPACE(1)) + '" />'
+	                        
 	SET @endRun = getdate()
 	SET @duration = datediff(millisecond, @startRun, @endRun)
 
@@ -267,6 +280,7 @@ BEGIN
 			,@CustID = @CustID
 			,@ActionID = 639
 			,@TrackingValue = @LogSPData
+			,@TrackingValue2 = @TrackingValueDB
 			,@duration = @duration
 	END TRY
 
@@ -294,17 +308,10 @@ BEGIN
 			,@CustID = @CustID
 			,@ActionID = 639
 			,@TrackingValue = @LogSPData
+			,@TrackingValue2 = @TrackingValueDB
 			,@duration = @duration
 	END CATCH
 END
-
-
-
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [bodbAdminNet] AS [dbo]
 GO
