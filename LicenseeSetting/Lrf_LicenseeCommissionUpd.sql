@@ -12,7 +12,7 @@ AS
 /*
 	Created: Elodie
 	Date: 20150121
-	Task : Licensee Setting Configuration - Update Position taking [#6304]
+	Task : Licensee Setting Configuration - Update Commission [#6304]
 	DB: DBCUST/CustDB
 	Original:
 
@@ -58,7 +58,7 @@ BEGIN
 			WHERE isfinished = 0
 
 			SELECT @rowcnt = @@rowcount	
-
+			
 			EXEC Acc_CustSetting3rd_13 @ids = @ids, @Sporttype = @Sporttype, @Bettype = @Bettype, @Discount = @Discount
 
 			IF @rowcnt < 10000 RETURN

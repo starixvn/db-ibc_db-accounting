@@ -7,7 +7,7 @@ AS
 	Created: Elodie
 	Date: 20150108
 	Task : Licensee Setting Configuration - Update PT [#6304]
-	DB: DBTXN/CustDB
+	DB: DBCUST/CustDB
 	Original:
 
 	Revisions:

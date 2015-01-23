@@ -1,7 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Lrf_LicenseeBetSettingUpd] 
 	@CustID INT
 	,@Sporttype INT
-	,@Bettype INT
+	,@Bettype INT = 0
 	,@MinBet MONEY
 	,@MaxBet MONEY
 	,@MaxPerMatch MONEY
@@ -15,6 +15,18 @@
 	,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg NVARCHAR(4000) = '' OUTPUT
 AS
+/*
+	Created: Elodie
+	Date: 20150108
+	Task : Licensee Setting Configuration - Update Bet Setting [#6304]
+	DB: DBCUST/CustDB
+	Original:
+
+	Revisions:
+
+	Param's Explanation:
+		
+*/ 
 BEGIN
  SET NOCOUNT ON
 	DECLARE @startRun DATETIME

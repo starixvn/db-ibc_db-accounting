@@ -15,7 +15,7 @@ AS
 	Created: Elodie
 	Date: 20150108
 	Task : Licensee Setting Configuration - Update Bet Setting [#6304]
-	DB: DBTXN/CustDB
+	DB: DBCUST/CustDB
 	Original:
 
 	Revisions:
@@ -44,17 +44,16 @@ BEGIN
 	IF @Sporttype IN (1,2,3,5,8,10,11,99,154) --Sportbook
 	BEGIN
 		UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
-		SET @MaxPerMatch = CASE	WHEN @Sporttype = 1		THEN maxpermatch 
-								WHEN @Sporttype = 2		THEN maxpermatch2 
-								WHEN @Sporttype = 3		THEN maxpermatch3
-								WHEN @Sporttype = 5		THEN maxpermatch5
-								WHEN @Sporttype = 8		THEN maxpermatch8
-								WHEN @Sporttype = 10	THEN maxpermatch10
-								WHEN @Sporttype = 11	THEN maxpermatch11
-								WHEN @Sporttype = 99	THEN maxpermatch99
-								WHEN @Sporttype = 99 AND @Bettype = 9 THEN MaxPerMatch99MP
-								WHEN @Sporttype = 154	THEN maxpermatch154						
-								END
+		SET  maxpermatch =	CASE WHEN @Sporttype = 1 THEN @MaxPerMatch ELSE maxpermatch END
+			,maxpermatch2 =	CASE WHEN @Sporttype = 2 THEN @MaxPerMatch ELSE maxpermatch2 END 
+			,maxpermatch3 = CASE WHEN @Sporttype = 3 THEN @MaxPerMatch ELSE maxpermatch3 END
+			,maxpermatch5 = CASE WHEN @Sporttype = 5 THEN @MaxPerMatch ELSE maxpermatch5 END
+			,maxpermatch8 = CASE WHEN @Sporttype = 8 THEN @MaxPerMatch ELSE maxpermatch8 END
+			,maxpermatch10 = CASE WHEN @Sporttype = 10 THEN @MaxPerMatch ELSE maxpermatch10 END
+			,maxpermatch11 = CASE WHEN @Sporttype = 11 THEN @MaxPerMatch ELSE maxpermatch11 END
+			,maxpermatch99 = CASE WHEN @Sporttype = 99 AND @Bettype = 0 THEN @MaxPerMatch ELSE maxpermatch99 END
+			,MaxPerMatch99MP = CASE WHEN @Sporttype = 99 AND @Bettype = 9 THEN @MaxPerMatch ELSE MaxPerMatch99MP END
+			,maxpermatch154	= CASE WHEN @Sporttype = 154 THEN @MaxPerMatch ELSE maxpermatch154 END						
 		WHERE custid IN (SELECT custid FROM #tblCust) 
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 
@@ -88,20 +87,18 @@ BEGIN
 	IF @Sporttype BETWEEN 151 AND 153 --Racing
 	BEGIN		
 		UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
-		SET @MaxPerMatch = CASE
-								WHEN @Sporttype = 151 AND @Bettype = 31 THEN MaxPerMatch151
-								WHEN @Sporttype = 151 AND @Bettype = 41 THEN MaxPerMatch151_OT
-								WHEN @Sporttype = 151 AND @Bettype = 51 THEN MaxPerMatch151_AU
-								WHEN @Sporttype = 152 AND @Bettype = 41 THEN MaxPerMatch152_UK
-								WHEN @Sporttype = 152 AND @Bettype = 51 THEN MaxPerMatch152_AU
-								WHEN @Sporttype = 153 AND @Bettype = 51 THEN MaxPerMatch153_AU
-								END,
-			DisableHorseracing = CASE WHEN @Sporttype = 151 AND @Bettype = 31 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE DisableHorseracing END,
-			DisableOpenTote = CASE WHEN @Sporttype = 151 AND @Bettype = 41 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE DisableOpenTote END,
-			Disable151_AU = CASE WHEN @Sporttype = 151 AND @Bettype = 51 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable151_AU END,
-			Disable152_UK = CASE WHEN @Sporttype = 152 AND @Bettype = 41 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable152_UK END,
-			Disable152_AU = CASE WHEN @Sporttype = 152 AND @Bettype = 51 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable152_AU END,
-			Disable153_AU = CASE WHEN @Sporttype = 153 AND @Bettype = 51 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable153_AU END			
+		SET  MaxPerMatch151 = CASE WHEN @Sporttype = 151 AND @Bettype = 31 THEN @MaxPerMatch ELSE MaxPerMatch151 END
+			,MaxPerMatch151_OT = CASE WHEN @Sporttype = 151 AND @Bettype = 41 THEN @MaxPerMatch ELSE MaxPerMatch151_OT END
+			,MaxPerMatch151_AU = CASE WHEN @Sporttype = 151 AND @Bettype = 51 THEN @MaxPerMatch ELSE MaxPerMatch151_AU END
+			,MaxPerMatch152_UK = CASE WHEN @Sporttype = 152 AND @Bettype = 41 THEN @MaxPerMatch ELSE MaxPerMatch152_UK END
+			,MaxPerMatch152_AU = CASE WHEN @Sporttype = 152 AND @Bettype = 51 THEN @MaxPerMatch ELSE MaxPerMatch152_AU END
+			,MaxPerMatch153_AU = CASE WHEN @Sporttype = 153 AND @Bettype = 51 THEN @MaxPerMatch ELSE MaxPerMatch153_AU END
+			,DisableHorseracing = CASE WHEN @Sporttype = 151 AND @Bettype = 31 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE DisableHorseracing END
+			,DisableOpenTote = CASE WHEN @Sporttype = 151 AND @Bettype = 41 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE DisableOpenTote END
+			,Disable151_AU = CASE WHEN @Sporttype = 151 AND @Bettype = 51 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable151_AU END
+			,Disable152_UK = CASE WHEN @Sporttype = 152 AND @Bettype = 41 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable152_UK END
+			,Disable152_AU = CASE WHEN @Sporttype = 152 AND @Bettype = 51 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable152_AU END
+			,Disable153_AU = CASE WHEN @Sporttype = 153 AND @Bettype = 51 AND @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE Disable153_AU END			
 		WHERE custid IN (SELECT custid FROM #tblCust) 
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 
@@ -123,17 +120,15 @@ BEGIN
 		SELECT @ptVALUE = spositiontaking FROM Dep_CustSetting3rd WITH (NOLOCK) WHERE custid = @srecommend
 
 		UPDATE Custinfo WITH(UPDLOCK,ROWLOCK)
-		SET @MaxPerMatch = CASE	--Virtual Sport
-								WHEN @Sporttype = 180	THEN maxpermatch180
-								WHEN @Sporttype = 181	THEN maxpermatch181
-								WHEN @Sporttype = 182	THEN maxpermatch182
-								WHEN @Sporttype = 183	THEN maxpermatch183
-								WHEN @Sporttype = 184	THEN maxpermatch184
-								WHEN @Sporttype = 185	THEN maxpermatch185
-								WHEN @Sporttype = 186	THEN maxpermatch186						
-								END,
-			DisableVirtualSports = CASE WHEN @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE DisableVirtualSports END,
-			HideVirtualSports = CASE WHEN @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE HideVirtualSports END
+		SET  maxpermatch180 = CASE WHEN @Sporttype = 180 THEN @MaxPerMatch ELSE maxpermatch180 END
+			,maxpermatch181 = CASE WHEN @Sporttype = 181 THEN @MaxPerMatch ELSE maxpermatch181 END				
+			,maxpermatch182 = CASE WHEN @Sporttype = 182 THEN @MaxPerMatch ELSE maxpermatch182 END				
+			,maxpermatch183 = CASE WHEN @Sporttype = 183 THEN @MaxPerMatch ELSE maxpermatch183 END				
+			,maxpermatch184 = CASE WHEN @Sporttype = 184 THEN @MaxPerMatch ELSE maxpermatch184 END				
+			,maxpermatch185 = CASE WHEN @Sporttype = 185 THEN @MaxPerMatch ELSE maxpermatch185 END				
+			,maxpermatch186 = CASE WHEN @Sporttype = 186 THEN @MaxPerMatch ELSE maxpermatch186 END						
+			,DisableVirtualSports = CASE WHEN @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE DisableVirtualSports END
+			,HideVirtualSports = CASE WHEN @Enable = 1 AND @EnableDownline = 1 THEN 0 ELSE HideVirtualSports END
 		WHERE custid IN (SELECT custid FROM #tblCust) 
 			AND 1 = CASE WHEN @ExistedMember = 0 AND roleid = 1 THEN 0 ELSE 1 END
 		
