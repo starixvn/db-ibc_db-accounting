@@ -17,7 +17,7 @@ AS
 					180: Virtual sport
 					162: Live Casino
 					202: Keno
-		
+	Example: EXEC Lrf_LicenseePositionTakingSel @CustID = 16947245, @Product = 202	
 */ 
 BEGIN
 	SET NOCOUNT ON

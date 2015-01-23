@@ -25,6 +25,9 @@ AS
 	Revisions:
 
 	Param's Explanation:
+	Example:	DECLARE @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = ''
+				EXEC Lrf_LicenseeBetSettingUpd @CustID = 16947245, @Sporttype = 151, @Bettype = 31, @MinBet = 25, @MaxBet = 205, @MaxPerMatch = 2005, @ExistedMember = 1, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+				SELECT @ErrCode, @ErrMsg
 		
 */ 
 BEGIN

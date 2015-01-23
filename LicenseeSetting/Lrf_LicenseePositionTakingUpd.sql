@@ -23,7 +23,9 @@ AS
 					180: Virtual sport
 					151: Horse Racing
 					202: Keno
-		
+	Example:	DECLARE @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = ''
+				EXEC Lrf_LicenseePositionTakingUpd @CustID = 16947245, @Sporttype = 1, @ptValue = 0.9, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+				SELECT @ErrCode, @ErrMsg	
 */ 
 BEGIN
 	SET NOCOUNT ON

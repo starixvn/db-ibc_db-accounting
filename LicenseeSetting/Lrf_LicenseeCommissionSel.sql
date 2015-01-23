@@ -11,6 +11,7 @@ AS
 	Revisions:
 
 	Param's Explanation:
+	Example: EXEC Lrf_LicenseeCommissionSel @CustID = 16947245
 		
 */ 
 BEGIN

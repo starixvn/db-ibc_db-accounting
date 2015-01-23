@@ -19,6 +19,9 @@ AS
 	Revisions:
 
 	Param's Explanation:
+	Example:	DECLARE @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = ''
+				EXEC Lrf_LicenseeCommissionUpd @CustID = 16947245, @Sporttype = 153, @Bettype = 51, @Discount = 0.03, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+				SELECT @ErrCode, @ErrMsg
 		
 */ 
 BEGIN

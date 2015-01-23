@@ -17,6 +17,8 @@ AS
 					180: Virtual sport
 					151: Horse Racing
 					202: Keno
+					
+	Example: EXEC Lrf_LicenseeBetSettingSel @CustID = 16947245, @Product = 151					
 		
 */ 
 BEGIN
