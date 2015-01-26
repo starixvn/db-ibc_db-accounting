@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyTurnover]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_DailyTurnover]    Script Date: 01/26/2015 02:22:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_Rpt_DailyTurnover    Script Date: 2/7/2012 6:00:22 PM ******/
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyTurnover]
 	@fromdate datetime,
 	@isActual bit = 0,
 	@errcode bit = 0 OUTPUT,
@@ -13,15 +22,12 @@ Original: Dot_Admin_turnover_detail
 
 Revisions:
 	- Daniel@20120605: fix bug include P2P tickets
-	- 20121031@Jim: add more bettype for Sportbook (new Tennis: 1301->1304)
-	- 20121109@Viet: do not allow this SP to run once cpu is high
-	
+	-20121031@Jim: add more bettype for Sportbook (new Tennis: 1301->1304)
 Param's Explanation:
 
 */
 
 SET NOCOUNT ON
-
 ------ 20121109@Viet: do not allow this SP to run once cpu is high --------
 declare @ispermit bit
 EXEC dbo.Server_IsHeavyLoadPermitted @ispermit OUTPUT
@@ -31,6 +37,7 @@ BEGIN
 	RETURN
 END
 ------ 20121109@Viet: do not allow this SP to run once cpu is high --------
+
 Declare @NormalCNT int, @RejectCNT int
 
 
@@ -42,7 +49,7 @@ BEGIN
 	FROM bettrans14 with(rowlock)
 	WHERE winlostdate = @fromdate
 		and matchid > 29 -- exclude transfer, mix parlay, system parlay
-		AND ((bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype =18999 OR bettype BETWEEN 1301 AND 1334) AND bettype NOT IN  (9,29))
+		and (bettype < 9 OR bettype between 11 and 30 OR bettype between 121 and 999 OR bettype BETWEEN 1301 AND 1334)	
 		and statusid in (101,102,103) -- void, reject, refund
 		and currency <> 20
 
@@ -74,7 +81,7 @@ BEGIN
 	FROM bettrans14 with(rowlock)
 	WHERE winlostdate = @fromdate
 		and matchid > 29 -- exclude transfer, mix parlay, system parlay
-		and ((bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype =18999 OR bettype BETWEEN 1301 AND 1334) AND bettype NOT IN  (9,29))	
+		and (bettype < 9 OR bettype between 11 and 30 OR bettype between 121 and 999 OR bettype BETWEEN 1301 AND 1334)	
 		and statusid in (111,112,113) -- won, lose, draw	
 		and currency <> 20
 
@@ -85,7 +92,7 @@ BEGIN
 	FROM bettrans with(rowlock)
 	WHERE winlostdate = @fromdate
 		and matchid > 29 -- exclude transfer, mix parlay, system parlay
-		and ((bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype =18999 OR bettype BETWEEN 1301 AND 1334) AND bettype NOT IN  (9,29))
+		and (bettype < 9 OR bettype between 11 and 30 OR bettype between 121 and 999 OR bettype BETWEEN 1301 AND 1334)	
 		and statusid in (101,102,103) -- void, reject, refund
 		and currency <> 20
 
@@ -117,16 +124,17 @@ BEGIN
 	FROM bettrans with(rowlock)
 	WHERE winlostdate = @fromdate
 		and matchid > 29 -- exclude transfer, mix parlay, system parlay
-		and ((bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype =18999 OR bettype BETWEEN 1301 AND 1334) AND bettype NOT IN  (9,29))	
+		and (bettype < 9 OR bettype between 11 and 30 OR bettype between 121 and 999 OR bettype BETWEEN 1301 AND 1334)	
 		and statusid in (111,112,113) -- won, lose, draw
 		and currency <> 20
 
 END
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover] TO [Dot_Admin]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover] TO [Dot_Admin] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover] TO [vnteam] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyTurnover] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyTurnover] TO [vnteam] AS [dbo]

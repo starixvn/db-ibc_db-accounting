@@ -1,11 +1,5 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail]    Script Date: 06/05/2012 06:17:49 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail]
 	@fromdate datetime
 AS
@@ -18,8 +12,7 @@ Original:
 
 Revisions:
 	20120511@Minzy: Fix when get data from bettrans14, must get team name from match14
-	Daniel@20120605: exclude 3rd party bettypes when checking void bet case	
-	20121031@Jim: add more bettype for Sportbook (new Tennis: 1301->1304)
+	Daniel@20120605: exclude 3rd party bettypes when checking void bet case
 	20121213@Dan: Change linked server from DB052-->DBLOG
 
 	
@@ -125,7 +118,7 @@ BEGIN
 			AND b.winlostdate = @fromdate 
 			AND	b.currency <> 20
 			and b.matchid > 29 -- exclude transfer, mix parlay, system parlay
-			and ((b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype =18999 OR b.bettype BETWEEN 1301 AND 1334) AND b.bettype NOT IN  (9,29))
+			and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)	
 	END
 
 	ELSE
@@ -202,7 +195,7 @@ BEGIN
 			AND b.winlostdate = @fromdate 
 			AND	b.currency <> 20
 			and b.matchid > 29 -- exclude transfer, mix parlay, system parlay
-			and ((b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype =18999 OR b.bettype BETWEEN 1301 AND 1334) AND b.bettype NOT IN  (9,29))
+			and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)		
 	END
 	
 	UPDATE #temp
@@ -260,15 +253,11 @@ BEGIN
 
 	DROP TABLE #temp		
 END
-
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [Dot_Admin]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [Dot_Admin] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [vnteam] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [vnteam] AS [dbo]
