@@ -11,10 +11,10 @@ DB: DB06.bodb02
 Original: 
 
 Revisions:
-	20120511@Minzy: Fix when get data from bettrans14, must get team name from match14
-	Daniel@20120605: exclude 3rd party bettypes when checking void bet case
-	20121213@Dan: Change linked server from DB052-->DBLOG
-
+	- 20120511@Minzy: Fix when get data from bettrans14, must get team name from match14
+	- Daniel@20120605: exclude 3rd party bettypes when checking void bet case
+	- 20121213@Dan: Change linked server from DB052-->DBLOG
+	- 20150126@Jamie: Missing 3rd party's tickets - HotFix [#29477]
 	
 Param's Explanation:
 
@@ -44,6 +44,15 @@ BEGIN
 					--RejectCNT INT
 			)
 
+	DECLARE	@tmpBettypes TABLE(
+		Bettype		INT
+	)
+
+	INSERT INTO @tmpBettypes(Bettype)
+	SELECT	Bettype 
+	FROM	SportBettypeMatrix WITH (NOLOCK)
+	WHERE	ProductID = 1
+			AND EventType = 1 
 
 	-- Consider to include bettrans_BK into query or not.
 	IF @fromdate <= (select max(distinct eventdate) from match14 (nolock))
@@ -79,7 +88,8 @@ BEGIN
 								112,-- Refund FGLG
 								123,-- Calculate All for Abandoned/Postponed match
 								124,-- Calculate FT for Abandoned/Postponed match
-								125	-- Calculate HT for Abandoned/Postponed match	
+								125,-- Calculate HT for Abandoned/Postponed match	
+								142 -- CAL PS 
 							)
 			AND		((l.actionid IN(100,123) AND b.bettype <> 14 )-- cal all
 							OR ((l.actionid IN(101,124) AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- cal FT
@@ -90,6 +100,7 @@ BEGIN
 							OR (l.actionid  = 111 AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- refund  FT
 							OR (l.actionid =110 AND b.bettype IN(7,8,15,12,21,30,125) )-- refund HT
 							OR (l.actionid =112 AND b.bettype = 14)-- refund FGLG
+							OR (l.ActionID =142 AND b.bettype = 135) -- CAL PS 
 						))
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
@@ -118,7 +129,8 @@ BEGIN
 			AND b.winlostdate = @fromdate 
 			AND	b.currency <> 20
 			and b.matchid > 29 -- exclude transfer, mix parlay, system parlay
-			and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)	
+			--and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)	
+			and b.bettype IN (SELECT bettype FROM @tmpBettypes)
 	END
 
 	ELSE
@@ -156,7 +168,8 @@ BEGIN
 								112,-- Refund FGLG
 								123,-- Calculate All for Abandoned/Postponed match
 								124,-- Calculate FT for Abandoned/Postponed match
-								125	-- Calculate HT for Abandoned/Postponed match	
+								125,-- Calculate HT for Abandoned/Postponed match	
+								142 -- CAL PS 	
 							)
 			AND		((l.actionid IN(100,123) AND b.bettype <> 14 )-- cal all
 							OR ((l.actionid IN(101,124) AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- cal FT
@@ -167,6 +180,7 @@ BEGIN
 							OR (l.actionid  = 111 AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- refund  FT
 							OR (l.actionid =110 AND b.bettype IN(7,8,15,12,21,30,125) )-- refund HT
 							OR (l.actionid =112 AND b.bettype = 14)-- refund FGLG
+							OR (l.ActionID =142 AND b.bettype = 135) -- CAL PS 
 						))
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
@@ -195,7 +209,8 @@ BEGIN
 			AND b.winlostdate = @fromdate 
 			AND	b.currency <> 20
 			and b.matchid > 29 -- exclude transfer, mix parlay, system parlay
-			and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)		
+			--and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)		
+			and b.bettype IN (SELECT bettype FROM @tmpBettypes)
 	END
 	
 	UPDATE #temp
