@@ -9,7 +9,7 @@
 AS /*
 	Created: 
 	Task : Update new multi virtual rates for username
-	DB: DBTXN/bodb02
+	DB: DBTXN/CustDB
 	Original: 
 	Revisions:	
 		- 20090812@Simon: Update new multi virtual rates for username
@@ -21,6 +21,9 @@ AS /*
 		- 20101021@Henry: Record execution time
 		- 20130224@Lukas: move table Acc_CustVirtualRate to new database bodb_ACC
 						& change linked-server from db03 to DBPOLICY
+		- 20150126@Johnson: Separate virtual rate setting into sport types and bet types [Redmine: #25840]						
+						+ Change to use new structure : table Ac_VirtualRateList						 						
+							
 */
 BEGIN
     SET NOCOUNT ON		
@@ -38,41 +41,53 @@ BEGIN
 	
     DECLARE @tmpStatus TABLE
         (
-          custid INT PRIMARY KEY ,
-          username VARCHAR(50) ,
-          rate SMALLMONEY
+          custid INT ,
+          username VARCHAR(50)           
         )
+	
+	DECLARE @tmpCust TABLE(
+		custid INT,
+		sporttype INT,
+		bettype	INT,
+		isLive BIT,
+		virtualRate SMALLMONEY
+	)       
 
     DECLARE @FromRow INT ,
         @ToRow INT
-    SET @FromRow = ( @Index - 1 ) * 500 + 1
-    SET @ToRow = @Index * 500
+    SET @FromRow = ( @Index - 1 ) * 100 + 1
+    SET @ToRow = @Index *100
 
     INSERT  INTO @tmpStatus
             ( custid ,
-              username ,
-              rate
+              username             
             )
             SELECT  custid ,
-                    username ,
-                    1 + virtualrate
-            FROM    ( SELECT    ROW_NUMBER() OVER ( ORDER BY v.USERID, v.USERNAME ) IndexRow ,
+                    username 
+            FROM    ( SELECT    ROW_NUMBER() OVER ( ORDER BY t.USERNAME ) IndexRow ,
                                 ci.custid ,
-                                v.username ,
-                                v.virtualrate
+                                t.username
                       FROM      custinfo ci WITH ( NOLOCK )
-                                INNER JOIN DBACC.bodb_acc.dbo.Acc_CustVirtualRate v
-                                WITH ( NOLOCK ) ON ci.username = v.username
-                                                   AND v.userID = @UserID
+                                INNER JOIN (SELECT DISTINCT username
+											FROM DBACC.bodb_Acc.dbo.Acc_VirtualRateList WITH(NOLOCK)
+											WHERE userid = @userid											
+                                )t ON ci.username = t.username
                     ) Tmp
             WHERE   IndexRow BETWEEN @FromRow AND @ToRow
-				
-    UPDATE  custinfo WITH ( ROWLOCK, UPDLOCK )
-    SET     virtualmultiplier = s.rate
-    FROM    @tmpStatus s
-    WHERE   custinfo.custid = s.custid 
-
-
+	
+	INSERT INTO @tmpCust(custid, sporttype, bettype, isLive, virtualRate)
+	SELECT t.custid, sporttype, bettype, isLive, virtualRate
+	FROM DBACC.bodb_Acc.dbo.Acc_VirtualRateList c WITH(NOLOCK) 
+		INNER JOIN @tmpStatus t ON c.username = t.username
+		
+    UPDATE  cv
+    SET     virtualmultiplier = t.virtualRate
+    FROM    custVirtualRate cv  WITH ( ROWLOCK, UPDLOCK )
+		INNER JOIN @tmpCust t ON cv.custid = t.custid 
+								AND cv.sporttype = t.sporttype
+								AND cv.bettype = t.bettype
+								AND cv.isLive = t.isLive
+								
 	set @endRun = getdate()
 	set @duration  = datediff (millisecond,@startRun,@endRun)
 
@@ -114,22 +129,32 @@ BEGIN
 			)
     SELECT  @UserID,
             CustID,
-            '<Acc_VirtualRateMulUpd Rate="'
-            + CONVERT(VARCHAR(8), rate) + '" UserName="'
+            '<Acc_VirtualRateMulUpd UserName="'
             + username + '" IP="' + @IP + '" FileName="'
             + @FileName + '" Size="'
-            + CONVERT(VARCHAR(20), @FileSize) + '" />',
+            + CONVERT(VARCHAR(20), @FileSize) + '">'+
+            (
+				SELECT  SportType
+						,BetType
+						,IsLive
+						,Virtualrate
+				FROM @tmpCust c
+				WHERE c.custid = t.custid   
+				ORDER BY sporttype,isLive DESC,bettype
+				FOR XML  RAW('s')          
+            )+'</Acc_VirtualRateMulUpd>',
             802,
             @duration
-    FROM    @tmpStatus 
+    FROM    @tmpStatus t
+     
 
     DECLARE @TotalUsers INT
-    SELECT  @TotalUsers = COUNT(username)
+    SELECT  @TotalUsers = COUNT(DISTINCT username)
     FROM    DBACC.bodb_acc.dbo.Acc_CustVirtualRate WITH ( NOLOCK )
     WHERE   userID = @UserID
 
 -- Insert Last Log Row
-    IF (@Index * 500 >= @TotalUsers) 
+    IF (@Index * 100 >= @TotalUsers) 
     BEGIN
 		set @endRun = getdate()
 		set @duration  = datediff (millisecond,@startRun,@endRun)

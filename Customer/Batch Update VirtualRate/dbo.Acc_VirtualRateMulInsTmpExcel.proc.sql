@@ -1,7 +1,6 @@
 ﻿ALTER PROC [dbo].[Acc_VirtualRateMulInsTmpExcel]	
 	@UserID INT,
-	@arrUsernames NVARCHAR(4000),
-	@arrVirtualRates NVARCHAR(4000),	
+	@virtualrate VARCHAR(MAX),	
 	@ErrCode INT = 0 OUTPUT,
 	@ErrMsg NVARCHAR(200) = '' OUTPUT
 AS
@@ -16,7 +15,25 @@ AS
 		- 20091116@Daniel: Change to check permission on dedicated function [UploadVR]
 		- 20130224@Lukas: move SP to new database bodb_ACC
 						& change linked-server from db03 to DBPOLICY
-		- 20131203@Elodie: Expand size of string						
+		- 20131203@Elodie: Expand size of string
+		- 20150126@Johnson: Separate virtual rate setting into sport types and bet types [Redmine: #25840]						
+						+ Change to use new structure : table Ac_VirtualRateList						 						
+	
+	Parameter's Explanation:
+		- @virtualRate = '<ROOT>
+							<customer username="test123">
+								<rate sporttype="1" bettype="1" islive="0" rate="0.8" />
+								<rate sporttype="1" bettype="1" islive="1" rate="0.6" />
+								<rate sporttype="99" bettype="1" islive="0" rate="1.5" />
+								<rate sporttype="99" bettype="1" islive="1" rate="1.2" />
+							</customer>	
+							<customer username="supertest12">
+								<rate sporttype="1" bettype="1" islive="0" rate="0.5" />
+								<rate sporttype="1" bettype="1" islive="1" rate="0.9" />
+								<rate sporttype="99" bettype="1" islive="0" rate="1" />
+								<rate sporttype="99" bettype="1" islive="1" rate="0.7" />
+							</customer>
+						</ROOT>'						
 */
 BEGIN
 SET NOCOUNT ON
@@ -28,36 +45,70 @@ SET NOCOUNT ON
 
 	DECLARE @tblCust TABLE (
 		UserName	NVARCHAR(50),
-		VirtualRate	NVARCHAR(10)
+		sporttype	INT,
+		bettype		INT,
+		isLive		BIT,
+		VirtualRate	SMALLMONEY
 	)
 
 	DECLARE @tblFail TABLE (
 		UserName	NVARCHAR(50),
-		VirtualRate	NVARCHAR(10),
+		sporttype	INT,
+		bettype		INT,
+		isLive		BIT,
+		VirtualRate	SMALLMONEY,
 		Reason		NVARCHAR(100)
 	)
+	
+	DECLARE @DocHandler INT		
+	
+	IF @virtualrate <> ''
+	BEGIN
+		-- For read xml					
+		EXEC sp_xml_preparedocument @DocHandler OUTPUT, @virtualrate
 
-	INSERT INTO @tblCust(username, virtualrate)
-	SELECT	a.val, 
-			b.val 
-	FROM	dbo.strSplit(@arrUsernames, CHAR(8)) a
-			INNER JOIN dbo.strSplit(@arrVirtualRates, CHAR(8)) b ON a.RANK=b.RANK
-	WHERE  ISNULL(a.val,'') != ''
+		INSERT INTO @tblCust(
+					UserName,
+					SportType,
+					BetType,
+					IsLive,
+					Virtualrate
+				)
+		SELECT
+			Data.username,
+			Data.SportType,
+			Data.BetType,
+			Data.IsLive,
+			Data.rate
+		FROM OPENXML (@DocHandler, '/ROOT/customer/rate',2) 
+		WITH (
+			username	NVARCHAR(50) '../@username',
+			SportType	SMALLINT '@sporttype',
+			BetType		SMALLINT '@bettype',
+			IsLive		BIT '@islive',
+			rate		SMALLMONEY '@rate'	
+		) AS Data
 
-	INSERT INTO @tblFail(username, virtualrate, reason)
-	SELECT	username, virtualrate, 
-			CASE WHEN ISNUMERIC(VirtualRate)=0 THEN 'Invalid virtual rate.'
-				 WHEN (ISNUMERIC(VirtualRate)=1  AND (CAST(VirtualRate AS SMALLMONEY)<-0.8 OR CAST(VirtualRate AS SMALLMONEY)>0.6 OR CAST(VirtualRate AS SMALLMONEY)*100%5!=0) ) THEN 'Virtual rate must be in a range from -80% to +60% and be multiples of 5%.'
+		EXEC sp_xml_removedocument @DocHandler
+		-- end read xml	
+	END		
+
+
+	INSERT INTO @tblFail(username, sporttype, bettype, isLive, virtualrate, reason)
+	SELECT	username, sporttype, bettype, isLive, virtualrate, 
+			CASE WHEN virtualrate <0.2 OR virtualrate > 1.6 OR virtualrate*100%5!=0 THEN 'Virtual rate must be in a range from -80% to +60% and be multiples of 5%.'
 				 WHEN ISNULL(username,'') ='' THEN 'Username cannot be blanked.' ELSE '' END AS Reason 	
 	FROM	@tblCust 
-	WHERE	ISNUMERIC(VirtualRate)=0 
-			OR (ISNUMERIC(VirtualRate)=1  AND (CAST(VirtualRate AS SMALLMONEY)<-0.8 OR CAST(VirtualRate AS SMALLMONEY)>0.6 OR CAST(VirtualRate AS SMALLMONEY)*100%5!=0) )
+	WHERE	virtualrate <0.2 OR virtualrate > 1.6 OR virtualrate*100%5!=0
 			OR ISNULL(username,'') ='' 
 	
-	INSERT INTO dbo.Acc_CustVirtualRate(userid, username, virtualrate)
+	INSERT INTO dbo.Acc_VirtualRateList(userid, username, sporttype, bettype, islive, virtualrate)
 	SELECT	@UserID, 
 			username,
-			CAST(virtualrate AS SMALLMONEY)
+			sporttype,
+			bettype,
+			isLive,
+			virtualrate
 	FROM	@tblCust 
 	WHERE	username NOT IN ( SELECT username FROM @tblFail)
 	IF @@ERROR <> 0
