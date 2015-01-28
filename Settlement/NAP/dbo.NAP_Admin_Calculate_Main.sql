@@ -177,6 +177,7 @@ AS
 		- 20140728@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
 		- 20140807@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20141016@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150128@Jamie: Hotfix Settlement SS
 		
 	Param's Explanation:
 		@action			@mode
@@ -1204,6 +1205,7 @@ BEGIN
 						,@bettype = 1
 						,@fth = @fth
 						,@fta = @fta
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1
 				IF @betCount_2 > 0 -- Odd/Even 
 					EXEC dbo.NAP_Admin_Calculate_2 
@@ -1212,6 +1214,7 @@ BEGIN
 						,@oddeven			= @oddeven
 						,@OddEvenSetMatch	= @OddEvenSetMatch
 						,@totalgoal			= @totalgoal
+						,@SelectedSet		= @SelectedSet
 						,@betcount			= @betCount_2
 				IF @betCount_3 > 0 -- Match Total Games Over/Under
 					EXEC dbo.NAP_Admin_Calculate_3 
@@ -1219,6 +1222,7 @@ BEGIN
 						,@bettype		= 3
 						,@totalgoal		= @totalgoal
 						,@TotalSetMatch	= @TotalSetMatch
+						,@SelectedSet	= @SelectedSet
 						,@betcount		= @betCount_3
 
 				IF @betcount_20 > 0  -- Set Handicap 	
@@ -1227,6 +1231,7 @@ BEGIN
 						,@bettype = 20
 						,@fth = @fth
 						,@fta = @fta
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_20
 
 				IF @betCount_153 > 0 -- Game Handicap
@@ -1235,6 +1240,7 @@ BEGIN
 						,@bettype = 153
 						,@fth = @TotalGameHomeMatch
 						,@fta = @TotalGameAwayMatch
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betCount_153
 
 				IF @betcount_1301 > 0  -- Match Winner 		
@@ -1243,12 +1249,14 @@ BEGIN
 						,@bettype = 1301
 						,@fth = @fth
 						,@fta = @fta
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1301
 				IF @betCount_1302 > 0  -- Match Correct Score - Decimal 
 					EXEC dbo.NAP_Admin_Calculate_4 
 						 @matchid = @matchid
 						,@bettype = 1302
 						,@correctscore = @correctscore
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1302
 
 				IF @betcount_1303 > 0  -- Set Handicap 	
@@ -1257,6 +1265,7 @@ BEGIN
 						,@bettype = 1303
 						,@fth = @fth
 						,@fta = @fta
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1303
 
 				IF @betCount_1305 > 0 -- Match Total Games Odd/Even
@@ -1264,12 +1273,14 @@ BEGIN
 						 @matchid	= @matchid
 						,@bettype	= 1305
 						,@oddeven	= @oddeven
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1305
 				IF @betCount_1306 > 0 -- Match Total Games Over/Under
 					EXEC dbo.NAP_Admin_Calculate_3 
 						 @matchid = @matchid
 						,@bettype = 1306
 						,@totalgoal		= @totalgoal
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betCount_1306
 
 				IF @betCount_1308 > 0 -- Game Handicap (3rd)
@@ -1278,6 +1289,7 @@ BEGIN
 						,@bettype = 1308
 						,@fth = @TotalGameHomeMatch
 						,@fta = @TotalGameAwayMatch
+						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1308
 			END 
 			---- END: Match Scope 
