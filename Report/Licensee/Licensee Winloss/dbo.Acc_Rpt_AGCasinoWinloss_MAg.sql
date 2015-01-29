@@ -30,7 +30,7 @@ exec Acc_Rpt_AGCasinoWinloss_MAg
     Task : AG Win Loss report 
     DB: DBACC.bodb02  
     Revisions:  
-		
+		-20150127@Winnie: Add currency GBP
 	Param's Explanation:  
 	  + @excludeTest: remove currency UUS
 */    
@@ -103,6 +103,7 @@ BEGIN
 		   ,USD
 		   ,EUR
 		   ,MYR
+		   ,GBP
 	INTO #TempExchange 
 	FROM Lrf_f_GetExchangeDaily(@FromDate, @ToDate)
 	WHERE exchangeid IN (SELECT DISTINCT Currency FROM #tmpResult)
@@ -133,6 +134,11 @@ BEGIN
 			,SUM(r.Winlost*e.EUR)		 	AS WinlostEUR
 			,SUM(r.LicenseeWinlost*e.EUR) AS LicenseeWinlostEUR
 			,SUM(r.LicenseeWinlost*@ChargeRate*e.EUR)  AS AmtDueToAGCEUR
+		---GBP
+			,SUM(r.TurnOver*e.GBP)   	 	AS TurnOverGBP
+			,SUM(r.Winlost*e.GBP)		 	AS WinlostGBP
+			,SUM(r.LicenseeWinlost*e.GBP) AS LicenseeWinlostGBP
+			,SUM(r.LicenseeWinlost*@ChargeRate*e.GBP)  AS AmtDueToAGCGBP
 	FROM #tmpResult r
 		INNER JOIN #TempExchange e ON r.Winlostdate = e.ExchangeDate AND r.currency = e.ExchangeId
 		INNER JOIN dbo.CustInfo c WITH (NOLOCK) ON r.CustID = c.CustID
