@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_Rpt_WinlossByBettype]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_WinlossByBettype]
 	@winlostdate		datetime
 AS
 	/*	Creator: Vinh Truong 
@@ -54,8 +54,15 @@ AS
 			- 20130618@Johnson: Add NSW racing's pools from AUST
 			- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 			- 20140303@Dom: Add keno
+			- 20141203@Dom: Apply sport bettype matrix
 	*/
 	SET NOCOUNT ON
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 	-- Horse racing
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 	
@@ -118,7 +125,7 @@ AS
 
 	-- Sportbook
 	select	10 Num,
-			bettype,
+			b.bettype,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
 			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal_live else 0 end) as LineTotal_soccer_live,
 			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal_live else 0 end) as VirtualLineTotal_soccer_live,
@@ -131,17 +138,20 @@ AS
 			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others			
 	from 	#tmpBettrans b
 			inner join match m with(nolocK) on b.matchid = m.matchid
-	where   ((bettype < 31 and bettype <> 10) 
+			inner join @SportBettype s on s.bettype = b.bettype
+	where   s.ProductId=1 
+		and s.eventtype=1
+		/*((bettype < 31 and bettype <> 10) 
 				OR bettype between 121 and 999 				
-				OR bettype BETWEEN 1301 and 1334)	
+				OR bettype BETWEEN 1301 and 1334)	*/
 	group by 
-			bettype, 
+			b.bettype, 
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 	
 	-- Virtual sports
 	UNION ALL 
 	select	20 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -152,13 +162,15 @@ AS
 			sum(LineTotal) as  LineTotal_others,
 			0  VirtualLineTotal_others 		
 	from 	#tmpBettrans b
-	where   b.bettype BETWEEN 1201 and 1299
-	group by bettype			
+	inner join @SportBettype s on s.bettype = b.bettype
+	where   s.ProductId=5
+		--b.bettype BETWEEN 1201 and 1299
+	group by b.bettype			
 			
 	-- Casino
 	UNION ALL 
 	SELECT	30 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -168,14 +180,17 @@ AS
 			0 VirtualLineTotal_others_live,
 			sum(LineTotal) as  LineTotal_others,
 			0  VirtualLineTotal_others    
-	FROM	#tmpBettrans
-	WHERE	bettype = 71 and matchid in (0, 71)  			
-	group by bettype
+	FROM	#tmpBettrans b
+	inner join @SportBettype s on s.bettype = b.bettype
+	WHERE	s.ProductId=6
+		--bettype = 71 
+		and matchid in (0, 71)  			
+	group by b.bettype
 	
 	-- BINGO 
 	UNION ALL
 	SELECT	40 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -185,14 +200,17 @@ AS
 			0 VirtualLineTotal_others_live,
 			sum(LineTotal) as  LineTotal_others,
 			0  VirtualLineTotal_others    
-	FROM	#tmpBettrans
-	WHERE	bettype = 73 and matchid in (0, 73)	
-	group by bettype	
+	FROM	#tmpBettrans b
+	inner join @SportBettype s on s.bettype = b.bettype
+	WHERE	s.ProductId=7
+		--bettype = 73 
+		and matchid in (0, 73)	
+	group by b.bettype	
 	
 	--KENO
 	UNION ALL
 	SELECT	50 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -202,14 +220,16 @@ AS
 			0 VirtualLineTotal_others_live,		
 			sum(LineTotal) as LineTotal_others,
 			0 VirtualLineTotal_others	
-	FROM	#tmpBettrans 
-	WHERE	bettype BETWEEN 1501 AND 1599			
-	GROUP BY bettype		
+	FROM	#tmpBettrans b
+	inner join @SportBettype s on s.bettype = b.bettype
+	WHERE	s.ProductId=8
+		--bettype BETWEEN 1501 AND 1599			
+	GROUP BY b.bettype		
 	
 	--NUMBER GAME
 	UNION ALL
 	SELECT	60 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -219,14 +239,16 @@ AS
 			sum(case when liveindicator = 1 then VirtualLineTotal_live else 0 end) as VirtualLineTotal_others_live,		
 			sum(case when liveindicator = 0 then LineTotal else 0 end) as LineTotal_others,
 			sum(case when liveindicator = 0 then VirtualLineTotal else 0 end) as VirtualLineTotal_others	
-	FROM	#tmpBettrans 
-	WHERE	bettype BETWEEN 81 AND 120			
-	GROUP BY bettype
+	FROM	#tmpBettrans b
+	inner join @SportBettype s on s.bettype = b.bettype
+	WHERE	s.ProductId=3
+		--bettype BETWEEN 81 AND 120			
+	GROUP BY b.bettype
 	
 	-- Live Casino
 	UNION ALL
 	SELECT	70 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -236,9 +258,11 @@ AS
 			0 as VirtualLineTotal_others_live,		
 			sum(LineTotal) as LineTotal_others,
 			0 as VirtualLineTotal_others
-	FROM	#tmpBettrans 
-	WHERE	bettype BETWEEN 1101 AND 1199			
-	GROUP BY bettype					
+	FROM	#tmpBettrans b
+	inner join @SportBettype s on s.bettype = b.bettype
+	WHERE	s.ProductId=4
+		--bettype BETWEEN 1101 AND 1199			
+	GROUP BY b.bettype					
 	
 	-- Mix parlay, System parlay
 	UNION ALL 
@@ -311,15 +335,15 @@ AS
 			0 VirtualLineTotal_soccer,
 			0 LineTotal_others_live,
 			0 VirtualLineTotal_others_live,
-			-(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate)
-			+ sum((case bettype	when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
+			-(sum((case when b.bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate)
+			+ sum((case b.bettype	when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
 								when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
 								when 33 then bm.TOPhum*cs.ToteCommWP 
 								else 0  end)*b.actualrate) --IBCIncome
 			- sum(b.scomm*b.actualrate)
 			- sum((case when cs.IBCFee = 0 then 0 else 
 								case when b.bettype = 33 then bm.TOPhum 
-										when bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0))
+										when b.bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0))
 								 else 0 end
 					 end)*b.actualrate*cs.ToteFee)) Lintotal_others,
 			0  VirtualLineTotal_others
@@ -332,8 +356,10 @@ AS
 				from	bettransm with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
+			 inner join @SportBettype s on s.bettype = b.bettype
 	WHERE	
-			b.bettype in (31,32,33)
+			s.ProductId=2
+			--b.bettype in (31,32,33)
 			and b.matchid > 0
 			and b.winlostdate = @winlostdate
 			and b.ruben =1 

@@ -29,11 +29,18 @@ SET NOCOUNT ON
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)		
 		- 20140711@Johnson: Separate major and minor bettypes of soccer
 		- 20141110@Johnson: include additional bettypes into report
+		- 20150108@Dom: Apply sport bettype matrix
 	Param's Explanation: 
 		- @SoccerType= 1: Major bettypes
 					= 2: Minor bettypes	
 		- @IncludeBettype: include more bettypes in some specific cases(minor bettypes soccer get some major bettypes)
 */		
+
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@SportType=1
 
 	Declare @tmpBettype table (Bettype int, DisplayOrder int)
 	CREATE TABLE #DepAgent (custid int primary key)
@@ -102,7 +109,7 @@ SET NOCOUNT ON
 	INSERT INTO #TempBettrans	
 	SELECT		
 			liveindicator,
-			Bettype,			
+			b.Bettype,			
 			matchid,
 			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*virtualrate) WinLost,
@@ -113,16 +120,17 @@ SET NOCOUNT ON
 			sum((1-tpositiontaking)*ABS(stake)*actualrate) Turnover_actualrate,
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover_virtualrate
 	FROM	bettrans14 b WITH (NOLOCK)	
+		inner join @SportBettype s ON s.bettype = b.bettype
 		LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE
 			winlostdate = @winlostdate
-			AND (bettype < 31 OR b.bettype BETWEEN 121 AND 999)	
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999)	
 			AND matchid >0		
 			AND statusID NOT IN (101, 102,103) 
 			AND ruben = 1			
 	GROUP BY		
 			liveindicator,
-			Bettype,
+			b.Bettype,
 			matchid,
 			case when dep.custid is null then 1 else 2 end 	
 			
@@ -154,11 +162,12 @@ SET NOCOUNT ON
 	select	b.liveindicator, 
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
 	FROM	bettrans14 b WITH (NOLOCK)
+			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
 	WHERE
 			winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101,102,103) 
@@ -171,11 +180,12 @@ SET NOCOUNT ON
 	select	b.liveindicator, 
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) WinlostBARM
 	FROM	bettrans14 b WITH (NOLOCK)
+			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
 	WHERE
 			winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101,102,103) 

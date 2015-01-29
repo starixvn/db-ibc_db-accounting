@@ -61,6 +61,7 @@ AS
 		- 20140303@Dom: Add Keno
 		- 20140910@Johnson: - Separate major and minor bettypes of soccer
 							- Combine Mix Parlay and System Parlay into 1 section
+		- 20141203@Dom: Apply sport bettype matrix
 	
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -72,6 +73,11 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 
 	DECLARE @P2P_LineTotal  money			
 	DECLARE @RBWinlost TABLE(site tinyint,
@@ -182,14 +188,14 @@ BEGIN
 		sum((b.winlost -b.actual_stake)*b.actualrate) as winlost,
 		sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) as pos,
 		sum(b.scomm*b.actualrate) as comm,
-		-(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
+		-(sum((case when b.bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
 								- sum(case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
-								+ sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
+								+ sum((case b.bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
 													when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
 													when 33 then bm.TOPhum*cs.ToteCommWP 
 													else 0 end)*b.actualrate) --commIncomeIBC
 								- sum(b.scomm*b.actualrate)) as realLinetotal,
-		sum(case when bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end) as turnover
+		sum(case when b.bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end) as turnover
 			
 	FROM	bettrans14 b with (nolock)
 			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid  
@@ -201,9 +207,11 @@ BEGIN
 				from	bettransm14 with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno
+			 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			 left join (select custid from #DepAgent) dep ON b.recommend = dep.custid 
 	WHERE	b.ruben =1 
-			and b.bettype in (31,32,33)
+			--and b.bettype in (31,32,33)
+			and s.ProductID=2
 			and b.matchid >0
 			and b.winlostdate = @winlostdate
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')	
@@ -264,10 +272,13 @@ BEGIN
 			1 EnableVirtual
 	FROM	#src b WITH(NOLOCK)
 				INNER JOIN @Match m on b.matchid = m.matchid
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 				LEFT JOIN @Bettype t ON b.bettype = t.bettype
-	WHERE	(b.bettype < 31 
+	WHERE	/*(b.bettype < 31 
 				OR b.bettype BETWEEN 121 AND 999
-				OR b.bettype BETWEEN 1301 and 1334)	
+				OR b.bettype BETWEEN 1301 and 1334)	*/
+			s.ProductId=1
+			AND s.EventType=1
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY		
 			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
@@ -366,7 +377,9 @@ BEGIN
 			SUM(turnover_virtualrate) VirtualTurnover,
 			1 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
-	WHERE	b.bettype BETWEEN 81 AND 120
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId=3
+		--AND b.bettype BETWEEN 81 AND 120
 	GROUP BY site
 
 	--------------------------------------------------------------------------------
@@ -400,7 +413,9 @@ BEGIN
 			SUM(turnover_virtualrate) VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
-	WHERE	b.bettype BETWEEN 1101 AND 1199
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId=7
+	--b.bettype BETWEEN 1101 AND 1199
 			AND b.matchid > 0
 	GROUP BY site
 
@@ -417,7 +432,9 @@ BEGIN
 			SUM(turnover_virtualrate) VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
-	WHERE	b.bettype BETWEEN 1201 AND 1299
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId=5
+		--b.bettype BETWEEN 1201 AND 1299
 	GROUP BY site
 
 	----CASINO
@@ -431,8 +448,10 @@ BEGIN
 			0 RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
-	from	#src with (nolock)
-	where 	bettype IN (71, 72)
+	from	#src b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	where 	s.ProductId=6
+		--bettype IN(71, 72)
 			AND matchid IN (0, 71)
 	group by site
 
@@ -468,8 +487,10 @@ BEGIN
 			0 RealTurnover,
 			0 VirtualTurnover,
 			0 EnableVirtual
-	from	#src with (nolock)
-	where 	bettype = 73
+	from	#src b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	where s.ProductId=7	
+		--bettype = 73
 			AND matchid IN (0, 73)	
 	group by site
 
@@ -499,7 +520,9 @@ BEGIN
 			SUM(ISNULL(turnover_actualrate,0)) VirtualTurnover,
 			0 EnableVirtual
 		FROM	#src b WITH (NOLOCK)			
-		WHERE	b.bettype BETWEEN 1501 AND 1599 
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		WHERE	s.ProductId=8
+			--b.bettype BETWEEN 1501 AND 1599
 		GROUP BY site
 	) A
 	WHERE s.SportType = 202

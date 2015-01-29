@@ -13,9 +13,16 @@ AS
 			- 20130703@Kathy: Update matchid for RnG Casino (71)
 			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 			- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)					   
+			- 20150109@Dom: Apply sport bettype matrix
 	*/
 BEGIN
 	SET NOCOUNT ON
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=6
+
 	CREATE TABLE #DepAgent (custid int primary key)
 	
 	INSERT INTO #DepAgent 
@@ -35,9 +42,10 @@ BEGIN
 			isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate),0) LineTotal,
 			0 Turnover
 	FROM	bettrans b WITH (NOLOCK)
+		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
 	WHERE	b.winlostdate = @winlostdate
-			AND b.bettype IN(71, 72)								--20120405@Hurri
+			--AND b.bettype IN(71, 72)								--20120405@Hurri
 			AND b.matchid IN (0, 71)
 			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
 			AND b.statusID NOT IN (102, 101,121,103) 

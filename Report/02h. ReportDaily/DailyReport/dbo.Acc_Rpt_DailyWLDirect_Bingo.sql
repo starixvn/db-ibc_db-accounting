@@ -8,11 +8,18 @@ AS
 		
 		Revisions:
 		- 20130705@Kathy: Update matchid for Bingo (73)	
-		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)					   
+		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)		
+		- 20150109@Dom: Apply sport bettype matrix			   
    
 	*/
 BEGIN
 	SET NOCOUNT ON
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=7
+
 	CREATE TABLE #DepAgent (custid int primary key)
 		
 	INSERT INTO #DepAgent 
@@ -32,9 +39,10 @@ BEGIN
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
 			0 Turnover
 	FROM	bettrans b WITH (NOLOCK)
+		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
 	WHERE	b.winlostdate = @winlostdate
-			AND b.bettype = 73
+			--AND b.bettype = 73
 			AND b.matchid in (0, 73) 
 			AND b.statusID NOT IN (102, 101,121,103) 
 			AND b.ruben = 1		

@@ -26,10 +26,17 @@ SET NOCOUNT ON
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)		
+		- 20150108@Dom: Apply sport bettype matrix
 	
 */
 	--Declare @temp table to contain all matches based on @winlostdate
 	
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=1
+
 	DECLARE @Match TABLE (matchid int, sporttype tinyint, type varchar(10), primary key(matchid, type))
 	CREATE TABLE #DepAgent (custid int primary key)
 	
@@ -67,10 +74,11 @@ SET NOCOUNT ON
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
+			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334) 
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334) 
 			AND b.matchid > 0
 			--AND b.status NOT IN ('VOID', 'REJECT', 'Refund') 
 			AND b.statusID NOT IN (101,102,103) 
@@ -89,9 +97,10 @@ SET NOCOUNT ON
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid			
+			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101,102,103) 
@@ -106,9 +115,10 @@ SET NOCOUNT ON
 			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) WinlostBARM
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid			
+			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101,102,103) 

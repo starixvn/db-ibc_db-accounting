@@ -14,10 +14,16 @@ AS
 		- 20110824@Johnson: remove check winlostdate with '16 Dec 2010' for sumary turnover, get from stake instead actual_stake
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
-		- 20130731@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				 
+		- 20130731@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
+		- 20150108@Dom: Apply sport bettype matrix	 
 	
 */
 SET NOCOUNT ON
+
+----Get Sport Bettype Matrix------
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=3
 
 CREATE TABLE #DepAgent (custid int primary key)
 	
@@ -42,8 +48,9 @@ SELECT
 		sum((1-tpositiontaking)*stake*virtualrate) VirtualTurnover
 FROM	bettrans b WITH (NOLOCK)
 	LEFT JOIN (SELECT custid FROM #DepAgent) dep ON b.recommend = dep.custid
+	INNER JOIN @SportBettype s ON s.bettype = b.bettype
 WHERE	b.winlostdate = @winlostdate
-		AND b.bettype BETWEEN 81 AND 120	
+		--AND b.bettype BETWEEN 81 AND 120	
 		AND b.ruben = 1		
 		--AND b.status != 'DONE'			
 		AND b.statusID not in (101,102,103,121)

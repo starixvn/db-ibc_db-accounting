@@ -11,11 +11,18 @@ AS
 	DB: DB06.BODB02
 		- 20110531@Johnson: show Exchange currency2 for SA Tote
 		- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
+		- 20141226@Dom: Apply bettype matrix
 	Revisions:
 		
 */
 BEGIN
 	SET NOCOUNT ON
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 	DECLARE @CommSetting TABLE
 	(	MatchID int,
 		MeetingID int,
@@ -35,7 +42,7 @@ BEGIN
 	SELECT	DISTINCT o.orid as matchid, o.leagueID, o.teamid, o.groupmatch, o.matchcode,
 			p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP,1
 	FROM	outright o WITH (NOLOCK)
-			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.leagueID  AND p.programDate = o.programDate
+			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.leagueID AND p.programDate = o.programDate
 			INNER JOIN RacingMeeting r WITH(NOLOCK) ON p.leagueid = r.meetingid
 	WHERE	o.eventdate = @winlostdate 
 
@@ -72,7 +79,9 @@ BEGIN
 				FROM	bettransm WITH (NOLOCK)
 				GROUP BY refno 
 			)bm ON bm.refno = b.transid 
-	WHERE	b.bettype in (31,32,33) 
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	--b.bettype in (31,32,33) 
+			s.ProductID = 2
 			AND b.ruben = 1 
 			--AND b.status NOT in ('VOID','REJECT','DONE','REFUND')
 			AND b.statusID NOT in (101,102,103,121)

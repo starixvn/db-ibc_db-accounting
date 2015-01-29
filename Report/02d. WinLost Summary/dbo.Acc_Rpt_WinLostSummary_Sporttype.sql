@@ -14,7 +14,13 @@ AS
 			- 20140327@Dom: Add Keno
         Parameter's Explanation:
     */
-SET NOCOUNT ON
+BEGIN
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
+	SET NOCOUNT ON
 
 	DECLARE @_fromdate    DATETIME,
 			@_todate      DATETIME
@@ -113,7 +119,7 @@ SET NOCOUNT ON
     UNION ALL
         --Casino
         SELECT 251 as sporttype
-            ,bettype
+            ,b.bettype
             ,0 as liveindicator
             ,0 as ibc
             ,0 as IsHedge
@@ -125,14 +131,16 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal --copy data from actual value
             ,0 as realTurnover
             ,NULL as virtualTurnover
-        FROM rptWinlost WITH(NOLOCK)
+        FROM rptWinlost b WITH(NOLOCK)
+		 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
         WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND bettype = 71
-        GROUP BY bettype
+            --AND bettype = 71
+			AND s.ProductId=6
+        GROUP BY b.bettype
     UNION ALL
         --Bingo
         SELECT 252 as sporttype
-            ,bettype
+            ,b.bettype
             ,0 as liveindicator
             ,0 as ibc
             ,0 as IsHedge
@@ -144,13 +152,15 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
             ,0 as realTurnover
             ,NULL as virtualTurnover
-        FROM rptWinlost WITH(NOLOCK)
+        FROM rptWinlost b WITH(NOLOCK)
+		 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
         WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND bettype = 73
-        GROUP BY bettype
+            --AND bettype = 73
+			AND s.ProductId=7
+        GROUP BY b.bettype
     UNION ALL
     SELECT 202 sporttype
-            ,bettype
+            ,b.bettype
             ,liveindicator
             ,ibc
             ,0 as IsHedge
@@ -162,15 +172,17 @@ SET NOCOUNT ON
             ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
             ,ISNULL(SUM(realTurnover),0) as realTurnover
             ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
-        FROM rptWinlost WITH(NOLOCK)
+        FROM rptWinlost b WITH(NOLOCK)
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
         WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            and bettype BETWEEN 1501 AND 1599
+            --and bettype BETWEEN 1501 AND 1599
+			AND s.ProductId=8
         GROUP BY sporttype,liveindicator ,ibc
-            ,bettype
+            ,b.bettype
     UNION ALL
         --Live casino
         SELECT 162 as sporttype
-            ,bettype
+            ,b.bettype
             ,0 as liveindicator
             ,0 as ibc
             ,0 as IsHedge
@@ -182,10 +194,12 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
             ,ISNULL(SUM(realTurnover),0)
             ,ISNULL(SUM(realTurnover),0) as virtualTurnover
-        FROM rptWinlost WITH(NOLOCK)
+        FROM rptWinlost b WITH(NOLOCK)
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
         WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND bettype between 1101 and 1199
-        GROUP BY bettype
+            --AND bettype between 1101 and 1199
+			AND s.ProductId=4
+        GROUP BY b.bettype
     UNION ALL
         SELECT 97 -- mix parlay
             ,9 as bettype
@@ -237,9 +251,11 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
             , 0 as realTurnover
             ,0 as virtualTurnover
-        FROM rptWinlost WITH(NOLOCK)
+        FROM rptWinlost b WITH(NOLOCK)
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
         WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND bettype BETWEEN 31 AND 33
+            --AND bettype BETWEEN 31 AND 33
+			AND s.ProductId=2
         GROUP BY sporttype
     UNION ALL
         --virtual sports
@@ -256,9 +272,11 @@ SET NOCOUNT ON
             ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
             ,ISNULL(SUM(realTurnover),0)
             ,ISNULL(SUM(realTurnover),0) as virtualTurnover
-        FROM rptWinlost WITH(NOLOCK)
+        FROM rptWinlost b WITH(NOLOCK)
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
         WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND bettype BETWEEN 1201 AND 1299
+            --AND bettype BETWEEN 1201 AND 1299
+			AND s.ProductId=5
         GROUP BY sporttype
 
     UNION ALL
@@ -313,7 +331,7 @@ SET NOCOUNT ON
     DROP TABLE #TempMatch
 	DROP TABLE #TempData
     --exec Acc_Rpt_WinlostSummary_Sporttype @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
-
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
 

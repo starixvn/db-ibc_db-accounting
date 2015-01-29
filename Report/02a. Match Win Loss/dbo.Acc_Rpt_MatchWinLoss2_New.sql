@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
 	@WinLost_BARM		 money = 0 OUTPUT,
@@ -21,6 +21,7 @@ AS
 			- 20130703@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 			- 20140303@Dom: Add Keno
+			- 20141203@Dom: Apply sport bettype matrix
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -31,7 +32,14 @@ AS
 
 	*/
 BEGIN	
-	SET NOCOUNT ON		
+	SET NOCOUNT ON	
+	
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	
+		
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 	
@@ -85,18 +93,18 @@ BEGIN
 			sum(b.scomm*b.actualrate) Comm,
 			0 VirtualComm,
 	        -(
-		        sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) -- PTWLIBC, 
+		        sum((case when b.bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) -- PTWLIBC, 
 		        - sum(case when cs.IBCFee = 0 then 0 else
 				        (case when b.bettype = 33 then bm.TOPhum 
 					        when b.bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) -- FeeDue2 ,
-		        + sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
+		        + sum((case b.bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
 							        when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
 							        when 33 then bm.TOPhum*cs.ToteCommWP 
 							        else 0 end)*b.actualrate)-- commIncomeIBC
 		        - sum(b.scomm*b.actualrate)
 	        ) LineTotal,
 			0 VirtualLineTotal,
-			sum(case when bettype = 33 then bm.TOIBC*b.actualrate else abs(b.stake)*isnull(oddsspread,0)*b.actualrate end) IBCTurnover
+			sum(case when b.bettype = 33 then bm.TOIBC*b.actualrate else abs(b.stake)*isnull(oddsspread,0)*b.actualrate end) IBCTurnover
     INTO #Racing
 	FROM	bettrans b with (nolock)
 			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid  
@@ -108,8 +116,10 @@ BEGIN
 				from	bettransm with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
+			 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	b.ruben = 1 
-			and b.bettype in (31,32,33)
+			--and b.bettype in (31,32,33)
+			and s.ProductID=2
 			and b.matchid > 0
 			and b.winlostdate = @winlostdate			
 			and b.statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
@@ -191,7 +201,9 @@ BEGIN
 	FROM 
 	    (
 	        SELECT 
-	            matchid, bettype, liveindicator,
+	            matchid, 
+				bettype, 
+				liveindicator,
 	            sum(winlost) winlost,
                 sum(pos) pos,
                 sum(comm) comm,
@@ -202,9 +214,12 @@ BEGIN
 	        FROM #tmpBettrans with (nolock)
 	        GROUP BY matchid, bettype, liveindicator
 	    ) b
-		inner join match m with (nolock) on m.matchid = b.matchid
-		inner join league l with (nolock) on l.leagueid = m.leagueid
-	WHERE ((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
+		INNER JOIN match m with (nolock) on m.matchid = b.matchid
+		INNER JOIN league l with (nolock) on l.leagueid = m.leagueid
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE ProductID=1
+		AND s.EventType <> 2	
+	--((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
 	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc
 	
 	-- Resultset of 3rd products and Parlay, Outright
@@ -222,7 +237,8 @@ BEGIN
 							 WHEN b.statusID = 113 THEN 'LOSE'
 							 WHEN b.statusID = 112 THEN 'WON' END as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype = 9 OR bettype = 29 	
+	WHERE	bettype = 9 
+			OR bettype = 29 	
 	GROUP BY statusID		
 	
 	    -- Outright 
@@ -267,7 +283,9 @@ BEGIN
 			0 IBCTurnover,
 			'Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype IN (71,72)		
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductID=6
+	--bettype IN (71,72)		
 
 	    -- Bingo - 73
 	UNION ALL
@@ -282,7 +300,9 @@ BEGIN
 			0 IBCTurnover,
 			'Bingo' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype = 73		
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE s.ProductID=7
+	--bettype = 73		
 	
 	 -- Keno
 	UNION ALL
@@ -297,7 +317,9 @@ BEGIN
 			sum(isnull(b.IBCTurnover,0)) IBCTurnover,
 			'Keno' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype BETWEEN 1501 AND 1599 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductID=8
+	--bettype BETWEEN 1501 AND 1599 
 	
 	    -- P2P Game - 1000
 	UNION ALL
@@ -332,7 +354,9 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Number Game' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype BETWEEN 81 AND 120 			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductID=3
+	--bettype BETWEEN 81 AND 120 			
 	
 	    -- Virtual Sports
 	UNION ALL
@@ -347,7 +371,9 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Virtual Sports' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype BETWEEN 1201 AND 1299			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductID=5
+	--bettype BETWEEN 1201 AND 1299			
 
 	    -- Live Casino
 	UNION ALL
@@ -362,7 +388,9 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Live Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	WHERE	bettype BETWEEN 1101 AND 1199	
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductID=7	
+	--bettype BETWEEN 1101 AND 1199	
 	ORDER BY Num ASC			
 	
     -- Resultset of 8RM and BARM
@@ -391,10 +419,13 @@ BEGIN
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
 			inner join match m with (nolock) on b.matchid = m.matchid
-	WHERE   ((bettype < 31 and bettype <> 10) 
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE   s.EventType=1
+		AND s.ProductId IN(1,5)
+			/*((bettype < 31 and bettype <> 10) 
 				OR bettype between 121 and 999 
 				OR (bettype BETWEEN 1201 and 1299 and b.bettype not in (1231, 1232, 1233, 1237, 1238))
-				OR bettype BETWEEN 1301 and 1334)	
+				OR bettype BETWEEN 1301 and 1334)	*/
 	GROUP BY 
 			b.bettype, 
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
@@ -402,7 +433,7 @@ BEGIN
 	    -- Virtual HR
 	UNION ALL 
 	SELECT	20 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -414,13 +445,15 @@ BEGIN
 			0  VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
-	WHERE   b.bettype in (1231, 1232, 1233, 1237, 1238)	
-	GROUP BY bettype			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE   s.EvenTType=3
+	--b.bettype in (1231, 1232, 1233, 1237, 1238)	
+	GROUP BY b.bettype			
 			
 	    -- Casino
 	UNION ALL 
 	SELECT	30 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -431,14 +464,17 @@ BEGIN
 			sum(LineTotal) as  LineTotal_others,
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
-	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype IN(71, 72) and matchid IN (0, 71)  			
-	GROUP BY bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductId = 6	
+		--bettype IN(71, 72) 
+		and matchid IN (0, 71)  			
+	GROUP BY b.bettype
 	
 	    -- Bingo 
 	UNION ALL
 	SELECT	40 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -449,9 +485,12 @@ BEGIN
 			sum(LineTotal) as  LineTotal_others,
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
-	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype = 73	and matchid IN (0, 73)
-	GROUP BY bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductId = 7	
+		--bettype = 73	
+		and matchid IN (0, 73)
+	GROUP BY b.bettype
 
 	    -- Keno
 	UNION ALL
@@ -467,14 +506,16 @@ BEGIN
 			sum(ISNULL(LineTotal,0)) as LineTotal_others,
 			0 VirtualLineTotal_others,
 			sum(ISNULL(IBCTurnover,0)) as IBCTurnover
-	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype BETWEEN 1501 AND 1599
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductId = 8	
+		--bettype BETWEEN 1501 AND 1599
 	--GROUP BY bettype
 	
 	    -- Number Game
 	UNION ALL
 	SELECT	60 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -485,14 +526,16 @@ BEGIN
 			sum(case when liveindicator = 0 then LineTotal else 0 end) as LineTotal_others,
 			sum(case when liveindicator = 0 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
-	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype BETWEEN 81 AND 120			
-	GROUP BY bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductId = 3	
+		--b.bettype BETWEEN 81 AND 120			
+	GROUP BY b.bettype
 	
 	    -- Live Casino
 	UNION ALL
 	SELECT	70 Num,
-			bettype,
+			b.bettype,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -503,9 +546,11 @@ BEGIN
 			sum(LineTotal) as LineTotal_others,
 			0 as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
-	FROM	#tmpBettrans with (nolock)
-	WHERE	bettype BETWEEN 1101 AND 1199			
-	GROUP BY bettype					
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 4	
+			--b.bettype BETWEEN 1101 AND 1199			
+	GROUP BY b.bettype					
 	
 	    -- Parlay
 	UNION ALL 
