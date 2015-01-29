@@ -64,6 +64,7 @@ AS
 		- 20140306@Dom: Add Keno
 		- 20140908@Dom:	[Redmine #22012] Update VS conditions
 		- 20141103@Dom: Apply sport bettype matrix
+		- 20152001@Dom: Fix Bug Virtual HR condition
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -75,7 +76,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC Acc_SportBettypeMatrix_Sel @mode=4
 
     DECLARE @tmpStatus TABLE (
         [statusID] TINYINT);
@@ -1007,7 +1008,8 @@ BEGIN
 				   INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             WHERE  b.custid = @custid
                    AND b.winlostdate = @fromdate
-				   AND s.ProductID = 2
+				   AND s.ProductID = 5
+				   AND s.EventType = 3
                    --AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
                    AND b.statusID IN (SELECT statusID FROM @tmpStatus)
                                                          
