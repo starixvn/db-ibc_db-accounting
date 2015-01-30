@@ -20,6 +20,7 @@ AS
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20140714@Kathy: filter by running penalty shootout only [Redmine:#17142]
 		- 20141006@Jamie: Get ResultDetail for Tennis [Redmine:#23034]
+		- 20150130@Jamie: Betradar phase II [Readmine:#27212]
       
  Param explanation:  
 	@MatchCode: match code
@@ -322,6 +323,23 @@ BEGIN
 	from SingleTicket sg
 		full outer join ParlayTicket pl on sg.matchid = pl.matchid 
 
+	CREATE TABLE #tmpAutoSettle1s(
+		 MatchID		INT
+		,ResultStatusID	TINYINT 
+	)
+	INSERT INTO #tmpAutoSettle1s(MatchID,ResultStatusID)
+	SELECT	MatchID, MIN(ResultStatusID)
+	FROM	ResultDetail WITH (NOLOCK)
+	WHERE	@Sporttype IN(0,1)
+			AND MatchID IN (SELECT MatchID FROM #matchList)
+			AND (ResourceID IN ('135','175','176','192','193')
+					OR ResourceID LIKE '160__'
+					OR ResourceID LIKE '164__'
+					OR ResourceID LIKE '169__'
+					OR ResourceID LIKE '180__'
+				)
+	GROUP BY MatchID 
+
 	SELECT m.HalfTimeHomeScore
 		,m.HalfTimeAwayScore
 		,m.IsCalculated
@@ -357,8 +375,14 @@ BEGIN
 		,m.PlaceOdds
 		,t.IsCalculatingSingle
 		,t.IsCalculatingMP
-	FROM #matchList m
-	LEFT JOIN #tempmatch t ON t.matchid = m.matchid
+		,CASE	WHEN a.ResultStatusID IS NULL THEN 'N/A'
+				WHEN a.ResultStatusID IN(0,1,3) THEN 'Running'
+				WHEN a.ResultStatusID IN (2,5) THEN 'Completed'
+				ELSE '' END AS AutoSettleResultStatus
+
+	FROM	#matchList m
+			LEFT JOIN #tempmatch t ON t.matchid = m.matchid
+			LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID
 	ORDER BY case m.eventstatus when 'completed' then 1 when 'refund' then 1 else 0 END
 		, m.eventdate
 		,m.kickofftime
