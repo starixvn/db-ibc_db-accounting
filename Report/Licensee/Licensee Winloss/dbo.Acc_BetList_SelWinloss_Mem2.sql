@@ -1,11 +1,11 @@
-﻿USE [bodb02]
+﻿SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_BetList_SelWinloss_Mem2]
+/****** Object:  Stored Procedure dbo.Acc_BetList_SelWinloss_Mem2    Script Date: 1/28/2015 4:08:40 PM ******/
+ 
+CREATE PROCEDURE [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@CustID			INT,
 	@CurrencyId		INT=0,
 	@FromDate		DATETIME,
@@ -47,7 +47,7 @@ DB: DBRPT/bodb02
 Revisions:
 	- 20110729@Henry: offer 3 new bettypes for Number Game + Combination Mixed Parlay
 	- 20111208@Jim: change condition bettype<31 
-	- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily
+	- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily_xtest
 	- 20120319@Henry: show main transid for sub-ticket of system parlay
 	- 20120508@Jim: enhance query performance 
 	- 20120802@Jim: add playercomm value 
@@ -61,9 +61,10 @@ Revisions:
 	- 20140704@Jim: support sporting solution
 	- 20140909@Jim: retrict Virtual Horse Racing bettype
 	- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
+	- 20150123@Jim: support base on GBP currency
 Param's Explanation: 
 	+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
-	+ @BaseCurrency : Base currency in Result tables 0: ALL, 1: USD, 2: MYR, 3: EUR
+	+ @BaseCurrency : Base currency in Result tables 0: ALL, 1: USD, 2: MYR, 3: EUR ,4:GBP
 
 */
 
@@ -2220,7 +2221,7 @@ END
 --@currency
 
 SELECT * INTO #TempExchange 
-FROM Lrf_f_GetExchangeDaily(@FDate,@TDate)
+FROM Lrf_f_GetExchangeDaily (@FDate,@TDate)
 --WHERE exchangeid = @currency
 
 --exclude draw for no draw option (2)
@@ -2250,12 +2251,12 @@ INNER JOIN
 
 -- Update Stake to Base currency
 UPDATE #BetListByDateMem
-SET stake = stake *					(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
-	actual_stake = actual_stake *	(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
-	winlost = winlost *				(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
-	LicenseeWL = LicenseeWL *		(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
-	comm = comm *					(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
-	playercomm = playercomm *		(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END)
+SET stake = stake *					(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+	actual_stake = actual_stake *	(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+	winlost = winlost *				(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+	LicenseeWL = LicenseeWL *		(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+	comm = comm *					(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+	playercomm = playercomm *		(CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END)
 FROM	#BetListByDateMem d 
 		INNER JOIN #TempExchange e 
 		ON e.ExchangeDate =  d.winlostdate AND e.exchangeid = d.currency
@@ -2346,7 +2347,7 @@ begin
 		SELECT 
 			BM.refno, 
 			BM.odds, 
-			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BM.status, 
 			BM.apositiontaking,
 			0,
@@ -2366,7 +2367,7 @@ begin
 		SELECT 
 			BM.refno, 
 			BM.odds, 
-			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BM.status, 
 			BM.apositiontaking, 
 			0,
@@ -2386,7 +2387,7 @@ begin
 		SELECT 
 			BM.refno, 
 			BM.odds, 
-			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+			BM.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BM.status, 
 			BM.apositiontaking, 
 			0,
@@ -2408,7 +2409,7 @@ BEGIN
 		SELECT 
 			BG.refno, 
 			BG.odds, 
-			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
 			BG.apositiontaking, 
 			0,
@@ -2428,7 +2429,7 @@ BEGIN
 		SELECT 
 			BG.refno, 
 			BG.odds, 
-			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
 			BG.apositiontaking, 
 			0,
@@ -2448,7 +2449,7 @@ BEGIN
 		SELECT 
 			BG.refno, 
 			BG.odds, 
-			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR ELSE 1 END),
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
 			BG.apositiontaking,
 			0,
@@ -2467,10 +2468,18 @@ SELECT * FROM @BettransDetail ORDER BY RefNo,Bettype
 DROP TABLE #TempBetList	
 DROP TABLE #BetListByDateMem
 DROP TABLE #TempExchange
+GO
 
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbAdminNet] AS [dbo]
+SET ANSI_NULLS ON 
 GO
-GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbLicenseeNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [vnteam] AS [dbo]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbLicenseeNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbAdminNet]
+GO 
