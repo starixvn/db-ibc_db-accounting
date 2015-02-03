@@ -14,15 +14,6 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON 
-	DECLARE	 @betCount_135		INT 
-			,@betCount_160		INT
-			,@betCount_164		INT
-			,@betCount_169		INT
-			,@betCount_175		INT 
-			,@betCount_176		INT
-			,@betCount_180		INT 
-			,@betCount_192		INT
-			,@betCount_193		INT
 			
 	DECLARE	@tmpTicketStatus TABLE(
 		 ResourceID		VARCHAR(20)
