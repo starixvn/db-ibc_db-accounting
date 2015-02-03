@@ -59,15 +59,18 @@ BEGIN
 					WHEN bettype = 193 THEN '193'
 					ELSE 0 END
 				 
-	SELECT	 t.ResourceID
+	SELECT	 ResourceID = (CAST(ISNULL(t.ResourceID,0) AS INT)|CAST(ISNULL(r.ResourceID,0) AS INT))	
 			,t.BetCount
 			,t.InRunning
-			,r.ResourceId
-			,r.HomeValue
+			,TicketStatus = CASE WHEN t.ResourceID IS NULL OR t.BetCount = 0 THEN 'No Ticket'
+								 WHEN t.InRunning = 0 THEN 'Calculated'
+								 ELSE 'Running' END 
+ 			,r.HomeValue
 			,r.ResultStatusID
 			,r.SettlementStatusID
+
 	FROM	@tmpTicketStatus t
-			FULL OUTER JOIN ResultDetail r WITH (NOLOCK) ON t.ResourceID = r.ResourceId
+			FULL OUTER JOIN DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) ON t.ResourceID = r.ResourceId
 	WHERE	r.ResourceID IN ('135','175','176','192','193')
 			OR r.ResourceID LIKE '160__'
 			OR r.ResourceID LIKE '164__'
