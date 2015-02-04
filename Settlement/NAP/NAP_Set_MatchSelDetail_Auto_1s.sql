@@ -49,10 +49,20 @@ BEGIN
 					WHEN bettype = 192 THEN '192'
 					WHEN bettype = 193 THEN '193'
 					ELSE 0 END
-				 
+
+
+	-- Match Info 
+	SELECT	LeagueID
+			,MatchID
+			,matchcode
+			,kickofftime
+			,homeid
+			,awayid
+	FROM	DBPRO.bodb02.dbo.Match WITH (NOLOCK)
+	WHERE	MatchID = @MatchID
+
+	-- Detail  		 
 	SELECT	 ResourceID = (CAST(ISNULL(t.ResourceID,0) AS INT)|CAST(ISNULL(r.ResourceID,0) AS INT))	
-			,t.BetCount
-			,t.InRunning
 			,TicketStatus = CASE WHEN t.ResourceID IS NULL OR t.BetCount = 0 THEN 'No Ticket'
 								 WHEN t.InRunning = 0 THEN 'Calculated'
 								 ELSE 'Running' END 
