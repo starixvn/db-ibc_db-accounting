@@ -5,7 +5,8 @@ ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@MatchCode NVARCHAR(50) = ''
 	,@StatusId TINYINT = 0
 	,@FilterBy TINYINT = 0
-	,@PenaltyShootoutOnly BIT = 0 
+	--,@PenaltyShootoutOnly BIT = 0 
+	,@AutoSettlementOnly BIT = 0 
 	,@IsReLoad BIT = 0
 AS
 /*  
@@ -90,7 +91,7 @@ BEGIN
 				END
 
 		--ignore event status if selecting filterby
-		IF (@UncalMultiOnly = 1 OR @UncalOnly = 1 OR @PenaltyShootoutOnly = 1)
+		IF (@UncalMultiOnly = 1 OR @UncalOnly = 1 OR @AutoSettlementOnly = 1)
 			SELECT @eventstatus = ''
 				,@isRefund = NULL
 	END
@@ -238,7 +239,7 @@ BEGIN
 	LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
 	where (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
 	AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
-	AND ISNULL(mr.SettlementStatus135,0) = CASE when @PenaltyShootoutOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
+	AND ISNULL(mr.SettlementStatus135,0) = CASE when @AutoSettlementOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
 	
 	
 	SELECT @rowcount = 0
