@@ -77,7 +77,7 @@ BEGIN
 			OR r.ResourceID LIKE '164__'
 			OR r.ResourceID LIKE '169__'
 			OR r.ResourceID LIKE '180__'
-				
+	ORDER BY ResourceID ASC 
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail_Auto_1s] TO [bodbAdminNet] AS [dbo]
