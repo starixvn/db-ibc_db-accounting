@@ -1,5 +1,6 @@
-USE bodb_licensee
+USE [bodb_licensee]
 GO
+
 ALTER PROCEDURE [dbo].[DBA_Lrf_AddUserIntoLicensee]
 (	@LicenseeName  VARCHAR(10),
 	@UserName	   VARCHAR(50),	

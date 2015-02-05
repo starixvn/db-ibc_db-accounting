@@ -1,10 +1,6 @@
 USE [bodb_licensee]
 GO
  
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[DBA_Lrf_EnablePlayerComm]
 (	
 	@LicenseeName  VARCHAR(500)
@@ -134,5 +130,3 @@ BEGIN
 		END	
  
 END
-GO
-GRANT EXECUTE ON [dbo].[DBA_Lrf_EnablePlayerComm] TO [vnteam]

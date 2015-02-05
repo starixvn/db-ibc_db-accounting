@@ -1,11 +1,6 @@
 ﻿USE [bodb_licensee]
 GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
+ 
 ALTER PROCEDURE [dbo].[DBA_CreateNewLicensee]
 (
 	@LicenseeName VARCHAR(50),

@@ -1,13 +1,5 @@
-﻿USE [bodb_licensee]
+USE [bodb_licensee]
 GO
-/****** Object:  StoredProcedure [dbo].[DBA_CreateLicenseeUser]    Script Date: 01/12/2015 17:15:17 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-
 ALTER PROCEDURE [dbo].[DBA_CreateLicenseeUser]
 	@LicenseeName varchar(50)='All',
 	@Username varchar(50),
@@ -196,6 +188,3 @@ BEGIN
 	-------------------
 	SELECT @i = @i + 1
 END
-GO
-GRANT VIEW DEFINITION ON [dbo].[DBA_CreateLicenseeUser] TO [vnteam] 
- 
