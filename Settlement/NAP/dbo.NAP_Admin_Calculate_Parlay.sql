@@ -38,6 +38,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@SetxGameyREFUND		VARCHAR(MAX) = NULL 
 	,@SelectedSetCAL		VARCHAR(50)  = NULL
 	,@SelectedSetREFUND		VARCHAR(50)  = NULL 
+	,@ResourceIDs			VARCHAR(MAX) = NULL
 	,@CalledByBrokerService BIT = 0 
 AS
 /*
@@ -51,6 +52,7 @@ AS
 		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140815@Kathy: add more mode for Special Delete function
+		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 
 	Param's Explanation:
 		@action			@mode
@@ -218,6 +220,11 @@ BEGIN
 				WHEN @SelectedSetREFUND IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(VARCHAR(50), @SelectedSetREFUND) + ''''
 				END + '
+
+			,@ResourceIDs = ' + CASE 
+				WHEN @ResourceIDs IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(50), @ResourceIDs) + ''''
+				END + '
 			,@CalledByBrokerService = 1'
 
 		EXEC [sb].[SBInputMessage] @fromService = N'//Service/Calculation_send'
@@ -253,7 +260,7 @@ BEGIN
 
 			BEGIN TRANSACTION
 
-			   			   			   			   EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+			 EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
 				,@fth = @fth
 				,@fta = @fta
 				,@hth = @hth
@@ -262,8 +269,9 @@ BEGIN
 				,@action = @action
 				,@resultPS = @resultPS
 				,@IsRefundHT = @IsRefundHT
-				,@TennisTotal			= @TennisTotal
-				,@SelectedSet			= @SelectedSet
+				,@TennisTotal	= @TennisTotal
+				,@SelectedSet	= @SelectedSet
+				,@ResourceIDs	= @ResourceIDs
 
 			COMMIT TRANSACTION
 		END

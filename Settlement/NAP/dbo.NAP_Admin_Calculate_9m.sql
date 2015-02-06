@@ -37,6 +37,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@SetxGameyREFUND		VARCHAR(MAX) = NULL 
 	,@SelectedSetCAL		VARCHAR(50)  = NULL
 	,@SelectedSetREFUND		VARCHAR(50)  = NULL 
+	,@ResourceIDs			VARCHAR(MAX)= NULL
 WITH RECOMPILE
 AS
 /*
@@ -56,6 +57,7 @@ AS
 							sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20141204@Jamie: Sportting Solution settlement - Change rule Set x Correct Score [Redmine:#23034]
+		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -324,7 +326,6 @@ BEGIN
 		AND statusID NOT IN (101, 102)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-		--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND 1 = CASE WHEN @SelectedSet IS NULL THEN 1 
 					 WHEN @SelectedSet LIKE '%1%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '801%' THEN 1 
 					 WHEN @SelectedSet LIKE '%2%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '802%' THEN 1
@@ -333,6 +334,10 @@ BEGIN
 					 WHEN @SelectedSet LIKE '%5%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '805%' THEN 1
 					 WHEN @SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20,153,1301,1302,1303,1305,1306,1308) THEN 1 
 					 ELSE 0 END
+		AND 1 = CASE WHEN @ResourceIDs IS NULL OR Bettype NOT IN (135,160,164,169,175,176,180,192,193) THEN 1 
+					 WHEN Bettype IN (160,164,169,180) AND CHARINDEX(SUBSTRING(CAST(betcheck AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
+					 WHEN Bettype IN (135,175,176,192,193) AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDs)>0 THEN 1 
+					 ELSE 0 END 
 
 		UPDATE dbo.BetParlayDetail
 		SET statuswinlost = 0
@@ -341,7 +346,6 @@ BEGIN
 		AND statusID NOT IN (101, 102)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-		--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND 1 = CASE WHEN @SelectedSet IS NULL THEN 1 
 					 WHEN @SelectedSet LIKE '%1%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '801%' THEN 1 
 					 WHEN @SelectedSet LIKE '%2%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '802%' THEN 1
@@ -350,6 +354,10 @@ BEGIN
 					 WHEN @SelectedSet LIKE '%5%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '805%' THEN 1
 					 WHEN @SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20,153,1301,1302,1303,1305,1306,1308) THEN 1 
 					 ELSE 0 END
+		AND 1 = CASE WHEN @ResourceIDs IS NULL OR Bettype NOT IN (135,160,164,169,175,176,180,192,193) THEN 1 
+					 WHEN Bettype IN (160,164,169,180) AND CHARINDEX(SUBSTRING(CAST(betcheck AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
+					 WHEN Bettype IN (135,175,176,192,193) AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDs)>0 THEN 1 
+					 ELSE 0 END 
 	END
 			-- ===================================================
 			-- ===================================================

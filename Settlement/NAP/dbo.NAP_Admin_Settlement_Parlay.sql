@@ -4,6 +4,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay] (
 	,@action VARCHAR(20) = 'CAL'
 	,@resultPS NVARCHAR(10) = NULL
 	,@SelectedSet VARCHAR(50) = NULL 
+	,@ResourceIDs VARCHAR(MAX) = NULL
 	,@IP VARCHAR(15) = ''
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -21,6 +22,7 @@ AS
 		- 20140717@Kathy: Settle MP for Penalty Shootout [Redmine:#17142]
 		- 20141007@Kathy: Correct condition in case settle for sport (Tennis/VolleyBall/Badminton/Squash) [Redmine:#24073]
 		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 	Param's Explanation:
 	@resultPS: match result of penalty shootout
 
@@ -343,6 +345,7 @@ BEGIN
 				,@matchdate = @matchdate
 				,@TennisTotal = @TennisTotal
 				,@SelectedSet = @SelectedSet
+				,@ResourceIDs = @ResourceIDs
 		END
 		UPDATE @match
 		SET CalTime = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
