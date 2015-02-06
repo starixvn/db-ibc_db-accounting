@@ -206,6 +206,7 @@ AS
 		 REFUND-FGLG	 REFUND-FT, REFUND-HT
 		 CAL-PS			 CAL
 		 CAL-SET		 CAL		--Tennis 
+		 CAL-AUTO		 CAL 
 
 */
 BEGIN
@@ -1191,6 +1192,7 @@ BEGIN
 				EXEC dbo.NAP_Admin_Calculate_Undo 
 					 @matchid	  = @matchid
 					,@SelectedSet = @SelectedSet
+					,@ResourceIDs = @ResourceIDs
 			END
 		END
 
