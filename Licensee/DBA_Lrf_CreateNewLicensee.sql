@@ -1,6 +1,5 @@
 USE [bodb_licensee]
 GO
- 
 ALTER PROCEDURE [dbo].[DBA_Lrf_CreateNewLicensee]
 (
 	@LicenseeName   	VARCHAR(50)
@@ -302,7 +301,8 @@ WHILE (@i <= @maxId)
 		WHERE f.FunctionId NOT IN (SELECT FunctionId FROM dbo.LicenseeUserFunctions WITH (NOLOCK) WHERE LicenseeId = @LicenseeId AND UserId = @UserId)
 			  AND f.TypeId = 1
 			  AND lf.LicenseeId = @LicenseeId	
-			  
+		
+			
 		IF EXISTS (SELECT TOP 1 1 FROM @SpecialAdmin a INNER JOIN @AdminUser b ON  a.UserId=b.UserId WHERE a.UserId=@UserId)
 		BEGIN 
 			INSERT INTO  dbo.LicenseeUserFunctions(LicenseeId, UserId, FunctionId)
@@ -313,7 +313,31 @@ WHILE (@i <= @maxId)
 			  AND f.TypeId= 11	
 		END
 	END
- 
+ /*
+	- Grant currency permission to Licensee's Users
+	*/
+	DECLARE @Currency AS TABLE (LicenseeID INT, CurrencyID INT)
+	DECLARE @usr AS TABLE (LicenseeID INT ,UserID INT )
+	 
+	INSERT INTO @Currency(LicenseeID,CurrencyID)
+	SELECT DISTINCT LicenseeID,Currency CurrencyID
+	FROM dbo.LicenseeCust WITH (NOLOCK)
+	WHERE LicenseeID = @LicenseeID
+	EXCEPT
+	SELECT DISTINCT LicenseeID, CurrencyID
+	FROM dbo.CurrencyUser WITH (NOLOCK )
+	WHERE LicenseeID = @LicenseeID 
+	
+	INSERT INTO @usr (LicenseeID, UserID)
+	SELECT DISTINCT LicenseeID,UserID 
+	FROM dbo.LicenseeUser WITH (NOLOCK)
+	WHERE LicenseeID = @LicenseeID
+	
+	INSERT INTO dbo.CurrencyUser(usrID,LicenseeID,CurrencyID,SystemID,isActive)
+	SELECT u.UserID,u.LicenseeID,c.CurrencyID,1,1 ---SystemID=1 is default for Lrf
+	FROM @usr u
+		INNER JOIN 	@Currency c ON u.LicenseeID = c.LicenseeID
+		
 ------------------------------------------------------
 -- Map Licencee to LicenseeBAConfig
 ------------------------------------------------------
