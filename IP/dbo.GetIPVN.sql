@@ -14,10 +14,12 @@ Task : Get IP VN ranges
 DB: BODB02.IPDB
 Original:Accounting site
 Revisions:
+	- 20150205@Johnson: get IP VN from IPTable [redmine: #30656]
 */		
 	SET NOCOUNT ON
 
-	SELECT * from IPVN with (nolock)
+	SELECT ipFROM,ipTO, 0 as isManual from IPTable with (nolock)
+	WHERE countrySHORT = 'vn'
 
 GO
 GRANT EXECUTE ON [dbo].[GetIPVN] TO [bodbAdminNet]

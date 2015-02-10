@@ -79,7 +79,13 @@ BEGIN
 	SELECT t.custid, sporttype, bettype, isLive, virtualRate
 	FROM DBACC.bodb_Acc.dbo.Acc_VirtualRateList c WITH(NOLOCK) 
 		INNER JOIN @tmpStatus t ON c.username = t.username
-		
+	
+	--enable virtual rate for disabled customers
+	UPDATE cusinfo WITH(UPDLOCK,ROWLOCK)
+	SET virtualmultiplier = 1
+	WHERE custid IN (SELECT DISTINCT custid FROM @tmpCust)
+		AND virtualmultiplier = 0
+			
     UPDATE  cv
     SET     virtualmultiplier = t.virtualRate
     FROM    custVirtualRate cv  WITH ( ROWLOCK, UPDLOCK )
@@ -137,7 +143,7 @@ BEGIN
 				SELECT  SportType
 						,BetType
 						,IsLive
-						,Virtualrate
+						,Virtualrate as VirtualMultiplier
 				FROM @tmpCust c
 				WHERE c.custid = t.custid   
 				ORDER BY sporttype,isLive DESC,bettype

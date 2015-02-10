@@ -104,13 +104,18 @@ SET NOCOUNT ON
 	
 	INSERT INTO dbo.Acc_VirtualRateList(userid, username, sporttype, bettype, islive, virtualrate)
 	SELECT	@UserID, 
-			username,
-			sporttype,
-			bettype,
-			isLive,
-			virtualrate
-	FROM	@tblCust 
-	WHERE	username NOT IN ( SELECT username FROM @tblFail)
+			c.username,
+			c.sporttype,
+			c.bettype,
+			c.isLive,
+			c.virtualrate
+	FROM	@tblCust c
+		LEFT JOIN @tblFail t ON c.UserName = t.username
+								AND c.sporttype = t.sporttype 
+								AND c.bettype = t.bettype
+								AND c.isLive = t.isLive
+	WHERE	t.username IS NULL
+	
 	IF @@ERROR <> 0
 	BEGIN
 		SELECT	@ErrMsg = 'Insert process is unsuccessful.',
