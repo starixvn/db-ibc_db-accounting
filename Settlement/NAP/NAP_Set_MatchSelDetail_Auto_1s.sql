@@ -25,7 +25,9 @@ BEGIN
 	SELECT	CASE	WHEN bettype = 135 THEN '135'
 					WHEN bettype = 160 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
 					WHEN bettype = 164 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN bettype = 168 THEN '168'
 					WHEN bettype = 169 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN bettype = 174 THEN '174'
 					WHEN bettype = 175 THEN '175'
 					WHEN bettype = 176 THEN '176'
 					WHEN bettype = 180 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
@@ -37,12 +39,14 @@ BEGIN
 			,SUM(CASE	WHEN StatusID = 0 THEN 1 
 						ELSE 0 END)
 	FROM	dbo.Bettrans WITH (NOLOCK)
-	WHERE	bettype IN (135,160,164,169,175,176,180,192,193)
+	WHERE	bettype IN (135,160,164,169,174,175,176,180,192,193)
 			AND matchID = @MatchID 
 	GROUP BY CASE	WHEN bettype = 135 THEN '135'
 					WHEN bettype = 160 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
 					WHEN bettype = 164 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN bettype = 168 THEN '168'
 					WHEN bettype = 169 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN bettype = 174 THEN '174'
 					WHEN bettype = 175 THEN '175'
 					WHEN bettype = 176 THEN '176'
 					WHEN bettype = 180 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
@@ -73,7 +77,7 @@ BEGIN
 	FROM	@tmpTicketStatus t
 			FULL JOIN DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) ON t.ResourceID = r.ResourceId
 	WHERE	r.MatchID = @MatchID
-			AND( r.ResourceID IN ('135','175','176','192','193')
+			AND( r.ResourceID IN ('135','168','174','175','176','192','193')
 					OR r.ResourceID LIKE '160__'
 					OR r.ResourceID LIKE '164__'
 					OR r.ResourceID LIKE '169__'
