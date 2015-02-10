@@ -79,6 +79,8 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@1st10Min1x2					VARCHAR(10)	= NULL
 	,@1stGoalTime10Min				VARCHAR(10)	= NULL
 	,@1stGoalTime15Min				VARCHAR(10)	= NULL
+	,@WhoAdvancesNextRound			VARCHAR(10) = NULL
+	,@ExtraTimeandGoal				VARCHAR(10)	= NULL
 	,@1HNextGoal					VARCHAR(MAX)= NULL
 	,@NextGoal						VARCHAR(MAX)= NULL
 	,@NextGoalTime15Min				VARCHAR(MAX)= NULL
@@ -151,7 +153,9 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betCount_156					INT 		= NULL
 	,@betCount_160					INT 		= NULL
 	,@betCount_164					INT 		= NULL
+	,@betcount_168					INT 		= NULL
 	,@betCount_169					INT 		= NULL
+	,@betCount_174					INT 		= NULL
 	,@betCount_175					INT 		= NULL
 	,@betCount_176					INT 		= NULL
 	,@betCount_192					INT 		= NULL
@@ -400,6 +404,8 @@ BEGIN
 			,@1st10Min1x2 = ' + CASE WHEN @1st10Min1x2 IS NULL THEN 'NULL' ELSE '''' + @1st10Min1x2 + '''' END + '
 			,@1stGoalTime10Min = ' + CASE WHEN @1stGoalTime10Min IS NULL THEN 'NULL' ELSE '''' + @1stGoalTime10Min + '''' END + '
 			,@1stGoalTime15Min = ' + CASE WHEN @1stGoalTime15Min IS NULL THEN 'NULL' ELSE '''' + @1stGoalTime15Min + '''' END + '
+			,@WhoAdvancesNextRound = ' + CASE WHEN @WhoAdvancesNextRound IS NULL THEN 'NULL' ELSE '''' + @WhoAdvancesNextRound + '''' END + '
+			,@ExtraTimeandGoal = ' + CASE WHEN @ExtraTimeandGoal IS NULL THEN 'NULL' ELSE '''' + @ExtraTimeandGoal + '''' END + '	
 			,@1HNextGoal = ' + CASE WHEN @1HNextGoal IS NULL THEN 'NULL' ELSE '''' + @1HNextGoal + '''' END + '
 			,@NextGoal = ' + CASE WHEN @NextGoal IS NULL THEN 'NULL' ELSE '''' + @NextGoal + '''' END + '
 			,@NextGoalTime15Min = ' + CASE WHEN @NextGoalTime15Min IS NULL THEN 'NULL' ELSE '''' + @NextGoalTime15Min + '''' END + '
@@ -661,7 +667,9 @@ BEGIN
 			
 			,@betCount_160 = ' + CASE WHEN @betCount_160 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_160) END + '
 			,@betCount_164 = ' + CASE WHEN @betCount_164 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_164) END + '
+			,@betCount_168 = ' + CASE WHEN @betCount_168 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_168) END + '
 			,@betCount_169 = ' + CASE WHEN @betCount_169 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_169) END + '
+			,@betCount_174 = ' + CASE WHEN @betCount_174 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_174) END + '
 			,@betCount_175 = ' + CASE WHEN @betCount_175 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_175) END + '
 			,@betCount_176 = ' + CASE WHEN @betCount_176 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_176) END + '
 			,@betCount_192 = ' + CASE WHEN @betCount_192 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_192) END + '
@@ -1258,6 +1266,15 @@ BEGIN
 					,@result = @NextGoal
 					,@betcount = @betcount_164
 
+			-- bettype: 168: Who advances to next round 
+			IF @betcount_168 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 168
+					,@ResourceIDs = @ResourceIDs
+					,@result = @WhoAdvancesNextRound
+					,@betcount = @betcount_168
+
 			-- bettype: 169: Next Goal Time (15 Min)
 			IF @betcount_169 > 0	
 				EXEC dbo.NAP_Admin_Calculate_135 
@@ -1267,6 +1284,14 @@ BEGIN
 					,@result = @ExtraNextGoal
 					,@betcount = @betcount_169
 
+			-- bettype: 174: Who advances to next round 
+			IF @betcount_174> 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 174
+					,@ResourceIDs = @ResourceIDs
+					,@result = @ExtraTimeandGoal
+					,@betcount = @betcount_174
 
 			-- bettype: 175 : Match Decided Method 
 			IF @betcount_175 > 0	
