@@ -6,6 +6,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundAll]
 	,@SelectedSet					VARCHAR(50)	 = NULL 
 	,@SelectedSettleFinishedGame	VARCHAR(50)	 = NULL 
 	,@SetxGameyFinishedGame			VARCHAR(MAX) = NULL 
+	,@ResourceIDs					VARCHAR(MAX) = NULL 
 AS
 /*	Created by: Kathy
 	Date: 20140213
@@ -22,6 +23,7 @@ AS
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		- 20141027@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
+		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -85,6 +87,10 @@ BEGIN
 						 WHEN @SelectedSettleFinishedGame LIKE '%4%' AND BetID BETWEEN 80401 AND 80499 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 0   
 						 WHEN @SelectedSettleFinishedGame LIKE '%5%' AND BetID BETWEEN 80501 AND 80599 AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyFinishedGame)>0 THEN 0 
 						 ELSE 1 END 
+			AND 1 = CASE WHEN @ResourceIDs IS NULL AND Bettype NOT IN (135,160,164,168,169,174,175,176,180,192,193) THEN 1 
+						 WHEN @ResourceIDs IS NOT NULL AND Bettype IN (160,164,169,180) AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
+						 WHEN @ResourceIDs IS NOT NULL AND Bettype IN (135,168,174,175,176,192,193) AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDs)>0 THEN 1 
+						 ELSE 0 END  
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) 
 						AND (@SelectedSet IS NULL OR (@SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20))) THEN 0

@@ -92,7 +92,7 @@ BEGIN
 	IF LEN(@sqlCommand)> 1000 --Max Field 
 	BEGIN
 		SELECT   @ErrCode = 1001010
-				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each set/match to execute separately.'	
+				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'	
 		RETURN 
 	END
 	

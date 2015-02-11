@@ -92,7 +92,7 @@ BEGIN
 
 	END 
 	/* END - @Command = 'NAP_Admin_Settlement_Auto_1s-CAL' */
-	IF @Command ='NAP_Admin_Settlement_Auto_1s-UNDO'
+	ELSE IF @Command ='NAP_Admin_Settlement_Auto_1s-UNDO'
 	BEGIN
 		UPDATE	ResultDetail WITH (UPDLOCK,ROWLOCK)
 		SET		 HomeValue			= NULL 
@@ -105,7 +105,17 @@ BEGIN
 				AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
 	END
 	/* END - @Command = 'NAP_Admin_Settlement_Auto_1s-UNDO' */
-
+	ELSE IF @Command ='NAP_Admin_Settlement_Auto_1s-REFUND'
+	BEGIN
+		UPDATE	ResultDetail WITH (UPDLOCK,ROWLOCK)
+		SET		 ResultStatusID		= 5		--  
+				,SettlementStatusID	= 1		-- Refund
+				,LastModifyBy		= @Creator 
+				,LastModifyDate		= GETDATE() 
+		WHERE	MatchID = @MatchID
+				AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)		
+	END 
+	/* END - @Command = 'NAP_Admin_Settlement_Auto_1s-REFUND' */
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Result_Update_1s] TO [bodbAdminNet]

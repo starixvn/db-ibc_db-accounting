@@ -2071,6 +2071,7 @@ BEGIN
 						,@SelectedSet				= @SelectedSet
 						,@SelectedSettleFinishedGame= @SelectedSettleFinishedGame
 						,@SetxGameyFinishedGame		= @SetxGameyFinishedGame
+						,@ResourceIDs				= @ResourceIDs
 
 			END
 
