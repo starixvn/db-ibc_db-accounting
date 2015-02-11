@@ -33,7 +33,7 @@ BEGIN
 		,credit - debit AS Amount
 		,NULL AS Exrate
 	FROM 
-		bodb_archive.dbo.transfer_bk tbk WITH(NOLOCK)
+		dbo.transfer_bk tbk WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.Bettype bt WITH(NOLOCK) ON (tbk.bettype = bt.typeid) 
 	WHERE
 		 winlostdate BETWEEN @fromdate AND @todate 
