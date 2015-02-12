@@ -75,14 +75,21 @@ BEGIN
 			,r.SettlementStatusID
 
 	FROM	@tmpTicketStatus t
-			FULL JOIN DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) ON t.ResourceID = r.ResourceId
-	WHERE	r.MatchID = @MatchID
-			AND( r.ResourceID IN ('135','168','174','175','176','192','193')
-					OR r.ResourceID LIKE '160__'
-					OR r.ResourceID LIKE '164__'
-					OR r.ResourceID LIKE '169__'
-					OR r.ResourceID LIKE '180__'
-			)
+			FULL JOIN( 
+				SELECT	 r.MatchID  
+				        ,r.ResourceId
+						,r.HomeValue
+						,r.ResultStatusID
+						,r.SettlementStatusID
+				FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) 
+				WHERE	r.MatchID = @MatchID
+							AND( r.ResourceID IN ('135','168','174','175','176','192','193')
+									OR r.ResourceID LIKE '160__'
+									OR r.ResourceID LIKE '164__'
+									OR r.ResourceID LIKE '169__'
+									OR r.ResourceID LIKE '180__'
+							)
+			) r ON t.ResourceID = r.ResourceId
 	ORDER BY ResourceID ASC 
 
 END
