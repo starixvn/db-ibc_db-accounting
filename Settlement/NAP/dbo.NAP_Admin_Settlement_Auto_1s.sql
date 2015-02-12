@@ -37,6 +37,18 @@ BEGIN
 							 WHEN @Action = 'UNDO'	THEN 149 
 							 WHEN @Action = 'REFUND'THEN 150
 							 ELSE 0 END  
+							 
+	--Write Log Settle
+
+	SELECT	 @fth			= finalhomescore
+			,@fta			= finalawayscore
+			,@hth			= hthomescore
+			,@hta			= htawayscore
+			,@goalrecord	= goalrecord 
+			,@betstatus		= betstatus 
+	FROM	DBPRO.BODB02.dbo.match WITH (NOLOCK)
+	WHERE	matchid = @matchid
+		
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (
 			SELECT 1 
