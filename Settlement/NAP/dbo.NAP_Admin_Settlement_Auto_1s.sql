@@ -30,13 +30,15 @@ BEGIN
 			,@goalrecord				VARCHAR(50)
 			,@betstatus					VARCHAR(50) 
 			,@ActionID					INT
-			,@Remark					VARCHAR(500)
+			,@Remark					VARCHAR(500) =''
 			,@LogData					NVARCHAR(200)							
 
+	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE WHEN @Action = 'CAL'	THEN 148 
 							 WHEN @Action = 'UNDO'	THEN 149 
 							 WHEN @Action = 'REFUND'THEN 150
 							 ELSE 0 END  
+		
 							 
 	--Write Log Settle
 
@@ -262,8 +264,8 @@ BEGIN
 		@UserID = @AdminId
 		,@Doing = @logdata
 
-	SELECT @remark = 'NAP: ResourceID:' + @ResourceIDs
-						+ CASE WHEN ISNULL(@Results,'') ='' THEN '' ELSE ' Result:'+ ISNULL(@Results,'') + '<br/> ' END
+	SELECT @Remark = 'NAP: ResourceID:' + @ResourceIDs +  ' <br/> ' 
+						+ CASE WHEN ISNULL(@Results,'') ='' THEN '' ELSE ' Result:'+ ISNULL(@Results,'') + ' <br/> ' END
 						+ ' IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
 						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + 'ms' 
 	BEGIN TRY
