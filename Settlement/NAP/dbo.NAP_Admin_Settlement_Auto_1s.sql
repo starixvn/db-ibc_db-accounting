@@ -30,7 +30,7 @@ BEGIN
 			,@goalrecord				VARCHAR(50)
 			,@betstatus					VARCHAR(50) 
 			,@ActionID					INT
-			,@Remark					VARCHAR(500) =''
+			,@Remark					VARCHAR(500)
 			,@LogData					NVARCHAR(200)							
 
 	SELECT	@start = CURRENT_TIMESTAMP
