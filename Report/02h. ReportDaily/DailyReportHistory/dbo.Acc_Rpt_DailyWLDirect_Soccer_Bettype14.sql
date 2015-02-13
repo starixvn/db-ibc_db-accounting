@@ -30,6 +30,7 @@ SET NOCOUNT ON
 		- 20140711@Johnson: Separate major and minor bettypes of soccer
 		- 20141110@Johnson: include additional bettypes into report
 		- 20150108@Dom: Apply sport bettype matrix
+		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 	Param's Explanation: 
 		- @SoccerType= 1: Major bettypes
 					= 2: Minor bettypes	
@@ -78,8 +79,8 @@ SET NOCOUNT ON
 		WHERE (typeid > 10 AND typeid < 31) OR typeid BETWEEN 121 AND 999
 	
 	DELETE @tmpBettype 
-	WHERE 1 = CASE WHEN @SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1
-					WHEN @SoccerType = 2 AND Bettype IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126) THEN 1 ELSE 0 END
+	WHERE 1 = CASE WHEN @SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1
+					WHEN @SoccerType = 2 AND Bettype IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1 ELSE 0 END
 	
 	IF ISNULL(@IncludeBettype,'') <> ''
 	BEGIN
@@ -160,7 +161,14 @@ SET NOCOUNT ON
 			b.liveindicator, bt.DisplayOrder, site		
 			
 	select	b.liveindicator, 
-			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
+			1 as ibc,--8RM
+			-sum(winlost-actual_stake) WinLost,
+			-sum(awinlost+mwinlost+swinlost) Position,
+			sum(scomm) Commission,				
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
+			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 
@@ -178,7 +186,14 @@ SET NOCOUNT ON
 	
 	-- 20120412@Hurri: Get win lost of agent 'BARM'
 	select	b.liveindicator, 
-			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) WinlostBARM
+			2 as ibc,--BARM
+			-sum(winlost-actual_stake) WinLost,
+			-sum(awinlost+mwinlost+swinlost) Position,
+			sum(scomm) Commission,	
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
+			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 

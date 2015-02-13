@@ -63,6 +63,7 @@ AS
 		- 20140910@Johnson: - Separate major and minor bettypes of soccer
 							- Combine Mix Parlay and System Parlay into 1 section
 		- 20141203@Dom: Apply sport bettype matrix
+		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -159,7 +160,7 @@ BEGIN
 	INSERT INTO @Bettype(bettype)
 	SELECT typeid
 	FROM bettype WITH(NOLOCK)
-	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126)
+	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151)
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
@@ -189,7 +190,7 @@ BEGIN
 			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) as pos,
 			sum(b.scomm*b.actualrate) as comm,
 			-(sum((case when b.bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
-								- sum( case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
+								- sum( case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when b.bettype in (31,32) then b.actual_stake*(1 -b.tpositiontaking - isnull(b.oddsspread,0)) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
 								+ sum((case b.bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
 													when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
 													when 33 then bm.TOPhum*cs.ToteCommWP  
@@ -386,9 +387,18 @@ BEGIN
 				 
 	--------------------------------------------------------------------------------
 	--Section 1: all products that disable virtual currency, DisplayOrder field:	101 -> 200
-
+	/*
+	Display order for gaming
+		1. Number Game
+		2. Live Casino
+		3. Casino
+		4. Virtual Sports
+		5. Keno
+		6. Racing
+		7. Bingo
+	*/
 	UNION ALL --Racing
-	SELECT	101,
+	SELECT	106,
 			'Racing', 
 			151, 
 			0, 
@@ -429,7 +439,7 @@ BEGIN
 	----VIRTUAL SPORT
 	UNION ALL
 	SELECT
-			103,'Virtual Sports', 180, 0,site,
+			104,'Virtual Sports', 180, 0,site,
 			SUM(winlost_actualrate) WinLost,
 			SUM(position_actualrate) Position,
 			SUM(commission_actualrate) Commission,	
@@ -446,7 +456,7 @@ BEGIN
 	
 	----CASINO
 	UNION ALL
-	SELECT	104,'Casino', 251, 0, site,
+	SELECT	103,'Casino', 251, 0, site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -464,7 +474,7 @@ BEGIN
 
 	--P2P
 	UNION ALL
-	SELECT	105,'P2P', 253, 0, 
+	SELECT	108,'P2P', 253, 0, 
 			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			0 Position,
@@ -486,7 +496,7 @@ BEGIN
 
 	--BINGO
 	UNION ALL
-	SELECT	106,'Bingo', 252, 0,site,
+	SELECT	107,'Bingo', 252, 0,site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -505,7 +515,7 @@ BEGIN
 	----KENO
 	UNION ALL
 	SELECT
-			107,'Keno', 202, 0, site,
+			105,'Keno', 202, 0, site,
 			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
 			SUM(ISNULL(b.position_actualrate,0)) Position,
 			SUM(ISNULL(commission_actualrate,0)) Commission,	

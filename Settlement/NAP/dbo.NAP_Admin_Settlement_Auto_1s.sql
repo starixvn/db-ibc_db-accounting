@@ -33,9 +33,24 @@ BEGIN
 			,@Remark					VARCHAR(500)
 			,@LogData					NVARCHAR(200)							
 
+	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE WHEN @Action = 'CAL'	THEN 148 
 							 WHEN @Action = 'UNDO'	THEN 149 
+							 WHEN @Action = 'REFUND'THEN 150
 							 ELSE 0 END  
+		
+							 
+	--Write Log Settle
+
+	SELECT	 @fth			= finalhomescore
+			,@fta			= finalawayscore
+			,@hth			= hthomescore
+			,@hta			= htawayscore
+			,@goalrecord	= goalrecord 
+			,@betstatus		= betstatus 
+	FROM	DBPRO.BODB02.dbo.match WITH (NOLOCK)
+	WHERE	matchid = @matchid
+		
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (
 			SELECT 1 
@@ -91,37 +106,36 @@ BEGIN
 		,balance MONEY
 		)
 
-	DECLARE @TotalAccount INT
-		,@TotalAccount_BalanceUpdate INT
+	--===
+	INSERT INTO #BalanceBefore
+	SELECT	 b.custid
+			,SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM	dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @MatchId 
+			AND b.bettype IN (135,160,164,169,175,176,180,192,193)
+	GROUP BY b.custid
 
 
 	--===
+
+	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	IF @Action='CAL'
 	BEGIN
-		INSERT INTO #BalanceBefore
-		SELECT	 b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM	dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @MatchId 
-				AND b.bettype IN (135,160,164,169,175,176,180,192,193)
-		GROUP BY b.custid
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+			@Command			= 'NAP_Admin_Settlement_Auto_1s-CAL',
+			@MatchID			= @MatchID,
+			@ResourceIDs		= @ResourceIDs, 
+			@Results			= @Results,
+			@IsAuto				= @IsAuto,
+			@creator			= @AdminID 			
 
-		SET @TotalAccount = @@ROWCOUNT
-	END
-	ELSE IF @Action = 'UNDO'
-	BEGIN
-		INSERT INTO #BalanceBefore
-		SELECT   b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM	dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @MatchId
-				AND b.bettype IN (135,160,164,169,175,176,180,192,193)
-		GROUP BY b.custid
-	END
-			--===
+		EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
+			 @matchid		= @matchid
+			,@ResourceIDs	= @ResourceIDs
+			,@mode			= @action						
 
-			--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	IF @action = 'UNDO'
+	END
+	ELSE IF @action = 'UNDO'
 	BEGIN
 		EXEC dbo.NAP_Admin_Calculate_Main 
 			 @matchid		= @matchid
@@ -145,21 +159,22 @@ BEGIN
 			@creator			= @AdminID 
 
 	END
-	ELSE IF @Action='CAL'
+	ELSE IF @Action = 'REFUND'
 	BEGIN
 		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
-			@Command			= 'NAP_Admin_Settlement_Auto_1s-CAL',
+			@Command			= 'NAP_Admin_Settlement_Auto_1s-REFUND',
 			@MatchID			= @MatchID,
 			@ResourceIDs		= @ResourceIDs, 
 			@Results			= @Results,
 			@IsAuto				= @IsAuto,
-			@creator			= @AdminID 			
+			@creator			= @AdminID 	
 
-		EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
+		EXEC dbo.NAP_Admin_Calculate_Main 
 			 @matchid		= @matchid
 			,@ResourceIDs	= @ResourceIDs
-			,@mode			= @action						
-
+			,@action		= 'REFUND'	
+			,@mode			= 'ALL' 
+			,@row_count		= 1 
 	END
 
 
@@ -167,26 +182,14 @@ BEGIN
 	---         CAPTURE value BALANCE after settlement        ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #BalanceAfter (custid INT PRIMARY KEY, balance MONEY)
-	IF @Action IN ('CAL')
-	BEGIN
-		INSERT INTO #BalanceAfter
-		SELECT b.custid
-			,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @matchid 
-				AND b.bettype IN (135,160,164,169,175,176,180,192,193)
-		GROUP BY b.custid
-	END
-	ELSE IF @Action = 'UNDO'
-	BEGIN
-		INSERT INTO #BalanceAfter
-		SELECT b.custid
-			,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @matchid
-				AND b.bettype IN (135,160,164,169,175,176,180,192,193)
-		GROUP BY b.custid
-	END
+	INSERT INTO #BalanceAfter
+	SELECT b.custid
+		,SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @matchid 
+			AND b.bettype IN (135,160,164,169,175,176,180,192,193)
+	GROUP BY b.custid
+
 
 
 	-------------------------------------------------------------
@@ -206,8 +209,6 @@ BEGIN
 	FROM #BalanceBefore b
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
-
-	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
 	INSERT INTO dbo.BalancePendingDebit (custid, balance)
 	SELECT custid, ABS(balance)
@@ -263,8 +264,8 @@ BEGIN
 		@UserID = @AdminId
 		,@Doing = @logdata
 
-	SELECT @remark = 'NAP: ResourceID:' + @ResourceIDs
-						+ CASE WHEN ISNULL(@Results,'') ='' THEN '' ELSE ' Result:'+ ISNULL(@Results,'') + '<br/> ' END
+	SELECT @Remark = 'NAP: ResourceID:' + @ResourceIDs +  ' <br/> ' 
+						+ CASE WHEN ISNULL(@Results,'') ='' THEN '' ELSE ' Result:'+ ISNULL(@Results,'') + ' <br/> ' END
 						+ ' IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
 						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + 'ms' 
 	BEGIN TRY

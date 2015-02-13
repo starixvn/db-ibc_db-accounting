@@ -18,7 +18,9 @@ BEGIN
 	DECLARE	 @betCount_135			INT = 0
 			,@betCount_160			INT = 0 
 			,@betCount_164			INT = 0
+			,@betCount_168			INT = 0
 			,@betCount_169			INT = 0
+			,@betCount_174			INT = 0
 			,@betCount_175			INT = 0
 			,@betCount_176			INT = 0
 			,@betCount_192			INT = 0
@@ -30,6 +32,8 @@ BEGIN
 			,@1st10Min1x2			VARCHAR(10)	=''
 			,@1stGoalTime10Min		VARCHAR(10)	=''
 			,@1stGoalTime15Min		VARCHAR(10)	=''
+			,@WhoAdvancesNextRound	VARCHAR(10) =''
+			,@ExtraTimeandGoal		VARCHAR(10)	=''
 			,@1HNextGoal			VARCHAR(MAX)=''
 			,@NextGoal				VARCHAR(MAX)=''
 			,@NextGoalTime15Min		VARCHAR(MAX)=''
@@ -66,7 +70,9 @@ BEGIN
 	SELECT	 @betCount_135	= ISNULL(SUM(CASE WHEN bettype = 135 THEN 1 ELSE 0 END),0)
 			,@betCount_160	= ISNULL(SUM(CASE WHEN bettype = 160 THEN 1 ELSE 0 END),0)
 			,@betCount_164	= ISNULL(SUM(CASE WHEN bettype = 164 THEN 1 ELSE 0 END),0)
+			,@betCount_168	= ISNULL(SUM(CASE WHEN bettype = 168 THEN 1 ELSE 0 END),0)
 			,@betCount_169  = ISNULL(SUM(CASE WHEN bettype = 169 THEN 1 ELSE 0 END),0)
+			,@betCount_174	= ISNULL(SUM(CASE WHEN bettype = 174 THEN 1 ELSE 0 END),0)
 			,@betCount_175  = ISNULL(SUM(CASE WHEN bettype = 175 THEN 1 ELSE 0 END),0)
 			,@betCount_176  = ISNULL(SUM(CASE WHEN bettype = 176 THEN 1 ELSE 0 END),0)
 			,@betCount_192  = ISNULL(SUM(CASE WHEN bettype = 192 THEN 1 ELSE 0 END),0)
@@ -74,15 +80,17 @@ BEGIN
 			,@betCount_180  = ISNULL(SUM(CASE WHEN bettype = 180 THEN 1 ELSE 0 END),0)
 	FROM	dbo.Bettrans WITH (NOLOCK)
 	WHERE	MatchID = @MatchID 
-			AND Bettype IN (135,160,164,169,175,176,180,192,193)
+			AND Bettype IN (135,160,164,168,169,174,175,176,180,192,193)
 			AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
 			AND StatusID NOT BETWEEN 101 AND 102 
 
-	SELECT	 @penaltyshootout	= CASE WHEN ResourceID='135' THEN HomeValue ELSE '' END 
-			,@matchDecidedMethod= CASE WHEN ResourceID='175' THEN HomeValue ELSE '' END  
-			,@1st10Min1x2		= CASE WHEN ResourceID='176' THEN HomeValue ELSE '' END 
-			,@1stGoalTime10Min	= CASE WHEN ResourceID='192' THEN HomeValue ELSE '' END 
-			,@1stGoalTime15Min	= CASE WHEN ResourceID='193' THEN HomeValue ELSE '' END
+	SELECT	 @penaltyshootout		= CASE WHEN ResourceID='135' THEN HomeValue ELSE '' END
+			,@WhoAdvancesNextRound	= CASE WHEN ResourceID='168' THEN HomeValue ELSE '' END
+			,@ExtraTimeandGoal		= CASE WHEN ResourceID='174' THEN HomeValue ELSE '' END
+			,@matchDecidedMethod	= CASE WHEN ResourceID='175' THEN HomeValue ELSE '' END  
+			,@1st10Min1x2			= CASE WHEN ResourceID='176' THEN HomeValue ELSE '' END 
+			,@1stGoalTime10Min		= CASE WHEN ResourceID='192' THEN HomeValue ELSE '' END 
+			,@1stGoalTime15Min		= CASE WHEN ResourceID='193' THEN HomeValue ELSE '' END
 	FROM	@tmpResultDetail
 	WHERE	MatchID = @MatchID 
 			AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
@@ -105,6 +113,8 @@ BEGIN
 				,@1st10Min1x2			= @1st10Min1x2
 				,@1stGoalTime10Min		= @1stGoalTime10Min
 				,@1stGoalTime15Min		= @1stGoalTime15Min
+				,@WhoAdvancesNextRound	= @WhoAdvancesNextRound
+				,@ExtraTimeandGoal		= @ExtraTimeandGoal	
 				,@NextGoal				= @NextGoal
 				,@ExtraNextGoal			= @ExtraNextGoal
 				,@NextGoalTime15Min		= @NextGoalTime15Min
@@ -112,7 +122,9 @@ BEGIN
 				,@betCount_135			= @betCount_135
 				,@betCount_160			= @betCount_160
 				,@betCount_164			= @betCount_164
+				,@betCount_168			= @betCount_168
 				,@betCount_169			= @betCount_169
+				,@betCount_174			= @betCount_174
 				,@betCount_175			= @betCount_175
 				,@betCount_176			= @betCount_176
 				,@betCount_180			= @betCount_180

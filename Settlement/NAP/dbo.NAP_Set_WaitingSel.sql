@@ -67,7 +67,7 @@ BEGIN
 	FROM	ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #tempmatch)
-			AND (ResourceID IN ('135','175','176','192','193')
+			AND (ResourceID IN ('135','168','174','175','176','192','193')
 					OR ResourceID LIKE '160__'
 					OR ResourceID LIKE '164__'
 					OR ResourceID LIKE '169__'
