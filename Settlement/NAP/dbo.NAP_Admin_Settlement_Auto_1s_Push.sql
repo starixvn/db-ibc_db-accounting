@@ -46,7 +46,8 @@ BEGIN
 
 	IF @isAuto = 1 AND( EXISTS(	SELECT	TOP 1 1 
 								FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK) 
-								WHERE	ResourceID IN( SELECT Val FROM dbo.strSplit(@ResourceIDs,',') WHERE ISNULL(@ResourceIDs,'')<>'')	
+								WHERE	MatchID = @MatchID 
+										AND ResourceID IN( SELECT Val FROM dbo.strSplit(@ResourceIDs,',') WHERE ISNULL(@ResourceIDs,'')<>'')	
 										AND ResultStatusID = 5				
 							)
 						OR ISNULL(@ResourceIDs,'')=''
