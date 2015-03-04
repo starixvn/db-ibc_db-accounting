@@ -84,13 +84,13 @@ BEGIN
 			AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
 			AND StatusID NOT BETWEEN 101 AND 102 
 
-	SELECT	 @penaltyshootout		= CASE WHEN ResourceID='135' THEN HomeValue ELSE '' END
-			,@WhoAdvancesNextRound	= CASE WHEN ResourceID='168' THEN HomeValue ELSE '' END
-			,@ExtraTimeandGoal		= CASE WHEN ResourceID='174' THEN HomeValue ELSE '' END
-			,@matchDecidedMethod	= CASE WHEN ResourceID='175' THEN HomeValue ELSE '' END  
-			,@1st10Min1x2			= CASE WHEN ResourceID='176' THEN HomeValue ELSE '' END 
-			,@1stGoalTime10Min		= CASE WHEN ResourceID='192' THEN HomeValue ELSE '' END 
-			,@1stGoalTime15Min		= CASE WHEN ResourceID='193' THEN HomeValue ELSE '' END
+	SELECT	 @penaltyshootout		= ISNULL(MAX(CASE WHEN ResourceID='135' THEN HomeValue ELSE '' END),'')
+			,@WhoAdvancesNextRound	= ISNULL(MAX(CASE WHEN ResourceID='168' THEN HomeValue ELSE '' END),'')
+			,@ExtraTimeandGoal		= ISNULL(MAX(CASE WHEN ResourceID='174' THEN HomeValue ELSE '' END),'')
+			,@matchDecidedMethod	= ISNULL(MAX(CASE WHEN ResourceID='175' THEN HomeValue ELSE '' END),'')  
+			,@1st10Min1x2			= ISNULL(MAX(CASE WHEN ResourceID='176' THEN HomeValue ELSE '' END),'') 
+			,@1stGoalTime10Min		= ISNULL(MAX(CASE WHEN ResourceID='192' THEN HomeValue ELSE '' END),'') 
+			,@1stGoalTime15Min		= ISNULL(MAX(CASE WHEN ResourceID='193' THEN HomeValue ELSE '' END),'')
 	FROM	@tmpResultDetail
 	WHERE	MatchID = @MatchID 
 			AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
