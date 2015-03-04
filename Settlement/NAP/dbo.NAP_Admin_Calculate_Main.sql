@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Main]    Script Date: 3/4/2015 9:23:40 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@mode							VARCHAR(15)	= 'CAL'
 	,@action						VARCHAR(20)	= 'CAL'
@@ -1263,7 +1270,7 @@ BEGIN
 					 @matchid = @matchid
 					,@bettype = 164
 					,@ResourceIDs = @ResourceIDs
-					,@result = @NextGoal
+					,@result = @ExtraNextGoal
 					,@betcount = @betcount_164
 
 			-- bettype: 168: Who advances to next round 
@@ -1281,10 +1288,10 @@ BEGIN
 					 @matchid = @matchid
 					,@bettype = 169
 					,@ResourceIDs = @ResourceIDs
-					,@result = @ExtraNextGoal
+					,@result = @NextGoalTime15Min
 					,@betcount = @betcount_169
 
-			-- bettype: 174: Who advances to next round 
+			-- bettype: 174: Extra Time and Goal 
 			IF @betcount_174> 0	
 				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
@@ -2097,5 +2104,3 @@ BEGIN
 
 	END
 END
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Main] TO [vnteam] AS [dbo]
