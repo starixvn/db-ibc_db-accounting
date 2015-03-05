@@ -1,6 +1,6 @@
 USE [bodb_licensee]
 GO
-
+ 
 ALTER PROCEDURE [dbo].[DBA_Lrf_OfferProduct]
 (	@ResellerID	INT,
 	@LicenseeId  INT,
@@ -93,8 +93,8 @@ BEGIN
 	FROM dbo.Users u WITH (NOLOCK) 
 		INNER JOIN dbo.LicenseeUser lu WITH (NOLOCK) ON u.UserID = lu.UserID 
 	WHERE lu.LicenseeID = @LicenseeID 
-		AND u.IsInternal = 0
-		
+		  AND u.userrole = 'admin'
+		  AND u.Status='Open'	
 	SELECT @i = 1
 			,@k = MAX(ID)
 	FROM @tblLicenseeUser
@@ -142,6 +142,15 @@ BEGIN
 									AND ResellerID = @ResellerID
 								)
 		AND pf.TypeId = 2
+	IF EXISTS (SELECT 1 FROM @tblProductPrefix WHERE ProductCode = 'AGC')
+		BEGIN 
+			DECLARE @LicenseeName VARCHAR(50)
+			SELECT  @LicenseeName = LicenseeName
+			FROM  dbo.Licensees WITH (NOLOCK)
+			WHERE LicenseeId = @LicenseeId
+			
+			EXEC DBPTCS.bodb_PlaytechCS.[dbo].[DBA_EnableAGCasinoService] @LicenseeName = @LicenseeName, @SettingName ='AGCasino_VersionKey'
+		END
 	IF EXISTS (SELECT 1 FROM @tblProductPrefix WHERE ProductCode = 'BA')
 	BEGIN
 		IF NOT EXISTS(SELECT 1 FROM	dbo.LicenseeReseller WITH (NOLOCK) WHERE LicenseeID = @LicenseeID AND ResellerID = 3 )
