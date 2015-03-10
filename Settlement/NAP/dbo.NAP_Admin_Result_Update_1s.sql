@@ -107,13 +107,39 @@ BEGIN
 	/* END - @Command = 'NAP_Admin_Settlement_Auto_1s-UNDO' */
 	ELSE IF @Command ='NAP_Admin_Settlement_Auto_1s-REFUND'
 	BEGIN
-		UPDATE	ResultDetail WITH (UPDLOCK,ROWLOCK)
-		SET		 ResultStatusID		= 5		--  
-				,SettlementStatusID	= 1		-- Refund
-				,LastModifyBy		= @Creator 
-				,LastModifyDate		= GETDATE() 
-		WHERE	MatchID = @MatchID
-				AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)		
+		MERGE	ResultDetail AS TARGET
+		USING	@tmpResourceIDs AS SOURCE ON TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID 
+		WHEN MATCHED THEN 
+				UPDATE SET
+					 TARGET.ResultStatusID		= 5
+					,TARGET.SettlementStatusID	= 1
+					,TARGET.LastModifyBy		= @Creator
+					,TARGET.LastModifyDate		= GETDATE()
+		WHEN NOT MATCHED BY TARGET THEN 
+				INSERT(
+						 MatchID
+						,ResourceID
+						,HomeValue
+						,AwayValue
+						,ResultStatusID
+						,SettlementStatusID
+						,CreateBy
+						,CreateDate
+						,LastModifyBy
+						,LastModifyDate
+					)
+					VALUES(
+						 @MatchID
+						,SOURCE.ResourceID
+						,NULL
+						,NULL
+						,5 -- Manual Settlement 
+						,1 -- Refund
+						,@Creator
+						,GETDATE()
+						,@Creator
+						,GETDATE()
+					);		
 	END 
 	/* END - @Command = 'NAP_Admin_Settlement_Auto_1s-REFUND' */
 END
