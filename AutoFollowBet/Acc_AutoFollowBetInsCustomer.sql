@@ -1,11 +1,10 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 01/20/2015 15:17:00 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 03/13/2015 12:42:06 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetInsCustomer    Script Date: 09/01/2015 3:47:03 PM ******/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
     @Username       VARCHAR(30)
     ,@Rate          SMALLMONEY
@@ -43,6 +42,7 @@ Revision:
 	                    4. Do not allow loop following
 	- 20141230@Kathy: Update the accounts dangerous setting change to "2" for Original & Non Live [Redmine:#25770]
 	- 20150120@Kathy: Update Original and Nonlive danger level of BA member to 2 [Redmine:#29459]
+	- 20150311@Kathy: Support multi-follower on one customer [Redmine:#32146]
 	
 Param's Explanation:	
 */
@@ -59,12 +59,12 @@ BEGIN
 		 , @duration = 0
 
 	DECLARE @custid     INT
-		  , @custFollow INT
-		  , @roleid     BIT
-		  , @recommend  INT
+		  , @custFollower INT
+		  , @isAgent	BIT --@roleid     BIT
+		  , @follower_recommend  INT
 
 	SELECT @custid = custid
-	     , @roleid = CASE
+	     , @isAgent = CASE
 	                   WHEN roleid = 1 THEN 0
 	                   ELSE 1
 	                 END
@@ -80,19 +80,19 @@ BEGIN
 		RETURN
 	END
 
-	IF EXISTS (SELECT TOP 1 1
-			     FROM Cust_followBet WITH(NOLOCK)
-			    WHERE custid = @custid
-			  )
-	BEGIN
-		SELECT @ErrMsg = 'Username ''' + @Username +''' existed, please try again!'
-			 , @ErrCode = 102
+	--IF EXISTS (SELECT TOP 1 1
+	--		     FROM Cust_followBet WITH(NOLOCK)
+	--		    WHERE custid = @custid
+	--		  )
+	--BEGIN
+	--	SELECT @ErrMsg = 'Username ''' + @Username +''' existed, please try again!'
+	--		 , @ErrCode = 102
 
-		RETURN
-	END
-
-	SELECT @custFollow = c.custid
-         , @recommend = recommend
+	--	RETURN
+	--END
+	
+	SELECT @custFollower = c.custid
+         , @follower_recommend = recommend
 	  FROM custInfo c WITH(NOLOCK)
 	 WHERE c.username = @Follower
 	   AND roleid     = 1  
@@ -100,38 +100,66 @@ BEGIN
 	IF @@rowcount = 0
 	BEGIN
 		SELECT @ErrMsg = 'Invalid follower, please try again!'
-			 , @ErrCode = 103
+			 , @ErrCode = 102
 
 		RETURN
 	END
 	
 	--Do not allow member to follow himself
-	IF @custFollow = @custid
+	IF @custFollower = @custid
 	BEGIN
 	    SELECT @ErrMsg = 'User '''+ @Username +''' and follower are identical, please try again!'
-			 , @ErrCode = 106
+			 , @ErrCode = 103
 
 		RETURN
 	END
 
     --Do not allow member to follow his agent
-	IF @recommend = @custid
+	IF @follower_recommend = @custid
 	BEGIN
 	    SELECT @ErrMsg = 'Can not follow direct upline ''' + @Username + ''', please try again!'
-			 , @ErrCode = 107
+			 , @ErrCode = 104
 
 		RETURN
 	END
 
     --Do not allow loop-following
-    IF EXISTS (SELECT TOP 1 1 FROM Cust_FollowBet WITH(NOLOCK) WHERE custid = @custFollow AND Follower = @custid)
+    IF EXISTS (SELECT TOP 1 1 FROM Cust_FollowBet WITH(NOLOCK) WHERE custid = @custFollower AND Follower = @custid)
 	BEGIN
 		SELECT @ErrMsg ='Do not allow loop following: ''' + @Username + ''' , please try again!'
-			 , @ErrCode = 109
+			 , @ErrCode = 105
 
 		RETURN
 	END
 
+
+	-- (custid, follower) is existed
+	IF EXISTS (SELECT TOP 1 1 FROM dbo.Cust_FollowBet WITH(NOLOCK) WHERE custid = @custid AND Follower = @custFollower)
+	BEGIN
+		SELECT @ErrMsg = 'The account is already followed by this group'
+			 , @ErrCode = 106
+			 
+		RETURN 
+	END
+	ELSE
+	BEGIN
+		-- Not allow to follow 1 member by different follower has the same group
+		-- Not allow to follow 1 agent by different follower has the same group
+		
+		IF EXISTS( SELECT TOP 1 1
+			FROM dbo.Cust_FollowBet cf WITH(NOLOCK)
+			INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON cf.Follower = ci.custid
+			WHERE cf.custid = @custid
+			AND ci.recommend = @follower_recommend
+			AND @isAgent = 0
+		)
+		BEGIN
+			SELECT @ErrMsg = 'The account is already followed by this group'
+				 , @ErrCode = 107
+			RETURN 
+		END	
+	END
+	
 	--Not follow any bettype
 	IF @LiveHDP = 0
 	    AND @LiveOU = 0
@@ -153,7 +181,7 @@ BEGIN
 	   OR (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1)))
 	BEGIN
 		SELECT @ErrMsg = 'Invalid rate! Rate must range between 0.01 and 3'
-			 , @ErrCode = 104
+			 , @ErrCode = 109
 
 		RETURN
 	END
@@ -166,7 +194,7 @@ BEGIN
 
 	BEGIN
 		SELECT @ErrMsg = 'Invalid odds! Odds must range between -0.1 and 0.1'
-			 , @ErrCode = 105
+			 , @ErrCode = 110
 
 		RETURN
 	END 
@@ -197,9 +225,9 @@ BEGIN
 		,@LiveOU
 		,@Live1stHDP
 		,@Live1stOU
-		,@custFollow
+		,@custFollower
 		,@LiveOdds
-		,@roleid
+		,@isAgent
     )
 
     --NonLive
@@ -227,9 +255,9 @@ BEGIN
 		    ,@NonLiveOU
 		    ,@NonLive1stHDP
 		    ,@NonLive1stOU
-		    ,@custFollow
+		    ,@custFollower
 		    ,@NonLiveOdds
-		    ,@roleid
+		    ,@isAgent
         )
     /*END*/
     
@@ -312,6 +340,8 @@ BEGIN
 			,@duration = @duration
 	END CATCH
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [bodbAdminNet] AS [dbo]
 GO

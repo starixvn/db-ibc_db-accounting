@@ -1,14 +1,14 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 01/23/2015 09:13:14 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 03/13/2015 12:41:14 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetDelCustomer    Script Date: 09/01/2015 3:47:04 PM ******/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetDelCustomer]	
 	@Username   VARCHAR(30),
-
+	@Follower	VARCHAR(30),
+	
 	@UserId		INT,
 	@IP			VARCHAR(50),
 	@ErrCode    INT				= 0 OUTPUT,
@@ -27,12 +27,14 @@ AS
                             2. Code aligning
 		- 20141230@Kathy: Update the accounts dangerous setting change to "2" for Original & Non Live [Redmine:#25770]
 		- 20150120@Kathy: Update Original and Nonlive danger level of BA member to 100 and 0 respectively [Redmine:#29459]
+		- 20150311@Kathy: Support multi-follower on one customer [Redmine:#32146]
 		
 	Param's Explanation:	
 */
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @custid             INT
+		  , @custFollower		INT
 	      , @startRun           DATETIME
 	      , @endRun             DATETIME
 	      , @duration           INT
@@ -56,6 +58,10 @@ BEGIN
 	     , @duration = 0
 	     , @isBA = 0
 
+	SELECT @custFollower = custid
+	FROM custinfo with(NOLOCK)
+	WHERE username = @Follower
+	
 	SELECT @custid = custid
 	  FROM Custinfo WITH(nolock)
 	 WHERE username = @username
@@ -70,8 +76,9 @@ BEGIN
 	END
 
 	IF NOT EXISTS (SELECT TOP 1 1
-			     FROM Cust_followBet WITH(NOLOCK)
-			    WHERE custid = @custid
+					FROM Cust_followBet WITH(NOLOCK)
+					WHERE custid = @custid
+					AND follower = @custFollower
 			  )
 	BEGIN
 		SELECT @ErrMsg = 'Username ''' + @Username + ''' does not exist, please try again!'
@@ -99,7 +106,8 @@ BEGIN
 	                      )
 	  FROM Cust_FollowBet f WITH(NOLOCK)
 	 WHERE f.custid = @custid
-	   AND f.FollowLive = 1
+		AND f.follower = @custFollower
+		AND f.FollowLive = 1
 	
 	-- Get old NonLive value
 	SELECT @oldNonLiveHDP = f.Follow1
@@ -109,7 +117,8 @@ BEGIN
 	     , @oldNonLiveOdds = f.Odds
 	  FROM Cust_FollowBet f WITH(NOLOCK)
 	 WHERE f.custid = @custid
-	   AND f.FollowLive = 0
+		AND f.follower = @custFollower
+		AND f.FollowLive = 0
 	 
 	SELECT @oldDanger		= danger
 			,@oldDanger2	= danger2
@@ -118,6 +127,7 @@ BEGIN
 
 	DELETE Cust_followBet WITH(ROWLOCK, UPDLOCK)
 	WHERE custid = @custid
+	AND follower = @custFollower
 	
 	UPDATE dbo.custInfo WITH(ROWLOCK, UPDLOCK)
 	SET danger = CASE WHEN @isBA = 1 THEN 100 ELSE 0 END
@@ -129,6 +139,7 @@ BEGIN
 	Declare @LogSPData VARCHAR(MAX),@TrackingValueDB VARCHAR(max)
 
 	SELECT	@LogSPData = '<Acc_AutoFollowBetDelCustomer Username="'+ COALESCE(@Username, SPACE(1)) + '" '
+					   + 'follower="' + COALESCE(@follower, SPACE(1)) + '" '
 	                   + 'UserId="' + COALESCE(CAST(@UserId AS VARCHAR(50)), SPACE(1)) + '" '
 	                   + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" '
 	                   + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" '
@@ -148,7 +159,7 @@ BEGIN
 	                         + 'oldNonLive1stOU="' + COALESCE(CAST(@oldNonLive1stOU AS VARCHAR(1)), SPACE(1))+'" '
 	                         + 'oldDanger="' + COALESCE(CAST(@oldDanger AS VARCHAR(10)), SPACE(1))+'" '
 	                         + 'oldDanger2="' + COALESCE(CAST(@oldDanger2 AS VARCHAR(10)), SPACE(1))+'" '
-	                         + 'Follower="' + COALESCE(CAST(@oldFollower AS VARCHAR(30)), SPACE(1))+'" '
+	                         + 'Follower="' + COALESCE(@follower, SPACE(1)) + '" '
 	                         + 'UserId="' + COALESCE(CAST(@UserId AS VARCHAR(50)), SPACE(1)) + '" '
 	                         + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" '
 	                         + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" '
@@ -168,6 +179,7 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		SELECT	@LogSPData = '<Acc_AutoFollowBetDelCustomer Username="'+ COALESCE(@Username, SPACE(1)) + '" '
+						   + 'follower="' + COALESCE(@follower, SPACE(1)) + '" '
 	                       + 'UserId="' + COALESCE(CAST(@UserId AS VARCHAR(50)), SPACE(1)) + '" '
 	                       + 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" '
 	                       + 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" '
@@ -181,7 +193,6 @@ BEGIN
 			@duration = @duration 
 	END CATCH
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [bodbAdminNet] AS [dbo]

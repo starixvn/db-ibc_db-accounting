@@ -1,28 +1,29 @@
-
-SET QUOTED_IDENTIFIER ON 
+USE [CustDB]
 GO
-SET ANSI_NULLS ON 
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetUpdRate]    Script Date: 03/13/2015 12:43:17 ******/
+SET ANSI_NULLS ON
 GO
-
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetUpdRate    Script Date: 8/29/2014 9:35:01 AM ******/
-CREATE PROCEDURE [dbo].[Acc_AutoFollowBetUpdRate]
-    @Username      VARCHAR(30)
-  , @Rate          SMALLMONEY
-  , @LiveOdds      SMALLMONEY
-  , @NonLiveOdds   SMALLMONEY
-  , @LiveHDP       TINYINT
-  , @NonLiveHDP    TINYINT
-  , @Live1stHDP    TINYINT
-  , @NonLive1stHDP TINYINT
-  , @LiveOU        TINYINT
-  , @NonLiveOU     TINYINT
-  , @Live1stOU     TINYINT
-  , @NonLive1stOU  TINYINT
-  , @Follower      VARCHAR(30)
-  , @UserId        INT
-  , @IP            VARCHAR(50) = ''
-  , @ErrCode       INT = 0 OUTPUT
-  , @ErrMsg        NVARCHAR(200) = '' OUTPUT
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_AutoFollowBetUpdRate]
+    @Username      		VARCHAR(30)
+  , @Rate          		SMALLMONEY
+  , @LiveOdds      		SMALLMONEY
+  , @NonLiveOdds   		SMALLMONEY
+  , @LiveHDP       		TINYINT
+  , @NonLiveHDP    		TINYINT
+  , @Live1stHDP    		TINYINT
+  , @NonLive1stHDP 		TINYINT
+  , @LiveOU        		TINYINT
+  , @NonLiveOU     		TINYINT
+  , @Live1stOU     		TINYINT
+  , @NonLive1stOU  		TINYINT
+  , @Follower      		VARCHAR(30) 	-- Follower after changed
+  , @OriginalFollower	VARCHAR(30) 	-- Follower before changed
+  , @UserId        		INT
+  , @IP            		VARCHAR(50) = ''
+  , @ErrCode       		INT = 0 OUTPUT
+  , @ErrMsg        		NVARCHAR(200) = '' OUTPUT
 AS
 /*
 Created: Viet @ 4-Jul-2012
@@ -38,6 +39,7 @@ Revison:
 	- 20140805@Logan:   1. Separate live and nonlive setting [Redmine: #16578]
 	                    2. Allow following an agent (all members under) [Redmine: #19650]
                         3. Do not allow member to follow himself or his agent
+	- 20150311@Kathy: Support multi-follower on one customer [Redmine:#32146]                        
 
 Param's Explanation:
     
@@ -48,31 +50,38 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @custid           INT
-		  , @custFollower     INT
-		  , @startRun         DATETIME
-		  , @endRun           DATETIME
-		  , @duration         INT
-		  , @oldRate          SMALLMONEY
-		  , @oldFollower      VARCHAR(30)
-		  , @OldLiveOdds      SMALLMONEY
-          , @OldNonLiveOdds   SMALLMONEY
-          , @OldLiveHDP       BIT
-          , @OldNonLiveHDP    BIT
-          , @OldLive1stHDP    BIT
-          , @OldNonLive1stHDP BIT
-          , @OldLiveOU        BIT
-          , @OldNonLiveOU     BIT
-          , @OldLive1stOU     BIT
-          , @OldNonLive1stOU  BIT
-          , @recommend        INT
+	DECLARE @custid           				INT
+		  , @custFollower     				INT
+		  , @custOriginalFollower     		INT
+		  , @startRun         				DATETIME
+		  , @endRun           				DATETIME
+		  , @duration         				INT
+		  , @oldRate          				SMALLMONEY
+		  , @oldFollower      				VARCHAR(30)
+		  , @OldLiveOdds      				SMALLMONEY
+          , @OldNonLiveOdds   				SMALLMONEY
+          , @OldLiveHDP       				BIT
+          , @OldNonLiveHDP    				BIT
+          , @OldLive1stHDP    				BIT
+          , @OldNonLive1stHDP 				BIT
+          , @OldLiveOU        				BIT
+          , @OldNonLiveOU     				BIT
+          , @OldLive1stOU     				BIT
+          , @OldNonLive1stOU				BIT
+          , @recommendFollower				INT
+          , @recommendOriginalFollower		INT
+          , @isAgent		  BIT 
 
 
 	SELECT @startRun = getdate()
 		 , @duration = 0
 
 	SELECT @custid = custid
- 	  FROM Custinfo WITH(NOLOCK)
+		 , @isAgent = CASE
+	                   WHEN roleid = 1 THEN 0
+	                   ELSE 1
+	                 END
+ 	 FROM Custinfo WITH(NOLOCK)
 	 WHERE username = @Username
 	   AND roleid IN (1, 2)
 
@@ -85,7 +94,7 @@ BEGIN
 	END
 
 	SELECT @custFollower = custid
-         , @recommend = recommend
+         , @recommendFollower = recommend
 	  FROM Custinfo WITH(NOLOCK)
 	 WHERE username = @Follower
 	   AND roleid = 1
@@ -93,25 +102,32 @@ BEGIN
 	IF @@rowcount = 0
 	BEGIN
 		SELECT @ErrMsg = 'Invalid follower, please try again!'
-			 , @ErrCode = 103
+			 , @ErrCode = 102
 
 		RETURN
 	END
+	
+	SELECT @custOriginalFollower = custid
+		,@recommendOriginalFollower = recommend
+	  FROM Custinfo WITH(NOLOCK)
+	 WHERE username = @originalFollower
+	   AND roleid = 1
+	
 	
 	--Do not allow member to follow himself
 	IF @custFollower = @custid
 	BEGIN
 	    SELECT @ErrMsg = 'User and follower are identical, please try again!'
-			 , @ErrCode = 106
+			 , @ErrCode = 103
 
 		RETURN
 	END
 
     --Do not allow member to follow his agent
-	IF @recommend = @custid
+	IF @recommendFollower = @custid
 	BEGIN
 	    SELECT @ErrMsg = 'Can not follow direct upline, please try again!'
-			 , @ErrCode = 107
+			 , @ErrCode = 104
 
 		RETURN
 	END
@@ -125,17 +141,35 @@ BEGIN
     IF @@rowcount <> 0
 	BEGIN
 		SELECT @ErrMsg = 'Do not allow loop following, please try again!'
-			 , @ErrCode = 109
+			 , @ErrCode = 105
 
 		RETURN
 	END
-
+	
+	
+	IF @Follower <> @originalFollower AND @recommendFollower <> @recommendOriginalFollower
+	BEGIN
+		IF EXISTS( SELECT TOP 1 1
+				FROM dbo.Cust_FollowBet cf WITH(NOLOCK)
+				INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON cf.Follower = ci.custid
+				WHERE cf.custid = @custid
+				AND ci.recommend = @recommendFollower
+				AND @isAgent = 0
+			) 
+			BEGIN
+				SELECT @ErrMsg = 'The account is already followed by this group'
+					 , @ErrCode = 106
+				RETURN 
+			END	
+		
+	END
+	
 	-- Rate must range between 0.01 and 3, 2 decimal digits
 	IF @Rate NOT BETWEEN 0.01 AND 3 
 	   OR (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1)))
 	BEGIN
 		SELECT @ErrMsg = 'Invalid rate! Rate must range between 0.01 and 3'
-			 , @ErrCode = 104
+			 , @ErrCode = 107
 
 		RETURN
 	END
@@ -155,7 +189,7 @@ BEGIN
 	      )
 	BEGIN
 		SELECT @ErrMsg = 'Invalid odds! Odds must range between -0.1 and 0.1'
-			 , @ErrCode = 105
+			 , @ErrCode = 108
 
 		RETURN
 	END
@@ -173,7 +207,8 @@ BEGIN
 			              )
 	  FROM Cust_FollowBet f WITH(NOLOCK)
 	 WHERE f.custid = @custid
-	   AND f.FollowLive = 1
+		AND f.Follower = @custoriginalFollower
+		AND f.FollowLive = 1
 
     SELECT @OldNonLiveOdds = ISNULL(f.Odds, 0)
          , @OldNonLiveHDP = ISNULL(f.Follow1, 0)
@@ -196,9 +231,10 @@ BEGIN
        AND @OldNonLiveOU = @NonLiveOU
        AND @OldNonLive1stHDP = @NonLive1stHDP
        AND @OldNonLive1stOU = @NonLive1stOU
+       AND @Follower = @originalFollower
     BEGIN
         SELECT @ErrMsg = 'There is no new data for updating, please try again!'
-			 , @ErrCode = 109
+			 , @ErrCode = 19
 
 		RETURN
     END
@@ -257,6 +293,7 @@ BEGIN
 		 , Odds = @LiveOdds
 	 WHERE custid = @custid
 	   AND FollowLive = 1
+	   AND Follower = @custoriginalFollower
 
     --Update Non-Live
     UPDATE Cust_FollowBet WITH(UPDLOCK, ROWLOCK)
@@ -269,6 +306,7 @@ BEGIN
 		 , Odds = @NonLiveOdds
 	 WHERE custid = @custid
 	   AND FollowLive = 0
+	   AND Follower = @custoriginalFollower
 
 	-- write log
 	DECLARE @LogSPData VARCHAR(MAX)
@@ -354,16 +392,11 @@ BEGIN
 END
 
 
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetUpdRate] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetUpdRate] TO [bodbAdminNet]
-GO 
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetUpdRate] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetUpdRate] TO [vnteam] AS [dbo]
