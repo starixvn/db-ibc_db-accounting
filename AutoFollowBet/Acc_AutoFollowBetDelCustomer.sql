@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 03/13/2015 12:41:14 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 03/13/2015 13:39:05 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -69,7 +69,7 @@ BEGIN
 
 	IF @@rowcount = 0
 	BEGIN
-		SELECT @ErrMsg = 'Invalid username ''' + @Username + ''', please try again!'
+		SELECT @ErrMsg = 'Invalid username ''' + @Username + ',' + @Follower + ''', please try again!'
 		     , @ErrCode = 101
 
 		RETURN
@@ -81,7 +81,7 @@ BEGIN
 					AND follower = @custFollower
 			  )
 	BEGIN
-		SELECT @ErrMsg = 'Username ''' + @Username + ''' does not exist, please try again!'
+		SELECT @ErrMsg = 'Username ''' + @Username + ',' + @Follower + ''' does not exist, please try again!'
 			 , @ErrCode = 102
 
 		RETURN
