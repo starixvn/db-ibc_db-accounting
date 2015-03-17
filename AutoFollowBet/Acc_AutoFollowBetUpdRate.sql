@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetUpdRate]    Script Date: 03/13/2015 12:43:17 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetUpdRate]    Script Date: 03/16/2015 12:34:21 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -217,7 +217,8 @@ BEGIN
          , @OldNonLive1stOU = ISNULL(f.Follow8, 0)
 	  FROM Cust_FollowBet f WITH(NOLOCK)
 	 WHERE f.custid = @custid
-	   AND f.FollowLive = 0
+		AND f.Follower = @custoriginalFollower
+		AND f.FollowLive = 0
 
     IF @oldRate = @Rate
        AND @OldLiveOdds = @LiveOdds
