@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 03/13/2015 12:42:06 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 03/18/2015 10:15:59 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -136,7 +136,7 @@ BEGIN
 	-- (custid, follower) is existed
 	IF EXISTS (SELECT TOP 1 1 FROM dbo.Cust_FollowBet WITH(NOLOCK) WHERE custid = @custid AND Follower = @custFollower)
 	BEGIN
-		SELECT @ErrMsg = 'The account is already followed by this group'
+		SELECT @ErrMsg = 'The account ''' + @Username + ''' is already followed by this group'
 			 , @ErrCode = 106
 			 
 		RETURN 
@@ -151,10 +151,10 @@ BEGIN
 			INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON cf.Follower = ci.custid
 			WHERE cf.custid = @custid
 			AND ci.recommend = @follower_recommend
-			AND @isAgent = 0
+			
 		)
 		BEGIN
-			SELECT @ErrMsg = 'The account is already followed by this group'
+			SELECT @ErrMsg = 'The account ''' + @Username + ''' is already followed by this group'
 				 , @ErrCode = 107
 			RETURN 
 		END	
@@ -340,6 +340,8 @@ BEGIN
 			,@duration = @duration
 	END CATCH
 END
+
+
 
 
 GO
