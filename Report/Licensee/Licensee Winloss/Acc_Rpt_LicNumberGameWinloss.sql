@@ -1,8 +1,5 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
-
-ALTER  PROCEDURE [dbo].[Acc_Rpt_LicNumberGameWinloss]      
+﻿ 
+CREATE  PROCEDURE [dbo].[Acc_Rpt_LicNumberGameWinloss]      
 	@NormalLicensee VARCHAR(1000),  
 	@Operator  VARCHAR(1000),  
 	@FromDate  SMALLDATETIME,    
@@ -20,6 +17,7 @@ AS
 	- 20121213@henry: change to use Effectivedate from LicenseeProduct3rd instead of hard-code
 	- 20130612@Jim: change condition AffectedDate,EffectiveDate
 	- 20130719@Jim: exclude status "void","reject","done"
+	- 20150209@Jim: base on currency GBP
 		
  * Param's Explanation:    
  *  - @NormalLicensee : List of normal licensee ID separated by ','  
@@ -38,7 +36,7 @@ DECLARE @tmpLicenseeReseller AS TABLE (ResellerID INT, LicenseeID INT,AffectedDa
 
 CREATE TABLE #Data (winlostdate  DATETIME, Currency  INT,  ResellerID int, LicenseeID int,turnover MONEY, MemberWinloss MONEY,LicenseeWL MONEY, Betcount INT)
 CREATE TABLE #Result (ResellerID INT,LicenseeID int,turnover MONEY, MemberWinloss MONEY,GrossWinloss MONEY, DistributorRevenue MONEY, Betcount INT,LupineRevenue MONEY, OneworksRevenue MONEY,DistributorsChargeRate MONEY, LupineChargeRate MONEY,OneworksChargeRate MONEY)
-DECLARE @Exchange TABLE(ExchangeDate SMALLDATETIME, ExchangeId INT,  EUR FLOAT, PRIMARY KEY(ExchangeDate,ExchangeId))
+DECLARE @Exchange TABLE(ExchangeDate SMALLDATETIME, ExchangeId INT,  Rate FLOAT, PRIMARY KEY(ExchangeDate,ExchangeId))
 
 
 --Get normal licensee list:
@@ -117,23 +115,33 @@ BEGIN
 END
 
 CREATE NONCLUSTERED INDEX IDX_Currency ON #Data(Currency,winlostdate)
+DECLARE @ExchangeRate VARCHAR(3)
+		,@SqlCmd	  VARCHAR(500)  	
+		
+SELECT  @ExchangeRate = Currency
+		,@SqlCmd = ''
+FROM dbo.Lrf_f_basecurrency (@ToDate)
+WHERE isdefault = 1
+
+SELECT @SqlCmd = 
+				'SELECT ExchangeDate,ExchangeId,'+CHAR(13)+CONVERT(VARCHAR(3),@ExchangeRate)+CHAR(13)+
+				'FROM Lrf_f_GetExchangeDaily('''+CONVERT(VARCHAR,@FromDate,120)+''','''+CONVERT(VARCHAR,@ToDate,120)+''')'+CHAR(13)+
+				'WHERE exchangeid IN (SELECT DISTINCT Currency FROM #Data)'
 
 
-INSERT INTO @Exchange(ExchangeDate,ExchangeId,EUR)
-SELECT ExchangeDate,ExchangeId,EUR
-FROM Lrf_f_GetExchangeDaily(@FromDate,@ToDate)
-WHERE exchangeid IN (SELECT DISTINCT Currency FROM #Data)
+INSERT INTO @Exchange(ExchangeDate,ExchangeId,Rate)
+EXEC (@SqlCmd)
 
 INSERT INTO #Result(ResellerID,LicenseeID,turnover, MemberWinloss,GrossWinloss, DistributorRevenue, Betcount,LupineRevenue,OneworksRevenue,DistributorsChargeRate, LupineChargeRate,OneworksChargeRate)
 SELECT	
 	r.ResellerID,d.LicenseeID,
-	CAST(isnull(SUM(d.turnover * e.EUR),0) AS MONEY) AS Turnover,
-	CAST(isnull(SUM(d.MemberWinloss * e.EUR),0) AS MONEY) AS MemberWinloss,
-	CAST(CASE WHEN isnull(SUM(d.MemberWinloss * e.EUR),0) > 0 THEN 0 ELSE -1 * isnull(SUM(d.MemberWinloss * e.EUR),0) END AS money) AS GrossWinloss,
-	CAST(CASE WHEN isnull(SUM(d.MemberWinloss * e.EUR),0) > 0 THEN 0 ELSE -1 * isnull(SUM(d.MemberWinloss * e.EUR * isnull(DI.ChargeRate,0)),0) END AS money) AS DistributorRevenue,
+	CAST(isnull(SUM(d.turnover * e.Rate),0) AS MONEY) AS Turnover,
+	CAST(isnull(SUM(d.MemberWinloss * e.Rate),0) AS MONEY) AS MemberWinloss,
+	CAST(CASE WHEN isnull(SUM(d.MemberWinloss * e.Rate),0) > 0 THEN 0 ELSE -1 * isnull(SUM(d.MemberWinloss * e.Rate),0) END AS money) AS GrossWinloss,
+	CAST(CASE WHEN isnull(SUM(d.MemberWinloss * e.Rate),0) > 0 THEN 0 ELSE -1 * isnull(SUM(d.MemberWinloss * e.Rate * isnull(DI.ChargeRate,0)),0) END AS money) AS DistributorRevenue,
 	ISNULL(SUM(d.betcount), 0) AS BetCount,
-	CAST(CASE WHEN isnull(SUM(-1 * d.MemberWinloss * e.EUR),0) < 0 THEN 0 ELSE -1 * isnull(SUM(d.MemberWinloss * e.EUR * isnull(DI.ChargeRate,0) * isnull(LUP.ChargeRate,0) ),0) END AS money) AS LupineRevenue,
-	CAST(CASE WHEN isnull(SUM(-1 * d.MemberWinloss * e.EUR),0) < 0 THEN 0 ELSE isnull(SUM(-1 * d.MemberWinloss * e.EUR * isnull(DI.ChargeRate,0) * isnull(LUP.ChargeRate,0) * isnull(OW.ChargeRate,0)),0) END AS money) AS OneworksRevenue,
+	CAST(CASE WHEN isnull(SUM(-1 * d.MemberWinloss * e.Rate),0) < 0 THEN 0 ELSE -1 * isnull(SUM(d.MemberWinloss * e.Rate * isnull(DI.ChargeRate,0) * isnull(LUP.ChargeRate,0) ),0) END AS money) AS LupineRevenue,
+	CAST(CASE WHEN isnull(SUM(-1 * d.MemberWinloss * e.Rate),0) < 0 THEN 0 ELSE isnull(SUM(-1 * d.MemberWinloss * e.Rate * isnull(DI.ChargeRate,0) * isnull(LUP.ChargeRate,0) * isnull(OW.ChargeRate,0)),0) END AS money) AS OneworksRevenue,
 	isnull(DI.ChargeRate,0) as DistributorsChargeRate,
 	isnull(LUP.ChargeRate,0) as LupineChargeRate,
 	isnull(OW.ChargeRate,0) as OneworksChargeRate
@@ -175,9 +183,17 @@ DROP TABLE	#Result
 
 			
 END
+ 
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
 
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LicNumberGameWinloss] TO [bodbAdminNet] 
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicNumberGameWinloss] TO [vnteam]    
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicNumberGameWinloss] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LicNumberGameWinloss] TO [bodbAdminNet]
+GO 
