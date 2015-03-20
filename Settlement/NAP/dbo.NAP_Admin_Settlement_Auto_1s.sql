@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
 	 @AdminID			INT				= 148		-- calculated by system (default)
 	,@MatchID			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -31,7 +33,7 @@ BEGIN
 			,@betstatus					VARCHAR(50) 
 			,@ActionID					INT
 			,@Remark					VARCHAR(500)
-			,@LogData					NVARCHAR(200)							
+			,@LogData					NVARCHAR(300)							
 
 	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE WHEN @Action = 'CAL'	THEN 148 
@@ -112,7 +114,7 @@ BEGIN
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (135,160,164,168,169,174,175,176,180,192,193)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,216,217)
 	GROUP BY b.custid
 
 
@@ -187,7 +189,7 @@ BEGIN
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @matchid 
-			AND b.bettype IN (135,160,164,168,169,174,175,176,180,192,193)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,216,217)
 	GROUP BY b.custid
 
 
@@ -351,7 +353,3 @@ BEGIN
 		END CATCH
 	END
 END
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [vnteam] AS [dbo]

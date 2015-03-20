@@ -1,10 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Main]    Script Date: 3/4/2015 9:23:40 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@mode							VARCHAR(15)	= 'CAL'
 	,@action						VARCHAR(20)	= 'CAL'
@@ -88,10 +83,13 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@1stGoalTime15Min				VARCHAR(10)	= NULL
 	,@WhoAdvancesNextRound			VARCHAR(10) = NULL
 	,@ExtraTimeandGoal				VARCHAR(10)	= NULL
+	,@ExtraTimeYN					VARCHAR(10)	= NULL
+	,@GoalScorerFirst				VARCHAR(10)	= NULL
 	,@1HNextGoal					VARCHAR(MAX)= NULL
 	,@NextGoal						VARCHAR(MAX)= NULL
 	,@NextGoalTime15Min				VARCHAR(MAX)= NULL
 	,@ExtraNextGoal					VARCHAR(MAX)= NULL 
+	,@GoalScorerAnytime				VARCHAR(MAX)= NULL
 	,@isRefundHT					BIT 		= NULL
 	,@IsHTCal						BIT 		= NULL
 	,@betcount_1 					INT 		= NULL
@@ -162,12 +160,15 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betCount_164					INT 		= NULL
 	,@betcount_168					INT 		= NULL
 	,@betCount_169					INT 		= NULL
+	,@betCount_173					INT 		= NULL
 	,@betCount_174					INT 		= NULL
 	,@betCount_175					INT 		= NULL
 	,@betCount_176					INT 		= NULL
 	,@betCount_192					INT 		= NULL
 	,@betCount_193					INT 		= NULL
 	,@betCount_180					INT 		= NULL
+	,@betCount_216					INT 		= NULL
+	,@betCount_217					INT 		= NULL
 	,@betcount_1301					INT			= NULL		-- Tennis SS 
 	,@betCount_1302					INT			= NULL	
 	,@betCount_1303					INT			= NULL	
@@ -413,11 +414,13 @@ BEGIN
 			,@1stGoalTime15Min = ' + CASE WHEN @1stGoalTime15Min IS NULL THEN 'NULL' ELSE '''' + @1stGoalTime15Min + '''' END + '
 			,@WhoAdvancesNextRound = ' + CASE WHEN @WhoAdvancesNextRound IS NULL THEN 'NULL' ELSE '''' + @WhoAdvancesNextRound + '''' END + '
 			,@ExtraTimeandGoal = ' + CASE WHEN @ExtraTimeandGoal IS NULL THEN 'NULL' ELSE '''' + @ExtraTimeandGoal + '''' END + '	
+			,@ExtraTimeYN = ' + CASE WHEN @ExtraTimeYN IS NULL THEN 'NULL' ELSE '''' + @ExtraTimeYN + '''' END + '	
+			,@GoalScorerFirst = ' + CASE WHEN @GoalScorerFirst IS NULL THEN 'NULL' ELSE '''' + @GoalScorerFirst + '''' END + '
 			,@1HNextGoal = ' + CASE WHEN @1HNextGoal IS NULL THEN 'NULL' ELSE '''' + @1HNextGoal + '''' END + '
 			,@NextGoal = ' + CASE WHEN @NextGoal IS NULL THEN 'NULL' ELSE '''' + @NextGoal + '''' END + '
 			,@NextGoalTime15Min = ' + CASE WHEN @NextGoalTime15Min IS NULL THEN 'NULL' ELSE '''' + @NextGoalTime15Min + '''' END + '
 			,@ExtraNextGoal = ' + CASE WHEN @ExtraNextGoal IS NULL THEN 'NULL' ELSE '''' + @ExtraNextGoal + '''' END + '
-
+			,@GoalScorerAnytime = ' + CASE WHEN @GoalScorerAnytime IS NULL THEN 'NULL' ELSE '''' + @GoalScorerAnytime + '''' END + '
 			,@isRefundHT = ' + CASE 
 				WHEN @isRefundHT IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @isRefundHT)
@@ -676,13 +679,16 @@ BEGIN
 			,@betCount_164 = ' + CASE WHEN @betCount_164 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_164) END + '
 			,@betCount_168 = ' + CASE WHEN @betCount_168 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_168) END + '
 			,@betCount_169 = ' + CASE WHEN @betCount_169 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_169) END + '
+			,@betCount_173 = ' + CASE WHEN @betCount_173 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_173) END + '
 			,@betCount_174 = ' + CASE WHEN @betCount_174 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_174) END + '
 			,@betCount_175 = ' + CASE WHEN @betCount_175 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_175) END + '
 			,@betCount_176 = ' + CASE WHEN @betCount_176 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_176) END + '
 			,@betCount_192 = ' + CASE WHEN @betCount_192 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_192) END + '
 			,@betCount_193 = ' + CASE WHEN @betCount_193 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_193) END + '
 			,@betCount_180 = ' + CASE WHEN @betCount_180 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_180) END + '
-
+			,@betCount_216 = ' + CASE WHEN @betCount_216 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_216) END + '
+			,@betCount_217 = ' + CASE WHEN @betCount_217 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_217) END + '
+			
 			,@betCount_1301 = ' + CASE WHEN @betCount_1301 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1301) END + '
 			,@betCount_1302 = ' + CASE WHEN @betCount_1302 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1302) END + '
 			,@betCount_1303 = ' + CASE WHEN @betCount_1303 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1303) END + '
@@ -1291,6 +1297,15 @@ BEGIN
 					,@result = @NextGoalTime15Min
 					,@betcount = @betcount_169
 
+			-- bettype: 173: Extra Time Yes/No 
+			IF @betcount_173> 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 173
+					,@ResourceIDs = @ResourceIDs
+					,@result = @ExtraTimeYN
+					,@betcount = @betcount_173
+
 			-- bettype: 174: Extra Time and Goal 
 			IF @betcount_174> 0	
 				EXEC dbo.NAP_Admin_Calculate_135 
@@ -1344,6 +1359,25 @@ BEGIN
 					,@ResourceIDs = @ResourceIDs
 					,@result = @1stGoalTime15Min
 					,@betcount = @betcount_193
+
+			-- bettype: 216 : Goal Scorer - Anytime 
+			IF @betcount_216 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 216
+					,@ResourceIDs = @ResourceIDs
+					,@result = @GoalScorerAnytime
+					,@betcount = @betcount_216
+
+			-- bettype: 217 : Goal Scorer - First 
+			IF @betcount_217 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 217
+					,@ResourceIDs = @ResourceIDs
+					,@result = @GoalScorerFirst
+					,@betcount = @betcount_217
+
 		END
 
 		IF @action ='CAL-SET'  --Tennis including Sportting Solution
