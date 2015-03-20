@@ -1,5 +1,6 @@
 USE [bodb_licensee]
 GO
+
 ALTER   PROCEDURE [dbo].[DBA_Lrf_FunctionProduct]
 (
 	@ProductCode VARCHAR(100) = ''
@@ -11,7 +12,7 @@ DB: DBLIC.bodb_licensee
 Original :
 	
 Revisions:
-	
+	- 20150320@Jim: add more funtion permission for 'Active Customer Summary' report
 Param's Explanation:
 		
 	
@@ -27,11 +28,11 @@ BEGIN
 					,1 AS TypeId	 -- Lrf Function
 			FROM dbo.Functions WITH (NOLOCK)
 			WHERE FunctionId NOT IN (
-									5,--DATA WAREHOUSE
-									44,--Warehouse/WinLoss
-									45,--Warehouse/TopCustomer
-									59,--Report/WinLossByLeague
-									22 -- Racing
+									5  --DATA WAREHOUSE
+									,44 --Warehouse/WinLoss
+									,45 --Warehouse/TopCustomer
+									,59 --Report/WinLossByLeague
+									,22 -- Racing
 									,23 -- Number Game
 									,34 -- Racing Commission
 									,35 -- Daily Racing Win Loss
@@ -118,6 +119,7 @@ BEGIN
 									,30 -- Customer Pending Funds
 									,40 --Customer Balance
 									,51 -- Customer Turnover
+									,64	-- Active Customer Summary
 									)
 			UNION ALL 
 			SELECT 	2 AS ProductId -- NG
@@ -161,7 +163,7 @@ BEGIN
 									,29 -- Customer Win Loss
 									,30 -- Customer Pending Funds
 									,40 --Customer Balance
-									
+									,64	-- Active Customer Summary
 									)
 			UNION ALL 
 			SELECT 	4 AS ProductId -- LC
@@ -194,6 +196,7 @@ BEGIN
 									,30 -- Customer Pending Funds
 									,40 --Customer Balance
 									,51 -- Customer Turnover
+									,64	-- Active Customer Summary
 									)
 			UNION ALL 
 			SELECT 	5 AS ProductId -- VS
@@ -222,6 +225,7 @@ BEGIN
 									,42 -- Balance
 									,29 -- Customer Win Loss
 									,40 --Customer Balance
+									,64	-- Active Customer Summary
 									)
 			UNION ALL 
 			SELECT 	6 AS ProductId -- CS
@@ -248,6 +252,7 @@ BEGIN
 									,42 -- Balance
 									,29 -- Customer Win Loss
 									,40 --Customer Balance
+									,64	-- Active Customer Summary
 									)
 		END
 	IF @ProductCode = 'PTCS'
