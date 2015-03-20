@@ -1,5 +1,10 @@
 USE [bodb_licensee]
 GO
+/****** Object:  StoredProcedure [dbo].[DBA_Lrf_OfferProduct]    Script Date: 03/20/2015 11:23:09 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
  
 ALTER PROCEDURE [dbo].[DBA_Lrf_OfferProduct]
 (	@ResellerID	INT,
@@ -15,7 +20,7 @@ DB: DBLIC.bodb_licensee
 Original :
 	
 Revisions:
-	
+		- 20150320@Jim: add more funtion permission for 'Active Customer Summary' report
 Param's Explanation:
 
 	

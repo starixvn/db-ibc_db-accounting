@@ -85,6 +85,7 @@ BEGIN
 									,29 -- Customer Win Loss
 									,30 -- Customer Pending Funds
 									,40 --Customer Balance
+									,64	-- Active Customer Summary
 									)
 			UNION ALL 
 			SELECT 	1 AS ProductId -- RB
