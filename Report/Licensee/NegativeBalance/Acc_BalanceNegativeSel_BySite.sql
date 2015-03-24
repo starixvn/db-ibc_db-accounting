@@ -1,6 +1,4 @@
-﻿USE [bodb02]
-GO
-ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_BySite]
+﻿ALTER PROCEDURE [dbo].[Acc_BalanceNegativeSel_BySite]
   @Site		VARCHAR(50) = 'Haifa'
  ,@isTest	BIT			= 0
 
@@ -14,6 +12,7 @@ AS
 	Revision: 
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call custInfo, exchange by link database)
 		- 20150120@Jamie: Edit the definition of @isTest 
+		- 20150316@Elodie: Support Negative Balance function for all licensee [Red:#30840]
 	Param's Explanation: 
 		@isTest: 0: Real Currency; 1: UUS Currency 
 	
@@ -25,16 +24,17 @@ BEGIN
 			, h.MatchID
 			, h.GroupID
 			, h.CustID
-			, ci.Username
+			, c.Username
 			, h.TotalBalance
 			, CurrencyName = e.currency 
 			, h.Site
-			, bin.CustomInfo1
+			, CASE WHEN bin.CustomInfo1 IS NULL THEN c.username2 ELSE bin.CustomInfo1 END AS CustomInfo1
 	FROM	BalanceNegativeHistory h WITH (NOLOCK)
+			INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON h.CustID = c.custid
+			INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
 			LEFT JOIN DBDEPBBIN.bbin.dbo.Customer bin WITH (NOLOCK) ON h.CustID = bin.IBCCustID
-			LEFT JOIN CustDB.dbo.custInfo ci WITH (NOLOCK) ON h.CustID = ci.custid
-			LEFT JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON ci.currency = e.exchangeid
 	WHERE	h.StatusID = 0 
+			AND h.Site = @Site
 			AND 1 = CASE WHEN @isTest = 0 AND e.exchangeID <> 20 THEN 1 
 						 WHEN @isTest = 1 AND e.exchangeID = 20 THEN 1 
 						 ELSE 0 
@@ -42,7 +42,8 @@ BEGIN
 			
 	ORDER BY	  h.LogID ASC
 				, h.MatchID ASC
-				, ci.Username ASC
+				, c.Username ASC
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_BySite] TO [bodbAdminNet] AS [dbo]
