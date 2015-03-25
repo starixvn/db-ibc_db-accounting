@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsBACustomer]    Script Date: 01/21/2015 14:18:46 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsBACustomer]    Script Date: 03/25/2015 09:33:48 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -27,6 +27,7 @@ AS
 		- 20140805@Logan:   1. Separate live and non-live setting [Redmine: #16578]
 		                    2. Do not allow user to follow himself
 		- 20150120@Kathy: Update Original and Nonlive danger level of BA member to 2 [Redmine:#29459]
+		- 20150324@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]  
 		
 	Param's Explanation:  
 	 
@@ -35,30 +36,34 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-	DECLARE @startRun		DATETIME
-			,@endRun		DATETIME
-			,@duration		INT
-			,@oldDanger		VARCHAR(100)
-			,@oldDanger2	VARCHAR(100)
+	DECLARE @startRun			DATETIME
+			,@endRun			DATETIME
+			,@duration			INT
+			,@oldDanger			VARCHAR(100)
+			,@oldDanger2		VARCHAR(100)
+			,@LogSPData			VARCHAR(5000)
+			,@TrackingValueDB	VARCHAR(max)
+			,@custFollower		INT
 
 	SET @startRun = GETDATE()
 
-	DECLARE @LogSPData		VARCHAR(5000)
-			,@TrackingValueDB VARCHAR(max)
-	
 	CREATE TABLE #TempCustID(CustID INT)
 
+	--INSERT INTO #TempCustID(CustID)
+	--SELECT c.CustID
+	--FROM dbo.custInfo c WITH(NOLOCK)
+	--INNER JOIN DBLIC.bodb_licensee.dbo.LicenseeBAHistory lba WITH(NOLOCK) ON c.custid = lba.custid
+	--WHERE c.CustID IN (SELECT RTRIM(LTRIM(VAL))
+	--		              FROM strSplit(@strCustID, ',')
+	--		           )
+	--AND lba.status = 'running'
+
 	INSERT INTO #TempCustID(CustID)
-	SELECT c.CustID
+	SELECT c.custid
 	FROM dbo.custInfo c WITH(NOLOCK)
-	INNER JOIN DBLIC.bodb_licensee.dbo.LicenseeBAHistory lba WITH(NOLOCK) ON c.custid = lba.custid
-	WHERE c.CustID IN (SELECT RTRIM(LTRIM(VAL))
-			              FROM strSplit(@strCustID, ',')
-			           )
-	AND lba.status = 'running'
-
-	DECLARE @custFollower INT
-
+	INNER JOIN dbo.Dep_CustBAActive d WITH(NOLOCK) ON d.CustId = c.custid
+	WHERE c.custid IN (SELECT RTRIM(LTRIM(val)) FROM dbo.strSplit(@strCustId,','))	
+	
 	SELECT @custFollower = c.custid
 	  FROM custInfo c WITH(NOLOCK)
 	 WHERE c.username = @Follower
@@ -100,10 +105,12 @@ BEGIN
 	(
 	    custid
 	  , rate
+	  , Rate2
 	  , FollowLive
 	  , Follower
 	)
 	SELECT c.CustID
+		 , @rate
 		 , @rate
 		 , 1
 		 , @custFollower
@@ -126,10 +133,12 @@ BEGIN
 	(
 	    custid
 	  , rate
+	  , Rate2
 	  , FollowLive
 	  , Follower
 	)
 	SELECT c.CustID
+		 , @rate
 		 , @rate
 		 , 0
 		 , @custFollower
