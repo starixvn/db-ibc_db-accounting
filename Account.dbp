@@ -908,6 +908,10 @@ Begin DataProject = "Account"
       Begin Folder = "All Customer Turnover by Site"
          Script = "dbo.Acc_Rpt_CustomerTurnoverBySite.StoredProcedure.sql"
       End
+	  Begin Folder = "AutoMail"
+         Script = "Acc_Rpt_AllProductWLAutomail.sql"
+		 Script = "Acc_Rpt_RNGCasinoAutomail.sql"
+      End
       Begin Folder = "Check Bet"
          Script = "Acc_Rpt_CheckBet.sql"
          Script = "Acc_Rpt_CheckBet_Normal.sql"
