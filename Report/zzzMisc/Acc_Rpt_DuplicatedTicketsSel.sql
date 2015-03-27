@@ -1,0 +1,116 @@
+ALTER PROCEDURE [dbo].[Acc_Rpt_DuplicatedTicketsSel]
+	@Date DATETIME,
+	@CheckTime SMALLINT = 1
+AS
+/*
+Created: 20150212@Sophia
+Task :	Get Duplicated ticket report
+DB:		DBRPT/bodb_report
+Original: [Acc_CheckDuplicateTickets]
+
+Revisions:
+	 
+Param's Explanation:
+	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
+				   Because job recurs every 30s, so we set @CheckTime = 1 minute as default
+
+*/
+BEGIN
+	SET NOCOUNT ON
+
+	---- ** 1. Check the transdate of LastTransID and current time  ** ----
+	DECLARE @LastTransId BIGINT, @LastTransDate DATETIME
+	SELECT @LastTransId = CONVERT(BIGINT, VValue) FROM bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VName = 'DuplTicketLastID'
+
+	
+	SELECT @LastTransDate = CONVERT(DATETIME, VValue) FROM bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VName = 'DuplTicketLastDate'
+	
+		----> If it's more than 1 minute then the job fails and call the code of the old report (SP: Acc_CheckDuplicateTickets)
+	IF DATEDIFF(MINUTE, @LastTransDate, CURRENT_TIMESTAMP) > @CheckTime
+	BEGIN 
+			;WITH _match AS (
+			SELECT matchid as mID from bodb02.dbo.match WITH(NOLOCK) WHERE eventdate >= @date
+			UNION ALL
+			SELECT orid FROM bodb02.dbo.outright WITH(NOLOCK) WHERE eventdate >= @date
+			UNION ALL
+			SELECT DISTINCT eventid FROM bodb02.dbo.VSOutright WITH(NOLOCK) WHERE EventDate >= @date
+			UNION ALL
+			SELECT DISTINCT eventid FROM bodb02.dbo.translog WITH(NOLOCK) WHERE transdate BETWEEN @date AND DATEADD(dd, 1, @date)
+			UNION ALL
+			SELECT 9 -- mix parlay
+			UNION ALL
+			SELECT 29 -- system parlay
+			)
+			SELECT custid, 
+					odds, 
+					stake, 
+					balance, 
+					bettype,
+					winlostdate, 
+					matchid 		
+			INTO #TempData
+			FROM bodb02.dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN _match m ON b.matchid = m.mID
+			WHERE bettype < 19000
+				and custid not in (50057,879241,103873, 851668, 878902) --betdaq
+				and custid NOT IN (1077687) -- Betfair
+				and recommend not in (11196380) -- foobet
+				and transdate BETWEEN @date AND DATEADD(dd, 1, @date)
+				--and winlostdate >= @_date
+				and custid > 0
+				and recommend NOT IN (5707545,52466) -- exclude members under BARM,8RM
+				and currency <> 20
+				And statusID not in (101,102)			
+			GROUP BY custid, 
+					odds, 
+					stake, 
+					balance, 
+					bettype,
+					winlostdate, 
+					matchid
+			HAVING COUNT(*) > 1
+			option (maxdop 4)
+			--------------------------------------------------------
+
+			SELECT b.custid, b.odds, b.stake, b.balance, b.status, b.statusID, b.bettype, b.winlostdate, b.username, b.transid as refno, b.transdate as bettime, bt.typenamee as typename 
+			FROM bodb02.dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN #TempData t ON b.custid = t.custid 
+					AND b.odds = t.odds
+					AND b.stake = t.stake
+					AND ISNULL(b.balance,0) = ISNULL(t.balance,0) 
+					AND b.bettype = t.bettype
+					AND b.winlostdate = t.winlostdate
+					AND b.matchid = t.matchid
+			INNER JOIN bodb02.dbo.bettype bt with(nolock) on bt.typeid = b.bettype
+			WHERE b.custid IN (SELECT DISTINCT custid FROM #TempData)
+				AND b.statusID NOT IN (101,102)
+			ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID
+
+			DROP TABLE #TempData			
+
+	END
+	ELSE  ----> Get report form new table
+	BEGIN 	
+
+		DECLARE @DateFrom DATETIME
+		SELECT @DateFrom = DATEADD(dd, 0, DATEDIFF(dd, 0, @Date) ) -- get begin of the day (just in case param input time also)
+		 
+
+		SELECT	b.custid, b.odds, b.stake, b.balance, b.status, b.statusID, b.bettype, b.winlostdate, b.username, b.transid as refno, b.transdate as bettime, bt.typenamee as typename 
+		FROM	dbo.DuplicatedTicket t WITH (NOLOCK)	
+			INNER JOIN bodb02.dbo.Bettrans b WITH (NOLOCK)	
+					ON b.TransID = t.TransID
+			INNER JOIN bodb02.dbo.bettype bt WITH (NOLOCK) 
+					ON bt.typeid = b.bettype
+		WHERE	t.Transdate >= @DateFrom 
+			AND t.Transdate < DATEADD(dd, 1, DATEDIFF(dd, 0, @DateFrom))
+		ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID	  
+
+
+	END
+		
+END
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DuplicatedTicketsSel] TO [bodbAdminNet]
+GO
