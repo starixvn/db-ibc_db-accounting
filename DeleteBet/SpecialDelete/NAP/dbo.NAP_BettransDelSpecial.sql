@@ -4,7 +4,7 @@
 	@FromTransId			BIGINT, 
 	@ToTransId				BIGINT, 
 		
-	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 153, 1303, 1306, 1308
+	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 153, 183, 1303, 1306, 1308
 	@Handicap155			SMALLMONEY		= 9999,		-- 155, 1316 
 	@Handicap178			SMALLMONEY		= 9999,		-- 178,197,198,204,205
 	@OverUnder156			SMALLMONEY		= 9999,		-- 156, 1312 
@@ -359,7 +359,7 @@ BEGIN
 								190, 193, 194, 195, 196, 197, 198, 199,
 								200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216, 217,
 								1302, 1311, 1312, 1316, 1317, 1318, 1324)
-		AND CASE WHEN b.bettype IN (1,3,7,8, 153, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
+		AND CASE WHEN b.bettype IN (1,3,7,8, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
 													ELSE 0 END 
 			ELSE 1 END = 1
