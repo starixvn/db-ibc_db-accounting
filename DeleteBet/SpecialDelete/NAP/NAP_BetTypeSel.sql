@@ -14,6 +14,7 @@ AS
 		- 20130813@Elodie: Add new bettype Live Bacarat and Live Roulette (1103,1104)  
 		- 20141015@Kathy: exclude the testing bettypes (Sportting Solution & BetRadar) [Redmine:#24391]
 		- 20140926@Kathy: Get list bettype belong to matchid [Redmine:#23129]
+		- 20150401@Dominic: Add new parent-child bettypes [Redmine:#27214]
 	      
 	Param's Explanation:  
 	@Mode:   
