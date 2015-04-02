@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/02/2015 08:59:08 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/02/2015 13:31:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -43,8 +43,6 @@ BEGIN
 						  ,hth SMALLINT
 						  ,hta SMALLINT
 						 )
-	
-	DECLARE @wtMatch TABLE (matchid INT)
 	
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''
@@ -94,29 +92,19 @@ BEGIN
 	
 	
 	--SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + b.matchid,
-	INSERT INTO @wtMatch(matchid)
-	SELECT b.matchid
-	FROM bettransm b WITH(NOLOCK)
-	WHERE b.matchid IN (SELECT matchid FROM @match)
-	AND b.statusID = 1 -- waiting status
-				AND b.bettype NOT BETWEEN 1501 AND 1599
-				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-				AND (
-					(@Action IN('CAL', 'REFUND')
-					OR 
-					(@Action IN('CAL-HT','REFUND-HT') AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 127, 129, 136, 138, 143, 151))
-					OR
-					(@Action IN ('CAL-FT', 'REFUND-FT') AND b.bettype NOT IN (7, 8, 12, 15, 21, 30, 125, 126, 127, 129, 136, 138, 143, 151))
-					)
-					)
-	GROUP BY b.matchid
+	
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchIds = @MatchIds	OUTPUT
+		,@Action = @Action
+		,@Mode = 'CAL-MP'	
 	
 	SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + m.matchcode, m.matchcode)
 	FROM dbo.match m WITH(NOLOCK)
-	INNER JOIN @wtMatch w ON w.matchid = m.matchid
+	WHERE m.matchid IN (SELECT val FROM dbo.strSplit(@MatchIds, ','))
 	
 	DELETE FROM @match
-	WHERE matchid IN (SELECT w.matchid FROM @wtMatch w)
+	WHERE matchid IN (SELECT val FROM dbo.strSplit(@MatchIds, ','))
 
 	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '')
 	BEGIN
@@ -199,6 +187,9 @@ BEGIN
 		END
 	END
 END
+
+
+
 
 
 GO

@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push]    Script Date: 04/01/2015 17:08:21 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push]    Script Date: 04/02/2015 13:33:02 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -77,22 +77,20 @@ BEGIN
 		RETURN
 	END
 	
-	IF EXISTS (SELECT TOP 1 1 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.matchid = @matchid
-				AND b.statusID = 1 -- waiting status
-				AND b.bettype IN (14, 127)
-				AND b.bettype = CASE @Action WHEN 'REFUND-HT' THEN 127
-											WHEN 'REFUND-FT' THEN 14
-											ELSE b.bettype	
-								END	
-			)
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'REFUND-FGLG'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrCode = 1001013
-			,@ErrMsg = 'Cannot proceed as there exists some PENDING tickets in this match. Please contact admin for help.'
-			
+		SELECT @ErrCode
+			,@ErrMsg
+		
 		RETURN
-	END	
+	END
 
 	SELECT @ErrCode		= 0
 		,@ErrMsg		= ''
@@ -205,6 +203,8 @@ BEGIN
 			,@sqlCommand
 	END
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] TO [bodbAdminNet] AS [dbo]

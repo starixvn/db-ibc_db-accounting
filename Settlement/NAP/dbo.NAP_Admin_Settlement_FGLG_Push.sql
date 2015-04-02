@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG_Push]    Script Date: 04/01/2015 17:06:27 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG_Push]    Script Date: 04/02/2015 13:31:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -79,21 +79,21 @@ BEGIN
 		RETURN
 	END
 	
-	IF EXISTS (SELECT TOP 1 1 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.matchid = @matchid
-				AND b.statusID = 1 -- waiting status
-				AND b.bettype = CASE WHEN @Action = 'CAL-HT' THEN 127
-									 ELSE 14 -- CAL-FT
-								END						
-			)
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'CAL-FGLG'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrCode = 1001013
-			,@ErrMsg = 'Cannot proceed as there exists some PENDING tickets in this match. Please contact admin for help.'
-			
+		SELECT @ErrCode
+			,@ErrMsg
+		
 		RETURN
 	END
-
+	
 	SELECT @ErrCode		= 0
 		,@ErrMsg		= ''
 		,@mode			= CASE 
@@ -199,6 +199,8 @@ BEGIN
 			,@sqlCommand
 	END
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [bodbAdminNet] AS [dbo]
