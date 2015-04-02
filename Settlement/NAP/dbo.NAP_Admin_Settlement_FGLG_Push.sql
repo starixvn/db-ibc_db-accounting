@@ -1,7 +1,8 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG_Push]    Script Date: 09/11/2014 17:01:09 ******/
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG_Push]    Script Date: 04/01/2015 17:06:27 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
 
@@ -27,6 +28,7 @@ AS
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140507@Kathy: Add param @action (for bettype 1H FGLG (127)) [Redmine:#14449]
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
@@ -74,6 +76,21 @@ BEGIN
 		SELECT @ErrCode = 1000000
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
+		RETURN
+	END
+	
+	IF EXISTS (SELECT TOP 1 1 
+				FROM dbo.bettrans b WITH(NOLOCK)
+				WHERE b.matchid = @matchid
+				AND b.statusID = 1 -- waiting status
+				AND b.bettype = CASE WHEN @Action = 'CAL-HT' THEN 127
+									 ELSE 14 -- CAL-FT
+								END						
+			)
+	BEGIN
+		SELECT @ErrCode = 1001013
+			,@ErrMsg = 'Cannot proceed as there exists some PENDING tickets in this match. Please contact admin for help.'
+			
 		RETURN
 	END
 
@@ -182,9 +199,8 @@ BEGIN
 			,@sqlCommand
 	END
 END
-GO
 
+GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [vnteam] AS [dbo]
