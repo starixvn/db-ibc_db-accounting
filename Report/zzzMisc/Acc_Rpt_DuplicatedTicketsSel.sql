@@ -9,6 +9,7 @@ DB:		DBRPT/bodb_report
 Original: [Acc_CheckDuplicateTickets]
 
 Revisions:
+	- 20150402@Sophia: Add more test currency (20, 27, 28)
 	 
 Param's Explanation:
 	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
@@ -19,10 +20,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	---- ** 1. Check the transdate of LastTransID and current time  ** ----
-	DECLARE @LastTransId BIGINT, @LastTransDate DATETIME
-	SELECT @LastTransId = CONVERT(BIGINT, VValue) FROM bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VName = 'DuplTicketLastID'
-
-	
+	DECLARE @LastTransDate DATETIME	
 	SELECT @LastTransDate = CONVERT(DATETIME, VValue) FROM bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VName = 'DuplTicketLastDate'
 	
 		----> If it's more than 1 minute then the job fails and call the code of the old report (SP: Acc_CheckDuplicateTickets)
@@ -59,8 +57,8 @@ BEGIN
 				--and winlostdate >= @_date
 				and custid > 0
 				and recommend NOT IN (5707545,52466) -- exclude members under BARM,8RM
-				and currency <> 20
-				And statusID not in (101,102)			
+				and currency NOT IN (20, 27, 28)
+				And statusID NOT IN (101,102)			
 			GROUP BY custid, 
 					odds, 
 					stake, 
@@ -104,6 +102,7 @@ BEGIN
 					ON bt.typeid = b.bettype
 		WHERE	t.Transdate >= @DateFrom 
 			AND t.Transdate < DATEADD(dd, 1, DATEDIFF(dd, 0, @DateFrom))
+			AND b.statusID NOT IN (101,102)
 		ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID	  
 
 
