@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/02/2015 08:59:08 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -15,7 +22,8 @@ AS
 	Revisions:		
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
-		- 20141117@Jamie: Change ErrCode [Redmine:#23034]				   
+		- 20141117@Jamie: Change ErrCode [Redmine:#23034]		
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]		   
 	Param's Explanation:		
 		
 */
@@ -24,6 +32,7 @@ SET NOCOUNT ON
 BEGIN
 	DECLARE  @NotKeyScoreList VARCHAR(130)
 			,@NotAllowCalculating VARCHAR(200)
+			,@HaveWaitingTicket VARCHAR(200)
 			,@procName nvarchar(50)	
 			,@matchid int
 
@@ -34,6 +43,8 @@ BEGIN
 						  ,hth SMALLINT
 						  ,hta SMALLINT
 						 )
+	
+	DECLARE @wtMatch TABLE (matchid INT)
 	
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''
@@ -80,8 +91,34 @@ BEGIN
 		WHERE matchid IN (SELECT matchid from Single_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1) )
 		OR matchid IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK) WHERE IsCalculating IN (0,1) ) 
 	END
+	
+	
+	--SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + b.matchid,
+	INSERT INTO @wtMatch(matchid)
+	SELECT b.matchid
+	FROM bettransm b WITH(NOLOCK)
+	WHERE b.matchid IN (SELECT matchid FROM @match)
+	AND b.statusID = 1 -- waiting status
+				AND b.bettype NOT BETWEEN 1501 AND 1599
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND (
+					(@Action IN('CAL', 'REFUND')
+					OR 
+					(@Action IN('CAL-HT','REFUND-HT') AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 127, 129, 136, 138, 143, 151))
+					OR
+					(@Action IN ('CAL-FT', 'REFUND-FT') AND b.bettype NOT IN (7, 8, 12, 15, 21, 30, 125, 126, 127, 129, 136, 138, 143, 151))
+					)
+					)
+	GROUP BY b.matchid
+	
+	SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + m.matchcode, m.matchcode)
+	FROM dbo.match m WITH(NOLOCK)
+	INNER JOIN @wtMatch w ON w.matchid = m.matchid
+	
+	DELETE FROM @match
+	WHERE matchid IN (SELECT w.matchid FROM @wtMatch w)
 
-	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
+	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '')
 	BEGIN
 		SELECT   @ErrCode = 1001011
 				,@ErrMsg = 'All matches are being calculated, except following matches ' 
@@ -93,6 +130,10 @@ BEGIN
 									THEN  '(being calculated by another user): ' + @NotAllowCalculating
 									ELSE ''
 								END 
+							+ CASE WHEN ISNULL(@HaveWaitingTicket, '') <> ''
+									THEN '(existing some PENDING tickets in these match): ' + @HaveWaitingTicket
+									ELSE ''
+								END
 	END
 
 	IF EXISTS (
@@ -158,6 +199,8 @@ BEGIN
 		END
 	END
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO

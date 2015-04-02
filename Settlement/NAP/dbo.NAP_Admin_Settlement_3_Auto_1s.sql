@@ -27,8 +27,6 @@ BEGIN
 			,@betCount_192			INT = 0
 			,@betCount_193			INT = 0
 			,@betCount_180			INT = 0
-			,@betCount_216			INT = 0
-			,@betCount_217			INT = 0
 
 			,@penaltyshootout		VARCHAR(10)	=''
 			,@matchDecidedMethod	VARCHAR(10)	=''
@@ -38,13 +36,11 @@ BEGIN
 			,@WhoAdvancesNextRound	VARCHAR(10) =''
 			,@ExtraTimeandGoal		VARCHAR(10)	=''
 			,@ExtraTimeYN			VARCHAR(10) =''	
-			,@GoalScorerFirst		VARCHAR(10) =''			
 
 			,@1HNextGoal			VARCHAR(MAX)=''
 			,@NextGoal				VARCHAR(MAX)=''
 			,@NextGoalTime15Min		VARCHAR(MAX)=''
 			,@ExtraNextGoal			VARCHAR(MAX)=''
-			,@GoalScorerAnytime		VARCHAR(MAX)=''
 
 	DECLARE	@tmpResourceIDs TABLE(
 		ResourceID	VARCHAR(20)
@@ -86,11 +82,9 @@ BEGIN
 			,@betCount_192  = ISNULL(SUM(CASE WHEN bettype = 192 THEN 1 ELSE 0 END),0)
 			,@betCount_193  = ISNULL(SUM(CASE WHEN bettype = 193 THEN 1 ELSE 0 END),0)
 			,@betCount_180  = ISNULL(SUM(CASE WHEN bettype = 180 THEN 1 ELSE 0 END),0)
-			,@betCount_216	= ISNULL(SUM(CASE WHEN bettype = 216 THEN 1 ELSE 0 END),0)
-			,@betCount_217	= ISNULL(SUM(CASE WHEN bettype = 217 THEN 1 ELSE 0 END),0)
 	FROM	dbo.Bettrans WITH (NOLOCK)
 	WHERE	MatchID = @MatchID 
-			AND Bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,216,217)
+			AND Bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
 			AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
 			AND StatusID NOT BETWEEN 101 AND 102 
 
@@ -102,7 +96,6 @@ BEGIN
 			,@1st10Min1x2			= ISNULL(MAX(CASE WHEN ResourceID='176' THEN HomeValue ELSE '' END),'') 
 			,@1stGoalTime10Min		= ISNULL(MAX(CASE WHEN ResourceID='192' THEN HomeValue ELSE '' END),'') 
 			,@1stGoalTime15Min		= ISNULL(MAX(CASE WHEN ResourceID='193' THEN HomeValue ELSE '' END),'')
-			,@GoalScorerFirst		= ISNULL(MAX(CASE WHEN ResourceID='217' THEN HomeValue ELSE '' END),'')
 	FROM	@tmpResultDetail
 	WHERE	MatchID = @MatchID 
 			AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
@@ -111,7 +104,6 @@ BEGIN
 			,@ExtraNextGoal			= @ExtraNextGoal +  CASE WHEN ResourceID LIKE '164__' THEN ResourceID + HomeValue +',' ELSE '' END 
 			,@NextGoalTime15Min		= @NextGoalTime15Min + CASE WHEN ResourceID LIKE '169__' THEN ResourceID + HomeValue +',' ELSE '' END 
 			,@1HNextGoal			= @1HNextGoal + CASE WHEN ResourceID LIKE '180__' THEN ResourceID + HomeValue +',' ELSE '' END 
-			,@GoalScorerAnytime		= @GoalScorerAnytime + CASE WHEN ResourceID LIKE '217__' THEN ResourceID + HomeValue +',' ELSE '' END 
 	FROM	@tmpResultDetail
 	WHERE	MatchID = @MatchID 
 			AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
@@ -133,8 +125,6 @@ BEGIN
 				,@ExtraNextGoal			= @ExtraNextGoal
 				,@NextGoalTime15Min		= @NextGoalTime15Min
 				,@1HNextGoal			= @1HNextGoal
-				,@GoalScorerAnytime		= @GoalScorerAnytime
-				,@GoalScorerFirst		= @GoalScorerFirst
 				,@betCount_135			= @betCount_135
 				,@betCount_160			= @betCount_160
 				,@betCount_164			= @betCount_164
@@ -147,8 +137,6 @@ BEGIN
 				,@betCount_180			= @betCount_180
 				,@betCount_192			= @betCount_192
 				,@betCount_193			= @betCount_193
-				,@betCount_216			= @betCount_216
-				,@betCount_217			= @betCount_217
 				,@CalledByBrokerService = 0	
 
 END

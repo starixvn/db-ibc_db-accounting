@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetUpdRate]    Script Date: 03/25/2015 09:34:14 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetUpdRate]    Script Date: 03/26/2015 09:35:01 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -174,7 +174,6 @@ BEGIN
 		RETURN
 	END
 	
-	
 	IF @Follower <> @originalFollower AND @recommendFollower <> @recommendOriginalFollower
 	BEGIN
 		IF EXISTS( SELECT TOP 1 1
@@ -192,35 +191,76 @@ BEGIN
 		
 	END
 	
-	-- Rate must range between 0.01 and 3, 2 decimal digits
-	IF @Rate NOT BETWEEN 0.01 AND 3 
-	   OR (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1)))
+	-- Rate must range between 0.01 and 3
+	IF @Rate NOT BETWEEN 0.01 AND 3
 	BEGIN
-		SELECT @ErrMsg = 'Invalid rate! Rate must range between 0.01 and 3'
+		SELECT @ErrMsg = 'Invalid rate for O/U and HDP group! Rate must range between 0.01 and 3'
 			 , @ErrCode = 107
 
 		RETURN
 	END
-
-	-- Validate Odds
-	IF (@LiveOdds <> 2
-	    AND (@LiveOdds NOT BETWEEN -0.1 AND 0.1
-	         OR ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @LiveOdds, 2))) - ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @LiveOdds, 1))) <> 0
-	         OR ABS(@LiveOdds) * 100 < 1 AND @LiveOdds <> 0
-	        )
-	   )
-	   OR (@NonLiveOdds <> 2
-	       AND (@NonLiveOdds NOT BETWEEN -0.1 AND 0.1
-	            OR ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @NonLiveOdds, 2))) - ABS(CONVERT(FLOAT, CONVERT(NVARCHAR, @NonLiveOdds, 1))) <> 0
-	            OR ABS(@NonLiveOdds) * 100 < 1 AND @NonLiveOdds <> 0
-	           )
-	      )
+	
+	IF @Rate2 NOT BETWEEN 0.01 AND 3 
 	BEGIN
-		SELECT @ErrMsg = 'Invalid odds! Odds must range between -0.1 and 0.1'
+		SELECT @ErrMsg = 'Invalid rate for 1x2 Group! Rate must range between 0.01 and 3'
+			 , @ErrCode = 107
+
+		RETURN
+	END
+	
+	-- Don't allow to save rate with 3 decimal digits
+	IF CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1))
+	BEGIN
+		SELECT @ErrMsg = 'Invalid rate for O/U and HDP group! Don''t enter the number with more than 2 decimal places.'
 			 , @ErrCode = 108
 
 		RETURN
 	END
+	
+	IF (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate2, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate2, 1)))
+	BEGIN
+		SELECT @ErrMsg = 'Invalid rate for 1x2 Group! Don''t enter the number with more than 2 decimal places.'
+			 , @ErrCode = 108
+
+		RETURN
+	END
+
+	-- Validate Odds: Odds must range between -0.1 and 0.1, 2 decimal digits		
+	IF ( @LiveOdds <> 2 
+		 AND(
+			(@LiveOdds NOT BETWEEN -0.1 AND 0.1)
+			OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@LiveOdds * 100))) %1 <> 0)
+		)
+	   )
+	   OR
+	   (
+	     @NonLiveOdds <> 2
+	     AND(
+			(@NonLiveOdds NOT BETWEEN -0.1 AND 0.1)
+			OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@NonLiveOdds * 100))) %1 <> 0)
+		 )
+	   )
+	   OR 
+	   (
+	     @LiveOdds2 <> 2
+	     AND(
+			(@LiveOdds2 NOT BETWEEN -0.1 AND 0.1)
+			OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@LiveOdds2 * 100))) %1 <> 0)		
+	     )	     
+	   )
+	   OR(
+	     @NonLiveOdds2 <> 2
+	     AND(
+			(@NonLiveOdds2 NOT BETWEEN -0.1 AND 0.1)
+			OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@NonLiveOdds2 * 100))) %1 <> 0)
+	     )
+	   ) 	   
+	BEGIN
+		SELECT @ErrMsg = 'Invalid odds! Odds must range between -0.1 and 0.1'
+			 , @ErrCode = 109
+
+		RETURN
+	END 
 
 	SELECT @oldRate			= ISNULL(f.Rate, 0)
 		 , @oldRate2		= ISNULL(f.Rate2, 0)		 
@@ -484,6 +524,8 @@ BEGIN
 
 	END CATCH
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetUpdRate] TO [bodbAdminNet] AS [dbo]
 GO

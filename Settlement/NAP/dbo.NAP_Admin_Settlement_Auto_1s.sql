@@ -114,12 +114,11 @@ BEGIN
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,216,217)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
 	GROUP BY b.custid
 
 
 	--===
-
 	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	IF @Action='CAL'
 	BEGIN
@@ -189,7 +188,7 @@ BEGIN
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @matchid 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,216,217)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
 	GROUP BY b.custid
 
 

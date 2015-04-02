@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 03/25/2015 09:33:57 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 03/26/2015 09:33:02 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -145,7 +145,7 @@ BEGIN
 	-- (custid, follower) is existed
 	IF EXISTS (SELECT TOP 1 1 FROM dbo.Cust_FollowBet WITH(NOLOCK) WHERE custid = @custid AND Follower = @custFollower)
 	BEGIN
-		SELECT @ErrMsg = 'The account ''' + @Username + ''' is already followed by this group'
+		SELECT @ErrMsg = 'The member ''' + @Username + ''' is followed by this follower already! Please try again'
 			 , @ErrCode = 106
 			 
 		RETURN 
@@ -163,7 +163,7 @@ BEGIN
 			
 		)
 		BEGIN
-			SELECT @ErrMsg = 'The account ''' + @Username + ''' is already followed by this group'
+			SELECT @ErrMsg = 'The account '''+ @username + ''' is already followed by this group'
 				 , @ErrCode = 107
 			RETURN 
 		END	
@@ -189,25 +189,53 @@ BEGIN
 		RETURN
 	END	    
 	    
-	-- Rate must range between 0.01 and 3, 2 decimal digits
-	IF @Rate NOT BETWEEN 0.01 AND 3 
-	   OR (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1)))
+	-- Rate must range between 0.01 and 3
+	IF @Rate NOT BETWEEN 0.01 AND 3
 	BEGIN
-		SELECT @ErrMsg = 'Invalid rate! Rate must range between 0.01 and 3'
+		SELECT @ErrMsg = 'Invalid rate for O/U and HDP group! Rate must range between 0.01 and 3'
 			 , @ErrCode = 109
 
 		RETURN
 	END
+	
+	IF @Rate2 NOT BETWEEN 0.01 AND 3 
+	BEGIN
+		SELECT @ErrMsg = 'Invalid rate for 1x2 Group! Rate must range between 0.01 and 3'
+			 , @ErrCode = 109
 
+		RETURN
+	END
+	
+	-- Don't allow to save rate with 3 decimal digits
+	IF CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate, 1))
+	BEGIN
+		SELECT @ErrMsg = 'Invalid rate for O/U and HDP group! Don''t enter the number with more than 2 decimal places.'
+			 , @ErrCode = 110
+
+		RETURN
+	END
+	
+	IF (CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate2, 2)) <> CONVERT(FLOAT, CONVERT(NVARCHAR, @Rate2, 1)))
+	BEGIN
+		SELECT @ErrMsg = 'Invalid rate for 1x2 Group! Don''t enter the number with more than 2 decimal places.'
+			 , @ErrCode = 110
+
+		RETURN
+	END
+
+	
 	-- Validate Odds: Odds must range between -0.1 and 0.1, 2 decimal digits		
 	IF (@LiveOdds NOT BETWEEN -0.1 AND 0.1)
 	   OR (@NonLiveOdds NOT BETWEEN -0.1 AND 0.1)
 	   OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@LiveOdds * 100))) %1 <> 0)
 	   OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@NonLiveOdds * 100))) %1 <> 0)
-
+	   OR (@LiveOdds2 NOT BETWEEN -0.1 AND 0.1)
+	   OR (@NonLiveOdds2 NOT BETWEEN -0.1 AND 0.1)
+	   OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@LiveOdds2 * 100))) %1 <> 0)
+	   OR (CONVERT(SMALLMONEY, RTRIM(CONVERT(CHAR(10),@NonLiveOdds2 * 100))) %1 <> 0)
 	BEGIN
 		SELECT @ErrMsg = 'Invalid odds! Odds must range between -0.1 and 0.1'
-			 , @ErrCode = 110
+			 , @ErrCode = 111
 
 		RETURN
 	END 
@@ -390,6 +418,8 @@ BEGIN
 			,@duration = @duration
 	END CATCH
 END
+
+
 
 
 
