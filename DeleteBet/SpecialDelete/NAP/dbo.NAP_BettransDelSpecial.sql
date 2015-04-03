@@ -684,8 +684,22 @@ BEGIN
 				)
 				OR
 				(
-				  b.bettype IN (159,179)
+				  b.bettype IN (159)
 				  AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN b.betteam ELSE @BetTeam159 END, '^'))
+				)
+				OR
+				(
+				  b.bettype IN (179)
+				  AND 
+				  (
+					(b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN b.betteam ELSE @BetTeam159 END, '^')))
+					OR
+					(
+						b.betteam = 'G4'
+						AND
+						'G4&Over' IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN 'G4&Over' ELSE @BetTeam159 END, '^'))
+					)
+				  )
 				)
 				OR
 				(
