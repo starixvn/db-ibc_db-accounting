@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 04/01/2015 17:06:49 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 04/02/2015 13:32:13 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -85,7 +85,7 @@ BEGIN
 		,@sporttype		= m.sporttype
 		,@leagueid		= m.leagueid
 		,@IsNested		= 0
-		,@Action		= 'CAL'
+		,@Action		= 'REFUND'
 	FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -116,19 +116,20 @@ BEGIN
 		RETURN
 	END
 
-	IF EXISTS (SELECT TOP 1 1 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.matchid = @matchid
-				AND b.statusID = 1 -- waiting status
-				AND b.bettype NOT BETWEEN 1501 AND 1599
-				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing						
-			)
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'REFUND'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrCode = 1001013
-			,@ErrMsg = 'Cannot proceed as there exists some PENDING tickets in this match. Please contact admin for help.'
-			
+		SELECT @ErrCode
+			,@ErrMsg
+		
 		RETURN
-	END	
+	END
 	
 	SELECT @ErrCode		= 0
 		,@ErrMsg		= ''
@@ -246,6 +247,9 @@ BEGIN
 			,@sqlCommand
 	END
 END
+
+
+
 
 
 GO

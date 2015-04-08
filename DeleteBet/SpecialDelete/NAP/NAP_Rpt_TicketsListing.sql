@@ -26,6 +26,7 @@ AS
 		- 20131203@Kathy: Add @showtime column.
 						Using Dep_CustSuper table instead of f_DepSuper_1() function.
 		- 20141021@Kathy: Consolidate Sportting Solution and IBC bettypes [Redmine:#23129]
+		- 20150401@Dominic: Add new parent-child bettypes [Redmine:#27214]
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -161,21 +162,33 @@ BEGIN
 		)
 
 	INSERT INTO @tmpConsolidatedBettypes
-		SELECT 153, 1308 -- Game Handicap	
+		SELECT 153, 1308 -- Game Handicap
 		UNION ALL
-		SELECT 154, 1311 -- Set x Winner	
+		SELECT 154, 1311 -- Set x Winner
 		UNION ALL
 		SELECT 155, 1316 -- Set x Game Handicap
 		UNION ALL
-		SELECT 156, 1312 -- Set x Total Games	
+		SELECT 156, 1312 -- Set x Total Games
 		UNION ALL
 		SELECT 1, 1303 -- Handicap
 		UNION ALL
-		SELECT 2, 1305 -- Odd/Even	
+		SELECT 2, 1305 -- Odd/Even
 		UNION ALL
-		SELECT 3, 1306 -- Over/Under	
+		SELECT 2, 157 -- Odd/Even
+		UNION ALL
+		SELECT 3, 1306 -- Over/Under
 		UNION ALL
 		SELECT 20, 1301 -- Moneyline
+		UNION ALL
+		SELECT 22, 160 -- Next Goal
+		UNION ALL
+		SELECT 144, 163 -- Result/Total Goals
+		UNION ALL
+		SELECT 18, 178 -- 2H Over/Under
+		UNION ALL
+		SELECT 17, 183 -- 2H Handicap
+		UNION ALL
+		SELECT 11, 199 -- Total Corners
 
 	INSERT INTO #TmpBettrans
 	SELECT srecommend

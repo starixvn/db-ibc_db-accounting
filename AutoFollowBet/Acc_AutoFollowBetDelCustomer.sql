@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 03/25/2015 09:26:58 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 04/06/2015 17:25:00 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -151,17 +151,19 @@ BEGIN
 	DELETE Cust_followBet WITH(ROWLOCK, UPDLOCK)
 	WHERE custid = @custid
 	AND follower = @custFollower
-	 
-	--  If remove a member, but his upline is being followed -> danger still stay at level 2
-	UPDATE dbo.custInfo WITH(ROWLOCK, UPDLOCK)
-	SET danger = CASE WHEN @isBA = 1 THEN 100 ELSE 0 END
-		,danger2 = 0
-	WHERE custid = @custid
-	AND (
-			(@isAgent = 1) 
-			OR (recommend NOT IN (SELECT cf.custid FROM dbo.Cust_FollowBet cf WITH(NOLOCK) WHERE cf.IsAgent = 1))
-		)
 	
+	IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Cust_FollowBet WITH(NOLOCK) WHERE custid = @CustId)
+	BEGIN
+		--  If remove a member, but his upline is being followed -> danger still stay at level 2
+		UPDATE dbo.custInfo WITH(ROWLOCK, UPDLOCK)
+		SET danger = CASE WHEN @isBA = 1 THEN 100 ELSE 0 END
+			,danger2 = 0
+		WHERE custid = @custid
+		AND (
+				(@isAgent = 1) 
+				OR (recommend NOT IN (SELECT cf.custid FROM dbo.Cust_FollowBet cf WITH(NOLOCK) WHERE cf.IsAgent = 1))
+			)
+	END
 	-- update downlines
 	-- If remove an agent, but his downline who is being followed -> danger of only this member still stay at level 2
 	IF @isAgent = 1
@@ -248,6 +250,10 @@ BEGIN
 			@duration = @duration 
 	END CATCH
 END
+
+
+
+
 
 
 
