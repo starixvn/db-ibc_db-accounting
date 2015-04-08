@@ -1,10 +1,12 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/02/2015 13:31:52 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/08/2015 12:56:28 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 07/04/2015 3:41:11 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -35,7 +37,10 @@ BEGIN
 			,@HaveWaitingTicket VARCHAR(200)
 			,@procName nvarchar(50)	
 			,@matchid int
-
+		
+	DECLARE @subErrCode		INT
+			,@subErrMsg		NVARCHAR(200)
+	
 	DECLARE @match TABLE ( matchid INT
 						  ,matchcode NVARCHAR(50)
 						  ,fth SMALLINT
@@ -47,7 +52,9 @@ BEGIN
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''
 			,@procName = OBJECT_NAME(@@procid)
-
+			,@subErrCode = 0
+			,@subErrMsg = ''
+			
 	INSERT INTO @match ( matchid, matchcode, fth, fta, hth, hta)
 	SELECT DISTINCT matchid
 			,matchcode
@@ -119,7 +126,7 @@ BEGIN
 									ELSE ''
 								END 
 							+ CASE WHEN ISNULL(@HaveWaitingTicket, '') <> ''
-									THEN '(existing some PENDING tickets in these match): ' + @HaveWaitingTicket
+									THEN '(existing some PENDING tickets): ' + @HaveWaitingTicket
 									ELSE ''
 								END
 	END
@@ -153,12 +160,12 @@ BEGIN
 						,@creator = @AdminId
 						,@action  = @action
 						,@IP      = @IP
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg  = @ErrMsg   OUTPUT
+						,@ErrCode = @subErrCode OUTPUT
+						,@ErrMsg  = @subErrMsg   OUTPUT
 				END TRY
 
 				BEGIN CATCH
-					SELECT @ErrMsg  = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+					SELECT @ErrMsg  = @subErrMsg + ISNULL(ERROR_MESSAGE(),'')
 						  ,@ErrCode = @@error
 					RETURN
 				END CATCH
@@ -187,6 +194,9 @@ BEGIN
 		END
 	END
 END
+
+
+
 
 
 
