@@ -4,7 +4,7 @@
 	@FromTransId			BIGINT, 
 	@ToTransId				BIGINT, 
 		
-	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 153, 183, 1303, 1306, 1308
+	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 17, 153, 183, 1303, 1306, 1308
 	@Handicap155			SMALLMONEY		= 9999,		-- 155, 1316 
 	@Handicap178			SMALLMONEY		= 9999,		-- 178,197,198,204,205
 	@OverUnder156			SMALLMONEY		= 9999,		-- 156, 1312 
@@ -18,7 +18,7 @@
 	
     @BetTypes				VARCHAR(1000)	= '',
 	
-	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 20, 153,157,168,183,185,191, 1301, 1303, 1305, 1306, 1308 
+	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 17, 20, 153,157,168,183,185,191, 1301, 1303, 1305, 1306, 1308 
 	@BetTeam515				NVARCHAR(10)	= 'ALL',	-- 5,15,160,164,167,176,177,180
 	@BetTeam430				VARCHAR(120) 	= '',
     @BetTeam6				VARCHAR(120) 	= '',		-- 6, 126, 131, 132
@@ -339,7 +339,7 @@ BEGIN
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END 
 		AND b.transdate between CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END
 							AND CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-		AND b.betteam = CASE WHEN b.bettype IN (1,2, 3,7,8,12, 20, 153, 157, 168, 183, 185, 191, 1301, 1303, 1305, 1306, 1308) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
+		AND b.betteam = CASE WHEN b.bettype IN (1,2, 3,7,8,12, 17, 20, 153, 157, 168, 183, 185, 191, 1301, 1303, 1305, 1306, 1308) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
 							WHEN b.bettype IN (5,15,160,164,167,176,177,180) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 							ELSE b.betteam END 
 		AND CASE WHEN b.bettype IN (160,164,180) 
@@ -359,7 +359,7 @@ BEGIN
 								190, 193, 194, 195, 196, 197, 198, 199,
 								200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216, 217,
 								1302, 1311, 1312, 1316, 1317, 1318, 1324)
-		AND CASE WHEN b.bettype IN (1,3,7,8, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
+		AND CASE WHEN b.bettype IN (1,3,7,8, 17, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
 													ELSE 0 END 
 			ELSE 1 END = 1
