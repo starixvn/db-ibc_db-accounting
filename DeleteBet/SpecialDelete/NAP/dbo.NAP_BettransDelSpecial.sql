@@ -44,7 +44,7 @@
 	@BetTeam200				VARCHAR(120)	= 'ALL',	-- 200,201
 	@BetTeam169				VARCHAR(120)	= 'ALL',	-- 169,193
 	@BetTeam210				VARCHAR(10)		= 'ALL',	-- 210,173,174,188,189,190,211,212,123,214,215,133,134,135,145,146,147,148,149,150
-	@BetTeam216				VARCHAR(120)	= 'ALL',	-- 216,217
+	@BetTeam216				VARCHAR(120)	= 'ALL',	-- 216
 	
 	@Set154					VARCHAR(3)		= 'ALL', 	-- 154, 155, 1311, 1316 
 	@Set156					VARCHAR(3)		= 'ALL', 	-- 156, 1312 
@@ -357,7 +357,7 @@ BEGIN
 								154, 155, 156, 159, 161, 162, 163, 165, 166, 169, 
 								173, 174, 178, 179, 181, 182, 184, 188, 189, 
 								190, 193, 194, 195, 196, 197, 198, 199,
-								200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216, 217,
+								200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216,
 								1302, 1311, 1312, 1316, 1317, 1318, 1324)
 		AND CASE WHEN b.bettype IN (1,3,7,8, 17, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 														WHEN @Handicap = (hdp1 + hdp2) THEN 1
@@ -652,7 +652,7 @@ BEGIN
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END				 
 	
-		--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216,217
+		--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216
 		INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
@@ -676,7 +676,7 @@ BEGIN
 		AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
 		AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 						AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 	
-		AND b.bettype IN (133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216,217)
+		AND b.bettype IN (133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216)
 		AND (
 				(
 				  b.bettype IN (165,166)
@@ -692,7 +692,7 @@ BEGIN
 				  b.bettype IN (179)
 				  AND 
 				  (
-					(b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN b.betteam ELSE @BetTeam159 END, '^')))
+					(b.betteam <> 'G4' AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN b.betteam ELSE @BetTeam159 END, '^')))
 					OR
 					(
 						b.betteam = 'G4'
@@ -738,7 +738,7 @@ BEGIN
 				)
 				OR
 				(
-				  b.bettype IN (216,217)
+				  b.bettype IN (216)
 				  AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam216 = 'ALL' THEN b.betteam ELSE @BetTeam216 END, '^'))
 				)
 			)
