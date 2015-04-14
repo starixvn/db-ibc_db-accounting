@@ -3,6 +3,7 @@
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
 	,@Results			VARCHAR(MAX)	= '' 
+	,@IsSettleAbandonedMatchIBC			BIT = 0 
 	,@Action			VARCHAR(10)		= 'CAL'
 	,@IsAuto			BIT				= 1
 	,@IP				VARCHAR(15)		= ''
@@ -84,6 +85,7 @@ BEGIN
 															+ ', @AdminId = ' + CONVERT(NVARCHAR(50), @AdminId) 
 															+ ', @ResourceIDs = ''' + CONVERT(VARCHAR(MAX), @ResourceIDs) + ''''
 															+ ', @Results = ''' + CONVERT(VARCHAR(MAX), @Results) + ''''
+															+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(50), @IsSettleAbandonedMatchIBC) 	
 															+ ', @Action = ''' + CONVERT(NVARCHAR(50), @Action) + '''' 
 															+ ', @isAuto = ' + CONVERT(NVARCHAR(50), @isAuto) 														
 															+ ', @IP = ''' + CONVERT(VARCHAR(15), @IP) + '''' 
