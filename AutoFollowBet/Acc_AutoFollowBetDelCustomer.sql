@@ -1,10 +1,11 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 04/06/2015 17:25:00 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 04/14/2015 09:58:56 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetDelCustomer    Script Date: 08/04/2015 9:36:37 AM ******/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetDelCustomer]	
 	@Username   VARCHAR(30),
 	@Follower	VARCHAR(30),
@@ -250,15 +251,6 @@ BEGIN
 			@duration = @duration 
 	END CATCH
 END
-
-
-
-
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [bodbAdminNet] AS [dbo]
 GO
