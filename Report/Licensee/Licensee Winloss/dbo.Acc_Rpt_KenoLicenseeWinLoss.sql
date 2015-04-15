@@ -1,12 +1,5 @@
-USE [bodb_Licensee]
-GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Acc_Rpt_KenoLicenseeWinLoss]
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_KenoLicenseeWinLoss]
 	@LicenseeIDList	NVARCHAR(500),
 	@BettypeID		INT = 0,
 	@Currency		VARCHAR(3)='0',
@@ -22,6 +15,7 @@ AS
 			-20140610@Jim: fix bug #17114 ( regardless effective date of Keno)
 			-20140617@Jim: +Report changed to support group by currency
 						   +Hard-code  launch date  for all Credit Customers (belong to 2 licensees FDL, PIH) 	
+			-20150211@Jim: support to base on currency GBP			   
 	Param's Explanation:  
 	  + @@LicenseeIDList: list of LicenseeID, seperate by ',' 
 	  +	@BettypeID: Keno Bettype, if this value is 0 - All Keno Bettypes
@@ -29,11 +23,11 @@ AS
 */
 /*
 	 	 exec Acc_Rpt_KenoLicenseeWinLoss 
-	@LicenseeIDList=N'1'
-	,@Currency='0'
-	,@BettypeID=0
-	,@FromDate='2014-04-01 00:00:00'
-	,@ToDate='2014-04-01 00:00:00'
+		@LicenseeIDList=N'1'
+		,@Currency='0'
+		,@BettypeID=0
+		,@FromDate='2014-04-01 00:00:00'
+		,@ToDate='2014-04-01 00:00:00'
  
 */
 BEGIN
@@ -138,7 +132,7 @@ BEGIN
 	FROM #tmpResult
 	GROUP BY  CurrencyCode
 	ORDER BY CurrencyCode
-	--- Total (base on EUR/MYR )
+	--- Total (base on EUR/MYR/GBP )
 	SELECT *
 	INTO #Exchange	
 	FROM bodb02.dbo.Lrf_f_GetExchangeDaily(@FromDate,@ToDate)
@@ -147,9 +141,11 @@ BEGIN
 	SELECT 
 		 SUM(d.TurnOver*ex.EUR)		  AS ToTalTurnOverEUR
 		 ,SUM(d.TurnOver*ex.MYR) 	  AS ToTalTurnOverMYR
+		 ,SUM(d.TurnOver*ex.GBP) 	  AS ToTalTurnOverGBP
 		 ,SUM(d.BetCount) 			  AS TotalTransaction
 		 ,SUM(d.MemberWinloss*ex.EUR) AS CustomerWLEUR
 		 ,SUM(d.MemberWinloss*ex.MYR) AS CustomerWLMYR
+		 ,SUM(d.MemberWinloss*ex.GBP) AS CustomerWLGBP
 	FROM #tmpResult d
 	INNER JOIN #Exchange ex ON d.rptDate = ex.exchangedate AND d.CurrencyID = ex.ExchangeId
 	
@@ -160,7 +156,17 @@ BEGIN
 	DROP TABLE #tmpResult 
 	DROP TABLE #Exchange
 END
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_KenoLicenseeWinLoss] TO [bodbAdminNet]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_KenoLicenseeWinLoss] TO [vnteam]
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_KenoLicenseeWinLoss] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_KenoLicenseeWinLoss] TO [bodbAdminNet]
+GO 

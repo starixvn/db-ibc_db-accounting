@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByCom]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByCom]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@currency INT,	
@@ -28,6 +28,7 @@ Revisions:
 	-20140304@TomVo: 
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
+	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]						
 */  
 
 SET NOCOUNT ON
@@ -273,7 +274,6 @@ GROUP BY b.srecommend ,
 		--cs.virtualmultiplier,
 		CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
 
-
 SELECT b.srecommend,
 	cs.UserName,
 	SUM(Turnover) Turnover,
@@ -288,11 +288,23 @@ SELECT b.srecommend,
 	SUM(CASE WHEN virtualratetype=-1 THEN totalrm-virtual_total ELSE 0 END) [WLVariance-],
 	SUM(CASE WHEN virtualratetype=1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance+],
 	SUM(CASE WHEN virtualratetype=-1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance-],
-	(ISNULL(cs.virtualmultiplier,1)-1)*100 virtualrate
+	ISNULL(cs.virtualmultiplier,1) EnableVirtualrate
 FROM #TmpResultAll b
 INNER JOIN custinfo cs WITH(NOLOCK) ON b.srecommend = cs.custid
-GROUP BY b.srecommend,(ISNULL(cs.virtualmultiplier,1)-1)*100,cs.username
+GROUP BY b.srecommend,ISNULL(cs.virtualmultiplier,1),cs.username
+ORDER BY username	
 
+SELECT cs.username
+		,vr.custid
+		,vr.sporttype
+		,vr.bettype
+		,vr.islive
+		,vr.virtualMultiplier
+FROM custinfo cs WITH(NOLOCK) 
+	INNER JOIN CustVirtualRate vr WITH(NOLOCK) ON cs.custid = vr.custid
+WHERE cs.custid IN (SELECT DISTINCT srecommend FROM #TmpResultAll)
+	AND cs.virtualMultiplier = 1
+ORDER BY username,sporttype,islive DESC, bettype
 
 DROP TABLE #TmpResult
 DROP TABLE #TmpResultAll

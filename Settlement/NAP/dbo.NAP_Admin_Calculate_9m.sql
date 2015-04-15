@@ -1,3 +1,11 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 04/08/2015 13:00:33 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9m    Script Date: 3/2/2015 4:40:37 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT
 	,@fta INT
@@ -56,6 +64,7 @@ AS
 							sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20141204@Jamie: Sportting Solution settlement - Change rule Set x Correct Score [Redmine:#23034]
+		- 20150407@Kathy: Don't update 'waiting' ticket when do "Undo" action [Redmine:#33493]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -321,7 +330,7 @@ BEGIN
 			,ruben = 0
 			,statusID = 0
 		WHERE matchid = @matchid 
-		AND statusID NOT IN (101, 102)
+		AND statusID NOT IN (101, 102, 1)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
@@ -338,7 +347,7 @@ BEGIN
 		SET statuswinlost = 0
 			,statusID = 0
 		WHERE matchid = @matchid 
-		AND statusID NOT IN (101, 102)
+		AND statusID NOT IN (101, 102, 1)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
@@ -1386,5 +1395,7 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]

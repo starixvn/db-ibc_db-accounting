@@ -15,6 +15,9 @@ AS
 		- 20130224@Lukas: move sp to new database bodb_ACC
 						& change linked-server from db03 to DBPOLICY
 		- 20131203@Elodie: Expand size of string	
+		- 20150126@Johnson: Separate virtual rate setting into sport types and bet types [Redmine: #25840]						
+						+ Change to use new structure : table Ac_VirtualRateList						 						
+	
 */
 BEGIN
 SET NOCOUNT ON
@@ -35,33 +38,27 @@ SET NOCOUNT ON
 	)
 	INSERT INTO @tmpExistUser
 	SELECT 	v.UserName
-	FROM	dbo.Acc_CustVirtualRate v WITH (NOLOCK) 
+	FROM	dbo.Acc_VirtualRateList v WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.custinfo c WITH (NOLOCK) ON c.username=v.username
+	WHERE	v.userID = @userID
 	GROUP BY v.UserName
 
 
-	INSERT INTO @tmpFail
-	SELECT 	UserName, 
-			'This username is repeated '+ CAST(COUNT(UserName) AS VARCHAR(20))+' times.' AS reason
-	FROM	dbo.Acc_CustVirtualRate WITH (NOLOCK)
-	WHERE	UserID=@UserID 
-	GROUP BY UserName 
-	HAVING COUNT(UserName)>1
-	UNION ALL
+	INSERT INTO @tmpFail		
 	SELECT	t.username,
 			'This username does not exist in the system.' AS reason 
 	FROM	
 	(
-			SELECT	username FROM dbo.Acc_CustVirtualRate WITH (NOLOCK) WHERE	UserID=@UserID 
+			SELECT	username FROM dbo.Acc_VirtualRateList WITH (NOLOCK) WHERE	UserID=@UserID 
 			EXCEPT (
 				SELECT	UserName
 				FROM	@tmpExistUser
 			)
 		) t
 	
-	DELETE FROM dbo.Acc_CustVirtualRate WHERE userid = @userid AND username IN (SELECT username FROM @tmpFail)
+	DELETE FROM dbo.Acc_VirtualRateList WHERE userid = @userid AND username IN (SELECT username FROM @tmpFail)
 	
-	SELECT * FROM dbo.Acc_CustVirtualRate WITH (NOLOCK) 
+	SELECT * FROM dbo.Acc_VirtualRateList WITH (NOLOCK) 
 	WHERE	UserID=@UserID 
 	ORDER BY username
 

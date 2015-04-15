@@ -1,4 +1,10 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_PlaytechWinloss2] 
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_PlaytechWinloss2] 
  @LicenseeID	INT,
  @Currency		INT = 0,
  @FromDate		SMALLDATETIME,  
@@ -12,7 +18,7 @@ AS
     DB: DB06.bodb02  
    
     Revisions:  
-		
+		- 20150211@Jim: support base on GBP
 	Param's Explanation:  
 	  + @ReportType: 1-Daily; 2-Monthly;  
 	  + @BackupDay: The day we move tickets to rptDepWinlostByProduct_bk
@@ -35,10 +41,13 @@ BEGIN
 
 	DECLARE @tempAg	TABLE(custID INT, currency INT) 
 	DECLARE @LicenseeName VARCHAR(50)
-	DECLARE @VNDCurrencyName VARCHAR(20)
-
-	DECLARE @BackupDay SMALLDATETIME
-
+			,@VNDCurrencyName VARCHAR(20)
+			,@BackupDay SMALLDATETIME
+			,@SqlCmd    VARCHAR(4000)
+			,@Rate		VARCHAR(3)
+			,@i 		TINYINT
+			,@maxID		INT
+			
 	SELECT @BackupDay = MIN(winlostdate)
 	FROM [bodb_report].[dbo].[rptDepWinlostByProduct] WITH (NOLOCK)
 
@@ -127,66 +136,71 @@ BEGIN
 			AND r.sporttype = 254
 		GROUP BY  r.winlostdate, s.currency
 	END 
-
 	CREATE NONCLUSTERED INDEX IDX_Index_SA ON #SAgWinLoss(Currency)
 	SELECT * INTO #TempExchange 
 	FROM Lrf_f_GetExchangeDaily(@FDate,@TDate)
 	WHERE exchangeid IN (SELECT DISTINCT Currency FROM #SAgWinLoss)
-
-	SELECT   
-	   CASE WHEN @ReportType = 1 THEN CONVERT(VARCHAR(8),w.winlostdate,112)  
-			WHEN @ReportType = 2 THEN CONVERT(VARCHAR(6),w.winlostdate,112)  
-			ELSE '0' END ReportType,  
-	   Currency ,   
-			CASE WHEN Currency = 51 THEN @VNDCurrencyName 
-				ELSE e.Code END CurrencyName,
-	   SUM(TurnOver)	AS Turnover,   
-	   SUM(Winlost)		AS Winlost,  
-	   SUM(LicenseeWL)  AS LicenseeWL,
-	   SUM(PlayerComm)  AS PlayerComm,
-	   SUM(AmtDueto)    AS AmtDueTo,
-	   SUM(Betcount)	AS BetCount,
-   
-	   --BaseRM  
-	   CAST(SUM(TurnOver*e.MYR) AS MONEY)	AS TurnoverMYR,   
-	   CAST(SUM(Winlost*e.MYR) AS MONEY)	AS WinlostMYR,  
-	   CAST(SUM(LicenseeWL*e.MYR) AS MONEY) AS LicenseeWLMYR,
-	   CAST(SUM(PlayerComm*e.MYR) AS MONEY) AS PlayerCommMYR,
-	   CAST(SUM(AmtDueto*e.MYR) AS MONEY)	AS AmtDueToMYR,
-   
-	   --BaseUSD  
-	   CAST(SUM(TurnOver*e.USD) AS MONEY)	AS TurnoverUSD,   
-	   CAST(SUM(Winlost*e.USD) AS MONEY)	AS WinlostUSD,  
-	   CAST(SUM(LicenseeWL*e.USD) AS MONEY) AS LicenseeWLUSD,
-	   CAST(SUM(PlayerComm*e.USD) AS MONEY) AS PlayerCommUSD,
-	   CAST(SUM(AmtDueto*e.USD) AS MONEY)	AS AmtDueToUSD,
-   
-		--BaseEUR  
-	   CAST(SUM(TurnOver*e.EUR) AS MONEY)	AS TurnoverEUR,   
-	   CAST(SUM(Winlost*e.EUR) AS MONEY)	AS WinlostEUR,  
-	   CAST(SUM(LicenseeWL*e.EUR) AS MONEY) AS LicenseeWLEUR,
-	   CAST(SUM(PlayerComm*e.EUR) AS MONEY) AS PlayerCommEUR,
-	   CAST(SUM(AmtDueto*e.EUR) AS MONEY)	AS AmtDueToEUR
-	FROM	
-		#SAgWinLoss w   
-		INNER JOIN  #TempExchange e
-		ON w.winlostdate = e.ExchangeDate AND w.currency = e.ExchangeId
-	GROUP BY   
-		Currency
-		,CASE WHEN @ReportType = 1 THEN CONVERT(VARCHAR(8),w.winlostdate,112)  
-			  WHEN @ReportType = 2 THEN CONVERT(VARCHAR(6),w.winlostdate,112)  
-			  ELSE '0' END   
-		, CASE WHEN Currency = 51 THEN @VNDCurrencyName 
-				ELSE e.Code END
-	ORDER BY ReportType  
-
+	SET @SqlCmd  = ''
+	SELECT @SqlCmd  = @SqlCmd  +
+								'SELECT' +CHAR(13)+
+								CASE WHEN  @ReportType = 1 THEN 'CONVERT(VARCHAR(8),w.winlostdate,112) '
+									 WHEN  @ReportType = 2 THEN 'CONVERT(VARCHAR(6),w.winlostdate,112) ' 	
+									 ELSE '0' END +'ReportType,'+CHAR(13)+
+								'Currency,'	 + CHAR(13)+
+								'CASE WHEN Currency = 51 THEN '''+CONVERT(VARCHAR(20),@VNDCurrencyName) +''''+CHAR(13)+
+									'ELSE e.Code END CurrencyName,'+CHAR(13)+
+								'SUM(TurnOver)	AS Turnover, '	   +CHAR(13)+
+								'SUM(Winlost)		AS Winlost,'   +CHAR(13)+
+								'SUM(LicenseeWL)  AS LicenseeWL,'  +CHAR(13)+
+								'SUM(PlayerComm)  AS PlayerComm,'  +CHAR(13)+
+							    'SUM(AmtDueto)    AS AmtDueTo,'    +CHAR(13)+
+							    'SUM(Betcount)	AS BetCount,'	   +CHAR(13)		 
+	SELECT  @i = 1
+			,@maxID = MAX(ID)
+	FROM dbo.Lrf_f_basecurrency (@ToDate)
+	WHILE (@i <= @maxID)
+	BEGIN
+		SELECT @Rate = Currency
+		FROM dbo.Lrf_f_basecurrency (@ToDate)
+		WHERE ID = @i
+		SELECT @SqlCmd  = @SqlCmd  + '----'+CONVERT(VARCHAR(3),@Rate)+CHAR(13)+
+									+'CAST(SUM(TurnOver*e.'+CONVERT(VARCHAR(3),@Rate)+')   AS MONEY) AS Turnover'+@Rate+','+CHAR(13)+
+									+'CAST(SUM(Winlost*e.'+CONVERT(VARCHAR(3),@Rate)+')    AS MONEY) AS Winlost'+@Rate+','+CHAR(13)+
+									+'CAST(SUM(LicenseeWL*e.'+CONVERT(VARCHAR(3),@Rate)+') AS MONEY) AS LicenseeWL'+@Rate+','+CHAR(13)+
+									+'CAST(SUM(PlayerComm*e.'+CONVERT(VARCHAR(3),@Rate)+') AS MONEY) AS PlayerComm'+@Rate+','+CHAR(13)+
+									+'CAST(SUM(AmtDueto*e.'+CONVERT(VARCHAR(3),@Rate)+')   AS MONEY) AS AmtDueTo'+@Rate+','+CHAR(13)
+		SET @i = @i+1							
+	END
+	
+	SELECT @SqlCmd  = SUBSTRING(@SqlCmd,1,LEN(@SqlCmd)-2) +CHAR(13) +'FROM'+CHAR(13)	+
+								'#SAgWinLoss w  '+CHAR(13)+
+								'INNER JOIN  #TempExchange e
+								ON w.winlostdate = e.ExchangeDate AND w.currency = e.ExchangeId'+CHAR(13)+
+							'GROUP BY   
+								Currency,'+CHAR(13)+
+								CASE WHEN @ReportType = 1 THEN ' CONVERT(VARCHAR(8),w.winlostdate,112)' 
+									  WHEN @ReportType = 2 THEN ' CONVERT(VARCHAR(6),w.winlostdate,112)'
+									  ELSE '0' END +','+CHAR(13)+
+								' CASE WHEN Currency = 51 THEN '''+CONVERT(VARCHAR(20),@VNDCurrencyName)+''''+CHAR(13)+
+										'ELSE e.Code END'+CHAR(13)+
+							'ORDER BY ReportType' +CHAR(13) 
+	EXEC (@SqlCmd)
 	DROP TABLE #TempExchange
 	DROP TABLE #SAgWinLoss   
 END   
+
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_PlaytechWinloss2] TO [bodbLicenseeNet]
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_PlaytechWinloss2] TO [bodbAdminNet]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_PlaytechWinloss2] TO [vnteam] 
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_PlaytechWinloss2] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_PlaytechWinloss2] TO [bodbLicenseeNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_PlaytechWinloss2] TO [bodbAdminNet]
+GO 

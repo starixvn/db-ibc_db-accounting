@@ -12,7 +12,14 @@ SET NOCOUNT ON
 		- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
 		- 20130618@Johnson: Add NSW racing's pools from AUST
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
+		- 20150108@Dom: Apply sport bettype matrix	
 */
+	
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=2
+
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 
 	DECLARE @CommSetting TABLE (matchid int primary key,
@@ -72,14 +79,14 @@ SET NOCOUNT ON
 			sum((b.winlost -b.actual_stake)*b.actualrate) winlost,
 			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) position,
 			sum(b.scomm*b.actualrate) commission,
-			-(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
-			- sum(case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when bettype in (31,32) then b.actual_stake*(1 - b.tpositiontaking - isnull(b.oddsspread,0) ) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
-			+ sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
+			-(sum((case when b.bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
+			- sum(case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when b.bettype in (31,32) then b.actual_stake*(1 - b.tpositiontaking - isnull(b.oddsspread,0) ) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
+			+ sum((case b.bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
 								when 32 then b.actual_stake*cs.ToteCommPlace*(1 - b.tpositiontaking - isnull(oddsspread,0))
 								when 33 then bm.TOPhum*cs.ToteCommWP 
 								else 0 end)*b.actualrate) --commIncomeIBC
 			- sum(b.scomm*b.actualrate)) LineTotal,
-			sum(case when bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end) Turnover
+			sum(case when b.bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end) Turnover
 			
 	FROM	bettrans14 b with (nolock)
 			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid  
@@ -92,8 +99,9 @@ SET NOCOUNT ON
 				group by refno
 			 )bm on b.transid = bm.refno 
 			 LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
+			 INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	WHERE	b.ruben =1 
-			and b.bettype in (31,32,33)
+			--and b.bettype in (31,32,33)
 			and b.matchid >0
 			and b.winlostdate = @winlostdate
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')

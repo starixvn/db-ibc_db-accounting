@@ -255,7 +255,7 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					--AND bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) 
 					--AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
 					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-					--AND b.custid = @custid 
+					AND b.custid = @custid 
 					AND match.sporttype <> 1 
 			
 			UNION ALL 

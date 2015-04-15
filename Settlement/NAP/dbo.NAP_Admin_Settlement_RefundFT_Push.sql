@@ -1,10 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT_Push]    Script Date: 09/11/2014 17:12:51 ******/
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT_Push]    Script Date: 04/02/2015 13:33:24 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT_Push] 
 	@MatchId						INT
 	,@AdminId						INT
@@ -30,6 +30,7 @@ AS
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
 
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -45,10 +46,12 @@ BEGIN
 		,@leagueid		INT
 		,@sqlCommand	NVARCHAR(500)
 		,@procName		NVARCHAR(50)
+		,@Action		VARCHAR(10)
 
 	SELECT @matchcode	= m.matchcode
 		,@sporttype		= m.sporttype
 		,@leagueid		= m.leagueid
+		,@Action		= 'REFUND-FT'
 	FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -76,6 +79,21 @@ BEGIN
 		SELECT @ErrCode = 1000003
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
+		RETURN
+	END
+	
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'REFUND'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrCode
+			,@ErrMsg
+		
 		RETURN
 	END
 
@@ -117,6 +135,7 @@ BEGIN
 		BEGIN CATCH
 			SELECT @ErrMsg	= @ErrMsg + ERROR_MESSAGE()
 				,@ErrCode	= @@error
+
 
 			RETURN
 		END CATCH
@@ -161,13 +180,15 @@ BEGIN
 			,@sporttype
 			,@AdminId
 			,@IP
-			,'Refund-FT'
+			,@Action
 			,@sqlCommand
 	END
 END
-GO
 
+
+
+
+GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundFT_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundFT_Push] TO [vnteam] AS [dbo]

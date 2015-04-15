@@ -11,37 +11,39 @@ AS
 	
 	Revision: 
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call custInfo, exchange by link database)
-		- 20140312@Elodie: Group result by CustID, MatchId, GroupID, TotalBalance
+		- 20150120@Jamie: Edit the definition of @isTest 
+		- 20150316@Elodie: Support Negative Balance function for all licensee [Red:#30840]
 	Param's Explanation: 
-		@isTest: 0: Exclude currency UUS; 1: All Currency 
+		@isTest: 0: Real Currency; 1: UUS Currency 
 	
 */
 BEGIN 
 	SET NOCOUNT ON 
-	SELECT	  MAX(h.LogID)
-			, MAX(h.LogDate)
+	SELECT	  h.LogID	
+			, h.LogDate
 			, h.MatchID
-			, CASE WHEN h.GroupID = 2 THEN 1 ELSE h.GroupID END AS GroupID
+			, h.GroupID
 			, h.CustID
-			, ci.Username
+			, c.Username
 			, h.TotalBalance
 			, CurrencyName = e.currency 
 			, h.Site
-			, bin.CustomInfo1
+			, CASE WHEN bin.CustomInfo1 IS NULL THEN c.username2 ELSE bin.CustomInfo1 END AS CustomInfo1
 	FROM	BalanceNegativeHistory h WITH (NOLOCK)
+			INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON h.CustID = c.custid
+			INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
 			LEFT JOIN DBDEPBBIN.bbin.dbo.Customer bin WITH (NOLOCK) ON h.CustID = bin.IBCCustID
-			LEFT JOIN CustDB.dbo.custInfo ci WITH (NOLOCK) ON h.CustID = ci.custid
-			LEFT JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON ci.currency = e.exchangeid
 	WHERE	h.StatusID = 0 
-			AND e.exchangeid <> CASE @isTest WHEN 0 THEN 20 ELSE 0 END
-	GROUP BY h.CustID, h.MatchID, 
-			 CASE WHEN h.GroupID = 2 THEN 1 ELSE h.GroupID END,
-			 ci.UserName, TotalBalance, e.currency, Site, bin.CustomInfo1
-	ORDER BY	  MAX(h.LogID) ASC
+			AND h.Site = @Site
+			AND 1 = CASE WHEN @isTest = 0 AND e.exchangeID <> 20 THEN 1 
+						 WHEN @isTest = 1 AND e.exchangeID = 20 THEN 1 
+						 ELSE 0 
+						 END  
+			
+	ORDER BY	  h.LogID ASC
 				, h.MatchID ASC
-				, ci.Username ASC
-END 
-
+				, c.Username ASC
+END
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_BySite] TO [bodbAdminNet] AS [dbo]

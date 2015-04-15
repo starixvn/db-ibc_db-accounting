@@ -1,11 +1,10 @@
-﻿USE [bodb02]
+﻿
+SET QUOTED_IDENTIFIER ON 
 GO
-
-SET ANSI_NULLS ON
+SET ANSI_NULLS ON 
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinloss2] 
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinloss2] 
  @LicenseeID	INT,
  @Currency		INT = 0,
  @FromDate		SMALLDATETIME,  
@@ -36,7 +35,7 @@ AS
 		- 20110930@Henry: put a check for non-BA block
 		- 20111013@Henry: change to use rptLicWinloss2
 		- 20111208@Jim : change condition Bettype<31 
-		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily
+		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily_xtest
 		- 20120601@Jim: enhance query performance 
 		- 20120801@Jim: add PlayerComm value 
 		- 20120816@Jim: add live casino
@@ -45,6 +44,7 @@ AS
 		- 20140331@Hannah: offer Keno
 		- 20140704@Jim: offer Sporting solution
 		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust ( task change currency KeenOcean)
+		- 20150123@Jim: support base on GBP currency 
 	Param's Explanation:  
 	  + @ReportType: 1-Daily; 2-Monthly;  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -500,7 +500,7 @@ END
 
 CREATE NONCLUSTERED INDEX IDX_Index_SA ON #SAgWinLoss(Currency)
 SELECT * INTO #TempExchange 
-FROM Lrf_f_GetExchangeDaily(@FDate,@TDate)
+FROM Lrf_f_GetExchangeDaily (@FDate,@TDate)
 WHERE exchangeid IN (SELECT DISTINCT Currency FROM #SAgWinLoss)
 
 SELECT   
@@ -556,7 +556,18 @@ SELECT
    CAST(SUM(PlayerComm*e.EUR) AS MONEY) AS PlayerCommEUR,
    CAST(SUM(AmtDuetoBA*e.EUR) AS MONEY) AS AmtDuetoBAEUR,
    CAST(SUM(AmtDuetoRB*e.EUR) AS MONEY) AS AmtDuetoRBEUR,
-   CAST(SUM(Company * e.EUR) AS MONEY) AS CompanyEUR
+   CAST(SUM(Company * e.EUR) AS MONEY) AS CompanyEUR,
+   --BaseGBP  
+    CAST(SUM(TurnOver*e.GBP)  AS MONEY)		AS TurnoverGBP,   
+	CAST(SUM(Winlost*e.GBP) AS MONEY)		AS WinlostGBP,  
+	CAST(SUM(LicenseeWL*e.GBP) AS MONEY) 	AS LicenseeWLGBP,
+	CAST(SUM(WinlossRB*e.GBP) AS MONEY)		AS WinlossRBGBP,
+	CAST(SUM(CommBA * e.GBP) AS MONEY) 		AS CommBAGBP,
+	CAST(SUM(CommRB * e.GBP) AS MONEY) 		AS CommRBGBP,
+	CAST(SUM(PlayerComm*e.GBP) AS MONEY) 	AS PlayerCommGBP,
+	CAST(SUM(AmtDuetoBA*e.GBP) AS MONEY) 	AS AmtDuetoBAGBP,
+	CAST(SUM(AmtDuetoRB*e.GBP) AS MONEY) 	AS AmtDuetoRBGBP,
+	CAST(SUM(Company * e.GBP) AS MONEY) 	AS CompanyGBP
 FROM	
 	#SAgWinLoss w   
 	INNER JOIN  #TempExchange e
@@ -573,10 +584,18 @@ ORDER BY ReportType
 DROP TABLE #TempExchange
 DROP TABLE #SAgWinLoss   
 END
+GO
 
-Go
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinloss2] TO [bodbLicenseeNet]
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinloss2] TO [bodbAdminNet]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinloss2] TO [vnteam] 
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinloss2] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinloss2] TO [bodbLicenseeNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinloss2] TO [bodbAdminNet]
+GO 

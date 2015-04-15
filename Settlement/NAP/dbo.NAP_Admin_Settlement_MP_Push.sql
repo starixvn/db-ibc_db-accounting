@@ -1,3 +1,12 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/08/2015 12:56:28 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 07/04/2015 3:41:11 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -15,7 +24,8 @@ AS
 	Revisions:		
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
-		- 20141117@Jamie: Change ErrCode [Redmine:#23034]				   
+		- 20141117@Jamie: Change ErrCode [Redmine:#23034]		
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]		   
 	Param's Explanation:		
 		
 */
@@ -24,9 +34,13 @@ SET NOCOUNT ON
 BEGIN
 	DECLARE  @NotKeyScoreList VARCHAR(130)
 			,@NotAllowCalculating VARCHAR(200)
+			,@HaveWaitingTicket VARCHAR(200)
 			,@procName nvarchar(50)	
 			,@matchid int
-
+		
+	DECLARE @subErrCode		INT
+			,@subErrMsg		NVARCHAR(200)
+	
 	DECLARE @match TABLE ( matchid INT
 						  ,matchcode NVARCHAR(50)
 						  ,fth SMALLINT
@@ -38,7 +52,9 @@ BEGIN
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''
 			,@procName = OBJECT_NAME(@@procid)
-
+			,@subErrCode = 0
+			,@subErrMsg = ''
+			
 	INSERT INTO @match ( matchid, matchcode, fth, fta, hth, hta)
 	SELECT DISTINCT matchid
 			,matchcode
@@ -80,8 +96,24 @@ BEGIN
 		WHERE matchid IN (SELECT matchid from Single_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1) )
 		OR matchid IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK) WHERE IsCalculating IN (0,1) ) 
 	END
+	
+	
+	--SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + b.matchid,
+	
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchIds = @MatchIds	OUTPUT
+		,@Action = @Action
+		,@Mode = 'CAL-MP'	
+	
+	SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + m.matchcode, m.matchcode)
+	FROM dbo.match m WITH(NOLOCK)
+	WHERE m.matchid IN (SELECT val FROM dbo.strSplit(@MatchIds, ','))
+	
+	DELETE FROM @match
+	WHERE matchid IN (SELECT val FROM dbo.strSplit(@MatchIds, ','))
 
-	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '')
+	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '')
 	BEGIN
 		SELECT   @ErrCode = 1001011
 				,@ErrMsg = 'All matches are being calculated, except following matches ' 
@@ -93,6 +125,10 @@ BEGIN
 									THEN  '(being calculated by another user): ' + @NotAllowCalculating
 									ELSE ''
 								END 
+							+ CASE WHEN ISNULL(@HaveWaitingTicket, '') <> ''
+									THEN '(existing some PENDING tickets): ' + @HaveWaitingTicket
+									ELSE ''
+								END
 	END
 
 	IF EXISTS (
@@ -124,12 +160,12 @@ BEGIN
 						,@creator = @AdminId
 						,@action  = @action
 						,@IP      = @IP
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg  = @ErrMsg   OUTPUT
+						,@ErrCode = @subErrCode OUTPUT
+						,@ErrMsg  = @subErrMsg   OUTPUT
 				END TRY
 
 				BEGIN CATCH
-					SELECT @ErrMsg  = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
+					SELECT @ErrMsg  = @subErrMsg + ISNULL(ERROR_MESSAGE(),'')
 						  ,@ErrCode = @@error
 					RETURN
 				END CATCH
@@ -158,6 +194,14 @@ BEGIN
 		END
 	END
 END
+
+
+
+
+
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO

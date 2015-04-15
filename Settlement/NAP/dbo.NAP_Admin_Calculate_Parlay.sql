@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@matchids VARCHAR(2000) = NULL
 	,@mode VARCHAR(15) = 'CAL'
@@ -36,7 +38,8 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@SetxGameyREFUND		VARCHAR(MAX) = NULL 
 	,@SelectedSetCAL		VARCHAR(50)  = NULL
 	,@SelectedSetREFUND		VARCHAR(50)  = NULL 
-	,@CalledByBrokerService BIT = NULL 
+	,@ResourceIDs			VARCHAR(MAX) = NULL
+	,@CalledByBrokerService BIT = 0 
 AS
 /*
 	Created: Kathy
@@ -49,6 +52,7 @@ AS
 		- 20140716@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140815@Kathy: add more mode for Special Delete function
+		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 
 	Param's Explanation:
 		@action			@mode
@@ -117,6 +121,7 @@ BEGIN
 			,@winlostdate = ' + CASE 
 				WHEN @winlostdate IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @winlostdate) + ''''
+
 				END + '
 			,@VoidTransID = ' + CASE 
 				WHEN @VoidTransID IS NULL THEN 'NULL'
@@ -195,14 +200,14 @@ BEGIN
 				WHEN @SetxGameyAwayWON IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyAwayWON) + ''''
 				END + '
-			,@SetxGameyHomeWON = ' + CASE 
-				WHEN @SetxGameyHomeWON IS NULL THEN 'NULL'
-				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyHomeWON) + ''''
-				END + '
 			,@SetxGameyDRAW = ' + CASE 
 				WHEN @SetxGameyDRAW IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyDRAW) + ''''
 				END + '
+			,@SetxGameyFinishedGame = ' + CASE 
+				WHEN @SetxGameyFinishedGame IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyFinishedGame) + ''''
+				END + '		
 			,@SetxGameyREFUND = ' + CASE 
 				WHEN @SetxGameyREFUND IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(VARCHAR(MAX), @SetxGameyREFUND) + ''''
@@ -214,6 +219,11 @@ BEGIN
 			,@SelectedSetREFUND = ' + CASE 
 				WHEN @SelectedSetREFUND IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(VARCHAR(50), @SelectedSetREFUND) + ''''
+				END + '
+
+			,@ResourceIDs = ' + CASE 
+				WHEN @ResourceIDs IS NULL THEN 'NULL'
+				ELSE '''' + CONVERT(VARCHAR(50), @ResourceIDs) + ''''
 				END + '
 			,@CalledByBrokerService = 1'
 
@@ -234,7 +244,7 @@ BEGIN
 
 			IF @action IN ('REFUND-FT', 'REFUND-HT')
 			BEGIN
-				EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+																EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
 					,@fth = @fth
 					,@fta = @fta
 					,@hth = @hth
@@ -250,7 +260,7 @@ BEGIN
 
 			BEGIN TRANSACTION
 
-			   EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+			 EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
 				,@fth = @fth
 				,@fta = @fta
 				,@hth = @hth
@@ -259,15 +269,16 @@ BEGIN
 				,@action = @action
 				,@resultPS = @resultPS
 				,@IsRefundHT = @IsRefundHT
-				,@TennisTotal			= @TennisTotal
-				,@SelectedSet			= @SelectedSet
+				,@TennisTotal	= @TennisTotal
+				,@SelectedSet	= @SelectedSet
+				,@ResourceIDs	= @ResourceIDs
 
 			COMMIT TRANSACTION
 		END
 
 		IF @mode='CAL-SET'
 		BEGIN
-			EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+												EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
 				,@fth = @fth
 				,@fta = @fta
 				,@hth = @hth
@@ -280,7 +291,7 @@ BEGIN
 				,@SelectedSetCAL			= @SelectedSetCAL 
 				,@SelectedSetREFUND			= @SelectedSetREFUND 
 
-			EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+												EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
 				,@fth = @fth
 				,@fta = @fta
 				,@hth = @hth
@@ -332,7 +343,7 @@ BEGIN
 		
 		IF @mode = 'VOID'
 		BEGIN
-			EXEC dbo.NAP_Admin_Calculate_9m 
+												EXEC dbo.NAP_Admin_Calculate_9m 
 				@matchid	= @MatchID,
 				@fth		= 0, 
 				@fta		= 0,

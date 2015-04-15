@@ -63,6 +63,7 @@ Revisions:
 	- 20140820@Logan:   Add status for E-Sports [Redmine: #20531]
 	- 20140912@Logan:   Add status of Direct/Indirect Account [Redmine: #15267]
 	- 20141120@Johnson: correct Last transaction date for super [Redmine: #26006]
+	- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]				
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -447,7 +448,8 @@ BEGIN
 	    e.currency,
 	    e.exchangeid,
 	    e.actualrate,
-	    ci.virtualmultiplier - 1 as virtualmultiplier,
+	    --virtual rate status
+	    ci.virtualmultiplier as EnableVirtualrate,
 	    important,
 	    ci.danger,
 	    ci.danger2,
@@ -503,7 +505,7 @@ BEGIN
 	    case @roleid	when 1 then ISNULL(a.autosuspend,0) 
 					    when 2 then ISNULL(m.autosuspend,0) 
 					    when 3 then ISNULL(s.autosuspend,0) 
-					    else 0 end uplineAutosuspend,		
+					    else 0 end uplineAutosuspend,							    		
 	    a.custid as agentID,
 	    a.username as agentName,	
 	    a.Enabled as agentEnabled,

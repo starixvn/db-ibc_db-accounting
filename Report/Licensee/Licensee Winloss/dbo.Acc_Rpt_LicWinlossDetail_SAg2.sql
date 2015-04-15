@@ -1,12 +1,8 @@
-﻿USE [bodb02]
+﻿
+SET QUOTED_IDENTIFIER ON 
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_SAg2]    
+CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_SAg2]    
  @LicenseeID INT,  
  @Currency  INT = 0,  
  @FromDate  SMALLDATETIME,    
@@ -35,6 +31,7 @@ AS
 		- 20140401@Hannah: offer Keno
 		- 20140704@Jim: support Sporting solution
 		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
+		- 20150123@Jim: support base on GBP currency 
  Param's Explanation:    
    + @CustID: SuperID    
    + @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)  
@@ -499,7 +496,18 @@ BEGIN
  CAST(SUM(PlayerComm*e.EUR) AS MONEY) AS PlayerCommEUR,  
  CAST(SUM(AmtDuetoBA*e.EUR) AS MONEY) AS AmtDuetoBAEUR,  
  CAST(SUM(AmtDuetoRB*e.EUR) AS MONEY) AS AmtDuetoRBEUR,  
- CAST(SUM(Company * e.EUR) AS MONEY) AS CompanyEUR  
+ CAST(SUM(Company * e.EUR) AS MONEY) AS CompanyEUR ,
+ --BaseGBP   
+ CAST(SUM(TurnOver*e.GBP) AS MONEY) 	AS TurnoverGBP,     
+ CAST(SUM(Winlost*e.GBP) AS MONEY)		AS WinlostGBP,    
+ CAST(SUM(LicenseeWL*e.GBP) AS MONEY)   AS LicenseeWLGBP,  
+ CAST(SUM(WinlossRB*e.GBP) AS MONEY)    AS WinlossRBGBP,  
+ CAST(SUM(CommBA * e.GBP) AS MONEY) 	AS CommBAGBP,  
+ CAST(SUM(CommRB * e.GBP) AS MONEY) 	AS CommRBGBP,  
+ CAST(SUM(PlayerComm*e.GBP) AS MONEY) 	AS PlayerCommGBP,  
+ CAST(SUM(AmtDuetoBA*e.GBP) AS MONEY) 	AS AmtDuetoBAGBP,  
+ CAST(SUM(AmtDuetoRB*e.GBP) AS MONEY) 	AS AmtDuetoRBGBP,  
+ CAST(SUM(Company * e.GBP) AS MONEY) 	AS CompanyGBP  
              
  FROM #SAgWinLoss w     
   INNER JOIN #TempExchange e  
@@ -514,12 +522,18 @@ DROP TABLE #SAgWinLoss
 DROP TABLE #TempExchange  
   
 END
+GO
 
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_SAg2] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_SAg2] TO [bodbLicenseeNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail_SAg2] TO [vnteam] 
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail_SAg2] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_SAg2] TO [bodbLicenseeNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_SAg2] TO [bodbAdminNet]
+GO 

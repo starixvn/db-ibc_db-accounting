@@ -11,9 +11,17 @@ AS
 	
 	Revisions:
 			- 2014-03-04@Dom: add param @bettype
+			- 20150122@Dom: Apply sport bettype matrix
 */
 
+BEGIN
 	SET NOCOUNT ON 
+	
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC Acc_SportBettypeMatrix_Sel @mode=4
+	
 	CREATE TABLE #DepAgent (custid int primary key , site varchar(50))
 	
 	INSERT INTO #DepAgent (custid, site)
@@ -40,19 +48,21 @@ AS
 		sum((1-tpositiontaking)*stake*actualrate) RealTurnover,
 		sum((1-tpositiontaking)*stake*actualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE	b.winlostdate = @winlostdate
-		AND b.bettype BETWEEN 1501 AND 1599
-		and b.bettype = @bettype
+		--AND b.bettype BETWEEN 1501 AND 1599
+		AND s.ProductId=8
+		AND b.bettype = @bettype
 		AND b.ruben = 1		
 		--AND b.status != 'DONE'			
 		AND b.statusID not in (101,102,103,121)
 	GROUP BY ag.site
 	ORDER BY ag.site
 
-DROP TABLE #DepAgent
+	DROP TABLE #DepAgent
 
-
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Keno_Bettype_Site14] TO [bodbAdminNet]
 GO

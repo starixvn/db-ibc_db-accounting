@@ -8,14 +8,21 @@ AS
 	Created by: Johnson
 	Date: 2011-03-16
 	Task: BetList for Racing 
-	DB: DB06.BODB02
+	DB: DBACC.BODB02
 		- 20110531@Johnson: show exchange currency 2 for SA Tote
 		- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
+		- 20141226@Dom: Apply bettype matrix
 	Revisions:
 		
 */
 BEGIN
 	SET NOCOUNT ON
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 	DECLARE @CommSetting TABLE
 	(	MatchID int,
 		MeetingID int,
@@ -72,7 +79,9 @@ BEGIN
 				FROM	bettransm14 WITH (NOLOCK)
 				GROUP BY refno 
 			)bm ON bm.refno = b.transid 
-	WHERE	b.bettype in (31,32,33) 
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	--b.bettype in (31,32,33) 
+			s.ProductID = 2 
 			AND b.ruben = 1 
 			--AND b.status NOT in ('VOID','REJECT','DONE','REFUND')
 			AND b.statusID NOT in (101,102,103,121)
@@ -87,3 +96,5 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostRacing_Tote_BetList14] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostRacing_Tote_BetList14] TO [vnteam]
+
+

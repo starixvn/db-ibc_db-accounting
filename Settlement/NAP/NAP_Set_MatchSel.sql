@@ -5,7 +5,8 @@ ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@MatchCode NVARCHAR(50) = ''
 	,@StatusId TINYINT = 0
 	,@FilterBy TINYINT = 0
-	,@PenaltyShootoutOnly BIT = 0 
+	--,@PenaltyShootoutOnly BIT = 0 
+	,@AutoSettlementOnly BIT = 0 
 	,@IsReLoad BIT = 0
 AS
 /*  
@@ -20,6 +21,7 @@ AS
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20140714@Kathy: filter by running penalty shootout only [Redmine:#17142]
 		- 20141006@Jamie: Get ResultDetail for Tennis [Redmine:#23034]
+		- 20150130@Jamie: Betradar phase II [Readmine:#27212]
       
  Param explanation:  
 	@MatchCode: match code
@@ -89,7 +91,7 @@ BEGIN
 				END
 
 		--ignore event status if selecting filterby
-		IF (@UncalMultiOnly = 1 OR @UncalOnly = 1 OR @PenaltyShootoutOnly = 1)
+		IF (@UncalMultiOnly = 1 OR @UncalOnly = 1 OR @AutoSettlementOnly = 1)
 			SELECT @eventstatus = ''
 				,@isRefund = NULL
 	END
@@ -237,7 +239,7 @@ BEGIN
 	LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
 	where (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
 	AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
-	AND ISNULL(mr.SettlementStatus135,0) = CASE when @PenaltyShootoutOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
+	AND ISNULL(mr.SettlementStatus135,0) = CASE when @AutoSettlementOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
 	
 	
 	SELECT @rowcount = 0
@@ -322,6 +324,24 @@ BEGIN
 	from SingleTicket sg
 		full outer join ParlayTicket pl on sg.matchid = pl.matchid 
 
+	CREATE TABLE #tmpAutoSettle1s(
+		 MatchID		INT
+		,ResultStatusID	TINYINT 
+	)
+	INSERT INTO #tmpAutoSettle1s(MatchID,ResultStatusID)
+	SELECT	MatchID, MIN(ResultStatusID)
+	FROM	ResultDetail WITH (NOLOCK)
+	WHERE	@Sporttype IN(0,1)
+			AND MatchID IN (SELECT MatchID FROM #matchList)
+			AND (ResourceID IN ('135','168','173','174','175','176','192','193','217')
+					OR ResourceID LIKE '160__'
+					OR ResourceID LIKE '164__'
+					OR ResourceID LIKE '169__'
+					OR ResourceID LIKE '180__'
+					OR ResourceID LIKE '216__' 
+				)
+	GROUP BY MatchID 
+
 	SELECT m.HalfTimeHomeScore
 		,m.HalfTimeAwayScore
 		,m.IsCalculated
@@ -357,8 +377,14 @@ BEGIN
 		,m.PlaceOdds
 		,t.IsCalculatingSingle
 		,t.IsCalculatingMP
-	FROM #matchList m
-	LEFT JOIN #tempmatch t ON t.matchid = m.matchid
+		,CASE	WHEN a.ResultStatusID IS NULL THEN 'N/A'
+				WHEN a.ResultStatusID IN(0,1,3) THEN 'Running'
+				WHEN a.ResultStatusID IN (2,5) THEN 'Completed'
+				ELSE '' END AS AutoSettleResultStatus
+
+	FROM	#matchList m
+			LEFT JOIN #tempmatch t ON t.matchid = m.matchid
+			LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID
 	ORDER BY case m.eventstatus when 'completed' then 1 when 'refund' then 1 else 0 END
 		, m.eventdate
 		,m.kickofftime

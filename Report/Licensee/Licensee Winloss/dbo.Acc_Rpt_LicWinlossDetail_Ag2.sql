@@ -1,13 +1,6 @@
-﻿USE [bodb02]
-GO
+﻿
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_Ag2]  
+CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_Ag2]  
  @LicenseeID	INT,
  @mrecommend	INT=NULL,
  @Currency		INT = 0,
@@ -40,7 +33,7 @@ AS
 		- 20110930@Henry: put a check for non-BA block
 		- 20111013@Henry: change to use rptLicWinloss2
 		- 20111208@Jim : change  condition Bettype<31
-		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily
+		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily_xtest
 		- 20120601@Jim: enhance query performance 
 		- 20120803@Jim: add Player commission value 
 		- 20120817@Jim: add live casino 
@@ -50,6 +43,7 @@ AS
 		- 20140331@Hannah: offer Keno
 		- 20140704@Jim: offer Sporting solution
 		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
+		- 20150123@Jim: support base on GBP currency
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -553,7 +547,18 @@ BEGIN
 	CAST(SUM(PlayerComm*e.EUR) AS MONEY) AS PlayerCommEUR,
 	CAST(SUM(AmtDuetoBA*e.EUR) AS MONEY) AS AmtDuetoBAEUR,
 	CAST(SUM(AmtDuetoRB*e.EUR) AS MONEY) AS AmtDuetoRBEUR,
-	CAST(SUM(Company * e.EUR) AS MONEY) AS CompanyEUR
+	CAST(SUM(Company * e.EUR) AS MONEY) AS CompanyEUR,
+	--BaseGBP
+	CAST(SUM(TurnOver*e.GBP) AS MONEY)	AS TurnoverGBP,   
+	CAST(SUM(Winlost*e.GBP) AS MONEY)	AS WinlostGBP,  
+	CAST(SUM(LicenseeWL*e.GBP) AS MONEY) AS LicenseeWLGBP,
+	CAST(SUM(WinlossRB*e.GBP) AS MONEY)	AS WinlossRBGBP,
+	CAST(SUM(CommBA * e.GBP) AS MONEY) AS CommBAGBP,
+	CAST(SUM(CommRB * e.GBP) AS MONEY) AS CommRBGBP,
+	CAST(SUM(PlayerComm*e.GBP) AS MONEY) AS PlayerCommGBP,
+	CAST(SUM(AmtDuetoBA*e.GBP) AS MONEY) AS AmtDuetoBAGBP,
+	CAST(SUM(AmtDuetoRB*e.GBP) AS MONEY) AS AmtDuetoRBGBP,
+	CAST(SUM(Company * e.GBP) AS MONEY) AS CompanyGBP
 	          
  FROM	#SAgWinLoss w   
 		INNER JOIN #TempExchange e
@@ -568,11 +573,18 @@ DROP TABLE #SAgWinLoss
 DROP TABLE #TempExchange
 
 END
-
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbAdminNet]
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbLicenseeNet]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [vnteam] 
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbLicenseeNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbAdminNet]
+GO 

@@ -24,8 +24,16 @@ SET NOCOUNT ON
 		- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 		- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
-		- 20130731@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)				 
+		- 20130731@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
+		- 20150108@Dom: Apply sport bettype matrix	
+		- 20150205@Johnson: show more info of 8RM(winlost, comm, turnover) [redmineID: #27216] 
 */
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=1
+	
 	DECLARE @Match TABLE (matchid int, sporttype tinyint, type varchar(10), primary key(matchid, type))
 	CREATE TABLE #DepAgent (custid int primary key)
 		
@@ -63,10 +71,11 @@ SET NOCOUNT ON
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
+			inner join @SportBettype s ON s.bettype = b.bettype
 			LEFT JOIN (SELECT custid FROM #DepAgent) dep ON b.recommend = dep.custid
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101, 102,103) 
@@ -82,12 +91,20 @@ SET NOCOUNT ON
 			site
 
 	select	b.liveindicator, 
-			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
+			1 as ibc,--8RM
+			-sum(winlost-actual_stake) WinLost,
+			-sum(awinlost+mwinlost+swinlost) Position,
+			sum(scomm) Commission,	
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
+			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
+			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101, 102,103) 
@@ -99,12 +116,20 @@ SET NOCOUNT ON
 
 	-- 20120412@Hurri: Get win lost of agent 'BARM'
 	select	b.liveindicator, 
-			-sum((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) WinlostBARM
+			2 as ibc,--BARM
+			-sum(winlost-actual_stake) WinLost,
+			-sum(awinlost+mwinlost+swinlost) Position,
+			sum(scomm) Commission,	
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
+			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
+			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
+			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101, 102,103) 

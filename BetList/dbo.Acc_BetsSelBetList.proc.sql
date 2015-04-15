@@ -72,6 +72,7 @@ AS
 		- 20140318@Dom: #13487 Prevent user to delete LAS ticket in bet list accounting site
 		- 20140908@Dom:	[Redmine #22012] Update VS conditions
 		- 20141103@Dom: Apply sport bettype matrix
+		- 20150122@Dom: HotFix #29646 Fix bug virtual HR
 */		
 
 SET NOCOUNT ON  
@@ -1658,7 +1659,7 @@ BEGIN
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid and
 				s.ProductID=5 AND 
-				s.EventType=1
+				s.EventType=3
 				--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())		
 				
 	END

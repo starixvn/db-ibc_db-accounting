@@ -12,12 +12,18 @@ AS
 		History:
 			- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 			- 20130311@Don: Add column [IBC Turnover] into resultset
-			
+			- 20141203@Dom: Apply sport bettype matrix
 		Explanation's Param:
 
 	*/
 BEGIN	
 	SET NOCOUNT ON	
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 	create table #bettrans (matchid int, bettype int, liveindicator bit, winlost money, pos money, comm money, virtualcomm money, linetotal money, virtuallinetotal money, IBCTurnover money)
 	create index IX_bettype on #bettrans(bettype, liveindicator)		
 	
@@ -53,13 +59,16 @@ BEGIN
     from	#bettrans b with (nolock)
 			inner join match14 m with (nolock) on m.matchid=b.matchid
 			inner join league l with (nolock) on l.leagueid=m.leagueid
-    where               
-            ((bettype < 31 AND bettype <> 10) 
+    		INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+    where   s.EventType=1
+		AND s.ProductId=1     
+            /*((bettype < 31 AND bettype <> 10) 
             OR bettype between 121 and 999 
-            OR bettype BETWEEN 1301 and 1334) and --20120626@Elodie: exclude outright from sportbook					           
-			l.leaguenametc = case when (l.leaguenametc = '' or l.leaguenametc is null) and @Sporttype = 'Other Sports' then l.leaguenametc else @Sporttype end and
-			b.bettype = case when @Bettype = 0 then b.bettype else @Bettype end and
-			b.liveindicator = case when @Bettype = 0 then b.liveindicator else @LiveIndicator end
+            OR bettype BETWEEN 1301 and 1334) and --20120626@Elodie: exclude outright from sportbook		
+			*/			           
+			AND l.leaguenametc = case when (l.leaguenametc = '' or l.leaguenametc is null) and @Sporttype = 'Other Sports' then l.leaguenametc else @Sporttype end
+			AND b.bettype = case when @Bettype = 0 then b.bettype else @Bettype end
+			AND b.liveindicator = case when @Bettype = 0 then b.liveindicator else @LiveIndicator end
     order by b.bettype, b.liveindicator desc, m.matchcode       
 END
 

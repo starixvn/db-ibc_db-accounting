@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 04/02/2015 13:32:13 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All_Push] 
 	@Matchid						INT
 	,@AdminId						INT
@@ -40,6 +47,7 @@ AS
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -77,7 +85,7 @@ BEGIN
 		,@sporttype		= m.sporttype
 		,@leagueid		= m.leagueid
 		,@IsNested		= 0
-		,@Action		= 'CAL'
+		,@Action		= 'REFUND'
 	FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -108,6 +116,21 @@ BEGIN
 		RETURN
 	END
 
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'REFUND'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrCode
+			,@ErrMsg
+		
+		RETURN
+	END
+	
 	SELECT @ErrCode		= 0
 		,@ErrMsg		= ''
 		,@procName		= OBJECT_NAME(@@procid)
@@ -224,6 +247,11 @@ BEGIN
 			,@sqlCommand
 	END
 END
+
+
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_All_Push] TO [bodbAdminNet] AS [dbo]
 GO

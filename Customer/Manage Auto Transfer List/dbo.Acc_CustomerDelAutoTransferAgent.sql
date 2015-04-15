@@ -12,7 +12,7 @@
 		DB: DBTXN/CustDB
 		
 		Revisions:
-		
+			- 20150406@Johnson: fix log format [Redmine: #25321]
 		Parameter's Explanation:
 	*/
 BEGIN
@@ -47,7 +47,7 @@ BEGIN
 			
 	SET @endRun = GETDATE()
 	SET @duration  = DATEDIFF(millisecond,@startRun,@endRun)	
-	SELECT @LogData = '<Acc_CustomerDelAutoTransferAgent CustID="' + COALESCE(CAST(@CustID AS VARCHAR(10)),SPACE(1)) + '"'
+	SELECT @LogData = '<Acc_CustomerDelAutoTransferAgent CustID="' + COALESCE(CAST(@CustID AS VARCHAR(10)),SPACE(1)) + '" '
 								+ 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(50)),SPACE(1)) + '" '
 								+ 'ErrMsg="' + COALESCE(@ErrMsg,SPACE(1))+'" '
 								+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'																		
@@ -61,7 +61,7 @@ BEGIN
 			@Duration = @duration
 	END TRY
 	BEGIN CATCH
-		SELECT @LogData = '<Acc_CustomerDelAutoTransferAgent CustID="' + COALESCE(CAST(@CustID AS VARCHAR(10)),SPACE(1)) + '"'
+		SELECT @LogData = '<Acc_CustomerDelAutoTransferAgent CustID="' + COALESCE(CAST(@CustID AS VARCHAR(10)),SPACE(1)) + '" '
 								+ 'ErrCode="' + coalesce(cast(@ErrCode as varchar(50)),space(1)) + '" '
 								+ 'ErrMsg="' + coalesce(ERROR_MESSAGE(),space(1))+'" '
 								+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'																		

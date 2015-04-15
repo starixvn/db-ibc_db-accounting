@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByAg]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByAg]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@recommend INT,
@@ -27,6 +27,7 @@ Revisions:
 	-20140304@TomVo: 
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
+	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]								
 */  
 
 SET NOCOUNT ON
@@ -256,6 +257,7 @@ WHERE winlostdate BETWEEN @FromDate AND @ToDate
 GROUP BY b.custid ,
 	CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
 
+
 SELECT b.custid,
 	ci.username, 
 	SUM(Turnover) Turnover,
@@ -270,13 +272,25 @@ SELECT b.custid,
 	SUM(CASE WHEN virtualratetype=-1 THEN totalrm-virtual_total ELSE 0 END) [WLVariance-],
 	SUM(CASE WHEN virtualratetype=1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance+],
 	SUM(CASE WHEN virtualratetype=-1 THEN TurnoverRM-TurnoverIBCVirtual ELSE 0 END) [TOVariance-],
-	(ISNULL(ci.virtualmultiplier,1)-1)*100 virtualrate
+	ISNULL(ci.virtualmultiplier,1) EnableVirtualrate
 FROM #TmpResultAll b
 INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid
 GROUP BY b.custid,
 		ci.username,
-		(ISNULL(ci.virtualmultiplier,1)-1)*100
+		ISNULL(ci.virtualmultiplier,1)
+ORDER BY username	
 
+SELECT cs.username
+		,vr.custid
+		,vr.sporttype
+		,vr.bettype
+		,vr.islive
+		,vr.virtualMultiplier
+FROM custinfo cs WITH(NOLOCK) 
+	INNER JOIN CustVirtualRate vr WITH(NOLOCK) ON cs.custid = vr.custid
+WHERE cs.custid IN (SELECT DISTINCT custid FROM #TmpResultAll)
+	AND cs.virtualMultiplier = 1
+ORDER BY username,sporttype,islive DESC, bettype
 
 DROP TABLE #TmpResult
 DROP TABLE #TmpResultAll
@@ -315,6 +329,7 @@ DROP TABLE #TmpResultAll
 
 
 */
+
 
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [bodbAdminNet]

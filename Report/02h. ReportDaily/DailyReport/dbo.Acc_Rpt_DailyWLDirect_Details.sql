@@ -3,8 +3,6 @@
 	@SportType		int = 1,
 	@liveindicator	bit,
 	@bettype		int,
-	@WinLost_8RM	money = 0 OUTPUT,
-	@WinLost_BARM	money = 0 OUTPUT,
 	@IsHedge		bit = 0
 AS
 
@@ -30,6 +28,7 @@ AS
 			- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 			- 20130506@Elodie: Get matchid value
 			- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
+			- 20150209@Johnson: get more fields for 8RM and BARM [redmine: #27216]
 	*/	
 
 	SET NOCOUNT ON
@@ -226,7 +225,14 @@ AS
 				HomeId
 	END	
 
-	SELECT	@WinLost_8RM = -sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) 
+	SELECT	1 as ibc,--8RM
+			-sum(winlost-actual_stake) WinLost,
+			-sum(awinlost+mwinlost+swinlost) Position,
+			sum(scomm) Commission,	
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
+			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN
 			(
@@ -249,7 +255,14 @@ AS
 			AND b.BetType = @Bettype
 			
 	-- 20120412@Hurri: Get win lost of agent 'BARM' (@WinLost_BARM)
-	SELECT	@WinLost_BARM = -sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) 
+	SELECT	2 as ibc,--BARM
+			-sum(winlost-actual_stake) WinLost,
+			-sum(awinlost+mwinlost+swinlost) Position,
+			sum(scomm) Commission,	
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
+			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN
 			(

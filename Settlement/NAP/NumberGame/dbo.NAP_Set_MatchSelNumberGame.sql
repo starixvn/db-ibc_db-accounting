@@ -1,4 +1,11 @@
-CREATE PROCEDURE [NAP_Set_MatchSelNumberGame]
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelNumberGame]    Script Date: 02/26/2015 10:27:02 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSelNumberGame]
 	@FromDate		DATETIME,
 	@ToDate			DATETIME = NULL,
 	@LeagueID		INT,
@@ -13,6 +20,7 @@ DB: DB053.bodb02
 Original: [Acc_Result_MatchSelNumberGameByLeague]
   
 Revisions:   
+	- 20150226@Kathy: Don't show match in match14 [Redmine:#29990]
 
 Param explanation:  
 	@matchcode: match code
@@ -82,16 +90,16 @@ FROM
     WHERE	eventdate BETWEEN  @FromDate  AND  @ToDate 
 			AND sporttype=161
 			AND (@LeagueID = 0 OR leagueid = @LeagueID)
-	UNION ALL  
-	SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime,homeid   
-	FROM match14 (NOLOCK)  
-	WHERE	eventdate BETWEEN  @FromDate  AND  @ToDate 
-			AND sporttype=161
-			AND (@LeagueID = 0 OR leagueid = @LeagueID)
+	--UNION ALL  
+	--SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime,homeid   
+	--FROM match14 (NOLOCK)  
+	--WHERE	eventdate BETWEEN  @FromDate  AND  @ToDate 
+	--		AND sporttype=161
+	--		AND (@LeagueID = 0 OR leagueid = @LeagueID)
    )AS m 
 	LEFT OUTER JOIN (SELECT matchid, seq, number FROM bingoball(NOLOCK)
-				UNION ALL
-				SELECT matchid, seq, number FROM bingoball14(NOLOCK)
+				--UNION ALL
+				--SELECT matchid, seq, number FROM bingoball14(NOLOCK)
 				) AS B ON B.matchid = m.matchid
 	LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 WHERE (m.eventstatus NOT IN ('internal','running')  
@@ -107,12 +115,8 @@ ORDER BY m.leagueid, m.matchid, b.seq
   
   
 
+
 GO
-
-GRANT EXECUTE ON [NAP_Set_MatchSelNumberGame] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelNumberGame] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_MatchSelNumberGame] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelNumberGame] TO [vnteam] AS [dbo]

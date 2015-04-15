@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1_Push]    Script Date: 04/02/2015 13:30:25 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push] 
 	 @AdminId				INT
 	,@Matchid				INT
@@ -33,6 +40,7 @@ AS
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
 		
 	Param's Explanation:
 
@@ -45,12 +53,12 @@ BEGIN
 		,@sporttype				INT
 		,@leagueid				INT
 		,@sqlCommand			NVARCHAR(MAX)  --
-		,@NextAllowSettleTime	DATETIME
 		,@procName				NVARCHAR(50)
 
 	SELECT @matchcode	= m.matchcode
 		,@sporttype		= m.sporttype
 		,@leagueid		= m.leagueid
+		
 	FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -86,6 +94,21 @@ BEGIN
 		SELECT @ErrCode = 1001003
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
+		RETURN
+	END
+	
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'CAL'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrCode
+			,@ErrMsg
+		
 		RETURN
 	END
 
@@ -215,6 +238,12 @@ BEGIN
 			,@sqlCommand
 	END
 END
+
+
+
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1_Push] TO [bodbAdminNet] AS [dbo]
 GO

@@ -1,0 +1,354 @@
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
+	 @AdminID			INT				= 148		-- calculated by system (default)
+	,@MatchID			INT
+	,@ResourceIDs		VARCHAR(MAX)	= '' 
+	,@Results			VARCHAR(MAX)	= '' 
+	,@Action			VARCHAR(10)		= 'CAL'
+	,@IsAuto			BIT				= 1
+	,@IP				VARCHAR(15)		= ''
+	,@ErrCode			INT				= 0		OUTPUT
+	,@ErrMsg			NVARCHAR(200)	= ''	OUTPUT
+AS
+/*	Creator: Jamie
+	Date: 20150120
+	Task: BetRadar Auto/Manual Settlement
+	DB: DBTXN/BODB02
+	Original: 
+	
+	Revisions:
+
+	Param's Explanation:
+*/	
+BEGIN
+	SET NOCOUNT ON 
+	DECLARE	 @start						DATETIME
+			,@stop						DATETIME
+			,@fth						INT
+			,@fta						INT
+			,@hth						INT
+			,@hta						INT
+			,@goalrecord				VARCHAR(50)
+			,@betstatus					VARCHAR(50) 
+			,@ActionID					INT
+			,@Remark					VARCHAR(500)
+			,@LogData					NVARCHAR(300)							
+
+	SELECT	@start = CURRENT_TIMESTAMP
+	SELECT	@ActionID = CASE WHEN @Action = 'CAL'	THEN 148 
+							 WHEN @Action = 'UNDO'	THEN 149 
+							 WHEN @Action = 'REFUND'THEN 150
+							 ELSE 0 END  
+		
+							 
+	--Write Log Settle
+
+	SELECT	 @fth			= finalhomescore
+			,@fta			= finalawayscore
+			,@hth			= hthomescore
+			,@hta			= htawayscore
+			,@goalrecord	= goalrecord 
+			,@betstatus		= betstatus 
+	FROM	DBPRO.BODB02.dbo.match WITH (NOLOCK)
+	WHERE	matchid = @matchid
+		
+	-- check and not allow attempt to settlement same game while it's still not finish
+	IF EXISTS (
+			SELECT 1 
+			FROM dbo.TempVariableNumber t WITH(NOLOCK)
+			WHERE t.KeyID = 1 
+			AND t.KeyValue = @matchid
+			)
+	BEGIN
+		SELECT @ErrCode = 1000000
+			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+
+		RETURN
+	END
+
+	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
+	VALUES (1, @matchid)
+
+	IF (@@ERROR = 0)
+	BEGIN
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID		= @AdminId
+				,@Matchid	= @matchid
+				,@KeyID		= 1
+				,@ActionID	= @ActionID
+				,@Remark	= 'ADD SUCCESS'
+		END TRY
+
+		BEGIN CATCH
+			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
+
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID		= @AdminId
+				,@Matchid	= @matchid
+				,@KeyID		= 1
+				,@ActionID	= @ActionID
+				,@Remark	= @Remark
+		END CATCH
+	END
+	ELSE
+	BEGIN
+		SELECT @ErrCode = 1000000
+			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+
+		RETURN
+	END
+
+	-------------------------------------------------------------
+	---        CAPTURE value BALANCE before settlement        ---
+	---------------------------VVVV------------------------------
+	CREATE TABLE #BalanceBefore (
+		custid INT PRIMARY KEY
+		,balance MONEY
+		)
+
+	--===
+	INSERT INTO #BalanceBefore
+	SELECT	 b.custid
+			,SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM	dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @MatchId 
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
+	GROUP BY b.custid
+
+
+	--===
+	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	IF @Action='CAL'
+	BEGIN
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+			@Command			= 'NAP_Admin_Settlement_Auto_1s-CAL',
+			@MatchID			= @MatchID,
+			@ResourceIDs		= @ResourceIDs, 
+			@Results			= @Results,
+			@IsAuto				= @IsAuto,
+			@creator			= @AdminID 			
+
+		EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
+			 @matchid		= @matchid
+			,@ResourceIDs	= @ResourceIDs
+			,@mode			= @action						
+
+	END
+	ELSE IF @action = 'UNDO'
+	BEGIN
+		EXEC dbo.NAP_Admin_Calculate_Main 
+			 @matchid		= @matchid
+			,@ResourceIDs	= @ResourceIDs
+			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
+			,@mode			= 'UNDO' 
+
+		EXEC dbo.NAP_Admin_Settlement_Parlay
+			@matchids		= @matchid
+			,@creator		= @AdminID
+			,@ResourceIDs	= @ResourceIDs
+			,@action		= 'UNDO'
+			,@IP			= @IP
+
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+			@Command			= 'NAP_Admin_Settlement_Auto_1s-UNDO',
+			@MatchID			= @MatchID,
+			@ResourceIDs		= @ResourceIDs, 
+			@Results			= @Results,
+			@IsAuto				= @IsAuto,
+			@creator			= @AdminID 
+
+	END
+	ELSE IF @Action = 'REFUND'
+	BEGIN
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+			@Command			= 'NAP_Admin_Settlement_Auto_1s-REFUND',
+			@MatchID			= @MatchID,
+			@ResourceIDs		= @ResourceIDs, 
+			@Results			= @Results,
+			@IsAuto				= @IsAuto,
+			@creator			= @AdminID 	
+
+		EXEC dbo.NAP_Admin_Calculate_Main 
+			 @matchid		= @matchid
+			,@ResourceIDs	= @ResourceIDs
+			,@action		= 'REFUND'	
+			,@mode			= 'ALL' 
+			,@row_count		= 1 
+	END
+
+
+	-------------------------------------------------------------
+	---         CAPTURE value BALANCE after settlement        ---
+	---------------------------VVVV------------------------------
+	CREATE TABLE #BalanceAfter (custid INT PRIMARY KEY, balance MONEY)
+	INSERT INTO #BalanceAfter
+	SELECT b.custid
+		,SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @matchid 
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
+	GROUP BY b.custid
+
+
+
+	-------------------------------------------------------------
+	---                   compare BALANCE                     ---
+	---------------------------VVVV------------------------------
+	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
+
+	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+
+	INSERT INTO #Balance
+	SELECT b.custid
+		,a.balance - b.balance
+		,CASE 
+			WHEN a.balance > b.balance THEN 1
+			ELSE 0
+			END
+	FROM #BalanceBefore b
+		INNER JOIN #BalanceAfter a ON b.custid = a.custid
+	WHERE b.balance <> a.balance
+
+	INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	SELECT custid, ABS(balance)
+	FROM #Balance
+	WHERE Increased = 0
+
+	INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	SELECT custid, balance
+	FROM #Balance
+	WHERE Increased = 1
+
+	----
+	-- Add Negative Balance into BalanceNegative table 
+	----
+	INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+		[ExecDate]
+		,[MatchID]
+		,[ActionID]
+		,[GroupID]
+		,[CustID]
+		,[Balance]
+		,[StatusID]
+		,[Remark]
+		)
+	SELECT GETDATE()
+		,@MatchID
+		,@ActionID
+		,1 -- Sportsbook Single bet Settlement 
+		,CustID
+		,Balance
+		,0
+		,NULL
+	FROM #Balance WITH(NOLOCK)
+	WHERE Increased = 0
+
+	---------------------------------------------------
+	DROP TABLE #Balance
+
+	DROP TABLE #BalanceBefore
+
+	DROP TABLE #BalanceAfter
+
+	-------------------------------------------------------------
+	---                      WRITE LOG                        ---
+	---------------------------VVVV------------------------------
+
+	SELECT @stop = CURRENT_TIMESTAMP
+
+	SELECT @logdata = 'NAP: Auto-Settlement (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
+														   + ' ResourceID:' + CAST(@ResourceIDs AS VARCHAR(MAX))
+														   + ' Result:' + @Results + '(' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
+	EXEC dbo.WriteLog_UserLog 
+		@UserID = @AdminId
+		,@Doing = @logdata
+
+	SELECT @Remark = 'NAP: ResourceID:' + @ResourceIDs +  ' <br/> ' 
+						+ CASE WHEN ISNULL(@Results,'') ='' THEN '' ELSE ' Result:'+ ISNULL(@Results,'') + ' <br/> ' END
+						+ ' IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
+						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + 'ms' 
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
+			@userid				= @AdminId
+			,@matchid			= @MatchID
+			,@actionid			= @ActionID
+			,@finalhomescore	= @fth
+			,@finalawayscore	= @fta
+			,@hthomescore		= @hth
+			,@htawayscore		= @hta
+			,@GoalRecord		= @goalrecord
+			,@betstatus			= @betstatus
+			,@Remark			= @Remark
+			,@ip				= @ip
+	END TRY
+
+	BEGIN CATCH
+		SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
+
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
+			@UserID				= @AdminId
+			,@MatchID			= @matchid
+			,@actionid			= @actionid
+			,@finalhomescore	= @fth
+			,@finalawayscore	= @fta
+			,@hthomescore		= @hth
+			,@htawayscore		= @hta
+			,@GoalRecord		= @goalrecord
+			,@betstatus			= @betstatus
+			,@Remark			= @Remark
+			,@IP				= @ip
+	END CATCH
+
+	--
+	DELETE
+	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+	WHERE KeyID = 1 
+	AND KeyValue = @matchid
+
+	IF @@ERROR = 0
+	BEGIN
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@userid		= @AdminId
+				,@matchid	= @matchid
+				,@keyid		= 1
+				,@actionid	= @actionid
+				,@remark	= 'DEL SUCCESS'
+		END TRY
+
+		BEGIN CATCH
+			SELECT @remark = 'DEL SUCCESS ErrMsg=' + LEFT(ERROR_MESSAGE(), 400)
+
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID		= @AdminId
+				,@MatchID	= @matchid
+				,@KeyID		= 1
+				,@ActionID	= @actionid
+				,@Remark	= @remark
+		END CATCH
+	END
+	ELSE
+	BEGIN
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@userid		= @AdminId
+				,@matchid	= @matchid
+				,@keyid		= 1
+				,@actionid	= @actionid
+				,@remark	= 'DEL FAILED'
+		END TRY
+
+		BEGIN CATCH
+			SELECT @remark = 'DEL FAILED ErrMsg=' + LEFT(ERROR_MESSAGE(), 400)
+
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID		= @AdminId
+				,@MatchID	= @matchid
+				,@KeyID		= 1
+				,@ActionID	= @actionid
+				,@Remark	= @remark
+		END CATCH
+	END
+END

@@ -1,4 +1,11 @@
-ALTER PROCEDURE dbo.Acc_SpecialDel_CheckMatchIDwithRefno
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_SpecialDel_CheckMatchIDwithRefno]    Script Date: 02/10/2015 18:13:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_SpecialDel_CheckMatchIDwithRefno]
 	@MatchID int
 	,@FromRefno bigint --transid
 	,@ToRefno bigint --transid
@@ -19,6 +26,9 @@ BEGIN
 		- 20110914@Jamie: correct sp to cover case of @FromRefno=@ToRefno
 		- 20120829@Elodie: Check if the match belongs to virtual sport
 						   Change DB053 server instead of DB052 server
+		- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]		
+		- 20150210@Kathy:  check if tickets have been moved to match14, bettrans14 [Redmine:#30298] 
+						   
 	
 	Param's Explanation:	
 		- @Type: sports type
@@ -34,7 +44,7 @@ BEGIN
 	from match with (NOLOCK)
 	where matchid = @MatchID
 	
-	IF @Sporttype not between 1 and 99 AND @Type = 0
+	IF @Sporttype not between 1 and 99 AND @Sporttype <> 154 AND @Type = 0
 	BEGIN 
 		SET @ErrCode = 2
 		SET @ErrMsg ='This MatchID doesn''t belong to sportbook.' 
@@ -70,17 +80,31 @@ BEGIN
 	IF @FromRefno=@ToRefno
 	BEGIN
 		IF @totalRecord <> 1 
-			SELECT @ErrCode=1
-				,@ErrMsg='You have entered an invalid matchId or refno.'
+		BEGIN
+			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND transid IN (@FromRefno, @ToRefno))
+				SELECT @ErrCode= 6 --  harcode in web
+					,@ErrMsg='Tickets have been moved.'
+			ELSE
+				SELECT @ErrCode=1
+					,@ErrMsg='You have entered an invalid matchId or refno.'
+		END
 	END
 	ELSE IF @totalRecord <> 2 
-		SELECT @ErrCode=1
-			,@ErrMsg='You have entered an invalid matchId or refno.'
+		BEGIN
+			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND transid IN (@FromRefno, @ToRefno))
+				SELECT @ErrCode= 6 --  harcode in web
+					,@ErrMsg='Tickets have been moved.'
+			ELSE
+				SELECT @ErrCode=1
+					,@ErrMsg='You have entered an invalid matchId or refno.'
+		END
 	
 	SET NOCOUNT OFF
 END
 
+
+
 GO
-GRANT EXECUTE ON dbo.Acc_SpecialDel_CheckMatchIDwithRefno TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_SpecialDel_CheckMatchIDwithRefno] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON dbo.Acc_SpecialDel_CheckMatchIDwithRefno TO vnteam
+GRANT VIEW DEFINITION ON [dbo].[Acc_SpecialDel_CheckMatchIDwithRefno] TO [vnteam] AS [dbo]

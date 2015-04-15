@@ -1,6 +1,7 @@
 ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]	
 	@CustID int,
 	@AdminID int = 0,
+	@system	VARCHAR(30)='NAP',
 	@username  VARCHAR(50) = ''
 AS 
 /*
@@ -30,7 +31,10 @@ Revisions:
 	- 20140303@Kathy: Get HideKeno [Redmine:#12691]
 	- 20140407@Elodie: Get DisableKeno [Redmine:#13156]
 	- 20140825@Logan:   Get status of E-Sports [Redmine: #20531]
+	- 20150210@Johnson: use param @system to check permission on ViewIPVN function from NAP or NAP EXT internal login [Redmine: #30860]
 Param's Explanation:
+• @system: = NAP : internal login from NAP
+			NAPEXT:internal login from NAP EXT
 • @CustID: customer id.   
 */
 
@@ -95,7 +99,15 @@ SELECT @IsAdminCanViewVNIP = 1
 IF (@AdminID > 0) 
 BEGIN
 	DECLARE @ErrCode INT
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission_All @custid=@AdminID,@funcname='[ViewIPVN]',@ErrCode=@ErrCode OUTPUT
+	IF @system = 'NAP'
+	BEGIN
+		EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission_All @custid=@AdminID,@funcname='[ViewIPVN]',@ErrCode=@ErrCode OUTPUT
+	END
+	ELSE IF @system = 'NAPEXT'
+	BEGIN
+		EXEC DBEAS.bodb_EAS.dbo.EAS_UserCheckPermission_All @userid=@AdminID,@FuncKey='ViewVNIP',@ErrCode=@ErrCode OUTPUT
+	END
+	
 	IF @ErrCode<> 0 SELECT @IsAdminCanViewVNIP = 0 ELSE SELECT @IsAdminCanViewVNIP = 1     
 END
 

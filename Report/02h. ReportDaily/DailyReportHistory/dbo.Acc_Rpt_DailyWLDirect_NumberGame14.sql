@@ -13,9 +13,16 @@ AS
 			- 20130408@Elodie: Add RealLineTotal field for all products that enable virtual currency
 			- 20130522@Elodie: Get more fields RealTurnover, VirtualTurnover
 			- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
+			- 20150108@Dom: Apply sport bettype matrix
 */
 BEGIN
 	SET NOCOUNT ON
+
+----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=3
+
 	CREATE TABLE #DepAgent (custid int primary key)
 		
 	INSERT INTO #DepAgent 
@@ -39,8 +46,9 @@ BEGIN
 			sum((1-tpositiontaking)*stake*virtualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 		LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
+		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	WHERE	b.winlostdate = @winlostdate
-			AND b.bettype BETWEEN 81 AND 120		
+			--AND b.bettype BETWEEN 81 AND 120		
 			--AND status != 'DONE'	
 			AND b.statusID not in (101,102,103,121)
 			AND b.ruben = 1		

@@ -44,7 +44,7 @@ BEGIN
 		DISTINCT gameID bettype 
 		FROM translog (nolock)
 	WHERE 
-		AND winlostdate BETWEEN @TempFromDate AND @todate
+		winlostdate BETWEEN @TempFromDate AND @todate
 		AND statusID = 0
 		
 			

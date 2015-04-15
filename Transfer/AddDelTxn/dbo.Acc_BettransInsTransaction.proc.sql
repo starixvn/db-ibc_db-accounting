@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransInsTransaction]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Acc_BettransInsTransaction]
 	@transid bigint OUTPUT,
 	@custid int,
 	@transdate datetime,
@@ -35,10 +38,12 @@ Revisions:
 	- 20121103@Viet: revise sp
 	- 20130201@Elodie: Change link server DB03 to DBPOLICY, DB053 to DBAGE
 					   Write more log on DBTXN server in case of DBLOG server failure
-	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)  								   
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)
+	- 20141226@Tom: Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day (Redmine#15274)
 					   
 Param's Explanation:
 */
+BEGIN
 SET NOCOUNT ON
 DECLARE @balance money, @balance_ABS money
 
@@ -58,12 +63,11 @@ Declare @RefNo bigint, @bettype int, @Curr int, @CurrName nvarchar(10),@actualra
 
 select @winlostdate = convert(nvarchar(10), @Transdate,120)
 
-
 --------------------------vvvvv-------------------------------------
 --Check to not allow to transfer before balance up date
-Declare @BalanceUpDay smalldatetime
+DECLARE @BalanceUpDay smalldatetime
 SELECT TOP 1 @BalanceUpDay = winlostdate
-FROM Bettrans WITH(NOLOCK)
+FROM dbo.Bettrans WITH(NOLOCK)
 WHERE bettype = 20000 and matchid = 0 and custid = 3
 
 -- at this time, server is processing adding tickets into transfer_fi table. So not allow to transfer.
@@ -124,8 +128,6 @@ BEGIN
 	return
 END
 
-
-
 SELECT @balance = @creditamt - @debitamt
 
 ----Update balance Debit
@@ -143,7 +145,7 @@ EXEC dbo.Acc_SelRefNo @refNo = @RefNo OUTPUT
 
 select @RefNo = @RefNo + 100000000000
 
-INSERT INTO bettrans( custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
+INSERT INTO dbo.bettrans( custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 					  winlostdate, creator,recommend,mrecommend,srecommend,currency, currencyName,
 					  actualrate,ruben, status,ip,statusID)
 VALUES (@CustID, @username, @RefNo, current_timestamp, 0, @bettype, @transdesc, @creditamt, @debitamt, 
@@ -168,6 +170,39 @@ BEGIN
 END
 Select @TransID = @@IDENTITY
 
+-- Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day
+DECLARE @MoveBetsDay DATETIME
+SELECT @MoveBetsDay = MAX(eventdate)
+FROM dbo.match14 WITH (NOLOCK)
+
+IF @winlostdate <= @MoveBetsDay
+BEGIN
+	EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
+		@custid = @custid
+		,@Amount = @amount
+		,@winlostdate = @winlostdate
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+
+	if @@ERROR <> 0
+	BEGIN
+		--rollback Debit Balance
+		IF @roleID = 1
+		BEGIN 
+			IF @balance < 0 
+			BEGIN 
+				SELECT @balance_ABS = ABS(@balance)
+				EXEC Dot_BalanceUpdCredit @CustID = @custid, @balance = @balance_ABS  
+			END
+		END
+
+		delete bettrans where custid = @custid and refno = @refno and matchid = 0	
+		Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104		
+		return
+	END
+
+END
+
 -----Update balance Credit
 IF @roleID = 1
 BEGIN 
@@ -188,7 +223,7 @@ BEGIN CATCH
 	EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
 END CATCH
 
-
+END
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsTransaction] TO [bodbAdminNet] AS [dbo]
