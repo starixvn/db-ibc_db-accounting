@@ -13,7 +13,7 @@ AS
 	Original:     
 
 	Revisions:  
-
+		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
 		+ @TransID NOT NULL: Search by TransID
@@ -44,6 +44,7 @@ BEGIN
 		,actual_stake	MONEY
 		,transdate		DATETIME
 		,betteam		NVARCHAR(10)
+		,betcheck		NVARCHAR(50)
 		,liveindicator	BIT
 		,modds			SMALLMONEY
 		,custid			INT
@@ -107,6 +108,7 @@ BEGIN
 			,b.actual_stake
 			,b.transdate
 			,b.betteam
+			,b.betcheck
 			,b.liveindicator
 			,b.modds
 			,b.custid
@@ -158,6 +160,7 @@ BEGIN
 			,b.actual_stake
 			,b.transdate transdate
 			,b.betteam
+			,b.betcheck
 			,0 liveindicator
 			,b.modds
 			,b.custid
@@ -206,6 +209,7 @@ BEGIN
 			,b.actual_stake
 			,b.transdate transdate
 			,b.betteam
+			,b.betcheck
 			,b.liveindicator
 			,b.modds
 			,b.custid
@@ -263,6 +267,7 @@ BEGIN
 			,b.actual_stake
 			,b.transdate
 			,b.betteam
+			,b.betcheck
 			,b.liveindicator
 			,b.modds
 			,b.custid
@@ -314,6 +319,7 @@ BEGIN
 			,b.actual_stake
 			,b.transdate transdate
 			,b.betteam
+			,b.betcheck
 			,0 liveindicator
 			,b.modds
 			,b.custid
@@ -362,6 +368,7 @@ BEGIN
 			,b.actual_stake
 			,b.transdate transdate
 			,b.betteam
+			,b.betcheck
 			,b.liveindicator
 			,b.modds
 			,b.custid
