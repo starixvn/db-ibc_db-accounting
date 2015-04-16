@@ -1,0 +1,63 @@
+ALTER PROCEDURE [dbo].[Task_DailyRptStatement_Job]
+
+
+/*	Created by:  Cody
+	Date: 20141229
+	Task: Jobs for sum up date for rptStatement
+	DB: DBTRANS.BODB02
+
+	Revision:
+
+*/
+
+AS
+	CHECKPOINT
+
+	DECLARE @WeekDay TINYINT
+	SET @WeekDay = DATEPART(WEEKDAY, CURRENT_TIMESTAMP)
+
+	DECLARE @Todaym1 DATETIME
+			,@Todaym2 DATETIME
+			,@Todaym3 DATETIME
+			,@Todaym4 DATETIME
+			
+	SET @Todaym1 = DATEADD(DAY, -1, CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120))
+	SET @Todaym2 = DATEADD(DAY, -1, @Todaym1)
+	SET @Todaym3 = DATEADD(DAY, -1, @Todaym2)
+
+	-- Server Time : Monday
+	-- Local Time  : Tuesday's morning
+	IF @WeekDay = 2
+	BEGIN
+		EXEC dbo.Task_DailyRptStatement @Todaym1 -- Friday
+		EXEC dbo.Task_DailyRptStatement @Todaym2 -- Saturday
+		EXEC dbo.Task_DailyRptStatement @Todaym3 -- Sunday
+	END
+	-- Server Time : Tuesday (3)
+	-- Local Time  : Wednesday's morning
+	ELSE IF @WeekDay = 3
+	BEGIN
+		EXEC dbo.Task_DailyRptStatement @Todaym1 -- Sunday
+		EXEC dbo.Task_DailyRptStatement @Todaym2 -- Monday
+	END
+	-- Server Time : Wednesday (4)
+	-- Local Time  : Thursday's morning
+	ELSE IF @WeekDay = 4
+	BEGIN
+		EXEC dbo.Task_DailyRptStatement @Todaym1 -- Tuesday
+	END
+	-- Server Time : Friday (6)
+	-- Local Time  : Saturday's morning
+	ELSE IF @WeekDay = 6
+	BEGIN
+		EXEC dbo.Task_DailyRptStatement @Todaym1 -- wednesday
+		EXEC dbo.Task_DailyRptStatement @Todaym2 -- Thursday
+	END
+	ELSE
+	BEGIN
+		RETURN -1
+	END
+
+
+GO
+--GRANT VIEW DEFINITION ON [dbo].[Task_DailyRptStatement] TO [vnteam] AS [dbo]
