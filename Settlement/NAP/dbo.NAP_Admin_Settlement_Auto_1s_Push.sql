@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Auto_1s_Push]    Script Date: 04/16/2015 09:03:31 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
 	 @AdminId			INT				= 148		-- calculated by system (default)
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -17,6 +24,7 @@ AS
 	Original: 
 	
 	Revisions:
+		- 20150415@Kathy: Add checking ticket status before performing settlement [Redmine:#27212]
 
 	Param's Explanation:
 */		
@@ -75,6 +83,21 @@ BEGIN
 		SELECT	 @ErrCode = 1001003
 				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 
+		RETURN
+	END
+	
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'CAL-AUTO'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrCode
+			,@ErrMsg
+		
 		RETURN
 	END
 
@@ -137,7 +160,10 @@ BEGIN
 			,'CAL-AUTO'
 			,@sqlCommand
 	END
+
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO
