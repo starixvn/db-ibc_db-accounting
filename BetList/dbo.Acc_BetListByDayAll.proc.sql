@@ -65,6 +65,7 @@ AS
 		- 20140908@Dom:	[Redmine #22012] Update VS conditions
 		- 20141103@Dom: Apply sport bettype matrix
 		- 20152001@Dom: Fix Bug Virtual HR condition
+		- 20150415@Sophia: Get Betcheck for Betradar
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -168,7 +169,8 @@ BEGIN
 		awinlost		money,
 		mwinlost		money,
 		swinlost		money,
-		winlostdate		smalldatetime
+		winlostdate		smalldatetime,
+		BetCheck		NVARCHAR(50)
         );
         
  DECLARE @DetailData TABLE (
@@ -249,7 +251,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
                    INNER JOIN dbo.match14 AS m WITH (NOLOCK) ON b.matchid = m.matchid
 				   INNER JOIN @SportBettype s ON s.Bettype = b.bettype
@@ -324,7 +327,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 b WITH (NOLOCK)
                    INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -398,7 +402,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
@@ -469,7 +474,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
@@ -541,7 +547,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
@@ -615,7 +622,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -686,7 +694,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -759,7 +768,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
             --INNER JOIN customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -833,7 +843,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans14 AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.outright14 AS o WITH (NOLOCK)
@@ -925,7 +936,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
                    INNER JOIN dbo.match AS m WITH (NOLOCK) ON b.matchid = m.matchid
 				   INNER JOIN @SportBettype s ON s.Bettype = b.bettype
@@ -1001,7 +1013,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans b WITH (NOLOCK)
                    INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
                    INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -1076,7 +1089,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
@@ -1147,7 +1161,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
             --INNER JOIN	customer AS creator WITH (NOLOCK) ON creator.custid = b.creator
@@ -1218,7 +1233,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
@@ -1289,7 +1305,8 @@ BEGIN
 				   0 awinlost,		
 				   0 mwinlost,		
 				   0 swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   '' as BetCheck
             FROM   dbo.translog AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
@@ -1362,7 +1379,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1433,7 +1451,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1506,7 +1525,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
             --INNER JOIN	customer AS creator WITH (NOLOCK)	ON creator.custid = b.creator
             WHERE  b.custid = @custid
@@ -1580,7 +1600,8 @@ BEGIN
 				   awinlost,		
 				   mwinlost,		
 				   swinlost,
-				   b.winlostdate
+				   b.winlostdate,
+				   b.BetCheck
             FROM   dbo.bettrans AS b WITH (NOLOCK)
                    INNER JOIN
                    dbo.outright AS o WITH (NOLOCK)

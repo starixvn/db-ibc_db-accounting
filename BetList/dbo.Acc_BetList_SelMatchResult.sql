@@ -149,6 +149,8 @@ SET NOCOUNT ON
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
 			
+			SELECT @Sporttype = Sporttype FROM dbo.match14 m WITH(NOLOCK) WHERE m.matchid = @matchid	
+				
 			SELECT	D.MatchId,
 					D.ResourceId,
 					D.HomeValue,
@@ -209,7 +211,8 @@ SET NOCOUNT ON
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
 
-			
+			SELECT @Sporttype = Sporttype FROM DBARC.bodb_archive.dbo.match_BK m WITH(NOLOCK) WHERE m.matchid = @matchid	
+				
 			SELECT	D.MatchId,
 					D.ResourceId,
 					D.HomeValue,
