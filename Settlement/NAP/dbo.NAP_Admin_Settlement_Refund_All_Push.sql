@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 04/02/2015 13:32:13 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 04/20/2015 17:26:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -48,6 +48,7 @@ AS
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
+		- 20150420@kathy: hotfix - change Action = Cal instead of Refund
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -85,7 +86,7 @@ BEGIN
 		,@sporttype		= m.sporttype
 		,@leagueid		= m.leagueid
 		,@IsNested		= 0
-		,@Action		= 'REFUND'
+		,@Action		= 'CAL'
 	FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -117,9 +118,9 @@ BEGIN
 	END
 
 	-- check waiting ticket
-	EXEC NAP_Admin_Settlement_Checking
+		EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
-		,@Action = @Action
+		,@Action = 'REFUND'
 		,@Mode = 'REFUND'
 		,@ErrCode = @ErrCode OUTPUT
 		,@ErrMsg = @ErrMsg OUTPUT
@@ -247,9 +248,6 @@ BEGIN
 			,@sqlCommand
 	END
 END
-
-
-
 
 
 GO
