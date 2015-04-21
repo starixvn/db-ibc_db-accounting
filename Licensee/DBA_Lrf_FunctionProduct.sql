@@ -1,5 +1,10 @@
 USE [bodb_licensee]
 GO
+ 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 ALTER   PROCEDURE [dbo].[DBA_Lrf_FunctionProduct]
 (
@@ -13,6 +18,7 @@ Original :
 	
 Revisions:
 	- 20150320@Jim: add more funtion permission for 'Active Customer Summary' report
+	- 20150421@Jim: add more function Gold Deluxe
 Param's Explanation:
 		
 	
@@ -280,7 +286,19 @@ BEGIN
 									,62 -- AG Casino Win Loss
 									)
 		END	
-	
+	IF @ProductCode = 'GD'
+		BEGIN 
+			INSERT INTO @tblFunctions (ProductId, FunctionId,TypeID)
+			SELECT	11 AS ProductId -- AGC
+					,FunctionID  
+					,1 AS TypeId	 -- Lrf Function
+			FROM dbo.Functions WITH (NOLOCK)
+			WHERE FunctionId    IN (
+									 3  -- REPORTS
+									,65 -- Gold Deluxe Winloss
+									)
+		END	
+		
 	SELECT DISTINCT ProductId, FunctionId,TypeID
 	FROM @tblFunctions ORDER BY ProductId,FunctionId  ASC
 		/*
