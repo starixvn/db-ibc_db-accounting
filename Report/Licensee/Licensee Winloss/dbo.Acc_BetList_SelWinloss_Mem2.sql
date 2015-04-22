@@ -1,11 +1,4 @@
-﻿SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_BetList_SelWinloss_Mem2    Script Date: 1/28/2015 4:08:40 PM ******/
- 
-ALTER PROCEDURE [dbo].[Acc_BetList_SelWinloss_Mem2]
+﻿ALTER PROCEDURE [dbo].[Acc_BetList_SelWinloss_Mem2]
 	@CustID			INT,
 	@CurrencyId		INT=0,
 	@FromDate		DATETIME,
@@ -304,7 +297,7 @@ BEGIN
 			INSERT INTO #BetListByDateMem
 			SELECT
 				0, --Sporttype
-				CASE WHEN bettype <> 29 THEN b.transid
+				CASE WHEN b.bettype <> 29 THEN b.transid
 				ELSE CASE WHEN ISNULL(b.BetID,0)=0 THEN b.transid ELSE betid END
 				END AS transid,	
 				b.BetID,
@@ -1044,7 +1037,7 @@ BEGIN
 			INSERT INTO #BetListByDateMem
 			SELECT
 				0, --Sporttype
-				CASE WHEN bettype <> 29 THEN b.transid
+				CASE WHEN b.bettype <> 29 THEN b.transid
 				ELSE CASE WHEN ISNULL(b.BetID,0)=0 THEN b.transid ELSE betid END
 				END AS transid,	
 				b.BetID,
@@ -1779,7 +1772,7 @@ BEGIN
 		INSERT INTO #BetListByDateMem
 		SELECT
 			0, --Sporttype
-			CASE WHEN bettype <> 29 THEN b.transid
+			CASE WHEN b.bettype <> 29 THEN b.transid
 				ELSE CASE WHEN ISNULL(b.BetID,0)=0 THEN b.transid ELSE betid END
 				END AS transid,	
 			b.BetID,
@@ -2627,18 +2620,4 @@ SELECT * FROM @BettransDetail ORDER BY RefNo,Bettype
 DROP TABLE #TempBetList	
 DROP TABLE #BetListByDateMem
 DROP TABLE #TempExchange
-GO
 
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbLicenseeNet]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_BetList_SelWinloss_Mem2] TO [bodbAdminNet]
-GO 

@@ -39,7 +39,7 @@ DECLARE @BetListMP TABLE(
 	isNeutral bit,
 	matchid int,
 	matchcode nvarchar(50),
-	BetCheck Varchar(50)
+	BetCheck NVarchar(50)
 )
 
 

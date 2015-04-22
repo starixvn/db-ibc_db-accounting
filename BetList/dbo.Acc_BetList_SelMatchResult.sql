@@ -213,19 +213,32 @@ SET NOCOUNT ON
 
 			SELECT @Sporttype = Sporttype FROM DBARC.bodb_archive.dbo.match_BK m WITH(NOLOCK) WHERE m.matchid = @matchid	
 				
+						
 			SELECT	D.MatchId,
 					D.ResourceId,
 					D.HomeValue,
 					D.AwayValue,
 					D.ResultStatusID,
-					D.SettlementStatusID
-			FROM	DBARC.bodb_archive.dbo.ResultDetail_BK D WITH (NOLOCK)			
-			WHERE	D.MatchId = @MatchId	
-					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
-							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
-								ELSE 0 END END = LEN(D.ResourceId)
-					AND D.SettlementStatusID > 0
+					D.SettlementStatusID,
+					D.OtherInfo
+			FROM	DBARC.bodb_archive.dbo.ResultDetail_BK D WITH (NOLOCK)		
+				LEFT JOIN (SELECT Bettype, ResourceId FROM dbo.f_ResourceBettype()) F 					
+					ON	F.Bettype = @Bettype
+						AND D.ResourceId LIKE F.ResourceID	
+			WHERE	D.MatchId = @MatchId AND D.SettlementStatusID > 0 	
+					AND (	(@Sporttype = 5 AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
+								 					 CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
+														ELSE 0 END END = LEN(D.ResourceId)
+							 )
+							OR 
+							(@Sporttype = 1 AND D.ResourceId NOT IN ( '00', '01', '08') 
+							 AND D.ResourceId LIKE F.ResourceID							 	 
+							 	
+							)
+						)
 			ORDER BY ResourceId
+			
+			
 		END
 	END
 	ELSE
