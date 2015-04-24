@@ -351,8 +351,8 @@ BEGIN
 								 WHEN b.bettype = 180 THEN (818000 + @BetID160)
 							END
 						END
-				ELSE b.betID
-			END = b.betID
+				ELSE ISNULL(b.betID,0)
+			END = ISNULL(b.betID,0)
 		AND b.bettype NOT IN(4,6,14,16,30, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 
 								143, 144, 145, 146, 147, 148, 149, 150,
 								154, 155, 156, 159, 161, 162, 163, 165, 166, 169, 
