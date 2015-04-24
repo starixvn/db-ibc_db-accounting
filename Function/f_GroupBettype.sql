@@ -5,7 +5,7 @@ AS
 /*
 	Created: 20141016@Sophia
 	Task :	Get grouped bettype for Sporting Solution and BetRadar
-	DB:		DBAGE/bodb02, DBAGE/bodb_AGE, DBEXT/bodb02, DBACC/bodb02
+	DB:		DBAGE/bodb02, DBEXT/bodb02, DBACC/bodb02
  	Revisions: 
 		- 20150414@Sophia: Support BetRadar
 
