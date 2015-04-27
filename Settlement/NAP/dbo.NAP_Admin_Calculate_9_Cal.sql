@@ -109,7 +109,7 @@ BEGIN
 	
 	-- CALCULATE effective odds value  
 	Declare @modds
-		TABLE (m_refno bigint PRIMARY KEY, modds money, NoRefund INT, loseCnt tinyint, runningCnt tinyint, matchdate_max smalldatetime)
+		TABLE (m_refno bigint PRIMARY KEY, modds money, NoRefund INT, loseCnt INT, runningCnt INT, matchdate_max smalldatetime)
 	INSERT INTO @modds (m_refno, modds, NoRefund, loseCnt, runningCnt, matchdate_max)
 		SELECT refno,
 			EXP(SUM(LOG(
