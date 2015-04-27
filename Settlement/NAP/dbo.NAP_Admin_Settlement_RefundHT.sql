@@ -1,7 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 08/27/2014 14:08:10 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER OFF
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
@@ -12,6 +9,11 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@IsSettleAbandonedMatchBetFair BIT = 0
 	,@hth INT = NULL
 	,@hta INT = NULL
+	,@isExistTotalCorner			BIT	= 0 
+	,@isExistHTFCorner				BIT	= 0 
+	,@isExistHTLCorner				BIT	= 0 
+	,@isExistFTFCorner				BIT	= 0 
+	,@isExistFTLCorner				BIT	= 0  
 	,@IP VARCHAR(15) = ''
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -29,6 +31,7 @@ AS
 		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]	
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 
 	
 	Param's Explanation:
@@ -125,7 +128,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -187,7 +190,7 @@ BEGIN
 			END CATCH
 		END
 
-		EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
+								EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
 			,@creator = @adminid
 			,@IsExcludeBetdaq = @IsExcludeBetdaq
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
@@ -198,6 +201,14 @@ BEGIN
 			,@fth = NULL
 			,@fta = NULL
 			,@betstatus = NULL
+			,@hthCorners = NULL
+			,@htaCorners = NULL
+			,@HTFCorner	 = NULL
+			,@isExistTotalCorner= @isExistTotalCorner
+			,@isExistHTFCorner	= @isExistHTFCorner
+			,@isExistHTLCorner	= @isExistHTLCorner
+			,@isExistFTFCorner	= @isExistFTFCorner
+			,@isExistFTLCorner	= @isExistFTLCorner
 			,@Action = 'CAL-HT'
 			,@IP = @IP
 			,@ErrCode = @ErrCode OUTPUT
@@ -283,7 +294,7 @@ BEGIN
 				END 
 		AND statusID NOT IN (101, 102)
 
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
 			,@betcount_8 = @betcount_8 -- bettype
@@ -300,12 +311,20 @@ BEGIN
 		,@RowCount = @Rowcount OUTPUT
 		,@creator = @adminid
 
+	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+		@Command			= 'NAP_Admin_Settlement_RefundHT'
+		,@MatchID			= @matchid
+		,@isExistTotalCorner= @isExistTotalCorner
+		,@isExistHTFCorner	= @isExistHTFCorner
+		,@isExistHTLCorner	= @isExistHTLCorner
+		,@creator			= @adminid
+
 	IF @Rowcount > 0
 	BEGIN
 		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
 			,'F'
 
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
 			,@IsExcludeBetdaq = @IsExcludeBetdaq
@@ -317,7 +336,7 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
+	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -521,9 +540,6 @@ BEGIN
 		END CATCH
 	END
 END
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO

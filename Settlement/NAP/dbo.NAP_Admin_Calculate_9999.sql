@@ -38,10 +38,10 @@ BEGIN
 		,@csHT NVARCHAR(10) -- HT correct score
 	
 	SELECT @csHT =  CASE WHEN @hth + @hta >= 4 THEN '4+' 
-						 ELSE CAST(@hth AS nvarchar(1)) + ':' + CAST(@hta AS nvarchar(1))
+						 ELSE CAST(@hth AS nvarchar(10)) + ':' + CAST(@hta AS nvarchar(10))
 					END
 		  ,@csFT =  CASE WHEN @fth + @fta >=4 THEN '4+'
-					     ELSE CAST(@fth AS nvarchar(1)) + ':' + CAST(@fta AS nvarchar(1))
+					     ELSE CAST(@fth AS nvarchar(10)) + ':' + CAST(@fta AS nvarchar(10))
 					END
 
 	--- LAS settlement 
