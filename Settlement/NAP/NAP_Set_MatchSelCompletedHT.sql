@@ -1,10 +1,5 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompletedHT]    Script Date: 09/10/2014 09:44:18 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompletedHT    Script Date: 3/17/2014 4:21:11 PM ******/
-
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompletedHT] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
@@ -24,6 +19,7 @@ AS
 		- 20140905@Kathy: exclude virtual racing bettype 1231,1232,1233
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		
 */
 BEGIN
@@ -170,10 +166,11 @@ BEGIN
 				,mr.isUndecided
 			FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
 				INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
+				LEFT JOIN DBPRO.BODB02.dbo.League l WITH (NOLOCK) ON m.leagueID = l.leagueID 
 			WHERE m.eventdate = @Date AND m.leagueID = CASE 
 					WHEN @LeagueID <> 0 THEN @LeagueID
 					ELSE m.leagueID
-					END AND m.sporttype = @sporttype AND m.eventstatus IN ('Closed', 'running', 'internal') AND ((datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) > @HTOverStartMins AND datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) < @HTOverEndMins) OR mr.confirmHT <> 0) AND mr.ishtcal = 0
+					END AND m.sporttype = @sporttype AND m.eventstatus IN ('Closed', 'running', 'internal') AND ((datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) > @HTOverStartMins AND datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) < @HTOverEndMins) OR mr.confirmHT <> 0 OR l.DisplayCat = 1) AND mr.ishtcal = 0
 			) m
 			INNER JOIN (
 			SELECT bettrans.matchid
@@ -199,8 +196,6 @@ BEGIN
 
 	ORDER BY eventstatus, matchcode
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
 GO
