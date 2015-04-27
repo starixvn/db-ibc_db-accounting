@@ -21,6 +21,7 @@ Original :
 	
 Revisions:
 		- 20150320@Jim: add more funtion permission for 'Active Customer Summary' report
+		- 20150427@Jim: support product Gold Deluxe 
 Param's Explanation:
 
 	
@@ -37,7 +38,12 @@ BEGIN
 			,@ProductName VARCHAR(5)
 			,@n INT
 			,@m INT
-			
+	        ,@LicenseeName VARCHAR(50)
+
+	SELECT  @LicenseeName = LicenseeName
+	FROM  dbo.Licensees WITH (NOLOCK)
+	WHERE LicenseeId = @LicenseeId
+	
 	---   INIT VARIABLE 
 	INSERT INTO @tblProductPrefix (ProductId,ProductCode,EffectiveDate)
 	SELECT 0,val,null
@@ -149,13 +155,12 @@ BEGIN
 		AND pf.TypeId = 2
 	IF EXISTS (SELECT 1 FROM @tblProductPrefix WHERE ProductCode = 'AGC')
 		BEGIN 
-			DECLARE @LicenseeName VARCHAR(50)
-			SELECT  @LicenseeName = LicenseeName
-			FROM  dbo.Licensees WITH (NOLOCK)
-			WHERE LicenseeId = @LicenseeId
-			
 			EXEC DBPTCS.bodb_PlaytechCS.[dbo].[DBA_EnableAGCasinoService] @LicenseeName = @LicenseeName, @SettingName ='AGCasino_VersionKey'
 		END
+	IF EXISTS (SELECT 1 FROM @tblProductPrefix WHERE ProductCode = 'GD')
+	BEGIN 
+		EXEC DBPTCS.bodb_PlaytechCS.[dbo].[DBA_EnableGoldDeluxeService] @LicenseeName = @LicenseeName, @SettingName ='GoldDeluxe_VersionKey'
+	END	
 	IF EXISTS (SELECT 1 FROM @tblProductPrefix WHERE ProductCode = 'BA')
 	BEGIN
 		IF NOT EXISTS(SELECT 1 FROM	dbo.LicenseeReseller WITH (NOLOCK) WHERE LicenseeID = @LicenseeID AND ResellerID = 3 )
