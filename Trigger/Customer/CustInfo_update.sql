@@ -37,6 +37,7 @@ Revisions:
          MaxPerMatch152_UK
          MaxPerMatch153_AU
     - 20141022@Logan: Add DisableEsports [Redmine: #20531]
+    - 20150421@Johnson: Add HideGoldDeluxe & DisableGoldDeluxe 
 
 */
 SET NOCOUNT ON
@@ -84,6 +85,8 @@ INSERT INTO bodb_CustomerLog.dbo.CustInfo_history (
       ,MaxPerMatch152_UK
       ,MaxPerMatch153_AU
       ,DisableEsports
+      ,HideGoldDeluxe
+      ,DisableGoldDeluxe
                 )
 SELECT
                 username, custid, currency, roleid, srecommend, mrecommend, recommend, dangercust, autosuspend, reject, credit, closed, MatchLimit,
@@ -129,4 +132,6 @@ SELECT
       ,MaxPerMatch152_UK
       ,MaxPerMatch153_AU
       ,DisableEsports
+      ,HideGoldDeluxe
+      ,DisableGoldDeluxe      
 FROM [DELETED]
