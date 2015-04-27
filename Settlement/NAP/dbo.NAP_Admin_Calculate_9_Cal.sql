@@ -1,9 +1,5 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 08/07/2014 14:06:53 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 3/17/2014 4:21:09 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime,
@@ -27,6 +23,7 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
+
 	Declare @subStart datetime
 	Declare @commWinRate smallmoney, @commLostRate smallmoney
 
@@ -40,7 +37,7 @@ BEGIN
 		SELECT distinct refno
 		FROM dbo.bettransm bm WITH (ROWLOCK)
 		WHERE matchid = @matchid
-
+	
 	DECLARE @temp_bettrans_9 TABLE (
 		[transid] [bigint] NOT NULL ,
 		[custid] [int] NOT NULL,
@@ -71,7 +68,7 @@ BEGIN
 		tloseCnt [tinyint] NULL,
 		[oldruben] [tinyint] NULL, -- this field to keep previous ticket status (running or not?)
 		[oldwinlostdate] [smalldatetime] NULL
-	)
+	)   
 	--create index temp_index on @temp_bettrans_9 (TransID)  
 	-- GET list of concern Ticket
 	SET @subStart = CURRENT_TIMESTAMP
@@ -97,7 +94,7 @@ BEGIN
 			AND bettype=9    
 			AND statusID NOT IN (101,102) --('VOID','REJECT')
 			--AND refno IN (SELECT refno FROM @tmp_mrefno)
-	
+		
 	-- Results list from both bettransm & bettransm14
 	Declare @parlay
 		TABLE (refno bigint, matchid int, statuswinlost tinyint, statusID int, odds smallmoney, matchdate smalldatetime)
@@ -109,10 +106,10 @@ BEGIN
 	INSERT INTO @parlay
 		SELECT bm.refno, bm.matchid, bm.statuswinlost, statusID, odds, matchdate
 		FROM dbo.bettransm14 bm with (rowlock) INNER JOIN @tmp_mrefno tm ON bm.refno = tm.refno
-
+	
 	-- CALCULATE effective odds value  
 	Declare @modds
-		TABLE (m_refno bigint PRIMARY KEY, modds money, NoRefund tinyint, loseCnt tinyint, runningCnt tinyint, matchdate_max smalldatetime)
+		TABLE (m_refno bigint PRIMARY KEY, modds money, NoRefund INT, loseCnt tinyint, runningCnt tinyint, matchdate_max smalldatetime)
 	INSERT INTO @modds (m_refno, modds, NoRefund, loseCnt, runningCnt, matchdate_max)
 		SELECT refno,
 			EXP(SUM(LOG(
@@ -142,6 +139,7 @@ BEGIN
 			MAX(matchdate) AS matchdate_max
 		FROM @parlay bm
 		GROUP BY refno  
+	
 
 	Declare @statusID tinyint, @odds money
 	Declare @oldstatusID tinyint, @oldwinlost money, @winlost money
@@ -234,7 +232,7 @@ BEGIN
 
 	FROM @temp_bettrans_9 T 
 			INNER JOIN @modds m ON T.refno = m.m_refno
-
+	
 	-------------------------------------------------------------------------------------  
 
 	-- UPDATE BACK TO BETTRANS  
@@ -383,6 +381,8 @@ BEGIN
 		DROP TABLE #BalanceAfter
 	END		
 END
+---------------------------------------------------------------
+
 ---------------------------------------------------------------
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]
