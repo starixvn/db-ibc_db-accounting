@@ -65,7 +65,7 @@ BEGIN
 		[statusID] [tinyint] NULL,
 		comstatus nvarchar(20) NULL,
 		IsUpdated [bit] NULL,     -- this field to stored value indicate if this row been change
-		tloseCnt [tinyint] NULL,
+		tloseCnt [INT] NULL,
 		[oldruben] [tinyint] NULL, -- this field to keep previous ticket status (running or not?)
 		[oldwinlostdate] [smalldatetime] NULL
 	)   
