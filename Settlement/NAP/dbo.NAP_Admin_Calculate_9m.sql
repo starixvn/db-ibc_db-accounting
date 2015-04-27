@@ -2203,5 +2203,6 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
+	
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]

@@ -830,6 +830,5 @@ BEGIN
 	END
 END
 
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]
