@@ -104,7 +104,7 @@ BEGIN
 	FROM dbo.Users u WITH (NOLOCK) 
 		INNER JOIN dbo.LicenseeUser lu WITH (NOLOCK) ON u.UserID = lu.UserID 
 	WHERE lu.LicenseeID = @LicenseeID 
-		  AND u.userrole = 'admin'
+		 -- AND u.userrole = 'admin'
 		  AND u.Status='Open'	
 	SELECT @i = 1
 			,@k = MAX(ID)
