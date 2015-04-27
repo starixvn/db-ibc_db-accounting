@@ -10,7 +10,7 @@ AS
 	Created by: [Creator]
 	Date: 2008
 	Task: Bet list by date 
-	DB: DB053.BODB02 
+	DB: DBAGE.BODB02 
 	
 	Revisions:
 		- 20081218@PhuongNguyen: Get Isneutral from Match

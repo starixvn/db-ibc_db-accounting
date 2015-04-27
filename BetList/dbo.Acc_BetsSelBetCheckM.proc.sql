@@ -7,7 +7,7 @@ AS
 	Created by: [Creator]
 	Date: 2008
 	Task: Get info of Mix Parlay Bets 
-	DB: DB053.BODB02
+	DB: DBAGE.BODB02
 	Original: Original: SP mteamlist
 	
 	Revisions: 
