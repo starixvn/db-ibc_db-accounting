@@ -1,10 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_All_Push]    Script Date: 04/20/2015 17:26:23 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All_Push] 
 	@Matchid						INT
 	,@AdminId						INT
@@ -17,6 +12,13 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All_Push]
 	,@HalfTimeAway					INT 			= NULL
 	,@FullTimeHome					INT 			= NULL
 	,@FullTimeAway					INT 			= NULL
+	,@GoalSequence					VARCHAR(50)		= NULL 
+	,@fthCorners					SMALLINT		= NULL
+	,@ftaCorners					SMALLINT		= NULL
+	,@hthCorners					SMALLINT		= NULL
+	,@htaCorners					SMALLINT		= NULL 
+	,@FTFCorner						VARCHAR(1)		= NULL
+	,@HTFCorner						VARCHAR(1)		= NULL
 	,@BetStatus						NVARCHAR(50)	= NULL
 	,@SetResult						VARCHAR(50)		= NULL 
 	,@GameResult1					VARCHAR(MAX)	= NULL
@@ -31,6 +33,11 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All_Push]
 	,@SelectedSet4Game				VARCHAR(MAX)	= NULL 
 	,@SelectedSet5Game				VARCHAR(MAX)	= NULL
 	,@SelectedSettleFinishedGame	VARCHAR(50)		= NULL 
+	,@isExistTotalCorner			BIT				= 0 
+	,@isExistHTFCorner				BIT				= 0 
+	,@isExistHTLCorner				BIT				= 0 
+	,@isExistFTFCorner				BIT				= 0 
+	,@isExistFTLCorner				BIT				= 0 
 	,@IP							VARCHAR(15)		= ''
 	,@ErrCode						INT				= 0		OUTPUT
 	,@ErrMsg						NVARCHAR(200)	= ''	OUTPUT
@@ -48,7 +55,7 @@ AS
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
-		- 20150420@kathy: hotfix - change Action = Cal instead of Refund
+		- 20150414@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -69,6 +76,7 @@ AS
 				custid	--- username	-	roleid
 				2331	---	BF		    -	1
 				1077687	---	BFOS		-	1
+	* @isExistTotalCorner: = 1 When existing tickets or result details of corners bettypes 
 
 */
 BEGIN
@@ -118,7 +126,7 @@ BEGIN
 	END
 
 	-- check waiting ticket
-		EXEC NAP_Admin_Settlement_Checking
+				EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = 'REFUND'
 		,@Mode = 'REFUND'
@@ -142,6 +150,7 @@ BEGIN
 																  + ', @IsExcludeBetfair = ' + CONVERT(NVARCHAR(1), @IsExcludeBetfair) 
 																  + ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchBetFair) 
 																  + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchIBC) 
+																 
 																  + ', @betstatus = ' + CASE WHEN @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(NVARCHAR(20), @BetStatus) + '''' END 
 																  + ', @SetResult = ' + CASE WHEN @SetResult IS NULL THEN 'NULL' ELSE '''' + @SetResult + '''' END
 																  + ', @GameResult1 = ' + CASE WHEN @GameResult1 IS NULL THEN 'NULL' ELSE '''' + @GameResult1 + '''' END
@@ -159,7 +168,21 @@ BEGIN
 																  + ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeHome), 'NULL') 
 																  + ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeAway), 'NULL') 
 																  + ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeHome), 'NULL') 
-																  + ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeAway), 'NULL') 
+																  + ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeAway), 'NULL')
+																  + ', @GoalSequence = ' + CASE WHEN @GoalSequence IS NULL THEN 'NULL' ELSE '''' + @GoalSequence + '''' END
+																  + ', @fthCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @fthCorners), 'NULL')  
+																  + ', @ftaCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @ftaCorners), 'NULL') 
+																  + ', @hthCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @hthCorners), 'NULL') 
+																  + ', @htaCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @htaCorners), 'NULL') 
+																  
+																  + ', @FTFCorner = ' + CASE WHEN @HTFCorner IS NULL THEN 'NULL' ELSE '''' + @HTFCorner + '''' END
+																  + ', @HTFCorner = ' + CASE WHEN @HTFCorner IS NULL THEN 'NULL' ELSE '''' + @HTFCorner + '''' END
+																  + ', @isExistTotalCorner = ' + CONVERT(NVARCHAR(1), @isExistTotalCorner)
+																  + ', @isExistHTFCorner = ' + CONVERT(NVARCHAR(1), @isExistHTFCorner)
+																  + ', @isExistHTLCorner = ' + CONVERT(NVARCHAR(1), @isExistHTLCorner)
+																  + ', @isExistFTFCorner = ' + CONVERT(NVARCHAR(1), @isExistFTFCorner)
+																  + ', @isExistFTLCorner = ' + CONVERT(NVARCHAR(1), @isExistFTLCorner)
+
 																  + ', @Action = ''' + CONVERT(NVARCHAR(20), @Action) + '''' 
 																  + ', @IsNested = ''' + CONVERT(NVARCHAR(1), @IsNested) + '''' 
 																  + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
@@ -169,7 +192,7 @@ BEGIN
 	IF LEN(@sqlCommand)> 1000 --Max Field 
 	BEGIN
 		SELECT   @ErrCode = 1001010
-				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each set/match to execute separately.'	
+				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'	
 		RETURN 
 	END
 
@@ -248,8 +271,6 @@ BEGIN
 			,@sqlCommand
 	END
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_All_Push] TO [bodbAdminNet] AS [dbo]
 GO

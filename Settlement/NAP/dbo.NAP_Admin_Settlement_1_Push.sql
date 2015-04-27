@@ -1,10 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1_Push]    Script Date: 04/02/2015 13:30:25 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push] 
 	 @AdminId				INT
 	,@Matchid				INT
@@ -26,6 +19,14 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push]
 	,@SelectedSet3Game		VARCHAR(MAX)	= NULL 
 	,@SelectedSet4Game		VARCHAR(MAX)	= NULL 
 	,@SelectedSet5Game		VARCHAR(MAX)	= NULL 
+	,@fthCorners			SMALLINT		= NULL
+	,@ftaCorners			SMALLINT		= NULL
+	,@hthCorners			SMALLINT		= NULL
+	,@htaCorners			SMALLINT		= NULL 
+	,@FTFCorner				VARCHAR(1)		= NULL
+	,@FTLCorner				VARCHAR(1)		= NULL
+	,@HTFCorner				VARCHAR(1)		= NULL
+	,@HTLCorner				VARCHAR(1)		= NULL 	
 	,@Action				VARCHAR(10)		= 'CAL'
 	,@IP					VARCHAR(15)		= ''
 	,@ErrCode				INT				= 0		OUTPUT
@@ -41,6 +42,7 @@ AS
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
+		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		
 	Param's Explanation:
 
@@ -52,7 +54,7 @@ BEGIN
 	DECLARE @matchcode			NVARCHAR(50)
 		,@sporttype				INT
 		,@leagueid				INT
-		,@sqlCommand			NVARCHAR(MAX)  --
+		,@sqlCommand			NVARCHAR(MAX) 
 		,@procName				NVARCHAR(50)
 
 	SELECT @matchcode	= m.matchcode
@@ -149,6 +151,20 @@ BEGIN
 																					   ELSE '''' + @SelectedSet4Game+ '''' END 
 														  + ', @SelectedSet5Game = ' + CASE WHEN @SelectedSet5Game IS NULL THEN 'NULL'	
 																					   ELSE '''' + @SelectedSet5Game+ '''' END  
+
+														  + ', @fthCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @fthCorners), 'NULL') 
+														  + ', @ftaCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @ftaCorners), 'NULL') 
+														  + ', @hthCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @hthCorners), 'NULL') 
+														  + ', @htaCorners = ' + ISNULL(CONVERT(NVARCHAR(50), @htaCorners), 'NULL') 
+														  + ', @FTFCorner = ' + CASE WHEN @FTFCorner IS NULL THEN 'NULL'	
+																					   ELSE '''' + @FTFCorner + '''' END 
+														  + ', @FTLCorner = ' + CASE WHEN @FTLCorner IS NULL THEN 'NULL'	
+																						   ELSE '''' + @FTLCorner + '''' END 
+														  + ', @HTFCorner = ' + CASE WHEN @HTFCorner IS NULL THEN 'NULL'	
+																						   ELSE '''' + @HTFCorner + '''' END 
+														  + ', @HTLCorner = ' + CASE WHEN @HTLCorner IS NULL THEN 'NULL'	
+																						   ELSE '''' + @HTLCorner+ '''' END 
+
 														  + ', @action = ''' + CONVERT(NVARCHAR(50), @Action) + '''' 
 														  + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
 														  + ', @ErrCode = @ErrCode OUTPUT' 
@@ -157,7 +173,7 @@ BEGIN
 	IF LEN(@sqlCommand)> 1000 --Max Field 
 	BEGIN
 		SELECT   @ErrCode = 1001010
-				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each set/match to execute separately.'	
+				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'	
 		RETURN 
 	END
 
@@ -238,11 +254,6 @@ BEGIN
 			,@sqlCommand
 	END
 END
-
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1_Push] TO [bodbAdminNet] AS [dbo]

@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Auto_1s_Push]    Script Date: 04/16/2015 09:03:31 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
 	 @AdminId			INT				= 148		-- calculated by system (default)
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -24,7 +17,6 @@ AS
 	Original: 
 	
 	Revisions:
-		- 20150415@Kathy: Add checking ticket status before performing settlement [Redmine:#27212]
 
 	Param's Explanation:
 */		
@@ -34,7 +26,7 @@ BEGIN
 	DECLARE	 @matchcode		NVARCHAR(50)
 			,@sporttype		INT
 			,@leagueid		INT
-			,@sqlCommand	NVARCHAR(500)
+			,@sqlCommand	NVARCHAR(MAX)
 			,@procName		NVARCHAR(50)
 			,@betstatus		NVARCHAR(50)
 
@@ -85,7 +77,7 @@ BEGIN
 
 		RETURN
 	END
-	
+
 	-- check waiting ticket
 	EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
@@ -100,6 +92,7 @@ BEGIN
 		
 		RETURN
 	END
+
 
 	SELECT	 @ErrCode		= 0
 			,@ErrMsg		= ''
@@ -162,8 +155,6 @@ BEGIN
 	END
 
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO

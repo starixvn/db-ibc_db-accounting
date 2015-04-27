@@ -1,13 +1,12 @@
-﻿USE [bodb02]
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
-	 @AdminID			INT				= 148		-- calculated by system (default)
-	,@MatchID			INT
-	,@ResourceIDs		VARCHAR(MAX)	= '' 
-	,@Results			VARCHAR(MAX)	= '' 
-	,@Action			VARCHAR(10)		= 'CAL'
-	,@IsAuto			BIT				= 1
-	,@IP				VARCHAR(15)		= ''
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
+	 @AdminID						INT				= 148		-- calculated by system (default)
+	,@MatchID						INT
+	,@ResourceIDs					VARCHAR(MAX)	= '' 
+	,@Results						VARCHAR(MAX)	= ''
+	,@IsSettleAbandonedMatchIBC		BIT				= 0 
+	,@Action						VARCHAR(10)		= 'CAL'
+	,@IsAuto						BIT				= 1
+	,@IP							VARCHAR(15)		= ''
 	,@ErrCode			INT				= 0		OUTPUT
 	,@ErrMsg			NVARCHAR(200)	= ''	OUTPUT
 AS
@@ -114,7 +113,7 @@ BEGIN
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 	GROUP BY b.custid
 
 
@@ -162,20 +161,75 @@ BEGIN
 	END
 	ELSE IF @Action = 'REFUND'
 	BEGIN
+		
+		IF @IsSettleAbandonedMatchIBC = 1 
+		BEGIN
+			DECLARE	 @betCount_216			INT	= 0
+					,@GoalScorerAnytime		VARCHAR(MAX)=''
+
+			DECLARE	@tmpResourceIDs	TABLE(
+				 ID			INT IDENTITY(1,1)
+				,ResourceID	VARCHAR(20)
+				,Bettype	INT
+			)
+			INSERT INTO @tmpResourceIDs(ResourceID, Bettype)
+			SELECT	Val, CAST(LEFT(val,3) AS INT) FROM dbo.StrSplit(@ResourceIDs,',')
+
+			DECLARE	@tmpResults TABLE(
+				 ID			INT IDENTITY(1,1)
+				,HomeValue	VARCHAR(50)
+			)
+			INSERT INTO @tmpResults(HomeValue)
+			SELECT	Val FROM dbo.StrSplit(@Results,',') WHERE @Results IS NOT NULL 
+
+			UPDATE @tmpResults
+			SET		HomeValue = NULL
+			WHERE	HomeValue ='NL'
+
+			SELECT	 @betCount_216	= ISNULL(SUM(CASE WHEN bettype = 216 THEN 1 ELSE 0 END),0)
+			FROM	dbo.Bettrans WITH (NOLOCK)
+			WHERE	MatchID = @MatchID 
+					AND Bettype = 216
+					AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
+					AND StatusID NOT BETWEEN 101 AND 102 
+	
+			SELECT	@GoalScorerAnytime		= @GoalScorerAnytime + CASE WHEN t.ResourceID LIKE '216__' THEN ISNULL(r.HomeValue,'') +',' ELSE '' END 
+			FROM	@tmpResourceIDs t
+					INNER JOIN @tmpResults r ON t.ID = r.ID 
+			WHERE	t.ResourceID LIKE '216__'	
+
+			IF ISNULL(@GoalScorerAnytime,'') =''
+			BEGIN
+				SELECT	 @ErrCode	= 1001014
+						,@ErrMsg	= 'Cannot settle determined ticket(s) without suspended result!'		
+				RETURN 	
+			END
+
+			EXEC dbo.NAP_Admin_Calculate_Main 
+				 @matchid					= @matchid
+				,@ResourceIDs				= @ResourceIDs
+				,@action					= 'REFUND'	
+				,@mode						= 'ALL' 
+				,@GoalScorerAnytime			= @GoalScorerAnytime
+				,@IsSettleAbandonedMatchIBC	= @IsSettleAbandonedMatchIBC
+				,@betCount_216				= @betCount_216
+		END
+
 		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
-			@Command			= 'NAP_Admin_Settlement_Auto_1s-REFUND',
-			@MatchID			= @MatchID,
-			@ResourceIDs		= @ResourceIDs, 
-			@Results			= @Results,
-			@IsAuto				= @IsAuto,
-			@creator			= @AdminID 	
+					@Command			= 'NAP_Admin_Settlement_Auto_1s-REFUND',
+					@MatchID			= @MatchID,
+					@ResourceIDs		= @ResourceIDs, 
+					@Results			= @Results,
+					@IsAuto				= @IsAuto,
+					@creator			= @AdminID 	
 
 		EXEC dbo.NAP_Admin_Calculate_Main 
-			 @matchid		= @matchid
-			,@ResourceIDs	= @ResourceIDs
-			,@action		= 'REFUND'	
-			,@mode			= 'ALL' 
-			,@row_count		= 1 
+			 @matchid					= @matchid
+			,@ResourceIDs				= @ResourceIDs
+			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+			,@action					= 'REFUND'	
+			,@mode						= 'ALL' 
+			,@row_count					= 1 
 	END
 
 
@@ -188,7 +242,7 @@ BEGIN
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @matchid 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 	GROUP BY b.custid
 
 
@@ -260,6 +314,7 @@ BEGIN
 
 	SELECT @logdata = 'NAP: Auto-Settlement (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
 														   + ' ResourceID:' + CAST(@ResourceIDs AS VARCHAR(MAX))
+														   + ' SettleDeterminedTickets:' + CAST(@IsSettleAbandonedMatchIBC AS VARCHAR(1))
 														   + ' Result:' + @Results + '(' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 	EXEC dbo.WriteLog_UserLog 
 		@UserID = @AdminId
@@ -267,6 +322,7 @@ BEGIN
 
 	SELECT @Remark = 'NAP: ResourceID:' + @ResourceIDs +  ' <br/> ' 
 						+ CASE WHEN ISNULL(@Results,'') ='' THEN '' ELSE ' Result:'+ ISNULL(@Results,'') + ' <br/> ' END
+						+ ' SettleDeterminedTickets:' + CAST(@IsSettleAbandonedMatchIBC AS VARCHAR(1))
 						+ ' IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
 						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + 'ms' 
 	BEGIN TRY

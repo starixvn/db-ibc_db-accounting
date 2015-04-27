@@ -1,7 +1,6 @@
 ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] @Date DATETIME
 	,@LeagueID INT = 0
-	,-- 0 for ALL Leagues
-	@sporttype TINYINT = 0
+	,@sporttype TINYINT = 0
 	,@statusid TINYINT = 0
 AS
 /*  
@@ -13,6 +12,7 @@ AS
 	Revisions:  
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
+		- 20150403@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 
 	Param explanation:  
 		@sporttype: show info of particular sport
@@ -370,15 +370,24 @@ BEGIN
 			,matchcode  
 
 	-- Get TENNIS RESULT 
-	SELECT	DISTINCT 
-			MatchId
-			, CASE WHEN LEN(ResourceId) > 2 THEN '0101' ELSE ResourceID END AS ResourceID 
-			, CASE WHEN LEN(ResourceID) > 2 THEN '0' ELSE HomeValue END AS HomeValue 
-			, CASE WHEN LEN(ResourceID) > 2 THEN '0' ELSE AwayValue END AS AwayValue 
-			, CASE WHEN LEN(ResourceID) > 2 THEN  4 ELSE SettlementStatusID END AS SettlementStatusID
+	SELECT	DISTINCT MatchId
+			, CASE WHEN @Sporttype = 1 THEN '04'
+				   WHEN @Sporttype = 5 AND LEN(ResourceId) > 2 THEN '0101' 
+				   ELSE ResourceID END AS ResourceID 
+			, CASE WHEN @Sporttype = 1 THEN '0'
+				   WHEN @sporttype = 5 AND LEN(ResourceID) > 2 THEN '0' 
+				   ELSE HomeValue END AS HomeValue 
+			, CASE WHEN @Sporttype = 1 THEN '0'
+				   WHEN @Sporttype = 5 AND LEN(ResourceID) > 2 THEN '0' 
+				   ELSE AwayValue END AS AwayValue 
+			, CASE WHEN @Sporttype = 1 OR (@Sporttype = 5 AND LEN(ResourceID) > 2) THEN  4 
+				   ELSE SettlementStatusID END AS SettlementStatusID
 	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
-	WHERE	@Sporttype IN (0,5 )
+	WHERE	(@Sporttype = 5)
+				OR( @Sporttype = 1 AND ResourceID NOT IN ('00','01','08')
+			)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
+			AND ResultStatusID > 0 
 	ORDER BY MatchID, ResourceID 
 
 	DROP TABLE #matchList

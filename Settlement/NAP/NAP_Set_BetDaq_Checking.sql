@@ -1,10 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_BetDaq_Checking]    Script Date: 10/03/2014 09:09:55 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Set_BetDaq_Checking]
 	@matchid				int = 0
 AS 
@@ -12,7 +7,7 @@ AS
 /*
 Created: 20120924@dAN
 Task : Checking exists betdatd tickets or not
-DB: DBTRANS.bodb02
+DB: DBTXN/bodb02
 Original: [Acc_Set_BetDaq_Checking]
 
 Revisions: 
@@ -20,6 +15,8 @@ Revisions:
 	-20140707@Kathy: Execute settlement for abandoned/postponed matches: BetRadar [Redmine:17142]
 	-20140725@Kathy: Execute settlement for abandoned/postponed matches: Correct Score(4,30)[Redmine:#19310]
 	-20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
+	-20141023@Jamie: Exclude new bet types Sporting Solution for Tennis [Redmine:#23034] 
+	- 20150418@Jamie: Betradar phase II [Readmine:#27212]
 
 Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 	* List of BetDaq Customers 
@@ -71,6 +68,9 @@ BEGIN
 								OR recommend = 1688156	)
 						AND matchid = @matchid 
 						AND ruben = 0
+						AND bettype NOT BETWEEN 1301 AND 1399	-- Sportting solution exclude in Betdaq/Betfair 
+						AND bettype NOT BETWEEN 153 AND 156		-- Tennis new bet types 
+						AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			   )
 	BEGIN
 		SELECT	@isMoveBetDaq = 1, @isExcludeBetDaq = 1, @IsRefundRunningBetDaq = 1  	
@@ -87,27 +87,14 @@ BEGIN
 						AND bettype IN (3,8,13,26,27, --Over/Under ,Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 								4, 6, 30, 126,
 								128, 129, 130, 131, 132, 143, 144,
-								133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar
+								133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152
+								,159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207 -- Betradar2 
+								)  -- BetRadar
 						AND statusID NOT IN (101, 102)
 						AND ruben = 0 
 			   )
 	BEGIN
 		SELECT	@IsSettleAbandonedMatch = 1 
-		--IF EXISTS (
-		--			SELECT 1 
-		--			FROM bettrans WITH (NOLOCK) 
-		--			WHERE 
-		--					(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
-		--						OR recommend = 1688156	)
-		--					AND matchid = @matchid 
-		--					AND bettype IN(3,13,26,27,   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil
-		--						133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar
-		--					AND statusID NOT IN (101, 102)
-		--					AND ruben = 1 
-		--		   )	
-		--BEGIN
-		--	SELECT	@IsSettleAbandonedMatch = 0
-		--END
 
 	END
 	SELECT @IsMovebetdaq IsMovebetdaq,
@@ -116,9 +103,6 @@ BEGIN
 		@IsRefundRunningBetDaq	IsRefundRunningBetDaq
 	
 END
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_BetDaq_Checking] TO [bodbAdminNet] AS [dbo]
 GO

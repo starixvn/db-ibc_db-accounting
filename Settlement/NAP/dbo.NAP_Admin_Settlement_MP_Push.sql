@@ -1,11 +1,11 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/08/2015 12:56:28 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/24/2015 02:31:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 4/8/2015 1:48:13 AM ******/
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 07/04/2015 3:41:11 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
@@ -101,7 +101,7 @@ BEGIN
 	--SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + b.matchid,
 	
 	-- check waiting ticket
-	EXEC NAP_Admin_Settlement_Checking
+				EXEC NAP_Admin_Settlement_Checking
 		@MatchIds = @MatchIds	OUTPUT
 		,@Action = @Action
 		,@Mode = 'CAL-MP'	
@@ -194,14 +194,6 @@ BEGIN
 		END
 	END
 END
-
-
-
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO

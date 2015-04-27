@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1] 
      @matchid INT
 	,@bettype				SMALLINT
@@ -14,6 +16,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1]
 	,@TotalGameAwaySet3		SMALLMONEY	= NULL 
 	,@TotalGameAwaySet4		SMALLMONEY	= NULL 
 	,@TotalGameAwaySet5		SMALLMONEY	= NULL 
+	,@isRefundHT			BIT = 0
 	,@betcount				INT = 0
 	-- add any params, please modify script in 'special section'
 AS
@@ -26,6 +29,7 @@ AS
 	Revisions:
 		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
 		- 20141017@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		
 */
 BEGIN
@@ -190,6 +194,7 @@ BEGIN
 				matchid=@matchid 
 				AND Bettype = @bettype
 				AND statusID NOT IN (101,102) -- REJECT & VOID 
+				AND 1 = CASE WHEN @bettype = 183 and @isRefundHT = 1 THEN 0 ELSE 1 END
 				AND 1 = CASE WHEN @Bettype NOT IN (154,155,1311, 1316) THEN 1
 							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
 							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
@@ -352,13 +357,14 @@ BEGIN
 		WHERE matchid = @matchid 
 			AND bettype = @bettype 
 			AND statusID NOT IN (101,102) -- REJECT & VOID 
-				AND 1 = CASE WHEN @Bettype NOT IN (154,155,1311, 1316) THEN 1
-							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
-							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
-							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1
-							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1
-							 WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1
-							 ELSE 0 END 
+			AND 1 = CASE WHEN @bettype = 183 and @isRefundHT = 1 THEN 0 ELSE 1 END
+			AND 1 = CASE WHEN @Bettype NOT IN (154,155,1311, 1316) THEN 1
+							WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
+							WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
+							WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1
+							WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1
+							WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1
+							ELSE 0 END 
 	END
 END
 GO

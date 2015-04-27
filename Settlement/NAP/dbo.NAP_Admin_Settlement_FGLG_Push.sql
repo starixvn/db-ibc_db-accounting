@@ -1,11 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG_Push]    Script Date: 04/02/2015 13:31:29 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG_Push] 
 	@AdminId			INT
 	,@action			VARCHAR(10)		= 'CAL-FT' -- CAL-FT, CAL-HT
@@ -80,7 +74,7 @@ BEGIN
 	END
 	
 	-- check waiting ticket
-	EXEC NAP_Admin_Settlement_Checking
+				EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = @Action
 		,@Mode = 'CAL-FGLG'
@@ -199,9 +193,6 @@ BEGIN
 			,@sqlCommand
 	END
 END
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [bodbAdminNet] AS [dbo]
 GO

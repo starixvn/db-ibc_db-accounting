@@ -1,8 +1,6 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundHT]    Script Date: 08/27/2014 14:03:14 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER ON
-GO
+
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundHT] @matchid INT
 	,@IsExcludeBetdaq BIT = 0
@@ -18,7 +16,8 @@ AS
 		- 20140620@Kathy: Apply BetRadar:
 							- Add 1st Correct Score(151) 	
 							- Refund FT bettypes  [Redmine:#17142]
-		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]					
+		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]		
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]			
 		
 
 	Param's Explanation:
@@ -34,7 +33,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -72,10 +71,14 @@ BEGIN
 			,scomm = 0
 		WHERE matchid = @matchid
 			--AND [status] not in (N'Void', N'Reject')
-			AND statusID NOT IN (103, 101, 102) 			
+			AND statusID NOT IN (103, 101, 102) 		
+			AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)	
 			AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
 							128,
-							133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 ) -- BetRadar: refund FT ticket in case of 30x3 match
+							133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+							,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209	--Betradar 2 HT tickets
+							,177,178,183,184,185,186,187,189,190		-- Betradar 2 FT ticket in case of 30x3 match 
+							) 
 			AND 1 = CASE 
 						WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 						WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
@@ -86,11 +89,6 @@ BEGIN
 			BREAK
 	END
 END
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO

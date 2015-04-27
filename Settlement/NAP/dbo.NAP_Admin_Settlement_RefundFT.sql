@@ -1,9 +1,5 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT]    Script Date: 09/12/2014 09:04:59 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER OFF
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT] 
 	@matchid						INT
 	,@adminid						INT
@@ -14,7 +10,16 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT]
 	,@IsSettleAbandonedMatchIBC		BIT 			= 0
 	,@fth							INT 			= NULL
 	,@fta							INT 			= NULL
+	,@GoalSequence					VARCHAR(50)		= NULL 
+	,@fthCorners					SMALLINT		= NULL
+	,@ftaCorners					SMALLINT		= NULL
+	,@ftFCorner						VARCHAR(1)		= NULL
 	,@betstatus						NVARCHAR(50)	= NULL
+	,@isExistTotalCorner			BIT				= 0 
+	,@isExistHTFCorner				BIT				= 0 
+	,@isExistHTLCorner				BIT				= 0 
+	,@isExistFTFCorner				BIT				= 0 
+	,@isExistFTLCorner				BIT				= 0 
 	,@IP							VARCHAR(15)		= ''
 	,@ErrCode						INT				= 0			OUTPUT
 	,@ErrMsg						NVARCHAR(200)	= ''		OUTPUT
@@ -37,6 +42,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20140911@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
+		- 20150421@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 
 		
 	Param's Explanation:
@@ -119,6 +125,7 @@ BEGIN
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	GROUP BY b.custid
 
 	DECLARE @status TABLE (FTBet BIT, BetCount INT, InRunning INT)
@@ -127,7 +134,7 @@ BEGIN
 
 	INSERT INTO @status
 	SELECT CASE 
-				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
+				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
 				ELSE 1
 		   END
 		,SUM(CASE 
@@ -143,8 +150,9 @@ BEGIN
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	GROUP BY CASE 
-				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
+				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
 				ELSE 1
 			 END
 
@@ -234,7 +242,7 @@ BEGIN
 			END CATCH
 		END
 
-		EXEC dbo.NAP_Admin_Settlement_Refund_All 
+								EXEC dbo.NAP_Admin_Settlement_Refund_All 
 			@matchid						= @matchid
 			,@creator						= @adminid
 			,@IsExcludeBetdaq				= @IsExcludeBetdaq
@@ -246,7 +254,19 @@ BEGIN
 			,@hta 							= NULL
 			,@fth 							= @fth
 			,@fta 							= @fta
+			,@GoalSequence					= @GoalSequence
+			,@fthCorners					= @fthCorners
+			,@ftaCorners					= @ftaCorners
+			,@hthCorners					= NULL
+			,@htaCorners					= NULL
+			,@ftFCorner						= @ftFCorner
+			,@htFCorner						= NULL
 			,@betstatus						= @betstatus
+			,@isExistTotalCorner			= @isExistTotalCorner
+			,@isExistHTFCorner				= @isExistHTFCorner
+			,@isExistHTLCorner				= @isExistHTLCorner
+			,@isExistFTFCorner				= @isExistFTFCorner
+			,@isExistFTLCorner				= @isExistFTLCorner
 			,@Action						= 'CAL-FT'
 			,@IP							= @IP
 			,@ErrCode						= @ErrCode OUTPUT
@@ -266,7 +286,6 @@ BEGIN
 		,@IsRefundHT	BIT
 		,@oddevenht		SMALLMONEY
 		,@scorediff		SMALLMONEY
-		,@SettlementStatus135 INT
 
 	SELECT @sporttype	= SportType
 		,@hth			= hthomescore
@@ -276,21 +295,20 @@ BEGIN
 	WHERE matchid = @matchid
 
 	SELECT @IsHTCal = isHTCal
-		,@SettlementStatus135 = SettlementStatus135
 	FROM DBPRO.BODB02.dbo.Match_remark WITH (NOLOCK)
 	WHERE matchid = @matchid	
 	
-	IF NOT EXISTS (SELECT TOP 1 1 FROM bettrans WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)	
-		AND NOT EXISTS (SELECT TOP 1 1 FROM bettransm WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)
-	BEGIN
-		SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0 -- No offer
-										   ELSE 4 -- No ticket
-									  END
-	END
-	ELSE
-	BEGIN
-		SELECT @SettlementStatus135 = 3 -- Calculated (Manual)
-	END
+	--IF NOT EXISTS (SELECT TOP 1 1 FROM bettrans WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)	
+	--	AND NOT EXISTS (SELECT TOP 1 1 FROM bettransm WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)
+	--BEGIN
+	--	SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0 -- No offer
+	--									   ELSE 4 -- No ticket
+	--								  END
+	--END
+	--ELSE
+	--BEGIN
+	--	SELECT @SettlementStatus135 = 3 -- Calculated (Manual)
+	--END
 	
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @HTDone = 1
 	BEGIN
@@ -298,6 +316,8 @@ BEGIN
 			,@T_Home		 SMALLINT
 			,@T_Away		 SMALLINT
 			,@totalgoal		 SMALLMONEY
+			,@totalgoal_2H	 SMALLMONEY
+			,@totalCorners	 SMALLMONEY 
 			
 		DECLARE @betcount_3  INT
 			,@betcount_4     INT
@@ -322,10 +342,26 @@ BEGIN
 			,@betcount_149	 INT
 			,@betcount_150	 INT
 			,@betcount_152	 INT
+
+			,@betcount_159 		INT
+			,@betcount_161 		INT
+			,@betcount_162 		INT
+			,@betcount_163 		INT
+			,@betcount_170 		INT
+			,@betcount_172 		INT
+			,@betcount_187 		INT
+			,@betcount_195 		INT
+			,@betcount_196 		INT
+			,@betcount_199 		INT
+			,@betcount_206 		INT
 			
 		SELECT @ScoreLog = ' FTHScore=' + CAST(@fth AS VARCHAR(10)) 
 						 + ' FTAScore=' + CAST(@fta AS VARCHAR(10)) 
 						 + ' BetStatus=' + ISNULL(@betstatus,'')
+						 + CASE WHEN @GoalSequence IS NULL THEN '' ELSE ' GoalSequence=' + @GoalSequence + '<br/> ' END  
+						 + CASE WHEN @fthCorners IS NULL THEN '' ELSE ' fthCorners=' + CAST(@fthCorners AS VARCHAR(20)) + '<br/> ' END 
+						 + CASE WHEN @ftaCorners IS NULL THEN '' ELSE ' ftaCorners=' + CAST(@ftaCorners AS VARCHAR(20)) + '<br/> ' END 
+						 + CASE WHEN @ftFCorner	IS NULL THEN '' ELSE ' ftFCorner=' + @ftFCorner	+ '<br/> ' END 
 
 		IF @SportType IN (5, 6, 9, 30) -- Tennis/VolleyBall/Badminton/Squash : get TotalGamesPlayed
 			EXEC dbo.Admin_Settlement_2 
@@ -340,6 +376,8 @@ BEGIN
 							  END
 			,@oddevenht		= (@hth + @hta) % 2
 			,@scorediff		= (@fth - @fta)
+			,@totalCorners	= (@fthCorners + @ftaCorners)
+			,@totalgoal_2H  = (@fth + @fta) - (@hth + @hta)
 
 		IF @totalgoal IS NULL
 		BEGIN
@@ -425,9 +463,21 @@ BEGIN
 		  ,@betcount_149 	= ISNULL(SUM(CASE b.bettype WHEN 149 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_150 	= ISNULL(SUM(CASE b.bettype WHEN 150 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_152 	= ISNULL(SUM(CASE b.bettype WHEN 152 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_159 	= ISNULL(SUM(CASE b.bettype WHEN 159 THEN 1 ELSE 0 END), 0)  -- Betradar 2 
+		  ,@betcount_161 	= ISNULL(SUM(CASE b.bettype WHEN 161 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_162 	= ISNULL(SUM(CASE b.bettype WHEN 162 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_163 	= ISNULL(SUM(CASE b.bettype WHEN 163 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_170 	= ISNULL(SUM(CASE b.bettype WHEN 170 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_172 	= ISNULL(SUM(CASE b.bettype WHEN 172 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_187 	= ISNULL(SUM(CASE b.bettype WHEN 187 THEN 1 ELSE 0 END), 0)  
+		  ,@betcount_195 	= ISNULL(SUM(CASE b.bettype WHEN 195 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_196 	= ISNULL(SUM(CASE b.bettype WHEN 196 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_199 	= ISNULL(SUM(CASE b.bettype WHEN 199 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_206 	= ISNULL(SUM(CASE b.bettype WHEN 206 THEN 1 ELSE 0 END), 0)
+
 		FROM bettrans b WITH (NOLOCK)
 		WHERE b.matchid = @matchid 
-		AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152) 
+		AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206) 
 		AND b.statusID NOT IN (101, 102) 
 		AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 				     WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
@@ -460,8 +510,14 @@ BEGIN
 			,@hth 							= @hth
 			,@hta 							= @hta
 			,@totalgoal 					= @totalgoal
+			,@totalgoal_2H					= @totalgoal_2H
 			,@oddevenht 					= @oddevenht
 			,@scorediff 					= @scorediff
+			,@GoalRecord					= @GoalSequence
+			,@fthCorners					= @fthCorners
+			,@ftaCorners					= @ftaCorners
+			,@totalCorners					= @totalCorners
+			,@ftFCorner						= @ftFCorner
 			,@betcount_4					= @betcount_4
 			,@betcount_6					= @betcount_6
 			,@betcount_13 					= @betcount_13
@@ -484,6 +540,17 @@ BEGIN
 			,@betcount_149 					= @betcount_149
 			,@betcount_150 					= @betcount_150
 			,@betcount_152 					= @betcount_152
+			,@betcount_159 					= @betcount_159  -- Betradar 2 
+			,@betcount_161 					= @betcount_161
+			,@betcount_162 					= @betcount_162
+			,@betcount_163 					= @betcount_163
+			,@betcount_170 					= @betcount_170
+			,@betcount_172 					= @betcount_172
+			,@betcount_187 					= @betcount_187
+			,@betcount_195 					= @betcount_195
+			,@betcount_196 					= @betcount_196
+			,@betcount_199 					= @betcount_199
+			,@betcount_206 					= @betcount_206
 			,@IsHTCal						= @IsHTCal
 			,@IsSettleAbandonedMatch		= @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -498,6 +565,16 @@ BEGIN
 		,@HTDone	= @HTDone
 		,@RowCount	= @RowCount OUTPUT
 		,@creator	= @adminid
+
+	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+		@Command			= 'NAP_Admin_Settlement_RefundFT'
+		,@MatchID			= @matchid
+		,@isExistTotalCorner= @isExistTotalCorner
+		,@isExistHTFCorner	= @isExistHTFCorner
+		,@isExistHTLCorner	= @isExistHTLCorner
+		,@isExistFTFCorner	= @isExistFTFCorner
+		,@isExistFTLCorner	= @isExistFTLCorner
+		,@creator			= @adminid
 
 	IF @RowCount > 0
 	BEGIN
@@ -515,14 +592,14 @@ BEGIN
 			,@IsHTCal					= @IsHTCal
 			,@IsRefundHT				= @IsRefundHT
 
-		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+								EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
 			@matchid	= @matchid
 			,@command	= 'F'
 
-		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
-			@matchid	= @matchid
-			,@command	= 'PS'
-			,@ivalue	= @SettlementStatus135
+			--					EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+			--@matchid	= @matchid
+			--,@command	= 'PS'
+			--,@ivalue	= @SettlementStatus135
 	END
 
 	-------------------------------------------------------------
@@ -540,6 +617,7 @@ BEGIN
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+	AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -757,15 +835,6 @@ BEGIN
 		END CATCH
 	END
 END
-
-
-
-
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundFT] TO [bodbAdminNet] AS [dbo]
 GO

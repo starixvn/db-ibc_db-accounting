@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay] (
 	@matchids VARCHAR(2000)
 	,@creator INT
@@ -34,6 +36,8 @@ BEGIN
 	DECLARE  @SkipBalanceUpdate BIT
 			,@procName nvarchar(50)
 			,@mode int
+			,@isExistAutoBets BIT --Soccer Betradar 
+
 	DECLARE	  @TotalGameMatch			INT
 				,@TotalGameHomeMatch	INT 
 				,@TotalGameAwayMatch	INT 
@@ -53,7 +57,32 @@ BEGIN
 				,@SetxGameyFinishedGame	VARCHAR(MAX) 	
 				,@SetxGameyREFUND		VARCHAR(MAX) 	
 				,@SelectedSetCAL		VARCHAR(50)   
-				,@SelectedSetREFUND		VARCHAR(50)  
+				,@SelectedSetREFUND		VARCHAR(50)
+				  
+				,@penaltyshootout		VARCHAR(10)=''	 
+				,@matchDecidedMethod	VARCHAR(10)=''	
+				,@1st10Min1x2			VARCHAR(10)=''	
+				,@1stGoalTime10Min		VARCHAR(10)=''	
+				,@1stGoalTime15Min		VARCHAR(10)=''	
+				,@WhoAdvancesNextRound	VARCHAR(10)='' 
+				,@ExtraTimeandGoal		VARCHAR(10)=''	
+				,@ExtraTimeYN			VARCHAR(10)='' 
+
+				,@PlayerSentOff			VARCHAR(10)='' 
+				,@HTPlayerSentOff		VARCHAR(10)='' 
+				,@PlayerSentOffHome		VARCHAR(10)='' 
+				,@HTPlayerSentOffHome	VARCHAR(10)='' 
+				,@PlayerSentOffAway		VARCHAR(10)='' 
+				,@HTPlayerSentOffAway	VARCHAR(10)='' 
+				,@GoalScorerFirst		VARCHAR(10)='' 	
+				
+				,@1HNextGoal			VARCHAR(MAX)=''
+				,@NextGoal				VARCHAR(MAX)=''
+				,@NextGoalTime15Min		VARCHAR(MAX)=''
+				,@ExtraNextGoal			VARCHAR(MAX)=''
+				,@GoalScorerAnytime		VARCHAR(MAX)=''
+				,@ResourceIDsCAL		VARCHAR(MAX)=''
+				,@ResourceIDsREFUND		VARCHAR(MAX)=''
 
 	SELECT   @SkipBalanceUpdate = 0
 			,@procName = OBJECT_NAME(@@procid)
@@ -71,6 +100,7 @@ BEGIN
 	SELECT @start = CURRENT_TIMESTAMP
 		,@ErrCode = 0
 		,@ErrMsg = ''
+		,@isExistAutoBets = 0 
 
 	SELECT @ActionID = CASE @Action
 			WHEN 'CAL' THEN 104
@@ -215,6 +245,15 @@ BEGIN
 		,@T_Away SMALLINT
 		,@tmp INT
 		,@IsRefundHT BIT
+				--corners bets
+		,@fthCorners		INT = 0
+		,@ftaCorners		INT = 0
+		,@hthCorners		INT = 0
+		,@htaCorners		INT = 0 	
+		,@FTFCorner			VARCHAR(10) =''
+		,@FTLCorner			VARCHAR(10) =''
+		,@HTFCorner			VARCHAR(10) =''
+		,@HTLCorner			VARCHAR(10) =''
 
 	SET @rn = 1
 
@@ -267,6 +306,44 @@ BEGIN
 		--BEGIN TRANSACTION
 
 		--EXEC dbo.NAP_Admin_Calculate_9m @matchid,@finalhomescore,@finalawayscore,@hthomescore,@htawayscore,@matchdate,@action,@TennisTotal
+			
+
+		IF @Sporttype = 1 
+		BEGIN
+
+			SELECT	 @fthCorners	= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN HomeValue ELSE 0 END),0)
+					,@ftaCorners	= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN AwayValue ELSE 0 END),0)
+					,@hthCorners	= ISNULL(MAX(CASE WHEN ResourceID ='05' THEN HomeValue ELSE 0 END),0)
+					,@htaCorners	= ISNULL(MAX(CASE WHEN ResourceID ='05' THEN AwayValue ELSE 0 END),0)
+					,@FTFCorner		= ISNULL(MAX(CASE WHEN ResourceID ='206' THEN HomeValue ELSE '' END),'')
+					,@HTFCorner		= ISNULL(MAX(CASE WHEN ResourceID ='207' THEN HomeValue ELSE '' END),'')
+					,@FTLCorner		= ISNULL(MAX(CASE WHEN ResourceID ='208' THEN HomeValue ELSE '' END),'')
+					,@HTLCorner		= ISNULL(MAX(CASE WHEN ResourceID ='209' THEN HomeValue ELSE '' END),'')
+			FROM	DBPRO.BODB02.dbo.ResultDetail WITH (NOLOCK)
+			WHERE	matchid = @matchid
+					AND ResourceID IN ('04','05','206','207','208','209')
+					AND SettlementStatusID =4
+			
+			IF EXISTS(	
+				SELECT	TOP 1 1 
+				FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) 
+				WHERE	r.MatchID = @MatchID
+							AND( r.ResourceID IN ('135','168','192','193','217')
+									OR r.ResourceID LIKE '17[3-6]'
+									OR r.ResourceID LIKE '21[0-5]'
+									OR r.ResourceID LIKE '160__'
+									OR r.ResourceID LIKE '164__'
+									OR r.ResourceID LIKE '169__'
+									OR r.ResourceID LIKE '180__'
+									OR r.ResourceID LIKE '216__'
+							)
+						AND SettlementStatusID > 0 
+			) 
+			BEGIN
+				SELECT @isExistAutoBets = 1 
+			END
+		END 	
+
 
 		--COMMIT TRANSACTION
 		IF @Sporttype = 5 AND @action IN ('REFUND','CAL')--Tennis 
@@ -332,7 +409,64 @@ BEGIN
 					,@SelectedSetREFUND			= @SelectedSetREFUND 
 		END
 		ELSE 
-		BEGIN 		
+		BEGIN
+			IF @Sporttype = 1 AND @isExistAutoBets = 1 AND  @action IN ('CAL','REFUND-HT','REFUND-FT','REFUND') --Soccer Auto Bets Radar 
+			BEGIN
+				EXEC dbo.NAP_Admin_Settlement_2_Auto_1s 
+						@MatchID = @MatchID,
+						@penaltyshootout = @penaltyshootout OUTPUT,
+						@matchDecidedMethod = @matchDecidedMethod OUTPUT,
+						@1st10Min1x2 = @1st10Min1x2 OUTPUT,
+						@1stGoalTime10Min = @1stGoalTime10Min OUTPUT,
+						@1stGoalTime15Min = @1stGoalTime15Min OUTPUT,
+						@WhoAdvancesNextRound = @WhoAdvancesNextRound OUTPUT,
+						@ExtraTimeandGoal = @ExtraTimeandGoal OUTPUT,
+						@ExtraTimeYN = @ExtraTimeYN OUTPUT,
+						@PlayerSentOff = @PlayerSentOff OUTPUT,
+						@HTPlayerSentOff = @HTPlayerSentOff OUTPUT,
+						@PlayerSentOffHome = @PlayerSentOffHome OUTPUT,
+						@HTPlayerSentOffHome = @HTPlayerSentOffHome OUTPUT,
+						@PlayerSentOffAway = @PlayerSentOffAway OUTPUT,
+						@HTPlayerSentOffAway = @HTPlayerSentOffAway OUTPUT,
+						@GoalScorerFirst = @GoalScorerFirst OUTPUT,
+						@1HNextGoal = @1HNextGoal OUTPUT,
+						@NextGoal = @NextGoal OUTPUT,
+						@NextGoalTime15Min = @NextGoalTime15Min OUTPUT,
+						@ExtraNextGoal = @ExtraNextGoal OUTPUT,
+						@GoalScorerAnytime = @GoalScorerAnytime OUTPUT,
+						@ResourceIDsCAL = @ResourceIDsCAL OUTPUT,
+						@ResourceIDsREFUND = @ResourceIDsREFUND OUTPUT
+
+						
+				EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+						,@mode = 'CAL-AUTO'
+						,@matchdate = @matchdate
+						,@action = @action,
+						@penaltyshootout = @penaltyshootout ,
+						@matchDecidedMethod = @matchDecidedMethod ,
+						@1st10Min1x2 = @1st10Min1x2 ,
+						@1stGoalTime10Min = @1stGoalTime10Min ,
+						@1stGoalTime15Min = @1stGoalTime15Min ,
+						@WhoAdvancesNextRound = @WhoAdvancesNextRound ,
+						@ExtraTimeandGoal = @ExtraTimeandGoal ,
+						@ExtraTimeYN = @ExtraTimeYN ,
+						@PlayerSentOff = @PlayerSentOff ,
+						@HTPlayerSentOff = @HTPlayerSentOff ,
+						@PlayerSentOffHome = @PlayerSentOffHome ,
+						@HTPlayerSentOffHome = @HTPlayerSentOffHome ,
+						@PlayerSentOffAway = @PlayerSentOffAway ,
+						@HTPlayerSentOffAway = @HTPlayerSentOffAway ,
+						@GoalScorerFirst = @GoalScorerFirst ,
+						@1HNextGoal = @1HNextGoal ,
+						@NextGoal = @NextGoal ,
+						@NextGoalTime15Min = @NextGoalTime15Min ,
+						@ExtraNextGoal = @ExtraNextGoal ,
+						@GoalScorerAnytime = @GoalScorerAnytime ,
+						@ResourceIDsCAL = @ResourceIDsCAL ,
+						@ResourceIDsREFUND = @ResourceIDsREFUND 
+
+			END 
+		 		
 			EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
 				,@mode = 'ALL'
 				,@action = @action
@@ -342,6 +476,15 @@ BEGIN
 				,@fta = @finalawayscore
 				,@hth = @hthomescore
 				,@hta = @htawayscore
+				,@GoalSequence = @GoalRecord
+				,@fthCorners = @fthCorners
+				,@ftaCorners = @ftaCorners
+				,@hthCorners = @hthCorners
+				,@htaCorners = @htaCorners
+				,@FTFCorner	 = @FTFCorner
+				,@FTLCorner	 = @FTLCorner
+				,@HTFCorner	 = @HTFCorner
+				,@HTLCorner	 = @HTLCorner		
 				,@matchdate = @matchdate
 				,@TennisTotal = @TennisTotal
 				,@SelectedSet = @SelectedSet
@@ -686,5 +829,6 @@ BEGIN
 		SET @rn = @rn + 1
 	END
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]
