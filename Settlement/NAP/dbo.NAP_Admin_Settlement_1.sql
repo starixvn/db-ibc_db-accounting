@@ -19,6 +19,14 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1]
 	,@SelectedSet3Game	VARCHAR(MAX)	= NULL 
 	,@SelectedSet4Game	VARCHAR(MAX)	= NULL 
 	,@SelectedSet5Game	VARCHAR(MAX)	= NULL 
+	,@fthCorners		SMALLINT		= NULL
+	,@ftaCorners		SMALLINT		= NULL
+	,@hthCorners		SMALLINT		= NULL
+	,@htaCorners		SMALLINT		= NULL  
+	,@ftFCorner			VARCHAR(1)		= NULL
+	,@ftLCorner			VARCHAR(1)		= NULL
+	,@htFCorner			VARCHAR(1)		= NULL
+	,@htLCorner			VARCHAR(1)		= NULL 	
 	,@action			VARCHAR(10)		= 'CAL'
 	,@IP				VARCHAR(50)		= ''
 	,@ErrCode			INT				= 0		OUTPUT
@@ -40,6 +48,7 @@ AS
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20140910@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141009@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -59,12 +68,12 @@ BEGIN
 		,@start								DATETIME
 		,@stop								DATETIME
 		,@goalrecord_old					VARCHAR(50)
-		,@LogData							NVARCHAR(200)
+		,@LogData							NVARCHAR(300)
 		,@eventstatus						NVARCHAR(50)
 		,@sporttype							TINYINT
 		,@TicketCount						INT
 		,@betcount_135						INT
-		,@SettlementStatus135				INT
+		--,@SettlementStatus135				INT
 		,@betCount_1324						INT		-- Set x Game y Winner - 1324
 		,@MaxGameSet1						INT
 		,@MaxGameSet2						INT
@@ -176,7 +185,6 @@ BEGIN
 	WHERE b.bettype <= 19000 
 		AND b.matchid = @matchid
 		AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-		--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
 
 	IF @Sporttype = 5 
@@ -202,25 +210,25 @@ BEGIN
 				,@MaxGameSet5 = CASE WHEN @MaxGameSet5 < @MaxGameSet5Parlay THEN @MaxGameSet5Parlay ELSE @MaxGameSet5 END
 	END
 
-	SELECT @SettlementStatus135 = mr.SettlementStatus135
-	FROM DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK)
-	WHERE mr.matchid = @matchid
+	--SELECT @SettlementStatus135 = mr.SettlementStatus135
+	--FROM DBPRO.BODB02.dbo.match_remark mr WITH(NOLOCK)
+	--WHERE mr.matchid = @matchid
 	
-	IF @betcount_135 = 0 AND 
-		NOT EXISTS (SELECT TOP 1 1 
-					FROM dbo.bettransm bm WITH(NOLOCK) 
-					WHERE bm.matchid = @matchid AND bm.statusid NOT IN (101, 102) AND bm.bettype = 135)
-	BEGIN
-			SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0
-											   ELSE 4
-										  END
-	END
-	ELSE
-	BEGIN
-		SELECT @SettlementStatus135 = CASE	WHEN @action = 'UNDO' THEN 1 -- Running
-											ELSE 3 -- Calculated (Manual)
-									  END
-	END
+	--IF @betcount_135 = 0 AND 
+	--	NOT EXISTS (SELECT TOP 1 1 
+	--				FROM dbo.bettransm bm WITH(NOLOCK) 
+	--				WHERE bm.matchid = @matchid AND bm.statusid NOT IN (101, 102) AND bm.bettype = 135)
+	--BEGIN
+	--		SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0
+	--										   ELSE 4
+	--									  END
+	--END
+	--ELSE
+	--BEGIN
+	--	SELECT @SettlementStatus135 = CASE	WHEN @action = 'UNDO' THEN 1 -- Running
+	--										ELSE 3 -- Calculated (Manual)
+	--								  END
+	--END
 	-------------------------------------------------------------
 	---        CAPTURE value BALANCE before settlement        ---
 	---------------------------VVVV------------------------------
@@ -244,8 +252,8 @@ BEGIN
 			WHERE b.matchid = @matchid 
 				AND b.bettype NOT IN (14, 127)
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-				--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) -- Auto settle Betradar
 			GROUP BY b.custid
 
 			SET @TotalAccount = @@ROWCOUNT
@@ -256,7 +264,9 @@ BEGIN
 			SELECT b.custid
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM dbo.bettrans b WITH (ROWLOCK)
-			WHERE b.matchid = @matchid AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
+			WHERE	b.matchid = @matchid 
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			GROUP BY b.custid
 
 			SET @TotalAccount = @@ROWCOUNT
@@ -269,8 +279,8 @@ BEGIN
 			FROM dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-					--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			GROUP BY b.custid
 		END
 				--===
@@ -296,7 +306,7 @@ BEGIN
 		EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
 			@matchid		= @matchid
 			,@command		= 'U'
-			,@ivalue		= @SettlementStatus135 -- update SettlementStatus135 value
+			--,@ivalue		= @SettlementStatus135 -- update SettlementStatus135 value
 			,@SelectedSet	= @SelectedSet	--Tennis 
 
 		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
@@ -312,6 +322,14 @@ BEGIN
 					@Command			= 'NAP_Admin_Settlement_1-UNDO',
 					@MatchID			= @MatchID,
 					@SelectedSet		= @SelectedSet
+		END
+
+		IF @Sporttype = 1 -- Soccer
+		BEGIN
+			EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+				@Command			= 'NAP_Admin_Settlement_1-UNDO',
+				@MatchID			= @MatchID,
+				@creator			= @creator 
 		END
 		/* --20110620@Thien: replace by calling SP instead
 	-- RESET 'SaveBet' of DB06
@@ -336,7 +354,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		INSERT INTO @status
 		SELECT CASE 
-					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
+					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
 					--WHEN b.bettype = 135 THEN 2
 					ELSE 1
 			   END
@@ -351,11 +369,10 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.matchid = @matchid
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-				AND b.bettype <> 135					-- Penalty Shootout not belong HT and FT 
-				--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
 		GROUP BY CASE 
-					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 0
+					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
 					--WHEN b.bettype = 135 THEN 2
 					ELSE 1
 				 END
@@ -447,6 +464,30 @@ need below code to determine for mark match as calculated (all bets settled)
 				@creator			= @creator 			
 		END
 
+		IF @Sporttype = 1 AND LEFT(@Action, 3) = 'CAL'
+		BEGIN
+			EXEC dbo.NAP_Admin_Result_Update_1s 
+				@Command = 'NAP_Admin_Settlement_1-CAL',
+				@MatchID = @MatchID,
+				@ResourceIDs = NULL,
+				@Results = NULL,
+				@fth = @fth,
+				@fta = @fta,
+				@hth = @hth,
+				@hta = @hta,
+				@fthCorners = @fthCorners,
+				@ftaCorners = @ftaCorners,
+				@hthCorners = @hthCorners,
+				@htaCorners = @htaCorners,
+				@ftFCorner = @ftFCorner,
+				@ftLCorner = @ftLCorner,
+				@htFCorner = @htFCorner,
+				@htLCorner = @htLCorner,
+				@Action = @Action,
+				@IsAuto = 0,
+				@creator = @creator
+		END
+
 		IF LEFT(@action, 3) = 'CAL'
 		BEGIN
 			IF @sporttype IN (180, 181, 182, 183, 184, 185, 186) --virtual sports 	
@@ -529,13 +570,13 @@ need below code to determine for mark match as calculated (all bets settled)
 				@matchid	= @matchid
 				,@command	= 'C'
 
-			IF @SettlementStatus135 = 4
-			BEGIN
-				EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
-					@matchid	= @matchid 
-					,@command	= 'PS'
-					,@ivalue	= @SettlementStatus135
-			END
+			--IF @SettlementStatus135 = 4
+			--BEGIN
+			--	EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+			--		@matchid	= @matchid 
+			--		,@command	= 'PS'
+			--		,@ivalue	= @SettlementStatus135
+			--END
 		END
 		ELSE IF @action = 'CAL-HT'
 		BEGIN
@@ -561,18 +602,18 @@ need below code to determine for mark match as calculated (all bets settled)
 			WHERE	b.matchid = @matchid 
 					AND b.bettype NOT IN (14, 127)
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-					--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
 			GROUP BY b.custid
 		END
 		ELSE IF @Action = 'CAL-HT'
 		BEGIN
 			INSERT INTO #BalanceAfter
-			SELECT b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm)
-			FROM dbo.bettrans b WITH (ROWLOCK)
-			WHERE b.matchid = @matchid 
-			AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
+			SELECT	b.custid
+					,SUM(b.winlost - b.actual_stake + b.playercomm)
+			FROM	dbo.bettrans b WITH (ROWLOCK)
+			WHERE	b.matchid = @matchid 
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
 			GROUP BY b.custid
 		END
 		ELSE IF @Action = 'UNDO'
@@ -583,8 +624,8 @@ need below code to determine for mark match as calculated (all bets settled)
 			FROM dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-					--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
 			GROUP BY b.custid
 		END
 	END --IF @SkipBalanceUpdate = 0
@@ -698,6 +739,15 @@ need below code to determine for mark match as calculated (all bets settled)
 														+ CASE	WHEN @GameResult5 IS NULL THEN ''
 																ELSE '(S5GR:' + @GameResult5 + ') ' 
 																END
+														+ CASE WHEN @fthCorners IS NULL THEN '' ELSE '(fthCorners:' + CAST(@fthCorners AS VARCHAR(50))  + ') ' END 
+														+ CASE WHEN @ftaCorners IS NULL THEN '' ELSE '(ftaCorners:' + CAST(@ftaCorners AS VARCHAR(50))  + ') ' END
+														+ CASE WHEN @hthCorners IS NULL THEN '' ELSE '(hthCorners:' + CAST(@hthCorners AS VARCHAR(50))  + ') ' END
+														+ CASE WHEN @htaCorners IS NULL THEN '' ELSE '(htaCorners:' + CAST(@htaCorners AS VARCHAR(50))  + ') ' END
+														+ CASE WHEN @ftFCorner IS NULL THEN '' ELSE '(ftFCorner:' + @ftFCorner + ') ' END
+														+ CASE WHEN @ftLCorner IS NULL THEN '' ELSE '(ftLCorner:' + @ftLCorner + ') ' END
+														+ CASE WHEN @htFCorner IS NULL THEN '' ELSE '(htFCorner:' + @htFCorner + ') ' END
+														+ CASE WHEN @htLCorner IS NULL THEN '' ELSE '(htLCorner:' + @htLCorner + ') ' END
+
 														+' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 
 	EXEC dbo.WriteLog_UserLog 
@@ -744,6 +794,17 @@ need below code to determine for mark match as calculated (all bets settled)
 							+ CASE	WHEN @GameResult5 IS NULL THEN ''
 									ELSE 'S5GR:' + @GameResult5 + '<br/> ' 
 									END  
+
+							+ CASE WHEN @fthCorners IS NULL THEN '' ELSE 'fthCorners:' + CAST(@fthCorners AS VARCHAR(50))  + ' ' END 
+							+ CASE WHEN @ftaCorners IS NULL THEN '' ELSE 'ftaCorners:' + CAST(@ftaCorners AS VARCHAR(50))  + '<br/> ' END
+							+ CASE WHEN @hthCorners IS NULL THEN '' ELSE 'hthCorners:' + CAST(@hthCorners AS VARCHAR(50))  + ' ' END
+							+ CASE WHEN @htaCorners IS NULL THEN '' ELSE 'htaCorners:' + CAST(@htaCorners AS VARCHAR(50))  + '<br/> ' END
+							+ CASE WHEN @ftFCorner IS NULL THEN '' ELSE 'ftFCorner:' + @ftFCorner + '<br/> ' END
+							+ CASE WHEN @ftLCorner IS NULL THEN '' ELSE 'ftLCorner:' + @ftLCorner + '<br/> ' END
+							+ CASE WHEN @htFCorner IS NULL THEN '' ELSE 'htFCorner:' + @htFCorner + '<br/> ' END
+							+ CASE WHEN @htLCorner IS NULL THEN '' ELSE 'htLCorner:' + @htLCorner + '<br/> ' END
+
+
 							+ 'Duration:' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + ' ms;' 
 							+ ' TC:' + CAST(ISNULL(@ticketCount, 0) AS VARCHAR(20)) 
 							+ ' Bal:' + CAST(ISNULL(@TotalAccount_BalanceUpdate, 0) AS VARCHAR(20)) + '/' + CAST(IsNull(@TotalAccount, 0) AS VARCHAR(20))

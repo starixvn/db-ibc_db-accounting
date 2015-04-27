@@ -1,15 +1,12 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_6]    Script Date: 08/27/2014 14:01:09 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-
 /****** Object:  Stored Procedure dbo.Admin_Calculate_6    Script Date: 2/26/2014 6:01:44 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_6] @matchid INT
 	,@bettype SMALLINT
 	,@totalgoal SMALLMONEY
 	,@betcount INT = 0
+	,@isRefundHT BIT = 0
+	,@IsHTCal	 BIT = 0
 	,@IsSettleAbandonedMatch BIT = 0
 	,@IsSettleAbandonedMatchIBC BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
@@ -24,6 +21,7 @@ AS
 		- 20140426@Kathy: Add 1H Total Goal (126) [Redmine:#14449]
 		- 20140728@Kathy: Settle determined tickets for Total Goal (6, 126)[Redmine:#19310]
 		- 20140807@Kathy: Support new 11 bettypes: 129, 130, 131, 132 [Redmine:#19667]
+		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		
 */
 BEGIN
@@ -38,7 +36,7 @@ BEGIN
 		,@commLostRate SMALLMONEY
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -71,14 +69,31 @@ BEGIN
 	BEGIN
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 		SET @modds = modds = CASE 
-								WHEN betteam = '0-1' and @totalgoal >= 2 then -1
+								WHEN betteam = '0-1' and @totalgoal >= 2 then -1 --6,200,201 
 								WHEN betteam = '2-3' and @totalgoal >= 4 then -1
 								WHEN betteam = '4-6' and @totalgoal >=7  and @bettype = 6 then -1
-								WHEN betteam in ('4-over', '4&over') and @totalgoal >=4 then 1 -- 126, 131, 132
+								WHEN betteam in ('4-over', '4&over') and @totalgoal >=4 then 1 -- 126, 131, 132,200,201
 								WHEN betteam = '5&over' AND @totalgoal >= 5 THEN 1 -- 129
-								WHEN betteam in ('7-over', '7&over') and @totalgoal >=7 then 1		-- 6, 130	
+								WHEN betteam in ('7-over', '7&over') and @totalgoal >=7 then 1		-- 6, 130, 195,196,202 
+								WHEN bettype IN(195,196) AND betteam='0-2' AND @totalgoal > 2 THEN -1 
+								WHEN bettype IN(195,196) AND betteam='3-4' AND @totalgoal > 4 THEN -1 
+								WHEN bettype IN(195,196,202) AND betteam='5-6' AND @totalgoal > 6 THEN -1 
+								WHEN bettype = 199 AND betteam ='0-8' AND @totalgoal > 8 THEN -1
+								WHEN bettype = 199 AND betteam ='9-11' AND @totalgoal >11 THEN -1
+								WHEN bettype = 199 AND betteam ='12-over' AND @totalgoal>=12 THEN 1 
+								WHEN bettype IN (200,201) AND betteam ='2' AND @totalgoal > 2 THEN -1 
+								WHEN bettype IN (200,201) AND betteam ='3' AND @totalgoal > 3 THEN -1 
+								WHEN bettype = 202 AND betteam ='0-4' AND @totalgoal > 4 THEN -1 
 								WHEN betteam not in ('5&over') and @bettype = 129 and @totalgoal > cast(betteam as INT)  THEN -1 -- 129
-								WHEN betteam not in ('7&over') and @bettype = 130 and @totalgoal > cast(betteam as INT)  THEN -1 -- 130								
+								WHEN betteam not in ('7&over') and @bettype = 130 and @totalgoal > cast(betteam as INT)  THEN -1 -- 130							
+								WHEN bettype = 159 AND betteam LIKE 'G[0-5]' AND @totalgoal > CAST(RIGHT(betteam,1) AS TINYINT) THEN -1 
+								WHEN bettype = 159 AND betteam ='G6' AND @totalgoal >= CAST(RIGHT(betteam,1) AS TINYINT) THEN 1 
+								WHEN bettype = 179 AND betteam LIKE 'G[0-3]' AND @totalgoal > CAST(RIGHT(betteam,1) AS TINYINT) THEN -1 
+								WHEN bettype = 179 AND betteam ='G4' AND @totalgoal >= CAST(RIGHT(betteam,1) AS TINYINT) THEN 1 
+								WHEN bettype IN (161,162,181,182) AND betteam LIKE 'G[0-2]' AND @totalgoal > CAST(RIGHT(betteam,1) AS TINYINT) THEN -1 
+								WHEN bettype IN (161,162,181,182) AND betteam ='G3' AND @totalgoal >= CAST(RIGHT(betteam,1) AS TINYINT) THEN 1 
+								WHEN bettype = 187 AND betteam LIKE 'G[0-1]' AND @totalgoal > CAST(RIGHT(betteam,1) AS TINYINT) THEN -1 
+								WHEN bettype = 187 AND betteam ='G2' AND @totalgoal >= CAST(RIGHT(betteam,1) AS TINYINT) THEN 1 
 								ELSE NULL
 							 END
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -95,14 +110,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						)
 				WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						) * 0.5
@@ -115,14 +130,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking * 0.5
@@ -135,14 +150,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking * 0.5
@@ -155,14 +170,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (6, 126, 129, 130, 131, 132) THEN odds - 1
+								WHEN bettype IN (6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking * 0.5
@@ -220,6 +235,10 @@ BEGIN
 					 END
 		WHERE matchid = @matchid AND bettype = @bettype 
 			AND statusID NOT IN (101, 102)
+			AND 1 = CASE WHEN @bettype = 187 and @isRefundHT = 1 THEN 0 ELSE 1 END
+			AND 1 = CASE WHEN @bettype <> 187 THEN 1 
+						 WHEN @bettype = 187 AND @IsHTCal = 1 THEN 1 
+						 ELSE 0 END 
 			AND 1 = CASE 
 						WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 						WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
@@ -233,13 +252,29 @@ BEGIN
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 		SET @modds = modds = CASE 
 				WHEN bettype = 1206 AND betteam = cast(cast(@totalgoal AS TINYINT) AS VARCHAR(5)) THEN 1
-				WHEN betteam = '0-1' AND @totalgoal <= 1 THEN 1
+				WHEN betteam = '0-1' AND @totalgoal <= 1 THEN 1		-- + 200,201
 				WHEN betteam = '2-3' AND @totalgoal IN (2, 3) THEN 1
 				WHEN betteam = '4-6' AND @totalgoal IN (4, 5, 6) THEN 1
-				WHEN betteam IN ('4-over', '4&over') AND @totalgoal >= 4 THEN 1
-				WHEN betteam IN ('7-over', '7&over') AND @totalgoal >= 7 THEN 1				
+				WHEN bettype IN (195,196) AND betteam = '0-2' AND @totalgoal <=2 THEN 1			
+				WHEN bettype IN (195,196) AND betteam = '3-4' AND @totalgoal IN (3, 4) THEN 1	
+				WHEN bettype IN (195,196,202) AND betteam = '5-6' AND @totalgoal IN(5, 6) THEN 1	
+				WHEN bettype = 199 AND betteam ='0-8' AND @totalgoal<=8 THEN 1 
+				WHEN bettype = 199 AND betteam ='9-11' AND @totalgoal IN(9,10,11) THEN 1 	
+				WHEN bettype = 199 AND betteam ='12-over' AND @totalgoal>=12 THEN 1 
+				WHEN bettype IN (200,201) AND (betteam ='2' OR betteam='3') AND betteam = cast(cast(@totalgoal AS TINYINT) AS VARCHAR(5)) THEN 1
+				WHEN bettype = 202 AND betteam ='0-4' AND  @totalgoal<=4 THEN 1 
+				WHEN betteam IN ('4-over', '4&over') AND @totalgoal >= 4 THEN 1		--+ 200,201 
+				WHEN betteam IN ('7-over', '7&over') AND @totalgoal >= 7 THEN 1		-- 7-over(195, 196,202)			
 				WHEN betteam = '5&over' and bettype = 129  AND @totalgoal >= 5 THEN 1
-				WHEN ((betteam <> '5&over' and bettype = 129) or (betteam <> '7&over' and bettype = 130)) AND @totalgoal = cast(betteam AS INT) THEN 1			 	
+				WHEN ((betteam <> '5&over' and bettype = 129) or (betteam <> '7&over' and bettype = 130)) AND @totalgoal = cast(betteam AS INT) THEN 1		
+				WHEN bettype = 159 AND betteam LIKE 'G[0-5]' AND @totalgoal = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+				WHEN bettype = 159 AND betteam ='G6' AND @totalgoal >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+				WHEN bettype = 179 AND betteam LIKE 'G[0-3]' AND @totalgoal = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+				WHEN bettype = 179 AND betteam ='G4' AND @totalgoal >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+				WHEN bettype IN (161,162,181,182) AND betteam LIKE 'G[0-2]' AND @totalgoal = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
+				WHEN bettype IN (161,162,181,182) AND betteam ='G3' AND @totalgoal >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
+				WHEN bettype = 187 AND betteam LIKE 'G[0-1]' AND @totalgoal = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
+				WHEN bettype = 187 AND betteam ='G2'AND @totalgoal >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
 				ELSE - 1
 				END
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -256,14 +291,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 159,161,162,179,181,182,187,195,196,199,200,201,202,1206) THEN odds - 1
 								ELSE odds END
 								) END
 						)
 				WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132,159,161,162,179,181,182,187,195,196,199,200,201,202, 1206) THEN odds - 1
 								ELSE odds END
 								) END
 						) * 0.5
@@ -275,14 +310,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132,159,161,162,179,181,182,187,195,196,199,200,201,202, 1206) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132,159,161,162,179,181,182,187,195,196,199,200,201,202, 1206) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking * 0.5
@@ -294,14 +329,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132,159,161,162,179,181,182,187,195,196,199,200,201,202, 1206) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132,159,161,162,179,181,182,187,195,196,199,200,201,202, 1206) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking * 0.5
@@ -313,14 +348,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132,159,161,162,179,181,182,187,195,196,199,200,201,202, 1206) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132, 1206) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 126, 129, 130, 131, 132,159,161,162,179,181,182,187,195,196,199,200,201,202, 1206) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking * 0.5
@@ -369,16 +404,8 @@ BEGIN
 			,ruben = 1
 		WHERE matchid = @matchid AND bettype = @bettype AND
 			statusID NOT IN (101, 102)
+			AND 1 = CASE WHEN @bettype = 187 and @isRefundHT = 1 THEN 0 ELSE 1 END
 	END
 END
-
-
-
-
-
-
-
-
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_6] TO [vnteam] AS [dbo]

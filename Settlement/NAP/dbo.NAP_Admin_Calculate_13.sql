@@ -1,16 +1,14 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_13]    Script Date: 08/07/2014 13:59:24 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+USE [bodb02]
 GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_13] @matchid INT
 	,@bettype SMALLINT
-	,@fth SMALLMONEY
-	,@fta SMALLMONEY
-	,@betcount INT = 0
+	,@fth SMALLMONEY = NULL
+	,@fta SMALLMONEY = NULL 	
+	,@ResultString NVARCHAR(50)	= NULL 
 	,@IsSettleAbandonedMatch BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
 	,@IsSettleAbandonedMatchIBC BIT = 0
+	,@betcount INT = 0
 AS
 /*
 	Created by: Kathy
@@ -61,20 +59,32 @@ BEGIN
 		END
 	END
 
-	DECLARE @modds SMALLMONEY
-		,@commWinRate SMALLMONEY
-		,@commLostRate SMALLMONEY
-	SELECT @modds = 0
+	DECLARE  @modds SMALLMONEY
+			,@commWinRate SMALLMONEY
+			,@commLostRate SMALLMONEY
+			,@FirstGoal NVARCHAR(50) 
+
+	SELECT	@modds = 0
+
+	SELECT	@FirstGoal=''
+	SELECT	@FirstGoal = LEFT(REPLACE(ISNULL(@ResultString,''),';',''),1) --172 
 
 	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetfair = 1 OR @IsSettleAbandonedMatchIBC = 1
 	BEGIN
 		
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 		SET @modds = modds = CASE 
-				WHEN betteam = 'ay' AND @fth > 0  THEN - 1
+				WHEN betteam = 'ay' AND @fth > 0  THEN -1
 				WHEN betteam = 'an' AND @fth > 0  THEN 1
-				WHEN betteam = 'hy' AND @fta > 0  THEN - 1
+				WHEN betteam = 'hy' AND @fta > 0  THEN -1
 				WHEN betteam = 'hn' AND @fta > 0  THEN 1
+				WHEN betteam = 'HH' AND @FirstGoal ='A' THEN -1		--172
+				WHEN betteam = 'HD' AND @FirstGoal ='A' THEN -1 
+				WHEN betteam = 'HA' AND @FirstGoal ='A' THEN -1 
+				WHEN betteam = 'AH' AND @FirstGoal ='H' THEN -1 
+				WHEN betteam = 'AD' AND @FirstGoal ='H' THEN -1 
+				WHEN betteam = 'AA' AND @FirstGoal ='H' THEN -1 
+				WHEN betteam = 'NO' AND (@FirstGoal='H' OR @FirstGoal='A') THEN -1 
 				ELSE NULL
 				END
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -92,14 +102,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						)
 				WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * 0.5
@@ -112,14 +122,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking * 0.5
@@ -132,14 +142,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking * 0.5
@@ -152,14 +162,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking * 0.5
@@ -232,6 +242,13 @@ BEGIN
 				WHEN betteam = 'hn' AND @fta > 0 THEN 1
 				WHEN betteam = 'ay' AND @fth = 0 THEN 1
 				WHEN betteam = 'an' AND @fth > 0 THEN 1
+				WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1  --172 
+				WHEN betteam = 'HD' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
+				WHEN betteam = 'HA' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
+				WHEN betteam = 'AH' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
+				WHEN betteam = 'AD' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
+				WHEN betteam = 'AA' AND @FirstGoal='A' AND (@fth - @fta) <0 THEN 1
+				WHEN betteam = 'NO' AND @fth =0 AND @fta= 0 THEN 1
 				ELSE - 1
 				END
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -249,14 +266,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						)
 				WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * 0.5
@@ -268,14 +285,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking * 0.5
@@ -287,14 +304,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking * 0.5
@@ -306,14 +323,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking * 0.5
@@ -367,6 +384,5 @@ BEGIN
 		
 	END
 END
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_13] TO [vnteam] AS [dbo]

@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_2] @matchid INT
 	,@bettype						SMALLINT
 	,@oddeven						SMALLMONEY = NULL
@@ -27,6 +29,7 @@ AS
 		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054	
 		- 20140808@Kathy: Support new 11 bettypes: 128, 136, 137, 138, 139 [Redmine:#19667]	
 		- 20141020@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 
 */
 BEGIN
@@ -121,8 +124,8 @@ BEGIN
 					ELSE CASE -- normal settlement
 							WHEN betteam = 'h' AND @oddeven = 1 THEN 1
 							WHEN betteam = 'a' AND @oddeven = 0 THEN 1
-							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --1318
-							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --1318  
+							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --184, 194, 1318
+							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --184, 194, 1318  
 							WHEN b.betteam = 'oo' AND @oddevenht = 1 AND @oddeven = 1 THEN 1 -- 128
 							WHEN b.betteam = 'oe' AND @oddevenht = 1 AND @oddeven = 0 THEN 1 -- 128
 							WHEN b.betteam = 'eo' AND @oddevenht = 0 AND @oddeven = 1 THEN 1 -- 128
@@ -282,7 +285,7 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END 
-				AND 1 = CASE WHEN @bettype = 128 and @isRefundHT = 1 THEN 0 ELSE 1 END
+				AND 1 = CASE WHEN @bettype IN (128,184) and @isRefundHT = 1 THEN 0 ELSE 1 END
 				AND statusID NOT IN (101, 102)
 				AND 1 = CASE 
 							WHEN @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1 
@@ -325,8 +328,8 @@ BEGIN
 					ELSE CASE -- normal settlement
 							WHEN betteam = 'h' AND @oddeven = 1 THEN 1
 							WHEN betteam = 'a' AND @oddeven = 0 THEN 1
-							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --1318
-							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --1318  
+							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --184, 194, 203, 1318
+							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --184, 194, 203, 1318  
 							WHEN betteam = 'oo' AND @oddevenht = 1 AND @oddeven = 1 THEN 1 -- 128
 							WHEN betteam = 'oe' AND @oddevenht = 1 AND @oddeven = 0 THEN 1 -- 128
 							WHEN betteam = 'eo' AND @oddevenht = 0 AND @oddeven = 1 THEN 1 -- 128
@@ -484,10 +487,8 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END
-			AND 1 = CASE WHEN @bettype = 128 and @isRefundHT = 1 THEN 0 ELSE 1 END
+			AND 1 = CASE WHEN @bettype IN (128,184) and @isRefundHT = 1 THEN 0 ELSE 1 END
 	END
 END
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_2] TO [ibc_admin] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_2] TO [vnteam] AS [dbo]

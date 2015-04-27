@@ -1,12 +1,9 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_25]    Script Date: 08/27/2014 13:59:58 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_25] @matchid INT
 	,@bettype SMALLINT
 	,@scorediff SMALLMONEY
+	,@isRefundHT BIT = 0
 	,@betcount INT = 0
 AS
 /*
@@ -16,7 +13,7 @@ AS
 	DB: DBTRANS.BODB02
 	
 	Revisions:
-		
+		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 */
 BEGIN
 	IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
@@ -26,7 +23,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -55,9 +52,9 @@ BEGIN
 	UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 	SET @modds = modds = CASE 
 			-- draw no bet
-			WHEN bettype = 25 AND @scorediff = 0 THEN 0
-			WHEN bettype = 25 AND betteam = 'h' AND @scorediff > 0 THEN 1
-			WHEN bettype = 25 AND betteam = 'a' AND @scorediff < 0 THEN 1
+			WHEN bettype IN (25,185,191) AND @scorediff = 0 THEN 0
+			WHEN bettype IN (25,185,191) AND betteam = 'h' AND @scorediff > 0 THEN 1
+			WHEN bettype IN (25,185,191) AND betteam = 'a' AND @scorediff < 0 THEN 1
 				-- home no bet
 			WHEN bettype = 121 AND @scorediff > 0 THEN 0
 			WHEN bettype = 121 AND betteam = 'x' AND @scorediff = 0 THEN 1
@@ -85,14 +82,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					)
 			WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					) * 0.5
@@ -104,14 +101,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - apositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - apositiontaking * 0.5
@@ -123,14 +120,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - mpositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - mpositiontaking * 0.5
@@ -142,14 +139,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - spositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 121, 122, 123,185,191) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - spositiontaking * 0.5
@@ -199,7 +196,7 @@ BEGIN
 	WHERE matchid = @matchid AND bettype = @bettype AND
 		--status NOT IN ('VOID', 'REJECT')
 		statusID NOT IN (101, 102)
+		AND 1 = CASE WHEN @bettype = 185 and @isRefundHT = 1 THEN 0 ELSE 1 END
 END
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_25] TO [vnteam] AS [dbo]

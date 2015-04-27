@@ -1,9 +1,5 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9999]    Script Date: 08/27/2014 14:01:39 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9999] @matchid INT
 	,@bettype SMALLINT
 	,@fth	INT = NULL
@@ -25,6 +21,7 @@ AS
 	
 	Revisions:
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		
 */
 BEGIN
@@ -48,7 +45,7 @@ BEGIN
 					END
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -158,7 +155,19 @@ BEGIN
 													 CASE 
 														WHEN betteam = @csHT + '/' + @csFT THEN 1
 														ELSE -1
-													 END 																
+													 END 	
+										WHEN 189 THEN -- Both Halves Over 1.5 Yes/No
+													CASE 
+														WHEN betteam ='y' AND (@hth + @hta - 1.5) > 0 AND (@fth + @fta - 1.5)>0 THEN 1  --ftscore save 2nd half score 
+														WHEN betteam ='n' AND ((@hth + @hta - 1.5) <=0 OR (@fth + @fta - 1.5)<=0) THEN 1 
+														ELSE -1 
+													END 
+										WHEN 190 THEN -- Both Halves Under 1.5 Yes/No  [190]
+													CASE 
+														WHEN betteam ='y' AND (@hth + @hta - 1.5) < 0 AND (@fth + @fta - 1.5)<0 THEN 1  --ftscore save 2nd half score 
+														WHEN betteam ='n' AND ((@hth + @hta - 1.5) >=0 OR (@fth + @fta - 1.5)>=0) THEN 1 
+														ELSE -1 
+													END															
 									 END											
 							WHEN @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetfair = 1 OR @IsSettleAbandonedMatchIBC = 1 
 								THEN CASE bettype
@@ -259,7 +268,7 @@ BEGIN
 			WHEN @modds > 0 THEN actual_stake + stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE CASE 
-							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) THEN odds - 1
+							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152,189,190) THEN odds - 1
 							ELSE odds 
 							END
 					END
@@ -270,7 +279,7 @@ BEGIN
 			WHEN @modds > 0 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE CASE 
-							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) THEN odds - 1
+							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152,189,190) THEN odds - 1
 							ELSE odds
 							END
 					END
@@ -281,7 +290,7 @@ BEGIN
 			WHEN @modds > 0 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE CASE 
-							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) THEN odds - 1
+							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152,189,190) THEN odds - 1
 							ELSE odds 
 							END
 					END
@@ -292,7 +301,7 @@ BEGIN
 			WHEN @modds > 0 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE CASE 
-							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) THEN odds - 1
+							WHEN bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152,189,190) THEN odds - 1
 							ELSE odds 
 							END
 					END
@@ -329,7 +338,7 @@ BEGIN
 	AND statusID NOT IN (101, 102) -- reject, void
 	AND 1 = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 AND @IsSettleAbandonedMatchIBC = 0 
 						AND ((@isRefundHT = 1 AND bettype IN (145)) -- settle only bettype 145 when match has been refunded HT
-								OR ( @isRefundHT = 0 AND bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)) 
+								OR ( @isRefundHT = 0 AND bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152,189,190)) 
 							)
 					THEN 1
 				 WHEN (
@@ -385,10 +394,5 @@ BEGIN
 				 ELSE 0
 			END 
 END
-
-
-
-
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9999] TO [vnteam] AS [dbo]
