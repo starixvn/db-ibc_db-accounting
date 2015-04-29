@@ -179,6 +179,7 @@ BEGIN
 	END
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO
