@@ -67,7 +67,8 @@ BEGIN
 		SET @modds = modds = CASE 
 				WHEN betteam = 'b' AND @fth > 0 AND @fta > 0 THEN 1
 				WHEN betteam = 'o' AND @fth > 0 AND @fta > 0 THEN - 1
-				WHEN betteam = 'n' AND (@fth > 0 OR @fta > 0) THEN - 1 -- 170, 188
+				WHEN Bettype <> 188 AND betteam = 'n' AND (@fth > 0 OR @fta > 0) THEN - 1 -- 170
+				WHEN bettype = 188 AND betteam = 'n' AND (@fth > 0 AND @fta > 0) THEN -1 --188
 				WHEN betteam = 'h' AND @fta > 0 THEN - 1  --170 
 				WHEN betteam = 'a' AND @fth > 0 THEN - 1  --170
 				WHEN betteam = 'y' AND @fth > 0 AND @fta > 0 THEN 1		--188
