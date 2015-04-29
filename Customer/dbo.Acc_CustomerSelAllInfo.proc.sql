@@ -1,10 +1,3 @@
-
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_CustomerSelAllInfo    Script Date: 10/9/2014 4:58:03 PM ******/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
@@ -63,7 +56,8 @@ Revisions:
 	- 20140820@Logan:   Add status for E-Sports [Redmine: #20531]
 	- 20140912@Logan:   Add status of Direct/Indirect Account [Redmine: #15267]
 	- 20141120@Johnson: correct Last transaction date for super [Redmine: #26006]
-	- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]				
+	- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]			
+	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -86,6 +80,7 @@ BEGIN
           , @DisableDownlinesVirtualSports BIT
           , @DisableDownlinesEsports BIT
           , @DownlinesSelectedBetting BIT
+		  , @DisableDownlinesGoldDeluxe BIT
           , @IsInternal BIT
           , @LimitPerIP TINYINT
           , @SelectedBetting BIT
@@ -170,33 +165,19 @@ BEGIN
 										      ELSE 0 END
     										  
     SELECT @DisableDownlinesVirtualSports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableVirtualSports = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableVirtualSports = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableVirtualSports = 1) 											 
-										      ELSE 0 END
+										     WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableVirtualSports = 1) 											 
+										     WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableVirtualSports = 1) 											 
+										     ELSE 0 END
 
-    SELECT @DisableDownlinesEsports =
-             CASE @roleid
-               WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0)
-                              FROM custInfo WITH(NOLOCK)
-                             WHERE srecommend = @custid
-                               AND roleid = 3
-                               AND DisableEsports = 1
-                           )
-               WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0)
-                              FROM custInfo WITH(NOLOCK)
-                             WHERE mrecommend = @custid
-                               AND roleid = 2
-                               AND DisableEsports = 1
-                           )
-               WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0)
-                              FROM custInfo WITH(NOLOCK)
-                             WHERE recommend = @custid
-                               AND roleid = 1
-                               AND DisableEsports = 1
-                           )
-               ELSE 0
-             END
-    										  										  							  
+    SELECT @DisableDownlinesEsports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableEsports = 1)
+											WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableEsports = 1)
+											WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE recommend = @custid AND roleid = 1 AND DisableEsports = 1)
+											ELSE 0 END
+
+    SELECT @DisableDownlinesGoldDeluxe = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableGoldDeluxe = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableGoldDeluxe = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableGoldDeluxe = 1) 											 
+										      ELSE 0 END										  										  							  
     -------------------------------------------------------------------------
     DECLARE @IsDeposit BIT --Identify deposit customer
 	    SET @IsDeposit = 0
@@ -465,6 +446,8 @@ BEGIN
 	    ISNULL(@DisableDownlinesHRFixedOdds,0) DisableDownlinesHRFixedOdds,
 	    ISNULL(@DisableDownlinesVirtualSports,0) DisableDownlinesVirtualSports,
 	    ISNULL(@DownlinesSelectedBetting,0) DownlinesSelectedBetting,
+		ISNULL(@DisableDownlinesEsports, 0) DisableDownlinesEsports,
+		ISNULL(@DisableDownlinesGoldDeluxe,0) DisableDownlinesGoldDeluxe,
 	    ci.DisableBingo,
 	    ci.DisableNumber,
 	    ci.DisableOutRight,
@@ -476,9 +459,9 @@ BEGIN
 	    ci.DisableHRFixedOdds,
 	    ci.DisableVirtualSports,
 	    ci.HideVirtualSports,
-	    ci.DoubleCommLosing,
-	    ci.DisableEsports,
-	    ISNULL(@DisableDownlinesEsports, 0) DisableDownlinesEsports,
+	    ci.DoubleCommLosing,	    	   
+		ci.DisableEsports,
+		ci.DisableGoldDeluxe,
 	    ci.Enabled,
 	    @isBA IsBA,
 	    @IsDeposit IsDeposit, 
@@ -722,13 +705,6 @@ BEGIN
 		    @TotalMemberClosed MemberClosed,
 		    @TotalMemberSuspended MemberSuspended
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
 
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
