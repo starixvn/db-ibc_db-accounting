@@ -45,19 +45,43 @@ BEGIN
 		RETURN
 	END
 
-	IF @isAuto = 1 AND( EXISTS(	SELECT	TOP 1 1 
-								FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK) 
-								WHERE	MatchID = @MatchID 
-										AND ResourceID IN( SELECT Val FROM dbo.strSplit(@ResourceIDs,',') WHERE ISNULL(@ResourceIDs,'')<>'')	
-										AND ResultStatusID = 5				
-							)
-						OR ISNULL(@ResourceIDs,'')=''
-					)
-	BEGIN
-		SELECT	 @ErrCode	= 1001012
-				,@ErrMsg	= 'The auto-settlement failed due to a result that has been settled previously by manual.'
+	DECLARE	@InvalidResourceIDs VARCHAR(MAX)=''
 
-		RETURN
+	DECLARE @tmpResultDetail TABLE(
+		ResourceID		VARCHAR(20)
+		,Value			VARCHAR(50)
+		,ResultStatusID	TINYINT
+	)
+	INSERT INTO @tmpResultDetail(ResourceID, Value, ResultStatusID)
+	SELECT	ResourceID
+			,CASE WHEN ResourceID IN('214','215') THEN AwayValue ELSE HomeValue END 
+			,ResultStatusID
+	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
+	WHERE	MatchID = @MatchID 
+			AND ResourceID IN( SELECT Val FROM dbo.strSplit(@ResourceIDs,',') WHERE ISNULL(@ResourceIDs,'')<>'')
+
+	IF @isAuto = 1 
+	BEGIN
+		IF (EXISTS(	SELECT	TOP 1 1 FROM	@tmpResultDetail WHERE	ResultStatusID = 5)
+				OR ISNULL(@ResourceIDs,'')=''
+		)
+		BEGIN
+			SELECT	 @ErrCode	= 1001012
+					,@ErrMsg	= 'The auto-settlement failed due to a result that has been settled previously by manual.'
+
+			RETURN
+		END
+
+		IF(EXISTS(SELECT TOP 1 1 FROM @tmpResultDetail WHERE Value IS NULL) OR ISNULL(@ResourceIDs,'')='') 
+		BEGIN
+			SELECT	@InvalidResourceIDs = @InvalidResourceIDs + ResourceID +',' 
+			FROM	@tmpResultDetail WHERE Value IS NULL
+
+			SELECT	 @ErrCode	= 1001015
+					,@ErrMsg	= 'The auto-settlement failed due to following result(s) with invalid value:' + @InvalidResourceIDs
+
+			RETURN
+		END
 	END
 
 	IF EXISTS (
