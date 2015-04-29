@@ -225,11 +225,11 @@ BEGIN
 		SET @modds = modds = CASE 
 				WHEN betteam = 'b' AND (@fth > 0 AND @fta > 0) THEN 1
 				WHEN betteam = 'o' AND ((@fth > 0 AND @fta = 0) OR (@fta > 0 AND @fth = 0)) THEN 1
-				WHEN betteam = 'n' AND (@fth = 0 AND @fta = 0) THEN 1
+				WHEN bettype <> 188 AND betteam = 'n' AND (@fth = 0 AND @fta = 0) THEN 1
 				WHEN betteam = 'h' AND (@fth > 0 AND @fta = 0) THEN 1  --170
 				WHEN betteam = 'a' AND (@fth = 0 AND @fta > 0) THEN 1  -- 170 
 				WHEN betteam = 'Y' AND @fth > 0 AND @fta > 0 THEN 1 --188
-				WHEN betteam = 'N' AND @fth = 0 AND @fta = 0 THEN 1 --188 
+				WHEN bettype = 188 AND betteam = 'N' AND (@fth = 0 OR @fta = 0) THEN 1 --188 
 				ELSE - 1
 				END
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
