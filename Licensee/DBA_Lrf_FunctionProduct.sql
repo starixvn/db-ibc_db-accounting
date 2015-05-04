@@ -1,6 +1,6 @@
 USE [bodb_licensee]
 GO
- 
+/****** Object:  StoredProcedure [dbo].[DBA_Lrf_FunctionProduct]    Script Date: 05/04/2015 15:07:49 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -19,6 +19,7 @@ Original :
 Revisions:
 	- 20150320@Jim: add more funtion permission for 'Active Customer Summary' report
 	- 20150421@Jim: add more function Gold Deluxe
+	- 20150421@Jim: correct function product for Void Bridge
 Param's Explanation:
 		
 	
@@ -54,6 +55,8 @@ BEGIN
 									,49	-- Assign Permission
 									,50	-- Reset Password
 									,57	-- Assign Currency
+									,65 -- Gold Deluxe Winloss
+									,66 -- Void Bridge Winloss
 									)	
 			UNION ALL 
 			SELECT	0 AS ProductId -- SB

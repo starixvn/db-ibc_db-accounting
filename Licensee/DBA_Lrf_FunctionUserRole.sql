@@ -1,5 +1,11 @@
 USE [bodb_licensee]
 GO
+/****** Object:  StoredProcedure [dbo].[DBA_Lrf_FunctionUserRole]    Script Date: 05/04/2015 14:11:55 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.DBA_Lrf_FunctionUserRole    Script Date: 1/26/2015 3:18:48 PM ******/
 
 ALTER   PROCEDURE [dbo].[DBA_Lrf_FunctionUserRole]
 (
@@ -14,8 +20,7 @@ DB: DBLIC.bodb_licensee
 Original :
 	
 Revisions:
-	
-Param's Explanation:
+	+20150504@Jim: correct function permission for GD,Void Bridge,AG,Playtech,
 		@UserRole : admin , who get all of funtion with typeid=2
 					normal , who get all of funtion with typeid=1
 	
@@ -28,10 +33,10 @@ IF (@UserRole='normal')
 		INSERT INTO  @tblFunctions (FunctionId,TypeID) 
 		SELECT FunctionID,1 AS TypeID 
 		FROM dbo.Functions WITH (NOLOCK)
-		WHERE FunctionId IN (1,2,3,4,52)
+		WHERE (FunctionId IN (1,2,3,4,52)
 				OR ParentId IN (1,2,3,4,52)
-		
-			
+			)
+			AND FunctionID not in  (56,59,61,62,65,66)
 	END
 IF (@UserRole='admin')
 	BEGIN	
@@ -42,7 +47,7 @@ IF (@UserRole='admin')
 		WHERE (FunctionId IN (1,2,3,4,52)
 				OR ParentId IN (1,2,3,4,52)
 				)
-				AND FunctionID <> 56
+				AND FunctionID not in  (56,59,61,62,65,66)
 		UNION ALL 
 		
 		SELECT FunctionID,11 AS TypeID

@@ -1,5 +1,10 @@
 USE [bodb_licensee]
 GO
+/****** Object:  StoredProcedure [dbo].[DBA_Lrf_CreateNewLicensee]    Script Date: 05/04/2015 14:23:57 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[DBA_Lrf_CreateNewLicensee]
 (
 	@LicenseeName   	VARCHAR(50)
@@ -18,14 +23,7 @@ ALTER PROCEDURE [dbo].[DBA_Lrf_CreateNewLicensee]
 )
 AS 
 
-/*
-
-note: userrole :
-	normal user. 
-	legend user
-	adminuser
-
-*/
+ 
 /*
 Created: Henry
 Date: 20120409
@@ -44,6 +42,7 @@ Revisions:
 	+20140404@Jim: + hard-code to grant 'Account managerment'	role for special user
 				   + hard-code to not grant Agency System Function for new licensee
 	+20140422@Jim: re-arrange data flow 			   
+	+20150504@Jim: correct function permission for GD,Void Bridge,AG,Playtech,
 Param's Explanation:
 	+ @IsSpecial: if 1 then update column Description to normal, or affiliate or banner depend on:
 		- username ending with 01: normal
@@ -165,11 +164,7 @@ IF ISNULL(@ProductCode,'')<>''
 			,@LicenseeId  = @LicenseeId
 			,@ProductCode = @ProductCode
 	END
-IF CHARINDEX('AGC', @ProductCode) > 0 	
- 	BEGIN
-		EXEC DBPTCS.bodb_PlaytechCS.[dbo].[DBA_EnableAGCasinoService] @LicenseeName = @LicenseeName, @SettingName = 'AGCasino_VersionKey'
-	END
-	
+
 IF @IsAllowMemberComm = 1
 	BEGIN 
 				EXEC DBA_Lrf_EnablePlayerComm
