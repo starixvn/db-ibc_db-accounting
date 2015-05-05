@@ -52,8 +52,11 @@ BEGIN
 		 ID			INT IDENTITY(1,1)
 		,ResourceID	VARCHAR(20)
 	)
-	INSERT INTO @tmpResourceIDs(ResourceID)
-	SELECT	Val FROM dbo.StrSplit(@ResourceIDs,',') WHERE @ResourceIDs IS NOT NULL 
+	IF @ResourceIDs IS NOT NULL 
+	BEGIN
+		INSERT INTO @tmpResourceIDs(ResourceID)
+		SELECT	Val FROM dbo.StrSplit(@ResourceIDs,',') 
+	END 
 
 	IF @Command ='NAP_Admin_Settlement_Auto_1s-CAL'
 	BEGIN
@@ -73,8 +76,12 @@ BEGIN
 				 ID			INT IDENTITY(1,1)
 				,Value		VARCHAR(50)
 			)
-			INSERT INTO @tmpResults(Value)
-			SELECT	Val FROM dbo.StrSplit(@Results,',') WHERE @Results IS NOT NULL 
+
+			IF @Results IS NOT NULL 
+			BEGIN
+				INSERT INTO @tmpResults(Value)
+				SELECT	Val FROM dbo.StrSplit(@Results,',') 
+			END 
 
 			UPDATE	@tmpResults
 			SET		Value = NULL
