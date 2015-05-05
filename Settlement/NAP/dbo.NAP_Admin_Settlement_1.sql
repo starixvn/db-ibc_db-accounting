@@ -466,7 +466,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		IF @Sporttype = 1 AND LEFT(@Action, 3) = 'CAL'
 		BEGIN
-			EXEC dbo.NAP_Admin_Result_Update_1s 
+			EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
 				@Command = 'NAP_Admin_Settlement_1-CAL',
 				@MatchID = @MatchID,
 				@ResourceIDs = NULL,
