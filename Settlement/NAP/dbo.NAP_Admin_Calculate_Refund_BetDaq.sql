@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Refund_BetDaq] 
 	@matchid int
 AS
@@ -10,6 +12,7 @@ AS
 		- 20140512@Kathy: Exclude bettype 1H FGLG (127) [Redmine:#14718]
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		- 20141030@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
+		- 20150422@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 */
 SET NOCOUNT ON
 
@@ -39,6 +42,7 @@ BEGIN
 			AND bettype NOT BETWEEN 153 AND 156   -- New bettype of Tennis 
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			and( custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 				OR  recommend IN (1688156)
 			)

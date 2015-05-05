@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_BetFair_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
@@ -18,7 +20,7 @@ AS
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20140901@Kathy: Support to move tickets (non-live and live) for Betfair [Redmine:#21221]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
-		
+		- 20150418@Jamie: Betradar phase II [Readmine:#27212]
 
 	Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 
@@ -107,6 +109,7 @@ BEGIN
 			INNER JOIN @tmpOdds o ON b.bettype = o.bettype 
 	WHERE	b.matchid = @MatchID 
 			AND b.custid IN (2331, 1077687, 115770, 15523642)
+			AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			AND b.ruben = 0
 			AND 1 = CASE WHEN @Sporttype = 5 AND b.bettype NOT IN (1,2,3,20) THEN 0 
 						 ELSE 1 END 

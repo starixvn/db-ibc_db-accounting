@@ -1,12 +1,10 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 04/08/2015 12:56:28 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 05/04/2015 10:38:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 07/04/2015 3:41:11 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -96,9 +94,6 @@ BEGIN
 		WHERE matchid IN (SELECT matchid from Single_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1) )
 		OR matchid IN (SELECT matchid FROM Parlay_Calculate_Queue with(NOLOCK) WHERE IsCalculating IN (0,1) ) 
 	END
-	
-	
-	--SELECT @HaveWaitingTicket = COALESCE(@HaveWaitingTicket + ',' + b.matchid,
 	
 	-- check waiting ticket
 	EXEC NAP_Admin_Settlement_Checking
@@ -194,11 +189,6 @@ BEGIN
 		END
 	END
 END
-
-
-
-
-
 
 
 

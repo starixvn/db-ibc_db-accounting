@@ -8,6 +8,7 @@ AS
 	DB: DBPRO/BODB02  
 
 	Revisions:  	
+	- 20150406@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -19,9 +20,13 @@ BEGIN
 			,homeid
 			,awayid
 			,kickofftime
+			,hthomescore
+			,htawayscore
 			,finalhomescore
 			,finalawayscore
 			,eventstatus
+			,betstatus
+			,GoalRecord
 	FROM	dbo.Match WITH (NOLOCK)
 	WHERE	MatchID = @MatchID 
 
@@ -29,9 +34,11 @@ BEGIN
 			,ResourceID 
 			,HomeValue 
 			,AwayValue 
+			,OtherInfo
 			,SettlementStatusID
 	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
 	WHERE	MatchID = @MatchID 
+			AND ResultStatusID > 0 
 	ORDER BY ResourceID 
 END
 GO

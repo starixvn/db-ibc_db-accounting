@@ -32,6 +32,7 @@ Revisions:
 	- 20140407@Elodie: Get DisableKeno [Redmine:#13156]
 	- 20140825@Logan:   Get status of E-Sports [Redmine: #20531]
 	- 20150210@Johnson: use param @system to check permission on ViewIPVN function from NAP or NAP EXT internal login [Redmine: #30860]
+	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 Param's Explanation:
 • @system: = NAP : internal login from NAP
 			NAPEXT:internal login from NAP EXT
@@ -141,8 +142,9 @@ SELECT	ISNULL(reject,0) AS Suspend,
 		ISNULL(ci.DisableEsports, 0) AS DisableEsports,
 
 		ISNULL(ci.HideKeno,0) as HideKeno, 
-		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513) then cg.IsDisabled else 1 end) as DisableKeno	
-
+		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513) then cg.IsDisabled else 1 end) as DisableKeno,
+		ISNULL(DisableGoldDeluxe,0) as DisableGoldDeluxe,
+		ISNULL(HideGoldDeluxe,0) as HideGoldDeluxe
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
@@ -173,7 +175,9 @@ group by
 		ci.DoubleCommLosing, 
 		ci.DisableHRFixedOdds,
 		ci.DisableEsports,
-		ci.HideKeno
+		ci.HideKeno,
+		ci.DisableGoldDeluxe, 
+		ci.HideGoldDeluxe 
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]

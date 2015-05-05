@@ -1,7 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_FGLG]    Script Date: 08/27/2014 14:06:16 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+USE [bodb02]
 GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG] @creator INT
 	,@matchid INT
@@ -23,6 +20,7 @@ AS
 	Revisions:
 		- 20140426@Kathy: Add @action param (1H FGLG (bettype 127) ) [Redmine:#14449]
 		- 20140618@Kathy: Correct betstatus
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212] - GoalRecord
 	Param's Explanation:
 		+ @betstatus: FGLG status
 		+ @IsLoopTempTable: 1 : is nested
@@ -103,6 +101,11 @@ BEGIN
 		,@BetStatus = @betstatus
 		,@GoalRecord = @goalrecord
 		,@creator = @creator
+
+	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+		@Command			= 'NAP_Admin_Settlement_FGLG'
+		,@MatchID			= @matchid
+		,@creator			= @creator
 
 	-------------------------
 	--First Goal, Last Goal 
@@ -458,10 +461,6 @@ BEGIN
 		END
 	END
 END
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG] TO [bodbAdminNet] AS [dbo]
 GO

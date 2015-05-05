@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@ToDate DATETIME
 	,@SportType TINYINT = 0
@@ -239,7 +241,7 @@ BEGIN
 	LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
 	where (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
 	AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
-	AND ISNULL(mr.SettlementStatus135,0) = CASE when @AutoSettlementOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
+	--AND ISNULL(mr.SettlementStatus135,0) = CASE when @AutoSettlementOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
 	
 	
 	SELECT @rowcount = 0
@@ -326,14 +328,14 @@ BEGIN
 
 	CREATE TABLE #tmpAutoSettle1s(
 		 MatchID		INT
-		,ResultStatusID	TINYINT 
+		,SettlementStatusID	TINYINT 
 	)
-	INSERT INTO #tmpAutoSettle1s(MatchID,ResultStatusID)
-	SELECT	MatchID, MIN(ResultStatusID)
+	INSERT INTO #tmpAutoSettle1s(MatchID,SettlementStatusID)
+	SELECT	MatchID, MIN(SettlementStatusID)
 	FROM	ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
-			AND (ResourceID IN ('135','168','173','174','175','176','192','193','217')
+			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217')
 					OR ResourceID LIKE '160__'
 					OR ResourceID LIKE '164__'
 					OR ResourceID LIKE '169__'
@@ -341,6 +343,16 @@ BEGIN
 					OR ResourceID LIKE '216__' 
 				)
 	GROUP BY MatchID 
+
+	IF @AutoSettlementOnly = 1 --Running Auto bettypes ONLY ( BETRADAR USED)
+	BEGIN
+		DELETE FROM #matchList
+		WHERE	MatchID NOT IN (
+			SELECT	MatchID
+			FROM	#tmpAutoSettle1s
+			WHERE	SettlementStatusID = 0 
+		)
+	END
 
 	SELECT m.HalfTimeHomeScore
 		,m.HalfTimeAwayScore
@@ -377,9 +389,9 @@ BEGIN
 		,m.PlaceOdds
 		,t.IsCalculatingSingle
 		,t.IsCalculatingMP
-		,CASE	WHEN a.ResultStatusID IS NULL THEN 'N/A'
-				WHEN a.ResultStatusID IN(0,1,3) THEN 'Running'
-				WHEN a.ResultStatusID IN (2,5) THEN 'Completed'
+		,CASE	WHEN a.SettlementStatusID IS NULL THEN 'N/A'
+				WHEN a.SettlementStatusID = 0 THEN 'Running'
+				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 				ELSE '' END AS AutoSettleResultStatus
 
 	FROM	#matchList m
@@ -408,6 +420,7 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]

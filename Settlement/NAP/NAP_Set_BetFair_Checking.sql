@@ -1,3 +1,5 @@
+ï»¿USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_BetFair_Checking] 
 	@matchid INT = 0
 AS
@@ -14,6 +16,7 @@ Revisions:
 	-20140725@Kathy: Execute settlement for abandoned/postponed matches: Correct Score(4,30)[Redmine:#19310]
 	-20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 	-20141023@Jamie: Exclude new bet types Sporting Solution for Tennis [Redmine:#23034] 
+	- 20150418@Jamie: Betradar phase II [Readmine:#27212]
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
@@ -23,17 +26,17 @@ Note: For settlement SPs should hardcode the custid of betfair customer to avoid
 			15523642--- BF3			-	1
 
 Param's Explanation:
-• @matchid: matchid of match to checking
-• @IsMovebetfair:
+â€¢ @matchid: matchid of match to checking
+â€¢ @IsMovebetfair:
 	= 0 don't move betfair tickets to other match
 	= 1 move betfair tickets to other match
-• @IsExcludeBetfair:
+â€¢ @IsExcludeBetfair:
 	= 0 hide the checkbox exclude betfair
 	= 1 show the checkbox exclude betfair
-• @IsSettleAbandonedMatchBetfair:
+â€¢ @IsSettleAbandonedMatchBetfair:
 	= 0 hide the checkbox "Settle determined tickets"
 	= 1 show the checkbox "Settle determined tickets"
-• @IsRefundRunningBetfair:
+â€¢ @IsRefundRunningBetfair:
 	= 0 hide the checkbox "Refund running BetFair"
 	= 1 show the checkbox "Refund running BetFair"
 
@@ -59,6 +62,7 @@ BEGIN
 					AND ruben = 0
 					AND bettype NOT BETWEEN 1301 AND 1399	-- Sportting solution exclude in Betdaq/Betfair 
 					AND bettype NOT BETWEEN 153 AND 156		-- Tennis new bet types
+					AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			)
 	BEGIN
 		SELECT @IsMovebetfair = 1
@@ -74,7 +78,9 @@ BEGIN
 			AND bettype in (3,8,13,26,27,   --Over/Under, Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 				4, 6, 30, 126,
 				128, 129, 130, 131, 132, 143, 144,
-				133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152)  -- BetRadar)
+				133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152
+				,159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207 -- Betradar2 
+				)  -- BetRadar)
 			AND statusID NOT IN (101, 102) AND ruben = 0
 			)
 	BEGIN

@@ -125,6 +125,9 @@ BEGIN
 	VALUES (1, 9, 'Special', 173, '173')
 
 	INSERT INTO @ResourceBettype (Sporttype , ResultGroup , ResultGroupDesc , Bettype , ResourceID)
+	VALUES (1, 9, 'Special', 174, '174')
+
+	INSERT INTO @ResourceBettype (Sporttype , ResultGroup , ResultGroupDesc , Bettype , ResourceID)
 	VALUES (1, 9, 'Special', 135, '135')
 
 	INSERT INTO @ResourceBettype (Sporttype , ResultGroup , ResultGroupDesc , Bettype , ResourceID)

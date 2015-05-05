@@ -7,6 +7,8 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@fta							INT			= NULL
 	,@hth							INT			= NULL
 	,@hta							INT			= NULL
+	,@home_2nd						INT			= NULL
+	,@away_2nd						INT			= NULL
 	,@sporttype						TINYINT		= NULL
 	,@betstatus						NVARCHAR(50)= NULL
 	,@GoalRecord					VARCHAR(50)	= NULL
@@ -17,13 +19,16 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@oddevenhome_ht				SMALLMONEY	= NULL
 	,@oddevenaway					SMALLMONEY	= NULL
 	,@oddevenaway_ht				SMALLMONEY	= NULL
+	,@oddeven_2H					SMALLMONEY	= NULL
 	,@totalgoal						SMALLMONEY	= NULL
 	,@totalht						SMALLMONEY	= NULL
+	,@totalgoal_2H					SMALLMONEY	= NULL
 	,@totalhome 					SMALLMONEY 	= NULL
 	,@totalaway 					SMALLMONEY 	= NULL
 	,@goaldiff  					SMALLMONEY 	= NULL
 	,@scorediff 					SMALLMONEY 	= NULL
 	,@scorediff_ht 					SMALLMONEY 	= NULL
+	,@scorediff_2H					SMALLMONEY 	= NULL 
 	,@correctscore 					NVARCHAR(10)= NULL
 	,@correctscore_ht				NVARCHAR(10)= NULL
 	,@HTFT							NVARCHAR(10)= NULL
@@ -34,6 +39,18 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@TennisTotal					SMALLINT 	= NULL
 	,@T_Home 						SMALLINT 	= NULL
 	,@T_Away 						SMALLINT 	= NULL
+	,@fthCorners					INT			= NULL
+	,@ftaCorners					INT			= NULL
+	,@hthCorners					INT			= NULL
+	,@htaCorners					INT			= NULL 	
+	,@oddevenCorners				SMALLMONEY 	= NULL 
+	,@oddevenCorners_ht				SMALLMONEY 	= NULL 
+	,@totalCorners					SMALLMONEY 	= NULL 
+	,@totalCorners_ht				SMALLMONEY 	= NULL 
+	,@FTFCorner						VARCHAR(10) = NULL
+	,@FTLCorner						VARCHAR(10) = NULL
+	,@HTFCorner						VARCHAR(10) = NULL
+	,@HTLCorner						VARCHAR(10) = NULL
 	,@SelectedSet					VARCHAR(50) = NULL 
 	,@SelectedSettleFinishedGame	VARCHAR(50)	= NULL 
 	,@TotalGameHomeMatch			INT			= NULL
@@ -85,6 +102,12 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@ExtraTimeandGoal				VARCHAR(10)	= NULL
 	,@ExtraTimeYN					VARCHAR(10)	= NULL
 	,@GoalScorerFirst				VARCHAR(10)	= NULL
+	,@PlayerSentOff					VARCHAR(10)	= NULL
+	,@HTPlayerSentOff				VARCHAR(10)	= NULL
+	,@PlayerSentOffHome				VARCHAR(10)	= NULL
+	,@HTPlayerSentOffHome			VARCHAR(10)	= NULL
+	,@PlayerSentOffAway				VARCHAR(10)	= NULL
+	,@HTPlayerSentOffAway			VARCHAR(10)	= NULL
 	,@1HNextGoal					VARCHAR(MAX)= NULL
 	,@NextGoal						VARCHAR(MAX)= NULL
 	,@NextGoalTime15Min				VARCHAR(MAX)= NULL
@@ -156,19 +179,67 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betCount_154					INT 		= NULL
 	,@betCount_155					INT 		= NULL
 	,@betCount_156					INT 		= NULL
+	,@betcount_157					INT 		= NULL	--Betradar 2 
+	,@betcount_159					INT 		= NULL
 	,@betCount_160					INT 		= NULL
+	,@betcount_161 					INT 		= NULL
+	,@betcount_162 					INT 		= NULL
+	,@betcount_163 					INT 		= NULL
 	,@betCount_164					INT 		= NULL
+	,@betcount_165 					INT 		= NULL
+	,@betcount_166 					INT 		= NULL
+	,@betcount_167 					INT 		= NULL
 	,@betcount_168					INT 		= NULL
 	,@betCount_169					INT 		= NULL
+	,@betcount_170 					INT 		= NULL
+	,@betcount_171 					INT 		= NULL
+	,@betcount_172 					INT 		= NULL
 	,@betCount_173					INT 		= NULL
 	,@betCount_174					INT 		= NULL
 	,@betCount_175					INT 		= NULL
 	,@betCount_176					INT 		= NULL
+	,@betcount_177 					INT 		= NULL
+	,@betcount_178 					INT 		= NULL
+	,@betcount_179 					INT 		= NULL
+	,@betcount_180 					INT 		= NULL
+	,@betcount_181 					INT 		= NULL
+	,@betcount_182 					INT 		= NULL
+	,@betcount_183 					INT 		= NULL
+	,@betcount_184 					INT 		= NULL
+	,@betcount_185 					INT 		= NULL
+	,@betcount_186 					INT 		= NULL
+	,@betcount_187 					INT 		= NULL
+	,@betcount_188 					INT 		= NULL
+	,@betcount_189 					INT 		= NULL
+	,@betcount_190 					INT 		= NULL
+	,@betcount_191 					INT 		= NULL
 	,@betCount_192					INT 		= NULL
 	,@betCount_193					INT 		= NULL
-	,@betCount_180					INT 		= NULL
+	,@betcount_194 					INT 		= NULL
+	,@betcount_195 					INT 		= NULL
+	,@betcount_196 					INT 		= NULL
+	,@betcount_197 					INT 		= NULL
+	,@betcount_198 					INT 		= NULL
+	,@betcount_199 					INT 		= NULL
+	,@betcount_200 					INT 		= NULL
+	,@betcount_201 					INT 		= NULL
+	,@betcount_202 					INT 		= NULL
+	,@betcount_203 					INT 		= NULL
+	,@betcount_204 					INT 		= NULL
+	,@betcount_205 					INT 		= NULL
+	,@betcount_206 					INT 		= NULL
+	,@betcount_207 					INT 		= NULL
+	,@betcount_208 					INT 		= NULL
+	,@betcount_209 					INT 		= NULL
+	,@betCount_210					INT 		= NULL
+	,@betCount_211					INT 		= NULL
+	,@betCount_212					INT 		= NULL
+	,@betCount_213					INT 		= NULL
+	,@betCount_214					INT 		= NULL
+	,@betCount_215					INT 		= NULL
 	,@betCount_216					INT 		= NULL
 	,@betCount_217					INT 		= NULL
+
 	,@betcount_1301					INT			= NULL		-- Tennis SS 
 	,@betCount_1302					INT			= NULL	
 	,@betCount_1303					INT			= NULL	
@@ -256,6 +327,9 @@ BEGIN
 				WHEN @hta IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @hta)
 				END + '
+			,@home_2nd = ' + CASE WHEN @home_2nd IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @home_2nd) END + '
+			,@away_2nd = ' + CASE WHEN @away_2nd IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @away_2nd) END + '
+
 			,@sporttype = ' + CASE 
 				WHEN @sporttype IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @sporttype)
@@ -296,6 +370,7 @@ BEGIN
 				WHEN @oddevenaway_ht IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @oddevenaway_ht)
 				END + '
+			,@oddeven_2H = ' + CASE WHEN @oddeven_2H IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @oddeven_2H) END + '
 			,@totalgoal = ' + CASE 
 				WHEN @totalgoal IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @totalgoal)
@@ -304,6 +379,8 @@ BEGIN
 				WHEN @totalht IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @totalht)
 				END + '
+			,@totalgoal_2H = ' + CASE WHEN @totalgoal_2H IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @totalgoal_2H) END + '
+
 			,@totalhome = ' + CASE 
 				WHEN @totalhome IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @totalhome)
@@ -324,6 +401,8 @@ BEGIN
 				WHEN @scorediff_ht IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @scorediff_ht)
 				END + '
+			,@scorediff_2H = ' + CASE WHEN @scorediff_2H IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @scorediff_2H) END + '
+
 			,@correctscore = ' + CASE 
 				WHEN @correctscore IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @correctscore) + ''''
@@ -364,6 +443,21 @@ BEGIN
 				WHEN @T_Away IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @T_Away)
 				END + '
+
+			,@fthCorners = ' + CASE WHEN @fthCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @fthCorners) END + '
+			,@ftaCorners = ' + CASE WHEN @ftaCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @ftaCorners) END + '
+			,@hthCorners = ' + CASE WHEN @hthCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @hthCorners) END + '
+			,@htaCorners = ' + CASE WHEN @htaCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @htaCorners) END + '
+			,@oddevenCorners = ' + CASE WHEN @oddevenCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @oddevenCorners) END + '
+			,@oddevenCorners_ht = ' + CASE WHEN @oddevenCorners_ht IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @oddevenCorners_ht) END + '
+			,@totalCorners = ' + CASE WHEN @totalCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @totalCorners) END + '
+			,@totalCorners_ht = ' + CASE WHEN @totalCorners_ht IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @totalCorners_ht) END + '
+
+			,@ftFCorner = ' + CASE WHEN @ftFCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@ftFCorner)+ '''' END + ' 
+			,@ftLCorner = ' + CASE WHEN @ftLCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@ftLCorner)+ '''' END + ' 
+			,@htFCorner = ' + CASE WHEN @htFCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@htFCorner)+ '''' END + ' 
+			,@htLCorner = ' + CASE WHEN @htLCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@htLCorner)+ '''' END + ' 
+
 			,@SelectedSet = ' + CASE WHEN @SelectedSet IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@SelectedSet)+ '''' END + ' 
 			,@SelectedSettleFinishedGame = ' + CASE WHEN @SelectedSettleFinishedGame IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@SelectedSettleFinishedGame)+ '''' END + ' 
 			,@TotalGameHomeMatch = ' + CASE WHEN @TotalGameHomeMatch IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50),@TotalGameHomeMatch,0) END + ' 
@@ -416,6 +510,12 @@ BEGIN
 			,@ExtraTimeandGoal = ' + CASE WHEN @ExtraTimeandGoal IS NULL THEN 'NULL' ELSE '''' + @ExtraTimeandGoal + '''' END + '	
 			,@ExtraTimeYN = ' + CASE WHEN @ExtraTimeYN IS NULL THEN 'NULL' ELSE '''' + @ExtraTimeYN + '''' END + '	
 			,@GoalScorerFirst = ' + CASE WHEN @GoalScorerFirst IS NULL THEN 'NULL' ELSE '''' + @GoalScorerFirst + '''' END + '
+			,@PlayerSentOff = ' + CASE WHEN @PlayerSentOff IS NULL THEN 'NULL' ELSE '''' + @PlayerSentOff + '''' END + '
+			,@HTPlayerSentOff = ' + CASE WHEN @HTPlayerSentOff IS NULL THEN 'NULL' ELSE '''' + @HTPlayerSentOff + '''' END + '
+			,@PlayerSentOffHome = ' + CASE WHEN @PlayerSentOffHome IS NULL THEN 'NULL' ELSE '''' + @PlayerSentOffHome + '''' END + '
+			,@HTPlayerSentOffHome = ' + CASE WHEN @HTPlayerSentOffHome IS NULL THEN 'NULL' ELSE '''' + @HTPlayerSentOffHome + '''' END + '
+			,@PlayerSentOffAway = ' + CASE WHEN @PlayerSentOffAway IS NULL THEN 'NULL' ELSE '''' + @PlayerSentOffAway + '''' END + '
+			,@HTPlayerSentOffAway = ' + CASE WHEN @HTPlayerSentOffAway IS NULL THEN 'NULL' ELSE '''' + @HTPlayerSentOffAway + '''' END + '
 			,@1HNextGoal = ' + CASE WHEN @1HNextGoal IS NULL THEN 'NULL' ELSE '''' + @1HNextGoal + '''' END + '
 			,@NextGoal = ' + CASE WHEN @NextGoal IS NULL THEN 'NULL' ELSE '''' + @NextGoal + '''' END + '
 			,@NextGoalTime15Min = ' + CASE WHEN @NextGoalTime15Min IS NULL THEN 'NULL' ELSE '''' + @NextGoalTime15Min + '''' END + '
@@ -674,18 +774,64 @@ BEGIN
 			,@betCount_154 = ' + CASE WHEN @betCount_154 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_154) END + '
 			,@betCount_155 = ' + CASE WHEN @betCount_155 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_155) END + '
 			,@betCount_156 = ' + CASE WHEN @betCount_156 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_156) END + '
-			
+			,@betCount_157 = ' + CASE WHEN @betCount_157 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_157) END + '
+			,@betCount_159 = ' + CASE WHEN @betCount_159 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_159) END + '
 			,@betCount_160 = ' + CASE WHEN @betCount_160 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_160) END + '
+			,@betCount_161 = ' + CASE WHEN @betCount_161 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_161) END + '
+			,@betCount_162 = ' + CASE WHEN @betCount_162 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_162) END + '
+			,@betCount_163 = ' + CASE WHEN @betCount_163 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_163) END + '
 			,@betCount_164 = ' + CASE WHEN @betCount_164 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_164) END + '
+			,@betCount_165 = ' + CASE WHEN @betCount_165 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_165) END + '
+			,@betCount_166 = ' + CASE WHEN @betCount_166 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_166) END + '
+			,@betCount_167 = ' + CASE WHEN @betCount_167 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_167) END + '
 			,@betCount_168 = ' + CASE WHEN @betCount_168 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_168) END + '
 			,@betCount_169 = ' + CASE WHEN @betCount_169 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_169) END + '
+			,@betCount_170 = ' + CASE WHEN @betCount_170 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_170) END + '
+			,@betCount_171 = ' + CASE WHEN @betCount_171 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_171) END + '
+			,@betCount_172 = ' + CASE WHEN @betCount_172 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_172) END + '
 			,@betCount_173 = ' + CASE WHEN @betCount_173 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_173) END + '
 			,@betCount_174 = ' + CASE WHEN @betCount_174 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_174) END + '
 			,@betCount_175 = ' + CASE WHEN @betCount_175 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_175) END + '
-			,@betCount_176 = ' + CASE WHEN @betCount_176 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_176) END + '
-			,@betCount_192 = ' + CASE WHEN @betCount_192 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_192) END + '
-			,@betCount_193 = ' + CASE WHEN @betCount_193 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_193) END + '
+			,@betCount_176 = ' + CASE WHEN @betCount_176 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_176) END + '		
+			,@betCount_177 = ' + CASE WHEN @betCount_177 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_177) END + '
+			,@betCount_178 = ' + CASE WHEN @betCount_178 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_178) END + '
+			,@betCount_179 = ' + CASE WHEN @betCount_179 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_179) END + '
 			,@betCount_180 = ' + CASE WHEN @betCount_180 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_180) END + '
+			,@betCount_181 = ' + CASE WHEN @betCount_181 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_181) END + '
+			,@betCount_182 = ' + CASE WHEN @betCount_182 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_182) END + '
+			,@betCount_183 = ' + CASE WHEN @betCount_183 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_183) END + '
+			,@betCount_184 = ' + CASE WHEN @betCount_184 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_184) END + '
+			,@betCount_185 = ' + CASE WHEN @betCount_185 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_185) END + '
+			,@betCount_186 = ' + CASE WHEN @betCount_186 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_186) END + '
+			,@betCount_187 = ' + CASE WHEN @betCount_187 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_187) END + '
+			,@betCount_188 = ' + CASE WHEN @betCount_188 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_188) END + '
+			,@betCount_189 = ' + CASE WHEN @betCount_189 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_189) END + '
+			,@betCount_190 = ' + CASE WHEN @betCount_190 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_190) END + '
+			,@betCount_191 = ' + CASE WHEN @betCount_191 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_191) END + '
+			,@betCount_192 = ' + CASE WHEN @betCount_192 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_192) END + '
+			,@betCount_193 = ' + CASE WHEN @betCount_193 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_193) END + '		
+			,@betCount_194 = ' + CASE WHEN @betCount_194 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_194) END + '
+			,@betCount_195 = ' + CASE WHEN @betCount_195 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_195) END + '
+			,@betCount_196 = ' + CASE WHEN @betCount_196 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_196) END + '
+			,@betCount_197 = ' + CASE WHEN @betCount_197 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_197) END + '
+			,@betCount_198 = ' + CASE WHEN @betCount_198 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_198) END + '
+			,@betCount_199 = ' + CASE WHEN @betCount_199 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_199) END + '
+			,@betCount_200 = ' + CASE WHEN @betCount_200 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_200) END + '
+			,@betCount_201 = ' + CASE WHEN @betCount_201 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_201) END + '
+			,@betCount_202 = ' + CASE WHEN @betCount_202 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_202) END + '
+			,@betCount_203 = ' + CASE WHEN @betCount_203 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_203) END + '
+			,@betCount_204 = ' + CASE WHEN @betCount_204 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_204) END + '
+			,@betCount_205 = ' + CASE WHEN @betCount_205 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_205) END + '
+			,@betCount_206 = ' + CASE WHEN @betCount_206 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_206) END + '
+			,@betCount_207 = ' + CASE WHEN @betCount_207 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_207) END + '
+			,@betCount_208 = ' + CASE WHEN @betCount_208 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_208) END + '
+			,@betCount_209 = ' + CASE WHEN @betCount_209 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_209) END + '
+			,@betCount_210 = ' + CASE WHEN @betCount_210 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_210) END + '
+			,@betCount_211 = ' + CASE WHEN @betCount_211 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_211) END + '
+			,@betCount_212 = ' + CASE WHEN @betCount_212 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_212) END + '
+			,@betCount_213 = ' + CASE WHEN @betCount_213 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_213) END + '
+			,@betCount_214 = ' + CASE WHEN @betCount_214 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_214) END + '
+			,@betCount_215 = ' + CASE WHEN @betCount_215 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_215) END + '
 			,@betCount_216 = ' + CASE WHEN @betCount_216 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_216) END + '
 			,@betCount_217 = ' + CASE WHEN @betCount_217 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_217) END + '
 			
@@ -1110,6 +1256,206 @@ BEGIN
 						,@totalgoal = @totalgoal
 						,@scorediff = @scorediff
 						,@betcount = @betcount_144
+
+				--*** Betradar 2: START *****
+					-- bettype 157: Odd/Even(3rd) 
+					EXEC dbo.NAP_Admin_Calculate_2 
+						 @matchid = @matchid
+						,@bettype = 157
+						,@oddeven = @oddeven
+						,@betcount = @betcount_157
+
+					-- bettype 159: Exact Total Goals 
+					EXEC dbo.NAP_Admin_Calculate_6
+						 @matchid = @matchid
+						,@bettype = 159
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_159
+
+					-- bettype 161:Exact Home Team Goals 
+					EXEC dbo.NAP_Admin_Calculate_6
+						 @matchid = @matchid
+						,@bettype = 161
+						,@totalgoal = @totalhome
+						,@betcount = @betcount_161
+
+					-- bettype 162:Exact Away Team Goals 
+					EXEC dbo.NAP_Admin_Calculate_6 
+						 @matchid = @matchid
+						,@bettype = 162
+						,@totalgoal = @totalaway
+						,@betcount = @betcount_162
+					
+					-- bettype 163:Result/Total Goals (3rd) 
+					EXEC dbo.NAP_Admin_Calculate_3 
+						 @matchid = @matchid
+						,@bettype = 163
+						,@totalgoal = @totalgoal
+						,@scorediff = @scorediff
+						,@betcount = @betcount_163
+
+					-- bettype 166: Extra time correct score 
+					EXEC dbo.NAP_Admin_Calculate_4 
+						 @matchid = @matchid
+						,@bettype = 166
+						,@correctscore = @correctscore
+						,@betcount = @betcount_166
+
+
+					-- bettype 170: Team to Score 
+					EXEC dbo.NAP_Admin_Calculate_26 
+						 @matchid = @matchid
+						,@bettype = 170
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_170
+
+					-- bettype 171: Winning Margin
+					EXEC dbo.NAP_Admin_Calculate_3 
+						 @matchid = @matchid
+						,@bettype = 171
+						,@scorediff = @scorediff
+						,@betcount = @betcount_171
+
+					-- bettype 172: Result and First Team to Score 
+					EXEC dbo.NAP_Admin_Calculate_13 
+						 @matchid = @matchid
+						,@bettype = 172
+						,@fth = @fth
+						,@fta = @fta
+						,@ResultString = @GoalRecord
+						,@betcount = @betcount_172
+
+					-- bettype 177 : 2nd Half 1x2
+					EXEC dbo.NAP_Admin_Calculate_5 
+						 @matchid = @matchid
+						,@bettype = 177
+						,@whowin = @scorediff_2H
+						,@betcount = @betcount_177
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 178 : 2nd Over/Under(3rd)
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = 178
+						,@totalgoal = @totalgoal_2H
+						,@betcount = @betcount_178
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 183 : 2nd Handicap (3rd)
+					EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
+						,@bettype = 183
+						,@fth = @home_2nd
+						,@fta = @away_2nd
+						,@betcount = @betcount_183
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 184 : 2H Odd/Even
+					EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+						,@bettype = 184
+						,@oddeven = @oddeven_2H
+						,@oddevenht = NULL 
+						,@betcount = @betcount_184
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 185 : 2H Draw No Bet
+					EXEC dbo.NAP_Admin_Calculate_25 
+						 @matchid = @matchid
+						,@bettype = 185
+						,@scorediff = @scorediff_2H
+						,@betcount = @betcount_185
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 186 : 2H Double Chance 
+					EXEC dbo.NAP_Admin_Calculate_24 
+						 @matchid = @matchid
+						,@bettype = 186
+						,@scorediff = @scorediff_2H
+						,@betcount = @betcount_186
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 187 : Exact 2H Goals 
+					EXEC dbo.NAP_Admin_Calculate_6 
+						 @matchid = @matchid
+						,@bettype = 187
+						,@totalgoal = @totalgoal_2H
+						,@betcount = @betcount_187
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 189 : Both Halves Over 1.5 Yes/No  [189]
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+						,@bettype = 189
+						,@fth = @home_2nd
+						,@fta = @away_2nd
+						,@hth = @hth
+						,@hta = @hta
+						,@betcount = @betcount_189
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 190 : Both Halves Under 1.5 Yes/No
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+						,@bettype = 190
+						,@fth = @home_2nd
+						,@fta = @away_2nd
+						,@hth = @hth
+						,@hta = @hta
+						,@betcount = @betcount_190
+						,@isRefundHT = @isRefundHT
+
+					-- bettype 194 : Corners Odd/Even
+					EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+						,@bettype = 194
+						,@oddeven = @oddevenCorners
+						,@oddevenht = NULL
+						,@betcount = @betcount_194
+
+
+					-- bettype 195 :Home Team Exact Corners
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 195
+						,@totalgoal = @fthCorners
+						,@betcount = @betcount_195
+
+					-- bettype 196 :Away Team Exact Corners
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 196
+						,@totalgoal = @ftaCorners
+						,@betcount = @betcount_196
+
+
+					-- bettype 197 :Home Team Total Corners Over/Under
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = 197
+						,@totalgoal = @fthCorners
+						,@betcount = @betcount_197
+
+					-- bettype 198 :Home Team Total Corners Over/Under
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = 198
+						,@totalgoal = @ftaCorners
+						,@betcount = @betcount_198
+
+					-- bettype 199 :Total Corners
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 199
+						,@totalgoal = @totalCorners
+						,@betcount = @betcount_199
+
+					-- bettype: 206: First Corner
+					EXEC dbo.NAP_Admin_Calculate_135
+						 @matchid = @matchid
+						,@bettype = 206
+						,@result = @ftFCorner
+						,@betcount = @betcount_206
+
+					-- bettype: 208: Last Corner
+					EXEC dbo.NAP_Admin_Calculate_135
+						 @matchid = @matchid
+						,@bettype = 208
+						,@result = @ftLCorner
+						,@betcount = @betcount_208
+
+				--*** Betradar 2: END *****
+
 				END
 			END
 
@@ -1206,6 +1552,107 @@ BEGIN
 					,@totalht = @totalht
 					,@scorediff_ht = @scorediff_ht
 					,@betcount = @betcount_143
+
+			--*** Betradar 2: START ****
+				-- bettype 165: Extra time 1H correct score 
+				EXEC dbo.NAP_Admin_Calculate_4 
+					 @matchid = @matchid
+					,@bettype = 165
+					,@correctscore = @correctscore_ht
+					,@betcount = @betcount_165
+
+				-- bettype 167 : Extra Time 1H 1X2 
+				EXEC dbo.NAP_Admin_Calculate_5 @matchid = @matchid
+					,@bettype = 167
+					,@whowin = @scorediff_ht
+					,@betcount = @betcount_167
+
+				-- bettype 179 : Exact 1H Goal
+				EXEC dbo.NAP_Admin_Calculate_6 
+					 @matchid = @matchid
+					,@bettype = 179
+					,@totalgoal = @totalht
+					,@betcount = @betcount_179
+
+				-- bettype 181 : 1H Exact Home Team Goals 
+				EXEC dbo.NAP_Admin_Calculate_6 
+					 @matchid = @matchid
+					,@bettype = 181
+					,@totalgoal = @hth
+					,@betcount = @betcount_181
+
+				-- bettype 182 : 1H Exact Away Team Goals 
+				EXEC dbo.NAP_Admin_Calculate_6 
+					 @matchid = @matchid
+					,@bettype = 182
+					,@totalgoal = @hta
+					,@betcount = @betcount_182
+
+				-- bettype 188: 1H Both Teams to Score 
+				EXEC dbo.NAP_Admin_Calculate_26 
+					 @matchid = @matchid
+					,@bettype = 188
+					,@fth = @hth
+					,@fta = @hta
+					,@betcount = @betcount_188
+
+				-- bettype 191 : 1H Draw no bet 
+				EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
+					,@bettype = 191
+					,@scorediff = @scorediff_ht
+					,@betcount = @betcount_191
+
+				-- bettype 200 :1H Home Team Exact Corners
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					,@bettype = 200
+					,@totalgoal = @hthCorners
+					,@betcount = @betcount_200
+
+				-- bettype 201 :1H Away Team Exact Corners
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					,@bettype = 201
+					,@totalgoal = @htaCorners
+					,@betcount = @betcount_201
+
+				-- bettype 202 :1H Total Corners
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					,@bettype = 202
+					,@totalgoal = @totalCorners_ht
+					,@betcount = @betcount_202
+
+				-- bettype 203 : 1H Corners Odd/Even
+				EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+					,@bettype = 203
+					,@oddeven = @oddevenCorners_ht
+					,@oddevenht = NULL 
+					,@betcount = @betcount_203
+
+				-- bettype 204 :1H Home Corner Over/Under
+				EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					,@bettype = 204
+					,@totalgoal = @hthCorners
+					,@betcount = @betcount_204
+
+				-- bettype 205 :1H Away Corner Over/Under
+				EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					,@bettype = 205
+					,@totalgoal = @htaCorners
+					,@betcount = @betcount_205
+
+				-- bettype: 207: 1H First Corner
+				EXEC dbo.NAP_Admin_Calculate_135
+					 @matchid = @matchid
+					,@bettype = 207
+					,@result = @htFCorner
+					,@betcount = @betcount_207
+
+				-- bettype: 209: 1H Last Corner
+				EXEC dbo.NAP_Admin_Calculate_135
+					 @matchid = @matchid
+					,@bettype = 209
+					,@result = @htLCorner
+					,@betcount = @betcount_209
+			--*** Betradar 2: END ****
 			END
 
 			IF @Mode = 'UNDO'
@@ -1359,6 +1806,62 @@ BEGIN
 					,@ResourceIDs = @ResourceIDs
 					,@result = @1stGoalTime15Min
 					,@betcount = @betcount_193
+
+			-- bettype: 210 : Player Sent Off 
+			IF @betcount_210 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 210
+					,@ResourceIDs = @ResourceIDs
+					,@result = @PlayerSentOff
+					,@betcount = @betcount_210
+
+			-- bettype: 211 : 1H Player Sent Off 
+			IF @betcount_211 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 211
+					,@ResourceIDs = @ResourceIDs
+					,@result = @HTPlayerSentOff
+					,@betcount = @betcount_211
+
+
+			-- bettype: 212 : Home Team Player Sent Off 
+			IF @betcount_212 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 212
+					,@ResourceIDs = @ResourceIDs
+					,@result = @PlayerSentOffHome
+					,@betcount = @betcount_212
+
+			-- bettype: 213 : HT Home Team Player Sent Off 
+			IF @betcount_213 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 213
+					,@ResourceIDs = @ResourceIDs
+					,@result = @HTPlayerSentOffHome
+					,@betcount = @betcount_213
+
+
+			-- bettype: 214 : Away Team Player Sent Off 
+			IF @betcount_214 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 214
+					,@ResourceIDs = @ResourceIDs
+					,@result = @PlayerSentOffAway
+					,@betcount = @betcount_214
+
+			-- bettype: 215 : 1H Away Team Player Sent Off 
+			IF @betcount_215 > 0	
+				EXEC dbo.NAP_Admin_Calculate_135 
+					 @matchid = @matchid
+					,@bettype = 215
+					,@ResourceIDs = @ResourceIDs
+					,@result = @HTPlayerSentOffAway
+					,@betcount = @betcount_215
 
 			-- bettype: 216 : Goal Scorer - Anytime 
 			IF @betcount_216 > 0	
@@ -1885,6 +2388,116 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 						,@IsHTCal = @IsHTCal
 
+				-- Betradar 2
+				IF @betcount_159 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 159
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_159
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_161 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 161
+						,@totalgoal = @fth
+						,@betcount = @betcount_161
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_162 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 162
+						,@totalgoal = @fta
+						,@betcount = @betcount_162
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_163 > 0
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = 163
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_163
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+
+
+				IF @betcount_170 > 0
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+						,@bettype = 170
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_170
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_172 > 0
+					EXEC dbo.NAP_Admin_Calculate_13 
+						 @matchid = @matchid
+						,@bettype = 172
+						,@fth = NULL
+						,@fta = NULL 
+						,@ResultString = @GoalRecord
+						,@betcount = @betcount_172
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_187 > 0	--Exact 2nd Half Goals [187]
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 187
+						,@totalgoal = @totalgoal_2H
+						,@betcount = @betcount_187
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsHTCal = @IsHTCal
+
+				IF @betcount_195 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 195
+						,@totalgoal = @fthCorners
+						,@betcount = @betcount_195
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+
+				IF @betcount_196 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 196
+						,@totalgoal = @ftaCorners
+						,@betcount = @betcount_196
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+
+				IF @betcount_199 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 199
+						,@totalgoal = @totalCorners
+						,@betcount = @betcount_199
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betCount_206 > 0 
+					EXEC dbo.NAP_Admin_Calculate_135	
+						 @matchid					= @matchid
+						,@bettype					= 206	
+						,@result					= @FTFCorner
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@betcount					= @betCount_206
+
+
 				IF @row_count > 0
 					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
@@ -2089,6 +2702,192 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 						,@isRefundHT = @isRefundHT
 						,@IsHTCal = @IsHTCal
+
+
+				-- Betradar 2
+				IF @betcount_159 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 159
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_159
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_161 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 161
+						,@totalgoal = @fth
+						,@betcount = @betcount_161
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_162 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 162
+						,@totalgoal = @fta
+						,@betcount = @betcount_162
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_163 > 0
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = 163
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_163
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+
+				IF @betcount_170 > 0
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+						,@bettype = 170
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_170
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_172 > 0
+					EXEC dbo.NAP_Admin_Calculate_13 
+						 @matchid = @matchid
+						,@bettype = 172
+						,@fth = NULL
+						,@fta = NULL 
+						,@ResultString = @GoalRecord
+						,@betcount = @betcount_172
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_179 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 179
+						,@totalgoal = @totalht
+						,@betcount = @betcount_179
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_181 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 181
+						,@totalgoal = @hth
+						,@betcount = @betcount_181
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_182 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 182
+						,@totalgoal = @hta
+						,@betcount = @betcount_182
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_188 > 0
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+						,@bettype = 188
+						,@fth = @hth
+						,@fta = @hta 
+						,@betcount = @betcount_188
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_195 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 195
+						,@totalgoal = @fthCorners
+						,@betcount = @betcount_195
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+
+				IF @betcount_196 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 196
+						,@totalgoal = @ftaCorners
+						,@betcount = @betcount_196
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+
+				IF @betcount_199 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 199
+						,@totalgoal = @totalCorners
+						,@betcount = @betcount_199
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_200 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 200
+						,@totalgoal = @hthCorners
+						,@betcount = @betcount_200
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_201 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 201
+						,@totalgoal = @htaCorners
+						,@betcount = @betcount_201
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				IF @betcount_202 > 0
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+						,@bettype = 202
+						,@totalgoal = @totalCorners_ht
+						,@betcount = @betcount_202
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+
+				IF @betCount_206 > 0 
+					EXEC dbo.NAP_Admin_Calculate_135	
+						 @matchid					= @matchid
+						,@bettype					= 206	
+						,@result					= @FTFCorner
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@betcount					= @betCount_206
+
+				IF @betCount_207 > 0 
+					EXEC dbo.NAP_Admin_Calculate_135	
+						 @matchid					= @matchid
+						,@bettype					= 207	
+						,@result					= @HTFCorner
+						,@IsSettleAbandonedMatch	= @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@betcount					= @betCount_207
+
+				
+				IF @betCount_216 > 0 -- Auto-bettypes
+					EXEC dbo.NAP_Admin_Calculate_135	
+						 @matchid					= @matchid
+						,@bettype					= 216	
+						,@ResourceIDs				= @ResourceIDs
+						,@result					= @GoalScorerAnytime
+						,@IsSettleAbandonedMatchIBC	= @IsSettleAbandonedMatchIBC
+						,@betcount					= @betCount_216
+
+				-- END: Betradar 2 
 
 				IF @betCount_1324 > 0 -- Set x Game y Winner 
 					EXEC dbo.NAP_Admin_Calculate_1324 

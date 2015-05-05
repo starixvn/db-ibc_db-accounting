@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Auto_1s_Push]    Script Date: 04/16/2015 09:03:31 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
 	 @AdminId			INT				= 148		-- calculated by system (default)
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -24,7 +17,6 @@ AS
 	Original: 
 	
 	Revisions:
-		- 20150415@Kathy: Add checking ticket status before performing settlement [Redmine:#27212]
 
 	Param's Explanation:
 */		
@@ -34,7 +26,7 @@ BEGIN
 	DECLARE	 @matchcode		NVARCHAR(50)
 			,@sporttype		INT
 			,@leagueid		INT
-			,@sqlCommand	NVARCHAR(500)
+			,@sqlCommand	NVARCHAR(MAX)
 			,@procName		NVARCHAR(50)
 			,@betstatus		NVARCHAR(50)
 
@@ -53,19 +45,43 @@ BEGIN
 		RETURN
 	END
 
-	IF @isAuto = 1 AND( EXISTS(	SELECT	TOP 1 1 
-								FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK) 
-								WHERE	MatchID = @MatchID 
-										AND ResourceID IN( SELECT Val FROM dbo.strSplit(@ResourceIDs,',') WHERE ISNULL(@ResourceIDs,'')<>'')	
-										AND ResultStatusID = 5				
-							)
-						OR ISNULL(@ResourceIDs,'')=''
-					)
-	BEGIN
-		SELECT	 @ErrCode	= 1001012
-				,@ErrMsg	= 'The auto-settlement failed due to a result that has been settled previously by manual.'
+	DECLARE	@InvalidResourceIDs VARCHAR(MAX)=''
 
-		RETURN
+	DECLARE @tmpResultDetail TABLE(
+		ResourceID		VARCHAR(20)
+		,Value			VARCHAR(50)
+		,ResultStatusID	TINYINT
+	)
+	INSERT INTO @tmpResultDetail(ResourceID, Value, ResultStatusID)
+	SELECT	ResourceID
+			,CASE WHEN ResourceID IN('214','215') THEN AwayValue ELSE HomeValue END 
+			,ResultStatusID
+	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
+	WHERE	MatchID = @MatchID 
+			AND ResourceID IN( SELECT Val FROM dbo.strSplit(@ResourceIDs,',') WHERE ISNULL(@ResourceIDs,'')<>'')
+
+	IF @isAuto = 1 
+	BEGIN
+		IF (EXISTS(	SELECT	TOP 1 1 FROM	@tmpResultDetail WHERE	ResultStatusID = 5)
+				OR ISNULL(@ResourceIDs,'')=''
+		)
+		BEGIN
+			SELECT	 @ErrCode	= 1001012
+					,@ErrMsg	= 'The auto-settlement failed due to a result that has been settled previously by manual.'
+
+			RETURN
+		END
+
+		IF(EXISTS(SELECT TOP 1 1 FROM @tmpResultDetail WHERE Value IS NULL) OR ISNULL(@ResourceIDs,'')='') 
+		BEGIN
+			SELECT	@InvalidResourceIDs = @InvalidResourceIDs + ResourceID +',' 
+			FROM	@tmpResultDetail WHERE Value IS NULL
+
+			SELECT	 @ErrCode	= 1001015
+					,@ErrMsg	= 'The auto-settlement failed due to following result(s) with invalid value:' + @InvalidResourceIDs
+
+			RETURN
+		END
 	END
 
 	IF EXISTS (
@@ -85,7 +101,7 @@ BEGIN
 
 		RETURN
 	END
-	
+
 	-- check waiting ticket
 	EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
@@ -100,6 +116,7 @@ BEGIN
 		
 		RETURN
 	END
+
 
 	SELECT	 @ErrCode		= 0
 			,@ErrMsg		= ''
@@ -163,8 +180,10 @@ BEGIN
 
 END
 
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI] AS [dbo]
+GO

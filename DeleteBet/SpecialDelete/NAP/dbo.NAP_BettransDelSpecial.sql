@@ -225,6 +225,7 @@ BEGIN
 		hdp2 				SMALLMONEY,
 		bettype 			SMALLINT, 
 		betteam 			NVARCHAR(10),
+		betcheck			NVARCHAR(50),
 		odds				SMALLMONEY, 
 		OddsType			INT,
 		transdate			DATETIME,
@@ -319,7 +320,7 @@ BEGIN
  -- bettype <> 4 - Handicap(1), Over/Under(3), 1st Handicap(7), 1st Over/Under(8) - FT.1X2(5)/ 1st 1X2(15)
  INSERT INTO #BetDelete
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
-		b.Username, b.creator, b.hdp1, b.hdp2, b.bettype, b.betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		b.Username, b.creator, b.hdp1, b.hdp2, b.bettype, b.betteam, b.betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@bettypes,'^') AS bt ON bt.val=b.bettype
@@ -350,8 +351,8 @@ BEGIN
 								 WHEN b.bettype = 180 THEN (818000 + @BetID160)
 							END
 						END
-				ELSE b.betID
-			END = b.betID
+				ELSE ISNULL(b.betID,0)
+			END = ISNULL(b.betID,0)
 		AND b.bettype NOT IN(4,6,14,16,30, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 
 								143, 144, 145, 146, 147, 148, 149, 150,
 								154, 155, 156, 159, 161, 162, 163, 165, 166, 169, 
@@ -370,7 +371,7 @@ BEGIN
  -- bettype = 4 -- Correct score
  INSERT INTO #BetDelete
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -401,7 +402,7 @@ BEGIN
 -- bettype = 6: Total Goal; 126: 1st Total Goal, 131: Home Team Total Goal; 132:  Away Team Total Goal
  INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -431,7 +432,7 @@ BEGIN
 -- bettype = 14: First Goal/Last Goal; 127: 1st FGLG
  INSERT INTO #BetDelete  
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate,b.liveindicator, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate,b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -459,7 +460,7 @@ BEGIN
 -- bettype = 16: HT/FT
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -490,7 +491,7 @@ BEGIN
 	-- bettype = 128, 129, 130, 136, 137, 138, 139, 143, 144, 163, 184,194,203
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -539,7 +540,7 @@ BEGIN
 	-- bettype = 154, 155, 156, 1302, 1311, 1312, 1316, 1317, 1318, 1324
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid as transtest, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -614,7 +615,7 @@ BEGIN
 		--178,197,198,204,205
 		INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -655,7 +656,7 @@ BEGIN
 		--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216
 		INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
@@ -1012,7 +1013,7 @@ BEGIN
 	
 	-- Send mail when void deposit
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
+		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag, b.betid
 	FROM
 		#BetDelete b WITH (NOLOCK)
@@ -1024,7 +1025,7 @@ BEGIN
 
 	-- Send mail when void 12EU tickets 
 		SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
+		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
 		stake, b.CurrencyName, '12EU' as site, b.status, b.SecAcceptFlag, b.betid
 	FROM
 		#BetDelete b WITH (NOLOCK)
@@ -1037,7 +1038,7 @@ BEGIN
 	
 	-----Send mail when void any real tickets by IT
 	SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
+		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
@@ -1049,7 +1050,7 @@ BEGIN
 
 	-- Send mail when void UUS tickets
 		SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
+		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
 		b.status, b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
@@ -1061,7 +1062,7 @@ BEGIN
 
 	-----Send mail when void Foobet tickets
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
+		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
 		b.status, b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
@@ -1073,7 +1074,7 @@ BEGIN
 	
 	-----Send mail when void Betfair tickets
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
+		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'BetFair' as site,
 		b.status, b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
@@ -1085,7 +1086,7 @@ BEGIN
 
 	-----Send mail when void OneExchange tickets
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
+		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'OneExchange' as site,
 		b.status, b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
