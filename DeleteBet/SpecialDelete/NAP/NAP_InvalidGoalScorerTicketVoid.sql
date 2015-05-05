@@ -173,7 +173,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 	WHERE b.matchid=@matchid
 		AND b.bettype = @BetType
-		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,','))
+		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,'^'))
 		
 	--Get Parlay Ticket
 	INSERT INTO #Ref ( 	refno, transid, custid, srecommend, mrecommend, recommend, betfrom, bettype, hdp1
@@ -200,7 +200,7 @@ BEGIN
 		 INNER JOIN custDB.dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
 	WHERE b.matchid=@MatchID	
 		AND b.bettype = @BetType
-		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,','))
+		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,'^'))
 		AND b.statusID IN (0, 1, 103)
 	
 	
