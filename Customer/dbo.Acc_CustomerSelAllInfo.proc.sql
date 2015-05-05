@@ -462,6 +462,7 @@ BEGIN
 	    ci.DoubleCommLosing,	    	   
 		ci.DisableEsports,
 		ci.DisableGoldDeluxe,
+		ci.HideGoldDeluxe,
 	    ci.Enabled,
 	    @isBA IsBA,
 	    @IsDeposit IsDeposit, 
