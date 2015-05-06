@@ -40,6 +40,11 @@ BEGIN
 		RETURN
 	END
 	
+	--Check Invalid Match
+	EXEC DBACC.bodb02.dbo.NAP_BetTypeSel @MatchId=9669,@Mode=0,@ErrMsg=@ErrMsg output,@ErrCode=@ErrCode output
+	If @ErrCode <> 0
+		RETURN
+
 	------------------***** Check winlostdate before resettle, delete transaction, recover bet...   *****------------------
 	DECLARE @eventdate DATETIME 
 	
