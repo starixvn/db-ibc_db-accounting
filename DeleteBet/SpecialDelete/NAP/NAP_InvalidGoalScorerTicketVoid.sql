@@ -41,7 +41,7 @@ BEGIN
 	END
 	
 	--Check Invalid Match
-	EXEC DBACC.bodb02.dbo.NAP_BetTypeSel @MatchId=9669,@Mode=0,@ErrMsg=@ErrMsg output,@ErrCode=@ErrCode output
+	EXEC DBACC.bodb02.dbo.NAP_BetTypeSel @MatchId=@MatchId,@Mode=0,@ErrMsg=@ErrMsg output,@ErrCode=@ErrCode output
 	If @ErrCode <> 0
 		RETURN
 
