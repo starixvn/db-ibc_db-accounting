@@ -7,7 +7,7 @@ AS
 	Created by: [Creator]
 	Date: 2008
 	Task: Get info of Mix Parlay Bets 
-	DB: DBAGE.BODB02
+	DB: DB053.BODB02
 	Original: Original: SP mteamlist
 	
 	Revisions: 
@@ -23,7 +23,6 @@ AS
 		- 20110513@Lukas: re-arrange bettype
 		- 20110928@Johnson: get column statusid to mark void sub-tickets
 		- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype,f_GetChoice for odds, Oddstype, betteam
-		- 20150415@Sophia: Get Betcheck for BEtRadar
 	
 */
 
@@ -46,8 +45,7 @@ DECLARE @BetListMP TABLE(
 	Sporttype smallint,
 	isNeutral bit,
 	matchid int,
-	matchcode nvarchar(50),
-	Betcheck NVARCHAR(50)
+	matchcode nvarchar(50)
 )
 
 
@@ -71,11 +69,10 @@ BEGIN
 		match.sporttype,
 		match.isNeutral as IsNeutral,
 		match.matchid,
-		match.matchcode,
-		bettrans.Betcheck
+		match.matchcode
 	from 
 		(SELECT matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid,
-				livehomescore,liveawayscore,liveindicator, Betcheck
+				livehomescore,liveawayscore,liveindicator
 		FROM BettransM with (nolock)
 		WHERE refno=@refno ) AS bettrans
 	INNER JOIN match with (nolock) ON bettrans.matchid=match.matchid
@@ -101,11 +98,10 @@ BEGIN
 		match.sporttype,
 		match.isNeutral as IsNeutral,
 		match.matchid,
-		match.matchcode,
-		bettrans.Betcheck
+		match.matchcode
 	from 
 		(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid,
-				livehomescore,liveawayscore,liveindicator, Betcheck
+				livehomescore,liveawayscore,liveindicator
 		FROM BettransM14 with (nolock)
 		WHERE refno=@refno) AS bettrans
 	INNER JOIN match14 as match with (nolock) ON bettrans.matchid=match.matchid
