@@ -52,7 +52,7 @@ BEGIN
 	FROM match WITH (NOLOCK)
 	WHERE matchid = @MatchID
 	
-	IF (@Sporttype NOT BETWEEN 1 AND 99) AND (@Sporttype <> 154)
+	IF (@Sporttype <> 1)
 	BEGIN 
 		SET @ErrCode = 100
 		SET @ErrMsg ='Invalid match!' 
@@ -66,7 +66,7 @@ BEGIN
 		INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = o.matchid
 		WHERE m.matchid = @MatchId
 		AND b.typeid = @BetType
-		AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154))
+		AND m.sporttype = 1)
 	BEGIN
 		SELECT @ErrMsg = 'This match does not offer the specfied bet type (' + CAST(@BetType AS VARCHAR(10)) +  ')' 
 			,@ErrCode  = 106
