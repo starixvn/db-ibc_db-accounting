@@ -2,7 +2,7 @@ ALTER PROCEDURE [dbo].[NAP_InvalidGoalScorerTicketVoid]
 	@MatchId	INT,
 	@BetType	SMALLINT,
 	@BetTeam	NVARCHAR(100),
-    @UserID		INT,
+    @UserID		INT = 111,
 	@ErrMsg		NVARCHAR(200)	OUTPUT,
     @ErrCode	INT			OUTPUT
 AS
@@ -13,15 +13,18 @@ AS
 			- Goal Scorer - First (217 )
 	DB: DBTXN/bodb02
 	Original:
-
+		
 	Revisions:
 	
 	Param's Explanation:
+		- @UserID : 111 (oddsfeedlog) is used when this SP is called automatically by a program
 */
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @LogData NVARCHAR(500)
 	SELECT @ErrCode = 0, @ErrMsg = ''
+	
+	SELECT @UserID = 111
 /*******************************************************************
 ****************             A.CHECKING                ************* 	
 ********************************************************************/
@@ -41,9 +44,20 @@ BEGIN
 	END
 	
 	--Check Invalid Match
-	EXEC DBACC.bodb02.dbo.NAP_BetTypeSel @MatchId=@MatchId,@Mode=0,@ErrMsg=@ErrMsg output,@ErrCode=@ErrCode output
-	If @ErrCode <> 0
+	DECLARE @Sporttype INT	
+		
+	SET @Sporttype = 0
+	
+	SELECT @Sporttype = sporttype
+	FROM match WITH (NOLOCK)
+	WHERE matchid = @MatchID
+	
+	IF (@Sporttype NOT BETWEEN 1 AND 99) AND (@Sporttype <> 154)
+	BEGIN 
+		SET @ErrCode = 100
+		SET @ErrMsg ='Invalid match!' 
 		RETURN
+	END 
 
 	--Check if the match do not offer the specified bet type
 	IF NOT EXISTS( SELECT  TOP 1 1
@@ -91,6 +105,20 @@ BEGIN
 	END
 	
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (@KeyID, @MatchId)
+	
+	IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
+	BEGIN
+		SELECT @ErrCode = 107
+			,@ErrMsg	= 'Another parlay settlement is in progress or some parlay tickets are being voided, please wait a few seconds until the on-going process has finished and try again.'
+		 
+		RETURN
+	END
+	ELSE 
+	BEGIN
+		UPDATE SystemSettings WITH (ROWLOCK, UPDLOCK)
+			SET VValue = '1'
+		WHERE VName = 'isCalculatingParlay'
+	END
 	
 	IF (@@Error = 0)
 	BEGIN TRY
@@ -303,7 +331,7 @@ BEGIN
 	WHERE	    (a.balance - b.balance) < 0
 	
 	------------------***** End of Special Delete *****------------------
-	SELECT @LogData ='fail to void bet for matchid ' + CONVERT(VARCHAR(20), 
+	SELECT @LogData ='void bet for matchid ' + CONVERT(VARCHAR(20), 
 			@MatchId) + ' bettype ' + CONVERT(VARCHAR(20), @bettype) + ' betteam ' + @BetTeam
 			
 	EXEC WriteLog_UserLog 
