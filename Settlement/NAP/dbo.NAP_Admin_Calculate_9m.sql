@@ -449,11 +449,11 @@ BEGIN
 		DECLARE  @csHTFT NVARCHAR(10) -- HT/FT correct score
 	
 		SELECT @csHTFT = CASE WHEN @hth + @hta >= 4 THEN '4+' 
-							ELSE CAST(@hth AS nvarchar(10)) + ':' + CAST(@hta AS nvarchar(10))
+							ELSE CAST(@hth AS nvarchar(1)) + ':' + CAST(@hta AS nvarchar(1))
 							END 
 					+ '/'
 					+ CASE WHEN @fth + @fta >=4 THEN '4+'
-						    ELSE CAST(@fth AS nvarchar(10)) + ':' + CAST(@fta AS nvarchar(10))
+						    ELSE CAST(@fth AS nvarchar(1)) + ':' + CAST(@fta AS nvarchar(1))
 							END
 		DECLARE @FirstGoal NVARCHAR(50) 
 		SELECT	@FirstGoal=''
@@ -1009,10 +1009,10 @@ BEGIN
 				WHEN 172 THEN	
 					CASE 
 						WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1 
-						WHEN betteam = 'HD' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
-						WHEN betteam = 'HA' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
-						WHEN betteam = 'AH' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
-						WHEN betteam = 'AD' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'DH' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'AH' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
+						WHEN betteam = 'HA' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
+						WHEN betteam = 'DA' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
 						WHEN betteam = 'AA' AND @FirstGoal='A' AND (@fth - @fta) <0 THEN 1
 						WHEN betteam = 'NO' AND @fth =0 AND @fta= 0 THEN 1
 						ELSE - 1
@@ -1885,10 +1885,10 @@ BEGIN
 				WHEN 172 THEN	
 					CASE 
 						WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1 
-						WHEN betteam = 'HD' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
-						WHEN betteam = 'HA' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
-						WHEN betteam = 'AH' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
-						WHEN betteam = 'AD' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'DH' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'AH' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
+						WHEN betteam = 'HA' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
+						WHEN betteam = 'DA' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
 						WHEN betteam = 'AA' AND @FirstGoal='A' AND (@fth - @fta) <0 THEN 1
 						WHEN betteam = 'NO' AND @fth =0 AND @fta= 0 THEN 1
 						ELSE - 1

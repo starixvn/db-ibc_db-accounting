@@ -19,6 +19,7 @@ AS
 	Revisions:
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+		- 20150507@Jamie: Settlement Betradar 2 
 		
 */
 BEGIN
@@ -29,7 +30,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
 			SELECT *
 			FROM sys.databases
 			WHERE NAME = 'LASDB'
@@ -79,10 +80,10 @@ BEGIN
 				WHEN betteam = 'hy' AND @fta > 0  THEN -1
 				WHEN betteam = 'hn' AND @fta > 0  THEN 1
 				WHEN betteam = 'HH' AND @FirstGoal ='A' THEN -1		--172
-				WHEN betteam = 'HD' AND @FirstGoal ='A' THEN -1 
-				WHEN betteam = 'HA' AND @FirstGoal ='A' THEN -1 
-				WHEN betteam = 'AH' AND @FirstGoal ='H' THEN -1 
-				WHEN betteam = 'AD' AND @FirstGoal ='H' THEN -1 
+				WHEN betteam = 'DH' AND @FirstGoal ='A' THEN -1 
+				WHEN betteam = 'AH' AND @FirstGoal ='A' THEN -1 
+				WHEN betteam = 'HA' AND @FirstGoal ='H' THEN -1 
+				WHEN betteam = 'DA' AND @FirstGoal ='H' THEN -1 
 				WHEN betteam = 'AA' AND @FirstGoal ='H' THEN -1 
 				WHEN betteam = 'NO' AND (@FirstGoal='H' OR @FirstGoal='A') THEN -1 
 				ELSE NULL
@@ -243,10 +244,10 @@ BEGIN
 				WHEN betteam = 'ay' AND @fth = 0 THEN 1
 				WHEN betteam = 'an' AND @fth > 0 THEN 1
 				WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1  --172 
-				WHEN betteam = 'HD' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
-				WHEN betteam = 'HA' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
-				WHEN betteam = 'AH' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
-				WHEN betteam = 'AD' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
+				WHEN betteam = 'DH' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
+				WHEN betteam = 'AH' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
+				WHEN betteam = 'HA' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
+				WHEN betteam = 'DA' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
 				WHEN betteam = 'AA' AND @FirstGoal='A' AND (@fth - @fta) <0 THEN 1
 				WHEN betteam = 'NO' AND @fth =0 AND @fta= 0 THEN 1
 				ELSE - 1
