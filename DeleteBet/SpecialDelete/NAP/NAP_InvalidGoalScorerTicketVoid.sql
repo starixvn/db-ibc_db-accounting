@@ -45,6 +45,20 @@ BEGIN
 	If @ErrCode <> 0
 		RETURN
 
+	--Check if the match do not offer the specified bet type
+	IF NOT EXISTS( SELECT  TOP 1 1
+		FROM dbo.bettype b WITH(NOLOCK) 
+		INNER JOIN dbo.odds o WITH(NOLOCK) ON b.typeid = o.bettype
+		INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = o.matchid
+		WHERE m.matchid = @MatchId
+		AND b.typeid = @BetType
+		AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154))
+	BEGIN
+		SELECT @ErrMsg = 'This match does not offer the specfied bet type (' + CAST(@BetType AS VARCHAR(10)) +  ')' 
+			,@ErrCode  = 106
+		RETURN
+	END
+	
 	------------------***** Check winlostdate before resettle, delete transaction, recover bet...   *****------------------
 	DECLARE @eventdate DATETIME 
 	
@@ -179,6 +193,7 @@ BEGIN
 	WHERE b.matchid=@matchid
 		AND b.bettype = @BetType
 		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,'^'))
+		AND b.statusID NOT IN (SELECT * FROM @Status)
 		
 	--Get Parlay Ticket
 	INSERT INTO #Ref ( 	refno, transid, custid, srecommend, mrecommend, recommend, betfrom, bettype, hdp1
@@ -213,58 +228,6 @@ BEGIN
 /*******************************************************************
 ********             C.DELETE SINGLE TICKET                ********* 	
 ********************************************************************/
-	
-	---------------- ********  Check and delete tickets having invalid status ********* ---------------
-	IF EXISTS (SELECT 1 FROM #BetDeleteSingle WHERE statusID IN (111,112,113)) --WON/LOSE/DRAW
-	BEGIN
-		SELECT @ErrCode = 105, @ErrMsg = 'You can only void the unsettled or refunded tickets.'
-		-----
-		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
-		WHERE KeyID = @KeyID AND KeyValue = @MatchId	
-		IF (@@Error = 0)
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = 'VOID SUCCESS SPName=NAP_InvalidGoalScorerTicketVoid'
-		END TRY
-		BEGIN CATCH
-			SELECT @Remark = 'VOID SUCCESS SPName=NAP_InvalidGoalScorerTicketVoid ErrMsg=' + LEFT(error_message(), 400)
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = @Remark
-		END CATCH
-		ELSE
-		BEGIN
-			BEGIN TRY
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = 'VOID FAILED SPName=NAP_InvalidGoalScorerTicketVoid'
-			END TRY
-			BEGIN CATCH
-				SELECT @Remark = 'VOID FAILED SPName=NAP_InvalidGoalScorerTicketVoid ErrMsg=' + LEFT(error_message(), 400)
-				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = @Remark
-			END CATCH
-		END
-		RETURN
-	END
-	ELSE
-	BEGIN
-		DELETE FROM #BetDeleteSingle WHERE statusID IN (SELECT * FROM @Status)
-	END
 	
 	------------------***** Begin Special Delete *****------------------
 	-- Step 1: backup
