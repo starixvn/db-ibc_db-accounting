@@ -7,7 +7,7 @@ AS
 	Created by: Henry
 	Date: 2009-12-05
 	Task: Get info of Mix Parlay Bets 
-	DB: DBAGE.BODB02
+	DB: DBAGE/BODB02
 	Original: Acc_BetsSelBetCheckM
 	
 	Revisions: 
@@ -39,7 +39,7 @@ DECLARE @BetListMP TABLE(
 	isNeutral bit,
 	matchid int,
 	matchcode nvarchar(50),
-	BetCheck NVarchar(50)
+	BetCheck Varchar(50)
 )
 
 
