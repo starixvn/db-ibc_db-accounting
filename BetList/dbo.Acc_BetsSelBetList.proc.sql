@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList]  
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Acc_BetsSelBetList]  
  @FromDate datetime,  
  @ToDate datetime,  
  @MoveBetsDay datetime, 
@@ -1899,7 +1902,8 @@ BEGIN
  ELSE --@Bettype<>0
  BEGIN
 	--HR
-	IF @Bettype = 31 OR @Bettype = 32 OR @Bettype = 33 OR @Bettype = 41 OR @Bettype = 42 OR @Bettype = 43
+	--IF @Bettype = 31 OR @Bettype = 32 OR @Bettype = 33 OR @Bettype = 41 OR @Bettype = 42 OR @Bettype = 43
+	IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
@@ -2209,7 +2213,7 @@ BEGIN
 		END
 	END
 	--Casino
-	ELSE IF @Bettype = 71								--20120405@Hurri
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
@@ -2348,7 +2352,7 @@ BEGIN
 	END
 	
 	--ibc bingo
-	ELSE IF @Bettype  = 73
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
 	BEGIN
 		IF @ToDate > @MoveBetsDay
 		BEGIN
@@ -2489,7 +2493,7 @@ BEGIN
 	END
 
 	--ibc keno
-	ELSE IF @Bettype BETWEEN 1501 AND 1599
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
 	BEGIN
 		IF @ToDate > @MoveBetsDay
 		BEGIN
@@ -2699,7 +2703,7 @@ BEGIN
 	END
 	
 	--P2P
-	ELSE IF @Bettype = 1000
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
@@ -3666,7 +3670,8 @@ BEGIN
 	BEGIN
 		 INSERT INTO #BetListDetailData
 			SELECT 
-				BG.refno, 
+				CASE WHEN sp.Productid in (4) THEN BG.refno
+					ELSE B2.refno END refno, 
 				BG.odds, 
 				BG.stake,
 				BG.status,
@@ -3674,19 +3679,20 @@ BEGIN
 				BG.mpositiontaking, 
 				BG.spositiontaking,
 				BG.bettype,
-				BG.betteam  
+				BG.betteam
 			FROM dbo.bettransg BG with (NOLOCK)
 				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-				INNER JOIN #BetListData B ON BG.CustID = B.CustID 
-			WHERE  (sp.Productid in (4) AND BG.refno = B.refno AND BG.bettype = B.bettype)
-						OR (sp.Productid in (12) AND BG.refno = B.transid AND BG.bettype = B.bettype)	
+				LEFT JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+				LEFT JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+			WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL		
 	END 
 
 	IF @Fromdate <= @MoveBetsDay
 	BEGIN	
 		INSERT INTO #BetListDetailData
 			SELECT 
-				BG.refno, 
+				CASE WHEN sp.Productid in (4) THEN BG.refno
+					ELSE B2.refno END refno,
 				BG.odds, 
 				BG.stake,
 				BG.[status],
@@ -3697,12 +3703,9 @@ BEGIN
 				BG.betteam  
 			FROM dbo.bettransg14 BG with (NOLOCK)
 				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-				INNER JOIN #BetListData B
-					ON  
-				 (BG.refno = B.refno AND BG.CustID = B.CustID AND sp.Productid in (4))
-				OR (BG.refno = B.transid AND BG.CustID = B.CustID AND sp.Productid in (12))
-				
-			   
+				LEFT JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+				LEFT JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+			WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL		   
 	END 
 END
 		   

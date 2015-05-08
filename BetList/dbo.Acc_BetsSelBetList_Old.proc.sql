@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_Old]  
+﻿USE bodb_archive
+GO
+
+ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_Old]  
 	@FromDate datetime,  
 	@ToDate datetime,  
 	@CustID int,
@@ -910,7 +913,8 @@ BEGIN
  ELSE
  BEGIN
 	--HR
-	IF @Bettype = 31 OR @Bettype = 32 OR @Bettype = 33 OR @Bettype = 41 OR @Bettype = 42 OR @Bettype = 43
+	--IF @Bettype = 31 OR @Bettype = 32 OR @Bettype = 33 OR @Bettype = 41 OR @Bettype = 42 OR @Bettype = 43
+	IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
 	BEGIN
 		INSERT INTO #BetListData
 		select 
@@ -1060,7 +1064,7 @@ BEGIN
 		b.custid = @Custid    
 	END
 	--Casino
-	ELSE IF @Bettype = 71								--20120405@Hurri
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
 	BEGIN
 		INSERT INTO #BetListData
 		select 
@@ -1128,7 +1132,7 @@ BEGIN
 				AND bettype = @Bettype
 	END
 	--IBC Bingo
-	ELSE IF @Bettype  = 73
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
 	BEGIN
 		INSERT INTO #BetListData
 		select 
@@ -1197,7 +1201,7 @@ BEGIN
 	END
 
 	-- keno
-	ELSE IF @Bettype  BETWEEN 1501 and 1599
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
 	BEGIN
 		INSERT INTO #BetListData
 		select 
@@ -1267,7 +1271,7 @@ BEGIN
 	END
 	
 	--P2P
-	ELSE IF @Bettype  = 1000
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
 	BEGIN
 		INSERT INTO #BetListData
 		select 
@@ -1708,7 +1712,8 @@ BEGIN
 BEGIN
 	 INSERT INTO #BetListData
 		SELECT 
-			BG.refno, 
+			CASE WHEN sp.Productid in (4) THEN BG.refno
+					ELSE B.refno END refno,
 			BG.odds, 
 			BG.stake,
 			BG.status,

@@ -1,6 +1,9 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID]    
+﻿USE bodb02
+Go
+
+ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID]    
 	@CustID int,  
-	@TransID bigint  
+	@TransID bigint
 AS    
 	/*  
 	Created by: Henry  
@@ -162,71 +165,79 @@ SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
 
 IF exists(  
 select top 1 1 from bettrans with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
+where (transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000))) --20120405@Hurri  
 AND custid = @Custid  
 )  
-	SELECT @WinlostDate = winlostdate, @bettype = bettype
+	SELECT @WinlostDate = winlostdate, @bettype = bettype ,@refno = refno
 	from bettrans with (nolock)   
-	where transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
+	where (transid = @TransID OR (refno = @transid AND bettype IN (71, 73, 1000) and matchid IN (0, 71, 73, 1000))) --20120405@Hurri  
 	AND custid = @Custid
 ELSE IF exists(  
 select top 1 1 from bettrans14 with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
+where (transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000))) --20120405@Hurri  
 AND custid = @Custid  
 )
-	SELECT @WinlostDate = winlostdate, @bettype = bettype 
+	SELECT @WinlostDate = winlostdate, @bettype = bettype ,@refno = refno
 	from bettrans14 with (nolock)   
-	where transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000)) --20120405@Hurri  
+	where (transid = @TransID OR (refno = @transid AND bettype IN (71,73, 1000) and matchid IN (0,71, 73, 1000))) --20120405@Hurri  
 	AND custid = @Custid
 ELSE IF exists(  
 select top 1 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
+where (transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000))) --20120405@Hurri  
 AND custid = @Custid  
 )
-	SELECT @WinlostDate = winlostdate, @bettype = bettype 
+	SELECT @WinlostDate = winlostdate, @bettype = bettype ,@refno = refno
 	from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
-	where transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000)) --20120405@Hurri  
+	where (transid = @TransID OR (refno = @transid AND bettype IN (71,73,1000) and matchid IN (0, 71, 73, 1000))) --20120405@Hurri  
 	AND custid = @Custid  
 
----------Process Keno----------------
+---------Process Keno & Gold Delux----------------
 ELSE IF exists(  
-select top 1 1 from bettrans with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
+select top 1 1 from bettrans bt with (nolock)
+INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+where (transid = @TransID OR (refno = @transid AND sp.productid IN (8,12))) --Dom
 AND custid = @Custid  
 ) 
-SELECT @WinlostDate = winlostdate, @bettype = bettype
-	from bettrans with (nolock)   
-	where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
-	AND custid = @Custid
+	SELECT @WinlostDate = winlostdate, @bettype = bt.bettype ,@refno = refno
+		from bettrans bt with (nolock)
+		INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype
+		where (transid = @TransID OR (refno = @transid AND sp.productid IN (8,12))) --Dom
+		AND custid = @Custid
 ELSE IF exists(  
-select top 1 1 from translog with (nolock)   
-where translogid = @TransID OR (gameID BETWEEN 1501 and 1599) --Dom
+select top 1 1 from translog bt with (nolock)   
+	INNER JOIN @SportBettype sp ON bt.gameID = sp.bettype
+where translogid = @TransID AND sp.productid IN (8,12) --Dom
 AND custid = @Custid  and statusID = 0
-) 
-SELECT @WinlostDate = winlostdate, @bettype = gameID
-	from translog with (nolock)   
-	where translogid = @TransID OR (gameID BETWEEN 1501 and 1599) --Dom
-	AND custid = @Custid and statusID = 0
+)
+	SELECT @WinlostDate = winlostdate, @bettype = gameID ,@refno = translogid
+		from translog bt with (nolock)   
+		INNER JOIN @SportBettype sp ON bt.gameID = sp.bettype
+		where translogid = @TransID  AND sp.productid IN (8,12) --Dom
+		AND custid = @Custid and statusID = 0
 ELSE IF exists(  
-select top 1 1 from bettrans14 with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
+select top 1 1 from bettrans14 bt with (nolock)   
+INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+where (transid = @TransID OR (refno = @transid AND sp.productid IN (8,12))) --Dom
 AND custid = @Custid  
 )
 BEGIN
-	SELECT @WinlostDate = winlostdate, @bettype = bettype 
-	from bettrans14 with (nolock)   
-	where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --Dom
+	SELECT @WinlostDate = winlostdate, @bettype = bt.bettype ,@refno = refno
+	from bettrans14 bt with (nolock)   
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+	where (transid = @TransID OR (refno = @transid AND sp.productid IN (8,12))) --Dom
 	AND custid = @Custid
 	print 'btttt14'
 END
 ELSE IF exists(  
-select top 1 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
-where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --20120405@Hurri  
+select top 1 1 from DBARC.bodb_archive.dbo.bettrans_bk bt with (nolock)    
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+where (transid = @TransID OR (refno = @transid AND sp.productid IN (8,12))) --20120405@Hurri  
 AND custid = @Custid  
 )
-	SELECT @WinlostDate = winlostdate, @bettype = bettype 
-	from DBARC.bodb_archive.dbo.bettrans_bk with (nolock)   
-	where transid = @TransID OR (refno = @transid AND bettype BETWEEN 1501 and 1599) --20120405@Hurri  
+	SELECT @WinlostDate = winlostdate, @bettype = bt.bettype ,@refno = refno
+	from DBARC.bodb_archive.dbo.bettrans_bk bt with (nolock)   
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+	where (transid = @TransID OR (refno = @transid AND sp.productid IN (8,12))) --20120405@Hurri  
 	AND custid = @Custid
 
 --select @WinlostDate,@bettype
@@ -393,7 +404,7 @@ WHERE b.custid = @Custid
 	and b.transid = @TransID  
   
 --- Casino  
-IF @bettype = 71
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -463,7 +474,7 @@ where
 	AND b.refno = @TransID  
 
 --IBC Bingo  
-IF @bettype = 73
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -533,7 +544,7 @@ where
 	AND b.refno = @TransID  
 
 --IBC Keno  
-IF @bettype BETWEEN 1501 AND 1599
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -672,7 +683,7 @@ where	b.custid = @Custid
 	AND b.translogid = @TransID  
 
 --- P2P  
-IF @bettype = 1000
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -809,7 +820,7 @@ where b.bettype = 10
 	and b.transid = @TransID  
  
 --HR  
-IF @bettype in (31,32,33,41,42,43)  
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -970,138 +981,140 @@ where
 
 --Gold Deluxe
 IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
-INSERT INTO @Data  
-select   
-	b.bettype,     
-	b.betid transid,   
-	isnull(b.BetID,0) as BetID,    
-	b.refno,  
-	'' as matchcode,     
-	'' as race,  
-	'' as eventdate,   
-	0 as virtualrate,  
-	0 as isShowOTExRate,  
-	sdiscount,  
-	adiscount,  
-	discount,    
-	0 as homeid,     
-	0 as awayid,    
-	'' settleTime,   
-	b.hdp1,  
-	b.hdp2,  
-	b.odds,     
-	0 finalodds,  
-	0 finalodds2,  
-	'' OddsType,    
-	b.status,  
-	CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,     
-	b.stake,     
-	b.actual_stake,  
-	b.transdate,     
-	b.betteam,   
-	b.spositiontaking,    
-	b.mpositiontaking,     
-	b.apositiontaking,   
-	0 spositiontaking2,  
-	0 mpositiontaking2,  
-	0 apositiontaking2,     
-	b.liveindicator,     
-	b.modds,     
-	b.custid,  
-	b.livehomescore,   
-	b.liveawayscore,  
-	0, 
-	0,    
-	0 as leagueid,    
-	255 as sporttype,   
-	b.ip,  
-	b.betfrom,  
-	b.matchid,
-	CONVERT(BIT,0) as IsNeutral,  
-	0 as allowdelete,  
-	(b.winlost-b.actual_stake)  winlost,  
-	b.playercomm as commission,  
-	(b.scomm - b.acomm) as scomm,  
-	(b.acomm - b.comm) as acomm,  
-	(b.comm - b.playercomm) as comm,  
-	b.awinlost,  
-	b.mwinlost,  
-	b.swinlost,  
-	'' as showtime,
-	b.winlostdate ,
-	b.BetCheck        
-from dbo.bettrans b with (nolock)     
-INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-where     
-	b.custid = @Custid    
-	AND s.ProductID = 12
-	AND b.refno = @TransID  
-UNION ALL	-- translog
-select 
-	b.gameid bettype,   
-	0 as transid, 
-	0 as betid,
-	b.translogid ,
-	'' as matchcode,   
-	'' as race,
-	'' as eventdate, 
-	0,
-	0,
-	sdiscount,
-	adiscount,
-	discount,	 
-	0 as homeid,   
-	0 as awayid,  
-	'' settleTime, 
-	0 hdp1,
-	0 hdp2,
-	b.odds,   
-	0 finalodds,
-	0 finalodds2,
-	'' OddsType,  
-	b.status,  
-	0 as comstatus, 
-	b.stake,  
-	b.actual_stake,    
-	b.transdate,   
-	b.GameID3rd betteam,   
-	b.spositiontaking,  
-	b.mpositiontaking,   
-	b.apositiontaking, 
-	0 spositiontaking2,
-	0 mpositiontaking2,
-	0 apositiontaking2,   
-	0 liveindicator,   
-	0 modds,   
-	b.custid,
-	0 livehomescore, 
-	0 liveawayscore,
-	0 as finalhomescore, 
-	0 as finalawayscore,  
-	0 as leagueid,  
-	255 as sporttype, 
-	b.ip,
-	b.betfrom,
-	NULL matchid,
-	CONVERT(BIT,0) as IsNeutral,
-	0 as allowdelete,
-	(-b.actual_stake)  winlost,
-	0 as commission,
-    0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	'' as showtime,
-	b.winlostdate,
-	b.GameID3rd as BetCheck  	 
-from dbo.translog b with (nolock)   
-INNER JOIN @SportBettype s ON s.Bettype = b.gameID
-where	b.custid = @Custid  
-	AND s.ProductID = 12
-	AND b.statusID = 0
-	AND b.translogid = @TransID  
+	BEGIN
+		INSERT INTO @Data  
+		select   
+			b.bettype,     
+			b.transid,   
+			isnull(b.BetID,0) as BetID,    
+			b.refno,  
+			'' as matchcode,     
+			'' as race,  
+			'' as eventdate,   
+			0 as virtualrate,  
+			0 as isShowOTExRate,  
+			sdiscount,  
+			adiscount,  
+			discount,    
+			0 as homeid,     
+			0 as awayid,    
+			'' settleTime,   
+			b.hdp1,  
+			b.hdp2,  
+			b.odds,     
+			0 finalodds,  
+			0 finalodds2,  
+			'' OddsType,    
+			b.status,  
+			CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,     
+			b.stake,     
+			b.actual_stake,  
+			b.transdate,     
+			b.betteam,   
+			b.spositiontaking,    
+			b.mpositiontaking,     
+			b.apositiontaking,   
+			0 spositiontaking2,  
+			0 mpositiontaking2,  
+			0 apositiontaking2,     
+			b.liveindicator,     
+			b.modds,     
+			b.custid,  
+			b.livehomescore,   
+			b.liveawayscore,  
+			0, 
+			0,    
+			0 as leagueid,    
+			255 as sporttype,   
+			b.ip,  
+			b.betfrom,  
+			b.matchid,
+			CONVERT(BIT,0) as IsNeutral,  
+			0 as allowdelete,  
+			(b.winlost-b.actual_stake)  winlost,  
+			b.playercomm as commission,  
+			(b.scomm - b.acomm) as scomm,  
+			(b.acomm - b.comm) as acomm,  
+			(b.comm - b.playercomm) as comm,  
+			b.awinlost,  
+			b.mwinlost,  
+			b.swinlost,  
+			'' as showtime,
+			b.winlostdate ,
+			b.BetCheck        
+		from dbo.bettrans b with (nolock)     
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		where     
+			b.custid = @Custid    
+			AND s.ProductID = 12
+			AND b.refno = @refno
+		UNION ALL	-- translog
+		select 
+			b.gameid bettype,   
+			0 as transid, 
+			0 as betid,
+			b.translogid ,
+			'' as matchcode,   
+			'' as race,
+			'' as eventdate, 
+			0,
+			0,
+			sdiscount,
+			adiscount,
+			discount,	 
+			0 as homeid,   
+			0 as awayid,  
+			'' settleTime, 
+			0 hdp1,
+			0 hdp2,
+			b.odds,   
+			0 finalodds,
+			0 finalodds2,
+			'' OddsType,  
+			b.status,  
+			0 as comstatus, 
+			b.stake,  
+			b.actual_stake,    
+			b.transdate,   
+			b.GameID3rd betteam,   
+			b.spositiontaking,  
+			b.mpositiontaking,   
+			b.apositiontaking, 
+			0 spositiontaking2,
+			0 mpositiontaking2,
+			0 apositiontaking2,   
+			0 liveindicator,   
+			0 modds,   
+			b.custid,
+			0 livehomescore, 
+			0 liveawayscore,
+			0 as finalhomescore, 
+			0 as finalawayscore,  
+			0 as leagueid,  
+			255 as sporttype, 
+			b.ip,
+			b.betfrom,
+			NULL matchid,
+			CONVERT(BIT,0) as IsNeutral,
+			0 as allowdelete,
+			(-b.actual_stake)  winlost,
+			0 as commission,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			'' as showtime,
+			b.winlostdate,
+			b.GameID3rd as BetCheck  	 
+		from dbo.translog b with (nolock)   
+		INNER JOIN @SportBettype s ON s.Bettype = b.gameID
+		where	b.custid = @Custid  
+			AND s.ProductID = 12
+			AND b.statusID = 0
+			AND b.translogid = @refno
+	END
 END  
 
 --Bettrans14  
@@ -1263,7 +1276,7 @@ WHERE b.custid = @Custid
 	and b.transid = @TransID   
  
 --- Casino  
-IF @bettype = 71
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -1333,7 +1346,7 @@ where
 	AND b.refno = @TransID  
 
 --IBC Bingo  
-IF @bettype = 73
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -1403,7 +1416,7 @@ where
 	AND b.refno = @TransID  
 
 --IBC Keno
-IF @bettype BETWEEN 1501 AND 1599
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -1473,7 +1486,7 @@ where
 	AND s.ProductID = 8
 	AND b.statusID NOT IN (0,1)					
 --- P2P  
-IF @bettype = 1000
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -1609,7 +1622,7 @@ where b.bettype = 10
 	and b.transid = @TransID  
  
 --HR  
-IF @bettype in (31,32,33,41,42,43)  
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -1771,7 +1784,7 @@ IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettyp
 INSERT INTO @Data  
 select   
 	b.bettype,     
-	b.betid transid,   
+	b.transid,   
 	isnull(b.BetID,0) as BetID,    
 	b.refno,  
 	'' as matchcode,     
@@ -1833,7 +1846,7 @@ INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 where     
 	b.custid = @Custid    
 	AND s.ProductID = 12
-	AND b.refno = @TransID 
+	AND b.refno = @refno 
 END  
 --bettrans_bk  
 ELSE IF @WinlostDate < @BalanceUpDay 
@@ -1991,7 +2004,7 @@ WHERE b.custid = @Custid
 	and b.transid = @TransID  
 
 --- Casino  
-IF @bettype = 71
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -2061,7 +2074,7 @@ where
 	AND b.refno = @TransID  
 
 --- IBC Bingo 
-IF @bettype = 73 
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -2131,7 +2144,7 @@ where
 	AND b.refno = @TransID  
 
 --- IBC keno 
-IF @bettype BETWEEN 1501 and 1599
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,     
@@ -2201,7 +2214,7 @@ where
 	AND b.refno = @TransID  
 
 --- P2P  
-IF @bettype = 1000
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	bettype,     
@@ -2338,7 +2351,7 @@ where b.bettype = 10
 	and b.transid = @TransID     
 
 --HR  
-IF @bettype in (31,32,33,41,42,43)  
+ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
 INSERT INTO @Data  
 select   
 	b.bettype,  
@@ -2501,7 +2514,7 @@ IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettyp
 INSERT INTO @Data  
 select   
 	b.bettype,     
-	b.betid transid,   
+	b.transid,   
 	isnull(b.BetID,0) as BetID,    
 	b.refno,  
 	'' as matchcode,     
@@ -2563,7 +2576,7 @@ INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 where     
 	b.custid = @Custid    
 	AND s.ProductID = 12
-	AND b.refno = @TransID
+	AND b.refno = @refno
 END  
 
 ---- get data of systemp parlay  
@@ -2778,7 +2791,7 @@ ORDER BY transid
 
 IF EXISTS (SELECT TOP 1 1 
 		FROM @SportBettype sp 
-			INNER JOIN #BetListData d
+			INNER JOIN @Data d
 				ON d.bettype = sp.bettype 
 		WHERE ProductID in (4,12)) 
 BEGIN
@@ -2786,7 +2799,8 @@ BEGIN
 	BEGIN
 		INSERT INTO @DetailData  
 		SELECT   
-			BG.refno,   
+			CASE WHEN sp.Productid in (4) THEN BG.refno
+					ELSE B.refno END refno,
 			BG.odds,   
 			BG.stake,  
 			BG.status,  
@@ -2805,7 +2819,8 @@ BEGIN
 	BEGIN
 		INSERT INTO @DetailData  
 		SELECT   
-			BG.refno,   
+			CASE WHEN sp.Productid in (4) THEN BG.refno
+					ELSE B2.refno END refno,
 			BG.odds,   
 			BG.stake,  
 			BG.status,  
@@ -2816,15 +2831,17 @@ BEGIN
 			BG.betteam    
 		FROM bettransg14 BG with (NOLOCK)  
 			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-			INNER JOIN @Data B
-					ON  (BG.refno = B.refno AND BG.CustID = B.CustID AND sp.Productid in (4))
-					OR (BG.refno = B.transid AND BG.CustID = B.CustID AND sp.Productid in (12))
+			LEFT JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+			LEFT JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+		WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL
+			
 	END
 	ELSE
 	BEGIN
 		INSERT INTO @DetailData  
 		SELECT   
-			BG.refno,   
+			CASE WHEN sp.Productid in (4) THEN BG.refno
+					ELSE B2.refno END refno,
 			BG.odds,   
 			BG.stake,  
 			BG.status,  
@@ -2835,9 +2852,9 @@ BEGIN
 			BG.betteam    
 		FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)  
 			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-			INNER JOIN @Data B
-				ON  (BG.refno = B.refno AND BG.CustID = B.CustID AND sp.Productid in (4))
-					OR (BG.refno = B.transid AND BG.CustID = B.CustID AND sp.Productid in (12))
+			LEFT JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+			LEFT JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+		WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL
 	END
 END
    
