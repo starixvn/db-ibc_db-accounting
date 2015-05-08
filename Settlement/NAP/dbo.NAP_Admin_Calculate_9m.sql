@@ -93,6 +93,7 @@ AS
 		- 20141204@Jamie: Sportting Solution settlement - Change rule Set x Correct Score [Redmine:#23034]
 		- 20150407@Kathy: Don't update 'waiting' ticket when do "Undo" action [Redmine:#33493]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150505@Jamie: Converting error [HotFix #35259]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
