@@ -449,11 +449,11 @@ BEGIN
 		DECLARE  @csHTFT NVARCHAR(10) -- HT/FT correct score
 	
 		SELECT @csHTFT = CASE WHEN @hth + @hta >= 4 THEN '4+' 
-							ELSE CAST(@hth AS nvarchar(1)) + ':' + CAST(@hta AS nvarchar(1))
+							ELSE CAST(@hth AS nvarchar(10)) + ':' + CAST(@hta AS nvarchar(10))
 							END 
 					+ '/'
 					+ CASE WHEN @fth + @fta >=4 THEN '4+'
-						    ELSE CAST(@fth AS nvarchar(1)) + ':' + CAST(@fta AS nvarchar(1))
+						    ELSE CAST(@fth AS nvarchar(10)) + ':' + CAST(@fta AS nvarchar(10))
 							END
 		DECLARE @FirstGoal NVARCHAR(50) 
 		SELECT	@FirstGoal=''
@@ -2201,7 +2201,6 @@ BEGIN
 		
 	END
 END
-
 	-- ===================================================
 	-- ===================================================
 
