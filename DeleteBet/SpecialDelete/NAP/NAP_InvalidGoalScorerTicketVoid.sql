@@ -343,7 +343,9 @@ BEGIN
 		
 	IF OBJECT_ID('tempdb..#BeforeUpd') IS NOT NULL DROP TABLE #BeforeUpd
 	IF OBJECT_ID('tempdb..#AfterUpd') IS NOT NULL DROP TABLE #AfterUpd
-	
+
+	DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
+	WHERE KeyID = @KeyID AND KeyValue = @MatchId	
 	
 	IF (@@Error = 0)
 	BEGIN TRY
