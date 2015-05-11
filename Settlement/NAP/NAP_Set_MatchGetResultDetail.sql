@@ -51,6 +51,7 @@ BEGIN
 			AND ResultStatusID > 0 
 	ORDER BY ResourceID 
 END
+
 GO
 GRANT EXECUTE ON [NAP_Set_MatchGetResultDetail] TO [bodbAdminNet] AS [dbo]
 GO
