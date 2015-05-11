@@ -1894,6 +1894,7 @@ Begin DataProject = "Account"
       Script = "dbo.Acc_MT_GetMiniGamePT.proc.sql"
       Script = "dbo.Acc_MT_GetPT.proc.sql"
       Script = "dbo.Acc_MT_SportTypeSel.proc.sql"
+	  Script = "dbo.Acc_MT_GetGoldDeluxePT.sql"
    End
    Begin Folder = "zzMisc"
       Begin Folder = "BK"
