@@ -8,27 +8,37 @@ AS
 	DB: DBPRO/BODB02  
 
 	Revisions:  	
-	- 20150406@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150406@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 */
 BEGIN
 	SET NOCOUNT ON
 
-	SELECT	MatchID
-			,matchcode
-			,sporttype
-			,leagueid
-			,homeid
-			,awayid
-			,kickofftime
-			,hthomescore
-			,htawayscore
-			,finalhomescore
-			,finalawayscore
-			,eventstatus
-			,betstatus
-			,GoalRecord
-	FROM	dbo.Match WITH (NOLOCK)
-	WHERE	MatchID = @MatchID 
+	SELECT	 m.MatchID
+			,m.matchcode
+			,m.sporttype
+			,m.leagueid
+			,m.homeid
+			,m.awayid
+			,m.kickofftime
+			,m.hthomescore
+			,m.htawayscore
+			,m.finalhomescore
+			,m.finalawayscore
+			,m.eventstatus
+			,CASE 
+					WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'
+					WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'
+					WHEN m.betstatus LIKE 'Refund%' THEN 'Refund'
+					ELSE m.eventstatus
+					END AS eventstatus
+			,m.betstatus
+			,m.GoalRecord
+			,ISNULL(mr.IsHTCal, 0) AS IsHTCal
+			,ISNULL(mr.calculate, 0) AS calculate
+			,ISNULL(mr.isPending, 0) AS isPending
+	FROM	dbo.Match m WITH (NOLOCK)
+			LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON m.MatchID = mr.MatchID 
+	WHERE	m.MatchID = @MatchID 
 
 	SELECT	 MatchId
 			,ResourceID 
