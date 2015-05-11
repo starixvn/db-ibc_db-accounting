@@ -1,12 +1,11 @@
 USE [bodb02]
 GO
-
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveAgent]    Script Date: 08/28/2014 11:33:00 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveAgent]    Script Date: 05/11/2015 09:21:27 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerCheckMoveAgent    Script Date: 9/11/2014 9:52:03 AM ******/
 
 ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveAgent]
 	@mastername		VARCHAR(40)
@@ -30,7 +29,8 @@ Revisions:
 			- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
 			- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
 			- 20140314@Elodie: Add Keno product [Redmine:#13326]
-			- 20140828@Logan:   Add constraint for E-Sports status [Redmine: #20531]
+			- 20140828@Logan: Add constraint for E-Sports status [Redmine: #20531]
+			- 20150508@Kathy: Add Gold Deluxe product [Redmine:#34486]
 			
 Param's Explanation:
 • @ErrCode:
@@ -99,6 +99,10 @@ BEGIN
 	      , @mHideVirtualSports		BIT
 	      , @aHideKeno				BIT
 	      , @mHideKeno				BIT
+	      , @mDisableGoldDeluxe		BIT
+	      , @aDisableGoldDeluxe		BIT
+	      ,	@mHideGoldDeluxe		BIT
+	      , @aHideGoldDeluxe		BIT
 	      , @AdminUser				VARCHAR(50)
 
 
@@ -127,6 +131,8 @@ BEGIN
 	     , @mHideVirtualSports  = HideVirtualSports
 	     , @mHideKeno			= HideKeno
 	     , @mDisableEsports     = DisableEsports
+	     , @mDisableGoldDeluxe	= DisableGoldDeluxe
+	     , @mHideGoldDeluxe		= HideGoldDeluxe
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @mastername
 	   AND roleid = 3
@@ -157,6 +163,8 @@ BEGIN
 	     , @aHideVirtualSports  = HideVirtualSports
 	     , @aHideKeno			= HideKeno
 	     , @aDisableEsports     = DisableEsports
+	     , @aDisableGoldDeluxe	= DisableGoldDeluxe
+	     , @aHideGoldDeluxe		= HideGoldDeluxe
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @agentname
 	   AND roleid = 2
@@ -343,7 +351,7 @@ BEGIN
 		return
 	END		
 
-	--Check Virtual sport enable status
+	--Check Keno enable status
 	IF @mHideKeno = 1 and @aHideKeno = 0
 	BEGIN
 		SELECT @ErrMsg = 'Agent is offered Keno but new master is not offered Keno.',
@@ -351,6 +359,7 @@ BEGIN
 		return
 	END		
 
+	
 	IF @mdisableBingo = 1 and @adisableBingo = 0
 	BEGIN
 		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': agent is enabled Bingo but new master is not enabled Bingo',
@@ -372,6 +381,21 @@ BEGIN
 		     , @ErrCode = 126
 		RETURN
 	END
+	
+	--Check Gold Deluxe enable status	
+	IF @mHideGoldDeluxe = 1 and @aHideGoldDeluxe = 0
+	BEGIN
+		SELECT @ErrMsg = 'Agent is offered Gold Deluxe but new master is not offered Gold Deluxe.',
+			@ErrCode = 128
+		return
+	END	
+		
+	IF @mDisableGoldDeluxe = 1 and @aDisableGoldDeluxe = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': agent is enabled Gold Deluxe but new master is not enabled Gold Deluxe.'
+		     , @ErrCode = 127
+		RETURN
+	END	
 	
 	--Check identical auto master PT 
 	IF (@DisableAutoMPT_old = 0 and @DisableAutoMPT = 1)
@@ -408,6 +432,14 @@ BEGIN
 		return
 	END
 
+	-- Gold Deluxe
+	IF exists(SELECT 1 from custsetting3rd  WITH(NOLOCK)where custid = @recommend and sporttype = 255)
+		AND not exists(SELECT 1 from custsetting3rd  WITH(NOLOCK)where custid = @mrecommend and sporttype = 255)		
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': master does not have Gold Deluxe setting.',
+			@ErrCode = 128				 
+		return
+	END
 
 	--Check casino Syn
 	--Remove checking Casino 
@@ -477,6 +509,25 @@ BEGIN
 		RETURN
 	END
 
+	--Check commission for Gold Deluxe
+	IF EXISTS (
+			SELECT	1
+			FROM	CustSettingGame mcs WITH(NOLOCK) 
+				INNER JOIN CustSettingGame acs WITH(NOLOCK) 
+					ON	acs.custid = @recommend 
+						AND acs.sporttype = mcs.sporttype 
+						AND acs.bettype = mcs.bettype
+			WHERE	mcs.custid = @mrecommend 
+					AND mcs.sporttype = 255 
+					AND mcs.bettype = 1701
+					AND mcs.adiscount < acs.discount
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission for Gold Deluxe is less than agent''s commission.',
+			@ErrCode = 215
+		RETURN
+	END
+
 	--Check identical autoposition taking
 	IF exists (
 		SELECT 1 from 
@@ -524,6 +575,25 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = 'Error master ' + @Mastername + ': Auto Position Taking of new master is not matched with old master.',
 			@ErrCode = 205				 
+		RETURN
+	END
+	
+	--Check identical autoposition taking for Gold Deluxe
+	IF EXISTS (
+			SELECT	1
+			FROM	CustSettingGame mcs_old WITH(NOLOCK)
+				INNER JOIN CustSettingGame mcs_new WITH(NOLOCK) 
+					ON	mcs_new.custid = @mrecommend 
+						AND mcs_new.sporttype = mcs_old.sporttype 
+						AND mcs_new.bettype = mcs_old.bettype 
+			WHERE	mcs_old.custid = @mrecommend_old 
+					AND mcs_old.sporttype = 255 
+					AND mcs_old.bettype = 1701
+					AND (mcs_old.isautopositiontaking <> mcs_new.isautopositiontaking)
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @Mastername + ': Auto Position Taking of new master is not matched with old master.',
+			@ErrCode = 209			 
 		RETURN
 	END
 
@@ -596,6 +666,27 @@ BEGIN
 			@ErrCode = 208					 
 		return
 	END
+	
+	--Check Position Taking for Gold Deluxe
+		--check m3_master_old <= m3_master_new
+	
+	IF EXISTS(
+			SELECT	1 
+			FROM	CustSettingGame mcs_old WITH(NOLOCK) 
+				INNER JOIN CustSettingGame mcs_new WITH(NOLOCK) 
+					ON	mcs_new.custid = @mrecommend 
+						AND mcs_new.sporttype = mcs_old.sporttype 
+						AND mcs_new.bettype = mcs_old.bettype
+			WHERE	mcs_old.custid = @mrecommend_old 
+					AND mcs_old.sporttype = 255 
+					AND mcs_old.bettype = 1701
+					AND mcs_old.mpositiontaking > mcs_new.mpositiontaking	
+		)	
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @Mastername + ': Master Position Taking of new master is less than Master Position Taking of old master.',
+			@ErrCode = 210			 
+		return
+	END	
 
 		--m2+a2<=m3		
 		--check n3<=m2+a2<=l3 IF im2 = 0, 
@@ -716,6 +807,36 @@ BEGIN
 		RETURN
 	END
 			
+		--Check for Gold Deluxe
+		--m2+a2<=m3
+		--n3<= im = 0? m2+a2 : um2 + a2
+	IF EXISTS(
+			SELECT	1
+			FROM	CustSettingGame mcs WITH(NOLOCK) 
+				INNER JOIN CustSettingGame acs WITH(NOLOCK) 
+					ON	acs.custid = @recommend 
+						AND mcs.sporttype = acs.sporttype 
+						AND acs.bettype = mcs.bettype 
+				INNER JOIN CustOverrideGame mco WITH(NOLOCK) 
+					ON	mco.custid = @mrecommend 
+						AND mco.sporttype = mcs.sporttype 
+						AND mco.bettype = mcs.bettype
+			WHERE	mcs.custid = @mrecommend 
+					AND mcs.sporttype = 255 
+					AND mcs.bettype = 1701
+				AND (-- m2+a2<=m3
+					acs.mpositiontaking + acs.apositiontaking > mcs.mpositiontaking OR 
+					--n3<=m2+a2
+					(acs.isautompositiontaking = 0 AND acs.mpositiontaking + acs.apositiontaking < mco.minpositiontaking)
+					OR
+					(acs.isautompositiontaking = 1 AND acs.autompositiontaking + acs.apositiontaking < mco.minpositiontaking)
+				)
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master position taking.',
+			@ErrCode = 211
+		RETURN
+	END
 	--Check Position Taking	
 		--all a2<=a4
 		--all a1<=a4
@@ -781,6 +902,29 @@ BEGIN
 
 		return
 	END
+	
+	--Check Position Taking	for Gold Deluxe
+		--all a2<=a4
+		--all a1<=a4
+	IF exists (
+			SELECT 1 from 
+				CustSettingGame as scs with (nolock)
+				inner join CustSettingGame as acs  WITH(NOLOCK)
+					ON	scs.custid = @srecommend  
+						and scs.sporttype=acs.sporttype 
+						AND scs.bettype=acs.bettype
+				inner join customer as c  WITH(NOLOCK)
+					ON	c.custid = acs.custid 
+					AND c.roleid in (1,2)
+					AND c.recommend = @recommend --get member and agent			
+			where (acs.apositiontaking > scs.apositiontaking) AND scs.sporttype = 255
+	)
+	BEGIN	
+		SELECT @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super position taking.',
+			@ErrCode = 213				 
+
+		return
+	END
 
 	--Check P2P :Game Comm
 	--IF exists(
@@ -799,7 +943,7 @@ BEGIN
 END
 
 
-
 GO
-
-
+GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveAgent] TO [vnteam] AS [dbo]
