@@ -110,7 +110,10 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 107
 			,@ErrMsg	= 'Another parlay settlement is in progress or some parlay tickets are being voided, please wait a few seconds until the on-going process has finished and try again.'
-		 
+		
+		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
+		WHERE KeyID = @KeyID AND KeyValue = @MatchId
+	 
 		RETURN
 	END
 	ELSE 
@@ -340,10 +343,9 @@ BEGIN
 		
 	IF OBJECT_ID('tempdb..#BeforeUpd') IS NOT NULL DROP TABLE #BeforeUpd
 	IF OBJECT_ID('tempdb..#AfterUpd') IS NOT NULL DROP TABLE #AfterUpd
-	
+
 	DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
-	WHERE KeyID = @KeyID AND KeyValue = @MatchId
-	
+	WHERE KeyID = @KeyID AND KeyValue = @MatchId	
 	
 	IF (@@Error = 0)
 	BEGIN TRY

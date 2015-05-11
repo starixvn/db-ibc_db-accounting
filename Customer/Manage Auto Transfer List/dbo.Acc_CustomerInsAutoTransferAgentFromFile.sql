@@ -91,7 +91,7 @@ BEGIN
 		IF @@ROWCOUNT = 0 BREAK;
 		
 		SELECT @LogData = '<Acc_CustomerInsAutoTransferAgentFromFile username="' + COALESCE(@log_username,SPACE(1)) + '" ' 
-								+ 'TransferType="' + COALESCE(CAST(@TransferType AS VARCHAR(10)),SPACE(1)) + '"'
+								+ 'TransferType="' + COALESCE(CAST(@TransferType AS VARCHAR(10)),SPACE(1)) + '" '
 								+ 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(50)),SPACE(1)) + '" '
 								+ 'ErrMsg="' + COALESCE(@ErrMsg,SPACE(1))+'" '
 								+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'																		
@@ -106,7 +106,7 @@ BEGIN
 		END TRY
 		BEGIN CATCH
 			SELECT @LogData = '<Acc_CustomerInsAutoTransferAgentFromFile username="' + COALESCE(@log_username,SPACE(1)) + '" ' 
-									+ 'TransferType="' + COALESCE(CAST(@TransferType AS VARCHAR(10)),SPACE(1)) + '"'
+									+ 'TransferType="' + COALESCE(CAST(@TransferType AS VARCHAR(10)),SPACE(1)) + '" '
 									+ 'ErrCode="' + coalesce(cast(@ErrCode as varchar(50)),space(1)) + '" '
 									+ 'ErrMsg="' + coalesce(ERROR_MESSAGE(),space(1))+'" '
 									+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" />'																		
