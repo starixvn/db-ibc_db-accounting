@@ -1,0 +1,233 @@
+﻿-------------------------------
+--CREATE FILEGROUPS and FILES
+USE bodb_Report
+GO
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_06ALL]
+
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_07ALL]
+
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M01]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M02]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M03]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M04]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M05]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M06]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M07]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M08]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M09]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M10]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M11]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_08M12]
+
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M01]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M02]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M03]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M04]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M05]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M06]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M07]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M08]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M09]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M10]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M11]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_09M12]
+
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M01]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M02]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M03]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M04]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M05]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M06]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M07]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M08]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M09]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M10]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M11]
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_10M12]
+
+ALTER DATABASE bodb_Report ADD filegroup [STATEMENT_MAX]
+
+--------------
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_06ALL', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_06ALL.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_06ALL]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_07ALL', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_07ALL.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_07ALL]
+
+
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M01', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M01.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M01]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M02', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M02.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M02]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M03', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M03.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M03]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M04', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M04.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M04]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M05', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M05.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M05]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M06', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M06.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M06]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M07', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M07.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M07]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M08', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M08.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M08]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M09', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M09.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M09]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M10', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M10.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M10]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M11', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M11.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M11]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_08M12', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_08M12.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_08M12]
+
+
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M01', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M01.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M01]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M02', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M02.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M02]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M03', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M03.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M03]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M04', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M04.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M04]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M05', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M05.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M05]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M06', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M06.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M06]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M07', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M07.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M07]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M08', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M08.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M08]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M09', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M09.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M09]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M10', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M10.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M10]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M11', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M11.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M11]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_09M12', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_09M12.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_09M12]
+
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M01', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M01.ndf', SIZE = 100 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M01]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M02', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M02.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M02]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M03', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M03.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M03]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M04', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M04.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M04]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M05', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M05.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M05]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M06', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M06.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M06]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M07', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M07.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M07]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M08', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M08.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M08]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M09', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M09.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M09]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M10', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M10.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M10]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M11', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M11.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M11]
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_10M12', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_10M12.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_10M12]
+
+ALTER DATABASE bodb_Report ADD FILE (name = 'STATEMENT_MAX', filename ='G:\IBC_DB\bodb_Report\STATEMENT\Statement_MAX.ndf', SIZE = 1 MB ,FILEGROWTH = 100 MB ) TO filegroup [STATEMENT_MAX]
+
+
+----
+
+--2
+--Create partition function
+CREATE PARTITION FUNCTION pf_STATEMENT_monthly (DATETIME) AS
+RANGE LEFT FOR VALUES
+(    
+    '2006/12/31 23:59:59.997',
+    
+    '2007/12/31 23:59:59.997',
+    
+    '2008/01/31 23:59:59.997',
+    '2008/02/29 23:59:59.997',
+    '2008/03/31 23:59:59.997',
+    '2008/04/30 23:59:59.997',
+    '2008/05/31 23:59:59.997',
+    '2008/06/30 23:59:59.997',
+    '2008/07/31 23:59:59.997',
+    '2008/08/31 23:59:59.997',
+    '2008/09/30 23:59:59.997',
+    '2008/10/31 23:59:59.997',
+    '2008/11/30 23:59:59.997',
+    '2008/12/31 23:59:59.997',
+    
+    '2009/01/31 23:59:59.997',
+    '2009/02/28 23:59:59.997',
+    '2009/03/31 23:59:59.997',
+    '2009/04/30 23:59:59.997',
+    '2009/05/31 23:59:59.997',
+    '2009/06/30 23:59:59.997',
+    '2009/07/31 23:59:59.997',
+    '2009/08/31 23:59:59.997',
+    '2009/09/30 23:59:59.997',
+    '2009/10/31 23:59:59.997',
+    '2009/11/30 23:59:59.997',
+    '2009/12/31 23:59:59.997',
+    
+    '2010/01/31 23:59:59.997',
+    '2010/02/28 23:59:59.997',
+    '2010/03/31 23:59:59.997',
+    '2010/04/30 23:59:59.997',
+    '2010/05/31 23:59:59.997',
+    '2010/06/30 23:59:59.997',
+    '2010/07/31 23:59:59.997',
+    '2010/08/31 23:59:59.997',
+    '2010/09/30 23:59:59.997',
+    '2010/10/31 23:59:59.997',
+    '2010/11/30 23:59:59.997',
+    '2010/12/31 23:59:59.997'
+)
+
+--Create partition schema
+CREATE PARTITION SCHEME ps_STATEMENT_monthly
+AS PARTITION pf_STATEMENT_monthly
+TO
+    (
+    [STATEMENT_06ALL], 
+    [STATEMENT_07ALL], 
+    
+	[STATEMENT_08M01], 
+	[STATEMENT_08M02], 
+	[STATEMENT_08M03], 
+	[STATEMENT_08M04], 
+	[STATEMENT_08M05], 
+	[STATEMENT_08M06], 
+	[STATEMENT_08M07], 
+	[STATEMENT_08M08], 
+	[STATEMENT_08M09], 
+	[STATEMENT_08M10], 
+	[STATEMENT_08M11], 
+	[STATEMENT_08M12],
+	
+	[STATEMENT_09M01], 
+	[STATEMENT_09M02], 
+	[STATEMENT_09M03], 
+	[STATEMENT_09M04], 
+	[STATEMENT_09M05], 
+	[STATEMENT_09M06], 
+	[STATEMENT_09M07], 
+	[STATEMENT_09M08], 
+	[STATEMENT_09M09], 
+	[STATEMENT_09M10], 
+	[STATEMENT_09M11], 
+	[STATEMENT_09M12],
+	
+	[STATEMENT_10M01], 
+	[STATEMENT_10M02], 
+	[STATEMENT_10M03], 
+	[STATEMENT_10M04], 
+	[STATEMENT_10M05], 
+	[STATEMENT_10M06], 
+	[STATEMENT_10M07], 
+	[STATEMENT_10M08], 
+	[STATEMENT_10M09], 
+	[STATEMENT_10M10], 
+	[STATEMENT_10M11], 
+	[STATEMENT_10M12],
+	
+	[STATEMENT_MAX]
+	
+ )                
+GO
+---
+
+USE [bodb_Report]
+GO
+/****** Object:  Table [dbo].[Statement]    Script Date: 01/23/2010 04:41:10 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Statement](
+	[custid] [int] NULL,
+	[accdate] [datetime] NULL,
+	[totalamt] [money] NULL,
+	[transtype] [nvarchar](50) NULL,
+	[transdesc] [nvarchar](300) NULL
+) ON [DATA]
+
+GO
+
+/****** Object:  Index [IX_Statement]    Script Date: 01/23/2010 04:41:10 ******/
+CREATE CLUSTERED INDEX [IX_Statement] ON [dbo].[Statement] 
+(
+	[custid] ASC,
+	[accdate] ASC
+)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON)
+
+ON ps_STATEMENT_monthly(accdate)
+GO
+GRANT SELECT ON [dbo].[Statement] TO [public]
+--------------
+--IMPORT DATA
+--SHRINK ALL THE FILES
+
+

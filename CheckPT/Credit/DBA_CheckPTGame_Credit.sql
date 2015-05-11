@@ -1,0 +1,619 @@
+USE [CheckResultDB]
+GO
+/****** Object:  StoredProcedure [dbo].[DBA_CheckPTGame_Credit]    Script Date: 7/25/2014 10:23:23 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[DBA_CheckPTGame_Credit]
+	 @srecommend INT 
+	,@SportType SMALLINT = 0
+	,@RuleId	SMALLINT = 0
+AS
+/*
+Created: 20140313@Sophia
+Task: Check PT setting for credit customers - Game setting
+DB: DBCHECK.CheckResultDB
+Revisions:
+	- 20140723@Sophia: Add Keno
+	- 20140910@Sophia: Change the Filter of customer from closed = 0 and Reject = 0 to Enabled = 1
+	- 20141111@Sophia: Correct bettype LiveCasino
+	 
+Param's Explanation: 
+	@RuleId = 0 : 'all' 
+	IF @sporttype = 162 (Live Casino) THEN @RuleId IN (1, 5, 6, 7, 8, 9, 10, 17, 18, 19, 20, 23, 24, 28, 30, 31 )
+	IF @sporttype = 202 (Keno) THEN @RuleId IN (1, 5, 6, 7, 8, 9, 10, 17, 18, 19, 20, 23, 24, 28, 31, 32 )
+*/
+SET NOCOUNT ON
+BEGIN 
+IF @sporttype IN (162, 202) OR @sporttype = 0 
+BEGIN 
+	---- 1. S1 < 0 OR M1 < 0 OR A1 < 0
+
+		IF @RuleId IN (0,1)
+		BEGIN
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive) 
+			SELECT	1 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId,
+					CASE WHEN cs.spositiontaking < 0 THEN cs.spositiontaking 
+						 WHEN cs.mpositiontaking < 0 THEN cs.mpositiontaking 
+						 WHEN cs.apositiontaking < 0 THEN cs.apositiontaking
+					ELSE 0
+					END,
+					0, 
+					0
+			FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+			WHERE	ci.roleid = 1
+				AND ci.Enabled = 1			
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND (cs.spositiontaking < 0 OR cs.mpositiontaking < 0 OR cs.apositiontaking < 0)
+		
+		END
+
+		
+		----5. S4 < N4 
+ 
+		IF @RuleId IN (0,5)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	5 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, co.minpositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON cs.CustId = ci.CustId	
+				INNER JOIN CheckCustDB.dbo.CustOverrideGame co WITH (NOLOCK)
+					ON co.CustId=ci.CustId 
+					AND co.SportType=cs.SportType
+					AND co.BetType=cs.BetType
+			WHERE ci.roleid = 4
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND cs.spositiontaking < co.minpositiontaking
+
+
+		END
+
+
+		----6. S4 < US3 
+
+		IF @RuleId IN (0,6)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	6 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.spositiontaking , cs.autopositiontaking, 0
+			FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				INNER JOIN	CheckCustDB.dbo.CustSettingGame scs WITH (NOLOCK)
+						ON	scs.CustId = ci.srecommend
+							AND scs.SportType = cs.SportType
+							AND scs.BetType = cs.BetType
+			WHERE	ci.roleid = 3
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND scs.spositiontaking < cs.autopositiontaking
+
+
+		END
+
+		----7. S4 < US1 
+
+		IF @RuleId IN (0,7)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	7 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.spositiontaking, cs.autopositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN CheckCustDB.dbo.CustSettingGame scs WITH (NOLOCK)
+					ON	scs.CustId = ci.srecommend
+					AND scs.SportType = cs.SportType
+					AND scs.BetType = cs.BetType
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND scs.spositiontaking < cs.autopositiontaking
+
+
+			
+		END
+	
+		----8. S4 < S3 + M3 
+
+		IF @RuleId IN (0,8)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	8 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.spositiontaking, cs.spositiontaking + cs.mpositiontaking, 0
+			FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				INNER JOIN	CheckCustDB.dbo.CustSettingGame scs WITH (NOLOCK)
+						ON	scs.CustId = ci.srecommend
+							AND scs.SportType = cs.SportType
+							AND scs.BetType = cs.BetType
+			WHERE ci.roleid = 3
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking
+
+
+		
+		END
+
+		----9. S4 < S1 + M1 + A1 
+
+		IF @RuleId IN (0,9)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	9 as RuleId, cs.BetType, cs.SportType, scs.CustId, ci.CustId, scs.spositiontaking, cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN CheckCustDB.dbo.CustSettingGame scs WITH (NOLOCK)
+					ON	scs.CustId = ci.srecommend
+					AND scs.SportType = cs.SportType
+					AND scs.BetType = cs.BetType
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend		
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND scs.spositiontaking < cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
+
+
+			
+		END
+
+		----10. N4 > S1 + M1 + A1 
+ 
+		IF @RuleId IN (0,10)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	10 as RuleId, cs.BetType, cs.SportType, sco.CustId, ci.CustId, sco.minpositiontaking, cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN CheckCustDB.dbo.CustOverrideGame sco WITH (NOLOCK)
+					ON	sco.CustId = ci.srecommend
+					AND sco.SportType = cs.SportType
+					AND sco.BetType = cs.BetType
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND sco.minpositiontaking > cs.spositiontaking + cs.mpositiontaking + cs.apositiontaking
+
+			
+		END
+
+	
+		-----------------------------------------------------------------------
+  
+		----17. M3 < N3 
+ 
+		IF @RuleId IN (0,17)
+		BEGIN
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	17 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.mpositiontaking, co.minpositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN CheckCustDB.dbo.CustOverrideGame co WITH (NOLOCK)
+					ON	co.CustId = ci.CustId
+					AND co.SportType = cs.SportType
+					AND co.BetType = cs.BetType
+			WHERE ci.roleid = 3
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND cs.mpositiontaking < co.minpositiontaking
+
+
+			
+		END
+
+		--------------------------------------------------------------------------------------------
+		----18. M3 < M2 + A2 
+
+		IF @RuleId IN (0,18)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	18 as RuleId, cs.BetType, cs.SportType, mcs.CustId, ci.CustId, mcs.mpositiontaking, cs.mpositiontaking + cs.apositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN ( SELECT mcs.CustId, mcs.SportType, mcs.BetType, mcs.mpositiontaking  
+							 FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+								INNER JOIN CheckCustDB.dbo.CustSettingGame mcs WITH (NOLOCK)
+									ON ci.CustId = mcs.CustId
+									AND ci.roleid = 3 
+									AND ci.Enabled = 1
+									AND ci.Currency NOT IN (20,27,28)	
+									AND ci.srecommend = @srecommend
+									AND mcs.SportType IN (162, 202)
+									AND CASE WHEN mcs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+									AND CASE WHEN @Sporttype <> 0 THEN mcs.Sporttype ELSE @SportType END = @SportType
+							) mcs
+					ON	mcs.CustId = ci.mrecommend
+					AND mcs.SportType = cs.SportType
+					AND mcs.BetType = cs.BetType
+			WHERE ci.roleid = 2
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend 
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
+
+
+		
+		END
+	
+		----19. M3 < M1 + A1 
+
+		IF @RuleId IN (0,19)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	19 as RuleId, cs.BetType, cs.SportType, mcs.CustId, ci.CustId, mcs.mpositiontaking, cs.mpositiontaking + cs.apositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN ( SELECT mcs.CustId, mcs.SportType, mcs.BetType, mcs.mpositiontaking  
+							 FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+								INNER JOIN CheckCustDB.dbo.CustSettingGame mcs WITH (NOLOCK)
+									ON ci.CustId = mcs.CustId
+									AND ci.roleid = 3 
+									AND ci.Enabled = 1 
+									AND ci.Currency NOT IN (20,27,28)	
+									AND ci.srecommend = @srecommend
+									AND mcs.SportType IN (162, 202)
+									AND CASE WHEN mcs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+									AND CASE WHEN @Sporttype <> 0 THEN mcs.Sporttype ELSE @SportType END = @SportType
+							) mcs
+					ON	mcs.CustId = ci.mrecommend
+					AND mcs.SportType = cs.SportType
+					AND mcs.BetType = cs.BetType
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend			
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND mcs.mpositiontaking < cs.mpositiontaking + cs.apositiontaking
+
+
+		END
+ 
+   
+		----20. N3 > M1 + A1 
+
+		IF @RuleId IN (0,20)
+		BEGIN
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	20 as RuleId, cs.BetType, cs.SportType, mco.CustId, ci.CustId, mco.minpositiontaking, cs.mpositiontaking + cs.apositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN (
+							SELECT	mco.CustId, mco.SportType, mco.Bettype, mco.minpositiontaking 
+							FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+								 INNER JOIN CheckCustDB.dbo.CustOverrideGame mco WITH (NOLOCK)
+									ON	mco.CustID = ci.CustId
+										AND ci.roleid = 3 
+										AND ci.Enabled = 1
+										AND ci.Currency NOT IN (20,27,28)	
+										AND ci.srecommend = @srecommend
+										AND mco.SportType IN (162, 202)
+										AND CASE WHEN mco.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN mco.Sporttype ELSE @SportType END = @SportType
+							) mco
+					ON	mco.CustId = ci.mrecommend
+					AND mco.SportType = cs.SportType
+					AND mco.BetType = cs.BetType
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend	
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND mco.minpositiontaking > cs.mpositiontaking + cs.apositiontaking
+
+		END  
+ 
+ 		----23. A2 < N2
+ 
+		IF @RuleId IN (0,23)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	23 as RuleId, cs.BetType, cs.SportType, ci.CustId, co.CustId, cs.apositiontaking, co.minpositiontaking, 0
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN CheckCustDB.dbo.CustOverrideGame co WITH (NOLOCK)
+					ON	co.CustId = ci.CustId
+					AND co.SportType = cs.SportType
+					AND co.BetType = cs.BetType
+			WHERE ci.roleid = 2
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND cs.apositiontaking < co.minpositiontaking
+			
+		END 
+	  
+		----24. N2 > A1
+ 
+		IF @RuleId IN (0,24)
+		BEGIN
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	24 as RuleId, cs.BetType, cs.SportType, co.CustId, ci.CustId, co.minpositiontaking, cs.apositiontaking, 0 
+			FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+					ON	cs.CustId = ci.CustId
+				INNER JOIN (	SELECT co.CustId, co.SportType, co.BetType, co.minpositiontaking 
+								FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+									INNER JOIN CheckCustDB.dbo.CustOverrideGame co WITH (NOLOCK)
+											ON co.CustId = ci.CustId
+											AND ci.roleid = 2
+											AND ci.Enabled = 1
+											AND ci.Currency NOT IN (20,27,28)	
+											AND ci.srecommend = @srecommend	 
+											AND co.SportType IN (162, 202)
+											AND CASE WHEN co.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+											AND CASE WHEN @Sporttype <> 0 THEN co.Sporttype ELSE @SportType END = @SportType
+							) co
+					ON	co.CustId = ci.recommend
+					AND co.SportType = cs.SportType
+					AND co.BetType = cs.BetType
+			WHERE   ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend			
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND co.minpositiontaking > cs.apositiontaking 
+			
+		END
+ 		---------------------------------------------------
+		----Note: Do not check rule 25, 26, 27 at CustSettingGame table
+		---------------------------------------------------
+		---- 28. MIN(S4-M1-A1, (IS1?US1,US3)) > S1
+		IF @RuleId IN (0,28)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT 28 AS RuleId, cs.BetType, cs.SportType 
+				,CASE	WHEN scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautopositiontaking = 1 THEN cs.autopositiontaking	ELSE mcs.autopositiontaking END)			
+						THEN (	CASE	WHEN cs.isautopositiontaking = 1 
+										THEN cs.CustId 
+										ELSE mcs.CustId 
+								END)
+						ELSE scs.CustId
+				 END 
+				,cs.CustId				
+				,CASE	WHEN scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautopositiontaking = 1 THEN cs.autopositiontaking	ELSE mcs.autopositiontaking END)			
+						THEN (	CASE	WHEN cs.isautopositiontaking = 1 
+										THEN cs.autopositiontaking 
+										ELSE mcs.autopositiontaking 
+								END)
+						ELSE scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking
+				 END 
+				,cs.spositiontaking
+				,0
+			FROM CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+						ON ci.CustId = cs.CustId
+				INNER JOIN (
+								SELECT cs.CustId, cs.SportType, cs.BetType, cs.spositiontaking
+								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+									ON cs.CustId = ci.CustId
+										AND ci.roleid = 4
+										AND ci.Enabled = 1
+										AND ci.Currency NOT IN (20,27,28)	
+										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (162, 202)
+										AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+							) AS scs
+						ON	scs.SportType = cs.SportType
+							AND scs.bettype = cs.bettype
+							AND scs.CustId = ci.srecommend
+				INNER JOIN (
+								SELECT cs.CustId, cs.SportType, cs.BetType, cs.mpositiontaking, cs.autopositiontaking, cs.isautopositiontaking
+								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+									ON cs.CustId = ci.CustId
+										AND ci.roleid = 3
+										AND ci.Enabled = 1
+										AND ci.Currency NOT IN (20,27,28)	
+										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (162, 202)
+										AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+							) AS mcs
+						ON	mcs.SportType = cs.SportType
+							AND mcs.bettype = cs.bettype
+							AND mcs.CustId = ci.mrecommend			
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND (cs.isautopositiontaking=1 OR mcs.isautopositiontaking=1)
+				AND cs.spositiontaking < CASE	WHEN scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautopositiontaking = 1 THEN cs.autopositiontaking	ELSE mcs.autopositiontaking END)			
+												THEN (	CASE	WHEN cs.isautopositiontaking = 1 
+																THEN cs.autopositiontaking 
+																ELSE mcs.autopositiontaking 
+														END)
+												ELSE scs.spositiontaking - cs.mpositiontaking - cs.apositiontaking
+										 END 
+		 
+			END 
+
+
+		----30. S4 > 0.93
+			-->Live Casino: Do not check Rule 2 Check rule 30 
+		
+		IF @sporttype IN (0, 162)
+		BEGIN 
+			IF @RuleId IN (0,30)
+			BEGIN
+				INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+				SELECT	30 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.93, 0
+				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				WHERE	ci.roleid = 4
+					AND ci.Enabled = 1
+					AND ci.Currency NOT IN (20,27,28)	
+					AND ci.srecommend = @srecommend
+					AND cs.SportType = 162
+					AND ci.SyncLiveCasino = 1					
+					AND cs.spositiontaking > 0.93
+			
+			END
+		END
+
+		---- 31. MIN (M3-A1,(IM1?UM1,UM2)) > M1
+			---> Check Rule 31 instead of Rule 29 because it does not have M4, A4  [29. MIN (M4-A1, M3-A1,(IM1?UM1,UM2)) > M1]
+
+		 
+		IF @RuleId IN (0,31)
+		BEGIN 
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+			SELECT	31 AS RuleId, cs.BetType, cs.SportType,
+					CASE WHEN mcs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautompositiontaking = 1 THEN cs.autompositiontaking ELSE acs.autompositiontaking END) 
+								 THEN (CASE WHEN cs.isautompositiontaking = 1 
+											THEN cs.CustId
+											ELSE acs.CustId 
+											END
+									   )
+					ELSE mcs.CustId
+					END	
+				,cs.CustId
+				,CASE WHEN mcs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautompositiontaking = 1 THEN cs.autompositiontaking ELSE acs.autompositiontaking END) 
+								 THEN (CASE WHEN cs.isautompositiontaking = 1 
+											THEN cs.autompositiontaking
+											ELSE acs.autompositiontaking 
+									   END
+									   )
+					ELSE mcs.mpositiontaking - cs.apositiontaking
+					END					
+				,cs.mpositiontaking
+				,0
+			FROM CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+				INNER JOIN CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+						ON ci.CustId = cs.CustId
+				INNER JOIN (
+								SELECT cs.CustId, cs.SportType, cs.BetType, cs.mpositiontaking
+								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+									ON cs.CustId = ci.CustId
+										AND ci.roleid = 3
+										AND ci.Enabled = 1
+										AND ci.Currency NOT IN (20,27,28)	
+										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (162, 202)
+										AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+							) AS mcs
+						ON	mcs.SportType = cs.SportType
+							AND mcs.bettype = cs.bettype
+							AND mcs.CustId = ci.mrecommend
+				INNER JOIN (
+								SELECT cs.CustId, cs.SportType, cs.BetType, cs.autompositiontaking, isautompositiontaking
+								FROM CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+									INNER JOIN CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+									ON cs.CustId = ci.CustId
+										AND ci.roleid = 2
+										AND ci.Enabled = 1
+										AND ci.Currency NOT IN (20,27,28)	
+										AND ci.srecommend = @srecommend
+										AND cs.SportType IN (162, 202)
+										AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+										AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+							) AS acs
+						ON	acs.SportType = cs.SportType
+							AND acs.bettype = cs.bettype
+							AND acs.CustId = ci.recommend
+			WHERE ci.roleid = 1
+				AND ci.Enabled = 1
+				AND ci.Currency NOT IN (20,27,28)	
+				AND ci.srecommend = @srecommend
+				AND cs.SportType IN (162, 202)
+				AND CASE WHEN cs.Sporttype = 162 THEN ci.SyncLiveCasino ELSE 1 END = 1
+				AND CASE WHEN @Sporttype <> 0 THEN cs.Sporttype ELSE @SportType END = @SportType
+				AND ( acs.isautompositiontaking = 1	OR cs.isautompositiontaking = 1 )
+				AND cs.mpositiontaking <	CASE  WHEN mcs.mpositiontaking - cs.apositiontaking > (CASE WHEN cs.isautompositiontaking = 1 THEN cs.autompositiontaking ELSE acs.autompositiontaking END) 
+													THEN (CASE WHEN cs.isautompositiontaking = 1 
+															THEN cs.autompositiontaking
+															ELSE acs.autompositiontaking 
+														END
+														)
+													ELSE mcs.mpositiontaking - cs.apositiontaking
+													END
+												
+												
+
+	END 
+		
+		
+		----32. S4 > 0.85
+			--> Keno: Do not check Rule 2 Check rule 32 
+		
+		IF @SportType IN (0,202)
+		BEGIN 
+			IF @RuleId IN (0,32)
+			BEGIN
+			INSERT INTO CheckPTResult_Credit (RuleId, BetType, SportType, CustIdA, CustIdB, ValueA, ValueB, IsLive)
+				SELECT	32 as RuleId, cs.BetType, cs.SportType, ci.CustId, ci.CustId, cs.spositiontaking, 0.85, 0
+				FROM	CheckCustDB.dbo.CustInfo ci WITH (NOLOCK)
+					INNER JOIN	CheckCustDB.dbo.CustSettingGame cs WITH (NOLOCK)
+						ON	cs.CustId = ci.CustId
+				WHERE	ci.roleid = 4
+					AND ci.Enabled = 1
+					AND ci.Currency NOT IN (20,27,28)	
+					AND ci.srecommend = @srecommend
+					AND cs.SportType = 202					
+					AND cs.spositiontaking > 0.85
+			END
+		END
+
+END
+END 

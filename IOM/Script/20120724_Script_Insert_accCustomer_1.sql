@@ -1,0 +1,6 @@
+﻿INSERT INTO accCustomer_1(custid,PageAccess,createdate,creator,GroupID) VALUES(8,N'[A][B][C][D]','Jun 11 2007  5:41AM',360418,1)
+INSERT INTO accCustomer_1(custid,PageAccess,createdate,creator,GroupID) VALUES(1070339,N'','Jul 24 2012  2:52AM',8,1)
+INSERT INTO accCustomer_1(custid,PageAccess,createdate,creator,GroupID) VALUES(1948903,N'','Jul 24 2012  2:52AM',8,1)
+INSERT INTO accCustomer_1(custid,PageAccess,createdate,creator,GroupID) VALUES(3150145,N'','Jul 24 2012  2:53AM',8,1)
+INSERT INTO accCustomer_1(custid,PageAccess,createdate,creator,GroupID) VALUES(3916614,N'','Jul 24 2012  2:53AM',8,1)
+INSERT INTO accCustomer_1(custid,PageAccess,createdate,creator,GroupID) VALUES(4181773,N'','Jul 24 2012  2:53AM',8,1)
