@@ -18,7 +18,6 @@ AS
 		- 20150511@Jamie: Sync PS for Betradar2 
 */
 BEGIN
-
 	SET NOCOUNT ON
 
 	DECLARE @MatchId	INT
@@ -43,7 +42,6 @@ BEGIN
 	SELECT TOP 1 @duration	= DATEDIFF(ms, execTime, GETDATE())
 		,@keyId				= keyid
 		,@matchid			= matchid
-		,@sporttype			= SportType
 	FROM Single_Calculate_Queue WITH (NOLOCK)
 	WHERE IsCalculating = 1
 
@@ -94,6 +92,7 @@ BEGIN
 		,@IP			= IP
 		,@Action		= Action
 		,@sqlCommand	= sqlCommand
+		,@sporttype		= SportType
 	WHERE keyid = @keyId
 
 	IF @@ROWCOUNT = 0 RETURN
@@ -188,7 +187,12 @@ BEGIN
 
 		IF @sporttype = 1
 		BEGIN
-			EXEC DBPRO.bodb02.dbo.NAP_Task_BetRadar_SyncPS @MatchID = @MatchID 
+			BEGIN TRY
+				EXEC DBPRO.bodb02.dbo.NAP_Task_BetRadar_SyncPS @MatchID = @MatchID
+			END TRY 
+			BEGIN CATCH 
+				PRINT 'Synchronize failed!'  
+			END CATCH  
 		END 
 
 		SELECT @ActionId	= CASE 
@@ -235,5 +239,3 @@ BEGIN
 		END
 	END
 END
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_SB_Job] TO [vnteam] AS [dbo]
