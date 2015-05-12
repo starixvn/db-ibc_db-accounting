@@ -18,6 +18,7 @@ AS
 		- 20150511@Jamie: Sync PS for Betradar2 
 */
 BEGIN
+
 	SET NOCOUNT ON
 
 	DECLARE @MatchId	INT

@@ -7,6 +7,7 @@ AS
 	DB: DBPRO/bodb02
 */
 BEGIN
+
 	SET NOCOUNT ON 
 	DECLARE  @betstatus				NVARCHAR(50)=''
 			,@SettlementStatus135	TINYINT 
