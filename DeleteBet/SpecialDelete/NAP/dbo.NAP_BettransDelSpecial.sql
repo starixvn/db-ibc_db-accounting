@@ -344,7 +344,7 @@ BEGIN
 							WHEN b.bettype IN (5,15,160,164,167,176,177,180) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 							ELSE b.betteam END 
 		AND CASE WHEN b.bettype IN (160,164,180) 
-						THEN CASE WHEN @BetID160=100 THEN b.betID 
+						THEN CASE WHEN @BetID160=100 THEN ISNULL(b.betID ,0)
 						ELSE 
 							CASE WHEN b.bettype = 160 THEN (816000 + @BetID160) 
 								 WHEN b.bettype = 164 THEN (816400 + @BetID160)
