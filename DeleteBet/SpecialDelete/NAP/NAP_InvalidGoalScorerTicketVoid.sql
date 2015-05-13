@@ -1,7 +1,7 @@
 ALTER PROCEDURE [dbo].[NAP_InvalidGoalScorerTicketVoid]
 	@MatchId	INT,
 	@BetType	SMALLINT,
-	@BetTeam	NVARCHAR(100),
+	@BetTeam	NVARCHAR(200),
     @UserID		INT = 111,
 	@ErrMsg		NVARCHAR(200)	OUTPUT,
     @ErrCode	INT			OUTPUT
