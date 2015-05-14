@@ -1712,8 +1712,7 @@ BEGIN
 BEGIN
 	 INSERT INTO #BetListData
 		SELECT 
-			CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B.refno END refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake,
 			BG.status,
@@ -1723,10 +1722,22 @@ BEGIN
 			BG.bettype,
 			BG.betteam  
 		FROM dbo.bettransg BG with (NOLOCK)
-			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-			INNER JOIN #BetListData B ON
-				 (BG.refno = B.refno AND BG.CustID = B.CustID AND sp.Productid in (4))
-				OR (BG.refno = B.transid AND BG.CustID = B.CustID AND sp.Productid in (12))
+			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+			INNER JOIN #BetListData B ON (BG.refno = B.refno AND BG.CustID = B.CustID AND sp.Productid in (4))
+		UNION ALL
+		SELECT 
+			B.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam  
+		FROM dbo.bettransg BG with (NOLOCK)
+			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+			INNER JOIN #BetListData B ON (BG.refno = B.transid AND BG.CustID = B.CustID AND sp.Productid in (12))
 				
 END 
 		   

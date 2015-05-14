@@ -2755,8 +2755,7 @@ BEGIN
 	BEGIN
 		INSERT INTO @BettransDetail
 		SELECT 
-			CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B.refno END refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
@@ -2767,10 +2766,24 @@ BEGIN
 			BG.Betteam,
 			'' AS BetCheck
 		FROM bettransg BG WITH (NOLOCK)		
-		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-		INNER JOIN #BetListByDateMem B ON
-				 (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
-				OR (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+		INNER JOIN #BetListByDateMem B ON (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
+		INNER JOIN #TempExchange e ON e.ExchangeDate =  b.winlostdate AND e.exchangeid = b.currency
+		UNION ALL
+		SELECT 
+			B.refno,
+			BG.odds, 
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+			BG.status, 
+			BG.apositiontaking, 
+			0,
+			0,
+			BG.bettype,
+			BG.Betteam,
+			'' AS BetCheck
+		FROM bettransg BG WITH (NOLOCK)		
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+		INNER JOIN #BetListByDateMem B ON (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
 		INNER JOIN #TempExchange e ON e.ExchangeDate =  b.winlostdate AND e.exchangeid = b.currency
 	END
 		
@@ -2778,8 +2791,7 @@ BEGIN
 	BEGIN
 		INSERT INTO @BettransDetail
 		SELECT 
-			CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B.refno END refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
@@ -2790,20 +2802,32 @@ BEGIN
 			BG.Betteam,
 			'' AS BetCheck
 		FROM bettransg14 BG WITH (NOLOCK)
-		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-		INNER JOIN #BetListByDateMem B ON  
-				(BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
-				OR (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+		INNER JOIN #BetListByDateMem B ON  (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
 		INNER JOIN #TempExchange e ON e.ExchangeDate =  b.winlostdate AND e.exchangeid = b.currency
-		
+		UNION ALL
+		SELECT 
+			B.refno,
+			BG.odds, 
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+			BG.status, 
+			BG.apositiontaking, 
+			0,
+			0,
+			BG.bettype,
+			BG.Betteam,
+			'' AS BetCheck
+		FROM bettransg14 BG WITH (NOLOCK)
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+		INNER JOIN #BetListByDateMem B ON  (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
+		INNER JOIN #TempExchange e ON e.ExchangeDate =  b.winlostdate AND e.exchangeid = b.currency
 	END	
 	 
 	IF @fdate < @BalanceUpDay
 	BEGIN
 		INSERT INTO @BettransDetail
 		SELECT 
-			CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B.refno END refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
@@ -2814,10 +2838,24 @@ BEGIN
 			BG.Betteam,
 			'' AS BetCheck
 		FROM bodb_archive.dbo.bettransG BG WITH (NOLOCK)
-		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-		INNER JOIN #BetListByDateMem B ON 
-				(BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
-				OR (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+		INNER JOIN #BetListByDateMem B ON (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
+		INNER JOIN #TempExchange e  ON e.ExchangeDate = b.winlostdate   AND e.exchangeid = b.currency
+		UNION ALL
+		SELECT 
+			B.refno,
+			BG.odds, 
+			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
+			BG.status, 
+			BG.apositiontaking,
+			0,
+			0, 
+			BG.bettype,
+			BG.Betteam,
+			'' AS BetCheck
+		FROM bodb_archive.dbo.bettransG BG WITH (NOLOCK)
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+		INNER JOIN #BetListByDateMem B ON (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
 		INNER JOIN #TempExchange e  ON e.ExchangeDate = b.winlostdate   AND e.exchangeid = b.currency
 	END 
 END

@@ -20,6 +20,7 @@ AS
 		- 20140907@Dom:	[Redmine #22012] update VS Condition
 		- 20141103@Dom: Apply sport bettype matrix
 		- 20150415@Sophia: Support Betradar and revise code of Bettype matrix
+		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 */ 
 
 SET NOCOUNT ON  
@@ -159,7 +160,9 @@ where refno = @transid AND sp.productid IN (12)
 --Bettrans
 IF @WinlostDate > @MoveBetsDay
 BEGIN
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
+	--and @bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	--Sportbooks
 	INSERT INTO @Data
 	select 
@@ -574,7 +577,8 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
-	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3 AND s.bettype = @bettype)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -792,7 +796,9 @@ END
 ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay
 BEGIN
 	--Sportbooks
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+		--and @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()
+		and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -1205,7 +1211,8 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
-	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3 AND s.bettype = @bettype)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -1357,7 +1364,9 @@ END
 ELSE IF @WinlostDate < @BalanceUpDay
 BEGIN
 	--Sportbooks
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+		and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
+		--and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1778,7 +1787,8 @@ BEGIN
 	order by b.transid 
 	
 	-- Virtual HR
-	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3 AND s.bettype = @bettype)
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1854,7 +1864,7 @@ BEGIN
 			) bm on b.refno = bm.refno  
 	where	s.ProductID = 5 AND
 			s.EventType = 3 AND 
-			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
+			--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
 
 IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
@@ -1941,8 +1951,7 @@ BEGIN
 	IF @WinlostDate > @MoveBetsDay
 		INSERT INTO @DetailData
 		SELECT 
-			CASE WHEN sp.Productid in (4) THEN BG.refno
-						ELSE B2.refno END refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake,
 			BG.status,
@@ -1951,17 +1960,28 @@ BEGIN
 			BG.spositiontaking,
 			BG.bettype,
 			BG.betteam  
-		FROM bettransg BG with (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-				LEFT JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
-				LEFT JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
-		WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL
-	
+		FROM dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+		UNION ALL 
+		SELECT 
+			B2.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam  
+		FROM dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+
 	ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay	   
 		INSERT INTO @DetailData
 		SELECT 
-			CASE WHEN sp.Productid in (4) THEN BG.refno
-						ELSE B2.refno END refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake,
 			BG.status,
@@ -1970,16 +1990,27 @@ BEGIN
 			BG.spositiontaking,
 			BG.bettype,
 			BG.betteam  
-		FROM bettransg14 BG with (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-				LEFT JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
-				LEFT JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
-		WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL
+		FROM dbo.bettransg14 BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+		UNION ALL 
+		SELECT 
+			B2.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam  
+		FROM dbo.bettransg14 BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 	ELSE	
 		INSERT INTO @DetailData
 		SELECT 
-			CASE WHEN sp.Productid in (4) THEN BG.refno
-						ELSE B2.refno END refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake,
 			BG.status,
@@ -1989,10 +2020,22 @@ BEGIN
 			BG.bettype,
 			BG.betteam  
 		FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)
-					INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-				LEFT JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
-				LEFT JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
-		WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL	 
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+		UNION ALL 
+		SELECT 
+			B2.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam  
+		FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 END
 		   
 SELECT * FROM @DetailData

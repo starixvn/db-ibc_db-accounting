@@ -1539,8 +1539,7 @@ IF EXISTS (SELECT TOP 1 1
 BEGIN
  INSERT INTO @DetailData
 	SELECT 
-		CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B.refno END refno,
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1550,16 +1549,26 @@ BEGIN
 		BG.bettype,
 		BG.betteam  
 	FROM bettransg BG with (NOLOCK)  
-		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-		INNER JOIN @Data B ON BG.CustID = @CustID 
-				AND (sp.Productid in (4) AND BG.refno = B.refno AND BG.bettype = B.bettype)
-					OR (sp.Productid in (12) AND BG.refno = B.transid AND BG.bettype = B.bettype)	
-		   
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+		INNER JOIN @Data B ON BG.CustID = @CustID AND (sp.Productid in (4) AND BG.refno = B.refno AND BG.bettype = B.bettype)
+	UNION ALL
+	SELECT 
+		B.refno,
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam  
+	FROM bettransg BG with (NOLOCK)  
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+		INNER JOIN @Data B ON BG.CustID = @CustID AND (sp.Productid in (12) AND BG.refno = B.transid AND BG.bettype = B.bettype)
 
     INSERT INTO @DetailData
 	SELECT 
-		CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B.refno END refno,
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1569,10 +1578,22 @@ BEGIN
 		BG.bettype,
 		BG.betteam  
 	FROM bettransg14 BG with (NOLOCK)  
-		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-		INNER JOIN @Data B
-				ON  (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
-				OR (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+		INNER JOIN @Data B ON  (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
+	UNION ALL
+	SELECT 
+		B.refno,
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam  
+	FROM bettransg14 BG with (NOLOCK)  
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+		INNER JOIN @Data B ON  (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
 END
 
 SELECT	* FROM @Data

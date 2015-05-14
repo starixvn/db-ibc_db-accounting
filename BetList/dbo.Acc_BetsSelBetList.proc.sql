@@ -3131,7 +3131,8 @@ BEGIN
 		END
 	END
 	-- Virtual HR
-	ELSE IF @Bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	ELSE IF EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3 AND s.bettype = @bettype)
+	--ELSE IF @Bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
@@ -3670,8 +3671,7 @@ BEGIN
 	BEGIN
 		 INSERT INTO #BetListDetailData
 			SELECT 
-				CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B2.refno END refno, 
+				BG.refno, 
 				BG.odds, 
 				BG.stake,
 				BG.status,
@@ -3681,18 +3681,29 @@ BEGIN
 				BG.bettype,
 				BG.betteam
 			FROM dbo.bettransg BG with (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-				LEFT JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
-				LEFT JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
-			WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL		
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+			UNION ALL			
+			SELECT 
+				B2.refno, 
+				BG.odds, 
+				BG.stake,
+				BG.status,
+				BG.apositiontaking, 
+				BG.mpositiontaking, 
+				BG.spositiontaking,
+				BG.bettype,
+				BG.betteam
+			FROM dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 	END 
 
 	IF @Fromdate <= @MoveBetsDay
 	BEGIN	
 		INSERT INTO #BetListDetailData
 			SELECT 
-				CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B2.refno END refno,
+				BG.refno,
 				BG.odds, 
 				BG.stake,
 				BG.[status],
@@ -3702,10 +3713,22 @@ BEGIN
 				BG.bettype,
 				BG.betteam  
 			FROM dbo.bettransg14 BG with (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-				LEFT JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
-				LEFT JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
-			WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL		   
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+			UNION ALL			
+			SELECT 
+				B2.refno, 
+				BG.odds, 
+				BG.stake,
+				BG.status,
+				BG.apositiontaking, 
+				BG.mpositiontaking, 
+				BG.spositiontaking,
+				BG.bettype,
+				BG.betteam
+			FROM dbo.bettransg14 BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))	   
 	END 
 END
 		   

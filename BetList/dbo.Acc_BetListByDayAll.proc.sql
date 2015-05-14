@@ -1875,8 +1875,7 @@ IF EXISTS (SELECT TOP 1 1
 BEGIN
  INSERT INTO @DetailData
 	SELECT 
-		CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B2.refno END refno,
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1885,16 +1884,27 @@ BEGIN
 		BG.spositiontaking,
 		BG.bettype,
 		BG.betteam  
-	FROM bettransg BG with (NOLOCK)
-			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-			LEFT JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
-			LEFT JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
-	WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL
+	FROM dbo.bettransg BG with (NOLOCK)
+			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+			INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+	UNION ALL
+	SELECT 
+		B2.refno,
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam  
+	FROM dbo.bettransg BG with (NOLOCK)
+			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+			INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 
     INSERT INTO @DetailData
 	SELECT 
-		CASE WHEN sp.Productid in (4) THEN BG.refno
-					ELSE B2.refno END refno,
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1903,12 +1913,24 @@ BEGIN
 		BG.spositiontaking,
 		BG.bettype,
 		BG.betteam  
-	FROM bettransg14 BG with (NOLOCK)
-		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4,12)
-		LEFT JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
-		LEFT JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
-	WHERE B1.bettype IS NOT NULL OR B2.bettype IS NOT NULL
-	
+	FROM dbo.bettransg14 BG with (NOLOCK)
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+		INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+	UNION ALL
+	SELECT 
+		B2.refno,
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam  
+	FROM dbo.bettransg14 BG with (NOLOCK)
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+		INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+
 END
 		   
  SELECT * FROM @DetailData
