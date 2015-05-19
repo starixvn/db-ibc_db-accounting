@@ -18,6 +18,8 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail2]
 	@ShowVS		BIT=0,
 	@ShowCS  	BIT=0, -- RNG Casino
 	@ShowKN  	BIT=0, -- Keno
+	@ShowAGC	BIT = 0, --AG Casino
+	@ShowGD		BIT = 0, -- Gold Deluxe
 	@MoveBetsDay SMALLDATETIME,
 	@IsOld BIT = 0,
 	@drawfilter SMALLINT = 1,
@@ -46,6 +48,7 @@ AS
 		- 20140704@Jim: offer sporting solution
 		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
 		- 20150123@Jim: support base on GBP currency
+		- 20150518@Florent: Add AGC and GD
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  + @BaseCurrency (input currencyID): 2-MYR ; 3-USD; 6-EUR
@@ -135,6 +138,33 @@ DECLARE @Code VARCHAR(20), @TempCurrencyID INT
 DECLARE @bettype AS TABLE (bettype INT PRIMARY KEY)
 DECLARE @sporttype TABLE(sporttype INT)
 
+---- Party and config
+DECLARE @PartyId INT, @ProductList VARCHAR(100)
+SELECT @PartyId = p.PartyID 
+FROM bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) 
+WHERE p.OldRefID = @LicenseeID
+	AND p.PartyType = 1
+
+SELECT @ProductList = COALESCE(@ProductList + ',' + CAST(ProductPrefix AS VARCHAR), CAST(ProductPrefix AS VARCHAR))
+FROM bodb_licensee.dbo.LA_f_Products3rd('')
+WHERE (@ShowAGC = 1 AND ProductPrefix = 'AGC')
+	OR (@ShowGD = 1 AND ProductPrefix = 'GD')
+
+DECLARE @tmpParty AS TABLE (PartyId INT, LicenseeId INT, ProductID INT, Rate MONEY, FromDate SMALLDATETIME, ToDate SMALLDATETIME)
+
+INSERT INTO @tmpParty(PartyId, LicenseeId, ProductID, Rate, Fromdate, Todate)
+	(
+		SELECT PartyID, LicenseeID, ProductID, DI_Rate, Fromdate, Todate
+		FROM bodb_licensee.dbo.LA_f_ChargeInfo(@PartyID, @FromDate, @ToDate, @ProductList, 'OA', @excludeTest)
+		WHERE DI_Rate > 0
+	)
+
+INSERT INTO @Bettype (Bettype)
+	(
+		SELECT Bettype
+		FROM bodb_licensee.dbo.LA_f_BettypeProductMapping(0, @ProductList)
+	)
+-----
 SELECT TOP 1 @TempCurrencyID=currency FROM @tempAg 
 
 IF @TempCurrencyID=51
@@ -1125,7 +1155,225 @@ BEGIN
 	END
 	
  END
-   
+ --
+	DECLARE @Recommend VARCHAR(8000) = '', @SQL VARCHAR(8000) = ''
+	CREATE TABLE #DataWinloss3rd (CustId INT, Recommend	INT, Winlostdate DATETIME, SportType INT, Currency INT, TurnOver MONEY, TotalTrans INT, Winloss MONEY)		
+	DECLARE @TempSMAG AS TABLE( LicenseeeID INT,SuperId INT, MasterId INT, CustId INT, CurrencyId INT)
+
+	--get licensee recommend				
+	INSERT INTO @TempSMAG(LicenseeeID, SuperId, MasterId, CustId, CurrencyId)
+	SELECT DISTINCT LicenseeID, ci.srecommend, ci.mrecommend, lc.CustID, lc.Currency
+	FROM bodb_licensee.dbo.f_SelLicenseeCust(@LicenseeID) lc
+		INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON lc.CustID = ci.recommend
+	WHERE (@Currency = 0 OR (@Currency <> 0 AND lc.Currency = @Currency))
+		AND lc.Currency <> 20
+		AND (@CustId = 0 OR (@CustId <> 0 AND ci.recommend = @CustId))
+	SELECT @Recommend = @Recommend + CAST(CustID AS VARCHAR) + ',' 
+	FROM @TempSMAG 
+	--truncate comma
+	SET @Recommend = SUBSTRING(@Recommend, 0, LEN(@Recommend))
+
+	IF @ShowAGC = 1 -- AG Casino
+		BEGIN						
+			SET @SQL =
+					'SELECT CustId, Recommend, Winlostdate, SportType, Currency, TurnOver, TotalTrans, Winloss
+					FROM OPENQUERY(DBACC, ''SELECT ag.Custid
+											 , Winlostdate
+											 , SportType
+											 , ag.Currency
+											 , TurnOver - CASE WHEN '+ CAST(@DrawFilter AS varchar) +' IN (1,2) THEN DrawTO ELSE 0 END AS TurnOver
+											 , BetCount - CASE WHEN '+ CAST(@DrawFilter AS varchar) +' IN (1) THEN DrawBetCount ELSE 0 END AS TotalTrans
+											 , Winlost AS Winloss
+											 , c.recommend
+											FROM bodb_report.dbo.rptDepWinlost_AGCasino ag WITH (NOLOCK)
+												INNER JOIN bodb02.dbo.custInfo c WITH (NOLOCK) ON ag.Custid = c.custid
+											WHERE Winlostdate BETWEEN '''''+ CONVERT( VARCHAR(10),@FromDate, 120) +''''' AND '''''+ CONVERT( VARCHAR(10),@FromDate, 120) +'''''
+												AND c.recommend IN ('+ ISNULL(@recommend, 0) +')
+									'')'
+													
+			INSERT INTO #DataWinloss3rd(CustId, Recommend, Winlostdate, SportType, Currency, TurnOver, TotalTrans, Winloss)
+			EXECUTE (@SQL)
+
+			INSERT INTO #SAgWinLoss(CustID, Currency
+								, TurnOver, Winlost, LicenseeWL, WinlossRB, AmtDueToBA, AmtDueToRB, CommBA, CommRB, PlayerComm, Company
+								, TurnOverMYR, WinlostMYR, LicenseeWLMYR, WinlossRBMYR, AmtDueToBAMYR, AmtDueToRBMYR, CommBAMYR, CommRBMYR, PlayerCommMYR, CompanyMYR
+								, TurnOverUSD, WinlostUSD, LicenseeWLUSD, WinlossRBUSD, AmtDueToBAUSD, AmtDueToRBUSD, CommBAUSD, CommRBUSD, PlayerCommUSD, CompanyUSD
+								, TurnOverEUR, WinlostEUR, LicenseeWLEUR, WinlossRBEUR, AmtDueToBAEUR, AmtDueToRBEUR, CommBAEUR, CommRBEUR, PlayerCommEUR, CompanyEUR
+								, TurnOverGBP, WinlostGBP, LicenseeWLGBP, WinlossRBGBP, AmtDueToBAGBP, AmtDueToRBGBP, CommBAGBP, CommRBGBP, PlayerCommGBP, CompanyGBP
+								, Betcount)
+			(
+				SELECT b.CustId
+					, CurrencyID						AS Currency 
+					--original
+					, SUM(Turnover)						AS Turnover
+					, SUM(WinLoss)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate))	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate)			AS Company
+					--MYR
+					, SUM(Turnover * e.MYR)						AS Turnover
+					, SUM(WinLoss * e.MYR)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.MYR)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.MYR)			AS Company
+					--USD
+					, SUM(Turnover * e.USD)						AS Turnover
+					, SUM(WinLoss * e.USD)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.USD)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.USD)			AS Company
+					--EUR
+					, SUM(Turnover * e.EUR)						AS Turnover
+					, SUM(WinLoss * e.EUR)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.EUR)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.EUR)			AS Company 
+
+					--GBP
+					, SUM(Turnover * e.GBP)						AS Turnover
+					, SUM(WinLoss * e.GBP)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.GBP)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.GBP)			AS Company 
+
+					, SUM(b.TotalTrans)					AS BetCount	  	  
+				FROM #DataWinloss3rd b WITH (NOLOCK)	
+					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId								
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId
+					LEFT JOIN @Exchange e  ON e.ExchangeDate = b.winlostdate AND e.exchangeid = b.currency
+				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
+				GROUP BY b.CustId, CurrencyID 
+			)			
+		END
+	IF @ShowGD = 1 -- GD
+	BEGIN
+		-- reset 
+		DELETE #DataWinloss3rd		
+
+		INSERT INTO #DataWinloss3rd(CustId, Recommend, Winlostdate, Currency, TurnOver, TotalTrans, Winloss)
+		SELECT c.Custid
+				, co.recommend			AS Recommend	
+				, c.Winlostdate			AS Winlostdate
+				, c.Currency			
+				, SUM(c.TurnOver - 
+						CASE WHEN @DrawFilter IN (2, 3) 
+								THEN c.DrawTO 
+							ELSE 0 
+						END)			AS TurnOver
+				, SUM(c.BetCount - 
+						CASE WHEN @DrawFilter = 2
+										THEN c.DrawBetCount
+									ELSE 0 
+								END)	AS TotalTrans
+				, SUM(c.Winlost)		AS Winloss
+			FROM bodb_LicenseeReport.dbo.rptDepWinlost_ThirdParty c WITH (NOLOCK)
+				INNER JOIN dbo.Custinfo co WITH (NOLOCK) ON c.CustID = co.CustID	
+				INNER JOIN @TempSMAG ag ON co.recommend = ag.CustId
+			WHERE c.Winlostdate BETWEEN @FromDate AND @Todate				
+				AND (c.ProductId IN (SELECT ProductID FROM bodb_licensee.dbo.LRF_f_Products3rd(@ProductList)))
+			GROUP BY c.Custid, co.recommend, c.Winlostdate, c.Currency	
+			
+		INSERT INTO #SAgWinLoss(CustID, Currency
+								, TurnOver, Winlost, LicenseeWL, WinlossRB, AmtDueToBA, AmtDueToRB, CommBA, CommRB, PlayerComm, Company
+								, TurnOverMYR, WinlostMYR, LicenseeWLMYR, WinlossRBMYR, AmtDueToBAMYR, AmtDueToRBMYR, CommBAMYR, CommRBMYR, PlayerCommMYR, CompanyMYR
+								, TurnOverUSD, WinlostUSD, LicenseeWLUSD, WinlossRBUSD, AmtDueToBAUSD, AmtDueToRBUSD, CommBAUSD, CommRBUSD, PlayerCommUSD, CompanyUSD
+								, TurnOverEUR, WinlostEUR, LicenseeWLEUR, WinlossRBEUR, AmtDueToBAEUR, AmtDueToRBEUR, CommBAEUR, CommRBEUR, PlayerCommEUR, CompanyEUR
+								, TurnOverGBP, WinlostGBP, LicenseeWLGBP, WinlossRBGBP, AmtDueToBAGBP, AmtDueToRBGBP, CommBAGBP, CommRBGBP, PlayerCommGBP, CompanyGBP
+								, Betcount)
+			(
+				SELECT b.CustId
+					, CurrencyID						AS Currency 
+					--original
+					, SUM(Turnover)						AS Turnover
+					, SUM(WinLoss)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate))	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate)			AS Company
+					--MYR
+					, SUM(Turnover * e.MYR)						AS Turnover
+					, SUM(WinLoss * e.MYR)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.MYR)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.MYR)			AS Company
+					--USD
+					, SUM(Turnover * e.USD)						AS Turnover
+					, SUM(WinLoss * e.USD)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.USD)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.USD)			AS Company
+					--EUR
+					, SUM(Turnover * e.EUR)						AS Turnover
+					, SUM(WinLoss * e.EUR)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.EUR)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.EUR)			AS Company 
+
+					--GBP
+					, SUM(Turnover * e.GBP)						AS Turnover
+					, SUM(WinLoss * e.GBP)						AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate) * e.GBP)	AS LicenseeWL				
+					, 0									AS WinlossRB
+					, 0									AS AmtDueToBA
+					, 0									AS AmtDueToRB
+					, 0									AS CommBA
+					, 0									AS CommRB
+					, 0									AS PlayerComm
+					, - SUM(WinLoss * p.Rate * e.GBP)			AS Company 
+
+					, SUM(b.TotalTrans)					AS BetCount	  	  
+				FROM #DataWinloss3rd b WITH (NOLOCK)	
+					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId								
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId
+					LEFT JOIN @Exchange e  ON e.ExchangeDate = b.winlostdate AND e.exchangeid = b.currency
+				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
+				GROUP BY b.CustId, CurrencyID
+			)			
+	END
  SELECT 
 	c.username,  
 	SUBSTRING(c.username2, CHARINDEX('$', c.username2) + 1,LEN(c.username2) - CHARINDEX('$',c.username2)) AS nickname,

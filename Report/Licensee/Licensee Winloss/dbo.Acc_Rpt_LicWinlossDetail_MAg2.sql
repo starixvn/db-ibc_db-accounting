@@ -13,6 +13,8 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_MAg2]
  @ShowVS  BIT=0,  
  @ShowCS  BIT=0, -- RNG Casino
  @ShowKN  BIT=0, -- Keno
+ @ShowAGC		BIT = 0, --AG Casino
+ @ShowGD		BIT = 0, -- Gold Deluxe
  @MoveBetsDay SMALLDATETIME,  
  @IsOld BIT = 0,  
  @drawfilter SMALLINT = 1,  
@@ -30,6 +32,8 @@ AS
 	- 20140704@Jim: offer sporting solution
 	- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
 	- 20150123@Jim: support base on GBP currency
+	- 20150518@Florent: Add AGC and GD
+
  Param's Explanation:    
    + @CustID: SuperID    
    + @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)  
@@ -71,6 +75,34 @@ BEGIN
 
 	DECLARE @bettype AS TABLE (bettype INT PRIMARY KEY)  
 	DECLARE @sporttype TABLE(sporttype INT)  
+
+	---- Party and config
+	DECLARE @PartyId INT, @ProductList VARCHAR(100)
+	SELECT @PartyId = p.PartyID 
+	FROM bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) 
+	WHERE p.OldRefID = @LicenseeID
+		AND p.PartyType = 1
+
+	SELECT @ProductList = COALESCE(@ProductList + ',' + CAST(ProductPrefix AS VARCHAR), CAST(ProductPrefix AS VARCHAR))
+	FROM bodb_licensee.dbo.LA_f_Products3rd('')
+	WHERE (@ShowAGC = 1 AND ProductPrefix = 'AGC')
+		OR (@ShowGD = 1 AND ProductPrefix = 'GD')
+
+	DECLARE @tmpParty AS TABLE (PartyId INT, LicenseeId INT, ProductID INT, Rate MONEY, FromDate SMALLDATETIME, ToDate SMALLDATETIME)
+
+	INSERT INTO @tmpParty(PartyId, LicenseeId, ProductID, Rate, Fromdate, Todate)
+		(
+			SELECT PartyID, LicenseeID, ProductID, DI_Rate, Fromdate, Todate
+			FROM bodb_licensee.dbo.LA_f_ChargeInfo(@PartyID, @FromDate, @ToDate, @ProductList, 'OA', @excludeTest)
+			WHERE DI_Rate > 0
+		)
+
+	INSERT INTO @Bettype (Bettype)
+		(
+			SELECT Bettype
+			FROM bodb_licensee.dbo.LA_f_BettypeProductMapping(0, @ProductList)
+		)
+	-----
 
 	SELECT @VNDCurrencyName = currency FROM exchange (NOLOCK) WHERE ExchangeId = 51   
 		
@@ -447,7 +479,110 @@ IF @IsOld = 1
 	 END  
 	   
 	 END  
-	   
+	 
+	 --
+	DECLARE @Recommend VARCHAR(8000) = '', @SQL VARCHAR(8000) = ''
+	CREATE TABLE #DataWinloss3rd (Recommend	INT, Winlostdate DATETIME, SportType INT, Currency INT, TurnOver MONEY, TotalTrans INT, Winloss MONEY)
+	DECLARE @TempSMAG AS TABLE( LicenseeeID INT,SuperId INT, MasterId INT, CustId INT, CurrencyId INT)
+
+	--get licensee recommend				
+	INSERT INTO @TempSMAG(LicenseeeID, SuperId, MasterId, CustId, CurrencyId)
+	SELECT DISTINCT LicenseeID, ci.srecommend, ci.mrecommend, lc.CustID, lc.Currency
+	FROM bodb_licensee.dbo.f_SelLicenseeCust(@LicenseeID) lc
+		INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON lc.CustID = ci.recommend
+	WHERE (@Currency = 0 OR (@Currency <> 0 AND lc.Currency = @Currency))
+		AND lc.Currency <> 20
+		AND ci.srecommend = @Srecommend
+
+	SELECT @Recommend = @Recommend + CAST(CustID AS VARCHAR) + ',' 
+	FROM @TempSMAG 
+	--truncate comma
+	SET @Recommend = SUBSTRING(@Recommend, 0, LEN(@Recommend))	
+
+	IF @ShowAGC = 1 -- AG Casino
+		BEGIN
+			SELECT @sql = 'SELECT Recommend, Winlostdate, SportType, Currency, TurnOver, TotalTrans, Winloss
+							FROM OPENQUERY(DBACC,''EXEC bodb02.dbo.LA_Rpt_3rdProductWinloss_xtest
+													@ProductCodes		= ''''@ProductCodes_''''
+												, @Recommend		= ''''@Recommend_''''
+												, @Currency 		= @Currency_
+												, @FromDate 		= ''''@FromDate_''''
+												, @ToDate 			= ''''@ToDate_''''
+												, @DrawFilter 			= ''''@DrawFilter_''''
+												'')'
+			SET @SQL = REPLACE(@SQL, '@ProductCodes_', @ProductList)
+			SET @SQL = REPLACE(@SQL, '@Recommend_', @Recommend)
+			SET @SQL = REPLACE(@SQL, '@Currency_', @Currency)
+			SET @SQL = REPLACE(@SQL, '@FromDate_', CONVERT( VARCHAR(10),@FromDate, 120))
+			SET @SQL = REPLACE(@SQL, '@ToDate_', CONVERT( VARCHAR(10),@ToDate, 120))			
+			SET @SQL = REPLACE(@SQL, '@DrawFilter_', @drawfilter)	
+			
+			INSERT INTO #DataWinloss3rd(Recommend, Winlostdate, SportType, Currency, TurnOver, TotalTrans, Winloss)
+			EXECUTE (@SQL)
+
+			INSERT INTO #SAgWinLoss(winlostdate, CustID, Currency, TurnOver, Winlost, LicenseeWL, WinlossRB, AmtDueToBA, AmtDueToRB, CommBA, CommRB, PlayerComm, Company, Betcount)
+			(
+				SELECT   			   
+					b.Winlostdate     
+					, ag.MasterId
+					, CurrencyID		   
+					, SUM(Turnover) AS Turnover
+					, SUM(WinLoss) AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate)) AS LicenseeWL				
+					, 0 AS WinlossRB
+					, 0 AS AmtDueToBA
+					, 0 AS AmtDueToRB
+					, 0 AS CommBA
+					, 0 AS CommRB
+					, 0 AS PlayerComm
+					, - SUM(WinLoss * p.Rate) AS Company 
+					, SUM(b.TotalTrans) AS BetCount	  	  
+				FROM #DataWinloss3rd b WITH (NOLOCK)	
+					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId								
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId
+				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
+				GROUP BY b.Winlostdate, ag.MasterId, CurrencyID 
+			)			
+		END
+	IF @ShowGD = 1 -- GD
+	BEGIN
+		-- reset 
+		DELETE #DataWinloss3rd		
+
+		INSERT INTO #DataWinloss3rd(Recommend, Winlostdate, Currency, TurnOver, TotalTrans, Winloss)
+		EXECUTE dbo.LA_Rpt_ThirdPartyProductWinloss
+				@ProductCodes	= @ProductList
+				, @Recommend	= @Recommend
+				, @Currency 	= @Currency
+				, @DrawFilter	= @drawfilter
+				, @FromDate 	= @FromDate
+				, @ToDate 		= @ToDate
+			
+		INSERT INTO #SAgWinLoss(winlostdate,CustID, Currency, TurnOver, Winlost, LicenseeWL, WinlossRB, AmtDueToBA, AmtDueToRB, CommBA, CommRB, PlayerComm, Company, Betcount)
+			(
+				SELECT   			   
+					b.Winlostdate     
+					, ag.MasterId
+					, b.currency	   
+					, SUM(Turnover) AS Turnover
+					, SUM(WinLoss) AS Winlost			
+					, - SUM(Winloss * ( 1 - p.Rate)) AS LicenseeWL				
+					, 0 AS WinlossRB
+					, 0 AS AmtDueToBA
+					, 0 AS AmtDueToRB
+					, 0 AS CommBA
+					, 0 AS CommRB
+					, 0 AS PlayerComm
+					, - SUM(WinLoss * p.Rate) AS Company 
+					, SUM(b.TotalTrans) AS BetCount	  
+				FROM #DataWinloss3rd b WITH (NOLOCK)	
+					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId									
+				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
+				GROUP BY b.Winlostdate, ag.MasterId, b.Currency
+			)			
+	END 
+
 	 CREATE NONCLUSTERED INDEX IDX_Index_SA ON #SAgWinLoss(Currency)  
 	 SELECT * INTO #TempExchange  
 	 FROM Lrf_f_GetExchangeDaily (@Fdate,@Tdate)  
