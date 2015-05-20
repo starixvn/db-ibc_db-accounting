@@ -67,7 +67,7 @@ BEGIN
 		   srecommend =  C.srecommend,
 		   mrecommend =  C.mrecommend,
 		   recommend =  C.recommend,
-		   CustomerName =  C.Username,
+		   CustomerName = CASE WHEN C.RoleID = 1 THEN C.Username END,
 		   Site =  C.Site,
 		   RoleId = C.RoleId
 	FROM   @CreditMovement L
