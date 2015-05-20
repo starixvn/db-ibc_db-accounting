@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_BetDaq_Push]    Script Date: 04/02/2015 13:32:33 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetDaq_Push]
 	@MatchId int,
 	@AdminId int, 	
@@ -15,6 +22,7 @@ AS
 	Revisions: 
 	- 20140506@Kathy: Don't allow to calculate exists matches in queue
 	- 20141030@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+	- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
 	
 
 	Param's Explanation:
@@ -38,10 +46,12 @@ BEGIN
 			,@leagueid int
 			,@sqlCommand NVARCHAR(500)
 			,@procName nvarchar(50)	
+			,@Action VARCHAR(10)
 
 	SELECT   @matchcode = m.matchcode
 			,@sporttype = m.sporttype
 			,@leagueid = m.leagueid
+			,@Action = 'BetDaq'
 	FROM match m with(NOLOCK)
 	where m.matchid = @MatchId
 
@@ -59,7 +69,22 @@ BEGIN
 				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
 		RETURN
 	END 
-
+	
+	-- check waiting ticket
+	EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'REFUND'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrCode
+			,@ErrMsg
+		
+		RETURN
+	END
+	
 	SELECT   @ErrCode = 0
 			,@ErrMsg = ''
 			,@procName = OBJECT_NAME(@@procid)
@@ -87,9 +112,14 @@ BEGIN
 	ELSE
 	BEGIN
 		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'Refund-Betdaq', @sqlCommand
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand
 	END
 END
+
+
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetDaq_Push] TO [bodbAdminNet] AS [dbo]
 GO

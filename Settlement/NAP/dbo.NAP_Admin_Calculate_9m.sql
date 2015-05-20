@@ -1,8 +1,10 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
-	,@fth INT
-	,@fta INT
-	,@hth INT
-	,@hta INT
+	,@fth INT = NULL
+	,@fta INT = NULL
+	,@hth INT = NULL
+	,@hta INT = NULL
 	,@matchdate DATETIME
 	,@action VARCHAR(10) = 'CAL'
 	,@resultPS NVARCHAR(10) = NULL -- PS:Y/N;
@@ -37,6 +39,38 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@SetxGameyREFUND		VARCHAR(MAX) = NULL 
 	,@SelectedSetCAL		VARCHAR(50)  = NULL
 	,@SelectedSetREFUND		VARCHAR(50)  = NULL 
+
+	,@GoalSequence			VARCHAR(50) = NULL 
+	,@fthCorners			INT = NULL 
+	,@ftaCorners			INT = NULL 
+	,@hthCorners			INT = NULL 
+	,@htaCorners			INT = NULL 	
+	,@FTFCorner				VARCHAR(10)	= NULL 
+	,@FTLCorner				VARCHAR(10)	= NULL 
+	,@HTFCorner				VARCHAR(10)	= NULL 
+	,@HTLCorner				VARCHAR(10)	= NULL
+	,@penaltyshootout		VARCHAR(10)	= NULL	-- Betradar 2 - Auto BETS 
+	,@matchDecidedMethod	VARCHAR(10)	= NULL
+	,@1st10Min1x2			VARCHAR(10)	= NULL
+	,@1stGoalTime10Min		VARCHAR(10)	= NULL
+	,@1stGoalTime15Min		VARCHAR(10)	= NULL
+	,@WhoAdvancesNextRound	VARCHAR(10) = NULL
+	,@ExtraTimeandGoal		VARCHAR(10)	= NULL
+	,@ExtraTimeYN			VARCHAR(10) = NULL
+	,@PlayerSentOff			VARCHAR(10) = NULL
+	,@HTPlayerSentOff		VARCHAR(10) = NULL
+	,@PlayerSentOffHome		VARCHAR(10) = NULL
+	,@HTPlayerSentOffHome	VARCHAR(10) = NULL
+	,@PlayerSentOffAway		VARCHAR(10) = NULL
+	,@HTPlayerSentOffAway	VARCHAR(10) = NULL
+	,@GoalScorerFirst		VARCHAR(10) = NULL				
+	,@1HNextGoal			VARCHAR(MAX)= NULL
+	,@NextGoal				VARCHAR(MAX)= NULL
+	,@NextGoalTime15Min		VARCHAR(MAX)= NULL
+	,@ExtraNextGoal			VARCHAR(MAX)= NULL
+	,@GoalScorerAnytime		VARCHAR(MAX)= NULL
+	,@ResourceIDsCAL		VARCHAR(MAX)= NULL
+	,@ResourceIDsREFUND		VARCHAR(MAX)= NULL
 	,@ResourceIDs			VARCHAR(MAX)= NULL
 WITH RECOMPILE
 AS
@@ -57,7 +91,9 @@ AS
 							sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20141204@Jamie: Sportting Solution settlement - Change rule Set x Correct Score [Redmine:#23034]
+		- 20150407@Kathy: Don't update 'waiting' ticket when do "Undo" action [Redmine:#33493]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150505@Jamie: Converting error [HotFix #35259]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -205,6 +241,14 @@ BEGIN
 					 WHEN @SelectedSetREFUND LIKE '%6%' AND Bettype IN (1,2,3,20,153,1301,1302,1303,1305,1306,1308) THEN 1 
 					 ELSE 0 END
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+				WHEN @ResourceIDsREFUND IS NOT NULL 
+					AND Bettype IN (160,164,169,180) 
+					AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsREFUND)>0 THEN 1 
+			WHEN @ResourceIDsREFUND IS NOT NULL 
+						AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+						AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsREFUND)>0 THEN 1 
+			ELSE 0 END   --Betradar 2 Auto Bettype
 		
 
 		UPDATE dbo.BetParlayDetail
@@ -225,6 +269,14 @@ BEGIN
 					 ELSE 0 END
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		AND statusID NOT IN (101, 102)
+		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+				WHEN @ResourceIDsREFUND IS NOT NULL 
+					AND Bettype IN (160,164,169,180) 
+					AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsREFUND)>0 THEN 1 
+			WHEN @ResourceIDsREFUND IS NOT NULL 
+						AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+						AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsREFUND)>0 THEN 1 
+			ELSE 0 END   --Betradar 2 Auto Bettype
 		
 	END
 			-- ===================================================
@@ -237,22 +289,38 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		AND statusID NOT IN (101, 102)
+		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+				WHEN @ResourceIDsREFUND IS NOT NULL 
+					AND Bettype IN (160,164,169,180) 
+					AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsREFUND)>0 THEN 1 
+			WHEN @ResourceIDsREFUND IS NOT NULL 
+						AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+						AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsREFUND)>0 THEN 1 
+			ELSE 0 END   --Betradar 2 Auto Bettype
 
 		UPDATE dbo.BetParlayDetail
 		SET winlostdate = @matchdate
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151) 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		AND statusID NOT IN (101, 102)
+		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+				WHEN @ResourceIDsREFUND IS NOT NULL 
+					AND Bettype IN (160,164,169,180) 
+					AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsREFUND)>0 THEN 1 
+			WHEN @ResourceIDsREFUND IS NOT NULL 
+						AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+						AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsREFUND)>0 THEN 1 
+			ELSE 0 END   --Betradar 2 Auto Bettype
 	END
 	ELSE IF @action = 'REFUND-HT'
 	BEGIN
@@ -264,20 +332,36 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151) 
-				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) 
+				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
+		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+				WHEN @ResourceIDsREFUND IS NOT NULL 
+					AND Bettype IN (160,164,169,180) 
+					AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsREFUND)>0 THEN 1 
+			WHEN @ResourceIDsREFUND IS NOT NULL 
+						AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+						AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsREFUND)>0 THEN 1 
+			ELSE 0 END   --Betradar 2 Auto Bettypes 
 
 		UPDATE dbo.BetParlayDetail
 		SET winlostdate = @matchdate
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151) 
-				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152) AND @IsRefundHT = 1)
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) 
+				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
+		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+				WHEN @ResourceIDsREFUND IS NOT NULL 
+					AND Bettype IN (160,164,169,180) 
+					AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsREFUND)>0 THEN 1 
+			WHEN @ResourceIDsREFUND IS NOT NULL 
+						AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+						AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsREFUND)>0 THEN 1 
+			ELSE 0 END   --Betradar 2 Auto Bettype
 
 	END
 			-- ===================================================
@@ -323,7 +407,7 @@ BEGIN
 			,ruben = 0
 			,statusID = 0
 		WHERE matchid = @matchid 
-		AND statusID NOT IN (101, 102)
+		AND statusID NOT IN (101, 102, 1)
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		AND 1 = CASE WHEN @SelectedSet IS NULL THEN 1 
@@ -334,9 +418,9 @@ BEGIN
 					 WHEN @SelectedSet LIKE '%5%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '805%' THEN 1
 					 WHEN @SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20,153,1301,1302,1303,1305,1306,1308) THEN 1 
 					 ELSE 0 END
-		AND 1 = CASE WHEN @ResourceIDs IS NULL OR Bettype NOT IN (135,160,164,169,175,176,180,192,193) THEN 1 
-					 WHEN Bettype IN (160,164,169,180) AND CHARINDEX(SUBSTRING(CAST(betcheck AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
-					 WHEN Bettype IN (135,175,176,192,193) AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDs)>0 THEN 1 
+		AND 1 = CASE WHEN @ResourceIDs IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1 
+					 WHEN @ResourceIDs IS NOT NULL AND Bettype IN (160,164,169,180) AND CHARINDEX(SUBSTRING(CAST(betcheck AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
+					 WHEN @ResourceIDs IS NOT NULL AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDs)>0 THEN 1 
 					 ELSE 0 END 
 
 		UPDATE dbo.BetParlayDetail
@@ -354,9 +438,9 @@ BEGIN
 					 WHEN @SelectedSet LIKE '%5%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '805%' THEN 1
 					 WHEN @SelectedSet LIKE '%6%' AND Bettype IN (1,2,3,20,153,1301,1302,1303,1305,1306,1308) THEN 1 
 					 ELSE 0 END
-		AND 1 = CASE WHEN @ResourceIDs IS NULL OR Bettype NOT IN (135,160,164,169,175,176,180,192,193) THEN 1 
-					 WHEN Bettype IN (160,164,169,180) AND CHARINDEX(SUBSTRING(CAST(betcheck AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
-					 WHEN Bettype IN (135,175,176,192,193) AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDs)>0 THEN 1 
+		AND 1 = CASE WHEN @ResourceIDs IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1 
+					 WHEN @ResourceIDs IS NOT NULL AND Bettype IN (160,164,169,180) AND CHARINDEX(SUBSTRING(CAST(betcheck AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
+					 WHEN @ResourceIDs IS NOT NULL AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDs)>0 THEN 1 
 					 ELSE 0 END 
 	END
 			-- ===================================================
@@ -364,16 +448,17 @@ BEGIN
 	ELSE IF @action = 'CAL'
 	BEGIN
 		DECLARE  @csHTFT NVARCHAR(10) -- HT/FT correct score
-				,@penaltyshootout NVARCHAR(1)
 	
 		SELECT @csHTFT = CASE WHEN @hth + @hta >= 4 THEN '4+' 
-							ELSE CAST(@hth AS nvarchar(1)) + ':' + CAST(@hta AS nvarchar(1))
+							ELSE CAST(@hth AS nvarchar(10)) + ':' + CAST(@hta AS nvarchar(10))
 							END 
 					+ '/'
 					+ CASE WHEN @fth + @fta >=4 THEN '4+'
-						    ELSE CAST(@fth AS nvarchar(1)) + ':' + CAST(@fta AS nvarchar(1))
+						    ELSE CAST(@fth AS nvarchar(10)) + ':' + CAST(@fta AS nvarchar(10))
 							END
-			, @penaltyshootout = LEFT(RIGHT(RTRIM(@resultPS),2),1) -- @resultPS: PS:Y; 
+		DECLARE @FirstGoal NVARCHAR(50) 
+		SELECT	@FirstGoal=''
+		SELECT	@FirstGoal = LEFT(REPLACE(ISNULL(@GoalSequence,''),';',''),1) --172  --@GoalSequence = GoalRecord 
 
 		DECLARE	 @TotalGameHomeSetx	INT
 				,@TotalGameAwaySetx INT  
@@ -769,6 +854,359 @@ BEGIN
 						WHEN N'o' THEN (@TotalGameHomeSetx + @TotalGameAwaySetx) - hdp1 
 						WHEN N'u' THEN hdp1 - (@TotalGameHomeSetx + @TotalGameAwaySetx) 
 						END
+				-- Betradar 2 
+				WHEN 160 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@NextGoal)> 0 THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 164 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@ExtraNextGoal)> 0 THEN 1 
+						 ELSE - 1 
+						 END
+
+				WHEN 168 THEN 
+					CASE WHEN Betteam = @WhoAdvancesNextRound THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 169 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@NextGoalTime15Min)> 0 THEN 1 
+						 ELSE - 1 
+						 END
+				WHEN 173 THEN 
+					CASE WHEN Betteam = @ExtraTimeYN THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 174 THEN 
+					CASE WHEN Betteam = @ExtraTimeandGoal THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 175 THEN 
+					CASE WHEN Betteam = @matchDecidedMethod THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 176 THEN 
+					CASE WHEN Betteam = @1st10Min1x2 THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 180 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@1HNextGoal)> 0 THEN 1 
+						 ELSE - 1 
+						 END
+				WHEN 192 THEN 
+					CASE WHEN Betteam = @1stGoalTime10Min THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 193 THEN 
+					CASE WHEN Betteam = @1stGoalTime15Min THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 210 THEN 
+					CASE WHEN Betteam = @PlayerSentOff THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 211 THEN 
+					CASE WHEN Betteam = @HTPlayerSentOff THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 212 THEN 
+					CASE WHEN Betteam = @PlayerSentOffHome THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 213 THEN 
+					CASE WHEN Betteam = @HTPlayerSentOffHome THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 214 THEN 
+					CASE WHEN Betteam = @PlayerSentOffAway THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 215 THEN 
+					CASE WHEN Betteam = @HTPlayerSentOffAway THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 216 THEN 
+					CASE WHEN CHARINDEX(betteam,@GoalScorerAnytime)>0 THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 217 THEN 
+					CASE WHEN Betteam = @GoalScorerFirst THEN 1 
+						 ELSE - 1
+						 END 
+
+				-- Betradar 2 Manual Bettype 
+				WHEN 157 THEN 
+					CASE WHEN betteam =N'h' AND ((@fth + @fta) &1) = 1 THEN 1 
+						 WHEN betteam =N'a' AND ((@fth + @fta) &1) = 0 THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 159 THEN 
+					CASE WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G6' AND ((@fth + @fta) >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 161 THEN 
+					CASE WHEN betteam LIKE 'G[0-2]' AND (@fth = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@fth >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 162 THEN 
+					CASE WHEN betteam LIKE 'G[0-2]' AND (@fta = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@fta >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 163 THEN 
+					CASE WHEN betteam = 'ho' AND (@fth -@fta) > 0 THEN (@fth + @fta) - hdp1
+						 WHEN betteam = 'hu' AND (@fth -@fta) > 0 THEN hdp1 - (@fth + @fta)
+						 WHEN betteam = 'ao' AND (@fth -@fta) < 0 THEN (@fth + @fta) - hdp1
+						 WHEN betteam = 'au' AND (@fth -@fta) < 0 THEN hdp1 - (@fth + @fta)
+						 WHEN betteam = 'do' AND (@fth -@fta) = 0 THEN (@fth + @fta) - hdp1
+						 WHEN betteam = 'du' AND (@fth -@fta) = 0 THEN hdp1 - (@fth + @fta)	
+						 ELSE -1 
+						 END 
+				WHEN 165 THEN 
+					CASE 
+						WHEN betteam = (CAST(@hth AS VARCHAR(4)) + ':' + CAST(@hta AS VARCHAR(4))) THEN 1
+						ELSE - 1
+						END				
+				WHEN 166 THEN 
+					CASE 
+						WHEN betteam = (CAST(@fth AS VARCHAR(4)) + ':' + CAST(@fta AS VARCHAR(4))) THEN 1
+						ELSE - 1
+						END	
+				WHEN 167 THEN 
+					CASE 
+						WHEN (betteam = N'1') AND (@fth > @fta) THEN 1
+						WHEN (betteam = N'2') AND (@fta > @fth) THEN 1
+						WHEN (betteam = N'x') AND (@fth = @fta) THEN 1
+						ELSE - 1
+						END
+				WHEN 170 THEN		
+					CASE 
+						WHEN betteam =N'h' AND (@fth > 0 AND @fta = 0) THEN 1
+						WHEN betteam =N'a' AND (@fth = 0 AND @fta > 0) THEN 1
+						WHEN betteam =N'b' AND (@fth > 0 AND @fta > 0) THEN 1
+						WHEN betteam =N'n' AND (@fth = 0 AND @fta = 0) THEN 1
+						ELSE -1
+						END 
+				WHEN 171 THEN	
+					CASE 
+						WHEN betteam = 'h1' AND (@fth -@fta) = 1 THEN 1		--171 
+						WHEN betteam = 'h2' AND (@fth -@fta) = 2 THEN 1 
+						WHEN betteam = 'h3' AND (@fth -@fta) >=3 THEN 1 
+						WHEN betteam = 'd' AND (@fth -@fta) =0 THEN 1 
+						WHEN betteam = 'a1' AND (@fth -@fta) =-1 THEN 1 
+						WHEN betteam = 'a2' AND (@fth -@fta) =-2 THEN 1 
+						WHEN betteam = 'a3' AND (@fth -@fta)<=-3 THEN 1 
+						ELSE - 1					
+						END
+				WHEN 172 THEN	
+					CASE 
+						WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1 
+						WHEN betteam = 'DH' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'AH' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
+						WHEN betteam = 'HA' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
+						WHEN betteam = 'DA' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'AA' AND @FirstGoal='A' AND (@fth - @fta) <0 THEN 1
+						WHEN betteam = 'NO' AND @fth =0 AND @fta= 0 THEN 1
+						ELSE - 1
+						END
+				WHEN 177 THEN	
+					CASE 
+						WHEN (betteam = N'1') AND ((@fth -@hth) -(@fta - @hta))>0 THEN 1
+						WHEN (betteam = N'2') AND ((@fth -@hth) -(@fta - @hta))<0 THEN 1
+						WHEN (betteam = N'x') AND ((@fth -@hth) -(@fta - @hta))=0 THEN 1
+						ELSE - 1
+						END
+				WHEN 178 THEN 
+					CASE betteam 
+						WHEN N'o' THEN ((@fth + @fta) - (@hth + @hta)) - hdp1 
+						WHEN N'u' THEN hdp1 - ((@fth + @fta) - (@hth + @hta)) 
+						END
+				WHEN 179 THEN 
+					CASE 
+						WHEN betteam LIKE 'G[0-3]' AND (@hth + @hta) = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+						WHEN betteam ='G4' AND (@hth + @hta) >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+						ELSE -1
+						END 
+				WHEN 181 THEN 
+					CASE 
+						 WHEN betteam LIKE 'G[0-2]' AND (@hth = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@hth >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 182 THEN 
+					CASE 
+						 WHEN betteam LIKE 'G[0-2]' AND (@hta = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@hta >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 183 THEN 
+					CASE 
+						WHEN betteam =N'h' THEN (hdp2 - hdp1) + ((@fth - @hth) - livehomescore) - ((@fta - @hta) - liveawayscore)
+						WHEN betteam =N'a' THEN (hdp1 - hdp2) - ((@fth - @hth) - livehomescore) + ((@fta - @hta) - liveawayscore)
+						END
+				WHEN 184 THEN 
+					CASE WHEN betteam =N'o' AND ((@fth + @fta - @hth - @hta) &1) = 1 THEN 1 
+						 WHEN betteam =N'e' AND ((@fth + @fta - @hth - @hta) &1) = 0 THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 185 THEN -- Draw No Bet
+					CASE 
+						WHEN ((@fth -@hth) -(@fta - @hta)) = 0 THEN 0
+						WHEN betteam = 'h' AND ((@fth -@hth) -(@fta - @hta)) > 0 THEN 1
+						WHEN betteam = 'a' AND ((@fth -@hth) -(@fta - @hta)) < 0 THEN 1
+						ELSE - 1
+						END
+				WHEN 186 THEN -- Double Chance
+					CASE 
+						WHEN betteam = 'HD' AND ((@fth -@hth) -(@fta - @hta)) >= 0 THEN 1
+						WHEN betteam = 'DA' AND ((@fth -@hth) -(@fta - @hta)) <= 0 THEN 1
+						WHEN betteam = 'HA' AND ((@fth -@hth) -(@fta - @hta)) <> 0 THEN 1
+						ELSE - 1
+						END
+				WHEN 187 THEN
+					CASE 
+						WHEN betteam LIKE 'G[0-1]' AND ((@fth + @fta) - (@hth + @hta)) = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
+						WHEN betteam ='G2'AND ((@fth + @fta) - (@hth + @hta)) >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
+						ELSE - 1
+						END
+				WHEN 188 THEN 
+					CASE 
+						WHEN betteam = 'Y' AND @hth > 0 AND @hta > 0 THEN 1 
+						WHEN betteam = 'N' AND (@hth = 0 OR @hta = 0) THEN 1 
+						ELSE - 1
+						END
+				WHEN 189 THEN	
+					CASE 
+						WHEN betteam ='y' AND (@hth + @hta - 1.5) > 0 AND ((@fth-@hth) + (@fta -@hta) - 1.5)>0 THEN 1 
+						WHEN betteam ='n' AND ((@hth + @hta - 1.5) <=0 OR ((@fth-@hth) + (@fta -@hta) - 1.5)<=0) THEN 1 
+						ELSE -1 
+						END  
+				WHEN 190 THEN -- Both Halves Under 1.5 Yes/No  [190]
+					CASE 
+						WHEN betteam ='y' AND (@hth + @hta - 1.5) < 0 AND ((@fth-@hth) + (@fta -@hta) - 1.5)<0 THEN 1  
+						WHEN betteam ='n' AND ((@hth + @hta - 1.5) >=0 OR ((@fth-@hth) + (@fta -@hta) - 1.5)>=0) THEN 1 
+						ELSE -1 
+					END	
+				WHEN 191 THEN 
+					CASE 
+						WHEN (@hth - @hta) = 0 THEN 0
+						WHEN betteam = 'h' AND (@hth - @hta) > 0 THEN 1
+						WHEN betteam = 'a' AND (@hth - @hta) < 0 THEN 1
+						ELSE -1
+						END
+				WHEN 194 THEN
+					CASE 
+						WHEN betteam =N'o' AND ((@fthCorners + @ftaCorners) &1) = 1 THEN 1 
+						WHEN betteam =N'e' AND ((@fthCorners + @ftaCorners) &1) = 0 THEN 1 
+						ELSE - 1 
+						END   
+				WHEN 195 THEN 
+					CASE 
+						WHEN betteam = '0-2' AND @fthCorners <=2 THEN 1			
+						WHEN betteam = '3-4' AND @fthCorners IN (3, 4) THEN 1	
+						WHEN betteam = '5-6' AND @fthCorners IN(5, 6) THEN 1	
+						WHEN betteam = '7-over' AND @fthCorners >= 7 THEN 1		
+						ELSE -1
+						END 
+				WHEN 196 THEN 
+					CASE 
+						WHEN betteam = '0-2' AND @ftaCorners <=2 THEN 1			
+						WHEN betteam = '3-4' AND @ftaCorners IN (3, 4) THEN 1	
+						WHEN betteam = '5-6' AND @ftaCorners IN(5, 6) THEN 1	
+						WHEN betteam = '7-over' AND @ftaCorners >= 7 THEN 1		
+						ELSE -1
+						END 
+				WHEN 197 THEN 
+					CASE	
+						WHEN betteam = N'o' THEN @fthCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@fthCorners	
+						ELSE -1
+						END
+				WHEN 198 THEN
+					CASE	
+						WHEN betteam = N'o' THEN @ftaCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@ftaCorners	
+						ELSE -1
+						END
+				WHEN 199 THEN 
+					CASE 
+						WHEN betteam ='0-8' AND (@fthCorners + @ftaCorners) <=8 THEN 1
+						WHEN betteam ='9-11' AND (@fthCorners + @ftaCorners) IN(9,10,11) THEN 1
+						WHEN betteam ='12-over' AND (@fthCorners + @ftaCorners)>=12 THEN 1 
+					ELSE -1
+					END
+				WHEN 200 THEN
+					CASE 
+						WHEN betteam = '0-1' AND @hthCorners <= 1 THEN 1	
+						WHEN betteam ='2' AND @hthCorners = 2 THEN 1
+						WHEN betteam ='3' AND @hthCorners = 3 THEN 1
+						WHEN betteam ='4-over' AND @hthCorners >=4 THEN 1
+						ELSE -1
+						END
+				WHEN 201 THEN
+					CASE 
+						WHEN betteam = '0-1' AND @htaCorners <= 1 THEN 1	
+						WHEN betteam ='2' AND @htaCorners = 2 THEN 1
+						WHEN betteam ='3' AND @htaCorners = 3 THEN 1
+						WHEN betteam ='4-over' AND @htaCorners >=4 THEN 1
+						ELSE -1
+						END
+				WHEN 202 THEN
+					CASE 
+						WHEN betteam ='0-4' AND  (@hthCorners+@htaCorners)<=4 THEN 1
+						WHEN betteam = '5-6' AND (@hthCorners+@htaCorners) IN(5, 6) THEN 1
+						WHEN betteam ='7-over' AND (@hthCorners+@htaCorners) >= 7 THEN 1	
+						ELSE -1
+						END
+				WHEN 203 THEN 
+					CASE 
+						WHEN betteam =N'o' AND ((@hthCorners + @htaCorners) &1) = 1 THEN 1 
+						WHEN betteam =N'e' AND ((@hthCorners + @htaCorners) &1) = 0 THEN 1 
+						ELSE - 1 
+						END  
+
+				WHEN 204 THEN 
+					CASE 
+						WHEN betteam = N'o' THEN @hthCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@hthCorners	
+						ELSE -1
+						END
+				WHEN 205 THEN 
+					CASE 
+						WHEN betteam = N'o' THEN @htaCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@htaCorners	
+						ELSE -1
+						END	
+				WHEN 206 THEN
+					CASE 
+						WHEN betteam = @FTFCorner THEN 1
+						ELSE -1 
+						END
+				WHEN 207 THEN
+					CASE 
+						WHEN betteam = @HTFCorner THEN 1
+						ELSE -1 
+						END
+				WHEN 208 THEN
+					CASE 
+						WHEN betteam = @FTLCorner THEN 1
+						ELSE -1 
+						END
+				WHEN 209 THEN
+					CASE 
+						WHEN betteam = @HTLCorner THEN 1
+						ELSE -1 
+						END
+
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -867,9 +1305,9 @@ BEGIN
 		-- ========================
 		FROM dbo.bettransm WITH (INDEX = IX_matchid)
 		WHERE matchid = @matchid AND bettype NOT IN (14, 127) AND statusID NOT IN (101, 102)
-		AND bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN bettype
-						   WHEN ISNULL(@resultPS, '') <> '' THEN 135
-					  END
+		--AND bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN bettype
+		--				   WHEN ISNULL(@resultPS, '') <> '' THEN 135
+		--			  END
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND 1 = CASE WHEN @SelectedSetCAL IS NULL AND @SelectedSetREFUND IS NULL THEN 1 
@@ -886,6 +1324,14 @@ BEGIN
 					 WHEN @SelectedSetREFUND LIKE '%5%' AND Bettype = 1324 AND betcheck LIKE '805%' THEN 1  
 					 ELSE 0 
 					 END 
+		AND 1 = CASE WHEN @ResourceIDsCAL IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+				WHEN @ResourceIDsCAL IS NOT NULL 
+						AND Bettype IN (160,164,169,180) 
+						AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsCAL)>0 THEN 1 
+				WHEN @ResourceIDsCAL IS NOT NULL 
+							AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+							AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsCAL)>0 THEN 1 
+				ELSE 0 END  --Betradar 2 Auto Bettypes 
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 
 
@@ -1261,6 +1707,7 @@ BEGIN
 						WHEN betteam = 'du' AND (@fth - @fta) = 0 THEN hdp1 - (@fth+ @fta)
 						ELSE -1
 						END
+
 				-- Tennis New bet types 		
 				WHEN 153 THEN -- Match Games Handicap
 					CASE betteam 
@@ -1282,6 +1729,360 @@ BEGIN
 						WHEN N'o' THEN (@TotalGameHomeSetx + @TotalGameAwaySetx) - hdp1 
 						WHEN N'u' THEN hdp1 - (@TotalGameHomeSetx + @TotalGameAwaySetx) 
 						END
+
+				--- Betradar 2 
+				WHEN 160 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@NextGoal)> 0 THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 164 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@ExtraNextGoal)> 0 THEN 1 
+						 ELSE - 1 
+						 END
+
+				WHEN 168 THEN 
+					CASE WHEN Betteam = @WhoAdvancesNextRound THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 169 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@NextGoalTime15Min)> 0 THEN 1 
+						 ELSE - 1 
+						 END
+				WHEN 173 THEN 
+					CASE WHEN Betteam = @ExtraTimeYN THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 174 THEN 
+					CASE WHEN Betteam = @ExtraTimeandGoal THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 175 THEN 
+					CASE WHEN Betteam = @matchDecidedMethod THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 176 THEN 
+					CASE WHEN Betteam = @1st10Min1x2 THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 180 THEN 
+					CASE WHEN CHARINDEX((SUBSTRING(CAST(betcheck AS VARCHAR(10)),2,5) + betteam),@1HNextGoal)> 0 THEN 1 
+						 ELSE - 1 
+						 END
+				WHEN 192 THEN 
+					CASE WHEN Betteam = @1stGoalTime10Min THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 193 THEN 
+					CASE WHEN Betteam = @1stGoalTime15Min THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 210 THEN 
+					CASE WHEN Betteam = @PlayerSentOff THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 211 THEN 
+					CASE WHEN Betteam = @HTPlayerSentOff THEN 1 
+						 ELSE - 1
+						 END 
+				WHEN 212 THEN 
+					CASE WHEN Betteam = @PlayerSentOffHome THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 213 THEN 
+					CASE WHEN Betteam = @HTPlayerSentOffHome THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 214 THEN 
+					CASE WHEN Betteam = @PlayerSentOffAway THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 215 THEN 
+					CASE WHEN Betteam = @HTPlayerSentOffAway THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 216 THEN 
+					CASE WHEN CHARINDEX(betteam,@GoalScorerAnytime)>0 THEN 1 
+						 ELSE - 1
+						 END 
+
+				WHEN 217 THEN 
+					CASE WHEN Betteam = @GoalScorerFirst THEN 1 
+						 ELSE - 1
+						 END 
+
+				-- Betradar 2 Manual Bettype 
+				WHEN 157 THEN 
+					CASE WHEN betteam =N'h' AND ((@fth + @fta) &1) = 1 THEN 1 
+						 WHEN betteam =N'a' AND ((@fth + @fta) &1) = 0 THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 159 THEN 
+					CASE WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G6' AND ((@fth + @fta) >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 161 THEN 
+					CASE WHEN betteam LIKE 'G[0-2]' AND (@fth = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@fth >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 162 THEN 
+					CASE WHEN betteam LIKE 'G[0-2]' AND (@fta = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@fta >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 163 THEN 
+					CASE WHEN betteam = 'ho' AND (@fth -@fta) > 0 THEN (@fth + @fta) - hdp1
+						 WHEN betteam = 'hu' AND (@fth -@fta) > 0 THEN hdp1 - (@fth + @fta)
+						 WHEN betteam = 'ao' AND (@fth -@fta) < 0 THEN (@fth + @fta) - hdp1
+						 WHEN betteam = 'au' AND (@fth -@fta) < 0 THEN hdp1 - (@fth + @fta)
+						 WHEN betteam = 'do' AND (@fth -@fta) = 0 THEN (@fth + @fta) - hdp1
+						 WHEN betteam = 'du' AND (@fth -@fta) = 0 THEN hdp1 - (@fth + @fta)	
+						 ELSE -1 
+						 END 
+				WHEN 165 THEN 
+					CASE 
+						WHEN betteam = (CAST(@hth AS VARCHAR(4)) + ':' + CAST(@hta AS VARCHAR(4))) THEN 1
+						ELSE - 1
+						END				
+				WHEN 166 THEN 
+					CASE 
+						WHEN betteam = (CAST(@fth AS VARCHAR(4)) + ':' + CAST(@fta AS VARCHAR(4))) THEN 1
+						ELSE - 1
+						END	
+				WHEN 167 THEN 
+					CASE 
+						WHEN (betteam = N'1') AND (@fth > @fta) THEN 1
+						WHEN (betteam = N'2') AND (@fta > @fth) THEN 1
+						WHEN (betteam = N'x') AND (@fth = @fta) THEN 1
+						ELSE - 1
+						END
+				WHEN 170 THEN		
+					CASE 
+						WHEN betteam =N'h' AND (@fth > 0 AND @fta = 0) THEN 1
+						WHEN betteam =N'a' AND (@fth = 0 AND @fta > 0) THEN 1
+						WHEN betteam =N'b' AND (@fth > 0 AND @fta > 0) THEN 1
+						WHEN betteam =N'n' AND (@fth = 0 AND @fta = 0) THEN 1
+						ELSE -1
+						END 
+				WHEN 171 THEN	
+					CASE 
+						WHEN betteam = 'h1' AND (@fth -@fta) = 1 THEN 1		--171 
+						WHEN betteam = 'h2' AND (@fth -@fta) = 2 THEN 1 
+						WHEN betteam = 'h3' AND (@fth -@fta) >=3 THEN 1 
+						WHEN betteam = 'd' AND (@fth -@fta) =0 THEN 1 
+						WHEN betteam = 'a1' AND (@fth -@fta) =-1 THEN 1 
+						WHEN betteam = 'a2' AND (@fth -@fta) =-2 THEN 1 
+						WHEN betteam = 'a3' AND (@fth -@fta)<=-3 THEN 1 
+						ELSE - 1					
+						END
+				WHEN 172 THEN	
+					CASE 
+						WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1 
+						WHEN betteam = 'DH' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'AH' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
+						WHEN betteam = 'HA' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
+						WHEN betteam = 'DA' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'AA' AND @FirstGoal='A' AND (@fth - @fta) <0 THEN 1
+						WHEN betteam = 'NO' AND @fth =0 AND @fta= 0 THEN 1
+						ELSE - 1
+						END
+				WHEN 177 THEN	
+					CASE 
+						WHEN (betteam = N'1') AND ((@fth -@hth) -(@fta - @hta))>0 THEN 1
+						WHEN (betteam = N'2') AND ((@fth -@hth) -(@fta - @hta))<0 THEN 1
+						WHEN (betteam = N'x') AND ((@fth -@hth) -(@fta - @hta))=0 THEN 1
+						ELSE - 1
+						END
+				WHEN 178 THEN 
+					CASE betteam 
+						WHEN N'o' THEN ((@fth + @fta) - (@hth + @hta)) - hdp1 
+						WHEN N'u' THEN hdp1 - ((@fth + @fta) - (@hth + @hta)) 
+						END
+				WHEN 179 THEN 
+					CASE 
+						WHEN betteam LIKE 'G[0-3]' AND (@hth + @hta) = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+						WHEN betteam ='G4' AND (@hth + @hta) >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
+						ELSE -1
+						END 
+				WHEN 181 THEN 
+					CASE 
+						 WHEN betteam LIKE 'G[0-2]' AND (@hth = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@hth >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 182 THEN 
+					CASE 
+						 WHEN betteam LIKE 'G[0-2]' AND (@hta = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 WHEN betteam ='G3' AND (@hta >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 183 THEN 
+					CASE 
+						WHEN betteam =N'h' THEN (hdp2 - hdp1) + ((@fth - @hth) - livehomescore) - ((@fta - @hta) - liveawayscore)
+						WHEN betteam =N'a' THEN (hdp1 - hdp2) - ((@fth - @hth) - livehomescore) + ((@fta - @hta) - liveawayscore)
+						END
+				WHEN 184 THEN 
+					CASE WHEN betteam =N'o' AND ((@fth + @fta - @hth - @hta) &1) = 1 THEN 1 
+						 WHEN betteam =N'e' AND ((@fth + @fta - @hth - @hta) &1) = 0 THEN 1 
+						 ELSE - 1 
+						 END 
+				WHEN 185 THEN -- Draw No Bet
+					CASE 
+						WHEN ((@fth -@hth) -(@fta - @hta)) = 0 THEN 0
+						WHEN betteam = 'h' AND ((@fth -@hth) -(@fta - @hta)) > 0 THEN 1
+						WHEN betteam = 'a' AND ((@fth -@hth) -(@fta - @hta)) < 0 THEN 1
+						ELSE - 1
+						END
+				WHEN 186 THEN -- Double Chance
+					CASE 
+						WHEN betteam = 'HD' AND ((@fth -@hth) -(@fta - @hta)) >= 0 THEN 1
+						WHEN betteam = 'DA' AND ((@fth -@hth) -(@fta - @hta)) <= 0 THEN 1
+						WHEN betteam = 'HA' AND ((@fth -@hth) -(@fta - @hta)) <> 0 THEN 1
+						ELSE - 1
+						END
+				WHEN 187 THEN
+					CASE 
+						WHEN betteam LIKE 'G[0-1]' AND ((@fth + @fta) - (@hth + @hta)) = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
+						WHEN betteam ='G2'AND ((@fth + @fta) - (@hth + @hta)) >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1
+						ELSE - 1
+						END
+				WHEN 188 THEN 
+					CASE 
+						WHEN betteam = 'Y' AND @hth > 0 AND @hta > 0 THEN 1 
+						WHEN betteam = 'N' AND (@hth = 0 OR @hta = 0) THEN 1 
+						ELSE - 1
+						END
+				WHEN 189 THEN	
+					CASE 
+						WHEN betteam ='y' AND (@hth + @hta - 1.5) > 0 AND ((@fth-@hth) + (@fta -@hta) - 1.5)>0 THEN 1 
+						WHEN betteam ='n' AND ((@hth + @hta - 1.5) <=0 OR ((@fth-@hth) + (@fta -@hta) - 1.5)<=0) THEN 1 
+						ELSE -1 
+						END  
+				WHEN 190 THEN -- Both Halves Under 1.5 Yes/No  [190]
+					CASE 
+						WHEN betteam ='y' AND (@hth + @hta - 1.5) < 0 AND ((@fth-@hth) + (@fta -@hta) - 1.5)<0 THEN 1  
+						WHEN betteam ='n' AND ((@hth + @hta - 1.5) >=0 OR ((@fth-@hth) + (@fta -@hta) - 1.5)>=0) THEN 1 
+						ELSE -1 
+					END	
+				WHEN 191 THEN 
+					CASE 
+						WHEN (@hth - @hta) = 0 THEN 0
+						WHEN betteam = 'h' AND (@hth - @hta) > 0 THEN 1
+						WHEN betteam = 'a' AND (@hth - @hta) < 0 THEN 1
+						ELSE -1
+						END
+				WHEN 194 THEN
+					CASE 
+						WHEN betteam =N'o' AND ((@fthCorners + @ftaCorners) &1) = 1 THEN 1 
+						WHEN betteam =N'e' AND ((@fthCorners + @ftaCorners) &1) = 0 THEN 1 
+						ELSE - 1 
+						END   
+				WHEN 195 THEN 
+					CASE 
+						WHEN betteam = '0-2' AND @fthCorners <=2 THEN 1			
+						WHEN betteam = '3-4' AND @fthCorners IN (3, 4) THEN 1	
+						WHEN betteam = '5-6' AND @fthCorners IN(5, 6) THEN 1	
+						WHEN betteam = '7-over' AND @fthCorners >= 7 THEN 1		
+						ELSE -1
+						END 
+				WHEN 196 THEN 
+					CASE 
+						WHEN betteam = '0-2' AND @ftaCorners <=2 THEN 1			
+						WHEN betteam = '3-4' AND @ftaCorners IN (3, 4) THEN 1	
+						WHEN betteam = '5-6' AND @ftaCorners IN(5, 6) THEN 1	
+						WHEN betteam = '7-over' AND @ftaCorners >= 7 THEN 1		
+						ELSE -1
+						END 
+				WHEN 197 THEN 
+					CASE	
+						WHEN betteam = N'o' THEN @fthCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@fthCorners	
+						ELSE -1
+						END
+				WHEN 198 THEN
+					CASE	
+						WHEN betteam = N'o' THEN @ftaCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@ftaCorners	
+						ELSE -1
+						END
+				WHEN 199 THEN 
+					CASE 
+						WHEN betteam ='0-8' AND (@fthCorners + @ftaCorners) <=8 THEN 1
+						WHEN betteam ='9-11' AND (@fthCorners + @ftaCorners) IN(9,10,11) THEN 1
+						WHEN betteam ='12-over' AND (@fthCorners + @ftaCorners)>=12 THEN 1 
+					ELSE -1
+					END
+				WHEN 200 THEN
+					CASE 
+						WHEN betteam = '0-1' AND @hthCorners <= 1 THEN 1	
+						WHEN betteam ='2' AND @hthCorners = 2 THEN 1
+						WHEN betteam ='3' AND @hthCorners = 3 THEN 1
+						WHEN betteam ='4-over' AND @hthCorners >=4 THEN 1
+						ELSE -1
+						END
+				WHEN 201 THEN
+					CASE 
+						WHEN betteam = '0-1' AND @htaCorners <= 1 THEN 1	
+						WHEN betteam ='2' AND @htaCorners = 2 THEN 1
+						WHEN betteam ='3' AND @htaCorners = 3 THEN 1
+						WHEN betteam ='4-over' AND @htaCorners >=4 THEN 1
+						ELSE -1
+						END
+				WHEN 202 THEN
+					CASE 
+						WHEN betteam ='0-4' AND  (@hthCorners+@htaCorners)<=4 THEN 1
+						WHEN betteam = '5-6' AND (@hthCorners+@htaCorners) IN(5, 6) THEN 1
+						WHEN betteam ='7-over' AND (@hthCorners+@htaCorners) >= 7 THEN 1	
+						ELSE -1
+						END
+				WHEN 203 THEN 
+					CASE 
+						WHEN betteam =N'o' AND ((@hthCorners + @htaCorners) &1) = 1 THEN 1 
+						WHEN betteam =N'e' AND ((@hthCorners + @htaCorners) &1) = 0 THEN 1 
+						ELSE - 1 
+						END  
+
+				WHEN 204 THEN 
+					CASE 
+						WHEN betteam = N'o' THEN @hthCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@hthCorners	
+						ELSE -1
+						END
+				WHEN 205 THEN 
+					CASE 
+						WHEN betteam = N'o' THEN @htaCorners-hdp1	
+						WHEN betteam = N'u' THEN hdp1-@htaCorners	
+						ELSE -1
+						END	
+				WHEN 206 THEN
+					CASE 
+						WHEN betteam = @FTFCorner THEN 1
+						ELSE -1 
+						END
+				WHEN 207 THEN
+					CASE 
+						WHEN betteam = @HTFCorner THEN 1
+						ELSE -1 
+						END
+				WHEN 208 THEN
+					CASE 
+						WHEN betteam = @FTLCorner THEN 1
+						ELSE -1 
+						END
+				WHEN 209 THEN
+					CASE 
+						WHEN betteam = @HTLCorner THEN 1
+						ELSE -1 
+						END
+	
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -1369,11 +2170,10 @@ BEGIN
 		-- ========================
 		FROM dbo.BetParlayDetail pd WITH (UPDLOCK, INDEX = IX_matchid)
 		WHERE bettype not IN (14, 127) AND matchid = @matchid AND statusID NOT IN (101, 102)
-		AND pd.bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN pd.bettype
-							  WHEN ISNULL(@resultPS, '') <> '' THEN 135
-					     END
+		--AND pd.bettype = CASE WHEN ISNULL(@resultPS, '') = '' AND bettype <> 135 THEN pd.bettype
+		--					  WHEN ISNULL(@resultPS, '') <> '' THEN 135
+		--			     END
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-		--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND 1 = CASE WHEN @SelectedSetCAL IS NULL AND @SelectedSetREFUND IS NULL THEN 1 
 					 WHEN @SelectedSetCAL LIKE '%1%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '801%' THEN 1 
 					 WHEN @SelectedSetCAL LIKE '%2%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND betcheck LIKE '802%' THEN 1 
@@ -1388,11 +2188,22 @@ BEGIN
 					 WHEN @SelectedSetREFUND LIKE '%5%' AND Bettype = 1324 AND betcheck LIKE '805%' THEN 1  
 					 ELSE 0 
 					 END 
+
+		AND 1 = CASE WHEN @ResourceIDsCAL IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
+					 WHEN @ResourceIDsCAL IS NOT NULL 
+							AND Bettype IN (160,164,169,180) 
+							AND CHARINDEX(SUBSTRING(CAST(Betcheck AS VARCHAR(20)),2,5),@ResourceIDsCAL)>0 THEN 1 
+					WHEN @ResourceIDsCAL IS NOT NULL 
+								AND Bettype IN (135,168,173,174,175,176,192,193,210,211,212,213,214,215,216,217) 
+								AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsCAL)>0 THEN 1 
+					ELSE 0 END   --Betradar 2 Auto Bettypes 
+							
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		
 	END
 END
 	-- ===================================================
 	-- ===================================================
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]
+
+
+

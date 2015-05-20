@@ -21,6 +21,8 @@ AS
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
 		- 20141204@Jamie: Sportting Solution settlement - GameSession to indicate the type of league [Redmine:#27027]
+		- 20150401@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -37,7 +39,7 @@ BEGIN
 		,@HTStatus NVARCHAR(20)
 		,@FGLGStatus NVARCHAR(20)
 		,@HTFGLGStatus NVARCHAR(20)
-		,@PSStatus NVARCHAR(20)
+		--,@PSStatus NVARCHAR(20)
 		,@FGLG_FTParlayRunning BIT
 		,@FGLG_HTParlayRunning BIT
 		,@PSParlayRunning BIT
@@ -50,8 +52,15 @@ BEGIN
 		,@TennisStatusSet4	NVARCHAR(20)
 		,@TennisStatusSet5	NVARCHAR(20)
 		,@TennisStatusMatch NVARCHAR(20)	-- Match Scope 
-		,@GameSession		TINYINT			-- Type of League 
-		
+
+		-- Betradar Results
+		,@isExistTotalCorner	BIT
+		,@isExistHTFCorner		BIT
+		,@isExistHTLCorner		BIT
+		,@isExistFTFCorner		BIT	
+		,@isExistFTLCorner		BIT
+		,@isExistResultandFirstTeamScore	BIT
+		,@DisplayCat			TINYINT
 
 	SELECT @IsExistLG = 0
 		,@IsExistFGLG = 0
@@ -61,8 +70,13 @@ BEGIN
 		,@IsExistHTLG = 0
 		,@IsExistHTFGLG = 0
 		,@IsExistPS  = 0
-		,@GameSession = 0 
-
+		,@isExistTotalCorner	= 0
+		,@isExistHTFCorner		= 0
+		,@isExistHTLCorner		= 0
+		,@isExistFTFCorner		= 0	
+		,@isExistFTLCorner		= 0
+		,@isExistResultandFirstTeamScore = 0 
+		,@DisplayCat		= 0 
 		
 
 	SELECT	 @sporttype = sporttype
@@ -70,14 +84,10 @@ BEGIN
 	FROM	match WITH (NOLOCK)
 	WHERE	matchid = @matchid
 
-	SELECT	@GameSession = CASE GameSession 
-								WHEN 1 THEN 1	
-								WHEN 3 THEN 3 
-								ELSE 5 
-								END 
+	SELECT	@DisplayCat = DisplayCat
 	FROM	dbo.League WITH (NOLOCK)
 	WHERE	LeagueID = @LeagueID
-			AND @Sporttype = 5 
+			AND @Sporttype = 1 
 
 	IF @excludeRefundFGLG = 0 -- Calculate page
 	BEGIN
@@ -147,20 +157,146 @@ BEGIN
 		ELSE
 			SELECT @IsExistHTFGLG = 1
 
-		-- IsExistPS
+		---- IsExistPS
+		--IF EXISTS (	
+		--	SELECT TOP 1 1
+		--	FROM bettrans WITH(NOLOCK)
+		--	WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
+		--)
+		--	SELECT @IsExistPS = 1
+		--ELSE IF EXISTS
+		--	(
+		--	SELECT TOP 1 1
+		--	FROM bettransm WITH(NOLOCK)
+		--	WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
+		--	)
+		--	SELECT @IsExistPS = 1
+
+
+		-- @isExistResultandFirstTeamScore
 		IF EXISTS (	
 			SELECT TOP 1 1
 			FROM bettrans WITH(NOLOCK)
-			WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
+			WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102)
 		)
-			SELECT @IsExistPS = 1
+			SELECT @isExistResultandFirstTeamScore = 1
 		ELSE IF EXISTS
 			(
 			SELECT TOP 1 1
 			FROM bettransm WITH(NOLOCK)
-			WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
+			WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102)
 			)
-			SELECT @IsExistPS = 1
+			SELECT @isExistResultandFirstTeamScore = 1
+
+		/**START: Check existing Corner bettypes or not **/
+		IF EXISTS(
+			SELECT TOP 1 1 
+			FROM	Bettrans WITH (NOLOCK)
+			WHERE	MatchID = @matchid
+					AND bettype BETWEEN 194 AND 205 
+					AND statusID NOT IN (101, 102)
+			)
+			OR EXISTS(
+				SELECT TOP 1 1 
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype BETWEEN 194 AND 205 
+						AND statusID NOT IN (101, 102)
+			)
+		BEGIN
+			SELECT	@isExistTotalCorner = 1 	
+		END			
+
+		IF EXISTS(	
+			SELECT	TOP 1 1
+			FROM	Bettrans WITH (NOLOCK) 
+			WHERE	MatchID = @matchid
+					AND bettype BETWEEN 206 AND 209
+					AND statusID NOT IN (101, 102)
+		) 
+		OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype BETWEEN 206 AND 209
+						AND statusID NOT IN (101, 102)
+		)
+		BEGIN
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 206
+						AND statusID NOT IN (101, 102)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 206
+						AND statusID NOT IN (101, 102)
+			)
+			BEGIN
+				SELECT	@isExistFTFCorner = 1 
+			END
+
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 208
+						AND statusID NOT IN (101, 102)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 208
+						AND statusID NOT IN (101, 102)
+			)
+			BEGIN
+				SELECT	@isExistFTLCorner = 1 
+			END
+
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 207
+						AND statusID NOT IN (101, 102)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 207
+						AND statusID NOT IN (101, 102)
+			)
+			BEGIN
+				SELECT	@isExistHTFCorner = 1 
+			END
+
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 209
+						AND statusID NOT IN (101, 102)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 209
+						AND statusID NOT IN (101, 102)
+			)
+			BEGIN
+				SELECT	@isExistHTLCorner = 1 
+			END
+		END
+
+		/**END: Check existing Corner bettypes or not **/
+
 
 		-- check match status
 		DECLARE @status TABLE (
@@ -171,7 +307,7 @@ BEGIN
 
 		INSERT INTO @status
 		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
@@ -195,10 +331,10 @@ BEGIN
 		FROM bettrans WITH (NOLOCK)
 		WHERE	matchid = @matchid 
 				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
-				--AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+				AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype = 135 THEN 4
@@ -336,16 +472,16 @@ BEGIN
 		FROM @status
 		WHERE [Group] = 3
 
-		SELECT @PSStatus = CASE 
-				WHEN betcount = 0 THEN CASE WHEN @PSParlayRunning IS NULL THEN  N'No Ticket'
-											WHEN @PSParlayRunning = 1 then N'Parlay Running'	
-											WHEN @PSParlayRunning = 0 then N'Parlay Calculated'
-										END
-				WHEN inRunning = 0 THEN N'Calculated'
-				ELSE N'Running'
-				END
-		FROM @status
-		WHERE [Group] = 4
+		--SELECT @PSStatus = CASE 
+		--		WHEN betcount = 0 THEN CASE WHEN @PSParlayRunning IS NULL THEN  N'No Ticket'
+		--									WHEN @PSParlayRunning = 1 then N'Parlay Running'	
+		--									WHEN @PSParlayRunning = 0 then N'Parlay Calculated'
+		--								END
+		--		WHEN inRunning = 0 THEN N'Calculated'
+		--		ELSE N'Running'
+		--		END
+		--FROM @status
+		--WHERE [Group] = 4
 
 		--- Tennis Ticket Status 
 
@@ -462,19 +598,150 @@ BEGIN
 		END
 		ELSE
 			SELECT @IsExistHTFGLG = 1
+
+
+		-- @isExistResultandFirstTeamScore
+		IF EXISTS (	
+			SELECT TOP 1 1
+			FROM bettrans WITH(NOLOCK)
+			WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102, 103)
+		)
+			SELECT @isExistResultandFirstTeamScore = 1
+		ELSE IF EXISTS
+			(
+			SELECT TOP 1 1
+			FROM bettransm WITH(NOLOCK)
+			WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102, 103)
+			)
+			SELECT @isExistResultandFirstTeamScore = 1
+
+		/**START: Check existing Corner bettypes or not **/
+		IF EXISTS(
+			SELECT TOP 1 1 
+			FROM	Bettrans WITH (NOLOCK)
+			WHERE	MatchID = @matchid
+					AND bettype BETWEEN 194 AND 205 
+					AND statusID NOT IN (101, 102,103)
+			)
+			OR EXISTS(
+				SELECT TOP 1 1 
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype BETWEEN 194 AND 205 
+						AND statusID NOT IN (101, 102,103)
+			)
+		BEGIN
+			SELECT	@isExistTotalCorner = 1 	
+		END			
+
+		IF EXISTS(	
+			SELECT	TOP 1 1
+			FROM	Bettrans WITH (NOLOCK) 
+			WHERE	MatchID = @matchid
+					AND bettype BETWEEN 206 AND 209
+					AND statusID NOT IN (101, 102,103)
+		) 
+		OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype BETWEEN 206 AND 209
+						AND statusID NOT IN (101, 102,103)
+		)
+		BEGIN
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 206
+						AND statusID NOT IN (101, 102,103)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 206
+						AND statusID NOT IN (101, 102,103)
+			)
+			BEGIN
+				SELECT	@isExistFTFCorner = 1 
+			END
+
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 208
+						AND statusID NOT IN (101, 102,103)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 208
+						AND statusID NOT IN (101, 102,103)
+			)
+			BEGIN
+				SELECT	@isExistFTLCorner = 1 
+			END
+
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 207
+						AND statusID NOT IN (101, 102,103)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 207
+						AND statusID NOT IN (101, 102,103)
+			)
+			BEGIN
+				SELECT	@isExistHTFCorner = 1 
+			END
+
+			IF EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettrans WITH (NOLOCK) 
+				WHERE	MatchID = @matchid
+						AND bettype = 209
+						AND statusID NOT IN (101, 102,103)
+			) 
+			OR EXISTS(
+				SELECT	TOP 1 1
+				FROM	Bettransm WITH (NOLOCK)
+				WHERE	MatchID = @matchid
+						AND bettype = 209
+						AND statusID NOT IN (101, 102,103)
+			)
+			BEGIN
+				SELECT	@isExistHTLCorner = 1 
+			END
+		END
+
+		/**END: Check existing Corner bettypes or not **/
 	END
 
 	IF (
 			EXISTS (
 				--HT Soccer
-				SELECT 1
-				FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
-					INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
-				WHERE m.matchid = @matchid AND sporttype = 1 AND datediff(minute, kickofftime, CURRENT_TIMESTAMP) < 100 AND (datediff(minute, kickofftime, CURRENT_TIMESTAMP) > 45 OR isnull(ConfirmHT, 0) > 0) AND isnull(ConfirmFT, 0) = 0
+				SELECT	TOP 1 1
+				FROM	DBPRO.BODB02.dbo.match m WITH (NOLOCK)
+						INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
+				WHERE	m.matchid = @matchid 
+						AND sporttype = 1 
+						AND datediff(minute, kickofftime, CURRENT_TIMESTAMP) < 100 
+						AND (datediff(minute, kickofftime, CURRENT_TIMESTAMP) > 45 OR isnull(ConfirmHT, 0) > 0) 
+						AND isnull(ConfirmFT, 0) = 0
 				)
 			)
+			AND @DisplayCat = 0	
 	BEGIN
 		SELECT @IsHTOnly = 1
+		
 	END
 
 	IF (
@@ -482,10 +749,12 @@ BEGIN
 				SELECT 1
 				FROM bettrans WITH (NOLOCK)
 				WHERE 
-						( bettype IN (4, 6, 13, 26, 27, 30, 126) -- 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
+						( bettype IN (4, 6, 13, 26, 27, 30, 126)  
 							OR bettype BETWEEN 128 AND 134
 							OR bettype BETWEEN 140 AND 150 
-							OR bettype = 152)
+							OR bettype = 152
+							OR bettype IN (159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207) 
+						)
 						AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
 						AND ruben = 0 
 						AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
@@ -493,18 +762,6 @@ BEGIN
 			)
 	BEGIN
 		SELECT @IsSettleAbandonedMatchIBC = 1
-
-		--IF EXISTS (
-		--		SELECT 1
-		--		FROM bettrans WITH (NOLOCK)
-		--		WHERE matchid = @matchid AND bettype IN (13, 26, 27, 133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152) 
-		--		AND statusID NOT IN (101, 102) 
-		--		AND ruben = 1 
-		--		AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770) AND recommend <> 1688156)
-		--		) OR @sporttype <> 1
-		--BEGIN
-		--	SELECT @IsSettleAbandonedMatchIBC = 0
-		--END
 	END
 
 	IF EXISTS (
@@ -542,7 +799,7 @@ BEGIN
 		,@FTStatus FTStatus
 		,@FGLGStatus fglgstatus
 		,@HTFGLGStatus HTFGLGStatus
-		,@PSStatus PSStatus
+		--,@PSStatus PSStatus
 		,@IsExistFGLG AS IsExistFGLG
 		,@IsExistLG AS IsExistLG
 		,@IsExistHTFGLG AS IsExistHTFGLG
@@ -557,7 +814,13 @@ BEGIN
 		,@TennisStatusSet4	AS TennisStatusSet4
 		,@TennisStatusSet5	AS TennisStatusSet5
 		,@TennisStatusMatch	AS TennisStatusMatch
-		,@GameSession		AS GameSession 
+		,@isExistTotalCorner	AS isExistTotalCorner
+		,@isExistHTFCorner		AS isExistHTFCorner
+		,@isExistHTLCorner		AS isExistHTLCorner
+		,@isExistFTFCorner		AS isExistFTFCorner	
+		,@isExistFTLCorner		AS isExistFTLCorner
+		,@isExistResultandFirstTeamScore AS isExistResultandFirstTeamScore
+		,@DisplayCat	AS DisplayCat	-- 1: Extra time match 
  	FROM DBPRO.BODB02.dbo.match WITH (NOLOCK)
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
@@ -571,10 +834,19 @@ BEGIN
 			, SettlementStatusID
 	FROM	DBPRO.BODB02.dbo.[ResultDetail] WITH (NOLOCK) 
 	WHERE	MatchID = @MatchID 
-			AND @Sporttype = 5 
+			AND (@Sporttype = 5 
+					OR(	@Sporttype = 1 
+						AND ResourceID IN ('04','05','206','207','208','209') -- Corners Bettype
+					)
+			)
 
 
 END
+
+GO
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]

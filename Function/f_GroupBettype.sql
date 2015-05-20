@@ -4,13 +4,15 @@ RETURNS @GroupBettype TABLE (Bettype SMALLINT, GroupTypeId SMALLINT)
 AS 
 /*
 	Created: 20141016@Sophia
-	Task :	Get grouped bettype for tennis 
-	DB:		DBAGE/bodb02, DBAGE/bodb_AGE
+	Task :	Get grouped bettype for Sporting Solution and BetRadar
+	DB:		DBAGE/bodb02, DBEXT/bodb02, DBACC/bodb02
  	Revisions: 
+		- 20150414@Sophia: Support BetRadar
 
 */
 
 BEGIN 
+	-------- Grouped bettype for Sporting Solution
 
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
 	VALUES (153, 153)
@@ -52,6 +54,37 @@ BEGIN
 	VALUES (20, 20)
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
 	VALUES (1301, 20)
+
+
+	-------- Grouped bettype for BetRadar
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (157, 2)
+
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (22, 22)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (160, 22)
+	
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (144, 144)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (163, 144)
+
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (18, 18)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (178, 18)
+
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (17, 17)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (183, 17)
+
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (11, 11)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (199, 11)
+
 
 	RETURN
 END

@@ -11,12 +11,14 @@ Original: Acc_BetList_SelMatchResult
 
 Revisions:    
  - 20141021@Sophia: Get data of ResultDetail (Sporting Solution) 
+ - 20140414@Sophia: Support Bet Radar
 	
 */
 SET NOCOUNT ON
 
+DECLARE @Sporttype TINYINT
 
-IF exists(SELECT 1 FROM match WITH(NOLOCK) WHERE matchid = @matchid)
+IF EXISTS(SELECT 1 FROM match WITH(NOLOCK) WHERE matchid = @matchid)
 BEGIN	
 	SELECT 
 		m.betstatus, 
@@ -31,10 +33,18 @@ BEGIN
 		m.eventdate,
 		m.finalhomescore,
 		m.finalawayscore,
-		case	when m.betstatus like 'Refund FT%' then 'Refund FT' 
-				when m.betstatus like 'Refund HT%' then 'Refund HT'
-				when m.betstatus like 'Refund%' then 'Refund' 
-				else m.eventstatus end as eventstatus,
+		CASE m.Sporttype WHEN 5 THEN CASE ISNULL(R.SettlementStatusID,0)	 
+										WHEN 1 THEN 'Refund' 
+										WHEN 2 THEN 'Refund HT'
+										WHEN 3 THEN 'Refund FT'
+									ELSE m.eventstatus END 
+								ELSE 
+									CASE  WHEN m.betstatus like 'Refund FT%' THEN 'Refund FT' 
+										  WHEN m.betstatus like 'Refund HT%' THEN 'Refund HT'
+										  WHEN m.betstatus like 'Refund%' THEN 'Refund' 
+									ELSE m.eventstatus END 
+						END AS eventstatus, 
+
 		isnull(mr.refund,0) IsRefund, 
 		isnull(mr.calrefund,0) IsCalRefund,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
@@ -45,6 +55,7 @@ BEGIN
 		m.showtime	
 	FROM match m WITH(NOLOCK)
 		LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+		LEFT JOIN dbo.ResultDetail R WITH (NOLOCK) ON R.matchID = M.MatchID AND R.ResourceId = '00'
 	WHERE m.matchid = @matchid
 	
 	SELECT @TraderName = c.username
@@ -61,16 +72,23 @@ BEGIN
 							WHEN bettype = 4 AND OperatorType = 2 THEN 12
 							END
 
+		SELECT @Sporttype = Sporttype FROM dbo.Match m WITH (NOLOCK) WHERE MatchId = @matchid
+
+
 		SELECT	D.MatchId,
 				D.ResourceId,
 				D.HomeValue,
 				D.AwayValue,
 				D.ResultStatusID,
-				D.SettlementStatusID
+				D.SettlementStatusID,
+				D.OtherInfo
 		FROM	dbo.ResultDetail D WITH (NOLOCK)			
 		WHERE	D.MatchId = @MatchId	
 				AND D.SettlementStatusID > 0
-		ORDER BY ResourceId
+				AND ((@Sporttype = 1 AND D.ResourceId NOT IN ( '00', '01', '08'))
+						OR @Sporttype = 5
+						)
+		ORDER BY  D.MatchID, D.ResourceId 
 
 
 END
@@ -89,10 +107,17 @@ BEGIN
 		m.eventdate,
 		m.finalhomescore,
 		m.finalawayscore,
-		case	when m.betstatus like 'Refund FT%' then 'Refund FT' 
-				when m.betstatus like 'Refund HT%' then 'Refund HT'
-				when m.betstatus like 'Refund%' then 'Refund' 
-				else m.eventstatus end as eventstatus,
+		CASE m.Sporttype WHEN 5 THEN CASE ISNULL(R.SettlementStatusID,0)	 
+										WHEN 1 THEN 'Refund' 
+										WHEN 2 THEN 'Refund HT'
+										WHEN 3 THEN 'Refund FT'
+									ELSE m.eventstatus END 
+								ELSE 
+									CASE  WHEN m.betstatus like 'Refund FT%' THEN 'Refund FT' 
+										  WHEN m.betstatus like 'Refund HT%' THEN 'Refund HT'
+										  WHEN m.betstatus like 'Refund%' THEN 'Refund' 
+									ELSE m.eventstatus END 
+						END AS eventstatus,
 		isnull(mr.refund,0) IsRefund, 
 		isnull(mr.calrefund,0) IsCalRefund,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
@@ -103,6 +128,7 @@ BEGIN
 		m.showtime	
 	FROM match14 m WITH(NOLOCK)
 		LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+		LEFT JOIN dbo.ResultDetail14 R WITH (NOLOCK) ON R.matchID = M.MatchID AND R.ResourceId = '00'
 	WHERE m.matchid = @matchid
 	
 	SELECT @TraderName = c.username
@@ -119,18 +145,23 @@ BEGIN
 							WHEN bettype = 4 AND OperatorType = 2 THEN 12
 							END
 
-
+		SELECT @Sporttype = Sporttype FROM dbo.Match14 m WITH (NOLOCK) WHERE MatchId = @matchid
 
 		SELECT	D.MatchId,
 				D.ResourceId,
 				D.HomeValue,
 				D.AwayValue,
 				D.ResultStatusID,
-				D.SettlementStatusID
+				D.SettlementStatusID,
+				D.OtherInfo
 		FROM	dbo.ResultDetail14 D WITH (NOLOCK)			
 		WHERE	D.MatchId = @MatchId	
-				AND D.SettlementStatusID > 0		
-		ORDER BY ResourceId
+				AND D.SettlementStatusID > 0	
+				AND ((@Sporttype = 1 AND D.ResourceId NOT IN ( '00', '01', '08'))
+						OR @Sporttype = 5
+						)
+		ORDER BY  D.MatchID, D.ResourceId 	
+	 
 
 END
 

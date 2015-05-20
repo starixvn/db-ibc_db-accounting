@@ -37,7 +37,38 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@SetxGameyFinishedGame	VARCHAR(MAX) = NULL 	
 	,@SetxGameyREFUND		VARCHAR(MAX) = NULL 
 	,@SelectedSetCAL		VARCHAR(50)  = NULL
-	,@SelectedSetREFUND		VARCHAR(50)  = NULL 
+	,@SelectedSetREFUND		VARCHAR(50)  = NULL
+	,@GoalSequence			VARCHAR(50) = NULL 
+	,@fthCorners			INT = NULL 
+	,@ftaCorners			INT = NULL 
+	,@hthCorners			INT = NULL 
+	,@htaCorners			INT = NULL 	
+	,@FTFCorner				VARCHAR(10)	= NULL 
+	,@FTLCorner				VARCHAR(10)	= NULL 
+	,@HTFCorner				VARCHAR(10)	= NULL 
+	,@HTLCorner				VARCHAR(10)	= NULL 
+	,@penaltyshootout		VARCHAR(10)	= NULL 
+	,@matchDecidedMethod	VARCHAR(10)	= NULL
+	,@1st10Min1x2			VARCHAR(10)	= NULL
+	,@1stGoalTime10Min		VARCHAR(10)	= NULL
+	,@1stGoalTime15Min		VARCHAR(10)	= NULL
+	,@WhoAdvancesNextRound	VARCHAR(10) = NULL
+	,@ExtraTimeandGoal		VARCHAR(10)	= NULL
+	,@ExtraTimeYN			VARCHAR(10) = NULL
+	,@PlayerSentOff			VARCHAR(10) = NULL
+	,@HTPlayerSentOff		VARCHAR(10) = NULL
+	,@PlayerSentOffHome		VARCHAR(10) = NULL
+	,@HTPlayerSentOffHome	VARCHAR(10) = NULL
+	,@PlayerSentOffAway		VARCHAR(10) = NULL
+	,@HTPlayerSentOffAway	VARCHAR(10) = NULL
+	,@GoalScorerFirst		VARCHAR(10) = NULL			
+	,@1HNextGoal			VARCHAR(MAX)= NULL
+	,@NextGoal				VARCHAR(MAX)= NULL
+	,@NextGoalTime15Min		VARCHAR(MAX)= NULL
+	,@ExtraNextGoal			VARCHAR(MAX)= NULL
+	,@GoalScorerAnytime		VARCHAR(MAX)= NULL
+	,@ResourceIDsCAL		VARCHAR(MAX)= NULL
+	,@ResourceIDsREFUND		VARCHAR(MAX)= NULL
 	,@ResourceIDs			VARCHAR(MAX) = NULL
 	,@CalledByBrokerService BIT = 0 
 AS
@@ -220,11 +251,38 @@ BEGIN
 				WHEN @SelectedSetREFUND IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(VARCHAR(50), @SelectedSetREFUND) + ''''
 				END + '
-
-			,@ResourceIDs = ' + CASE 
-				WHEN @ResourceIDs IS NULL THEN 'NULL'
-				ELSE '''' + CONVERT(VARCHAR(50), @ResourceIDs) + ''''
-				END + '
+			,@GoalSequence = ' + CASE WHEN @GoalSequence IS NULL THEN 'NULL' ELSE '''' + @GoalSequence + '''' END + '
+			,@fthCorners = ' + CASE WHEN @fthCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @fthCorners) END + '
+			,@ftaCorners = ' + CASE WHEN @ftaCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @ftaCorners) END + '
+			,@hthCorners = ' + CASE WHEN @hthCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @hthCorners) END + '
+			,@htaCorners = ' + CASE WHEN @htaCorners IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @htaCorners) END + '
+			,@ftFCorner = ' + CASE WHEN @ftFCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@ftFCorner)+ '''' END + ' 
+			,@ftLCorner = ' + CASE WHEN @ftLCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@ftLCorner)+ '''' END + ' 
+			,@htFCorner = ' + CASE WHEN @htFCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@htFCorner)+ '''' END + ' 
+			,@htLCorner = ' + CASE WHEN @htLCorner IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50),@htLCorner)+ '''' END + '
+			,@penaltyshootout = ' + CASE WHEN @penaltyshootout IS NULL THEN 'NULL' ELSE '''' + @penaltyshootout + '''' END + '
+			,@matchDecidedMethod = ' + CASE WHEN @matchDecidedMethod IS NULL THEN 'NULL' ELSE '''' + @matchDecidedMethod + '''' END + '
+			,@1st10Min1x2 = ' + CASE WHEN @1st10Min1x2 IS NULL THEN 'NULL' ELSE '''' + @1st10Min1x2 + '''' END + '
+			,@1stGoalTime10Min = ' + CASE WHEN @1stGoalTime10Min IS NULL THEN 'NULL' ELSE '''' + @1stGoalTime10Min + '''' END + '
+			,@1stGoalTime15Min = ' + CASE WHEN @1stGoalTime15Min IS NULL THEN 'NULL' ELSE '''' + @1stGoalTime15Min + '''' END + '
+			,@WhoAdvancesNextRound = ' + CASE WHEN @WhoAdvancesNextRound IS NULL THEN 'NULL' ELSE '''' + @WhoAdvancesNextRound + '''' END + '
+			,@ExtraTimeandGoal = ' + CASE WHEN @ExtraTimeandGoal IS NULL THEN 'NULL' ELSE '''' + @ExtraTimeandGoal + '''' END + '	
+			,@ExtraTimeYN = ' + CASE WHEN @ExtraTimeYN IS NULL THEN 'NULL' ELSE '''' + @ExtraTimeYN + '''' END + '	
+			,@GoalScorerFirst = ' + CASE WHEN @GoalScorerFirst IS NULL THEN 'NULL' ELSE '''' + @GoalScorerFirst + '''' END + '
+			,@PlayerSentOff = ' + CASE WHEN @PlayerSentOff IS NULL THEN 'NULL' ELSE '''' + @PlayerSentOff + '''' END + '
+			,@HTPlayerSentOff = ' + CASE WHEN @HTPlayerSentOff IS NULL THEN 'NULL' ELSE '''' + @HTPlayerSentOff + '''' END + '
+			,@PlayerSentOffHome = ' + CASE WHEN @PlayerSentOffHome IS NULL THEN 'NULL' ELSE '''' + @PlayerSentOffHome + '''' END + '
+			,@HTPlayerSentOffHome = ' + CASE WHEN @HTPlayerSentOffHome IS NULL THEN 'NULL' ELSE '''' + @HTPlayerSentOffHome + '''' END + '
+			,@PlayerSentOffAway = ' + CASE WHEN @PlayerSentOffAway IS NULL THEN 'NULL' ELSE '''' + @PlayerSentOffAway + '''' END + '
+			,@HTPlayerSentOffAway = ' + CASE WHEN @HTPlayerSentOffAway IS NULL THEN 'NULL' ELSE '''' + @HTPlayerSentOffAway + '''' END + '
+			,@1HNextGoal = ' + CASE WHEN @1HNextGoal IS NULL THEN 'NULL' ELSE '''' + @1HNextGoal + '''' END + '
+			,@NextGoal = ' + CASE WHEN @NextGoal IS NULL THEN 'NULL' ELSE '''' + @NextGoal + '''' END + '
+			,@NextGoalTime15Min = ' + CASE WHEN @NextGoalTime15Min IS NULL THEN 'NULL' ELSE '''' + @NextGoalTime15Min + '''' END + '
+			,@ExtraNextGoal = ' + CASE WHEN @ExtraNextGoal IS NULL THEN 'NULL' ELSE '''' + @ExtraNextGoal + '''' END + '
+			,@GoalScorerAnytime = ' + CASE WHEN @GoalScorerAnytime IS NULL THEN 'NULL' ELSE '''' + @GoalScorerAnytime + '''' END + '
+			,@ResourceIDsCAL = ' + CASE WHEN @ResourceIDsCAL IS NULL THEN 'NULL' ELSE '''' + @ResourceIDsCAL + '''' END + '
+			,@ResourceIDsREFUND = ' + CASE WHEN @ResourceIDsREFUND IS NULL THEN 'NULL' ELSE '''' + @ResourceIDsREFUND + '''' END + '
+			,@ResourceIDs = ' + CASE WHEN @ResourceIDs IS NULL THEN 'NULL' ELSE '''' + @ResourceIDs + '''' END + '
 			,@CalledByBrokerService = 1'
 
 		EXEC [sb].[SBInputMessage] @fromService = N'//Service/Calculation_send'
@@ -244,7 +302,7 @@ BEGIN
 
 			IF @action IN ('REFUND-FT', 'REFUND-HT')
 			BEGIN
-																EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_9m @matchid = @matchid
 					,@fth = @fth
 					,@fta = @fta
 					,@hth = @hth
@@ -252,6 +310,15 @@ BEGIN
 					,@matchdate = @matchdate
 					,@action = 'CAL'
 					,@resultPS = @resultPS
+					,@GoalSequence = @GoalSequence
+					,@fthCorners = @fthCorners
+					,@ftaCorners = @ftaCorners
+					,@hthCorners = @hthCorners
+					,@htaCorners = @htaCorners
+					,@FTFCorner	 = @FTFCorner
+					,@FTLCorner	 = @FTLCorner
+					,@HTFCorner	 = @HTFCorner
+					,@HTLCorner	 = @HTLCorner		
 					,@IsRefundHT = @IsRefundHT
 					,@TennisTotal = @TennisTotal
 			END
@@ -268,6 +335,15 @@ BEGIN
 				,@matchdate = @matchdate
 				,@action = @action
 				,@resultPS = @resultPS
+				,@GoalSequence = @GoalSequence
+				,@fthCorners = @fthCorners
+				,@ftaCorners = @ftaCorners
+				,@hthCorners = @hthCorners
+				,@htaCorners = @htaCorners
+				,@FTFCorner	 = @FTFCorner
+				,@FTLCorner	 = @FTLCorner
+				,@HTFCorner	 = @HTFCorner
+				,@HTLCorner	 = @HTLCorner	
 				,@IsRefundHT = @IsRefundHT
 				,@TennisTotal	= @TennisTotal
 				,@SelectedSet	= @SelectedSet
@@ -322,6 +398,66 @@ BEGIN
 				,@SelectedSetCAL			= @SelectedSetCAL 
 				,@SelectedSetREFUND			= @SelectedSetREFUND 
 		END
+
+		IF @mode='CAL-AUTO'
+		BEGIN
+			EXEC dbo.NAP_Admin_Calculate_9m 
+				@matchid = @matchid
+				,@action = 'REFUND'
+				,@matchdate = @matchdate
+				,@IsRefundHT = @IsRefundHT
+				,@penaltyshootout		= @penaltyshootout
+				,@matchDecidedMethod	= @matchDecidedMethod
+				,@1st10Min1x2			= @1st10Min1x2
+				,@1stGoalTime10Min		= @1stGoalTime10Min
+				,@1stGoalTime15Min		= @1stGoalTime15Min
+				,@WhoAdvancesNextRound	= @WhoAdvancesNextRound
+				,@ExtraTimeandGoal		= @ExtraTimeandGoal
+				,@ExtraTimeYN			= @ExtraTimeYN
+				,@PlayerSentOff			= @PlayerSentOff
+				,@HTPlayerSentOff		= @HTPlayerSentOff
+				,@PlayerSentOffHome		= @PlayerSentOffHome
+				,@HTPlayerSentOffHome	= @HTPlayerSentOffHome
+				,@PlayerSentOffAway		= @PlayerSentOffAway
+				,@HTPlayerSentOffAway	= @HTPlayerSentOffAway
+				,@GoalScorerFirst		= @GoalScorerFirst				
+				,@1HNextGoal			= @1HNextGoal
+				,@NextGoal				= @NextGoal
+				,@NextGoalTime15Min		= @NextGoalTime15Min
+				,@ExtraNextGoal			= @ExtraNextGoal
+				,@GoalScorerAnytime		= @GoalScorerAnytime
+				,@ResourceIDsCAL		= @ResourceIDsCAL
+				,@ResourceIDsREFUND		= @ResourceIDsREFUND
+
+			EXEC dbo.NAP_Admin_Calculate_9m 
+				@matchid = @matchid
+				,@action = 'CAL'
+				,@matchdate = @matchdate
+				,@IsRefundHT = @IsRefundHT
+				,@penaltyshootout		= @penaltyshootout
+				,@matchDecidedMethod	= @matchDecidedMethod
+				,@1st10Min1x2			= @1st10Min1x2
+				,@1stGoalTime10Min		= @1stGoalTime10Min
+				,@1stGoalTime15Min		= @1stGoalTime15Min
+				,@WhoAdvancesNextRound	= @WhoAdvancesNextRound
+				,@ExtraTimeandGoal		= @ExtraTimeandGoal
+				,@ExtraTimeYN			= @ExtraTimeYN
+				,@PlayerSentOff			= @PlayerSentOff
+				,@HTPlayerSentOff		= @HTPlayerSentOff
+				,@PlayerSentOffHome		= @PlayerSentOffHome
+				,@HTPlayerSentOffHome	= @HTPlayerSentOffHome
+				,@PlayerSentOffAway		= @PlayerSentOffAway
+				,@HTPlayerSentOffAway	= @HTPlayerSentOffAway
+				,@GoalScorerFirst		= @GoalScorerFirst				
+				,@1HNextGoal			= @1HNextGoal
+				,@NextGoal				= @NextGoal
+				,@NextGoalTime15Min		= @NextGoalTime15Min
+				,@ExtraNextGoal			= @ExtraNextGoal
+				,@GoalScorerAnytime		= @GoalScorerAnytime
+				,@ResourceIDsCAL		= @ResourceIDsCAL
+				,@ResourceIDsREFUND		= @ResourceIDsREFUND
+
+		END 
 
 		IF @mode = 'PRECAL-29'
 		BEGIN

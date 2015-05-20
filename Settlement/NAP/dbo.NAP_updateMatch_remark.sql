@@ -19,6 +19,7 @@ WITH RECOMPILE
 		- 20140711@Kathy: Add more @command value: PS for settlement Penalty Shootout [Redmine:#17142]
 		- 20140905@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141022@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150418@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 	Param's Explanation: 
 */
 AS
@@ -110,7 +111,7 @@ BEGIN
 			,calrefund				= 0
 			,refund					= 0
 			,isUndecided			= 0
-			,SettlementStatus135	= @ivalue -- 0: No offer; 1: Has ticket; 4: No ticket
+		--	,SettlementStatus135	= @ivalue -- 0: No offer; 1: Has ticket; 4: No ticket
 		WHERE matchid = @matchid 
 	END
 	
@@ -291,12 +292,12 @@ BEGIN
 	END
 
 	-- update SettlementStatus135 status for Penalty Shootout
-	IF @command = 'PS' 
-	BEGIN
-		UPDATE match_remark WITH (ROWLOCK, UPDLOCK) 
-		SET SettlementStatus135 = @ivalue
-		WHERE matchid = @matchid  
-	END
+	--IF @command = 'PS' 
+	--BEGIN
+	--	UPDATE match_remark WITH (ROWLOCK, UPDLOCK) 
+	--	SET SettlementStatus135 = @ivalue
+	--	WHERE matchid = @matchid  
+	--END
 
 END
 GO

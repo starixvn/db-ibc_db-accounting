@@ -1,0 +1,31 @@
+﻿
+
+ALTER PROCEDURE [dbo].[Acc_ExecRep_09]	
+AS
+
+BEGIN	
+	SET NOCOUNT ON	
+	IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'CustSettingGame')
+	BEGIN
+		WHILE 1 = 1 
+		BEGIN
+			DELETE TOP(10000) CustSettingGame WITH(ROWLOCK,UPDLOCK)
+			IF @@ROWCOUNT <> 10000
+				BREAK
+			WAITFOR DELAY '00:00:01'
+		END
+	END
+	
+	IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'CustoverrideGame')
+	BEGIN
+		WHILE 1 = 1 
+		BEGIN
+			DELETE TOP(10000) CustoverrideGame WITH(ROWLOCK,UPDLOCK)
+			IF @@ROWCOUNT <> 10000
+				BREAK
+			WAITFOR DELAY '00:00:01'
+		END
+	END	
+END
+
+

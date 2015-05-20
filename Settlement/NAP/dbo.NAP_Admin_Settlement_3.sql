@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_3]    Script Date: 09/04/2014 13:21:42 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] @matchid INT
 	,@mode VARCHAR(6) = 'CAL'
 AS
@@ -17,6 +12,7 @@ AS
 	   - 20140617@Kathy: Apply BetRadar [Redmine:#17142]
 	   - 20140807@Kathy: Support new 11 bettypes [Redmine:#19667]
 	   - 20140822@Jamie: Add bet count 11 bettypes [Redmine:#19667]
+	   - 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 
 	Param's Explanation:
 	• @Mode:
@@ -32,6 +28,8 @@ BEGIN
 			,@fta 				INT
 			,@hth 				INT
 			,@hta 				INT
+			,@home_2nd			INT
+			,@away_2nd			INT 
 			,@sporttype			TINYINT
 			,@betstatus			NVARCHAR(50)
 			,@GoalRecord		VARCHAR(50)
@@ -41,22 +39,39 @@ BEGIN
 			,@oddevenhome		SMALLMONEY
 			,@oddevenhome_ht	SMALLMONEY
 			,@oddevenaway		SMALLMONEY
-			,@oddevenaway_ht	SMALLMONEY			
+			,@oddevenaway_ht	SMALLMONEY		
+			,@oddeven_2H		SMALLMONEY		
 			,@totalgoal			SMALLMONEY
 			,@totalht			SMALLMONEY
+			,@totalgoal_2H		SMALLMONEY 
 			,@totalhome			SMALLMONEY
 			,@totalaway			SMALLMONEY
 			,@scorediff			SMALLMONEY
 			,@scorediff_ht		SMALLMONEY
+			,@scorediff_2H		SMALLMONEY 
 			,@correctscore		NVARCHAR(10)
 			,@correctscore_ht	NVARCHAR(10)
 			,@HTFT				NVARCHAR(10)
 			,@isRefundHT		BIT
-			
+						
 			-- for tennis
 			,@TennisTotal		SMALLINT
 			,@T_Home			SMALLINT
 			,@T_Away			SMALLINT
+
+			--corners bets
+			,@fthCorners		INT = 0
+			,@ftaCorners		INT = 0
+			,@hthCorners		INT = 0
+			,@htaCorners		INT = 0 	
+			,@oddevenCorners	SMALLMONEY	
+			,@oddevenCorners_ht	SMALLMONEY
+			,@totalCorners		SMALLMONEY
+			,@totalCorners_ht	SMALLMONEY
+			,@FTFCorner			VARCHAR(10) =''
+			,@FTLCorner			VARCHAR(10) =''
+			,@HTFCorner			VARCHAR(10) =''
+			,@HTLCorner			VARCHAR(10) =''
 
 	--ticket count
 	DECLARE @betcount_1		INT
@@ -120,6 +135,49 @@ BEGIN
 			,@betcount_151 	INT
 			,@betcount_152 	INT
 
+			,@betcount_157 	INT 
+			,@betcount_159 	INT
+			,@betcount_161 	INT
+			,@betcount_162 	INT
+			,@betcount_163 	INT
+			,@betcount_165 	INT
+			,@betcount_166 	INT
+			,@betcount_167 	INT
+			,@betcount_170 	INT
+			,@betcount_171 	INT
+			,@betcount_172 	INT
+			,@betcount_177 	INT
+			,@betcount_178 	INT
+			,@betcount_179 	INT
+			,@betcount_181 	INT
+			,@betcount_182 	INT
+			,@betcount_183 	INT
+			,@betcount_184 	INT
+			,@betcount_185 	INT
+			,@betcount_186 	INT
+			,@betcount_187 	INT
+			,@betcount_188 	INT
+			,@betcount_189 	INT
+			,@betcount_190 	INT
+			,@betcount_191 	INT
+			,@betcount_194 	INT
+			,@betcount_195 	INT
+			,@betcount_196 	INT
+			,@betcount_197 	INT
+			,@betcount_198 	INT
+			,@betcount_199 	INT
+			,@betcount_200 	INT
+			,@betcount_201 	INT
+			,@betcount_202 	INT
+			,@betcount_203 	INT
+			,@betcount_204 	INT
+			,@betcount_205 	INT
+			,@betcount_206 	INT
+			,@betcount_207 	INT
+			,@betcount_208 	INT
+			,@betcount_209 	INT
+
+
 	SELECT @fth = FinalHomeScore
 		,@fta = FinalAwayScore
 		,@hth = HTHomeScore
@@ -132,7 +190,28 @@ BEGIN
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid = @matchid
 
-	IF @SportType IN (5, 6, 9, 30) -- Tennis/VolleyBall/Badminton/Squash : get TotalGamesPlayed
+	IF @Sporttype = 1 
+	BEGIN
+
+		SELECT	 @fthCorners	= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN HomeValue ELSE 0 END),0)
+				,@ftaCorners	= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN AwayValue ELSE 0 END),0)
+				,@hthCorners	= ISNULL(MAX(CASE WHEN ResourceID ='05' THEN HomeValue ELSE 0 END),0)
+				,@htaCorners	= ISNULL(MAX(CASE WHEN ResourceID ='05' THEN AwayValue ELSE 0 END),0)
+				,@FTFCorner		= ISNULL(MAX(CASE WHEN ResourceID ='206' THEN HomeValue ELSE '' END),'')
+				,@HTFCorner		= ISNULL(MAX(CASE WHEN ResourceID ='207' THEN HomeValue ELSE '' END),'')
+				,@FTLCorner		= ISNULL(MAX(CASE WHEN ResourceID ='208' THEN HomeValue ELSE '' END),'')
+				,@HTLCorner		= ISNULL(MAX(CASE WHEN ResourceID ='209' THEN HomeValue ELSE '' END),'')
+		FROM	DBPRO.BODB02.dbo.ResultDetail WITH (NOLOCK)
+		WHERE	matchid = @matchid
+				AND ResourceID IN ('04','05','206','207','208','209')
+
+		SELECT	 @oddevenCorners	= ((@fthCorners + @ftaCorners)%2)
+				,@oddevenCorners_ht	= ((@hthCorners + @htaCorners)%2)
+				,@totalCorners		= (@fthCorners + @ftaCorners)
+				,@totalCorners_ht	= (@hthCorners + @htaCorners)
+	END 
+
+	IF @SportType IN (6, 9, 30) -- Tennis/VolleyBall/Badminton/Squash : get TotalGamesPlayed
 	BEGIN
 		EXEC dbo.NAP_Admin_Settlement_2 @betstatus = @betstatus
 			,@Total = @TennisTotal OUTPUT
@@ -150,31 +229,36 @@ BEGIN
 	END
 
 	SELECT @oddeven = CASE 
-							WHEN @sporttype IN (5, 6, 9, 30) AND @TennisTotal > 0 THEN @TennisTotal % 2
+							WHEN @sporttype IN (6, 9, 30) AND @TennisTotal > 0 THEN @TennisTotal % 2
 							ELSE ((@fth + @fta) % 2)
 					  END
 		,@oddevenht = ((@hth + @hta) % 2)
 		,@oddevenhome = CASE 
-						WHEN @sporttype IN (5, 6, 9, 30) AND @T_Home > 0 THEN @T_Home % 2
+						WHEN @sporttype IN (6, 9, 30) AND @T_Home > 0 THEN @T_Home % 2
 						ELSE ((@fth ) % 2)
 					  END
 		,@oddevenhome_ht = @hth % 2
 		,@oddevenaway = CASE 
-							WHEN @sporttype IN (5, 6, 9, 30) AND @T_Away > 0 THEN @T_Away % 2
+							WHEN @sporttype IN (6, 9, 30) AND @T_Away > 0 THEN @T_Away % 2
 							ELSE ((@fta) % 2)
 						END
 		,@oddevenaway_ht = @hta % 2
+		,@oddeven_2H = ((@fth + @fta - @hth - @hta)%2)
 		,@totalgoal = CASE 
-						WHEN @sporttype IN (5, 6, 9, 30) AND @TennisTotal > 0 THEN @TennisTotal
+						WHEN @sporttype IN (6, 9, 30) AND @TennisTotal > 0 THEN @TennisTotal
 						ELSE (@fth + @fta)
 					  END
 		,@totalht = (@hth + @hta)
+		,@totalgoal_2H = (@fth + @fta) - (@hth + @hta)
 		,@totalhome = @fth
 		,@totalaway = @fta
 		,@scorediff = (@fth - @fta)
 		,@scorediff_ht = (@hth - @hta)
+		,@scorediff_2H = (@fth -@hth) -(@fta - @hta)
 		,@correctscore = CAST(@fth AS NVARCHAR(6)) + ':' + CAST(@fta AS NVARCHAR(6))
 		,@correctscore_ht = CAST(@hth AS NVARCHAR(6)) + ':' + CAST(@hta AS NVARCHAR(6))
+		,@home_2nd = (@fth - @hth)
+		,@away_2nd = (@fta - @hta)
 		,@HTFT = CASE 
 					WHEN @hth = @hta THEN '0'
 					WHEN @hth > @hta THEN '1'
@@ -196,6 +280,8 @@ BEGIN
 
 		RETURN
 	END
+
+
 
 	IF @Mode IN ('CAL-FT', 'CAL')
 	BEGIN
@@ -351,6 +437,34 @@ BEGIN
 						when 152 then 1 
 						else 0 
 						end), 0)
+
+			,@betcount_157 = ISNULL(SUM(CASE bettype WHEN 157 THEN 1 ELSE 0 END),0)
+			,@betcount_159 = ISNULL(SUM(CASE bettype WHEN 159 THEN 1 ELSE 0 END),0)
+			,@betcount_161 = ISNULL(SUM(CASE bettype WHEN 161 THEN 1 ELSE 0 END),0)
+			,@betcount_162 = ISNULL(SUM(CASE bettype WHEN 162 THEN 1 ELSE 0 END),0)
+			,@betcount_163 = ISNULL(SUM(CASE bettype WHEN 163 THEN 1 ELSE 0 END),0)
+			,@betcount_166 = ISNULL(SUM(CASE bettype WHEN 166 THEN 1 ELSE 0 END),0)
+			,@betcount_170 = ISNULL(SUM(CASE bettype WHEN 170 THEN 1 ELSE 0 END),0)
+			,@betcount_171 = ISNULL(SUM(CASE bettype WHEN 171 THEN 1 ELSE 0 END),0)
+			,@betcount_172 = ISNULL(SUM(CASE bettype WHEN 172 THEN 1 ELSE 0 END),0)
+			,@betcount_177 = ISNULL(SUM(CASE bettype WHEN 177 THEN 1 ELSE 0 END),0)
+			,@betcount_178 = ISNULL(SUM(CASE bettype WHEN 178 THEN 1 ELSE 0 END),0)
+			,@betcount_183 = ISNULL(SUM(CASE bettype WHEN 183 THEN 1 ELSE 0 END),0)
+			,@betcount_184 = ISNULL(SUM(CASE bettype WHEN 184 THEN 1 ELSE 0 END),0)
+			,@betcount_185 = ISNULL(SUM(CASE bettype WHEN 185 THEN 1 ELSE 0 END),0)
+			,@betcount_186 = ISNULL(SUM(CASE bettype WHEN 186 THEN 1 ELSE 0 END),0)
+			,@betcount_187 = ISNULL(SUM(CASE bettype WHEN 187 THEN 1 ELSE 0 END),0)
+			,@betcount_189 = ISNULL(SUM(CASE bettype WHEN 189 THEN 1 ELSE 0 END),0)
+			,@betcount_190 = ISNULL(SUM(CASE bettype WHEN 190 THEN 1 ELSE 0 END),0)
+			,@betcount_194 = ISNULL(SUM(CASE bettype WHEN 194 THEN 1 ELSE 0 END),0)
+			,@betcount_195 = ISNULL(SUM(CASE bettype WHEN 195 THEN 1 ELSE 0 END),0)
+			,@betcount_196 = ISNULL(SUM(CASE bettype WHEN 196 THEN 1 ELSE 0 END),0)
+			,@betcount_197 = ISNULL(SUM(CASE bettype WHEN 197 THEN 1 ELSE 0 END),0)
+			,@betcount_198 = ISNULL(SUM(CASE bettype WHEN 198 THEN 1 ELSE 0 END),0)
+			,@betcount_199 = ISNULL(SUM(CASE bettype WHEN 199 THEN 1 ELSE 0 END),0)
+			,@betcount_206 = ISNULL(SUM(CASE bettype WHEN 206 THEN 1 ELSE 0 END),0)
+			,@betcount_208 = ISNULL(SUM(CASE bettype WHEN 208 THEN 1 ELSE 0 END),0)
+
 			,@betcount_1201 = ISNULL(SUM(CASE bettype
 						WHEN 1201 THEN 1
 						ELSE 0
@@ -375,10 +489,14 @@ BEGIN
 						WHEN 1224 THEN 1
 						ELSE 0
 						END), 0)
-		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype IN (1, 2, 3, 4, 5, 6, 13, 16, 20, 22, 24, 25, 26, 27, 28, 121, 122, 123, 124, 128, 130, 131, 132,
+		FROM	bettrans WITH (NOLOCK)
+		WHERE	matchid = @matchid 
+				AND( bettype IN (1, 2, 3, 4, 5, 6, 13, 16, 20, 22, 24, 25, 26, 27, 28, 121, 122, 123, 124, 128, 130, 131, 132,
 												133, 134, 137, 139, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,
 												1201, 1203, 1204, 1205, 1206, 1224)
+					OR Bettype IN (157,159,161,162,163,166,170,171,172,177,178,183,184,185,186,187,189,190,194,195,196,197,198,199,206,208)
+				)
+
 	END
 
 	IF @Mode IN ('CAL-HT', 'CAL') AND @SportType NOT IN (180, 181, 182, 183, 184, 185, 186)
@@ -435,8 +553,25 @@ BEGIN
 						when 151 then 1 
 						else 0 
 						end), 0)
+
+			,@betcount_165 = ISNULL(SUM(CASE bettype WHEN 165 THEN 1 ELSE 0 END),0)
+			,@betcount_167 = ISNULL(SUM(CASE bettype WHEN 167 THEN 1 ELSE 0 END),0)
+			,@betcount_179 = ISNULL(SUM(CASE bettype WHEN 179 THEN 1 ELSE 0 END),0)
+			,@betcount_181 = ISNULL(SUM(CASE bettype WHEN 181 THEN 1 ELSE 0 END),0)
+			,@betcount_182 = ISNULL(SUM(CASE bettype WHEN 182 THEN 1 ELSE 0 END),0)
+			,@betcount_188 = ISNULL(SUM(CASE bettype WHEN 188 THEN 1 ELSE 0 END),0)
+			,@betcount_191 = ISNULL(SUM(CASE bettype WHEN 191 THEN 1 ELSE 0 END),0)
+			,@betcount_200 = ISNULL(SUM(CASE bettype WHEN 200 THEN 1 ELSE 0 END),0)
+			,@betcount_201 = ISNULL(SUM(CASE bettype WHEN 201 THEN 1 ELSE 0 END),0)
+			,@betcount_202 = ISNULL(SUM(CASE bettype WHEN 202 THEN 1 ELSE 0 END),0)
+			,@betcount_203 = ISNULL(SUM(CASE bettype WHEN 203 THEN 1 ELSE 0 END),0)
+			,@betcount_204 = ISNULL(SUM(CASE bettype WHEN 204 THEN 1 ELSE 0 END),0)
+			,@betcount_205 = ISNULL(SUM(CASE bettype WHEN 205 THEN 1 ELSE 0 END),0)
+			,@betcount_207 = ISNULL(SUM(CASE bettype WHEN 207 THEN 1 ELSE 0 END),0)
+			,@betcount_209 = ISNULL(SUM(CASE bettype WHEN 209 THEN 1 ELSE 0 END),0)
+
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151)
+		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
 	END
 	
 	-- call execrep SP
@@ -446,6 +581,8 @@ BEGIN
 		,@fta = @fta
 		,@hth = @hth
 		,@hta = @hta
+		,@home_2nd = @home_2nd
+		,@away_2nd = @away_2nd
 		,@sporttype = @sporttype
 		,@betstatus = @betstatus
 		,@GoalRecord = @GoalRecord
@@ -456,18 +593,33 @@ BEGIN
 		,@oddevenhome_ht = @oddevenhome_ht
 		,@oddevenaway = @oddevenaway
 		,@oddevenaway_ht = @oddevenaway_ht
+		,@oddeven_2H = @oddeven_2H
 		,@totalgoal = @totalgoal
 		,@totalht = @totalht
+		,@totalgoal_2H = @totalgoal_2H
 		,@totalhome = @totalhome
 		,@totalaway = @totalaway
 		,@scorediff = @scorediff
 		,@scorediff_ht = @scorediff_ht
+		,@scorediff_2H = @scorediff_2H
 		,@correctscore = @correctscore
 		,@correctscore_ht = @correctscore_ht
 		,@HTFT = @HTFT
 		,@TennisTotal = @TennisTotal
 		,@T_Home = @T_Home
 		,@T_Away = @T_Away
+		,@fthCorners = @fthCorners
+		,@ftaCorners = @ftaCorners
+		,@hthCorners = @hthCorners
+		,@htaCorners = @htaCorners
+		,@oddevenCorners = @oddevenCorners
+		,@oddevenCorners_ht	= @oddevenCorners_ht
+		,@totalCorners = @totalCorners
+		,@totalCorners_ht = @totalCorners_ht
+		,@ftFCorner = @ftFCorner
+		,@ftLCorner = @ftLCorner
+		,@htFCorner = @htFCorner
+		,@htLCorner = @htLCorner
 		,@isRefundHT = @isRefundHT
 		,@betcount_1 = @betcount_1
 		,@betcount_2 = @betcount_2
@@ -526,11 +678,49 @@ BEGIN
 		,@betcount_138 = @betcount_138	
 		,@betcount_143 = @betcount_143
 		,@betcount_151 = @betcount_151
+		,@betcount_157 = @betcount_157
+		,@betcount_159 = @betcount_159
+		,@betcount_161 	= @betcount_161
+		,@betcount_162 	= @betcount_162
+		,@betcount_163 	= @betcount_163
+		,@betcount_165 	= @betcount_165
+		,@betcount_166 	= @betcount_166
+		,@betcount_167 	= @betcount_167
+		,@betcount_170 	= @betcount_170
+		,@betcount_171 	= @betcount_171
+		,@betcount_172 	= @betcount_172
+		,@betcount_177 	= @betcount_177
+		,@betcount_178 	= @betcount_178
+		,@betcount_179 	= @betcount_179
+		,@betcount_181 	= @betcount_181
+		,@betcount_182 	= @betcount_182
+		,@betcount_183 	= @betcount_183
+		,@betcount_184 	= @betcount_184
+		,@betcount_185 	= @betcount_185
+		,@betcount_186 	= @betcount_186
+		,@betcount_187 	= @betcount_187
+		,@betcount_188 	= @betcount_188
+		,@betcount_189 	= @betcount_189
+		,@betcount_190 	= @betcount_190
+		,@betcount_191 	= @betcount_191
+		,@betcount_194 	= @betcount_194
+		,@betcount_195 	= @betcount_195
+		,@betcount_196 	= @betcount_196
+		,@betcount_197 	= @betcount_197
+		,@betcount_198 	= @betcount_198
+		,@betcount_199 	= @betcount_199
+		,@betcount_200 	= @betcount_200
+		,@betcount_201 	= @betcount_201
+		,@betcount_202 	= @betcount_202
+		,@betcount_203 	= @betcount_203
+		,@betcount_204 	= @betcount_204
+		,@betcount_205 	= @betcount_205
+		,@betcount_206 	= @betcount_206
+		,@betcount_207 	= @betcount_207
+		,@betcount_208 	= @betcount_208
+		,@betcount_209 	= @betcount_209
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_3] TO [bodbAdminNet] AS [dbo]
 GO

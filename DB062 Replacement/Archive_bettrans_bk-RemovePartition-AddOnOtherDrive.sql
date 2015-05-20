@@ -1,0 +1,103 @@
+﻿-------------------------------
+------------REMOVE------------
+-------------------------------
+
+ALTER PARTITION FUNCTION pf_BET_monthly()
+MERGE RANGE ('2010-12-31 23:59:00.000')
+GO
+ALTER PARTITION FUNCTION pf_BET_monthly()
+MERGE RANGE ('2010-11-30 23:59:00.000')
+GO
+ALTER PARTITION FUNCTION pf_BET_monthly()
+MERGE RANGE ('2010-10-31 23:59:00.000')
+GO
+ALTER PARTITION FUNCTION pf_BET_monthly()
+MERGE RANGE ('2010-09-30 23:59:00.000')
+GO
+ALTER PARTITION FUNCTION pf_BET_monthly()
+MERGE RANGE ('2010-08-31 23:59:00.000')
+GO
+ALTER PARTITION FUNCTION pf_BET_monthly()
+MERGE RANGE ('2010-07-31 23:59:00.000')
+GO
+-------------
+USE [bodb_Archive]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [BET_10M12]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [BET_10M12]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [BET_10M11]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [BET_10M11]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [BET_10M10]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [BET_10M10]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [BET_10M09]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [BET_10M09]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [BET_10M08]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [BET_10M08]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [BET_10M07]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [BET_10M07]
+GO
+---------------
+-------------------------------
+------------ADD NEW------------
+-------------------------------
+ALTER DATABASE bodb_Archive ADD filegroup [BET_10M07]
+ALTER DATABASE bodb_Archive ADD filegroup [BET_10M08]
+ALTER DATABASE bodb_Archive ADD filegroup [BET_10M09]
+ALTER DATABASE bodb_Archive ADD filegroup [BET_10M10]
+ALTER DATABASE bodb_Archive ADD filegroup [BET_10M11]
+ALTER DATABASE bodb_Archive ADD filegroup [BET_10M12]
+GO
+
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_10M07', filename ='M:\IBC_DB\bodb_Archive\BET\BET_10M07.ndf', SIZE = 500 MB ,FILEGROWTH = 500 MB ) TO filegroup [BET_10M07]
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_10M08', filename ='M:\IBC_DB\bodb_Archive\BET\BET_10M08.ndf', SIZE = 500 MB ,FILEGROWTH = 500 MB ) TO filegroup [BET_10M08]
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_10M09', filename ='M:\IBC_DB\bodb_Archive\BET\BET_10M09.ndf', SIZE = 500 MB ,FILEGROWTH = 500 MB ) TO filegroup [BET_10M09]
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_10M10', filename ='M:\IBC_DB\bodb_Archive\BET\BET_10M10.ndf', SIZE = 500 MB ,FILEGROWTH = 500 MB ) TO filegroup [BET_10M10]
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_10M11', filename ='M:\IBC_DB\bodb_Archive\BET\BET_10M11.ndf', SIZE = 500 MB ,FILEGROWTH = 500 MB ) TO filegroup [BET_10M11]
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_10M12', filename ='M:\IBC_DB\bodb_Archive\BET\BET_10M12.ndf', SIZE = 500 MB ,FILEGROWTH = 500 MB ) TO filegroup [BET_10M12]
+
+GO
+
+ALTER PARTITION SCHEME ps_BET_monthly NEXT USED [BET_10M07]
+ALTER PARTITION FUNCTION  pf_BET_monthly () SPLIT RANGE('2010/07/31 23:59:00')
+GO
+
+ALTER PARTITION SCHEME ps_BET_monthly NEXT USED [BET_10M08]
+ALTER PARTITION FUNCTION  pf_BET_monthly () SPLIT RANGE('2010/08/31 23:59:00')
+GO
+
+ALTER PARTITION SCHEME ps_BET_monthly NEXT USED [BET_10M09]
+ALTER PARTITION FUNCTION  pf_BET_monthly () SPLIT RANGE('2010/09/30 23:59:00')
+GO
+
+ALTER PARTITION SCHEME ps_BET_monthly NEXT USED [BET_10M10]
+ALTER PARTITION FUNCTION  pf_BET_monthly () SPLIT RANGE('2010/10/31 23:59:00')
+GO
+
+ALTER PARTITION SCHEME ps_BET_monthly NEXT USED [BET_10M11]
+ALTER PARTITION FUNCTION  pf_BET_monthly () SPLIT RANGE('2010/11/30 23:59:00')
+GO
+
+ALTER PARTITION SCHEME ps_BET_monthly NEXT USED [BET_10M12]
+ALTER PARTITION FUNCTION  pf_BET_monthly () SPLIT RANGE('2010/12/31 23:59:00')
+
+-----------------------------------------------
+------------NEW FILES FOR BET_INDEX------------
+-----------------------------------------------
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_INDEX_04', filename ='M:\IBC_DB\bodb_Archive\BET\BET_INDEX_04.ndf', SIZE = 1 GB ,FILEGROWTH = 1GB ) TO filegroup [BET_INDEX]
+ALTER DATABASE bodb_Archive ADD FILE (name = 'BET_INDEX_05', filename ='M:\IBC_DB\bodb_Archive\BET\BET_INDEX_05.ndf', SIZE = 1 GB ,FILEGROWTH = 1GB ) TO filegroup [BET_INDEX]
+GO
+ALTER DATABASE [bodb_Archive] ADD FILE ( NAME = N'bettransm_03', FILENAME = N'M:\IBC_DB\bodb_Archive\bodb_Archive_bettransm_03.ndf' , SIZE = 2048KB , FILEGROWTH = 32MB ) TO FILEGROUP [Bettransm]
+GO
+ALTER DATABASE [bodb_Archive] ADD FILE ( NAME = N'bettransm_04', FILENAME = N'M:\IBC_DB\bodb_Archive\bodb_Archive_bettransm_04.ndf' , SIZE = 2048KB , FILEGROWTH = 32MB ) TO FILEGROUP [Bettransm]
+

@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_BetDaq_Move]
 	@MatchID		INT,
 	@NewMatchID		INT,
@@ -16,6 +18,7 @@ AS
 	Revisions: 
 			- 20140512@Kathy: Add more log to distinguish between NAP and old settlement system
 			- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
+			- 20150418@Jamie: Betradar phase II [Readmine:#27212]
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 
 
@@ -86,6 +89,7 @@ BEGIN
 	FROM	bettrans b
 			INNER JOIN @tmpOdds o ON b.bettype = o.bettype 
 	WHERE	b.matchid = @MatchID 
+			AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) or b.recommend = 1688156)
 			AND b.ruben = 0
 			AND 1 = CASE WHEN @Sporttype = 5 AND b.bettype NOT IN (1,2,3,20) THEN 0 

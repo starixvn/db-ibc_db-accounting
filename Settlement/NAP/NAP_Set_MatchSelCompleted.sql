@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
@@ -20,6 +22,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 
 
 	Param explanation: 
@@ -94,7 +97,8 @@ BEGIN
 		,eventdate smalldatetime
 		,goalrecord varchar(50)
 		,hthomescore int 
-		,htawayscore int 		
+		,htawayscore int 
+
 		)
 
 	INSERT INTO #m
@@ -134,15 +138,17 @@ BEGIN
 		INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ht WITH (NOLOCK) ON mr.ConfirmHT = ht.custid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ft WITH (NOLOCK) ON mr.ConfirmFT = ft.custid
+		LEFT JOIN DBPRO.BODB02.dbo.League l WITH (NOLOCK) ON m.leagueID = l.leagueID 
+		
 	WHERE m.eventdate = @Date 	AND 
 	m.leagueID = CASE 
 			WHEN @LeagueID <> 0 THEN @LeagueID
 			ELSE m.leagueID
 			END AND m.sporttype = CASE 
-			WHEN @sporttype = 0 THEN sporttype
+			WHEN @sporttype = 0 THEN m.sporttype
 			ELSE @sporttype
 			END 
-			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0)
+			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0 OR l.DisplayCat =1 )
 	
 	INSERT INTO #matchList	
 		SELECT tm.matchid
@@ -261,8 +267,6 @@ BEGIN
 
 	DROP TABLE #matchList
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO

@@ -1,10 +1,5 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT_Push_xtest]    Script Date: 09/11/2014 17:19:28 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT_Push] 
 	@MatchId						INT
 	,@AdminId						INT
@@ -14,6 +9,11 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT_Push]
 	,@IsSettleAbandonedMatchBetFair BIT 			= 0
 	,@HalfTimeHome					INT 			= NULL
 	,@HalfTimeAway					INT 			= NULL
+	,@isExistTotalCorner			BIT				= 0 
+	,@isExistHTFCorner				BIT				= 0 
+	,@isExistHTLCorner				BIT				= 0 
+	,@isExistFTFCorner				BIT				= 0 
+	,@isExistFTLCorner				BIT				= 0
 	,@IP							VARCHAR(15)		= ''
 	,@ErrCode						INT				= 0		OUTPUT
 	,@ErrMsg						NVARCHAR(200)	= ''	OUTPUT
@@ -26,6 +26,8 @@ AS
 	Revisions:
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212] 
 	
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -41,12 +43,14 @@ BEGIN
 	DECLARE @matchcode	NVARCHAR(50)
 		,@sporttype		INT
 		,@leagueid		INT
-		,@sqlCommand	NVARCHAR(500)
+		,@sqlCommand	NVARCHAR(MAX)
 		,@procName		NVARCHAR(50)
+		,@Action		VARCHAR(10)
 
 	SELECT @matchcode	= m.matchcode
 		,@sporttype		= m.sporttype
 		,@leagueid		= m.leagueid
+		,@Action		= 'REFUND-HT'
 	FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -76,6 +80,22 @@ BEGIN
 
 		RETURN
 	END
+	
+	-- check waiting ticket
+								EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'REFUND'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrCode
+			,@ErrMsg
+		
+		RETURN
+	END
+
 
 	SELECT @ErrCode		= 0
 		,@ErrMsg		= ''
@@ -88,9 +108,22 @@ BEGIN
 																 + ', @IsSettleAbandonedMatchBetFair = ' + CONVERT(NVARCHAR(1), @IsSettleAbandonedMatchBetFair) 
 																 + ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeHome), 'NULL') 
 																 + ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeAway), 'NULL') 
+ 																 + ', @isExistTotalCorner = ' + CONVERT(NVARCHAR(1), @isExistTotalCorner)
+																 + ', @isExistHTFCorner = ' + CONVERT(NVARCHAR(1), @isExistHTFCorner)
+																 + ', @isExistHTLCorner = ' + CONVERT(NVARCHAR(1), @isExistHTLCorner)
+																 + ', @isExistFTFCorner = ' + CONVERT(NVARCHAR(1), @isExistFTFCorner)
+																 + ', @isExistFTLCorner = ' + CONVERT(NVARCHAR(1), @isExistFTLCorner)
 																 + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
 																 + ', @ErrCode = @ErrCode OUTPUT' 
 																 + ', @ErrMsg = @ErrMsg OUTPUT'
+
+	
+	IF LEN(@sqlCommand)> 1000 --Max Field 
+	BEGIN
+		SELECT   @ErrCode = 1001010
+				,@ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'	
+		RETURN 
+	END
 
 	IF @procName LIKE '%_xtest'	OR @procName LIKE '%_xpre'
 	BEGIN
@@ -107,6 +140,7 @@ BEGIN
 				,@ErrMsg	= @ErrMsg	OUTPUT
 				,@ErrCode	= @ErrCode	OUTPUT
 		END TRY
+
 
 		BEGIN CATCH
 			SELECT @ErrMsg	= @ErrMsg + ISNULL(ERROR_MESSAGE(), '')
@@ -154,13 +188,7 @@ BEGIN
 			,@sporttype
 			,@AdminId
 			,@IP
-			,'Refund-HT'
+			,@Action
 			,@sqlCommand
 	END
 END
-GO
-
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT_Push] TO [bodbAdminNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundHT_Push] TO [vnteam] AS [dbo]

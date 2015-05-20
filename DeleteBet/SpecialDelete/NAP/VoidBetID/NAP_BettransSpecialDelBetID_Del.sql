@@ -16,7 +16,7 @@ AS
 	
 	Revisions:
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
-		
+		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
 	Param's Explanation: 
 */
 BEGIN 
@@ -267,6 +267,7 @@ BEGIN
 			b.transid,
 			b.refno,
 			b.betteam,
+			b.betcheck,
 			b.hdp1,
 			b.hdp2,
 			b.betfrom,
@@ -303,6 +304,7 @@ BEGIN
 			b.transid,
 			b.refno,
 			'' AS betteam,
+			'' AS betcheck,
 			0 AS hdp1,
 			0 AS hdp2,
 			'' AS betfrom,
@@ -337,6 +339,7 @@ BEGIN
 			b.transid,
 			b.refno,
 			b.betteam,
+			b.betcheck,
 			b.hdp1,
 			b.hdp2,
 			b.betfrom,

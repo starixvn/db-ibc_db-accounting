@@ -14,6 +14,7 @@ AS
 		- 20130813@Elodie: Add new bettype Live Bacarat and Live Roulette (1103,1104)  
 		- 20141015@Kathy: exclude the testing bettypes (Sportting Solution & BetRadar) [Redmine:#24391]
 		- 20140926@Kathy: Get list bettype belong to matchid [Redmine:#23129]
+		- 20150401@Dominic: Add new parent-child bettypes [Redmine:#27214]
 	      
 	Param's Explanation:  
 	@Mode:   
@@ -70,9 +71,21 @@ BEGIN
 		UNION ALL
 		SELECT 2, 1305 -- Odd/Even
 		UNION ALL
+		SELECT 2, 157 -- Odd/Even
+		UNION ALL
 		SELECT 3, 1306 -- Over/Under
 		UNION ALL
 		SELECT 20, 1301 -- Moneyline
+		UNION ALL
+		SELECT 22, 160 -- Next Goal
+		UNION ALL
+		SELECT 144, 163 -- Result/Total Goals
+		UNION ALL
+		SELECT 18, 178 -- 2H Over/Under
+		UNION ALL
+		SELECT 17, 183 -- 2H Handicap
+		UNION ALL
+		SELECT 11, 199 -- Total Corners
 	
 	-- @mode = 0: Single bet, 2: Early kick-off, 3: Ticket listing, 4: Mix Parlay   
 	-- type = 0: Sport Book

@@ -20,6 +20,7 @@ AS
 		- 20121112@Jamie: Create #tmpAge instead of @tmpAg 
 		- 20121121@Dan: optimize performance (use index when searching agent, create index after inserting) 
         - 20130123@Daniel: Change link server alias
+		- 20150319@Tom: Get Data by Effective Licensee (#31687)
 
     Param usage:
 		- @SiteID:
@@ -39,7 +40,7 @@ AS
 SET NOCOUNT ON
 
 --DECLARE @tmpAg TABLE(custID INT PRIMARY KEY) 
-DECLARE	@tmpCurrency TABLE(currency INT PRIMARY KEY)
+DECLARE	@tmpCurrency TABLE(currency INT)
 DECLARE	@tmpSite TABLE(siteid INT)
 
 CREATE TABLE #tmpAg(custID INT)
@@ -58,26 +59,52 @@ WHERE currency = 0 -- ALL currency
 INSERT INTO @tmpSite
 	SELECT val 
 	FROM strSPlit(@siteid,',')
+
+IF @siteid = ''
+	INSERT INTO @tmpSite
+		SELECT -1 
 	
+DECLARE @tmpLscActive TABLE (
+		LicenseeID INT
+		,LicenseeName VARCHAR(100)
+		,FromDate SMALLDATETIME
+		,ToDate SMALLDATETIME
+		)
+
+INSERT INTO @tmpLscActive (
+	LicenseeID
+	,LicenseeName
+	,FromDate
+	,ToDate
+	)
+SELECT LicenseeID
+	,LicenseeName
+	,FromDate
+	,ToDate
+FROM dbo.[NAP_f_GetAffectedDateLicensee](1,@siteid,1, @winlostdate, @winlostdate, 1, 18, 3, 'NG')
+
 IF EXISTS (SELECT 1 FROM @tmpSite WHERE siteid = -1)--IBCGroup   
 BEGIN  	
 		INSERT INTO #tmpAg
 		SELECT custID FROM customer ci WITH (NOLOCK)
 		WHERE ci.custid NOT IN(SELECT custid from DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK))
 			AND ci.roleid = 2
-			AND ci.Currency IN (SELECT ISNULL(t.currency,ci.currency) FROM @tmpCurrency t)	
+			AND (@currency = '' OR ci.Currency IN (SELECT ISNULL(t.currency,ci.currency) FROM @tmpCurrency t))
 END  
-IF EXISTS( SELECT 1 FROM @tmpSite WHERE siteid > 0)--Licensee   
-BEGIN  
+
+IF EXISTS( SELECT TOP 1 1 FROM @tmpLscActive WHERE licenseeID > 0)
+--IF EXISTS( SELECT 1 FROM @tmpSite WHERE siteid > 0)--Licensee   
+BEGIN
     INSERT INTO #tmpAg
     SELECT custID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust lc with (nolock) 
-    WHERE LicenseeID IN (SELECT siteid FROM @tmpSite WHERE siteid > 0)
+    WHERE LicenseeID IN (SELECT licenseeID FROM @tmpLscActive WHERE licenseeID > 0)
         AND roleid = 2
-        AND lc.Currency IN (SELECT ISNULL(t.currency,lc.currency) FROM @tmpCurrency t)	
+        AND (@currency = '' OR lc.Currency IN (SELECT ISNULL(t.currency,lc.currency) FROM @tmpCurrency t))
 END    
 -- only create index after inserting data to not affect performance when inserting
 CREATE INDEX IX_tmpAg_CustID ON #tmpAg(CustID)
 
+/*
 IF EXISTS (SELECT 1 FROM @tmpSite WHERE SiteID = 0)-- ALL Site
     SELECT		
 	        b.bettype bettype,
@@ -97,6 +124,7 @@ IF EXISTS (SELECT 1 FROM @tmpSite WHERE SiteID = 0)-- ALL Site
     GROUP BY b.Bettype
     ORDER BY b.Bettype
 ELSE
+*/
     SELECT		
 	        b.bettype bettype,
 	        sum((winlost-actual_stake)*actualrate) WinLost,

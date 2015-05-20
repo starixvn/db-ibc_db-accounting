@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel]
 	@MatchCode nvarchar(50) = '',
 	@SportType tinyint = 0,
@@ -14,7 +16,7 @@ AS
 		- 20140506@Kathy: get HT FGLG status 
 		- 20140711@Kathy: get Penalty Shootout status
 		- 20141007@Jamie: Get Tennis in new table [Redmine: #23034]
-		- 20150130@Jamie: Betradar phase II [Readmine:#27212]
+		- 20150420@Jamie: Betradar phase II [Readmine:#27212]
 	Param's explanation:  
 		
 */
@@ -58,109 +60,111 @@ BEGIN
 		 
 	set @topn = @@ROWCOUNT
 
+
 	CREATE TABLE #tmpAutoSettle1s(
 		 MatchID		INT
 		,ResultStatusID	TINYINT 
 	)
 	INSERT INTO #tmpAutoSettle1s(MatchID,ResultStatusID)
 	SELECT	MatchID, MIN(ResultStatusID)
-	FROM	ResultDetail WITH (NOLOCK)
+	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #tempmatch)
-			AND (ResourceID IN ('135','168','173','174','175','176','192','193','217')
+			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217')
 					OR ResourceID LIKE '160__'
 					OR ResourceID LIKE '164__'
 					OR ResourceID LIKE '169__'
 					OR ResourceID LIKE '180__'
-					OR ResourceID LIKE '216__'
+					OR ResourceID LIKE '216__' 
 				)
 	GROUP BY MatchID 
 
-	select  t.matchid,
-			leagueid,
-			HalfTimeHomeScore,
-			HalfTimeAwayScore,
-			IsCalculated,
-			IsMultiCaled,
-			IsRefund,
-			IsCalRefund,
-			homeid,
-			awayid,
-			matchcode,
-			--kickofftime,
-			finalhomescore,
-			finalawayscore,
-			betstatus,
-			eventstatus,
-			SettlementStatus135,
-			--Foddsstatus,
-			sporttype,
-			IsNeutral,
-			--eventdate,
-			goalrecord,
-			--suspenderHalfTime,
-			--suspenderFullTime,
-			IsHalfTimeCal,
-			isPending,
-			isUndecided,
-			IsKeyscore,
-			IsExistFGLG,
-			IsExistHTFGLG,
-			IsCalculatingSingle,
-			IsCalculatingMP,
-			CASE	WHEN a.ResultStatusID IS NULL THEN 'N/A'
-					WHEN a.ResultStatusID IN(0,1,3) THEN 'Running'
-					WHEN a.ResultStatusID IN (2,5) THEN 'Completed'
-					ELSE '' END AS AutoSettleResultStatus
+	select matchid,
+		leagueid,
+		HalfTimeHomeScore,
+		HalfTimeAwayScore,
+		IsCalculated,
+		IsMultiCaled,
+		IsRefund,
+		IsCalRefund,
+		homeid,
+		awayid,
+		matchcode,
+		--kickofftime,
+		finalhomescore,
+		finalawayscore,
+		betstatus,
+		eventstatus,
+		SettlementStatus135,
+		--Foddsstatus,
+		sporttype,
+		IsNeutral,
+		--eventdate,
+		goalrecord,
+		--suspenderHalfTime,
+		--suspenderFullTime,
+		IsHalfTimeCal,
+		isPending,
+		isUndecided,
+		IsKeyscore,
+		IsExistFGLG,
+		IsExistHTFGLG,
+		IsCalculatingSingle,
+		IsCalculatingMP,
+		t.AutoSettleResultStatus
 	from 
-		(
-			select m.matchid, m.leagueid ,
-				hthomescore HalfTimeHomeScore,
-				htawayscore HalfTimeAwayScore, 
-				isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,  
-				isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,  		
-				m.homeid, m.awayid,  
-				m.matchcode, 
-				--m.kickofftime,  
-				m.finalhomescore,  
-				m.finalawayscore, m.betstatus,  
-				case when m.betstatus like 'Refund FT%' then 'Refund FT'  
-					when m.betstatus like 'Refund HT%' then 'Refund HT'  
-					when m.betstatus like 'Refund%' then 'Refund'  
-					else m.eventstatus  
-				end as eventstatus,    
-				ISNULL(mr.SettlementStatus135,0) SettlementStatus135,
-				--'' as Foddsstatus,  
-				m.sporttype,  
-				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,  
-				--m.eventdate,  
-				m.goalrecord, 
-				--case mr.ConfirmHT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmHT ) end suspenderHalfTime,   
-				--case mr.ConfirmFT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmFT ) end suspenderFullTime,  
-				ISNULL(mr.IsHTCal,0) as IsHalfTimeCal,  		
-				ISNULL(mr.isPending,0) as isPending,  
-				ISNULL(mr.isUndecided,0) as isUndecided,  
-				CAST(CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore ,
-				case when C.cntFGLG <> 0 then 1 ELSE 0 END IsExistFGLG,
-				case when C.cntHTFGLG <> 0 then 1 ELSE 0 END IsExistHTFGLG,
-				tm.singlestatus as IsCalculatingSingle,
-				tm.parlaystatus as IsCalculatingMP
-			FROM #tempmatch tm		
-				INNER JOIN DBPRO.bodb02.dbo.match m with(NOLOCK) ON  tm.matchid = m.matchid
-				LEFT JOIN (
-								SELECT b.matchid,
-									sum(CASE when b.bettype = 14 THEN 1 ELSE 0 end) as cntFGLG  ,
-									sum(CASE when b.bettype = 127 THEN 1 ELSE 0 end)  as cntHTFGLG 
-								FROM bettrans b WITH(NOLOCK) 
-								where b.bettype in (14 , 127)
-								GROUP BY b.matchid				
-							) C ON C.matchid = m.matchid
-				LEFT OUTER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid		
-			WHERE  
-				 m.matchid in (select top (@topn) matchid from #tempmatch)
-				and mr.matchid in (select top (@topn) matchid from #tempmatch)
-		) t 
-		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON t.matchid = a.MatchID
+	(
+		select m.matchid, m.leagueid ,
+			hthomescore HalfTimeHomeScore,
+			htawayscore HalfTimeAwayScore, 
+			isnull(mr.calculate,0) IsCalculated, isnull(mr.multiple,0) IsMultiCaled,  
+			isnull(mr.refund,0) IsRefund, isnull(mr.calrefund,0) IsCalRefund,  		
+			m.homeid, m.awayid,  
+			m.matchcode, 
+			--m.kickofftime,  
+			m.finalhomescore,  
+			m.finalawayscore, m.betstatus,  
+			case when m.betstatus like 'Refund FT%' then 'Refund FT'  
+				when m.betstatus like 'Refund HT%' then 'Refund HT'  
+				when m.betstatus like 'Refund%' then 'Refund'  
+				else m.eventstatus  
+			end as eventstatus,    
+			ISNULL(mr.SettlementStatus135,0) SettlementStatus135,
+			--'' as Foddsstatus,  
+			m.sporttype,  
+			isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,  
+			--m.eventdate,  
+			m.goalrecord, 
+			--case mr.ConfirmHT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmHT ) end suspenderHalfTime,   
+			--case mr.ConfirmFT when 0 then '' else (select username from CustDB.dbo.custInfo (nolock) where custid = mr.ConfirmFT ) end suspenderFullTime,  
+			ISNULL(mr.IsHTCal,0) as IsHalfTimeCal,  		
+			ISNULL(mr.isPending,0) as isPending,  
+			ISNULL(mr.isUndecided,0) as isUndecided,  
+			CAST(CASE WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore ,
+			case when C.cntFGLG <> 0 then 1 ELSE 0 END IsExistFGLG,
+			case when C.cntHTFGLG <> 0 then 1 ELSE 0 END IsExistHTFGLG,
+			tm.singlestatus as IsCalculatingSingle,
+			tm.parlaystatus as IsCalculatingMP
+			,CASE	WHEN a.ResultStatusID IS NULL THEN 'N/A'
+				WHEN a.ResultStatusID IN(0,1,3) THEN 'Running'
+				WHEN a.ResultStatusID IN (2,5) THEN 'Completed'
+				ELSE '' END AS AutoSettleResultStatus
+		FROM #tempmatch tm		
+			INNER JOIN DBPRO.bodb02.dbo.match m with(NOLOCK) ON  tm.matchid = m.matchid
+			LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID
+			LEFT JOIN (
+							SELECT b.matchid,
+								sum(CASE when b.bettype = 14 THEN 1 ELSE 0 end) as cntFGLG  ,
+								sum(CASE when b.bettype = 127 THEN 1 ELSE 0 end)  as cntHTFGLG 
+							FROM bettrans b WITH(NOLOCK) 
+							where b.bettype in (14 , 127)
+							GROUP BY b.matchid				
+						) C ON C.matchid = m.matchid
+			LEFT OUTER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid		
+		WHERE  
+			 m.matchid in (select top (@topn) matchid from #tempmatch)
+			and mr.matchid in (select top (@topn) matchid from #tempmatch)
+	) t 
 	where 
 		t.leagueID = case when @LeagueID <> 0 then @LeagueID else t.leagueID end  
 			AND t.sporttype = case when @sporttype = 0 then t.sporttype else @sporttype end  	  		
@@ -177,7 +181,6 @@ BEGIN
 	WHERE	MatchID IN (SELECT MatchID FROM #tempmatch)	
 			AND ResourceId LIKE '0[0-5]' 
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
 GO
