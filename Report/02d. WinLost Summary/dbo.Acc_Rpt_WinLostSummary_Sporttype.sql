@@ -12,6 +12,7 @@ AS
             - 20130822@Johnson: change to use rptWinlost instead rptWinlost2
             - 20131206@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 			- 20140327@Dom: Add Keno
+			- 20150520@Daniel: remove old logic: exclude 8rm if bet on hedge match
         Parameter's Explanation:
     */
 BEGIN
@@ -301,11 +302,6 @@ BEGIN
                 
     ORDER BY 1,3 DESC,2,4,5
 
-    
-	
-	UPDATE #TempData SET IsHedge =1,
-						ibc = 0
-	where ibc = 1 AND IsHedge = 1
 	
 	SELECT sporttype,
            bettype,

@@ -109,7 +109,7 @@ BEGIN
 			matchid		INT,
 			matchcode	VARCHAR(50),
 			matchdate	DATETIME,
-			Betcheck	VARCHAR(50),
+			Betcheck	NVARCHAR(50),
 			--for generating combination parlays
 			RN TINYINT, -- set No. for selection in the combination
 			CNT TINYINT, -- total selection count, base on bettransm/14

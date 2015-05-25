@@ -73,6 +73,7 @@ AS
 		- 20140908@Dom:	[Redmine #22012] Update VS conditions
 		- 20141103@Dom: Apply sport bettype matrix
 		- 20150122@Dom: HotFix #29646 Fix bug virtual HR
+		- 20150415@Sophia: Get Betcheck for Betradar
 */		
 
 SET NOCOUNT ON  
@@ -156,7 +157,8 @@ Declare @Data TABLE (
 	mwinlost		money,
 	swinlost		money,
 	showtime		nvarchar(50),
-	winlostdate		smalldatetime
+	winlostdate		smalldatetime,
+	BetCheck		NVARCHAR(50)
 )
 
 DECLARE @DetailData TABLE (
@@ -239,7 +241,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			m.showtime,
-			b.winlostdate
+			b.winlostdate,
+			b.BetCheck
 		from 
 			bettrans as b with (nolock) inner join match as m with (nolock) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
@@ -310,7 +313,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			b.winlostdate
+			 b.winlostdate,
+			 b.BetCheck
 		from	bettrans as b with (nolock)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -378,7 +382,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			b.winlostdate
+			 b.winlostdate,
+			 b.BetCheck
 		from	bettrans as b with (nolock)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -446,7 +451,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			b.winlostdate	 
+			 b.winlostdate,
+			 b.BetCheck
 		from	bettrans b with (nolock)   
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
@@ -514,7 +520,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			b.winlostdate	 
+			 b.winlostdate,
+			 b.BetCheck	 
 		from	bettrans b with (nolock)   
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
@@ -582,7 +589,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			b.winlostdate	 
+			 b.winlostdate,
+			 b.BetCheck	 
 		from	bettrans b with (nolock)   
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
@@ -650,7 +658,8 @@ BEGIN
 			 0,
 			 0,
 			 '' as showtime,
-			b.winlostdate	 
+			 b.winlostdate	 ,
+			 '' as BetCheck
 		from translog b with (nolock)   
 			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
@@ -720,7 +729,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			 b.winlostdate		 
+			 b.winlostdate,
+			 b.BetCheck		 
 		from	bettrans b with (nolock)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -790,7 +800,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			'' as showtime,
-			 b.winlostdate			
+			 b.winlostdate,
+			 b.BetCheck			
 		from	bettrans as b with (nolock)   
 				inner join outright as odds with (nolock) on b.matchid=odds.orid   
 				inner join league l with (nolock) on odds.leagueid=l.leagueid     
@@ -859,7 +870,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			'' as showtime,
-			 b.winlostdate		
+			 b.winlostdate,
+			 b.BetCheck		
 		from	bettrans as b with (nolock)   
 				inner join outright as odds with (nolock) on b.matchid=odds.orid   
 				inner join league l with (nolock) on odds.leagueid=l.leagueid    
@@ -938,7 +950,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			r.EventTime showtime, -- Race Name
-			b.winlostdate
+			b.winlostdate,
+			b.BetCheck
 		from 
 			bettrans as b with (nolock) 
 			INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -1019,7 +1032,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			m.showtime,
-			b.winlostdate			
+			b.winlostdate,
+			b.BetCheck			
 		from 
 			bettrans14 as b with (nolock) inner join match14 as m with (nolock) on b.matchid = m.matchid
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
@@ -1091,7 +1105,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			 b.winlostdate		 
+			 b.winlostdate,
+			 b.BetCheck		 
 		from	bettrans14 as b with (nolock)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1159,7 +1174,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			 b.winlostdate			 
+			 b.winlostdate,
+			 b.BetCheck			 
 		from	bettrans14 as b with (nolock)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1226,7 +1242,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			 b.winlostdate		 
+			 b.winlostdate,
+			 b.BetCheck		 
 		from	bettrans14 b with (nolock)   
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
@@ -1294,7 +1311,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			 b.winlostdate		 
+			 b.winlostdate,
+			 b.BetCheck		 
 		from	bettrans14 b with (nolock)   
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
@@ -1362,7 +1380,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			b.winlostdate	 
+			b.winlostdate,
+			b.BetCheck	 
 		from	bettrans14 b with (nolock)   
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
@@ -1430,7 +1449,8 @@ BEGIN
 			 b.mwinlost,
 			 b.swinlost,
 			 '' as showtime,
-			 b.winlostdate			 
+			 b.winlostdate,
+			 b.BetCheck			 
 		from	bettrans14 b with (nolock)   
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1494,7 +1514,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			'' as showtime,
-			 b.winlostdate			
+			 b.winlostdate,
+			 b.BetCheck			
 		from	bettrans14 as b with (nolock)   
 				inner join outright14 as odds with (nolock) on b.matchid=odds.orid   
 				inner join league l with (nolock) on odds.leagueid=l.leagueid     
@@ -1563,7 +1584,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			'' as showtime,
-			 b.winlostdate			
+			 b.winlostdate,
+			 b.BetCheck			
 		from	bettrans14 as b with (nolock)   
 				inner join outright14 as odds with (nolock) on b.matchid=odds.orid   
 				inner join league l with (nolock) on odds.leagueid=l.leagueid    
@@ -1642,7 +1664,8 @@ BEGIN
 			b.mwinlost,
 			b.swinlost,
 			r.EventTime showtime, -- Race Name			
-			b.winlostdate
+			b.winlostdate,
+			b.BetCheck
 		from 
 			bettrans14 as b with (nolock) 
 			INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -1732,7 +1755,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-			    b.winlostdate				
+			    b.winlostdate,
+				b.BetCheck				
 			from	bettrans as b with (nolock)   
 					inner join outright as odds with (nolock) on b.matchid=odds.orid   
 					inner join league l with (nolock) on odds.leagueid=l.leagueid    
@@ -1809,7 +1833,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate	
+				b.winlostdate,
+				b.BetCheck	
 			from	bettrans14 as b with (nolock)   
 					inner join outright14 as odds with (nolock) on b.matchid=odds.orid   
 					inner join league l with (nolock) on odds.leagueid=l.leagueid    
@@ -1894,7 +1919,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate				
+				b.winlostdate,
+				b.BetCheck				
 			from	bettrans as b with (nolock)   
 					inner join outright as odds with (nolock) on b.matchid=odds.orid   
 					inner join league l with (nolock) on odds.leagueid=l.leagueid     
@@ -1962,7 +1988,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost	,
 				'' as showtime,
-				b.winlostdate
+				b.winlostdate,
+				b.BetCheck
 			from	bettrans14 as b with (nolock)   
 					inner join outright14 as odds with (nolock) on b.matchid=odds.orid   
 					inner join league l with (nolock) on odds.leagueid=l.leagueid     
@@ -2034,7 +2061,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate			 
+				b.winlostdate,
+				b.BetCheck			 
 			from	bettrans b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2100,7 +2128,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate				 
+				b.winlostdate,
+				b.BetCheck				 
 			from	bettrans14 b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2172,7 +2201,8 @@ BEGIN
 				 b.mwinlost,
 				 b.swinlost,
 				 '' as showtime,
-				 b.winlostdate		 
+				 b.winlostdate,
+				 b.BetCheck		 
 			from	bettrans b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2239,7 +2269,8 @@ BEGIN
 				 b.mwinlost,
 				 b.swinlost,
 				 '' as showtime,
-				 b.winlostdate	 
+				 b.winlostdate,
+				 b.BetCheck	 
 			from	bettrans14 b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2311,7 +2342,8 @@ BEGIN
 				 b.mwinlost,
 				 b.swinlost,
 				 '' as showtime,
-				 b.winlostdate		 
+				 b.winlostdate,
+				 b.BetCheck		 
 			from	bettrans b with (nolock)   
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 			where	b.winlostdate>= @FromDate AND    
@@ -2376,7 +2408,8 @@ BEGIN
 				 0,
 				 0,
 				 '' as showtime,
-				b.winlostdate	 
+				 b.winlostdate,
+				'' as BetCheck	 
 			from	translog b with (nolock)   
 				outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
 			where	b.winlostdate>= @FromDate and    
@@ -2445,7 +2478,8 @@ BEGIN
 				 b.mwinlost,
 				 b.swinlost,
 				 '' as showtime,
-				 b.winlostdate	 
+				 b.winlostdate,
+				 b.BetCheck	 
 			from	bettrans14 b with (nolock)   
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 			where	b.winlostdate>= @FromDate and    
@@ -2517,7 +2551,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate				 
+				b.winlostdate,
+				b.BetCheck				 
 			from	bettrans b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2579,11 +2614,12 @@ BEGIN
 				 (b.scomm - b.acomm),
 				 (b.acomm - b.comm),
 				 (b.comm - b.playercomm),
-				b.awinlost,
-				b.mwinlost,
-				b.swinlost,
-				'' as showtime,
-				b.winlostdate				 
+				 b.awinlost,
+				 b.mwinlost,
+				 b.swinlost,
+				 '' as showtime,
+				 b.winlostdate,
+				 b.BetCheck				 
 			from	bettrans14 b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2652,11 +2688,12 @@ BEGIN
 				 (b.scomm - b.acomm),
 				 (b.acomm - b.comm),
 				 (b.comm - b.playercomm),
-				b.awinlost,
-				b.mwinlost,
-				b.swinlost,
-				'' as showtime,
-				b.winlostdate			  
+				 b.awinlost,
+				 b.mwinlost,
+				 b.swinlost,
+				 '' as showtime,
+				 b.winlostdate,
+				 b.BetCheck			  
 			from	bettrans as b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2724,7 +2761,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate				 
+				b.winlostdate,
+				b.BetCheck				 
 			from	bettrans14 as b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2799,7 +2837,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate				  
+				b.winlostdate,
+				b.BetCheck				  
 			from	bettrans as b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2867,7 +2906,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' as showtime,
-				b.winlostdate			 
+				b.winlostdate,
+				b.BetCheck			 
 			from	bettrans14 as b with (nolock)   
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
@@ -2943,7 +2983,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				r.EventTime showtime, -- Race Name				
-				b.winlostdate
+				b.winlostdate,
+				b.BetCheck
 			from 
 				bettrans as b with (nolock) 
 				INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -3023,7 +3064,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' showtime,
-				b.winlostdate
+				b.winlostdate,
+				b.BetCheck
 			from 
 				bettrans14 as b with (nolock) 
 				INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -3109,7 +3151,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				m.showtime,
-				b.winlostdate		
+				b.winlostdate,
+				b.BetCheck		
 			from 
 				bettrans as b with (nolock) inner join match as m with (nolock) on b.matchid = m.matchid
 			where	b.winlostdate>= @FromDate and    
@@ -3176,7 +3219,8 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				m.showtime,
-				b.winlostdate				
+				b.winlostdate,
+				b.BetCheck				
 			from 
 				bettrans14 as b with (nolock) inner join match14 as m with (nolock) on b.matchid = m.matchid
 			where	b.winlostdate>= @FromDate and    
