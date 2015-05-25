@@ -152,18 +152,15 @@ WHERE (@ShowAGC = 1 AND ProductPrefix = 'AGC')
 
 DECLARE @tmpParty AS TABLE (PartyId INT, LicenseeId INT, ProductID INT, Rate MONEY, FromDate SMALLDATETIME, ToDate SMALLDATETIME)
 
-INSERT INTO @tmpParty(PartyId, LicenseeId, ProductID, Rate, Fromdate, Todate)
-	(
-		SELECT PartyID, LicenseeID, ProductID, DI_Rate, Fromdate, Todate
-		FROM bodb_licensee.dbo.LA_f_ChargeInfo(@PartyID, @FromDate, @ToDate, @ProductList, 'OA', @excludeTest)
-		WHERE DI_Rate > 0
-	)
-
-INSERT INTO @Bettype (Bettype)
-	(
-		SELECT Bettype
-		FROM bodb_licensee.dbo.LA_f_BettypeProductMapping(0, @ProductList)
-	)
+IF ISNULL(@ProductList, '') != ''
+BEGIN
+	INSERT INTO @tmpParty(PartyId, LicenseeId, ProductID, Rate, Fromdate, Todate)
+		(
+			SELECT PartyID, LicenseeID, ProductID, DI_Rate, Fromdate, Todate
+			FROM bodb_licensee.dbo.LA_f_ChargeInfo(@PartyID, @FromDate, @ToDate, @ProductList, 'OA', @excludeTest)
+			WHERE DI_Rate > 0
+		)
+END
 -----
 SELECT TOP 1 @TempCurrencyID=currency FROM @tempAg 
 
@@ -1207,7 +1204,7 @@ BEGIN
 					--original
 					, SUM(Turnover)						AS Turnover
 					, SUM(WinLoss)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate))	AS LicenseeWL				
+					, - SUM(Winloss)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1218,7 +1215,7 @@ BEGIN
 					--MYR
 					, SUM(Turnover * e.MYR)						AS Turnover
 					, SUM(WinLoss * e.MYR)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.MYR)	AS LicenseeWL				
+					, - SUM(Winloss * e.MYR)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1229,7 +1226,7 @@ BEGIN
 					--USD
 					, SUM(Turnover * e.USD)						AS Turnover
 					, SUM(WinLoss * e.USD)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.USD)	AS LicenseeWL				
+					, - SUM(Winloss * e.USD)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1240,7 +1237,7 @@ BEGIN
 					--EUR
 					, SUM(Turnover * e.EUR)						AS Turnover
 					, SUM(WinLoss * e.EUR)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.EUR)	AS LicenseeWL				
+					, - SUM(Winloss * e.EUR)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1252,7 +1249,7 @@ BEGIN
 					--GBP
 					, SUM(Turnover * e.GBP)						AS Turnover
 					, SUM(WinLoss * e.GBP)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.GBP)	AS LicenseeWL				
+					, - SUM(Winloss * e.GBP)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1264,7 +1261,7 @@ BEGIN
 					, SUM(b.TotalTrans)					AS BetCount	  	  
 				FROM #DataWinloss3rd b WITH (NOLOCK)	
 					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId								
-					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId AND p.ProductID = 10
 					LEFT JOIN @Exchange e  ON e.ExchangeDate = b.winlostdate AND e.exchangeid = b.currency
 				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
 				GROUP BY b.CustId, CurrencyID 
@@ -1311,7 +1308,7 @@ BEGIN
 					--original
 					, SUM(Turnover)						AS Turnover
 					, SUM(WinLoss)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate))	AS LicenseeWL				
+					, - SUM(Winloss)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1322,7 +1319,7 @@ BEGIN
 					--MYR
 					, SUM(Turnover * e.MYR)						AS Turnover
 					, SUM(WinLoss * e.MYR)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.MYR)	AS LicenseeWL				
+					, - SUM(Winloss * e.MYR)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1333,7 +1330,7 @@ BEGIN
 					--USD
 					, SUM(Turnover * e.USD)						AS Turnover
 					, SUM(WinLoss * e.USD)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.USD)	AS LicenseeWL				
+					, - SUM(Winloss * e.USD)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1344,7 +1341,7 @@ BEGIN
 					--EUR
 					, SUM(Turnover * e.EUR)						AS Turnover
 					, SUM(WinLoss * e.EUR)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.EUR)	AS LicenseeWL				
+					, - SUM(Winloss * e.EUR)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1356,7 +1353,7 @@ BEGIN
 					--GBP
 					, SUM(Turnover * e.GBP)						AS Turnover
 					, SUM(WinLoss * e.GBP)						AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate) * e.GBP)	AS LicenseeWL				
+					, - SUM(Winloss * e.GBP)	AS LicenseeWL				
 					, 0									AS WinlossRB
 					, 0									AS AmtDueToBA
 					, 0									AS AmtDueToRB
@@ -1368,7 +1365,7 @@ BEGIN
 					, SUM(b.TotalTrans)					AS BetCount	  	  
 				FROM #DataWinloss3rd b WITH (NOLOCK)	
 					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId								
-					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId AND p.ProductID = 11
 					LEFT JOIN @Exchange e  ON e.ExchangeDate = b.winlostdate AND e.exchangeid = b.currency
 				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
 				GROUP BY b.CustId, CurrencyID
@@ -1443,7 +1440,7 @@ BEGIN
 	ORDER BY c.username
   
 DROP TABLE #SAgWinLoss 
-
+DROP TABLE #DataWinloss3rd
 END
 GO
 

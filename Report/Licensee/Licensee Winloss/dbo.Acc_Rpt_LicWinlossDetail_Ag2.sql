@@ -99,19 +99,15 @@ WHERE (@ShowAGC = 1 AND ProductPrefix = 'AGC')
 	OR (@ShowGD = 1 AND ProductPrefix = 'GD')
 
 DECLARE @tmpParty AS TABLE (PartyId INT, LicenseeId INT, ProductID INT, Rate MONEY, FromDate SMALLDATETIME, ToDate SMALLDATETIME)
-
-INSERT INTO @tmpParty(PartyId, LicenseeId, ProductID, Rate, Fromdate, Todate)
-	(
-		SELECT PartyID, LicenseeID, ProductID, DI_Rate, Fromdate, Todate
-		FROM bodb_licensee.dbo.LA_f_ChargeInfo(@PartyID, @FromDate, @ToDate, @ProductList, 'OA', @excludeTest)
-		WHERE DI_Rate > 0
-	)
-
-INSERT INTO @Bettype (Bettype)
-	(
-		SELECT Bettype
-		FROM bodb_licensee.dbo.LA_f_BettypeProductMapping(0, @ProductList)
-	)
+IF ISNULL(@ProductList, '') != ''
+BEGIN
+	INSERT INTO @tmpParty(PartyId, LicenseeId, ProductID, Rate, Fromdate, Todate)
+		(
+			SELECT PartyID, LicenseeID, ProductID, DI_Rate, Fromdate, Todate
+			FROM bodb_licensee.dbo.LA_f_ChargeInfo(@PartyID, @FromDate, @ToDate, @ProductList, 'OA', @excludeTest)
+			WHERE DI_Rate > 0
+		)
+END
 -----
 
 SELECT @VNDCurrencyName = currency FROM exchange (NOLOCK) WHERE ExchangeId = 51 
@@ -571,7 +567,7 @@ BEGIN
 					, CurrencyID		   
 					, SUM(Turnover) AS Turnover
 					, SUM(WinLoss) AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate)) AS LicenseeWL				
+					, - SUM(Winloss) AS LicenseeWL				
 					, 0 AS WinlossRB
 					, 0 AS AmtDueToBA
 					, 0 AS AmtDueToRB
@@ -582,7 +578,7 @@ BEGIN
 					, SUM(b.TotalTrans) AS BetCount	  	  
 				FROM #DataWinloss3rd b WITH (NOLOCK)	
 					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId								
-					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId AND p.ProductID = 10
 				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
 				GROUP BY b.Winlostdate, ag.CustId, CurrencyID 
 			)			
@@ -609,7 +605,7 @@ BEGIN
 					, b.currency	   
 					, SUM(Turnover) AS Turnover
 					, SUM(WinLoss) AS Winlost			
-					, - SUM(Winloss * ( 1 - p.Rate)) AS LicenseeWL				
+					, - SUM(Winloss) AS LicenseeWL				
 					, 0 AS WinlossRB
 					, 0 AS AmtDueToBA
 					, 0 AS AmtDueToRB
@@ -620,7 +616,7 @@ BEGIN
 					, SUM(b.TotalTrans) AS BetCount	  
 				FROM #DataWinloss3rd b WITH (NOLOCK)	
 					INNER JOIN @TempSMAG ag ON b.Recommend = ag.CustId AND b.Currency = ag.CurrencyId
-					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId									
+					INNER JOIN @tmpParty p ON ag.LicenseeeID = p.LicenseeId	AND p.ProductID = 11								
 				WHERE b.Winlostdate BETWEEN p.Fromdate AND p.Todate
 				GROUP BY b.Winlostdate, ag.CustId, b.Currency
 			)			
@@ -704,7 +700,7 @@ BEGIN
 
 DROP TABLE #SAgWinLoss 
 DROP TABLE #TempExchange
-
+DROP TABLE #DataWinloss3rd
 END
 GO
 
