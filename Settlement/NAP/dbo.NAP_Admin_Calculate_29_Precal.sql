@@ -1,4 +1,12 @@
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_Precal] (@matchids VARCHAR(2000)) WITH RECOMPILE
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29_PreCal]    Script Date: 05/26/2015 14:13:16 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_29_PreCal    Script Date: 26/05/2015 12:36:18 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_PreCal] (@matchids VARCHAR(2000)) WITH RECOMPILE
 AS
 /*
 	Created: Kathy
@@ -9,6 +17,8 @@ AS
 
 	Revisions:
 		- 20141030@Jamie: Sporting Solution for Tennis [Redmine:#23034]
+		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
+		
 	Param's Explanation:
 	@matchid: matchid of match to be settled
 */
@@ -36,12 +46,13 @@ BEGIN
 
 	WITH refnos
 	AS (
-		SELECT DISTINCT refno
-		FROM dbo.bettransm WITH (ROWLOCK)
-		WHERE matchid IN (
+		SELECT DISTINCT bm.refno
+		FROM dbo.bettransm bm WITH (ROWLOCK)
+		WHERE bm.matchid IN (
 				SELECT val
 				FROM dbo.strSplit(@matchids, ',')
 				)
+		AND NOT EXISTS (SELECT 1 FROM bettransm WITH(NOLOCK) WHERE refno = bm.refno AND statusID IN(1, 101)) -- dont calculate main ticket if subticket is still waiting or rejected
 		)
 	INSERT INTO @temp_bettrans (
 		[transid]
@@ -292,6 +303,6 @@ BEGIN
 		INNER JOIN dbo.RefCombination rc ON tb.N = rc.N AND (tb.bitmap & rc.bitmap) > 0
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_29_Precal] TO [vnteam] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_29_PreCal] TO [vnteam] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29_Precal] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29_PreCal] TO [vnteam] AS [dbo]
