@@ -52,14 +52,14 @@ BEGIN
 	INSERT INTO @CreditMovement (TransDate, CustId, Amount, BaseAmount )
 	SELECT	DATEADD(dd, 1, DATEDIFF(dd, 1, L.LogDate)) AS TransDate, 
 			L.CustId, 
-			SUM (L.NewValue - L.OldValue) AS Amount, 
-			SUM ((L.NewValue - L.OldValue)) * ISNULL(L.ActualRate,0) AS BaseAmount 
+			SUM (ISNULL(L.NewValue,0) - ISNULL(L.OldValue,0)) AS Amount, 
+			SUM ((ISNULL(L.NewValue,0) -  ISNULL(L.OldValue,0))) * L.ActualRate AS BaseAmount 
 	FROM	bodb_CustomerLog.dbo.UserLog_Credit L WITH (NOLOCK)		
 	WHERE	L.LogDate BETWEEN @FromDate AND @ToDate		 
-			AND L.NewValue > L.OldValue
+			AND ISNULL(L.NewValue,0) > ISNULL(L.OldValue,0)
 	GROUP BY DATEADD(dd, 1, DATEDIFF(dd, 1, L.LogDate)),
-			 ISNULL(L.ActualRate,0), L.CustId
-	HAVING	SUM((L.NewValue - L.OldValue)) * ISNULL(L.ActualRate,0) > @Amount
+			L.ActualRate, L.CustId
+	HAVING	SUM((ISNULL(L.NewValue,0) - ISNULL(L.OldValue,0))) * L.ActualRate > @Amount
 			
  
 	UPDATE L
