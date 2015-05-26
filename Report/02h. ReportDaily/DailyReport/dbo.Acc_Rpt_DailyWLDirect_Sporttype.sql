@@ -64,6 +64,7 @@ AS
 							- Combine Mix Parlay and System Parlay into 1 section
 		- 20141203@Dom: Apply sport bettype matrix
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
+		- 20150521@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -78,9 +79,9 @@ BEGIN
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(site tinyint,
@@ -210,9 +211,9 @@ BEGIN
 			 )bm on b.transid = bm.refno 
 			 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			 left join (select custid FROM #DepAgent) dep ON b.recommend = dep.custid
-	WHERE	b.ruben =1 
+	WHERE	b.ruben = 1 
 			--and b.bettype in (31,32,33)
-			and s.ProductID=2
+			and s.ProductID = 2
 			and b.matchid >0
 			and b.winlostdate = @winlostdate
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')	
@@ -278,8 +279,9 @@ BEGIN
 	WHERE	/*(b.bettype < 31 
 				OR b.bettype BETWEEN 121 AND 999
 				OR b.bettype BETWEEN 1301 and 1334)	*/
-			s.ProductId=1
-			AND s.EventType=1
+			s.ProductId = 1
+			AND s.EventType IN (1,2)
+			AND s.SubProduct NOT IN ('MG-SuperLive')
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY		
 			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
@@ -381,7 +383,7 @@ BEGIN
 			1 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=3
+	WHERE	s.ProductId = 3
 		--AND b.bettype BETWEEN 81 AND 120
 	GROUP BY site
 				 
@@ -392,10 +394,12 @@ BEGIN
 		1. Number Game
 		2. Live Casino
 		3. Casino
-		4. Virtual Sports
+		4. Virtual Sports + Gold Delulxe
 		5. Keno
 		6. Racing
-		7. Bingo
+		7. Metric Gaming- Super Live
+		8. Bingo
+		9. P2P
 	*/
 	UNION ALL --Racing
 	SELECT	106,
@@ -413,7 +417,7 @@ BEGIN
 			0 EnableVirtual
 	FROM @RBWinlost
 
-	---Live Casino
+	---Live Casino + Gold Deluxe
 	UNION ALL
 	SELECT
 			102,
@@ -431,7 +435,7 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=7
+	WHERE	s.ProductId IN (4,12)
 	--b.bettype BETWEEN 1101 AND 1199
 			AND b.matchid > 0
 	GROUP BY site
@@ -450,7 +454,7 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=5
+	WHERE	s.ProductId = 5
 		--b.bettype BETWEEN 1201 AND 1299
 	GROUP BY site			
 	
@@ -467,14 +471,14 @@ BEGIN
 			0 EnableVirtual
 	from	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	where 	s.ProductId=6
+	where 	s.ProductId = 6
 		--bettype IN(71, 72)
 			AND matchid IN (0, 71) 
 	GROUP BY site 
 
 	--P2P
 	UNION ALL
-	SELECT	108,'P2P', 253, 0, 
+	SELECT	109,'P2P', 253, 0, 
 			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			0 Position,
@@ -496,7 +500,7 @@ BEGIN
 
 	--BINGO
 	UNION ALL
-	SELECT	107,'Bingo', 252, 0,site,
+	SELECT	108,'Bingo', 252, 0,site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -507,7 +511,7 @@ BEGIN
 			0 EnableVirtual
 	from	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	where s.ProductId=7	
+	where s.ProductId = 7	
 		--bettype = 73
 			AND matchid IN (0, 73)	
 	GROUP BY site	
@@ -526,10 +530,32 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=8
+	WHERE	s.ProductId = 8
 		--b.bettype BETWEEN 1501 AND 1599
 	GROUP BY site
+
+	----METRIC GAMING -SUPER LIVE
+	UNION ALL
+	SELECT
+			107,'Metric Gaming - Super Live', 4, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			SUM(ISNULL(commission_actualrate,0)) Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) as VirtualLineTotal,	
+			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
+			SUM(ISNULL(turnover_actualrate,0)) VirtualTurnover,
+			0 EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 1
+			AND s.EventType = 1 
+			AND s.SubProduct = 'MG-SuperLive'
+	GROUP BY site
+
 	ORDER BY DisplayOrder asc, ibc	, site
+
+
 					
 	SELECT	@LineTotal = ISNULL(SUM(LineTotal_actualrate), 0) 
 	FROM	#src b WITH (NOLOCK)
