@@ -135,7 +135,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 	mpositiontaking smallmoney, 
 	spositiontaking smallmoney,
 	bettype			smallint,
-	betteam			nvarchar(50)
+	betteam			nvarchar(50),
+	TransDesc		varchar(300)
 							)  
 							
 	INSERT INTO @Data
@@ -1547,13 +1548,14 @@ BEGIN
 		BG.mpositiontaking, 
 		BG.spositiontaking,
 		BG.bettype,
-		BG.betteam  
+		BG.betteam,
+		BG.TransDesc  
 	FROM bettransg BG with (NOLOCK)  
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 		INNER JOIN @Data B ON BG.CustID = @CustID AND (sp.Productid in (4) AND BG.refno = B.refno AND BG.bettype = B.bettype)
 	UNION ALL
 	SELECT 
-		B.refno,
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1561,7 +1563,8 @@ BEGIN
 		BG.mpositiontaking, 
 		BG.spositiontaking,
 		BG.bettype,
-		BG.betteam  
+		BG.betteam,
+		BG.TransDesc   
 	FROM bettransg BG with (NOLOCK)  
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 		INNER JOIN @Data B ON BG.CustID = @CustID AND (sp.Productid in (12) AND BG.refno = B.transid AND BG.bettype = B.bettype)
@@ -1576,13 +1579,14 @@ BEGIN
 		BG.mpositiontaking, 
 		BG.spositiontaking,
 		BG.bettype,
-		BG.betteam  
+		BG.betteam,
+		BG.TransDesc    
 	FROM bettransg14 BG with (NOLOCK)  
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 		INNER JOIN @Data B ON  (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
 	UNION ALL
 	SELECT 
-		B.refno,
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1590,7 +1594,8 @@ BEGIN
 		BG.mpositiontaking, 
 		BG.spositiontaking,
 		BG.bettype,
-		BG.betteam  
+		BG.betteam,
+		BG.TransDesc    
 	FROM bettransg14 BG with (NOLOCK)  
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 		INNER JOIN @Data B ON  (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))

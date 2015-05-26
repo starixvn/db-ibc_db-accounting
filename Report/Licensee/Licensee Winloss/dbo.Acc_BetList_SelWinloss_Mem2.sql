@@ -2681,7 +2681,8 @@ DECLARE @BettransDetail TABLE(
 	spositiontaking SMALLMONEY,
 	bettype SMALLINT,
 	Betteam NVARCHAR (10),
-	BetCheck NVARCHAR(50)
+	BetCheck NVARCHAR(50),
+	TransDesc		varchar(300)
 	 )   
 
 IF @ShowRB = 1
@@ -2699,7 +2700,8 @@ begin
 			0,
 			BM.bettype,
 			BM.Betteam,	
-			BM.BetCheck
+			BM.BetCheck,
+			''	TransDesc
 		FROM bettransm BM WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BM.refno = B.transid
 		INNER JOIN #TempExchange e 
@@ -2720,7 +2722,8 @@ begin
 			0,
 			BM.bettype,
 			BM.Betteam,
-			BM.BetCheck 
+			BM.BetCheck ,
+			''	TransDesc
 		FROM bettransm14 BM WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BM.refno = B.transid
 		INNER JOIN #TempExchange e 
@@ -2741,7 +2744,8 @@ begin
 			0,
 			BM.bettype,
 			BM.Betteam,
-			BM.BetCheck 
+			BM.BetCheck ,
+			''	TransDesc
 		FROM bodb_archive.dbo.bettransm BM WITH (NOLOCK)
 		INNER JOIN #BetListByDateMem B ON BM.refno = B.transid
 		INNER JOIN #TempExchange e ON e.ExchangeDate = b.winlostdate   AND e.exchangeid = b.currency
@@ -2764,14 +2768,15 @@ BEGIN
 			0,
 			BG.bettype,
 			BG.Betteam,
-			'' AS BetCheck
+			'' AS BetCheck,
+			BG.TransDesc 
 		FROM bettransg BG WITH (NOLOCK)		
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 		INNER JOIN #BetListByDateMem B ON (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
 		INNER JOIN #TempExchange e ON e.ExchangeDate =  b.winlostdate AND e.exchangeid = b.currency
 		UNION ALL
 		SELECT 
-			B.refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
@@ -2780,7 +2785,8 @@ BEGIN
 			0,
 			BG.bettype,
 			BG.Betteam,
-			'' AS BetCheck
+			'' AS BetCheck,
+			BG.TransDesc 
 		FROM bettransg BG WITH (NOLOCK)		
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 		INNER JOIN #BetListByDateMem B ON (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
@@ -2800,14 +2806,15 @@ BEGIN
 			0,
 			BG.bettype,
 			BG.Betteam,
-			'' AS BetCheck
+			'' AS BetCheck,
+			BG.TransDesc 
 		FROM bettransg14 BG WITH (NOLOCK)
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 		INNER JOIN #BetListByDateMem B ON  (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
 		INNER JOIN #TempExchange e ON e.ExchangeDate =  b.winlostdate AND e.exchangeid = b.currency
 		UNION ALL
 		SELECT 
-			B.refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
@@ -2816,7 +2823,8 @@ BEGIN
 			0,
 			BG.bettype,
 			BG.Betteam,
-			'' AS BetCheck
+			'' AS BetCheck,
+			BG.TransDesc 
 		FROM bettransg14 BG WITH (NOLOCK)
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 		INNER JOIN #BetListByDateMem B ON  (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))
@@ -2836,14 +2844,15 @@ BEGIN
 			0, 
 			BG.bettype,
 			BG.Betteam,
-			'' AS BetCheck
+			'' AS BetCheck,
+			BG.TransDesc 
 		FROM bodb_archive.dbo.bettransG BG WITH (NOLOCK)
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 		INNER JOIN #BetListByDateMem B ON (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid in (4))
 		INNER JOIN #TempExchange e  ON e.ExchangeDate = b.winlostdate   AND e.exchangeid = b.currency
 		UNION ALL
 		SELECT 
-			B.refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake * (CASE @BaseCurrency WHEN 0 THEN 1 WHEN 1 THEN e.USD WHEN 2 THEN e.MYR WHEN 3 THEN e.EUR WHEN 4 THEN e.GBP ELSE 1 END),
 			BG.status, 
@@ -2852,7 +2861,8 @@ BEGIN
 			0, 
 			BG.bettype,
 			BG.Betteam,
-			'' AS BetCheck
+			'' AS BetCheck,
+			BG.TransDesc 
 		FROM bodb_archive.dbo.bettransG BG WITH (NOLOCK)
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 		INNER JOIN #BetListByDateMem B ON (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid in (12))

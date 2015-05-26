@@ -178,7 +178,8 @@ CREATE TABLE #BetListDetailData (
 	mpositiontaking smallmoney, 
 	spositiontaking smallmoney,
 	bettype			smallint,
-	betteam			nvarchar(50)
+	betteam			nvarchar(50),
+	TransDesc		varchar(300)
 )
 
 IF @Bettype = 0
@@ -3679,13 +3680,14 @@ BEGIN
 				BG.mpositiontaking, 
 				BG.spositiontaking,
 				BG.bettype,
-				BG.betteam
+				BG.betteam,
+				BG.TransDesc 
 			FROM dbo.bettransg BG with (NOLOCK)
 				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 				INNER JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
 			UNION ALL			
 			SELECT 
-				B2.refno, 
+				BG.refno, 
 				BG.odds, 
 				BG.stake,
 				BG.status,
@@ -3693,7 +3695,8 @@ BEGIN
 				BG.mpositiontaking, 
 				BG.spositiontaking,
 				BG.bettype,
-				BG.betteam
+				BG.betteam,
+				BG.TransDesc 
 			FROM dbo.bettransg BG with (NOLOCK)
 				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 				INNER JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
@@ -3711,13 +3714,14 @@ BEGIN
 				BG.mpositiontaking, 
 				BG.spositiontaking,
 				BG.bettype,
-				BG.betteam  
+				BG.betteam,
+				BG.TransDesc   
 			FROM dbo.bettransg14 BG with (NOLOCK)
 				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 				INNER JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
 			UNION ALL			
 			SELECT 
-				B2.refno, 
+				BG.refno, 
 				BG.odds, 
 				BG.stake,
 				BG.status,
@@ -3725,7 +3729,8 @@ BEGIN
 				BG.mpositiontaking, 
 				BG.spositiontaking,
 				BG.bettype,
-				BG.betteam
+				BG.betteam,
+				BG.TransDesc 
 			FROM dbo.bettransg14 BG with (NOLOCK)
 				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 				INNER JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))	   

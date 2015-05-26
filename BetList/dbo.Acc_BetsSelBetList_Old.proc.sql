@@ -1,11 +1,11 @@
 ﻿USE bodb_archive
 GO
 
-ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_Old]  
+ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_Old]
 	@FromDate datetime,  
 	@ToDate datetime,  
 	@CustID int,
-	@Bettype int = 0
+	@Bettype int = 0	 
 AS  
 /*
 Created: 20100123@[Henry]
@@ -121,7 +121,8 @@ CREATE TABLE #BetListDetailData (
 	mpositiontaking smallmoney, 
 	spositiontaking smallmoney,
 	bettype			smallint,
-	betteam			nvarchar(50)
+	betteam			nvarchar(50),
+	TransDesc		varchar(300)
 )
 
 ----Get Sport Bettype Matrix------
@@ -1710,7 +1711,7 @@ BEGIN
 				ON d.bettype = sp.bettype 
 		WHERE ProductID in (4,12)) 
 BEGIN
-	 INSERT INTO #BetListData
+	 INSERT INTO #BetListDetailData
 		SELECT 
 			BG.refno,
 			BG.odds, 
@@ -1720,13 +1721,14 @@ BEGIN
 			BG.mpositiontaking, 
 			BG.spositiontaking,
 			BG.bettype,
-			BG.betteam  
+			BG.betteam ,
+			BG.TransDesc  
 		FROM dbo.bettransg BG with (NOLOCK)
 			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
 			INNER JOIN #BetListData B ON (BG.refno = B.refno AND BG.CustID = B.CustID AND sp.Productid in (4))
 		UNION ALL
 		SELECT 
-			B.refno,
+			BG.refno,
 			BG.odds, 
 			BG.stake,
 			BG.status,
@@ -1734,14 +1736,15 @@ BEGIN
 			BG.mpositiontaking, 
 			BG.spositiontaking,
 			BG.bettype,
-			BG.betteam  
+			BG.betteam  ,
+			BG.TransDesc 
 		FROM dbo.bettransg BG with (NOLOCK)
 			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 			INNER JOIN #BetListData B ON (BG.refno = B.transid AND BG.CustID = B.CustID AND sp.Productid in (12))
 				
 END 
 		   
- SELECT * FROM #BetListData BG ORDER BY refno
+ SELECT * FROM #BetListDetailData BG ORDER BY refno
   	
  DROP TABLE #BetListData
  DROP TABLE #BetListDetailData
