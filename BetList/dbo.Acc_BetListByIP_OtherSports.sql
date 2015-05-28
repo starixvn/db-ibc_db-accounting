@@ -1,7 +1,7 @@
 ﻿USE bodb02
 GO
 
-ALTER PROCEDURE [dbo].[Acc_BetListByIP_OtherSports]
+ALTER PROCEDURE [dbo].[Acc_BetListByIP_OtherSports_xtest]
 	@custid		INT, 
 	@ip			VARCHAR(15),
 	@fromdate	DATETIME 
@@ -123,7 +123,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 			sporttype		INT,
 			IsNeutral		BIT,
 			showtime		NVARCHAR (50),
-			winlostdate		smalldatetime
+			winlostdate		smalldatetime,
+			BetCheck		NVARCHAR(50)
 			)
         
  DECLARE @DetailData TABLE (
@@ -199,7 +200,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 			sporttype,		
 			IsNeutral,		
 			showtime,
-			winlostdate					
+			winlostdate,
+			BetCheck
 	FROM (
 			SELECT
 					match.finalhomescore,
@@ -250,7 +252,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate
+					b.winlostdate,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock) 
 					INNER JOIN match14 match with (nolock) on b.matchid= match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
@@ -313,7 +316,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					b.betcheck
 			FROM  	bettrans14 b  with (nolock) 
 					inner join custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.bettype = 9 
@@ -374,7 +378,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM  	bettrans14 b  with (nolock) 
 					inner join custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.bettype = 29 
@@ -438,7 +443,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					b.betcheck
 			FROM	bettrans b with (nolock) 
 					INNER JOIN match  with (nolock) on b.matchid = match.matchid
 					INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
@@ -498,7 +504,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					b.betcheck
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -557,7 +564,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo creator  with (nolock) on creator.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -620,7 +628,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM	 
 					bettrans b with (nolock)
 					INNER JOIN outright odds with (nolock) on b.matchid = odds.orid
@@ -689,7 +698,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN outright14 odds with (nolock) on b.matchid = odds.orid
 					INNER JOIN league l with (nolock) on odds.leagueid = l.leagueid
@@ -756,7 +766,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					b.betcheck
 			FROM 	bettrans b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE	s.ProductID = 6
@@ -815,7 +826,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE	s.ProductID = 6
@@ -874,7 +886,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					b.betcheck
 			FROM 	bettrans b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE	s.ProductID = 7
@@ -933,7 +946,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE	s.ProductID = 7
@@ -992,7 +1006,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					b.betcheck
 			FROM 	bettrans b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
@@ -1050,7 +1065,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					0 mwinlost,
 					0 swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					'' betcheck
 			FROM 	translog b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
@@ -1110,7 +1126,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
@@ -1169,7 +1186,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM 	bettrans b with (nolock)
 			WHERE	b.bettype = 1000
 					AND b.matchid = 1000 
@@ -1226,7 +1244,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock)
 			WHERE	b.bettype = 1000
 					AND b.matchid = 1000 
@@ -1283,7 +1302,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate
+					b.winlostdate,
+					b.betcheck
 			FROM 	bettrans b with (nolock)
 					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -1344,7 +1364,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate
+					b.winlostdate,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -1404,7 +1425,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					b.betcheck
 			FROM 	bettrans b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE	s.ProductID = 12
@@ -1460,7 +1482,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					0 mwinlost,
 					0 swinlost,
 					b.betfrom,
-					b.winlostdate 
+					b.winlostdate ,
+					'' betcheck					
 			FROM 	dbo.translog b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 			WHERE	s.ProductID = 12
@@ -1518,7 +1541,8 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					b.mwinlost,
 					b.swinlost,
 					b.betfrom,
-					b.winlostdate  
+					b.winlostdate  ,
+					b.betcheck
 			FROM 	bettrans14 b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE	s.ProductID = 12
