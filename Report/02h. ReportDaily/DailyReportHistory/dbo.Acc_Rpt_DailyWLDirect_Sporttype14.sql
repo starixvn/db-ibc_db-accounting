@@ -547,7 +547,7 @@ BEGIN
 	UNION ALL
 	SELECT 107
 		,'Metric Gaming - Super Live'
-		,4
+		,-1
 		,0
 		,site
 		,ISNULL(SUM(winlost_actualrate), 0) WinLost

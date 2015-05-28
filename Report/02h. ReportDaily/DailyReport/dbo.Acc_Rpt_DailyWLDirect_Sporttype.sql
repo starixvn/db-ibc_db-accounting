@@ -537,7 +537,7 @@ BEGIN
 	----METRIC GAMING -SUPER LIVE
 	UNION ALL
 	SELECT
-			107,'Metric Gaming - Super Live', 4, 0, site,
+			107,'Metric Gaming - Super Live', -1, 0, site,
 			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
 			SUM(ISNULL(b.position_actualrate,0)) Position,
 			SUM(ISNULL(commission_actualrate,0)) Commission,	
