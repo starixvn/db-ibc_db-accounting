@@ -1,7 +1,7 @@
 ﻿USE bodb02
 GO
 
-ALTER PROCEDURE [dbo].[Acc_BetListByIP_OtherSports_xtest]
+ALTER PROCEDURE [dbo].[Acc_BetListByIP_OtherSports]
 	@custid		INT, 
 	@ip			VARCHAR(15),
 	@fromdate	DATETIME 
