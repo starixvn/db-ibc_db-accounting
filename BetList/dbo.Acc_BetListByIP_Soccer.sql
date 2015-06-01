@@ -1,4 +1,7 @@
-﻿ALTER PROC [dbo].[Acc_BetListByIP_Soccer]
+﻿USE bodb02
+GO
+
+ALTER PROC [dbo].[Acc_BetListByIP_Soccer]
 	@custid		INT, 
 	@ip			VARCHAR(15),
 	@fromdate	DATETIME 

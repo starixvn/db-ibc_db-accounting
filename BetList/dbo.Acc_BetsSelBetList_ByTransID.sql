@@ -169,11 +169,11 @@ BEGIN
 	-- FROM translog
 	SELECT TOP 1 
 		@WinlostDate 	= bt.winlostdate
-		, @bettype 		= bt.bettype 
+		, @bettype 		= bt.gameID 
 		, @refno 		= bt.translogid
 	from dbo.translog bt with (nolock)
 		INNER JOIN @SportBettype sp 
-		ON bt.bettype = sp.bettype
+		ON bt.gameID = sp.bettype
 	where bt.custid 	= @Custid
 		AND translogid 	= @transid 
 		AND statusID 	= 0
@@ -237,9 +237,9 @@ BEGIN
 					AND sp.productid IN (6,7,8,9,12)
 				)
 			)
-		)
+		
 	END
-	
+
 	IF(@WinlostDate IS NULL) GOTO OutputResult;
 	
 	/*
@@ -326,11 +326,12 @@ BEGIN
 	--Bettrans
 	IF @WinlostDate > @MoveBetsDay  
 	BEGIN  
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
-		and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
-		and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 8 )
+	--IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+	--	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
+	--	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 8 )
 		--AND @bettype NOT BETWEEN 1501 AND 1599 
 		--AND @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
 	BEGIN
 		--Sportbooks  
 		INSERT INTO @Data  
@@ -407,7 +408,7 @@ BEGIN
 			--b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
 			--b.bettype NOT BETWEEN 1501 and 1599 AND
 			--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) AND
-			s.eventtype = 1 AND
+			--s.eventtype = 1 AND
 			b.transid 	= @TransID  
 			
 		UNION ALL -- translog metric gaming
@@ -631,8 +632,9 @@ BEGIN
 		b.custid = @Custid    
 		--AND matchid in (0, 71)  
 		--AND bettype = 71        --20120405@Hurri  
-		AND s.ProductID = 6
-		AND b.refno = @TransID  
+		--AND s.ProductID = 6
+		--AND b.refno = @TransID  
+		AND b.refno = @refno
 
 	--IBC Bingo  
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
@@ -703,7 +705,8 @@ BEGIN
 		--AND matchid in (0, 73) 
 		--AND bettype = 73  
 		AND s.ProductID = 7
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno
 
 	--IBC Keno  
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
@@ -775,7 +778,8 @@ BEGIN
 		b.custid = @Custid    
 		--AND bettype BETWEEN 1501 AND 1599
 		AND s.ProductID = 8
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno
 	UNION ALL	-- translog
 	select 
 		b.gameid bettype,   
@@ -1218,6 +1222,7 @@ BEGIN
 				b.custid = @Custid    
 				AND s.ProductID = 12
 				AND b.refno = @refno
+
 			UNION ALL	-- translog
 			select 
 				b.gameid bettype,   
@@ -1291,11 +1296,12 @@ BEGIN
 	--Bettrans14  
 	ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay 
 	BEGIN  
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/)
-			and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)		
-			and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 8 )
-		--AND @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-		--AND @bettype NOT BETWEEN 1501 and 1599 
+	--IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/)
+	--	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)		
+	--	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 8 )
+	--AND @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--AND @bettype NOT BETWEEN 1501 and 1599 
+	IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
 	--Sportbooks  
 	INSERT INTO @Data  
 	select   
@@ -1520,7 +1526,8 @@ BEGIN
 		--AND matchid in (0, 71) 
 		--AND bettype = 71        --20120405@Hurri
 		AND s.ProductID = 6
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno  
 
 	--IBC Bingo  
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
@@ -1591,7 +1598,8 @@ BEGIN
 		--AND matchid in (0, 73)  
 		--AND bettype = 73  
 		AND s.ProductID = 7 
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno  
 
 	--IBC Keno
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
@@ -1661,7 +1669,8 @@ BEGIN
 	where     
 		b.custid = @Custid   
 		--AND bettype BETWEEN 1501 AND 1599  
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno  
 		AND s.ProductID = 8
 		AND b.statusID NOT IN (0,1)					
 	--- P2P  
@@ -2037,9 +2046,10 @@ BEGIN
 	ELSE IF @WinlostDate < @BalanceUpDay 
 	BEGIN  
 	--Sportbooks  
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231, 1232, 1233, 1237, 1238*/) 
-		and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
-		--and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231, 1232, 1233, 1237, 1238*/) 
+	--and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
+	--and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
 	INSERT INTO @Data  
 	select   
 		b.bettype,  
@@ -2261,7 +2271,8 @@ BEGIN
 		AND s.ProductID = 6
 		--AND matchid in (0, 71)  
 		--AND bettype = 71        --20120405@Hurri  
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno  
 
 	--- IBC Bingo 
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
@@ -2332,7 +2343,8 @@ BEGIN
 		--AND matchid in (0, 73)  
 		--AND bettype = 73  
 		AND s.ProductID = 7
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno  
 
 	--- IBC keno 
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
@@ -2403,7 +2415,8 @@ BEGIN
 		b.custid = @Custid    
 		AND s.ProductID = 8
 		--AND bettype BETWEEN 1501 AND 1599
-		AND b.refno = @TransID  
+		--AND b.refno = @TransID  
+		AND b.refno = @refno  
 
 	--- P2P  
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)

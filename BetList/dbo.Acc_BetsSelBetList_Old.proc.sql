@@ -113,7 +113,7 @@ BEGIN
 		showtime nvarchar(50),
 		winlostdate		smalldatetime,
 		BetCheck	NVARCHAR(50),
-		BetCheck	NVARCHAR(3000)
+		transdesc	NVARCHAR(300)
 	)
 
 	CREATE TABLE #BetListDetailData (
@@ -588,7 +588,7 @@ BEGIN
 					AND s.EventType = 0
 					AND (@bettype 	= 0 OR s.bettype = @bettype)
 				)
-				
+	END
 	IF (@Bettype = 0
 		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
 	)
@@ -664,8 +664,8 @@ BEGIN
 					s.ProductId 	= 8 	
 					AND s.EventType = 0
 					AND (@bettype 	= 0 OR s.bettype = @bettype)
-				)
-				
+				)				
+	END
 	IF (@Bettype = 0
 		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
 	)
@@ -673,7 +673,7 @@ BEGIN
 		--- P2P
 		INSERT INTO #BetListData
 		select 
-			 bettype,   
+			 b.bettype,   
 			 b.transid,   
 			 isnull(b.BetID,0),
 			 b.refno,
@@ -732,6 +732,7 @@ BEGIN
 			b.BetCheck,
 			'' AS transdesc									 
 		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid  
@@ -1037,8 +1038,8 @@ BEGIN
 			   
 	 SELECT * FROM #BetListDetailData BG ORDER BY refno
 		
-	 DROP TABLE #BetListData
-	 DROP TABLE #BetListDetailData
+	 DROP TABLE #BetListData;
+	 DROP TABLE #BetListDetailData;
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList_Old] TO [bodbAdminNet]

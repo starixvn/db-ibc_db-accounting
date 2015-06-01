@@ -1,4 +1,4 @@
-﻿USE BODB02
+﻿USE bodb02
 GO 
 
 ALTER PROCEDURE [dbo].[Acc_BetListByDayAll]

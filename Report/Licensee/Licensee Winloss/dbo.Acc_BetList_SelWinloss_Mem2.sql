@@ -2720,7 +2720,7 @@ BEGIN
 			0 as swinlost,
 			d.Winlostdate as winlostdate,
 			d.BetCheck,
-			b.transdesc
+			d.transdesc
 	FROM	#BetListByDateMem d 
 			INNER JOIN #TempExchange e 
 			ON e.ExchangeDate =  d.winlostdate AND e.exchangeid = d.currency

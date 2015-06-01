@@ -830,7 +830,7 @@ BEGIN
 		BEGIN	
 			INSERT INTO #BetListData
 			select 
-				 bettype,   
+				 b.bettype,   
 				 b.transid,   
 				 isnull(b.betid,0),
 				 b.refno,
@@ -891,6 +891,7 @@ BEGIN
 				 '' AS transdesc
 				 
 			from	bettrans b with (nolock)   
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
 					b.custid = @Custid  
@@ -1806,7 +1807,7 @@ BEGIN
 		
 			INSERT INTO #BetListData
 			select 
-				 bettype,   
+				 b.bettype,   
 				 b.transid,
 				 isnull(b.betid,0),   
 				 b.refno,
@@ -1866,6 +1867,7 @@ BEGIN
 				'' AS transdesc
 					
 			from	bettrans14 b with (nolock)   
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
 					b.custid = @Custid  
