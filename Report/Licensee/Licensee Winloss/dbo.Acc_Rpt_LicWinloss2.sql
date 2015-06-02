@@ -538,7 +538,7 @@ BEGIN
 	SET @Recommend = SUBSTRING(@Recommend, 0, LEN(@Recommend))	
 
 	SELECT @sql = 'SELECT Recommend, Winlostdate, SportType, Currency, TurnOver, TotalTrans, Winloss
-					FROM OPENQUERY(DBACC,''EXEC bodb02.dbo.LA_Rpt_3rdProductWinloss_xtest
+					FROM OPENQUERY(DBACC,''EXEC bodb02.dbo.LA_Rpt_3rdProductWinloss
 											@ProductCodes		= ''''@ProductCodes_''''
 										, @Recommend		= ''''@Recommend_''''
 										, @Currency 		= @Currency_
