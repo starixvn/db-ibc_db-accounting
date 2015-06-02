@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 05/26/2015 14:13:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime,
@@ -13,8 +18,8 @@ AS
 	Original: Admin_Calculate_9_Cal
 
 	Revisions:
-		-20140502@Kathy: Calculate the execution time
-
+		- 20140502@Kathy: Calculate the execution time
+		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -37,6 +42,7 @@ BEGIN
 		SELECT distinct refno
 		FROM dbo.bettransm bm WITH (ROWLOCK)
 		WHERE matchid = @matchid
+		AND NOT EXISTS (SELECT 1 FROM bettransm WITH(NOLOCK) WHERE refno = bm.refno AND statusID IN(1, 101)) -- dont calculate main ticket if subticket is still waiting or rejected
 	
 	DECLARE @temp_bettrans_9 TABLE (
 		[transid] [bigint] NOT NULL ,
@@ -383,5 +389,9 @@ BEGIN
 END
 ---------------------------------------------------------------
 ---------------------------------------------------------------
+
+
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]
