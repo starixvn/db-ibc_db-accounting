@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss]
 	@fromdate datetime,
 	@todate datetime,
 	@username varchar(50) = '',
@@ -9,21 +8,24 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss]
 	@GameTableID smallint = 0,--leagueid
 	@currency smallint = 0,
 	@ReportBy tinyint = 0,
+	@ProductId TINYINT = 0,
 	@MoveBetDay smalldatetime,
     @Debug BIT = 0
 AS 
 /*
 Created: 20120521@Dom
 Task : SP for Live Casino Game - Reports - Agency Win/Loss report
-DB: DB06/bodb02 + Get history sum data from DBDW2
+DB: DBACC/bodb02 + Get history sum data from DBDW2
 
 Revisions:
-	Dom.Cao@2012-06-12: 
+	- Dom.Cao@2012-06-12: 
 		- Replace table MasterCube to mcCustLiveCasinoDaily
 		- Use temp table tbl_Currency_Daily instead of ExchangeDail
-	Dom.Cao@2012-10-19:
+	- Dom.Cao@2012-10-19:
 		- Update wrong _RM column: sum((winlost-actual_stake)*actualrate)	
-   20130123@Daniel: Change link server alias
+    - 20130123@Daniel: Change link server alias
+	- 20150601@Sophia: Apply Gold Deluxe
+
 		
 Param's Explanation:
 
@@ -55,6 +57,12 @@ Param's Explanation:
   3: Game Type
   4: Game Table
   5: currency
+
+  - @ProductId:
+  0: All
+  4: Live Casino 
+  12: GoldDeluxe
+
 */
 
 
@@ -119,6 +127,15 @@ SELECT @sqlTableExchange = 'create table #tbl_Currency_Daily
     from ExchangeDailyOanda with (nolock) 
     where exchangedate between '''+convert(varchar(10),@fromdate,120)+''' AND '''+convert(varchar(10),@todate,120)+'''' + char(13)
 
+SELECT @sqlTableExchange = @sqlTableExchange + '
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4 
+
+	DELETE @SportBettype 
+	WHERE ProductID NOT IN (4,12) '
+
 
 SELECT @TempDataSQL = ''
 SELECT @TempDataSQLDW = ''
@@ -169,14 +186,17 @@ BEGIN
 	 								+'LEFT JOIN DBLIC.bodb_licensee.dbo.Licensees lic with (nolock) on lc.LicenseeID = lic.LicenseeID' + char(13)
 	 ELSE ''
 	 END
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
 	+'WHERE winlostdate  >= @fromdate AND winlostdate <= @todate'+char(13)
-	+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1' + char(13)
-	+'AND statusid IN (111,112,113)'
+	--+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1 '+char(13)
+	+CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
+	+'AND b.ruben = 1' + char(13)
+	+'AND statusid IN (111,112,113)'+char(13)
 	+CASE WHEN @username <> '' THEN 'AND ci.username LIKE '''+@username+'%'' '+char(13) ELSE '' END
 	+case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
 	+case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+case when @GameTypeID > 0 then '	AND bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY'+char(13)
 	+CASE WHEN @ReportBy = 3 THEN 'b.bettype,'+char(13) ELSE '' END
@@ -221,6 +241,7 @@ BEGIN
 	+'-SUM((winlossIBC+CommissionS) * c.actualrate)'+char(13)
 	
 	+'FROM DBDW2.bodb_account.dbo.mcCustLiveCasinoDaily  b WITH(NOLOCK) '+char(13)
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
 	+CASE WHEN @ReportBy = 2 OR @username <> '' THEN 'INNER JOIN CustInfo ci WITH (NOLOCK) ON ci.CustId = b.CustId'+char(13) ELSE '' END
 	+'INNER JOIN #tbl_Currency_Daily c with (nolock) on b.rptdate = c.exchangedate AND b.currency = c.exchangeid' + char(13)
 	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN DBDW2.bodb_Account.dbo.tbl_site s with (nolock) on b.siteid = s.siteid' + char(13)
@@ -228,13 +249,14 @@ BEGIN
 	 ELSE '' 
 	 END
 	+'WHERE rptDate  >= @fromdate and rptDate <= @todate'+char(13)
-	+'AND b.bettype BETWEEN 1101 AND 1199' + char(13)
+	---+'AND b.bettype BETWEEN 1101 AND 1199' + char(13)
+	+ CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
 	--+'AND b.status IN (3,4,8)' + char(13)
 	+CASE WHEN @username <> '' THEN 'AND ci.username LIKE '''+@username+'%'' '+char(13) ELSE '' END
 	+ case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+ case when @SiteID > 0 then '	AND lic.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND s.isDeposit = 0' + char(13) else '' end
 	+ case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+ case when @GameTypeID > 0 then '	AND bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+ case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+ case when @GameTableID > 0 then '	AND b.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY'+char(13)
 	+CASE WHEN @ReportBy = 3 THEN 'b.bettype,'+char(13) ELSE '' END
@@ -307,6 +329,7 @@ BEGIN
 	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm) * b.actualrate)'+char(13)
 	
 	+'FROM bettrans b with (nolock)'+char(13)
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
 	--+'INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid'+char(13)
 	+ CASE WHEN @UserRole = 4 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.mrecommend' 
 			WHEN @UserRole = 3 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.recommend' 
@@ -323,12 +346,14 @@ BEGIN
 	 ELSE '' 
 	 END
 	+'WHERE winlostdate  >= @fromdate and winlostdate <= @todate'+char(13)
-	+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1' + char(13)
+	---+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1' + char(13)
+	+ CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
+	+'AND b.ruben = 1' + char(13)
 	+'AND statusid IN (111,112,113)'
 	+ case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+ case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
 	+ case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+ case when @GameTypeID > 0 then '	AND bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+ case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+ case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY b.Currency,'+char(13)
 	+'a.UserName'+char(13)
@@ -367,6 +392,7 @@ BEGIN
 			+'-SUM((winlossIBC+CommissionS) * c.actualrate)'+char(13)
 			
 			+'FROM DBDW2.bodb_Account.dbo.mcCustLiveCasinoDaily b with (nolock)'+char(13)
+			+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
 			+'INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid'+char(13)
 			+'INNER JOIN #tbl_Currency_Daily c with (nolock) on b.rptdate = c.exchangedate AND b.currency = c.exchangeid' + char(13)
 			+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN DBDW2.bodb_Account.dbo.tbl_site s with (nolock) on b.siteid = s.siteid' + char(13)
@@ -380,12 +406,13 @@ BEGIN
 				ELSE ''
 			END + char(13)
 	+'WHERE rptDate  >= @fromdate AND rptDate <= @todate'+char(13)
-	+'AND b.bettype BETWEEN 1101 AND 1199' + char(13)
+	---+'AND b.bettype BETWEEN 1101 AND 1199' + char(13)
+	+ CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
 	--+'AND b.status IN (3,4,8)' + char(13)
 	+ case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+ case when @SiteID > 0 then '	AND lic.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND s.isDeposit = 0' + char(13) else '' end
 	+ case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+ case when @GameTypeID > 0 then '	AND bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+ case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+ case when @GameTableID > 0 then '	AND b.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY b.currency,'+char(13)
 	+'a.UserName'+char(13)
@@ -606,7 +633,8 @@ SELECT @sql = @sqlTableExchange + @sql
  
 IF(@Debug=1)
 	print @sql
-exec (@sql)
+
+EXEC (@sql)
 
 
 /*
@@ -636,6 +664,7 @@ select [ExchangeDate], [ExchangeId],[ActualRate]
 
 DROP TABLE #Data
 DROP TABLE #Agency
+
 GO
 GRANT EXECUTE ON [dbo].Acc_Rpt_LiveCasino_AgencyWinLoss TO [bodbAdminNet]
 GO
