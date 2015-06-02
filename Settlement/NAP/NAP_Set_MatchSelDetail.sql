@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
 	,@excludeRefundFGLG BIT = 0
 AS
@@ -23,6 +25,7 @@ AS
 		- 20141204@Jamie: Sportting Solution settlement - GameSession to indicate the type of league [Redmine:#27027]
 		- 20150401@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -738,7 +741,7 @@ BEGIN
 						AND isnull(ConfirmFT, 0) = 0
 				)
 			)
-			AND @DisplayCat = 0	
+			AND @DisplayCat <>8	
 	BEGIN
 		SELECT @IsHTOnly = 1
 		
@@ -842,12 +845,6 @@ BEGIN
 
 
 END
-
-GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO

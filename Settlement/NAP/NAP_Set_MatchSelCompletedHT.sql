@@ -20,6 +20,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 		
 */
 BEGIN
@@ -170,7 +171,7 @@ BEGIN
 			WHERE m.eventdate = @Date AND m.leagueID = CASE 
 					WHEN @LeagueID <> 0 THEN @LeagueID
 					ELSE m.leagueID
-					END AND m.sporttype = @sporttype AND m.eventstatus IN ('Closed', 'running', 'internal') AND ((datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) > @HTOverStartMins AND datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) < @HTOverEndMins) OR mr.confirmHT <> 0 OR l.DisplayCat = 1) AND mr.ishtcal = 0
+					END AND m.sporttype = @sporttype AND m.eventstatus IN ('Closed', 'running', 'internal') AND ((datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) > @HTOverStartMins AND datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) < @HTOverEndMins) OR mr.confirmHT <> 0 OR l.DisplayCat = 8) AND mr.ishtcal = 0
 			) m
 			INNER JOIN (
 			SELECT bettrans.matchid

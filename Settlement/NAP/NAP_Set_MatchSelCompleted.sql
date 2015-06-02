@@ -22,7 +22,8 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
-		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212
+		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 
 
 	Param explanation: 
@@ -148,7 +149,7 @@ BEGIN
 			WHEN @sporttype = 0 THEN m.sporttype
 			ELSE @sporttype
 			END 
-			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0 OR l.DisplayCat =1 )
+			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0 OR l.DisplayCat =8 )
 	
 	INSERT INTO #matchList	
 		SELECT tm.matchid
