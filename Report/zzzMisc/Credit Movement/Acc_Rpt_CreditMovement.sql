@@ -12,6 +12,7 @@ AS
     DB: DBLOG/bodb_CustomerLog
    
     Revisions: 
+		- 20150602@Sophia: remove unused code
 
 	Param's Explanation:
 
@@ -40,14 +41,6 @@ BEGIN
 		INNER JOIN bodb02.dbo.strSplit(@sitelist,',') t 
 				ON s.siteid = CONVERT(INT,t.val)
 	END
-
-
-	DECLARE @ExchangeDaily TABLE(ExchangeDate SMALLDATETIME, ExchangeId INT, Actualrate FLOAT)
-	
-	INSERT INTO @ExchangeDaily (Exchangedate, ExchangeId, Actualrate)
-	SELECT Exchangedate, exchangeid, Actualrate
-	FROM bodb02.dbo.Lrf_f_GetExchangeDaily( @FromDate, @ToDate)	
-
 		
 	INSERT INTO @CreditMovement (TransDate, CustId, Amount, BaseAmount )
 	SELECT	DATEADD(dd, 1, DATEDIFF(dd, 1, L.LogDate)) AS TransDate, 
