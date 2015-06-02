@@ -447,6 +447,7 @@ Begin DataProject = "Account"
                Script = "dbo.NAP_BettransSelSpecialDel_LiveCS.sql"
             End
             Begin Folder = "Mix Parlay"
+               Script = "dbo.DBA_BettransRecoverBet_Parlay.sql"
                Script = "dbo.NAP_BettransDelSpecialDel_MixParlay.sql"
                Script = "dbo.NAP_BettransSelDetailSpecialDel_MixParlay.sql"
                Script = "dbo.NAP_BettransSelSpecialDel_MixParlay.sql"

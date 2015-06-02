@@ -31,7 +31,7 @@ SET NOCOUNT ON
 
 DECLARE @Date DATE , @ActualRate FLOAT, @ExchangeId TINYINT
 SELECT @Date = CURRENT_TIMESTAMP
-
+ 
 SELECT  @ExchangeId = Currency
 FROM	bodb02.dbo.Customer WITH (NOLOCK)
 WHERE	CustId = @CustID
@@ -40,7 +40,8 @@ SELECT @ActualRate = ActualRate
 FROM  bodb02.dbo.ExchangeDailyOanda WITH (NOLOCK)
 WHERE ExchangeDate = @Date
 	  AND ExchangeId = @ExchangeId
-	
+
+ 
 
 INSERT INTO UserLog_Credit (UserID, 
 							CustID,
