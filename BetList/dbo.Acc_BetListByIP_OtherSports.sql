@@ -1483,7 +1483,7 @@ EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 					0 swinlost,
 					b.betfrom,
 					b.winlostdate ,
-					'' betcheck					
+					b.Gameid3rd betcheck					
 			FROM 	dbo.translog b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 			WHERE	s.ProductID = 12
