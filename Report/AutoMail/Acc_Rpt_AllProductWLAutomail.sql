@@ -9,7 +9,7 @@ AS
 	Original:
 
 	Revisions:
-		
+		- 20150529@Jim: support Gold Deluxe & Metric Gaming (Feature #35359)
 	Param's Explanation:
 	
 */
@@ -25,12 +25,14 @@ BEGIN
 	UNION ALL SELECT	'SB',4, 6911914	, 'Outright'	---- DWLOutright
 	UNION ALL SELECT	'3rd', 5, 6911916	, 'RNG Casino'		---- DWLCasino
 	UNION ALL SELECT	'3rd', 6, 6911917	, 'Live Casino' ---- DWLLiveCasino
-	UNION ALL SELECT	'3rd', 7, 6911918	, 'Number Game' ---- DWLNumber	
-	UNION ALL SELECT	'3rd', 8, 6911919	, 'Racing'		---- DWLRacing
-	UNION ALL SELECT	'partners', 9, 7723121	, 'Racing (Due to Partners)'	----- VNM-Racing Partners MYR
-	UNION ALL SELECT	'3rd', 10, 6913085	, 'Bingo'		---- DWLBingo
-	UNION ALL SELECT	'3rd', 11, 8158305	, 'Virtual Sports'	---- DWLVirtualSports
-	UNION ALL SELECT	'3rd', 12, 14054918, 'Keno'		---- DWLKeno
+	UNION ALL SELECT	'3rd', 7, 18123445, 'Gold Deluxe'		---- DWLGoldDeluxe
+	UNION ALL SELECT	'3rd', 8, 6911918	, 'Number Game' ---- DWLNumber	
+	UNION ALL SELECT	'3rd', 9, 6911919	, 'Racing'		---- DWLRacing
+	UNION ALL SELECT	'partners', 10, 7723121	, 'Racing (Due to Partners)'	----- VNM-Racing Partners MYR
+	UNION ALL SELECT	'3rd', 11, 6913085	, 'Bingo'		---- DWLBingo
+	UNION ALL SELECT	'3rd', 12, 8158305	, 'Virtual Sports'	---- DWLVirtualSports
+	UNION ALL SELECT	'3rd', 13, 14054918, 'Keno'		---- DWLKeno
+	UNION ALL SELECT	'3rd', 14, 18123442, 'Metric Gaming - Super Live'		---- DWLMetricGaming
 
 	
 
@@ -84,7 +86,7 @@ BEGIN
 				ISNULL(-SUM(b.Credit),0) AS winlostyesterday
 			FROM bodb_archive.dbo.transfer_bk b WITH(NOLOCK) 
 			 WHERE b.winlostdate BETWEEN @_fromdate AND @balanceupdate - 1
-				AND	b.custid in( 6911909,6911911,6911913,6911914,6911916,6911917,6911918,6911919,6913085,7723121,8158305, 14054918 )
+				AND	b.custid in( 6911909,6911911,6911913,6911914,6911916,6911917,6911918,6911919,6913085,7723121,8158305, 14054918,18123445,18123442 )
 				AND b.bettype IN(21001,21002)
 			GROUP BY b.custid,b.winlostdate
 			ORDER BY b.custid
@@ -152,6 +154,9 @@ BEGIN
 						WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
 						WHEN bettype BETWEEN 1501 AND 1599 THEN 14054918
 						WHEN bettype IN (31,32,33) THEN 7723121
+						WHEN bettype IN (1701,1702,1703) THEN 18123445
+						WHEN bettype IN (1701,1702,1703) THEN 18123445
+						WHEN bettype IN  (801,802,803,804,805,806,807,808) THEN 18123442
 					END
 	FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 	WHERE b.winlostdate = @_todate
