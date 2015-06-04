@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Result_Update_1s]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Result_Update_1s]
   @Command						VARCHAR(100) 
  ,@MatchID						INT
  ,@ResourceIDs					VARCHAR(MAX)= NULL 
@@ -31,12 +33,20 @@ AS
 	DB: DBPRO/bodb02 
 
 	Revision
+		- 20150604@Jamie: Apply for Soccer ONLY 
 
 	Param's Explanation: 
 		@Results: 'H,1,X,NL,...'  NL: Blank result of Bettype 216 
 */
 BEGIN
 	SET NOCOUNT ON 
+
+	DECLARE	@sporttype INT
+	SELECT	@sporttype = Sporttype 
+	FROM	Match WITH (NOLOCK)
+	WHERE	MatchID = @MatchID
+
+	IF @sporttype <> 1 RETURN -- Apply for Soccer ONLY 
 
 	DECLARE @tmpResultDetail TABLE(
 			ResourceID		VARCHAR(20)
@@ -554,6 +564,6 @@ BEGIN
 	/* END - @Command = 'NAP_Admin_Settlement_FGLG' */
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Result_Update_1s] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Result_Update_1s] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Result_Update_1s] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Result_Update_1s] TO [vnteam] AS [dbo]
