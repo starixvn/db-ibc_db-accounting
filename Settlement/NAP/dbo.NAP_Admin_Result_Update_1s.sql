@@ -46,7 +46,8 @@ BEGIN
 	FROM	Match WITH (NOLOCK)
 	WHERE	MatchID = @MatchID
 
-	IF @sporttype <> 1 RETURN -- Apply for Soccer ONLY 
+	IF @sporttype <> 1 RETURN -- Apply for Soccer ONLY
+	 
 
 	DECLARE @tmpResultDetail TABLE(
 			ResourceID		VARCHAR(20)
