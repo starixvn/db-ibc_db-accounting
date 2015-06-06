@@ -11,6 +11,7 @@ DB: DBTXN/bodb02
 Revisions:   
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Get credit in CustInfo from CustDB by link database)						   
 	- 20140515@Kathy: Calculate balance from translog (for running tickets) and bettrans
+	- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 	
 Param's Explanation: Special bet delete option
     @transids: All ticket of customers who need to be check negative bet credit
@@ -75,7 +76,7 @@ BEGIN
 			case when wc.balance > 0 AND (c.credit + bal.balance - wc.balance) < 0 THEN 1 ELSE 0 END IsNegative
 	from #WonCust wc 
 		inner join @BalanceCust bal on wc.custid= bal.custid	
-		inner join CustDB.dbo.custInfo c with (NOLOCK) ON bal.custid = c.custid
+		inner join DBCUST.CustDB.dbo.custInfo c with (NOLOCK) ON bal.custid = c.custid
 
 	DROP TABLE #WonCust
 	DROP TABLE #BetDelete		
