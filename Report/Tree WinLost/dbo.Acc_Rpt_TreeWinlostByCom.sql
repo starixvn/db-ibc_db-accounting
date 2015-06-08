@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByCom]
+﻿USE [bodb02]
+GO
+ 
+ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByCom]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@currency INT,	
@@ -12,7 +15,7 @@
 	@showVS BIT = 0,
 	@showKeno BIT=0,
 	@ShowGD BIT = 0, -- Show GoldDeluxe
-	@ShowMG BIT = 0 -- Show Metric Gaming
+	@ShowMGSL BIT = 0 -- Show Metric Gaming
 
 AS
 
@@ -30,7 +33,7 @@ Revisions:
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
 	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
-	- 20150529@Jim: add more parameter @ShowGD,@ShowMG and apply sport-bettype matrix 		
+	- 20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 		
 */  
 
 SET NOCOUNT ON
@@ -64,7 +67,7 @@ CREATE TABLE #TmpResultAll (srecommend INT ,
 							--virtualrate SMALLINT
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
+EXEC dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=5
 
 IF @ShowSB = 1  
 	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
@@ -114,7 +117,7 @@ IF @ShowGD =1
 	 FROM @SportBettype   
 	 WHERE ProductID = 12
  
-IF @ShowMG =1 
+IF @ShowMGSL =1 
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
 	SELECT Bettype, 1   
 	FROM @SportBettype   
@@ -329,7 +332,7 @@ DROP TABLE #TmpResultAll
 
 /*
 
-[Acc_Rpt_TreeWinlostByProduct]
+[Acc_Rpt_TreeWinlostByProduct_xtest]
 	@FromDate   ='20130618',
 	@ToDate   ='20160630',
 
@@ -343,7 +346,7 @@ DROP TABLE #TmpResultAll
 	@showVS = 1,
 	@ShowKeno = 1
 
-[Acc_Rpt_TreeWinlostByCom]
+[Acc_Rpt_TreeWinlostByCom_xtest]
 	@FromDate   = '20130618',
 	@ToDate   = '20160630',  
 	@currency =1,	

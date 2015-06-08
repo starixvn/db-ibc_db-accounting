@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@mrecommend INT,
@@ -57,7 +59,7 @@ CREATE TABLE #TmpResultAll (recommend INT ,
 							Virtual_Total MONEY)
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
+EXEC dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=5
 
 IF @ShowSB = 1  
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
@@ -312,7 +314,7 @@ DROP TABLE #TmpResultAll
 
 /*
 
-[Acc_Rpt_TreeWinlostBySAg]
+[Acc_Rpt_TreeWinlostBySAg_xtest]
 	@FromDate   = '20130618',
 	@ToDate   = '20160630',  
 	@srecommend =394310,	
@@ -327,7 +329,7 @@ DROP TABLE #TmpResultAll
 	@showVS = 1,
 	@showKeno=1
 
-[Acc_Rpt_TreeWinlostByMAg]
+[Acc_Rpt_TreeWinlostByMAg_xtest]
 	@FromDate   = '20130618',
 	@ToDate   = '20160630',  
 	@mrecommend =395840,	
@@ -345,4 +347,3 @@ GO
  GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByMAg] TO [bodbAdminNet]
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByMAg] TO [vnteam]
-GO 
