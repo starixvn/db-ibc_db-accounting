@@ -148,8 +148,9 @@ BEGIN
 			END AND m.sporttype = CASE 
 			WHEN @sporttype = 0 THEN m.sporttype
 			ELSE @sporttype
-			END 
-			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0 OR l.DisplayCat =8 )
+			END
+			-- 20150606@Francis: Hotfix checking kickoff time for ExtraTime Match
+			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0 OR (l.DisplayCat = 8 AND m.kickofftime <= CURRENT_TIMESTAMP))
 	
 	INSERT INTO #matchList	
 		SELECT tm.matchid
@@ -268,6 +269,8 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO

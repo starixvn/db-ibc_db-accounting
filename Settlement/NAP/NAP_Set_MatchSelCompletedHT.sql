@@ -22,6 +22,7 @@ AS
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 		
+		
 */
 BEGIN
 	SET NOCOUNT ON
@@ -171,7 +172,8 @@ BEGIN
 			WHERE m.eventdate = @Date AND m.leagueID = CASE 
 					WHEN @LeagueID <> 0 THEN @LeagueID
 					ELSE m.leagueID
-					END AND m.sporttype = @sporttype AND m.eventstatus IN ('Closed', 'running', 'internal') AND ((datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) > @HTOverStartMins AND datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) < @HTOverEndMins) OR mr.confirmHT <> 0 OR l.DisplayCat = 8) AND mr.ishtcal = 0
+					-- 20150606@Francis: Hotfix checking kickoff time for ExtraTime Match
+					END AND m.sporttype = @sporttype AND m.eventstatus IN ('Closed', 'running', 'internal') AND ((datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) > @HTOverStartMins AND datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) < @HTOverEndMins) OR mr.confirmHT <> 0 OR (l.DisplayCat = 8 AND m.kickofftime <= CURRENT_TIMESTAMP)) AND mr.ishtcal = 0
 			) m
 			INNER JOIN (
 			SELECT bettrans.matchid
@@ -197,6 +199,7 @@ BEGIN
 
 	ORDER BY eventstatus, matchcode
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
 GO
