@@ -1226,9 +1226,9 @@ BEGIN
 			UNION ALL	-- translog
 			select 
 				b.gameid bettype,   
-				0 as transid, 
+				b.translogid as transid, 
 				0 as betid,
-				b.translogid ,
+				b.translogid AS refno,
 				'' as matchcode,   
 				'' as race,
 				'' as eventdate, 
