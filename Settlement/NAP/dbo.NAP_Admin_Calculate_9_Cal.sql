@@ -9,7 +9,7 @@ AS
 	Created: Kathy
 	Date: 20140213
 	Task : Settle bettrans based on bettransm (for mix parlay)
-	DB: DB02.bodb02
+	DB: DBTXN/bodb02
 	Original: Admin_Calculate_9_Cal
 
 	Revisions:
@@ -394,8 +394,6 @@ BEGIN
 END
 ---------------------------------------------------------------
 ---------------------------------------------------------------
-
-
 
 
 GO
