@@ -1,6 +1,6 @@
 ﻿USE [bodb_Licensee]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_BA_SpecialCustDel]    Script Date: 06/09/2015 11:30:13 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_BA_SpecialCustDel]    Script Date: 06/09/2015 13:56:57 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -25,6 +25,8 @@ Original:
 Revisions:
 	- 20130123@Daniel: Change link server alias
 	- 20131224@Winnie: Change to DBTXN.CustDB
+	- 20150606@Kathy: Change link server DBTXN.CustDB to DBCust.CustDB [Redmine:#36216]
+
 
 Param's Explanation:
 	
@@ -95,6 +97,7 @@ BEGIN
 		END
 	END 
 END
+
 
 
 
