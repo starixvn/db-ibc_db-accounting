@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 05/11/2015 10:21:43 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 06/08/2015 17:57:31 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -404,21 +404,7 @@ BEGIN
             RETURN 
         END
     END
-
-	 -- Gold Deluxe
-    IF @sHideGoldDeluxe = 0 AND (@sHideGoldDeluxe <> @mHideGoldDeluxe)
-    BEGIN
-        UPDATE    Custinfo WITH (UPDLOCK,ROWLOCK)
-           SET        HideGoldDeluxe = 0
-        WHERE    custid IN(SELECT CustID FROM @CustInfo)
-        IF @@ERROR <>0
-        BEGIN
-            SELECT    @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-                    @ErrCode = 311
-            RETURN 
-        END
-    END
-	
+    
 	 IF @sDisableGoldDeluxe = 1 AND @sDisableGoldDeluxe <> @mDisableGoldDeluxe
     BEGIN
         UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
@@ -636,6 +622,7 @@ INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
             @duration = @duration
     END CATCH
 END
+
 
 
 

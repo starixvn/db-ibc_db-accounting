@@ -1,12 +1,12 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveMaster]    Script Date: 05/11/2015 09:21:09 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveMaster_xtest]    Script Date: 06/08/2015 17:50:00 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 /****** Object:  Stored Procedure dbo.Acc_CustomerCheckMoveMaster    Script Date: 9/11/2014 9:52:03 AM ******/
-ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster]
+ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster_xtest]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
 	@userid		INT,	
@@ -388,14 +388,6 @@ BEGIN
 		return
 	END
 	
-	 --E-Sports
-	IF @sDisableGoldDeluxe = 1 and @mDisableGoldDeluxe = 0
-	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Gold Deluxe but new super is not enabled Gold Deluxe.'
-		     , @ErrCode = 126
-		RETURN
-	END
-	
 	--Check Number Game
 	IF EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 161)
 		AND NOT EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 161)
@@ -760,7 +752,8 @@ BEGIN
 	--END
 
 END
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster_xtest] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster_xtest] TO [vnteam] AS [dbo]

@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveAgent]    Script Date: 05/11/2015 09:21:27 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveAgent_xtest]    Script Date: 06/08/2015 17:45:59 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -389,13 +389,6 @@ BEGIN
 			@ErrCode = 128
 		return
 	END	
-		
-	IF @mDisableGoldDeluxe = 1 and @aDisableGoldDeluxe = 0
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': agent is enabled Gold Deluxe but new master is not enabled Gold Deluxe.'
-		     , @ErrCode = 127
-		RETURN
-	END	
 	
 	--Check identical auto master PT 
 	IF (@DisableAutoMPT_old = 0 and @DisableAutoMPT = 1)
@@ -429,15 +422,6 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': master does not have Virtual Sports setting.',
 			@ErrCode = 124					 
-		return
-	END
-
-	-- Gold Deluxe
-	IF exists(SELECT 1 from custsetting3rd  WITH(NOLOCK)where custid = @recommend and sporttype = 255)
-		AND not exists(SELECT 1 from custsetting3rd  WITH(NOLOCK)where custid = @mrecommend and sporttype = 255)		
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': master does not have Gold Deluxe setting.',
-			@ErrCode = 128				 
 		return
 	END
 
@@ -941,6 +925,7 @@ BEGIN
 	--	return
 	--END
 END
+
 
 
 GO

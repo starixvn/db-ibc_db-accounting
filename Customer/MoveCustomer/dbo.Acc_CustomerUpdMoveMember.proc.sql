@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMember]    Script Date: 05/11/2015 10:33:14 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMember]    Script Date: 06/08/2015 18:06:22 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -377,11 +377,16 @@ BEGIN
 	--Check Gold Deluxe
     IF @aDisableGoldDeluxe = 1 AND @DisableGoldDeluxe = 0
     BEGIN
-	    SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is enabled Gold Deluxe but new agent is not enabled Gold Deluxe.',
-		    @ErrCode = 121				 
-	    IF @ReturnErrCode = 0
-		    RAISERROR(@ErrMsg, 16, 1)
-	    return
+		UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
+           SET DisableGoldDeluxe = 1
+        WHERE custid  = @custid
+        
+        IF @@ERROR <>0 
+        BEGIN
+            SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': update unsuccessfully (custinfo).',
+                    @ErrCode = 309
+            RETURN
+        END
     END
 
     --Check CS SyncCasino between Agent AND Member 
@@ -1996,6 +2001,7 @@ BEGIN
 		    @duration = @duration	
     END CATCH
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet] AS [dbo]

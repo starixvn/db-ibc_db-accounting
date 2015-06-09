@@ -1,4 +1,7 @@
-﻿SET ANSI_NULLS ON
+﻿USE [bodb_Licensee]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BA_SpecialCustDel]    Script Date: 06/09/2015 11:30:13 ******/
+SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
@@ -21,7 +24,8 @@ Original:
 
 Revisions:
 	- 20130123@Daniel: Change link server alias
-	
+	- 20131224@Winnie: Change to DBTXN.CustDB
+
 Param's Explanation:
 	
 */
@@ -54,7 +58,7 @@ BEGIN
 			SET ugroup=@ugroup_old
 			WHERE LicenseeID=@LicenseeID AND CustID=@CustID  AND Status='Running'
 			--- update comm
-			EXEC DBTXN.bodb02.dbo.Lrf_CustomerUpdMemberBAComm
+			EXEC DBCust.CustDB.dbo.Lrf_CustomerUpdMemberBAComm
 			@LicenseeID=@LicenseeID,
 			@custid=@CustID,
 			@ModifyBy=@Modifyby,
@@ -64,7 +68,7 @@ BEGIN
 			@ErrCode = @ErrCode OUTPUT,
 			@ErrMsg = @ErrMsg OUTPUT
 			DECLARE @groupold VARCHAR(3)
-			SELECT @groupold=ugroup FROM DBTXN.bodb02.dbo.customer WITH (NOLOCK) WHERE CustID=@CustID
+			SELECT @groupold=ugroup FROM DBCUST.CustDB.dbo.customer WITH (NOLOCK) WHERE CustID=@CustID
 			--- write log BA Customer
 			INSERT INTO UserLog_LicenseeSpecialCust(LicenseeID,CustID,ugroup,ugroup_old,modifyby,modifydate,IP,ActionType)
 			VALUES (@LicenseeID,@CustID,@groupold,@ugroup,@modifyby,getdate(),@IP,'Delete')
@@ -72,7 +76,7 @@ BEGIN
 		ELSE -- Normal member
 		BEGIN
 			-- Update ugroup to Customer table 0
-				EXEC DBTXN.bodb02.dbo.Acc_BA_SpecialCustUpdUgroup
+				EXEC DBCust.CustDB.dbo.Acc_BA_SpecialCustUpdUgroup
 				@custid = @CustID,
 				@ugroup = @ugroup_old,
 				@userid = @modifyby,
@@ -93,15 +97,8 @@ BEGIN
 END
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_BA_SpecialCustDel] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_BA_SpecialCustDel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BA_SpecialCustDel] TO [vnteam] 
-
-
-
-
-
-
-
-
+GRANT VIEW DEFINITION ON [dbo].[Acc_BA_SpecialCustDel] TO [vnteam] AS [dbo]
