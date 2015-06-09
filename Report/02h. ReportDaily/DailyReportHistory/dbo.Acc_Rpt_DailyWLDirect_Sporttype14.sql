@@ -260,7 +260,7 @@ BEGIN
 	
 	--Section 2: all products that enable virtual currency, DisplayOrder field:	1 -> 100
 	SELECT
-			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as DisplayOrder,
+			case when m.sporttype> 1 THEN 4 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as DisplayOrder,
 			case when m.sporttype> 1 then 'Other Sports' else CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END end as SportName,
 			case when m.sporttype> 1 then 3 else CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as SportType,						
 			0 ibc,
@@ -285,7 +285,7 @@ BEGIN
 			AND s.SubProduct NOT IN ('MG-SuperLive')
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY		
-			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
+			case when m.sporttype> 1 THEN 4 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
 			case when m.sporttype> 1 then 'Other Sports' else CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END end,
 			case when m.sporttype> 1 then 3 else CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,						
 			site
@@ -293,7 +293,7 @@ BEGIN
 	-- Get win lost of agent '8RM'
 	UNION ALL
 	SELECT
-			case when m.sporttype> 1 THEN 3 ELSE 1 end as DisplayOrder,
+			case when m.sporttype> 1 THEN 4 ELSE 1 end as DisplayOrder,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
 			case when m.sporttype> 1 then 3 else 1 end as SportType,	
 			1 ibc,
@@ -317,14 +317,14 @@ BEGIN
 			AND b.recommend = 52466
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY	
-			case when m.sporttype> 1 THEN 3 ELSE 1 end,
+			case when m.sporttype> 1 THEN 4 ELSE 1 end,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
 			case when m.sporttype> 1 then 3 else 1 end
 
 	-- Get win lost of agent 'BARM'
 	UNION ALL
 	SELECT
-			case when m.sporttype> 1 THEN 3 ELSE 1 end as DisplayOrder,
+			case when m.sporttype> 1 THEN 4 ELSE 1 end as DisplayOrder,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
 			case when m.sporttype> 1 then 3 else 1 end as SportType,	
 			2 ibc,
@@ -348,13 +348,13 @@ BEGIN
 			AND b.recommend = 5707545
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY	
-			case when m.sporttype> 1 THEN 3 ELSE 1 end,
+			case when m.sporttype> 1 THEN 4 ELSE 1 end,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
 			case when m.sporttype> 1 then 3 else 1 end
 			
 	UNION ALL
 	SELECT 
-			4,'Parlay', 99, 0,site,
+			5,'Parlay', 99, 0,site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -371,7 +371,7 @@ BEGIN
 	----NUMBER GAME
 	UNION ALL
 	SELECT
-			5,'Number Game', 161, 0, site,
+			6,'Number Game', 161, 0, site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -545,7 +545,7 @@ BEGIN
 
 	--Metric Gaming - SuperLive
 	UNION ALL
-	SELECT 107
+	SELECT 3
 		,'Metric Gaming - Super Live'
 		,-1
 		,0
