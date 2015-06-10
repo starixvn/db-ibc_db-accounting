@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdResetMemberCredit]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdResetMemberCredit]    Script Date: 06/10/2015 14:51:51 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdResetMemberCredit    Script Date: 12/25/2013 3:09:38 PM ******/
+ALTER PROCEDURE [dbo].[Acc_CustomerUpdResetMemberCredit]
 	@agentID		INT,
 	@closedOnly		BIT = 1,
 	@UserID			INT,
@@ -18,8 +26,8 @@ AS
 		- 20100102@Kiwi: Modify Log.
 		- 20110907@Sophia: Change Linked Server from DB052 to DB053
 		- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
-		- 20131025@Lukas: add system define permission checking when call from external accounting
-		
+		- 20131025@Lukas: add system define permission checking when call from external accounting		
+		- 20150609@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
 */
 BEGIN
 SET NOCOUNT ON 
@@ -41,7 +49,7 @@ BEGIN
 END
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @agentID, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+EXEC dbo.Acc_CustomerSelCheckEnable @custid = @agentID, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 IF @ErrCode <>0 RETURN
 --end
 
@@ -79,6 +87,7 @@ BEGIN CATCH
 END CATCH
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdResetMemberCredit] TO [bodbAdminNet] AS [dbo]
 GO

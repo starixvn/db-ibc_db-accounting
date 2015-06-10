@@ -1,4 +1,15 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdVirtualMultiplier]    Script Date: 06/10/2015 16:38:04 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdVirtualMultiplier    Script Date: 3/6/2015 5:53:59 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdVirtualMultiplier    Script Date: 2/9/2015 9:40:15 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdVirtualMultiplier    Script Date: 2/9/2015 9:39:33 AM ******/
+
+ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
     @custid int,      
     @EnableVirtualrate BIT = 0,
     @virtualmultiplier VARCHAR(MAX)='',  
@@ -28,7 +39,8 @@ Revisions:
     - 20120306@Lukas: change linked-server alias  
     - 20131108@Elodie: Splitting bodb02 into CustDB (call Acc_ExecRep_Cust_04 instead of Acc_ExecRep_04)
 	- 20141125@Jamie: Use Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]
-    - 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]				
+    - 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]		
+    - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]	                    		
 Param's Explanation:  
 • @virtualmultiplier = '<ROOT>
 							<Rate SportType="1" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
@@ -80,7 +92,7 @@ BEGIN
 	select @OldEnableVirtualrate = virtualmultiplier, @roleid = roleid from custinfo with (nolock) where custid = @custid  
 	  
 	--Check Allowed downlines during peak hour at weekend      
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines    @custid=@custid,  
+	EXEC dbo.Acc_CustomerSelCheckAllowedDownlines    @custid=@custid,  
 										@roleid=@roleid,  
 										@isExecRep=1,  
 										@Language='E',  
@@ -143,7 +155,7 @@ BEGIN
 	*/  
 	  
 	
-	EXEC dbo.Acc_CustomerInfo_Execrep_04   
+								EXEC dbo.Acc_CustomerInfo_Execrep_04   
 			@custid = @custid,  
 			@roleid = @roleid,  
 			@action = 'VirtualMultiplier',
@@ -191,7 +203,7 @@ BEGIN
 	  
 	IF @IsLicenseeUser=0  --For accounting admin  
 	BEGIN  
-		/*801 Acc_CustomerUpdVirtualMultiplier Update Virtual Rate */  
+		/*801 Acc_CustomerUpdVirtualMult Update Virtual Rate */  
 		IF @LogSPData <> ''
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP  
@@ -234,6 +246,7 @@ BEGIN
 				@TrackingValue = @LogSPData2,  
 				@duration = @duration  
 		END CATCH  
+
 	END  
 	ELSE -- For Licensee user  
 	BEGIN  
@@ -281,6 +294,7 @@ BEGIN
 		END CATCH    
 	END
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdVirtualMultiplier] TO [bodbAdminNet] AS [dbo]
