@@ -26,6 +26,7 @@ AS
 		- 20150401@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
+		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -63,7 +64,6 @@ BEGIN
 		,@isExistFTFCorner		BIT	
 		,@isExistFTLCorner		BIT
 		,@isExistResultandFirstTeamScore	BIT
-		,@DisplayCat			TINYINT
 
 	SELECT @IsExistLG = 0
 		,@IsExistFGLG = 0
@@ -79,18 +79,11 @@ BEGIN
 		,@isExistFTFCorner		= 0	
 		,@isExistFTLCorner		= 0
 		,@isExistResultandFirstTeamScore = 0 
-		,@DisplayCat		= 0 
-		
 
 	SELECT	 @sporttype = sporttype
 			,@LeagueID	= leagueid
 	FROM	match WITH (NOLOCK)
 	WHERE	matchid = @matchid
-
-	SELECT	@DisplayCat = DisplayCat
-	FROM	dbo.League WITH (NOLOCK)
-	WHERE	LeagueID = @LeagueID
-			AND @Sporttype = 1 
 
 	IF @excludeRefundFGLG = 0 -- Calculate page
 	BEGIN
@@ -741,7 +734,6 @@ BEGIN
 						AND isnull(ConfirmFT, 0) = 0
 				)
 			)
-			AND @DisplayCat <>8	
 	BEGIN
 		SELECT @IsHTOnly = 1
 		
@@ -823,7 +815,6 @@ BEGIN
 		,@isExistFTFCorner		AS isExistFTFCorner	
 		,@isExistFTLCorner		AS isExistFTLCorner
 		,@isExistResultandFirstTeamScore AS isExistResultandFirstTeamScore
-		,@DisplayCat	AS DisplayCat	-- 1: Extra time match 
  	FROM DBPRO.BODB02.dbo.match WITH (NOLOCK)
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
@@ -849,3 +840,4 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]
+
