@@ -108,7 +108,7 @@ SET NOCOUNT ON
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 	WHERE s.sporttype = 1
 	
-	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype TINYINT, matchid INT, site TINYINT, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
+	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype INT, matchid INT, site TINYINT, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
 	INSERT INTO #TempBettrans	
 	SELECT		
 			liveindicator,
