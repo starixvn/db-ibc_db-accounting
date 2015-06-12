@@ -249,10 +249,12 @@ BEGIN
 			FROM 	bettrans14 b with (nolock) 
 					INNER JOIN match14 m with (nolock) on b.matchid= m.matchid
 					INNER JOIN custInfo c with (nolock) on c.custid = b.creator
+					INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+					INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 			WHERE 	b.winlostdate = @fromdate
 					AND bettype < 19001 AND bettype <> 10 --20120626@Elodie: exclude outright from sportbook
 					AND b.custid = @custid 
-					AND m.sporttype = 1 
+					AND s.sporttype = 1 
 			
 			UNION ALL 
 			SELECT 
@@ -467,10 +469,12 @@ BEGIN
 			FROM	bettrans b with (nolock) 
 					INNER JOIN match m  with (nolock) on b.matchid = m.matchid
 					INNER JOIN custInfo c with (nolock) on c.custid = b.creator
+					INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+					INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 			WHERE	b.winlostdate = @fromdate 
 					AND b.bettype < 19001 AND bettype <> 10 --20120626@Elodie: exclude outright from sportbook
-					AND m.sporttype = 1
 					AND b.custid = @custid
+					AND s.sporttype = 1
 	
 			UNION ALL
 			SELECT	0 finalhomescore,

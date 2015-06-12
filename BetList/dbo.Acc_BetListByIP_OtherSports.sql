@@ -265,14 +265,16 @@ BEGIN
 				FROM 	bettrans14 b with (nolock) 
 						INNER JOIN match14 match with (nolock) on b.matchid= match.matchid
 						INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
-						INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+						INNER JOIN league l WITH (NOLOCK) ON match.leagueid = l.leagueid 
+						INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
+						INNER JOIN @SportBettype sp ON sp.Bettype = b.bettype
 				WHERE 	b.winlostdate = @fromdate
-						and s.eventtype = 1
+						and sp.eventtype = 1
 						--AND bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) 
 						--AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
 						--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 						AND b.custid = @custid 
-						AND match.sporttype <> 1 
+						AND s.sporttype <> 1 
 				
 				UNION ALL 
 				SELECT 
@@ -459,13 +461,15 @@ BEGIN
 				FROM	bettrans b with (nolock) 
 						INNER JOIN match  with (nolock) on b.matchid = match.matchid
 						INNER JOIN custInfo creator with (nolock) on creator.custid = b.creator
-						INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+						INNER JOIN league l WITH (NOLOCK) ON match.leagueid = l.leagueid 
+						INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
+						INNER JOIN @SportBettype sp ON sp.Bettype = b.bettype
 				WHERE	b.winlostdate = @fromdate 
 						--AND b.bettype < 19001 AND bettype NOT IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) 
 						--AND b.bettype NOT BETWEEN 1501 AND 1599 --20120626@Elodie: exclude outright, HR from sportbook
 						--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-						AND s.eventtype = 1 and b.bettype <> 10
-						AND match.sporttype <> 1
+						AND sp.eventtype = 1 and b.bettype <> 10
+						AND s.sporttype <> 1
 						AND b.custid = @custid
 		
 				UNION ALL

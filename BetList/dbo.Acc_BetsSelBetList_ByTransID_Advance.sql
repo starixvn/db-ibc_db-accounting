@@ -141,7 +141,11 @@ BEGIN
 		from dbo.bettrans bt with (nolock)
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
-		where bt.transid 	= @transid 
+		WHERE bt.transid 	= @transid 
+			OR (
+				bt.refno		= @transid
+				AND sp.bettype BETWEEN 801 AND 899
+			)
 			
 	END
 	-- FROM bettrans14
@@ -154,7 +158,11 @@ BEGIN
 		from dbo.bettrans14 bt with (nolock)
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
-		where bt.transid 	= @transid 
+		WHERE bt.transid 	= @transid 
+			OR (
+					bt.refno		= @transid
+					AND sp.bettype BETWEEN 801 AND 899
+				)
 	END
 	-- FROM bettrans_bk
 	IF(@WinlostDate IS NULL)
@@ -166,7 +174,11 @@ BEGIN
 		from DBARC.bodb_archive.dbo.bettrans_bk bt with (nolock)
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
-		where bt.transid 	= @transid 
+		WHERE bt.transid 	= @transid 
+			OR (
+					bt.refno		= @transid
+					AND sp.bettype BETWEEN 801 AND 899
+				)
 	END
 	
 	IF(@WinlostDate IS NULL) GOTO OutputResult;
@@ -295,7 +307,9 @@ BEGIN
 			where	s.EventType=1 
 					--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and
 					--b.bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-					AND b.transid = @TransID
+					AND (b.transid 	= @TransID
+						OR (b.refno	= @refno AND b.bettype BETWEEN 801 AND 899)
+					)
 			
 			UNION ALL -- translog metric gaming
 			select 
@@ -320,7 +334,8 @@ BEGIN
 				b.odds,   
 				0 finalodds,
 				0 finalodds2,
-				0 AS OddsType,  
+				--0 AS OddsType,  
+				CASE WHEN b.gameid IN (801,803,804,805,806) THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType,
 				b.status,
 				'' as comstatus,
 				stake,
@@ -365,6 +380,7 @@ BEGIN
 				
 			where  b.translogid 	= @TransID  
 				AND s.Bettype 		BETWEEN 801 AND 899
+				AND b.statusid		= 0
 		END		
 		--Mix Parlay
 		IF @bettype = 9

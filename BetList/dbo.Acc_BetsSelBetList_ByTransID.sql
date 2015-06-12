@@ -196,7 +196,7 @@ BEGIN
 				bt.transid 	= @transid 
 				OR (
 					bt.refno = @transid 
-					AND sp.productid IN (6,7,8,9,12)
+					AND (sp.productid IN (6,7,8,9,12) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
 	END
@@ -215,7 +215,7 @@ BEGIN
 				bt.transid 	= @transid 
 				OR (
 					bt.refno = @transid 
-					AND sp.productid IN (6,7,8,9,12)
+					AND (sp.productid IN (6,7,8,9,12) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
 	END
@@ -234,7 +234,7 @@ BEGIN
 				bt.transid 	= @transid 
 				OR (
 					bt.refno = @transid 
-					AND sp.productid IN (6,7,8,9,12)
+					AND (sp.productid IN (6,7,8,9,12) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
 		
@@ -409,7 +409,9 @@ BEGIN
 			--b.bettype NOT BETWEEN 1501 and 1599 AND
 			--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) AND
 			--s.eventtype = 1 AND
-			b.transid 	= @TransID  
+			(b.transid 	= @TransID  
+				OR ( @bettype BETWEEN 801 AND 899 AND b.refno = @refno )
+			)
 			
 		UNION ALL -- translog metric gaming
 		SELECT   
@@ -433,7 +435,8 @@ BEGIN
 			b.odds,     
 			0 finalodds,  
 			0 finalodds2,  
-			0 AS OddsType,    
+			--0 AS OddsType,    
+			CASE WHEN b.gameid IN (801,803,804,805,806) THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType,
 			b.status,  
 			0 AS comstatus,  
 			stake,  
@@ -481,7 +484,8 @@ BEGIN
 		where    
 			b.custid 			= @Custid 
 			AND s.Bettype 		BETWEEN 801 AND 899
-			AND b.translogid 	= @TransID  
+			AND b.translogid 	= @TransID 
+			AND b.statusID		IN (0,1)
 		
 	END
 	--Mix Parlay 
@@ -1374,7 +1378,10 @@ BEGIN
 		--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 		--AND b.bettype not BETWEEN 1501 and 1500 
 		s.EventType = 1 AND
-		b.transid = @TransID  
+		--b.transid = @TransID  
+		(b.transid 	= @TransID  
+				OR ( @bettype BETWEEN 801 AND 899 AND b.refno = @refno )
+			)
 
 	--Mix Parlay  
 	IF @bettype = 9
@@ -2120,7 +2127,10 @@ BEGIN
 		s.EventType = 1 AND
 		--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231, 1232, 1233, 1237, 1238*/) and   
 		--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-		b.transid = @TransID  
+		--b.transid = @TransID  
+		(b.transid 	= @TransID  
+				OR ( @bettype BETWEEN 801 AND 899 AND b.refno = @refno )
+			)
 	 
 	--Mix Parlay  
 	IF @bettype = 9
