@@ -1,43 +1,34 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveAgent_xtest]    Script Date: 06/08/2015 17:45:59 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_CustomerCheckMoveAgent    Script Date: 9/11/2014 9:52:03 AM ******/
-
 ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveAgent]
 	@mastername		VARCHAR(40)
-  , @agentname		VARCHAR(40)
-  , @userid			INT
-  , @IP				VARCHAR(15) = ''
-  , @ErrCode		INT = 0 OUTPUT
-  , @ErrMsg			NVARCHAR(200) = '' OUTPUT
+	, @agentname	VARCHAR(40)
+	, @userid		INT
+	, @IP			VARCHAR(15) = ''
+	, @ErrCode		INT = 0				OUTPUT
+	, @ErrMsg		NVARCHAR(200) = ''	OUTPUT
 AS
 /*
-Created: 
-Task : Check moving a agent to another master
-DB: DBAGE/bodb02
-Original:
+	Created: 
+	Task : Check moving a agent to another master
+	DB: DBCUST.CustDB
+	Original:
 
-Revisions:
-			- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
-			- 20120821@Dan: add virtual soccer, remove FI
-			- 20130121@Dan: remove unneeded linked server call DB052
-			- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
-			- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
-			- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
-			- 20140314@Elodie: Add Keno product [Redmine:#13326]
-			- 20140828@Logan: Add constraint for E-Sports status [Redmine: #20531]
-			- 20150508@Kathy: Add Gold Deluxe product [Redmine:#34486]
-			
-Param's Explanation:
-• @ErrCode:
-    = 0: Transaction recorded successfully.
-    > 0: Specific Error.
-    Max errorcode: 214
-• @ErrMsg: Error description.
+	Revisions:
+		- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
+		- 20120821@Dan: add virtual soccer, remove FI
+		- 20130121@Dan: remove unneeded linked server call DB052
+		- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+		- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
+		- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
+		- 20140314@Elodie: Add Keno product [Redmine:#13326]
+		- 20140828@Logan: Add constraint for E-Sports status [Redmine: #20531]
+		- 20150508@Kathy: Add Gold Deluxe product [Redmine:#34486]
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+	Param's Explanation:
+	• @ErrCode:
+		= 0: Transaction recorded successfully.
+		> 0: Specific Error.
+		Max errorcode: 214
+	• @ErrMsg: Error description.
 */
 
 BEGIN
@@ -925,6 +916,7 @@ BEGIN
 	--	return
 	--END
 END
+
 
 
 

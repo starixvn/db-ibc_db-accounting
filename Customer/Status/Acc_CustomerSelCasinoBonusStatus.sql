@@ -58,3 +58,8 @@ SELECT
 
 FROM custinfo ci WITH(NOLOCK)
 WHERE custid = @custid
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelCasinoBonusStatus] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelCasinoBonusStatus] TO [vnteam]
