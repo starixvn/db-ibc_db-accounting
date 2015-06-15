@@ -77,8 +77,10 @@ SET NOCOUNT ON
 
 	INSERT INTO @tmpBettype
 		SELECT typeid, typeid
-		FROM bettype WITH(NOLOCK)
-		WHERE (typeid > 10 AND typeid < 31) OR typeid BETWEEN 121 AND 999
+		FROM bettype b WITH(NOLOCK)
+		INNER JOIN @SportBettype s 
+			ON s.bettype = b.typeid
+		WHERE b.typeid > 10
 	
 	DELETE @tmpBettype 
 	WHERE 1 = CASE WHEN @SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1
