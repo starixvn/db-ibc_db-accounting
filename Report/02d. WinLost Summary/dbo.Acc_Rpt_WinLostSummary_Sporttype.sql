@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
+﻿USE [bodb_report]
+GO
+ 
+ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
     @fromdate    DATETIME,
     @todate        DATETIME    
 AS
@@ -20,7 +23,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode=5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel   @mode=5
 	
 	DECLARE @_fromdate    DATETIME,
 			@_todate      DATETIME
@@ -104,7 +107,7 @@ BEGIN
 				,ibc
 				, CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END IsHedge
 				,'' status 
-				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 4 ELSE 1 END AS OrderKey
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END AS OrderKey
 				,ISNULL(SUM(realWinlost),0) as realWinlost
 				,ISNULL(SUM(realPosition),0) as realPosition
 				,ISNULL(SUM(realcommission),0) as realCommission
@@ -124,7 +127,7 @@ BEGIN
 				,ibc
 				,CASE WHEN b.bettype in (1,3,7,8) then b.bettype else 19999 end        
 				,CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END
-				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 4 ELSE 1 END
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END
     UNION ALL
         --Casino
         SELECT  251 as sporttype
@@ -133,7 +136,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,'' status
-				,2 as OrderKey
+				,5 as OrderKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0)
 				,ISNULL(SUM(realCommission),0)
@@ -155,7 +158,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,'' status
-				,5 as OrderKey
+				,6 as OrderKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0)
 				,ISNULL(SUM(realCommission),0)
@@ -176,7 +179,7 @@ BEGIN
 				,ibc
 				,0 as IsHedge
 				,'' status  
-				,6 as OrderKey	
+				,7 as OrderKey	
 				,ISNULL(SUM(realWinlost),0) as realWinlost
 				,ISNULL(SUM(realPosition),0) as realPosition
 				,ISNULL(SUM(realcommission),0) as realCommission
@@ -199,7 +202,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,'' status
-				,7 as OrderKey
+				,8 as OrderKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0) 
 				,ISNULL(SUM(realCommission),0)
@@ -220,7 +223,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,status
-				,1 as OrderKey
+				,3 as OrderKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0) 
 				,ISNULL(SUM(realCommission),0)
@@ -239,7 +242,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,status
-				,1 as OrderKey
+				,4 as OrderKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0) 
 				,ISNULL(SUM(realCommission),0)
@@ -259,7 +262,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,'' as status
-				,8 as OrderKey
+				,9 as OrderKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0) 
 				,ISNULL(SUM(realCommission),0)
@@ -281,7 +284,7 @@ BEGIN
             ,0 as ibc
             ,0 as IsHedge
             ,'' as status
-			,9 as OrderKey
+			,10 as OrderKey
             ,ISNULL(SUM(realWinlost),0)
             ,ISNULL(SUM(realPosition),0) 
             ,ISNULL(SUM(realCommission),0)
@@ -324,7 +327,7 @@ BEGIN
             ,ibc
             ,0 as IsHedge
             ,'' status 
-			,3 as OrderKey	
+			,11 as OrderKey	
             ,ISNULL(SUM(realWinlost),0) as realWinlost
             ,ISNULL(SUM(realPosition),0) as realPosition
             ,ISNULL(SUM(realcommission),0) as realCommission
@@ -368,7 +371,7 @@ BEGIN
 	ORDER BY OrderKey
     DROP TABLE #TempMatch
 	DROP TABLE #TempData
-    --exec Acc_Rpt_WinlostSummary_Sporttype @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
+    --exec Acc_Rpt_WinlostSummary_Sporttype_xtest @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
