@@ -20,6 +20,9 @@ Revisions:
 	- 20100114@Kiwi: Put in "AND srecommend = @srecommend_old" when we update sum_winloss table
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo, customer table in main SP)  
 	- 20140904@Jamie: Missing update FOR KENO table HotFix [#21770]
+     - 20150603@Daniel: 
+	  + Separate custDB to new server DBCUST: 
+	  + Improve medthod check table existing in subscribers		
    
 Param's Explanation:
 • @ErrCode:
@@ -28,6 +31,20 @@ Param's Explanation:
     
 • @ErrMsg: Error description.
 */
+
+ if NOT(dbo.f_CheckRepTable('CustSetting') = 1 
+	  AND dbo.f_CheckRepTable('CustOverride') = 1 
+	  AND dbo.f_CheckRepTable('CustSetting3rd') = 1 
+	  AND dbo.f_CheckRepTable('CustOverride3rd') = 1 
+	  AND dbo.f_CheckRepTable('CustSettingGame') = 1 
+	  AND dbo.f_CheckRepTable('CustOverrideGame') = 1 
+	  AND dbo.f_CheckRepTable('CustGameType') = 1
+	  AND dbo.f_CheckRepTable('ProductGlobalSetting') = 1 
+	  AND dbo.f_CheckRepTable('ProductBetSetting') = 1 
+	  AND dbo.f_CheckRepTable('P2PGAMESETTING') = 1 
+	  AND dbo.f_CheckRepTable('P2PGroupComm') = 1		  
+   )
+   RETURN
 
 --IF @@ServerName <> 'DB02'
 --	WAITFOR DELAY '00:00:30.000'
@@ -44,29 +61,12 @@ DECLARE --@IsExistCust TINYINT,
 DECLARE @MinDateBettrans14 DATETIME 
 SELECT	@MinDateBettrans14 = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)		-- SET DEFAULT VALUE 
 
---SELECT @IsExistCust = COUNT(*) FROM dbo.sysobjects
---WHERE	name IN ('custinfo','customer')
---		AND xtype = 'U'
---HAVING COUNT(*) = 2
-
-IF @@SERVERNAME = 'DBTRANS'  -- IF @@SERVERNAME IN ('DBTRANS','DB230')
-BEGIN
-	SELECT @IsExistCustinfo = COUNT(*) FROM custdb.dbo.sysobjects WHERE name = 'custinfo'
-	SELECT @IsExistBettrans = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans'
-	SELECT @IsExistBettrans14 = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans14'
-	SELECT @IsExistSum_Winloss = COUNT(*) FROM dbo.sysobjects WHERE name = 'sum_winloss'
-	SELECT @IsExistTransLog = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog'
-	SELECT @IsExistTransLog14 = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog14'
-END 
-ELSE 
-BEGIN
-	SELECT @IsExistCustinfo = COUNT(*) FROM dbo.sysobjects WHERE name = 'custinfo'
-	SELECT @IsExistBettrans = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans'
-	SELECT @IsExistBettrans14 = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans14'
-	SELECT @IsExistSum_Winloss = COUNT(*) FROM dbo.sysobjects WHERE name = 'sum_winloss'
-	SELECT @IsExistTransLog = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog'
-	SELECT @IsExistTransLog14 = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog14'
-END
+SELECT @IsExistCustinfo = dbo.f_CheckRepTable('custinfo')
+SELECT @IsExistBettrans = dbo.f_CheckRepTable('bettrans')
+SELECT @IsExistBettrans14 = dbo.f_CheckRepTable('bettrans14')
+SELECT @IsExistSum_Winloss = dbo.f_CheckRepTable('sum_winloss')
+SELECT @IsExistTransLog = dbo.f_CheckRepTable('TransLog')
+SELECT @IsExistTransLog14 = dbo.f_CheckRepTable('TransLog14')
 
 DECLARE @cnt INT
 DECLARE @CustInfo TABLE (CustID INT PRIMARY KEY)
