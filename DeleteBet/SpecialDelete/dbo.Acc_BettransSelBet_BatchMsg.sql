@@ -19,7 +19,8 @@ AS
   - 20100823@Khoa: add more @transids  
   - 20101007@Henry: Change column transid from INT to BIGINT  
   - 20140224@Elodie: Apply LAS system [Redmine:#10701]  
-  - 20150403@Kathy: Support uploading msg for ticket has been moved in bettrans14  
+  - 20150403@Kathy: Support uploading msg for ticket has been moved in bettrans14
+  - 20150615@Dominic: Exclude 3 sub-tickets of BetTrade (901,902,903)
  Explanation's Param:  
   
 */  
@@ -39,11 +40,11 @@ BEGIN
  INSERT INTO @BetDelete (transid, custid, recommend, mrecommend, srecommend, betfrom)   
  SELECT transid, custid, recommend, mrecommend, srecommend, betfrom  
  FROM bettrans b with (nolock)  
- WHERE transid in ( SELECT transid from #transid )  
+ WHERE transid in ( SELECT transid from #transid )  AND Bettype NOT IN (901,902,903)
  UNION ALL  
  SELECT transid, custid, recommend, mrecommend, srecommend, betfrom  
  FROM bettrans14 b14 with (nolock)  
- WHERE transid in ( SELECT transid from #transid )  
+ WHERE transid in ( SELECT transid from #transid )  AND Bettype NOT IN (901,902,903)
   
  exec DBLAS.LASDB.dbo.Las_Get_recommend @StringRec = @strLASAgent output  
   

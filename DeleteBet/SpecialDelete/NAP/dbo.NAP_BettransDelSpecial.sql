@@ -876,7 +876,29 @@ BEGIN
 				WHEN b.bettype IN (1,3,7,8) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN betteam ELSE @BetTeam1378 END
 				WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN betteam ELSE @BetTeam515 END
 				ELSE betteam
-			END = betteam    
+			END = betteam 
+			
+	--Back up BetTrade's subtickets (901,902,903)  
+	INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
+				winlost,livehomescore,liveawayscore,liveindicator,betteam,creator, refno, 
+				winlostdate,betfrom,betcheck,checktime,matchid, bettype)
+		SELECT  sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.awinlost, sb.status, 
+				sb.winlost, sb.livehomescore, sb.liveawayscore, sb.liveindicator, sb.betteam, sb.creator , sb.refno, 
+				sb.winlostdate, sb.betfrom, sb.betcheck, sb.checktime, sb.matchid, sb.bettype
+		FROM
+			bettrans b WITH (nolock)
+			INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno
+		WHERE
+			b.transid IN (SELECT transid FROM #BetDelete)
+			AND b.bettype IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,'^'))
+			AND sb.BetType IN (901,902,903)
+			AND b.matchid = @MatchId
+			--AND b.liveindicator = @LiveIndicator
+			AND CASE
+				WHEN b.bettype IN (1,3,7,8) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
+				WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
+				ELSE b.betteam
+			END = b.betteam
 
 	CREATE TABLE #BeforeUpd (
 			custid		 INT,
@@ -911,6 +933,84 @@ BEGIN
 		,statusID		= 102       
 	WHERE
 		transid IN (SELECT transid FROM #BetDelete)
+		
+	-- Update BetTrade's subtickets (901,902,903) 
+	UPDATE 
+		bettrans WITH (ROWLOCK, UPDLOCK)
+	SET winlost			= actual_stake
+		,ruben			= 1
+		,statuswinlost	= 6
+		,status			= 'Void'
+		,creator		= @UserID
+		,awinlost		= 0
+		,mwinlost		= 0
+		,swinlost		= 0
+		,playercomm		= 0
+		,comm			= 0
+		,acomm			= 0
+		,scomm			= 0
+		,statusID		= 102       
+	WHERE
+		refno IN (SELECT transid FROM #BetDelete)
+		AND Bettype IN (901, 902, 903)
+		
+	-- Update BetTradeSelling
+	UPDATE [dbo].[BetTradeSelling] WITH (ROWLOCK, UPDLOCK)
+	SET
+		[Status] = 'Cancel',
+		[ChangeDate]  = GETDATE()
+	WHERE
+		TicketID IN (SELECT transid FROM #BetDelete)
+		
+	-- Insert BetTradeSellingCancel
+	INSERT INTO [dbo].[BetTradeSellingCancelled]
+           ([TicketID]
+           ,[Remark]
+           ,[BTBuyBack]
+           ,[BTCommission]
+           ,[AfterBalance]
+           ,[Owner]
+           ,[Cancelled]
+           ,[ChangeDate]
+           ,[CreateDate])
+     SELECT zb.refno
+			, 'SB void ticket due to ' + @Reason
+			,zb.Stake
+			,0
+			,0
+			,'SB'
+			,1
+			,GETDATE()
+			,GETDATE()
+     FROM #BetDelete t
+     INNER JOIN zzzbettrans zb WITH(NOLOCK)
+		ON zb.Refno = t.TransID AND zb.BetType = 901
+     LEFT JOIN [dbo].[BetTradeSellingCancelled] c WITH(NOLOCK) 
+		ON c.[TicketID] = zb.TransID
+	WHERE c.[BTBuyBack] IS NULL
+	
+	--Update
+	UPDATE main
+	SET
+		[Remark] = 'SB void ticket due to ' + @Reason,
+		[BTBuyBack] = zb.Stake,
+		[BTCommission] = 0,
+		[Owner] = 'SB',
+		[Cancelled] = 1,
+		[ChangeDate] = GETDATE(),
+		[CreateDate] = GETDATE(),
+		AfterBalance = (SELECT ISNULL(SUM(CASE 
+							WHEN ruben = 1
+								THEN winlost - actual_stake + playercomm
+							ELSE 0
+							END), 0)
+							FROM dbo.bettrans WITH (NOLOCK)
+							WHERE custid = zb.custid
+							)
+	FROM [dbo].[BetTradeSellingCancelled] main WITH (ROWLOCK, UPDLOCK)
+	INNER JOIN zzzbettrans zb WITH(NOLOCK)
+		ON zb.Refno = main.[TicketID] AND zb.BetType = 901
+
 
 	-- update totalbets
 	DECLARE @Total TABLE (oddsid INT, HomeTotal MONEY, AwayTotal MONEY)
