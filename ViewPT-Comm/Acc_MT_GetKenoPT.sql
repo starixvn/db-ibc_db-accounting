@@ -1,21 +1,45 @@
 ALTER PROCEDURE [dbo].[Acc_MT_GetKenoPT]
-    @username  varchar(50),  
-    @Sporttype int = 202,
-    @Bettype   int,
-    @ErrCode   int = 0 output,  
-    @ErrMsg    varchar(100) = '' output
+	@username	varchar(50),  
+	@Sporttype	int = 202,
+	@Bettype	int,
+	@ErrCode	int = 0 output,  
+	@ErrMsg		varchar(100) = '' output
 AS
  /*
-  Created: Logan
-  Date: 20140604
-  Task: View PT setting of customer - Keno
-  DB: DBAGE/BODB02
+	Created: Logan
+	Date: 20140604
+	Task: View PT setting of customer - Keno
+	DB: DBCUST.CustDB
 
-  Revisions:
+	Revisions:
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB, use temp table for sports, bettype)
 
-  Parameters Explanation:
+	Parameters Explanation:
  */
 SET NOCOUNT ON
+
+----- 20150610@Kos -------------------
+DECLARE @tmp_Sports TABLE (SportType TINYINT, SportName NVARCHAR(50))
+DECLARE @tmp_Bettype TABLE (TypeID INT, TypeNamee NVARCHAR(50))
+	
+BEGIN TRY
+	INSERT INTO @tmp_Sports (SportType, SportName)
+	SELECT SportType, SportName FROM DBAGE.bodb02.dbo.Sports WITH (NOLOCK)
+END TRY
+BEGIN CATCH
+	INSERT INTO @tmp_Sports (SportType, SportName)
+	SELECT SportType, SportName FROM DBTXN.bodb02.dbo.Sports WITH (NOLOCK)
+END CATCH
+
+BEGIN TRY
+	INSERT INTO @tmp_Bettype (TypeID, TypeNamee)
+	SELECT TypeID, TypeNamee FROM DBAGE.bodb02.dbo.Bettype WITH (NOLOCK)
+END TRY
+BEGIN CATCH
+	INSERT INTO @tmp_Bettype (TypeID, TypeNamee)
+	SELECT TypeID, TypeNamee FROM DBTXN.bodb02.dbo.Bettype WITH (NOLOCK)
+END CATCH
+----- 20150610@Kos -------------------
 
 declare @roleid int,
         @custid int,
@@ -56,8 +80,8 @@ insert into @tmpSportBetType(sporttype, sportname, bettype, typename, gmaxpt, se
             a.typenamee,
             pg.MaxPositiontaking,
             ROW_NUMBER() over(order by a.typeid)
-       from bettype a with(nolock)
- inner join Sports b with(nolock) on b.SportType = 202
+       from @tmp_Bettype a 
+ inner join @tmp_Sports b on b.SportType = 202
  inner join ProductGlobalSetting pg with(nolock) on a.typeid = pg.Bettype and b.SportType = pg.Sporttype
       where 1 = 1
         and (b.SportType = 202 and a.typeid between 1501 and 1599)
@@ -191,6 +215,7 @@ begin
            @ErrMsg ='Invalid Data!'  
     return    
 end
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_MT_GetKenoPT] TO [bodbAdminNet]
