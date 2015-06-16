@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
 	@showVS BIT = 0,
 	@showKeno BIT=0,
 	@ShowGD BIT = 0, -- Show GoldDeluxe
-	@ShowMG BIT = 0 -- Show Metric Gaming
+	@ShowMGSLSL BIT = 0 -- Show Metric Gaming
 
 AS
 
@@ -32,7 +32,7 @@ Revisions:
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
 	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
-	- 20150529@Jim: add more parameter @ShowGD,@ShowMG and apply sport-bettype matrix 		
+	- 20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 		
 */  
 
 SET NOCOUNT ON
@@ -110,7 +110,7 @@ IF @ShowGD =1
 	 FROM @SportBettype   
 	 WHERE ProductID = 12
  
-IF @ShowMG =1 
+IF @ShowMGSLSL =1 
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
 	SELECT Bettype, 1   
 	FROM @SportBettype   
