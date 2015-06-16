@@ -476,7 +476,83 @@ BEGIN
 					AND b.bettype < 19001 AND bettype <> 10 --20120626@Elodie: exclude outright from sportbook
 					AND b.custid = @custid
 					AND s.sporttype = 1
-	
+			
+			--Metric gaming running ticket
+			UNION ALL 
+			SELECT 
+				m.finalhomescore,
+				m.finalawayscore,
+				0 AS oddsid,
+				m.leagueid,
+				b.gameID AS bettype,
+				b.translogid AS transid,
+				0 AS betid,
+				b.translogid AS refno,
+				m.matchcode,
+				'' race,
+				'' as eventdate,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				m.homeid,
+				m.awayid,
+				'' AS checktime,
+				0 AS hdp1,
+				0 AS hdp2,
+				b.odds, 
+				0 AS modds,
+				CASE WHEN b.gameid IN (801,803,804,805,806) THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType,
+				b.status,
+				0 as comstatus,  
+				b.stake,
+				b.actual_stake,
+				b.transdate,
+				'' AS betteam,
+				b.spositiontaking,   
+				b.mpositiontaking,   
+				b.apositiontaking,
+				0 AS spositiontaking2,
+				0 AS mpositiontaking2,
+				0 AS apositiontaking2,
+				0 AS livehomescore,
+				0 AS liveawayscore,
+				0 AS liveindicator,
+				0 AS winlost, 
+				0 AS commission, 
+				0 AS scomm,
+				0 AS acomm,
+				0 AS comm,
+				0 AS awinlost,
+				0 AS mwinlost,
+				0 AS swinlost,
+				c.username creator,
+				b.username,
+				m.hthomescore, m.htawayscore,ip,
+				b.betfrom,
+				m.sporttype,
+				b.eventID,
+				m.IsNeutral,
+				m.showtime,
+				0 as virtualrate,
+				0 as isShowOTExRate,
+				0 finalodds,
+				0 finalodds2,
+				b.winlostdate,
+				'' AS BetCheck,
+				b.transdesc
+			FROM   
+				dbo.translog as b with (nolock)   
+				inner join dbo.match as m with (nolock) 
+				on b.eventid = m.matchid
+				INNER JOIN custInfo c with (nolock) 
+				on c.custid = b.creator
+							
+			WHERE   b.winlostdate	= @fromdate
+				AND b.Gameid 		BETWEEN 801 AND 899
+				AND b.custid		= @custid 
+				AND b.statusID		IN (0,1)
+			
+			--Mix-Parlay ticket
 			UNION ALL
 			SELECT	0 finalhomescore,
 					0 finalawayscore,
