@@ -1,7 +1,14 @@
-﻿USE bodb02
+﻿USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[Acc_BettransInsTransaction]    Script Date: 06/15/2015 18:17:01 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_BettransInsTransaction    Script Date: 4/10/2015 5:08:27 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_BettransInsTransaction    Script Date: 2/4/2015 10:53:09 AM ******/
 
-ALTER PROCEDURE [dbo].[Acc_BettransInsTransaction]
+ALTER PROCEDURE  [dbo].[Acc_BettransInsTransaction]
 	@transid bigint OUTPUT,
 	@custid int,
 	@transdate datetime,
@@ -40,7 +47,7 @@ Revisions:
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)
 	- 20141226@Tom: Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day (Redmine#15274)
-					   
+	- 20150615@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]					   
 Param's Explanation:
 */
 BEGIN
@@ -53,7 +60,7 @@ If @ErrCode <> 0
 	RETURN
 --end
 --Check disable user
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	EXEC DBCUST.CustDB.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 	if @ErrCode <>0 return
 --end
 
@@ -177,7 +184,7 @@ FROM dbo.match14 WITH (NOLOCK)
 
 IF @winlostdate <= @MoveBetsDay
 BEGIN
-	EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
+				EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
 		@custid = @custid
 		,@Amount = @amount
 		,@winlostdate = @winlostdate
@@ -227,5 +234,7 @@ END
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsTransaction] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransaction] TO [ITVivi] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransaction] TO [vnteam] AS [dbo]
