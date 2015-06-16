@@ -1040,7 +1040,85 @@ BEGIN
 					--AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
 					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
-
+			
+			--Metric gaming running ticket
+			UNION ALL
+			SELECT 
+				m.sporttype,
+			   m.leagueid,
+			   m.homeid,
+			   m.awayid,
+			   m.matchcode,
+			   '' AS race,
+			   '' AS eventdate, --get eventdate
+			   0,
+			   0,
+			   b.sdiscount,
+			   b.adiscount,
+			   b.discount,
+			   '' AS settletime,
+			   m.matchid,
+			   b.translogid AS transid,
+			   0 AS BetID,
+			   b.translogid AS refno,
+			   b.transdate,
+			  0 AS oddsid,
+			   b.gameID AS bettype,
+			   0 AS hdp1,
+			   0 AS hdp2,
+			   b.odds,
+			   0 AS modds,
+			   0 AS finalodds,
+			   0 AS finalodds2,
+			   CASE WHEN b.gameid IN (801,803,804,805,806) THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType,
+			   '' AS betteam,
+			   b.status,
+			   m.betstatus,
+			   0 as comstatus,   
+			   b.stake,
+			   b.actual_stake,
+			   0 AS winlost,
+			   0 AS playercomm,
+			   0 AS livehomescore,
+			   0 AS liveawayscore,
+			   0 AS liveindicator,
+			   m.finalhomescore,
+			   m.finalawayscore,
+			   m.hthomescore,
+			   m.htawayscore,
+			   b.CREATOR, --creator.username creator, 
+			   b.ip,
+			   b.Username,
+			   ISNULL(m.isNeutral, CONVERT (BIT, 0)) AS IsNeutral, --phuong.nguyen, get isneutral from Match
+			   m.showtime,
+			   0 spositiontaking, -- unuse in this report
+			   0 mpositiontaking, -- unuse in this report
+			   0 apositiontaking, -- unuse in this report		
+			   0 spositiontaking2,-- unuse in this report
+			   0 mpositiontaking2,-- unuse in this report
+			   0 apositiontaking2,-- unuse in this report
+			   b.betfrom,
+			   0 scomm, -- unuse in this report			
+			   0 acomm, -- unuse in this report			
+			   0 comm,	-- unuse in this report	
+			   0 AS awinlost,		
+			   0 AS mwinlost,		
+			   0 AS swinlost,
+			   b.winlostdate,
+			   '' AS BetCheck,
+			   b.transdesc
+			FROM   
+				dbo.translog as b with (nolock)   
+				inner join dbo.match as m with (nolock) 
+				on b.eventid = m.matchid
+				INNER JOIN custInfo c with (nolock) 
+				on c.custid = b.creator
+							
+			WHERE   b.custid		= @custid 
+				AND b.winlostdate	= @fromdate
+				AND b.Gameid 		BETWEEN 801 AND 899
+				AND b.statusID		IN (SELECT [statusID] FROM   @tmpStatus WHERE statusID IN(0,1))
+				
 			-- Virtual HR
             INSERT INTO @Data
             SELECT r.SportType,

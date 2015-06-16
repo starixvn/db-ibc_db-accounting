@@ -234,7 +234,7 @@ BEGIN
 		--IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
 		--and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
 		--and @bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-		IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
+		IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE eventtype = 1 AND bettype = @bettype ))
 		BEGIN
 			--Sportbooks
 			INSERT INTO @Data
@@ -955,7 +955,7 @@ BEGIN
 		--IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
 		--and @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()
 		--and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
-		IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
+		IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE eventtype = 1 AND bettype = @bettype ))
 		INSERT INTO @Data
 		select 
 			b.username,

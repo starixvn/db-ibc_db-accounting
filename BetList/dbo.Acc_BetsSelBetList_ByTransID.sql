@@ -331,7 +331,7 @@ BEGIN
 	--	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 8 )
 		--AND @bettype NOT BETWEEN 1501 AND 1599 
 		--AND @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-	IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
+	IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE eventtype = 1 AND bettype = @bettype ))
 	BEGIN
 		--Sportbooks  
 		INSERT INTO @Data  
@@ -404,6 +404,7 @@ BEGIN
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where    
 			b.custid = @Custid AND
+			s.EventType=1 AND
 			--b.bettype < 19001 and 
 			--b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
 			--b.bettype NOT BETWEEN 1501 and 1599 AND
@@ -1305,7 +1306,7 @@ BEGIN
 	--	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 8 )
 	--AND @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	--AND @bettype NOT BETWEEN 1501 and 1599 
-	IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
+	IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE eventtype = 1 AND bettype = @bettype ))
 	--Sportbooks  
 	INSERT INTO @Data  
 	select   

@@ -186,9 +186,14 @@ BEGIN
 
 	IF @Todate > @MoveBetsDay
 	BEGIN
-		--Sport Book
+		/* normal tickets 
+			- SB		: ProductID = 1
+			- NG		: ProductID = 3
+			- LC		: ProductID = 4
+			- VS		: ProductID = 5
+		*/
 		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 1 AND Bettype = @Bettype)
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @Bettype)
 		)
 		BEGIN	
 			
@@ -272,11 +277,88 @@ BEGIN
 					--b.bettype not between 1501 and 1599 AND--20120626@Elodie: exclude outright, HR from sportbook
 					--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND	(
-						s.ProductId 	= 1 	
-						AND s.EventType = 1
+						s.EventType = 1
 						AND (@bettype 	= 0 OR s.bettype = @bettype)
 					)
 					
+			UNION ALL -- translog metric gaming
+			SELECT 
+				b.gameid AS bettype,  
+				b.translogid AS transid,  
+				0 AS BetID,  
+				b.translogid AS refno,  
+				m.matchcode,  
+				'' as race,  
+				m.eventdate,  
+				0 as virtualrate,  
+				0 as isShowOTExRate,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,	
+				m.homeid,
+				m.awayid,
+				'' AS settleTime,  
+				0 AS hdp1,  
+				0 AS hdp2,  
+				b.odds,   
+				0 finalodds,
+				0 finalodds2,
+				--b.OddsType,  
+				CASE WHEN b.gameid IN (801,803,804,805,806) THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType,
+				b.status,
+				0 AS comstatus, 
+				b.stake,
+				b.actual_stake,
+				b.transdate,
+				'' AS betteam,   
+				b.spositiontaking,     
+				b.mpositiontaking,     
+				b.apositiontaking,  
+				0 spositiontaking2,  
+				0 mpositiontaking2,  
+				0 apositiontaking2,     
+				0 AS liveindicator,     
+				0 AS modds,  
+				b.custid,
+				0 AS livehomescore, 
+				0 AS liveawayscore, 
+				m.finalhomescore, 
+				m.finalawayscore, 
+				m.leagueid,
+				m.sporttype,
+				b.ip,
+				'' AS betfrom,
+				b.eventID,
+				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+				--CASE WHEN b.bettype in (SELECT typeid FROM @tableBettypeNotAllowDelete) or status NOT IN('running', 'waiting', 'WON', 'LOSE', 'DRAW') THEN 0 ELSE 1 END as allowdelete,
+				CASE WHEN b.gameID in (SELECT typeid FROM @tableBettypeNotAllowDelete) 
+							or b.recommend IN (SELECT custid from #LASAgent) 
+							or statusID NOT IN(0, 1, 112, 113, 111) THEN 0 ELSE 1 END as allowdelete,
+				0 AS winlost,  
+				0 AS commission,  
+				0 AS scomm,  
+				0 AS acomm,  
+				0 AS comm,  
+				0 AS awinlost,  
+				0 AS mwinlost,  
+				0 AS swinlost,  
+				m.showtime,
+				b.winlostdate,
+				'' AS BetCheck,
+				b.transdesc
+			FROM   
+				dbo.translog as b with (nolock)   
+				inner join dbo.match as m with (nolock) 
+				on b.eventid = m.matchid
+				INNER JOIN @SportBettype s 
+				ON b.gameid = s.Bettype
+			WHERE    
+				b.custid 			= @Custid 
+				AND s.Bettype 		BETWEEN 801 AND 899
+				AND b.winlostdate>= @FromDate 
+				AND b.winlostdate<= @ToDate 
+				AND b.statusID		IN (0,1)
+				
 			--Mix Parlay
 			IF (EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 1 AND Bettype = 9))
 			BEGIN	
@@ -1246,11 +1328,17 @@ BEGIN
 	END
 	IF @Fromdate <= @MoveBetsDay
 	BEGIN
+		/* normal tickets 
+		- SB		: ProductID = 1
+		- NG		: ProductID = 3
+		- LC		: ProductID = 4
+		- VS		: ProductID = 5
+		*/
 		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 1 AND Bettype = @Bettype)
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @Bettype)
 		)
 		BEGIN
-			--Sport Book
+			
 			INSERT INTO #BetListData
 			select 
 				b.bettype,
@@ -1322,8 +1410,7 @@ BEGIN
 					b.winlostdate<= @ToDate and   
 					b.custid = @Custid 
 					AND	(
-						s.ProductId 	= 1
-						AND s.EventType = 1
+						s.EventType = 1
 						AND (@bettype 	= 0 OR s.bettype = @bettype)
 					)
 					--and	s.EventType = 1
