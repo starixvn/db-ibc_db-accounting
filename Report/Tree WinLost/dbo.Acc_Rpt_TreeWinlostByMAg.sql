@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
+ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg_xtest]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@mrecommend INT,
@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
 	@showVS BIT = 0,
 	@showKeno BIT=0,
 	@ShowGD BIT = 0, -- Show GoldDeluxe
-	@ShowMGSLSL BIT = 0 -- Show Metric Gaming
+	@ShowMGSL BIT = 0 -- Show Metric Gaming
 
 AS
 
@@ -110,7 +110,7 @@ IF @ShowGD =1
 	 FROM @SportBettype   
 	 WHERE ProductID = 12
  
-IF @ShowMGSLSL =1 
+IF @ShowMGSL =1 
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
 	SELECT Bettype, 1   
 	FROM @SportBettype   
