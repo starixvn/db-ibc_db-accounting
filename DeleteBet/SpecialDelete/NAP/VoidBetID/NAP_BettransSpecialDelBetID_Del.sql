@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 06/06/2015 15:37:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 5/18/2015 11:32:13 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 4/29/2015 11:09:37 AM ******/
+ALTER PROCEDURE  [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -17,6 +26,7 @@ AS
 	Revisions:
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
+		- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 	Param's Explanation: 
 */
 BEGIN 
@@ -228,7 +238,7 @@ BEGIN
 	WHERE	custid = @CustID
 		
 	SELECT  @isNegativeBalance = CASE WHEN @Balance > 0 AND (credit + @totalbalance - @Balance) < 0 THEN 1 ELSE 0 END
-	FROM	CustDB.dbo.custinfo WITH(NOLOCK)
+	FROM	DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	WHERE	custid = @CustID 
 
 
@@ -474,5 +484,6 @@ BEGIN
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]

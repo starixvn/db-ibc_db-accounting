@@ -9,11 +9,12 @@ AS
 	Created by: []
 	Date:[]
 	Task: Customer List in left panel 
-	DB: DB05.BODB02 
+	DB: DBCUST.CustDB
 	
 	Revisions:	
 		- 2009115@Ryan: apply paging.
 		- 20110301@Johnson: change the length of username in @CustList upto 30
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 */
 
 SET NOCOUNT ON
