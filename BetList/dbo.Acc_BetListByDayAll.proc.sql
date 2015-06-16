@@ -71,6 +71,7 @@ AS
 		- 20150415@Sophia: Get Betcheck for Betradar
 		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
+		- 20150615@Edward: Support for BetTrade
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -1876,6 +1877,19 @@ BEGIN
 			END
         END
         
+	UPDATE betList
+	SET betList.Odds	= originBetList.Odds
+		,betList.Stake	= originBetList.Stake
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
+		,betList.BetID	= originBetList.Bettype
+	FROM @Data AS betList
+		INNER JOIN @Data AS originBetList ON betList.RefNO = originBetList.TransID
+		INNER JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO
+	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
+		AND commBetList.Bettype = 903
+
+	DELETE @Data WHERE Sporttype = 1 AND Bettype = 903
+
     UPDATE  @Data
         SET tblTemp.Creator = cu.username
     FROM    @Data AS tblTemp

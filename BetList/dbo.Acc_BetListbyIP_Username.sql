@@ -15,6 +15,7 @@ AS
 	- 20130904@Daniel: Remove condition bettype < 19001 when querying bettrans14 since it's useless => optimize performance
 	- 20140303@Elodie: Add Keno product [Redmine:#12756]
 	- 20150506@Tom: Support Gold Deluxe Product [#34847]
+	- 20150615@Edward: Support for BetTrade
 */
  BEGIN
 	SET NOCOUNT ON
@@ -37,6 +38,7 @@ AS
 	FROM	dbo.bettrans WITH (NOLOCK)
 	WHERE   winlostdate = @fromdate 
 			AND bettype < 19001
+			AND bettype <> 903
 			AND ip = @ip
 	GROUP BY custid	
 	UNION ALL 
@@ -82,6 +84,7 @@ AS
 										INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 								WHERE	b.winlostdate = @fromdate  
 										AND s.SportType = 1 
+										AND b.bettype <> 903
 										AND b.ip = @ip
 										AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END
 								UNION ALL 
@@ -126,6 +129,7 @@ AS
 										INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 								WHERE	b.winlostdate = @fromdate  
 										AND s.SportType = 1 
+										AND b.bettype <> 903
 										AND b.ip = @ip
 										AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END
 								UNION ALL 

@@ -16,6 +16,7 @@ AS
 	- 20110524@Henry: change to use winlostdate instead of transdate
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20140311@Dom: Add keno translog
+	- 20150615@Edward: Remove bettype 903 of BetTrade
 */
 
 SET NOCOUNT ON  
@@ -37,6 +38,7 @@ BEGIN
 		FROM bettrans (nolock)
 	WHERE 
 		bettype < 19001 
+		AND bettype <> 903
 		AND custid = @CustID
 		AND winlostdate BETWEEN @TempFromDate AND @todate
 	UNION 
@@ -65,6 +67,7 @@ BEGIN
 		FROM bettrans14 (nolock)
 	WHERE 
 		bettype < 19001 
+		AND bettype <> 903
 		AND custid = @CustID
 		AND winlostdate BETWEEN @BalanceUpDay AND @TempToDate 
 END
@@ -82,6 +85,7 @@ BEGIN
 	FROM DBARC.bodb_archive.dbo.bettrans_bk with (nolock)
 	WHERE 
 		bettype < 19001
+		AND bettype <> 903
 		AND custid = @CustID
 		AND winlostdate between @fromdate and @TempToDate 
 END

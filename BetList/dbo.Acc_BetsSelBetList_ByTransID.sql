@@ -57,6 +57,7 @@ AS
 	- 20150415@Sophia: Get Betcheck for Betradar
 	- 20150506@Tom: Support Gold Deluxe Product [#34847]
 	- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
+	- 20150615@Edward: Support for BetTrade
 */   
 BEGIN
 
@@ -487,6 +488,17 @@ BEGIN
 			AND b.translogid 	= @TransID 
 			AND b.statusID		IN (0,1)
 		
+	UPDATE betList
+	SET betList.Odds	= originBetList.Odds
+		,betList.Stake	= originBetList.Stake
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
+		,betList.BetID	= originBetList.Bettype
+	FROM @Data AS betList
+		INNER JOIN bettrans AS originBetList ON betList.RefNO = originBetList.TransID
+		INNER JOIN bettrans AS commBetList ON betList.RefNO = commBetList.RefNO
+	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
+		AND commBetList.Bettype = 903
+
 	END
 	--Mix Parlay 
 	IF @bettype = 9 
@@ -1382,6 +1394,17 @@ BEGIN
 		(b.transid 	= @TransID  
 				OR ( @bettype BETWEEN 801 AND 899 AND b.refno = @refno )
 			)
+	
+	UPDATE betList
+	SET betList.Odds	= originBetList.Odds
+		,betList.Stake	= originBetList.Stake
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
+		,betList.BetID	= originBetList.Bettype
+	FROM @Data AS betList
+		INNER JOIN bettrans14 AS originBetList ON betList.RefNO = originBetList.TransID
+		INNER JOIN bettrans14 AS commBetList ON betList.RefNO = commBetList.RefNO
+	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
+		AND commBetList.Bettype = 903
 
 	--Mix Parlay  
 	IF @bettype = 9
@@ -2132,6 +2155,17 @@ BEGIN
 				OR ( @bettype BETWEEN 801 AND 899 AND b.refno = @refno )
 			)
 	 
+	UPDATE betList
+	SET betList.Odds	= originBetList.Odds
+		,betList.Stake	= originBetList.Stake
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
+		,betList.BetID	= originBetList.Bettype
+	FROM @Data AS betList
+		INNER JOIN DBARC.bodb_archive.dbo.bettrans_bk AS originBetList ON betList.RefNO = originBetList.TransID
+		INNER JOIN DBARC.bodb_archive.dbo.bettrans_bk AS commBetList ON betList.RefNO = commBetList.RefNO
+	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
+		AND commBetList.Bettype = 903
+
 	--Mix Parlay  
 	IF @bettype = 9
 	INSERT INTO @Data  
