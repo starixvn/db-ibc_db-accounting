@@ -94,7 +94,8 @@ AS
 						  - Add moneyline in filter
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20141204@Kathy: Remove codes which are used in checking permission on DBPolicy [Redmine:#27058]	
-		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]				  
+		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]	
+		- 20150615@Dominic: BetTrade Integration 	[Redmine:#36964]		  
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
 		  + 0: All tickets
