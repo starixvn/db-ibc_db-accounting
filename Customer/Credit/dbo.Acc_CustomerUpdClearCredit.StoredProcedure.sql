@@ -24,7 +24,7 @@ AS
 		- 20131025@Lukas: add system define permission checking when call from external accounting
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call bettrans by link database)
 		- 20140306@Dom: add outstanding from translog
-		- 20140423@Elodie: Implement SMA Turnover [Redmine:#14426]
+		- 20150612@Elodie: Separate CustDB to DBCUST server (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB, use Acc_CustomerTotalAmountSel to get total amount)
 */
 
 SET NOCOUNT ON
@@ -45,12 +45,10 @@ END
 
 declare @custid		int,
 		@roleid		tinyint,
-		@custLine	varchar(20), 
-		@mrecommend INT,
-		@recommend	INT
+		@custLine	varchar(20)
 declare	@tmpCust table (custid int, Credit money)
 
-select @custid = custid, @roleid = roleid, @mrecommend = mrecommend, @recommend = recommend from custinfo with (NOLOCK) where username = @username
+select @custid = custid, @roleid = roleid from custinfo with (NOLOCK) where username = @username
 
 if isnull(@custid,0) = 0 or isnull(@roleid, 0) > 4
 BEGIN
@@ -71,7 +69,7 @@ END
 
 
 --Check Allowed downlines during peak hour at weekend
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
+EXEC Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
 											@roleid=@roleid,
 											@isExecRep=0,
 											@Language='E',
@@ -106,21 +104,21 @@ BEGIN
 	Select @custLine =' member '
 	
 	DECLARE @TotalAmt money
+
+	EXEC DBTXN.bodb02.dbo.Acc_CustomerTotalAmountSel @CustID = @custid, @TotalAmt = @TotalAmt OUTPUT
 	
-	select  @TotalAmt = sum(winlost-actual_stake+playercomm)
-    from bodb02.dbo.bettrans with (nolock)
-    where custid = @CustID
+	--select  @TotalAmt = sum(winlost-actual_stake+playercomm)
+ --   from bodb02.dbo.bettrans with (nolock)
+ --   where custid = @CustID
     
-    select @TotalAmt = isnull(@TotalAmt, 0)
-	SELECT  @TotalAmt = @TotalAmt + ISNULL(SUM(-actual_stake), 0) FROM bodb02.dbo.translog WITH(NOLOCK) WHERE custid=@custid AND statusID=0
+ --   select @TotalAmt = isnull(@TotalAmt, 0)
+	--SELECT  @TotalAmt = @TotalAmt + ISNULL(SUM(-actual_stake), 0) FROM bodb02.dbo.translog WITH(NOLOCK) WHERE custid=@custid AND statusID=0
 		
 	Update custinfo with (ROWLOCK, UPDLOCK) 
 	set credit = case when @TotalAmt >= 0 then 0 else abs(@TotalAmt) end
 	output deleted.custid, deleted.Credit into @tmpCust(custid, Credit)
 	where custid = @custid AND Credit != 0 
 END
-
-EXEC DBAGE.bodb02.dbo.NAP_SMATurnover_MaxTurnoverUpd @UpdMode = 18, @SMAID = @CustID
 
 -- Write Log Credit
 Declare @LogSPCredit varchar(500)
