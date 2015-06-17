@@ -26,7 +26,7 @@ BEGIN
 	SELECT @FromDateTmp = @FromDate, @ToDateTmp = @ToDate
 	
 	DECLARE @SAgWinLoss TABLE (CustId INT, CompanyWL MONEY) 
-	DECLARE @Super AS TABLE (custid INT)
+	DECLARE @Super AS TABLE (custid INT, currency TINYINT)
 	DECLARE @BetTypeList TABLE(BetType SMALLINT)
 	DECLARE @SportTypeList TABLE(SportType SMALLINT, IsBA BIT)
 
@@ -134,8 +134,8 @@ BEGIN
 
     END
 	
-	INSERT INTO @Super(custid)
-	SELECT DISTINCT CustID
+	INSERT INTO @Super(custid, currency)
+	SELECT DISTINCT CustID, currency
 	FROM bodb_Licensee.dbo.f_SelDepCustSuper(@LicenseeName)
 	WHERE (@CurrencyId = 0) OR (@CurrencyId <> 0 AND currency = @CurrencyId)
 
@@ -147,7 +147,7 @@ BEGIN
 			SELECT b.srecommend
 				, - SUM(ISNULL(swinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(scomm, 0))
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
-				INNER JOIN @Super s ON b.srecommend = s.custid
+				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND (bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 AND 1399)
 				AND b.statusid IN (111, 112, 113)
@@ -160,7 +160,7 @@ BEGIN
 			SELECT b.srecommend
 				, - SUM(ISNULL(swinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(scomm, 0))
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
-				INNER JOIN @Super s ON b.srecommend = s.custid
+				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND (bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 AND 1399)
 				AND b.statusid IN (111, 112, 113)
@@ -173,7 +173,7 @@ BEGIN
 			SELECT b.srecommend
 				, - SUM(ISNULL(swinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(scomm, 0))
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
-				INNER JOIN @Super s ON b.srecommend = s.custid
+				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 				INNER JOIN @BetTypeList bt ON b.bettype = bt.bettype
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.statusid IN (111, 112, 113)
@@ -185,9 +185,9 @@ BEGIN
 			SELECT b.srecommend
 				, - SUM(ISNULL(swinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(scomm, 0))
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
-				INNER JOIN @Super s ON b.srecommend = s.custid
+				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
-				AND b.bettype < 19000
+				AND b.bettype < 19999
 				AND b.statusid IN (111, 112, 113)
 			GROUP BY b.srecommend
 		END
@@ -205,7 +205,7 @@ BEGIN
 			SELECT b.srecommend
 				, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
 			FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
-				INNER JOIN @Super s ON b.srecommend = s.custid
+				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 				INNER JOIN @SportTypeList bt ON b.SportType = bt.SportType AND b.IsBA = bt.IsBA
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.RoleId = 4
@@ -218,10 +218,10 @@ BEGIN
 			SELECT b.srecommend
 				, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
 			FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
-				INNER JOIN @Super s ON b.srecommend = s.custid
+				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.RoleId = 4
-				AND b.BetType < 19000
+				AND b.BetType < 19999
 				AND b.statusid IN (111, 112, 113)
 			GROUP BY b.srecommend
 		END
