@@ -59,7 +59,10 @@ UNION ALL
 	SELECT Bettype ,'GD'  
 	FROM @SportBettype   
 	WHERE ProductID = 12	
-
+UNION ALL 
+	SELECT Bettype ,'MG'  
+	FROM @SportBettype
+	WHERE SubProduct='MG-SuperLive'
 INSERT INTO @tmpSport
 	SELECT 161, 'NG'
 UNION
