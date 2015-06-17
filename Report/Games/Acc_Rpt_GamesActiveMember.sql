@@ -28,7 +28,7 @@ AS
 SET NOCOUNT ON  
 
 CREATE TABLE #tmpcust (CustID INT , gameName VARCHAR(10) PRIMARY KEY CLUSTERED (custid, gameName) )
-CREATE TABLE #statistic (CustID INT PRIMARY KEY CLUSTERED, NG BIT , BG BIT , CS BIT, LC BIT)
+CREATE TABLE #statistic (CustID INT PRIMARY KEY CLUSTERED, NG BIT , BG BIT , CS BIT, LC BIT, GD BIT, MG BIT)
 DECLARE @tmpBettype TABLE (bettype int , gameName VARCHAR(10))
 DECLARE @tmpSport	TABLE (sporttype INT, gameName VARCHAR(10))
 
@@ -74,7 +74,7 @@ UNION
 UNION 
 	SELECT 255, 'GD'
 UNION 
-	SELECT -1, 'MG'	
+	SELECT 1, 'MG'	
 
 IF @Todate >= @BalanceUpDay  
 BEGIN  	
