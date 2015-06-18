@@ -7,12 +7,12 @@ AS
 /*  Created: Dominic 
 	Date: 2014-06-02  
     Task : Total Credit Accounts Enabled/Disabled per Product
-    DB: DBCUST.CustDB
+    DB: DBACC/bodb02
    
     Revisions:  
 		- 20140627@Dominic: Exclude special super with username  LIKE '3rdSuper%','STEST%','%ACCSuper%'
 		- 20140707@Dominic: Add Param @ShowEnabled/@ShowDisabled #18655
-		- 20150609@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20150609@Kos: Separate CustDB to DBCUST server (Move SP to DBACC.bodb02)
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + {251:Casino, 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
