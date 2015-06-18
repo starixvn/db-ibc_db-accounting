@@ -96,7 +96,7 @@ Declare @Data TABLE (
 	stake   money,  
 	actual_stake money,  
 	transdate  datetime,  
-	betteam   nvarchar(10),  
+	betteam   nvarchar(50),  
 	spositiontaking smallmoney,  
 	mpositiontaking smallmoney,  
 	apositiontaking smallmoney,  

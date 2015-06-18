@@ -140,7 +140,7 @@ BEGIN
         finalodds      SMALLMONEY    ,
         finalodds2     SMALLMONEY    ,
         oddstype       INT           ,
-        betteam        NVARCHAR (10) ,
+        betteam        NVARCHAR (50) ,
         status         NVARCHAR (50) ,
         betstatus      NVARCHAR (50) ,
         comstatus	   NVARCHAR(50)	 ,
