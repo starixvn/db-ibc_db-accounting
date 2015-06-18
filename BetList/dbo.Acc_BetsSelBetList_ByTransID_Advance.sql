@@ -1024,7 +1024,9 @@ BEGIN
 		where	s.EventType = 1 
 				--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
 				--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-				AND b.transid = @TransID
+				AND (b.transid 	= @TransID
+						OR (b.refno	= @refno AND b.bettype BETWEEN 801 AND 899)
+					)
 				
 		--Mix Parlay
 		IF @bettype = 9
@@ -1599,10 +1601,12 @@ BEGIN
 			inner join DBARC.bodb_archive.dbo.match_BK m with (nolock) on b.matchid = m.matchid
 			inner JOIN custInfo c with (NOLOCK) on c.custid = b.custid
 			INNER JOIN @SportBettype s ON s.BetType = b.BetType 
-		where	s.EventType = 1 AND 
+		where	s.EventType = 1
 				--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
 				--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-				b.transid = @TransID
+				AND (b.transid 	= @TransID
+						OR (b.refno	= @refno AND b.bettype BETWEEN 801 AND 899)
+					)
 				
 		--Mix Parlay
 		IF @bettype = 9
