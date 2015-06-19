@@ -29,7 +29,7 @@ SET NOCOUNT ON
 
 CREATE TABLE #tmpcust (CustID INT , gameName VARCHAR(10) PRIMARY KEY CLUSTERED (custid, gameName) )
 CREATE TABLE #statistic (CustID INT PRIMARY KEY CLUSTERED, NG BIT , BG BIT , CS BIT, LC BIT, GD BIT, MG BIT)
-DECLARE @tmpBettype TABLE (bettype int , gameName VARCHAR(10))
+DECLARE @tmpBettype TABLE (bettype int , gameName VARCHAR(10) )
 DECLARE @tmpSport	TABLE (sporttype INT, gameName VARCHAR(10))
 
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
@@ -42,12 +42,12 @@ INSERT INTO @tmpBettype
 	WHERE ProductID =3
 	 
 UNION ALL
-	SELECT Bettype, 'CS' 
+	SELECT Bettype, 'CS'  
 	FROM @SportBettype   
 	WHERE ProductID = 6
 	 
 UNION ALL
-	SELECT Bettype, 'BG'   
+	SELECT Bettype, 'BG'  
 	FROM @SportBettype   
 	WHERE ProductID = 7
 	 
@@ -109,6 +109,13 @@ BEGIN
 			WHERE s.roleid = 1 				
 				AND winlostdate BETWEEN @fromdate AND @ToDate  
 				AND NOT EXISTS(SELECT 1 FROM #tmpcust WHERE custid = s.custid and gameName = t.gameName)
+	INSERT INTO #tmpcust
+	SELECT d.CustID,t.gameName
+	FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
+		INNER JOIN @tmpBettype t ON d.bettype=t.bettype 
+		WHERE t.gameName='MG'
+			  AND d.rptDate BETWEEN @fromdate AND @ToDate  
+			  AND NOT EXISTS(SELECT 1 FROM #tmpcust WHERE custid = s.custid and gameName = t.gameName)
 END  
 
 DELETE t
