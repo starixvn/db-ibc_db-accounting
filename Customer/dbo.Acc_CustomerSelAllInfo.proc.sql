@@ -1,10 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerSelAllInfo]    Script Date: 06/09/2015 13:13:39 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
@@ -482,8 +475,8 @@ BEGIN
 	    ci.HideVirtualSports,
 	    ci.DoubleCommLosing,	    	   
 		ci.DisableEsports,
-		ci.DisableGoldDeluxe,
-		ci.HideGoldDeluxe,
+		ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
+		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
 	    ci.Enabled,
 	    @isBA IsBA,
 	    @IsDeposit IsDeposit, 
