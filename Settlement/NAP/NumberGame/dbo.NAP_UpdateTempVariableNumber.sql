@@ -1,6 +1,14 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_UpdateTempVariableNumber]    Script Date: 06/23/2015 10:12:22 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_UpdateTempVariableNumber]
 	@MatchId	INT	
 	,@ActionId	TINYINT
+	,@KeyId		TINYINT = 1 
 	,@ErrCode	INT  = 0 OUTPUT
 AS
 /*
@@ -15,6 +23,9 @@ AS
 	Param's Explanation:
 		@actionid = 0: Delete
 					1: Insert
+					
+		@KeyId = 1: match
+				 2: outright
 	
 */
 BEGIN
@@ -23,11 +34,11 @@ BEGIN
 		IF @ActionId = 0 -- delete
 		BEGIN
 			DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
-			WHERE KeyID = 1 AND KeyValue = @MatchId	
+			WHERE KeyID = @KeyId AND KeyValue = @MatchId	
 		END
 		ELSE IF @ActionId = 1 -- insert
 		BEGIN
-			INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (1, @MatchId)
+			INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (@KeyId, @MatchId)
 		END	
 	END TRY
 	BEGIN CATCH
@@ -36,7 +47,8 @@ BEGIN
 	
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].NAP_UpdateTempVariableNumber TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_UpdateTempVariableNumber] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].NAP_UpdateTempVariableNumber TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[NAP_UpdateTempVariableNumber] TO [vnteam] AS [dbo]
