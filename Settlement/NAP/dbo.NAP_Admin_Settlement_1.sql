@@ -49,7 +49,7 @@ AS
 		- 20140910@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141009@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-
+		- 20150610@Johnson: Add bettrade [Redmine: #]
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		+ @GameResult: Game result for Set(s) of Tennis Sport 
@@ -84,7 +84,9 @@ BEGIN
 		,@ActionID							INT
 		,@HomeValue							VARCHAR(20)
 		,@AwayValue							VARCHAR(20)
-		
+	
+	CREATE TABLE #tmpTrans (transid BIGINT)--tickets of bettrade
+	DECLARE @tmpBettype TABLE(bettype INT)--bettypes of bettrade
 
 	SELECT @start				= CURRENT_TIMESTAMP
 		,@SkipBalanceUpdate 	= 0
@@ -245,6 +247,16 @@ BEGIN
 		--===
 		IF @Action IN ('CAL', 'CAL-FT')
 		BEGIN
+			INSERT INTO #tmpTrans(transid)
+			SELECT transid
+			FROM bettrans b WITH(NOLOCK)
+			WHERE matchid = @matchid 
+				AND b.bettype NOT IN (14, 127)
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) -- Auto settle Betradar
+				AND betdaqid = 0--bettrade tickets
+			
 			INSERT INTO #BalanceBefore
 			SELECT b.custid
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
@@ -253,26 +265,49 @@ BEGIN
 				AND b.bettype NOT IN (14, 127)
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
-				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) -- Auto settle Betradar
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) -- Auto settle Betradar				
+				AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 			GROUP BY b.custid
 
 			SET @TotalAccount = @@ROWCOUNT
 		END
 		ELSE IF @Action = 'CAL-HT'
 		BEGIN
+			INSERT INTO #tmpTrans(transid)
+			SELECT transid
+			FROM bettrans b WITH(NOLOCK)
+			WHERE	b.matchid = @matchid 
+				AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+				AND betdaqid = 0--bettrade tickets
+				
 			INSERT INTO #BalanceBefore
 			SELECT b.custid
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 			GROUP BY b.custid
 
 			SET @TotalAccount = @@ROWCOUNT
 		END
 		ELSE IF @Action = 'UNDO'
 		BEGIN
+			INSERT INTO #tmpTrans(transid)
+			SELECT transid
+			FROM bettrans b WITH(NOLOCK)
+			WHERE	b.matchid = @matchid
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+				AND betdaqid = 0--bettrade tickets
+			
 			INSERT INTO #BalanceBefore
 			SELECT b.custid
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
@@ -281,6 +316,9 @@ BEGIN
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 			GROUP BY b.custid
 		END
 				--===
@@ -604,6 +642,9 @@ need below code to determine for mark match as calculated (all bets settled)
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 			GROUP BY b.custid
 		END
 		ELSE IF @Action = 'CAL-HT'
@@ -613,7 +654,10 @@ need below code to determine for mark match as calculated (all bets settled)
 					,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM	dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 			GROUP BY b.custid
 		END
 		ELSE IF @Action = 'UNDO'
@@ -626,6 +670,9 @@ need below code to determine for mark match as calculated (all bets settled)
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 			GROUP BY b.custid
 		END
 	END --IF @SkipBalanceUpdate = 0
@@ -690,6 +737,8 @@ need below code to determine for mark match as calculated (all bets settled)
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
+	
+	DROP TABLE #tmpTrans
 
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---

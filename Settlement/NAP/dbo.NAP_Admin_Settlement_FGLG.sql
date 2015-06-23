@@ -21,6 +21,7 @@ AS
 		- 20140426@Kathy: Add @action param (1H FGLG (bettype 127) ) [Redmine:#14449]
 		- 20140618@Kathy: Correct betstatus
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212] - GoalRecord
+		- 20150610@Johnson: Add bettrade [Redmine: #]
 	Param's Explanation:
 		+ @betstatus: FGLG status
 		+ @IsLoopTempTable: 1 : is nested
@@ -32,6 +33,8 @@ BEGIN
 
 	DECLARE @ActionID INT
 		,@bettype INT
+		
+	CREATE TABLE #tmpTrans (transid BIGINT)
 
 	SELECT @ActionID = 108
 		,@bettype = CASE 
@@ -161,11 +164,21 @@ BEGIN
 
 	BEGIN
 		--===
+		INSERT INTO #tmpTrans(transid)
+		SELECT transid
+		FROM dbo.bettrans WITH (NOLOCK)
+		WHERE matchid = @matchid 
+			AND bettype = @bettype
+			AND betdaqid = 0--bettrade tickets
+		
 		INSERT INTO #BalanceBefore
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype = @bettype
+		WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903)
+			AND 1 = CASE WHEN bettype IN (901,902,903) 
+									AND refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -279,7 +292,10 @@ BEGIN
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype = @bettype
+		WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903)
+			AND 1 = CASE WHEN bettype IN (901,902,903) 
+									AND refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 		GROUP BY custid
 			--===
 	END
@@ -356,6 +372,8 @@ BEGIN
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
+	
+	DROP TABLE #tmpTrans
 
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---

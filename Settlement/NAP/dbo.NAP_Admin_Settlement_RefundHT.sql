@@ -32,7 +32,7 @@ AS
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]	
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-
+		- 20150611@Johnson: Add bettrade [Redmine: #]
 	
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -121,14 +121,27 @@ BEGIN
 		,balance MONEY
 		,Increased BIT
 		)
+			
+	CREATE TABLE #tmpTrans (transid BIGINT)
 
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
-
+	
+	INSERT INTO #tmpTrans
+	SELECT transid
+	FROM dbo.bettrans WITH (ROWLOCK)
+	WHERE matchid = @matchid 
+		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+		AND betdaqid = 0--bettrade tickets
+		
 	INSERT INTO #BalanceBefore
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+	WHERE matchid = @matchid 
+		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
+		AND 1 = CASE WHEN bettype IN (901,902,903) 
+						AND refno IN (SELECT transid FROM #tmpTrans)	
+				THEN 1 ELSE 0 END
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -336,7 +349,11 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+	WHERE matchid = @matchid 
+		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
+		AND 1 = CASE WHEN bettype IN (901,902,903) 
+						AND refno IN (SELECT transid FROM #tmpTrans)	
+				THEN 1 ELSE 0 END--bettrade
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -430,6 +447,8 @@ BEGIN
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
+	
+	DROP TABLE #tmpTrans
 
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---

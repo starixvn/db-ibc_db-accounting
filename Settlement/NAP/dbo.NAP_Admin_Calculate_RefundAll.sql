@@ -24,7 +24,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		- 20141027@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
-		
+		- 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#] 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
 BEGIN
@@ -73,6 +73,7 @@ BEGIN
 			AND bettype NOT IN (14, 127) 
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND bettype NOT IN (901,902,903)
 			AND 1 = CASE WHEN @SelectedSet IS NULL THEN 1 
 						 WHEN @SelectedSet LIKE '%1%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 801 OR BetID BETWEEN 80101 AND 80199) THEN 1 
 						 WHEN @SelectedSet LIKE '%2%' AND Bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) AND (BetID = 802 OR BetID BETWEEN 80201 AND 80299) THEN 1

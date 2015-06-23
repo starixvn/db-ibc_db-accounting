@@ -64,7 +64,7 @@ AS
 		- 201409010@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150414@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-	
+		- 20150610@Johnson: Add bettrade [Redmine: #]
 	Param's Explanation:
 	• @matchid: matchid need to refund
 	• @IsExcludeBetdaq: Is Exclude betdaq tickets or not
@@ -117,6 +117,8 @@ BEGIN
 		,@SetxGameyFinishedGame	VARCHAR(MAX) = ''
 		,@BetstatusLOG			NVARCHAR(50) = ''
 		,@IsSettleDeterminedTicketTennis	BIT	= 0 
+	
+	CREATE TABLE #tmpTrans (transid BIGINT)
 	
 	SELECT @start = CURRENT_TIMESTAMP
 	
@@ -176,7 +178,17 @@ BEGIN
 	---------------------------VVVV------------------------------
 
 	CREATE TABLE #BalanceBefore (custid INT PRIMARY KEY, balance MONEY)
-
+	
+	INSERT INTO #tmpTrans
+	SELECT transid
+	FROM dbo.bettrans b WITH (NOLOCK)
+	WHERE	b.matchid = @matchid 
+			AND b.bettype NOT IN (14, 127)
+			AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+			AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
+			AND betdaqid = 0--bettrade tickets
+			
 	INSERT INTO #BalanceBefore
 	SELECT	b.custid
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
@@ -186,6 +198,9 @@ BEGIN
 			AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 			AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
+			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 	GROUP BY b.custid
 	
 	-------------------------------------------------------------
@@ -741,6 +756,9 @@ BEGIN
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
+	AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+						AND b.refno IN (SELECT transid FROM #tmpTrans)	
+				THEN 1 ELSE 0 END
 	GROUP BY b.custid
 	
 	------------------------------------------------------------
@@ -829,7 +847,8 @@ BEGIN
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
-
+	
+	DROP TABLE #tmpTrans
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---
 	---------------------------VVVV------------------------------

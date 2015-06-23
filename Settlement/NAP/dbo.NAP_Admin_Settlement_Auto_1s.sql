@@ -17,7 +17,7 @@ AS
 	Original: 
 	
 	Revisions:
-
+		- 20150610@Johnson: Add bettrade [Redmine: #]
 	Param's Explanation:
 */	
 BEGIN
@@ -33,7 +33,9 @@ BEGIN
 			,@ActionID					INT
 			,@Remark					VARCHAR(500)
 			,@LogData					NVARCHAR(300)							
-
+	
+	CREATE TABLE #tmpTrans (transid BIGINT)
+	
 	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE WHEN @Action = 'CAL'	THEN 148 
 							 WHEN @Action = 'UNDO'	THEN 149 
@@ -108,12 +110,22 @@ BEGIN
 		)
 
 	--===
+	INSERT INTO #tmpTrans(transid)
+	SELECT transid
+	FROM dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @MatchId 
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+			AND betdaqid = 0--bettrade tickets
+	
 	INSERT INTO #BalanceBefore
 	SELECT	 b.custid
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217,901,902,903)
+			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 	GROUP BY b.custid
 
 
@@ -243,6 +255,9 @@ BEGIN
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @matchid 
 			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 ELSE 0 END
 	GROUP BY b.custid
 
 
@@ -305,7 +320,8 @@ BEGIN
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
-
+	
+	DROP TABLE #tmpTrans
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---
 	---------------------------VVVV------------------------------

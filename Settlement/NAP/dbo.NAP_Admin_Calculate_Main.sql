@@ -251,7 +251,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betCount_1316					INT			= NULL	
 	,@betCount_1317					INT			= NULL	
 	,@betCount_1318					INT			= NULL	
-	,@betCount_1324					INT			= NULL	
+	,@betCount_1324					INT			= NULL		
 	,@row_count						INT 		= NULL
 	,@IsSettleAbandonedMatch		BIT 		= 0
 	,@IsSettleAbandonedMatchBetFair BIT 		= 0
@@ -280,6 +280,7 @@ AS
 		- 20141016@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150128@Jamie: Hotfix Settlement SS
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150529@Johnson: Add bettrade
 		
 	Param's Explanation:
 		@action			@mode
@@ -847,6 +848,7 @@ BEGIN
 			,@betCount_1317 = ' + CASE WHEN @betCount_1317 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1317) END + '
 			,@betCount_1318 = ' + CASE WHEN @betCount_1318 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1318) END + '
 			,@betCount_1324 = ' + CASE WHEN @betCount_1324 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1324) END + '
+			
 			,@row_count = ' + CASE 
 				WHEN @row_count IS NULL THEN 'NULL'
 				ELSE CONVERT(NVARCHAR(50), @row_count)
@@ -1455,6 +1457,12 @@ BEGIN
 						,@betcount = @betcount_208
 
 				--*** Betradar 2: END *****
+				
+				--Bettrade
+					EXEC dbo.NAP_Admin_Calculate_901
+						 @matchid = @matchid											
+						,@action = @action
+						,@mode = @mode
 
 				END
 			END
@@ -1653,6 +1661,12 @@ BEGIN
 					,@result = @htLCorner
 					,@betcount = @betcount_209
 			--*** Betradar 2: END ****
+			
+			--Bettrade
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 			END
 
 			IF @Mode = 'UNDO'
@@ -1661,6 +1675,11 @@ BEGIN
 					 @matchid	  = @matchid
 					,@SelectedSet = @SelectedSet
 					,@ResourceIDs = @ResourceIDs
+				
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 			END
 		END
 
@@ -1674,6 +1693,11 @@ BEGIN
 					,@goaldiff = @goaldiff
 					,@FGLG2 = @HT_FGLG2
 					,@betcount = @betcount_127
+				
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 			END
 
 			IF @mode = 'CAL-FT'
@@ -1694,6 +1718,11 @@ BEGIN
 						,@FGLG2 = @FGLG2
 						,@betcount = @betcount_14
 				END
+				
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 			END
 		END
 
@@ -1880,7 +1909,11 @@ BEGIN
 					,@ResourceIDs = @ResourceIDs
 					,@result = @GoalScorerFirst
 					,@betcount = @betcount_217
-
+			
+			EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 		END
 
 		IF @action ='CAL-SET'  --Tennis including Sportting Solution
@@ -2498,13 +2531,21 @@ BEGIN
 						,@betcount					= @betCount_206
 
 
-				IF @row_count > 0
+				IF @row_count > 0				
+				BEGIN
 					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@isRefundHT = @IsRefundHT
 						,@isHTCal = @isHTCal
+										
+					EXEC NAP_Admin_Calculate_Refund_901
+						@matchid					= @matchid							
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@action					= @action
+						,@mode						= @mode
+				END
 			END
 
 			IF @mode = 'HT'
@@ -2518,9 +2559,16 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @row_count > 0
+				BEGIN
 					EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
+					
+					EXEC NAP_Admin_Calculate_Refund_901
+						@matchid = @matchid													
+						,@action = @action
+						,@mode	 = @mode
+				END
 			END
 
 			IF @mode = 'ALL'
@@ -2903,6 +2951,7 @@ BEGIN
 					
 
 				IF @row_count > 0
+				BEGIN
 					EXEC dbo.NAP_Admin_Calculate_RefundAll 
 						 @matchid					= @matchid
 						,@IsExcludeBetdaq			= @IsExcludeBetdaq
@@ -2912,6 +2961,14 @@ BEGIN
 						,@SelectedSettleFinishedGame= @SelectedSettleFinishedGame
 						,@SetxGameyFinishedGame		= @SetxGameyFinishedGame
 						,@ResourceIDs				= @ResourceIDs
+					
+					EXEC NAP_Admin_Calculate_Refund_901
+						@matchid					= @matchid							
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@ResourceIDs				= @ResourceIDs
+						,@action					= @action
+						,@mode						= @mode
+				END
 
 			END
 
@@ -2932,6 +2989,11 @@ BEGIN
 				,@action = @mode
 				,@LGOnly = @LGOnly
 				,@matchdate = @matchdate
+			
+			EXEC NAP_Admin_Calculate_Refund_901
+				@matchid = @matchid											
+				,@action = @action
+				,@mode	 = @mode
 		END
 	END
 END
