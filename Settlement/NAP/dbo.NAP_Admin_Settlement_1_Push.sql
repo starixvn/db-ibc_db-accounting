@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push] 
 	 @AdminId				INT
 	,@Matchid				INT
@@ -27,6 +30,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_Push]
 	,@FTLCorner				VARCHAR(1)		= NULL
 	,@HTFCorner				VARCHAR(1)		= NULL
 	,@HTLCorner				VARCHAR(1)		= NULL 	
+	,@isExcludeCorner		BIT				= 0 
 	,@Action				VARCHAR(10)		= 'CAL'
 	,@IP					VARCHAR(15)		= ''
 	,@ErrCode				INT				= 0		OUTPUT
@@ -43,6 +47,7 @@ AS
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		
 	Param's Explanation:
 
@@ -54,7 +59,7 @@ BEGIN
 	DECLARE @matchcode			NVARCHAR(50)
 		,@sporttype				INT
 		,@leagueid				INT
-		,@sqlCommand			NVARCHAR(MAX) 
+		,@sqlCommand			NVARCHAR(MAX)  --
 		,@procName				NVARCHAR(50)
 
 	SELECT @matchcode	= m.matchcode
@@ -100,7 +105,7 @@ BEGIN
 	END
 	
 	-- check waiting ticket
-	EXEC NAP_Admin_Settlement_Checking
+								EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = @Action
 		,@Mode = 'CAL'
@@ -164,7 +169,7 @@ BEGIN
 																						   ELSE '''' + @HTFCorner + '''' END 
 														  + ', @HTLCorner = ' + CASE WHEN @HTLCorner IS NULL THEN 'NULL'	
 																						   ELSE '''' + @HTLCorner+ '''' END 
-
+														  + ', @isExcludeCorner = ' + ISNULL(CONVERT(NVARCHAR(50), @isExcludeCorner), '0') 
 														  + ', @action = ''' + CONVERT(NVARCHAR(50), @Action) + '''' 
 														  + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
 														  + ', @ErrCode = @ErrCode OUTPUT' 
@@ -254,7 +259,6 @@ BEGIN
 			,@sqlCommand
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1_Push] TO [bodbAdminNet] AS [dbo]
 GO
