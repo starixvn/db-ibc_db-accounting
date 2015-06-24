@@ -403,6 +403,19 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM @status
 		WHERE FTBet = 1
 
+		DECLARE @isExistRunningCornerBet BIT
+		SELECT	@isExistRunningCornerBet = 0 
+		IF @Sporttype = 1 
+		BEGIN
+			IF EXISTS(	SELECT TOP 1 1 FROM Bettrans WITH (NOLOCK) 
+						WHERE	bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
+								AND matchID = @MatchID 
+								AND statusID = 0 	
+								AND @isExcludeCorner = 1 
+			)
+			SELECT	@isExistRunningCornerBet = 1 
+		END
+
 		/* Mode
 	CAL : (default) Settle ALL BetTypes
 	CAL-FT : Full Time Only
@@ -411,7 +424,9 @@ need below code to determine for mark match as calculated (all bets settled)
 	UNDO : Unsettle the match  -- not use
 	*/
 		SELECT @eventstatus = CASE 
-								WHEN @action = 'CAL' AND @Sporttype <>5					THEN N'completed'
+								WHEN @action = 'CAL' AND @Sporttype NOT IN (1,5)		THEN N'completed'
+								WHEN @action = 'CAL' AND @Sporttype = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL' AND @Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND @Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN N'completed'	-- Match Option checked 
 								WHEN @action = 'CAL-HT' AND m.matchcode LIKE '%hedge%'	THEN eventstatus -- Jamie@20120330: Not change eventstatus='completed' for Hedge Match although 
 								WHEN @action = 'CAL-HT' AND @FTDone = 1					THEN N'completed'
@@ -438,6 +453,8 @@ need below code to determine for mark match as calculated (all bets settled)
 			,@Action		= @action
 			,@FTDone		= @FTDone
 			,@HTDone		= @HTDone
+			,@isExcludeCorner = @isExcludeCorner
+			,@isExistRunningCornerBet = @isExistRunningCornerBet
 			,@creator		= @creator
 
 		IF @Sporttype = 5 AND @Action='CAL'

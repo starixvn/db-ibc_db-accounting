@@ -14,7 +14,9 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 	@Action VARCHAR(10)			= NULL,
 	@FTDone BIT = 0,
 	@HTDone BIT = 0,
-	@NoneCornerBetDone BIT = 0, 
+	@NoneCornerBetDone	BIT = 0, 
+	@isExcludeCorner	BIT = 0,
+	@isExistRunningCornerBet BIT = 0,
 	@RowCount INT = 0 OUTPUT,
 	@Creator INT = 0
 ) 
@@ -68,7 +70,9 @@ BEGIN
 			goalrecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
 							  WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> '' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
 							  ELSE @goalrecord END,
-			eventstatus = CASE	WHEN @action = 'CAL' AND Sporttype <> 5 THEN N'completed'
+			eventstatus = CASE	WHEN @action = 'CAL' AND Sporttype NOT IN (1,5)		THEN N'completed'
+								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 5 AND @SelectedSet LIKE '%6%'THEN N'completed'
 								WHEN @action = 'CAL-HT' AND @FTDone = 1 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 THEN N'completed'
