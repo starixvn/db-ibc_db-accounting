@@ -396,5 +396,7 @@ END
 ---------------------------------------------------------------
 
 
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]
