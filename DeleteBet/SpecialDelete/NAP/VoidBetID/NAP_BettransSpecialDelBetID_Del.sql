@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
+		- 20150615@Dominic: BetTrade Integration 	[Redmine:#36964]
 	Param's Explanation: 
 */
 BEGIN 
@@ -43,7 +44,15 @@ BEGIN
 		EXEC WriteLog_UserLog @UserID = @UserID ,@Doing = @LogData
 		RETURN
 	END
-
+	
+	CREATE TABLE #BeforeUpd (
+			custid		 INT,
+			balance		 MONEY)
+		
+	CREATE TABLE #AfterUpd(
+				custid		 INT,
+				balance		 MONEY)
+				
 	DECLARE @tmpListTransID TABLE (
 		 TransID		BIGINT
 		,MatchID		INT
@@ -78,12 +87,14 @@ BEGIN
 
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113)  -- DRAW, WON, LOSE 
 	BEGIN
-		DELETE FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113	-- Not allowed to delete settled(DRAW, WON, LOSE ) Mix Parlay 
+		DELETE FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113
+		AND Bettype NOT IN (901,902,903)	-- Not allowed to delete settled(DRAW, WON, LOSE ) Mix Parlay 
 	END
 
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1)
 	BEGIN
-		DELETE FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1 -- Not allowed to settle the running Live CS bet 
+		DELETE FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1 
+		AND Bettype NOT IN (901,902,903)-- Not allowed to settle the running Live CS bet 
 	END
 
 	DECLARE	@Recommend			INT
@@ -105,6 +116,8 @@ BEGIN
 			,@balance			MONEY
 			,@winlostdate		DATETIME
 			,@currency			INT
+	
+	DECLARE @ErrorTransID		TABLE(transid BIGINT PRIMARY KEY)
 
 	SELECT	@winlostdate	= MIN(winlostdate)
 			,@CustID		= MIN(CustID)
@@ -113,7 +126,7 @@ BEGIN
 			,@isExistParlay = MAX(CASE WHEN Bettype = 9 THEN 1 ELSE 0 END)
 			,@isExistOutright = MAX(CASE WHEN Bettype = 10 THEN 1 ELSE 0 END)
 	FROM	Bettrans WITH (NOLOCK)
-	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)
+	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))
 			
 
 	SELECT	 @Username2		= Username2
@@ -153,6 +166,7 @@ BEGIN
 			FROM	dbo.TempVariableNumber t WITH (NOLOCK)
 					INNER JOIN @tmpListTransID l ON t.KeyID = t.KeyID AND t.KeyValue = l.MatchID 
 			WHERE	Bettype <> 9  --- EXCLUDE MIX PARLAY 
+					AND Bettype NOT IN (901,902,903)
 		
 		))
 		BEGIN
@@ -165,7 +179,7 @@ BEGIN
 			INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
 			SELECT	DISTINCT KeyID, MatchID 
 			FROM	@tmpListTransID
-			WHERE	Bettype <> 9  
+			WHERE	Bettype <> 9   AND Bettype NOT IN (901,902,903)
 		END
 	END
 
@@ -220,18 +234,200 @@ BEGIN
 	WHERE b.transid IN (
 				SELECT	TransID
 				FROM	@tmpListTransID
-				WHERE	Bettype <> 9
+				WHERE	Bettype <> 9 AND Bettype NOT IN (901,902,903)
 			)
 
 	SELECT	@totalbalance = SUM(winlost - actual_stake + playercomm)
 	FROM	bettrans with (nolock)
 	WHERE	custid = @CustID
+
+	INSERT INTO zzzbettrans
+		(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
+	SELECT	transid, custid, CURRENT_TIMESTAMP, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype
+	FROM	bettrans with (nolock)
+	WHERE	transid IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))  
+	
+	--Back up BetTrade's subtickets (901,902,903)  
+	INSERT INTO zzzbettrans
+		(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
+	SELECT	sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.awinlost, sb.status, sb.winlost, sb.livehomescore, sb.liveawayscore, sb.liveindicator, sb.betteam, sb.creator , sb.refno, sb.winlostdate, sb.betfrom, sb.betcheck, sb.checktime, sb.matchid, sb.bettype
+	FROM	bettrans b with (nolock)
+		INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno
+	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903)) 
+			AND b.Bettype IN (901,902,903)
+	
+	UPDATE 
+		bettrans WITH (ROWLOCK, UPDLOCK)
+	SET [status]			= 'Void'     
+	WHERE
+		transid IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))
 		
-	SELECT  @isNegativeBalance = CASE WHEN @Balance > 0 AND (credit + @totalbalance - @Balance) < 0 THEN 1 ELSE 0 END
-	FROM	CustDB.dbo.custinfo WITH(NOLOCK)
-	WHERE	custid = @CustID 
+	-- Update BetTrade's subtickets (901,902,903) 
+	UPDATE 
+		bettrans WITH (ROWLOCK, UPDLOCK)
+	SET [status]			= 'Void'      
+	WHERE
+		refno IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))
+		AND Bettype IN (901, 902, 903)
 
+	
+	-- Control concurrency problems - start		
+		--Get error TransID
+		INSERT INTO @ErrorTransID(TransID)
+		SELECT DISTINCT t.TransID
+		FROM @tmpListTransID t
+			INNER JOIN zzzbettrans z WITH(NOLOCK) ON t.TransID = z.refno AND z.Bettype = 901
+			LEFT JOIN @tmpListTransID t2 ON t2.TransID = z.TransID
+		WHERE t2.TransID IS NULL
+		UNION
+		SELECT DISTINCT t.TransID
+		FROM @tmpListTransID t
+			INNER JOIN bettrans b WITH(NOLOCK) ON t.TransID = b.TransID AND b.betdaqid = 0
+			LEFT JOIN zzzbettrans z WITH(NOLOCK) ON t.TransID = z.refno AND z.Bettype = 901
+		WHERE z.TransID IS NULL
+		UNION
+		SELECT DISTINCT t.TransID
+		FROM @tmpListTransID t
+			INNER JOIN bettrans b WITH(NOLOCK) ON t.TransID = b.TransID AND b.betdaqid = 0
+			INNER JOIN zzzbettrans z WITH(NOLOCK) ON t.TransID = z.TransID
+		WHERE z.CustID <> b.CustID
+		
+		-- Rollback BetTrade's main tickets
+		UPDATE  main
+		SET main.status	= z.Status
+		FROM bettrans b WITH (ROWLOCK, UPDLOCK) 
+			INNER JOIN zzzbettrans z  WITH (ROWLOCK, UPDLOCK) ON b.TransID = z.TransID   
+		WHERE
+			b.TransID IN (SELECT transid FROM @ErrorTransID)
+			
+		-- Rollback BetTrade's subtickets (901,902,903) 
+		UPDATE  main
+		SET main.status	= z.Status
+		FROM bettrans b WITH (ROWLOCK, UPDLOCK) 
+			INNER JOIN zzzbettrans z  WITH (ROWLOCK, UPDLOCK) ON b.TransID = z.TransID   
+		WHERE
+			b.refno IN (SELECT transid FROM @ErrorTransID)
+			AND b.Bettype IN (901, 902, 903)
+		
+		-- DELETE balance/backup/delete data	
+		DELETE FROM zzzbettrans 
+		WHERE TransID IN (SELECT transid FROM @ErrorTransID)
+			OR (Refno IN (SELECT transid FROM @ErrorTransID) AND Bettype IN(901,902,903))
+			
+		DELETE db
+		FROM @tmpListTransID db
+		INNER JOIN bettrans b WITH (ROWLOCK, UPDLOCK) ON db.TransID = b.TransID
+		WHERE db.TransID IN (SELECT transid FROM @ErrorTransID)
+			OR 
+				( b.refno IN (SELECT transid FROM @ErrorTransID) AND b.Bettype IN (901,902,903))
+	
+	-- Control concurrency problems - end
+	
+	INSERT INTO #BeforeUpd (custid, balance)
+	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
+	FROM	bettrans b WITH (NOLOCK)
+	WHERE	b.transid IN (SELECT transid FROM #BetDelete)
+	GROUP BY b.CustID
+	
+	--update bettrans
+	UPDATE	bettrans WITH (UPDLOCK,ROWLOCK) 
+	SET		winlost=actual_stake,ruben=1,statuswinlost=6, creator = @UserID,
+			awinlost = 0, mwinlost = 0, swinlost = 0, playercomm = 0, comm  = 0, acomm = 0, scomm = 0,statusID = 102
+	WHERE transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype NOT IN (901,902,903)) 
+	
+	--update bettrans
+	UPDATE	bettrans WITH (UPDLOCK,ROWLOCK) 
+	SET		winlost=actual_stake,ruben=1,statuswinlost=6, creator = @UserID,
+			awinlost = 0, mwinlost = 0, swinlost = 0, playercomm = 0, comm  = 0, acomm = 0, scomm = 0,statusID = 102
+	WHERE refno IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))
+		AND Bettype IN (901, 902, 903)
+		
+	
+	--Update BetTrade selling information			
+		-- Update BetTradeSelling
+		UPDATE [dbo].[BetTradeSelling] WITH (ROWLOCK, UPDLOCK)
+		SET
+			[Status] = 'Cancel',
+			[ChangeDate]  = GETDATE()
+		WHERE
+			TicketID IN (SELECT transid FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))
+			
+		-- Insert BetTradeSellingCancel
+		INSERT INTO [dbo].[BetTradeSellingCancelled]
+			   ([TicketID]
+			   ,[Remark]
+			   ,[BTBuyBack]
+			   ,[BTCommission]
+			   ,[AfterBalance]
+			   ,[Owner]
+			   ,[Cancelled]
+			   ,[ChangeDate]
+			   ,[CreateDate])
+		 SELECT zb.refno
+				, 'SB void ticket due to ' + @Reason
+				,zb.Stake
+				,0
+				,0
+				,'SB'
+				,1
+				,GETDATE()
+				,GETDATE()
+		 FROM @tmpListTransID t
+		 INNER JOIN zzzbettrans zb WITH(NOLOCK)
+			ON zb.Refno = t.TransID AND zb.BetType = 901
+		 LEFT JOIN [dbo].[BetTradeSellingCancelled] c WITH(NOLOCK) 
+			ON c.[TicketID] = zb.TransID
+		WHERE c.[BTBuyBack] IS NULL AND t.Bettype NOT IN(901,902,903)
+		
+		--Update
+		UPDATE main
+		SET
+			[Remark] = 'SB void ticket due to ' + @Reason,
+			[BTBuyBack] = zb.Stake,
+			[BTCommission] = 0,
+			[Owner] = 'SB',
+			[Cancelled] = 1,
+			[ChangeDate] = GETDATE(),
+			[CreateDate] = GETDATE(),
+			AfterBalance = (SELECT ISNULL(SUM(CASE 
+								WHEN ruben = 1
+									THEN winlost - actual_stake + playercomm
+								ELSE 0
+								END), 0)
+								FROM dbo.bettrans WITH (NOLOCK)
+								WHERE custid = zb.custid
+								)
+		FROM [dbo].[BetTradeSellingCancelled] main WITH (ROWLOCK, UPDLOCK)
+		INNER JOIN zzzbettrans zb WITH(NOLOCK)
+			ON zb.Refno = main.[TicketID] AND zb.BetType = 901	
+		WHERE main.[TicketID] IN (SELECT transid FROM @tmpListTransID WHERE Bettype NOT IN(901,902,903))
+		
+	
+	--Get data after update
+	INSERT INTO #AfterUpd (custid, balance)
+	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
+	FROM	bettrans b WITH (NOLOCK)
+	WHERE	b.transid IN (SELECT transid FROM #BetDelete)
+	GROUP BY b.CustID 
+	
+	---INSERT data into pending balance table 
+	INSERT INTO BalancePendingCredit (custid,Balance)
+	SELECT		a.custid, (a.balance - b.balance) as Balance
+	FROM		#BeforeUpd b
+	INNER JOIN	#AfterUpd a 	
+			ON	a.custid = b.custid
+	WHERE	    (a.balance - b.balance) > 0
 
+	INSERT INTO BalancePendingDebit (custid,Balance)
+	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
+	FROM		#BeforeUpd b
+	INNER JOIN	#AfterUpd a 	
+			ON	a.custid = b.custid
+	WHERE	    (a.balance - b.balance) < 0
+	
+	DROP TABLE #BeforeUpd
+	DROP TABLE #AfterUpd
+	
 	-- Get Upline info 
 
 	SELECT	 @CustID			AS CustID 
@@ -385,69 +581,12 @@ BEGIN
 				,NULL AS betteam 
 				,0 AS refno
 	END
-			
-	---- Mix Parlay 
-	--IF(@isExistParlay =1)
-	--BEGIN
-	--	SELECT	bm.transid,
-	--			bm.bettype,
-	--			bm.betteam,
-	--			bm.odds,
-	--			bm.hdp1,
-	--			bm.hdp2,
-	--			bm.livehomescore,
-	--			bm.liveawayscore,
-	--			bm.liveindicator,
-	--			m.matchid,
-	--			m.homeid,
-	--			m.awayid,
-	--			m.leagueid,
-	--			m.sporttype,	
-	--			isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral,
-	--			bm.refno	
-	--	FROM	bettransm bm WITH(NOLOCK)
-	--			INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
-	--	WHERE	bm.refno IN (SELECT Refno FROM @tmpListTransID WHERE bettype = 9)
-	--	UNION ALL 
-	--	SELECT	bm.transid,
-	--			bm.bettype,
-	--			bm.betteam,
-	--			bm.odds,
-	--			bm.hdp1,
-	--			bm.hdp2,
-	--			bm.livehomescore,
-	--			bm.liveawayscore,
-	--			bm.liveindicator,
-	--			m.matchid,
-	--			m.homeid,
-	--			m.awayid,
-	--			m.leagueid,
-	--			m.sporttype,	
-	--			isnull(isNeutral, CONVERT(BIT,0)) AS IsNeutral,
-	--			bm.refno	
-	--	FROM	bettransm14 bm WITH(NOLOCK)
-	--			INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
-	--	WHERE	bm.refno IN (SELECT Refno FROM @tmpListTransID WHERE bettype = 9)
-	--	ORDER BY bm.transid
-	--END
-
-	INSERT INTO zzzbettrans
-		(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
-	SELECT	transid, custid, CURRENT_TIMESTAMP, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype
-	FROM	bettrans with (nolock)
-	WHERE	transid IN (SELECT TransID FROM @tmpListTransID)  
-
+		
 	--update balance debit
 	IF @balance > 0
 	BEGIN			
 		EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
-	END
-	
-	--update bettrans
-	UPDATE	bettrans WITH (UPDLOCK,ROWLOCK) 
-	SET		winlost=actual_stake,ruben=1,statuswinlost=6, status = 'Void', creator = @UserID,
-			awinlost = 0, mwinlost = 0, swinlost = 0, playercomm = 0, comm  = 0, acomm = 0, scomm = 0,statusID = 102
-	WHERE transid IN (SELECT TransID FROM @tmpListTransID)  
+	END 
 		
 	--update balance debit	
 	IF @balance < 0
@@ -473,6 +612,9 @@ BEGIN
 		SET		VValue = '0'
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
+	
+	--Return Error TransIDs
+	SELECT * FROM @ErrorTransID
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]

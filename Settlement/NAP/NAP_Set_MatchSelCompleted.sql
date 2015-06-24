@@ -24,6 +24,7 @@ AS
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212
 		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
+		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
 
 
 	Param explanation: 
@@ -139,8 +140,6 @@ BEGIN
 		INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ht WITH (NOLOCK) ON mr.ConfirmHT = ht.custid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ft WITH (NOLOCK) ON mr.ConfirmFT = ft.custid
-		LEFT JOIN DBPRO.BODB02.dbo.League l WITH (NOLOCK) ON m.leagueID = l.leagueID 
-		
 	WHERE m.eventdate = @Date 	AND 
 	m.leagueID = CASE 
 			WHEN @LeagueID <> 0 THEN @LeagueID
@@ -148,9 +147,8 @@ BEGIN
 			END AND m.sporttype = CASE 
 			WHEN @sporttype = 0 THEN m.sporttype
 			ELSE @sporttype
-			END
-			-- 20150606@Francis: Hotfix checking kickoff time for ExtraTime Match
-			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0 OR (l.DisplayCat = 8 AND m.kickofftime <= CURRENT_TIMESTAMP))
+			END 
+			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0)
 	
 	INSERT INTO #matchList	
 		SELECT tm.matchid
@@ -269,9 +267,8 @@ BEGIN
 
 	DROP TABLE #matchList
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelCompleted] TO [vnteam] AS [dbo]
+

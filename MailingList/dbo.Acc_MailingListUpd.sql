@@ -23,6 +23,7 @@ Revisions:
 	20131101@Kathy: Add Foobet group [Redmine:#5697]
 	20131113@Kathy: Add RecoverBet group [Redmine:#6647]
 	20140411@Kathy: Add BetFair, OneExchange's group [Redmine:#6647]
+	20150615@Dominic: Add BetTrade's group RM:#36964
 */  
 
 BEGIN	
@@ -54,7 +55,7 @@ IF @ErrCode <> 0
 	RETURN
 
 --2. VALIDATE LICENSEE.
-IF @Siteid NOT IN (1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006) -- 12EU, IT QA, IT Support, Foobet, RecoverBet, BetFair, OneExchange
+IF @Siteid NOT IN (1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007) -- 12EU, IT QA, IT Support, Foobet, RecoverBet, BetFair, OneExchange, BetTrade
 	IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 ) AND @Siteid <> 0
 	BEGIN
 		SELECT @ErrMsg = 'This Licensee does not exists in System.',

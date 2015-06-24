@@ -86,6 +86,7 @@ BEGIN
           , @SelectedBetting BIT
           , @NicknameLoginOnly BIT
           , @LastChangedSecurityCodeDate DATETIME
+		  , @HasDownline BIT = 0
 
     DECLARE @todaySuperCash MONEY
           , @todayMasterCash MONEY
@@ -132,7 +133,7 @@ BEGIN
 
     IF @roleid > 4
 	    RETURN
-    -----------------------------
+    -----------------------------	
 
     SELECT @DisableDownlinesFI = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableFinancial = 1)
 										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableFinancial = 1) 											 
@@ -232,6 +233,8 @@ BEGIN
 
     IF @roleid = 4 --super
     BEGIN
+		SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3
+
 	    SELECT @IsInternal = ISNULL(IsInternal, 0)
 	         , @LimitPerIP = ISNULL(LimitPerIP, 0)
 	         , @SelectedBetting = ISNULL(SelectedBetting, 0)
@@ -314,6 +317,8 @@ BEGIN
     END								  
     ELSE IF @roleid = 3 --master
     BEGIN
+		SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
+
 	    SELECT @IsInternal = ISNULL(IsInternal, 0)
 	         , @LimitPerIP = ISNULL(LimitPerIP, 0)
 	         , @SelectedBetting = ISNULL(SelectedBetting, 0)
@@ -344,6 +349,8 @@ BEGIN
     END
     ELSE IF @roleid = 2 --agent
     BEGIN
+		SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE recommend = @custid AND roleid = 1
+
 	    SELECT 
 		    @IsInternal = ISNULL(IsInternal, 0),
 		    @LimitPerIP = ISNULL(LimitPerIP, 0),
@@ -461,8 +468,8 @@ BEGIN
 	    ci.HideVirtualSports,
 	    ci.DoubleCommLosing,	    	   
 		ci.DisableEsports,
-		ci.DisableGoldDeluxe,
-		ci.HideGoldDeluxe,
+		ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
+		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
 	    ci.Enabled,
 	    @isBA IsBA,
 	    @IsDeposit IsDeposit, 
@@ -476,7 +483,8 @@ BEGIN
 	    @LastChangedSecurityCodeDate as LastChangedSecurityCodeDate,
 	    @IsHideDirectStatus IsHideDirectStatus,
 	    @IsCheckedDirectStatus IsCheckDirectStatus,
-	    @IsDisabledDirectStatus IsDisabledDirectStatus
+	    @IsDisabledDirectStatus IsDisabledDirectStatus,
+		@HasDownline AS HasDownline
     FROM customer c WITH(NOLOCK)
 	    inner join custinfo ci WITH(NOLOCK) on c.custid = ci.custid
 	    inner join exchange e WITH(NOLOCK) on c.currency = e.exchangeid 
@@ -706,6 +714,7 @@ BEGIN
 		    @TotalMemberClosed MemberClosed,
 		    @TotalMemberSuspended MemberSuspended
 END
+
 
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]

@@ -143,8 +143,8 @@ SELECT	ISNULL(reject,0) AS Suspend,
 
 		ISNULL(ci.HideKeno,0) as HideKeno, 
 		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513) then cg.IsDisabled else 1 end) as DisableKeno,
-		ISNULL(DisableGoldDeluxe,0) as DisableGoldDeluxe,
-		ISNULL(HideGoldDeluxe,0) as HideGoldDeluxe
+		ISNULL(DisableGoldDeluxe,1) as DisableGoldDeluxe,
+		ISNULL(HideGoldDeluxe,1) as HideGoldDeluxe
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
