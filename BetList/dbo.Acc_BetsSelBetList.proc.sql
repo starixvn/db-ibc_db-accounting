@@ -1336,10 +1336,10 @@ BEGIN
 			INSERT INTO #BetListData
 			select 
 				 b.bettype,   
-				 b.betid transid, 
+				 b.transid transid, 
 				 isnull(b.betid,0),
 				 b.refno,
-				 CONVERT(varchar(50), b.refno) as matchcode,   
+				 '' as matchcode,   
 				 '' as race,
 				 '' as eventdate, 
 				 0,
@@ -2398,10 +2398,10 @@ BEGIN
 			INSERT INTO #BetListData
 			select 
 				 b.bettype,   
-				 b.betid transid, 
+				 b.transid transid, 
 				 isnull(b.betid,0),
 				 b.refno,
-				 CONVERT(varchar(50), b.refno) as matchcode,   
+				 '' as matchcode,   
 				 '' as race,
 				 '' as eventdate, 
 				 0,

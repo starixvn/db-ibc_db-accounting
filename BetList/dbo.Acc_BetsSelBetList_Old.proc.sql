@@ -51,6 +51,7 @@ Revisions:
 	- 20150506@Tom: Support Gold Deluxe Product [#34847]
 	- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 	- 20150615@Edward: Support for BetTrade
+	- 20150625@Edward: Support for MicroGamming
 */	
 BEGIN
 
@@ -994,6 +995,82 @@ BEGIN
 					AND (@bettype 	= 0 OR s.bettype = @bettype)
 				)
 	 END
+	IF (@Bettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 13 AND Bettype = @Bettype)
+	)
+	BEGIN
+		--MicroGamming
+		INSERT INTO #BetListData
+		select 
+			 b.bettype,   
+			 b.transid transid,   
+			 isnull(b.BetID,0),
+			 b.refno,
+			 '' as matchcode,   
+			 '' as race,
+			 '' as eventdate, 
+			 0,0,
+			 sdiscount,
+			 adiscount,
+			 discount,	 
+			 0 as homeid,   
+			 0 as awayid,  
+			 '' settleTime, 
+			 b.hdp1,
+			 b.hdp2,
+			 b.odds,   
+			 0 finalodds,
+			 0 finalodds2,
+			 '' OddsType,  
+			 b.status,  
+			 CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus, 
+			 b.stake,  
+			 b.actual_stake, 
+			 b.transdate,   
+			 '' AS betteam,   
+			 b.spositiontaking,  
+			 b.mpositiontaking,   
+			 b.apositiontaking, 
+			 0 spositiontaking2,
+			 0 mpositiontaking2,
+			 0 apositiontaking2,   
+			 b.liveindicator,   
+			 b.modds,   
+			 b.custid,
+			 b.livehomescore, 
+			 b.liveawayscore,
+			 0 as finalhomescore, 
+			 0 as finalawayscore,  
+			 0 as leagueid,  
+			 203 as sporttype, 
+			 b.ip,
+			 b.betfrom,
+			 0 AS matchid,
+			 CONVERT(BIT,0) as IsNeutral,
+			 0 as allowdelete,
+			 (b.winlost-b.actual_stake)  winlost,
+			 b.playercomm as commission,
+			 (b.scomm - b.acomm) as scomm,
+			 (b.acomm - b.comm) as acomm,
+			 (b.comm - b.playercomm) as comm,
+			 b.awinlost,
+			 b.mwinlost,
+			 b.swinlost,
+			 '' as showtime,
+			b.winlostdate,
+			b.BetCheck,
+			'' AS transdesc								 
+		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		where	b.winlostdate>= @FromDate and    
+				b.winlostdate<= @ToDate and   
+				b.custid = @Custid  
+				AND	(
+					s.ProductId 	= 13 	
+					AND s.EventType = 0
+					AND (@bettype 	= 0 OR s.bettype = @bettype)
+				)				
+	END
 	 
 	UPDATE betList
 	SET betList.Odds	= originBetList.Odds
