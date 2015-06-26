@@ -9,7 +9,8 @@ AS
 	Original:
 
 	Revisions:
-		- 2150619@Sophia: Add Gold Deluxe, AG Casino, Vegas Game [#37683]
+		- 20150619@Sophia: Add Gold Deluxe, AG Casino, Vegas Game [#38512]
+		- 20150626@Sophia: Apply Metric Gaming  [#36423]
 		 
 	Param's Explanation:
 	
@@ -46,7 +47,7 @@ BEGIN
 				, CASE	WHEN Product = 'SPL' THEN 'Sportsbook Live' 
 						WHEN Product = 'SPNL' THEN 'Sportsbook Non-Live' 
 					 ELSE Product END AS Product
-	 FROM	bodb_ACC.dbo.Acc_DWLList_1 WITH (NOLOCK)
+	 FROM	bodb_ACC.dbo.Acc_DWLList WITH (NOLOCK)
 	 WHERE  Product NOT IN ('Total Balance', 'Poker', 'Poker (Due to Partners)')
 
 
@@ -156,8 +157,8 @@ BEGIN
 	*/	
 	INSERT INTO #TempCustTrans
 	SELECT DISTINCT custid = CASE 
-						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND bettype NOT BETWEEN 81 AND 120) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 THEN 6911909
-						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND bettype NOT BETWEEN 81 AND 120) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 6911911
+						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 THEN 6911909
+						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 6911911
 						WHEN bettype IN(9,29 ) THEN 6911913
 						WHEN bettype = 10 THEN 6911914
 						WHEN bettype IN (71,72) THEN 6911916
@@ -171,6 +172,7 @@ BEGIN
 						WHEN bettype = 1800 THEN 18188766
 						WHEN bettype = 1900 THEN 18188815
 						WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
+						WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
 					END
 	FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 	WHERE b.winlostdate = @_todate
@@ -183,7 +185,7 @@ BEGIN
 	/****************************End**************************/
 
 	SELECT @totalrows = COUNT(*) FROM #TempYesterday
-	IF(@totalrows=15) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
+	IF(@totalrows=16) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
 --------------------------------------------------------------------------------------- 
 
 	SELECT [group], c.custid, c.product,
