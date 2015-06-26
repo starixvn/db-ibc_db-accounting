@@ -231,10 +231,11 @@ BEGIN
 	END
 	--show result
 	SELECT ROW_NUMBER() OVER(ORDER BY UserName) AS RowId
-		, UserName, CompanyWL--, c.custid
+		, UserName, SUM(CompanyWL) AS CompanyWL--, c.custid
 	FROM @SAgWinLoss tmp
 		INNER JOIN dbo.Customer c WITH(NOLOCK) ON tmp.CustId = c.custid
 	WHERE roleid = 4
+	GROUP BY UserName
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinloss] TO [bodbLicenseeNet] AS [dbo]
