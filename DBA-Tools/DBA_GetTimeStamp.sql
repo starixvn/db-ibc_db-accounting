@@ -1,0 +1,6 @@
+﻿ CREATE PROCEDURE [dbo].[DBA_GetTimeStamp]  
+AS  
+  /*		
+	DB: DBTRANS.bodb02	
+*/
+SELECT @@SERVERNAME DB, CURRENT_TIMESTAMP [Time], GETDATE() [Time2]  

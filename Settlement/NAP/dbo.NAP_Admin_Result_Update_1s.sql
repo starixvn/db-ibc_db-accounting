@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Result_Update_1s]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Result_Update_1s]
   @Command						VARCHAR(100) 
  ,@MatchID						INT
  ,@ResourceIDs					VARCHAR(MAX)= NULL 
@@ -20,6 +22,7 @@
  ,@isExistHTLCorner				BIT			= 0 
  ,@isExistFTFCorner				BIT			= 0 
  ,@isExistFTLCorner				BIT			= 0 
+ ,@isExcludeCorner				BIT			= 0 
  ,@Action						VARCHAR(10) = 'CAL'
  ,@IsAuto						BIT			= 0 
  ,@creator						INT			= 0 
@@ -31,12 +34,22 @@ AS
 	DB: DBPRO/bodb02 
 
 	Revision
+		- 20150604@Jamie: Apply for Soccer ONLY 
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 
 	Param's Explanation: 
 		@Results: 'H,1,X,NL,...'  NL: Blank result of Bettype 216 
 */
 BEGIN
 	SET NOCOUNT ON 
+
+	DECLARE	@sporttype INT
+	SELECT	@sporttype = Sporttype 
+	FROM	Match WITH (NOLOCK)
+	WHERE	MatchID = @MatchID
+
+	IF @sporttype <> 1 RETURN -- Apply for Soccer ONLY
+	 
 
 	DECLARE @tmpResultDetail TABLE(
 			ResourceID		VARCHAR(20)
@@ -52,8 +65,11 @@ BEGIN
 		 ID			INT IDENTITY(1,1)
 		,ResourceID	VARCHAR(20)
 	)
-	INSERT INTO @tmpResourceIDs(ResourceID)
-	SELECT	Val FROM dbo.StrSplit(@ResourceIDs,',') WHERE @ResourceIDs IS NOT NULL 
+	IF @ResourceIDs IS NOT NULL 
+	BEGIN
+		INSERT INTO @tmpResourceIDs(ResourceID)
+		SELECT	Val FROM dbo.StrSplit(@ResourceIDs,',') 
+	END 
 
 	IF @Command ='NAP_Admin_Settlement_Auto_1s-CAL'
 	BEGIN
@@ -73,8 +89,12 @@ BEGIN
 				 ID			INT IDENTITY(1,1)
 				,Value		VARCHAR(50)
 			)
-			INSERT INTO @tmpResults(Value)
-			SELECT	Val FROM dbo.StrSplit(@Results,',') WHERE @Results IS NOT NULL 
+
+			IF @Results IS NOT NULL 
+			BEGIN
+				INSERT INTO @tmpResults(Value)
+				SELECT	Val FROM dbo.StrSplit(@Results,',') 
+			END 
 
 			UPDATE	@tmpResults
 			SET		Value = NULL
@@ -222,21 +242,21 @@ BEGIN
 		-- HalfTime 
 		SELECT '01', CAST(@hth AS VARCHAR(50)), CAST(@hta AS VARCHAR(50))
 		UNION ALL 
-		SELECT '05', CAST(@hthCorners AS VARCHAR(50)), CAST( @htaCorners AS VARCHAR(50)) WHERE @hthCorners IS NOT NULL AND @htaCorners IS NOT NULL 
+		SELECT '05', CAST(@hthCorners AS VARCHAR(50)), CAST( @htaCorners AS VARCHAR(50)) WHERE @hthCorners IS NOT NULL AND @htaCorners IS NOT NULL AND @isExcludeCorner = 0
 		UNION ALL 
-		SELECT '207', @HTFCorner, NULL WHERE @HTFCorner IS NOT NULL
+		SELECT '207', @HTFCorner, NULL WHERE @HTFCorner IS NOT NULL AND @isExcludeCorner = 0
 		UNION ALL 
-		SELECT '209', @HTLCorner, NULL WHERE @HTLCorner IS NOT NULL	
+		SELECT '209', @HTLCorner, NULL WHERE @HTLCorner IS NOT NULL AND @isExcludeCorner = 0	
 	
 		-- FullTime 
 		UNION ALL 
 		SELECT'00', CAST(@fth AS VARCHAR(50)), CAST(@fta AS VARCHAR(50)) WHERE @fth IS NOT NULL AND @fta IS NOT NULL 
 		UNION ALL 
-		SELECT '04', CAST(@fthCorners AS VARCHAR(50)), CAST( @ftaCorners AS VARCHAR(50)) WHERE @fthCorners IS NOT NULL AND @ftaCorners IS NOT NULL 
+		SELECT '04', CAST(@fthCorners AS VARCHAR(50)), CAST( @ftaCorners AS VARCHAR(50)) WHERE @fthCorners IS NOT NULL AND @ftaCorners IS NOT NULL AND @isExcludeCorner = 0
 		UNION ALL 
-		SELECT '206', @FTFCorner, NULL WHERE @FTFCorner IS NOT NULL
+		SELECT '206', @FTFCorner, NULL WHERE @FTFCorner IS NOT NULL  AND @isExcludeCorner = 0
 		UNION ALL 
-		SELECT '208', @FTLCorner, NULL WHERE @FTLCorner IS NOT NULL
+		SELECT '208', @FTLCorner, NULL WHERE @FTLCorner IS NOT NULL  AND @isExcludeCorner = 0
 
 		UNION ALL 
 		SELECT '08', @GoalSequence,NULL WHERE @GoalSequence IS NOT NULL 
@@ -545,8 +565,69 @@ BEGIN
 				);	 
 	END 
 	/* END - @Command = 'NAP_Admin_Settlement_FGLG' */
+	ELSE IF @Command ='NAP_Admin_Settlement_Corner-CAL'
+	BEGIN
+		INSERT INTO @tmpResultDetail(ResourceID,HomeValue,AwayValue)
+		SELECT '05', CAST(@hthCorners AS VARCHAR(50)), CAST( @htaCorners AS VARCHAR(50)) WHERE @hthCorners IS NOT NULL AND @htaCorners IS NOT NULL 
+		UNION ALL 
+		SELECT '207', @HTFCorner, NULL WHERE @HTFCorner IS NOT NULL
+		UNION ALL 
+		SELECT '209', @HTLCorner, NULL WHERE @HTLCorner IS NOT NULL 
+	
+		-- FullTime 
+		UNION ALL 
+		SELECT '04', CAST(@fthCorners AS VARCHAR(50)), CAST( @ftaCorners AS VARCHAR(50)) WHERE @fthCorners IS NOT NULL AND @ftaCorners IS NOT NULL 
+		UNION ALL 
+		SELECT '206', @FTFCorner, NULL WHERE @FTFCorner IS NOT NULL  
+		UNION ALL 
+		SELECT '208', @FTLCorner, NULL WHERE @FTLCorner IS NOT NULL 
+
+		SELECT @SettlementStatusID = 4 -- Completed
+
+		SELECT * FROM @tmpResultDetail
+
+		MERGE	ResultDetail AS TARGET
+		USING	@tmpResultDetail AS SOURCE ON (TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID)
+		WHEN	MATCHED THEN				 
+				UPDATE SET
+					TARGET.HomeValue			= SOURCE.HomeValue
+					,TARGET.AwayValue			= SOURCE.AwayValue  
+					,TARGET.OtherInfo			= NULL
+					,TARGET.ResultStatusID		= 5		-- Manual Settlement 
+					,TARGET.SettlementStatusID	= @SettlementStatusID		-- Completed
+					,TARGET.LastModifyBy		= @Creator 
+					,TARGET.LastModifyDate		= GETDATE() 
+		WHEN	NOT MATCHED BY TARGET THEN 
+				INSERT(
+					 MatchID
+					,ResourceID
+					,HomeValue
+					,AwayValue
+					,OtherInfo 
+					,ResultStatusID
+					,SettlementStatusID
+					,CreateBy
+					,CreateDate
+					,LastModifyBy
+					,LastModifyDate
+				)
+				VALUES(
+					 @MatchID
+					,SOURCE.ResourceID
+					,SOURCE.HomeValue
+					,SOURCE.AwayValue 
+					,NULL 
+					,5 -- Manual Settlement 
+					,@SettlementStatusID -- Completed
+					,@Creator
+					,GETDATE()
+					,@Creator
+					,GETDATE()
+				);	 
+	END 
+	/* END - @Command = 'NAP_Admin_Settlement_Corner-CAL' */
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Result_Update_1s] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Result_Update_1s] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Result_Update_1s] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Result_Update_1s] TO [vnteam] AS [dbo]

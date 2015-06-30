@@ -18,12 +18,17 @@ AS
 		- 20120920@Sophia: support only Sportsbook
 		- 20121123@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		- 20120215@Elodie: Change linked server DB06 to DBARC
+		- 20150529@Jim: add Metric Gaming and apply sport-bettype matrix
 	Explanation's Param:
 		- @matchid: the id of match
 		- @statusid: the status of tickets --> ALL/DRAW/WON/LOSE  (0/111/112/113)
 */
 	SET NOCOUNT ON
 	
+	DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
+
 	IF 	(@statusid NOT IN (0,111,112,113))
 		RETURN
 	
@@ -47,18 +52,19 @@ AS
 				ISNULL(SUM(tpositiontaking*ABS(stake)* b.actualrate),0) AS SMATurnover,
 				ISNULL(SUM((swinlost + scomm + awinlost + mwinlost - playercomm)* b.actualrate),0) AS SMAWinLost
 				
-		FROM	bettrans b WITH (NOLOCK)				
+		FROM	bettrans b WITH (NOLOCK)	
+				INNER JOIN @SportBettype s ON b.bettype = s.bettype
 		WHERE			
 				matchid = @matchid
 				--support only sportbook
-				AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
-				AND	b.bettype NOT IN (9,29,10) 
+				AND s.ProductID =1 
+				AND s.EventType NOT IN (0,2)
 				AND statusID = CASE WHEN @statusID = 0 THEN statusID		
 									ELSE @statusID 	END
 				--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 				AND b.statusID IN (111,112,113)
 				AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-				AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
+				AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
 				AND ruben = 1
 				AND Currency <> 20		
 		GROUP BY b.currency--, currencyname
@@ -79,19 +85,19 @@ AS
 				ISNULL(SUM(tpositiontaking*ABS(stake)* b.actualrate),0) AS SMATurnover,
 				ISNULL(SUM((swinlost + scomm + awinlost + mwinlost - playercomm)* b.actualrate),0) AS SMAWinLost
 				
-		FROM	bettrans14 b WITH (NOLOCK)				
+		FROM	bettrans14 b WITH (NOLOCK)	
+				INNER JOIN @SportBettype s ON b.bettype = s.bettype
 		WHERE			
 				matchid = @matchid
 				--support only sportbook
-				AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
-				AND	b.bettype NOT IN (9,29,10) 				
-
+				AND s.ProductID =1 
+				AND s.EventType NOT IN (0,2)
 				AND statusID = CASE WHEN @statusID = 0 THEN statusID		
 									ELSE @statusID 	END
 				--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 				AND b.statusID IN (111,112,113)
 				AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-				AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
+				AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
 				AND ruben = 1		
 				AND Currency <> 20		
 		GROUP BY b.currency --, currencyname
@@ -112,13 +118,15 @@ AS
 				ISNULL(SUM(tpositiontaking*ABS(stake)* b.actualrate),0) AS SMATurnover,
 				ISNULL(SUM((swinlost + scomm + awinlost + mwinlost - playercomm)* b.actualrate),0) AS SMAWinLost
 				
-		FROM	DBARC.bodb_archive.dbo.bettrans_bk b WITH (NOLOCK)				
+		FROM	DBARC.bodb_archive.dbo.bettrans_bk b WITH (NOLOCK)
+				INNER JOIN @SportBettype s ON b.bettype = s.bettype
 		WHERE
 				winlostdate = @eventdate			
 				AND matchid = @matchid
+				
 				--support only sportbook
-				AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
-				AND	b.bettype NOT IN (9,29,10) 				
+				AND s.ProductID =1 
+				AND s.EventType NOT IN (0,2)
 				--AND statusID = CASE WHEN @statusID = 0 THEN statusID	ELSE @statusID 	END
 				AND status = CASE WHEN @statusID = 0 THEN status
 								WHEN @statusID = 111 THEN 'DRAW'
@@ -128,7 +136,7 @@ AS
 				AND status IN ('DRAW', 'WON','LOSE') 
 				--AND b.statusID IN (111,112,113)				
 				AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-				AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
+				AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
 				AND ruben = 1		
 				AND Currency <> 20		
 		GROUP BY b.currency --, currencyname

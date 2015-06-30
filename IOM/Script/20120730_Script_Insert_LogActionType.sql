@@ -1,0 +1,5 @@
+﻿
+INSERT INTO logactiontype(ActionTypeID,ActionTypeNameEN,ActionTypeNameCH,ActionTypeNameCS,ActionTypeNameJP,ActionTypeNameIT,ActionTypeNameTH,ActionTypeNameKO) VALUES(1,N'Position Taking',N'佔成數',N'占成数',N'Position Taking',N'Position Taking',N'ค่าความเสี่ยง',N'Position Taking')
+INSERT INTO logactiontype(ActionTypeID,ActionTypeNameEN,ActionTypeNameCH,ActionTypeNameCS,ActionTypeNameJP,ActionTypeNameIT,ActionTypeNameTH,ActionTypeNameKO) VALUES(2,N'Commission',N'佣金',N'佣金',N'Commission',N'Commission',N'คอมมิชชั่น',N'Commission')
+INSERT INTO logactiontype(ActionTypeID,ActionTypeNameEN,ActionTypeNameCH,ActionTypeNameCS,ActionTypeNameJP,ActionTypeNameIT,ActionTypeNameTH,ActionTypeNameKO) VALUES(3,N'Bet Setting',N'投注設定',N'投注设定',N'Bet Setting',N'Bet Setting',N'การกำหนดการวางเดิมพัน',N'Bet Setting')
+INSERT INTO logactiontype(ActionTypeID,ActionTypeNameEN,ActionTypeNameCH,ActionTypeNameCS,ActionTypeNameJP,ActionTypeNameIT,ActionTypeNameTH,ActionTypeNameKO) VALUES(4,N'General Info',N'一般信息',N'一般信息',N'General Info',N'General Info',N'ข้อมูลทั่วไป',N'General Info')

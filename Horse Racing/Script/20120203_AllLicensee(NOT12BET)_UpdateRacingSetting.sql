@@ -1,0 +1,264 @@
+﻿ 
+/*all licensees not including 12BET */
+
+DECLARE @tmpSupers TABLE (ID INT IDENTITY, CustID INT)
+
+INSERT INTO @tmpSupers(CustID)
+			SELECT 	925144
+UNION ALL SELECT 	932063
+UNION ALL SELECT 	932167
+UNION ALL SELECT 	932181
+UNION ALL SELECT 	932188
+UNION ALL SELECT 	932209
+UNION ALL SELECT 	932253
+UNION ALL SELECT 	1004374
+UNION ALL SELECT 	1573954
+UNION ALL SELECT 	1573960
+UNION ALL SELECT 	1573967
+UNION ALL SELECT 	1573975
+UNION ALL SELECT 	1574008
+UNION ALL SELECT 	1574016
+UNION ALL SELECT 	1574024
+UNION ALL SELECT 	1574028
+UNION ALL SELECT 	1574036
+UNION ALL SELECT 	1574083
+UNION ALL SELECT 	1574095
+UNION ALL SELECT 	1574102
+UNION ALL SELECT 	2308733
+UNION ALL SELECT 	2308771
+UNION ALL SELECT 	2308796
+UNION ALL SELECT 	2308841
+UNION ALL SELECT 	2397872
+UNION ALL SELECT 	2397885
+UNION ALL SELECT 	2564717
+UNION ALL SELECT 	2747736
+UNION ALL SELECT 	2747862
+UNION ALL SELECT 	2747989
+UNION ALL SELECT 	3114255
+UNION ALL SELECT 	3229876
+UNION ALL SELECT 	3233912
+UNION ALL SELECT 	3287311
+UNION ALL SELECT 	3289719
+UNION ALL SELECT 	3289746
+UNION ALL SELECT 	3293743
+UNION ALL SELECT 	3293760
+UNION ALL SELECT 	3319756
+UNION ALL SELECT 	3319994
+UNION ALL SELECT 	3320067
+UNION ALL SELECT 	3325726
+UNION ALL SELECT 	3325961
+UNION ALL SELECT 	3326157
+UNION ALL SELECT 	3326312
+UNION ALL SELECT 	3329242
+UNION ALL SELECT 	3329951
+UNION ALL SELECT 	3330152
+UNION ALL SELECT 	3330267
+UNION ALL SELECT 	3330403
+UNION ALL SELECT 	3330565
+UNION ALL SELECT 	3345920
+UNION ALL SELECT 	3346318
+UNION ALL SELECT 	3347360
+UNION ALL SELECT 	3347644
+UNION ALL SELECT 	3347891
+UNION ALL SELECT 	3352069
+UNION ALL SELECT 	3352872
+UNION ALL SELECT 	3353211
+UNION ALL SELECT 	3353486
+UNION ALL SELECT 	3353831
+UNION ALL SELECT 	3417070
+UNION ALL SELECT 	3543918
+UNION ALL SELECT 	3544240
+UNION ALL SELECT 	3544312
+UNION ALL SELECT 	3544377
+UNION ALL SELECT 	3544528
+UNION ALL SELECT 	3544695
+UNION ALL SELECT 	3544783
+UNION ALL SELECT 	3544878
+UNION ALL SELECT 	3578505
+UNION ALL SELECT 	3651355
+UNION ALL SELECT 	3651422
+UNION ALL SELECT 	3652596
+UNION ALL SELECT 	3652650
+UNION ALL SELECT 	3652705
+UNION ALL SELECT 	3663671
+UNION ALL SELECT 	3663860
+UNION ALL SELECT 	3664373
+UNION ALL SELECT 	3664636
+UNION ALL SELECT 	3664957
+UNION ALL SELECT 	3670743
+UNION ALL SELECT 	3670780
+UNION ALL SELECT 	3670803
+UNION ALL SELECT 	3670855
+UNION ALL SELECT 	3670900
+UNION ALL SELECT 	3752050
+UNION ALL SELECT 	3752544
+UNION ALL SELECT 	3753528
+UNION ALL SELECT 	3762073
+UNION ALL SELECT 	3763288
+UNION ALL SELECT 	3782799
+UNION ALL SELECT 	3928584
+UNION ALL SELECT 	4345449
+UNION ALL SELECT 	4359240
+UNION ALL SELECT 	4359374
+UNION ALL SELECT 	4603197
+UNION ALL SELECT 	4686903
+UNION ALL SELECT 	4688739
+UNION ALL SELECT 	4689166
+UNION ALL SELECT 	4689517
+UNION ALL SELECT 	4689995
+UNION ALL SELECT 	4714272
+UNION ALL SELECT 	4715061
+UNION ALL SELECT 	4715142
+UNION ALL SELECT 	4715507
+UNION ALL SELECT 	4833492
+UNION ALL SELECT 	4845960
+UNION ALL SELECT 	4845993
+UNION ALL SELECT 	4846034
+UNION ALL SELECT 	4854754
+UNION ALL SELECT 	4854900
+UNION ALL SELECT 	4899808
+UNION ALL SELECT 	4899913
+UNION ALL SELECT 	4900001
+UNION ALL SELECT 	5068911
+UNION ALL SELECT 	5118752
+UNION ALL SELECT 	5119008
+
+
+
+
+DECLARE @SRecommend INT,
+		@i INT,
+		@MaxCount INT 
+
+----SELECT  count(1) FROM 	@tmpSupers
+
+
+SELECT @i = 1
+
+SELECT	@SRecommend = custid
+FROM	@tmpSupers
+WHERE	ID = @i
+
+WHILE @i <= 118 -- SELECT  count(1) FROM 	@tmpSupers
+BEGIN
+	EXEC [Acc_ExecRep_09] @SRecommend = @SRecommend
+	
+	SET @i = @i + 1
+
+	SELECT @SRecommend = custid 
+	FROM @tmpSupers
+	WHERE id = @i
+	
+	WAITFOR DELAY '00:00:01'
+END
+
+--------------=============
+
+--2. STEP 2 --ALL LICENSEES : pt = 0% & commission : 3% aust, 4% others 
+
+
+ALTER PROCEDURE [dbo].[Acc_ExecRep_09] 	
+    @srecommend		INT = 0
+AS
+BEGIN
+
+    SET NOCOUNT ON
+
+	IF (SELECT COUNT('') FROM sys.objects WITH(NOLOCK) WHERE name IN ('custsetting3rd','custinfo','custoverride3rd') AND type = 'u') <> 3
+	BEGIN
+		PRINT 'custsetting3rd or custinfo or custoverride3rd objects does not exist.'
+		RETURN
+	END
+
+    ---- update PT on super
+    UPDATE cs3 WITH(ROWLOCK,UPDLOCK)
+    SET spositiontaking = 0,
+		mpositiontaking = 0,
+		apositiontaking = 0,
+		sdiscount = CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END,
+		adiscount = 0,
+		discount = 0,
+		playerdiscount = 0 
+    FROM	custsetting3rd cs3 
+    WHERE	cs3.sporttype BETWEEN 151 AND 153 AND cs3.bettype IN (31,32,41,42,51,52)
+			AND cs3.custID = @srecommend 
+			AND (cs3.spositiontaking <> 0 OR cs3.mpositiontaking <>0 OR cs3.apositiontaking <>0
+				  OR ( sporttype between 151 and 152 AND bettype IN (31,32,41,42) and sdiscount <>0.04 )
+				  OR (sporttype between 151 and 153  AND bettype IN (51,52) AND sdiscount <> 0.03 )
+			)
+
+    ---- update PT on master
+    UPDATE cs3 WITH(ROWLOCK,UPDLOCK)
+    SET spositiontaking = 0,
+		mpositiontaking = 0,
+		apositiontaking = 0,
+		sdiscount = 0,
+		adiscount = CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END,
+		discount = 0,
+		playerdiscount = 0 
+    FROM	custsetting3rd cs3
+			INNER JOIN custinfo c WITH(NOLOCK) ON cs3.custid = c.custid
+    WHERE	cs3.sporttype BETWEEN 151 AND 153 AND cs3.bettype IN (31,32,41,42,51,52)
+			AND c.mrecommend NOT IN (927780,857227)
+			AND c.srecommend = @srecommend 
+			AND c.roleid = 3 
+			AND (cs3.spositiontaking <> 0 OR cs3.mpositiontaking <> 0 OR cs3.apositiontaking <>0
+				  OR ( sporttype between 151 and 152 AND bettype IN (31,32,41,42) and adiscount <>0.04 )
+				  OR (sporttype between 151 and 153  AND bettype IN (51,52) AND adiscount <> 0.03 )
+			)
+
+    ---- update PT on agent
+    UPDATE cs3 WITH(ROWLOCK,UPDLOCK)
+    SET spositiontaking = 0,
+		mpositiontaking = 0,
+		apositiontaking = 0,
+		sdiscount = 0,
+		adiscount = 0,
+		discount  = CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END,
+		playerdiscount = 0 
+    FROM custsetting3rd cs3
+        INNER JOIN custinfo c WITH(NOLOCK) ON cs3.custid = c.custid
+    WHERE	cs3.sporttype BETWEEN 151 AND 153 AND cs3.bettype IN (31,32,41,42,51,52)
+			AND c.mrecommend NOT IN (927780,857227)
+			AND c.srecommend = @srecommend 
+			AND c.roleid =2 
+			AND (cs3.spositiontaking <> 0 OR cs3.mpositiontaking <> 0 OR cs3.apositiontaking <>0
+				  OR ( sporttype between 151 and 152 AND bettype IN (31,32,41,42) and discount <>0.04 )
+				  OR (sporttype between 151 and 153  AND bettype IN (51,52) AND discount <> 0.03 )
+			)
+
+
+    ---- update PT on member
+	WHILE 1 = 1 
+	BEGIN
+		UPDATE TOP(20000) cs3 WITH(ROWLOCK,UPDLOCK)
+		SET spositiontaking = 0,
+			mpositiontaking = 0,
+			apositiontaking = 0,
+			sdiscount = CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END,
+			adiscount = CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END,
+			discount  = CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END,
+			playerdiscount = 0 
+
+		FROM custsetting3rd cs3
+			INNER JOIN custinfo c WITH(NOLOCK) ON cs3.custid = c.custid
+		WHERE cs3.sporttype BETWEEN 151 AND 153 AND cs3.bettype IN (31,32,41,42,51,52)
+			  AND c.srecommend = @srecommend 
+			  AND c.roleid = 1 
+			  AND ( apositiontaking <> 0 OR mpositiontaking <> 0 OR spositiontaking <> 0 
+					OR 
+					sdiscount <> CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END
+					OR 
+					adiscount <> CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END
+					OR 
+					discount <> CASE WHEN bettype IN (51,52) THEN 0.03 ELSE 0.04 END
+				)
+			AND c.mrecommend NOT IN (927780,857227)
+		IF @@ROWCOUNT < 20000
+		BEGIN
+			RETURN
+		END
+	END
+END
+
+

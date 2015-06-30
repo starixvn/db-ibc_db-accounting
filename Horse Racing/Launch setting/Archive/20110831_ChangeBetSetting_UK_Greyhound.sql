@@ -1,0 +1,105 @@
+﻿ALTER PROCEDURE [dbo].[Acc_ExecRep_09]	
+	@mode		INT = 3,
+	@fromCustID	INT,
+	@toCustID	INT
+AS
+BEGIN
+
+/*
+	@mode : 1 update Max per Match
+			2 Update Min/Max Bet
+*/
+SET NOCOUNT ON 
+
+	DECLARE @betSetting TABLE(Currency INT, CurrencyName NVARCHAR(50), MinBet MONEY, MaxBet MONEY, MaxPerMatch MONEY)
+
+	INSERT INTO @betSetting
+			  SELECT 	2	,	'RM'	,	10	,	40000.00	,	80000.00
+	UNION ALL SELECT 	35	,	'$US'	,	5	,	15000.00	,	30000.00
+	UNION ALL SELECT 	9	,	'AUD'	,	5	,	15000.00	,	30000.00
+	UNION ALL SELECT 	46	,	'BND'	,	5	,	15000.00	,	30000.00
+	UNION ALL SELECT 	21	,	'CAD'	,	5	,	5000.00		,	10000.00
+	UNION ALL SELECT 	41	,	'CHF'	,	10	,	10000.00	,	20000.00
+	UNION ALL SELECT 	57	,	'CZK'	,	70	,	40000.00	,	80000.00
+	UNION ALL SELECT 	47	,	'DDD'	,	40	,	120000.00	,	240000.00
+	UNION ALL SELECT 	6	,	'EURO'	,	5	,	10000.00	,	20000.00
+	UNION ALL SELECT 	12	,	'GBP'	,	5	,	10000.00	,	20000.00
+	UNION ALL SELECT 	5	,	'HK$'	,	30	,	80000.00	,	160000.00
+	UNION ALL SELECT 	33	,	'IDD'	,	40	,	120000.00	,	240000.00
+	UNION ALL SELECT 	34	,	'IDR'	,	40	,	120000.00	,	240000.00
+	UNION ALL SELECT 	15	,	'IN'	,	40	,	120000.00	,	240000.00
+	UNION ALL SELECT 	22	,	'IND'	,	40	,	120000.00	,	240000.00
+	UNION ALL SELECT 	40	,	'IRR'	,	5	,	10000.00	,	20000.00
+	UNION ALL SELECT 	32	,	'JPY'	,	300	,	1000000.00	,	2000000.00
+	UNION ALL SELECT 	52	,	'DKK'	,	20	,	80000.00	,	160000.00
+	UNION ALL SELECT 	51	,	'INH'	,	70	,	40000.00	,	80000.00
+	UNION ALL SELECT 	49	,	'MXN'	,	40	,	120000.00	,	240000.00
+	UNION ALL SELECT 	54	,	'NOK'	,	20	,	80000.00	,	160000.00
+	UNION ALL SELECT 	30	,	'NT'	,	100	,	400000.00	,	800000.00
+	UNION ALL SELECT 	17	,	'NTD'	,	5	,	10000.00	,	20000.00
+	UNION ALL SELECT 	37	,	'P'		,	5	,	10000.00	,	20000.00
+	UNION ALL SELECT 	42	,	'PE'	,	300	,	400000.00	,	800000.00
+	UNION ALL SELECT 	56	,	'PLN'	,	10	,	40000.00	,	80000.00
+	UNION ALL SELECT 	44	,	'PT'	,	40	,	120000.00	,	240000.00
+	UNION ALL SELECT 	31	,	'Pts'	,	300	,	4000000.00	,	8000000.00
+	UNION ALL SELECT 	13	,	'RMB'	,	30	,	80000.00	,	160000.00
+	UNION ALL SELECT 	1	,	'SD$'	,	5	,	20000.00	,	40000.00
+	UNION ALL SELECT 	4	,	'TB'	,	200	,	400000.00	,	800000.00
+	UNION ALL SELECT 	43	,	'THB'	,	200	,	400000.00	,	800000.00
+	UNION ALL SELECT 	3	,	'US$'	,	5	,	15000.00	,	30000.00
+	UNION ALL SELECT 	45	,	'Won'	,	6000,	16000000.00	,	32000000.00
+	UNION ALL SELECT 	36	,	'Y$US'	,	5	,	15000.00	,	30000.00
+	UNION ALL SELECT 	16	,	'Yen'	,	5	,	15000.00	,	30000.00
+	UNION ALL SELECT 	48	,	'ZAR'	,	30	,	80000.00	,	160000.00
+	
+	IF @mode = 1 
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE NAME = 'custinfo' AND TYPE = 'u')
+			RETURN
+		
+		UPDATE c WITH(ROWLOCK,UPDLOCK)
+		SET MaxPerMatch152_UK = b.MaxPerMatch
+		FROM custinfo c INNER JOIN @betSetting b ON c.currency = b.Currency
+		WHERE roleid < 5 AND custid BETWEEN @fromCustID AND @toCustID			  
+	END
+	ELSE IF @mode = 2 
+	BEGIN
+		IF (SELECT COUNT('') FROM sys.objects WHERE NAME IN ('custsetting3rd','custinfo') AND TYPE = 'U') <> 2
+			RETURN
+
+		UPDATE cs3 WITH(ROWLOCK,UPDLOCK)
+		SET MinBet = b.MinBet,
+			MaxBet = b.MaxBet
+		FROM custsetting3rd cs3 
+				INNER JOIN custinfo c WITH(NOLOCK) ON cs3.custid = c.custid
+				INNER JOIN @betSetting b ON c.currency = b.Currency		
+		WHERE	cs3.custid BETWEEN @fromCustID AND @toCustID
+				AND cs3.sporttype = 152 
+				AND cs3.bettype BETWEEN 41 AND 42
+	END	
+
+END
+
+ 
+
+/* 
+DECLARE @COUNT INT, @MaxCustID INT, @Step INT, @fromCustID int, @toCustID int, @mode int
+
+-- update MaxPerMatch or Min/Max bet
+SET @mode = 2
+
+SELECT @MaxCustID =  max(custid) from custinfo with(nolock)
+
+SELECT  @COUNT = 0,
+        @Step = 20000 
+
+WHILE 1 + @Step*@COUNT < @MaxCustID
+BEGIN
+	SELECT @fromCustID = 1 + @step*@COUNT, @toCustID = @step*(@COUNT + 1)
+    EXEC dbo.Acc_ExecRep_09 @mode = @mode, @fromCustID = @fromCustID, @toCustID = @toCustID
+     
+    SELECT @COUNT = @COUNT + 1
+    WAITFOR DELAY '000:00:01'
+END
+
+*/

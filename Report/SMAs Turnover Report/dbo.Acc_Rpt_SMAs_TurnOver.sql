@@ -8,6 +8,8 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_SMAs_TurnOver]
 	@ShowLC			BIT				=	1,
 	@ShowVS			BIT				=	1,
 	@ShowCS			BIT				=	1,
+	@ShowGD			BIT				=	1, -- gold deluxe
+	@ShowMG			BIT				=	1, -- metrix gaming
 	@ShowOpened		BIT				=	1,
 	@ShowClosed		BIT				=	0,
 	@ShowSuspended	BIT				=	0
@@ -18,7 +20,7 @@ AS
     DB: DBAGE/bodb02  
    
     Revisions:  
-		
+		-20150529@Jim: apply sport&bettype matrix and support GD,MG
 	Param's Explanation:   
 	  + @winLostDate: The specified date used as one of the filter criterias
 	  + @MoveBetsDay: The day when bets are moved to bettrans14
@@ -29,6 +31,8 @@ AS
 	  + @ShowLC: Include Live Casino
 	  + @ShowVS: Include Virtual Sports
 	  +	@ShowCS: Include RNG Casino
+	  + @ShowGD: Include Gold Deluxe
+	  + @ShowMG: Include Metrix Gaming
 	  +	@ShowOpened: Include Opened account status
 	  +	@ShowClosed: Include closed account status
 	  +	@ShowSuspended: Include suspended account status
@@ -89,7 +93,64 @@ BEGIN
 		TurnOver MONEY,
 		TurnOverMYR MONEY
 		)
+	DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
+	DECLARE @tmpbettype AS TABLE (bettype INT)
+	
+	IF @ShowSB = 1  
+	INSERT INTO @tmpbettype(Bettype ) 
+	SELECT Bettype    
+	 FROM @SportBettype   
+	 WHERE ProductID =1 
+		AND SubProduct <> 'MG-SuperLive'
+IF @ShowRB =1
+	INSERT INTO @tmpbettype(Bettype) 
+	SELECT Bettype   
+	 FROM @SportBettype   
+	 WHERE ProductID = 2
+	 
+IF @ShowNG = 1  
+	INSERT INTO @tmpbettype(Bettype ) 
+	SELECT Bettype   
+	 FROM @SportBettype   
+	 WHERE ProductID =3
+IF @ShowLC = 1
+	INSERT INTO @tmpbettype(Bettype) 
+	SELECT Bettype   
+	 FROM @SportBettype   
+	 WHERE ProductID = 4
 
+IF @ShowCS = 1
+	INSERT INTO @tmpbettype(Bettype) 
+	SELECT Bettype 
+	 FROM @SportBettype   
+	 WHERE ProductID = 6
+	
+IF @showVS = 1
+	INSERT INTO @tmpbettype(Bettype ) 
+	 SELECT Bettype   
+	 FROM @SportBettype   
+	 WHERE ProductID = 5	
+
+IF @ShowKN = 1    
+	 INSERT INTO @tmpbettype(Bettype )   
+	  SELECT Bettype    
+	 FROM @SportBettype   
+	 WHERE ProductID = 8
+IF @ShowGD =1 
+	 INSERT INTO @tmpbettype(Bettype )   
+	 SELECT Bettype   
+	 FROM @SportBettype   
+	 WHERE ProductID = 12
+ 
+IF @ShowMG =1 
+	INSERT INTO @tmpbettype(Bettype )   
+	SELECT Bettype   
+	FROM @SportBettype   
+	WHERE ProductID = 1
+		AND SubProduct= 'MG-SuperLive'	
+		
 	--Get Super Accounts
 	INSERT INTO @DepositDummySuper
 	SELECT custid FROM dbo.Dep_CustSuper
@@ -267,18 +328,9 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			 JOIN dbo.bettrans b WITH (NOLOCK)  ON s.custid = b.srecommend	
+			 INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE s.RoleID=4 AND b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113) 
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)
+			
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID,
@@ -319,18 +371,9 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			JOIN dbo.bettrans b WITH (NOLOCK)  ON s.custid = b.mrecommend
+			INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE s.RoleID=3 AND b.winlostdate = @WinlostDate AND b.statusID  IN (111, 112, 113)
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)
+		
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID,
@@ -370,19 +413,10 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			JOIN dbo.bettrans b WITH (NOLOCK) ON s.custid = b.recommend
+			INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE 
 			s.RoleID=2 AND b.winlostdate = @WinlostDate AND  b.statusID  IN (111, 112, 113)
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)	
+			 
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID, 
@@ -419,19 +453,10 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			JOIN dbo.bettrans b WITH (NOLOCK)  ON s.custid = b.custid
+			INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE 
 			s.RoleID=1	AND b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113)
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)	
+			
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID,
@@ -474,18 +499,9 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			 JOIN dbo.bettrans14 b WITH (NOLOCK)  ON s.custid = b.srecommend AND s.RoleID=4
+			 INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113) 
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)
+			
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID,
@@ -526,18 +542,9 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			JOIN dbo.bettrans14 b WITH (NOLOCK)  ON s.custid = b.mrecommend AND s.RoleID=3
+			INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE b.winlostdate = @WinlostDate AND b.statusID  IN (111, 112, 113)
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)
+			 
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID,
@@ -577,18 +584,9 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			JOIN dbo.bettrans14 b WITH (NOLOCK) ON s.custid = b.recommend AND s.RoleID=2
+			INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE b.winlostdate = @WinlostDate AND  b.statusID  IN (111, 112, 113)
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)	
+			
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID, 
@@ -625,18 +623,9 @@ BEGIN
 			) turnoverMYR
 		FROM #DirectCustFilterResult s
 			JOIN dbo.bettrans14 b WITH (NOLOCK)  ON s.custid = b.custid AND s.RoleID=1
+			INNER JOIN @tmpbettype s ON b.bettype = s.bettype
 		WHERE b.winlostdate = @WinlostDate AND b.statusID IN (111, 112, 113)
-			AND	(
-					b.bettype < CASE WHEN @showSB=1 THEN 31 ELSE 0 END
-					OR b.bettype BETWEEN 121 AND CASE WHEN @showSB=1 THEN 999 ELSE 0 END
-					OR b.bettype BETWEEN 1301 AND CASE WHEN @showSB=1 THEN 1334 ELSE 0 END
-					OR b.bettype BETWEEN 31 AND CASE WHEN @ShowRB=1 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @ShowLC=1 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @showCS=1 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @ShowKN=1 THEN 1599 ELSE 0 END)
-				)	
+			 
 		GROUP BY   
 			s.IsAssignedGroup,
 			s.GroupID,

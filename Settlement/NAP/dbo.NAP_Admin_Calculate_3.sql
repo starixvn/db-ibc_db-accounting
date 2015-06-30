@@ -14,6 +14,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_3] @matchid INT
 	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
 	,@IsSettleAbandonedMatchIBC		BIT = 0
+	,@isExcludeCorner				BIT = 0 
 	-- add any params, please modify script in 'special section'
 AS
 /*
@@ -30,6 +31,7 @@ AS
 		- 20140818@Jamie: Correct settle  determined ticket 144
 		- 20141020@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 
 	Param's Explanation:
 		+ @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -182,6 +184,7 @@ BEGIN
 		WHERE matchid = @matchid AND bettype = @bettype 
 		AND statusID NOT IN (101, 102) 
 		AND 1 = CASE WHEN @bettype = 178 and @isRefundHT = 1 THEN 0 ELSE 1 END
+		AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (197,198,204,205) THEN 0 ELSE 1 END 
 		AND 1 = CASE 
 					WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 					WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
@@ -459,6 +462,7 @@ BEGIN
 					AND bettype = @bettype 
 					AND statusID NOT IN (101, 102)
 					AND 1 = CASE WHEN @bettype = 178 and @isRefundHT = 1 THEN 0 ELSE 1 END
+					AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (197,198,204,205) THEN 0 ELSE 1 END 
 					AND 1 = CASE WHEN @bettype NOT IN (156,1312) THEN 1 
 								 WHEN @Bettype IN (156,1312) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1 
 								 WHEN @Bettype IN (156,1312) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1 

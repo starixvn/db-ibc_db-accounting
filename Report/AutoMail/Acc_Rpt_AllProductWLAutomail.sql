@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
+ALTER PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail_xtest]
 	@AllowSendEmail BIT = 0 OUTPUT
 AS
 /*
@@ -9,7 +9,13 @@ AS
 	Original:
 
 	Revisions:
-		
+<<<<<<< HEAD
+		- 2150619@Sophia: Add Gold Deluxe, AG Casino, Vegas Game [#37683]
+=======
+		- 20150619@Sophia: Add Gold Deluxe, AG Casino, Vegas Game [#38512]
+		- 20150626@Sophia: Apply Metric Gaming  [#36423]
+>>>>>>> remotes/origin/Gold_Deluxe_Report
+		 
 	Param's Explanation:
 	
 */
@@ -18,21 +24,36 @@ BEGIN
 
 	DECLARE @dummyBalance TABLE ([group] varchar(10),orderby INT, custid INT, product VARCHAR(50))
 	
-	INSERT INTO @dummyBalance 
-			  SELECT	'SB',1, 6911909	, 'Sportsbook Live'			---- DWLSPL'
-	UNION ALL SELECT	'SB',2, 6911911	, 'Sportsbook Non-Live'		---- DWLSPNL
-	UNION ALL SELECT	'SB',3, 6911913	, 'Parlay'		---- DWLParlay
-	UNION ALL SELECT	'SB',4, 6911914	, 'Outright'	---- DWLOutright
-	UNION ALL SELECT	'3rd', 5, 6911916	, 'RNG Casino'		---- DWLCasino
-	UNION ALL SELECT	'3rd', 6, 6911917	, 'Live Casino' ---- DWLLiveCasino
-	UNION ALL SELECT	'3rd', 7, 6911918	, 'Number Game' ---- DWLNumber	
-	UNION ALL SELECT	'3rd', 8, 6911919	, 'Racing'		---- DWLRacing
-	UNION ALL SELECT	'partners', 9, 7723121	, 'Racing (Due to Partners)'	----- VNM-Racing Partners MYR
-	UNION ALL SELECT	'3rd', 10, 6913085	, 'Bingo'		---- DWLBingo
-	UNION ALL SELECT	'3rd', 11, 8158305	, 'Virtual Sports'	---- DWLVirtualSports
-	UNION ALL SELECT	'3rd', 12, 14054918, 'Keno'		---- DWLKeno
+	--INSERT INTO @dummyBalance 
+	--		  SELECT	'SB',1, 6911909	, 'Sportsbook Live'			---- DWLSPL'
+	--UNION ALL SELECT	'SB',2, 6911911	, 'Sportsbook Non-Live'		---- DWLSPNL
+	--UNION ALL SELECT	'SB',3, 6911913	, 'Parlay'		---- DWLParlay
+	--UNION ALL SELECT	'SB',4, 6911914	, 'Outright'	---- DWLOutright
+	--UNION ALL SELECT	'3rd', 5, 6911916	, 'RNG Casino'		---- DWLCasino
+	--UNION ALL SELECT	'3rd', 6, 6911917	, 'Live Casino' ---- DWLLiveCasino
+	--UNION ALL SELECT	'3rd', 7, 6911918	, 'Number Game' ---- DWLNumber	
+	--UNION ALL SELECT	'3rd', 8, 6911919	, 'Racing'		---- DWLRacing
+	--UNION ALL SELECT	'partners', 9, 7723121	, 'Racing (Due to Partners)'	----- VNM-Racing Partners MYR
+	--UNION ALL SELECT	'3rd', 10, 6913085	, 'Bingo'		---- DWLBingo
+	--UNION ALL SELECT	'3rd', 11, 8158305	, 'Virtual Sports'	---- DWLVirtualSports
+	--UNION ALL SELECT	'3rd', 12, 14054918, 'Keno'		---- DWLKeno
+	--UNION ALL SELECT	'3rd', 13, 18123445, 'Gold Deluxe'
+	--UNION ALL SELECT	'3rd', 14, 18188766, 'AG Casino'
+	--UNION ALL SELECT	'3rd', 15, 18188815, 'Vegas Game'
+ 
 
-	
+	 INSERT INTO @dummyBalance ([group], orderby, custid, product )
+	 SELECT		CASE WHEN Product IN ('SPL','SPNL','Parlay','Outright') THEN 'SB' 
+					 WHEN Product IN ('Racing (Due to Partners)') THEN 'partners' 
+					 ELSE '3rd' END AS [Group]
+				, Seq
+				, Custid
+				, CASE	WHEN Product = 'SPL' THEN 'Sportsbook Live' 
+						WHEN Product = 'SPNL' THEN 'Sportsbook Non-Live' 
+					 ELSE Product END AS Product
+	 FROM	bodb_ACC.dbo.Acc_DWLList WITH (NOLOCK)
+	 WHERE  Product NOT IN ('Total Balance', 'Poker', 'Poker (Due to Partners)')
+
 
 	DECLARE @_fromdate    DATETIME,
 			@_todate      DATETIME,
@@ -84,7 +105,7 @@ BEGIN
 				ISNULL(-SUM(b.Credit),0) AS winlostyesterday
 			FROM bodb_archive.dbo.transfer_bk b WITH(NOLOCK) 
 			 WHERE b.winlostdate BETWEEN @_fromdate AND @balanceupdate - 1
-				AND	b.custid in( 6911909,6911911,6911913,6911914,6911916,6911917,6911918,6911919,6913085,7723121,8158305, 14054918 )
+				AND	b.custid in (Select CustId from @dummyBalance ) ----( 6911909,6911911,6911913,6911914,6911916,6911917,6911918,6911919,6913085,7723121,8158305, 14054918 )
 				AND b.bettype IN(21001,21002)
 			GROUP BY b.custid,b.winlostdate
 			ORDER BY b.custid
@@ -137,11 +158,11 @@ BEGIN
 	
 		Find product that has no ticket and then identify accounts don't need to transfer. If there is no ticket, transfer account should have winlost amount = 0
 	
-	*/
+	*/	
 	INSERT INTO #TempCustTrans
 	SELECT DISTINCT custid = CASE 
-						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND bettype NOT BETWEEN 81 AND 120) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 THEN 6911909
-						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND bettype NOT BETWEEN 81 AND 120) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 6911911
+						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 THEN 6911909
+						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 6911911
 						WHEN bettype IN(9,29 ) THEN 6911913
 						WHEN bettype = 10 THEN 6911914
 						WHEN bettype IN (71,72) THEN 6911916
@@ -152,6 +173,13 @@ BEGIN
 						WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
 						WHEN bettype BETWEEN 1501 AND 1599 THEN 14054918
 						WHEN bettype IN (31,32,33) THEN 7723121
+						WHEN bettype = 1800 THEN 18188766
+						WHEN bettype = 1900 THEN 18188815
+						WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
+<<<<<<< HEAD
+=======
+						WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
+>>>>>>> remotes/origin/Gold_Deluxe_Report
 					END
 	FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 	WHERE b.winlostdate = @_todate
@@ -160,14 +188,16 @@ BEGIN
 	SELECT d.custid,0 
 	FROM @dummyBalance d LEFT JOIN #TempCustTrans c ON d.custid = c.CustId
 	WHERE c.CustId IS NULL AND d.CustId NOT IN(SELECT custid FROM #TempYesterday)
-	
-
+	 
 	/****************************End**************************/
-	
-	SELECT @totalrows = COUNT(*) FROM #TempYesterday
-	IF(@totalrows=12) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
----------------------------------------------------------------------------------------
 
+	SELECT @totalrows = COUNT(*) FROM #TempYesterday
+<<<<<<< HEAD
+	IF(@totalrows=15) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
+=======
+	IF(@totalrows=16) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
+>>>>>>> remotes/origin/Gold_Deluxe_Report
+--------------------------------------------------------------------------------------- 
 
 	SELECT [group], c.custid, c.product,
 		b.winlostyesterday,

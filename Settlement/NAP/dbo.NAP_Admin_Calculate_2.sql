@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_2] @matchid INT
 	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
 	,@isRefundHT					BIT = 0
+	,@isExcludeCorner				BIT = 0 
 	-- add any params, please modify script in 'special section'
 AS
 /*
@@ -30,6 +31,7 @@ AS
 		- 20140808@Kathy: Support new 11 bettypes: 128, 136, 137, 138, 139 [Redmine:#19667]	
 		- 20141020@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 
 */
 BEGIN
@@ -286,6 +288,7 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END 
 				AND 1 = CASE WHEN @bettype IN (128,184) and @isRefundHT = 1 THEN 0 ELSE 1 END
+				AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (194,203) THEN 0 ELSE 1 END 
 				AND statusID NOT IN (101, 102)
 				AND 1 = CASE 
 							WHEN @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1 
@@ -488,6 +491,7 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END
 			AND 1 = CASE WHEN @bettype IN (128,184) and @isRefundHT = 1 THEN 0 ELSE 1 END
+			AND 1 = CASE WHEN @isExcludeCorner = 1 AND  @bettype IN (194,203) THEN 0 ELSE 1 END 
 	END
 END
 GO

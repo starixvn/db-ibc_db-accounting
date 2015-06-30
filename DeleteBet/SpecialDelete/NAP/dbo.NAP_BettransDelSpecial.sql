@@ -44,7 +44,7 @@
 	@BetTeam200				VARCHAR(120)	= 'ALL',	-- 200,201
 	@BetTeam169				VARCHAR(120)	= 'ALL',	-- 169,193
 	@BetTeam210				VARCHAR(10)		= 'ALL',	-- 210,173,174,188,189,190,211,212,123,214,215,133,134,135,145,146,147,148,149,150
-	@BetTeam216				VARCHAR(120)	= 'ALL',	-- 216
+	@BetTeam216				VARCHAR(240)	= 'ALL',	-- 216
 	
 	@Set154					VARCHAR(3)		= 'ALL', 	-- 154, 155, 1311, 1316 
 	@Set156					VARCHAR(3)		= 'ALL', 	-- 156, 1312 
@@ -344,7 +344,7 @@ BEGIN
 							WHEN b.bettype IN (5,15,160,164,167,176,177,180) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 							ELSE b.betteam END 
 		AND CASE WHEN b.bettype IN (160,164,180) 
-						THEN CASE WHEN @BetID160=100 THEN b.betID 
+						THEN CASE WHEN @BetID160=100 THEN ISNULL(b.betID ,0)
 						ELSE 
 							CASE WHEN b.bettype = 160 THEN (816000 + @BetID160) 
 								 WHEN b.bettype = 164 THEN (816400 + @BetID160)

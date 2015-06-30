@@ -1,0 +1,168 @@
+﻿ALTER PROCEDURE [dbo].[DBA_DelTransfer_bk]
+    @winlostdate smalldatetime
+AS
+
+if @winlostdate >= '2009-01-01' --to prevent mistake
+    RETURN
+    
+Declare @RowsEffected int
+Declare @RowsCnt int
+
+SELECT @RowsEffected = 0
+
+SET NOCOUNT ON
+WHILE 1=1
+BEGIN
+    DELETE TOP(10000) FROM transfer_bk where
+        winlostdate between @winlostdate and dateadd(mi, 1439, @winlostdate) -- plus '23:59:00'
+    
+	SELECT @RowsCnt = @@ROWCOUNT
+	SELECT @RowsEffected = @RowsEffected + @RowsCnt   
+
+	IF @RowsCnt < 10000
+        BREAK
+
+END
+
+SET NOCOUNT OFF
+
+print convert(varchar(20), @winlostdate,0) + '-' + convert(varchar(20), dateadd(mi, 1439, @winlostdate),0) + ' - '+ convert(varchar,@RowsEffected) 
+
+-----------
+
+GO
+------------
+USE [bodb_Archive]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_08M07]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_08M07]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_08M08]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_08M08]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_08M09]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_08M09]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_08M10]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_08M10]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_08M11]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_08M11]
+GO
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_08M12]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_08M12]
+------------------
+
+USE [bodb_Archive]
+GO
+/****** Object:  Table [dbo].[Transfer_09M06]    Script Date: 04/09/2011 08:29:21 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Transfer_09M06](
+	[custid] [int] NOT NULL,
+	[transdate] [datetime] NOT NULL,
+	[Debit] [money] NOT NULL,
+	[Credit] [money] NOT NULL,
+	[TransDesc] [nvarchar](300) NULL,
+	[winlostdate] [smalldatetime] NOT NULL,
+	[recommend] [int] NOT NULL,
+	[mrecommend] [int] NOT NULL,
+	[srecommend] [int] NOT NULL,
+	[currency] [tinyint] NULL,
+	[refno] [bigint] NOT NULL,
+	[creator] [int] NULL,
+	[transid] [bigint] NOT NULL,
+	[bettype] [smallint] NULL
+)
+
+GO
+
+/****** Object:  Index [IX_Transfer_Data]    Script Date: 04/09/2011 08:29:21 ******/
+CREATE CLUSTERED INDEX [IX_Transfer_Data] ON [dbo].[Transfer_09M06] 
+(
+	[winlostdate] ASC,
+	[recommend] ASC
+)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = OFF) ON [Transfer_09M06]
+------------
+ALTER TABLE transfer_bk SWITCH PARTITION 1 TO [Transfer_09M01]
+GO
+ALTER PARTITION FUNCTION pf_TRANSFER_monthly() MERGE RANGE ('2009/01/31 23:59:00')
+GO
+
+ALTER TABLE transfer_bk SWITCH PARTITION 1 TO [Transfer_09M02]
+GO
+ALTER PARTITION FUNCTION pf_TRANSFER_monthly() MERGE RANGE ('2009/02/28 23:59:00')
+GO
+
+ALTER TABLE transfer_bk SWITCH PARTITION 1 TO [Transfer_09M03]
+GO
+ALTER PARTITION FUNCTION pf_TRANSFER_monthly() MERGE RANGE ('2009/03/31 23:59:00')
+GO
+
+ALTER TABLE transfer_bk SWITCH PARTITION 1 TO [Transfer_09M04]
+GO
+ALTER PARTITION FUNCTION pf_TRANSFER_monthly() MERGE RANGE ('2009/04/30 23:59:00')
+GO
+
+ALTER TABLE transfer_bk SWITCH PARTITION 1 TO [Transfer_09M05]
+GO
+ALTER PARTITION FUNCTION pf_TRANSFER_monthly() MERGE RANGE ('2009/05/31 23:59:00')
+GO
+
+ALTER TABLE transfer_bk SWITCH PARTITION 1 TO [Transfer_09M06]
+GO
+ALTER PARTITION FUNCTION pf_TRANSFER_monthly() MERGE RANGE ('2009/06/30 23:59:00')
+GO
+
+DROP TABLE [TRANSFER_09M01]
+GO
+DROP TABLE [TRANSFER_09M02]
+GO
+DROP TABLE [TRANSFER_09M03]
+GO
+DROP TABLE [TRANSFER_09M04]
+GO
+DROP TABLE [TRANSFER_09M05]
+GO
+DROP TABLE [TRANSFER_09M06]
+----------
+
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_09M01]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_09M01]
+GO
+
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_09M02]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_09M02]
+GO
+
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_09M03]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_09M03]
+GO
+
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_09M04]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_09M04]
+GO
+
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_09M05]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_09M05]
+GO
+
+ALTER DATABASE [bodb_Archive]  REMOVE FILE [TRANSFER_09M06]
+GO
+ALTER DATABASE [bodb_Archive] REMOVE FILEGROUP [TRANSFER_09M06]
+GO
+
+
