@@ -15,6 +15,7 @@ AS
 	DB: DB06.BODB_ACC
 	
 	Revisions:
+		-20150529@Jim: add Metric Gaming
 */
 
 BEGIN
@@ -60,13 +61,17 @@ BEGIN
 			SELECT @MatchID, Bettype, liveindicator, 'TB', typenamee
 			FROM #MatchBettype mb INNER JOIN bodb02.dbo.bettype WITH(NOLOCK) ON typeid = mb.bettype
 			WHERE MatchID = @MatchID 
-				AND bettype IN (1,3,7,8,20)
+				AND (bettype IN (1,3,7,8,20)
+					OR bettype BETWEEN 801 AND 808
+					)
 				AND liveindicator = 0
 			UNION ALL
 			SELECT @MatchID, Bettype, liveindicator, 'TB', typenamee
 			FROM #MatchBettype  mb INNER JOIN bodb02.dbo.bettype WITH(NOLOCK) ON typeid = mb.bettype
 			WHERE MatchID = @MatchID 
-				AND bettype IN (1,3,7,8,20)
+				AND (bettype IN (1,3,7,8,20)
+					OR bettype BETWEEN 801 AND 808
+					)
 				AND liveindicator = 1
 			UNION ALL
 			SELECT @MatchID, Bettype, liveindicator, 'BETS', typenamee
