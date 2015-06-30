@@ -27,12 +27,13 @@ SET NOCOUNT ON
 		- 20130731@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
 		- 20150108@Dom: Apply sport bettype matrix	
 		- 20150205@Johnson: show more info of 8RM(winlost, comm, turnover) [redmineID: #27216] 
+		- 20150525@Sophia: Apply Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 */
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=1
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductId = 1
 	
 	DECLARE @Match TABLE (matchid int, sporttype tinyint, type varchar(10), primary key(matchid, type))
 	CREATE TABLE #DepAgent (custid int primary key)
@@ -56,7 +57,7 @@ SET NOCOUNT ON
 		) m
 	INNER JOIN league l with (nolock) ON m.leagueid = l.leagueid
 	INNER JOIN sports sp with (nolock) ON l.sporttype = sp.sporttype
-	WHERE sp.sporttype >1
+	WHERE sp.sporttype > 1
 	
 	SELECT
 			b.liveindicator, 
@@ -71,10 +72,11 @@ SET NOCOUNT ON
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
-			inner join @SportBettype s ON s.bettype = b.bettype
+			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			LEFT JOIN (SELECT custid FROM #DepAgent) dep ON b.recommend = dep.custid
-	WHERE
-			b.winlostdate = @winlostdate
+	WHERE	s.EventType IN (1,2)
+			AND s.SubProduct NOT IN ('MG-SuperLive')
+			AND b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
@@ -100,10 +102,11 @@ SET NOCOUNT ON
 			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
 			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
-			inner join @SportBettype s ON s.bettype = b.bettype
+			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid
-	WHERE
-			b.winlostdate = @winlostdate
+	WHERE	s.EventType IN (1,2)
+			AND s.SubProduct NOT IN ('MG-SuperLive')
+			AND	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
@@ -125,10 +128,11 @@ SET NOCOUNT ON
 			-sum((1-tpositiontaking)*ABS(stake)) RealTurnover,
 			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
-			inner join @SportBettype s ON s.bettype = b.bettype
+			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid
-	WHERE
-			b.winlostdate = @winlostdate
+	WHERE	s.EventType IN (1,2)
+			AND s.SubProduct NOT IN ('MG-SuperLive')
+			AND	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334)
 			AND b.matchid > 0
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 

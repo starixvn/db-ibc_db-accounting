@@ -22,6 +22,7 @@ AS
 							Expand the size of match code to varchar(50)
 		-- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		-- 20121112@Elodie: Use stake field to calculate TurnOver instead of actual_stake
+		-- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]		
 
 		Explanation's Param:
 			- @winlostdate: the date want to view report
@@ -30,7 +31,14 @@ AS
 */
 
 SET NOCOUNT ON
-BEGIN	 
+BEGIN	
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4, @ProductID = 1 	
+	
+	 
 	--Declare @temp table to contain all matches based on @winlostdate
 	DECLARE @Match TABLE (matchid INT, sporttype tinyINT, leagueid INT, matchcode VARCHAR(50), type varchar(10), primary key(matchid, type))
 	INSERT INTO @Match 
@@ -90,7 +98,9 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 
 	INSERT INTO @tmpBettype
 		SELECT typeid, typeid
-		FROM bettype WITH(NOLOCK)
+		FROM bettype b WITH(NOLOCK)
+		INNER JOIN @SportBettype s 
+				ON b.typeid = s.Bettype
 		WHERE (typeid > 10 AND typeid < 31)OR typeid BETWEEN 121 AND 999 OR typeid BETWEEN 1301 AND 1334
 
 	SELECT		
@@ -105,9 +115,10 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid			
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype	
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
+			---AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT', 'Refund') 
 			AND b.statusID NOT IN (101, 102, 103) 
@@ -124,30 +135,32 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 
 	SELECT	b.liveindicator, -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
 	FROM	bettrans14 b WITH (NOLOCK)
-			INNER JOIN @Match m on b.matchid = m.matchid				 
+			INNER JOIN @Match m on b.matchid = m.matchid	
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype				 
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
+			---AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101, 102, 103) 
 			AND b.ruben = 1					
-			and recommEND = 52466
+			and recommend = 52466
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid				
 	GROUP BY b.liveindicator
 
 	-- 20120412@Hurri: Get win lost of agent 'BARM'
 	SELECT	b.liveindicator, -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) WinlostBARM
 	FROM	bettrans14 b WITH (NOLOCK)
-			INNER JOIN @Match m on b.matchid = m.matchid				 
+			INNER JOIN @Match m on b.matchid = m.matchid	
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype				 
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
+			---AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101, 102, 103) 
 			AND b.ruben = 1					
-			and recommEND = 5707545
+			and recommend = 5707545
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid				
 	GROUP BY b.liveindicator
 END
