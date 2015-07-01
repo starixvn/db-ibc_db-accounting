@@ -24,7 +24,7 @@ BEGIN
 		,Bettype INT
 		,oddsid INT
 		,odds SMALLMONEY
-		,betteam NVARCHAR(20)
+		,betteam NVARCHAR(50)
 		,statusid INT
 		,TransDesc VARCHAR(300)
 		,WinlostDate SMALLDATETIME	

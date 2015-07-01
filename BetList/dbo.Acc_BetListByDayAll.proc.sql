@@ -141,7 +141,7 @@ BEGIN
         finalodds      SMALLMONEY    ,
         finalodds2     SMALLMONEY    ,
         oddstype       INT           ,
-        betteam        NVARCHAR (10) ,
+        betteam        NVARCHAR (50) ,
         status         NVARCHAR (50) ,
         betstatus      NVARCHAR (50) ,
         comstatus	   NVARCHAR(50)	 ,
@@ -1040,6 +1040,8 @@ BEGIN
 					--AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
 					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
+					--exclude Metric Gaming running ticket
+					AND (b.bettype BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
 			
 			--Metric gaming running ticket
 			UNION ALL
