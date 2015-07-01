@@ -16,6 +16,7 @@ AS
 	- 20110524@Henry: change to use winlostdate instead of transdate
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20140311@Dom: Add keno translog
+	- 20150529@Tom: Add filter by custid on translog
 */
 
 SET NOCOUNT ON  
@@ -39,12 +40,13 @@ BEGIN
 		bettype < 19001 
 		AND custid = @CustID
 		AND winlostdate BETWEEN @TempFromDate AND @todate
-	UNION 
+	UNION ALL
 	SELECT 
 		DISTINCT gameID bettype 
 		FROM translog (nolock)
 	WHERE 
-		winlostdate BETWEEN @TempFromDate AND @todate
+		winlostdate BETWEEN @TempFromDate AND @todate		
+		AND custid = @CustID
 		AND statusID = 0
 		
 			
