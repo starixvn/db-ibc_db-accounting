@@ -1,10 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 05/26/2015 14:13:42 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime,
@@ -14,12 +9,13 @@ AS
 	Created: Kathy
 	Date: 20140213
 	Task : Settle bettrans based on bettransm (for mix parlay)
-	DB: DB02.bodb02
+	DB: DBTXN/bodb02
 	Original: Admin_Calculate_9_Cal
 
 	Revisions:
 		- 20140502@Kathy: Calculate the execution time
 		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
+		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -174,10 +170,14 @@ BEGIN
 			WHEN 0 THEN 0
 			ELSE 1
 			END,
-		winlostdate = CASE @statusID
-			WHEN 0 THEN m.matchdate_max
-			ELSE @matchdate
-			END,
+		--winlostdate = CASE @statusID
+		--	WHEN 0 THEN m.matchdate_max
+		--	ELSE @matchdate
+		--	END,
+		winlostdate = CASE WHEN @statusID = 0 THEN m.matchdate_max
+						   WHEN @statusID IN (103,111,112) THEN m.matchdate_max
+						   WHEN @statusID = 113 THEN @matchdate
+							END,	
 		@odds = modds = CASE
 			WHEN loseCnt > 0 THEN 0
 			WHEN @statusID = 0 THEN 0
@@ -247,6 +247,9 @@ BEGIN
 		--+new status is "RUNNING" --> update to max_matchdate
 		--+current status is RUNNING (ruben = 0) and new status is NOT RUNNING --> update to @matchdate
 
+	--20150609@Jamie: Update rules 
+		-->> New status is "RUNNING" or "WON,REFUND,DRAW" --> Update the max_matchdate
+		-->> current status is RUNNING (ruben = 0) and new status is LOSE --> update to @matchdate 
 
 	IF @mode = 0
 	BEGIN
@@ -256,7 +259,9 @@ BEGIN
 				transid, custid, statusID, modds, refno,
 				CASE
 				WHEN statusID = 0 THEN winlostdate
-				WHEN oldruben = 0 AND statusID <> 0 THEN @matchdate
+				WHEN statusID IN(103,111,112) THEN winlostdate 
+				WHEN oldruben = 0 AND statusID = 113 THEN @matchdate
+				--WHEN oldruben = 0 AND statusID <> 0 THEN @matchdate
 				ELSE oldwinlostdate END,
 				tloseCnt, @matchid
 			FROM @temp_bettrans_9

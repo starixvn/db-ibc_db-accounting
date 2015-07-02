@@ -94,7 +94,8 @@ AS
 						  - Add moneyline in filter
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20141204@Kathy: Remove codes which are used in checking permission on DBPolicy [Redmine:#27058]	
-		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]				  
+		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]	
+		- 20150615@Dominic: BetTrade Integration 	[Redmine:#36964]		  
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
 		  + 0: All tickets
@@ -263,6 +264,7 @@ BEGIN
 	DECLARE @tblTransFB				TABLE(transid BIGINT PRIMARY KEY)
 	DECLARE @tblTransBetFair		TABLE(transid BIGINT PRIMARY KEY)
 	DECLARE @tblTransOneExchange	TABLE(transid BIGINT PRIMARY KEY)
+	DECLARE @ErrorTransID			TABLE(transid BIGINT PRIMARY KEY)
 
 	BEGIN TRY
 		INSERT INTO @tblTransCredit
@@ -324,7 +326,8 @@ BEGIN
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@bettypes,'^') AS bt ON bt.val=b.bettype
-	WHERE b.matchid=@matchid 
+	WHERE 
+		(b.matchid=@matchid 
 		AND b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -367,6 +370,8 @@ BEGIN
 		AND ISNULL(b.SecAcceptFlag, 0)  = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(b.SecAcceptFlag, 0)  
 														 WHEN 1 THEN 0 
 														 WHEN 2 THEN 1 END
+		)
+		OR b.Bettype IN (901,902,903)
 					 
  -- bettype = 4 -- Correct score
  INSERT INTO #BetDelete
@@ -376,7 +381,8 @@ BEGIN
 	FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON bt.val=b.betteam
-	WHERE b.matchid=@matchid
+	WHERE (
+		b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -397,6 +403,8 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END
+		)
+		OR b.Bettype IN (901,902,903)
 
 
 -- bettype = 6: Total Goal; 126: 1st Total Goal, 131: Home Team Total Goal; 132:  Away Team Total Goal
@@ -407,7 +415,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
-	WHERE b.matchid=@matchid
+	WHERE (b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -428,6 +436,8 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END
+		)
+		OR b.Bettype IN (901,902,903)
 
 -- bettype = 14: First Goal/Last Goal; 127: 1st FGLG
  INSERT INTO #BetDelete  
@@ -437,7 +447,7 @@ BEGIN
 	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
-	WHERE b.matchid=@matchid AND           
+	WHERE (b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -456,7 +466,8 @@ BEGIN
 		AND b.bettype IN (14, 127)
 		AND (@betteam14='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
-
+		)
+		OR b.Bettype IN (901,902,903)
 -- bettype = 16: HT/FT
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
@@ -465,7 +476,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam16,'^') AS bt ON bt.val=b.betteam
-	WHERE b.matchid=@matchid AND           
+	WHERE (b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -485,9 +496,10 @@ BEGIN
 		AND (@betteam16='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
 													WHEN 1 THEN 0 
-													WHEN 2 THEN 1 END					
+													WHEN 2 THEN 1 END				
 					
-										 									
+		)
+		OR b.Bettype IN (901,902,903)								 									
 	-- bettype = 128, 129, 130, 136, 137, 138, 139, 143, 144, 163, 184,194,203
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
@@ -495,7 +507,7 @@ BEGIN
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
-	WHERE b.matchid=@matchid AND           
+	WHERE (b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -536,7 +548,8 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
 													WHEN 1 THEN 0 
 													WHEN 2 THEN 1 END	
-										
+		)
+		OR b.Bettype IN (901,902,903)								
 	-- bettype = 154, 155, 156, 1302, 1311, 1312, 1316, 1317, 1318, 1324
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid as transtest, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
@@ -544,7 +557,7 @@ BEGIN
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
-	WHERE b.matchid=@matchid AND           
+	WHERE (b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -611,16 +624,17 @@ BEGIN
 					ELSE 1 
 			END
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END	
-		
-		--178,197,198,204,205
-		INSERT INTO #BetDelete 
+	)
+		OR b.Bettype IN (901,902,903)	
+	--178,197,198,204,205
+	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
-	WHERE b.matchid=@matchid
+	WHERE (b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -652,16 +666,17 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END				 
-	
-		--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216
-		INSERT INTO #BetDelete 
+	)
+		OR b.Bettype IN (901,902,903)
+	--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216
+	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
-	WHERE b.matchid=@matchid
+	WHERE (b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -745,10 +760,283 @@ BEGIN
 			)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
-													 WHEN 2 THEN 1 END			 								 
+													 WHEN 2 THEN 1 END	
+		)
+		OR b.Bettype IN (901,902,903)		 							 
 ------------------***** End of insert all data into #BetDelete *****------------------
 
-------------------***** Insert Custid of each type into its temp table *****------------------	
+
+	IF EXISTS (SELECT 1 FROM #BetDelete WHERE statusID IN (111,112,113) AND Bettype NOT IN (901,902,903))
+	BEGIN
+		SELECT @ErrCode = 100, @ErrMsg = 'You can only void the unsettled or refunded tickets.'
+		-----
+		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
+		WHERE KeyID = @KeyID AND KeyValue = @MatchId	
+		IF (@@Error = 0)
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID = @UserID, 
+				@MatchId = @MatchId, 
+				@KeyID = @KeyID,
+				@ActionID = 0, 
+				@Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial'
+		END TRY
+		BEGIN CATCH
+			SELECT @Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID = @UserID, 
+				@MatchId = @MatchId, 
+				@KeyID = @KeyID,
+				@ActionID = 0, 
+				@Remark = @Remark
+		END CATCH
+		ELSE
+		BEGIN
+			BEGIN TRY
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @UserID, 
+					@MatchId = @MatchId, 
+					@KeyID = @KeyID,
+					@ActionID = 0, 
+					@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
+			END TRY
+			BEGIN CATCH
+				SELECT @Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @UserID, 
+					@MatchId = @MatchId, 
+					@KeyID = @KeyID,
+					@ActionID = 0, 
+					@Remark = @Remark
+			END CATCH
+		END
+		RETURN
+	END
+	ELSE
+	BEGIN
+		DELETE FROM #BetDelete WHERE statusID IN (SELECT * FROM @Status) AND Bettype NOT IN (901, 902,903)
+	END
+	------------------***** Begin Special Delete *****------------------
+	-- Step 1: backup
+	INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
+				winlost,livehomescore,liveawayscore,liveindicator,betteam,creator, refno, 
+				winlostdate,betfrom,betcheck,checktime,matchid, bettype)
+		SELECT  transid, custid, CURRENT_TIMESTAMP, oddsid, hdp1, hdp2, odds, stake, status, 
+				winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, 
+				winlostdate, betfrom, betcheck, checktime, matchid, bettype
+		FROM
+			bettrans b WITH (nolock)
+		WHERE
+			b.transid IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN (901, 902,903))
+			AND b.bettype IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,'^'))
+			AND b.matchid = @MatchId
+			--AND b.liveindicator = @LiveIndicator
+			AND CASE
+				WHEN b.bettype IN (1,3,7,8) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN betteam ELSE @BetTeam1378 END
+				WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN betteam ELSE @BetTeam515 END
+				ELSE betteam
+			END = betteam 
+			
+	--Back up BetTrade's subtickets (901,902,903)  
+	INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
+				winlost,livehomescore,liveawayscore,liveindicator,betteam,creator, refno, 
+				winlostdate,betfrom,betcheck,checktime,matchid, bettype)
+		SELECT  sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.awinlost, sb.status, 
+				sb.winlost, sb.livehomescore, sb.liveawayscore, sb.liveindicator, sb.betteam, sb.creator , sb.refno, 
+				sb.winlostdate, sb.betfrom, sb.betcheck, sb.checktime, sb.matchid, sb.bettype
+		FROM
+			bettrans b WITH (nolock)
+			INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno
+		WHERE
+			b.transid IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN (901, 902,903))
+			AND sb.BetType IN (901,902,903)
+
+	CREATE TABLE #BeforeUpd (
+			custid		 INT,
+			balance		 MONEY)
+		
+	CREATE TABLE #AfterUpd(
+				custid		 INT,
+				balance		 MONEY)
+
+	
+	-- STEP 2 : Update - phase 1 : Update status to keep affected transactions away from BetTrade selling action
+		--  begin tran
+		UPDATE 
+			bettrans WITH (ROWLOCK, UPDLOCK)
+		SET [status]			= 'Void'     
+		WHERE
+			transid IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN (901, 902,903))
+			
+		-- Update BetTrade's subtickets (901,902,903) 
+		UPDATE 
+			bettrans WITH (ROWLOCK, UPDLOCK)
+		SET [status]			= 'Void'      
+		WHERE
+			refno IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN (901, 902,903))
+			AND Bettype IN (901, 902, 903)
+		
+		
+		
+		-- Control concurrency problems - start		
+			--Get error TransID
+			INSERT INTO @ErrorTransID(TransID)
+			SELECT DISTINCT t.TransID
+			FROM #BetDelete t
+				INNER JOIN zzzbettrans z WITH(NOLOCK) ON t.TransID = z.refno AND z.Bettype = 901
+				LEFT JOIN #BetDelete t2 ON t2.TransID = z.TransID
+			WHERE t2.TransID IS NULL
+			UNION
+			SELECT DISTINCT t.TransID
+			FROM #BetDelete t
+				INNER JOIN bettrans b WITH(NOLOCK) ON t.TransID = b.TransID AND b.betdaqid = 0
+				LEFT JOIN zzzbettrans z WITH(NOLOCK) ON t.TransID = z.refno AND z.Bettype = 901
+			WHERE z.TransID IS NULL
+			UNION
+			SELECT DISTINCT t.TransID
+			FROM #BetDelete t
+				INNER JOIN bettrans b WITH(NOLOCK) ON t.TransID = b.TransID AND b.betdaqid = 0
+				INNER JOIN zzzbettrans z WITH(NOLOCK) ON t.TransID = z.TransID
+			WHERE z.CustID <> b.CustID
+			
+			-- Rollback BetTrade's main tickets
+			UPDATE  main
+			SET main.status	= z.Status
+			FROM bettrans b WITH (ROWLOCK, UPDLOCK) 
+				INNER JOIN zzzbettrans z  WITH (ROWLOCK, UPDLOCK) ON b.TransID = z.TransID   
+			WHERE
+				b.TransID IN (SELECT transid FROM @ErrorTransID)
+				
+			-- Rollback BetTrade's subtickets (901,902,903) 
+			UPDATE  main
+			SET main.status	= z.Status
+			FROM bettrans b WITH (ROWLOCK, UPDLOCK) 
+				INNER JOIN zzzbettrans z  WITH (ROWLOCK, UPDLOCK) ON b.TransID = z.TransID   
+			WHERE
+				b.refno IN (SELECT transid FROM @ErrorTransID)
+				AND b.Bettype IN (901, 902, 903)
+			
+			-- DELETE balance/backup/delete data
+			DELETE FROM zzzbettrans 
+			WHERE TransID IN (SELECT transid FROM @ErrorTransID)
+				OR (Refno IN (SELECT transid FROM @ErrorTransID) AND Bettype IN(901,902,903))
+				
+			DELETE db
+			FROM #BetDelete db
+			INNER JOIN bettrans b WITH (ROWLOCK, UPDLOCK) ON db.TransID = b.TransID
+			WHERE db.TransID IN (SELECT transid FROM @ErrorTransID)
+				OR 
+				( b.refno IN (SELECT transid FROM @ErrorTransID) AND b.Bettype IN (901,902,903))
+				
+		
+		-- Control concurrency problems - end
+	
+	INSERT INTO #BeforeUpd (custid, balance)
+	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
+	FROM	bettrans b WITH (NOLOCK)
+	WHERE	b.transid IN (SELECT transid FROM #BetDelete)
+	GROUP BY b.CustID
+	
+	-- STEP 2 : Update - phase 2 : Update remaining fields of affected transactions
+		UPDATE 
+			bettrans WITH (ROWLOCK, UPDLOCK)
+		SET winlost			= actual_stake
+			,ruben			= 1
+			,statuswinlost	= 6
+			,creator		= @UserID
+			,awinlost		= 0
+			,mwinlost		= 0
+			,swinlost		= 0
+			,playercomm		= 0
+			,comm			= 0
+			,acomm			= 0
+			,scomm			= 0
+			,statusID		= 102       
+		WHERE
+			transid IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN(901,902,903))
+			
+		-- Update BetTrade's subtickets (901,902,903) 
+		UPDATE 
+			bettrans WITH (ROWLOCK, UPDLOCK)
+		SET winlost			= actual_stake
+			,ruben			= 1
+			,statuswinlost	= 6
+			,creator		= @UserID
+			,awinlost		= 0
+			,mwinlost		= 0
+			,swinlost		= 0
+			,playercomm		= 0
+			,comm			= 0
+			,acomm			= 0
+			,scomm			= 0
+			,statusID		= 102       
+		WHERE
+			refno IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN(901,902,903))
+			AND Bettype IN (901, 902, 903)
+	
+	
+		
+	-- STEP 2 : Update - phase 3 : Update BetTrade selling information			
+		-- Update BetTradeSelling
+		UPDATE [dbo].[BetTradeSelling] WITH (ROWLOCK, UPDLOCK)
+		SET
+			[Status] = 'Cancel',
+			[ChangeDate]  = GETDATE()
+		WHERE
+			TicketID IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN(901,902,903))
+			
+		-- Insert BetTradeSellingCancel
+		INSERT INTO [dbo].[BetTradeSellingCancelled]
+			   ([TicketID]
+			   ,[Remark]
+			   ,[BTBuyBack]
+			   ,[BTCommission]
+			   ,[AfterBalance]
+			   ,[Owner]
+			   ,[Cancelled]
+			   ,[ChangeDate]
+			   ,[CreateDate])
+		 SELECT zb.refno
+				, 'SB void ticket due to ' + @Reason
+				,zb.Stake
+				,0
+				,0
+				,'SB'
+				,1
+				,GETDATE()
+				,GETDATE()
+		 FROM #BetDelete t
+		 INNER JOIN zzzbettrans zb WITH(NOLOCK)
+			ON zb.Refno = t.TransID AND zb.BetType = 901
+		 LEFT JOIN [dbo].[BetTradeSellingCancelled] c WITH(NOLOCK) 
+			ON c.[TicketID] = zb.TransID
+		WHERE c.[BTBuyBack] IS NULL AND t.Bettype NOT IN(901,902,903)
+		
+		--Update
+		UPDATE main
+		SET
+			[Remark] = 'SB void ticket due to ' + @Reason,
+			[BTBuyBack] = zb.Stake,
+			[BTCommission] = 0,
+			[Owner] = 'SB',
+			[Cancelled] = 1,
+			[ChangeDate] = GETDATE(),
+			[CreateDate] = GETDATE(),
+			AfterBalance = (SELECT ISNULL(SUM(CASE 
+								WHEN ruben = 1
+									THEN winlost - actual_stake + playercomm
+								ELSE 0
+								END), 0)
+								FROM dbo.bettrans WITH (NOLOCK)
+								WHERE custid = zb.custid
+								)
+		FROM [dbo].[BetTradeSellingCancelled] main WITH (ROWLOCK, UPDLOCK)
+		INNER JOIN zzzbettrans zb WITH(NOLOCK)
+			ON zb.Refno = main.[TicketID] AND zb.BetType = 901
+		WHERE main.[TicketID] IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN(901,902,903))
+
+
+	------------------***** Insert Custid of each type into its temp table *****------------------	
 	
 	 -- get deposit tickets voided 
 	 INSERT INTO @DepositCust(custid)
@@ -805,113 +1093,8 @@ BEGIN
 		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
 		where bd.recommend = 13423967
 		and ci.roleid = 1
-
-
-	IF EXISTS (SELECT 1 FROM #BetDelete WHERE statusID IN (111,112,113))
-	BEGIN
-		SELECT @ErrCode = 100, @ErrMsg = 'You can only void the unsettled or refunded tickets.'
-		-----
-		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
-		WHERE KeyID = @KeyID AND KeyValue = @MatchId	
-		IF (@@Error = 0)
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial'
-		END TRY
-		BEGIN CATCH
-			SELECT @Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = @Remark
-		END CATCH
-		ELSE
-		BEGIN
-			BEGIN TRY
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
-			END TRY
-			BEGIN CATCH
-				SELECT @Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
-				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = @Remark
-			END CATCH
-		END
-		RETURN
-	END
-	ELSE
-	BEGIN
-		DELETE FROM #BetDelete WHERE statusID IN (SELECT * FROM @Status)
-	END
-	------------------***** Begin Special Delete *****------------------
-	-- Step 1: backup
-	INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
-				winlost,livehomescore,liveawayscore,liveindicator,betteam,creator, refno, 
-				winlostdate,betfrom,betcheck,checktime,matchid, bettype)
-		SELECT  transid, custid, CURRENT_TIMESTAMP, oddsid, hdp1, hdp2, odds, stake, status, 
-				winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, 
-				winlostdate, betfrom, betcheck, checktime, matchid, bettype
-		FROM
-			bettrans b WITH (nolock)
-		WHERE
-			b.transid IN (SELECT transid FROM #BetDelete)
-			AND b.bettype IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,'^'))
-			AND b.matchid = @MatchId
-			--AND b.liveindicator = @LiveIndicator
-			AND CASE
-				WHEN b.bettype IN (1,3,7,8) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN betteam ELSE @BetTeam1378 END
-				WHEN b.bettype IN (5,15) THEN CASE WHEN @BetTeam515 = 'ALL' THEN betteam ELSE @BetTeam515 END
-				ELSE betteam
-			END = betteam    
-
-	CREATE TABLE #BeforeUpd (
-			custid		 INT,
-			balance		 MONEY)
 		
-	CREATE TABLE #AfterUpd(
-				custid		 INT,
-				balance		 MONEY)
-
-	INSERT INTO #BeforeUpd (custid, balance)
-	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
-	FROM	bettrans b WITH (NOLOCK)
-	WHERE	b.transid IN (SELECT transid FROM #BetDelete)
-	GROUP BY b.CustID
-	
-	-- STEP 2 : Update
-	--  begin tran
-	UPDATE 
-		bettrans WITH (ROWLOCK, UPDLOCK)
-	SET winlost			= actual_stake
-		,ruben			= 1
-		,statuswinlost	= 6
-		,status			= 'Void'
-		,creator		= @UserID
-		,awinlost		= 0
-		,mwinlost		= 0
-		,swinlost		= 0
-		,playercomm		= 0
-		,comm			= 0
-		,acomm			= 0
-		,scomm			= 0
-		,statusID		= 102       
-	WHERE
-		transid IN (SELECT transid FROM #BetDelete)
-
+		
 	-- update totalbets
 	DECLARE @Total TABLE (oddsid INT, HomeTotal MONEY, AwayTotal MONEY)
 	INSERT INTO @Total
@@ -1235,8 +1418,12 @@ BEGIN
 		SELECT TransID, TargetID, TargetName, IsAgent FROM @AgentUpline
 	END
 
-	DROP TABLE #BetDelete
 
+	--Return Error TransIDs
+	SELECT * FROM @ErrorTransID
+
+	DROP TABLE #BetDelete
+	
 	SET NOCOUNT OFF
 END
 
