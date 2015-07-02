@@ -1,19 +1,19 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_UpdateTempVariableNumber]    Script Date: 06/23/2015 10:12:22 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_UpdateTempVariableNumber]    Script Date: 06/23/2015 17:35:26 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[NAP_UpdateTempVariableNumber]
-	@MatchId	INT	
+	@MatchId	MONEY	
 	,@ActionId	TINYINT
-	,@KeyId		TINYINT = 1 
+	,@KeyId		INT = 1 
 	,@ErrCode	INT  = 0 OUTPUT
 AS
 /*
 	Created by:Kathy
-	Date: 20131212
+	Date: 20150606
 	Task: insert/delete match in TempVariableNumber
 	DB: DBTXN/BODB02
 	
@@ -21,11 +21,13 @@ AS
 	Revisions:
 	
 	Param's Explanation:
-		@actionid = 0: Delete
+		@ActionId = 0: Delete
 					1: Insert
 					
 		@KeyId = 1: match
 				 2: outright
+				 3: match of Sporting solution
+				 4: match of Virtual Horse Racing
 	
 */
 BEGIN
@@ -46,6 +48,9 @@ BEGIN
 	END CATCH
 	
 END
+
+
+
 
 
 GO
