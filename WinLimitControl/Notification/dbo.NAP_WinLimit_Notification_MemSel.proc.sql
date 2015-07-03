@@ -21,6 +21,17 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON
 	
+	DECLARE @custList	NVARCHAR(MAX)
+		, @remoteQuery	NVARCHAR(MAX)
+
+	CREATE TABLE #tempCust
+	(
+		custid			INT
+		, username		NVARCHAR(30)
+		, username2		NVARCHAR(30)
+		, currency		VARCHAR(10)
+	)
+	
 	-- RESET output
 	SELECT 	@ErrCode 	= 0
 			, @ErrMsg 	= ''
@@ -44,19 +55,9 @@ BEGIN
 		RETURN;
 	END
 	
-	DECLARE @custList	NVARCHAR(MAX)
-		, @remoteQuery	NVARCHAR(MAX)
-
-	CREATE TABLE #tempCust
-	(
-		custid			INT
-		, username		NVARCHAR(30)
-		, username2		NVARCHAR(30)
-		, currency		VARCHAR(10)
-	)
-	
 	SELECT @custList	= COALESCE(@custList + ',', '') + CAST(g.custid AS NVARCHAR(10))
 	FROM #tempWLGame g
+	GROUP BY g.custid
 	
 	SELECT @remoteQuery = N'
 		INSERT INTO #tempCust 
@@ -74,7 +75,13 @@ BEGIN
 				ON c.currency = e.exchangeid
 			WHERE custid IN (' + @custList + ')'') AS q'
 	
-	EXEC sp_executesql @remoteQuery
+	BEGIN TRY
+		EXEC sp_executesql @remoteQuery
+	END TRY
+	BEGIN CATCH
+		SELECT 	@ErrCode 	= 101
+			, @ErrMsg 		= ERROR_MESSAGE()
+	END CATCH
 
 	SELECT g.custid
 		, c.username
