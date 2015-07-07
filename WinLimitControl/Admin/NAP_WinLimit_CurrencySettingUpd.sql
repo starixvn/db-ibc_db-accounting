@@ -1,0 +1,145 @@
+USE [bodb02]
+GO
+
+/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CurrencySettingUpd]    Script Date: 07/07/2015 16:10:44 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingUpd]
+	@ExchangeID		INT = 0,
+	@ProductID		INT = 0,
+	@MaxWinLimit	MONEY,
+	@UserID			INT = 0,
+	@IP				VARCHAR(20) = '',
+	@ErrCode		INT = 0 OUTPUT,
+	@ErrMsg			NVARCHAR(500) = '' OUTPUT
+AS
+	/*
+		Created: Phillip	
+		Date: 2015-06-26
+		Task: #38608
+		DB: DBCust/CustDB
+		
+		Revisions:
+		
+		Parameters Explanation:	
+			@ExchangeID: Currency ID.
+			@ProductID: Product ID.
+			@MaxWinLimit: Max Win Limit amount.
+			@UserID: User making this action.
+			@IP: IP of the machine making this action.
+			@ErrCode: Error Code.
+			@ErrMsg: Error Message.
+	*/
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @StartRun DATETIME
+	DECLARE @EndRun DATETIME
+	DECLARE @Duration INT
+	DECLARE @MaxWinLimitOld MONEY
+	SET @StartRun = GETDATE()
+	IF @MaxWinLimit <=0
+	BEGIN
+		SET @MaxWinLimit = 1000
+	END
+	IF NOT EXISTS (SELECT 1 FROM dbo.WinLimit_GlobalSetting WITH(NOLOCK) WHERE ExchangeID = @ExchangeID AND ProductID = @ProductID)
+	BEGIN
+		SET @ErrCode = 2
+		SET @ErrMsg = 'This setting does not exist.'
+		RETURN
+	END
+	
+	SELECT @MaxWinLimitOld = MaxWinLimit
+	FROM dbo.WinLimit_GlobalSetting WITH(NOLOCK) 
+	WHERE ExchangeID = @ExchangeID AND ProductID = @ProductID
+	
+	UPDATE dbo.WinLimit_GlobalSetting
+	SET MaxWinLimit = @MaxWinLimit
+	WHERE ProductID = @ProductID
+		AND ExchangeID = @ExchangeID
+	
+	-- Update all related Customer MaxWinLimit If new Global MaxWinLimit less than Customer MaxWinLimit.
+	DECLARE @RelatedCustomer TABLE
+	(
+		CustID int,
+		ExchangeID int
+	)
+	
+	INSERT INTO @RelatedCustomer
+	SELECT cs.CustID, c.currency
+	FROM CustDB.dbo.WinLimit_CustSetting cs WITH (NOLOCK)
+		INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK)
+		ON cs.CustID = c.custid
+	WHERE c.currency = @ExchangeID
+		AND cs.MaxWinLimit > @MaxWinLimit
+	
+	
+	UPDATE CustDB.dbo.WinLimit_CustSetting
+	SET MaxWinLimit = @MaxWinLimit
+	WHERE CustID IN (SELECT CustID FROM @RelatedCustomer) AND ProductID = @ProductID
+	
+	SET @EndRun = GETDATE()
+	SET @Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
+	
+	DECLARE @LogSPData VARCHAR(300)
+	DECLARE @TrackingValue2 VARCHAR(300)
+
+	SELECT @LogSPData = '<NAP_WinLimit_CurrencySettingUpd '
+		+ '" ExchangeID ="' + CONVERT(VARCHAR(20), @ExchangeID) 
+		+ '" ProductID="' + CONVERT(VARCHAR(20), @ProductID)
+		+ '" MaxWinLimit="' + CONVERT(VARCHAR(20), @MaxWinLimit)
+		+ '" UserId="' + CONVERT(VARCHAR(20), @UserId)
+		+ '" IP="'+ COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
+		+ '" />'
+						
+	SELECT @TrackingValue2 = '<NAP_WinLimit_CurrencySettingUpd '
+		+ '" ExchangeID ="' + CONVERT(VARCHAR(20), @ExchangeID) 
+		+ '" ProductID="' + CONVERT(VARCHAR(20), @ProductID)
+		+ '" MaxWinLimit="' + CONVERT(VARCHAR(20), @MaxWinLimitOld)
+		+ '" UserId="' + CONVERT(VARCHAR(20), @UserId)
+		+ '" IP="'+ COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
+		+ '" />'
+
+	SET @EndRun = GETDATE()
+	SET @Duration  = DATEDIFF(MILLISECOND,@StartRun,@EndRun)
+
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@UserID = @UserID,
+			@ActionID = 2905,
+			@TrackingValue = @LogSPData	,
+			@TrackingValue2 = @TrackingValue2,
+			@Duration = @Duration
+	END TRY
+	BEGIN CATCH
+		SELECT @LogSPData = '<NAP_WinLimit_CurrencySettingUpd '
+			+ '" ExchangeID ="' + CONVERT(VARCHAR(20), @ExchangeID) 
+			+ '" ProductID="' + CONVERT(VARCHAR(20), @ProductID)
+			+ '" MaxWinLimit="' + CONVERT(VARCHAR(20), @MaxWinLimit)
+			+ '" UserId="' + CONVERT(VARCHAR(20), @UserId)
+			+ '" IP="'+ COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
+			+ '" ErrMsg="'+ COALESCE(CAST(ERROR_MESSAGE() AS VARCHAR(400)),SPACE(1)) 
+			+ '" />'
+		SELECT @TrackingValue2 = '<NAP_WinLimit_CurrencySettingUpd '
+			+ '" ExchangeID ="' + CONVERT(VARCHAR(20), @ExchangeID) 
+			+ '" ProductID="' + CONVERT(VARCHAR(20), @ProductID)
+			+ '" MaxWinLimit="' + CONVERT(VARCHAR(20), @MaxWinLimitOld)
+			+ '" UserId="' + CONVERT(VARCHAR(20), @UserId)
+			+ '" IP="'+ COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
+			+ '" ErrMsg="'+ COALESCE(CAST(ERROR_MESSAGE() AS VARCHAR(400)),SPACE(1)) 
+			+ '" />'
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@UserID = @UserID,
+			@ActionID = 2905,
+			@TrackingValue = @LogSPData	,
+			@TrackingValue2 = @TrackingValue2,
+			@Duration = @Duration
+	END CATCH
+	
+END
+
+GO
+
