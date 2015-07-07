@@ -24,7 +24,8 @@ Revisions:
 	- Dom.Cao@2012-10-19:
 		- Update wrong _RM column: sum((winlost-actual_stake)*actualrate)	
     - 20130123@Daniel: Change link server alias
-	- 20150601@Sophia: Apply Gold Deluxe
+	- 20150601@Sophia: Apply Gold Deluxe [#35359] 
+	- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 
 		
 Param's Explanation:
@@ -129,13 +130,13 @@ SELECT @sqlTableExchange = 'create table #tbl_Currency_Daily
 
 SELECT @sqlTableExchange = @sqlTableExchange + '
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4 
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DELETE @SportBettype 
-	WHERE ProductID NOT IN (4,12) '
-
+	WHERE ProductID NOT IN (4,11,12,13) 
+		 OR (ProductID = 13 AND SubProduct = ''MGC-RNG'') '
 
 SELECT @TempDataSQL = ''
 SELECT @TempDataSQLDW = ''

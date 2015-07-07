@@ -14,15 +14,16 @@ AS
 			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 			- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
 			- 20150109@Dom: Apply sport bettype matrix
+			- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 		
 	*/
 BEGIN
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductId=6
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	CREATE TABLE #DepAgent (custid int primary key)
 		
@@ -34,8 +35,8 @@ BEGIN
 	UNION
 	SELECT 5707545--BARM
 				
-	SELECT		
-			71 bettype,
+	SELECT	s.ProductId,	
+			---71 bettype,
 			case when dep.custid is null then 1 else 2 end as site,
 			isnull(sum((winlost-actual_stake)*actualrate), 0) WinLost,
 			isnull(sum((awinlost+mwinlost+swinlost)*actualrate), 0) Position,
@@ -46,13 +47,15 @@ BEGIN
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE	b.winlostdate = @winlostdate
-			--AND b.bettype IN(71, 72)								--20120405@Hurri
-			AND b.matchid IN (0, 71)
-			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
+			AND (
+					s.ProductId = 6 -- Casino
+					OR s.ProductId = 11  --- Vegas Games
+					OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino	
+				) 
 			AND b.statusID NOT IN (101, 102,103,121) 
 			AND b.ruben = 1		
-	GROUP BY case when dep.custid is null then 1 else 2 end 
-	ORDER BY site	
+	GROUP BY s.ProductId, case when dep.custid is null then 1 else 2 end 
+	ORDER BY s.ProductId, site	
 	--GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end 
 	--ORDER BY b.Bettype, site		
 	

@@ -10,31 +10,37 @@ SET NOCOUNT ON
 	Original:
 
 	Revisions:
-		- 20150601@Sophia: Apply Gold Deluxe
+		- 20150601@Sophia: Apply Gold Deluxe [#35359] 
+		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 	
 	Parameters Explanation:
 		- @ProductID = 0 : All
 					 = 4 : Live Casino
 					 = 12: Gold Deluxe
+					 = 11: AG Casino
+					 = 13: Microgaming [<> RNG casino]
 
 */
 SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4 
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5 
 
 	DELETE @SportBettype 
-	WHERE ProductID NOT IN (4,12)
+	WHERE ProductID NOT IN (4,11,12,13) 
+		  OR (ProductID = 13 AND SubProduct = 'MGC-RNG') 
+		  
 
 
-	SELECT	b.typeID, b.typenamee 
+	SELECT	s.ProductId, b.typeID, b.typenamee 
 	FROM	bettype b WITH (NOLOCK) 
 		INNER JOIN @SportBettype s 
 			ON s.Bettype = b.typeid
-	WHERE	s.ProductId = @ProductID OR @ProductID = 0
-	ORDER BY b.typeID ASC
+	WHERE	s.ProductId = @ProductID 
+			OR @ProductID = 0
+	ORDER BY s.ProductId, b.typeID ASC
 
  
 

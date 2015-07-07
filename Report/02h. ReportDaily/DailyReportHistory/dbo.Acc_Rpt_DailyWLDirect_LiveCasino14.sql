@@ -11,14 +11,15 @@ AS
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
 		- 20150109@Dom: Apply sport bettype matrix
 		- 20150522@Sophia: Apply Gold Deluxe and revise Sport Betype Matrix [#35359] 
+		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 	
 */
 SET NOCOUNT ON
 
 ----Get Sport Bettype Matrix------
-DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 INSERT INTO @SportBettype
-EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4 
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 CREATE TABLE #DepAgent (custid int primary key)
 	
@@ -41,8 +42,9 @@ FROM	bettrans14 b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 WHERE	b.winlostdate = @winlostdate
-		AND s.ProductID IN (4,12)
-		--AND b.bettype BETWEEN 1101 AND 1199	
+		AND (s.ProductID IN (4,12,11) 
+			  OR s.ProductID = 13 AND SubProduct <> 'MGC-RNG'
+			  )
 		AND b.ruben = 1		
 		AND b.statusID not in (101,102,103,121)
 GROUP BY s.ProductID, b.Bettype, case when dep.custid is null then 1 else 2 end
