@@ -77,7 +77,7 @@ BEGIN
 		stake			MONEY,
 		actual_stake	MONEY,
 		transdate		DATETIME,
-		betteam			NVARCHAR (10),
+		betteam			NVARCHAR (50),
 		spositiontaking smallmoney,  
 		mpositiontaking smallmoney,  
 		apositiontaking smallmoney,  

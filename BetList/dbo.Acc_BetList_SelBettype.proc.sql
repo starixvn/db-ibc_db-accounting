@@ -17,6 +17,7 @@ AS
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20140311@Dom: Add keno translog
 	- 20150615@Edward: Remove bettype 903 of BetTrade
+	- 20150529@Tom: Add filter by custid on translog
 */
 
 SET NOCOUNT ON  
@@ -41,12 +42,13 @@ BEGIN
 		AND bettype <> 903
 		AND custid = @CustID
 		AND winlostdate BETWEEN @TempFromDate AND @todate
-	UNION 
+	UNION ALL
 	SELECT 
 		DISTINCT gameID bettype 
 		FROM translog (nolock)
 	WHERE 
-		winlostdate BETWEEN @TempFromDate AND @todate
+		winlostdate BETWEEN @TempFromDate AND @todate		
+		AND custid = @CustID
 		AND statusID = 0
 		
 			
