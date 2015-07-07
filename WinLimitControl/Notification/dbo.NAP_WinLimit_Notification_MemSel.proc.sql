@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[NAP_WinLimit_Notification_MemSel]
 AS
 /*
 Created: 20150702@bobby.nguyen
-Task : Win Limit Control - Notification
+Task : #35215 - Win Limit Control - Notification select member
 DB: DBTXN.bodb02
 Original:
 Revisions:
@@ -30,6 +30,7 @@ BEGIN
 		, username		NVARCHAR(30)
 		, username2		NVARCHAR(30)
 		, currency		VARCHAR(10)
+		, SiteName		NVARCHAR(100)
 	)
 	
 	-- RESET output
@@ -54,38 +55,41 @@ BEGIN
 			
 		RETURN;
 	END
-	
-	SELECT @custList	= COALESCE(@custList + ',', '') + CAST(g.custid AS NVARCHAR(10))
-	FROM #tempWLGame g
-	GROUP BY g.custid
-	
-	SELECT @remoteQuery = N'
-		INSERT INTO #tempCust 
-		SELECT q.custid
-			, q.username
-			, q.username2
-			, q.code AS currency
-	
-		FROM OPENQUERY([DBTXN], ''SELECT c.custid
-				, c.username
-				, c.username2
-				, e.code
-			FROM CustDB.dbo.customer c WITH(NOLOCK)
-				INNER JOIN CustDB.dbo.exchange e WITH(NOLOCK)
-				ON c.currency = e.exchangeid
-			WHERE custid IN (' + @custList + ')'') AS q'
-	
-	BEGIN TRY
-		EXEC sp_executesql @remoteQuery
-	END TRY
-	BEGIN CATCH
-		SELECT 	@ErrCode 	= 101
-			, @ErrMsg 		= ERROR_MESSAGE()
-	END CATCH
+	-- SELECT cust info
+	;WITH CTE_CustId AS
+	(
+		SELECT g.custid
+		FROM #tempWLGame g
+		GROUP BY g.custid
+	)
+	INSERT INTO #tempCust 
+	SELECT c.custid
+		, c.username
+		, c.username2
+		, e.code
+		, CASE	WHEN s.site IS NOT NULL THEN s.site 
+				ELSE 
+					CASE	WHEN (s.site IS NULL AND sc.site = '789y') THEN 'MBC789y'
+							ELSE 'MBC'
+					END 
+		END AS SiteName
+	FROM CustDB.dbo.Customer c WITH(NOLOCK)
+		INNER JOIN CTE_CustId temp
+		ON c.custid 		= temp.custid
+		INNER JOIN CustDB.dbo.Customer sc WITH(NOLOCK) -- credit member
+		ON c.srecommend 	= sc.custid 
+		LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) -- deposit member
+		ON c.srecommend 	= s.custid
+		INNER JOIN CustDB.dbo.exchange e WITH(NOLOCK)
+		ON c.currency 		= e.exchangeid
 
+	WHERE sc.roleid 		= 4
+		
 	SELECT g.custid
 		, c.username
 		, ISNULL(c.username2, '') AS username2
+		, c.currency
+		, c.SiteName
 		, g.productid
 		, p.ProductName
 		, g.MaxWinLimit
@@ -93,7 +97,7 @@ BEGIN
 		, (g.TotalWinAmt * 100 / g.MaxWinLimit) AS percentage
 			
 	FROM #tempWLGame g
-		INNER JOIN #tempCust c
+		LEFT JOIN #tempCust c
 		ON g.custid 		= c.custid
 		INNER JOIN dbo.Products p WITH(NOLOCK)
 		ON g.ProductID 		= p.ProductID
@@ -107,4 +111,3 @@ GRANT EXECUTE ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [vnteam]
 GO
-

@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[NAP_WinLimit_Notification_MemUpd]
 AS
 /*
 Created: 20150702@bobby.nguyen
-Task : Win Limit Control - Notification
+Task : #35215 - Win Limit Control - Notification update member
 DB: DBTXN.bodb02
 Original:
 Revisions:
