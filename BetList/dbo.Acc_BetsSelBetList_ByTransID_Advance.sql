@@ -22,6 +22,7 @@ AS
 		- 20150415@Sophia: Support Betradar and revise code of Bettype matrix
 		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
+		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 */ 
 BEGIN
 	SET NOCOUNT ON  
@@ -146,6 +147,8 @@ BEGIN
 				bt.refno		= @transid
 				AND sp.bettype BETWEEN 801 AND 899
 			)
+			--exclude metric gaming running ticket
+			AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
 			
 	END
 	-- FROM bettrans14

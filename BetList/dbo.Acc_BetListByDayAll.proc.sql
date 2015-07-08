@@ -71,6 +71,7 @@ AS
 		- 20150415@Sophia: Get Betcheck for Betradar
 		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
+		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -1040,8 +1041,8 @@ BEGIN
 					--AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
 					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
-					--exclude Metric Gaming running ticket
-					AND (b.bettype BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
+					--exclude metric gaming running ticket
+					AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
 			
 			--Metric gaming running ticket
 			UNION ALL
@@ -1119,7 +1120,7 @@ BEGIN
 			WHERE   b.custid		= @custid 
 				AND b.winlostdate	= @fromdate
 				AND b.Gameid 		BETWEEN 801 AND 899
-				AND b.statusID		IN (SELECT [statusID] FROM   @tmpStatus WHERE statusID IN(0,1))
+				AND b.statusID		= 0
 				
 			-- Virtual HR
             INSERT INTO @Data

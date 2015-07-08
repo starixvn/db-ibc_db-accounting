@@ -15,6 +15,7 @@ AS
 	- 20130904@Daniel: Remove condition bettype < 19001 when querying bettrans14 since it's useless => optimize performance
 	- 20140303@Elodie: Add Keno product [Redmine:#12756]
 	- 20150506@Tom: Support Gold Deluxe Product [#34847]
+	- 20150707@Bobby: Add metric gaming bettypes (801-899)
 */
  BEGIN
 	SET NOCOUNT ON
@@ -38,13 +39,15 @@ AS
 	WHERE   winlostdate = @fromdate 
 			AND bettype < 19001
 			AND ip = @ip
+			--exclude metric gaming running ticket
+			AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
 	GROUP BY custid	
 	UNION ALL 
 	SELECT	tl.custid, COUNT(tl.custid), 2
 	FROM	dbo.translog tl WITH (NOLOCK)
 	INNER JOIN @SportBettype sp 
 		ON tl.gameid = sp.BetType
-			AND sp.ProductID IN (8,12)
+			AND (sp.ProductID IN (8,12) OR tl.gameid BETWEEN 801 AND 806)
 	WHERE   winlostdate = @fromdate 
 			--AND gameid between 1501 and 1599
 			AND ip = @ip AND statusid = 0
@@ -84,6 +87,8 @@ AS
 										AND s.SportType = 1 
 										AND b.ip = @ip
 										AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END
+										--exclude metric gaming running ticket
+										AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
 								UNION ALL 
 								SELECT	b.custid
 								FROM	bettrans b WITH (NOLOCK) 

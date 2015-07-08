@@ -57,6 +57,7 @@ AS
 	- 20150415@Sophia: Get Betcheck for Betradar
 	- 20150506@Tom: Support Gold Deluxe Product [#34847]
 	- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
+	- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 */   
 BEGIN
 
@@ -199,6 +200,8 @@ BEGIN
 					AND (sp.productid IN (6,7,8,9,12) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
+			--exclude metric gaming running ticket
+			AND (bt.bettype NOT BETWEEN 801 AND 806 AND bt.statusID NOT IN (0, 1))
 	END
 	-- FROM bettrans14
 	IF(@WinlostDate IS NULL)
