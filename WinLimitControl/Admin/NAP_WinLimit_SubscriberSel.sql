@@ -9,9 +9,9 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[NAP_WinLimit_SubscriberSel]
-	@CustID int,
-	@IsDeposit bit output,
-	@SiteName varchar(10) output
+	@CustID		INT,
+	@IsDeposit	BIT OUTPUT,
+	@SiteName	VARCHAR(10) OUTPUT
 AS
 	/*
 		Created: Phillip	
@@ -22,19 +22,20 @@ AS
 		Revisions:
 		
 		Parameters Explanation:	
+			@CustID: Customer ID.
+			@IsDeposit: 1: Deposit; 0: Credit.
+			@SiteName: Site of Customer.
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	SELECT @IsDeposit = CASE WHEN s.site IS NULL THEN 0 ELSE 1 END 
-		, @SiteName = sc.site
-	FROM dbo.WinLimit_CustSetting cs WITH(NOLOCK)
-		 INNER JOIN dbo.Customer c WITH(NOLOCK)
-		 ON cs.CustID = c.custid
+	SELECT TOP(1) @IsDeposit = CASE WHEN c.site IS NULL THEN 0 ELSE 1 END 
+		, @SiteName = c.site
+	FROM dbo.Customer c WITH(NOLOCK)
 		 INNER JOIN dbo.Customer sc WITH(NOLOCK)
 		 ON c.srecommend = sc.custid and sc.roleid = 4
 		 LEFT JOIN dbo.Dep_CustSuper s WITH(NOLOCK)
 		 ON c.srecommend = s.custid
-	WHERE cs.CustID = @CustID
+	WHERE c.CustID = @CustID
 END
 GO
 
