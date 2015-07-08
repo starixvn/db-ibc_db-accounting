@@ -1477,7 +1477,7 @@ BEGIN
 					b.statusID = 0
 					AND	(
 						s.ProductId 	= 13
-						AND s.EventType = 1
+						AND s.EventType = 0
 						AND (@bettype 	= 0 OR s.bettype = @bettype)
 					)
 		END		
