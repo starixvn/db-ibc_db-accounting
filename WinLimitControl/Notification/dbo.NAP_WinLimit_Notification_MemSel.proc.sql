@@ -69,8 +69,8 @@ BEGIN
 		, e.code
 		, CASE	WHEN s.site IS NOT NULL THEN s.site 
 				ELSE 
-					CASE	WHEN (s.site IS NULL AND sc.site = '789y') THEN 'MBC789y'
-							ELSE 'MBC'
+					CASE	WHEN (s.site IS NULL AND sc.site = '789y') THEN 'maxbet789y'
+							ELSE 'maxbet'
 					END 
 		END AS SiteName
 	FROM CustDB.dbo.Customer c WITH(NOLOCK)
