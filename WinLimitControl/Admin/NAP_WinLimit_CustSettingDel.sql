@@ -8,39 +8,45 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel]
+ALTER PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel]
 	@CustID		INT,
-	@ProductID	INT,
-	@UserID		INT = 0,
-	@IP			VARCHAR(20) = '',
-	@ErrCode	INT = 0 OUTPUT,
-	@ErrMsg		VARCHAR(500) = '' OUTPUT
+	@ProductID	TINYINT,
+	@UserID		INT				= 0,
+	@IP			VARCHAR(20)		= '',
+	@ErrCode	INT				= 0		OUTPUT,
+	@ErrMsg		VARCHAR(500)	= ''	OUTPUT
 AS
 	/*
 		Created: Phillip	
 		Date: 2015-06-30
-		Task: #38608
+		Task: #38608 - Implement function to control Player's Win Limit on specific Product
+		
 		DB: DBCust/CustDB
 		
 		Revisions:
 		
 		Parameters Explanation:	
-			@UserName : User Name.
-			@ProductID: Game ID.
+			@UserName		: User Name.
+			@ProductID		: Game ID.
+			@UserID			: User making this action.
+			@IP				: IP of the machine making this action.
+			@ErrCode		: Error Code.
+			@ErrMsg			: Error Message.
 	*/
 BEGIN
 	SET NOCOUNT ON;
 	DECLARE @StartRun DATETIME
-	DECLARE @EndRun DATETIME
-	DECLARE @Duration INT
-	DECLARE @MaxWinLimitOld MONEY
-	SET @StartRun = GETDATE()
+			,@EndRun DATETIME
+			,@Duration INT
+			,@MaxWinLimitOld MONEY
+	SELECT	@StartRun = GETDATE()
 	
-	SELECT @MaxWinLimitOld = MaxWinLimit
-	FROM dbo.WinLimit_CustSetting WITH (NOLOCK) 
-	WHERE CustID = @CustID AND ProductID = @ProductID
+	SELECT	@MaxWinLimitOld = MaxWinLimit
+	FROM	dbo.WinLimit_CustSetting WITH (NOLOCK) 
+	WHERE	CustID = @CustID 
+			AND ProductID = @ProductID
 	
-	DELETE FROM dbo.WinLimit_CustSetting
+	DELETE dbo.WinLimit_CustSetting
 	WHERE CustID = @CustID AND ProductID = @ProductID
 	
 	IF @@ERROR <> 0
@@ -49,8 +55,8 @@ BEGIN
 		SET @ErrMsg = 'This setting does not exist.'
 	END
 	
-	SET @EndRun = GETDATE()
-	SET @Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
+	SELECT	@EndRun = GETDATE()
+			,@Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
 	
 	DECLARE @LogSPData VARCHAR(300)
 
@@ -64,11 +70,11 @@ BEGIN
 		
 	BEGIN TRY
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-		@UserID = @UserID,
-		@CustID = @CustID,
-		@ActionID = 2908,
-		@TrackingValue = @LogSPData	,
-		@Duration = @Duration
+		@UserID			= @UserID,
+		@CustID			= @CustID,
+		@ActionID		= 2908,
+		@TrackingValue	= @LogSPData,
+		@Duration		= @Duration
 	END TRY
 	BEGIN CATCH
 	SELECT @LogSPData = '<NAP_WinLimit_CustSettingDel '
@@ -80,12 +86,15 @@ BEGIN
 		+ '" ErrMsg="'+ COALESCE(CAST(ERROR_MESSAGE() AS VARCHAR(400)),SPACE(1)) 
 		+ '" />'
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-		@UserID = @UserID,
-		@CustID = @CustID,
-		@ActionID = 2908,
-		@TrackingValue = @LogSPData	,
-		@Duration = @Duration
+		@UserID			= @UserID,
+		@CustID			= @CustID,
+		@ActionID		= 2908,
+		@TrackingValue	= @LogSPData,
+		@Duration		= @Duration
 	END CATCH
 END
 GO
-
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingDel] TO [bodbAdminNet]
+GO
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingDel] TO [accteam]
+GO

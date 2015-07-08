@@ -8,13 +8,13 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
-	@UserName varchar(100) = '',
-	@ExchangeID int = 0,
-	@ProductID	int = 0,
-	@PageIndex int = 1,
-	@PageSize int = 50,
-	@TotalRow int = 0 output
+ALTER PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
+	@UserName	VARCHAR(100)	= '',
+	@ExchangeID INT				= 0,
+	@ProductID	TINYINT 		= 0,
+	@PageIndex	INT 			= 1,
+	@PageSize	INT 			= 50,
+	@TotalRow	INT 			= 0		OUTPUT
 AS
 	/*
 		Created: Phillip	
@@ -25,9 +25,12 @@ AS
 		Revisions:
 		
 		Parameters Explanation:	
-			@UserName : User Name.
+			@UserName	: User Name.
 			@ExchangeID : Currency ID.
-			@ProductID: Game ID.
+			@ProductID	: Game ID.
+			@PageIndex	: Page Index.
+			@PageSize	: Page Size.
+			@TotalRow	: Total Row.
 	*/
 BEGIN
 	SET NOCOUNT ON;
@@ -42,20 +45,31 @@ BEGIN
 	)
 	
 	INSERT INTO @ResultTable
-	SELECT DENSE_RANK() OVER(ORDER BY cs.CustID) AS RowNum, cs.CustID, c.username, c.currency ExchangeID, ProductID, cs.MaxWinLimit
-	FROM WinLimit_CustSetting cs WITH (NOLOCK)
-		INNER JOIN Customer c WITH (NOLOCK) ON cs.CustID = c.custid
-	WHERE c.username LIKE '%' + @UserName + '%'
-		AND (@ExchangeID = 0 OR c.currency = @ExchangeID)
-		AND (@ProductID = 0 OR cs.ProductID = @ProductID)
+	SELECT	DENSE_RANK() OVER(ORDER BY cs.CustID) AS RowNum
+			,cs.CustID
+			,c.username
+			,c.currency ExchangeID
+			,ProductID, cs.MaxWinLimit
+	FROM	WinLimit_CustSetting cs WITH (NOLOCK)
+			INNER JOIN Customer c WITH (NOLOCK) 
+			ON cs.CustID = c.custid
+	WHERE	c.username LIKE '%' + @UserName + '%'
+			AND (@ExchangeID = 0 OR c.currency = @ExchangeID)
+			AND (@ProductID = 0 OR cs.ProductID = @ProductID)
 		
-	SELECT @TotalRow = ISNULL(MAX(RowNum), 0) FROM @ResultTable
-	
-	SELECT CustID, UserName, ExchangeID, ProductID, MaxWinLimit 
+	SELECT	@TotalRow = ISNULL(MAX(RowNum), 0) 
 	FROM @ResultTable
-	WHERE RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
+	
+	SELECT	CustID
+			,UserName
+			,ExchangeID
+			,ProductID
+			,MaxWinLimit 
+	FROM	@ResultTable
+	WHERE	RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
 END
-
-
 GO
-
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [bodbAdminNet]
+GO
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [accteam]
+GO
