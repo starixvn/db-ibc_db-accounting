@@ -39,16 +39,16 @@ BEGIN
 	SET NOCOUNT ON;
 	DECLARE @ResultTempTable AS TABLE
 	(
-		RowNum int,
-		CustID int,
-		UserName varchar(50),
-		ExchangeID int,
-		ProductID int,
-		WinLimit money,
-		WinningAmount money,
-		BlockedTime datetime,
-		IsBlocked bit,
-		IsNotified bit
+		RowNum INT,
+		CustID INT,
+		UserName VARCHAR(50),
+		ExchangeID INT,
+		ProductID INT,
+		WinLimit MONEY,
+		WinningAmount MONEY,
+		BlockedTime DATETIME,
+		IsBlocked BIT,
+		IsNotified BIT
 	)
 	
 	INSERT INTO @ResultTempTable
@@ -66,42 +66,47 @@ BEGIN
 	WHERE	(@ProductID = 0 OR ProductID = @ProductID) 
 			AND IsBlocked = 1
 		
-	DECLARE @CustIDList AS varchar(MAX)
+	DECLARE @CustIDList AS VARCHAR(MAX)
 	SELECT	@CustIDList  = COALESCE(@CustIDList +',' ,'') + CONVERT(VARCHAR(50),CustID )
 	FROM	@ResultTempTable
 	
 	DECLARE @TSQL VARCHAR(8000)
-	SELECT	@TSQL = 'SELECT * 
-				FROM OPENQUERY (DBTRANS, 
+	SELECT	@TSQL = 'SELECT *
+				FROM OPENQUERY (DBCUST, 
 					''SELECT 
 						CustID, 
 						Username, 
 						currency 
 					FROM CustDB.dbo.Customer WITH (NOLOCK) 
-					WHERE CustID IN (' + @CustIDList + ')'')'
-	
+					WHERE CustID IN (' + @CustIDList + ')
+							AND (' + CONVERT(VARCHAR(10), @ExchangeID) + ' = 0 OR currency=' + CONVERT(VARCHAR(10), @ExchangeID) + ')' +
+ 							'AND username LIKE ''''' + @UserName + '%' +
+					''''''')'
+					
 	DECLARE @CustomerTempTable AS TABLE
 	(
-		CustID int,
-		UserName varchar(30),
-		ExchangeID int
+		CustID INT,
+		UserName VARCHAR(30),
+		ExchangeID INT
 	)
 	
 	INSERT INTO @CustomerTempTable
 	EXEC(@TSQL)
 	
-	UPDATE @ResultTempTable 
+	UPDATE	@ResultTempTable 
 	SET		UserName = c.UserName
 			,ExchangeID = c.ExchangeID
 	FROM	@ResultTempTable rs
 			INNER JOIN @CustomerTempTable c 
 			ON rs.CustID = c.CustID
-		
+			
+	DELETE	@ResultTempTable
+	WHERE	UserName IS NULL
+	
 	SELECT	@TotalRow = COUNT(DISTINCT(CustID)) 
 	FROM	@ResultTempTable
 	WHERE	UserName LIKE @UserName + '%' 
 			AND (@ExchangeID = 0 OR ExchangeID = @ExchangeID) 
-	
 	
 	SELECT	CustID
 			,UserName
@@ -134,4 +139,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_Game_SelBlocked] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_Game_SelBlocked] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_Game_SelBlocked] TO [vnteam]
 GO

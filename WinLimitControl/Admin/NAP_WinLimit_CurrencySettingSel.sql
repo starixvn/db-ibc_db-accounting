@@ -27,27 +27,12 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	DECLARE @ResultTbl TABLE
-	(
-		RowNum int,
-		ExchangeID int, 
-		ProductID int, 
-		MaxWinLimit money
-	)
-	
-	INSERT INTO @ResultTbl
-	SELECT	DENSE_RANK() OVER(ORDER BY ExchangeID) AS RowNum
-			, ExchangeID
-			, ProductID
-			, MaxWinLimit
-	FROM	WinLimit_GlobalSetting WITH(NOLOCK)
-	WHERE	(@ProductID = 0 OR ProductID = @ProductID)
-			AND (@ExchangeID = 0 OR ExchangeID = @ExchangeID)
-		
 	SELECT		ExchangeID
 				, ProductID
 				, MaxWinLimit
-	FROM		@ResultTbl
+	FROM		dbo.WinLimit_GlobalSetting WITH(NOLOCK)
+	WHERE		(@ProductID = 0 OR ProductID = @ProductID)
+				AND (@ExchangeID = 0 OR ExchangeID = @ExchangeID)
 	ORDER BY	ExchangeID
 				, ProductID
 	
@@ -56,4 +41,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [vnteam]
 GO

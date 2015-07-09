@@ -51,8 +51,9 @@ BEGIN
 	
 	IF @@ERROR <> 0
 	BEGIN
-		SET @ErrCode = 2
-		SET @ErrMsg = 'This setting does not exist.'
+		SELECT	@ErrCode = 2
+				,@ErrMsg = 'This setting does not exist.'
+		RETURN;
 	END
 	
 	SELECT	@EndRun = GETDATE()
@@ -97,4 +98,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingDel] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingDel] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingDel] TO [vnteam]
 GO

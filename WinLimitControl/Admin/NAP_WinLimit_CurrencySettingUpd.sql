@@ -41,7 +41,7 @@ BEGIN
 			,@EndRun DATETIME
 			,@Duration INT
 			,@MaxWinLimitOld MONEY
-	SET @StartRun = GETDATE()
+	SELECT  @StartRun = GETDATE()
 	IF @MaxWinLimit <=0
 	BEGIN
 		SET @MaxWinLimit = 1000
@@ -50,7 +50,7 @@ BEGIN
 	BEGIN
 		SELECT	@ErrCode = 2
 				,@ErrMsg = 'This setting does not exist.'
-		RETURN
+		RETURN;
 	END
 	
 	SELECT	@MaxWinLimitOld = MaxWinLimit
@@ -58,37 +58,27 @@ BEGIN
 	WHERE	ExchangeID = @ExchangeID 
 			AND ProductID = @ProductID
 	
-	UPDATE	dbo.WinLimit_GlobalSetting WITH (UPDLOCK, ROWLOCK)
-	SET		MaxWinLimit = @MaxWinLimit
-	WHERE	ProductID = @ProductID
-			AND ExchangeID = @ExchangeID
-	
+	BEGIN TRY
+		UPDATE	dbo.WinLimit_GlobalSetting WITH (UPDLOCK, ROWLOCK)
+		SET		MaxWinLimit = @MaxWinLimit
+		WHERE	ProductID = @ProductID
+				AND ExchangeID = @ExchangeID
+	END TRY
+	BEGIN CATCH
+		SELECT	@ErrCode = 2
+				,@ErrMsg = ERROR_MESSAGE()
+		RETURN;
+	END CATCH
 	-- Update all related Customer MaxWinLimit If new Global MaxWinLimit less than Customer MaxWinLimit.
-	DECLARE @RelatedCustomer TABLE
-	(
-		CustID int,
-		ExchangeID int
-	)
-	
-	INSERT INTO @RelatedCustomer
-	SELECT	cs.CustID
-			,c.currency
-	FROM	CustDB.dbo.WinLimit_CustSetting cs WITH (NOLOCK)
-			INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK)
-			ON cs.CustID = c.custid
-	WHERE	c.currency = @ExchangeID
-			AND cs.MaxWinLimit > @MaxWinLimit
-	
-	
-	UPDATE	CustDB.dbo.WinLimit_CustSetting
-	SET		MaxWinLimit = @MaxWinLimit
-	WHERE	CustID IN 
-				(
-					SELECT	CustID 
-					FROM @RelatedCustomer
-				) 
-			AND ProductID = @ProductID
-	
+	EXEC DBCUST.CustDB.dbo.NAP_WinLimit_CustSettingRelatedToCurrencySettingUpd
+		@ExchangeID	= @ExchangeID,
+		@ProductID = @ProductID,
+		@MaxWinLimit = @MaxWinLimit,
+		@UserID	=@UserID,
+		@IP	= @IP,
+		@ErrCode = @ErrCode,
+		@ErrMsg	=@ErrMsg
+		
 	SELECT	@EndRun = GETDATE()
 			,@Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
 	
@@ -139,7 +129,7 @@ BEGIN
 			+ '" IP="'+ COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
 			+ '" ErrMsg="'+ COALESCE(CAST(ERROR_MESSAGE() AS VARCHAR(400)),SPACE(1)) 
 			+ '" />'
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 			@UserID			= @UserID,
 			@ActionID		= 2905,
 			@TrackingValue	= @LogSPData,
@@ -151,4 +141,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingUpd] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingUpd] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CurrencySettingUpd] TO [vnteam]
 GO

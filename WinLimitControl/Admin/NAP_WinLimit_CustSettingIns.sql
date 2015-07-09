@@ -40,7 +40,7 @@ BEGIN
 	DECLARE @StartRun DATETIME
 			,@EndRun DATETIME
 			,@Duration INT
-	SELECT @StartRun = GETDATE()
+	SELECT	@StartRun = GETDATE()
 	IF EXISTS(SELECT 1 FROM dbo.WinLimit_CustSetting WITH (NOLOCK) WHERE CustID = @CustID AND ProductID = @ProductID)
 	BEGIN
 		SELECT	@ErrCode = 1
@@ -64,7 +64,8 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		SELECT	@ErrCode = 1
-				,@ErrMsg = 'This setting is already set.'
+				,@ErrMsg = ERROR_MESSAGE()
+		RETURN;
 	END CATCH;
 	
 	SELECT	@EndRun = GETDATE()
@@ -109,4 +110,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingIns] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingIns] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingIns] TO [vnteam]
 GO

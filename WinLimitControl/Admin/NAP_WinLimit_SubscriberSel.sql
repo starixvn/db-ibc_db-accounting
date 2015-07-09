@@ -45,3 +45,5 @@ GRANT EXECUTE ON [dbo].[NAP_WinLimit_SubscriberSel] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_SubscriberSel] TO [accteam]
 GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_SubscriberSel] TO [vnteam]
+GO

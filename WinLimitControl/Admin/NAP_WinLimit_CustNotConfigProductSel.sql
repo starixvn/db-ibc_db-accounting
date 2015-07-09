@@ -35,14 +35,14 @@ BEGIN
 			,@PlayerMaxWinLimit money
 	SELECT	@UserName = LTRIM(RTRIM(@UserName))
 	
-	SELECT	@CustID = custid
+	SELECT	@CustID = c.custid
 			,@ExchangeID = c.currency
 			,@ExchangeName = e.Code + ' (' + e.currency + ')'
 	FROM	dbo.Customer c WITH (NOLOCK)
 			INNER JOIN dbo.exchange e WITH (NOLOCK)
 			ON c.currency = e.exchangeid
-	WHERE	username = @UserName 
-			AND roleid = 1 -- Search member level only.
+	WHERE	c.username = @UserName 
+			AND c.roleid = 1 -- Search member level only.
 	
 	-- If CustID is NULL => Invalid UserName
 	-- Else => Valid UserName
@@ -89,7 +89,7 @@ BEGIN
 					,gs.MaxWinLimit CurrencyMaxWinLimit
 			FROM	bodb02.dbo.Products p WITH (NOLOCK)
 					LEFT OUTER JOIN dbo.WinLimit_CustSetting cs WITH (NOLOCK)
-					ON  p.ProductID = cs.ProductID and cs.CustID = @CustID
+					ON  p.ProductID = cs.ProductID AND cs.CustID = @CustID
 					LEFT OUTER JOIN @CurrencySettingTable gs
 					ON p.ProductID = gs.ProductID
 			WHERE	p.ProductType = 2 
@@ -101,4 +101,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [vnteam]
 GO

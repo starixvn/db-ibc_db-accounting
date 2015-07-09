@@ -55,6 +55,13 @@ BEGIN
 		RETURN;
 	END
 	
+	IF EXISTS (SELECT 1 FROM dbo.WinLimit_GlobalSetting WITH (NOLOCK) WHERE ExchangeID = @ExchangeID AND ProductID = @ProductID)
+	BEGIN
+		SELECT	@ErrCode = 1
+				,@ErrMsg = 'This setting is already set.'
+		RETURN;
+	END
+	
 	BEGIN TRY
 	INSERT INTO dbo.WinLimit_GlobalSetting 
 	(
@@ -73,7 +80,8 @@ BEGIN
 	IF @@ERROR <> 0 
 	BEGIN
 		SELECT	@ErrCode = 1
-				,@ErrMsg = 'This setting is already set.'
+				,@ErrMsg = ERROR_MESSAGE()
+		RETURN;
 	END
 	END CATCH;
 	
@@ -116,4 +124,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingIns] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingIns] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CurrencySettingIns] TO [vnteam]
 GO

@@ -10,7 +10,7 @@ GO
 
 ALTER PROCEDURE [dbo].[NAP_WinLimit_Game_Unblock]
 	@CustID		INT,
-	@ProductID	INT,
+	@ProductID	TINYINT,
 	@UserID		INT				= 0,
 	@IP			VARCHAR(20)		= '',
 	@ErrCode	INT				= 0		OUTPUT,
@@ -62,10 +62,11 @@ BEGIN
 		BEGIN
 			SELECT	@ErrCode = 5
 					,@ErrMsg = 'The Player does not exist.'
+			RETURN;
 		END
 		
 		SELECT	@EndRun = GETDATE()
-				,@Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
+				,@Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun)
 		
 		DECLARE @LogSPData VARCHAR(300)
 				,@TrackingValue2 VARCHAR(300)
@@ -124,4 +125,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_Game_Unblock] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_Game_Unblock] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_Game_Unblock] TO [vnteam]
 GO

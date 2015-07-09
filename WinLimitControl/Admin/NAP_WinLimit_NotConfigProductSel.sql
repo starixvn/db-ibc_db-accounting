@@ -41,3 +41,5 @@ GRANT EXECUTE ON [dbo].[NAP_WinLimit_NotConfigProductSel] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_NotConfigProductSel] TO [accteam]
 GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_NotConfigProductSel] TO [vnteam]
+GO
