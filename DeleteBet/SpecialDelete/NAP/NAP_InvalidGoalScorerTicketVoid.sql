@@ -1,8 +1,8 @@
 ALTER PROCEDURE [dbo].[NAP_InvalidGoalScorerTicketVoid]
 	@MatchId	INT,
 	@BetType	SMALLINT,
-	@BetTeam	NVARCHAR(100),
-    @UserID		INT,
+	@BetTeam	NVARCHAR(200),
+    @UserID		INT = 111,
 	@ErrMsg		NVARCHAR(200)	OUTPUT,
     @ErrCode	INT			OUTPUT
 AS
@@ -13,15 +13,18 @@ AS
 			- Goal Scorer - First (217 )
 	DB: DBTXN/bodb02
 	Original:
-
+		
 	Revisions:
 	
 	Param's Explanation:
+		- @UserID : 111 (oddsfeedlog) is used when this SP is called automatically by a program
 */
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @LogData NVARCHAR(500)
 	SELECT @ErrCode = 0, @ErrMsg = ''
+	
+	SELECT @UserID = 111
 /*******************************************************************
 ****************             A.CHECKING                ************* 	
 ********************************************************************/
@@ -37,6 +40,36 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = 'Wrong input parameter of bet type, only support for Goal Scorer(Anytime & First) !'
 			,@ErrCode  = 102
+		RETURN
+	END
+	
+	--Check Invalid Match
+	DECLARE @Sporttype INT	
+		
+	SET @Sporttype = 0
+	
+	SELECT @Sporttype = sporttype
+	FROM match WITH (NOLOCK)
+	WHERE matchid = @MatchID
+	
+	IF (@Sporttype <> 1)
+	BEGIN 
+		SET @ErrCode = 100
+		SET @ErrMsg ='Invalid match!' 
+		RETURN
+	END 
+
+	--Check if the match do not offer the specified bet type
+	IF NOT EXISTS( SELECT  TOP 1 1
+		FROM dbo.bettype b WITH(NOLOCK) 
+		INNER JOIN dbo.odds o WITH(NOLOCK) ON b.typeid = o.bettype
+		INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = o.matchid
+		WHERE m.matchid = @MatchId
+		AND b.typeid = @BetType
+		AND m.sporttype = 1)
+	BEGIN
+		SELECT @ErrMsg = 'This match does not offer the specfied bet type (' + CAST(@BetType AS VARCHAR(10)) +  ')' 
+			,@ErrCode  = 106
 		RETURN
 	END
 	
@@ -72,6 +105,23 @@ BEGIN
 	END
 	
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (@KeyID, @MatchId)
+	
+	IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
+	BEGIN
+		SELECT @ErrCode = 107
+			,@ErrMsg	= 'Another parlay settlement is in progress or some parlay tickets are being voided, please wait a few seconds until the on-going process has finished and try again.'
+		
+		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
+		WHERE KeyID = @KeyID AND KeyValue = @MatchId
+	 
+		RETURN
+	END
+	ELSE 
+	BEGIN
+		UPDATE SystemSettings WITH (ROWLOCK, UPDLOCK)
+			SET VValue = '1'
+		WHERE VName = 'isCalculatingParlay'
+	END
 	
 	IF (@@Error = 0)
 	BEGIN TRY
@@ -173,7 +223,8 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 	WHERE b.matchid=@matchid
 		AND b.bettype = @BetType
-		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,','))
+		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,'^'))
+		AND b.statusID NOT IN (SELECT * FROM @Status)
 		
 	--Get Parlay Ticket
 	INSERT INTO #Ref ( 	refno, transid, custid, srecommend, mrecommend, recommend, betfrom, bettype, hdp1
@@ -200,7 +251,7 @@ BEGIN
 		 INNER JOIN custDB.dbo.customer AS c WITH(NOLOCK) ON c.custid=b.custid		
 	WHERE b.matchid=@MatchID	
 		AND b.bettype = @BetType
-		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,','))
+		AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(@BetTeam,'^'))
 		AND b.statusID IN (0, 1, 103)
 	
 	
@@ -208,58 +259,6 @@ BEGIN
 /*******************************************************************
 ********             C.DELETE SINGLE TICKET                ********* 	
 ********************************************************************/
-	
-	---------------- ********  Check and delete tickets having invalid status ********* ---------------
-	IF EXISTS (SELECT 1 FROM #BetDeleteSingle WHERE statusID IN (111,112,113)) --WON/LOSE/DRAW
-	BEGIN
-		SELECT @ErrCode = 105, @ErrMsg = 'You can only void the unsettled or refunded tickets.'
-		-----
-		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
-		WHERE KeyID = @KeyID AND KeyValue = @MatchId	
-		IF (@@Error = 0)
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = 'VOID SUCCESS SPName=NAP_InvalidGoalScorerTicketVoid'
-		END TRY
-		BEGIN CATCH
-			SELECT @Remark = 'VOID SUCCESS SPName=NAP_InvalidGoalScorerTicketVoid ErrMsg=' + LEFT(error_message(), 400)
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = @Remark
-		END CATCH
-		ELSE
-		BEGIN
-			BEGIN TRY
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = 'VOID FAILED SPName=NAP_InvalidGoalScorerTicketVoid'
-			END TRY
-			BEGIN CATCH
-				SELECT @Remark = 'VOID FAILED SPName=NAP_InvalidGoalScorerTicketVoid ErrMsg=' + LEFT(error_message(), 400)
-				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = @Remark
-			END CATCH
-		END
-		RETURN
-	END
-	ELSE
-	BEGIN
-		DELETE FROM #BetDeleteSingle WHERE statusID IN (SELECT * FROM @Status)
-	END
 	
 	------------------***** Begin Special Delete *****------------------
 	-- Step 1: backup
@@ -311,23 +310,6 @@ BEGIN
 		,statusID		= 102       
 	WHERE
 		transid IN (SELECT transid FROM #BetDeleteSingle)
-		
-	-- update totalbets
-	DECLARE @Total TABLE (oddsid INT, HomeTotal MONEY, AwayTotal MONEY)
-	INSERT INTO @Total
-		SELECT oddsid,
-			SUM(CASE WHEN betteam='h' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) 
-					 ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) homeTotal,
-			SUM(CASE WHEN betteam='a' THEN (CASE WHEN ABS(odds) > 1 THEN ABS(odds) 
-					 ELSE 1 END * b.stake * e.actualrate * (1-b.tpositiontaking)) ELSE 0 END) awayTotal
-		FROM bettrans b WITH (nolock)
-			INNER JOIN custDB.dbo.exchange e WITH (nolock) ON b.currency = e.exchangeid
-		WHERE bettype IN (1,3,7,8) AND ruben = 0 AND oddsid <> 0 AND matchid = @MatchId
-		GROUP BY oddsid
-		
-	UPDATE odds WITH (rowlock, updlock)
-	SET hometotal = t.HomeTotal, awaytotal = t.AwayTotal
-	FROM @Total t WHERE odds.oddsid = t.oddsid AND odds.matchid = @MatchId
 	
 	--Get data after update
 	INSERT INTO #AfterUpd (custid, balance)
@@ -352,7 +334,7 @@ BEGIN
 	WHERE	    (a.balance - b.balance) < 0
 	
 	------------------***** End of Special Delete *****------------------
-	SELECT @LogData ='fail to void bet for matchid ' + CONVERT(VARCHAR(20), 
+	SELECT @LogData ='void bet for matchid ' + CONVERT(VARCHAR(20), 
 			@MatchId) + ' bettype ' + CONVERT(VARCHAR(20), @bettype) + ' betteam ' + @BetTeam
 			
 	EXEC WriteLog_UserLog 
@@ -361,10 +343,9 @@ BEGIN
 		
 	IF OBJECT_ID('tempdb..#BeforeUpd') IS NOT NULL DROP TABLE #BeforeUpd
 	IF OBJECT_ID('tempdb..#AfterUpd') IS NOT NULL DROP TABLE #AfterUpd
-	
+
 	DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
-	WHERE KeyID = @KeyID AND KeyValue = @MatchId
-	
+	WHERE KeyID = @KeyID AND KeyValue = @MatchId	
 	
 	IF (@@Error = 0)
 	BEGIN TRY
@@ -546,3 +527,10 @@ BEGIN
 	
 	SET NOCOUNT OFF
 END
+GO
+GRANT EXECUTE ON [dbo].[NAP_InvalidGoalScorerTicketVoid] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_InvalidGoalScorerTicketVoid] TO [vnteam] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[NAP_InvalidGoalScorerTicketVoid] TO [Dot_CoreAPI] AS [dbo]
+GO

@@ -1,23 +1,25 @@
-﻿USE [bodb02]
-GO
-Alter Procedure [dbo].[Acc_CustomerSelSuspended]
-	@CustID int
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelSuspended]
+	@CustID INT
 AS
-SET NOCOUNT ON
+
 /*
 Created: 
 Task : Get status suspended by custid
-DB: DB05.bodb02
+DB: DBCUST.CustDB
 Original:Accounting site
 
 Revisions:
 	- 20090527@Pluto: Get customer suspended status
+	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 Param's Explanation:
 	@CustID: id of customer
-*/		
-Select isnull(reject,0) as Suspended
-From custinfo with (nolock)
-Where CustID = @CustID
+*/
+
+SET NOCOUNT ON
+
+SELECT ISNULL(reject, 0) AS Suspended
+FROM custinfo WITH (NOLOCK)
+WHERE CustID = @CustID
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelSuspended] TO [bodbAdminNet]

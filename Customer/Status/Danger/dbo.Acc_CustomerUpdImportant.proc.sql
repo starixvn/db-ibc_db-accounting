@@ -19,6 +19,7 @@ SET NOCOUNT ON
 		- 20110907@Sophia: Change Linked Server from DB052 to DB053
 		- 20110908@Lukas: Check is existed customer to update important
 		- 20130306@Lukas: change linked-server alias
+		- 20150606@Elodie: Separate CustDB to DBCUST server (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB)
 */
 
 declare @startRun datetime
@@ -34,7 +35,7 @@ If @ErrCode <> 0
 	RETURN
 --end
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 if @ErrCode <>0 return
 --end
 
@@ -94,7 +95,6 @@ BEGIN CATCH
 		@TrackingValue = @LogSPData,
 		@duration = @duration
 END CATCH
-
 
 
 

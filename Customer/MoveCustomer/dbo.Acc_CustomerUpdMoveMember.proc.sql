@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMember]    Script Date: 05/11/2015 10:33:14 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMember]    Script Date: 06/08/2015 18:06:22 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -62,6 +62,8 @@ Revisions:
 	- 20140828@Logan:   Add constraint for Esports status [Redmine: #20531]
 	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine:#26647]
 	- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
+	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
+	
 	
 Param's Explanation:
 • @ErrCode:
@@ -250,7 +252,7 @@ BEGIN
 	    RETURN
     END
     --check an account disabled or not 
-    EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable
+    EXEC dbo.Acc_CustomerSelCheckEnable
         @username = @membername
       , @ErrCode = @ErrCode OUTPUT
       , @ErrMsg = @ErrMsg OUTPUT
@@ -258,7 +260,7 @@ BEGIN
     IF @ErrCode <> 0
         RETURN
 
-    EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable
+    EXEC dbo.Acc_CustomerSelCheckEnable
         @username = @agentname
       , @ErrCode = @ErrCode OUTPUT
       , @ErrMsg = @ErrMsg OUTPUT
@@ -377,11 +379,16 @@ BEGIN
 	--Check Gold Deluxe
     IF @aDisableGoldDeluxe = 1 AND @DisableGoldDeluxe = 0
     BEGIN
-	    SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is enabled Gold Deluxe but new agent is not enabled Gold Deluxe.',
-		    @ErrCode = 121				 
-	    IF @ReturnErrCode = 0
-		    RAISERROR(@ErrMsg, 16, 1)
-	    return
+		UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
+           SET DisableGoldDeluxe = 1
+        WHERE custid  = @custid
+        
+        IF @@ERROR <>0 
+        BEGIN
+            SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': update unsuccessfully (custinfo).',
+                    @ErrCode = 309
+            RETURN
+        END
     END
 
     --Check CS SyncCasino between Agent AND Member 
@@ -1570,26 +1577,19 @@ BEGIN
     END
     
     --Gold Deluxe
-    IF @aHideGoldDeluxe = 0 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
+    IF @aHideGoldDeluxe = 1 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
     BEGIN
-	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	    SET		HideGoldDeluxe = 0
-	    WHERE	custid = @custid 
-	    IF @@ERROR <>0
-	    BEGIN
-		    Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+		    Select	@ErrMsg = 'Member is offered Gold Deluxe but new Agent is not offered Gold Deluxe.',
 				    @ErrCode = 507
-		    IF @ReturnErrCode = 0
-			    RAISERROR(@ErrMsg, 16, 1)
+		    
 		    RETURN 
-	    END
     END
     
     --Gold Deluxe
-    IF @aDisableGoldDeluxe = 0 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
+    IF @aDisableGoldDeluxe = 1 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
     BEGIN
 	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	    SET		DisableGoldDeluxe = 0
+	    SET		DisableGoldDeluxe = 1
 	    WHERE	custid = @custid 
 	    IF @@ERROR <>0
 	    BEGIN
@@ -1996,6 +1996,7 @@ BEGIN
 		    @duration = @duration	
     END CATCH
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet] AS [dbo]

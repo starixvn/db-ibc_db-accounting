@@ -1,13 +1,22 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_CustomerSelCasinoBonusStatus]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerSelCasinoBonusStatus]    Script Date: 6/9/2015 9:57:00 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_CustomerSelCasinoBonusStatus]
 	@custid INT
 	
 /*
 	Created: Elodie
 	Date: 2013-07-30
-	DB: DBAGE/BODB02
+	DB: DBCUST.CustDB
 	Task: get DisableCasinoBonus status
 	
 	Revisions:
+		- 20150609@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 */
 AS
 SET NOCOUNT ON
@@ -49,17 +58,8 @@ SELECT
 
 FROM custinfo ci WITH(NOLOCK)
 WHERE custid = @custid
-					
-					
-								
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelCasinoBonusStatus] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCasinoBonusStatus] TO [bodbExtAccNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCasinoBonusStatus] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCasinoBonusStatus] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelCasinoBonusStatus] TO [vnteam]

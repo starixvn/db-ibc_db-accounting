@@ -1,10 +1,11 @@
-﻿USE [bodb02]
+﻿USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdSecurityCode]    Script Date: 10/27/2013 10:29:06 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdSecurityCode]    Script Date: 06/10/2015 14:57:08 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdSecurityCode    Script Date: 12/5/2013 4:34:23 PM ******/
 /****** Object:  Stored Procedure dbo.Acc_CustomerUpdSecurityCode    Script Date: 4/23/2013 10:50:32 AM ******/
  ALTER PROCEDURE [dbo].[Acc_CustomerUpdSecurityCode]
 	@custid		INT,
@@ -24,6 +25,7 @@ GO
 		Task: upline/admin update Security code of customer
 		
 		Revisions:
+			- 20150609@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
 		
 		Parameter's Explanation:
 	*/
@@ -48,7 +50,7 @@ SET NOCOUNT ON
 	END
 	
 	--Check disable user
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 	if @ErrCode <>0 return
 	
 	SELECT @roleid = roleid 
@@ -166,5 +168,8 @@ SET NOCOUNT ON
 				@duration = @duration 
 		END CATCH
 	END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdSecurityCode] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdSecurityCode] TO [bodbExtAccNet] AS [dbo]

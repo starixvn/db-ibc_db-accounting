@@ -17,6 +17,7 @@ AS
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20140311@Dom: Add keno translog
 	- 20150529@Tom: Add filter by custid on translog
+	- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 */
 
 SET NOCOUNT ON  
@@ -35,11 +36,13 @@ BEGIN
 	INSERT INTO @BettypeTable
 	SELECT 
 		DISTINCT bettype 
-		FROM bettrans (nolock)
+		FROM bettrans b (nolock)
 	WHERE 
 		bettype < 19001 
 		AND custid = @CustID
 		AND winlostdate BETWEEN @TempFromDate AND @todate
+		--exclude metric gaming running ticket
+		AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
 	UNION ALL
 	SELECT 
 		DISTINCT gameID bettype 

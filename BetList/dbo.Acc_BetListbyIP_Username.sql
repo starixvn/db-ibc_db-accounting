@@ -35,7 +35,7 @@ AS
 	DECLARE @UserTicketTmp TABLE (custid INT, totalBet INT, Type TINYINT) --Type: 1: Ticket in bettrans, 2: Ticket in translog (for Keno)
 	INSERT INTO @UserTicketTmp (custid, totalBet, Type)
 	SELECT	custid, COUNT(custid), 1
-	FROM	dbo.bettrans WITH (NOLOCK)
+	FROM	dbo.bettrans b WITH (NOLOCK)
 	WHERE   winlostdate = @fromdate 
 			AND bettype < 19001
 			AND ip = @ip

@@ -2042,10 +2042,9 @@ BEGIN
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 		INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 
+	SELECT * FROM @DetailData
 END
-		   
- SELECT * FROM @DetailData
-  	
+		     	
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByDayAll] TO [bodbAdminNet]
 GO

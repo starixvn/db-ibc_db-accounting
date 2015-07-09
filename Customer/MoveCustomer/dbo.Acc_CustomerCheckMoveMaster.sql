@@ -1,34 +1,27 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveMaster]    Script Date: 05/11/2015 09:21:09 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_CustomerCheckMoveMaster    Script Date: 9/11/2014 9:52:03 AM ******/
 ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
-	@userid		INT,	
-	@ErrCode    INT = 0 OUTPUT,
-	@ErrMsg     NVARCHAR(200) = '' OUTPUT
+	@userid		INT,
+	@ErrCode	INT = 0 OUTPUT,
+	@ErrMsg		NVARCHAR(200) = '' OUTPUT
 AS
 /*
 	Created: Johnson
 	Date: 2012-04-03
 	Task : Check moving a master to another super
-	DB: DBAGE/bodb02
+	DB: DBCUST.CustDB
 	
 	Revisions:
-				- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
-				- 20120821@Dan: add virtual soccer, remove FI
-				- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
-				- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
-				- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
-				- 20140314@Elodie: Add Keno product [Redmine:#13326]
-				- 20140818@Logan:   Exclude disabled agents, members while checking constraints. [Redmine: #19763]
-				- 20140828@Logan:   Add constraint for E-Sports status [Redmine: #20531]
-				- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
+		- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
+		- 20120821@Dan: add virtual soccer, remove FI
+		- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+		- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
+		- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
+		- 20140314@Elodie: Add Keno product [Redmine:#13326]
+		- 20140818@Logan:   Exclude disabled agents, members while checking constraints. [Redmine: #19763]
+		- 20140828@Logan:   Add constraint for E-Sports status [Redmine: #20531]
+		- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -386,14 +379,6 @@ BEGIN
 		SELECT @ErrMsg = 'Master is offered Gold Deluxe but new super is not offered Gold Deluxe.',
 			@ErrCode = 125
 		return
-	END
-	
-	 --E-Sports
-	IF @sDisableGoldDeluxe = 1 and @mDisableGoldDeluxe = 0
-	BEGIN
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Gold Deluxe but new super is not enabled Gold Deluxe.'
-		     , @ErrCode = 126
-		RETURN
 	END
 	
 	--Check Number Game
@@ -760,7 +745,7 @@ BEGIN
 	--END
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam] AS [dbo]

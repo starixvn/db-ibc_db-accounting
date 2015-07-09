@@ -12,39 +12,29 @@ as
 		- 20130121@Johnson: move sp from DB052.BODB02 to DBBET.BK
 		- 20130225@Elodie: Add Virtual Horse Racing report
 		- 20141211@Sophia: change the range of bettypes of Tennis (1301 -> 1399)
-		- 20150420@Sophia: Apply Sport Bettype Matrix 
 	Param's explanation:		
 	
 */
 Begin
 	SET NOCOUNT ON 	
-	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
-	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
-
-
-
+	
 	CREATE TABLE #tmp(transid BIGINT)
     --insert into #tmp
     INSERT INTO #tmp
     SELECT bt.transid
     FROM bodb02.dbo.bettrans bt WITH (nolock) 
         INNER join dbo.betsReject b WITH (nolock) ON bt.transid=b.transid        
-		INNER JOIN @SportBettype s on s.bettype = b.bettype
     WHERE bt.winlostdate=@winlostdate
         and bt.custid<>98632
 		and (bt.status<>b.status) 
 		and b.currency <> 20
-		AND s.productID IN ( 1,2,3,5)
-		/*and (
+		and (
 				bt.bettype < 31  or bt.bettype between 121 AND 999 or bt.bettype between 1301 AND 1399 --sportbook
 				OR bt.bettype BETWEEN 81 AND 120 --number game					
 				OR bt.bettype IN (31,32,33,41,42,43) --racing
 				OR bt.bettype BETWEEN 1201 AND 1299 --virtual sports
 			)
-		*/	
-
+			
 	DECLARE @Match TABLE (matchid int, homeid int, awayid int, matchcode nvarchar(50), type varchar(10))
 	
 	INSERT INTO @Match
@@ -94,11 +84,10 @@ Begin
 		inner join dbo.betsreject b with (nolock) on bt.transid=b.transid
 		inner join bodb02.dbo.custinfo c with (nolock) on bt.creator = c.custid
 		inner JOIN @Match m on b.matchid = m.matchid
-		INNER JOIN @SportBettype s on s.bettype = b.bettype
 	where bt.transid in (SELECT transid from #tmp)			
-		AND m.type = CASE  WHEN((s.ProductID=2) OR (s.ProductID = 1 AND s.EventType = 2)) THEN 'outright'  ----- b.bettype IN (31,32,33,41,42,43,10) THEN 'outright'
+		AND m.type = CASE  WHEN b.bettype IN (31,32,33,41,42,43,10) THEN 'outright'
 							ELSE 'match' END
-		AND b.bettype NOT IN (SELECT bettype FROM @SportBettype WHERE (ProductID=5 AND EventType =3)) ---(1231,1232,1233,1237,1238)
+		AND b.bettype NOT IN (1231,1232,1233,1237,1238)
 		
 	-- Virtual HR
 	UNION ALL
@@ -124,10 +113,9 @@ Begin
 		inner join dbo.betsreject b with (nolock) on bt.transid=b.transid
 		inner join bodb02.dbo.custinfo c with (nolock) on bt.creator = c.custid
 		inner JOIN @Match m on bt.oddsid = m.matchid
-		INNER JOIN @SportBettype s on s.bettype = b.bettype
 	where bt.transid in (SELECT transid from #tmp)			
 		AND m.type = 'VSOutright'
-		AND (s.ProductID=5 AND s.EventType =3) ---AND b.bettype IN (1231,1232,1233,1237,1238)
+		AND b.bettype IN (1231,1232,1233,1237,1238)
 	ORDER BY bt.transid		
 	
 	DROP TABLE #tmp	 	
