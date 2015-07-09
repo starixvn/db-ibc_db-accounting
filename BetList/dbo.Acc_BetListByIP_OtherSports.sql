@@ -54,6 +54,7 @@ Revisions:
 	- 20141103@Dom: Apply sport bettype matrix
 	- 20150506@Tom: Support Gold Deluxe Product [#34847]
 	- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
+	- 20150709@Edward: Supporting for MicroGamming
 	
 Param's Explanation:
 	• @fromdate = @winlostdate
@@ -1582,6 +1583,183 @@ BEGIN
 				FROM 	bettrans14 b with (nolock)
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 				WHERE	s.ProductID = 12
+						AND b.winlostdate = @fromdate
+						AND b.custid = @custid
+
+				UNION ALL--MicroGamming
+				SELECT	0 finalhomescore,
+						0 finalawayscore, 
+						0 oddsid, 
+						0 leagueid,
+						b.bettype, 
+						b.transid,
+						isnull(b.BetID,0) as BetID,
+						b.refno,
+						'' matchcode, 
+						'' as race, 
+						'' as eventdate, 
+						0 as virtualrate,
+						0 as isShowOTExRate,
+						b.sdiscount,
+						b.adiscount,
+						b.discount,
+						0 homeid,
+						0 awayid,
+						ISNULL(b.checktime,'') checktime, 
+						b.hdp1, 
+						b.hdp2,
+						b.odds,  
+						b.modds,
+						0 finalodds,
+						0 finalodds2, 
+						' ' OddsType, 
+						b.status,
+						CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+						b.stake, 
+						b.actual_stake,
+						b.transdate, 
+						b.betteam,   
+						b.livehomescore,
+						b.liveawayscore, 
+						0 liveindicator, 
+						(b.winlost-b.actual_stake)  winlost,
+						b.playercomm as commission, 
+						CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+						b.username,
+						0 hthomescore, 0 htawayscore,ip, 	
+						203 AS sporttype, 
+						b.matchid,
+						0 IsNeutral,
+						'' as showtime,
+						b.awinlost,
+						b.mwinlost,
+						b.swinlost,
+						b.betfrom,
+						b.winlostdate ,
+						b.betcheck,
+						'' AS transdesc
+				FROM 	bettrans b with (nolock)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				WHERE	s.ProductID = 13
+						AND b.winlostdate = @fromdate
+						AND b.custid = @custid
+
+				UNION ALL -- MicroGamming translog
+				SELECT	0 finalhomescore,
+						0 finalawayscore, 
+						0 oddsid, 
+						0 leagueid,
+						b.gameid, 
+						0 transid,
+						0 as BetID,
+						b.translogid,
+						'' matchcode, 
+						'' as race, 
+						'' as eventdate, 
+						0 as virtualrate,
+						0 as isShowOTExRate,
+						b.sdiscount,
+						b.adiscount,
+						b.discount,
+						0 homeid,
+						0 awayid,
+						'' checktime, 
+						0 hdp1, 
+						0 hdp2,
+						b.odds,  
+						0 modds,
+						0 finalodds,
+						0 finalodds2, 
+						' ' OddsType, 
+						b.status,
+						0 as comstatus,  
+						b.stake, 
+						b.actual_stake,
+						b.transdate, 
+						b.GameID3rd betteam,   
+						0 livehomescore,
+						0 liveawayscore, 
+						0 liveindicator, 
+						(-b.actual_stake)  winlost,
+						0 commission, 
+						CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+						b.username,
+						0 hthomescore, 0 htawayscore,ip, 	
+						203 AS sporttype, 
+						NULL matchid,
+						0 IsNeutral,
+						'' as showtime,
+						0 awinlost,
+						0 mwinlost,
+						0 swinlost,
+						b.betfrom,
+						b.winlostdate ,
+						'' betcheck,
+						'' AS transdesc					
+						
+				FROM 	dbo.translog b with (nolock)
+				INNER JOIN @SportBettype s ON s.Bettype = b.gameID
+				WHERE	s.ProductID = 13
+						AND b.winlostdate = @fromdate
+						AND b.custid = @custid
+						AND b.statusID = 0
+						
+				--- MicroGamming Bettrans 14
+				UNION ALL
+				SELECT	0 finalhomescore,
+						0 finalawayscore, 
+						0 oddsid, 
+						0 leagueid,
+						b.bettype, 
+						b.transid transid,
+						isnull(b.BetID,0) as BetID,
+						b.refno,
+						'' matchcode,
+						'' as race, 
+						'' as eventdate, 
+						0 as virtualrate,
+						0 as isShowOTExRate,
+						b.sdiscount,
+						b.adiscount,
+						b.discount,
+						0 homeid,
+						0 awayid,
+						ISNULL(b.checktime,'') checktime, 
+						b.hdp1, 
+						b.hdp2, 
+						b.odds,   
+						b.modds,
+						0 finalodds,
+						0 finalodds2,
+						' ' OddsType, 
+						b.status, 
+						CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,  
+						b.stake, 
+						b.actual_stake,
+						b.transdate, 
+						b.betteam,   
+						b.livehomescore, 
+						b.liveawayscore,
+						0 liveindicator, 
+						(b.winlost-b.actual_stake)  winlost,
+						b.playercomm as commission, 
+						CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
+						b.username,
+						0 hthomescore, 0 htawayscore,ip, 	
+						203 sporttype,
+						b.matchid,
+						0 IsNeutral,
+						'' as showtime,
+						b.awinlost,
+						b.mwinlost,
+						b.swinlost,
+						b.betfrom,
+						b.winlostdate  ,
+						b.betcheck,
+						'' AS transdesc
+				FROM 	bettrans14 b with (nolock)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				WHERE	s.ProductID = 13
 						AND b.winlostdate = @fromdate
 						AND b.custid = @custid
 						
