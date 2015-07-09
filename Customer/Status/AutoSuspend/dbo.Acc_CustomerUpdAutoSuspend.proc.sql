@@ -1,6 +1,4 @@
-﻿USE [CustDB]
-GO
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdAutoSuspend]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdAutoSuspend]
 	@CustID			INT,
 	@AutoSuspend	BIT = NULL, -- Auto-suspend Soccer
 	@AutoSuspendOther BIT = NULL, -- Auto-suspend non-soccer sports
@@ -33,6 +31,7 @@ AS
 							+ Apply execRep
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call Acc_ExecRep_Cust_04 instead of Acc_ExecRep_04)								
 		- 20141125@Jamie: Change DB location & Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]
+		- 20150606@Elodie: Separate CustDB to DBCUST server (Move Acc_CustomerSelCheckAllowedDownlines, Acc_CustomerSelCheckEnable to DBCUST.CustDB)
 	Param's Explanation:
 		@IsUpdDownline: auto-suspended all downlines
 
@@ -49,7 +48,7 @@ AS
 	If @ErrCode <> 0
 		RETURN
 	--Check disable user
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	EXEC Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 	if @ErrCode <>0 return
 	--end
 	DECLARE	@roleID	TINYINT,
@@ -89,7 +88,7 @@ AS
 		RETURN
 
 	-- Check Allowed downlines during peak hour at weekend 
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
+	EXEC Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
 											@roleid=@roleid,
 											@isExecRep=1,
 											@Language=@Language,
@@ -256,6 +255,7 @@ AS
 			@TrackingValue2 = @TrackingValueDB,
 			@duration = @duration 
 	END CATCH
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdAutoSuspend] TO [bodbAdminNet] AS [dbo]

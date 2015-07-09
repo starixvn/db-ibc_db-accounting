@@ -16,9 +16,21 @@ AS
 		DB: DBTXN/CustDB
 		
 		Revisions:
+		20150609@Alex: Separate CustDB to DBCUST server (Use temp table for sports, bettype, GameType table)
+
 */
 BEGIN
-	SELECT GameTypeID, GameTypeName FROM [bodb02].[dbo].[GameType] WITH(NOLOCK)
+SET NOCOUNT ON
+DECLARE @tmp_GameType TABLE (GameTypeID INT, GameTypeName NVARCHAR(50), IsDisabled BIT, IBCBettypeID INT)
+	BEGIN TRY		
+	INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+	SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBAGE.bodb02.dbo.GameType WITH (NOLOCK)
+	END TRY
+	BEGIN CATCH		
+		INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+		SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBTXN.bodb02.dbo.GameType WITH (NOLOCK)
+	END CATCH
+SELECT * FROM @tmp_GameType
 END
 GO
 

@@ -1,10 +1,5 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29]    Script Date: 08/27/2014 14:00:27 ******/
-SET ANSI_NULLS ON
+USE [bodb02]
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.Admin_Calculate_29    Script Date: 10/26/2012 10:37:04 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29] @matchids VARCHAR(2000)
 	,@matchdate SMALLDATETIME WITH RECOMPILE
 AS
@@ -16,7 +11,7 @@ AS
 	Original: Admin_Calculate_29
 
 	Revisions:
-		
+		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -195,7 +190,7 @@ BEGIN
 					WHEN pd.statusID IN (0, 1) THEN 1
 					ELSE 0
 					END) AS runningCnt
-		--MAX(pd.winlostdate) AS matchdate_max
+			,MAX(pd.winlostdate) AS matchdate_max
 		FROM dbo.BetParlayDetail pd WITH (ROWLOCK)
 			INNER JOIN @temp_bettrans tb ON pd.refno = tb.refno
 			INNER JOIN @refno_maxeventdate rm ON pd.refno = rm.refno
@@ -216,10 +211,15 @@ BEGIN
 			WHEN m.modds > 1 THEN 112 -- Won
 			ELSE - 1 -- error ??
 			END
-		,winlostdate = CASE @statusID
-			WHEN 0 THEN m.eventdate -- running : set winlostdate = maxeventdate
-			ELSE @matchdate -- settled : set winlostdate = input @matchdate
-			END
+		--,winlostdate = CASE @statusID
+		--	WHEN 0 THEN m.eventdate -- running : set winlostdate = maxeventdate
+		--	ELSE @matchdate -- settled : set winlostdate = input @matchdate
+		--	END
+		,winlostdate = CASE WHEN @statusID = 0 THEN m.eventdate
+						    WHEN @statusID IN (103,111,112) THEN  m.matchdate_max 
+						    WHEN @statusID = 113 THEN @matchdate
+							ELSE @matchdate
+							END
 		,Odds = m.Odds
 		,@odds = mOdds = CASE 
 			WHEN loseCnt > 0 THEN 0
@@ -350,6 +350,5 @@ BEGIN
 		,pr.refno
 		,pr.winlostdate
 END
-
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29] TO [vnteam] AS [dbo]

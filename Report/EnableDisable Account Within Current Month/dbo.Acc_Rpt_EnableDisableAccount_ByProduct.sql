@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
+ALTER PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
 	@ListCurrency	NVARCHAR(150)	= 'all', 
 	@SportType		INT ,
 	@ShowEnabled	BIT				=	1,
@@ -7,20 +7,18 @@ AS
 /*  Created: Dominic 
 	Date: 2014-06-02  
     Task : Total Credit Accounts Enabled/Disabled per Product
-    DB: DBAGE/bodb02  
+    DB: DBACC/bodb02
    
     Revisions:  
-		20140627@Dominic: Exclude special super with username  LIKE '3rdSuper%','STEST%','%ACCSuper%'
-		20140707@Dominic: Add Param @ShowEnabled/@ShowDisabled #18655
+		- 20140627@Dominic: Exclude special super with username  LIKE '3rdSuper%','STEST%','%ACCSuper%'
+		- 20140707@Dominic: Add Param @ShowEnabled/@ShowDisabled #18655
+		- 20150609@Kos: Separate CustDB to DBCUST server (Move SP to DBACC.bodb02)
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + {251:Casino, 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
-
-  
 */  
 BEGIN
 	SET NOCOUNT ON
-
 	
 	--Table of real creadit super filter by currency
 	CREATE TABLE #FiltedCreditSuper(
@@ -348,6 +346,7 @@ BEGIN
 	DROP TABLE #FiltedCreditSuper
 	DROP TABLE #FiltedDownlineAcc
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet]
 GO

@@ -1,15 +1,4 @@
-﻿USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Acc_ResetWinning_SelByDate14]    Script Date: 07/10/2014 03:43:35 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_ResetWinning_SelByDate14    Script Date: 7/4/2014 2:56:07 PM ******/
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
+﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	DATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
@@ -26,11 +15,43 @@ AS
 		- 20121102@Elodie: No need execute Acc_ResetWinning_SelByDate_Original (@winlostdate < '2012-09-01')		
 		- 20140310@Kathy: Automation of Keno's income account. [Redmine:#13106]
 		- 20140626@Logan: Improve performance. [Redmine: #17345]
+		- 20150604@Sophia: . Apply Gold Deluxe  
+						   . Remove P2P (Poker)
+						   . Revise Code
+						   . Apply AG Casino and Vegas Game [#37683]
 	Explanation's Param:
 
 */
 BEGIN	
 	SET NOCOUNT ON
+
+	DECLARE @DummyCust AS TABLE (CustId INT, Product VARCHAR(50) )
+
+	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+	IF (@SQL like '%_xtest%' OR  @SQL like '%_xpre%' )
+	BEGIN
+		SELECT @isTest = 1
+	END
+	ELSE
+	BEGIN
+		SELECT @isTest = 0
+	END
+	
+	IF @isTest = 0
+	BEGIN 
+		INSERT INTO @DummyCust (CustID, Product)
+		SELECT CustID, Product
+		FROM bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
+		WHERE Product NOT IN ('Total Balance','Poker', 'Poker (Due to Partners)')----, 'Racing (Due to Partners)') 
+	END 
+	ELSE
+	BEGIN 
+		INSERT INTO @DummyCust (CustID, Product)
+		SELECT CustID, Product
+		FROM bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
+		WHERE Product NOT IN ('Total Balance','Poker', 'Poker (Due to Partners)')  ---'Racing (Due to Partners)')
+	END 
+
 
 	DECLARE @Winning TABLE 
 	(
@@ -45,16 +66,7 @@ BEGIN
 	    winlost       MONEY
 	)
 
-    DECLARE @uus    tinyint  = 0
-            
-    SELECT @uus = c.currency
-      FROM custInfo c WITH(NOLOCK)
-INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
-     WHERE c.custid = (SELECT MIN(custid)
-                         FROM bodb_ACC.dbo.Acc_DWLList
-                        WHERE custid > 0
-                      )
-	
+
 	INSERT INTO #source
 	SELECT CASE
 	         WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
@@ -66,17 +78,12 @@ INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
 	                                                                              WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
 	                                                                              ELSE actualrate
 	                                                                            END), 0)) as winlost
-      FROM bettrans b WITH(READPAST, INDEX = IX_Report)
- LEFT JOIN bodb_ACC.dbo.Acc_DWLList d WITH(NOLOCK) ON b.custid = d.custid
-	 WHERE b.ruben = 1
+    FROM bettrans b WITH(READPAST, INDEX = IX_Report)
+	LEFT JOIN @DummyCust d ON b.custid = d.custid
+	WHERE b.ruben = 1
 	   AND b.winlostdate = @winlostdate
-	   AND b.statusid NOT IN (101, 102, 103, 121)
-	   AND (@uus = 20 AND b.custid NOT IN (6911909, 6911911, 6911913, 6911914, 6911916,
-                                           6911917, 6911918, 6911919, 6911920, 6913085,
-                                           8158305, 14054918
-                                          )
-         OR @uus <> 20)	   
-  GROUP BY CASE
+	   AND b.statusid NOT IN (101, 102, 103, 121) 
+	GROUP BY CASE
              WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
              ELSE -1
            END, b.bettype
@@ -89,10 +96,7 @@ INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
 	---- get total balance
 	SELECT @totalBalance = ISNULL(SUM(winlost), 0)
 	  FROM #source
-	 WHERE custid NOT IN (SELECT custid
-	                        FROM bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
-	                       WHERE custid <> 0
-	                     )
+	 WHERE custid NOT IN (SELECT custid FROM @DummyCust)
 	   AND bettype <> 20000
 
 
@@ -112,34 +116,31 @@ INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
 	       SUM(ISNULL(winlost, 0)) as winlost
 	  FROM #source
 	 WHERE bettype = 19999 
-	   AND custid NOT IN (SELECT custid 
-	                        FROM bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
-	                       WHERE custid <> 0
-	                     )
+	   AND custid NOT IN (SELECT custid FROM @DummyCust)
 
 	----- calculate reset
 	;WITH rs AS
 	(
-		SELECT 'All products' AS product,
-		       SUM(ISNULL(winlost, 0)) AS reset
-		  FROM #source b			
-    INNER JOIN bodb_ACC.dbo.Acc_DWLList d WITH(NOLOCK) ON b.custid = d.custid
-		 WHERE b.bettype IN (21001, 21002)
-		   AND d.custid <> 0
+		SELECT 'All products' AS product
+				,SUM(ISNULL(winlost, 0)) AS reset
+		FROM #source b
+		INNER JOIN @DummyCust d
+			ON b.custid = d.custid
+		WHERE b.bettype IN (21001, 21002)
+			AND d.custid <> 0
 	) 	
 	SELECT w.product,
 	       ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
 	       ROUND(ISNULL(rs.reset, 0), 2) AS reset
-	  FROM @winning w	
- LEFT JOIN rs rs ON w.product = rs.product
+	FROM @winning w	
+	LEFT JOIN rs rs ON w.product = rs.product
 
 	DROP TABLE #source	
 END
 
-
 GO
-GRANT EXECUTE ON Acc_ResetWinning_SelByDate14 TO bodbAdminNet
+
+GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON Acc_ResetWinning_SelByDate14 TO vnteam
-
-
+GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam] AS [dbo]
+GO 

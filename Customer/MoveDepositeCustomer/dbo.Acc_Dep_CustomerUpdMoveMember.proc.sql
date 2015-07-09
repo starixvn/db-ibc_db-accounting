@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Dep_CustomerUpdMoveMember]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Dep_CustomerUpdMoveMember]    Script Date: 06/11/2015 09:42:56 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_Dep_CustomerUpdMoveMember    Script Date: 12/24/2013 2:49:26 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_Dep_CustomerUpdMoveMember    Script Date: 12/5/2013 5:09:05 PM ******/
+ALTER PROCEDURE [dbo].[Acc_Dep_CustomerUpdMoveMember]
 	@agentname varchar(40),
 	@membername varchar(40),
 	@userid int,
@@ -41,7 +50,8 @@ Revisions:
 	- 20111020@Tom:Add check P2P Game: Status, game setting, commission.
 	- 20120322@Johnson: Check live casino
 	- 20130723@Jim: change server alias name
-	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo,customer table in main SP)  			
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo,customer table in main SP)  	
+	- 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]			
 	 
 Param's Explanation:
 • @ErrCode:
@@ -104,15 +114,15 @@ declare @srecommend			int,
 		@aClosed			BIT,
 		@Closed				BIT,
 		@aSuspended			BIT,
-		@Suspended			BIT,
-		@aMaxTransferP2P	MONEY,
-		@MaxTransferP2P		MONEY,
-		@aIsAutoResetP2P	BIT,
-		@IsAutoResetP2P		BIT,
-		@aDisableP2P		BIT, 
-		@DisableP2P			BIT, 
-		@aDisableFunP2P		BIT,
-		@DisableFunP2P		BIT
+		@Suspended			BIT
+		--@aMaxTransferP2P	MONEY,
+		--@MaxTransferP2P		MONEY,
+		--@aIsAutoResetP2P	BIT,
+		--@IsAutoResetP2P		BIT,
+		--@aDisableP2P		BIT, 
+		--@DisableP2P			BIT, 
+		--@aDisableFunP2P		BIT,
+		--@DisableFunP2P		BIT
 		
 select	@srecommend			= srecommend, 
 		@mrecommend			= mrecommend, 
@@ -132,11 +142,11 @@ select	@srecommend			= srecommend,
 		@aDisableBingo		= DisableBingo,
 		@aDisableNumber		= DisableNumber,
 		@aClosed			= closed,
-		@aSuspended			= reject,
-		@aMaxTransferP2P	= MaxTransferP2P, 
-		@aIsAutoResetP2P	= IsAutoResetP2P, 
-		@aDisableP2P		= DisableP2P, 
-		@aDisableFunP2P		= DisableFunP2P	
+		@aSuspended			= reject
+		--@aMaxTransferP2P	= MaxTransferP2P, 
+		--@aIsAutoResetP2P	= IsAutoResetP2P, 
+		--@aDisableP2P		= DisableP2P, 
+		--@aDisableFunP2P		= DisableFunP2P	
 from	custinfo with (nolock)
 where	username = @agentname and roleid = 2
 
@@ -159,11 +169,11 @@ select	@custid				= custid,
 		@DisableBingo		= DisableBingo,
 		@DisableNumber		= DisableNumber,
 		@Closed				= closed,
-		@Suspended			= reject,
-		@MaxTransferP2P		= MaxTransferP2P, 
-		@IsAutoResetP2P		= IsAutoResetP2P, 
-		@DisableP2P			= DisableP2P, 
-		@DisableFunP2P		= DisableFunP2P
+		@Suspended			= reject
+		--@MaxTransferP2P		= MaxTransferP2P, 
+		--@IsAutoResetP2P		= IsAutoResetP2P, 
+		--@DisableP2P			= DisableP2P, 
+		--@DisableFunP2P		= DisableFunP2P
 from	custinfo with (nolock) 
 where	username = @membername and roleid = 1
 
@@ -194,10 +204,10 @@ BEGIN
 	return
 END
 --check an account disabled or not 
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @membername, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
+EXEC dbo.Acc_CustomerSelCheckEnable @username = @membername, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
 if @ErrCode <>0		return 
 
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @agentname, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
+EXEC dbo.Acc_CustomerSelCheckEnable @username = @agentname, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
 if @ErrCode <>0		return 
 
 if @currency_old <> @acurrency
@@ -402,20 +412,20 @@ BEGIN
 	return
 END
 
---Check P2P :Game Setting
-IF exists(
-	SELECT TOP 1 1
-	FROM dbo.P2PGROUPCOMM me WITH(NOLOCK)
-		INNER JOIN dbo.P2PGROUPCOMM a WITH(NOLOCK)
-			ON a.GroupID = me.GroupID
-		WHERE  me.custid = @custid AND A.custid = @recommend
-				AND (a.discount < me.playerdiscount )
-)
-BEGIN
-	Select @ErrMsg = 'Error agent ' + @agentname + ', member ' + @membername + ': P2P''s commission of member is greater than P2P''s commission of new agent .',
-		@ErrCode = 203
-	return
-END
+----Check P2P :Game Setting
+--IF exists(
+--	SELECT TOP 1 1
+--	FROM dbo.P2PGROUPCOMM me WITH(NOLOCK)
+--		INNER JOIN dbo.P2PGROUPCOMM a WITH(NOLOCK)
+--			ON a.GroupID = me.GroupID
+--		WHERE  me.custid = @custid AND A.custid = @recommend
+--				AND (a.discount < me.playerdiscount )
+--)
+--BEGIN
+--	Select @ErrMsg = 'Error agent ' + @agentname + ', member ' + @membername + ': P2P''s commission of member is greater than P2P''s commission of new agent .',
+--		@ErrCode = 203
+--	return
+--END
 
 ----------------------------
 DECLARE
@@ -585,64 +595,64 @@ SELECT @v162apositiontaking_1101 = apositiontaking FROM CustSettingGame WITH(NOL
 
 print  'Move member '+@membername+' from agent id '+convert(varchar(20), @recommend_old)+' to agent '+@agentname+' (id ' + convert(varchar(20), @recommend)+')'
 
---P2PGAMESETTING table
-UPDATE G_P
-SET stakelevel1 = CASE WHEN s.stakelevel1 = 1 AND G_P.stakelevel1 = 1 THEN 1 ELSE 0 END,
-	stakelevel2 = CASE WHEN s.stakelevel2 = 1 AND G_P.stakelevel2 = 1 THEN 1 ELSE 0 END,
-	stakelevel3 = CASE WHEN s.stakelevel3 = 1 AND G_P.stakelevel3 = 1 THEN 1 ELSE 0 END,
-	stakelevel4 = CASE WHEN s.stakelevel4 = 1 AND G_P.stakelevel4 = 1 THEN 1 ELSE 0 END,
-	stakelevel5 = CASE WHEN s.stakelevel5 = 1 AND G_P.stakelevel5 = 1 THEN 1 ELSE 0 END
-FROM P2PGameSetting G_P WITH (ROWLOCK, UPDLOCK)
-	INNER JOIN 
-		( SELECT * FROM dbo.P2PGameSetting s WITH(NOLOCK) WHERE custid = @srecommend) s
-			ON G_P.BETTYPE = s.BETTYPE
-WHERE G_P.custid = @CustID
+----P2PGAMESETTING table
+--UPDATE G_P
+--SET stakelevel1 = CASE WHEN s.stakelevel1 = 1 AND G_P.stakelevel1 = 1 THEN 1 ELSE 0 END,
+--	stakelevel2 = CASE WHEN s.stakelevel2 = 1 AND G_P.stakelevel2 = 1 THEN 1 ELSE 0 END,
+--	stakelevel3 = CASE WHEN s.stakelevel3 = 1 AND G_P.stakelevel3 = 1 THEN 1 ELSE 0 END,
+--	stakelevel4 = CASE WHEN s.stakelevel4 = 1 AND G_P.stakelevel4 = 1 THEN 1 ELSE 0 END,
+--	stakelevel5 = CASE WHEN s.stakelevel5 = 1 AND G_P.stakelevel5 = 1 THEN 1 ELSE 0 END
+--FROM P2PGameSetting G_P WITH (ROWLOCK, UPDLOCK)
+--	INNER JOIN 
+--		( SELECT * FROM dbo.P2PGameSetting s WITH(NOLOCK) WHERE custid = @srecommend) s
+--			ON G_P.BETTYPE = s.BETTYPE
+--WHERE G_P.custid = @CustID
 
-IF @@ERROR <> 0 
-	BEGIN
-		IF @@ERROR <>0
-			SELECT	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (P2PGameSetting).',
-					@ErrCode = 300
-		RETURN
-	END
+--IF @@ERROR <> 0 
+--	BEGIN
+--		IF @@ERROR <>0
+--			SELECT	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (P2PGameSetting).',
+--					@ErrCode = 300
+--		RETURN
+--	END
 
-if (@aDisableP2P = 1 and @DisableP2P = 0) 
-	OR (@aIsAutoResetP2P = 0 and @IsAutoResetP2P = 1)
-	OR (@aDisableFunP2P = 1 and @DisableFunP2P = 0)
-	OR (@aMaxTransferP2P < @MaxTransferP2P)
-BEGIN
-	UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	SET		DisableP2P = CASE WHEN @aDisableP2P = 1 THEN 1 ELSE DisableP2P END,
-			DisableFunP2P = CASE WHEN @aIsAutoResetP2P = 1 THEN 1 ELSE DisableFunP2P END,
-			IsAutoResetP2P = CASE WHEN @aDisableFunP2P = 0 THEN 0 ELSE IsAutoResetP2P END,
-			MaxTransferP2P = CASE WHEN @aMaxTransferP2P < MaxTransferP2P THEN @aMaxTransferP2P ELSE MaxTransferP2P END
-	WHERE	custid = @CustID
-	IF @@ERROR <>0
-	BEGIN
-		Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
-				@ErrCode = 301
-		RETURN 
-	END
-END
+--if (@aDisableP2P = 1 and @DisableP2P = 0) 
+--	OR (@aIsAutoResetP2P = 0 and @IsAutoResetP2P = 1)
+--	OR (@aDisableFunP2P = 1 and @DisableFunP2P = 0)
+--	OR (@aMaxTransferP2P < @MaxTransferP2P)
+--BEGIN
+--	UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
+--	SET		DisableP2P = CASE WHEN @aDisableP2P = 1 THEN 1 ELSE DisableP2P END,
+--			DisableFunP2P = CASE WHEN @aIsAutoResetP2P = 1 THEN 1 ELSE DisableFunP2P END,
+--			IsAutoResetP2P = CASE WHEN @aDisableFunP2P = 0 THEN 0 ELSE IsAutoResetP2P END,
+--			MaxTransferP2P = CASE WHEN @aMaxTransferP2P < MaxTransferP2P THEN @aMaxTransferP2P ELSE MaxTransferP2P END
+--	WHERE	custid = @CustID
+--	IF @@ERROR <>0
+--	BEGIN
+--		Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+--				@ErrCode = 301
+--		RETURN 
+--	END
+--END
 
---P2PGroupComm table
-UPDATE G_C 
-SET sdiscount = a.sdiscount,
-	adiscount  =a.adiscount,
-	discount  =a.discount
-FROM P2PGroupComm G_C WITH (ROWLOCK, UPDLOCK)
-	INNER JOIN 
-		( SELECT * FROM dbo.P2PGROUPCOMM a WITH(NOLOCK) WHERE custid = @recommend) a
-		ON G_C.GroupID = a.GroupID
-WHERE G_C.custid = @custid
+----P2PGroupComm table
+--UPDATE G_C 
+--SET sdiscount = a.sdiscount,
+--	adiscount  =a.adiscount,
+--	discount  =a.discount
+--FROM P2PGroupComm G_C WITH (ROWLOCK, UPDLOCK)
+--	INNER JOIN 
+--		( SELECT * FROM dbo.P2PGROUPCOMM a WITH(NOLOCK) WHERE custid = @recommend) a
+--		ON G_C.GroupID = a.GroupID
+--WHERE G_C.custid = @custid
 
-IF @@ERROR <> 0 
-BEGIN
-	IF @@ERROR <>0
-		SELECT	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
-				@ErrCode = 302
-	RETURN
-END
+--IF @@ERROR <> 0 
+--BEGIN
+--	IF @@ERROR <>0
+--		SELECT	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+--				@ErrCode = 302
+--	RETURN
+--END
 
 --customer table
 update customer with (ROWLOCK, UPDLOCK) set srecommend = @srecommend, mrecommend = @mrecommend,
@@ -929,9 +939,7 @@ set @duration  = datediff (millisecond,@startRun,@endRun)
 		@TrackingValue = @LogSPData,
 		@duration = @duration
 
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [bodbadminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Dep_CustomerUpdMoveMember] TO [vnteam] AS [dbo]

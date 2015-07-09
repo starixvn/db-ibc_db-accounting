@@ -1,4 +1,14 @@
-CREATE PROCEDURE [NAP_UpdateNumberGameBalls]
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_UpdateNumberGameBalls]    Script Date: 06/12/2015 15:36:53 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+/****** Object:  Stored Procedure dbo.NAP_UpdateNumberGameBalls    Script Date: 3/20/2014 5:44:00 PM ******/
+ALTER PROCEDURE [dbo].[NAP_UpdateNumberGameBalls]
 	@MatchId int,
 	@FirstBall tinyint = NULL, -- 0 means N/A	
 	@SecondBall tinyint = NULL, -- 0 means N/A
@@ -14,7 +24,7 @@ AS
 	Orignal: Acc_UpdateNumberGameBalls
 
 	Revisions:
-	
+		20150612@Kathy: Not allow to insert/delete table TempVariableNumber by linked server. Use SP NAP_UpdateTempVariableNumber   [Redmine:#36216](Migrate custDB to new server - DBCust)
 */
 BEGIN	
 
@@ -28,8 +38,11 @@ BEGIN
 END
 
 DECLARE @LogData NVARCHAR(300)
-INSERT INTO DBTXN.bodb02.dbo.TempVariableNumber (KeyID, KeyValue) VALUES (1, @MatchId)
-IF (@@Error = 0)
+
+EXEC DBTXN.bodb02.dbo.NAP_UpdateTempVariableNumber @matchid = @matchid, @ActionId = 1, @ErrCode = @ErrCode OUTPUT
+--INSERT INTO DBTXN.bodb02.dbo.TempVariableNumber (KeyID, KeyValue) VALUES (1, @MatchId)
+
+IF (@ErrCode = 0)
 BEGIN 
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
@@ -67,9 +80,11 @@ END
 	-- FIRST ball
 	IF @FirstBall IS NULL 
 	BEGIN 
-		DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
-		WHERE KeyID = 1 AND KeyValue = @MatchId	
-		IF (@@Error = 0)
+		--DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
+		--WHERE KeyID = 1 AND KeyValue = @MatchId	
+		--IF (@@Error = 0)
+		EXEC DBTXN.bodb02.dbo.NAP_UpdateTempVariableNumber @matchid = @matchid, @ActionId = 0, @ErrCode = @ErrCode OUTPUT
+		IF @ErrCode = 0
 		BEGIN	
 			BEGIN TRY
 				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
@@ -110,9 +125,12 @@ END
 	-- SECOND ball
 	IF @SecondBall IS NULL 
 	BEGIN 
-		DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
-		WHERE KeyID = 1 AND KeyValue = @MatchId	
-		IF (@@Error = 0)
+		--DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
+		--WHERE KeyID = 1 AND KeyValue = @MatchId	
+		--IF (@@Error = 0)
+		EXEC DBTXN.bodb02.dbo.NAP_UpdateTempVariableNumber @matchid = @matchid, @ActionId = 0, @ErrCode = @ErrCode OUTPUT
+		
+		IF @ErrCode = 0
 		BEGIN	
 			BEGIN TRY
 				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
@@ -153,9 +171,12 @@ END
 	-- THIRD ball
 	IF @ThirdBall IS NULL 
 	BEGIN 
-		DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
-		WHERE KeyID = 1 AND KeyValue = @MatchId	
-		IF (@@Error = 0)
+		--DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
+		--WHERE KeyID = 1 AND KeyValue = @MatchId	
+		--IF (@@Error = 0)
+		EXEC DBTXN.bodb02.dbo.NAP_UpdateTempVariableNumber @matchid = @matchid, @ActionId = 0, @ErrCode = @ErrCode OUTPUT
+		
+		IF @ErrCode = 0
 		BEGIN	
 			BEGIN TRY
 				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
@@ -195,9 +216,11 @@ END
 	
 	   
 ----
-DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
-WHERE KeyID = 1 AND KeyValue = @MatchId	
-IF (@@Error = 0)
+--DELETE FROM DBTXN.bodb02.dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK) 
+--WHERE KeyID = 1 AND KeyValue = @MatchId	
+--IF (@@Error = 0)
+EXEC DBTXN.bodb02.dbo.NAP_UpdateTempVariableNumber @matchid = @matchid, @ActionId = 0, @ErrCode = @ErrCode OUTPUT
+IF @ErrCode = 0
 BEGIN	
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
@@ -232,13 +255,7 @@ END
 
 END
 
-
 GO
-
-GRANT EXECUTE ON [NAP_UpdateNumberGameBalls] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_UpdateNumberGameBalls] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_UpdateNumberGameBalls] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_UpdateNumberGameBalls] TO [vnteam] AS [dbo]

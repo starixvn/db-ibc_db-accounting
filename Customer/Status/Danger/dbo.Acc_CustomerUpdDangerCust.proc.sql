@@ -1,9 +1,4 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
-
-
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdDangercust]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdDangercust]
 	@CustID int,
 	@UpdateDownline bit = 0,
 	@DangerType tinyint,
@@ -37,6 +32,7 @@ Revisions:
 	- 20110907@Sophia: Change Linked Server from DB052 to DB053
 	- 20120306@Jim: Edit dangerous level of BA accounts
 	- 20130201@Daniel: Change link server alias & failover writelog to DBTXN
+	- 20150606@Elodie: Separate CustDB to DBCUST server (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB)
 	
 Param's Explanation:
 	@CustID: Id of member will be updated,
@@ -56,7 +52,7 @@ If @ErrCode <> 0
 --end
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 if @ErrCode <>0 return
 --end
 
@@ -208,6 +204,7 @@ BEGIN CATCH
 	    @TrackingValue = @LogSPData,
 	    @duration = @duration
 END CATCH
+
 
 
 GO

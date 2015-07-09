@@ -67,7 +67,7 @@ BEGIN
 	)
 	INSERT INTO #tmpAutoSettle1s(MatchID,ResultStatusID)
 	SELECT	MatchID, MIN(ResultStatusID)
-	FROM	ResultDetail WITH (NOLOCK)
+	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #tempmatch)
 			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217')
@@ -181,11 +181,6 @@ BEGIN
 	WHERE	MatchID IN (SELECT MatchID FROM #tempmatch)	
 			AND ResourceId LIKE '0[0-5]' 
 END
-GO
-GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam] AS [dbo]
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
 GO

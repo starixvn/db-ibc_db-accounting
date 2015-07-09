@@ -58,6 +58,8 @@ Revisions:
 	- 20141120@Johnson: correct Last transaction date for super [Redmine: #26006]
 	- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]			
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
+	- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
+	
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -86,6 +88,7 @@ BEGIN
           , @SelectedBetting BIT
           , @NicknameLoginOnly BIT
           , @LastChangedSecurityCodeDate DATETIME
+		  , @HasDownline BIT = 0
 
     DECLARE @todaySuperCash MONEY
           , @todayMasterCash MONEY
@@ -132,7 +135,7 @@ BEGIN
 
     IF @roleid > 4
 	    RETURN
-    -----------------------------
+    -----------------------------	
 
     SELECT @DisableDownlinesFI = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableFinancial = 1)
 										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableFinancial = 1) 											 
@@ -191,7 +194,7 @@ BEGIN
 	    SET @IsDeposit =1
     	
 	    SELECT @LastChangedSecurityCodeDate = LastChangedSecurityCodeDate
-	    FROM DBTXN.CustDB.dbo.CustLoginInfo WITH(NOLOCK)
+	    FROM DBCUST.CustDB.dbo.CustLoginInfo WITH(NOLOCK)
 	    WHERE custid = @custid
     END
 
@@ -211,7 +214,7 @@ BEGIN
 	    SET @IsDeposit =1
     	
 	    SELECT @LastChangedSecurityCodeDate = LastChangedDate
-	    FROM DBTXN.CustDB.dbo.CustLoginInfo_Member WITH(NOLOCK)
+	    FROM DBCUST.CustDB.dbo.CustLoginInfo_Member WITH(NOLOCK)
 	    WHERE custid = @custid
     END
 
@@ -232,6 +235,8 @@ BEGIN
 
     IF @roleid = 4 --super
     BEGIN
+		SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3
+
 	    SELECT @IsInternal = ISNULL(IsInternal, 0)
 	         , @LimitPerIP = ISNULL(LimitPerIP, 0)
 	         , @SelectedBetting = ISNULL(SelectedBetting, 0)
@@ -314,6 +319,8 @@ BEGIN
     END								  
     ELSE IF @roleid = 3 --master
     BEGIN
+		SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
+
 	    SELECT @IsInternal = ISNULL(IsInternal, 0)
 	         , @LimitPerIP = ISNULL(LimitPerIP, 0)
 	         , @SelectedBetting = ISNULL(SelectedBetting, 0)
@@ -344,6 +351,8 @@ BEGIN
     END
     ELSE IF @roleid = 2 --agent
     BEGIN
+		SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE recommend = @custid AND roleid = 1
+
 	    SELECT 
 		    @IsInternal = ISNULL(IsInternal, 0),
 		    @LimitPerIP = ISNULL(LimitPerIP, 0),
@@ -419,13 +428,18 @@ BEGIN
     ELSE
 	    SET @isBA=0
 
+	DECLARE @credit MONEY
+	SELECT @credit = credit
+	FROM DBCUST.CustDB.dbo.CustInfo WITH(NOLOCK)
+	WHERE custid = @custid
+	
     SELECT c.custid, c.username, c.firstname, c.lastname, 
 	    c.username2, 		
 	    ci.roleid, 
 	    lastlogged, 
 	    iplogin lastloginip, 
 	    pwdexpiry, 
-	    ci.credit, 
+	    @credit as credit, --ci.credit, 
 	    e.currency,
 	    e.exchangeid,
 	    e.actualrate,
@@ -461,7 +475,8 @@ BEGIN
 	    ci.HideVirtualSports,
 	    ci.DoubleCommLosing,	    	   
 		ci.DisableEsports,
-		ci.DisableGoldDeluxe,
+		ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
+		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
 	    ci.Enabled,
 	    @isBA IsBA,
 	    @IsDeposit IsDeposit, 
@@ -475,7 +490,8 @@ BEGIN
 	    @LastChangedSecurityCodeDate as LastChangedSecurityCodeDate,
 	    @IsHideDirectStatus IsHideDirectStatus,
 	    @IsCheckedDirectStatus IsCheckDirectStatus,
-	    @IsDisabledDirectStatus IsDisabledDirectStatus
+	    @IsDisabledDirectStatus IsDisabledDirectStatus,
+		@HasDownline AS HasDownline
     FROM customer c WITH(NOLOCK)
 	    inner join custinfo ci WITH(NOLOCK) on c.custid = ci.custid
 	    inner join exchange e WITH(NOLOCK) on c.currency = e.exchangeid 
@@ -540,7 +556,7 @@ BEGIN
     else if @roleid = 2
     BEGIN
 	    SELECT @UsedCredit = sum(credit)  
-	    FROM dbo.custinfo WITH(NOLOCK) 
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=1 
 		     AND recommend = @custid
 	    /*	 
@@ -592,7 +608,7 @@ BEGIN
 	    FROM translog(NOLOCK) WHERE mrecommend = @custid AND statusID = 0
     	
 	    SELECT @UsedCredit = sum(credit)  
-	    FROM custinfo WITH(NOLOCK) 
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=2 
 		    AND mrecommend = @custid
 	    /*	
@@ -648,7 +664,7 @@ BEGIN
 
 	    DECLARE @transdate DATETIME
 	    SELECT @UsedCredit = sum(credit) 
-	    FROM custinfo WITH(NOLOCK)
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	    WHERE roleid=3
 		     AND srecommend = @custid
     	    	
@@ -706,6 +722,17 @@ BEGIN
 		    @TotalMemberSuspended MemberSuspended
 END
 
+
+<<<<<<< HEAD
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
+=======
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
 GO 
@@ -715,3 +742,4 @@ GO
 GO 
  GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
 GO 
+>>>>>>> 55fb03dc815b93aa77e08ede5f0d81afd0afc69b
