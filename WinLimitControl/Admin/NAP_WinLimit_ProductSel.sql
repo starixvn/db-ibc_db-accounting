@@ -9,7 +9,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[NAP_WinLimit_ProductSel]
-	@ExcludeUsed bit = 0
+	@ExcludeUsed BIT = 0
 AS
 	/*
 		Created: Phillip	
