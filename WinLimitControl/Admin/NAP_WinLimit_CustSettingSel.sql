@@ -19,8 +19,9 @@ AS
 	/*
 		Created: Phillip	
 		Date: 2015-06-30
-		Task: #38608
-		DB: DBCust/CustDB
+		Task: #38608 - Implement function to control Player's Win Limit on specific Product
+		
+		DB: DBCUST/CustDB
 		
 		Revisions:
 		
@@ -34,17 +35,17 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	DECLARE @ResultTable TABLE
+	DECLARE @TVP_CustSetting TABLE
 	(
-		RowNum int,
-		CustID int,
-		UserName varchar(30),
-		ExchangeID int,
-		ProductID tinyint,
-		MaxWinLimit money
+		RowNum INT,
+		CustID INT,
+		UserName VARCHAR(30),
+		ExchangeID INT,
+		ProductID TINYINT,
+		MaxWinLimit MONEY
 	)
 	
-	INSERT INTO @ResultTable
+	INSERT INTO @TVP_CustSetting
 	SELECT	DENSE_RANK() OVER(ORDER BY cs.CustID) AS RowNum
 			,cs.CustID
 			,c.username
@@ -58,18 +59,20 @@ BEGIN
 			AND (@ProductID = 0 OR cs.ProductID = @ProductID)
 		
 	SELECT	@TotalRow = ISNULL(MAX(RowNum), 0) 
-	FROM @ResultTable
+	FROM	@TVP_CustSetting
 	
 	SELECT	CustID
 			,UserName
 			,ExchangeID
 			,ProductID
 			,MaxWinLimit 
-	FROM	@ResultTable
+	FROM	@TVP_CustSetting
 	WHERE	RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingSel] TO [vnteam]
 GO

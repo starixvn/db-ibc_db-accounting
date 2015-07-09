@@ -54,7 +54,7 @@ BEGIN
 	FROM	@ResultTbl
 	
 	DECLARE @TSQL VARCHAR(4000)
-	SELECT	@TSQL = 'SELECT * FROM OPENQUERY(DBPRO, ''SELECT ExchangeID, ProductID, MaxWinLimit FROM DBPRO.bodb02.dbo.WinLimit_GlobalSetting WITH (NOLOCK) WHERE ExchangeID IN (' + @CurrencyIDList + ')'')'
+	SELECT	@TSQL = 'SELECT * FROM OPENQUERY(DBPRO, ''SELECT ExchangeID, ProductID, MaxWinLimit FROM bodb02.dbo.WinLimit_GlobalSetting WITH (NOLOCK) WHERE ExchangeID IN (' + @CurrencyIDList + ')'')'
 	
 	INSERT INTO @WLGlobalSettingTbl
 	EXEC(@TSQL)
@@ -70,4 +70,6 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingListSel] TO [bodbAdminNet]
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingListSel] TO [accteam]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingListSel] TO [vnteam]
 GO
