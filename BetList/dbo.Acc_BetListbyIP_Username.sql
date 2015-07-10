@@ -42,14 +42,14 @@ AS
 			AND bettype <> 903
 			AND ip = @ip
 			--exclude metric gaming running ticket
-			AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
+			AND (b.bettype NOT BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
 	GROUP BY custid	
 	UNION ALL 
 	SELECT	tl.custid, COUNT(tl.custid), 2
 	FROM	dbo.translog tl WITH (NOLOCK)
 	INNER JOIN @SportBettype sp 
 		ON tl.gameid = sp.BetType
-			AND (sp.ProductID IN (8,12) OR tl.gameid BETWEEN 801 AND 806)
+			AND (sp.ProductID IN (8,12) OR tl.gameid BETWEEN 801 AND 899)
 	WHERE   winlostdate = @fromdate 
 			--AND gameid between 1501 and 1599
 			AND ip = @ip AND statusid = 0
@@ -91,7 +91,7 @@ AS
 										AND b.ip = @ip
 										AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END
 										--exclude metric gaming running ticket
-										AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
+										AND (b.bettype NOT BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
 								UNION ALL 
 								SELECT	b.custid
 								FROM	bettrans b WITH (NOLOCK) 
