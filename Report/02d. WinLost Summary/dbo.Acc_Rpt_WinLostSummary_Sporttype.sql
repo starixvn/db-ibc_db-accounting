@@ -267,7 +267,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,'' as status
-				,9 as OrderKey
+				,13 as OrderKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0) 
 				,ISNULL(SUM(realCommission),0)
@@ -289,7 +289,7 @@ BEGIN
             ,0 as ibc
             ,0 as IsHedge
             ,'' as status
-			,10 as OrderKey
+			,14 as OrderKey
             ,ISNULL(SUM(realWinlost),0)
             ,ISNULL(SUM(realPosition),0) 
             ,ISNULL(SUM(realCommission),0)
@@ -332,7 +332,7 @@ BEGIN
             ,ibc
             ,0 as IsHedge
             ,'' status 
-			,11 as OrderKey	
+			,9 as OrderKey	
             ,ISNULL(SUM(realWinlost),0) as realWinlost
             ,ISNULL(SUM(realPosition),0) as realPosition
             ,ISNULL(SUM(realcommission),0) as realCommission
@@ -353,7 +353,7 @@ BEGIN
             ,ibc
             ,0 as IsHedge
             ,'' status 
-			,12 as OrderKey	
+			,10 as OrderKey	
             ,ISNULL(SUM(realWinlost),0) as realWinlost
             ,ISNULL(SUM(realPosition),0) as realPosition
             ,ISNULL(SUM(realcommission),0) as realCommission
@@ -374,7 +374,7 @@ BEGIN
             ,ibc
             ,0 as IsHedge
             ,'' status 
-			,13 as OrderKey	
+			,11 as OrderKey	
             ,ISNULL(SUM(realWinlost),0) as realWinlost
             ,ISNULL(SUM(realPosition),0) as realPosition
             ,ISNULL(SUM(realcommission),0) as realCommission
@@ -395,7 +395,7 @@ BEGIN
             ,ibc
             ,0 as IsHedge
             ,'' status 
-			,14 as OrderKey	
+			,12 as OrderKey	
             ,ISNULL(SUM(realWinlost),0) as realWinlost
             ,ISNULL(SUM(realPosition),0) as realPosition
             ,ISNULL(SUM(realcommission),0) as realCommission
