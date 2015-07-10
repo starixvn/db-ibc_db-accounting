@@ -62,6 +62,7 @@ BEGIN
 		BEGIN
 			SELECT	@ErrCode = 5
 					,@ErrMsg = 'The Player does not exist.'
+			RETURN;
 		END
 		
 		SELECT	@EndRun = GETDATE()

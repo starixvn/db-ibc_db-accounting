@@ -62,6 +62,7 @@ BEGIN
 	BEGIN
 		SELECT	@ErrCode = 2
 				,@ErrMsg = 'This setting does not exist.'
+		RETURN;
 	END
 	
 	SELECT	@EndRun = GETDATE()

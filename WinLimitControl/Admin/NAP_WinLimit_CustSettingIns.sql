@@ -64,7 +64,8 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		SELECT	@ErrCode = 1
-				,@ErrMsg = 'This setting is already set.'
+				,@ErrMsg = ERROR_MESSAGE()
+		RETURN;
 	END CATCH;
 	
 	SELECT	@EndRun = GETDATE()

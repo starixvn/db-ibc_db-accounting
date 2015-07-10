@@ -30,7 +30,7 @@ BEGIN
 	SELECT		ExchangeID
 				, ProductID
 				, MaxWinLimit
-	FROM		WinLimit_GlobalSetting WITH(NOLOCK)
+	FROM		dbo.WinLimit_GlobalSetting WITH(NOLOCK)
 	WHERE		(@ProductID = 0 OR ProductID = @ProductID)
 				AND (@ExchangeID = 0 OR ExchangeID = @ExchangeID)
 	ORDER BY	ExchangeID

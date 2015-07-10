@@ -50,7 +50,7 @@ BEGIN
 	BEGIN
 		SELECT	@ErrCode = 2
 				,@ErrMsg = 'This setting does not exist.'
-		RETURN
+		RETURN;
 	END
 	
 	SELECT	@MaxWinLimitOld = MaxWinLimit
@@ -58,11 +58,17 @@ BEGIN
 	WHERE	ExchangeID = @ExchangeID 
 			AND ProductID = @ProductID
 	
-	UPDATE	dbo.WinLimit_GlobalSetting WITH (UPDLOCK, ROWLOCK)
-	SET		MaxWinLimit = @MaxWinLimit
-	WHERE	ProductID = @ProductID
-			AND ExchangeID = @ExchangeID
-	
+	BEGIN TRY
+		UPDATE	dbo.WinLimit_GlobalSetting WITH (UPDLOCK, ROWLOCK)
+		SET		MaxWinLimit = @MaxWinLimit
+		WHERE	ProductID = @ProductID
+				AND ExchangeID = @ExchangeID
+	END TRY
+	BEGIN CATCH
+		SELECT	@ErrCode = 2
+				,@ErrMsg = ERROR_MESSAGE()
+		RETURN;
+	END CATCH
 	-- Update all related Customer MaxWinLimit If new Global MaxWinLimit less than Customer MaxWinLimit.
 	EXEC DBCUST.CustDB.dbo.NAP_WinLimit_CustSettingRelatedToCurrencySettingUpd
 		@ExchangeID	= @ExchangeID,

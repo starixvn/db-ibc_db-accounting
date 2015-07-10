@@ -59,6 +59,7 @@ BEGIN
 	BEGIN
 		SELECT	@ErrCode = 1
 				,@ErrMsg = 'This setting is already set.'
+		RETURN;
 	END
 	
 	BEGIN TRY
@@ -79,7 +80,8 @@ BEGIN
 	IF @@ERROR <> 0 
 	BEGIN
 		SELECT	@ErrCode = 1
-				,@ErrMsg = 'This setting is already set.'
+				,@ErrMsg = ERROR_MESSAGE()
+		RETURN;
 	END
 	END CATCH;
 	
