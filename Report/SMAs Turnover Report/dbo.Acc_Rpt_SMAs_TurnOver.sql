@@ -10,6 +10,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_SMAs_TurnOver]
 	@ShowCS			BIT				=	1,
 	@ShowGD			BIT				=	1, -- gold deluxe
 	@ShowMG			BIT				=	1, -- metrix gaming
+	@showMGC 		BIT				=	1, --Micro Gaming
 	@ShowOpened		BIT				=	1,
 	@ShowClosed		BIT				=	0,
 	@ShowSuspended	BIT				=	0
@@ -21,6 +22,7 @@ AS
    
     Revisions:  
 		-20150529@Jim: apply sport&bettype matrix and support GD,MG
+		-20150710@Jim:  Microgaming integration (Feature #38168)	
 	Param's Explanation:   
 	  + @winLostDate: The specified date used as one of the filter criterias
 	  + @MoveBetsDay: The day when bets are moved to bettrans14
@@ -150,7 +152,12 @@ IF @ShowMG =1
 	FROM @SportBettype   
 	WHERE ProductID = 1
 		AND SubProduct= 'MG-SuperLive'	
-		
+IF @showMGC =1  --Micro Gaming
+	INSERT INTO @tmpbettype(Bettype)   
+	SELECT Bettype    
+	FROM @SportBettype   
+	WHERE ProductID = 13
+	
 	--Get Super Accounts
 	INSERT INTO @DepositDummySuper
 	SELECT custid FROM dbo.Dep_CustSuper
