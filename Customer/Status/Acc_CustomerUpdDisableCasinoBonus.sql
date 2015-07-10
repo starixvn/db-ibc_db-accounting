@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_CustomerUpdDisableCasinoBonus]
+﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdDisableCasinoBonus]
 	@CustID					INT,	
 	@Disable				BIT,
 	@DisableDownlines		BIT = true, --Disable all downline
@@ -16,7 +16,8 @@ DB: DBTXN/bodb02
 Original: 
 	
 Revisions:
-   
+	- 20150606@Elodie: Separate CustDB to DBCUST server (Move Acc_CustomerSelCheckAllowedDownlines, Acc_CustomerSelCheckEnable to DBCUST.CustDB)
+	   
 Param's Explanation:
 • @custid: customer id.   
 • @Disable: status
@@ -29,7 +30,7 @@ declare @duration int
 set @startRun = getdate()
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 if @ErrCode <>0 return
 --end
 Declare @RoleID tinyint , @UplineDisable bit, @Old_Disable bit
@@ -77,7 +78,7 @@ end
 --Check Allowed downlines during peak hour at weekend
 IF (@Disable = 1 or (@Disable = 0 and @DisableDownlines = 0))
 BEGIN
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
+	EXEC Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
 											@roleid=@roleid,
 											@isExecRep=0,
 											@Language=@Language,
@@ -197,12 +198,12 @@ BEGIN CATCH
 		@duration = @duration
 END CATCH
 
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdDisableCasinoBonus] TO [bodbAdminNet]
 GO
 GRANT  EXECUTE  ON [dbo].[Acc_CustomerUpdDisableCasinoBonus]  TO [bodbDownlineNet]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdDisableCasinoBonus] TO [vnteam]
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdDisableCasinoBonus] TO [bodbExtAccNet] 

@@ -14,6 +14,7 @@ AS
 
 	Revisions:  
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
+		- 20150611@Dominic: BetTrade Integration [Redmine:#36964]
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
 		+ @TransID NOT NULL: Search by TransID
@@ -23,7 +24,8 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @Data TABLE (
-		bettype			INT
+		GroupID			BIGINT
+		,bettype		INT
 		,transid		BIGINT
 		,betid			BIGINT
 		,refno			BIGINT
@@ -79,7 +81,7 @@ BEGIN
 		SELECT	@FromDate = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP - 3,120)		-- As defined, only get data within 3 days 
 		
 		INSERT INTO @Data
-		SELECT b.bettype
+		SELECT b.transid GroupID, b.bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -136,7 +138,7 @@ BEGIN
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT 9 bettype
+		SELECT b.transid GroupID, 9 bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -185,7 +187,7 @@ BEGIN
 				AND b.bettype = 9
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT b.bettype
+		SELECT b.transid GroupID, b.bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -238,7 +240,7 @@ BEGIN
 	ELSE --- Search by CustID 
 	BEGIN 
 		INSERT INTO @Data
-		SELECT b.bettype
+		SELECT b.transid GroupID, b.bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -295,7 +297,7 @@ BEGIN
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT 9 bettype
+		SELECT b.transid GroupID, 9 bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -344,7 +346,7 @@ BEGIN
 				AND bettype = 9
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT b.bettype
+		SELECT b.transid GroupID, b.bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -395,10 +397,63 @@ BEGIN
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 	END
 
-
-	SELECT *
-	FROM @Data
-	ORDER BY transid
+	SELECT * FROM
+	(SELECT *
+	FROM @Data t
+	UNION ALL
+	SELECT b.refno GroupID, b.bettype
+			,b.transid
+			,isnull(b.BetID, 0) AS BetID
+			,b.refno
+			,m.matchcode
+			,m.eventdate AS eventdate
+			,m.homeid
+			,m.awayid
+			,ISNULL(b.checktime, '') settleTime
+			,b.hdp1
+			,b.hdp2
+			,b.odds
+			,0 finalodds
+			,0 finalodds2
+			,b.OddsType
+			,'SOLD' STATUS
+			,CASE 
+				WHEN b.comstatus = '1' THEN 1
+				ELSE 0
+				END AS comstatus
+			,b.stake
+			,b.actual_stake
+			,b.transdate
+			,b.betteam
+			,b.betcheck
+			,b.liveindicator
+			,b.modds
+			,b.custid
+			,b.username
+			,b.livehomescore
+			,b.liveawayscore
+			,m.finalhomescore
+			,m.finalawayscore
+			,m.leagueid
+			,m.sporttype
+			,b.betfrom
+			,b.matchid
+			,isnull(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
+			,(b.winlost - b.actual_stake) winlost
+			,b.playercomm AS commission
+			,m.showtime
+			,b.winlostdate
+	FROM @Data t
+			INNER JOIN bettrans AS b WITH (NOLOCK) ON b.refno = t.transid AND b.bettype = 901
+			INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
+		WHERE	b.winlostdate >=@FromDate
+				AND b.bettype < 19001
+				AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
+				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
+				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
+				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
+	) tmp			
+	ORDER BY GroupID, transid
 
 	-->> Ticket Details 
 	-- LiveCS Detail 

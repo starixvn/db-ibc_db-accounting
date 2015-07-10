@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_LoginAdmin]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_LoginAdmin]    Script Date: 06/30/2015 16:01:47 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_LoginAdmin    Script Date: 12/5/2013 4:34:27 PM ******/
+ALTER PROCEDURE [dbo].[Acc_LoginAdmin]
 	@UserName varchar(50) OUTPUT,
 	@UserPwd varchar(50),
 	@LoginIP varchar(20),	
@@ -17,7 +25,7 @@ AS
 /*
 Created: 
 Task : 
-DB: DBTXN/BODB02
+DB: DBCUST.CustDB
 Original:
 
 Revisions:
@@ -39,6 +47,8 @@ Revisions:
 	- 20130118@Elodie: Change link server DB03 to DBPOLICY	
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20130327@Lukas: add constraint time for some particular admins
+	- 20140730@Thien: temporarily block the access from SMS IPs
+	- 20150630@Kathy: Remove linked server DBTXNIP
 Param's Explanation:
 */
 SET NOCOUNT ON
@@ -49,11 +59,21 @@ DECLARE @Duration	INT
 
 SET @Begin = GETDATE()
 
+
+
 declare @LogData nvarchar(200),
 	@db_userpwd nvarchar(50),
 	@failedcount tinyint, @closed bit--, @Groupname nvarchar(50)
 
 SELECT @LogData = '', @ErrMsg = '', @ErrCode = 0 -- initial value
+
+--Thien@20140730: temporarily block the access from SMS IPs
+IF LEFT(@LoginIP, 10) IN ('202.78.231','202.78.228')--, '122.147.23') 
+BEGIN
+	SELECT  @ErrMsg = 'Unauthorized login!',
+		@ErrCode = 888
+	RETURN
+END
 
 SELECT @CustID = c.custid, @db_userpwd = c.userpwd, @RoleID = roleid, @failedcount = IsNull(logincount, 0),
 		@UserName = username
@@ -121,7 +141,7 @@ DECLARE @isAccess BIT
 -- check time constraint
 IF (@ErrMsg = '') AND (@logData = '') AND (@System = 'ACCOUNTING')
  BEGIN
-	EXEC Acc_LoginAdminCheckTimeConstraint @custid = @custid, @isAccess = @isAccess OUTPUT, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+		EXEC Acc_LoginAdminCheckTimeConstraint @custid = @custid, @isAccess = @isAccess OUTPUT, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
 	
 	IF @isAccess = 0 OR @ErrCode <> 0
 		SELECT	@ErrCode = 111,
@@ -131,7 +151,7 @@ END
 --check for ABS system
 IF (@ErrMsg = '') AND (@logData = '') AND (@System = 'ABS')
  BEGIN
-				EXEC DBTXNIP.IPDB.dbo.Acc_LoginAdminCheckGrantAccess @custid = @custid, @LoginIP = @LoginIP, @isAccess = @isAccess OUTPUT
+				EXEC IPDB.dbo.Acc_LoginAdminCheckGrantAccess @custid = @custid, @LoginIP = @LoginIP, @isAccess = @isAccess OUTPUT
 	
 	IF @isAccess = 0 
 		SELECT @ErrMsg = 'You are not authorized to access through VPN. Please contact your supervisor.',
@@ -201,8 +221,8 @@ END
 				 @Duration = @Duration
 		END CATCH				 
 	END
-	
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_LoginAdmin] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_LoginAdmin] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_LoginAdmin] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_LoginAdmin] TO [vnteam] AS [dbo]

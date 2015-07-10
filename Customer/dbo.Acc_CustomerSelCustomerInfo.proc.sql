@@ -1,17 +1,18 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelCustomerInfo] 
-@CustID int = null,
-@Username nvarchar(50) = null
+	@CustID INT = null,
+	@Username NVARCHAR(50) = null
 AS
 /*
 Created: 
 Task : Get User Information
-DB: DB053.bodb02
+DB: DBCUST.CustDB
 Original:Accounting site
 
 Revisions:
 	- 20090912@Shifu: Get User Information by CustID or Username
 	- 20120405@Johnson: get status of live casino
 	- 20120504@Johnson: get superid, masterid 
+	- 20150609@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 */	
 SET NOCOUNT ON
 IF @CustID IS NOT NULL
@@ -36,8 +37,6 @@ BEGIN
 		LEFT JOIN custinfo s with (nolock) ON c.srecommend = s.custid
 	WHERE c.username = @Username
 END
-
-
 
 
 

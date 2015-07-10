@@ -72,6 +72,7 @@ AS
 		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 		- 20150615@Edward: Support for BetTrade
+		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150708@Edward: Support for MicroGamming
 		
 	Param's Explanation:   
@@ -1115,8 +1116,8 @@ BEGIN
 					--AND b.bettype not BETWEEN 1501 and 1599 --20120626@Elodie: exclude outright, HR from sportbook
 					--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
-					--exclude Metric Gaming running ticket
-					AND (b.bettype BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
+					--exclude metric gaming running ticket
+					AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
 			
 			--Metric gaming running ticket
 			UNION ALL
@@ -1194,7 +1195,7 @@ BEGIN
 			WHERE   b.custid		= @custid 
 				AND b.winlostdate	= @fromdate
 				AND b.Gameid 		BETWEEN 801 AND 899
-				AND b.statusID		IN (SELECT [statusID] FROM   @tmpStatus WHERE statusID IN(0,1))
+				AND b.statusID		= 0
 			
 			--Metric gaming running ticket
 			UNION ALL
@@ -2350,10 +2351,9 @@ BEGIN
 		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
 		INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 
+	SELECT * FROM @DetailData
 END
-		   
- SELECT * FROM @DetailData
-  	
+		     	
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByDayAll] TO [bodbAdminNet]
 GO

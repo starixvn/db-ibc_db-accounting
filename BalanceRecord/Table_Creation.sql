@@ -1,0 +1,65 @@
+﻿
+/****** Object:  PartitionFunction [pf_BR_monthly]    Script Date: 03/13/2013 03:08:41 ******/
+CREATE PARTITION FUNCTION [pf_BR_monthly](datetime) AS RANGE LEFT FOR VALUES (N'2013-02-28T23:59:59.997', N'2013-03-31T23:59:59.997', N'2013-04-30T23:59:59.997', N'2013-05-31T23:59:59.997', N'2013-06-30T23:59:59.997', N'2013-07-31T23:59:59.997', N'2013-08-31T23:59:59.997', N'2013-09-30T23:59:59.997', N'2013-10-31T23:59:59.997', N'2013-11-30T23:59:59.997', N'2013-12-31T23:59:59.997', N'2014-01-31T23:59:59.997', N'2014-02-28T23:59:59.997', N'2014-03-31T23:59:59.997', N'2014-04-30T23:59:59.997', N'2014-05-31T23:59:59.997', N'2014-06-30T23:59:59.997', N'2014-07-31T23:59:59.997', N'2014-08-31T23:59:59.997', N'2014-09-30T23:59:59.997', N'2014-10-31T23:59:59.997', N'2014-11-30T23:59:59.997', N'2014-12-31T23:59:59.997', N'2015-01-31T23:59:59.997', N'2015-02-28T23:59:59.997', N'2015-03-31T23:59:59.997', N'2015-04-30T23:59:59.997', N'2015-05-31T23:59:59.997', N'2015-06-30T23:59:59.997', N'2015-07-31T23:59:59.997', N'2015-08-31T23:59:59.997', N'2015-09-30T23:59:59.997', N'2015-10-31T23:59:59.997', N'2015-11-30T23:59:59.997', N'2015-12-31T23:59:59.997')
+GO
+/****** Object:  PartitionScheme [ps_BR_monthly]    Script Date: 03/13/2013 03:08:17 ******/
+CREATE PARTITION SCHEME [ps_BR_monthly] AS PARTITION [pf_BR_monthly] TO ([BR_13M02], [BR_13M03], [BR_13M04], [BR_13M05], [BR_13M06], [BR_13M07], [BR_13M08], [BR_13M09], [BR_13M10], [BR_13M11], [BR_13M12], [BR_14M01], [BR_14M02], [BR_14M03], [BR_14M04], [BR_14M05], [BR_14M06], [BR_14M07], [BR_14M08], [BR_14M09], [BR_14M10], [BR_14M11], [BR_14M12], [BR_15M01], [BR_15M02], [BR_15M03], [BR_15M04], [BR_15M05], [BR_15M06], [BR_15M07], [BR_15M08], [BR_15M09], [BR_15M10], [BR_15M11], [BR_15M12], [BR_MAX])
+GO
+
+
+-------
+
+USE [BalanceRecord]
+GO
+
+/****** Object:  Table [dbo].[BalanceRecord_bk]    Script Date: 03/13/2013 03:15:20 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+SET ANSI_PADDING ON
+GO
+
+CREATE TABLE [dbo].[BalanceRecord_bk](
+	[RowID] [bigint] NOT NULL,
+	[custid] [int] NOT NULL,
+	[transid] [bigint] NOT NULL,
+	[bettype] [smallint] NOT NULL,
+	[actual_stake] [money] NOT NULL,
+	[winlost] [money] NOT NULL,
+	[playercomm] [money] NOT NULL,
+	[BalanceChanged] [money] NOT NULL,
+	[NewBalance] [money] NULL,
+	[ActionDate] [datetime] NOT NULL,
+	[ActionID] [tinyint] NULL,
+	[Action] [varchar](200) NOT NULL,
+	[BTBalance] [money] NULL
+) ON [ps_BR_monthly]([ActionDate])
+
+GO
+
+SET ANSI_PADDING OFF
+GO
+
+
+USE [BalanceRecord]
+/****** Object:  Index [CIX_custid_actiondate]    Script Date: 03/13/2013 03:15:20 ******/
+CREATE CLUSTERED INDEX [CIX_custid_actiondate] ON [dbo].[BalanceRecord_bk] 
+(
+	[custid] ASC,
+	[ActionDate] ASC
+)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [ps_BR_monthly]([ActionDate])
+GO
+
+
+USE [BalanceRecord]
+/****** Object:  Index [IX_RowID]    Script Date: 03/13/2013 03:15:20 ******/
+CREATE NONCLUSTERED INDEX [IX_RowID] ON [dbo].[BalanceRecord_bk] 
+(
+	[RowID] ASC
+)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [ps_BR_monthly]([ActionDate])
+GO
+
+

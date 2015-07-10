@@ -80,6 +80,7 @@ AS
 		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 		- 20150615@Edward: Support for BetTrade
+		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150625@Edward: Support for MicroGamming
 */		
 BEGIN
@@ -282,6 +283,8 @@ BEGIN
 						s.EventType = 1
 						AND (@bettype 	= 0 OR s.bettype = @bettype)
 					)
+					--exclude metric gaming running ticket
+					AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
 					
 			UNION ALL -- translog metric gaming
 			SELECT 

@@ -1,6 +1,6 @@
 USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 05/11/2015 10:21:43 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 06/10/2015 11:37:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -66,6 +66,7 @@ Revisions:
     - 20140818@Logan:   Exclude disabled agents, members while updating [Redmine:#19631]
 	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine: #26647]
 	- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
+	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerCheckMoveMaster, Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
 	
 Param's Explanation:
 • @ErrCode:
@@ -154,7 +155,7 @@ BEGIN
 
 
     --Check Allowed downlines 
-     EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines 
+     EXEC dbo.Acc_CustomerSelCheckAllowedDownlines 
         @custid=@mrecommend,
         @roleid=3,
         @isExecRep=0,
@@ -166,7 +167,7 @@ BEGIN
      IF @ErrCode <> 0 
       RETURN
       
-    EXEC DBAGE.bodb02.dbo.Acc_CustomerCheckMoveMaster
+    EXEC dbo.Acc_CustomerCheckMoveMaster
         @supername = @supername
       , @mastername = @mastername
       , @userid = @userid
@@ -404,21 +405,7 @@ BEGIN
             RETURN 
         END
     END
-
-	 -- Gold Deluxe
-    IF @sHideGoldDeluxe = 0 AND (@sHideGoldDeluxe <> @mHideGoldDeluxe)
-    BEGIN
-        UPDATE    Custinfo WITH (UPDLOCK,ROWLOCK)
-           SET        HideGoldDeluxe = 0
-        WHERE    custid IN(SELECT CustID FROM @CustInfo)
-        IF @@ERROR <>0
-        BEGIN
-            SELECT    @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-                    @ErrCode = 311
-            RETURN 
-        END
-    END
-	
+    
 	 IF @sDisableGoldDeluxe = 1 AND @sDisableGoldDeluxe <> @mDisableGoldDeluxe
     BEGIN
         UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
@@ -552,7 +539,7 @@ INNER JOIN CustGameType mcg ON scg.CustID = @srecommend AND mcg.GameTypeID = scg
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1508
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1509
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1514
-    EXEC dbo.Acc_CustSetting3rd_04_xtest @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'GoldDeluxe', @sporttype = 255, @bettype = 1701
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'GoldDeluxe', @sporttype = 255, @bettype = 1701
 
     --when separate code we must update db07.bodb02.dbo.custsetting 
     UPDATE cs
@@ -636,6 +623,8 @@ INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
             @duration = @duration
     END CATCH
 END
+
+
 
 
 

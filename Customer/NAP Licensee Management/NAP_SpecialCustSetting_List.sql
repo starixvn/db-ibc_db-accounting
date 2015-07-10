@@ -22,10 +22,33 @@ Created: Dom
 		DB: DBTXN/CustDB
 		
 		Revisions:
+		20150609@Alex: Separate CustDB to DBCUST server (Use temp table for sports, bettype, GameType table)
 
 */
 
 BEGIN
+	SET NOCOUNT ON
+	
+	DECLARE @tmp_Sports TABLE(SportType TINYINT,SportName NVARCHAR(50))
+	DECLARE @tmp_GameType TABLE (GameTypeID INT, GameTypeName NVARCHAR(50), IsDisabled BIT, IBCBettypeID INT)
+
+	BEGIN TRY
+		INSERT INTO @tmp_Sports(SportType, SportName)
+		SELECT SportType, SportName FROM DBAGE.bodb02.dbo.Sports WITH (NOLOCK)
+	END TRY
+	BEGIN CATCH
+		INSERT INTO @tmp_Sports(SportType, SportName)
+		SELECT SportType, SportName FROM DBTXN.bodb02.dbo.Sports WITH (NOLOCK) 
+	END CATCH
+	
+	BEGIN TRY		
+		INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+		SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBAGE.bodb02.dbo.GameType WITH (NOLOCK)
+	END TRY
+	BEGIN CATCH		
+		INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+		SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBTXN.bodb02.dbo.GameType WITH (NOLOCK)
+	END CATCH
 	
 	DECLARE @Sport TABLE(SportID INT)
 	
@@ -82,7 +105,7 @@ BEGIN
 		,cbs.MaxPerMatch
 		,cbs.MaxPerBall
 	FROM [dbo].[Dep_CustBetLimit_Special] cbs WITH(NOLOCK)
-	INNER JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON s.SportType = cbs.SportType
+	INNER JOIN @tmp_Sports s ON s.SportType = cbs.SportType
 	INNER JOIN Exchange ex WITH(NOLOCK) ON ex.exchangeid = cbs.CurrencyID
 	LEFT JOIN CustInfo ci WITH(NOLOCK) ON ci.CustID = cbs.AgentID and ci.roleid=2
 	WHERE cbs.SportType IN(SELECT SportID FROM @Sport)
@@ -102,7 +125,7 @@ BEGIN
 		,maxpergametype MaxPerMatch
 		,MaxPerBall = NULL
 	FROM [dbo].[Dep_CustBetLimitGameType_Special] cbs WITH(NOLOCK)
-	INNER JOIN [bodb02].[dbo].[GameType] bt WITH(NOLOCK) ON bt.GameTypeID = cbs.gametypeid
+	INNER JOIN @tmp_GameType bt ON bt.GameTypeID = cbs.gametypeid
 	INNER JOIN Exchange ex WITH(NOLOCK) ON ex.exchangeid = cbs.CurrencyID
 	WHERE @ShowKeno=1
 		AND CurrencyID IN (SELECT val FROM dbo.strSplit(@Currency,','))
@@ -115,6 +138,7 @@ BEGIN
 
 	SELECT * FROM #DATA ORDER BY Licensee,CurrencyID, Currency , AgentID,SportType,Bettype
 END
+
 GO
 
 SET QUOTED_IDENTIFIER OFF 

@@ -23,6 +23,7 @@ AS
 		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 		- 20150615@Edward: Support for BetTrade
+		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 */ 
 BEGIN
 	SET NOCOUNT ON  
@@ -147,6 +148,8 @@ BEGIN
 				bt.refno		= @transid
 				AND sp.bettype BETWEEN 801 AND 899
 			)
+			--exclude metric gaming running ticket
+			AND (bt.bettype NOT BETWEEN 801 AND 806 AND bt.statusID NOT IN (0, 1))
 			
 	END
 	-- FROM bettrans14
@@ -176,10 +179,14 @@ BEGIN
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
 		WHERE bt.transid 	= @transid 
-			OR (
+			-- disallow to search ticket from translog 
+			/*OR (
 					bt.refno		= @transid
-					AND sp.bettype BETWEEN 801 AND 899
-				)
+					AND (
+						sp.productid IN (8, 12)
+						OR sp.bettype BETWEEN 801 AND 899
+					)
+				)*/
 	END
 	
 	IF(@WinlostDate IS NULL) GOTO OutputResult;

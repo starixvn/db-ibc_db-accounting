@@ -1,0 +1,81 @@
+USE [bodb_licensee]
+GO
+ 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER  PROCEDURE [dbo].[DBA_ActiveLicenseeSystem]
+(
+	@LicenseeName  VARCHAR(50),
+	@SystemisActive   VARCHAR(100)='',
+	@SystemDeactivate VARCHAR(100)='',	
+	@ErrCode int = 0 OUTPUT , 
+	@ErrMsg nvarchar(1000) = '' OUTPUT 	
+)
+/*
+Created: 20140502@Jim
+Task : re-structure create new licensee flow
+DB: DBLIC.bodb_licensee
+Original :
+	
+Revisions:
+	
+Param's Explanation:
+
+	
+*/
+
+AS
+
+DECLARE @tblSystem AS TABLE(ID INT IDENTITY(1,1),SystemId INT, SystemCode VARCHAR(10),isActive BIT)
+DECLARE @LicenseeId INT
+
+---   init variable 
+SELECT @LicenseeId=LicenseeId
+FROM dbo.Licensees WITH (NOLOCK)
+WHERE LicenseeName=@LicenseeName
+
+IF 	ISNULL(@SystemisActive,'')<>''
+	BEGIN 
+		INSERT INTO @tblSystem (SystemId,SystemCode,isActive)
+		SELECT 0,val,1
+		FROM bodb02.dbo.strSplit(@SystemisActive,',')
+	END
+
+IF 	ISNULL(@SystemDeactivate,'')<>''
+	BEGIN 
+		INSERT INTO @tblSystem (SystemId,SystemCode,isActive)
+		SELECT 0,val,0
+		FROM bodb02.dbo.strSplit(@SystemDeactivate,',')
+	END
+
+----- Correct Data 
+UPDATE a
+SET SystemId=b.id 
+FROM @tblSystem a
+	INNER JOIN dbo.Systems b WITH (NOLOCK) ON a.SystemCode=b.SystemName
+
+IF NOT EXISTS (SELECT TOP 1 1 FROM @tblSystem WHERE SystemId<>0)
+	BEGIN 
+		SELECT @ErrCode=101
+			  ,	@ErrMsg='SystemID is  not correct,please check again'
+		RETURN	
+	END
+
+--- Set active/deactivate for all of existing systems
+UPDATE a1
+SET isActive=b1.isActive
+FROM SystemLicensee a1
+	INNER JOIN @tblSystem b1 ON a1.SystemID=b1.SystemId
+WHERE a1.LicenseeID=@LicenseeId
+
+DELETE @tblSystem
+WHERE SystemId IN (SELECT SystemId FROM dbo.SystemLicensee WITH (NOLOCK) WHERE LicenseeID=@LicenseeId)
+--- Set active/deactivate for all of new systems
+INSERT  INTO SystemLicensee(SystemId,LicenseeId,IsActive)
+SELECT 
+	SystemId
+	,@LicenseeId
+	,isActive
+FROM @tblSystem

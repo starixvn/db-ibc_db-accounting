@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1] 
 	@creator			INT
 	,@matchid			INT
@@ -27,6 +29,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1]
 	,@ftLCorner			VARCHAR(1)		= NULL
 	,@htFCorner			VARCHAR(1)		= NULL
 	,@htLCorner			VARCHAR(1)		= NULL 	
+	,@isExcludeCorner	BIT				= 0 
 	,@action			VARCHAR(10)		= 'CAL'
 	,@IP				VARCHAR(50)		= ''
 	,@ErrCode			INT				= 0		OUTPUT
@@ -49,6 +52,7 @@ AS
 		- 20140910@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141009@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -72,7 +76,7 @@ BEGIN
 		,@eventstatus						NVARCHAR(50)
 		,@sporttype							TINYINT
 		,@TicketCount						INT
-		,@betcount_135						INT
+		--,@betcount_135						INT
 		--,@SettlementStatus135				INT
 		,@betCount_1324						INT		-- Set x Game y Winner - 1324
 		,@MaxGameSet1						INT
@@ -89,7 +93,7 @@ BEGIN
 	SELECT @start				= CURRENT_TIMESTAMP
 		,@SkipBalanceUpdate 	= 0
 		,@TicketCount			= 0
-		,@betcount_135			= 0
+		--,@betcount_135			= 0
 		,@MaxGameSet1			= 0
 		,@MaxGameSet2			= 0 
 		,@MaxGameSet3			= 0
@@ -175,7 +179,7 @@ BEGIN
 	END
 
 	SELECT	@TicketCount = COUNT(1)
-			,@betcount_135	= ISNULL(SUM(CASE WHEN b.bettype = 135 and b.statusID NOT IN (101, 102) THEN 1 ELSE 0 END),0)
+			--,@betcount_135	= ISNULL(SUM(CASE WHEN b.bettype = 135 and b.statusID NOT IN (101, 102) THEN 1 ELSE 0 END),0)
 			,@MaxGameSet1 =   ISNULL(MAX(CASE WHEN b.bettype = 1324 AND LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '801%' THEN (b.betID - 80100) ELSE 0 END),0)  --  Tennis - Set x Game y Winner
 			,@MaxGameSet2 =   ISNULL(MAX(CASE WHEN b.bettype = 1324 AND LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '802%' THEN (b.betID - 80200) ELSE 0 END),0)
 			,@MaxGameSet3 =   ISNULL(MAX(CASE WHEN b.bettype = 1324 AND LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '803%' THEN (b.betID - 80300) ELSE 0 END),0)
@@ -290,20 +294,20 @@ BEGIN
 	-- 20090412 : Joe : case for unsettle the game.
 	IF @action = 'UNDO'
 	BEGIN
-		EXEC dbo.NAP_Admin_Calculate_Main 
+								EXEC dbo.NAP_Admin_Calculate_Main 
 			@matchid		= @matchid
 			,@SelectedSet	= @SelectedSet
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-		EXEC dbo.NAP_Admin_Settlement_Parlay
+								EXEC dbo.NAP_Admin_Settlement_Parlay
 			@matchids		= @matchid
 			,@creator		= @creator
 			,@action		= 'UNDO'
 			,@SelectedSet	= @SelectedSet
 			,@IP			= @IP
 
-		EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
+								EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
 			@matchid		= @matchid
 			,@command		= 'U'
 			--,@ivalue		= @SettlementStatus135 -- update SettlementStatus135 value
@@ -326,7 +330,7 @@ BEGIN
 
 		IF @Sporttype = 1 -- Soccer
 		BEGIN
-			EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+												EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
 				@Command			= 'NAP_Admin_Settlement_1-UNDO',
 				@MatchID			= @MatchID,
 				@creator			= @creator 
@@ -399,6 +403,19 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM @status
 		WHERE FTBet = 1
 
+		DECLARE @isExistRunningCornerBet BIT
+		SELECT	@isExistRunningCornerBet = 0 
+		IF @Sporttype = 1 
+		BEGIN
+			IF EXISTS(	SELECT TOP 1 1 FROM Bettrans WITH (NOLOCK) 
+						WHERE	bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
+								AND matchID = @MatchID 
+								AND statusID = 0 	
+								AND @isExcludeCorner = 1 
+			)
+			SELECT	@isExistRunningCornerBet = 1 
+		END
+
 		/* Mode
 	CAL : (default) Settle ALL BetTypes
 	CAL-FT : Full Time Only
@@ -407,7 +424,9 @@ need below code to determine for mark match as calculated (all bets settled)
 	UNDO : Unsettle the match  -- not use
 	*/
 		SELECT @eventstatus = CASE 
-								WHEN @action = 'CAL' AND @Sporttype <>5					THEN N'completed'
+								WHEN @action = 'CAL' AND @Sporttype NOT IN (1,5)		THEN N'completed'
+								WHEN @action = 'CAL' AND @Sporttype = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL' AND @Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND @Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN N'completed'	-- Match Option checked 
 								WHEN @action = 'CAL-HT' AND m.matchcode LIKE '%hedge%'	THEN eventstatus -- Jamie@20120330: Not change eventstatus='completed' for Hedge Match although 
 								WHEN @action = 'CAL-HT' AND @FTDone = 1					THEN N'completed'
@@ -434,6 +453,8 @@ need below code to determine for mark match as calculated (all bets settled)
 			,@Action		= @action
 			,@FTDone		= @FTDone
 			,@HTDone		= @HTDone
+			,@isExcludeCorner = @isExcludeCorner
+			,@isExistRunningCornerBet = @isExistRunningCornerBet
 			,@creator		= @creator
 
 		IF @Sporttype = 5 AND @Action='CAL'
@@ -466,7 +487,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		IF @Sporttype = 1 AND LEFT(@Action, 3) = 'CAL'
 		BEGIN
-			EXEC dbo.NAP_Admin_Result_Update_1s 
+			EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
 				@Command = 'NAP_Admin_Settlement_1-CAL',
 				@MatchID = @MatchID,
 				@ResourceIDs = NULL,
@@ -483,6 +504,7 @@ need below code to determine for mark match as calculated (all bets settled)
 				@ftLCorner = @ftLCorner,
 				@htFCorner = @htFCorner,
 				@htLCorner = @htLCorner,
+				@isExcludeCorner = @isExcludeCorner,
 				@Action = @Action,
 				@IsAuto = 0,
 				@creator = @creator
@@ -509,7 +531,8 @@ need below code to determine for mark match as calculated (all bets settled)
 			BEGIN
 				EXEC dbo.NAP_Admin_Settlement_3 
 					@matchid	= @matchid
-					,@mode		= @action						
+					,@mode		= @action	
+					,@isExcludeCorner = @isExcludeCorner					
 			END
 		END
 
@@ -527,7 +550,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					)
 				IF CHARINDEX('1FL:', @betstatus) > 0
 				BEGIN
-					EXEC dbo.NAP_Admin_Settlement_FGLG 
+																				EXEC dbo.NAP_Admin_Settlement_FGLG 
 						@creator			= @creator
 						,@matchid			= @matchid
 						,@action			= 'CAL-HT'
@@ -553,7 +576,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					FROM dbo.bettransm bm WITH(NOLOCK)
 					WHERE bm.bettype = 14 AND bm.matchid = @matchid
 					)
-				EXEC dbo.NAP_Admin_Settlement_FGLG 
+																EXEC dbo.NAP_Admin_Settlement_FGLG 
 					@creator			= @creator
 					,@matchid			= @matchid
 					,@action			= 'CAL-FT'
@@ -566,13 +589,13 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		IF @eventstatus = 'completed'
 		BEGIN
-			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+												EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
 				@matchid	= @matchid
 				,@command	= 'C'
 
 			--IF @SettlementStatus135 = 4
 			--BEGIN
-			--	EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+			--				EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
 			--		@matchid	= @matchid 
 			--		,@command	= 'PS'
 			--		,@ivalue	= @SettlementStatus135
@@ -580,7 +603,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		END
 		ELSE IF @action = 'CAL-HT'
 		BEGIN
-			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+												EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
 				@matchid	= @matchid
 				,@command	= 'H'
 		END
@@ -703,6 +726,7 @@ need below code to determine for mark match as calculated (all bets settled)
 														+ '-' + CAST(@hta AS NVARCHAR(10)) 
 														+ ' GoalRecord:' + ISNULL(@goalrecord, '') 
 														+ '(Old:' + @goalrecord_old + ') Remark(' + @betstatus + ')' 
+
 														+ CASE	WHEN @SelectedSet IS NULL THEN ''
 																ELSE ' (Set:' + @SelectedSet + ')' 
 																END  
@@ -747,6 +771,7 @@ need below code to determine for mark match as calculated (all bets settled)
 														+ CASE WHEN @ftLCorner IS NULL THEN '' ELSE '(ftLCorner:' + @ftLCorner + ') ' END
 														+ CASE WHEN @htFCorner IS NULL THEN '' ELSE '(htFCorner:' + @htFCorner + ') ' END
 														+ CASE WHEN @htLCorner IS NULL THEN '' ELSE '(htLCorner:' + @htLCorner + ') ' END
+														+ CASE WHEN @isExcludeCorner IS NULL THEN '' ELSE '(isExcludeCorner:' + CAST(@isExcludeCorner AS VARCHAR(50)) + ') ' END
 
 														+' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 
@@ -803,6 +828,7 @@ need below code to determine for mark match as calculated (all bets settled)
 							+ CASE WHEN @ftLCorner IS NULL THEN '' ELSE 'ftLCorner:' + @ftLCorner + '<br/> ' END
 							+ CASE WHEN @htFCorner IS NULL THEN '' ELSE 'htFCorner:' + @htFCorner + '<br/> ' END
 							+ CASE WHEN @htLCorner IS NULL THEN '' ELSE 'htLCorner:' + @htLCorner + '<br/> ' END
+							+ CASE WHEN @isExcludeCorner IS NULL THEN '' ELSE 'isExcludeCorner:' + CAST( @isExcludeCorner AS VARCHAR(50)) + '<br/> ' END 
 
 
 							+ 'Duration:' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + ' ms;' 
@@ -890,8 +916,9 @@ need below code to determine for mark match as calculated (all bets settled)
 		END CATCH
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1] TO [Dot_Member] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_1] TO [vnteam] AS [dbo]
