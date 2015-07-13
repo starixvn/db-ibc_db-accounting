@@ -239,7 +239,7 @@ BEGIN
 				bt.transid 	= @transid 
 				OR (
 					bt.refno = @transid 
-					AND (sp.productid IN (6,7,8,9,12) OR sp.bettype BETWEEN 801 AND 899)
+					AND (sp.productid IN (6,7,8,9,12,13) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
 		
