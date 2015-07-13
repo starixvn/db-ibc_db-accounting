@@ -1,0 +1,64 @@
+﻿ ALTER PROCEDURE [dbo].[Nap_Set_MatchMetricGamingSel]
+	@fromdate	DATETIME,
+	@todate		DATETIME,
+	@MatchCode	VARCHAR(50)='',
+	@StatusID	TINYINT = 0,
+	@Leagueid	INT =0	
+ AS
+	/*
+		Created: Johnson
+		Date: 2015-06-29
+		Task: Get matches offer MG
+		DB: DBTXN/bodb02
+		
+		Revisions:
+		
+		Parameter's Explanation:
+			- @StatusID: 0: all, 1: running, 2: completed
+			- @matchcode = '' : all
+			- @leagueid = 0: all
+	*/
+BEGIN
+	SET NOCOUNT ON 
+	
+	DECLARE @matchid INT
+	
+	SELECT @matchid = 0
+	
+	IF @MatchCode <> ''
+	BEGIN	
+		SELECT @matchid =  CASE WHEN ISNUMERIC(@MatchCode) = 1 THEN CAST(@matchCode AS INT) ELSE 0 END
+	END
+		
+	SELECT  
+		m.matchid, 
+		m.matchcode, 
+		m.kickofftime, 
+		m.leagueid, 
+		m.homeid, 
+		m.awayid,
+		ISNULL(mr.isUndecided,0) as isUndecided,
+		CASE WHEN rs.SettlementStatusID = 0 then 'Running' ELSE 'Completed' END as EventStatus
+	FROM match m WITH(NOLOCK) 	
+		INNER JOIN (SELECT matchid, MIN(SettlementStatusID) as SettlementStatusID
+					FROM ResultDetail3rd WITH(NOLOCK)
+					GROUP BY matchid
+					) rs  ON m.matchid = rs.matchid
+		INNER JOIN VendorStatus vs WITH(NOLOCK) ON m.matchid = vs.matchid		
+		LEFT JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid 
+	WHERE m.eventdate BETWEEN @fromdate AND @todate
+		AND m.sporttype = 1
+		AND (ISNULL(@matchcode,'') = '' OR m.matchid = @matchid OR m.matchcode = @matchcode)
+		AND (@leagueid = 0 OR m.leagueid = @leagueid)
+		AND 1 = CASE WHEN @statusid = 0 THEN 1
+					WHEN @statusid = 1 AND rs.SettlementStatusID = 0 THEN 1
+					WHEN @statusid = 2 AND rs.SettlementStatusID IN (1,4) THEN 1 
+					ELSE 0 
+				END
+		AND vs.SB_TradeStatusID = 1 -- this match is offered Metric Gaming
+		AND vs.VD_TradeStatusID =1
+	ORDER BY EventStatus DESC, leagueid, kickofftime
+		
+END
+GO
+GRANT EXECUTE ON [dbo].[Nap_Set_MatchMetricGamingSel] TO [bodbAdminNet]
