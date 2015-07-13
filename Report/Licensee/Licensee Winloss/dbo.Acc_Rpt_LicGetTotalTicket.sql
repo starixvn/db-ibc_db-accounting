@@ -19,6 +19,9 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_LicGetTotalTicket]
 	@ShowVS			BIT=0,
 	@ShowCS			BIT=0,
 	@ShowKN  	    BIT=0,
+	@showGD 		BIT=0,-- Gold Deluxe
+	@showVG 		BIT=0, --Vegas Games
+	@showAGCS 		BIT=0, --AG Casino
 	@SportID		INT=0,
 	@bettype		INT=0,
 	@ReportBy		TINYINT=0,  
@@ -35,6 +38,7 @@ AS
 		-20140401@Hannah: offer Keno
 		-20140421@Hannah: fix bug for Keno
 		-20140704@Jim: offer Sporting solution
+		-20150710@Jim:  Super Balance fix (Feature #38168)
 	Param's Explanation:    
 	+ @ReportBy 1-Live; 2-Non-Live; 0: All;  
 	+ @GroupBy 1-Daily; 2-Monthly
@@ -93,7 +97,7 @@ END
 
 --Get the data
 SELECT @sql = @sql + '--Get the data:' + char(13)
-IF (@ShowSB = 1 OR @ShowRB = 1 OR @ShowNG = 1 OR @ShowLC = 1 OR @ShowVS = 1 OR @ShowCS=1 OR @ShowKN=1)
+IF (@ShowSB = 1 OR @ShowRB = 1 OR @ShowNG = 1 OR @ShowLC = 1 OR @ShowVS = 1 OR @ShowCS=1 OR @ShowKN=1 OR @showGD = 1 OR @showVG = 1 OR  @showAGCS  = 1)
 BEGIN
 	--exclude BA & IBC & PIH...
 	SELECT @sql = @sql + '--Exclude BA & IBC & PIH...:' + char(13)
@@ -119,7 +123,10 @@ BEGIN
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END + 
 						CASE WHEN @ShowCS = 1 THEN ' OR b.bettype =71' ELSE '' END + 
 						CASE WHEN @ShowKN = 1 THEN ' OR b.bettype BETWEEN 1501 AND 1599' ELSE '' END + 
-						CASE WHEN @ShowNG = 1 THEN ' OR b.bettype BETWEEN 81 AND 120' ELSE '' END + ')' + char(13) +
+						CASE WHEN @ShowNG = 1 THEN ' OR b.bettype BETWEEN 81 AND 120' ELSE '' END   + char(13) +
+						CASE WHEN @showGD = 1 THEN ' OR b.bettype = 1700' ELSE '' END   + char(13) +
+						CASE WHEN @showVG = 1 THEN ' OR b.bettype = 1900' ELSE '' END   + char(13) +
+						CASE WHEN @showAGCS  = 1 THEN ' OR b.bettype = 1800' ELSE '' END + ')' + char(13) +
 						CASE WHEN @bettype <> 0 THEN ' AND b.bettype = ' + convert(varchar(10), @Bettype)  ELSE '' END + char(13) +
 						CASE WHEN @SportID<>0 THEN 'AND b.bettype NOT IN (9,29) AND b.bettype NOT BETWEEN 31 AND 120 AND l.Sporttype = ' + convert(varchar(10), @SportID) ELSE '' END + char(13) +
 						CASE 
@@ -181,7 +188,10 @@ BEGIN
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END +
 						CASE WHEN @ShowCS = 1 THEN ' OR b.bettype =71' ELSE '' END +
 						CASE WHEN @ShowKN = 1 THEN ' OR b.bettype BETWEEN 1501 AND 1599' ELSE '' END +
-						CASE WHEN @ShowNG = 1 THEN ' OR b.bettype BETWEEN 81 AND 120' ELSE '' END + ')' + char(13) +
+						CASE WHEN @ShowNG = 1 THEN ' OR b.bettype BETWEEN 81 AND 120' ELSE '' END   + char(13) +
+						CASE WHEN @showGD = 1 THEN ' OR b.bettype = 1700' ELSE '' END   + char(13) +
+						CASE WHEN @showVG = 1 THEN ' OR b.bettype = 1900' ELSE '' END   + char(13) +
+						CASE WHEN @showAGCS  = 1 THEN ' OR b.bettype = 1800' ELSE '' END + ')' + char(13) +
 						CASE WHEN @bettype <> 0 THEN ' AND b.bettype = ' + convert(varchar(10), @Bettype)  ELSE '' END + char(13) +
 						CASE WHEN @SportID<>0 THEN 'AND b.bettype NOT IN (9,29) AND b.bettype NOT BETWEEN 31 AND 120 AND l.Sporttype = ' + convert(varchar(10), @SportID)  ELSE '' END + char(13) +
 						CASE 
