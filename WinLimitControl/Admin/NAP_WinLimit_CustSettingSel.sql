@@ -51,7 +51,7 @@ BEGIN
 			,c.username
 			,c.currency ExchangeID
 			,ProductID, cs.MaxWinLimit
-	FROM	WinLimit_CustSetting cs WITH (NOLOCK)
+	FROM	dbo.WinLimit_CustSetting cs WITH (NOLOCK)
 			INNER JOIN Customer c WITH (NOLOCK) 
 			ON cs.CustID = c.custid
 	WHERE	c.username LIKE '%' + @UserName + '%'

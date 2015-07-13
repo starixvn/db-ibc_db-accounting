@@ -1,10 +1,8 @@
 USE [bodb02]
 GO
-
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_Game_SelBlocked]    Script Date: 07/07/2015 16:10:53 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_Game_SelBlocked_xtest]    Script Date: 07/10/2015 14:23:58 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
 
@@ -37,103 +35,100 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	DECLARE @ResultTempTable AS TABLE
-	(
-		RowNum INT,
-		CustID INT,
-		UserName VARCHAR(50),
-		ExchangeID INT,
-		ProductID INT,
-		WinLimit MONEY,
-		WinningAmount MONEY,
-		BlockedTime DATETIME,
-		IsBlocked BIT,
-		IsNotified BIT
-	)
-	
-	INSERT INTO @ResultTempTable
-	SELECT	0,
-			g.CustID, 
-			NULL,
-			NULL,
-			g.ProductID,
-			g.MaxWinLimit WinLimit, 
-			g.TotalWinAmt WinningAmount, 
-			g.CreateDate BlockedTime, 
-			g.IsBlocked, 
-			g.IsNotified
-	FROM	dbo.WinLimit_Game g WITH (NOLOCK)
-	WHERE	(@ProductID = 0 OR ProductID = @ProductID) 
-			AND IsBlocked = 1
 		
-	DECLARE @CustIDList AS VARCHAR(MAX)
-	SELECT	@CustIDList  = COALESCE(@CustIDList +',' ,'') + CONVERT(VARCHAR(50),CustID )
-	FROM	@ResultTempTable
+	DECLARE @searchCust BIT
+	SET  @searchCust 	= CASE WHEN LEN(@UserName) > 0 THEN 1 ELSE 0 END
 	
-	DECLARE @TSQL VARCHAR(8000)
-	SELECT	@TSQL = 'SELECT *
-				FROM OPENQUERY (DBCUST, 
-					''SELECT 
-						CustID, 
-						Username, 
-						currency 
-					FROM CustDB.dbo.Customer WITH (NOLOCK) 
-					WHERE CustID IN (' + @CustIDList + ')
-							AND (' + CONVERT(VARCHAR(10), @ExchangeID) + ' = 0 OR currency=' + CONVERT(VARCHAR(10), @ExchangeID) + ')' +
- 							'AND username LIKE ''''' + @UserName + '%' +
-					''''''')'
-					
-	DECLARE @CustomerTempTable AS TABLE
-	(
-		CustID INT,
-		UserName VARCHAR(30),
-		ExchangeID INT
+	--FITER product
+	SELECT ProductID
+	INTO #tempProduct
+	FROM dbo.Products p
+	WHERE p.Enabled 		= 1
+		AND p.ProductType 	= 2
+		AND (@ProductID 	= 0 
+			OR ProductID 	= @ProductID)
+	
+	--FILER cust
+	SELECT c.custid
+	INTO #tempCust
+	FROM CustDB.dbo.Customer c WITH(NOLOCK)
+	WHERE @searchCust		= 1
+		AND c.username 		LIKE '%' + @UserName + '%'
+		AND (
+			@ExchangeID 	= 0 
+			OR c.currency 	= @ExchangeID
+		)
+		AND c.roleid		= 1
+	
+	;WITH CTE_Paging AS (
+		SELECT RowNum = DENSE_RANK() OVER ( ORDER BY g.CustID)
+			,g.Custid
+			,c.username
+			,c.currency AS ExchangeId
+		FROM dbo.WinLimit_Game g WITH (NOLOCK)
+			INNER JOIN #tempProduct p
+			ON g.ProductID	= p.ProductID
+			LEFT JOIN #tempCust sc 
+			ON g.custid		= sc.custid
+			INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK)
+			ON g.CustID		= c.custid
+
+		WHERE g.IsBlocked 		= 1
+			AND (@searchCust 	= 0
+				OR (@searchCust = 1 AND sc.custid > 0)
+			)
+			AND (@ExchangeID 	= 0 
+				OR c.currency 	= @ExchangeID
+			)
+		GROUP BY g.Custid
+			,c.username
+			,c.currency
 	)
 	
-	INSERT INTO @CustomerTempTable
-	EXEC(@TSQL)
-	
-	UPDATE	@ResultTempTable 
-	SET		UserName = c.UserName
-			,ExchangeID = c.ExchangeID
-	FROM	@ResultTempTable rs
-			INNER JOIN @CustomerTempTable c 
-			ON rs.CustID = c.CustID
-			
-	DELETE	@ResultTempTable
-	WHERE	UserName IS NULL
-	
-	SELECT	@TotalRow = COUNT(DISTINCT(CustID)) 
-	FROM	@ResultTempTable
-	WHERE	UserName LIKE @UserName + '%' 
-			AND (@ExchangeID = 0 OR ExchangeID = @ExchangeID) 
-	
-	SELECT	CustID
-			,UserName
-			,ExchangeID
-			,ProductID
-			,WinLimit
-			,WinningAmount
-			,BlockedTime
-			,IsBlocked
-			,IsNotified 
-	FROM 
-		(
-			SELECT	DENSE_RANK() OVER(ORDER BY CustID) AS RowNum
-					,CustID
-					,UserName
-					,ExchangeID
-					,ProductID
-					,WinLimit
-					,WinningAmount
-					,BlockedTime
-					,IsBlocked
-					,IsNotified 
-			FROM	@ResultTempTable
-			WHERE	UserName LIKE @UserName + '%' 
-					AND (@ExchangeID = 0 OR ExchangeID = @ExchangeID)
-		) AS tbl
-	WHERE	RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
+	SELECT	
+		tp.RowNum,
+		g.CustID, 
+		tp.username,
+		tp.ExchangeId,
+		g.ProductID,
+		g.MaxWinLimit WinLimit, 
+		g.TotalWinAmt WinningAmount, 
+		g.CreateDate BlockedTime, 
+		g.IsBlocked, 
+		g.IsNotified
+	INTO #tempResult
+	FROM dbo.WinLimit_Game g WITH (NOLOCK)
+		INNER JOIN #tempProduct p
+		ON g.ProductID	= p.ProductID
+		INNER JOIN CTE_Paging tp
+		ON g.CustID = tp.CustID
+		INNER JOIN dbo.exchange e
+		ON tp.ExchangeId = e.exchangeid
+	WHERE g.IsBlocked = 1
+	ORDER BY tp.username, tp.ExchangeId, g.ProductID
+
+	SELECT TOP 1 @TotalRow = MAX(RowNum)
+	FROM #tempResult
+
+	SELECT RowNum,
+		CustID, 
+		username,
+		ExchangeId,
+		ProductID,
+		WinLimit, 
+		WinningAmount, 
+		BlockedTime, 
+		IsBlocked, 
+		IsNotified
+	FROM #tempResult rs
+	WHERE rs.RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
+	ORDER BY RowNum
+
+	DROP TABLE #tempProduct
+	DROP TABLE #tempCust
+	DROP TABLE #tempResult
+
+	RETURN;
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_Game_SelBlocked] TO [bodbAdminNet]
