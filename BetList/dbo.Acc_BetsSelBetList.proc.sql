@@ -284,7 +284,7 @@ BEGIN
 						AND (@bettype 	= 0 OR s.bettype = @bettype)
 					)
 					--exclude metric gaming running ticket
-					AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
+					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
 					
 			UNION ALL -- translog metric gaming
 			SELECT 

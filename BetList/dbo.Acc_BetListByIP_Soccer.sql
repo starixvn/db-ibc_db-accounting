@@ -478,7 +478,7 @@ BEGIN
 					AND b.custid = @custid
 					AND s.sporttype = 1
 					--exclude metric gaming running ticket
-					AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
+					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
 			
 			--Metric gaming running ticket
 			UNION ALL 

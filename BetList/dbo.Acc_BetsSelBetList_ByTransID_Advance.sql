@@ -149,7 +149,7 @@ BEGIN
 				AND sp.bettype BETWEEN 801 AND 899
 			)
 			--exclude metric gaming running ticket
-			AND (bt.bettype NOT BETWEEN 801 AND 899 AND bt.statusID NOT IN (0, 1))
+			AND (bt.bettype NOT BETWEEN 801 AND 806 OR (bt.bettype BETWEEN 801 AND 806 AND bt.statusID NOT IN (0, 1)))
 			
 	END
 	-- FROM bettrans14
@@ -319,7 +319,7 @@ BEGIN
 						OR (b.refno	= @refno AND b.bettype BETWEEN 801 AND 899)
 					)
 					--exclude metric gaming running ticket
-					AND (b.bettype NOT BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
+					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
 			
 			UNION ALL -- translog metric gaming
 			select 

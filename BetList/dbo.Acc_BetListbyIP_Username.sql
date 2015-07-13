@@ -42,7 +42,7 @@ AS
 			AND bettype <> 903
 			AND ip = @ip
 			--exclude metric gaming running ticket
-			AND (b.bettype NOT BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
+			AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
 	GROUP BY custid	
 	UNION ALL 
 	SELECT	tl.custid, COUNT(tl.custid), 2
@@ -91,7 +91,7 @@ AS
 										AND b.ip = @ip
 										AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END
 										--exclude metric gaming running ticket
-										AND (b.bettype NOT BETWEEN 801 AND 899 AND b.statusID NOT IN (0, 1))
+										AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
 								UNION ALL 
 								SELECT	b.custid
 								FROM	bettrans b WITH (NOLOCK) 

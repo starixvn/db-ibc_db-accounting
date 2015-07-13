@@ -44,7 +44,7 @@ BEGIN
 		AND custid = @CustID
 		AND winlostdate BETWEEN @TempFromDate AND @todate
 		--exclude metric gaming running ticket
-		AND (b.bettype NOT BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1))
+		AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
 	UNION ALL
 	SELECT 
 		DISTINCT gameID bettype 
