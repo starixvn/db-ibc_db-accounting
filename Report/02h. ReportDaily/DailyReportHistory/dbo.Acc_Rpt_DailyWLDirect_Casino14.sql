@@ -49,7 +49,7 @@ BEGIN
 	WHERE	b.winlostdate = @winlostdate
 			AND (
 					s.ProductId = 6 -- Casino
-					OR s.ProductId = 11  --- Vegas Games
+					OR s.ProductId = 14  --- Vegas Games
 					OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino	
 				) 
 			AND b.statusID NOT IN (101, 102,103,121) 
