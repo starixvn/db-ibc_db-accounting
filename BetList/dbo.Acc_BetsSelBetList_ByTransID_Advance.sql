@@ -2161,6 +2161,8 @@ BEGIN
 
 	END
 	
+	DELETE @Data WHERE sporttype = 1 AND bettype = 903
+
 	OutputResult:
 	SELECT * FROM @Data
 	ORDER BY transid  
