@@ -144,10 +144,15 @@ BEGIN
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
 		WHERE bt.transid 	= @transid 
+			/*
+			--dis-allow searching by refno
 			OR (
 				bt.refno		= @transid
-				AND sp.bettype BETWEEN 801 AND 899
-			)
+				AND (
+						sp.productid IN (8, 12)
+						OR sp.bettype BETWEEN 801 AND 899
+					)
+			)*/
 			--exclude metric gaming running ticket
 			AND (bt.bettype NOT BETWEEN 801 AND 806 OR (bt.bettype BETWEEN 801 AND 806 AND bt.statusID NOT IN (0, 1)))
 			
@@ -163,10 +168,16 @@ BEGIN
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
 		WHERE bt.transid 	= @transid 
+			/*
+			--dis-allow searching by refno
 			OR (
 					bt.refno		= @transid
-					AND sp.bettype BETWEEN 801 AND 899
+					AND (
+						sp.productid IN (8, 12)
+						OR sp.bettype BETWEEN 801 AND 899
+					)
 				)
+			*/
 	END
 	-- FROM bettrans_bk
 	IF(@WinlostDate IS NULL)
@@ -179,7 +190,7 @@ BEGIN
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
 		WHERE bt.transid 	= @transid 
-			-- disallow to search ticket from translog 
+			--dis-allow searching by refno
 			/*OR (
 					bt.refno		= @transid
 					AND (
