@@ -104,7 +104,14 @@ AS
 										AND b.refno IN (SELECT refno FROM	dbo.bettransm bm WITH (NOLOCK) 
 																			INNER JOIN dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 																	 WHERE 	m.sporttype = 1)
-								) Bet 
+								--COUNT MG ticket as soccer
+								UNION ALL 
+								SELECT	tl.custid
+								FROM	dbo.translog tl WITH (NOLOCK) 
+								WHERE   winlostdate = @fromdate 
+									AND tl.gameid BETWEEN 801 AND 899
+									AND ip = @ip AND statusid = 0
+							) Bet 
 					GROUP BY custid
 				) tmpSoccerBet  ON tmpSoccerBet.custid = u.custid
 	END 	
