@@ -403,7 +403,7 @@ BEGIN
 	UNION ALL
 	SELECT b.refno GroupID, b.bettype
 			,b.transid
-			,isnull(b.BetID, 0) AS BetID
+			,t.bettype AS BetID
 			,b.refno
 			,m.matchcode
 			,m.eventdate AS eventdate
@@ -412,7 +412,7 @@ BEGIN
 			,ISNULL(b.checktime, '') settleTime
 			,b.hdp1
 			,b.hdp2
-			,b.odds
+			,t.odds
 			,0 finalodds
 			,0 finalodds2
 			,b.OddsType
