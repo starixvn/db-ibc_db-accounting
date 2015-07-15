@@ -95,7 +95,7 @@ BEGIN
 		AND winlostdate between @fromdate and @TempToDate 
 END
 
-
+DELETE @BettypeTable WHERE bettype = 903
 select 
 	typeid,
 	typenamee

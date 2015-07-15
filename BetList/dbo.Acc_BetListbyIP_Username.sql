@@ -17,6 +17,7 @@ AS
 	- 20150506@Tom: Support Gold Deluxe Product [#34847]
 	- 20150615@Edward: Support for BetTrade
 	- 20150707@Bobby: Add metric gaming bettypes (801-899)
+	- 20150715@Edward: Support for MicroGamming
 */
  BEGIN
 	SET NOCOUNT ON
@@ -49,7 +50,7 @@ AS
 	FROM	dbo.translog tl WITH (NOLOCK)
 	INNER JOIN @SportBettype sp 
 		ON tl.gameid = sp.BetType
-			AND (sp.ProductID IN (8,12) OR tl.gameid BETWEEN 801 AND 899)
+			AND (sp.ProductID IN (8,12,13) OR tl.gameid BETWEEN 801 AND 899)
 	WHERE   winlostdate = @fromdate 
 			--AND gameid between 1501 and 1599
 			AND ip = @ip AND statusid = 0
