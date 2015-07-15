@@ -493,18 +493,17 @@ BEGIN
 			b.custid 			= @Custid 
 			AND s.Bettype 		BETWEEN 801 AND 899
 			AND b.translogid 	= @TransID 
-			AND b.statusID		IN (0,1)
-		
+			AND b.statusID		IN (0,1)		
+	
 	UPDATE betList
 	SET betList.Odds	= originBetList.Odds
 		,betList.Stake	= originBetList.Stake
-		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
 		,betList.BetID	= originBetList.Bettype
 	FROM @Data AS betList
-		INNER JOIN bettrans AS originBetList ON betList.RefNO = originBetList.TransID
-		INNER JOIN bettrans AS commBetList ON betList.RefNO = commBetList.RefNO
-	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
-		AND commBetList.Bettype = 903
+		INNER JOIN bettrans AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+		LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)	
 
 	END
 	--Mix Parlay 
@@ -1545,13 +1544,12 @@ BEGIN
 	UPDATE betList
 	SET betList.Odds	= originBetList.Odds
 		,betList.Stake	= originBetList.Stake
-		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
 		,betList.BetID	= originBetList.Bettype
 	FROM @Data AS betList
-		INNER JOIN bettrans14 AS originBetList ON betList.RefNO = originBetList.TransID
-		INNER JOIN bettrans14 AS commBetList ON betList.RefNO = commBetList.RefNO
+		INNER JOIN bettrans14 AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+		LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
 	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
-		AND commBetList.Bettype = 903
 
 	--Mix Parlay  
 	IF @bettype = 9
@@ -2370,18 +2368,17 @@ BEGIN
 		--b.transid = @TransID  
 		(b.transid 	= @TransID  
 				OR ( @bettype BETWEEN 801 AND 899 AND b.refno = @refno )
-			)
-	 
+			) 
+
 	UPDATE betList
 	SET betList.Odds	= originBetList.Odds
 		,betList.Stake	= originBetList.Stake
-		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
 		,betList.BetID	= originBetList.Bettype
 	FROM @Data AS betList
-		INNER JOIN DBARC.bodb_archive.dbo.bettrans_bk AS originBetList ON betList.RefNO = originBetList.TransID
-		INNER JOIN DBARC.bodb_archive.dbo.bettrans_bk AS commBetList ON betList.RefNO = commBetList.RefNO
+		INNER JOIN DBARC.bodb_archive.dbo.bettrans_bk AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+		LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
 	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
-		AND commBetList.Bettype = 903
 
 	--Mix Parlay  
 	IF @bettype = 9

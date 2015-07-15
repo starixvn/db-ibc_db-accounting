@@ -1034,6 +1034,16 @@ BEGIN
 				   AND s.ProductID = 13
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus);
+
+			UPDATE betList
+			SET betList.Odds	= originBetList.Odds
+				,betList.Stake	= originBetList.Stake
+				,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
+				,betList.BetID	= originBetList.Bettype
+			FROM @Data AS betList
+				INNER JOIN bettrans14 AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+				LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+			WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
         END
     ELSE
         BEGIN
@@ -2173,18 +2183,17 @@ BEGIN
 				   AND s.ProductID = 13
                    AND b.statusID = 0
 				   AND EXISTS(SELECT [statusID] FROM   @tmpStatus t WHERE t.statusID = 0);
-        END
-        
-	UPDATE betList
-	SET betList.Odds	= originBetList.Odds
-		,betList.Stake	= originBetList.Stake
-		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
-		,betList.BetID	= originBetList.Bettype
-	FROM @Data AS betList
-		INNER JOIN @Data AS originBetList ON betList.RefNO = originBetList.TransID
-		INNER JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO
-	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
-		AND commBetList.Bettype = 903
+
+			UPDATE betList
+			SET betList.Odds	= originBetList.Odds
+				,betList.Stake	= originBetList.Stake
+				,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
+				,betList.BetID	= originBetList.Bettype
+			FROM @Data AS betList
+				INNER JOIN bettrans AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+				LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+			WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)		
+        END       
 
 	DELETE @Data WHERE Sporttype = 1 AND Bettype = 903
 

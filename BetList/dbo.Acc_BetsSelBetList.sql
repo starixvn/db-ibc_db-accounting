@@ -589,6 +589,16 @@ BEGIN
 				b.winlostdate<= @ToDate  and
 				b.custid = @Custid 
 			END
+
+			UPDATE betList
+			SET betList.Odds	= originBetList.Odds
+				,betList.Stake	= originBetList.Stake
+				,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
+				,betList.BetID	= originBetList.Bettype
+			FROM #BetListData AS betList
+				INNER JOIN bettrans AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+				LEFT JOIN #BetListData AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+			WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)		
 		END
 		
 		--- Casino
@@ -1798,6 +1808,16 @@ BEGIN
 				b.winlostdate<= @ToDate  and
 				b.custid = @Custid 	
 			END
+
+			UPDATE betList
+			SET betList.Odds	= originBetList.Odds
+				,betList.Stake	= originBetList.Stake
+				,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
+				,betList.BetID	= originBetList.Bettype
+			FROM #BetListData AS betList
+				INNER JOIN bettrans14 AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+				LEFT JOIN #BetListData AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+			WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)		
 		END
 		
 		--- Casino
@@ -2471,18 +2491,7 @@ BEGIN
 						AND (@bettype 	= 0 OR s.bettype = @bettype)
 					)
 		END		
-	END 
-	   
-	UPDATE betList
-	SET betList.Odds	= originBetList.Odds
-		,betList.Stake	= originBetList.Stake
-		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN commBetList.awinlost ELSE betList.comm END
-		,betList.BetID	= originBetList.Bettype
-	FROM #BetListData AS betList
-		INNER JOIN #BetListData AS originBetList ON betList.RefNO = originBetList.TransID
-		INNER JOIN #BetListData AS commBetList ON betList.RefNO = commBetList.RefNO
-	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
-		AND commBetList.Bettype = 903
+	END    
 
 	DELETE #BetListData WHERE Sporttype = 1 AND Bettype = 903
 
