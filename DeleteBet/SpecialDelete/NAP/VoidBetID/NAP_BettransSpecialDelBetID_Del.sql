@@ -293,16 +293,16 @@ BEGIN
 		WHERE z.CustID <> b.CustID
 		
 		-- Rollback BetTrade's main tickets
-		UPDATE  main
-		SET main.status	= z.Status
+		UPDATE  b
+		SET b.status	= z.Status
 		FROM bettrans b WITH (ROWLOCK, UPDLOCK) 
 			INNER JOIN zzzbettrans z  WITH (ROWLOCK, UPDLOCK) ON b.TransID = z.TransID   
 		WHERE
 			b.TransID IN (SELECT transid FROM @ErrorTransID)
 			
 		-- Rollback BetTrade's subtickets (901,902,903) 
-		UPDATE  main
-		SET main.status	= z.Status
+		UPDATE  b
+		SET b.status	= z.Status
 		FROM bettrans b WITH (ROWLOCK, UPDLOCK) 
 			INNER JOIN zzzbettrans z  WITH (ROWLOCK, UPDLOCK) ON b.TransID = z.TransID   
 		WHERE
