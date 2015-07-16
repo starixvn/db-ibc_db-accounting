@@ -327,7 +327,7 @@ BEGIN
 	FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@bettypes,'^') AS bt ON bt.val=b.bettype
 	WHERE 
-		(b.matchid=@matchid 
+		b.matchid=@matchid 
 		AND b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -370,8 +370,6 @@ BEGIN
 		AND ISNULL(b.SecAcceptFlag, 0)  = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(b.SecAcceptFlag, 0)  
 														 WHEN 1 THEN 0 
 														 WHEN 2 THEN 1 END
-		)
-		OR b.Bettype IN (901,902,903)
 					 
  -- bettype = 4 -- Correct score
  INSERT INTO #BetDelete
@@ -381,8 +379,7 @@ BEGIN
 	FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt ON bt.val=b.betteam
-	WHERE (
-		b.matchid=@matchid
+	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -403,8 +400,6 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END
-		)
-		OR b.Bettype IN (901,902,903)
 
 
 -- bettype = 6: Total Goal; 126: 1st Total Goal, 131: Home Team Total Goal; 132:  Away Team Total Goal
@@ -415,7 +410,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
-	WHERE (b.matchid=@matchid
+	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -436,8 +431,6 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END
-		)
-		OR b.Bettype IN (901,902,903)
 
 -- bettype = 14: First Goal/Last Goal; 127: 1st FGLG
  INSERT INTO #BetDelete  
@@ -447,7 +440,7 @@ BEGIN
 	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam14,'^') AS bt ON b.betteam=CONVERT(VARCHAR(3),bt.val)
-	WHERE (b.matchid=@matchid AND           
+	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -466,8 +459,7 @@ BEGIN
 		AND b.bettype IN (14, 127)
 		AND (@betteam14='All' OR bt.val IS NOT NULL)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END
-		)
-		OR b.Bettype IN (901,902,903)
+
 -- bettype = 16: HT/FT
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
@@ -507,7 +499,7 @@ BEGIN
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
-	WHERE (b.matchid=@matchid AND           
+	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -547,9 +539,7 @@ BEGIN
 		)
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
 													WHEN 1 THEN 0 
-													WHEN 2 THEN 1 END	
-		)
-		OR b.Bettype IN (901,902,903)								
+													WHEN 2 THEN 1 END									
 	-- bettype = 154, 155, 156, 1302, 1311, 1312, 1316, 1317, 1318, 1324
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid as transtest, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
@@ -557,7 +547,7 @@ BEGIN
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
-	WHERE (b.matchid=@matchid AND           
+	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -624,8 +614,7 @@ BEGIN
 					ELSE 1 
 			END
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END	
-	)
-		OR b.Bettype IN (901,902,903)	
+
 	--178,197,198,204,205
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
@@ -634,7 +623,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
-	WHERE (b.matchid=@matchid
+	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -666,8 +655,7 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END				 
-	)
-		OR b.Bettype IN (901,902,903)
+													 
 	--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
@@ -676,7 +664,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam6,'^') AS bt ON bt.val=b.betteam
-	WHERE (b.matchid=@matchid
+	WHERE b.matchid=@matchid
 		AND b.transid between @FromTransId AND @ToTransId	
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -761,8 +749,22 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 													 WHEN 1 THEN 0 
 													 WHEN 2 THEN 1 END	
-		)
-		OR b.Bettype IN (901,902,903)		 							 
+	--Get Bettrade tickets 				
+	INSERT INTO #BetDelete 
+	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		b.liveawayscore, b.stake, b.CurrencyName, b.betid
+	FROM dbo.bettrans AS b WITH (NOLOCK)
+	WHERE (b.transid IN (SELECT transid FROM @tblTransCredit)
+			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
+			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
+			OR b.transid IN (SELECT transid FROM @tblTrans12EU )
+			OR b.transid IN (SELECT transid FROM @tblTransMHC)
+			OR b.transid IN (SELECT transid FROM @tblTransFB )
+			OR b.transid IN (SELECT transid FROM @tblTransBetFair )
+			OR b.transid IN (SELECT transid FROM @tblTransOneExchange )
+			)	
+		AND b.bettype = 901		 
 ------------------***** End of insert all data into #BetDelete *****------------------
 
 
