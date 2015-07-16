@@ -1,14 +1,23 @@
-﻿ALTER PROCEDURE [dbo].[Nap_Admin_Settlement_MetricGaming] 
-	@matchid		INT
-	,@Bettype		INT
-	,@ResultID		INT	
-	,@BettypeTime	VARCHAR(100)	= ''
-	,@Result		XML
-	,@action		VARCHAR(10)		= 'CAL'
-	,@AdminID		INT	
-	,@IP			VARCHAR(50)		= ''
-	,@ErrCode		INT				= 0		OUTPUT
-	,@ErrMsg		NVARCHAR(200)	= ''	OUTPUT
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 07/16/2015 16:39:09 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MetricGaming] 
+	@MatchId					INT
+	,@Bettype					INT
+	,@ResultID					INT	
+	,@BettypeTime				VARCHAR(100)	= ''
+	,@Result					XML
+	,@Action					VARCHAR(10)		= 'CAL'
+	,@AdminId					INT	
+	,@IsSettleDetermined		BIT				= 0
+	,@SuspendedTime				TINYINT			= 0
+	,@IP						VARCHAR(50)		= ''
+	,@ErrCode					INT				= 0		OUTPUT
+	,@ErrMsg					NVARCHAR(200)	= ''	OUTPUT
 AS
 	/*
 		Created: Johnson
@@ -19,15 +28,15 @@ AS
 		Revisions:
 		
 		Parameter's Explantion:
-			- @Result = <Result>
-							<Row GameResult='7' OtherInfo='6:10'></Row>
-							<Row GameResult='8' OtherInfo='6:20'></Row>
+			-@Result = <Result>
+							<Row GameResult="7" OtherInfo="6:10"/>
+							<Row GameResult="8" OtherInfo="6:20"/>
 						</Result>: Every Single Minute
 			-@Result = <Result>
-							<Row GameResult='15'></Row>									
+							<Row GameResult="15"/>
 						</Result>: NONE
 			-@Result = <Result>
-							<Row GameResult='9' OtherInfo='62'></Row>
+							<Row GameResult="9" OtherInfo="62"/>
 						</Result>: Time of Posession
 	*/
 BEGIN
@@ -35,16 +44,16 @@ BEGIN
 	
 	DECLARE @ActionID		INT
 			,@start			DATETIME
-			,@stop			DATETIME						
-			,@LogData		VARCHAR(4000)
-			,@Remark		VARCHAR(4000)
+			,@stop			DATETIME
+			,@Remark		VARCHAR(500)
+			,@LogData		NVARCHAR(300)
+			,@ticketCount	INT = 0
 	
-	SELECT @ActionID = CASE WHEN @Action = 'CAL' THEN 152--MG-calculate
-							WHEN @Action = 'UNDO' THEN 153
-							WHEN @Action = 'Refund' THEN 154
+	SELECT @ActionID = CASE WHEN @Action = 'CAL'	THEN 152--MG-calculate
+							WHEN @Action = 'UNDO'	THEN 153
+							WHEN @Action = 'REFUND' THEN 154
 							END
-			,@start = CURRENT_TIMESTAMP()
-	
+			,@start = CURRENT_TIMESTAMP
 			
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (
@@ -67,7 +76,7 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminID
+				@UserID		= @AdminId
 				,@Matchid	= @matchid
 				,@KeyID		= 3
 				,@ActionID	= @ActionID
@@ -78,7 +87,7 @@ BEGIN
 			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
 
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminID
+				@UserID		= @AdminId
 				,@Matchid	= @matchid
 				,@KeyID		= 3
 				,@ActionID	= @ActionID
@@ -93,38 +102,44 @@ BEGIN
 		RETURN
 	END
 	
+	SELECT	@ticketCount = COUNT(1)
+	FROM	dbo.translog WITH(NOLOCK)
+	WHERE	eventID = @MatchId
+			AND gameID = @Bettype
 	-------------------------------------------------------------
 	---        CAPTURE value BALANCE before settlement        ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #BalanceBefore (
-		custid INT PRIMARY KEY
-		,balance MONEY
+		custid		INT PRIMARY KEY
+		,balance	MONEY
 		)
 	
-	DECLARE @TotalAccount INT
-		,@TotalAccount_BalanceUpdate INT
+	DECLARE @TotalAccount				INT = 0
+		,@TotalAccount_BalanceUpdate	INT = 0
 	
 	INSERT INTO #BalanceBefore
 	SELECT b.custid
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE b.matchid = @matchid 
-		AND b.bettype = @bettype
+		AND b.bettype = @Bettype
 	GROUP BY b.custid
 	
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_MetricGamingResult_Update
-		@ResultID	= @ResultID,
-		@Action		= @Action,
-		@Result		= @Result,
-		@AdminID	= @AdminID
+		@ResultID				= @ResultID
+		,@Action				= @Action
+		,@Result				= @Result
+		,@Creator				= @AdminId
+		,@isSettleDetermined	= @isSettleDetermined
 	
 	EXEC NAP_Admin_Calculate_801
-		@matchid		= @matchid,
-		@bettype		= @bettype,
-		@bettypeTime	= @bettypeTime,
-		@Action			= @Action,
-		@ResultID		= @ResultID,
-		@Result			= @Result
+		@matchid				= @matchid
+		,@bettype				= @bettype
+		,@bettypeTime			= @bettypeTime
+		,@Action				= @Action
+		,@ResultID				= @ResultID
+		,@Result				= @Result
+		,@isSettleDetermined	= @isSettleDetermined
 	
 	-------------------------------------------------------------
 	---         CAPTURE value BALANCE after unsettlement        ---
@@ -134,8 +149,8 @@ BEGIN
 	INSERT INTO #BalanceAfter
 	SELECT custid,sum( winlost-actual_stake+playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE matchid = @matchid 
-		AND b.bettype = @bettype
+	WHERE matchid = @Matchid 
+		AND b.bettype = @Bettype
 	Group by custid
     
     -------------------------------------------------------------
@@ -204,26 +219,71 @@ BEGIN
 	---------------------------VVVV------------------------------     
 	SELECT @stop = CURRENT_TIMESTAMP
 	
+	SELECT @LogData = 'NAP: Calculate (' + @Action + ') for matchid:' + CAST(@MatchId AS VARCHAR(10))
+							+ 'Bettype:' + CAST(@Bettype AS VARCHAR(10)) 
 	
-	SELECT @logdata = 'NAP: Metric Gaming-Settlement (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
-														   + ' Bettype:' + CAST(@Bettype AS varchar(10))
-														   + ' BettypeTime:' + @bettypeTime														   
-														   + ' ResultID:' + CAST(@ResultID AS VARCHAR(10))														  
-														   + ' Result:' + @Result + '(' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 	EXEC dbo.WriteLog_UserLog 
-		@UserID = @Creator
-		,@Doing = @logdata
+		@UserID = @AdminId
+		,@Doing = @LogData
+		
+	-- WRITE LOG	
+	/* Format
+		<Log>
+			<Event IsSettleDetermined="" Duration="" TC="" Bal="" NewAttribute=""/>
+				<Result>
+					<Row GameResult="7" OtherInfo="6:10"/>
+                    <Row GameResult="8" OtherInfo="6:20"/>
+				</Result>
+			</Event>
+		</Log>
+	*/
+	SELECT @Remark = '<Log>
+							<Event IsSettleDetermined ="' + CAST(@Bettype AS varchar(10)) + '"'
+											+ ' Duration="'+ CAST(DATEDIFF(MILLISECOND, @start, @stop) AS VARCHAR(20)) + ' ms"'
+											+ ' TC="' + CAST(@ticketCount AS VARCHAR(20)) + '"'
+											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" />'
+								+ CAST(@Result AS VARCHAR(4000))
+						  +	'<Event>'
+					+ '</Log>'
+
+	SELECT @Remark
+			
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+			@UserID			= @AdminId
+			,@MatchID		= @matchid
+			,@bettype		= @bettype
+			,@bettypeTime	= @bettypeTime
+			,@ResultID		= @ResultID
+			,@ActionID		= @ActionID			
+			,@Result		= @Result
+			,@Remark		= @Remark
+			,@IP			= @IP
+	END TRY
+	BEGIN CATCH
+		SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+			@UserID			= @AdminId
+			,@MatchID		= @matchid
+			,@bettype		= @bettype
+			,@bettypeTime	= @bettypeTime
+			,@ResultID		= @ResultID
+			,@ActionID		= @ActionID			
+			,@Result		= @Result
+			,@Remark		= @Remark
+			,@IP			= @IP
+	END CATCH		
 		
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
 	WHERE KeyID = 3
 		AND KeyValue = @matchid	
-				
+		
 	IF (@@Error = 0)
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @AdminID,
+				@UserID = @AdminId,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
@@ -233,7 +293,7 @@ BEGIN
 		BEGIN CATCH
 			SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @AdminID,
+				@UserID = @AdminId,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
@@ -244,7 +304,7 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @AdminID,
+				@UserID = @AdminId,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
@@ -254,43 +314,18 @@ BEGIN
 		BEGIN CATCH
 			SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @AdminID,
+				@UserID = @AdminId,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
 				@Remark = @Remark
 		END CATCH
 	END
-	
-	SELECT @Remark = 'NAP: Bettype:' + CAST(@Bettype AS varchar(10)) +  ' <br/> ' 
-						+ ' BettypeTime:' + CAST(@BettypeTime AS varchar(50)) +  ' <br/> ' 
-						+ ' Result:'+ @Result +' <br/> ' 					
-						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + 'ms' 
 
-	-- WRITE LOG	
-	BEGIN TRY		
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-			@userid				= @AdminID
-			,@matchid			= @MatchID
-			,@actionid			= @ActionID
-			,@VendorID			= 5--MG
-			,@ResultID			= @ResultID
-			,@Remark			= @Remark
-			,@ip				= @ip
-	END TRY
-	BEGIN CATCH
-		SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
-		
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-			@userid				= @AdminID
-			,@matchid			= @MatchID
-			,@actionid			= @ActionID
-			,@VendorID			= 5--MG
-			,@ResultID			= @ResultID
-			,@Remark			= @Remark
-			,@ip				= @ip
-	END CATCH		
-		
 END
+
+
 GO
-GRANT EXECUTE ON [dbo].[Nap_Admin_Settlement_MetricGaming] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MetricGaming] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_MetricGaming] TO [vnteam] AS [dbo]
