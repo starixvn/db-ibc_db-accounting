@@ -444,7 +444,7 @@ BEGIN
 			,m.showtime
 			,b.winlostdate
 	FROM @Data t
-			INNER JOIN bettrans AS b WITH (NOLOCK) ON b.refno = t.transid AND b.bettype = 901 AND b.matchid=t.MatchId AND b.custid = t.custid
+			INNER JOIN bettrans AS b WITH (NOLOCK) ON b.refno = t.transid AND b.bettype = 901
 			INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
 		WHERE	b.winlostdate >=@FromDate
 				AND b.bettype < 19001
