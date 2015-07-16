@@ -3,9 +3,9 @@
 	,@Bettype		INT
 	,@ResultID		INT	
 	,@BettypeTime	VARCHAR(100)	= ''
-	,@Result		VARCHAR(4000)
+	,@Result		XML
 	,@action		VARCHAR(10)		= 'CAL'
-	,@creator		INT	
+	,@AdminID		INT	
 	,@IP			VARCHAR(50)		= ''
 	,@ErrCode		INT				= 0		OUTPUT
 	,@ErrMsg		NVARCHAR(200)	= ''	OUTPUT
@@ -33,12 +33,18 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE @ActionID	INT,
-			,@start		DATETIME
-			,@stop		DATETIME
+	DECLARE @ActionID		INT
+			,@start			DATETIME
+			,@stop			DATETIME						
+			,@LogData		VARCHAR(4000)
+			,@Remark		VARCHAR(4000)
 	
-	SELECT @ActionID = 152--MG-calculate
+	SELECT @ActionID = CASE WHEN @Action = 'CAL' THEN 152--MG-calculate
+							WHEN @Action = 'UNDO' THEN 153
+							WHEN @Action = 'Refund' THEN 154
+							END
 			,@start = CURRENT_TIMESTAMP()
+	
 			
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (
@@ -61,7 +67,7 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
+				@UserID		= @AdminID
 				,@Matchid	= @matchid
 				,@KeyID		= 3
 				,@ActionID	= @ActionID
@@ -72,7 +78,7 @@ BEGIN
 			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
 
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
+				@UserID		= @AdminID
 				,@Matchid	= @matchid
 				,@KeyID		= 3
 				,@ActionID	= @ActionID
@@ -103,14 +109,14 @@ BEGIN
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE b.matchid = @matchid 
-		AND b.bettype IN (801,803,804,805,806)
+		AND b.bettype = @bettype
 	GROUP BY b.custid
 	
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_MetricGamingResult_Update
 		@ResultID	= @ResultID,
 		@Action		= @Action,
 		@Result		= @Result,
-		@Creator	= @Creator
+		@AdminID	= @AdminID
 	
 	EXEC NAP_Admin_Calculate_801
 		@matchid		= @matchid,
@@ -129,7 +135,7 @@ BEGIN
 	SELECT custid,sum( winlost-actual_stake+playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE matchid = @matchid 
-		AND b.bettype IN (801,803,804,805,806)
+		AND b.bettype = @bettype
 	Group by custid
     
     -------------------------------------------------------------
@@ -198,16 +204,26 @@ BEGIN
 	---------------------------VVVV------------------------------     
 	SELECT @stop = CURRENT_TIMESTAMP
 	
+	
+	SELECT @logdata = 'NAP: Metric Gaming-Settlement (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
+														   + ' Bettype:' + CAST(@Bettype AS varchar(10))
+														   + ' BettypeTime:' + @bettypeTime														   
+														   + ' ResultID:' + CAST(@ResultID AS VARCHAR(10))														  
+														   + ' Result:' + @Result + '(' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
+	EXEC dbo.WriteLog_UserLog 
+		@UserID = @Creator
+		,@Doing = @logdata
+		
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
 	WHERE KeyID = 3
 		AND KeyValue = @matchid	
-		
+				
 	IF (@@Error = 0)
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
@@ -217,7 +233,7 @@ BEGIN
 		BEGIN CATCH
 			SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
@@ -228,7 +244,7 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
@@ -238,39 +254,41 @@ BEGIN
 		BEGIN CATCH
 			SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @creator,
+				@UserID = @AdminID,
 				@Matchid = @matchid,
 				@KeyID = 3,
 				@ActionID = @ActionID,
 				@Remark = @Remark
 		END CATCH
 	END
+	
+	SELECT @Remark = 'NAP: Bettype:' + CAST(@Bettype AS varchar(10)) +  ' <br/> ' 
+						+ ' BettypeTime:' + CAST(@BettypeTime AS varchar(50)) +  ' <br/> ' 
+						+ ' Result:'+ @Result +' <br/> ' 					
+						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + 'ms' 
 
 	-- WRITE LOG	
-	BEGIN TRY
+	BEGIN TRY		
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-			@UserID			= @creator
-			,@MatchID		= @matchid
-			,@bettype		= @bettype
-			,@bettypeTime	= @bettypeTime
-			,@ResultID		= @ResultID
-			,@ActionID		= @ActionID			
-			,@Result		= @Result
-			,@Remark		= @Remark
-			,@IP			= @IP
+			@userid				= @AdminID
+			,@matchid			= @MatchID
+			,@actionid			= @ActionID
+			,@VendorID			= 5--MG
+			,@ResultID			= @ResultID
+			,@Remark			= @Remark
+			,@ip				= @ip
 	END TRY
 	BEGIN CATCH
-		SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
+		SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
+		
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-			@UserID			= @creator
-			,@MatchID		= @matchid
-			,@bettype		= @bettype
-			,@bettypeTime	= @bettypeTime
-			,@ResultID		= @ResultID
-			,@ActionID		= @ActionID			
-			,@Result		= @Result
-			,@Remark		= @Remark
-			,@IP			= @IP
+			@userid				= @AdminID
+			,@matchid			= @MatchID
+			,@actionid			= @ActionID
+			,@VendorID			= 5--MG
+			,@ResultID			= @ResultID
+			,@Remark			= @Remark
+			,@ip				= @ip
 	END CATCH		
 		
 END

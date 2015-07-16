@@ -1,8 +1,8 @@
 ﻿ ALTER PROCEDURE [dbo].[NAP_Admin_MetricGamingResult_Update]
 	@ResultID	INT,
 	@Action		VARCHAR(100)= 'CAL',
-	@Result		VARCHAR(4000)='',
-	@Creator	INT
+	@Result		XML,
+	@AdminID	INT
  AS
 	/*
 		Created: Johnson
@@ -14,12 +14,15 @@
 		
 		Parameter's Explanation:
 			- @Result = <Result>
-							<Row GameResult='7' Time='6:10'></Row>
-							<Row GameResult='8' Time='6:20'></Row>
-						</Result>
+							<Row GameResult='7' OtherInfo='6:10'></Row>
+							<Row GameResult='8' OtherInfo='6:20'></Row>
+						</Result>: Every Single Minute
 			-@Result = <Result>
-							<Row GameResult=''15''></Row>									
+							<Row GameResult='15' OtherInfo=''></Row>									
 						</Result>: NONE
+			-@Result = <Result>
+							<Row GameResult='9' OtherInfo='62'></Row>
+						</Result>: Time of Posession
 		
 	*/
 BEGIN
@@ -30,7 +33,7 @@ BEGIN
 		UPDATE ResultDetail3rd WITH(UPDLOCK,ROWLOCK)
 		SET SettlementStatusID = 1,
 			ResultStatusID = 5,
-			LastModifyBy = @Creator,
+			LastModifyBy = @AdminID,
 			LastModifyDate = GETDATE(),
 			GameResult = '',
 			OtherInfo = ''
@@ -41,7 +44,7 @@ BEGIN
 		UPDATE ResultDetail3rd WITH(UPDLOCK,ROWLOCK)
 		SET SettlementStatusID = 0,
 			ResultStatusID = 5,
-			LastModifyBy = @Creator,
+			LastModifyBy = @AdminID,
 			LastModifyDate = GETDATE(),
 			GameResult = '',
 			OtherInfo = ''
@@ -51,27 +54,17 @@ BEGIN
 	BEGIN
 		DECLARE @tmpResult TABLE (
 			GameResult TINYINT,
-			Time VARCHAR(50)
+			OtherInfo VARCHAR(50)
 		)		
 		
 		DECLARE @DocHandler INT,
 				@GameResult	VARCHAR(100) = '',
 				@OtherInfo	VARCHAR(100) = ''
 		
-		-- For read xml     
-		EXEC sp_xml_preparedocument @DocHandler OUTPUT, @Result		
-		
 		INSERT INTO @tmpResult 
-		SELECT Data.GameResult,
-			Data.Time
-		FROM OPENXML (@DocHandler, '/Result/Row',1)
-		WITH(
-			GameResult INT,
-			Time		VARCHAR(50)
-		) as Data
-		
-		EXEC sp_xml_removedocument @DocHandler
-		-- end read xml
+		SELECT t.c.value('@GameResult','int')
+			t.c.value('@OtherInfo','varchar(50)') AS Value
+		FROM @Result.nodes('Result/Row')  t(c)	
 		
 		SELECT @GameResult = @GameResult + CAST(GameResult AS VARCHAR(10)) + ',',
 			@OtherInfo = @OtherInfo + ISNULL(Time,'') + ','
@@ -83,7 +76,7 @@ BEGIN
 		UPDATE ResultDetail3rd WITH(UPDLOCK,ROWLOCK)
 		SET SettlementStatusID = 4,
 			ResultStatusID = 5,
-			LastModifyBy = @Creator,
+			LastModifyBy = @AdminID,
 			LastModifyDate = GETDATE(),
 			GameResult = ISNULL(@GameResult,''),
 			OtherInfo = ISNULL(@OtherInfo,'')
