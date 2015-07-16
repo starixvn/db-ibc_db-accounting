@@ -1,5 +1,6 @@
 ﻿ ALTER PROCEDURE [dbo].[NAP_UserLog_Settle3rd_MatchSelByID]
-	@matchid INT
+	@matchid INT,
+	@ResultID INT
  AS
 	/*
 		Created: Johnson
@@ -13,6 +14,19 @@
 	*/
 BEGIN
 	SET NOCOUNT ON
+	
+	SELECT 
+		logid,
+		logdate,
+		o.username,
+		la.ActionNameEN,
+		l.Remark,
+		l.IP
+	FROM Userlog_Settle3rd l WITH(NOLOCK)
+		LEFT JOIN LogAction la WITH (NOLOCK) ON l.ActionID = la.ActionID
+		LEFT JOIN bodb02.dbo.CustInfo o WITH(NOLOCK) ON o.custid = l.userid
+	WHERE matchid = @matchid
+		AND ResultID = @ResultID		
 	
 END
 GO
