@@ -1,12 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s162]    Script Date: 05/13/2015 12:37:19 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_s162    Script Date: 22/04/2015 12:46:06 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_s162]
 	@MatchId		INT,
 	@Action			VARCHAR(10)		= 'CAL',	-- CAL  / Refund 
@@ -27,7 +21,7 @@ AS
 	
 	Revisions:
 		- 20150421@Kathy: Offer New Game Type "No Card Baccarat" (1106) [Redmine:#31630]
-		
+		- 20150716@Patrick: Support Gold Deluxe
 
 	Param explanation:
 		@CardsResult: 
@@ -255,10 +249,12 @@ BEGIN
 				custid
 				,winlostdate
 				,balance
+				,bettype
 		)
 		SELECT	custid
 				,@eventdate
 				,ABS(balance)
+				,1101
 		FROM	#BalanceGame
 		WHERE	Increased = 0
 
@@ -266,10 +262,12 @@ BEGIN
 				custid
 				,winlostdate
 				,balance
+				,bettype
 		)
 		SELECT	custid
 				,@eventdate
 				,balance
+				,1101
 		FROM	#BalanceGame
 		WHERE	Increased = 1
 
