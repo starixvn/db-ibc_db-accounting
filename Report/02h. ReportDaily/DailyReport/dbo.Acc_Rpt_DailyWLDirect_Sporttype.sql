@@ -472,7 +472,7 @@ BEGIN
 	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71))
-			OR (s.ProductId = 11)  --- Vegas Games
+			OR (s.ProductId = 14)  --- Vegas Games
 			OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino			
 	GROUP BY site 
 
@@ -575,6 +575,7 @@ BEGIN
 	DROP TABLE #src
 	DROP TABLE #DepAgent
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]
