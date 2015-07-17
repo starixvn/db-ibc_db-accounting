@@ -468,7 +468,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.strSplit(@BetTypes,'^') s ON s.val = b.bettype
 		LEFT JOIN dbo.strSplit(@betteam16,'^') AS bt ON bt.val=b.betteam
-	WHERE (b.matchid=@matchid AND           
+	WHERE b.matchid=@matchid AND           
 		b.transid between @FromTransId AND @ToTransId		
 		AND (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
@@ -489,9 +489,7 @@ BEGIN
 		AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 then ISNULL(SecAcceptFlag,0) 
 													WHEN 1 THEN 0 
 													WHEN 2 THEN 1 END				
-					
-		)
-		OR b.Bettype IN (901,902,903)								 									
+													 									
 	-- bettype = 128, 129, 130, 136, 137, 138, 139, 143, 144, 163, 184,194,203
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
