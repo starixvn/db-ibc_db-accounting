@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_MetricGamingResult_Update]    Script Date: 07/16/2015 16:38:41 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_MetricGamingResult_Update]    Script Date: 07/17/2015 09:08:09 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -8,7 +8,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_Admin_MetricGamingResult_Update]
 	@ResultID				INT
 	,@Action				VARCHAR(100)	= 'CAL'
-	,@Result				XML
+	,@Result				VARCHAR(4000)
 	,@IsSettleDetermined	BIT				= 0
 	,@AdminId				INT
  AS
@@ -40,13 +40,15 @@ ALTER PROCEDURE [dbo].[NAP_Admin_MetricGamingResult_Update]
 BEGIN
 	SET NOCOUNT ON 
 	
+	DECLARE @xml			XML
+			,@GameResult	VARCHAR(100) = ''
+			,@OtherInfo		VARCHAR(100) = ''
 	DECLARE @tmpResult TABLE (
 			GameResult	TINYINT,
 			OtherInfo	VARCHAR(50)
 		)	
 	
-	DECLARE @GameResult	VARCHAR(100) = ''
-			,@OtherInfo	VARCHAR(100) = ''
+	SELECT @xml = CONVERT(XML, @Result)
 	
 	INSERT INTO @tmpResult (
 			GameResult
@@ -54,7 +56,7 @@ BEGIN
 		)
 	SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
 			,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
-	FROM	@Result.nodes('Result/Row') t( c )
+	FROM	@xml.nodes('Result/Row') t( c )
 	
 	SELECT	@GameResult = @GameResult + CAST(GameResult AS VARCHAR(10)) + ','
 			,@OtherInfo = @OtherInfo + ISNULL(OtherInfo,'') + ','
@@ -108,6 +110,7 @@ BEGIN
 		WHERE ResultID = @ResultID	
 	END
 END
+
 
 
 GO

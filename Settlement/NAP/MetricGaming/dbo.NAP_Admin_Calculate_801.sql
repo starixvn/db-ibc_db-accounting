@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801]    Script Date: 07/16/2015 16:38:19 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801]    Script Date: 07/17/2015 08:53:33 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -12,7 +12,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
 	@SuspendedTime			TINYINT			= 0,
 	@Action					VARCHAR(50)		= 'CAL',
 	@ResultID				INT,
-	@Result					XML,
+	@Result					VARCHAR(4000),
 	@isSettleDetermined		BIT				= 0
 AS
 	/*
@@ -55,11 +55,14 @@ BEGIN
 			,@StatusID		TINYINT
 			,@commWinRate	SMALLMONEY
 			,@commLostRate	SMALLMONEY
+			,@xml			XML
+	
+	SELECT @xml = CONVERT(XML, @Result)
 	
 	INSERT INTO @tmpResult 
 	SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
 			,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
-	FROM	@Result.nodes('Result/Row') t( c )	
+	FROM	@xml.nodes('Result/Row') t( c )	
 	
 	IF @Action = 'CAL'
 	BEGIN
@@ -575,6 +578,82 @@ BEGIN
 	END
 	ELSE IF @Action = 'REFUND'
 	BEGIN		
+		CREATE TABLE #tmpSettledTicket (
+			translogid				BIGINT
+			,transdate				DATETIME
+			,odds					SMALLMONEY
+			,stake					MONEY
+			,status					NVARCHAR(10)
+			,statusID				TINYINT
+			,actual_stake			MONEY
+			,custom2				VARCHAR(50)
+			,playerdiscount			DECIMAL(9,8)
+			,discount				DECIMAL(9,8)
+			,adiscount				DECIMAL(9,8)
+			,apositiontaking 		SMALLMONEY
+			,mpositiontaking 		SMALLMONEY
+			,spositiontaking 		SMALLMONEY
+			,tpositiontaking 		SMALLMONEY
+			,liveindicator			BIT
+			,creator				INT
+			,transdesc				NVARCHAR(300)
+			,winlostdate			SMALLDATETIME
+			,betfrom				NVARCHAR(1)
+			,actualrate				FLOAT
+			,eventID				INT
+			,recommend				INT
+			,mrecommend				INT
+			,srecommend				INT
+			,custid					INT
+			,custom3				VARCHAR(50)
+			,gameID					INT
+			,currency				TINYINT
+			,CurrencyName			NVARCHAR(50)
+			,ip						NVARCHAR(15)
+			,sdiscount				DECIMAL(9,8)
+			,username				NVARCHAR(50)
+			,virtualrate			FLOAT
+			,custom1				VARCHAR(50)
+			,balance				MONEY
+		)
+		CREATE TABLE #tmpRefundedTicket (
+			translogid				BIGINT
+			,transdate				DATETIME
+			,odds					SMALLMONEY
+			,stake					MONEY
+			,status					NVARCHAR(10)
+			,statusID				TINYINT
+			,actual_stake			MONEY
+			,custom2				VARCHAR(50)
+			,playerdiscount			DECIMAL(9,8)
+			,discount				DECIMAL(9,8)
+			,adiscount				DECIMAL(9,8)
+			,apositiontaking		SMALLMONEY
+			,mpositiontaking		SMALLMONEY
+			,spositiontaking		SMALLMONEY
+			,tpositiontaking		SMALLMONEY
+			,liveindicator			BIT
+			,creator				INT
+			,transdesc				NVARCHAR(300)
+			,winlostdate			SMALLDATETIME
+			,betfrom				NVARCHAR(1)
+			,actualrate				FLOAT
+			,eventID				INT
+			,recommend				INT
+			,mrecommend				INT
+			,srecommend				INT
+			,custid					INT
+			,custom3				VARCHAR(50)
+			,gameID					INT
+			,currency				TINYINT
+			,CurrencyName			NVARCHAR(50)
+			,ip						NVARCHAR(15)
+			,sdiscount				DECIMAL(9,8)
+			,username				NVARCHAR(50)
+			,virtualrate			FLOAT
+			,custom1				VARCHAR(50)
+			,balance				MONEY
+		)
 		IF @isSettleDetermined = 1 AND @Bettype = 806
 		BEGIN
 			-- update translog
@@ -598,6 +677,7 @@ BEGIN
 					,INSERTED.adiscount
 					,INSERTED.apositiontaking
 					,INSERTED.mpositiontaking
+					,INSERTED.spositiontaking
 					,INSERTED.tpositiontaking
 					,INSERTED.liveindicator
 					,INSERTED.creator
@@ -616,6 +696,10 @@ BEGIN
 					,INSERTED.CurrencyName
 					,INSERTED.ip
 					,INSERTED.sdiscount
+					,INSERTED.username
+					,INSERTED.virtualrate
+					,INSERTED.custom1
+					,INSERTED.balance
 			INTO 	#tmpSettledTicket								
 			WHERE	GameId 	= @Bettype
 					AND EventId = @MatchId
@@ -626,38 +710,43 @@ BEGIN
 			
 			-- update & insert tickets in bettrans	
 			MERGE	dbo.bettrans b 
-			USING (SELECT translogid
-						  ,transdate
-						  ,odds
-						  ,stake
-						  ,status
-						  ,statusID
-						  ,actual_stake
-						  ,custom2
-						  ,playerdiscount
-						  ,discount
-						  ,adiscount
-						  ,apositiontaking
-						  ,mpositiontaking
-						  ,tpositiontaking
-						  ,liveindicator
-						  ,creator
-						  ,transdesc
-						  ,winlostdate
-						  ,betfrom
-						  ,actualrate
-						  ,eventID
-						  ,recommend
-						  ,mrecommend
-						  ,srecommend
-						  ,custid
-						  ,custom3
-						  ,gameID
-						  ,currency
-						  ,CurrencyName
-						  ,ip
-						  ,sdiscount			
-					FROM #tmpTrans)	AS t
+			USING	(SELECT	  translogid
+							  ,transdate
+							  ,odds
+							  ,stake
+							  ,status
+							  ,statusID
+							  ,actual_stake
+							  ,custom2
+							  ,playerdiscount
+							  ,discount
+							  ,adiscount
+							  ,apositiontaking
+							  ,mpositiontaking
+							  ,spositiontaking
+							  ,tpositiontaking
+							  ,liveindicator
+							  ,creator
+							  ,transdesc
+							  ,winlostdate
+							  ,betfrom
+							  ,actualrate
+							  ,eventID
+							  ,recommend
+							  ,mrecommend
+							  ,srecommend
+							  ,custid
+							  ,custom3
+							  ,gameID
+							  ,currency
+							  ,CurrencyName
+							  ,ip
+							  ,sdiscount	
+							  ,username	
+							  ,virtualrate
+							  ,custom1	
+							  ,balance
+					FROM #tmpSettledTicket)	AS t
 			ON	b.refno = t.translogid
 			WHEN MATCHED THEN UPDATE SET	b.status	= t.status
 											,b.statusID	= t.statusId
@@ -901,6 +990,7 @@ BEGIN
 				,INSERTED.adiscount
 				,INSERTED.apositiontaking
 				,INSERTED.mpositiontaking
+				,INSERTED.spositiontaking
 				,INSERTED.tpositiontaking
 				,INSERTED.liveindicator
 				,INSERTED.creator
@@ -919,6 +1009,10 @@ BEGIN
 				,INSERTED.CurrencyName
 				,INSERTED.ip
 				,INSERTED.sdiscount
+				,INSERTED.username	
+				,INSERTED.virtualrate
+				,INSERTED.custom1	
+				,INSERTED.balance
 		INTO	#tmpRefundedTicket
 		WHERE	eventID = @MatchId
 				AND gameID = @Bettype
@@ -1045,9 +1139,9 @@ BEGIN
 										,t.[recommend]
 										,t.[mrecommend]
 										,t.[srecommend]
-										,t.[ruben]
+										,1 --[ruben]
 										,t.custom2 -- [betid]
-										,t.[statuswinlost]
+										,0 -- [statuswinlost]
 										,1 -- [modds]
 										,t.GameId -- [bettype]				   
 										,t.[actual_stake]
@@ -1101,6 +1195,7 @@ BEGIN
 		END
 	END
 END
+
 
 
 

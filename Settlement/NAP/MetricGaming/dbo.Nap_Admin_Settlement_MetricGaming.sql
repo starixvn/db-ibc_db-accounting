@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 07/16/2015 16:39:09 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 07/17/2015 09:08:28 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -10,7 +10,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MetricGaming]
 	,@Bettype					INT
 	,@ResultID					INT	
 	,@BettypeTime				VARCHAR(100)	= ''
-	,@Result					XML
+	,@Result					VARCHAR(4000)
 	,@Action					VARCHAR(10)		= 'CAL'
 	,@AdminId					INT	
 	,@IsSettleDetermined		BIT				= 0
@@ -129,8 +129,9 @@ BEGIN
 		@ResultID				= @ResultID
 		,@Action				= @Action
 		,@Result				= @Result
-		,@Creator				= @AdminId
+		,@AdminId				= @AdminId
 		,@isSettleDetermined	= @isSettleDetermined
+		
 	
 	EXEC NAP_Admin_Calculate_801
 		@matchid				= @matchid
@@ -238,41 +239,41 @@ BEGIN
 		</Log>
 	*/
 	SELECT @Remark = '<Log>
-							<Event IsSettleDetermined ="' + CAST(@Bettype AS varchar(10)) + '"'
+							<Event IsSettleDetermined ="' + CAST(@IsSettleDetermined AS varchar(10)) + '"'
 											+ ' Duration="'+ CAST(DATEDIFF(MILLISECOND, @start, @stop) AS VARCHAR(20)) + ' ms"'
 											+ ' TC="' + CAST(@ticketCount AS VARCHAR(20)) + '"'
 											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" />'
-								+ CAST(@Result AS VARCHAR(4000))
+								+ @Result
 						  +	'<Event>'
 					+ '</Log>'
 
 	SELECT @Remark
 			
-	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-			@UserID			= @AdminId
-			,@MatchID		= @matchid
-			,@bettype		= @bettype
-			,@bettypeTime	= @bettypeTime
-			,@ResultID		= @ResultID
-			,@ActionID		= @ActionID			
-			,@Result		= @Result
-			,@Remark		= @Remark
-			,@IP			= @IP
-	END TRY
-	BEGIN CATCH
-		SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-			@UserID			= @AdminId
-			,@MatchID		= @matchid
-			,@bettype		= @bettype
-			,@bettypeTime	= @bettypeTime
-			,@ResultID		= @ResultID
-			,@ActionID		= @ActionID			
-			,@Result		= @Result
-			,@Remark		= @Remark
-			,@IP			= @IP
-	END CATCH		
+	--BEGIN TRY
+	--	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+	--		@UserID			= @AdminId
+	--		,@MatchID		= @matchid
+	--		,@bettype		= @bettype
+	--		,@bettypeTime	= @bettypeTime
+	--		,@ResultID		= @ResultID
+	--		,@ActionID		= @ActionID			
+	--		,@Result		= @Result
+	--		,@Remark		= @Remark
+	--		,@IP			= @IP
+	--END TRY
+	--BEGIN CATCH
+	--	SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
+	--	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+	--		@UserID			= @AdminId
+	--		,@MatchID		= @matchid
+	--		,@bettype		= @bettype
+	--		,@bettypeTime	= @bettypeTime
+	--		,@ResultID		= @ResultID
+	--		,@ActionID		= @ActionID			
+	--		,@Result		= @Result
+	--		,@Remark		= @Remark
+	--		,@IP			= @IP
+	--END CATCH		
 		
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
@@ -323,6 +324,7 @@ BEGIN
 	END
 
 END
+
 
 
 GO
