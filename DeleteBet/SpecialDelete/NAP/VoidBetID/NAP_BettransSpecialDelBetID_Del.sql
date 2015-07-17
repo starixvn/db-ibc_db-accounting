@@ -262,9 +262,8 @@ BEGIN
 		(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
 	SELECT	sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.awinlost, sb.status, sb.winlost, sb.livehomescore, sb.liveawayscore, sb.liveindicator, sb.betteam, sb.creator , sb.refno, sb.winlostdate, sb.betfrom, sb.betcheck, sb.checktime, sb.matchid, sb.bettype
 	FROM	bettrans b with (nolock)
-		INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno
+		INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno AND b.matchid = sb.matchid AND sb.BetType IN (901,902,903)
 	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903)) 
-			AND b.Bettype IN (901,902,903)
 	
 	UPDATE 
 		bettrans WITH (ROWLOCK, UPDLOCK)
@@ -336,7 +335,7 @@ BEGIN
 	INSERT INTO #BeforeUpd (custid, balance)
 	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
 	FROM	bettrans b WITH (NOLOCK)
-	WHERE	b.transid IN (SELECT transid FROM #BetDelete)
+	WHERE	b.transid IN (SELECT transid FROM @tmpListTransID)
 	GROUP BY b.CustID
 	
 	--update bettrans
@@ -417,7 +416,7 @@ BEGIN
 	INSERT INTO #AfterUpd (custid, balance)
 	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
 	FROM	bettrans b WITH (NOLOCK)
-	WHERE	b.transid IN (SELECT transid FROM #BetDelete)
+	WHERE	b.transid IN (SELECT transid FROM @tmpListTransID)
 	GROUP BY b.CustID 
 	
 	---INSERT data into pending balance table 
