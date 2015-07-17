@@ -251,6 +251,163 @@ BEGIN
 	FROM	bettrans with (nolock)
 	WHERE	custid = @CustID
 
+	
+	
+	-- Get Upline info 
+
+	SELECT	 @CustID			AS CustID 
+			,@CustUsername		AS CustUsername
+			,@Username2			AS Username2
+			,@AgUsername		AS AgUsername
+			,@Recommend			AS Recommend
+			,@MAgUsername		AS MAgUsername
+			,@MRecommend		AS Mrecommend
+			,@SAgUsername		AS SAgUsername
+			,@Srecommend		AS SRecommend 
+			,@currency			AS Currency 
+			,@isNegativeBalance AS isNegativeBalance
+			,@Site				AS [Site]
+			,@EmailGroup		AS EmailGroup 
+			,@isITAdmin			AS isITAdmin 
+
+		
+	--- BETS: return all additional information for mailing
+	SELECT	m.homeid,
+			m.awayid,
+			m.matchcode,
+			m.eventdate,
+			m.leagueid,
+			GETDATE() AS DATETIME,
+			isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+			showtime AS GameEvent,
+			b.bettype,
+			b.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.transid,
+			b.refno,
+			b.betteam,
+			b.betcheck,
+			b.hdp1,
+			b.hdp2,
+			b.betfrom,
+			b.livehomescore,
+			b.liveawayscore,
+			b.liveindicator,
+			cr.username creator,
+			b.stake,     
+			b.status,
+			b.winlost - actual_stake as winlost,
+			b.playercomm as comm,      
+			b.currency,
+			tpl.betid
+	FROM	bettrans b WITH (NOLOCK)
+			INNER JOIN @tmpListTransID tpl ON tpl.transid = b.transid
+			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
+			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+	WHERE	@isExistMatch = 1 
+			AND tpl.bettype NOT IN (10,9)
+	UNION ALL 
+	SELECT	
+			0 AS homeid,
+			0 AS awayid,
+			'' AS matchcode,
+			'' AS eventdate,
+			0 AS leagueid,
+			GETDATE() AS DATETIME,
+			CONVERT(BIT,0) AS IsNeutral,
+			''  AS GameEvent,
+			b.bettype,
+			b.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.transid,
+			b.refno,
+			'' AS betteam,
+			'' AS betcheck,
+			0 AS hdp1,
+			0 AS hdp2,
+			'' AS betfrom,
+			0 AS livehomescore,
+			0 AS liveawayscore,
+			0 AS liveindicator,
+			cr.username creator,
+			b.stake,     
+			b.status,
+			b.winlost - actual_stake as winlost,
+			b.playercomm as comm,      
+			b.currency,
+			b.betid
+	FROM	bettrans b WITH(NOLOCK) 
+			INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
+	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 9)
+			AND @isExistParlay = 1 
+	UNION ALL 
+	SELECT	m.teamid AS homeid,
+			0 AS awayid,
+			m.matchcode,
+			m.eventdate,
+			m.leagueid,
+			GETDATE() AS DATETIME,
+			CONVERT(BIT,0) AS IsNeutral,
+			'' AS GameEvent,				-- N/A 
+			b.bettype,
+			b.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.transid,
+			b.refno,
+			b.betteam,
+			b.betcheck,
+			b.hdp1,
+			b.hdp2,
+			b.betfrom,
+			b.livehomescore,
+			b.liveawayscore,
+			b.liveindicator,
+			cr.username creator,
+			b.stake,     
+			b.status,
+			b.winlost - actual_stake as winlost,
+			b.playercomm as comm,      
+			b.currency,
+			b.betid
+	FROM
+			bettrans b WITH (NOLOCK)
+			INNER JOIN Outright m WITH (NOLOCK) ON b.matchID = m.orid
+			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 10)
+			AND @isExistOutright = 1 
+		
+			
+	--check for live casino
+	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199))
+	BEGIN		
+		SELECT 	 t.TransID 
+				,bg.odds
+				,bg.stake
+				,bg.STATUS
+				,bg.bettype
+				,bg.betteam
+				,bg.refno
+		FROM	bettransG bg WITH (NOLOCK)
+				INNER JOIN @tmpListTransID t ON bg.refno = t.Refno 
+		WHERE	t.Bettype  BETWEEN 1101 AND 1199
+	END
+	ELSE	--- Get structure for web 
+	BEGIN
+		SELECT	 0 AS TransID 
+				,0 AS Odds
+				,0 AS Stake
+				,NULL AS Status 
+				,0 AS Bettype
+				,NULL AS betteam 
+				,0 AS refno
+	END
+	
 	INSERT INTO zzzbettrans
 		(transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)
 	SELECT	transid, custid, CURRENT_TIMESTAMP, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype
@@ -437,160 +594,6 @@ BEGIN
 	DROP TABLE #BeforeUpd
 	DROP TABLE #AfterUpd
 	
-	-- Get Upline info 
-
-	SELECT	 @CustID			AS CustID 
-			,@CustUsername		AS CustUsername
-			,@Username2			AS Username2
-			,@AgUsername		AS AgUsername
-			,@Recommend			AS Recommend
-			,@MAgUsername		AS MAgUsername
-			,@MRecommend		AS Mrecommend
-			,@SAgUsername		AS SAgUsername
-			,@Srecommend		AS SRecommend 
-			,@currency			AS Currency 
-			,@isNegativeBalance AS isNegativeBalance
-			,@Site				AS [Site]
-			,@EmailGroup		AS EmailGroup 
-			,@isITAdmin			AS isITAdmin 
-
-		
-	--- BETS: return all additional information for mailing
-	SELECT	m.homeid,
-			m.awayid,
-			m.matchcode,
-			m.eventdate,
-			m.leagueid,
-			GETDATE() AS DATETIME,
-			isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
-			showtime AS GameEvent,
-			b.bettype,
-			b.odds,  
-			b.OddsType, 
-			b.transdate,
-			b.bettype,
-			b.transid,
-			b.refno,
-			b.betteam,
-			b.betcheck,
-			b.hdp1,
-			b.hdp2,
-			b.betfrom,
-			b.livehomescore,
-			b.liveawayscore,
-			b.liveindicator,
-			cr.username creator,
-			b.stake,     
-			b.status,
-			b.winlost - actual_stake as winlost,
-			b.playercomm as comm,      
-			b.currency,
-			tpl.betid
-	FROM	bettrans b WITH (NOLOCK)
-			INNER JOIN @tmpListTransID tpl ON tpl.transid = b.transid
-			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
-			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
-	WHERE	@isExistMatch = 1 
-			AND tpl.bettype NOT IN (10,9)
-	UNION ALL 
-	SELECT	
-			0 AS homeid,
-			0 AS awayid,
-			'' AS matchcode,
-			'' AS eventdate,
-			0 AS leagueid,
-			GETDATE() AS DATETIME,
-			CONVERT(BIT,0) AS IsNeutral,
-			''  AS GameEvent,
-			b.bettype,
-			b.odds,  
-			b.OddsType, 
-			b.transdate,
-			b.bettype,
-			b.transid,
-			b.refno,
-			'' AS betteam,
-			'' AS betcheck,
-			0 AS hdp1,
-			0 AS hdp2,
-			'' AS betfrom,
-			0 AS livehomescore,
-			0 AS liveawayscore,
-			0 AS liveindicator,
-			cr.username creator,
-			b.stake,     
-			b.status,
-			b.winlost - actual_stake as winlost,
-			b.playercomm as comm,      
-			b.currency,
-			b.betid
-	FROM	bettrans b WITH(NOLOCK) 
-			INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
-	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 9)
-			AND @isExistParlay = 1 
-	UNION ALL 
-	SELECT	m.teamid AS homeid,
-			0 AS awayid,
-			m.matchcode,
-			m.eventdate,
-			m.leagueid,
-			GETDATE() AS DATETIME,
-			CONVERT(BIT,0) AS IsNeutral,
-			'' AS GameEvent,				-- N/A 
-			b.bettype,
-			b.odds,  
-			b.OddsType, 
-			b.transdate,
-			b.bettype,
-			b.transid,
-			b.refno,
-			b.betteam,
-			b.betcheck,
-			b.hdp1,
-			b.hdp2,
-			b.betfrom,
-			b.livehomescore,
-			b.liveawayscore,
-			b.liveindicator,
-			cr.username creator,
-			b.stake,     
-			b.status,
-			b.winlost - actual_stake as winlost,
-			b.playercomm as comm,      
-			b.currency,
-			b.betid
-	FROM
-			bettrans b WITH (NOLOCK)
-			INNER JOIN Outright m WITH (NOLOCK) ON b.matchID = m.orid
-			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
-	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 10)
-			AND @isExistOutright = 1 
-		
-			
-	--check for live casino
-	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199))
-	BEGIN		
-		SELECT 	 t.TransID 
-				,bg.odds
-				,bg.stake
-				,bg.STATUS
-				,bg.bettype
-				,bg.betteam
-				,bg.refno
-		FROM	bettransG bg WITH (NOLOCK)
-				INNER JOIN @tmpListTransID t ON bg.refno = t.Refno 
-		WHERE	t.Bettype  BETWEEN 1101 AND 1199
-	END
-	ELSE	--- Get structure for web 
-	BEGIN
-		SELECT	 0 AS TransID 
-				,0 AS Odds
-				,0 AS Stake
-				,NULL AS Status 
-				,0 AS Bettype
-				,NULL AS betteam 
-				,0 AS refno
-	END
 		
 	--update balance debit
 	IF @balance > 0
