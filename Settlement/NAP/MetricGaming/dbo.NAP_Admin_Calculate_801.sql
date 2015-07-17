@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801]    Script Date: 07/17/2015 08:53:33 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
 	@matchid				INT,
 	@bettype				INT,
 	@bettypeTime			VARCHAR(100)	= '',
@@ -50,9 +43,7 @@ BEGIN
 			OtherInfo	VARCHAR(50)
 		)		
 	
-	DECLARE @GameResult		VARCHAR(100) = ''
-			,@OtherInfo		VARCHAR(100) = ''
-			,@StatusID		TINYINT
+	DECLARE @StatusID		TINYINT
 			,@commWinRate	SMALLMONEY
 			,@commLostRate	SMALLMONEY
 			,@xml			XML
@@ -62,7 +53,8 @@ BEGIN
 	INSERT INTO @tmpResult 
 	SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
 			,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
-	FROM	@xml.nodes('Result/Row') t( c )	
+	FROM	@xml.nodes('Result/Row') t(c)	
+	OPTION ( OPTIMIZE FOR ( @xml = NULL ) )
 	
 	IF @Action = 'CAL'
 	BEGIN
@@ -704,10 +696,10 @@ BEGIN
 			WHERE	GameId 	= @Bettype
 					AND EventId = @MatchId
 					AND StatusId NOT IN (101, 102) -- Reject, Void
-					AND 1 = CASE WHEN EXISTS (SELECT GameResult FROM @tmpResult WHERE GameResult = 2) AND @SuspendedTime >= SUBSTRING(transdesc,11,CHARINDEX(';bettypetime',transdesc)-11)  THEN 0
+					AND 1 = CASE WHEN EXISTS (SELECT GameResult FROM @tmpResult WHERE GameResult = 2) AND SUBSTRING(transdesc,11,CHARINDEX(';bettypetime',transdesc)-11) >= @SuspendedTime  THEN 0 -- need to refund
 								 ELSE 1
 							END	
-			
+							
 			-- update & insert tickets in bettrans	
 			MERGE	dbo.bettrans b 
 			USING	(SELECT	  translogid
@@ -747,7 +739,9 @@ BEGIN
 							  ,custom1	
 							  ,balance
 					FROM #tmpSettledTicket)	AS t
-			ON	b.refno = t.translogid
+			ON		b.matchid = t.eventID
+					AND b.bettype = t.gameID
+					AND b.refno = t.translogid
 			WHEN MATCHED THEN UPDATE SET	b.status	= t.status
 											,b.statusID	= t.statusId
 											,@commWinRate = CASE 
@@ -1022,7 +1016,9 @@ BEGIN
 		MERGE	dbo.bettrans b
 		USING	(SELECT *
 				 FROM	#tmpRefundedTicket) AS t
-		ON	b.refno	= t.translogid
+		ON		b.matchid = t.eventID
+				AND b.bettype = t.gameID
+				AND b.refno	= t.translogid
 		WHEN MATCHED THEN UPDATE SET	b.status = t.status
 										,b.statusID = t.statusID
 										,b.winlost = b.actual_stake
@@ -1199,7 +1195,9 @@ END
 
 
 
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_801] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_801] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_801_xtest] TO [vnteam] AS [dbo]

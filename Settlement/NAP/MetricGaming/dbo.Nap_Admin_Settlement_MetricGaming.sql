@@ -1,16 +1,9 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 07/17/2015 09:08:28 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MetricGaming] 
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MetricGaming] 
 	@MatchId					INT
 	,@Bettype					INT
 	,@ResultID					INT	
 	,@BettypeTime				VARCHAR(100)	= ''
-	,@Result					VARCHAR(4000)
+	,@Result					VARCHAR(4000)	= ''
 	,@Action					VARCHAR(10)		= 'CAL'
 	,@AdminId					INT	
 	,@IsSettleDetermined		BIT				= 0
@@ -137,6 +130,7 @@ BEGIN
 		@matchid				= @matchid
 		,@bettype				= @bettype
 		,@bettypeTime			= @bettypeTime
+		,@SuspendedTime			= @SuspendedTime
 		,@Action				= @Action
 		,@ResultID				= @ResultID
 		,@Result				= @Result
@@ -324,6 +318,10 @@ BEGIN
 	END
 
 END
+
+
+
+
 
 
 

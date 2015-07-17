@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_MetricGamingResult_Update]    Script Date: 07/17/2015 09:08:09 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_MetricGamingResult_Update]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_MetricGamingResult_Update]
 	@ResultID				INT
 	,@Action				VARCHAR(100)	= 'CAL'
 	,@Result				VARCHAR(4000)
@@ -56,7 +49,8 @@ BEGIN
 		)
 	SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
 			,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
-	FROM	@xml.nodes('Result/Row') t( c )
+	FROM	@xml.nodes('Result/Row') t(c)
+	OPTION ( OPTIMIZE FOR ( @xml = NULL ) )
 	
 	SELECT	@GameResult = @GameResult + CAST(GameResult AS VARCHAR(10)) + ','
 			,@OtherInfo = @OtherInfo + ISNULL(OtherInfo,'') + ','
@@ -110,8 +104,6 @@ BEGIN
 		WHERE ResultID = @ResultID	
 	END
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_MetricGamingResult_Update] TO [bodbAdminNet] AS [dbo]
