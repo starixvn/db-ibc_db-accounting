@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801_xtest]    Script Date: 07/17/2015 11:36:11 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
 	@matchid				INT,
 	@bettype				INT,
 	@bettypeTime			VARCHAR(100)	= '',
@@ -656,6 +663,7 @@ BEGIN
 					,Status = CASE WHEN @StatusId = 112 THEN 'WON' 
 									ELSE 'LOSE' 
 							  END
+					,custom3 = @ResultID
 			OUTPUT 	INSERTED.translogid
 					,INSERTED.transdate
 					,INSERTED.odds
@@ -759,7 +767,7 @@ BEGIN
 																WHEN t.statusId = 113 THEN 0
 																END
 											,b.awinlost	= CASE	
-																WHEN t.statusId = 112 THEN b.actual_stake + b.stake * (CASE WHEN b.odds < 0 THEN 1 ELSE b.odds END) * (- b.apositiontaking)
+																WHEN t.statusId = 112 THEN b.stake * (CASE WHEN b.odds < 0 THEN 1 ELSE b.odds END) * (- b.apositiontaking)
 																WHEN t.StatusId = 113 THEN b.actual_stake * b.apositiontaking
 																END
 											,b.mwinlost	= CASE	
@@ -971,6 +979,7 @@ BEGIN
 		UPDATE	dbo.translog WITH (ROWLOCK, UPDLOCK)
 		SET		statusID = 103 -- Refund
 				,status = 'Refund'
+				,custom3 = @ResultId
 		OUTPUT	INSERTED.translogid
 				,INSERTED.transdate
 				,INSERTED.odds
@@ -1136,7 +1145,7 @@ BEGIN
 										,t.[mrecommend]
 										,t.[srecommend]
 										,1 --[ruben]
-										,t.custom2 -- [betid]
+										,t.custom3 -- [betid]
 										,0 -- [statuswinlost]
 										,1 -- [modds]
 										,t.GameId -- [bettype]				   
