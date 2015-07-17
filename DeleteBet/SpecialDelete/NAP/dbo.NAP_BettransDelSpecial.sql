@@ -848,10 +848,10 @@ BEGIN
 				sb.winlostdate, sb.betfrom, sb.betcheck, sb.checktime, sb.matchid, sb.bettype
 		FROM
 			bettrans b WITH (nolock)
-			INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno
+			INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno AND b.matchid = sb.matchid AND sb.BetType IN (901,902,903)
 		WHERE
 			b.transid IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN (901, 902,903))
-			AND sb.BetType IN (901,902,903)
+			
 
 	CREATE TABLE #BeforeUpd (
 			custid		 INT,
