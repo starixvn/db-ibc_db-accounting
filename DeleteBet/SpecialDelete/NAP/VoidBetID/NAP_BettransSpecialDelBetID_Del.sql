@@ -57,6 +57,7 @@ BEGIN
 		 TransID		BIGINT
 		,MatchID		INT
 		,Bettype		INT
+		,betid			BIGINT
 		,Refno			BIGINT
 		,Betfrom		NVARCHAR(10)
 		,StatusID		TINYINT
@@ -67,6 +68,7 @@ BEGIN
 		 TransID
 		,MatchID
 		,Bettype
+		,betid
 		,Refno
 		,Betfrom
 		,StatusID
@@ -75,6 +77,7 @@ BEGIN
 	SELECT	 TransID
 			,MatchID
 			,Bettype
+			,betid
 			,Refno
 			,Betfrom
 			,StatusID
@@ -84,7 +87,14 @@ BEGIN
 	FROM	Bettrans WITH (NOLOCK)
 	WHERE	TransID IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))
 			AND StatusID NOT IN (101, 102)	-- REJECT, VOID
-
+	
+	--Update 901.betid=main.bettype
+	UPDATE main
+	SET main.betid = b.bettype
+	FROM @tmpListTransID main
+	INNER JOIN Bettrans b WITH (NOLOCK) ON b.transid = main.refno
+	WHERE main.bettype = 901
+	
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113)  -- DRAW, WON, LOSE 
 	BEGIN
 		DELETE FROM @tmpListTransID WHERE Bettype = 9 AND StatusID BETWEEN 111 AND 113
@@ -476,12 +486,13 @@ BEGIN
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
 			b.currency,
-			b.betid
+			tpl.betid
 	FROM	bettrans b WITH (NOLOCK)
+			INNER JOIN @tmpListTransID tpl ON tpl.transid = b.transid
 			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
 			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
-	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype NOT IN (10,9))
-			AND @isExistMatch = 1 
+	WHERE	@isExistMatch = 1 
+			AND tpl.bettype NOT IN (10,9)
 	UNION ALL 
 	SELECT	
 			0 AS homeid,

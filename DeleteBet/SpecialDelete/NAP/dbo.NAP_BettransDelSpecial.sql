@@ -749,10 +749,11 @@ BEGIN
 													 WHEN 2 THEN 1 END	
 	--Get Bettrade tickets 				
 	INSERT INTO #BetDelete 
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
-		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
-		b.liveawayscore, b.stake, b.CurrencyName, b.betid
+	SELECT DISTINCT b.transid, b.custid, b.recommend, b.mrecommend, b.srecommend, b.betfrom, b.statusID, b.status, b.SecAcceptFlag,
+		b.Username, b.creator, b.hdp1,b.hdp2, b.bettype, b.betteam, b.betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		b.liveawayscore, b.stake, b.CurrencyName, b2.bettype betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
+	INNER JOIN dbo.bettrans AS b2 WITH (NOLOCK) ON b2.transid = b.refno
 	WHERE (b.transid IN (SELECT transid FROM @tblTransCredit)
 			OR b.transid IN (SELECT transid FROM @tblTransDeposit )
 			OR b.transid IN (SELECT transid FROM @tblTransBetDaq )
