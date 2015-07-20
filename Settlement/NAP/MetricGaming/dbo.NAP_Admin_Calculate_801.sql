@@ -1078,7 +1078,9 @@ BEGIN
 		INTO	#tmpRefundedTicket
 		WHERE	eventID = @MatchId
 				AND gameID = @Bettype
+				AND statusID NOT IN (101, 102, 103) -- reject, void, refund
 				AND NOT EXISTS (SELECT t.translogid FROM #tmpSettledTicket t)
+				AND SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12) = @bettypeTime
 		
 		-- refund existing & insert new tickets in bettrans
 		MERGE	dbo.bettrans b
