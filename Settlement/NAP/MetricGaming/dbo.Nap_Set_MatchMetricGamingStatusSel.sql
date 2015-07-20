@@ -4,7 +4,7 @@
 		Created: Johnson
 		Date: 2015-06-29
 		Task: Get match status of Metric Gaming
-		DB: DBTXN/bodb02
+		DB: DBPRO/bodb02
 	*/
 BEGIN
 	SET NOCOUNT ON

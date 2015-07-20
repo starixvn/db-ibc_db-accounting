@@ -35,7 +35,7 @@ BEGIN
 	VALUES
 	(	
 		GETDATE(),
-		@Creator,
+		@userid,
 		@matchid,
 		@actionID,
 		@ResultID,

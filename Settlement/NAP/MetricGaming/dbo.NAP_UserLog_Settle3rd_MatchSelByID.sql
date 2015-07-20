@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[NAP_UserLog_Settle3rd_MatchSelByID]
+﻿ alter PROCEDURE [dbo].[NAP_UserLog_Settle3rd_MatchSelByID]
 	@matchid INT,
 	@ResultID INT
  AS

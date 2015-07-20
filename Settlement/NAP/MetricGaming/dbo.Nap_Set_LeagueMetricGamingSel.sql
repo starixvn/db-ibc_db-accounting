@@ -6,7 +6,7 @@
 		Created: Johnson
 		Date: 2015-06-29
 		Task: Get all leagues offer Metric Gaming
-		DB: DBTXN/bodb02
+		DB: DBPRO/bodb02
 	*/
 BEGIN
 	SET NOCOUNT ON
