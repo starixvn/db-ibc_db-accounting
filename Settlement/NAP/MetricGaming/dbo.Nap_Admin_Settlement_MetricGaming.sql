@@ -236,38 +236,34 @@ BEGIN
 							<Event IsSettleDetermined ="' + CAST(@IsSettleDetermined AS varchar(10)) + '"'
 											+ ' Duration="'+ CAST(DATEDIFF(MILLISECOND, @start, @stop) AS VARCHAR(20)) + ' ms"'
 											+ ' TC="' + CAST(@ticketCount AS VARCHAR(20)) + '"'
-											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" />'
+											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" >'
 								+ @Result
-						  +	'<Event>'
+						  +	'</Event>'
 					+ '</Log>'
 
 	SELECT @Remark
 			
-	--BEGIN TRY
-	--	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-	--		@UserID			= @AdminId
-	--		,@MatchID		= @matchid
-	--		,@bettype		= @bettype
-	--		,@bettypeTime	= @bettypeTime
-	--		,@ResultID		= @ResultID
-	--		,@ActionID		= @ActionID			
-	--		,@Result		= @Result
-	--		,@Remark		= @Remark
-	--		,@IP			= @IP
-	--END TRY
-	--BEGIN CATCH
-	--	SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
-	--	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
-	--		@UserID			= @AdminId
-	--		,@MatchID		= @matchid
-	--		,@bettype		= @bettype
-	--		,@bettypeTime	= @bettypeTime
-	--		,@ResultID		= @ResultID
-	--		,@ActionID		= @ActionID			
-	--		,@Result		= @Result
-	--		,@Remark		= @Remark
-	--		,@IP			= @IP
-	--END CATCH		
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+			@UserID			= @AdminId
+			,@MatchID		= @matchid			
+			,@ActionID		= @ActionID	
+			,@VendorID		= 5--MG		
+			,@ResultID		= @ResultID
+			,@Remark		= @Remark
+			,@IP			= @IP
+	END TRY
+	BEGIN CATCH
+		SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+			@UserID			= @AdminId
+			,@MatchID		= @matchid			
+			,@ActionID		= @ActionID	
+			,@VendorID		= 5--MG		
+			,@ResultID		= @ResultID
+			,@Remark		= @Remark
+			,@IP			= @IP
+	END CATCH		
 		
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)

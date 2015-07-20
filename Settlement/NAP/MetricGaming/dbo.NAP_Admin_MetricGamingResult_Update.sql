@@ -43,21 +43,24 @@ BEGIN
 	
 	SELECT @xml = CONVERT(XML, @Result)
 	
-	INSERT INTO @tmpResult (
-			GameResult
-			,OtherInfo
-		)
-	SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
-			,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
-	FROM	@xml.nodes('Result/Row') t(c)
-	OPTION ( OPTIMIZE FOR ( @xml = NULL ) )
+	IF @Action IN ('Cal','Refund')
+	BEGIN
+		INSERT INTO @tmpResult (
+				GameResult
+				,OtherInfo
+			)
+		SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
+				,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
+		FROM	@xml.nodes('Result/Row') t(c)
+		OPTION ( OPTIMIZE FOR ( @xml = NULL ) )
 	
-	SELECT	@GameResult = @GameResult + CAST(GameResult AS VARCHAR(10)) + ','
-			,@OtherInfo = @OtherInfo + ISNULL(OtherInfo,'') + ','
-	FROM	@tmpResult
+		SELECT	@GameResult = @GameResult + CAST(GameResult AS VARCHAR(10)) + ','
+				,@OtherInfo = @OtherInfo + ISNULL(OtherInfo,'') + ','
+		FROM	@tmpResult
 		
-	SELECT	@GameResult = LEFT(@GameResult,LEN(@GameResult) -1)	
-			,@OtherInfo = LEFT(@OtherInfo,LEN(@OtherInfo) -1)			
+		SELECT	@GameResult = LEFT(@GameResult,LEN(@GameResult) -1)	
+				,@OtherInfo = LEFT(@OtherInfo,LEN(@OtherInfo) -1)			
+	END
 						
 	IF @Action = 'CAL'
 	BEGIN			 
@@ -104,6 +107,8 @@ BEGIN
 		WHERE ResultID = @ResultID	
 	END
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_MetricGamingResult_Update] TO [bodbAdminNet] AS [dbo]
