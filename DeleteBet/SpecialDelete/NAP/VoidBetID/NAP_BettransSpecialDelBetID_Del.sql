@@ -58,6 +58,7 @@ BEGIN
 		,MatchID		INT
 		,Bettype		INT
 		,betid			BIGINT
+		,odds			SMALLMONEY
 		,Refno			BIGINT
 		,Betfrom		NVARCHAR(10)
 		,StatusID		TINYINT
@@ -69,6 +70,7 @@ BEGIN
 		,MatchID
 		,Bettype
 		,betid
+		,odds
 		,Refno
 		,Betfrom
 		,StatusID
@@ -78,6 +80,7 @@ BEGIN
 			,MatchID
 			,Bettype
 			,betid
+			,odds
 			,Refno
 			,Betfrom
 			,StatusID
@@ -90,7 +93,7 @@ BEGIN
 	
 	--Update 901.betid=main.bettype
 	UPDATE main
-	SET main.betid = b.bettype
+	SET main.betid = b.bettype, main.odds = b.odds
 	FROM @tmpListTransID main
 	INNER JOIN Bettrans b WITH (NOLOCK) ON b.transid = main.refno
 	WHERE main.bettype = 901
@@ -281,7 +284,7 @@ BEGIN
 			isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
 			showtime AS GameEvent,
 			b.bettype,
-			b.odds,  
+			tpl.odds,  
 			b.OddsType, 
 			b.transdate,
 			b.bettype,
@@ -297,7 +300,7 @@ BEGIN
 			b.liveindicator,
 			cr.username creator,
 			b.stake,     
-			b.status,
+			CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status],
 			b.winlost - actual_stake as winlost,
 			b.playercomm as comm,      
 			b.currency,

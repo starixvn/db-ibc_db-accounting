@@ -750,7 +750,7 @@ BEGIN
 	--Get Bettrade tickets 				
 	INSERT INTO #BetDelete 
 	SELECT DISTINCT b.transid, b.custid, b.recommend, b.mrecommend, b.srecommend, b.betfrom, b.statusID, b.status, b.SecAcceptFlag,
-		b.Username, b.creator, b.hdp1,b.hdp2, b.bettype, b.betteam, b.betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
+		b.Username, b.creator, b.hdp1,b.hdp2, b.bettype, b.betteam, b.betcheck, b2.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b2.bettype betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 	INNER JOIN dbo.bettrans AS b2 WITH (NOLOCK) ON b2.transid = b.refno
@@ -1198,7 +1198,7 @@ BEGIN
 	-- Send mail when void deposit
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
-		stake, b.CurrencyName, ag.site, b.status, b.SecAcceptFlag, b.betid
+		stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
 	FROM
 		#BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
@@ -1210,7 +1210,7 @@ BEGIN
 	-- Send mail when void 12EU tickets 
 		SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
-		stake, b.CurrencyName, '12EU' as site, b.status, b.SecAcceptFlag, b.betid
+		stake, b.CurrencyName, '12EU' as site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
 	FROM
 		#BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
@@ -1224,7 +1224,7 @@ BEGIN
 	SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
-		b.status, b.SecAcceptFlag, b.betid
+		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
@@ -1236,7 +1236,7 @@ BEGIN
 		SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, ag.site,
-		b.status, b.SecAcceptFlag, b.betid
+		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
@@ -1248,7 +1248,7 @@ BEGIN
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
-		b.status, b.SecAcceptFlag, b.betid
+		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
@@ -1260,7 +1260,7 @@ BEGIN
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'BetFair' as site,
-		b.status, b.SecAcceptFlag, b.betid
+		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
@@ -1272,7 +1272,7 @@ BEGIN
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
 		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
 		cr.username creator, stake, b.CurrencyName, 'OneExchange' as site,
-		b.status, b.SecAcceptFlag, b.betid
+		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
 	FROM #BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
