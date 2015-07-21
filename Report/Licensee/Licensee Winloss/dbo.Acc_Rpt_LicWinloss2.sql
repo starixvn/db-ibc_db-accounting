@@ -199,7 +199,7 @@ BEGIN
 
 	INSERT INTO @bettype(bettype)
 	SELECT typeid FROM bettype (NOLOCK)
-	WHERE (typeid BETWEEN 2001 AND 2007)
+	WHERE (typeid BETWEEN 2001 AND 2009)
 END 
 
 DECLARE @TempFromDate DATETIME 
