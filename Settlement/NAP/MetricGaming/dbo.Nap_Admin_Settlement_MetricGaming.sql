@@ -214,8 +214,13 @@ BEGIN
 	---------------------------VVVV------------------------------     
 	SELECT @stop = CURRENT_TIMESTAMP
 	
-	SELECT @LogData = 'NAP: Calculate (' + @Action + ') for matchid:' + CAST(@MatchId AS VARCHAR(10))
-							+ 'Bettype:' + CAST(@Bettype AS VARCHAR(10)) 
+	SELECT @LogData = 'Calculate (' + @Action + ') for matchid:' + CAST(@MatchId AS VARCHAR(10))
+							+ ' Bettype:' + CAST(@Bettype AS VARCHAR(10)) 
+							+ ' ResultID:' + CAST (@ResultId AS VARCHAR(10))
+							+ ' BettypeTime:' + @BettypeTime
+							+ ' Result:' + @Result
+							+ ' IsSettleDetermined:' + CAST (@IsSettleDetermined AS VARCHAR(1))
+							+ ' SuspendedTime' + CAST(@SuspendedTime AS VARCHAR(2))
 	
 	EXEC dbo.WriteLog_UserLog 
 		@UserID = @AdminId
