@@ -16,7 +16,7 @@ AS
 Created: 20090125@nqminh
 Task : Select customer's status
 DB: DBACC.bodb02
-Original:
+Original: 
 
 Revisions:
     - 20090411@PhuongDoan: Add casino status    
