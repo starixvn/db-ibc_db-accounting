@@ -1,10 +1,3 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMember]    Script Date: 06/08/2015 18:06:22 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
 	@agentname     VARCHAR(40)
   , @membername    VARCHAR(40)
@@ -1504,7 +1497,7 @@ BEGIN
     END
     
       -- Gold Deluxe
-    EXEC dbo.Acc_CustomerUpdMemberGoldDeluxe_Positiontaking
+        EXEC dbo.Acc_CustomerUpdMemberGoldDeluxe_Positiontaking
 	    @custid  = @custid,
 	    @v255apositiontaking_1701 = @v255apositiontaking_1701,
     	
@@ -1576,20 +1569,11 @@ BEGIN
 	    END
     END
     
-    --Gold Deluxe
-    IF @aHideGoldDeluxe = 1 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
-    BEGIN
-		    Select	@ErrMsg = 'Member is offered Gold Deluxe but new Agent is not offered Gold Deluxe.',
-				    @ErrCode = 507
-		    
-		    RETURN 
-    END
-    
-    --Gold Deluxe
-    IF @aDisableGoldDeluxe = 1 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
+     --Gold Deluxe
+    IF @aHideGoldDeluxe = 0 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
     BEGIN
 	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	    SET		DisableGoldDeluxe = 1
+	    SET		HideGoldDeluxe = 0
 	    WHERE	custid = @custid 
 	    IF @@ERROR <>0
 	    BEGIN
@@ -1600,6 +1584,23 @@ BEGIN
 		    RETURN 
 	    END
     END
+    
+    --Gold Deluxe
+    IF @aDisableGoldDeluxe = 0 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
+    BEGIN
+	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
+	    SET		DisableGoldDeluxe = 0
+	    WHERE	custid = @custid 
+	    IF @@ERROR <>0
+	    BEGIN
+		    Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+				    @ErrCode = 507
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    RETURN 
+	    END
+    END
+
 
     UPDATE	cg WITH (UPDLOCK,ROWLOCK)
     SET		cg.IsDisabled = 1 
@@ -1996,8 +1997,6 @@ BEGIN
 		    @duration = @duration	
     END CATCH
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet] AS [dbo]
 GO
