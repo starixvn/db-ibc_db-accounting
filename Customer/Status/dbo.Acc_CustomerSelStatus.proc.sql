@@ -1,12 +1,4 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerSelStatus]    Script Date: 07/17/2015 12:31:51 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_CustomerSelStatus    Script Date: 6/24/2015 10:04:49 AM ******/
-ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus_xtest]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]
 	@CustID		INT,
 	@AdminID	INT			= 0,
 	@system		VARCHAR(30)	='NAP',
@@ -44,6 +36,7 @@ Revisions:
 	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 	- 20150717@Kiwi: Move SP to DB06.bodb02 to solve the performance issue for temporary
 	- 20150721@Winnie: Add Microgaming product 
+	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 
 Param's Explanation:
 • @system: = NAP : internal login from NAP
@@ -172,6 +165,7 @@ SELECT	ISNULL(reject,0) AS Suspend,
 		ISNULL(DisableGoldDeluxe,1) as DisableGoldDeluxe,
 		ISNULL(HideGoldDeluxe,1) as HideGoldDeluxe,
 		ISNULL(DisableMicrogame,1) as DisableMicrogame
+		ISNULL(DisableSuperLive,1) as DisableSuperLive
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
@@ -205,7 +199,8 @@ group by
 		ci.HideKeno,
 		ci.DisableGoldDeluxe, 
 		ci.HideGoldDeluxe,
-		ci.DisableMicrogame
+		ci.DisableMicrogame,
+		ci.DisableSuperLive
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
