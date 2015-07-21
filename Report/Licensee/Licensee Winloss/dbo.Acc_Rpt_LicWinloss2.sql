@@ -98,7 +98,7 @@ SELECT @ProductList = COALESCE(@ProductList + ',' + CAST(ProductPrefix AS VARCHA
 FROM bodb_licensee.dbo.LA_f_Products3rd('')
 WHERE (@ShowAGC = 1 AND ProductPrefix = 'AGC')
 	OR (@ShowGD = 1 AND ProductPrefix = 'GD')
-	OR (@showMGC = 1 AND ProductPrefix = 'MGC')
+	 
 
 DECLARE @tmpParty AS TABLE (PartyId INT, LicenseeId INT, ProductID INT, Rate MONEY, FromDate SMALLDATETIME, ToDate SMALLDATETIME)
 IF ISNULL(@ProductList, '') != ''
