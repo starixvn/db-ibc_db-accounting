@@ -137,6 +137,7 @@ BEGIN
 				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
+				AND b.Bettype NOT IN (901,902,903)
 		UNION ALL 
 		SELECT b.transid GroupID, 9 bettype
 			,b.transid
@@ -296,6 +297,7 @@ BEGIN
 				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
+				AND b.Bettype NOT IN (901,902,903)
 		UNION ALL 
 		SELECT b.transid GroupID, 9 bettype
 			,b.transid
