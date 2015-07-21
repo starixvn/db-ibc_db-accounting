@@ -58,7 +58,49 @@ BEGIN
 	
 	IF @Action = 'CAL'
 	BEGIN
-		CREATE TABLE #tmpTrans (refno BIGINT)	
+		CREATE TABLE #tmpTransCalc(
+					[translogid] [bigint] ,
+					[custid] [int] ,
+					[transdate] [datetime] ,
+					[odds] [smallmoney] ,
+					[stake] [money] ,
+					[status] [nvarchar](10) ,
+					[apositiontaking] [smallmoney] ,
+					[mpositiontaking] [smallmoney] ,
+					[tpositiontaking] [smallmoney] ,
+					[spositiontaking] [smallmoney] ,
+					[playerdiscount] [decimal](9, 8) ,
+					[discount] [decimal](9, 8) ,
+					[adiscount] [decimal](9, 8) ,
+					[sdiscount] [decimal](9, 8) ,
+					[creator] [int] ,
+					[winlostdate] [smalldatetime] ,
+					[betfrom] [nvarchar](1) ,
+					[virtualrate] [float],
+					[actualrate] [float] ,
+					[actual_stake] [money] ,
+					[currency] [tinyint] ,
+					[CurrencyName] [nvarchar](50) ,
+					[recommend] [int] ,
+					[mrecommend] [int] ,
+					[srecommend] [int] ,
+					[ip] [nvarchar](15) ,
+					[statusID] [tinyint] ,
+					[balance] [money] ,
+					[Username] [nvarchar](50) ,
+					[transdesc] [nvarchar](300) ,
+					[productID] [int] ,
+					[gameID] [int] ,
+					[eventID] [int] ,
+					[vendorID] [int] ,
+					[Gameid3rd] [varchar](50) ,
+					[Tranid3rd] [varchar](64) ,
+					[custom1] [varchar](40) ,
+					[liveindicator] [bit] ,
+					[custom2] [varchar](50) ,
+					[custom3] [varchar](50) 
+			)
+
 		
 		IF @bettype IN (801,803,804,805)
 		BEGIN
@@ -110,17 +152,58 @@ BEGIN
 				  ,INSERTED.[liveindicator]
 				  ,INSERTED.[custom2]
 				  ,INSERTED.[custom3]
-			INTO #tmpTrans
+			INTO #tmpTransCalc(
+				[translogid]
+			  ,[custid]
+			  ,[transdate]
+			  ,[odds]
+			  ,[stake]
+			  ,[status]
+			  ,[apositiontaking]
+			  ,[mpositiontaking]
+			  ,[tpositiontaking]
+			  ,[spositiontaking]
+			  ,[playerdiscount]
+			  ,[discount]
+			  ,[adiscount]
+			  ,[sdiscount]
+			  ,[creator]
+			  ,[winlostdate]
+			  ,[betfrom]
+			  ,[virtualrate]
+			  ,[actualrate]
+			  ,[actual_stake]
+			  ,[currency]
+			  ,[CurrencyName]
+			  ,[recommend]
+			  ,[mrecommend]
+			  ,[srecommend]
+			  ,[ip]
+			  ,[statusID]
+			  ,[balance]
+			  ,[Username]
+			  ,[transdesc]
+			  ,[productID]
+			  ,[gameID]
+			  ,[eventID]
+			  ,[vendorID]
+			  ,[Gameid3rd]
+			  ,[Tranid3rd]
+			  ,[custom1]
+			  ,[liveindicator]
+			  ,[custom2]
+			  ,[custom3]
+			)
 			WHERE GameID = @bettype
 				AND EventID = @matchid
 				AND SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12) = @bettypeTime
 				AND StatusID NOT IN (101,102)--('VOID','REJECT')
 			
 			MERGE dbo.Bettrans b
-			USING #tmpTrans t ON b.matchid = @matchid
+			USING #tmpTransCalc t ON b.matchid = @matchid
 							AND b.bettype = @bettype
 							AND b.refno = t.translogID
-			WHEN MATCHED THEN UPDATE SET @Statusid = CASE WHEN SUBSTRING(transdesc,11,CHARINDEX(';bettypetime',transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112
+			WHEN MATCHED THEN UPDATE SET @Statusid = CASE WHEN SUBSTRING(b.transdesc,11,CHARINDEX(';bettypetime',b.transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112
 											WHEN EXISTS(SELECT 1 FROM @tmpResult WHERe GameResult = 14) THEN 111
 											ELSE 113 END,
 				statusID = @StatusID,
@@ -136,44 +219,44 @@ BEGIN
 					WHEN '1' THEN 2 
 					ELSE 1 END,
 				WinLost = CASE
-					WHEN @Statusid = 112 THEN actual_stake + stake * (case when odds<0 then 1 else odds end)
-					WHEN @statusID = 111 THEN actual_stake
+					WHEN @Statusid = 112 THEN b.actual_stake + b.stake * (case when b.odds<0 then 1 else b.odds end)
+					WHEN @statusID = 111 THEN b.actual_stake
 					WHEN @Statusid =  113 THEN 0 
 					END,
 				aWinLost = CASE
-					WHEN @Statusid = 112 THEN stake * (case when odds<0 then 1 else odds end)* -apositiontaking
+					WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.apositiontaking
 					WHEN @StatusID = 111 THEN 0
-					WHEN @Statusid =  113 THEN actual_stake * apositiontaking 
+					WHEN @Statusid =  113 THEN b.actual_stake * b.apositiontaking 
 					END,
 				mWinLost = CASE	
-					WHEN @Statusid = 112 THEN stake * (case when odds<0 then 1 else odds end)* -mpositiontaking
+					WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.mpositiontaking
 					WHEN @StatusID = 111 THEN 0
-					WHEN @Statusid =  113 THEN actual_stake * mpositiontaking 
+					WHEN @Statusid =  113 THEN b.actual_stake * b.mpositiontaking 
 					END,
 				sWinLost = CASE	
-					WHEN @Statusid = 112 THEN stake * (case when odds<0 then 1 else odds end)* -spositiontaking
+					WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.spositiontaking
 					WHEN @StatusID = 111 THEN 0
-					WHEN @Statusid =  113 THEN actual_stake * spositiontaking 
+					WHEN @Statusid =  113 THEN b.actual_stake * b.spositiontaking 
 					END,
 				PlayerComm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * playerdiscount * stake		
+					WHEN @Statusid = 112 	THEN @commWinRate * b.playerdiscount * b.stake		
 					WHEN @StatusID = 111	THEN 0
-					WHEN @Statusid = 113 	THEN @commLostRate * playerdiscount * stake					
+					WHEN @Statusid = 113 	THEN @commLostRate * b.playerdiscount * b.stake					
 					END,
 				Comm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * discount * stake * (1-apositiontaking)		
+					WHEN @Statusid = 112 	THEN @commWinRate * b.discount * b.stake * (1-b.apositiontaking)		
 					WHEN @StatusID = 111	THEN 0
-					WHEN @Statusid = 113 	THEN @commLostRate * discount * stake * (1-apositiontaking)						
+					WHEN @Statusid = 113 	THEN @commLostRate * b.discount * b.stake * (1-b.apositiontaking)						
 					END,
 				aComm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))		
+					WHEN @Statusid = 112 	THEN @commWinRate * b.adiscount * b.stake * (1-(b.mpositiontaking+b.apositiontaking))		
 					WHEN @StatusID = 111	THEN 0
-					WHEN @Statusid = 113 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))						
+					WHEN @Statusid = 113 	THEN @commLostRate * b.adiscount * b.stake * (1-(b.mpositiontaking+b.apositiontaking))						
 					END,
 				sComm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))		
+					WHEN @Statusid = 112 	THEN @commWinRate * b.sdiscount * b.stake * (1-(b.spositiontaking+b.mpositiontaking+b.apositiontaking))		
 					WHEN @StatusID = 111	THEN 0
-					WHEN @Statusid = 113 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))						
+					WHEN @Statusid = 113 	THEN @commLostRate * b.sdiscount * b.stake * (1-(b.spositiontaking+b.mpositiontaking+b.apositiontaking))						
 					END,
 				ruben = 1			
 			WHEN NOT MATCHED BY TARGET THEN INSERT(
@@ -335,7 +418,7 @@ BEGIN
 					WHEN t.Statusid = 113 THEN (CASE t.custom2
 												WHEN '0' THEN 1
 												WHEN '1' THEN 2 
-												ELSE 1 END) * sdiscount * stake * (1-(t.spositiontaking+t.mpositiontaking+t.apositiontaking))						
+												ELSE 1 END) * t.sdiscount * t.stake * (1-(t.spositiontaking+t.mpositiontaking+t.apositiontaking))						
 					END --[scomm]
 			   ,t.[spositiontaking]
 			   ,CASE	
@@ -403,16 +486,57 @@ BEGIN
 				  ,INSERTED.[liveindicator]
 				  ,INSERTED.[custom2]
 				  ,INSERTED.[custom3]
-			INTO #tmpTrans
+			INTO #tmpTransCalc(
+				[translogid]
+			  ,[custid]
+			  ,[transdate]
+			  ,[odds]
+			  ,[stake]
+			  ,[status]
+			  ,[apositiontaking]
+			  ,[mpositiontaking]
+			  ,[tpositiontaking]
+			  ,[spositiontaking]
+			  ,[playerdiscount]
+			  ,[discount]
+			  ,[adiscount]
+			  ,[sdiscount]
+			  ,[creator]
+			  ,[winlostdate]
+			  ,[betfrom]
+			  ,[virtualrate]
+			  ,[actualrate]
+			  ,[actual_stake]
+			  ,[currency]
+			  ,[CurrencyName]
+			  ,[recommend]
+			  ,[mrecommend]
+			  ,[srecommend]
+			  ,[ip]
+			  ,[statusID]
+			  ,[balance]
+			  ,[Username]
+			  ,[transdesc]
+			  ,[productID]
+			  ,[gameID]
+			  ,[eventID]
+			  ,[vendorID]
+			  ,[Gameid3rd]
+			  ,[Tranid3rd]
+			  ,[custom1]
+			  ,[liveindicator]
+			  ,[custom2]
+			  ,[custom3]
+			)
 			WHERE GameID = @bettype
 				AND EventID = @matchid				
 				AND StatusID NOT IN (101,102)--('VOID','REJECT')
 			
 			MERGE dbo.Bettrans b
-			USING #tmpTrans t ON b.matchid = @matchid
+			USING #tmpTransCalc t ON b.matchid = @matchid
 							AND b.bettype = @bettype
 							AND b.refno = t.translogID
-			WHEN MATCHED THEN UPDATE SET @Statusid = CASE WHEN SUBSTRING(transdesc,11,CHARINDEX(';bettypetime',transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112											
+			WHEN MATCHED THEN UPDATE SET @Statusid = CASE WHEN SUBSTRING(b.transdesc,11,CHARINDEX(';bettypetime',b.transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112											
 											ELSE 113 END,
 				statusID = @StatusID,
 				status = CASE WHEN @StatusID = 112 THEN 'WON' 
@@ -427,36 +551,36 @@ BEGIN
 					WHEN '1' THEN 2 
 					ELSE 1 END,
 				WinLost = CASE
-					WHEN @Statusid = 112 THEN actual_stake + stake * (case when odds<0 then 1 else odds end)					
+					WHEN @Statusid = 112 THEN b.actual_stake + b.stake * (case when b.odds<0 then 1 else b.odds end)					
 					WHEN @Statusid =  113 THEN 0 
 					END,
 				aWinLost = CASE
-					WHEN @Statusid = 112 THEN stake * (case when odds<0 then 1 else odds end)* -apositiontaking					
-					WHEN @Statusid =  113 THEN actual_stake * apositiontaking 
+					WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.apositiontaking					
+					WHEN @Statusid =  113 THEN b.actual_stake * b.apositiontaking 
 					END,
 				mWinLost = CASE	
-					WHEN @Statusid = 112 THEN stake * (case when odds<0 then 1 else odds end)* -mpositiontaking					
-					WHEN @Statusid =  113 THEN actual_stake * mpositiontaking 
+					WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.mpositiontaking					
+					WHEN @Statusid =  113 THEN b.actual_stake * b.mpositiontaking 
 					END,
 				sWinLost = CASE	
-					WHEN @Statusid = 112 THEN stake * (case when odds<0 then 1 else odds end)* -spositiontaking					
-					WHEN @Statusid =  113 THEN actual_stake * spositiontaking 
+					WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.spositiontaking					
+					WHEN @Statusid =  113 THEN b.actual_stake * b.spositiontaking 
 					END,
 				PlayerComm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * playerdiscount * stake							
-					WHEN @Statusid = 113 	THEN @commLostRate * playerdiscount * stake					
+					WHEN @Statusid = 112 	THEN @commWinRate * b.playerdiscount * b.stake							
+					WHEN @Statusid = 113 	THEN @commLostRate * b.playerdiscount * b.stake					
 					END,
 				Comm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * discount * stake * (1-apositiontaking)							
-					WHEN @Statusid = 113 	THEN @commLostRate * discount * stake * (1-apositiontaking)						
+					WHEN @Statusid = 112 	THEN @commWinRate * b.discount * b.stake * (1-b.apositiontaking)							
+					WHEN @Statusid = 113 	THEN @commLostRate * b.discount * b.stake * (1-b.apositiontaking)						
 					END,
 				aComm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))							
-					WHEN @Statusid = 113 	THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking))						
+					WHEN @Statusid = 112 	THEN @commWinRate * b.adiscount * b.stake * (1-(b.mpositiontaking+b.apositiontaking))							
+					WHEN @Statusid = 113 	THEN @commLostRate * b.adiscount * b.stake * (1-(b.mpositiontaking+b.apositiontaking))						
 					END,
 				sComm = CASE
-					WHEN @Statusid = 112 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))							
-					WHEN @Statusid = 113 	THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))						
+					WHEN @Statusid = 112 	THEN @commWinRate * b.sdiscount * b.stake * (1-(b.spositiontaking+b.mpositiontaking+b.apositiontaking))							
+					WHEN @Statusid = 113 	THEN @commLostRate * b.sdiscount * b.stake * (1-(b.spositiontaking+b.mpositiontaking+b.apositiontaking))						
 					END,
 				ruben = 1			
 			WHEN NOT MATCHED BY TARGET THEN INSERT(
@@ -611,7 +735,7 @@ BEGIN
 					WHEN t.Statusid = 113 THEN (CASE t.custom2
 												WHEN '0' THEN 1
 												WHEN '1' THEN 2 
-												ELSE 1 END) * sdiscount * stake * (1-(t.spositiontaking+t.mpositiontaking+t.apositiontaking))						
+												ELSE 1 END) *t.sdiscount * t.stake * (1-(t.spositiontaking+t.mpositiontaking+t.apositiontaking))						
 					END --[scomm]
 			   ,t.[spositiontaking]
 			   ,CASE	
@@ -630,10 +754,11 @@ BEGIN
 			   ,0 -- [transid2]
 			   ,NULL -- [RecommDate]
 			);
-		END--@bettype = 806
+		END--@bettype = 806		
 		
-			
-	END
+		DROP TABLE #tmpTransCalc
+					
+	END--@Action = 'Cal'
 	ELSE IF @Action = 'REFUND'
 	BEGIN		
 		CREATE TABLE #tmpSettledTicket (
