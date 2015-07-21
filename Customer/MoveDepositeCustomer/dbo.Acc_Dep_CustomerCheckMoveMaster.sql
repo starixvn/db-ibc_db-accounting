@@ -2,22 +2,22 @@
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
 	@userid		INT,	
-	@ErrCode INT = 0 OUTPUT,
-	@ErrMsg NVARCHAR(200) = '' OUTPUT
+	@ErrCode	INT = 0				OUTPUT,
+	@ErrMsg		NVARCHAR(200) = ''	OUTPUT
 AS
 /*
 	Created: Johnson
 	Date: 2012-04-03
 	Task : Check moving a master to another super
-	DB: DBAGE/bodb02
+	DB: DBCUST.CustDB
 	
 	Revisions:
-	
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
 		> 0: Specific Error.
-		Max errorcode 210
+		Max errorcode 136
 	• @ErrMsg: Error description.
 */
 
@@ -101,7 +101,7 @@ BEGIN
 			@sMaxTransferP2P	= MaxTransferP2P, 
 			@sIsAutoResetP2P	= IsAutoResetP2P, 
 			@sDisableP2P		= DisableP2P, 
-			@sDisableFunP2P		= DisableFunP2P
+			@sDisableFunP2P		= DisableFunP2P 		
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @supername AND roleid = 4
 
@@ -128,10 +128,10 @@ BEGIN
 			@mMaxTransferP2P	= MaxTransferP2P, 
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P
+			@mDisableFunP2P		= DisableFunP2P 		
 	FROM	custinfo WITH (NOLOCK) 
 	WHERE	username = @mastername AND roleid = 3
-	
+
 	IF ISNULL(@srecommend, 0) = 0
 	BEGIN
 		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super not found.',
@@ -159,7 +159,6 @@ BEGIN
 
 	EXEC dbo.Acc_CustomerSelCheckEnable @username = @supername, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT 
 	IF @ErrCode <>0		RETURN 
-
 
 	IF @scurrency <> @mcurrency
 	BEGIN
@@ -289,6 +288,25 @@ BEGIN
 		RETURN
 	END
 
+
+	--Check Horse, FI, Casino sync status:
+	--no need to check for Horse
+	/*IF EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 151)
+		AND NOT EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 151)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super does not have Horse Racing setting.',
+			@ErrCode = 110					 
+		RETURN
+	END*/
+	--no need to check for Financial
+	/*IF EXISTS(SELECT 1 FROM dep_custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 201)
+		AND NOT EXISTS(SELECT 1 FROM dep_custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 201)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': super does not have Finance setting.',
+			@ErrCode = 200					 
+		RETURN
+	END*/
+
 	--Check Number Game
 	IF EXISTS(SELECT 1 FROM dep_custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 161)
 		AND NOT EXISTS(SELECT 1 FROM dep_custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 161)
@@ -351,7 +369,7 @@ BEGIN
 	)
 	BEGIN
 		
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super position taking.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super positiontaking.',
 			@ErrCode = 205				 
 		RETURN
 	END
@@ -381,7 +399,7 @@ BEGIN
 	)
 	BEGIN
 		
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super position taking.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super positiontaking.',
 			@ErrCode = 206				 
 		RETURN
 	END
@@ -406,7 +424,7 @@ BEGIN
 	)
 	BEGIN
 		
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super positiontaking.',
 			@ErrCode = 208				 
 		RETURN
 	END
@@ -429,7 +447,7 @@ BEGIN
 	)
 	BEGIN
 		
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super positiontaking.',
 			@ErrCode = 209					 
 		RETURN
 	END
@@ -450,6 +468,7 @@ BEGIN
 	END
 
 END
+
 
 
 GO

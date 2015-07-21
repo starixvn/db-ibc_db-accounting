@@ -9,21 +9,21 @@ AS
 /*
 Created: 
 Task : Move a agent to another master
-DB: DBAGE/bodb02
+DB: DBCUST.CustDB
 Original:
 
-Revisions:	
-	
+Revisions:
+	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
     > 0: Specific Error.
-    Max errorcode: 214
+    Max errorcode: 142
 • @ErrMsg: Error description.
 */
 
 BEGIN
-	SET NOCOUNT ON	
+	SET NOCOUNT ON
 
 	declare	@srecommend			int, 
 			@mrecommend			int, 
@@ -79,7 +79,8 @@ BEGIN
 			@aDisableP2P		BIT, 
 			@mDisableP2P		BIT, 
 			@aDisableFunP2P		BIT,
-			@mDisableFunP2P		BIT			
+			@mDisableFunP2P		BIT
+
 
 	select	@srecommend			= srecommend, 
 			@mrecommend			= custid, 
@@ -105,7 +106,7 @@ BEGIN
 			@mMaxTransferP2P	= MaxTransferP2P, 
 			@mIsAutoResetP2P	= IsAutoResetP2P, 
 			@mDisableP2P		= DisableP2P, 
-			@mDisableFunP2P		= DisableFunP2P
+			@mDisableFunP2P		= DisableFunP2P 
 	from	custinfo with (nolock) 
 	where	username = @mastername and roleid = 3
 
@@ -133,9 +134,9 @@ BEGIN
 			@aMaxTransferP2P	= MaxTransferP2P, 
 			@aIsAutoResetP2P	= IsAutoResetP2P, 
 			@aDisableP2P		= DisableP2P, 
-			@aDisableFunP2P		= DisableFunP2P
+			@aDisableFunP2P		= DisableFunP2P 		
 	from	custinfo with (NOLOCK) 
-	where	username = @agentname and roleid = 2	
+	where	username = @agentname and roleid = 2
 	
 	SELECT @mSyncLiveCasino_Old = SyncLiveCasino FROM CustInfo WITH(NOLOCK) WHERE custid = @mrecommend_old
 	
@@ -172,7 +173,7 @@ BEGIN
 	EXEC dbo.Acc_CustomerSelCheckEnable @username = @mastername, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
 	if @ErrCode <>0		return 
 
-	EXEC DB053.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @agentname, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
+	EXEC dbo.Acc_CustomerSelCheckEnable @username = @agentname, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output 
 	if @ErrCode <>0		return 
 
 	if @mcurrency <> @acurrency
@@ -452,7 +453,7 @@ BEGIN
 		((mcs.sporttype =1) and (mcs.bettype in (1,3,7,8)) AND mcs.islive = 1 and (acs.mpositiontaking + acs.apositiontaking > mcs.mpositiontaking))
 	)
 	BEGIN	
-		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master position taking.',
+		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master positiontaking.',
 			@ErrCode = 209					 
 		return
 	END
@@ -475,7 +476,7 @@ BEGIN
 		)	
 	)
 	BEGIN	
-		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master position taking.',
+		Select @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master positiontaking.',
 			@ErrCode = 210					 
 		return
 	END
@@ -498,7 +499,7 @@ BEGIN
 				)
 		)
 	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master position taking.',
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master positiontaking.',
 			@ErrCode = 211
 		RETURN
 	END
@@ -522,7 +523,7 @@ BEGIN
 			)
 	)
 	BEGIN	
-		Select @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super position taking.',
+		Select @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super positiontaking.',
 			@ErrCode = 212					 
 
 		return
@@ -544,7 +545,7 @@ BEGIN
 			((acs.sporttype =161) and (acs.bettype in (85,86,87,89,90)) AND acs.islive=1 and (acs.apositiontaking > scs.apositiontaking))
 	)
 	BEGIN	
-		Select @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super position taking.',
+		Select @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super positiontaking.',
 			@ErrCode = 213				 
 
 		return

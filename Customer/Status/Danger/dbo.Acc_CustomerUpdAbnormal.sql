@@ -15,6 +15,7 @@ AS
 
 	Revisions:	
 		- 20130306@Lukas: change linked-server alias & add more write log section
+		- 20150606@Elodie: Separate CustDB to DBCUST server (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB)
 		
 	Param's Explanation:
 		@CustID: Id of member will be updated
@@ -34,7 +35,7 @@ Begin
 	--end
 
 	--Check disable user
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	EXEC Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 	if @ErrCode <> 0 
 		return
 	--end
@@ -108,9 +109,6 @@ Begin
 			@duration = @duration
 	END CATCH
 End
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdAbnormal] TO [bodbAdminNet]

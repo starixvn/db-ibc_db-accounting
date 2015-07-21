@@ -1,5 +1,11 @@
 ﻿USE [CustDB]
 GO
+/****** Object:  StoredProcedure [dbo].[Acc_UpdBingoStatus]    Script Date: 06/11/2015 09:49:38 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_UpdBingoStatus    Script Date: 11/27/2014 5:09:46 PM ******/
 ALTER PROCEDURE [dbo].[Acc_UpdBingoStatus]
 	@custid INT,
 	@disabledBingo BIT=NULL,
@@ -34,6 +40,7 @@ Revisions:
 	- 20130926@Kathy: Apply exec rep
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Turn to use Acc_ExecRep_Cust_04)	
 	- 20141125@Jamie: Use Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]	
+	- 20150611@Kathy: Migrate custDB to new server DBCust (Move CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
 */
 SET NOCOUNT ON
 
@@ -63,7 +70,7 @@ END
 -- Check Allowed downlines during peak hour at weekend 
 IF @disabledBingo = 1 OR @enableDownline = 1
 BEGIN
-				EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
+				EXEC dbo.Acc_CustomerSelCheckAllowedDownlines	@custid=@custid,
 											@roleid=@roleid,
 											@isExecRep=1,
 											@Language=@Language,

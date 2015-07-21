@@ -1,13 +1,21 @@
-ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]	
-	@CustID int,
-	@AdminID int = 0,
-	@system	VARCHAR(30)='NAP',
-	@username  VARCHAR(50) = ''
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerSelStatus]    Script Date: 07/17/2015 12:31:51 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerSelStatus    Script Date: 6/24/2015 10:04:49 AM ******/
+ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]
+	@CustID		INT,
+	@AdminID	INT			= 0,
+	@system		VARCHAR(30)	='NAP',
+	@username	VARCHAR(50)	= ''
 AS 
 /*
 Created: 20090125@nqminh
 Task : Select customer's status
-DB: DBAGE/bodb02
+DB: DBACC.bodb02
 Original:
 
 Revisions:
@@ -33,6 +41,9 @@ Revisions:
 	- 20140825@Logan:   Get status of E-Sports [Redmine: #20531]
 	- 20150210@Johnson: use param @system to check permission on ViewIPVN function from NAP or NAP EXT internal login [Redmine: #30860]
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
+	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+	- 20150717@Kiwi: Move SP to DB06.bodb02 to solve the performance issue for temporary
+	
 Param's Explanation:
 • @system: = NAP : internal login from NAP
 			NAPEXT:internal login from NAP EXT
@@ -40,6 +51,20 @@ Param's Explanation:
 */
 
 SET NOCOUNT ON
+
+----- 20150610@Kos -------------------
+--DECLARE @tmp_GameType TABLE (GameTypeID INT, GameTypeName NVARCHAR(50), IsDisabled BIT, IBCBettypeID INT)	
+
+--BEGIN TRY
+	--INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+	--SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM dbo.GameType WITH (NOLOCK)
+--END TRY
+--BEGIN CATCH
+--	INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+--	SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBTXN.bodb02.dbo.GameType WITH (NOLOCK)
+--END CATCH
+----- 20150610@Kos -------------------
+
 DECLARE @agentid INT, @roleid TINYINT, @IsInternal BIT, @IsAdminCanViewVNIP BIT,  @LimitPerIP tinyint, @SelectedBetting bit
 
 IF ISNULL(@username,'') <> ''
@@ -148,7 +173,7 @@ SELECT	ISNULL(reject,0) AS Suspend,
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
-	LEFT JOIN bodb02.dbo.GameType g WITH (NOLOCK) on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
+	LEFT JOIN dbo.GameType g on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
 WHERE ci.CustID = @CustID
 group by
 		ci.reject,
@@ -177,7 +202,7 @@ group by
 		ci.DisableEsports,
 		ci.HideKeno,
 		ci.DisableGoldDeluxe, 
-		ci.HideGoldDeluxe 
+		ci.HideGoldDeluxe
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
