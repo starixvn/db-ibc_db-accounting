@@ -301,7 +301,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'Vegas Games' as bettype
+			'Macau' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
 	WHERE	s.ProductID = 14

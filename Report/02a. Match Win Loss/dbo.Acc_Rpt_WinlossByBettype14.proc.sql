@@ -217,7 +217,7 @@ AS
 		and matchid in (0, 71) 			
 	group by b.bettype
 
-	-- AG Casino
+	-- Vegas game
 	UNION ALL
 	SELECT	31 Num,
 			b.bettype,
