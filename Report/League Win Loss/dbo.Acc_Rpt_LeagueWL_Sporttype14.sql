@@ -20,6 +20,7 @@ AS
 		- 20120530@Elodie: Change formula of 8RM/BARM winloss
 		- 20120628@Elodie: check case of matchid = orid
 		- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
+		- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]
 		
 		Explanation's Param:
 			- @winlostdate: the date want to view report
@@ -30,6 +31,11 @@ AS
 	
 BEGIN
 SET NOCOUNT ON
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4, @ProductID = 1
+
 		
 	--Declare @temp table to contain all matches based on @winlostdate
 	DECLARE @Match TABLE (matchid INT, sporttype smallint, leagueid int, type varchar(10), primary key(matchid, type))
@@ -40,11 +46,11 @@ SET NOCOUNT ON
 			l.leagueid, 
 			m.type
 	FROM (
-			SELECT matchid, leagueid, 'match' as type  FROM match14 WITH (NOLOCK) WHERE eventdate = @winlostdate
+			SELECT matchid, leagueid, 'match' as type  FROM dbo.match14 WITH (NOLOCK) WHERE eventdate = @winlostdate
 			UNION ALL
-			SELECT orid, leagueid, 'outright' as type FROM outright14 WITH (NOLOCK) WHERE eventdate = @winlostdate
+			SELECT orid, leagueid, 'outright' as type FROM dbo.outright14 WITH (NOLOCK) WHERE eventdate = @winlostdate
 		)m	
-	INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid	
+	INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid	
 	WHERE l.sporttype<=99
 
 SELECT * FROM 
@@ -58,10 +64,13 @@ SELECT * FROM
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
 			sum((1-tpositiontaking)*virtualrate* ABS(b.stake)) Turnover
-	FROM	bettrans14 b WITH (NOLOCK)
-			INNER JOIN @Match m ON b.matchid = m.matchid			
+	FROM	dbo.bettrans14 b WITH (NOLOCK)
+		INNER JOIN @SportBettype s 
+			ON s.Bettype = b.bettype
+		INNER JOIN @Match m 
+			ON b.matchid = m.matchid			
 	WHERE	b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334) 
+			---AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 and 1334) 
 			AND b.matchid > 0 
 			AND b.ruben = 1	
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
@@ -79,7 +88,7 @@ SELECT * FROM
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
 			sum((1-tpositiontaking)*virtualrate*ABS(stake)) Turnover
-	FROM	bettrans14 WITH (NOLOCK)
+	FROM	dbo.bettrans14 WITH (NOLOCK)
 	WHERE
 			winlostdate = @winlostdate
 			AND bettype = 9
@@ -92,7 +101,7 @@ SELECT * FROM
 	Order By wl.sporttype, wl.leagueid			
 
 	SELECT	@WinLost_8RM = -isnull(sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm), 0) 
-	FROM	bettrans14 b WITH (NOLOCK)
+	FROM	dbo.bettrans14 b WITH (NOLOCK)
 	WHERE 
 			recommend = 52466 and
 			winlostdate = @winlostdate and
@@ -104,7 +113,7 @@ SELECT * FROM
 			 
 	-- 20120412@Hurri: Get win lost of agent 'BARM' (@WinLost_BARM)
 	SELECT	@WinLost_BARM = -isnull(sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm), 0) 
-	FROM	bettrans14 b WITH (NOLOCK)
+	FROM	dbo.bettrans14 b WITH (NOLOCK)
 	WHERE 
 			recommend = 5707545 and
 			winlostdate = @winlostdate and

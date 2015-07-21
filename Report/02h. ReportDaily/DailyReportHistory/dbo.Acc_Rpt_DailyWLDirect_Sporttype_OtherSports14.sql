@@ -15,6 +15,7 @@ AS
 		- 20130802@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)	
 		- 20140917@Johnson: hardcode sporttype for others is 3
 		- 20150122@Dom: Apply sport bettype matrix
+		- 20150525@Sophia: Apply Metric Gaming - SuperLive and Sport Betype Matrix [#35359]
 	Explanation's Param:
 		
 */
@@ -24,9 +25,9 @@ BEGIN
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC Acc_SportBettypeMatrix_Sel @mode = 5, @ProductId = 1
 
 	--Declare @temp table to contain all matches based on @winlostdate
 	DECLARE @Match TABLE (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
@@ -69,9 +70,10 @@ BEGIN
 			INNER JOIN @Match m on b.matchid = m.matchid
 			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid		
-	WHERE	b.winlostdate = @winlostdate
+	WHERE	s.EventType IN (1,2)
+			AND s.SubProduct NOT IN ('MG-SuperLive')
+			AND b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 and 1334) -- bettype of sportbook
-			AND s.ProductID = 1
 			AND b.matchid > 0		
 			AND b.statusID NOT IN (101, 102,103) --('VOID', 'REJECT','REFUND')
 			AND b.ruben = 1	
@@ -136,10 +138,10 @@ BEGIN
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 			INNER JOIN @SportBettype s ON s.bettype = b.bettype
-	WHERE
-			winlostdate = @winlostdate
+	WHERE	s.EventType IN (1,2)
+			AND s.SubProduct NOT IN ('MG-SuperLive')
+			AND b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 and 1334) -- bettype of sportbook
-			AND s.ProductID = 1
 			AND b.matchid >=0 
 			AND b.statusID NOT IN (101, 102,103,121) --('VOID', 'REJECT','DONE','REFUND') 
 			AND b.ruben = 1	

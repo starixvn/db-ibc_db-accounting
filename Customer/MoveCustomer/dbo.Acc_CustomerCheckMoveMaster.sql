@@ -1,3 +1,9 @@
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerCheckMoveMaster]    Script Date: 05/11/2015 09:21:09 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerCheckMoveMaster    Script Date: 9/11/2014 9:52:03 AM ******/
 ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),

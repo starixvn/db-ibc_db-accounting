@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetListByDayAll]
+﻿USE BODB02
+GO 
+
+ALTER PROCEDURE [dbo].[Acc_BetListByDayAll]
 	@custid int,
 	@fromdate smalldatetime,
 	@language nvarchar(2) = 'en',
@@ -66,6 +69,7 @@ AS
 		- 20141103@Dom: Apply sport bettype matrix
 		- 20152001@Dom: Fix Bug Virtual HR condition
 		- 20150415@Sophia: Get Betcheck for Betradar
+		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -136,7 +140,7 @@ BEGIN
         finalodds      SMALLMONEY    ,
         finalodds2     SMALLMONEY    ,
         oddstype       INT           ,
-        betteam        NVARCHAR (10) ,
+        betteam        NVARCHAR (50) ,
         status         NVARCHAR (50) ,
         betstatus      NVARCHAR (50) ,
         comstatus	   NVARCHAR(50)	 ,
@@ -182,7 +186,8 @@ BEGIN
 	mpositiontaking smallmoney, 
 	spositiontaking smallmoney,
 	bettype			smallint,
-	betteam			nvarchar(50)
+	betteam			nvarchar(50),
+	TransDesc		varchar(300)
 )       
         
     IF EXISTS (SELECT 1
@@ -869,6 +874,78 @@ BEGIN
                    AND b.winlostdate = @fromdate
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus);
+        
+			-- Gold Deluxe
+            INSERT INTO @Data
+            SELECT 255, --sporttype,
+                   0, --leagueid,
+                   0, --homeid,
+                   0, --awayid,		
+                   CONVERT (VARCHAR (50), b.refno) AS matchcode, --matchcode, 
+                   '' AS race,
+                   '' AS eventdate, --get eventdate
+                   0,
+                   0,
+                   b.sdiscount,
+                   b.adiscount,
+                   b.discount,
+                   ISNULL(b.checktime, '') AS settletime,
+                   b.matchid,
+                   b.transid,
+                   ISNULL(b.BetID, 0),
+                   b.refno,
+                   b.transdate,
+                   b.oddsid,
+                   b.bettype,
+                   b.hdp1,
+                   b.hdp2,
+                   b.odds,
+                   b.modds,
+                   0 AS finalodds,
+                   0 AS finalodds2,
+                   '' AS oddstype,
+                   b.betteam,   
+                   b.status AS status,
+                   '' AS betstatus,
+                   CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+                   b.stake,
+                   b.actual_stake,
+                   (b.winlost - b.actual_stake) AS winlost,
+                   b.playercomm,
+                   b.livehomescore,
+                   b.liveawayscore,
+                   b.liveindicator,
+                   0, --finalhomescore, 
+                   0, --finalawayscore, 
+                   0, --hthomescore, 
+                   0, --htawayscore,
+                   b.CREATOR,
+                   b.ip,
+                   b.Username,
+                   0 AS IsNeutral,
+                   '' AS showtime,
+                   0 spositiontaking,
+				   0 mpositiontaking,
+				   0 apositiontaking,
+				   0 spositiontaking2,
+				   0 mpositiontaking2,
+				   0 apositiontaking2,
+				   b.betfrom,
+				   0 scomm,
+				   0 acomm,
+				   0 comm,
+				   b.awinlost,		
+				   b.mwinlost,		
+				   b.swinlost,
+				   b.winlostdate,
+				   b.BetCheck
+            FROM   dbo.bettrans14 AS b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+            WHERE  b.custid = @custid
+                   AND b.winlostdate = @fromdate
+				   AND s.ProductID = 12
+                   AND b.statusID IN (SELECT [statusID]
+                                      FROM   @tmpStatus);     
         END
     ELSE
         BEGIN
@@ -1626,13 +1703,161 @@ BEGIN
                    AND b.winlostdate = @fromdate
                    AND b.statusID IN (SELECT [statusID]
                                       FROM   @tmpStatus);
+        
+			--Gold Deluxe
+			IF EXISTS (SELECT TOP 1 [statusID] FROM   @tmpStatus WHERE [statusID] =0 )
+			BEGIN
+				INSERT INTO @Data
+				SELECT 255, --sporttype,
+					   0, --leagueid,
+					   0, --homeid,
+					   0, --awayid,		
+					   '' AS matchcode,
+					   '' AS race,
+					   '' AS eventdate,
+					   0,
+					   0,
+					   b.sdiscount,
+					   b.adiscount,
+					   b.discount,
+					   '' AS settletime,
+					   NULL matchid, --matchid, 
+					   0 AS transid,
+					   0 BetID,
+					   translogid refno,
+					   b.transdate,
+					   NULL oddsid,
+					   b.Gameid bettype,
+					   0 hdp1,
+					   0 hdp2,
+					   b.odds,
+					   0 modds,
+					   0 AS finalodds,
+					   0 AS finalodds2,
+					   '' AS oddstype,
+					   b.GameID3rd betteam,
+					   b.status,
+					   '' AS betstatus,
+					   0 as comstatus,   
+					   b.stake,
+					   b.actual_stake,
+					   (- b.actual_stake) AS winlost,
+					   0 playercomm,
+					   0 livehomescore,
+					   0 liveawayscore,
+					   0 liveindicator,
+					   0,
+					   0,
+					   0,
+					   0,
+					   b.CREATOR,
+					   b.ip,
+					   b.Username,
+					   0 AS IsNeutral,
+					   '' AS showtime,
+					   0 spositiontaking,
+					   0 mpositiontaking,
+					   0 apositiontaking,
+					   0 spositiontaking2,
+					   0 mpositiontaking2,
+					   0 apositiontaking2,
+					   b.betfrom,
+					   0 scomm,	
+					   0 acomm,
+					   0 comm,
+					   0 awinlost,		
+					   0 mwinlost,		
+					   0 swinlost,
+					   b.winlostdate,
+					   b.GameID3rd BetCheck
+				FROM   dbo.translog AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype s ON s.Bettype = b.Gameid
+				WHERE  b.custid = @custid
+					   AND b.winlostdate = @fromdate
+					   AND s.ProductID = 12
+					   AND b.statusID = 0
+			END
+			IF EXISTS (SELECT TOP 1 [statusID] FROM   @tmpStatus WHERE [statusID] <> 0 )
+			BEGIN
+				INSERT INTO @Data
+				SELECT 255, --sporttype,
+					   0, --leagueid,
+					   0, --homeid,
+					   0, --awayid,		
+					   CONVERT (VARCHAR (50), b.refno) AS matchcode,
+					   '' AS race,
+					   '' AS eventdate,
+					   0,
+					   0,
+					   b.sdiscount,
+					   b.adiscount,
+					   b.discount,
+					   '' AS settletime,
+					   b.matchid,
+					   b.transid,
+					   ISNULL(b.BetID, 0),
+					   b.refno,
+					   b.transdate,
+					   b.oddsid,
+					   b.bettype,
+					   b.hdp1,
+					   b.hdp2,
+					   b.odds,
+					   b.modds,
+					   0 AS finalodds,
+					   0 AS finalodds2,
+					   '' AS oddstype,
+					   b.betteam,
+					   b.status,
+					   '' AS betstatus,
+					   CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+					   b.stake,
+					   b.actual_stake,
+					   (b.winlost - b.actual_stake) AS winlost,
+					   b.playercomm,
+					   b.livehomescore,
+					   b.liveawayscore,
+					   b.liveindicator,
+					   0,
+					   0,
+					   0,
+					   0,
+					   b.CREATOR,
+					   b.ip,
+					   b.Username,
+					   0 AS IsNeutral,
+					   '' AS showtime,
+					   0 spositiontaking,
+					   0 mpositiontaking,
+					   0 apositiontaking,
+					   0 spositiontaking2,
+					   0 mpositiontaking2,
+					   0 apositiontaking2,
+					   b.betfrom,
+					   0 scomm,	
+					   0 acomm,
+					   0 comm,
+					   awinlost,		
+					   mwinlost,		
+					   swinlost,
+					   b.winlostdate,
+					   b.BetCheck
+				FROM   dbo.bettrans AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				WHERE  b.custid = @custid
+					   AND b.winlostdate = @fromdate
+					   AND s.ProductID = 12
+					   AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
+			END
         END
+        
     UPDATE  @Data
         SET tblTemp.Creator = cu.username
     FROM    @Data AS tblTemp
             INNER JOIN
             Customer AS cu WITH (NOLOCK)
             ON cu.custid = tblTemp.Creator;
+    
     IF @transid = 0
         SELECT   *
         FROM     @Data
@@ -1643,9 +1868,15 @@ BEGIN
         WHERE  transid = @transid;
 END
 
+IF EXISTS (SELECT TOP 1 1 
+		FROM @SportBettype sp 
+			INNER JOIN @Data d
+				ON d.bettype = sp.bettype 
+		WHERE ProductID in (4,12)) 
+BEGIN
  INSERT INTO @DetailData
 	SELECT 
-		BG.refno, 
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1653,15 +1884,30 @@ END
 		BG.mpositiontaking, 
 		BG.spositiontaking,
 		BG.bettype,
-		BG.betteam  
-	FROM bettransg BG with (NOLOCK)
-	INNER JOIN @Data B ON BG.refno = B.refno
-	WHERE B.Bettype between 1101 and 1199
-		   
+		BG.betteam,
+		BG.TransDesc  
+	FROM dbo.bettransg BG with (NOLOCK)
+			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+			INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+	UNION ALL
+	SELECT 
+		BG.refno,
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam,
+		BG.TransDesc   
+	FROM dbo.bettransg BG with (NOLOCK)
+			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+			INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 
     INSERT INTO @DetailData
 	SELECT 
-		BG.refno, 
+		BG.refno,
 		BG.odds, 
 		BG.stake,
 		BG.status,
@@ -1669,11 +1915,28 @@ END
 		BG.mpositiontaking, 
 		BG.spositiontaking,
 		BG.bettype,
-		BG.betteam  
-	FROM bettransg14 BG with (NOLOCK)
-	INNER JOIN @Data B ON BG.refno = B.refno
-	WHERE B.Bettype between 1101 and 1199
-		
+		BG.betteam,
+		BG.TransDesc  
+	FROM dbo.bettransg14 BG with (NOLOCK)
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+		INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+	UNION ALL
+	SELECT 
+		BG.refno,
+		BG.odds, 
+		BG.stake,
+		BG.status,
+		BG.apositiontaking, 
+		BG.mpositiontaking, 
+		BG.spositiontaking,
+		BG.bettype,
+		BG.betteam,
+		BG.TransDesc  
+	FROM dbo.bettransg14 BG with (NOLOCK)
+		INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+		INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+
+END
 		   
  SELECT * FROM @DetailData
   	

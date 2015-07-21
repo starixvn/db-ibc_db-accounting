@@ -11,12 +11,17 @@ AS
   
  Revisions:      
 	- 20130121@Dan: add linked server DBSUM for bodb_Summary
+	- 20150529@Jim: apply sport-bettype matrix
    
 */  
   
 SET NOCOUNT ON  
 
 CREATE TABLE #tmpcust (CustID INT PRIMARY KEY CLUSTERED)
+
+DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
 
 IF @Todate >= @BalanceUpDay  
 BEGIN  	
@@ -33,8 +38,9 @@ BEGIN
 		SELECT DISTINCT custid
 		FROM bettrans b WITH(NOLOCK)			
 		WHERE winlostdate BETWEEN @fromdate and @todate
-			and bettype in (31,32,33)
+			and bettype in (SELECT bettype FROM @SportBettype WHERE ProductID = 2)
 			AND NOT EXISTS (SELECT 1 FROM #tmpcust WHERE custid = b.custid)
+			 
 END  
 
 IF @FromDate < @BalanceUpDay   
