@@ -11,7 +11,7 @@ AS
 		Created: Johnson
 		Date: 2015-07-13
 		Task: write log settlement for Metric Gaming
-		DB: DBLOG/bodb_CustomerLog
+		DB: DBLOG & DBTXN/bodb_CustomerLog
 		
 		Revisions:
 		
@@ -29,7 +29,7 @@ BEGIN
 		ActionID,
 		ResultID,
 		VendorID,		
-		[Remark],
+		Detail,
 		IP
 	) 
 	VALUES

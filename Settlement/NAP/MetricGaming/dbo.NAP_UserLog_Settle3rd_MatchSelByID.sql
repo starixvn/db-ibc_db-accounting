@@ -20,7 +20,7 @@ BEGIN
 		logdate,
 		o.username,
 		la.ActionNameEN,
-		l.Remark,
+		l.Detail as Remark,
 		l.IP
 	FROM Userlog_Settle3rd l WITH(NOLOCK)
 		LEFT JOIN LogAction la WITH (NOLOCK) ON l.ActionID = la.ActionID
