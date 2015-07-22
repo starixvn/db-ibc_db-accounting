@@ -1213,7 +1213,7 @@ BEGIN
 				AND gameID = @Bettype
 				AND statusID NOT IN (101, 102, 103) -- reject, void, refund
 				AND gameID BETWEEN 801 AND 899 -- MG
-				AND NOT EXISTS (SELECT t.translogid FROM #tmpSettledTicket t)
+				AND translogid NOT IN (SELECT t.translogid FROM #tmpSettledTicket t)
 				AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
 										ELSE @bettypeTime
 										END
