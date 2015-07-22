@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801_xtest]    Script Date: 07/22/2015 12:34:09 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
 	@matchid				INT,
 	@bettype				INT,
 	@bettypeTime			VARCHAR(100)	= '',
@@ -887,6 +894,7 @@ BEGIN
 			INTO 	#tmpSettledTicket								
 			WHERE	GameId 	= @Bettype
 					AND EventId = @MatchId
+					AND gameID BETWEEN 801 AND 899 -- MG
 					AND StatusId NOT IN (101, 102) -- Reject, Void
 					AND 1 = CASE WHEN EXISTS (SELECT GameResult FROM @tmpResult WHERE GameResult = 2) AND SUBSTRING(transdesc,11,CHARINDEX(';bettypetime',transdesc)-11) >= @SuspendedTime  THEN 0 -- need to refund
 								 ELSE 1
@@ -1204,8 +1212,11 @@ BEGIN
 		WHERE	eventID = @MatchId
 				AND gameID = @Bettype
 				AND statusID NOT IN (101, 102, 103) -- reject, void, refund
+				AND gameID BETWEEN 801 AND 899 -- MG
 				AND NOT EXISTS (SELECT t.translogid FROM #tmpSettledTicket t)
-				AND SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12) = @bettypeTime
+				AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
+										ELSE @bettypeTime
+										END
 		
 		-- refund existing & insert new tickets in bettrans
 		MERGE	dbo.bettrans b
@@ -1417,6 +1428,7 @@ BEGIN
 		DROP TABLE #tmpTransUnc
 	END
 END
+
 
 
 
