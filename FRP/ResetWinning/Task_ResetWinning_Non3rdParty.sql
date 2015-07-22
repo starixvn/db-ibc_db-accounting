@@ -298,7 +298,7 @@ BEGIN
 			 WHEN bettype = 1900 THEN 'Vegas Game'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
-			 WHEN bettype BETWEEN 2001 AND 2009 THEN 'Microgaming'
+			 WHEN bettype BETWEEN 2001 AND 2099 THEN 'Microgaming'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
@@ -312,7 +312,7 @@ BEGIN
 			OR bettype IN (1800, 1900)
 			OR bettype BETWEEN 1700 AND 1799 
 			OR bettype BETWEEN 801 AND 899
-			OR bettype BETWEEN 2001 AND 2009  
+			OR bettype BETWEEN 2001 AND 2099  
 			OR bettype BETWEEN 901 AND 903  
 		   )
   GROUP BY CASE
@@ -330,7 +330,7 @@ BEGIN
 			 WHEN bettype = 1900 THEN 'Vegas Game'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
-			 WHEN bettype BETWEEN 2001 AND 2009 THEN 'Microgaming'
+			 WHEN bettype BETWEEN 2001 AND 2099 THEN 'Microgaming'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 		   END, winlostdate
 

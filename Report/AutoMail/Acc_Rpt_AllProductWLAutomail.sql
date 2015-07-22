@@ -11,6 +11,7 @@ AS
 	Revisions:
 		- 20150619@Sophia: Add Gold Deluxe, AG Casino, Vegas Game [#38512]
 		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
+		- 20150722@Sophia: Send mail for dummy account in case of testing
 		 
 	Param's Explanation:
 	
@@ -19,6 +20,19 @@ AS
 BEGIN
 
 	DECLARE @dummyBalance TABLE ([group] varchar(10),orderby INT, custid INT, product VARCHAR(50))
+	 
+	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+
+	IF  (@SQL like '%_xtest%' OR  @SQL like '%_xpre%' )
+	BEGIN
+		SELECT @isTest = 1
+	END
+	ELSE
+	BEGIN
+		SELECT @isTest = 0
+	END
+
+	------------------------------------------
 	
 	--INSERT INTO @dummyBalance 
 	--		  SELECT	'SB',1, 6911909	, 'Sportsbook Live'			---- DWLSPL'
@@ -37,23 +51,39 @@ BEGIN
 	--UNION ALL SELECT	'3rd', 14, 18188766, 'AG Casino'
 	--UNION ALL SELECT	'3rd', 15, 18188815, 'Vegas Game'
  
-
-	 INSERT INTO @dummyBalance ([group], orderby, custid, product )
-	 SELECT		CASE WHEN Product IN ('SPL','SPNL','Parlay','Outright') THEN 'SB' 
-					 WHEN Product IN ('Racing (Due to Partners)') THEN 'partners' 
-					 ELSE '3rd' END AS [Group]
-				, Seq
-				, Custid
-				, CASE	WHEN Product = 'SPL' THEN 'Sportsbook Live' 
-						WHEN Product = 'SPNL' THEN 'Sportsbook Non-Live' 
-					 ELSE Product END AS Product
-	 FROM	bodb_ACC.dbo.Acc_DWLList WITH (NOLOCK)
-	 WHERE  Product NOT IN ('Total Balance', 'Poker', 'Poker (Due to Partners)')
-
+	IF @isTest = 0
+	BEGIN 	
+		INSERT INTO @dummyBalance ([group], orderby, custid, product )
+		SELECT		CASE WHEN Product IN ('SPL','SPNL','Parlay','Outright') THEN 'SB' 
+						 WHEN Product IN ('Racing (Due to Partners)') THEN 'partners' 
+						 ELSE '3rd' END AS [Group]
+					, Seq
+					, Custid
+					, CASE	WHEN Product = 'SPL' THEN 'Sportsbook Live' 
+							WHEN Product = 'SPNL' THEN 'Sportsbook Non-Live' 
+						 ELSE Product END AS Product
+		FROM	bodb_ACC.dbo.Acc_DWLList WITH (NOLOCK)
+		WHERE  	Product NOT IN ('Total Balance', 'Poker', 'Poker (Due to Partners)')
+	END
+	ELSE 
+	BEGIN 
+		INSERT INTO @dummyBalance ([group], orderby, custid, product )
+		SELECT		CASE WHEN Product IN ('SPL','SPNL','Parlay','Outright') THEN 'SB' 
+						 WHEN Product IN ('Racing (Due to Partners)') THEN 'partners' 
+						 ELSE '3rd' END AS [Group]
+					, Seq
+					, Custid
+					, CASE	WHEN Product = 'SPL' THEN 'Sportsbook Live' 
+							WHEN Product = 'SPNL' THEN 'Sportsbook Non-Live' 
+						 ELSE Product END AS Product
+		FROM 	bodb_ACC.dbo.Acc_DWLList_xtest WITH (NOLOCK)
+		WHERE  	Product NOT IN ('Total Balance', 'Poker', 'Poker (Due to Partners)')	
+	END
 
 	DECLARE @_fromdate    DATETIME,
 			@_todate      DATETIME,
-			@totalrows INT
+			@totalrows 	  INT,
+			@TotalDummy	  INT
 			
 			
 	SELECT @_todate = convert(varchar(10), getdate()-1, 120)
@@ -173,7 +203,7 @@ BEGIN
 						WHEN bettype = 1900 THEN 18188815
 						WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
 						WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
-						WHEN bettype BETWEEN 2001 AND 2009 THEN 18256397
+						WHEN bettype BETWEEN 2001 AND 2099 THEN 18256397
 						WHEN bettype BETWEEN 901 AND 903 THEN 18371760
 					END
 	FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
@@ -187,7 +217,9 @@ BEGIN
 	/****************************End**************************/
 
 	SELECT @totalrows = COUNT(*) FROM #TempYesterday
-	IF(@totalrows=18) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
+	SELECt @TotalDummy = COUNT(*) FROM @dummyBalance
+	
+	IF(@totalrows = @TotalDummy) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
 --------------------------------------------------------------------------------------- 
 
 	SELECT [group], c.custid, c.product,
