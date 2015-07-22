@@ -1,3 +1,6 @@
+Use bodb02
+Go
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
 	@AllowSendEmail BIT = 0 OUTPUT
 AS
@@ -185,29 +188,60 @@ BEGIN
 		Find product that has no ticket and then identify accounts don't need to transfer. If there is no ticket, transfer account should have winlost amount = 0
 	
 	*/	
-	INSERT INTO #TempCustTrans
-	SELECT DISTINCT custid = CASE 
-						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 THEN 6911909
-						WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 6911911
-						WHEN bettype IN(9,29 ) THEN 6911913
-						WHEN bettype = 10 THEN 6911914
-						WHEN bettype IN (71,72) THEN 6911916
-						WHEN bettype BETWEEN 1101 AND 1199 THEN 6911917
-						WHEN bettype BETWEEN 81 AND 120 THEN 6911918
-						WHEN bettype IN (31,32,33) THEN 6911919
-						WHEN bettype = 73 THEN 6913085
-						WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
-						WHEN bettype BETWEEN 1501 AND 1599 THEN 14054918
-						WHEN bettype IN (31,32,33) THEN 7723121
-						WHEN bettype = 1800 THEN 18188766
-						WHEN bettype = 1900 THEN 18188815
-						WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
-						WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
-						WHEN bettype BETWEEN 2001 AND 2099 THEN 18256397
-						WHEN bettype BETWEEN 901 AND 903 THEN 18371760
-					END
-	FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
-	WHERE b.winlostdate = @_todate
+
+	IF @isTest = 0
+	BEGIN 	
+		INSERT INTO #TempCustTrans
+		SELECT DISTINCT custid = CASE 
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 THEN 6911909
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 6911911
+							WHEN bettype IN(9,29 ) THEN 6911913
+							WHEN bettype = 10 THEN 6911914
+							WHEN bettype IN (71,72) THEN 6911916
+							WHEN bettype BETWEEN 1101 AND 1199 THEN 6911917
+							WHEN bettype BETWEEN 81 AND 120 THEN 6911918
+							WHEN bettype IN (31,32,33) THEN 6911919
+							WHEN bettype = 73 THEN 6913085
+							WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
+							WHEN bettype BETWEEN 1501 AND 1599 THEN 14054918
+							WHEN bettype IN (31,32,33) THEN 7723121
+							WHEN bettype = 1800 THEN 18188766
+							WHEN bettype = 1900 THEN 18188815
+							WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
+							WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
+							WHEN bettype BETWEEN 2001 AND 2099 THEN 18256397
+							WHEN bettype BETWEEN 901 AND 903 THEN 18371760
+						END
+		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
+		WHERE b.winlostdate = @_todate
+	END
+	ELSE
+	BEGIN 
+		INSERT INTO #TempCustTrans
+		SELECT DISTINCT custid = CASE 
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 THEN 9398886
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 12005466
+							WHEN bettype IN(9,29 ) THEN 12005470
+							WHEN bettype = 10 THEN 12005483
+							WHEN bettype IN (71,72) THEN 12017095
+							WHEN bettype BETWEEN 1101 AND 1199 THEN 12962878
+							WHEN bettype BETWEEN 81 AND 120 THEN 13062600
+							WHEN bettype IN (31,32,33) THEN 13062602
+							WHEN bettype = 73 THEN 13062771
+							WHEN bettype BETWEEN 1201 AND 1299 THEN 13062615
+							WHEN bettype BETWEEN 1501 AND 1599 THEN 13062664
+							WHEN bettype IN (31,32,33) THEN 13062630
+							WHEN bettype = 1800 THEN 18254399
+							WHEN bettype = 1900 THEN 18254404
+							WHEN bettype BETWEEN 1700 AND 1799 THEN 18254395
+							WHEN bettype BETWEEN 801 AND 899 THEN 18254387 
+							WHEN bettype BETWEEN 2001 AND 2099 THEN 18377344
+							WHEN bettype BETWEEN 901 AND 903 THEN 18377348
+						END
+		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
+		WHERE b.winlostdate = @_todate
+	END 
+
 
 	INSERT INTO #TempYesterday
 	SELECT d.custid,0 
