@@ -24,6 +24,7 @@ AS
 			- 20141203@Dom: Apply sport bettype matrix
 			- 20150520@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
+			- 20150723@Sophia: Apply Bettrade [#38815]
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -221,7 +222,7 @@ BEGIN
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE s.ProductID = 1
 		AND s.EventType = 1	
-		AND s.SubProduct NOT IN ('MG-SuperLive')
+		AND s.SubProduct NOT IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm')
 	--((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
 	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc
 	
@@ -479,6 +480,24 @@ BEGIN
 		AND s.EventType = 1	
 		AND s.SubProduct = 'MG-SuperLive'
 
+	-- Bettrade
+	UNION ALL
+	SELECT	150 Num,
+			@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			0 AS comm,
+			0 AS virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.VirtualLineTotal) as VirtualLineTotal,
+			0 AS IBCTurnover,
+			'Bettrade' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE s.ProductID = 1
+		AND s.EventType = 1	
+		AND s.SubProduct = 'BT-Comm'
+
 	ORDER BY Num ASC		
 		
 	
@@ -511,7 +530,7 @@ BEGIN
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
 	WHERE  	s.ProductId = 1
 		AND s.EventType = 1
-		AND s.SubProduct NOT IN ('MG-SuperLive')
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 				/*((bettype < 31 and bettype <> 10) 
 				OR bettype between 121 and 999 
 				OR (bettype BETWEEN 1201 and 1299 and b.bettype not in (1231, 1232, 1233, 1237, 1238))
@@ -545,6 +564,34 @@ BEGIN
 	GROUP BY 
 			b.bettype, 
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
+
+	
+		---Bettrade
+	UNION ALL 
+	SELECT	12 Num,
+			b.bettype,
+			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
+			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			
+			sum(case when liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			
+			0 as IBCTurnover
+	FROM 	#tmpBettrans b with (nolock)
+			inner join match m with (nolock) on b.matchid = m.matchid
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE  	s.ProductId = 1
+		AND s.EventType = 1
+		AND s.SubProduct = 'BT-Comm'				
+	GROUP BY 
+			b.bettype, 
+			case when matchcode like '%hedge%' then ' (hedge)' else '' end
+	
 	
 
 		---- Virtual Sports
