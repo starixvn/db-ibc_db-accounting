@@ -548,7 +548,7 @@ BEGIN
 				statusID = @StatusID,
 				status = CASE WHEN @StatusID = 112 THEN 'WON' 
 							WHEN @statusID = 113 THEN 'LOSE' 
-							ELSE 'DRAW' END,							
+							END,							
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0 
@@ -1395,7 +1395,7 @@ BEGIN
 				,scomm = 0
 			WHERE matchid = @matchid
 				AND bettype = @bettype
-				AND refno IN (SELECT refno FROM #tmpTransUnc)
+				AND refno IN (SELECT translogid FROM #tmpTransUnc)
 		END
 		ELSE IF @bettype = 806
 		BEGIN
@@ -1422,7 +1422,7 @@ BEGIN
 				,scomm = 0
 			WHERE matchid = @matchid
 				AND bettype = @bettype
-				AND refno IN (SELECT refno FROM #tmpTransUnc)
+				AND refno IN (SELECT translogid FROM #tmpTransUnc)
 		END
 		
 		DROP TABLE #tmpTransUnc

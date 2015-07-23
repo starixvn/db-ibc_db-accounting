@@ -37,6 +37,10 @@ BEGIN
 		m.leagueid, 
 		m.homeid, 
 		m.awayid,
+		m.hthomescore AS HalfTimeHomeScore,
+		m.htawayscore AS HalfTimeAwayScore,
+		m.finalhomescore,
+		m.finalawayscore,
 		ISNULL(mr.isUndecided,0) as isUndecided,
 		CASE WHEN rs.SettlementStatusID = 0 then 'Running' ELSE 'Completed' END as EventStatus
 	FROM match m WITH(NOLOCK) 	

@@ -43,25 +43,26 @@ BEGIN
 	
 	SELECT @xml = CONVERT(XML, @Result)
 	
-	IF @Action IN ('Cal','Refund')
-	BEGIN
-		INSERT INTO @tmpResult (
-				GameResult
-				,OtherInfo
-			)
-		SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
-				,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
-		FROM	@xml.nodes('Result/Row') t(c)
-		OPTION ( OPTIMIZE FOR ( @xml = NULL ) )
+
+	INSERT INTO @tmpResult (
+			GameResult
+			,OtherInfo
+		)
+	SELECT	t.c.value('@GameResult','TINYINT')		AS GameResult
+			,t.c.value('@OtherInfo', 'VARCHAR(50)') AS OtherInfo
+	FROM	@xml.nodes('Result/Row') t(c)
+	OPTION ( OPTIMIZE FOR ( @xml = NULL ) )
 	
-		SELECT	@GameResult = @GameResult + CAST(GameResult AS VARCHAR(10)) + ','
-				,@OtherInfo = @OtherInfo + ISNULL(OtherInfo,'') + ','
-		FROM	@tmpResult
+	SELECT	@GameResult = @GameResult + CAST(GameResult AS VARCHAR(10)) + ','
+			,@OtherInfo = @OtherInfo + ISNULL(OtherInfo,'') + ','
+	FROM	@tmpResult
 		
+	IF ISNULL(@GameResult,'')<> ''
 		SELECT	@GameResult = LEFT(@GameResult,LEN(@GameResult) -1)	
-				,@OtherInfo = LEFT(@OtherInfo,LEN(@OtherInfo) -1)			
-	END
-						
+	
+	IF ISNULL(@OtherInfo,'')<> ''
+		SELECT @OtherInfo = LEFT(@OtherInfo,LEN(@OtherInfo) -1)			
+				
 	IF @Action = 'CAL'
 	BEGIN			 
 		UPDATE ResultDetail3rd WITH(UPDLOCK,ROWLOCK)
@@ -99,7 +100,7 @@ BEGIN
 	BEGIN
 		UPDATE ResultDetail3rd WITH(UPDLOCK,ROWLOCK)
 		SET SettlementStatusID = 0,
-			ResultStatusID = 5,
+			ResultStatusID = 1,
 			LastModifyBy = @AdminID,
 			LastModifyDate = GETDATE(),
 			GameResult = '',
@@ -107,6 +108,7 @@ BEGIN
 		WHERE ResultID = @ResultID	
 	END
 END
+
 
 
 

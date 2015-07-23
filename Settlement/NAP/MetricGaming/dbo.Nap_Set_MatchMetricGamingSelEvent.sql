@@ -38,7 +38,11 @@ BEGIN
 		kickofftime,
 		eventdate,
 		homeid,
-		awayid
+		awayid,
+		hthomescore AS HalfTimeHomeScore,
+		htawayscore AS HalfTimeAwayScore,
+		finalhomescore,
+		finalawayscore
 	FROM match WITH(NOLOCK)
 	WHERE matchid = @matchid
 	

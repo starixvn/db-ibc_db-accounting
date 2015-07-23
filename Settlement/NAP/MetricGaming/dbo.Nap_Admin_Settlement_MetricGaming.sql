@@ -52,7 +52,7 @@ BEGIN
 	IF EXISTS (
 			SELECT 1 
 			FROM dbo.TempVariableNumber t WITH(NOLOCK)
-			WHERE t.KeyID = 3
+			WHERE t.KeyID = 1
 			AND t.KeyValue = @matchid
 			)
 	BEGIN
@@ -63,7 +63,7 @@ BEGIN
 	END
 
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
-	VALUES (3, @matchid)
+	VALUES (1, @matchid)
 
 	IF (@@ERROR = 0)
 	BEGIN
@@ -71,7 +71,7 @@ BEGIN
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID		= @AdminId
 				,@Matchid	= @matchid
-				,@KeyID		= 3
+				,@KeyID		= 1
 				,@ActionID	= @ActionID
 				,@Remark	= 'ADD SUCCESS'
 		END TRY
@@ -82,7 +82,7 @@ BEGIN
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID		= @AdminId
 				,@Matchid	= @matchid
-				,@KeyID		= 3
+				,@KeyID		= 1
 				,@ActionID	= @ActionID
 				,@Remark	= @Remark
 		END CATCH
@@ -99,6 +99,9 @@ BEGIN
 	FROM	dbo.translog WITH(NOLOCK)
 	WHERE	eventID = @MatchId
 			AND gameID = @Bettype
+			AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
+										ELSE @bettypeTime
+										END
 	-------------------------------------------------------------
 	---        CAPTURE value BALANCE before settlement        ---
 	---------------------------VVVV------------------------------
@@ -107,16 +110,36 @@ BEGIN
 		,balance	MONEY
 		)
 	
+	CREATE TABLE #tmpRef (refno BIGINT)
+	
 	DECLARE @TotalAccount				INT = 0
 		,@TotalAccount_BalanceUpdate	INT = 0
 	
+	INSERT INTO #tmpRef 
+	SELECT translogid
+	FROM Translog WITH(NOLOCK)
+	WHERE GameID = @bettype
+		AND EventID = @matchid
+		AND statusid IN (0,1)--running, waiting
+	
 	INSERT INTO #BalanceBefore
-	SELECT b.custid
-		,SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE b.matchid = @matchid 
-		AND b.bettype = @Bettype
-	GROUP BY b.custid
+	SELECT custid,SUM(balance)
+	FROM 
+	(
+		SELECT b.custid
+			,SUM(b.winlost - b.actual_stake + b.playercomm) as balance
+		FROM dbo.bettrans b WITH (ROWLOCK)
+		WHERE b.matchid = @matchid 
+			AND b.bettype = @Bettype
+			AND refno NOT IN (SELECT refno FROM #tmpRef)
+		GROUP BY b.custid
+		UNION ALL
+		SELECT custid, SUM(-actual_stake) as balance
+		FROM translog WITH(NOLOCK)
+		WHERE translogid IN (SELECT refno FROM #tmpRef)
+		GROUP BY custid
+	)t
+	GROUP BY custid
 	
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_MetricGamingResult_Update
 		@ResultID				= @ResultID
@@ -209,6 +232,7 @@ BEGIN
 
 	DROP TABLE #BalanceAfter	
 	
+	DROP TABLE #tmpRef
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---
 	---------------------------VVVV------------------------------     
@@ -272,7 +296,7 @@ BEGIN
 		
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-	WHERE KeyID = 3
+	WHERE KeyID = 1
 		AND KeyValue = @matchid	
 		
 	IF (@@Error = 0)
@@ -281,7 +305,7 @@ BEGIN
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 3,
+				@KeyID = 1,
 				@ActionID = @ActionID,
 				@Remark = 'DEL SUCCESS'
 		END TRY
@@ -291,7 +315,7 @@ BEGIN
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 3,
+				@KeyID = 1,
 				@ActionID = @ActionID,
 				@Remark = @Remark
 		END CATCH
@@ -302,7 +326,7 @@ BEGIN
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 3,
+				@KeyID = 1,
 				@ActionID = @ActionID,
 				@Remark = 'DEL FAILED'
 		END TRY
@@ -312,7 +336,7 @@ BEGIN
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 3,
+				@KeyID = 1,
 				@ActionID = @ActionID,
 				@Remark = @Remark
 		END CATCH

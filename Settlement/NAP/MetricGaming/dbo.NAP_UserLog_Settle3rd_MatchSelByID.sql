@@ -27,6 +27,7 @@ BEGIN
 		LEFT JOIN bodb02.dbo.CustInfo o WITH(NOLOCK) ON o.custid = l.userid
 	WHERE matchid = @matchid
 		AND ResultID = @ResultID		
+	ORDER BY logid
 	
 END
 GO
