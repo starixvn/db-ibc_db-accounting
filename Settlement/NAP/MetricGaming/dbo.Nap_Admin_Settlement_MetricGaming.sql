@@ -261,8 +261,7 @@ BEGIN
 			</Event>
 		</Log>
 	*/
-	SELECT @Remark = '<Log>
-							<Event IsSettleDetermined ="' + CAST(@IsSettleDetermined AS varchar(10)) + '"'
+	SELECT @Remark = '<Log><Event IsSettleDetermined ="' + CAST(@IsSettleDetermined AS varchar(10)) + '"'
 											+ ' Duration="'+ CAST(DATEDIFF(MILLISECOND, @start, @stop) AS VARCHAR(20)) + ' ms"'
 											+ ' TC="' + CAST(@ticketCount AS VARCHAR(20)) + '"'
 											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" >'
