@@ -19,6 +19,8 @@ AS
 		- 20141111@Johnson: include additional bettypes into report
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and Sport Betype Matrix [#35359]
+		- 20150723@Sophia: Exclude data of Bettrade [#38815]	
+
 	Explanation's Param:
 		- @SoccerType =	 0: All bettype(major and minor bettype)
 					= 1: report soccer for major bettype
@@ -47,6 +49,10 @@ SELECT 5707545--BARM
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @SportType  = 1
+	
+	DELETE	@SportBettype  
+	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+			OR EventType NOT IN (1,2)
 
 
 INSERT INTO @Bettype(bettype,soccerType)
@@ -54,10 +60,8 @@ SELECT typeid, CASE WHEN typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126
 FROM bettype b WITH(NOLOCK)
 INNER JOIN @SportBettype s 
 		ON s.bettype = b.typeid
-WHERE	 ---(typeid < 31 OR typeid BETWEEN 121 AND 999)
-		s.EventType IN (1,2)
-		AND s.SubProduct NOT IN ('MG-SuperLive')
-		AND 1 = CASE WHEN @SoccerType = 0 THEN 1 
+WHERE	 ---(typeid < 31 OR typeid BETWEEN 121 AND 999)		
+		1 = CASE WHEN @SoccerType = 0 THEN 1 
 				WHEN @SoccerType = 1 AND typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1 
 				WHEN @SoccerType = 2 AND typeid NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1 
 				ELSE 0 END							

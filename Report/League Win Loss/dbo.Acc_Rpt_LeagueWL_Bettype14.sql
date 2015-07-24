@@ -22,7 +22,8 @@ AS
 							Expand the size of match code to varchar(50)
 		-- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		-- 20121112@Elodie: Use stake field to calculate TurnOver instead of actual_stake
-		-- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]		
+		-- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]	
+		-- 20150723@Sophia: Exclude data of Bettrade [#38815]	
 
 		Explanation's Param:
 			- @winlostdate: the date want to view report
@@ -34,9 +35,12 @@ SET NOCOUNT ON
 BEGIN	
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4, @ProductID = 1 	
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductID = 1
+
+	DELETE	@SportBettype  
+	WHERE	(SubProduct IN ('BT-Sold','BT-Bought','BT-Comm'))
 	
 	 
 	--Declare @temp table to contain all matches based on @winlostdate
