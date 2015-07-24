@@ -26,7 +26,7 @@ Begin
 		----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC Acc_SportBettypeMatrix_Sel @mode = 5, @ProductId = 1
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductId = 1
 
 	DELETE	@SportBettype  
 	WHERE	SubProduct IN ( 'BT-Sold','BT-Bought','BT-Comm') 
