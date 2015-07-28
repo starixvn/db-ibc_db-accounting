@@ -21,6 +21,7 @@ AS
 			- 20140327@Dom: Add Keno
 			- 20150525@Jim: apply sport& bettype matrix and also support GoldDeluxe & Metric Gaming (#35359 & #28309 )
 			- 20150710@Jim: Super Balance fix and Microgaming integration (feature #38168 )
+			- 20150723@Jim: Apply Bettrade [#38815]
         Parameter's Explanation:
     */
 BEGIN
@@ -106,13 +107,18 @@ BEGIN
         END
 
         INSERT INTO #TempData
-        SELECT CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 ELSE	b.sporttype END sporttype
+        SELECT CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1
+								 WHEN 'BT-Comm' THEN -2
+								 ELSE	b.sporttype
+								 END sporttype
 				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899)) then b.bettype else 19999 end as bettypec
 				,liveindicator
 				,ibc
 				, CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END IsHedge
 				,'' status 
-				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END AS OrderKey
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 
+								   WHEN  'BT-Comm' THEN 15	
+									ELSE 1 END AS OrderKey
 				,ISNULL(SUM(realWinlost),0) as realWinlost
 				,ISNULL(SUM(realPosition),0) as realPosition
 				,ISNULL(SUM(realcommission),0) as realCommission
@@ -125,14 +131,18 @@ BEGIN
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
            -- AND (sporttype BETWEEN 1 and 99 OR sporttype = 161)
-		   AND (s.ProductID = 1 OR s.ProductID = 3) -- SB or NG
-        GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 ELSE	b.sporttype END
+		   AND ((s.ProductID = 1 AND s.SubProduct NOT IN ('BT-Sold','BT-Bought')) OR s.ProductID = 3) -- SB or NG
+        GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 
+								   WHEN 'BT-Comm' THEN -2
+								   ELSE	b.sporttype END
 				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899)) then b.bettype else 19999 end
 				,liveindicator 
 				,ibc
 				,CASE WHEN b.bettype in (1,3,7,8) then b.bettype else 19999 end        
 				,CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END
-				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 
+								    WHEN  'BT-Comm' THEN 15
+									ELSE 1 END
     UNION ALL
         --Casino
         SELECT  251 as sporttype
