@@ -19,6 +19,7 @@ AS
 		- 20121123@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		- 20120215@Elodie: Change linked server DB06 to DBARC
 		- 20150529@Jim: add Metric Gaming and apply sport-bettype matrix
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 	Explanation's Param:
 		- @matchid: the id of match
 		- @statusid: the status of tickets --> ALL/DRAW/WON/LOSE  (0/111/112/113)
@@ -28,7 +29,9 @@ AS
 	DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 	INSERT INTO @SportBettype
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
-
+	
+	DELETE 	@SportBettype WHERE bettype IN (901,902,903)
+	
 	IF 	(@statusid NOT IN (0,111,112,113))
 		RETURN
 	
