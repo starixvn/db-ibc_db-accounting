@@ -35,6 +35,7 @@ AS
 	- 20150123@Jim: support base on GBP currency
 	- 20150518@Florent: Add AGC and GD
 	- 20150710@Jim:  Microgaming integration (Feature #38168)
+	- 20150728@Jim: apply Bettrade (Feature #38815)		
  Param's Explanation:    
    + @CustID: SuperID    
    + @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)  
@@ -188,7 +189,7 @@ BEGIN
 
 		INSERT INTO @bettype(bettype)
 		SELECT typeid FROM bettype (NOLOCK)
-		WHERE (typeid BETWEEN 2001 AND 2009)
+		WHERE (typeid BETWEEN 2001 AND 2099)
 	END 
 
 	
@@ -236,7 +237,9 @@ BEGIN
 				INNER JOIN @TempAg t ON t.custid = b.recommend AND t.currency=b.currency
 				INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON t.custid=BA.recommend and b.transid = BA.transid     
 			WHERE	b.winlostdate BETWEEN @TempFromDate AND @TDate AND    
-				b.statusID  IN (111, 112, 113)   
+				b.statusID  IN (111, 112, 113)  AND
+				b.bettype NOT IN (901,902,903)				
+				
 			GROUP BY b.winlostdate,b.currency,b.mrecommend,b.statusID   
 		END   
 	   
@@ -268,7 +271,7 @@ BEGIN
 				INNER JOIN @master s ON b.mrecommend = s.custid  
 			WHERE b.winlostdate BETWEEN @TempFromDate AND @TDate AND    
 				b.statusID  IN (111, 112, 113) AND  
-				(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399)) AND  
+				(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999 AND b.bettype NOT IN (901,902,903)) OR (b.bettype BETWEEN 1301 AND 1399)) AND  
 				b.tpositiontaking <> 0  
 			GROUP BY b.winlostdate,s.currency,b.mrecommend, b.statusID    
 		END  
@@ -350,7 +353,8 @@ BEGIN
 			   b.Winlostdate BETWEEN @FDate AND @TempToDate    
 			   AND b.roleid = 2     
 			   AND b.statusID <> 101 --exclude REJECT bets  
-			   AND ISNULL(b.isBA,0) = 1  
+			   AND ISNULL(b.isBA,0) = 1
+			   AND b.bettype NOT IN (901,902,903)
 			  GROUP BY  b.winlostdate,b.currency, s.mrecommend  , b.statusID  
 		 END  
 	   
@@ -394,6 +398,7 @@ BEGIN
 		   AND b.roleid = 2     
 		   AND b.statusID <> 101 --exclude REJECT bets  
 		   AND ISNULL(b.isBA,0) = 0  
+		   AND b.bettype NOT IN (901,902,903)
 		  GROUP BY  b.winlostdate,b.currency, s.mrecommend, b.statusID  
 	END  
  END   
@@ -442,6 +447,7 @@ IF @IsOld = 1
 			  -- AND b.roleid = 2     
 			   AND b.statusID <> 101 --exclude REJECT bets  
 			   AND ISNULL(b.isBA,0) = 1  
+			   AND b.bettype NOT IN (901,902,903)
 			  GROUP BY  b.winlostdate,b.currency, s.mrecommend, b.statusID  
 		 END  
 	   
@@ -484,6 +490,7 @@ IF @IsOld = 1
 	  -- AND b.roleid = 2     
 	   AND b.statusID <> 101 --exclude REJECT bets  
 	   AND ISNULL(b.isBA,0) = 0  
+	   AND b.bettype NOT IN (901,902,903)
 	  GROUP BY  b.winlostdate,b.currency, s.mrecommend, b.statusID  
 	 END  
 	   
