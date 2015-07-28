@@ -51,6 +51,7 @@ AS
 		- 20150123@Jim: support base on GBP currency
 		- 20150518@Florent: Add AGC and GD
 		- 20150710@Jim:  Microgaming integration (Feature #38168)
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  + @BaseCurrency (input currencyID): 2-MYR ; 3-USD; 6-EUR
@@ -259,7 +260,7 @@ IF @showMGC =1 -- Micro Gaming
 
 		INSERT INTO @bettype(bettype)
 		SELECT typeid FROM bettype (NOLOCK)
-		WHERE (typeid BETWEEN 2001 AND 2009)
+		WHERE (typeid BETWEEN 2001 AND 2099)
 	END 
 	
 DECLARE @TempFromDate DATETIME 
@@ -400,7 +401,8 @@ BEGIN
 			LEFT JOIN @Exchange e  ON e.ExchangeDate = b.winlostdate AND e.exchangeid = b.currency
 		WHERE 
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
-			b.statusID IN (111, 112, 113) 
+			b.statusID IN (111, 112, 113) AND
+			b.bettype NOT IN (901,902,903)
 		GROUP BY   
 			b.currency,b.custid , b.statusID
 	END		
@@ -525,7 +527,9 @@ BEGIN
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
 			b.statusID  IN (111, 112, 113) AND
 			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399)) AND
-			b.tpositiontaking <> 0
+			b.tpositiontaking <> 0 AND
+			b.bettype NOT IN (901,902,903)
+			
 		GROUP BY   
 			s.currency,b.custid,b.statusID
 	END
@@ -784,6 +788,7 @@ BEGIN
 			AND b.roleid = 1
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency,b.custid,  b.statusID
 	END
 	
@@ -907,6 +912,7 @@ BEGIN
 			AND b.roleid = 1
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency,b.custid,b.statusID
 	END
 	
@@ -1037,6 +1043,7 @@ BEGIN
 			AND b.roleid = 1   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency,b.custid,b.statusID
 	END
 	
@@ -1160,6 +1167,7 @@ BEGIN
 			AND b.roleid = 1   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency, b.custid,b.statusID
 	END
 	
