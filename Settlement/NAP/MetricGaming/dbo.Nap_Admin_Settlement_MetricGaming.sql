@@ -141,6 +141,8 @@ BEGIN
 	)t
 	GROUP BY custid
 	
+	SET @TotalAccount = @@ROWCOUNT
+	
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_MetricGamingResult_Update
 		@ResultID				= @ResultID
 		,@Action				= @Action
