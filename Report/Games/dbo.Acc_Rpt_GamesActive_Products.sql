@@ -23,6 +23,6 @@ SELECT
 ORDER BY ProductID ASC
  
 GO
-GRANT EXECUTE ON [dbo].Acc_Rpt_GamesActive_Products_xtest TO [bodbAdminNet]  
+GRANT EXECUTE ON [dbo].Acc_Rpt_GamesActive_Products  TO [bodbAdminNet]  
 GO
 GRANT VIEW DEFINITION ON [dbo].Acc_Rpt_GamesActive_Products  TO [vnteam]  
