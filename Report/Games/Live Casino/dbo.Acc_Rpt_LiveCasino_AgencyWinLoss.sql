@@ -179,8 +179,8 @@ BEGIN
 	
 	+'FROM bettrans b with (NOLOCK)'+char(13)
 	+CASE WHEN @ReportBy = 2 OR @username <> '' THEN 'INNER JOIN CustInfo ci WITH (NOLOCK) ON ci.CustId = b.CustId'+char(13) ELSE '' END
-	+CASE WHEN @GameTableID > 0 OR @ReportBy = 4 THEN 'LEFT JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
-									+'LEFT JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
+	+CASE WHEN @GameTableID > 0 OR @ReportBy = 4 THEN 'INNER JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
+									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
 	 ELSE ''
 	 END
 	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN DBLIC.bodb_licensee.dbo.LicenseeCust lc with (nolock) on b.recommend = lc.custid' + char(13)
@@ -338,8 +338,8 @@ BEGIN
 			WHEN @UserRole = -1 THEN 'INNER JOIN CustInfo a ON a.custid = b.srecommend' 
 	 ELSE ''
 	 END + char(13)
-	+CASE WHEN @GameTableID > 0 THEN 'LEFT JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
-									+'LEFT JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
+	+CASE WHEN @GameTableID > 0 THEN 'INNER JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
+									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
 	 ELSE ''
 	 END + char(13)
 	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN DBLIC.bodb_licensee.dbo.LicenseeCust lc with (nolock) on b.recommend = lc.custid' + char(13)
