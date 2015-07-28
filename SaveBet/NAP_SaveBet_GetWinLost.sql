@@ -16,7 +16,7 @@ AS
 	
 	Revisions:
 		-20150529@Jim: add metrix gaming
-		
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 */
 
 IF EXISTS (SELECT matchid FROM bodb02.dbo.match with (nolock) WHERE matchid = @matchid)
@@ -52,6 +52,7 @@ FROM
 	WHERE
 		matchid = @matchid 
 		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
+		AND bettype NOT IN (901,902,903)
 	GROUP BY
 		bettype, liveindicator
 ) b
@@ -84,6 +85,7 @@ LEFT OUTER JOIN
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
 		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
+		AND b.bettype NOT IN (901,902,903)
 	GROUP BY
 		bettype, liveindicator
 ) t ON b.bettype = t.bettype AND b.liveindicator = t.liveindicator
@@ -128,6 +130,7 @@ FROM
 	WHERE
 		matchid = @matchid
 		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
+		AND bettype NOT IN (901,902,903)
 	GROUP BY
 		bettype, liveindicator
 ) b
@@ -160,6 +163,7 @@ LEFT OUTER JOIN
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
 		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
+		AND bettype NOT IN (901,902,903)
 	GROUP BY
 		bettype, liveindicator
 ) t ON b.bettype = t.bettype AND b.liveindicator = t.liveindicator

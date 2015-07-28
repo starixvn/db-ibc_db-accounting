@@ -16,7 +16,7 @@ AS
 	DB: DB06.BODB02
 	
 	Revisions:
-		
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 */
 
 
@@ -80,6 +80,7 @@ FROM (
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
 		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
+		AND b.bettype NOT IN (901,902,903)
 ) b
 
 ELSE
@@ -142,6 +143,7 @@ FROM (
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
 		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
+		AND b.bettype NOT IN (901,902,903)
 ) b
 
 GO

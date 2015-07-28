@@ -18,11 +18,16 @@ AS
 	DB: DB06.BODB02
 	
 	Revisions:
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 		
 */
 
 -- original is Dot_Admin_cteamlist
-
+IF @bettype IN (901,902,903)
+	BEGIN 
+		SELECT N'This report does not support bettrade ticket !'
+		RETURN
+	END 
 IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
 	SELECT
 		0 positiontaking, 
