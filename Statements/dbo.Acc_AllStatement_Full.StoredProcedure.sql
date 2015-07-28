@@ -1,13 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AllStatement_Full]    Script Date: 10/01/2014 16:56:42 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_AllStatement_Full    Script Date: 3/18/2014 4:42:53 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_AllStatement_Full    Script Date: 3/10/2014 10:45:34 AM ******/
-ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
+﻿ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
 	@custid int,
 	@fromdate datetime,
 	@todate datetime,
@@ -51,6 +42,8 @@ ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
 		- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
 		- 20140305@Dom: Update outstanding for keno
 		- 20140929@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
+		- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
+		- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
  */
 SET NOCOUNT ON
 
@@ -104,7 +97,7 @@ BEGIN
 	
 	IF @roleid = 1
 	BEGIN
-		INSERT INTO @bet  
+		INSERT INTO @bet  			 
 			SELECT winlostdate, bettype, 
 				CASE
 					WHEN statusID IN (102,101) THEN 102 --'VOID','REJECT'
@@ -118,6 +111,7 @@ BEGIN
 			FROM bettrans (NOLOCK)
 			WHERE custid = @custid
 				AND winlostdate between @_FromDate and @_ToDate
+				AND CASE WHEN bettype BETWEEN 801 AND 899 AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
 				--AND statusID <> 103
 			GROUP BY winlostdate, bettype,
 				CASE
@@ -126,8 +120,11 @@ BEGIN
 				ELSE 131 END,
 				CASE WHEN bettype <= 19999 THEN NULL ELSE transdate END,
 				CASE WHEN bettype <= 19999 THEN '' ELSE transdesc END
+			
+			
 			UNION ALL
-			SELECT winlostdate, 1501, 
+			SELECT  winlostdate, 
+					GameId as bettype, 
 					0 StatusID,
 					NULL transdate,
 					'' transdesc,
@@ -139,7 +136,7 @@ BEGIN
 			WHERE custid = @custid
 				AND winlostdate BETWEEN @_FromDate and @_ToDate
 				AND statusID = 0
-			GROUP BY winlostdate
+			GROUP BY GameId, winlostdate
 
 
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
@@ -158,6 +155,7 @@ BEGIN
 				'' Creator,	 NULL,   '', NULL,	   0
 		FROM	@bet  
 		WHERE	statusID = 102
+				AND Bettype <> 903
 		GROUP BY winlostdate  
 
 		UNION ALL
@@ -252,6 +250,7 @@ BEGIN
 			where 
 				zzzbettrans.matchid = match.matchid 
 				and bettype between 1 and 19999 
+				AND Bettype <> 903
 				and custid=@custid 
 				--and eventdate between @_FromDate and @_ToDate 
 				and eventdate between @_FromDate and @MoveBetDay 
@@ -274,6 +273,7 @@ BEGIN
 			where 
 				zzzbettrans.matchid = match.matchid 
 				and bettype between 1 and 19999 
+				AND Bettype <> 903
 				and custid=@custid 
 				--and eventdate between @_FromDate and @_ToDate 
 				and eventdate between @_FromDate and @MoveBetDay 
@@ -561,9 +561,9 @@ BEGIN
 			if (@BUDate is NULL) 
 			BEGIN
 				SET @BUDate = @fromdate_bk
-				WHILE(DATEPART(WEEKDAY, @BUDate) <> 7) SET @BUDate = DATEADD(dd, -1, @BUDate)		
-			END	
-										
+				WHILE(DATEPART(WEEKDAY, @BUDate) <> 7) SET @BUDate = DATEADD(dd, -1, @BUDate)  
+			END
+			
 			--get acc bal from statement old (Statement):		
 			SELECT @AccBal = isnull(SUM(totalamt),0)
 			FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
@@ -584,9 +584,13 @@ FROM @StatementTable
 where (accdate >= @fromdate_bk OR transdesc = 'ACCUMULATED BALANCE')
 order by accdate, case when transdesc like '%opening balance%' then 1 else 2 end, transdesc
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_AllStatement_Full] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AllStatement_Full] TO [vnteam] AS [dbo]
+
+GO 
+GRANT EXECUTE ON [Acc_AllStatement_Full] TO  [bodbAdminNet]
+GO 
+GRANT EXECUTE ON [Acc_AllStatement_Full] TO  [bodbDownlineNet]
+GO 
+GRANT EXECUTE ON [Acc_AllStatement_Full] TO  [bodbDownlineNetView]
+GO 
+GRANT EXECUTE ON [Acc_AllStatement_Full] TO  [bodbExtAccNet]
+GO 
