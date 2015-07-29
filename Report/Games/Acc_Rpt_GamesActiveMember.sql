@@ -204,7 +204,7 @@ SET GameName = GameName +CHAR(13)+'(Only)'
 WHERE combinations = 1
 
 INSERT INTO @result (subID,combinations  ,NoActive ,GameName)
-SELECT 1,12,SUM(NoActive),'Total Active Members'
+SELECT 1,@i,SUM(NoActive),'Total Active Members'
 FROM @result
 WHERE combinations=1
 
