@@ -25,7 +25,7 @@ AS
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		- 20150422@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#] 
+		- 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#35921] 
 	Param's Explanation:
 		@IsRefundHT: Indicate whether or not match has been refunded HT
 		@IsHTCal: Indicate whether or not match has been calculated HT

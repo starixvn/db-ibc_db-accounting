@@ -23,7 +23,7 @@ AS
 	Revisions:
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 		- 20140618@Kathy: Correct 1FL, FL string
-		- 20150611@Johnson: Add bettrade [Redmine: #]
+		- 20150611@Johnson: Add bettrade [Redmine: #35921]
 	Param's Explanation:
 			+ @matchid: matchid of match to Refund HT
 			+ @IsLoopTempTable: 1 : is nested
@@ -122,8 +122,10 @@ BEGIN
 			WHERE matchid = @matchid 				
 				AND ((@bettype = 0 AND bettype IN (14, 127,901,902,903)) OR (bettype IN(@bettype,901,902,903)))
 				AND 1 = CASE WHEN bettype IN (901,902,903) 
-							AND refno IN (SELECT transid FROM #tmpTrans)	
-					THEN 1 ELSE 0 END
+								AND refno IN (SELECT transid FROM #tmpTrans)	
+								THEN 1 
+							WHEN bettype NOT IN (901,902,903) 
+							ELSE 0 END
 			GROUP BY custid
 
 			SET @TotalAccount = @@ROWCOUNT
@@ -213,8 +215,10 @@ BEGIN
 			WHERE matchid = @matchid 
 				AND ((@bettype = 0 AND bettype IN (14, 127,901,902,903)) OR (bettype IN (@bettype,901,902,903)))
 				AND 1 = CASE WHEN bettype IN (901,902,903) 
-							AND refno IN (SELECT transid FROM #tmpTrans)	
-					THEN 1 ELSE 0 END
+								AND refno IN (SELECT transid FROM #tmpTrans)	
+								THEN 1 
+							WHEN bettype NOT IN (901,902,903) 
+							ELSE 0 END
 			GROUP BY custid
 		END --IF @SkipBalanceUpdate = 0
 

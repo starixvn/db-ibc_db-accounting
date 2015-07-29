@@ -64,7 +64,7 @@ AS
 		- 201409010@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150414@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150610@Johnson: Add bettrade [Redmine: #]
+		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 	Param's Explanation:
 	• @matchid: matchid need to refund
 	• @IsExcludeBetdaq: Is Exclude betdaq tickets or not
@@ -200,7 +200,9 @@ BEGIN
 			AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
 			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1 ELSE 0 END
+								THEN 1 
+						WHEN b.bettype NOT IN (901,902,903) THEN 1
+						ELSE 0 END
 	GROUP BY b.custid
 	
 	-------------------------------------------------------------
@@ -758,7 +760,9 @@ BEGIN
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
 	AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 						AND b.refno IN (SELECT transid FROM #tmpTrans)	
-				THEN 1 ELSE 0 END
+					THEN 1 
+				WHEN b.bettype NOT IN (901,902,903) THEN 1
+				ELSE 0 END
 	GROUP BY b.custid
 	
 	------------------------------------------------------------

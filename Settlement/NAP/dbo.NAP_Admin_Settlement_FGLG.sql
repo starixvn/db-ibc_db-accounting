@@ -21,7 +21,7 @@ AS
 		- 20140426@Kathy: Add @action param (1H FGLG (bettype 127) ) [Redmine:#14449]
 		- 20140618@Kathy: Correct betstatus
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212] - GoalRecord
-		- 20150610@Johnson: Add bettrade [Redmine: #]
+		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 	Param's Explanation:
 		+ @betstatus: FGLG status
 		+ @IsLoopTempTable: 1 : is nested
@@ -178,7 +178,9 @@ BEGIN
 		WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903)
 			AND 1 = CASE WHEN bettype IN (901,902,903) 
 									AND refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1 ELSE 0 END
+								THEN 1 
+						WHEN bettype NOT IN (901,902,903) THEN 1
+						ELSE 0 END
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -295,7 +297,9 @@ BEGIN
 		WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903)
 			AND 1 = CASE WHEN bettype IN (901,902,903) 
 									AND refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1 ELSE 0 END
+							THEN 1 
+						WHEN bettype NOT IN (901,902,903) THEN 1
+						ELSE 0 END
 		GROUP BY custid
 			--===
 	END

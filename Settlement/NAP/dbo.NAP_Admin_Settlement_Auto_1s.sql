@@ -17,7 +17,7 @@ AS
 	Original: 
 	
 	Revisions:
-		- 20150610@Johnson: Add bettrade [Redmine: #]
+		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 	Param's Explanation:
 */	
 BEGIN
@@ -125,7 +125,9 @@ BEGIN
 			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217,901,902,903)
 			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1 ELSE 0 END
+							THEN 1 
+						WHEN b.bettype NOT IN (901,902,903) THEN 1
+						ELSE 0 END
 	GROUP BY b.custid
 
 
@@ -254,10 +256,12 @@ BEGIN
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @matchid 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217,901,902,903)
 			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1 ELSE 0 END
+								THEN 1 
+						WHEN b.bettype NOT IN (901,902,903) THEN 1
+						ELSE 0 END
 	GROUP BY b.custid
 
 

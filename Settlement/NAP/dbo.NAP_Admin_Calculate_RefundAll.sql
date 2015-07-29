@@ -24,7 +24,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		- 20141027@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#] 
+		- 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#35921] 
 	Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
 BEGIN

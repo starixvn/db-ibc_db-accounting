@@ -15,7 +15,7 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		- 20141022@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150608@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#] 
+		- 20150608@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#35921] 
 	Param's Explanation:
 			• @matchid: matchid of match to be unsettled
 */
