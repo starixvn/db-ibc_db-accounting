@@ -14,7 +14,7 @@
 		Revisions:
 		
 		Parameter's Explanation:
-			- @StatusID: 0: all, 1: running, 2: completed
+			- @StatusID: 0: all, 1: running, 3: completed
 			- @matchcode = '' : all
 			- @leagueid = 0: all
 	*/
@@ -56,7 +56,7 @@ BEGIN
 		AND (@leagueid = 0 OR m.leagueid = @leagueid)
 		AND 1 = CASE WHEN @statusid = 0 THEN 1
 					WHEN @statusid = 1 AND rs.SettlementStatusID = 0 THEN 1
-					WHEN @statusid = 2 AND rs.SettlementStatusID IN (1,4) THEN 1 
+					WHEN @statusid = 3 AND rs.SettlementStatusID IN (1,4) THEN 1 
 					ELSE 0 
 				END
 		AND vs.SB_TradeStatusID = 1 -- this match is offered Metric Gaming

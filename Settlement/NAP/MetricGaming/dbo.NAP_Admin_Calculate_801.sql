@@ -449,7 +449,7 @@ BEGIN
 		SELECT refno as tiketID,
 			custid,
 			StatusID,
-			CASE WHEN statusid NOT IN (0,1) THEN winlost-actual_stake+playercomm ELSE 0 END as payout,
+			winlost as payout,
 			odds,
 			stake
 		FROM bettrans WITH(NOLOCK)
@@ -1062,7 +1062,7 @@ BEGIN
 		SELECT refno as tiketID,
 			custid,
 			StatusID,
-			CASE WHEN statusid NOT IN (0,1) THEN winlost-actual_stake+playercomm ELSE 0 END as payout,
+			winlost as payout,
 			odds,
 			stake
 		FROM bettrans WITH(NOLOCK)
@@ -1111,7 +1111,7 @@ BEGIN
 		SELECT refno as tiketID,
 			custid,
 			StatusID,
-			CASE WHEN statusid NOT IN (0,1) THEN winlost-actual_stake+playercomm ELSE 0 END as payout,
+			winlost as payout,
 			odds,
 			stake
 		FROM bettrans WITH(NOLOCK)

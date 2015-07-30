@@ -25,7 +25,7 @@ AS
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212
 		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
-
+		- 20150729@Johnson: Exclude Metric Gaming in settlement's sportbook [Redmine: #37688]
 
 	Param explanation: 
 		@isReLoad: 1: reload partial matches of a league, 0: not reload
@@ -204,6 +204,7 @@ BEGIN
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 				--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 			GROUP BY b.matchid
 			) AS C ON tm.matchid = c.matchid
 
