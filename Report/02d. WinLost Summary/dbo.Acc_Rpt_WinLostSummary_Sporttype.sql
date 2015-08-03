@@ -111,7 +111,7 @@ BEGIN
 								 WHEN 'BT-Comm' THEN -2
 								 ELSE	b.sporttype
 								 END sporttype
-				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899)) then b.bettype else 19999 end as bettypec
+				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899) or b.bettype IN (901,902,903)) then b.bettype else 19999 end as bettypec
 				,liveindicator
 				,ibc
 				, CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END IsHedge
@@ -135,7 +135,7 @@ BEGIN
         GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 
 								   WHEN 'BT-Comm' THEN -2
 								   ELSE	b.sporttype END
-				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899)) then b.bettype else 19999 end
+				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899)or b.bettype IN (901,902,903)) then b.bettype else 19999 end
 				,liveindicator 
 				,ibc
 				,CASE WHEN b.bettype in (1,3,7,8) then b.bettype else 19999 end        
