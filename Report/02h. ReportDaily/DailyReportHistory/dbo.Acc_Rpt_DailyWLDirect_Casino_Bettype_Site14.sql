@@ -67,7 +67,7 @@ BEGIN
 			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
 			AND b.statusID NOT IN (102, 101,121,103) 
 			AND b.ruben = 1		
-	GROUP BY ag.site
+	GROUP BY ag.site, s.ProductId
 	ORDER BY ag.site
 	
 	DROP TABLE #DepAgent
