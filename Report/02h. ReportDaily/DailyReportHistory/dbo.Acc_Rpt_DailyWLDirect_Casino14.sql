@@ -42,7 +42,7 @@ BEGIN
 			isnull(sum((awinlost+mwinlost+swinlost)*actualrate), 0) Position,
 			isnull(sum(scomm*actualrate), 0) Commission,	
 			isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate), 0) LineTotal,
-			0 Turnover
+			CASE WHEN s.ProductId = 6 THEN 0 ELSE sum((1-tpositiontaking)*stake*actualrate) END AS Turnover
 	FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
