@@ -49,8 +49,8 @@ BEGIN
 			sum(scomm*actualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-			0 RealTurnover,
-			0 VirtualTurnover
+			CASE WHEN s.ProductId = 6 THEN 0 ELSE sum((1-tpositiontaking)*stake*actualrate) END AS RealTurnover,
+			CASE WHEN s.ProductId = 6 THEN 0 ELSE sum((1-tpositiontaking)*stake*actualrate) END AS VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
@@ -58,7 +58,7 @@ BEGIN
 			AND s.ProductId = @ProductId
 			AND (
 					s.ProductId = 6 -- Casino
-					OR s.ProductId = 11  --- Vegas Games
+					OR s.ProductId = 14 --- Vegas Games
 					OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino	
 				) 
 

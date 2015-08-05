@@ -293,7 +293,7 @@ BEGIN
 			0 as virtualComm,
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,		
-			0 as IBCTurnover,
+			sum(isnull(b.IBCTurnover,0)) IBCTurnover,
 			'Macau' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
@@ -416,7 +416,7 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductID = 12
 
-	---Metricgaming
+	---Microgaming
 	UNION ALL
 	SELECT	@winlostdate winlostdate,
 	        sum(b.winlost) as winlost,
@@ -426,7 +426,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,		
 			sum(b.IBCTurnover) IBCTurnover,
-			'Metricgaming' as bettype
+			'Microgaming' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductID = 13
