@@ -1,13 +1,3 @@
-USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Task_ResetWinning_Non3rdParty]    Script Date: 06/03/2015 05:00:18 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
- 
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate datetime,
 	@todate   datetime,
@@ -295,10 +285,10 @@ BEGIN
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			 WHEN bettype = 1800 THEN 'AG Casino'
-			 WHEN bettype = 1900 THEN 'Vegas Game'
+			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
-			 WHEN bettype BETWEEN 2001 AND 2009 THEN 'Microgaming'
+			 WHEN bettype BETWEEN 2001 AND 2099 THEN 'Microgaming'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
@@ -312,7 +302,7 @@ BEGIN
 			OR bettype IN (1800, 1900)
 			OR bettype BETWEEN 1700 AND 1799 
 			OR bettype BETWEEN 801 AND 899
-			OR bettype BETWEEN 2001 AND 2009  
+			OR bettype BETWEEN 2001 AND 2099  
 			OR bettype BETWEEN 901 AND 903  
 		   )
   GROUP BY CASE
@@ -327,10 +317,10 @@ BEGIN
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			 WHEN bettype = 1800 THEN 'AG Casino'
-			 WHEN bettype = 1900 THEN 'Vegas Game'
+			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
-			 WHEN bettype BETWEEN 2001 AND 2009 THEN 'Microgaming'
+			 WHEN bettype BETWEEN 2001 AND 2099 THEN 'Microgaming'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 		   END, winlostdate
 
@@ -572,6 +562,8 @@ BEGIN
 	    RETURN
 	END
 END
+
+
 
 GO
 

@@ -65,7 +65,7 @@ BEGIN
 			--AND b.matchid IN (0, 71)			
 			AND b.statusID NOT IN (102, 101,121,103)  ---('VOID', 'REJECT','done','REFUND') 
 			AND b.ruben = 1		
-	GROUP BY ag.site
+	GROUP BY ag.site, s.ProductId
 	ORDER BY ag.site
 	
 	DROP TABLE #DepAgent
