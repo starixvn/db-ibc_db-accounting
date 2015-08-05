@@ -2,10 +2,12 @@
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_Old]
-	@FromDate datetime,  
-	@ToDate datetime,  
-	@CustID int,
-	@Bettype int = 0	 
+(
+	@FromDate	DATETIME,  
+	@ToDate		DATETIME,  
+	@CustID		INT,
+	@Bettype	INT = 0	 
+) WITH RECOMPILE 
 AS  
 /*
 Created: 20100123@[Henry]
@@ -55,7 +57,12 @@ Revisions:
 */	
 BEGIN
 
-	SET NOCOUNT ON	
+	SET NOCOUNT ON
+	
+	DECLARE @tempBettype 	INT
+	
+	SELECT @tempBettype 	= @Bettype
+	
 	CREATE TABLE #BetListData (
 		bettype smallint,
 		transid bigint, 
@@ -136,14 +143,14 @@ BEGIN
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 
-	IF @Bettype <> 0
+	IF @tempBettype <> 0
 	BEGIN
 		DELETE @SportBettype 
-		WHERE Bettype <> @Bettype
+		WHERE Bettype <> @tempBettype
 	END
 
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 1 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID IN (1,3,4,5) AND Bettype = @tempBettype)
 	)
 	BEGIN
 		--Sport Book
@@ -210,14 +217,13 @@ BEGIN
 		from 
 			dbo.bettrans_bk as b with (nolock,index=IX_custid) 
 			inner join dbo.match_BK as m with (nolock) on b.matchid = m.matchid 
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
 				b.custid = @Custid 
 				AND	(
-					s.ProductId 	= 1 	
-					AND s.EventType = 1
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					s.EventType = 1
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)
 				
 				--b.bettype < 19001 and
@@ -288,7 +294,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				'' AS transdesc 				
-			from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)
+			from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
 					b.custid = @Custid  
@@ -359,7 +365,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				'' AS transdesc								 
-			from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)
+			from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)
 			where	b.winlostdate>= @FromDate and    
 					b.winlostdate<= @ToDate and   
 					b.custid = @Custid  
@@ -430,7 +436,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				'' AS transdesc									
-			from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
+			from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)   
 					inner join dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 					inner join bodb02.dbo.league l with (nolock) on odds.leagueid=l.leagueid     
 			where b.bettype = 10
@@ -439,8 +445,8 @@ BEGIN
 			b.custid = @Custid  
 		END
 	END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @tempBettype)
 	)
 	BEGIN
 		--- Casino
@@ -504,7 +510,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			'' AS transdesc								 
-		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)	
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -512,11 +518,11 @@ BEGIN
 				AND	(
 					s.ProductId 	= 6 	
 					AND s.EventType = 0
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)
 	END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @tempBettype)
 	)
 	BEGIN
 		--IBC BIngo
@@ -580,7 +586,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			'' AS transdesc								 
-		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)	
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -588,11 +594,11 @@ BEGIN
 				AND	(
 					s.ProductId 	= 7 	
 					AND s.EventType = 0
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)
 	END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @tempBettype)
 	)
 	BEGIN
 		--keno
@@ -656,7 +662,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			'' AS transdesc								 
-		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)	
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 		where	b.winlostdate>= @FromDate and    
@@ -665,11 +671,11 @@ BEGIN
 				AND	(
 					s.ProductId 	= 8 	
 					AND s.EventType = 0
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)				
 	END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @tempBettype)
 	)
 	BEGIN				
 		--- P2P
@@ -733,7 +739,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			'' AS transdesc									 
-		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)	
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -741,11 +747,11 @@ BEGIN
 				AND	(
 					s.ProductId 	= 9 	
 					AND s.EventType = 0
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)
 	END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @tempBettype)
 	)
 	BEGIN		
 		-- HR		
@@ -811,7 +817,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			'' AS transdesc									
-		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)   
+		from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)   
 				inner join dbo.Outright_bk as odds with (nolock) on b.matchid=odds.orid   
 				inner join bodb02.dbo.league l with (nolock) on odds.leagueid=l.leagueid    
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
@@ -828,11 +834,11 @@ BEGIN
 				AND	(
 					s.ProductId 	= 2
 					AND s.EventType = 2
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)
 	END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 5 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 5 AND Bettype = @tempBettype)
 	)
 	BEGIN
 		-- Virtual HR
@@ -898,7 +904,7 @@ BEGIN
 			b.BetCheck,
 			'' AS transdesc
 		from 
-			bettrans_bk as b with (nolock, index=IX_custid)    
+			bettrans_bk as b with (nolock,index=IX_custid)    
 			INNER JOIN VSOutright_bk o WITH (NOLOCK) ON b.oddsid = o.Orid
 			INNER JOIN bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN @SportBettype s ON s.BetType = b.BetType 
@@ -915,11 +921,11 @@ BEGIN
 				AND	(
 					s.ProductId 	= 5
 					AND s.EventType = 3
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)
 	END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @tempBettype)
 	)
 	BEGIN	
 		--Gold Deluxe
@@ -984,7 +990,7 @@ BEGIN
 			 b.winlostdate,
 			 b.BetCheck,
 			'' AS transdesc	 
-		from	dbo.bettrans_bk b with (nolock)   
+		from	dbo.bettrans_bk b with (nolock,index=IX_custid)   
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -992,11 +998,11 @@ BEGIN
 				AND	(
 					s.ProductId 	= 12
 					AND s.EventType = 0
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)
 	 END
-	IF (@Bettype = 0
-		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 13 AND Bettype = @Bettype)
+	IF (@tempBettype = 0
+		OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 13 AND Bettype = @tempBettype)
 	)
 	BEGIN
 		--MicroGamming
@@ -1060,7 +1066,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			'' AS transdesc								 
-		from	dbo.bettrans_bk AS b with (nolock, index=IX_custid)	
+		from	dbo.bettrans_bk AS b with (nolock,index=IX_custid)	
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		where	b.winlostdate>= @FromDate and    
 				b.winlostdate<= @ToDate and   
@@ -1068,24 +1074,27 @@ BEGIN
 				AND	(
 					s.ProductId 	= 13 	
 					AND s.EventType = 0
-					AND (@bettype 	= 0 OR s.bettype = @bettype)
+					AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 				)				
 	END
-	 
-	UPDATE betList
-	SET betList.Odds	= originBetList.Odds
-		,betList.Stake	= originBetList.Stake
-		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
-		,betList.BetID	= originBetList.Bettype
-	FROM #BetListData AS betList
-		INNER JOIN dbo.bettrans_bk AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
-		LEFT JOIN #BetListData AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
-	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)		
+	
+	IF(EXISTS(SELECT TOP 1 1 FROM #BetListData WHERE Bettype IN (901, 902, 903) ))
+	BEGIN
+		UPDATE betList
+		SET betList.Odds	= originBetList.Odds
+			,betList.Stake	= originBetList.Stake
+			,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
+			,betList.BetID	= originBetList.Bettype
+		FROM #BetListData AS betList
+			INNER JOIN dbo.bettrans_bk AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+			LEFT JOIN #BetListData AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+		WHERE betList.Bettype IN (901, 902)		
 
-	DELETE #BetListData WHERE Sporttype = 1 AND Bettype = 903
-
-	 SELECT * 
-	 FROM #BetListData ORDER BY transid 	
+		DELETE #BetListData WHERE Sporttype = 1 AND Bettype = 903
+	END
+	
+	SELECT * 
+	FROM #BetListData ORDER BY transid 	
 
 	 IF EXISTS (SELECT TOP 1 1 
 			FROM @SportBettype sp 

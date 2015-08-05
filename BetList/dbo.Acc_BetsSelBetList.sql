@@ -14,7 +14,7 @@ AS
 	 @ToDate = '2014-02-24',
 	 @MoveBetsDay ='2014-02-24', 
 	 @CustID = 8252986,
-	 @Bettype = 1
+	 @tempBettype = 1
 
 	Created by: [Creator]
 	Date: 2008
@@ -86,6 +86,10 @@ AS
 BEGIN
 	SET NOCOUNT ON  
 
+	DECLARE @tempBettype 	INT
+	
+	SELECT @tempBettype 	= @Bettype
+	
 	--list of bettype not allowed to delete
 	DECLARE @tableBettypeNotAllowDelete  TABLE(typeid int not null)
 	INSERT INTO @tableBettypeNotAllowDelete (typeid) 
@@ -107,9 +111,9 @@ BEGIN
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 
-	IF @Bettype <> 0
+	IF @tempBettype <> 0
 	BEGIN
-		DELETE @SportBettype WHERE Bettype <> @Bettype
+		DELETE @SportBettype WHERE Bettype <> @tempBettype
 	END
 
 	CREATE TABLE #BetListData(
@@ -195,8 +199,8 @@ BEGIN
 			- LC		: ProductID = 4
 			- VS		: ProductID = 5
 		*/
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @tempBettype)
 		)
 		BEGIN	
 			
@@ -281,7 +285,7 @@ BEGIN
 					--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 					AND	(
 						s.EventType = 1
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					--exclude metric gaming running ticket
 					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
@@ -602,8 +606,8 @@ BEGIN
 		END
 		
 		--- Casino
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @tempBettype)
 		)
 		BEGIN	
 			
@@ -678,13 +682,13 @@ BEGIN
 					AND	(
 						s.ProductId 	= 6 	
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END
 		
 		--ibc bingo
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 7 AND Bettype = @tempBettype)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
@@ -758,13 +762,13 @@ BEGIN
 					AND	(
 						s.ProductId 	= 7 	
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					) 
 		END
 		
 		--ibc KENO
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @tempBettype)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
@@ -840,7 +844,7 @@ BEGIN
 					AND	(
 						s.ProductId 	= 8 	
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					
 			union all-- translog
@@ -916,13 +920,13 @@ BEGIN
 					AND	(
 						s.ProductId 	= 8	
 						AND s.EventType = 1
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END		
 		
 		--- P2P
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @tempBettype)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
@@ -995,14 +999,14 @@ BEGIN
 					AND	(
 						s.ProductId 	= 9 	
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					
 		END
 		
 		-- HR		
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @tempBettype)
 		)
 		BEGIN
 			INSERT INTO #BetListData 
@@ -1086,13 +1090,13 @@ BEGIN
 					AND	(
 						s.ProductId 	= 2 	
 						AND s.EventType = 2
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END		
 		
 		-- Virtual HR
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 5 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 5 AND Bettype = @tempBettype)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -1180,15 +1184,15 @@ BEGIN
 					AND	(
 						s.ProductId 	= 5
 						AND s.EventType = 3
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					
 					--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())					 
 		END
 		
 		--Gold Deluxe
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @tempBettype)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -1262,7 +1266,7 @@ BEGIN
 					AND	(
 						s.ProductId 	= 12
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					
 			union all-- translog
@@ -1336,14 +1340,14 @@ BEGIN
 					AND	(
 						s.ProductId 	= 12
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					
 		END
 
 		-- MicroGamming
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 13 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 13 AND Bettype = @tempBettype)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
@@ -1417,7 +1421,7 @@ BEGIN
 					AND	(
 						s.ProductId 	= 13
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					
 			union all-- translog
@@ -1491,7 +1495,7 @@ BEGIN
 					AND	(
 						s.ProductId 	= 13
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END		
 		
@@ -1504,8 +1508,8 @@ BEGIN
 		- LC		: ProductID = 4
 		- VS		: ProductID = 5
 		*/
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @tempBettype)
 		)
 		BEGIN
 			
@@ -1581,7 +1585,7 @@ BEGIN
 					b.custid = @Custid 
 					AND	(
 						s.EventType = 1
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					--and	s.EventType = 1
 					--b.bettype < 19001 and
@@ -1821,8 +1825,8 @@ BEGIN
 		END
 		
 		--- Casino
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 6 AND Bettype = @tempBettype)
 		)
 		BEGIN
 			
@@ -1897,13 +1901,13 @@ BEGIN
 					AND	(
 						s.ProductId 	= 6
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END
 		
 		--ibc bingo
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @tempBettype)
 		)
 		BEGIN		
 			
@@ -1979,13 +1983,13 @@ BEGIN
 					AND	(
 						s.ProductId 	= 7
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END
 		
 		--ibc KENO
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 8 AND Bettype = @tempBettype)
 		)
 		BEGIN		
 			
@@ -2062,13 +2066,13 @@ BEGIN
 					AND	(
 						s.ProductId 	= 8
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END
 		
 		--- P2P
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 9 AND Bettype = @tempBettype)
 		)
 		BEGIN	
 		
@@ -2142,14 +2146,14 @@ BEGIN
 					AND	(
 						s.ProductId 	= 9
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 					
 		END
 		
 		-- HR		
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @tempBettype)
 		)
 		BEGIN	
 			INSERT INTO #BetListData 
@@ -2233,12 +2237,12 @@ BEGIN
 					AND	(
 						s.ProductId 	= 2 	
 						AND s.EventType = 2
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END
 		
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 5 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 5 AND Bettype = @tempBettype)
 		)
 		BEGIN		
 			-- Virtual HR
@@ -2328,12 +2332,12 @@ BEGIN
 					AND	(
 						s.ProductId 	= 5 	
 						AND s.EventType = 3
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END
 		
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @tempBettype)
 		)
 		BEGIN		
 			--Gold Deluxe
@@ -2407,14 +2411,14 @@ BEGIN
 					AND	(
 						s.ProductId 	= 12
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 						
 		END
 
 		-- MicroGamming
-		IF (@Bettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 13 AND Bettype = @Bettype)
+		IF (@tempBettype = 0
+			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 13 AND Bettype = @tempBettype)
 		)
 		BEGIN		
 			
@@ -2488,7 +2492,7 @@ BEGIN
 					AND	(
 						s.ProductId 	= 13
 						AND s.EventType = 0
-						AND (@bettype 	= 0 OR s.bettype = @bettype)
+						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
 					)
 		END		
 	END    
