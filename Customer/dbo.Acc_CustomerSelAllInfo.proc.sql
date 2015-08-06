@@ -731,12 +731,11 @@ BEGIN
 		    @TotalMemberSuspended MemberSuspended
 END
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
-GO 
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
