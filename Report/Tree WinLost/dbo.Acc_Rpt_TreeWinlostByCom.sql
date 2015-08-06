@@ -67,7 +67,7 @@ CREATE TABLE #TmpResultAll (srecommend INT ,
 							--virtualrate SMALLINT
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=5
+EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
 
 IF @ShowSB = 1  
 	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   

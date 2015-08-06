@@ -15,11 +15,7 @@ AS
             - 20130822@Johnson: change to use rptWinlost instead rptWinlost2
             - 20131206@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 			- 20140327@Dom: Add Keno
-<<<<<<< HEAD
-			- 20150520@Daniel: remove old logic: exclude 8rm if bet on hedge match
-=======
 			- 20150525@Jim: apply sport& bettype matrix and also support GoldDeluxe & Metric Gaming (#35359 & #28309 )
->>>>>>> remotes/origin/Gold_Deluxe_Report
         Parameter's Explanation:
     */
 BEGIN
@@ -323,11 +319,6 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND sporttype = 154
         GROUP BY sporttype,bettype, liveindicator ,ibc
-<<<<<<< HEAD
-                
-    ORDER BY 1,3 DESC,2,4,5
-
-=======
 	--- GD	
      UNION ALL
         SELECT 255 sporttype
@@ -355,7 +346,6 @@ BEGIN
 	UPDATE #TempData SET IsHedge =1,
 						ibc = 0
 	WHERE ibc = 1 AND IsHedge = 1
->>>>>>> remotes/origin/Gold_Deluxe_Report
 	
 	SELECT sporttype,
            bettype,

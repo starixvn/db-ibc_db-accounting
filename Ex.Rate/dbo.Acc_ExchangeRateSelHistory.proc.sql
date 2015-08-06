@@ -6,7 +6,7 @@ AS
 /*
 	Created by: Peter
 	Task: Show Min Max Rate History 
-	DB: DBPOLICY.BODB02
+	DB: DBPOLICY/BODB02
 	
 	Revisions:
 		- 20100105@Jamie: Get CurrencyName from cache 

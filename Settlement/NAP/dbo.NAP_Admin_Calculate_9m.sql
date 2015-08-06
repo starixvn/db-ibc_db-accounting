@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 06/23/2015 16:36:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT = NULL
 	,@fta INT = NULL
@@ -94,6 +99,7 @@ AS
 		- 20150407@Kathy: Don't update 'waiting' ticket when do "Undo" action [Redmine:#33493]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150505@Jamie: Converting error [HotFix #35259]
+		- 20150608@Kathy: Add more mode Recover for recover parlay tickets [Redmine:#35539]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -397,6 +403,35 @@ BEGIN
 				SELECT transid
 				FROM @transtbl
 				)
+	END
+	ELSE IF @action = 'RECOVER'
+	BEGIN
+		DECLARE @tblTransIds TABLE (transid BIGINT)
+		
+		INSERT INTO @tblTransIds
+		SELECT CONVERT(BIGINT, val)
+		FROM dbo.strSplit(@VoidTransId, ',')
+		
+		UPDATE dbo.bettransm WITH (ROWLOCK, UPDLOCK)
+			SET	winlost = 0
+				,ruben = 0
+				,statuswinlost = NULL
+				,status = 'running'
+				,statusID = 0
+				,winlostdate = NULL
+		WHERE	matchid = @matchid
+				AND statusID = 102
+				AND transid IN (SELECT transid FROM @tblTransIds)
+				
+		
+		UPDATE	dbo.BetParlayDetail WITH(ROWLOCK, UPDLOCK)
+			SET winlostdate = NULL
+				,statuswinlost = NULL
+				,statusid = 0
+		WHERE	matchid = @matchid 
+				AND statusID = 102
+				AND transid IN (SELECT transid FROM @tblTransIds)
+		
 	END
 			-- ===================================================
 	ELSE IF @action = 'UNDO'
@@ -2207,3 +2242,7 @@ END
 
 
 
+
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]

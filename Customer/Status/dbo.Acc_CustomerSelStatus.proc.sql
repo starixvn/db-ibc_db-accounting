@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus_xtest]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]
 	@CustID		INT,
 	@AdminID	INT			= 0,
 	@system		VARCHAR(30)	='NAP',
