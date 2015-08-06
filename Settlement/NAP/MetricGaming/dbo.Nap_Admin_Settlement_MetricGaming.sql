@@ -52,7 +52,7 @@ BEGIN
 	IF EXISTS (
 			SELECT 1 
 			FROM dbo.TempVariableNumber t WITH(NOLOCK)
-			WHERE t.KeyID = 1
+			WHERE t.KeyID = 3
 			AND t.KeyValue = @matchid
 			)
 	BEGIN
@@ -63,7 +63,7 @@ BEGIN
 	END
 
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
-	VALUES (1, @matchid)
+	VALUES (3, @matchid)
 
 	IF (@@ERROR = 0)
 	BEGIN
@@ -71,7 +71,7 @@ BEGIN
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID		= @AdminId
 				,@Matchid	= @matchid
-				,@KeyID		= 1
+				,@KeyID		= 3
 				,@ActionID	= @ActionID
 				,@Remark	= 'ADD SUCCESS'
 		END TRY
@@ -82,7 +82,7 @@ BEGIN
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID		= @AdminId
 				,@Matchid	= @matchid
-				,@KeyID		= 1
+				,@KeyID		= 3
 				,@ActionID	= @ActionID
 				,@Remark	= @Remark
 		END CATCH
@@ -297,7 +297,7 @@ BEGIN
 		
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-	WHERE KeyID = 1
+	WHERE KeyID = 3
 		AND KeyValue = @matchid	
 		
 	IF (@@Error = 0)
@@ -306,7 +306,7 @@ BEGIN
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 1,
+				@KeyID = 3,
 				@ActionID = @ActionID,
 				@Remark = 'DEL SUCCESS'
 		END TRY
@@ -316,7 +316,7 @@ BEGIN
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 1,
+				@KeyID = 3,
 				@ActionID = @ActionID,
 				@Remark = @Remark
 		END CATCH
@@ -327,7 +327,7 @@ BEGIN
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 1,
+				@KeyID = 3,
 				@ActionID = @ActionID,
 				@Remark = 'DEL FAILED'
 		END TRY
@@ -337,7 +337,7 @@ BEGIN
 			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 				@UserID = @AdminId,
 				@Matchid = @matchid,
-				@KeyID = 1,
+				@KeyID = 3,
 				@ActionID = @ActionID,
 				@Remark = @Remark
 		END CATCH
