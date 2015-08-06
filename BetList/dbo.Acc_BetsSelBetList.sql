@@ -9,13 +9,6 @@ ALTER PROCEDURE [dbo].[Acc_BetsSelBetList]
 	@Bettype int = 0
 AS  
 /*
-	Acc_BetsSelBetList
-	 @FromDate = '2014-02-06',
-	 @ToDate = '2014-02-24',
-	 @MoveBetsDay ='2014-02-24', 
-	 @CustID = 8252986,
-	 @tempBettype = 1
-
 	Created by: [Creator]
 	Date: 2008
 	Task: Bet List 
@@ -82,6 +75,7 @@ AS
 		- 20150615@Edward: Support for BetTrade
 		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150625@Edward: Support for MicroGamming
+		- 20150805@Bobby: Enhance code for SQL parameter sniffing
 */		
 BEGIN
 	SET NOCOUNT ON  

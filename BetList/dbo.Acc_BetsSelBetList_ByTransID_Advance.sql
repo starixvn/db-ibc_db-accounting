@@ -24,6 +24,9 @@ AS
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 		- 20150615@Edward: Support for BetTrade
 		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
+		- 20150805@Bobby: 
+			+ Dis-allow to get ticket detail by refno 
+			+ remove checking product when selecting ticket's eventtype = 1 from bettrans_bk
 */ 
 BEGIN
 	SET NOCOUNT ON  
@@ -327,7 +330,7 @@ BEGIN
 					--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and
 					--b.bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 					AND (b.transid 	= @TransID
-						OR (b.refno	= @refno AND b.bettype BETWEEN 801 AND 899)
+						--OR (b.refno = @refno AND b.bettype BETWEEN 801 AND 899)
 					)
 					--exclude metric gaming running ticket
 					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
@@ -841,7 +844,7 @@ BEGIN
 				--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 				b.transid = @TransID
 		
-		IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+		/*IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
 		BEGIN
 			INSERT INTO @Data  
 			select
@@ -977,7 +980,7 @@ BEGIN
 			where	s.ProductID = 12
 				AND b.statusID = 0
 				AND b.translogid = @refno
-		END		
+		END*/		
 	END
 
 	--Bettrans14
@@ -1057,7 +1060,7 @@ BEGIN
 				--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
 				--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 				AND (b.transid 	= @TransID
-						OR (b.refno	= @refno AND b.bettype BETWEEN 801 AND 899)
+						--OR (b.refno = @refno AND b.bettype BETWEEN 801 AND 899)
 					)
 				
 		UPDATE betList
@@ -1498,7 +1501,7 @@ BEGIN
 				--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 				b.transid = @TransID
 				
-		IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+		/*IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
 		BEGIN
 			INSERT INTO @Data  
 			select
@@ -1566,7 +1569,7 @@ BEGIN
 			where     
 				s.ProductID = 12
 				AND b.refno = @refno
-		END
+		END*/
 	END
 
 	--bettrans_bk
@@ -1576,7 +1579,7 @@ BEGIN
 		--IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
 		--and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
 		--and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-		IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 1 AND eventtype = 1 AND bettype = @bettype ))
+		IF(EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE eventtype = 1 AND bettype = @bettype ))
 		INSERT INTO @Data
 		select 
 			c.username,
@@ -1647,7 +1650,7 @@ BEGIN
 				--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
 				--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
 				AND (b.transid 	= @TransID
-						OR (b.refno	= @refno AND b.bettype BETWEEN 801 AND 899)
+						--OR (b.refno = @refno AND b.bettype BETWEEN 801 AND 899)
 					)
 				
 		UPDATE betList
@@ -2096,7 +2099,7 @@ BEGIN
 				--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 				b.transid = @TransID
 
-	IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+		/*IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
 		BEGIN
 			INSERT INTO @Data  
 			select
@@ -2165,7 +2168,7 @@ BEGIN
 			where     
 				s.ProductID = 12
 				AND b.refno = @refno
-		END
+		END*/
 
 	END
 	

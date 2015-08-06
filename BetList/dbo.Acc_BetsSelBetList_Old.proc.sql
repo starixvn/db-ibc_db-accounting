@@ -54,6 +54,7 @@ Revisions:
 	- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 	- 20150615@Edward: Support for BetTrade
 	- 20150625@Edward: Support for MicroGamming
+	- 20150805@Bobby: Enhance code for SQL parameter sniffing
 */	
 BEGIN
 
