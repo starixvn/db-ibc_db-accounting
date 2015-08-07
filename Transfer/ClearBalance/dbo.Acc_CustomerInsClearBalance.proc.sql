@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
+﻿use bodb02
+go
+
+ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
 	@UserID int,
@@ -37,6 +40,7 @@ Revisions:
 	- 20131025@Lukas: add system define permission checking when call from external accounting
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call Customer, Exchange by link database)  								   
 	- 20140826@Jamie: put RECOMPILE
+	- 20150723@Patrick: Support Gold deluxe
 	
 Param's Explanation:
 */ 
@@ -317,8 +321,8 @@ BEGIN
 		-- reset yesterday balance for live casino						
 		EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
 		Select @LogData = @LogData + CASE WHEN @isResetYesterdayBalance = 1 THEN 										
-										CASE WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetLiveCSBalance = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')' 
-										ELSE '. (ResetLiveCSBalance = fail)' END		
+										CASE WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetGameBalance = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')' 
+										ELSE '. (ResetGameBalance = fail)' END		
 								ELSE '' END	
 		BEGIN TRY
 			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @custid, @IP = @IP, @Doing = @LogData		
