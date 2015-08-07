@@ -16,7 +16,9 @@ AS
 	- 20110524@Henry: change to use winlostdate instead of transdate
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20140311@Dom: Add keno translog
+	- 20150615@Edward: Remove bettype 903 of BetTrade
 	- 20150529@Tom: Add filter by custid on translog
+	- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 */
 
 SET NOCOUNT ON  
@@ -35,11 +37,14 @@ BEGIN
 	INSERT INTO @BettypeTable
 	SELECT 
 		DISTINCT bettype 
-		FROM bettrans (nolock)
+		FROM bettrans b (nolock)
 	WHERE 
 		bettype < 19001 
+		AND bettype <> 903
 		AND custid = @CustID
 		AND winlostdate BETWEEN @TempFromDate AND @todate
+		--exclude metric gaming running ticket
+		AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
 	UNION ALL
 	SELECT 
 		DISTINCT gameID bettype 
@@ -67,6 +72,7 @@ BEGIN
 		FROM bettrans14 (nolock)
 	WHERE 
 		bettype < 19001 
+		AND bettype <> 903
 		AND custid = @CustID
 		AND winlostdate BETWEEN @BalanceUpDay AND @TempToDate 
 END
@@ -84,11 +90,12 @@ BEGIN
 	FROM DBARC.bodb_archive.dbo.bettrans_bk with (nolock)
 	WHERE 
 		bettype < 19001
+		AND bettype <> 903
 		AND custid = @CustID
 		AND winlostdate between @fromdate and @TempToDate 
 END
 
-
+DELETE @BettypeTable WHERE bettype = 903
 select 
 	typeid,
 	typenamee
