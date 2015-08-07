@@ -15,6 +15,8 @@ AS
 			- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)					   
 			- 20150109@Dom: Apply sport bettype matrix
 			- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
+			- 20150806@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
+			
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -36,13 +38,16 @@ BEGIN
 	SELECT 5707545--BARM	
 	
 	SELECT	s.ProductId,	
-			---71 bettype,
+			CASE s.ProductId WHEN 6 THEN 71
+							 WHEN 14 THEN 1900
+							 WHEN 13 THEN 2008
+							 END AS bettype,
 			case when dep.custid is null then 1 else 2 end as site,
 			isnull(sum((winlost-actual_stake)*actualrate), 0 ) WinLost,
 			isnull(sum((awinlost+mwinlost+swinlost)*actualrate),0) Position,
 			isnull(sum(scomm*actualrate),0) Commission,	
 			isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate),0) LineTotal,
-			CASE WHEN s.ProductId = 6 THEN 0 ELSE sum((1-tpositiontaking)*stake*actualrate) END AS Turnover
+			isnull(sum(CASE WHEN s.ProductId = 6 THEN 0 ELSE (1-tpositiontaking)*stake*actualrate END),0) AS Turnover
 	FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
@@ -54,8 +59,14 @@ BEGIN
 				) 
 			AND b.statusID NOT IN (102, 101,121,103)  ---('VOID', 'REJECT','done','REFUND') 
 			AND b.ruben = 1		
-	GROUP BY s.ProductId, case when dep.custid is null then 1 else 2 end 
+	GROUP BY s.ProductId, 
+			case when dep.custid is null then 1 else 2 end,
+			CASE s.ProductId WHEN 6 THEN 71
+							 WHEN 14 THEN 1900
+							 WHEN 13 THEN 2008
+							 END 
 	ORDER BY s.ProductId, site	
+
 	--GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end 
 	--ORDER BY b.Bettype, site
 	

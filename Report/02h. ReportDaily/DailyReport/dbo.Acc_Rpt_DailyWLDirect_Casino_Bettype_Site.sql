@@ -2,6 +2,7 @@
 	@winlostdate DATETIME
 	,@ProductId TINYINT
 	,@site TINYINT
+	,@bettype INT
 
 AS
 	/*	Creator: Johnson
@@ -12,11 +13,13 @@ AS
 		Revisions: 
 			- 20130906@Johnson: get virtual values by virtual rate instead of actual rate
 			- 20150703@Sophia: Apply Microgaming and SuperBalance [#38168]
-					
+			- 20150806@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
+			
 		Parameter's Explanation:
 			- @site: 1: credit
 					2: deposit	
 			- @ProductId: ProductId of SportBettypeMatrix
+			- @bettype : No need now, will enhance later
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -49,8 +52,8 @@ BEGIN
 			sum(scomm*actualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-			CASE WHEN s.ProductId = 6 THEN 0 ELSE sum((1-tpositiontaking)*stake*actualrate) END AS RealTurnover,
-			CASE WHEN s.ProductId = 6 THEN 0 ELSE sum((1-tpositiontaking)*stake*actualrate) END AS VirtualTurnover
+			sum(CASE WHEN s.ProductId = 6 THEN 0 ELSE (1-tpositiontaking)*stake*actualrate END) AS RealTurnover,
+			sum(CASE WHEN s.ProductId = 6 THEN 0 ELSE (1-tpositiontaking)*stake*actualrate END) AS VirtualTurnover
 	FROM	bettrans b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
@@ -65,7 +68,7 @@ BEGIN
 			--AND b.matchid IN (0, 71)			
 			AND b.statusID NOT IN (102, 101,121,103)  ---('VOID', 'REJECT','done','REFUND') 
 			AND b.ruben = 1		
-	GROUP BY ag.site, s.ProductId
+	GROUP BY ag.site 
 	ORDER BY ag.site
 	
 	DROP TABLE #DepAgent
