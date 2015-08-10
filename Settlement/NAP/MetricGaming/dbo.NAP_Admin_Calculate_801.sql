@@ -446,7 +446,7 @@ BEGIN
 		);
 		
 		--return result to send API
-		SELECT refno as tiketID,
+		SELECT refno as ticketID,
 			custid,
 			StatusID,
 			winlost as payout,
@@ -1059,7 +1059,7 @@ BEGIN
 		;
 		
 			--return result to send API
-		SELECT refno as tiketID,
+		SELECT refno as ticketID,
 			custid,
 			StatusID,
 			winlost as payout,
@@ -1108,7 +1108,7 @@ BEGIN
 			AND refno IN (SELECT translogid FROM #tmpTransUnc)
 		
 		--return result to send API
-		SELECT refno as tiketID,
+		SELECT refno as ticketID,
 			custid,
 			StatusID,
 			winlost as payout,
