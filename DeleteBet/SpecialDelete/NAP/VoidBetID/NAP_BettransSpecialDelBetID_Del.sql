@@ -18,6 +18,7 @@ AS
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
 		- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
+		- 20150810@Kathy: Using new balance table (BalCreditSports,BalDebitSports) [Redmine:#40125]
 	Param's Explanation: 
 */
 BEGIN 
@@ -103,19 +104,24 @@ BEGIN
 			,@EmailGroup		VARCHAR(30)
 			,@isNegativeBalance BIT
 			,@totalbalance		MONEY
-			,@balance			MONEY
+			--,@balance			MONEY
 			,@winlostdate		DATETIME
 			,@currency			INT
+			,@balanceSB			MONEY
+			,@balanceLC			MONEY
+			,@balanceNG			MONEY
 
 	SELECT	@winlostdate	= MIN(winlostdate)
 			,@CustID		= MIN(CustID)
-			,@Balance		= SUM(winlost - actual_stake + playercomm) 
+			--,@Balance		= SUM(winlost - actual_stake + playercomm) 
+			,@balanceSB		= SUM(CASE WHEN bettype BETWEEN 80 AND 120 OR bettype BETWEEN 1101 AND 1199 THEN 0 ELSE winlost - actual_stake + playercomm END)
+			,@balanceNG		= SUM(CASE WHEN bettype BETWEEN 80 AND 120 THEN winlost - actual_stake + playercomm ELSE 0 END)
+			,@balanceLC		= SUM(CASE WHEN bettype BETWEEN 1101 AND 1199 THEN winlost - actual_stake + playercomm ELSE 0 END)
 			,@isExistMatch	= MAX(CASE WHEN Bettype NOT IN (9,10) THEN 1 ELSE 0 END)
 			,@isExistParlay = MAX(CASE WHEN Bettype = 9 THEN 1 ELSE 0 END)
 			,@isExistOutright = MAX(CASE WHEN Bettype = 10 THEN 1 ELSE 0 END)
 	FROM	Bettrans WITH (NOLOCK)
-	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)
-			
+	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)			
 
 	SELECT	 @Username2		= Username2
 			,@CustUsername	= username
@@ -228,7 +234,7 @@ BEGIN
 	FROM	bettrans with (nolock)
 	WHERE	custid = @CustID
 		
-	SELECT  @isNegativeBalance = CASE WHEN @Balance > 0 AND (credit + @totalbalance - @Balance) < 0 THEN 1 ELSE 0 END
+	SELECT  @isNegativeBalance = CASE WHEN (@BalanceSB + @balanceLC + @balanceNG) > 0 AND (credit + @totalbalance - (@BalanceSB + @balanceLC + @balanceNG)) < 0 THEN 1 ELSE 0 END
 	FROM	DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	WHERE	custid = @CustID 
 
@@ -439,9 +445,27 @@ BEGIN
 	WHERE	transid IN (SELECT TransID FROM @tmpListTransID)  
 
 	--update balance debit
-	IF @balance > 0
+	IF @balanceSB > 0
 	BEGIN			
-		EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+		--EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+		EXEC dbo.Dot_BalanceDebitUpd 
+			@custID		= @custid
+			,@balance	= @balanceSB
+			,@type		= 1 -- Sports
+	END
+	IF @balanceLC > 0
+	BEGIN
+		EXEC dbo.Dot_BalanceDebitUpd 
+			@custID		= @custid
+			,@balance	= @balanceLC
+			,@type		= 3 -- Casino
+	END
+	IF @balanceNG > 0
+	BEGIN
+		EXEC dbo.Dot_BalanceDebitUpd 
+			@custID		= @custid
+			,@balance	= @balanceNG
+			,@type		= 4 -- Others
 	END
 	
 	--update bettrans
@@ -451,10 +475,32 @@ BEGIN
 	WHERE transid IN (SELECT TransID FROM @tmpListTransID)  
 		
 	--update balance debit	
-	IF @balance < 0
+	IF @balanceSB < 0
 	BEGIN
-		SELECT @balance = ABS(@balance)
-		EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+		SELECT @balanceSB = ABS(@balanceSB)
+		--EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+		EXEC dbo.Dot_BalanceCreditUpd
+			@custID = @custid
+			,@balance = @balanceSB
+			,@type = 1 -- Sports
+	END	
+	IF @balanceLC < 0
+	BEGIN
+		SELECT @balanceLC = ABS(@balanceLC)
+
+		EXEC dbo.Dot_BalanceCreditUpd
+			@custID = @custid
+			,@balance = @balanceLC
+			,@type = 1 -- Casino
+	END	
+	IF @balanceNG < 0
+	BEGIN
+		SELECT @balanceNG = ABS(@balanceNG)
+
+		EXEC dbo.Dot_BalanceCreditUpd
+			@custID = @custid
+			,@balance = @balanceNG
+			,@type = 1 -- Others
 	END		
 			
 	SELECT @LogData = 'Delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@strTransID as varchar(8000))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason

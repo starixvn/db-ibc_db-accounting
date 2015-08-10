@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Corner] 
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Corner]    Script Date: 08/07/2015 09:23:34 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Corner    Script Date: 7/6/2015 4:29:06 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Corner] 
 	 @AdminId				INT
 	,@Matchid				INT
 	,@fthCorners			SMALLINT		= NULL
@@ -20,6 +28,7 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:		
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 		
 	Param's Explanation:
@@ -157,14 +166,14 @@ BEGIN
 		FROM	DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
 		WHERE	m.matchid = @matchid
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+				EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command			= 'NAP_Admin_Settlement_Corner-CAL'
 			,@MatchID			= @matchid
 			,@NoneCornerBetDone = @NoneCornerBetDone
 			,@Action			= @action
 			,@creator			= @AdminID
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
+				EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
 				@Command = 'NAP_Admin_Settlement_Corner-CAL',
 				@MatchID = @MatchID,
 				@fthCorners = @fthCorners,
@@ -179,7 +188,7 @@ BEGIN
 				@IsAuto = 0,
 				@creator = @AdminID		
 
-		EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
+				EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
 			 @matchid		= @matchid
 			,@mode			= @action	
 			
@@ -205,11 +214,14 @@ BEGIN
 	GROUP BY b.custid
 
 
+
 	-------------------------------------------------------------
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
-
+	DECLARE @tblDebitPending BalanceList
+	DECLARE @tblCreditPending BalanceList
+	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -223,16 +235,34 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
+			
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
-
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----

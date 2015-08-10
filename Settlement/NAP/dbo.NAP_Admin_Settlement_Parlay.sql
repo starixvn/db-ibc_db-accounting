@@ -1,5 +1,12 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay]    Script Date: 08/07/2015 10:23:08 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 6/1/2015 11:09:39 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay    Script Date: 5/8/2015 9:44:36 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay] (
 	@matchids VARCHAR(2000)
 	,@creator INT
@@ -25,6 +32,8 @@ AS
 		- 20141007@Kathy: Correct condition in case settle for sport (Tennis/VolleyBall/Badminton/Squash) [Redmine:#24073]
 		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		
 	Param's Explanation:
 	@resultPS: match result of penalty shootout
 
@@ -299,7 +308,7 @@ BEGIN
 		--BEGIN TRANSACTION
 
 		--IF @action IN ('REFUND-FT', 'REFUND-HT') -- if REFUND-FT or REFUND-HT called, do 'CAL' first, before do 'REFUND-FT'
-		--				EXEC dbo.NAP_Admin_Calculate_9m @matchid, @finalhomescore, @finalawayscore, @hthomescore, @htawayscore, @matchdate, 'CAL', @TennisTotal
+		--																EXEC dbo.NAP_Admin_Calculate_9m @matchid, @finalhomescore, @finalawayscore, @hthomescore, @htawayscore, @matchdate, 'CAL', @TennisTotal
 			
 		--COMMIT TRANSACTION
 
@@ -376,7 +385,7 @@ BEGIN
 					,@T_Home		= @TotalGameHomeMatch
 					,@T_Away		= @TotalGameAwayMatch
 
-			EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+												EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
 					,@mode = 'CAL-SET'
 					,@action = @action
 					,@resultPS = @resultPS
@@ -412,7 +421,7 @@ BEGIN
 		BEGIN
 			IF @Sporttype = 1 AND @isExistAutoBets = 1 AND  @action IN ('CAL','REFUND-HT','REFUND-FT','REFUND') --Soccer Auto Bets Radar 
 			BEGIN
-				EXEC dbo.NAP_Admin_Settlement_2_Auto_1s 
+																EXEC dbo.NAP_Admin_Settlement_2_Auto_1s 
 						@MatchID = @MatchID,
 						@penaltyshootout = @penaltyshootout OUTPUT,
 						@matchDecidedMethod = @matchDecidedMethod OUTPUT,
@@ -438,7 +447,7 @@ BEGIN
 						@ResourceIDsREFUND = @ResourceIDsREFUND OUTPUT
 
 						
-				EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+																EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
 						,@mode = 'CAL-AUTO'
 						,@matchdate = @matchdate
 						,@action = @action,
@@ -467,7 +476,7 @@ BEGIN
 
 			END 
 		 		
-			EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+												EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
 				,@mode = 'ALL'
 				,@action = @action
 				,@resultPS = @resultPS
@@ -502,7 +511,7 @@ BEGIN
 
 	--EXEC dbo.NAP_Admin_Calculate_29_Precal @matchids
 
-		EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
+								EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
 			,@mode = 'PRECAL-29'
 
 	SET @PreCal = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
@@ -587,7 +596,7 @@ BEGIN
 		SET @strXML_modds = ''
 		SET @9Start = CURRENT_TIMESTAMP
 
-		EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate, @mode = @mode
+								EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate, @mode = @mode
 
 		SET @9Time = @9Time + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
 		SET @2Call = @2Call + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
@@ -600,7 +609,7 @@ BEGIN
 		--EXEC dbo.NAP_Admin_Calculate_29 @matchids = @subMatchIDs
 		--	,@matchdate = @matchdate
 		
-																																EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
+																																																																																																																																EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
 			,@mode = 'CAL-29'
 			,@matchdate = @matchdate
 
@@ -635,17 +644,17 @@ BEGIN
 			BREAK
 
 		IF @action = 'CAL'
-			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
+												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
 				 @matchid			= @matchid
 				,@command			= 'M'
 				,@SelectedSetCAL	= @SelectedSetCAL
 		ELSE IF @action IN ('REFUND', 'REFUND-FT', 'REFUND-HT')
-			EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
+												EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark 
 				 @matchid = @matchid
 				,@command = 'R'
 				,@SelectedSetREFUND = @SelectedSetREFUND
 		--ELSE IF @action IN ('REFUND-FT', 'REFUND-HT')
-		--										EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
+		--																																								EXEC DBPRO.BODB02.dbo.NAP_UpdateMatch_Remark @matchid = @matchid
 		--		,@command = 'F'
 
 		---------------------------------------------------------------
@@ -696,6 +705,8 @@ BEGIN
 		,balance MONEY
 		,Increased BIT
 		)
+	DECLARE @tblDebitPending BalanceList
+	DECLARE @tblCreditPending BalanceList
 
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
@@ -712,24 +723,45 @@ BEGIN
 
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-	INSERT INTO dbo.BalancePendingDebit (
-		custid
-		,balance
-		)
-	SELECT custid
-		,ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (
+	--	custid
+	--	,balance
+	--	)
+	--SELECT custid
+	--	,ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
+			
 
-	INSERT INTO dbo.BalancePendingCredit (
-		custid
-		,balance
-		)
-	SELECT custid
-		,balance
-	FROM #Balance
-	WHERE Increased = 1
-
+	--INSERT INTO dbo.BalancePendingCredit (
+	--	custid
+	--	,balance
+	--	)
+	--SELECT custid
+	--	,balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
+			
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----
@@ -829,6 +861,7 @@ BEGIN
 		SET @rn = @rn + 1
 	END
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay] TO [vnteam] AS [dbo]

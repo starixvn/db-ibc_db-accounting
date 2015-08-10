@@ -1,6 +1,3 @@
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@adminid INT
 	,@IsExcludeBetdaq BIT = 0
@@ -32,6 +29,7 @@ AS
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]	
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 	
 	Param's Explanation:
@@ -121,6 +119,9 @@ BEGIN
 		,balance MONEY
 		,Increased BIT
 		)
+	
+	DECLARE @tblDebitPending BalanceList
+	DECLARE @tblCreditPending BalanceList
 
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
@@ -190,7 +191,7 @@ BEGIN
 			END CATCH
 		END
 
-								EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
+																																																																EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
 			,@creator = @adminid
 			,@IsExcludeBetdaq = @IsExcludeBetdaq
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
@@ -294,7 +295,7 @@ BEGIN
 				END 
 		AND statusID NOT IN (101, 102)
 
-								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+																																																																EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
 			,@betcount_8 = @betcount_8 -- bettype
@@ -311,7 +312,7 @@ BEGIN
 		,@RowCount = @Rowcount OUTPUT
 		,@creator = @adminid
 
-	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+								EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
 		@Command			= 'NAP_Admin_Settlement_RefundHT'
 		,@MatchID			= @matchid
 		,@isExistTotalCorner= @isExistTotalCorner
@@ -321,10 +322,10 @@ BEGIN
 
 	IF @Rowcount > 0
 	BEGIN
-		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
+																EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
 			,'F'
 
-								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+																																																																EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
 			,@IsExcludeBetdaq = @IsExcludeBetdaq
@@ -353,24 +354,42 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	INSERT INTO dbo.BalancePendingDebit (
-		custid
-		,balance
-		)
-	SELECT custid
-		,ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (
+	--	custid
+	--	,balance
+	--	)
+	--SELECT custid
+	--	,ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
 
-	INSERT INTO dbo.BalancePendingCredit (
-		custid
-		,balance
-		)
-	SELECT custid
-		,balance
-	FROM #Balance
-	WHERE Increased = 1
+	--INSERT INTO dbo.BalancePendingCredit (
+	--	custid
+	--	,balance
+	--	)
+	--SELECT custid
+	--	,balance
+	--FROM #Balance
+	--WHERE Increased = 1
 
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----

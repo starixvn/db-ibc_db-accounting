@@ -1,5 +1,3 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All] 
 	 @matchid						INT
 	,@creator						INT
@@ -64,6 +62,8 @@ AS
 		- 201409010@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150414@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		
 	
 	Param's Explanation:
 	• @matchid: matchid need to refund
@@ -273,7 +273,7 @@ BEGIN
 					,@SetxGameyDRAW			= @SetxGameyDRAW	OUTPUT
 					,@SetxGameyFinishedGame	= @SetxGameyFinishedGame OUTPUT 
 
-												EXEC dbo.NAP_Admin_Calculate_Main 
+																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
 				 @matchid						= @matchid
 				,@action						= 'REFUND'
 				,@mode							= 'ALL'
@@ -556,7 +556,7 @@ BEGIN
 	BEGIN	
 		IF @Action IN ('CAL', 'CAL-HT')
 		BEGIN
-												EXEC dbo.NAP_Admin_Calculate_Main 
+																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
 				@matchid						= @matchid
 				,@action						= 'REFUND'
 				,@mode							= 'ALL'
@@ -568,7 +568,7 @@ BEGIN
 
 		IF @Action IN ('CAL', 'CAL-FT')
 		BEGIN
-												EXEC dbo.NAP_Admin_Calculate_Main 
+																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
 				@matchid						= @matchid
 				,@action						= 'REFUND'
 				,@mode							= 'ALL'
@@ -587,7 +587,7 @@ BEGIN
 	BEGIN
 		IF @action = 'CAL-FT'
 		BEGIN
-												EXEC dbo.NAP_Admin_Calculate_Main 
+																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
 				@matchid 						= @matchid
 				,@action 						= 'REFUND'
 				,@mode							= 'FT'
@@ -636,7 +636,7 @@ BEGIN
 		END
 		IF @action = 'CAL'
 		BEGIN
-								EXEC dbo.NAP_Admin_Calculate_Main 
+																																																																EXEC dbo.NAP_Admin_Calculate_Main 
 				@matchid 						= @matchid
 				,@action 						= 'REFUND'
 				,@mode							= 'ALL'
@@ -704,7 +704,7 @@ BEGIN
 			,@SelectedSet	= @SelectedSet
 			,@creator		= @creator
 
-		EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+																EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
 			@Command			= 'NAP_Admin_Settlement_Refund_All'
 			,@MatchID			= @matchid
 			,@isExistTotalCorner= @isExistTotalCorner
@@ -714,7 +714,7 @@ BEGIN
 			,@isExistFTLCorner	= @isExistFTLCorner
 			,@creator			= @creator
 
-		EXEC dbo.NAP_Admin_Calculate_Main 
+																EXEC dbo.NAP_Admin_Calculate_Main 
 			@matchid					= @matchid
 			,@action					= 'REFUND'
 			,@mode						= 'ALL'
@@ -749,7 +749,9 @@ BEGIN
 	---------------------------VVVV------------------------------
 	
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
-
+	DECLARE @tblDebitPending BalanceList
+	DECLARE @tblCreditPending BalanceList
+	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 	
 	INSERT INTO #Balance
@@ -763,16 +765,35 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
-
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----
@@ -972,7 +993,7 @@ BEGIN
 	IF @IsNested = 0
 	BEGIN
 		-- Update match_remark
-								EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+																																																																EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
 			@matchid		= @matchid
 			,@command		= 'F'
 			,@SelectedSet	= @SelectedSet

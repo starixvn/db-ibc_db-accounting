@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransDelBet_Parlay]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BettransDelBet_Parlay]    Script Date: 08/05/2015 15:08:28 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_BettransDelBet_Parlay]
 	@transid bigint,
 	@custid int = 0,
 	@username varchar(50),
@@ -24,7 +31,8 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130605@Johnson:- get more additional information for mailing
 							- Remove checking concurrent running on table TempVariableNumber by using table SystemSettings
-		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer by link database)						   							
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer by link database)	
+		- 20150805@Kathy: Using new balance table (BalCreditSports,BalDebitSports) [Redmine:#40125]					   							
 */
 SET NOCOUNT ON
 
@@ -179,7 +187,11 @@ where transid = @transid
 -----Update debit balance 
 IF @balance > 0
 BEGIN 
-	EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+	--EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+	EXEC dbo.Dot_BalanceDebitUpd 
+		@custID		= @custid
+		,@balance	= @balance
+		,@type		= 1 -- Sports
 END
 
 --Delete
@@ -193,7 +205,11 @@ where transid = @transid
 IF @balance < 0
 BEGIN
 	SET @balance = ABS(@balance)
-	EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+	--EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+	EXEC dbo.Dot_BalanceCreditUpd
+		@custID		= @custid
+		,@balance	= @balance	
+		,@type		= 1 -- Sports
 END
 
 Select @LogData ='delete parlay ticket for transid ' + convert(varchar(20), @transid) + ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15))  + ' - reason: ' + @reason
@@ -248,7 +264,6 @@ IF (@@Error = 0)
 		END CATCH
 	END
 */
-
 
 
 GO

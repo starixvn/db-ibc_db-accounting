@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial_xpre]    Script Date: 08/07/2015 15:55:04 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId				INT,
 	
 	@FromTransId			BIGINT, 
@@ -94,7 +101,9 @@ AS
 						  - Add moneyline in filter
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20141204@Kathy: Remove codes which are used in checking permission on DBPolicy [Redmine:#27058]	
-		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]				  
+		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]			
+		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+			  
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
 		  + 0: All tickets
@@ -937,19 +946,47 @@ BEGIN
 	GROUP BY b.CustID
 
 	---INSERT data into pending balance table 
-	INSERT INTO BalancePendingCredit (custid,Balance)
+	DECLARE @tblDebitPending BalanceList
+	DECLARE @tblCreditPending BalanceList
+	
+	--INSERT INTO BalancePendingCredit (custid,Balance)
+	--SELECT		a.custid, (a.balance - b.balance) as Balance
+	--FROM		#BeforeUpd b
+	--INNER JOIN	#AfterUpd a 	
+	--		ON	a.custid = b.custid
+	--WHERE	    (a.balance - b.balance) > 0
+	
+	INSERT INTO @tblCreditPending (custID, balance)
 	SELECT		a.custid, (a.balance - b.balance) as Balance
 	FROM		#BeforeUpd b
 	INNER JOIN	#AfterUpd a 	
 			ON	a.custid = b.custid
-	WHERE	    (a.balance - b.balance) > 0
+	WHERE	    (a.balance - b.balance) > 0	
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 
-	INSERT INTO BalancePendingDebit (custid,Balance)
+	--INSERT INTO BalancePendingDebit (custid,Balance)
+	--SELECT		a.custid, ABS(a.balance - b.balance) as Balance
+	--FROM		#BeforeUpd b
+	--INNER JOIN	#AfterUpd a 	
+	--		ON	a.custid = b.custid
+	--WHERE	    (a.balance - b.balance) < 0
+	
+	INSERT INTO @tblDebitPending (custID, balance)
 	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
 	FROM		#BeforeUpd b
 	INNER JOIN	#AfterUpd a 	
 			ON	a.custid = b.custid
 	WHERE	    (a.balance - b.balance) < 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
+	
 ------------------***** End of Special Delete *****------------------
 
 	SELECT @LogData ='void bet for matchid ' + CONVERT(VARCHAR(20), @MatchId) 
@@ -1239,8 +1276,6 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
