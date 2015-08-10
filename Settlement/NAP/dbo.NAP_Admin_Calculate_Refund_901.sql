@@ -3,7 +3,9 @@
 	@ResourceIDs VARCHAR(MAX)=NULL,
 	@IsSettleAbandonedMatchIBC BIT = 0,
 	@action	VARCHAR(30)= 'REFUND',
-	@mode	VARCHAR(30)= 'ALL'	
+	@mode	VARCHAR(30)= 'ALL',
+	@LGOnly BIT = 0--refund last goal
+	
 AS
 	/*
 		Created: Johnson
@@ -84,6 +86,13 @@ BEGIN
 						AND statusID IN (112, 113)
 						AND bettype IN (4, 6, 30, 126) THEN 0
 				ELSE 1 END
+		AND 1= CASE WHEN bettype IN (14,127) 
+						AND right(betteam, 1) = CASE WHEN @LGOnly = 1 THEN '2' ELSE right(betteam, 1) END 
+					THEN 1 
+					WHEN bettype NOT IN (14,127) THEN 1
+					ELSE 0 
+				END
+
 				
 	IF @@ROWCOUNT = 0 RETURN
 	
@@ -97,7 +106,7 @@ BEGIN
 	--BEGIN: Refund sub-tickets on bettrans
 	UPDATE bettrans WITH(UPDLOCK,ROWLOCK)
 	SET winlost = actual_stake,
-		awinlost = actual_stake - winlost,
+		awinlost = 0,
 		status = 'Refund',
 		statusid = 103,
 		ruben = 1

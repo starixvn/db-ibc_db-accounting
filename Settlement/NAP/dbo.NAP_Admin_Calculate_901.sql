@@ -3,7 +3,8 @@
  ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_901]
 	@matchid INT,	
 	@action	VARCHAR(30)= '',
-	@mode	VARCHAR(30)= ''	
+	@mode	VARCHAR(30)= '',
+	@ResourceIDs VARCHAR(MAX)=NULL
  AS
 	/*
 		Created: Johnson
@@ -81,6 +82,9 @@ BEGIN
 	FROM bettrans WITH(NOLOCK)
 	WHERE bettype IN (SELECT bettype FROM @tmpBettype)
 		AND matchid = @matchid
+		AND 1 = CASE WHEN Bettype IN (160,180) AND CHARINDEX(SUBSTRING(CAST(betID AS VARCHAR(20)),2,5),@ResourceIDs)>0 THEN 1 
+					 WHEN Bettype NOT IN (160,180) THEN 1 
+					 ELSE 0 END
 		AND statusid NOT IN (101,102)		
 		AND betdaqid = 0--indicate tickets belong to bettrade
 	
@@ -97,7 +101,7 @@ BEGIN
 	
 	UPDATE b1
 	SET b1.winlost = b2.actual_stake,
-		b1.awinlost = b2.actual_stake - b1.actual_stake,
+		b1.awinlost = -(b2.actual_stake - b1.actual_stake),
 		@statusID = CASE WHEN b1.actual_stake > b2.actual_stake THEN 113 
 						WHEN b1.actual_stake = b2.actual_stake THEN 111
 						ELSE 112 END,
@@ -112,7 +116,7 @@ BEGIN
 	
 	UPDATE b1
 	SET b1.winlost = b2.actual_stake,
-		b1.awinlost = b2.actual_stake - b1.actual_stake,
+		b1.awinlost = -(b2.actual_stake - b1.actual_stake),
 		@statusID = CASE WHEN b1.actual_stake > b2.actual_stake THEN 113 
 						WHEN b1.actual_stake = b2.actual_stake THEN 111
 						ELSE 112 END,
@@ -125,12 +129,15 @@ BEGIN
 	WHERE b1.bettype = 902
 		AND b2.bettype = 901
 	
-	UPDATE #bettrans
+	UPDATE b1
 	SET status = 'LOSE',
 		statusID = 113,
 		winlost = 0,
-		awinlost = actual_stake*discount
-	WHERE bettype = 903		
+		awinlost = b2.winlost*b1.discount
+	FROM #bettrans b1 
+		INNER JOIN #bettrans b2 ON b1.refno= b2.refno 											
+	WHERE b1.bettype = 903
+		AND b2.bettype = 901		
 	
 	
 	UPDATE b

@@ -1938,6 +1938,7 @@ BEGIN
 					 @matchid = @matchid					
 					,@action = @action
 					,@mode = @mode
+					,@ResourceIDs = @ResourceIDs
 		END
 
 		IF @action ='CAL-SET'  --Tennis including Sportting Solution
@@ -3163,6 +3164,7 @@ BEGIN
 				@matchid = @matchid											
 				,@action = @action
 				,@mode	 = @mode
+				,@LGOnly = @LGOnly
 		END
 	END
 END
