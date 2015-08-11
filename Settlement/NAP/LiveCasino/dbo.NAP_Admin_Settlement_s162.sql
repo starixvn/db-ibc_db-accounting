@@ -20,7 +20,6 @@ AS
 	Original: Admin_Settlement_s162
 	
 	Revisions:
-		- 20150421@Kathy: Offer New Game Type "No Card Baccarat" (1106) [Redmine:#31630]
 		- 20150716@Patrick: Support Gold Deluxe
 
 	Param explanation:
@@ -124,7 +123,7 @@ BEGIN
 		IF @action = 'CAL'
 		BEGIN
 			--bettye 1101,1102 all use Admin_Calculate_1101G for settle
-			IF (@bettype IN (1101, 1103, 1106))
+			IF (@bettype IN (1101, 1103))
 			BEGIN
 				EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 					@Command	= 'NAP_Admin_Settlement_s162-CAL'
@@ -282,7 +281,7 @@ BEGIN
 		SELECT @LogData = @LogData + '(' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms)'
 		EXEC dbo.WriteLog_UserLog @AdminID, @LogData
 
-	IF (@bettype in (1101,1103, 1106))
+	IF (@bettype in (1101,1103))
 	BEGIN 
 		SELECT @Remark = 'Cards result: ' + @CardsResult + '; '
 						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms; '
