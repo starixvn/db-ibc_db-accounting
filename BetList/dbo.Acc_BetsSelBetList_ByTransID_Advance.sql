@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID_Advance]  
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Acc_BetsSelBetList_ByTransID_Advance]  
 	@TransID bigint
 AS  
 /*
@@ -17,6 +20,7 @@ AS
 		- 20140907@Dom:	[Redmine #22012] update VS Condition
 		- 20141103@Dom: Apply sport bettype matrix
 		- 20150415@Sophia: Support Betradar and revise code of Bettype matrix
+		- 20150506@Tom: Support Gold Deluxe Product [#34847]
 */ 
 
 SET NOCOUNT ON  
@@ -58,7 +62,7 @@ Declare @Data TABLE (
 	stake			money,
 	actual_stake	money,
 	transdate		datetime,
-	betteam			nvarchar(10),
+	betteam			nvarchar(50),
 	spositiontaking smallmoney,
 	mpositiontaking smallmoney,
 	apositiontaking smallmoney,
@@ -100,7 +104,8 @@ DECLARE @DetailData TABLE (
 	mpositiontaking smallmoney, 
 	spositiontaking smallmoney,
 	bettype			smallint,
-	betteam			nvarchar(50)	
+	betteam			nvarchar(50),
+	TransDesc		varchar(300)	
 )
 
 DECLARE @WinlostDate smalldatetime, @MoveBetsDay smalldatetime, @BalanceUpDay smalldatetime, @bettype int
@@ -110,17 +115,55 @@ EXEC Age_SelBalanceUpDay
 
 SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
 
-IF exists (select 1 from bettrans with (nolock) where transid = @TransID)
-	SELECT @WinlostDate = winlostdate, @bettype = bettype from bettrans with (nolock) where transid = @TransID
-ELSE IF exists(select 1 from bettrans14 with (nolock) where transid = @TransID)
-	SELECT @WinlostDate = winlostdate, @bettype = bettype from bettrans14 with (nolock) where transid = @TransID
-ELSE 
-	SELECT @WinlostDate = winlostdate, @bettype = bettype from DBARC.bodb_archive.dbo.bettrans_bk with (nolock) where transid = @TransID
+IF exists (select top 1 1 from bettrans with (nolock) where transid = @TransID)
+	SELECT @WinlostDate = winlostdate, @bettype = bettype ,@refno = refno from bettrans with (nolock) where transid = @TransID
+ELSE IF exists(select top 1 1  from bettrans14 with (nolock) where transid = @TransID)
+	SELECT @WinlostDate = winlostdate, @bettype = bettype ,@refno = refno from bettrans14 with (nolock) where transid = @TransID
+ELSE IF exists(select top 1 1 from DBARC.bodb_archive.dbo.bettrans_bk with (nolock) where transid = @TransID)
+	SELECT @WinlostDate = winlostdate, @bettype = bettype ,@refno = refno from DBARC.bodb_archive.dbo.bettrans_bk with (nolock) where transid = @TransID
+ELSE IF exists(  
+	select top 1 1 from bettrans bt with (nolock)
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+	where (refno = @transid AND sp.productid IN (12))
+) 
+	SELECT @WinlostDate = winlostdate, @bettype = bt.bettype ,@refno = refno
+		from bettrans bt with (nolock)
+		INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype
+		where (refno = @transid AND sp.productid IN (12))
+ELSE IF exists(  
+	select top 1 1 from translog bt with (nolock)   
+		INNER JOIN @SportBettype sp ON bt.gameID = sp.bettype
+	where translogid = @TransID AND sp.productid IN (12) and statusID = 0
+)
+	SELECT @WinlostDate = winlostdate, @bettype = gameID ,@refno = translogid
+		from translog bt with (nolock)   
+		INNER JOIN @SportBettype sp ON bt.gameID = sp.bettype
+		where translogid = @TransID  AND sp.productid IN (12) and statusID = 0
+ELSE IF exists(  
+	select top 1 1 from bettrans14 bt with (nolock)   
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+	where ((refno = @transid AND sp.productid IN (12)))
+)
+	SELECT @WinlostDate = winlostdate, @bettype = bt.bettype ,@refno = refno
+	from bettrans14 bt with (nolock)   
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+	where ((refno = @transid AND sp.productid IN (12)))
+ELSE IF exists(  
+select top 1 1 from DBARC.bodb_archive.dbo.bettrans_bk bt with (nolock)    
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+where refno = @transid AND sp.productid IN (12)
+)
+	SELECT @WinlostDate = winlostdate, @bettype = bt.bettype ,@refno = refno
+	from DBARC.bodb_archive.dbo.bettrans_bk bt with (nolock)   
+	INNER JOIN @SportBettype sp ON bt.bettype = sp.bettype 
+	where refno = @transid AND sp.productid IN (12)
 
 --Bettrans
 IF @WinlostDate > @MoveBetsDay
 BEGIN
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+	and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
+	--and @bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	--Sportbooks
 	INSERT INTO @Data
 	select 
@@ -459,7 +502,7 @@ BEGIN
 		  and b.transid = @TransID
 			
 	--HR
-	IF @bettype in (31,32,33,41,42,43)
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 2 AND Bettype = @Bettype)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -535,7 +578,8 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
-	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3 AND s.bettype = @bettype)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -612,14 +656,150 @@ BEGIN
 			s.EventType = 3 AND 
 			--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
-			
+	
+	IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+	BEGIN
+		INSERT INTO @Data  
+		select
+			b.username, 
+			b.bettype,     
+			b.transid,   
+			isnull(b.BetID,0) as BetID,    
+			b.refno,  
+			'' as matchcode,     
+			'' as race,  
+			'' as eventdate,   
+			0 as virtualrate,  
+			0 as isShowOTExRate,  
+			sdiscount,  
+			adiscount,  
+			discount,    
+			0 as homeid,     
+			0 as awayid,    
+			'' settleTime,   
+			b.hdp1,  
+			b.hdp2,  
+			b.odds,     
+			0 finalodds,  
+			0 finalodds2,  
+			'' OddsType,    
+			b.status,  
+			CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,     
+			b.stake,     
+			b.actual_stake,  
+			b.transdate,     
+			b.betteam,   
+			b.spositiontaking,    
+			b.mpositiontaking,     
+			b.apositiontaking,   
+			0 spositiontaking2,  
+			0 mpositiontaking2,  
+			0 apositiontaking2,     
+			b.liveindicator,     
+			b.modds,     
+			b.custid,  
+			b.livehomescore,   
+			b.liveawayscore,  
+			0, 
+			0,    
+			0 as leagueid,    
+			255 as sporttype,   
+			b.ip,  
+			b.betfrom,  
+			b.matchid,
+			CONVERT(BIT,0) as IsNeutral,  
+			(b.winlost-b.actual_stake)  winlost,  
+			b.playercomm as commission,  
+			(b.scomm - b.acomm) as scomm,  
+			(b.acomm - b.comm) as acomm,  
+			(b.comm - b.playercomm) as comm,  
+			b.awinlost,  
+			b.mwinlost,  
+			b.swinlost,  
+			'' as showtime,
+			b.winlostdate ,
+			b.BetCheck        
+		from dbo.bettrans b with (nolock)     
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		where     
+			s.ProductID = 12
+			AND b.refno = @refno
+		UNION ALL	-- translog
+		select 
+			cu.username,
+			b.gameid bettype,   
+			0 as transid, 
+			0 as betid,
+			b.translogid ,
+			'' as matchcode,   
+			'' as race,
+			'' as eventdate, 
+			0,
+			0,
+			sdiscount,
+			adiscount,
+			discount,	 
+			0 as homeid,   
+			0 as awayid,  
+			'' settleTime, 
+			0 hdp1,
+			0 hdp2,
+			b.odds,   
+			0 finalodds,
+			0 finalodds2,
+			'' OddsType,  
+			b.status,  
+			0 as comstatus, 
+			b.stake,  
+			b.actual_stake,    
+			b.transdate,   
+			b.GameID3rd betteam,   
+			b.spositiontaking,  
+			b.mpositiontaking,   
+			b.apositiontaking, 
+			0 spositiontaking2,
+			0 mpositiontaking2,
+			0 apositiontaking2,   
+			0 liveindicator,   
+			0 modds,   
+			b.custid,
+			0 livehomescore, 
+			0 liveawayscore,
+			0 as finalhomescore, 
+			0 as finalawayscore,  
+			0 as leagueid,  
+			255 as sporttype, 
+			b.ip,
+			b.betfrom,
+			NULL matchid,
+			CONVERT(BIT,0) as IsNeutral,
+			(-b.actual_stake)  winlost,
+			0 as commission,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			'' as showtime,
+			b.winlostdate,
+			b.GameID3rd as BetCheck  	 
+		from dbo.translog b with (nolock)
+			LEFT JOIN dbo.CustInfo cu with (nolock) ON b.CustID = cu.CustID
+		INNER JOIN @SportBettype s ON s.Bettype = b.gameID
+		where	s.ProductID = 12
+			AND b.statusID = 0
+			AND b.translogid = @refno
+	END		
 END
 
 --Bettrans14
 ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay
 BEGIN
 	--Sportbooks
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+		--and @bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()
+		and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -1032,7 +1212,8 @@ BEGIN
 	order by b.transid  
 	
 	-- Virtual HR
-	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3 AND s.bettype = @bettype)
 	INSERT INTO @Data
 	select 
 		b.username,
@@ -1109,13 +1290,84 @@ BEGIN
 			s.EventType=3 AND 
 			--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
+			
+	IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+	BEGIN
+		INSERT INTO @Data  
+		select
+			b.username, 
+			b.bettype,     
+			b.transid,   
+			isnull(b.BetID,0) as BetID,    
+			b.refno,  
+			'' as matchcode,     
+			'' as race,  
+			'' as eventdate,   
+			0 as virtualrate,  
+			0 as isShowOTExRate,  
+			sdiscount,  
+			adiscount,  
+			discount,    
+			0 as homeid,     
+			0 as awayid,    
+			'' settleTime,   
+			b.hdp1,  
+			b.hdp2,  
+			b.odds,     
+			0 finalodds,  
+			0 finalodds2,  
+			'' OddsType,    
+			b.status,  
+			CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,     
+			b.stake,     
+			b.actual_stake,  
+			b.transdate,     
+			b.betteam,   
+			b.spositiontaking,    
+			b.mpositiontaking,     
+			b.apositiontaking,   
+			0 spositiontaking2,  
+			0 mpositiontaking2,  
+			0 apositiontaking2,     
+			b.liveindicator,     
+			b.modds,     
+			b.custid,  
+			b.livehomescore,   
+			b.liveawayscore,  
+			0, 
+			0,    
+			0 as leagueid,    
+			255 as sporttype,   
+			b.ip,  
+			b.betfrom,  
+			b.matchid,
+			CONVERT(BIT,0) as IsNeutral,  
+			(b.winlost-b.actual_stake)  winlost,  
+			b.playercomm as commission,  
+			(b.scomm - b.acomm) as scomm,  
+			(b.acomm - b.comm) as acomm,  
+			(b.comm - b.playercomm) as comm,  
+			b.awinlost,  
+			b.mwinlost,  
+			b.swinlost,  
+			'' as showtime,
+			b.winlostdate ,
+			b.BetCheck        
+		from dbo.bettrans14 b with (nolock)     
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		where     
+			s.ProductID = 12
+			AND b.refno = @refno
+	END
 END
 
 --bettrans_bk
 ELSE IF @WinlostDate < @BalanceUpDay
 BEGIN
 	--Sportbooks
-	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF @bettype < 19001 and @bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) 
+		and @bettype NOT IN (SELECT bettype FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3)
+		--and @bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1536,7 +1788,8 @@ BEGIN
 	order by b.transid 
 	
 	-- Virtual HR
-	IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	--IF @bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+	IF EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE s.ProductID = 5 AND s.EventType = 3 AND s.bettype = @bettype)
 	INSERT INTO @Data
 	select 
 		c.username,
@@ -1612,59 +1865,184 @@ BEGIN
 			) bm on b.refno = bm.refno  
 	where	s.ProductID = 5 AND
 			s.EventType = 3 AND 
-			b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
+			--b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and 
 			b.transid = @TransID
+
+IF EXISTS (SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 12 AND Bettype = @Bettype)
+	BEGIN
+		INSERT INTO @Data  
+		select
+			cu.username, 
+			b.bettype,     
+			b.transid,   
+			isnull(b.BetID,0) as BetID,    
+			b.refno,  
+			'' as matchcode,     
+			'' as race,  
+			'' as eventdate,   
+			0 as virtualrate,  
+			0 as isShowOTExRate,  
+			sdiscount,  
+			adiscount,  
+			discount,    
+			0 as homeid,     
+			0 as awayid,    
+			'' settleTime,   
+			b.hdp1,  
+			b.hdp2,  
+			b.odds,     
+			0 finalodds,  
+			0 finalodds2,  
+			'' OddsType,    
+			b.status,  
+			CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,     
+			b.stake,     
+			b.actual_stake,  
+			b.transdate,     
+			b.betteam,   
+			b.spositiontaking,    
+			b.mpositiontaking,     
+			b.apositiontaking,   
+			0 spositiontaking2,  
+			0 mpositiontaking2,  
+			0 apositiontaking2,     
+			b.liveindicator,     
+			b.modds,     
+			b.custid,  
+			b.livehomescore,   
+			b.liveawayscore,  
+			0, 
+			0,    
+			0 as leagueid,    
+			255 as sporttype,   
+			b.ip,  
+			b.betfrom,  
+			b.matchid,
+			CONVERT(BIT,0) as IsNeutral,  
+			(b.winlost-b.actual_stake)  winlost,  
+			b.playercomm as commission,  
+			(b.scomm - b.acomm) as scomm,  
+			(b.acomm - b.comm) as acomm,  
+			(b.comm - b.playercomm) as comm,  
+			b.awinlost,  
+			b.mwinlost,  
+			b.swinlost,  
+			'' as showtime,
+			b.winlostdate ,
+			b.BetCheck        
+		from DBARC.bodb_archive.dbo.bettrans_bk b with (nolock)     
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		INNER JOIN dbo.custInfo cu with (NOLOCK) ON cu.custid = b.custid
+		where     
+			s.ProductID = 12
+			AND b.refno = @refno
+	END
+
 END
 
 SELECT * FROM @Data
 ORDER BY transid  
 
-IF @bettype between 1101 and 1199 
+IF EXISTS (SELECT TOP 1 1 
+		FROM @SportBettype sp 
+			INNER JOIN @Data d
+				ON d.bettype = sp.bettype 
+		WHERE ProductID in (4,12) AND sp.bettype = @bettype )
 BEGIN
-	INSERT INTO @DetailData
-	SELECT 
-		BG.refno, 
-		BG.odds, 
-		BG.stake,
-		BG.status,
-		BG.apositiontaking, 
-		BG.mpositiontaking, 
-		BG.spositiontaking,
-		BG.bettype,
-		BG.betteam  
-	FROM bettransg BG with (NOLOCK)
-	INNER JOIN @Data B ON BG.refno = B.refno
-	WHERE B.Bettype between 1101 and 1199
-		   
-	INSERT INTO @DetailData
-	SELECT 
-		BG.refno, 
-		BG.odds, 
-		BG.stake,
-		BG.status,
-		BG.apositiontaking, 
-		BG.mpositiontaking, 
-		BG.spositiontaking,
-		BG.bettype,
-		BG.betteam  
-	FROM bettransg14 BG with (NOLOCK)
-	INNER JOIN @Data B ON BG.refno = B.refno
-	WHERE B.Bettype between 1101 and 1199
-		
-	INSERT INTO @DetailData
-	SELECT 
-		BG.refno, 
-		BG.odds, 
-		BG.stake,
-		BG.status,
-		BG.apositiontaking, 
-		BG.mpositiontaking, 
-		BG.spositiontaking,
-		BG.bettype,
-		BG.betteam  
-	FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)
-	INNER JOIN @Data B ON BG.refno = B.refno
-	WHERE B.Bettype between 1101 and 1199
+	IF @WinlostDate > @MoveBetsDay
+		INSERT INTO @DetailData
+		SELECT 
+			BG.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam,
+			BG.TransDesc   
+		FROM dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+		UNION ALL 
+		SELECT 
+			BG.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam,
+			BG.TransDesc   
+		FROM dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+
+	ELSE IF @WinlostDate <= @MoveBetsDay and @WinlostDate >= @BalanceUpDay	   
+		INSERT INTO @DetailData
+		SELECT 
+			BG.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam,
+			BG.TransDesc   
+		FROM dbo.bettransg14 BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+		UNION ALL 
+		SELECT 
+			BG.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam,
+			BG.TransDesc   
+		FROM dbo.bettransg14 BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
+	ELSE	
+		INSERT INTO @DetailData
+		SELECT 
+			BG.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam,
+			BG.TransDesc   
+		FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (4)
+				INNER JOIN @Data B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid in (4))
+		UNION ALL 
+		SELECT 
+			BG.refno,
+			BG.odds, 
+			BG.stake,
+			BG.status,
+			BG.apositiontaking, 
+			BG.mpositiontaking, 
+			BG.spositiontaking,
+			BG.bettype,
+			BG.betteam,
+			BG.TransDesc   
+		FROM DBARC.bodb_archive.dbo.bettransg BG with (NOLOCK)
+				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid in (12)
+				INNER JOIN @Data B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid in (12))
 END
 		   
 SELECT * FROM @DetailData

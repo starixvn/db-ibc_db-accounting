@@ -1,7 +1,9 @@
-
-SET QUOTED_IDENTIFIER ON 
+USE [CustDB]
 GO
-SET ANSI_NULLS ON 
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 06/10/2015 11:37:29 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 /****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveMaster    Script Date: 8/21/2014 3:12:19 PM ******/
@@ -63,6 +65,9 @@ Revisions:
     - 20140611@Elodie: Implement separate setting pages for Keno [Redmine:#13156]
     - 20140818@Logan:   Exclude disabled agents, members while updating [Redmine:#19631]
 	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine: #26647]
+	- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
+	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerCheckMoveMaster, Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
+	
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -109,7 +114,11 @@ BEGIN
             @sDisableVirtualSports        BIT,
             @mDisableVirtualSports        BIT,            
             @sHideKeno                    BIT,
-            @mHideKeno                    BIT        
+            @mHideKeno                    BIT,
+            @mHideGoldDeluxe		BIT,
+            @sHideGoldDeluxe		BIT,
+            @sDisableGoldDeluxe		BIT,
+            @mDisableGoldDeluxe		BIT        
 
     SELECT    @srecommend            = custid,         
             @sDisableOutright    = DisableOutright,
@@ -121,8 +130,9 @@ BEGIN
             --@sDisableP2P        = DisableP2P, 
             --@sDisableFunP2P        = DisableFunP2P,
             @sDisableVirtualSports    = DisableVirtualSports,
-            @sHideKeno                = HideKeno
-            
+            @sHideKeno                = HideKeno,
+			@sDisableGoldDeluxe		= DisableGoldDeluxe,
+			@sHideGoldDeluxe	= HideGoldDeluxe            
       FROM    custinfo WITH(NOLOCK) 
     WHERE    username = @supername AND roleid = 4
 
@@ -137,13 +147,15 @@ BEGIN
             --@mDisableP2P        = DisableP2P, 
             --@mDisableFunP2P        = DisableFunP2P,
             @mDisableVirtualSports    = DisableVirtualSports,
-            @mHideKeno                = HideKeno
+            @mHideKeno                = HideKeno,
+			@mDisableGoldDeluxe		= DisableGoldDeluxe,
+			@mHideGoldDeluxe	= HideGoldDeluxe            
       FROM    custinfo WITH(NOLOCK) 
     WHERE    username = @mastername AND roleid = 3
 
 
     --Check Allowed downlines 
-     EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckAllowedDownlines 
+     EXEC dbo.Acc_CustomerSelCheckAllowedDownlines 
         @custid=@mrecommend,
         @roleid=3,
         @isExecRep=0,
@@ -155,7 +167,7 @@ BEGIN
      IF @ErrCode <> 0 
       RETURN
       
-    EXEC DBAGE.bodb02.dbo.Acc_CustomerCheckMoveMaster
+    EXEC dbo.Acc_CustomerCheckMoveMaster
         @supername = @supername
       , @mastername = @mastername
       , @userid = @userid
@@ -393,6 +405,20 @@ BEGIN
             RETURN 
         END
     END
+    
+	 IF @sDisableGoldDeluxe = 1 AND @sDisableGoldDeluxe <> @mDisableGoldDeluxe
+    BEGIN
+        UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
+           SET DisableGoldDeluxe = 1
+        WHERE custid IN (SELECT custid FROM @CustInfo)
+        
+        IF @@ERROR <>0 
+        BEGIN
+            SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
+                    @ErrCode = 309
+            RETURN
+        END
+    END
 
     UPDATE    mcg WITH (UPDLOCK,ROWLOCK)
        SET        mcg.IsDisabled = 1 
@@ -513,6 +539,7 @@ INNER JOIN CustGameType mcg ON scg.CustID = @srecommend AND mcg.GameTypeID = scg
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1508
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1509
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1514
+    EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'GoldDeluxe', @sporttype = 255, @bettype = 1701
 
     --when separate code we must update db07.bodb02.dbo.custsetting 
     UPDATE cs
@@ -598,18 +625,12 @@ INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
 END
 
 
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [vnteam]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMaster] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [bodbAdminNet]
-GO 
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [vnteam] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMaster] TO [vnteam] AS [dbo]

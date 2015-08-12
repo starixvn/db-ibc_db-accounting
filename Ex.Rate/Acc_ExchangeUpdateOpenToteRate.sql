@@ -1,10 +1,4 @@
-﻿USE [bodb02]
-GO
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-Alter PROCEDURE [dbo].[Acc_ExchangeUpdateOpenToteRate]
+﻿ALTER PROCEDURE [dbo].[Acc_ExchangeUpdateOpenToteRate]
 
 	@GBPRate FLOAT = NULL,
 	@AUDRate FLOAT = NULL,
@@ -25,14 +19,14 @@ DB: DBTRANS.bodb02
 Original: Acc_ExchangeUpd
 
 Revisions: 
-
+	- 20150622@Elodie: Migrate CustDB to new server DBCUST (Change DBPOLICY instead of DB03)
 Param's Explanation:
 */
 
 SET NOCOUNT ON
 
 --Check permission for account site: @phuc20080213
-EXEC db03.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[UpdateExchangeRateOpenTote]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[UpdateExchangeRateOpenTote]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 If @ErrCode <> 0
 	RETURN
 --end
@@ -86,8 +80,8 @@ EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_ExchangeRate
 	@actualrate = @actualrate, 
 	@IP = @IP, 
 	@Doing = @LogData
-GO
 
+GO
 GRANT EXECUTE ON [dbo].[Acc_ExchangeUpdateOpenToteRate] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_ExchangeUpdateOpenToteRate] TO [vnteam] 

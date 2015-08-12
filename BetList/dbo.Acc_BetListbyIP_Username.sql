@@ -14,10 +14,15 @@ AS
 	- 20120626@Lukas: check case of matchid = orid
 	- 20130904@Daniel: Remove condition bettype < 19001 when querying bettrans14 since it's useless => optimize performance
 	- 20140303@Elodie: Add Keno product [Redmine:#12756]
+	- 20150506@Tom: Support Gold Deluxe Product [#34847]
 */
  BEGIN
 	SET NOCOUNT ON
-	
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 	DECLARE @min_date	SMALLDATETIME, 
 			@max_date	SMALLDATETIME,
 			@min_date14 SMALLDATETIME, 
@@ -35,10 +40,13 @@ AS
 			AND ip = @ip
 	GROUP BY custid	
 	UNION ALL 
-	SELECT	custid, COUNT(custid), 2
-	FROM	dbo.translog WITH (NOLOCK)
+	SELECT	tl.custid, COUNT(tl.custid), 2
+	FROM	dbo.translog tl WITH (NOLOCK)
+	INNER JOIN @SportBettype sp 
+		ON tl.gameid = sp.BetType
+			AND sp.ProductID IN (8,12)
 	WHERE   winlostdate = @fromdate 
-			AND gameid between 1501 and 1599
+			--AND gameid between 1501 and 1599
 			AND ip = @ip AND statusid = 0
 	GROUP BY custid	
 

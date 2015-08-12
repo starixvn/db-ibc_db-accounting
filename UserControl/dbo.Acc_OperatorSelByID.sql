@@ -1,20 +1,36 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_OperatorSelByID]   
- @CustID int  
-AS  
+﻿ALTER PROCEDURE [dbo].[Acc_OperatorSelByID] 
+	@CustID INT
+AS
 /*
-Created: 
-Task : Get the information of operator by custID
-DB: DB053.bodb02
+Created:
+Task : 
+DB: DBCUST.CustDB
+Original: 
+
 Revisions:
-						
-Parameters Explanation:
-	
+	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 */
-SET NOCOUNT ON  
-Select  
- CustID, UserName, FirstName, LastName, Address, City, State, Country, Postal, Email, Phone, MobilePhone, Fax, RoleID   
-from Customer with (NOLOCK)   
-where CustID = @CustID  
+--Original: EditOperator.asp
+SET NOCOUNT ON
+
+SELECT
+	CustID, 
+	UserName, 
+	FirstName, 
+	LastName, 
+	Address, 
+	City, 
+	State, 
+	Country, 
+	Postal, 
+	Email, 
+	Phone, 
+	MobilePhone, 
+	Fax, 
+	RoleID 
+FROM Customer WITH (NOLOCK) 
+WHERE CustID = @CustID
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_OperatorSelByID] TO [bodbAdminNet] AS [dbo]

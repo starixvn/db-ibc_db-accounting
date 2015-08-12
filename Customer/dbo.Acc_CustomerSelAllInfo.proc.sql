@@ -58,6 +58,8 @@ Revisions:
 	- 20141120@Johnson: correct Last transaction date for super [Redmine: #26006]
 	- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]			
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
+	- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
+	
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -192,7 +194,7 @@ BEGIN
 	    SET @IsDeposit =1
     	
 	    SELECT @LastChangedSecurityCodeDate = LastChangedSecurityCodeDate
-	    FROM DBTXN.CustDB.dbo.CustLoginInfo WITH(NOLOCK)
+	    FROM DBCUST.CustDB.dbo.CustLoginInfo WITH(NOLOCK)
 	    WHERE custid = @custid
     END
 
@@ -212,7 +214,7 @@ BEGIN
 	    SET @IsDeposit =1
     	
 	    SELECT @LastChangedSecurityCodeDate = LastChangedDate
-	    FROM DBTXN.CustDB.dbo.CustLoginInfo_Member WITH(NOLOCK)
+	    FROM DBCUST.CustDB.dbo.CustLoginInfo_Member WITH(NOLOCK)
 	    WHERE custid = @custid
     END
 
@@ -426,13 +428,18 @@ BEGIN
     ELSE
 	    SET @isBA=0
 
+	DECLARE @credit MONEY
+	SELECT @credit = credit
+	FROM DBCUST.CustDB.dbo.CustInfo WITH(NOLOCK)
+	WHERE custid = @custid
+	
     SELECT c.custid, c.username, c.firstname, c.lastname, 
 	    c.username2, 		
 	    ci.roleid, 
 	    lastlogged, 
 	    iplogin lastloginip, 
 	    pwdexpiry, 
-	    ci.credit, 
+	    @credit as credit, --ci.credit, 
 	    e.currency,
 	    e.exchangeid,
 	    e.actualrate,
@@ -549,7 +556,7 @@ BEGIN
     else if @roleid = 2
     BEGIN
 	    SELECT @UsedCredit = sum(credit)  
-	    FROM dbo.custinfo WITH(NOLOCK) 
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=1 
 		     AND recommend = @custid
 	    /*	 
@@ -601,7 +608,7 @@ BEGIN
 	    FROM translog(NOLOCK) WHERE mrecommend = @custid AND statusID = 0
     	
 	    SELECT @UsedCredit = sum(credit)  
-	    FROM custinfo WITH(NOLOCK) 
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=2 
 		    AND mrecommend = @custid
 	    /*	
@@ -657,7 +664,7 @@ BEGIN
 
 	    DECLARE @transdate DATETIME
 	    SELECT @UsedCredit = sum(credit) 
-	    FROM custinfo WITH(NOLOCK)
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	    WHERE roleid=3
 		     AND srecommend = @custid
     	    	
@@ -716,6 +723,16 @@ BEGIN
 END
 
 
+<<<<<<< HEAD
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
+=======
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
 GO 
@@ -725,3 +742,4 @@ GO
 GO 
  GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
 GO 
+>>>>>>> 55fb03dc815b93aa77e08ede5f0d81afd0afc69b
