@@ -1,16 +1,11 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_GamesActiveMember_xtest]    Script Date: 08/12/2015 13:49:17 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
  
 ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
  @fromdate datetime,  
  @todate datetime,  
  @BalanceUpDay datetime,
-  @ProductList VARCHAR(200)
+ @ProductList VARCHAR(200)
 AS  
  
 /*  
@@ -54,9 +49,11 @@ WHERE ProductID IN (3,6,7,4,11,12,13,14)
 	LEFT JOIN @Product_Filter f ON p.ProductID = f.ProductID
 	WHERE ISNULL(f.ProductID,0) = 0 
 	
-		IF EXISTS (SELECT 1 FROM @Product_Filter WHERE ProductID=-1)
+		IF NOT EXISTS (SELECT 1 FROM @Product_Filter WHERE ProductID=-1)
 		BEGIN
-			DELETE #exProduct WHERE ProductPrefix = 'MGC'
+			INSERT INTO #exProduct (ProductPrefix)
+			SELECT 'MG'
+			
 		END	
 		
 UPDATE d
@@ -146,6 +143,8 @@ FROM #tmpCust t
 	INNER JOIN custInfo ci WITH(NOLOCK) ON t.custid = ci.custid
 WHERE roleid =1 AND (currency = 20 or username LIKE 'BIBET%'or username LIKE 'NUBET%' or username LIKE 'CASBET%' )
 --/*
+ 
+
 SELECT CustID
 	   ,GameName
 	   INTO #Result
@@ -174,7 +173,6 @@ DROP TABLE #tmpcust
 DROP TABLE #statistic
 DROP TABLE #exProduct 
 DROP TABLE #Result
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActiveMember] TO [bodbAdminNet] AS [dbo]
 GO
