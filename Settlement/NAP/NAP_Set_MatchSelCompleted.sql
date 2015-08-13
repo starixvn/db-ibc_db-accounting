@@ -1,5 +1,7 @@
 USE [bodb02]
 GO
+
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompleted    Script Date: 6/12/2015 8:40:34 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
@@ -22,8 +24,10 @@ AS
 		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
-		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212
+		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
+		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
+		- 20150811@Johnson: Exclude bettrade tickets from sportbook [Redmine: 35921]
 
 	Param explanation: 
 		@isReLoad: 1: reload partial matches of a league, 0: not reload
@@ -138,8 +142,6 @@ BEGIN
 		INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ht WITH (NOLOCK) ON mr.ConfirmHT = ht.custid
 		LEFT OUTER JOIN CustDB.dbo.custinfo ft WITH (NOLOCK) ON mr.ConfirmFT = ft.custid
-		LEFT JOIN DBPRO.BODB02.dbo.League l WITH (NOLOCK) ON m.leagueID = l.leagueID 
-		
 	WHERE m.eventdate = @Date 	AND 
 	m.leagueID = CASE 
 			WHEN @LeagueID <> 0 THEN @LeagueID
@@ -148,7 +150,7 @@ BEGIN
 			WHEN @sporttype = 0 THEN m.sporttype
 			ELSE @sporttype
 			END 
-			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0 OR l.DisplayCat =1 )
+			AND m.eventstatus <> N'Completed' AND (m.kickofftime < dateadd(s, - 6000, CURRENT_TIMESTAMP) OR mr.ConfirmFT > 0)
 	
 	INSERT INTO #matchList	
 		SELECT tm.matchid
@@ -204,6 +206,7 @@ BEGIN
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 				--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND bettype NOT IN (901,902,903)
 			GROUP BY b.matchid
 			) AS C ON tm.matchid = c.matchid
 
@@ -267,6 +270,7 @@ BEGIN
 
 	DROP TABLE #matchList
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO

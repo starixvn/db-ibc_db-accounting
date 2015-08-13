@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
 	,@excludeRefundFGLG BIT = 0
 AS
@@ -23,6 +25,10 @@ AS
 		- 20141204@Jamie: Sportting Solution settlement - GameSession to indicate the type of league [Redmine:#27027]
 		- 20150401@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
+		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20150811@Johnson: exclude bettrade tickets from sportbook [Redmine: #35921]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -39,10 +45,10 @@ BEGIN
 		,@HTStatus NVARCHAR(20)
 		,@FGLGStatus NVARCHAR(20)
 		,@HTFGLGStatus NVARCHAR(20)
-		--,@PSStatus NVARCHAR(20)
+		,@FTCornerStatus NVARCHAR(20)
+		,@HTCornerStatus NVARCHAR(20)
 		,@FGLG_FTParlayRunning BIT
 		,@FGLG_HTParlayRunning BIT
-		,@PSParlayRunning BIT
 		,@IsExistPS BIT
 		,@LeagueID	INT
 		-- Tennis Settlement 
@@ -60,7 +66,6 @@ BEGIN
 		,@isExistFTFCorner		BIT	
 		,@isExistFTLCorner		BIT
 		,@isExistResultandFirstTeamScore	BIT
-		,@DisplayCat			TINYINT
 
 	SELECT @IsExistLG = 0
 		,@IsExistFGLG = 0
@@ -76,18 +81,11 @@ BEGIN
 		,@isExistFTFCorner		= 0	
 		,@isExistFTLCorner		= 0
 		,@isExistResultandFirstTeamScore = 0 
-		,@DisplayCat		= 0 
-		
 
 	SELECT	 @sporttype = sporttype
 			,@LeagueID	= leagueid
 	FROM	match WITH (NOLOCK)
 	WHERE	matchid = @matchid
-
-	SELECT	@DisplayCat = DisplayCat
-	FROM	dbo.League WITH (NOLOCK)
-	WHERE	LeagueID = @LeagueID
-			AND @Sporttype = 1 
 
 	IF @excludeRefundFGLG = 0 -- Calculate page
 	BEGIN
@@ -306,11 +304,12 @@ BEGIN
 			)
 
 		INSERT INTO @status
-		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: PS
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 1
+		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: HT Corner, 5:FT Corner 
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
-				WHEN bettype = 135 THEN 4
+				WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
+				WHEN bettype IN (194,195,196,197,198,199,206,208) THEN 5 
 				WHEN bettype IN (154,155,156,1311,1312,1316,1317,1318,1324)	--- Tennis Set x 
 					THEN CASE	WHEN CAST(betid AS VARCHAR(20)) LIKE '801%' THEN 11		-- Tennis Set 1 
 								WHEN CAST(betid AS VARCHAR(20)) LIKE '802%' THEN 12		-- Tennis Set 2
@@ -333,11 +332,13 @@ BEGIN
 				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 				AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND bettype NOT IN (901,902,903)--bettrade tickets
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
-				WHEN bettype = 135 THEN 4
+				WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
+				WHEN bettype IN (194,195,196,197,198,199,206,208) THEN 5 
 				WHEN bettype IN (154,155,156,1311,1312,1316,1317,1318,1324) 
 					THEN CASE	WHEN CAST(betid AS VARCHAR(20)) LIKE '801%' THEN 11		-- Tennis Set 1 
 								WHEN CAST(betid AS VARCHAR(20)) LIKE '802%' THEN 12		-- Tennis Set 2
@@ -396,17 +397,12 @@ BEGIN
 				,0
 				)
 
-		IF NOT EXISTS (
-				SELECT *
-				FROM @status
-				WHERE [Group] = 4
-				)
-			INSERT INTO @status
-			VALUES (
-				4
-				,0
-				,0
-				)
+		IF NOT EXISTS (SELECT * FROM @status WHERE [Group] = 4)
+			INSERT INTO @status VALUES (4,0,0)
+
+		IF NOT EXISTS (SELECT * FROM @status WHERE [Group] = 5)
+			INSERT INTO @status VALUES (5,0,0)
+
 		IF NOT EXISTS ( SELECT * FROM @status WHERE [Group] = 11)
 			INSERT INTO @status VALUES (11,0,0)
 
@@ -430,9 +426,9 @@ BEGIN
 		FROM bettransm WITH(NOLOCK)
 		WHERE matchid = @matchid AND bettype = 127 AND statusID NOT IN (101,102)
 
-		SELECT TOP 1 @PSParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
-		FROM bettransm with(NOLOCK)
-		WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
+		--SELECT TOP 1 @PSParlayRunning = CASE WHEN statusID = 0 THEN 1 ELSE 0 END
+		--FROM bettransm with(NOLOCK)
+		--WHERE matchid = @matchid AND bettype = 135 AND statusID NOT IN (101, 102)
 
 		SELECT @FTStatus = CASE 
 				WHEN betcount = 0 THEN N'No Ticket'
@@ -482,6 +478,22 @@ BEGIN
 		--		END
 		--FROM @status
 		--WHERE [Group] = 4
+
+
+		SELECT	@HTCornerStatus = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 4 
+
+		SELECT	@FTCornerStatus = CASE	WHEN betcount = 0 THEN N'No Ticket'
+											WHEN inRunning = 0 THEN N'Calculated'
+											ELSE N'Running'
+											END
+		FROM	@Status 
+		WHERE	[Group] = 5
+
 
 		--- Tennis Ticket Status 
 
@@ -738,7 +750,6 @@ BEGIN
 						AND isnull(ConfirmFT, 0) = 0
 				)
 			)
-			AND @DisplayCat = 0	
 	BEGIN
 		SELECT @IsHTOnly = 1
 		
@@ -791,7 +802,7 @@ BEGIN
 		,isnull(mr.multiple, 0) IsMultiCaled
 		,isnull(match.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
 		,mr.ishtcal AS IsHalfTimeCal
-		,ISNULL(mr.SettlementStatus135,0) SettlementStatus135
+		--,ISNULL(mr.SettlementStatus135,0) SettlementStatus135
 		,match.GoalRecord
 		,mr.ConfirmHT
 		,mr.ConfirmFT
@@ -799,7 +810,6 @@ BEGIN
 		,@FTStatus FTStatus
 		,@FGLGStatus fglgstatus
 		,@HTFGLGStatus HTFGLGStatus
-		--,@PSStatus PSStatus
 		,@IsExistFGLG AS IsExistFGLG
 		,@IsExistLG AS IsExistLG
 		,@IsExistHTFGLG AS IsExistHTFGLG
@@ -820,7 +830,8 @@ BEGIN
 		,@isExistFTFCorner		AS isExistFTFCorner	
 		,@isExistFTLCorner		AS isExistFTLCorner
 		,@isExistResultandFirstTeamScore AS isExistResultandFirstTeamScore
-		,@DisplayCat	AS DisplayCat	-- 1: Extra time match 
+		,@HTCornerStatus AS HTCornerStatus 
+		,@FTCornerStatus AS FTCornerStatus 
  	FROM DBPRO.BODB02.dbo.match WITH (NOLOCK)
 		LEFT OUTER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON match.matchid = mr.matchid
 	WHERE match.matchid = @matchid
@@ -842,6 +853,7 @@ BEGIN
 
 
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]

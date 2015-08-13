@@ -1704,6 +1704,7 @@ BEGIN
 					 @matchid = @matchid					
 					,@action = @action
 					,@mode = @mode
+					,@ResourceIDs = @ResourceIDs
 			END
 		END
 

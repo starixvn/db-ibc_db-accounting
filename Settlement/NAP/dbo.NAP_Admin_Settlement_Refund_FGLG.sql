@@ -124,7 +124,7 @@ BEGIN
 				AND 1 = CASE WHEN bettype IN (901,902,903) 
 								AND refno IN (SELECT transid FROM #tmpTrans)	
 								THEN 1 
-							WHEN bettype NOT IN (901,902,903) 
+							WHEN bettype NOT IN (901,902,903) THEN 1
 							ELSE 0 END
 			GROUP BY custid
 
@@ -217,7 +217,7 @@ BEGIN
 				AND 1 = CASE WHEN bettype IN (901,902,903) 
 								AND refno IN (SELECT transid FROM #tmpTrans)	
 								THEN 1 
-							WHEN bettype NOT IN (901,902,903) 
+							WHEN bettype NOT IN (901,902,903) THEN 1
 							ELSE 0 END
 			GROUP BY custid
 		END --IF @SkipBalanceUpdate = 0
