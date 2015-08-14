@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]
  @fromdate datetime,  
  @todate datetime,  
  @BalanceUpDay datetime,
-  @ProductList VARCHAR(200)
+ @ProductList VARCHAR(200)
 AS  
  
 /*  
@@ -33,10 +33,29 @@ CREATE TABLE #statistic (Id INT IDENTITY (1,1) ,CustId INT,MemberCount INT ,Game
 DECLARE @result 	TABLE (ProductID INT,CustID INT,combinations INT,NoActive INT,GameName VARCHAR(1000))
 DECLARE @tmpBettype TABLE (bettype int , gameName VARCHAR(20) )
 DECLARE @tmpSport	TABLE (sporttype INT, gameName VARCHAR(20))
-DECLARE @Product    TABLE (ID INT IDENTITY (1,1),subID INT, ProductID INT, ProductPrefix VARCHAR(10))
-INSERT INTO @Product (ProductID)
+DECLARE @Product    TABLE (ID INT IDENTITY (1,1) , ProductID INT, ProductPrefix VARCHAR(10))
+DECLARE @Product_Filter    TABLE (ProductID INT)
+INSERT INTO @Product_Filter (ProductID)
 SELECT VAL FROM  dbo.strSplit(@ProductList,',')
- 
+
+INSERT INTO @Product (ProductID,ProductPrefix)
+SELECT ProductID,ProductPrefix
+FROM dbo.Products WITH (NOLOCK)
+WHERE ProductID IN (3,6,7,4,11,12,13,14)
+ SELECT 
+		p.ProductPrefix
+	INTO #exProduct	
+	FROM dbo.Products p  WITH (NOLOCK)
+	LEFT JOIN @Product_Filter f ON p.ProductID = f.ProductID
+	WHERE ISNULL(f.ProductID,0) = 0 
+	
+		IF NOT EXISTS (SELECT 1 FROM @Product_Filter WHERE ProductID=-1)
+		BEGIN
+			INSERT INTO #exProduct (ProductPrefix)
+			SELECT 'MG'
+			
+		END	
+		
 UPDATE d
 SET ProductPrefix  = s.ProductPrefix  
 FROM @Product d 
@@ -56,13 +75,12 @@ INSERT INTO @tmpBettype
 		  ,p.ProductPrefix   
 	FROM @SportBettype sb
 		INNER JOIN @Product p ON sb.ProductID = p.ProductID
-IF EXISTS (SELECT 1 FROM @Product WHERE ProductId = -1 )	 
-	BEGIN
-		INSERT INTO @tmpBettype
-		SELECT Bettype ,'MG' 
-		FROM @SportBettype
-		WHERE SubProduct='MG-SuperLive'
-	END
+
+INSERT INTO @tmpBettype
+SELECT Bettype ,'MG' 
+FROM @SportBettype
+WHERE SubProduct='MG-SuperLive'
+
 	 
 INSERT INTO @tmpSport
 SELECT DISTINCT m.Sporttype
@@ -80,8 +98,8 @@ BEGIN
 		FROM sum_winloss s with(NOLOCK) 
 			INNER JOIN @tmpSport t ON s.sporttype = t.sporttype
 		WHERE roleid = 1 AND winlostdate BETWEEN @BalanceUpDay AND @Todate
-			--AND NOT EXISTS (SELECT 1 FROM #tmpcust WHERE custid = s.custid AND gameName = t.gameName)
-		
+			 AND NOT EXISTS (SELECT 1 FROM #tmpcust WHERE custid = s.custid AND gameName = t.gameName)
+			
 	INSERT INTO #tmpcust
 		SELECT DISTINCT custid, gameName
 		FROM bettrans b WITH(NOLOCK)
@@ -112,7 +130,7 @@ BEGIN
 				AND winlostdate BETWEEN @fromdate AND @ToDate  
 				AND NOT EXISTS(SELECT 1 FROM #tmpcust WHERE custid = s.custid and gameName = t.gameName)
 	INSERT INTO #tmpcust
-	SELECT d.CustID,t.gameName
+	SELECT DISTINCT d.CustID,t.gameName
 	FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
 		INNER JOIN @tmpBettype t ON d.bettype=t.bettype 
 		WHERE t.gameName='MG'
@@ -124,15 +142,26 @@ DELETE t
 FROM #tmpCust t
 	INNER JOIN custInfo ci WITH(NOLOCK) ON t.custid = ci.custid
 WHERE roleid =1 AND (currency = 20 or username LIKE 'BIBET%'or username LIKE 'NUBET%' or username LIKE 'CASBET%' )
+--/*
+ 
 
+SELECT CustID
+	   ,GameName
+	   INTO #Result
+FROM #tmpCust	   
+WHERE CustID NOT IN (SELECT CustID 
+					FROM #tmpCust c
+					 WHERE GameName IN (SELECT ProductPrefix FROM #exProduct)
+					)
+---*/
 INSERT INTO #statistic (CustID,MemberCount,GameName)
 	SELECT CustID,COUNT(gameName),GameName 
-	FROM #tmpCust
+	FROM #Result
 	GROUP BY CustID,GameName
 SELECT
 	a.CustID
 	,a.MemberCount
-	,CASE a.GameName WHEN 'MG' THEN -1 ELSE CONVERT(INT,p.ProductId) END ProductId 
+	,CASE a.GameName WHEN 'MG' THEN '-1' ELSE CONVERT(VARCHAR(3),p.ProductId) END ProductId 
 	,a.GameName ProductPrefix
 	,CASE a.GameName WHEN 'MG' THEN 'MG-SuperLive' ELSE p.ProductName END GameName
 FROM #statistic a 
@@ -142,8 +171,8 @@ LEFT JOIN dbo.Products p ON a.gameName=p.ProductPrefix
  
 DROP TABLE #tmpcust
 DROP TABLE #statistic
- 
-
+DROP TABLE #exProduct 
+DROP TABLE #Result
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActiveMember] TO [bodbAdminNet] AS [dbo]
 GO
