@@ -21,6 +21,7 @@ AS
 			- 20140327@Dom: Add Keno
 			- 20150525@Jim: apply sport& bettype matrix and also support GoldDeluxe & Metric Gaming (#35359 & #28309 )
 			- 20150710@Jim: Super Balance fix and Microgaming integration (feature #38168 )
+
         Parameter's Explanation:
     */
 BEGIN

@@ -9,7 +9,7 @@ AS
 /*
 	Created: 
 	Task : Check moving a agent to another master
-	DB: DBCUST.CustDB
+	DB: DBCUST/CustDB
 	Original:
 
 	Revisions:
@@ -23,6 +23,7 @@ AS
 		- 20140828@Logan: Add constraint for E-Sports status [Redmine: #20531]
 		- 20150508@Kathy: Add Gold Deluxe product [Redmine:#34486]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -94,6 +95,8 @@ BEGIN
 	      , @aDisableGoldDeluxe		BIT
 	      ,	@mHideGoldDeluxe		BIT
 	      , @aHideGoldDeluxe		BIT
+		  , @mDisableSuperLive		BIT
+	      , @aDisableSuperLive		BIT
 	      , @AdminUser				VARCHAR(50)
 
 
@@ -124,6 +127,7 @@ BEGIN
 	     , @mDisableEsports     = DisableEsports
 	     , @mDisableGoldDeluxe	= DisableGoldDeluxe
 	     , @mHideGoldDeluxe		= HideGoldDeluxe
+		 , @mDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @mastername
 	   AND roleid = 3
@@ -156,6 +160,7 @@ BEGIN
 	     , @aDisableEsports     = DisableEsports
 	     , @aDisableGoldDeluxe	= DisableGoldDeluxe
 	     , @aHideGoldDeluxe		= HideGoldDeluxe
+		 , @aDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @agentname
 	   AND roleid = 2
@@ -373,6 +378,14 @@ BEGIN
 		RETURN
 	END
 	
+	--Super Live
+	IF @mDisableSuperLive = 1 and @aDisableSuperLive = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': agent is enabled Super Live but new master is not enabled Super Live.'
+		     , @ErrCode = 127
+		RETURN
+	END
+
 	--Check Gold Deluxe enable status	
 	IF @mHideGoldDeluxe = 1 and @aHideGoldDeluxe = 0
 	BEGIN
@@ -916,9 +929,6 @@ BEGIN
 	--	return
 	--END
 END
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveAgent] TO [bodbAdminNet] AS [dbo]
