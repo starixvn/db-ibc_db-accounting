@@ -22,9 +22,31 @@ AS
 		DB: DBTXN/CustDB
 		
 		Revisions:
+		20150609@Alex: Separate CustDB to DBCUST server (Use temp table for sports, bettype, GameType table)
+
 
 */
+SET NOCOUNT ON
+	DECLARE @tmp_Sports TABLE(SportType TINYINT,SportName NVARCHAR(50))
+	DECLARE @tmp_GameType TABLE (GameTypeID INT, GameTypeName NVARCHAR(50), IsDisabled BIT, IBCBettypeID INT)
+	
+	BEGIN TRY
+		INSERT INTO @tmp_Sports(SportType, SportName)
+		SELECT SportType, SportName FROM DBAGE.bodb02.dbo.Sports WITH (NOLOCK)
+	END TRY
+	BEGIN CATCH
+		INSERT INTO @tmp_Sports(SportType, SportName)
+		SELECT SportType, SportName FROM DBTXN.bodb02.dbo.Sports WITH (NOLOCK) 
+	END CATCH
 
+	BEGIN TRY		
+	INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+	SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBAGE.bodb02.dbo.GameType WITH (NOLOCK)
+	END TRY
+	BEGIN CATCH		
+		INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+		SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBTXN.bodb02.dbo.GameType WITH (NOLOCK)
+	END CATCH
 BEGIN
 	
 	SELECT @AgentName = username FROM CustInfo WITH(NOLOCK) WHERE custid = @AgentID
@@ -79,7 +101,7 @@ BEGIN
 			,sp.MaxPerMatch
 			,sp.MaxPerBall
 		FROM @SportTable sp
-		LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON s.SportType = sp.SportType
+		LEFT JOIN @tmp_Sports s ON s.SportType = sp.SportType
 		WHERE sp.sporttype <> 202 
 
 		SELECT sp.[Site] Licensee
@@ -95,7 +117,7 @@ BEGIN
 				,sp.MaxPerMatch
 				,MaxPerBall = NULL
 			FROM @SportTable sp 
-			INNER JOIN [bodb02].[dbo].[GameType] bt WITH(NOLOCK) ON sp.bettype = bt.GameTypeID
+			INNER JOIN @tmp_GameType bt ON sp.bettype = bt.GameTypeID
 			where sp.sporttype = 202 AND @AgentID IS NULL
 	END
 	ELSE
@@ -115,7 +137,7 @@ BEGIN
 			,tmp.MaxPerMatch
 			,tmp.MaxPerBall
 		FROM @SportTable sp
-		LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON s.SportType = sp.SportType
+		LEFT JOIN @tmp_Sports s ON s.SportType = sp.SportType
 		LEFT JOIN (
 			SELECT cbs.Site,cbs.SportType, cbs.bettype,cbs.AgentID,cbs.CurrencyID,cbs.MaxBet,cbs.MaxPerMatch,cbs.MaxPerBall
 			FROM [dbo].[Dep_CustBetLimit_Special] cbs WITH(NOLOCK) 
@@ -151,7 +173,7 @@ BEGIN
 					,sp.MaxPerMatch
 					,MaxPerBall = NULL
 				FROM @SportTable sp 
-				INNER JOIN [bodb02].[dbo].[GameType] bt WITH(NOLOCK) ON sp.bettype = bt.GameTypeID
+				INNER JOIN @tmp_GameType bt ON sp.bettype = bt.GameTypeID
 				WHERE SportType=202
 			END
 			ELSE
@@ -171,7 +193,7 @@ BEGIN
 				,MaxPerBall = NULL
 			FROM @SportTable sp 
 			LEFT JOIN [dbo].[Dep_CustBetLimitGameType_Special] cbs WITH(NOLOCK) ON cbs.gametypeid = sp.bettype AND cbs.[Site]=@Licensee AND cbs.CurrencyID=@CurrencyID
-			INNER JOIN [bodb02].[dbo].[GameType] bt WITH(NOLOCK) ON sp.bettype = bt.GameTypeID
+			INNER JOIN @tmp_GameType bt ON sp.bettype = bt.GameTypeID
 			--INNER JOIN Exchange ex WITH(NOLOCK) ON ex.exchangeid = sp.CurrencyID
 			WHERE sp.CurrencyID = @CurrencyID
 				AND sp.[Site] = @Licensee
@@ -181,6 +203,7 @@ BEGIN
 		END
 	END
 END
+
 GO
 
 SET QUOTED_IDENTIFIER OFF 

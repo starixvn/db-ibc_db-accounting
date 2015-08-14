@@ -1,13 +1,3 @@
-USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Task_ResetWinning_Non3rdParty]    Script Date: 06/03/2015 05:00:18 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
- 
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate datetime,
 	@todate   datetime,
@@ -572,6 +562,8 @@ BEGIN
 	    RETURN
 	END
 END
+
+
 
 GO
 

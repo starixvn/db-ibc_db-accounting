@@ -20,6 +20,7 @@ AS
 		- 20120215@Elodie: Change linked server DB06 to DBARC
 		- 20150529@Jim: add Metric Gaming and apply sport-bettype matrix
 		- 20150728@Jim: apply Bettrade (Feature #38815)
+
 	Explanation's Param:
 		- @CustID : Agent ID
 		- @matchid: the id of match
@@ -34,13 +35,14 @@ AS
 
 	IF (@bettypes IS NOT NULL)
 		INSERT INTO @tmp(val) SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,',')
+
 	
 	DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 	INSERT INTO @SportBettype
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	DELETE 	@SportBettype WHERE bettype IN (901,902,903)
-	
+
 	IF (@eventdate>@MoveBetsDay)
 	BEGIN	
 		SELECT 	
@@ -58,12 +60,11 @@ AS
 				
 		FROM	bettrans b WITH (NOLOCK)	
 			INNER JOIN customer c WITH (NOLOCK)	ON c.custid = b.custid
-			INNER JOIN @SportBettype s ON b.bettype = s.bettype
 		WHERE	b.recommend = @custID		
 				AND b.matchid = @matchid
 				--support only sportbook
-				AND s.ProductID =1 
-				AND s.EventType NOT IN (0,2) 
+				AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
+				AND	b.bettype NOT IN (9,29,10) 
 
 				AND b.statusID = CASE WHEN @statusID = 0 THEN statusID		
 									ELSE @statusID 	END
@@ -93,19 +94,18 @@ AS
 				
 		FROM	bettrans14 b WITH (NOLOCK)	
 			INNER JOIN customer c WITH (NOLOCK) ON c.custid = b.custid
-			INNER JOIN @SportBettype s ON b.bettype = s.bettype
 		WHERE	b.recommend = @custID			
 				AND matchid = @matchid
 				--support only sportbook
-				AND s.ProductID =1 
-				AND s.EventType NOT IN (0,2) 
+				AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
+				AND	b.bettype NOT IN (9,29,10) 
 
 				AND statusID = CASE WHEN @statusID = 0 THEN statusID		
 									ELSE @statusID 	END
 				
 				AND b.statusID IN (111,112,113)
 				AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-				AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
+				AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
 				AND ruben = 1
 				AND b.Currency <> 20		
 		GROUP BY b.custid, c.username, b.Currency
@@ -128,13 +128,12 @@ AS
 				
 		FROM	DBARC.bodb_archive.dbo.bettrans_bk b WITH (NOLOCK)	
 			INNER JOIN customer c WITH (NOLOCK) ON c.custid = b.custid
-			INNER JOIN @SportBettype s ON b.bettype = s.bettype
 		WHERE	b.recommend = @custID		
 				AND winlostdate = @eventdate	
 				AND matchid = @matchid
 				--support only sportbook
-				AND s.ProductID =1 
-				AND s.EventType NOT IN (0,2) 
+				AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
+				AND	b.bettype NOT IN (9,29,10) 
 				--AND statusID = CASE WHEN @statusID = 0 THEN statusID	ELSE @statusID 	END
 				AND status = CASE WHEN @statusID = 0 THEN status
 								WHEN @statusID = 111 THEN 'DRAW'
@@ -144,7 +143,7 @@ AS
 				AND status IN ('DRAW', 'WON','LOSE') 
 				--AND b.statusID IN (111,112,113)				
 				AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-				AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
+				AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
 				AND ruben = 1
 				AND b.Currency <> 20		
 		GROUP BY b.custid, c.username, b.Currency

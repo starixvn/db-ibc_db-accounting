@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Portal_TB_Transfer]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Portal_TB_Transfer]    Script Date: 06/06/2015 15:38:59 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Portal_TB_Transfer    Script Date: 12/24/2013 2:47:46 AM ******/
+/****** Object:  Stored Procedure dbo.Portal_TB_Transfer    Script Date: 12/6/2013 4:14:33 PM ******/
+ALTER PROCEDURE  [dbo].[Portal_TB_Transfer]
 	@agentid int,
 	@from_id int,
 	@to_id int,
@@ -16,6 +25,7 @@ AS
 		- 20100522@viet: Update Bettrans.StatusID
 		- 20120529@Sophia: . Update credit/debit balance
 						   . Check @@Error to rollback
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Exchange by link database)										   
 */
 
 
@@ -51,21 +61,21 @@ END
 		@from_user = username, @from_GC = IsNull(credit, 0),
 		@recommend = recommend, @mrecommend = mrecommend, @srecommend = srecommend,
 		@currency = currency
-	FROM dbo.custinfo (nolock)
+	FROM DBCUST.CustDB.dbo.custinfo WITH(nolock)
 	WHERE custid = @from_id AND recommend = @agentid AND roleid = 1
 IF @@ROWCOUNT = 0 SET @result = 'FAILED:Not_Found_FromUser'
 
 	SELECT
 		@to_user = username, @to_GC = IsNull(credit, 0),
 		@to_closed = IsNull(closed, 1)
-	FROM dbo.custinfo (nolock)
+	FROM DBCUST.CustDB.dbo.custinfo WITH (nolock)
 	WHERE custid = @to_id AND recommend = @agentid AND roleid = 1
 IF @@ROWCOUNT = 0 SET @result = 'FAILED:Not_Found_ToUser'
 
 	SELECT
 		@currencyName = currency,
 		@actualrate = actualrate
-	FROM dbo.exchange (nolock)
+	FROM CustDB.dbo.exchange (nolock)
 	WHERE exchangeid = @currency
 
 IF (@from_user = @to_user) OR
@@ -177,10 +187,7 @@ SELECT
 	@to_user to_user, @to_BC to_BC, @to_Out to_Out,
 	IsNull(@transcode, 0) refno
 
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Portal_TB_Transfer] TO [Portal]
+GRANT EXECUTE ON [dbo].[Portal_TB_Transfer] TO [portal] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Portal_TB_Transfer] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Portal_TB_Transfer] TO [vnteam] AS [dbo]

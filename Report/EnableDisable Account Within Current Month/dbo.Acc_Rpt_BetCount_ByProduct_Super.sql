@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
+ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@CustID			INT,
@@ -11,6 +11,7 @@ AS
    
     Revisions:  
 		20140701@Dominic: Get running Keno bets from table Translog
+		20150617@Elodie: Migrate CustDB to DBCUST (call CustGameType by link server DBACC)
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
@@ -169,17 +170,39 @@ BEGIN
 	END
 	IF @sportType = 202
     BEGIN      
+		WITH CustEnableKeno (CustID)
+		AS(
+			SELECT gt.CustID
+			FROM DBACC.bodb02.dbo.CustGameType gt WITH (NOLOCK) 
+				JOIN #AvailableMember av ON av.CustID = gt.CustID
+			WHERE gt.IsDisabled = 0
+			GROUP BY gt.CustID
+		)
 		INSERT INTO #FiltedDownlineAcc
-		SELECT ci.custid,
-			CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
-																WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
-																THEN 0 
-																ELSE 1 
-																END,
+		SELECT av.custid,
+			--CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+			--													WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+			--													THEN 0 
+			--													ELSE 1 
+			--													END,
+			0,
 			av.BetStatus,
 			av.BetCount
-		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #AvailableMember av ON av.CustID = ci.custid                 
+		FROM #AvailableMember av              
+			INNER JOIN CustEnableKeno ce ON ce.CustID = av.custid    
+		UNION ALL
+		SELECT av.custid,
+			--CASE WHEN EXISTS(SELECT TOP 1 1 FROM dbo.CustGameType gt WITH(NOLOCK,INDEX=PK_CustGameType)
+			--													WHERE gt.CustID = ci.CustID AND gt.IsDisabled = 0 ) 
+			--													THEN 0 
+			--													ELSE 1 
+			--													END,
+			1,
+			av.BetStatus,
+			av.BetCount
+		FROM #AvailableMember av              
+			LEFT JOIN CustEnableKeno ce ON ce.CustID = av.custid    
+		WHERE ce.CustID IS NULL
 	END
 
 
@@ -196,6 +219,7 @@ BEGIN
 	DROP TABLE #FiltedDownlineAcc
 	DROP TABLE #AvailableMember
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
 GO
