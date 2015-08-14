@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801_xtest]    Script Date: 07/22/2015 12:34:09 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801_xtest]    Script Date: 8/14/2015 3:18:55 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -200,9 +200,10 @@ BEGIN
 		)
 		WHERE GameID = @bettype
 			AND EventID = @matchid				
-			AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
-									ELSE @bettypeTime
-									END
+			AND 1 = CASE WHEN gameId <> 806 AND @bettypeTime = SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12) THEN 1
+						WHEN gameID = 806 THEN 1 
+						ELSE 0 
+					END
 			AND StatusID NOT IN (101,102)--('VOID','REJECT')
 		
 		MERGE dbo.Bettrans b
@@ -1086,9 +1087,9 @@ BEGIN
 		INTO #tmpTransUnc				
 		WHERE GameID = @bettype
 			AND EventID = @matchid
-			AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
-								ELSE @bettypeTime
-								END
+			AND 1 = CASE WHEN gameId <> 806 AND @bettypeTime = SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12) THEN 1
+						WHEN gameID = 806 THEN 1 
+						ELSE 0 END
 			AND statusId NOT IN (0, 1, 102, 101)  ---('running','waiting','void','reject')
 	
 		UPDATE Bettrans WITH(UPDLOCK,ROWLOCK)
@@ -1122,6 +1123,11 @@ BEGIN
 		DROP TABLE #tmpTransUnc
 	END
 END
+
+
+
+
+
 
 
 
