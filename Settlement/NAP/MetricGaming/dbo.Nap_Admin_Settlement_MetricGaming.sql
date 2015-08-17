@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MetricGaming] 
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/17/2015 10:40:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MetricGaming] 
 	@MatchId					INT
 	,@Bettype					INT
 	,@ResultID					INT	
@@ -270,9 +277,7 @@ BEGIN
 								+ @Result
 						  +	'</Event>'
 					+ '</Log>'
-
-	SELECT @Remark
-			
+								
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
 			@UserID			= @AdminId
@@ -344,6 +349,8 @@ BEGIN
 	END
 
 END
+
+
 
 
 
