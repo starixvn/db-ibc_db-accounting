@@ -65,13 +65,9 @@ AS
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 		- 20150521@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
-<<<<<<< HEAD
 		- 20150723@Sophia: Apply Bettrade [#38815]
-
-=======
 		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
->>>>>>> master
-	
+
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
