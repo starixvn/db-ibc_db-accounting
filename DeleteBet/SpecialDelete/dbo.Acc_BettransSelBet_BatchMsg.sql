@@ -20,14 +20,15 @@ AS
   - 20101007@Henry: Change column transid from INT to BIGINT  
   - 20140224@Elodie: Apply LAS system [Redmine:#10701]  
   - 20150403@Kathy: Support uploading msg for ticket has been moved in bettrans14
-  - 20150615@Dominic: Exclude 3 sub-tickets of BetTrade (901,902,903)
+  - 20150615@Dominic: Exclude 3 sub-tickets of BetTrade (901,902,903)  
+  - 20150625@Dominic: Add ticket from translog/translog14 [Redmine:#38200]  
  Explanation's Param:  
   
 */  
 BEGIN  
   
  SET NOCOUNT ON  
- DECLARE @BetDelete TABLE (transid bigint, custid int, recommend int, mrecommend int, srecommend int, betfrom nvarchar(1))  
+ DECLARE @BetDelete TABLE (transid bigint,refno bigint,bettype smallint, custid int, recommend int, mrecommend int, srecommend int, betfrom nvarchar(1))  
  DECLARE @TransIdsLAS VARCHAR(MAX), @strLASAgent VARCHAR(500)  
  DECLARE @tblTransLAS TABLE(transid VARCHAR(20))  
  DECLARE @LASCust TABLE (custid INT)  
@@ -37,14 +38,28 @@ BEGIN
  INSERT INTO #transid  
  SELECT distinct (convert(varchar,val)) FROM dbo.strSplit(@transids,',')  
    
- INSERT INTO @BetDelete (transid, custid, recommend, mrecommend, srecommend, betfrom)   
- SELECT transid, custid, recommend, mrecommend, srecommend, betfrom  
- FROM bettrans b with (nolock)  
- WHERE transid in ( SELECT transid from #transid )  AND Bettype NOT IN (901,902,903)
- UNION ALL  
- SELECT transid, custid, recommend, mrecommend, srecommend, betfrom  
- FROM bettrans14 b14 with (nolock)  
- WHERE transid in ( SELECT transid from #transid )  AND Bettype NOT IN (901,902,903)
+	INSERT INTO @BetDelete (transid, refno, bettype, custid, recommend, mrecommend, srecommend, betfrom)   
+	SELECT transid, refno, bettype, custid, recommend, mrecommend, srecommend, betfrom  
+	FROM bettrans b with (nolock)  
+	WHERE CASE WHEN b.Bettype IN (801,803,804,805,806) THEN b.refno ELSE b.transid END in ( SELECT transid from #transid )
+		AND b.Bettype NOT IN (901,902,903) 
+	UNION ALL  
+	SELECT transid, refno,bettype,custid, recommend, mrecommend, srecommend, betfrom  
+	FROM bettrans14 b14 with (nolock)  
+	WHERE CASE WHEN b14.Bettype IN (801,803,804,805,806) THEN b14.refno ELSE b14.transid END in ( SELECT transid from #transid ) 
+		AND b14.Bettype NOT IN (901,902,903)
+	UNION ALL  
+	SELECT translogid, translogid, gameid, ts.custid, ts.recommend, ts.mrecommend, ts.srecommend, ts.betfrom  
+	FROM translog ts with (nolock)  
+	LEFT JOIN bettrans b WITH(nolock) ON ts.gameid = b.bettype AND b.matchid = ts.eventid AND b.custid = ts.Custid AND ts.translogid = b.refno
+	WHERE translogid in ( SELECT transid from #transid ) 
+	AND ts.GameID IN (801,803,804,805,806)  AND b.refno IS NULL
+	UNION ALL  
+	SELECT translogid, translogid, gameid, ts14.custid, ts14.recommend, ts14.mrecommend, ts14.srecommend, ts14.betfrom  
+	FROM translog14 ts14 with (nolock)  
+	LEFT JOIN bettrans14 b14 WITH(nolock) ON ts14.gameid = b14.bettype AND b14.matchid = ts14.eventid AND b14.custid = ts14.Custid AND ts14.translogid = b14.refno
+	WHERE translogid in ( SELECT transid from #transid ) 
+	AND ts14.GameID IN (801,803,804,805,806)  AND b14.refno IS NULL
   
  exec DBLAS.LASDB.dbo.Las_Get_recommend @StringRec = @strLASAgent output  
   
@@ -68,7 +83,7 @@ BEGIN
  )  
  SELECT @TransIdsLAS = val + ',' from tmp  
   
- select transid,   
+ select CASE WHEN bettype IN (801,803,804,805,806) THEN refno ELSE transid END transid,   
   bd.custid, mem.UserName     as CustUserName,  
   bd.recommend, ag.UserName as AgUserName,  
   bd.mrecommend, mag.UserName as MagUserName,  
