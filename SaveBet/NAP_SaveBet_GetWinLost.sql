@@ -4,7 +4,6 @@ GO
 SET ANSI_NULLS ON 
 GO
 
-/****** Object:  Stored Procedure dbo.NAP_SaveBet_GetWinLost    Script Date: 9/10/2014 3:22:02 PM ******/
 ALTER PROCEDURE [dbo].[NAP_SaveBet_GetWinLost]
 	@matchid int
 AS
@@ -16,6 +15,7 @@ AS
 	DB: DB06.BODB02
 	
 	Revisions:
+		-20150529@Jim: add metrix gaming
 		
 */
 
@@ -27,7 +27,9 @@ SELECT
 	CASE b.liveindicator WHEN 0 THEN '' ELSE 'Live' END Live,
 	b.winlosta, b.agenta, b.comma,
 	b.winlostv, b.agentv, b.commv,
-	CASE WHEN b.bettype IN (1,3,7,8,20) THEN b.winlostv + b.agentv ELSE 0 END FC,
+	CASE WHEN (b.bettype IN (1,3,7,8,20)
+					OR b.bettype BETWEEN 801 AND 808
+					) THEN b.winlostv + b.agentv ELSE 0 END FC,
 	b.BetCount, b.Reject, b.Void,
 	IsNull(t.HomeA, 0) HomeA, IsNull(t.AwayA, 0) AwayA, IsNull(t.HomeA, 0) - IsNull(t.AwayA, 0) DiffA,
 	IsNull(t.HomeV, 0) HomeV, IsNull(t.AwayV, 0) AwayV, IsNull(t.HomeV, 0) - IsNull(t.AwayV, 0) DiffV
@@ -101,7 +103,9 @@ SELECT
 	CASE b.liveindicator WHEN 0 THEN '' ELSE 'Live' END Live,
 	b.winlosta, b.agenta, b.comma,
 	b.winlostv, b.agentv, b.commv,
-	CASE WHEN b.bettype IN (1,3,7,8,20) THEN b.winlostv + b.agentv ELSE 0 END FC,
+	CASE WHEN (b.bettype IN (1,3,7,8,20)
+					OR b.bettype BETWEEN 801 AND 808
+					) THEN b.winlostv + b.agentv ELSE 0 END FC,
 	b.BetCount, b.Reject, b.Void,
 	IsNull(t.HomeA, 0) HomeA, IsNull(t.AwayA, 0) AwayA, IsNull(t.HomeA, 0) - IsNull(t.AwayA, 0) DiffA,
 	IsNull(t.HomeV, 0) HomeV, IsNull(t.AwayV, 0) AwayV, IsNull(t.HomeV, 0) - IsNull(t.AwayV, 0) DiffV

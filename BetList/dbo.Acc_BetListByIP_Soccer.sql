@@ -1,4 +1,7 @@
-﻿ALTER PROC [dbo].[Acc_BetListByIP_Soccer]
+﻿USE bodb02
+GO
+
+ALTER PROC [dbo].[Acc_BetListByIP_Soccer]
 	@custid		INT, 
 	@ip			VARCHAR(15),
 	@fromdate	DATETIME 
@@ -32,86 +35,93 @@ Revisions:
 	- 20120927@Johnson: get commstatus column to check double comm losing
 	- 20130718@Elodie: Apply core betlist
 	- 20150415@Sophia: Get Betcheck for Betradar
+	- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
+	- 20150615@Edward: Support for BetTrade
+	- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
+	
 Param's Explanation:
 	• @fromdate = @winlostdate
 */
-SET NOCOUNT ON
+BEGIN
+	SET NOCOUNT ON
 
-  DECLARE @Data TABLE (
-        	finalhomescore	INT,
-			finalawayscore	INT,
-			oddsid			INT,
-			leagueid		INT,
-			matchid			INT,
-			bettype			SMALLINT,
-			transid			BIGINT,
-			betid			BIGINT,
-			refno			BIGINT,
-			matchcode		NVARCHAR (50),
-			race			NVARCHAR (50), 
-			eventdate		DATETIME,
-			virtualrate		FLOAT,
-			isShowOTExRate  bit,
-			sdiscount		DECIMAL (9, 8),
-			adiscount		DECIMAL (9, 8),
-			discount		DECIMAL (9, 8),
-			homeid			INT,
-			awayid			INT,
-			settleTime		DATETIME,
-			hdp1			SMALLMONEY,
-			hdp2			SMALLMONEY,
-			odds			SMALLMONEY,  
-			finalodds		SMALLMONEY,  
-			finalodds2		SMALLMONEY,
-			modds			SMALLMONEY,
-			OddsType		INT, 
-			status			NVARCHAR (50),
-			comstatus		NVARCHAR (20),
-			stake			MONEY,
-			actual_stake	MONEY,
-			transdate		DATETIME,
-			betteam			NVARCHAR (10),
-			spositiontaking smallmoney,  
-			mpositiontaking smallmoney,  
-			apositiontaking smallmoney,  
-			spositiontaking2 smallmoney,  
-			mpositiontaking2 smallmoney,  
-			apositiontaking2 smallmoney, 
-			livehomescore	INT,
-			liveawayscore	INT,
-			liveindicator	BIT,
-			winlost			MONEY, 
-			commission		MONEY, 
-			scomm			MONEY,   
-			acomm			MONEY,  
-			comm			MONEY,  
-			awinlost		MONEY,  
-			mwinlost		MONEY,  
-			swinlost		MONEY,  
-			creator			VARCHAR (50),
-			username		NVARCHAR (50),
-			hthomescore		INT, 
-			htawayscore		INT,
-			ip				NVARCHAR (15),
-			betfrom			NVARCHAR (1),
-			sporttype		INT,
-			IsNeutral		BIT,
-			showtime		NVARCHAR (50),
-			winlostdate		smalldatetime,
-			BetCheck		NVARCHAR(50)
-			)
+	DECLARE @Data TABLE (
+		finalhomescore	INT,
+		finalawayscore	INT,
+		oddsid			INT,
+		leagueid		INT,
+		matchid			INT,
+		bettype			SMALLINT,
+		transid			BIGINT,
+		betid			BIGINT,
+		refno			BIGINT,
+		matchcode		NVARCHAR (50),
+		race			NVARCHAR (50), 
+		eventdate		DATETIME,
+		virtualrate		FLOAT,
+		isShowOTExRate  bit,
+		sdiscount		DECIMAL (9, 8),
+		adiscount		DECIMAL (9, 8),
+		discount		DECIMAL (9, 8),
+		homeid			INT,
+		awayid			INT,
+		settleTime		DATETIME,
+		hdp1			SMALLMONEY,
+		hdp2			SMALLMONEY,
+		odds			SMALLMONEY,  
+		finalodds		SMALLMONEY,  
+		finalodds2		SMALLMONEY,
+		modds			SMALLMONEY,
+		OddsType		INT, 
+		status			NVARCHAR (50),
+		comstatus		NVARCHAR (20),
+		stake			MONEY,
+		actual_stake	MONEY,
+		transdate		DATETIME,
+		betteam			NVARCHAR (50),
+		spositiontaking smallmoney,  
+		mpositiontaking smallmoney,  
+		apositiontaking smallmoney,  
+		spositiontaking2 smallmoney,  
+		mpositiontaking2 smallmoney,  
+		apositiontaking2 smallmoney, 
+		livehomescore	INT,
+		liveawayscore	INT,
+		liveindicator	BIT,
+		winlost			MONEY, 
+		commission		MONEY, 
+		scomm			MONEY,   
+		acomm			MONEY,  
+		comm			MONEY,  
+		awinlost		MONEY,  
+		mwinlost		MONEY,  
+		swinlost		MONEY,  
+		creator			VARCHAR (50),
+		username		NVARCHAR (50),
+		hthomescore		INT, 
+		htawayscore		INT,
+		ip				NVARCHAR (15),
+		betfrom			NVARCHAR (1),
+		sporttype		INT,
+		IsNeutral		BIT,
+		showtime		NVARCHAR (50),
+		winlostdate		smalldatetime,
+		BetCheck		NVARCHAR(50),
+		transdesc		NVARCHAR(300)
+	)
         
- DECLARE @DetailData TABLE (
-	refno			nvarchar(50), 
-	odds			smallmoney, 
-	stake			money,
-	status			nvarchar(50),
-	apositiontaking smallmoney, 
-	mpositiontaking smallmoney, 
-	spositiontaking smallmoney,
-	bettype			smallint,
-	betteam			nvarchar(50)
-							)  
+	DECLARE @DetailData TABLE (
+		refno			nvarchar(50), 
+		odds			smallmoney, 
+		stake			money,
+		status			nvarchar(50),
+		apositiontaking smallmoney, 
+		mpositiontaking smallmoney, 
+		spositiontaking smallmoney,
+		bettype			smallint,
+		betteam			nvarchar(50)
+	)
+	
 	INSERT INTO @Data						
 	SELECT  finalhomescore,	
 			finalawayscore,	
@@ -173,7 +183,8 @@ SET NOCOUNT ON
 			IsNeutral,		
 			showtime,
 			winlostdate,
-			BetCheck		
+			BetCheck,
+			transdesc			
 	FROM (
 			SELECT
 					m.finalhomescore,
@@ -234,14 +245,18 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck
+					b.BetCheck,
+					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc
+					
 			FROM 	bettrans14 b with (nolock) 
 					INNER JOIN match14 m with (nolock) on b.matchid= m.matchid
 					INNER JOIN custInfo c with (nolock) on c.custid = b.creator
+					INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+					INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 			WHERE 	b.winlostdate = @fromdate
 					AND bettype < 19001 AND bettype <> 10 --20120626@Elodie: exclude outright from sportbook
 					AND b.custid = @custid 
-					AND m.sporttype = 1 
+					AND s.sporttype = 1 
 			
 			UNION ALL 
 			SELECT 
@@ -303,7 +318,8 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck
+					b.BetCheck,
+					'' AS transdesc
 			FROM  	bettrans14 b  with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.bettype = 9 
@@ -374,7 +390,8 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck
+					b.BetCheck,
+					'' AS transdesc
 			FROM  	bettrans14 b  with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.bettype = 29 
@@ -448,15 +465,97 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck
+					b.BetCheck,
+					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc
+					
 			FROM	bettrans b with (nolock) 
 					INNER JOIN match m  with (nolock) on b.matchid = m.matchid
 					INNER JOIN custInfo c with (nolock) on c.custid = b.creator
+					INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+					INNER JOIN sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 			WHERE	b.winlostdate = @fromdate 
-					AND b.bettype < 19001 AND bettype <> 10 --20120626@Elodie: exclude outright from sportbook
-					AND m.sporttype = 1
+					AND b.bettype < 19001 AND b.bettype <> 10 --20120626@Elodie: exclude outright from sportbook
 					AND b.custid = @custid
-	
+					AND s.sporttype = 1
+					--exclude metric gaming running ticket
+					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
+			
+			--Metric gaming running ticket
+			UNION ALL 
+			SELECT 
+				m.finalhomescore,
+				m.finalawayscore,
+				0 AS oddsid,
+				m.leagueid,
+				b.gameID AS bettype,
+				b.translogid AS transid,
+				0 AS betid,
+				b.translogid AS refno,
+				m.matchcode,
+				'' race,
+				'' as eventdate,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				m.homeid,
+				m.awayid,
+				'' AS checktime,
+				0 AS hdp1,
+				0 AS hdp2,
+				b.odds, 
+				0 AS modds,
+				CASE WHEN b.gameid IN (801,803,804,805,806) THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType,
+				b.status,
+				0 as comstatus,  
+				b.stake,
+				b.actual_stake,
+				b.transdate,
+				'' AS betteam,
+				b.spositiontaking,   
+				b.mpositiontaking,   
+				b.apositiontaking,
+				0 AS spositiontaking2,
+				0 AS mpositiontaking2,
+				0 AS apositiontaking2,
+				0 AS livehomescore,
+				0 AS liveawayscore,
+				0 AS liveindicator,
+				0 AS winlost, 
+				0 AS commission, 
+				0 AS scomm,
+				0 AS acomm,
+				0 AS comm,
+				0 AS awinlost,
+				0 AS mwinlost,
+				0 AS swinlost,
+				c.username creator,
+				b.username,
+				m.hthomescore, m.htawayscore,ip,
+				b.betfrom,
+				m.sporttype,
+				b.eventID,
+				m.IsNeutral,
+				m.showtime,
+				0 as virtualrate,
+				0 as isShowOTExRate,
+				0 finalodds,
+				0 finalodds2,
+				b.winlostdate,
+				'' AS BetCheck,
+				b.transdesc
+			FROM   
+				dbo.translog as b with (nolock)   
+				inner join dbo.match as m with (nolock) 
+				on b.eventid = m.matchid
+				INNER JOIN custInfo c with (nolock) 
+				on c.custid = b.creator
+							
+			WHERE   b.winlostdate	= @fromdate
+				AND b.Gameid 		BETWEEN 801 AND 899
+				AND b.custid		= @custid 
+				AND b.statusID		= 0
+			
+			--Mix-Parlay ticket
 			UNION ALL
 			SELECT	0 finalhomescore,
 					0 finalawayscore,
@@ -514,7 +613,8 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck 
+					b.BetCheck,
+					'' AS transdesc 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -583,7 +683,8 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck 
+					b.BetCheck,
+					'' AS transdesc 
 			FROM	bettrans b with (nolock) 
 					INNER JOIN custInfo c  with (nolock) on c.custid = b.creator
 			WHERE	b.winlostdate = @fromdate 
@@ -655,7 +756,8 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck 
+					b.BetCheck,
+					'' AS transdesc 
 			FROM	 
 					bettrans b with (nolock)
 					INNER JOIN outright odds with (nolock) on b.matchid = odds.orid
@@ -726,7 +828,8 @@ SET NOCOUNT ON
 					0 finalodds,
 					0 finalodds2,
 					b.winlostdate,
-					b.BetCheck
+					b.BetCheck,
+					'' AS transdesc
 			FROM 	bettrans14 b with (nolock)
 					INNER JOIN outright14 odds with (nolock) on b.matchid = odds.orid
 					INNER JOIN league l with (nolock) on odds.leagueid = l.leagueid
@@ -736,14 +839,34 @@ SET NOCOUNT ON
 					AND b.custid = @custid
 					AND s.SportType = 1 
 	) x
+	WHERE ip=@ip
 
-WHERE ip=@ip
+	UPDATE betList
+	SET betList.Odds	= originBetList.Odds
+		,betList.Stake	= originBetList.Stake
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
+		,betList.BetID	= originBetList.Bettype
+	FROM @Data AS betList
+		INNER JOIN bettrans AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+		LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)	
 
+	UPDATE betList
+	SET betList.Odds	= originBetList.Odds
+		,betList.Stake	= originBetList.Stake
+		,betList.comm	= CASE WHEN betList.Bettype = 902 THEN ISNULL(commBetList.awinlost,0) ELSE betList.comm END
+		,betList.BetID	= originBetList.Bettype
+	FROM @Data AS betList
+		INNER JOIN bettrans14 AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
+		LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
+	WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
 
-SELECT * FROM @Data
-ORDER BY 4,26
+	DELETE @Data WHERE Sporttype = 1 AND Bettype = 903
 
- INSERT INTO @DetailData
+	SELECT * FROM @Data
+	ORDER BY 4,26
+
+	INSERT INTO @DetailData
 	SELECT 
 		BG.refno, 
 		BG.odds, 
@@ -774,8 +897,8 @@ ORDER BY 4,26
 	INNER JOIN @Data B ON BG.refno = B.refno
 	WHERE B.Bettype between 1101 and 1199
 				   
- SELECT * FROM @DetailData
-  
+	SELECT * FROM @DetailData
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByIP_Soccer] TO [bodbAdminNet]
 GO

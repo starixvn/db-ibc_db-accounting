@@ -30,6 +30,7 @@ BEGIN
 	SET NOCOUNT ON 
 	DECLARE	 @start						DATETIME
 			,@stop						DATETIME
+			,@eventstatus				NVARCHAR(50)
 			,@fth						INT
 			,@fta						INT
 			,@hth						INT
@@ -137,20 +138,24 @@ BEGIN
 		WHERE	matchID = @MatchID 
 				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
 				AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
 		GROUP BY CASE WHEN bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209) THEN 1 
 					  ELSE 0 END 
 
 		IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE CornerBet = 0)
 			INSERT INTO @Status(CornerBet, BetCount, InRunning) VALUES(0,0,0)
-		--IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE CornerBet = 1)
-		--	INSERT INTO @Status(CornerBet, BetCount, InRunning) VALUES(1,0,0)
 
 		DECLARE @NoneCornerBetDone BIT
 
 		SELECT	@NoneCornerBetDone = CASE InRunning WHEN 0 THEN 1 ELSE 0 END 
 		FROM	@Status
 		WHERE	CornerBet = 0 
+
+		SELECT	@eventstatus = CASE WHEN @Action ='CAL' AND @NoneCornerBetDone = 1 THEN N'completed'
+								    ELSE eventstatus END 
+		FROM	DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
+		WHERE	m.matchid = @matchid
 
 		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command			= 'NAP_Admin_Settlement_Corner-CAL'
@@ -176,7 +181,14 @@ BEGIN
 
 		EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
 			 @matchid		= @matchid
-			,@mode			= @action						
+			,@mode			= @action	
+			
+		IF 	@eventstatus='completed'			
+		BEGIN
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+				 @matchid	= @matchid
+				,@command	= 'C'
+		END
 
 	END
 
@@ -191,7 +203,6 @@ BEGIN
 	WHERE	b.matchid = @matchid 
 			AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
 	GROUP BY b.custid
-
 
 
 	-------------------------------------------------------------

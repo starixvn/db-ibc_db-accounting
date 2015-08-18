@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Parlay]    Script Date: 06/23/2015 16:35:32 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Parlay] @matchid INT = NULL
 	,@matchids VARCHAR(2000) = NULL
 	,@mode VARCHAR(15) = 'CAL'
@@ -84,6 +89,7 @@ AS
 		- 20140720@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
 		- 20140815@Kathy: add more mode for Special Delete function
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150608@Kathy: Add more mode Recover for recover parlay tickets [Redmine:#35539]
 
 	Param's Explanation:
 		@action			@mode
@@ -490,7 +496,18 @@ BEGIN
 				@VoidTransID= @VoidTransID,
 				@UserId		= @UserId
 		END
+		
+		IF @Mode = 'RECOVER'
+		BEGIN
+			EXEC dbo.NAP_Admin_Calculate_9m 
+				@matchid	= @MatchID,
+				@matchdate	= @matchdate,
+				@action		= 'RECOVER',
+				@VoidTransID= @VoidTransID
+		END
 	END
 END
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_Parlay] TO [vnteam] AS [dbo]

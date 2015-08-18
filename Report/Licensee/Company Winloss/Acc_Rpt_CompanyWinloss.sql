@@ -17,7 +17,8 @@ AS
 		@ProductId default value is 0 it mean get all products
 		@CurrencyId default value is 0 it mean get all currencies
 		
-	Revisions:	
+	Revisions:
+		- 20150630@Patrick: Remove the UUS line
 */
 
 BEGIN
@@ -137,8 +138,8 @@ BEGIN
 	INSERT INTO @Super(custid, currency)
 	SELECT DISTINCT CustID, currency
 	FROM bodb_Licensee.dbo.f_SelDepCustSuper(@LicenseeName)
-	WHERE (@CurrencyId = 0) OR (@CurrencyId <> 0 AND currency = @CurrencyId)
-
+	WHERE ((@CurrencyId = 0) OR (@CurrencyId <> 0 AND currency = @CurrencyId)) AND currency <> 20
+		
 	IF @ToDate > @MoveBetsDay
 	BEGIN
 		IF @ProductPrefix = 'SB'--for SB
@@ -209,7 +210,7 @@ BEGIN
 				INNER JOIN @SportTypeList bt ON b.SportType = bt.SportType AND b.IsBA = bt.IsBA
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.RoleId = 4
-				AND b.statusid IN (111, 112, 113)
+				AND b.statusid IN (111, 112, 113, 114, 115)
 			GROUP BY b.srecommend
 		END
 		ELSE
@@ -222,7 +223,7 @@ BEGIN
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.RoleId = 4
 				AND b.BetType < 19999
-				AND b.statusid IN (111, 112, 113)
+				AND b.statusid IN (111, 112, 113, 114, 115)
 			GROUP BY b.srecommend
 		END
 

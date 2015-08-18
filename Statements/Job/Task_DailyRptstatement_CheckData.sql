@@ -1,13 +1,10 @@
 USE [bodb_Report]
 GO
-/****** Object:  StoredProcedure [dbo].[Task_DailyRptStatement_CheckData]    Script Date: 06/25/2015 02:51:43 ******/
+/****** Object:  StoredProcedure [dbo].[Task_DailyRptStatement_CheckData]    Script Date: 07/19/2015 22:22:39 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.Task_DailyRptStatement_CheckData    Script Date: 4/2/2015 2:36:13 PM ******/
-
-
 ALTER PROCEDURE [dbo].[Task_DailyRptStatement_CheckData]
 	@winlostdate DATE
 	,@isCheckDataOnly BIT
@@ -19,8 +16,9 @@ AS
  Original:  
   
  Revisions:
-	@20150311@Tom: Change option ReadPast to NOLOCK when select data on bettrans table
-	@20150402@Tom: Change option NOLOCK to ROWLOCK table hint when select on bettrans to prevent dirty read by NOLOCK
+	- @20150311@Tom: Change option ReadPast to NOLOCK when select data on bettrans table
+	- @20150402@Tom: Change option NOLOCK to ROWLOCK table hint when select on bettrans to prevent dirty read by NOLOCK
+	- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -54,6 +52,8 @@ BEGIN
 		,Amount MONEY NULL
 		,ErrCode INT --1: Not Exists | 2: Sum WL-TO  | 10: Transfer | 20: Opening Balance | 30: Void/ Cancelled Bet
 		)
+
+	CREATE CLUSTERED INDEX ErrCode ON #tmpCustMiss (ErrCode )
 
 	IF OBJECT_ID('tempdb..#tmpOpeningBalance') IS NOT NULL
 	BEGIN
@@ -353,6 +353,8 @@ BEGIN
 		GROUP BY bt.srecommend
 	END
 
+	CREATE CLUSTERED INDEX CustId ON #tmpOpeningBalance (CustId)	
+	------------------------------------------------------------
 
 	INSERT INTO #tmpCustMiss (
 		Custid
@@ -423,6 +425,7 @@ BEGIN
 			--	ON bt.matchid = match.matchid				
 		WHERE 
 			bt.bettype <= 19000
+			AND bt.bettype <> 903
 			AND bt.winlostdate = @winlostdate
 			AND bt.statusID in (101, 102) -- 'VOID','REJECT'
 		GROUP BY custid
@@ -504,6 +507,9 @@ BEGIN
 		DROP TABLE #tmpCustMiss
 	END
 	 
+	CREATE CLUSTERED INDEX ErrCode ON #tmpStatement (ErrCode)
+	CREATE NONCLUSTERED INDEX CustId ON #tmpStatement (CustId)
+	
 	--Show up data 
 	IF @isCheckDataOnly = 1
 	BEGIN
@@ -689,3 +695,4 @@ BEGIN
 		DROP TABLE #tmpStatement
 	END
 END
+GO

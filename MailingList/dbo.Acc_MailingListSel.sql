@@ -16,7 +16,6 @@ AS
 		- 20131113@Kathy: Add RecoverBet group [Redmine:#6647]
 		- 20130107@Kathy: Rename 'RecoverBet' group to 'CSD Recovery' [Redmine:#10270]
 		- 20140411@Kathy: Add BetFair, OneExchange's group [Redmine:#6647]
-		- 20150615@Dominic: Add BetTrade's group RM:#36964
 */    
 BEGIN 
 
@@ -96,13 +95,6 @@ BEGIN
 		FROM Acc_MailingList WITH(NOLOCK)
 		WHERE FuncID = @FuncID 
 		and SiteId = 1000006
-		
-		UNION ALL
-		SELECT SiteId, 'BetTrade', ToList, CcList, BccList,
-			CASE WHEN tolist IS NOT NULL OR cclist IS NOT NULL OR bcclist IS NOT NULL THEN 1 ELSE 0 END isavailabe  
-		FROM Acc_MailingList WITH(NOLOCK)
-		WHERE FuncID = @FuncID 
-		and SiteId = 1000007
 	END    
 END  
 go

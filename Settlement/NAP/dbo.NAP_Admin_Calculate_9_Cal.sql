@@ -1,5 +1,12 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 08/05/2015 09:31:35 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 7/16/2015 2:27:21 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 6/24/2015 10:00:28 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime,
@@ -16,6 +23,7 @@ AS
 		- 20140502@Kathy: Calculate the execution time
 		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
 		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
+		- 20150720@Kathy: Correct the winlostdate of main ticket [HotFix #37418]		
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -99,14 +107,14 @@ BEGIN
 		
 	-- Results list from both bettransm & bettransm14
 	Declare @parlay
-		TABLE (refno bigint, matchid int, statuswinlost tinyint, statusID int, odds smallmoney, matchdate smalldatetime)
+		TABLE (refno bigint, matchid int, statuswinlost tinyint, statusID int, odds smallmoney, winlostdate smalldatetime) --20150720@Kathy: use winlostdate instead of matchdate since it may be out updated
 
 	INSERT INTO @parlay
-		SELECT bm.refno, bm.matchid, bm.statuswinlost, statusID, odds, matchdate
+		SELECT bm.refno, bm.matchid, bm.statuswinlost, statusID, odds, winlostdate
 		FROM dbo.bettransm bm with (rowlock) INNER JOIN @tmp_mrefno tm ON bm.refno = tm.refno
 
 	INSERT INTO @parlay
-		SELECT bm.refno, bm.matchid, bm.statuswinlost, statusID, odds, matchdate
+		SELECT bm.refno, bm.matchid, bm.statuswinlost, statusID, odds, winlostdate
 		FROM dbo.bettransm14 bm with (rowlock) INNER JOIN @tmp_mrefno tm ON bm.refno = tm.refno
 	
 	-- CALCULATE effective odds value  
@@ -138,7 +146,7 @@ BEGIN
 				when bm.statusID IN (0,1) then 1
 				else 0
 			end) as runningCnt,
-			MAX(matchdate) AS matchdate_max
+			MAX(winlostdate) AS matchdate_max
 		FROM @parlay bm
 		GROUP BY refno  
 	

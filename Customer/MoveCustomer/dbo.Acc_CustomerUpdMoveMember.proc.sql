@@ -1,10 +1,3 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMember]    Script Date: 06/08/2015 18:06:22 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
 	@agentname     VARCHAR(40)
   , @membername    VARCHAR(40)
@@ -63,7 +56,7 @@ Revisions:
 	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine:#26647]
 	- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
 	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
-	
+	- 20150707@Elodie: Add Super Live product [Redmine: #35776]	
 	
 Param's Explanation:
 • @ErrCode:
@@ -147,6 +140,8 @@ BEGIN
           , @DisableGoldDeluxe		BIT
           , @aHideGoldDeluxe		BIT
           , @HideGoldDeluxe			BIT
+		  , @aDisableSuperLive		BIT
+          , @DisableSuperLive		BIT
 
     SELECT @srecommend	          = srecommend
          , @mrecommend		      = mrecommend
@@ -175,6 +170,7 @@ BEGIN
          , @aGivenCredit		  = credit	
          , @aDisableGoldDeluxe	  = DisableGoldDeluxe
          , @aHideGoldDeluxe		  = HideGoldDeluxe
+		 , @aDisableSuperLive	  = DisableSuperLive
       FROM custinfo WITH(NOLOCK)
      WHERE username = @agentname
        AND roleid = 2
@@ -207,6 +203,7 @@ BEGIN
          , @GivenCredit			 = credit
          , @DisableGoldDeluxe	 = DisableGoldDeluxe 
          , @HideGoldDeluxe		 = HideGoldDeluxe
+		 , @DisableSuperLive	 = DisableSuperLive
       FROM custinfo WITH(NOLOCK)
      WHERE username = @membername
        AND roleid = 1
@@ -444,7 +441,15 @@ BEGIN
 		     , @ErrCode = 120
 		RETURN
     END
-    	
+	
+	--Super Live
+    IF @aDisableSuperLive = 1 AND @DisableSuperLive = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is enabled Super Live but new agent is not enabled Super Live.'
+		     , @ErrCode = 121
+		RETURN
+    END
+	    	
     IF @aSyncLiveCasino = 0 AND @SyncLiveCasino = 1
     BEGIN
 	    SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is synchronized Live Casino but new agent is not synchronized Live Casino.'
@@ -1504,7 +1509,7 @@ BEGIN
     END
     
       -- Gold Deluxe
-    EXEC dbo.Acc_CustomerUpdMemberGoldDeluxe_Positiontaking
+        EXEC dbo.Acc_CustomerUpdMemberGoldDeluxe_Positiontaking
 	    @custid  = @custid,
 	    @v255apositiontaking_1701 = @v255apositiontaking_1701,
     	
@@ -1576,20 +1581,11 @@ BEGIN
 	    END
     END
     
-    --Gold Deluxe
-    IF @aHideGoldDeluxe = 1 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
-    BEGIN
-		    Select	@ErrMsg = 'Member is offered Gold Deluxe but new Agent is not offered Gold Deluxe.',
-				    @ErrCode = 507
-		    
-		    RETURN 
-    END
-    
-    --Gold Deluxe
-    IF @aDisableGoldDeluxe = 1 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
+     --Gold Deluxe
+    IF @aHideGoldDeluxe = 0 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
     BEGIN
 	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	    SET		DisableGoldDeluxe = 1
+	    SET		HideGoldDeluxe = 0
 	    WHERE	custid = @custid 
 	    IF @@ERROR <>0
 	    BEGIN
@@ -1600,6 +1596,23 @@ BEGIN
 		    RETURN 
 	    END
     END
+    
+    --Gold Deluxe
+    IF @aDisableGoldDeluxe = 0 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
+    BEGIN
+	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
+	    SET		DisableGoldDeluxe = 0
+	    WHERE	custid = @custid 
+	    IF @@ERROR <>0
+	    BEGIN
+		    Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+				    @ErrCode = 507
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    RETURN 
+	    END
+    END
+
 
     UPDATE	cg WITH (UPDLOCK,ROWLOCK)
     SET		cg.IsDisabled = 1 
@@ -1997,10 +2010,10 @@ BEGIN
     END CATCH
 END
 
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam] AS [dbo]
+GO 
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
+GO 
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
+GO 
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet]
+GO 

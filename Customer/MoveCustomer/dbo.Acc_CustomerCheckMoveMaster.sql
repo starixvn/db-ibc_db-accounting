@@ -9,7 +9,7 @@ AS
 	Created: Johnson
 	Date: 2012-04-03
 	Task : Check moving a master to another super
-	DB: DBCUST.CustDB
+	DB: DBCUST/CustDB
 	
 	Revisions:
 		- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
@@ -22,6 +22,7 @@ AS
 		- 20140828@Logan:   Add constraint for E-Sports status [Redmine: #20531]
 		- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -101,6 +102,8 @@ BEGIN
 			@sDisableGoldDeluxe		BIT,
 			@mHideGoldDeluxe		BIT,
 			@sHideGoldDeluxe		BIT,
+			@mDisableSuperLive		BIT,
+			@sDisableSuperLive		BIT,
 			@AdminUser				VARCHAR(50)
 
 	SELECT @srecommend			= custid
@@ -128,6 +131,7 @@ BEGIN
 	     , @sHideKeno			= HideKeno
 	     , @sHideGoldDeluxe		= HideGoldDeluxe
 	     , @sDisableGoldDeluxe	= DisableGoldDeluxe
+		 , @sDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK) 
 	 WHERE username = @supername
 	   AND roleid = 4
@@ -158,6 +162,7 @@ BEGIN
 	     , @mHideKeno			= HideKeno 		
 	     , @mHideGoldDeluxe		= HideGoldDeluxe
 	     , @mDisableGoldDeluxe	= DisableGoldDeluxe
+		 , @mDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @mastername
 	   AND roleid = 3
@@ -348,6 +353,14 @@ BEGIN
 		RETURN
 	END
 	
+	--Super Live
+	IF @sDisableSuperLive = 1 and @mDisableSuperLive = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Super Live but new super is not enabled Super Live.'
+		     , @ErrCode = 127
+		RETURN
+	END
+
 	--Check Virtual sport enable status
 	IF @sHideVirtualSports = 1 and @mHideVirtualSports = 0
 	BEGIN
@@ -380,7 +393,7 @@ BEGIN
 			@ErrCode = 125
 		return
 	END
-	
+
 	--Check Number Game
 	IF EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 161)
 		AND NOT EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 161)

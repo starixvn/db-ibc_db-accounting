@@ -7,8 +7,8 @@ AS
 /*
 Created: 20090125@nqminh
 Task : Select customer's status
-DB: DBCUST.CustDB
-Original:
+DB: DBACC.bodb02
+Original: 
 
 Revisions:
     - 20090411@PhuongDoan: Add casino status    
@@ -34,6 +34,10 @@ Revisions:
 	- 20150210@Johnson: use param @system to check permission on ViewIPVN function from NAP or NAP EXT internal login [Redmine: #30860]
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+	- 20150717@Kiwi: Move SP to DB06.bodb02 to solve the performance issue for temporary	
+	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
+	- 20150721@Winnie: Add Microgaming product 
+
 Param's Explanation:
 • @system: = NAP : internal login from NAP
 			NAPEXT:internal login from NAP EXT
@@ -43,16 +47,16 @@ Param's Explanation:
 SET NOCOUNT ON
 
 ----- 20150610@Kos -------------------
-DECLARE @tmp_GameType TABLE (GameTypeID INT, GameTypeName NVARCHAR(50), IsDisabled BIT, IBCBettypeID INT)	
+--DECLARE @tmp_GameType TABLE (GameTypeID INT, GameTypeName NVARCHAR(50), IsDisabled BIT, IBCBettypeID INT)	
 
-BEGIN TRY
-	INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
-	SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBAGE.bodb02.dbo.GameType WITH (NOLOCK)
-END TRY
-BEGIN CATCH
-	INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
-	SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBTXN.bodb02.dbo.GameType WITH (NOLOCK)
-END CATCH
+--BEGIN TRY
+	--INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+	--SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM dbo.GameType WITH (NOLOCK)
+--END TRY
+--BEGIN CATCH
+--	INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+--	SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBTXN.bodb02.dbo.GameType WITH (NOLOCK)
+--END CATCH
 ----- 20150610@Kos -------------------
 
 DECLARE @agentid INT, @roleid TINYINT, @IsInternal BIT, @IsAdminCanViewVNIP BIT,  @LimitPerIP tinyint, @SelectedBetting bit
@@ -159,11 +163,13 @@ SELECT	ISNULL(reject,0) AS Suspend,
 		ISNULL(ci.HideKeno,0) as HideKeno, 
 		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513) then cg.IsDisabled else 1 end) as DisableKeno,
 		ISNULL(DisableGoldDeluxe,1) as DisableGoldDeluxe,
-		ISNULL(HideGoldDeluxe,1) as HideGoldDeluxe
+		ISNULL(HideGoldDeluxe,1) as HideGoldDeluxe,
+		ISNULL(DisableMicrogame,1) as DisableMicrogame,
+		ISNULL(DisableSuperLive,1) as DisableSuperLive
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
-	LEFT JOIN @tmp_GameType g on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
+	LEFT JOIN dbo.GameType g on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
 WHERE ci.CustID = @CustID
 group by
 		ci.reject,
@@ -192,8 +198,9 @@ group by
 		ci.DisableEsports,
 		ci.HideKeno,
 		ci.DisableGoldDeluxe, 
-		ci.HideGoldDeluxe 
-
+		ci.HideGoldDeluxe,
+		ci.DisableMicrogame,
+		ci.DisableSuperLive
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]

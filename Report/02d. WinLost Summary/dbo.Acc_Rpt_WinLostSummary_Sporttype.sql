@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
+﻿
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
     @fromdate    DATETIME,
     @todate        DATETIME    
 AS
@@ -12,17 +19,18 @@ AS
             - 20130822@Johnson: change to use rptWinlost instead rptWinlost2
             - 20131206@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 			- 20140327@Dom: Add Keno
-			- 20150520@Daniel: remove old logic: exclude 8rm if bet on hedge match
+			- 20150525@Jim: apply sport& bettype matrix and also support GoldDeluxe & Metric Gaming (#35359 & #28309 )
+			- 20150710@Jim: Super Balance fix and Microgaming integration (feature #38168 )
+
         Parameter's Explanation:
     */
 BEGIN
-	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
-	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
-
 	SET NOCOUNT ON
-
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel   @mode=5
+	
 	DECLARE @_fromdate    DATETIME,
 			@_todate      DATETIME
 
@@ -30,24 +38,26 @@ BEGIN
 			@_todate = @todate
 
     CREATE TABLE #TempMatch (matchid int, matchcode varchar(50))
-    CREATE TABLE #TempData(sporttype int, 
+    CREATE TABLE #TempData (sporttype int, 
 							bettype int, 
 							liveindicator bit, 
 							ibc int, 
 							IsHedge bit, 
 							status varchar(10),
+							OrderKey tinyint,
 							realWinlost money, 
 							realPosition money,
 							realCommission money, 
 							realLineTotal money, 
 							virtualLineTotal money, 
 							realTurnover money, 
-							virtualTurnover money)
+							virtualTurnover money
+							)
 
     DECLARE @movebetdate datetime,
-        @balanceupdate datetime,
-        @f_date datetime,
-        @t_date datetime
+			@balanceupdate datetime,
+			@f_date datetime,
+			@t_date datetime
     
         SELECT 
             TOP 1 @balanceupdate = winlostdate
@@ -97,164 +107,178 @@ BEGIN
         END
 
         INSERT INTO #TempData
-        SELECT sporttype
-            ,case when bettype in (1,3,7,8) then bettype else 19999 end as bettype
-            ,liveindicator
-            ,ibc
-            , CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END IsHedge
-            ,'' status        
-            ,ISNULL(SUM(realWinlost),0) as realWinlost
-            ,ISNULL(SUM(realPosition),0) as realPosition
-            ,ISNULL(SUM(realcommission),0) as realCommission
-            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
-            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
-            ,ISNULL(SUM(realTurnover),0) as realTurnover
-            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
-        FROM rptWinlost b WITH(NOLOCK)
-        INNER JOIN #TempMatch m ON m.matchid = b.matchid
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND (sporttype BETWEEN 1 and 99 OR sporttype = 161)
-        GROUP BY sporttype,liveindicator ,ibc
-            ,case when bettype in (1,3,7,8) then bettype else 19999 end        
-            , CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END
+        SELECT CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 ELSE	b.sporttype END sporttype
+				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899)) then b.bettype else 19999 end as bettypec
+				,liveindicator
+				,ibc
+				, CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END IsHedge
+				,'' status 
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END AS OrderKey
+				,ISNULL(SUM(realWinlost),0) as realWinlost
+				,ISNULL(SUM(realPosition),0) as realPosition
+				,ISNULL(SUM(realcommission),0) as realCommission
+				,ISNULL(SUM(realLineTotal),0) as realLineTotal
+				,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+				,ISNULL(SUM(realTurnover),0) as realTurnover
+				,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM dbo.rptWinlost b WITH(NOLOCK)
+			INNER JOIN #TempMatch m ON m.matchid = b.matchid
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
+           -- AND (sporttype BETWEEN 1 and 99 OR sporttype = 161)
+		   AND (s.ProductID = 1 OR s.ProductID = 3) -- SB or NG
+        GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 ELSE	b.sporttype END
+				,case when (b.bettype in (1,3,7,8) or (b.bettype between 801 and 899)) then b.bettype else 19999 end
+				,liveindicator 
+				,ibc
+				,CASE WHEN b.bettype in (1,3,7,8) then b.bettype else 19999 end        
+				,CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END
     UNION ALL
         --Casino
-        SELECT 251 as sporttype
-            ,b.bettype
-            ,0 as liveindicator
-            ,0 as ibc
-            ,0 as IsHedge
-            ,'' status
-            ,ISNULL(SUM(realWinlost),0)
-            ,ISNULL(SUM(realPosition),0)
-            ,ISNULL(SUM(realCommission),0)
-            ,ISNULL(SUM(realLineTotal),0)
-            ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal --copy data from actual value
-            ,0 as realTurnover
-            ,NULL as virtualTurnover
-        FROM rptWinlost b WITH(NOLOCK)
-		 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        SELECT  251 as sporttype
+				,b.bettype
+				,0 as liveindicator
+				,0 as ibc
+				,0 as IsHedge
+				,'' status
+				,5 as OrderKey
+				,ISNULL(SUM(realWinlost),0)
+				,ISNULL(SUM(realPosition),0)
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realLineTotal),0)
+				,ISNULL(SUM(realLineTotal),0) as virtualLineTotal --copy data from actual value
+				,0 as realTurnover
+				,NULL as virtualTurnover
+        FROM dbo.rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             --AND bettype = 71
 			AND s.ProductId=6
         GROUP BY b.bettype
     UNION ALL
         --Bingo
-        SELECT 252 as sporttype
-            ,b.bettype
-            ,0 as liveindicator
-            ,0 as ibc
-            ,0 as IsHedge
-            ,'' status
-            ,ISNULL(SUM(realWinlost),0)
-            ,ISNULL(SUM(realPosition),0)
-            ,ISNULL(SUM(realCommission),0)
-            ,ISNULL(SUM(realLineTotal),0)
-            ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
-            ,0 as realTurnover
-            ,NULL as virtualTurnover
-        FROM rptWinlost b WITH(NOLOCK)
-		 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        SELECT 	252 as sporttype
+				,b.bettype
+				,0 as liveindicator
+				,0 as ibc
+				,0 as IsHedge
+				,'' status
+				,6 as OrderKey
+				,ISNULL(SUM(realWinlost),0)
+				,ISNULL(SUM(realPosition),0)
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realLineTotal),0)
+				,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
+				,0 as realTurnover
+				,NULL as virtualTurnover
+        FROM dbo.rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             --AND bettype = 73
 			AND s.ProductId=7
         GROUP BY b.bettype
     UNION ALL
-    SELECT 202 sporttype
-            ,b.bettype
-            ,liveindicator
-            ,ibc
-            ,0 as IsHedge
-            ,'' status        
-            ,ISNULL(SUM(realWinlost),0) as realWinlost
-            ,ISNULL(SUM(realPosition),0) as realPosition
-            ,ISNULL(SUM(realcommission),0) as realCommission
-            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
-            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
-            ,ISNULL(SUM(realTurnover),0) as realTurnover
-            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
-        FROM rptWinlost b WITH(NOLOCK)
+		SELECT 	202 sporttype
+				,b.bettype
+				,liveindicator
+				,ibc
+				,0 as IsHedge
+				,'' status  
+				,7 as OrderKey	
+				,ISNULL(SUM(realWinlost),0) as realWinlost
+				,ISNULL(SUM(realPosition),0) as realPosition
+				,ISNULL(SUM(realcommission),0) as realCommission
+				,ISNULL(SUM(realLineTotal),0) as realLineTotal
+				,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+				,ISNULL(SUM(realTurnover),0) as realTurnover
+				,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM dbo.rptWinlost b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             --and bettype BETWEEN 1501 AND 1599
 			AND s.ProductId=8
         GROUP BY sporttype,liveindicator ,ibc
             ,b.bettype
     UNION ALL
         --Live casino
-        SELECT 162 as sporttype
-            ,b.bettype
-            ,0 as liveindicator
-            ,0 as ibc
-            ,0 as IsHedge
-            ,'' status
-            ,ISNULL(SUM(realWinlost),0)
-            ,ISNULL(SUM(realPosition),0) 
-            ,ISNULL(SUM(realCommission),0)
-            ,ISNULL(SUM(realLineTotal),0)
-            ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
-            ,ISNULL(SUM(realTurnover),0)
-            ,ISNULL(SUM(realTurnover),0) as virtualTurnover
-        FROM rptWinlost b WITH(NOLOCK)
+        SELECT  162 as sporttype
+				,b.bettype
+				,0 as liveindicator
+				,0 as ibc
+				,0 as IsHedge
+				,'' status
+				,8 as OrderKey
+				,ISNULL(SUM(realWinlost),0)
+				,ISNULL(SUM(realPosition),0) 
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realLineTotal),0)
+				,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
+				,ISNULL(SUM(realTurnover),0)
+				,ISNULL(SUM(realTurnover),0) as virtualTurnover
+        FROM dbo.rptWinlost b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             --AND bettype between 1101 and 1199
 			AND s.ProductId=4
         GROUP BY b.bettype
     UNION ALL
-        SELECT 97 -- mix parlay
-            ,9 as bettype
-            ,0 as liveindicator
-            ,0 as ibc
-            ,0 as IsHedge
-            ,status
-            ,ISNULL(SUM(realWinlost),0)
-            ,ISNULL(SUM(realPosition),0) 
-            ,ISNULL(SUM(realCommission),0)
-            ,ISNULL(SUM(realLineTotal),0)
-            ,ISNULL(SUM(virtualLineTotal),0)
-            ,ISNULL(SUM(realTurnover),0)
-            ,ISNULL(SUM(virtualTurnover),0)
-        FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        SELECT  97 -- mix parlay
+				,9 as bettype
+				,0 as liveindicator
+				,0 as ibc
+				,0 as IsHedge
+				,status
+				,3 as OrderKey
+				,ISNULL(SUM(realWinlost),0)
+				,ISNULL(SUM(realPosition),0) 
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realLineTotal),0)
+				,ISNULL(SUM(virtualLineTotal),0)
+				,ISNULL(SUM(realTurnover),0)
+				,ISNULL(SUM(virtualTurnover),0)
+        FROM dbo.rptWinlost b WITH(NOLOCK)
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype = 9
         GROUP BY status
     UNION ALL
-        SELECT 98 --system parlay
-            ,29 as bettype
-            ,0 as liveindicator
-            ,0 as ibc
-            ,0 as IsHedge
-            ,status
-            ,ISNULL(SUM(realWinlost),0)
-            ,ISNULL(SUM(realPosition),0) 
-            ,ISNULL(SUM(realCommission),0)
-            ,ISNULL(SUM(realLineTotal),0)
-            ,ISNULL(SUM(virtualLineTotal),0)
-            ,ISNULL(SUM(realTurnover),0)
-            ,ISNULL(SUM(virtualTurnover),0)
-        FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        SELECT  98 --system parlay
+				,29 as bettype
+				,0 as liveindicator
+				,0 as ibc
+				,0 as IsHedge
+				,status
+				,4 as OrderKey
+				,ISNULL(SUM(realWinlost),0)
+				,ISNULL(SUM(realPosition),0) 
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realLineTotal),0)
+				,ISNULL(SUM(virtualLineTotal),0)
+				,ISNULL(SUM(realTurnover),0)
+				,ISNULL(SUM(virtualTurnover),0)
+        FROM dbo.rptWinlost b WITH(NOLOCK)
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype = 29
         GROUP BY status
     UNION ALL
         --racing
-        SELECT sporttype
-            ,0 as bettype
-            ,0 as liveindicator
-            ,0 as ibc
-            ,0 as IsHedge
-            ,'' as status
-            ,ISNULL(SUM(realWinlost),0)
-            ,ISNULL(SUM(realPosition),0) 
-            ,ISNULL(SUM(realCommission),0)
-            ,ISNULL(SUM(realLineTotal),0)
-            ,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
-            , 0 as realTurnover
-            ,0 as virtualTurnover
+        SELECT   sporttype
+				,0 as bettype
+				,0 as liveindicator
+				,0 as ibc
+				,0 as IsHedge
+				,'' as status
+				,13 as OrderKey
+				,ISNULL(SUM(realWinlost),0)
+				,ISNULL(SUM(realPosition),0) 
+				,ISNULL(SUM(realCommission),0)
+				,ISNULL(SUM(realLineTotal),0)
+				,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
+				,0 as realTurnover
+				,0 as virtualTurnover
         FROM rptWinlost b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             --AND bettype BETWEEN 31 AND 33
 			AND s.ProductId=2
         GROUP BY sporttype
@@ -266,6 +290,7 @@ BEGIN
             ,0 as ibc
             ,0 as IsHedge
             ,'' as status
+			,14 as OrderKey
             ,ISNULL(SUM(realWinlost),0)
             ,ISNULL(SUM(realPosition),0) 
             ,ISNULL(SUM(realCommission),0)
@@ -287,7 +312,8 @@ BEGIN
             ,liveindicator
             ,ibc
             ,0 as IsHedge
-            ,'' status        
+            ,'' status 
+			,1 as OrderKey	
             ,ISNULL(SUM(realWinlost),0) as realWinlost
             ,ISNULL(SUM(realPosition),0) as realPosition
             ,ISNULL(SUM(realcommission),0) as realCommission
@@ -295,13 +321,100 @@ BEGIN
             ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
             ,ISNULL(SUM(realTurnover),0) as realTurnover
             ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
-        FROM rptWinlost WITH(NOLOCK)
-        WHERE winlostdate BETWEEN @_fromdate AND @_todate
+        FROM rptWinlost b WITH(NOLOCK)
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND sporttype = 154
         GROUP BY sporttype,bettype, liveindicator ,ibc
-                
-    ORDER BY 1,3 DESC,2,4,5
-
+	--- GD	
+     UNION ALL
+        SELECT 255 sporttype
+            ,b.bettype
+            ,liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,9 as OrderKey	
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=12
+        GROUP BY sporttype,b.bettype, liveindicator ,ibc
+	-- Micro Gaming
+		UNION ALL
+        SELECT 203 sporttype
+            ,b.bettype
+            ,liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,10 as OrderKey	
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=13
+        GROUP BY sporttype,b.bettype, liveindicator ,ibc
+	--- AG Casino
+		UNION ALL
+        SELECT 250 sporttype
+            ,b.bettype
+            ,liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,11 as OrderKey	
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=11
+        GROUP BY sporttype,b.bettype, liveindicator ,ibc
+	--	VegasGame aka Macau
+		UNION ALL
+        SELECT 249 sporttype
+            ,b.bettype
+            ,liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,12 as OrderKey	
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=14
+        GROUP BY sporttype,b.bettype, liveindicator ,ibc	
+	ORDER BY OrderKey ASC	
+   -- ORDER BY 1,3 DESC,2,4,5
+	
+	UPDATE #TempData SET IsHedge =1,
+						ibc = 0
+	WHERE ibc = 1 AND IsHedge = 1
 	
 	SELECT sporttype,
            bettype,
@@ -322,12 +435,22 @@ BEGIN
            liveindicator,
            ibc,
            IsHedge,
-           status
-	
+           status,
+           OrderKey
+	ORDER BY OrderKey
     DROP TABLE #TempMatch
 	DROP TABLE #TempData
-    --exec Acc_Rpt_WinlostSummary_Sporttype @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
+    --exec Acc_Rpt_WinlostSummary_Sporttype_xtest @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
 
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
+GO 
+ 
