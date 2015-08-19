@@ -1,10 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 08/06/2015 14:00:14 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1] 
 	@creator			INT
 	,@matchid			INT
@@ -306,7 +299,7 @@ BEGIN
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-								EXEC dbo.NAP_Admin_Settlement_Parlay
+																EXEC dbo.NAP_Admin_Settlement_Parlay
 			@matchids		= @matchid
 			,@creator		= @creator
 			,@action		= 'UNDO'
@@ -319,7 +312,7 @@ BEGIN
 			--,@ivalue		= @SettlementStatus135 -- update SettlementStatus135 value
 			,@SelectedSet	= @SelectedSet	--Tennis 
 
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+																EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command		= 'NAP_Admin_Settlement_1-UNDO'
 			,@MatchID		= @matchid
 			,@betstatus		= @betstatus
@@ -446,7 +439,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
 		WHERE m.matchid = @matchid
 
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+																EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command		= 'NAP_Admin_Settlement_1-CAL'
 			,@MatchID		= @matchid
 			,@FTHome		= @fth
@@ -518,14 +511,14 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		IF LEFT(@action, 3) = 'CAL'
 		BEGIN
-			IF @sporttype IN (180, 181, 182, 183, 184, 185, 186) --virtual sports 	
-			BEGIN
-				EXEC dbo.NAP_Admin_Settlement_3_VS 
-					@creator	= @creator
-					,@matchid	= @matchid
-					,@mode		= @action
-			END
-			ELSE IF @Sporttype = 5 -- Tennis settlement 
+			--IF @sporttype IN (180, 181, 182, 183, 184, 185, 186) --virtual sports 	
+			--BEGIN
+			--	EXEC dbo.NAP_Admin_Settlement_3_VS 
+			--		@creator	= @creator
+			--		,@matchid	= @matchid
+			--		,@mode		= @action
+			--END
+			IF @Sporttype = 5 -- Tennis settlement 
 			BEGIN 
 				EXEC dbo.NAP_Admin_Settlement_5 
 					@MatchID = @MatchID,
@@ -556,7 +549,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					)
 				IF CHARINDEX('1FL:', @betstatus) > 0
 				BEGIN
-																				EXEC dbo.NAP_Admin_Settlement_FGLG 
+																																								EXEC dbo.NAP_Admin_Settlement_FGLG 
 						@creator			= @creator
 						,@matchid			= @matchid
 						,@action			= 'CAL-HT'
@@ -582,7 +575,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					FROM dbo.bettransm bm WITH(NOLOCK)
 					WHERE bm.bettype = 14 AND bm.matchid = @matchid
 					)
-																EXEC dbo.NAP_Admin_Settlement_FGLG 
+																																EXEC dbo.NAP_Admin_Settlement_FGLG 
 					@creator			= @creator
 					,@matchid			= @matchid
 					,@action			= 'CAL-FT'
@@ -692,7 +685,7 @@ need below code to determine for mark match as calculated (all bets settled)
 	WHERE	Increased = 0
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
+				EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
@@ -707,7 +700,7 @@ need below code to determine for mark match as calculated (all bets settled)
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
+				EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 
@@ -944,7 +937,6 @@ need below code to determine for mark match as calculated (all bets settled)
 		END CATCH
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_1] TO [bodbAdminNet] AS [dbo]
 GO
