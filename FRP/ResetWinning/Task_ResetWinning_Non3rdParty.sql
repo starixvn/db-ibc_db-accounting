@@ -1,13 +1,3 @@
-USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Task_ResetWinning_Non3rdParty]    Script Date: 06/03/2015 05:00:18 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
- 
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate datetime,
 	@todate   datetime,
@@ -28,7 +18,8 @@ AS
 						   . Remove P2P (Poker)
 						   . Revise Code
 						   . Apply AG Casino and Vegas Game [#37683]
-						    
+		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
+							    
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -86,7 +77,6 @@ BEGIN
 		SELECT @wldate = DATEADD( DAY, -1, @wldate)
 	END
 
----************************nho chang table test nay
 	IF @isTest = 0
 	BEGIN 
 		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
@@ -276,7 +266,7 @@ BEGIN
 		   END Product,
 		   ISNULL(SUM(winlost), 0) winlost
 	  FROM #bettranstmp
-	 WHERE (bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72, 73) AND bettype NOT BETWEEN 81 AND 120)
+	 WHERE (bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72, 73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
 		or bettype between 1301 and 1334		
   GROUP BY liveindicator, winlostdate
 
@@ -294,11 +284,12 @@ BEGIN
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
-
 			 WHEN bettype = 1800 THEN 'AG Casino'
-			 WHEN bettype = 1900 THEN 'Vegas Game'
-
+			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
+			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
+			 WHEN bettype BETWEEN 2001 AND 2099 THEN 'Microgaming'
+			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	  FROM #bettranstmp
@@ -310,6 +301,9 @@ BEGIN
 			OR bettype BETWEEN 1501 AND 1599
 			OR bettype IN (1800, 1900)
 			OR bettype BETWEEN 1700 AND 1799 
+			OR bettype BETWEEN 801 AND 899
+			OR bettype BETWEEN 2001 AND 2099  
+			OR bettype BETWEEN 901 AND 903  
 		   )
   GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -322,11 +316,12 @@ BEGIN
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
-
 			 WHEN bettype = 1800 THEN 'AG Casino'
-			 WHEN bettype = 1900 THEN 'Vegas Game'
-
+			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
+			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
+			 WHEN bettype BETWEEN 2001 AND 2099 THEN 'Microgaming'
+			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 		   END, winlostdate
 
     UNION ALL
@@ -567,6 +562,8 @@ BEGIN
 	    RETURN
 	END
 END
+
+
 
 GO
 

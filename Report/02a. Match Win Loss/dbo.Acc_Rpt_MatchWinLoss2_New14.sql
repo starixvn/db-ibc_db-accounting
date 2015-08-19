@@ -23,6 +23,7 @@ AS
 			- 20140304@Dom: Add Keno
 			- 20141203@Dom: Apply sport bettype matrix
 			- 20150520@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
+			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -280,7 +281,23 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
 	WHERE	s.ProductID = 6
-		--bettype IN(71, 72)		
+		--bettype IN(71, 72)	
+		
+	   -- Vegas Games
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,		
+			sum(isnull(b.IBCTurnover,0)) IBCTurnover,
+			'Macau' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductID = 14
+		 	
 
 	    -- Bingo - 73
 	UNION ALL
@@ -397,6 +414,38 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductID = 12
+
+	---Microgaming
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,		
+			sum(b.IBCTurnover) IBCTurnover,
+			'Microgaming' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductID = 13
+
+
+	---AG Casino
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,		
+			sum(b.IBCTurnover) IBCTurnover,
+			'AG Casino' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductID = 11
+
 			
 	  -- Metric Gaming - Super Live
 	UNION ALL
@@ -550,6 +599,26 @@ BEGIN
 		--bettype IN(71, 72) 
 		and matchid IN (0, 71) 			
 	GROUP BY b.bettype
+
+	    -- Vegas Games
+	UNION ALL 
+	SELECT	31 Num,
+			b.bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 LineTotal_others_live,
+			0 VirtualLineTotal_others_live,
+			sum(LineTotal) as  LineTotal_others,
+			0 VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductId = 14	
+	GROUP BY b.bettype
+
 	
 	    -- Bingo 
 	UNION ALL
@@ -650,6 +719,45 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 12		
 	GROUP BY b.bettype
+
+	 -- Microgaming
+	UNION ALL
+	SELECT	72 Num,
+			b.bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			0 as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 13		
+	GROUP BY b.bettype
+
+	 -- AG Casino
+	UNION ALL
+	SELECT	73 Num,
+			b.bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			0 as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 11
+	GROUP BY b.bettype
+
 
 	    -- Parlay
 	UNION ALL 

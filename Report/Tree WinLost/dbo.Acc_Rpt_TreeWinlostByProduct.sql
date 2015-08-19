@@ -1,12 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_TreeWinlostByProduct_xtest]    Script Date: 06/08/2015 13:27:39 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_Rpt_TreeWinlostByProduct_xtest    Script Date: 6/3/2015 5:20:57 PM ******/
+ 
 ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,    
@@ -21,6 +15,9 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]
 	@showKeno BIT=0,
 	@ShowGD BIT = 0, -- Show GoldDeluxe
 	@ShowMGSL BIT = 0, -- Show Metric Gaming
+	@showMGC BIT=0, --Micro Gaming
+	@showVG BIT=0, --Vegas Games
+	@showAGCS BIT=0, --AG Casino
 	@TurnOver_8RM MONEY = 0 OUTPUT,    
 	@Total_8RM   MONEY = 0 OUTPUT,    
 	@VirtualTotal_8RM  MONEY = 0 OUTPUT,    
@@ -47,6 +44,7 @@ Revisions:
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
 	-20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 	
+	-20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)
 */    
   
   
@@ -132,6 +130,25 @@ SELECT Bettype, 1
 FROM @SportBettype   
 WHERE ProductID = 1
 	AND SubProduct= 'MG-SuperLive'
+	
+IF @showMGC =1  --Micro Gaming
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 13
+
+IF @showVG =1  --- VegasGame aka Macau
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 14	 
+
+IF @showAGCS =1 -- AG Casino
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 11	
+	
 --IF @winlostdate > @MoveBetDays  
 --BEGIN  
 

@@ -15,6 +15,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_MAg2]
  @ShowKN  BIT=0, -- Keno
  @ShowAGC		BIT = 0, --AG Casino
  @ShowGD		BIT = 0, -- Gold Deluxe
+ @showMGC 		BIT	= 1, --Micro Gaming
  @MoveBetsDay SMALLDATETIME,  
  @IsOld BIT = 0,  
  @drawfilter SMALLINT = 1,  
@@ -33,7 +34,7 @@ AS
 	- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
 	- 20150123@Jim: support base on GBP currency
 	- 20150518@Florent: Add AGC and GD
-
+	- 20150710@Jim:  Microgaming integration (Feature #38168)
  Param's Explanation:    
    + @CustID: SuperID    
    + @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)  
@@ -179,7 +180,18 @@ BEGIN
 		SELECT typeid FROM bettype (NOLOCK)
 		WHERE (typeid BETWEEN 1501 AND 1599)
 	END
-	  
+	 
+	IF @showMGC =1 -- Micro Gaming
+	BEGIN 
+		INSERT INTO @sporttype (sporttype)
+		VALUES(203)
+
+		INSERT INTO @bettype(bettype)
+		SELECT typeid FROM bettype (NOLOCK)
+		WHERE (typeid BETWEEN 2001 AND 2099)
+	END 
+
+	
 	DECLARE @TempFromDate DATETIME   
 	DECLARE @TempToDate DATETIME   
 	DECLARE @MaxOldDate DATETIME  
@@ -261,7 +273,7 @@ BEGIN
 			GROUP BY b.winlostdate,s.currency,b.mrecommend, b.statusID    
 		END  
 	   
-		IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1 OR @ShowCS=1 OR @showKN=1)  
+		IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1 OR @ShowCS=1 OR @showKN=1 OR @showMGC =1)  
 		BEGIN  
 			INSERT INTO #SAgWinLoss  
 			SELECT b.winlostdate,b.mrecommend,s.currency,   
@@ -343,7 +355,7 @@ BEGIN
 		 END  
 	   
 	 --exclude BA tickets  
-	 IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @showKN=1)  
+	 IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @showKN=1 OR @showMGC =1)  
 	 BEGIN  
 	 
 		  INSERT INTO #SAgWinLoss    
@@ -360,7 +372,7 @@ BEGIN
 			ELSE 1 END  
 		   ),       
 		   SUM(b.winlost),    
-		   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
+		   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
 		   SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,  
 		   0 AS AmountDueToBA,  
 		   - SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,  
@@ -434,7 +446,7 @@ IF @IsOld = 1
 		 END  
 	   
 	 --exclude BA tickets  
-	 IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @showKN=1)  
+	 IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @showKN=1 OR @showMGC =1)  
 	 BEGIN  
 	  INSERT INTO #SAgWinLoss    
 	  SELECT   
@@ -450,7 +462,7 @@ IF @IsOld = 1
 		ELSE 1 END  
 	   ),       
 	   SUM(b.winlost),    
-	   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
+	   - SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,  
 	   SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,  
 	   0 AS AmountDueToBA,  
 	   - SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,  

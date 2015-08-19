@@ -65,6 +65,8 @@ AS
 		- 20141203@Dom: Apply sport bettype matrix
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 		- 20150521@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
+		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
+		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -81,7 +83,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(site tinyint,
@@ -417,7 +419,7 @@ BEGIN
 			0 EnableVirtual
 	FROM @RBWinlost
 
-	---Live Casino + Gold Deluxe
+	---Live Casino + Gold Deluxe + AG Casino + Microgaming exclude RNG Casino
 	UNION ALL
 	SELECT
 			102,
@@ -435,9 +437,8 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId IN (4,12)
-	--b.bettype BETWEEN 1101 AND 1199
-			AND b.matchid > 0
+	WHERE	(s.ProductId IN (4,12,11))    -----SLI, Gold Deluxe, AG Casino
+			OR (s.ProductId = 13 AND SubProduct <> 'MGC-RNG') --- Microgaming exclude RNG Casino			
 	GROUP BY site
 		
 	----VIRTUAL SPORT
@@ -458,7 +459,7 @@ BEGIN
 		--b.bettype BETWEEN 1201 AND 1299
 	GROUP BY site			
 	
-	----CASINO
+	----CASINO + Vegas Games + Microgaming - RNG Casino
 	UNION ALL
 	SELECT	103,'Casino', 251, 0, site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
@@ -466,14 +467,14 @@ BEGIN
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
 			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
-			0 RealTurnover,
-			0 VirtualTurnover,
+			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_actualrate END ) AS RealTurnover,
+			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_virtualrate END) AS VirtualTurnover,
 			0 EnableVirtual
-	from	#src b with (nolock)
+	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	where 	s.ProductId = 6
-		--bettype IN(71, 72)
-			AND matchid IN (0, 71) 
+	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71))
+			OR (s.ProductId = 14)  --- Vegas Games
+			OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino			
 	GROUP BY site 
 
 	--P2P
@@ -575,6 +576,7 @@ BEGIN
 	DROP TABLE #src
 	DROP TABLE #DepAgent
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]
