@@ -156,7 +156,7 @@ BEGIN
 						--'AND b.rptDate >= isnull(lic.AffectedDate,''1999-01-01'')' + char(13) +
 						'AND b.status NOT IN (-1,103) ' + char(13) +
 						'AND CurrencyID<>20 ' + char(13) +
-						'AND b.bettype NOTE IN (901,902,903)'+CHAR(13)+
+						'AND b.bettype NOT IN (901,902,903)'+CHAR(13)+
 						CASE WHEN @bettype<>0 THEN 'AND b.bettype = ' + convert(varchar(10), @Bettype)  ELSE '' END + char(13) +	
 						CASE WHEN @SportID<>0 THEN 'AND b.bettype NOT IN (9,29)  AND l.Sporttype = ' + convert(varchar(10), @SportID)  ELSE '' END + char(13) +
 						CASE 
