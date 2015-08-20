@@ -1,18 +1,22 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelMatchLimit] 
-	@custid int,
-	@matchlimit smallmoney OUTPUT
+	@custid		INT,
+	@matchlimit SMALLMONEY OUTPUT
 AS
 /*
-Created: 
-Task : Get max exposure value of customer
-DB: DB053.bodb02
-Revisions:
-						
-Parameters Explanation:
+	Created: 
+	Task : Get max exposure value of customer
+	DB: DBCUST.CustDB
+	Revisions:
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+	Parameters Explanation:
 	
 */
 SET NOCOUNT ON
-Select @matchlimit = matchlimit from custinfo with (NOLOCK) where custid = @custid
+
+SELECT @matchlimit = matchlimit 
+FROM custinfo WITH (NOLOCK) 
+WHERE custid = @custid
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelMatchLimit] TO [bodbAdminNet] AS [dbo]

@@ -66,8 +66,8 @@ AS
 		- 20150521@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 		- 20150723@Sophia: Apply Bettrade [#38815]
+		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 
-	
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -393,8 +393,8 @@ BEGIN
 	/*
 	Display order for gaming
 		1. Number Game
-		2. Live Casino
-		3. Casino
+		2. Live Casino + Gold Deluxe + AG Casino + Microgaming exclude RNG Casino
+		3. Casino + Vegas Games + Microgaming - RNG Casino
 		4. Virtual Sports + Gold Deluxe
 		5. Keno
 		6. Racing
@@ -461,8 +461,8 @@ BEGIN
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
 			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
-			0 RealTurnover,
-			0 VirtualTurnover,
+			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_actualrate END ) AS RealTurnover,
+			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_virtualrate END) AS VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype

@@ -22,8 +22,8 @@ AS
 							Expand the size of match code to varchar(50)
 		-- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		-- 20121112@Elodie: Use stake field to calculate TurnOver instead of actual_stake
-		-- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]	
-		-- 20150723@Sophia: Exclude data of Bettrade [#38815]			
+		-- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]
+		-- 20150723@Sophia: Exclude data of Bettrade [#38815]		
 
 		Explanation's Param:
 			- @winlostdate: the date want to view report

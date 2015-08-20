@@ -1,11 +1,11 @@
-﻿USE [bodb02]
+﻿USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdTransferOption]    Script Date: 04/13/2010 22:51:09 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdTransferOption]    Script Date: 06/10/2015 16:19:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdTransferOption    Script Date: 12/5/2013 4:34:25 PM ******/
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdTransferOption]
 	@CustId INT,
 	@TransferOption VARCHAR(8),
@@ -20,7 +20,7 @@ AS
 /*
 Created: 
 Task : Update transfer option.
-DB: DBTXN/bodb02
+DB: DBTXN/CustDB
 Original: 
 
 Revisions:
@@ -34,6 +34,8 @@ Revisions:
 	- 20110907@Lukas: Change linked-server from DB052 -> DB053
 	- 20130208@Elodie: Change link server DB03 to DBPOLICY, DB053 to DBAGE
 					   Write more log on DBTXN server in case of DBLOG server failure
+	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB, Change Age_CustomerSelCheckBelonging -> Age_CustomerSelCheckBelongingByCustID) [Redmine:#36216]
+						  
 Param's Explanation:
 */
 
@@ -49,7 +51,7 @@ DECLARE @Old_TransferOption TINYINT
 --------------------------
 -- ***Check Downline Belonging***
 DECLARE @roleid TINYINT
-EXEC DBAGE.bodb02.dbo.Age_CustomerSelCheckBelonging 
+EXEC dbo.Age_CustomerSelCheckBelongingByCustID 
 @SessionCustID = @UserID, 
 @Custid = @CustId,
 @roleid = @roleid OUTPUT
@@ -66,7 +68,7 @@ BEGIN
 END
 --end
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 IF @ErrCode <>0 RETURN
 --end
 
@@ -196,12 +198,11 @@ Select @TrackingValue2 = '<Acc_CustomerUpdTransferOption CustId="'+ coalesce(cas
 		@duration = @duration
 END CATCH
 
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdTransferOption] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdTransferOption] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdTransferOption] TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdTransferOption] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdTransferOption] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdTransferOption] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdTransferOption] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdTransferOption] TO [vnteam] AS [dbo]

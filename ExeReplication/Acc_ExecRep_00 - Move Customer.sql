@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ExecRep_00]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_ExecRep_00]    Script Date: 07/07/2015 04:30:20 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_ExecRep_00    Script Date: 9/12/2014 9:25:10 AM ******/
+ALTER PROCEDURE [dbo].[Acc_ExecRep_00]
 	@custid INT = 0,
 	@recommend INT = 0,
 	@recommend_old INT = 0,
@@ -962,7 +970,6 @@ BEGIN
 		END
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_ExecRep_00] TO [bodbAdminNet] AS [dbo]
 GO
