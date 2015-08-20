@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/20/2015 15:19:21 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/20/2015 16:27:00 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -56,6 +56,7 @@ BEGIN
 			,@start = CURRENT_TIMESTAMP
 			
 	SET @BettypeTime = ISNULL(@BettypeTime,'')
+	SET @Result = ISNULL(@Result,'')
 			
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (
