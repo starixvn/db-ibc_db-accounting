@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/17/2015 10:40:42 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/20/2015 11:10:41 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -26,6 +26,7 @@ AS
 		DB: DBTXN/bodb02
 		
 		Revisions:
+			- 20150817@Kathy: Using new balance table (BalCreditOthersPending,BalDebitOthersPending) [Redmine:#40125]
 		
 		Parameter's Explantion:
 			-@Result = <Result>
@@ -117,33 +118,38 @@ BEGIN
 		,balance	MONEY
 		)
 	
-	CREATE TABLE #tmpRef (refno BIGINT)
+	CREATE TABLE #tmpRef (refno BIGINT, isRunning BIT)
+	
+	CREATE INDEX IX_Balance_IsRunning ON #tmpRef (isRunning)
 	
 	DECLARE @TotalAccount				INT = 0
 		,@TotalAccount_BalanceUpdate	INT = 0
 	
-	INSERT INTO #tmpRef 
-	SELECT translogid
+	INSERT INTO #tmpRef (refno, isRunning)
+	SELECT	translogid
+			,CASE WHEN statusID IN (0,1) THEN 1 ELSE 0 END AS isRunning
 	FROM Translog WITH(NOLOCK)
 	WHERE GameID = @bettype
 		AND EventID = @matchid
-		AND statusid IN (0,1)--running, waiting
+		AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
+										ELSE @bettypeTime
+										END
 	
 	INSERT INTO #BalanceBefore
 	SELECT custid,SUM(balance)
 	FROM 
 	(
-		SELECT b.custid
-			,SUM(b.winlost - b.actual_stake + b.playercomm) as balance
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @matchid 
-			AND b.bettype = @Bettype
-			AND refno NOT IN (SELECT refno FROM #tmpRef)
+		SELECT	b.custid
+				,SUM(b.winlost - b.actual_stake + b.playercomm) as balance
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	b.matchid = @matchid 
+				AND b.bettype = @Bettype
+				AND b.refno IN (SELECT refno FROM #tmpRef WHERE isRunning = 0)
 		GROUP BY b.custid
 		UNION ALL
-		SELECT custid, SUM(-actual_stake) as balance
-		FROM translog WITH(NOLOCK)
-		WHERE translogid IN (SELECT refno FROM #tmpRef)
+		SELECT	custid, SUM(-actual_stake) as balance
+		FROM	translog WITH(NOLOCK)
+		WHERE	translogid IN (SELECT refno FROM #tmpRef WHERE isRunning = 1)				
 		GROUP BY custid
 	)t
 	GROUP BY custid
@@ -178,13 +184,17 @@ BEGIN
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE matchid = @Matchid 
 		AND b.bettype = @Bettype
-	Group by custid
+		AND b.refno IN (SELECT refno FROM #tmpRef)
+	GROUP BY custid
     
     -------------------------------------------------------------
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
 
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -200,16 +210,36 @@ BEGIN
 
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
-
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+				EXEC dbo.Dot_BalancePendingDebitIns
+			@BalancePending = @tblDebitPending
+			,@Type			= 4 -- Others
+			
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+				EXEC dbo.Dot_BalancePendingCreditIns
+			@BalancePending = @tblCreditPending
+			,@Type			= 4 -- Others
+			
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----
@@ -349,14 +379,6 @@ BEGIN
 	END
 
 END
-
-
-
-
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MetricGaming] TO [bodbAdminNet] AS [dbo]
