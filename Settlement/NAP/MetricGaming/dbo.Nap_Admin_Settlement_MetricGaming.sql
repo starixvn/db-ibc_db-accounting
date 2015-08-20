@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/20/2015 11:10:41 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/20/2015 14:58:31 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -26,7 +26,6 @@ AS
 		DB: DBTXN/bodb02
 		
 		Revisions:
-			- 20150817@Kathy: Using new balance table (BalCreditOthersPending,BalDebitOthersPending) [Redmine:#40125]
 		
 		Parameter's Explantion:
 			-@Result = <Result>
@@ -131,7 +130,7 @@ BEGIN
 	FROM Translog WITH(NOLOCK)
 	WHERE GameID = @bettype
 		AND EventID = @matchid
-		AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
+		AND ISNULL(@bettypeTime,'') = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
 										ELSE @bettypeTime
 										END
 	
@@ -153,10 +152,10 @@ BEGIN
 		GROUP BY custid
 	)t
 	GROUP BY custid
-	
+
 	SET @TotalAccount = @@ROWCOUNT
 	
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_MetricGamingResult_Update
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_MetricGamingResult_Update
 		@ResultID				= @ResultID
 		,@Action				= @Action
 		,@Result				= @Result
@@ -164,7 +163,7 @@ BEGIN
 		,@isSettleDetermined	= @isSettleDetermined
 		
 	
-	EXEC NAP_Admin_Calculate_801
+		EXEC NAP_Admin_Calculate_801
 		@matchid				= @matchid
 		,@bettype				= @bettype
 		,@bettypeTime			= @bettypeTime
@@ -192,9 +191,6 @@ BEGIN
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
 
-	DECLARE @tblDebitPending TVP_BalanceList
-	DECLARE @tblCreditPending TVP_BalanceList
-	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -210,36 +206,16 @@ BEGIN
 
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	--SELECT custid, ABS(balance)
-	--FROM #Balance
-	--WHERE Increased = 0
+	INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	SELECT custid, ABS(balance)
+	FROM #Balance
+	WHERE Increased = 0
 
-	INSERT INTO @tblDebitPending (custID, balance)
-	SELECT	custid, ABS(balance)
-	FROM	#Balance
-	WHERE	Increased = 0
-	
-	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingDebitIns
-			@BalancePending = @tblDebitPending
-			,@Type			= 4 -- Others
-			
-	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	--SELECT custid, balance
-	--FROM #Balance
-	--WHERE Increased = 1
-	
-	INSERT INTO @tblCreditPending (custID, balance)
-	SELECT	custid, balance
-	FROM	#Balance
-	WHERE	Increased = 1
-	
-	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingCreditIns
-			@BalancePending = @tblCreditPending
-			,@Type			= 4 -- Others
-			
+	INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	SELECT custid, balance
+	FROM #Balance
+	WHERE Increased = 1
+
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----
@@ -256,7 +232,7 @@ BEGIN
 	SELECT GETDATE()
 		,@MatchID
 		,@ActionID
-		,1 -- Sportsbook Single bet Settlement 
+		,3 -- Sportsbook Single bet Settlement 
 		,CustID
 		,Balance
 		,0
@@ -307,9 +283,9 @@ BEGIN
 								+ @Result
 						  +	'</Event>'
 					+ '</Log>'
-								
+			
 	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming
 			@UserID			= @AdminId
 			,@MatchID		= @matchid			
 			,@ActionID		= @ActionID	
@@ -320,7 +296,7 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming 
+				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming
 			@UserID			= @AdminId
 			,@MatchID		= @matchid			
 			,@ActionID		= @ActionID	
