@@ -108,7 +108,7 @@ CREATE TABLE #BalanceAfter (custid int PRIMARY KEY, balance money)
 CREATE TABLE #Balance (custid int not null, balance money, Increased bit not null)
 ALTER TABLE #Balance add constraint pk_C2 primary key (custid, Increased);
 
-DECLARE @tblCreditPending BalanceList
+DECLARE @tblCreditPending TVP_BalanceList
 
 CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
  

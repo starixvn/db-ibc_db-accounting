@@ -946,8 +946,8 @@ BEGIN
 	GROUP BY b.CustID
 
 	---INSERT data into pending balance table 
-	DECLARE @tblDebitPending BalanceList
-	DECLARE @tblCreditPending BalanceList
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 	
 	--INSERT INTO BalancePendingCredit (custid,Balance)
 	--SELECT		a.custid, (a.balance - b.balance) as Balance

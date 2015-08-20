@@ -126,8 +126,8 @@ END
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
 	
-	DECLARE @tblDebitPending BalanceList
-	DECLARE @tblCreditPending BalanceList
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 

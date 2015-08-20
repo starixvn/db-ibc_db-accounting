@@ -158,8 +158,8 @@ BEGIN
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid int not null , balance money, Increased bit not null , PRIMARY KEY CLUSTERED(custid, Increased))
 	
-	DECLARE @tblDebitPending BalanceList
-	DECLARE @tblCreditPending BalanceList
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 	
 	INSERT INTO #Balance
 	SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END

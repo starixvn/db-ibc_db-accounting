@@ -100,8 +100,8 @@ CREATE TABLE #BalanceAfter (custid int PRIMARY KEY, balance money)
 CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
 CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
-DECLARE @tblDebitPending BalanceList
-DECLARE @tblCreditPending BalanceList
+DECLARE @tblDebitPending TVP_BalanceList
+DECLARE @tblCreditPending TVP_BalanceList
 
 INSERT INTO #Balance
 SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END

@@ -656,8 +656,8 @@ need below code to determine for mark match as calculated (all bets settled)
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
-	DECLARE @tblDebitPending BalanceList
-	DECLARE @tblCreditPending BalanceList
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
