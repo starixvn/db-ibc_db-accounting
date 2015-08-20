@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/20/2015 14:58:31 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MetricGaming]    Script Date: 08/20/2015 15:19:21 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -54,6 +54,8 @@ BEGIN
 							WHEN @Action = 'REFUND' THEN 154
 							END
 			,@start = CURRENT_TIMESTAMP
+			
+	SET @BettypeTime = ISNULL(@BettypeTime,'')
 			
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (
@@ -130,7 +132,7 @@ BEGIN
 	FROM Translog WITH(NOLOCK)
 	WHERE GameID = @bettype
 		AND EventID = @matchid
-		AND ISNULL(@bettypeTime,'') = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
+		AND @bettypeTime = CASE WHEN gameId <> 806 THEN SUBSTRING(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12)
 										ELSE @bettypeTime
 										END
 	
@@ -355,6 +357,8 @@ BEGIN
 	END
 
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MetricGaming] TO [bodbAdminNet] AS [dbo]
