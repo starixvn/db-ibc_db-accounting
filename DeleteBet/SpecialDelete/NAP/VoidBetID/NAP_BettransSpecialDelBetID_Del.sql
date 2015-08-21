@@ -57,6 +57,7 @@ BEGIN
 				
 	DECLARE @tmpListTransID TABLE (
 		 TransID		BIGINT
+		,GroupTransID	BIGINT
 		,MatchID		INT
 		,Bettype		INT
 		,betid			BIGINT
@@ -71,6 +72,7 @@ BEGIN
 
 	INSERT INTO @tmpListTransID(
 		 TransID
+		,GroupTransID
 		,MatchID
 		,Bettype
 		,betid
@@ -83,6 +85,7 @@ BEGIN
 		,TicketType
 	)
 	SELECT	 CASE WHEN Bettype IN (801,803,804,805,806) THEN Refno ELSE TransID END TransID
+			,CASE WHEN Bettype IN (801,803,804,805,806) THEN Refno ELSE TransID END GroupTransID
 			,MatchID
 			,Bettype
 			,betid
@@ -91,34 +94,17 @@ BEGIN
 			,Refno
 			,Betfrom
 			,StatusID
-			,CASE Bettype WHEN 9 THEN -1	-- isCalculatingParlay in SystemSettings OR 1 (Single match)
-						  WHEN 10 THEN 2    -- Outright 
+			,CASE WHEN Bettype = 9 THEN -1	-- isCalculatingParlay in SystemSettings OR 1 (Single match)
+						  WHEN Bettype = 10 THEN 2    -- Outright 
+						  WHEN Bettype IN (801,803,804,805,806) THEN 3
 						  ELSE 1 END		-- SB, NG, LiveCS 
 			,1
 	FROM	Bettrans WITH (NOLOCK)
-	WHERE	TransID IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))
+	WHERE	CASE WHEN Bettype IN (801,803,804,805,806) THEN refno ELSE TransID END IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))
 			AND StatusID NOT IN (101, 102)	-- REJECT, VOID
 	UNION ALL
 	--Get data from Translog for Metric Gaming Super Live
-	SELECT	bs.TransID
-			,bs.MatchID
-			,bs.Bettype
-			,bs.betid
-			,bs.stake
-			,bs.odds
-			,bs.Refno
-			,bs.Betfrom
-			,bs.StatusID
-			,1 
-			,1
-	FROM	translog b WITH (NOLOCK)
-		INNER JOIN bettrans bs WITH(NOLOCK) ON b.gameid = bs.bettype AND bs.matchid = b.eventid AND bs.custid = b.Custid AND b.translogid = bs.refno
-	WHERE	translogid IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))
-			AND b.StatusID NOT IN (101, 102)	-- REJECT, VOID
-			AND b.GameID IN (801,803,804,805,806)
-	UNION ALL
-	--Get data from Translog for Metric Gaming Super Live
-	SELECT	 translogid TransID
+	SELECT	 translogid TransID, translogid GroupTransID
 			,eventID matchID
 			,b.GameID
 			,0 betid
@@ -127,7 +113,7 @@ BEGIN
 			,translogid Refno
 			,b.Betfrom
 			,b.StatusID
-			,1
+			,3
 			,2
 	FROM	translog b WITH (NOLOCK)
 		LEFT JOIN bettrans bs WITH(NOLOCK) ON b.gameid = bs.bettype AND bs.matchid = b.eventid AND bs.custid = b.Custid AND b.translogid = bs.refno
@@ -137,7 +123,7 @@ BEGIN
 			
 	--Update 901.betid=main.bettype
 	UPDATE main
-	SET main.betid = b.bettype, main.odds = b.odds, main.stake = b.stake
+	SET main.betid = b.bettype, main.odds = b.odds, main.stake = b.stake, main.GroupTransID = b.transid
 	FROM @tmpListTransID main
 	INNER JOIN Bettrans b WITH (NOLOCK) ON b.transid = main.refno AND b.matchid = main.MatchID
 	WHERE main.bettype = 901
@@ -179,7 +165,8 @@ BEGIN
 	FROM (
 			SELECT	winlostdate,CustID,winlost,actual_stake,playercomm,Bettype
 			FROM	Bettrans WITH (NOLOCK)
-			WHERE	TransID IN (SELECT TransID FROM @tmpListTransID WHERE TicketType = 1 AND Bettype NOT IN (901,902,903))
+			WHERE	CASE WHEN Bettype IN (801,803,804,805,806) THEN Refno ELSE TransID END 
+						IN (SELECT TransID FROM @tmpListTransID WHERE TicketType = 1 AND Bettype NOT IN (901,902,903))
 			UNION ALL
 			SELECT	winlostdate,CustID,0 winlost,actual_stake,0 playercomm,GameID Bettype
 			FROM	translog WITH (NOLOCK)
@@ -203,6 +190,7 @@ BEGIN
 		RETURN
 	
 	--- CHECKING SETTLEMENT PROCESS IN PROGRESS OR NOT ?????
+	DECLARE @UpdSystemSettings TINYINT = 0
 	IF(@isExistParlay = 1)
 	BEGIN
 		IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
@@ -215,31 +203,148 @@ BEGIN
 		BEGIN
 			UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
 			SET VValue = '1'
-			WHERE VName = 'isCalculatingParlay'
+			WHERE VName = 'isCalculatingParlay' AND VValue = 0
+			
+			SELECT @UpdSystemSettings = @@ROWCOUNT
 		END	
 	END
 
-	IF(@isExistMatch = 1 OR @isExistOutright = 1)
+	DECLARE @MatchId     INT,
+	        @KeyId       TINYINT,
+	        @Remark		 VARCHAR(500)
+	        
+	DECLARE @LockTbl TABLE(KeyID INT, KeyValue MONEY, IsLocked BIT)
+	
+	INSERT @LockTbl(KeyID, KeyValue, IsLocked) 
+	SELECT DISTINCT t.KeyID,
+				  t.matchid,
+				  0
+	FROM   @tmpListTransID t 
+	WHERE Bettype <> 9
+	
+	WHILE (1 = 1)
 	BEGIN
-		IF(EXISTS(
-			SELECT TOP 1 1 
-			FROM	dbo.TempVariableNumber t WITH (NOLOCK)
-					INNER JOIN @tmpListTransID l ON t.KeyID = t.KeyID AND t.KeyValue = l.MatchID 
-			WHERE	Bettype <> 9  --- EXCLUDE MIX PARLAY 
-					AND Bettype NOT IN (901,902,903)
-		))
+	    SELECT TOP 1 @KeyId = t.KeyID,
+	           @MatchId = t.matchid
+	    FROM   @tmpListTransID t
+	    WHERE  t.Bettype NOT IN (9,901,902,903)  AND t.matchid NOT IN (SELECT v.KeyValue
+	                             FROM   dbo.TempVariableNumber v with(NOLOCK)
+	                             WHERE  v.KeyID = t.KeyID)
+	    
+	    IF @@rowcount = 0
+	        BREAK
+	    
+	    INSERT INTO dbo.TempVariableNumber
+	      (
+	        KeyID,
+	        KeyValue
+	      )
+	    VALUES
+	      (
+	        @KeyId,
+	        @MatchId
+	      )		
+	    IF (@@Error = 0)
+	    BEGIN
+			BEGIN TRY	
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					 @UserID = @UserID,
+					 @Matchid = @matchid,
+					 @KeyID = @KeyID,
+					 @ActionID = 0,
+					 @Remark = 'ADD SUCCESS SPName= NAP_BettransSpecialDelBetID_Del'
+			END TRY	    
+			BEGIN CATCH
+	    		SELECT @Remark = 'ADD SUCCESS SPName=NAP_BettransSpecialDelBetID_Del ErrMsg=' 
+	    			   + LEFT(ERROR_MESSAGE(), 400)
+		    	
+	    		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	    			 @UserID = @UserID,
+	    			 @Matchid = @matchid,
+	    			 @KeyID = @KeyID,
+	    			 @ActionID = 0,
+	    			 @Remark = @Remark	
+			END CATCH
+			
+			UPDATE @LockTbl
+			SET IsLocked = 1
+			WHERE KeyID = @KeyId AND KeyValue = @MatchId
+	    END
+	    ELSE 
+	    BEGIN
+			BEGIN TRY	
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					 @UserID = @UserID,
+					 @Matchid = @matchid,
+					 @KeyID = @KeyID,
+					 @ActionID = 0,
+					 @Remark = 'ADD FAIL SPName= NAP_BettransSpecialDelBetID_Del'
+			END TRY	    
+			BEGIN CATCH
+	    		SELECT @Remark = 'ADD FAIL SPName=NAP_BettransSpecialDelBetID_Del ErrMsg=' 
+	    			   + LEFT(ERROR_MESSAGE(), 400)
+		    	
+	    		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	    			 @UserID = @UserID,
+	    			 @Matchid = @matchid,
+	    			 @KeyID = @KeyID,
+	    			 @ActionID = 0,
+	    			 @Remark = @Remark	
+			END CATCH
+			
+			DELETE main
+			FROM dbo.TempVariableNumber main
+			INNER JOIN @LockTbl lk ON lk.KeyID = main.KeyID AND lk.KeyValue = main.KeyValue
+			WHERE lk.IsLocked = 1
+			
+			IF @isExistParlay = 1 AND @UpdSystemSettings > 0
+			BEGIN
+				UPDATE SystemSettings WITH (ROWLOCK, UPDLOCK)
+				SET VValue = '0'
+				WHERE VName = 'isCalculatingParlay'
+			END
+			
+	    	SELECT @ErrCode = 100,
+	    	       @ErrMsg = 
+	    	       'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
+	    	RETURN
+	    END
+	END
+	
+	IF EXISTS(SELECT TOP 1 1 FROM @LockTbl WHERE IsLocked = 0)
+	BEGIN
+		SELECT TOP 1 @matchid = KeyValue, @KeyID = KeyID
+		FROM @LockTbl WHERE IsLocked = 0
+		
+		BEGIN TRY	
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				 @UserID = @UserID,
+				 @Matchid = @matchid,
+				 @KeyID = @KeyID,
+				 @ActionID = 0,
+				 @Remark = 'ADD FAIL SPName= NAP_BettransRecoverBet'
+		END TRY	    
+		BEGIN CATCH
+    		SELECT @Remark = 'ADD FAIL SPName=NAP_BettransRecoverBet ErrMsg=' 
+    			   + LEFT(ERROR_MESSAGE(), 400)
+		END CATCH
+		
+		DELETE main
+		FROM dbo.TempVariableNumber main
+		INNER JOIN @LockTbl lk ON lk.KeyID = main.KeyID AND lk.KeyValue = main.KeyValue
+		WHERE lk.IsLocked = 1
+		
+		IF @isExistParlay = 1 AND @UpdSystemSettings > 0
 		BEGIN
-			SELECT  @ErrCode = 206,
-					@ErrMsg = 'The selected tickets are not ready to be voided now, please wait a few seconds until the on-going process is completed and try again.'
-			RETURN
+			UPDATE SystemSettings WITH (ROWLOCK, UPDLOCK)
+			SET VValue = '0'
+			WHERE VName = 'isCalculatingParlay'
 		END
-		ELSE
-		BEGIN
-			INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
-			SELECT	DISTINCT KeyID, MatchID 
-			FROM	@tmpListTransID
-			WHERE	Bettype <> 9  AND Bettype NOT IN (901,902,903) 
-		END
+		
+		SELECT @ErrCode = 100,
+	    	       @ErrMsg = 
+	    	       'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
+	    RETURN
 	END
 
 	-- CHECK IT GROUP or NOT ? 
@@ -356,7 +461,8 @@ BEGIN
 			b.playercomm as comm,      
 			b.currency,
 			tpl.betid,
-			b.transdesc
+			b.transdesc,
+			tpl.grouptransid
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @tmpListTransID tpl ON tpl.transid = b.transid
 			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
@@ -395,7 +501,8 @@ BEGIN
 			0 comm,      
 			b.currency,
 			NULL betid,
-			b.transdesc
+			b.transdesc,
+			b.translogID grouptransid
 	FROM	translog b WITH (NOLOCK)
 			INNER JOIN Match m WITH (NOLOCK) ON b.EventID = m.matchid
 			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
@@ -433,7 +540,8 @@ BEGIN
 			b.playercomm as comm,      
 			b.currency,
 			b.betid,
-			b.transdesc
+			b.transdesc,
+			b.transid grouptransid
 	FROM	bettrans b WITH(NOLOCK) 
 			INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
 	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 9)
@@ -469,14 +577,60 @@ BEGIN
 			b.playercomm as comm,      
 			b.currency,
 			b.betid,
-			b.transdesc
+			b.transdesc,
+			b.transid grouptransid
 	FROM
 			bettrans b WITH (NOLOCK)
 			INNER JOIN Outright m WITH (NOLOCK) ON b.matchID = m.orid
 			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 	WHERE	b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 10)
 			AND @isExistOutright = 1 
-		
+	
+	--Email Bettrade
+	SELECT	m.homeid,
+			m.awayid,
+			m.matchcode,
+			m.eventdate,
+			m.leagueid,
+			GETDATE() AS DATETIME,
+			isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+			showtime AS GameEvent,
+			b.bettype,
+			tpl.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.transid,
+			b.refno,
+			b.betteam,
+			b.betcheck,
+			b.hdp1,
+			b.hdp2,
+			b.betfrom,
+			b.livehomescore,
+			b.liveawayscore,
+			b.liveindicator,
+			cr.username creator,
+			c.username ,
+			CASE WHEN b.bettype = 901 THEN tpl.stake ELSE b.stake END stake,     
+			CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status],
+			b.winlost - b.actual_stake as winlost,
+			b.playercomm as comm,      
+			b.currency,
+			tpl.betid,
+			b.transdesc,
+			tpl.grouptransid
+	FROM	
+			@tmpListTransID tpl 
+			INNER JOIN @tmpListTransID tpl2 ON tpl2.grouptransid = tpl.grouptransid AND tpl2.transid <> tpl.transid
+			INNER JOIN bettrans b2 WITH (NOLOCK) ON tpl.transid = b2.transid
+			INNER JOIN bettrans b WITH (NOLOCK) ON tpl2.transid = b.transid
+			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
+			INNER JOIN CustDB.dbo.custinfo c2 WITH (NOLOCK) ON c2.custid = b2.custid
+			INNER JOIN CustDB.dbo.custinfo c WITH (NOLOCK) ON c.custid = b.custid
+			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator	
+	WHERE c2.username like '%BetTrade%' OR c.username like '%BetTrade%'
+	ORDER BY tpl.grouptransid,b.transid
 			
 	--check for live casino
 	IF (@isExistMatch = 1 AND EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199))
@@ -604,7 +758,7 @@ BEGIN
 			   ,b.[recommend]
 			   ,b.[mrecommend]
 			   ,1 [ruben]
-			   ,NULL [betid]
+			   ,CASE WHEN ISNULL(b.custom3,'') = '' THEN NULL ELSE CAST(b.custom3 AS BIGINT) END [betid]
 			   ,NULL [statuswinlost]
 			   ,0 [modds]
 			   ,b.GameID [bettype]
@@ -632,12 +786,21 @@ BEGIN
 		WHERE b.translogid IN (SELECT TransID FROM @tmpListTransID WHERE TicketType=2)
 		AND b.GameID IN (801,803,804,805,806)
 		
-		--Update resultID in translog for MGSL
+		--Update translog for MGSL
 		UPDATE tl
 		SET
 			tl.Status = 'Void',
 			tl.StatusID = 102,
-			tl.creator = @UserID,
+			tl.creator = @UserID
+		FROM dbo.translog tl WITH(ROWLOCK,UPDLOCK)
+		WHERE (tl.translogid IN (SELECT TransID FROM @tmpListTransID WHERE TicketType=2)
+			OR tl.translogid IN (SELECT refno FROM @tmpListTransID WHERE TicketType=1)
+		)
+		AND tl.GameID IN (801,803,804,805,806)
+		
+		--Update resultID in translog for MGSL
+		UPDATE tl
+		SET
 			tl.custom3 = (	
 							SELECT rs.ResultID 
 							FROM DBPRO.bodb02.dbo.ResultDetail3rd rs WITH(NOLOCK) 
@@ -654,7 +817,7 @@ BEGIN
 		WHERE (tl.translogid IN (SELECT TransID FROM @tmpListTransID WHERE TicketType=2)
 			OR tl.translogid IN (SELECT refno FROM @tmpListTransID WHERE TicketType=1)
 		)
-		AND tl.GameID IN (801,803,804,805,806)
+		AND tl.GameID IN (801,803,804,805,806) AND ISNULL(tl.Custom3,'') = ''
 		
 		--Update resultID in bettrans for MGSL
 		UPDATE b
@@ -672,7 +835,7 @@ BEGIN
 						)
 		FROM dbo.bettrans b WITH(ROWLOCK,UPDLOCK)
 		WHERE b.refno IN (SELECT TransID FROM @tmpListTransID WHERE TicketType=2)
-		AND b.Bettype IN (801,803,804,805,806)
+		AND b.Bettype IN (801,803,804,805,806) AND b.BetID IS NULL
 		
 		--Update new transid
 		UPDATE main
@@ -867,26 +1030,128 @@ BEGIN
 			ON	a.custid = b.custid
 	WHERE	    (a.balance - b.balance) < 0
 	
+	--Metric API Calling
+	SELECT	m.homeid,
+			m.awayid,
+			m.matchcode,
+			m.eventdate,
+			m.leagueid,
+			b.custid,
+			GETDATE() AS DATETIME,
+			isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+			showtime AS GameEvent,
+			b.bettype,
+			b.odds,  
+			b.OddsType, 
+			b.transdate,
+			b.bettype,
+			b.refno transid,
+			b.refno,
+			b.betteam,
+			b.betcheck,
+			b.hdp1,
+			b.hdp2,
+			b.betfrom,
+			b.livehomescore,
+			b.liveawayscore,
+			b.liveindicator,
+			cr.username creator,
+			b.stake,     
+			b.status,
+			b.winlost,
+			b.playercomm as comm,      
+			b.currency,
+			b.betid,
+			b.transdesc
+	FROM	bettrans b WITH (NOLOCK)
+			INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid
+			INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+	WHERE	b.refno IN (SELECT refno FROM @tmpListTransID WHERE bettype BETWEEN 801 AND 806)
+			AND @isExistMatch = 1 
+			AND b.bettype BETWEEN 801 AND 806
+			
 	DROP TABLE #BeforeUpd
 	DROP TABLE #AfterUpd	
 			
 	SELECT @LogData = 'Delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@strTransID as varchar(8000))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
-	-----
-	IF (@isExistMatch = 1 OR @isExistOutright = 1)
+	------ release data of TempVariableNumBer table		
+	WHILE (1 = 1)
 	BEGIN
-		DELETE  t
-		FROM	dbo.TempVariableNumber t WITH (ROWLOCK,UPDLOCK)
-				INNER JOIN @tmpListTransID l ON t.KeyID = l.KeyID AND t.KeyValue = l.MatchID	
-		WHERE	l.Bettype <> 9 
+	    SELECT TOP 1 @KeyId = t.KeyID,
+	           @MatchId = t.matchid
+	    FROM   @tmpListTransID t
+			INNER JOIN @LockTbl lstt ON t.KeyID = lstt.KeyID AND t.matchid = lstt.KeyValue
+	    WHERE  t.Bettype <> 9 AND t.matchid IN (SELECT v.KeyValue
+	                             FROM   dbo.TempVariableNumber v with(NOLOCK)
+	                             WHERE  v.KeyID = t.KeyID)
+	            AND lstt.IsLocked = 1
+	    
+	    IF @@rowcount = 0
+	        BREAK;
+	    DELETE 
+	    FROM   TempVariableNumber 
+	    WHERE  KeyID = @KeyId
+	           AND KeyValue = @MatchId
+	    
+	    IF @@Error = 0
+	    BEGIN
+	    BEGIN
+	        TRY
+	        EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	             @UserID = @UserID,
+	             @Matchid = @MatchId,
+	             @KeyID = @KeyID,
+	             @ActionID = 0,
+	             @Remark = 'DEL SUCCESS SPName=NAP_BettransRecoverBet'
+	    END TRY
+	    
+	    BEGIN CATCH
+	    	SELECT @Remark = 'DEL SUCCESS SPName=NAP_BettransRecoverBet ErrMsg=' 
+	    	       + LEFT(ERROR_MESSAGE(), 400)
+	    	
+	    	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	    	     @UserID = @UserID,
+	    	     @Matchid = @MatchId,
+	    	     @KeyID = @KeyID,
+	    	     @ActionID = 0,
+	    	     @Remark = @Remark
+	    END CATCH
+	    
+	    END
+	    ELSE
+	    BEGIN TRY
+	    	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	    	     @UserID = @UserID,
+	    	     @Matchid = @MatchId,
+	    	     @KeyID = @KeyID,
+	    	     @ActionID = 0,
+	    	     @Remark = 'DEL FAILED SPName=NAP_BettransRecoverBet'
+	    END TRY
+	    BEGIN CATCH
+	    	SELECT @Remark = 'DEL FAILED SPName=NAP_BettransRecoverBet ErrMsg=' 
+	    	       + LEFT(ERROR_MESSAGE(), 400)
+	    	
+	    	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+	    	     @UserID = @UserID,
+	    	     @Matchid = @MatchId,
+	    	     @KeyID = @KeyID,
+	    	     @ActionID = 0,
+	    	     @Remark = @Remark
+	    END CATCH
+	    
+	    UPDATE @LockTbl
+		SET IsLocked = 0
+		WHERE KeyID = @KeyId AND KeyValue = @MatchId
 	END
-	IF (@isExistParlay = 1)
+	
+	IF @isExistParlay = 1 AND @UpdSystemSettings > 0
 	BEGIN
-		UPDATE	systemSettings WITH (ROWLOCK,UPDLOCK)
-		SET		VValue = '0'
-		WHERE	VName = 'isCalculatingParlay'	
-	END 
+		UPDATE SystemSettings WITH (ROWLOCK, UPDLOCK)
+		SET VValue = '0'
+		WHERE VName = 'isCalculatingParlay'
+	END
 	
 	--Return Error TransIDs
 	SELECT * FROM @ErrorTransID

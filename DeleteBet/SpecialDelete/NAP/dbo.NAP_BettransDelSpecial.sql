@@ -212,6 +212,7 @@ BEGIN
 	-------------------		
 	CREATE TABLE #BetDelete (
 		transid				BIGINT PRIMARY KEY, 
+		grouptransid		BIGINT,
 		custid				INT, 
 		recommend			INT, 
 		mrecommend			INT, 
@@ -245,6 +246,7 @@ BEGIN
 	DECLARE @FoobetCust			TABLE (custid INT)
 	DECLARE @BetFairCust		TABLE (custid INT)
 	DECLARE @OneExchangeCust	TABLE (custid INT)
+	DECLARE @BettradeCust		TABLE (custid INT)
 
 	DECLARE @Status				TABLE (statusID TINYINT)
 	
@@ -321,7 +323,7 @@ BEGIN
 
  -- bettype <> 4 - Handicap(1), Over/Under(3), 1st Handicap(7), 1st Over/Under(8) - FT.1X2(5)/ 1st 1X2(15)
  INSERT INTO #BetDelete
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
 		b.Username, b.creator, b.hdp1, b.hdp2, b.bettype, b.betteam, b.betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans b WITH (NOLOCK)
@@ -373,7 +375,7 @@ BEGIN
 					 
  -- bettype = 4 -- Correct score
  INSERT INTO #BetDelete
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag, 
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans b WITH (NOLOCK)
@@ -404,7 +406,7 @@ BEGIN
 
 -- bettype = 6: Total Goal; 126: 1st Total Goal, 131: Home Team Total Goal; 132:  Away Team Total Goal
  INSERT INTO #BetDelete 
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -434,7 +436,7 @@ BEGIN
 
 -- bettype = 14: First Goal/Last Goal; 127: 1st FGLG
  INSERT INTO #BetDelete  
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate,b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM bettrans b WITH (NOLOCK)
@@ -462,7 +464,7 @@ BEGIN
 
 -- bettype = 16: HT/FT
 	INSERT INTO #BetDelete 
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -492,7 +494,7 @@ BEGIN
 													 									
 	-- bettype = 128, 129, 130, 136, 137, 138, 139, 143, 144, 163, 184,194,203
 	INSERT INTO #BetDelete 
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -540,7 +542,7 @@ BEGIN
 													WHEN 2 THEN 1 END									
 	-- bettype = 154, 155, 156, 1302, 1311, 1312, 1316, 1317, 1318, 1324
 	INSERT INTO #BetDelete 
-	SELECT DISTINCT transid as transtest, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+	SELECT DISTINCT transid as transtest, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator,b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -615,7 +617,7 @@ BEGIN
 
 	--178,197,198,204,205
 	INSERT INTO #BetDelete 
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -656,7 +658,7 @@ BEGIN
 													 
 	--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216
 	INSERT INTO #BetDelete 
-	SELECT DISTINCT transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
+	SELECT DISTINCT transid, transid, custid, recommend, mrecommend, srecommend, betfrom, statusID, status, SecAcceptFlag,
 		Username, creator, hdp1,hdp2, bettype, betteam, betcheck, b.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b.stake, b.CurrencyName, b.betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -749,7 +751,7 @@ BEGIN
 													 WHEN 2 THEN 1 END	
 	--Get Bettrade tickets 				
 	INSERT INTO #BetDelete 
-	SELECT DISTINCT b.transid, b.custid, b.recommend, b.mrecommend, b.srecommend, b.betfrom, b.statusID, b.status, b.SecAcceptFlag,
+	SELECT DISTINCT b.transid, b2.transid, b.custid, b.recommend, b.mrecommend, b.srecommend, b.betfrom, b.statusID, b.status, b.SecAcceptFlag,
 		b.Username, b.creator, b.hdp1,b.hdp2, b.bettype, b.betteam, b.betcheck, b2.odds, b.oddstype, b.transdate, b.liveindicator, b.livehomescore, 
 		b.liveawayscore, b2.stake, b.CurrencyName, b2.bettype betid
 	FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -1095,6 +1097,13 @@ BEGIN
 		where bd.recommend = 13423967
 		and ci.roleid = 1
 		
+	-- get OneExchange tickets
+	INSERT INTO @BettradeCust (custid)
+		SELECT bd.custid
+		FROM custDB.dbo.custInfo ci with(NOLOCK)
+		INNER JOIN #BetDelete bd ON bd.custid = ci.custid
+		where ci.username like '%BetTrade%'
+		
 		
 	-- update totalbets
 	DECLARE @Total TABLE (oddsid INT, HomeTotal MONEY, AwayTotal MONEY)
@@ -1197,88 +1206,214 @@ BEGIN
 	
 	-- Send mail when void deposit
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator, livehomescore, liveawayscore, cr.username creator,
-		stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
 	FROM
 		#BetDelete b WITH (NOLOCK)
 		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
-	WHERE c.custid IN (SELECT custid FROM @DepositCust) -- Email deposit if voided		
-	ORDER BY transid
-
-	-- Send mail when void 12EU tickets 
-		SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore, cr.username creator,
-		stake, b.CurrencyName, '12EU' as site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+	WHERE b.custid IN (SELECT custid FROM @DepositCust) -- Email deposit if voided	
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
 	FROM
 		#BetDelete b WITH (NOLOCK)
-		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @DepositCust) 
+			AND b2.custid NOT IN (SELECT custid FROM @DepositCust) -- Email deposit if voided	
+	ORDER BY grouptransid,transid
+
+	-- Send mail when void 12EU tickets 
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
-	WHERE b.custid IN (SELECT [@12EUCust].custid FROM @12EUCust) -- Email 12EU if voided			
-	ORDER BY transid
+	WHERE b.custid IN (SELECT [@12EUCust].custid FROM @12EUCust)
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT [@12EUCust].custid FROM @12EUCust) 
+			AND b2.custid NOT IN (SELECT [@12EUCust].custid FROM @12EUCust)
+	ORDER BY grouptransid,transid
 
 	
 	-----Send mail when void any real tickets by IT
-	SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
-		cr.username creator, stake, b.CurrencyName, ag.site,
-		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
-	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
-	WHERE c.custid IN (SELECT custid FROM @RealCurrCust)			     					   
-	ORDER BY transid    	   
+	WHERE b.custid IN (SELECT custid FROM @RealCurrCust)
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @RealCurrCust) 
+		AND b2.custid NOT IN (SELECT custid FROM @RealCurrCust)
+	ORDER BY grouptransid,transid	   
 
 	-- Send mail when void UUS tickets
-		SELECT c.username,c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
-		cr.username creator, stake, b.CurrencyName, ag.site,
-		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
-	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
-	WHERE c.custid IN (SELECT custid FROM @UUSCust)				     					   
-	ORDER BY transid    
+	WHERE b.custid IN (SELECT custid FROM @UUSCust)
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @UUSCust)
+		AND b2.custid NOT IN (SELECT custid FROM @UUSCust)
+	ORDER BY grouptransid,transid	
+	   
 
 	-----Send mail when void Foobet tickets
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
-		cr.username creator, stake, b.CurrencyName, 'Foobet' as site,
-		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
-	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
-	WHERE c.custid IN (SELECT custid FROM @FoobetCust)			     					   
-	ORDER BY transid  
+	WHERE b.custid IN (SELECT custid FROM @FoobetCust)
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @FoobetCust)
+		AND b2.custid NOT IN (SELECT custid FROM @FoobetCust)
+	ORDER BY grouptransid,transid
+	 
 	
 	-----Send mail when void Betfair tickets
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
-		cr.username creator, stake, b.CurrencyName, 'BetFair' as site,
-		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
-	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
-	WHERE c.custid IN (SELECT custid FROM @BetFairCust)			     					   
-	ORDER BY transid    
+	WHERE b.custid IN (SELECT custid FROM @BetFairCust)
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @BetFairCust)
+		AND b2.custid NOT IN (SELECT custid FROM @BetFairCust)
+	ORDER BY grouptransid,transid   
 
 	-----Send mail when void OneExchange tickets
 	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
-		b.transid AS refno, betteam, betcheck, hdp1, hdp2, betfrom, b.isLiveIndicator,livehomescore, liveawayscore,
-		cr.username creator, stake, b.CurrencyName, 'OneExchange' as site,
-		CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
-	FROM #BetDelete b WITH (NOLOCK)
-		INNER JOIN custDB.dbo.customer c WITH (NOLOCK) ON c.custid=b.custid
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
 		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
 		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
-	WHERE c.custid IN (SELECT custid FROM @OneExchangeCust)			     					   
-	ORDER BY transid    
+	WHERE b.custid IN (SELECT custid FROM @OneExchangeCust)
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @OneExchangeCust)
+		AND b2.custid NOT IN (SELECT custid FROM @OneExchangeCust)
+	ORDER BY grouptransid,transid
+  
+	--Send email Bettrade 
+	SELECT c.username, c.username2, b.odds, b.OddsType, b.transdate, b.bettype, b.betfrom,
+		b.transid AS refno, b.betteam, b.betcheck, b.hdp1, b.hdp2, b.betfrom, b.isLiveIndicator, b.livehomescore, b.liveawayscore, cr.username creator,
+		b.stake, b.CurrencyName, ag.site, CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status], b.SecAcceptFlag, b.betid
+		, b.grouptransid, b.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @BettradeCust)
+	UNION ALL
+	SELECT c.username, c.username2, b2.odds, b2.OddsType, b2.transdate, b2.bettype, b2.betfrom,
+		b2.transid AS refno, b2.betteam, b2.betcheck, b2.hdp1, b2.hdp2, b2.betfrom, b2.isLiveIndicator, b2.livehomescore, b2.liveawayscore, cr.username creator,
+		b2.stake, b2.CurrencyName, ag.site, CASE WHEN b2.bettype = 901 THEN 'SOLD' ELSE b2.status END [status], b2.SecAcceptFlag, b2.betid
+		, b2.grouptransid, b2.transid
+	FROM
+		#BetDelete b WITH (NOLOCK)
+		INNER JOIN #BetDelete b2 WITH (NOLOCK) ON b.grouptransid = b2.grouptransid AND b.transid <> b2.transid
+		INNER JOIN custDB.dbo.customer c  WITH (NOLOCK) ON c.custid=b2.custid
+		INNER JOIN custDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b2.creator
+		INNER JOIN custDB.dbo.customer ag WITH (NOLOCK) ON c.recommend = ag.custid
+	WHERE b.custid IN (SELECT custid FROM @BettradeCust)
+		AND b2.custid NOT IN (SELECT custid FROM @BettradeCust)
+	ORDER BY grouptransid,transid
 	
 	DROP TABLE #BeforeUpd
 	DROP TABLE #AfterUpd
