@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+﻿use bodb02
+go
+
+ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -18,6 +21,8 @@ AS
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
 		- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
+		- 20150804@Patrick: Adjust Balance Credit/Debit Game value for LiveCS #40736
+
 	Param's Explanation: 
 */
 BEGIN 
@@ -232,6 +237,14 @@ BEGIN
 	FROM	DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	WHERE	custid = @CustID 
 
+	--get balance game for livecs
+	DECLARE @balanceGame TABLE(custid INT, winlostdate SMALLDATETIME, balance MONEY)
+	INSERT INTO @balanceGame(custid, winlostdate, balance)
+	SELECT custid, winlostdate
+		, SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END)
+	FROM dbo.bettrans WITH(NOLOCK)
+	WHERE transid IN (SELECT tmp.TransID FROM @tmpListTransID tmp WHERE tmp.Bettype BETWEEN 1101 AND 1199)
+	GROUP BY custid, winlostdate
 
 	-- Get Upline info 
 
@@ -443,6 +456,19 @@ BEGIN
 	BEGIN			
 		EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
 	END
+
+	--update balance debit game
+	UPDATE bal
+	SET Balance = bal.Balance + tmp.balance
+	FROM dbo.BalanceDebitGame bal WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
+	WHERE tmp.balance > 0
+
+	INSERT INTO dbo.BalanceDebitGame(CustId, WinlostDate, Balance)
+	SELECT b.custid, b.winlostdate, b.balance
+	FROM @balanceGame b
+		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
+	WHERE bal.CustId IS NULL AND b.balance > 0
 	
 	--update bettrans
 	UPDATE	bettrans WITH (UPDLOCK,ROWLOCK) 
@@ -455,8 +481,21 @@ BEGIN
 	BEGIN
 		SELECT @balance = ABS(@balance)
 		EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
-	END		
-			
+	END
+
+	--update balance credit game
+	UPDATE bal
+	SET Balance = bal.Balance + ABS(tmp.balance)
+	FROM dbo.BalanceCreditGame bal WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
+	WHERE tmp.balance < 0
+
+	INSERT INTO dbo.BalanceCreditGame(CustId, WinlostDate, Balance)
+	SELECT b.custid, b.winlostdate, ABS(b.balance)
+	FROM @balanceGame b
+		LEFT JOIN dbo.BalanceCreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
+	WHERE bal.CustId IS NULL AND b.balance < 0
+				
 	SELECT @LogData = 'Delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@strTransID as varchar(8000))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
