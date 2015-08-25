@@ -844,7 +844,7 @@ BEGIN
 	INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
 				winlost,livehomescore,liveawayscore,liveindicator,betteam,creator, refno, 
 				winlostdate,betfrom,betcheck,checktime,matchid, bettype)
-		SELECT  sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.awinlost, sb.status, 
+		SELECT  sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.stake, sb.status, 
 				sb.winlost, sb.livehomescore, sb.liveawayscore, sb.liveindicator, sb.betteam, sb.creator , sb.refno, 
 				sb.winlostdate, sb.betfrom, sb.betcheck, sb.checktime, sb.matchid, sb.bettype
 		FROM

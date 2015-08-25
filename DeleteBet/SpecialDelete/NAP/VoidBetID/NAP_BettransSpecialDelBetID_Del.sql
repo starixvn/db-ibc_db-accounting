@@ -857,7 +857,7 @@ BEGIN
  --Back up BetTrade's subtickets (901,902,903)    
  INSERT INTO zzzbettrans  
   (transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status, winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno, winlostdate, betfrom, betcheck, checktime, matchid, bettype)  
- SELECT sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.awinlost, sb.status, sb.winlost, sb.livehomescore, sb.liveawayscore, sb.liveindicator, sb.betteam, sb.creator , sb.refno, sb.winlostdate, sb.betfrom, sb.betcheck, 
+ SELECT sb.transid, sb.custid, CURRENT_TIMESTAMP, sb.oddsid, sb.hdp1, sb.hdp2, sb.odds, sb.stake, sb.status, sb.winlost, sb.livehomescore, sb.liveawayscore, sb.liveindicator, sb.betteam, sb.creator , sb.refno, sb.winlostdate, sb.betfrom, sb.betcheck, 
 sb.checktime, sb.matchid, sb.bettype  
  FROM bettrans b with (nolock)  
   INNER JOIN bettrans sb WITH (nolock) ON b.transid = sb.refno AND b.matchid = sb.matchid AND sb.BetType IN (901,902,903)  
