@@ -980,25 +980,18 @@ BEGIN
 	
 		
 	-- STEP 2 : Update - phase 3 : Update BetTrade selling information			
-		-- Update BetTradeSelling
-		UPDATE [dbo].[BetTradeSelling] WITH (ROWLOCK, UPDLOCK)
-		SET
-			[Status] = 'Cancel',
-			[ChangeDate]  = GETDATE()
-		WHERE
-			TicketID IN (SELECT transid FROM #BetDelete WHERE Bettype NOT IN(901,902,903))
-			
 		-- Insert BetTradeSellingCancel
 		INSERT INTO [dbo].[BetTradeSellingCancelled]
 			   ([TicketID]
 			   ,[Remark]
 			   ,[BTBuyBack]
-			   ,[BTCommission]
+			   ,[BTComission]
 			   ,[AfterBalance]
 			   ,[Owner]
 			   ,[Cancelled]
 			   ,[ChangeDate]
-			   ,[CreateDate])
+			   ,[CreateDate]
+			   ,TradeID)
 		 SELECT zb.refno
 				, 'SB void ticket due to ' + @Reason
 				,zb.Stake
@@ -1008,11 +1001,14 @@ BEGIN
 				,1
 				,GETDATE()
 				,GETDATE()
+				,btc.TradeID
 		 FROM #BetDelete t
 		 INNER JOIN zzzbettrans zb WITH(NOLOCK)
 			ON zb.Refno = t.TransID AND zb.BetType = 901
+		 INNER JOIN [dbo].[BetTradeSelling] btc WITH(NOLOCK)
+			ON btc.TicketID = zb.refno
 		 LEFT JOIN [dbo].[BetTradeSellingCancelled] c WITH(NOLOCK) 
-			ON c.[TicketID] = zb.TransID
+			ON c.[TicketID] = zb.refno
 		WHERE c.[BTBuyBack] IS NULL AND t.Bettype NOT IN(901,902,903)
 		
 		--Update
@@ -1020,11 +1016,10 @@ BEGIN
 		SET
 			[Remark] = 'SB void ticket due to ' + @Reason,
 			[BTBuyBack] = zb.Stake,
-			[BTCommission] = 0,
+			[BTComission] = 0,
 			[Owner] = 'SB',
 			[Cancelled] = 1,
 			[ChangeDate] = GETDATE(),
-			[CreateDate] = GETDATE(),
 			AfterBalance = (SELECT ISNULL(SUM(CASE 
 								WHEN ruben = 1
 									THEN winlost - actual_stake + playercomm
