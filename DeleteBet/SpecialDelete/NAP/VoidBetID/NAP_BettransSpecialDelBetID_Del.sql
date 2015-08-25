@@ -517,7 +517,7 @@ BEGIN
 				EXEC dbo.Dot_BalanceCreditUpd
 			@custID = @custid
 			,@balance = @balanceLC
-			,@type = 1 -- Casino
+			,@type = 3 -- Casino
 	END	
 	IF @balanceNG < 0
 	BEGIN
@@ -526,7 +526,7 @@ BEGIN
 				EXEC dbo.Dot_BalanceCreditUpd
 			@custID = @custid
 			,@balance = @balanceNG
-			,@type = 1 -- Others
+			,@type = 4 -- Others
 	END		
 			
 	--update balance credit game
