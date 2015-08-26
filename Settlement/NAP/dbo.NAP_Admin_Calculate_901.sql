@@ -151,12 +151,8 @@ BEGIN
 	
 	
 	--recover BetTradeSelling & BetTradeSellingCancelled on DBTXN
-	IF @@SERVERNAME IN ('DBTRANS','DB230','DB206')
-	BEGIN
-		UPDATE BetTradeSelling WITH(UPDLOCK,ROWLOCK)
-		SET Status = 'Accept'			
-		WHERE TicketID IN (SELECT transid FROM #tmp)
-		
+	IF @@SERVERNAME IN ('DBTRANS','DB06','DBTP','DB230','DB232','DB206','DB234')
+	BEGIN		
 		UPDATE BetTradeSellingCancelled WITH(UPDLOCK,ROWLOCK)
 		SET BTBuyback = -BTBuyback,
 			Remark = 'SB recover ticket',

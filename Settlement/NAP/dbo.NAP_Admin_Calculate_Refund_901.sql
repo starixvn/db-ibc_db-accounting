@@ -116,17 +116,12 @@ BEGIN
 	--END
 	
 	--BEGIN: Cancel BetTradeSelling/BetTradeSellingCancelled ON DBTXN
-	IF @@SERVERNAME IN ('DBTRANS','DB230','DB206')	
-	BEGIN
-		UPDATE BetTradeSelling WITH(UPDLOCK,ROWLOCK)
-		SET Status = 'Cancel',
-			ChangeDate = GETDATE()
-		WHERE TicketID IN (SELECT transid FROM #tmp)
-		
+	IF @@SERVERNAME IN ('DBTRANS','DB06','DBTP','DB230','DB232','DB206','DB234')
+	BEGIN		
 		UPDATE b
 		SET Remark = 'SB refund ticket',
 			b.BTBuyback = t.BTBuyback,
-			BTCommission = 0,
+			BTComission = 0,
 			AfterBalance = 0,
 			Owner = 'SB',
 			Cancelled = 1,
@@ -136,17 +131,19 @@ BEGIN
 		
 		--insert records into BetTradeSellingCancelled if not exist these tickets	
 		INSERT INTO BetTradeSellingCancelled(
-			TicketID
+			TradeID
+			,TicketID
 			,Remark
 			,BTBuyBack
-			,BTCommission
+			,BTComission
 			,AfterBalance
 			,Owner
 			,Cancelled
 			,ChangeDate
 			,CreateDate
 		)
-		SELECT t.transid
+		SELECT bt.TradeID
+			,t.transid
 			,'SB refund ticket'
 			,t.BTBuyback
 			,0
@@ -156,6 +153,7 @@ BEGIN
 			,GETDATE()
 			,GETDATE()
 		FROM #tmp t 
+			INNER JOIN BetTradeSelling bt WITH(NOLOCK) ON t.transid = bt.ticketID
 			LEFT JOIN BetTradeSellingCancelled b WITH(NOLOCK) ON t.transid = b.TicketID
 		WHERE b.TicketID IS NULL
 	END
