@@ -55,7 +55,7 @@ BEGIN
 		SettlementStatusID,
 		GameResult,
 		OtherInfo 
-	FROM ResultDetail3rd rs WITH(NOLOCK)
+	FROM DBPRO.bodb02.dbo.ResultDetail3rd rs WITH(NOLOCK)
 		INNER JOIN @tmpEvent t ON t.GameID = rs.GameID AND t.BettypeTime = rs.Custom1
 	WHERE matchid = @matchid
 	ORDER BY t.GameID,bettypeTime,TicketStatus
