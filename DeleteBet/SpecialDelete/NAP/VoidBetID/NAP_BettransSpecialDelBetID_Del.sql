@@ -962,9 +962,9 @@ sb.checktime, sb.matchid, sb.bettype
       ,[ChangeDate]  
       ,[CreateDate]  
       ,TradeID)  
-   SELECT zb.refno  
+   SELECT b.refno  
     , 'SB void ticket due to ' + @Reason  
-    ,zb.Stake  
+    ,b.actual_stake - b902.actual_stake
     ,0  
     ,0  
     ,'SB'  
@@ -973,19 +973,21 @@ sb.checktime, sb.matchid, sb.bettype
     ,GETDATE()  
     ,btc.TradeID  
    FROM @tmpListTransID t  
-   INNER JOIN zzzbettrans zb WITH(NOLOCK)  
-   ON zb.Refno = t.TransID AND zb.BetType = 901  
+   INNER JOIN bettrans b WITH(NOLOCK)  
+	ON b.Refno = t.TransID AND b.BetType = 901  
+	INNER JOIN bettrans b902 WITH(NOLOCK)  
+	ON b902.Refno = t.TransID AND b902.BetType = 902 
    INNER JOIN [dbo].[BetTradeSelling] btc WITH(NOLOCK)  
-   ON btc.TicketID = zb.refno  
+   ON btc.TicketID = b.refno  
    LEFT JOIN [dbo].[BetTradeSellingCancelled] c WITH(NOLOCK)   
-   ON c.[TicketID] = zb.refno  
+   ON c.[TicketID] = b.refno  
   WHERE c.[BTBuyBack] IS NULL AND t.Bettype NOT IN(901,902,903)  
     
   --Update  
   UPDATE main  
   SET  
    [Remark] = 'SB void ticket due to ' + @Reason,  
-   [BTBuyBack] = zb.Stake,  
+   [BTBuyBack] = b.actual_stake - b902.actual_stake,  
    [BTComission] = 0,  
    [Owner] = 'SB',  
    [Cancelled] = 1,  
@@ -996,11 +998,13 @@ sb.checktime, sb.matchid, sb.bettype
         ELSE 0  
         END), 0)  
         FROM dbo.bettrans WITH (NOLOCK)  
-        WHERE custid = zb.custid  
+        WHERE custid = b.custid  
         )  
   FROM [dbo].[BetTradeSellingCancelled] main WITH (ROWLOCK, UPDLOCK)  
-  INNER JOIN zzzbettrans zb WITH(NOLOCK)  
-   ON zb.Refno = main.[TicketID] AND zb.BetType = 901   
+  INNER JOIN bettrans b WITH(NOLOCK)  
+   ON b.Refno = main.[TicketID] AND b.BetType = 901  
+   INNER JOIN bettrans b902 WITH(NOLOCK)  
+	ON b902.Refno = main.[TicketID] AND b902.BetType = 902  
   WHERE main.[TicketID] IN (SELECT transid FROM @tmpListTransID WHERE Bettype NOT IN(901,902,903))  
     
    
