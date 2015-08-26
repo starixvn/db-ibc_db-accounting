@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]  
+﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]  
  @strTransID  VARCHAR(MAX) = '',  
  @CustID   int = 0,  
  @username  varchar(30),  
@@ -84,8 +84,8 @@ BEGIN
   ,KeyID  
   ,TicketType  
  )  
- SELECT  CASE WHEN Bettype IN (801,803,804,805,806) THEN Refno ELSE TransID END TransID  
-   ,CASE WHEN Bettype IN (801,803,804,805,806) THEN Refno ELSE TransID END GroupTransID  
+ SELECT  TransID  TransID  
+   ,TransID  GroupTransID  
    ,MatchID  
    ,Bettype  
    ,betid  
@@ -100,8 +100,29 @@ BEGIN
         ELSE 1 END  -- SB, NG, LiveCS   
    ,1  
  FROM Bettrans WITH (NOLOCK)  
- WHERE CASE WHEN Bettype IN (801,803,804,805,806) THEN refno ELSE TransID END IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))  
-   AND StatusID NOT IN (101, 102) -- REJECT, VOID  
+ WHERE TransID  IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))  
+   AND StatusID NOT IN (101, 102) -- REJECT, VOID 
+   AND Bettype NOT IN (801,803,804,805,806)
+ UNION ALL
+  SELECT  Refno TransID  
+   ,Refno GroupTransID  
+   ,MatchID  
+   ,Bettype  
+   ,betid  
+   ,stake  
+   ,odds  
+   ,Refno  
+   ,Betfrom  
+   ,StatusID  
+   ,CASE WHEN Bettype = 9 THEN -1 -- isCalculatingParlay in SystemSettings OR 1 (Single match)  
+        WHEN Bettype = 10 THEN 2    -- Outright   
+        WHEN Bettype IN (801,803,804,805,806) THEN 3  
+        ELSE 1 END  -- SB, NG, LiveCS   
+   ,1  
+ FROM Bettrans WITH (NOLOCK)  
+ WHERE Refno IN (SELECT CONVERT(BIGINT,Val) FROM dbo.strSplit(@strTransID,','))  
+   AND StatusID NOT IN (101, 102) -- REJECT, VOID 
+   AND Bettype  IN (801,803,804,805,806) 
  UNION ALL  
  --Get data from Translog for Metric Gaming Super Live  
  SELECT  translogid TransID, translogid GroupTransID  
@@ -165,8 +186,13 @@ BEGIN
  FROM (  
    SELECT winlostdate,CustID,winlost,actual_stake,playercomm,Bettype  
    FROM Bettrans WITH (NOLOCK)  
-   WHERE CASE WHEN Bettype IN (801,803,804,805,806) THEN Refno ELSE TransID END   
-      IN (SELECT TransID FROM @tmpListTransID WHERE TicketType = 1 AND Bettype NOT IN (901,902,903))  
+   WHERE TransID IN (SELECT TransID FROM @tmpListTransID WHERE TicketType = 1 AND Bettype NOT IN (901,902,903)) 
+		AND Bettype NOT IN (801,803,804,805,806)
+   UNION ALL
+   SELECT winlostdate,CustID,winlost,actual_stake,playercomm,Bettype  
+   FROM Bettrans WITH (NOLOCK)  
+   WHERE Refno IN (SELECT TransID FROM @tmpListTransID WHERE TicketType = 1 AND Bettype NOT IN (901,902,903)) 
+      AND Bettype IN (801,803,804,805,806)
    UNION ALL  
    SELECT winlostdate,CustID,0 winlost,actual_stake,0 playercomm,GameID Bettype  
    FROM translog WITH (NOLOCK)  
@@ -455,6 +481,7 @@ BEGIN
    b.liveawayscore,  
    b.liveindicator,  
    cr.username creator,  
+   usr.username username,
    CASE WHEN b.bettype = 901 THEN tpl.stake ELSE b.stake END stake,       
    CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status],  
    b.winlost - actual_stake as winlost,  
@@ -467,6 +494,7 @@ BEGIN
    INNER JOIN @tmpListTransID tpl ON tpl.transid = b.transid  
    INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid  
    INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator  
+   INNER JOIN CustDB.dbo.customer usr WITH (NOLOCK) ON usr.custid = b.custid 
  WHERE CASE WHEN b.bettype IN (801,803,804,805,806) THEN b.refno ELSE b.transid END IN (SELECT CASE WHEN bettype IN (801,803,804,805,806) THEN refno ELSE transid END FROM @tmpListTransID WHERE bettype NOT IN (10,9) AND TicketType=1)  
    AND @isExistMatch = 1   
  UNION ALL  
@@ -495,6 +523,7 @@ BEGIN
    NULL liveawayscore,  
    NULL liveindicator,  
    cr.username creator,  
+   usr.username username,  
    b.stake,       
    b.status,  
    - actual_stake as winlost,  
@@ -506,6 +535,7 @@ BEGIN
  FROM translog b WITH (NOLOCK)  
    INNER JOIN Match m WITH (NOLOCK) ON b.EventID = m.matchid  
    INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator  
+   INNER JOIN CustDB.dbo.customer usr WITH (NOLOCK) ON usr.custid = b.custid 
  WHERE b.translogid IN (SELECT TransID FROM @tmpListTransID WHERE TicketType=2)  
    AND @isExistMatch = 1  
  UNION ALL   
@@ -534,6 +564,7 @@ BEGIN
    0 AS liveawayscore,  
    0 AS liveindicator,  
    cr.username creator,  
+   usr.username username,  
    b.stake,       
    b.status,  
    b.winlost - actual_stake as winlost,  
@@ -544,6 +575,7 @@ BEGIN
    b.transid grouptransid  
  FROM bettrans b WITH(NOLOCK)   
    INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator  
+   INNER JOIN CustDB.dbo.customer usr WITH (NOLOCK) ON usr.custid = b.custid 
  WHERE b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 9)  
    AND @isExistParlay = 1   
  UNION ALL   
@@ -571,6 +603,7 @@ BEGIN
    b.liveawayscore,  
    b.liveindicator,  
    cr.username creator,  
+   usr.username username,  
    b.stake,       
    b.status,  
    b.winlost - actual_stake as winlost,  
@@ -583,8 +616,10 @@ BEGIN
    bettrans b WITH (NOLOCK)  
    INNER JOIN Outright m WITH (NOLOCK) ON b.matchID = m.orid  
    INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator  
+   INNER JOIN CustDB.dbo.customer usr WITH (NOLOCK) ON usr.custid = b.custid 
  WHERE b.transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype = 10)  
    AND @isExistOutright = 1   
+ ORDER BY grouptransid,transid  
    
  --Email Bettrade  
  SELECT m.homeid,  
@@ -1056,6 +1091,7 @@ sb.checktime, sb.matchid, sb.bettype
    b.liveawayscore,  
    b.liveindicator,  
    cr.username creator,  
+   usr.username username,
    b.stake,       
    b.status,  
    b.winlost,  
@@ -1065,7 +1101,8 @@ sb.checktime, sb.matchid, sb.bettype
    b.transdesc  
  FROM bettrans b WITH (NOLOCK)  
    INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid  
-   INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator  
+   INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator
+   INNER JOIN CustDB.dbo.customer usr WITH (NOLOCK) ON usr.custid = b.custid   
  WHERE b.refno IN (SELECT refno FROM @tmpListTransID WHERE bettype BETWEEN 801 AND 806)  
    AND @isExistMatch = 1   
    AND b.bettype BETWEEN 801 AND 806  

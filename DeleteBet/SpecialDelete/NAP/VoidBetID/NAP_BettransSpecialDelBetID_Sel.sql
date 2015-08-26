@@ -507,8 +507,9 @@ BEGIN
 
 
 	SELECT * FROM
-	(SELECT *
+	(SELECT t.*, b.transid AS SoldID
 	FROM @Data t
+	LEFT JOIN bettrans AS b WITH (NOLOCK) ON b.refno = t.transid AND b.bettype = 901
 	UNION ALL
 	SELECT b.refno GroupID, b.bettype
 			,b.transid
@@ -553,6 +554,7 @@ BEGIN
 			,m.showtime
 			,b.winlostdate
 			,b.transdesc
+			,b.transid SoldID
 	FROM @Data t
 			INNER JOIN bettrans AS b WITH (NOLOCK) ON b.refno = t.transid AND b.bettype = 901
 			INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
