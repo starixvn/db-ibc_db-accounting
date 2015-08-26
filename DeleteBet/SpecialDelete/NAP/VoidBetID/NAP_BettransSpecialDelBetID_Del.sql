@@ -434,7 +434,7 @@ BEGIN
   main.TransID = bs.transid,  
   main.StatusID = bs.StatusID  
  FROM @tmpListTransID  main  
-  INNER JOIN bettrans bs WITH(NOLOCK) ON main.Refno = bs.refno AND main.bettype = bs.bettype  
+  INNER JOIN bettrans bs WITH(NOLOCK) ON main.Refno = bs.refno AND main.bettype = bs.bettype  AND main.matchid = bs.matchid
  WHERE main.bettype IN (801,803,804,805,806)  
  --Update if there are any concurrency problems for MGSL - end  
   
@@ -954,7 +954,9 @@ sb.checktime, sb.matchid, sb.bettype
   -- DELETE balance/backup/delete data   
   DELETE FROM zzzbettrans   
   WHERE TransID IN (SELECT transid FROM @ErrorTransID)  
-   OR (Refno IN (SELECT transid FROM @ErrorTransID) AND Bettype IN(901,902,903))  
+  
+  DELETE FROM zzzbettrans   
+  WHERE (Refno IN (SELECT transid FROM @ErrorTransID) AND Bettype IN(901,902,903))  
      
   DELETE db  
   FROM @tmpListTransID db  
@@ -974,13 +976,13 @@ sb.checktime, sb.matchid, sb.bettype
  --update bettrans  
  UPDATE bettrans WITH (UPDLOCK,ROWLOCK)   
  SET  winlost=actual_stake,ruben=1,statuswinlost=6, creator = @UserID,  
-   awinlost = 0, mwinlost = 0, swinlost = 0, playercomm = 0, comm  = 0, acomm = 0, scomm = 0,statusID = 102  
+   mwinlost = 0, swinlost = 0, playercomm = 0, comm  = 0, acomm = 0, scomm = 0,statusID = 102  
  WHERE transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype NOT IN (901,902,903))   
    
  --update bettrans  
  UPDATE bettrans WITH (UPDLOCK,ROWLOCK)   
  SET  winlost=actual_stake,ruben=1,statuswinlost=6, creator = @UserID,  
-   awinlost = 0, mwinlost = 0, swinlost = 0, playercomm = 0, comm  = 0, acomm = 0, scomm = 0,statusID = 102  
+    mwinlost = 0, swinlost = 0, playercomm = 0, comm  = 0, acomm = 0, scomm = 0,statusID = 102  
  WHERE refno IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))  
   AND Bettype IN (901, 902, 903)    
     
@@ -999,7 +1001,7 @@ sb.checktime, sb.matchid, sb.bettype
       ,TradeID)  
    SELECT b.refno  
     , 'SB void ticket due to ' + @Reason  
-    ,b.actual_stake - b902.actual_stake
+    ,b.awinlost
     ,0  
     ,0  
     ,'SB'  
@@ -1010,8 +1012,6 @@ sb.checktime, sb.matchid, sb.bettype
    FROM @tmpListTransID t  
    INNER JOIN bettrans b WITH(NOLOCK)  
 	ON b.Refno = t.TransID AND b.BetType = 901  
-	INNER JOIN bettrans b902 WITH(NOLOCK)  
-	ON b902.Refno = t.TransID AND b902.BetType = 902 
    INNER JOIN [dbo].[BetTradeSelling] btc WITH(NOLOCK)  
    ON btc.TicketID = b.refno  
    LEFT JOIN [dbo].[BetTradeSellingCancelled] c WITH(NOLOCK)   
@@ -1022,7 +1022,7 @@ sb.checktime, sb.matchid, sb.bettype
   UPDATE main  
   SET  
    [Remark] = 'SB void ticket due to ' + @Reason,  
-   [BTBuyBack] = b.actual_stake - b902.actual_stake,  
+   [BTBuyBack] = b.awinlost,  
    [BTComission] = 0,  
    [Owner] = 'SB',  
    [Cancelled] = 1,  
@@ -1037,12 +1037,20 @@ sb.checktime, sb.matchid, sb.bettype
         )  
   FROM [dbo].[BetTradeSellingCancelled] main WITH (ROWLOCK, UPDLOCK)  
   INNER JOIN bettrans b WITH(NOLOCK)  
-   ON b.Refno = main.[TicketID] AND b.BetType = 901  
-   INNER JOIN bettrans b902 WITH(NOLOCK)  
-	ON b902.Refno = main.[TicketID] AND b902.BetType = 902  
+   ON b.Refno = main.[TicketID] AND b.BetType = 901   
   WHERE main.[TicketID] IN (SELECT transid FROM @tmpListTransID WHERE Bettype NOT IN(901,902,903))  
     
+ --update awinlost  
+ UPDATE bettrans WITH (UPDLOCK,ROWLOCK)   
+ SET  awinlost = 0
+ WHERE transid IN (SELECT TransID FROM @tmpListTransID WHERE bettype NOT IN (901,902,903))   
    
+ --update awinlost  
+ UPDATE bettrans WITH (UPDLOCK,ROWLOCK)   
+ SET  awinlost = 0  
+ WHERE refno IN (SELECT TransID FROM @tmpListTransID WHERE Bettype NOT IN (901,902,903))  
+  AND Bettype IN (901, 902, 903) 
+    
  --Get data after update  
  INSERT INTO #AfterUpd (custid, balance)  
  SELECT b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance  
