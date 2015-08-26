@@ -160,6 +160,7 @@ BEGIN
 			Cancelled = 0,
 			ChangeDate = GETDATE()
 		WHERE TicketID IN (SELECT transid FROM #tmp)
+			AND Cancelled = 1
 	END	
 	
 	DROP TABLE #bettrans		
