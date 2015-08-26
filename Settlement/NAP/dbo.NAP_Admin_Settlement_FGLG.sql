@@ -95,7 +95,7 @@ BEGIN
 	END
 
 	---
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_FGLG'
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_FGLG'
 		,@MatchID = @matchid
 		,@Action = @action
 		,@BetStatus = @betstatus
@@ -165,7 +165,7 @@ BEGIN
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype = @bettype
+		WHERE matchid = @matchid AND bettype IN (14, 127)
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -232,7 +232,7 @@ BEGIN
 				,@FGLG2 = @FGLG2
 				,@betcount_14 = @betcount_14
 
-			EXEC dbo.NAP_Admin_Settlement_Refund_FGLG --refund  all LG
+						EXEC dbo.NAP_Admin_Settlement_Refund_FGLG --refund  all LG
 				@matchid = @matchid
 				,@adminid = @creator
 				,@action = 'REFUND'
@@ -255,7 +255,7 @@ BEGIN
 
 		IF @IncludeLG = 0
 		BEGIN
-			EXEC dbo.NAP_Admin_Settlement_Refund_FGLG --refund FT LG
+						EXEC dbo.NAP_Admin_Settlement_Refund_FGLG --refund FT LG
 				@matchid = @matchid
 				,@adminid = @creator
 				,@action = 'REFUND-FT'
@@ -279,7 +279,7 @@ BEGIN
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype = @bettype
+		WHERE matchid = @matchid AND bettype IN (14, 127)
 		GROUP BY custid
 			--===
 	END
@@ -325,7 +325,7 @@ BEGIN
 	WHERE	Increased = 0
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
+				EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
@@ -343,7 +343,7 @@ BEGIN
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
+				EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 
