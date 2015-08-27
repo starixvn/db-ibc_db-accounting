@@ -367,7 +367,7 @@ BEGIN
    WHERE VName = 'isCalculatingParlay'  
   END  
     
-  SELECT @ErrCode = 100,  
+  SELECT @ErrCode = 101,  
              @ErrMsg =   
              'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'  
      RETURN  
@@ -482,6 +482,7 @@ BEGIN
    b.liveindicator,  
    cr.username creator,  
    usr.username username,
+   usr.username2 username2,
    CASE WHEN b.bettype = 901 THEN tpl.stake ELSE b.stake END stake,       
    CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status],  
    b.winlost - actual_stake as winlost,  
@@ -524,6 +525,7 @@ BEGIN
    NULL liveindicator,  
    cr.username creator,  
    usr.username username,  
+   usr.username2 username2,
    b.stake,       
    b.status,  
    - actual_stake as winlost,  
@@ -564,7 +566,8 @@ BEGIN
    0 AS liveawayscore,  
    0 AS liveindicator,  
    cr.username creator,  
-   usr.username username,  
+   usr.username username,
+   usr.username2 username2,  
    b.stake,       
    b.status,  
    b.winlost - actual_stake as winlost,  
@@ -603,7 +606,8 @@ BEGIN
    b.liveawayscore,  
    b.liveindicator,  
    cr.username creator,  
-   usr.username username,  
+   usr.username username, 
+   usr.username2 username2, 
    b.stake,       
    b.status,  
    b.winlost - actual_stake as winlost,  
@@ -647,6 +651,7 @@ BEGIN
    b.liveindicator,  
    cr.username creator,  
    c.username ,  
+   c.username2 ,
    CASE WHEN b.bettype = 901 THEN tpl.stake ELSE b.stake END stake,       
    CASE WHEN b.bettype = 901 THEN 'SOLD' ELSE b.status END [status],  
    b.winlost - b.actual_stake as winlost,  
@@ -662,7 +667,7 @@ BEGIN
    INNER JOIN bettrans b WITH (NOLOCK) ON tpl2.transid = b.transid  
    INNER JOIN Match m WITH (NOLOCK) ON b.matchID = m.matchid  
    INNER JOIN CustDB.dbo.custinfo c2 WITH (NOLOCK) ON c2.custid = b2.custid  
-   INNER JOIN CustDB.dbo.custinfo c WITH (NOLOCK) ON c.custid = b.custid  
+   INNER JOIN CustDB.dbo.customer c WITH (NOLOCK) ON c.custid = b.custid  
    INNER JOIN CustDB.dbo.customer cr WITH (NOLOCK) ON cr.custid = b.creator   
  WHERE c2.username like '%BetTrade%' OR c.username like '%BetTrade%'  
  ORDER BY tpl.grouptransid,b.transid  
@@ -1100,6 +1105,7 @@ sb.checktime, sb.matchid, sb.bettype
    b.liveindicator,  
    cr.username creator,  
    usr.username username,
+   usr.username2 username2,
    b.stake,       
    b.status,  
    b.winlost,  
