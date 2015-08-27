@@ -438,7 +438,15 @@ BEGIN
  WHERE main.bettype IN (801,803,804,805,806)  
  --Update if there are any concurrency problems for MGSL - end  
   
-  
+ 
+ --get balance game for livecs
+	DECLARE @balanceGame TABLE(custid INT, winlostdate SMALLDATETIME, balance MONEY)
+	INSERT INTO @balanceGame(custid, winlostdate, balance)
+	SELECT custid, winlostdate
+		, SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END)
+	FROM dbo.bettrans WITH(NOLOCK)
+	WHERE transid IN (SELECT tmp.TransID FROM @tmpListTransID tmp WHERE tmp.Bettype BETWEEN 1101 AND 1199)
+	GROUP BY custid, winlostdate 
  -- Get Upline info   
   
  SELECT  @CustID   AS CustID   
@@ -1070,6 +1078,19 @@ sb.checktime, sb.matchid, sb.bettype
  INNER JOIN #AfterUpd a    
    ON a.custid = b.custid  
  WHERE     (a.balance - b.balance) > 0  
+ 
+ --update balance debit game
+	UPDATE bal
+	SET Balance = bal.Balance + tmp.balance
+	FROM dbo.BalanceDebitGame bal WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
+	WHERE tmp.balance > 0
+
+	INSERT INTO dbo.BalanceDebitGame(CustId, WinlostDate, Balance)
+	SELECT b.custid, b.winlostdate, b.balance
+	FROM @balanceGame b
+		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
+	WHERE bal.CustId IS NULL AND b.balance > 0
   
  INSERT INTO BalancePendingDebit (custid,Balance)  
  SELECT  a.custid, ABS(a.balance - b.balance) as Balance  
@@ -1077,6 +1098,19 @@ sb.checktime, sb.matchid, sb.bettype
  INNER JOIN #AfterUpd a    
    ON a.custid = b.custid  
  WHERE     (a.balance - b.balance) < 0  
+ 
+ --update balance credit game
+	UPDATE bal
+	SET Balance = bal.Balance + ABS(tmp.balance)
+	FROM dbo.BalanceCreditGame bal WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
+	WHERE tmp.balance < 0
+
+	INSERT INTO dbo.BalanceCreditGame(CustId, WinlostDate, Balance)
+	SELECT b.custid, b.winlostdate, ABS(b.balance)
+	FROM @balanceGame b
+		LEFT JOIN dbo.BalanceCreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
+	WHERE bal.CustId IS NULL AND b.balance < 0
    
  --Metric API Calling  
  SELECT m.homeid,  
