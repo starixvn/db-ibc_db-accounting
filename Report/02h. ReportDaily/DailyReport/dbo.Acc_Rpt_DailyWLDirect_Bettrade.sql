@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Bettrade_xpre]
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Bettrade]
 	@WinlostDate	DATETIME
 AS
 /*	Creator: 20150723@Sophia
@@ -6,6 +6,7 @@ AS
 	DB: DBACC/bodb02
 	
 	Revisions: 
+		- 20150827@Sophia: Get Bettype
 		
 */
 
@@ -24,7 +25,8 @@ WHERE	srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
 UNION
 SELECT 5707545--BARM
 
-SELECT	CASE WHEN dep.custid IS NULL THEN 1 ELSE 2 END AS site
+SELECT	b.bettype,
+		CASE WHEN dep.custid IS NULL THEN 1 ELSE 2 END AS site
 		,SUM ((winlost - actual_stake) * actualrate) WinLost
 		,SUM ((awinlost + mwinlost + swinlost) * actualrate) Position
 		,0 AS Commission
@@ -49,5 +51,5 @@ DROP TABLE #DepAgent
 
 END		
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Bettrade_xpre] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Bettrade] TO [bodbAdminNet]
 GO 
