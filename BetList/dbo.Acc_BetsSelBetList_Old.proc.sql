@@ -219,7 +219,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-			b.oddsspread
+			ISNULL(b.oddsspread, 0) AS OddsSpread
 		FROM 
 			dbo.bettrans_bk as b WITH (nolock,index=IX_custid) 
 			INNER JOIN dbo.match_BK as m WITH (NOLOCK) on b.matchid = m.matchid 
@@ -1162,6 +1162,7 @@ BEGIN
 	 DROP TABLE #BetListData;
 	 DROP TABLE #BetListDetailData;
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList_Old] TO [bodbAdminNet]

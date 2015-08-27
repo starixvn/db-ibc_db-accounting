@@ -268,7 +268,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-				b.oddsspread
+				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM 
 				bettrans AS b WITH (NOLOCK) 
 				INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
@@ -1568,7 +1568,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-				b.oddsspread
+				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM 
 				bettrans14 AS b WITH (NOLOCK) 
 				INNER JOIN match14 AS m WITH (NOLOCK) 

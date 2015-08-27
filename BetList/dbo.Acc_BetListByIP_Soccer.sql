@@ -251,7 +251,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-				b.oddsspread
+				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM bettrans14 b WITH (NOLOCK) 
 				INNER JOIN match14 m WITH (NOLOCK) on b.matchid= m.matchid
 				INNER JOIN custInfo c WITH (NOLOCK) on c.custid = b.creator
@@ -476,7 +476,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-				b.oddsspread
+				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM bettrans b WITH (NOLOCK) 
 				INNER JOIN match m  WITH (NOLOCK) on b.matchid = m.matchid
 				INNER JOIN custInfo c WITH (NOLOCK) on c.custid = b.creator

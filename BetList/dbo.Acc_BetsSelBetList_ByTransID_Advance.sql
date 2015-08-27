@@ -300,7 +300,7 @@ BEGIN
 				b.winlostdate,
 				b.BetCheck,
 				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-				b.oddsspread
+				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM 
 				bettrans as b WITH (NOLOCK) 
 				INNER JOIN match as m WITH (NOLOCK) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
@@ -1029,7 +1029,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-			b.oddsspread
+			ISNULL(b.oddsspread, 0) AS OddsSpread
 		FROM 
 			bettrans14 as b WITH (NOLOCK) 
 			INNER JOIN match14 as m WITH (NOLOCK) on b.matchid = m.matchid
@@ -1621,7 +1621,7 @@ BEGIN
 			b.winlostdate,
 			b.BetCheck,
 			CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-			b.oddsspread
+			ISNULL(b.oddsspread, 0) AS OddsSpread
 		FROM 
 			DBARC.bodb_archive.dbo.bettrans_bk b WITH (NOLOCK) 
 			INNER JOIN DBARC.bodb_archive.dbo.match_BK m WITH (NOLOCK) on b.matchid = m.matchid
@@ -2263,6 +2263,7 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList_ByTransID_Advance] TO [bodbAdminNet]

@@ -267,7 +267,7 @@ BEGIN
 					b.winlostdate,
 					b.betcheck,
 					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
-					b.oddsspread
+					ISNULL(b.oddsspread, 0) AS OddsSpread
 				FROM 	bettrans14 b with (NOLOCK) 
 						INNER JOIN match14 match with (NOLOCK) on b.matchid= match.matchid
 						INNER JOIN custInfo creator with (NOLOCK) on creator.custid = b.creator
@@ -468,7 +468,7 @@ BEGIN
 					b.winlostdate ,
 					b.betcheck,
 					'' AS transdesc,
-					b.oddsspread
+					ISNULL(b.oddsspread, 0) AS OddsSpread
 				FROM bettrans b with (NOLOCK) 
 					INNER JOIN match  with (NOLOCK) on b.matchid = match.matchid
 					INNER JOIN custInfo creator with (NOLOCK) on creator.custid = b.creator
@@ -1901,6 +1901,7 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByIP_OtherSports] TO [bodbAdminNet]
