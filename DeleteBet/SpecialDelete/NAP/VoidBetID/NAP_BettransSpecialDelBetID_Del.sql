@@ -20,6 +20,7 @@ AS
   - 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]   
   - 20150615@Dominic: BetTrade Integration  [Redmine:#36964]  
   - 20150623@Dominic: Add Metric Gaming Super Live [Redmine:##38200]  
+  - 20150804@Patrick: Adjust Balance Credit/Debit Game value for LiveCS #40736
  Param's Explanation:   
 */  
 BEGIN   
