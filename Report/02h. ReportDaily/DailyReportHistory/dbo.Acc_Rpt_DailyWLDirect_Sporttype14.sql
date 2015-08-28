@@ -67,7 +67,8 @@ AS
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 		- 20150723@Sophia: Apply Bettrade [#38815]
 		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
-
+		- 20150828@Sophia: Apply Colossus Bets [#41935]
+		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -585,6 +586,23 @@ BEGIN
 	WHERE	s.ProductId = 1
 			AND s.EventType = 1 
 			AND s.SubProduct = 'BT-Comm'
+	GROUP BY site
+	
+	----Colosuss Bets
+	UNION ALL
+	SELECT
+			120,'Colosuss Bets', 204, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			SUM(ISNULL(b.commission_actualrate,0)) AS Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) AS VirtualLineTotal,	
+			SUM(ISNULL(turnover_actualrate,0)) AS RealTurnover,
+			SUM(ISNULL(turnover_actualrate,0)) AS VirtualTurnover,
+			0 AS EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 15
 	GROUP BY site
 
 	ORDER BY DisplayOrder asc, ibc, site

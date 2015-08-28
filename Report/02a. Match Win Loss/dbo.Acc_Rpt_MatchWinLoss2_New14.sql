@@ -25,6 +25,7 @@ AS
 			- 20150520@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
 			- 20150723@Sophia: Apply Bettrade [#38815]
+			- 20150827@Sophia: Apply Colossus Bets [#41935]
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -480,7 +481,22 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
 	WHERE s.ProductID = 1
 		AND s.EventType = 1	
-		AND s.SubProduct = 'BT-Comm'			 
+		AND s.SubProduct = 'BT-Comm'	
+
+	-- Colossus Bets
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.Linetotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Colossus Bets' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE	s.ProductID = 15		
 					
 	
     -- Resultset of 8RM and BARM
@@ -908,9 +924,28 @@ BEGIN
 			and statusID not in (101,102,103,121)
 	GROUP BY bettrans14.bettype			
 	
+		-- Colossus Bets
+	UNION ALL
+	SELECT	120 Num,
+			b.bettype,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			sum(LineTotal) as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 15		
+	GROUP BY b.bettype
+			
 	    -- 8RM & BARM
 	UNION ALL 		
-	SELECT	120 Num,
+	SELECT	130 Num,
 			bettype,	
 			Hedge,	
 			LineTotal_soccer_live,
