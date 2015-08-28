@@ -64,6 +64,10 @@ SET @p_bettypesLive = @BetTypesLive
 IF @Type = 1 or @Type = 2 or @Type = 3
 	SELECT @LiveType = 0
 
+SELECT CustID 
+INTO #CustIDs
+FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK)
+
 ----***** bettype <> 9 (because bettype = 9 then matchID = 9)****----
 IF @p_bettypes <> '9' AND @BetTypes <> '29' AND @BetTypes <> '9,29'
 BEGIN
@@ -290,7 +294,7 @@ BEGIN
 				,b.transdesc
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 	
-		WHERE		B.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
+		WHERE		B.recommend NOT IN (SELECT CustID FROM #CustIDs WITH (NOLOCK) ) 
 					AND b.statusID NOT IN (101,102, 121) --- ('Void', 'Reject', 'Dummy')
 					AND b.matchid = @MatchId 
 					AND
@@ -354,7 +358,7 @@ BEGIN
 		FROM		Translog b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.EventID = m.matchid 
 		LEFT JOIN bettrans bs WITH(NOLOCK) ON b.translogid = bs.refno AND b.gameid = bs.bettype			
-		WHERE		B.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
+		WHERE		B.recommend NOT IN (SELECT CustID FROM #CustIDs WITH (NOLOCK) ) 
 					AND b.statusID NOT IN (101,102, 121) --- ('Void', 'Reject', 'Dummy')
 					AND b.gameid IN (801,803,804,805,806) AND bs.refno IS NULL
 					AND b.EventID = @MatchId 
@@ -668,7 +672,7 @@ BEGIN
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
 		INNER JOIN  match m WITH (NOLOCK) ON m.matchid = bm.matchID
-		WHERE		b.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
+		WHERE		b.recommend NOT IN (SELECT CustID FROM #CustIDs WITH (NOLOCK) ) 
 					AND b.statusID NOT IN (101,102) --('Void', 'Reject')
 					AND b.bettype IN (9,29) AND b.matchID IN (9,29)
 					AND bm.matchid = @MatchId 	 
