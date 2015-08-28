@@ -59,8 +59,9 @@ BEGIN
 					WHEN @statusid = 3 AND rs.SettlementStatusID IN (1,4) THEN 1 
 					ELSE 0 
 				END
-		AND vs.SB_TradeStatusID = 1 -- this match is offered Metric Gaming
+		AND vs.SB_TradeStatusID IN (1,2,3) -- this match is offered Metric Gaming
 		AND vs.VD_TradeStatusID =1
+		AND vs.VendorID = 5
 	ORDER BY EventStatus DESC, leagueid, kickofftime
 		
 END

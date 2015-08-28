@@ -17,8 +17,9 @@ BEGIN
 		WHERE m.eventstatus = 'completed'
 			AND sporttype = 1
 			AND rs.SettlementStatusID = 0--MG is running
-			AND vs.SB_TradeStatusID = 1--match offer MG
+			AND vs.SB_TradeStatusID IN (1,2,3)--match offer MG
 			AND vs.VD_TradeStatusID = 1
+			AND vs.VendorID = 5
 	)
 	BEGIN
 		SELECT @isExistRunningMG = 1
