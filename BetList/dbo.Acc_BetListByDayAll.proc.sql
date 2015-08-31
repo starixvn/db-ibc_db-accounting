@@ -73,8 +73,9 @@ AS
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 		- 20150615@Edward: Support for BetTrade
 		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
-		- 20150708@Edward: Support for MicroGamming
+		- 20150708@Edward: Support for Micro Gaming
 		- 20150825@Kos: Add OddsSpread column to support Myanmar Odds
+		- 20150828@Kos: Support Colossus Bet
 		
 	Param's Explanation:   
 		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
@@ -231,7 +232,7 @@ BEGIN
 				b.betteam,
 				b.status,
 				m.betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -276,16 +277,16 @@ BEGIN
 				--b.bettype NOT BETWEEN 1501 and 1599 AND --20120626@Elodie: exclude outright, HR from sportbook
 				--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 				AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus);
-                                      
+
 			-- Virtual HR
 			INSERT INTO @Data
 			SELECT 
 				r.SportType,
 				r.LeagueID,
-				o.RacerID as homeid,
-				0 as awayid,
-				o.RacerNum as matchcode,
-				b.oddsid as Race,
+				o.RacerID AS homeid,
+				0 AS awayid,
+				o.RacerNum AS matchcode,
+				b.oddsid AS Race,
 				o.EventDate,
 				0,
 				0,
@@ -307,26 +308,26 @@ BEGIN
 				0 AS finalodds,
 				0 AS finalodds2,
 				b.oddstype,
-				'' as betteam,
+				'' AS betteam,
 				b.status,
-				'' as betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,
+				'' AS betstatus,
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
 				b.playercomm,
 				b.livehomescore,
 				b.liveawayscore,
-				0 as liveindicator,
-				0 as finalhomescore,
-				0 as finalawayscore,
-				0 as hthomescore,
-				0 as htawayscore,
+				0 AS liveindicator,
+				0 AS finalhomescore,
+				0 AS finalawayscore,
+				0 AS hthomescore,
+				0 AS htawayscore,
 				b.CREATOR, --creator.username creator, 
 				b.ip,
 				b.Username,
 				CONVERT (BIT, 0) AS IsNeutral,
-				'' as showtime,
+				'' AS showtime,
 				0 spositiontaking, -- unuse in this report
 				0 mpositiontaking, -- unuse in this report
 				0 apositiontaking, -- unuse in this report		
@@ -389,7 +390,7 @@ BEGIN
 				b.betteam,
 				b.status AS status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,                  
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -465,7 +466,7 @@ BEGIN
 				b.betteam,
 				b.status AS status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,                  
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -541,7 +542,7 @@ BEGIN
 				d.ChoiceId betteam,   
 				b.status AS status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,                  
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -584,7 +585,7 @@ BEGIN
 				AND s.ProductID = 8
 				--AND bettype BETWEEN 1501 and 1599
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
-			
+
 			-- P2P 
 			INSERT INTO @Data
 			SELECT 
@@ -618,7 +619,7 @@ BEGIN
 				b.betteam,
 				b.status AS status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,                  
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -692,7 +693,7 @@ BEGIN
 				'',
 				b.status,
 				'' AS betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,                  
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -768,7 +769,7 @@ BEGIN
 				b.betteam,
 				b.status,
 				'' AS betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -845,7 +846,7 @@ BEGIN
 				'',
 				b.status,
 				'',
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -929,7 +930,7 @@ BEGIN
 				b.betteam,   
 				b.status AS status,
 				'' AS betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,                  
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -976,7 +977,7 @@ BEGIN
 				203, --sporttype,
 				0, --leagueid,
 				0, --homeid,
-				0, --awayid,		
+				0, --awayid,
 				'' AS matchcode, --matchcode, 
 				'' AS race,
 				'' AS eventdate, --get eventdate
@@ -1000,10 +1001,10 @@ BEGIN
 				0 AS finalodds,
 				0 AS finalodds2,
 				'' AS oddstype,
-				'' AS betteam,   
+				'' AS betteam,
 				b.status AS status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                  
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1022,26 +1023,100 @@ BEGIN
 				'' AS showtime,
 				0 spositiontaking, -- unuse in this report
 				0 mpositiontaking, -- unuse in this report
-				0 apositiontaking, -- unuse in this report		
+				0 apositiontaking, -- unuse in this report
 				0 spositiontaking2,-- unuse in this report
 				0 mpositiontaking2,-- unuse in this report
 				0 apositiontaking2,-- unuse in this report
 				b.betfrom,
-				0 scomm, -- unuse in this report			
-				0 acomm, -- unuse in this report			
-				0 comm,	-- unuse in this report	
-				awinlost,		
-				mwinlost,		
+				0 scomm, -- unuse in this report
+				0 acomm, -- unuse in this report
+				0 comm,	-- unuse in this report
+				awinlost,
+				mwinlost,
 				swinlost,
 				b.winlostdate,
 				b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE  b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 13
+				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
+
+			-- Colossus Bet
+			INSERT INTO @Data
+			SELECT 
+				204, --sporttype,
+				0, --leagueid,
+				0, --homeid,
+				0, --awayid,
+				'' AS matchcode, --matchcode, 
+				'' AS race,
+				'' AS eventdate, --get eventdate
+				0,
+				0,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				ISNULL(b.checktime, '') AS settletime,
+				b.matchid, --matchid, 
+				b.transid,
+				ISNULL(b.BetID, 0),
+				b.refno,
+				b.transdate,
+				b.oddsid,
+				b.bettype,
+				0 AS hdp1,
+				0 AS hdp2,
+				0 AS odds,
+				0 AS modds,
+				0 AS finalodds,
+				0 AS finalodds2,
+				'' AS oddstype,
+				'' AS betteam,
+				b.status AS status,
+				'' AS betstatus, --m.betstatus, 
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
+				b.stake,
+				b.actual_stake,
+				(b.winlost - b.actual_stake) AS winlost,
+				b.playercomm,
+				b.livehomescore,
+				b.liveawayscore,
+				0 AS liveindicator,
+				0, --finalhomescore, 
+				0, --finalawayscore, 
+				0, --hthomescore, 
+				0, --htawayscore,
+				b.CREATOR, --creator.username creator, 
+				b.ip,
+				b.Username,
+				0 AS IsNeutral,
+				'' AS showtime,
+				0 spositiontaking, -- unuse in this report
+				0 mpositiontaking, -- unuse in this report
+				0 apositiontaking, -- unuse in this report
+				0 spositiontaking2,-- unuse in this report
+				0 mpositiontaking2,-- unuse in this report
+				0 apositiontaking2,-- unuse in this report
+				b.betfrom,
+				0 scomm, -- unuse in this report
+				0 acomm, -- unuse in this report
+				0 comm,	-- unuse in this report
+				awinlost,
+				mwinlost,
+				swinlost,
+				b.winlostdate,
+				b.BetCheck,
+				b.transdesc,
+				0 AS OddsSpread
+			FROM dbo.bettrans14 AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+			WHERE  b.custid = @custid
+				AND b.winlostdate = @fromdate
+				AND s.ProductID = 15
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
 
 			UPDATE betList
@@ -1089,9 +1164,9 @@ BEGIN
 				b.betteam,
 				CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 					ELSE b.status 
-				END as status,
+				END AS status,
 				m.betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1173,7 +1248,7 @@ BEGIN
 				'' AS betteam,
 				b.status,
 				m.betstatus,
-				0 as comstatus,   
+				0 AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				0 AS winlost,
@@ -1208,8 +1283,8 @@ BEGIN
 				b.transdesc,
 				0 AS OddsSpread
 			FROM
-				dbo.translog as b WITH (NOLOCK)
-				INNER JOIN dbo.match as m WITH (NOLOCK) on b.eventid = m.matchid
+				dbo.translog AS b WITH (NOLOCK)
+				INNER JOIN dbo.match AS m WITH (NOLOCK) on b.eventid = m.matchid
 				INNER JOIN custInfo c WITH (NOLOCK) on c.custid = b.creator
 			WHERE   b.custid		= @custid 
 				AND b.winlostdate	= @fromdate
@@ -1221,10 +1296,10 @@ BEGIN
 			SELECT 
 				r.SportType,
 				r.LeagueID,
-				o.RacerID as homeid,
-				0 as awayid,
-				o.RacerNum as matchcode,
-				b.oddsid as Race,
+				o.RacerID AS homeid,
+				0 AS awayid,
+				o.RacerNum AS matchcode,
+				b.oddsid AS Race,
 				o.EventDate,
 				0,
 				0,
@@ -1246,26 +1321,26 @@ BEGIN
 				0 AS finalodds,
 				0 AS finalodds2,
 				b.oddstype,
-				'' as betteam,
+				'' AS betteam,
 				b.status,
-				'' as betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,                                      
+				'' AS betstatus,
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,                                      
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
 				b.playercomm,
 				b.livehomescore,
 				b.liveawayscore,
-				0 as liveindicator,
-				0 as finalhomescore,
-				0 as finalawayscore,
-				0 as hthomescore,
-				0 as htawayscore,
+				0 AS liveindicator,
+				0 AS finalhomescore,
+				0 AS finalawayscore,
+				0 AS hthomescore,
+				0 AS htawayscore,
 				b.CREATOR, --creator.username creator, 
 				b.ip,
 				b.Username,
 				CONVERT (BIT, 0) AS IsNeutral,
-				'' as showtime,
+				'' AS showtime,
 				0 spositiontaking, -- unuse in this report
 				0 mpositiontaking, -- unuse in this report
 				0 apositiontaking, -- unuse in this report		
@@ -1328,7 +1403,7 @@ BEGIN
 				b.betteam,
 				b.status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1404,7 +1479,7 @@ BEGIN
 				b.betteam,
 				b.status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1480,7 +1555,7 @@ BEGIN
 				d.ChoiceId,
 				b.status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1555,7 +1630,7 @@ BEGIN
 				d.ChoiceId betteam,   
 				b.status,
 				'' AS betstatus, --m.betstatus, 
-				0 as comstatus,   
+				0 AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(-b.actual_stake) AS winlost,
@@ -1586,7 +1661,7 @@ BEGIN
 				0 mwinlost,		
 				0 swinlost,
 				b.winlostdate,
-				'' as BetCheck,
+				'' AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.translog AS b WITH (NOLOCK)
@@ -1632,7 +1707,7 @@ BEGIN
 				b.betteam,
 				b.status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1706,7 +1781,7 @@ BEGIN
 				'',
 				b.status,
 				'' AS betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1748,8 +1823,8 @@ BEGIN
 				AND b.matchid = 9
 				AND b.bettype = 9
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
-			
-				-- combination mixed parlay
+
+			-- combination mixed parlay
 			INSERT INTO @Data
 			SELECT 
 				0,
@@ -1782,7 +1857,7 @@ BEGIN
 				b.betteam,
 				b.status,
 				'' AS betstatus,
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1859,7 +1934,7 @@ BEGIN
 				'',
 				b.status,
 				'',
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -1910,7 +1985,7 @@ BEGIN
 				AND b.winlostdate = @fromdate
 				AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus);
 
-			--Gold Deluxe
+			-- Gold Deluxe
 			IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0 )
 			BEGIN
 				INSERT INTO @Data
@@ -1945,7 +2020,7 @@ BEGIN
 					b.GameID3rd betteam,
 					b.status,
 					'' AS betstatus,
-					0 as comstatus,   
+					0 AS comstatus,   
 					b.stake,
 					b.actual_stake,
 					(- b.actual_stake) AS winlost,
@@ -1986,6 +2061,7 @@ BEGIN
 					AND s.ProductID = 12
 					AND b.statusID = 0
 			END
+
 			IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] <> 0 )
 			BEGIN
 				INSERT INTO @Data
@@ -2020,7 +2096,7 @@ BEGIN
 					b.betteam,
 					b.status,
 					'' AS betstatus,
-					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,   
 					b.stake,
 					b.actual_stake,
 					(b.winlost - b.actual_stake) AS winlost,
@@ -2062,13 +2138,13 @@ BEGIN
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
 
-			--MicroGamming
+			-- Micro Gaming
 			INSERT INTO @Data
 			SELECT 
 				203, --sporttype,
 				0, --leagueid,
 				0, --homeid,
-				0, --awayid,		
+				0, --awayid,
 				'' AS matchcode,
 				'' AS race,
 				'' AS eventdate, --get eventdate
@@ -2078,7 +2154,7 @@ BEGIN
 				b.adiscount,
 				b.discount,
 				'' AS settletime,
-				b.matchid, --matchid, 
+				b.matchid, --matchid,
 				b.refno AS transid,
 				ISNULL(b.BetID, 0),
 				b.refno,
@@ -2095,7 +2171,7 @@ BEGIN
 				'',
 				b.status,
 				'' AS betstatus, --m.betstatus, 
-				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,   
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
 				b.stake,
 				b.actual_stake,
 				(b.winlost - b.actual_stake) AS winlost,
@@ -2103,44 +2179,46 @@ BEGIN
 				b.livehomescore,
 				b.liveawayscore,
 				b.liveindicator,
-				0, --finalhomescore, 
-				0, --finalawayscore, 
-				0, --hthomescore, 
+				0, --finalhomescore,
+				0, --finalawayscore,
+				0, --hthomescore,
 				0, --htawayscore,
-				b.CREATOR, --creator.username creator, 
+				b.CREATOR, --creator.username creator,
 				b.ip,
 				b.Username,
 				0 AS IsNeutral,
 				'' AS showtime,
 				0 spositiontaking, -- unuse in this report
 				0 mpositiontaking, -- unuse in this report
-				0 apositiontaking, -- unuse in this report		
+				0 apositiontaking, -- unuse in this report
 				0 spositiontaking2,-- unuse in this report
 				0 mpositiontaking2,-- unuse in this report
 				0 apositiontaking2,-- unuse in this report
 				b.betfrom,
-				0 scomm, -- unuse in this report			
-				0 acomm, -- unuse in this report			
-				0 comm,	-- unuse in this report	
-				awinlost,		
-				mwinlost,		
+				0 scomm, -- unuse in this report
+				0 acomm, -- unuse in this report
+				0 comm,	-- unuse in this report
+				awinlost,
+				mwinlost,
 				swinlost,
 				b.winlostdate,
 				b.BetCheck,
 				'' AS transdesc,
-					0 AS OddsSpread
+				0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 13
-				AND b.statusID IN (SELECT [statusID] FROM   @tmpStatus)
+				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+
 			UNION ALL
+
 			SELECT 
 				203, --sporttype,
 				0, --leagueid,
 				0, --homeid,
-				0, --awayid,		
+				0, --awayid,
 				'' AS matchcode,
 				'' AS race,
 				'' AS eventdate, --get eventdate
@@ -2164,10 +2242,10 @@ BEGIN
 				0 AS finalodds,
 				0 AS finalodds2,
 				'' AS oddstype,
-				'' AS betteam,   
+				'' AS betteam,
 				b.status,
 				'' AS betstatus, --m.betstatus, 
-				0 as comstatus,   
+				0 AS comstatus,
 				b.stake,
 				b.actual_stake,
 				(-b.actual_stake) AS winlost,
@@ -2179,33 +2257,182 @@ BEGIN
 				0, --finalawayscore, 
 				0, --hthomescore, 
 				0, --htawayscore,
-				b.CREATOR, --creator.username creator, 
+				b.CREATOR, --creator.username creator,
 				b.ip,
 				b.Username,
 				0 AS IsNeutral,
 				'' AS showtime,
 				0 spositiontaking, -- unuse in this report
 				0 mpositiontaking, -- unuse in this report
-				0 apositiontaking, -- unuse in this report		
+				0 apositiontaking, -- unuse in this report
 				0 spositiontaking2,-- unuse in this report
 				0 mpositiontaking2,-- unuse in this report
 				0 apositiontaking2,-- unuse in this report
 				b.betfrom,
-				0 scomm, -- unuse in this report			
-				0 acomm, -- unuse in this report			
-				0 comm,	-- unuse in this report	
-				0 awinlost,		
-				0 mwinlost,		
+				0 scomm, -- unuse in this report
+				0 acomm, -- unuse in this report
+				0 comm,	-- unuse in this report
+				0 awinlost,
+				0 mwinlost,
 				0 swinlost,
 				b.winlostdate,
-				'' as BetCheck,
+				'' AS BetCheck,
 				'' AS transdesc,
-					0 AS OddsSpread
+				0 AS OddsSpread
 			FROM dbo.translog AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype s ON s.Bettype = b.gameID
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 13
+				AND b.statusID = 0
+				AND EXISTS(SELECT [statusID] FROM @tmpStatus t WHERE t.statusID = 0);
+
+			-- Colossus Bet
+			INSERT INTO @Data
+			SELECT 
+				204, --sporttype,
+				0, --leagueid,
+				0, --homeid,
+				0, --awayid,
+				'' AS matchcode,
+				'' AS race,
+				'' AS eventdate, --get eventdate
+				0,
+				0,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				'' AS settletime,
+				b.matchid, --matchid,
+				b.transid,
+				ISNULL(b.BetID, 0),
+				b.refno,
+				b.transdate,
+				b.oddsid,
+				b.bettype,
+				0 AS hdp1,
+				0 AS hdp2,
+				0 AS odds,
+				0 AS modds,
+				0 AS finalodds,
+				0 AS finalodds2,
+				'' AS oddstype,
+				'',
+				b.status,
+				'' AS betstatus, --m.betstatus, 
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
+				b.stake,
+				b.actual_stake,
+				(b.winlost - b.actual_stake) AS winlost,
+				b.playercomm,
+				b.livehomescore,
+				b.liveawayscore,
+				0 AS liveindicator,
+				0, --finalhomescore,
+				0, --finalawayscore,
+				0, --hthomescore,
+				0, --htawayscore,
+				b.CREATOR, --creator.username creator,
+				b.ip,
+				b.Username,
+				0 AS IsNeutral,
+				'' AS showtime,
+				0 spositiontaking, -- unuse in this report
+				0 mpositiontaking, -- unuse in this report
+				0 apositiontaking, -- unuse in this report
+				0 spositiontaking2,-- unuse in this report
+				0 mpositiontaking2,-- unuse in this report
+				0 apositiontaking2,-- unuse in this report
+				b.betfrom,
+				0 scomm, -- unuse in this report
+				0 acomm, -- unuse in this report
+				0 comm,	-- unuse in this report
+				awinlost,
+				mwinlost,
+				swinlost,
+				b.winlostdate,
+				b.BetCheck,
+				b.transdesc,
+				0 AS OddsSpread
+			FROM dbo.bettrans AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+			WHERE b.custid = @custid
+				AND b.winlostdate = @fromdate
+				AND s.ProductID = 15
+				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+
+			UNION ALL
+
+			SELECT 
+				204, --sporttype,
+				0, --leagueid,
+				0, --homeid,
+				0, --awayid,
+				'' AS matchcode,
+				'' AS race,
+				'' AS eventdate, --get eventdate
+				0,
+				0,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				'' AS settletime,
+				0 AS matchid, --matchid, 
+				0 transid,
+				0 BetID,
+				b.translogid,
+				b.transdate,
+				0 oddsid,
+				b.gameID,
+				0 hdp1,
+				0 hdp2,
+				0 AS odds,
+				0 modds,
+				0 AS finalodds,
+				0 AS finalodds2,
+				'' AS oddstype,
+				'' AS betteam,
+				b.status,
+				'' AS betstatus, --m.betstatus, 
+				0 AS comstatus,
+				b.stake,
+				b.actual_stake,
+				(-b.actual_stake) AS winlost,
+				0 playercomm,
+				0 livehomescore,
+				0 liveawayscore,
+				0 liveindicator,
+				0, --finalhomescore, 
+				0, --finalawayscore, 
+				0, --hthomescore, 
+				0, --htawayscore,
+				b.CREATOR, --creator.username creator,
+				b.ip,
+				b.Username,
+				0 AS IsNeutral,
+				'' AS showtime,
+				0 spositiontaking, -- unuse in this report
+				0 mpositiontaking, -- unuse in this report
+				0 apositiontaking, -- unuse in this report
+				0 spositiontaking2,-- unuse in this report
+				0 mpositiontaking2,-- unuse in this report
+				0 apositiontaking2,-- unuse in this report
+				b.betfrom,
+				0 scomm, -- unuse in this report
+				0 acomm, -- unuse in this report
+				0 comm,	-- unuse in this report
+				0 awinlost,
+				0 mwinlost,
+				0 swinlost,
+				b.winlostdate,
+				'' AS BetCheck,
+				b.transdesc,
+				0 AS OddsSpread
+			FROM dbo.translog AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
+			WHERE b.custid = @custid
+				AND b.winlostdate = @fromdate
+				AND s.ProductID = 15
 				AND b.statusID = 0
 				AND EXISTS(SELECT [statusID] FROM @tmpStatus t WHERE t.statusID = 0);
 
@@ -2217,7 +2444,7 @@ BEGIN
 			FROM @Data AS betList
 				INNER JOIN bettrans AS originBetList WITH(NOLOCK) ON betList.RefNO = originBetList.TransID
 				LEFT JOIN @Data AS commBetList ON betList.RefNO = commBetList.RefNO AND commBetList.Bettype = 903
-			WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)		
+			WHERE betList.Sporttype = 1 AND betList.Bettype IN (901, 902)
 		END
 
 	DELETE @Data WHERE Sporttype = 1 AND Bettype = 903
@@ -2307,7 +2534,7 @@ BEGIN
 	SELECT * FROM @DetailData
 	RETURN 
 END
-		     	
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetListByDayAll] TO [bodbAdminNet]
 GO
