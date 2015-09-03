@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14]
+﻿﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14]
 		@winlostdate DATETIME
 		,@ProductId TINYINT
 		,@site TINYINT

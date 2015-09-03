@@ -36,7 +36,8 @@ Revisions:
 		Add Keno Sport (202) -Bettype : 1501 - 1599
 	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
 	- 20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 	
-	- 20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)		
+	- 20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)	
+	- 20150723@Jim: Apply Bettrade [#38815]			
 */  
 
 SET NOCOUNT ON
@@ -70,7 +71,7 @@ IF @ShowSB = 1
 	 SELECT Bettype, 1   
 	 FROM @SportBettype   
 	 WHERE ProductID =1 
-		AND SubProduct <> 'MG-SuperLive'
+		AND SubProduct NOT IN ('MG-SuperLive' ,'BT-Sold','BT-Bought','BT-Comm')
 
 IF @ShowNG = 1  
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 

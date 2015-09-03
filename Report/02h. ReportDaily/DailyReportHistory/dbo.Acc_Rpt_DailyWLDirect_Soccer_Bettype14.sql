@@ -32,6 +32,7 @@ SET NOCOUNT ON
 		- 20150108@Dom: Apply sport bettype matrix
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
+		- 20150723@Sophia: Exclude data of Bettrade [#38815]	
 
 	Param's Explanation: 
 		- @SoccerType= 1: Major bettypes
@@ -44,6 +45,11 @@ SET NOCOUNT ON
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @Sporttype = 1 
+
+	DELETE	@SportBettype  
+	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+			OR EventType NOT IN (1,2)
+
 
 	Declare @tmpBettype table (Bettype int, DisplayOrder int)
 	CREATE TABLE #DepAgent (custid int primary key)
@@ -127,9 +133,7 @@ SET NOCOUNT ON
 	FROM	bettrans14 b WITH (NOLOCK)	
 		inner join @SportBettype s ON s.bettype = b.bettype
 		LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
-	WHERE	s.EventType IN (1,2)
-			AND s.SubProduct NOT IN ('MG-SuperLive')
-			AND	b.winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999)	
 			AND matchid >0		
 			AND statusID NOT IN (101, 102,103) 
@@ -178,9 +182,7 @@ SET NOCOUNT ON
 			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
-	WHERE	s.EventType IN (1,2)
-			AND s.SubProduct NOT IN ('MG-SuperLive')
-			AND	b.winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
@@ -204,9 +206,7 @@ SET NOCOUNT ON
 			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
-	WHERE	s.EventType IN (1,2)
-			AND s.SubProduct NOT IN ('MG-SuperLive')
-			AND	b.winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 

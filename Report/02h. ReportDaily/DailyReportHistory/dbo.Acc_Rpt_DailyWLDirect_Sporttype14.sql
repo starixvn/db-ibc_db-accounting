@@ -65,8 +65,9 @@ AS
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 		- 20150521@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
+		- 20150723@Sophia: Apply Bettrade [#38815]
 		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
-	
+
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -283,7 +284,7 @@ BEGIN
 				OR b.bettype BETWEEN 1301 and 1334)	*/
 			s.ProductId = 1
 			AND s.EventType IN (1,2)
-			AND s.SubProduct NOT IN ('MG-SuperLive')
+			AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY		
 			case when m.sporttype> 1 THEN 4 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
@@ -567,7 +568,27 @@ BEGIN
 	GROUP BY site
 
 
+	----BETTRADE
+	UNION ALL
+	SELECT
+			110,'Bettrade', -2, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			0 AS Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) as VirtualLineTotal,	
+			0 AS RealTurnover,
+			0 AS VirtualTurnover,
+			0 AS EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 1
+			AND s.EventType = 1 
+			AND s.SubProduct = 'BT-Comm'
+	GROUP BY site
+
 	ORDER BY DisplayOrder asc, ibc, site
+
 				
 	SELECT	@LineTotal = ISNULL(SUM(LineTotal_actualrate), 0) 
 	FROM	#src b WITH (NOLOCK)

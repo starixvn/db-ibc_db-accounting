@@ -39,6 +39,7 @@ AS
 		-20140421@Hannah: fix bug for Keno
 		-20140704@Jim: offer Sporting solution
 		-20150710@Jim:  Super Balance fix (Feature #38168)
+		- 20150723@Jim: Apply Bettrade [#38815]	
 	Param's Explanation:    
 	+ @ReportBy 1-Live; 2-Non-Live; 0: All;  
 	+ @GroupBy 1-Daily; 2-Monthly
@@ -117,7 +118,7 @@ BEGIN
 						--'AND b.rptDate >= isnull(lic.AffectedDate,''1999-01-01'')' + char(13) +
 						'AND b.status NOT IN (-1,103) ' + char(13) +
 						'AND CurrencyID<>20 ' + char(13) +
-						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
+						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR (b.bettype BETWEEN 121 AND 999 AND b.bettype NOT IN (901,902,903)) OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
 						CASE WHEN @ShowRB = 1 THEN ' OR b.bettype BETWEEN 31 AND 33' ELSE '' END + 
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END + 
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END + 
@@ -155,6 +156,7 @@ BEGIN
 						--'AND b.rptDate >= isnull(lic.AffectedDate,''1999-01-01'')' + char(13) +
 						'AND b.status NOT IN (-1,103) ' + char(13) +
 						'AND CurrencyID<>20 ' + char(13) +
+						'AND b.bettype NOT IN (901,902,903)'+CHAR(13)+
 						CASE WHEN @bettype<>0 THEN 'AND b.bettype = ' + convert(varchar(10), @Bettype)  ELSE '' END + char(13) +	
 						CASE WHEN @SportID<>0 THEN 'AND b.bettype NOT IN (9,29)  AND l.Sporttype = ' + convert(varchar(10), @SportID)  ELSE '' END + char(13) +
 						CASE 
@@ -182,7 +184,7 @@ BEGIN
 						--'AND b.rptDate >= isnull(lb.AffectedDate,''1999-01-01'')' + char(13) +
 						'AND CurrencyID<>20 ' + char(13) +
 						'AND isnull(b.customercategory,-1) NOT IN (27,28) ' + char(13) +
-						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
+						'AND (b.bettype < ' + CASE WHEN @ShowSB=1 THEN + ' 31 OR (b.bettype BETWEEN 121 AND 999 AND b.bettype NOT IN (901,902,903)) OR b.bettype BETWEEN 1301 AND 1399' ELSE '0' END +
 						CASE WHEN @ShowRB = 1 THEN ' OR b.bettype BETWEEN 31 AND 33' ELSE '' END + 
 						CASE WHEN @ShowLC = 1 THEN ' OR b.bettype BETWEEN 1101 AND 1199' ELSE '' END +
 						CASE WHEN @ShowVS = 1 THEN ' OR b.bettype BETWEEN 1201 AND 1299' ELSE '' END +

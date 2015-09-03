@@ -57,6 +57,7 @@ AS
 			- 20141203@Dom: Apply sport bettype matrix
 			- 20150520@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
+			- 20150723@Sophia: Apply Bettrade [#38815]
 	*/
 	SET NOCOUNT ON
 
@@ -143,7 +144,7 @@ AS
 			inner join @SportBettype s on s.bettype = b.bettype
 	where   s.ProductId = 1 
 		AND s.eventtype = 1
-		AND s.SubProduct NOT IN ('MG-SuperLive')
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 		/*((bettype < 31 and bettype <> 10) 
 				OR bettype between 121 and 999 				
 				OR bettype BETWEEN 1301 and 1334)	*/
@@ -176,6 +177,32 @@ AS
 				OR bettype between 121 and 999 				
 				OR bettype BETWEEN 1301 and 1334)	*/
 	group by 
+			b.bettype, 
+			case when matchcode like '%hedge%' then ' (hedge)' else '' end
+
+		---Bettrade
+	UNION ALL 
+	SELECT	12 Num,
+			b.bettype,
+			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
+			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			
+			sum(case when liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			
+			0 as IBCTurnover
+	FROM 	#tmpBettrans b with (nolock)
+			inner join match m with (nolock) on b.matchid = m.matchid
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	WHERE  	s.ProductId = 1
+		AND s.EventType = 1
+		AND s.SubProduct = 'BT-Comm'				
+	GROUP BY 
 			b.bettype, 
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 

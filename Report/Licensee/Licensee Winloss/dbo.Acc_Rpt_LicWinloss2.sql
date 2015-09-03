@@ -50,6 +50,7 @@ AS
 		- 20150123@Jim: support base on GBP currency 
 		- 20150518@Florent: Add AGC and GD
 		- 20150710@Jim:  Microgaming integration (Feature #38168)	
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 	Param's Explanation:  
 	  + @ReportType: 1-Daily; 2-Monthly;  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -255,7 +256,8 @@ BEGIN
 			INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON s.custid=BA.srecommend and b.transid = BA.transid 	 
 		WHERE 
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND 
-			b.statusID  IN (111, 112, 113) 
+			b.statusID  IN (111, 112, 113) AND
+			b.bettype NOT IN (901,902,903)
 		GROUP BY   
 			b.winlostdate,b.currency, b.statusID
 	END
@@ -297,7 +299,7 @@ BEGIN
 		WHERE 
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  		
 			b.statusID  IN (111, 112, 113) AND
-			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399) ) AND
+			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999 AND b.bettype NOT IN (901,902,903)) OR (b.bettype BETWEEN 1301 AND 1399) ) AND
 			b.tpositiontaking <> 0
 		GROUP BY   
 			b.winlostdate,s.currency
@@ -394,6 +396,7 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.winlostdate,  b.currency,  b.statusID
 	END
 	
@@ -439,6 +442,7 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.winlostdate, b.currency,  b.statusID
 	END
 	
@@ -487,6 +491,7 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.winlostdate,  b.currency, b.statusID
 	END
 
@@ -529,6 +534,7 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.winlostdate,   b.currency, b.statusID
 	END
 	
