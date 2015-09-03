@@ -23,6 +23,7 @@ AS
 		- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
+		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -98,11 +99,14 @@ BEGIN
 			@mDisableEsports	    BIT,
 			@sHideKeno				BIT, 
 			@mHideKeno				BIT,
-			@mDisableGoldDeluxe		BIT,
-			@sDisableGoldDeluxe		BIT,
+			
 			@mHideGoldDeluxe		BIT,
 			@sHideGoldDeluxe		BIT,
 			@mDisableSuperLive		BIT,
+			
+			@mHideColossusBet		BIT,
+			@sHideColossusBet		BIT,
+			
 			@sDisableSuperLive		BIT,
 			@AdminUser				VARCHAR(50)
 
@@ -130,7 +134,7 @@ BEGIN
 	     , @sHideVirtualSports  = HideVirtualSports
 	     , @sHideKeno			= HideKeno
 	     , @sHideGoldDeluxe		= HideGoldDeluxe
-	     , @sDisableGoldDeluxe	= DisableGoldDeluxe
+	     , @sHideColossusBet	= HideColossusBet
 		 , @sDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK) 
 	 WHERE username = @supername
@@ -161,7 +165,7 @@ BEGIN
 	     , @mHideVirtualSports  = HideVirtualSports
 	     , @mHideKeno			= HideKeno 		
 	     , @mHideGoldDeluxe		= HideGoldDeluxe
-	     , @mDisableGoldDeluxe	= DisableGoldDeluxe
+	     , @mHideColossusBet	= HideColossusBet
 		 , @mDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @mastername
@@ -393,6 +397,16 @@ BEGIN
 			@ErrCode = 125
 		return
 	END
+	
+
+	--Check Colossus Bet sport enable status
+	IF @sHideColossusBet = 1 and @mHideColossusBet = 0
+	BEGIN
+		SELECT @ErrMsg = 'Master is offered Colossus Bets but new super is not offered Colossus Bets.',
+			@ErrCode = 126
+		return
+	END
+		
 
 	--Check Number Game
 	IF EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 161)
@@ -488,6 +502,47 @@ BEGIN
 				@ErrCode = 204
 		RETURN	
 	END
+	
+	
+	--Check commission for Colossus Bet
+	IF EXISTS(
+			SELECT	1 
+			FROM	AgentCommRate  scs WITH(NOLOCK)
+				JOIN AgentCommRate mcs WITH(NOLOCK) 
+					ON	mcs.custid = @mrecommend 
+						AND scs.sporttype = mcs.sporttype 
+						AND scs.bettype = mcs.bettype
+			WHERE	scs.custid = @srecommend 
+					AND scs.sporttype = 204 
+					AND scs.bettype = 18001
+					AND scs.CommRate < mcs.CommRate
+	)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Colossus Bets is less than master''s commission.',
+				@ErrCode = 210
+		RETURN	
+	END
+	
+	--Check Cash-In Share for Colossus Bet
+	IF EXISTS(
+			SELECT	1 
+			FROM	AgentCommRate  scs WITH(NOLOCK)
+				JOIN AgentCommRate mcs WITH(NOLOCK) 
+					ON	mcs.custid = @mrecommend 
+						AND scs.sporttype = mcs.sporttype 
+						AND scs.bettype = mcs.bettype
+			WHERE	scs.custid = @srecommend 
+					AND scs.sporttype = 204 
+					AND scs.bettype = 18002
+					AND scs.CommRate < mcs.CommRate
+	)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s Cash-In Share for Colossus Bets is less than master''s Cash-In Share.',
+				@ErrCode = 211
+		RETURN	
+	END
+	
+	
 	--Check Position Taking
 		--n4<=s3+m3<=s4		IF i3=0
 		--m3<=s4 and u3<=s4	IF i3=1

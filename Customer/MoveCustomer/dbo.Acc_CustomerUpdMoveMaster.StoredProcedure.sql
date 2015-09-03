@@ -20,7 +20,7 @@ AS
 /*
 Created: 
 Task : Move a master to another super
-DB: DBTXN/CustDB
+DB: DBCust/CustDB
 Original:
 
 Revisions:
@@ -67,6 +67,7 @@ Revisions:
 	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine: #26647]
 	- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
 	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerCheckMoveMaster, Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
+	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	
 Param's Explanation:
 • @ErrCode:
@@ -77,13 +78,13 @@ Param's Explanation:
 */
 
 BEGIN
-       SET NOCOUNT ON
+    
+    SET NOCOUNT ON
 
-
-    declare @startRun datetime
-    declare @endRun datetime
-    declare @duration int
-       SET @startRun = getdate()
+    DECLARE @startRun DATETIME
+    DECLARE @endRun DATETIME
+    DECLARE @duration INT
+    SET @startRun = getdate()
 
     --Check permission for account site: @phuc20080213
     EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherCust]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
@@ -115,10 +116,16 @@ BEGIN
             @mDisableVirtualSports        BIT,            
             @sHideKeno                    BIT,
             @mHideKeno                    BIT,
+            
             @mHideGoldDeluxe		BIT,
             @sHideGoldDeluxe		BIT,
             @sDisableGoldDeluxe		BIT,
-            @mDisableGoldDeluxe		BIT        
+            @mDisableGoldDeluxe		BIT,
+            
+            @mHideColossusBet		BIT,
+            @sHideColossusBet		BIT,
+            @sDisableColossusBet	BIT,
+            @mDisableColossusBet	BIT                
 
     SELECT    @srecommend            = custid,         
             @sDisableOutright    = DisableOutright,
@@ -131,9 +138,15 @@ BEGIN
             --@sDisableFunP2P        = DisableFunP2P,
             @sDisableVirtualSports    = DisableVirtualSports,
             @sHideKeno                = HideKeno,
-			@sDisableGoldDeluxe		= DisableGoldDeluxe,
-			@sHideGoldDeluxe	= HideGoldDeluxe            
-      FROM    custinfo WITH(NOLOCK) 
+			
+			@sDisableGoldDeluxe	= DisableGoldDeluxe,
+			@sHideGoldDeluxe	= HideGoldDeluxe,
+			
+			@sDisableColossusBet = DisableColossusBet,
+			@sHideColossusBet	= HideColossusBet
+			
+			            
+    FROM    custinfo WITH(NOLOCK) 
     WHERE    username = @supername AND roleid = 4
 
     SELECT    @mrecommend            = custid,
@@ -148,10 +161,14 @@ BEGIN
             --@mDisableFunP2P        = DisableFunP2P,
             @mDisableVirtualSports    = DisableVirtualSports,
             @mHideKeno                = HideKeno,
-			@mDisableGoldDeluxe		= DisableGoldDeluxe,
-			@mHideGoldDeluxe	= HideGoldDeluxe            
-      FROM    custinfo WITH(NOLOCK) 
-    WHERE    username = @mastername AND roleid = 3
+			@mDisableGoldDeluxe	= DisableGoldDeluxe,
+			@mHideGoldDeluxe	= HideGoldDeluxe,
+			
+			@mDisableColossusBet = DisableColossusBet,
+			@mHideColossusBet	= HideColossusBet            
+			
+    FROM    custinfo WITH(NOLOCK) 
+    WHERE   username = @mastername AND roleid = 3
 
 
     --Check Allowed downlines 
@@ -182,10 +199,11 @@ BEGIN
 
     INSERT INTO @CustInfo
     SELECT custid
-      FROM custinfo (NOLOCK)
-     WHERE mrecommend = @mrecommend
+    FROM custinfo (NOLOCK)
+    WHERE mrecommend = @mrecommend
 
-    ----P2PGAMESETTING table
+	
+	---P2PGAMESETTING table
     --UPDATE G_P
     --SET stakelevel1 = CASE WHEN s.stakelevel1 = 1 AND G_P.stakelevel1 = 1 THEN 1 ELSE 0 END,
     --    stakelevel2 = CASE WHEN s.stakelevel2 = 1 AND G_P.stakelevel2 = 1 THEN 1 ELSE 0 END,
@@ -272,7 +290,7 @@ BEGIN
     --    RETURN
     --END
 
-    if (@sDoubleCommLosing = 0 and @mDoubleCommLosing = 1)
+    IF (@sDoubleCommLosing = 0 and @mDoubleCommLosing = 1)
     BEGIN
         UPDATE    Custinfo WITH (UPDLOCK,ROWLOCK)
            SET        DoubleCommLosing = CASE WHEN @sDoubleCommLosing = 0 THEN 0 ELSE DoubleCommLosing END
@@ -406,7 +424,7 @@ BEGIN
         END
     END
     
-	 IF @sDisableGoldDeluxe = 1 AND @sDisableGoldDeluxe <> @mDisableGoldDeluxe
+	IF @sDisableGoldDeluxe = 1 AND @sDisableGoldDeluxe <> @mDisableGoldDeluxe
     BEGIN
         UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
            SET DisableGoldDeluxe = 1
@@ -420,10 +438,24 @@ BEGIN
         END
     END
 
+	IF @sDisableColossusBet = 1 AND @sDisableColossusBet <> @mDisableColossusBet 
+    BEGIN
+        UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
+           SET DisableColossusBet = 1
+        WHERE custid IN (SELECT custid FROM @CustInfo)
+        
+        IF @@ERROR <>0 
+        BEGIN
+            SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
+                    @ErrCode = 310
+            RETURN
+        END
+    END
+    
     UPDATE    mcg WITH (UPDLOCK,ROWLOCK)
        SET        mcg.IsDisabled = 1 
       FROM CustGameType scg WITH(NOLOCK) 
-INNER JOIN CustGameType mcg ON scg.CustID = @srecommend AND mcg.GameTypeID = scg.GameTypeID
+		INNER JOIN CustGameType mcg ON scg.CustID = @srecommend AND mcg.GameTypeID = scg.GameTypeID
     WHERE    mcg.custid IN(SELECT CustID FROM @CustInfo) AND scg.IsDisabled = 1 AND mcg.IsDisabled = 0
     IF @@ERROR <>0
     BEGIN
@@ -540,17 +572,18 @@ INNER JOIN CustGameType mcg ON scg.CustID = @srecommend AND mcg.GameTypeID = scg
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1509
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'Keno', @sporttype = 202, @bettype = 1514
     EXEC dbo.Acc_CustSetting3rd_04 @custid = @mrecommend, @srecommend = @srecommend, @roleid = 3, @mode = 'GoldDeluxe', @sporttype = 255, @bettype = 1701
+    
 
     --when separate code we must update db07.bodb02.dbo.custsetting 
     UPDATE cs
        SET cs.sdiscount = scs.sdiscount 
-      FROM custsetting cs WITH(ROWLOCK, UPDLOCK)
-INNER JOIN custInfo c WITH(NOLOCK) ON cs.custid = c.custid
+    FROM custsetting cs WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN custInfo c WITH(NOLOCK) ON cs.custid = c.custid
                                   AND c.Enabled = 1
-INNER JOIN custsetting scs WITH(NOLOCK) ON scs.custid = @srecommend
+		INNER JOIN custsetting scs WITH(NOLOCK) ON scs.custid = @srecommend
                                        AND cs.sporttype = scs.sporttype
                                        AND cs.bettype = scs.bettype
-     WHERE cs.custid IN (SELECT custid
+    WHERE cs.custid IN (SELECT custid
                            FROM @CustInfo
                         )
        AND ISNULL(cs.sdiscount, 0) < scs.adiscount
@@ -558,30 +591,30 @@ INNER JOIN custsetting scs WITH(NOLOCK) ON scs.custid = @srecommend
 
     UPDATE cs
        SET cs.sdiscount = scs.sdiscount
-      FROM custsetting3rd cs WITH(ROWLOCK, UPDLOCK)
-INNER JOIN custInfo c WITH(NOLOCK) ON cs.custid = c.custid
+    FROM custsetting3rd cs WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN custInfo c WITH(NOLOCK) ON cs.custid = c.custid
                                   AND c.Enabled = 1
-INNER JOIN custsetting3rd scs WITH(NOLOCK) ON scs.custid = @srecommend
+		INNER JOIN custsetting3rd scs WITH(NOLOCK) ON scs.custid = @srecommend
                                           AND cs.sporttype = scs.sporttype
                                           AND cs.bettype = scs.bettype
-     WHERE cs.custid IN (SELECT custid
+    WHERE cs.custid IN (SELECT custid
                            FROM @CustInfo
                         )
-       AND ISNULL(cs.sdiscount, 0) < scs.sdiscount
+			AND ISNULL(cs.sdiscount, 0) < scs.sdiscount
 
 
     UPDATE cs
        SET cs.sdiscount = scs.sdiscount
-      FROM CustSettingGame cs WITH(ROWLOCK, UPDLOCK)
-INNER JOIN custInfo c WITH(NOLOCK) ON cs.custid = c.custid
+    FROM CustSettingGame cs WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN custInfo c WITH(NOLOCK) ON cs.custid = c.custid
                                   AND c.Enabled = 1
-INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
+		INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
                                            AND cs.sporttype = scs.sporttype
                                            AND cs.bettype = scs.bettype
     WHERE cs.custid IN (SELECT custid
                            FROM @CustInfo
                        )
-      AND ISNULL(cs.sdiscount, 0) < scs.sdiscount
+		AND ISNULL(cs.sdiscount, 0) < scs.sdiscount
 
 
     DECLARE @LogSPData VARCHAR(8000)
@@ -623,11 +656,6 @@ INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
             @duration = @duration
     END CATCH
 END
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMaster] TO [bodbAdminNet] AS [dbo]
 GO

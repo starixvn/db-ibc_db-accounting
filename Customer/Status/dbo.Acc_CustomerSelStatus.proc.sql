@@ -37,6 +37,7 @@ Revisions:
 	- 20150717@Kiwi: Move SP to DB06.bodb02 to solve the performance issue for temporary	
 	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 	- 20150721@Winnie: Add Microgaming product 
+	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 
 Param's Explanation:
 • @system: = NAP : internal login from NAP
@@ -164,14 +165,18 @@ SELECT	ISNULL(reject,0) AS Suspend,
 		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513) then cg.IsDisabled else 1 end) as DisableKeno,
 		ISNULL(DisableGoldDeluxe,1) as DisableGoldDeluxe,
 		ISNULL(HideGoldDeluxe,1) as HideGoldDeluxe,
+		
+		ISNULL(DisableColossusBet,1) as DisableColossusBet,
+		ISNULL(HideColossusBet,1) as HideColossusBet,
+		
 		ISNULL(DisableMicrogame,1) as DisableMicrogame,
 		ISNULL(DisableSuperLive,1) as DisableSuperLive
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
-	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
-	LEFT JOIN dbo.GameType g on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
+	LEFT JOIN CustGameType cg WITH(NOLOCK) ON ci.custid = cg.custid
+	LEFT JOIN dbo.GameType g WITH(NOLOCK) ON cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID IN (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
 WHERE ci.CustID = @CustID
-group by
+GROUP BY
 		ci.reject,
 		ci.closed,
 		ci.autosuspend,
@@ -199,6 +204,8 @@ group by
 		ci.HideKeno,
 		ci.DisableGoldDeluxe, 
 		ci.HideGoldDeluxe,
+		ci.DisableColossusBet,
+		ci.HideColossusBet,
 		ci.DisableMicrogame,
 		ci.DisableSuperLive
 
