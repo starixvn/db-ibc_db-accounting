@@ -1,3 +1,6 @@
+use bodb02
+go
+
 ALTER PROCEDURE [dbo].[Task_BalanceUpdDebitGame]
 AS
 /*
@@ -7,6 +10,7 @@ AS
 		DB: DBTRANS.BODB02
 		
 		Revisions:
+			- 20150710@Patrick: Support Gold Deluxe
 			
 		Parameters Explanation:	
 */
@@ -26,12 +30,12 @@ END
 SET @rn = CASE WHEN @rnx - @rn > 100 THEN @rn + 100 ELSE @rnx END
 
 -- collect balance value.
-CREATE TABLE #Balance (custid int, winlostdate smalldatetime, balance money)
+CREATE TABLE #Balance (custid int, winlostdate smalldatetime, bettype smallint, balance money)
 INSERT INTO #Balance
-SELECT custid, winlostdate, SUM(balance)
+SELECT custid, winlostdate, bettype, SUM(balance)
 FROM dbo.BalancePendingDebitGame --with (rowlock)
 WHERE rn <= @rn
-GROUP BY custid, winlostdate
+GROUP BY custid, winlostdate, bettype
 
 DECLARE @today SMALLDATETIME
 SET @today = convert(nvarchar(10), current_timestamp,120)
@@ -50,13 +54,13 @@ BEGIN TRY
 	UPDATE bal
 	SET Balance = bal.Balance + B.balance
 	FROM dbo.BalanceDebitGame bal 	--WITH (rowlock, updlock)
-		INNER JOIN #Balance B ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate
+		INNER JOIN #Balance B ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate AND bal.bettype = b.bettype
 		
 	-- insert balance for not exist in balance table
-	INSERT INTO dbo.BalanceDebitGame(custid, winlostdate, balance )
-	select b.custid, b.winlostdate, b.balance
+	INSERT INTO dbo.BalanceDebitGame(custid, winlostdate, bettype, balance )
+	select b.custid, b.winlostdate, b.bettype, b.balance
 	from #Balance B 
-		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate		
+		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate AND bal.bettype = b.bettype
 	WHERE bal.Winlostdate is null and b.winlostdate = @today
 		
 	COMMIT TRANSACTION

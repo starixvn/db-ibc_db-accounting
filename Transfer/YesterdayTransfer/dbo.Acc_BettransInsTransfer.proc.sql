@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransInsTransfer]
+﻿use bodb02
+go
+
+ALTER PROCEDURE [dbo].[Acc_BettransInsTransfer]
 	@FromCustID int,
 	@ToUserName varchar(30), 
 	@Amount money,
@@ -31,6 +34,7 @@ Revisions:
 	- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					       
+	- 20150723@Patrick: Support Gold deluxe
 					   
 Param's Explanation:
 */
@@ -325,8 +329,8 @@ BEGIN
 		EXEC Acc_BalanceGameResetYesterday @CustID = @ToCustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
 		
 	Select @LogData = @LogData + CASE WHEN @isResetYesterdayBalance = 1 THEN 
-										CASE WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetLiveCSBalance = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')' 
-										ELSE '. (ResetLiveCSBalance = fail)' END		
+										CASE WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetGameBalance = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')' 
+										ELSE '. (ResetGameBalance = fail)' END		
 								ELSE '' END			
 END
 	

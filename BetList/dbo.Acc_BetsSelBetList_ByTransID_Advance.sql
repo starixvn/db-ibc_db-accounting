@@ -27,6 +27,7 @@ AS
 		- 20150805@Bobby: 
 			+ Dis-allow to get ticket detail by refno 
 			+ remove checking product when selecting ticket's eventtype = 1 from bettrans_bk
+		- 20150814@Bobby: Fix bug #41544 - Exclude CS, BG, GD, KN, MG, MGC tickets
 */ 
 BEGIN
 	SET NOCOUNT ON  
@@ -37,7 +38,13 @@ BEGIN
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 
-
+	-- exclude CS, BG, GD, KN, MG, MGC tickets
+	DELETE sp
+	FROM @SportBettype sp
+	WHERE sp.productid 		IN (6, 7, 8, 12, 13)
+			OR sp.bettype  	BETWEEN 801 AND 899
+		
+	
 	DECLARE @refno BIGINT		
 
 	Declare @Data TABLE (
@@ -132,9 +139,6 @@ BEGIN
 		ON bt.gameID 	= sp.bettype
 	where bt.translogid = @transid 
 		AND statusID 	= 0
-		AND (sp.productid IN (8, 12)
-			OR sp.bettype BETWEEN 801 AND 899
-		)
 		
 	-- FROM bettrans
 	IF(@WinlostDate IS NULL)
@@ -147,17 +151,6 @@ BEGIN
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
 		WHERE bt.transid 	= @transid 
-			/*
-			--dis-allow searching by refno
-			OR (
-				bt.refno		= @transid
-				AND (
-						sp.productid IN (8, 12)
-						OR sp.bettype BETWEEN 801 AND 899
-					)
-			)*/
-			--exclude metric gaming running ticket
-			AND (bt.bettype NOT BETWEEN 801 AND 806 OR (bt.bettype BETWEEN 801 AND 806 AND bt.statusID NOT IN (0, 1)))
 			
 	END
 	-- FROM bettrans14
@@ -171,16 +164,7 @@ BEGIN
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
 		WHERE bt.transid 	= @transid 
-			/*
-			--dis-allow searching by refno
-			OR (
-					bt.refno		= @transid
-					AND (
-						sp.productid IN (8, 12)
-						OR sp.bettype BETWEEN 801 AND 899
-					)
-				)
-			*/
+		
 	END
 	-- FROM bettrans_bk
 	IF(@WinlostDate IS NULL)
@@ -193,14 +177,7 @@ BEGIN
 			INNER JOIN @SportBettype sp 
 			ON bt.bettype 	= sp.bettype
 		WHERE bt.transid 	= @transid 
-			--dis-allow searching by refno
-			/*OR (
-					bt.refno		= @transid
-					AND (
-						sp.productid IN (8, 12)
-						OR sp.bettype BETWEEN 801 AND 899
-					)
-				)*/
+			
 	END
 	
 	IF(@WinlostDate IS NULL) GOTO OutputResult;
@@ -326,14 +303,8 @@ BEGIN
 				bettrans as b with (nolock) 
 				INNER JOIN match as m with (nolock) on b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			where	s.EventType=1 
-					--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and
-					--b.bettype not in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-					AND (b.transid 	= @TransID
-						--OR (b.refno = @refno AND b.bettype BETWEEN 801 AND 899)
-					)
-					--exclude metric gaming running ticket
-					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
+			where	s.EventType		= 1 
+					AND b.transid 	= @TransID
 			
 			UNION ALL -- translog metric gaming
 			select 
@@ -1056,12 +1027,9 @@ BEGIN
 			bettrans14 as b with (nolock) 
 			INNER JOIN match14 as m with (nolock) on b.matchid = m.matchid
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-		where	s.EventType = 1 
-				--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
-				--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-				AND (b.transid 	= @TransID
-						--OR (b.refno = @refno AND b.bettype BETWEEN 801 AND 899)
-					)
+		where	s.EventType 	= 1 
+				AND b.transid 	= @TransID
+					
 				
 		UPDATE betList
 		SET betList.Odds	= originBetList.Odds
@@ -1646,12 +1614,8 @@ BEGIN
 			inner join DBARC.bodb_archive.dbo.match_BK m with (nolock) on b.matchid = m.matchid
 			inner JOIN custInfo c with (NOLOCK) on c.custid = b.custid
 			INNER JOIN @SportBettype s ON s.BetType = b.BetType 
-		where	s.EventType = 1
-				--b.bettype < 19001 and b.bettype NOT IN (31,32,33,10/*, 1231,1232,1233,1237,1238*/) and 
-				--b.bettype NOT IN(SELECT  bettype FROM dbo.f_VSHorseRacingByBettype()) and
-				AND (b.transid 	= @TransID
-						--OR (b.refno = @refno AND b.bettype BETWEEN 801 AND 899)
-					)
+		where	s.EventType 	= 1
+				AND b.transid 	= @TransID
 				
 		UPDATE betList
 		SET betList.Odds	= originBetList.Odds
