@@ -95,9 +95,7 @@ BEGIN
 			,m.homeid
 			,m.awayid
 			,IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC 
-			,l.DisplayCat		-- 1: Extra time match 
 	FROM	DBPRO.bodb02.dbo.Match m WITH (NOLOCK)
-			LEFT JOIN DBPRO.bodb02.dbo.League l WITH (NOLOCK) ON m.leagueid = l.leagueid 
 	WHERE	MatchID = @MatchID
 
 	-- Detail  		 

@@ -42,6 +42,7 @@ AS
 		- 20140911@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20150421@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]
 		- 20150611@Johnson: Add bettrade [Redmine: #35921]
 		
 	Param's Explanation:
@@ -137,6 +138,7 @@ BEGIN
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+	AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 						AND b.refno IN (SELECT transid FROM #tmpTrans)	
@@ -167,6 +169,7 @@ BEGIN
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+	AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	GROUP BY CASE 
 				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
@@ -344,6 +347,18 @@ BEGIN
 	WHERE matchid = @matchid	
 	
 
+	--IF NOT EXISTS (SELECT TOP 1 1 FROM bettrans WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)	
+	--	AND NOT EXISTS (SELECT TOP 1 1 FROM bettransm WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)
+	--BEGIN
+	--	SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0 -- No offer
+	--									   ELSE 4 -- No ticket
+	--								  END
+	--END
+	--ELSE
+	--BEGIN
+	--	SELECT @SettlementStatus135 = 3 -- Calculated (Manual)
+	--END
+	
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @HTDone = 1
 	BEGIN
 		DECLARE @TennisTotal SMALLINT
@@ -635,6 +650,10 @@ BEGIN
 			@matchid	= @matchid
 			,@command	= 'F'
 
+			--					EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+			--@matchid	= @matchid
+			--,@command	= 'PS'
+			--,@ivalue	= @SettlementStatus135
 	END
 
 	-------------------------------------------------------------
@@ -652,6 +671,7 @@ BEGIN
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+	AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 	AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	AND 1 = CASE WHEN bettype IN (901,902,903) 
 						AND refno IN (SELECT transid FROM #tmpTrans)	

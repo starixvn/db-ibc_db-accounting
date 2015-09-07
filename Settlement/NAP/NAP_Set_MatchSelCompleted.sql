@@ -28,6 +28,7 @@ AS
 		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
 		- 20150811@Johnson: Exclude bettrade tickets from sportbook [Redmine: 35921]
+		- 20150729@Johnson: Exclude Metric Gaming in settlement's sportbook [Redmine: #37688]
 
 	Param explanation: 
 		@isReLoad: 1: reload partial matches of a league, 0: not reload
@@ -207,6 +208,7 @@ BEGIN
 				--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 				AND bettype NOT IN (901,902,903)
+				AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 			GROUP BY b.matchid
 			) AS C ON tm.matchid = c.matchid
 
@@ -275,3 +277,4 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelCompleted] TO [vnteam] AS [dbo]
+

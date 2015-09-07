@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_6] @matchid INT
 	,@IsSettleAbandonedMatch BIT = 0
 	,@IsSettleAbandonedMatchIBC BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
+	,@isExcludeCorner				BIT = 0 
 AS
 /*
 	Created by: Kathy
@@ -22,6 +23,7 @@ AS
 		- 20140728@Kathy: Settle determined tickets for Total Goal (6, 126)[Redmine:#19310]
 		- 20140807@Kathy: Support new 11 bettypes: 129, 130, 131, 132 [Redmine:#19667]
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		
 */
 BEGIN
@@ -236,6 +238,7 @@ BEGIN
 		WHERE matchid = @matchid AND bettype = @bettype 
 			AND statusID NOT IN (101, 102)
 			AND 1 = CASE WHEN @bettype = 187 and @isRefundHT = 1 THEN 0 ELSE 1 END
+			AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (195,196,199,200,201,202) THEN 0 ELSE 1 END 
 			AND 1 = CASE WHEN @bettype <> 187 THEN 1 
 						 WHEN @bettype = 187 AND @IsHTCal = 1 THEN 1 
 						 ELSE 0 END 
@@ -405,6 +408,7 @@ BEGIN
 		WHERE matchid = @matchid AND bettype = @bettype AND
 			statusID NOT IN (101, 102)
 			AND 1 = CASE WHEN @bettype = 187 and @isRefundHT = 1 THEN 0 ELSE 1 END
+			AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (195,196,199,200,201,202) THEN 0 ELSE 1 END 
 	END
 END
 GO

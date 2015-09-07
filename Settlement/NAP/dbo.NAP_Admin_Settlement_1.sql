@@ -60,6 +60,7 @@ AS
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150610@Johnson: Add bettrade [Redmine: #35921]
+		- 20150715@Johnson: Exclude range bettype of Metric Gaming from settlement of SB [Redmine: #37688]
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		+ @GameResult: Game result for Set(s) of Tennis Sport 
@@ -275,6 +276,7 @@ BEGIN
 				AND b.bettype NOT IN (14, 127)
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) -- Auto settle Betradar				
 				AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)								
@@ -329,6 +331,7 @@ BEGIN
 			WHERE	b.matchid = @matchid
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
@@ -424,6 +427,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		WHERE b.matchid = @matchid
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
 		GROUP BY CASE 
 					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
@@ -676,6 +680,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					AND b.bettype NOT IN (14, 127)
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
 					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
@@ -708,6 +713,7 @@ need below code to determine for mark match as calculated (all bets settled)
 			WHERE	b.matchid = @matchid
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
 					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	

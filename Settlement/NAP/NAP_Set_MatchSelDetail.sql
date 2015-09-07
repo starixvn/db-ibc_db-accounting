@@ -29,6 +29,7 @@ AS
 		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150811@Johnson: exclude bettrade tickets from sportbook [Redmine: #35921]
+		- 20150727@Johnson: Exclude range bettype of Metric Gaming from SB settlement [RedmineID: #37688]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -333,6 +334,7 @@ BEGIN
 				AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 				AND bettype NOT IN (901,902,903)--bettrade tickets
+				AND bettype NOT BETWEEN 801 AND 899 -- Metric Gaming
 		GROUP BY CASE 
 				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191) THEN 1
 				WHEN bettype = 14 THEN 2
@@ -854,13 +856,8 @@ BEGIN
 
 END
 
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]
 
-GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelDetail] TO [vnteam] AS [dbo]

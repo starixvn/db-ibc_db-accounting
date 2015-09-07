@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 (
 	@Command VARCHAR(100),
@@ -12,6 +14,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 	@Action VARCHAR(10)			= NULL,
 	@FTDone BIT = 0,
 	@HTDone BIT = 0,
+	@NoneCornerBetDone BIT = 0, 
 	@RowCount INT = 0 OUTPUT,
 	@Creator INT = 0
 ) 
@@ -29,11 +32,12 @@ AS
 		- 20140825@Kathy: Only update HT part of goalrecord when calculating HT
 		- 20140912@Kathy: Correct betstatus when calculate FT '3x30' match [Redmine:#22399]
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
-						   
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]		   
 		
 */
 BEGIN
-	
+	SET NOCOUNT ON 
 	SET @BetStatus = ISNULL(@BetStatus, N'')
 	
 	IF @Command = 'NAP_Admin_Settlement_1-UNDO'
@@ -240,6 +244,15 @@ BEGIN
 			,settletime = GETDATE()
 		WHERE matchid = @matchid
 	END
+	IF @Command = 'NAP_Admin_Settlement_Corner-CAL'
+	BEGIN
+		UPDATE dbo.Match WITH (UPDLOCK,ROWLOCK)
+		SET		eventstatus = CASE WHEN @Action ='CAL' AND @NoneCornerBetDone = 1 THEN N'completed'
+								   ELSE eventstatus END 
+				,changetime = CURRENT_TIMESTAMP
+				,settletime = CURRENT_TIMESTAMP
+		WHERE MatchID = @MatchID 
+	END
 	IF @Command = 'NAP_Admin_Settlement_s161-Refund'
 	BEGIN
 		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK)
@@ -338,7 +351,6 @@ BEGIN
 		WHERE EventID = @MatchID
 	END	
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Match_Update] TO [bodbAdminNet] AS [dbo]
 GO

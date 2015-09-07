@@ -1,11 +1,12 @@
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] @matchid INT
 	,@mode VARCHAR(6) = 'CAL'
+	,@isExcludeCorner	BIT = 0 
 AS
 /*
 	Created: Viet
 	Task : Covered SP for settlement
 	Original SP: Admin_Settlement_3
-	DB: DBTRANS.bodb02
+	DB: DBTXN/bodb02
 
 	Revisions:
 	   - 20140426@Kathy: Add 1H Total Goal (126) [Redmine:#14449]
@@ -13,6 +14,7 @@ AS
 	   - 20140807@Kathy: Support new 11 bettypes [Redmine:#19667]
 	   - 20140822@Jamie: Add bet count 11 bettypes [Redmine:#19667]
 	   - 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+	   - 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 
 	Param's Explanation:
 	• @Mode:
@@ -204,6 +206,7 @@ BEGIN
 		FROM	DBPRO.BODB02.dbo.ResultDetail WITH (NOLOCK)
 		WHERE	matchid = @matchid
 				AND ResourceID IN ('04','05','206','207','208','209')
+				AND SettlementStatusID = 4 
 
 		SELECT	 @oddevenCorners	= ((@fthCorners + @ftaCorners)%2)
 				,@oddevenCorners_ht	= ((@hthCorners + @htaCorners)%2)
@@ -496,7 +499,8 @@ BEGIN
 												1201, 1203, 1204, 1205, 1206, 1224)
 					OR Bettype IN (157,159,161,162,163,166,170,171,172,177,178,183,184,185,186,187,189,190,194,195,196,197,198,199,206,208)
 				)
-
+				AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (194,195,196,197,198,199,206,208) THEN 0 
+							 ELSE 1 END 
 	END
 
 	IF @Mode IN ('CAL-HT', 'CAL') AND @SportType NOT IN (180, 181, 182, 183, 184, 185, 186)
@@ -572,6 +576,8 @@ BEGIN
 
 		FROM bettrans WITH (NOLOCK)
 		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+				AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (200,201,202,203,204,205,207,209) THEN 0 
+							 ELSE 1 END 
 	END
 	
 	-- call execrep SP
@@ -621,6 +627,7 @@ BEGIN
 		,@htFCorner = @htFCorner
 		,@htLCorner = @htLCorner
 		,@isRefundHT = @isRefundHT
+		,@isExcludeCorner = @isExcludeCorner
 		,@betcount_1 = @betcount_1
 		,@betcount_2 = @betcount_2
 		,@betcount_3 = @betcount_3

@@ -7,7 +7,6 @@ ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@MatchCode NVARCHAR(50) = ''
 	,@StatusId TINYINT = 0
 	,@FilterBy TINYINT = 0
-	--,@PenaltyShootoutOnly BIT = 0 
 	,@AutoSettlementOnly BIT = 0 
 	,@IsReLoad BIT = 0
 AS
@@ -24,11 +23,12 @@ AS
 		- 20140714@Kathy: filter by running penalty shootout only [Redmine:#17142]
 		- 20141006@Jamie: Get ResultDetail for Tennis [Redmine:#23034]
 		- 20150130@Jamie: Betradar phase II [Readmine:#27212]
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
       
  Param explanation:  
 	@MatchCode: match code
 	@LeagueID: = 0: show info of all leagues     
-	@StatusId: 0: all, 1: running; 2: closed; 3: completed; 4: refund; 
+	@StatusId: 0: all, 1: running; 2: closed; 3: completed; 4: refund; 5: Completed (Running Corner)
 	@FilterBy: 0: none, 1: un-calculated game; 2: Un-calculated multiple only; 3: all
 	@PenaltyShootoutOnly: 0: none; 1: running penalty shootout only
 	@IsReLoad: 1: reload partial matches of a league, 0: not reload
@@ -76,6 +76,7 @@ BEGIN
 				WHEN 1 THEN 'running'
 				WHEN 2 THEN 'closed'
 				WHEN 3 THEN 'completed'
+				WHEN 5 THEN 'running'
 				ELSE ''
 				END
 			,@isRefund = CASE @statusid
@@ -277,6 +278,7 @@ BEGIN
 		EXEC sp_xml_preparedocument @intDocHandle OUTPUT
 			,@betstatus
 
+
 		UPDATE m
 		SET IsExistFGLG = ISNULL(rs.cnt,0)		
 		FROM #matchList m
@@ -344,6 +346,19 @@ BEGIN
 				)
 	GROUP BY MatchID 
 
+	CREATE TABLE #tmpCornerBets(
+		 MatchID		INT
+		,SettlementStatusID	TINYINT
+	)
+	INSERT INTO #tmpCornerBets(MatchID,SettlementStatusID)
+	SELECT	MatchID, MIN(SettlementStatusID)
+	FROM	ResultDetail WITH (NOLOCK)
+	WHERE	@Sporttype IN(0,1)
+			AND MatchID IN (SELECT MatchID FROM #matchList)
+			AND ResourceID IN ('04','05','206','207','208','209')			
+	GROUP BY MatchID 
+
+
 	IF @AutoSettlementOnly = 1 --Running Auto bettypes ONLY ( BETRADAR USED)
 	BEGIN
 		DELETE FROM #matchList
@@ -353,6 +368,17 @@ BEGIN
 			WHERE	SettlementStatusID = 0 
 		)
 	END
+
+	IF @StatusID = 5 
+	BEGIN
+		DELETE FROM #matchList
+		WHERE	MatchID NOT IN (
+			SELECT	MatchID
+			FROM	#tmpCornerBets
+			WHERE	SettlementStatusID = 0 
+		)
+	END 
+
 
 	SELECT m.HalfTimeHomeScore
 		,m.HalfTimeAwayScore
@@ -370,7 +396,6 @@ BEGIN
 		,m.finalawayscore
 		,m.betstatus
 		,m.eventstatus
-		,m.SettlementStatus135
 		,m.Foddsstatus
 		,m.sporttype
 		,m.IsNeutral
@@ -393,7 +418,6 @@ BEGIN
 				WHEN a.SettlementStatusID = 0 THEN 'Running'
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 				ELSE '' END AS AutoSettleResultStatus
-
 	FROM	#matchList m
 			LEFT JOIN #tempmatch t ON t.matchid = m.matchid
 			LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID
@@ -420,8 +444,6 @@ BEGIN
 
 	DROP TABLE #matchList
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
 GO
