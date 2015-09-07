@@ -18,8 +18,7 @@ BEGIN
 		INNER JOIN league l WITH(NOLOCK) ON m.leagueid = l.leagueid
 	WHERE m.eventdate BETWEEN @fromdate AND @todate
 		AND m.sporttype = 1
-		AND vs.SB_TradeStatusID IN (1,2,3)-- this match is offered Metric Gaming
-		AND vs.VD_TradeStatusID =1
+		AND vs.opened = 1-- this match is offered Metric Gaming		
 		AND vs.VendorID = 5
 	ORDER BY leaguename
 END
