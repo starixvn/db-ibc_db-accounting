@@ -30,7 +30,6 @@ BEGIN
  SET NOCOUNT ON  
  DECLARE @BetDelete TABLE (transid bigint,refno bigint,bettype smallint, custid int, recommend int, mrecommend int, srecommend int, betfrom nvarchar(1))  
  DECLARE @TransIdsLAS VARCHAR(MAX), @strLASAgent VARCHAR(500) 
- DECLARE @InvalidTransIds VARCHAR(MAX) 
  DECLARE @tblInvalidTransIds TABLE(transid VARCHAR(20))
  DECLARE @tblTransLAS TABLE(transid VARCHAR(20))  
  DECLARE @LASCust TABLE (custid INT)  
@@ -45,6 +44,7 @@ BEGIN
 	FROM bettrans b with (nolock)  
 	WHERE b.transid  in ( SELECT transid from #transid )
 		AND b.Bettype NOT IN (801,803,804,805,806,901,902,903)
+	UNION ALL
 	SELECT transid, refno, bettype, custid, recommend, mrecommend, srecommend, betfrom  
 	FROM bettrans b with (nolock)  
 	WHERE b.refno IN ( SELECT transid from #transid )
@@ -54,6 +54,7 @@ BEGIN
 	FROM bettrans14 b14 with (nolock)  
 	WHERE b14.transid in ( SELECT transid from #transid ) 
 		AND b14.Bettype NOT IN (801,803,804,805,806,901,902,903)
+	UNION ALL
 	SELECT transid, refno,bettype,custid, recommend, mrecommend, srecommend, betfrom  
 	FROM bettrans14 b14 with (nolock)  
 	WHERE b14.refno in ( SELECT transid from #transid ) 
@@ -130,19 +131,11 @@ BEGIN
  WHERE b.transid NOT IN (SELECT CASE WHEN bettype IN (801,803,804,805,806) THEN refno ELSE transid END FROM @BetDelete)
 
  
- ;with tmp as  
- (Select stuff(  
-   (  
-   Select '^' + T2.transid  
-   From @tblInvalidTransIds As T2  
-   Order By T2.transid  
-   For Xml Path(''), type  
-   ).value('.', 'varchar(max)'), 1, 2, '') As val  
- From @tblInvalidTransIds As T1  
- )  
- SELECT @InvalidTransIds = val from tmp 
- 
- SELECT @InvalidTransIds AS InvalidTransID
+ SELECT STUFF((SELECT distinct '^' + p1.transid
+ FROM @tblInvalidTransIds p1
+		FOR XML PATH(''), TYPE
+		).value('.', 'NVARCHAR(MAX)')
+	,1,1,'') AS InvalidTransID
  
 END  
 GO
