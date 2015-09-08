@@ -1,4 +1,14 @@
-﻿ALTER PROCEDURE [Acc_MailingListSel] 
+﻿
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_MailingListSel    Script Date: 9/3/2015 8:47:38 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_MailingListSel    Script Date: 9/3/2015 8:46:04 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_MailingListSel    Script Date: 8/21/2015 9:11:20 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_MailingListSel    Script Date: 8/21/2015 9:10:01 AM ******/
+CREATE PROCEDURE [Acc_MailingListSel] 
 	@FuncID int = 287  -- [SpecialDeleteMailing]
 AS 
 /*    
@@ -16,6 +26,7 @@ AS
 		- 20131113@Kathy: Add RecoverBet group [Redmine:#6647]
 		- 20130107@Kathy: Rename 'RecoverBet' group to 'CSD Recovery' [Redmine:#10270]
 		- 20140411@Kathy: Add BetFair, OneExchange's group [Redmine:#6647]
+		- 20150615@Dominic: Add BetTrade's group RM:#36964
 */    
 BEGIN 
 
@@ -95,16 +106,25 @@ BEGIN
 		FROM Acc_MailingList WITH(NOLOCK)
 		WHERE FuncID = @FuncID 
 		and SiteId = 1000006
+		
+		UNION ALL
+		SELECT SiteId, 'BetTrade', ToList, CcList, BccList,
+			CASE WHEN tolist IS NOT NULL OR cclist IS NOT NULL OR bcclist IS NOT NULL THEN 1 ELSE 0 END isavailabe  
+		FROM Acc_MailingList WITH(NOLOCK)
+		WHERE FuncID = @FuncID 
+		and SiteId = 1000007
 	END    
-END  
-go
+END
+GO
 
-/*
-==========Execute sample=================  
-Acc_MailingListSel   
-*/
-  
-GRANT EXECUTE ON [dbo].[Acc_MailingListSel] TO [bodbAdminNet]
-go
-GRANT VIEW DEFINITION ON [dbo].[Acc_MailingListSel] TO [vnteam]
-go
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_MailingListSel] TO [bodbAdminNet]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_MailingListSel] TO [vnteam]
+GO 

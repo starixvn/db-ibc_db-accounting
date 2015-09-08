@@ -1,4 +1,14 @@
-﻿ALTER PROCEDURE [Acc_MailingListUpd]
+﻿
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_MailingListUpd    Script Date: 9/3/2015 8:47:38 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_MailingListUpd    Script Date: 9/3/2015 8:46:06 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_MailingListUpd    Script Date: 8/21/2015 9:11:20 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_MailingListUpd    Script Date: 8/21/2015 9:10:03 AM ******/
+CREATE PROCEDURE [Acc_MailingListUpd]
 	@Userid INT,		
 	@Siteid INT = 0, 
 	@FuncID INT = 287,  -- [SpecialDeleteMailing]
@@ -23,6 +33,7 @@ Revisions:
 	20131101@Kathy: Add Foobet group [Redmine:#5697]
 	20131113@Kathy: Add RecoverBet group [Redmine:#6647]
 	20140411@Kathy: Add BetFair, OneExchange's group [Redmine:#6647]
+	20150615@Dominic: Add BetTrade's group RM:#36964
 */  
 
 BEGIN	
@@ -54,7 +65,7 @@ IF @ErrCode <> 0
 	RETURN
 
 --2. VALIDATE LICENSEE.
-IF @Siteid NOT IN (1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006) -- 12EU, IT QA, IT Support, Foobet, RecoverBet, BetFair, OneExchange
+IF @Siteid NOT IN (1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007) -- 12EU, IT QA, IT Support, Foobet, RecoverBet, BetFair, OneExchange, BetTrade
 	IF NOT EXISTS( SELECT 1 FROM bodb02.dbo.[SITE] WITH(NOLOCK) WHERE siteid = @Siteid  and islicensee = 1 ) AND @Siteid <> 0
 	BEGIN
 		SELECT @ErrMsg = 'This Licensee does not exists in System.',
@@ -117,6 +128,16 @@ END
 
 
 GRANT EXECUTE ON [dbo].[Acc_MailingListUpd] TO [bodbAdminNet]
-go
-GRANT VIEW DEFINITION ON [dbo].[Acc_MailingListUpd] TO [vnteam]
-go
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_MailingListUpd] TO [bodbAdminNet]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_MailingListUpd] TO [vnteam]
+GO 
