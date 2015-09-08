@@ -1,3 +1,11 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 09/08/2015 15:55:11 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 8/20/2015 9:22:09 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@adminid INT
 	,@IsExcludeBetdaq BIT = 0
@@ -29,6 +37,7 @@ AS
 		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]	
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+	        - 20150611@Johnson: Add bettrade [Redmine: #35921]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 	
@@ -123,13 +132,28 @@ BEGIN
 	DECLARE @tblDebitPending TVP_BalanceList
 	DECLARE @tblCreditPending TVP_BalanceList
 
+        CREATE TABLE #tmpTrans (transid BIGINT)
+
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
+	INSERT INTO #tmpTrans
+	SELECT transid
+	FROM dbo.bettrans WITH (ROWLOCK)
+	WHERE matchid = @matchid 
+		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+		AND betdaqid = 0--bettrade tickets
+		
 	INSERT INTO #BalanceBefore
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+	WHERE matchid = @matchid 
+		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
+		AND 1 = CASE WHEN bettype IN (901,902,903) 
+						AND refno IN (SELECT transid FROM #tmpTrans)	
+						THEN 1 
+					WHEN bettype NOT IN (901,902,903) THEN 1
+				ELSE 0 END
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -191,7 +215,7 @@ BEGIN
 			END CATCH
 		END
 
-																																																																EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
+																																																																																																																																EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
 			,@creator = @adminid
 			,@IsExcludeBetdaq = @IsExcludeBetdaq
 			,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
@@ -307,7 +331,7 @@ BEGIN
 	/* --- END Settle Abandoned Match ---*/
 	DECLARE @RowCount INT
 
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
 		,@Matchid = @matchid
 		,@RowCount = @Rowcount OUTPUT
 		,@creator = @adminid
@@ -337,7 +361,13 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+	WHERE matchid = @matchid 
+		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
+		AND 1 = CASE WHEN bettype IN (901,902,903) 
+						AND refno IN (SELECT transid FROM #tmpTrans)	
+						THEN 1 
+					WHEN bettype NOT IN (901,902,903) THEN 1
+				ELSE 0 END--bettrade
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -368,7 +398,7 @@ BEGIN
 	WHERE	Increased = 0
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
+				EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
@@ -387,7 +417,7 @@ BEGIN
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
+				EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 	----

@@ -1,3 +1,11 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 09/08/2015 15:32:14 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_1    Script Date: 8/20/2015 9:22:06 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1] 
 	@creator			INT
 	,@matchid			INT
@@ -50,7 +58,9 @@ AS
 		- 20140910@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141009@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]		
+		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]	
+	        - 20150610@Johnson: Add bettrade [Redmine: #35921]
+		- 20150715@Johnson: Exclude range bettype of Metric Gaming from settlement of SB [Redmine: #37688]	
 		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 	Param's Explanation:
@@ -88,6 +98,8 @@ BEGIN
 		,@HomeValue							VARCHAR(20)
 		,@AwayValue							VARCHAR(20)
 		
+	CREATE TABLE #tmpTrans (transid BIGINT)--tickets of bettrade
+	DECLARE @tmpBettype TABLE(bettype INT)--bettypes of bettrade
 
 	SELECT @start				= CURRENT_TIMESTAMP
 		,@SkipBalanceUpdate 	= 0
@@ -248,6 +260,16 @@ BEGIN
 		--===
 		IF @Action IN ('CAL', 'CAL-FT')
 		BEGIN
+			INSERT INTO #tmpTrans(transid)
+			SELECT transid
+			FROM bettrans b WITH(NOLOCK)
+			WHERE matchid = @matchid 
+				AND b.bettype NOT IN (14, 127)
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) -- Auto settle Betradar
+				AND betdaqid = 0--bettrade tickets
+			
 			INSERT INTO #BalanceBefore
 			SELECT b.custid
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
@@ -256,26 +278,54 @@ BEGIN
 				AND b.bettype NOT IN (14, 127)
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) -- Auto settle Betradar
+				AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)								
+								THEN 1 
+							WHEN b.bettype NOT IN (901,902,903) THEN 1
+							ELSE 0 END
 			GROUP BY b.custid
 
 			SET @TotalAccount = @@ROWCOUNT
 		END
 		ELSE IF @Action = 'CAL-HT'
 		BEGIN
+			INSERT INTO #tmpTrans(transid)
+			SELECT transid
+			FROM bettrans b WITH(NOLOCK)
+			WHERE	b.matchid = @matchid 
+				AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+				AND betdaqid = 0--bettrade tickets
+				
 			INSERT INTO #BalanceBefore
 			SELECT b.custid
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+									THEN 1 
+								WHEN b.bettype NOT IN (901,902,903) THEN 1
+								ELSE 0 END
 			GROUP BY b.custid
 
 			SET @TotalAccount = @@ROWCOUNT
 		END
 		ELSE IF @Action = 'UNDO'
 		BEGIN
+			INSERT INTO #tmpTrans(transid)
+			SELECT transid
+			FROM bettrans b WITH(NOLOCK)
+			WHERE	b.matchid = @matchid
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+				AND betdaqid = 0--bettrade tickets
+			
 			INSERT INTO #BalanceBefore
 			SELECT b.custid
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
@@ -283,7 +333,13 @@ BEGIN
 			WHERE	b.matchid = @matchid
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+									THEN 1 
+								WHEN b.bettype NOT IN (901,902,903) THEN 1
+								ELSE 0 END
 			GROUP BY b.custid
 		END
 				--===
@@ -299,7 +355,7 @@ BEGIN
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-																EXEC dbo.NAP_Admin_Settlement_Parlay
+																																EXEC dbo.NAP_Admin_Settlement_Parlay
 			@matchids		= @matchid
 			,@creator		= @creator
 			,@action		= 'UNDO'
@@ -312,7 +368,7 @@ BEGIN
 			--,@ivalue		= @SettlementStatus135 -- update SettlementStatus135 value
 			,@SelectedSet	= @SelectedSet	--Tennis 
 
-																EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+																																EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command		= 'NAP_Admin_Settlement_1-UNDO'
 			,@MatchID		= @matchid
 			,@betstatus		= @betstatus
@@ -373,6 +429,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		WHERE b.matchid = @matchid
 				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
 		GROUP BY CASE 
 					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
@@ -439,7 +496,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
 		WHERE m.matchid = @matchid
 
-																EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+																																EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command		= 'NAP_Admin_Settlement_1-CAL'
 			,@MatchID		= @matchid
 			,@FTHome		= @fth
@@ -549,7 +606,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					)
 				IF CHARINDEX('1FL:', @betstatus) > 0
 				BEGIN
-																																								EXEC dbo.NAP_Admin_Settlement_FGLG 
+																																																																																EXEC dbo.NAP_Admin_Settlement_FGLG 
 						@creator			= @creator
 						,@matchid			= @matchid
 						,@action			= 'CAL-HT'
@@ -575,7 +632,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					FROM dbo.bettransm bm WITH(NOLOCK)
 					WHERE bm.bettype = 14 AND bm.matchid = @matchid
 					)
-																																EXEC dbo.NAP_Admin_Settlement_FGLG 
+																																																																EXEC dbo.NAP_Admin_Settlement_FGLG 
 					@creator			= @creator
 					,@matchid			= @matchid
 					,@action			= 'CAL-FT'
@@ -625,7 +682,13 @@ need below code to determine for mark match as calculated (all bets settled)
 					AND b.bettype NOT IN (14, 127)
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+									THEN 1 
+								WHEN b.bettype NOT IN (901,902,903) THEN 1
+								ELSE 0 END
 			GROUP BY b.custid
 		END
 		ELSE IF @Action = 'CAL-HT'
@@ -635,7 +698,12 @@ need below code to determine for mark match as calculated (all bets settled)
 					,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM	dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903)
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+									THEN 1 
+								WHEN b.bettype NOT IN (901,902,903) THEN 1
+								ELSE 0 END
 			GROUP BY b.custid
 		END
 		ELSE IF @Action = 'UNDO'
@@ -647,7 +715,13 @@ need below code to determine for mark match as calculated (all bets settled)
 			WHERE	b.matchid = @matchid
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+					AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto betradar
+					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+									THEN 1 
+								WHEN b.bettype NOT IN (901,902,903) THEN 1
+							ELSE 0 END
 			GROUP BY b.custid
 		END
 	END --IF @SkipBalanceUpdate = 0
@@ -685,7 +759,7 @@ need below code to determine for mark match as calculated (all bets settled)
 	WHERE	Increased = 0
 	
 	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingDebitIns 
+								EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
@@ -700,7 +774,7 @@ need below code to determine for mark match as calculated (all bets settled)
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingCreditIns 
+								EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 
@@ -734,6 +808,8 @@ need below code to determine for mark match as calculated (all bets settled)
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
+
+	DROP TABLE #tmpTrans
 
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---

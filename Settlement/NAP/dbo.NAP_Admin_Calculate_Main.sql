@@ -1,5 +1,11 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_Main]    Script Date: 7/28/2015 3:44:50 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_Main    Script Date: 7/6/2015 4:29:06 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@mode							VARCHAR(15)	= 'CAL'
 	,@action						VARCHAR(20)	= 'CAL'
@@ -282,7 +288,7 @@ AS
 		- 20150128@Jamie: Hotfix Settlement SS
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
-		
+		- 20150529@Johnson: Add bettrade [Redmine: #35921]
 	Param's Explanation:
 		@action			@mode
 		 CAL			 CAL, CAL-HT, CAL-FT, UNDO, 
@@ -304,7 +310,7 @@ BEGIN
 		DECLARE @sMessage NVARCHAR(MAX)
 
 		SET @sMessage = '
-																								EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
+			EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
 			,@mode = ' + CASE 
 				WHEN @mode IS NULL THEN 'NULL'
 				ELSE '''' + CONVERT(NVARCHAR(50), @mode) + ''''
@@ -912,13 +918,13 @@ BEGIN
 						,@betcount = @betcount_1201
 
 					-- bettype 1203 : Virtual Over/Under
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 1203
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_1203
 
 					-- bettype 1204 : Virtual Correct Score
-																																								EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 						,@bettype = 1204
 						,@correctscore = @correctscore
 						,@goaldiff = @scorediff
@@ -926,19 +932,19 @@ BEGIN
 						,@betcount = @betcount_1204
 
 					-- bettype 1205 : Virtual 1x2
-																																								EXEC dbo.NAP_Admin_Calculate_5 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_5 @matchid = @matchid
 						,@bettype = 1205
 						,@whowin = @scorediff
 						,@betcount = @betcount_1205
 
 					-- bettype 1206 : Virtual Total Goal
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 1206
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_1206
 
 					-- bettype 1224 : Virtual Double Chance 
-																																								EXEC dbo.NAP_Admin_Calculate_24 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_24 @matchid = @matchid
 						,@bettype = 1224
 						,@scorediff = @scorediff
 						,@betcount = @betcount_1224
@@ -947,7 +953,7 @@ BEGIN
 				BEGIN
 					-- bettype 1 : Handicap
 					-- IF @betcount_1 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
 						,@bettype = 1
 						,@fth = @fth
 						,@fta = @fta
@@ -957,20 +963,20 @@ BEGIN
 					-- IF @betcount_20 > 0 
 					IF @SportType = 154
 						-- for horse racing fixodds swap win positions to resuse calculating SP 
-																																																EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
+						EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
 							,@bettype = 20
 							,@fth = @fta
 							,@fta = @fth
 							,@betcount = @betcount_20
 					ELSE
-																																																EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
+						EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
 							,@bettype = 20
 							,@fth = @fth
 							,@fta = @fta
 							,@betcount = @betcount_20
 
 					-- bettype 124: FT 1x2 HDP 
-																																								EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
 						,@bettype = 124
 						,@fth = @fth
 						,@fta = @fta
@@ -978,21 +984,21 @@ BEGIN
 
 					-- bettype 2 : Odd/Even
 					-- IF @betcount_2 > 0  
-																																								EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 						,@bettype = 2
 						,@oddeven = @oddeven
 						,@betcount = @betcount_2
 
 					-- bettype 3 : Over/Under
 					-- IF @betcount_3 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 3
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_3
 
 					-- bettype 4, 16 : Correct Score
 					-- IF @betcount_4 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 						,@bettype = 4
 						,@correctscore = @correctscore
 						,@goaldiff = @scorediff
@@ -1001,21 +1007,21 @@ BEGIN
 
 					-- bettype 5 : 1x2
 					-- IF @betcount_5 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_5 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_5 @matchid = @matchid
 						,@bettype = 5
 						,@whowin = @scorediff
 						,@betcount = @betcount_5
 
 					-- bettype 6 : Total Goal
 					-- IF @betcount_6 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 6
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_6
 
 					-- bettype 13 : Clean Sheet 
 					-- IF @betcount_13 > 0 
-																																								EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
 						,@bettype = 13
 						,@fth = @fth
 						,@fta = @fta
@@ -1023,7 +1029,7 @@ BEGIN
 
 					-- bettype 16 : HT/FT		
 					-- IF @betcount_16 > 0	
-																																								EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 						,@bettype = 16
 						,@correctscore = @HTFT
 						,@goaldiff = @scorediff
@@ -1039,21 +1045,21 @@ BEGIN
 
 					-- bettype 24 : Double Chance 
 					-- IF @betcount_24 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_24 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_24 @matchid = @matchid
 						,@bettype = 24
 						,@scorediff = @scorediff
 						,@betcount = @betcount_24
 
 					-- bettype 25 : Draw no bet 
 					-- IF @betcount_25 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
 						,@bettype = 25
 						,@scorediff = @scorediff
 						,@betcount = @betcount_25
 
 					-- bettype 26 : Both/One/Neither team to score  
 					-- IF @betcount_26 > 0 
-																																								EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 26
 						,@fth = @fth
 						,@fta = @fta
@@ -1077,27 +1083,27 @@ BEGIN
 
 					-- bettype 121 : Home no bet 
 					-- IF @betcount_121 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
 						,@bettype = 121
 						,@scorediff = @scorediff
 						,@betcount = @betcount_121
 
 					-- bettype 122 : Away no bet 
 					-- IF @betcount_121 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
 						,@bettype = 122
 						,@scorediff = @scorediff
 						,@betcount = @betcount_122
 
 					-- bettype 123 : Draw/No Draw
 					-- IF @betcount_123 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
 						,@bettype = 123
 						,@scorediff = @scorediff
 						,@betcount = @betcount_123
 
 					-- bettype 133 : Home To Win Both Halves
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 133
 						,@fth = @fth
 						,@fta = @fta
@@ -1107,7 +1113,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 134 : Away To win Both halves
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 134
 						,@fth = @fth
 						,@fta = @fta
@@ -1117,7 +1123,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 140 : Highest scoring half
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 140
 						,@fth = @fth
 						,@fta = @fta
@@ -1127,7 +1133,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 141 : Highest Scoring Half Home Team
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 141
 						,@fth = @fth
 						,@fta = @fta
@@ -1137,7 +1143,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 142 : Highest Scoring Half Away Team
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 142
 						,@fth = @fth
 						,@fta = @fta
@@ -1147,7 +1153,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 145 : Both Teams To Score
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 145
 						,@fth = @fth
 						,@fta = @fta
@@ -1157,7 +1163,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 146 : 2nd Half Both Teams To Score
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 146
 						,@fth = @fth
 						,@fta = @fta
@@ -1167,7 +1173,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 147 : Home To Score In Both Halves
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 147
 						,@fth = @fth
 						,@fta = @fta
@@ -1177,7 +1183,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 148 : Away To Score In Both Halves
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 148
 						,@fth = @fth
 						,@fta = @fta
@@ -1187,7 +1193,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 149 : Home To Win Either Half
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 149
 						,@fth = @fth
 						,@fta = @fta
@@ -1197,7 +1203,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 150 : Away To Win Either Half
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 150
 						,@fth = @fth
 						,@fta = @fta
@@ -1207,7 +1213,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 152 : Half time/Fulltime Correct Score
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 152
 						,@fth = @fth
 						,@fta = @fta
@@ -1217,7 +1223,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 128 : HT/FT Odd/Even
-																																								EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 						,@bettype = 128
 						,@oddeven = @oddeven
 						,@oddevenht = @oddevenht
@@ -1225,37 +1231,37 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 130 : Exact Goal
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 130
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_130
 
 					-- bettype 131 : Home Team Total Goal
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 131
 						,@totalgoal = @totalhome
 						,@betcount = @betcount_131
 
 					-- bettype 132 : Away Team Total Goal
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 132
 						,@totalgoal = @totalaway
 						,@betcount = @betcount_132
 						
 					-- bettype 137 : Home Team Odd/Even
-																																								EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 						,@bettype = 137
 						,@oddeven = @oddevenhome
 						,@betcount = @betcount_137
 						
 					-- bettype 139 : Away Team Odd/Even
-																																								EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 						,@bettype = 139
 						,@oddeven = @oddevenaway
 						,@betcount = @betcount_139
 						
 					-- bettype 144 : Result/Total Goals
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 144
 						,@totalgoal = @totalgoal
 						,@scorediff = @scorediff
@@ -1263,35 +1269,35 @@ BEGIN
 
 				--*** Betradar 2: START *****
 					-- bettype 157: Odd/Even(3rd) 
-																																								EXEC dbo.NAP_Admin_Calculate_2 
+					EXEC dbo.NAP_Admin_Calculate_2 
 						 @matchid = @matchid
 						,@bettype = 157
 						,@oddeven = @oddeven
 						,@betcount = @betcount_157
 
 					-- bettype 159: Exact Total Goals 
-																																								EXEC dbo.NAP_Admin_Calculate_6
+					EXEC dbo.NAP_Admin_Calculate_6
 						 @matchid = @matchid
 						,@bettype = 159
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_159
 
 					-- bettype 161:Exact Home Team Goals 
-																																								EXEC dbo.NAP_Admin_Calculate_6
+					EXEC dbo.NAP_Admin_Calculate_6
 						 @matchid = @matchid
 						,@bettype = 161
 						,@totalgoal = @totalhome
 						,@betcount = @betcount_161
 
 					-- bettype 162:Exact Away Team Goals 
-																																								EXEC dbo.NAP_Admin_Calculate_6 
+					EXEC dbo.NAP_Admin_Calculate_6 
 						 @matchid = @matchid
 						,@bettype = 162
 						,@totalgoal = @totalaway
 						,@betcount = @betcount_162
 					
 					-- bettype 163:Result/Total Goals (3rd) 
-																																								EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_3 
 						 @matchid = @matchid
 						,@bettype = 163
 						,@totalgoal = @totalgoal
@@ -1299,7 +1305,7 @@ BEGIN
 						,@betcount = @betcount_163
 
 					-- bettype 166: Extra time correct score 
-																																								EXEC dbo.NAP_Admin_Calculate_4 
+					EXEC dbo.NAP_Admin_Calculate_4 
 						 @matchid = @matchid
 						,@bettype = 166
 						,@correctscore = @correctscore
@@ -1307,7 +1313,7 @@ BEGIN
 
 
 					-- bettype 170: Team to Score 
-																																								EXEC dbo.NAP_Admin_Calculate_26 
+					EXEC dbo.NAP_Admin_Calculate_26 
 						 @matchid = @matchid
 						,@bettype = 170
 						,@fth = @fth
@@ -1315,14 +1321,14 @@ BEGIN
 						,@betcount = @betcount_170
 
 					-- bettype 171: Winning Margin
-																																								EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_3 
 						 @matchid = @matchid
 						,@bettype = 171
 						,@scorediff = @scorediff
 						,@betcount = @betcount_171
 
 					-- bettype 172: Result and First Team to Score 
-																																								EXEC dbo.NAP_Admin_Calculate_13 
+					EXEC dbo.NAP_Admin_Calculate_13 
 						 @matchid = @matchid
 						,@bettype = 172
 						,@fth = @fth
@@ -1331,7 +1337,7 @@ BEGIN
 						,@betcount = @betcount_172
 
 					-- bettype 177 : 2nd Half 1x2
-																																								EXEC dbo.NAP_Admin_Calculate_5 
+					EXEC dbo.NAP_Admin_Calculate_5 
 						 @matchid = @matchid
 						,@bettype = 177
 						,@whowin = @scorediff_2H
@@ -1339,14 +1345,14 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 178 : 2nd Over/Under(3rd)
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 178
 						,@totalgoal = @totalgoal_2H
 						,@betcount = @betcount_178
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 183 : 2nd Handicap (3rd)
-																																								EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
 						,@bettype = 183
 						,@fth = @home_2nd
 						,@fta = @away_2nd
@@ -1354,7 +1360,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 184 : 2H Odd/Even
-																																								EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 						,@bettype = 184
 						,@oddeven = @oddeven_2H
 						,@oddevenht = NULL 
@@ -1362,7 +1368,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 185 : 2H Draw No Bet
-																																								EXEC dbo.NAP_Admin_Calculate_25 
+					EXEC dbo.NAP_Admin_Calculate_25 
 						 @matchid = @matchid
 						,@bettype = 185
 						,@scorediff = @scorediff_2H
@@ -1370,7 +1376,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 186 : 2H Double Chance 
-																																								EXEC dbo.NAP_Admin_Calculate_24 
+					EXEC dbo.NAP_Admin_Calculate_24 
 						 @matchid = @matchid
 						,@bettype = 186
 						,@scorediff = @scorediff_2H
@@ -1378,7 +1384,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 187 : Exact 2H Goals 
-																																								EXEC dbo.NAP_Admin_Calculate_6 
+					EXEC dbo.NAP_Admin_Calculate_6 
 						 @matchid = @matchid
 						,@bettype = 187
 						,@totalgoal = @totalgoal_2H
@@ -1386,7 +1392,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 189 : Both Halves Over 1.5 Yes/No  [189]
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 189
 						,@fth = @home_2nd
 						,@fta = @away_2nd
@@ -1396,7 +1402,7 @@ BEGIN
 						,@isRefundHT = @isRefundHT
 
 					-- bettype 190 : Both Halves Under 1.5 Yes/No
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 190
 						,@fth = @home_2nd
 						,@fta = @away_2nd
@@ -1414,14 +1420,14 @@ BEGIN
 						,@betcount = @betcount_194
 
 					-- bettype 195 :Home Team Exact Corners
-					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 195
 						,@totalgoal = @fthCorners
 						,@isExcludeCorner = @isExcludeCorner
 						,@betcount = @betcount_195
 
 					-- bettype 196 :Away Team Exact Corners
-					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 196
 						,@totalgoal = @ftaCorners
 						,@isExcludeCorner = @isExcludeCorner
@@ -1429,28 +1435,28 @@ BEGIN
 
 
 					-- bettype 197 :Home Team Total Corners Over/Under
-					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 197
 						,@totalgoal = @fthCorners
 						,@isExcludeCorner = @isExcludeCorner
 						,@betcount = @betcount_197
 
 					-- bettype 198 :Home Team Total Corners Over/Under
-					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 198
 						,@totalgoal = @ftaCorners
 						,@isExcludeCorner = @isExcludeCorner
 						,@betcount = @betcount_198
 
 					-- bettype 199 :Total Corners
-					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+										EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 199
 						,@totalgoal = @totalCorners
 						,@isExcludeCorner = @isExcludeCorner
 						,@betcount = @betcount_199
 
 					-- bettype: 206: First Corner
-					EXEC dbo.NAP_Admin_Calculate_135
+										EXEC dbo.NAP_Admin_Calculate_135
 						 @matchid = @matchid
 						,@bettype = 206
 						,@result = @ftFCorner
@@ -1458,7 +1464,7 @@ BEGIN
 						,@betcount = @betcount_206
 
 					-- bettype: 208: Last Corner
-					EXEC dbo.NAP_Admin_Calculate_135
+										EXEC dbo.NAP_Admin_Calculate_135
 						 @matchid = @matchid
 						,@bettype = 208
 						,@result = @ftLCorner
@@ -1466,6 +1472,12 @@ BEGIN
 						,@betcount = @betcount_208
 
 				--*** Betradar 2: END *****
+				
+				--Bettrade
+					EXEC dbo.NAP_Admin_Calculate_901
+						 @matchid = @matchid											
+						,@action = @action
+						,@mode = @mode
 
 				END
 			END
@@ -1506,7 +1518,7 @@ BEGIN
 
 				-- bettype 12 : 1st Odd/Even
 				-- IF @betcount_12 > 0
-																																EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 					,@bettype = 12
 					,@oddeven = @oddevenht
 					,@betcount = @betcount_12
@@ -1529,7 +1541,7 @@ BEGIN
 					,@betcount = @betcount_30
 
 				-- bettype 126 : 1H Total Goal
-																																EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 126
 					,@totalgoal = @totalht
 					,@betcount = @betcount_126
@@ -1541,19 +1553,19 @@ BEGIN
 					,@betcount = @betcount_151
 
 				-- bettype 129 : 1H Exact Goal
-																																EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 129
 					,@totalgoal = @totalht
 					,@betcount = @betcount_129
 				
 				-- bettype 136 : 1H Home Team Odd/Even
-																																EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 					,@bettype = 136
 					,@oddevenht = @oddevenhome_ht
 					,@betcount = @betcount_136
 				
 				-- bettype 138 : 1H Away Team Odd/Even
-																																EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 					,@bettype = 138
 					,@oddevenht = @oddevenaway_ht
 					,@betcount = @betcount_138
@@ -1580,21 +1592,21 @@ BEGIN
 					,@betcount = @betcount_167
 
 				-- bettype 179 : Exact 1H Goal
-																																EXEC dbo.NAP_Admin_Calculate_6 
+				EXEC dbo.NAP_Admin_Calculate_6 
 					 @matchid = @matchid
 					,@bettype = 179
 					,@totalgoal = @totalht
 					,@betcount = @betcount_179
 
 				-- bettype 181 : 1H Exact Home Team Goals 
-																																EXEC dbo.NAP_Admin_Calculate_6 
+				EXEC dbo.NAP_Admin_Calculate_6 
 					 @matchid = @matchid
 					,@bettype = 181
 					,@totalgoal = @hth
 					,@betcount = @betcount_181
 
 				-- bettype 182 : 1H Exact Away Team Goals 
-																																EXEC dbo.NAP_Admin_Calculate_6 
+				EXEC dbo.NAP_Admin_Calculate_6 
 					 @matchid = @matchid
 					,@bettype = 182
 					,@totalgoal = @hta
@@ -1615,28 +1627,28 @@ BEGIN
 					,@betcount = @betcount_191
 
 				-- bettype 200 :1H Home Team Exact Corners
-				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 200
 					,@totalgoal = @hthCorners
 					,@isExcludeCorner = @isExcludeCorner
 					,@betcount = @betcount_200
 
 				-- bettype 201 :1H Away Team Exact Corners
-				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 201
 					,@totalgoal = @htaCorners
 					,@isExcludeCorner = @isExcludeCorner
 					,@betcount = @betcount_201
 
 				-- bettype 202 :1H Total Corners
-				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 202
 					,@totalgoal = @totalCorners_ht
 					,@isExcludeCorner = @isExcludeCorner
 					,@betcount = @betcount_202
 
 				-- bettype 203 : 1H Corners Odd/Even
-				EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 					,@bettype = 203
 					,@oddeven = @oddevenCorners_ht
 					,@oddevenht = NULL 
@@ -1644,21 +1656,21 @@ BEGIN
 					,@betcount = @betcount_203
 
 				-- bettype 204 :1H Home Corner Over/Under
-				EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 					,@bettype = 204
 					,@totalgoal = @hthCorners
 					,@isExcludeCorner = @isExcludeCorner
 					,@betcount = @betcount_204
 
 				-- bettype 205 :1H Away Corner Over/Under
-				EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 					,@bettype = 205
 					,@totalgoal = @htaCorners
 					,@isExcludeCorner = @isExcludeCorner
 					,@betcount = @betcount_205
 
 				-- bettype: 207: 1H First Corner
-				EXEC dbo.NAP_Admin_Calculate_135
+								EXEC dbo.NAP_Admin_Calculate_135
 					 @matchid = @matchid
 					,@bettype = 207
 					,@result = @htFCorner
@@ -1666,13 +1678,19 @@ BEGIN
 					,@betcount = @betcount_207
 
 				-- bettype: 209: 1H Last Corner
-				EXEC dbo.NAP_Admin_Calculate_135
+								EXEC dbo.NAP_Admin_Calculate_135
 					 @matchid = @matchid
 					,@bettype = 209
 					,@result = @htLCorner
 					,@isExcludeCorner = @isExcludeCorner
 					,@betcount = @betcount_209
 			--*** Betradar 2: END ****
+			
+			--Bettrade
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 			END
 
 			IF @Mode = 'UNDO'
@@ -1680,6 +1698,12 @@ BEGIN
 																																EXEC dbo.NAP_Admin_Calculate_Undo 
 					 @matchid	  = @matchid
 					,@SelectedSet = @SelectedSet
+					,@ResourceIDs = @ResourceIDs
+				
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 					,@ResourceIDs = @ResourceIDs
 			END
 		END
@@ -1694,6 +1718,11 @@ BEGIN
 					,@goaldiff = @goaldiff
 					,@FGLG2 = @HT_FGLG2
 					,@betcount = @betcount_127
+				
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 			END
 
 			IF @mode = 'CAL-FT'
@@ -1714,6 +1743,11 @@ BEGIN
 						,@FGLG2 = @FGLG2
 						,@betcount = @betcount_14
 				END
+				
+				EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
 			END
 		END
 
@@ -1721,7 +1755,7 @@ BEGIN
 		BEGIN
 			-- bettype: 135: PenaltyShootout 
 			IF @betcount_135 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 135
 					,@ResourceIDs = @ResourceIDs
@@ -1730,7 +1764,7 @@ BEGIN
 
 			-- bettype: 160: Next Goal (3rd) 
 			IF @betcount_160 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 160
 					,@ResourceIDs = @ResourceIDs
@@ -1739,7 +1773,7 @@ BEGIN
 
 			-- bettype: 164: Extra Time Next Goal 
 			IF @betcount_164 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 164
 					,@ResourceIDs = @ResourceIDs
@@ -1748,7 +1782,7 @@ BEGIN
 
 			-- bettype: 168: Who advances to next round 
 			IF @betcount_168 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 168
 					,@ResourceIDs = @ResourceIDs
@@ -1757,7 +1791,7 @@ BEGIN
 
 			-- bettype: 169: Next Goal Time (15 Min)
 			IF @betcount_169 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 169
 					,@ResourceIDs = @ResourceIDs
@@ -1766,7 +1800,7 @@ BEGIN
 
 			-- bettype: 173: Extra Time Yes/No 
 			IF @betcount_173> 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 173
 					,@ResourceIDs = @ResourceIDs
@@ -1775,7 +1809,7 @@ BEGIN
 
 			-- bettype: 174: Extra Time and Goal 
 			IF @betcount_174> 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 174
 					,@ResourceIDs = @ResourceIDs
@@ -1784,7 +1818,7 @@ BEGIN
 
 			-- bettype: 175 : Match Decided Method 
 			IF @betcount_175 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 175
 					,@ResourceIDs = @ResourceIDs
@@ -1793,7 +1827,7 @@ BEGIN
 
 			-- bettype: 176 : First 10 Min 1x2 
 			IF @betcount_176 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 176
 					,@ResourceIDs = @ResourceIDs
@@ -1802,7 +1836,7 @@ BEGIN
 
 			-- bettype: 180 : 1H Next Goal 
 			IF @betcount_180 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 180
 					,@ResourceIDs = @ResourceIDs
@@ -1811,7 +1845,7 @@ BEGIN
 
 			-- bettype: 192 : First Goal Time (10 Min) 
 			IF @betcount_192 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 192
 					,@ResourceIDs = @ResourceIDs
@@ -1820,7 +1854,7 @@ BEGIN
 
 			-- bettype: 193 : First Goal Time (15 Min) 
 			IF @betcount_193 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 193
 					,@ResourceIDs = @ResourceIDs
@@ -1829,7 +1863,7 @@ BEGIN
 
 			-- bettype: 210 : Player Sent Off 
 			IF @betcount_210 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 210
 					,@ResourceIDs = @ResourceIDs
@@ -1838,7 +1872,7 @@ BEGIN
 
 			-- bettype: 211 : 1H Player Sent Off 
 			IF @betcount_211 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 211
 					,@ResourceIDs = @ResourceIDs
@@ -1848,7 +1882,7 @@ BEGIN
 
 			-- bettype: 212 : Home Team Player Sent Off 
 			IF @betcount_212 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 212
 					,@ResourceIDs = @ResourceIDs
@@ -1857,7 +1891,7 @@ BEGIN
 
 			-- bettype: 213 : HT Home Team Player Sent Off 
 			IF @betcount_213 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 213
 					,@ResourceIDs = @ResourceIDs
@@ -1867,7 +1901,7 @@ BEGIN
 
 			-- bettype: 214 : Away Team Player Sent Off 
 			IF @betcount_214 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 214
 					,@ResourceIDs = @ResourceIDs
@@ -1876,7 +1910,7 @@ BEGIN
 
 			-- bettype: 215 : 1H Away Team Player Sent Off 
 			IF @betcount_215 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 215
 					,@ResourceIDs = @ResourceIDs
@@ -1885,7 +1919,7 @@ BEGIN
 
 			-- bettype: 216 : Goal Scorer - Anytime 
 			IF @betcount_216 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 216
 					,@ResourceIDs = @ResourceIDs
@@ -1894,13 +1928,18 @@ BEGIN
 
 			-- bettype: 217 : Goal Scorer - First 
 			IF @betcount_217 > 0	
-																																EXEC dbo.NAP_Admin_Calculate_135 
+				EXEC dbo.NAP_Admin_Calculate_135 
 					 @matchid = @matchid
 					,@bettype = 217
 					,@ResourceIDs = @ResourceIDs
 					,@result = @GoalScorerFirst
 					,@betcount = @betcount_217
-
+			
+			EXEC dbo.NAP_Admin_Calculate_901
+					 @matchid = @matchid					
+					,@action = @action
+					,@mode = @mode
+					,@ResourceIDs = @ResourceIDs
 		END
 
 		IF @action ='CAL-SET'  --Tennis including Sportting Solution
@@ -1916,7 +1955,7 @@ BEGIN
 						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1
 				IF @betCount_2 > 0 -- Odd/Even 
-																																								EXEC dbo.NAP_Admin_Calculate_2 
+					EXEC dbo.NAP_Admin_Calculate_2 
 						 @matchid			= @matchid
 						,@bettype			= 2
 						,@oddeven			= @oddeven
@@ -1925,7 +1964,7 @@ BEGIN
 						,@SelectedSet		= @SelectedSet
 						,@betcount			= @betCount_2
 				IF @betCount_3 > 0 -- Match Total Games Over/Under
-																																								EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_3 
 						 @matchid		= @matchid
 						,@bettype		= 3
 						,@totalgoal		= @totalgoal
@@ -1977,14 +2016,14 @@ BEGIN
 						,@betcount = @betcount_1303
 
 				IF @betCount_1305 > 0 -- Match Total Games Odd/Even
-																																								EXEC dbo.NAP_Admin_Calculate_2 
+					EXEC dbo.NAP_Admin_Calculate_2 
 						 @matchid	= @matchid
 						,@bettype	= 1305
 						,@oddeven	= @oddeven
 						,@SelectedSet = @SelectedSet
 						,@betcount = @betcount_1305
 				IF @betCount_1306 > 0 -- Match Total Games Over/Under
-																																								EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_3 
 						 @matchid = @matchid
 						,@bettype = 1306
 						,@totalgoal		= @totalgoal
@@ -2044,7 +2083,7 @@ BEGIN
 							,@betcount			= @betCount_155
 
 				IF @betCount_156 > 0 -- Set x Total Games Over/Under 
-																																								EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_3 
 							 @matchid		= @matchid
 							,@bettype		= 156
 							,@SelectedSet	= @SelectedSet
@@ -2075,7 +2114,7 @@ BEGIN
 							,@betcount			= @betcount_1311
 
 				IF @betCount_1312 > 0 -- Set x Total Games Over/Under (3rd)
-																																								EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_3 
 							 @matchid		= @matchid
 							,@bettype		= 1312
 							,@SelectedSet	= @SelectedSet
@@ -2114,7 +2153,7 @@ BEGIN
 						,@betcount			= @betCount_1317
 
 				IF @betCount_1318 > 0 -- Set x Total Games Odd/Even
-																																								EXEC dbo.NAP_Admin_Calculate_2 
+					EXEC dbo.NAP_Admin_Calculate_2 
 						 @matchid			= @matchid
 						,@bettype			= 1318
 						,@oddeven			= @oddeven 
@@ -2147,7 +2186,7 @@ BEGIN
 
 				-- bettype 200 :1H Home Team Exact Corners
 			IF @betcount_200 > 0 
-				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 200
 					,@totalgoal = @hthCorners
 					,@isExcludeCorner = 0
@@ -2156,7 +2195,7 @@ BEGIN
 			
 				-- bettype 201 :1H Away Team Exact Corners
 			IF @betcount_201 > 0 
-				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 201
 					,@totalgoal = @htaCorners
 					,@isExcludeCorner = 0
@@ -2164,7 +2203,7 @@ BEGIN
 
 				-- bettype 202 :1H Total Corners
 			IF @betcount_202 > 0 
-				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 					,@bettype = 202
 					,@totalgoal = @totalCorners_ht
 					,@isExcludeCorner = 0
@@ -2172,7 +2211,7 @@ BEGIN
 
 				-- bettype 203 : 1H Corners Odd/Even
 			IF @betcount_203 > 0 
-				EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_2 @matchid = @matchid
 					,@bettype = 203
 					,@oddeven = @oddevenCorners_ht
 					,@oddevenht = NULL 
@@ -2181,7 +2220,7 @@ BEGIN
 
 				-- bettype 204 :1H Home Corner Over/Under
 			IF @betcount_204 >0 
-				EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 					,@bettype = 204
 					,@totalgoal = @hthCorners
 					,@isExcludeCorner = 0
@@ -2189,7 +2228,7 @@ BEGIN
 
 				-- bettype 205 :1H Away Corner Over/Under
 			IF @betcount_205 > 0 
-				EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 					,@bettype = 205
 					,@totalgoal = @htaCorners
 					,@isExcludeCorner = 0
@@ -2197,7 +2236,7 @@ BEGIN
 
 				-- bettype: 207: 1H First Corner
 			IF @betcount_207 > 0 
-				EXEC dbo.NAP_Admin_Calculate_135
+								EXEC dbo.NAP_Admin_Calculate_135
 					 @matchid = @matchid
 					,@bettype = 207
 					,@result = @htFCorner
@@ -2206,7 +2245,7 @@ BEGIN
 
 				-- bettype: 209: 1H Last Corner
 			IF @betcount_209 >0
-				EXEC dbo.NAP_Admin_Calculate_135
+								EXEC dbo.NAP_Admin_Calculate_135
 					 @matchid = @matchid
 					,@bettype = 209
 					,@result = @htLCorner
@@ -2315,7 +2354,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @betcount_6 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 6
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_6
@@ -2324,7 +2363,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_3 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 3
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_3
@@ -2332,7 +2371,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @betcount_13 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
 						,@bettype = 13
 						,@fth = @fth
 						,@fta = @fta
@@ -2342,7 +2381,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_26 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 26
 						,@fth = @fth
 						,@fta = @fta
@@ -2362,7 +2401,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 				
 				IF @betcount_130 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 130
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_130
@@ -2371,7 +2410,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						
 				IF @betcount_131 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 131
 						,@totalgoal = @fth
 						,@betcount = @betcount_131
@@ -2380,7 +2419,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 				
 				IF @betcount_132 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 132
 						,@totalgoal = @fta
 						,@betcount = @betcount_132
@@ -2389,7 +2428,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						
 				IF @betcount_133 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 133
 						,@fth = @fth
 						,@fta = @fta
@@ -2402,7 +2441,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_134 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 134
 						,@fth = @fth
 						,@fta = @fta
@@ -2415,7 +2454,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_140 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 140
 						,@fth = @fth
 						,@fta = @fta
@@ -2428,7 +2467,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_141 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 141
 						,@fth = @fth
 						,@fta = @fta
@@ -2441,7 +2480,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_142 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 142
 						,@fth = @fth
 						,@fta = @fta
@@ -2454,7 +2493,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_144 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 144
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_144
@@ -2463,7 +2502,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 						
 				IF @betcount_145 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 145
 						,@fth = @fth
 						,@fta = @fta
@@ -2476,7 +2515,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_146 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 146
 						,@fth = @fth
 						,@fta = @fta
@@ -2502,7 +2541,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_148 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 148
 						,@fth = @fth
 						,@fta = @fta
@@ -2515,7 +2554,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_149 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 149
 						,@fth = @fth
 						,@fta = @fta
@@ -2528,7 +2567,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_150 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 150
 						,@fth = @fth
 						,@fta = @fta
@@ -2541,7 +2580,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_152 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 152
 						,@fth = @fth
 						,@fta = @fta
@@ -2555,7 +2594,7 @@ BEGIN
 
 				-- Betradar 2
 				IF @betcount_159 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 159
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_159
@@ -2564,7 +2603,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_161 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 161
 						,@totalgoal = @fth
 						,@betcount = @betcount_161
@@ -2573,7 +2612,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_162 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 162
 						,@totalgoal = @fta
 						,@betcount = @betcount_162
@@ -2582,7 +2621,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_163 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 163
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_163
@@ -2592,7 +2631,7 @@ BEGIN
 
 
 				IF @betcount_170 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 170
 						,@fth = @fth
 						,@fta = @fta
@@ -2602,7 +2641,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_172 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_13 
+					EXEC dbo.NAP_Admin_Calculate_13 
 						 @matchid = @matchid
 						,@bettype = 172
 						,@fth = NULL
@@ -2614,7 +2653,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_187 > 0	--Exact 2nd Half Goals [187]
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 187
 						,@totalgoal = @totalgoal_2H
 						,@betcount = @betcount_187
@@ -2624,7 +2663,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_195 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 195
 						,@totalgoal = @fthCorners
 						,@betcount = @betcount_195
@@ -2634,7 +2673,7 @@ BEGIN
 
 
 				IF @betcount_196 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 196
 						,@totalgoal = @ftaCorners
 						,@betcount = @betcount_196
@@ -2644,7 +2683,7 @@ BEGIN
 
 
 				IF @betcount_199 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 199
 						,@totalgoal = @totalCorners
 						,@betcount = @betcount_199
@@ -2653,7 +2692,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betCount_206 > 0 
-																																								EXEC dbo.NAP_Admin_Calculate_135	
+					EXEC dbo.NAP_Admin_Calculate_135	
 						 @matchid					= @matchid
 						,@bettype					= 206	
 						,@result					= @FTFCorner
@@ -2663,13 +2702,21 @@ BEGIN
 						,@betcount					= @betCount_206
 
 
-				IF @row_count > 0
-																																								EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
+				IF @row_count > 0				
+				BEGIN
+					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@isRefundHT = @IsRefundHT
 						,@isHTCal = @isHTCal
+										
+					EXEC NAP_Admin_Calculate_Refund_901
+						@matchid					= @matchid							
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@action					= @action
+						,@mode						= @mode
+				END
 			END
 
 			IF @mode = 'HT'
@@ -2683,15 +2730,22 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @row_count > 0
+				BEGIN
 																																								EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
+					
+					EXEC NAP_Admin_Calculate_Refund_901
+						@matchid = @matchid													
+						,@action = @action
+						,@mode	 = @mode
+				END
 			END
 
 			IF @mode = 'ALL'
 			BEGIN
 				IF @betcount_3 > 0 AND (@SelectedSet IS NULL OR @SelectedSet LIKE '%6%')
-																																								EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_3 
 						 @matchid = @matchid
 						,@bettype = 3
 						,@totalgoal = @totalgoal
@@ -2716,7 +2770,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @betcount_6 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 6
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_6
@@ -2733,7 +2787,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @betcount_13 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_13 @matchid = @matchid
 						,@bettype = 13
 						,@fth = @fth
 						,@fta = @fta
@@ -2743,7 +2797,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_26 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 26
 						,@fth = @fth
 						,@fta = @fta
@@ -2763,7 +2817,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_30 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 						,@bettype = 30
 						,@correctscore = NULL
 						,@goaldiff = NULL
@@ -2778,7 +2832,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @betcount_126 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 126
 						,@totalgoal = @totalht
 						,@betcount = @betcount_126
@@ -2787,7 +2841,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						
 				IF @betcount_129 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 129
 						,@totalgoal = @totalht
 						,@betcount = @betcount_129
@@ -2796,7 +2850,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 				
 				IF @betcount_130 > 0
-																																EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 130
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_130
@@ -2805,7 +2859,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 					
 				IF @betcount_131 > 0
-																																EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 131
 						,@totalgoal = @fth
 						,@betcount = @betcount_131
@@ -2814,7 +2868,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 				
 				IF @betcount_132 > 0
-																																EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 132
 						,@totalgoal = @fta
 						,@betcount = @betcount_132
@@ -2832,7 +2886,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 				
 				IF @betcount_144 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 144
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_144
@@ -2841,7 +2895,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 							
 				IF @betcount_145 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 145
 						,@fth = @fth
 						,@fta = @fta
@@ -2855,7 +2909,7 @@ BEGIN
 						,@IsHTCal = @IsHTCal
 
 				IF @betcount_152 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_9999 @matchid = @matchid
 						,@bettype = 152
 						,@fth = @fth
 						,@fta = @fta
@@ -2871,7 +2925,7 @@ BEGIN
 
 				-- Betradar 2
 				IF @betcount_159 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 159
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_159
@@ -2880,7 +2934,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_161 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 161
 						,@totalgoal = @fth
 						,@betcount = @betcount_161
@@ -2889,7 +2943,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_162 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 162
 						,@totalgoal = @fta
 						,@betcount = @betcount_162
@@ -2898,7 +2952,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_163 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
 						,@bettype = 163
 						,@totalgoal = @totalgoal
 						,@betcount = @betcount_163
@@ -2907,7 +2961,7 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @betcount_170 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 170
 						,@fth = @fth
 						,@fta = @fta
@@ -2917,7 +2971,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_172 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_13 
+					EXEC dbo.NAP_Admin_Calculate_13 
 						 @matchid = @matchid
 						,@bettype = 172
 						,@fth = NULL
@@ -2929,7 +2983,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_179 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 179
 						,@totalgoal = @totalht
 						,@betcount = @betcount_179
@@ -2938,7 +2992,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_181 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 181
 						,@totalgoal = @hth
 						,@betcount = @betcount_181
@@ -2947,7 +3001,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_182 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 182
 						,@totalgoal = @hta
 						,@betcount = @betcount_182
@@ -2956,7 +3010,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_188 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_26 @matchid = @matchid
 						,@bettype = 188
 						,@fth = @hth
 						,@fta = @hta 
@@ -2966,7 +3020,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_195 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 195
 						,@totalgoal = @fthCorners
 						,@betcount = @betcount_195
@@ -2976,7 +3030,7 @@ BEGIN
 
 
 				IF @betcount_196 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 196
 						,@totalgoal = @ftaCorners
 						,@betcount = @betcount_196
@@ -2986,7 +3040,7 @@ BEGIN
 
 
 				IF @betcount_199 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 199
 						,@totalgoal = @totalCorners
 						,@betcount = @betcount_199
@@ -2995,7 +3049,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_200 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 200
 						,@totalgoal = @hthCorners
 						,@betcount = @betcount_200
@@ -3004,7 +3058,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_201 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 201
 						,@totalgoal = @htaCorners
 						,@betcount = @betcount_201
@@ -3013,7 +3067,7 @@ BEGIN
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @betcount_202 > 0
-																																								EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
 						,@bettype = 202
 						,@totalgoal = @totalCorners_ht
 						,@betcount = @betcount_202
@@ -3023,7 +3077,7 @@ BEGIN
 
 
 				IF @betCount_206 > 0 
-																																								EXEC dbo.NAP_Admin_Calculate_135	
+					EXEC dbo.NAP_Admin_Calculate_135	
 						 @matchid					= @matchid
 						,@bettype					= 206	
 						,@result					= @FTFCorner
@@ -3033,7 +3087,7 @@ BEGIN
 						,@betcount					= @betCount_206
 
 				IF @betCount_207 > 0 
-																																								EXEC dbo.NAP_Admin_Calculate_135	
+					EXEC dbo.NAP_Admin_Calculate_135	
 						 @matchid					= @matchid
 						,@bettype					= 207	
 						,@result					= @HTFCorner
@@ -3044,7 +3098,7 @@ BEGIN
 
 				
 				IF @betCount_216 > 0 -- Auto-bettypes
-																																								EXEC dbo.NAP_Admin_Calculate_135	
+					EXEC dbo.NAP_Admin_Calculate_135	
 						 @matchid					= @matchid
 						,@bettype					= 216	
 						,@ResourceIDs				= @ResourceIDs
@@ -3068,6 +3122,7 @@ BEGIN
 					
 
 				IF @row_count > 0
+				BEGIN
 																																								EXEC dbo.NAP_Admin_Calculate_RefundAll 
 						 @matchid					= @matchid
 						,@IsExcludeBetdaq			= @IsExcludeBetdaq
@@ -3077,6 +3132,14 @@ BEGIN
 						,@SelectedSettleFinishedGame= @SelectedSettleFinishedGame
 						,@SetxGameyFinishedGame		= @SetxGameyFinishedGame
 						,@ResourceIDs				= @ResourceIDs
+					
+					EXEC NAP_Admin_Calculate_Refund_901
+						@matchid					= @matchid							
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@ResourceIDs				= @ResourceIDs
+						,@action					= @action
+						,@mode						= @mode
+				END
 
 			END
 
@@ -3097,6 +3160,12 @@ BEGIN
 				,@action = @mode
 				,@LGOnly = @LGOnly
 				,@matchdate = @matchdate
+			
+			EXEC NAP_Admin_Calculate_Refund_901
+				@matchid = @matchid											
+				,@action = @action
+				,@mode	 = @mode
+				,@LGOnly = @LGOnly
 		END
 	END
 END
