@@ -22,6 +22,7 @@ AS
 			- 20150525@Jim: apply sport& bettype matrix and also support GoldDeluxe & Metric Gaming (#35359 & #28309 )
 			- 20150710@Jim: Super Balance fix and Microgaming integration (feature #38168 )
 			- 20150723@Jim: Apply Bettrade [#38815]
+			- 20150828@Jim: support Colossus Bet (#42608)
         Parameter's Explanation:
     */
 BEGIN
@@ -418,6 +419,27 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=14
         GROUP BY sporttype,b.bettype, liveindicator ,ibc	
+	--	ColossusBet
+		UNION ALL
+        SELECT 204 sporttype
+            ,b.bettype
+            ,liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,16 as OrderKey	
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=15
+        GROUP BY sporttype,b.bettype, liveindicator ,ibc			
 	ORDER BY OrderKey ASC	
    -- ORDER BY 1,3 DESC,2,4,5
 	

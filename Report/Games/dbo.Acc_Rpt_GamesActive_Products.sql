@@ -10,12 +10,13 @@ AS
  Original:  
   
  Revisions:
+	- 20150907@Jim: Integrate CB (#42608)
 */
 SELECT
 	ProductID
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,4,11,12,14)
+WHERE ProductID IN (3,6,7,4,11,12,14,15)
 UNION ALL
 SELECT
 	CONVERT(INT,0) ProductID
