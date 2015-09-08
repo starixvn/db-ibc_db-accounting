@@ -743,7 +743,7 @@ BEGIN
 	IF @@rowcount <> 0
 		EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
-			,@Type			= 1 -- Sports
+			,@Type			= 4 -- Others
 
 	--INSERT INTO BalancePendingDebit (custid,Balance)
 	--SELECT		a.custid, ABS(a.balance - b.balance) as Balance
@@ -762,7 +762,7 @@ BEGIN
 	IF @@rowcount <> 0
 		EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
-			,@Type			= 1 -- Sports
+			,@Type			= 4 -- Others
 			
 ------------------***** End of Special Delete *****------------------
 
