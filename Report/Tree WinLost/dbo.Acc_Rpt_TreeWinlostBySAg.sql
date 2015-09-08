@@ -18,7 +18,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostBySAg]
 	@ShowMGSL BIT = 0, -- Show Metric Gaming
 	@showMGC BIT=0, --Micro Gaming
 	@showVG BIT=0, --Vegas Games
-	@showAGCS BIT=0 --AG Casino
+	@showAGCS BIT=0, --AG Casino
+	@showCB	 BIT=0
 AS
 
 /*  
@@ -37,6 +38,7 @@ Revisions:
 	- 20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 
 	- 20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)	
 	- 20150723@Jim: Apply Bettrade [#38815]		
+	- 20150828@Jim: support Colossus Bet (#42608)
 */  
 
 SET NOCOUNT ON
@@ -136,6 +138,12 @@ IF @showAGCS =1 -- AG Casino
 	SELECT Bettype, 0   
 	FROM @SportBettype   
 	WHERE ProductID = 11
+
+IF @showCB =1 -- Colossus Bet
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 15
 	
 --IF @winlostdate > @MoveBetDays
 --BEGIN
