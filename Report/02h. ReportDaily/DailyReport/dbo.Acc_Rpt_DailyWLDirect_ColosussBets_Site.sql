@@ -44,7 +44,7 @@ BEGIN
 	SELECT ag.site
 		,SUM ((winlost - actual_stake) * actualrate) WinLost
 		,SUM ((awinlost + mwinlost + swinlost) * actualrate) Position
-		,0 AS Commission
+		,SUM (scomm * actualrate) Commission
 		,SUM ((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealLineTotal
 		,SUM ((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) VirtualLineTotal
 		,SUM ((1 - tpositiontaking) * stake * actualrate)  AS RealTurnover

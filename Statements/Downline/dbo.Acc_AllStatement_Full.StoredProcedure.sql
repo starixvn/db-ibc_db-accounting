@@ -12,7 +12,7 @@
 	Created by: Henry
 	Date: 2009 Oct 16
 	Task: Get Statement report
-	DB: DBEXT/BODB02 
+	DB: DBEXT/BODB02 , DBACC/BODB02
 	
 	Revisions:
 		- 20091016@Henry: Create New (Copy logic from Acc_AllStatement)
@@ -44,6 +44,8 @@
 		- 20140929@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
 		- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
 		- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
+		- 20150903@Sophia: Apply Colossus Bets [#42428]
+
  */
 SET NOCOUNT ON
 
@@ -230,6 +232,52 @@ BEGIN
 				transdesc + case when @showExchangeRate = 1 then ' - Ex.Rate: ' + cast(actualrate as varchar(10)) else '' end
 				,transdate,transid, bettype.typeid,c.username
 				,bettrans.betid, bettrans.betcheck, bettrans.checkTime, bettrans.refno 
+
+		-----------Grand Prize of Colossus bets
+		UNION ALL 
+		SELECT b.winlostdate AS accdate
+			,0
+			,sum(bm.winlost - bm.stake) AS totalamt
+			,'GP' transtype
+			,'Grand Prize' transdesc
+			,'' Creator
+			,NULL
+			,''
+			,NULL
+			,0
+		FROM bettrans b WITH (NOLOCK)
+			INNER JOIN BettransM bm WITH (NOLOCK)
+				ON b.RefNo = bm.RefNo
+		WHERE b.bettype = 18000
+			AND b.custid = @custid
+			AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
+			AND b.Ruben = 1
+			AND bm.statuswinlost <> 0
+		GROUP BY b.winlostdate
+		
+
+		UNION ALL 
+		SELECT b.winlostdate AS accdate
+			,0
+			,sum(bm.winlost - bm.stake) AS totalamt
+			,'GP' transtype
+			,'Grand Prize' transdesc
+			,'' Creator
+			,NULL
+			,''
+			,NULL
+			,0
+		FROM bettrans14 b WITH (NOLOCK)
+			INNER JOIN BettransM14 bm WITH (NOLOCK)
+				ON b.RefNo = bm.RefNo
+		WHERE b.bettype = 18000
+			AND b.custid = @custid
+			AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
+			AND b.Ruben = 1
+			AND bm.statuswinlost <> 0
+		GROUP BY b.winlostdate
+
+
 
 		-- customer deleted/void ticket
 		IF @_FromDate <= @MoveBetDay
@@ -533,6 +581,7 @@ BEGIN
 	from DBRPT.bodb_Report.dbo.Statement with (nolock) 
 	WHERE custid = @custid AND accdate > @_ToDate and accdate <= dateadd(day,2,@_ToDate)
 			and @lateTransaction = 1 and transtype in ('Dep','Wit')
+
 END
 
 IF (@_IncludeAccBal = 1)
