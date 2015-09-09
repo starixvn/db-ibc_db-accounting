@@ -2714,7 +2714,7 @@ BEGIN
 				AND b.winlostdate <= @ToDate
 				AND b.custid = @Custid
 				AND (
-					s.ProductId = 13
+					s.ProductId = 15
 					AND s.EventType = 0
 					AND (@tempBettype = 0 OR s.bettype = @tempBettype)
 				)

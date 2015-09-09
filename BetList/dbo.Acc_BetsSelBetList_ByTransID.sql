@@ -190,7 +190,7 @@ BEGIN
 	WHERE bt.custid 	= @Custid
 		AND translogid 	= @transid 
 		AND statusID 	= 0
-		AND (sp.productid IN (8, 12, 13)
+		AND (sp.productid IN (8, 12, 13, 15)
 			OR sp.bettype BETWEEN 801 AND 899
 		)
 
@@ -208,7 +208,7 @@ BEGIN
 				bt.transid 	= @transid 
 				OR (
 					bt.refno = @transid 
-					AND (sp.productid IN (6,7,8,9,12,13) OR sp.bettype BETWEEN 801 AND 899)
+					AND (sp.productid IN (6, 7, 8, 9, 12, 13, 15) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
 			--exclude metric gaming running ticket
@@ -229,7 +229,7 @@ BEGIN
 				bt.transid 	= @transid 
 				OR (
 					bt.refno = @transid 
-					AND (sp.productid IN (6,7,8,9,12,13) OR sp.bettype BETWEEN 801 AND 899)
+					AND (sp.productid IN (6, 7, 8, 9, 12, 13, 15) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
 	END
@@ -248,7 +248,7 @@ BEGIN
 				bt.transid 	= @transid 
 				OR (
 					bt.refno = @transid 
-					AND (sp.productid IN (6,7,8,9,12,13) OR sp.bettype BETWEEN 801 AND 899)
+					AND (sp.productid IN (6, 7, 8, 9, 12, 13, 15) OR sp.bettype BETWEEN 801 AND 899)
 				)
 			)
 	END

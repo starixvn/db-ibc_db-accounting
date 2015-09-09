@@ -76,9 +76,14 @@ AS
 		- 20150708@Edward: Support for Micro Gaming
 		- 20150825@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
+		- 20150828@Kos: Fix bug not show CB ticket after clicking Grand Prize in Statement report
 		
-	Param's Explanation:   
-		+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet   		
+	Param's Explanation:
+		+ @transtype: 
+			1: Betting Statement
+			2: VOID/Cancelled Bet
+			3: Outstanding Bet
+			4: Colossus Bet Grand Prize  		
 */
 
 BEGIN
@@ -95,27 +100,33 @@ BEGIN
 	IF (@transtype = 1)
 		BEGIN
 			INSERT INTO @tmpStatus ([statusID])
-			SELECT 111
-			UNION ALL SELECT 112
-			UNION ALL SELECT 113
-			UNION ALL SELECT 103
+			SELECT 111 UNION ALL
+			SELECT 112 UNION ALL
+			SELECT 113 UNION ALL
+			SELECT 103
 		END
-	ELSE
-		IF (@transtype = 2)
-			BEGIN
-				INSERT INTO @tmpStatus ([statusID])
-				SELECT 101
-				UNION ALL
-				SELECT 102;
-			END
-		ELSE
-			IF (@transtype = 3)
-				BEGIN
-					INSERT INTO @tmpStatus ([statusID])
-					SELECT 0
-					UNION ALL
-					SELECT 1;
-				END
+	ELSE IF (@transtype = 2)
+		BEGIN
+			INSERT INTO @tmpStatus ([statusID])
+			SELECT 101 UNION ALL
+			SELECT 102
+		END
+	ELSE IF (@transtype = 3)
+		BEGIN
+			INSERT INTO @tmpStatus ([statusID])
+			SELECT 0 UNION ALL
+			SELECT 1
+		END
+	ELSE IF (@transtype = 4)	-- Grand Prize of Colossus Bet
+		BEGIN
+			INSERT INTO @tmpStatus ([statusID])
+			SELECT 111 UNION ALL
+			SELECT 112 UNION ALL
+			SELECT 113
+
+			DELETE @SportBettype
+			WHERE ProductID <> 15
+		END
 
 	DECLARE @Data TABLE (
 		SportType		INT,
@@ -1117,7 +1128,11 @@ BEGIN
 			WHERE  b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
-				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
+				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+				AND (@transtype <> 4
+					OR EXISTS (	SELECT 1 
+								FROM bettransm14 AS bm WITH (NOLOCK) 
+								WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
 
 			UPDATE betList
 			SET betList.Odds	= originBetList.Odds
@@ -2360,6 +2375,10 @@ BEGIN
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+				AND (@transtype <> 4
+					OR EXISTS (	SELECT 1 
+								FROM bettransm AS bm WITH (NOLOCK) 
+								WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
 
 			UNION ALL
 
@@ -2434,7 +2453,8 @@ BEGIN
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
 				AND b.statusID = 0
-				AND EXISTS(SELECT [statusID] FROM @tmpStatus t WHERE t.statusID = 0);
+				AND EXISTS(SELECT [statusID] FROM @tmpStatus t WHERE t.statusID = 0)
+				AND @transtype <> 4		-- CB ticket in translog don't have Grand Prize
 
 			UPDATE betList
 			SET betList.Odds	= originBetList.Odds
