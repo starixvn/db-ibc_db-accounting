@@ -19,6 +19,7 @@ AS
 						   . Revise Code
 						   . Apply AG Casino and Vegas Game [#37683]
 		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
+		- 20150909@Sophia: Exclude Colosuss Bets [#43352]
 							    
 
 	Param Explanation:
@@ -34,7 +35,7 @@ BEGIN
 
 	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
 
-	IF  (@SQL like '%_xtest%' OR  @SQL like '%_xpre%' )
+	IF  (@SQL like '%_xtest%' )
 	BEGIN
 		SELECT @isTest = 1
 	END
@@ -159,6 +160,7 @@ BEGIN
        AND b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
+	   AND b.Bettype <> 18000
 	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
 	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
 	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
