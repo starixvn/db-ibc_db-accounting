@@ -1514,6 +1514,9 @@ Begin DataProject = "Account"
          Script = "Task_DailyDummyTransfer_s162.sql"
       End
       Begin Folder = "NAP"
+         Begin Folder = "Bettrade service"
+            Script = "dbo.BettradeTickets_APIGet.sql"
+         End
          Begin Folder = "bk"
             Script = "dbo.NAP_Admin_Settlement_Checking.sql"
          End

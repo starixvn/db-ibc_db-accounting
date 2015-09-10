@@ -149,6 +149,28 @@ BEGIN
 		INNER JOIN #bettrans b1 ON b.transid = b1.transid
 	--end
 	
+	--Insert bettrade tickets to send API
+	IF @@SERVERNAME IN ('DBTRANS','DB230','DB206')
+	BEGIN
+		DECLARE @logdate DATETIME = GETDATE()
+		
+		INSERT INTO [dbo].[BettradeAPI]
+           ([transid]
+           ,[matchid]
+           ,[action]
+           ,[logdate]
+           ,[buybackNo]
+           ,[Payout])
+        SELECT TicketID,
+			matchid,
+			@action+':'+@mode as action,
+			@logdate,
+			BuyBackNo,
+			PayOut
+        FROM bettradeSelling b WITH(NOLOCK)
+		WHERE ticketID IN (SELECT DISTINCT refno FROM #bettrans)
+			AND status IN ('Accept','Confirm')
+	END
 	
 	--recover BetTradeSelling & BetTradeSellingCancelled on DBTXN
 	IF @@SERVERNAME IN ('DBTRANS','DB06','DBTP','DB230','DB232','DB206','DB234')

@@ -115,6 +115,29 @@ BEGIN
 		AND refno IN (SELECT transid FROM #tmp)
 	--END
 	
+	--Insert bettrade tickets to send API
+	IF @@SERVERNAME IN ('DBTRANS','DB230','DB206')
+	BEGIN
+		DECLARE @logdate DATETIME = GETDATE()
+		
+		INSERT INTO [dbo].[BettradeAPI]
+           ([transid]
+           ,[matchid]
+           ,[action]
+           ,[logdate]
+           ,[buybackNo]
+           ,[Payout])
+        SELECT TicketID,
+			matchid,
+			@action+':'+@mode as action,
+			@logdate,
+			BuyBackNo,
+			PayOut
+        FROM bettradeSelling b WITH(NOLOCK)
+		WHERE ticketID IN (SELECT transid FROM #tmp)
+			AND status IN ('Accept','Confirm')	
+	END
+	
 	--BEGIN: Cancel BetTradeSelling/BetTradeSellingCancelled ON DBTXN
 	IF @@SERVERNAME IN ('DBTRANS','DB06','DBTP','DB230','DB232','DB206','DB234')
 	BEGIN		
@@ -156,6 +179,7 @@ BEGIN
 			INNER JOIN BetTradeSelling bt WITH(NOLOCK) ON t.transid = bt.ticketID
 			LEFT JOIN BetTradeSellingCancelled b WITH(NOLOCK) ON t.transid = b.TicketID
 		WHERE b.TicketID IS NULL
+			AND bt.Status IN ('Accept','Confirm')
 	END
 	--END
 	
