@@ -169,6 +169,53 @@ BEGIN
 		WHERE	statusID = 0  AND bettype NOT IN (23001,23002,23101,23102,23201,23202) -- 20120405@Hurri
 		GROUP BY winlostdate 
 
+		-----------Grand Prize of Colossus bets
+		UNION ALL  
+		SELECT b.winlostdate AS accdate
+			,0 refno
+			,sum(bm.winlost - bm.stake) AS totalamt
+			,'GP' transtype
+			,4 transtypeid
+			,'Grand Prize' transdesc
+			,'' Creator
+			,NULL checkerID
+			,'' checkerName
+			,NULL checkTime
+			,0 isAllowVeify
+		FROM bettrans b WITH (NOLOCK)
+			INNER JOIN BettransM bm WITH (NOLOCK)
+				ON b.RefNo = bm.RefNo
+		WHERE b.bettype = 18000
+			AND b.custid = @custid
+			AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
+			AND b.Ruben = 1
+			AND bm.statuswinlost <> 0
+		GROUP BY b.winlostdate
+		
+
+		UNION ALL 
+		SELECT b.winlostdate AS accdate
+			,0 refno
+			,sum(bm.winlost - bm.stake) AS totalamt
+			,'GP' transtype
+			, 4 transtypeid
+			,'Grand Prize' transdesc
+			,'' Creator
+			,NULL checkerID
+			,'' checkerName
+			,NULL checkTime
+			,0 isAllowVeify
+		FROM bettrans14 b WITH (NOLOCK)
+			INNER JOIN BettransM14 bm WITH (NOLOCK)
+				ON b.RefNo = bm.RefNo
+		WHERE b.bettype = 18000
+			AND b.custid = @custid
+			AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
+			AND b.Ruben = 1
+			AND bm.statuswinlost <> 0
+		GROUP BY b.winlostdate
+
+		--------------------------------------------------------------
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, 
 					checkTime, isAllowVeify)
 
@@ -233,52 +280,7 @@ BEGIN
 				,transdate,transid, bettype.typeid,c.username
 				,bettrans.betid, bettrans.betcheck, bettrans.checkTime, bettrans.refno 
 
-		-----------Grand Prize of Colossus bets
-		UNION ALL 
-		SELECT b.winlostdate AS accdate
-			,0
-			,sum(bm.winlost - bm.stake) AS totalamt
-			,'GP' transtype
-			,'Grand Prize' transdesc
-			,'' Creator
-			,NULL
-			,''
-			,NULL
-			,0
-		FROM bettrans b WITH (NOLOCK)
-			INNER JOIN BettransM bm WITH (NOLOCK)
-				ON b.RefNo = bm.RefNo
-		WHERE b.bettype = 18000
-			AND b.custid = @custid
-			AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
-			AND b.Ruben = 1
-			AND bm.statuswinlost <> 0
-		GROUP BY b.winlostdate
 		
-
-		UNION ALL 
-		SELECT b.winlostdate AS accdate
-			,0
-			,sum(bm.winlost - bm.stake) AS totalamt
-			,'GP' transtype
-			,'Grand Prize' transdesc
-			,'' Creator
-			,NULL
-			,''
-			,NULL
-			,0
-		FROM bettrans14 b WITH (NOLOCK)
-			INNER JOIN BettransM14 bm WITH (NOLOCK)
-				ON b.RefNo = bm.RefNo
-		WHERE b.bettype = 18000
-			AND b.custid = @custid
-			AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
-			AND b.Ruben = 1
-			AND bm.statuswinlost <> 0
-		GROUP BY b.winlostdate
-
-
-
 		-- customer deleted/void ticket
 		IF @_FromDate <= @MoveBetDay
 			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, 
@@ -631,7 +633,7 @@ SELECT	accdate, refno,totalamt,transtype,transtypeid,transdesc,creator
 		,checkerID ,checkerName, checkTime ,isAllowVeify			
 FROM @StatementTable
 where (accdate >= @fromdate_bk OR transdesc = 'ACCUMULATED BALANCE')
-order by accdate, case when transdesc like '%opening balance%' then 1 else 2 end, transdesc
+order by accdate, case when transdesc like '%opening balance%' then 1 else 2 end, transtypeid, transdesc
 
 
 GO 
