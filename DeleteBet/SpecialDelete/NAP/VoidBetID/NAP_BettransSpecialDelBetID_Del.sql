@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 09/08/2015 12:17:53 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 09/10/2015 14:05:25 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -58,11 +58,13 @@ BEGIN
   
  CREATE TABLE #BeforeUpd (  
    custid   INT,  
-   balance   MONEY)  
+   balance   MONEY,
+   BalanceGroup TINYINT)   -- Sports, Casino, Others balance
     
  CREATE TABLE #AfterUpd(  
     custid   INT,  
-    balance   MONEY)  
+    balance   MONEY, 
+    BalanceGroup TINYINT)   -- Sports, Casino, Others balance
       
  DECLARE @tmpListTransID TABLE (  
    TransID  BIGINT  
@@ -989,11 +991,22 @@ sb.checktime, sb.matchid, sb.bettype
    
  -- Control concurrency problems - end  
    
- INSERT INTO #BeforeUpd (custid, balance)  
- SELECT b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance  
+ INSERT INTO #BeforeUpd (custid, balance, BalanceGroup)  
+ SELECT b.custid
+	,SUM (b.winlost - b.actual_stake + b.playercomm) balance  
+	,CASE WHEN b.bettype BETWEEN 1101 AND 1199 THEN 3 	-- Casino
+		  WHEN (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154) AND b.bettype NOT IN (801, 803, 804, 805, 806) THEN 1 -- Sports
+		  ELSE 4 -- Others
+		  END
  FROM bettrans b WITH (NOLOCK)  
+ INNER JOIN match m WITH(NOLOCK)
+	ON b.matchid = m.matchid
  WHERE b.transid IN (SELECT transid FROM @tmpListTransID)  
  GROUP BY b.CustID  
+	,CASE WHEN b.bettype BETWEEN 1101 AND 1199 THEN 3 	-- Casino
+		  WHEN (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154) AND b.bettype NOT IN (801, 803, 804, 805, 806) THEN 1 -- Sports
+		  ELSE 4 -- Others
+		  END
    
  --update bettrans  
  UPDATE bettrans WITH (UPDLOCK,ROWLOCK)   
@@ -1074,34 +1087,80 @@ sb.checktime, sb.matchid, sb.bettype
   AND Bettype IN (901, 902, 903) 
     
  --Get data after update  
- INSERT INTO #AfterUpd (custid, balance)  
- SELECT b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance  
- FROM bettrans b WITH (NOLOCK)  
+ INSERT INTO #AfterUpd (custid, balance, BalanceGroup)  
+ SELECT b.custid
+	,SUM (b.winlost - b.actual_stake + b.playercomm) balance  
+	,CASE WHEN b.bettype BETWEEN 1101 AND 1199 THEN 3 	-- Casino
+		  WHEN (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154) AND b.bettype NOT IN (801, 803, 804, 805, 806) THEN 1 -- Sports
+		  ELSE 4 -- Others
+		  END
+ FROM bettrans b WITH (NOLOCK) 
+	INNER JOIN match m WITH(NOLOCK)
+		ON m.matchid = b.matchid 
  WHERE b.transid IN (SELECT transid FROM @tmpListTransID)  
  GROUP BY b.CustID   
+	,CASE WHEN b.bettype BETWEEN 1101 AND 1199 THEN 3 	-- Casino
+		  WHEN (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154) AND b.bettype NOT IN (801, 803, 804, 805, 806) THEN 1 -- Sports
+		  ELSE 4 -- Others
+		  END
    
   DECLARE @tblDebitPending TVP_BalanceList
   DECLARE @tblCreditPending TVP_BalanceList
   
- ---INSERT data into pending balance table   
- --INSERT INTO BalancePendingCredit (custid,Balance)  
- --SELECT  a.custid, (a.balance - b.balance) as Balance  
- --FROM  #BeforeUpd b  
- --INNER JOIN #AfterUpd a    
- --  ON a.custid = b.custid  
- --WHERE     (a.balance - b.balance) > 0  
+  DECLARE @tblDebitCasinoPending TVP_BalanceList
+  DECLARE @tblCreditCasinoPending TVP_BalanceList
+  
+  DECLARE @tblDebitOthersPending TVP_BalanceList
+  DECLARE @tblCreditOthersPending TVP_BalanceList
+  
+  -- BEGIN insert credit pending
+  -- for sports 
 	 INSERT INTO @tblCreditPending (custID, balance)
 	 SELECT		a.custid, (a.balance - b.balance) as Balance 
 	 FROM		#BeforeUpd b
 	 INNER JOIN	#AfterUpd a 	
 			ON	a.custid = b.custid
 	 WHERE	    (a.balance - b.balance) > 0	
+				AND a.BalanceGroup = 1
+				AND b.BalanceGroup = 1
 	 
 	 IF @@rowcount <> 0
 			EXEC dbo.Dot_BalancePendingCreditIns 
 				@BalancePending = @tblCreditPending
 				,@Type			= 1 -- Sports 
- 
+				
+	-- for casino
+	 INSERT INTO @tblCreditCasinoPending (custID, balance)
+	 SELECT		a.custid, (a.balance - b.balance) as Balance 
+	 FROM		#BeforeUpd b
+	 INNER JOIN	#AfterUpd a 	
+			ON	a.custid = b.custid
+	 WHERE	    (a.balance - b.balance) > 0	
+				AND a.BalanceGroup = 3
+				AND b.BalanceGroup = 3
+	 
+	 IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingCreditIns 
+				@BalancePending = @tblCreditCasinoPending
+				,@Type			= 3 -- Casino 
+				
+	-- for others
+	 INSERT INTO @tblCreditOthersPending (custID, balance)
+	 SELECT		a.custid, (a.balance - b.balance) as Balance 
+	 FROM		#BeforeUpd b
+	 INNER JOIN	#AfterUpd a 	
+			ON	a.custid = b.custid
+	 WHERE	    (a.balance - b.balance) > 0	
+				AND a.BalanceGroup = 4
+				AND b.BalanceGroup = 4
+	 
+	 IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingCreditIns 
+				@BalancePending = @tblCreditOthersPending
+				,@Type			= 4 -- Others 
+				
+	-- END insert credit pending
+	
  --update balance debit game
 	UPDATE bal
 	SET Balance = bal.Balance + tmp.balance
@@ -1114,26 +1173,55 @@ sb.checktime, sb.matchid, sb.bettype
 	FROM @balanceGame b
 		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
 	WHERE bal.CustId IS NULL AND b.balance > 0
-  
- --INSERT INTO BalancePendingDebit (custid,Balance)  
- --SELECT  a.custid, ABS(a.balance - b.balance) as Balance  
- --FROM  #BeforeUpd b  
- --INNER JOIN #AfterUpd a    
- --  ON a.custid = b.custid  
- --WHERE     (a.balance - b.balance) < 0
  
+	-- BEGIN insert debit pending
+	-- for sport
 	INSERT INTO @tblDebitPending (custID, balance)
 	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
 	FROM		#BeforeUpd b
 	INNER JOIN	#AfterUpd a 	
 			ON	a.custid = b.custid
 	WHERE	    (a.balance - b.balance) < 0  
+			AND a.BalanceGroup = 1
+			AND b.BalanceGroup = 1
 	
 	IF @@rowcount <> 0
 		EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
+	
+	-- for casino		
+	INSERT INTO @tblDebitCasinoPending (custID, balance)
+	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
+	FROM		#BeforeUpd b
+	INNER JOIN	#AfterUpd a 	
+			ON	a.custid = b.custid
+	WHERE	(a.balance - b.balance) < 0 
+			AND a.BalanceGroup = 3
+			AND b.BalanceGroup = 3 
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitCasinoPending
+			,@Type			= 3 -- Casino
  
+	-- for others		
+	INSERT INTO @tblDebitOthersPending (custID, balance)
+	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
+	FROM		#BeforeUpd b
+	INNER JOIN	#AfterUpd a 	
+			ON	a.custid = b.custid
+	WHERE	(a.balance - b.balance) < 0 
+			AND a.BalanceGroup = 4
+			AND b.BalanceGroup = 4 
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitOthersPending
+			,@Type			= 4 -- Others
+	
+	-- END insert debit pending
+	
  --update balance credit game
 	UPDATE bal
 	SET Balance = bal.Balance + ABS(tmp.balance)
@@ -1277,6 +1365,7 @@ sb.checktime, sb.matchid, sb.bettype
  SELECT * FROM @ErrorTransID  
    
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]
