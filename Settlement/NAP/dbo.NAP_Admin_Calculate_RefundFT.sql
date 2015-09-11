@@ -25,8 +25,7 @@ AS
 		- 20140905@Lukas: exclude virtual racing bettype 1231,1232,1233
 		- 20140909@Kathy: Exclude virtual racing (bettype 1237, 1238), outright (bettype 10, 31, 32, 33), keno (1501 -> 1599)
 		- 20150422@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#35921] 
-		- 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]
+		
 	Param's Explanation:
 		@IsRefundHT: Indicate whether or not match has been refunded HT
 		@IsHTCal: Indicate whether or not match has been calculated HT
@@ -83,8 +82,6 @@ BEGIN
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product		
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-			AND bettype NOT IN (901,902,903)--bettrade tickets
-			AND bettype NOT BETWEEN 801 and 899 -- Metric Gaming
 			AND 1 = CASE 
 				WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
 				WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0

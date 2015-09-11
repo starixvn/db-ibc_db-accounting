@@ -15,7 +15,6 @@ AS
 		- 20141015@Kathy: exclude the testing bettypes (Sportting Solution & BetRadar) [Redmine:#24391]
 		- 20140926@Kathy: Get list bettype belong to matchid [Redmine:#23129]
 		- 20150401@Dominic: Add new parent-child bettypes [Redmine:#27214]
-		- 20150626@Dominic: Add metric gaming bettype bettypes [Redmine:#38200]
 	      
 	Param's Explanation:  
 	@Mode:   
@@ -50,7 +49,7 @@ BEGIN
 	
 	CREATE TABLE #TmpBettype (
 		typeid			INT
-		,type			INT -- 0:Sport Book, 1:Number Game, 2:Virtual Sports, 3:Live Casino  , 4: Metric Gaming
+		,type			INT -- 0:Sport Book, 1:Number Game, 2:Virtual Sports, 3:Live Casino  
 		,liveindicator  BIT
 		)
 		
@@ -136,40 +135,6 @@ BEGIN
 			,0 AS liveindicator
 		FROM dbo.bettype b WITH(NOLOCK)
 		WHERE b.typeid BETWEEN 1101 AND 1199
-		AND @matchid = 0
-	END
-	
-	IF @Mode = 2
-	BEGIN
-		--metric gaming
-		INSERT INTO #TmpBettype (
-			typeid
-			,type
-			,liveindicator
-			)
-		SELECT DISTINCT b.typeid
-			, 4					
-			, 0	
-		FROM dbo.bettype b WITH(NOLOCK) 
-		INNER JOIN dbo.ResultDetail3rd rd WITH(NOLOCK) ON b.typeid = rd.gameid
-		WHERE rd.matchid = @matchid 
-		AND rd.vendorid = 5 
-		AND rd.gameID IN (805,806)
-		
-	END
-	
-	IF @Mode = 3
-	BEGIN
-		INSERT INTO #TmpBettype (
-			typeid
-			,type
-			,liveindicator
-			)
-		SELECT typeid
-			,4 AS type -- type = 4: Metric Gaming Super Live
-			,0 AS liveindicator
-		FROM bettype WITH (NOLOCK)
-		WHERE typeid IN (801,803,804,805,806)
 		AND @matchid = 0
 	END
 	

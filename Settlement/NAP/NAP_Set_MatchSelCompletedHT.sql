@@ -1,11 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompletedHT]    Script Date: 8/11/2015 1:27:01 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompletedHT    Script Date: 6/12/2015 8:40:34 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompletedHT] @Date DATETIME
 	,@SportType TINYINT = 0
 	,@LeagueID INT = 0
@@ -28,8 +22,7 @@ AS
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime  
-		- 20150811@Johnson: Exclude bettrade tickets from Sportbook [Redmine: #35921]
-		- 20150729@Johnson: Exclude range bettype of Metric Gaming from settlement of SB [Redmine: #37688]
+		
 */
 BEGIN
 	SET NOCOUNT ON
@@ -198,16 +191,12 @@ BEGIN
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-			AND bettype NOT IN (901,902,903)--bettrade
-			AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 			GROUP BY bettrans.matchid
 			) c ON m.matchid = c.matchid
 		) x LEFT JOIN @tblSingle t ON t.matchid = x.matchid
 
 	ORDER BY eventstatus, matchcode
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
 GO

@@ -27,14 +27,12 @@ AS
 						Using Dep_CustSuper table instead of f_DepSuper_1() function.
 		- 20141021@Kathy: Consolidate Sportting Solution and IBC bettypes [Redmine:#23129]
 		- 20150401@Dominic: Add new parent-child bettypes [Redmine:#27214]
-		- 20150623@Dominic: Add Metric Gaming Super Live [Redmine:#38200]
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
 		1: Number Game
 		2: Virtual sports
 		3: Live casino
-		4: Metric Gaming Super Live
 	- @LicenseeID:
 	  + =0: No Site filter
 	  + >0: Filter by specific Licensee's ID
@@ -58,7 +56,7 @@ AS
 				set @p12=0
 				declare @p13 varchar(1000)
 				set @p13=''
-								exec NAP_Rpt_TicketsListing_xtest @MatchId=4626986,@LicenseeID=0,@BetTypes='1101,1102',@BetTypesLive='',@LiveType=2,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=3,@SecondAcceptFlag=0,@ErrCode=@p12 output,@ErrMsg=@p13 output
+								exec NAP_Rpt_TicketsListing @MatchId=4626986,@LicenseeID=0,@BetTypes='1101,1102',@BetTypesLive='',@LiveType=2,@LiveHomeScore=default,@LiveAwayScore=default,@FromTransdate=default,@ToTransdate=default,@Type=3,@SecondAcceptFlag=0,@ErrCode=@p12 output,@ErrMsg=@p13 output
 				select @p12, @p13		
 */
 BEGIN
@@ -76,7 +74,7 @@ BEGIN
 	SET @sporttype = 0
 
 	---- If number game or virtual sports, live casino then don't care @livetype , so set @LiveType to zero
-	IF @Type = 1 OR @Type = 2 OR @Type = 3
+	IF @Type = 1 OR @Type = 2 OR @Type = 3 
 		SELECT @LiveType = 0
 
 	----Show match description
@@ -99,7 +97,7 @@ BEGIN
 	END
 	ELSE IF @sporttype > 99
 		AND @sporttype <> 154
-		AND @Type IN (0,4)
+		AND @Type = 0
 	BEGIN
 		SET @ErrCode = 2
 		SET @ErrMsg = 'This MatchID is not sportsbook.'
@@ -198,14 +196,7 @@ BEGIN
 		,liveindicator
 		,statusID
 		,matchid
-		,COUNT(transid) cnt
-	FROM (
-	SELECT srecommend
-		,bettype
-		,liveindicator
-		,statusID
-		,matchid
-		,transid
+		,count(transid) AS cnt
 	FROM bettrans WITH (NOLOCK)
 	WHERE matchid = @MatchId
 		AND statusID NOT IN (101, 102, 121) --('Void', 'Reject', 'Dummy')
@@ -252,41 +243,11 @@ BEGIN
 			WHEN 1 THEN 0
 			WHEN 2 THEN 1
 			END
-	UNION ALL
-	SELECT bl.srecommend
-		,bl.GameID bettype
-		,bl.liveindicator
-		,bl.statusID
-		,bl.EventID matchid
-		,bl.translogid transid
-	FROM translog bl WITH (NOLOCK)
-		LEFT JOIN bettrans b WITH(NOLOCK) ON bl.gameid = b.bettype AND b.matchid = bl.eventid AND b.custid = bl.Custid AND bl.translogid = b.refno
-	WHERE EventID = @MatchId
-		AND GameID IN (
-					801,803,804,805,806 -- MEtric Gaming SUper Live
-					)
-		AND bl.statusID NOT IN (101, 102, 121) --('Void', 'Reject', 'Dummy')
-		AND GameID IN (
-					SELECT CONVERT(INT, val)
-					FROM dbo.strSplit(@BetTypes, ',')
-					)
-		AND b.refno IS NULL
-		AND CASE 
-				WHEN @LiveType <> 2 THEN bl.liveindicator
-				ELSE 0 END = CASE 
-				WHEN @LiveType <> 2 THEN @LiveType
-				ELSE 0 
-			END	) tmp	
 	GROUP BY srecommend
 		,matchid
 		,bettype
 		,liveindicator
 		,statusid
-	
-
-
-
-
 
 	----## Direct Licensee
 	IF @LicenseeID <> 0

@@ -1,11 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT]    Script Date: 09/08/2015 15:50:04 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT    Script Date: 8/20/2015 9:22:08 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT] 
 	@matchid						INT
 	,@adminid						INT
@@ -50,16 +42,14 @@ AS
 		- 20140911@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20150421@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
-                - 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]
-		- 20150611@Johnson: Add bettrade [Redmine: #35921]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 		
 	Param's Explanation:
-	• @matchid: matchid of match to Refund HT
-	• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
-	• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
-	• @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
+	? @matchid: matchid of match to Refund HT
+	? @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
+	? @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+	? @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
 
 */
 BEGIN
@@ -69,8 +59,6 @@ BEGIN
 		,@ActionID	INT
 		,@start		DATETIME
 		,@stop		DATETIME
-
-	CREATE TABLE #tmpTrans (transid BIGINT)
 
 	SELECT @start	= CURRENT_TIMESTAMP
 		,@ActionID	= 111
@@ -128,17 +116,6 @@ BEGIN
 
 	CREATE TABLE #BalanceBefore (custid	INT PRIMARY KEY, balance MONEY)
 
-	INSERT INTO #tmpTrans
-	SELECT transid
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE b.matchid = @matchid 
-		AND b.bettype NOT IN (14, 127)
-		AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-		AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
-		AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
-		AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
-		AND b.betdaqid = 0--bettrade tickets
-		
 	INSERT INTO #BalanceBefore
 	SELECT b.custid
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
@@ -148,13 +125,7 @@ BEGIN
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
-	AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
-	AND 1 = CASE WHEN b.bettype IN (901,902,903) 
-						AND b.refno IN (SELECT transid FROM #tmpTrans)	
-					THEN 1 
-				WHEN b.bettype NOT IN (901,902,903) THEN 1
-				ELSE 0 END
 	GROUP BY b.custid
 
 	DECLARE @status TABLE (FTBet BIT, BetCount INT, InRunning INT)
@@ -179,7 +150,6 @@ BEGIN
 	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
-	AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	GROUP BY CASE 
 				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
@@ -300,7 +270,7 @@ BEGIN
 			END CATCH
 		END
 
-																																																																																																																																EXEC dbo.NAP_Admin_Settlement_Refund_All 
+																																																																EXEC dbo.NAP_Admin_Settlement_Refund_All 
 			@matchid						= @matchid
 			,@creator						= @adminid
 			,@IsExcludeBetdaq				= @IsExcludeBetdaq
@@ -606,7 +576,7 @@ BEGIN
 
 	DECLARE @RowCount INT
 
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+				EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 		@Command	= 'NAP_Admin_Settlement_RefundFT'
 		,@MatchID	= @matchid
 		,@HTDone	= @HTDone
@@ -665,13 +635,7 @@ BEGIN
 	AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 	AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 	AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-	AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 	AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
-	AND 1 = CASE WHEN bettype IN (901,902,903) 
-						AND refno IN (SELECT transid FROM #tmpTrans)	
-					THEN 1 
-				 WHEN bettype NOT IN (901,902,903) THEN 1 
-				ELSE 0 END
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -705,7 +669,7 @@ BEGIN
 	WHERE	Increased = 0
 	
 	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingDebitIns 
+		EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
@@ -721,7 +685,7 @@ BEGIN
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingCreditIns 
+		EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 			
@@ -783,7 +747,6 @@ BEGIN
 
 	DROP TABLE #BalanceAfter
 
-	DROP TABLE #tmpTrans
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---
 	---------------------------VVVV------------------------------

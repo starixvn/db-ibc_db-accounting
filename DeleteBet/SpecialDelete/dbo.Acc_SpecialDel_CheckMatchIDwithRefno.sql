@@ -28,7 +28,6 @@ BEGIN
 						   Change DB053 server instead of DB052 server
 		- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]		
 		- 20150210@Kathy:  check if tickets have been moved to match14, bettrans14 [Redmine:#30298] 
-		- 201507014@Dominic: Integrate Metric Gaming - Superlive product into the Special Delete site - Redmine: #38200
 						   
 	
 	Param's Explanation:	
@@ -74,23 +73,15 @@ BEGIN
 	END 
 	
 	SELECT @totalRecord = count(1)
-	FROM
-	(	SELECT 1 Row
-		FROM dbo.bettrans WITH (NOLOCK)		
-		WHERE transid IN (@FromRefno,@ToRefno)
-			AND matchid = @MatchID	
-		UNION ALL
-		SELECT 1 Row
-		FROM dbo.translog WITH (NOLOCK)		
-		WHERE translogid IN (@FromRefno,@ToRefno)
-			AND eventid = @MatchID	
-	) tmp
+	FROM dbo.bettrans WITH (NOLOCK)		
+	WHERE transid IN (@FromRefno,@ToRefno)
+		AND matchid = @MatchID	
 	
 	IF @FromRefno=@ToRefno
 	BEGIN
 		IF @totalRecord <> 1 
 		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND (refno IN (@FromRefno, @ToRefno) OR transid IN (@FromRefno, @ToRefno)))
+			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND transid IN (@FromRefno, @ToRefno))
 				SELECT @ErrCode= 6 --  harcode in web
 					,@ErrMsg='Tickets have been moved.'
 			ELSE
@@ -100,7 +91,7 @@ BEGIN
 	END
 	ELSE IF @totalRecord <> 2 
 		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND (refno IN (@FromRefno, @ToRefno) OR transid IN (@FromRefno, @ToRefno)))
+			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND transid IN (@FromRefno, @ToRefno))
 				SELECT @ErrCode= 6 --  harcode in web
 					,@ErrMsg='Tickets have been moved.'
 			ELSE

@@ -14,8 +14,6 @@ AS
 
 	Revisions:  
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
-		- 20150611@Dominic: BetTrade Integration [Redmine:#36964]
-		- 20150623@Dominic: Add Metric Gaming Super Live [Redmine:##38200]
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
 		+ @TransID NOT NULL: Search by TransID
@@ -25,8 +23,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @Data TABLE (
-		GroupID			BIGINT
-		,bettype		INT
+		bettype			INT
 		,transid		BIGINT
 		,betid			BIGINT
 		,refno			BIGINT
@@ -65,7 +62,6 @@ BEGIN
 		,commission		MONEY
 		,showtime		NVARCHAR(50)
 		,winlostdate	SMALLDATETIME
-		,TransDesc		NVARCHAR(300)
 		)
 	DECLARE @DetailData TABLE (
 		refno			BIGINT
@@ -83,8 +79,8 @@ BEGIN
 		SELECT	@FromDate = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP - 3,120)		-- As defined, only get data within 3 days 
 		
 		INSERT INTO @Data
-		SELECT CASE WHEN b.Bettype IN (801,803,804,805,806) THEN b.refno ELSE b.transid END GroupID, b.bettype
-			,CASE WHEN b.Bettype IN (801,803,804,805,806) THEN b.refno ELSE b.transid END transid
+		SELECT b.bettype
+			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
 			,m.matchcode
@@ -130,68 +126,17 @@ BEGIN
 			,b.playercomm AS commission
 			,m.showtime
 			,b.winlostdate
-			,b.transdesc
 		FROM bettrans AS b WITH (NOLOCK)
 			INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
-		WHERE	CASE WHEN b.Bettype IN (801,803,804,805,806) THEN b.refno  ELSE b.transid END = @TransID
+		WHERE	b.transid = @TransID 
 				AND b.winlostdate >=@FromDate
 				AND b.bettype < 19001
 				AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
 				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
-				AND b.Bettype NOT IN (901,902,903)
-		UNION ALL
-		--Metric Gaming SUper Live
-		SELECT b.translogID GroupID, b.GameID
-			,b.translogID as transid
-			,0 AS BetID
-			,b.translogID refno
-			,m.matchcode
-			,m.eventdate AS eventdate
-			,m.homeid
-			,m.awayid
-			,'' settleTime
-			,0 hdp1
-			,0 hdp2
-			,b.odds
-			,0 finalodds
-			,0 finalodds2
-			,b.custom1 OddsType
-			,b.STATUS
-			,b.custom2 comstatus
-			,b.stake
-			,b.actual_stake
-			,b.transdate
-			,NULL betteam
-			,NULL betcheck
-			,b.liveindicator liveindicator
-			,NULL modds
-			,b.custid
-			,b.username
-			,NULL livehomescore
-			,NULL liveawayscore
-			,m.finalhomescore
-			,m.finalawayscore
-			,m.leagueid
-			,m.sporttype
-			,b.betfrom
-			,b.EventID
-			,isnull(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
-			,- b.actual_stake as winlost
-			,0 AS commission
-			,m.showtime
-			,b.winlostdate
-			,b.transdesc
-		FROM translog AS b WITH (NOLOCK)
-			INNER JOIN match AS m WITH (NOLOCK) ON b.EventID = m.matchid 
-			LEFT JOIN bettrans bs WITH(NOLOCK) ON b.gameid = bs.bettype AND bs.matchid = b.eventid AND bs.custid = b.Custid AND b.translogid = bs.refno
-		WHERE	b.translogid = @TransID 
-				AND b.winlostdate >=@FromDate
-				AND b.GameID IN (801, 803, 804, 805, 806) AND bs.refno IS NULL
-				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT b.transid GroupID, 9 bettype
+		SELECT 9 bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -233,7 +178,6 @@ BEGIN
 			,b.playercomm AS commission
 			,'' AS showtime
 			,b.winlostdate
-			,b.transdesc
 		FROM bettrans AS b WITH (NOLOCK)
 		WHERE	b.transid = @TransID 
 				AND b.winlostdate >=@FromDate
@@ -241,7 +185,7 @@ BEGIN
 				AND b.bettype = 9
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT b.transid GroupID, b.bettype
+		SELECT b.bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -283,7 +227,6 @@ BEGIN
 			,b.playercomm AS commission
 			,'' AS showtime
 			,b.winlostdate
-			,b.transdesc
 		FROM bettrans AS b WITH (NOLOCK)
 			INNER JOIN outright AS odds WITH (NOLOCK) ON b.matchid = odds.orid
 			INNER JOIN league l WITH (NOLOCK) ON odds.leagueid = l.leagueid
@@ -295,8 +238,8 @@ BEGIN
 	ELSE --- Search by CustID 
 	BEGIN 
 		INSERT INTO @Data
-		SELECT b.transid GroupID, b.bettype
-			,CASE WHEN b.Bettype IN (801,803,804,805,806) THEN b.refno ELSE b.transid END transid
+		SELECT b.bettype
+			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
 			,m.matchcode
@@ -342,7 +285,6 @@ BEGIN
 			,b.playercomm AS commission
 			,m.showtime
 			,b.winlostdate
-			,b.transdesc
 		FROM bettrans AS b WITH (NOLOCK)
 			INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
 		WHERE	b.custid =@Custid 
@@ -352,58 +294,8 @@ BEGIN
 				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
 				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
-				AND b.Bettype NOT IN (901,902,903)
-		UNION ALL
-		--Metric Gaming Super Live
-		SELECT b.translogid GroupID, b.GameID
-			,b.translogid transid
-			,0 AS BetID
-			,b.translogid refno
-			,m.matchcode
-			,m.eventdate AS eventdate
-			,m.homeid
-			,m.awayid
-			,'' settleTime
-			,0 hdp1
-			,0 hdp2
-			,b.odds
-			,0 finalodds
-			,0 finalodds2
-			,b.custom1 OddsType
-			,b.STATUS
-			,b.custom2 comstatus
-			,b.stake
-			,b.actual_stake
-			,b.transdate
-			,NULL betteam
-			,NULL betcheck
-			,b.liveindicator liveindicator
-			,NULL modds
-			,b.custid
-			,b.username
-			,NULL livehomescore
-			,NULL liveawayscore
-			,m.finalhomescore
-			,m.finalawayscore
-			,m.leagueid
-			,m.sporttype
-			,b.betfrom
-			,b.EventID
-			,isnull(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
-			,- b.actual_stake as winlost
-			,0 AS commission
-			,m.showtime
-			,b.winlostdate
-			,b.transdesc
-		FROM translog AS b WITH (NOLOCK)
-			INNER JOIN match AS m WITH (NOLOCK) ON b.EventID = m.matchid 
-			LEFT JOIN bettrans bs WITH(NOLOCK) ON b.gameid = bs.bettype AND bs.matchid = b.eventid AND bs.custid = b.Custid AND b.translogid = bs.refno
-		WHERE	b.custid =@Custid 
-				AND b.winlostdate BETWEEN @FromDate AND @ToDate 
-				AND b.GameID IN (801, 803, 804, 805, 806) AND bs.refno IS NULL
-				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT b.transid GroupID, 9 bettype
+		SELECT 9 bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -445,7 +337,6 @@ BEGIN
 			,b.playercomm AS commission
 			,'' AS showtime
 			,b.winlostdate
-			,b.transdesc
 		FROM bettrans AS b WITH (NOLOCK)
 		WHERE	b.custid =@Custid 
 				AND b.winlostdate BETWEEN @FromDate AND @ToDate 
@@ -453,7 +344,7 @@ BEGIN
 				AND bettype = 9
 				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
 		UNION ALL 
-		SELECT b.transid GroupID, b.bettype
+		SELECT b.bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
 			,b.refno
@@ -495,7 +386,6 @@ BEGIN
 			,b.playercomm AS commission
 			,'' AS showtime
 			,b.winlostdate
-			,b.transdesc
 		FROM bettrans AS b WITH (NOLOCK)
 			INNER JOIN outright AS odds WITH (NOLOCK) ON b.matchid = odds.orid
 			INNER JOIN league l WITH (NOLOCK) ON odds.leagueid = l.leagueid
@@ -506,66 +396,9 @@ BEGIN
 	END
 
 
-	SELECT * FROM
-	(SELECT t.*, b.transid AS SoldID
-	FROM @Data t
-	LEFT JOIN bettrans AS b WITH (NOLOCK) ON b.refno = t.transid AND b.bettype = 901
-	UNION ALL
-	SELECT b.refno GroupID, b.bettype
-			,b.transid
-			,t.bettype AS BetID
-			,b.refno
-			,m.matchcode
-			,m.eventdate AS eventdate
-			,m.homeid
-			,m.awayid
-			,ISNULL(b.checktime, '') settleTime
-			,b.hdp1
-			,b.hdp2
-			,t.odds
-			,0 finalodds
-			,0 finalodds2
-			,b.OddsType
-			,'SOLD' STATUS
-			,CASE 
-				WHEN b.comstatus = '1' THEN 1
-				ELSE 0
-				END AS comstatus
-			,t.stake
-			,b.actual_stake
-			,b.transdate
-			,b.betteam
-			,b.betcheck
-			,b.liveindicator
-			,b.modds
-			,b.custid
-			,b.username
-			,b.livehomescore
-			,b.liveawayscore
-			,m.finalhomescore
-			,m.finalawayscore
-			,m.leagueid
-			,m.sporttype
-			,b.betfrom
-			,b.matchid
-			,isnull(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
-			,(b.winlost - b.actual_stake) winlost
-			,b.playercomm AS commission
-			,m.showtime
-			,b.winlostdate
-			,b.transdesc
-			,b.transid SoldID
-	FROM @Data t
-			INNER JOIN bettrans AS b WITH (NOLOCK) ON b.refno = t.transid AND b.bettype = 901
-			INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid 
-		WHERE	b.winlostdate >=@FromDate
-				AND b.bettype < 19001
-				AND b.bettype NOT IN (10,31, 32, 33, 71,72,73,1000)		-- NOT IN Racing, Outright, VS 
-				AND b.bettype NOT BETWEEN 1201 AND 1299					-- NOT VS
-				AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno 
-				AND b.statusID NOT IN (101, 102)	-- REJECT, VOID 
-	) tmp			
-	ORDER BY GroupID, transid
+	SELECT *
+	FROM @Data
+	ORDER BY transid
 
 	-->> Ticket Details 
 	-- LiveCS Detail 
