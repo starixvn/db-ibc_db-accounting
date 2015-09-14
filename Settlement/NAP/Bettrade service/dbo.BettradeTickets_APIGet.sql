@@ -10,19 +10,22 @@
 	Revisions:
 	
 	Parameter's Explanation:
- */
- AS
+ */ 
  BEGIN
 	SET NOCOUNT ON
-	DECLARE @logdate DATETIME
+	DECLARE @logdate DATETIME, @matchid INT
 	
-	SELECT top (1) @logdate = LogDate
+	SELECT top (1) @logdate = LogDate, @matchid = matchid
 	FROM BettradeAPI WITH(NOLOCK)
 	ORDER BY logdate ASC
 	
-	DELETE BettradeAPI WITH(UPDLOCK,ROWLOCK)
-	OUPUT DELETED.transid as TicketID, DELETED.BuyBackNo, DELETED.Payout
+	SELECT action, 
+		transid as TicketID,
+		BuyBackNo,
+		Payout	
+	FROM BettradeAPI WITH(NOLOCK)	
 	WHERE logdate = @logdate
+		AND matchid = @matchid
 	
  END
  GO

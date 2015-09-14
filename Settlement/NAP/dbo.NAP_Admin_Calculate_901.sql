@@ -148,7 +148,7 @@ BEGIN
 	FROM bettrans b WITH(UPDLOCK,ROWLOCK)
 		INNER JOIN #bettrans b1 ON b.transid = b1.transid
 	--end
-	
+		
 	--Insert bettrade tickets to send API
 	IF @@SERVERNAME IN ('DBTRANS','DB230','DB206')
 	BEGIN
