@@ -712,6 +712,14 @@ BEGIN
 			WHERE rpt.CustID IS NULL 
 				AND tmpSta.ErrCode = 20
 		END
+		
+				
+		UPDATE rpt
+		SET rpt.VoidAmt = tmpSta.VoidAmt  
+		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
+		INNER JOIN   #tmpStatement tmpSta
+			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 30
+
 
 		INSERT INTO [dbo].[rptStatement] (
 			WinlostDate
@@ -730,15 +738,16 @@ BEGIN
 		WHERE rpt.CustID IS NULL 
 			AND tmpSta.ErrCode = 20
 			AND tmpSta.Custid IN (SELECT Custid FROM #tmpStatement tmpSta WHERE tmpSta.ErrCode = 30)
-			
-		UPDATE rpt
-		SET rpt.VoidAmt = tmpSta.VoidAmt  
-		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
-		INNER JOIN   #tmpStatement tmpSta
-			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 30
-
+	
 	
 		---------
+		UPDATE rpt
+		SET rpt.GrandPrize = tmpSta.GrandPrize  
+		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
+		INNER JOIN   #tmpStatement tmpSta
+			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 40
+
+			
 		INSERT INTO [dbo].[rptStatement] (
 			WinlostDate
 			,Custid
@@ -754,12 +763,7 @@ BEGIN
 		WHERE rpt.CustID IS NULL 
 			  AND tmpSta.ErrCode = 40
 			
-		UPDATE rpt
-		SET rpt.GrandPrize = tmpSta.GrandPrize  
-		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
-		INNER JOIN   #tmpStatement tmpSta
-			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 40
-
+		
 	END
 	 
 	IF OBJECT_ID('tempdb..#tmpStatement') IS NOT NULL

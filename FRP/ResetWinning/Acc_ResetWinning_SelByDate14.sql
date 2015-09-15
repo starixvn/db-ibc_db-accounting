@@ -100,7 +100,7 @@ BEGIN
            bettype,
            SUM(ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
                ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * actualrate, 0)) as winlost
-    FROM bettrans14 b WITH(READPAST, INDEX = IX_Report)
+    FROM bettrans14 b WITH(NOLOCK)
 	LEFT JOIN @DummyCust d ON b.custid = d.custid
 	WHERE  b.bettype <> 18000
 	   AND b.winlostdate = @winlostdate
