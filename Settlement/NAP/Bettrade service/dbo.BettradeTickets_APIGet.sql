@@ -13,20 +13,24 @@
  */ 
  BEGIN
 	SET NOCOUNT ON
-	DECLARE @logdate DATETIME, @matchid INT
+	DECLARE @session NVARCHAR(50), @matchid INT
 	
-	SELECT top (1) @logdate = LogDate, @matchid = matchid
+	SELECT top (1) @session = session, @matchid = matchid
 	FROM BettradeAPI WITH(NOLOCK)
-	ORDER BY logdate ASC
+	ORDER BY id ASC
 	
-	SELECT action, 
+	IF @@ROWCOUNT = 0 
+		RETURN
+		
+	SELECT action, 		
 		transid as TicketID,
 		BuyBackNo,
 		Payout	
 	FROM BettradeAPI WITH(NOLOCK)	
-	WHERE logdate = @logdate
+	WHERE session = @session
 		AND matchid = @matchid
 	
+	SELECT @session as session, @matchid as matchid, @@rowcount as numTicket
  END
  GO
  GRANT EXECUTE ON [dbo].[BettradeTickets_APIGet] TO [bodbAdminNet]

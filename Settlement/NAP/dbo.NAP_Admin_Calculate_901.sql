@@ -152,19 +152,19 @@ BEGIN
 	--Insert bettrade tickets to send API
 	IF @@SERVERNAME IN ('DBTRANS','DB230','DB206')
 	BEGIN
-		DECLARE @logdate DATETIME = GETDATE()
+		DECLARE @Session NVARCHAR(50) = CONVERT(NVARCHAR(50),NEWID())
 		
 		INSERT INTO [dbo].[BettradeAPI]
            ([transid]
            ,[matchid]
+           ,[Session]
            ,[action]
-           ,[logdate]
            ,[buybackNo]
            ,[Payout])
         SELECT TicketID,
 			matchid,
-			@action+':'+@mode as action,
-			@logdate,
+			@Session,
+			@action+':'+@mode as action,			
 			BuyBackNo,
 			PayOut
         FROM bettradeSelling b WITH(NOLOCK)

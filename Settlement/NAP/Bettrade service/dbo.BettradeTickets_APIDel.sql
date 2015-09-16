@@ -1,6 +1,7 @@
 ﻿ ALTER PROCEDURE [dbo].[BettradeTickets_APIDel]
 	@matchid INT,
-	@logdate DATETIME
+	@session NVARCHAR(50),
+	@numTicket INT
  AS
 	/*
 		Created: Johnson
@@ -15,9 +16,9 @@
 BEGIN
 	SET NOCOUNT ON 
 	
-	DELETE BettradeAPI WITH(UPDLOCK,ROWLOCK)
+	DELETE TOP (@numTicket) BettradeAPI WITH(UPDLOCK,ROWLOCK)
 	WHERE matchid = @matchid
-		AND logdate = @logdate
+		AND session = @session
 END
 GO
 GRANT EXECUTE ON [dbo].[BettradeTickets_APIDel] TO [bodbAdminNet]
