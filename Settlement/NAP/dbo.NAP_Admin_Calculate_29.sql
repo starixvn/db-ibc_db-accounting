@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29]    Script Date: 09/16/2015 13:44:32 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29] @matchids VARCHAR(2000)
 	,@matchdate SMALLDATETIME WITH RECOMPILE
 AS
@@ -12,6 +17,8 @@ AS
 
 	Revisions:
 		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
+		- 20150914@Kathy: Using function f_moddsParlay to calculate modds [Redmine:#43566]
+		
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -167,17 +174,18 @@ BEGIN
 			,pd.serial
 			,rm.eventdate
 			,EXP(SUM(LOG(odds))) AS Odds
-			,EXP(SUM(LOG(CASE statuswinlost
-							WHEN 0 THEN 1 -- draw
-							WHEN 1 THEN 1 + ((odds - 1) / 2) -- half won
-							WHEN 2 THEN odds -- won
-							WHEN 3 THEN 0.5 -- half lose
-							WHEN 4 THEN 0.000000000001 -- lose
-							ELSE 1 -- void/reject
-							END))) AS mOdds
-			,
+			--,EXP(SUM(LOG(CASE statuswinlost
+			--				WHEN 0 THEN 1 -- draw
+			--				WHEN 1 THEN 1 + ((odds - 1) / 2) -- half won
+			--				WHEN 2 THEN odds -- won
+			--				WHEN 3 THEN 0.5 -- half lose
+			--				WHEN 4 THEN 0.000000000001 -- lose
+			--				ELSE 1 -- void/reject
+			--				END))) AS mOdds
+			--,
+			,dbo.f_moddsParlay(pd.RefNo) AS modds
 			--SUM(case when pd.statusID = 101			THEN 0 ELSE 1 END) as NoReject, 
-			SUM(CASE 
+			,SUM(CASE 
 					WHEN pd.statusID IN (121, 103) THEN 0
 					ELSE 1
 					END) AS NoRefund
@@ -350,5 +358,7 @@ BEGIN
 		,pr.refno
 		,pr.winlostdate
 END
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29] TO [vnteam] AS [dbo]
