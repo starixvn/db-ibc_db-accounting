@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay]    Script Date: 09/16/2015 13:45:10 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay]    Script Date: 09/17/2015 15:09:00 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -30,7 +30,7 @@ AS
 		- 20141007@Kathy: Correct condition in case settle for sport (Tennis/VolleyBall/Badminton/Squash) [Redmine:#24073]
 		- 20141023@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150915@Kathy: Remove @mode variable (it's used just for testing purpose) [Redmine:#43566]
+		- 20150915@Kathy: Remove @mode variable (it's used just for testing purpose), add table to trace settlement process [Redmine:#43566]
 	Param's Explanation:
 	@resultPS: match result of penalty shootout
 
@@ -374,7 +374,7 @@ BEGIN
 					,@T_Home		= @TotalGameHomeMatch
 					,@T_Away		= @TotalGameAwayMatch
 
-																																																EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_Parlay @matchid = @matchid
 					,@mode = 'CAL-SET'
 					,@action = @action
 					,@resultPS = @resultPS
@@ -499,8 +499,22 @@ BEGIN
 	SET @subStart = CURRENT_TIMESTAMP
 
 	--EXEC dbo.NAP_Admin_Calculate_29_Precal @matchids
-
-																																EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
+	DECLARE @refnos29 as TABLE(refno bigint)
+	DECLARE @runCNT29 INT
+	
+	INSERT INTO @refnos29(refno)	
+	SELECT DISTINCT bm.refno
+	FROM dbo.bettrans b WITH(NOLOCK)
+		INNER JOIN dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
+	WHERE bm.matchid = @matchid
+		AND b.matchid = 29
+	
+	SET @runCNT29 = @@ROWCOUNT
+			
+	INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+	VALUES (@matchid, @runCNT29, CURRENT_TIMESTAMP, NULL, 'Start running PRECAL-29')	
+			
+	EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @matchids
 			,@mode = 'PRECAL-29'
 
 	SET @PreCal = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
@@ -519,19 +533,12 @@ BEGIN
 	IF @SkipBalanceUpdate = 0
 	BEGIN
 		--===
-			;
-
-		WITH refnos
-		AS (
-			SELECT DISTINCT refno
-			FROM dbo.bettransm b WITH (NOLOCK)
-				INNER JOIN @match m ON b.matchid = m.matchid
-			)
+		
 		INSERT INTO #BalanceBefore
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans b WITH (ROWLOCK)
-			INNER JOIN refnos r ON b.refno = r.refno
+			INNER JOIN @refnos29 r ON b.refno = r.refno
 		WHERE matchid IN (29)
 		GROUP BY custid
 
@@ -559,6 +566,7 @@ BEGIN
 	SELECT DISTINCT EventDate
 	FROM @match
 	ORDER BY EventDate
+	
 
 	SET @rn = 1
 
@@ -568,6 +576,8 @@ BEGIN
 			WHERE rn = @rn
 			)
 	BEGIN
+
+
 		SELECT @matchdate = EventDate
 		FROM @Ev
 		WHERE rn = @rn
@@ -585,7 +595,7 @@ BEGIN
 		SET @strXML_modds = ''
 		SET @9Start = CURRENT_TIMESTAMP
 
-																																EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate
+			EXEC dbo.NAP_Admin_Calculate_9_Cal @matchid = @subMatchIDs,@matchdate = @matchdate
 
 		SET @9Time = @9Time + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
 		SET @2Call = @2Call + DATEDIFF(millisecond, @9Start, CURRENT_TIMESTAMP)
@@ -598,7 +608,10 @@ BEGIN
 		--EXEC dbo.NAP_Admin_Calculate_29 @matchids = @subMatchIDs
 		--	,@matchdate = @matchdate
 		
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
+		INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+		VALUES (@matchid, NULL, CURRENT_TIMESTAMP, NULL, 'Start running CAL-29')	
+	
+			 EXEC dbo.NAP_Admin_Calculate_Parlay @matchids = @subMatchIDs
 			,@mode = 'CAL-29'
 			,@matchdate = @matchdate
 
@@ -613,7 +626,13 @@ BEGIN
 	--- insert sub-ticket into bettrans
 	SET @subStart = CURRENT_TIMESTAMP
 
-				EXEC dbo.NAP_Admin_Calculate_29_Summary
+	INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+	VALUES (@matchid, NULL, CURRENT_TIMESTAMP, NULL, 'Start running 29_summary')	
+				
+	EXEC dbo.NAP_Admin_Calculate_29_Summary
+	
+	INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+	VALUES (@matchid, NULL, NULL, CURRENT_TIMESTAMP, 'well done, no more to do')
 
 	SET @Summary = DATEDIFF(millisecond, @subStart, CURRENT_TIMESTAMP)
 	---------------------------------------------------------------
@@ -669,18 +688,12 @@ BEGIN
 
 	IF @SkipBalanceUpdate = 0
 	BEGIN
-		--===
-		;WITH refnos
-		AS (
-			SELECT DISTINCT refno
-			FROM dbo.bettransm b WITH (NOLOCK)
-				INNER JOIN @match m ON b.matchid = m.matchid
-			)
+		--===		
 		INSERT INTO #BalanceAfter
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans b WITH (ROWLOCK)
-			INNER JOIN refnos r ON b.refno = r.refno
+			INNER JOIN @refnos29 r ON b.refno = r.refno
 		WHERE matchid IN (29)
 		GROUP BY custid
 			--===
@@ -825,16 +838,10 @@ BEGIN
 		END CATCH
 
 		SET @rn = @rn + 1
-	END
-	
-	-- since Parlay_Job has been also modified, cannot test on UAT for testing. It will be removed when launch on PRO
-	UPDATE	dbo.Parlay_Calculate_Queue WITH (UPDLOCK, ROWLOCK)
-			SET IsCalculating = 2,
-				duration = DATEDIFF(ms,execTime,GETDATE())
-		WHERE	matchid = @matchid 
-				AND IsCalculating = 1
-		
+	END		
 END
+
+
 
 
 
