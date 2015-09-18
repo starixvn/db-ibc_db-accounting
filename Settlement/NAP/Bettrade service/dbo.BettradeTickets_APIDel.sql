@@ -1,5 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[BettradeTickets_APIDel]
-	@matchid INT,
+﻿ ALTER PROCEDURE [dbo].[BettradeTickets_APIDel]	
 	@session NVARCHAR(50),
 	@numTicket INT
  AS
@@ -17,8 +16,7 @@ BEGIN
 	SET NOCOUNT ON 
 	
 	DELETE TOP (@numTicket) BettradeAPI WITH(UPDLOCK,ROWLOCK)
-	WHERE matchid = @matchid
-		AND session = @session
+	WHERE session = @session
 END
 GO
 GRANT EXECUTE ON [dbo].[BettradeTickets_APIDel] TO [bodbAdminNet]
