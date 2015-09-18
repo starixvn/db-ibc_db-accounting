@@ -23,6 +23,7 @@
 		RETURN
 		
 	SELECT action, 		
+		matchid,
 		transid as TicketID,
 		BuyBackNo,
 		Payout,

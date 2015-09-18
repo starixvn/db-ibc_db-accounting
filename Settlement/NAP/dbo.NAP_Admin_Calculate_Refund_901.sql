@@ -121,12 +121,14 @@ BEGIN
 		DECLARE @Session NVARCHAR(50) = CONVERT(NVARCHAR(50),NEWID())
 		
 		INSERT INTO [dbo].[BettradeAPI]
-           ([transid]           
+           ([transid]    
+           ,[Matchid]		       
            ,[Session]
            ,[action]
            ,[buybackNo]
            ,[Payout])
         SELECT TicketID,
+			Matchid,
 			@Session,
 			@action+':'+@mode as action,			
 			BuyBackNo,
