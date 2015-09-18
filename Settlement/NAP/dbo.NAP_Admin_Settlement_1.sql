@@ -53,7 +53,7 @@ AS
 		- 20141009@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
-
+		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		+ @GameResult: Game result for Set(s) of Tennis Sport 
@@ -430,7 +430,8 @@ need below code to determine for mark match as calculated (all bets settled)
 								WHEN @action = 'CAL' AND @Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN N'completed'	-- Match Option checked 
 								WHEN @action = 'CAL-HT' AND m.matchcode LIKE '%hedge%'	THEN eventstatus -- Jamie@20120330: Not change eventstatus='completed' for Hedge Match although 
 								WHEN @action = 'CAL-HT' AND @FTDone = 1					THEN N'completed'
-								WHEN @action = 'CAL-FT' AND @HTDone = 1					THEN N'completed'
+								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								ELSE m.eventstatus
 							  END
 			,@FTDone		= CASE 
