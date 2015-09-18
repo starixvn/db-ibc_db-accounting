@@ -1,4 +1,11 @@
-﻿
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_TraderPerformanceSum]    Script Date: 09/18/2015 09:38:14 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSum]  
  @fromdate datetime,  
@@ -45,6 +52,7 @@ AS
   - 20140519@Johnson: Remove bettype from league name [RedmineID:#16022]						
   - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
   - 20150122@Johnson: optimize sp
+  - 20150909@Jim: Remove leagueName SPECIALS (HotFix #41712)
  Param's Explanation:  
  • @isSoccer  
   = 1: Soccer  
@@ -98,7 +106,8 @@ BEGIN
    when leaguename LIKE '%SPECIFIC 15 MINS TOTAL BOOKINGS%' then 7 
    when leaguename LIKE '%SPECIFIC 15 MINS%' then 2 
    when leaguename LIKE '%SPECIFIC 10 MINS%' then 8
-   when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+   when leaguename LIKE '%SINGLE TEAM OVER/UNDER%' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+   
    else 0  
   end ,
   l.category 
@@ -126,7 +135,7 @@ BEGIN
    when leaguename LIKE '%SPECIFIC 15 MINS TOTAL BOOKINGS%' then 7 
    when leaguename LIKE '%SPECIFIC 15 MINS%' then 2 
    when leaguename LIKE '%SPECIFIC 10 MINS%' then 8
-   when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+   when leaguename LIKE '%SINGLE TEAM OVER/UNDER%' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
    else 0  
   end ,
   l.category   
@@ -571,7 +580,6 @@ GROUP by matchid, bettype
  order by username  
     drop table #userMatch  
 END  
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSum] TO [bodbAdminNet]
