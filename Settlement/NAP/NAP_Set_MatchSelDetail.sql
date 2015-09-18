@@ -30,6 +30,7 @@ AS
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150811@Johnson: exclude bettrade tickets from sportbook [Redmine: #35921]
 		- 20150727@Johnson: Exclude range bettype of Metric Gaming from SB settlement [RedmineID: #37688]
+		- 20150918@Johnson: Check existing bettrade tickets [Redmined: #43234]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -67,6 +68,9 @@ BEGIN
 		,@isExistFTFCorner		BIT	
 		,@isExistFTLCorner		BIT
 		,@isExistResultandFirstTeamScore	BIT
+		
+		--Bettrade
+		,@isExistBettrade		BIT
 
 	SELECT @IsExistLG = 0
 		,@IsExistFGLG = 0
@@ -82,6 +86,7 @@ BEGIN
 		,@isExistFTFCorner		= 0	
 		,@isExistFTLCorner		= 0
 		,@isExistResultandFirstTeamScore = 0 
+		,@isExistBettrade		= 0
 
 	SELECT	 @sporttype = sporttype
 			,@LeagueID	= leagueid
@@ -776,7 +781,18 @@ BEGIN
 	BEGIN
 		SELECT @IsSettleAbandonedMatchIBC = 1
 	END
-
+	
+	--check existing bettrade tickets
+	IF EXISTS (SELECT TOP 1 1
+				FROM bettrans(NOLOCK)
+				WHERE matchid = @matchid 
+					AND bettype IN (901,902,903)
+					AND statusid NOT IN (101,102)
+			)
+	BEGIN
+		SELECT @isExistBettrade =1 
+	END
+			
 	IF EXISTS (
 			SELECT TOP 1 1
 			FROM bettrans(NOLOCK)
@@ -818,8 +834,9 @@ BEGIN
 		,@IsExistHTLG AS IsExistHTLG
 		,@IsExistPS as IsExistPS
 		,@IsHTOnly AS IsHTOnly
+		,@isExistBettrade  AS IsExistBettrade
 		,@IsLive AS IsLive
-		,@IsSettleAbandonedMatchIBC IsSettleAbandonedMatchIBC
+		,@IsSettleAbandonedMatchIBC IsSettleAbandonedMatchIBC		
 		,@TennisStatusSet1	AS TennisStatusSet1
 		,@TennisStatusSet2	AS TennisStatusSet2
 		,@TennisStatusSet3	AS TennisStatusSet3
