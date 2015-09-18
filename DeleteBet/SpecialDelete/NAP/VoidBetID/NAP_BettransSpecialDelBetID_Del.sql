@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 09/18/2015 17:00:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
@@ -19,6 +26,7 @@ AS
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
 		- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 		- 20150804@Patrick: Adjust Balance Credit/Debit Game value for LiveCS #40736
+		- 20150907@Patrick: Support LiveCS
 		- 20150810@Kathy: Using new balance table (BalCreditSports,BalDebitSports) [Redmine:#40125]
 	Param's Explanation: 
 */
@@ -240,13 +248,24 @@ BEGIN
 	WHERE	custid = @CustID 
 
 	--get balance game for livecs
-	DECLARE @balanceGame TABLE(custid INT, winlostdate SMALLDATETIME, balance MONEY)
-	INSERT INTO @balanceGame(custid, winlostdate, balance)
+	DECLARE @balanceGame TABLE(custid INT, winlostdate SMALLDATETIME, balance MONEY, bettype SMALLINT)
+	INSERT INTO @balanceGame(custid, winlostdate, balance, bettype)
 	SELECT custid, winlostdate
 		, SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END)
+		, CASE WHEN bettype BETWEEN 1101 AND 1199 THEN 1101
+			--WHEN bettype BETWEEN 1701 AND 1799 THEN 1701 
+			END
 	FROM dbo.bettrans WITH(NOLOCK)
-	WHERE transid IN (SELECT tmp.TransID FROM @tmpListTransID tmp WHERE tmp.Bettype BETWEEN 1101 AND 1199)
-	GROUP BY custid, winlostdate
+	WHERE transid IN (SELECT tmp.TransID 
+						FROM @tmpListTransID tmp 
+						WHERE tmp.Bettype BETWEEN 1101 AND 1199 --live CS
+							--OR tmp.Bettype BETWEEN 1701 AND 1799 --Gold deluxe
+					)
+	GROUP BY custid, winlostdate, 
+		CASE WHEN bettype BETWEEN 1101 AND 1199 THEN 1101
+			 --WHEN bettype BETWEEN 1701 AND 1799 THEN 1701 
+		END
+
 
 	-- Get Upline info 
 
@@ -484,15 +503,14 @@ BEGIN
 	UPDATE bal
 	SET Balance = bal.Balance + tmp.balance
 	FROM dbo.BalanceDebitGame bal WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
+		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate AND bal.bettype = tmp.bettype
 	WHERE tmp.balance > 0
 
-	INSERT INTO dbo.BalanceDebitGame(CustId, WinlostDate, Balance)
-	SELECT b.custid, b.winlostdate, b.balance
+	INSERT INTO dbo.BalanceDebitGame(CustId, WinlostDate, Balance, bettype)
+	SELECT b.custid, b.winlostdate, b.balance, b.bettype
 	FROM @balanceGame b
-		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
+		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate AND bal.bettype = b.bettype
 	WHERE bal.CustId IS NULL AND b.balance > 0
-
 	
 	--update bettrans
 	UPDATE	bettrans WITH (UPDLOCK,ROWLOCK) 
@@ -533,13 +551,13 @@ BEGIN
 	UPDATE bal
 	SET Balance = bal.Balance + ABS(tmp.balance)
 	FROM dbo.BalanceCreditGame bal WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
+		INNER JOIN @balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate AND bal.bettype = tmp.bettype
 	WHERE tmp.balance < 0
 
-	INSERT INTO dbo.BalanceCreditGame(CustId, WinlostDate, Balance)
-	SELECT b.custid, b.winlostdate, ABS(b.balance)
+	INSERT INTO dbo.BalanceCreditGame(CustId, WinlostDate, Balance, bettype)
+	SELECT b.custid, b.winlostdate, ABS(b.balance), b.bettype
 	FROM @balanceGame b
-		LEFT JOIN dbo.BalanceCreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
+		LEFT JOIN dbo.BalanceCreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate AND bal.bettype = b.bettype
 	WHERE bal.CustId IS NULL AND b.balance < 0
 
 	SELECT @LogData = 'Delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@strTransID as varchar(8000))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
@@ -560,6 +578,7 @@ BEGIN
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]
 GO
