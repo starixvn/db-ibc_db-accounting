@@ -60,12 +60,6 @@ BEGIN
 	SELECT T.C.value('./@t', 'bigint'), ISNULL(T.C.value('./@m', 'smallmoney'), 0)
 	FROM @xml.nodes('/root/r') AS T(C)
 	OPTION (OPTIMIZE FOR (@xml = NULL ))	
-
-	declare @matchid INT
-	select top (1) @matchid = bm.matchid
-	from dbo.bettransM bm with(nolock)
-		inner join bettrans b with(nolock) on b.refno = bm.refno
-	where b.transid in (select top 1 transid from @transIDs)
 	
 	UPDATE b WITH(ROWLOCK, UPDLOCK)
 		SET statusID = @statusID
