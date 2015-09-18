@@ -10,6 +10,7 @@ AS
 	
 	Revisions:
 		- 20140304@Elodie: Retreive settlement log for outright
+		- 20150918@Elodie: Get Log Action Name by Chinese langague [Red:#43705]
 	Param's Explanation: 
 		+ @GroupID: 1: Match Single Bet; 2: Match Parlay Bet ; 3: Outright 
 
@@ -161,6 +162,7 @@ BEGIN
 		SELECT	  l.logid
 				, l.logdate
 				, la.ActionNameEN
+				, la.ActionNameCS
 				, l.finalhomescore
 				, l.finalawayscore
 				, l.hthomescore
@@ -175,6 +177,7 @@ BEGIN
 		SELECT	  l.logid
 				, l.logdate
 				, la.ActionNameEN
+				, la.ActionNameCS
 				, l.Result
 				, CASE WHEN l.ActionID = 137 AND cast(l.Remark as INT) > 1 THEN 'DeadHeat(' + l.Remark + ')' ELSE '' END AS Remark
 		FROM	bodb_CustomerLog.dbo.UserLog_SettleOutright l WITH(NOLOCK)
@@ -182,9 +185,7 @@ BEGIN
 		WHERE	l.MatchID = @MatchID and l.ActionID IN (137,141,139)
 		ORDER BY	l.LogID ASC 	
 	END
-	
 END 
 
 GO 
 GRANT EXECUTE ON [dbo].[Acc_BalanceNegativeSel_MatchLog] TO [bodbAdminNet]
-GO
