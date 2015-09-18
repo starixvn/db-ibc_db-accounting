@@ -26,6 +26,8 @@ AS
 			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
 			- 20150723@Sophia: Apply Bettrade [#38815]
 			- 20150827@Sophia: Apply Colossus Bets [#41935]
+			- 20150917@Jim: Integrate MO product (Feature #41935)
+			
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -39,11 +41,22 @@ BEGIN
 	SET NOCOUNT ON		
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT)
+	INSERT INTO @SportBettype(ProductID  , Bettype  ,EventType  ,SubProduct)
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
-
-
+	
+	UPDATE @SportBettype
+	SET OrderKey = CASE Bettype WHEN 1   THEN 1
+								WHEN 301 THEN 2
+								WHEN 3	 THEN 4
+								WHEN 302 THEN 5
+								WHEN 7   THEN 7
+								WHEN 303 THEN 8
+								WHEN 8   THEN 10
+								WHEN 304 THEN 11
+								ELSE 12
+								END	
+								
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 	
@@ -188,6 +201,7 @@ BEGIN
 	SELECT 
 	    UPPER(case when l.leaguenametc = '' or l.leaguenametc is null  then 'Other Sports' else l.leaguenametc end) as leaguenametc,
 		b.bettype,
+		s.Orderkey,
 		b.liveindicator,		
 		m.matchcode,
 		m.kickofftime,
@@ -202,6 +216,7 @@ BEGIN
         b.LineTotal,
         b.VirtualLineTotal,
         b.IBCTurnover
+		INTO #tmpReturn1
 	FROM 
 	    (
 	        SELECT 
@@ -223,7 +238,26 @@ BEGIN
 		AND s.EventType = 1
 		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 	--((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
-	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc
+	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc 
+	
+	SELECT  leaguenametc,
+			bettype,
+			liveindicator,		
+			matchcode,
+			kickofftime,
+			matchid,
+			homeid,
+			awayid,
+			IsNeutral,
+			winlost,
+			pos,
+			comm,   
+			VirtualComm,
+			LineTotal,
+			VirtualLineTotal,
+			IBCTurnover
+	FROM #tmpReturn1
+	ORDER BY Orderkey ASC
 	
 	-- Resultset of 3rd products and Parlay, Outright
 	    -- Mix Parlay
@@ -509,8 +543,37 @@ BEGIN
 	
 	-- Resultset by bettype of 
 	    -- Sportbook without Parlay and Outright
+	CREATE TABLE #tmpReturn2 (Num TinyINT
+							,bettype smallint
+							,OrderKey TINYINT
+							,Hedge NVARCHAR(50)
+							,LineTotal_soccer_live MONEY
+							,VirtualLineTotal_soccer_live MONEY
+							,LineTotal_soccer MONEY
+							,VirtualLineTotal_soccer MONEY
+							,LineTotal_others_live MONEY
+							,VirtualLineTotal_others_live MONEY
+							,LineTotal_others MONEY
+							,VirtualLineTotal_others MONEY
+							,IBCTurnover MONEY
+							)	
+	INSERT INTO #tmpReturn2 (Num  
+							,bettype 
+							,OrderKey  
+							,Hedge  
+							,LineTotal_soccer_live  
+							,VirtualLineTotal_soccer_live 
+							,LineTotal_soccer  
+							,VirtualLineTotal_soccer  
+							,LineTotal_others_live  
+							,VirtualLineTotal_others_live  
+							,LineTotal_others  
+							,VirtualLineTotal_others
+							,IBCTurnover)		
+							
 	SELECT	10 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
 			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
 			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
@@ -535,12 +598,14 @@ BEGIN
 				OR bettype BETWEEN 1301 and 1334)	*/
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 	
 		---Metric Gaming - Super Live
 	UNION ALL 
 	SELECT	11 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
 			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
 			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
@@ -561,6 +626,7 @@ BEGIN
 		AND s.SubProduct = 'MG-SuperLive'				
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 
 
@@ -568,6 +634,7 @@ BEGIN
 	UNION ALL 
 	SELECT	12 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
 			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
 			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
@@ -588,6 +655,7 @@ BEGIN
 		AND s.SubProduct = 'BT-Comm'				
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 	
 	
@@ -595,6 +663,7 @@ BEGIN
 	UNION ALL
 	SELECT	20 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
 			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
 			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
@@ -618,12 +687,14 @@ BEGIN
 				OR bettype BETWEEN 1301 and 1334)	*/
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 	
 	    -- Virtual HR
 	UNION ALL 
 	SELECT	21 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -639,12 +710,13 @@ BEGIN
 	WHERE	s.ProductId = 5
 		AND s.EventType = 3
 		--b.bettype in (1231, 1232, 1233, 1237, 1238)	
-	GROUP BY b.bettype			
+	GROUP BY b.bettype,s.orderkey			
 			
 	    -- Casino
 	UNION ALL 
 	SELECT	30 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -660,12 +732,13 @@ BEGIN
 	WHERE	s.ProductId = 6	
 		--bettype IN(71, 72) 
 		and matchid IN (0, 71) 			
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	    -- Vegas Games
 	UNION ALL 
 	SELECT	31 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -679,13 +752,14 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
 	WHERE	s.ProductId = 14	
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	
 	    -- Bingo 
 	UNION ALL
 	SELECT	40 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -701,12 +775,13 @@ BEGIN
 	WHERE	s.ProductId = 7	
 		--bettype = 73	
 			and matchid IN (0, 73)
-	GROUP BY b.bettype			
+	GROUP BY b.bettype,s.orderkey			
 	
 	    -- Keno
 	UNION ALL
 	SELECT	50 Num,
 			1501,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -721,12 +796,13 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 8	
 		--b.bettype BETWEEN 1501 AND 1599			
-	---GROUP BY bettype
+	 GROUP BY s.orderkey
 
 	    -- Number Game
 	UNION ALL
 	SELECT	60 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -742,11 +818,13 @@ BEGIN
 	WHERE	s.ProductId = 3	
 		--bettype BETWEEN 81 AND 120			
 	GROUP BY b.bettype
+			,s.orderkey
 	
 	    -- Live Casino
 	UNION ALL
 	SELECT	70 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -761,12 +839,13 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 4
 		--bettype BETWEEN 1101 AND 1199			
-	GROUP BY b.bettype					
+	GROUP BY b.bettype,s.orderkey					
 	
 	    -- Gold Deluxe
 	UNION ALL
 	SELECT	71 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -780,12 +859,13 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 12		
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	 -- Microgaming
 	UNION ALL
 	SELECT	72 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -799,12 +879,13 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 13		
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	 -- AG Casino
 	UNION ALL
 	SELECT	73 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -818,13 +899,14 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 11
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 
 	    -- Parlay
 	UNION ALL 
 	SELECT 	80 Num,
 			m1.bettype,
+			12 orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -869,6 +951,7 @@ BEGIN
 	UNION ALL 
 	SELECT	90 Num,
 			10 bettype,	
+			12 orderkey,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,	
@@ -888,6 +971,7 @@ BEGIN
 	UNION ALL
 	SELECT	100 Num,
 			bettype,
+			12 orderkey,
 	        '' Hedge,
 	        0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -904,6 +988,7 @@ BEGIN
 	UNION ALL
 	SELECT	110 Num,
 			bettrans14.bettype,
+			12 orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -928,6 +1013,7 @@ BEGIN
 	UNION ALL
 	SELECT	120 Num,
 			b.bettype,
+			12 orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -946,7 +1032,8 @@ BEGIN
 	    -- 8RM & BARM
 	UNION ALL 		
 	SELECT	130 Num,
-			bettype,	
+			bettype,
+			12 orderkey,			
 			Hedge,	
 			LineTotal_soccer_live,
 			VirtualLineTotal_soccer_live,
@@ -958,10 +1045,30 @@ BEGIN
 			VirtualLineTotal_others,
 			IBCTurnover
 	FROM #R_8RM with (nolock)
-	
 	ORDER BY 1, bettype, Hedge	
+	
+	UPDATE #tmpReturn2
+	SET orderkey  = 3
+	WHERE bettype = 1 AND Hedge =' (hedge)'
+	
+	SELECT  Num  
+			,bettype 
+			,Hedge  
+			,LineTotal_soccer_live  
+			,VirtualLineTotal_soccer_live 
+			,LineTotal_soccer  
+			,VirtualLineTotal_soccer  
+			,LineTotal_others_live  
+			,VirtualLineTotal_others_live  
+			,LineTotal_others  
+			,VirtualLineTotal_others
+			,IBCTurnover 	
+	FROM #tmpReturn2
+	ORDER BY orderkey ASC
 	-- END - Resultset by bettype of 
-		
+	---------------------------	
+	DROP TABLE #tmpReturn1
+	DROP TABLE #tmpReturn2
     DROP TABLE #tmpBettrans
 	DROP TABLE #Racing
 	DROP TABLE #R_8RM

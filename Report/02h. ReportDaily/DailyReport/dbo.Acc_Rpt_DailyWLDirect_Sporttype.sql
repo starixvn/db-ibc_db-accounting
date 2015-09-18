@@ -69,11 +69,14 @@ AS
 		- 20150723@Sophia: Apply Bettrade [#38815]
 		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 		- 20150828@Sophia: Apply Colossus Bets [#41935]
-
+		- 20150917@Jim: Integrate MO product (Feature #41935)
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
-		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
+		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)declare @p2 money
+set @p2=-430156.7928
+exec Acc_Rpt_DailyWLDirect_Sporttype @winlostdate='2015-09-10 00:00:00',@LineTotal=@p2 output
+select @p2
 		- DisplayOrder field:	1 -> 100: all products that enable virtual currency 
 								101 -> 200: all products that disable virtual currency 
 
@@ -166,7 +169,7 @@ BEGIN
 	INSERT INTO @Bettype(bettype)
 	SELECT typeid
 	FROM bettype WITH(NOLOCK)
-	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151)
+	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304)
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
