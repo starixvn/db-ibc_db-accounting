@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29]    Script Date: 09/17/2015 11:58:16 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29] @matchids VARCHAR(2000)
 	,@matchdate SMALLDATETIME WITH RECOMPILE
 AS
@@ -12,6 +17,7 @@ AS
 
 	Revisions:
 		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
+		- 20150916@Kathy: Cast modds as DECIMAL [Redmine:#43566]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -160,21 +166,22 @@ BEGIN
 		,@winlost MONEY
 		-- CALCULATE effective odds value
 		;
-
+		
 	WITH EffectiveOdds
 	AS (
 		SELECT pd.refno
 			,pd.serial
 			,rm.eventdate
 			,EXP(SUM(LOG(odds))) AS Odds
-			,EXP(SUM(LOG(CASE statuswinlost
+			,CAST(EXP(SUM(CAST(LOG(CASE statuswinlost
 							WHEN 0 THEN 1 -- draw
 							WHEN 1 THEN 1 + ((odds - 1) / 2) -- half won
 							WHEN 2 THEN odds -- won
 							WHEN 3 THEN 0.5 -- half lose
 							WHEN 4 THEN 0.000000000001 -- lose
 							ELSE 1 -- void/reject
-							END))) AS mOdds
+							END
+							)AS DECIMAL(38, 20)))) as smallmoney) AS mOdds
 			,
 			--SUM(case when pd.statusID = 101			THEN 0 ELSE 1 END) as NoReject, 
 			SUM(CASE 
@@ -350,5 +357,8 @@ BEGIN
 		,pr.refno
 		,pr.winlostdate
 END
+
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29] TO [vnteam] AS [dbo]
