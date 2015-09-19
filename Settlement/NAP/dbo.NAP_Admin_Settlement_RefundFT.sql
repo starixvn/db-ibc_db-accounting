@@ -43,7 +43,7 @@ AS
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20140911@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20150421@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
-
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		
 	Param's Explanation:
 	• @matchid: matchid of match to Refund HT
@@ -134,7 +134,7 @@ BEGIN
 
 	INSERT INTO @status
 	SELECT CASE 
-				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
+				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304) THEN 0
 				ELSE 1
 		   END
 		,SUM(CASE 
@@ -152,7 +152,7 @@ BEGIN
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	GROUP BY CASE 
-				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
+				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304) THEN 0
 				ELSE 1
 			 END
 
@@ -354,6 +354,7 @@ BEGIN
 			,@betcount_196 		INT
 			,@betcount_199 		INT
 			,@betcount_206 		INT
+			,@betcount_302 		INT
 			
 		SELECT @ScoreLog = ' FTHScore=' + CAST(@fth AS VARCHAR(10)) 
 						 + ' FTAScore=' + CAST(@fta AS VARCHAR(10)) 
@@ -474,10 +475,11 @@ BEGIN
 		  ,@betcount_196 	= ISNULL(SUM(CASE b.bettype WHEN 196 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_199 	= ISNULL(SUM(CASE b.bettype WHEN 199 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_206 	= ISNULL(SUM(CASE b.bettype WHEN 206 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_302 	= ISNULL(SUM(CASE b.bettype WHEN 302 THEN 1 ELSE 0 END), 0)
 
 		FROM bettrans b WITH (NOLOCK)
 		WHERE b.matchid = @matchid 
-		AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206) 
+		AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302) 
 		AND b.statusID NOT IN (101, 102) 
 		AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 				     WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
@@ -551,6 +553,7 @@ BEGIN
 			,@betcount_196 					= @betcount_196
 			,@betcount_199 					= @betcount_199
 			,@betcount_206 					= @betcount_206
+			,@betcount_302 					= @betcount_302
 			,@IsHTCal						= @IsHTCal
 			,@IsSettleAbandonedMatch		= @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair

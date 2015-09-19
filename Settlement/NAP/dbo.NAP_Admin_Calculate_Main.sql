@@ -239,6 +239,11 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betCount_215					INT 		= NULL
 	,@betCount_216					INT 		= NULL
 	,@betCount_217					INT 		= NULL
+	
+	,@betCount_301					INT 		= NULL
+	,@betCount_302					INT 		= NULL
+	,@betCount_303					INT 		= NULL
+	,@betCount_304					INT 		= NULL
 
 	,@betcount_1301					INT			= NULL		-- Tennis SS 
 	,@betCount_1302					INT			= NULL	
@@ -282,6 +287,7 @@ AS
 		- 20150128@Jamie: Hotfix Settlement SS
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		
 	Param's Explanation:
 		@action			@mode
@@ -837,6 +843,11 @@ BEGIN
 			,@betCount_216 = ' + CASE WHEN @betCount_216 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_216) END + '
 			,@betCount_217 = ' + CASE WHEN @betCount_217 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_217) END + '
 			
+			,@betCount_301 = ' + CASE WHEN @betCount_301 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_301) END + '
+			,@betCount_302 = ' + CASE WHEN @betCount_302 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_302) END + '
+			,@betCount_303 = ' + CASE WHEN @betCount_303 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_303) END + '
+			,@betCount_304 = ' + CASE WHEN @betCount_304 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_304) END + '
+			
 			,@betCount_1301 = ' + CASE WHEN @betCount_1301 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1301) END + '
 			,@betCount_1302 = ' + CASE WHEN @betCount_1302 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1302) END + '
 			,@betCount_1303 = ' + CASE WHEN @betCount_1303 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1303) END + '
@@ -952,7 +963,7 @@ BEGIN
 						,@fth = @fth
 						,@fta = @fta
 						,@betcount = @betcount_1
-
+					
 					-- bettype 20 : Money Line
 					-- IF @betcount_20 > 0 
 					IF @SportType = 154
@@ -1464,11 +1475,24 @@ BEGIN
 						,@result = @ftLCorner
 						,@isExcludeCorner = @isExcludeCorner
 						,@betcount = @betcount_208
-
+		
 				--*** Betradar 2: END *****
 
+				/* FT Myanmar odds*/
+					EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
+						,@bettype = 301
+						,@fth = @fth
+						,@fta = @fta
+						,@betcount = @betcount_301
+					
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = 302
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_302
+				/*END FT Myanmar odds*/
+				
 				END
-			END
+			END -- END CAL/CAL-FT
 
 			IF @Mode IN ('CAL-HT', 'CAL')
 				AND @SportType NOT IN (180, 181, 182, 183, 184, 185, 186)
@@ -1673,6 +1697,19 @@ BEGIN
 					,@isExcludeCorner = @isExcludeCorner
 					,@betcount = @betcount_209
 			--*** Betradar 2: END ****
+			
+			/*HT Myanmar Odds*/
+				EXEC dbo.NAP_Admin_Calculate_7 @matchid = @matchid
+					,@bettype = 303
+					,@hth = @hth
+					,@hta = @hta
+					,@betcount = @betcount_303
+				
+				EXEC dbo.NAP_Admin_Calculate_8 @matchid = @matchid
+					,@bettype = 304
+					,@totalht = @totalht
+					,@betcount = @betcount_304
+			/*END HT Myanmar Odds*/
 			END
 
 			IF @Mode = 'UNDO'
@@ -2661,7 +2698,15 @@ BEGIN
 						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@betcount					= @betCount_206
-
+						
+				/* Myanmar odds*/
+				IF @betCount_302 > 0 
+					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
+						,@bettype = 302
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_302
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @row_count > 0
 																																								EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
@@ -3066,6 +3111,23 @@ BEGIN
 						,@SetxGameyFinishedGame			= @SetxGameyFinishedGame
 						,@betcount						= @betCount_1324
 					
+				/*Myanmar odds*/
+				IF @betcount_302 > 0
+					EXEC dbo.NAP_Admin_Calculate_3 
+						 @matchid = @matchid
+						,@bettype = 302
+						,@totalgoal = @totalgoal
+						,@betcount = @betcount_302
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+						
+				IF @betcount_304 > 0
+					EXEC dbo.NAP_Admin_Calculate_8 @matchid = @matchid
+						,@bettype = 304
+						,@totalht = @totalht
+						,@betcount = @betcount_304
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+						,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @row_count > 0
 																																								EXEC dbo.NAP_Admin_Calculate_RefundAll 
