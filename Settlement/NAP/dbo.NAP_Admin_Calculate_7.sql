@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_7]    Script Date: 09/19/2015 11:26:48 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_7]    Script Date: 09/21/2015 14:09:57 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -185,8 +185,8 @@ BEGIN
 			sComm = CASE
 				WHEN @modds >  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking))
 				WHEN @modds =  0.25 	THEN @commWinRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
-				WHEN @modds =  0 AND bettype <> 301    	THEN 0
-				WHEN @modds =  0 AND bettype = 301    	THEN CASE
+				WHEN @modds =  0 AND bettype <> 303    	THEN 0
+				WHEN @modds =  0 AND bettype = 303    	THEN CASE
 																WHEN oddsspread = 0 THEN 0
 																WHEN oddsspread > 0 THEN @commWinRate * sdiscount * stake * (oddsspread/100) * (1-(spositiontaking+mpositiontaking+apositiontaking))
 																ELSE @commLostRate * sdiscount * stake * ABS(oddsspread/100) * (1-(spositiontaking+mpositiontaking+apositiontaking))
@@ -412,6 +412,7 @@ BEGIN
 			statusID NOT IN (101, 102)
 	END
 END
+
 
 
 
