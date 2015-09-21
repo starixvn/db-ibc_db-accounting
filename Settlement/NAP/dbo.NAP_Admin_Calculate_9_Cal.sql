@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/21/2015 11:07:57 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime	
@@ -139,6 +146,8 @@ BEGIN
 			TRUNCATE TABLE #BalanceBefore
 			TRUNCATE TABLE #BalanceAfter
 			TRUNCATE TABLE #Balance
+			DELETE FROM @tblCreditPending
+			DELETE FROM @tblDebitPending
 
 			DELETE TOP (1000) #temp_bettrans_9
 			OUTPUT	deleted.transID, DELETED.modds into @tempTransID(transid, modds)
@@ -203,10 +212,10 @@ BEGIN
 			WHERE	Increased = 0
 			
 			IF @@rowcount <> 0
-							EXEC dbo.Dot_BalancePendingDebitIns
+							EXEC dbo.Dot_BalancePendingDebitIns 
 					@BalancePending = @tblDebitPending
 					,@Type			= 1 -- Sports
-
+			
 			--INSERT INTO dbo.BalancePendingCredit (custid, balance)
 			--SELECT custid, balance
 			--FROM #Balance
@@ -221,7 +230,7 @@ BEGIN
 							EXEC dbo.Dot_BalancePendingCreditIns 
 					@BalancePending = @tblCreditPending
 					,@Type			= 1 -- Sports
-					
+				
 			----
 			-- Add Negative Balance into BalanceNegative table 
 			----
@@ -253,5 +262,6 @@ BEGIN
 	DROP TABLE #Balance
 	DROP TABLE #BalanceAfter	
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]
