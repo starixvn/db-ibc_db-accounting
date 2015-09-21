@@ -99,8 +99,8 @@ BEGIN
 			WinLost = CASE
 				WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6) then odds-1 else odds end) end)
 				WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6) then odds-1 else odds end) end) * 0.5
-				WHEN @modds =  0 AND bettype <> 301	THEN actual_stake
-				WHEN @modds =  0 AND bettype = 301	THEN CASE 
+				WHEN @modds =  0 AND bettype <> 303	THEN actual_stake
+				WHEN @modds =  0 AND bettype = 303	THEN CASE 
 															WHEN oddsspread = 0 THEN actual_stake
 															WHEN oddsspread > 0 THEN actual_stake + stake * odds * (oddsspread/100) -- oddsspread > 0: WON
 															ELSE actual_stake * (1 - ABS(oddsspread/100))  -- oddsspread < 0: LOSE
