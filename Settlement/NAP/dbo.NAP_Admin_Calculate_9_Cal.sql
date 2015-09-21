@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/17/2015 15:05:08 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/21/2015 16:30:04 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -22,6 +22,8 @@ AS
 		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
 		- 20150720@Kathy: Correct the winlostdate of main ticket [HotFix #37418]		
 		- 20150914@Kathy: Change settlement flow (Remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
+		- 20150921@Kathy: Correct the winlostdate of main ticket [Redmine:#43566]
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -76,7 +78,7 @@ BEGIN
 				WHEN NoRefund = 0 THEN p.matchdate_max-- Refund
 				WHEN p.modds < 1 THEN @matchdate -- Lose
 				WHEN p.modds = 1 THEN p.matchdate_max -- Draw
-				ELSE winlostdate -- Won
+				ELSE p.matchdate_max -- Won
 			END as winlostdate			
 		,CASE
 				WHEN loseCnt > 0 THEN 113 -- Lose
@@ -124,6 +126,8 @@ BEGIN
 	CREATE TABLE #BalanceAfter (custid int PRIMARY KEY,balance money)
 	CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 	-------------------
 	
 	WHILE (1 = 1)
@@ -143,6 +147,8 @@ BEGIN
 			TRUNCATE TABLE #BalanceBefore
 			TRUNCATE TABLE #BalanceAfter
 			TRUNCATE TABLE #Balance
+			DELETE FROM @tblCreditPending
+			DELETE FROM @tblDebitPending
 
 			DELETE TOP (1000) #temp_bettrans_9
 			OUTPUT	deleted.transID, DELETED.modds into @tempTransID(transid, modds)
@@ -168,7 +174,7 @@ BEGIN
 			GROUP BY b.custid				
 			--------------------------------------------------------------	
 			SET @tstime = CURRENT_TIMESTAMP			 
-			EXEC dbo.NAP_Admin_Calculate_Parlay
+						EXEC dbo.NAP_Admin_Calculate_Parlay
 				@mode = 'CAL-9'
 				,@strXML = @strTransIds 
 				,@statusID = @statusID
@@ -196,15 +202,36 @@ BEGIN
 				INNER JOIN #BalanceAfter a ON b.custid = a.custid
 			WHERE b.balance <> a.balance			
 
-			INSERT INTO dbo.BalancePendingDebit (custid, balance)
-			SELECT custid, ABS(balance)
-			FROM #Balance
-			WHERE Increased = 0
-
-			INSERT INTO dbo.BalancePendingCredit (custid, balance)
-			SELECT custid, balance
-			FROM #Balance
-			WHERE Increased = 1
+			--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+			--SELECT custid, ABS(balance)
+			--FROM #Balance
+			--WHERE Increased = 0
+			
+			INSERT INTO @tblDebitPending (custID, balance)
+			SELECT	custid, ABS(balance)
+			FROM	#Balance
+			WHERE	Increased = 0
+			
+			IF @@rowcount <> 0
+							EXEC dbo.Dot_BalancePendingDebitIns
+					@BalancePending = @tblDebitPending
+					,@Type			= 1 -- Sports
+			
+			--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+			--SELECT custid, balance
+			--FROM #Balance
+			--WHERE Increased = 1
+			
+			INSERT INTO @tblCreditPending (custID, balance)
+			SELECT	custid, balance
+			FROM	#Balance
+			WHERE	Increased = 1
+			
+			IF @@rowcount <> 0
+							EXEC dbo.Dot_BalancePendingCreditIns 
+					@BalancePending = @tblCreditPending
+					,@Type			= 1 -- Sports
+				
 			----
 			-- Add Negative Balance into BalanceNegative table 
 			----
@@ -236,7 +263,6 @@ BEGIN
 	DROP TABLE #Balance
 	DROP TABLE #BalanceAfter	
 END
-
 
 
 GO
