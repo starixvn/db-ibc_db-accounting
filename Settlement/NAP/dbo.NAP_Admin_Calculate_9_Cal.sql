@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/21/2015 11:07:57 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/21/2015 16:30:04 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -22,6 +22,7 @@ AS
 		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
 		- 20150720@Kathy: Correct the winlostdate of main ticket [HotFix #37418]		
 		- 20150914@Kathy: Change settlement flow (Remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
+		- 20150921@Kathy: Correct the winlostdate of main ticket [Redmine:#43566]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
@@ -77,7 +78,7 @@ BEGIN
 				WHEN NoRefund = 0 THEN p.matchdate_max-- Refund
 				WHEN p.modds < 1 THEN @matchdate -- Lose
 				WHEN p.modds = 1 THEN p.matchdate_max -- Draw
-				ELSE winlostdate -- Won
+				ELSE p.matchdate_max -- Won
 			END as winlostdate			
 		,CASE
 				WHEN loseCnt > 0 THEN 113 -- Lose
@@ -212,7 +213,7 @@ BEGIN
 			WHERE	Increased = 0
 			
 			IF @@rowcount <> 0
-							EXEC dbo.Dot_BalancePendingDebitIns 
+							EXEC dbo.Dot_BalancePendingDebitIns
 					@BalancePending = @tblDebitPending
 					,@Type			= 1 -- Sports
 			
@@ -262,6 +263,7 @@ BEGIN
 	DROP TABLE #Balance
 	DROP TABLE #BalanceAfter	
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]
