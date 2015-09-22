@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_MatchWinLoss2_New_xpre]    Script Date: 09/22/2015 16:20:48 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
 	@WinLost_BARM		 money = 0 OUTPUT,
@@ -27,7 +34,6 @@ AS
 			- 20150723@Sophia: Apply Bettrade [#38815]
 			- 20150827@Sophia: Apply Colossus Bets [#41935]
 			- 20150917@Jim: Integrate MO product (Feature #41935)
-			
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -43,7 +49,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xpre @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
 	UPDATE @SportBettype
 	SET OrderKey = CASE Bettype WHEN 1   THEN 1
 								WHEN 301 THEN 2
@@ -199,21 +205,22 @@ BEGIN
 	-- Resultset of Sportbook without Parlay and Outright
 	SELECT 
 	    UPPER(case when l.leaguenametc = '' or l.leaguenametc is null  then 'Other Sports' else l.leaguenametc end) as leaguenametc,
-		b.bettype,
+		s.bettype,
+		s.OrderKey,
 		b.liveindicator,		
 		m.matchcode,
 		m.kickofftime,
 		b.matchid,
 		m.homeid,
 		m.awayid,
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-        b.winlost,
+	    isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+        SUM( b.winlost) winlost,
         b.pos,
-        b.comm,   
-        b.VirtualComm,
-        b.LineTotal,
-        b.VirtualLineTotal,
-        b.IBCTurnover
+        SUM(b.comm) comm,   
+        SUM(b.VirtualComm) VirtualComm,
+        SUM(b.LineTotal) LineTotal,
+        SUM(b.VirtualLineTotal) VirtualLineTotal,
+        SUM(b.IBCTurnover) IBCTurnover
 	FROM 
 	    (
 	        SELECT 
@@ -237,7 +244,18 @@ BEGIN
 		AND s.EventType = 1	
 		AND s.SubProduct NOT IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm')
 	--((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
-	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc
+	GROUP BY	l.leaguenametc,
+				s.bettype,
+				s.OrderKey,
+				b.liveindicator,		
+				m.matchcode,
+				m.kickofftime,
+				b.matchid,
+				m.homeid,
+				m.awayid,
+				isnull(m.isNeutral, CONVERT(BIT,0)),  
+				b.pos 
+	 ORDER BY l.leaguenametc,s.OrderKey asc, s.bettype, b.liveindicator desc
 	
 	-- Resultset of 3rd products and Parlay, Outright
 	    -- Mix Parlay
@@ -1079,6 +1097,7 @@ BEGIN
 	DROP TABLE #R_8RM
 	DROP TABLE #tmpReturn
 END
+
 
 
 GO
