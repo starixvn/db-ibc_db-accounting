@@ -199,23 +199,23 @@ BEGIN
 	
 	-- Resultset of Sportbook without Parlay and Outright
 	SELECT 
-	    UPPER(case when l.leaguenametc = '' or l.leaguenametc is null  then 'Other Sports' else l.leaguenametc end) as leaguenametc,
-		b.bettype,
-		s.Orderkey,
+	UPPER(case when l.leaguenametc = '' or l.leaguenametc is null  then 'Other Sports' else l.leaguenametc end) as leaguenametc,
+		s.bettype,
+		s.OrderKey,
 		b.liveindicator,		
 		m.matchcode,
 		m.kickofftime,
 		b.matchid,
 		m.homeid,
 		m.awayid,
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-        b.winlost,
+	    isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+        SUM( b.winlost) winlost,
         b.pos,
-        b.comm,   
-        b.VirtualComm,
-        b.LineTotal,
-        b.VirtualLineTotal,
-        b.IBCTurnover
+        SUM(b.comm) comm,   
+        SUM(b.VirtualComm) VirtualComm,
+        SUM(b.LineTotal) LineTotal,
+        SUM(b.VirtualLineTotal) VirtualLineTotal,
+        SUM(b.IBCTurnover) IBCTurnover
 		INTO #tmpReturn1
 	FROM 
 	    (
@@ -237,8 +237,19 @@ BEGIN
 	WHERE s.ProductID = 1
 		AND s.EventType = 1
 		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+    GROUP BY	l.leaguenametc,
+				s.bettype,
+				s.OrderKey,
+				b.liveindicator,		
+				m.matchcode,
+				m.kickofftime,
+				b.matchid,
+				m.homeid,
+				m.awayid,
+				isnull(m.isNeutral, CONVERT(BIT,0)),  
+				b.pos 	
 	--((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
-	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc 
+	ORDER BY l.leaguenametc, s.OrderKey asc,s.bettype, b.liveindicator desc 
 	
 	SELECT  leaguenametc,
 			bettype,
