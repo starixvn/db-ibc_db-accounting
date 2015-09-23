@@ -1,5 +1,11 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT]    Script Date: 09/23/2015 14:20:04 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT    Script Date: 23/09/2015 9:43:53 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT] 
 	@matchid						INT
 	,@adminid						INT
@@ -46,10 +52,10 @@ AS
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		
 	Param's Explanation:
-	• @matchid: matchid of match to Refund HT
-	• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
-	• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
-	• @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
+	â€¢ @matchid: matchid of match to Refund HT
+	â€¢ @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
+	â€¢ @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+	â€¢ @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
 
 */
 BEGIN
@@ -181,6 +187,34 @@ BEGIN
 
 	IF @IsSettleAbandonedMatchBetFair = 1
 		SELECT @IsExcludeBetfair = 1
+	
+	--=========================================
+	-- Check HTNormalBets and HTCornerBet 
+	DECLARE	@HTNoneCornerBetDone	BIT
+			,@HTCornerBetDone	BIT
+
+	DECLARE	@tmpHTStatus TABLE(
+		HTCornerBet	BIT
+		,inRunning	INT
+	)	
+
+	INSERT INTO @tmpHTStatus(HTCornerBet,inRunning)
+	SELECT	CASE WHEN Bettype IN (200,201,202,203,204,205,207,209) THEN 1
+				 ELSE 0 END 
+			,SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+	FROM bettrans WITH (NOLOCK)
+	WHERE	MatchID = @MatchID 
+			AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) --HT bets
+			AND statusID NOT BETWEEN 101 AND 102 
+	GROUP BY CASE WHEN Bettype IN (200,201,202,203,204,205,207,209) THEN 1
+				 ELSE 0 END 
+
+	IF NOT EXISTS(SELECT TOP 1 1 FROM @tmpHTStatus WHERE HTCornerBet = 0)
+		INSERT INTO @tmpHTStatus(HTCornerBet,inRunning) VALUES(0,0)
+
+	SELECT	@HTNoneCornerBetDone = CASE InRunning WHEN 0 THEN 1 ELSE 0 END 
+	FROM	@tmpHTStatus
+	WHERE	HTCornerBet = 0
 
 	---===============================================
 	--Check if match already Refund HT => refund whole match
@@ -297,18 +331,6 @@ BEGIN
 	SELECT @IsHTCal = isHTCal
 	FROM DBPRO.BODB02.dbo.Match_remark WITH (NOLOCK)
 	WHERE matchid = @matchid	
-	
-	--IF NOT EXISTS (SELECT TOP 1 1 FROM bettrans WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)	
-	--	AND NOT EXISTS (SELECT TOP 1 1 FROM bettransm WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)
-	--BEGIN
-	--	SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0 -- No offer
-	--									   ELSE 4 -- No ticket
-	--								  END
-	--END
-	--ELSE
-	--BEGIN
-	--	SELECT @SettlementStatus135 = 3 -- Calculated (Manual)
-	--END
 	
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @HTDone = 1
 	BEGIN
@@ -566,19 +588,23 @@ BEGIN
 		@Command	= 'NAP_Admin_Settlement_RefundFT'
 		,@MatchID	= @matchid
 		,@HTDone	= @HTDone
+		,@HTNoneCornerBetDone = @HTNoneCornerBetDone
 		,@RowCount	= @RowCount OUTPUT
 		,@creator	= @adminid
 
-	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
-		@Command			= 'NAP_Admin_Settlement_RefundFT'
-		,@MatchID			= @matchid
-		,@isExistTotalCorner= @isExistTotalCorner
-		,@isExistHTFCorner	= @isExistHTFCorner
-		,@isExistHTLCorner	= @isExistHTLCorner
-		,@isExistFTFCorner	= @isExistFTFCorner
-		,@isExistFTLCorner	= @isExistFTLCorner
-		,@creator			= @adminid
-
+	IF @sporttype = 1
+	BEGIN
+		EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+			@Command			= 'NAP_Admin_Settlement_RefundFT'
+			,@MatchID			= @matchid
+			,@isExistTotalCorner= @isExistTotalCorner
+			,@isExistHTFCorner	= @isExistHTFCorner
+			,@isExistHTLCorner	= @isExistHTLCorner
+			,@isExistFTFCorner	= @isExistFTFCorner
+			,@isExistFTLCorner	= @isExistFTLCorner
+			,@creator			= @adminid
+	END
+	
 	IF @RowCount > 0
 	BEGIN
 		-- Calculate Refund FT
