@@ -14,6 +14,7 @@ Revisions:
 	- 20110517@Lukas: re-arrange bettype
 	- 20110830@Jamie: COUNT phonebetting's negative stake as positive number
 	- 20140305@Dom: Update outstanding for keno
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 Param's Explanation:
 	
 */  
@@ -59,6 +60,11 @@ Param's Explanation:
 				 isnull(SUM(CASE WHEN ruben=1 THEN winlost-actual_stake+playercomm END), 0) balance
 		  FROM bettrans  WITH (NOLOCK)
 		  WHERE recommend =@custid 
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 		  GROUP BY custid
 		) AS b 	ON c.custid = b.custid
 	LEFT JOIN 
