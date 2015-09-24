@@ -28,7 +28,7 @@ SET NOCOUNT ON
         HomeId int, AwayId int,        
         liveindicator bit, bettype smallint, leagueid int,
         realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money,
-        virtualTurnover money, virtualLineTotal money, isNeutral bit
+        virtualTurnover money, virtualLineTotal money, isNeutral bit,orderkey tinyint
     )
     
     Declare @movebetdate datetime,
@@ -74,7 +74,7 @@ SET NOCOUNT ON
 				AND b.sporttype = @sporttype
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN @bettype = b.bettype THEN 1
-						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8) THEN 1
+						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8,301,302,303,304) THEN 1
 						ELSE 0 END = 1
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
@@ -146,7 +146,7 @@ SET NOCOUNT ON
 				AND b.sporttype = @sporttype
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN @bettype = b.bettype THEN 1
-						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8) THEN 1
+						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8,301,302,303,304) THEN 1
 						ELSE 0 END = 1
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
@@ -227,7 +227,7 @@ SET NOCOUNT ON
 				AND b.sporttype = @sporttype
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN @bettype = b.bettype THEN 1
-						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8) THEN 1
+						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8,301,302,303,304) THEN 1
 						ELSE 0 END = 1
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
@@ -299,7 +299,7 @@ SET NOCOUNT ON
 				AND b.sporttype = @sporttype
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN @bettype = b.bettype THEN 1
-						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8) THEN 1
+						WHEN @bettype = 19999 AND b.bettype NOT IN (1,3,7,8,301,302,303,304) THEN 1
 						ELSE 0 END = 1
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
@@ -345,7 +345,27 @@ SET NOCOUNT ON
         insert into @HedgeMatch
         select eventdate, matchid,matchcode,leagueid,HomeId,AwayId
         from @RPT where matchcode like '%hedge%'
-    
+		
+		UPDATE @RPT
+		SET orderkey = CASE  WHEN Bettype =1   AND liveindicator =0   THEN 1
+						WHEN Bettype =301 AND liveindicator =0   THEN 2
+						WHEN Bettype =1   AND liveindicator =1   THEN 3
+						WHEN Bettype =301 AND liveindicator =1   THEN 4
+						WHEN Bettype =3   AND liveindicator =0   THEN 5
+						WHEN Bettype =302 AND liveindicator =0   THEN 6
+						WHEN Bettype =3   AND liveindicator =1   THEN 7
+						WHEN Bettype =302 AND liveindicator =1   THEN 8
+						WHEN Bettype =7   AND liveindicator =0   THEN 9
+						WHEN Bettype =303 AND liveindicator =0   THEN 10
+						WHEN Bettype =7   AND liveindicator =1   THEN 11
+						WHEN Bettype =303 AND liveindicator =1   THEN 12
+						WHEN Bettype =8   AND liveindicator =0   THEN 13
+						WHEN Bettype =304 AND liveindicator =0   THEN 14
+						WHEN Bettype =8   AND liveindicator =1   THEN 15
+						WHEN Bettype =304 AND liveindicator =1   THEN 16
+						ELSE 17
+						END
+			
         SELECT  CASE WHEN d.matchcode like '%hedge%' OR r.matchcode like '%hedge%' THEN ISNULL(d.matchcode,r.matchcode) END HedgeGroup,
             CASE WHEN r.matchcode like '%hedge%' THEN 1 ELSE 0 END IsHedge,    
             r.* FROM @RPT r
@@ -353,12 +373,13 @@ SET NOCOUNT ON
             select * from @HedgeMatch h where h.leagueid = r.leagueid and h.homeid = r.HomeId and h.awayid = r.AwayId and h.evendate = r.eventdate and h.matchid <> r.matchid
         )D
 		--WHERE r.matchcode NOT Like '%hedge%'
-        ORDER BY r.HomeId,
+        ORDER BY 
+				r.orderkey
+				,r.HomeId,
                 r.AwayId,
                 r.leagueid,
                 r.matchcode,
                 r.bettype
-		
 		
 
     /*
