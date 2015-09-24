@@ -17,6 +17,7 @@
             - 20131204@Johnson: get @movebetday base on match14
 			- 20140327@Dom: Add Hedge Field
 			- 20140804@Dom: [Feature #19394] Remove Hedge match
+			- 20150924@Jim: Offer MO
         Parameter's Explanation:
 		@type = 1 drilldown for sport
 		@type = 2 drilldown for bettype
