@@ -1,10 +1,13 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/21/2015 16:30:04 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/24/2015 11:12:46 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 23/09/2015 9:57:57 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 9/23/2015 9:53:24 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime	
@@ -23,6 +26,7 @@ AS
 		- 20150720@Kathy: Correct the winlostdate of main ticket [HotFix #37418]		
 		- 20150914@Kathy: Change settlement flow (Remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
 		- 20150921@Kathy: Correct the winlostdate of main ticket [Redmine:#43566]
+		- 20150923@Kathy: Correct modds [Redmine:#43566]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
@@ -158,11 +162,16 @@ BEGIN
 			SET @runcnt = @@ROWCOUNT
 			IF @runcnt = 0 BREAK
 			
-			SET @strTransIds = STUFF((
-				SELECT ',' + cast(transid as varchar(20)) + CASE WHEN NULLIF(modds,0) IS NULL THEN '' ELSE '|' + cast(modds as varchar(20)) END
-				FROM @tempTransID					
-				FOR XML PATH('')
-			),1,1,'')
+			 SET @strTransIds = CONVERT(varchar(max),(  
+			   SELECT  
+					transid '@t'  
+					,NULLIF(modds,0) '@m'  
+			   FROM @tempTransID	
+			   FOR XML PATH('r'), ROOT('root'), TYPE  
+			  ))     
+			  
+			SET @strTransIds = REPLACE(REPLACE(@strTransIds, '<root><r t="', ''), '"/></root>', '')
+			SET @strTransIds = REPLACE(REPLACE(@strTransIds, '" m="', '|'), '"/><r t="', ',')
 						
 			-------------------------------------------------------------
 			---        CAPTURE value BALANCE before settlement        ---
@@ -213,7 +222,7 @@ BEGIN
 			WHERE	Increased = 0
 			
 			IF @@rowcount <> 0
-							EXEC dbo.Dot_BalancePendingDebitIns
+														EXEC dbo.Dot_BalancePendingDebitIns_xpre 
 					@BalancePending = @tblDebitPending
 					,@Type			= 1 -- Sports
 			
@@ -228,7 +237,7 @@ BEGIN
 			WHERE	Increased = 1
 			
 			IF @@rowcount <> 0
-							EXEC dbo.Dot_BalancePendingCreditIns 
+														EXEC dbo.Dot_BalancePendingCreditIns_xpre 
 					@BalancePending = @tblCreditPending
 					,@Type			= 1 -- Sports
 				
