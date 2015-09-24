@@ -60,6 +60,8 @@ Revisions:
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 	- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	 
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -559,6 +561,11 @@ BEGIN
 			    max(transdate) lastTxn 
 		    FROM dbo.bettrans WITH(NOLOCK) 
 		    WHERE custid = @custid
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 	    ) Balance 
 
     END 
@@ -603,6 +610,11 @@ BEGIN
 			    max(transdate) lastTxn
 		    FROM dbo.bettrans WITH(NOLOCK) 
 		    WHERE recommend = @custid
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 	    )Balance 
 
     END
@@ -656,6 +668,11 @@ BEGIN
 				    max(transdate) lastTxn
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE mrecommend = @custid	
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 	    )Balance 
     	
 	    /*
@@ -715,6 +732,11 @@ BEGIN
 				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 then actual_stake else 0 end) customerOutstanding	
 		     FROM bettrans WITH(NOLOCK) 
 		     WHERE srecommend = @custid
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 		    )Balance 
      
     END
@@ -731,6 +753,9 @@ BEGIN
 		    @TotalMemberSuspended MemberSuspended
 END
 
+
+ 
+ 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
 GO
@@ -739,3 +764,14 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
+ 
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
+GO 
+ 
