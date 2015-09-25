@@ -1,10 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_MatchWinLoss2_New_xpre]    Script Date: 09/25/2015 09:21:02 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+ 
 ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
@@ -49,7 +45,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
 	
 	UPDATE @SportBettype
 	SET liveindicator =0
@@ -1094,6 +1090,20 @@ BEGIN
 	UPDATE #tmpReturn
 	SET orderkey  = 3
 	WHERE bettype = 1 AND Hedge =' (hedge)'
+	
+	UPDATE #tmpReturn
+	SET OrderKey =  CASE  WHEN Bettype =1       THEN 1
+						  WHEN Bettype =301     THEN 2
+						  WHEN Bettype =3     THEN 5
+						  WHEN Bettype =302    THEN 6
+						  WHEN Bettype =7    THEN 9
+						  WHEN Bettype =303    THEN 10
+						  WHEN Bettype =8     THEN 13
+					      WHEN Bettype =304    THEN 14
+					      ELSE 17
+						END
+						
+	
 	SELECT 	Num,
 			bettype,
 			Hedge,	
@@ -1110,8 +1120,8 @@ BEGIN
 	GROUP BY Num,
 			 bettype,
 			 Hedge,
-			 Orderkey	
-	ORDER BY num,Orderkey ASC	
+			 OrderKey
+	ORDER BY num,OrderKey ASC 
 	----------------------------------------
     DROP TABLE #tmpBettrans
 	DROP TABLE #Racing
@@ -1119,8 +1129,9 @@ BEGIN
 	DROP TABLE #tmpReturn
 END
 
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam]
+
+
