@@ -43,7 +43,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xpre @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
 	UPDATE @SportBettype
 	SET liveindicator =0
