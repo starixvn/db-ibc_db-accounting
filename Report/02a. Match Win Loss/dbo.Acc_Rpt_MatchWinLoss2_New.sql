@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_MatchWinLoss2_New_xpre]    Script Date: 09/24/2015 16:51:32 ******/
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_MatchWinLoss2_New_xpre]    Script Date: 09/25/2015 09:21:02 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1041,7 +1041,7 @@ BEGIN
 			0  VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	bettrans with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = bettrans.bettype  AND b.liveindicator=s.liveindicator
+	INNER JOIN @SportBettype s ON s.Bettype = bettrans.bettype  AND bettrans.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 9
 			--bettype = 1000
 			--and matchid = 1000  
@@ -1123,4 +1123,4 @@ END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam] 
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam]
