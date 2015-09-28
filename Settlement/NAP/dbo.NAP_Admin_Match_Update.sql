@@ -74,7 +74,8 @@ BEGIN
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 5 AND @SelectedSet LIKE '%6%'THEN N'completed'
-								WHEN @action = 'CAL-HT' AND @FTDone = 1 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'								
 							ELSE eventstatus END,

@@ -429,7 +429,8 @@ need below code to determine for mark match as calculated (all bets settled)
 								WHEN @action = 'CAL' AND @Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND @Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN N'completed'	-- Match Option checked 
 								WHEN @action = 'CAL-HT' AND m.matchcode LIKE '%hedge%'	THEN eventstatus -- Jamie@20120330: Not change eventstatus='completed' for Hedge Match although 
-								WHEN @action = 'CAL-HT' AND @FTDone = 1					THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1	AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1	AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								ELSE m.eventstatus
