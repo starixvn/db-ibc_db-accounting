@@ -68,6 +68,7 @@ AS
 		- 20150723@Sophia: Apply Bettrade [#38815]
 		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 		- 20150828@Sophia: Apply Colossus Bets [#41935]
+		- 20150917@Jim: Integrate MO product (Feature #41935)
 		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -165,7 +166,7 @@ BEGIN
 	INSERT INTO @Bettype(bettype)
 	SELECT typeid
 	FROM bettype WITH(NOLOCK)
-	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151)
+	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304)
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
