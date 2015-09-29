@@ -27,6 +27,7 @@ AS
 			- 20150723@Sophia: Apply Bettrade [#38815]
 			- 20150827@Sophia: Apply Colossus Bets [#41935]
 			- 20150917@Jim: Integrate MO product (Feature #41935)
+			- 20150929@Sophia: Order by for MO product [#41935]
 			
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
@@ -827,7 +828,7 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 8	
 		--b.bettype BETWEEN 1501 AND 1599			
-	 GROUP BY s.orderkey
+	 GROUP BY s.bettype,s.orderkey
 
 	    -- Number Game
 	UNION ALL
@@ -848,7 +849,7 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 3	
 		--bettype BETWEEN 81 AND 120			
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 			,s.orderkey
 	
 	    -- Live Casino
@@ -937,7 +938,7 @@ BEGIN
 	UNION ALL 
 	SELECT 	80 Num,
 			m1.bettype,
-			12 orderkey,
+			m1.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -952,7 +953,8 @@ BEGIN
 			IBCTurnover
 	FROM
 		(
-			SELECT 	bettype,	
+			SELECT 	bettype,
+					17 as orderkey,	
 					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate), 0) as LineTotal_soccer,
 					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate), 0) as VirtualLineTotal_soccer
 			FROM	bettrans14 with (nolock)
@@ -982,7 +984,7 @@ BEGIN
 	UNION ALL 
 	SELECT	90 Num,
 			10 bettype,	
-			12 orderkey,
+			17 orderkey,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,	
@@ -1002,7 +1004,7 @@ BEGIN
 	UNION ALL
 	SELECT	100 Num,
 			bettype,
-			12 orderkey,
+			17 orderkey,
 	        '' Hedge,
 	        0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -1019,7 +1021,7 @@ BEGIN
 	UNION ALL
 	SELECT	110 Num,
 			bettrans14.bettype,
-			12 orderkey,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -1038,13 +1040,13 @@ BEGIN
 			and winlostdate = @winlostdate
 			and ruben = 1
 			and statusID not in (101,102,103,121)
-	GROUP BY bettrans14.bettype			
+	GROUP BY bettrans14.bettype,s.orderkey			
 	
 		-- Colossus Bets
 	UNION ALL
 	SELECT	120 Num,
 			b.bettype,
-			12 orderkey,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -1058,13 +1060,13 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 15		
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 			
 	    -- 8RM & BARM
 	UNION ALL 		
 	SELECT	130 Num,
 			bettype,
-			12 orderkey,			
+			17 orderkey,			
 			Hedge,	
 			LineTotal_soccer_live,
 			VirtualLineTotal_soccer_live,
@@ -1076,27 +1078,46 @@ BEGIN
 			VirtualLineTotal_others,
 			IBCTurnover
 	FROM #R_8RM with (nolock)
+	
 	ORDER BY 1, bettype, Hedge	
+	
 	
 	UPDATE #tmpReturn2
 	SET orderkey  = 3
 	WHERE bettype = 1 AND Hedge =' (hedge)'
 	
-	SELECT  Num  
-			,bettype 
-			,Hedge  
-			,LineTotal_soccer_live  
-			,VirtualLineTotal_soccer_live 
-			,LineTotal_soccer  
-			,VirtualLineTotal_soccer  
-			,LineTotal_others_live  
-			,VirtualLineTotal_others_live  
-			,LineTotal_others  
-			,VirtualLineTotal_others
-			,IBCTurnover 	
+	UPDATE #tmpReturn2
+	SET OrderKey =  CASE  WHEN Bettype =1       THEN 1
+						  WHEN Bettype =301     THEN 2
+						  WHEN Bettype =3     THEN 5
+						  WHEN Bettype =302    THEN 6
+						  WHEN Bettype =7    THEN 9
+						  WHEN Bettype =303    THEN 10
+						  WHEN Bettype =8     THEN 13
+					      WHEN Bettype =304    THEN 14
+					      ELSE 17
+						END
+						
+	
+	SELECT 	Num,
+			bettype,
+			Hedge,	
+			SUM(LineTotal_soccer_live) LineTotal_soccer_live,
+			SUM(VirtualLineTotal_soccer_live) VirtualLineTotal_soccer_live,
+			SUM(LineTotal_soccer) LineTotal_soccer,
+			SUM(VirtualLineTotal_soccer) VirtualLineTotal_soccer,
+			SUM(LineTotal_others_live) LineTotal_others_live,
+			SUM(VirtualLineTotal_others_live) VirtualLineTotal_others_live,		
+			SUM(LineTotal_others) LineTotal_others,
+			SUM(VirtualLineTotal_others) VirtualLineTotal_others,
+			SUM(IBCTurnover) IBCTurnover
 	FROM #tmpReturn2
-	ORDER BY orderkey ASC
-	-- END - Resultset by bettype of 
+	GROUP BY Num,
+			 bettype,
+			 Hedge,
+			 OrderKey
+	ORDER BY num,OrderKey ASC 
+	
 	---------------------------	
 	DROP TABLE #tmpReturn1
 	DROP TABLE #tmpReturn2
