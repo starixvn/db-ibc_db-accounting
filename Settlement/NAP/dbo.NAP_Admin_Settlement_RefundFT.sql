@@ -182,6 +182,34 @@ BEGIN
 	IF @IsSettleAbandonedMatchBetFair = 1
 		SELECT @IsExcludeBetfair = 1
 
+	--=========================================
+	-- Check HTNormalBets and HTCornerBet 
+	DECLARE	@HTNoneCornerBetDone	BIT
+			,@HTCornerBetDone	BIT
+
+	DECLARE	@tmpHTStatus TABLE(
+		HTCornerBet	BIT
+		,inRunning	INT
+	)	
+
+	INSERT INTO @tmpHTStatus(HTCornerBet,inRunning)
+	SELECT	CASE WHEN Bettype IN (200,201,202,203,204,205,207,209) THEN 1
+				 ELSE 0 END 
+			,SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+	FROM bettrans WITH (NOLOCK)
+	WHERE	MatchID = @MatchID 
+			AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) --HT bets
+			AND statusID NOT BETWEEN 101 AND 102 
+	GROUP BY CASE WHEN Bettype IN (200,201,202,203,204,205,207,209) THEN 1
+				 ELSE 0 END 
+
+	IF NOT EXISTS(SELECT TOP 1 1 FROM @tmpHTStatus WHERE HTCornerBet = 0)
+		INSERT INTO @tmpHTStatus(HTCornerBet,inRunning) VALUES(0,0)
+
+	SELECT	@HTNoneCornerBetDone = CASE InRunning WHEN 0 THEN 1 ELSE 0 END 
+	FROM	@tmpHTStatus
+	WHERE	HTCornerBet = 0
+
 	---===============================================
 	--Check if match already Refund HT => refund whole match
 	IF EXISTS (
@@ -242,7 +270,7 @@ BEGIN
 			END CATCH
 		END
 
-								EXEC dbo.NAP_Admin_Settlement_Refund_All 
+																																EXEC dbo.NAP_Admin_Settlement_Refund_All 
 			@matchid						= @matchid
 			,@creator						= @adminid
 			,@IsExcludeBetdaq				= @IsExcludeBetdaq
@@ -298,18 +326,7 @@ BEGIN
 	FROM DBPRO.BODB02.dbo.Match_remark WITH (NOLOCK)
 	WHERE matchid = @matchid	
 	
-	--IF NOT EXISTS (SELECT TOP 1 1 FROM bettrans WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)	
-	--	AND NOT EXISTS (SELECT TOP 1 1 FROM bettransm WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)
-	--BEGIN
-	--	SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0 -- No offer
-	--									   ELSE 4 -- No ticket
-	--								  END
-	--END
-	--ELSE
-	--BEGIN
-	--	SELECT @SettlementStatus135 = 3 -- Calculated (Manual)
-	--END
-	
+
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @HTDone = 1
 	BEGIN
 		DECLARE @TennisTotal SMALLINT
@@ -559,22 +576,27 @@ BEGIN
 
 	DECLARE @RowCount INT
 
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+				EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 		@Command	= 'NAP_Admin_Settlement_RefundFT'
 		,@MatchID	= @matchid
 		,@HTDone	= @HTDone
+		,@HTNoneCornerBetDone = @HTNoneCornerBetDone
 		,@RowCount	= @RowCount OUTPUT
 		,@creator	= @adminid
 
-	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
-		@Command			= 'NAP_Admin_Settlement_RefundFT'
-		,@MatchID			= @matchid
-		,@isExistTotalCorner= @isExistTotalCorner
-		,@isExistHTFCorner	= @isExistHTFCorner
-		,@isExistHTLCorner	= @isExistHTLCorner
-		,@isExistFTFCorner	= @isExistFTFCorner
-		,@isExistFTLCorner	= @isExistFTLCorner
-		,@creator			= @adminid
+	
+	IF @sporttype = 1 
+	BEGIN
+								EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+			@Command			= 'NAP_Admin_Settlement_RefundFT'
+			,@MatchID			= @matchid
+			,@isExistTotalCorner= @isExistTotalCorner
+			,@isExistHTFCorner	= @isExistHTFCorner
+			,@isExistHTLCorner	= @isExistHTLCorner
+			,@isExistFTFCorner	= @isExistFTFCorner
+			,@isExistFTLCorner	= @isExistFTLCorner
+			,@creator			= @adminid
+	END
 
 	IF @RowCount > 0
 	BEGIN
@@ -596,10 +618,6 @@ BEGIN
 			@matchid	= @matchid
 			,@command	= 'F'
 
-			--					EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
-			--@matchid	= @matchid
-			--,@command	= 'PS'
-			--,@ivalue	= @SettlementStatus135
 	END
 
 	-------------------------------------------------------------
@@ -836,6 +854,7 @@ BEGIN
 	END
 END
 GO
+
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundFT] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundFT] TO [vnteam] AS [dbo]

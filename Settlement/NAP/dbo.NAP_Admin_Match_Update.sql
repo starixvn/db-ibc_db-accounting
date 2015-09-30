@@ -15,6 +15,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 	@FTDone BIT = 0,
 	@HTDone BIT = 0,
 	@NoneCornerBetDone	BIT = 0, 
+	@HTNoneCornerBetDone	BIT = 0,
 	@isExcludeCorner	BIT = 0,
 	@isExistRunningCornerBet BIT = 0,
 	@RowCount INT = 0 OUTPUT,
