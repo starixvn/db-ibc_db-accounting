@@ -78,6 +78,7 @@ AS
 		- 20150805@Bobby: Enhance code for SQL parameter sniffing
 		- 20150825@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
+		- 20150930@Bobby: Enhance performance - re-arrange indexers
 */
 BEGIN
 	SET NOCOUNT ON  
@@ -104,14 +105,15 @@ BEGIN
 	--END 
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT, EventType INT)
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, EventType TINYINT, SubProduct VARCHAR(500))
 
-	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+	INSERT INTO #SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	IF @tempBettype <> 0
 	BEGIN
-		DELETE @SportBettype WHERE Bettype <> @tempBettype
+		DELETE #SportBettype 
+		WHERE Bettype <> @tempBettype
 	END
 
 	CREATE TABLE #BetListData (
@@ -198,8 +200,8 @@ BEGIN
 			- LC		: ProductID = 4
 			- VS		: ProductID = 5
 		*/
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (1, 3, 4, 5))
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -273,20 +275,14 @@ BEGIN
 			FROM 
 				bettrans AS b WITH (NOLOCK) 
 				INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND
-					b.winlostdate<= @ToDate AND
-					b.custid = @Custid 
-					--b.bettype < 19001 AND
-					--b.bettype not IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) AND 
-					--b.bettype not between 1501 AND 1599 AND--20120626@Elodie: exclude outright, HR from sportbook
-					--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
-					AND	(
-						s.EventType = 1
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
-					--exclude metric gaming running ticket
-					AND (b.bettype NOT BETWEEN 801 AND 806 OR (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 1)))
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE b.custid 		= @Custid 
+				AND b.matchid 	> 0	
+				AND	s.EventType = 1
+				--exclude metric gaming running ticket
+				AND (s.SubProduct NOT IN('MG-SuperLive') OR (s.SubProduct IN('MG-SuperLive') AND b.statusID NOT IN (0, 1)))
+				AND b.winlostdate BETWEEN @FromDate AND @ToDate 
+			
 			UNION ALL -- translog metric gaming
 			SELECT 
 				b.gameid AS bettype,  
@@ -359,16 +355,15 @@ BEGIN
 			FROM
 				dbo.translog AS b WITH (NOLOCK)
 				INNER JOIN dbo.match AS m WITH (NOLOCK) ON b.eventid = m.matchid
-				INNER JOIN @SportBettype s ON b.gameid = s.Bettype
+				INNER JOIN #SportBettype s ON b.gameid = s.Bettype
 			WHERE
 				b.custid 			= @Custid 
-				AND s.Bettype 		BETWEEN 801 AND 899
-				AND b.winlostdate>= @FromDate 
-				AND b.winlostdate<= @ToDate 
+				AND s.SubProduct 	IN('MG-SuperLive')
 				AND b.statusID		IN (0,1)
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				
 			--Mix Parlay
-			IF (EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 1 AND Bettype = 9))
+			IF (EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 1 AND Bettype = 9))
 			BEGIN	
 				INSERT INTO #BetListData
 				SELECT 
@@ -433,16 +428,14 @@ BEGIN
 					 '' AS transdesc,
 					 0 AS OddsSpread
 				FROM	bettrans AS b WITH (NOLOCK)
-				WHERE	b.winlostdate>= @FromDate AND
-						b.winlostdate<= @ToDate AND
-						b.custid = @Custid  
-						--AND matchid=0  
-						AND matchid = 9
-						AND bettype = 9  
+				WHERE b.custid 		= @Custid  
+					AND matchid 	= 9
+					AND b.bettype 	= 9
+					AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 						
 			END
 			
 			--Combination Mix Parlay
-			IF (EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 1 AND Bettype = 29))
+			IF (EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 1 AND Bettype = 29))
 			BEGIN
 				INSERT INTO #BetListData
 				SELECT 
@@ -507,16 +500,14 @@ BEGIN
 					 '' AS transdesc,
 					0 AS OddsSpread
 				FROM	bettrans AS b WITH (NOLOCK)
-				WHERE	b.winlostdate>= @FromDate AND
-						b.winlostdate<= @ToDate AND
-						b.custid = @Custid  
-						--AND matchid=0  
-						AND matchid = 29
-						AND bettype = 29 
+				WHERE b.custid 		= @Custid  				
+					AND matchid 	= 29
+					AND b.bettype 	= 29
+					AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 						
 			END
 			
 			-- Outright
-			IF (EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 1 AND Bettype = 10))
+			IF (EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 1 AND Bettype = 10))
 			BEGIN
 				INSERT INTO #BetListData
 				SELECT 
@@ -585,12 +576,13 @@ BEGIN
 					 '' AS transdesc,
 					0 AS OddsSpread
 				FROM	bettrans AS b WITH (NOLOCK)
-						INNER JOIN outright AS odds WITH (NOLOCK) on b.matchid=odds.orid   
-						INNER JOIN league l WITH (NOLOCK) on odds.leagueid=l.leagueid     
-				WHERE b.bettype = 10
-				AND b.winlostdate >= @FromDate AND   
-				b.winlostdate<= @ToDate  AND
-				b.custid = @Custid 
+					INNER JOIN outright AS odds WITH (NOLOCK) on b.matchid=odds.orid   
+					INNER JOIN league l WITH (NOLOCK) on odds.leagueid=l.leagueid     
+				WHERE b.custid 		= @Custid 
+					AND b.matchid 	> 0
+					AND b.bettype 	= 10
+					AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 	
+				
 			END
 
 			UPDATE betList
@@ -605,8 +597,7 @@ BEGIN
 		END
 		
 		--- Casino
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 6 AND Bettype = @tempBettype)
+		IF (EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 6)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
@@ -672,21 +663,19 @@ BEGIN
 				 '' AS transdesc,
 				 0 AS OddsSpread
 			FROM	bettrans b WITH (NOLOCK)   
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid  
-					--AND bettype = 71								--20120405@Hurri
-					AND	(
-						s.ProductId 	= 6 	
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE b.custid 			= @Custid
+				AND b.matchid 		= 0
+				AND	(
+					s.ProductId 	= 6 	
+					AND s.EventType = 0
+				)
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 	
 		END
 		
 		--ibc bingo
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 7 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 7)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
@@ -752,21 +741,19 @@ BEGIN
 				 '' AS transdesc,
 				 0 AS OddsSpread
 			FROM	bettrans b WITH (NOLOCK)   
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					--AND bettype = 73
-					AND	(
-						s.ProductId 	= 7 	
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					) 
+			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE	b.custid 		= @Custid 
+				AND b.matchid 		= 0
+				AND	(
+					s.ProductId 	= 7 	
+					AND s.EventType = 0
+				)
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 					
 		END
 		
 		--ibc KENO
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 8 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 8)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
@@ -832,17 +819,12 @@ BEGIN
 				 '' AS transdesc,
 				 0 AS OddsSpread
 			FROM	bettrans b WITH (NOLOCK)   
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				OUTER APPLY dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					--AND bettype BETWEEN 1501 AND 1599
-					AND	(
-						s.ProductId 	= 8 	
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			WHERE	b.custid 		= @Custid 
+				AND b.matchid 		> 0
+				AND	s.ProductId 	= 8
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 					
 			UNION ALL-- translog
 			SELECT 
@@ -907,28 +889,22 @@ BEGIN
 				 '' AS transdesc,
 				 0 AS OddsSpread
 			FROM translog b WITH (NOLOCK)   
-				INNER JOIN @SportBettype s ON s.Bettype = b.gameID
+				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 				OUTER APPLY dbo.[f_ParseTransDesc](b.TransDesc, b.gameid) d
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid AND
-					--AND b.gameID BETWEEN 1501 AND 1599
-					b.statusID = 0
-					AND	(
-						s.ProductId 	= 8	
-						AND s.EventType = 1
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			WHERE b.custid 			= @Custid
+				AND s.ProductId 	= 8	
+				AND b.statusID 		= 0
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END		
 		
 		--- P2P
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 9 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 9)
 		)
 		BEGIN	
 			INSERT INTO #BetListData
 			SELECT 
-				 b.bettype,   
+				 b.bettype,  
 				 b.transid,   
 				 ISNULL(b.betid,0),
 				 b.refno,
@@ -989,20 +965,16 @@ BEGIN
 				 '' AS transdesc,
 				 0 AS OddsSpread
 			FROM	bettrans b WITH (NOLOCK)   
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid  
-					AND	(
-						s.ProductId 	= 9 	
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE b.custid 			= @Custid
+				AND b.matchid 		= 0
+				AND	s.ProductId 	= 9
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END
 		
 		-- HR		
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 2 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 2)
 		)
 		BEGIN
 			INSERT INTO #BetListData 
@@ -1071,7 +1043,7 @@ BEGIN
 			FROM	bettrans AS b WITH (NOLOCK)   
 					INNER JOIN outright AS odds WITH (NOLOCK) on b.matchid = odds.orid   
 					INNER JOIN league l WITH (NOLOCK) on odds.leagueid = l.leagueid    
-					INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 					LEFT JOIN (			
 						SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 								f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
@@ -1079,20 +1051,15 @@ BEGIN
 								INNER JOIN bettransm f WITH (NOLOCK) ON t.refno = f.refno 
 						WHERE	t.bettype IN (31,41) AND f.bettype IN (32,42)
 					) bm on b.transid = bm.refno 
-			WHERE	b.winlostdate >= @FromDate 
-					AND b.winlostdate<= @ToDate 
-					AND b.custid = @Custid  
-					--and  s.ProductID = 2 --b.bettype IN (31,32,33,41,42,43) 
-					AND	(
-						s.ProductId 	= 2 	
-						AND s.EventType = 2
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			WHERE b.custid 			= @Custid  	
+				AND b.matchid 		> 0
+				AND	s.ProductId 	= 2
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END		
 		
 		-- Virtual HR
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 5 AND Bettype = @tempBettype)
+		IF ( 
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 5)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -1164,7 +1131,7 @@ BEGIN
 				bettrans AS b WITH (NOLOCK) 
 				INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-				INNER JOIN @SportBettype s ON s.BetType = b.BetType 
+				INNER JOIN #SportBettype s ON s.BetType = b.BetType 
 				LEFT JOIN (     
 					SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 					  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
@@ -1172,23 +1139,15 @@ BEGIN
 					  INNER JOIN bettransm f WITH (NOLOCK) ON t.refno = f.refno   
 					WHERE t.bettype = 1231 AND f.bettype = 1232 
 					) bm on b.refno = bm.refno  
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid
-					--s.ProductID = 5 AND
-					--s.EventType = 3
-					AND	(
-						s.ProductId 	= 5
-						AND s.EventType = 3
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
-					
-					--b.bettype IN (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())					 
+			WHERE b.custid 			= @Custid
+				AND b.matchid		> 0
+				AND s.ProductID 	= 5 
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END
 		
 		--Gold Deluxe
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 12 AND Bettype = @tempBettype)
+		IF ( 
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 12)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -1254,16 +1213,11 @@ BEGIN
 				 '' AS transdesc,
 				 0 AS OddsSpread
 			FROM	dbo.bettrans b WITH (NOLOCK)   
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					--AND	s.ProductID = 12
-					AND	(
-						s.ProductId 	= 12
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE b.custid 			= @Custid 
+				AND	b.matchid 		IN (0, 255)
+				AND s.ProductID 	= 12
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 					
 			UNION ALL-- translog
 			SELECT 
@@ -1311,7 +1265,7 @@ BEGIN
 				 255 AS sporttype, 
 				 b.ip,
 				 b.betfrom,
-				 NULL matchid,
+				 0 matchid,
 				 CONVERT(BIT,0) AS IsNeutral,
 				 0 AS allowdelete,
 				 (-b.actual_stake)  winlost,
@@ -1328,22 +1282,16 @@ BEGIN
 				 '' AS transdesc,
 				 0 AS OddsSpread
 			FROM dbo.translog b WITH (NOLOCK)
-				INNER JOIN @SportBettype s ON s.Bettype = b.gameid
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid AND
-					b.statusid = 0
-					--AND s.ProductID = 12 
-					AND	(
-						s.ProductId 	= 12
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+				INNER JOIN #SportBettype s ON s.Bettype = b.gameid
+			WHERE b.custid 			= @Custid
+				AND b.statusid 		= 0
+				AND s.ProductID 	= 12 	
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END
 
 		-- Micro Gaming
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 13 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 13)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -1409,18 +1357,13 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM bettrans AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-			WHERE b.winlostdate >= @FromDate 
-				AND b.winlostdate <= @ToDate 
-				AND b.custid = @Custid 
-				AND (
-					s.ProductId = 13
-					AND s.EventType = 0
-					AND (@tempBettype = 0 OR s.bettype = @tempBettype)
-				)
-
+				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
+			WHERE b.custid 			= @Custid 
+				AND b.matchid 		IN (203)
+				AND s.ProductId 	= 13
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
+				
 			UNION ALL-- translog
-
 			SELECT
 				b.gameid bettype,
 				0 AS transid,
@@ -1483,21 +1426,16 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM translog AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
-			WHERE b.winlostdate >= @FromDate
-				AND b.winlostdate <= @ToDate
-				AND b.custid = @Custid 
-				AND b.statusID = 0
-				AND	(
-					s.ProductId = 13
-					AND s.EventType = 0
-					AND (@tempBettype = 0 OR s.bettype = @tempBettype)
-				)
+				INNER JOIN #SportBettype AS s ON s.Bettype = b.gameID
+			WHERE b.custid 			= @Custid 
+				AND s.ProductId 	= 13
+				AND b.statusID 		= 0
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END
 
 		-- Colossus Bet
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 15 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 15)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -1563,18 +1501,13 @@ BEGIN
 				b.transdesc,
 				0 AS OddsSpread
 			FROM bettrans AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-			WHERE b.winlostdate >= @FromDate 
-				AND b.winlostdate <= @ToDate 
-				AND b.custid = @Custid 
-				AND (
-					s.ProductId = 15
-					AND s.EventType = 0
-					AND (@tempBettype = 0 OR s.bettype = @tempBettype)
-				)
+				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
+			WHERE b.custid 			= @Custid 
+				AND b.matchid 		= 204
+				AND s.ProductId 	= 15
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 
 			UNION ALL-- translog
-
 			SELECT
 				b.gameid bettype,
 				0 AS transid,
@@ -1637,16 +1570,11 @@ BEGIN
 				b.transdesc,
 				0 AS OddsSpread
 			FROM translog AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
-			WHERE b.winlostdate >= @FromDate
-				AND b.winlostdate <= @ToDate
-				AND b.custid = @Custid 
-				AND b.statusID = 0
-				AND	(
-					s.ProductId = 15
-					AND s.EventType = 0
-					AND (@tempBettype = 0 OR s.bettype = @tempBettype)
-				)
+				INNER JOIN #SportBettype AS s ON s.Bettype = b.gameID
+			WHERE b.custid 			= @Custid 
+				AND s.ProductId 	= 15
+				AND b.statusID 		= 0
+				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END
 	END
 
@@ -1658,8 +1586,9 @@ BEGIN
 		- LC		: ProductID = 4
 		- VS		: ProductID = 5
 		*/
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID IN (1, 3, 4, 5) AND Bettype = @tempBettype)
+		SET @ToDate = @MoveBetsDay
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID IN (1, 3, 4, 5))
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -1728,22 +1657,15 @@ BEGIN
 				bettrans14 AS b WITH (NOLOCK) 
 				INNER JOIN match14 AS m WITH (NOLOCK) 
 				on b.matchid = m.matchid
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					AND	(
-						s.EventType = 1
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
-					--and	s.EventType = 1
-					--b.bettype < 19001 and
-					--b.bettype not IN (10,31,32,33,41,42,43/*,1231,1232,1233,1237,1238*/) and 
-					--b.bettype NOT BETWEEN 1501 and 1599 and --20120626@Elodie: exclude outright, HR from sportbook
-					--b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate
+				AND b.custid 			= @Custid 
+				AND b.matchid  		> 0
+				AND s.EventType 	= 1
 			
 			--Mix Parlay
-			IF (EXISTS(SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 1 AND Bettype = 9))
+			IF (EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 1 AND Bettype = 9))
 			BEGIN
 				INSERT INTO #BetListData
 				SELECT 
@@ -1808,16 +1730,14 @@ BEGIN
 					 '' AS transdesc,
 					 0 AS OddsSpread
 				FROM	bettrans14 AS b WITH (NOLOCK)   
-				WHERE	b.winlostdate>= @FromDate AND    
-						b.winlostdate<= @ToDate AND   
-						b.custid = @Custid  
-						--and matchid=0  
-						AND matchid = 9
-						AND bettype = 9  		
+				WHERE	b.winlostdate 	BETWEEN @FromDate AND @ToDate   
+						AND b.custid 	= @Custid  
+						AND matchid 	= 9
+						AND bettype 	= 9  		
 			END
 				
 			--Combination Mix Parlay
-			IF (EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 1 AND Bettype = 29))
+			IF (EXISTS(SELECT TOP 1 1 FROM  #SportBettype s  WHERE ProductID = 1 AND Bettype = 29))
 			BEGIN
 				INSERT INTO #BetListData
 				SELECT 
@@ -1882,15 +1802,13 @@ BEGIN
 					'' AS transdesc,
 					0 AS OddsSpread
 				FROM	bettrans14 AS b WITH (NOLOCK)   
-				WHERE	b.winlostdate>= @FromDate AND    
-						b.winlostdate<= @ToDate AND   
-						b.custid = @Custid  
-						--and matchid=0  
-						AND matchid = 29
-						AND bettype = 29  	
+				WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate   
+					AND b.custid 		= @Custid  
+					AND matchid 		= 29
+					AND bettype 		= 29  	
 			END	
 			-- Outright
-			IF (EXISTS(SELECT TOP 1 1 FROM  @SportBettype s  WHERE ProductID = 1 AND Bettype = 10))
+			IF (EXISTS(SELECT TOP 1 1 FROM  #SportBettype s  WHERE ProductID = 1 AND Bettype = 10))
 			BEGIN
 				INSERT INTO #BetListData
 				SELECT 
@@ -1956,10 +1874,11 @@ BEGIN
 				FROM	bettrans14 AS b WITH (NOLOCK)   
 						INNER JOIN outright14 AS odds WITH (NOLOCK) on b.matchid=odds.orid   
 						INNER JOIN league l WITH (NOLOCK) on odds.leagueid=l.leagueid     
-				WHERE b.bettype = 10
-				AND b.winlostdate >= @FromDate AND   
-				b.winlostdate<= @ToDate  AND
-				b.custid = @Custid 	
+				WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate  
+					AND b.custid 		= @Custid
+					AND b.matchid		> 0
+					AND b.bettype 		= 10
+				 	
 			END
 
 			UPDATE betList
@@ -1974,8 +1893,8 @@ BEGIN
 		END
 		
 		--- Casino
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 6 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 6)
 		)
 		BEGIN
 			
@@ -2041,22 +1960,18 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM	bettrans14 b WITH (NOLOCK)   
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					--AND	s.ProductID = 6 
-					--AND bettype = 71								--20120405@Hurri	
-					AND	(
-						s.ProductId 	= 6
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 	
+				AND b.custid 		= @Custid 
+				AND b.matchid		= 0
+				AND s.ProductId 	= 6
+				
+					
 		END
 		
 		--ibc bingo
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 9 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 7)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -2122,22 +2037,16 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM	bettrans14 b WITH (NOLOCK)   
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					--AND	s.ProductID = 7
-					--AND bettype = 73
-					AND	(
-						s.ProductId 	= 7
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		= 0
+				AND	s.ProductID 	= 7
 		END
 		
 		--ibc KENO
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 8 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 8)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -2203,23 +2112,19 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM	bettrans14 b WITH (NOLOCK)   
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				OUTER APPLY dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					--AND	s.ProductID = 8
-					--AND bettype BETWEEN 1501 AND 1599
-					AND	(
-						s.ProductId 	= 8
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			WHERE	b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		> 0
+				AND	s.ProductID 	= 8
+			OPTION (RECOMPILE)
+	
 		END
 		
 		--- P2P
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 9 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 9)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -2283,22 +2188,18 @@ BEGIN
 				 b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM	bettrans14 b WITH (NOLOCK)   
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid  
-					--AND bettype  = 1000
-					AND	(
-						s.ProductId 	= 9
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			FROM bettrans14 b WITH (NOLOCK)   
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE	b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		= 0
+				AND s.ProductId 	= 9
+	
 		END
 		
 		-- HR		
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 2 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 2)
 		)
 		BEGIN	
 			INSERT INTO #BetListData 
@@ -2367,7 +2268,7 @@ BEGIN
 			FROM	bettrans14 AS b WITH (NOLOCK)   
 					INNER JOIN outright14 AS odds WITH (NOLOCK) on b.matchid=odds.orid   
 					INNER JOIN league l WITH (NOLOCK) on odds.leagueid=l.leagueid    
-					INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 					LEFT JOIN (			
 						SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 								f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
@@ -2375,19 +2276,15 @@ BEGIN
 								INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno 
 						WHERE	t.bettype IN (31,41) AND f.bettype IN (32,42)
 					) bm on b.transid = bm.refno 
-			WHERE	b.winlostdate >= @FromDate 
-					AND b.winlostdate<= @ToDate 
-					AND b.custid = @Custid 
-					--and s.ProductID = 2 --b.bettype IN (31,32,33,41,42,43)
-					AND	(
-						s.ProductId 	= 2 	
-						AND s.EventType = 2
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		> 0
+				AND s.ProductId 	= 2	
+			OPTION (RECOMPILE)
 		END
 		
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 5 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 5)
 		)
 		BEGIN		
 			-- Virtual HR
@@ -2460,7 +2357,7 @@ BEGIN
 				bettrans14 AS b WITH (NOLOCK) 
 				INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-				INNER JOIN @SportBettype s ON s.BetType = b.BetType 
+				INNER JOIN #SportBettype s ON s.BetType = b.BetType 
 				LEFT JOIN (     
 					SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 					  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
@@ -2468,21 +2365,15 @@ BEGIN
 					  INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno   
 					WHERE t.bettype = 1231 AND f.bettype = 1232 
 					) bm on b.refno = bm.refno  
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid 
-					--and	s.ProductID=5 
-					--AND s.EventType=3
-					--b.bettype IN (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())		
-					AND	(
-						s.ProductId 	= 5 	
-						AND s.EventType = 3
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		> 0
+				AND (s.ProductId 	= 5	AND s.EventType = 3)
+			OPTION (RECOMPILE)
 		END
 		
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 12 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 12)
 		)
 		BEGIN		
 			--Gold Deluxe
@@ -2549,20 +2440,16 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM	dbo.bettrans14 b WITH (NOLOCK)   
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			WHERE	b.winlostdate>= @FromDate AND    
-					b.winlostdate<= @ToDate AND   
-					b.custid = @Custid
-					AND	(
-						s.ProductId 	= 12
-						AND s.EventType = 0
-						AND (@tempBettype 	= 0 OR s.bettype = @tempBettype)
-					)
+			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		IN (0, 255)
+				AND s.ProductId 	= 12
 		END
 
 		-- Micro Gaming
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 13 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 13)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -2628,21 +2515,17 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM bettrans14 AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-			WHERE 
-				b.winlostdate >= @FromDate
-				AND b.winlostdate <= @ToDate
-				AND b.custid = @Custid
-				AND (
-					s.ProductId = 13
-					AND s.EventType = 0
-					AND (@tempBettype = 0 OR s.bettype = @tempBettype)
-				)
+				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		IN (203)
+				AND s.ProductId 	= 13
+				
 		END
 
 		-- Colossus Bet
-		IF (@tempBettype = 0
-			OR EXISTS(SELECT TOP 1 1 FROM  @SportBettype s WHERE ProductID = 15 AND Bettype = @tempBettype)
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID = 15)
 		)
 		BEGIN
 			INSERT INTO #BetListData
@@ -2708,26 +2591,23 @@ BEGIN
 				b.transdesc,
 				0 AS OddsSpread
 			FROM bettrans14 AS b WITH (NOLOCK)
-				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-			WHERE 
-				b.winlostdate >= @FromDate
-				AND b.winlostdate <= @ToDate
-				AND b.custid = @Custid
-				AND (
-					s.ProductId = 15
-					AND s.EventType = 0
-					AND (@tempBettype = 0 OR s.bettype = @tempBettype)
-				)
+				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
+			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
+				AND b.custid 		= @Custid 
+				AND b.matchid		IN (204)
+				AND s.ProductId 	= 15
 		END
 	END
 
-	DELETE #BetListData WHERE Sporttype = 1 AND Bettype = 903
+	DELETE #BetListData 
+	WHERE Sporttype = 1 
+		AND Bettype = 903
 
 	SELECT * FROM #BetListData
 	ORDER BY transid  
 
 	IF EXISTS (SELECT TOP 1 1 
-			FROM @SportBettype sp 
+			FROM #SportBettype sp 
 				INNER JOIN #BetListData d ON d.bettype = sp.bettype 
 			WHERE ProductID IN (4,12)) 
 	BEGIN
@@ -2746,7 +2626,7 @@ BEGIN
 				BG.betteam,
 				BG.TransDesc 
 			FROM dbo.bettransg BG WITH (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (4)
+				INNER JOIN #SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (4)
 				INNER JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid IN (4))
 			UNION ALL
 			SELECT 
@@ -2761,7 +2641,7 @@ BEGIN
 				BG.betteam,
 				BG.TransDesc 
 			FROM dbo.bettransg BG WITH (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (12)
+				INNER JOIN #SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (12)
 				INNER JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid IN (12))
 		END 
 
@@ -2780,7 +2660,7 @@ BEGIN
 				BG.betteam,
 				BG.TransDesc
 			FROM dbo.bettransg14 BG WITH (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (4)
+				INNER JOIN #SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (4)
 				INNER JOIN #BetListData B1 ON (BG.refno = B1.refno AND BG.bettype = B1.bettype AND sp.Productid IN (4))
 			UNION ALL
 			SELECT 
@@ -2795,16 +2675,18 @@ BEGIN
 				BG.betteam,
 				BG.TransDesc 
 			FROM dbo.bettransg14 BG WITH (NOLOCK)
-				INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (12)
+				INNER JOIN #SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (12)
 				INNER JOIN #BetListData B2 ON (BG.refno = B2.transid AND BG.bettype = B2.bettype AND sp.Productid IN (12))
 		END 
 	END
 
-	SELECT * FROM #BetListDetailData BG ORDER BY BG.refno
+	SELECT * FROM #BetListDetailData BG 
+	ORDER BY BG.refno
 
 	DROP TABLE #BetListData
 	DROP TABLE #BetListDetailData
 	DROP TABLE #LASAgent
+	DROP TABLE #SportBettype
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList] TO [bodbAdminNet] AS [dbo]
