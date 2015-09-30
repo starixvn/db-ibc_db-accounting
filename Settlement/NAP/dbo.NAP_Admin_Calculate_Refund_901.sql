@@ -134,7 +134,7 @@ BEGIN
 			BuyBackNo,
 			PayOut
         FROM bettradeSelling b WITH(NOLOCK)
-		WHERE ticketID IN (SELECT DISTINCT refno FROM #bettrans)
+		WHERE ticketID IN (SELECT transid FROM #tmp)
 			AND status IN ('Accept','Confirm')
 	END
 	
