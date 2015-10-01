@@ -25,6 +25,8 @@ AS
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
+		- 20150904@Helen: commission setting for MO [Redmine #41470]
+		
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -564,6 +566,41 @@ BEGIN
 			@ErrCode = 217
 		RETURN
 	END	
+	
+	--Check commission for Myanmar Odds
+	DECLARE @IsMyanmarOdds_source BIT = 0
+	DECLARE @IsMyanmarOdds_destination BIT = 0
+	
+	SET @IsMyanmarOdds_destination =  dbo.fn_IsMyanmarOdds (@mrecommend)
+
+	SET @IsMyanmarOdds_source =  dbo.fn_IsMyanmarOdds (@mrecommend_old)
+
+	IF @IsMyanmarOdds_source <> @IsMyanmarOdds_destination
+	BEGIN
+		SELECT @ErrMsg = 'Cannot move customer ' + @agentname + ' since amongs its new and old sites, one has % Odds.',
+					@ErrCode = 218
+		RETURN	
+	END	
+	
+	IF @IsMyanmarOdds_source = 1
+	BEGIN
+		IF EXISTS(
+			SELECT	1
+			FROM	AgentCommRate mcs WITH(NOLOCK) 
+				JOIN AgentCommRate acs WITH(NOLOCK) ON	acs.custid = @recommend 
+														AND acs.sporttype = mcs.sporttype 
+														AND acs.bettype = mcs.bettype
+			WHERE	mcs.custid = @mrecommend 
+					AND mcs.sporttype = 1 
+					AND mcs.bettype = 301
+					AND mcs.CommRate < acs.CommRate
+		)
+		BEGIN
+			SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s cash-in share for Colossus Bets is less than agent''s cash-in share.',
+					@ErrCode = 219
+			RETURN	
+		END
+	END
 	--Check identical autoposition taking
 	IF exists (
 		SELECT 1 from 

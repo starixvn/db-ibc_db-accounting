@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster]
+alter PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
 	@userid		INT,
@@ -24,6 +24,7 @@ AS
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
+		- 20150904@Helen: commission setting for MO [Redmine #41470]
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -542,7 +543,43 @@ BEGIN
 		RETURN	
 	END
 	
+	--Check Myanmar Odds
+	DECLARE @IsMyanmarOdds_source BIT = 0
+	DECLARE @IsMyanmarOdds_destination BIT = 0
 	
+	SET @IsMyanmarOdds_destination =  dbo.fn_IsMyanmarOdds (@srecommend)
+
+	SET @IsMyanmarOdds_source = dbo.fn_IsMyanmarOdds (@srecommend_old)
+
+	
+	IF @IsMyanmarOdds_source <> @IsMyanmarOdds_destination
+	BEGIN
+		
+		SELECT @ErrMsg = 'Cannot move customer ' + @mastername + ' since amongs its new and old sites, one has % Odds.',
+				@ErrCode = 212
+		RETURN	
+	END	
+	
+	IF @IsMyanmarOdds_source = 1
+	BEGIN
+		IF EXISTS(
+				SELECT	1 
+				FROM	AgentCommRate  scs WITH(NOLOCK)
+					JOIN AgentCommRate mcs WITH(NOLOCK) 
+						ON	mcs.custid = @mrecommend 
+							AND scs.sporttype = mcs.sporttype 
+							AND scs.bettype = mcs.bettype
+				WHERE	scs.custid = @srecommend 
+						AND scs.sporttype = 1 
+						AND scs.bettype = 301
+						AND scs.CommRate < mcs.CommRate
+		)
+		BEGIN
+			SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Myanmar Odds is less than master''s commission.',
+					@ErrCode = 213
+			RETURN	
+		END
+	END
 	--Check Position Taking
 		--n4<=s3+m3<=s4		IF i3=0
 		--m3<=s4 and u3<=s4	IF i3=1

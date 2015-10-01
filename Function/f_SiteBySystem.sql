@@ -19,6 +19,7 @@ Revisions:
 	- 20130404@Jamie: Put ACCUUS for testing 
 	- 20130718@Lukas: add ACCUT group
 	- 20130909@Jamie: ADD group ACCYEN668 
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	
 	Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING'
@@ -50,6 +51,8 @@ BEGIN
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 1 --BEST-ODDS
+		UNION ALL 
+		SELECT 184 -- 766666
 	END
 	ELSE IF (@System = 'ACCDDD')
 	BEGIN
@@ -66,3 +69,4 @@ GO
 GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbAdminNet]
 GO
 GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbExtAccNet] 
+
