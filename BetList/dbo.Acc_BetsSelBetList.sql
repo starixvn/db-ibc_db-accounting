@@ -2,11 +2,13 @@
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BetsSelBetList]
+(
 	@FromDate		DATETIME,
 	@ToDate			DATETIME,
 	@MoveBetsDay	DATETIME,
 	@CustID			INT,
 	@Bettype		INT = 0
+)
 AS  
 /*
 	Created by: [Creator]
@@ -273,7 +275,7 @@ BEGIN
 				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
 				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM 
-				bettrans AS b WITH (NOLOCK) 
+				bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype) 
 				INNER JOIN match AS m WITH (NOLOCK) ON b.matchid = m.matchid --phuong.nguyen, remove left join match_remark
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.custid 		= @Custid 
@@ -575,7 +577,7 @@ BEGIN
 					 b.BetCheck,
 					 '' AS transdesc,
 					0 AS OddsSpread
-				FROM	bettrans AS b WITH (NOLOCK)
+				FROM	bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
 					INNER JOIN outright AS odds WITH (NOLOCK) on b.matchid=odds.orid   
 					INNER JOIN league l WITH (NOLOCK) on odds.leagueid=l.leagueid     
 				WHERE b.custid 		= @Custid 
@@ -666,10 +668,7 @@ BEGIN
 			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.custid 			= @Custid
 				AND b.matchid 		= 0
-				AND	(
-					s.ProductId 	= 6 	
-					AND s.EventType = 0
-				)
+				AND	s.ProductId 	= 6
 				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 	
 		END
 		
@@ -744,10 +743,7 @@ BEGIN
 			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE	b.custid 		= @Custid 
 				AND b.matchid 		= 0
-				AND	(
-					s.ProductId 	= 7 	
-					AND s.EventType = 0
-				)
+				AND	s.ProductId 	= 7
 				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate 					
 		END
 		
@@ -818,7 +814,7 @@ BEGIN
 				 b.BetCheck,
 				 '' AS transdesc,
 				 0 AS OddsSpread
-			FROM	bettrans b WITH (NOLOCK)   
+			FROM	bettrans b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)   
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				OUTER APPLY dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 			WHERE	b.custid 		= @Custid 
@@ -1040,16 +1036,20 @@ BEGIN
 				 b.BetCheck,
 				 '' AS transdesc,
 				0 AS OddsSpread
-			FROM	bettrans AS b WITH (NOLOCK)   
+			FROM	bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)   
 					INNER JOIN outright AS odds WITH (NOLOCK) on b.matchid = odds.orid   
 					INNER JOIN league l WITH (NOLOCK) on odds.leagueid = l.leagueid    
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 					LEFT JOIN (			
 						SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 								f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
-						FROM	bettransm t WITH (NOLOCK)
-								INNER JOIN bettransm f WITH (NOLOCK) ON t.refno = f.refno 
-						WHERE	t.bettype IN (31,41) AND f.bettype IN (32,42)
+						FROM dbo.bettransm t WITH (NOLOCK)
+							INNER JOIN dbo.bettransm f WITH (NOLOCK) 
+							ON t.refno = f.refno 
+						WHERE t.custid = @custid
+							AND t.winlostdate BETWEEN @FromDate AND @ToDate
+							AND t.bettype IN (31,41) 
+							AND f.bettype IN (32,42)
 					) bm on b.transid = bm.refno 
 			WHERE b.custid 			= @Custid  	
 				AND b.matchid 		> 0
@@ -1128,20 +1128,25 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM 
-				bettrans AS b WITH (NOLOCK) 
+				bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype) 
 				INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 				INNER JOIN #SportBettype s ON s.BetType = b.BetType 
 				LEFT JOIN (     
 					SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 					  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
-					FROM bettransm t WITH (NOLOCK)  
-					  INNER JOIN bettransm f WITH (NOLOCK) ON t.refno = f.refno   
-					WHERE t.bettype = 1231 AND f.bettype = 1232 
-					) bm on b.refno = bm.refno  
+					FROM dbo.bettransm t WITH (NOLOCK)  
+						INNER JOIN dbo.bettransm f WITH (NOLOCK) 
+						ON t.refno = f.refno   
+					WHERE t.custid = @custid
+						AND t.winlostdate BETWEEN @FromDate AND @ToDate
+						AND t.bettype = 1231 
+						AND f.bettype = 1232 
+				) bm on b.refno = bm.refno  
 			WHERE b.custid 			= @Custid
 				AND b.matchid		> 0
-				AND s.ProductID 	= 5 
+				AND s.ProductID 	= 5
+				AND s.eventtype		= 3				
 				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END
 		
@@ -1586,7 +1591,6 @@ BEGIN
 		- LC		: ProductID = 4
 		- VS		: ProductID = 5
 		*/
-		SET @ToDate = @MoveBetsDay
 		IF (
 			EXISTS(SELECT TOP 1 1 FROM  #SportBettype s WHERE ProductID IN (1, 3, 4, 5))
 		)
@@ -1654,13 +1658,13 @@ BEGIN
 				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
 				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM 
-				bettrans14 AS b WITH (NOLOCK) 
+				bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413) 
 				INNER JOIN match14 AS m WITH (NOLOCK) 
 				on b.matchid = m.matchid
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate
-				AND b.custid 			= @Custid 
+				AND b.custid 		= @Custid 
 				AND b.matchid  		> 0
 				AND s.EventType 	= 1
 			
@@ -1729,7 +1733,7 @@ BEGIN
 					 b.BetCheck,
 					 '' AS transdesc,
 					 0 AS OddsSpread
-				FROM	bettrans14 AS b WITH (NOLOCK)   
+				FROM	bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)   
 				WHERE	b.winlostdate 	BETWEEN @FromDate AND @ToDate   
 						AND b.custid 	= @Custid  
 						AND matchid 	= 9
@@ -1801,7 +1805,7 @@ BEGIN
 					 b.BetCheck,
 					'' AS transdesc,
 					0 AS OddsSpread
-				FROM	bettrans14 AS b WITH (NOLOCK)   
+				FROM	bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)   
 				WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate   
 					AND b.custid 		= @Custid  
 					AND matchid 		= 29
@@ -1871,7 +1875,7 @@ BEGIN
 					 b.BetCheck,
 					'' AS transdesc,
 					0 AS OddsSpread
-				FROM	bettrans14 AS b WITH (NOLOCK)   
+				FROM	bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)   
 						INNER JOIN outright14 AS odds WITH (NOLOCK) on b.matchid=odds.orid   
 						INNER JOIN league l WITH (NOLOCK) on odds.leagueid=l.leagueid     
 				WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate  
@@ -1959,7 +1963,7 @@ BEGIN
 				 b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM	bettrans14 b WITH (NOLOCK)   
+			FROM	bettrans14 b WITH (NOLOCK, INDEX=bettrans1413)   
 			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 	
 				AND b.custid 		= @Custid 
@@ -2036,7 +2040,7 @@ BEGIN
 				 b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM	bettrans14 b WITH (NOLOCK)   
+			FROM	bettrans14 b WITH (NOLOCK, INDEX=bettrans1413)   
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
@@ -2111,14 +2115,14 @@ BEGIN
 				b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM	bettrans14 b WITH (NOLOCK)   
+			FROM	bettrans14 b WITH (NOLOCK, INDEX=bettrans1413)   
 			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				OUTER APPLY dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 			WHERE	b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
 				AND b.matchid		> 0
 				AND	s.ProductID 	= 8
-			OPTION (RECOMPILE)
+			
 	
 		END
 		
@@ -2188,7 +2192,7 @@ BEGIN
 				 b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM bettrans14 b WITH (NOLOCK)   
+			FROM bettrans14 b WITH (NOLOCK, INDEX=bettrans1413)   
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE	b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
@@ -2265,22 +2269,32 @@ BEGIN
 				 b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM	bettrans14 AS b WITH (NOLOCK)   
+			FROM	bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)   
 					INNER JOIN outright14 AS odds WITH (NOLOCK) on b.matchid=odds.orid   
 					INNER JOIN league l WITH (NOLOCK) on odds.leagueid=l.leagueid    
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
-					LEFT JOIN (			
+					/*LEFT JOIN (			
 						SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
 								f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
 						FROM	bettransm14 t WITH (NOLOCK)
 								INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno 
 						WHERE	t.bettype IN (31,41) AND f.bettype IN (32,42)
-					) bm on b.transid = bm.refno 
+					) bm on b.transid = bm.refno */
+					OUTER APPLY (			
+						SELECT	t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking, t.finalodds,
+								f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2, f.finalodds finalodds2
+						FROM dbo.bettransm14 t WITH (NOLOCK)
+							INNER JOIN dbo.bettransm14 f WITH (NOLOCK) 
+							ON t.refno = f.refno 
+						WHERE t.refno = b.transid	
+							AND t.bettype IN (31,41) 
+							AND f.bettype IN (32,42)
+					) bm
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
 				AND b.matchid		> 0
 				AND s.ProductId 	= 2	
-			OPTION (RECOMPILE)
+			
 		END
 		
 		IF (
@@ -2354,22 +2368,32 @@ BEGIN
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM 
-				bettrans14 AS b WITH (NOLOCK) 
+				bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413) 
 				INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 				INNER JOIN #SportBettype s ON s.BetType = b.BetType 
-				LEFT JOIN (     
+				/*LEFT JOIN (     
 					SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
 					  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
 					FROM bettransm14 t WITH (NOLOCK)  
 					  INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno   
 					WHERE t.bettype = 1231 AND f.bettype = 1232 
-					) bm on b.refno = bm.refno  
+				) bm on b.refno = bm.refno */
+				OUTER APPLY (     
+					SELECT t.refno, t.apositiontaking , t.mpositiontaking, t.spositiontaking,
+					  f.apositiontaking apositiontaking2, f.mpositiontaking mpositiontaking2, f.spositiontaking spositiontaking2
+					FROM dbo.bettransm14 t WITH (NOLOCK)  
+						INNER JOIN dbo.bettransm14 f WITH (NOLOCK) 
+						ON t.refno = f.refno   
+					WHERE t.refno = b.refno
+					AND t.bettype = 1231 
+					AND f.bettype = 1232 
+				) bm 
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
 				AND b.matchid		> 0
 				AND (s.ProductId 	= 5	AND s.EventType = 3)
-			OPTION (RECOMPILE)
+			
 		END
 		
 		IF (
@@ -2439,7 +2463,7 @@ BEGIN
 				 b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM	dbo.bettrans14 b WITH (NOLOCK)   
+			FROM	dbo.bettrans14 b WITH (NOLOCK, INDEX=bettrans1413)   
 			INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
@@ -2514,7 +2538,7 @@ BEGIN
 				b.BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM bettrans14 AS b WITH (NOLOCK)
+			FROM bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
@@ -2590,7 +2614,7 @@ BEGIN
 				b.BetCheck,
 				b.transdesc,
 				0 AS OddsSpread
-			FROM bettrans14 AS b WITH (NOLOCK)
+			FROM bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
