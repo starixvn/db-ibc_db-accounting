@@ -1081,7 +1081,6 @@ BEGIN
 	
 	ORDER BY 1, bettype, Hedge	
 	
-	
 	UPDATE #tmpReturn2
 	SET orderkey  = 3
 	WHERE bettype = 1 AND Hedge =' (hedge)'
@@ -1120,6 +1119,7 @@ BEGIN
 	
 	---------------------------	
 	DROP TABLE #tmpReturn1
+	DROP TABLE #tmpReturn2
 	DROP TABLE #tmpReturn2
     DROP TABLE #tmpBettrans
 	DROP TABLE #Racing
