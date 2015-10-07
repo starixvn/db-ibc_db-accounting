@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
+ALTER  PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@CustID			INT,
@@ -12,6 +12,8 @@ AS
     Revisions:  
 		20140701@Dominic: Get running Keno bets from table Translog
 		20150617@Elodie: Migrate CustDB to DBCUST (call CustGameType by link server DBACC)
+		20150828@Jim: support GoldDeluxe & Metric Gaming(#40262)
+		20150828@Jim: support Colossus Bet (#42608)
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
@@ -43,11 +45,15 @@ BEGIN
 	SELECT @FirstDate = CONVERT(VARCHAR(25),DATEADD(dd,-(DAY(@CurrentDate)-1),@CurrentDate),101)
     
     --Get running Keno bet
-    IF  @sportType = 202                       
+    IF  @sportType IN( 202,-1)                       
     BEGIN
 		INSERT INTO #AvailableMember
-		SELECT tl.custid,tl.[status],COUNT(1) FROM dbo.translog tl WITH(NOLOCK)
-		WHERE tl.productID = 202 AND tl.srecommend = @CustID
+		SELECT tl.custid,tl.[status],COUNT(1) 
+		FROM dbo.translog tl WITH(NOLOCK)
+		WHERE (tl.productID = 202 
+			  OR tl.GameID BETWEEN 801  AND 806
+			)
+			AND tl.srecommend = @CustID
 		GROUP BY tl.custid,tl.[status]
     END
     
@@ -61,7 +67,8 @@ BEGIN
 			SET @TempFromDate = @FirstDate
 			
 		INSERT INTO #AvailableMember
-		SELECT b.custid,b.[status],COUNT(1) FROM dbo.bettrans b WITH(NOLOCK)
+		SELECT b.custid,b.[status],COUNT(1) 
+		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
 		AND (
 			b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
@@ -71,8 +78,12 @@ BEGIN
 			OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
 			OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType=252 THEN 73 ELSE 0 END)
+			OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
+			OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
 		) 
-		AND b.status IN ('WON','LOSE','DRAW','running') AND b.srecommend = @CustID
+		AND ( b.status IN ('WON','LOSE','DRAW','running') 
+			)	
+		AND b.srecommend = @CustID
 		GROUP BY b.custid,b.[status]
 	END
 	
@@ -88,9 +99,17 @@ BEGIN
 			SELECT @BalanceUpDay=@FirstDate
 			
 		INSERT INTO #AvailableMember 
-		SELECT smw.custid,'SETTLED',smw.BetCount FROM dbo.sum_winloss smw WITH(NOLOCK)
+		SELECT smw.custid,'SETTLED',smw.BetCount 
+		FROM dbo.sum_winloss smw WITH(NOLOCK)
 		WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
 		AND smw.sporttype = @SportType AND smw.srecommend = @CustID AND smw.roleid = 1
+		
+		INSERT INTO #AvailableMember 
+		SELECT d.custid,'SETTLED',d.BetCount 
+		FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
+		WHERE d.bettype BETWEEN  801  AND 806
+				  AND d.rptDate BETWEEN @BalanceUpDay AND @TempToDate
+				   AND d.CustID = @CustID
 	END
 	
 	--Get data from sum_winlost_old
@@ -102,9 +121,17 @@ BEGIN
 			SET @TempToDate = @CurrentDate
 			
 		INSERT INTO #AvailableMember
-		SELECT smwo.custid,'SETTLED',smwo.BetCount FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
+		SELECT smwo.custid,'SETTLED',smwo.BetCount 
+		FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
 		WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
-		AND smwo.sporttype = @SportType AND smwo.srecommend = @CustID AND smwo.roleid = 1
+			AND smwo.sporttype = @SportType AND smwo.srecommend = @CustID AND smwo.roleid = 1
+			
+		INSERT INTO #AvailableMember 
+		SELECT d.custid,'SETTLED',d.BetCount 
+		FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
+		WHERE d.bettype BETWEEN  801  AND 806
+				  AND d.rptDate BETWEEN   @FirstDate AND @TempToDate
+				  AND d.CustID = @CustID
 	END
 	    
 	--Get data for downline list 
@@ -138,11 +165,15 @@ BEGIN
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #AvailableMember av ON av.CustID = ci.custid               
 	END
-	IF @sportType = 180
+	IF @sportType IN (-1,255,180,204)
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
-			ci.DisableVirtualSports,
+			CASE WHEN @sportType = 180 THEN  ci.DisableVirtualSports
+				 WHEN @sportType = -1  THEN  ci.DisableSuperLive
+				 WHEN @sportType = 255 THEN  ci.DisableGoldDeluxe
+				 WHEN @sportType = 204 THEN  ci.DisableColossusBet
+				 END ,
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
@@ -221,6 +252,6 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super ] TO [bodbAdminNet]
 GO
-GRANT VIEW definition ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO vnteam
+GRANT VIEW definition ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super ] TO vnteam

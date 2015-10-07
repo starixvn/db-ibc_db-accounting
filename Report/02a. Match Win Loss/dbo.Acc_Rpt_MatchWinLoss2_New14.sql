@@ -25,6 +25,10 @@ AS
 			- 20150520@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
 			- 20150723@Sophia: Apply Bettrade [#38815]
+			- 20150827@Sophia: Apply Colossus Bets [#41935]
+			- 20150917@Jim: Integrate MO product (Feature #41935)
+			- 20150929@Sophia: Order by for MO product [#41935]
+			
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -38,11 +42,42 @@ BEGIN
 	SET NOCOUNT ON		
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
+	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
-
-
+	
+	UPDATE @SportBettype
+	SET liveindicator =0
+	
+	INSERT INTO @SportBettype(ProductID,Bettype,EventType,SubProduct,liveindicator)
+	SELECT ProductID
+		 ,Bettype
+		 ,EventType
+		 ,SubProduct
+		 ,1 AS liveindicator
+	FROM @SportBettype
+	WHERE liveindicator =0	
+	
+	UPDATE @SportBettype
+	SET OrderKey =  CASE  WHEN Bettype =1   AND liveindicator =0   THEN 1
+						WHEN Bettype =301 AND liveindicator =0   THEN 2
+						WHEN Bettype =1   AND liveindicator =1   THEN 3
+						WHEN Bettype =301 AND liveindicator =1   THEN 4
+						WHEN Bettype =3   AND liveindicator =0   THEN 5
+						WHEN Bettype =302 AND liveindicator =0   THEN 6
+						WHEN Bettype =3   AND liveindicator =1   THEN 7
+						WHEN Bettype =302 AND liveindicator =1   THEN 8
+						WHEN Bettype =7   AND liveindicator =0   THEN 9
+						WHEN Bettype =303 AND liveindicator =0   THEN 10
+						WHEN Bettype =7   AND liveindicator =1   THEN 11
+						WHEN Bettype =303 AND liveindicator =1   THEN 12
+						WHEN Bettype =8   AND liveindicator =0   THEN 13
+						WHEN Bettype =304 AND liveindicator =0   THEN 14
+						WHEN Bettype =8   AND liveindicator =1   THEN 15
+						WHEN Bettype =304 AND liveindicator =1   THEN 16
+						ELSE 17
+						END
+		
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 	
@@ -119,7 +154,7 @@ BEGIN
 				from	bettransm14 with (nolock)
 				group by refno
 			 )bm on b.transid = bm.refno 
-			 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			 INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	b.ruben = 1 
 			--and b.bettype in (31,32,33)
 			and s.ProductID = 2
@@ -185,22 +220,24 @@ BEGIN
 	
 	-- Resultset of Sportbook without Parlay and Outright
 	SELECT 
-	    UPPER(case when l.leaguenametc = '' or l.leaguenametc is null  then 'Other Sports' else l.leaguenametc end) as leaguenametc,
-		b.bettype,
+	UPPER(case when l.leaguenametc = '' or l.leaguenametc is null  then 'Other Sports' else l.leaguenametc end) as leaguenametc,
+		s.bettype,
+		s.OrderKey,
 		b.liveindicator,		
 		m.matchcode,
 		m.kickofftime,
 		b.matchid,
 		m.homeid,
 		m.awayid,
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-        b.winlost,
+	    isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+        SUM( b.winlost) winlost,
         b.pos,
-        b.comm,   
-        b.VirtualComm,
-        b.LineTotal,
-        b.VirtualLineTotal,
-        b.IBCTurnover
+        SUM(b.comm) comm,   
+        SUM(b.VirtualComm) VirtualComm,
+        SUM(b.LineTotal) LineTotal,
+        SUM(b.VirtualLineTotal) VirtualLineTotal,
+        SUM(b.IBCTurnover) IBCTurnover
+		INTO #tmpReturn1
 	FROM 
 	    (
 	        SELECT 
@@ -217,12 +254,42 @@ BEGIN
 	    ) b
 		inner join match14 m with (nolock) on m.matchid = b.matchid
 		inner join league l with (nolock) on l.leagueid = m.leagueid
-		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE s.ProductID = 1
 		AND s.EventType = 1
 		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+    GROUP BY	l.leaguenametc,
+				s.bettype,
+				s.OrderKey,
+				b.liveindicator,		
+				m.matchcode,
+				m.kickofftime,
+				b.matchid,
+				m.homeid,
+				m.awayid,
+				isnull(m.isNeutral, CONVERT(BIT,0)),  
+				b.pos 	
 	--((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
-	ORDER BY l.leaguenametc, b.bettype, b.liveindicator desc
+	ORDER BY l.leaguenametc, s.OrderKey asc,s.bettype, b.liveindicator desc 
+	
+	SELECT  leaguenametc,
+			bettype,
+			liveindicator,		
+			matchcode,
+			kickofftime,
+			matchid,
+			homeid,
+			awayid,
+			IsNeutral,
+			winlost,
+			pos,
+			comm,   
+			VirtualComm,
+			LineTotal,
+			VirtualLineTotal,
+			IBCTurnover
+	FROM #tmpReturn1
+	ORDER BY Orderkey ASC
 	
 	-- Resultset of 3rd products and Parlay, Outright
 	    -- Mix Parlay
@@ -280,7 +347,7 @@ BEGIN
 			0 as IBCTurnover,
 			'Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 6
 		--bettype IN(71, 72)	
 		
@@ -296,7 +363,7 @@ BEGIN
 			sum(isnull(b.IBCTurnover,0)) IBCTurnover,
 			'Macau' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 14
 		 	
 
@@ -312,7 +379,7 @@ BEGIN
 			0 as IBCTurnover,
 			'Bingo' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype  AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 7
 		--bettype = 73		
 	
@@ -328,7 +395,7 @@ BEGIN
 			sum(isnull(b.IBCTurnover,0)) IBCTurnover,
 			'Keno' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 8
 		--b.bettype BETWEEN 1501 AND 1599 		
 
@@ -344,7 +411,7 @@ BEGIN
 			0 IBCTurnover,
 			'P2P' bettype 
 	FROM bettrans14 with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = bettrans14.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = bettrans14.bettype AND bettrans14.liveindicator=s.liveindicator
 	WHERE 
 			--bettrans14.bettype = 1000
 			--and bettrans14.matchid = 1000 
@@ -365,7 +432,7 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Number Game' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 3	
 		--bettype BETWEEN 81 AND 120 			
 	
@@ -381,7 +448,7 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Virtual Sports' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 5
 		--bettype BETWEEN 1201 AND 1299			
 
@@ -397,7 +464,7 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Live Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 4	
 		--bettype BETWEEN 1101 AND 1199	
 
@@ -413,7 +480,7 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Gold Deluxe' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 12
 
 	---Microgaming
@@ -428,7 +495,7 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Microgaming' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 13
 
 
@@ -444,7 +511,7 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'AG Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 11
 
 			
@@ -460,7 +527,7 @@ BEGIN
 			sum(b.IBCTurnover) IBCTurnover,
 			'Metric Gaming - Super Live' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE s.ProductID = 1
 		AND s.EventType = 1	
 		AND s.SubProduct = 'MG-SuperLive'
@@ -477,10 +544,25 @@ BEGIN
 			0 AS IBCTurnover,
 			'Bettrade' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE s.ProductID = 1
 		AND s.EventType = 1	
-		AND s.SubProduct = 'BT-Comm'			 
+		AND s.SubProduct = 'BT-Comm'	
+
+	-- Colossus Bets
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.Linetotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Colossus Bets' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductID = 15		
 					
 	
     -- Resultset of 8RM and BARM
@@ -493,23 +575,52 @@ BEGIN
 	
 	-- Resultset by bettype of 
 	    -- Sportbook without Parlay and Outright
+	CREATE TABLE #tmpReturn2 (Num TinyINT
+							,bettype smallint
+							,OrderKey TINYINT
+							,Hedge NVARCHAR(50)
+							,LineTotal_soccer_live MONEY
+							,VirtualLineTotal_soccer_live MONEY
+							,LineTotal_soccer MONEY
+							,VirtualLineTotal_soccer MONEY
+							,LineTotal_others_live MONEY
+							,VirtualLineTotal_others_live MONEY
+							,LineTotal_others MONEY
+							,VirtualLineTotal_others MONEY
+							,IBCTurnover MONEY
+							)	
+	INSERT INTO #tmpReturn2 (Num  
+							,bettype 
+							,OrderKey  
+							,Hedge  
+							,LineTotal_soccer_live  
+							,VirtualLineTotal_soccer_live 
+							,LineTotal_soccer  
+							,VirtualLineTotal_soccer  
+							,LineTotal_others_live  
+							,VirtualLineTotal_others_live  
+							,LineTotal_others  
+							,VirtualLineTotal_others
+							,IBCTurnover)		
+							
 	SELECT	10 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
-			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
-			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
-			sum(case when liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
-			sum(case when liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
 			
-			sum(case when liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
-			sum(case when liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
-			sum(case when liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
-			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
 			inner join match14 m with (nolock) on b.matchid = m.matchid
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE  	s.ProductId = 1
 		AND s.EventType = 1
 		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
@@ -519,32 +630,35 @@ BEGIN
 				OR bettype BETWEEN 1301 and 1334)	*/
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 	
 		---Metric Gaming - Super Live
 	UNION ALL 
 	SELECT	11 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
-			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
-			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
-			sum(case when liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
-			sum(case when liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
 			
-			sum(case when liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
-			sum(case when liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
-			sum(case when liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
-			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
 			inner join match14 m with (nolock) on b.matchid = m.matchid
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE  	s.ProductId = 1
 		AND s.EventType = 1
 		AND s.SubProduct = 'MG-SuperLive'				
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 
 
@@ -552,26 +666,28 @@ BEGIN
 	UNION ALL 
 	SELECT	12 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
-			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
-			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
-			sum(case when liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
-			sum(case when liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
 			
-			sum(case when liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
-			sum(case when liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
-			sum(case when liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
-			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			
 			0 as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
 			inner join match14 m with (nolock) on b.matchid = m.matchid
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE  	s.ProductId = 1
 		AND s.EventType = 1
 		AND s.SubProduct = 'BT-Comm'				
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 	
 	
@@ -579,21 +695,22 @@ BEGIN
 	UNION ALL
 	SELECT	20 Num,
 			b.bettype,
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
-			sum(case when liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
-			sum(case when liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
-			sum(case when liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
-			sum(case when liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
 			
-			sum(case when liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
-			sum(case when liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
-			sum(case when liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
-			sum(case when liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
 			inner join match14 m with (nolock) on b.matchid = m.matchid
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE   s.ProductId = 5
 		AND s.EventType = 1
 				/*((bettype < 31 and bettype <> 10) 
@@ -602,12 +719,14 @@ BEGIN
 				OR bettype BETWEEN 1301 and 1334)	*/
 	GROUP BY 
 			b.bettype, 
+			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end
 	
 	    -- Virtual HR
 	UNION ALL 
 	SELECT	21 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -619,16 +738,17 @@ BEGIN
 			0  VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 5
 		AND s.EventType = 3
 		--b.bettype in (1231, 1232, 1233, 1237, 1238)	
-	GROUP BY b.bettype			
+	GROUP BY b.bettype,s.orderkey			
 			
 	    -- Casino
 	UNION ALL 
 	SELECT	30 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -640,16 +760,17 @@ BEGIN
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 6	
 		--bettype IN(71, 72) 
 		and matchid IN (0, 71) 			
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	    -- Vegas Games
 	UNION ALL 
 	SELECT	31 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -661,15 +782,16 @@ BEGIN
 			0 VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 14	
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	
 	    -- Bingo 
 	UNION ALL
 	SELECT	40 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -681,16 +803,17 @@ BEGIN
 			0 VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 7	
 		--bettype = 73	
 			and matchid IN (0, 73)
-	GROUP BY b.bettype			
+	GROUP BY b.bettype,s.orderkey			
 	
 	    -- Keno
 	UNION ALL
 	SELECT	50 Num,
 			1501,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -702,35 +825,38 @@ BEGIN
 			0 VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 8	
 		--b.bettype BETWEEN 1501 AND 1599			
-	---GROUP BY bettype
+	 GROUP BY s.bettype,s.orderkey
 
 	    -- Number Game
 	UNION ALL
 	SELECT	60 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
 			0 LineTotal_soccer,
 			0 VirtualLineTotal_soccer,
-			sum(case when liveindicator = 1 then LineTotal else 0 end) as LineTotal_others_live,
-			sum(case when liveindicator = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,		
-			sum(case when liveindicator = 0 then LineTotal else 0 end) as LineTotal_others,
-			sum(case when liveindicator = 0 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(case when b.liveindicator = 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when b.liveindicator = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,		
+			sum(case when b.liveindicator = 0 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when b.liveindicator = 0 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 3	
 		--bettype BETWEEN 81 AND 120			
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
+			,s.orderkey
 	
 	    -- Live Casino
 	UNION ALL
 	SELECT	70 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -742,15 +868,16 @@ BEGIN
 			0 as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 4
 		--bettype BETWEEN 1101 AND 1199			
-	GROUP BY b.bettype					
+	GROUP BY b.bettype,s.orderkey					
 	
 	    -- Gold Deluxe
 	UNION ALL
 	SELECT	71 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -762,14 +889,15 @@ BEGIN
 			0 as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 12		
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	 -- Microgaming
 	UNION ALL
 	SELECT	72 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -781,14 +909,15 @@ BEGIN
 			0 as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 13		
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 	 -- AG Casino
 	UNION ALL
 	SELECT	73 Num,
 			b.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -800,15 +929,16 @@ BEGIN
 			0 as VirtualLineTotal_others,
 			sum(IBCTurnover) as IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 11
-	GROUP BY b.bettype
+	GROUP BY b.bettype,s.orderkey
 
 
 	    -- Parlay
 	UNION ALL 
 	SELECT 	80 Num,
 			m1.bettype,
+			m1.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -823,7 +953,8 @@ BEGIN
 			IBCTurnover
 	FROM
 		(
-			SELECT 	bettype,	
+			SELECT 	bettype,
+					17 as orderkey,	
 					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate), 0) as LineTotal_soccer,
 					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate), 0) as VirtualLineTotal_soccer
 			FROM	bettrans14 with (nolock)
@@ -853,6 +984,7 @@ BEGIN
 	UNION ALL 
 	SELECT	90 Num,
 			10 bettype,	
+			17 orderkey,
 			'' Hedge,
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,	
@@ -872,6 +1004,7 @@ BEGIN
 	UNION ALL
 	SELECT	100 Num,
 			bettype,
+			17 orderkey,
 	        '' Hedge,
 	        0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -888,6 +1021,7 @@ BEGIN
 	UNION ALL
 	SELECT	110 Num,
 			bettrans14.bettype,
+			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
 			0 VirtualLineTotal_soccer_live,
@@ -899,19 +1033,40 @@ BEGIN
 			0  VirtualLineTotal_others,
 			0 IBCTurnover
 	FROM	bettrans14 with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = bettrans14.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = bettrans14.bettype  AND bettrans14.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 9
 			--bettype = 1000
 			--and matchid = 1000  
 			and winlostdate = @winlostdate
 			and ruben = 1
 			and statusID not in (101,102,103,121)
-	GROUP BY bettrans14.bettype			
+	GROUP BY bettrans14.bettype,s.orderkey			
 	
+		-- Colossus Bets
+	UNION ALL
+	SELECT	120 Num,
+			b.bettype,
+			s.orderkey,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			sum(LineTotal) as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductId = 15		
+	GROUP BY b.bettype,s.orderkey
+			
 	    -- 8RM & BARM
 	UNION ALL 		
-	SELECT	120 Num,
-			bettype,	
+	SELECT	130 Num,
+			bettype,
+			17 orderkey,			
 			Hedge,	
 			LineTotal_soccer_live,
 			VirtualLineTotal_soccer_live,
@@ -925,8 +1080,47 @@ BEGIN
 	FROM #R_8RM with (nolock)
 	
 	ORDER BY 1, bettype, Hedge	
-	-- END - Resultset by bettype of 
-		
+	
+	UPDATE #tmpReturn2
+	SET orderkey  = 3
+	WHERE bettype = 1 AND Hedge =' (hedge)'
+	
+	UPDATE #tmpReturn2
+	SET OrderKey =  CASE  WHEN Bettype =1       THEN 1
+						  WHEN Bettype =301     THEN 2
+						  WHEN Bettype =3     THEN 5
+						  WHEN Bettype =302    THEN 6
+						  WHEN Bettype =7    THEN 9
+						  WHEN Bettype =303    THEN 10
+						  WHEN Bettype =8     THEN 13
+					      WHEN Bettype =304    THEN 14
+					      ELSE 17
+						END
+						
+	
+	SELECT 	Num,
+			bettype,
+			Hedge,	
+			SUM(LineTotal_soccer_live) LineTotal_soccer_live,
+			SUM(VirtualLineTotal_soccer_live) VirtualLineTotal_soccer_live,
+			SUM(LineTotal_soccer) LineTotal_soccer,
+			SUM(VirtualLineTotal_soccer) VirtualLineTotal_soccer,
+			SUM(LineTotal_others_live) LineTotal_others_live,
+			SUM(VirtualLineTotal_others_live) VirtualLineTotal_others_live,		
+			SUM(LineTotal_others) LineTotal_others,
+			SUM(VirtualLineTotal_others) VirtualLineTotal_others,
+			SUM(IBCTurnover) IBCTurnover
+	FROM #tmpReturn2
+	GROUP BY Num,
+			 bettype,
+			 Hedge,
+			 OrderKey
+	ORDER BY num,OrderKey ASC 
+	
+	---------------------------	
+	DROP TABLE #tmpReturn1
+	DROP TABLE #tmpReturn2
+	DROP TABLE #tmpReturn2
     DROP TABLE #tmpBettrans
 	DROP TABLE #Racing
 	DROP TABLE #R_8RM
