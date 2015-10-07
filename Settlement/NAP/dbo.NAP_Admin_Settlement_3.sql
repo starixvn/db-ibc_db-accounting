@@ -15,6 +15,7 @@ AS
 	   - 20140822@Jamie: Add bet count 11 bettypes [Redmine:#19667]
 	   - 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 	   - 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+	   - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 
 	Param's Explanation:
 	• @Mode:
@@ -178,6 +179,10 @@ BEGIN
 			,@betcount_207 	INT
 			,@betcount_208 	INT
 			,@betcount_209 	INT
+			,@betcount_301 	INT
+			,@betcount_302 	INT
+			,@betcount_303 	INT
+			,@betcount_304 	INT
 
 
 	SELECT @fth = FinalHomeScore
@@ -467,6 +472,8 @@ BEGIN
 			,@betcount_199 = ISNULL(SUM(CASE bettype WHEN 199 THEN 1 ELSE 0 END),0)
 			,@betcount_206 = ISNULL(SUM(CASE bettype WHEN 206 THEN 1 ELSE 0 END),0)
 			,@betcount_208 = ISNULL(SUM(CASE bettype WHEN 208 THEN 1 ELSE 0 END),0)
+			,@betcount_301 = ISNULL(SUM(CASE bettype WHEN 301 THEN 1 ELSE 0 END),0)
+			,@betcount_302 = ISNULL(SUM(CASE bettype WHEN 302 THEN 1 ELSE 0 END),0)
 
 			,@betcount_1201 = ISNULL(SUM(CASE bettype
 						WHEN 1201 THEN 1
@@ -497,7 +504,7 @@ BEGIN
 				AND( bettype IN (1, 2, 3, 4, 5, 6, 13, 16, 20, 22, 24, 25, 26, 27, 28, 121, 122, 123, 124, 128, 130, 131, 132,
 												133, 134, 137, 139, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,
 												1201, 1203, 1204, 1205, 1206, 1224)
-					OR Bettype IN (157,159,161,162,163,166,170,171,172,177,178,183,184,185,186,187,189,190,194,195,196,197,198,199,206,208)
+					OR Bettype IN (157,159,161,162,163,166,170,171,172,177,178,183,184,185,186,187,189,190,194,195,196,197,198,199,206,208, 301, 302)
 				)
 				AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (194,195,196,197,198,199,206,208) THEN 0 
 							 ELSE 1 END 
@@ -573,9 +580,10 @@ BEGIN
 			,@betcount_205 = ISNULL(SUM(CASE bettype WHEN 205 THEN 1 ELSE 0 END),0)
 			,@betcount_207 = ISNULL(SUM(CASE bettype WHEN 207 THEN 1 ELSE 0 END),0)
 			,@betcount_209 = ISNULL(SUM(CASE bettype WHEN 209 THEN 1 ELSE 0 END),0)
-
+			,@betcount_303 = ISNULL(SUM(CASE bettype WHEN 303 THEN 1 ELSE 0 END),0)
+			,@betcount_304 = ISNULL(SUM(CASE bettype WHEN 304 THEN 1 ELSE 0 END),0)
 		FROM bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+		WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
 				AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (200,201,202,203,204,205,207,209) THEN 0 
 							 ELSE 1 END 
 	END
@@ -726,6 +734,10 @@ BEGIN
 		,@betcount_207 	= @betcount_207
 		,@betcount_208 	= @betcount_208
 		,@betcount_209 	= @betcount_209
+		,@betcount_301 	= @betcount_301
+		,@betcount_302 	= @betcount_302
+		,@betcount_303 	= @betcount_303
+		,@betcount_304 	= @betcount_304
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END
 GO

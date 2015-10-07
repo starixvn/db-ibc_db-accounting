@@ -64,13 +64,14 @@ AS
 		- 201409010@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 		- 20150414@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 	
 	Param's Explanation:
-	• @matchid: matchid need to refund
-	• @IsExcludeBetdaq: Is Exclude betdaq tickets or not
-	• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
-	• @IsExcludeBetfair: Is Exclude betfair tickets or not
-	• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+	? @matchid: matchid need to refund
+	? @IsExcludeBetdaq: Is Exclude betdaq tickets or not
+	? @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
+	? @IsExcludeBetfair: Is Exclude betfair tickets or not
+	? @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
 	  @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
 		* List of BetDaq Customers 
 					custid	--- username	-	roleid
@@ -86,7 +87,7 @@ AS
 					2331	---	BF		    -	1
 					1077687	---	BFOS		-	1
 					15523642--- BF3			-	1
-	• @SelectedSettleFinishedGame: set [1-5] 
+	? @SelectedSettleFinishedGame: set [1-5] 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -336,7 +337,9 @@ BEGIN
 			,@betcount_202 		INT
 			,@betcount_206 		INT
 			,@betcount_207 		INT
-
+			
+			,@betcount_302		INT
+			,@betcount_304 		INT
 			
 		SELECT @ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)), '') 
 						 + ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)), '') 
@@ -538,10 +541,13 @@ BEGIN
 				,@betcount_202 	= ISNULL(SUM(CASE b.bettype WHEN 202 THEN 1 ELSE 0 END), 0)
 				,@betcount_206 	= ISNULL(SUM(CASE b.bettype WHEN 206 THEN 1 ELSE 0 END), 0)
 				,@betcount_207 	= ISNULL(SUM(CASE b.bettype WHEN 207 THEN 1 ELSE 0 END), 0)
+				
+				,@betcount_302 	= ISNULL(SUM(CASE b.bettype WHEN 302 THEN 1 ELSE 0 END), 0)
+				,@betcount_304 	= ISNULL(SUM(CASE b.bettype WHEN 304 THEN 1 ELSE 0 END), 0)
 
 		FROM bettrans b WITH (NOLOCK)
 		WHERE b.matchid = @matchid 
-		AND b.bettype IN (3, 4, 6, 8, 13, 26, 27, 30, 126, 128, 129, 130, 131, 132, 143, 144, 145, 152,159,161,162,163,170,172,179,181,182,188,195,196,199,200,201,202,206,207) 
+		AND b.bettype IN (3, 4, 6, 8, 13, 26, 27, 30, 126, 128, 129, 130, 131, 132, 143, 144, 145, 152,159,161,162,163,170,172,179,181,182,188,195,196,199,200,201,202,206,207, 302, 304) 
 		AND b.statusID NOT IN (101, 102) 
 		AND 1 = CASE 
 					WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
@@ -612,6 +618,7 @@ BEGIN
 				,@betcount_196 					= @betcount_196
 				,@betcount_199 					= @betcount_199
 				,@betcount_206 					= @betcount_206
+				,@betcount_302 					= @betcount_302				
 				,@fth 							= @fth
 				,@fta 							= @fta
 				,@hth 							= @hth
@@ -674,6 +681,8 @@ BEGIN
 				,@betcount_202					= @betcount_202
 				,@betcount_206					= @betcount_206
 				,@betcount_207					= @betcount_207
+				,@betcount_302 					= @betcount_302		
+				,@betcount_304 					= @betcount_304
 				,@fth 							= @fth
 				,@fta 							= @fta
 				,@hth 							= @hth
