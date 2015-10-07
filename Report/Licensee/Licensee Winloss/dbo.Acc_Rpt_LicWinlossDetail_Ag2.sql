@@ -16,6 +16,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_Ag2]
  @ShowKN		BIT=0, -- keno
  @ShowAGC		BIT = 0, --AG Casino
  @ShowGD		BIT = 0, -- Gold Deluxe
+ @showMGC 		BIT	= 1, --Micro Gaming
  @MoveBetsDay SMALLDATETIME,
  @IsOld BIT = 0,
  @drawfilter SMALLINT = 1,
@@ -47,6 +48,8 @@ AS
 		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
 		- 20150123@Jim: support base on GBP currency
 		- 20150518@Florent: Add AGC and GD
+		- 20150710@Jim:  Microgaming integration (Feature #38168)
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -192,6 +195,16 @@ BEGIN
 	WHERE (typeid BETWEEN 1501 AND 1599)
 END 
 
+IF @showMGC =1 -- Micro Gaming
+	BEGIN 
+		INSERT INTO @sporttype (sporttype)
+		VALUES(203)
+
+		INSERT INTO @bettype(bettype)
+		SELECT typeid FROM bettype (NOLOCK)
+		WHERE (typeid BETWEEN 2001 AND 2099)
+	END 
+	
 DECLARE @TempFromDate DATETIME 
 DECLARE @TempToDate DATETIME 
 DECLARE @MaxOldDate DATETIME
@@ -244,7 +257,8 @@ BEGIN
 		INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON s.custid=BA.srecommend and b.transid = BA.transid 	 
 	WHERE 
 		b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
-		b.statusID  IN (111, 112, 113) 
+		b.statusID  IN (111, 112, 113) AND
+		b.bettype NOT IN (901,902,903)	
 	GROUP BY   
 		b.winlostdate,b.currency,b.recommend,b.statusID	
 	END	
@@ -286,13 +300,13 @@ BEGIN
 		WHERE 
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
 			b.statusID  IN (111, 112, 113) AND
-			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399)) AND
+			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999 AND b.bettype NOT IN (901,902,903)) OR (b.bettype BETWEEN 1301 AND 1399)) AND
 			b.tpositiontaking <> 0
 		GROUP BY   
 			b.winlostdate,s.currency,b.recommend, b.statusID 	
 	END
 	
-	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1 OR @ShowCS=1 OR @ShowKN=1)
+	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGC =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss
 		SELECT   
@@ -380,11 +394,12 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)	
 		GROUP BY  b.winlostdate,b.currency, b.recommend  , b.statusID
 	END
 	
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGC =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss  
 		SELECT 
@@ -400,7 +415,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 AS AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,
@@ -422,6 +437,7 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)	
 		GROUP BY  b.winlostdate,b.currency, b.recommend, b.statusID
 	END
 	
@@ -472,11 +488,12 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)	
 		GROUP BY  b.winlostdate,b.currency, b.recommend, b.statusID
 	END
  
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGC =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss  
 		SELECT 
@@ -492,7 +509,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 AS AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,
@@ -514,6 +531,7 @@ BEGIN
 			AND b.roleid = 2   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)	
 		GROUP BY  b.winlostdate,b.currency, b.recommend, b.statusID
 	END
 	

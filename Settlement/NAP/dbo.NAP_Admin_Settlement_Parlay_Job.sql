@@ -1,9 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay_Job]    Script Date: 08/07/2014 14:11:04 ******/
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay_Job]    Script Date: 09/16/2015 13:45:33 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Parlay_Job    Script Date: 30/05/2014 9:24:58 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_Job]
 AS
 /*
@@ -16,6 +17,7 @@ AS
 		- 20140502@Kathy: Add new columns execTime, duration for Parlay_Calculate_Queue
 		- 20140505@Kathy: Re-run match if time of execution more than 5 minutes
 		- 20140528@Kathy: rotate calculating sports in queue
+		- 20150916@Kathy: update IsCalculating = 2 when settlement is done (remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -28,30 +30,10 @@ BEGIN
 		,@ErrMsg NVARCHAR(200)
 		,@keyId INT
 		,@ActionId INT
-		,@duration INT
+		--,@duration INT
 		,@pre_Sporttype tinyint 
-		
-	SELECT TOP 1 @duration = DATEDIFF(ms, execTime, GETDATE())
-		,@keyId = keyid
-		,@matchid = matchid
-	FROM Parlay_Calculate_Queue WITH (NOLOCK)
-	WHERE IsCalculating = 1
-
-	IF isnull(@duration, 0) > 300000 AND NOT EXISTS ( -- 5 minutes
-			SELECT TOP 1 1
-			FROM bettrans_ParlayCalculateResult WITH (NOLOCK)
-			WHERE matchid = @matchid
-			) AND NOT EXISTS (
-			SELECT TOP 1 1
-			FROM bettrans_ParlayCalculateTransmission WITH (NOLOCK)
-			WHERE matchid = @matchid
-			)
-	BEGIN
-		UPDATE Parlay_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
-		SET IsCalculating = 0
-		WHERE keyid = @keyId
-	END
-	ELSE IF EXISTS (
+	
+	IF EXISTS (
 			SELECT TOP 1 1
 			FROM Parlay_Calculate_Queue WITH (NOLOCK)
 			WHERE IsCalculating = 1
@@ -145,6 +127,12 @@ BEGIN
 	END
 	ELSE
 	BEGIN
+		UPDATE	dbo.Parlay_Calculate_Queue WITH (UPDLOCK, ROWLOCK)
+			SET IsCalculating = 2,
+				duration = DATEDIFF(ms,execTime,GETDATE())
+		WHERE	matchid = @matchid 
+				AND IsCalculating = 1
+		
 		IF @action = 'CAL'
 			EXEC Acc_Set_ConfirmedActionParlay @matchids = @matchid
 		ELSE
@@ -162,6 +150,7 @@ BEGIN
 		END
 	END
 END
+
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Parlay_Job] TO [vnteam] AS [dbo]

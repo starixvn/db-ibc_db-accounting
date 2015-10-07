@@ -56,7 +56,7 @@ Revisions:
 	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine:#26647]
 	- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
 	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
-	
+	- 20150707@Elodie: Add Super Live product [Redmine: #35776]	
 	
 Param's Explanation:
 • @ErrCode:
@@ -140,6 +140,8 @@ BEGIN
           , @DisableGoldDeluxe		BIT
           , @aHideGoldDeluxe		BIT
           , @HideGoldDeluxe			BIT
+		  , @aDisableSuperLive		BIT
+          , @DisableSuperLive		BIT
 
     SELECT @srecommend	          = srecommend
          , @mrecommend		      = mrecommend
@@ -168,6 +170,7 @@ BEGIN
          , @aGivenCredit		  = credit	
          , @aDisableGoldDeluxe	  = DisableGoldDeluxe
          , @aHideGoldDeluxe		  = HideGoldDeluxe
+		 , @aDisableSuperLive	  = DisableSuperLive
       FROM custinfo WITH(NOLOCK)
      WHERE username = @agentname
        AND roleid = 2
@@ -200,6 +203,7 @@ BEGIN
          , @GivenCredit			 = credit
          , @DisableGoldDeluxe	 = DisableGoldDeluxe 
          , @HideGoldDeluxe		 = HideGoldDeluxe
+		 , @DisableSuperLive	 = DisableSuperLive
       FROM custinfo WITH(NOLOCK)
      WHERE username = @membername
        AND roleid = 1
@@ -437,7 +441,15 @@ BEGIN
 		     , @ErrCode = 120
 		RETURN
     END
-    	
+	
+	--Super Live
+    IF @aDisableSuperLive = 1 AND @DisableSuperLive = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is enabled Super Live but new agent is not enabled Super Live.'
+		     , @ErrCode = 121
+		RETURN
+    END
+	    	
     IF @aSyncLiveCasino = 0 AND @SyncLiveCasino = 1
     BEGIN
 	    SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is synchronized Live Casino but new agent is not synchronized Live Casino.'
@@ -1997,9 +2009,11 @@ BEGIN
 		    @duration = @duration	
     END CATCH
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam] AS [dbo]
+
+GO 
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
+GO 
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
+GO 
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet]
+GO 

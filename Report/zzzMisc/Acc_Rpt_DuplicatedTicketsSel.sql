@@ -1,3 +1,6 @@
+Use bodb_report 
+Go
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_DuplicatedTicketsSel]
 	@Date DATETIME,
 	@CheckTime SMALLINT = 1
@@ -10,10 +13,12 @@ Original: [Acc_CheckDuplicateTickets]
 
 Revisions:
 	- 20150402@Sophia: Add more test currency (20, 27, 28)
+	- 20150723@Sophia: Exclude data of Bettrade [#38815]
 	 
 Param's Explanation:
 	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
 				   Because job recurs every 30s, so we set @CheckTime = 1 minute as default
+
 
 */
 BEGIN
@@ -49,7 +54,7 @@ BEGIN
 			INTO #TempData
 			FROM bodb02.dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN _match m ON b.matchid = m.mID
-			WHERE bettype < 19000
+			WHERE bettype < 19000				
 				and custid not in (50057,879241,103873, 851668, 878902) --betdaq
 				and custid NOT IN (1077687) -- Betfair
 				and recommend not in (11196380) -- foobet
@@ -82,6 +87,7 @@ BEGIN
 			INNER JOIN bodb02.dbo.bettype bt with(nolock) on bt.typeid = b.bettype
 			WHERE b.custid IN (SELECT DISTINCT custid FROM #TempData)
 				AND b.statusID NOT IN (101,102)
+				AND b.bettype NOT IN (901,902,903)
 			ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID
 
 			DROP TABLE #TempData			
@@ -103,6 +109,7 @@ BEGIN
 		WHERE	t.Transdate >= @DateFrom 
 			AND t.Transdate < DATEADD(dd, 1, DATEDIFF(dd, 0, @DateFrom))
 			AND b.statusID NOT IN (101,102)
+			AND b.bettype NOT IN (901,902,903)
 		ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID	  
 
 
@@ -111,5 +118,5 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DuplicatedTicketsSel] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DuplicatedTicketsSel_xpre] TO [bodbAdminNet]
 GO

@@ -18,7 +18,7 @@ AS
 	DB: DB06.BODB02
 	
 	Revisions:
-		
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 */
 
 SET NOCOUNT ON
@@ -35,6 +35,12 @@ SET NOCOUNT ON
 		FC_m1 money, FC_m2 money, FC_m3 money, FC_m4 money, FC_mX money, FC_00 money, FC_0x money)
 
 	Declare @FTHomeScore smallint, @FTAwayScore smallint, @HTHomeScore smallint, @HTAwayScore smallint
+
+IF @bettype IN (901,902,903)
+BEGIN 
+	SELECT N'This report does not support bettrade ticket !'
+	RETURN
+END 
 
 IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
 BEGIN

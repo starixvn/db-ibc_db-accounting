@@ -15,7 +15,10 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostBySAg]
 	@showVS BIT = 0,
 	@showKeno BIT=0,
 	@ShowGD BIT = 0, -- Show GoldDeluxe
-	@ShowMGSL BIT = 0 -- Show Metric Gaming
+	@ShowMGSL BIT = 0, -- Show Metric Gaming
+	@showMGC BIT=0, --Micro Gaming
+	@showVG BIT=0, --Vegas Games
+	@showAGCS BIT=0 --AG Casino
 AS
 
 /*  
@@ -31,7 +34,9 @@ Revisions:
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
 	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
-	- 20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 		
+	- 20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 
+	- 20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)	
+	- 20150723@Jim: Apply Bettrade [#38815]		
 */  
 
 SET NOCOUNT ON
@@ -59,14 +64,14 @@ CREATE TABLE #TmpResultAll (mrecommend INT ,
 							Virtual_Total MONEY)
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=5
+EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
 							
 IF @ShowSB = 1  
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
 	 SELECT Bettype, 1   
 	 FROM @SportBettype   
 	 WHERE ProductID =1 
-		AND SubProduct <> 'MG-SuperLive'
+		AND SubProduct NOT IN ('MG-SuperLive' ,'BT-Sold','BT-Bought','BT-Comm')
 
 IF @ShowNG = 1  
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
@@ -114,7 +119,24 @@ IF @ShowMGSL =1
 	FROM @SportBettype   
 	WHERE ProductID = 1
 		AND SubProduct= 'MG-SuperLive'	 
+IF @showMGC =1  --Micro Gaming
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 13
 
+IF @showVG =1  --- VegasGame aka Macau
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 14	 
+
+IF @showAGCS =1 -- AG Casino
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 11
+	
 --IF @winlostdate > @MoveBetDays
 --BEGIN
 
