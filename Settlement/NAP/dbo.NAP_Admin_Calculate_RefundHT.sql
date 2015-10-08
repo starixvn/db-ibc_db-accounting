@@ -17,7 +17,8 @@ AS
 							- Add 1st Correct Score(151) 	
 							- Refund FT bettypes  [Redmine:#17142]
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]		
-		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]			
+		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]	
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)		
 		
 
 	Param's Explanation:
@@ -78,6 +79,7 @@ BEGIN
 							133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
 							,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209	--Betradar 2 HT tickets
 							,177,178,183,184,185,186,187,189,190		-- Betradar 2 FT ticket in case of 30x3 match 
+							,303, 304 -- Myanmar odds
 							) 
 			AND 1 = CASE 
 						WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0

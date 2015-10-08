@@ -15,6 +15,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 	@FTDone BIT = 0,
 	@HTDone BIT = 0,
 	@NoneCornerBetDone	BIT = 0, 
+	@HTNoneCornerBetDone	BIT = 0,
 	@isExcludeCorner	BIT = 0,
 	@isExistRunningCornerBet BIT = 0,
 	@RowCount INT = 0 OUTPUT,
@@ -74,7 +75,8 @@ BEGIN
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 5 AND @SelectedSet LIKE '%6%'THEN N'completed'
-								WHEN @action = 'CAL-HT' AND @FTDone = 1 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'								
 							ELSE eventstatus END,

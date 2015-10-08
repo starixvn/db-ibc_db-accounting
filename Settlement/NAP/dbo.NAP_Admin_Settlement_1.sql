@@ -54,6 +54,7 @@ AS
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		+ @GameResult: Game result for Set(s) of Tennis Sport 
@@ -269,7 +270,7 @@ BEGIN
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 			GROUP BY b.custid
 
@@ -358,7 +359,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		INSERT INTO @status
 		SELECT CASE 
-					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
+					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304) THEN 0
 					--WHEN b.bettype = 135 THEN 2
 					ELSE 1
 			   END
@@ -376,7 +377,7 @@ need below code to determine for mark match as calculated (all bets settled)
 				AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
 		GROUP BY CASE 
-					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
+					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304) THEN 0
 					--WHEN b.bettype = 135 THEN 2
 					ELSE 1
 				 END
@@ -429,7 +430,8 @@ need below code to determine for mark match as calculated (all bets settled)
 								WHEN @action = 'CAL' AND @Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND @Sporttype = 5 AND @SelectedSet LIKE '%6%' THEN N'completed'	-- Match Option checked 
 								WHEN @action = 'CAL-HT' AND m.matchcode LIKE '%hedge%'	THEN eventstatus -- Jamie@20120330: Not change eventstatus='completed' for Hedge Match although 
-								WHEN @action = 'CAL-HT' AND @FTDone = 1					THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1	AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1	AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								ELSE m.eventstatus
@@ -637,7 +639,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM	dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
 			GROUP BY b.custid
 		END
 		ELSE IF @Action = 'UNDO'

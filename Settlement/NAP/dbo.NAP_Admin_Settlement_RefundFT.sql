@@ -1,5 +1,11 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundFT]    Script Date: 09/23/2015 14:20:04 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT    Script Date: 23/09/2015 9:43:53 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT] 
 	@matchid						INT
 	,@adminid						INT
@@ -43,13 +49,13 @@ AS
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 		- 20140911@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20150421@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
-
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		
 	Param's Explanation:
-	• @matchid: matchid of match to Refund HT
-	• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
-	• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
-	• @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
+	â€¢ @matchid: matchid of match to Refund HT
+	â€¢ @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
+	â€¢ @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+	â€¢ @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
 
 */
 BEGIN
@@ -134,7 +140,7 @@ BEGIN
 
 	INSERT INTO @status
 	SELECT CASE 
-				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
+				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304) THEN 0
 				ELSE 1
 		   END
 		,SUM(CASE 
@@ -152,7 +158,7 @@ BEGIN
 	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	GROUP BY CASE 
-				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) THEN 0
+				WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304) THEN 0
 				ELSE 1
 			 END
 
@@ -181,6 +187,34 @@ BEGIN
 
 	IF @IsSettleAbandonedMatchBetFair = 1
 		SELECT @IsExcludeBetfair = 1
+	
+	--=========================================
+	-- Check HTNormalBets and HTCornerBet 
+	DECLARE	@HTNoneCornerBetDone	BIT
+			,@HTCornerBetDone	BIT
+
+	DECLARE	@tmpHTStatus TABLE(
+		HTCornerBet	BIT
+		,inRunning	INT
+	)	
+
+	INSERT INTO @tmpHTStatus(HTCornerBet,inRunning)
+	SELECT	CASE WHEN Bettype IN (200,201,202,203,204,205,207,209) THEN 1
+				 ELSE 0 END 
+			,SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+	FROM bettrans WITH (NOLOCK)
+	WHERE	MatchID = @MatchID 
+			AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) --HT bets
+			AND statusID NOT BETWEEN 101 AND 102 
+	GROUP BY CASE WHEN Bettype IN (200,201,202,203,204,205,207,209) THEN 1
+				 ELSE 0 END 
+
+	IF NOT EXISTS(SELECT TOP 1 1 FROM @tmpHTStatus WHERE HTCornerBet = 0)
+		INSERT INTO @tmpHTStatus(HTCornerBet,inRunning) VALUES(0,0)
+
+	SELECT	@HTNoneCornerBetDone = CASE InRunning WHEN 0 THEN 1 ELSE 0 END 
+	FROM	@tmpHTStatus
+	WHERE	HTCornerBet = 0
 
 	---===============================================
 	--Check if match already Refund HT => refund whole match
@@ -298,18 +332,6 @@ BEGIN
 	FROM DBPRO.BODB02.dbo.Match_remark WITH (NOLOCK)
 	WHERE matchid = @matchid	
 	
-	--IF NOT EXISTS (SELECT TOP 1 1 FROM bettrans WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)	
-	--	AND NOT EXISTS (SELECT TOP 1 1 FROM bettransm WITH(NOLOCK) WHERE matchid = @matchid and bettype = 135)
-	--BEGIN
-	--	SELECT @SettlementStatus135 = CASE WHEN @SettlementStatus135 = 0 THEN 0 -- No offer
-	--									   ELSE 4 -- No ticket
-	--								  END
-	--END
-	--ELSE
-	--BEGIN
-	--	SELECT @SettlementStatus135 = 3 -- Calculated (Manual)
-	--END
-	
 	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @HTDone = 1
 	BEGIN
 		DECLARE @TennisTotal SMALLINT
@@ -354,6 +376,7 @@ BEGIN
 			,@betcount_196 		INT
 			,@betcount_199 		INT
 			,@betcount_206 		INT
+			,@betcount_302 		INT
 			
 		SELECT @ScoreLog = ' FTHScore=' + CAST(@fth AS VARCHAR(10)) 
 						 + ' FTAScore=' + CAST(@fta AS VARCHAR(10)) 
@@ -474,10 +497,11 @@ BEGIN
 		  ,@betcount_196 	= ISNULL(SUM(CASE b.bettype WHEN 196 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_199 	= ISNULL(SUM(CASE b.bettype WHEN 199 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_206 	= ISNULL(SUM(CASE b.bettype WHEN 206 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_302 	= ISNULL(SUM(CASE b.bettype WHEN 302 THEN 1 ELSE 0 END), 0)
 
 		FROM bettrans b WITH (NOLOCK)
 		WHERE b.matchid = @matchid 
-		AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206) 
+		AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302) 
 		AND b.statusID NOT IN (101, 102) 
 		AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 				     WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
@@ -551,6 +575,7 @@ BEGIN
 			,@betcount_196 					= @betcount_196
 			,@betcount_199 					= @betcount_199
 			,@betcount_206 					= @betcount_206
+			,@betcount_302 					= @betcount_302
 			,@IsHTCal						= @IsHTCal
 			,@IsSettleAbandonedMatch		= @IsSettleAbandonedMatch
 			,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -563,19 +588,23 @@ BEGIN
 		@Command	= 'NAP_Admin_Settlement_RefundFT'
 		,@MatchID	= @matchid
 		,@HTDone	= @HTDone
+		,@HTNoneCornerBetDone = @HTNoneCornerBetDone
 		,@RowCount	= @RowCount OUTPUT
 		,@creator	= @adminid
 
-	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
-		@Command			= 'NAP_Admin_Settlement_RefundFT'
-		,@MatchID			= @matchid
-		,@isExistTotalCorner= @isExistTotalCorner
-		,@isExistHTFCorner	= @isExistHTFCorner
-		,@isExistHTLCorner	= @isExistHTLCorner
-		,@isExistFTFCorner	= @isExistFTFCorner
-		,@isExistFTLCorner	= @isExistFTLCorner
-		,@creator			= @adminid
-
+	IF @sporttype = 1
+	BEGIN
+		EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+			@Command			= 'NAP_Admin_Settlement_RefundFT'
+			,@MatchID			= @matchid
+			,@isExistTotalCorner= @isExistTotalCorner
+			,@isExistHTFCorner	= @isExistHTFCorner
+			,@isExistHTLCorner	= @isExistHTLCorner
+			,@isExistFTFCorner	= @isExistFTFCorner
+			,@isExistFTLCorner	= @isExistFTLCorner
+			,@creator			= @adminid
+	END
+	
 	IF @RowCount > 0
 	BEGIN
 		-- Calculate Refund FT
