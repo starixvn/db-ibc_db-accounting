@@ -94,7 +94,9 @@ AS
 						  - Add moneyline in filter
 		- 20141125@Kathy: Add betid column [Redmine:##26489]
 		- 20141204@Kathy: Remove codes which are used in checking permission on DBPolicy [Redmine:#27058]	
-		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]				  
+		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
+		- 20150917@Patrick: #43565: Show error-message in case user clicks void button but no tickets are found
+						  
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
 		  + 0: All tickets
@@ -857,6 +859,57 @@ BEGIN
 	BEGIN
 		DELETE FROM #BetDelete WHERE statusID IN (SELECT * FROM @Status)
 	END
+
+	--check no data
+	IF NOT EXISTS (SELECT TOP 1 1 FROM #BetDelete)
+	BEGIN
+		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		
+		-----
+		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
+		WHERE KeyID = @KeyID AND KeyValue = @MatchId	
+		IF (@@Error = 0)
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID = @UserID, 
+				@MatchId = @MatchId, 
+				@KeyID = @KeyID,
+				@ActionID = 0, 
+				@Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial'
+		END TRY
+		BEGIN CATCH
+			SELECT @Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID = @UserID, 
+				@MatchId = @MatchId, 
+				@KeyID = @KeyID,
+				@ActionID = 0, 
+				@Remark = @Remark
+		END CATCH
+		ELSE
+		BEGIN
+			BEGIN TRY
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @UserID, 
+					@MatchId = @MatchId, 
+					@KeyID = @KeyID,
+					@ActionID = 0, 
+					@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
+			END TRY
+			BEGIN CATCH
+				SELECT @Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @UserID, 
+					@MatchId = @MatchId, 
+					@KeyID = @KeyID,
+					@ActionID = 0, 
+					@Remark = @Remark
+			END CATCH
+		END
+		DROP TABLE #BetDelete
+		RETURN
+	END
+
 	------------------***** Begin Special Delete *****------------------
 	-- Step 1: backup
 	INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,

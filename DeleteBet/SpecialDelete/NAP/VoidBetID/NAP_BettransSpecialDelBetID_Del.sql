@@ -1,7 +1,4 @@
-﻿use bodb02
-go
-
-ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -23,6 +20,7 @@ AS
 		- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 		- 20150804@Patrick: Adjust Balance Credit/Debit Game value for LiveCS #40736
 		- 20150907@Patrick: Support LiveCS
+		- 20150917@Patrick: #43565: Show error-message in case user clicks void button but no tickets are found
 
 	Param's Explanation: 
 */
@@ -91,6 +89,13 @@ BEGIN
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1)
 	BEGIN
 		DELETE FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1 -- Not allowed to settle the running Live CS bet 
+	END
+
+	--check no data
+	IF NOT EXISTS (SELECT TOP 1 1 FROM @tmpListTransID)
+	BEGIN
+		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		RETURN
 	END
 
 	DECLARE	@Recommend			INT
