@@ -1488,7 +1488,7 @@ BEGIN
 					AND s.ProductID = 13
 					AND s.SubProduct = 'MGC-RNG'
 					AND b.transid = @TransId
-					AND brng.status = 0
+					AND brng.statusid = 0
 				GROUP BY
 					b.transid,
 					ISNULL(b.BetID, 0),
@@ -1585,7 +1585,7 @@ BEGIN
 					AND s.ProductID = 13
 					AND s.SubProduct = 'MGC-RNG'
 					AND b.transid = @TransId
-					AND brng.status <> 0
+					AND brng.statusid <> 0
 				GROUP BY
 					b.transid,
 					ISNULL(b.BetID, 0),

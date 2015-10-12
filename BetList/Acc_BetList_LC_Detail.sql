@@ -1,19 +1,15 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Lrf_BetList_LC_Detail]    Script Date: 10/12/2015 10:00:46 AM ******/
+/****** Object:  StoredProcedure [dbo].[Acc_BetList_LC_Detail]    Script Date: 10/12/2015 3:31:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BetList_LC_Detail]
-	@LicenseeId		INT,
-	@UserId			INT,
-	@CustId			INT,
 	@RefNo			BIGINT,
-	@TransType		TINYINT			= 0,
-	@MoveBetsDay	SMALLDATETIME,
-	@BalanceUpDay	SMALLDATETIME
+	@CustId			INT,
+	@TransType		TINYINT			= 0
 AS
 
 /*
@@ -68,27 +64,8 @@ BEGIN
 		SELECT 1
 	END
 
-	DECLARE @tmpBettransLC TABLE (
-		TransId			BIGINT,
-		SportType		SMALLINT,
-		BetType			SMALLINT,
-		TransDate		DATETIME,
-		WinLostDate		SMALLDATETIME,
-		Status			VARCHAR(10),
-		StatusId		TINYINT,
-		Odds			SMALLMONEY,
-		Stake			MONEY,
-		Actual_Stake	MONEY,
-		WinLost			MONEY,
-		Comm			MONEY,
-		PlayerComm		MONEY,
-		IP				NVARCHAR(15),
-		TransDesc		NVARCHAR(1000)
-	)
-
 	IF EXISTS ( SELECT 1 FROM dbo.bettrans WITH (NOLOCK) WHERE transid = @RefNo )
 	BEGIN
-		INSERT INTO @tmpBettransLC
 		SELECT
 			blc.transid,
 			blc.productID AS SportType,
@@ -112,7 +89,6 @@ BEGIN
 	END
 	ELSE IF EXISTS ( SELECT 1 FROM dbo.bettrans14 WITH (NOLOCK) WHERE transid = @RefNo )
 	BEGIN
-		INSERT INTO @tmpBettransLC
 		SELECT
 			blc.transid,
 			blc.productID AS SportType,
@@ -134,7 +110,6 @@ BEGIN
 	END
 	ELSE IF EXISTS ( SELECT 1 FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK) WHERE transid = @RefNo )
 	BEGIN
-		INSERT INTO @tmpBettransLC
 		SELECT
 			blc.transid,
 			blc.productID AS SportType,
@@ -154,66 +129,6 @@ BEGIN
 		FROM DBARC.bodb_Archive.dbo.bettransLC_bk AS blc WITH (NOLOCK)
 		WHERE blc.custid = @CustId AND blc.RefNo = @RefNo
 	END
-
-	-- get currency (for security)
-	DECLARE @currency INT
-
-	SELECT currencyID,
-		LicenseeID 
-	INTO #currency
-	FROM dbo.Lrf_f_GetCurrencybyUser(@LicenseeId, @UserId, 1)	-- System is default=1 (LRF)
-
-	SELECT @currency = c.currency 
-	FROM dbo.custinfo AS c WITH (NOLOCK)
-		INNER JOIN #Currency AS cy ON c.Currency = cy.CurrencyID 
-	WHERE c.custid = @custid
-
-	DROP TABLE #Currency
-
-	-- get from date - to date
-	DECLARE @Fromdate DATETIME
-	DECLARE @Todate DATETIME 
-
-	SELECT @Fromdate = MIN(WinLostDate),
-		@Todate = MAX(WinLostDate) 
-	FROM @tmpBettransLC
-
-	SELECT 
-		TransId,
-		SportType,
-		BetType,
-		TransDate,
-		WinLostDate,
-		Status,
-		StatusId,
-		Odds,
-		Stake,
-		Actual_Stake,
-		CAST(Stake * e.USD AS MONEY) AS StakeUSD,
-		CAST(Stake * e.EUR AS MONEY) AS StakeEUR,
-		CAST(Stake * e.MYR AS MONEY) AS StakeMYR,
-		CAST(Stake * e.GBP AS MONEY) AS StakeGBP,
-		WinLost,
-		CAST(WinLost * e.USD AS MONEY) AS WinLostUSD,
-		CAST(WinLost * e.EUR AS MONEY) AS WinLostEUR,
-		CAST(WinLost * e.MYR AS MONEY) AS WinLostMYR,
-		CAST(WinLost * e.GBP AS MONEY) AS WinLostGBP,
-		Comm,
-		CAST(Comm * e.USD AS MONEY) AS CommUSD,
-		CAST(Comm * e.EUR AS MONEY) AS CommEUR,
-		CAST(Comm * e.MYR AS MONEY) AS CommMYR,
-		CAST(Comm * e.GBP AS MONEY) AS CommGBP,
-		PlayerComm,
-		CAST(PlayerComm * e.USD AS MONEY) AS PlayerCommUSD,
-		CAST(PlayerComm * e.EUR AS MONEY) AS PlayerCommEUR,
-		CAST(PlayerComm * e.MYR AS MONEY) AS PlayerCommMYR,
-		CAST(PlayerComm * e.GBP AS MONEY) AS PlayerCommGBP,
-		IP,
-		TransDesc
-	FROM @tmpBettransLC AS b
-		INNER JOIN (SELECT * FROM Lrf_f_GetExchangeDaily(@FromDate, @ToDate)) AS e
-			ON e.ExchangeDate = b.WinLostDate AND e.exchangeid = @currency
-
 END
 
 GRANT	VIEW DEFINITION	ON	Acc_BetList_LC_Detail	TO	vnteam
