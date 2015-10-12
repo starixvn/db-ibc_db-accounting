@@ -1,11 +1,12 @@
-USE [bodb02]
+
+SET QUOTED_IDENTIFIER ON 
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Del]    Script Date: 09/18/2015 17:00:05 ******/
-SET ANSI_NULLS ON
+SET ANSI_NULLS ON 
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 09/10/2015 1:17:53 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 09/10/2015 1:16:12 PM ******/
+CREATE PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -28,6 +29,8 @@ AS
 		- 20150804@Patrick: Adjust Balance Credit/Debit Game value for LiveCS #40736
 		- 20150907@Patrick: Support LiveCS
 		- 20150810@Kathy: Using new balance table (BalCreditSports,BalDebitSports) [Redmine:#40125]
+		- 20150917@Patrick: #43565: Show error-message in case user clicks void button but no tickets are found
+
 	Param's Explanation: 
 */
 BEGIN 
@@ -95,6 +98,13 @@ BEGIN
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1)
 	BEGIN
 		DELETE FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1 -- Not allowed to settle the running Live CS bet 
+	END
+
+	--check no data
+	IF NOT EXISTS (SELECT TOP 1 1 FROM @tmpListTransID)
+	BEGIN
+		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		RETURN
 	END
 
 	DECLARE	@Recommend			INT
@@ -476,7 +486,7 @@ BEGIN
 	IF @balanceSB > 0
 	BEGIN			
 		--EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
-				EXEC dbo.Dot_BalanceDebitUpd
+								EXEC dbo.Dot_BalanceDebitUpd
 			@custID		= @custid
 			,@balance	= @balanceSB
 			,@type		= 1 -- Sports
@@ -484,7 +494,7 @@ BEGIN
 	END
 	IF @balanceLC > 0
 	BEGIN
-				EXEC dbo.Dot_BalanceDebitUpd 
+								EXEC dbo.Dot_BalanceDebitUpd 
 			@custID		= @custid
 			,@balance	= @balanceLC
 			,@type		= 3 -- Casino
@@ -492,7 +502,7 @@ BEGIN
 	END
 	IF @balanceNG > 0
 	BEGIN
-				EXEC dbo.Dot_BalanceDebitUpd
+								EXEC dbo.Dot_BalanceDebitUpd
 			@custID		= @custid
 			,@balance	= @balanceNG
 			,@type		= 4 -- Others
@@ -523,7 +533,7 @@ BEGIN
 	BEGIN
 		SELECT @balanceSB = ABS(@balanceSB)
 		--EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
-				EXEC dbo.Dot_BalanceCreditUpd
+								EXEC dbo.Dot_BalanceCreditUpd
 			@custID = @custid
 			,@balance = @balanceSB
 			,@type = 1 -- Sports
@@ -532,7 +542,7 @@ BEGIN
 	BEGIN
 		SELECT @balanceLC = ABS(@balanceLC)
 
-				EXEC dbo.Dot_BalanceCreditUpd
+								EXEC dbo.Dot_BalanceCreditUpd
 			@custID = @custid
 			,@balance = @balanceLC
 			,@type = 3 -- Casino
@@ -541,7 +551,7 @@ BEGIN
 	BEGIN
 		SELECT @balanceNG = ABS(@balanceNG)
 
-				EXEC dbo.Dot_BalanceCreditUpd
+								EXEC dbo.Dot_BalanceCreditUpd
 			@custID = @custid
 			,@balance = @balanceNG
 			,@type = 4 -- Others
@@ -578,8 +588,16 @@ BEGIN
 		WHERE	VName = 'isCalculatingParlay'	
 	END 
 END
+GO
 
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet] AS [dbo]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [vnteam] AS [dbo]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Del] TO [bodbAdminNet]
+GO 

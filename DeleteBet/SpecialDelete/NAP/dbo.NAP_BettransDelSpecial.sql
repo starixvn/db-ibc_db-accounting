@@ -1,11 +1,11 @@
-﻿USE [bodb02]
+﻿SET QUOTED_IDENTIFIER ON 
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial_xpre]    Script Date: 08/07/2015 15:55:04 ******/
-SET ANSI_NULLS ON
+SET ANSI_NULLS ON 
 GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+
+/****** Object:  Stored Procedure dbo.NAP_BettransDelSpecial    Script Date: 09/10/2015 1:17:53 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_BettransDelSpecial    Script Date: 09/10/2015 1:16:01 PM ******/
+CREATE PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId				INT,
 	
 	@FromTransId			BIGINT, 
@@ -103,6 +103,7 @@ AS
 		- 20141204@Kathy: Remove codes which are used in checking permission on DBPolicy [Redmine:#27058]	
 		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]			
 		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		- 20150917@Patrick: #43565: Show error-message in case user clicks void button but no tickets are found
 			  
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -866,6 +867,57 @@ BEGIN
 	BEGIN
 		DELETE FROM #BetDelete WHERE statusID IN (SELECT * FROM @Status)
 	END
+
+	--check no data
+	IF NOT EXISTS (SELECT TOP 1 1 FROM #BetDelete)
+	BEGIN
+		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		
+		-----
+		DELETE FROM dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
+		WHERE KeyID = @KeyID AND KeyValue = @MatchId	
+		IF (@@Error = 0)
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID = @UserID, 
+				@MatchId = @MatchId, 
+				@KeyID = @KeyID,
+				@ActionID = 0, 
+				@Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial'
+		END TRY
+		BEGIN CATCH
+			SELECT @Remark = 'VOID SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+				@UserID = @UserID, 
+				@MatchId = @MatchId, 
+				@KeyID = @KeyID,
+				@ActionID = 0, 
+				@Remark = @Remark
+		END CATCH
+		ELSE
+		BEGIN
+			BEGIN TRY
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @UserID, 
+					@MatchId = @MatchId, 
+					@KeyID = @KeyID,
+					@ActionID = 0, 
+					@Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial'
+			END TRY
+			BEGIN CATCH
+				SELECT @Remark = 'VOID FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
+				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+					@UserID = @UserID, 
+					@MatchId = @MatchId, 
+					@KeyID = @KeyID,
+					@ActionID = 0, 
+					@Remark = @Remark
+			END CATCH
+		END
+		DROP TABLE #BetDelete
+		RETURN
+	END
+
 	------------------***** Begin Special Delete *****------------------
 	-- Step 1: backup
 	INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
@@ -946,8 +998,8 @@ BEGIN
 	GROUP BY b.CustID
 
 	---INSERT data into pending balance table 
-	DECLARE @tblDebitPending BalanceList
-	DECLARE @tblCreditPending BalanceList
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 	
 	--INSERT INTO BalancePendingCredit (custid,Balance)
 	--SELECT		a.custid, (a.balance - b.balance) as Balance
@@ -964,7 +1016,7 @@ BEGIN
 	WHERE	    (a.balance - b.balance) > 0	
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
+				EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 
@@ -983,7 +1035,7 @@ BEGIN
 	WHERE	    (a.balance - b.balance) < 0
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
+				EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 	
@@ -1276,8 +1328,16 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO
 
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [vnteam] AS [dbo]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet]
+GO 
