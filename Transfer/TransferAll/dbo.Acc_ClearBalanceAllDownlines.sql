@@ -1,7 +1,4 @@
-﻿use bodb02
-go
-
-ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
+﻿ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	
 	@UserID int = 8,
 	@IP nvarchar(15)='', 
@@ -33,6 +30,7 @@ AS
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 	
 		- 20140826@Lukas: use maxdop hint to avoid parallelism operators -> reduce CPU usage  
 		- 20150723@Patrick: Support Gold deluxe & override code from production with 20140826@Lukas version 
+		- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -276,7 +274,20 @@ BEGIN
 		END
 
 		---update debit balance  
-		EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @memberBalance
+		--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @memberBalance
+		EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2, @ErrCode = @ErrCode OUTPUT
+		IF @ErrCode <> 0
+		BEGIN
+			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
+
+			DELETE dbo.bettrans
+			WHERE custid IN (@recommend, @custid)
+				AND matchid = 0
+				AND bettype IN (21003, 21004)
+				AND refno = @refno
+
+			RETURN
+		END
 
 		INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 		VALUES (0, @UserID, @custid, @membername, @refno, @Now, 21004, 'To Customer::' + @agentusername, 0, @memberBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
@@ -292,8 +303,8 @@ BEGIN
 				AND refno = @refno
 
 			--rollback balance  
-			EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @memberBalance
-
+			--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @memberBalance
+			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2
 			RETURN
 		END
 
@@ -302,7 +313,7 @@ BEGIN
 		DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 
 		-- reset yesterday balance for live casino         
-		EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
+								EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
 
 		SELECT @LogData = @LogData + CASE 
 				WHEN @isResetYesterdayBalance = 1 THEN CASE 
@@ -370,12 +381,13 @@ BEGIN
 		---update credit balance  
 		SELECT @ABSmemberBalance = abs(@memberBalance)
 
-		EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSmemberBalance
+		--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSmemberBalance
+		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @ABSmemberBalance, @Type = 2
 
 		SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Agent ' + @agentusername + ' to Member ' + @membername + ' with amount ' + convert(VARCHAR(20), @memberBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
 
 		-- reset yesterday balance for live casino         
-		EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
+								EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
 
 		SELECT @LogData = @LogData + CASE 
 				WHEN @isResetYesterdayBalance = 1 THEN CASE 
@@ -831,8 +843,6 @@ BEGIN
 
 	RETURN
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbAdminNet] AS [dbo]

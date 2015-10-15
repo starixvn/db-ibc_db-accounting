@@ -1,7 +1,12 @@
-﻿use bodb02
-go
 
-ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 09/10/2015 1:17:53 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_BettransSpecialDelBetID_Del    Script Date: 09/10/2015 1:16:12 PM ******/
+CREATE PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Del]
 	@strTransID		VARCHAR(MAX) = '',
 	@CustID			int = 0,
 	@username		varchar(30),
@@ -23,6 +28,8 @@ AS
 		- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 		- 20150804@Patrick: Adjust Balance Credit/Debit Game value for LiveCS #40736
 		- 20150907@Patrick: Support LiveCS
+		- 20150810@Kathy: Using new balance table (BalCreditSports,BalDebitSports) [Redmine:#40125]
+		- 20150917@Patrick: #43565: Show error-message in case user clicks void button but no tickets are found
 
 	Param's Explanation: 
 */
@@ -93,6 +100,13 @@ BEGIN
 		DELETE FROM @tmpListTransID WHERE Bettype BETWEEN 1101 AND 1199 AND StatusID BETWEEN 0 AND 1 -- Not allowed to settle the running Live CS bet 
 	END
 
+	--check no data
+	IF NOT EXISTS (SELECT TOP 1 1 FROM @tmpListTransID)
+	BEGIN
+		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		RETURN
+	END
+
 	DECLARE	@Recommend			INT
 			,@MRecommend		INT
 			,@Srecommend		INT
@@ -109,19 +123,24 @@ BEGIN
 			,@EmailGroup		VARCHAR(30)
 			,@isNegativeBalance BIT
 			,@totalbalance		MONEY
-			,@balance			MONEY
+			--,@balance			MONEY
 			,@winlostdate		DATETIME
 			,@currency			INT
+			,@balanceSB			MONEY
+			,@balanceLC			MONEY
+			,@balanceNG			MONEY
 
 	SELECT	@winlostdate	= MIN(winlostdate)
 			,@CustID		= MIN(CustID)
-			,@Balance		= SUM(winlost - actual_stake + playercomm) 
+			--,@Balance		= SUM(winlost - actual_stake + playercomm) 
+			,@balanceSB		= SUM(CASE WHEN bettype BETWEEN 80 AND 120 OR bettype BETWEEN 1101 AND 1199 THEN 0 ELSE winlost - actual_stake + playercomm END)
+			,@balanceNG		= SUM(CASE WHEN bettype BETWEEN 80 AND 120 THEN winlost - actual_stake + playercomm ELSE 0 END)
+			,@balanceLC		= SUM(CASE WHEN bettype BETWEEN 1101 AND 1199 THEN winlost - actual_stake + playercomm ELSE 0 END)
 			,@isExistMatch	= MAX(CASE WHEN Bettype NOT IN (9,10) THEN 1 ELSE 0 END)
 			,@isExistParlay = MAX(CASE WHEN Bettype = 9 THEN 1 ELSE 0 END)
 			,@isExistOutright = MAX(CASE WHEN Bettype = 10 THEN 1 ELSE 0 END)
 	FROM	Bettrans WITH (NOLOCK)
-	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)
-			
+	WHERE	TransID IN (SELECT TransID FROM @tmpListTransID)			
 
 	SELECT	 @Username2		= Username2
 			,@CustUsername	= username
@@ -234,7 +253,7 @@ BEGIN
 	FROM	bettrans with (nolock)
 	WHERE	custid = @CustID
 		
-	SELECT  @isNegativeBalance = CASE WHEN @Balance > 0 AND (credit + @totalbalance - @Balance) < 0 THEN 1 ELSE 0 END
+	SELECT  @isNegativeBalance = CASE WHEN (@BalanceSB + @balanceLC + @balanceNG) > 0 AND (credit + @totalbalance - (@BalanceSB + @balanceLC + @balanceNG)) < 0 THEN 1 ELSE 0 END
 	FROM	DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	WHERE	custid = @CustID 
 
@@ -256,6 +275,7 @@ BEGIN
 		CASE WHEN bettype BETWEEN 1101 AND 1199 THEN 1101
 			 --WHEN bettype BETWEEN 1701 AND 1799 THEN 1701 
 		END
+
 
 	-- Get Upline info 
 
@@ -463,11 +483,32 @@ BEGIN
 	WHERE	transid IN (SELECT TransID FROM @tmpListTransID)  
 
 	--update balance debit
-	IF @balance > 0
+	IF @balanceSB > 0
 	BEGIN			
-		EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+		--EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+								EXEC dbo.Dot_BalanceDebitUpd
+			@custID		= @custid
+			,@balance	= @balanceSB
+			,@type		= 1 -- Sports
+			,@isforced	= 1
 	END
-
+	IF @balanceLC > 0
+	BEGIN
+								EXEC dbo.Dot_BalanceDebitUpd 
+			@custID		= @custid
+			,@balance	= @balanceLC
+			,@type		= 3 -- Casino
+			,@isforced	= 1
+	END
+	IF @balanceNG > 0
+	BEGIN
+								EXEC dbo.Dot_BalanceDebitUpd
+			@custID		= @custid
+			,@balance	= @balanceNG
+			,@type		= 4 -- Others
+			,@isforced	= 1
+	END
+	
 	--update balance debit game
 	UPDATE bal
 	SET Balance = bal.Balance + tmp.balance
@@ -488,12 +529,34 @@ BEGIN
 	WHERE transid IN (SELECT TransID FROM @tmpListTransID)  
 		
 	--update balance debit	
-	IF @balance < 0
+	IF @balanceSB < 0
 	BEGIN
-		SELECT @balance = ABS(@balance)
-		EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
-	END
+		SELECT @balanceSB = ABS(@balanceSB)
+		--EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+								EXEC dbo.Dot_BalanceCreditUpd
+			@custID = @custid
+			,@balance = @balanceSB
+			,@type = 1 -- Sports
+	END	
+	IF @balanceLC < 0
+	BEGIN
+		SELECT @balanceLC = ABS(@balanceLC)
 
+								EXEC dbo.Dot_BalanceCreditUpd
+			@custID = @custid
+			,@balance = @balanceLC
+			,@type = 3 -- Casino
+	END	
+	IF @balanceNG < 0
+	BEGIN
+		SELECT @balanceNG = ABS(@balanceNG)
+
+								EXEC dbo.Dot_BalanceCreditUpd
+			@custID = @custid
+			,@balance = @balanceNG
+			,@type = 4 -- Others
+	END		
+			
 	--update balance credit game
 	UPDATE bal
 	SET Balance = bal.Balance + ABS(tmp.balance)
@@ -506,7 +569,7 @@ BEGIN
 	FROM @balanceGame b
 		LEFT JOIN dbo.BalanceCreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate AND bal.bettype = b.bettype
 	WHERE bal.CustId IS NULL AND b.balance < 0
-				
+
 	SELECT @LogData = 'Delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@strTransID as varchar(8000))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
 	EXEC WriteLog_UserLog @UserID = @UserID, @Doing = @LogData
 		
@@ -522,10 +585,9 @@ BEGIN
 	BEGIN
 		UPDATE	systemSettings WITH (ROWLOCK,UPDLOCK)
 		SET		VValue = '0'
-		WHERE	VName = 'isCalculatingParlay'
+		WHERE	VName = 'isCalculatingParlay'	
 	END 
 END
-
 GO
 
 SET QUOTED_IDENTIFIER OFF 

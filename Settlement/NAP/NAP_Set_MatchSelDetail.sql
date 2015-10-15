@@ -28,6 +28,7 @@ AS
 		- 20150602@Jamie: DisplayCat = 8 ExtraTime 
 		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 */
 BEGIN
 	SET NOCOUNT ON
@@ -304,7 +305,7 @@ BEGIN
 
 		INSERT INTO @status
 		SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: HT Corner, 5:FT Corner 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
@@ -332,7 +333,7 @@ BEGIN
 				AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 		GROUP BY CASE 
-				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191) THEN 1
+				WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304) THEN 1
 				WHEN bettype = 14 THEN 2
 				WHEN bettype = 127 THEN 3
 				WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
@@ -762,7 +763,7 @@ BEGIN
 							OR bettype BETWEEN 128 AND 134
 							OR bettype BETWEEN 140 AND 150 
 							OR bettype = 152
-							OR bettype IN (159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207) 
+							OR bettype IN (159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207, 302, 304) 
 						)
 						AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
 						AND ruben = 0 
