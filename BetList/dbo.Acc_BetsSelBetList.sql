@@ -1857,7 +1857,6 @@ BEGIN
 					INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid 
 					AND s.ProductId = 11
-					AND s.SubProduct = 'MGC-RNG'
 					AND b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) AND @ToDate		-- today
 					AND blc.statusID <> 0
 				GROUP BY
@@ -3069,6 +3068,7 @@ BEGIN
 	DROP TABLE #LASAgent
 	DROP TABLE #SportBettype
 END
+
 
 GRANT	VIEW DEFINITION	ON	Acc_BetsSelBetList	TO	vnteam
 GRANT	EXECUTE	ON	Acc_BetsSelBetList	TO	bodbExtAccNet
