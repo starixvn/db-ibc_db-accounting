@@ -1757,7 +1757,7 @@ BEGIN
 					b.custid = @Custid
 					AND s.ProductID = 11
 					AND b.transid = @TransId
-					AND blc.status = 0
+					AND blc.statusID = 0
 				GROUP BY
 					b.transid,
 					ISNULL(b.BetID, 0),
@@ -1853,7 +1853,7 @@ BEGIN
 					b.custid = @Custid
 					AND s.ProductID = 11
 					AND b.transid = @TransId
-					AND blc.status <> 0
+					AND blc.statusID <> 0
 				GROUP BY
 					b.transid,
 					ISNULL(b.BetID, 0),
