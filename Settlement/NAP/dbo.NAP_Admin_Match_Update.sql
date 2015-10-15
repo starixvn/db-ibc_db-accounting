@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
+ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update_xpre]
 (
 	@Command VARCHAR(100),
 	@MatchID INT,
@@ -15,7 +15,6 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 	@FTDone BIT = 0,
 	@HTDone BIT = 0,
 	@NoneCornerBetDone	BIT = 0, 
-	@HTNoneCornerBetDone	BIT = 0,
 	@isExcludeCorner	BIT = 0,
 	@isExistRunningCornerBet BIT = 0,
 	@RowCount INT = 0 OUTPUT,
@@ -37,6 +36,7 @@ AS
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
+		- 20150918@Johnson: Reset betstatus value when RefundFull or RefundFT for Muay Thai  [Redmine: #43806]
 		
 */
 BEGIN
@@ -75,8 +75,7 @@ BEGIN
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 5 AND @SelectedSet LIKE '%6%'THEN N'completed'
-								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
-								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'								
 							ELSE eventstatus END,
@@ -96,7 +95,7 @@ BEGIN
 							END
 			,@Sporttype = sporttype
 		FROM match with(NOLOCK)
-		WHERE matchid = @matchid
+		WHERE matchid = @matchid AND sporttype NOT IN (44)
 
 		IF @sporttype <> 5 
 		BEGIN
@@ -196,7 +195,7 @@ BEGIN
 												 END
 						END,
 			eventstatus = 'Completed', changetime = GETDATE(), settleTime = GETDATE()
-		WHERE matchid=@MatchID AND @HTDone = 1
+		WHERE matchid=@MatchID AND @HTDone = 1 AND sporttype NOT IN (44)
 
 		--- get rowcount
 		SET @RowCount = @@ROWCOUNT
