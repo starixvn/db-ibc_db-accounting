@@ -1,10 +1,11 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s162]    Script Date: 08/19/2015 08:58:09 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_s162    Script Date: 8/11/2015 10:35:07 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_s162    Script Date: 8/11/2015 4:45:42 PM ******/
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_s162]
 	@MatchId		INT,
@@ -121,7 +122,8 @@ BEGIN
 		SELECT	custid, SUM(winlost-actual_stake+playercomm), SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM	dbo.bettrans with (rowlock)
 		WHERE	matchid = @matchid 
-				AND bettype = @Bettype
+				--AND bettype = @Bettype
+				AND bettype BETWEEN 1101 and 1199
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -194,7 +196,8 @@ BEGIN
 				,SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM	dbo.bettrans with (rowlock)
 		WHERE	matchid = @matchid 
-				AND bettype = @Bettype
+				--AND bettype = @Bettype
+				AND bettype BETWEEN 1101 and 1199
 		GROUP BY custid
 		
 
@@ -438,9 +441,6 @@ BEGIN
 		END CATCH
 	END
 END
-
-
-
 
 
 
