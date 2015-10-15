@@ -26,7 +26,8 @@ AS
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
 		- 20141117@Jamie: Change ErrCode [Redmine:#23034]		
 		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]		
-		- 20151002@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)   
+		- 20150922@Johnson: check result status from ResultDetail [Redmine: #43806]
+		- 20151002@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 	Param's Explanation:		
 		
 */
@@ -49,6 +50,7 @@ BEGIN
 						  ,hth SMALLINT
 						  ,hta SMALLINT
 						 )
+						 
 	
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''
@@ -70,15 +72,33 @@ BEGIN
 	IF EXISTS (SELECT 1
 				FROM @match
 				WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL ) AND @action <> 'UNDO'
+		OR EXISTS (SELECT 1
+					FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
+					WHERE matchid IN (SELECT matchid FROM @match)
+						AND ResourceId NOT IN ('00','01','08')
+						AND ResultStatusId NOT IN (2,5)
+				)				
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
+			OR matchid IN (
+				SELECT matchid
+				FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid IN (SELECT matchid FROM @match)
+					AND ResourceId NOT IN ('00','01','08')
+					AND ResultStatusId NOT IN (2,5))
 
 		-- exclude matches were not keyscore yet
 		DELETE
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
+			OR matchid IN (
+				SELECT matchid
+				FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid IN (SELECT matchid FROM @match)
+					AND ResourceId NOT IN ('00','01','08')
+					AND ResultStatusId NOT IN (2,5))
 	END
 
 	IF EXISTS (SELECT 1

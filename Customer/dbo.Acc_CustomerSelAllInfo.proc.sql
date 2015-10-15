@@ -60,6 +60,9 @@ Revisions:
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 	- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
+	 
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -84,6 +87,7 @@ BEGIN
           , @DisableDownlinesEsports BIT
           , @DownlinesSelectedBetting BIT
 		  , @DisableDownlinesGoldDeluxe BIT
+		  , @DisableDownlinesColossusBet BIT 
 		  , @DisableDownlinesSuperLive BIT
           , @IsInternal BIT
           , @LimitPerIP TINYINT
@@ -184,6 +188,11 @@ BEGIN
 										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableGoldDeluxe = 1) 											 
 										      ELSE 0 END	
 
+	SELECT @DisableDownlinesColossusBet = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableColossusBet = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableColossusBet = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableColossusBet = 1) 											 
+										      ELSE 0 END	
+										      
 	SELECT @DisableDownlinesSuperLive = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableSuperLive = 1)
 										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableSuperLive = 1) 											 
 										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableSuperLive = 1) 											 
@@ -469,6 +478,7 @@ BEGIN
 	    ISNULL(@DownlinesSelectedBetting,0) DownlinesSelectedBetting,
 		ISNULL(@DisableDownlinesEsports, 0) DisableDownlinesEsports,
 		ISNULL(@DisableDownlinesGoldDeluxe,0) DisableDownlinesGoldDeluxe,
+		ISNULL(@DisableDownlinesColossusBet,0) DisableDownlinesColossusBet,
 		ISNULL(@DisableDownlinesSuperLive,0) DisableDownlinesSuperLive,
 	    ci.DisableBingo,
 	    ci.DisableNumber,
@@ -485,6 +495,8 @@ BEGIN
 		ci.DisableEsports,
 		ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
 		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
+		ISNULL(ci.DisableColossusBet,1) AS DisableColossusBet,
+		ISNULL(ci.HideColossusBet,1) AS HideColossusBet,
 		ISNULL(ci.DisableSuperLive,1) AS DisableSuperLive,
 	    ci.Enabled,
 	    @isBA IsBA,
@@ -559,6 +571,11 @@ BEGIN
 			    max(transdate) lastTxn 
 		    FROM dbo.bettrans WITH(NOLOCK) 
 		    WHERE custid = @custid
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 	    ) Balance 
 
     END 
@@ -603,6 +620,11 @@ BEGIN
 			    max(transdate) lastTxn
 		    FROM dbo.bettrans WITH(NOLOCK) 
 		    WHERE recommend = @custid
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 	    )Balance 
 
     END
@@ -656,6 +678,11 @@ BEGIN
 				    max(transdate) lastTxn
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE mrecommend = @custid	
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 	    )Balance 
     	
 	    /*
@@ -715,6 +742,11 @@ BEGIN
 				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 then actual_stake else 0 end) customerOutstanding	
 		     FROM bettrans WITH(NOLOCK) 
 		     WHERE srecommend = @custid
+				AND (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 		    )Balance 
      
     END
@@ -731,6 +763,9 @@ BEGIN
 		    @TotalMemberSuspended MemberSuspended
 END
 
+
+ 
+ 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
 GO
@@ -739,3 +774,14 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
+ 
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
+GO 
+ 

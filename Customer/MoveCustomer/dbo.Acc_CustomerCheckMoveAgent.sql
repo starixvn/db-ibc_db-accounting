@@ -24,6 +24,9 @@ AS
 		- 20150508@Kathy: Add Gold Deluxe product [Redmine:#34486]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
+		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
+		- 20150904@Helen: commission setting for MO [Redmine #41470]
+		
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -91,10 +94,13 @@ BEGIN
 	      , @mHideVirtualSports		BIT
 	      , @aHideKeno				BIT
 	      , @mHideKeno				BIT
-	      , @mDisableGoldDeluxe		BIT
-	      , @aDisableGoldDeluxe		BIT
+	      
 	      ,	@mHideGoldDeluxe		BIT
 	      , @aHideGoldDeluxe		BIT
+	      	      
+	      ,	@mHideColossusBet		BIT
+	      , @aHideColossusBet		BIT
+	      
 		  , @mDisableSuperLive		BIT
 	      , @aDisableSuperLive		BIT
 	      , @AdminUser				VARCHAR(50)
@@ -125,8 +131,8 @@ BEGIN
 	     , @mHideVirtualSports  = HideVirtualSports
 	     , @mHideKeno			= HideKeno
 	     , @mDisableEsports     = DisableEsports
-	     , @mDisableGoldDeluxe	= DisableGoldDeluxe
 	     , @mHideGoldDeluxe		= HideGoldDeluxe
+	     , @mHideColossusBet	= HideColossusBet
 		 , @mDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @mastername
@@ -158,8 +164,8 @@ BEGIN
 	     , @aHideVirtualSports  = HideVirtualSports
 	     , @aHideKeno			= HideKeno
 	     , @aDisableEsports     = DisableEsports
-	     , @aDisableGoldDeluxe	= DisableGoldDeluxe
 	     , @aHideGoldDeluxe		= HideGoldDeluxe
+	     , @aHideColossusBet	= HideColossusBet
 		 , @aDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @agentname
@@ -254,7 +260,7 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': agent enabled SA Racing but new master not enabled SA Racing.',
 			@ErrCode = 107					 
-		return
+		RETURN
 	END
 
 
@@ -391,7 +397,15 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = 'Agent is offered Gold Deluxe but new master is not offered Gold Deluxe.',
 			@ErrCode = 128
-		return
+		RETURN
+	END	
+	
+	--Check Colossus Bet enable status	
+	IF @mHideColossusBet = 1 and @aHideColossusBet = 0
+	BEGIN
+		SELECT @ErrMsg = 'Agent is offered Colossus Bets but new master is not offered Colossus Bets.',
+			@ErrCode = 129
+		RETURN
 	END	
 	
 	--Check identical auto master PT 
@@ -516,6 +530,77 @@ BEGIN
 		RETURN
 	END
 
+
+	--Check commission for Colossus Bet
+	IF EXISTS (
+			SELECT	1
+			FROM	AgentCommRate mcs WITH(NOLOCK) 
+				JOIN AgentCommRate acs WITH(NOLOCK) ON	acs.custid = @recommend 
+														AND acs.sporttype = mcs.sporttype 
+														AND acs.bettype = mcs.bettype
+			WHERE	mcs.custid = @mrecommend 
+					AND mcs.sporttype = 204 
+					AND mcs.bettype = 18001
+					AND mcs.CommRate < acs.CommRate
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission for Colossus Bets is less than agent''s commission.',
+			@ErrCode = 216
+		RETURN
+	END
+
+	--Check Cash-In share for Colossus Bet
+	IF EXISTS (
+			SELECT	1
+			FROM	AgentCommRate mcs WITH(NOLOCK) 
+				JOIN AgentCommRate acs WITH(NOLOCK) ON	acs.custid = @recommend 
+														AND acs.sporttype = mcs.sporttype 
+														AND acs.bettype = mcs.bettype
+			WHERE	mcs.custid = @mrecommend 
+					AND mcs.sporttype = 204 
+					AND mcs.bettype = 18002
+					AND mcs.CommRate < acs.CommRate
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s cash-in share for Colossus Bets is less than agent''s cash-in share.',
+			@ErrCode = 217
+		RETURN
+	END	
+	
+	--Check commission for Myanmar Odds
+	DECLARE @IsMyanmarOdds_source BIT = 0
+	DECLARE @IsMyanmarOdds_destination BIT = 0
+	
+	SET @IsMyanmarOdds_destination =  dbo.fn_IsMyanmarOdds (@mrecommend)
+
+	SET @IsMyanmarOdds_source =  dbo.fn_IsMyanmarOdds (@mrecommend_old)
+
+	IF @IsMyanmarOdds_source <> @IsMyanmarOdds_destination
+	BEGIN
+		SELECT @ErrMsg = 'Cannot move customer ' + @agentname + ' since amongs its new and old sites, one has % Odds.',
+					@ErrCode = 218
+		RETURN	
+	END	
+	
+	IF @IsMyanmarOdds_source = 1
+	BEGIN
+		IF EXISTS(
+			SELECT	1
+			FROM	AgentCommRate mcs WITH(NOLOCK) 
+				JOIN AgentCommRate acs WITH(NOLOCK) ON	acs.custid = @recommend 
+														AND acs.sporttype = mcs.sporttype 
+														AND acs.bettype = mcs.bettype
+			WHERE	mcs.custid = @mrecommend 
+					AND mcs.sporttype = 1 
+					AND mcs.bettype = 301
+					AND mcs.CommRate < acs.CommRate
+		)
+		BEGIN
+			SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s cash-in share for Colossus Bets is less than agent''s cash-in share.',
+					@ErrCode = 219
+			RETURN	
+		END
+	END
 	--Check identical autoposition taking
 	IF exists (
 		SELECT 1 from 
