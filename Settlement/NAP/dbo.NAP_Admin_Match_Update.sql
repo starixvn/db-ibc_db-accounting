@@ -36,7 +36,7 @@ AS
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
-		
+		- 20151012@Patrick: Reset betstatus for Muay Thai when user do action RefundFull & RefundFT [Redmine: #45356]
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -94,7 +94,12 @@ BEGIN
 							END
 			,@Sporttype = sporttype
 		FROM match with(NOLOCK)
-		WHERE matchid = @matchid
+		WHERE matchid = @matchid AND sporttype NOT IN (44)
+
+		IF ISNULL(@betstatus , '') = ''
+		BEGIN
+			SET @betstatus = ''
+		END
 
 		IF @sporttype <> 5 
 		BEGIN
@@ -182,7 +187,12 @@ BEGIN
 								 ELSE ISNULL(betstatus, '')
 							END
 		FROM match with(NOLOCK)
-		WHERE matchid = @matchid
+		WHERE matchid = @matchid AND sporttype NOT IN (44)
+
+		IF ISNULL(@betstatus , '') = ''
+		BEGIN
+			SET @betstatus = ''
+		END
 
 		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
 		SET finalhomescore=0, finalawayscore=0, 
