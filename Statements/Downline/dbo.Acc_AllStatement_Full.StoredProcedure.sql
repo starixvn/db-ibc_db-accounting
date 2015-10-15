@@ -45,7 +45,7 @@
 		- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
 		- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
 		- 20150903@Sophia: Apply Colossus Bets [#42428]
-		- 20150918@Sophia: Apply AG Casino - Add table BettransLC [#43810]
+		- 20151013@Sophia: Apply AG Casino - Add table BettransLC [#43810]
 						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]
 
  */
@@ -103,11 +103,8 @@ BEGIN
 	BEGIN
 		SELECT @fromdate_bk = @_FromDate
 		SELECT @_FromDate = @_BalanceUpDay
-	END
-	
-	DECLARE @Today SMALLDATETIME 
-	SELECT @Today = DATEADD(DAY, DATEDIFF(DAY,0,CURRENT_TIMESTAMP), 0)
-
+	END	
+ 
 	IF @roleid = 1
 	BEGIN
 		---- 1.1 bettrans
@@ -127,7 +124,7 @@ BEGIN
 			WHERE custid = @custid
 				AND winlostdate between @_FromDate and @_ToDate
 				AND CASE WHEN s.productId = 1 AND s.SubProduct = 'MG-SuperLive' AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
-				AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) AND Winlostdate = @Today THEN 0 ELSE 1 END = 1
+				AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
 				--AND statusID <> 103
 			GROUP BY winlostdate, b.bettype,
 				CASE
@@ -154,9 +151,7 @@ BEGIN
 				AND statusID = 0
 			GROUP BY GameId, winlostdate
 
-			----1.3 Get data today from BettransLC for AS Casino  
-			IF @Today <= @todate
-			BEGIN 
+			----1.3 Get data from BettransLC for AG Casino  			
 				INSERT INTO @bet(winlostdate, bettype, statusID, transdate, transdesc, stake, actual_stake, winlost, playercomm )
 				SELECT winlostdate, GameId, 
 					CASE
@@ -171,7 +166,7 @@ BEGIN
 					SUM(playercomm)
 				FROM bettransLC (NOLOCK)
 				WHERE custid = @custid
-					AND winlostdate = @Today
+					AND winlostdate BETWEEN @_FromDate and @_ToDate
 				GROUP BY winlostdate, GameId,
 					CASE
 						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
@@ -193,14 +188,13 @@ BEGIN
 					SUM(playercomm)
 				FROM bettransRNG (NOLOCK)
 				WHERE custid = @custid
-					AND winlostdate = @Today
+					AND winlostdate BETWEEN @_FromDate and @_ToDate
 				GROUP BY winlostdate, GameId,
 					CASE
 						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
 						WHEN statusID IN (0,1) THEN 0--'running', 'waiting'
 					ELSE 131 END					 
-			END
-
+			
 		
 		---------------------
 
@@ -283,24 +277,24 @@ BEGIN
 			GROUP BY b.winlostdate
 		END
 
-		-----------Grand Prize of Microgaming RNG Casino				
-			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-			SELECT winlostdate AS accdate
-				,0 refno
-				,SUM (winlost) AS totalamt
-				,'GP' transtype
-				, 4 transtypeid
-				,'Grand Prize' transdesc
-				,'' Creator
-				,NULL checkerID
-				,'' checkerName
-				,NULL checkTime
-				,0 isAllowVeify
-			FROM dbo.JackpotWin WITH(NOLOCK) 
-			WHERE	winlostdate BETWEEN @fromdate AND @todate
-					AND custid = @custid
-					AND statusID NOT IN (102,101) -- 'VOID','REJECT'				
-			GROUP BY winlostdate, custid
+		-----Grand Prize of Microgaming RNG Casino				
+		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
+		SELECT winlostdate AS accdate
+			,0 refno
+			,SUM (winlost) AS totalamt
+			,'GP' transtype
+			, 4 transtypeid
+			,'Grand Prize' transdesc
+			,'' Creator
+			,NULL checkerID
+			,'' checkerName
+			,NULL checkTime
+			,0 isAllowVeify
+		FROM dbo.JackpotWin WITH(NOLOCK) 
+		WHERE	winlostdate BETWEEN @fromdate AND @todate
+				AND custid = @custid
+				AND statusID NOT IN (102,101) -- 'VOID','REJECT'				
+		GROUP BY winlostdate, custid
 						 
 
 		--------------------------------------------------------------
@@ -336,12 +330,13 @@ BEGIN
 			'',
 			NULL,
 			0  
-		from bettrans with (nolock)  
+		from bettrans b with (nolock)  
+			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 		where 
-			bettype between 1 and 19999 
+			b.bettype between 1 and 19999 
 			and custid=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN bettype BETWEEN 1800 AND 1899 AND Winlostdate = @Today THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
 			and playercomm<>0 
 		group by winlostdate
 
@@ -370,9 +365,6 @@ BEGIN
 				,bettrans.betid, bettrans.betcheck, bettrans.checkTime, bettrans.refno 
 
 
-	
-		IF @Today <= @todate
-		BEGIN 
 			----# Get data today from BettransLC for AG Casino
 			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 			SELECT winlostdate as accdate
@@ -387,7 +379,7 @@ BEGIN
 				,0
 			FROM bettransLC WITH (NOLOCK)
 			WHERE custid = @custid
-				AND winlostdate = @Today
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
 				AND playercomm <> 0
 			GROUP BY winlostdate
 
@@ -405,11 +397,9 @@ BEGIN
 				,0
 			FROM bettransRNG WITH (NOLOCK)
 			WHERE custid = @custid
-				AND winlostdate = @Today
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
 				AND playercomm <> 0
 			GROUP BY winlostdate
-
-		END 
 
 
 		-- customer deleted/void ticket
@@ -507,7 +497,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and recommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	AND Winlostdate >= @Today THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	THEN 0 ELSE 1 END = 1
 		group by winlostdate 
 		having sum(awinlost) <> 0
 		
@@ -529,13 +519,11 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and recommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	AND Winlostdate >= @Today THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
 		group by winlostdate 
 		having sum(comm-playercomm) <> 0		
 
-		----# Get data today from BettransLC for AG Casino and BettransRNG of Metricgaming
-		IF @Today <= @todate
-		BEGIN 
+		----# Get data today from BettransLC for AG Casino and BettransRNG of Microgaming
 			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 			SELECT winlostdate accdate
 				,0
@@ -549,7 +537,7 @@ BEGIN
 				,0
 			FROM bettransLC WITH (NOLOCK)
 			WHERE recommend = @custid
-				AND winlostdate = @Today
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
 			GROUP BY winlostdate
 			
 			UNION ALL
@@ -565,7 +553,7 @@ BEGIN
 				,0
 			FROM bettransLC WITH (NOLOCK)
 			WHERE recommend = @custid
-				AND winlostdate = @Today
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
 			GROUP BY winlostdate
 			HAVING sum(comm - playercomm) <> 0
 
@@ -582,7 +570,7 @@ BEGIN
 				,0
 			FROM bettransRNG WITH (NOLOCK)
 			WHERE recommend = @custid
-				AND winlostdate = @Today
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
 			GROUP BY winlostdate
 			HAVING sum(awinlost) <> 0
 
@@ -599,12 +587,10 @@ BEGIN
 				,0
 			FROM bettransRNG WITH (NOLOCK)
 			WHERE recommend = @custid
-				AND winlostdate = @Today
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
 			GROUP BY winlostdate
 			HAVING sum(comm - playercomm) <> 0
-
-
-		END 
+		 
 	END
 
 	-- MASTER
@@ -652,7 +638,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and mrecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	AND Winlostdate >= @Today THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
 		group by winlostdate 
 		having sum(mwinlost) <> 0	
 	
@@ -673,14 +659,12 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and mrecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	AND Winlostdate >= @Today THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
 		group by winlostdate 
 		having sum(acomm-comm) <> 0
 
 		
 		----# Get data today from BettransLC for AG Casino and BettransRNG of Metricgaming
-		IF @Today <= @todate
-		BEGIN 
 			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 			select 
 				winlostdate accdate,
@@ -696,7 +680,7 @@ BEGIN
 			from bettransLC with (nolock) 
 			where  
 				mrecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(mwinlost) <> 0
 
@@ -714,7 +698,7 @@ BEGIN
 			from bettransLC  with (nolock)  
 			where 
 				mrecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(acomm-comm) <> 0
 
@@ -733,7 +717,7 @@ BEGIN
 			from bettransRNG with (nolock) 
 			where  
 				mrecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(mwinlost) <> 0
 
@@ -751,10 +735,9 @@ BEGIN
 			from bettransRNG with (nolock)  
 			where 
 				mrecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(acomm-comm) <> 0
-		END
 	END
 
 	-- SUPER
@@ -803,7 +786,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and srecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	AND Winlostdate >= @Today THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	THEN 0 ELSE 1 END = 1
 		group by winlostdate 
 		having sum(swinlost) <> 0
 	
@@ -825,14 +808,12 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and srecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	AND Winlostdate >= @Today THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	THEN 0 ELSE 1 END = 1
 		group by winlostdate 
 		having sum(scomm-acomm) <> 0
 
 
-		----# Get data today from BettransLC for AG Casino and BettransRNG of Metricgaming
-		IF @Today <= @todate
-		BEGIN 
+		----# Get data today from BettransLC for AG Casino and BettransRNG of Microgaming
 			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 			select 
 				winlostdate accdate,
@@ -847,7 +828,7 @@ BEGIN
 				0 
 			from bettransLC with (nolock) 
 			where  srecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(swinlost) <> 0
 
@@ -866,7 +847,7 @@ BEGIN
 			from bettransLC  with (nolock)  
 			where 
 				srecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(scomm-acomm) <> 0
 
@@ -884,7 +865,7 @@ BEGIN
 				0 
 			from bettransRNG with (nolock) 
 			where  srecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(swinlost) <> 0
 
@@ -903,10 +884,10 @@ BEGIN
 			from bettransRNG with (nolock)  
 			where 
 				srecommend=@custid 
-				and winlostdate = @Today
+				and winlostdate BETWEEN @_FromDate and @_ToDate
 			group by winlostdate 
 			having sum(scomm-acomm) <> 0
-		END
+		
 	END
 
 END		   
