@@ -1,5 +1,12 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_1]    Script Date: 10/15/2015 09:58:12 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_1    Script Date: 13/10/2015 10:11:20 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_1    Script Date: 12/10/2015 2:49:25 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1] 
 	@creator			INT
 	,@matchid			INT
@@ -53,8 +60,9 @@ AS
 		- 20141009@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150406@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
-		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)		
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
 		+ @GameResult: Game result for Set(s) of Tennis Sport 
@@ -301,7 +309,7 @@ BEGIN
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-								EXEC dbo.NAP_Admin_Settlement_Parlay
+																																EXEC dbo.NAP_Admin_Settlement_Parlay
 			@matchids		= @matchid
 			,@creator		= @creator
 			,@action		= 'UNDO'
@@ -314,7 +322,7 @@ BEGIN
 			--,@ivalue		= @SettlementStatus135 -- update SettlementStatus135 value
 			,@SelectedSet	= @SelectedSet	--Tennis 
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command		= 'NAP_Admin_Settlement_1-UNDO'
 			,@MatchID		= @matchid
 			,@betstatus		= @betstatus
@@ -443,7 +451,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		FROM DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
 		WHERE m.matchid = @matchid
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command		= 'NAP_Admin_Settlement_1-CAL'
 			,@MatchID		= @matchid
 			,@FTHome		= @fth
@@ -515,14 +523,15 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		IF LEFT(@action, 3) = 'CAL'
 		BEGIN
-			IF @sporttype IN (180, 181, 182, 183, 184, 185, 186) --virtual sports 	
-			BEGIN
-				EXEC dbo.NAP_Admin_Settlement_3_VS 
-					@creator	= @creator
-					,@matchid	= @matchid
-					,@mode		= @action
-			END
-			ELSE IF @Sporttype = 5 -- Tennis settlement 
+			--IF @sporttype IN (180, 181, 182, 183, 184, 185, 186) --virtual sports 	
+			--BEGIN
+			--	EXEC dbo.NAP_Admin_Settlement_3_VS 
+			--		@creator	= @creator
+			--		,@matchid	= @matchid
+			--		,@mode		= @action
+			--END
+			--ELSE 
+			IF @Sporttype = 5 -- Tennis settlement 
 			BEGIN 
 				EXEC dbo.NAP_Admin_Settlement_5 
 					@MatchID = @MatchID,
@@ -592,7 +601,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		IF @eventstatus = 'completed'
 		BEGIN
-												EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
 				@matchid	= @matchid
 				,@command	= 'C'
 
@@ -606,7 +615,7 @@ need below code to determine for mark match as calculated (all bets settled)
 		END
 		ELSE IF @action = 'CAL-HT'
 		BEGIN
-												EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
 				@matchid	= @matchid
 				,@command	= 'H'
 		END
@@ -660,7 +669,9 @@ need below code to determine for mark match as calculated (all bets settled)
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
-
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -676,16 +687,35 @@ need below code to determine for mark match as calculated (all bets settled)
 
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+								EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
-
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+								EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----

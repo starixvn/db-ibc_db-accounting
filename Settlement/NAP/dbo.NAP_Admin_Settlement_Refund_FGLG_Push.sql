@@ -1,12 +1,14 @@
-USE [bodb02]
+
+SET QUOTED_IDENTIFIER ON 
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push]    Script Date: 04/02/2015 13:33:02 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+SET ANSI_NULLS ON 
 GO
 
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] 
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_FGLG_Push    Script Date: 06/10/2015 11:21:40 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_FGLG_Push    Script Date: 4/8/2015 1:48:10 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_FGLG_Push    Script Date: 06/04/2015 1:01:55 PM ******/
+
+CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] 
 	@MatchId				INT
 	,@action				VARCHAR(10) 	= 'REFUND' -- REFUND, REFUND-FT, REFUND-HT
 	,@AdminId				INT
@@ -27,6 +29,7 @@ Revisions:
 	- 20140507@Kathy: Add param @action (for bettype 1H FGLG (127)) [Redmine:#14449]
 	- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 	- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
+	- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 		
 Param's Explanation:
 		+ @matchid: matchid of match to Refund HT
@@ -78,7 +81,7 @@ BEGIN
 	END
 	
 	-- check waiting ticket
-	EXEC NAP_Admin_Settlement_Checking
+				EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = @Action
 		,@Mode = 'REFUND-FGLG'
@@ -121,7 +124,7 @@ BEGIN
 																	+ ', @ErrCode = @ErrCode OUTPUT' 
 																	+ ', @ErrMsg = @ErrMsg OUTPUT'
 
-	IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre'
+	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
 	BEGIN
 		DECLARE @fth		SMALLINT
 			,@fta 			SMALLINT
@@ -205,8 +208,16 @@ BEGIN
 END
 
 
+GO
 
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] TO [bodbAdminNet] AS [dbo]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] TO [vnteam] AS [dbo]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] TO [bodbAdminNet]
+GO 

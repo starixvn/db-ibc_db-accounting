@@ -1,5 +1,11 @@
 USE [bodb02]
 GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_s162    Script Date: 8/11/2015 10:35:07 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_s162    Script Date: 8/11/2015 4:45:42 PM ******/
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_s162]
 	@MatchId		INT,
@@ -21,6 +27,7 @@ AS
 	
 	Revisions:
 		- 20150716@Patrick: Support Gold Deluxe
+		- 20150807@Kathy: Using new balance table (BalCreditCasinoPending,BalDebitCasinoPending) [Redmine:#40125]
 
 	Param explanation:
 		@CardsResult: 
@@ -115,7 +122,8 @@ BEGIN
 		SELECT	custid, SUM(winlost-actual_stake+playercomm), SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM	dbo.bettrans with (rowlock)
 		WHERE	matchid = @matchid 
-				AND bettype = @Bettype
+				--AND bettype = @Bettype
+				AND bettype BETWEEN 1101 and 1199
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -188,7 +196,8 @@ BEGIN
 				,SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM	dbo.bettrans with (rowlock)
 		WHERE	matchid = @matchid 
-				AND bettype = @Bettype
+				--AND bettype = @Bettype
+				AND bettype BETWEEN 1101 and 1199
 		GROUP BY custid
 		
 
@@ -199,6 +208,9 @@ BEGIN
 								,balance MONEY
 								,Increased BIT)
 								
+		DECLARE @tblDebitPending TVP_BalanceList
+		DECLARE @tblCreditPending TVP_BalanceList
+	
 		CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 		INSERT INTO #Balance
@@ -213,15 +225,35 @@ BEGIN
 		SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
 
-		INSERT INTO dbo.BalancePendingDebit (custid, balance)
+		--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+		--SELECT	custid, ABS(balance)
+		--FROM	#Balance
+		--WHERE	Increased = 0
+		
+		INSERT INTO @tblDebitPending (custID, balance)
 		SELECT	custid, ABS(balance)
 		FROM	#Balance
 		WHERE	Increased = 0
+		
+		IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingDebitIns 
+				@BalancePending = @tblDebitPending
+				,@Type			= 3 -- Casino
 
-		INSERT INTO dbo.BalancePendingCredit (custid, balance)
+		--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+		--SELECT	custid, balance
+		--FROM	#Balance
+		--WHERE	Increased = 1
+		
+		INSERT INTO @tblCreditPending (custID, balance)
 		SELECT	custid, balance
 		FROM	#Balance
 		WHERE	Increased = 1
+		
+		IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingCreditIns 
+				@BalancePending = @tblCreditPending
+				,@Type			= 3 -- Casino
 		
 		-------------------------------------------------------------
 		---                   compare BALANCE for LCS Balance     ---
@@ -412,9 +444,11 @@ END
 
 
 
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s162] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s162] TO [Dot_Casino] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s162] TO [vnteam] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_s162] TO [vnteam] AS [dbo]

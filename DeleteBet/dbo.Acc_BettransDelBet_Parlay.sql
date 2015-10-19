@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransDelBet_Parlay]
+
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_BettransDelBet_Parlay   Script Date: 25/09/2015 10:47:22 AM ******/
+CREATE PROCEDURE [dbo].[Acc_BettransDelBet_Parlay]
 	@transid bigint,
 	@custid int = 0,
 	@username varchar(50),
@@ -24,7 +31,9 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130605@Johnson:- get more additional information for mailing
 							- Remove checking concurrent running on table TempVariableNumber by using table SystemSettings
-		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer by link database)						   							
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call Customer by link database)	
+		- 20150924@Kathy: support to void settled ticket (MixParlay, SystemParlay)
+		- 20150805@Kathy: Using new balance table (BalCreditSports,BalDebitSports) [Redmine:#40125]					   							
 */
 SET NOCOUNT ON
 
@@ -52,7 +61,7 @@ END
 
 select @statusID = statusID from bettrans with (nolock) where transid = @transid
 
-if @statusID <> 0
+if @statusID not in (0, 1, 111, 112, 113)
 BEGIN
 	SELECT @ErrMsg =  'Sorry! You can only delete running tickets', @ErrCode = 103
 	return
@@ -156,12 +165,12 @@ SELECT transid,
 FROM bettrans b WITH(NOLOCK) 
 	INNER JOIN CustDB.dbo.customer AS cr with (NOLOCK) ON cr.custid = b.creator
 	INNER JOIN CustDB.dbo.customer ag WITH (NOLOCK) ON ag.custid=b.recommend	
-WHERE transid = @transid and bettype = 9
+WHERE transid = @transid and bettype IN (9, 29)
 
 -- get balance
 SELECT @balance = winlost-actual_stake+playercomm
 FROM bettrans WITH(NOLOCK)
-WHERE transid = @transid AND bettype = 9
+WHERE transid = @transid AND bettype IN (9, 29)
 	
 -- STEP 1 : BackUp
 insert into 
@@ -172,14 +181,19 @@ select
 from 
 	bettrans with (nolock)
 where transid = @transid
-	  AND bettype = 9
+	  AND bettype IN (9, 29)
 
 -- STEP 2 : Update
 
 -----Update debit balance 
 IF @balance > 0
 BEGIN 
-	EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+	--EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+								EXEC dbo.Dot_BalanceDebitUpd 
+		@custID		= @custid
+		,@balance	= @balance
+		,@type		= 1 -- Sports
+		,@isforced	= 1
 END
 
 --Delete
@@ -193,7 +207,11 @@ where transid = @transid
 IF @balance < 0
 BEGIN
 	SET @balance = ABS(@balance)
-	EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+	--EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+								EXEC dbo.Dot_BalanceCreditUpd
+		@custID		= @custid
+		,@balance	= @balance	
+		,@type		= 1 -- Sports
 END
 
 Select @LogData ='delete parlay ticket for transid ' + convert(varchar(20), @transid) + ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15))  + ' - reason: ' + @reason
@@ -249,9 +267,16 @@ IF (@@Error = 0)
 	END
 */
 
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
 
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelBet_Parlay] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet_Parlay] TO [vnteam] AS [dbo]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet_Parlay] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_BettransDelBet_Parlay] TO [bodbAdminNet]
+GO 

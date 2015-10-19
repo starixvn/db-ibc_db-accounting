@@ -17,6 +17,7 @@ AS
 	Original: 
 	
 	Revisions:
+		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 	Param's Explanation:
 */	
@@ -121,7 +122,7 @@ BEGIN
 	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	IF @Action='CAL'
 	BEGIN
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+								EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
 			@Command			= 'NAP_Admin_Settlement_Auto_1s-CAL',
 			@MatchID			= @MatchID,
 			@ResourceIDs		= @ResourceIDs, 
@@ -129,7 +130,7 @@ BEGIN
 			@IsAuto				= @IsAuto,
 			@creator			= @AdminID 			
 
-		EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
+								EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
 			 @matchid		= @matchid
 			,@ResourceIDs	= @ResourceIDs
 			,@mode			= @action						
@@ -137,20 +138,20 @@ BEGIN
 	END
 	ELSE IF @action = 'UNDO'
 	BEGIN
-		EXEC dbo.NAP_Admin_Calculate_Main 
+								EXEC dbo.NAP_Admin_Calculate_Main 
 			 @matchid		= @matchid
 			,@ResourceIDs	= @ResourceIDs
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-		EXEC dbo.NAP_Admin_Settlement_Parlay
+								EXEC dbo.NAP_Admin_Settlement_Parlay
 			@matchids		= @matchid
 			,@creator		= @AdminID
 			,@ResourceIDs	= @ResourceIDs
 			,@action		= 'UNDO'
 			,@IP			= @IP
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+								EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
 			@Command			= 'NAP_Admin_Settlement_Auto_1s-UNDO',
 			@MatchID			= @MatchID,
 			@ResourceIDs		= @ResourceIDs, 
@@ -205,7 +206,7 @@ BEGIN
 				RETURN 	
 			END
 
-			EXEC dbo.NAP_Admin_Calculate_Main 
+												EXEC dbo.NAP_Admin_Calculate_Main 
 				 @matchid					= @matchid
 				,@ResourceIDs				= @ResourceIDs
 				,@action					= 'REFUND'	
@@ -215,7 +216,7 @@ BEGIN
 				,@betCount_216				= @betCount_216
 		END
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+								EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
 					@Command			= 'NAP_Admin_Settlement_Auto_1s-REFUND',
 					@MatchID			= @MatchID,
 					@ResourceIDs		= @ResourceIDs, 
@@ -223,7 +224,7 @@ BEGIN
 					@IsAuto				= @IsAuto,
 					@creator			= @AdminID 	
 
-		EXEC dbo.NAP_Admin_Calculate_Main 
+								EXEC dbo.NAP_Admin_Calculate_Main 
 			 @matchid					= @matchid
 			,@ResourceIDs				= @ResourceIDs
 			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
@@ -251,7 +252,9 @@ BEGIN
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
-
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -265,15 +268,34 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
+	
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 
 	----
 	-- Add Negative Balance into BalanceNegative table 
@@ -411,7 +433,6 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [vnteam] AS [dbo]
-GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [Dot_CoreAPI] AS [dbo]
 GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [vnteam] AS [dbo]

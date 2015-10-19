@@ -16,7 +16,7 @@ AS
 		- 20141022@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 	Param's Explanation:
-			• @matchid: matchid of match to be unsettled
+			? @matchid: matchid of match to be unsettled
 */
 BEGIN
 	SET NOCOUNT ON
