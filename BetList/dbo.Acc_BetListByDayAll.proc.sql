@@ -78,6 +78,7 @@ AS
 		- 20150828@Kos: Support Colossus Bet
 		- 20150828@Kos: Fix bug not show CB ticket after clicking Grand Prize in Statement report
 		- 20151009@Kos: Support Microgaming RNG Game and AG Casino
+		- 20151019@Kos: Support Microgaming RNG Game Jackpot Win
 		
 	Param's Explanation:
 		+ @transtype: 
@@ -126,7 +127,7 @@ BEGIN
 			SELECT 113
 
 			DELETE @SportBettype
-			WHERE ProductID <> 15
+			WHERE ProductID NOT IN (13, 15)
 		END
 
 	DECLARE @Data TABLE (
@@ -975,7 +976,87 @@ BEGIN
 			WHERE  b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID IN (11, 13)
-				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
+				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+				AND @transtype <> 4
+
+			-- Microgaming RNG Game Jackpot Win
+			IF @transtype = 4
+			BEGIN
+				INSERT INTO @Data
+				SELECT 
+					203 AS SportType,
+					0 AS leagueid,
+					0 AS homeid,
+					0 AS awayid,
+					'' AS matchcode,
+					'' AS race,
+					'' AS eventdate,
+					0,
+					0,
+					0 AS sdiscount,
+					0 AS adiscount,
+					0 AS discount,
+					'' AS settletime,
+					0 AS matchid,
+					j.JackpotWinId AS transid,
+					0 AS BetId,
+					j.refno,
+					j.transdate,
+					0 AS oddsid,
+					b.gameID AS BetType,
+					0 AS hdp1,
+					0 AS hdp2,
+					b.odds,
+					0 AS modds,
+					0 AS finalodds,
+					0 AS finalodds2,
+					'' AS oddstype,
+					'' AS betteam,
+					j.status,
+					'' AS betstatus,
+					0 AS comstatus,
+					b.stake,
+					b.actual_stake,
+					j.winlost,
+					0 AS playercomm,
+					0 AS livehomescore,
+					0 AS liveawayscore,
+					0 AS liveindicator,
+					0 AS finalhomescore,
+					0 AS finalawayscore,
+					0 AS hthomescore,
+					0 AS htawayscore,
+					b.CREATOR,
+					b.ip,
+					b.Username,
+					0 AS IsNeutral,
+					'' AS showtime,
+					0 AS spositiontaking, -- unuse in this report
+					0 AS mpositiontaking, -- unuse in this report
+					0 AS apositiontaking, -- unuse in this report
+					0 AS spositiontaking2,-- unuse in this report
+					0 AS mpositiontaking2,-- unuse in this report
+					0 AS apositiontaking2,-- unuse in this report
+					b.betfrom,
+					0 AS scomm, -- unuse in this report
+					0 AS acomm, -- unuse in this report
+					0 AS comm,	-- unuse in this report
+					0 AS awinlost,
+					0 AS mwinlost,
+					0 AS swinlost,
+					j.winlostdate,
+					b.TranId3rd AS BetCheck,
+					b.transdesc,
+					0 AS OddsSpread
+				FROM dbo.JackpotWin AS j WITH (NOLOCK)
+					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON j.RefNo = b.transid
+					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
+				WHERE  j.custid = @custid
+					AND j.winlostdate = @fromdate
+					AND s.ProductID = 13
+					AND s.SubProduct = 'MGC-RNG'
+					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+			END
 
 			-- Colossus Bet
 			INSERT INTO @Data
@@ -2692,6 +2773,85 @@ BEGIN
 					b.sdiscount,
 					b.adiscount,
 					b.discount
+			END
+
+			-- Microgaming RNG Game Jackpot Win
+			IF @transtype = 4
+			BEGIN
+				INSERT INTO @Data
+				SELECT 
+					203 AS SportType,
+					0 AS leagueid,
+					0 AS homeid,
+					0 AS awayid,
+					'' AS matchcode,
+					'' AS race,
+					'' AS eventdate,
+					0,
+					0,
+					0 AS sdiscount,
+					0 AS adiscount,
+					0 AS discount,
+					'' AS settletime,
+					0 AS matchid,
+					j.JackpotWinId AS transid,
+					0 AS BetId,
+					j.refno,
+					j.transdate,
+					0 AS oddsid,
+					b.gameID AS BetType,
+					0 AS hdp1,
+					0 AS hdp2,
+					b.odds,
+					0 AS modds,
+					0 AS finalodds,
+					0 AS finalodds2,
+					'' AS oddstype,
+					'' AS betteam,
+					j.status,
+					'' AS betstatus,
+					0 AS comstatus,
+					b.stake,
+					b.actual_stake,
+					j.winlost,
+					0 AS playercomm,
+					0 AS livehomescore,
+					0 AS liveawayscore,
+					0 AS liveindicator,
+					0 AS finalhomescore,
+					0 AS finalawayscore,
+					0 AS hthomescore,
+					0 AS htawayscore,
+					b.CREATOR,
+					b.ip,
+					b.Username,
+					0 AS IsNeutral,
+					'' AS showtime,
+					0 AS spositiontaking, -- unuse in this report
+					0 AS mpositiontaking, -- unuse in this report
+					0 AS apositiontaking, -- unuse in this report
+					0 AS spositiontaking2,-- unuse in this report
+					0 AS mpositiontaking2,-- unuse in this report
+					0 AS apositiontaking2,-- unuse in this report
+					b.betfrom,
+					0 AS scomm, -- unuse in this report
+					0 AS acomm, -- unuse in this report
+					0 AS comm,	-- unuse in this report
+					0 AS awinlost,
+					0 AS mwinlost,
+					0 AS swinlost,
+					j.winlostdate,
+					b.TranId3rd AS BetCheck,
+					b.transdesc,
+					0 AS OddsSpread
+				FROM dbo.JackpotWin AS j WITH (NOLOCK)
+					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON j.RefNo = b.transid
+					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
+				WHERE  j.custid = @custid
+					AND j.winlostdate = @fromdate
+					AND s.ProductID = 13
+					AND s.SubProduct = 'MGC-RNG'
+					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
 
 			-- Colossus Bet

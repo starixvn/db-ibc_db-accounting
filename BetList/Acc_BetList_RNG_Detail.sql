@@ -18,7 +18,6 @@ AS
 	DB: DBAGE.bodb02
 	Original:
 	Revisions:
-
 	Parameters:
 		- @TransType
 			+ 0 : All (DRAW/WON/LOSE/Reject/Void/Refund/Running/Waiting)
@@ -79,8 +78,13 @@ BEGIN
 			brng.stake,
 			brng.actual_stake,
 			(brng.winlost - brng.actual_stake) AS WinLost,
-			brng.comm,
-			brng.playercomm,
+			brng.swinlost,
+			brng.mwinlost,
+			brng.awinlost,
+			brng.playercomm AS commission,
+			(brng.scomm - brng.acomm) AS scomm,
+			(brng.acomm - brng.comm) AS acomm,
+			(brng.comm - brng.playercomm) AS comm,
 			brng.ip,
 			brng.transdesc,
 			CASE
@@ -106,8 +110,13 @@ BEGIN
 			brng.stake,
 			brng.actual_stake,
 			(brng.winlost - brng.actual_stake) AS WinLost,
-			brng.comm,
-			brng.playercomm,
+			brng.swinlost,
+			brng.mwinlost,
+			brng.awinlost,
+			brng.playercomm AS commission,
+			(brng.scomm - brng.acomm) AS scomm,
+			(brng.acomm - brng.comm) AS acomm,
+			(brng.comm - brng.playercomm) AS comm,
 			brng.ip,
 			brng.transdesc,
 			CASE
@@ -131,8 +140,13 @@ BEGIN
 			brng.stake,
 			brng.actual_stake,
 			(brng.winlost - brng.actual_stake) AS WinLost,
-			brng.comm,
-			brng.playercomm,
+			brng.swinlost,
+			brng.mwinlost,
+			brng.awinlost,
+			brng.playercomm AS commission,
+			(brng.scomm - brng.acomm) AS scomm,
+			(brng.acomm - brng.comm) AS acomm,
+			(brng.comm - brng.playercomm) AS comm,
 			brng.ip,
 			brng.transdesc,
 			CASE

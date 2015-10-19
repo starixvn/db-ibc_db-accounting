@@ -7,9 +7,9 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BetList_LC_Detail]
-	@RefNo			BIGINT,
-	@CustId			INT,
-	@TransType		TINYINT			= 0
+	@RefNo		BIGINT,
+	@CustId		INT,
+	@TransType	TINYINT	= 0
 AS
 
 /*
@@ -78,8 +78,13 @@ BEGIN
 			blc.stake,
 			blc.actual_stake,
 			(blc.winlost - blc.actual_stake) AS WinLost,
-			blc.comm,
-			blc.playercomm,
+			blc.swinlost,
+			blc.mwinlost,
+			blc.awinlost,
+			blc.playercomm AS commission,
+			(blc.scomm - blc.acomm) AS scomm,
+			(blc.acomm - blc.comm) AS acomm,
+			(blc.comm - blc.playercomm) AS comm,
 			blc.ip,
 			blc.transdesc
 		FROM dbo.bettransLC AS blc WITH (NOLOCK)
@@ -101,8 +106,13 @@ BEGIN
 			blc.stake,
 			blc.actual_stake,
 			(blc.winlost - blc.actual_stake) AS WinLost,
-			blc.comm,
-			blc.playercomm,
+			blc.swinlost,
+			blc.mwinlost,
+			blc.awinlost,
+			blc.playercomm AS commission,
+			(blc.scomm - blc.acomm) AS scomm,
+			(blc.acomm - blc.comm) AS acomm,
+			(blc.comm - blc.playercomm) AS comm,
 			blc.ip,
 			blc.transdesc
 		FROM dbo.bettransLC14 AS blc WITH (NOLOCK)
@@ -122,8 +132,13 @@ BEGIN
 			blc.stake,
 			blc.actual_stake,
 			(blc.winlost - blc.actual_stake) AS WinLost,
-			blc.comm,
-			blc.playercomm,
+			blc.swinlost,
+			blc.mwinlost,
+			blc.awinlost,
+			blc.playercomm AS commission,
+			(blc.scomm - blc.acomm) AS scomm,
+			(blc.acomm - blc.comm) AS acomm,
+			(blc.comm - blc.playercomm) AS comm,
 			blc.ip,
 			blc.transdesc
 		FROM DBARC.bodb_Archive.dbo.bettransLC_bk AS blc WITH (NOLOCK)
