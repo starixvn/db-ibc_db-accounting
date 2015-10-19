@@ -1,6 +1,13 @@
 USE [bodb02]
 GO
 
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CurrencySettingUpd]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingUpd]
+GO
+
+USE [bodb02]
+GO
+
 /****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CurrencySettingUpd]    Script Date: 07/07/2015 16:10:44 ******/
 SET ANSI_NULLS ON
 GO
@@ -8,7 +15,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingUpd]
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingUpd]
 	@ExchangeID		INT				= 0,
 	@ProductID		TINYINT			= 0,
 	@MaxWinLimit	MONEY,

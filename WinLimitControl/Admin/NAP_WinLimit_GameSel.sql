@@ -1,14 +1,21 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_Game_SelBlocked_xtest]    Script Date: 07/10/2015 14:23:58 ******/
+
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_GameSel]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_GameSel]
+GO
+
+USE [bodb02]
+GO
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_Game_SelBlocked]
+CREATE PROCEDURE [dbo].[NAP_WinLimit_GameSel]
 	@UserName		VARCHAR(100)	= '',
 	@ExchangeID		INT				= 0,
+	@IsBlocked		BIT				= 1,
 	@ProductID		TINYINT			= 0,
 	@PageIndex		INT				= 0,
 	@PageSize		INT				= 50,
@@ -28,6 +35,7 @@ AS
 		Parameters Explanation:	
 			@UserName	: User Name.
 			@ExchangeID : Currency ID.
+			@IsBlocked	: Is blocked player.
 			@ProductID	: Game ID.
 			@PageIndex	: Current page.
 			@PageSize	: Page size.
@@ -35,10 +43,10 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-		
+	
 	DECLARE @searchCust BIT
 	SET  @searchCust 	= CASE WHEN LEN(@UserName) > 0 THEN 1 ELSE 0 END
-	
+	SET @UserName = ISNULL(@UserName, '')
 	--FITER product
 	SELECT ProductID
 	INTO #tempProduct
@@ -53,7 +61,7 @@ BEGIN
 	INTO #tempCust
 	FROM CustDB.dbo.Customer c WITH(NOLOCK)
 	WHERE @searchCust		= 1
-		AND c.username 		LIKE '%' + @UserName + '%'
+		AND (@UserName ='' OR c.username = @UserName)
 		AND (
 			@ExchangeID 	= 0 
 			OR c.currency 	= @ExchangeID
@@ -93,8 +101,8 @@ BEGIN
 		g.ProductID,
 		g.MaxWinLimit WinLimit, 
 		g.TotalWinAmt WinningAmount, 
-		g.CreateDate BlockedTime, 
-		g.IsBlocked, 
+		g.BlockedDate BlockedTime, 
+		g.UnblockedDate UnblockedTime,
 		g.IsNotified
 	INTO #tempResult
 	FROM dbo.WinLimit_Game g WITH (NOLOCK)
@@ -104,7 +112,7 @@ BEGIN
 		ON g.CustID = tp.CustID
 		INNER JOIN dbo.exchange e
 		ON tp.ExchangeId = e.exchangeid
-	WHERE g.IsBlocked = 1
+	WHERE g.IsBlocked = @IsBlocked
 	ORDER BY tp.username, tp.ExchangeId, g.ProductID
 
 	SELECT TOP 1 @TotalRow = MAX(RowNum)
@@ -118,7 +126,8 @@ BEGIN
 		WinLimit, 
 		WinningAmount, 
 		BlockedTime, 
-		IsBlocked, 
+		UnBlockedTime,
+		@IsBlocked IsBlocked, 
 		IsNotified
 	FROM #tempResult rs
 	WHERE rs.RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
@@ -131,9 +140,9 @@ BEGIN
 	RETURN;
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_Game_SelBlocked] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_GameSel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_Game_SelBlocked] TO [accteam]
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_GameSel] TO [accteam]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_Game_SelBlocked] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_GameSel] TO [vnteam]
 GO

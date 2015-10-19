@@ -1,17 +1,19 @@
 USE [CustDB]
 GO
 
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustSettingIns]    Script Date: 07/07/2015 16:09:24 ******/
-SET ANSI_NULLS ON
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingIns]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingIns]
 GO
 
+USE [CustDB]
+GO
+SET ANSI_NULLS ON
+GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_CustSettingIns]
-	@CustID			INT,
-	@ProductID		TINYINT,
-	@MaxWinLimit	MONEY,
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingIns]
+	@CustSettingXML XML,
 	@UserID			INT				= 0,
 	@IP				VARCHAR(20)		= '',
 	@ErrCode		INT				= 0		OUTPUT,
@@ -27,9 +29,7 @@ AS
 		Revisions:
 		
 		Parameters Explanation:	
-			@UserName		: User Name.
-			@ProductID		: Game ID.
-			@MaxWinLimit	: Player Win Limit.
+			@CustSettingXML	: Insert XML string.
 			@UserID			: User making this action.
 			@IP				: IP of the machine making this action.
 			@ErrCode		: Error Code.
@@ -40,43 +40,41 @@ BEGIN
 	DECLARE @StartRun DATETIME
 			,@EndRun DATETIME
 			,@Duration INT
+			,@LogSPData VARCHAR(300)
+			
 	SELECT	@StartRun = GETDATE()
-	IF EXISTS(SELECT 1 FROM dbo.WinLimit_CustSetting WITH (NOLOCK) WHERE CustID = @CustID AND ProductID = @ProductID)
+	DECLARE @TempCustSetting TABLE
+	(
+		CustID			INT
+		,ProductID		TINYINT
+		,MaxWinLimit	MONEY
+	)
+	
+	INSERT INTO @TempCustSetting
+	SELECT  
+       Tbl.Col.value('@CustID', 'INT'),  
+       Tbl.Col.value('@ProductID', 'TINYINT'),
+       Tbl.Col.value('@MaxWinLimit', 'MONEY')
+	FROM @CustSettingXML.nodes('//custsetting/row') Tbl(Col)
+	
+	IF ( @@ROWCOUNT = 0 )
 	BEGIN
-		SELECT	@ErrCode = 1
-				,@ErrMsg = 'This setting is already set.'
+		SELECT 	@ErrCode	= 100
+				,@ErrMsg 	= 'There is no information.'
 		RETURN;
 	END
 	
-	BEGIN TRY
-		INSERT INTO dbo.WinLimit_CustSetting 
-		(
-			CustID,
+	INSERT INTO dbo.WinLimit_CustSetting
+	SELECT	CustID,
 			ProductID,
 			MaxWinLimit
-		)
-		VALUES
-		(
-			@CustID,
-			@ProductID,
-			@MaxWinLimit
-		)
-	END TRY
-	BEGIN CATCH
-		SELECT	@ErrCode = 1
-				,@ErrMsg = ERROR_MESSAGE()
-		RETURN;
-	END CATCH;
+	FROM @TempCustSetting
 	
 	SELECT	@EndRun = GETDATE()
 			,@Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
-	
-	DECLARE @LogSPData VARCHAR(300)
-
+			
 	SELECT	@LogSPData = '<NAP_WinLimit_CustSettingIns '
-		+ '" CustID ="' + CONVERT(VARCHAR(20), @CustID) 
-		+ '" ProductID="' + CONVERT(VARCHAR(20), @ProductID)
-		+ '" MaxWinLimit="' + CONVERT(VARCHAR(20), @MaxWinLimit)
+		+ '" CustSettingXML ="' + CONVERT(VARCHAR(MAX), @CustSettingXML) 
 		+ '" UserId="' + CONVERT(VARCHAR(20), @UserId)
 		+ '" IP="'+ COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
 		+ '" />'
@@ -84,23 +82,21 @@ BEGIN
 	BEGIN TRY
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID			= @UserID,
-		@CustID			= @CustID,
+		@CustID			= @UserID,
 		@ActionID		= 2906,
 		@TrackingValue	= @LogSPData,
 		@Duration		= @Duration
 	END TRY
 	BEGIN CATCH
 	SELECT @LogSPData = '<NAP_WinLimit_CustSettingIns '
-		+ '" CustID ="' + CONVERT(VARCHAR(20), @CustID) 
-		+ '" ProductID="' + CONVERT(VARCHAR(20), @ProductID)
-		+ '" MaxWinLimit="' + CONVERT(VARCHAR(20), @MaxWinLimit)
+		+ '" CustSettingXML ="' + CONVERT(VARCHAR(MAX), @CustSettingXML) 
 		+ '" UserId="' + CONVERT(VARCHAR(20), @UserId)
 		+ '" IP="'+ COALESCE(CAST(@IP AS VARCHAR(15)),SPACE(1))
 		+ '" ErrMsg="'+ COALESCE(CAST(ERROR_MESSAGE() AS VARCHAR(400)),SPACE(1)) 
 		+ '" />'
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID			= @UserID,
-		@CustID			= @CustID,
+		@CustID			= @UserID,
 		@ActionID		= 2906,
 		@TrackingValue	= @LogSPData,
 		@Duration		= @Duration

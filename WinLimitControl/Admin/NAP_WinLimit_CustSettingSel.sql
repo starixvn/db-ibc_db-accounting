@@ -1,6 +1,13 @@
 USE [CustDB]
 GO
 
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingSel]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
+GO
+
+USE [CustDB]
+GO
+
 /****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustSettingSel]    Script Date: 07/07/2015 16:09:41 ******/
 SET ANSI_NULLS ON
 GO
@@ -8,7 +15,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
 	@UserName	VARCHAR(100)	= '',
 	@ExchangeID INT				= 0,
 	@ProductID	TINYINT 		= 0,
@@ -42,7 +49,8 @@ BEGIN
 		UserName VARCHAR(30),
 		ExchangeID INT,
 		ProductID TINYINT,
-		MaxWinLimit MONEY
+		PlayerWinLimit MONEY,
+		CurrencyWinLimit MONEY
 	)
 	
 	INSERT INTO @TVP_CustSetting
@@ -50,10 +58,14 @@ BEGIN
 			,cs.CustID
 			,c.username
 			,c.currency ExchangeID
-			,ProductID, cs.MaxWinLimit
+			,cs.ProductID
+			,cs.MaxWinLimit PlayerWinLimit
+			,wg.MaxWinLimit CurrencyWinLimit
 	FROM	dbo.WinLimit_CustSetting cs WITH (NOLOCK)
 			INNER JOIN Customer c WITH (NOLOCK) 
 			ON cs.CustID = c.custid
+			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg
+			ON cs.ProductID = wg.ProductID AND c.currency = wg.ExchangeID
 	WHERE	c.username LIKE '%' + @UserName + '%'
 			AND (@ExchangeID = 0 OR c.currency = @ExchangeID)
 			AND (@ProductID = 0 OR cs.ProductID = @ProductID)
@@ -65,7 +77,8 @@ BEGIN
 			,UserName
 			,ExchangeID
 			,ProductID
-			,MaxWinLimit 
+			,PlayerWinLimit 
+			,CurrencyWinLimit
 	FROM	@TVP_CustSetting
 	WHERE	RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
 END

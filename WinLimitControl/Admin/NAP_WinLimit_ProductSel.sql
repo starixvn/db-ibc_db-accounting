@@ -1,14 +1,20 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_ProductSel]    Script Date: 07/07/2015 17:03:03 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_ProductSel]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_ProductSel]
+GO
+
+USE [bodb02]
+GO
+
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_ProductSel]
+CREATE PROCEDURE [dbo].[NAP_WinLimit_ProductSel]
 	@ExcludeUsed BIT = 0
 AS
 	/*

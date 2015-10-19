@@ -1,16 +1,23 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CurrencySettingSel]    Script Date: 07/07/2015 16:10:36 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CurrencySettingSel]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel]
+GO
+
+USE [bodb02]
+
+GO
+
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel]
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel]
 	@ExchangeID		INT		= 0,
-	@ProductID		TINYINT = 0
+	@ProductID		TINYINT
 AS
 	/*
 		Created: Phillip	
@@ -27,16 +34,19 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	SELECT		ExchangeID
-				, ProductID
-				, MaxWinLimit
-	FROM		dbo.WinLimit_GlobalSetting WITH(NOLOCK)
-	WHERE		(@ProductID = 0 OR ProductID = @ProductID)
-				AND (@ExchangeID = 0 OR ExchangeID = @ExchangeID)
-	ORDER BY	ExchangeID
-				, ProductID
-	
+	SELECT	c.exchangeid as CurrencyID
+			, currency as CurrencyName
+			, Code as CurrencyCode
+			, wg.MaxWinLimit
+	FROM	CustDB.dbo.exchange c
+			LEFT JOIN dbo.WinLimit_GlobalSetting wg
+			ON c.exchangeid = wg.ExchangeID
+	WHERE	c.currency NOT IN ('UUS', 'H', 'C')
+			AND (wg.ProductID IS NULL OR wg.ProductID = @ProductID)
+			AND (@ExchangeID = 0 OR c.exchangeid = @ExchangeID)
+				
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [bodbAdminNet]
 GO

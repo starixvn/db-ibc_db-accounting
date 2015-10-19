@@ -1,14 +1,20 @@
 USE [CustDB]
 GO
 
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_SubscriberSel]    Script Date: 07/07/2015 16:10:07 ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_SubscriberSel]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_SubscriberSel]
+GO
+
+USE [CustDB]
+GO
+
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_SubscriberSel]
+CREATE PROCEDURE [dbo].[NAP_WinLimit_SubscriberSel]
 	@CustID		INT,
 	@IsDeposit	BIT OUTPUT,
 	@SiteName	VARCHAR(10) OUTPUT

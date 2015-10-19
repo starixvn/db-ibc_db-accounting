@@ -1,6 +1,13 @@
 USE [CustDB]
 GO
 
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingListSel]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingListSel]
+GO
+
+USE [CustDB]
+GO
+
 /****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustSettingListSel]    Script Date: 07/07/2015 16:09:32 ******/
 SET ANSI_NULLS ON
 GO
@@ -8,7 +15,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_CustSettingListSel]
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingListSel]
 	@CustID		INT
 AS
 	/*

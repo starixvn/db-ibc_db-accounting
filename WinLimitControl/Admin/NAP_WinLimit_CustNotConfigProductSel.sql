@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustNotConfigProductSel]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel]
+GO
+
 USE [CustDB]
 GO
 
@@ -8,14 +15,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel]
-	@UserName	VARCHAR(100)	= '',
-	@ErrCode	INT				= 0		OUTPUT,
-	@ErrMsg		VARCHAR(100)	=''		OUTPUT
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel]
+	@CustId		VARCHAR(100)	= ''
 AS
 	/*
 		Created: Phillip	
-		Date: 2015-06-26
+		Date: 2015-10-15
 		Task: #38608 - Implement function to control Player's Win Limit on specific Product
 
 		DB: DBCust/CustDB
@@ -23,79 +28,28 @@ AS
 		Revisions:
 		
 		Parameters Explanation:	
-			@UserName	: User Name.
-			@ErrCode	: Error Code.
-			@ErrMsg		: Error Message.
+			@CustId	: Player ID.
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	DECLARE @CustID int
-			,@ExchangeID int
-			,@ExchangeName varchar(50)
-			,@PlayerMaxWinLimit money
-	SELECT	@UserName = LTRIM(RTRIM(@UserName))
-	
-	SELECT	@CustID = c.custid
-			,@ExchangeID = c.currency
-			,@ExchangeName = e.Code + ' (' + e.currency + ')'
-	FROM	dbo.Customer c WITH (NOLOCK)
+	SELECT	c.username,
+			e.exchangeid,
+			e.currency,
+			p.ProductID,
+			p.ProductName,
+			cs.MaxWinLimit,
+			wg.MaxWinLimit CurrencyWinLimit
+	FROM	dbo.Customer c WITH (NOLOCK) 
 			INNER JOIN dbo.exchange e WITH (NOLOCK)
 			ON c.currency = e.exchangeid
-	WHERE	c.username = @UserName 
-			AND c.roleid = 1 -- Search member level only.
-	
-	-- If CustID is NULL => Invalid UserName
-	-- Else => Valid UserName
-	IF @CustID IS NULL
-	BEGIN
-		SELECT	@ErrCode = 3
-				,@ErrMsg = 'Invalid username.'
-		RETURN;
-	END
-	
-	DECLARE @CurrencySettingTable AS TABLE
-	(
-		ExchangeID INT,
-		ProductID INT,
-		MaxWinLimit MONEY
-	)
-	
-	DECLARE @TSQL varchar(4000)
-	SELECT	@TSQL = 'SELECT * FROM OPENQUERY(DBTXN, ''SELECT ExchangeID, ProductID, MaxWinLimit FROM DBTXN.bodb02.dbo.WinLimit_GlobalSetting WITH (NOLOCK) WHERE ExchangeID = ' + CONVERT(varchar(10), @ExchangeID) + ''')'
-	
-	SELECT	@CustID CustID
-			,@ExchangeID CurrencyID
-			,@ExchangeName CurrencyName
-			
-	INSERT INTO @CurrencySettingTable
-	EXEC(@TSQL)
-	
-	IF NOT EXISTS (SELECT 1 FROM @CurrencySettingTable)
-	BEGIN
-		SELECT	@ErrCode = 4
-				,@ErrMsg = 'Please set Currency Win Limit for currency of this Username.'
-		RETURN;
-	END
-	
-	SELECT	ProductID
-			,CustID
-			,PlayerWinLimit
-			,CurrencyMaxWinLimit
-	FROM
-		(	
-			SELECT	p.ProductID
-					,@CustID CustID
-					,cs.MaxWinLimit PlayerWinLimit
-					,gs.MaxWinLimit CurrencyMaxWinLimit
-			FROM	bodb02.dbo.Products p WITH (NOLOCK)
-					LEFT OUTER JOIN dbo.WinLimit_CustSetting cs WITH (NOLOCK)
-					ON  p.ProductID = cs.ProductID AND cs.CustID = @CustID
-					LEFT OUTER JOIN @CurrencySettingTable gs
-					ON p.ProductID = gs.ProductID
-			WHERE	p.ProductType = 2 
-					AND gs.MaxWinLimit IS NOT NULL
-		) cs_p
-	WHERE	cs_p.PlayerWinLimit IS NULL
+			RIGHT JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK)
+			ON p.ProductType = 2
+			LEFT JOIN dbo.WinLimit_CustSetting cs WITH (NOLOCK)
+			ON cs.CustID = c.CustId AND cs.ProductID = p.ProductID
+			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
+			ON wg.ProductID = p.ProductID AND wg.ExchangeID = e.exchangeid
+	WHERE	c.CustId = @CustId
+			AND cs.MaxWinLimit IS NULL
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [bodbAdminNet]
