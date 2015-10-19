@@ -47,6 +47,7 @@
 		- 20150903@Sophia: Apply Colossus Bets [#42428]
 		- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
 						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]
+						   NOTE: transtypeid = 4 - GrandPrize
 
  */
 SET NOCOUNT ON
@@ -226,7 +227,7 @@ BEGIN
 		WHERE	statusID = 0  AND bettype NOT IN (23001,23002,23101,23102,23201,23202) -- 20120405@Hurri
 		GROUP BY winlostdate 
 
-
+		  
 		--------------2.Grand Prize 
 		----2.1 bettrans
 		IF @_Todate >= @MoveBetDay
@@ -279,6 +280,7 @@ BEGIN
 			GROUP BY b.winlostdate
 		END
 
+		
 		---2.2 JactPotWin - Grand Prize of Microgaming RNG Casino	 			
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 		SELECT winlostdate AS accdate
@@ -297,7 +299,9 @@ BEGIN
 				AND custid = @custid
 				AND statusID NOT IN (102,101) -- 'VOID','REJECT'				
 		GROUP BY winlostdate, custid
-						 
+			
+			
+			 
 
 		--------------------------------------------------------------
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, 
@@ -911,7 +915,10 @@ BEGIN
 		0,
 		totalamt,
 		transtype,
-		CASE transtype WHEN 'BET' THEN 1 ELSE 0 END transtypeid,
+		CASE transtype  
+			WHEN 'BET' THEN 1 
+			WHEN  'GP' THEN 4 
+			ELSE 0 END transtypeid,
 		CASE WHEN transtype='BET' AND transdesc='Betting' THEN 'Betting Statement'ELSE transdesc END transdesc , 
 		'' creator,
 		NULL,
@@ -920,7 +927,8 @@ BEGIN
 		0 
 	FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
 	WHERE custid = @custid AND accdate between @_FromDate and @_ToDate
-	union all --- @Lukas add missing transaction
+	
+	UNION ALL --- @Lukas add missing transaction
 	SELECT 		 
 		accdate,
 		0,
