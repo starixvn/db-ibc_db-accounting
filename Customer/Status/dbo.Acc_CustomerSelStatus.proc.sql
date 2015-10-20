@@ -1,4 +1,4 @@
-alter PROCEDURE [dbo].[Acc_CustomerSelStatus]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]
 	@CustID		INT,
 	@AdminID	INT			= 0,
 	@system		VARCHAR(30)	='NAP',
@@ -41,6 +41,7 @@ Revisions:
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
+	
 	
 
 Param's Explanation:
@@ -228,7 +229,7 @@ Param's Explanation:
 			ci.recommend, 
 			ci.DisableVirtualSports, 
 			ci.HideVirtualSports, 
-			ci.DoubleCommLosing, 
+			ci.DoubleCommLosing, Acc_CustomerSelStatus
 			ci.DisableHRFixedOdds,
 			ci.DisableEsports,
 			ci.HideKeno,
@@ -242,13 +243,14 @@ Param's Explanation:
 			ci.DisableSuperLive
 	
 END
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbExtAccNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [vnteam] AS [dbo]
