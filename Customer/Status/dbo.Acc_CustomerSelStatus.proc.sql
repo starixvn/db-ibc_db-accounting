@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]
+alter PROCEDURE [dbo].[Acc_CustomerSelStatus_UAT2]
 	@CustID		INT,
 	@AdminID	INT			= 0,
 	@system		VARCHAR(30)	='NAP',
@@ -39,6 +39,7 @@ Revisions:
 	- 20150721@Winnie: Add Microgaming product 
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	
 	
 
 Param's Explanation:
@@ -222,14 +223,17 @@ GROUP BY
 		ci.HideColossusBet,
 		ci.DisableMicrogame,
 		ci.DisableSuperLive
+	
+	-- For sportbook2
+	EXEC Acc_CustSetting_StatusSettingSelect_UAT2 @CustID = @custid,@roleid = @roleid	
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbExtAccNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus_UAT2] TO [vnteam] AS [dbo]
