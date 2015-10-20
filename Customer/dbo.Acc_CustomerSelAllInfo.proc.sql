@@ -806,13 +806,13 @@ END
  
  
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo_UAT2] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo_UAT2] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo_UAT2] TO [bodbExtAccNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo_UAT2] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
  
 
 
