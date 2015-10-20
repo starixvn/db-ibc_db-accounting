@@ -1,4 +1,4 @@
-alter PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
 
@@ -814,4 +814,5 @@ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
  
+
 
