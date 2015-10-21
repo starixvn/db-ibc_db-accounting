@@ -15,6 +15,11 @@ Revisions:
 	- 20150402@Sophia: Add more test currency (20, 27, 28)
 	- 20150723@Sophia: Exclude data of Bettrade [#38815]
 	 
+	- 20151021@Sophia: Modify the SPs to only cover the tickets of the following products [#45898] 
+						1	Sportsbook [inclusive of : Metric Gaming - Superlive and BetTrade tickets (heck the refno)]
+						3	Number Game
+						4	SLI - Live Casino
+						5	Virtual Sports
 Param's Explanation:
 	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
 				   Because job recurs every 30s, so we set @CheckTime = 1 minute as default
@@ -23,6 +28,15 @@ Param's Explanation:
 */
 BEGIN
 	SET NOCOUNT ON
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+
+	DELETE  @SportBettype 
+	WHERE	ProductID NOT IN (1, 3, 4, 5)
+
 
 	---- ** 1. Check the transdate of LastTransID and current time  ** ----
 	DECLARE @LastTransDate DATETIME	
@@ -44,17 +58,20 @@ BEGIN
 			UNION ALL
 			SELECT 29 -- system parlay
 			)
-			SELECT custid, 
-					odds, 
-					stake, 
-					balance, 
-					bettype,
-					winlostdate, 
-					matchid 		
+			SELECT  b.custid, 
+					b.odds, 
+					b.stake, 
+					b.balance, 
+					b.bettype,
+					b.winlostdate, 
+					b.matchid,
+					b.ip,
+					b.refno 		
 			INTO #TempData
 			FROM bodb02.dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN @SportBettype s ON s.bettype = b.bettype
 				INNER JOIN _match m ON b.matchid = m.mID
-			WHERE bettype < 19000				
+			WHERE b.bettype < 19000							
 				and custid not in (50057,879241,103873, 851668, 878902) --betdaq
 				and custid NOT IN (1077687) -- Betfair
 				and recommend not in (11196380) -- foobet
@@ -64,13 +81,15 @@ BEGIN
 				and recommend NOT IN (5707545,52466) -- exclude members under BARM,8RM
 				and currency NOT IN (20, 27, 28)
 				And statusID NOT IN (101,102)			
-			GROUP BY custid, 
-					odds, 
-					stake, 
-					balance, 
-					bettype,
-					winlostdate, 
-					matchid
+			GROUP BY b.custid, 
+					b.odds, 
+					b.stake, 
+					b.balance, 
+					b.bettype,
+					b.winlostdate, 
+					b.matchid,
+					b.ip,
+					b.refno 	
 			HAVING COUNT(*) > 1
 			option (maxdop 4)
 			--------------------------------------------------------
@@ -84,10 +103,11 @@ BEGIN
 					AND b.bettype = t.bettype
 					AND b.winlostdate = t.winlostdate
 					AND b.matchid = t.matchid
-			INNER JOIN bodb02.dbo.bettype bt with(nolock) on bt.typeid = b.bettype
+					AND b.refno = t.refno
+				INNER JOIN bodb02.dbo.bettype bt with(nolock) on bt.typeid = b.bettype
 			WHERE b.custid IN (SELECT DISTINCT custid FROM #TempData)
 				AND b.statusID NOT IN (101,102)
-				AND b.bettype NOT IN (901,902,903)
+				--AND b.bettype NOT IN (901,902,903)
 			ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID
 
 			DROP TABLE #TempData			
