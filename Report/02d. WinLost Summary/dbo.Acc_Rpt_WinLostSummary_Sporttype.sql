@@ -1,13 +1,13 @@
-﻿USE [bodb_Report]
+﻿
+SET QUOTED_IDENTIFIER ON 
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_WinlostSummary_Sporttype_xpre]    Script Date: 09/25/2015 15:35:00 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+SET ANSI_NULLS ON 
 GO
 
+/****** Object:  Stored Procedure dbo.Acc_Rpt_WinlostSummary_Sporttype    Script Date: 10/21/2015 10:51:12 AM ******/
+
  
-ALTER  PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
+CREATE  PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
     @fromdate    DATETIME,
     @todate        DATETIME    
 AS
@@ -26,6 +26,7 @@ AS
 			- 20150723@Jim: Apply Bettrade [#38815]
 			- 20150828@Jim: support Colossus Bet (#42608)
 			- 20150921@Jim: support MO (#41935)
+			- 20151020@Sophia: Fix bug missing Outright data [#30661]
         Parameter's Explanation:
     */
 BEGIN
@@ -115,6 +116,8 @@ BEGIN
         
             INSERT INTO #TempMatch
             SELECT m.matchid,m.matchcode FROM bodb02.dbo.match(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
+			UNION ALL 
+			SELECT m.orid as matchid, m.matchcode FROM bodb02.dbo.Outright(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
         END
 
         IF @_fromdate <=@movebetdate
@@ -128,6 +131,8 @@ BEGIN
 
             INSERT INTO #TempMatch
             SELECT m.matchid,m.matchcode FROM bodb02.dbo.match14(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
+			UNION ALL 
+			SELECT m.orid as matchid, m.matchcode FROM bodb02.dbo.Outright14(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
         END
         IF @_fromdate <@balanceupdate
         BEGIN
@@ -140,6 +145,8 @@ BEGIN
 
             INSERT INTO #TempMatch
             SELECT m.matchid,m.matchcode FROM bodb_archive.dbo.match_bk(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
+			UNION ALL 
+			SELECT m.orid as matchid, m.matchcode FROM bodb_archive.dbo.Outright_bk(nolock) m WHERE m.eventdate BETWEEN @f_date AND @t_date
         END
 
         INSERT INTO #TempData
@@ -526,7 +533,17 @@ BEGIN
 	DROP TABLE #TempData
     --exec Acc_Rpt_WinlostSummary_Sporttype_xtest @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
 END
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [vnteam]
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
+GO 
