@@ -10,6 +10,7 @@ AS
 	Revisions:
 		- 20091201@Kiwi: Union with CustSetting3rd.
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB, use temp table for sports)
+        - 20151021@Billy: Add support for DCS -- UNION with ProductSettingDetail
 */
 
 SET NOCOUNT ON
@@ -32,6 +33,9 @@ FROM
 	(	SELECT cs.custid, cs.sporttype FROM CustSetting cs WITH (NOLOCK)
 		UNION 
 		SELECT cs3rd.custid, cs3rd.sporttype FROM CustSetting3rd cs3rd WITH (NOLOCK)
+        UNION
+        SELECT 73104, psd.SportType FROM ProductSettingDetail psd WITH(NOLOCK)
+        WHERE psd.SettingType IN (1,3)
 	 ) t
 	INNER JOIN @tmp_Sports s ON t.sporttype = s.sporttype
 WHERE t.custid = 73104 
