@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
 	 @AdminId			INT				= 148		-- calculated by system (default)
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -17,7 +19,7 @@ AS
 	Original: 
 	
 	Revisions:
-
+		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 	Param's Explanation:
 */		
 BEGIN
@@ -103,7 +105,7 @@ BEGIN
 	END
 
 	-- check waiting ticket
-	EXEC NAP_Admin_Settlement_Checking
+				EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = @Action
 		,@Mode = 'CAL-AUTO'
@@ -139,7 +141,7 @@ BEGIN
 		RETURN 
 	END
 	
-	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
 	BEGIN
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -179,11 +181,7 @@ BEGIN
 	END
 
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI] AS [dbo]
-GO
