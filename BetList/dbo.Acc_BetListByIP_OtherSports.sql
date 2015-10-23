@@ -1456,7 +1456,7 @@ BEGIN
 				b.stake,
 				b.actual_stake,
 				b.transdate,
-				0 AS betteam,
+				'' AS betteam,
 				0 AS livehomescore,
 				0 AS liveawayscore,
 				0 AS liveindicator,
