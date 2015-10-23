@@ -15,8 +15,9 @@ Revisions:
 	- 20150402@Sophia: Add more test currency (20, 27, 28)
 	- 20150723@Sophia: Exclude data of Bettrade [#38815]
 	 
+	- 20151009@Sophia: Group by IP [#45176]
 	- 20151021@Sophia: Modify the SPs to only cover the tickets of the following products [#45898] 
-						1	Sportsbook [inclusive of : Metric Gaming - Superlive and BetTrade tickets (heck the refno)]
+						1	Sportsbook [inclusive of : Metric Gaming - Superlive and BetTrade tickets (check the refno)]
 						3	Number Game
 						4	SLI - Live Casino
 						5	Virtual Sports
@@ -129,7 +130,7 @@ BEGIN
 		WHERE	t.Transdate >= @DateFrom 
 			AND t.Transdate < DATEADD(dd, 1, DATEDIFF(dd, 0, @DateFrom))
 			AND b.statusID NOT IN (101,102)
-			AND b.bettype NOT IN (901,902,903)
+			---AND b.bettype NOT IN (901,902,903)
 		ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID	  
 
 
