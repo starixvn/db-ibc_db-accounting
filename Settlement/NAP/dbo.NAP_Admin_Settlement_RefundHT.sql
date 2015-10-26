@@ -1,13 +1,11 @@
-
-SET QUOTED_IDENTIFIER ON 
+USE [bodb02]
 GO
-SET ANSI_NULLS ON 
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 10/19/2015 11:24:40 ******/
+SET ANSI_NULLS ON
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 06/10/2015 11:21:39 AM ******/
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 05/10/2015 6:21:02 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
     ,@adminid INT
     ,@IsExcludeBetdaq BIT = 0
     ,@IsSettleAbandonedMatch BIT = 0
@@ -40,6 +38,7 @@ AS
         - 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
         - 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+        - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
     
     Param's Explanation:
@@ -139,7 +138,16 @@ BEGIN
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
-    WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
+    WHERE matchid = @matchid 
+		  AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
+                            ,17, 18 -- refund 2nd FT
+                            ,303, 304 -- Myanmar odds
+                            ) 
     GROUP BY custid
 
     IF @IsSettleAbandonedMatch = 1
@@ -317,7 +325,7 @@ BEGIN
     /* --- END Settle Abandoned Match ---*/
     DECLARE @RowCount INT
 
-    EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
+                                EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
         ,@Matchid = @matchid
         ,@RowCount = @Rowcount OUTPUT
         ,@creator = @adminid
@@ -347,7 +355,16 @@ BEGIN
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
-    WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
+    WHERE matchid = @matchid 
+      AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
+                            ,17, 18 -- refund 2nd FT
+                            ,303, 304 -- Myanmar odds
+                            ) 
     GROUP BY custid
 
     -------------------------------------------------------------
@@ -573,19 +590,7 @@ BEGIN
 END
 
 
-
-
-
 GO
-
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [bodbAdminNet]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]
