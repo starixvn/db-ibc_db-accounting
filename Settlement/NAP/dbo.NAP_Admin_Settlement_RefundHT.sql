@@ -1,6 +1,8 @@
 USE [bodb02]
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 10/19/2015 11:24:40 ******/
+SET ANSI_NULLS ON
 GO
-
+SET QUOTED_IDENTIFIER ON
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@adminid INT
 	,@IsExcludeBetdaq BIT = 0
@@ -33,14 +35,15 @@ AS
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+                - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
-	
-	Param's Explanation:
-	? @matchid: matchid of match to Refund HT
-	? @IsExcludeBetdaq: Is Exclude betdaq tickets or not
-	? @IsSettleAbandonedMatch: Is Settlement for Betdaq ticket of Abandoned/postponed match or not
-	? @IsExcludeBetfair: Is Exclude betfair tickets or not
-	? @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+    
+    Param's Explanation:
+    • @matchid: matchid of match to Refund HT
+    • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
+    • @IsSettleAbandonedMatch: Is Settlement for Betdaq ticket of Abandoned/postponed match or not
+    • @IsExcludeBetfair: Is Exclude betfair tickets or not
+    • @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
 
 */
 BEGIN
@@ -117,19 +120,31 @@ BEGIN
 		,balance MONEY
 		)
 
-	CREATE TABLE #Balance (
-		custid INT PRIMARY KEY
-		,balance MONEY
-		,Increased BIT
-		)
+    CREATE TABLE #Balance (
+        custid INT PRIMARY KEY
+        ,balance MONEY
+        ,Increased BIT
+        )
+        
+    DECLARE @tblDebitPending TVP_BalanceList
+    DECLARE @tblCreditPending TVP_BalanceList
 
-	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+    CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
-	INSERT INTO #BalanceBefore
-	SELECT custid
-		,SUM(winlost - actual_stake + playercomm)
-	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
+    INSERT INTO #BalanceBefore
+    SELECT custid
+        ,SUM(winlost - actual_stake + playercomm)
+    FROM dbo.bettrans WITH (ROWLOCK)
+    WHERE matchid = @matchid 
+		  AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
+                            ,17, 18 -- refund 2nd FT
+                            ,303, 304 -- Myanmar odds
+                            ) 
 	GROUP BY custid
 
 	IF @IsSettleAbandonedMatch = 1
@@ -307,7 +322,7 @@ BEGIN
 	/* --- END Settle Abandoned Match ---*/
 	DECLARE @RowCount INT
 
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
+                                EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
 		,@Matchid = @matchid
 		,@RowCount = @Rowcount OUTPUT
 		,@creator = @adminid
@@ -337,7 +352,16 @@ BEGIN
 	SELECT custid
 		,SUM(winlost - actual_stake + playercomm)
 	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
+    WHERE matchid = @matchid 
+      AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
+                            ,17, 18 -- refund 2nd FT
+                            ,303, 304 -- Myanmar odds
+                            ) 
 	GROUP BY custid
 
 	-------------------------------------------------------------
@@ -354,47 +378,67 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	INSERT INTO dbo.BalancePendingDebit (
-		custid
-		,balance
-		)
-	SELECT custid
-		,ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+    --INSERT INTO dbo.BalancePendingDebit (
+    --    custid
+    --    ,balance
+    --    )
+    --SELECT custid
+    --    ,ABS(balance)
+    --FROM #Balance
+    --WHERE Increased = 0
+    
+    INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
 
-	INSERT INTO dbo.BalancePendingCredit (
-		custid
-		,balance
-		)
-	SELECT custid
-		,balance
-	FROM #Balance
-	WHERE Increased = 1
+    --INSERT INTO dbo.BalancePendingCredit (
+    --    custid
+    --    ,balance
+    --    )
+    --SELECT custid
+    --    ,balance
+    --FROM #Balance
+    --WHERE Increased = 1
+    
+    INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 
-	----
-	-- Add Negative Balance into BalanceNegative table 
-	----
-	INSERT INTO [bodb02].[dbo].[BalanceNegative] (
-		[ExecDate]
-		,[MatchID]
-		,[ActionID]
-		,[GroupID]
-		,[CustID]
-		,[Balance]
-		,[StatusID]
-		,[Remark]
-		)
-	SELECT GETDATE()
-		,@MatchID
-		,@ActionID
-		,1 -- Sportsbook Single bet Settlement 
-		,CustID
-		,Balance
-		,0
-		,NULL
-	FROM #Balance WITH (NOLOCK)
-	WHERE Increased = 0
+    ----
+    -- Add Negative Balance into BalanceNegative table 
+    ----
+    INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+        [ExecDate]
+        ,[MatchID]
+        ,[ActionID]
+        ,[GroupID]
+        ,[CustID]
+        ,[Balance]
+        ,[StatusID]
+        ,[Remark]
+        )
+    SELECT GETDATE()
+        ,@MatchID
+        ,@ActionID
+        ,1 -- Sportsbook Single bet Settlement 
+        ,CustID
+        ,Balance
+        ,0
+        ,NULL
+    FROM #Balance WITH (NOLOCK)
+    WHERE Increased = 0
 
 	---------------------------------------
 	--  Betfair & Betdaq - Warning message:
@@ -541,7 +585,6 @@ BEGIN
 		END CATCH
 	END
 END
-GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_RefundHT] TO [vnteam] AS [dbo]
