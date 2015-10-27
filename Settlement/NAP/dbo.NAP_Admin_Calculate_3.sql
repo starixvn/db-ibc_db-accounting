@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_3]    Script Date: 10/06/2015 09:03:52 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_3]    Script Date: 10/26/2015 10:32:56 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -40,6 +40,7 @@ AS
         - 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
         - 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
         - 20150909@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304): add bettype 302
+        - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -323,7 +324,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302        THEN CASE
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * playerdiscount * stake * (oddsspread/100) * odds
+                                                                WHEN oddsspread > 0 THEN @commWinRate * playerdiscount * stake * (oddsspread/100)
                                                                 ELSE @commLostRate * playerdiscount * stake * ABS(oddsspread/100)
                                                                 END
                     WHEN @modds = -0.25     THEN @commLostRate * playerdiscount * stake * 0.5
@@ -335,7 +336,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302       THEN 0
                     WHEN @modds =  0 AND bettype = 302       THEN CASE 
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * discount * stake * (oddsspread/100) * odds * (1-apositiontaking)
+                                                                WHEN oddsspread > 0 THEN @commWinRate * discount * stake * (oddsspread/100) * (1-apositiontaking)
                                                                 ELSE @commLostRate * discount * stake * ABS(oddsspread/100) * (1-apositiontaking)
                                                                 END
                     WHEN @modds = -0.25     THEN @commLostRate * discount * stake * (1-apositiontaking) * 0.5
@@ -347,7 +348,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302        THEN CASE
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * adiscount * stake * (oddsspread/100) * odds * (1-(mpositiontaking+apositiontaking))
+                                                                WHEN oddsspread > 0 THEN @commWinRate * adiscount * stake * (oddsspread/100) * (1-(mpositiontaking+apositiontaking))
                                                                 ELSE @commLostRate * adiscount * stake * ABS(oddsspread/100) * (1-(mpositiontaking+apositiontaking))
                                                                 END
                     WHEN @modds = -0.25     THEN @commLostRate * adiscount * stake * (1-(mpositiontaking+apositiontaking)) * 0.5
@@ -359,7 +360,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302      THEN CASE
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * sdiscount * stake * (oddsspread/100) * odds * (1-(spositiontaking+mpositiontaking+apositiontaking))
+                                                                WHEN oddsspread > 0 THEN @commWinRate * sdiscount * stake * (oddsspread/100) * (1-(spositiontaking+mpositiontaking+apositiontaking))
                                                                 ELSE @commLostRate * sdiscount * stake * ABS(oddsspread/100) * (1-(spositiontaking+mpositiontaking+apositiontaking))
                                                                 END
                     WHEN @modds = -0.25     THEN @commLostRate * sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) * 0.5
@@ -501,7 +502,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302        THEN CASE
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * playerdiscount * stake * (oddsspread/100) * odds
+                                                                WHEN oddsspread > 0 THEN @commWinRate * playerdiscount * stake * (oddsspread/100)
                                                                 ELSE @commLostRate * playerdiscount * stake * ABS(oddsspread/100)
                                                                 END
                     WHEN @modds = - 0.25 THEN @commLostRate * playerdiscount * stake * 0.5
@@ -513,7 +514,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302       THEN 0
                     WHEN @modds =  0 AND bettype = 302       THEN CASE 
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * discount * stake * (oddsspread/100) * odds * (1-apositiontaking)
+                                                                WHEN oddsspread > 0 THEN @commWinRate * discount * stake * (oddsspread/100) * (1-apositiontaking)
                                                                 ELSE @commLostRate * discount * stake * ABS(oddsspread/100) * (1-apositiontaking)
                                                                 END
                     WHEN @modds = - 0.25 THEN @commLostRate * discount * stake * (1 - apositiontaking) * 0.5
@@ -525,7 +526,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302        THEN CASE
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * adiscount * stake * (oddsspread/100) * odds * (1-(mpositiontaking+apositiontaking))
+                                                                WHEN oddsspread > 0 THEN @commWinRate * adiscount * stake * (oddsspread/100) * (1-(mpositiontaking+apositiontaking))
                                                                 ELSE @commLostRate * adiscount * stake * ABS(oddsspread/100) * (1-(mpositiontaking+apositiontaking))
                                                                 END
                     WHEN @modds = - 0.25 THEN @commLostRate * adiscount * stake * (1 - (mpositiontaking + apositiontaking)) * 0.5
@@ -537,7 +538,7 @@ BEGIN
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302        THEN CASE
                                                                 WHEN oddsspread = 0 THEN 0
-                                                                WHEN oddsspread > 0 THEN @commWinRate * sdiscount * stake * (oddsspread/100) * odds * (1-(spositiontaking+mpositiontaking+apositiontaking))
+                                                                WHEN oddsspread > 0 THEN @commWinRate * sdiscount * stake * (oddsspread/100) * (1-(spositiontaking+mpositiontaking+apositiontaking))
                                                                 ELSE @commLostRate * sdiscount * stake * ABS(oddsspread/100) * (1-(spositiontaking+mpositiontaking+apositiontaking))
                                                                 END
                     WHEN @modds = - 0.25 THEN @commLostRate * sdiscount * stake * (1 - (spositiontaking + mpositiontaking + apositiontaking)) * 0.5
@@ -578,13 +579,6 @@ BEGIN
         END
     END
 END
-
-
-
-
-
-
-
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_3] TO [vnteam] AS [dbo]
