@@ -15,6 +15,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 	@FTDone BIT = 0,
 	@HTDone BIT = 0,
 	@NoneCornerBetDone	BIT = 0, 
+	@HTNoneCornerBetDone	BIT = 0,
 	@isExcludeCorner	BIT = 0,
 	@isExistRunningCornerBet BIT = 0,
 	@RowCount INT = 0 OUTPUT,
@@ -35,8 +36,10 @@ AS
 		- 20140912@Kathy: Correct betstatus when calculate FT '3x30' match [Redmine:#22399]
 		- 20141013@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20150812@Kathy: Add more command for VS sports [Redmine:#40125]
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
 		- 20151012@Patrick: Reset betstatus for Muay Thai when user do action RefundFull & RefundFT [Redmine: #45356]
+		
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -74,7 +77,8 @@ BEGIN
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL' AND Sporttype = 5 AND @SelectedSet LIKE '%6%'THEN N'completed'
-								WHEN @action = 'CAL-HT' AND @FTDone = 1 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND @FTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 0 THEN N'completed'
 								WHEN @action = 'CAL-FT' AND @HTDone = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'								
 							ELSE eventstatus END,
@@ -94,9 +98,9 @@ BEGIN
 							END
 			,@Sporttype = sporttype
 		FROM match with(NOLOCK)
-		WHERE matchid = @matchid AND sporttype NOT IN (44)
+		WHERE matchid = @matchid
 
-		IF ISNULL(@betstatus , '') = ''
+		IF @Sporttype = 44
 		BEGIN
 			SET @betstatus = ''
 		END
@@ -202,9 +206,13 @@ BEGIN
 															THEN REPLACE(@betstatus, 'Refund HT;', '') 
 													  ELSE REPLACE(@betstatus, 'Refund FT;', '')
 												 END
-						END,
-			eventstatus = 'Completed', changetime = GETDATE(), settleTime = GETDATE()
-		WHERE matchid=@MatchID AND @HTDone = 1
+						END
+			,eventstatus = CASE WHEN @HTDone=1 THEN 'Completed' ELSE eventstatus END 
+			,changetime  = GETDATE(), settleTime = GETDATE()
+		WHERE matchid=@MatchID 
+			  AND (@HTDone = 1 
+					OR	@HTNoneCornerBetDone = 1 
+				  )
 
 		--- get rowcount
 		SET @RowCount = @@ROWCOUNT
@@ -364,9 +372,47 @@ BEGIN
 			eventstatus = 'Completed',
 			changetime = CURRENT_TIMESTAMP
 		WHERE EventID = @MatchID
-	END	
+	END
+	IF @Command = 'NAP_Admin_Settlement_VS_180-CAL'
+	BEGIN
+		UPDATE	dbo.match WITH(ROWLOCK, UPDLOCK)
+			SET finalhomescore = @fthome
+				,finalawayscore = @ftaway
+				,eventstatus = 'completed'
+				,changetime = CURRENT_TIMESTAMP
+				,settletime = CURRENT_TIMESTAMP
+		WHERE	matchid = @matchid
+	END
+	IF @Command = 'NAP_Admin_Settlement_VS_180-REFUND'
+	BEGIN
+		UPDATE dbo.match WITH(ROWLOCK, UPDLOCK)
+			SET betstatus = 'Refund'
+				,changetime = CURRENT_TIMESTAMP
+				,settletime = CURRENT_TIMESTAMP
+		WHERE	matchid = @matchid
+	END
+	IF @Command = 'NAP_Admin_Settlement_VS_180-CAL'
+	BEGIN
+		UPDATE	dbo.match WITH(ROWLOCK, UPDLOCK)
+			SET finalhomescore = @fthome
+				,finalawayscore = @ftaway
+				,eventstatus = 'completed'
+				,changetime = CURRENT_TIMESTAMP
+				,settletime = CURRENT_TIMESTAMP
+		WHERE	matchid = @matchid
+	END
+	IF @Command = 'NAP_Admin_Settlement_VS_180-REFUND'
+	BEGIN
+		UPDATE dbo.match WITH(ROWLOCK, UPDLOCK)
+			SET betstatus = 'Refund'
+				,changetime = CURRENT_TIMESTAMP
+				,settletime = CURRENT_TIMESTAMP
+		WHERE	matchid = @matchid
+	END
+	
 END
+GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Match_Update] TO [vnteam]
+GO 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Match_Update] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Match_Update] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Match_Update] TO [vnteam] AS [dbo]
