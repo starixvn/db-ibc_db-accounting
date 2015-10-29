@@ -1106,9 +1106,9 @@ BEGIN
 			'' AS eventdate,
 			0,
 			0,
-			sdiscount,
-			adiscount,
-			discount,
+			b.sdiscount,
+			b.adiscount,
+			b.discount,
 			0 AS homeid,
 			0 AS awayid,
 			'' settleTime,
@@ -1227,7 +1227,6 @@ BEGIN
 	 DROP TABLE #BetListDetailData;
 	 DROP TABLE #SportBettype
 END
-
 
 
 GO
