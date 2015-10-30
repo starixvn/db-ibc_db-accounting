@@ -46,8 +46,11 @@
 		- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
 		- 20150903@Sophia: Apply Colossus Bets [#42428]
 		- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
-						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]
-						   NOTE: transtypeid = 4 - GrandPrize
+						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
+		- 20151030@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
+
+	Param explanation : 
+		- Transtypeid = 4 - GrandPrize
 
  */
 SET NOCOUNT ON
@@ -125,7 +128,7 @@ BEGIN
 			WHERE custid = @custid
 				AND winlostdate between @_FromDate and @_ToDate
 				AND CASE WHEN s.productId = 1 AND s.SubProduct = 'MG-SuperLive' AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
-				AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
+				AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 				--AND statusID <> 103
 			GROUP BY winlostdate, b.bettype,
 				CASE
@@ -326,7 +329,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and custid=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 			and playercomm<>0 
 		GROUP BY winlostdate
 
@@ -490,7 +493,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and recommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
 		GROUP BY winlostdate 
 		HAVING sum(awinlost) <> 0
 		
@@ -512,7 +515,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and recommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 		GROUP BY winlostdate 
 		HAVING sum(comm-playercomm) <> 0		
 
@@ -635,7 +638,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and mrecommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 		GROUP BY winlostdate 
 		HAVING sum(mwinlost) <> 0	
 	
@@ -656,7 +659,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and mrecommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG')) THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 		GROUP BY winlostdate 
 		HAVING sum(acomm-comm) <> 0
 
@@ -787,7 +790,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and srecommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
 		GROUP BY winlostdate 
 		HAVING sum(swinlost) <> 0
 	
@@ -809,7 +812,7 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and srecommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR (s.productId = 13 AND s.SubProduct = 'MGC-RNG'))	THEN 0 ELSE 1 END = 1
+			AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
 		GROUP BY winlostdate 
 		HAVING sum(scomm-acomm) <> 0
 

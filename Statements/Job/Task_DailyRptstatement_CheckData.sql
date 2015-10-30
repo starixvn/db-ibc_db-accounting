@@ -20,7 +20,9 @@ AS
 	- @20150402@Tom: Change option NOLOCK to ROWLOCK table hint when select on bettrans to prevent dirty read by NOLOCK
 	- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
 	- 20150901@Sophia: Apply Colossus Bets [#42428]
-
+	- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
+					   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
+	- 20151030@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -451,24 +453,36 @@ BEGIN
 		,40 ErrCode
 	FROM 
 		(
-		SELECT 
-			bt.custid custid
-			,SUM(bm.winlost - bm.stake) AS GrandPrize
-		FROM 
-			bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
-			INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
-				ON bt.RefNo = bm.RefNo				
-		WHERE 
-			bt.bettype = 18000
-			AND bt.winlostdate = @winlostdate
-			AND bt.statusID in (101, 102) -- 'VOID','REJECT'
-			AND bm.statuswinlost <> 0
-		GROUP BY bt.custid
+			SELECT 
+				bt.custid custid
+				,SUM(bm.winlost - bm.stake) AS GrandPrize
+			FROM 
+				bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
+					ON bt.RefNo = bm.RefNo				
+			WHERE 
+				bt.bettype = 18000
+				AND bt.winlostdate = @winlostdate
+				AND bt.statusID in (101, 102) -- 'VOID','REJECT'
+				AND bm.statuswinlost <> 0
+			GROUP BY bt.custid
+
+			UNION ALL
+
+			SELECT  custid
+					,SUM(winlost) AS GrandPrize
+			FROM	bodb02.dbo.JackpotWin WITH(NOLOCK) 
+			WHERE	winlostdate = @Winlostdate
+					AND statusID NOT IN (102,101) -- 'VOID','REJECT'				
+			GROUP BY custid
+
 		) tmpGrandPrize 
 	LEFT JOIN [dbo].[rptStatement] rpt WITH (NOLOCK) 	
 		ON rpt.Custid = tmpGrandPrize.Custid
 			AND rpt.winlostdate = @winlostdate
 	WHERE ABS(ISNULL(tmpGrandPrize.GrandPrize, 0) - ISNULL(rpt.GrandPrize, 0)) > 0
+
+
 
 
 	/*Insert data into tmpStatement temp table*/
