@@ -18,6 +18,7 @@ AS
 	DB: DBAGE.bodb02
 	Original:
 	Revisions:
+		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 	Parameters:
 		- @TransType
 			+ 0 : All (DRAW/WON/LOSE/Reject/Void/Refund/Running/Waiting)
@@ -88,7 +89,7 @@ BEGIN
 			brng.ip,
 			brng.transdesc,
 			CASE
-				WHEN brng.productID = 203 THEN brng.TranId3rd		-- Microgaming RNG Game
+				WHEN brng.productID = 205 THEN brng.TranId3rd		-- Microgaming RNG Casino
 				ELSE ''
 			END AS BetCheck
 		FROM dbo.bettransRnG AS brng WITH (NOLOCK)
@@ -120,7 +121,7 @@ BEGIN
 			brng.ip,
 			brng.transdesc,
 			CASE
-				WHEN brng.productID = 203 THEN brng.TranId3rd		-- Microgaming RNG Game
+				WHEN brng.productID = 205 THEN brng.TranId3rd		-- Microgaming RNG Casino
 				ELSE ''
 			END AS BetCheck
 		FROM dbo.bettransRnG14 AS brng WITH (NOLOCK)
@@ -150,7 +151,7 @@ BEGIN
 			brng.ip,
 			brng.transdesc,
 			CASE
-				WHEN brng.productID = 203 THEN brng.TranId3rd		-- Microgaming RNG Game
+				WHEN brng.productID = 205 THEN brng.TranId3rd		-- Microgaming RNG Casino
 				ELSE ''
 			END AS BetCheck
 		FROM DBARC.bodb_Archive.dbo.bettransRnG_bk AS brng WITH (NOLOCK)
