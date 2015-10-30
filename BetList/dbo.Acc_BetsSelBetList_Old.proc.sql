@@ -58,12 +58,13 @@ AS
 		- 20150828@Kos: Support Colossus Bet
 		- 20150930@Bobby: Enhance performance - re-arrange indexers
 		- 20151008@Kos: Support Microgaming RNG Game and AG Casino
+		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 */
 
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE @tempBettype 	INT
+	DECLARE @tempBettype INT
 	
 	SELECT @tempBettype = @Bettype
 	
@@ -804,8 +805,8 @@ BEGIN
 			
 	END
 
-	-- AG Casino, Microgaming, Colossus Bet
-	IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (11, 13, 15))
+	-- AG Casino, Microgaming Live Casino, Microgaming RNG Casino, Colossus Bet
+	IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (11, 13, 15, 17))
 	BEGIN
 		INSERT INTO #BetListData
 		SELECT 
@@ -854,6 +855,7 @@ BEGIN
 				WHEN s.ProductId = 11 THEN 250
 				WHEN s.ProductId = 13 THEN 203
 				WHEN s.ProductId = 15 THEN 204
+				WHEN s.ProductId = 17 THEN 205
 			END AS sporttype,
 			b.ip,
 			b.betfrom,
@@ -870,14 +872,17 @@ BEGIN
 			b.swinlost,
 			'' AS showtime,
 			b.winlostdate,
-			b.BetCheck,
+			CASE
+				WHEN s.ProductId = 13 THEN b.BetCheck
+				ELSE ''
+			END AS BetCheck,
 			'' AS transdesc,
 			0 AS OddSpread
 		FROM dbo.bettrans_bk AS b WITH (nolock,index=IX_custid)
 			INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 		WHERE b.custid = @Custid
-			AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
-			AND s.ProductId IN (11, 13, 15)
+			AND b.winlostdate BETWEEN @FromDate AND @ToDate
+			AND s.ProductId IN (11, 13, 15, 17)
 	END
 
 	IF (EXISTS(SELECT TOP 1 1 FROM #BetListData WHERE Bettype IN (901, 902, 903)))

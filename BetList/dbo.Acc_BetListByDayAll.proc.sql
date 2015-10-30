@@ -79,7 +79,8 @@ AS
 		- 20150828@Kos: Fix bug not show CB ticket after clicking Grand Prize in Statement report
 		- 20151009@Kos: Support Microgaming RNG Game and AG Casino
 		- 20151019@Kos: Support Microgaming RNG Game Jackpot Win
-		
+		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
+
 	Param's Explanation:
 		+ @transtype: 
 			1: Betting Statement
@@ -92,10 +93,10 @@ BEGIN
 	SET NOCOUNT ON;
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT, SubProduct VARCHAR(500))
+	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
 
 	INSERT INTO @SportBettype
-	EXEC Acc_SportBettypeMatrix_Sel @mode = 5
+	EXEC Acc_SportBettypeMatrix_Sel @mode = 4
 
 	DECLARE @tmpStatus TABLE ([statusID] TINYINT);
 
@@ -901,12 +902,13 @@ BEGIN
 				AND s.ProductID = 12
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
 
-			-- Microgaming, AG Casino
+			-- Microgaming Live Casino, Microgaming RNG Casino, AG Casino
 			INSERT INTO @Data
 			SELECT 
 				CASE
 					WHEN s.ProductID = 11 THEN 250
 					WHEN s.ProductID = 13 THEN 203
+					WHEN s.ProductID = 17 THEN 205
 				END AS SportType,
 				0 AS leagueid,
 				0 AS homeid,
@@ -949,7 +951,7 @@ BEGIN
 				0 AS finalawayscore,
 				0 AS hthomescore,
 				0 AS htawayscore,
-				b.CREATOR, --creator.username creator, 
+				b.CREATOR,
 				b.ip,
 				b.Username,
 				0 AS IsNeutral,
@@ -968,14 +970,17 @@ BEGIN
 				mwinlost,
 				swinlost,
 				b.winlostdate,
-				b.BetCheck,
+				CASE
+					WHEN s.ProductID = 13 THEN b.BetCheck
+					ELSE ''
+				END AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE  b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (11, 13)
+				AND s.ProductID IN (11, 13, 17)
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 				AND @transtype <> 4
 
@@ -984,7 +989,7 @@ BEGIN
 			BEGIN
 				INSERT INTO @Data
 				SELECT 
-					203 AS SportType,
+					205 AS SportType,
 					0 AS leagueid,
 					0 AS homeid,
 					0 AS awayid,
@@ -1053,8 +1058,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 				WHERE  j.custid = @custid
 					AND j.winlostdate = @fromdate
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
 
@@ -1157,7 +1161,7 @@ BEGIN
 				m.awayid,
 				m.matchcode,
 				'' AS race,
-				'' AS eventdate, --get eventdate
+				'' AS eventdate,
 				0,
 				0,
 				b.sdiscount,
@@ -2069,7 +2073,7 @@ BEGIN
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
 
-			-- Microgaming - Live Casino
+			-- Microgaming Live Casino
 			IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)
 			BEGIN
 				INSERT INTO @Data
@@ -2143,7 +2147,6 @@ BEGIN
 				WHERE b.custid = @custid
 					AND b.winlostdate = @fromdate
 					AND s.ProductID = 13
-					AND s.SubProduct <> 'MGC-RNG'
 					AND b.statusID = 0
 			END
 
@@ -2212,7 +2215,7 @@ BEGIN
 					mwinlost,
 					swinlost,
 					b.winlostdate,
-					'' AS BetCheck,
+					b.BetCheck,
 					'' AS transdesc,
 					0 AS OddsSpread
 				FROM dbo.bettrans AS b WITH (NOLOCK)
@@ -2220,18 +2223,17 @@ BEGIN
 				WHERE b.custid = @custid
 					AND b.winlostdate = @fromdate
 					AND s.ProductID = 13
-					AND s.SubProduct <> 'MGC-RNG'
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
 
-			-- Microgaming - RNG Game
+			-- Microgaming RNG Casino
 			IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] <> 0)	-- not today settled ticket
 				AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 				AND @transtype = 1		-- only support transtype = 1
 			BEGIN
 				INSERT INTO @Data
 				SELECT 
-					203 AS SportType,
+					205 AS SportType,
 					0 AS leagueid,
 					0 AS homeid,
 					0 AS awayid,
@@ -2299,8 +2301,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @custid
 					AND b.winlostdate = @fromdate
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
 
@@ -2310,7 +2311,7 @@ BEGIN
 			BEGIN
 				INSERT INTO @Data
 				SELECT 
-					203 AS SportType,
+					205 AS SportType,
 					0 AS leagueid,
 					0 AS homeid,
 					0 AS awayid,
@@ -2383,8 +2384,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @custid
 					AND b.winlostdate = @fromdate
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND brng.statusID IN (SELECT [statusID] FROM @tmpStatus)
 				GROUP BY
 					b.transid,
@@ -2410,7 +2410,7 @@ BEGIN
 			BEGIN
 				INSERT INTO @Data
 				SELECT 
-					203 AS SportType,
+					205 AS SportType,
 					0 AS leagueid,
 					0 AS homeid,
 					0 AS awayid,
@@ -2479,8 +2479,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @custid
 					AND b.winlostdate = @fromdate
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND brng.statusID IN (SELECT [statusID] FROM @tmpStatus)
 				GROUP BY
 					b.transid,
@@ -2780,7 +2779,7 @@ BEGIN
 			BEGIN
 				INSERT INTO @Data
 				SELECT 
-					203 AS SportType,
+					205 AS SportType,
 					0 AS leagueid,
 					0 AS homeid,
 					0 AS awayid,
@@ -2849,8 +2848,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 				WHERE  j.custid = @custid
 					AND j.winlostdate = @fromdate
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
 

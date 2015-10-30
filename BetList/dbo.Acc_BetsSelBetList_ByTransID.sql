@@ -65,6 +65,7 @@ AS
 		- 20150825@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
 		- 20151009@Kos: Support Microgaming RNG Game and AG Casino
+		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 */
 BEGIN
 
@@ -1268,8 +1269,8 @@ BEGIN
 					AND b.translogid = @refno
 			END
 
-		-- Microgaming - Live Casino
-		IF EXISTS (SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 13 AND Bettype = @Bettype AND SubProduct <> 'MGC-RNG')
+		-- Microgaming Live Casino
+		IF EXISTS (SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 13 AND Bettype = @Bettype)
 		BEGIN
 			INSERT INTO @Data
 			SELECT
@@ -1338,7 +1339,6 @@ BEGIN
 			WHERE
 				b.custid = @Custid
 				AND s.ProductID = 13
-				AND s.SubProduct <> 'MGC-RNG'
 				AND b.refno = @refno
 
 			UNION ALL	-- translog
@@ -1407,13 +1407,12 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 			WHERE b.custid = @Custid
 				AND s.ProductID = 13
-				AND s.SubProduct <> 'MGC-RNG'
 				AND b.statusID = 0
 				AND b.translogid = @refno
 		END
 
-		-- Microgaming - RNG Game
-		IF EXISTS (SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 13 AND Bettype = @Bettype AND SubProduct = 'MGC-RNG')
+		-- Microgaming RNG Casino
+		IF EXISTS (SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 17 AND Bettype = @Bettype)
 		BEGIN
 			IF @WinlostDate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
 			BEGIN
@@ -1461,7 +1460,7 @@ BEGIN
 					0,
 					0,
 					0 AS leagueid,
-					203 AS sporttype,
+					205 AS sporttype,
 					b.ip,
 					b.betfrom,
 					0 AS matchid,
@@ -1485,8 +1484,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE
 					b.custid = @Custid
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND b.transid = @TransId
 					AND brng.statusid = 0
 				GROUP BY
@@ -1558,7 +1556,7 @@ BEGIN
 					0,
 					0,
 					0 AS leagueid,
-					203 AS sporttype,
+					205 AS sporttype,
 					b.ip,
 					b.betfrom,
 					0 AS matchid,
@@ -1582,8 +1580,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE
 					b.custid = @Custid
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND b.transid = @TransId
 					AND brng.statusid <> 0
 				GROUP BY
@@ -1653,7 +1650,7 @@ BEGIN
 					0,
 					0,
 					0 AS leagueid,
-					203 AS sporttype,
+					205 AS sporttype,
 					b.ip,
 					b.betfrom,
 					0 AS matchid,
@@ -1676,8 +1673,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE
 					b.custid = @Custid
-					AND s.ProductID = 13
-					AND s.SubProduct = 'MGC-RNG'
+					AND s.ProductID = 17
 					AND b.transid = @TransId
 			END
 		END
@@ -2787,10 +2783,7 @@ BEGIN
 				AND b.refno = @refno 
 
 		-- Microgaming - Live Casino, Colossus Bet
-		IF EXISTS (	SELECT TOP 1 1 FROM @SportBettype s 
-					WHERE ProductID IN (13, 15) 
-						AND Bettype = @Bettype
-						AND s.SubProduct <> 'MGC-RNG')
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (13, 15) AND Bettype = @Bettype )
 			INSERT INTO @Data
 			SELECT
 				b.bettype,
@@ -2863,14 +2856,10 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid
 				AND s.ProductID IN (13, 15)
-				AND s.SubProduct <> 'MGC-RNG'
 				AND b.refno = @refno
 
-		-- Microgaming - RNG Game, AG Casino
-		IF EXISTS (	SELECT TOP 1 1 FROM @SportBettype s 
-					WHERE (ProductID IN (11)
-							OR (ProductID = 13 AND SubProduct = 'MGC-RNG'))
-						AND Bettype = @Bettype )
+		-- Microgaming RNG Casino, AG Casino
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (11, 17) AND Bettype = @Bettype )
 			INSERT INTO @Data
 			SELECT
 				b.bettype,
@@ -2916,7 +2905,7 @@ BEGIN
 				0 AS leagueid,
 				CASE
 					WHEN s.ProductID = 11 THEN 250
-					WHEN s.ProductID = 13 THEN 203
+					WHEN s.ProductID = 17 THEN 205
 				END AS sporttype,
 				b.ip,
 				b.betfrom,
@@ -2932,15 +2921,14 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				'' AS showtime,
-				b.winlostdate ,
+				b.winlostdate,
 				'' AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid
-				AND (ProductID IN (11)
-					OR (ProductID = 13 AND SubProduct = 'MGC-RNG'))
+				AND s.ProductID IN (11, 17)
 				AND b.transid = @TransID
 	END
 
@@ -3640,10 +3628,7 @@ BEGIN
 				AND b.refno = @refno
 
 		-- Microgaming - Live Casino, Colossus Bet
-		IF EXISTS (	SELECT TOP 1 1 FROM @SportBettype s 
-					WHERE ProductID IN (13, 15) 
-						AND Bettype = @Bettype
-						AND s.SubProduct <> 'MGC-RNG')
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (13, 15) AND Bettype = @Bettype)
 			INSERT INTO @Data
 			SELECT
 				b.bettype,
@@ -3716,14 +3701,10 @@ BEGIN
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid
 				AND s.ProductID IN (13, 15)
-				AND s.SubProduct <> 'MGC-RNG'
 				AND b.refno = @refno
 
-		-- Microgaming - RNG Game, AG Casino
-		IF EXISTS (	SELECT TOP 1 1 FROM @SportBettype s 
-					WHERE (ProductID IN (11)
-							OR (ProductID = 13 AND SubProduct = 'MGC-RNG'))
-						AND Bettype = @Bettype )
+		-- Microgaming RNG Casino, AG Casino
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (11, 17) AND Bettype = @Bettype )
 			INSERT INTO @Data
 			SELECT
 				b.bettype,
@@ -3769,7 +3750,7 @@ BEGIN
 				0 AS leagueid,
 				CASE
 					WHEN s.ProductID = 11 THEN 250
-					WHEN s.ProductID = 13 THEN 203
+					WHEN s.ProductID = 17 THEN 205
 				END AS sporttype,
 				b.ip,
 				b.betfrom,
@@ -3792,8 +3773,7 @@ BEGIN
 			FROM DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid
-				AND (ProductID IN (11)
-					OR (ProductID = 13 AND SubProduct = 'MGC-RNG'))
+				AND s.ProductID IN (11, 17)
 				AND b.transid = @TransID
 	END
 
@@ -4127,6 +4107,7 @@ BEGIN
 
 	SELECT * FROM @DetailData  
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList_ByTransID] TO [bodbAdminNet]

@@ -32,6 +32,7 @@ AS
 		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150826@Kos: Exclude Colossus Bet ticket
 		- 20151008@Kos: Exclude AG Casino ticket
+		- 20151008@Kos: Exclude Microgaming RNG Casino ticket
 */
 
 BEGIN
@@ -43,10 +44,10 @@ BEGIN
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
-	-- exclude CS, BG, GD, KN, MG, MGC, CB tickets
+	-- exclude CS, BG, GD, KN, MG, MGC LC, MGC RNG, AG, CB tickets
 	DELETE sp
 	FROM @SportBettype sp
-	WHERE sp.productid IN (6, 7, 8, 11, 12, 13, 15)
+	WHERE sp.productid IN (6, 7, 8, 11, 12, 13, 15, 17)
 		OR sp.bettype BETWEEN 801 AND 899
 	
 	DECLARE @refno BIGINT
@@ -2266,6 +2267,7 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
+
 
 
 

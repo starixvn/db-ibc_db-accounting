@@ -59,6 +59,7 @@ AS
 		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150831@Kos: Support Colossus Bet
 		- 20151009@Kos: Support Microgaming RNG Game and AG casino
+		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 	
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -68,10 +69,10 @@ BEGIN
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT, SubProduct	VARCHAR(500))
+	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
 
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
 	DECLARE @Data TABLE (
 		finalhomescore	INT,
@@ -1487,10 +1488,9 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID IN (13, 15)
-				AND s.SubProduct <> 'MGC-RNG'
 
 			-- Microgaming Live Casino, Colossus Bet translog
-			UNION ALL -- MicroGamming translog
+			UNION ALL
 			SELECT
 				0 AS finalhomescore,
 				0 AS finalawayscore,
@@ -1552,12 +1552,11 @@ BEGIN
 			FROM dbo.translog AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 			WHERE s.ProductID IN (13, 15)
-				AND s.SubProduct <> 'MGC-RNG'
 				AND b.winlostdate = @fromdate
 				AND b.custid = @custid
 				AND b.statusID = 0
 
-			-- Microgaming, Colossus Bet, AG Casino Bettrans14
+			-- Microgaming Live Casino, Microgaming RNG Casino, Colossus Bet, AG Casino Bettrans14
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1606,6 +1605,7 @@ BEGIN
 					WHEN s.ProductID = 11 THEN 250
 					WHEN s.ProductID = 13 THEN 203
 					WHEN s.ProductID = 15 THEN 204
+					WHEN s.ProductID = 17 THEN 205
 				END AS sporttype,
 				b.matchid,
 				0 AS IsNeutral,
@@ -1622,9 +1622,9 @@ BEGIN
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (11, 13, 15)
+				AND s.ProductID IN (11, 13, 15, 17)
 
-			-- Microgaming RNG Game (not today ticket)
+			-- Microgaming RNG Casino (not today ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1669,7 +1669,7 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				ip,
-				203 AS sporttype,
+				205 AS sporttype,
 				b.matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -1686,10 +1686,9 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- not today
-				AND s.ProductID = 13
-				AND s.SubProduct = 'MGC-RNG'
+				AND s.ProductID = 17
 
-			-- Microgaming RNG Game (today running ticket)
+			-- Microgaming RNG Casino (today running ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1734,7 +1733,7 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				203 AS sporttype,
+				205 AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -1752,8 +1751,7 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
-				AND s.ProductID = 13
-				AND s.SubProduct = 'MGC-RNG'
+				AND s.ProductID = 17
 				AND brng.statusID = 0
 			GROUP BY
 				b.transid,
@@ -1826,7 +1824,7 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				203 AS sporttype,
+				205 AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -1844,8 +1842,7 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
-				AND s.ProductID = 13
-				AND s.SubProduct = 'MGC-RNG'
+				AND s.ProductID = 17
 				AND brng.statusID IN (111, 112, 113, 103)
 			GROUP BY
 				b.transid,
@@ -1933,7 +1930,7 @@ BEGIN
 				AND @fromdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- not today
 				AND s.ProductID = 11
 
-			-- Microgaming RNG Game (today running ticket)
+			-- AG Casino (today running ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1978,7 +1975,7 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				203 AS sporttype,
+				250 AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -2069,7 +2066,7 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				203 AS sporttype,
+				250 AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -2161,7 +2158,7 @@ BEGIN
 			BG.spositiontaking,
 			BG.bettype,
 			BG.betteam,
-			BG.TransDesc    
+			BG.TransDesc
 		FROM bettransg14 BG WITH (NOLOCK)  
 			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (4)
 			INNER JOIN @Data B ON  (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid IN (4))
@@ -2187,6 +2184,7 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
+
 
 
 
