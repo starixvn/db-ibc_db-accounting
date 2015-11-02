@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s161]    Script Date: 09/10/2014 09:14:31 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_s161] 
 	@MatchId INT
 	,@IsLive BIT			= 0
@@ -24,6 +19,7 @@ AS
 	
 	Revisions:
 		- 20140910@Kathy: Include range of NG bettypes ( 81-> 120)
+		- 20150807@Kathy: Using new balance table (BalCreditOthersPending,BalDebitOthersPending) [Redmine:#40125]
 						   
 	Param's Explanation:
 		+ @IsLoop (used for Balance):
@@ -140,7 +136,7 @@ BEGIN
 
 		IF @DrawSeq = 1 -- Cal-HT
 		BEGIN
-			EXEC dbo.NAP_Admin_Settlement_s161 @MatchId = @MatchId
+												EXEC dbo.NAP_Admin_Settlement_s161 @MatchId = @MatchId
 				,@Action = 'CAL-HT'
 				,@IP = @IP
 				,@AdminID = @AdminID
@@ -152,7 +148,7 @@ BEGIN
 	BEGIN
 		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_s161-Refund', @MatchId = @MatchId, @Creator = @AdminID
 
-		EXEC dbo.NAP_Admin_PreCalculate_s161_Refund @MatchId = @MatchId, @Action = @Action
+								EXEC dbo.NAP_Admin_PreCalculate_s161_Refund @MatchId = @MatchId, @Action = @Action
 
 		SET @LogData = 'REFUND Number Game for matchid:' + CAST(@MatchId AS NVARCHAR(10))
 		SET @ActionID = 117
@@ -161,7 +157,7 @@ BEGIN
 	BEGIN
 		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_s161-Refund_FT', @MatchId = @MatchId, @Creator = @AdminID
 
-		EXEC dbo.NAP_Admin_PreCalculate_s161_Refund @MatchId = @MatchId, @Action = @Action
+								EXEC dbo.NAP_Admin_PreCalculate_s161_Refund @MatchId = @MatchId, @Action = @Action
 
 		SET @LogData = 'REFUND FT Number Game for matchid:' + CAST(@MatchId AS NVARCHAR(10))
 		SET @ActionID = 119
@@ -260,6 +256,9 @@ BEGIN
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
 
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+		
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -270,15 +269,35 @@ BEGIN
 
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 4 -- Others
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 4 -- Others
 
 	DROP TABLE #Balance
 	DROP TABLE #BalanceBefore
@@ -373,10 +392,6 @@ BEGIN
 		END
 	END
 END
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s161] TO [bodbAdminNet] AS [dbo]

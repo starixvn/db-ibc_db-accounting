@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_MT_GetPT] 
+alter PROCEDURE [dbo].[Acc_MT_GetPT] 
 	@UserName varchar(30),
 	@Sporttype smallint = 1,
 	@Bettype smallint = 1,
@@ -34,6 +34,8 @@ Revisions:
 	- 20131121@Elodie: Add Virtual greyhounds(182), Virtual Motor Racing(184) [Redmine:#7234]
 	- 20140402@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
 	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB, use temp table for sports, bettype)
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	
 Param's Explanation:
 • @HasComm: view Comm or view PT
 	+ 0: View PT (default)
@@ -727,6 +729,36 @@ Begin
 		
 		SELECT @ugroup = ugroup from customer with(nolock) where custid=@custid
 
+		-- For Myanmar Odds
+		DECLARE @MyanmarOddsComm_1 DECIMAL (9,8) = 0
+				, @MyanmarOddsComm_2 DECIMAL (9,8) = 0
+				, @MyanmarOddsComm_3 DECIMAL (9,8) = 0
+				, @MyanmarOddsComm_4 DECIMAL (9,8) = 0
+				, @IsMyanmarOdds BIT = 0
+		
+	
+		IF @RoleID = 4
+			SELECT @MyanmarOddsComm_4 = CommRate, @IsMyanmarOdds = 1 FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @SRecommend AND Sporttype = 1 AND Bettype = 301		
+		IF @RoleID =3
+		BEGIN
+			SELECT @MyanmarOddsComm_3 = CommRate, @IsMyanmarOdds = 1 FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @MRecommend AND Sporttype = 1 AND Bettype = 301		
+			SELECT @MyanmarOddsComm_4 = CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @SRecommend AND Sporttype = 1 AND Bettype = 301		
+		END	
+			
+		IF @RoleID =2
+		BEGIN
+			SELECT @MyanmarOddsComm_2 = CommRate, @IsMyanmarOdds = 1 FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @Recommend AND Sporttype = 1 AND Bettype = 301
+			SET @MyanmarOddsComm_3 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @MRecommend AND Sporttype = 1 AND Bettype = 301)		
+			SET @MyanmarOddsComm_4 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @SRecommend AND Sporttype = 1 AND Bettype = 301)		
+		END		
+		
+		IF @RoleID = 1
+		BEGIN
+			SELECT @IsMyanmarOdds = 1, @MyanmarOddsComm_1= playerdiscount, @MyanmarOddsComm_2 = discount,@MyanmarOddsComm_3= adiscount, @MyanmarOddsComm_4 = sdiscount
+			FROM CustCommRate WITH (NOLOCK) WHERE CustId = @CustID AND Sporttype = 1 AND Bettype = 301		
+			
+		END
+		
 		SELECT	@ga4 ga4,
 				@gb4 gb4,
 				@gc4 gc4,
@@ -796,8 +828,13 @@ Begin
 				@v161_comm_81 v161_comm_81  , 
 				@v253_comm_1  v253_comm_1,
 				@v253_comm_2  v253_comm_2,  
-				@ugroup ugroup
-	END
+				@ugroup ugroup,
+				ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
+				ISNULL(@MyanmarOddsComm_1,0) AS MyanmarOddsComm_1,
+				ISNULL(@MyanmarOddsComm_2,0) AS MyanmarOddsComm_2,
+				ISNULL(@MyanmarOddsComm_3,0) AS MyanmarOddsComm_3,
+				ISNULL(@MyanmarOddsComm_4,0) AS MyanmarOddsComm_4
+	end
 	--IBC pt for HR
 	select	@v151_AutoIBC_pt_31 as v151_AutoIBC_pt_31,
 			@v151_AutoIBC_pt_41 as v151_AutoIBC_pt_41,

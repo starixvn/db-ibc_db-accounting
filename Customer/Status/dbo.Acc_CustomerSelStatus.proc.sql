@@ -37,6 +37,9 @@ Revisions:
 	- 20150717@Kiwi: Move SP to DB06.bodb02 to solve the performance issue for temporary	
 	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 	- 20150721@Winnie: Add Microgaming product 
+	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	
 
 Param's Explanation:
 • @system: = NAP : internal login from NAP
@@ -60,13 +63,15 @@ SET NOCOUNT ON
 ----- 20150610@Kos -------------------
 
 DECLARE @agentid INT, @roleid TINYINT, @IsInternal BIT, @IsAdminCanViewVNIP BIT,  @LimitPerIP tinyint, @SelectedBetting bit
+		,@IsMyanmarOdds BIT = 0
+		,@srecommend INT = 0
 
 IF ISNULL(@username,'') <> ''
-	SELECT @roleid = roleid, @agentid = recommend, @custid = custid
+	SELECT @roleid = roleid, @agentid = recommend, @custid = custid,@srecommend = srecommend
 	FROM custinfo WITH (NOLOCK)
 	WHERE username = @username
 ELSE 
-	SELECT @roleid = roleid, @agentid = recommend
+	SELECT @roleid = roleid, @agentid = recommend,@srecommend = srecommend
 	FROM custinfo WITH (NOLOCK)
 	WHERE custid = @CustID
 	
@@ -80,7 +85,11 @@ BEGIN
 		@IsInternal = isnull(IsInternal, 0) ,
 		@LimitPerIP =  isnull(LimitPerIP, 0),
 		@SelectedBetting =  isnull(SelectedBetting, 0)
+		
 	FROM custSuper WITH (NOLOCK) WHERE custid = @custid
+
+	SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
+
 END
 ELSE IF @roleid = 3 --master
 BEGIN
@@ -89,6 +98,8 @@ BEGIN
 		@LimitPerIP =  isnull(LimitPerIP, 0),
 		@SelectedBetting =  isnull(SelectedBetting, 0)
 	FROM custMaster WITH (NOLOCK) WHERE custid = @custid
+	
+	SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
 END
 ELSE IF @roleid = 2 --agent
 BEGIN
@@ -97,12 +108,16 @@ BEGIN
 		@LimitPerIP =  isnull(LimitPerIP, 0),
 		@SelectedBetting =  isnull(SelectedBetting, 0)
 	FROM custAgent WITH (NOLOCK) WHERE custid = @custid
+	
+	SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
 END
 ELSE IF @roleid = 1 --member
 BEGIN
 	SELECT 
 		@IsInternal = isnull(IsInternal, 0) 
 	FROM custAgent WITH (NOLOCK) WHERE custid = @agentid
+	
+	SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@agentid)
 END
 
 --Get Internal status
@@ -113,7 +128,6 @@ SELECT @IsInternal = CASE @roleid WHEN 4 THEN (SELECT isnull(IsInternal, 0) FROM
 								  WHEN 1 THEN (SELECT isnull(IsInternal, 0) FROM custAgent WITH (NOLOCK) WHERE custid = @agentid)
 								  ELSE 0 END 
 */								  
-		
 
 SELECT @IsAdminCanViewVNIP = 1
 IF (@AdminID > 0) 
@@ -164,14 +178,19 @@ SELECT	ISNULL(reject,0) AS Suspend,
 		min(case when g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513) then cg.IsDisabled else 1 end) as DisableKeno,
 		ISNULL(DisableGoldDeluxe,1) as DisableGoldDeluxe,
 		ISNULL(HideGoldDeluxe,1) as HideGoldDeluxe,
+		
+		ISNULL(DisableColossusBet,1) as DisableColossusBet,
+		ISNULL(HideColossusBet,1) as HideColossusBet,
+		
 		ISNULL(DisableMicrogame,1) as DisableMicrogame,
-		ISNULL(DisableSuperLive,1) as DisableSuperLive
+		ISNULL(DisableSuperLive,1) as DisableSuperLive,
+		ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds
 FROM custinfo AS ci WITH (nolock)
 	LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
-	LEFT JOIN CustGameType cg with(nolock) on ci.custid = cg.custid
-	LEFT JOIN dbo.GameType g on cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID in (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
+	LEFT JOIN CustGameType cg WITH(NOLOCK) ON ci.custid = cg.custid
+	LEFT JOIN dbo.GameType g WITH(NOLOCK) ON cg.GameTypeID = g.GameTypeID and g.IBCBetTypeID IN (1501,1503,1504,1505,1507,1508,1509,1511,1513)		
 WHERE ci.CustID = @CustID
-group by
+GROUP BY
 		ci.reject,
 		ci.closed,
 		ci.autosuspend,
@@ -199,6 +218,8 @@ group by
 		ci.HideKeno,
 		ci.DisableGoldDeluxe, 
 		ci.HideGoldDeluxe,
+		ci.DisableColossusBet,
+		ci.HideColossusBet,
 		ci.DisableMicrogame,
 		ci.DisableSuperLive
 

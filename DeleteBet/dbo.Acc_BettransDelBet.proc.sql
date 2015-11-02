@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [Acc_BettransDelBet]
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BettransDelBet]    Script Date: 09/25/2015 13:29:26 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_BettransDelBet]
 	@transid bigint = 0,
 	@custid int = 0,
 	@username varchar(50),
@@ -38,7 +45,8 @@ AS
 		- 20130526@Johnson: Add param @reason to log the reason delete bets				   
 		- 20130603@Johnson: get additional information for mailing
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Customer, Dep_CustSuper, Exchange by link database)						   
-		- 20140421@Kathy: Add more account allow to void settled ticket   
+		- 20140421@Kathy: Allow more accounts to void settled ticket
+		- 20150805@Kathy: Using new balance table (BalCreditSports,BalDebitSports) [Redmine:#40125]
 */
 
 SET NOCOUNT ON
@@ -52,6 +60,7 @@ If @ErrCode <> 0
 DECLARE @LogData NVARCHAR(500), @balance MONEY , @winlostdate datetime, @bettype int, @refno bigint, @matchid int, @Remark VARCHAR(500),
 		-- check customer for mailing live cs
 		@isDepositCust BIT, @is12EUCust BIT, @isRealCust BIT, @srecommend INT,@bet_username NVARCHAR(50), @currency INT, @betfrom NVARCHAR(1)
+		,@balance_type TINYINT
 
 If NOT EXISTS (select 1 from CustDB.dbo.customer c with (nolock) where userpwd = @password and custid = @userid and roleid >= 5)
 BEGIN
@@ -61,14 +70,15 @@ BEGIN
 	Return
 END
 
-If @userid in (	352361--Erica
-				,661969-- Erica1
-				,352362-- Jane
-				,1070340-- pgmKiwi
-				,360418 -- dbaThien
-				,862400-- pgmViet
-				,8		-- sa
-				,1274   -- Steven				
+If @userid in (	352361		-- Erica
+				,661969		-- Erica1
+				,352362		-- Jane
+				,1070340	-- pgmKiwi
+				,360418		-- dbaThien
+				,862400		-- pgmViet
+				,8			-- sa
+				,1274		-- Steven	
+				,15470969 -- Amy -- for testing					
 			   )
 BEGIN
 	if not exists (select * from bettrans with (nolock) where transid = @transid and custid = @custid)
@@ -92,6 +102,13 @@ END
 SELECT	@winlostdate = b.winlostdate, @bettype = bettype, @matchid = matchid, @refno = refno, @betfrom = betfrom
 FROM	bettrans b with (nolock)
 WHERE	b.transid = @transid
+
+SELECT  @balance_type = CASE WHEN (sporttype BETWEEN 1 AND 99 OR sporttype = 154) THEN 1 -- SB --> Sports
+							 WHEN sporttype = 162 THEN 3 -- LC --> Casino
+							 ELSE 4  -- NG, VS --> others
+						END
+FROM	match WITH(NOLOCK)
+WHERE	matchid = @matchid
 
 --Check settled Date
 EXEC dbo.Acc_CheckSettledDate @winlostdate = @winlostdate, @UserID = @UserID, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
@@ -172,7 +189,7 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 			@bet_username = username,
 			@srecommend = srecommend,
 			@currency = currency
-		FROM CustDB.dbo.custinfo WITH(NOLOCK)
+		FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 		WHERE custid = @custid 
 		
 		--return all additional information for mailing
@@ -268,7 +285,12 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		--update balance debit
 		IF @balance > 0
 		BEGIN			
-			EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+			--EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance
+																								EXEC dbo.Dot_BalanceDebitUpd 
+				@custID		= @custid
+				,@balance	= @balance
+				,@type		= @balance_type 
+				,@isforced	= 1
 		END
 	
 		--update bettrans
@@ -281,7 +303,11 @@ IF EXISTS (SELECT transid FROM bettrans (nolock) WHERE custid = @custid AND tran
 		IF @balance < 0
 		BEGIN
 			SELECT @balance = ABS(@balance)
-			EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+			--EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+																								EXEC dbo.Dot_BalanceCreditUpd
+				@custID		= @custid
+				,@balance	= @balance
+				,@type		= @balance_type
 		END		
 			
 		SELECT @LogData = 'delete transaction for custid:' +cast(@custid as varchar(10))+' transid:' + cast(@transid as varchar(20))+ ' by_login:' + @username + 'IP:' + cast(@IP as varchar(15)) + ' reason: ' + @reason
@@ -333,10 +359,9 @@ IF (@@Error = 0)
 	END
 
 
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelBet] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_BettransDelBet_xpre] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet_xpre] TO [ITVivi] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelBet_xpre] TO [vnteam] AS [dbo]
