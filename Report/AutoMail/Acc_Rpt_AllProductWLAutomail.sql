@@ -16,6 +16,7 @@ AS
 		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
 		- 20150722@Sophia: Send mail for dummy account in case of testing
 		- 20150930@Sophia: Fix winlostyesterday at table Transfer_bk [#44701]
+		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
 		 
 	Param's Explanation:
 	
@@ -210,7 +211,8 @@ BEGIN
 							WHEN bettype = 1900 THEN 18188815
 							WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
 							WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
-							WHEN bettype BETWEEN 2001 AND 2099 THEN 18256397
+							WHEN bettype BETWEEN 2001 AND 2007 THEN 18256397
+							WHEN bettype BETWEEN 2008 AND 2009 THEN 19692521
 							WHEN bettype BETWEEN 901 AND 903 THEN 18371760
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
@@ -236,7 +238,8 @@ BEGIN
 							WHEN bettype = 1900 THEN 18254404
 							WHEN bettype BETWEEN 1700 AND 1799 THEN 18254395
 							WHEN bettype BETWEEN 801 AND 899 THEN 18254387 
-							WHEN bettype BETWEEN 2001 AND 2099 THEN 18377344
+							WHEN bettype BETWEEN 2001 AND 2007 THEN 18377344
+							WHEN bettype BETWEEN 2008 AND 2009 THEN 19741787
 							WHEN bettype BETWEEN 901 AND 903 THEN 18377348
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
