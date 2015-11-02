@@ -27,8 +27,8 @@ BEGIN
 	CREATE TABLE #tempCust
 	(
 		custid			INT
-		, username		NVARCHAR(30)
-		, username2		NVARCHAR(30)
+		, username		NVARCHAR(50)
+		, username2		NVARCHAR(50)
 		, currency		VARCHAR(10)
 		, SiteName		NVARCHAR(100)
 	)
@@ -41,6 +41,7 @@ BEGIN
 		g.CustID
 		, g.ProductID
 		, g.MaxWinLimit
+		, g.BlockedWinAmt
 		, g.TotalWinAmt
 	INTO #tempWLGame		
 	FROM dbo.WinLimit_Game g WITH(NOLOCK)
@@ -93,16 +94,18 @@ BEGIN
 		, g.productid
 		, p.ProductName
 		, g.MaxWinLimit
+		, g.BlockedWinAmt
 		, g.TotalWinAmt
-		, (g.TotalWinAmt * 100 / g.MaxWinLimit) AS percentage
+		, (g.BlockedWinAmt * 100 / g.MaxWinLimit) AS percentage
 			
 	FROM #tempWLGame g
 		LEFT JOIN #tempCust c
 		ON g.custid 		= c.custid
-		INNER JOIN dbo.Products p WITH(NOLOCK)
+		INNER JOIN dbo.f_Winlimit_GetProductSetting() p
 		ON g.ProductID 		= p.ProductID
 		
-	WHERE p.ProductType 	= 2
+	WHERE p.IsActive_Company = 1
+		AND g.MaxWinLimit > 0
 	
 	RETURN;
 END
