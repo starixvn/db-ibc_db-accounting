@@ -20,7 +20,6 @@ AS
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and Sport Betype Matrix [#35359]
 		- 20150723@Sophia: Exclude data of Bettrade [#38815]	
-		- 20150917@Jim: Integrate MO product (Feature #41935)
 
 	Explanation's Param:
 		- @SoccerType =	 0: All bettype(major and minor bettype)
@@ -54,14 +53,14 @@ SELECT 5707545--BARM
 
 	
 INSERT INTO @Bettype(bettype,soccerType)
-SELECT typeid, CASE WHEN typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304) THEN 1 ELSE 2 END as SoccerType
+SELECT typeid, CASE WHEN typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1 ELSE 2 END as SoccerType
 FROM bettype b WITH(NOLOCK)
 INNER JOIN @SportBettype s 
 		ON s.bettype = b.typeid
 WHERE 	---(typeid < 31 OR typeid BETWEEN 121 AND 999)
 		1 = CASE WHEN @SoccerType = 0 THEN 1 
-				WHEN @SoccerType = 1 AND typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304) THEN 1 
-				WHEN @SoccerType = 2 AND typeid NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304) THEN 1 
+				WHEN @SoccerType = 1 AND typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1 
+				WHEN @SoccerType = 2 AND typeid NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1 
 				ELSE 0 END							
 
 IF ISNULL(@IncludeBettype,'')<>'' AND @soccerType <> 0

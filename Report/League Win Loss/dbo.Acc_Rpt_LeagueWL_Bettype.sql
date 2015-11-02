@@ -23,8 +23,7 @@ AS
 		-- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		-- 20121112@Elodie: Use stake field to calculate TurnOver instead of actual_stake
 		-- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]
-		-- 20150723@Sophia: Exclude data of Bettrade [#38815]	
-		-- 20150922@Jim: offer MO		
+		-- 20150723@Sophia: Exclude data of Bettrade [#38815]		
 
 		Explanation's Param:
 			- @winlostdate: the date want to view report
@@ -65,31 +64,23 @@ BEGIN
 Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 
 	Insert INTo @tmpBettype
-	select 1,  1 --'Handicap',
+	SELECT 1,  1 --'Handicap',
 	UNION ALL
-	select 301,2 --% Handicap
+	SELECT 3,  2 --'Over/Under',
 	UNION ALL
-	Select 3,  3 --'Over/Under',
+	SELECT 7,  3 --'1st Half Handicap',
+	UNION ALL
+	SELECT 8,  4 --'1st Half Over/Under',
+	UNION ALL
+	SELECT 2,  5 --'Odd/Even',
+	UNION ALL
+	SELECT 5,  6 --'1x2',
+	UNION ALL
+	SELECT 4,  7 --'Correct Score',
+	UNION ALL
+	SELECT 6,  8 --'Total Goal',
 	UNION ALL 
-	select 302,4 --- % Over/Under
-	UNION ALL
-	select 7,  5 --'1st Half Handicap',
-	UNION ALL 
-	select 303,6 -- 1H % Handicap
-	UNION ALL
-	Select 8,  7 --'1st Half Over/Under',
-	UNION ALL 
-	select 304,8 --1H % Over/Under
-	UNION ALL
-	select 2,  9 --'Odd/Even',
-	UNION ALL
-	select 5,  9 --'1x2',
-	UNION ALL
-	Select 4,  9 --'Correct Score',
-	UNION ALL
-	Select 6,  9 --'Total Goal',
-	UNION ALL 
-	Select 10, 10 --'Outright',
+	SELECT 10,  10 --'Outright',
 	
 --	UNION ALL
 --	SELECT 11,  11 --'Total Corners',
@@ -116,7 +107,7 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 		FROM bettype b WITH(NOLOCK)
 			INNER JOIN @SportBettype s 
 				ON b.typeid = s.Bettype
-		WHERE (typeid > 10 AND typeid < 31) OR (typeid BETWEEN 121 AND 999 and b.typeid NOT IN (301,302,303,304))  OR typeid BETWEEN 1301 AND 1334
+		WHERE (typeid > 10 AND typeid < 31) OR typeid BETWEEN 121 AND 999 OR typeid BETWEEN 1301 AND 1334
 
 	SELECT		
 			b.liveindicator,

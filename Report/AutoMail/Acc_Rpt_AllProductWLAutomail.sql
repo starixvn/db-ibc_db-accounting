@@ -15,7 +15,6 @@ AS
 		- 20150619@Sophia: Add Gold Deluxe, AG Casino, Vegas Game [#38512]
 		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
 		- 20150722@Sophia: Send mail for dummy account in case of testing
-		- 20150930@Sophia: Fix winlostyesterday at table Transfer_bk [#44701]
 		 
 	Param's Explanation:
 	
@@ -132,7 +131,7 @@ BEGIN
             INSERT INTO #TempMonthToDate
             SELECT b.winlostdate,
 				b.custid, 
-				ISNULL(-SUM(b.Credit - b.Debit),0) AS winlostyesterday
+				ISNULL(-SUM(b.Credit),0) AS winlostyesterday
 			FROM bodb_archive.dbo.transfer_bk b WITH(NOLOCK) 
 			 WHERE b.winlostdate BETWEEN @_fromdate AND @balanceupdate - 1
 				AND	b.custid in (Select CustId from @dummyBalance ) ----( 6911909,6911911,6911913,6911914,6911916,6911917,6911918,6911919,6913085,7723121,8158305, 14054918 )

@@ -19,8 +19,6 @@ AS
 	- @20150311@Tom: Change option ReadPast to NOLOCK when select data on bettrans table
 	- @20150402@Tom: Change option NOLOCK to ROWLOCK table hint when select on bettrans to prevent dirty read by NOLOCK
 	- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
-	- 20150901@Sophia: Apply Colossus Bets [#42428]
-
 */
 BEGIN
 	SET NOCOUNT ON
@@ -82,7 +80,6 @@ BEGIN
 			,Winlost			MONEY	NULL
 			,Comm				MONEY	NULL
 			,ClosingBalance		MONEY	NULL
-			,GrandPrize			MONEY	NULL
 			,ErrCode			INT
 		)
 
@@ -438,38 +435,6 @@ BEGIN
 			AND rpt.winlostdate = @winlostdate
 	WHERE ABS(ISNULL(tmpVoid.VoidAmt, 0) - ISNULL(rpt.VoidAmt, 0)) > 0
 		
-		
-
-	--STEP 05: Grand Prize
-	INSERT INTO #tmpCustMiss (
-		Custid
-		,Amount
-		,ErrCode
-		)
-	SELECT tmpGrandPrize.Custid
-		,tmpGrandPrize.GrandPrize AS Amount
-		,40 ErrCode
-	FROM 
-		(
-		SELECT 
-			bt.custid custid
-			,SUM(bm.winlost - bm.stake) AS GrandPrize
-		FROM 
-			bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
-			INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
-				ON bt.RefNo = bm.RefNo				
-		WHERE 
-			bt.bettype = 18000
-			AND bt.winlostdate = @winlostdate
-			AND bt.statusID in (101, 102) -- 'VOID','REJECT'
-			AND bm.statuswinlost <> 0
-		GROUP BY bt.custid
-		) tmpGrandPrize 
-	LEFT JOIN [dbo].[rptStatement] rpt WITH (NOLOCK) 	
-		ON rpt.Custid = tmpGrandPrize.Custid
-			AND rpt.winlostdate = @winlostdate
-	WHERE ABS(ISNULL(tmpGrandPrize.GrandPrize, 0) - ISNULL(rpt.GrandPrize, 0)) > 0
-
 
 	/*Insert data into tmpStatement temp table*/
 	
@@ -537,18 +502,6 @@ BEGIN
 	FROM #tmpCustMiss tmp
 	WHERE tmp.ErrCode IN  (30 )
 
-	INSERT INTO #tmpStatement (
-		Custid
-		,GrandPrize
-		,ErrCode
-	)
-	SELECT 	tmp.Custid	
-		,Amount
-		,40 ErrCode
-	FROM #tmpCustMiss tmp
-	WHERE tmp.ErrCode IN  (40)
-
-
 	IF OBJECT_ID('tempdb..#tmpCustMiss') IS NOT NULL 
 	BEGIN
 		DROP TABLE #tmpCustMiss
@@ -561,10 +514,10 @@ BEGIN
 	IF @isCheckDataOnly = 1
 	BEGIN
 		IF EXISTS(SELECT TOP 1 1FROM #tmpStatement tmpSta
-					WHERE tmpSta.ErrCode  IN (1,40))
+					WHERE tmpSta.ErrCode = 1)
 		BEGIN
 			SELECT 
-				'Wrong W/L-TO-Grand Prize' Reason
+				'Wrong W/L-TO' Reason
 				,Custid
 				,OpeningBalance
 				,Turnover
@@ -572,10 +525,9 @@ BEGIN
 				,Winlost
 				,Comm
 				,TransferAmt
-				,ClosingBalance
-				,GrandPrize 
+				,ClosingBalance 
 			FROM #tmpStatement tmpSta
-			WHERE tmpSta.ErrCode IN (1,40)
+			WHERE tmpSta.ErrCode = 1
 		END 
 			
 		IF EXISTS(SELECT TOP 1 1FROM #tmpStatement tmpSta
@@ -736,30 +688,6 @@ BEGIN
 		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
 		INNER JOIN   #tmpStatement tmpSta
 			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 30
-
-	
-		---------
-		INSERT INTO [dbo].[rptStatement] (
-			WinlostDate
-			,Custid
-			,GrandPrize
-		)
-		SELECT 
-			@WinlostDate WinlostDate
-			,tmpSta.Custid
-			,tmpSta.GrandPrize AS GrandPrize
-		FROM   #tmpStatement tmpSta	
-			LEFT JOIN [dbo].[rptStatement] rpt
-			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID
-		WHERE rpt.CustID IS NULL 
-			  AND tmpSta.ErrCode = 40
-			
-		UPDATE rpt
-		SET rpt.GrandPrize = tmpSta.GrandPrize  
-		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
-		INNER JOIN   #tmpStatement tmpSta
-			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 40
-
 	END
 	 
 	IF OBJECT_ID('tempdb..#tmpStatement') IS NOT NULL

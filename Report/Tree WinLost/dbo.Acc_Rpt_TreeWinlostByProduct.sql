@@ -18,7 +18,6 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]
 	@showMGC BIT=0, --Micro Gaming
 	@showVG BIT=0, --Vegas Games
 	@showAGCS BIT=0, --AG Casino
-	@showCB	 BIT=0,
 	@TurnOver_8RM MONEY = 0 OUTPUT,    
 	@Total_8RM   MONEY = 0 OUTPUT,    
 	@VirtualTotal_8RM  MONEY = 0 OUTPUT,    
@@ -46,8 +45,7 @@ Revisions:
 		Add Keno Sport (202) -Bettype : 1501 - 1599
 	-20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 	
 	-20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)
-	-20150723@Jim: Apply Bettrade [#38815]
-	-20150828@Jim: support Colossus Bet (#42608)
+	- 20150723@Jim: Apply Bettrade [#38815]
 */    
   
   
@@ -151,12 +149,6 @@ INSERT INTO @TmpCondBettype(Bettype,isVirtual)
 SELECT Bettype, 0   
 FROM @SportBettype   
 WHERE ProductID = 11	
-
-IF @showCB =1 -- Colossus Bet
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 0   
-FROM @SportBettype   
-WHERE ProductID = 15	
 	
 --IF @winlostdate > @MoveBetDays  
 --BEGIN  

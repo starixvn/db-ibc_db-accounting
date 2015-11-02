@@ -36,7 +36,7 @@ AS
 	Revision
 		- 20150604@Jamie: Apply for Soccer ONLY 
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
-		- 20150928@Johnson: update result of corner without single corner ticket [Redmine: #44415]
+
 	Param's Explanation: 
 		@Results: 'H,1,X,NL,...'  NL: Blank result of Bettype 216 
 */
@@ -336,35 +336,17 @@ BEGIN
 		UNION ALL 
 		SELECT '08', @GoalSequence,NULL 
 		UNION ALL 
-		SELECT '04', '0', '0' WHERE @isExistTotalCorner = 1
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '04'
-								) 
+		SELECT '04', '0', '0' WHERE @isExistTotalCorner = 1 
 		UNION ALL 
 		SELECT '05', '0', '0' WHERE @isExistTotalCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '05'
-								)
 		UNION ALL 
 		SELECT '206', 'N', NULL WHERE @isExistFTFCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '206'
-								)
 		UNION ALL 
 		SELECT '207', 'N', NULL WHERE @isExistHTFCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '207'
-								)
 		UNION ALL 
 		SELECT '208', 'N', NULL WHERE @isExistFTLCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '208'
-								)	
 		UNION ALL 
 		SELECT '209', 'N', NULL WHERE @isExistHTLCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '209'
-								)
 
 		SELECT @SettlementStatusID = 1 -- Refund
 
@@ -425,19 +407,10 @@ BEGIN
 		SELECT'00', CAST(@fth AS VARCHAR(50)), CAST(@fta AS VARCHAR(50)) 
 		UNION ALL 
 		SELECT '04', '0', '0' WHERE @isExistTotalCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '04'
-								)
 		UNION ALL 
 		SELECT '206', 'N', NULL WHERE @isExistFTFCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '206'
-								)
 		UNION ALL 
 		SELECT '208', 'N', NULL WHERE @isExistFTLCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '208'
-								)
 
 		MERGE	ResultDetail AS TARGET
 		USING	@tmpResultDetail AS SOURCE ON (TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID)
@@ -495,20 +468,11 @@ BEGIN
 
 		SELECT'01', CAST(@hth AS VARCHAR(50)), CAST(@hta AS VARCHAR(50)) 
 		UNION ALL 
-		SELECT '05', '0', '0' WHERE @isExistTotalCorner = 1
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-									WHERE matchid = @matchid AND ResourceID = '05'
-								) 
+		SELECT '05', '0', '0' WHERE @isExistTotalCorner = 1 
 		UNION ALL 
-		SELECT '207', 'N', NULL WHERE @isExistHTFCorner = 1
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '207'
-								) 
+		SELECT '207', 'N', NULL WHERE @isExistHTFCorner = 1 
 		UNION ALL 
 		SELECT '209', 'N', NULL WHERE @isExistHTLCorner = 1 
-								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)
-										WHERE matchid = @matchid AND ResourceID = '209'
-								)
 
 		MERGE	ResultDetail AS TARGET
 		USING	@tmpResultDetail AS SOURCE ON (TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID)
