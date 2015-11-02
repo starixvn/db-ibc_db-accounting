@@ -24,7 +24,9 @@ AS
 		- 20131203@Kathy: Rename column: liveindicator to IsLiveIndicator.
 						Using Dep_CustSuper table instead of f_DepSuper_1() function.		
 		- 20140211@Kathy: Get more column for MixParlay	
-		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]	  
+		- 20150402@Dominic: Add new 60 bettypes [Redmine:#27214]
+		- 20151023@Patrick: Add more field sporttype to support Muay Thai
+			  
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -106,7 +108,8 @@ BEGIN
         ChoiceLiveAwayScore SMALLINT  ,
         ChoiceLiveIndicator BIT  ,
 		ChoiceLeagueId INT  ,
-        ChoiceSportType SMALLINT  
+        ChoiceSportType SMALLINT,
+		SportType SMALLINT  
 	)
 	
 ----Direct Licensee
@@ -153,7 +156,8 @@ BEGIN
 				b.liveawayscore as ChoiceLiveAwayScore,
 				b.liveindicator as ChoiceLiveIndicator,
 				m.leagueid  as ChoiceLeagueId ,
-				m.sporttype as ChoiceSportType				
+				m.sporttype as ChoiceSportType,
+				CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.srecommend IN ( SELECT custid FROM Dep_CustSuper with(nolock) where site = @LicenseeName)
@@ -224,7 +228,8 @@ BEGIN
 				b.liveawayscore as ChoiceLiveAwayScore,
 				b.liveindicator as ChoiceLiveIndicator,
 				m.leagueid  as ChoiceLeagueId ,
-				m.sporttype as ChoiceSportType
+				m.sporttype as ChoiceSportType,
+				CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 	
 		WHERE		B.recommend NOT IN (SELECT CustID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH (NOLOCK) ) 
@@ -295,7 +300,8 @@ BEGIN
 				b.liveawayscore as ChoiceLiveAwayScore,
 				b.liveindicator as ChoiceLiveIndicator	,
 				m.leagueid  as ChoiceLeagueId ,
-				m.sporttype as ChoiceSportType	
+				m.sporttype as ChoiceSportType,
+				CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
 		FROM		Bettrans b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.statusID NOT IN (101,102, 121)--('Void', 'Reject', 'Dummy') 
@@ -367,7 +373,8 @@ BEGIN
 			liveawayscore as ChoiceLiveAwayScore,
 			liveindicator as ChoiceLiveIndicator,
 			0  as ChoiceLeagueId ,
-			0 as ChoiceSportType
+			0 as ChoiceSportType,
+			NULL as SportType
 	FROM bettrans WITH (NOLOCK)
 	WHERE 0 = 1
 END 
@@ -419,7 +426,8 @@ BEGIN
 				bm.liveawayscore ChoiceLiveAwayScore,
 				bm.liveindicator ChoiceLiveIndicator	,
 				m.leagueid  as ChoiceLeagueId ,
-				m.sporttype as ChoiceSportType
+				m.sporttype as ChoiceSportType,
+				NULL as SportType
 		FROM	bettransm bm WITH (NOLOCK)	
 		INNER JOIN  Bettrans b WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -482,7 +490,8 @@ BEGIN
 				bm.liveawayscore ChoiceLiveAwayScore,
 				bm.liveindicator ChoiceLiveIndicator,
 				m.leagueid  as ChoiceLeagueId ,
-				m.sporttype as ChoiceSportType						
+				m.sporttype as ChoiceSportType,
+				NULL as SportType
 		FROM	Bettrans b WITH (NOLOCK) 
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -543,7 +552,8 @@ BEGIN
 				bm.liveawayscore ChoiceLiveAwayScore,
 				bm.liveindicator ChoiceLiveIndicator	,
 				m.leagueid  as ChoiceLeagueId ,
-				m.sporttype as ChoiceSportType				
+				m.sporttype as ChoiceSportType,
+				NULL as SportType				
 		FROM	Bettrans b WITH (NOLOCK)	
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -599,11 +609,12 @@ BEGIN
 				0 ChoiceLiveAwayScore,
 				0 ChoiceLiveIndicator,
 				0  as ChoiceLeagueId ,
-				0 as ChoiceSportType
+				0 as ChoiceSportType,
+				NULL as SportType
 		FROM bettrans WITH (NOLOCK) 
 		WHERE 0 = 1
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListingDetail_xpre] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[NAP_Rpt_TicketsListingDetail_xpre] TO [vnteam] AS [dbo]
