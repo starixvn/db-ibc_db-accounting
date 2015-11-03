@@ -450,38 +450,6 @@ BEGIN
 	FROM DBCUST.CustDB.dbo.CustInfo WITH(NOLOCK)
 	WHERE custid = @custid
 	
-	-- For Sportbook2
-	
-/*	
-	DECLARE @bitmapOrder INT = 0
-	SELECT @bitmapOrder = bitmapOrder FROM DBCust.CUSTDB.dbo.ProductStatusProfile WITH (NOLOCK)
-	WHERE Sporttype = 44 AND Bettype = 3
-	
-	DECLARE @DisableDownlinesSportbook2 INT = 0, @DisableSportbook2 BIT = 0
-	SELECT @DisableSportbook2 = dbo.f_GetProductStatus(stt.bitmapIsDisabled,@bitmapOrder)
-	FROM dbo.CustProductStatus stt WITH (NOLOCK) 
-	WHERE stt.CustID = @CustID  
-	
-
-	IF @roleid = 4
-		SET @DisableDownlinesSportbook2 = ISNULL((SELECT TOP 1 1
-														FROM dbo.custInfo ci WITH (NOLOCK)
-															INNER JOIN dbo.CustProductStatus cps_temp WITH (NOLOCK) ON ci.custid = cps_temp.CustID
-														WHERE srecommend = @CustID	AND roleid = 3
-															AND dbo.f_GetProductStatus(cps_temp.bitmapIsDisabled, @bitmapOrder) = 1),0)
-	ELSE IF @roleid = 3
-		SET @DisableDownlinesSportbook2 = ISNULL((SELECT TOP 1 1
-														FROM dbo.custInfo ci WITH (NOLOCK)
-															INNER JOIN dbo.CustProductStatus cps_temp WITH (NOLOCK) ON ci.custid = cps_temp.CustID
-														WHERE mrecommend = @CustID	AND roleid = 2
-															AND dbo.f_GetProductStatus(cps_temp.bitmapIsDisabled, @bitmapOrder) = 1),0)
-	ELSE IF @roleid = 2
-		SET @DisableDownlinesSportbook2 = ISNULL((SELECT TOP 1 1
-														FROM dbo.custInfo ci WITH (NOLOCK)
-															INNER JOIN dbo.CustProductStatus cps_temp WITH (NOLOCK) ON ci.custid = cps_temp.CustID
-														WHERE recommend = @CustID	AND roleid = 1
-															AND dbo.f_GetProductStatus(cps_temp.bitmapIsDisabled, @bitmapOrder) = 1),0)
-*/
     SELECT c.custid, c.username, c.firstname, c.lastname, 
 	    c.username2, 		
 	    ci.roleid, 
