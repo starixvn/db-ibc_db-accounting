@@ -42,7 +42,7 @@ Revisions:
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
 	
-	
+
 	
 
 Param's Explanation:
