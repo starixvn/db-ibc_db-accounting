@@ -22,9 +22,9 @@ BEGIN
 
 	--get setting from DBCUST via linked server
 	INSERT INTO #CustWinlimitSetting(CustId, ProductId, MaxWinLimit)
-	SELECT CustId, ProductId, MaxWinLimit
+	SELECT CustId, ProductId, ISNULL(MaxWinLimit, 0)
 	FROM DBCUST.CustDB.dbo.WinLimit_CustSetting WITH(NOLOCK)
-	WHERE ISNULL(MaxWinLimit, 0) > 0
+	--WHERE ISNULL(MaxWinLimit, 0) > 0
 
 	--get product setting
 	INSERT INTO #ProductSetting(ProductId, Bettype)
@@ -59,6 +59,7 @@ BEGIN
 	FROM #DataTmp t
 		INNER JOIN #CustWinlimitSetting s ON t.CustId = s.CustId AND t.ProductId = s.ProductId
 	WHERE t.TotalWinAmount >= s.MaxWinLimit
+		AND s.MaxWinLimit > 0
 	
 	--for WinLimit_GlobalSetting
 	IF EXISTS (
@@ -77,6 +78,13 @@ BEGIN
 			AND cc.CustId IS NULL
 			AND ISNULL(s.MaxWinLimit, 0) > 0
 	END
+
+	--remove members who is setting unlimited
+	DELETE t
+	FROM #CustBlockedList t
+		INNER JOIN #CustWinlimitSetting s ON t.CustId = s.CustId AND t.ProductId = s.ProductId
+	WHERE s.MaxWinLimit = 0
+
 	--select * from @CustBlockedList
 	IF NOT EXISTS (SELECT TOP 1 1 FROM #CustBlockedList)
 	BEGIN
@@ -89,11 +97,12 @@ BEGIN
 		RETURN
 
 	END
-	
+
 	--incase reached MaxWinLimit again
 	UPDATE g
 	SET MaxwinLimit = t.MaxWinLimit
-		, TotalWinAmt += t.TotalWinAmount
+		, TotalWinAmt = CASE WHEN g.IsBlocked = 0 AND g.WinlostDate = @WinlostDate THEN g.TotalWinAmt + t.TotalWinAmount
+							ELSE t.TotalWinAmount END
 		, BlockedWinAmt = t.TotalWinAmount
 		, IsBlocked = 1
 		, IsNotified = 0
@@ -101,9 +110,7 @@ BEGIN
 		, UnBlockedDate = NULL
 	FROM dbo.WinLimit_Game g WITH(ROWLOCK, UPDLOCK)
 		INNER JOIN #CustBlockedList t ON t.CustId = g.CustID AND t.Bettype = g.Bettype
-	WHERE g.IsBlocked = 0
-		AND g.WinlostDate = @WinlostDate
-
+	
 	--insert
 	INSERT INTO dbo.WinLimit_Game(CustId, ProductID, Bettype, MaxWinLimit, BlockedWinAmt, TotalWinAmt, IsBlocked, BlockedDate
 		, UnBlockedDate, IsNotified, CreatedBy, WinlostDate)
