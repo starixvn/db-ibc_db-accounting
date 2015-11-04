@@ -36,7 +36,7 @@ AS
 		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
-                - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
+        - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
     
     Param's Explanation:
