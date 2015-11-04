@@ -3,6 +3,7 @@ USE [bodb02]
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
+GO
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 19/10/2015 10:46:58 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@adminid INT
@@ -28,14 +29,15 @@ AS
 	DB: DBTXN/BODB02
 	Original: Admin_Settlement_RefundHT
 
-	Revisions:
-		- 20140421@Kathy: Add new bettype 126 [Redmine:#14449]
-		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
-		- 20140617@Kathy: Apply BetRadar [Redmine:#17142]
-		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]	
-		- 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
-		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+    Revisions:
+        - 20140421@Kathy: Add new bettype 126 [Redmine:#14449]
+        - 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+        - 20140617@Kathy: Apply BetRadar [Redmine:#17142]
+        - 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]    
+        - 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
+        - 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+        - 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+        - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
         - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
     
@@ -310,7 +312,7 @@ BEGIN
 				END 
 		AND statusID NOT IN (101, 102)
 
-								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
 			,@betcount_8 = @betcount_8 -- bettype
@@ -340,7 +342,7 @@ BEGIN
 		EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
 			,'F'
 
-								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+				EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'REFUND'
 			,@mode = 'HT'
 			,@IsExcludeBetdaq = @IsExcludeBetdaq
