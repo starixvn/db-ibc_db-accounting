@@ -1,11 +1,7 @@
 
-SET QUOTED_IDENTIFIER ON 
-GO
 SET ANSI_NULLS ON 
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 06/10/2015 11:21:39 AM ******/
-
+SET QUOTED_IDENTIFIER ON
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 05/10/2015 6:21:02 PM ******/
 CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
     ,@adminid INT
@@ -40,6 +36,7 @@ AS
         - 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
         - 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+        - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
     
     Param's Explanation:
@@ -131,7 +128,7 @@ BEGIN
         )
         
     DECLARE @tblDebitPending TVP_BalanceList
-	DECLARE @tblCreditPending TVP_BalanceList
+    DECLARE @tblCreditPending TVP_BalanceList
 
     CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
@@ -139,7 +136,15 @@ BEGIN
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
-    WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
+    WHERE matchid = @matchid 
+		  AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
+                            ,303, 304 -- Myanmar odds
+                            ) 
     GROUP BY custid
 
     IF @IsSettleAbandonedMatch = 1
@@ -305,7 +310,7 @@ BEGIN
                 END 
         AND statusID NOT IN (101, 102)
 
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
             ,@action = 'REFUND'
             ,@mode = 'HT'
             ,@betcount_8 = @betcount_8 -- bettype
@@ -317,7 +322,7 @@ BEGIN
     /* --- END Settle Abandoned Match ---*/
     DECLARE @RowCount INT
 
-    EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
+	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
         ,@Matchid = @matchid
         ,@RowCount = @Rowcount OUTPUT
         ,@creator = @adminid
@@ -335,7 +340,7 @@ BEGIN
         EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
             ,'F'
 
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
             ,@action = 'REFUND'
             ,@mode = 'HT'
             ,@IsExcludeBetdaq = @IsExcludeBetdaq
@@ -347,7 +352,15 @@ BEGIN
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
-    WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
+    WHERE matchid = @matchid 
+      AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match                     
+                            ,303, 304 -- Myanmar odds
+                            ) 
     GROUP BY custid
 
     -------------------------------------------------------------
@@ -576,7 +589,6 @@ END
 
 
 
-GO
 
 SET QUOTED_IDENTIFIER OFF 
 GO
