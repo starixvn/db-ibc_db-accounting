@@ -1,8 +1,9 @@
 USE [bodb02]
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 10/19/2015 11:24:40 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_RefundHT]    Script Date: 10/30/2015 08:29:55 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 19/10/2015 10:46:58 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
 	,@adminid INT
 	,@IsExcludeBetdaq BIT = 0
@@ -142,7 +143,6 @@ BEGIN
                             ,16 -- refund FT ticket
                             ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
                             ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
-                            ,17, 18 -- refund 2nd FT
                             ,303, 304 -- Myanmar odds
                             ) 
 	GROUP BY custid
@@ -358,8 +358,7 @@ BEGIN
                             133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
                             ,16 -- refund FT ticket
                             ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
-                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
-                            ,17, 18 -- refund 2nd FT
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match                     
                             ,303, 304 -- Myanmar odds
                             ) 
 	GROUP BY custid
