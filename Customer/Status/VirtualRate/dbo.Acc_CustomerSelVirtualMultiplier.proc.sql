@@ -8,30 +8,48 @@ AS
 		Task: Get virtual rate settings of customers
 		
 		Revisions:
-			- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]				
+			- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
+			- 20151029@Billy: Using new Virtual Rate structure [Redmine: #46541]
+						
 		Parameter's Explanation:
 	*/
 BEGIN
 	SET NOCOUNT ON
-	declare @ActualRate float
-	
-	select @ActualRate = actualrate
-	from exchange with (nolock)
-		inner join customer on exchange.exchangeid = customer.currency
-	where custid = @CustID
-		
-	
-	Select @ActualRate as ActualRate, 			
-			virtualmultiplier as EnableVirtualrate, 
-			-0.8 as Min_VirtualMultiplier,            ---- 0.2 - 1 
-			 0.6 as Max_VirtualMultiplier             ---- 1.6 - 1 
-	from CustInfo with (NOLOCK) where CustID = @CustID
-	
-	SELECT * 
-	FROM CustVirtualRate WITH(NOLOCK)
-	WHERE custid = @Custid
-	ORDER BY sporttype,isLive DESC,bettype
-	
+
+    DECLARE @ActualRate FLOAT
+    DECLARE @CustVirtualRate TABLE (
+                custid INT,
+                sporttype SMALLINT,
+                bettype SMALLINT,
+                islive BIT,
+                virtualMultiplier SMALLMONEY)
+
+    SELECT      @ActualRate = actualrate
+    FROM        exchange AS e WITH(NOLOCK)
+    INNER JOIN  Customer AS c
+            ON  e.exchangeid = c.currency
+    WHERE       c.custid = @CustID
+
+    SELECT  @ActualRate         AS ActualRate,
+            VirtualMultiplier   AS EnableVirtualRate,
+            -0.8                AS Min_VirtualMultiplier,
+            0.6                 AS Max_VirtualMultiplier
+    FROM    custInfo WITH(NOLOCK)
+    WHERE   custid = @CustID
+
+    INSERT INTO @CustVirtualRate
+    SELECT      cvs.custid,
+                pvs.sporttype,
+                pvs.bettype,
+                pvs.islive,
+                dbo.f_GetVirtualSetting(cvs.bitmapVirtual, pvs.profileID) AS virtualMultiplier
+    FROM        CustVirtualSetting    AS cvs WITH(NOLOCK)
+    INNER JOIN  ProfileVirtualSetting       AS pvs WITH(NOLOCK)
+            ON  cvs.seqNo = pvs.seqNo
+    WHERE       cvs.custid = @CustID
+
+    SELECT custid, sporttype, bettype, islive, virtualMultiplier
+    FROM @CustVirtualRate
 END
 
 GO
