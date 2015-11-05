@@ -1,3 +1,6 @@
+use bodb02
+go
+
 ALTER PROCEDURE [dbo].[Task_BalanceUpdDebitGame]
 AS
 /*
@@ -7,6 +10,8 @@ AS
 		DB: DBTRANS.BODB02
 		
 		Revisions:
+			- 20150710@Patrick: Support Gold Deluxe
+			- 20151028@Patrick: Support Company Winlimit
 			
 		Parameters Explanation:	
 */
@@ -26,15 +31,20 @@ END
 SET @rn = CASE WHEN @rnx - @rn > 100 THEN @rn + 100 ELSE @rnx END
 
 -- collect balance value.
-CREATE TABLE #Balance (custid int, winlostdate smalldatetime, balance money)
+CREATE TABLE #Balance (custid int, winlostdate smalldatetime, bettype smallint, balance money)
 INSERT INTO #Balance
-SELECT custid, winlostdate, SUM(balance)
+SELECT custid, winlostdate, bettype, SUM(balance)
 FROM dbo.BalancePendingDebitGame --with (rowlock)
 WHERE rn <= @rn
-GROUP BY custid, winlostdate
+GROUP BY custid, winlostdate, bettype
 
 DECLARE @today SMALLDATETIME
 SET @today = convert(nvarchar(10), current_timestamp,120)
+
+CREATE TABLE #ProductSetting(Bettype SMALLINT, IsCompany BIT, IsSMA BIT)
+INSERT INTO #ProductSetting(Bettype, IsCompany, IsSMA)
+SELECT BetType, IsActive_Company, IsActive_SMA
+FROM dbo.f_Winlimit_GetProductSetting()
 
 -- perform update
 Declare @Retry int, @Success bit
@@ -47,17 +57,34 @@ BEGIN TRY
 	SET @Success = 1
 	BEGIN TRANSACTION
 	
+	--for SMA Winlimit
 	UPDATE bal
 	SET Balance = bal.Balance + B.balance
 	FROM dbo.BalanceDebitGame bal 	--WITH (rowlock, updlock)
-		INNER JOIN #Balance B ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate
-		
+		INNER JOIN #Balance B ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate AND bal.bettype = b.bettype
+	WHERE b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsSMA = 1)
+
 	-- insert balance for not exist in balance table
-	INSERT INTO dbo.BalanceDebitGame(custid, winlostdate, balance )
-	select b.custid, b.winlostdate, b.balance
-	from #Balance B 
-		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate		
-	WHERE bal.Winlostdate is null and b.winlostdate = @today
+	INSERT INTO dbo.BalanceDebitGame(custid, winlostdate, bettype, balance )
+	SELECT b.custid, b.winlostdate, b.bettype, b.balance
+	FROM #Balance B 
+		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate AND bal.bettype = b.bettype
+	WHERE bal.Winlostdate IS NULL AND b.winlostdate = @today
+		AND b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsSMA = 1)
+	
+	--for Company Winlimit
+	UPDATE bal
+	SET Winlost = bal.Winlost + B.balance
+	FROM dbo.Winlimit_DebitGame bal
+		INNER JOIN #Balance B ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate AND bal.bettype = b.bettype
+	WHERE b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsCompany = 1)
+	
+	INSERT INTO dbo.Winlimit_DebitGame(custid, winlostdate, bettype, Winlost)
+	SELECT b.custid, b.winlostdate, b.bettype, b.balance
+	FROM #Balance B 
+		LEFT JOIN dbo.Winlimit_DebitGame bal ON bal.custid = B.custid AND bal.winlostdate = B.winlostdate AND bal.bettype = b.bettype
+	WHERE bal.Winlostdate IS NULL AND b.winlostdate = @today
+		AND b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsCompany = 1)
 		
 	COMMIT TRANSACTION
 END TRY
@@ -73,6 +100,8 @@ IF @Success = 0 AND @Retry < 3 GOTO TryAgain
 IF @Success = 1
 	DELETE FROM dbo.BalancePendingDebitGame
 	WHERE rn <= @rn
+
+DROP TABLE #ProductSetting
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Task_BalanceUpdDebitGame] TO [vnteam]

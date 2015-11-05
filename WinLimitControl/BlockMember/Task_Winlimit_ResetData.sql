@@ -37,23 +37,25 @@ BEGIN
 		--
 		WHILE 1 = 1
 		BEGIN
-			DELETE TOP(20000) dbo.Winlimit_CreditGame WITH(ROWLOCK) 
+			DELETE TOP(50000) dbo.Winlimit_CreditGame WITH(ROWLOCK) 
 			WHERE CustId NOT IN (SELECT CustId FROM @BlockedListMember WHERE BetType = @BetType)
 				AND WinlostDate < @WinlostDate
 				AND BetType = @BetType
+			OPTION (MAXDOP 4)
 			
-			IF @@ROWCOUNT < 20000
+			IF @@ROWCOUNT < 50000
 				BREAK
 		END
 		--
 		WHILE 1 = 1
 		BEGIN
-			DELETE TOP(20000) dbo.Winlimit_DebitGame WITH(ROWLOCK) 
+			DELETE TOP(50000) dbo.Winlimit_DebitGame WITH(ROWLOCK) 
 			WHERE CustId NOT IN (SELECT CustId FROM @BlockedListMember WHERE BetType = @BetType)
 				AND WinlostDate < @WinlostDate
 				AND BetType = @BetType
+			OPTION (MAXDOP 4)
 
-			IF @@ROWCOUNT < 20000
+			IF @@ROWCOUNT < 50000
 				BREAK
 		END
 	END

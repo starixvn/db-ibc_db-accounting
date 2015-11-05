@@ -108,8 +108,12 @@ BEGIN
 		, IsNotified = 0
 		, BlockedDate = @BlockedDate
 		, UnBlockedDate = NULL
+		, WinlostDate = @WinlostDate
+		, CreatedBy = NULL
+		, ModifiedBy = NULL
 	FROM dbo.WinLimit_Game g WITH(ROWLOCK, UPDLOCK)
 		INNER JOIN #CustBlockedList t ON t.CustId = g.CustID AND t.Bettype = g.Bettype
+	WHERE (g.IsBlocked = 0 AND g.WinlostDate = @WinlostDate) OR (g.WinlostDate <> @WinlostDate)
 	
 	--insert
 	INSERT INTO dbo.WinLimit_Game(CustId, ProductID, Bettype, MaxWinLimit, BlockedWinAmt, TotalWinAmt, IsBlocked, BlockedDate
