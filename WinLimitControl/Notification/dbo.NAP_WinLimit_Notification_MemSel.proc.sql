@@ -96,7 +96,7 @@ BEGIN
 		, g.MaxWinLimit
 		, g.BlockedWinAmt
 		, g.TotalWinAmt
-		, (g.BlockedWinAmt * 100 / g.MaxWinLimit) AS percentage
+		, (g.TotalWinAmt * 100 / g.MaxWinLimit) AS percentage
 			
 	FROM #tempWLGame g
 		LEFT JOIN #tempCust c
