@@ -1,4 +1,5 @@
-ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]
+
+ALTER PROCEDURE dbo.Acc_CustomerSelStatus_uat1
 	@CustID		INT,
 	@AdminID	INT			= 0,
 	@system		VARCHAR(30)	='NAP',
@@ -41,9 +42,9 @@ Revisions:
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
+	- 20151106@Patrick: Support RnG Game & rename field named DisableMicroGame to DisableMicroGameLC
 	
 
-	
 
 Param's Explanation:
 • @system: = NAP : internal login from NAP
@@ -193,14 +194,15 @@ Param's Explanation:
 			ISNULL(DisableColossusBet,1) as DisableColossusBet,
 			ISNULL(HideColossusBet,1) as HideColossusBet,
 			
+		ISNULL(DisableMicrogameLC,1) as DisableMicrogameLC,
 			-- For MuayThai
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder),0)  AS DisableMuayThai,
 			
 			CAST(CASE WHEN @HideMuayThai = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideMuayThai,
 			
-			ISNULL(DisableMicrogame,1) as DisableMicrogame,
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
-			ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds
+		ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
+		ISNULL(DisableMicrogameRNG,1) as DisableMicrogameRNG
 	FROM custinfo AS ci WITH (nolock)
 		LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 		LEFT JOIN CustGameType cg WITH(NOLOCK) ON ci.custid = cg.custid
@@ -240,18 +242,19 @@ Param's Explanation:
 			ci.HideColossusBet,
 			cps.bitmapIsDisabled,
 			cps.bitmapIsHidden,
-			ci.DisableMicrogame,
-			ci.DisableSuperLive
+		ci.DisableMicrogameLC,
+		ci.DisableSuperLive,
+		ci.DisableMicrogameRNG
 	
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbExtAccNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus_uat1] TO [vnteam] AS [dbo]
