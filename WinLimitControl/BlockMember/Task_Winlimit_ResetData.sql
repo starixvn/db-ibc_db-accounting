@@ -21,9 +21,9 @@ BEGIN
 	FROM dbo.f_Winlimit_GetProductSetting() WHERE IsActive_Company = 1
 
 	--get blocked list members
-	DECLARE @BlockedListMember TABLE(CustId INT, BetType SMALLINT)
+	CREATE TABLE #BlockedListMember (CustId INT, BetType SMALLINT)
 
-	INSERT INTO @BlockedListMember(CustId, BetType)
+	INSERT INTO #BlockedListMember(CustId, BetType)
 	SELECT CustId, BetType
 	FROM dbo.WinLimit_Game WITH(NOLOCK)
 	WHERE IsBlocked = 1
@@ -37,10 +37,12 @@ BEGIN
 		--
 		WHILE 1 = 1
 		BEGIN
-			DELETE TOP(50000) dbo.Winlimit_CreditGame WITH(ROWLOCK) 
-			WHERE CustId NOT IN (SELECT CustId FROM @BlockedListMember WHERE BetType = @BetType)
-				AND WinlostDate < @WinlostDate
-				AND BetType = @BetType
+			DELETE TOP(50000) g
+			FROM dbo.Winlimit_CreditGame g WITH(ROWLOCK)
+				LEFT JOIN #BlockedListMember t ON g.CustId = t.CustId AND g.BetType = t.BetType
+			WHERE WinlostDate < @WinlostDate
+				AND g.BetType = @BetType
+				AND t.CustId IS NULL
 			OPTION (MAXDOP 4)
 			
 			IF @@ROWCOUNT < 50000
@@ -49,10 +51,12 @@ BEGIN
 		--
 		WHILE 1 = 1
 		BEGIN
-			DELETE TOP(50000) dbo.Winlimit_DebitGame WITH(ROWLOCK) 
-			WHERE CustId NOT IN (SELECT CustId FROM @BlockedListMember WHERE BetType = @BetType)
-				AND WinlostDate < @WinlostDate
-				AND BetType = @BetType
+			DELETE TOP(50000) g
+			FROM dbo.Winlimit_DebitGame g WITH(ROWLOCK)
+				LEFT JOIN #BlockedListMember t ON g.CustId = t.CustId AND g.BetType = t.BetType
+			WHERE WinlostDate < @WinlostDate
+				AND g.BetType = @BetType
+				AND t.CustId IS NULL
 			OPTION (MAXDOP 4)
 
 			IF @@ROWCOUNT < 50000
@@ -61,6 +65,6 @@ BEGIN
 	END
 
 	DROP TABLE #ProductSetting
-
+	DROP TABLE #BlockedListMember
 END
 GO
