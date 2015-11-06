@@ -151,8 +151,8 @@ Param's Explanation:
 	DECLARE @bitmapOrder INT 
 	SET @bitmapOrder = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
 
-	DECLARE @HideMuayThai INT = 0
-    SET @HideMuayThai = (SELECT TOP 1 SettingStatus FROM ProductSettingDetail WITH (NOLOCK) WHERE sportType =44 AND BetType = 3 AND SettingType = 4)
+	DECLARE @HideMuayThai BIT = 0
+    SET @HideMuayThai = (SELECT TOP 1 CASE WHEN SettingStatus = 0 THEN 0 ELSE 1 END FROM ProductSettingDetail WITH (NOLOCK) WHERE sportType =44 AND BetType = 3 AND SettingType = 4)
     
 	SELECT	ISNULL(reject,0) AS Suspend,
 			ISNULL (closed,0) As Closed,
@@ -193,7 +193,8 @@ Param's Explanation:
 			
 			-- For MuayThai
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder),0)  AS DisableMuayThai,
-			CASE WHEN @HideMuayThai = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder),1) = 0 THEN 0 ELSE 1 END AS HideMuayThai,
+			
+			CAST(CASE WHEN @HideMuayThai = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideMuayThai,
 			
 			ISNULL(DisableMicrogame,1) as DisableMicrogame,
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
