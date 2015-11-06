@@ -1,5 +1,5 @@
 
-ALTER PROCEDURE dbo.Acc_CustomerSelStatus_uat1
+ALTER PROCEDURE dbo.Acc_CustomerSelStatus
 	@CustID		INT,
 	@AdminID	INT			= 0,
 	@system		VARCHAR(30)	='NAP',
@@ -249,12 +249,12 @@ Param's Explanation:
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus_uat1] TO [bodbExtAccNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelStatus] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus_uat1] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelStatus] TO [vnteam] AS [dbo]
