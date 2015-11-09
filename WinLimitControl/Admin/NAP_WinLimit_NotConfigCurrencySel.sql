@@ -16,7 +16,8 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[NAP_WinLimit_NotConfigCurrencySel]
-	@ProductID TINYINT
+	@ProductID TINYINT,
+	@ExcludeTestData	BIT = 1
 AS
 	/*
 		Created: Phillip	
@@ -35,7 +36,7 @@ BEGIN
 	SELECT	exchangeid
 			,Code + ' (' + currency + ')' as ExchangeName
 	FROM	dbo.exchange WITH (NOLOCK)
-	WHERE	currency NOT IN('UUS', 'H', 'C')
+	WHERE	(@ExcludeTestData = 0 OR currency NOT IN ('UUS', 'H', 'C'))
 			AND exchangeid NOT IN
 			(
 				SELECT ExchangeID 

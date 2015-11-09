@@ -45,8 +45,7 @@ BEGIN
 		DECLARE		@TotalProduct INT
 		
 		SELECT		@TotalProduct = COUNT(1)
-		FROM		dbo.Products WITH (NOLOCK)
-		WHERE		ProductType = 2
+		FROM		dbo.f_Winlimit_GetProductSetting()
 		
 		SELECT		e.exchangeid
 					,e.Code + ' (' + e.currency + ')' AS ExchangeName

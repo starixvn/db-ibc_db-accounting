@@ -64,6 +64,9 @@ BEGIN
 		RETURN;
 	END
 	
+	-- Validate Data
+	
+	
 	INSERT INTO dbo.WinLimit_CustSetting
 	SELECT	CustID,
 			ProductID,

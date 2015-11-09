@@ -16,8 +16,9 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel]
-	@ExchangeID		INT		= 0,
-	@ProductID		TINYINT
+	@ExchangeID			INT		= 0,
+	@ProductID			TINYINT,
+	@ExcludeTestData	BIT = 1
 AS
 	/*
 		Created: Phillip	
@@ -38,13 +39,11 @@ BEGIN
 			, currency as CurrencyName
 			, Code as CurrencyCode
 			, wg.MaxWinLimit
-	FROM	CustDB.dbo.exchange c
-			LEFT JOIN dbo.WinLimit_GlobalSetting wg
-			ON c.exchangeid = wg.ExchangeID
-	WHERE	c.currency NOT IN ('UUS', 'H', 'C')
-			AND (wg.ProductID IS NULL OR wg.ProductID = @ProductID)
+	FROM	CustDB.dbo.exchange c WITH (NOLOCK)
+			LEFT JOIN dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
+			ON c.exchangeid = wg.ExchangeID AND (wg.ProductID IS NULL OR wg.ProductID = @ProductID)
+	WHERE	(@ExcludeTestData = 0 OR c.currency NOT IN ('UUS', 'H', 'C'))
 			AND (@ExchangeID = 0 OR c.exchangeid = @ExchangeID)
-				
 END
 
 GO

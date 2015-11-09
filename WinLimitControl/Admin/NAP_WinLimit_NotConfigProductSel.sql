@@ -33,8 +33,8 @@ BEGIN
 	SET NOCOUNT ON;
 	SELECT	ProductID
 			,ProductName
-	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductType = 2
+	FROM	dbo.f_Winlimit_GetProductSetting()
+	WHERE	IsActive_Company = 1
 			AND ProductID NOT IN 
 			(
 				SELECT ProductID 

@@ -37,8 +37,8 @@ BEGIN
 	BEGIN
 		SELECT	ProductID
 				,ProductName
-		FROM	dbo.Products WITH (NOLOCK)
-		WHERE	ProductType = 2 -- Game only
+		FROM	dbo.f_Winlimit_GetProductSetting()
+		WHERE	IsActive_Company = 1 -- Game only
 	END
 	ELSE
 	BEGIN
@@ -49,10 +49,10 @@ BEGIN
 		
 		SELECT		p.ProductID
 					,p.ProductName
-		FROM		dbo.Products p WITH (NOLOCK)
+		FROM		dbo.f_Winlimit_GetProductSetting() p
 					INNER JOIN dbo.WinLimit_GlobalSetting s WITH (NOLOCK)
 					ON p.ProductID = s.ProductID
-		WHERE		p.ProductType = 2 -- Game only
+		WHERE		p.IsActive_Company = 1 -- Game only
 		GROUP BY	p.ProductID
 					,p.ProductName
 		HAVING		COUNT(DISTINCT(ExchangeID)) <>  @TotalExchange

@@ -1,4 +1,4 @@
-USE [bodb02]
+USE [CustDB]
 GO
 
 IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustNotConfigProductSel]') AND type in (N'P', N'PC'))
@@ -16,7 +16,9 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel]
-	@CustId		VARCHAR(100)	= ''
+	@CustName	VARCHAR(100)	= '',
+	@ErrCode	INT				= 0		OUTPUT,
+	@ErrMsg		VARCHAR(100)	= ''	OUTPUT
 AS
 	/*
 		Created: Phillip	
@@ -32,7 +34,46 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
-	SELECT	c.username,
+	DECLARE @ProductSetting TABLE(ProductId TINYINT, ProductName VARCHAR(50), BetType SMALLINT, IsActive_Company BIT)
+	INSERT INTO @ProductSetting
+	SELECT ProductId, ProductName, BetType, IsActive_Company
+	FROM OPENQUERY(DBTXN,'SELECT ProductId, ProductName, BetType, IsActive_Company FROM bodb02.dbo.f_Winlimit_GetProductSetting()')
+
+	DECLARE @ROLEID int = 1, -- Search member level only.
+			@CustID int,
+			@CurrencyID int,
+			@CurrencyName nvarchar(50)
+	
+	-- check custname is valid or not.
+	SELECT	@CustID = c.custid, @CurrencyID = e.exchangeid, @CurrencyName = e.currency
+	FROM	dbo.Customer c WITH (NOLOCK)
+			INNER JOIN dbo.exchange e WITH (NOLOCK)
+			ON c.currency = e.exchangeid
+	WHERE	c.username = @CustName 
+			AND c.roleid = @ROLEID 
+			
+	IF @CustID IS NULL
+	BEGIN
+		SELECT	@ErrCode = 3
+		SET NOCOUNT OFF;
+		RETURN;
+	END
+	
+	-- check Currency Win Limit is set or not
+	DECLARE @hasCurrencySetting int
+	SELECT	@hasCurrencySetting = COUNT(1)
+	FROM	DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
+	WHERE	wg.ExchangeID = @CurrencyID
+	IF @hasCurrencySetting = 0
+	BEGIN
+		SELECT	@ErrCode = 4,
+				@ErrMsg = @CurrencyName
+		SET NOCOUNT OFF;
+		RETURN;
+	END
+	
+	SELECT	c.custid,
+			c.username,
 			e.exchangeid,
 			e.currency,
 			p.ProductID,
@@ -42,13 +83,13 @@ BEGIN
 	FROM	dbo.Customer c WITH (NOLOCK) 
 			INNER JOIN dbo.exchange e WITH (NOLOCK)
 			ON c.currency = e.exchangeid
-			RIGHT JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK)
-			ON p.ProductType = 2
+			RIGHT JOIN @ProductSetting p
+			ON p.IsActive_Company = 1
 			LEFT JOIN dbo.WinLimit_CustSetting cs WITH (NOLOCK)
 			ON cs.CustID = c.CustId AND cs.ProductID = p.ProductID
 			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
 			ON wg.ProductID = p.ProductID AND wg.ExchangeID = e.exchangeid
-	WHERE	c.CustId = @CustId
+	WHERE	c.custid = @CustID
 			AND cs.MaxWinLimit IS NULL
 END
 GO

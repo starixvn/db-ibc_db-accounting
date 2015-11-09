@@ -21,6 +21,7 @@ CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
 	@ProductID	TINYINT 		= 0,
 	@PageIndex	INT 			= 1,
 	@PageSize	INT 			= 50,
+	@SortOrder	TINYINT			 = 1,
 	@TotalRow	INT 			= 0		OUTPUT
 AS
 	/*
@@ -52,9 +53,23 @@ BEGIN
 		PlayerWinLimit MONEY,
 		CurrencyWinLimit MONEY
 	)
+	DECLARE @ProductSetting TABLE
+	(
+		ProductId TINYINT, 
+		ProductName VARCHAR(50), 
+		BetType SMALLINT, 
+		IsActive_Company BIT
+	)
+	
+	INSERT INTO @ProductSetting
+	SELECT ProductId, ProductName, BetType, IsActive_Company
+	FROM OPENQUERY(DBTXN,'SELECT ProductId, ProductName, BetType, IsActive_Company FROM bodb02.dbo.f_Winlimit_GetProductSetting() WHERE IsActive_Company = 1')
 	
 	INSERT INTO @TVP_CustSetting
-	SELECT	DENSE_RANK() OVER(ORDER BY cs.CustID) AS RowNum
+	SELECT	DENSE_RANK() OVER(ORDER BY
+				CASE WHEN @SortOrder = 1 THEN c.username END ASC,
+				CASE WHEN @SortOrder = 2 THEN c.username END DESC
+			) AS RowNum
 			,cs.CustID
 			,c.username
 			,c.currency ExchangeID
@@ -64,9 +79,11 @@ BEGIN
 	FROM	dbo.WinLimit_CustSetting cs WITH (NOLOCK)
 			INNER JOIN Customer c WITH (NOLOCK) 
 			ON cs.CustID = c.custid
-			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg
+			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
 			ON cs.ProductID = wg.ProductID AND c.currency = wg.ExchangeID
-	WHERE	c.username LIKE '%' + @UserName + '%'
+			INNER JOIN @ProductSetting p
+			ON cs.ProductID = p.ProductID
+	WHERE	(@UserName = '' OR c.username = @UserName)
 			AND (@ExchangeID = 0 OR c.currency = @ExchangeID)
 			AND (@ProductID = 0 OR cs.ProductID = @ProductID)
 		
