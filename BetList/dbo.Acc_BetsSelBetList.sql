@@ -2565,9 +2565,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				sdiscount,
-				adiscount,
-				discount,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
 				0 AS homeid,
 				0 AS awayid,
 				'' settleTime,
@@ -2715,6 +2715,8 @@ BEGIN
 	DROP TABLE #LASAgent
 	DROP TABLE #SportBettype
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_BetsSelBetList] TO [bodbAdminNet] AS [dbo]
 GO
