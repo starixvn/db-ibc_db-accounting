@@ -80,6 +80,7 @@ AS
 		- 20151009@Kos: Support Microgaming RNG Game and AG Casino
 		- 20151019@Kos: Support Microgaming RNG Game Jackpot Win
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
+		- 20151109@Kos: Replace using Jackpotwin table by PayoutTrans table
 
 	Param's Explanation:
 		+ @transtype: 
@@ -1003,10 +1004,10 @@ BEGIN
 					0 AS discount,
 					'' AS settletime,
 					0 AS matchid,
-					j.JackpotWinId AS transid,
+					pt.PayoutTransId AS transid,
 					0 AS BetId,
-					j.refno,
-					j.transdate,
+					pt.refno,
+					pt.transdate,
 					0 AS oddsid,
 					b.gameID AS BetType,
 					0 AS hdp1,
@@ -1017,12 +1018,12 @@ BEGIN
 					0 AS finalodds2,
 					'' AS oddstype,
 					'' AS betteam,
-					j.status,
+					b.status,
 					'' AS betstatus,
 					0 AS comstatus,
 					b.stake,
 					b.actual_stake,
-					j.winlost,
+					pt.WinAmount AS WinLost,
 					0 AS playercomm,
 					0 AS livehomescore,
 					0 AS liveawayscore,
@@ -1049,15 +1050,15 @@ BEGIN
 					0 AS awinlost,
 					0 AS mwinlost,
 					0 AS swinlost,
-					j.winlostdate,
+					pt.winlostdate,
 					b.TranId3rd AS BetCheck,
 					b.transdesc,
 					0 AS OddsSpread
-				FROM dbo.JackpotWin AS j WITH (NOLOCK)
-					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON j.RefNo = b.transid
+				FROM dbo.PayoutTrans AS pt WITH (NOLOCK)
+					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON pt.RefNo = b.transid
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
-				WHERE  j.custid = @custid
-					AND j.winlostdate = @fromdate
+				WHERE pt.custid = @custid
+					AND pt.winlostdate = @fromdate
 					AND s.ProductID = 17
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
@@ -2793,10 +2794,10 @@ BEGIN
 					0 AS discount,
 					'' AS settletime,
 					0 AS matchid,
-					j.JackpotWinId AS transid,
+					pt.PayoutTransId AS transid,
 					0 AS BetId,
-					j.refno,
-					j.transdate,
+					pt.RefNo,
+					pt.TransDate,
 					0 AS oddsid,
 					b.gameID AS BetType,
 					0 AS hdp1,
@@ -2807,12 +2808,12 @@ BEGIN
 					0 AS finalodds2,
 					'' AS oddstype,
 					'' AS betteam,
-					j.status,
+					b.status,
 					'' AS betstatus,
 					0 AS comstatus,
 					b.stake,
 					b.actual_stake,
-					j.winlost,
+					pt.WinAmount AS WinLost,
 					0 AS playercomm,
 					0 AS livehomescore,
 					0 AS liveawayscore,
@@ -2839,15 +2840,15 @@ BEGIN
 					0 AS awinlost,
 					0 AS mwinlost,
 					0 AS swinlost,
-					j.winlostdate,
+					pt.winlostdate,
 					b.TranId3rd AS BetCheck,
 					b.transdesc,
 					0 AS OddsSpread
-				FROM dbo.JackpotWin AS j WITH (NOLOCK)
-					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON j.RefNo = b.transid
+				FROM dbo.PayoutTrans AS pt WITH (NOLOCK)
+					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON pt.RefNo = b.transid
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
-				WHERE  j.custid = @custid
-					AND j.winlostdate = @fromdate
+				WHERE pt.custid = @custid
+					AND pt.winlostdate = @fromdate
 					AND s.ProductID = 17
 					AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			END
