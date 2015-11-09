@@ -22,7 +22,7 @@ AS
 	- 20150901@Sophia: Apply Colossus Bets [#42428]
 	- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
 					   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
-	- 20151030@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
+	- 20151109@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -470,10 +470,9 @@ BEGIN
 			UNION ALL
 
 			SELECT  custid
-					,SUM(winlost) AS GrandPrize
-			FROM	bodb02.dbo.JackpotWin WITH(NOLOCK) 
-			WHERE	winlostdate = @Winlostdate
-					AND statusID NOT IN (102,101) -- 'VOID','REJECT'				
+					,SUM(WinAmount) AS GrandPrize
+			FROM	bodb02.dbo.PayoutTrans WITH(NOLOCK) 
+			WHERE	winlostdate = @Winlostdate							
 			GROUP BY custid
 
 		) tmpGrandPrize 

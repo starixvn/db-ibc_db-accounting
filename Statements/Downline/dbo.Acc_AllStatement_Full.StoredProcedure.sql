@@ -47,7 +47,7 @@
 		- 20150903@Sophia: Apply Colossus Bets [#42428]
 		- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
 						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
-		- 20151030@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
+		- 20151106@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -237,7 +237,7 @@ BEGIN
 		BEGIN 
 			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 			SELECT b.winlostdate AS accdate
-				,0 refno
+				,b.RefNo as refno
 				,sum(bm.winlost - bm.stake) AS totalamt
 				,'GP' transtype
 				,4 transtypeid
@@ -255,14 +255,14 @@ BEGIN
 				AND b.winlostdate BETWEEN @MoveBetDay AND @_ToDate
 				AND b.Ruben = 1
 				AND bm.statuswinlost <> 0
-			GROUP BY b.winlostdate
+			GROUP BY b.RefNo, b.winlostdate
 		END
 		
 		IF @_FromDate <= @MoveBetDay
 		BEGIN 
 			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 			SELECT b.winlostdate AS accdate
-				,0 refno
+				,b.RefNo as  refno
 				,sum(bm.winlost - bm.stake) AS totalamt
 				,'GP' transtype
 				, 4 transtypeid
@@ -280,15 +280,15 @@ BEGIN
 				AND b.winlostdate BETWEEN @_FromDate AND @MoveBetDay
 				AND b.Ruben = 1
 				AND bm.statuswinlost <> 0
-			GROUP BY b.winlostdate
+			GROUP BY b.RefNo, b.winlostdate
 		END
 
 		
-		---2.2 JactPotWin - Grand Prize of Microgaming RNG Casino	 			
+		---2.2 PayoutTrans - Grand Prize of Microgaming RNG Casino	 			
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 		SELECT winlostdate AS accdate
-			,0 refno
-			,SUM (winlost) AS totalamt
+			,refno as refno
+			,SUM (WinAmount) AS totalamt
 			,'GP' transtype
 			, 4 transtypeid
 			,'Grand Prize' transdesc
@@ -297,11 +297,10 @@ BEGIN
 			,'' checkerName
 			,NULL checkTime
 			,0 isAllowVeify
-		FROM dbo.JackpotWin WITH(NOLOCK) 
+		FROM dbo.PayoutTrans WITH(NOLOCK) 
 		WHERE	winlostdate BETWEEN @Fromdate AND @todate
-				AND custid = @custid
-				AND statusID NOT IN (102,101) -- 'VOID','REJECT'				
-		GROUP BY winlostdate, custid
+				AND custid = @custid 	 		
+		GROUP BY refno, winlostdate, custid
 			
 			
 			 

@@ -15,7 +15,7 @@ AS
 	DB: DBTXN.bodb02
 	Revisions:
 		- 20150831@Sophia: Apply Colossus Bets - get Grand Prize [#42428] 
-		- 20151019@Sophia: Add Grand Prize for Microgaming - Table JackPotWin
+		- 20151109@Sophia: Add Grand Prize for Microgaming - Table PayoutTrans [RedmineId: #46450] 
 	
  */
 
@@ -60,12 +60,11 @@ BEGIN
 			HAVING SUM(bm.winlost - bm.stake) <> 0
 
 			UNION ALL
-			SELECT b.custid, b.winlostdate AS accdate, SUM(b.winlost) AS totalamt
-			FROM dbo.JackpotWin b WITH(NOLOCK) 
+			SELECT b.custid, b.winlostdate AS accdate, SUM(b.WinAmount) AS totalamt
+			FROM dbo.PayoutTrans b WITH(NOLOCK) 
 			WHERE b.winlostdate BETWEEN @min_winlostdate AND @max_winlostdate	
-				AND statusID NOT IN (102,101) -- 'VOID','REJECT'		
 			GROUP BY b.winlostdate, b.custid
-			HAVING SUM(b.winlost) <> 0
+			HAVING SUM(b.WinAmount) <> 0
 		) GP
 	GROUP BY custid, accdate
 
