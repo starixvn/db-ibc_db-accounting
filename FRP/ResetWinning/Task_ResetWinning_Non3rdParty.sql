@@ -1,3 +1,10 @@
+
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Task_ResetWinning_Non3rdParty    Script Date: 10/26/2015 10:32:33 AM ******/
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate datetime,
 	@todate   datetime,
@@ -13,13 +20,13 @@ AS
 	DB: DBACC.BODB02
 	
 	Revision:
-		- 20140619@Logan: Initial version - [RedmineID: 17345]
+		- 20140619@Logan: Initial version - Redmine: 17345
 		- 20150604@Sophia: . Apply Gold Deluxe 
 						   . Remove P2P (Poker)
 						   . Revise Code
-						   . Apply AG Casino and Vegas Game [RedmineID: #37683]
-		- 20150702@Sophia: Apply Metric Gaming, Bettrade [RedmineID: #36906]
-		- 20150909@Sophia: Exclude Colosuss Bets [RedmineID: #43352]
+						   . Apply AG Casino and Vegas Game [#37683]
+		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
+		- 20150922@Sophia: Apply Colossus Bets and expand the range of AG Casino [#43352]
 		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
 							    
 
@@ -161,7 +168,6 @@ BEGIN
        AND b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
-	   AND b.Bettype <> 18000
 	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
 	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
 	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
@@ -287,13 +293,14 @@ BEGIN
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
-			 WHEN bettype = 1800 THEN 'AG Casino'
+			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
 			 WHEN bettype BETWEEN 2001 AND 2007 THEN 'Microgaming - Live Casino'
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
+			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	  FROM #bettranstmp
@@ -303,12 +310,14 @@ BEGIN
 			OR bettype IN (71, 72, 73, 10,  9, 29) ---1000
 			OR bettype BETWEEN 1201 AND 1299
 			OR bettype BETWEEN 1501 AND 1599
-			OR bettype IN (1800, 1900)
+			OR bettype BETWEEN 1800 AND 1899
+			OR bettype = 1900
 			OR bettype BETWEEN 1700 AND 1799 
 			OR bettype BETWEEN 801 AND 899
 			OR bettype BETWEEN 2001 AND 2007  
-			OR bettype BETWEEN 2008 AND 2009
-			OR bettype BETWEEN 901 AND 903  
+			OR bettype BETWEEN 2008 AND 2009 
+			OR bettype BETWEEN 901 AND 903 
+			OR bettype BETWEEN 18000 AND 18099  
 		   )
   GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -321,13 +330,14 @@ BEGIN
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
-			 WHEN bettype = 1800 THEN 'AG Casino'
+			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
 			 WHEN bettype BETWEEN 2001 AND 2007 THEN 'Microgaming - Live Casino'
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
+			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 		   END, winlostdate
 
     UNION ALL
@@ -571,15 +581,19 @@ END
 
 
 
+
 GO
 
-GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
 GO
-
-GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam] AS [dbo]
+SET ANSI_NULLS ON 
 GO
 
 
+GO 
+ GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [bodbAdminNet]
+GO 
