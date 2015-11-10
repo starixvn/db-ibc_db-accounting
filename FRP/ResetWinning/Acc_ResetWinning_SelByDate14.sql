@@ -19,7 +19,6 @@ AS
 						   . Remove P2P (Poker)
 						   . Revise Code
 						   . Apply AG Casino and Vegas Game [#37683]
-		- 20150909@Sophia: Exclude Colosuss Bets [#43352]
 	Explanation's Param:
 
 */
@@ -29,7 +28,7 @@ BEGIN
 	DECLARE @DummyCust AS TABLE (CustId INT, Product VARCHAR(50) )
 
 	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
-	IF (@SQL like '%_xtest%')
+	IF (@SQL like '%_xtest%' OR  @SQL like '%_xpre%' )
 	BEGIN
 		SELECT @isTest = 1
 	END
@@ -82,7 +81,6 @@ BEGIN
     FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 	LEFT JOIN @DummyCust d ON b.custid = d.custid
 	WHERE b.ruben = 1
-	   AND b.bettype > 19000
 	   AND b.winlostdate = @winlostdate
 	   AND b.statusid NOT IN (101, 102, 103, 121) 
 	GROUP BY CASE
@@ -94,25 +92,6 @@ BEGIN
 	                                                                              WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
 	                                                                              ELSE actualrate
 	                                                                            END), 0)) <> 0
-	UNION ALL 
-		
-	SELECT -1 AS custid,
-           bettype,
-           SUM(ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
-               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * actualrate, 0)) as winlost
-    FROM bettrans14 b WITH(NOLOCK)
-	LEFT JOIN @DummyCust d ON b.custid = d.custid
-	WHERE  b.bettype <> 18000
-	   AND b.winlostdate = @winlostdate
-	   AND b.statusid NOT IN (101, 102, 103, 121) 
-	GROUP BY  b.bettype
-	HAVING SUM(ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
-               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * actualrate, 0)) <> 0
-
-	
-	
-
-	
 
 	---- get total balance
 	SELECT @totalBalance = ISNULL(SUM(winlost), 0)
