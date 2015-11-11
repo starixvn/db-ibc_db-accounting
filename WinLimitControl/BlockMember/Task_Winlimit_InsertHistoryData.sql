@@ -49,25 +49,32 @@ BEGIN
  
 	EXEC sp_xml_removedocument @_hdoc
 
-	;MERGE dbo.WinLimit_Game_History WITH(ROWLOCK, UPDLOCK) AS t
-	USING #TempData AS s 
-		ON (t.CustId = s.CustId AND t.BetType = s.BetType 
-			AND t.WinlostDate = s.WinlostDate AND t.BlockedDate = s.BlockedDate)
-	WHEN MATCHED THEN 
-		UPDATE SET t.ProductId = s.ProductId
-		, t.MaxWinLimit = s.MaxWinLimit
-		, t.TotalWinAmt = s.TotalWinAmt
-		, t.IsBlocked = s.IsBlocked
-		, t.UnBlockedDate = s.UnBlockedDate
-		, t.IsNotified = s.IsNotified
-		, t.BlockedWinAmt = s.BlockedWinAmt
-		, t.ModifiedBy = s.ModifiedBy
-		, t.CreatedBy = s.CreatedBy
-	WHEN NOT MATCHED THEN
-		INSERT(CustId, ProductId, MaxWinLimit, TotalWinAmt, IsBlocked, BlockedDate, UnBlockedDate
-			, IsNotified, BetType, BlockedWinAmt, ModifiedBy, CreatedBy, WinlostDate)
-		VALUES(s.CustId, s.ProductId, s.MaxWinLimit, s.TotalWinAmt, s.IsBlocked, s.BlockedDate, s.UnBlockedDate
-			, s.IsNotified, s.BetType, s.BlockedWinAmt, s.ModifiedBy, s.CreatedBy, s.WinlostDate);
+	--;MERGE dbo.WinLimit_Game_History WITH(ROWLOCK, UPDLOCK) AS t
+	--USING #TempData AS s 
+	--	ON (t.CustId = s.CustId AND t.BetType = s.BetType 
+	--		AND t.WinlostDate = s.WinlostDate AND t.BlockedDate = s.BlockedDate)
+	--WHEN MATCHED THEN 
+	--	UPDATE SET t.ProductId = s.ProductId
+	--	, t.MaxWinLimit = s.MaxWinLimit
+	--	, t.TotalWinAmt = s.TotalWinAmt
+	--	, t.IsBlocked = s.IsBlocked
+	--	, t.UnBlockedDate = s.UnBlockedDate
+	--	, t.IsNotified = s.IsNotified
+	--	, t.BlockedWinAmt = s.BlockedWinAmt
+	--	, t.ModifiedBy = s.ModifiedBy
+	--	, t.CreatedBy = s.CreatedBy
+	--WHEN NOT MATCHED THEN
+	--	INSERT(CustId, ProductId, MaxWinLimit, TotalWinAmt, IsBlocked, BlockedDate, UnBlockedDate
+	--		, IsNotified, BetType, BlockedWinAmt, ModifiedBy, CreatedBy, WinlostDate)
+	--	VALUES(s.CustId, s.ProductId, s.MaxWinLimit, s.TotalWinAmt, s.IsBlocked, s.BlockedDate, s.UnBlockedDate
+	--		, s.IsNotified, s.BetType, s.BlockedWinAmt, s.ModifiedBy, s.CreatedBy, s.WinlostDate);
 
+	INSERT INTO dbo.WinLimit_Game_History(CustId, ProductId, MaxWinLimit, TotalWinAmt, IsBlocked, BlockedDate, UnBlockedDate
+			, IsNotified, BetType, BlockedWinAmt, ModifiedBy, CreatedBy, WinlostDate)
+	SELECT CustId, ProductId, MaxWinLimit, TotalWinAmt, IsBlocked, BlockedDate, UnBlockedDate
+			, IsNotified, BetType, BlockedWinAmt, ModifiedBy, CreatedBy, WinlostDate
+	FROM #TempData
+
+	DROP TABLE #TempData
 END
 GO
