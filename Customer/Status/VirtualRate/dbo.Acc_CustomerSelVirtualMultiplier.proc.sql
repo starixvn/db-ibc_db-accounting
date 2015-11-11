@@ -47,6 +47,7 @@ BEGIN
     INNER JOIN  ProfileVirtualSetting       AS pvs WITH(NOLOCK)
             ON  cvs.seqNo = pvs.seqNo
     WHERE       cvs.custid = @CustID
+			AND pvs.isActive = 1
 
     SELECT custid, sporttype, bettype, islive, virtualMultiplier
     FROM @CustVirtualRate

@@ -22,7 +22,8 @@ AS /*
 		- 20130224@Lukas: move table Acc_CustVirtualRate to new database bodb_ACC
 						& change linked-server from db03 to DBPOLICY
 		- 20150126@Johnson: Separate virtual rate setting into sport types and bet types [Redmine: #25840]						
-						+ Change to use new structure : table Ac_VirtualRateList						 						
+						+ Change to use new structure : table Ac_VirtualRateList				
+		- 20151105@Billy: Change to new VirtualRate structure [Redmine: #46541]		 						
 							
 */
 BEGIN
@@ -30,6 +31,10 @@ BEGIN
 	declare @startRun datetime
 	declare @endRun datetime
 	declare @duration int
+
+	DECLARE @VirtualRateBitmap BINARY(64),
+			@seqNo TINYINT
+
 	set @startRun = getdate()
 
 --Check permission for account site
@@ -81,18 +86,35 @@ BEGIN
 		INNER JOIN @tmpStatus t ON c.username = t.username
 	
 	--enable virtual rate for disabled customers
-	UPDATE cusinfo WITH(UPDLOCK,ROWLOCK)
+	UPDATE custinfo WITH(UPDLOCK,ROWLOCK)
 	SET virtualmultiplier = 1
 	WHERE custid IN (SELECT DISTINCT custid FROM @tmpCust)
 		AND virtualmultiplier = 0
-			
-    UPDATE  cv
-    SET     virtualmultiplier = t.virtualRate
-    FROM    custVirtualRate cv  WITH ( ROWLOCK, UPDLOCK )
-		INNER JOIN @tmpCust t ON cv.custid = t.custid 
-								AND cv.sporttype = t.sporttype
-								AND cv.bettype = t.bettype
-								AND cv.isLive = t.isLive
+	
+	-- Update using new Virtual Rate structure
+	UPDATE cvs
+	SET		bitmapVirtual = (SELECT TOP 1 bitmap FROM dbo.f_GenerateVirtualSetting_multiple(bitmapVirtual, CONVERT(VARCHAR(MAX), virtualXML)))
+	FROM		CustVirtualSetting AS cvs WITH(UPDLOCK, ROWLOCK)
+	CROSS APPLY (
+		SELECT (
+			SELECT	(
+						SELECT	ipvs.profileID			AS '@p',
+								tmp.virtualRate			AS '@v'
+						FROM		@tmpCust				AS tmp
+						INNER JOIN	ProfileVirtualSetting	AS ipvs WITH(NOLOCK)
+								ON	tmp.sporttype	= ipvs.sporttype
+								AND tmp.bettype		= ipvs.bettype
+								AND tmp.isLive		= ipvs.islive
+						WHERE	ipvs.seqNo = cvs.seqNo
+							AND tmp.custid = cvs.custid
+						FOR XML PATH ('r'), 
+						TYPE
+					)
+			FOR XML PATH ('root'), 
+			TYPE
+		) AS virtualXML
+	) p
+	WHERE cvs.custid IN (SELECT DISTINCT custid FROM @tmpCust)
 								
 	set @endRun = getdate()
 	set @duration  = datediff (millisecond,@startRun,@endRun)

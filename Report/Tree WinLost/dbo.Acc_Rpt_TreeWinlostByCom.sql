@@ -39,6 +39,7 @@ Revisions:
 	- 20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)
 	- 20150723@Jim: Apply Bettrade [#38815]	
 	- 20150828@Jim: support Colossus Bet (#42608)
+	- 20151110@Billy : Change to new Virtual Rate structure - [Redmine: #47355]
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 */  
 
@@ -348,17 +349,21 @@ INNER JOIN custinfo cs WITH(NOLOCK) ON b.srecommend = cs.custid
 GROUP BY b.srecommend,ISNULL(cs.virtualmultiplier,1),cs.username
 ORDER BY username	
 
-SELECT cs.username
-		,vr.custid
-		,vr.sporttype
-		,vr.bettype
-		,vr.islive
-		,vr.virtualMultiplier
-FROM custinfo cs WITH(NOLOCK) 
-	INNER JOIN CustVirtualRate vr WITH(NOLOCK) ON cs.custid = vr.custid
-WHERE cs.custid IN (SELECT DISTINCT srecommend FROM #TmpResultAll)
-	AND cs.virtualMultiplier = 1
-ORDER BY username,sporttype,islive DESC, bettype
+SELECT	ci.username,
+		cvs.custid,
+		pvs.sporttype,
+		pvs.bettype,
+		pvs.islive,
+		dbo.f_GetVirtualSetting(cvs.bitmapVirtual, pvs.profileID) AS virtualMultiplier
+FROM		custinfo				AS ci  WITH(NOLOCK) 
+INNER JOIN	CustVirtualSetting		AS cvs WITH(NOLOCK) 
+		ON	ci.custid = cvs.custid
+INNER JOIN	ProfileVirtualSetting	AS pvs WITH(NOLOCK)
+		ON	cvs.seqNo = pvs.seqNo
+WHERE	ci.custid IN (SELECT DISTINCT srecommend FROM #TmpResultAll)
+	AND ci.virtualMultiplier = 1
+	AND pvs.isActive = 1
+ORDER BY username, sporttype, islive DESC, bettype
 
 DROP TABLE #TmpResult
 DROP TABLE #TmpResultAll

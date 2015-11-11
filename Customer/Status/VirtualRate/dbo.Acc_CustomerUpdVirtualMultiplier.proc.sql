@@ -40,7 +40,8 @@ Revisions:
     - 20131108@Elodie: Splitting bodb02 into CustDB (call Acc_ExecRep_Cust_04 instead of Acc_ExecRep_04)
 	- 20141125@Jamie: Use Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]
     - 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]		
-    - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]	                    		
+    - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
+	- 20151109@Billy: Change LogSPData definition to support over-8000-characters log - [Redmine: #46541]
 Param's Explanation:  
 • @virtualmultiplier = '<ROOT>
 							<Rate SportType="1" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
@@ -162,8 +163,8 @@ BEGIN
 			@EnableVirtualrate = @EnableVirtualrate,  
 			@virtualmultiplier = @virtualmultiplier 	
 	 
-	Declare @LogSPData varchar(8000) = '',
-			@LogSPData2 varchar(8000)= ''  
+	Declare @LogSPData varchar(MAX) = '',
+			@LogSPData2 varchar(MAX)= ''  
 	
 	IF @OldEnableVirtualrate <> @EnableVirtualrate 
 	BEGIN
