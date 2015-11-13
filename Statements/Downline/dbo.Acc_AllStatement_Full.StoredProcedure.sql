@@ -47,7 +47,7 @@
 		- 20150903@Sophia: Apply Colossus Bets [#42428]
 		- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
 						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
-		- 20151106@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
+		- 20151113@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -258,30 +258,30 @@ BEGIN
 			GROUP BY b.RefNo, b.winlostdate
 		END
 		
-		IF @_FromDate <= @MoveBetDay
-		BEGIN 
-			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-			SELECT b.winlostdate AS accdate
-				,b.RefNo as  refno
-				,sum(bm.winlost - bm.stake) AS totalamt
-				,'GP' transtype
-				, 4 transtypeid
-				,'Grand Prize' transdesc
-				,'' Creator
-				,NULL checkerID
-				,'' checkerName
-				,NULL checkTime
-				,0 isAllowVeify
-			FROM bettrans14 b WITH (NOLOCK)
-				INNER JOIN BettransM14 bm WITH (NOLOCK)
-					ON b.RefNo = bm.RefNo
-			WHERE b.bettype = 18000
-				AND b.custid = @custid
-				AND b.winlostdate BETWEEN @_FromDate AND @MoveBetDay
-				AND b.Ruben = 1
-				AND bm.statuswinlost <> 0
-			GROUP BY b.RefNo, b.winlostdate
-		END
+		--IF @_FromDate <= @MoveBetDay
+		--BEGIN 
+		--	INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
+		--	SELECT b.winlostdate AS accdate
+		--		,b.RefNo as  refno
+		--		,sum(bm.winlost - bm.stake) AS totalamt
+		--		,'GP' transtype
+		--		, 4 transtypeid
+		--		,'Grand Prize' transdesc
+		--		,'' Creator
+		--		,NULL checkerID
+		--		,'' checkerName
+		--		,NULL checkTime
+		--		,0 isAllowVeify
+		--	FROM bettrans14 b WITH (NOLOCK)
+		--		INNER JOIN BettransM14 bm WITH (NOLOCK)
+		--			ON b.RefNo = bm.RefNo
+		--	WHERE b.bettype = 18000
+		--		AND b.custid = @custid
+		--		AND b.winlostdate BETWEEN @_FromDate AND @MoveBetDay
+		--		AND b.Ruben = 1
+		--		AND bm.statuswinlost <> 0
+		--	GROUP BY b.RefNo, b.winlostdate
+		--END
 
 		
 		---2.2 PayoutTrans - Grand Prize of Microgaming RNG Casino	 			

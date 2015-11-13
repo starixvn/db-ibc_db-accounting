@@ -453,21 +453,21 @@ BEGIN
 		,40 ErrCode
 	FROM 
 		(
-			SELECT 
-				bt.custid custid
-				,SUM(bm.winlost - bm.stake) AS GrandPrize
-			FROM 
-				bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
-				INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
-					ON bt.RefNo = bm.RefNo				
-			WHERE 
-				bt.bettype = 18000
-				AND bt.winlostdate = @winlostdate
-				AND bt.statusID in (101, 102) -- 'VOID','REJECT'
-				AND bm.statuswinlost <> 0
-			GROUP BY bt.custid
+			--SELECT 
+			--	bt.custid custid
+			--	,SUM(bm.winlost - bm.stake) AS GrandPrize
+			--FROM 
+			--	bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
+			--	INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
+			--		ON bt.RefNo = bm.RefNo				
+			--WHERE 
+			--	bt.bettype = 18000
+			--	AND bt.winlostdate = @winlostdate
+			--	AND bt.statusID in (101, 102) -- 'VOID','REJECT'
+			--	AND bm.statuswinlost <> 0
+			--GROUP BY bt.custid
 
-			UNION ALL
+			--UNION ALL
 
 			SELECT  custid
 					,SUM(WinAmount) AS GrandPrize
