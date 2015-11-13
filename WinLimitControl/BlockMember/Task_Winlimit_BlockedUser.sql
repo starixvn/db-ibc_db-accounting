@@ -32,7 +32,7 @@ BEGIN
 	FROM dbo.f_Winlimit_GetProductSetting() WHERE IsActive_Company = 1
 
 	DECLARE @WinlostDate SMALLDATETIME, @BlockedDate DATETIME
-	SELECT @WinlostDate = CAST(GETDATE() AS DATE), @BlockedDate = GETDATE()
+	SELECT @WinlostDate = CAST(GETDATE() AS DATE)
 
 	INSERT INTO #DataTmp(CustId, ProductId, Bettype, TotalWinAmount, WinlostDate, Currency)
 	SELECT ISNULL(c.CustId, d.CustId) AS CustId
@@ -97,7 +97,7 @@ BEGIN
 		RETURN
 
 	END
-
+	SELECT @BlockedDate = GETDATE()
 	--incase reached MaxWinLimit again
 	UPDATE g
 	SET MaxwinLimit = t.MaxWinLimit

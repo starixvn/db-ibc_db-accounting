@@ -1,18 +1,6 @@
 USE [bodb02]
 GO
-
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_UnblockedMemberSel]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
-GO
-
-USE [bodb02]
-GO
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
+ALTER PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
 	@UserName		VARCHAR(100)	= '',
 	@ExchangeID		INT				= 0,
 	@ProductID		TINYINT			= 0,
@@ -24,13 +12,9 @@ AS
 		Created: Phillip	
 		Date: 2015-06-30
 		Task: #38608 - Implement function to control Player's Win Limit on specific Product
-		
 		DB: DBTXN/bodb02
-		
 		Description: Get All blocked users from Winlimit_Game table.
-		
 		Revisions:
-		
 		Parameters Explanation:	
 			@UserName	: User Name.
 			@ExchangeID : Currency ID.
@@ -41,115 +25,141 @@ AS
 			@TotalRow	: Total Rows.
 	*/
 BEGIN
-	SET NOCOUNT ON;	
-	DECLARE @Today		DATE,
-			@Tomorrow	DATE
+	SET NOCOUNT ON	
+	DECLARE @Today DATE
 	
 	SELECT @ToDay = CONVERT(DATE, GETDATE())
-	SELECT @Tomorrow = DATEADD(DAY, 1, CONVERT(DATE, GETDATE(), 120))	
-	SET @UserName = ISNULL(@UserName, '')
+
 	SELECT ProductID, ProductName
 	INTO #tempProduct
 	FROM dbo.f_Winlimit_GetProductSetting() p
 	WHERE p.IsActive_Company= 1
 		AND (@ProductID = 0 OR ProductID = @ProductID)
 	
-	SELECT custid, username
-	INTO #tempAdmin
-	FROM CustDB.dbo.Customer WITH (NOLOCK)
-	WHERE roleid > 4
-		AND (custid IN (SELECT DISTINCT(CreatedBy) FROM dbo.WinLimit_Game WITH (NOLOCK) WHERE CreatedBy IS NOT NULL)
-			OR custid IN (SELECT DISTINCT(ModifiedBy) FROM dbo.WinLimit_Game WITH (NOLOCK) WHERE ModifiedBy IS NOT NULL))
-	
-	SELECT c.custid, c.username, c.currency
-	INTO #tempCust
-	FROM CustDB.dbo.Customer c WITH(NOLOCK)
-	WHERE  (@UserName ='' OR c.username = @UserName)
-		AND (
-			@ExchangeID 	= 0 
-			OR c.currency 	= @ExchangeID
-		)
-		AND c.roleid		= 1
-		AND c.CustID IN (SELECT CustID FROM dbo.WinLimit_Game WITH (NOLOCK))
-	
-	SELECT	RowNum = ROW_NUMBER() OVER ( ORDER BY tbl.UnblockedTime),
-			CustID,
-			username,
-			ExchangeID,
-			currency,
-			ProductID,
-			ProductName,
-			WinLimit,
-			TodayWinningAmount,
-			SUM(CreditTodayWinningAmount) CreditTodayWinningAmount,
-			SUM(DebitTodayWinningAmount) DebitTodayWinningAmount,
-			TotalWinningAmount,
-			BlockedTime,
-			UnblockedTime,
-			IsBlocked,
-			UnblockedBy
-	INTO	#tempResult
-	FROM	(
-			SELECT	g.CustID,
-					c.username,
-					e.ExchangeID,
-					e.currency,
-					p.ProductID,
-					p.ProductName,
-					g.MaxWinLimit WinLimit,
-					NULL TodayWinningAmount,
-					wc.Winlost CreditTodayWinningAmount,
-					wd.Winlost DebitTodayWinningAmount,
-					CASE WHEN g.WinlostDate BETWEEN @Today AND @Tomorrow THEN g.TotalWinAmt ELSE 0 END TotalWinningAmount,
-					g.BlockedDate BlockedTime, 
-					g.UnblockedDate UnblockedTime, 
-					g.IsBlocked,
-					g.ModifiedBy UnblockedBy
-			FROM	dbo.WinLimit_Game g WITH (NOLOCK)
-					INNER JOIN #tempCust c
-					ON g.CustId = c.CustID
-					INNER JOIN #tempProduct p
-					ON g.ProductID = p.ProductID
-					INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK)
-					ON c.currency = e.exchangeid
-					LEFT JOIN dbo.WinLimit_CreditGame wc WITH (NOLOCK)
-					ON g.custid = wc.custid AND g.bettype = wc.Bettype AND wc.Winlostdate BETWEEN @Today AND @Tomorrow
-					LEFT JOIN dbo.WinLimit_DebitGame wd WITH (NOLOCK)
-					ON g.custid = wd.custid AND g.bettype = wd.Bettype AND wd.Winlostdate BETWEEN @Today AND @Tomorrow
+	DECLARE @CustId INT
+	IF ISNULL(@UserName, '') = ''
+	BEGIN
+		SET @UserName = ''
+	END
+	ELSE
+	BEGIN
+		SELECT @CustId = CustId, @ExchangeID = Currency
+		FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE UserName = @UserName
+	END
+
+	IF ISNULL(@ExchangeID, 0) = 0
+	BEGIN
+		SET @ExchangeID = 0
+	END
+
+	IF ISNULL(@ProductID, 0) = 0
+	BEGIN
+		SET @ProductID = 0
+	END
+
+	CREATE TABLE #tempResult (RowNum INT, CustID INT, ProductID TINYINT, MaxWinLimit MONEY, BlockedWinAmt MONEY
+		, TotalWinAmt MONEY, IsBlocked BIT, UserName VARCHAR(50), Currency TINYINT, ProductName VARCHAR(50), BlockedDate DATETIME
+		, UnblockedDate DATETIME, ModifiedBy INT, BetType SMALLINT)
+
+	IF @UserName = ''
+	BEGIN
+		SELECT @TotalRow = COUNT(1)
+		FROM dbo.WinLimit_Game g WITH (NOLOCK)
+			INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId AND c.RoleId = 1
+			INNER JOIN #tempProduct p ON g.ProductId = p.ProductId
+		WHERE g.IsBlocked = 0
+			AND (@ExchangeID = 0 OR @ExchangeID = c.currency)
+		
+		;WITH DataTmp AS (
+			SELECT ROW_NUMBER() OVER (ORDER BY g.UnBlockedDate DESC) AS RowNum
+				, g.CustID
+				, g.ProductID
+				, g.MaxWinLimit
+				, g.BlockedWinAmt
+				, CASE WHEN WinlostDate = @Today THEN g.TotalWinAmt ELSE 0 END AS TotalWinAmt
+				, g.BlockedDate
+				, g.IsBlocked
+				--, g.CreatedBy
+				, g.UnblockedDate
+				, g.ModifiedBy
+				, g.BetType
+				, c.UserName
+				, c.Currency
+				, p.ProductName
+			FROM dbo.WinLimit_Game g WITH (NOLOCK)
+				INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId AND c.RoleId = 1
+				INNER JOIN #tempProduct p ON g.ProductId = p.ProductId
 			WHERE g.IsBlocked = 0
-			) tbl
-	GROUP BY	CustID,
-				username,
-				ExchangeID,
-				currency,
-				ProductID,
-				ProductName,
-				WinLimit,
-				TodayWinningAmount,
-				TotalWinningAmount,
-				BlockedTime,
-				UnblockedTime,
-				IsBlocked,
-				UnblockedBy
-	ORDER BY tbl.UnblockedTime
-	
-	UPDATE	#tempResult
-	SET		TodayWinningAmount = ISNULL(TotalWinningAmount, 0) + ISNULL(CreditTodayWinningAmount, 0) - ISNULL(DebitTodayWinningAmount, 0)
-	
-	SELECT TOP 1 @TotalRow = MAX(RowNum)
-	FROM #tempResult
-	
-	SELECT		rs.*,
-				ad.username UnblockedByUserName
-	FROM		#tempResult rs
-				LEFT JOIN #tempAdmin ad
-				ON rs.UnblockedBy = ad.custid
-	WHERE		rs.RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
-	ORDER BY	RowNum	
+				AND (@ExchangeID = 0 OR @ExchangeID = c.currency)
+		)
+		INSERT INTO #tempResult(RowNum, CustID, ProductID, MaxWinLimit, BlockedWinAmt, TotalWinAmt, IsBlocked
+			, UserName, Currency, ProductName, BlockedDate, UnblockedDate, ModifiedBy, BetType)
+		SELECT RowNum, CustID, ProductID, MaxWinLimit, BlockedWinAmt, TotalWinAmt, IsBlocked
+			, UserName, Currency, ProductName, BlockedDate, UnblockedDate, ModifiedBy, BetType
+		FROM DataTmp
+		WHERE RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
+
+	END
+	ELSE
+	BEGIN
+		SELECT @TotalRow = COUNT(1)
+		FROM dbo.WinLimit_Game g WITH (NOLOCK)
+			INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId AND c.RoleId = 1
+			INNER JOIN #tempProduct p ON g.ProductId = p.ProductId
+		WHERE g.IsBlocked = 0
+			AND g.CustId = @CustId
+			AND @ExchangeID = c.currency
+
+		;WITH DataTmp AS (
+			SELECT ROW_NUMBER() OVER (ORDER BY g.UnBlockedDate DESC) AS RowNum
+				, g.CustID
+				, g.ProductID
+				, g.MaxWinLimit
+				, g.BlockedWinAmt
+				, CASE WHEN WinlostDate = @Today THEN g.TotalWinAmt ELSE 0 END AS TotalWinAmt
+				, g.BlockedDate
+				, g.IsBlocked
+				--, g.CreatedBy
+				, g.UnblockedDate
+				, g.ModifiedBy
+				, g.BetType
+				, c.UserName
+				, c.Currency
+				, p.ProductName
+			FROM dbo.WinLimit_Game g WITH (NOLOCK)
+				INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId AND c.RoleId = 1
+				INNER JOIN #tempProduct p ON g.ProductId = p.ProductId
+			WHERE g.IsBlocked = 0
+				AND g.CustId = @CustId
+				AND @ExchangeID = c.currency
+		)
+		INSERT INTO #tempResult(RowNum, CustID, ProductID, MaxWinLimit, BlockedWinAmt, TotalWinAmt, IsBlocked
+			, UserName, Currency, ProductName, BlockedDate, UnblockedDate, ModifiedBy, BetType)
+		SELECT RowNum, CustID, ProductID, MaxWinLimit, BlockedWinAmt, TotalWinAmt, IsBlocked
+			, UserName, Currency, ProductName, BlockedDate, UnblockedDate, ModifiedBy, BetType
+		FROM DataTmp
+		WHERE RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
+	END
+
+	SELECT rs.RowNum, rs.CustId, rs.UserName, e.ExchangeID, e.currency, rs.ProductId, rs.ProductName
+		, rs.BlockedDate AS BlockedTime
+		, rs.UnblockedDate AS UnblockedTime
+		, rs.IsBlocked
+		, rs.ModifiedBy AS UnblockedBy
+		, rs.MaxWinLimit AS WinLimit
+		, ISNULL(rs.TotalWinAmt, 0) + ISNULL(wc.Winlost, 0) - ISNULL(wd.Winlost, 0) AS TodayWinningAmount
+		, rs.TotalWinAmt AS TotalWinningAmount
+		, c.username AS UnblockedByUserName
+	FROM #tempResult rs
+		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId
+		LEFT JOIN dbo.WinLimit_CreditGame wc WITH (NOLOCK) 
+			ON rs.CustId = wc.CustId AND rs.bettype = wc.Bettype AND wc.Winlostdate = @Today
+		LEFT JOIN dbo.WinLimit_DebitGame wd WITH (NOLOCK)
+			ON rs.CustId = wd.CustId AND rs.bettype = wd.Bettype AND wd.Winlostdate = @Today
+		LEFT JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON rs.ModifiedBy = c.CustId
+	ORDER BY RowNum ASC
 	
 	DROP TABLE #tempProduct
-	DROP TABLE #tempAdmin
-	DROP TABLE #tempCust
 	DROP TABLE #tempResult
 	RETURN;
 END
