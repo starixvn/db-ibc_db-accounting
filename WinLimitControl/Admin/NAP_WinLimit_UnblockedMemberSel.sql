@@ -134,7 +134,7 @@ BEGIN
 	ORDER BY tbl.UnblockedTime
 	
 	UPDATE	#tempResult
-	SET		TodayWinningAmount = TotalWinningAmount + CreditTodayWinningAmount - DebitTodayWinningAmount
+	SET		TodayWinningAmount = ISNULL(TotalWinningAmount, 0) + ISNULL(CreditTodayWinningAmount, 0) - ISNULL(DebitTodayWinningAmount, 0)
 	
 	SELECT TOP 1 @TotalRow = MAX(RowNum)
 	FROM #tempResult

@@ -56,6 +56,27 @@ BEGIN
 		RETURN;
 	END
 	
+	--Validate player win limit < currency win limit
+	DECLARE	@CurrencyWinLimit	MONEY,
+			@ExchangeID			INT
+			
+	SELECT	@ExchangeID = c.currency
+	FROM	dbo.WinLimit_CustSetting cs WITH (NOLOCK)
+			INNER JOIN dbo.Customer c WITH (NOLOCK)
+			ON cs.CustID = c.custid
+	WHERE	cs.CustID = @CustID
+	
+	SELECT	@CurrencyWinLimit = MaxWinLimit
+	FROM	DBPRO.bodb02.dbo.WinLimit_GlobalSetting WITH (NOLOCK)
+	WHERE	ProductID = @ProductID AND ExchangeID = @ExchangeID
+	
+	IF @CurrencyWinLimit < @MaxWinLimit
+	BEGIN
+		SELECT	@ErrCode = 3
+				,@ErrMsg = 'Player WinLimit cannot greater than Currency WinLimit.'
+		RETURN;
+	END
+	
 	SELECT	@MaxWinLimitOld = MaxWinLimit 
 	FROM	dbo.WinLimit_CustSetting WITH (NOLOCK) 
 	WHERE	CustID = @CustID AND ProductID = @ProductID
