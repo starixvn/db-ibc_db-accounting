@@ -146,7 +146,7 @@ BEGIN
 		, rs.UnblockedDate AS UnblockedTime
 		, rs.IsBlocked
 		, rs.ModifiedBy AS UnblockedBy
-		, rs.MaxWinLimit AS WinLimit
+		, CASE WHEN cw.CustId IS NOT NULL THEN cw.MaxWinLimit ELSE gs.MaxWinLimit END AS WinLimit
 		, ISNULL(rs.TotalWinAmt, 0) + ISNULL(wc.Winlost, 0) - ISNULL(wd.Winlost, 0) AS TodayWinningAmount
 		, rs.TotalWinAmt AS TotalWinningAmount
 		, c.username AS UnblockedByUserName
@@ -157,6 +157,10 @@ BEGIN
 		LEFT JOIN dbo.WinLimit_DebitGame wd WITH (NOLOCK)
 			ON rs.CustId = wd.CustId AND rs.bettype = wd.Bettype AND wd.Winlostdate = @Today
 		LEFT JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON rs.ModifiedBy = c.CustId
+		LEFT JOIN DBCUST.CustDB.dbo.WinLimit_CustSetting cw WITH(NOLOCK) 
+			ON rs.CustId = cw.CustId AND rs.ProductId = cw.ProductId
+		LEFT JOIN dbo.WinLimit_GlobalSetting gs WITH(NOLOCK)
+			ON rs.ProductID = gs.ProductID AND rs.Currency = gs.ExchangeId
 	ORDER BY RowNum ASC
 	
 	DROP TABLE #tempProduct
