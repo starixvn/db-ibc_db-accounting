@@ -37,6 +37,7 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON;
+	
 	DECLARE @StartRun DATETIME
 			,@EndRun DATETIME
 			,@Duration INT
@@ -59,19 +60,52 @@ BEGIN
 	
 	IF ( @@ROWCOUNT = 0 )
 	BEGIN
-		SELECT 	@ErrCode	= 100
+		SELECT 	@ErrCode	= 1
 				,@ErrMsg 	= 'There is no information.'
 		RETURN;
 	END
 	
 	-- Validate Data
+	DECLARE @TempSearchCurrencySetting TABLE
+	(
+		CustID				INT,
+		ExchangeID			INT,
+		ProductID			TINYINT,
+		PlayerWinLimit		MONEY,
+		CurrencyWinLimit	MONEY,
+		IsValid				BIT
+	)
 	
+	INSERT INTO @TempSearchCurrencySetting
+	SELECT	tcs.CustID, wg.ExchangeID, wg.ProductID, tcs.MaxWinLimit PlayerWinLimit, wg.MaxWinLimit CurrencyWinLimit, CASE WHEN tcs.MaxWinLimit <= wg.MaxWinLimit THEN 1 ELSE 0 END IsValid
+	FROM	@TempCustSetting tcs
+			INNER JOIN dbo.Customer c WITH (NOLOCK)
+			ON tcs.CustID = c.CustID
+			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
+			ON c.currency = wg.ExchangeID AND tcs.ProductID = wg.ProductID
+			
+	IF EXISTS (SELECT 1 FROM @TempSearchCurrencySetting WHERE IsValid = 0)
+	BEGIN
+		DECLARE @ValidPlayers	VARCHAR(1000),
+				@InvalidPlayers	VARCHAR(1000)
+				  
+		SELECT	@ValidPlayers = COALESCE(@ValidPlayers + ',', '') + CONVERT(VARCHAR(100), ProductID) FROM @TempSearchCurrencySetting
+		WHERE	IsValid = 1
+		
+		SELECT	@InvalidPlayers = COALESCE(@InvalidPlayers + ',', '') + CONVERT(VARCHAR(100), ProductID) FROM @TempSearchCurrencySetting
+		WHERE	IsValid = 0
+		
+		SELECT	@ErrCode	= 2,
+				@ErrMsg		= 'Invalid data because it has changed by some other people. Please refresh the page.'--ISNULL(@ValidPlayers, '') + ';' + ISNULL(@InvalidPlayers, '')
+				
+	END
 	
 	INSERT INTO dbo.WinLimit_CustSetting
 	SELECT	CustID,
 			ProductID,
-			MaxWinLimit
-	FROM @TempCustSetting
+			PlayerWinLimit
+	FROM	@TempSearchCurrencySetting
+	WHERE	IsValid = 1
 	
 	SELECT	@EndRun = GETDATE()
 			,@Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
