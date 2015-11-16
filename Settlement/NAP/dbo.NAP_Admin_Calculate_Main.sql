@@ -1,5 +1,6 @@
 USE [bodb02]
 GO
+
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
     ,@mode                            VARCHAR(15)    = 'CAL'
     ,@action                        VARCHAR(20)    = 'CAL'
@@ -289,6 +290,7 @@ AS
         - 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
         - 20150529@Johnson: Add bettrade [Redmine: #35921]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)		
+        - 20151019@Kathy: add more param @IsRefundHT for calculate_4 (Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626])
         
     Param's Explanation:
         @action            @mode
@@ -311,7 +313,7 @@ BEGIN
         DECLARE @sMessage NVARCHAR(MAX)
 
         SET @sMessage = '
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                EXEC dbo.NAP_Admin_Calculate_Main @matchid = ' + CONVERT(NVARCHAR(50), @matchid) + '
             ,@mode = ' + CASE 
                 WHEN @mode IS NULL THEN 'NULL'
                 ELSE '''' + CONVERT(NVARCHAR(50), @mode) + ''''
@@ -1041,6 +1043,7 @@ BEGIN
                         ,@goaldiff = @scorediff
                         ,@FGLG2 = NULL
                         ,@betcount = @betcount_16 --reuse 
+						,@IsRefundHT = @IsRefundHT
 
                     -- bettype 22 : Next Goal    
                     -- IF @betcount_22 > 0
@@ -1480,10 +1483,11 @@ BEGIN
                 --*** Betradar 2: END *****
 			
 				--Bettrade
-					EXEC dbo.NAP_Admin_Calculate_901
+																				EXEC dbo.NAP_Admin_Calculate_901
 						 @matchid = @matchid											
 						,@action = @action
 						,@mode = @mode
+						,@isRefundHT = @isRefundHT
 
                 /* FT Myanmar odds*/
                                                                                 EXEC dbo.NAP_Admin_Calculate_1 @matchid = @matchid
@@ -1706,7 +1710,7 @@ BEGIN
             --*** Betradar 2: END ****
             
 				--Bettrade
-				EXEC dbo.NAP_Admin_Calculate_901
+																EXEC dbo.NAP_Admin_Calculate_901
 					 @matchid = @matchid					
 					,@action = @action
 					,@mode = @mode
@@ -1727,12 +1731,12 @@ BEGIN
 
             IF @Mode = 'UNDO'
             BEGIN
-                                                                                                                                EXEC dbo.NAP_Admin_Calculate_Undo 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                EXEC dbo.NAP_Admin_Calculate_Undo 
                      @matchid      = @matchid
                     ,@SelectedSet = @SelectedSet
                     ,@ResourceIDs = @ResourceIDs
 					
-				EXEC dbo.NAP_Admin_Calculate_901
+																EXEC dbo.NAP_Admin_Calculate_901
 					 @matchid = @matchid					
 					,@action = @action
 					,@mode = @mode
@@ -1751,7 +1755,7 @@ BEGIN
                     ,@FGLG2 = @HT_FGLG2
                     ,@betcount = @betcount_127
 									
-				EXEC dbo.NAP_Admin_Calculate_901
+																EXEC dbo.NAP_Admin_Calculate_901
 					 @matchid = @matchid					
 					,@action = @action
 					,@mode = @mode
@@ -1776,7 +1780,7 @@ BEGIN
                         ,@betcount = @betcount_14
                 END
 		
-				EXEC dbo.NAP_Admin_Calculate_901
+																EXEC dbo.NAP_Admin_Calculate_901
 					 @matchid = @matchid					
 					,@action = @action
 					,@mode = @mode
@@ -1967,7 +1971,7 @@ BEGIN
                     ,@result = @GoalScorerFirst
                     ,@betcount = @betcount_217
 
-			EXEC dbo.NAP_Admin_Calculate_901
+												EXEC dbo.NAP_Admin_Calculate_901
 					 @matchid = @matchid					
 					,@action = @action
 					,@mode = @mode
@@ -2745,14 +2749,14 @@ BEGIN
 
                 	IF @row_count > 0				
 				BEGIN
-					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
+																				EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@isRefundHT = @IsRefundHT
 						,@isHTCal = @isHTCal
 										
-					EXEC NAP_Admin_Calculate_Refund_901
+																				EXEC NAP_Admin_Calculate_Refund_901
 						@matchid					= @matchid							
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@action					= @action
@@ -2772,11 +2776,11 @@ BEGIN
 
                 IF @row_count > 0
 				BEGIN
-																																								EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
+																																																																																EXEC dbo.NAP_Admin_Calculate_RefundHT @matchid = @matchid
 						,@IsExcludeBetdaq = @IsExcludeBetdaq
 						,@IsExcludeBetfair = @IsExcludeBetfair
 					
-					EXEC NAP_Admin_Calculate_Refund_901
+																				EXEC NAP_Admin_Calculate_Refund_901
 						@matchid = @matchid													
 						,@action = @action
 						,@mode	 = @mode
@@ -3183,7 +3187,7 @@ BEGIN
 
                	IF @row_count > 0
 				BEGIN
-																																								EXEC dbo.NAP_Admin_Calculate_RefundAll 
+																																																																																																																																																																EXEC dbo.NAP_Admin_Calculate_RefundAll 
 						 @matchid					= @matchid
 						,@IsExcludeBetdaq			= @IsExcludeBetdaq
 						,@IsExcludeBetfair			= @IsExcludeBetfair
@@ -3193,7 +3197,7 @@ BEGIN
 						,@SetxGameyFinishedGame		= @SetxGameyFinishedGame
 						,@ResourceIDs				= @ResourceIDs
 					
-					EXEC NAP_Admin_Calculate_Refund_901
+																				EXEC NAP_Admin_Calculate_Refund_901
 						@matchid					= @matchid							
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@ResourceIDs				= @ResourceIDs
@@ -3221,7 +3225,7 @@ BEGIN
                 ,@LGOnly = @LGOnly
                 ,@matchdate = @matchdate
 			
-			EXEC NAP_Admin_Calculate_Refund_901
+												EXEC NAP_Admin_Calculate_Refund_901
 				@matchid = @matchid											
 				,@action = @action
 				,@mode	 = @mode

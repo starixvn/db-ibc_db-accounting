@@ -30,6 +30,8 @@ BEGIN
 
 	CREATE TABLE #tmp (transid BIGINT, BTbuyback money)
 	
+	CREATE TABLE #tmpRef(refno BIGINT)
+	
 	IF @action = 'REFUND'
 	BEGIN
 		--Refund from manual settlement
@@ -46,6 +48,7 @@ BEGIN
 			INSERT INTO @tmpBettype(bettype)
 					SELECT 7 UNION SELECT 8 UNION SELECT 12 UNION SELECT 15
 				UNION SELECT 30 UNION SELECT 126
+				UNION SELECT 16 UNION SELECT 177 UNION SELECT 178 UNION SELECT 183 UNION SELECT 184 --refund for match 3x30 
 		END
 		--Refund from auto settlement
 		IF @mode = 'ALL' AND @ResourceIDs IS NOT NULL
@@ -110,9 +113,11 @@ BEGIN
 		status = 'Refund',
 		statusid = 103,
 		ruben = 1
+	OUTPUT DELETED.refno INTO #tmpRef
 	WHERE matchid = @matchid 
 		AND bettype IN (901,902,903)
 		AND refno IN (SELECT transid FROM #tmp)
+		AND statusID <> 103
 	--END
 	
 	--Insert bettrade tickets to send API
@@ -134,7 +139,7 @@ BEGIN
 			BuyBackNo,
 			PayOut
         FROM bettradeSelling b WITH(NOLOCK)
-		WHERE ticketID IN (SELECT transid FROM #tmp)
+		WHERE ticketID IN (SELECT refno FROM #tmpRef)
 			AND status IN ('Accept','Confirm')
 	END
 	
@@ -151,6 +156,7 @@ BEGIN
 			ChangeDate = GETDATE()
 		FROM BetTradeSellingCancelled b WITH(UPDLOCK,ROWLOCK)
 			INNER JOIN #tmp t ON b.TicketID = t.transID
+		WHERE ticketID IN (SELECT refno FROM #tmpRef)
 		
 		--insert records into BetTradeSellingCancelled if not exist these tickets	
 		INSERT INTO BetTradeSellingCancelled(
@@ -184,5 +190,6 @@ BEGIN
 	--END
 	
 	DROP TABLE #tmp
+	DROP TABLE #tmpRef
 				
 END 

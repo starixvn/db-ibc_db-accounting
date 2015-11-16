@@ -1,5 +1,6 @@
 USE [bodb02]
 GO
+
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
     ,@adminid INT
     ,@IsExcludeBetdaq BIT = 0
@@ -31,9 +32,9 @@ AS
         - 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]    
         - 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
         - 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-        - 20150611@Johnson: Add bettrade [Redmine: #35921]
-		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+        - 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+        - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
     
     Param's Explanation:
@@ -123,32 +124,25 @@ BEGIN
         ,balance MONEY
         ,Increased BIT
         )
-    
-	CREATE TABLE #tmpTrans (transid BIGINT)
-    
+        
     DECLARE @tblDebitPending TVP_BalanceList
 	DECLARE @tblCreditPending TVP_BalanceList
 
     CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
-	
-	INSERT INTO #tmpTrans
-	SELECT transid
-	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid 
-		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209)
-		AND betdaqid = 0--bettrade tickets
 
     INSERT INTO #BalanceBefore
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
     WHERE matchid = @matchid 
-		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903, 303, 304)
-		AND 1 = CASE WHEN bettype IN (901,902,903) 
-						AND refno IN (SELECT transid FROM #tmpTrans)	
-						THEN 1 
-					WHEN bettype NOT IN (901,902,903) THEN 1
-				ELSE 0 END
+		  AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
+                            ,303, 304 -- Myanmar odds
+                            ) 
     GROUP BY custid
 
     IF @IsSettleAbandonedMatch = 1
@@ -210,7 +204,7 @@ BEGIN
             END CATCH
         END
 
-								EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
+		EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
             ,@creator = @adminid
             ,@IsExcludeBetdaq = @IsExcludeBetdaq
             ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
@@ -314,7 +308,7 @@ BEGIN
                 END 
         AND statusID NOT IN (101, 102)
 
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
             ,@action = 'REFUND'
             ,@mode = 'HT'
             ,@betcount_8 = @betcount_8 -- bettype
@@ -326,7 +320,7 @@ BEGIN
     /* --- END Settle Abandoned Match ---*/
     DECLARE @RowCount INT
 
-                EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
+                                EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
         ,@Matchid = @matchid
         ,@RowCount = @Rowcount OUTPUT
         ,@creator = @adminid
@@ -344,7 +338,7 @@ BEGIN
         EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
             ,'F'
 
-		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
             ,@action = 'REFUND'
             ,@mode = 'HT'
             ,@IsExcludeBetdaq = @IsExcludeBetdaq
@@ -357,12 +351,14 @@ BEGIN
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
     WHERE matchid = @matchid 
-		AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903, 303, 304)
-		AND 1 = CASE WHEN bettype IN (901,902,903) 
-						AND refno IN (SELECT transid FROM #tmpTrans)	
-						THEN 1 
-					WHEN bettype NOT IN (901,902,903) THEN 1
-				ELSE 0 END--bettrade
+      AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
+                            128,
+                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
+                            ,16 -- refund FT ticket
+                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
+                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match                     
+                            ,303, 304 -- Myanmar odds
+                            ) 
     GROUP BY custid
 
     -------------------------------------------------------------
@@ -392,9 +388,9 @@ BEGIN
 	SELECT	custid, ABS(balance)
 	FROM	#Balance
 	WHERE	Increased = 0
-
+	
 	IF @@rowcount <> 0
-								EXEC dbo.Dot_BalancePendingDebitIns
+		EXEC dbo.Dot_BalancePendingDebitIns
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
@@ -413,7 +409,7 @@ BEGIN
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-								EXEC dbo.Dot_BalancePendingCreditIns 
+		EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 
@@ -476,8 +472,7 @@ BEGIN
     DROP TABLE #BalanceBefore
 
     DROP TABLE #BalanceAfter
-	
-	DROP TABLE #tmpTrans
+
     -------------------------------------------------------------
     ---                      WRITE LOG                        ---
     ---------------------------VVVV------------------------------

@@ -110,7 +110,12 @@ BEGIN
 
 		UPDATE translog WITH(UPDLOCK,ROWLOCK)
 		SET @Statusid = statusid = CASE WHEN SUBSTRING(transdesc,11,CHARINDEX(';bettypetime',transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112
-										WHEN EXISTS(SELECT 1 FROM @tmpResult WHERE GameResult = 14) AND @bettype = 805 THEN 111--DRAW
+										WHEN EXISTS(SELECT 1 
+													FROM @tmpResult 
+													WHERE 1= CASE WHEN GameResult = 14 AND @bettype = 805 THEN 1
+																 WHEN GameResult = 15 AND @bettype = 803 THEN 1	
+															ELSE 0 END
+													 )THEN 111--DRAW										
 										ELSE 113 END,				
 			status = CASE WHEN @StatusID = 112 THEN 'WON' 
 							WHEN @StatusID = 113 THEN 'LOSE'
@@ -211,7 +216,12 @@ BEGIN
 						AND b.bettype = @bettype
 						AND b.refno = t.translogID
 		WHEN MATCHED THEN UPDATE SET @Statusid = CASE WHEN SUBSTRING(b.transdesc,11,CHARINDEX(';bettypetime',b.transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112
-										WHEN EXISTS(SELECT 1 FROM @tmpResult WHERE GameResult = 14) AND @bettype = 805 THEN 111--DRAW
+										WHEN EXISTS(SELECT 1 
+													FROM @tmpResult 
+													WHERE 1= CASE WHEN GameResult = 14 AND @bettype = 805 THEN 1
+																 WHEN GameResult = 15 AND @bettype = 803 THEN 1	
+															ELSE 0 END
+													) THEN 111--DRAW
 										ELSE 113 END,
 			statusID = @StatusID,
 			status = CASE WHEN @StatusID = 112 THEN 'WON' 
@@ -225,25 +235,26 @@ BEGIN
 				WHEN '0' THEN 1
 				WHEN '1' THEN 2 
 				ELSE 1 END,
+			Actual_Stake = t.actual_stake,	
 			WinLost = CASE
-				WHEN @Statusid = 112 THEN b.actual_stake + b.stake * (case when b.odds<0 then 1 else b.odds end)
-				WHEN @statusID = 111 THEN b.actual_stake
+				WHEN @Statusid = 112 THEN t.actual_stake + b.stake * (case when b.odds<0 then 1 else b.odds end)
+				WHEN @statusID = 111 THEN t.actual_stake
 				WHEN @Statusid =  113 THEN 0 
 				END,
 			aWinLost = CASE
 				WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.apositiontaking
 				WHEN @StatusID = 111 THEN 0
-				WHEN @Statusid =  113 THEN b.actual_stake * b.apositiontaking 
+				WHEN @Statusid =  113 THEN t.actual_stake * b.apositiontaking 
 				END,
 			mWinLost = CASE	
 				WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.mpositiontaking
 				WHEN @StatusID = 111 THEN 0
-				WHEN @Statusid =  113 THEN b.actual_stake * b.mpositiontaking 
+				WHEN @Statusid =  113 THEN t.actual_stake * b.mpositiontaking 
 				END,
 			sWinLost = CASE	
 				WHEN @Statusid = 112 THEN b.stake * (case when b.odds<0 then 1 else b.odds end)* -b.spositiontaking
 				WHEN @StatusID = 111 THEN 0
-				WHEN @Statusid =  113 THEN b.actual_stake * b.spositiontaking 
+				WHEN @Statusid =  113 THEN t.actual_stake * b.spositiontaking 
 				END,
 			PlayerComm = CASE
 				WHEN @Statusid = 112 	THEN @commWinRate * b.playerdiscount * b.stake		
@@ -448,10 +459,12 @@ BEGIN
 		
 		--return result to send API
 		SELECT refno as ticketID,
+			@bettype as bettype,
 			custid,
 			StatusID,
 			winlost as payout,
 			odds,
+			oddstype,
 			stake
 		FROM bettrans WITH(NOLOCK)
 		WHERE matchid = @matchid
@@ -650,21 +663,22 @@ BEGIN
 																WHEN b.comstatus = '1' THEN 2
 																ELSE 1
 															END
+											,b.actual_stake = t.actual_stake
 											,b.winlost	= CASE	
-																WHEN t.statusID = 112 THEN b.actual_stake + b.stake * (CASE WHEN b.odds < 0 THEN 1 ELSE b.odds END)
+																WHEN t.statusID = 112 THEN t.actual_stake + b.stake * (CASE WHEN b.odds < 0 THEN 1 ELSE b.odds END)
 																WHEN t.statusId = 113 THEN 0
 																END
 											,b.awinlost	= CASE	
 																WHEN t.statusId = 112 THEN b.stake * (CASE WHEN b.odds < 0 THEN 1 ELSE b.odds END) * (- b.apositiontaking)
-																WHEN t.StatusId = 113 THEN b.actual_stake * b.apositiontaking
+																WHEN t.StatusId = 113 THEN t.actual_stake * b.apositiontaking
 																END
 											,b.mwinlost	= CASE	
 																WHEN t.StatusId = 112 THEN b.stake * (CASE WHEN b.odds < 0 THEN 1 ELSE b.odds END) * (-b.mpositiontaking)
-																WHEN t.StatusId = 113 THEN b.actual_stake * b.mpositiontaking
+																WHEN t.StatusId = 113 THEN t.actual_stake * b.mpositiontaking
 																END
 											,b.swinlost = CASE	
 																WHEN t.StatusId = 112 THEN b.stake * (CASE WHEN b.odds < 0 THEN 1 ELSE b.odds END) * (-b.spositiontaking)
-																WHEN t.StatusId = 113 THEN b.actual_stake * b.spositiontaking
+																WHEN t.StatusId = 113 THEN t.actual_stake * b.spositiontaking
 																END
 											,b.playercomm = CASE 
 																WHEN t.StatusId = 112 THEN @commWinRate * b.playerdiscount * b.stake
@@ -923,7 +937,8 @@ BEGIN
 				AND b.refno	= t.translogid
 		WHEN MATCHED THEN UPDATE SET	b.status = t.status
 										,b.statusID = t.statusID
-										,b.winlost = b.actual_stake
+										,b.actual_stake = t.actual_stake
+										,b.winlost = t.actual_stake
 										,b.awinlost = 0
 										,b.mwinlost = 0
 										,b.swinlost = 0
@@ -1061,10 +1076,12 @@ BEGIN
 		
 			--return result to send API
 		SELECT refno as ticketID,
+			@bettype as bettype,
 			custid,
 			StatusID,
 			winlost as payout,
 			odds,
+			oddstype,
 			stake
 		FROM bettrans WITH(NOLOCK)
 		WHERE matchid = @matchid
@@ -1097,6 +1114,7 @@ BEGIN
 			,STATUS = 'running'
 			,statusID = 0
 			,winlost = 0
+			,actual_stake = 0
 			,awinlost = 0
 			,mwinlost = 0
 			,swinlost = 0
@@ -1110,10 +1128,12 @@ BEGIN
 		
 		--return result to send API
 		SELECT refno as ticketID,
+			@bettype as bettype,
 			custid,
 			StatusID,
 			winlost as payout,
 			odds,
+			oddstype,
 			stake
 		FROM bettrans WITH(NOLOCK)
 		WHERE matchid = @matchid

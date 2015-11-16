@@ -13,6 +13,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@CorrectScoreSet3				NVARCHAR(10)= NULL 
 	,@CorrectScoreSet4				NVARCHAR(10)= NULL 
 	,@CorrectScoreSet5				NVARCHAR(10)= NULL 
+	,@IsRefundHT					BIT = 0
 	,@betcount						INT = 0
 	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchIBC		BIT = 0
@@ -32,6 +33,7 @@ AS
 		- 20140822@Jamie: Check @correctscore and @goaldiff NULL 
 		- 20141017@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
 	Param's Explanation:
 		
@@ -334,7 +336,8 @@ BEGIN
 					matchid=@matchid AND
 					bettype=@bettype 
 					AND statusID NOT IN (101,102)
-					AND 1 = CASE WHEN @bettype <> 1317  THEN 1 
+					AND 1 = CASE WHEN @bettype = 16 AND @IsRefundHT = 1 THEN 0
+								 WHEN @bettype <> 1317 THEN 1 
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1
@@ -551,7 +554,8 @@ BEGIN
 			WHERE matchid = @matchid 
 				AND bettype = @bettype 
 				AND statusID NOT IN (101,102)
-					AND 1 = CASE WHEN @bettype <> 1317  THEN 1 
+					AND 1 = CASE WHEN @bettype = 16 AND @IsRefundHT = 1 THEN 0
+								 WHEN @bettype <> 1317  THEN 1 
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN 1

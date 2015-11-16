@@ -175,15 +175,32 @@ BEGIN
 	---         CAPTURE value BALANCE after unsettlement        ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #BalanceAfter (custid int PRIMARY KEY , balance money)
- 
+	
+	UPDATE t
+	SET t.isRunning = CASE WHEN tl.statusid IN (0,1) THEN 1 ELSE 0 END
+	FROM #tmpRef t
+		INNER JOIN Translog tl WITH(NOLOCK) ON t.refno = tl.translogid
+	
 	INSERT INTO #BalanceAfter
-	SELECT custid,sum( winlost-actual_stake+playercomm)
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE matchid = @Matchid 
-		AND b.bettype = @Bettype
-		AND b.refno IN (SELECT refno FROM #tmpRef)
+	SELECT custid,SUM(balance)
+	FROM 
+	(
+		SELECT	b.custid
+				,SUM(b.winlost - b.actual_stake + b.playercomm) as balance
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	b.matchid = @matchid 
+				AND b.bettype = @Bettype
+				AND b.refno IN (SELECT refno FROM #tmpRef WHERE isRunning = 0)
+		GROUP BY b.custid
+		UNION ALL
+		SELECT	custid, SUM(-actual_stake) as balance
+		FROM	translog WITH(NOLOCK)
+		WHERE	translogid IN (SELECT refno FROM #tmpRef WHERE isRunning = 1)				
+		GROUP BY custid
+	)t
 	GROUP BY custid
-    
+	
+	    
     -------------------------------------------------------------
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
