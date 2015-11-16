@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_Ag2]  
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_Ag2]  
  @LicenseeID	INT,
  @mrecommend	INT=NULL,
  @Currency		INT = 0,
@@ -16,7 +14,8 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail_Ag2]
  @ShowKN		BIT=0, -- keno
  @ShowAGC		BIT = 0, --AG Casino
  @ShowGD		BIT = 0, -- Gold Deluxe
- @showMGC 		BIT	= 1, --Micro Gaming
+ @showMGCLC 	BIT	= 1, --Micro Gaming Live Casion
+ @showMGCRnG 	BIT	= 1, --Micro Gaming RNG Casino
  @MoveBetsDay SMALLDATETIME,
  @IsOld BIT = 0,
  @drawfilter SMALLINT = 1,
@@ -50,6 +49,8 @@ AS
 		- 20150518@Florent: Add AGC and GD
 		- 20150710@Jim:  Microgaming integration (Feature #38168)
 		- 20150728@Jim: apply Bettrade (Feature #38815)
+		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+		
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -195,15 +196,25 @@ BEGIN
 	WHERE (typeid BETWEEN 1501 AND 1599)
 END 
 
-IF @showMGC =1 -- Micro Gaming
-	BEGIN 
-		INSERT INTO @sporttype (sporttype)
-		VALUES(203)
+IF @showMGCLC =1 -- MGC-LC
+BEGIN 
+	INSERT INTO @sporttype (sporttype)
+	VALUES(203)
 
-		INSERT INTO @bettype(bettype)
-		SELECT typeid FROM bettype (NOLOCK)
-		WHERE (typeid BETWEEN 2001 AND 2099)
-	END 
+	INSERT INTO @bettype(bettype)
+	SELECT typeid FROM bettype (NOLOCK)
+	WHERE (typeid BETWEEN 2001 AND 2007)
+END
+
+IF @showMGCRnG =1 -- MGC-RNG
+BEGIN 
+	INSERT INTO @sporttype (sporttype)
+	VALUES(205)
+
+	INSERT INTO @bettype(bettype)
+	SELECT typeid FROM bettype (NOLOCK)
+	WHERE (typeid BETWEEN 2008 AND 2009)
+END 
 	
 DECLARE @TempFromDate DATETIME 
 DECLARE @TempToDate DATETIME 
@@ -306,7 +317,7 @@ BEGIN
 			b.winlostdate,s.currency,b.recommend, b.statusID 	
 	END
 	
-	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGC =1)
+	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowRB=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGCLC =1 OR @showMGCRnG =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss
 		SELECT   
@@ -399,7 +410,7 @@ BEGIN
 	END
 	
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGC =1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGCLC =1 OR @showMGCRnG =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss  
 		SELECT 
@@ -415,7 +426,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 AS AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,
@@ -493,7 +504,7 @@ BEGIN
 	END
  
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGC =1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGCLC =1 OR @showMGCRnG =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss  
 		SELECT 
@@ -509,7 +520,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 AS AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) AS AmountDueToRB,
@@ -720,18 +731,15 @@ DROP TABLE #SAgWinLoss
 DROP TABLE #TempExchange
 DROP TABLE #DataWinloss3rd
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbLicenseeNet]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbAdminNet]
-GO 
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [bodbLicenseeNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail_Ag2] TO [vnteam] AS [dbo]
+GO

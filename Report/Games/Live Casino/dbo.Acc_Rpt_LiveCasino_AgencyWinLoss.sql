@@ -26,6 +26,7 @@ Revisions:
     - 20130123@Daniel: Change link server alias
 	- 20150601@Sophia: Apply Gold Deluxe [#35359] 
 	- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
+	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 
 		
 Param's Explanation:
@@ -135,8 +136,7 @@ SELECT @sqlTableExchange = @sqlTableExchange + '
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DELETE @SportBettype 
-	WHERE ProductID NOT IN (4,11,12,13) 
-		 OR (ProductID = 13 AND SubProduct = ''MGC-RNG'') '
+	WHERE ProductID NOT IN (4,11,12,13)'
 
 SELECT @TempDataSQL = ''
 SELECT @TempDataSQLDW = ''
@@ -666,7 +666,13 @@ select [ExchangeDate], [ExchangeId],[ActualRate]
 DROP TABLE #Data
 DROP TABLE #Agency
 
+
+
+
 GO
-GRANT EXECUTE ON [dbo].Acc_Rpt_LiveCasino_AgencyWinLoss TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].Acc_Rpt_LiveCasino_AgencyWinLoss TO [vnteam]
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss] TO [vnteam] AS [dbo]
+GO

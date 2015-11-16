@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino]
 	@winlostdate datetime
 AS
 
@@ -12,6 +12,7 @@ AS
 		- 20150109@Dom: Apply sport bettype matrix
 		- 20150522@Sophia: Apply Gold Deluxe and revise Sport Betype Matrix [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
+		- 20151111@Percy: Change the sport type: MGC-RNG to MGC and RNG [RedmineID: #46576]
 	
 */
 SET NOCOUNT ON
@@ -43,9 +44,7 @@ FROM	bettrans b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid
 WHERE	b.winlostdate = @winlostdate
-		AND (s.ProductID IN (4,12,11) 
-			  OR s.ProductID = 13 AND SubProduct <> 'MGC-RNG'
-			  )
+		AND s.ProductId IN (4,12,11,13)
 		AND b.ruben = 1		
 		AND b.statusID not in (101,102,103,121)
 GROUP BY s.ProductID, b.Bettype, case when dep.custid is null then 1 else 2 end 
@@ -53,7 +52,11 @@ ORDER BY b.Bettype, site
 
 DROP TABLE #DepAgent
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino] TO [vnteam] AS [dbo]
+GO

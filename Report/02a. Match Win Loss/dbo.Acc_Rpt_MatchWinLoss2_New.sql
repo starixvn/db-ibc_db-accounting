@@ -1,7 +1,4 @@
-﻿USE [bodb02]
-GO
- 
-ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
 	@WinLost_BARM		 money = 0 OUTPUT,
@@ -1168,9 +1165,11 @@ BEGIN
 	DROP TABLE #tmpReturn
 END
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam]
 
+GO
 
+GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam] AS [dbo]
+GO

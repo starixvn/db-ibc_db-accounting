@@ -469,7 +469,7 @@ BEGIN
 	FROM	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71)) --SLI
-			OR s.ProductId IN ( 14, 13)  --- Vegas Games, Microgaming - RNG Casino			
+			OR s.ProductId IN (14, 17)  --- Vegas Games, Microgaming - RNG Casino			
 	GROUP BY site
 
 	--P2P 
@@ -629,7 +629,12 @@ END
 
 
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam] AS [dbo]
+GO

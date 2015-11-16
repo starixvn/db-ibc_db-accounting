@@ -1,80 +1,84 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14]
-		@winlostdate DATETIME
-		,@ProductId TINYINT
-		,@site TINYINT
-		,@bettype INT 
-
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino14]
+	@winlostdate	datetime
 AS
-	/*	Creator: Johnson
-		Date: 2013-08-02
-		Task: Casino WinLost Summary report by site
+	/*	Creator: Phuong Dao
+		Date: 2009-05-14
+		Task: Casino WinLost Summary report
 		DB: DBACC/bodb02
 		
-		Revisions: 
-			- 20130906@Johnson: get virtual values by virtual rate instead of actual rate			
-			- 20150703@Sophia: Apply Microgaming and SuperBalance [#38168]
+		Revisions:
+			- 20090731@Jamie: Not to view data in range of date, but only one date at once 	
+			-- 20100525@Henry: Change to use StatusID instead of Status in WHERE statement
+			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
+			- 20130703@Kathy: Update matchid for RnG Casino (71)
+			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
+			- 20150109@Dom: Apply sport bettype matrix
+			- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 			- 20150806@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
-
-		Parameter's Explanation:
-			- @site: 1: credit
-					2: deposit	
-			- @ProductId: ProductId of SportBettypeMatrix
-			- @bettype : No need now, will enhance later
+			- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+	
+		
 	*/
 BEGIN
 	SET NOCOUNT ON
+
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
-
-	CREATE TABLE #DepAgent (custid int primary key , site varchar(50))
-	
-	INSERT INTO #DepAgent (custid, site)
-	SELECT c.custid, site
-	FROM customer c WITH(NOLOCK)
-		LEFT JOIN (select custid from f_DepSuper_1('All')) dep ON c.srecommend = dep.custid
-	WHERE roleid = 2
-		AND 1= CASE WHEN @site = 1 AND dep.custid IS NULL THEN 1
-					WHEN @site = 2 AND dep.custid IS NOT NULL THEN 1 ELSE 0 END
-		AND c.custid NOT IN (52466,5707545)--8RM, BARM
-	
-	INSERT INTO #DepAgent (custid, site)
-	SELECT 52466,'XYZBET' WHERE @site = 1--8RM
+	CREATE TABLE #DepAgent (custid int primary key)
+		
+	INSERT INTO #DepAgent 
+	SELECT custid
+	FROM custInfo with(NOLOCK)
+	WHERE srecommend IN (SELECT custid FROM f_DepSuper_1('All'))
+		AND roleid = 2
 	UNION
-	SELECT 5707545,'BEST-ODDS' WHERE @site =2 --BARM
-	
-	SELECT		
-			ag.site,
-			sum((winlost-actual_stake)*actualrate) WinLost,
-			sum((awinlost+mwinlost+swinlost)*actualrate) Position,
-			sum(scomm*actualrate) Commission,	
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
-			sum(CASE WHEN s.ProductId = 6 THEN 0 ELSE (1-tpositiontaking)*stake*actualrate END) AS RealTurnover,
-			sum(CASE WHEN s.ProductId = 6 THEN 0 ELSE (1-tpositiontaking)*stake*actualrate END) AS VirtualTurnover
+	SELECT 5707545--BARM
+				
+	SELECT	s.ProductId,	
+			CASE s.ProductId WHEN 6 THEN 71
+							 WHEN 14 THEN 1900
+							 WHEN 13 THEN 2001
+							 WHEN 17 THEN 2008
+							 END AS bettype,
+			case when dep.custid is null then 1 else 2 end as site,
+			isnull(sum((winlost-actual_stake)*actualrate), 0) WinLost,
+			isnull(sum((awinlost+mwinlost+swinlost)*actualrate), 0) Position,
+			isnull(sum(scomm*actualrate), 0) Commission,	
+			isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate), 0) LineTotal,
+			isnull(sum(CASE WHEN s.ProductId = 6 THEN 0 ELSE (1-tpositiontaking)*stake*actualrate END),0) AS Turnover
 	FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
-		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
+		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE	b.winlostdate = @winlostdate
-			AND s.ProductId = @ProductId
-			AND (
-					s.ProductId = 6 -- Casino
-					OR s.ProductId = 14  --- Vegas Games
-					OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino	
-				) 
-
-			--AND b.bettype IN(71, 72)								--20120405@Hurri
-			--AND b.matchid IN (0, 71)
-			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
-			AND b.statusID NOT IN (102, 101,121,103) 
+			AND s.ProductId IN (6,14,17) -- Casino, Vegas Games, MGC-RNG
+			AND b.statusID NOT IN (101, 102,103,121) 
 			AND b.ruben = 1		
-	GROUP BY ag.site
-	ORDER BY ag.site
+	GROUP BY s.ProductId, 
+			case when dep.custid is null then 1 else 2 end ,
+			CASE s.ProductId WHEN 6 THEN 71
+							 WHEN 14 THEN 1900
+							 WHEN 13 THEN 2001
+							 WHEN 17 THEN 2008
+							 END  
+	ORDER BY s.ProductId, site	
+
+
+	--GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end 
+	--ORDER BY b.Bettype, site		
 	
 	DROP TABLE #DepAgent
-END
+END 
+
+
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino14] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Casino14] TO [vnteam] AS [dbo]
+GO

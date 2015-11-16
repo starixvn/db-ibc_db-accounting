@@ -12,6 +12,7 @@ SET NOCOUNT ON
 	Revisions:
 		- 20150601@Sophia: Apply Gold Deluxe [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
+		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 	
 	Parameters Explanation:
 		- @ProductID = 0 : All
@@ -30,9 +31,7 @@ SET NOCOUNT ON
 
 	DELETE @SportBettype 
 	WHERE ProductID NOT IN (4,11,12,13) 
-		  OR (ProductID = 13 AND SubProduct = 'MGC-RNG') 
 		  
-
 
 	SELECT	s.ProductId, b.typeID, b.typenamee 
 	FROM	bettype b WITH (NOLOCK) 
@@ -44,7 +43,12 @@ SET NOCOUNT ON
 
  
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LiveCasino_GameStatistics_GameTypeSel] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_LiveCasino_GameStatistics_GameTypeSel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LiveCasino_GameStatistics_GameTypeSel] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LiveCasino_GameStatistics_GameTypeSel] TO [vnteam] AS [dbo]
+GO

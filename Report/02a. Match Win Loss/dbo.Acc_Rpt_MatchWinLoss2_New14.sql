@@ -1160,7 +1160,11 @@ BEGIN
 	DROP TABLE #R_8RM
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New14] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New14] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New14] TO [vnteam] 
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New14] TO [vnteam] AS [dbo]
+GO
