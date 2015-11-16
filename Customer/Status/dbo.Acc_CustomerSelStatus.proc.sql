@@ -228,7 +228,7 @@ Param's Explanation:
 			ci.recommend, 
 			ci.DisableVirtualSports, 
 			ci.HideVirtualSports, 
-		ci.DoubleCommLosing, 
+			ci.DoubleCommLosing, 
 			ci.DisableHRFixedOdds,
 			ci.DisableEsports,
 			ci.HideKeno,
