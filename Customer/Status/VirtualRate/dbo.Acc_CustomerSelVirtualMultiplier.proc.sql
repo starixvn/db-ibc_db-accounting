@@ -48,6 +48,7 @@ BEGIN
             ON  cvs.seqNo = pvs.seqNo
     WHERE       cvs.custid = @CustID
 			AND pvs.isActive = 1
+	ORDER BY sporttype, isLive DESC, bettype
 
     SELECT custid, sporttype, bettype, islive, virtualMultiplier
     FROM @CustVirtualRate
