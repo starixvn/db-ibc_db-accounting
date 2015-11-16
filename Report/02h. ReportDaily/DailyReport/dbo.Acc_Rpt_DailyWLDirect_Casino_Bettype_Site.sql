@@ -60,7 +60,7 @@ BEGIN
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE	b.winlostdate = @winlostdate
 			AND s.ProductId = @ProductId
-			AND s.ProductId IN (6, 14, 17) -- Casino, Vegas Games, MGC-RNG
+			AND s.ProductId IN (6, 14, 17) -- Casino, Macau, MGC-RNG
 			--AND b.bettype IN(71, 72)								--20120405@Hurri
 			--AND b.matchid IN (0, 71)			
 			AND b.statusID NOT IN (102, 101,121,103)  ---('VOID', 'REJECT','done','REFUND') 

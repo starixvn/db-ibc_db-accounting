@@ -54,7 +54,7 @@ BEGIN
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		LEFT JOIN  (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
 	WHERE	b.winlostdate = @winlostdate
-			AND s.ProductId IN (6,14,17) -- Casino, Vegas Games, MGC-RNG
+			AND s.ProductId IN (6,14,17) -- Casino, Macau, MGC-RNG
 			AND b.statusID NOT IN (101, 102,103,121) 
 			AND b.ruben = 1		
 	GROUP BY s.ProductId, 
