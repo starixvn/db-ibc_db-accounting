@@ -44,7 +44,7 @@ FROM	bettrans b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid
 WHERE	b.winlostdate = @winlostdate
-		AND s.ProductId IN (4,12,11,13)
+		AND s.ProductId IN (4,12,11,13) -- Live Casino, AG Casino, Gold Deluxe, Microgaming - Live Casino
 		AND b.ruben = 1		
 		AND b.statusID not in (101,102,103,121)
 GROUP BY s.ProductID, b.Bettype, case when dep.custid is null then 1 else 2 end 
