@@ -783,3 +783,4 @@ GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
  
 
+
