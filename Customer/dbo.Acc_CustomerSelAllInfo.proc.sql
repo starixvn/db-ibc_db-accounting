@@ -1,4 +1,3 @@
-/****** Object:  Stored Procedure dbo.Acc_CustomerSelAllInfo    Script Date: 10/6/2015 12:37:47 PM ******/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
@@ -63,7 +62,9 @@ Revisions:
 	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
-	- 20151001@Percy: AG Casino & Microgaming - Outstanding Info [Redmine: #43765]	
+	- 20151001@Percy: AG Casino & Microgaming - Outstanding Info [Redmine: #43765]
+	- 20151030@Percy: AG Casino & Microgaming - Outstanding Info for new Sporttype [Redmine: #46450]
+	- 20151112@Percy: AG Casino & Microgaming - Fix bug for new Sporttype [Redmine: #47441]
 
 Param's Explanation:
 	@username: username want to get all info related
@@ -156,10 +157,11 @@ BEGIN
 	-- Get sport bettype
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-				EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+								EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
 	DELETE @SportBettype WHERE ProductID <> 11
-						   AND (ProductID <> 13 OR SubProduct <> 'MGC-RNG')
+						   AND ProductID <> 13
+						   AND ProductID <> 17
 						   AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive')
 
     --Get CustID FROM DB06, WHERE got index on Username AND Username2
@@ -604,7 +606,7 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.custid = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 		
 		-- Get Cash From TransLog
 	    SELECT @TransLogOT = SUM(ABS(actual_stake))
@@ -613,7 +615,7 @@ BEGIN
 	    -- Get Cash and Outstanding from bettrans and Show Info
 		SELECT	ISNULL(Balance.Cash,0) + @yesterdayCustCashLC + @todayCustCashLC + @yesterdayCustCashRNG + @todayCustCashRNG Cash,
 			    ISNULL(Balance.Cash,0) - @todayCustCash + @yesterdayCustCashLC + @yesterdayCustCashRNG yesterday_Cash,
-			    ISNULL(Balance.outstanding,0) + ISNULL(@TransLogOT,0) + ISNULL(@todayOutstandingRNG,0) outstanding,
+			    ISNULL(Balance.outstanding,0) + ISNULL(@TransLogOT,0) + ISNULL(@todayOutstandingLC,0) + ISNULL(@todayOutstandingRNG,0) outstanding,
 			    Balance.lastTxn lastTxn 
 	    FROM(		
 		    SELECT 
@@ -622,7 +624,7 @@ BEGIN
 			    max(transdate) lastTxn 
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.custid = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+			WHERE BT.custid = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 	    ) Balance
 
     END 
@@ -669,7 +671,7 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.recommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 		
 		-- Get Cash From TransLog
 		SELECT @TransLogOT = SUM(actual_stake),
@@ -695,7 +697,7 @@ BEGIN
 			    max(transdate) lastTxn
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.recommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+			WHERE BT.recommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 	    )Balance 
 
     END
@@ -752,7 +754,7 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.mrecommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 		
 		-- Get Cash From TransLog
 		SELECT @TransLogOT = SUM(actual_stake),
@@ -780,7 +782,7 @@ BEGIN
 				    max(transdate) lastTxn
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.mrecommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+			WHERE BT.mrecommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 	    )Balance 
     	
 	    /*
@@ -843,7 +845,7 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.srecommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
     	
 		-- Get Cash From TransLog
 		SELECT @TransLogOT = SUM(actual_stake),
@@ -873,7 +875,7 @@ BEGIN
 				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake else 0 end) customerOutstanding	
 		     FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.srecommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 13 OR S.SubProduct <> 'MGC-RNG')
+			WHERE BT.srecommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 		    )Balance 
      
     END
@@ -889,3 +891,20 @@ BEGIN
 		    @TotalMemberClosed MemberClosed,
 		    @TotalMemberSuspended MemberSuspended
 END
+
+
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
+GO
+
+
