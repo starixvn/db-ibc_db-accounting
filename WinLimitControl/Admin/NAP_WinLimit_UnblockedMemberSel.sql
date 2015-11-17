@@ -1,12 +1,13 @@
 USE [bodb02]
 GO
 ALTER PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
-	@UserName		VARCHAR(100)	= '',
-	@ExchangeID		INT				= 0,
-	@ProductID		TINYINT			= 0,
-	@PageIndex		INT				= 1,
-	@PageSize		INT				= 50,
-	@TotalRow		INT				= 0		OUTPUT
+	@UserName			VARCHAR(100)	= '',
+	@ExchangeID			INT				= 0,
+	@ProductID			TINYINT			= 0,
+	@ExcludeTestData	BIT				= 1,
+	@PageIndex			INT				= 1,
+	@PageSize			INT				= 50,
+	@TotalRow			INT				= 0		OUTPUT
 AS
 	/*
 		Created: Phillip	
@@ -151,7 +152,8 @@ BEGIN
 		, rs.TotalWinAmt AS TotalWinningAmount
 		, c.username AS UnblockedByUserName
 	FROM #tempResult rs
-		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId
+		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) 
+			ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
 		LEFT JOIN dbo.WinLimit_CreditGame wc WITH (NOLOCK) 
 			ON rs.CustId = wc.CustId AND rs.bettype = wc.Bettype AND wc.Winlostdate = @Today
 		LEFT JOIN dbo.WinLimit_DebitGame wd WITH (NOLOCK)

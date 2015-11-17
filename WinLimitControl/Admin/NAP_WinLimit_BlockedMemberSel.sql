@@ -2,12 +2,13 @@ USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[NAP_WinLimit_BlockedMemberSel]
-	@UserName		VARCHAR(100)	= '',
-	@ExchangeID		INT				= 0,
-	@ProductID		TINYINT			= 0,
-	@PageIndex		INT				= 1,
-	@PageSize		INT				= 50,
-	@TotalRow		INT				= 0		OUTPUT
+	@UserName			VARCHAR(100)	= '',
+	@ExchangeID			INT				= 0,
+	@ProductID			TINYINT			= 0,
+	@ExcludeTestData	BIT				= 1,
+	@PageIndex			INT				= 1,
+	@PageSize			INT				= 50,
+	@TotalRow			INT				= 0		OUTPUT
 AS
 	/*
 		Created: Phillip	
@@ -146,7 +147,7 @@ BEGIN
 		, rs.CreatedBy AS BlockedBy
 		, c.UserName AS BlockedByUserName
 	FROM #tempResult rs
-		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId
+		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
 		LEFT JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON rs.CreatedBy = c.CustId
 	ORDER BY RowNum ASC
 	

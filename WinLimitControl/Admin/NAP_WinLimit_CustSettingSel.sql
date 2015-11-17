@@ -16,13 +16,14 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
-	@UserName	VARCHAR(100)	= '',
-	@ExchangeID INT				= 0,
-	@ProductID	TINYINT 		= 0,
-	@PageIndex	INT 			= 1,
-	@PageSize	INT 			= 50,
-	@SortOrder	TINYINT			 = 1,
-	@TotalRow	INT 			= 0		OUTPUT
+	@UserName			VARCHAR(100)	= '',
+	@ExchangeID			INT				= 0,
+	@ProductID			TINYINT 		= 0,
+	@ExcludeTestData	BIT				= 1,
+	@PageIndex			INT 			= 1,
+	@PageSize			INT 			= 50,
+	@SortOrder			TINYINT			= 1,
+	@TotalRow			INT 			= 0		OUTPUT
 AS
 	/*
 		Created: Phillip	
@@ -77,12 +78,14 @@ BEGIN
 			,cs.MaxWinLimit PlayerWinLimit
 			,wg.MaxWinLimit CurrencyWinLimit
 	FROM	dbo.WinLimit_CustSetting cs WITH (NOLOCK)
-			INNER JOIN Customer c WITH (NOLOCK) 
+			INNER JOIN dbo.Customer c WITH (NOLOCK) 
 			ON cs.CustID = c.custid
 			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
 			ON cs.ProductID = wg.ProductID AND c.currency = wg.ExchangeID
 			INNER JOIN @ProductSetting p
 			ON cs.ProductID = p.ProductID
+			INNER JOIN dbo.exchange e WITH (NOLOCK)
+			ON c.currency = e.exchangeid AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
 	WHERE	(@UserName = '' OR c.username = @UserName)
 			AND (@ExchangeID = 0 OR c.currency = @ExchangeID)
 			AND (@ProductID = 0 OR cs.ProductID = @ProductID)

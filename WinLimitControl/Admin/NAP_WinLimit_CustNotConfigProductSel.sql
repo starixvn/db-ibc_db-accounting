@@ -16,9 +16,10 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel]
-	@CustName	VARCHAR(100)	= '',
-	@ErrCode	INT				= 0		OUTPUT,
-	@ErrMsg		VARCHAR(100)	= ''	OUTPUT
+	@CustName			VARCHAR(100)	= '',
+	@ExcludeTestData	BIT				= 1,
+	@ErrCode			INT				= 0		OUTPUT,
+	@ErrMsg				VARCHAR(100)	= ''	OUTPUT
 AS
 	/*
 		Created: Phillip	
@@ -48,7 +49,7 @@ BEGIN
 	SELECT	@CustID = c.custid, @CurrencyID = e.exchangeid, @CurrencyName = e.currency
 	FROM	dbo.Customer c WITH (NOLOCK)
 			INNER JOIN dbo.exchange e WITH (NOLOCK)
-			ON c.currency = e.exchangeid
+			ON c.currency = e.exchangeid AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
 	WHERE	c.username = @CustName 
 			AND c.roleid = @ROLEID 
 			
@@ -82,7 +83,7 @@ BEGIN
 			wg.MaxWinLimit CurrencyWinLimit
 	FROM	dbo.Customer c WITH (NOLOCK) 
 			INNER JOIN dbo.exchange e WITH (NOLOCK)
-			ON c.currency = e.exchangeid
+			ON c.currency = e.exchangeid AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
 			RIGHT JOIN @ProductSetting p
 			ON p.IsActive_Company = 1
 			LEFT JOIN dbo.WinLimit_CustSetting cs WITH (NOLOCK)
