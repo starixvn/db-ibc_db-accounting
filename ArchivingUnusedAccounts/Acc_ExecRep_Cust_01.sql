@@ -7,7 +7,7 @@ AS
 	Created by: Elodie
 	Date: 2013-08-08
 	Task: Archive unused Accounts 
-	DB: DBTXN/CustDB
+	DB: DBCUST/CustDB
 	Original: Acc_ExecRep_01
 	Revision:
 		- 20131230@Elodie: Update credit = 0 when account is disabled, check correct server name 

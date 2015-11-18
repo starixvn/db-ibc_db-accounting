@@ -8,7 +8,7 @@ AS
 	Created by: Theo
 	Date: 2009-30-07
 	Task: Moving data from custsetting to custsetting_old 
-	DB: DBTRANS.BODB02
+	DB: DBCUST/CustDB
 	
 	Revisions:
 		- 20091222@Jamie: separate 3rd custsetting to custsetting3rd_old 
@@ -19,6 +19,8 @@ AS
 		- 20120227@Lukas: archive data for Live Casino Game
 		- 20131108@Elodie: Splitting bodb02 into CustDB (change DBARCCUST instead of DB05)
 		- 20140618@Elodie: archive data for Keno
+		- 20150514@Elodie: archive data for CustVirtualRate
+		- 20151118@Billy: Archive data for CustVirtualSetting - [Redmine: #47729]
 */
     
 SET NOCOUNT ON
@@ -249,6 +251,17 @@ SELECT CustID, GameTypeID, StakeLevelList, MaxPerGameType, MinBet, MaxBet, IsDis
 FROM [dbo].CustGameType WITH(NOLOCK)
 WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
 
+--- copy DBTRANS.BODB02.dbo.CustVirtualRate data to DB05.bodb_Customer.dbo.CustVirtualRate_Old
+INSERT INTO DBARCCUST.bodb_Customer.dbo.CustVirtualRate_Old(custid, sporttype, bettype, isLive, virtualMultiplier)
+SELECT custid, sporttype, bettype, isLive, virtualMultiplier
+FROM [dbo].CustVirtualRate WITH(NOLOCK)
+WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
+
+--- copy DBTRANS.BODB02.dbo.CustVirtualSetting data to DB05.bodb_Customer.dbo.CustVirtualSetting_Old
+INSERT INTO DBARCCUST.bodb_Customer.dbo.CustVirtualSetting_Old(custid, seqNo, bitmapVirtual)
+SELECT custid, seqNo, bitmapVirtual
+FROM [dbo].CustVirtualSetting WITH(NOLOCK)
+WHERE custid IN (SELECT custid FROM custinfo WITH(NOLOCK) WHERE recommend = @AgentID AND roleid = 1)
 
 --Exec Acc_ExecRep_01 @AgentID = @AgentID, @Type = 0 
 ----------------------------------------------------------------
