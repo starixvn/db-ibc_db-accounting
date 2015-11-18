@@ -43,6 +43,7 @@ AS
 			@ErrMsg		: Error Message.
 	*/
 BEGIN
+	
 	SET NOCOUNT ON;
 	DECLARE @StartRun DATETIME
 			,@EndRun DATETIME
@@ -52,7 +53,7 @@ BEGIN
 	SELECT	@StartRun = GETDATE()
 	IF @MaxWinLimit <=0
 	BEGIN
-		SELECT	@MaxWinLimit = 1000
+		SELECT	@MaxWinLimit = 0
 	END
 	
 	IF @ExchangeID = 0 OR @ProductID = 0
@@ -106,7 +107,7 @@ BEGIN
 	BEGIN TRY
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID			= @UserID,
-		@ActionID		= 2904,
+		@ActionID		= 31201,
 		@TrackingValue	= @LogSPData,
 		@Duration		= @Duration
 	END TRY
@@ -121,7 +122,7 @@ BEGIN
 		+ '" />'
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID			= @UserID,
-		@ActionID		= 2904,
+		@ActionID		= 31201,
 		@TrackingValue	= @LogSPData,
 		@Duration		= @Duration
 	END CATCH

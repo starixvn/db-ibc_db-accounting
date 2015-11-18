@@ -120,7 +120,7 @@ BEGIN
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID			= @UserID,
 		@CustID			= @UserID,
-		@ActionID		= 2906,
+		@ActionID		= 31203,
 		@TrackingValue	= @LogSPData,
 		@Duration		= @Duration
 	END TRY
@@ -134,7 +134,7 @@ BEGIN
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID			= @UserID,
 		@CustID			= @UserID,
-		@ActionID		= 2906,
+		@ActionID		= 31203,
 		@TrackingValue	= @LogSPData,
 		@Duration		= @Duration
 	END CATCH

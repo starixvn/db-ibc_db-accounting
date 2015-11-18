@@ -51,7 +51,7 @@ BEGIN
 	SELECT  @StartRun = GETDATE()
 	IF @MaxWinLimit <=0
 	BEGIN
-		SET @MaxWinLimit = 1000
+		SET @MaxWinLimit = 0
 	END
 	IF NOT EXISTS (SELECT 1 FROM dbo.WinLimit_GlobalSetting WITH(NOLOCK) WHERE ExchangeID = @ExchangeID AND ProductID = @ProductID)
 	BEGIN
@@ -114,7 +114,7 @@ BEGIN
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 			@UserID			= @UserID,
-			@ActionID		= 2905,
+			@ActionID		= 31202,
 			@TrackingValue	= @LogSPData,
 			@TrackingValue2 = @TrackingValue2,
 			@Duration		= @Duration
@@ -138,7 +138,7 @@ BEGIN
 			+ '" />'
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 			@UserID			= @UserID,
-			@ActionID		= 2905,
+			@ActionID		= 31202,
 			@TrackingValue	= @LogSPData,
 			@TrackingValue2 = @TrackingValue2,
 			@Duration		= @Duration
