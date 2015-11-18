@@ -135,7 +135,7 @@ BEGIN
 	   VALUES(1900)
 
     END
-	ELSE IF @ProductPrefix = 'MGC-LC'
+	ELSE IF @ProductPrefix = 'MGCLC'
     BEGIN
 	   INSERT INTO @SportTypeList(SportType, IsBA)
 	   VALUES(203, 0)
@@ -146,7 +146,7 @@ BEGIN
 	   WHERE typeid BETWEEN 2001 AND 2007
 
     END
-	ELSE IF @ProductPrefix = 'MGC-RNG'
+	ELSE IF @ProductPrefix = 'MGCRNG'
     BEGIN
 	   INSERT INTO @SportTypeList(SportType, IsBA)
 	   VALUES(205, 0)
@@ -191,7 +191,7 @@ BEGIN
 				AND b.apositiontaking = 0
 			GROUP BY b.srecommend
 		END
-		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGC-LC', 'MGC-RNG')
+		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG')
 		BEGIN
 			INSERT INTO @SAgWinLoss(CustId, CompanyWL)
 			SELECT b.srecommend
