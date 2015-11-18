@@ -172,7 +172,5 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_UnblockedMemberSel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_UnblockedMemberSel] TO [accteam]
-GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_UnblockedMemberSel] TO [vnteam]
 GO

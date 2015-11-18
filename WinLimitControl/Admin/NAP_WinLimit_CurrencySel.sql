@@ -60,7 +60,5 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySel] TO [accteam]
-GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CurrencySel] TO [vnteam]
 GO

@@ -96,7 +96,5 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [accteam]
-GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [vnteam]
 GO

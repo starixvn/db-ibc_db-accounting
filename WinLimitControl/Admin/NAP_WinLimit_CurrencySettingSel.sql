@@ -49,7 +49,5 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [accteam]
-GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [vnteam]
 GO

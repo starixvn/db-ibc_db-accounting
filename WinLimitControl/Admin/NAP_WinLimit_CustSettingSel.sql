@@ -105,7 +105,5 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [accteam]
-GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingSel] TO [vnteam]
 GO

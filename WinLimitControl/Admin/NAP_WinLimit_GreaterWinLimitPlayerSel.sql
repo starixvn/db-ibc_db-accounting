@@ -51,7 +51,5 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_GreaterWinLimitPlayerSel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_GreaterWinLimitPlayerSel] TO [accteam]
-GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_GreaterWinLimitPlayerSel] TO [vnteam]
 GO

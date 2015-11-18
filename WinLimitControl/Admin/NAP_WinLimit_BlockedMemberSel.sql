@@ -159,7 +159,5 @@ GO
 
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_BlockedMemberSel] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_BlockedMemberSel] TO [accteam]
-GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_BlockedMemberSel] TO [vnteam]
 GO
