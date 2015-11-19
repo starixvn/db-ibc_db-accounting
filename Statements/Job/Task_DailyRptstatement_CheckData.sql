@@ -471,7 +471,7 @@ BEGIN
 
 			SELECT  custid
 					,SUM(WinAmount) AS GrandPrize
-			FROM	bodb02.dbo.PayoutTrans WITH(NOLOCK) 
+			FROM	DBACC.bodb02.dbo.PayoutTrans WITH(NOLOCK) 
 			WHERE	winlostdate = @Winlostdate							
 			GROUP BY custid
 
