@@ -62,6 +62,7 @@ Revisions:
 	- 20150707@Elodie: Add Super Live product [Redmine: #35776]
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
+	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
 	 
 	
 Param's Explanation:
@@ -513,10 +514,13 @@ BEGIN
 	    @IsCheckedDirectStatus IsCheckDirectStatus,
 	    @IsDisabledDirectStatus IsDisabledDirectStatus,
 		@HasDownline AS HasDownline
+		
     FROM customer c WITH(NOLOCK)
 	    inner join custinfo ci WITH(NOLOCK) on c.custid = ci.custid
 	    inner join exchange e WITH(NOLOCK) on c.currency = e.exchangeid 
     WHERE c.custid = @custid
+    
+    
     ----------------------------
     -------------------------------------------------------------------------
     --Agency Info
@@ -695,7 +699,7 @@ BEGIN
 	    WHERE mrecommend=@CustID
 	    */
     END
-    else if @roleid = 4
+    ELSE IF @roleid = 4
     BEGIN
 
 	    DECLARE @transdate DATETIME
@@ -761,6 +765,9 @@ BEGIN
 		    @TotalMemberActive MemberActive,
 		    @TotalMemberClosed MemberClosed,
 		    @TotalMemberSuspended MemberSuspended
+
+	-- For sportbook2
+	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
 
 
@@ -775,13 +782,5 @@ GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
  
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet]
-GO 
- 
+
+
