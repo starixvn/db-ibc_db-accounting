@@ -12,6 +12,10 @@ AS
 
 */
 SELECT
+	CONVERT(INT,-1) ProductID
+	,'MG-SuperLive' ProductName
+UNION ALL
+SELECT
 	ProductID
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
@@ -28,14 +32,6 @@ SELECT
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
 WHERE ProductID IN (14,15)
-SELECT
-	CONVERT(INT,-1) ProductID
-	,'MG-SuperLive' ProductName
-ORDER BY ProductID ASC
- 
-
-
-
 
 GO
 
