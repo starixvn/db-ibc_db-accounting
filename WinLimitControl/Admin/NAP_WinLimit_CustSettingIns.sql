@@ -101,6 +101,11 @@ BEGIN
 	END
 	
 	INSERT INTO dbo.WinLimit_CustSetting
+	(
+			CustID,
+			ProductID,
+			MaxWinLimit
+	)
 	SELECT	CustID,
 			ProductID,
 			PlayerWinLimit
