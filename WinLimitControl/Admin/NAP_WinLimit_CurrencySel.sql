@@ -37,7 +37,7 @@ BEGIN
 	BEGIN
 		SELECT		ExchangeID
 					,Code + ' (' + currency + ')' AS ExchangeName
-		FROM		dbo.exchange WITH (NOLOCK)
+		FROM		CustDB.dbo.exchange WITH (NOLOCK)
 		WHERE		@ExcludeTestData = 0 OR currency NOT IN ('UUS', 'H', 'C')
 		ORDER BY	ExchangeName
 	END
@@ -50,7 +50,7 @@ BEGIN
 		
 		SELECT		e.exchangeid
 					,e.Code + ' (' + e.currency + ')' AS ExchangeName
-		FROM		dbo.exchange e WITH (NOLOCK)
+		FROM		CustDB.dbo.exchange e WITH (NOLOCK)
 					LEFT OUTER JOIN dbo.WinLimit_GlobalSetting gs WITH (NOLOCK)
 					ON e.exchangeid = gs.ExchangeID
 		GROUP BY	e.exchangeid, e.Code, e.currency
