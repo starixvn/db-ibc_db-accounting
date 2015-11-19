@@ -44,7 +44,7 @@ BEGIN
 	BEGIN
 		DECLARE @TotalExchange INT
 		SELECT	@TotalExchange = COUNT(1)
-		FROM	dbo.exchange WITH (NOLOCK)
+		FROM	CustDB.dbo.exchange WITH (NOLOCK)
 		WHERE	currency NOT IN('UUS', 'H', 'C')
 		
 		SELECT		p.ProductID
