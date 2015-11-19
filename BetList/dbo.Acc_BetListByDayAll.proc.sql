@@ -77,11 +77,12 @@ AS
 		- 20150825@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
 		- 20150828@Kos: Fix bug not show CB ticket after clicking Grand Prize in Statement report
-		- 20151009@Kos: Support Microgaming RNG Game and AG Casino
-		- 20151019@Kos: Support Microgaming RNG Game Jackpot Win
+		- 20151009@Kos: Support Microgaming RNG Casino and AG Casino
+		- 20151019@Kos: Support Microgaming RNG Casino Jackpot Win
 		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151109@Kos: Replace using Jackpotwin table by PayoutTrans table
+		- 20151119@Kos: Use PayoutTrans table in DBACC instead of DBAGE
 
 	Param's Explanation:
 		+ @transtype: 
@@ -98,7 +99,7 @@ BEGIN
 	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
 
 	INSERT INTO @SportBettype
-	EXEC Acc_SportBettypeMatrix_Sel @mode = 4
+		EXEC Acc_SportBettypeMatrix_Sel_xpre @mode = 4
 
 	DECLARE @tmpStatus TABLE ([statusID] TINYINT);
 
@@ -122,7 +123,7 @@ BEGIN
 			SELECT 0 UNION ALL
 			SELECT 1
 		END
-	ELSE IF (@transtype = 4)	-- Grand Prize of Colossus Bet
+	ELSE IF (@transtype = 4)	-- Grand Prize of Colossus Bet, Microgaming RNG Casino
 		BEGIN
 			INSERT INTO @tmpStatus ([statusID])
 			SELECT 111 UNION ALL
@@ -130,7 +131,7 @@ BEGIN
 			SELECT 113
 
 			DELETE @SportBettype
-			WHERE ProductID NOT IN (13, 15)
+			WHERE ProductID NOT IN (15, 17)
 		END
 
 	DECLARE @Data TABLE (
@@ -1055,8 +1056,8 @@ BEGIN
 					b.TranId3rd AS BetCheck,
 					b.transdesc,
 					0 AS OddsSpread
-				FROM dbo.PayoutTrans AS pt WITH (NOLOCK)
-					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON pt.RefNo = b.transid
+				FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
+					INNER JOIN dbo.bettransRnG14 AS b WITH (NOLOCK) ON pt.RefNo = b.transid
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 				WHERE pt.custid = @custid
 					AND pt.winlostdate = @fromdate
@@ -2846,7 +2847,7 @@ BEGIN
 					b.TranId3rd AS BetCheck,
 					b.transdesc,
 					0 AS OddsSpread
-				FROM dbo.PayoutTrans AS pt WITH (NOLOCK)
+				FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
 					INNER JOIN dbo.bettransRnG AS b WITH (NOLOCK) ON pt.RefNo = b.transid
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 				WHERE pt.custid = @custid
