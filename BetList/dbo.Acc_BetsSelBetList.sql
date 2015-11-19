@@ -86,6 +86,7 @@ AS
 		- 20150828@Kos: Support Colossus Bet
 		- 20150930@Bobby: Enhance performance - re-arrange indexers
 		- 20151008@Kos: Support Microgaming RNG Game and AG Casino
+		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 */
 
@@ -1386,9 +1387,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				sdiscount,
-				adiscount,
-				discount,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
 				0 AS homeid,
 				0 AS awayid,
 				'' settleTime,
@@ -1893,9 +1894,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				sdiscount,
-				adiscount,
-				discount,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
 				0 AS homeid,
 				0 AS awayid,
 				'' settleTime,
@@ -1941,11 +1942,12 @@ BEGIN
 				b.swinlost,
 				'' AS showtime,
 				b.winlostdate,
-				b.BetCheck,
-				b.transdesc,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
 				0 AS OddsSpread
 			FROM bettrans AS b WITH (NOLOCK)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 			WHERE b.custid 			= @Custid 
 				AND b.matchid 		= 204
 				AND s.ProductId 	= 15
@@ -2010,8 +2012,8 @@ BEGIN
 				0,
 				'' AS showtime,
 				b.winlostdate,
-				'' AS BetCheck,
-				b.transdesc,
+				b.Tranid3rd AS BetCheck,
+				'' AS transdesc,
 				0 AS OddsSpread
 			FROM translog AS b WITH (NOLOCK)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.gameID
@@ -2921,9 +2923,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				sdiscount,
-				adiscount,
-				discount,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
 				0 AS homeid,
 				0 AS awayid,
 				'' settleTime,
@@ -2969,11 +2971,12 @@ BEGIN
 				b.swinlost,
 				'' AS showtime,
 				b.winlostdate,
-				b.BetCheck,
-				b.transdesc,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
 				0 AS OddsSpread
 			FROM bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 			WHERE b.winlostdate 	BETWEEN @FromDate AND @ToDate 
 				AND b.custid 		= @Custid 
 				AND b.matchid		IN (204)

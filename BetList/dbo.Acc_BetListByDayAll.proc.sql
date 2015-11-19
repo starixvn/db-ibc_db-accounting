@@ -79,6 +79,7 @@ AS
 		- 20150828@Kos: Fix bug not show CB ticket after clicking Grand Prize in Statement report
 		- 20151009@Kos: Support Microgaming RNG Game and AG Casino
 		- 20151019@Kos: Support Microgaming RNG Game Jackpot Win
+		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151109@Kos: Replace using Jackpotwin table by PayoutTrans table
 
@@ -1123,15 +1124,16 @@ BEGIN
 				0 scomm, -- unuse in this report
 				0 acomm, -- unuse in this report
 				0 comm,	-- unuse in this report
-				awinlost,
-				mwinlost,
-				swinlost,
+				b.awinlost,
+				b.mwinlost,
+				b.swinlost,
 				b.winlostdate,
-				b.BetCheck,
-				b.transdesc,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 			WHERE  b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
@@ -2919,8 +2921,8 @@ BEGIN
 					0 mwinlost,
 					0 swinlost,
 					b.winlostdate,
-					'' AS BetCheck,
-					b.transdesc,
+					b.Tranid3rd AS BetCheck,
+					'' AS transdesc,
 					0 AS OddsSpread
 				FROM dbo.translog AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
@@ -2991,15 +2993,16 @@ BEGIN
 					0 scomm, -- unuse in this report
 					0 acomm, -- unuse in this report
 					0 comm,	-- unuse in this report
-					awinlost,
-					mwinlost,
-					swinlost,
+					b.awinlost,
+					b.mwinlost,
+					b.swinlost,
 					b.winlostdate,
-					b.BetCheck,
-					b.transdesc,
+					ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
 					0 AS OddsSpread
 				FROM dbo.bettrans AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+					LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 				WHERE b.custid = @custid
 					AND b.winlostdate = @fromdate
 					AND s.ProductID = 15

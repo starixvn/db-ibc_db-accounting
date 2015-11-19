@@ -59,8 +59,9 @@ AS
 		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150831@Kos: Support Colossus Bet
 		- 20151009@Kos: Support Microgaming RNG Game and AG casino
+		- 20151023@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
-	
+
 	Param's Explanation:
 		• @fromdate = @winlostdate
 */
@@ -1423,7 +1424,7 @@ BEGIN
 				AND b.custid = @custid
 				AND b.statusID = 0
 
-			-- Microgaming Live Casino, Colossus Bet
+			-- Microgaming Live Casino
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1468,10 +1469,7 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				ip,
-				CASE
-					WHEN s.ProductID = 13 THEN 203
-					WHEN s.ProductID = 15 THEN 204
-				END AS sporttype,
+				203 AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -1487,7 +1485,71 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (13, 15)
+				AND s.ProductID = 13
+
+			-- Colossus Bet
+			UNION ALL
+			SELECT
+				0 AS finalhomescore,
+				0 AS finalawayscore,
+				0 AS oddsid,
+				0 AS leagueid,
+				b.bettype,
+				b.transid,
+				ISNULL(b.BetID, 0) AS BetID,
+				b.refno,
+				'' AS matchcode,
+				'' AS race,
+				'' AS eventdate,
+				0 AS virtualrate,
+				0 AS isShowOTExRate,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				0 AS homeid,
+				0 AS awayid,
+				ISNULL(b.checktime, '') AS checktime,
+				0 AS hdp1,
+				0 AS hdp2,
+				0 AS odds,
+				0 AS modds,
+				0 AS finalodds,
+				0 AS finalodds2,
+				' ' AS OddsType,
+				b.status,
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
+				b.stake,
+				b.actual_stake,
+				b.transdate,
+				'' AS betteam,
+				0 AS livehomescore,
+				0 AS liveawayscore,
+				0 AS liveindicator,
+				(b.winlost - b.actual_stake) AS winlost,
+				b.playercomm AS commission, 
+				CASE b.custid WHEN b.creator THEN b.username ELSE '' END AS creator,
+				b.username,
+				0 AS hthomescore,
+				0 AS htawayscore,
+				ip,
+				204 AS sporttype,
+				0 AS matchid,
+				0 AS IsNeutral,
+				'' AS showtime,
+				b.awinlost,
+				b.mwinlost,
+				b.swinlost,
+				b.betfrom,
+				b.winlostdate,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
+				0 AS OddsSpread
+			FROM bettrans AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+			WHERE b.custid = @custid
+				AND b.winlostdate = @fromdate
+				AND s.ProductID = 15
 
 			-- Microgaming Live Casino, Colossus Bet translog
 			UNION ALL
@@ -1546,7 +1608,10 @@ BEGIN
 				0 AS swinlost,
 				b.betfrom,
 				b.winlostdate,
-				'' AS betcheck,
+				CASE
+					WHEN s.ProductID = 15 THEN b.Tranid3rd
+					ELSE ''
+				END AS betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.translog AS b WITH (NOLOCK)
@@ -1556,7 +1621,7 @@ BEGIN
 				AND b.custid = @custid
 				AND b.statusID = 0
 
-			-- Microgaming Live Casino, Microgaming RNG Casino, Colossus Bet, AG Casino Bettrans14
+			-- Microgaming Live Casino, Microgaming RNG Casino, AG Casino Bettrans14
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1604,7 +1669,6 @@ BEGIN
 				CASE
 					WHEN s.ProductID = 11 THEN 250
 					WHEN s.ProductID = 13 THEN 203
-					WHEN s.ProductID = 15 THEN 204
 					WHEN s.ProductID = 17 THEN 205
 				END AS sporttype,
 				b.matchid,
@@ -1622,7 +1686,71 @@ BEGIN
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (11, 13, 15, 17)
+				AND s.ProductID IN (11, 13, 17)
+
+			-- Colossus Bet
+			UNION ALL
+			SELECT
+				0 AS finalhomescore,
+				0 AS finalawayscore,
+				0 AS oddsid,
+				0 AS leagueid,
+				b.bettype,
+				b.transid,
+				ISNULL(b.BetID, 0) AS BetID,
+				b.refno,
+				'' AS matchcode,
+				'' AS race,
+				'' AS eventdate,
+				0 AS virtualrate,
+				0 AS isShowOTExRate,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				0 AS homeid,
+				0 AS awayid,
+				ISNULL(b.checktime, '') AS checktime,
+				0 AS hdp1,
+				0 AS hdp2,
+				0 AS odds,
+				0 AS modds,
+				0 AS finalodds,
+				0 AS finalodds2,
+				' ' AS OddsType, 
+				b.status, 
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
+				b.stake,
+				b.actual_stake,
+				b.transdate,
+				b.betteam,
+				b.livehomescore,
+				b.liveawayscore,
+				0 AS liveindicator,
+				(b.winlost - b.actual_stake) AS winlost,
+				b.playercomm AS commission,
+				CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator,
+				b.username,
+				0 AS hthomescore,
+				0 AS htawayscore,
+				ip,
+				204 AS sporttype,
+				b.matchid,
+				0 AS IsNeutral,
+				'' AS showtime,
+				b.awinlost,
+				b.mwinlost,
+				b.swinlost,
+				b.betfrom,
+				b.winlostdate,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
+				0 AS OddsSpread
+			FROM bettrans14 b WITH (NOLOCK)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+			WHERE b.custid = @custid
+				AND b.winlostdate = @fromdate
+				AND s.ProductID = 15
 
 			-- Microgaming RNG Casino (not today ticket)
 			UNION ALL

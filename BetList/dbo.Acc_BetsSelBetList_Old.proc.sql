@@ -58,6 +58,7 @@ AS
 		- 20150828@Kos: Support Colossus Bet
 		- 20150930@Bobby: Enhance performance - re-arrange indexers
 		- 20151008@Kos: Support Microgaming RNG Game and AG Casino
+		- 20151022@Kos: Return [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 */
 
@@ -805,8 +806,8 @@ BEGIN
 			
 	END
 
-	-- AG Casino, Microgaming Live Casino, Microgaming RNG Casino, Colossus Bet
-	IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (11, 13, 15, 17))
+	-- AG Casino, Microgaming Live Casino, Microgaming RNG Casino
+	IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (11, 13, 17))
 	BEGIN
 		INSERT INTO #BetListData
 		SELECT 
@@ -854,7 +855,6 @@ BEGIN
 			CASE
 				WHEN s.ProductId = 11 THEN 250
 				WHEN s.ProductId = 13 THEN 203
-				WHEN s.ProductId = 15 THEN 204
 				WHEN s.ProductId = 17 THEN 205
 			END AS sporttype,
 			b.ip,
@@ -882,7 +882,80 @@ BEGIN
 			INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 		WHERE b.custid = @Custid
 			AND b.winlostdate BETWEEN @FromDate AND @ToDate
-			AND s.ProductId IN (11, 13, 15, 17)
+			AND s.ProductId IN (11, 13, 17)
+	END
+
+	-- Colossus Bet
+	IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 15)
+	BEGIN
+		INSERT INTO #BetListData
+		SELECT 
+			b.bettype,
+			b.transid,
+			ISNULL(b.BetID, 0),
+			b.refno,
+			'' AS matchcode,
+			'' AS race,
+			'' AS eventdate,
+			0,
+			0,
+			b.sdiscount,
+			b.adiscount,
+			b.discount,
+			0 AS homeid,
+			0 AS awayid,
+			'' AS settleTime,
+			0 AS hdp1,
+			0 AS hdp2,
+			0 AS odds,
+			0 finalodds,
+			0 finalodds2,
+			'' OddsType,
+			b.status,
+			CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
+			b.stake,
+			b.actual_stake,
+			b.transdate,
+			'' AS betteam,
+			b.spositiontaking,
+			b.mpositiontaking,
+			b.apositiontaking,
+			0 AS spositiontaking2,
+			0 AS mpositiontaking2,
+			0 AS apositiontaking2,
+			0 AS liveindicator,
+			0 AS modds,
+			b.custid,
+			b.livehomescore,
+			b.liveawayscore,
+			0 AS finalhomescore,
+			0 AS finalawayscore,
+			0 AS leagueid,
+			204 AS sporttype,
+			b.ip,
+			b.betfrom,
+			0 AS matchid,
+			CONVERT(BIT, 0) AS IsNeutral,
+			0 AS allowdelete,
+			(b.winlost - b.actual_stake) AS winlost,
+			b.playercomm AS commission,
+			(b.scomm - b.acomm) AS scomm,
+			(b.acomm - b.comm) AS acomm,
+			(b.comm - b.playercomm) AS comm,
+			b.awinlost,
+			b.mwinlost,
+			b.swinlost,
+			'' AS showtime,
+			b.winlostdate,
+			ISNULL(bm.betcheck, '') AS BetCheck,
+			'' AS transdesc,
+			0 AS OddSpread
+		FROM dbo.bettrans_bk AS b WITH (nolock,index=IX_custid)
+			INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
+			LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+		WHERE b.custid = @Custid
+			AND b.winlostdate BETWEEN @FromDate AND @ToDate
+			AND s.ProductId = 15
 	END
 
 	IF (EXISTS(SELECT TOP 1 1 FROM #BetListData WHERE Bettype IN (901, 902, 903)))

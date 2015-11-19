@@ -65,6 +65,7 @@ AS
 		- 20150825@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
 		- 20151009@Kos: Support Microgaming RNG Game and AG Casino
+		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 */
 BEGIN
@@ -1959,9 +1960,9 @@ BEGIN
 				'' AS eventdate,
 				0 AS virtualrate,
 				0 AS isShowOTExRate,
-				sdiscount,
-				adiscount,
-				discount,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
 				0 AS homeid,
 				0 AS awayid,
 				'' settleTime,
@@ -2007,11 +2008,12 @@ BEGIN
 				b.swinlost,
 				'' AS showtime,
 				b.winlostdate,
-				b.BetCheck,
-				b.transdesc,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 			WHERE
 				b.custid = @Custid
 				AND s.ProductID = 15
@@ -2076,7 +2078,7 @@ BEGIN
 				0,
 				'' AS showtime,
 				b.winlostdate,
-				b.GameID3rd AS BetCheck,
+				b.Tranid3rd AS BetCheck,
 				b.transdesc,
 				0 AS OddsSpread
 			FROM dbo.translog AS b WITH (NOLOCK)
@@ -2782,8 +2784,8 @@ BEGIN
 				AND s.ProductID = 12
 				AND b.refno = @refno 
 
-		-- Microgaming - Live Casino, Colossus Bet
-		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (13, 15) AND Bettype = @Bettype )
+		-- Microgaming - Live Casino
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 13 AND Bettype = @Bettype )
 			INSERT INTO @Data
 			SELECT
 				b.bettype,
@@ -2827,10 +2829,7 @@ BEGIN
 				0 AS finalhomescore,
 				0 AS finalawayscore,
 				0 AS leagueid,
-				CASE
-					WHEN s.ProductID = 13 THEN 203
-					WHEN s.ProductID = 15 THEN 204
-				END AS sporttype,
+				203 AS sporttype,
 				b.ip,
 				b.betfrom,
 				0 AS matchid,
@@ -2846,16 +2845,84 @@ BEGIN
 				b.swinlost,
 				'' AS showtime,
 				b.winlostdate ,
-				CASE
-					WHEN s.ProductID = 13 THEN b.betcheck
-					WHEN s.ProductID = 15 THEN ''
-				END AS BetCheck,
+				b.betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid
-				AND s.ProductID IN (13, 15)
+				AND s.ProductID = 13
+				AND b.refno = @refno
+
+		-- Colossus Bet
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 15 AND Bettype = @Bettype )
+			INSERT INTO @Data
+			SELECT
+				b.bettype,
+				b.transid,
+				ISNULL(b.BetID, 0) AS BetID,
+				b.refno,
+				'' AS matchcode,
+				'' AS race,
+				'' AS eventdate,
+				0 AS virtualrate,
+				0 AS isShowOTExRate,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				0 AS homeid,
+				0 AS awayid,
+				'' AS settleTime,
+				0 AS hdp1,
+				0 AS hdp2,
+				0 AS odds,
+				0 AS finalodds,
+				0 AS finalodds2,
+				'' AS OddsType,
+				b.status,
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
+				b.stake,
+				b.actual_stake,
+				b.transdate,
+				'' AS betteam,
+				b.spositiontaking,
+				b.mpositiontaking,
+				b.apositiontaking,
+				0 AS spositiontaking2,
+				0 AS mpositiontaking2,
+				0 AS apositiontaking2,
+				0 AS liveindicator,
+				0 AS modds,
+				b.custid,
+				0 AS livehomescore,
+				0 AS liveawayscore,
+				0 AS finalhomescore,
+				0 AS finalawayscore,
+				0 AS leagueid,
+				204 AS sporttype,
+				b.ip,
+				b.betfrom,
+				0 AS matchid,
+				CONVERT(BIT, 0) AS IsNeutral,
+				0 AS allowdelete,
+				(b.winlost - b.actual_stake) winlost,
+				b.playercomm AS commission,
+				(b.scomm - b.acomm) AS scomm,
+				(b.acomm - b.comm) AS acomm,
+				(b.comm - b.playercomm) AS comm,
+				b.awinlost,
+				b.mwinlost,
+				b.swinlost,
+				'' AS showtime,
+				b.winlostdate ,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
+				0 AS OddsSpread
+			FROM dbo.bettrans14 AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+			WHERE b.custid = @Custid
+				AND s.ProductID = 15
 				AND b.refno = @refno
 
 		-- Microgaming RNG Casino, AG Casino
@@ -3627,8 +3694,8 @@ BEGIN
 				AND s.ProductID = 12
 				AND b.refno = @refno
 
-		-- Microgaming - Live Casino, Colossus Bet
-		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (13, 15) AND Bettype = @Bettype)
+		-- Microgaming - Live Casino
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 13 AND Bettype = @Bettype)
 			INSERT INTO @Data
 			SELECT
 				b.bettype,
@@ -3672,10 +3739,7 @@ BEGIN
 				0,
 				0,
 				0 AS leagueid,
-				CASE
-					WHEN s.ProductID = 13 THEN 203
-					WHEN s.ProductID = 15 THEN 204
-				END AS sporttype,
+				203 AS sporttype,
 				b.ip,
 				b.betfrom,
 				0 AS matchid,
@@ -3691,16 +3755,84 @@ BEGIN
 				b.swinlost,
 				'' AS showtime,
 				b.winlostdate,
-				CASE
-					WHEN s.ProductID = 13 THEN b.betcheck
-					WHEN s.ProductID = 15 THEN ''
-				END AS BetCheck,
+				b.betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
 			FROM DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid
-				AND s.ProductID IN (13, 15)
+				AND s.ProductID = 13
+				AND b.refno = @refno
+				
+		-- Colossus Bet
+		IF EXISTS( SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID = 15 AND Bettype = @Bettype)
+			INSERT INTO @Data
+			SELECT
+				b.bettype,
+				b.transid,
+				ISNULL(b.BetID, 0) AS BetID,
+				b.refno,
+				'' AS matchcode,
+				'' AS race,
+				'' AS eventdate,
+				0 AS virtualrate,
+				0 AS isShowOTExRate,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
+				0 AS homeid,
+				0 AS awayid,
+				'' settleTime,
+				0 AS hdp1,
+				0 AS hdp2,
+				0 AS odds,
+				0 finalodds,
+				0 finalodds2,
+				'' OddsType,
+				b.status,
+				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
+				b.stake,
+				b.actual_stake,
+				b.transdate,
+				'' AS betteam,
+				b.spositiontaking,
+				b.mpositiontaking,
+				b.apositiontaking,
+				0 spositiontaking2,
+				0 mpositiontaking2,
+				0 apositiontaking2,
+				0 AS liveindicator,
+				0 AS modds,
+				b.custid,
+				0 AS livehomescore,
+				0 AS liveawayscore,
+				0,
+				0,
+				0 AS leagueid,
+				204 AS sporttype,
+				b.ip,
+				b.betfrom,
+				0 AS matchid,
+				CONVERT(BIT, 0) AS IsNeutral,
+				0 AS allowdelete,
+				(b.winlost - b.actual_stake) winlost,
+				b.playercomm AS commission,
+				(b.scomm - b.acomm) AS scomm,
+				(b.acomm - b.comm) AS acomm,
+				(b.comm - b.playercomm) AS comm,
+				b.awinlost,
+				b.mwinlost,
+				b.swinlost,
+				'' AS showtime,
+				b.winlostdate,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
+				0 AS OddsSpread
+			FROM DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				LEFT JOIN DBARC.bodb_archive.dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+			WHERE b.custid = @Custid
+				AND s.ProductID = 15
 				AND b.refno = @refno
 
 		-- Microgaming RNG Casino, AG Casino
