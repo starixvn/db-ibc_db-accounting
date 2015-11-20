@@ -11,6 +11,7 @@
 		DB: DBACC/bodb02 
 		
 		Revisions:
+			- 20151120@Percy: Change column name (to match DW) [RedmineID: #46576]
 		
 		Parameter's Explanation:
 			- @site: 1: credit
@@ -82,7 +83,7 @@ BEGIN
 	WHERE	o.eventdate = @winlostdate and l.sporttype = @sporttype
 
 	
-	SELECT	site,
+	SELECT	[site],
 			sum((b.winlost -b.actual_stake)*b.actualrate) WinLost,
 			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) Position,
 			sum(b.scomm*b.actualrate) Commission,

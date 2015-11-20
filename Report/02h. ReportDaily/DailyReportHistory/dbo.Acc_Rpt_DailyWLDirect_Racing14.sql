@@ -12,7 +12,8 @@ SET NOCOUNT ON
 		- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
 		- 20130618@Johnson: Add NSW racing's pools from AUST
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
-		- 20150108@Dom: Apply sport bettype matrix	
+		- 20150108@Dom: Apply sport bettype matrix
+		- 20151120@Percy: Change column name (to match DW) [RedmineID: #46576]
 */
 	
 	----Get Sport Bettype Matrix------
@@ -75,10 +76,10 @@ SET NOCOUNT ON
 	WHERE m.eventdate = @winlostdate and l.sporttype between 151 and 153
 		
 	SELECT	cs.sporttype,
-			case when dep.custid is null then 1 else 2 end as site,
-			sum((b.winlost -b.actual_stake)*b.actualrate) winlost,
-			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) position,
-			sum(b.scomm*b.actualrate) commission,
+			case when dep.custid is null then 1 else 2 end as [Site],
+			sum((b.winlost -b.actual_stake)*b.actualrate) Winlost,
+			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) Position,
+			sum(b.scomm*b.actualrate) Commission,
 			-(sum((case when b.bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
 			- sum(case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when b.bettype in (31,32) then b.actual_stake*(1 - b.tpositiontaking - isnull(b.oddsspread,0) ) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
 			+ sum((case b.bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))

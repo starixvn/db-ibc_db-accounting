@@ -24,6 +24,7 @@ AS
 								- Check Tote Fee is passed to Partners or not
 			- 20110701@Johnson: change the programdate in LeagueDetail is the programdate in OutRight
 			- 20130618@Johnson: Add NSW racing's pools from AUST
+			- 20151120@Percy: Change column name (to match DW) [RedmineID: #46576]
   */
 	
 	SET NOCOUNT ON
@@ -76,10 +77,10 @@ AS
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID 
 	WHERE	o.eventdate = @winlostdate AND l.sporttype = @sporttype
   
-	SELECT	cs.MeetingID leagueid, cs.Race race,
-			sum((b.winlost -b.actual_stake)*b.actualrate) winlost,
-			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) position,
-			sum(b.scomm*b.actualrate) commission,
+	SELECT	cs.MeetingID leagueid, cs.Race Race,
+			sum((b.winlost -b.actual_stake)*b.actualrate) WinLost,
+			sum((b.awinlost + b.mwinlost + b.swinlost)*b.actualrate) Position,
+			sum(b.scomm*b.actualrate) Commission,
 			-(sum((case when bettype = 33 then bm.WLIBC else -(b.winlost -b.actual_stake)*isnull(b.oddsspread,0) end)*b.actualrate) 
 			- sum(case when cs.IBCFee = 0 then 0 else (case when b.bettype = 33 then bm.TOPhum when bettype in (31,32) then b.actual_stake*(1 - b.tpositiontaking - isnull(b.oddsspread,0) ) else 0 end)*b.actualrate*cs.ToteFee end) --FeeDue2 
 			+ sum((case bettype when 31 then b.actual_stake*cs.ToteCommWin*(1 - b.tpositiontaking - isnull(oddsspread,0))
