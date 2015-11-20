@@ -54,11 +54,7 @@ BEGIN
 		INNER JOIN @SportBettype s ON s.bettype = b.bettype
 		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
 	WHERE	b.winlostdate = @winlostdate
-<<<<<<< Updated upstream
 			AND s.ProductId IN (6, 14, 17) -- Casino, Macau, MGC-RNG
-=======
-			AND s.ProductId IN (6, 14, 17) -- Casino, Vegas Games, MGC-RNG
->>>>>>> Stashed changes
 			AND b.statusID NOT IN (102, 101,121,103)  ---('VOID', 'REJECT','done','REFUND') 
 			AND b.ruben = 1		
 	GROUP BY s.ProductId, 
