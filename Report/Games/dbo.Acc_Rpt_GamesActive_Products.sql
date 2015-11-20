@@ -30,8 +30,18 @@ UNION ALL
 SELECT
 	ProductID
 	,ProductName
+FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
+WHERE ProductID IN (17)
+UNION ALL
+SELECT
+	ProductID
+	,ProductName
 FROM dbo.Products WITH (NOLOCK)
 WHERE ProductID IN (14,15)
+
+
+
+
 
 GO
 
