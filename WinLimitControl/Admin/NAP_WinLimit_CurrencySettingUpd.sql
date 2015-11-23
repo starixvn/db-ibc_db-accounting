@@ -76,15 +76,18 @@ BEGIN
 				,@ErrMsg = ERROR_MESSAGE()
 		RETURN;
 	END CATCH
+	
+	-- Remove nested called due to no DBCUST link DB on DBPRO.
+	-- Web will call this SP manually.
 	-- Update all related Customer MaxWinLimit If new Global MaxWinLimit less than Customer MaxWinLimit.
-	EXEC DBCUST.CustDB.dbo.NAP_WinLimit_CustSettingRelatedToCurrencySettingUpd
-		@ExchangeID	= @ExchangeID,
-		@ProductID = @ProductID,
-		@MaxWinLimit = @MaxWinLimit,
-		@UserID	=@UserID,
-		@IP	= @IP,
-		@ErrCode = @ErrCode,
-		@ErrMsg	=@ErrMsg
+	--EXEC DBCUST.CustDB.dbo.NAP_WinLimit_CustSettingRelatedToCurrencySettingUpd
+	--	@ExchangeID	= @ExchangeID,
+	--	@ProductID = @ProductID,
+	--	@MaxWinLimit = @MaxWinLimit,
+	--	@UserID	=@UserID,
+	--	@IP	= @IP,
+	--	@ErrCode = @ErrCode,
+	--	@ErrMsg	=@ErrMsg
 		
 	SELECT	@EndRun = GETDATE()
 			,@Duration = DATEDIFF(millisecond, @StartRun, @EndRun)
