@@ -29,7 +29,7 @@ AS
 		Date: 2015-06-26
 		Task: #38608 - Implement function to control Player's Win Limit on specific Product
 		
-		DB: DBTXN/bodb02
+		DB: DBPRO/bodb02
 		
 		Revisions:
 		
