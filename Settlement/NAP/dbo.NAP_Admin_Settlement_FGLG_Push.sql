@@ -4,8 +4,7 @@ GO
 SET ANSI_NULLS ON 
 GO
 
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 06/10/2015 11:21:40 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 6/1/2015 11:09:24 PM ******/
+
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 5/8/2015 9:44:36 AM ******/
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 4/24/2015 1:34:30 PM ******/
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 04/09/2014 2:25:54 PM ******/
@@ -31,6 +30,7 @@ AS
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140507@Kathy: Add param @action (for bettype 1H FGLG (127)) [Redmine:#14449]
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
+		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 		
 	Param's Explanation:
@@ -66,6 +66,21 @@ BEGIN
 	BEGIN 
 		SELECT	 @ErrCode	= 1000000
 				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+		RETURN
+	END 
+	
+	-- check waiting ticket
+				EXEC NAP_Admin_Settlement_Checking
+		@MatchId = @MatchId
+		,@Action = @Action
+		,@Mode = 'CAL-FGLG'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrCode
+			,@ErrMsg
+		
 		RETURN
 	END 
 

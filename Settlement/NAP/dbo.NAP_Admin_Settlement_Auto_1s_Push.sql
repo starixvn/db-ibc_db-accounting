@@ -190,14 +190,11 @@ BEGIN
 END
 
 
-
 GO
 
 SET QUOTED_IDENTIFIER OFF 
 GO
 SET ANSI_NULLS ON 
-GO
-
 
 GO 
  GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI]

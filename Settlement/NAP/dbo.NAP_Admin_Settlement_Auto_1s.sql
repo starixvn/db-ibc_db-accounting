@@ -1,4 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Auto_1s]    Script Date: 10/19/2015 23:26:44 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s    Script Date: 10/14/2015 1:15:07 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s    Script Date: 23/09/2015 9:57:55 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s    Script Date: 9/23/2015 9:52:33 AM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
 	 @AdminID						INT				= 148		-- calculated by system (default)
 	,@MatchID						INT
 	,@ResourceIDs					VARCHAR(MAX)	= '' 
@@ -17,6 +27,7 @@ AS
 	Original: 
 	
 	Revisions:
+		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 	Param's Explanation:
@@ -34,6 +45,8 @@ BEGIN
 			,@ActionID					INT
 			,@Remark					VARCHAR(500)
 			,@LogData					NVARCHAR(300)							
+
+	CREATE TABLE #tmpTrans (transid BIGINT)
 
 	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE WHEN @Action = 'CAL'	THEN 148 
@@ -109,12 +122,24 @@ BEGIN
 		)
 
 	--===
+	INSERT INTO #tmpTrans(transid)
+	SELECT transid
+	FROM dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @MatchId 
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+			AND betdaqid = 0--bettrade tickets
+
 	INSERT INTO #BalanceBefore
 	SELECT	 b.custid
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217,901,902,903)
+			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+								AND b.refno IN (SELECT transid FROM #tmpTrans)	
+						THEN 1 
+					WHEN b.bettype NOT IN (901,902,903) THEN 1
+					ELSE 0 END
 	GROUP BY b.custid
 
 
@@ -144,7 +169,7 @@ BEGIN
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-								EXEC dbo.NAP_Admin_Settlement_Parlay
+		EXEC dbo.NAP_Admin_Settlement_Parlay
 			@matchids		= @matchid
 			,@creator		= @AdminID
 			,@ResourceIDs	= @ResourceIDs
@@ -243,7 +268,12 @@ BEGIN
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @matchid 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217,901,902,903)
+			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+									AND b.refno IN (SELECT transid FROM #tmpTrans)	
+								THEN 1 
+						WHEN b.bettype NOT IN (901,902,903) THEN 1
+						ELSE 0 END
 	GROUP BY b.custid
 
 
@@ -327,7 +357,8 @@ BEGIN
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
-
+	
+	DROP TABLE #tmpTrans
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---
 	---------------------------VVVV------------------------------

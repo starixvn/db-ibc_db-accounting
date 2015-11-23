@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 		- 20140618@Kathy: Correct 1FL, FL string
+		- 20150611@Johnson: Add bettrade [Redmine: #35921]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 		
 	Param's Explanation:
@@ -95,16 +96,29 @@ BEGIN
 			custid INT PRIMARY KEY
 			,balance MONEY
 			)
+		CREATE TABLE #tmpTrans(transid BIGINT)
 
 		DECLARE @TotalAccount INT
 			,@TotalAccount_BalanceUpdate INT
 
 		BEGIN
+			INSERT INTO #tmpTrans
+			SELECT transid
+			FROM dbo.bettrans WITH (ROWLOCK)
+			WHERE matchid = @matchid 
+				AND ((@bettype = 0 AND bettype IN (14, 127)) OR (bettype = @bettype))
+				AND betdaqid = 0--bettrade
 			INSERT INTO #BalanceBefore
 			SELECT custid
 				,SUM(winlost - actual_stake + playercomm)
 			FROM dbo.bettrans WITH (ROWLOCK)
-			WHERE matchid = @matchid AND ((@bettype = 0 AND bettype IN (14, 127)) OR (bettype = @bettype))
+			WHERE matchid = @matchid 
+				AND ((@bettype = 0 AND bettype IN (14, 127,901,902,903)) OR (bettype IN(@bettype,901,902,903)))
+				AND 1 = CASE WHEN bettype IN (901,902,903) 
+								AND refno IN (SELECT transid FROM #tmpTrans)	
+								THEN 1 
+							WHEN bettype NOT IN (901,902,903) THEN 1
+							ELSE 0 END
 			GROUP BY custid
 
 			SET @TotalAccount = @@ROWCOUNT
@@ -165,7 +179,7 @@ BEGIN
 
 	SELECT @betstatus = @betstatus2 + @betstatus1
 
-	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Refund_FGLG'
+								EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_Refund_FGLG'
 		,@MatchID = @matchid
 		,@BetStatus = @betstatus
 
@@ -191,7 +205,13 @@ BEGIN
 			SELECT custid
 				,SUM(winlost - actual_stake + playercomm)
 			FROM dbo.bettrans WITH (ROWLOCK)
-			WHERE matchid = @matchid AND ((@bettype = 0 AND bettype IN (14, 127)) OR (bettype = @bettype))
+			WHERE matchid = @matchid 
+				AND ((@bettype = 0 AND bettype IN (14, 127,901,902,903)) OR (bettype IN (@bettype,901,902,903)))
+				AND 1 = CASE WHEN bettype IN (901,902,903) 
+								AND refno IN (SELECT transid FROM #tmpTrans)	
+								THEN 1 
+							WHEN bettype NOT IN (901,902,903) THEN 1
+							ELSE 0 END
 			GROUP BY custid
 		END --IF @SkipBalanceUpdate = 0
 
@@ -290,6 +310,8 @@ BEGIN
 		DROP TABLE #BalanceBefore
 
 		DROP TABLE #BalanceAfter
+		
+		DROP TABLE #tmpTrans
 	END
 
 	DECLARE @LogData NVARCHAR(200)
@@ -393,7 +415,6 @@ BEGIN
 		END
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_FGLG] TO [bodbAdminNet] AS [dbo]
 GO
