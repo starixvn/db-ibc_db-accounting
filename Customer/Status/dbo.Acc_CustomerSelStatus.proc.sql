@@ -244,7 +244,7 @@ Param's Explanation:
 			cps.bitmapIsHidden,
 		ci.DisableMicrogameLC,
 		ci.DisableSuperLive,
-		ci.DisableMicrogameRNG
+			ci.DisableMicrogameRNG
 	
 END
 
