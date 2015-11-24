@@ -41,6 +41,7 @@ AS
 		- 20141017@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
+		- 20151123@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 
 	Param's Explanation:
 		
@@ -119,8 +120,18 @@ BEGIN
 
 				UPDATE b
 				SET @modds = modds = CASE
-					WHEN b.betteam NOT IN ('0:4', '4:0') AND @bettype = 30 AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1) ) THEN -1			
-					WHEN b.betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1) ) THEN -1			
+					WHEN b.betteam NOT IN ('0:4', '4:0', 'AOS')
+						AND @bettype = 30
+						AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1)) THEN -1
+					WHEN b.betteam = 'AOS' --Any Other Scores
+						AND (@hth >= 4 OR @hta >= 4)
+						AND @bettype = 30 THEN 1
+					WHEN b.betteam NOT IN ('0:5', '5:0', 'AOS')
+						AND @bettype = 4 
+						AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1) ) THEN -1
+					WHEN b.betteam = 'AOS' --Any Other Scores
+						AND (@fth >= 4 OR @fta >= 4)
+						AND @bettype = 4 THEN 1
 					ELSE NULL
 					END,			
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -255,6 +266,12 @@ BEGIN
 					WHEN betteam = '0:4' AND @goaldiff <=  -4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '5:0' AND @goaldiff >=  5 THEN 1
 					WHEN betteam = '0:5' AND @goaldiff <= -5 THEN 1
+					WHEN betteam = 'AOS' --Any Other Scores 
+						AND ((@hth IS NOT NULL AND @hth >= 4) OR (@hta IS NOT NULL AND @hta >= 4))
+						AND @bettype = 30 THEN 1
+					WHEN betteam = 'AOS' --Any Other Scores
+						AND ((@fth IS NOT NULL AND @fth >= 5) OR (@fta IS NOT NULL AND @fta >= 5))
+						AND @bettype = 4 THEN 1
 					ELSE -1
 					END,
 			
@@ -364,9 +381,19 @@ BEGIN
 		BEGIN
 			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 			SET @modds = modds = CASE 
-					WHEN betteam NOT IN ('0:4', '4:0') AND @bettype = 30 AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) THEN -1			
-					WHEN betteam NOT IN ('0:5', '5:0') AND @bettype = 4 AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN -1			
-					ELSE NULL 
+					WHEN betteam NOT IN ('0:4', '4:0', 'AOS') 
+						AND @bettype = 30 
+						AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) THEN -1
+					WHEN betteam NOT IN ('0:5', '5:0', 'AOS') 
+						AND @bettype = 4 
+						AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN -1
+					WHEN betteam = 'AOS' --Any Other Scores
+						AND @bettype = 30 
+						AND (@hth >= 4 OR @hta >= 4) THEN 1
+					WHEN betteam = 'AOS' --Any Other Scores
+						AND @bettype = 4 
+						AND (@hth >= 5 OR @hta >= 5) THEN 1
+					ELSE NULL
 					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
@@ -480,6 +507,12 @@ BEGIN
 					WHEN betteam = '0:4' AND @goaldiff <= - 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '5:0' AND @goaldiff >= 5 THEN 1
 					WHEN betteam = '0:5' AND @goaldiff <= - 5 THEN 1
+					WHEN betteam = 'AOS' --Any Other Scores 
+						AND ((@hth IS NOT NULL AND @hth >= 4) OR (@hta IS NOT NULL AND @hta >= 4))
+						AND @bettype = 30 THEN 1
+					WHEN betteam = 'AOS' --Any Other Scores
+						AND ((@fth IS NOT NULL AND @fth >= 5) OR (@fta IS NOT NULL AND @fta >= 5))
+						AND @bettype = 4 THEN 1
 					ELSE - 1
 					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
