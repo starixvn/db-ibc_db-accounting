@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Admin_3rdCalculate_s151_Reject_Admin]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Admin_3rdCalculate_s151_Reject_Admin]    Script Date: 08/07/2015 14:57:12 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Admin_3rdCalculate_s151_Reject_Admin    Script Date: 3/1/2013 4:00:56 AM ******/
+/****** Object:  Stored Procedure dbo.Admin_3rdCalculate_s151_Reject_Admin    Script Date: 2/22/2013 5:35:49 PM ******/
+ALTER PROCEDURE [dbo].[Admin_3rdCalculate_s151_Reject_Admin]
 	@LeagueID int,
 	@raceNumber tinyint,
     @EventDate smalldatetime
@@ -13,6 +22,7 @@ Revisions:
    - 20120430@AllenWu: Apply new credit balance procedure
    - 20120717@Cooper: add try catch 
    - 20130121@Elodie: Change link server DB02 to DBPRO
+   - 20150807@Kathy: Using new balance table (BalCreditOthersPending) [Redmine:#40125]
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -97,6 +107,9 @@ CREATE TABLE #BalanceAfter (custid int PRIMARY KEY, balance money)
 ---------------------------VVVV------------------------------
 CREATE TABLE #Balance (custid int not null, balance money, Increased bit not null)
 ALTER TABLE #Balance add constraint pk_C2 primary key (custid, Increased);
+
+DECLARE @tblCreditPending TVP_BalanceList
+
 CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
  
 INSERT INTO #Balance
@@ -108,10 +121,20 @@ WHERE b.balance <> a.balance
 
 select @TotalAccount_BalanceUpdate = count(distinct custid) from #Balance
  
-INSERT INTO dbo.BalancePendingCredit (custid, balance)
-SELECT custid, balance
-FROM #Balance
-WHERE Increased = 1    
+--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+--SELECT custid, balance
+--FROM #Balance
+--WHERE Increased = 1    
+
+INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+IF @@rowcount <> 0
+	EXEC dbo.Dot_BalancePendingCreditIns 
+		@BalancePending = @tblCreditPending
+		,@Type			= 4 -- Others
 
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
@@ -143,3 +166,11 @@ END CATCH
 
 END
 
+GO
+GRANT EXECUTE ON [dbo].[Admin_3rdCalculate_s151_Reject_Admin] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Admin_3rdCalculate_s151_Reject_Admin] TO [Dot_3rdparty] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Admin_3rdCalculate_s151_Reject_Admin] TO [Dot_Admin] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Admin_3rdCalculate_s151_Reject_Admin] TO [vnteam] AS [dbo]

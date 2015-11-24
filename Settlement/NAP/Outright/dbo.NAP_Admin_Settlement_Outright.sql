@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Outright]    Script Date: 09/21/2014 22:46:57 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Outright]    Script Date: 08/07/2015 09:48:27 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -24,7 +24,8 @@ AS
 	Original: Dot_Admin_SettleOutright_Event & Dot_Admin_SettleOutright_Trans
 	
 	Revision: 
-
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		
 	Param's Explanation:
 		+ @Action	= CAL | UNDO | REFUND
 		+ @Status	= {WON | LOSE} | UNDO | REFUND 
@@ -156,7 +157,10 @@ BEGIN
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid int not null , balance money, Increased bit not null , PRIMARY KEY CLUSTERED(custid, Increased))
- 
+	
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+	
 	INSERT INTO #Balance
 	SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
 	FROM #BalanceBefore b
@@ -165,16 +169,33 @@ BEGIN
  
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
  
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
  
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
- 
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----
@@ -274,5 +295,6 @@ BEGIN
 			,@Remark = @Remark
 	END CATCH		
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Outright] TO [bodbAdminNet] AS [dbo]

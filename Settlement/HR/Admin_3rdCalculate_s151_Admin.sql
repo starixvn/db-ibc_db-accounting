@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Admin_3rdCalculate_s151_Admin]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Admin_3rdCalculate_s151_Admin]    Script Date: 08/07/2015 14:41:39 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Admin_3rdCalculate_s151_Admin    Script Date: 3/1/2013 4:00:54 AM ******/
+/****** Object:  Stored Procedure dbo.Admin_3rdCalculate_s151_Admin    Script Date: 2/22/2013 5:35:48 PM ******/
+ALTER PROCEDURE [dbo].[Admin_3rdCalculate_s151_Admin]
     @LeagueID int, --settle leagueid
     @raceNumber tinyint, -- settle race no
     @EventDate smalldatetime
@@ -9,6 +18,7 @@ AS
     -- 20120713@victor:	remove IF EXISTS(SELECT orid FROM @Horse)
 	-- 20120717@Cooper: add try catch 
     -- 20130121@Elodie: Change link server DB02 to DBPRO
+    -- 20150807@Kathy: Using new balance table (BalCreditOthersPending,BalDebitOthersPending) [Redmine:#40125]
     
     DECLARE @Horse TABLE (orid int, placing tinyint, WinOdds smallmoney, PlaceOdds smallmoney, IsSCR bit)
     DECLARE @DeadHeat TABLE (placing tinyint)
@@ -375,6 +385,10 @@ CREATE TABLE #BalanceAfter (custid int PRIMARY KEY , balance money)
 ---------------------------VVVV------------------------------
 CREATE TABLE #Balance (custid int not null, balance money, Increased bit not null)
 ALTER TABLE #Balance add constraint pk_C2 primary key (custid, Increased);
+
+DECLARE @tblDebitPending TVP_BalanceList
+DECLARE @tblCreditPending TVP_BalanceList
+	
 CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
  
 
@@ -384,15 +398,35 @@ FROM #BalanceBefore b
         INNER JOIN #BalanceAfter a ON b.custid = a.custid
 WHERE b.balance <> a.balance
 
-INSERT INTO dbo.BalancePendingDebit (custid, balance)
-SELECT custid, ABS(balance)
-FROM #Balance
-WHERE Increased = 0
+--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+--SELECT custid, ABS(balance)
+--FROM #Balance
+--WHERE Increased = 0
+
+INSERT INTO @tblDebitPending (custID, balance)
+SELECT	custid, ABS(balance)
+FROM	#Balance
+WHERE	Increased = 0
+
+IF @@rowcount <> 0
+	EXEC dbo.Dot_BalancePendingDebitIns 
+		@BalancePending = @tblDebitPending
+		,@Type			= 4 -- Others
  
-INSERT INTO dbo.BalancePendingCredit (custid, balance)
-SELECT custid, balance
-FROM #Balance
-WHERE Increased = 1   
+--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+--SELECT custid, balance
+--FROM #Balance
+--WHERE Increased = 1   
+
+INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+IF @@rowcount <> 0
+	EXEC dbo.Dot_BalancePendingCreditIns 
+		@BalancePending = @tblCreditPending
+		,@Type			= 4 -- Others
  
 DROP TABLE #Balance
 DROP TABLE #BalanceBefore
@@ -409,3 +443,11 @@ BEGIN CATCH
 			EXEC dbo.WriteLog_UserLog 151, @LogData
 END CATCH
 
+GO
+GRANT EXECUTE ON [dbo].[Admin_3rdCalculate_s151_Admin] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Admin_3rdCalculate_s151_Admin] TO [Dot_3rdparty] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Admin_3rdCalculate_s151_Admin] TO [Dot_Admin] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Admin_3rdCalculate_s151_Admin] TO [vnteam] AS [dbo]

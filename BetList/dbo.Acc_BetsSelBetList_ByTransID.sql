@@ -64,6 +64,7 @@ AS
 		- 20150805@Bobby: remove checking product when selecting ticket's eventtype = 1 from bettrans_bk
 		- 20150825@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
+		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 */
 BEGIN
 
@@ -1502,9 +1503,9 @@ BEGIN
 					'' AS eventdate,
 					0 AS virtualrate,
 					0 AS isShowOTExRate,
-					sdiscount,
-					adiscount,
-					discount,
+					b.sdiscount,
+					b.adiscount,
+					b.discount,
 					0 AS homeid,
 					0 AS awayid,
 					'' settleTime,
@@ -1550,11 +1551,12 @@ BEGIN
 					b.swinlost,
 					'' AS showtime,
 					b.winlostdate,
-					b.BetCheck,
-					b.transdesc,
+					ISNULL(bm.betcheck, '') AS BetCheck,
+					'' AS transdesc,
 					0 AS OddsSpread
 				FROM dbo.bettrans AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+					LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 				WHERE
 					b.custid = @Custid
 					AND s.ProductID = 15
@@ -1619,7 +1621,7 @@ BEGIN
 					0,
 					'' AS showtime,
 					b.winlostdate,
-					b.GameID3rd AS BetCheck,
+					b.Tranid3rd AS BetCheck,
 					b.transdesc,
 					0 AS OddsSpread
 				FROM dbo.translog AS b WITH (NOLOCK)
@@ -2487,9 +2489,9 @@ BEGIN
 				'' AS eventdate,
 				0 AS virtualrate,
 				0 AS isShowOTExRate,
-				sdiscount,
-				adiscount,
-				discount,
+				b.sdiscount,
+				b.adiscount,
+				b.discount,
 				0 AS homeid,
 				0 AS awayid,
 				'' settleTime,
@@ -2535,11 +2537,12 @@ BEGIN
 				b.swinlost,
 				'' AS showtime,
 				b.winlostdate ,
-				b.BetCheck,
-				b.transdesc,
+				ISNULL(bm.betcheck, '') AS BetCheck,
+				'' AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
+				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 			WHERE b.custid = @Custid
 				AND s.ProductID = 15
 				AND b.refno = @refno
@@ -3403,9 +3406,9 @@ BEGIN
 					'' AS eventdate,
 					0 AS virtualrate,
 					0 AS isShowOTExRate,
-					sdiscount,
-					adiscount,
-					discount,
+					b.sdiscount,
+					b.adiscount,
+					b.discount,
 					0 AS homeid,
 					0 AS awayid,
 					'' settleTime,
@@ -3451,11 +3454,12 @@ BEGIN
 					b.swinlost,
 					'' AS showtime,
 					b.winlostdate,
-					b.BetCheck,
-					b.transdesc,
+					ISNULL(bm.betcheck, '') AS BetCheck,
+					'' AS transdesc,
 					0 AS OddsSpread
 				FROM DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+					LEFT JOIN DBARC.bodb_archive.dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 				WHERE b.custid = @Custid
 					AND s.ProductID = 15
 					AND b.refno = @refno
