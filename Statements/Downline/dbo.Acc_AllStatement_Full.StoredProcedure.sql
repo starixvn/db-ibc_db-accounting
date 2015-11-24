@@ -12,7 +12,7 @@
 	Created by: Henry
 	Date: 2009 Oct 16
 	Task: Get Statement report
-	DB: DBEXT/BODB02 , DBACC/BODB02
+	DB: DBACC/BODB02
 	
 	Revisions:
 		- 20091016@Henry: Create New (Copy logic FROM Acc_AllStatement)
@@ -297,7 +297,7 @@ BEGIN
 			,'' checkerName
 			,NULL checkTime
 			,0 isAllowVeify
-		FROM DBACC.bodb02.dbo.PayoutTrans WITH(NOLOCK) 
+		FROM dbo.PayoutTrans WITH(NOLOCK) 
 		WHERE	winlostdate BETWEEN @Fromdate AND @todate
 				AND custid = @custid 	 		
 		GROUP BY refno, winlostdate, custid
