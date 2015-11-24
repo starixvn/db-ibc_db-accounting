@@ -13,19 +13,45 @@ AS
 	DB: DBAGE.bodb02
 	Original: 
 	
-	Revisions: 
+	Revisions:
+		- 20151022@Kos: Return more columns to support more detail 
 */
 
 BEGIN
 	SET NOCOUNT ON
 
+	DECLARE @Data TABLE (
+		TransId		BIGINT,
+		TransDate	DATETIME,
+		BetType		INT,
+		Sold		SMALLMONEY,
+		WinLost		MONEY,
+		StatusId	TINYINT,
+		Status		NVARCHAR(10),
+		SDiscount	SMALLMONEY,
+		ADiscount	SMALLMONEY,
+		Discount	SMALLMONEY,
+		SComm		MONEY,
+		AComm		MONEY,
+		Comm		MONEY,
+		OddsSpread	MONEY
+	)
+
+	INSERT INTO @Data
 	SELECT transid, 
 		transdate,
 		bettype,
 		hdp1 AS Sold, 
 		(winlost - stake) AS WinLost,
 		statusid,
-		status
+		status,
+		sdiscount,
+		adiscount,
+		discount,
+		(scomm - acomm) AS SComm,
+		(acomm - comm) AS AComm,
+		comm,
+		ISNULL(oddsspread, 0) AS OddsSpread
 	FROM bettransm WITH (NOLOCK)
 	WHERE refno = @RefNo AND custid = @CustId
 
@@ -37,7 +63,14 @@ BEGIN
 		hdp1 AS Sold, 
 		(winlost - stake) AS WinLost,
 		statusid,
-		status
+		status,
+		sdiscount,
+		adiscount,
+		discount,
+		(scomm - acomm) AS SComm,
+		(acomm - comm) AS AComm,
+		comm,
+		ISNULL(oddsspread, 0) AS OddsSpread
 	FROM bettransm14 WITH (NOLOCK)
 	WHERE refno = @RefNo
 	
@@ -49,10 +82,18 @@ BEGIN
 		hdp1 AS Sold, 
 		(winlost - stake) AS WinLost,
 		statusid,
-		status
+		status,
+		sdiscount,
+		adiscount,
+		discount,
+		(scomm - acomm) AS SComm,
+		(acomm - comm) AS AComm,
+		comm,
+		ISNULL(oddsspread, 0) AS OddsSpread
 	FROM DBARC.bodb_archive.dbo.bettransm WITH (NOLOCK)
 	WHERE refno = @RefNo
 
+	SELECT * FROM @Data
 END
 
 GO
