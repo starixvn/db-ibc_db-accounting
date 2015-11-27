@@ -1,6 +1,5 @@
-USE bodb02
-GO
-ALTER PROCEDURE dbo.Acc_Rpt_CompanyWinloss @FromDate SMALLDATETIME
+ALTER PROCEDURE dbo.Acc_Rpt_CompanyWinloss
+	  @FromDate SMALLDATETIME
 	, @ToDate SMALLDATETIME
 	, @LicenseeId INT
 	, @CurrencyId TINYINT = 0
@@ -19,6 +18,8 @@ AS
 		
 	Revisions:
 		- 20150630@Patrick: Remove the UUS line
+		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+
 */
 
 BEGIN
@@ -134,6 +135,28 @@ BEGIN
 	   VALUES(1900)
 
     END
+	ELSE IF @ProductPrefix = 'MGCLC'
+    BEGIN
+	   INSERT INTO @SportTypeList(SportType, IsBA)
+	   VALUES(203, 0)
+
+	   INSERT INTO @BetTypeList(BetType)
+	   SELECT typeid
+	   FROM bodb02.dbo.bettype WITH (NOLOCK)
+	   WHERE typeid BETWEEN 2001 AND 2007
+
+    END
+	ELSE IF @ProductPrefix = 'MGCRNG'
+    BEGIN
+	   INSERT INTO @SportTypeList(SportType, IsBA)
+	   VALUES(205, 0)
+
+	   INSERT INTO @BetTypeList(BetType)
+	   SELECT typeid
+	   FROM bodb02.dbo.bettype WITH (NOLOCK)
+	   WHERE typeid BETWEEN 2008 AND 2009
+
+    END
 	
 	INSERT INTO @Super(custid, currency)
 	SELECT DISTINCT CustID, currency
@@ -168,7 +191,7 @@ BEGIN
 				AND b.apositiontaking = 0
 			GROUP BY b.srecommend
 		END
-		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG')
+		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG')
 		BEGIN
 			INSERT INTO @SAgWinLoss(CustId, CompanyWL)
 			SELECT b.srecommend

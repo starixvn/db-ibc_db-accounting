@@ -4,10 +4,10 @@ GO
 SET ANSI_NULLS ON 
 GO
 
-/****** Object:  Stored Procedure dbo.Acc_Rpt_WinlostSummary_Sporttype    Script Date: 10/21/2015 10:51:12 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_Rpt_WinlostSummary_Sporttype    Script Date: 11/16/2015 5:15:59 PM ******/
 
  
-CREATE  PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
+ALTER  PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
     @fromdate    DATETIME,
     @todate        DATETIME    
 AS
@@ -27,6 +27,8 @@ AS
 			- 20150828@Jim: support Colossus Bet (#42608)
 			- 20150921@Jim: support MO (#41935)
 			- 20151020@Sophia: Fix bug missing Outright data [#30661]
+			- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+			
         Parameter's Explanation:
     */
 BEGIN
@@ -34,7 +36,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),SortKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType ,SubProduct )
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode=5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xpre  @mode=5
 	UPDATE @SportBettype
 	SET liveindicator =0
 	
@@ -411,7 +413,7 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=12
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
-	-- Micro Gaming
+	-- Micro Gaming LC
 		UNION ALL
         SELECT 203 sporttype
             ,b.bettype
@@ -432,6 +434,28 @@ BEGIN
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=13
+        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
+	-- Micro Gaming RNG
+		UNION ALL
+        SELECT 205 sporttype
+            ,b.bettype
+            ,b.liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,10 as OrderKey	
+			,17 as SortKey
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=17
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
 	--- AG Casino
 		UNION ALL

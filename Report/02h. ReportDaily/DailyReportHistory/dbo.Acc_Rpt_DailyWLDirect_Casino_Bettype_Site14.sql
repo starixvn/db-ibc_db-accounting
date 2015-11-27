@@ -1,4 +1,4 @@
-﻿﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14]
 		@winlostdate DATETIME
 		,@ProductId TINYINT
 		,@site TINYINT
@@ -14,6 +14,7 @@ AS
 			- 20130906@Johnson: get virtual values by virtual rate instead of actual rate			
 			- 20150703@Sophia: Apply Microgaming and SuperBalance [#38168]
 			- 20150806@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
+			- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 
 		Parameter's Explanation:
 			- @site: 1: credit
@@ -59,12 +60,7 @@ BEGIN
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE	b.winlostdate = @winlostdate
 			AND s.ProductId = @ProductId
-			AND (
-					s.ProductId = 6 -- Casino
-					OR s.ProductId = 14  --- Vegas Games
-					OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino	
-				) 
-
+			AND s.ProductId IN (6, 14, 17) -- Casino, Macau, MGC-RNG
 			--AND b.bettype IN(71, 72)								--20120405@Hurri
 			--AND b.matchid IN (0, 71)
 			--AND b.status NOT IN ('VOID', 'REJECT','done','REFUND') 
@@ -76,5 +72,9 @@ BEGIN
 	DROP TABLE #DepAgent
 END
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino_Bettype_Site14] TO [bodbAdminNet] AS [dbo]
+GO

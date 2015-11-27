@@ -1,6 +1,4 @@
-﻿USE [bodb02]
-GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@mrecommend INT,
@@ -15,7 +13,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByMAg]
 	@showKeno BIT=0,
 	@ShowGD BIT = 0, -- Show GoldDeluxe
 	@ShowMGSL BIT = 0, -- Show Metric Gaming
-	@showMGC BIT=0, --Micro Gaming
+	@showMGCLC BIT=0, -- MGC
+	@showMGCRnG BIT=0, -- RNG
 	@showVG BIT=0, --Vegas Games
 	@showAGCS BIT=0, --AG Casino
 	@showCB	 BIT=0
@@ -40,6 +39,8 @@ Revisions:
 	- 20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)	
 	- 20150723@Jim: Apply Bettrade [#38815]			
 	- 20150828@Jim: support Colossus Bet (#42608)
+	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+
 */  
 
 SET NOCOUNT ON
@@ -123,11 +124,18 @@ IF @ShowMGSL =1
 	FROM @SportBettype   
 	WHERE ProductID = 1
 		AND SubProduct= 'MG-SuperLive'	 
-IF @showMGC =1  --Micro Gaming
+
+IF @showMGCLC =1  -- MGC-LC
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
 	SELECT Bettype, 0   
 	FROM @SportBettype   
 	WHERE ProductID = 13
+
+IF @showMGCRnG =1  -- MGC-RNG
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 17
 
 IF @showVG =1  --- VegasGame aka Macau
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
@@ -372,7 +380,12 @@ DROP TABLE #TmpResultAll
 	@showBI =1,  
 	@showVS = 1
 */
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByMAg] TO [bodbAdminNet]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByMAg] TO [vnteam]
+
+
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByMAg] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByMAg] TO [vnteam] AS [dbo]
+GO

@@ -1,7 +1,4 @@
-﻿USE [bodb02]
-GO
- 
-ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
 	@WinLost_BARM		 money = 0 OUTPUT,
@@ -29,7 +26,8 @@ AS
 			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
 			- 20150723@Sophia: Apply Bettrade [#38815]
 			- 20150827@Sophia: Apply Colossus Bets [#41935]
-			- 20150917@Jim: Integrate MO product (Feature #41935)
+			- 20150917@Jim: Integrate MO product [RedmineID: #41935]
+			- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -478,7 +476,7 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 12	
 
-		-- Microgaming
+		-- Microgaming Live Casino
 	UNION ALL
 	SELECT	120 Num,
 			@winlostdate winlostdate,
@@ -489,10 +487,27 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'Microgaming' as bettype
+			'Microgaming - Live Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 13	
+
+		-- Microgaming RNG Casino
+	UNION ALL
+	SELECT	121 Num,
+			@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			0 as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			0 as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Microgaming - RNG Casino' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductID = 17	
+
 
 		-- AG Casino
 	UNION ALL
@@ -897,7 +912,7 @@ BEGIN
 	WHERE	s.ProductId = 12		
 	GROUP BY b.bettype,s.orderkey				
 				
-	    -- Microgaming
+	    -- Microgaming Live Casino
 	UNION ALL
 	SELECT	72 Num,
 			b.bettype,
@@ -916,10 +931,31 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 13		
 	GROUP BY b.bettype,s.orderkey
+
+		-- Microgaming RNG Casino
+	UNION ALL
+	SELECT	73 Num,
+			b.bettype,
+			s.orderkey,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			0 as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductId = 17		
+	GROUP BY b.bettype,s.orderkey
+
 		
 	   -- AG Casino
 	UNION ALL
-	SELECT	73 Num,
+	SELECT	74 Num,
 			b.bettype,
 			s.orderkey,
 			'' Hedge,	
@@ -1129,9 +1165,11 @@ BEGIN
 	DROP TABLE #tmpReturn
 END
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam]
 
+GO
 
+GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam] AS [dbo]
+GO

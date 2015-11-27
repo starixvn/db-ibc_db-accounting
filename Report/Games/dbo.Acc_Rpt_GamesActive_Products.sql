@@ -1,10 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_GamesActive_Products]    Script Date: 09/08/2015 14:48:15 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER  PROCEDURE [dbo].[Acc_Rpt_GamesActive_Products]   
  
 AS  
@@ -15,19 +8,75 @@ AS
  Original:  
   
  Revisions:
+	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+
 */
+SELECT
+	CONVERT(INT,-1) ProductID
+	,'MG-SuperLive' ProductName
+UNION ALL
 SELECT
 	ProductID
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,4,11,12,13,14,15)
+WHERE ProductID IN (3,6,7,4,11,12,13)
 UNION ALL
 SELECT
-	CONVERT(INT,-1) ProductID
-	,'MG-SuperLive' ProductName
-ORDER BY ProductID ASC
- 
- GO
-GRANT EXECUTE ON [dbo].Acc_Rpt_GamesActive_Products  TO [bodbAdminNet]  
+	ProductID
+	,ProductName
+FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
+WHERE ProductID IN (17)
+UNION ALL
+SELECT
+	ProductID
+	,ProductName
+FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
+WHERE ProductID IN (17)
+UNION ALL
+SELECT
+	ProductID
+	,ProductName
+FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
+WHERE ProductID IN (17)
+UNION ALL
+SELECT
+	ProductID
+	,ProductName
+FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
+WHERE ProductID IN (17)
+UNION ALL
+SELECT
+	ProductID
+	,ProductName
+FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
+WHERE ProductID IN (17)
+UNION ALL
+SELECT
+	ProductID
+	,ProductName
+FROM dbo.Products WITH (NOLOCK)
+WHERE ProductID IN (14,15)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 GO
-GRANT VIEW DEFINITION ON [dbo].Acc_Rpt_GamesActive_Products  TO [vnteam]  
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_GamesActive_Products] TO [vnteam] AS [dbo]
+GO

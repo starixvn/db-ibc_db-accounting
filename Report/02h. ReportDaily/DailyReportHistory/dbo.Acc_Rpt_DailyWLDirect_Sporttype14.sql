@@ -69,6 +69,7 @@ AS
 		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 		- 20150828@Sophia: Apply Colossus Bets [#41935]
 		- 20150917@Jim: Integrate MO product (Feature #41935)
+		- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
 		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -416,7 +417,7 @@ BEGIN
 			0 EnableVirtual
 	FROM @RBWinlost
 
-	---Live Casino + Gold Deluxe + AG Casino + Microgaming exclude RNG Casino
+	---Live Casino + Gold Deluxe + AG Casino + Microgaming live casino
 	UNION ALL
 	SELECT
 			102,'Live Casino',
@@ -433,8 +434,7 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	(s.ProductId IN (4,12,11))    -----SLI, Gold Deluxe, AG Casino
-			OR (s.ProductId = 13 AND SubProduct <> 'MGC-RNG') --- Microgaming exclude RNG Casino
+	WHERE	(s.ProductId IN (4,12,11,13))    -----SLI, Gold Deluxe, AG Casino, Microgaming live casino		
 	GROUP BY site
 
 	----VIRTUAL SPORT
@@ -468,9 +468,8 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71))
-			OR (s.ProductId = 14)  --- Vegas Games
-			OR (s.ProductId = 13 AND SubProduct = 'MGC-RNG')-- Microgaming - RNG Casino
+	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71)) --SLI
+			OR s.ProductId IN (14, 17)  --- Vegas Games, Microgaming - RNG Casino			
 	GROUP BY site
 
 	--P2P 
@@ -630,7 +629,12 @@ END
 
 
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam] AS [dbo]
+GO
