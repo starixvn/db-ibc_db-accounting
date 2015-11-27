@@ -14,8 +14,8 @@ AS
 SET NOCOUNT ON     
 
 	SELECT  
-		r.leagueid,  
-		r.EventTime race,
+		r.LeagueID,  
+		r.EventTime Race,
 		sum((winlost-actual_stake)*actualrate) WinLost,  
 		sum((awinlost+mwinlost+swinlost)*actualrate) Position,  
 		sum(scomm*actualrate) Commission,  
