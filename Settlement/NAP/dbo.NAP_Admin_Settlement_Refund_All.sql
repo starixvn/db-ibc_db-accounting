@@ -7,7 +7,7 @@ GO
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_All    Script Date: 06/10/2015 11:21:39 AM ******/
 
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_All    Script Date: 05/10/2015 6:21:02 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All] 
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All] 
      @matchid							INT
     ,@creator							INT
     ,@IsExcludeBetdaq					BIT             = 0

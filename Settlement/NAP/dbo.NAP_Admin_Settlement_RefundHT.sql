@@ -1,9 +1,8 @@
 
-SET ANSI_NULLS ON 
+USE bodb02
 GO
-SET QUOTED_IDENTIFIER ON
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundHT    Script Date: 05/10/2015 6:21:02 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
+
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
     ,@adminid INT
     ,@IsExcludeBetdaq BIT = 0
     ,@IsSettleAbandonedMatch BIT = 0

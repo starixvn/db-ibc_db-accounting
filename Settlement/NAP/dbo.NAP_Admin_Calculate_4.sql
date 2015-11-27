@@ -280,7 +280,7 @@ BEGIN
 						AND @bettype = 4 THEN 1
 					WHEN b.betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND (@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
 					ELSE -1
 					END,
 			
@@ -402,10 +402,10 @@ BEGIN
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 4 
 						AND (@hth >= 5 OR @hta >= 5) THEN 1
-					WHEN b.betteam NOT IN ('AOS')
+					WHEN betteam NOT IN ('AOS')
 						AND @bettype = 405 --2H Correct Score
-						AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1) ) THEN -1
-					WHEN b.betteam = 'AOS' --Any Other Scores
+						AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN -1
+					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405
 						AND (@fth >= 5 OR @fta >= 5 OR (@fth = 4 AND @fta = 3) OR (@fth = 3 AND @fta = 4)) THEN 1
 					ELSE NULL
@@ -528,7 +528,7 @@ BEGIN
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND (@fth >= 5 OR @fta >= 5)
 						AND @bettype = 4 THEN 1
-					WHEN b.betteam = 'AOS' --Any Other Scores
+					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405
 						AND (@fth >= 5 OR @fta >= 5 OR (@fth = 4 AND @fta = 3) OR (@fth = 3 AND @fta = 4)) THEN 1
 					ELSE - 1

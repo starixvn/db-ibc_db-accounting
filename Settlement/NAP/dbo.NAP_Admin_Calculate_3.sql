@@ -440,9 +440,9 @@ BEGIN
                     WHEN betteam = 'a1' AND @scorediff =-1 THEN 1 
                     WHEN betteam = 'a2' AND @scorediff =-2 THEN 1 
                     WHEN betteam = 'a3' AND @scorediff<=-3 THEN 1
-					WHEN b.betteam = '1x' AND @scorediff >=0 THEN 1
-					WHEN b.betteam = '12' AND @scorediff <> 0 THEN 1
-					WHEN b.betteam = '2x' AND @scorediff <= 0 THEN 1					
+					WHEN betteam = '1x' AND @scorediff >= 0 THEN 1
+					WHEN betteam = '12' AND @scorediff <> 0 THEN 1
+					WHEN betteam = '2x' AND @scorediff <= 0 THEN 1					
                     ELSE - 1                    
                     END
                 ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost

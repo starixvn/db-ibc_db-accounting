@@ -1242,28 +1242,29 @@ BEGIN
 						END
 				WHEN 401 THEN --Home Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @fth - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @fth
-						ELSE -1
+						WHEN betteam = 'o' THEN @fth - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @fth
+						ELSE -1 END
 				WHEN 402 THEN --Away Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @fta - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @fta
-						ELSE -1
+						WHEN betteam = 'o' THEN @fta - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @fta
+						ELSE -1 END
 				WHEN 403 THEN --1H Home Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @hth - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @hth
-						ELSE -1
+						WHEN betteam = 'o' THEN @hth - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @hth
+						ELSE -1 END
 				WHEN 404 THEN --1H Away Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @hta - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @hta
-						ELSE -1
+						WHEN betteam = 'o' THEN @hta - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @hta
+						ELSE -1 END
 				WHEN 405 THEN --2H Correct Score
 					CASE
-						WHEN b.betteam = 'AOS' --Any Other Scores
-							AND (@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						WHEN betteam = 'AOS' --Any Other Scores
+							AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
 						WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
@@ -2187,28 +2188,29 @@ BEGIN
 						END
 				WHEN 401 THEN --Home Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @fth - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @fth
-						ELSE -1
+						WHEN betteam = 'o' THEN @fth - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @fth
+						ELSE -1 END
 				WHEN 402 THEN --Away Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @fta - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @fta
-						ELSE -1
+						WHEN betteam = 'o' THEN @fta - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @fta
+						ELSE -1 END
 				WHEN 403 THEN --1H Home Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @hth - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @hth
-						ELSE -1
+						WHEN betteam = 'o' THEN @hth - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @hth
+						ELSE -1 END
 				WHEN 404 THEN --1H Away Team Over/Under
 					CASE
-						WHEN b.betteam = 'o' THEN @hta - hdp1
-						WHEN b.betteam = 'u' THEN hdp1 - @hta
-						ELSE -1
+						WHEN betteam = 'o' THEN @hta - hdp1
+						WHEN betteam = 'u' THEN hdp1 - @hta
+						ELSE -1 END
 				WHEN 405 THEN --2H Correct Score
 					CASE
-						WHEN b.betteam = 'AOS' --Any Other Scores
-							AND (@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						WHEN betteam = 'AOS' --Any Other Scores
+							AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
 						WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
