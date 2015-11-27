@@ -216,7 +216,7 @@ BEGIN
                 UPDATE b
                 SET @modds = modds = CASE 
                     WHEN betteam IN ('h', 'o') THEN @totalht-hdp1
-                    WHEN betteam IN ('h', 'o') THEN hdp1-@totalht
+                    WHEN betteam IN ('a', 'u') THEN hdp1-@totalht
                     WHEN b.betteam = 'ho' AND @scorediff_ht > 0 THEN @totalht - b.hdp1
                     WHEN b.betteam = 'hu' AND @scorediff_ht > 0 THEN b.hdp1 - @totalht
                     WHEN b.betteam = 'ao' AND @scorediff_ht < 0 THEN @totalht - b.hdp1
@@ -370,7 +370,7 @@ BEGIN
             UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
             SET @modds = modds = CASE 
                     WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
-                    WHEN betteam IN ('h', 'o') THEN hdp1 - @totalht
+                    WHEN betteam IN ('a', 'u') THEN hdp1 - @totalht
                     WHEN betteam = 'ho' AND @scorediff_ht > 0 THEN @totalht - hdp1
                     WHEN betteam = 'hu' AND @scorediff_ht > 0 THEN hdp1 - @totalht
                     WHEN betteam = 'ao' AND @scorediff_ht < 0 THEN @totalht - hdp1

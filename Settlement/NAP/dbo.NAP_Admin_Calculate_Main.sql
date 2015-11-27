@@ -2873,24 +2873,6 @@ BEGIN
                         ,@betcount = @betcount_402
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-
-				--1H Home Team Over/Under
-				IF @betcount_403 > 0
-					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
-                        ,@bettype = 403
-                        ,@totalgoal = @totalgoal
-                        ,@betcount = @betcount_403
-                        ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-
-				--1H Away Team Over/Under
-				IF @betcount_404 > 0
-					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
-                        ,@bettype = 404
-                        ,@totalgoal = @totalgoal
-                        ,@betcount = @betcount_404
-                        ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 				
 				--2H Correct Score
 				IF @betcount_405 > 0
@@ -2948,27 +2930,7 @@ BEGIN
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-
-				--1H Double Chance
-				IF @betcount_410 > 0
-					EXEC dbo.NAP_Admin_Calculate_3 
-                         @matchid = @matchid
-                        ,@bettype = 410
-                        ,@scorediff = @scorediff_ht
-                        ,@betcount = @betcount_410
-						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-                        ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-
-				--1H Double Chance
-				IF @betcount_411 > 0
-                    EXEC dbo.NAP_Admin_Calculate_25 
-                         @matchid = @matchid
-                        ,@bettype = 411
-                        ,@scorediff = @scorediff_HT
-                        ,@betcount = @betcount_411
-                        ,@isRefundHT = @isRefundHT
-
+				
                 IF @row_count > 0
 				BEGIN
 					EXEC dbo.NAP_Admin_Calculate_RefundFT @matchid = @matchid
