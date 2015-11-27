@@ -41,6 +41,7 @@ AS
         - 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
         - 20150909@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304): add bettype 302
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
+		- 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -98,9 +99,9 @@ BEGIN
         UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
         SET 
              @totalgoal = CASE WHEN bettype = 3 AND @totalgoal = 0 AND @SelectedSet LIKE '%6%' THEN ISNULL(@TotalSetMatch,0) ELSE @totalgoal END 
-            ,@modds = modds = CASE WHEN betteam = 'h' THEN @totalgoal - hdp1
-                                  WHEN betteam = 'a' THEN hdp1 - @totalgoal
-                                  WHEN RIGHT(betteam,1) ='u' THEN hdp1 - @totalgoal    -- 144 ,163
+            ,@modds = modds = CASE WHEN betteam IN ('h', 'o') THEN @totalgoal - hdp1
+                                  WHEN betteam IN ('a', 'u') THEN hdp1 - @totalgoal
+                                  WHEN RIGHT(betteam,1) = 'u' THEN hdp1 - @totalgoal    -- 144 ,163
                                   ELSE NULL 
                                   END 
             ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -241,8 +242,8 @@ BEGIN
                 ,@modds = modds = CASE 
                     WHEN betteam = N'h' THEN @totalgoal-hdp1
                     WHEN betteam = N'a' THEN hdp1-@totalgoal
-                    WHEN betteam = N'o' THEN @totalgoal-hdp1    -- 156,178,197,198,1312 
-                    WHEN betteam = N'u' THEN hdp1-@totalgoal    -- 156,178,197,198,1312 
+                    WHEN betteam = N'o' THEN @totalgoal-hdp1    -- 156,178,197,198,1312,401,402 
+                    WHEN betteam = N'u' THEN hdp1-@totalgoal    -- 156,178,197,198,1312,401,402 
                     WHEN b.betteam = 'ho' AND @scorediff > 0 THEN @totalgoal - b.hdp1
                     WHEN b.betteam = 'hu' AND @scorediff > 0 THEN b.hdp1 - @totalgoal
                     WHEN b.betteam = 'ao' AND @scorediff < 0 THEN @totalgoal - b.hdp1
@@ -251,12 +252,15 @@ BEGIN
                     WHEN b.betteam = 'du' AND @scorediff = 0 THEN b.hdp1 - @totalgoal    
                     WHEN b.betteam = 'h1' AND @scorediff = 1 THEN 1        --171 
                     WHEN b.betteam = 'h2' AND @scorediff = 2 THEN 1 
-                    WHEN b.betteam = 'h3' AND @scorediff >=3 THEN 1 
-                    WHEN b.betteam = 'd' AND @scorediff =0 THEN 1 
+                    WHEN b.betteam = 'h3' AND @scorediff >=3 THEN 1
+                    WHEN b.betteam = 'd' AND @scorediff =0 THEN 1
                     WHEN b.betteam = 'a1' AND @scorediff =-1 THEN 1 
                     WHEN b.betteam = 'a2' AND @scorediff =-2 THEN 1 
-                    WHEN b.betteam = 'a3' AND @scorediff<=-3 THEN 1 
-                    ELSE - 1                    
+                    WHEN b.betteam = 'a3' AND @scorediff<=-3 THEN 1
+					WHEN b.betteam = '1x' AND @scorediff >=0 THEN 1
+					WHEN b.betteam = '12' AND @scorediff <> 0 THEN 1
+					WHEN b.betteam = '2x' AND @scorediff <= 0 THEN 1
+                    ELSE - 1
                     END,
                 
                 @commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -269,8 +273,8 @@ BEGIN
                     ELSE 1 END,            
                 
                 WinLost = CASE
-                    WHEN @modds >  0.25    THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end)
-                    WHEN @modds =  0.25    THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end) * 0.5
+                    WHEN @modds >  0.25    THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end)
+                    WHEN @modds =  0.25    THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end) * 0.5
                     WHEN @modds =  0 AND bettype <> 302    THEN actual_stake
                     WHEN @modds =  0 AND bettype = 302    THEN CASE 
                                                             WHEN oddsspread = 0 THEN actual_stake
@@ -282,8 +286,8 @@ BEGIN
                     END,
 
                 aWinLost = CASE
-                    WHEN @modds >  0.25    THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end) * -apositiontaking
-                    WHEN @modds =  0.25    THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end) * -apositiontaking * 0.5
+                    WHEN @modds >  0.25    THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end) * -apositiontaking
+                    WHEN @modds =  0.25    THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end) * -apositiontaking * 0.5
                     WHEN @modds =  0 AND bettype <> 302    THEN 0
                     WHEN @modds =  0 AND bettype = 302    THEN CASE 
                                                             WHEN oddsspread = 0 THEN 0
@@ -294,8 +298,8 @@ BEGIN
                     WHEN @modds < -0.25    THEN actual_stake * apositiontaking
                     END,
                 mWinLost = CASE
-                    WHEN @modds >  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end) * -mpositiontaking
-                    WHEN @modds =  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end) * -mpositiontaking * 0.5
+                    WHEN @modds >  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end) * -mpositiontaking
+                    WHEN @modds =  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end) * -mpositiontaking * 0.5
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302        THEN CASE 
                                                                 WHEN oddsspread = 0 THEN 0
@@ -306,8 +310,8 @@ BEGIN
                     WHEN @modds < -0.25     THEN actual_stake * mpositiontaking
                     END,
                 sWinLost = CASE
-                    WHEN @modds >  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end) * -spositiontaking
-                    WHEN @modds =  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203) then odds-1 else odds end) end) * -spositiontaking * 0.5
+                    WHEN @modds >  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end) * -spositiontaking
+                    WHEN @modds =  0.25     THEN stake * (case when odds<0 then 1 else (case when bettype in (144,163,171,1203,408,410) then odds-1 else odds end) end) * -spositiontaking * 0.5
                     WHEN @modds =  0 AND bettype <> 302       THEN 0
                     WHEN @modds =  0 AND bettype = 302       THEN CASE 
                                                                 WHEN oddsspread = 0 THEN 0
@@ -421,8 +425,8 @@ BEGIN
                 ,@modds = modds = CASE 
                     WHEN betteam = N'h' THEN @totalgoal - hdp1
                     WHEN betteam = N'a' THEN hdp1 - @totalgoal
-                    WHEN betteam = N'o' THEN @totalgoal-hdp1    -- 156,178,197,198,1312 
-                    WHEN betteam = N'u' THEN hdp1-@totalgoal    -- 156,178,197,198,1312 
+                    WHEN betteam = N'o' THEN @totalgoal-hdp1    -- 156,178,197,198,1312,401,402 
+                    WHEN betteam = N'u' THEN hdp1-@totalgoal    -- 156,178,197,198,1312,401,402 
                     WHEN betteam = 'ho' AND @scorediff > 0 THEN @totalgoal - hdp1
                     WHEN betteam = 'hu' AND @scorediff > 0 THEN hdp1 - @totalgoal
                     WHEN betteam = 'ao' AND @scorediff < 0 THEN @totalgoal - hdp1
@@ -435,7 +439,10 @@ BEGIN
                     WHEN betteam = 'd' AND @scorediff =0 THEN 1 
                     WHEN betteam = 'a1' AND @scorediff =-1 THEN 1 
                     WHEN betteam = 'a2' AND @scorediff =-2 THEN 1 
-                    WHEN betteam = 'a3' AND @scorediff<=-3 THEN 1             
+                    WHEN betteam = 'a3' AND @scorediff<=-3 THEN 1
+					WHEN b.betteam = '1x' AND @scorediff >=0 THEN 1
+					WHEN b.betteam = '12' AND @scorediff <> 0 THEN 1
+					WHEN b.betteam = '2x' AND @scorediff <= 0 THEN 1					
                     ELSE - 1                    
                     END
                 ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -449,8 +456,8 @@ BEGIN
                     ELSE 1
                     END
                 ,WinLost = CASE 
-                    WHEN @modds > 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171,1203) THEN odds - 1 ELSE odds END ) END )
-                    WHEN @modds = 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203) THEN odds - 1 ELSE odds END ) END ) * 0.5
+                    WHEN @modds > 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171,1203,408,410) THEN odds - 1 ELSE odds END ) END )
+                    WHEN @modds = 0.25 THEN actual_stake + stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203,408,410) THEN odds - 1 ELSE odds END ) END ) * 0.5
                     WHEN @modds =  0 AND bettype <> 302    THEN actual_stake
                     WHEN @modds =  0 AND bettype = 302    THEN CASE 
                                                             WHEN oddsspread = 0 THEN actual_stake
@@ -461,8 +468,8 @@ BEGIN
                     WHEN @modds < - 0.25 THEN 0
                     END
                 ,aWinLost = CASE 
-                    WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking 
-                    WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking * 0.5
+                    WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203,408,410) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking 
+                    WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203,408,410) THEN odds - 1 ELSE odds END ) END ) * - apositiontaking * 0.5
                     WHEN @modds =  0 AND bettype <> 302    THEN 0
                     WHEN @modds =  0 AND bettype = 302    THEN CASE 
                                                             WHEN oddsspread = 0 THEN 0
@@ -473,8 +480,8 @@ BEGIN
                     WHEN @modds < - 0.25 THEN actual_stake * apositiontaking
                     END
                 ,mWinLost = CASE 
-                    WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking
-                    WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking * 0.5
+                    WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203,408,410) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking
+                    WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203,408,410) THEN odds - 1 ELSE odds END ) END ) * - mpositiontaking * 0.5
                     WHEN @modds =  0 AND bettype <> 302        THEN 0
                     WHEN @modds =  0 AND bettype = 302        THEN CASE 
                                                                 WHEN oddsspread = 0 THEN 0
@@ -485,8 +492,8 @@ BEGIN
                     WHEN @modds < - 0.25 THEN actual_stake * mpositiontaking
                     END
                 ,sWinLost = CASE 
-                    WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203) THEN odds - 1 ELSE odds END ) END    ) * - spositiontaking
-                    WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203) THEN odds - 1    ELSE odds END ) END    ) * - spositiontaking * 0.5
+                    WHEN @modds > 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203,408,410) THEN odds - 1 ELSE odds END ) END    ) * - spositiontaking
+                    WHEN @modds = 0.25 THEN stake * (CASE WHEN odds < 0 THEN 1 ELSE (CASE WHEN bettype IN (144,163,171, 1203,408,410) THEN odds - 1    ELSE odds END ) END    ) * - spositiontaking * 0.5
                     WHEN @modds =  0 AND bettype <> 302       THEN 0
                     WHEN @modds =  0 AND bettype = 302       THEN CASE 
                                                                 WHEN oddsspread = 0 THEN 0

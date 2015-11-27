@@ -75,6 +75,7 @@ AS
 		- 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]	
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+		- 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
     
     Param's Explanation:
     • @matchid: matchid need to refund
@@ -368,7 +369,19 @@ BEGIN
             
             ,@betcount_302        INT
             ,@betcount_304         INT
-            
+			
+			,@betcount_401         INT
+			,@betcount_402         INT
+			,@betcount_403         INT
+			,@betcount_404         INT
+			,@betcount_405         INT
+			,@betcount_406         INT
+			,@betcount_407         INT
+			,@betcount_408         INT
+			,@betcount_409         INT
+			,@betcount_410         INT
+			,@betcount_411         INT
+			
         SELECT @ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)), '') 
                          + ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)), '') 
                          + ' FTHScore=' + ISNULL(CAST(@fth AS VARCHAR(10)), '') 
@@ -572,10 +585,22 @@ BEGIN
                 
                 ,@betcount_302     = ISNULL(SUM(CASE b.bettype WHEN 302 THEN 1 ELSE 0 END), 0)
                 ,@betcount_304     = ISNULL(SUM(CASE b.bettype WHEN 304 THEN 1 ELSE 0 END), 0)
+				
+				,@betcount_401     = ISNULL(SUM(CASE b.bettype WHEN 401 THEN 1 ELSE 0 END), 0)
+				,@betcount_402     = ISNULL(SUM(CASE b.bettype WHEN 402 THEN 1 ELSE 0 END), 0)
+				,@betcount_403     = ISNULL(SUM(CASE b.bettype WHEN 403 THEN 1 ELSE 0 END), 0)
+				,@betcount_404     = ISNULL(SUM(CASE b.bettype WHEN 404 THEN 1 ELSE 0 END), 0)
+				,@betcount_405     = ISNULL(SUM(CASE b.bettype WHEN 405 THEN 1 ELSE 0 END), 0)
+				,@betcount_406     = ISNULL(SUM(CASE b.bettype WHEN 406 THEN 1 ELSE 0 END), 0)
+				,@betcount_407     = ISNULL(SUM(CASE b.bettype WHEN 407 THEN 1 ELSE 0 END), 0)
+				,@betcount_408     = ISNULL(SUM(CASE b.bettype WHEN 408 THEN 1 ELSE 0 END), 0)
+				,@betcount_409     = ISNULL(SUM(CASE b.bettype WHEN 409 THEN 1 ELSE 0 END), 0)
+				,@betcount_410     = ISNULL(SUM(CASE b.bettype WHEN 410 THEN 1 ELSE 0 END), 0)
+				,@betcount_411     = ISNULL(SUM(CASE b.bettype WHEN 411 THEN 1 ELSE 0 END), 0)
 
         FROM bettrans b WITH (NOLOCK)
         WHERE b.matchid = @matchid 
-        AND b.bettype IN (3, 4, 6, 8, 13, 26, 27, 30, 126, 128, 129, 130, 131, 132, 143, 144, 145, 152,159,161,162,163,170,172,179,181,182,188,195,196,199,200,201,202,206,207, 302, 304) 
+        AND b.bettype IN (3, 4, 6, 8, 13, 26, 27, 30, 126, 128, 129, 130, 131, 132, 143, 144, 145, 152,159,161,162,163,170,172,179,181,182,188,195,196,199,200,201,202,206,207, 302, 304,401,402,403,404,405,406,407,408,409,410,411) 
         AND b.statusID NOT IN (101, 102) 
         AND 1 = CASE 
                     WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
@@ -646,8 +671,14 @@ BEGIN
                 ,@betcount_196                     = @betcount_196
                 ,@betcount_199                     = @betcount_199
                 ,@betcount_206                     = @betcount_206
-                ,@betcount_302                     = @betcount_302                
-                ,@fth                             = @fth
+                ,@betcount_302                     = @betcount_302
+				,@betcount_401                     = @betcount_401
+				,@betcount_402                     = @betcount_402
+				,@betcount_406                     = @betcount_406
+				,@betcount_407                     = @betcount_407
+				,@betcount_408                     = @betcount_408
+				,@betcount_409                     = @betcount_409
+				,@fth                             = @fth
                 ,@fta                             = @fta
                 ,@hth                             = @hth
                 ,@hta                             = @hta
@@ -711,6 +742,17 @@ BEGIN
                 ,@betcount_207                    = @betcount_207
                 ,@betcount_302                     = @betcount_302        
                 ,@betcount_304                     = @betcount_304
+				,@betcount_401                     = @betcount_401
+				,@betcount_402                     = @betcount_402
+				,@betcount_403                     = @betcount_403
+				,@betcount_404                     = @betcount_404
+				,@betcount_405                     = @betcount_405
+				,@betcount_406                     = @betcount_406
+				,@betcount_407                     = @betcount_407
+				,@betcount_408                     = @betcount_408
+				,@betcount_409                     = @betcount_409
+				,@betcount_410                     = @betcount_410
+				,@betcount_411                     = @betcount_411
                 ,@fth                             = @fth
                 ,@fta                             = @fta
                 ,@hth                             = @hth

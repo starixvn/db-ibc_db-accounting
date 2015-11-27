@@ -28,6 +28,7 @@ AS
         - 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#35921] 
 		- 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+		- 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
         
     Param's Explanation:
         @IsRefundHT: Indicate whether or not match has been refunded HT
@@ -92,8 +93,8 @@ BEGIN
                 WHEN @IsExcludeBetfair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 0
                 WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
                     AND recommend <> 1688156) AND statusID IN (112, 113) 
-                    AND (( @IsRefundHT = 1 AND bettype IN (4, 6, 13, 26, 27, 130, 131, 132, 144, 145,159, 161, 162, 163, 170, 172, 195, 196, 199, 206)) 
-                            OR (@IsHTCal = 1 AND bettype IN (4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302) ))
+                    AND (( @IsRefundHT = 1 AND bettype IN (4, 6, 13, 26, 27, 130, 131, 132, 144, 145,159, 161, 162, 163, 170, 172, 195, 196, 199, 206,401,402,405,406,407,408,409)) 
+                            OR (@IsHTCal = 1 AND bettype IN (4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302,401,402,405,406,407,409) ))
                     THEN 0
                 ELSE 1
                 END

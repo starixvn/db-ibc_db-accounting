@@ -24,7 +24,7 @@ AS
         - 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]    
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)    
         - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
-        
+        - 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 
     Param's Explanation:
         + @IsExcludeBetdaq: 
@@ -86,6 +86,7 @@ BEGIN
                             ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
                             ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match                             
                             ,303, 304 -- Myanmar odds
+							,403, 404, 405, 410, 411
                             ) 
             AND 1 = CASE 
                         WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0

@@ -94,6 +94,7 @@ AS
 		- 20150505@Jamie: Converting error [HotFix #35259]
 		- 20150608@Kathy: Add more mode Recover for recover parlay tickets [Redmine:#35539]
 		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
+		- 20151124@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -565,6 +566,7 @@ BEGIN
 						WHEN betteam = (CAST(@fth AS VARCHAR(4)) + ':' + CAST(@fta AS VARCHAR(4))) THEN 1
 						WHEN betteam = '5:0' AND (@fth - @fta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@fth - @fta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@fth >= 5 OR @fta >= 5) THEN 1
 						ELSE - 1
 						END
 				WHEN 30 THEN -- 1st Correct Score
@@ -574,8 +576,10 @@ BEGIN
 						WHEN betteam = '0:4' AND (@hth - @hta) <= - 4 THEN 1 -- 4UP for 1st Correct Score
 						WHEN betteam = '5:0' AND (@hth - @hta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@hth - @hta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@hth >= 4 OR @hta >= 4) THEN 1
 						ELSE - 1
 						END
+				
 				WHEN 16 THEN -- HT/FT
 					CASE 
 						WHEN betteam = CASE 
@@ -1236,7 +1240,73 @@ BEGIN
 						WHEN betteam = @HTLCorner THEN 1
 						ELSE -1 
 						END
-
+				WHEN 401 THEN --Home Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @fth - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @fth
+						ELSE -1
+				WHEN 402 THEN --Away Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @fta - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @fta
+						ELSE -1
+				WHEN 403 THEN --1H Home Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @hth - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @hth
+						ELSE -1
+				WHEN 404 THEN --1H Away Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @hta - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @hta
+						ELSE -1
+				WHEN 405 THEN --2H Correct Score
+					CASE
+						WHEN b.betteam = 'AOS' --Any Other Scores
+							AND (@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+				WHEN 406 THEN --Exact Total Goals
+					CASE 
+						WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G6' AND ((@fth + @fta) >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						ELSE -1 
+						END 
+				WHEN 407 THEN --Exact Home Team Goals
+					CASE 
+						WHEN betteam LIKE 'G[0-2]' AND (@fth = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G3' AND (@fth >= CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						ELSE - 1 
+						END 
+				WHEN 408 THEN --Winning Margin	
+					CASE 
+						WHEN betteam = 'h1' AND (@fth - @fta) = 1 THEN 1
+						WHEN betteam = 'h2' AND (@fth - @fta) = 2 THEN 1 
+						WHEN betteam = 'h3' AND (@fth - @fta) >=3 THEN 1 
+						WHEN betteam = 'd' AND (@fth - @fta) =0 THEN 1
+						WHEN betteam = 'a1' AND (@fth - @fta) =-1 THEN 1 
+						WHEN betteam = 'a2' AND (@fth - @fta) =-2 THEN 1 
+						WHEN betteam = 'a3' AND (@fth - @fta)<=-3 THEN 1 
+						ELSE - 1					
+						END
+				WHEN 409 THEN --Exact Away Team Goals
+					CASE 
+						WHEN betteam LIKE 'G[0-2]' AND (@fta = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G3' AND (@fta >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						ELSE - 1 
+						END 
+				WHEN 410 THEN --1H Double Chance	
+					CASE 
+						WHEN betteam = '1x' AND (@hth - @hta) >= 0 THEN 1
+						WHEN betteam = '12' AND (@hth - @hta) <> 0 THEN 1 
+						WHEN betteam = '2x' AND (@hth - @hta) <= 0 THEN 1
+						ELSE - 1					
+						END		 
+				WHEN 411 THEN --1H Draw No Bet
+					CASE 
+						WHEN (@hth - @hta) = 0 THEN 0
+						WHEN betteam = 'h' AND (@hth - @hta) > 0 THEN 1
+						WHEN betteam = 'a' AND (@hth - @hta) < 0 THEN 1
+						ELSE -1
+						END
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -1437,6 +1507,7 @@ BEGIN
 						WHEN betteam = (CAST(@fth AS VARCHAR(4)) + ':' + CAST(@fta AS VARCHAR(4))) THEN 1
 						WHEN betteam = '5:0' AND (@fth - @fta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@fth - @fta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@fth >= 5 OR @fta >= 5) THEN 1
 						ELSE - 1
 						END
 				WHEN 30 THEN -- 1st Correct Score
@@ -1446,6 +1517,7 @@ BEGIN
 						WHEN betteam = '0:4' AND (@hth - @hta) <= - 4 THEN 1 -- 4UP for 1st Correct Score
 						WHEN betteam = '5:0' AND (@hth - @hta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@hth - @hta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@fth >= 4 OR @fta >= 4) THEN 1
 						ELSE - 1
 						END
 				WHEN 16 THEN -- HT/FT
@@ -2113,7 +2185,73 @@ BEGIN
 						WHEN betteam = @HTLCorner THEN 1
 						ELSE -1 
 						END
-	
+				WHEN 401 THEN --Home Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @fth - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @fth
+						ELSE -1
+				WHEN 402 THEN --Away Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @fta - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @fta
+						ELSE -1
+				WHEN 403 THEN --1H Home Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @hth - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @hth
+						ELSE -1
+				WHEN 404 THEN --1H Away Team Over/Under
+					CASE
+						WHEN b.betteam = 'o' THEN @hta - hdp1
+						WHEN b.betteam = 'u' THEN hdp1 - @hta
+						ELSE -1
+				WHEN 405 THEN --2H Correct Score
+					CASE
+						WHEN b.betteam = 'AOS' --Any Other Scores
+							AND (@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+				WHEN 406 THEN --Exact Total Goals
+					CASE 
+						WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G6' AND ((@fth + @fta) >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						ELSE -1 
+						END 
+				WHEN 407 THEN --Exact Home Team Goals
+					CASE 
+						WHEN betteam LIKE 'G[0-2]' AND (@fth = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G3' AND (@fth >= CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						ELSE - 1 
+						END 
+				WHEN 408 THEN --Winning Margin	
+					CASE 
+						WHEN betteam = 'h1' AND (@fth - @fta) = 1 THEN 1
+						WHEN betteam = 'h2' AND (@fth - @fta) = 2 THEN 1 
+						WHEN betteam = 'h3' AND (@fth - @fta) >= 3 THEN 1 
+						WHEN betteam = 'd' AND (@fth - @fta) = 0 THEN 1
+						WHEN betteam = 'a1' AND (@fth - @fta) = -1 THEN 1 
+						WHEN betteam = 'a2' AND (@fth - @fta) = -2 THEN 1 
+						WHEN betteam = 'a3' AND (@fth - @fta)<= -3 THEN 1 
+						ELSE - 1					
+						END
+				WHEN 409 THEN --Exact Away Team Goals
+					CASE 
+						WHEN betteam LIKE 'G[0-2]' AND (@fta = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G3' AND (@fta >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						ELSE - 1 
+						END 
+				WHEN 410 THEN --1H Double Chance	
+					CASE 
+						WHEN betteam = '1x' AND (@hth - @hta) >= 0 THEN 1
+						WHEN betteam = '12' AND (@hth - @hta) <> 0 THEN 1 
+						WHEN betteam = '2x' AND (@hth - @hta) <= 0 THEN 1
+						ELSE - 1					
+						END		 
+				WHEN 411 THEN --1H Draw No Bet
+					CASE 
+						WHEN (@hth - @hta) = 0 THEN 0
+						WHEN betteam = 'h' AND (@hth - @hta) > 0 THEN 1
+						WHEN betteam = 'a' AND (@hth - @hta) < 0 THEN 1
+						ELSE -1
+						END
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam

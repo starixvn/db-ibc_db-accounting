@@ -29,7 +29,7 @@ AS
         - 20140818@Jamie: Correct settle  determined ticket 143 
         - 20150909@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304): add bettype 304
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
-        
+        - 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -83,8 +83,8 @@ BEGIN
         SELECT    @comparedValue = @totalht - 0.5
 
         UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
-        SET @modds = modds = CASE WHEN betteam = 'h' THEN @totalht - hdp1
-                                  WHEN betteam = 'a' THEN hdp1 - @totalht
+        SET @modds = modds = CASE WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
+                                  WHEN betteam IN ('a', 'u') THEN hdp1 - @totalht
                                   WHEN RIGHT(betteam,1) ='u' THEN hdp1 - @totalht    -- 143 
                                   ELSE NULL 
                                   END                                         
@@ -215,8 +215,8 @@ BEGIN
 
                 UPDATE b
                 SET @modds = modds = CASE 
-                    WHEN betteam = 'h' THEN @totalht-hdp1
-                    WHEN betteam = 'a' THEN hdp1-@totalht
+                    WHEN betteam IN ('h', 'o') THEN @totalht-hdp1
+                    WHEN betteam IN ('h', 'o') THEN hdp1-@totalht
                     WHEN b.betteam = 'ho' AND @scorediff_ht > 0 THEN @totalht - b.hdp1
                     WHEN b.betteam = 'hu' AND @scorediff_ht > 0 THEN b.hdp1 - @totalht
                     WHEN b.betteam = 'ao' AND @scorediff_ht < 0 THEN @totalht - b.hdp1
@@ -369,8 +369,8 @@ BEGIN
         BEGIN
             UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
             SET @modds = modds = CASE 
-                    WHEN betteam = 'h' THEN @totalht - hdp1
-                    WHEN betteam = 'a' THEN hdp1 - @totalht
+                    WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
+                    WHEN betteam IN ('h', 'o') THEN hdp1 - @totalht
                     WHEN betteam = 'ho' AND @scorediff_ht > 0 THEN @totalht - hdp1
                     WHEN betteam = 'hu' AND @scorediff_ht > 0 THEN hdp1 - @totalht
                     WHEN betteam = 'ao' AND @scorediff_ht < 0 THEN @totalht - hdp1

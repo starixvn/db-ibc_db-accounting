@@ -19,6 +19,7 @@ AS
        - 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
        - 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 	   - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+	   - 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 
     Param's Explanation:
     • @Mode:
@@ -186,7 +187,17 @@ BEGIN
             ,@betcount_302     INT
             ,@betcount_303     INT
             ,@betcount_304     INT
-
+			,@betcount_401     INT
+			,@betcount_402     INT
+			,@betcount_403     INT
+			,@betcount_404     INT
+			,@betcount_405     INT
+			,@betcount_406     INT
+			,@betcount_407     INT
+			,@betcount_408     INT
+			,@betcount_409     INT
+			,@betcount_410     INT
+			,@betcount_411     INT
 
     SELECT @fth = FinalHomeScore
         ,@fta = FinalAwayScore
@@ -477,8 +488,15 @@ BEGIN
             ,@betcount_208 = ISNULL(SUM(CASE bettype WHEN 208 THEN 1 ELSE 0 END),0)
             ,@betcount_301 = ISNULL(SUM(CASE bettype WHEN 301 THEN 1 ELSE 0 END),0)
             ,@betcount_302 = ISNULL(SUM(CASE bettype WHEN 302 THEN 1 ELSE 0 END),0)
-
-            ,@betcount_1201 = ISNULL(SUM(CASE bettype
+			,@betcount_401 = ISNULL(SUM(CASE bettype WHEN 401 THEN 1 ELSE 0 END),0)
+			,@betcount_402 = ISNULL(SUM(CASE bettype WHEN 402 THEN 1 ELSE 0 END),0)
+			,@betcount_405 = ISNULL(SUM(CASE bettype WHEN 405 THEN 1 ELSE 0 END),0)
+			,@betcount_406 = ISNULL(SUM(CASE bettype WHEN 406 THEN 1 ELSE 0 END),0)
+			,@betcount_407 = ISNULL(SUM(CASE bettype WHEN 407 THEN 1 ELSE 0 END),0)
+			,@betcount_408 = ISNULL(SUM(CASE bettype WHEN 408 THEN 1 ELSE 0 END),0)
+			,@betcount_409 = ISNULL(SUM(CASE bettype WHEN 409 THEN 1 ELSE 0 END),0)
+			
+			,@betcount_1201 = ISNULL(SUM(CASE bettype
                         WHEN 1201 THEN 1
                         ELSE 0
                         END), 0)
@@ -507,7 +525,8 @@ BEGIN
                 AND( bettype IN (1, 2, 3, 4, 5, 6, 13, 16, 20, 22, 24, 25, 26, 27, 28, 121, 122, 123, 124, 128, 130, 131, 132,
                                                 133, 134, 137, 139, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,
                                                 1201, 1203, 1204, 1205, 1206, 1224)
-                    OR Bettype IN (157,159,161,162,163,166,170,171,172,177,178,183,184,185,186,187,189,190,194,195,196,197,198,199,206,208, 301, 302)
+                    OR Bettype IN (157,159,161,162,163,166,170,171,172,177,178,183,184,185,186,187,189,190,194,195,196,197,198,199,206,208, 301, 302
+					,401,402,405,406,407,408,409)
                 )
                 AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (194,195,196,197,198,199,206,208) THEN 0 
                              ELSE 1 END 
@@ -585,14 +604,19 @@ BEGIN
             ,@betcount_209 = ISNULL(SUM(CASE bettype WHEN 209 THEN 1 ELSE 0 END),0)
             ,@betcount_303 = ISNULL(SUM(CASE bettype WHEN 303 THEN 1 ELSE 0 END),0)
             ,@betcount_304 = ISNULL(SUM(CASE bettype WHEN 304 THEN 1 ELSE 0 END),0)
+			,@betcount_403 = ISNULL(SUM(CASE bettype WHEN 403 THEN 1 ELSE 0 END),0)
+			,@betcount_404 = ISNULL(SUM(CASE bettype WHEN 404 THEN 1 ELSE 0 END),0)
+			,@betcount_410 = ISNULL(SUM(CASE bettype WHEN 410 THEN 1 ELSE 0 END),0)
+			,@betcount_411 = ISNULL(SUM(CASE bettype WHEN 411 THEN 1 ELSE 0 END),0)
+			
         FROM bettrans WITH (NOLOCK)
-        WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304)
+        WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411)
                 AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (200,201,202,203,204,205,207,209) THEN 0 
                              ELSE 1 END 
     END
     
     -- call execrep SP
-                                EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
         ,@mode = @mode
         ,@fth = @fth
         ,@fta = @fta
@@ -741,6 +765,18 @@ BEGIN
         ,@betcount_302     = @betcount_302
         ,@betcount_303     = @betcount_303
         ,@betcount_304     = @betcount_304
+		,@betcount_401     = @betcount_401
+		,@betcount_402     = @betcount_402
+		,@betcount_403     = @betcount_403
+		,@betcount_404     = @betcount_404
+		,@betcount_405     = @betcount_405
+		,@betcount_406     = @betcount_406
+		,@betcount_407     = @betcount_407
+		,@betcount_408     = @betcount_408
+		,@betcount_409     = @betcount_409
+		,@betcount_410     = @betcount_410
+		,@betcount_411     = @betcount_411
+		
         ,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END
 GO

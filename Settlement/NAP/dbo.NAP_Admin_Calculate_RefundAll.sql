@@ -30,6 +30,7 @@ AS
         - 20150605@Johnson: Exclude SOLD/BOUGHT/COM tickets from bettrade [Redmine:#35921] 
 		- 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+		- 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
         
     Note: For settlement SPs should hardcode the custid of betdaq customer to avoid replication problem
 */
@@ -113,7 +114,7 @@ BEGIN
                             AND recommend <> 1688156) 
                         AND statusID IN (112, 113) 
                         AND bettype IN (4, 6, 13, 26, 27, 30, 126, 129, 130, 131, 132, 133, 134, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 152
-                            ,159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207, 302, 304) THEN 0
+                            ,159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207, 302, 304,401,402,403,404,406,407,409) THEN 0
                 WHEN @IsSettleAbandonedMatchIBC = 1 
                     AND statusID IN (112, 113) 
                     AND bettype = 216 THEN 0 
