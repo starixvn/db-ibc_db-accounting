@@ -58,6 +58,7 @@ BEGIN
             ,@scorediff_2H        SMALLMONEY 
             ,@correctscore        NVARCHAR(10)
             ,@correctscore_ht    NVARCHAR(10)
+			,@correctscore_2h    NVARCHAR(10)
             ,@HTFT                NVARCHAR(10)
             ,@isRefundHT        BIT
                         
@@ -279,6 +280,7 @@ BEGIN
         ,@scorediff_2H = (@fth -@hth) -(@fta - @hta)
         ,@correctscore = CAST(@fth AS NVARCHAR(6)) + ':' + CAST(@fta AS NVARCHAR(6))
         ,@correctscore_ht = CAST(@hth AS NVARCHAR(6)) + ':' + CAST(@hta AS NVARCHAR(6))
+		,@correctscore_2h = CAST((@fth -@hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6))
         ,@home_2nd = (@fth - @hth)
         ,@away_2nd = (@fta - @hta)
         ,@HTFT = CASE 
@@ -645,6 +647,7 @@ BEGIN
         ,@scorediff_2H = @scorediff_2H
         ,@correctscore = @correctscore
         ,@correctscore_ht = @correctscore_ht
+		,@correctscore_2h = @correctscore_2h
         ,@HTFT = @HTFT
         ,@TennisTotal = @TennisTotal
         ,@T_Home = @T_Home

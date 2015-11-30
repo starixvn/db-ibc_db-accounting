@@ -1262,6 +1262,7 @@ BEGIN
 						ELSE -1 END
 				WHEN 405 THEN --2H Correct Score
 					CASE
+						WHEN betteam = CAST((@fth -@hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
 							AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
 						END
@@ -2208,6 +2209,7 @@ BEGIN
 						ELSE -1 END
 				WHEN 405 THEN --2H Correct Score
 					CASE
+						WHEN betteam = CAST((@fth -@hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
 							AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
 						END

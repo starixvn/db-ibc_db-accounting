@@ -36,6 +36,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
     ,@scorediff_2H                    SMALLMONEY     = NULL 
     ,@correctscore                     NVARCHAR(10)= NULL
     ,@correctscore_ht                NVARCHAR(10)= NULL
+	,@correctscore_2h				 NVARCHAR(10)= NULL
     ,@HTFT                            NVARCHAR(10)= NULL
     ,@FGLG1                         VARCHAR(10) = NULL
     ,@FGLG2                         VARCHAR(10) = NULL
@@ -437,6 +438,10 @@ BEGIN
             ,@correctscore_ht = ' + CASE 
                 WHEN @correctscore_ht IS NULL THEN 'NULL'
                 ELSE '''' + CONVERT(NVARCHAR(50), @correctscore_ht) + ''''
+                END + '
+			,@correctscore_2h = ' + CASE 
+                WHEN @correctscore_2h IS NULL THEN 'NULL'
+                ELSE '''' + CONVERT(NVARCHAR(50), @correctscore_2h) + ''''
                 END + '
             ,@HTFT = ' + CASE 
                 WHEN @HTFT IS NULL THEN 'NULL'
@@ -1549,7 +1554,7 @@ BEGIN
 					--2H Correct Score
 					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
 						,@bettype = 405
-						,@correctscore = @correctscore
+						,@correctscore = @correctscore_2h
 						,@goaldiff = NULL
 						,@hth = @hth
 						,@hta = @hta
@@ -1568,7 +1573,7 @@ BEGIN
 					--Exact Home Team Goals
 					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 407
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalhome
                         ,@betcount = @betcount_407
 
 					--Winning Margin
@@ -1581,7 +1586,7 @@ BEGIN
 					--Exact Away Team Goals
 					EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 409
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalaway
                         ,@betcount = @betcount_409
                 
                 END
@@ -2904,7 +2909,7 @@ BEGIN
 				IF @betcount_407 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 407
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalhome
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -2925,7 +2930,7 @@ BEGIN
 				IF @betcount_409 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 409
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalaway
                         ,@betcount = @betcount_409
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -3435,7 +3440,7 @@ BEGIN
 				IF @betcount_407 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 407
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalhome
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -3456,7 +3461,7 @@ BEGIN
 				IF @betcount_409 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 409
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalaway
                         ,@betcount = @betcount_409
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
