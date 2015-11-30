@@ -134,10 +134,10 @@ BEGIN
 						AND @bettype = 4 THEN 1
 					WHEN b.betteam NOT IN ('AOS')
 						AND @bettype = 405 --2H Correct Score
-						AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1) ) THEN -1
+						AND ((@fth-@hth) > LEFT(b.betteam,1) OR (@fta-@hta) > RIGHT(b.betteam,1) ) THEN -1
 					WHEN b.betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405
-						AND (@fth >= 5 OR @fta >= 5 OR (@fth = 4 AND @fta = 3) OR (@fth = 3 AND @fta = 4)) THEN 1
+						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
 					ELSE NULL
 					END,			
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -241,6 +241,7 @@ BEGIN
 								WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 1
 								WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
 								WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
+								WHEN @IsRefundHT = 1 THEN 0
 								ELSE 0
 							END
 				IF @affectedagents <> 100 
@@ -404,10 +405,10 @@ BEGIN
 						AND (@hth >= 5 OR @hta >= 5) THEN 1
 					WHEN betteam NOT IN ('AOS')
 						AND @bettype = 405 --2H Correct Score
-						AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN -1
+						AND ((@fth-@hth) > LEFT(betteam,1) OR (@fta-@hta) > RIGHT(betteam,1) ) THEN -1
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405
-						AND (@fth >= 5 OR @fta >= 5 OR (@fth = 4 AND @fta = 3) OR (@fth = 3 AND @fta = 4)) THEN 1
+						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
 					ELSE NULL
 					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -503,6 +504,7 @@ BEGIN
 				AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 							 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
 							 WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
+							 WHEN @IsRefundHT = 1 THEN 0
 							 ELSE 0
 						END
 		END
@@ -530,7 +532,7 @@ BEGIN
 						AND @bettype = 4 THEN 1
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405
-						AND (@fth >= 5 OR @fta >= 5 OR (@fth = 4 AND @fta = 3) OR (@fth = 3 AND @fta = 4)) THEN 1
+						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
 					ELSE - 1
 					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost

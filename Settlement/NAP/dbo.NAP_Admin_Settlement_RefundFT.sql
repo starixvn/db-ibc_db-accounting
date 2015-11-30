@@ -7,7 +7,7 @@ GO
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT    Script Date: 06/10/2015 11:21:39 AM ******/
 
 /****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_RefundFT    Script Date: 05/10/2015 6:21:02 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT] 
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundFT] 
     @matchid							INT
     ,@adminid							INT
     ,@IsExcludeBetdaq					BIT				= 0
@@ -165,7 +165,7 @@ BEGIN
 
     INSERT INTO @status
     SELECT CASE 
-                WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,405,410,411) THEN 0
+                WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411) THEN 0
                 ELSE 1
            END
         ,SUM(CASE 
@@ -184,7 +184,7 @@ BEGIN
     AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --AUTO betradar 2 
 	AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
     GROUP BY CASE 
-                WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,405,410,411) THEN 0
+                WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411) THEN 0
                 ELSE 1
              END
 
@@ -406,9 +406,9 @@ BEGIN
 			
 			,@betcount_401         INT
 			,@betcount_402         INT
+			,@betcount_405		   INT
 			,@betcount_406         INT
 			,@betcount_407         INT
-			,@betcount_408         INT
 			,@betcount_409         INT
 			
         SELECT @ScoreLog = ' FTHScore=' + CAST(@fth AS VARCHAR(10)) 
@@ -534,14 +534,14 @@ BEGIN
 		  
 		  ,@betcount_401     = ISNULL(SUM(CASE b.bettype WHEN 401 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_402     = ISNULL(SUM(CASE b.bettype WHEN 402 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_405     = ISNULL(SUM(CASE b.bettype WHEN 405 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_406     = ISNULL(SUM(CASE b.bettype WHEN 406 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_407     = ISNULL(SUM(CASE b.bettype WHEN 407 THEN 1 ELSE 0 END), 0)
-		  ,@betcount_408     = ISNULL(SUM(CASE b.bettype WHEN 408 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_409     = ISNULL(SUM(CASE b.bettype WHEN 409 THEN 1 ELSE 0 END), 0)
 
         FROM bettrans b WITH (NOLOCK)
         WHERE b.matchid = @matchid 
-        AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302,401,402,406,407,408,409) 
+        AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302,401,402,405,406,407,409) 
         AND b.statusID NOT IN (101, 102) 
         AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
                      WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
@@ -618,9 +618,9 @@ BEGIN
             ,@betcount_302                     = @betcount_302
 			,@betcount_401                     = @betcount_401
 			,@betcount_402                     = @betcount_402
+			,@betcount_405                     = @betcount_405
 			,@betcount_406                     = @betcount_406
 			,@betcount_407                     = @betcount_407
-			,@betcount_408                     = @betcount_408
 			,@betcount_409                     = @betcount_409
 			
             ,@IsHTCal                        = @IsHTCal
