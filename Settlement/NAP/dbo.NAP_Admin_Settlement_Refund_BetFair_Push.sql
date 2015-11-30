@@ -1,13 +1,11 @@
-
-SET QUOTED_IDENTIFIER ON 
+USE [bodb02]
 GO
-SET ANSI_NULLS ON 
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push]    Script Date: 04/02/2015 13:32:49 ******/
+SET ANSI_NULLS ON
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_BetFair_Push    Script Date: 06/10/2015 11:21:40 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_BetFair_Push    Script Date: 4/8/2015 1:48:12 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_BetFair_Push    Script Date: 06/04/2015 1:01:55 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push]
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push]
 	@MatchId int,
 	@AdminId int, 	
 	@IP varchar(15) = '',
@@ -24,7 +22,6 @@ AS
 	Revisions: 
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]
-		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 	
 
 	Param's Explanation:
@@ -68,7 +65,7 @@ BEGIN
 	END 
 	
 	-- check waiting ticket
-				EXEC NAP_Admin_Settlement_Checking
+	EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = @Action
 		,@Mode = 'REFUND'
@@ -91,7 +88,7 @@ BEGIN
 								 ', @ErrCode = @ErrCode OUTPUT' +
 								 ', @ErrMsg = @ErrMsg OUTPUT' 
 
-	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
 	BEGIN
 		BEGIN TRY
 		EXEC sys.sp_executesql @sqlCommand
@@ -115,16 +112,9 @@ BEGIN
 END
 
 
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push] TO [bodbAdminNet]
-GO 
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_BetFair_Push] TO [vnteam] AS [dbo]

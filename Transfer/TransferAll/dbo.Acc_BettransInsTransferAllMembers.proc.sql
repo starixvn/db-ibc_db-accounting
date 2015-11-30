@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
+﻿use bodb02
+go
+
+ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
  @AgentName varchar(50),  
  @UserID int,  
  @IP nvarchar(15)='',  
@@ -27,7 +30,6 @@ Revisions:
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					   
 	- 20150723@Patrick: Support Gold deluxe
-	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 	
 Param's Explanation:
 */ 
@@ -229,21 +231,8 @@ if @ErrCode <>0 return
 			END
 			
 			---update debit balance
-			--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @amount
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @amount, @Type = 2, @ErrCode = @ErrCode OUTPUT
-			if @ErrCode <> 0
-			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103
-				
-				DELETE dbo.bettrans
-				WHERE custid in (@recommend, @custid)
-					and matchid = 0
-					and bettype = 21004
-					and refno = @refno
-					
-				return
-			END
-
+			EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @amount
+			
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)
@@ -260,8 +249,7 @@ if @ErrCode <>0 return
 					and refno = @refno
 					
 				---rollback balance
-				--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @amount
-				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @amount, @Type = 2
+				EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @amount
 				return
 			END
 
@@ -313,8 +301,7 @@ if @ErrCode <>0 return
 			
 			---update credit balance
 			SELECT @ABSamount = abs(@amount)
-			--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSamount
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @ABSamount, @Type = 2
+			EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSamount
 		
 			--Add writelog for each amt transfered - Vinh 20080629
 			SELECT @LogData = 'Transfer all members: Transfer from Agent ' + @agName + ' to Customer ' + @memberName + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @refno)
@@ -325,7 +312,7 @@ if @ErrCode <>0 return
 		BEGIN						
 			DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 			-- reset yesterday balance for live casino				
-												EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
+			EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
 			Select @LogData = @LogData + CASE WHEN @isResetYesterdayBalance = 1 THEN 
 												CASE WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetGameBalance = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')' 
 												ELSE '. (ResetGameBalance = fail)' END		
@@ -373,6 +360,8 @@ BEGIN
 	select @ErrItems = LEFT(@ErrItems, len(@ErrItems)-1)  
 	Select @ErrMsg = N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s): ' + @ErrItems
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbAdminNet] AS [dbo]

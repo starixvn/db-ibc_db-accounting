@@ -1,5 +1,4 @@
-﻿
-ALTER FUNCTION [dbo].[f_SiteBySystem]
+﻿ALTER FUNCTION [dbo].[f_SiteBySystem]
 (
 	@System varchar(50) = 'ACCOUNTING'
 )
@@ -20,11 +19,6 @@ Revisions:
 	- 20130404@Jamie: Put ACCUUS for testing 
 	- 20130718@Lukas: add ACCUT group
 	- 20130909@Jamie: ADD group ACCYEN668 
-	- 20140117@Lukas: add group ACCYEN888
-	- 20150526@Kiwi: add ACCUT2 group
-	- 20150812@Amy: add ACCTHAI2 group
-	-20150817@Susan: add ACCIN group
-	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	
 	Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING'
@@ -37,17 +31,17 @@ BEGIN
 		Select siteid 
 		From [Site] (nolock)
 	END
-	ELSE IF(@System IN ('ACCTHAI','ACCTHAI2','ACCTHAI56','ACCTHAI99'))
+	ELSE IF(@System = 'ACCTHAI')
 	BEGIN
 		Insert Into @tbSite(siteid)
 		SELECT 22 --755555,...
 	END
-	ELSE IF (@System IN ('ACCINDO','ACCIN') )
+	ELSE IF (@System = 'ACCINDO')
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 11 --INDO
 	END
-	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668','ACCNTD','ACCIRR','ACCUSD','ACCUT','ACCYEN888','ACCUT2'))
+	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668','ACCNTD','ACCIRR','ACCUSD','ACCUT'))
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 3 --789y
@@ -56,8 +50,6 @@ BEGIN
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 1 --BEST-ODDS
-		UNION ALL 
-		SELECT 184 -- 766666
 	END
 	ELSE IF (@System = 'ACCDDD')
 	BEGIN
@@ -69,9 +61,8 @@ END
 
 
 GO
-GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbAdminNet] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[f_SiteBySystem] TO [vnteam]
 GO
-GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbExtAccNet] AS [dbo]
+GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[f_SiteBySystem] TO [vnteam] AS [dbo]
-
+GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbExtAccNet] 

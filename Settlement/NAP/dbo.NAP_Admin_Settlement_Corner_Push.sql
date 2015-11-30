@@ -1,12 +1,4 @@
-﻿
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Corner_Push    Script Date: 06/10/2015 11:21:40 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Corner_Push    Script Date: 7/6/2015 4:29:06 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Corner_Push] 
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Corner_Push] 
 	 @AdminId				INT
 	,@Matchid				INT
 	,@fthCorners			SMALLINT		= NULL
@@ -28,7 +20,6 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:		
-		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 
 		
 	Param's Explanation:
@@ -79,7 +70,7 @@ BEGIN
 	END
 
 	-- check waiting ticket
-		EXEC NAP_Admin_Settlement_Checking
+	EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = @Action
 		,@Mode = 'CAL-CORNER'
@@ -123,7 +114,7 @@ BEGIN
 		RETURN 
 	END
 	
-	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
 	BEGIN
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -161,19 +152,8 @@ BEGIN
 			,'CAL-CORNER'
 			,@sqlCommand
 	END
-END
-
-
+END 
 GO
-
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Corner_Push] TO [bodbAdminNet] AS [dbo]
 GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Corner_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Corner_Push] TO [bodbAdminNet]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Corner_Push] TO [vnteam] AS [dbo]

@@ -1,4 +1,14 @@
-﻿ALTER PROCEDURE  [dbo].[Acc_BettransInsTransaction]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BettransInsTransaction]    Script Date: 06/15/2015 18:17:01 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_BettransInsTransaction    Script Date: 4/10/2015 5:08:27 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_BettransInsTransaction    Script Date: 2/4/2015 10:53:09 AM ******/
+
+ALTER PROCEDURE  [dbo].[Acc_BettransInsTransaction]
 	@transid bigint OUTPUT,
 	@custid int,
 	@transdate datetime,
@@ -38,7 +48,6 @@ Revisions:
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)
 	- 20141226@Tom: Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day (Redmine#15274)
 	- 20150615@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]					   
-	- 20150808@Elodie: Balance Improvement [Redmine:#40125]
 Param's Explanation:
 */
 BEGIN
@@ -134,12 +143,7 @@ BEGIN
 	IF @balance < 0 
 	BEGIN 
 		SELECT @balance_ABS = ABS(@balance)
-		EXEC Dot_BalanceDebitUpd @CustID = @custid, @balance = @balance_ABS, @type = 2, @errCode = @ErrCode OUTPUT
-		IF @ErrCode <> 0 
-		BEGIN
-			Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104
-			RETURN
-		END
+		EXEC Dot_BalanceUpdDebit @CustID = @custid, @balance = @balance_ABS  
 	END
 END
 
@@ -163,7 +167,7 @@ BEGIN
 		IF @balance < 0 
 		BEGIN 
 			SELECT @balance_ABS = ABS(@balance)
-			EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance_ABS, @type = 2, @errCode = @ErrCode OUTPUT
+			EXEC Dot_BalanceUpdCredit @CustID = @custid, @balance = @balance_ABS  
 		END
 	END
 
@@ -180,7 +184,7 @@ FROM dbo.match14 WITH (NOLOCK)
 
 IF @winlostdate <= @MoveBetsDay
 BEGIN
-	EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
+				EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
 		@custid = @custid
 		,@Amount = @amount
 		,@winlostdate = @winlostdate
@@ -195,7 +199,7 @@ BEGIN
 			IF @balance < 0 
 			BEGIN 
 				SELECT @balance_ABS = ABS(@balance)
-				EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance_ABS, @type = 2, @errCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceUpdCredit @CustID = @custid, @balance = @balance_ABS  
 			END
 		END
 
@@ -211,7 +215,7 @@ IF @roleID = 1
 BEGIN 
 	IF @balance > 0 
 	BEGIN 
-		EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance_ABS, @type = 2, @errCode = @ErrCode OUTPUT
+		EXEC Dot_BalanceUpdCredit @CustID = @custid, @balance = @balance 
 	END
 END
 

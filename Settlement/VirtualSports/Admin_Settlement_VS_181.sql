@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Admin_Settlement_VS_181]    Script Date: 08/07/2015 14:06:50 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Admin_Settlement_VS_181]
+﻿ALTER PROCEDURE [dbo].[Admin_Settlement_VS_181]
 	@matchid int, --VS EventID
 	@action varchar(10) = 'CAL', -- CAL  / Refund 
 	@IP varchar(50) = NULL ,
@@ -19,7 +12,6 @@ AS
 	DB: DBTRANS.bodb02
 	
 	Revisions:
-		- 20150807@Kathy: Using new balance table (BalCreditOthersPending,BalDebitOthersPending) [Redmine:#40125]
 
 */
 BEGIN
@@ -125,10 +117,6 @@ END
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
-	
-	DECLARE @tblDebitPending TVP_BalanceList
-	DECLARE @tblCreditPending TVP_BalanceList
-	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -141,36 +129,16 @@ END
 
 
 
-	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	--SELECT custid, ABS(balance)
-	--FROM #Balance
-	--WHERE Increased = 0
-	
-	INSERT INTO @tblDebitPending (custID, balance)
-	SELECT	custid, ABS(balance)
-	FROM	#Balance
-	WHERE	Increased = 0
-	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
-			@BalancePending = @tblDebitPending
-			,@Type			= 4 -- Others
+	INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	SELECT custid, ABS(balance)
+	FROM #Balance
+	WHERE Increased = 0
 
-	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	--SELECT custid, balance
-	--FROM #Balance
-	--WHERE Increased = 1
-	
-	INSERT INTO @tblCreditPending (custID, balance)
-	SELECT	custid, balance
-	FROM	#Balance
-	WHERE	Increased = 1
-	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
-			@BalancePending = @tblCreditPending
-			,@Type			= 4 -- Others
-			
+	INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	SELECT custid, balance
+	FROM #Balance
+	WHERE Increased = 1
+
 	DROP TABLE #Balance
 	DROP TABLE #BalanceBefore
 	DROP TABLE #BalanceAfter

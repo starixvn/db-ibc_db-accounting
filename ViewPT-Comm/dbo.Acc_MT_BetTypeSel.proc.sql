@@ -11,7 +11,6 @@ Original:
 Revisions:
 	- 20091201@Kiwi: Union with CustSetting3rd.
 	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB, use temp table for bettype)
-    - 20151021@Billy: Add support for DCS -- UNION with ProductSettingDetail
 
 */
 
@@ -35,9 +34,6 @@ FROM
 	(	SELECT cs.custid, cs.bettype, cs.sporttype FROM CustSetting cs WITH (NOLOCK)
 		UNION 
 		SELECT cs3rd.custid, cs3rd.bettype, cs3rd.sporttype FROM CustSetting3rd cs3rd WITH (NOLOCK)
-        UNION
-        SELECT 73104, psd.BetType, psd.SportType FROM ProductSettingDetail psd WITH(NOLOCK)
-        WHERE psd.SettingType IN (1,3)
 	 ) t
 	INNER JOIN @tmp_Bettype b ON t.bettype = b.typeid
 WHERE t.custid IN( 73104) AND t.sporttype = ISNULL(@sporttype, t.sporttype)

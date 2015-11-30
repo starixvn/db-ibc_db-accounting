@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG] @creator INT
 	,@matchid INT
 	,@action VARCHAR(10) = 'CAL-FT'
@@ -19,9 +21,6 @@ AS
 		- 20140426@Kathy: Add @action param (1H FGLG (bettype 127) ) [Redmine:#14449]
 		- 20140618@Kathy: Correct betstatus
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212] - GoalRecord
-		- 20150610@Johnson: Add bettrade [Redmine: #35921]
-		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
-		
 	Param's Explanation:
 		+ @betstatus: FGLG status
 		+ @IsLoopTempTable: 1 : is nested
@@ -33,7 +32,6 @@ BEGIN
 
 	DECLARE @ActionID INT
 		,@bettype INT
-	CREATE TABLE #tmpTrans (transid BIGINT)
 
 	SELECT @ActionID = 108
 		,@bettype = CASE 
@@ -104,7 +102,7 @@ BEGIN
 		,@GoalRecord = @goalrecord
 		,@creator = @creator
 
-								EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
 		@Command			= 'NAP_Admin_Settlement_FGLG'
 		,@MatchID			= @matchid
 		,@creator			= @creator
@@ -163,23 +161,11 @@ BEGIN
 
 	BEGIN
 		--===
-		INSERT INTO #tmpTrans(transid)
-		SELECT transid
-		FROM dbo.bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid 
-			AND bettype = @bettype
-			AND betdaqid = 0--bettrade tickets
-
 		INSERT INTO #BalanceBefore
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903)
-			AND 1 = CASE WHEN bettype IN (901,902,903) 
-									AND refno IN (SELECT transid FROM #tmpTrans)	
-								THEN 1 
-						WHEN bettype NOT IN (901,902,903) THEN 1
-						ELSE 0 END
+		WHERE matchid = @matchid AND bettype = @bettype
 		GROUP BY custid
 
 		SET @TotalAccount = @@ROWCOUNT
@@ -228,7 +214,7 @@ BEGIN
 	IF @action = 'CAL-HT'
 	BEGIN
 		-- cal HT
-																EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'CAL-FGLG'
 			,@mode = 'CAL-HT'
 			,@HT_FGLG1 = @HT_FGLG1
@@ -238,7 +224,7 @@ BEGIN
 
 		IF @IncludeLG = 0
 		BEGIN
-																								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'CAL-FGLG'
 				,@mode = 'CAL-FT'
 				,@FGLG1 = @FGLG1
@@ -259,7 +245,7 @@ BEGIN
 	IF @action = 'CAL-FT'
 	BEGIN
 		-- cal FT
-																EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+		EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 			,@action = 'CAL-FGLG'
 			,@mode = 'CAL-FT'
 			,@FGLG1 = @FGLG1
@@ -293,12 +279,7 @@ BEGIN
 		SELECT custid
 			,SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903)
-			AND 1 = CASE WHEN bettype IN (901,902,903) 
-									AND refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1 
-						WHEN bettype NOT IN (901,902,903) THEN 1
-						ELSE 0 END
+		WHERE matchid = @matchid AND bettype = @bettype
 		GROUP BY custid
 			--===
 	END
@@ -311,9 +292,6 @@ BEGIN
 		,balance MONEY
 		,Increased BIT
 		)
-		
-	DECLARE @tblDebitPending TVP_BalanceList
-	DECLARE @tblCreditPending TVP_BalanceList
 
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
@@ -330,46 +308,23 @@ BEGIN
 
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-	--INSERT INTO dbo.BalancePendingDebit (
-	--	custid
-	--	,balance
-	--	)
-	--SELECT custid
-	--	,ABS(balance)
-	--FROM #Balance
-	--WHERE Increased = 0
-	INSERT INTO @tblDebitPending (custID, balance)
-	SELECT	custid, ABS(balance)
-	FROM	#Balance
-	WHERE	Increased = 0
-	
-	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingDebitIns 
-			@BalancePending = @tblDebitPending
-			,@Type			= 1 -- Sports
+	INSERT INTO dbo.BalancePendingDebit (
+		custid
+		,balance
+		)
+	SELECT custid
+		,ABS(balance)
+	FROM #Balance
+	WHERE Increased = 0
 
-	--INSERT INTO dbo.BalancePendingCredit (
-	--	custid
-	--	,balance
-	--	)
-	--SELECT custid
-	--	,balance
-	--FROM #Balance
-	--WHERE Increased = 1
-	INSERT INTO @tblCreditPending (custID, balance)
-	SELECT	custid, balance
-	FROM	#Balance
-	WHERE	Increased = 1
-	
-	IF @@rowcount <> 0
-				EXEC dbo.Dot_BalancePendingCreditIns 
-			@BalancePending = @tblCreditPending
-			,@Type			= 1 -- Sports
-	
-	IF @@rowcount <> 0
-																																EXEC dbo.Dot_BalancePendingCreditIns 
-			@BalancePending = @tblCreditPending
-			,@Type			= 1 -- Sports
+	INSERT INTO dbo.BalancePendingCredit (
+		custid
+		,balance
+		)
+	SELECT custid
+		,balance
+	FROM #Balance
+	WHERE Increased = 1
 
 	----
 	-- Add Negative Balance into BalanceNegative table 
@@ -401,8 +356,7 @@ BEGIN
 	DROP TABLE #BalanceBefore
 
 	DROP TABLE #BalanceAfter
-	
-	DROP TABLE #tmpTrans
+
 	-------------------------------------------------------------
 	---                      WRITE LOG                        ---
 	---------------------------VVVV------------------------------

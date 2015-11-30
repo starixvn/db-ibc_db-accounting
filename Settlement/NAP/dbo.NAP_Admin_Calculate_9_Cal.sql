@@ -1,14 +1,11 @@
-USE [bodb02]
+SET QUOTED_IDENTIFIER ON 
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/24/2015 11:12:46 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+SET ANSI_NULLS ON 
 GO
 
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 23/09/2015 9:57:57 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 9/23/2015 9:53:24 AM ******/
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 23/09/2015 6:58:15 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 23/09/2015 9:43:53 AM ******/
+CREATE PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
 	@matchdate smalldatetime	
 AS  
@@ -27,7 +24,6 @@ AS
 		- 20150914@Kathy: Change settlement flow (Remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
 		- 20150921@Kathy: Correct the winlostdate of main ticket [Redmine:#43566]
 		- 20150923@Kathy: Correct modds [Redmine:#43566]
-		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -130,8 +126,6 @@ BEGIN
 	CREATE TABLE #BalanceAfter (custid int PRIMARY KEY,balance money)
 	CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
-	DECLARE @tblDebitPending TVP_BalanceList
-	DECLARE @tblCreditPending TVP_BalanceList
 	-------------------
 	
 	WHILE (1 = 1)
@@ -151,8 +145,6 @@ BEGIN
 			TRUNCATE TABLE #BalanceBefore
 			TRUNCATE TABLE #BalanceAfter
 			TRUNCATE TABLE #Balance
-			DELETE FROM @tblCreditPending
-			DELETE FROM @tblDebitPending
 
 			DELETE TOP (1000) #temp_bettrans_9
 			OUTPUT	deleted.transID, DELETED.modds into @tempTransID(transid, modds)
@@ -172,6 +164,13 @@ BEGIN
 			  
 			SET @strTransIds = REPLACE(REPLACE(@strTransIds, '<root><r t="', ''), '"/></root>', '')
 			SET @strTransIds = REPLACE(REPLACE(@strTransIds, '" m="', '|'), '"/><r t="', ',')
+  
+			
+			--SET @strTransIds = STUFF((
+			--	SELECT ',' + cast(transid as varchar(20)) + CASE WHEN NULLIF(modds,0) IS NULL THEN '' ELSE '|' + cast(modds as varchar(20)) END
+			--	FROM @tempTransID					
+			--	FOR XML PATH('')
+			--),1,1,'')
 						
 			-------------------------------------------------------------
 			---        CAPTURE value BALANCE before settlement        ---
@@ -211,36 +210,15 @@ BEGIN
 				INNER JOIN #BalanceAfter a ON b.custid = a.custid
 			WHERE b.balance <> a.balance			
 
-			--INSERT INTO dbo.BalancePendingDebit (custid, balance)
-			--SELECT custid, ABS(balance)
-			--FROM #Balance
-			--WHERE Increased = 0
-			
-			INSERT INTO @tblDebitPending (custID, balance)
-			SELECT	custid, ABS(balance)
-			FROM	#Balance
-			WHERE	Increased = 0
-			
-			IF @@rowcount <> 0
-														EXEC dbo.Dot_BalancePendingDebitIns_xpre 
-					@BalancePending = @tblDebitPending
-					,@Type			= 1 -- Sports
-			
-			--INSERT INTO dbo.BalancePendingCredit (custid, balance)
-			--SELECT custid, balance
-			--FROM #Balance
-			--WHERE Increased = 1
-			
-			INSERT INTO @tblCreditPending (custID, balance)
-			SELECT	custid, balance
-			FROM	#Balance
-			WHERE	Increased = 1
-			
-			IF @@rowcount <> 0
-														EXEC dbo.Dot_BalancePendingCreditIns_xpre 
-					@BalancePending = @tblCreditPending
-					,@Type			= 1 -- Sports
-				
+			INSERT INTO dbo.BalancePendingDebit (custid, balance)
+			SELECT custid, ABS(balance)
+			FROM #Balance
+			WHERE Increased = 0
+
+			INSERT INTO dbo.BalancePendingCredit (custid, balance)
+			SELECT custid, balance
+			FROM #Balance
+			WHERE Increased = 1
 			----
 			-- Add Negative Balance into BalanceNegative table 
 			----
@@ -275,4 +253,13 @@ END
 
 
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam] AS [dbo]
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9_Cal] TO [vnteam]
+GO 

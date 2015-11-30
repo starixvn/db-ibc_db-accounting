@@ -24,9 +24,6 @@ AS
 		- 20150508@Kathy: Add Gold Deluxe product [Redmine:#34486]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
-		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
-		- 20150904@Helen: commission setting for MO [Redmine #41470]
-		- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -94,15 +91,13 @@ BEGIN
 	      , @mHideVirtualSports		BIT
 	      , @aHideKeno				BIT
 	      , @mHideKeno				BIT
+	      , @mDisableGoldDeluxe		BIT
+	      , @aDisableGoldDeluxe		BIT
 	      ,	@mHideGoldDeluxe		BIT
 	      , @aHideGoldDeluxe		BIT
-		  ,	@mHideColossusBet		BIT
-	      , @aHideColossusBet		BIT
 		  , @mDisableSuperLive		BIT
 	      , @aDisableSuperLive		BIT
 	      , @AdminUser				VARCHAR(50)
-	      , @DCSSportType			INT
-	      , @DCSSportName			NVARCHAR(50)
 
 
 	SELECT @srecommend		    = srecommend
@@ -130,8 +125,8 @@ BEGIN
 	     , @mHideVirtualSports  = HideVirtualSports
 	     , @mHideKeno			= HideKeno
 	     , @mDisableEsports     = DisableEsports
+	     , @mDisableGoldDeluxe	= DisableGoldDeluxe
 	     , @mHideGoldDeluxe		= HideGoldDeluxe
-	     , @mHideColossusBet	= HideColossusBet
 		 , @mDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @mastername
@@ -163,8 +158,8 @@ BEGIN
 	     , @aHideVirtualSports  = HideVirtualSports
 	     , @aHideKeno			= HideKeno
 	     , @aDisableEsports     = DisableEsports
+	     , @aDisableGoldDeluxe	= DisableGoldDeluxe
 	     , @aHideGoldDeluxe		= HideGoldDeluxe
-	     , @aHideColossusBet	= HideColossusBet
 		 , @aDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @agentname
@@ -302,76 +297,7 @@ BEGIN
 			@ErrCode = 112
 		return
 	END
-	
-	-- Check DCS Product's [disabled]
-	SELECT top 1 @DCSSportType = stt.SportType
-	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
-		INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
-		INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
-	WHERE dbo.f_GetProductStatus(m.bitmapIsDisabled, stt.bitmapOrder) = 1
-			AND dbo.f_GetProductStatus(a.bitmapIsDisabled, stt.bitmapOrder) = 0
-	
-	IF @DCSSportType <> 0
-	BEGIN
-		SELECT @DCSSportName = sportname
-		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
-		WHERE Sporttype = @DCSSportType
-		
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname 
-					+ ': agent enabled '
-					+ @DCSSportName
-					+ ' but new master not enabled '
-					+ @DCSSportName
-					+ '.',
-			@ErrCode = 9111
-		return
-	END
 
-	-- Check DCS Product's [hidden]
-	SELECT top 1 @DCSSportType = stt.SportType
-	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
-		INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
-		INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
-	WHERE dbo.f_GetProductStatus(m.bitmapIsHidden, stt.bitmapOrder) = 1
-			AND dbo.f_GetProductStatus(a.bitmapIsHidden, stt.bitmapOrder) = 0
-	
-	IF @DCSSportType <> 0
-	BEGIN
-		SELECT @DCSSportName = sportname
-		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
-		WHERE Sporttype = @DCSSportType
-		
-		SELECT @ErrMsg = 'Agent is offered '
-					+ @DCSSportName
-					+ ' but new master is not offered '
-					+ @DCSSportName
-					+ '.',
-			@ErrCode = 9112
-		return
-	END
-	
-	-- Check DCS Product's [sync]
-	SELECT top 1 @DCSSportType = stt.SportType
-	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
-		INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
-		INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
-	WHERE dbo.f_GetProductStatus(m.bitmapHasSynced, stt.bitmapOrder) = 0
-			AND dbo.f_GetProductStatus(a.bitmapHasSynced, stt.bitmapOrder) = 1
-	
-	IF @DCSSportType <> 0
-	BEGIN
-		SELECT @DCSSportName = sportname
-		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
-		WHERE Sporttype = @DCSSportType
-		
-		SELECT @ErrMsg = 'Error Master ' + @mastername + ', agent ' + @agentname + ': agent is synchronized '
-				+ @DCSSportName
-				+ ' but new master is not synchronized '
-				+ @DCSSportName
-				+ '.',
-			@ErrCode = 9113
-		return
-	END
 	--Check SyncCasino between Master and Agent 
 	IF @mSyncCasino = 0 AND @aSyncCasino = 1
 	BEGIN
@@ -468,14 +394,6 @@ BEGIN
 		return
 	END	
 	
-	--Check Colossus Bet enable status	
-	IF @mHideColossusBet = 1 and @aHideColossusBet = 0
-	BEGIN
-		SELECT @ErrMsg = 'Agent is offered Colossus Bets but new master is not offered Colossus Bets.',
-			@ErrCode = 129
-		RETURN
-	END	
-	
 	--Check identical auto master PT 
 	IF (@DisableAutoMPT_old = 0 and @DisableAutoMPT = 1)
 	begin
@@ -550,20 +468,6 @@ BEGIN
 			@ErrCode = 201					 
 		return
 	END
-	
-	--Check commission for DCS products
-	IF EXISTS (SELECT TOP 1 1
-		FROM dbo.CustDiscount3rd_Agent m WITH (NOLOCK)
-			INNER JOIN dbo.CustDiscount3rd_Agent a WITH (NOLOCK)
-				ON m.SportType = a.sporttype  
-					AND m.BetType = a.bettype
-					AND a.CustID = @recommend 
-		WHERE m.CustID =  @mrecommend AND m.Discount < a.Discount)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission is less than agent''s commission.',
-			@ErrCode = 9114					 
-		return
-	END
 
 	--Check commission for live casino
 	IF EXISTS (
@@ -612,78 +516,6 @@ BEGIN
 		RETURN
 	END
 
-	--Check commission for Colossus Bet
-	IF EXISTS (
-			SELECT	1
-			FROM	AgentCommRate mcs WITH(NOLOCK) 
-				JOIN AgentCommRate acs WITH(NOLOCK) ON	acs.custid = @recommend 
-														AND acs.sporttype = mcs.sporttype 
-														AND acs.bettype = mcs.bettype
-			WHERE	mcs.custid = @mrecommend 
-					AND mcs.sporttype = 204 
-					AND mcs.bettype = 18001
-					AND mcs.CommRate < acs.CommRate
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s commission for Colossus Bets is less than agent''s commission.',
-			@ErrCode = 216
-		RETURN
-	END
-
-	--Check Cash-In share for Colossus Bet
-	IF EXISTS (
-			SELECT	1
-			FROM	AgentCommRate mcs WITH(NOLOCK) 
-				JOIN AgentCommRate acs WITH(NOLOCK) ON	acs.custid = @recommend 
-														AND acs.sporttype = mcs.sporttype 
-														AND acs.bettype = mcs.bettype
-			WHERE	mcs.custid = @mrecommend 
-					AND mcs.sporttype = 204 
-					AND mcs.bettype = 18002
-					AND mcs.CommRate < acs.CommRate
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s cash-in share for Colossus Bets is less than agent''s cash-in share.',
-			@ErrCode = 217
-		RETURN
-	END	
-	
-	--Check commission for Myanmar Odds
-	DECLARE @IsMyanmarOdds_source BIT = 0
-	DECLARE @IsMyanmarOdds_destination BIT = 0
-	
-	SET @IsMyanmarOdds_destination =  dbo.fn_IsMyanmarOdds (@mrecommend)
-
-	SET @IsMyanmarOdds_source =  dbo.fn_IsMyanmarOdds (@mrecommend_old)
-
-	IF @IsMyanmarOdds_source <> @IsMyanmarOdds_destination
-	BEGIN
-		SELECT @ErrMsg = 'Cannot move customer ' + @agentname + ' since amongs its new and old sites, one has % Odds.',
-					@ErrCode = 218
-		RETURN	
-	END	
-	
-	IF @IsMyanmarOdds_source = 1
-	BEGIN
-		IF EXISTS(
-			SELECT	1
-			FROM	AgentCommRate mcs WITH(NOLOCK) 
-				JOIN AgentCommRate acs WITH(NOLOCK) ON	acs.custid = @recommend 
-														AND acs.sporttype = mcs.sporttype 
-														AND acs.bettype = mcs.bettype
-			WHERE	mcs.custid = @mrecommend 
-					AND mcs.sporttype = 1 
-					AND mcs.bettype = 301
-					AND mcs.CommRate < acs.CommRate
-		)
-		BEGIN
-			SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Master''s cash-in share for Colossus Bets is less than agent''s cash-in share.',
-					@ErrCode = 219
-			RETURN	
-		END
-	END
-
-
 	--Check identical autoposition taking
 	IF exists (
 		SELECT 1 from 
@@ -702,23 +534,6 @@ BEGIN
 		return
 	END
 
-	--Check identical autoposition taking for DCS products
-	IF EXISTS (SELECT TOP 1 1
-		FROM dbo.CustPTSetting3rd_Agent m WITH (NOLOCK)
-			INNER JOIN dbo.CustPTSetting3rd_Agent mo WITH (NOLOCK)
-				ON m.SportType = mo.sporttype  
-					AND m.BetType = mo.bettype
-					AND m.IsLive = mo.IsLive
-					AND mo.CustID = @mrecommend_old 
-		WHERE m.CustID =  @mrecommend AND 
-				(m.IsAutoSuperPT <> mo.IsAutoSuperPT OR m.AutoSuperPT <> mo.AutoSuperPT)
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @Mastername + ': Auto Position Taking of new master is not matched with old master.',
-			@ErrCode = 9115					 
-		return
-	END
-	
 	--Check identical autoposition taking for 3rd Party
 	IF exists (
 		SELECT 1 from 
@@ -786,22 +601,6 @@ BEGIN
 	BEGIN	
 		SELECT @ErrMsg = 'Error master ' + @Mastername + ': Master Position Taking of new master is less than Master Position Taking of old master.',
 			@ErrCode = 206					 
-		return
-	END
-	
-	--Check Position Taking for DCS products
-	IF EXISTS (SELECT TOP 1 1
-		FROM dbo.CustPTSetting3rd_Agent m WITH (NOLOCK)
-			INNER JOIN dbo.CustPTSetting3rd_Agent mo WITH (NOLOCK)
-				ON m.SportType = mo.sporttype  
-					AND m.BetType = mo.bettype
-					AND m.IsLive = mo.IsLive
-					AND mo.CustID = @mrecommend_old 
-		WHERE m.CustID =  @mrecommend AND mo.MasterPT > m.MasterPT
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @Mastername + ': Master Position Taking of new master is less than Master Position Taking of old master.',
-			@ErrCode = 9116				 
 		return
 	END
 
@@ -914,34 +713,6 @@ BEGIN
 		return
 	END
 
-	--Check Position Taking for DCS products
-	IF EXISTS (SELECT TOP 1 1
-		FROM dbo.CustPTSetting3rd_Agent m WITH (NOLOCK)
-			INNER JOIN dbo.CustPTSetting3rd_Agent a WITH (NOLOCK)
-				ON m.SportType = a.sporttype  
-					AND m.BetType = a.bettype
-					AND m.IsLive = a.IsLive
-					AND a.CustID = @recommend 
-		WHERE m.CustID =  @mrecommend
-			AND
-			(
-				--m2+a2<=m3
-				(a.MasterPT + a.AgentPT > m.MasterPT)
-				OR
-				--check n3<=m2+a2<=l3 IF im2 = 0, 
-				--a2<=l3 and um2+a2>=n3 IF im2 = 1
-				((a.IsAutoMasterPT = 0) and (a.MasterPT + a.AgentPT > m.MaxPT or a.MasterPT + a.AgentPT < m.MinPT))
-				or 
-				((a.IsAutoMasterPT = 1) and (a.AgentPT > m.MaxPT or a.AutoMasterPT + a.AgentPT < m.MinPT))			
-			)
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @mastername + ', agent ' + @agentname + ': Agent exceeded new master position taking.',
-			@ErrCode = 9117				 
-		return
-	END
-	
-	
 		--Check for 3rd party
 		--m2+a2<=m3	
 		--check n3<=m2+a2<=l3 IF im2 = 0, 
@@ -1078,70 +849,7 @@ BEGIN
 
 		return
 	END
-	
-	--Check Position Taking for DCS products  --all a2<=a4
-	IF EXISTS (SELECT TOP 1 1
-		FROM dbo.custinfo c WITH(NOLOCK)
-			INNER JOIN dbo.CustPTSetting3rd_Agent s WITH (NOLOCK) ON @srecommend = s.CustID
-			INNER JOIN dbo.CustPTSetting3rd_Agent a WITH (NOLOCK)
-				ON s.SportType = a.sporttype  
-					AND s.BetType = a.bettype
-					AND s.IsLive = a.IsLive
-					AND a.CustID = c.CustID 
-		WHERE c.recommend =  @recommend AND c.RoleID = 2 AND a.AgentPT > s.AgentPT
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super position taking.',
-			@ErrCode = 9118			 
-		return
-	END
-	
-	--Check Position Taking for DCS products --all a1<=a4
-	IF EXISTS (SELECT TOP 1 1
-		FROM dbo.custinfo c WITH(NOLOCK)
-			INNER JOIN dbo.CustPTSetting3rd_Agent s WITH (NOLOCK) ON @srecommend = s.CustID
-			LEFT JOIN dbo.CustPTSetting3rd_Member mem WITH (NOLOCK)
-				ON s.SportType = mem.sporttype  
-					AND s.BetType = mem.bettype
-					AND s.IsLive = mem.IsLive
-					AND mem.CustID = c.CustID 
-			LEFT JOIN dbo.CustPTGroupSetting3rd_Member memg WITH (NOLOCK)
-				ON s.SportType = memg.sporttype  
-					AND s.BetType = memg.bettype
-					AND s.IsLive = memg.IsLive
-					AND memg.AgentID = c.recommend 
-		WHERE c.recommend =  @recommend AND c.RoleID = 1 AND ISNULL(mem.AgentPT,memg.AgentPT) > s.AgentPT
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super position taking.',
-			@ErrCode = 9119			 
-		return
-	END
-	
-	--Check Position Taking for DCS products --all us1<=s4 if is1 = 1
-	IF EXISTS (SELECT TOP 1 1
-		FROM dbo.custinfo c WITH(NOLOCK)
-			INNER JOIN dbo.CustPTSetting3rd_Agent s WITH (NOLOCK) ON @srecommend = s.CustID
-			LEFT JOIN dbo.CustPTSetting3rd_Member mem WITH (NOLOCK)
-				ON s.SportType = mem.sporttype  
-					AND s.BetType = mem.bettype
-					AND s.IsLive = mem.IsLive
-					AND mem.CustID = c.CustID 
-			LEFT JOIN dbo.CustPTGroupSetting3rd_Member memg WITH (NOLOCK)
-				ON s.SportType = memg.sporttype  
-					AND s.BetType = memg.bettype
-					AND s.IsLive = memg.IsLive
-					AND memg.AgentID = c.recommend 
-		WHERE c.recommend =  @recommend AND c.RoleID = 1 
-			AND ISNULL(mem.IsAutoSuperPT,memg.IsAutoSuperPT) = 1
-			AND ISNULL(mem.AutoSuperPT,memg.AutoSuperPT) > s.SuperPT
-		)
-	BEGIN
-		SELECT @ErrMsg = 'Error master ' + @Mastername + ', agent ' + @agentname + ': Agent or member exceeded new super position taking.',
-			@ErrCode = 9120			 
-		return
-	END
-	
+
 	--Check Position Taking	for 3rd party
 		--all a2<=a4
 		--all a1<=a4
@@ -1183,7 +891,7 @@ BEGIN
 		return
 	END
 	
-	--Check Position Taking	for Gold Deluxe 
+	--Check Position Taking	for Gold Deluxe
 		--all a2<=a4
 		--all a1<=a4
 	IF exists (

@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransInsTransfer]
+﻿use bodb02
+go
+
+ALTER PROCEDURE [dbo].[Acc_BettransInsTransfer]
 	@FromCustID int,
 	@ToUserName varchar(30), 
 	@Amount money,
@@ -32,7 +35,6 @@ Revisions:
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					       
 	- 20150723@Patrick: Support Gold deluxe
-	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 					   
 Param's Explanation:
 */
@@ -178,8 +180,7 @@ COMMIT TRANSACTION
 		--- update balance credit for @FromCustID
 		IF @FromRoleID  = 1
 		BEGIN
-			--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
-			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+			EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
 		END 
 
 		-------------------------------------------
@@ -188,31 +189,7 @@ COMMIT TRANSACTION
 		IF @ToRoleID  = 1
 		BEGIN
 			SELECT @BalanceAmount = @amount * @ExchangeRate
-			--EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @BalanceAmount 
-			EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2, @ErrCode = @ErrCode OUTPUT
-			if @ErrCode <> 0
-			BEGIN
-				Select @ErrMsg = case @Language 
-							when 'E' then 'Transfer failed. Please try again.'
-							when 'CS' then N'Transfer failed. Please try again.'
-							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
-							else N'Transfer failed. Please try again.'
-						end, @ErrCode = 104
-				--- rollback @FromCustID
-				IF @FromRoleID  = 1
-				BEGIN
-					--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
-				END 
-
-				delete bettrans 
-				where custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
-					and bettype = 21003				
-			
-				return
-			END
+			EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @BalanceAmount 
 		END
 
 		INSERT INTO bettrans 
@@ -233,8 +210,7 @@ COMMIT TRANSACTION
 			--- rollback @FromCustID
 			IF @FromRoleID  = 1
 			BEGIN
-				--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
+				EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
 			END 
 
 			delete bettrans 
@@ -247,8 +223,7 @@ COMMIT TRANSACTION
 			IF @ToRoleID  = 1
 			BEGIN
 				SELECT @BalanceAmount = @amount * @ExchangeRate
-				--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
-				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
+				EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
 			END
 			
 			return
@@ -264,19 +239,7 @@ COMMIT TRANSACTION
 		----update balance Debit
 		IF @FromRoleID  = 1
 		BEGIN
-			--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @ErrCode = @ErrCode OUTPUT
-			if @ErrCode <> 0
-			BEGIN
-				Select @ErrMsg = case @Language 
-							when 'E' then 'Transfer failed. Please try again.'
-							when 'CS' then N'Transfer failed. Please try again.'
-							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
-							else N'Transfer failed. Please try again.'
-						end, @ErrCode = 105					
-
-				return
-			END
+			EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
 		END
 		
 		INSERT INTO bettrans 
@@ -304,8 +267,7 @@ COMMIT TRANSACTION
 			---rollback @FromCustID
 			IF @FromRoleID  = 1
 			BEGIN
-				--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
-				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+				EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
 			END
 
 			return
@@ -338,8 +300,7 @@ COMMIT TRANSACTION
 			---rollback @FromCustID
 			IF @FromRoleID  = 1
 			BEGIN
-				--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
-				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+				EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
 			END
 
 			return
@@ -349,8 +310,7 @@ COMMIT TRANSACTION
 		IF @ToRoleID  = 1
 		BEGIN
 			SELECT @BalanceAmount = @amount * @ExchangeRate 
-			--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
-			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
+			EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
 		END
 				
 		Select @LogData = 'Transfer from Customer ' + @ToUserName + ' to Customer ' + @FromUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno)
@@ -364,9 +324,9 @@ BEGIN
 	DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 	
 	IF @FromRoleID = 1		
-								EXEC Acc_BalanceGameResetYesterday @CustID = @FromCustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
+		EXEC Acc_BalanceGameResetYesterday @CustID = @FromCustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
 	ELSE		
-								EXEC Acc_BalanceGameResetYesterday @CustID = @ToCustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
+		EXEC Acc_BalanceGameResetYesterday @CustID = @ToCustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
 		
 	Select @LogData = @LogData + CASE WHEN @isResetYesterdayBalance = 1 THEN 
 										CASE WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetGameBalance = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')' 
@@ -385,6 +345,8 @@ BEGIN CATCH
 	Select @LogData = @LogData + ' ErrMsg=' + error_message()
 	EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
 END CATCH
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsTransfer] TO [bodbAdminNet] AS [dbo]

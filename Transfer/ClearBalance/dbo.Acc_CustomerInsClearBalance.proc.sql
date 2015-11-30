@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
+﻿use bodb02
+go
+
+ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
 	@UserID int,
@@ -38,7 +41,6 @@ Revisions:
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call Customer, Exchange by link database)  								   
 	- 20140826@Jamie: put RECOMPILE
 	- 20150723@Patrick: Support Gold deluxe
-	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 	
 Param's Explanation:
 */ 
@@ -213,26 +215,8 @@ BEGIN
 		END
 		
 		--update debit balance
-		--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @amount
-		EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @amount, @Type = 2, @ErrCode = @ErrCode OUTPUT
-		if @ErrCode <> 0
-		BEGIN
-			Select @ErrMsg = case @Language 
-						when 'E' then 'Clear balance failed. Please try again.'
-						when 'CS' then N'Clear balance failed. Please try again.'
-						when 'J' then N'もう一度残高ポイントを確認してください。'
-						else N'Clear balance failed. Please try again.'
-					end, @ErrCode = 102
-			
-			DELETE dbo.bettrans
-			WHERE custid in (@agentid, @custid)
-				and matchid = 0
-				and bettype = 21004
-				and refno = @refno
+		EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @amount
 				
-			return
-		END			
-
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, 
@@ -256,8 +240,7 @@ BEGIN
 				and refno = @refno
 			
 			---rollback balance
-			--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @amount
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @amount, @Type = 2
+			EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @amount
 			return
 		END		
 		
@@ -296,7 +279,6 @@ BEGIN
 				
 			return
 		END
-
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -324,8 +306,7 @@ BEGIN
 		
 		---update credit balance
 		SELECT @ABSamount = abs(@amount)
-		--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSamount
-		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @ABSamount, @Type = 2
+		EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSamount
 				
 		--Add writelog for each amt transfered - Vinh 20080629
 		Select @LogData = 'Clear balance: Transfer from Agent ' + @agUser 
@@ -338,7 +319,7 @@ BEGIN
     BEGIN				
 		DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 		-- reset yesterday balance for live casino						
-								EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
+		EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	
 		Select @LogData = @LogData + CASE WHEN @isResetYesterdayBalance = 1 THEN 										
 										CASE WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetGameBalance = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')' 
 										ELSE '. (ResetGameBalance = fail)' END		
@@ -376,6 +357,7 @@ BEGIN
 	   else N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s): ' + @ErrItems 
 	  end  
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbAdminNet] AS [dbo]

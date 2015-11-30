@@ -1,11 +1,10 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Task_Calculate_Parlay]    Script Date: 08/07/2015 13:21:04 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Task_Calculate_Parlay]    Script Date: 10/03/2014 09:08:59 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.NAP_Task_Calculate_Parlay    Script Date: 02/05/2014 2:55:50 PM ******/
 /****** Object:  Stored Procedure dbo.NAP_Task_Calculate_Parlay    Script Date: 3/17/2014 4:21:08 PM ******/
 
 ALTER PROCEDURE [dbo].[NAP_Task_Calculate_Parlay] @step INT = 0
@@ -17,8 +16,7 @@ AS
 	DB: DBTXN/bodb02
 	
 	Revisions:
-		- 20140502@Kathy: Calculate the execution time
-		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		-20140502@Kathy: Calculate the execution time
 		
 */
 SET NOCOUNT ON
@@ -172,10 +170,7 @@ BEGIN
 		,balance MONEY
 		,Increased BIT
 		)
-	
-	DECLARE @tblDebitPending TVP_BalanceList
-	DECLARE @tblCreditPending TVP_BalanceList
-	
+
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -191,43 +186,24 @@ BEGIN
 
 	SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-	--INSERT INTO dbo.BalancePendingDebit (
-	--	custid
-	--	,balance
-	--	)
-	--SELECT custid
-	--	,ABS(balance)
-	--FROM #Balance
-	--WHERE Increased = 0
-	
-	INSERT INTO @tblDebitPending (custID, balance)
-	SELECT	custid, ABS(balance)
-	FROM	#Balance
-	WHERE	Increased = 0
-	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
-			@BalancePending = @tblDebitPending
-			,@Type			= 1 -- Sports
-			
-	--INSERT INTO dbo.BalancePendingCredit (
-	--	custid
-	--	,balance
-	--	)
-	--SELECT custid
-	--	,balance
-	--FROM #Balance
-	--WHERE Increased = 1
+	INSERT INTO dbo.BalancePendingDebit (
+		custid
+		,balance
+		)
+	SELECT custid
+		,ABS(balance)
+	FROM #Balance
+	WHERE Increased = 0
 
-	INSERT INTO @tblCreditPending (custID, balance)
-	SELECT	custid, balance
-	FROM	#Balance
-	WHERE	Increased = 1
-	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
-			@BalancePending = @tblCreditPending
-			,@Type			= 1 -- Sports
+	INSERT INTO dbo.BalancePendingCredit (
+		custid
+		,balance
+		)
+	SELECT custid
+		,balance
+	FROM #Balance
+	WHERE Increased = 1
+
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----

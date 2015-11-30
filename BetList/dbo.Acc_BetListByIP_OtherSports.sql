@@ -57,7 +57,6 @@ AS
 		- 20150709@Edward: Supporting for Micro Gaming
 		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150831@Kos: Support Colossus Bet
-		- 20151023@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 	
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -1891,12 +1890,11 @@ BEGIN
 					b.swinlost,
 					b.betfrom,
 					b.winlostdate,
-					ISNULL(bm.betcheck, '') AS BetCheck,
-					'' AS transdesc,
+					b.betcheck,
+					b.transdesc,
 					0 AS OddsSpread
 				FROM bettrans AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-					LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 				WHERE s.ProductID = 15
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid
@@ -1955,8 +1953,8 @@ BEGIN
 					0 swinlost,
 					b.betfrom,
 					b.winlostdate,
-					b.Tranid3rd AS BetCheck,
-					'' AS transdesc,
+					'' betcheck,
+					b.transdesc,
 					0 AS OddsSpread
 				FROM dbo.translog AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
@@ -2019,12 +2017,11 @@ BEGIN
 					b.swinlost,
 					b.betfrom,
 					b.winlostdate,
-					ISNULL(bm.betcheck, '') AS BetCheck,
-					'' AS transdesc,
+					b.betcheck,
+					b.transdesc,
 					0 AS OddsSpread
 				FROM bettrans14 AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-					LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 				WHERE	s.ProductID = 15
 					AND b.winlostdate = @fromdate
 					AND b.custid = @custid

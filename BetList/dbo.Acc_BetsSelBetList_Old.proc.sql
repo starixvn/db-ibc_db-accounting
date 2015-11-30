@@ -59,7 +59,6 @@ AS
 		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
 		- 20150930@Bobby: Enhance performance - re-arrange indexers
-		- 20151022@Kos: Return [bettransm].[betcheck] to support view CB ticket detail
 */
 
 BEGIN
@@ -1106,9 +1105,9 @@ BEGIN
 			'' AS eventdate,
 			0,
 			0,
-			b.sdiscount,
-			b.adiscount,
-			b.discount,
+			sdiscount,
+			adiscount,
+			discount,
 			0 AS homeid,
 			0 AS awayid,
 			'' settleTime,
@@ -1154,12 +1153,11 @@ BEGIN
 			b.swinlost,
 			'' AS showtime,
 			b.winlostdate,
-			ISNULL(bm.betcheck, '') AS BetCheck,
+			b.BetCheck,
 			'' AS transdesc,
 			0 AS OddSpread
 		FROM dbo.bettrans_bk AS b WITH (nolock,index=IX_custid)
 			INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
-			LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
 		WHERE b.custid 			= @Custid	
 			AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 			AND s.ProductId 	= 15
@@ -1227,6 +1225,7 @@ BEGIN
 	 DROP TABLE #BetListDetailData;
 	 DROP TABLE #SportBettype
 END
+
 
 
 GO

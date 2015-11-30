@@ -1,13 +1,4 @@
-﻿
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s_Push    Script Date: 06/10/2015 11:21:40 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s_Push    Script Date: 6/1/2015 11:08:35 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s_Push    Script Date: 5/8/2015 9:44:34 AM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
 	 @AdminId			INT				= 148		-- calculated by system (default)
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -26,7 +17,7 @@ AS
 	Original: 
 	
 	Revisions:
-		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
+
 	Param's Explanation:
 */		
 BEGIN
@@ -112,7 +103,7 @@ BEGIN
 	END
 
 	-- check waiting ticket
-				EXEC NAP_Admin_Settlement_Checking
+	EXEC NAP_Admin_Settlement_Checking
 		@MatchId = @MatchId
 		,@Action = @Action
 		,@Mode = 'CAL-AUTO'
@@ -148,7 +139,7 @@ BEGIN
 		RETURN 
 	END
 	
-	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
+	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
 	BEGIN
 		BEGIN TRY
 			EXEC sys.sp_executesql @sqlCommand
@@ -189,17 +180,10 @@ BEGIN
 
 END
 
-
 GO
-
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO
-SET ANSI_NULLS ON 
-
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI] AS [dbo]
+GO
