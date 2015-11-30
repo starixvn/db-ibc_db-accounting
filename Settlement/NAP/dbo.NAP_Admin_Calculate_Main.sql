@@ -1537,13 +1537,13 @@ BEGIN
 					--Home Team Over/Under
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 401
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalhome
                         ,@betcount = @betcount_401
 
 					--Away Team Over/Under
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 402
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalaway
                         ,@betcount = @betcount_402
 
 					--2H Correct Score
@@ -1826,11 +1826,11 @@ BEGIN
                     ,@betcount = @betcount_404
 
 				--1H Double Chance
-				EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
-                    ,@bettype = 410
-                    ,@scorediff = @scorediff_ht
-                    ,@betcount = @betcount_410
-				
+				EXEC dbo.NAP_Admin_Calculate_24 @matchid = @matchid
+					,@bettype = 410
+					,@scorediff = @scorediff_ht
+					,@betcount = @betcount_410
+						
 				--1H Draw No Bet
 				EXEC dbo.NAP_Admin_Calculate_25 @matchid = @matchid
                     ,@bettype = 411
@@ -2860,7 +2860,7 @@ BEGIN
 				IF @betcount_401 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 401
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalhome
                         ,@betcount = @betcount_401
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -2869,7 +2869,7 @@ BEGIN
 				IF @betcount_402 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 402
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalaway
                         ,@betcount = @betcount_402
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -3373,7 +3373,7 @@ BEGIN
 				IF @betcount_401 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 401
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalhome
                         ,@betcount = @betcount_401
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -3382,7 +3382,7 @@ BEGIN
 				IF @betcount_402 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 402
-                        ,@totalgoal = @totalgoal
+                        ,@totalgoal = @totalaway
                         ,@betcount = @betcount_402
                         ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -3464,14 +3464,11 @@ BEGIN
 
 				--1H Double Chance
 				IF @betcount_410 > 0
-					EXEC dbo.NAP_Admin_Calculate_3 
+					EXEC dbo.NAP_Admin_Calculate_24 
                          @matchid = @matchid
                         ,@bettype = 410
                         ,@scorediff = @scorediff_ht
                         ,@betcount = @betcount_410
-						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-                        ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				--1H Double Chance
 				IF @betcount_411 > 0

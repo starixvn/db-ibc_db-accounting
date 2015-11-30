@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20140624@Kathy: Apply BetRadar: Add new bettype 151 (1st Double Change) [Redmine:#17142]
 		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 
 */
 BEGIN
@@ -76,14 +77,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					)
 			WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					) * 0.5
@@ -95,14 +96,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - apositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - apositiontaking * 0.5
@@ -114,14 +115,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - mpositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - mpositiontaking * 0.5
@@ -133,14 +134,14 @@ BEGIN
 			WHEN @modds > 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - spositiontaking
 			WHEN @modds = 0.25 THEN stake * (CASE 
 					WHEN odds < 0 THEN 1
 					ELSE (CASE 
-							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186) THEN odds - 1
+							WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28, 1224, 151,186,410) THEN odds - 1
 							ELSE odds END
 							) END
 					) * - spositiontaking * 0.5
