@@ -140,5 +140,5 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DuplicatedTicketsSel_xpre] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DuplicatedTicketsSel] TO [bodbAdminNet]
 GO
