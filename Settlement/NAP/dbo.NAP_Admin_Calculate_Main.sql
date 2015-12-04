@@ -262,6 +262,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betCount_409                    INT         = NULL
 	,@betCount_410                    INT         = NULL
 	,@betCount_411                    INT         = NULL
+	,@betCount_412                    INT         = NULL
 
     ,@betcount_1301                    INT            = NULL        -- Tennis SS 
     ,@betCount_1302                    INT            = NULL    
@@ -883,6 +884,7 @@ BEGIN
 			,@betCount_409 = ' + CASE WHEN @betCount_409 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_409) END + '
 			,@betCount_410 = ' + CASE WHEN @betCount_410 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_410) END + '
 			,@betCount_411 = ' + CASE WHEN @betCount_411 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_411) END + '
+			,@betCount_412 = ' + CASE WHEN @betCount_412 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_412) END + '
             
             ,@betCount_1301 = ' + CASE WHEN @betCount_1301 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1301) END + '
             ,@betCount_1302 = ' + CASE WHEN @betCount_1302 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1302) END + '
@@ -1841,6 +1843,13 @@ BEGIN
                     ,@bettype = 411
                     ,@scorediff = @scorediff_ht
                     ,@betcount = @betcount_411
+
+				--Exact 1st Half Goal
+				EXEC dbo.NAP_Admin_Calculate_6 
+                     @matchid = @matchid
+                    ,@bettype = 412
+                    ,@totalgoal = @totalht
+                    ,@betcount = @betCount_412
 
             END
 
@@ -3408,6 +3417,14 @@ BEGIN
                         ,@bettype = 409
                         ,@totalgoal = @totalaway
                         ,@betcount = @betcount_409
+                        ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				--Exact 1st Half Goal
+				IF @betCount_412 > 0
+                    EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
+                        ,@bettype = 412
+                        ,@totalgoal = @totalht
+                        ,@betcount = @betcount_412
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				IF @row_count > 0

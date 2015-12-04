@@ -199,6 +199,7 @@ BEGIN
 			,@betcount_409     INT
 			,@betcount_410     INT
 			,@betcount_411     INT
+			,@betcount_412     INT
 
     SELECT @fth = FinalHomeScore
         ,@fta = FinalAwayScore
@@ -610,9 +611,10 @@ BEGIN
 			,@betcount_404 = ISNULL(SUM(CASE bettype WHEN 404 THEN 1 ELSE 0 END),0)
 			,@betcount_410 = ISNULL(SUM(CASE bettype WHEN 410 THEN 1 ELSE 0 END),0)
 			,@betcount_411 = ISNULL(SUM(CASE bettype WHEN 411 THEN 1 ELSE 0 END),0)
+			,@betcount_412 = ISNULL(SUM(CASE bettype WHEN 412 THEN 1 ELSE 0 END),0)
 			
         FROM bettrans WITH (NOLOCK)
-        WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411)
+        WHERE matchid = @matchid AND bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411,412)
                 AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (200,201,202,203,204,205,207,209) THEN 0 
                              ELSE 1 END 
     END
@@ -779,6 +781,7 @@ BEGIN
 		,@betcount_409     = @betcount_409
 		,@betcount_410     = @betcount_410
 		,@betcount_411     = @betcount_411
+		,@betcount_412     = @betcount_412
 		
         ,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 END

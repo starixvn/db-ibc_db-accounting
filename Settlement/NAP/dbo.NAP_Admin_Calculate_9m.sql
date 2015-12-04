@@ -291,7 +291,7 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411) 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
@@ -310,7 +310,7 @@ BEGIN
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411) 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
@@ -334,7 +334,7 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,405,410,411) 
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,405,410,411,412) 
 				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
@@ -352,7 +352,7 @@ BEGIN
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,405,410,411) 
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,405,410,411,412) 
 				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
@@ -1309,6 +1309,13 @@ BEGIN
 						WHEN betteam = 'a' AND (@hth - @hta) < 0 THEN 1
 						ELSE -1
 						END
+				WHEN 412 THEN --Exact 1st Half Goal
+					CASE 
+						WHEN betteam <> '3&over' AND CAST(betteam AS INT) = (@hth + @hta) THEN 1
+						WHEN betteam = '3&over' AND (@hth + @hta) >= 3 THEN 1
+						ELSE -1
+						END
+
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -2256,6 +2263,13 @@ BEGIN
 						WHEN betteam = 'a' AND (@hth - @hta) < 0 THEN 1
 						ELSE -1
 						END
+				WHEN 412 THEN --Exact 1st Half Goal
+					CASE 
+						WHEN betteam <> '3&over' AND CAST(betteam AS INT) = (@hth + @hta) THEN 1
+						WHEN betteam = '3&over' AND (@hth + @hta) >= 3 THEN 1
+						ELSE -1
+						END
+
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
