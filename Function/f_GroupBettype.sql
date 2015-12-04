@@ -8,7 +8,8 @@ AS
 	DB:		DBAGE/bodb02, DBEXT/bodb02, DBACC/bodb02
  	Revisions: 
 		- 20150414@Sophia: Support BetRadar
-
+		- 20151204@Bobby: Grouped 6 bettypes for PH AIO
+		
 */
 
 BEGIN 
@@ -85,7 +86,43 @@ BEGIN
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
 	VALUES (199, 11)
 
-
+	-------- Grouped 6 bettypes for PH AIO
+	--1.Exact Total Goals vs 3rd
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (406, 406)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (159, 406)
+	
+	--2.Exact Home Team Goals & 3rd
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (407, 407)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (161, 407)
+	
+	--3.Winning Margin & 3rd
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (408, 408)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (171, 408)
+	
+	--4.Exact Away Team Goals & 3rd
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (409, 409)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (162, 409)
+	
+	--5.1H Double Chance & 3rd
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (410, 410)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (151, 410)
+	
+	--6.1H Draw No Bet & 3rd
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (411, 411)
+	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
+	VALUES (191, 411)
+	
 	RETURN
 END
 
