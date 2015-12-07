@@ -66,6 +66,7 @@ AS
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)		
 		- 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -87,7 +88,7 @@ BEGIN
 		,@goalrecord_old					VARCHAR(50)
 		,@LogData							NVARCHAR(300)
 		,@eventstatus						NVARCHAR(50)
-		,@sporttype							TINYINT
+		,@sporttype							SMALLINT
 		,@TicketCount						INT
 		--,@betcount_135						INT
 		--,@SettlementStatus135				INT

@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
     ,@hta                            INT            = NULL
     ,@home_2nd                        INT            = NULL
     ,@away_2nd                        INT            = NULL
-    ,@sporttype                        TINYINT        = NULL
+    ,@sporttype                      SMALLINT        = NULL
     ,@betstatus                        NVARCHAR(50)= NULL
     ,@GoalRecord                    VARCHAR(50)    = NULL
     ,@matchCode                        NVARCHAR(50)= NULL
@@ -310,6 +310,7 @@ AS
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)		
         - 20151019@Kathy: add more param @IsRefundHT for calculate_4 (Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626])
 		- 20151124@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
         
     Param's Explanation:
         @action            @mode
