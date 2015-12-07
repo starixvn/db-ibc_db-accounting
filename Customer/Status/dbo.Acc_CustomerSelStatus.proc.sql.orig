@@ -43,7 +43,10 @@ Revisions:
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
 	- 20151106@Patrick: Support RnG Game & rename field named DisableMicroGame to DisableMicroGameLC
+<<<<<<< HEAD
 	
+=======
+>>>>>>> 81c960f315933f797c7b834563ab23b8e7f3f6a9
 
 
 Param's Explanation:
@@ -200,9 +203,16 @@ Param's Explanation:
 			
 			CAST(CASE WHEN @HideMuayThai = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideMuayThai,
 			
+<<<<<<< HEAD
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
 		ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
 		ISNULL(DisableMicrogameRNG,1) as DisableMicrogameRNG
+=======
+			ISNULL(DisableMicrogameLC,1) as DisableMicrogameLC,
+			ISNULL(DisableSuperLive,1) as DisableSuperLive,
+			ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
+			ISNULL(DisableMicrogameRNG,1) as DisableMicrogameRNG
+>>>>>>> 81c960f315933f797c7b834563ab23b8e7f3f6a9
 	FROM custinfo AS ci WITH (nolock)
 		LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 		LEFT JOIN CustGameType cg WITH(NOLOCK) ON ci.custid = cg.custid
@@ -245,12 +255,11 @@ Param's Explanation:
 <<<<<<< HEAD
 		ci.DisableMicrogameLC,
 		ci.DisableSuperLive,
-		ci.DisableMicrogameRNG
 =======
 			ci.DisableMicrogameLC,
 			ci.DisableSuperLive,
+>>>>>>> 81c960f315933f797c7b834563ab23b8e7f3f6a9
 			ci.DisableMicrogameRNG
->>>>>>> Merge remote-tracking branch 'origin/master' into 41334_Accounting_MGC_RNG
 	
 END
 
