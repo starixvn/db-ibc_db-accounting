@@ -134,10 +134,10 @@ BEGIN
 						AND @bettype = 4 THEN 1
 					WHEN b.betteam NOT IN ('AOS')
 						AND @bettype = 405 --2H Correct Score
-						AND ((@fth-@hth) > LEFT(b.betteam,1) OR (@fta-@hta) > RIGHT(b.betteam,1) ) THEN -1
+						AND ((@fth-@hth) > LEFT(b.betteam,1) OR (@fta-@hta) > RIGHT(b.betteam,1)) THEN -1
 					WHEN b.betteam = 'AOS' --Any Other Scores
-						AND @bettype = 405
-						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						AND @bettype = 405 --2H Correct Score
+						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE NULL
 					END,			
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -281,7 +281,7 @@ BEGIN
 						AND @bettype = 4 THEN 1
 					WHEN b.betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE -1
 					END,
 			
@@ -408,7 +408,7 @@ BEGIN
 						AND ((@fth-@hth) > LEFT(betteam,1) OR (@fta-@hta) > RIGHT(betteam,1) ) THEN -1
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405
-						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE NULL
 					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
@@ -532,7 +532,7 @@ BEGIN
 						AND @bettype = 4 THEN 1
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405
-						AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE - 1
 					END
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost

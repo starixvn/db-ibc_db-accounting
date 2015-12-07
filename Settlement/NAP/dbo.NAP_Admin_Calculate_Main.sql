@@ -1583,6 +1583,7 @@ BEGIN
                          @matchid = @matchid
                         ,@bettype = 408
                         ,@scorediff = @scorediff
+						,@totalgoal = @totalgoal
                         ,@betcount = @betcount_408
 
 					--Exact Away Team Goals

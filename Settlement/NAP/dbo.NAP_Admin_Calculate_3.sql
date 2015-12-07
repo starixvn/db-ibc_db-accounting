@@ -252,11 +252,12 @@ BEGIN
                     WHEN b.betteam = 'du' AND @scorediff = 0 THEN b.hdp1 - @totalgoal    
                     WHEN b.betteam = 'h1' AND @scorediff = 1 THEN 1        --171,408
                     WHEN b.betteam = 'h2' AND @scorediff = 2 THEN 1 
-                    WHEN b.betteam = 'h3' AND @scorediff >=3 THEN 1
-                    WHEN b.betteam = 'd' AND @scorediff =0 THEN 1
-                    WHEN b.betteam = 'a1' AND @scorediff =-1 THEN 1 
-                    WHEN b.betteam = 'a2' AND @scorediff =-2 THEN 1 
-                    WHEN b.betteam = 'a3' AND @scorediff<=-3 THEN 1
+                    WHEN b.betteam = 'h3' AND @scorediff >= 3 THEN 1
+                    WHEN b.betteam = 'd' AND @scorediff = 0 AND @totalgoal <> 0 THEN 1
+					WHEN b.betteam = 'NG' AND @totalgoal = 0 THEN 1 --No Goal
+                    WHEN b.betteam = 'a1' AND @scorediff = -1 THEN 1 
+                    WHEN b.betteam = 'a2' AND @scorediff = -2 THEN 1 
+                    WHEN b.betteam = 'a3' AND @scorediff <= -3 THEN 1
                     ELSE - 1
                     END,
                 
@@ -433,7 +434,8 @@ BEGIN
                     WHEN betteam = 'h1' AND @scorediff = 1 THEN 1        --171,408 
                     WHEN betteam = 'h2' AND @scorediff = 2 THEN 1 
                     WHEN betteam = 'h3' AND @scorediff >=3 THEN 1 
-                    WHEN betteam = 'd' AND @scorediff =0 THEN 1 
+                    WHEN betteam = 'd' AND @scorediff = 0 AND @totalgoal <> 0 THEN 1 
+					WHEN betteam = 'NG' AND @totalgoal = 0 THEN 1 --No Goal
                     WHEN betteam = 'a1' AND @scorediff =-1 THEN 1 
                     WHEN betteam = 'a2' AND @scorediff =-2 THEN 1 
                     WHEN betteam = 'a3' AND @scorediff<=-3 THEN 1

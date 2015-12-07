@@ -334,8 +334,8 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,405,410,411,412) 
-				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
+				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190,405) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
 		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
@@ -352,8 +352,8 @@ BEGIN
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,405,410,411,412) 
-				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
+				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190,405) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
 		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
@@ -1262,9 +1262,9 @@ BEGIN
 						ELSE -1 END
 				WHEN 405 THEN --2H Correct Score
 					CASE
-						WHEN betteam = CAST((@fth -@hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
+						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
-							AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+							AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 						END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
@@ -1280,14 +1280,15 @@ BEGIN
 						END 
 				WHEN 408 THEN --Winning Margin	
 					CASE 
-						WHEN betteam = 'h1' AND (@fth - @fta) = 1 THEN 1
-						WHEN betteam = 'h2' AND (@fth - @fta) = 2 THEN 1 
-						WHEN betteam = 'h3' AND (@fth - @fta) >=3 THEN 1 
-						WHEN betteam = 'd' AND (@fth - @fta) =0 THEN 1
-						WHEN betteam = 'a1' AND (@fth - @fta) =-1 THEN 1 
-						WHEN betteam = 'a2' AND (@fth - @fta) =-2 THEN 1 
-						WHEN betteam = 'a3' AND (@fth - @fta)<=-3 THEN 1 
-						ELSE - 1					
+						WHEN betteam = 'H1' AND (@fth - @fta) = 1 THEN 1
+						WHEN betteam = 'H2' AND (@fth - @fta) = 2 THEN 1 
+						WHEN betteam = 'H3' AND (@fth - @fta) >= 3 THEN 1 
+						WHEN betteam = 'D' AND (@fth - @fta) = 0 AND @fth <> 0 THEN 1
+						WHEN betteam = 'A1' AND (@fth - @fta) = -1 THEN 1 
+						WHEN betteam = 'A2' AND (@fth - @fta) = -2 THEN 1 
+						WHEN betteam = 'A3' AND (@fth - @fta) <= -3 THEN 1 
+						WHEN betteam = 'NG' AND @fth = 0 AND @fta = 0 THEN 1
+						ELSE - 1
 						END
 				WHEN 409 THEN --Exact Away Team Goals
 					CASE 
@@ -2216,9 +2217,9 @@ BEGIN
 						ELSE -1 END
 				WHEN 405 THEN --2H Correct Score
 					CASE
-						WHEN betteam = CAST((@fth -@hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
+						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
-							AND ((@fth-@hth) >= 5 OR (@fta-@hta) >= 5 OR ((@fth-@hth) = 4 AND (@fta-@hta) = 3) OR ((@fth-@hth) = 3 AND (@fta-@hta) = 4)) THEN 1
+							AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 						END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
@@ -2234,13 +2235,14 @@ BEGIN
 						END 
 				WHEN 408 THEN --Winning Margin	
 					CASE 
-						WHEN betteam = 'h1' AND (@fth - @fta) = 1 THEN 1
-						WHEN betteam = 'h2' AND (@fth - @fta) = 2 THEN 1 
-						WHEN betteam = 'h3' AND (@fth - @fta) >= 3 THEN 1 
-						WHEN betteam = 'd' AND (@fth - @fta) = 0 THEN 1
-						WHEN betteam = 'a1' AND (@fth - @fta) = -1 THEN 1 
-						WHEN betteam = 'a2' AND (@fth - @fta) = -2 THEN 1 
-						WHEN betteam = 'a3' AND (@fth - @fta)<= -3 THEN 1 
+						WHEN betteam = 'H1' AND (@fth - @fta) = 1 THEN 1
+						WHEN betteam = 'H2' AND (@fth - @fta) = 2 THEN 1 
+						WHEN betteam = 'H3' AND (@fth - @fta) >= 3 THEN 1 
+						WHEN betteam = 'D' AND (@fth - @fta) = 0 AND @fth <> 0 THEN 1
+						WHEN betteam = 'A1' AND (@fth - @fta) = -1 THEN 1 
+						WHEN betteam = 'A2' AND (@fth - @fta) = -2 THEN 1 
+						WHEN betteam = 'A3' AND (@fth - @fta) <= -3 THEN 1 
+						WHEN betteam = 'NG' AND @fth = 0 AND @fta = 0 THEN 1 
 						ELSE - 1					
 						END
 				WHEN 409 THEN --Exact Away Team Goals
