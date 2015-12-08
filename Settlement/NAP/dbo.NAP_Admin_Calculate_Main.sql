@@ -2918,6 +2918,16 @@ BEGIN
                         ,@totalgoal = @totalhome
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				--Winning Margin
+				IF @betCount_408 > 0
+					EXEC dbo.NAP_Admin_Calculate_3 
+                         @matchid = @matchid
+                        ,@bettype = 408
+                        ,@scorediff = @scorediff
+						,@totalgoal = @totalgoal
+                        ,@betcount = @betcount_408
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 				
 				--Exact Away Team Goals
 				IF @betcount_409 > 0
@@ -3412,6 +3422,16 @@ BEGIN
                         ,@totalgoal = @totalhome
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+
+				--Winning Margin
+				IF @betCount_408 > 0
+					EXEC dbo.NAP_Admin_Calculate_3 
+                         @matchid = @matchid
+                        ,@bettype = 408
+                        ,@scorediff = @scorediff
+						,@totalgoal = @totalgoal
+                        ,@betcount = @betcount_408
+						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
 				--Exact Away Team Goals
 				IF @betcount_409 > 0

@@ -100,10 +100,11 @@ BEGIN
         SET 
              @totalgoal = CASE WHEN bettype = 3 AND @totalgoal = 0 AND @SelectedSet LIKE '%6%' THEN ISNULL(@TotalSetMatch,0) ELSE @totalgoal END 
             ,@modds = modds = CASE WHEN betteam IN ('h', 'o') THEN @totalgoal - hdp1
-                                  WHEN betteam IN ('a', 'u') THEN hdp1 - @totalgoal
-                                  WHEN RIGHT(betteam,1) = 'u' THEN hdp1 - @totalgoal    -- 144 ,163
-                                  ELSE NULL 
-                                  END 
+								WHEN betteam IN ('a', 'u') THEN hdp1 - @totalgoal
+                                WHEN RIGHT(betteam,1) = 'u' THEN hdp1 - @totalgoal    -- 144 ,163
+								WHEN bettype = 408 AND betteam = 'NG' AND @totalgoal > 0 THEN 1 --408: No Goal
+                                ELSE NULL 
+                                END 
             ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                 WHEN '0' THEN 1
                 WHEN '1' THEN 0
@@ -253,8 +254,8 @@ BEGIN
                     WHEN b.betteam = 'h1' AND @scorediff = 1 THEN 1        --171,408
                     WHEN b.betteam = 'h2' AND @scorediff = 2 THEN 1 
                     WHEN b.betteam = 'h3' AND @scorediff >= 3 THEN 1
-                    WHEN b.betteam = 'd' AND @scorediff = 0 AND @totalgoal <> 0 THEN 1
-					WHEN b.betteam = 'NG' AND @totalgoal = 0 THEN 1 --No Goal
+                    WHEN betteam = 'd' AND ((@scorediff = 0 AND bettype <> 408) OR (bettype = 408 AND @scorediff = 0 AND @totalgoal <> 0)) THEN 1
+					WHEN betteam = 'NG' AND @totalgoal = 0 THEN 1 --No Goal
                     WHEN b.betteam = 'a1' AND @scorediff = -1 THEN 1 
                     WHEN b.betteam = 'a2' AND @scorediff = -2 THEN 1 
                     WHEN b.betteam = 'a3' AND @scorediff <= -3 THEN 1
@@ -433,8 +434,8 @@ BEGIN
                     WHEN betteam = 'du' AND @scorediff = 0 THEN hdp1 - @totalgoal        
                     WHEN betteam = 'h1' AND @scorediff = 1 THEN 1        --171,408 
                     WHEN betteam = 'h2' AND @scorediff = 2 THEN 1 
-                    WHEN betteam = 'h3' AND @scorediff >=3 THEN 1 
-                    WHEN betteam = 'd' AND @scorediff = 0 AND @totalgoal <> 0 THEN 1 
+                    WHEN betteam = 'h3' AND @scorediff >=3 THEN 1
+					WHEN betteam = 'd' AND ((@scorediff = 0 AND bettype <> 408) OR (bettype = 408 AND @scorediff = 0 AND @totalgoal <> 0)) THEN 1
 					WHEN betteam = 'NG' AND @totalgoal = 0 THEN 1 --No Goal
                     WHEN betteam = 'a1' AND @scorediff =-1 THEN 1 
                     WHEN betteam = 'a2' AND @scorediff =-2 THEN 1 

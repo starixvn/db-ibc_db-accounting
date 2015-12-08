@@ -409,6 +409,7 @@ BEGIN
 			,@betcount_405		   INT
 			,@betcount_406         INT
 			,@betcount_407         INT
+			,@betcount_408         INT
 			,@betcount_409         INT
 			
         SELECT @ScoreLog = ' FTHScore=' + CAST(@fth AS VARCHAR(10)) 
@@ -537,11 +538,12 @@ BEGIN
 		  ,@betcount_405     = ISNULL(SUM(CASE b.bettype WHEN 405 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_406     = ISNULL(SUM(CASE b.bettype WHEN 406 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_407     = ISNULL(SUM(CASE b.bettype WHEN 407 THEN 1 ELSE 0 END), 0)
+		  ,@betcount_408     = ISNULL(SUM(CASE b.bettype WHEN 408 THEN 1 ELSE 0 END), 0)
 		  ,@betcount_409     = ISNULL(SUM(CASE b.bettype WHEN 409 THEN 1 ELSE 0 END), 0)
 
         FROM bettrans b WITH (NOLOCK)
         WHERE b.matchid = @matchid 
-        AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302,401,402,405,406,407,409) 
+        AND b.bettype IN (3, 4, 6, 13, 26, 27, 128, 130, 131, 132, 133, 134, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 152,159, 161, 162, 163, 170, 172, 187, 195, 196, 199, 206, 302,401,402,405,406,407,408,409) 
         AND b.statusID NOT IN (101, 102) 
         AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
                      WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
@@ -621,6 +623,7 @@ BEGIN
 			,@betcount_405                     = @betcount_405
 			,@betcount_406                     = @betcount_406
 			,@betcount_407                     = @betcount_407
+			,@betcount_408                     = @betcount_408
 			,@betcount_409                     = @betcount_409
 			
             ,@IsHTCal                        = @IsHTCal

@@ -1282,8 +1282,8 @@ BEGIN
 					CASE 
 						WHEN betteam = 'H1' AND (@fth - @fta) = 1 THEN 1
 						WHEN betteam = 'H2' AND (@fth - @fta) = 2 THEN 1 
-						WHEN betteam = 'H3' AND (@fth - @fta) >= 3 THEN 1 
-						WHEN betteam = 'D' AND (@fth - @fta) = 0 AND @fth <> 0 THEN 1
+						WHEN betteam = 'H3' AND (@fth - @fta) >= 3 THEN 1
+						WHEN betteam = 'D' AND (((@fth - @fta) = 0 AND bettype <> 408) OR (bettype = 408 AND (@fth - @fta) = 0 AND (@fth + @fta) <> 0)) THEN 1
 						WHEN betteam = 'A1' AND (@fth - @fta) = -1 THEN 1 
 						WHEN betteam = 'A2' AND (@fth - @fta) = -2 THEN 1 
 						WHEN betteam = 'A3' AND (@fth - @fta) <= -3 THEN 1 
@@ -2238,7 +2238,7 @@ BEGIN
 						WHEN betteam = 'H1' AND (@fth - @fta) = 1 THEN 1
 						WHEN betteam = 'H2' AND (@fth - @fta) = 2 THEN 1 
 						WHEN betteam = 'H3' AND (@fth - @fta) >= 3 THEN 1 
-						WHEN betteam = 'D' AND (@fth - @fta) = 0 AND @fth <> 0 THEN 1
+						WHEN betteam = 'D' AND (((@fth - @fta) = 0 AND bettype <> 408) OR (bettype = 408 AND (@fth - @fta) = 0 AND (@fth + @fta) <> 0)) THEN 1
 						WHEN betteam = 'A1' AND (@fth - @fta) = -1 THEN 1 
 						WHEN betteam = 'A2' AND (@fth - @fta) = -2 THEN 1 
 						WHEN betteam = 'A3' AND (@fth - @fta) <= -3 THEN 1 
