@@ -1,5 +1,4 @@
-﻿ 
-ALTER PROCEDURE Acc_LoginAdminCheckTimeConstraint
+﻿ALTER PROCEDURE [dbo].[Acc_LoginAdminCheckTimeConstraint]
 (
 	@custid		int,	
 	@isAccess	BIT = 1 OUTPUT,
@@ -10,10 +9,11 @@ AS
 /*
 	Created: 20130327@Lukas
 	Task: constraint login time for some particular admins
-	DB: DBTXN/bodb02
+	DB: DBCUST/CustDB
 	
 	Revision: 
 		- 20130328@Lukas: set constrain time in between 9AM and 9PM (GMT+8)
+		- 20151209@Elodie: set constrain time in between 11AM and 12PM (GMT+8)
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -27,7 +27,7 @@ BEGIN
 					2340	, ---pin
 					8811	  ---YEAN
 				)
-				AND DATEPART(HOUR,GETDATE()) BETWEEN 9 AND 20
+				AND DATEPART(HOUR,GETDATE()) BETWEEN 12 AND 23
 	BEGIN		
 		SELECT	@isAccess = 0,
 				@ErrMsg = 'You are not authorized to access at this time. Please contact your supervisor.',
@@ -37,6 +37,4 @@ BEGIN
 END
 
 GO
-
-GRANT VIEW DEFINITION ON Acc_LoginAdminCheckTimeConstraint TO vnteam
-
+GRANT VIEW DEFINITION ON [dbo].[Acc_LoginAdminCheckTimeConstraint] TO [vnteam] AS [dbo]
