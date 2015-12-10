@@ -1,4 +1,10 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss]
+﻿SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_Rpt_LiveCasino_AgencyWinLoss    Script Date: 12/9/2015 2:49:09 PM ******/
+CREATE PROCEDURE [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss]
 	@fromdate datetime,
 	@todate datetime,
 	@username varchar(50) = '',
@@ -27,6 +33,7 @@ Revisions:
 	- 20150601@Sophia: Apply Gold Deluxe [#35359] 
 	- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+	-  Jim@20151113: HotFix #46113
 
 		
 Param's Explanation:
@@ -142,6 +149,19 @@ SELECT @TempDataSQL = ''
 SELECT @TempDataSQLDW = ''
 IF(@ReportBy  <> 5)--1,2,3,4
 BEGIN
+	SELECT   DISTINCT SUBSTRING(username,0,CHARINDEX('dummy3rd',username)) AS LicenseeName
+			,Recommend CustID
+			,currency 
+			,0 AS LicenseeID
+			INTO #tmpLicenseeDummy
+	FROM DBCUST.CustDB.dbo.Customer c WITH(NOLOCK)
+	WHERE username LIKE '%dummy3rd%'
+	
+	UPDATE d
+		SET LicenseeID=s.LicenseeID
+		FROM #tmpLicenseeDummy d 
+			INNER JOIN DBLIC.bodb_licensee.dbo.Licensees s ON s.LicenseeName=d.LicenseeName
+			
 	--SELECT @UserRole = 1
 	SELECT @TempDataSQL = @TempDataSQL
 	+'SELECT ' + CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
@@ -183,7 +203,13 @@ BEGIN
 									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
 	 ELSE ''
 	 END
-	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN DBLIC.bodb_licensee.dbo.LicenseeCust lc with (nolock) on b.recommend = lc.custid' + char(13)
+	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN (
+											SELECT lct.LicenseeID,lct.CustID
+													FROM DBLIC.bodb_licensee.dbo.LicenseeCust lct with (nolock) 
+													UNION ALL 
+													SELECT tmp.LicenseeID,tmp.CustID
+													FROM #tmpLicenseeDummy  tmp
+											) lc on b.recommend = lc.custid' + char(13)
 	 								+'LEFT JOIN DBLIC.bodb_licensee.dbo.Licensees lic with (nolock) on lc.LicenseeID = lic.LicenseeID' + char(13)
 	 ELSE ''
 	 END
@@ -266,6 +292,7 @@ BEGIN
 	+CASE WHEN @ReportBy = 4 THEN 'b.leagueid,'+char(13) ELSE '' END
 	+' b.currency'+CHAR(13)
 	--+'c.actualrate'+char(13)
+	--DROP TABLE #tmpLicenseeDummy
 END
 ELSE--(@ReportBy = 5)
 BEGIN
@@ -294,6 +321,19 @@ BEGIN
 		
 	END
 	
+	SELECT   DISTINCT SUBSTRING(username,0,CHARINDEX('dummy3rd',username)) AS LicenseeName
+			,Recommend CustID
+			,currency 
+			,0 AS LicenseeID
+			INTO #tmpLicenseeDummy1
+		FROM DBCUST.CustDB.dbo.Customer c WITH(NOLOCK)
+		WHERE username LIKE '%dummy3rd%'
+		
+		UPDATE d
+		SET LicenseeID=s.LicenseeID
+		FROM #tmpLicenseeDummy1 d 
+			INNER JOIN DBLIC.bodb_licensee.dbo.Licensees s ON s.LicenseeName=d.LicenseeName
+			
 	-- There is no username 
 	IF(@UserRole IS NULL) RETURN
 	
@@ -342,7 +382,14 @@ BEGIN
 									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
 	 ELSE ''
 	 END + char(13)
-	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN DBLIC.bodb_licensee.dbo.LicenseeCust lc with (nolock) on b.recommend = lc.custid' + char(13)
+	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN 
+									(
+									SELECT lct.LicenseeID,lct.CustID
+													FROM DBLIC.bodb_licensee.dbo.LicenseeCust lct with (nolock) 
+													UNION ALL 
+													SELECT tmp.LicenseeID,tmp.CustID
+													FROM #tmpLicenseeDummy1  tmp
+									)lc   on b.recommend = lc.custid' + char(13)
 								+'LEFT JOIN DBLIC.bodb_licensee.dbo.Licensees lic with (nolock) on lc.LicenseeID = lic.LicenseeID' + char(13)
 	 ELSE '' 
 	 END
@@ -418,6 +465,7 @@ BEGIN
 	+'GROUP BY b.currency,'+char(13)
 	+'a.UserName'+char(13)
 	--+'c.actualrate'+char(13)
+	--DROP TABLE #tmpLicenseeDummy1
 END
 --------Process data source based on move bet day & balanceup day---------------------------------
 select @sql = ''
@@ -661,18 +709,20 @@ select [ExchangeDate], [ExchangeId],[ActualRate]
     AND ExchangeId = 16
 */
 
-
-
 DROP TABLE #Data
 DROP TABLE #Agency
 
 
-
-
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss] TO [vnteam] AS [dbo]
-GO
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss] TO [bodbAdminNet]
+GO 
