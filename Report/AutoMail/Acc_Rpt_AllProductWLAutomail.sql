@@ -1,5 +1,9 @@
-Use bodb02
-Go
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_Rpt_AllProductWLAutomail    Script Date: 10/26/2015 10:32:33 AM ******/
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
 	@AllowSendEmail BIT = 0 OUTPUT
@@ -15,7 +19,8 @@ AS
 		- 20150619@Sophia: Add Gold Deluxe, AG Casino, Vegas Game [#38512]
 		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
 		- 20150722@Sophia: Send mail for dummy account in case of testing
-		- 20150930@Sophia: Fix winlostyesterday at table Transfer_bk [#44701]
+		- 20150928@Sophia: Apply Colosuss Bets and expand the range of AG Casino [#43352]
+		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
 		 
 	Param's Explanation:
 	
@@ -206,12 +211,14 @@ BEGIN
 							WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
 							WHEN bettype BETWEEN 1501 AND 1599 THEN 14054918
 							WHEN bettype IN (31,32,33) THEN 7723121
-							WHEN bettype = 1800 THEN 18188766
+							WHEN bettype BETWEEN 1800 AND 1899 THEN 18188766
 							WHEN bettype = 1900 THEN 18188815
 							WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
 							WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
-							WHEN bettype BETWEEN 2001 AND 2099 THEN 18256397
+							WHEN bettype BETWEEN 2001 AND 2007 THEN 18256397
+							WHEN bettype BETWEEN 2008 AND 2009 THEN 19692521
 							WHEN bettype BETWEEN 901 AND 903 THEN 18371760
+							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -232,12 +239,14 @@ BEGIN
 							WHEN bettype BETWEEN 1201 AND 1299 THEN 13062615
 							WHEN bettype BETWEEN 1501 AND 1599 THEN 13062664
 							WHEN bettype IN (31,32,33) THEN 13062630
-							WHEN bettype = 1800 THEN 18254399
+							WHEN bettype BETWEEN 1800 AND 1899 THEN 18254399
 							WHEN bettype = 1900 THEN 18254404
 							WHEN bettype BETWEEN 1700 AND 1799 THEN 18254395
 							WHEN bettype BETWEEN 801 AND 899 THEN 18254387 
-							WHEN bettype BETWEEN 2001 AND 2099 THEN 18377344
+							WHEN bettype BETWEEN 2001 AND 2007 THEN 18377344
+							WHEN bettype BETWEEN 2008 AND 2009 THEN 19741787
 							WHEN bettype BETWEEN 901 AND 903 THEN 18377348
+							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -277,11 +286,17 @@ BEGIN
 END
 
 
+
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_AllProductWLAutomail] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_AllProductWLAutomail] TO [vnteam] AS [dbo]
-GO
 
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_AllProductWLAutomail] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_AllProductWLAutomail] TO [bodbAdminNet]
+GO 

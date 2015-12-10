@@ -64,6 +64,7 @@ Revisions:
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20151001@Percy: AG Casino & Microgaming - Outstanding Info [Redmine: #43765]
 	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
+	- 20151001@Percy: AG Casino & Microgaming - Outstanding Info [Redmine: #43765]
 	- 20151030@Percy: AG Casino & Microgaming - Outstanding Info for new Sporttype [Redmine: #46450]
 	- 20151112@Percy: AG Casino & Microgaming - Fix bug for new Sporttype [Redmine: #47441]
 
@@ -677,6 +678,15 @@ BEGIN
 	    WHERE BT.recommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
 		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
 		
+		-- Get Today Cash on bettrans
+		SELECT
+			@todayAgentCash = ISNULL(sum(awinlost+comm-playercomm),0),
+			@todayCustCash = ISNULL(sum(winlost-actual_stake+playercomm),0)
+	    FROM bettrans BT WITH(NOLOCK)
+			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
+	    WHERE BT.recommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
+		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+		
 		-- Get Cash From TransLog
 		SELECT @TransLogOT = SUM(actual_stake),
 			    @TransLogOTPT = SUM(actual_stake * apositiontaking)
@@ -914,4 +924,5 @@ GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
 GO
 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
 
