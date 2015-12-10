@@ -5,6 +5,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MetricGaming]
 	,@Bettype					INT
 	,@ResultID					INT	
 	,@BettypeTime				VARCHAR(100)	= ''
+	,@newBettypeTime			VARCHAR(100)	= ''
 	,@Result					VARCHAR(4000)	= ''
 	,@Action					VARCHAR(10)		= 'CAL'
 	,@AdminId					INT	
@@ -21,7 +22,7 @@ AS
 		DB: DBTXN/bodb02
 		
 		Revisions:
-		
+			- 20151210@Johnson: allow update bettype time when settle bettype Goal within 60s of kick (801) [Redmine: #49016]
 		Parameter's Explantion:
 			-@Result = <Result>
 							<Row GameResult="7" OtherInfo="6:10"/>
@@ -66,6 +67,21 @@ BEGIN
 
 		RETURN
 	END
+	
+	IF @Bettype = 801 AND @newBettypeTime <>  '' 
+			AND EXISTS (SELECT 1
+						FROM ResultDetail3rd WITH(NOLOCK)
+						WHERE MatchID = @matchID
+							AND GameID = @bettype
+							AND ResultID <> @ResultID
+							AND custom1 = @newBettypeTime
+						)
+	BEGIN
+		SELECT @ErrCode = 9999999
+			,@ErrMsg	= 'The Event Time already existed in this match.'
+
+		RETURN
+	END						
 
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
 	VALUES (3, @matchid)
@@ -158,6 +174,7 @@ BEGIN
 		,@Action				= @Action
 		,@Result				= @Result
 		,@AdminId				= @AdminId
+		,@newBettypeTime		= @newBettypeTime
 		,@isSettleDetermined	= @isSettleDetermined
 		
 	
@@ -165,6 +182,7 @@ BEGIN
 		@matchid				= @matchid
 		,@bettype				= @bettype
 		,@bettypeTime			= @bettypeTime
+		,@newBettypeTime		= @newBettypeTime
 		,@SuspendedTime			= @SuspendedTime
 		,@Action				= @Action
 		,@ResultID				= @ResultID
@@ -296,6 +314,7 @@ BEGIN
 							+ ' Bettype:' + CAST(@Bettype AS VARCHAR(10)) 
 							+ ' ResultID:' + CAST (@ResultId AS VARCHAR(10))
 							+ ' BettypeTime:' + @BettypeTime
+							+ CASE WHEN @bettype = 801 AND @newBettypeTime <> '' THEN ' newBettypeTime:' + @newBettypeTime END
 							+ ' Result:' + @Result
 							+ ' IsSettleDetermined:' + CAST (@IsSettleDetermined AS VARCHAR(1))
 							+ ' SuspendedTime' + CAST(@SuspendedTime AS VARCHAR(2))
@@ -334,7 +353,18 @@ BEGIN
 			,@IP			= @IP
 	END TRY
 	BEGIN CATCH
-		SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
+		SELECT @Remark = '<Log><Event IsSettleDetermined ="' + CAST(@IsSettleDetermined AS varchar(10)) + '"'
+											+ ' Duration="'+ CAST(DATEDIFF(MILLISECOND, @start, @stop) AS VARCHAR(20)) + ' ms"'
+											+ ' TC="' + CAST(@ticketCount AS VARCHAR(20)) + '"'
+											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" >'
+											
+								+ @Result
+								+ '<Error>
+									<Row Msg="'+ left(error_message(), 400)+'"/>'
+								+ '</Error>'	
+						  +	'</Event>'
+					+ '</Log>'
+		--SELECT @Remark = 'ErrMsg=' + left(error_message(), 400)
 				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_SettleMetricGaming
 			@UserID			= @AdminId
 			,@MatchID		= @matchid			

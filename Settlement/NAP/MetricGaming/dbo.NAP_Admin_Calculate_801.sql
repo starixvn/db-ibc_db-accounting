@@ -1,14 +1,8 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_801_xtest]    Script Date: 8/14/2015 3:18:55 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_801]
 	@matchid				INT,
 	@bettype				INT,
 	@bettypeTime			VARCHAR(100)	= '',
+	@newBettypeTime			VARCHAR(100)	= '',
 	@SuspendedTime			TINYINT			= 0,
 	@Action					VARCHAR(50)		= 'CAL',
 	@ResultID				INT,
@@ -23,7 +17,7 @@ AS
 		DB: DBTXN/bodb02
 		
 		Revisions:
-		
+			- 20151210@Johnson: allow update bettype time when settle bettype Goal within 60s of kick (801) [Redmine: #49016]
 		Parameter's Explanation:
 		* @Result = <Result>
 						<Row GameResult="7" OtherInfo="6:10"/>
@@ -105,7 +99,8 @@ BEGIN
 					[custom1] [varchar](40) ,
 					[liveindicator] [bit] ,
 					[custom2] [varchar](50) ,
-					[custom3] [varchar](50) 
+					[custom3] [varchar](50),
+					[SiteID]  [varchar](10)
 			)
 
 		UPDATE translog WITH(UPDLOCK,ROWLOCK)
@@ -120,6 +115,8 @@ BEGIN
 			status = CASE WHEN @StatusID = 112 THEN 'WON' 
 							WHEN @StatusID = 113 THEN 'LOSE'
 							ELSE 'DRAW' END,
+			transdesc = CASE WHEN gameID = 801 AND @newBettypeTime <> '' THEN STUFF(transdesc,CHARINDEX('bettypetime',transdesc)+12,CHARINDEX(';time',transdesc)-CHARINDEX('bettypetime',transdesc)-12,@newBettypeTime)							
+								ELSE transdesc END,
 			custom3 = @ResultID				
 		OUTPUT INSERTED.[translogid]
 			  ,INSERTED.[custid]
@@ -161,6 +158,7 @@ BEGIN
 			  ,INSERTED.[liveindicator]
 			  ,INSERTED.[custom2]
 			  ,INSERTED.[custom3]
+			  ,INSERTED.[SiteID]
 		INTO #tmpTransCalc(
 			[translogid]
 		  ,[custid]
@@ -202,6 +200,7 @@ BEGIN
 		  ,[liveindicator]
 		  ,[custom2]
 		  ,[custom3]
+		  ,[siteID]
 		)
 		WHERE GameID = @bettype
 			AND EventID = @matchid				
@@ -215,7 +214,10 @@ BEGIN
 		USING #tmpTransCalc t ON b.matchid = @matchid
 						AND b.bettype = @bettype
 						AND b.refno = t.translogID
-		WHEN MATCHED THEN UPDATE SET @Statusid = CASE WHEN SUBSTRING(b.transdesc,11,CHARINDEX(';bettypetime',b.transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112
+		WHEN MATCHED THEN 
+		UPDATE 
+		SET b.transdesc = t.transdesc,				
+			@Statusid = CASE WHEN SUBSTRING(t.transdesc,11,CHARINDEX(';bettypetime',t.transdesc)-11) IN (SELECT GameResult FROM @tmpResult) THEN 112
 										WHEN EXISTS(SELECT 1 
 													FROM @tmpResult 
 													WHERE 1= CASE WHEN GameResult = 14 AND @bettype = 805 THEN 1
@@ -458,6 +460,7 @@ BEGIN
 		);
 		
 		--return result to send API
+		; WITH T AS(
 		SELECT refno as ticketID,
 			@bettype as bettype,
 			custid,
@@ -470,7 +473,11 @@ BEGIN
 		WHERE matchid = @matchid
 			AND bettype = @bettype
 			AND refno IN (SELECT translogid FROM #tmpTransCalc)
+		)
 		
+		SELECT t.*, b.SiteID
+		FROM T t
+			INNER JOIN #tmpTransCalc b ON t.TicketID = b.translogID
 		
 		DROP TABLE #tmpTransCalc
 					
@@ -514,6 +521,7 @@ BEGIN
 			,virtualrate			FLOAT
 			,custom1				VARCHAR(50)
 			,balance				MONEY
+			,[SiteID]				varchar(10)
 		)
 		CREATE TABLE #tmpRefundedTicket (
 			translogid				BIGINT
@@ -552,6 +560,7 @@ BEGIN
 			,virtualrate			FLOAT
 			,custom1				VARCHAR(50)
 			,balance				MONEY
+			,[SiteID]				varchar(10)
 		)
 		IF @isSettleDetermined = 1 AND @Bettype = 806
 		BEGIN
@@ -600,6 +609,7 @@ BEGIN
 					,INSERTED.virtualrate
 					,INSERTED.custom1
 					,INSERTED.balance
+					,INSERTED.siteID
 			INTO 	#tmpSettledTicket								
 			WHERE	GameId 	= @Bettype
 					AND EventId = @MatchId
@@ -918,6 +928,7 @@ BEGIN
 				,INSERTED.virtualrate
 				,INSERTED.custom1	
 				,INSERTED.balance
+				,INSERTED.siteID
 		INTO	#tmpRefundedTicket
 		WHERE	eventID = @MatchId
 				AND gameID = @Bettype
@@ -1075,6 +1086,7 @@ BEGIN
 		;
 		
 			--return result to send API
+		;WITH T AS (			
 		SELECT refno as ticketID,
 			@bettype as bettype,
 			custid,
@@ -1089,18 +1101,26 @@ BEGIN
 			AND refno IN (SELECT translogid FROM #tmpSettledTicket
 				UNION SELECT translogid FROM #tmpRefundedTicket
 			)
-			
+		)
+		
+		SELECT t.*, b.SiteID
+		FROM T t
+			INNER JOIN (SELECT translogid, SiteID FROM #tmpSettledTicket
+				UNION SELECT translogid, SiteID FROM #tmpRefundedTicket
+			) b ON t.TicketID = b.translogID
+						
 		DROP TABLE #tmpSettledTicket
 		DROP TABLE #tmpRefundedTicket
 	END	
 	ELSE IF @Action = 'UNDO'
 	BEGIN
-		CREATE TABLE #tmpTransUnc (translogid BIGINT)
+		CREATE TABLE #tmpTransUnc (translogid BIGINT, siteID VARCHAR(10))
 				
 		UPDATE translog WITH(UPDLOCK,ROWLOCK)
 		SET statusid = 0,
 			status = 'running'
 		OUTPUT INSERTED.translogid
+			,INSERTED.siteID
 		INTO #tmpTransUnc				
 		WHERE GameID = @bettype
 			AND EventID = @matchid
@@ -1127,6 +1147,7 @@ BEGIN
 			AND refno IN (SELECT translogid FROM #tmpTransUnc)
 		
 		--return result to send API
+		;WITH T AS (
 		SELECT refno as ticketID,
 			@bettype as bettype,
 			custid,
@@ -1139,11 +1160,15 @@ BEGIN
 		WHERE matchid = @matchid
 			AND bettype = @bettype
 			AND refno IN (SELECT translogid FROM #tmpTransUnc)
+		)
+		
+		SELECT t.*, b.SiteID
+		FROM T t
+			INNER JOIN #tmpTransUnc b ON t.TicketID = b.translogID			
 		
 		DROP TABLE #tmpTransUnc
 	END
 END
-
 
 
 
