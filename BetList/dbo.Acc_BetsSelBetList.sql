@@ -88,6 +88,7 @@ AS
 		- 20151008@Kos: Support Microgaming RNG Game and AG Casino
 		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
+		- 20151207@Kos: Add index hint to fix performance issue
 */
 
 BEGIN
@@ -1438,7 +1439,7 @@ BEGIN
 				'' AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM dbo.bettrans AS b WITH (NOLOCK)
+			FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid 
 				AND s.ProductId = 17
@@ -1511,8 +1512,8 @@ BEGIN
 					'' AS BetCheck,
 					'' AS transdesc,
 					0 AS OddsSpread
-				FROM dbo.bettransRnG AS brng WITH (NOLOCK)
-					INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
+				FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+					INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
 					INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid 
 					AND s.ProductId = 17
@@ -1598,8 +1599,8 @@ BEGIN
 					'' AS BetCheck,
 					'' AS transdesc,
 					0 AS OddsSpread
-				FROM dbo.bettransRnG AS brng WITH (NOLOCK)
-					INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
+				FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+					INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
 					INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid 
 					AND s.ProductId = 17
@@ -1692,7 +1693,7 @@ BEGIN
 				'' AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM dbo.bettrans AS b WITH (NOLOCK)
+			FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @Custid 
 				AND s.ProductId = 11
@@ -1765,8 +1766,8 @@ BEGIN
 					'' AS BetCheck,
 					'' AS transdesc,
 					0 AS OddsSpread
-				FROM dbo.bettransLC AS blc WITH (NOLOCK)
-					INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON blc.RefNo = b.transid
+				FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+					INNER JOIN dbo.bettransLC AS blc WITH (NOLOCK) ON blc.RefNo = b.transid
 					INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid 
 					AND s.ProductId = 11
@@ -1852,8 +1853,8 @@ BEGIN
 					'' AS BetCheck,
 					'' AS transdesc,
 					0 AS OddsSpread
-				FROM dbo.bettransLC AS blc WITH (NOLOCK)
-					INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON blc.RefNo = b.transid
+				FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+					INNER JOIN dbo.bettransLC AS blc WITH (NOLOCK) ON blc.RefNo = b.transid
 					INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid 
 					AND s.ProductId = 11
