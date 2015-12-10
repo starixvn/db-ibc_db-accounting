@@ -3,6 +3,7 @@
 	,@Action				VARCHAR(100)	= 'CAL'
 	,@Result				VARCHAR(4000)
 	,@IsSettleDetermined	BIT				= 0
+	,@newBettypeTime		VARCHAR(100) =''
 	,@AdminId				INT
  AS
 	/*
@@ -12,7 +13,7 @@
 		DB: DBPRO/bodb02
 		
 		Revisions:
-		
+			- 20151210@Johnson: allow update bettype time when settle bettype Goal within 60s of kick (801) [Redmine: #49016]
 		Parameter's Explanation:
 		* @Result = <Result>
 						<Row GameResult="7" OtherInfo="6:10"/>
@@ -68,6 +69,7 @@ BEGIN
 		UPDATE ResultDetail3rd WITH(UPDLOCK,ROWLOCK)
 		SET SettlementStatusID = 4,
 			ResultStatusID = 5,
+			Custom1 = CASE WHEN GameID = 801 and @newBettypeTime <> '' THEN @newBettypeTime ELSE custom1 END,
 			LastModifyBy = @AdminID,
 			LastModifyDate = GETDATE(),
 			GameResult = ISNULL(@GameResult,''),
