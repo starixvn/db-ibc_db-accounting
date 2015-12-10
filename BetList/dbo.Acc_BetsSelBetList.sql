@@ -89,6 +89,7 @@ AS
 		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151207@Kos: Add index hint to fix performance issue
+		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 */
 
 BEGIN
@@ -146,9 +147,9 @@ BEGIN
 		settleTime		DATETIME,
 		hdp1			SMALLMONEY, 
 		hdp2			SMALLMONEY, 
-		odds			SMALLMONEY,
-		finalodds		SMALLMONEY,
-		finalodds2		SMALLMONEY,
+		odds			MONEY,
+		finalodds		MONEY,
+		finalodds2		MONEY,
 		OddsType		TINYINT,
 		status			NVARCHAR(50),
 		comstatus		NVARCHAR(50), 
@@ -163,7 +164,7 @@ BEGIN
 		mpositiontaking2 SMALLMONEY,
 		apositiontaking2 SMALLMONEY,
 		liveindicator	 BIT,
-		modds			SMALLMONEY,
+		modds			MONEY,
 		custid			INT,
 		livehomescore	INT, 
 		liveawayscore	INT, 
@@ -193,7 +194,7 @@ BEGIN
 
 	CREATE TABLE #BetListDetailData (
 		refno			VARCHAR(50), 
-		odds			SMALLMONEY, 
+		odds			MONEY, 
 		stake			MONEY,
 		status			VARCHAR(50),
 		apositiontaking SMALLMONEY, 

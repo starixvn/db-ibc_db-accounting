@@ -33,6 +33,7 @@ AS
 		- 20150826@Kos: Exclude Colossus Bet ticket
 		- 20151008@Kos: Exclude AG Casino ticket
 		- 20151008@Kos: Exclude Microgaming RNG Casino ticket
+		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 */
 
 BEGIN
@@ -71,9 +72,9 @@ BEGIN
 		settleTime		DATETIME,
 		hdp1			SMALLMONEY, 
 		hdp2			SMALLMONEY, 
-		odds			SMALLMONEY,
-		finalodds		SMALLMONEY,
-		finalodds2		SMALLMONEY,
+		odds			MONEY,
+		finalodds		MONEY,
+		finalodds2		MONEY,
 		OddsType		TINYINT,
 		status			NVARCHAR(50), 
 		comstatus		NVARCHAR(50),
@@ -88,7 +89,7 @@ BEGIN
 		mpositiontaking2 SMALLMONEY,
 		apositiontaking2 SMALLMONEY,
 		liveindicator	 BIT,
-		modds			SMALLMONEY,
+		modds			MONEY,
 		custid			INT,
 		livehomescore	INT, 
 		liveawayscore	INT, 
@@ -117,7 +118,7 @@ BEGIN
 
 	DECLARE @DetailData TABLE (
 		refno			NVARCHAR(50), 
-		odds			SMALLMONEY, 
+		odds			MONEY, 
 		stake			MONEY,
 		status			NVARCHAR(50),
 		apositiontaking SMALLMONEY, 

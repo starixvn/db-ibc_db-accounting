@@ -61,6 +61,7 @@ AS
 		- 20151009@Kos: Support Microgaming RNG Game and AG casino
 		- 20151023@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
+		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -98,10 +99,10 @@ BEGIN
 		settleTime		DATETIME,
 		hdp1			SMALLMONEY,
 		hdp2			SMALLMONEY,
-		odds			SMALLMONEY,
-		modds			SMALLMONEY,
-		finalodds		SMALLMONEY,
-		finalodds2		SMALLMONEY,
+		odds			MONEY,   
+		modds			MONEY,
+		finalodds		MONEY,
+		finalodds2		MONEY,
 		OddsType		INT, 
 		status			NVARCHAR(50),
 		comstatus		NVARCHAR(20),
@@ -143,7 +144,7 @@ BEGIN
 
 	DECLARE @DetailData TABLE (
 		refno			NVARCHAR(50), 
-		odds			SMALLMONEY, 
+		odds			MONEY, 
 		stake			MONEY,
 		status			NVARCHAR(50),
 		apositiontaking SMALLMONEY, 

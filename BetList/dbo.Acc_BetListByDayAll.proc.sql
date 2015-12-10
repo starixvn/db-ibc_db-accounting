@@ -83,6 +83,7 @@ AS
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151109@Kos: Replace using Jackpotwin table by PayoutTrans table
 		- 20151119@Kos: Use PayoutTrans table in DBACC instead of DBAGE
+		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 
 	Param's Explanation:
 		+ @transtype: 
@@ -157,10 +158,10 @@ BEGIN
 		bettype			SMALLINT,
 		hdp1			SMALLMONEY,
 		hdp2			SMALLMONEY,
-		odds			SMALLMONEY,
-		modds			SMALLMONEY,
-		finalodds		SMALLMONEY,
-		finalodds2		SMALLMONEY,
+		odds			MONEY,
+		modds			MONEY,
+		finalodds		MONEY,
+		finalodds2		MONEY,
 		oddstype		INT,
 		betteam			NVARCHAR(50),
 		status			NVARCHAR(50),
@@ -203,7 +204,7 @@ BEGIN
 
 	DECLARE @DetailData TABLE (
 		refno			NVARCHAR(50), 
-		odds			SMALLMONEY, 
+		odds			MONEY, 
 		stake			MONEY,
 		status			NVARCHAR(50),
 		apositiontaking SMALLMONEY, 

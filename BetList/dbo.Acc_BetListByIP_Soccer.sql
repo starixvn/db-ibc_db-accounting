@@ -39,6 +39,7 @@ AS
 		- 20150615@Edward: Support for BetTrade
 		- 20150707@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
+		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 	
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -69,10 +70,10 @@ BEGIN
 		settleTime		DATETIME,
 		hdp1			SMALLMONEY,
 		hdp2			SMALLMONEY,
-		odds			SMALLMONEY,  
-		finalodds		SMALLMONEY,  
-		finalodds2		SMALLMONEY,
-		modds			SMALLMONEY,
+		odds			MONEY,  
+		finalodds		MONEY,  
+		finalodds2		MONEY,
+		modds			MONEY,
 		OddsType		INT, 
 		status			NVARCHAR(50),
 		comstatus		NVARCHAR(20),
@@ -114,7 +115,7 @@ BEGIN
 
 	DECLARE @DetailData TABLE (
 		refno			NVARCHAR(50), 
-		odds			SMALLMONEY, 
+		odds			MONEY, 
 		stake			MONEY,
 		status			NVARCHAR(50),
 		apositiontaking SMALLMONEY, 
