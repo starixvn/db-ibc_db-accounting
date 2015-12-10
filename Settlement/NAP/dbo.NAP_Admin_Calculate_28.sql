@@ -18,6 +18,7 @@ AS
 	DB: DBTXN.BODB02
 	
 	Revisions:
+		- 20151209@Patrick: Database - Change datatype [Redmine: #48660]
 		
 */
 BEGIN
@@ -50,17 +51,18 @@ BEGIN
 			,@BetCount = @betcount
 	END
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 
 	UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-	SET @modds = modds = CASE 
+	SET @modds = CASE 
 			WHEN betteam = '1' AND (hdp2 - hdp1 + @fth - @fta) > 0 THEN 1
 			WHEN betteam = '2' AND (hdp1 - hdp2 + @fta - @fth) > 0 THEN 1
 			WHEN betteam = 'x' AND ((hdp1 - hdp2) - (@fth - @fta)) = 0 THEN 1
 			ELSE - 1
 			END
+		,modds = @modds
 		,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 			WHEN '0' THEN 1
 			WHEN '1' THEN 0

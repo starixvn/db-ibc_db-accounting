@@ -2,7 +2,7 @@ USE [bodb02]
 GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@ToDate DATETIME
-	,@SportType TINYINT = 0
+	,@SportType SMALLINT = 0
 	,@LeagueID INT = 0 -- 0 for ALL Leagues
 	,@MatchCode NVARCHAR(50) = ''
 	,@StatusId TINYINT = 0
@@ -24,6 +24,7 @@ AS
 		- 20141006@Jamie: Get ResultDetail for Tennis [Redmine:#23034]
 		- 20150130@Jamie: Betradar phase II [Readmine:#27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
       
  Param explanation:  
 	@MatchCode: match code
@@ -118,7 +119,7 @@ BEGIN
 		,eventstatus NVARCHAR(50)
 		,SettlementStatus135 tinyint
 		,Foddsstatus VARCHAR(10)
-		,sporttype TINYINT
+		,sporttype SMALLINT
 		,IsNeutral BIT
 		,eventdate DATETIME
 		,goalrecord VARCHAR(50)
@@ -131,8 +132,8 @@ BEGIN
 		,IsKeyscore BIT
 		,IsExistFGLG BIT
 		,IsExistHTFGLG BIT
-		,WinOdds SMALLMONEY
-		,PlaceOdds SMALLMONEY
+		,WinOdds MONEY
+		,PlaceOdds MONEY
 		)
 
 	DECLARE @strmatchid VARCHAR(MAX)

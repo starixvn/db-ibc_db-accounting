@@ -16,6 +16,7 @@ AS
 	Date:20141020
 	Task: Settlement Tennis 
 	DB: DBTXN/BODB02
+		- 20151208@Patrick: Database - Change datatype [Redmine: #48660]
 	
 	Revisions:
 		
@@ -26,7 +27,7 @@ BEGIN
 
 	SET NOCOUNT ON
 
-	DECLARE @modds			SMALLMONEY
+	DECLARE @modds			MONEY
 		,@commWinRate		SMALLMONEY
 		,@commLostRate		SMALLMONEY
 		,@RemoteCount		INT
@@ -84,12 +85,12 @@ BEGIN
 			
 			@isAutoRefundGame	= CASE WHEN  CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 1 ELSE 0 END -- Refund: Game no score 
 			
-			,@modds = modds = CASE	WHEN betteam =N'h' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyHomeWON)>0 THEN 1 
+			,@modds = CASE	WHEN betteam =N'h' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyHomeWON)>0 THEN 1 
 									WHEN betteam =N'a' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyAwayWON)>0 THEN 1   
 									WHEN CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyDRAW)>0 THEN 0 
 									WHEN CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 0
 									ELSE -1 END,
-			
+			modds = @modds,
 			@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 			WHEN '0' THEN 1
 			WHEN '1' THEN 0 
@@ -204,11 +205,12 @@ BEGIN
 		
 			@isAutoRefundGame	= CASE WHEN  CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 1 ELSE 0 END -- Refund: Game no score 
 			
-			,@modds = modds = CASE	WHEN betteam =N'h' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyHomeWON)>0 THEN 1 
+			,@modds = CASE	WHEN betteam =N'h' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyHomeWON)>0 THEN 1 
 									WHEN betteam =N'a' AND CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyAwayWON)>0 THEN 1   
 									WHEN CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyDRAW)>0 THEN 0 
 									WHEN CHARINDEX(SUBSTRING(CAST(BetID AS VARCHAR(10)),2,4),@SetxGameyREFUND)>0 THEN 0
 									ELSE -1 END
+			,modds = @modds
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0

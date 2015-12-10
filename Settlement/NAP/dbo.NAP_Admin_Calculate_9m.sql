@@ -1265,7 +1265,7 @@ BEGIN
 						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
 							AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
-						END
+						ELSE -1	END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
 						WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
@@ -1283,7 +1283,7 @@ BEGIN
 						WHEN betteam = 'H1' AND (@fth - @fta) = 1 THEN 1
 						WHEN betteam = 'H2' AND (@fth - @fta) = 2 THEN 1 
 						WHEN betteam = 'H3' AND (@fth - @fta) >= 3 THEN 1
-						WHEN betteam = 'D' AND (((@fth - @fta) = 0 AND bettype <> 408) OR (bettype = 408 AND (@fth - @fta) = 0 AND (@fth + @fta) <> 0)) THEN 1
+						WHEN betteam = 'D' AND (@fth - @fta) = 0 AND (@fth + @fta) <> 0 THEN 1
 						WHEN betteam = 'A1' AND (@fth - @fta) = -1 THEN 1 
 						WHEN betteam = 'A2' AND (@fth - @fta) = -2 THEN 1 
 						WHEN betteam = 'A3' AND (@fth - @fta) <= -3 THEN 1 
@@ -2220,6 +2220,7 @@ BEGIN
 						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
 							AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
+						ELSE -1
 						END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
@@ -2238,11 +2239,11 @@ BEGIN
 						WHEN betteam = 'H1' AND (@fth - @fta) = 1 THEN 1
 						WHEN betteam = 'H2' AND (@fth - @fta) = 2 THEN 1 
 						WHEN betteam = 'H3' AND (@fth - @fta) >= 3 THEN 1 
-						WHEN betteam = 'D' AND (((@fth - @fta) = 0 AND bettype <> 408) OR (bettype = 408 AND (@fth - @fta) = 0 AND (@fth + @fta) <> 0)) THEN 1
+						WHEN betteam = 'D' AND (@fth - @fta) = 0 AND (@fth + @fta) <> 0 THEN 1
 						WHEN betteam = 'A1' AND (@fth - @fta) = -1 THEN 1 
 						WHEN betteam = 'A2' AND (@fth - @fta) = -2 THEN 1 
 						WHEN betteam = 'A3' AND (@fth - @fta) <= -3 THEN 1 
-						WHEN betteam = 'NG' AND @fth = 0 AND @fta = 0 THEN 1 
+						WHEN betteam = 'NG' AND @fth = 0 AND @fta = 0 THEN 1
 						ELSE - 1					
 						END
 				WHEN 409 THEN --Exact Away Team Goals

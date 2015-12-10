@@ -18,6 +18,8 @@ AS
 	Revisions:
 		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
 		- 20150916@Kathy: Cast modds as DECIMAL [Redmine:#43566]
+		- 20151209@Patrick: Database - Change datatype [Redmine: #48660]
+
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -181,7 +183,7 @@ BEGIN
 							WHEN 4 THEN 0.000000000001 -- lose
 							ELSE 1 -- void/reject
 							END
-							)AS DECIMAL(38, 20)))) as smallmoney) AS mOdds
+							)AS DECIMAL(38, 20)))) as money) AS mOdds
 			,
 			--SUM(case when pd.statusID = 101			THEN 0 ELSE 1 END) as NoReject, 
 			SUM(CASE 

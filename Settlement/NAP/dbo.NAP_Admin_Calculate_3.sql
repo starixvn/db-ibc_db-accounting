@@ -42,6 +42,7 @@ AS
         - 20150909@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304): add bettype 302
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
 		- 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -54,42 +55,42 @@ BEGIN
 
     SET NOCOUNT ON
 
-    DECLARE @modds SMALLMONEY
+    DECLARE @modds MONEY
         ,@commWinRate SMALLMONEY
         ,@commLostRate SMALLMONEY
 
     IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
-    -- LAS settlement 
-    IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-            SELECT *
-            FROM sys.databases
-            WHERE NAME = 'LASDB'
-            )
-    BEGIN
-        IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0) or @IsSettleAbandonedMatchIBC = 1
-        BEGIN
-            DECLARE @LASCommand NVARCHAR(1000)
-                ,@createdDate DATETIME
+    ---- LAS settlement 
+    --IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
+    --        SELECT *
+    --        FROM sys.databases
+    --        WHERE NAME = 'LASDB'
+    --        )
+    --BEGIN
+    --    IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0) or @IsSettleAbandonedMatchIBC = 1
+    --    BEGIN
+    --        DECLARE @LASCommand NVARCHAR(1000)
+    --            ,@createdDate DATETIME
 
-            SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_3] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-                                                            + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-                                                            + ', @totalgoal = ' + CONVERT(NVARCHAR(10), @totalgoal) 
-                                                            + ', @scorediff = ' + CASE WHEN @scorediff IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @scorediff) END
-                                                            + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
-                                                            + ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
-                ,@createdDate = GETDATE()
+    --        SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_3] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+    --                                                        + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+    --                                                        + ', @totalgoal = ' + CONVERT(NVARCHAR(10), @totalgoal) 
+    --                                                        + ', @scorediff = ' + CASE WHEN @scorediff IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @scorediff) END
+    --                                                        + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
+    --                                                        + ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
+    --            ,@createdDate = GETDATE()
 
-            EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_3'
-                ,@SQLCommand = @LASCommand
-                ,@CreatedDate = @createdDate
-                ,@StatusID = 0 -- waiting
-                ,@MatchID = @matchid
-                ,@Bettype = @bettype
-                ,@Status = 'waiting'
-                ,@BetCount = @betcount
-        END
-    END
+    --        EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_3'
+    --            ,@SQLCommand = @LASCommand
+    --            ,@CreatedDate = @createdDate
+    --            ,@StatusID = 0 -- waiting
+    --            ,@MatchID = @matchid
+    --            ,@Bettype = @bettype
+    --            ,@Status = 'waiting'
+    --            ,@BetCount = @betcount
+    --    END
+    --END
 
     IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 or @IsSettleAbandonedMatchIBC = 1
     BEGIN
@@ -99,12 +100,13 @@ BEGIN
         UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
         SET 
              @totalgoal = CASE WHEN bettype = 3 AND @totalgoal = 0 AND @SelectedSet LIKE '%6%' THEN ISNULL(@TotalSetMatch,0) ELSE @totalgoal END 
-            ,@modds = modds = CASE WHEN betteam IN ('h', 'o') THEN @totalgoal - hdp1
+            ,@modds = CASE WHEN betteam IN ('h', 'o') THEN @totalgoal - hdp1
 								WHEN betteam IN ('a', 'u') THEN hdp1 - @totalgoal
                                 WHEN RIGHT(betteam,1) = 'u' THEN hdp1 - @totalgoal    -- 144 ,163
-								WHEN bettype = 408 AND betteam = 'NG' AND @totalgoal > 0 THEN 1 --408: No Goal
+								WHEN bettype = 408 AND betteam = 'NG' AND @totalgoal > 0 THEN -1 --408: No Goal
                                 ELSE NULL 
-                                END 
+                                END
+			,modds = @modds 
             ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                 WHEN '0' THEN 1
                 WHEN '1' THEN 0
@@ -240,7 +242,7 @@ BEGIN
                                    WHEN bettype IN (156,1312) AND betID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameSet4
                                    WHEN bettype IN (156,1312) AND betID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameSet5
                                    ELSE @totalgoal END
-                ,@modds = modds = CASE 
+                ,@modds = CASE 
                     WHEN betteam = N'h' THEN @totalgoal-hdp1
                     WHEN betteam = N'a' THEN hdp1-@totalgoal
                     WHEN betteam = N'o' THEN @totalgoal-hdp1    -- 156,178,197,198,1312,401,402 
@@ -261,7 +263,7 @@ BEGIN
                     WHEN b.betteam = 'a3' AND @scorediff <= -3 THEN 1
                     ELSE - 1
                     END,
-                
+                modds = @modds,
                 @commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                     WHEN '0' THEN 1
                     WHEN '1' THEN 0
@@ -421,7 +423,7 @@ BEGIN
                                    WHEN bettype IN (156,1312) AND betID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameSet4
                                    WHEN bettype IN (156,1312) AND betID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameSet5
                                    ELSE @totalgoal END
-                ,@modds = modds = CASE 
+                ,@modds = CASE 
                     WHEN betteam = N'h' THEN @totalgoal - hdp1
                     WHEN betteam = N'a' THEN hdp1 - @totalgoal
                     WHEN betteam = N'o' THEN @totalgoal-hdp1    -- 156,178,197,198,1312,401,402 
@@ -442,6 +444,7 @@ BEGIN
                     WHEN betteam = 'a3' AND @scorediff<=-3 THEN 1
                     ELSE - 1                    
                     END
+				,modds = @modds
                 ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                     WHEN '0' THEN 1
                     WHEN '1' THEN 0

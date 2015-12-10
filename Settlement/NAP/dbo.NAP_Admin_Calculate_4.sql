@@ -42,6 +42,7 @@ AS
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 		- 20151123@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
 	Param's Explanation:
 		
@@ -54,47 +55,47 @@ BEGIN
 
 	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN	
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 		,@matchdate DATETIME
 
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
-			BEGIN
-				DECLARE @LASCommand NVARCHAR(1000)
-					,@createdDate DATETIME
+	----- LAS settlement 
+	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
+	--		SELECT *
+	--		FROM sys.databases
+	--		WHERE NAME = 'LASDB'
+	--		)
+	--BEGIN
+	--	IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
+	--		BEGIN
+	--			DECLARE @LASCommand NVARCHAR(1000)
+	--				,@createdDate DATETIME
 
-				SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-																+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-																+ ', @correctscore = ' + CASE WHEN @correctscore IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @correctscore) + '''' END
-																+ ', @goaldiff = ' + CASE WHEN @goaldiff IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(10), @goaldiff) END
-																+ ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' 
-																+ ', @hth = ' + CONVERT(NVARCHAR(10), @hth) 
-																+ ', @hta = ' + CONVERT(NVARCHAR(10), @hta) 
-																+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
-																+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
-																+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
-																+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+	--			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+	--															+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+	--															+ ', @correctscore = ' + CASE WHEN @correctscore IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @correctscore) + '''' END
+	--															+ ', @goaldiff = ' + CASE WHEN @goaldiff IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(10), @goaldiff) END
+	--															+ ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' 
+	--															+ ', @hth = ' + CONVERT(NVARCHAR(10), @hth) 
+	--															+ ', @hta = ' + CONVERT(NVARCHAR(10), @hta) 
+	--															+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
+	--															+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
+	--															+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
+	--															+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
 																
-					,@createdDate = GETDATE()
+	--				,@createdDate = GETDATE()
 
-				EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
-					,@SQLCommand = @LASCommand
-					,@CreatedDate = @createdDate
-					,@StatusID = 0 -- waiting
-					,@MatchID = @matchid
-					,@Bettype = @bettype
-					,@Status = 'waiting'
-					,@BetCount = @betcount
-			END
-	END
+	--			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
+	--				,@SQLCommand = @LASCommand
+	--				,@CreatedDate = @createdDate
+	--				,@StatusID = 0 -- waiting
+	--				,@MatchID = @matchid
+	--				,@Bettype = @bettype
+	--				,@Status = 'waiting'
+	--				,@BetCount = @betcount
+	--		END
+	--END
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
 	BEGIN
@@ -119,7 +120,7 @@ BEGIN
 				SET @affectedagents = @@rowcount
 
 				UPDATE b
-				SET @modds = modds = CASE
+				SET @modds = CASE
 					WHEN b.betteam NOT IN ('0:4', '4:0', 'AOS')
 						AND @bettype = 30 --1H Correct Score
 						AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1)) THEN -1
@@ -139,7 +140,8 @@ BEGIN
 						AND @bettype = 405 --2H Correct Score
 						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE NULL
-					END,			
+					END,
+				modds = @modds,			
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0 
@@ -267,7 +269,7 @@ BEGIN
 										WHEN bettype = 1317 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN @CorrectScoreSet4
 										WHEN bettype = 1317 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @CorrectScoreSet5
 										ELSE @correctscore END 					
-				,@modds = modds = CASE
+				,@modds = CASE
 					WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
 					WHEN betteam = '4:0' AND @goaldiff >=  4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '0:4' AND @goaldiff <=  -4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
@@ -284,7 +286,7 @@ BEGIN
 						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE -1
 					END,
-			
+				modds = @modds,
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0 
@@ -390,7 +392,7 @@ BEGIN
 		IF @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
 		BEGIN
 			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-			SET @modds = modds = CASE 
+			SET @modds = CASE 
 					WHEN betteam NOT IN ('0:4', '4:0', 'AOS') 
 						AND @bettype = 30 
 						AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) THEN -1
@@ -402,7 +404,7 @@ BEGIN
 						AND (@hth >= 4 OR @hta >= 4) THEN 1
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 4 
-						AND (@hth >= 5 OR @hta >= 5) THEN 1
+						AND (@fth >= 5 OR @fta >= 5) THEN 1
 					WHEN betteam NOT IN ('AOS')
 						AND @bettype = 405 --2H Correct Score
 						AND ((@fth-@hth) > LEFT(betteam,1) OR (@fta-@hta) > RIGHT(betteam,1) ) THEN -1
@@ -411,6 +413,7 @@ BEGIN
 						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE NULL
 					END
+				,modds = @modds
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0
@@ -518,7 +521,7 @@ BEGIN
 										WHEN bettype = 1317 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN @CorrectScoreSet4
 										WHEN bettype = 1317 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @CorrectScoreSet5
 										ELSE @correctscore END
-				,@modds = modds = CASE 
+				,@modds = CASE 
 					WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
 					WHEN betteam = '4:0' AND @goaldiff >= 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '0:4' AND @goaldiff <= - 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
@@ -535,6 +538,7 @@ BEGIN
 						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 					ELSE - 1
 					END
+				,modds = @modds
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0

@@ -20,6 +20,7 @@ AS
        - 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 	   - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 	   - 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+	   - 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 
     Param's Explanation:
     • @Mode:
@@ -37,7 +38,7 @@ BEGIN
             ,@hta                 INT
             ,@home_2nd            INT
             ,@away_2nd            INT 
-            ,@sporttype            TINYINT
+            ,@sporttype            SMALLINT
             ,@betstatus            NVARCHAR(50)
             ,@GoalRecord        VARCHAR(50)
             ,@matchCode            NVARCHAR(50)

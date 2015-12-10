@@ -35,6 +35,7 @@ AS
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
         - 20150915@Kathy: Remove @mode variable (it's used just for testing purpose), add table to trace settlement process [Redmine:#43566]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		
 	Param's Explanation:
 	@resultPS: match result of penalty shootout
@@ -241,7 +242,7 @@ BEGIN
 		,@hthomescore INT
 		,@htawayscore INT
 		,@GoalRecord VARCHAR(50)
-		,@sporttype TINYINT
+		,@sporttype SMALLINT
 		,@betstatus NVARCHAR(50)
 		,@TennisTotal SMALLINT
 		,@T_Home SMALLINT

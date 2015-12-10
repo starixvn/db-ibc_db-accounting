@@ -33,6 +33,7 @@ AS
 		- 20150918@Johnson: Check existing bettrade tickets [Redmined: #43234]
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		- 20151127@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 */
 BEGIN
     SET NOCOUNT ON
@@ -42,7 +43,7 @@ BEGIN
         ,@IsHTOnly BIT
         ,@IsLive BIT
         ,@IsSettleAbandonedMatchIBC BIT
-        ,@sporttype TINYINT
+        ,@sporttype SMALLINT
         ,@IsExistHTFGLG BIT
         ,@IsExistHTLG BIT
         ,@FTStatus NVARCHAR(20)

@@ -17,6 +17,7 @@ AS
 		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20151209@Patrick: Database - Change datatype [Redmine: #48660]
 		
 */
 BEGIN
@@ -57,14 +58,14 @@ BEGIN
 		END
 	END
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 
 	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetfair = 1 OR @IsSettleAbandonedMatchIBC = 1
 	BEGIN
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = modds = CASE 
+		SET @modds = CASE 
 				WHEN betteam = 'b' AND @fth > 0 AND @fta > 0 THEN 1
 				WHEN betteam = 'o' AND @fth > 0 AND @fta > 0 THEN - 1
 				WHEN Bettype <> 188 AND betteam = 'n' AND (@fth > 0 OR @fta > 0) THEN - 1 -- 170
@@ -74,6 +75,7 @@ BEGIN
 				WHEN betteam = 'y' AND @fth > 0 AND @fta > 0 THEN 1		--188
 				ELSE NULL
 				END
+			,modds = @modds
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0
@@ -223,7 +225,7 @@ BEGIN
 	ELSE
 	BEGIN
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = modds = CASE 
+		SET @modds = CASE 
 				WHEN betteam = 'b' AND (@fth > 0 AND @fta > 0) THEN 1
 				WHEN betteam = 'o' AND ((@fth > 0 AND @fta = 0) OR (@fta > 0 AND @fth = 0)) THEN 1
 				WHEN bettype <> 188 AND betteam = 'n' AND (@fth = 0 AND @fta = 0) THEN 1
@@ -233,6 +235,7 @@ BEGIN
 				WHEN bettype = 188 AND betteam = 'N' AND (@fth = 0 OR @fta = 0) THEN 1 --188 
 				ELSE - 1
 				END
+			,modds = @modds
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0

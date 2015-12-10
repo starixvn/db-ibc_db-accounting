@@ -16,7 +16,7 @@ Date: 20140211
 Task : Settlement for Next Goal Bettype  
 
 Revisions:
-    
+    - 20151209@Patrick: Database - Change datatype [Redmine: #48660]
 
 Param's Explanation:
 • @ResultString: + get from match.GoalRecord,
@@ -53,7 +53,7 @@ BEGIN
 			,@BetCount = @betcount
 	END
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 	DECLARE @hdp SMALLMONEY
@@ -63,11 +63,12 @@ BEGIN
 			WHEN N'h' THEN hdp2 - hdp1
 			WHEN N'a' THEN hdp1 - hdp2
 			END
-		,@modds = modds = CASE SUBSTRING(@ResultString, livehomescore + liveawayscore + 1, 1)
+		,@modds = CASE SUBSTRING(@ResultString, livehomescore + liveawayscore + 1, 1)
 			WHEN N'' THEN @hdp
 			WHEN betteam THEN 1 + @hdp
 			ELSE - 1 + @hdp
 			END
+		,modds = @modds
 		,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 			WHEN '0' THEN 1
 			WHEN '1' THEN 0

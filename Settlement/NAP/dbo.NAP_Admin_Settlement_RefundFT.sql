@@ -56,6 +56,7 @@ AS
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		- 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
         
     Param's Explanation:
     • @matchid: matchid of match to Refund HT
@@ -339,7 +340,7 @@ BEGIN
     Settle Abandoned Match for Over/Under 
 */
     DECLARE @ScoreLog    VARCHAR(100)
-        ,@sporttype        TINYINT
+        ,@sporttype        SMALLINT
         ,@hth            INT
         ,@hta            INT 
         ,@IsHTCal        BIT

@@ -30,6 +30,7 @@ AS
         - 20150909@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304): add bettype 304
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
         - 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -42,40 +43,40 @@ BEGIN
 
     IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
-    DECLARE @modds SMALLMONEY
+    DECLARE @modds MONEY
         ,@commWinRate SMALLMONEY
         ,@commLostRate SMALLMONEY
 
-    --- LAS settlement 
-    IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
-            SELECT *
-            FROM sys.databases
-            WHERE NAME = 'LASDB'
-            )
-    BEGIN
-        IF @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0
-        BEGIN
-            DECLARE @LASCommand NVARCHAR(1000)
-                ,@createdDate DATETIME
+    ----- LAS settlement 
+    --IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+    --        SELECT *
+    --        FROM sys.databases
+    --        WHERE NAME = 'LASDB'
+    --        )
+    --BEGIN
+    --    IF @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0
+    --    BEGIN
+    --        DECLARE @LASCommand NVARCHAR(1000)
+    --            ,@createdDate DATETIME
 
-            SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_8] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-                                                            + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-                                                            + ', @totalht = ' + CONVERT(NVARCHAR(10), @totalht) 
-                                                            + ', @scorediff_ht = ' + CASE WHEN @scorediff_ht IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @scorediff_ht) END
-                                                            + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
-                                                            + ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
-                ,@createdDate = GETDATE()
+    --        SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_8] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+    --                                                        + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+    --                                                        + ', @totalht = ' + CONVERT(NVARCHAR(10), @totalht) 
+    --                                                        + ', @scorediff_ht = ' + CASE WHEN @scorediff_ht IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @scorediff_ht) END
+    --                                                        + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
+    --                                                        + ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
+    --            ,@createdDate = GETDATE()
 
-            EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_8'
-                ,@SQLCommand = @LASCommand
-                ,@CreatedDate = @createdDate
-                ,@StatusID = 0 -- waiting
-                ,@MatchID = @matchid
-                ,@Bettype = @bettype
-                ,@Status = 'waiting'
-                ,@BetCount = @betcount
-        END
-    END
+    --        EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_8'
+    --            ,@SQLCommand = @LASCommand
+    --            ,@CreatedDate = @createdDate
+    --            ,@StatusID = 0 -- waiting
+    --            ,@MatchID = @matchid
+    --            ,@Bettype = @bettype
+    --            ,@Status = 'waiting'
+    --            ,@BetCount = @betcount
+    --    END
+    --END
     
     IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 or @IsSettleAbandonedMatchIBC = 1
     BEGIN
@@ -83,11 +84,12 @@ BEGIN
         SELECT    @comparedValue = @totalht - 0.5
 
         UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
-        SET @modds = modds = CASE WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
+        SET @modds = CASE WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
                                   WHEN betteam IN ('a', 'u') THEN hdp1 - @totalht
                                   WHEN RIGHT(betteam,1) ='u' THEN hdp1 - @totalht    -- 143 
                                   ELSE NULL 
-                                  END                                         
+                                  END 
+			,modds = @modds                                        
             ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                 WHEN '0' THEN 1
                 WHEN '1' THEN 0
@@ -214,7 +216,7 @@ BEGIN
                 SET @affectedagents = @@rowcount
 
                 UPDATE b
-                SET @modds = modds = CASE 
+                SET @modds = CASE 
                     WHEN betteam IN ('h', 'o') THEN @totalht-hdp1
                     WHEN betteam IN ('a', 'u') THEN hdp1-@totalht
                     WHEN b.betteam = 'ho' AND @scorediff_ht > 0 THEN @totalht - b.hdp1
@@ -225,7 +227,7 @@ BEGIN
                     WHEN b.betteam = 'du' AND @scorediff_ht = 0 THEN b.hdp1 - @totalht            
                     ELSE - 1                    
                     END,
-                                    
+                    modds = @modds,                
                     @commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                     WHEN '0' THEN 1
                     WHEN '1' THEN 0
@@ -368,7 +370,7 @@ BEGIN
         ELSE
         BEGIN
             UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
-            SET @modds = modds = CASE 
+            SET @modds = CASE 
                     WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
                     WHEN betteam IN ('a', 'u') THEN hdp1 - @totalht
                     WHEN betteam = 'ho' AND @scorediff_ht > 0 THEN @totalht - hdp1
@@ -379,6 +381,7 @@ BEGIN
                     WHEN betteam = 'du' AND @scorediff_ht = 0 THEN hdp1 - @totalht            
                     ELSE -1
                     END
+				,modds = @modds
                 ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                     WHEN '0' THEN 1
                     WHEN '1' THEN 0

@@ -18,6 +18,7 @@ AS
 	Revisions:
 		- 20141030@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		
 	Param's Explanation:
 	@matchid: matchid of match to be settled
@@ -83,13 +84,13 @@ BEGIN
 	-- Results list from both bettransm & bettransm14 (for only needed Combination Ticket)
 	DECLARE @parlay_base TABLE (
 		refno BIGINT
-		,transid INT
+		,transid BIGINT
 		,winlostdate SMALLDATETIME
 		,statuswinlost TINYINT
 		,statusid TINYINT
 		,matchid INT
 		,bettype SMALLINT
-		,odds SMALLMONEY
+		,odds MONEY
 		,betteam NVARCHAR(10)
 		,hdp1 SMALLMONEY
 		,hdp2 SMALLMONEY

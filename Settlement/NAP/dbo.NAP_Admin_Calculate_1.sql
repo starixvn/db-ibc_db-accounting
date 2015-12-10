@@ -37,6 +37,7 @@ AS
         - 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
         - 20150909@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304): add bettype 301
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
         
 */
 BEGIN
@@ -44,7 +45,7 @@ BEGIN
 
     SET NOCOUNT ON
 
-    DECLARE @modds SMALLMONEY
+    DECLARE @modds MONEY
         ,@commWinRate SMALLMONEY
         ,@commLostRate SMALLMONEY
         ,@RemoteCount INT
@@ -111,11 +112,11 @@ BEGIN
                          WHEN bettype IN (154,155,1311, 1316) AND BetID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameAwaySet4 
                          WHEN bettype IN (154,155,1311, 1316) AND BetID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameAwaySet5
                          ELSE @fta END     
-            ,@modds = modds = CASE betteam
+            ,@modds = CASE betteam
                 WHEN N'h' THEN (hdp2-hdp1) + (@fth - livehomescore) - (@fta - liveawayscore) 
                 WHEN N'a' THEN (hdp1-hdp2) - (@fth - livehomescore) + (@fta - liveawayscore)
                 END,
-            
+            modds = @modds,
             @commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
             WHEN '0' THEN 1
             WHEN '1' THEN 0 
@@ -280,10 +281,11 @@ BEGIN
                          WHEN bettype IN (154,155,1311, 1316) AND BetID = 804 AND @SelectedSet LIKE '%4%' THEN @TotalGameAwaySet4 
                          WHEN bettype IN (154,155,1311, 1316) AND BetID = 805 AND @SelectedSet LIKE '%5%' THEN @TotalGameAwaySet5
                          ELSE @fta END        
-            ,@modds = modds = CASE betteam
+            ,@modds = CASE betteam
                 WHEN N'h' THEN (hdp2 - hdp1) + (@fth - livehomescore) - (@fta - liveawayscore)
                 WHEN N'a' THEN (hdp1 - hdp2) - (@fth - livehomescore) + (@fta - liveawayscore)
                 END
+			,modds = @modds
             ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                 WHEN '0' THEN 1
                 WHEN '1' THEN 0

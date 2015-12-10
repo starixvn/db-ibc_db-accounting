@@ -2876,7 +2876,7 @@ BEGIN
 				IF @betcount_401 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 401
-                        ,@totalgoal = @totalhome
+                        ,@totalgoal = @fth
                         ,@betcount = @betcount_401
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
@@ -2884,7 +2884,7 @@ BEGIN
 				IF @betcount_402 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 402
-                        ,@totalgoal = @totalaway
+                        ,@totalgoal = @fta
                         ,@betcount = @betcount_402
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 				
@@ -2915,7 +2915,7 @@ BEGIN
 				IF @betcount_407 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 407
-                        ,@totalgoal = @totalhome
+                        ,@totalgoal = @fth
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
@@ -2933,7 +2933,7 @@ BEGIN
 				IF @betcount_409 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 409
-                        ,@totalgoal = @totalaway
+                        ,@totalgoal = @fta
                         ,@betcount = @betcount_409
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 				
@@ -3379,7 +3379,7 @@ BEGIN
 				IF @betcount_401 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 401
-                        ,@totalgoal = @totalhome
+                        ,@totalgoal = @fth
                         ,@betcount = @betcount_401
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
                         
@@ -3387,7 +3387,7 @@ BEGIN
 				IF @betcount_402 > 0
 					EXEC dbo.NAP_Admin_Calculate_3 @matchid = @matchid
                         ,@bettype = 402
-                        ,@totalgoal = @totalaway
+                        ,@totalgoal = @fta
                         ,@betcount = @betcount_402
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
                         
@@ -3419,7 +3419,7 @@ BEGIN
 				IF @betcount_407 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 407
-                        ,@totalgoal = @totalhome
+                        ,@totalgoal = @fth
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 
@@ -3437,7 +3437,7 @@ BEGIN
 				IF @betcount_409 > 0
                     EXEC dbo.NAP_Admin_Calculate_6 @matchid = @matchid
                         ,@bettype = 409
-                        ,@totalgoal = @totalaway
+                        ,@totalgoal = @fta
                         ,@betcount = @betcount_409
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 

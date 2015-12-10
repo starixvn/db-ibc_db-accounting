@@ -22,6 +22,7 @@ AS
         - 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054        
         - 20150909@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304): add bettype 303
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
 */
 BEGIN
@@ -31,33 +32,33 @@ BEGIN
 
     SET NOCOUNT ON
 
-    DECLARE @modds SMALLMONEY
+    DECLARE @modds MONEY
         ,@commWinRate SMALLMONEY
         ,@commLostRate SMALLMONEY
         ,@RemoteCount INT
 
-    --- LAS settlement 
-    IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231') AND EXISTS (
-            SELECT *
-            FROM sys.databases
-            WHERE NAME = 'LASDB'
-            )
-    BEGIN
-        DECLARE @LASCommand NVARCHAR(1000)
-            ,@createdDate DATETIME
+    ----- LAS settlement 
+    --IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231') AND EXISTS (
+    --        SELECT *
+    --        FROM sys.databases
+    --        WHERE NAME = 'LASDB'
+    --        )
+    --BEGIN
+    --    DECLARE @LASCommand NVARCHAR(1000)
+    --        ,@createdDate DATETIME
 
-        SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_7] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @hth = ' + CONVERT(NVARCHAR(10), @hth) + ', @hta = ' + CONVERT(NVARCHAR(10), @hta) + ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
-            ,@createdDate = GETDATE()
+    --    SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_7] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @hth = ' + CONVERT(NVARCHAR(10), @hth) + ', @hta = ' + CONVERT(NVARCHAR(10), @hta) + ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
+    --        ,@createdDate = GETDATE()
 
-        EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_7'
-            ,@SQLCommand = @LASCommand
-            ,@CreatedDate = @createdDate
-            ,@StatusID = 0 -- waiting
-            ,@MatchID = @matchid
-            ,@Bettype = @bettype
-            ,@Status = 'waiting'
-            ,@BetCount = @betcount
-    END
+    --    EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_7'
+    --        ,@SQLCommand = @LASCommand
+    --        ,@CreatedDate = @createdDate
+    --        ,@StatusID = 0 -- waiting
+    --        ,@MatchID = @matchid
+    --        ,@Bettype = @bettype
+    --        ,@Status = 'waiting'
+    --        ,@BetCount = @betcount
+    --END
 
     IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231', 'DB215')
     BEGIN
@@ -82,11 +83,11 @@ BEGIN
             SET @affectedagents = @@rowcount
 
             UPDATE b
-            SET @modds = modds = CASE betteam
+            SET @modds = CASE betteam
                 WHEN 'h' THEN (hdp2-hdp1) + (@hth - livehomescore) - (@hta - liveawayscore) 
                 WHEN 'a' THEN (hdp1-hdp2) - (@hth - livehomescore) + (@hta - liveawayscore)
                 END,
-        
+				modds = @modds,
                 @commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                 WHEN '0' THEN 1
                 WHEN '1' THEN 0
@@ -230,10 +231,11 @@ BEGIN
     ELSE
     BEGIN
         UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
-        SET @modds = modds = CASE betteam
+        SET @modds = CASE betteam
                 WHEN 'h' THEN (hdp2 - hdp1) + (@hth - livehomescore) - (@hta - liveawayscore)
                 WHEN 'a' THEN (hdp1 - hdp2) - (@hth - livehomescore) + (@hta - liveawayscore)
                 END
+			,modds = @modds
             ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
                 WHEN '0' THEN 1
                 WHEN '1' THEN 0

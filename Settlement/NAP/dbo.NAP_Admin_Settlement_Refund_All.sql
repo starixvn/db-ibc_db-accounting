@@ -76,6 +76,7 @@ AS
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		- 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
     
     Param's Explanation:
     • @matchid: matchid need to refund
@@ -106,7 +107,7 @@ BEGIN
     DECLARE @start					DATETIME
         ,@stop						DATETIME
         ,@ScoreLog					VARCHAR(100)
-        ,@sporttype					TINYINT
+        ,@sporttype					SMALLINT
         ,@IsRefundHT				BIT
         ,@IsHTCal					BIT
         ,@oddevenht					SMALLMONEY
@@ -128,7 +129,8 @@ BEGIN
         ,@SetxGameyDRAW            	VARCHAR(MAX) = ''
         ,@SetxGameyFinishedGame    	VARCHAR(MAX) = ''
         ,@BetstatusLOG				VARCHAR(50) = ''
-        ,@IsSettleDeterminedTicketTennis    BIT    = 0 
+        ,@IsSettleDeterminedTicketTennis    BIT    = 0
+		,@scorediff					SMALLMONEY 
     
 	CREATE TABLE #tmpTrans (transid BIGINT)
 
@@ -430,6 +432,7 @@ BEGIN
             ,@oddevenht        = (@hth + @hta) % 2
             ,@totalCorners        = (ISNULL(@fthCorners,0) + ISNULL(@ftaCorners,0))
             ,@totalCorners_ht    = (ISNULL(@hthCorners,0) + ISNULL(@htaCorners,0))
+			,@scorediff	= (@fth - @fta)
 
         IF @Action IN ('CAL', 'CAL-FT') AND @totalgoal IS NULL
         BEGIN
@@ -683,6 +686,7 @@ BEGIN
                 ,@hta                             = @hta
                 ,@totalgoal                        = @totalgoal
                 ,@totalht                        = @totalht
+				,@scorediff						 = @scorediff
                 ,@oddevenht                        = @oddevenht
                 ,@GoalRecord                     = @GoalSequence 
                 ,@fthCorners                    = @fthCorners
@@ -754,8 +758,9 @@ BEGIN
                 ,@fta                             = @fta
                 ,@hth                             = @hth
                 ,@hta                             = @hta
-                ,@totalgoal                        = @totalgoal
+                ,@totalgoal                      = @totalgoal
                 ,@totalht                        = @totalht
+				,@scorediff						 = @scorediff
                 ,@oddevenht                        = @oddevenht
                 ,@GoalRecord                     = @GoalSequence 
                 ,@fthCorners                    = @fthCorners

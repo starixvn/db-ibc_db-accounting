@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
 */
 BEGIN
@@ -22,31 +23,31 @@ BEGIN
 
 	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+	----- LAS settlement 
+	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
+	--		SELECT *
+	--		FROM sys.databases
+	--		WHERE NAME = 'LASDB'
+	--		)
+	--BEGIN
+	--	DECLARE @LASCommand NVARCHAR(1000)
+	--		,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_5] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @whowin = ' + CONVERT(NVARCHAR(10), @whowin) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-			,@createdDate = GETDATE()
+	--	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_5] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @whowin = ' + CONVERT(NVARCHAR(10), @whowin) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+	--		,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_5'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = @bettype
-			,@Status = 'waiting'
-			,@BetCount = @betcount
-	END
+	--	EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_5'
+	--		,@SQLCommand = @LASCommand
+	--		,@CreatedDate = @createdDate
+	--		,@StatusID = 0 -- waiting
+	--		,@MatchID = @matchid
+	--		,@Bettype = @bettype
+	--		,@Status = 'waiting'
+	--		,@BetCount = @betcount
+	--END
 
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 
@@ -73,13 +74,13 @@ BEGIN
 			SET @affectedagents = @@rowcount
 
 			UPDATE b WITH(ROWLOCK, UPDLOCK)
-			SET @modds = modds = CASE
+			SET @modds = CASE
 				WHEN betteam = '1' AND @whowin > 0 THEN 1
 				WHEN betteam = '2' AND @whowin < 0 THEN 1
 				WHEN betteam = 'X' AND @whowin = 0 THEN 1
 				ELSE -1
 				END,
-			
+				modds = @modds,
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0
@@ -175,12 +176,13 @@ BEGIN
 	ELSE 
 	BEGIN
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = modds = CASE 
+		SET @modds = CASE 
 				WHEN betteam = '1' AND @whowin > 0 THEN 1
 				WHEN betteam = '2' AND @whowin < 0 THEN 1
 				WHEN betteam = 'X' AND @whowin = 0 THEN 1
 				ELSE - 1
 				END
+			,modds = @modds
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0

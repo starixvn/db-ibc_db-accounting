@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151209@Patrick: Database - Change datatype [Redmine: #48660]
 */
 BEGIN
 	IF @betcount = 0 AND @@SERVERNAME NOT LIKE N'DBIOM%' RETURN
@@ -46,12 +47,12 @@ BEGIN
 			,@BetCount = @betcount
 	END
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 
 	UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-	SET @modds = modds = CASE 
+	SET @modds = CASE 
 			-- draw no bet
 			WHEN bettype IN (25,185,191,411) AND @scorediff = 0 THEN 0
 			WHEN bettype IN (25,185,191,411) AND betteam = 'h' AND @scorediff > 0 THEN 1
@@ -69,6 +70,7 @@ BEGIN
 			WHEN bettype = 123 AND betteam = 'a' AND @scorediff <> 0 THEN 1
 			ELSE - 1
 			END
+		,modds = @modds
 		,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 			WHEN '0' THEN 1
 			WHEN '1' THEN 0

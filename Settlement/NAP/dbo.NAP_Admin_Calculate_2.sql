@@ -32,6 +32,7 @@ AS
 		- 20141020@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
+		- 20151209@Patrick: Database - Change datatype [Redmine: #48660]
 
 */
 BEGIN
@@ -42,7 +43,7 @@ BEGIN
 
 	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 
@@ -116,7 +117,7 @@ BEGIN
 									WHEN bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @OddEvenGameSet5
 									ELSE @oddeven END 
 			
-				,@modds = modds = CASE 
+				,@modds = CASE 
 					WHEN @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1  -- determined tickets
 							THEN CASE 
 									WHEN b.betteam IN ('oo', 'oe') AND @oddevenht = 0 THEN - 1
@@ -137,6 +138,7 @@ BEGIN
 							ELSE - 1
 							END
 					END
+				,modds = @modds
 				,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0
@@ -321,7 +323,7 @@ BEGIN
 									WHEN bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN @OddEvenGameSet4
 									WHEN bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @OddEvenGameSet5
 									ELSE @oddeven END 
-			,@modds = modds =  CASE 
+			,@modds = CASE 
 					WHEN @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1  -- determined tickets
 							THEN CASE 
 									WHEN betteam IN ('oo', 'oe') AND @oddevenht = 0 THEN - 1
@@ -342,6 +344,7 @@ BEGIN
 							ELSE - 1
 							END
 					END
+			,modds =  @modds
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0
