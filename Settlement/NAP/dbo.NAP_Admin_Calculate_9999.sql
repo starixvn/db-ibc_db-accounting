@@ -22,6 +22,7 @@ AS
 	Revisions:
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		
 */
 BEGIN
@@ -31,7 +32,7 @@ BEGIN
 
 	IF @@servername IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY		
 		,@csFT NVARCHAR(10) -- FT correct score
@@ -44,43 +45,43 @@ BEGIN
 					     ELSE CAST(@fth AS nvarchar(10)) + ':' + CAST(@fta AS nvarchar(10))
 					END
 
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
-		BEGIN
-			DECLARE @LASCommand NVARCHAR(1000)
-				,@createdDate DATETIME
+	----- LAS settlement 
+	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
+	--		SELECT *
+	--		FROM sys.databases
+	--		WHERE NAME = 'LASDB'
+	--		)
+	--BEGIN
+	--	IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
+	--	BEGIN
+	--		DECLARE @LASCommand NVARCHAR(1000)
+	--			,@createdDate DATETIME
 
-			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_9999] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-																	+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-																	+ ', @fth = ' + convert(nvarchar(10),@fth) 
-																	+ ', @fta = ' + convert(nvarchar(10),@fta) 
-																	+ ', @hth = ' + convert(nvarchar(10),@hth) 
-																	+ ', @hta = ' + convert(nvarchar(10),@hta) 
-																	+ ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
-																	+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
-																	+ ', @IsHTCal = ' + CONVERT(NVARCHAR(10), @IsHTCal)
-																	+ ', @IsRefundHT = ' + CONVERT(NVARCHAR(10), @IsRefundHT)
-				,@createdDate = GETDATE()
+	--		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_9999] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+	--																+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+	--																+ ', @fth = ' + convert(nvarchar(10),@fth) 
+	--																+ ', @fta = ' + convert(nvarchar(10),@fta) 
+	--																+ ', @hth = ' + convert(nvarchar(10),@hth) 
+	--																+ ', @hta = ' + convert(nvarchar(10),@hta) 
+	--																+ ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
+	--																+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
+	--																+ ', @IsHTCal = ' + CONVERT(NVARCHAR(10), @IsHTCal)
+	--																+ ', @IsRefundHT = ' + CONVERT(NVARCHAR(10), @IsRefundHT)
+	--			,@createdDate = GETDATE()
 
-			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_9999'
-				,@SQLCommand = @LASCommand
-				,@CreatedDate = @createdDate
-				,@StatusID = 0 -- waiting
-				,@MatchID = @matchid
-				,@Bettype = @bettype
-				,@Status = 'waiting'
-				,@BetCount = @betcount
-		END
-	END
+	--		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_9999'
+	--			,@SQLCommand = @LASCommand
+	--			,@CreatedDate = @createdDate
+	--			,@StatusID = 0 -- waiting
+	--			,@MatchID = @matchid
+	--			,@Bettype = @bettype
+	--			,@Status = 'waiting'
+	--			,@BetCount = @betcount
+	--	END
+	--END
 
 	UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-	SET @modds = modds = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetfair = 0 AND @IsSettleAbandonedMatchIBC = 0
+	SET @modds = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetfair = 0 AND @IsSettleAbandonedMatchIBC = 0
 								THEN CASE bettype
 										WHEN 133 THEN -- Home To Win Both Halves
 													 CASE 
@@ -253,7 +254,8 @@ BEGIN
 															 END
 													END													
 									 END
-						END										
+						END	
+		,modds = @modds									
 		,@commWinRate = CASE comstatus
 			WHEN '0' THEN 1 -- 0: pay normal, both win/lost -- 1: pay 'double' ONLY on lost
 			WHEN '1' THEN 0

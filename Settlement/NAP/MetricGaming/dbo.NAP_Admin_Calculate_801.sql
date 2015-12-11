@@ -18,6 +18,7 @@ AS
 		
 		Revisions:
 			- 20151210@Johnson: allow update bettype time when settle bettype Goal within 60s of kick (801) [Redmine: #49016]
+			- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		Parameter's Explanation:
 		* @Result = <Result>
 						<Row GameResult="7" OtherInfo="6:10"/>
@@ -63,7 +64,7 @@ BEGIN
 					[translogid] [bigint] ,
 					[custid] [int] ,
 					[transdate] [datetime] ,
-					[odds] [smallmoney] ,
+					[odds] [money] ,
 					[stake] [money] ,
 					[status] [nvarchar](10) ,
 					[apositiontaking] [smallmoney] ,
@@ -487,7 +488,7 @@ BEGIN
 		CREATE TABLE #tmpSettledTicket (
 			translogid				BIGINT
 			,transdate				DATETIME
-			,odds					SMALLMONEY
+			,odds					MONEY
 			,stake					MONEY
 			,status					NVARCHAR(10)
 			,statusID				TINYINT
@@ -526,7 +527,7 @@ BEGIN
 		CREATE TABLE #tmpRefundedTicket (
 			translogid				BIGINT
 			,transdate				DATETIME
-			,odds					SMALLMONEY
+			,odds					MONEY
 			,stake					MONEY
 			,status					NVARCHAR(10)
 			,statusID				TINYINT

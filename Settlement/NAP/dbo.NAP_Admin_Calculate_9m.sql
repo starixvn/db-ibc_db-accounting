@@ -95,6 +95,7 @@ AS
 		- 20150608@Kathy: Add more mode Recover for recover parlay tickets [Redmine:#35539]
 		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 		- 20151124@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -106,7 +107,7 @@ BEGIN
 
 	IF @mode = 1
 	BEGIN
-		DECLARE @odds SMALLMONEY
+		DECLARE @odds MONEY
 		DECLARE @commWinRate SMALLMONEY
 				,@commLostRate SMALLMONEY
 		DECLARE @oldstatusID TINYINT
@@ -119,7 +120,7 @@ BEGIN
 
 		DECLARE @cal_modds AS TABLE (
 			transid BIGINT PRIMARY KEY
-			,modds SMALLMONEY
+			,modds MONEY
 			,loseCnt TINYINT
 			)
 
@@ -130,7 +131,7 @@ BEGIN
 			)
 		SELECT T.C.value('./@t', 'bigint')
 			,-- transid
-			isnull(T.C.value('./@m', 'smallmoney'), 0)
+			isnull(T.C.value('./@m', 'money'), 0)
 			,-- modds
 			isnull(T.C.value('./@l', 'tinyint'), 0) -- lostCnt
 		FROM @xml.nodes('/root/r') AS T(C)
@@ -149,11 +150,12 @@ BEGIN
 				ELSE 1
 				END
 			,winlostdate = @winlostdate
-			,@odds = modds = CASE 
+			,@odds = CASE 
 				WHEN loseCnt > 0 THEN 0
 				WHEN @statusID = 0 THEN 0
 				ELSE m.modds
 				END
+			,modds = @odds
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0
@@ -212,7 +214,7 @@ BEGIN
 
 	-------------------------------------------------------------------------
 	-------------------------------------------------------------------------
-	DECLARE @modds SMALLMONEY
+	DECLARE @modds MONEY
 
 	UPDATE BM
 	SET bettype = o.bettype

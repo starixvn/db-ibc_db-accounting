@@ -18,6 +18,7 @@ AS
 		- 20140505@Kathy: Re-run match if time of execution more than 5 minutes
 		- 20140528@Kathy: rotate calculating sports in queue
 		- 20150916@Kathy: update IsCalculating = 2 when settlement is done (remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -31,7 +32,7 @@ BEGIN
 		,@keyId INT
 		,@ActionId INT
 		--,@duration INT
-		,@pre_Sporttype tinyint 
+		,@pre_Sporttype smallint 
 	
 	IF EXISTS (
 			SELECT TOP 1 1

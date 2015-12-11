@@ -4,8 +4,8 @@
 	@raceNumber int,
 	@runnerNumber int,
 	@placing tinyint = 0,
-	@winOdds smallmoney = 0,
-	@placeOdds	smallmoney = 0,
+	@winOdds money = 0,
+	@placeOdds	money = 0,
 	@isSCR bit = 0,
 	@isFav bit = 0,
 	@userid int = 151 ----doing update status userid
@@ -16,7 +16,8 @@ AS
 	DB: DB02.BODB02
 	
 	Revisions: 
-		- 20130524@Elodie: Write settlement log for horse racing
+		-- 20130524@Elodie: Write settlement log for horse racing
+		-- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 */
 BEGIN
 	-- 20100720@Henry: Change SP Logfile to WriteLog_UserLog

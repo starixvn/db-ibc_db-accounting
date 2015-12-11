@@ -20,6 +20,7 @@ AS
 						  - Modify betstatus, goalrecord format before send to Apollo site
 		- 20140528@Kathy: rotate calculating sports in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -40,7 +41,7 @@ BEGIN
 		,@BetStatus		NVARCHAR(50)
 		,@ActionId		INT
 		,@duration		INT
-		,@pre_Sporttype TINYINT
+		,@pre_Sporttype SMALLINT
 
 	SELECT TOP 1 @duration	= DATEDIFF(ms, execTime, GETDATE())
 		,@keyId				= keyid

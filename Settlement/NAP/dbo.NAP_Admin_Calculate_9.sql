@@ -18,6 +18,7 @@ AS
 	
 	Revision:
 		- 20150914@Kathy: Change settlement flow (Remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		
 */
 BEGIN
@@ -25,39 +26,39 @@ BEGIN
 
 	IF @@SERVERNAME IN ('DB043', 'DB044') RETURN
 
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		DECLARE @LASCommand NVARCHAR(4000)
-			,@createdDate DATETIME
+	----- LAS settlement 
+	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	--		SELECT *
+	--		FROM sys.databases
+	--		WHERE NAME = 'LASDB'
+	--		)
+	--BEGIN
+	--	DECLARE @LASCommand NVARCHAR(4000)
+	--		,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_9] @statusID = ' + CONVERT(NVARCHAR(10), @statusID) + ', @strXML = ''' + @strXML + '''' + ', @winlostdate = ''' + CONVERT(NVARCHAR(20), @winlostdate) + ''''
-			,@createdDate = GETDATE()
+	--	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_9] @statusID = ' + CONVERT(NVARCHAR(10), @statusID) + ', @strXML = ''' + @strXML + '''' + ', @winlostdate = ''' + CONVERT(NVARCHAR(20), @winlostdate) + ''''
+	--		,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_9'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = 9
-			,@Bettype = 9
-			,@Status = 'waiting'
-			,@BetCount = 0
-	END
+	--	EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_9'
+	--		,@SQLCommand = @LASCommand
+	--		,@CreatedDate = @createdDate
+	--		,@StatusID = 0 -- waiting
+	--		,@MatchID = 9
+	--		,@Bettype = 9
+	--		,@Status = 'waiting'
+	--		,@BetCount = 0
+	--END
 
 	
-	DECLARE @odds SMALLMONEY, @commWinRate SMALLMONEY ,@commLostRate SMALLMONEY
+	DECLARE @odds MONEY, @commWinRate SMALLMONEY ,@commLostRate SMALLMONEY
 
 	DECLARE @xml XML
-	DECLARE @transIDs as TABLE (transid bigint, modds SMALLMONEY)
+	DECLARE @transIDs as TABLE (transid bigint, modds MONEY)
 	
 	SET @xml = CONVERT(XML, N'<root><r t="' + REPLACE(REPLACE(@strXML, '|', '" m="'), ',', '"/><r t="') + '"/></root>')
 	
 	INSERT INTO @transIDs(transid, modds)
-	SELECT T.C.value('./@t', 'bigint'), ISNULL(T.C.value('./@m', 'smallmoney'), 0)
+	SELECT T.C.value('./@t', 'bigint'), ISNULL(T.C.value('./@m', 'money'), 0)
 	FROM @xml.nodes('/root/r') AS T(C)
 	OPTION (OPTIMIZE FOR (@xml = NULL ))	
 	
@@ -75,12 +76,13 @@ BEGIN
 				ELSE 1
 				END
 			,winlostdate = @winlostdate
-			,@odds = b.modds = CASE WHEN @statusId = 0 THEN 0 ELSE t.modds END		
+			,@odds = CASE WHEN @statusId = 0 THEN 0 ELSE t.modds END		
 			,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 				WHEN '0' THEN 1
 				WHEN '1' THEN 0
 				ELSE 1
 				END
+			,b.modds = @odds
 			,@commLostRate = CASE comstatus
 				WHEN '0' THEN 1
 				WHEN '1' THEN 2

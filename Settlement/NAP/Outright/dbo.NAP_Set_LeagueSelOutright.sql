@@ -1,7 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[NAP_Set_LeagueSelOutright]
 	@FromDate datetime,
 	@ToDate datetime,
-	@sporttype tinyint = 0
+	@sporttype smallint = 0
 AS
 /**
  * Created by	: Jamie
@@ -10,6 +10,7 @@ AS
  * DB			: DBPRO/bodb02
 
  * Revisions	:
+	-- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
  * Parameters:
  *  @FromDate: From  date,

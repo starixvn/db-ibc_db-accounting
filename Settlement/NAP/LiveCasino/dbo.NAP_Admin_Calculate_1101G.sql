@@ -14,6 +14,7 @@ AS
 
 	Revisions:
 		- 20150421@Kathy: Offer New Game Type "No Card Baccarat" (1106) [Redmine:#31630]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		
 */
 SET NOCOUNT ON
@@ -29,7 +30,7 @@ BEGIN
 				@SettleA4	NVARCHAR(1),
 				@Draw		NVARCHAR(1),
 				@StrLen		INT ,
-				@modds		SMALLMONEY
+		@modds money
 
 			SELECT  @StrLen = LEN(@betteam)
 			 

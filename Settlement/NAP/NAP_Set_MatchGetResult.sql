@@ -1,6 +1,6 @@
 ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] @Date DATETIME
 	,@LeagueID INT = 0
-	,@sporttype TINYINT = 0
+	,@sporttype SMALLINT = 0
 	,@statusid TINYINT = 0
 AS
 /*  
@@ -13,6 +13,7 @@ AS
 		- 20140428@Kathy: get 1H FGLG ticket info [Redmine:#14449]
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
 		- 20150403@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
 	Param explanation:  
 		@sporttype: show info of particular sport
@@ -69,8 +70,8 @@ BEGIN
 		,IsKeyscore BIT
 		,IsExistFGLG BIT
 		,IsExistHTFGLG BIT
-		,WinOdds SMALLMONEY
-		,PlaceOdds SMALLMONEY
+		,WinOdds MONEY
+		,PlaceOdds MONEY
 		)
 
 	DECLARE @matchid VARCHAR(MAX)

@@ -13,6 +13,7 @@ AS
 
 	Revisions:		
 		- 20140513@Kathy: insert settled command into LAS queue [Redmine:#14286]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
 */
 BEGIN
@@ -21,12 +22,13 @@ BEGIN
 	DECLARE @IgnoreList VARCHAR(200)
 	SET @IgnoreList = 'DB04,DB042,DB043,DB044'
 
-	DECLARE @modds SMALLMONEY, @winningOdds SMALLMONEY, @commWinRate SMALLMONEY, @commLostRate SMALLMONEY
+	DECLARE @modds MONEY, @winningOdds MONEY, @commWinRate SMALLMONEY, @commLostRate SMALLMONEY
 	DECLARE @_xml XML, @_sXML VARCHAR(MAX)
-		,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
+		--,@LASCommand NVARCHAR(max)
+		,@createdDate DATETIME--, @Remark varchar(500)
 
 	DECLARE @subtable TABLE(transid BIGINT, winlost MONEY, awinlost MONEY, mwinlost MONEY, swinlost MONEY,
-		playercomm MONEY, comm MONEY, acomm MONEY, scomm MONEY, statusid TINYINT, modds SMALLMONEY)
+		playercomm MONEY, comm MONEY, acomm MONEY, scomm MONEY, statusid TINYINT, modds MONEY)
 
 	SELECT transid, actual_stake, stake, odds, comstatus, modds, betteam, hdp1, hdp2, livehomescore, liveawayscore,
 		apositiontaking, mpositiontaking, spositiontaking, playerdiscount,discount, adiscount, sdiscount,
@@ -41,7 +43,7 @@ BEGIN
 	IF @@ROWCOUNT = 0 RETURN
 
 	UPDATE #TempData
-	SET @modds = modds = CASE
+	SET @modds = CASE
 			WHEN bettype = 90 AND HDP1 = 1 AND CEILING(@FirstBallNo/5.0) = betteam THEN 1 
 			WHEN bettype = 90 AND HDP1 = 2 AND CEILING(@FirstBallNo/15.0) = betteam THEN 1 
 			WHEN bettype = 90 AND HDP1 = 3 AND CEILING(@FirstBallNo/25.0) = betteam THEN 1 
@@ -51,6 +53,7 @@ BEGIN
 			WHEN bettype in (81,82,83,84,85,86,88) AND @BetTeam = betteam THEN 1
 			ELSE -1 -- lose
 			END
+		,modds = @modds
 		,@winningOdds = CASE 
 			WHEN odds<0 THEN 1 
 			ELSE CASE WHEN bettype = 90 THEN odds-1 ELSE odds END
@@ -106,8 +109,8 @@ BEGIN
 	BEGIN
 		DELETE @subtable
 
-		SELECT @LASCommand = '',
-				@Remark = ''
+		--SELECT @LASCommand = '',
+		--		@Remark = ''
 
 		DELETE TOP (20) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
@@ -138,41 +141,41 @@ BEGIN
 			,@updatetype = 1 -- calculate
 			,@_sXML = @_sXML
 
-		--- LAS settlement
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_s161_Pregame] @_sXML = ''' + @_sXML + ''''
-				,@createdDate = GETDATE()
+		----- LAS settlement
+		--SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_s161_Pregame] @_sXML = ''' + @_sXML + ''''
+		--		,@createdDate = GETDATE()
 
-		BEGIN TRY
-			EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_s161_Pregame'
-				,@SQLCommand = @LASCommand
-				,@CreatedDate = @createdDate
-				,@StatusID = 0 -- waiting
-				,@MatchID = @matchid
-				,@Bettype = NULL
-				,@Status = 'waiting'
-				,@BetCount = NULL
-		END TRY
-		BEGIN CATCH			
-			SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
-			FROM @subtable
+		--BEGIN TRY
+		--	EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_s161_Pregame'
+		--		,@SQLCommand = @LASCommand
+		--		,@CreatedDate = @createdDate
+		--		,@StatusID = 0 -- waiting
+		--		,@MatchID = @matchid
+		--		,@Bettype = NULL
+		--		,@Status = 'waiting'
+		--		,@BetCount = NULL
+		--END TRY
+		--BEGIN CATCH			
+		--	SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+		--	FROM @subtable
 
-			SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+		--	SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
 
-			BEGIN TRY			
-				EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
-								@UserID = NULL, 
-								@Matchid = @matchid, 
-								@ActionID = 40014, 
-								@Remark = @Remark
-			END TRY
-			BEGIN CATCH
-				EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
-								@UserID = NULL, 
-								@Matchid = @matchid, 
-								@ActionID = 40014, 
-								@Remark = @Remark
-			END CATCH
-		END CATCH
+		--	BEGIN TRY			
+		--		EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+		--						@UserID = NULL, 
+		--						@Matchid = @matchid, 
+		--						@ActionID = 40014, 
+		--						@Remark = @Remark
+		--	END TRY
+		--	BEGIN CATCH
+		--		EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+		--						@UserID = NULL, 
+		--						@Matchid = @matchid, 
+		--						@ActionID = 40014, 
+		--						@Remark = @Remark
+		--	END CATCH
+		--END CATCH
 	END
 
 	DROP TABLE #TempData

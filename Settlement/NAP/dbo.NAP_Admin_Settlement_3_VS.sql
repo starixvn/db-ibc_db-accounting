@@ -1,4 +1,4 @@
-CREATE PROCEDURE [NAP_Admin_Settlement_3_VS]
+ALTER PROCEDURE [NAP_Admin_Settlement_3_VS]
 	@creator int,
 	@matchid int,
 	@mode varchar(6) = 'CAL'
@@ -10,7 +10,8 @@ AS
 	DB: DBTXN/BODB02
 	Original: Admin_Settlement_3_VS
 	Revisions:
-		
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+
 	Param's Explanation:
 	• @Mode:
 		CAL : All BetTypes
@@ -19,7 +20,7 @@ AS
 */
 SET NOCOUNT ON 
 
-	Declare @fth int, @fta int, @hth int, @hta int, @sporttype tinyint,
+	Declare @fth int, @fta int, @hth int, @hta int, @sporttype smallint,
 		@betstatus nvarchar(50), @GoalRecord varchar(50), @matchCode nvarchar(50)
 
 	SELECT  @fth = FinalHomeScore, @fta = FinalAwayScore,

@@ -3,7 +3,7 @@ GO
 
 /****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompleted    Script Date: 6/12/2015 8:40:34 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
-	,@SportType TINYINT = 0
+	,@SportType SMALLINT = 0
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues   
 	@isReLoad BIT = 0
@@ -29,6 +29,7 @@ AS
 		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime 
 		- 20150811@Johnson: Exclude bettrade tickets from sportbook [Redmine: 35921]
 		- 20150729@Johnson: Exclude Metric Gaming in settlement's sportbook [Redmine: #37688]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
 	Param explanation: 
 		@isReLoad: 1: reload partial matches of a league, 0: not reload
@@ -59,7 +60,7 @@ BEGIN
 		,betstatus NVARCHAR(50)
 		,eventstatus NVARCHAR(50)
 		,Foddsstatus NVARCHAR(50)
-		,sporttype TINYINT
+		,sporttype SMALLINT
 		,IsNeutral BIT
 		,eventdate DATETIME
 		,goalrecord VARCHAR(50)
@@ -97,7 +98,7 @@ BEGIN
 		,betstatus nvarchar(50)
 		,eventstatus nvarchar(50)
 		,Foddsstatus nvarchar(50)
-		,sporttype TINYINT 		
+		,sporttype SMALLINT 		
 		, IsNeutral bit
 		,eventdate smalldatetime
 		,goalrecord varchar(50)

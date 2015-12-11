@@ -28,6 +28,8 @@ AS
 		- 20150921@Kathy: Correct the winlostdate of main ticket [Redmine:#43566]
 		- 20150923@Kathy: Correct modds [Redmine:#43566]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
@@ -66,7 +68,7 @@ BEGIN
 					when 4 then 0.000000000001 -- lose
 					else 1 -- void/reject
 				end
-				) AS DECIMAL(38, 20)))) as smallmoney) as modds
+				) AS DECIMAL(38, 20)))) as money) as modds
 		FROM (
 				SELECT transid, odds, refno, statuswinlost, statusID, winlostdate FROM dbo.bettransm WITH(rowlock)						
 				UNION
@@ -116,7 +118,7 @@ BEGIN
 				
 	--
 	DECLARE @tempStatus as TABLE (statusID tinyint, winlostdate smalldatetime, isfinished bit)
-	DECLARE @tempTransID as TABLE(transID bigint, modds SMALLMONEY)
+	DECLARE @tempTransID as TABLE(transID bigint, modds MONEY)
 	DECLARE @strTransIds varchar(MAX) = ''
 
 	CREATE INDEX IX_temp_bettrans_9 ON #temp_bettrans_9 (statusid, winlostdate)
@@ -222,7 +224,7 @@ BEGIN
 			WHERE	Increased = 0
 			
 			IF @@rowcount <> 0
-														EXEC dbo.Dot_BalancePendingDebitIns_xpre 
+				EXEC dbo.Dot_BalancePendingDebitIns
 					@BalancePending = @tblDebitPending
 					,@Type			= 1 -- Sports
 			
@@ -237,7 +239,7 @@ BEGIN
 			WHERE	Increased = 1
 			
 			IF @@rowcount <> 0
-														EXEC dbo.Dot_BalancePendingCreditIns_xpre 
+				EXEC dbo.Dot_BalancePendingCreditIns
 					@BalancePending = @tblCreditPending
 					,@Type			= 1 -- Sports
 				

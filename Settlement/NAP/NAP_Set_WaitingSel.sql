@@ -2,7 +2,7 @@
 GO
 ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel]
 	@MatchCode nvarchar(50) = '',
-	@SportType tinyint = 0,
+	@SportType smallint = 0,
 	@LeagueID int = 0 -- 0 for ALL Leagues
 AS
 /*
@@ -17,6 +17,8 @@ AS
 		- 20140711@Kathy: get Penalty Shootout status
 		- 20141007@Jamie: Get Tennis in new table [Redmine: #23034]
 		- 20150420@Jamie: Betradar phase II [Readmine:#27212]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+
 	Param's explanation:  
 		
 */

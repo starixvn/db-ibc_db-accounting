@@ -7,7 +7,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 /****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompletedHT    Script Date: 6/12/2015 8:40:34 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompletedHT] @Date DATETIME
-	,@SportType TINYINT = 0
+	,@SportType SMALLINT = 0
 	,@LeagueID INT = 0
 	,-- 0 for ALL Leagues
 	@isReLoad BIT = 0
@@ -30,6 +30,7 @@ AS
 		- 20150611@Jamie: Remove the contrainst  DisplayCat = 8 ExtraTime  
 		- 20150811@Johnson: Exclude bettrade tickets from Sportbook [Redmine: #35921]
 		- 20150729@Johnson: Exclude range bettype of Metric Gaming from settlement of SB [Redmine: #37688]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 */
 BEGIN
 	SET NOCOUNT ON

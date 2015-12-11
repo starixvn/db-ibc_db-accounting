@@ -19,14 +19,16 @@ AS
 
 	Revisions:
 		- 20140514@Kathy: insert settled command into LAS queue [Redmine:#14286]	
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 				
 */
 SET NOCOUNT ON
 	DECLARE @IgnoreList varchar(200)
 	SET @IgnoreList = 'DB04,DB042,DB043,DB044'
 	
-	Declare @modds smallmoney, @commWinRate smallmoney, @commLostRate smallmoney, @matchdate datetime
-		,@LASCommand NVARCHAR(max),@createdDate DATETIME, @Remark varchar(500)
+	Declare @modds money, @commWinRate smallmoney, @commLostRate smallmoney, @matchdate datetime
+		--,@LASCommand NVARCHAR(max)
+		,@createdDate DATETIME--, @Remark varchar(500)
 
 	SELECT	transid, actual_stake, stake, odds, comstatus, modds,
 			betteam, hdp1, hdp2, livehomescore, liveawayscore,
@@ -44,7 +46,7 @@ SET NOCOUNT ON
 	IF @@ROWCOUNT = 0 RETURN
 
 	UPDATE #TempData
-	SET @modds = modds = CASE
+	SET @modds = CASE
 		WHEN (betteam = @correctscore) THEN 1
 		WHEN betteam = '4:0' AND @goaldiff >=  4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
 		WHEN betteam = '0:4' AND @goaldiff <=  -4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
@@ -52,7 +54,7 @@ SET NOCOUNT ON
 		WHEN betteam = '0:5' AND @goaldiff <= -5 THEN 1
 		ELSE -1
 		END,
-		
+		modds = @modds,
 		@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 		WHEN '0' THEN 1
 		WHEN '1' THEN 0
@@ -128,14 +130,14 @@ SET NOCOUNT ON
 		
 	DECLARE @_xml XML, @_sXML varchar(MAX)
 	DECLARE @subtable TABLE(transid bigint, winlost money, awinlost money, mwinlost money, swinlost money,
-		playercomm money, comm money, acomm money, scomm money, statusid tinyint, modds smallmoney)
+		playercomm money, comm money, acomm money, scomm money, statusid tinyint, modds money)
 		
 	WHILE (1 = 1)
 	BEGIN
 		DELETE @subtable
 
-		SELECT @LASCommand = '',
-				@Remark = ''
+		--SELECT @LASCommand = '',
+		--		@Remark = ''
 		
 		DELETE TOP (300) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
@@ -164,41 +166,41 @@ SET NOCOUNT ON
 		
 		EXEC dbo.Bet_ExecRep_05 @IgnoreList, 1, @_sXML
 
-		--- LAS settlement 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_VS_4] @_sXML = ''' + @_sXML + ''''
-				,@createdDate = GETDATE()
+		----- LAS settlement 
+		--SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_VS_4] @_sXML = ''' + @_sXML + ''''
+		--		,@createdDate = GETDATE()
 
-		BEGIN TRY
-			EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_VS_4'
-				,@SQLCommand = @LASCommand
-				,@CreatedDate = @createdDate
-				,@StatusID = 0 -- waiting
-				,@MatchID = @matchid
-				,@Bettype = NULL
-				,@Status = 'waiting'
-				,@BetCount = NULL
-		END TRY
-		BEGIN CATCH			
-			SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
-			FROM @subtable
+		--BEGIN TRY
+		--	EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_VS_4'
+		--		,@SQLCommand = @LASCommand
+		--		,@CreatedDate = @createdDate
+		--		,@StatusID = 0 -- waiting
+		--		,@MatchID = @matchid
+		--		,@Bettype = NULL
+		--		,@Status = 'waiting'
+		--		,@BetCount = NULL
+		--END TRY
+		--BEGIN CATCH			
+		--	SELECT @Remark = @Remark + CAST(transid as varchar(20)) + ','
+		--	FROM @subtable
 
-			SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
+		--	SET @Remark = SUBSTRING(@Remark, 1, LEN(@Remark)-1)
 
-			BEGIN TRY			
-				EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
-								@UserID = NULL, 
-								@Matchid = @matchid, 
-								@ActionID = 40018, 
-								@Remark = @Remark
-			END TRY
-			BEGIN CATCH
-				EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
-								@UserID = NULL, 
-								@Matchid = @matchid, 
-								@ActionID = 40018, 
-								@Remark = @Remark
-			END CATCH
-		END CATCH 
+		--	BEGIN TRY			
+		--		EXEC DBLOG.bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+		--						@UserID = NULL, 
+		--						@Matchid = @matchid, 
+		--						@ActionID = 40018, 
+		--						@Remark = @Remark
+		--	END TRY
+		--	BEGIN CATCH
+		--		EXEC bodb_CustomerLog.dbo.LAS_WriteLog_UserLog_RunSP
+		--						@UserID = NULL, 
+		--						@Matchid = @matchid, 
+		--						@ActionID = 40018, 
+		--						@Remark = @Remark
+		--	END CATCH
+		--END CATCH 
 			 					
 	END
 GO

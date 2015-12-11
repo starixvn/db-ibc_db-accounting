@@ -1,7 +1,7 @@
-CREATE PROC [NAP_Set_LeagueSel]
+ALTER PROC [NAP_Set_LeagueSel]
 	@FromDate datetime,
 	@ToDate datetime,
-	@sporttype tinyint = 0
+	@sporttype smallint = 0
 AS
 
 /*	Creator: Kathy
@@ -10,7 +10,8 @@ AS
 	DB: DB02.bodb02
 	
 	Revision:	
-		
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+
 	Param's Explanation:
 		
 		

@@ -19,8 +19,9 @@ AS
 	-- 20120717@Cooper: add try catch 
     -- 20130121@Elodie: Change link server DB02 to DBPRO
     -- 20150807@Kathy: Using new balance table (BalCreditOthersPending,BalDebitOthersPending) [Redmine:#40125]
+	-- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
     
-    DECLARE @Horse TABLE (orid int, placing tinyint, WinOdds smallmoney, PlaceOdds smallmoney, IsSCR bit)
+    DECLARE @Horse TABLE (orid int, placing tinyint, WinOdds money, PlaceOdds money, IsSCR bit)
     DECLARE @DeadHeat TABLE (placing tinyint)
     DECLARE @IsPlaceRefund bit
 
@@ -72,14 +73,14 @@ CREATE TABLE #BalanceBefore (custid int PRIMARY KEY, balance money)
         END
 
 
-    DECLARE @modds smallmoney, @odds smallmoney,
-            @EffectStake money, @EffectOdds smallmoney
+    DECLARE @modds money, @odds money,
+            @EffectStake money, @EffectOdds money
     -- ===============================
 
 	-- WIN & PLACE
     UPDATE dbo.bettrans with (UPDLOCK, ROWLOCK)
     SET
-        @odds = odds = CASE bettype
+        @odds = CASE bettype
             WHEN 31 THEN h.WinOdds
             WHEN 32 THEN h.PlaceOdds
             WHEN 33 THEN (h.WinOdds + h.PlaceOdds) / 2
@@ -89,14 +90,15 @@ CREATE TABLE #BalanceBefore (custid int PRIMARY KEY, balance money)
                 else 0 -- full lose
                 end */
             END,
-        @modds = modds = CASE
+		odds = @odds,
+        @modds = CASE
             WHEN h.IsSCR =  1 THEN 0 -- draw (cancel)
             WHEN bettype = 31 AND @odds > 0 /*h.placing = 1*/ THEN 1 -- Win : Horse come 1st place
             WHEN bettype = 32 AND @odds > 0 /*h.placing IN (1,2,3)*/ THEN 1 -- Place : Horse come within 3rd place
             WHEN bettype = 33 AND @odds > 0 /*h.placing IN (1,2,3)*/ THEN 1 -- Each Way : Horse come within 3rd place
             ELSE -1 -- Other Case : lose
             END,
-
+		modds = @modds,
         -- Value uses for calculate Agent Winlost & Commission
         @EffectStake = CASE
             WHEN bettype = 32 AND @IsPlaceRefund = 1 THEN 0
@@ -208,10 +210,11 @@ CREATE TABLE #BalanceBefore (custid int PRIMARY KEY, balance money)
 
     UPDATE dbo.bettransm with (UPDLOCK, ROWLOCK)
     SET
-        @odds = odds = CASE bettype
+        @odds = CASE bettype
             WHEN 31 THEN h.WinOdds
             WHEN 32 THEN h.PlaceOdds
             END,
+		odds = @odds,
         @modds = CASE
             WHEN h.IsSCR =  1 THEN 0 -- draw (cancel)
             WHEN bettype = 31 AND @odds > 0 THEN 1 -- Win : Horse come 1st place
@@ -321,9 +324,10 @@ CREATE TABLE #BalanceBefore (custid int PRIMARY KEY, balance money)
 		odds = CASE WHEN bm.liveawayscore = 0 THEN bm.hdp1 ELSE (bm.hdp1 + bm.hdp2)/2 END , 
 		oddsspread = CASE WHEN bm.liveawayscore = 0 THEN bm.oddsspread ELSE bettrans.oddsspread END, 
 
-		@modds = modds = CASE WHEN bm.IsSCR = 1 THEN 0 
+		@modds = CASE WHEN bm.IsSCR = 1 THEN 0 
 							  WHEN (CASE WHEN bm.liveawayscore = 0 THEN bm.winlost - bettrans.actual_stake/2 ELSE bm.winlost END) > 0 THEN 1 
 							  ELSE -1 END,
+		modds = @modds,
 		[status] = CASE
 			WHEN @modds = 0 THEN N'VOID' -- only case to be draw :: IsSCR = 1
 			--WHEN @odds  < 1 THEN N'LOSE'
