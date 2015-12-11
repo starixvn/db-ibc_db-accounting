@@ -28,28 +28,28 @@ BEGIN
 
 	SET NOCOUNT ON
 
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+	----- LAS settlement 
+	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
+	--		SELECT *
+	--		FROM sys.databases
+	--		WHERE NAME = 'LASDB'
+	--		)
+	--BEGIN
+	--	DECLARE @LASCommand NVARCHAR(1000)
+	--		,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_28] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @fth = ' + CONVERT(NVARCHAR(10), @fth) + ', @fta = ' + CONVERT(NVARCHAR(10), @fta) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-			,@createdDate = GETDATE()
+	--	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_28] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @fth = ' + CONVERT(NVARCHAR(10), @fth) + ', @fta = ' + CONVERT(NVARCHAR(10), @fta) + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+	--		,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_28'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = @bettype
-			,@Status = 'waiting'
-			,@BetCount = @betcount
-	END
+	--	EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_28'
+	--		,@SQLCommand = @LASCommand
+	--		,@CreatedDate = @createdDate
+	--		,@StatusID = 0 -- waiting
+	--		,@MatchID = @matchid
+	--		,@Bettype = @bettype
+	--		,@Status = 'waiting'
+	--		,@BetCount = @betcount
+	--END
 
 	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY

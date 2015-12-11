@@ -29,6 +29,7 @@ AS
 		- 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		- 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
         
     Param's Explanation:
         @IsRefundHT: Indicate whether or not match has been refunded HT
@@ -39,32 +40,32 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    --- LAS settlement 
-    IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-            SELECT *
-            FROM sys.databases
-            WHERE NAME = 'LASDB'
-            )
-    BEGIN
-        DECLARE @LASCommand NVARCHAR(1000)
-            ,@createdDate DATETIME
+    ----- LAS settlement 
+    --IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
+    --        SELECT *
+    --        FROM sys.databases
+    --        WHERE NAME = 'LASDB'
+    --        )
+    --BEGIN
+    --    DECLARE @LASCommand NVARCHAR(1000)
+    --        ,@createdDate DATETIME
 
-        SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFT] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
-                            + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 
-                            + ', @IsRefundHT = ' + CONVERT(NVARCHAR(10), ISNULL(@IsRefundHT, 0))                                             
-                            + ', @IsHTCal = ' + CONVERT(NVARCHAR(10), ISNULL(@IsHTCal, 0))                                                                                         
+    --    SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFT] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
+    --                        + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 
+    --                        + ', @IsRefundHT = ' + CONVERT(NVARCHAR(10), ISNULL(@IsRefundHT, 0))                                             
+    --                        + ', @IsHTCal = ' + CONVERT(NVARCHAR(10), ISNULL(@IsHTCal, 0))                                                                                         
 
-            ,@createdDate = GETDATE()
+    --        ,@createdDate = GETDATE()
 
-        EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundFT'
-            ,@SQLCommand = @LASCommand
-            ,@CreatedDate = @createdDate
-            ,@StatusID = 0 -- waiting
-            ,@MatchID = @matchid
-            ,@Bettype = 0 -- hardcode
-            ,@Status = 'waiting'
-            ,@BetCount = 0
-    END
+    --    EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundFT'
+    --        ,@SQLCommand = @LASCommand
+    --        ,@CreatedDate = @createdDate
+    --        ,@StatusID = 0 -- waiting
+    --        ,@MatchID = @matchid
+    --        ,@Bettype = 0 -- hardcode
+    --        ,@Status = 'waiting'
+    --        ,@BetCount = 0
+    --END
     
     WHILE 1 = 1
     BEGIN

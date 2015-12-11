@@ -47,39 +47,39 @@ BEGIN
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 
-	-- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215')
-		AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
+	---- LAS settlement 
+	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215')
+	--	AND EXISTS (
+	--		SELECT *
+	--		FROM sys.databases
+	--		WHERE NAME = 'LASDB'
+	--		)
+	--BEGIN
+	--	DECLARE @LASCommand NVARCHAR(1000)
+	--		,@createdDate DATETIME
 
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_2] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-														+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-														+ ', @oddeven = ' + CASE WHEN @oddeven IS NULL THEN 'NULL' 
-																				   ELSE CONVERT(NVARCHAR(50), @oddeven)
-																			  END 
-														+ ', @oddevenht = ' + CASE WHEN @oddevenht IS NULL THEN 'NULL' 
-																				   ELSE CONVERT(NVARCHAR(50), @oddevenht)
-																			  END 
-														+ ', @isRefundHT = ' + CONVERT(NVARCHAR(10), @isRefundHT) 
-													    + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, '')) 
-													    + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0))
-			,@createdDate = GETDATE()
+	--	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_2] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+	--													+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+	--													+ ', @oddeven = ' + CASE WHEN @oddeven IS NULL THEN 'NULL' 
+	--																			   ELSE CONVERT(NVARCHAR(50), @oddeven)
+	--																		  END 
+	--													+ ', @oddevenht = ' + CASE WHEN @oddevenht IS NULL THEN 'NULL' 
+	--																			   ELSE CONVERT(NVARCHAR(50), @oddevenht)
+	--																		  END 
+	--													+ ', @isRefundHT = ' + CONVERT(NVARCHAR(10), @isRefundHT) 
+	--												    + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, '')) 
+	--												    + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0))
+	--		,@createdDate = GETDATE()
 
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_2'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = @bettype
-			,@Status = 'waiting'
-			,@BetCount = @betcount
-	END
+	--	EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_2'
+	--		,@SQLCommand = @LASCommand
+	--		,@CreatedDate = @createdDate
+	--		,@StatusID = 0 -- waiting
+	--		,@MatchID = @matchid
+	--		,@Bettype = @bettype
+	--		,@Status = 'waiting'
+	--		,@BetCount = @betcount
+	--END
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB231','DB215')
 	BEGIN

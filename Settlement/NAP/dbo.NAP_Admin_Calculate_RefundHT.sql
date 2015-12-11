@@ -25,6 +25,7 @@ AS
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)    
         - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
         - 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 
     Param's Explanation:
         + @IsExcludeBetdaq: 
@@ -38,28 +39,28 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    --- LAS settlement 
-    IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-            SELECT *
-            FROM sys.databases
-            WHERE NAME = 'LASDB'
-            )
-    BEGIN
-        DECLARE @LASCommand NVARCHAR(1000)
-            ,@createdDate DATETIME
+    ----- LAS settlement 
+    --IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
+    --        SELECT *
+    --        FROM sys.databases
+    --        WHERE NAME = 'LASDB'
+    --        )
+    --BEGIN
+    --    DECLARE @LASCommand NVARCHAR(1000)
+    --        ,@createdDate DATETIME
 
-        SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundHT] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
-            ,@createdDate = GETDATE()
+    --    SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundHT] @matchid = ' + CONVERT(NVARCHAR(10), @matchid)
+    --        ,@createdDate = GETDATE()
 
-        EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundHT'
-            ,@SQLCommand = @LASCommand
-            ,@CreatedDate = @createdDate
-            ,@StatusID = 0 -- waiting
-            ,@MatchID = @matchid
-            ,@Bettype = 0 -- hardcode
-            ,@Status = 'waiting'
-            ,@BetCount = 0
-    END
+    --    EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundHT'
+    --        ,@SQLCommand = @LASCommand
+    --        ,@CreatedDate = @createdDate
+    --        ,@StatusID = 0 -- waiting
+    --        ,@MatchID = @matchid
+    --        ,@Bettype = 0 -- hardcode
+    --        ,@Status = 'waiting'
+    --        ,@BetCount = 0
+    --END
 
     WHILE 1 = 1
     BEGIN

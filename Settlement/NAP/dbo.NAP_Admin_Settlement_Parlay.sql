@@ -192,37 +192,37 @@ BEGIN
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
 	END
 
-	--- LAS settlement 
-	DECLARE @LASCommand NVARCHAR(1000)
-		,@createdDate DATETIME
+	----- LAS settlement 
+	--DECLARE @LASCommand NVARCHAR(1000)
+	--	,@createdDate DATETIME
 
-	SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' 
-														  + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) 
-														  + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
-														  + ',@resultPS = ' + CASE WHEN @resultPS IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @resultPS) + '''' END 									 
-		,@createdDate = GETDATE()
+	--SELECT @LASCommand = 'EXEC [dbo].[Admin_Settlement_Parlay] @matchids = ' + '''' + CONVERT(NVARCHAR(2000), @matchids) + '''' 
+	--													  + ', @creator = ' + CONVERT(NVARCHAR(10), @creator) 
+	--													  + ', @action = ' + '''' + CONVERT(NVARCHAR(50), @action) + ''''
+	--													  + ',@resultPS = ' + CASE WHEN @resultPS IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @resultPS) + '''' END 									 
+	--	,@createdDate = GETDATE()
 
-	BEGIN TRY
-		EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Settlement_Parlay'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchids
-			,@Bettype = 9
-			,@Status = 'waiting'
-			,@BetCount = 0
-		IF @@ERROR <> 0
-		BEGIN
-			SELECT	@ErrCode = 1001009
-					,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
-			RETURN
-		END 		
-	END TRY
-	BEGIN CATCH 
-		SELECT	@ErrCode = 1001009
-				,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
-		RETURN
-	END CATCH
+	--BEGIN TRY
+	--	EXEC DBLAS.LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Settlement_Parlay'
+	--		,@SQLCommand = @LASCommand
+	--		,@CreatedDate = @createdDate
+	--		,@StatusID = 0 -- waiting
+	--		,@MatchID = @matchids
+	--		,@Bettype = 9
+	--		,@Status = 'waiting'
+	--		,@BetCount = 0
+	--	IF @@ERROR <> 0
+	--	BEGIN
+	--		SELECT	@ErrCode = 1001009
+	--				,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
+	--		RETURN
+	--	END 		
+	--END TRY
+	--BEGIN CATCH 
+	--	SELECT	@ErrCode = 1001009
+	--			,@ErrMsg = 'Calculate Parlay for this match is unsuccessfully. Please try again.'
+	--	RETURN
+	--END CATCH
 
 	DECLARE @rn INT
 		,@subStart DATETIME

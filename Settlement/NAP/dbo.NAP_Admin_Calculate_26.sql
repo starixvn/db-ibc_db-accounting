@@ -27,36 +27,36 @@ BEGIN
 
 	SET NOCOUNT ON
 
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
-		BEGIN
-			DECLARE @LASCommand NVARCHAR(1000)
-				,@createdDate DATETIME
+	----- LAS settlement 
+	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
+	--		SELECT *
+	--		FROM sys.databases
+	--		WHERE NAME = 'LASDB'
+	--		)
+	--BEGIN
+	--	IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
+	--	BEGIN
+	--		DECLARE @LASCommand NVARCHAR(1000)
+	--			,@createdDate DATETIME
 
-			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_26] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-								+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-								+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
-								+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
-								+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-								+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 						
-				,@createdDate = GETDATE()
+	--		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_26] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
+	--							+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
+	--							+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
+	--							+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
+	--							+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
+	--							+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 						
+	--			,@createdDate = GETDATE()
 
-			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_26'
-				,@SQLCommand = @LASCommand
-				,@CreatedDate = @createdDate
-				,@StatusID = 0 -- waiting
-				,@MatchID = @matchid
-				,@Bettype = @bettype
-				,@Status = 'waiting'
-				,@BetCount = @betcount
-		END
-	END
+	--		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_26'
+	--			,@SQLCommand = @LASCommand
+	--			,@CreatedDate = @createdDate
+	--			,@StatusID = 0 -- waiting
+	--			,@MatchID = @matchid
+	--			,@Bettype = @bettype
+	--			,@Status = 'waiting'
+	--			,@BetCount = @betcount
+	--	END
+	--END
 
 	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
