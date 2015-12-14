@@ -64,7 +64,8 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 1000000
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
-
+		
+		select @Errcode as Errcode , @ErrMsg as ErrMsg
 		RETURN
 	END
 	
@@ -79,7 +80,8 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 9999999
 			,@ErrMsg	= 'The Event Time already existed in this match.'
-
+		
+		select @Errcode as Errcode , @ErrMsg as ErrMsg
 		RETURN
 	END						
 
@@ -112,7 +114,8 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 1000000
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
-
+		
+		select @Errcode as Errcode , @ErrMsg as ErrMsg
 		RETURN
 	END
 	
@@ -177,7 +180,9 @@ BEGIN
 		,@newBettypeTime		= @newBettypeTime
 		,@isSettleDetermined	= @isSettleDetermined
 		
-	
+		--hard code to ruturn dataset
+		select 0 as Errcode , '' as ErrMsg
+		
 		EXEC NAP_Admin_Calculate_801
 		@matchid				= @matchid
 		,@bettype				= @bettype
