@@ -2879,6 +2879,8 @@ BEGIN
                         ,@totalgoal = @fth
                         ,@betcount = @betcount_401
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				--Away Team Over/Under
 				IF @betcount_402 > 0
@@ -2887,6 +2889,8 @@ BEGIN
                         ,@totalgoal = @fta
                         ,@betcount = @betcount_402
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 				
 				--2H Correct Score
 				IF @betcount_405 > 0
@@ -2901,6 +2905,8 @@ BEGIN
                         ,@fth = @fth
                         ,@fta = @fta
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 						,@IsRefundHT = @IsRefundHT
 				
 				--Exact Total Goals
@@ -2910,6 +2916,8 @@ BEGIN
                         ,@totalgoal = @totalgoal
                         ,@betcount = @betcount_406
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				--Exact Home Team Goals
 				IF @betcount_407 > 0
@@ -2918,6 +2926,8 @@ BEGIN
                         ,@totalgoal = @fth
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				--Winning Margin
 				IF @betCount_408 > 0
@@ -2928,6 +2938,8 @@ BEGIN
 						,@totalgoal = @totalgoal
                         ,@betcount = @betcount_408
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 				
 				--Exact Away Team Goals
 				IF @betcount_409 > 0
@@ -2936,6 +2948,8 @@ BEGIN
                         ,@totalgoal = @fta
                         ,@betcount = @betcount_409
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 				
                 IF @row_count > 0
 				BEGIN
@@ -3382,6 +3396,8 @@ BEGIN
                         ,@totalgoal = @fth
                         ,@betcount = @betcount_401
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
                         
 				--Away Team Over/Under
 				IF @betcount_402 > 0
@@ -3390,6 +3406,8 @@ BEGIN
                         ,@totalgoal = @fta
                         ,@betcount = @betcount_402
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
                         
 				--1H Home Team Over/Under
 				IF @betcount_403 > 0
@@ -3398,6 +3416,8 @@ BEGIN
                         ,@totalht = @hth
                         ,@betcount = @betcount_403
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 					
 				--1H Away Team Over/Under
 				IF @betcount_404 > 0
@@ -3406,6 +3426,8 @@ BEGIN
                         ,@totalht = @hta
                         ,@betcount = @betcount_404
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 						
                	--Exact Total Goals
 				IF @betcount_406 > 0
@@ -3414,6 +3436,8 @@ BEGIN
                         ,@totalgoal = @totalgoal
                         ,@betcount = @betcount_406
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				--Exact Home Team Goals
 				IF @betcount_407 > 0
@@ -3422,6 +3446,8 @@ BEGIN
                         ,@totalgoal = @fth
                         ,@betcount = @betcount_407
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				--Winning Margin
 				IF @betCount_408 > 0
@@ -3432,6 +3458,8 @@ BEGIN
 						,@totalgoal = @totalgoal
                         ,@betcount = @betcount_408
 						,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				--Exact Away Team Goals
 				IF @betcount_409 > 0
@@ -3440,6 +3468,8 @@ BEGIN
                         ,@totalgoal = @fta
                         ,@betcount = @betcount_409
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				--Exact 1st Half Goal
 				IF @betCount_412 > 0
@@ -3448,6 +3478,8 @@ BEGIN
                         ,@totalgoal = @totalht
                         ,@betcount = @betcount_412
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @row_count > 0
 				BEGIN
