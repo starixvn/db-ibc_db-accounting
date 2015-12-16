@@ -1,21 +1,46 @@
-ALTER PROCEDURE [dbo].[Acc_MT_GetKenoPT]
-    @username  varchar(50),  
-    @Sporttype int = 202,
-    @Bettype   int,
-    @ErrCode   int = 0 output,  
-    @ErrMsg    varchar(100) = '' output
+CREATE PROCEDURE [dbo].[Acc_MT_GetKenoPT_xtest]
+	@username	varchar(50),  
+	@Sporttype	int = 202,
+	@Bettype	int,
+	@ErrCode	int = 0 output,  
+	@ErrMsg		varchar(100) = '' output
 AS
  /*
-  Created: Logan
-  Date: 20140604
-  Task: View PT setting of customer - Keno
-  DB: DBAGE/BODB02
+	Created: Logan
+	Date: 20140604
+	Task: View PT setting of customer - Keno
+	DB: DBCUST/CustDB
 
-  Revisions:
+	Revisions:
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB, use temp table for sports, bettype)
+		- 20150807@Elodie: Correct show PT for deposit customer [Redmine:#36137]
 
-  Parameters Explanation:
+	Parameters Explanation:
  */
 SET NOCOUNT ON
+
+----- 20150610@Kos -------------------
+DECLARE @tmp_Sports TABLE (SportType TINYINT, SportName NVARCHAR(50))
+DECLARE @tmp_Bettype TABLE (TypeID INT, TypeNamee NVARCHAR(50))
+	
+BEGIN TRY
+	INSERT INTO @tmp_Sports (SportType, SportName)
+	SELECT SportType, SportName FROM DBAGE.bodb02.dbo.Sports WITH (NOLOCK)
+END TRY
+BEGIN CATCH
+	INSERT INTO @tmp_Sports (SportType, SportName)
+	SELECT SportType, SportName FROM DBTXN.bodb02.dbo.Sports WITH (NOLOCK)
+END CATCH
+
+BEGIN TRY
+	INSERT INTO @tmp_Bettype (TypeID, TypeNamee)
+	SELECT TypeID, TypeNamee FROM DBAGE.bodb02.dbo.Bettype WITH (NOLOCK)
+END TRY
+BEGIN CATCH
+	INSERT INTO @tmp_Bettype (TypeID, TypeNamee)
+	SELECT TypeID, TypeNamee FROM DBTXN.bodb02.dbo.Bettype WITH (NOLOCK)
+END CATCH
+----- 20150610@Kos -------------------
 
 declare @roleid int,
         @custid int,
@@ -56,8 +81,8 @@ insert into @tmpSportBetType(sporttype, sportname, bettype, typename, gmaxpt, se
             a.typenamee,
             pg.MaxPositiontaking,
             ROW_NUMBER() over(order by a.typeid)
-       from bettype a with(nolock)
- inner join Sports b with(nolock) on b.SportType = 202
+       from @tmp_Bettype a 
+ inner join @tmp_Sports b on b.SportType = 202
  inner join ProductGlobalSetting pg with(nolock) on a.typeid = pg.Bettype and b.SportType = pg.Sporttype
       where 1 = 1
         and (b.SportType = 202 and a.typeid between 1501 and 1599)
@@ -113,15 +138,20 @@ declare @betCount smallint,
 select @betCount = MAX(seq)
   from @tmpSportBetType
 
+DECLARE @IsLicensee INT 
+SET @IsLicensee = 0 
+IF(EXISTS(SELECT ci.custid FROM custInfo ci with(NOLOCK) WHERE ci.srecommend IN (SELECT * FROM dbo.f_DepSuper_1('ALL') fds) AND ci.custid = @CustID))
+	SET @IsLicensee  = 1
+
 while @seq <= @betCount
 begin
     select @s4 = scs.spositiontaking,
            @m4 = scs.mpositiontaking,
            @a4 = scs.apositiontaking,
            @n4 = sco.minpositiontaking,
-           @l4 = scs.spositiontaking
+           @l4 = CASE WHEN @IsLicensee = 1 THEN 0 ELSE scs.spositiontaking END
       from CustSettingGame scs with(nolock)
-inner join CustOverrideGame sco with(nolock) on scs.sporttype = sco.Sporttype and scs.bettype = sco.Bettype and sco.CustID = scs.CustID
+LEFT join CustOverrideGame sco with(nolock) on scs.sporttype = sco.Sporttype and scs.bettype = sco.Bettype and sco.CustID = scs.CustID
 inner join @tmpSportBetType sb on sb.bettype = scs.bettype and sb.sporttype = scs.sporttype
      where 1 = 1
        and scs.CustID = @srecommend
@@ -132,9 +162,9 @@ inner join @tmpSportBetType sb on sb.bettype = scs.bettype and sb.sporttype = sc
            @u3 = mcs.autopositiontaking,
            @i3 = mcs.isautopositiontaking,
            @n3 = mco.minpositiontaking,
-           @l3 = sb.gmaxpt
+           @l3 = CASE WHEN @IsLicensee = 1 THEN 0 ELSE sb.gmaxpt END
       from CustSettingGame mcs with(nolock)
-inner join CustOverrideGame mco with(nolock) on mcs.sporttype = mco.Sporttype and mcs.bettype = mco.Bettype and mco.CustID = mcs.CustID
+LEFT join CustOverrideGame mco with(nolock) on mcs.sporttype = mco.Sporttype and mcs.bettype = mco.Bettype and mco.CustID = mcs.CustID
 inner join @tmpSportBetType sb on sb.bettype = mcs.bettype and sb.sporttype = mcs.sporttype
 --inner join ProductGlobalSetting pg with(nolock) on sb.sporttype = pg.Sporttype and sb.bettype = pg.Bettype
      where 1 = 1
@@ -146,9 +176,9 @@ inner join @tmpSportBetType sb on sb.bettype = mcs.bettype and sb.sporttype = mc
            @um2 = acs.autompositiontaking,
            @im2 = acs.isautompositiontaking,
            @n2 = aco.minpositiontaking,
-           @l2 = sb.gmaxpt
+           @l2 = CASE WHEN @IsLicensee = 1 THEN 0 ELSE sb.gmaxpt END
       from CustSettingGame acs with(nolock)
-inner join CustOverrideGame aco with(nolock) on acs.sporttype = aco.Sporttype and acs.bettype = aco.Bettype and aco.CustID = acs.CustID
+LEFT join CustOverrideGame aco with(nolock) on acs.sporttype = aco.Sporttype and acs.bettype = aco.Bettype and aco.CustID = acs.CustID
 inner join @tmpSportBetType sb on sb.bettype = acs.bettype and sb.sporttype = acs.sporttype
      where 1 = 1
        and acs.CustID = @recommend
@@ -191,6 +221,7 @@ begin
            @ErrMsg ='Invalid Data!'  
     return    
 end
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_MT_GetKenoPT] TO [bodbAdminNet]

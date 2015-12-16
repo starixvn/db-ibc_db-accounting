@@ -1,1002 +1,1083 @@
-USE [bodb02]
+
+SET QUOTED_IDENTIFIER ON 
 GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All] 
-	 @matchid						INT
-	,@creator						INT
-	,@IsExcludeBetdaq				BIT 			= 0
-	,@IsSettleAbandonedMatch		BIT 			= 0
-	,@IsExcludeBetfair				BIT 			= 0
-	,@IsSettleAbandonedMatchBetFair BIT 			= 0
-	,@IsSettleAbandonedMatchIBC		BIT 			= 0
-	,@hth 							INT 			= NULL
-	,@hta 							INT 			= NULL
-	,@fth 							INT 			= NULL
-	,@fta 							INT 			= NULL
-	,@GoalSequence					VARCHAR(50)		= NULL 
-	,@fthCorners					SMALLINT		= NULL
-	,@ftaCorners					SMALLINT		= NULL
-	,@hthCorners					SMALLINT		= NULL
-	,@htaCorners					SMALLINT		= NULL 
-	,@ftFCorner						VARCHAR(1)		= NULL
-	,@htFCorner						VARCHAR(1)		= NULL
-	,@betstatus						NVARCHAR(50)	= NULL
-	,@SetResult						VARCHAR(50)		= NULL 
-	,@GameResult1					VARCHAR(MAX)	= NULL
-	,@GameResult2					VARCHAR(MAX)	= NULL
-	,@GameResult3					VARCHAR(MAX)	= NULL
-	,@GameResult4					VARCHAR(MAX)	= NULL
-	,@GameResult5					VARCHAR(MAX)	= NULL
-	,@SelectedSet					VARCHAR(50)		= NULL
-	,@SelectedSettleFinishedGame	VARCHAR(50)		= NULL  
-	,@SelectedSet1Game				VARCHAR(MAX)	= NULL 
-	,@SelectedSet2Game				VARCHAR(MAX)	= NULL 
-	,@SelectedSet3Game				VARCHAR(MAX)	= NULL 
-	,@SelectedSet4Game				VARCHAR(MAX)	= NULL 
-	,@SelectedSet5Game				VARCHAR(MAX)	= NULL
-	,@isExistTotalCorner			BIT				= 0 
-	,@isExistHTFCorner				BIT				= 0 
-	,@isExistHTLCorner				BIT				= 0 
-	,@isExistFTFCorner				BIT				= 0 
-	,@isExistFTLCorner				BIT				= 0
-	,@Action						VARCHAR(10)		= 'CAL'
-	,@IsNested						BIT				= 1
-	,@IP							VARCHAR(15)		= ''
-	,@ErrCode						INT				= 0		OUTPUT
-	,@ErrMsg						NVARCHAR(200)	= ''	OUTPUT
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_All    Script Date: 06/10/2015 11:21:39 AM ******/
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_All    Script Date: 05/10/2015 6:21:02 PM ******/
+CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_All] 
+     @matchid							INT
+    ,@creator							INT
+    ,@IsExcludeBetdaq					BIT             = 0
+    ,@IsSettleAbandonedMatch			BIT             = 0
+    ,@IsExcludeBetfair					BIT             = 0
+    ,@IsSettleAbandonedMatchBetFair		BIT             = 0
+    ,@IsSettleAbandonedMatchIBC			BIT             = 0
+    ,@hth								INT             = NULL
+    ,@hta                             	INT             = NULL
+    ,@fth                             	INT             = NULL
+    ,@fta                             	INT             = NULL
+    ,@GoalSequence                    	VARCHAR(50)     = NULL 
+    ,@fthCorners                    	SMALLINT        = NULL
+    ,@ftaCorners                    	SMALLINT        = NULL
+    ,@hthCorners                    	SMALLINT        = NULL
+    ,@htaCorners                    	SMALLINT        = NULL 
+    ,@ftFCorner                        	VARCHAR(1)      = NULL
+    ,@htFCorner                        	VARCHAR(1)      = NULL
+    ,@betstatus                        	NVARCHAR(50)    = NULL
+    ,@SetResult                        	VARCHAR(50)     = NULL 
+    ,@GameResult1                    	VARCHAR(MAX)    = NULL
+    ,@GameResult2                    	VARCHAR(MAX)    = NULL
+    ,@GameResult3                    	VARCHAR(MAX)    = NULL
+    ,@GameResult4                    	VARCHAR(MAX)    = NULL
+    ,@GameResult5                    	VARCHAR(MAX)    = NULL
+    ,@SelectedSet                    	VARCHAR(50)     = NULL
+    ,@SelectedSettleFinishedGame		VARCHAR(50)     = NULL  
+    ,@SelectedSet1Game                	VARCHAR(MAX)    = NULL 
+    ,@SelectedSet2Game                	VARCHAR(MAX)    = NULL 
+    ,@SelectedSet3Game                	VARCHAR(MAX)    = NULL 
+    ,@SelectedSet4Game                	VARCHAR(MAX)    = NULL 
+    ,@SelectedSet5Game                	VARCHAR(MAX)    = NULL
+    ,@isExistTotalCorner				BIT				= 0 
+    ,@isExistHTFCorner                	BIT				= 0 
+    ,@isExistHTLCorner                	BIT				= 0 
+    ,@isExistFTFCorner                	BIT				= 0 
+    ,@isExistFTLCorner                	BIT				= 0
+    ,@Action							VARCHAR(10)		= 'CAL'
+    ,@IsNested							BIT				= 1
+    ,@IP								VARCHAR(15)		= ''
+    ,@ErrCode							INT				= 0			OUTPUT
+    ,@ErrMsg							NVARCHAR(200)   = ''		OUTPUT
 AS
 /*
-	Created: Kathy
-	Date: 20140213
-	Task : refund tickets 
-	Original: refund
-	DB: DBTXN/BODB02
+    Created: Kathy
+    Date: 20140213
+    Task : refund tickets 
+    Original: refund
+    DB: DBTXN/BODB02
 
-	Revisions: 
-		- 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
-		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
-		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
-		- 20140704@Kathy: Apply BetRadar [Redmine:#17142]
-		- 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
-		- 20140725@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
-		- 20140812@Kathy: Support new 11 bettypes [Redmine:#19667]
-		- 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
-						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
-		- 201409010@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
-		- 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
-		- 20150414@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
-	
-	Param's Explanation:
-	• @matchid: matchid need to refund
-	• @IsExcludeBetdaq: Is Exclude betdaq tickets or not
-	• @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
-	• @IsExcludeBetfair: Is Exclude betfair tickets or not
-	• @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
-	  @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
-		* List of BetDaq Customers 
-					custid	--- username	-	roleid
-					50057	---	BQUS888		-	1
-					879241	---	BQUSMLB		-	1
-					103873	---	BQUSNBA		-	1
-					78761	---	ITibc101	-	1
-					1688156	---	MTEST0101	-	2
-					851668  --- BDUS01      -   1
-					878902  --- BDUS016     -   1
-		* List of Betfair Customers 
-					custid	--- username	-	roleid
-					2331	---	BF		    -	1
-					1077687	---	BFOS		-	1
-					15523642--- BF3			-	1
-	• @SelectedSettleFinishedGame: set [1-5] 
+    Revisions: 
+        - 20140304@Kathy: Execute settlement for abandoned/postponed matches- Clean Sheet, Both/One/Neither team to score, To Win To Nil 
+        - 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
+        - 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
+        - 20140704@Kathy: Apply BetRadar [Redmine:#17142]
+        - 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]
+        - 20140725@Kathy: Settle determined tickets for Correct Score(4,30), Total Goal (6,126) [Redmine:#19310]
+        - 20140812@Kathy: Support new 11 bettypes [Redmine:#19667]
+        - 20140909@Kathy: Exclude virtual racing (bettype 1231,1232,1233, 1237, 1238), outright (bettype 10, 31, 32, 33),
+                         sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
+        - 201409010@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
+        - 20141024@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
+        - 20150414@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+        - 20150610@Johnson: Add bettrade [Redmine: #35921]
+		- 20150716@Johnson: Exclude range bettypes of Metric Gaming from settlement of SB [Redmine: #37688]	
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+        - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
+    
+    Param's Explanation:
+    • @matchid: matchid need to refund
+    • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
+    • @IsSettleAbandonedMatch: Is Settlement for Abandoned/postponed match or not
+    • @IsExcludeBetfair: Is Exclude betfair tickets or not
+    • @IsSettleAbandonedMatchBetFair: Is Settlement for Betfair ticket of Abandoned/postponed match or not
+      @IsSettleAbandonedMatchIBC: Is Settlement for IBC ticket of Abandoned/postponed match or not
+        * List of BetDaq Customers 
+                    custid    --- username    -    roleid
+                    50057    ---    BQUS888        -    1
+                    879241    ---    BQUSMLB        -    1
+                    103873    ---    BQUSNBA        -    1
+                    78761    ---    ITibc101    -    1
+                    1688156    ---    MTEST0101    -    2
+                    851668  --- BDUS01      -   1
+                    878902  --- BDUS016     -   1
+        * List of Betfair Customers 
+                    custid    --- username    -    roleid
+                    2331    ---    BF            -    1
+                    1077687    ---    BFOS        -    1
+                    15523642--- BF3            -    1
+    • @SelectedSettleFinishedGame: set [1-5] 
 */
 BEGIN
-	SET NOCOUNT ON
+    SET NOCOUNT ON
+    
+    DECLARE @start					DATETIME
+        ,@stop						DATETIME
+        ,@ScoreLog					VARCHAR(100)
+        ,@sporttype					TINYINT
+        ,@IsRefundHT				BIT
+        ,@IsHTCal					BIT
+        ,@oddevenht					SMALLMONEY
+        ,@betCount_1324            	INT            = 0 
+        ,@HomeValue                	VARCHAR(20)
+        ,@AwayValue                	VARCHAR(20)
+        ,@MaxGameSet1            	INT            = 0
+        ,@MaxGameSet2            	INT            = 0 
+        ,@MaxGameSet3            	INT            = 0 
+        ,@MaxGameSet4            	INT            = 0 
+        ,@MaxGameSet5            	INT            = 0 
+        ,@MaxGameSet1Parlay        	INT            = 0
+        ,@MaxGameSet2Parlay        	INT            = 0 
+        ,@MaxGameSet3Parlay        	INT            = 0 
+        ,@MaxGameSet4Parlay        	INT            = 0 
+        ,@MaxGameSet5Parlay        	INT            = 0 
+        ,@SetxGameyHomeWON        	VARCHAR(MAX) = '' 
+        ,@SetxGameyAwayWON        	VARCHAR(MAX) = ''
+        ,@SetxGameyDRAW            	VARCHAR(MAX) = ''
+        ,@SetxGameyFinishedGame    	VARCHAR(MAX) = ''
+        ,@BetstatusLOG				VARCHAR(50) = ''
+        ,@IsSettleDeterminedTicketTennis    BIT    = 0 
+    
+	CREATE TABLE #tmpTrans (transid BIGINT)
+
+    SELECT @start = CURRENT_TIMESTAMP
+    
+    SELECT     @HomeValue        = CAST(@fth AS VARCHAR(20))
+            ,@HomeValue        = CAST(@fta AS VARCHAR(20))
+
+    -- check and not allow attempt to settlement same game while it's still not finish
+    IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WITH(NOLOCK) WHERE KeyID = 1 AND KeyValue = @matchid)
+    BEGIN
+        SELECT @ErrCode = 1000000
+            ,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+
+        RETURN
+    END
+
+    DECLARE @Remark VARCHAR(500), @ActionID INT
+
+    SELECT @ActionID = 109
+
+    INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
+    VALUES (1, @matchid)
+
+    IF (@@ERROR = 0)
+    BEGIN
+        BEGIN TRY
+            EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                @UserID        = @creator
+                ,@Matchid    = @matchid
+                ,@KeyID        = 1
+                ,@ActionID    = @ActionID
+                ,@Remark    = 'ADD SUCCESS'
+        END TRY
+
+        BEGIN CATCH
+            SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
+
+            EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                @UserID        = @creator
+                ,@Matchid    = @matchid
+                ,@KeyID        = 1
+                ,@ActionID    = @ActionID
+                ,@Remark    = @Remark
+        END CATCH
+    END
+    ELSE
+    BEGIN
+        SELECT @ErrCode = 1000000
+            ,@ErrMsg    = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+
+        RETURN
+    END
+    
+
+
+    -------------------------------------------------------------
+    ---        CAPTURE value BALANCE before settlement        ---
+    ---------------------------VVVV------------------------------
+
+    CREATE TABLE #BalanceBefore (custid INT PRIMARY KEY, balance MONEY)
 	
-	DECLARE @start				DATETIME
-		,@stop					DATETIME
-		,@ScoreLog				VARCHAR(100)
-		,@sporttype				TINYINT
-		,@IsRefundHT			BIT
-		,@IsHTCal				BIT
-		,@oddevenht				SMALLMONEY
-		,@betCount_1324			INT			= 0 
-		,@HomeValue				VARCHAR(20)
-		,@AwayValue				VARCHAR(20)
-		,@MaxGameSet1			INT			= 0
-		,@MaxGameSet2			INT			= 0 
-		,@MaxGameSet3			INT			= 0 
-		,@MaxGameSet4			INT			= 0 
-		,@MaxGameSet5			INT			= 0 
-		,@MaxGameSet1Parlay		INT			= 0
-		,@MaxGameSet2Parlay		INT			= 0 
-		,@MaxGameSet3Parlay		INT			= 0 
-		,@MaxGameSet4Parlay		INT			= 0 
-		,@MaxGameSet5Parlay		INT			= 0 
-		,@SetxGameyHomeWON		VARCHAR(MAX) = '' 
-		,@SetxGameyAwayWON		VARCHAR(MAX) = ''
-		,@SetxGameyDRAW			VARCHAR(MAX) = ''
-		,@SetxGameyFinishedGame	VARCHAR(MAX) = ''
-		,@BetstatusLOG			NVARCHAR(50) = ''
-		,@IsSettleDeterminedTicketTennis	BIT	= 0 
-	
-	SELECT @start = CURRENT_TIMESTAMP
-	
-	SELECT	 @HomeValue		= CAST(@fth AS VARCHAR(20))
-			,@HomeValue		= CAST(@fta AS VARCHAR(20))
-
-	-- check and not allow attempt to settlement same game while it's still not finish
-	IF EXISTS (SELECT 1 FROM dbo.TempVariableNumber WITH(NOLOCK) WHERE KeyID = 1 AND KeyValue = @matchid)
-	BEGIN
-		SELECT @ErrCode = 1000000
-			,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
-
-		RETURN
-	END
-
-	DECLARE @Remark VARCHAR(500), @ActionID INT
-
-	SELECT @ActionID = 109
-
-	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
-	VALUES (1, @matchid)
-
-	IF (@@ERROR = 0)
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= 'ADD SUCCESS'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= @Remark
-		END CATCH
-	END
-	ELSE
-	BEGIN
-		SELECT @ErrCode = 1000000
-			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
-
-		RETURN
-	END
-	
-
-
-	-------------------------------------------------------------
-	---        CAPTURE value BALANCE before settlement        ---
-	---------------------------VVVV------------------------------
-
-	CREATE TABLE #BalanceBefore (custid INT PRIMARY KEY, balance MONEY)
-
-	INSERT INTO #BalanceBefore
-	SELECT	b.custid
-			,SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM	dbo.bettrans b WITH (ROWLOCK)
+	INSERT INTO #tmpTrans
+	SELECT transid
+	FROM dbo.bettrans b WITH (NOLOCK)
 	WHERE	b.matchid = @matchid 
 			AND b.bettype NOT IN (14, 127)
 			AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 			AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
 			AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
-	GROUP BY b.custid
-	
-	-------------------------------------------------------------
+			AND betdaqid = 0--bettrade tickets
 
-	IF @IsSettleAbandonedMatch = 1
-		SELECT @IsExcludeBetdaq = 1
+    INSERT INTO #BalanceBefore
+    SELECT    b.custid
+            ,SUM(b.winlost - b.actual_stake + b.playercomm)
+    FROM    dbo.bettrans b WITH (ROWLOCK)
+    WHERE    b.matchid = @matchid 
+            AND b.bettype NOT IN (14, 127)
+            AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+            AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
+            AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
+			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+								AND b.refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 
+					WHEN b.bettype NOT IN (901,902,903) THEN 1
+					ELSE 0 END
+    GROUP BY b.custid
+    
+    -------------------------------------------------------------
 
-	IF @IsSettleAbandonedMatchBetFair = 1
-		SELECT @IsExcludeBetfair = 1	
+    IF @IsSettleAbandonedMatch = 1
+        SELECT @IsExcludeBetdaq = 1
 
-	SELECT @sporttype	= m.SportType
-		,@IsRefundHT	= CASE WHEN m.betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
-	FROM DBPRO.BODB02.dbo.Match m  WITH (NOLOCK)
-	WHERE m.matchid = @matchid
+    IF @IsSettleAbandonedMatchBetFair = 1
+        SELECT @IsExcludeBetfair = 1    
 
-	SELECT @IsHTCal = mr.IsHTCal
-	FROM DBPRO.BODB02.dbo.Match_remark mr WITH (NOLOCK)
-	WHERE mr.matchid = @matchid
-	
-	IF @Sporttype = 5 
-	BEGIN
-		IF @SelectedSet LIKE '%6%' 
-		BEGIN
-			SELECT	@IsSettleDeterminedTicketTennis	= @IsSettleAbandonedMatch|@IsSettleAbandonedMatchBetFair
-		END
+    SELECT @sporttype    = m.SportType
+        ,@IsRefundHT    = CASE WHEN m.betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
+    FROM DBPRO.BODB02.dbo.Match m  WITH (NOLOCK)
+    WHERE m.matchid = @matchid
 
-		SELECT	 @betCount_1324 =	ISNULL(SUM(CASE WHEN b.StatusID NOT IN (101, 102) THEN 1 ELSE 0 END),0)
-				,@MaxGameSet1	=   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '801%' THEN (b.betID - 80100) ELSE 0 END),0)  --  Tennis - Set x Game y Winner
-				,@MaxGameSet2	=   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '802%' THEN (b.betID - 80200) ELSE 0 END),0)
-				,@MaxGameSet3	=   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '803%' THEN (b.betID - 80300) ELSE 0 END),0)
-				,@MaxGameSet4	=   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '804%' THEN (b.betID - 80400) ELSE 0 END),0)
-				,@MaxGameSet5	=   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '805%' THEN (b.betID - 80500) ELSE 0 END),0)
-		FROM	dbo.bettrans b WITH(NOLOCK)
-		WHERE	bettype = 1324		--Set x Game y - Tennis 
-				AND matchID = @MatchID 
+    SELECT @IsHTCal = mr.IsHTCal
+    FROM DBPRO.BODB02.dbo.Match_remark mr WITH (NOLOCK)
+    WHERE mr.matchid = @matchid
+    
+    IF @Sporttype = 5 
+    BEGIN
+        IF @SelectedSet LIKE '%6%' 
+        BEGIN
+            SELECT    @IsSettleDeterminedTicketTennis    = @IsSettleAbandonedMatch|@IsSettleAbandonedMatchBetFair
+        END
 
-		SELECT	 @MaxGameSet1Parlay	=   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '801%' THEN (CAST(bm.betcheck AS INT) - 80100) ELSE 0 END),0)  --  Tennis - Set x Game y Winner
-				,@MaxGameSet2Parlay	=   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '802%' THEN (CAST(bm.betcheck AS INT) - 80200) ELSE 0 END),0)
-				,@MaxGameSet3Parlay	=   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '803%' THEN (CAST(bm.betcheck AS INT) - 80300) ELSE 0 END),0)
-				,@MaxGameSet4Parlay	=   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '804%' THEN (CAST(bm.betcheck AS INT) - 80400) ELSE 0 END),0)
-				,@MaxGameSet5Parlay	=   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '805%' THEN (CAST(bm.betcheck AS INT) - 80500) ELSE 0 END),0)
-		FROM	dbo.bettransm bm WITH(NOLOCK)
-		WHERE	bettype = 1324		--Set x Game y - Tennis 
-				AND matchID = @MatchID 
+        SELECT     @betCount_1324 =    ISNULL(SUM(CASE WHEN b.StatusID NOT IN (101, 102) THEN 1 ELSE 0 END),0)
+                ,@MaxGameSet1    =   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '801%' THEN (b.betID - 80100) ELSE 0 END),0)  --  Tennis - Set x Game y Winner
+                ,@MaxGameSet2    =   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '802%' THEN (b.betID - 80200) ELSE 0 END),0)
+                ,@MaxGameSet3    =   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '803%' THEN (b.betID - 80300) ELSE 0 END),0)
+                ,@MaxGameSet4    =   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '804%' THEN (b.betID - 80400) ELSE 0 END),0)
+                ,@MaxGameSet5    =   ISNULL(MAX(CASE WHEN LEFT(CAST(b.betID AS VARCHAR(20)),3) LIKE '805%' THEN (b.betID - 80500) ELSE 0 END),0)
+        FROM    dbo.bettrans b WITH(NOLOCK)
+        WHERE    bettype = 1324        --Set x Game y - Tennis 
+                AND matchID = @MatchID 
 
-		SELECT	 @MaxGameSet1 = CASE WHEN @MaxGameSet1 < @MaxGameSet1Parlay THEN @MaxGameSet1Parlay ELSE @MaxGameSet1 END 
-				,@MaxGameSet2 = CASE WHEN @MaxGameSet2 < @MaxGameSet2Parlay THEN @MaxGameSet2Parlay ELSE @MaxGameSet2 END
-				,@MaxGameSet3 = CASE WHEN @MaxGameSet3 < @MaxGameSet3Parlay THEN @MaxGameSet3Parlay ELSE @MaxGameSet3 END
-				,@MaxGameSet4 = CASE WHEN @MaxGameSet4 < @MaxGameSet4Parlay THEN @MaxGameSet4Parlay ELSE @MaxGameSet4 END
-				,@MaxGameSet5 = CASE WHEN @MaxGameSet5 < @MaxGameSet5Parlay THEN @MaxGameSet5Parlay ELSE @MaxGameSet5 END
+        SELECT     @MaxGameSet1Parlay    =   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '801%' THEN (CAST(bm.betcheck AS INT) - 80100) ELSE 0 END),0)  --  Tennis - Set x Game y Winner
+                ,@MaxGameSet2Parlay    =   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '802%' THEN (CAST(bm.betcheck AS INT) - 80200) ELSE 0 END),0)
+                ,@MaxGameSet3Parlay    =   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '803%' THEN (CAST(bm.betcheck AS INT) - 80300) ELSE 0 END),0)
+                ,@MaxGameSet4Parlay    =   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '804%' THEN (CAST(bm.betcheck AS INT) - 80400) ELSE 0 END),0)
+                ,@MaxGameSet5Parlay    =   ISNULL(MAX(CASE WHEN bm.betcheck LIKE '805%' THEN (CAST(bm.betcheck AS INT) - 80500) ELSE 0 END),0)
+        FROM    dbo.bettransm bm WITH(NOLOCK)
+        WHERE    bettype = 1324        --Set x Game y - Tennis 
+                AND matchID = @MatchID 
 
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update 
-			@Command					= 'NAP_Admin_Settlement_Refund_All',
-			@MatchID					= @MatchID,
-			@HomeValue					= @HomeValue,
-			@AwayValue					= @AwayValue,
-			@SetResult					= @SetResult, 
-			@GameResult1				= @GameResult1,
-			@GameResult2				= @GameResult2,
-			@GameResult3				= @GameResult3,
-			@GameResult4				= @GameResult4,
-			@GameResult5				= @GameResult5,
-			@SelectedSet				= @SelectedSet,
-			@SelectedSet1Game			= @SelectedSet1Game,
-			@SelectedSet2Game			= @SelectedSet2Game,
-			@SelectedSet3Game			= @SelectedSet3Game,
-			@SelectedSet4Game			= @SelectedSet4Game,
-			@SelectedSet5Game			= @SelectedSet5Game,
-			@SelectedSettleFinishedGame	= @SelectedSettleFinishedGame,
-			@MaxGameSet1				= @MaxGameSet1,
-			@MaxGameSet2				= @MaxGameSet2,
-			@MaxGameSet3				= @MaxGameSet3,
-			@MaxGameSet4				= @MaxGameSet4,
-			@MaxGameSet5				= @MaxGameSet5,
-			@action						= @Action,
-			@creator					= @creator 		
+        SELECT     @MaxGameSet1 = CASE WHEN @MaxGameSet1 < @MaxGameSet1Parlay THEN @MaxGameSet1Parlay ELSE @MaxGameSet1 END 
+                ,@MaxGameSet2 = CASE WHEN @MaxGameSet2 < @MaxGameSet2Parlay THEN @MaxGameSet2Parlay ELSE @MaxGameSet2 END
+                ,@MaxGameSet3 = CASE WHEN @MaxGameSet3 < @MaxGameSet3Parlay THEN @MaxGameSet3Parlay ELSE @MaxGameSet3 END
+                ,@MaxGameSet4 = CASE WHEN @MaxGameSet4 < @MaxGameSet4Parlay THEN @MaxGameSet4Parlay ELSE @MaxGameSet4 END
+                ,@MaxGameSet5 = CASE WHEN @MaxGameSet5 < @MaxGameSet5Parlay THEN @MaxGameSet5Parlay ELSE @MaxGameSet5 END
 
-		
-		IF @SelectedSettleFinishedGame IS NOT NULL 
-		BEGIN
-												EXEC dbo.NAP_Admin_Settlement_4 
-					 @MatchID				= @MatchID
-					,@SetxGameyHomeWON		= @SetxGameyHomeWON	OUTPUT
-					,@SetxGameyAwayWON		= @SetxGameyAwayWON OUTPUT
-					,@SetxGameyDRAW			= @SetxGameyDRAW	OUTPUT
-					,@SetxGameyFinishedGame	= @SetxGameyFinishedGame OUTPUT 
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update 
+            @Command                    = 'NAP_Admin_Settlement_Refund_All',
+            @MatchID                    = @MatchID,
+            @HomeValue                    = @HomeValue,
+            @AwayValue                    = @AwayValue,
+            @SetResult                    = @SetResult, 
+            @GameResult1                = @GameResult1,
+            @GameResult2                = @GameResult2,
+            @GameResult3                = @GameResult3,
+            @GameResult4                = @GameResult4,
+            @GameResult5                = @GameResult5,
+            @SelectedSet                = @SelectedSet,
+            @SelectedSet1Game            = @SelectedSet1Game,
+            @SelectedSet2Game            = @SelectedSet2Game,
+            @SelectedSet3Game            = @SelectedSet3Game,
+            @SelectedSet4Game            = @SelectedSet4Game,
+            @SelectedSet5Game            = @SelectedSet5Game,
+            @SelectedSettleFinishedGame    = @SelectedSettleFinishedGame,
+            @MaxGameSet1                = @MaxGameSet1,
+            @MaxGameSet2                = @MaxGameSet2,
+            @MaxGameSet3                = @MaxGameSet3,
+            @MaxGameSet4                = @MaxGameSet4,
+            @MaxGameSet5                = @MaxGameSet5,
+            @action                        = @Action,
+            @creator                    = @creator         
 
-												EXEC dbo.NAP_Admin_Calculate_Main 
-				 @matchid						= @matchid
-				,@action						= 'REFUND'
-				,@mode							= 'ALL'
-				,@SelectedSet					= @SelectedSet
-				,@SelectedSettleFinishedGame	= @SelectedSettleFinishedGame
-				,@SetxGameyHomeWON				= @SetxGameyHomeWON
-				,@SetxGameyAwayWON				= @SetxGameyAwayWON 
-				,@SetxGameyDRAW					= @SetxGameyDRAW
-				,@SetxGameyFinishedGame			= @SetxGameyFinishedGame
-				,@betcount_1324					= @betcount_1324 
-		
-		END 
-			
-	END	
+        
+        IF @SelectedSettleFinishedGame IS NOT NULL 
+        BEGIN
+			EXEC dbo.NAP_Admin_Settlement_4 
+                     @MatchID                = @MatchID
+                    ,@SetxGameyHomeWON        = @SetxGameyHomeWON    OUTPUT
+                    ,@SetxGameyAwayWON        = @SetxGameyAwayWON OUTPUT
+                    ,@SetxGameyDRAW            = @SetxGameyDRAW    OUTPUT
+                    ,@SetxGameyFinishedGame    = @SetxGameyFinishedGame OUTPUT 
 
-	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1
-	BEGIN
-		DECLARE @TennisTotal	SMALLINT
-			,@T_Home			SMALLINT
-			,@T_Away			SMALLINT
-			,@totalgoal			SMALLMONEY
-			,@totalht			SMALLMONEY
-			,@totalCorners		SMALLMONEY 
-			,@totalCorners_ht	SMALLMONEY
-		
-		DECLARE @betcount_3		INT
-			,@betcount_4		INT
-			,@betcount_6		INT 
-			,@betcount_8		INT
-			,@betcount_13 		INT
-			,@betcount_26 		INT
-			,@betcount_27 		INT
-			,@betcount_30 		INT 
-			,@betcount_126 		INT
-			,@betcount_128 		INT
-			,@betcount_129 		INT
-			,@betcount_130 		INT
-			,@betcount_131 		INT
-			,@betcount_132 		INT
-			,@betcount_143 		INT
-			,@betcount_144 		INT
-			,@betcount_145 		INT
-			,@betcount_152 		INT
+			EXEC dbo.NAP_Admin_Calculate_Main 
+                 @matchid                        = @matchid
+                ,@action                        = 'REFUND'
+                ,@mode                            = 'ALL'
+                ,@SelectedSet                    = @SelectedSet
+                ,@SelectedSettleFinishedGame    = @SelectedSettleFinishedGame
+                ,@SetxGameyHomeWON                = @SetxGameyHomeWON
+                ,@SetxGameyAwayWON                = @SetxGameyAwayWON 
+                ,@SetxGameyDRAW                    = @SetxGameyDRAW
+                ,@SetxGameyFinishedGame            = @SetxGameyFinishedGame
+                ,@betcount_1324                    = @betcount_1324 
+        
+        END 
+            
+    END    
 
-			,@betcount_159 		INT
-			,@betcount_161 		INT
-			,@betcount_162 		INT
-			,@betcount_163 		INT
-			,@betcount_170 		INT
-			,@betcount_172 		INT
-			,@betcount_179 		INT
-			,@betcount_181 		INT
-			,@betcount_182 		INT
-			,@betcount_188 		INT
-			,@betcount_195 		INT
-			,@betcount_196 		INT
-			,@betcount_199 		INT
-			,@betcount_200 		INT
-			,@betcount_201 		INT
-			,@betcount_202 		INT
-			,@betcount_206 		INT
-			,@betcount_207 		INT
+    IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1
+    BEGIN
+        DECLARE @TennisTotal    SMALLINT
+            ,@T_Home            SMALLINT
+            ,@T_Away            SMALLINT
+            ,@totalgoal            SMALLMONEY
+            ,@totalht            SMALLMONEY
+            ,@totalCorners        SMALLMONEY 
+            ,@totalCorners_ht    SMALLMONEY
+        
+        DECLARE @betcount_3        INT
+            ,@betcount_4        INT
+            ,@betcount_6        INT 
+            ,@betcount_8        INT
+            ,@betcount_13         INT
+            ,@betcount_26         INT
+            ,@betcount_27         INT
+            ,@betcount_30         INT 
+            ,@betcount_126         INT
+            ,@betcount_128         INT
+            ,@betcount_129         INT
+            ,@betcount_130         INT
+            ,@betcount_131         INT
+            ,@betcount_132         INT
+            ,@betcount_143         INT
+            ,@betcount_144         INT
+            ,@betcount_145         INT
+            ,@betcount_152         INT
 
-			
-		SELECT @ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)), '') 
-						 + ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)), '') 
-						 + ' FTHScore=' + ISNULL(CAST(@fth AS VARCHAR(10)), '') 
-						 + ' FTAScore=' + ISNULL(CAST(@fta AS VARCHAR(10)), '') 
-						 + CASE 
-								WHEN @SportType IN (5, 6, 9, 30) THEN ' Betstatus=Refund;' 
-								ELSE ' Betstatus='
-						   END + ISNULL(@betstatus,'') + '<br/> ' 
+            ,@betcount_159         INT
+            ,@betcount_161         INT
+            ,@betcount_162         INT
+            ,@betcount_163         INT
+            ,@betcount_170         INT
+            ,@betcount_172         INT
+            ,@betcount_179         INT
+            ,@betcount_181         INT
+            ,@betcount_182         INT
+            ,@betcount_188         INT
+            ,@betcount_195         INT
+            ,@betcount_196         INT
+            ,@betcount_199         INT
+            ,@betcount_200         INT
+            ,@betcount_201         INT
+            ,@betcount_202         INT
+            ,@betcount_206         INT
+            ,@betcount_207         INT
+            
+            ,@betcount_302        INT
+            ,@betcount_304         INT
+            
+        SELECT @ScoreLog = ' HTHScore=' + ISNULL(CAST(@hth AS VARCHAR(10)), '') 
+                         + ' HTAScore=' + ISNULL(CAST(@hta AS VARCHAR(10)), '') 
+                         + ' FTHScore=' + ISNULL(CAST(@fth AS VARCHAR(10)), '') 
+                         + ' FTAScore=' + ISNULL(CAST(@fta AS VARCHAR(10)), '') 
+                         + CASE 
+                                WHEN @SportType IN (5, 6, 9, 30) THEN ' Betstatus=Refund;' 
+                                ELSE ' Betstatus='
+                           END + ISNULL(@betstatus,'') + '<br/> ' 
 
-						+ CASE WHEN @GoalSequence IS NULL THEN '' ELSE ' GoalSequence=' + @GoalSequence + '<br/> ' END  
-						+ CASE WHEN @fthCorners IS NULL THEN '' ELSE ' fthCorners=' + CAST(@fthCorners AS VARCHAR(20)) + '<br/> ' END  
-						+ CASE WHEN @ftaCorners IS NULL THEN '' ELSE ' ftaCorners=' + CAST(@ftaCorners AS VARCHAR(20)) + '<br/> ' END  
-						+ CASE WHEN @hthCorners IS NULL THEN '' ELSE ' hthCorners=' + CAST(@hthCorners AS VARCHAR(20)) + '<br/> ' END  
-						+ CASE WHEN @htaCorners IS NULL THEN '' ELSE ' htaCorners=' + CAST(@htaCorners AS VARCHAR(20)) + '<br/> ' END  
-						+ CASE WHEN @ftFCorner IS NULL THEN '' ELSE ' ftFCorner=' + @ftFCorner + '<br/> ' END
-						+ CASE WHEN @htFCorner IS NULL THEN '' ELSE ' htFCorner=' + @htFCorner + '<br/> ' END
-			
-		IF @SportType IN (6, 9, 30) -- Tennis/VolleyBall/Badminton/Squash : get TotalGamesPlayed  -- Remove sporttype 5 
-		BEGIN
-			EXEC dbo.Admin_Settlement_2 
-				@betstatus	= @betstatus
-				,@Total		= @TennisTotal	OUTPUT
-				,@TotalHome = @T_Home		OUTPUT
-				,@TotalAway = @T_Away		OUTPUT		
-		END
+                        + CASE WHEN @GoalSequence IS NULL THEN '' ELSE ' GoalSequence=' + @GoalSequence + '<br/> ' END  
+                        + CASE WHEN @fthCorners IS NULL THEN '' ELSE ' fthCorners=' + CAST(@fthCorners AS VARCHAR(20)) + '<br/> ' END  
+                        + CASE WHEN @ftaCorners IS NULL THEN '' ELSE ' ftaCorners=' + CAST(@ftaCorners AS VARCHAR(20)) + '<br/> ' END  
+                        + CASE WHEN @hthCorners IS NULL THEN '' ELSE ' hthCorners=' + CAST(@hthCorners AS VARCHAR(20)) + '<br/> ' END  
+                        + CASE WHEN @htaCorners IS NULL THEN '' ELSE ' htaCorners=' + CAST(@htaCorners AS VARCHAR(20)) + '<br/> ' END  
+                        + CASE WHEN @ftFCorner IS NULL THEN '' ELSE ' ftFCorner=' + @ftFCorner + '<br/> ' END
+                        + CASE WHEN @htFCorner IS NULL THEN '' ELSE ' htFCorner=' + @htFCorner + '<br/> ' END
+            
+        IF @SportType IN (6, 9, 30) -- Tennis/VolleyBall/Badminton/Squash : get TotalGamesPlayed  -- Remove sporttype 5 
+        BEGIN
+            EXEC dbo.Admin_Settlement_2 
+                @betstatus    = @betstatus
+                ,@Total        = @TennisTotal    OUTPUT
+                ,@TotalHome = @T_Home        OUTPUT
+                ,@TotalAway = @T_Away        OUTPUT        
+        END
 
-		IF @Sporttype = 5 -- Tennis -- Total Games played 
-		BEGIN
-												EXEC dbo.NAP_Admin_Settlement_4 
-				 @MatchID							= @MatchID
-				,@SelectedSet						= @SelectedSet
-				,@SetResult							= @SetResult
-				,@IsSettleDeterminedTicketTennis	= @IsSettleDeterminedTicketTennis
-				,@TotalGameMatch					= @TennisTotal	OUTPUT
-				,@TotalGameHomeMatch				= @T_Home		OUTPUT
-				,@TotalGameAwayMatch				= @T_Away		OUTPUT	
+        IF @Sporttype = 5 -- Tennis -- Total Games played 
+        BEGIN
+			EXEC dbo.NAP_Admin_Settlement_4 
+                 @MatchID                            = @MatchID
+                ,@SelectedSet                        = @SelectedSet
+                ,@SetResult                            = @SetResult
+                ,@IsSettleDeterminedTicketTennis    = @IsSettleDeterminedTicketTennis
+                ,@TotalGameMatch                    = @TennisTotal    OUTPUT
+                ,@TotalGameHomeMatch                = @T_Home        OUTPUT
+                ,@TotalGameAwayMatch                = @T_Away        OUTPUT    
 
-				SELECT   @hth = ISNULL(@hth,0) 
-						,@hta = ISNULL(@hta,0) 
- 		END 
-		
-		SELECT @totalgoal	= CASE 
-								WHEN @sporttype IN (5, 6, 9, 30) AND @TennisTotal > 0 THEN @TennisTotal
-								ELSE (@fth + @fta)
-							  END
-			,@totalht		= (@hth + @hta)
-			,@oddevenht		= (@hth + @hta) % 2
-			,@totalCorners		= (ISNULL(@fthCorners,0) + ISNULL(@ftaCorners,0))
-			,@totalCorners_ht	= (ISNULL(@hthCorners,0) + ISNULL(@htaCorners,0))
+                SELECT   @hth = ISNULL(@hth,0) 
+                        ,@hta = ISNULL(@hta,0) 
+         END 
+        
+        SELECT @totalgoal    = CASE 
+                                WHEN @sporttype IN (5, 6, 9, 30) AND @TennisTotal > 0 THEN @TennisTotal
+                                ELSE (@fth + @fta)
+                              END
+            ,@totalht        = (@hth + @hta)
+            ,@oddevenht        = (@hth + @hta) % 2
+            ,@totalCorners        = (ISNULL(@fthCorners,0) + ISNULL(@ftaCorners,0))
+            ,@totalCorners_ht    = (ISNULL(@hthCorners,0) + ISNULL(@htaCorners,0))
 
-		IF @Action IN ('CAL', 'CAL-FT') AND @totalgoal IS NULL
-		BEGIN
-			SELECT @ErrCode = 1001004
-				,@ErrMsg = 'Cannot settle determined ticket(s) without FT Score!'
+        IF @Action IN ('CAL', 'CAL-FT') AND @totalgoal IS NULL
+        BEGIN
+            SELECT @ErrCode = 1001004
+                ,@ErrMsg = 'Cannot settle determined ticket(s) without FT Score!'
 
-			DELETE
-			FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-			WHERE KeyID = 1 AND KeyValue = @matchid
+            DELETE
+            FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+            WHERE KeyID = 1 AND KeyValue = @matchid
 
-			IF (@@ERROR = 0)
-			BEGIN
-				BEGIN TRY
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= 'DEL SUCCESS'
-				END TRY
+            IF (@@ERROR = 0)
+            BEGIN
+                BEGIN TRY
+                    EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = 'DEL SUCCESS'
+                END TRY
 
-				BEGIN CATCH
-					SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
+                BEGIN CATCH
+                    SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
 
-					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= @Remark
-				END CATCH
-			END
-			ELSE
-			BEGIN
-				BEGIN TRY
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= 'DEL FAILED'
-				END TRY
+                    EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = @Remark
+                END CATCH
+            END
+            ELSE
+            BEGIN
+                BEGIN TRY
+                    EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = 'DEL FAILED'
+                END TRY
 
-				BEGIN CATCH
-					SELECT @Remark = 'DEL FAILED ErrMsg=' + left(ERROR_MESSAGE(), 400)
+                BEGIN CATCH
+                    SELECT @Remark = 'DEL FAILED ErrMsg=' + left(ERROR_MESSAGE(), 400)
 
-					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= @Remark
-				END CATCH
-			END
+                    EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = @Remark
+                END CATCH
+            END
 
-			RETURN
-		END
+            RETURN
+        END
 
-		IF @Action IN ('CAL', 'CAL-HT') AND @totalht IS NULL
-		BEGIN
-			SELECT @ErrCode = 1001005
-				,@ErrMsg = 'Cannot settle determined ticket(s) without HT Score!'
+        IF @Action IN ('CAL', 'CAL-HT') AND @totalht IS NULL
+        BEGIN
+            SELECT @ErrCode = 1001005
+                ,@ErrMsg = 'Cannot settle determined ticket(s) without HT Score!'
 
-			DELETE
-			FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-			WHERE KeyID = 1 AND KeyValue = @matchid
+            DELETE
+            FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+            WHERE KeyID = 1 AND KeyValue = @matchid
 
-			IF (@@Error = 0)
-			BEGIN
-				BEGIN TRY
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= 'DEL SUCCESS'
-				END TRY
+            IF (@@Error = 0)
+            BEGIN
+                BEGIN TRY
+                    EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = 'DEL SUCCESS'
+                END TRY
 
-				BEGIN CATCH
-					SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
+                BEGIN CATCH
+                    SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
 
-					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= @Remark
-				END CATCH
-			END
-			ELSE
-			BEGIN
-				BEGIN TRY
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= 'DEL FAILED'
-				END TRY
+                    EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = @Remark
+                END CATCH
+            END
+            ELSE
+            BEGIN
+                BEGIN TRY
+                    EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = 'DEL FAILED'
+                END TRY
 
-				BEGIN CATCH
-					SELECT @Remark = 'DEL FAILED ErrMsg=' + left(ERROR_MESSAGE(), 400)
+                BEGIN CATCH
+                    SELECT @Remark = 'DEL FAILED ErrMsg=' + left(ERROR_MESSAGE(), 400)
 
-					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-						@UserID		= @creator
-						,@Matchid	= @matchid
-						,@KeyID		= 1
-						,@ActionID	= @ActionID
-						,@Remark	= @Remark
-				END CATCH
-			END
+                    EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                        @UserID        = @creator
+                        ,@Matchid    = @matchid
+                        ,@KeyID        = 1
+                        ,@ActionID    = @ActionID
+                        ,@Remark    = @Remark
+                END CATCH
+            END
 
-			RETURN
-		END
+            RETURN
+        END
 
-		SELECT  @betcount_3		= ISNULL(SUM(CASE b.bettype WHEN 3 THEN 1 ELSE 0 END), 0)
-				,@betcount_4 	= ISNULL(SUM(CASE b.bettype WHEN 4 THEN 1 ELSE 0 END), 0)
-				,@betcount_6 	= ISNULL(SUM(CASE b.bettype WHEN 6 THEN 1 ELSE 0 END), 0)
-				,@betcount_8 	= ISNULL(SUM(CASE b.bettype WHEN 8 THEN 1 ELSE 0 END), 0)
-				,@betcount_13 	= ISNULL(SUM(CASE b.bettype WHEN 13 THEN 1 ELSE 0 END), 0)
-				,@betcount_26 	= ISNULL(SUM(CASE b.bettype WHEN 26 THEN 1 ELSE 0 END), 0)
-				,@betcount_27 	= ISNULL(SUM(CASE b.bettype WHEN 27 THEN 1 ELSE 0 END), 0)
-				,@betcount_30 	= ISNULL(SUM(CASE b.bettype WHEN 30 THEN 1 ELSE 0 END), 0)
-				,@betcount_126 	= ISNULL(SUM(CASE b.bettype WHEN 126 THEN 1 ELSE 0 END), 0)
-				,@betcount_128 	= ISNULL(SUM(CASE b.bettype WHEN 128 THEN 1 ELSE 0 END), 0)
-				,@betcount_129 	= ISNULL(SUM(CASE b.bettype WHEN 129 THEN 1 ELSE 0 END), 0)
-				,@betcount_130 	= ISNULL(SUM(CASE b.bettype WHEN 130 THEN 1 ELSE 0 END), 0)
-				,@betcount_131 	= ISNULL(SUM(CASE b.bettype WHEN 131 THEN 1 ELSE 0 END), 0)
-				,@betcount_132 	= ISNULL(SUM(CASE b.bettype WHEN 132 THEN 1 ELSE 0 END), 0)
-				,@betcount_143 	= ISNULL(SUM(CASE b.bettype WHEN 143 THEN 1 ELSE 0 END), 0)
-				,@betcount_144 	= ISNULL(SUM(CASE b.bettype WHEN 144 THEN 1 ELSE 0 END), 0)
-				,@betcount_145 	= ISNULL(SUM(CASE b.bettype WHEN 145 THEN 1 ELSE 0 END), 0)
-				,@betcount_152 	= ISNULL(SUM(CASE b.bettype WHEN 152 THEN 1 ELSE 0 END), 0)
-				,@betcount_159 	= ISNULL(SUM(CASE b.bettype WHEN 159 THEN 1 ELSE 0 END), 0)  -- Betradar 2 
-				,@betcount_161 	= ISNULL(SUM(CASE b.bettype WHEN 161 THEN 1 ELSE 0 END), 0)
-				,@betcount_162 	= ISNULL(SUM(CASE b.bettype WHEN 162 THEN 1 ELSE 0 END), 0)
-				,@betcount_163 	= ISNULL(SUM(CASE b.bettype WHEN 163 THEN 1 ELSE 0 END), 0)
-				,@betcount_170 	= ISNULL(SUM(CASE b.bettype WHEN 170 THEN 1 ELSE 0 END), 0)
-				,@betcount_172 	= ISNULL(SUM(CASE b.bettype WHEN 172 THEN 1 ELSE 0 END), 0)
-				,@betcount_179 	= ISNULL(SUM(CASE b.bettype WHEN 179 THEN 1 ELSE 0 END), 0)
-				,@betcount_181 	= ISNULL(SUM(CASE b.bettype WHEN 181 THEN 1 ELSE 0 END), 0)
-				,@betcount_182 	= ISNULL(SUM(CASE b.bettype WHEN 182 THEN 1 ELSE 0 END), 0)
-				,@betcount_188 	= ISNULL(SUM(CASE b.bettype WHEN 188 THEN 1 ELSE 0 END), 0)
-				,@betcount_195 	= ISNULL(SUM(CASE b.bettype WHEN 195 THEN 1 ELSE 0 END), 0)
-				,@betcount_196 	= ISNULL(SUM(CASE b.bettype WHEN 196 THEN 1 ELSE 0 END), 0)
-				,@betcount_199 	= ISNULL(SUM(CASE b.bettype WHEN 199 THEN 1 ELSE 0 END), 0)
-				,@betcount_200 	= ISNULL(SUM(CASE b.bettype WHEN 200 THEN 1 ELSE 0 END), 0)
-				,@betcount_201 	= ISNULL(SUM(CASE b.bettype WHEN 201 THEN 1 ELSE 0 END), 0)
-				,@betcount_202 	= ISNULL(SUM(CASE b.bettype WHEN 202 THEN 1 ELSE 0 END), 0)
-				,@betcount_206 	= ISNULL(SUM(CASE b.bettype WHEN 206 THEN 1 ELSE 0 END), 0)
-				,@betcount_207 	= ISNULL(SUM(CASE b.bettype WHEN 207 THEN 1 ELSE 0 END), 0)
+        SELECT  @betcount_3        = ISNULL(SUM(CASE b.bettype WHEN 3 THEN 1 ELSE 0 END), 0)
+                ,@betcount_4     = ISNULL(SUM(CASE b.bettype WHEN 4 THEN 1 ELSE 0 END), 0)
+                ,@betcount_6     = ISNULL(SUM(CASE b.bettype WHEN 6 THEN 1 ELSE 0 END), 0)
+                ,@betcount_8     = ISNULL(SUM(CASE b.bettype WHEN 8 THEN 1 ELSE 0 END), 0)
+                ,@betcount_13     = ISNULL(SUM(CASE b.bettype WHEN 13 THEN 1 ELSE 0 END), 0)
+                ,@betcount_26     = ISNULL(SUM(CASE b.bettype WHEN 26 THEN 1 ELSE 0 END), 0)
+                ,@betcount_27     = ISNULL(SUM(CASE b.bettype WHEN 27 THEN 1 ELSE 0 END), 0)
+                ,@betcount_30     = ISNULL(SUM(CASE b.bettype WHEN 30 THEN 1 ELSE 0 END), 0)
+                ,@betcount_126     = ISNULL(SUM(CASE b.bettype WHEN 126 THEN 1 ELSE 0 END), 0)
+                ,@betcount_128     = ISNULL(SUM(CASE b.bettype WHEN 128 THEN 1 ELSE 0 END), 0)
+                ,@betcount_129     = ISNULL(SUM(CASE b.bettype WHEN 129 THEN 1 ELSE 0 END), 0)
+                ,@betcount_130     = ISNULL(SUM(CASE b.bettype WHEN 130 THEN 1 ELSE 0 END), 0)
+                ,@betcount_131     = ISNULL(SUM(CASE b.bettype WHEN 131 THEN 1 ELSE 0 END), 0)
+                ,@betcount_132     = ISNULL(SUM(CASE b.bettype WHEN 132 THEN 1 ELSE 0 END), 0)
+                ,@betcount_143     = ISNULL(SUM(CASE b.bettype WHEN 143 THEN 1 ELSE 0 END), 0)
+                ,@betcount_144     = ISNULL(SUM(CASE b.bettype WHEN 144 THEN 1 ELSE 0 END), 0)
+                ,@betcount_145     = ISNULL(SUM(CASE b.bettype WHEN 145 THEN 1 ELSE 0 END), 0)
+                ,@betcount_152     = ISNULL(SUM(CASE b.bettype WHEN 152 THEN 1 ELSE 0 END), 0)
+                ,@betcount_159     = ISNULL(SUM(CASE b.bettype WHEN 159 THEN 1 ELSE 0 END), 0)  -- Betradar 2 
+                ,@betcount_161     = ISNULL(SUM(CASE b.bettype WHEN 161 THEN 1 ELSE 0 END), 0)
+                ,@betcount_162     = ISNULL(SUM(CASE b.bettype WHEN 162 THEN 1 ELSE 0 END), 0)
+                ,@betcount_163     = ISNULL(SUM(CASE b.bettype WHEN 163 THEN 1 ELSE 0 END), 0)
+                ,@betcount_170     = ISNULL(SUM(CASE b.bettype WHEN 170 THEN 1 ELSE 0 END), 0)
+                ,@betcount_172     = ISNULL(SUM(CASE b.bettype WHEN 172 THEN 1 ELSE 0 END), 0)
+                ,@betcount_179     = ISNULL(SUM(CASE b.bettype WHEN 179 THEN 1 ELSE 0 END), 0)
+                ,@betcount_181     = ISNULL(SUM(CASE b.bettype WHEN 181 THEN 1 ELSE 0 END), 0)
+                ,@betcount_182     = ISNULL(SUM(CASE b.bettype WHEN 182 THEN 1 ELSE 0 END), 0)
+                ,@betcount_188     = ISNULL(SUM(CASE b.bettype WHEN 188 THEN 1 ELSE 0 END), 0)
+                ,@betcount_195     = ISNULL(SUM(CASE b.bettype WHEN 195 THEN 1 ELSE 0 END), 0)
+                ,@betcount_196     = ISNULL(SUM(CASE b.bettype WHEN 196 THEN 1 ELSE 0 END), 0)
+                ,@betcount_199     = ISNULL(SUM(CASE b.bettype WHEN 199 THEN 1 ELSE 0 END), 0)
+                ,@betcount_200     = ISNULL(SUM(CASE b.bettype WHEN 200 THEN 1 ELSE 0 END), 0)
+                ,@betcount_201     = ISNULL(SUM(CASE b.bettype WHEN 201 THEN 1 ELSE 0 END), 0)
+                ,@betcount_202     = ISNULL(SUM(CASE b.bettype WHEN 202 THEN 1 ELSE 0 END), 0)
+                ,@betcount_206     = ISNULL(SUM(CASE b.bettype WHEN 206 THEN 1 ELSE 0 END), 0)
+                ,@betcount_207     = ISNULL(SUM(CASE b.bettype WHEN 207 THEN 1 ELSE 0 END), 0)
+                
+                ,@betcount_302     = ISNULL(SUM(CASE b.bettype WHEN 302 THEN 1 ELSE 0 END), 0)
+                ,@betcount_304     = ISNULL(SUM(CASE b.bettype WHEN 304 THEN 1 ELSE 0 END), 0)
 
-		FROM bettrans b WITH (NOLOCK)
-		WHERE b.matchid = @matchid 
-		AND b.bettype IN (3, 4, 6, 8, 13, 26, 27, 30, 126, 128, 129, 130, 131, 132, 143, 144, 145, 152,159,161,162,163,170,172,179,181,182,188,195,196,199,200,201,202,206,207) 
-		AND b.statusID NOT IN (101, 102) 
-		AND 1 = CASE 
-					WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
-					WHEN @IsSettleAbandonedMatch = 1 AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 1
-					WHEN @IsSettleAbandonedMatchBetFair = 1 AND b.custid IN (2331, 1077687, 115770, 15523642) THEN 1
-					ELSE 0
-				END
-	END
-			
-	/* 	Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  */
-	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
-	BEGIN	
-		IF @Action IN ('CAL', 'CAL-HT')
-		BEGIN
-												EXEC dbo.NAP_Admin_Calculate_Main 
-				@matchid						= @matchid
-				,@action						= 'REFUND'
-				,@mode							= 'ALL'
-				,@betcount_8					= @betcount_8 
-				,@totalht						= @totalht
-				,@IsSettleAbandonedMatch		= @IsSettleAbandonedMatch
-				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair					
-		END
+        FROM bettrans b WITH (NOLOCK)
+        WHERE b.matchid = @matchid 
+        AND b.bettype IN (3, 4, 6, 8, 13, 26, 27, 30, 126, 128, 129, 130, 131, 132, 143, 144, 145, 152,159,161,162,163,170,172,179,181,182,188,195,196,199,200,201,202,206,207, 302, 304) 
+        AND b.statusID NOT IN (101, 102) 
+        AND 1 = CASE 
+                    WHEN @IsSettleAbandonedMatchIBC = 1 AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
+                    WHEN @IsSettleAbandonedMatch = 1 AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 1
+                    WHEN @IsSettleAbandonedMatchBetFair = 1 AND b.custid IN (2331, 1077687, 115770, 15523642) THEN 1
+                    ELSE 0
+                END
+    END
+            
+    /*     Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  */
+    IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+    BEGIN    
+        IF @Action IN ('CAL', 'CAL-HT')
+        BEGIN
+			EXEC dbo.NAP_Admin_Calculate_Main 
+                @matchid                        = @matchid
+                ,@action                        = 'REFUND'
+                ,@mode                            = 'ALL'
+                ,@betcount_8                    = @betcount_8 
+                ,@totalht                        = @totalht
+                ,@IsSettleAbandonedMatch        = @IsSettleAbandonedMatch
+                ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair                    
+        END
 
-		IF @Action IN ('CAL', 'CAL-FT')
-		BEGIN
-												EXEC dbo.NAP_Admin_Calculate_Main 
-				@matchid						= @matchid
-				,@action						= 'REFUND'
-				,@mode							= 'ALL'
-				,@betcount_3					= @betcount_3 
-				,@totalgoal						= @totalgoal			
-				,@IsSettleAbandonedMatch		= @IsSettleAbandonedMatch
-				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-				,@SelectedSet					= @SelectedSet
-		END		
-	END
-	/* --- END Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  ---*/
+        IF @Action IN ('CAL', 'CAL-FT')
+        BEGIN
+			EXEC dbo.NAP_Admin_Calculate_Main 
+                @matchid                        = @matchid
+                ,@action                        = 'REFUND'
+                ,@mode                            = 'ALL'
+                ,@betcount_3                    = @betcount_3 
+                ,@totalgoal                        = @totalgoal            
+                ,@IsSettleAbandonedMatch        = @IsSettleAbandonedMatch
+                ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+                ,@SelectedSet                    = @SelectedSet
+        END        
+    END
+    /* --- END Settle Betdaq, Betfair tickets Abandoned Match for Over/Under  ---*/
 
-	--	Settle tickets Abandoned Match of Soccer 	
+    --    Settle tickets Abandoned Match of Soccer     
 
-	IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @sporttype = 1
-	BEGIN
-		IF @action = 'CAL-FT'
-		BEGIN
-												EXEC dbo.NAP_Admin_Calculate_Main 
-				@matchid 						= @matchid
-				,@action 						= 'REFUND'
-				,@mode							= 'FT'
-				,@betcount_4 					= @betcount_4
-				,@betcount_6 					= @betcount_6
-				,@betcount_13 					= @betcount_13
-				,@betcount_26 					= @betcount_26
-				,@betcount_27 					= @betcount_27
-				,@betcount_130 					= @betcount_130
-				,@betcount_131 					= @betcount_131
-				,@betcount_132 					= @betcount_132
-				,@betcount_144 					= @betcount_144
-				,@betcount_145 					= @betcount_145
-				,@betcount_152 					= @betcount_152
-				,@betcount_159 					= @betcount_159  -- Betradar 2 
-				,@betcount_161 					= @betcount_161
-				,@betcount_162 					= @betcount_162
-				,@betcount_163 					= @betcount_163
-				,@betcount_170 					= @betcount_170
-				,@betcount_172 					= @betcount_172
-				,@betcount_195 					= @betcount_195
-				,@betcount_196 					= @betcount_196
-				,@betcount_199 					= @betcount_199
-				,@betcount_206 					= @betcount_206
-				,@fth 							= @fth
-				,@fta 							= @fta
-				,@hth 							= @hth
-				,@hta 							= @hta
-				,@totalgoal						= @totalgoal
-				,@totalht						= @totalht
-				,@oddevenht						= @oddevenht
-				,@GoalRecord 					= @GoalSequence 
-				,@fthCorners					= @fthCorners
-				,@ftaCorners					= @ftaCorners
-				,@hthCorners					= @hthCorners
-				,@htaCorners					= @htaCorners
-				,@totalCorners					= @totalCorners
-				,@totalCorners_ht				= @totalCorners_ht
-				,@ftFCorner						= @ftFCorner
-				,@htFCorner						= @htFCorner
-				,@IsSettleAbandonedMatch		= @IsSettleAbandonedMatch
-				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-				,@IsSettleAbandonedMatchIBC		= @IsSettleAbandonedMatchIBC
-				,@IsRefundHT					= @IsrefundHT
-				,@IsHTCal						= @IsHTCal
-		END
-		IF @action = 'CAL'
-		BEGIN
-								EXEC dbo.NAP_Admin_Calculate_Main 
-				@matchid 						= @matchid
-				,@action 						= 'REFUND'
-				,@mode							= 'ALL'
-				,@betcount_4 					= @betcount_4
-				,@betcount_6 					= @betcount_6
-				,@betcount_13 					= @betcount_13
-				,@betcount_26 					= @betcount_26
-				,@betcount_27 					= @betcount_27
-				,@betcount_30 					= @betcount_30
-				,@betcount_126 					= @betcount_126
-				,@betcount_128 					= @betcount_128
-				,@betcount_129 					= @betcount_129
-				,@betcount_130 					= @betcount_130
-				,@betcount_131 					= @betcount_131
-				,@betcount_132 					= @betcount_132
-				,@betcount_143 					= @betcount_143
-				,@betcount_144 					= @betcount_144
-				,@betcount_145 					= @betcount_145
-				,@betcount_152					= @betcount_152
-				,@betcount_159					= @betcount_159	--Betradar 2 
-				,@betcount_161					= @betcount_161
-				,@betcount_162					= @betcount_162
-				,@betcount_163					= @betcount_163
-				,@betcount_170					= @betcount_170
-				,@betcount_172					= @betcount_172
-				,@betcount_179					= @betcount_179
-				,@betcount_181					= @betcount_181
-				,@betcount_182					= @betcount_182
-				,@betcount_188					= @betcount_188
-				,@betcount_195					= @betcount_195
-				,@betcount_196					= @betcount_196
-				,@betcount_199					= @betcount_199
-				,@betcount_200					= @betcount_200
-				,@betcount_201					= @betcount_201
-				,@betcount_202					= @betcount_202
-				,@betcount_206					= @betcount_206
-				,@betcount_207					= @betcount_207
-				,@fth 							= @fth
-				,@fta 							= @fta
-				,@hth 							= @hth
-				,@hta 							= @hta
-				,@totalgoal						= @totalgoal
-				,@totalht						= @totalht
-				,@oddevenht						= @oddevenht
-				,@GoalRecord 					= @GoalSequence 
-				,@fthCorners					= @fthCorners
-				,@ftaCorners					= @ftaCorners
-				,@hthCorners					= @hthCorners
-				,@htaCorners					= @htaCorners
-				,@totalCorners					= @totalCorners
-				,@totalCorners_ht				= @totalCorners_ht
-				,@ftFCorner						= @ftFCorner
-				,@htFCorner						= @htFCorner
-				,@IsSettleAbandonedMatch		= @IsSettleAbandonedMatch
-				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-				,@IsSettleAbandonedMatchIBC		= @IsSettleAbandonedMatchIBC
-				,@IsRefundHT					= @IsrefundHT
-				,@IsHTCal						= @IsHTCal
-		END
-	END
-	
+    IF (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1 OR @IsSettleAbandonedMatchIBC = 1) AND @sporttype = 1
+    BEGIN
+        IF @action = 'CAL-FT'
+        BEGIN
+			EXEC dbo.NAP_Admin_Calculate_Main 
+                @matchid                         = @matchid
+                ,@action                         = 'REFUND'
+                ,@mode                            = 'FT'
+                ,@betcount_4                     = @betcount_4
+                ,@betcount_6                     = @betcount_6
+                ,@betcount_13                     = @betcount_13
+                ,@betcount_26                     = @betcount_26
+                ,@betcount_27                     = @betcount_27
+                ,@betcount_130                     = @betcount_130
+                ,@betcount_131                     = @betcount_131
+                ,@betcount_132                     = @betcount_132
+                ,@betcount_144                     = @betcount_144
+                ,@betcount_145                     = @betcount_145
+                ,@betcount_152                     = @betcount_152
+                ,@betcount_159                     = @betcount_159  -- Betradar 2 
+                ,@betcount_161                     = @betcount_161
+                ,@betcount_162                     = @betcount_162
+                ,@betcount_163                     = @betcount_163
+                ,@betcount_170                     = @betcount_170
+                ,@betcount_172                     = @betcount_172
+                ,@betcount_195                     = @betcount_195
+                ,@betcount_196                     = @betcount_196
+                ,@betcount_199                     = @betcount_199
+                ,@betcount_206                     = @betcount_206
+                ,@betcount_302                     = @betcount_302                
+                ,@fth                             = @fth
+                ,@fta                             = @fta
+                ,@hth                             = @hth
+                ,@hta                             = @hta
+                ,@totalgoal                        = @totalgoal
+                ,@totalht                        = @totalht
+                ,@oddevenht                        = @oddevenht
+                ,@GoalRecord                     = @GoalSequence 
+                ,@fthCorners                    = @fthCorners
+                ,@ftaCorners                    = @ftaCorners
+                ,@hthCorners                    = @hthCorners
+                ,@htaCorners                    = @htaCorners
+                ,@totalCorners                    = @totalCorners
+                ,@totalCorners_ht                = @totalCorners_ht
+                ,@ftFCorner                        = @ftFCorner
+                ,@htFCorner                        = @htFCorner
+                ,@IsSettleAbandonedMatch        = @IsSettleAbandonedMatch
+                ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+                ,@IsSettleAbandonedMatchIBC        = @IsSettleAbandonedMatchIBC
+                ,@IsRefundHT                    = @IsrefundHT
+                ,@IsHTCal                        = @IsHTCal
+        END
+        IF @action = 'CAL'
+        BEGIN
+			EXEC dbo.NAP_Admin_Calculate_Main 
+                @matchid                         = @matchid
+                ,@action                         = 'REFUND'
+                ,@mode                            = 'ALL'
+                ,@betcount_4                     = @betcount_4
+                ,@betcount_6                     = @betcount_6
+                ,@betcount_13                     = @betcount_13
+                ,@betcount_26                     = @betcount_26
+                ,@betcount_27                     = @betcount_27
+                ,@betcount_30                     = @betcount_30
+                ,@betcount_126                     = @betcount_126
+                ,@betcount_128                     = @betcount_128
+                ,@betcount_129                     = @betcount_129
+                ,@betcount_130                     = @betcount_130
+                ,@betcount_131                     = @betcount_131
+                ,@betcount_132                     = @betcount_132
+                ,@betcount_143                     = @betcount_143
+                ,@betcount_144                     = @betcount_144
+                ,@betcount_145                     = @betcount_145
+                ,@betcount_152                    = @betcount_152
+                ,@betcount_159                    = @betcount_159    --Betradar 2 
+                ,@betcount_161                    = @betcount_161
+                ,@betcount_162                    = @betcount_162
+                ,@betcount_163                    = @betcount_163
+                ,@betcount_170                    = @betcount_170
+                ,@betcount_172                    = @betcount_172
+                ,@betcount_179                    = @betcount_179
+                ,@betcount_181                    = @betcount_181
+                ,@betcount_182                    = @betcount_182
+                ,@betcount_188                    = @betcount_188
+                ,@betcount_195                    = @betcount_195
+                ,@betcount_196                    = @betcount_196
+                ,@betcount_199                    = @betcount_199
+                ,@betcount_200                    = @betcount_200
+                ,@betcount_201                    = @betcount_201
+                ,@betcount_202                    = @betcount_202
+                ,@betcount_206                    = @betcount_206
+                ,@betcount_207                    = @betcount_207
+                ,@betcount_302                     = @betcount_302        
+                ,@betcount_304                     = @betcount_304
+                ,@fth                             = @fth
+                ,@fta                             = @fta
+                ,@hth                             = @hth
+                ,@hta                             = @hta
+                ,@totalgoal                        = @totalgoal
+                ,@totalht                        = @totalht
+                ,@oddevenht                        = @oddevenht
+                ,@GoalRecord                     = @GoalSequence 
+                ,@fthCorners                    = @fthCorners
+                ,@ftaCorners                    = @ftaCorners
+                ,@hthCorners                    = @hthCorners
+                ,@htaCorners                    = @htaCorners
+                ,@totalCorners                    = @totalCorners
+                ,@totalCorners_ht                = @totalCorners_ht
+                ,@ftFCorner                        = @ftFCorner
+                ,@htFCorner                        = @htFCorner
+                ,@IsSettleAbandonedMatch        = @IsSettleAbandonedMatch
+                ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+                ,@IsSettleAbandonedMatchIBC        = @IsSettleAbandonedMatchIBC
+                ,@IsRefundHT                    = @IsrefundHT
+                ,@IsHTCal                        = @IsHTCal
+        END
+    END
+    
 		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
-			@Command		= 'NAP_Admin_Settlement_Refund_All'
-			,@MatchID		= @matchid
-			,@SelectedSet	= @SelectedSet
-			,@creator		= @creator
+            @Command        = 'NAP_Admin_Settlement_Refund_All'
+            ,@MatchID        = @matchid
+            ,@SelectedSet    = @SelectedSet
+            ,@creator        = @creator
 
-		EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
-			@Command			= 'NAP_Admin_Settlement_Refund_All'
-			,@MatchID			= @matchid
-			,@isExistTotalCorner= @isExistTotalCorner
-			,@isExistHTFCorner	= @isExistHTFCorner
-			,@isExistHTLCorner	= @isExistHTLCorner
-			,@isExistFTFCorner	= @isExistFTFCorner
-			,@isExistFTLCorner	= @isExistFTLCorner
-			,@creator			= @creator
+        EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+            @Command            = 'NAP_Admin_Settlement_Refund_All'
+            ,@MatchID            = @matchid
+            ,@isExistTotalCorner= @isExistTotalCorner
+            ,@isExistHTFCorner    = @isExistHTFCorner
+            ,@isExistHTLCorner    = @isExistHTLCorner
+            ,@isExistFTFCorner    = @isExistFTFCorner
+            ,@isExistFTLCorner    = @isExistFTLCorner
+            ,@creator            = @creator
 
 		EXEC dbo.NAP_Admin_Calculate_Main 
-			@matchid					= @matchid
-			,@action					= 'REFUND'
-			,@mode						= 'ALL'
-			,@IsExcludeBetdaq			= @IsExcludeBetdaq
-			,@IsExcludeBetfair			= @IsExcludeBetfair
-			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-			,@SelectedSet				= @SelectedSet
-			,@SelectedSettleFinishedGame= @SelectedSettleFinishedGame
-			,@SetxGameyFinishedGame		= @SetxGameyFinishedGame
-			,@row_count					= 1
-			,@isRefundHT				= @IsRefundHT
+            @matchid                    = @matchid
+            ,@action                    = 'REFUND'
+            ,@mode                        = 'ALL'
+            ,@IsExcludeBetdaq            = @IsExcludeBetdaq
+            ,@IsExcludeBetfair            = @IsExcludeBetfair
+            ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+            ,@SelectedSet                = @SelectedSet
+            ,@SelectedSettleFinishedGame= @SelectedSettleFinishedGame
+            ,@SetxGameyFinishedGame        = @SetxGameyFinishedGame
+            ,@row_count                    = 1
+            ,@isRefundHT                = @IsRefundHT
 
-	-------------------------------------------------------------
-	---         CAPTURE value BALANCE after settlement        ---
-	---------------------------VVVV------------------------------
-	CREATE TABLE #BalanceAfter (custid INT PRIMARY KEY, balance MONEY)
+    -------------------------------------------------------------
+    ---         CAPTURE value BALANCE after settlement        ---
+    ---------------------------VVVV------------------------------
+    CREATE TABLE #BalanceAfter (custid INT PRIMARY KEY, balance MONEY)
+    
+    INSERT INTO #BalanceAfter
+    SELECT b.custid
+        ,SUM(b.winlost - b.actual_stake + b.playercomm)
+    FROM dbo.bettrans b WITH (ROWLOCK)
+    WHERE b.matchid = @matchid 
+    AND b.bettype NOT in (14,127)
+    AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+    AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
+	AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
+    AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
+	AND 1 = CASE WHEN b.bettype IN (901,902,903) 
+					AND b.refno IN (SELECT transid FROM #tmpTrans)	
+				THEN 1 
+			WHEN b.bettype NOT IN (901,902,903) THEN 1
+			ELSE 0 END
+    GROUP BY b.custid
+    
+    ------------------------------------------------------------
+    -------------------------------------------------------------
+    ---                   compare BALANCE                     ---
+    ---------------------------VVVV------------------------------
+    
+    CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 	
-	INSERT INTO #BalanceAfter
-	SELECT b.custid
-		,SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE b.matchid = @matchid 
-	AND b.bettype NOT in (14,127)
-	AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-	AND b.bettype NOT BETWEEN 1501 and 1599 -- Keno
-	AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar 
-	GROUP BY b.custid
+    CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+    
+    INSERT INTO #Balance
+    SELECT b.custid
+        ,a.balance - b.balance
+        ,CASE 
+            WHEN a.balance > b.balance THEN 1
+            ELSE 0
+            END
+    FROM #BalanceBefore b
+        INNER JOIN #BalanceAfter a ON b.custid = a.custid
+    WHERE b.balance <> a.balance
+
+    --INSERT INTO dbo.BalancePendingDebit (custid, balance)
+    --SELECT custid, ABS(balance)
+    --FROM #Balance
+    --WHERE Increased = 0
+    
+    INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
 	
-	------------------------------------------------------------
-	-------------------------------------------------------------
-	---                   compare BALANCE                     ---
-	---------------------------VVVV------------------------------
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
+
+    --INSERT INTO dbo.BalancePendingCredit (custid, balance)
+    --SELECT custid, balance
+    --FROM #Balance
+    --WHERE Increased = 1
+    
+    INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
 	
-	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 
-	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+    ----
+    -- Add Negative Balance into BalanceNegative table 
+    ----
+    INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+        [ExecDate]
+        ,[MatchID]
+        ,[ActionID]
+        ,[GroupID]
+        ,[CustID]
+        ,[Balance]
+        ,[StatusID]
+        ,[Remark]
+        )
+    SELECT GETDATE()
+        ,@MatchID
+        ,@ActionID
+        ,1 -- Sportsbook Single bet Settlement 
+        ,CustID
+        ,Balance
+        ,0
+        ,NULL
+    FROM #Balance WITH (NOLOCK)
+    WHERE Increased = 0
+
+    --  Betfair & Betdaq - Warning message:
+    DECLARE @movebet VARCHAR(20), @matchcode nvarchar(50)
+
+    SELECT @movebet = convert(VARCHAR(20), DATEADD(d, 1, m.kickofftime), 100),
+        @matchcode    = m.matchcode
+    FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
+    WHERE m.matchid = @matchid
+
+    IF @matchcode not like '%Hedge%'
+    BEGIN 
+        IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1) AND (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
+        BEGIN
+            SELECT @ErrCode = 1000006
+                ,@ErrMsg    = 'Please move Betdaq and Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
+        END
+        ELSE IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1)
+        BEGIN
+            SELECT @ErrCode = 1000006
+                ,@ErrMsg    = 'Please move Betdaq tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
+        END
+        ELSE IF (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
+        BEGIN
+            SELECT @ErrCode = 1000006
+                ,@ErrMsg    = 'Please move Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
+        END
+    END 
+    ---------------------------------------------------
+    DROP TABLE #Balance
+
+    DROP TABLE #BalanceBefore
+
+    DROP TABLE #BalanceAfter
 	
-	INSERT INTO #Balance
-	SELECT b.custid
-		,a.balance - b.balance
-		,CASE 
-			WHEN a.balance > b.balance THEN 1
-			ELSE 0
-			END
-	FROM #BalanceBefore b
-		INNER JOIN #BalanceAfter a ON b.custid = a.custid
-	WHERE b.balance <> a.balance
+	DROP TABLE #tmpTrans
+    -------------------------------------------------------------
+    ---                      WRITE LOG                        ---
+    ---------------------------VVVV------------------------------
+    
+    SELECT @stop = CURRENT_TIMESTAMP
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+    DECLARE @LogData NVARCHAR(300)
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
+    SELECT @LogData = 'NAP: Calculate (Refund All) for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
+                                                                 + CASE WHEN @IsExcludeBetdaq = 1                THEN ', Exclude Betdaq tickets'                ELSE '' END 
+                                                                 + CASE WHEN @IsSettleAbandonedMatch = 1        THEN ', Settle determined betdaq tickets'    ELSE '' END 
+                                                                 + CASE WHEN @IsExcludeBetfair = 1                THEN ', Exclude Betfair tickets'            ELSE '' END 
+                                                                 + CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ', Settle determined betfair tickets'    ELSE '' END
+                                                                 + CASE WHEN @IsSettleAbandonedMatchIBC = 1        THEN ', Settle determined IBC tickets'        ELSE '' END
+                                                                 + CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
+                                                                + CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Set=' + @SelectedSet + ' ' END  
+                                                                + CASE WHEN @SetResult IS NULL THEN '' ELSE ' SR=' + @SetResult + ' ' END 
+                                                                + CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' SetFG=' + @SelectedSettleFinishedGame + ' ' END  
+                                                                + CASE    WHEN @SelectedSet1Game IS NULL THEN '' ELSE ' S1Game=' + @SelectedSet1Game + ' ' END  
+                                                                + CASE    WHEN @GameResult1 IS NULL THEN '' ELSE ' S1GR=' + @GameResult1 + ' ' END  
+                                                                + CASE    WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' S2Game=' + @SelectedSet2Game + ' ' END  
+                                                                + CASE    WHEN @GameResult2 IS NULL THEN '' ELSE ' S2GR:' + @GameResult2 + ' ' END  
+                                                                + CASE    WHEN @SelectedSet3Game IS NULL THEN '' ELSE ' S3Game=' + @SelectedSet3Game + ' ' END  
+                                                                + CASE    WHEN @GameResult3 IS NULL THEN '' ELSE ' S3GR=' + @GameResult3 + ' ' END  
+                                                                + CASE    WHEN @SelectedSet4Game IS NULL THEN '' ELSE ' S4Game=' + @SelectedSet4Game + ' ' END  
+                                                                + CASE    WHEN @GameResult4 IS NULL THEN '' ELSE ' S4GR=' + @GameResult4 + ' ' END  
+                                                                + CASE    WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' S5Game=' + @SelectedSet5Game + ' ' END  
+                                                                + CASE    WHEN @GameResult5 IS NULL THEN '' ELSE ' S5GR=' + @GameResult5 + ' ' END  
 
-	----
-	-- Add Negative Balance into BalanceNegative table 
-	----
-	INSERT INTO [bodb02].[dbo].[BalanceNegative] (
-		[ExecDate]
-		,[MatchID]
-		,[ActionID]
-		,[GroupID]
-		,[CustID]
-		,[Balance]
-		,[StatusID]
-		,[Remark]
-		)
-	SELECT GETDATE()
-		,@MatchID
-		,@ActionID
-		,1 -- Sportsbook Single bet Settlement 
-		,CustID
-		,Balance
-		,0
-		,NULL
-	FROM #Balance WITH (NOLOCK)
-	WHERE Increased = 0
+    EXEC dbo.WriteLog_UserLog 
+        @UserID = @creator
+        ,@Doing =  @LogData
 
-	--  Betfair & Betdaq - Warning message:
-	DECLARE @movebet VARCHAR(20), @matchcode nvarchar(50)
+    --Write Log Settle
+    SELECT @Remark = 'NAP: ExcludeBetdaqTickets='            + convert(char(1),@IsExcludeBetdaq) 
+                    + ' SettleDeterminedBetdaqTickets='        + convert(char(1),@IsSettleAbandonedMatch)
+                    + ' ExcludeBetfairTickets='                + convert(char(1),@IsExcludeBetfair) 
+                    + ' SettleDeterminedBetfairTickets='    + convert(char(1),@IsSettleAbandonedMatchBetFair)
+                    + ' SettleDeterminedIBCTickets='        + convert(char(1),@IsSettleAbandonedMatchIBC)
+                    + CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
+                    + CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Set=' + @SelectedSet + '<br/> ' END  
+                    + CASE WHEN @SetResult IS NULL THEN '' ELSE ' SR=' + @SetResult + '<br/> ' END 
+                    + CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' SetFG=' + @SelectedSettleFinishedGame + '<br/> ' END  
+                    + CASE    WHEN @SelectedSet1Game IS NULL THEN '' ELSE ' S1Game=' + @SelectedSet1Game + '<br/> ' END  
+                    + CASE    WHEN @GameResult1 IS NULL THEN '' ELSE ' S1GR=' + @GameResult1 + '<br/> ' END  
+                    + CASE    WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' S2Game=' + @SelectedSet2Game + '<br/> ' END  
+                    + CASE    WHEN @GameResult2 IS NULL THEN '' ELSE ' S2GR=' + @GameResult2 + '<br/> ' END  
+                    + CASE    WHEN @SelectedSet3Game IS NULL THEN '' ELSE ' S3Game=' + @SelectedSet3Game + '<br/> ' END  
+                    + CASE    WHEN @GameResult3 IS NULL THEN '' ELSE ' S3GR=' + @GameResult3 + '<br/> ' END  
+                    + CASE    WHEN @SelectedSet4Game IS NULL THEN '' ELSE ' S4Game=' + @SelectedSet4Game + '<br/> ' END  
+                    + CASE    WHEN @GameResult4 IS NULL THEN '' ELSE ' S4GR=' + @GameResult4 + '<br/> ' END  
+                    + CASE    WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' S5Game=' + @SelectedSet5Game + '<br/> ' END  
+                    + CASE    WHEN @GameResult5 IS NULL THEN '' ELSE ' S5GR=' + @GameResult5 + '<br/> ' END  
+                    + ' Action=' + @Action
+                    + ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;'
 
-	SELECT @movebet = convert(VARCHAR(20), DATEADD(d, 1, m.kickofftime), 100),
-		@matchcode	= m.matchcode
-	FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
-	WHERE m.matchid = @matchid
+    SELECT    @BetstatusLOG = CASE WHEN @SelectedSet IS NULL THEN 'Refund' ELSE '' END  -- Set '' for Tennis Refund 
+    BEGIN TRY
+        EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
+            @UserID                = @creator
+            ,@Matchid            = @matchid
+            ,@ActionID            = @ActionID
+            ,@finalhomescore     = 0
+            ,@finalawayscore     = 0
+            ,@hthomescore         = 0
+            ,@htawayscore         = 0
+            ,@GoalRecord        = ''
+            ,@betstatus            = @BetstatusLOG
+            ,@Remark            = @Remark
+            ,@IP                = @IP
+    END TRY
 
-	IF @matchcode not like '%Hedge%'
-	BEGIN 
-		IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1) AND (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
-		BEGIN
-			SELECT @ErrCode = 1000006
-				,@ErrMsg	= 'Please move Betdaq and Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
-		END
-		ELSE IF (@IsExcludeBetdaq = 1 OR @IsSettleAbandonedMatch = 1)
-		BEGIN
-			SELECT @ErrCode = 1000006
-				,@ErrMsg	= 'Please move Betdaq tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
-		END
-		ELSE IF (@IsExcludeBetfair = 1 OR @IsSettleAbandonedMatchBetFair = 1)
-		BEGIN
-			SELECT @ErrCode = 1000006
-				,@ErrMsg	= 'Please move Betfair tickets to a new match before ' + @movebet + ' GMT-4. Otherwise they will bring harm to the system'
-		END
-	END 
-	---------------------------------------------------
-	DROP TABLE #Balance
+    BEGIN CATCH
+        SELECT @Remark = @Remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
 
-	DROP TABLE #BalanceBefore
+        EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
+            @UserID                = @creator
+            ,@Matchid            = @matchid
+            ,@ActionID            = @ActionID
+            ,@finalhomescore    = 0
+            ,@finalawayscore    = 0
+            ,@hthomescore         = 0
+            ,@htawayscore         = 0
+            ,@GoalRecord        = ''
+            ,@betstatus            = @BetstatusLOG
+            ,@Remark            = @Remark
+            ,@IP                = @IP
+    END CATCH
 
-	DROP TABLE #BalanceAfter
+    -----
+    DELETE
+    FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+    WHERE KeyID = 1 AND KeyValue = @matchid
 
-	-------------------------------------------------------------
-	---                      WRITE LOG                        ---
-	---------------------------VVVV------------------------------
-	
-	SELECT @stop = CURRENT_TIMESTAMP
+    IF (@@ERROR = 0)
+    BEGIN
+        BEGIN TRY
+            EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                @UserID        = @creator
+                ,@Matchid    = @matchid
+                ,@KeyID        = 1
+                ,@ActionID    = @ActionID
+                ,@Remark    = 'DEL SUCCESS'
+        END TRY
 
-	DECLARE @LogData NVARCHAR(300)
+        BEGIN CATCH
+            SELECT @Remark = 'DEL SUCCESS ErrMsg=' + LEFT(ERROR_MESSAGE(), 350)
 
-	SELECT @LogData = 'NAP: Calculate (Refund All) for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
-																 + CASE WHEN @IsExcludeBetdaq = 1				THEN ', Exclude Betdaq tickets'				ELSE '' END 
-																 + CASE WHEN @IsSettleAbandonedMatch = 1		THEN ', Settle determined betdaq tickets'	ELSE '' END 
-																 + CASE WHEN @IsExcludeBetfair = 1				THEN ', Exclude Betfair tickets'			ELSE '' END 
-																 + CASE WHEN @IsSettleAbandonedMatchBetFair = 1 THEN ', Settle determined betfair tickets'	ELSE '' END
-																 + CASE WHEN @IsSettleAbandonedMatchIBC = 1		THEN ', Settle determined IBC tickets'		ELSE '' END
-																 + CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
-																+ CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Set=' + @SelectedSet + ' ' END  
-																+ CASE WHEN @SetResult IS NULL THEN '' ELSE ' SR=' + @SetResult + ' ' END 
-																+ CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' SetFG=' + @SelectedSettleFinishedGame + ' ' END  
-																+ CASE	WHEN @SelectedSet1Game IS NULL THEN '' ELSE ' S1Game=' + @SelectedSet1Game + ' ' END  
-																+ CASE	WHEN @GameResult1 IS NULL THEN '' ELSE ' S1GR=' + @GameResult1 + ' ' END  
-																+ CASE	WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' S2Game=' + @SelectedSet2Game + ' ' END  
-																+ CASE	WHEN @GameResult2 IS NULL THEN '' ELSE ' S2GR:' + @GameResult2 + ' ' END  
-																+ CASE	WHEN @SelectedSet3Game IS NULL THEN '' ELSE ' S3Game=' + @SelectedSet3Game + ' ' END  
-																+ CASE	WHEN @GameResult3 IS NULL THEN '' ELSE ' S3GR=' + @GameResult3 + ' ' END  
-																+ CASE	WHEN @SelectedSet4Game IS NULL THEN '' ELSE ' S4Game=' + @SelectedSet4Game + ' ' END  
-																+ CASE	WHEN @GameResult4 IS NULL THEN '' ELSE ' S4GR=' + @GameResult4 + ' ' END  
-																+ CASE	WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' S5Game=' + @SelectedSet5Game + ' ' END  
-																+ CASE	WHEN @GameResult5 IS NULL THEN '' ELSE ' S5GR=' + @GameResult5 + ' ' END  
+            EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                @UserID        = @creator
+                ,@Matchid    = @matchid
+                ,@KeyID        = 1
+                ,@ActionID    = @ActionID
+                ,@Remark    = @Remark
+        END CATCH
+    END
+    ELSE
+    BEGIN
+        BEGIN TRY
+            EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                @UserID        = @creator
+                ,@Matchid    = @matchid
+                ,@KeyID        = 1
+                ,@ActionID    = @ActionID
+                ,@Remark    = 'DEL FAILED'
+        END TRY
 
-	EXEC dbo.WriteLog_UserLog 
-		@UserID = @creator
-		,@Doing =  @LogData
+        BEGIN CATCH
+            SELECT @Remark = 'DEL FAILED ErrMsg=' + left(ERROR_MESSAGE(), 350)
 
-	--Write Log Settle
-	SELECT @Remark = 'NAP: ExcludeBetdaqTickets='			+ convert(char(1),@IsExcludeBetdaq) 
-					+ ' SettleDeterminedBetdaqTickets='		+ convert(char(1),@IsSettleAbandonedMatch)
-					+ ' ExcludeBetfairTickets='				+ convert(char(1),@IsExcludeBetfair) 
-					+ ' SettleDeterminedBetfairTickets='	+ convert(char(1),@IsSettleAbandonedMatchBetFair)
-					+ ' SettleDeterminedIBCTickets='		+ convert(char(1),@IsSettleAbandonedMatchIBC)
-					+ CASE WHEN (@IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair =1 OR @IsSettleAbandonedMatchIBC = 1) THEN @ScoreLog ELSE '' END 
-					+ CASE WHEN @SelectedSet IS NULL THEN '' ELSE ' Set=' + @SelectedSet + '<br/> ' END  
-					+ CASE WHEN @SetResult IS NULL THEN '' ELSE ' SR=' + @SetResult + '<br/> ' END 
-					+ CASE WHEN @SelectedSettleFinishedGame IS NULL THEN '' ELSE ' SetFG=' + @SelectedSettleFinishedGame + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet1Game IS NULL THEN '' ELSE ' S1Game=' + @SelectedSet1Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult1 IS NULL THEN '' ELSE ' S1GR=' + @GameResult1 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet2Game IS NULL THEN '' ELSE ' S2Game=' + @SelectedSet2Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult2 IS NULL THEN '' ELSE ' S2GR=' + @GameResult2 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet3Game IS NULL THEN '' ELSE ' S3Game=' + @SelectedSet3Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult3 IS NULL THEN '' ELSE ' S3GR=' + @GameResult3 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet4Game IS NULL THEN '' ELSE ' S4Game=' + @SelectedSet4Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult4 IS NULL THEN '' ELSE ' S4GR=' + @GameResult4 + '<br/> ' END  
-					+ CASE	WHEN @SelectedSet5Game IS NULL THEN '' ELSE ' S5Game=' + @SelectedSet5Game + '<br/> ' END  
-					+ CASE	WHEN @GameResult5 IS NULL THEN '' ELSE ' S5GR=' + @GameResult5 + '<br/> ' END  
-					+ ' Action=' + @Action
-					+ ' Duration=' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms;'
+            EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
+                @UserID        = @creator
+                ,@Matchid    = @matchid
+                ,@KeyID        = 1
+                ,@ActionID    = @ActionID
+                ,@Remark    = @Remark
+        END CATCH
+    END
 
-	SELECT	@BetstatusLOG = CASE WHEN @SelectedSet IS NULL THEN 'Refund' ELSE '' END  -- Set '' for Tennis Refund 
-	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
-			@UserID				= @creator
-			,@Matchid			= @matchid
-			,@ActionID			= @ActionID
-			,@finalhomescore 	= 0
-			,@finalawayscore 	= 0
-			,@hthomescore 		= 0
-			,@htawayscore 		= 0
-			,@GoalRecord		= ''
-			,@betstatus			= @BetstatusLOG
-			,@Remark			= @Remark
-			,@IP				= @IP
-	END TRY
+    IF @IsNested = 0
+    BEGIN
+        -- Update match_remark
+                                EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+            @matchid        = @matchid
+            ,@command        = 'F'
+            ,@SelectedSet    = @SelectedSet
+        
 
-	BEGIN CATCH
-		SELECT @Remark = @Remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
+        ---- Update SettlementStatus135
+        --EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+        --    @matchid    = @matchid
+        --    ,@command    = 'PS'
+        --    ,@ivalue    = @SettlementStatus135
 
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
-			@UserID				= @creator
-			,@Matchid			= @matchid
-			,@ActionID			= @ActionID
-			,@finalhomescore	= 0
-			,@finalawayscore	= 0
-			,@hthomescore 		= 0
-			,@htawayscore 		= 0
-			,@GoalRecord		= ''
-			,@betstatus			= @BetstatusLOG
-			,@Remark			= @Remark
-			,@IP				= @IP
-	END CATCH
+        -- Write log
+        DECLARE @log VARCHAR(300)
 
-	-----
-	DELETE
-	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-	WHERE KeyID = 1 AND KeyValue = @matchid
+        SET @log = 'NAP: Refund for matchid: ' + CONVERT(VARCHAR(10), @matchid)
 
-	IF (@@ERROR = 0)
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= 'DEL SUCCESS'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @Remark = 'DEL SUCCESS ErrMsg=' + LEFT(ERROR_MESSAGE(), 350)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= @Remark
-		END CATCH
-	END
-	ELSE
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= 'DEL FAILED'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @Remark = 'DEL FAILED ErrMsg=' + left(ERROR_MESSAGE(), 350)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @creator
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= @Remark
-		END CATCH
-	END
-
-	IF @IsNested = 0
-	BEGIN
-		-- Update match_remark
-								EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
-			@matchid		= @matchid
-			,@command		= 'F'
-			,@SelectedSet	= @SelectedSet
-		
-
-		---- Update SettlementStatus135
-		--EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
-		--	@matchid	= @matchid
-		--	,@command	= 'PS'
-		--	,@ivalue	= @SettlementStatus135
-
-		-- Write log
-		DECLARE @log VARCHAR(300)
-
-		SET @log = 'NAP: Refund for matchid: ' + CONVERT(VARCHAR(10), @matchid)
-
-		EXEC dbo.WriteLog_UserLog 
-			@UserID = @creator
-			,@Doing = @Log
-	END
+        EXEC dbo.WriteLog_UserLog 
+            @UserID = @creator
+            ,@Doing = @Log
+    END
 END
+
+
+
+
+
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_All] TO [bodbAdminNet] AS [dbo]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_All] TO [Dot_Member] AS [dbo]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_All] TO [vnteam] AS [dbo]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Refund_All] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_All] TO [Dot_Member]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_All] TO [bodbAdminNet]
+GO 

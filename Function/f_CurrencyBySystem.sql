@@ -1,4 +1,13 @@
-﻿ALTER FUNCTION [dbo].[f_CurrencyBySystem]
+﻿USE [CustDB]
+GO
+/****** Object:  UserDefinedFunction [dbo].[f_CurrencyBySystem]    Script Date: 09/10/2015 05:51:01 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  User Defined Function dbo.f_CurrencyBySystem    Script Date: 5/21/2014 9:18:05 AM ******/
+
+ALTER FUNCTION [dbo].[f_CurrencyBySystem]
 (
 	@System varchar(50) = 'ACCOUNTING'
 )
@@ -9,7 +18,7 @@ AS
 /*
 Created: 
 Task : Get currencies by system
-DB:   DBTXN/bodb02; DBAGE/bodb02
+DB:   DBTXN/bodb02; DBAGE/bodb02; DBCUST/CUSTDB
 
 Revisions:
 	- 20100720@Shifu: Get currencies by System
@@ -20,8 +29,11 @@ Revisions:
 	- 2O130404@Jamie: Put UUS for Testing 
 	- 20130513@Lukas: add group ACCUSD
 	- 20130718@Lukas: add group ACCUT
-	- 20130909@Jamie: add group ACCYEN668
-	
+	- 20140521@Kiwi: add NTD currency into group ACCUT
+	- 20150526@Kiwi: add new group ACCUT2
+	- 20150812@Amy: add ACCTHAI2 group
+	-20150817@Susan:add ACCIN group
+	-20150909@Susan: add ACCYEN668 group
 Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING', 'ACCINDO'
 */
@@ -33,12 +45,12 @@ BEGIN
 		Select ExchangeID 
 		From Exchange (nolock)
 	END
-	ELSE IF(@System = 'ACCTHAI')
+	ELSE IF(@System IN ('ACCTHAI','ACCTHAI2','ACCTHAI56','ACCTHAI99'))
 	BEGIN
 		Insert Into @tbCurrency(exchangeID)
 		SELECT 43 --THB,...
 	END
-	ELSE IF (@System = 'ACCINDO')
+	ELSE IF (@System IN('ACCINDO', 'ACCIN'))
 	BEGIN
 		Insert Into @tbCurrency(exchangeID)
 		SELECT 22 --IND
@@ -47,7 +59,7 @@ BEGIN
 		UNION SELECT 47 --DDD
 		UNION SELECT 15 --IN
 	END	
-	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668'))
+	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668','ACCYEN888'))
 	BEGIN
 		Insert Into @tbCurrency(exchangeID)
 		SELECT 16 --YEN		
@@ -81,17 +93,24 @@ BEGIN
 		UNION ALL SELECT 40	--- 	IRR
 		UNION ALL SELECT 64 ---		UT
 	END
-	ELSE IF (@system = 'ACCUT')
+	ELSE IF (@system IN ('ACCUT','ACCUT2'))
 	BEGIN
 		INSERT INTO @tbCurrency(ExchangeID)
-		SELECT 64	--- 	UT		
+		SELECT 64	--- 	UT	
+		UNION ALL 
+		SELECT 17	--- 	NTD	
 	END
 	Return
 END
 
+
+
+
+
+
 GO
-GRANT VIEW DEFINITION ON [dbo].[f_CurrencyBySystem] TO [vnteam]
+GRANT SELECT ON [dbo].[f_CurrencyBySystem] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT SELECT ON [dbo].[f_CurrencyBySystem] TO [bodbAdminNet]
+GRANT SELECT ON [dbo].[f_CurrencyBySystem] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT SELECT ON [dbo].[f_CurrencyBySystem] TO [bodbExtAccNet]
+GRANT VIEW DEFINITION ON [dbo].[f_CurrencyBySystem] TO [vnteam] AS [dbo]

@@ -22,6 +22,10 @@ AS
 							Expand the size of match code to varchar(50)
 		-- 20121009@Elodie: Add 34 new bettypes of Tennis (1301 -> 1334)
 		-- 20121112@Elodie: Use stake field to calculate TurnOver instead of actual_stake
+		-- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]
+		-- 20150723@Sophia: Exclude data of Bettrade [#38815]	
+		-- 20150922@Jim: offer MO		
+
 		Explanation's Param:
 			- @winlostdate: the date want to view report
 			- @leagueid   : the leagueid want to view report
@@ -31,7 +35,16 @@ AS
 
 SET NOCOUNT ON
 BEGIN
-	  	
+
+	----Get Sport Bettype Matrix------
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductID = 1
+
+	DELETE	@SportBettype  
+	WHERE	(SubProduct IN ('BT-Sold','BT-Bought','BT-Comm'))
+
+
 	--Declare @temp table to contain all matches based on @winlostdate
 	DECLARE @Match TABLE (matchid INT, sporttype tinyINT, leagueid INT, matchcode VARCHAR(50), type varchar(10), primary key(matchid, type))
 	INSERT INTO @Match 
@@ -52,23 +65,31 @@ BEGIN
 Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 
 	Insert INTo @tmpBettype
-	SELECT 1,  1 --'Handicap',
+	select 1,  1 --'Handicap',
 	UNION ALL
-	SELECT 3,  2 --'Over/Under',
+	select 301,2 --% Handicap
 	UNION ALL
-	SELECT 7,  3 --'1st Half Handicap',
-	UNION ALL
-	SELECT 8,  4 --'1st Half Over/Under',
-	UNION ALL
-	SELECT 2,  5 --'Odd/Even',
-	UNION ALL
-	SELECT 5,  6 --'1x2',
-	UNION ALL
-	SELECT 4,  7 --'Correct Score',
-	UNION ALL
-	SELECT 6,  8 --'Total Goal',
+	Select 3,  3 --'Over/Under',
 	UNION ALL 
-	SELECT 10,  10 --'Outright',
+	select 302,4 --- % Over/Under
+	UNION ALL
+	select 7,  5 --'1st Half Handicap',
+	UNION ALL 
+	select 303,6 -- 1H % Handicap
+	UNION ALL
+	Select 8,  7 --'1st Half Over/Under',
+	UNION ALL 
+	select 304,8 --1H % Over/Under
+	UNION ALL
+	select 2,  9 --'Odd/Even',
+	UNION ALL
+	select 5,  9 --'1x2',
+	UNION ALL
+	Select 4,  9 --'Correct Score',
+	UNION ALL
+	Select 6,  9 --'Total Goal',
+	UNION ALL 
+	Select 10, 10 --'Outright',
 	
 --	UNION ALL
 --	SELECT 11,  11 --'Total Corners',
@@ -92,8 +113,10 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 
 	INSERT INTO @tmpBettype
 		SELECT typeid, typeid
-		FROM bettype WITH(NOLOCK)
-		WHERE (typeid > 10 AND typeid < 31) OR typeid BETWEEN 121 AND 999 OR typeid BETWEEN 1301 AND 1334
+		FROM bettype b WITH(NOLOCK)
+			INNER JOIN @SportBettype s 
+				ON b.typeid = s.Bettype
+		WHERE (typeid > 10 AND typeid < 31) OR (typeid BETWEEN 121 AND 999 and b.typeid NOT IN (301,302,303,304))  OR typeid BETWEEN 1301 AND 1334
 
 	SELECT		
 			b.liveindicator,
@@ -107,9 +130,10 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 	FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid			
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
+			---AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 AND 1334) 
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT', 'Refund') 
 			AND b.statusID NOT IN (101, 102, 103) 
@@ -126,10 +150,11 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 
 	SELECT	b.liveindicator, -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) Winlost8RM
 	FROM	bettrans b WITH (NOLOCK)
-			INNER JOIN @Match m on b.matchid = m.matchid				 
+			INNER JOIN @Match m on b.matchid = m.matchid	
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype			 
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 121 AND 999) 
+			---AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND statusID NOT IN (101, 102,103) 
@@ -141,15 +166,16 @@ Declare @tmpBettype table (	Bettype	INT primary key, DisplayOrder	int)
 	-- 20120412@Hurri: Get win lost of agent 'BARM'
 	SELECT	b.liveindicator, -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) WinlostBARM
 	FROM	bettrans b WITH (NOLOCK)
-			INNER JOIN @Match m on b.matchid = m.matchid				 
+			INNER JOIN @Match m on b.matchid = m.matchid	
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype			 
 	WHERE
 			b.winlostdate = @winlostdate
-			AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 121 AND 999) 
+			---AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND statusID NOT IN (101, 102,103) 
 			AND b.ruben = 1					
-			and recommEND = 5707545
+			and recommend = 5707545
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid				
 	GROUP BY b.liveindicator
 END

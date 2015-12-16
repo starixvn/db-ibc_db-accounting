@@ -1,10 +1,4 @@
-﻿
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail2]  
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail2]  
 	@LicenseeID	INT,
 	@Currency	INT = 0,
 	@CustID		INT = 0, --AgentID			
@@ -20,6 +14,8 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_LicWinlossDetail2]
 	@ShowKN  	BIT=0, -- Keno
 	@ShowAGC	BIT = 0, --AG Casino
 	@ShowGD		BIT = 0, -- Gold Deluxe
+	@showMGCLC 	BIT	= 1, -- MGC-LC
+	@showMGCRnG BIT	= 1, -- MGC-RNG
 	@MoveBetsDay SMALLDATETIME,
 	@IsOld BIT = 0,
 	@drawfilter SMALLINT = 1,
@@ -49,6 +45,10 @@ AS
 		- 20141205@Winnie: change from LicenseeCust to f_SelLicenseeCust, from DepCustSuper to f_SelDepCustSuper ( task change currency KeenOcean)
 		- 20150123@Jim: support base on GBP currency
 		- 20150518@Florent: Add AGC and GD
+		- 20150710@Jim:  Microgaming integration (Feature #38168)
+		- 20150728@Jim: apply Bettrade (Feature #38815)
+		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+
 	Param's Explanation:  
 	  + @CustID: SuperID  
 	  + @BaseCurrency (input currencyID): 2-MYR ; 3-USD; 6-EUR
@@ -250,6 +250,26 @@ BEGIN
 	WHERE (typeid BETWEEN 1501 AND 1599)
 END 
 
+IF @showMGCLC =1 -- MGC-LC
+BEGIN 
+	INSERT INTO @sporttype (sporttype)
+	VALUES(203)
+
+	INSERT INTO @bettype(bettype)
+	SELECT typeid FROM bettype (NOLOCK)
+	WHERE (typeid BETWEEN 2001 AND 2007)
+END
+
+IF @showMGCRnG =1 -- MGC-RNG
+BEGIN 
+	INSERT INTO @sporttype (sporttype)
+	VALUES(205)
+
+	INSERT INTO @bettype(bettype)
+	SELECT typeid FROM bettype (NOLOCK)
+	WHERE (typeid BETWEEN 2008 AND 2009)
+END 
+	
 DECLARE @TempFromDate DATETIME 
 DECLARE @TempToDate DATETIME 
 DECLARE @MaxOldDate DATETIME
@@ -388,7 +408,8 @@ BEGIN
 			LEFT JOIN @Exchange e  ON e.ExchangeDate = b.winlostdate AND e.exchangeid = b.currency
 		WHERE 
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
-			b.statusID IN (111, 112, 113) 
+			b.statusID IN (111, 112, 113) AND
+			b.bettype NOT IN (901,902,903)
 		GROUP BY   
 			b.currency,b.custid , b.statusID
 	END		
@@ -513,12 +534,14 @@ BEGIN
 			b.winlostdate BETWEEN @TempFromDate AND @TDate AND  
 			b.statusID  IN (111, 112, 113) AND
 			(b.bettype<31 OR (b.bettype BETWEEN 121 AND 999) OR (b.bettype BETWEEN 1301 AND 1399)) AND
-			b.tpositiontaking <> 0
+			b.tpositiontaking <> 0 AND
+			b.bettype NOT IN (901,902,903)
+			
 		GROUP BY   
 			s.currency,b.custid,b.statusID
 	END
 
-	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS = 1 OR @ShowRB = 1 OR @ShowCS=1 OR @showKN=1)
+	IF (@ShowNG=1 OR @ShowLC=1 OR @ShowVS = 1 OR @ShowRB = 1 OR @ShowCS=1 OR @showKN=1 OR @showMGCLC =1 OR @showMGCRnG =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss
 		SELECT   
@@ -772,11 +795,12 @@ BEGIN
 			AND b.roleid = 1
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency,b.custid,  b.statusID
 	END
 	
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1  OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1  OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGCLC =1 OR @showMGCRnG =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss 
 		SELECT 
@@ -792,7 +816,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 as AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) as AmountDueToRB,
@@ -812,7 +836,7 @@ BEGIN
 			* e.MYR	
 			),     
 			SUM(b.winlost * e.MYR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.MYR) AS WinlossRBMYR,
 			0 as AmountDueToBAMYR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.MYR) as AmountDueToRBMYR,
@@ -832,7 +856,7 @@ BEGIN
 			* e.USD	
 			),     
 			SUM(b.winlost * e.USD),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.USD) AS WinlossRBUSD,
 			0 as AmountDueToBAUSD,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.USD) as AmountDueToRBUSD,
@@ -852,7 +876,7 @@ BEGIN
 			* e.EUR	
 			),     
 			SUM(b.winlost * e.EUR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.EUR) AS WinlossRBEUR,
 			0 as AmountDueToBAEUR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.EUR) as AmountDueToRBEUR,
@@ -872,7 +896,7 @@ BEGIN
 			* e.GBP	
 			),     
 			SUM(b.winlost * e.GBP),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.GBP) AS LicenseeWLGBP ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.GBP) AS LicenseeWLGBP ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.GBP) AS WinlossRBGBP,
 			0 as AmountDueToBAGBP,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.GBP) as AmountDueToRBGBP,
@@ -895,6 +919,7 @@ BEGIN
 			AND b.roleid = 1
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency,b.custid,b.statusID
 	END
 	
@@ -1025,11 +1050,12 @@ BEGIN
 			AND b.roleid = 1   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 1
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency,b.custid,b.statusID
 	END
 	
 	--exclude BA tickets
-	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1)
+	IF (@showSB = 1 or @ShowRB = 1 or @ShowNG = 1 OR @ShowLC=1 OR @ShowVS=1 OR @ShowCS=1 OR @ShowKN=1 OR @showMGCLC =1 OR @showMGCRnG =1)
 	BEGIN
 		INSERT INTO #SAgWinLoss 
 		SELECT 
@@ -1045,7 +1071,7 @@ BEGIN
 				ELSE 1 END
 			),     
 			SUM(b.winlost),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END) AS LicenseeWL ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END) AS WinlossRB,
 			0 as AmountDueToBA,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END) as AmountDueToRB,
@@ -1065,7 +1091,7 @@ BEGIN
 			* e.MYR	
 			),     
 			SUM(b.winlost * e.MYR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.MYR) AS LicenseeWLMYR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.MYR) AS WinlossRBMYR,
 			0 as AmountDueToBAMYR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.MYR) as AmountDueToRBMYR,
@@ -1085,7 +1111,7 @@ BEGIN
 			* e.USD	
 			),     
 			SUM(b.winlost * e.USD),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.USD) AS LicenseeWLUSD ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.USD) AS WinlossRBUSD,
 			0 as AmountDueToBAUSD,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.USD) as AmountDueToRBUSD,
@@ -1105,7 +1131,7 @@ BEGIN
 			* e.EUR	
 			),     
 			SUM(b.winlost * e.EUR),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.EUR) AS LicenseeWLEUR ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.EUR) AS WinlossRBEUR,
 			0 as AmountDueToBAEUR,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.EUR) as AmountDueToRBEUR,
@@ -1124,7 +1150,7 @@ BEGIN
 			* e.GBP	
 			),     
 			SUM(b.winlost * e.GBP),  
-			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202))  THEN b.winlost ELSE 0 END * e.GBP) AS LicenseeWLGBP ,
+			- SUM(CASE WHEN (b.sporttype IN (0,161,162,180,251,202,203,205))  THEN b.winlost ELSE 0 END * e.GBP) AS LicenseeWLGBP ,
 			SUM(CASE WHEN b.sporttype = 151 THEN b.awinlost ELSE 0 END * e.GBP) AS WinlossRBGBP,
 			0 as AmountDueToBAGBP,
 			- SUM ( CASE WHEN b.sporttype = 151 THEN (b.winlost+b.awinlost+b.comm) ELSE 0 END * e.GBP) as AmountDueToRBGBP,
@@ -1148,6 +1174,7 @@ BEGIN
 			AND b.roleid = 1   
 			AND b.statusID <> 101 --exclude REJECT bets
 			AND ISNULL(b.isBA,0) = 0
+			AND b.bettype NOT IN (901,902,903)
 		GROUP BY  b.currency, b.custid,b.statusID
 	END
 	
@@ -1442,18 +1469,15 @@ BEGIN
 DROP TABLE #SAgWinLoss 
 DROP TABLE #DataWinloss3rd
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail2] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail2] TO [bodbLicenseeNet]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail2] TO [bodbAdminNet]
-GO 
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail2] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_LicWinlossDetail2] TO [bodbLicenseeNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_LicWinlossDetail2] TO [vnteam] AS [dbo]
+GO

@@ -1,10 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_SpecialDel_CheckMatchIDwithRefno]    Script Date: 02/10/2015 18:13:30 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[Acc_SpecialDel_CheckMatchIDwithRefno]
 	@MatchID int
 	,@FromRefno bigint --transid
@@ -28,6 +21,8 @@ BEGIN
 						   Change DB053 server instead of DB052 server
 		- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]		
 		- 20150210@Kathy:  check if tickets have been moved to match14, bettrans14 [Redmine:#30298] 
+		- 201507014@Dominic: Integrate Metric Gaming - Superlive product into the Special Delete site - Redmine: #38200
+		- 20150922@Kathy: Add more Type value to support BetTrade transaction [Redmine:#43233]
 						   
 	
 	Param's Explanation:	
@@ -36,6 +31,7 @@ BEGIN
 			1: Virtual sports
 			2: Number Game
 			3: Live Casino
+			4: BetTrade
 */
 	SET NOCOUNT ON
 	DECLARE @totalRecord INT, @Sporttype int
@@ -44,7 +40,7 @@ BEGIN
 	from match with (NOLOCK)
 	where matchid = @MatchID
 	
-	IF @Sporttype not between 1 and 99 AND @Sporttype <> 154 AND @Type = 0
+	IF @Sporttype not between 1 and 99 AND @Sporttype <> 154 AND @Type IN (0, 4)
 	BEGIN 
 		SET @ErrCode = 2
 		SET @ErrMsg ='This MatchID doesn''t belong to sportbook.' 
@@ -73,15 +69,24 @@ BEGIN
 	END 
 	
 	SELECT @totalRecord = count(1)
-	FROM dbo.bettrans WITH (NOLOCK)		
-	WHERE transid IN (@FromRefno,@ToRefno)
-		AND matchid = @MatchID	
+	FROM
+	(	SELECT 1 Row
+		FROM dbo.bettrans WITH (NOLOCK)		
+		WHERE transid IN (@FromRefno,@ToRefno)
+			AND matchid = @MatchID	
+			AND bettype = CASE WHEN @Type = 4 THEN 901 ELSE bettype END
+		UNION ALL
+		SELECT 1 Row
+		FROM dbo.translog WITH (NOLOCK)		
+		WHERE translogid IN (@FromRefno,@ToRefno)
+			AND eventid = @MatchID	
+	) tmp
 	
 	IF @FromRefno=@ToRefno
 	BEGIN
 		IF @totalRecord <> 1 
 		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND transid IN (@FromRefno, @ToRefno))
+			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND (refno IN (@FromRefno, @ToRefno) OR transid IN (@FromRefno, @ToRefno)))
 				SELECT @ErrCode= 6 --  harcode in web
 					,@ErrMsg='Tickets have been moved.'
 			ELSE
@@ -91,7 +96,7 @@ BEGIN
 	END
 	ELSE IF @totalRecord <> 2 
 		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND transid IN (@FromRefno, @ToRefno))
+			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans14 WITH(NOLOCK) WHERE matchid = @MatchId AND (refno IN (@FromRefno, @ToRefno) OR transid IN (@FromRefno, @ToRefno)))
 				SELECT @ErrCode= 6 --  harcode in web
 					,@ErrMsg='Tickets have been moved.'
 			ELSE
@@ -101,9 +106,6 @@ BEGIN
 	
 	SET NOCOUNT OFF
 END
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_SpecialDel_CheckMatchIDwithRefno] TO [bodbAdminNet] AS [dbo]
 GO

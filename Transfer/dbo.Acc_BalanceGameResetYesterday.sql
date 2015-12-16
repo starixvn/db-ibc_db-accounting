@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BalanceGameResetYesterday]
+﻿use bodb02
+go
+
+ALTER PROCEDURE [dbo].[Acc_BalanceGameResetYesterday]
 (
 	@CustID		INT	,	
 	@isResetYesterdayBalance	BIT OUTPUT,
@@ -14,6 +17,7 @@ AS
 
 	Revisions:		
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database) 					       
+		- 20150723@Patrick: Support Gold deluxe
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -25,11 +29,30 @@ BEGIN
 			@MaxWinLiveCasino = ISNULL(MaxWinLiveCasino,0)
 	from CustDB.dbo.Custinfo WITH (NOLOCK)
 	WHERE CustID=@CustID
+
+	DECLARE @BetTypeIds TABLE(BetType SMALLINT)
 	
 	-- return if not weekly reset
-	IF NOT(@isAutoResetLiveCasino = 0 AND @MaxWinLiveCasino>0)
-		RETURN
+	IF (@isAutoResetLiveCasino = 0 AND @MaxWinLiveCasino>0)
+	BEGIN
+		INSERT INTO @BetTypeIds(BetType) VALUES(1101)
+	END
+
+	--check for GD
+	SELECT @isAutoResetLiveCasino = ISNULL(IsAutoReset, 0)
+		, @MaxWinLiveCasino = ISNULL(MaxWinLimit, 0)
+	from DBCUST.CustDB.dbo.CustWinLimit WITH (NOLOCK)
+	WHERE CustId = @CustID AND SportType = 255 AND BetType = 1701
+
+	-- return if not weekly reset
+	IF (@isAutoResetLiveCasino = 0 AND @MaxWinLiveCasino > 0)
+	BEGIN
+		INSERT INTO @BetTypeIds(BetType) VALUES(1701)
+	END
 		
+	IF NOT EXISTS (SELECT TOP 1 1 FROM @BetTypeIds)
+		RETURN
+
 	DECLARE @resetDate smalldatetime
 	SELECT @resetDate = convert(nvarchar(10), current_timestamp,120)
 	
@@ -39,10 +62,12 @@ BEGIN
 	SELECT @Credit = SUM(Balance)
 	FROM BalanceCreditGame credit WITH (NOLOCK) 
 	WHERE custid=@custid and winlostdate<@resetDate
+		and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
 	
 	SELECT @Debit = SUM(Balance)
 	FROM BalanceDebitGame credit WITH (NOLOCK) 
 	WHERE custid=@custid and winlostdate<@resetDate
+		and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
 	
 	SET @YesterdayBalance = ISNULL(@Credit,0) -  ISNULL(@Debit,0)
 	
@@ -51,9 +76,11 @@ BEGIN
 			--delete yesterday balance
 			DELETE dbo.BalanceCreditGame with (ROWLOCK)
 			WHERE custid=@CustID and winlostdate < @resetDate
+				and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
 			
 			DELETE dbo.BalanceDebitGame with (ROWLOCK)
 			WHERE custid=@CustID and winlostdate < @resetDate
+				and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
 			
 			-- for testing:
 			-- RAISERROR ('Reset yesterday balance live casino unsuccessful', 16, 1)

@@ -1,5 +1,3 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_BetFair]
 	@matchid int,
 	@creator int, 	
@@ -12,7 +10,7 @@ AS
 Created: 20140114@Kathy 
 Task : Refund Running BetFair
 Original: Admin_Settlement_Refund_BetFair
-DB: DBTXN/BODB02
+DB: DBTXN/BODB02a
 
 Revisions: 
 	- 20140512@Kathy: Exclude 1H FGLG (127) [Redmine:#14449]
@@ -21,6 +19,7 @@ Revisions:
 						 sportting solution (from 1301 -> 1334), keno (1501 -> 1599)
 	- 20141030@Jamie: Sportting Solution Tennis Settlement [Redmine:#23034]
 	- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
+	- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 Param's Explanation:
 • @matchid: matchid need to refund
@@ -86,6 +85,9 @@ BEGIN
 	CREATE TABLE #BalanceAfter (custid int PRIMARY KEY, balance money)
 
 	CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 
@@ -102,7 +104,7 @@ BEGIN
 	AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto bets BetRadar 2 
 	GROUP BY custid
 
-				EXEC dbo.NAP_Admin_Calculate_Main 
+																EXEC dbo.NAP_Admin_Calculate_Main 
 	     @matchid = @matchid
 		,@action = 'REFUND'
 		,@mode = 'BetFair'
@@ -129,15 +131,35 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
+	
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 
 	----
 	-- Add Negative Balance into BalanceNegative table 
@@ -268,6 +290,7 @@ BEGIN
 		END CATCH
 	END
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Refund_BetFair] TO [bodbAdminNet] AS [dbo]
 GO

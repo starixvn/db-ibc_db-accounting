@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerUpdPwdReset]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdPwdReset]    Script Date: 06/10/2015 14:28:19 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerUpdPwdReset    Script Date: 12/5/2013 4:34:23 PM ******/
+
+ALTER PROCEDURE [dbo].[Acc_CustomerUpdPwdReset]
 	@CustID int,
 	@UserPwd nvarchar(50),
 	@UserID int,
@@ -27,7 +36,8 @@ AS
 		- 20120604@Elodie: Modify the content of a log in User Control
 		- 20130310@Lukas: change linked-server alias & add more write log section
 		- 20130328@Jamie: Update old userpwd on CustLoginInfo
-		- 20130704@Kathy: Synchronize user data between Accounting and AdminSite: update password in AdminSiteUser table
+		- 20130704@Kathy: Synchronize user data between Accounting and AdminSite: update password in AdminSiteUser table		
+		- 20150609@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
 
 */
 
@@ -53,7 +63,7 @@ BEGIN
 END
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 if @ErrCode <>0 return
 --end
 
@@ -150,10 +160,9 @@ Else
 		END CATCH
 End
 
-
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_CustomerUpdPwdReset]  TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdPwdReset] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_CustomerUpdPwdReset]  TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdPwdReset] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdPwdReset] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdPwdReset] TO [vnteam] AS [dbo]

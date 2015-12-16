@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Corner] 
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Corner]    Script Date: 08/07/2015 09:23:34 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Corner    Script Date: 7/6/2015 4:29:06 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Corner] 
 	 @AdminId				INT
 	,@Matchid				INT
 	,@fthCorners			SMALLINT		= NULL
@@ -20,6 +28,7 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:		
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 
 		
 	Param's Explanation:
@@ -30,6 +39,7 @@ BEGIN
 	SET NOCOUNT ON 
 	DECLARE	 @start						DATETIME
 			,@stop						DATETIME
+			,@eventstatus				NVARCHAR(50)
 			,@fth						INT
 			,@fta						INT
 			,@hth						INT
@@ -137,14 +147,13 @@ BEGIN
 		WHERE	matchID = @MatchID 
 				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+				AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
 				AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
 		GROUP BY CASE WHEN bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209) THEN 1 
 					  ELSE 0 END 
 
 		IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE CornerBet = 0)
 			INSERT INTO @Status(CornerBet, BetCount, InRunning) VALUES(0,0,0)
-		--IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE CornerBet = 1)
-		--	INSERT INTO @Status(CornerBet, BetCount, InRunning) VALUES(1,0,0)
 
 		DECLARE @NoneCornerBetDone BIT
 
@@ -152,14 +161,19 @@ BEGIN
 		FROM	@Status
 		WHERE	CornerBet = 0 
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+		SELECT	@eventstatus = CASE WHEN @Action ='CAL' AND @NoneCornerBetDone = 1 THEN N'completed'
+								    ELSE eventstatus END 
+		FROM	DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
+		WHERE	m.matchid = @matchid
+
+				EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command			= 'NAP_Admin_Settlement_Corner-CAL'
 			,@MatchID			= @matchid
 			,@NoneCornerBetDone = @NoneCornerBetDone
 			,@Action			= @action
 			,@creator			= @AdminID
 
-		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
+				EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
 				@Command = 'NAP_Admin_Settlement_Corner-CAL',
 				@MatchID = @MatchID,
 				@fthCorners = @fthCorners,
@@ -174,9 +188,16 @@ BEGIN
 				@IsAuto = 0,
 				@creator = @AdminID		
 
-		EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
+				EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
 			 @matchid		= @matchid
-			,@mode			= @action						
+			,@mode			= @action	
+			
+		IF 	@eventstatus='completed'			
+		BEGIN
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
+				 @matchid	= @matchid
+				,@command	= 'C'
+		END
 
 	END
 
@@ -198,7 +219,9 @@ BEGIN
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #Balance (custid INT PRIMARY KEY, balance MONEY, Increased BIT)
-
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+	
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
@@ -212,16 +235,34 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+	--SELECT custid, ABS(balance)
+	--FROM #Balance
+	--WHERE Increased = 0
+	INSERT INTO @tblDebitPending (custID, balance)
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
+			
+	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+	--SELECT custid, balance
+	--FROM #Balance
+	--WHERE Increased = 1
 
-	INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
-
+	INSERT INTO @tblCreditPending (custID, balance)
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
+	
+	IF @@rowcount <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----

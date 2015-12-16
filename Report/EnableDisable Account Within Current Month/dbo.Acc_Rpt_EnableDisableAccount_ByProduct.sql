@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
+ALTER PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
 	@ListCurrency	NVARCHAR(150)	= 'all', 
 	@SportType		INT ,
 	@ShowEnabled	BIT				=	1,
@@ -7,20 +7,20 @@ AS
 /*  Created: Dominic 
 	Date: 2014-06-02  
     Task : Total Credit Accounts Enabled/Disabled per Product
-    DB: DBAGE/bodb02  
+    DB: DBACC/bodb02
    
     Revisions:  
-		20140627@Dominic: Exclude special super with username  LIKE '3rdSuper%','STEST%','%ACCSuper%'
-		20140707@Dominic: Add Param @ShowEnabled/@ShowDisabled #18655
+		- 20140627@Dominic: Exclude special super with username  LIKE '3rdSuper%','STEST%','%ACCSuper%'
+		- 20140707@Dominic: Add Param @ShowEnabled/@ShowDisabled #18655
+		- 20150609@Kos: Separate CustDB to DBCUST server (Move SP to DBACC.bodb02)
+		- 20150828@Jim: support GoldDeluxe & Metric Gaming(#40262)
+		- 20150828@Jim: support Colossus Bet (#42608)
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + {251:Casino, 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
-
-  
 */  
 BEGIN
 	SET NOCOUNT ON
-
 	
 	--Table of real creadit super filter by currency
 	CREATE TABLE #FiltedCreditSuper(
@@ -59,6 +59,9 @@ BEGIN
 			WHEN @sportType = 180 THEN ci.DisableVirtualSports
 			WHEN @sportType = 251 THEN (~ci.SyncCasino |(ci.DisableCasino))
 			WHEN @sportType = 252 THEN (~ci.SyncBingo | ci.DisableBingo)
+			WHEN @sportType = 255 THEN ci.DisableGoldDeluxe
+			WHEN @sportType = -1  THEN ci.DisableSuperLive
+			WHEN @sportType = 204 THEN ci.DisableColossusBet
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
 	JOIN dbo.CustSuper cs WITH(NOLOCK) ON ci.custid = cs.custid AND cs.IsInternal = 0
@@ -318,7 +321,47 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
 		WHERE ci.Enabled = 1              
 	END
+	--  Gold Deluxe & Metric Gamming
+	IF @sportType IN(-1,255,204)
+    BEGIN            
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			CASE WHEN @sportType =255 THEN  ci.DisableGoldDeluxe
+				 WHEN @sportType =-1  THEN  ci.DisableSuperLive
+				 WHEN @sportType =204 THEN  ci.DisableColossusBet
+				 END
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3 
+		WHERE ci.Enabled = 1
 		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			CASE WHEN @sportType =255 THEN  ci.DisableGoldDeluxe
+				 WHEN @sportType =-1  THEN  ci.DisableSuperLive
+				 WHEN @sportType =204 THEN  ci.DisableColossusBet
+				 END
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2  
+		WHERE ci.Enabled = 1
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			CASE WHEN @sportType =255 THEN  ci.DisableGoldDeluxe
+				 WHEN @sportType =-1  THEN  ci.DisableSuperLive
+				 WHEN @sportType =204 THEN  ci.DisableColossusBet
+				 END
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
+		WHERE ci.Enabled = 1             
+	END	
 
 	--Return result
 	SELECT cust.custid,cust.username,sp.SuperStatus as IsDisable,e.currency,
@@ -348,6 +391,7 @@ BEGIN
 	DROP TABLE #FiltedCreditSuper
 	DROP TABLE #FiltedDownlineAcc
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet]
 GO

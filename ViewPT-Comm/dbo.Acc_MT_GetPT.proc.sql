@@ -1,26 +1,17 @@
-USE [bodb02]
-GO
-
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Acc_MT_GetPT_production] 
-	@UserName varchar(30),   
-	@Sporttype smallint = 1,  
-	@Bettype smallint = 1,  
-	@IsLive bit =0, 
+alter PROCEDURE [dbo].[Acc_MT_GetPT] 
+	@UserName varchar(30),
+	@Sporttype smallint = 1,
+	@Bettype smallint = 1,
+	@IsLive bit = 0, 
 	@HasComm bit = 1,
-	@ErrCode int =0 Output,
-	@ErrMsg varchar(100)='' Output
+	@ErrCode int = 0 Output,
+	@ErrMsg varchar(100) ='' Output
 AS
 /*
 Created: Phuc
 Date: 
 Task : View PT, commission in a visualable way
-DB: DB052.bodb02
+DB: DBCUST.CustDB
 Original: DBA_GetPT
 
 Revisions:
@@ -42,8 +33,9 @@ Revisions:
 	- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 	- 20131121@Elodie: Add Virtual greyhounds(182), Virtual Motor Racing(184) [Redmine:#7234]
 	- 20140402@Kathy: Add Virtual Speedway (183), Virtual Virtual Cycling (185)	[Redmine:#14142]
-	- 20140825@Logan:   Fix bug of displaying HRFixedOdds master comm [Redmine: #19631]
-
+	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB, use temp table for sports, bettype)
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	
 Param's Explanation:
 • @HasComm: view Comm or view PT
 	+ 0: View PT (default)
@@ -52,6 +44,30 @@ Param's Explanation:
 
 
 SET NOCOUNT ON
+
+----- 20150610@Kos -------------------
+DECLARE @tmp_Sports TABLE (SportType TINYINT, SportName NVARCHAR(50))
+DECLARE @tmp_Bettype TABLE (TypeID INT, TypeNamee NVARCHAR(50))
+	
+BEGIN TRY
+	INSERT INTO @tmp_Sports (SportType, SportName)
+	SELECT SportType, SportName FROM DBAGE.bodb02.dbo.Sports WITH (NOLOCK)
+END TRY
+BEGIN CATCH
+	INSERT INTO @tmp_Sports (SportType, SportName)
+	SELECT SportType, SportName FROM DBTXN.bodb02.dbo.Sports WITH (NOLOCK)
+END CATCH
+
+BEGIN TRY
+	INSERT INTO @tmp_Bettype (TypeID, TypeNamee)
+	SELECT TypeID, TypeNamee FROM DBAGE.bodb02.dbo.Bettype WITH (NOLOCK)
+END TRY
+BEGIN CATCH
+	INSERT INTO @tmp_Bettype (TypeID, TypeNamee)
+	SELECT TypeID, TypeNamee FROM DBTXN.bodb02.dbo.Bettype WITH (NOLOCK)
+END CATCH
+----- 20150610@Kos -------------------
+
 Begin
 	Declare
 	@CustID int,
@@ -226,8 +242,8 @@ Begin
 					UNION
 					SELECT cs3rd.custid, cs3rd.bettype, cs3rd.sporttype FROM CustSetting3rd cs3rd WITH (NOLOCK)
 				 ) t
-			inner join sports  with (nolock) on t.sporttype = sports.sporttype
-			inner join bettype with (nolock) on t.bettype = bettype.typeid
+			inner join @tmp_Sports sports on t.sporttype = sports.sporttype
+			inner join @tmp_Bettype bettype on t.bettype = bettype.typeid
 			WHERE CustID = @CustID and Bettype = case @Bettype when 0 then Bettype else @Bettype end  
 				and t.Sporttype = case @Sporttype when 0 then t.Sporttype else @Sporttype end  
 			ORDER BY t.Sporttype, t.Bettype		
@@ -240,8 +256,8 @@ Begin
 					UNION
 					SELECT cs3rd.custid, cs3rd.bettype, cs3rd.sporttype FROM dep_CustSetting3rd cs3rd WITH (NOLOCK)
 				 ) t
-			inner join sports  with (nolock) on t.sporttype = sports.sporttype
-			inner join bettype with (nolock) on t.bettype = bettype.typeid
+			inner join @tmp_Sports sports on t.sporttype = sports.sporttype
+			inner join @tmp_Bettype bettype on t.bettype = bettype.typeid
 			WHERE CustID = @CustID and Bettype = case @Bettype when 0 then Bettype else @Bettype end  
 				and t.Sporttype = case @Sporttype when 0 then t.Sporttype else @Sporttype end  
 			ORDER BY t.Sporttype, t.Bettype	
@@ -713,6 +729,36 @@ Begin
 		
 		SELECT @ugroup = ugroup from customer with(nolock) where custid=@custid
 
+		-- For Myanmar Odds
+		DECLARE @MyanmarOddsComm_1 DECIMAL (9,8) = 0
+				, @MyanmarOddsComm_2 DECIMAL (9,8) = 0
+				, @MyanmarOddsComm_3 DECIMAL (9,8) = 0
+				, @MyanmarOddsComm_4 DECIMAL (9,8) = 0
+				, @IsMyanmarOdds BIT = 0
+		
+	
+		IF @RoleID = 4
+			SELECT @MyanmarOddsComm_4 = CommRate, @IsMyanmarOdds = 1 FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @SRecommend AND Sporttype = 1 AND Bettype = 301		
+		IF @RoleID =3
+		BEGIN
+			SELECT @MyanmarOddsComm_3 = CommRate, @IsMyanmarOdds = 1 FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @MRecommend AND Sporttype = 1 AND Bettype = 301		
+			SELECT @MyanmarOddsComm_4 = CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @SRecommend AND Sporttype = 1 AND Bettype = 301		
+		END	
+			
+		IF @RoleID =2
+		BEGIN
+			SELECT @MyanmarOddsComm_2 = CommRate, @IsMyanmarOdds = 1 FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @Recommend AND Sporttype = 1 AND Bettype = 301
+			SET @MyanmarOddsComm_3 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @MRecommend AND Sporttype = 1 AND Bettype = 301)		
+			SET @MyanmarOddsComm_4 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @SRecommend AND Sporttype = 1 AND Bettype = 301)		
+		END		
+		
+		IF @RoleID = 1
+		BEGIN
+			SELECT @IsMyanmarOdds = 1, @MyanmarOddsComm_1= playerdiscount, @MyanmarOddsComm_2 = discount,@MyanmarOddsComm_3= adiscount, @MyanmarOddsComm_4 = sdiscount
+			FROM CustCommRate WITH (NOLOCK) WHERE CustId = @CustID AND Sporttype = 1 AND Bettype = 301		
+			
+		END
+		
 		SELECT	@ga4 ga4,
 				@gb4 gb4,
 				@gc4 gc4,
@@ -782,8 +828,13 @@ Begin
 				@v161_comm_81 v161_comm_81  , 
 				@v253_comm_1  v253_comm_1,
 				@v253_comm_2  v253_comm_2,  
-				@ugroup ugroup
-	END
+				@ugroup ugroup,
+				ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
+				ISNULL(@MyanmarOddsComm_1,0) AS MyanmarOddsComm_1,
+				ISNULL(@MyanmarOddsComm_2,0) AS MyanmarOddsComm_2,
+				ISNULL(@MyanmarOddsComm_3,0) AS MyanmarOddsComm_3,
+				ISNULL(@MyanmarOddsComm_4,0) AS MyanmarOddsComm_4
+	end
 	--IBC pt for HR
 	select	@v151_AutoIBC_pt_31 as v151_AutoIBC_pt_31,
 			@v151_AutoIBC_pt_41 as v151_AutoIBC_pt_41,
@@ -806,5 +857,11 @@ Begin
 			@v153_ibc_pt_51_53 as v153_ibc_pt_51_53, 
 			@v153_ibc_pt_52_53 as v153_ibc_pt_52_53
 End
-GO
 
+
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_MT_GetPT] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_MT_GetPT] TO [vnteam]

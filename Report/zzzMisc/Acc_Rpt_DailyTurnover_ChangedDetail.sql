@@ -15,6 +15,7 @@ Revisions:
 	- Daniel@20120605: exclude 3rd party bettypes when checking void bet case
 	- 20121213@Dan: Change linked server from DB052-->DBLOG
 	- 20150126@Jamie: Missing 3rd party's tickets - HotFix [#29477]
+	- 20150728@Jim: apply Bettrade (Feature #38815)
 	
 Param's Explanation:
 
@@ -53,7 +54,7 @@ BEGIN
 	FROM	SportBettypeMatrix WITH (NOLOCK)
 	WHERE	ProductID = 1
 			AND EventType = 1 
-
+			AND bettype NOT IN (901,902,903)
 	-- Consider to include bettrans_BK into query or not.
 	IF @fromdate <= (select max(distinct eventdate) from match14 (nolock))
 	BEGIN

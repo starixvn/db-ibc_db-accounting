@@ -1,7 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,    
-
 	@showSB BIT=1,    
 	@showNG BIT=0,    
 	@ShowRB BIT=0,    
@@ -11,12 +10,17 @@
 	@showBI BIT=0,    
 	@showVS BIT = 0,
 	@showKeno BIT=0,
-
+	@ShowGD BIT = 0, -- Show GoldDeluxe
+	@ShowMGSL BIT = 0, -- Show Metric Gaming
+	@showMGCLC BIT=0, -- MGC-LC
+	@showMGCRnG BIT=0, -- MGC-RNG
+	@showVG BIT=0, --Vegas Games
+	@showAGCS BIT=0, --AG Casino
+	@showCB	 BIT=0,
 	@TurnOver_8RM MONEY = 0 OUTPUT,    
 	@Total_8RM   MONEY = 0 OUTPUT,    
 	@VirtualTotal_8RM  MONEY = 0 OUTPUT,    
 	--@Variance_8RM  MONEY = 0 OUTPUT,    
-
 	@TurnOver_BARM MONEY = 0 OUTPUT, 
 	@Total_BARM   MONEY = 0 OUTPUT,    
 	@VirtualTotal_BARM  MONEY = 0 OUTPUT  
@@ -38,6 +42,12 @@ Revisions:
 	-20140304@TomVo: 
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
+	-20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 	
+	-20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)
+	-20150723@Jim: Apply Bettrade [#38815]
+	-20150828@Jim: support Colossus Bet (#42608)
+	-20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+
 */    
   
   
@@ -63,58 +73,104 @@ CREATE TABLE #TmpResultAll (Currency TINYINT,
 							TurnoverIBCVirtual MONEY,
 							TotalRM MONEY,
 							Virtual_Total MONEY)   
-    
+
+DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
+ 
+ 
 IF @ShowSB = 1    
  INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT typeid, 1   
- FROM bettype    WITH (NOLOCK)  
- WHERE typeid < 31 OR   
-   typeid BETWEEN 121 AND 999 OR   
-   typeid BETWEEN 1301 AND 1334;  
-  
+ SELECT Bettype, 1   
+ FROM @SportBettype   
+ WHERE ProductID =1 
+	AND SubProduct NOT IN ('MG-SuperLive' ,'BT-Sold','BT-Bought','BT-Comm')
 IF @ShowNG = 1    
  INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT typeid, 1   
- FROM bettype    WITH (NOLOCK)  
- WHERE typeid BETWEEN 81 AND 120;  
+ SELECT Bettype, 1   
+ FROM @SportBettype   
+ WHERE ProductID =3  
 
 IF @showLiveCasino = 1  
  INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT typeid, 0   
- FROM bettype    WITH (NOLOCK)  
- WHERE typeid BETWEEN 1101 AND 1199;  
+ SELECT Bettype, 0   
+ FROM @SportBettype   
+ WHERE ProductID = 4  
   
 IF @showCasino = 1  
  INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT typeid, 0   
- FROM bettype    WITH (NOLOCK) 
- WHERE typeid = 71  
+ SELECT Bettype, 0   
+ FROM @SportBettype   
+ WHERE ProductID = 6  
 
 IF @showBI = 1  
  INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT typeid, 0   
- FROM bettype    WITH (NOLOCK)  
- WHERE typeid = 73  
+ SELECT Bettype, 0   
+ FROM @SportBettype   
+ WHERE ProductID = 7
+  
    
 IF @showVS = 1  
  INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT typeid, 0   
- FROM bettype    WITH (NOLOCK)  
- WHERE typeid BETWEEN 1201 AND 1299;  
+ SELECT Bettype, 0   
+ FROM @SportBettype   
+ WHERE ProductID = 5 
 
 IF @showKeno = 1    
  INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT typeid, 0
- FROM bettype    WITH (NOLOCK)  
- WHERE typeid BETWEEN 1501 AND 1599
+ SELECT Bettype, 0   
+ FROM @SportBettype   
+ WHERE ProductID = 8 
+IF @ShowGD =1 
+ INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+ SELECT Bettype, 0   
+ FROM @SportBettype   
+ WHERE ProductID = 12
+ 
+IF @ShowMGSL =1 
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 1   
+FROM @SportBettype   
+WHERE ProductID = 1
+	AND SubProduct= 'MG-SuperLive'
+	
+IF @showMGCLC =1  -- MGC-LC
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 13
 
+IF @showMGCRnG =1  -- MGC-RNG
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 17
+
+IF @showVG =1  --- VegasGame aka Macau
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 14	 
+
+IF @showAGCS =1 -- AG Casino
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 11	
+
+IF @showCB =1 -- Colossus Bet
+INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+SELECT Bettype, 0   
+FROM @SportBettype   
+WHERE ProductID = 15	
+	
 --IF @winlostdate > @MoveBetDays  
 --BEGIN  
 
 ---get result for Horse Racing
 IF @ShowRB=1
 	BEGIN
-	
+		
 		INSERT INTO @tmpIBCFee (partnerID, IBCFee)  
 		SELECT 1,1 --RACE-PHU
 		UNION ALL
@@ -164,7 +220,7 @@ IF @ShowRB=1
 				) Winloss,  
 				SUM(scomm) Commission
 			FROM bettrans b with (nolock)  
-				INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid    
+				INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid  
 				LEFT JOIN ( select refno,
 								sum(case when bettype = 32 and liveawayscore = 0 then 0 else stake*isnull(oddsspread,0) end) TOIBC,  
 								-sum((winlost - stake)*isnull(oddsspread,0)) WLIBC,  
@@ -173,7 +229,7 @@ IF @ShowRB=1
 							group by refno  
 						)bm on b.transid = bm.refno   
 			WHERE b.ruben =1   
-				and b.bettype in (31,32,33)  
+				and b.bettype IN (SELECT bettype FROM @SportBettype WHERE ProductID = 2)  
 				and b.matchid >0  
 				and b.winlostdate BETWEEN @FromDate AND @ToDate
 				and b.statusID not in (101,102,103,121)  
@@ -211,7 +267,7 @@ BEGIN
 			isnull(sum(-1*(odds)),0)  Winlost,   
 			SUM(scomm) commission
 		from bettrans b with (nolock)  
-		where b.bettype = 1000  
+		where b.bettype IN( SELECT bettype FROM @SportBettype WHERE ProductID = 9)
 			and b.matchid = 1000   
 			and b.ruben=1    
 			and b.winlostdate BETWEEN @FromDate AND @ToDate
@@ -299,7 +355,7 @@ DROP TABLE #TmpResult
 DROP TABLE #TmpResultAll
 /*
 
-[Acc_Rpt_TreeWinlostByProduct]
+[Acc_Rpt_TreeWinlostByProduct_xtest]
 	@FromDate   ='20130618',
 	@ToDate   ='20140630',
 
@@ -315,8 +371,11 @@ DROP TABLE #TmpResultAll
  
  */
 
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [bodbAdminNet]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [vnteam]
-GO 
+
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [vnteam] AS [dbo]
+GO

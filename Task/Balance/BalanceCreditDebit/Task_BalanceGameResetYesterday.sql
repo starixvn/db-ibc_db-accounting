@@ -17,11 +17,12 @@ AS
 		Parameters Explanation:	
 */
 SET NOCOUNT ON	
-
 CREATE TABLE #WeeklyResetCustomer(custid INT, srecommend INT)
+
 IF @bettype = 1101 --LiveCS
 BEGIN
 	INSERT INTO #WeeklyResetCustomer(custid, srecommend)
+	SELECT custid, srecommend
 	SELECT custid, srecommend
 	FROM CustDB.dbo.custinfo WITH (NOLOCK)
 	WHERE roleid = 1 AND MaxWinLiveCasino > 0 AND isAutoResetLiveCasino = 0

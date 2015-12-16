@@ -11,7 +11,14 @@
 	@showP2P BIT=0,  
 	@showBI BIT=0,  
 	@showVS BIT = 0,
-	@showKeno BIT=0
+	@showKeno BIT=0,
+	@ShowGD BIT = 0, -- Show GoldDeluxe
+	@ShowMGSL BIT = 0, -- Show Metric Gaming
+	@showMGCLC BIT=0, -- MGC-LC
+	@showMGCRnG BIT=0, -- MGC-RNG
+	@showVG BIT=0, --Vegas Games
+	@showAGCS BIT=0, --AG Casino
+	@showCB	 BIT=0
 AS
 
 /*  
@@ -26,7 +33,14 @@ Revisions:
 	-20140304@TomVo: 
 		Change Name Server (DB06) to Alias Server (DBACC)
 		Add Keno Sport (202) -Bettype : 1501 - 1599
-	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]								
+	- 20151226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
+	- 20150529@Jim: add more parameter @ShowGD,@ShowMGSL and apply sport-bettype matrix 
+	- 20150710@Jim: Super Balance fix and Microgaming integration (Feature #38168)	
+	- 20150723@Jim: Apply Bettrade [#38815]		
+	- 20150828@Jim: support Colossus Bet (#42608)
+	- 20151110@Billy : Change to new Virtual Rate structure - [Redmine: #47355]
+	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+
 */  
 
 SET NOCOUNT ON
@@ -52,51 +66,94 @@ CREATE TABLE #TmpResultAll (mrecommend INT ,
 							TurnoverIBCVirtual MONEY,
 							TotalRM MONEY,
 							Virtual_Total MONEY)
+DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
 							
 IF @ShowSB = 1  
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
-	SELECT typeid, 1 
-	FROM bettype  WITH (NOLOCK)  
-	WHERE	typeid < 31 or 
-			typeid between 121 and 999 or 
-			typeid between 1301 and 1334;
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	 SELECT Bettype, 1   
+	 FROM @SportBettype   
+	 WHERE ProductID =1 
+		AND SubProduct NOT IN ('MG-SuperLive' ,'BT-Sold','BT-Bought','BT-Comm')
 
 IF @ShowNG = 1  
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
-	SELECT typeid, 1 
-	FROM bettype  WITH (NOLOCK)  
-	WHERE	typeid between 81 and 120;
+	SELECT Bettype, 1   
+	 FROM @SportBettype   
+	 WHERE ProductID =3
 
 IF @showLiveCasino = 1
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
-	SELECT typeid, 0 
-	FROM bettype  WITH (NOLOCK) 
-	WHERE	typeid between 1101 and 1199;
-
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	 SELECT Bettype, 0   
+	 FROM @SportBettype   
+	 WHERE ProductID = 4  
 IF @showCasino = 1
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
-	SELECT typeid, 0 
-	FROM bettype  WITH (NOLOCK)  
-	WHERE	typeid = 71
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	 SELECT Bettype, 0   
+	 FROM @SportBettype   
+	 WHERE ProductID = 6
 	
 IF @showBI = 1
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
-	SELECT typeid, 0 
-	FROM bettype  WITH (NOLOCK)  
-	WHERE	typeid = 73
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	 SELECT Bettype, 0   
+	 FROM @SportBettype   
+	 WHERE ProductID = 7
 	
 IF @showVS = 1
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
-	SELECT typeid, 0 
-	FROM bettype  WITH (NOLOCK)  
-	WHERE	typeid between 1201 and 1299;	
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	 SELECT Bettype, 0   
+	 FROM @SportBettype   
+	 WHERE ProductID = 5	
 
 IF @showKeno = 1    
 	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT typeid, 0
-	 FROM bettype    WITH (NOLOCK)  
-	 WHERE typeid BETWEEN 1501 AND 1599
+	 SELECT Bettype, 0   
+	 FROM @SportBettype   
+	 WHERE ProductID = 8
+IF @ShowGD =1 
+	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	 SELECT Bettype, 0   
+	 FROM @SportBettype   
+	 WHERE ProductID = 12
+ 
+IF @ShowMGSL =1 
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 1   
+	FROM @SportBettype   
+	WHERE ProductID = 1
+		AND SubProduct= 'MG-SuperLive'	 
 
+IF @showMGCLC =1  -- MGC-LC
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 13
+
+IF @showMGCRnG =1  -- MGC-RNG
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 17
+
+IF @showVG =1  --- VegasGame aka Macau
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 14	 
+
+IF @showAGCS =1 -- AG Casino
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 11
+
+IF @showCB =1 -- Colossus Bet
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 15
+	
 --IF @winlostdate > @MoveBetDays
 --BEGIN
 
@@ -162,7 +219,7 @@ IF @showKeno = 1
 						group by refno  
 					)bm on b.transid = bm.refno   
 		WHERE b.ruben =1   
-			and b.bettype in (31,32,33)  
+			and b.bettype in (SELECT bettype FROM @SportBettype WHERE ProductID = 2)    
 			and b.matchid >0  
 			and b.winlostdate BETWEEN @FromDate AND @ToDate
 			and b.statusID not in (101,102,103,121) 
@@ -199,7 +256,7 @@ IF @showKeno = 1
 			isnull(sum(-1*(odds)),0)  Winlost,   
 			SUM(scomm) commission
 		from bettrans b with (nolock)  			
-		where b.bettype = 1000  
+		where b.bettype IN( SELECT bettype FROM @SportBettype WHERE ProductID = 9)
 			and b.matchid = 1000   
 			and b.ruben=1    
 			and b.winlostdate BETWEEN @FromDate AND @ToDate
@@ -270,24 +327,28 @@ SELECT b.mrecommend,
 			ISNULL(cm.virtualmultiplier,1)
 ORDER BY username	
 
-SELECT cs.username
-		,vr.custid
-		,vr.sporttype
-		,vr.bettype
-		,vr.islive
-		,vr.virtualMultiplier
-FROM custinfo cs WITH(NOLOCK) 
-	INNER JOIN CustVirtualRate vr WITH(NOLOCK) ON cs.custid = vr.custid
-WHERE cs.custid IN (SELECT DISTINCT mrecommend FROM #TmpResultAll)
-	AND cs.virtualMultiplier = 1
-ORDER BY username,sporttype,islive DESC, bettype
+SELECT	ci.username,
+		cvs.custid,
+		pvs.sporttype,
+		pvs.bettype,
+		pvs.islive,
+		dbo.f_GetVirtualSetting(cvs.bitmapVirtual, pvs.profileID) AS virtualMultiplier
+FROM		custinfo				AS ci  WITH(NOLOCK) 
+INNER JOIN	CustVirtualSetting		AS cvs WITH(NOLOCK) 
+		ON	ci.custid = cvs.custid
+INNER JOIN	ProfileVirtualSetting	AS pvs WITH(NOLOCK)
+		ON	cvs.seqNo = pvs.seqNo
+WHERE	ci.custid IN (SELECT DISTINCT mrecommend FROM #TmpResultAll)
+	AND ci.virtualMultiplier = 1
+	AND pvs.isActive = 1
+ORDER BY username, sporttype, islive DESC, bettype
 
 DROP TABLE #TmpResult
 DROP TABLE #TmpResultAll
 	
 /*
 
-[Acc_Rpt_TreeWinlostByCom]
+[Acc_Rpt_TreeWinlostByCom_xtest]
 	@FromDate   = '20130618',
 	@ToDate   = '20130630',  
 	@currency =1,	
@@ -301,7 +362,7 @@ DROP TABLE #TmpResultAll
 	@showBI =1,  
 	@showVS = 1
  
- [Acc_Rpt_TreeWinlostBySAg]
+ [Acc_Rpt_TreeWinlostBySAg_xtest]
 	@FromDate   = '20130618',
 	@ToDate   = '20140630',  
 	@srecommend =394310,	
@@ -316,8 +377,12 @@ DROP TABLE #TmpResultAll
 	@showVS = 1
  
 * */
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostBySAg] TO [bodbAdminNet]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostBySAg] TO [vnteam]
-GO 
+
+
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostBySAg] TO [bodbAdminNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostBySAg] TO [vnteam] AS [dbo]
+GO

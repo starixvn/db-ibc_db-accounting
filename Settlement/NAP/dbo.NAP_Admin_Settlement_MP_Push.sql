@@ -1,10 +1,12 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 05/04/2015 10:38:44 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 10/07/2015 11:08:07 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 10/6/2015 1:45:54 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 02/10/2015 9:57:16 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -23,7 +25,9 @@ AS
 		- 20140506@Kathy: Don't allow to calculate exists matches in queue
 		- 20140512@Kathy: allow to execute undo action without score [Redmine:#14449]
 		- 20141117@Jamie: Change ErrCode [Redmine:#23034]		
-		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]		   
+		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]		
+		- 20150922@Johnson: check result status from ResultDetail [Redmine: #43806]
+		- 20151002@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 	Param's Explanation:		
 		
 */
@@ -46,6 +50,7 @@ BEGIN
 						  ,hth SMALLINT
 						  ,hta SMALLINT
 						 )
+						 
 	
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''
@@ -67,15 +72,33 @@ BEGIN
 	IF EXISTS (SELECT 1
 				FROM @match
 				WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL ) AND @action <> 'UNDO'
+		OR EXISTS (SELECT 1
+					FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
+					WHERE matchid IN (SELECT matchid FROM @match)
+						AND ResourceId NOT IN ('00','01','08')
+						AND ResultStatusId NOT IN (2,5)
+				)				
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
+			OR matchid IN (
+				SELECT matchid
+				FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid IN (SELECT matchid FROM @match)
+					AND ResourceId NOT IN ('00','01','08')
+					AND ResultStatusId NOT IN (2,5))
 
 		-- exclude matches were not keyscore yet
 		DELETE
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
+			OR matchid IN (
+				SELECT matchid
+				FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid IN (SELECT matchid FROM @match)
+					AND ResourceId NOT IN ('00','01','08')
+					AND ResultStatusId NOT IN (2,5))
 	END
 
 	IF EXISTS (SELECT 1
@@ -96,7 +119,7 @@ BEGIN
 	END
 	
 	-- check waiting ticket
-	EXEC NAP_Admin_Settlement_Checking
+				EXEC NAP_Admin_Settlement_Checking
 		@MatchIds = @MatchIds	OUTPUT
 		,@Action = @Action
 		,@Mode = 'CAL-MP'	
@@ -131,7 +154,7 @@ BEGIN
 				FROM @match
 				)
 	BEGIN
-		IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre'
+		IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_' -- UAT1 -->UAT9
 		BEGIN
 			DECLARE @ActionId INT
 
@@ -151,7 +174,7 @@ BEGIN
 					BREAK
 					 
 				BEGIN TRY
-					EXEC [NAP_Admin_Settlement_Parlay] @matchids = @matchid
+																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																EXEC [NAP_Admin_Settlement_Parlay] @matchids = @matchid
 						,@creator = @AdminId
 						,@action  = @action
 						,@IP      = @IP
@@ -189,9 +212,6 @@ BEGIN
 		END
 	END
 END
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO

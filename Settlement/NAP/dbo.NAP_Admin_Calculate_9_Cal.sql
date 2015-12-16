@@ -1,9 +1,16 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9_Cal]    Script Date: 09/24/2015 11:12:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 23/09/2015 9:57:57 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9_Cal    Script Date: 9/23/2015 9:53:24 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9_Cal]
 	@matchid int,
-	@matchdate smalldatetime,
-	@mode int = 0 
+	@matchdate smalldatetime	
 AS  
 /*
 	Created: Kathy
@@ -16,386 +23,255 @@ AS
 		- 20140502@Kathy: Calculate the execution time
 		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
 		- 20150609@Jamie: Correct the winlostdate of main ticket [HotFix #37418]
+		- 20150720@Kathy: Correct the winlostdate of main ticket [HotFix #37418]		
+		- 20150914@Kathy: Change settlement flow (Remove NAP_Task_Calculate_Parlay job) [Redmine:#43566]
+		- 20150921@Kathy: Correct the winlostdate of main ticket [Redmine:#43566]
+		- 20150923@Kathy: Correct modds [Redmine:#43566]
+		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 	Param's Explanation:
 		+ @matchid: matchid of match to be settled
 		+ @matchdate match date
-		+ @mode: 1: for testing
-				 0: on production
 */
 BEGIN
-	SET NOCOUNT ON
-
-	Declare @subStart datetime
-	Declare @commWinRate smallmoney, @commLostRate smallmoney
-
-	-- GET List of refno concern for input match(es)
-	--Declare @tmp_mrefno
-	--	TABLE (matchid int, refno bigint, statuswinlost tinyint, isdone bit)  
-
-	DECLARE @tmp_mrefno TABLE (refno bigint)
-
-	INSERT INTO @tmp_mrefno (refno)
-		SELECT distinct refno
-		FROM dbo.bettransm bm WITH (ROWLOCK)
-		WHERE matchid = @matchid
-		AND NOT EXISTS (SELECT 1 FROM bettransm WITH(NOLOCK) WHERE refno = bm.refno AND statusID IN(1, 101)) -- dont calculate main ticket if subticket is still waiting or rejected
+	SET NOCOUNT ON		
+	DECLARE @statusID tinyint, @winlostdate smalldatetime		
+	declare @tstime datetime, @duration int, @runcnt int = 0
 	
-	DECLARE @temp_bettrans_9 TABLE (
-		[transid] [bigint] NOT NULL ,
-		[custid] [int] NOT NULL,
-		[refno] [bigint] unique clustered NOT NULL ,  
-		[stake] [money] NOT NULL ,  
-		[status] [nvarchar] (10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,  
-		[winlost] [money] NULL ,  
-		[awinlost] [money] NULL ,  
-		[mwinlost] [money] NULL ,  
-		[swinlost] [money] NULL ,  
-		[winlostdate] [smalldatetime] NULL ,  
-		[apositiontaking] [smallmoney] NOT NULL ,  
-		[mpositiontaking] [smallmoney] NOT NULL ,  
-		[spositiontaking] [smallmoney] NOT NULL ,  
-		[playerdiscount] [float] NULL ,  
-		[discount] [float] NULL ,  
-		[adiscount] [float] NULL,  
-		[sdiscount] [float] NULL,  
-		[playercomm] [money] NULL ,  
-		[comm] [money] NULL ,  
-		[acomm] [money] NULL,  
-		[scomm] [money] NULL,  
-		[ruben] [tinyint] NULL ,
-		[modds] [money] null,
-		[statusID] [tinyint] NULL,
-		comstatus nvarchar(20) NULL,
-		IsUpdated [bit] NULL,     -- this field to stored value indicate if this row been change
-		tloseCnt [INT] NULL,
-		[oldruben] [tinyint] NULL, -- this field to keep previous ticket status (running or not?)
-		[oldwinlostdate] [smalldatetime] NULL
-	)   
-	--create index temp_index on @temp_bettrans_9 (TransID)  
-	-- GET list of concern Ticket
-	SET @subStart = CURRENT_TIMESTAMP
-		INSERT INTO @temp_bettrans_9 ([transid], [custid], [refno], [stake], [status],
-				[winlost], [awinlost], [mwinlost], [swinlost],
-				[winlostdate], [apositiontaking], [mpositiontaking], [spositiontaking],
-				[playerdiscount], [discount], [adiscount], [sdiscount],
-				[playercomm],  [comm], [acomm], [scomm],
-				[ruben], [modds],[statusID], [comstatus],
-				[oldruben], [oldwinlostdate] )
-		SELECT
-			[transid], [custid], b.[refno], [stake], [status],
-			[winlost], [awinlost], [mwinlost], [swinlost],
-			[winlostdate], [apositiontaking], [mpositiontaking], [spositiontaking],
-			[playerdiscount], [discount], [adiscount], [sdiscount],
-			[playercomm],  [comm], [acomm], [scomm],
-			[ruben], [modds],[statusID], [comstatus],
-			[ruben], [winlostdate]
-		FROM dbo.bettrans b WITH (ROWLOCK)
-			inner join @tmp_mrefno t on b.refno = t.refno
-		WHERE 
-			b.matchid = 9 
-			AND bettype=9    
-			AND statusID NOT IN (101,102) --('VOID','REJECT')
-			--AND refno IN (SELECT refno FROM @tmp_mrefno)
+	DECLARE @refnos as TABLE(refno bigint)
+	INSERT INTO @refnos
+	SELECT refno
+	FROM dbo.bettransm bm WITH(ROWLOCK)
+	WHERE matchid = @matchid
+		AND NOT EXISTS (
+			SELECT 1 FROM bettransm WITH(NOLOCK) WHERE refno = bm.refno AND statusID IN(1, 101)
+		)
 		
-	-- Results list from both bettransm & bettransm14
-	Declare @parlay
-		TABLE (refno bigint, matchid int, statuswinlost tinyint, statusID int, odds smallmoney, matchdate smalldatetime)
-
-	INSERT INTO @parlay
-		SELECT bm.refno, bm.matchid, bm.statuswinlost, statusID, odds, matchdate
-		FROM dbo.bettransm bm with (rowlock) INNER JOIN @tmp_mrefno tm ON bm.refno = tm.refno
-
-	INSERT INTO @parlay
-		SELECT bm.refno, bm.matchid, bm.statuswinlost, statusID, odds, matchdate
-		FROM dbo.bettransm14 bm with (rowlock) INNER JOIN @tmp_mrefno tm ON bm.refno = tm.refno
+	SET @runcnt = @@ROWCOUNT
+		
+	INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+	VALUES (@matchid, @runcnt, CURRENT_TIMESTAMP, NULL, 'Start running SP 9_cal')	
 	
-	-- CALCULATE effective odds value  
-	Declare @modds
-		TABLE (m_refno bigint PRIMARY KEY, modds money, NoRefund INT, loseCnt INT, runningCnt INT, matchdate_max smalldatetime)
-	INSERT INTO @modds (m_refno, modds, NoRefund, loseCnt, runningCnt, matchdate_max)
-		SELECT refno,
-			EXP(SUM(LOG(
-			case bm.statuswinlost
-				when 0 then 1 -- draw
-				when 1 then 1+((bm.odds-1)/2) -- half won
-				when 2 then bm.odds -- won
-				when 3 then 0.5 -- half lose
-				when 4 then 0.000000000001 -- lose
-				else 1 -- void/reject
-			end
-			))) as modds,
-			SUM(
-			case 
-				when bm.statusID IN(121, 103) then 0			
-				else 1
-			end
-			) as NoRefund,
-			SUM(case
-				when bm.statuswinlost = 4 then 1
-				else 0
-			end) as loseCnt,
-			SUM(case
-				when bm.statusID IN (0,1) then 1
-				else 0
-			end) as runningCnt,
-			MAX(matchdate) AS matchdate_max
-		FROM @parlay bm
-		GROUP BY refno  
-	
-
-	Declare @statusID tinyint, @odds money
-	Declare @oldstatusID tinyint, @oldwinlost money, @winlost money
-
-	UPDATE T
-	SET
-		@oldstatusID = statusID,
-		@oldwinlost = winlost,
-
-		@statusID = statusID = CASE
-			WHEN loseCnt > 0 THEN 113 -- Lose
-			WHEN runningCnt > 0 THEN 0 -- running
-			WHEN NoRefund = 0 THEN 103 -- Refund
-			WHEN m.modds < 1 THEN 113 -- Lose
-			WHEN m.modds = 1 THEN 111 -- Draw
-			ELSE 112 -- Won
-			END,
-		status = CASE @statusID
-			WHEN 0 THEN 'running'
-			WHEN 103 THEN 'Refund'
-			WHEN 111 THEN 'DRAW'
-			WHEN 112 THEN 'WON'
-			WHEN 113 THEN 'LOSE'
-			END,
-		ruben = CASE @statusID
-			WHEN 0 THEN 0
-			ELSE 1
-			END,
-		--winlostdate = CASE @statusID
-		--	WHEN 0 THEN m.matchdate_max
-		--	ELSE @matchdate
-		--	END,
-		winlostdate = CASE WHEN @statusID = 0 THEN m.matchdate_max
-						   WHEN @statusID IN (103,111,112) THEN m.matchdate_max
-						   WHEN @statusID = 113 THEN @matchdate
-							END,	
-		@odds = modds = CASE
-			WHEN loseCnt > 0 THEN 0
-			WHEN @statusID = 0 THEN 0
-			ELSE m.modds
-			END,
-	
-		@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
-		WHEN '0' THEN 1
-		WHEN '1' THEN 0
-		ELSE 1 END,
-		@commLostRate = CASE comstatus
-		WHEN '0' THEN 1
-		WHEN '1' THEN 2
-		ELSE 1 END,
-	
-		@winlost = winlost = CASE
-			WHEN loseCnt > 0 THEN 0
-			WHEN @statusID = 0 THEN 0
-			ELSE stake*@odds
-			END,
-		awinlost = CASE 
-			WHEN @statusID = 113 and loseCnt > 0  THEN  stake*apositiontaking
-			WHEN @statusID IN (112, 113) THEN -stake*apositiontaking*(@odds-1)
-			ELSE 0
-			END,
-		mwinlost = CASE
-			WHEN @statusID = 113 and loseCnt > 0 THEN  stake*mpositiontaking
-			WHEN @statusID IN (112, 113) THEN -stake*mpositiontaking*(@odds-1)		 
-			ELSE 0
-			END,
-		swinlost = CASE
-			WHEN @statusID = 113 and loseCnt > 0 THEN  stake*spositiontaking 
-			WHEN @statusID IN (112, 113) THEN -stake*spositiontaking*(@odds-1)		
-			ELSE 0
-			END,
-
-		playercomm	= CASE @statusID 
-					WHEN 112 THEN @commWinRate  * stake*playerdiscount
-					WHEN 113 THEN @commLostRate * stake*playerdiscount
-					ELSE 0 END,
-		comm		= CASE @statusID
-					WHEN 112 THEN @commWinRate  * discount*stake*(1-apositiontaking)
-					WHEN 113 THEN @commLostRate * discount*stake*(1-apositiontaking)
-					ELSE 0 END,  
-		acomm		= CASE @statusID
-					WHEN 112 THEN @commWinRate  * adiscount*stake*(1-apositiontaking-mpositiontaking)
-					WHEN 113 THEN @commLostRate * adiscount*stake*(1-apositiontaking-mpositiontaking)
-					ELSE 0 END,
-		scomm		= CASE @statusID
-					WHEN 112 THEN @commWinRate  * sdiscount*stake*(1-apositiontaking-mpositiontaking-spositiontaking)
-					WHEN 113 THEN @commLostRate * sdiscount*stake*(1-apositiontaking-mpositiontaking-spositiontaking)
-					ELSE 0 END,
+	;WITH p AS (
+		SELECT parlay.refno as refno
+			,SUM(CASE WHEN parlay.statusID IN (121, 103) THEN 0 ELSE 1 END) as NoRefund
+			,SUM(CASE WHEN parlay.statuswinlost = 4 THEN 1 ELSE 0 END) as loseCnt
+			,SUM(CASE WHEN parlay.statusID IN (0, 1) THEN 1 ELSE 0 END) as runningCnt
+			,MAX(winlostdate) as matchdate_max
+			,CAST(EXP(SUM(CAST(LOG(
+				case parlay.statuswinlost
+					when 0 then 1 -- draw
+					when 1 then 1+((parlay.odds-1)/2) -- half won
+					when 2 then parlay.odds -- won
+					when 3 then 0.5 -- half lose
+					when 4 then 0.000000000001 -- lose
+					else 1 -- void/reject
+				end
+				) AS DECIMAL(38, 20)))) as smallmoney) as modds
+		FROM (
+				SELECT transid, odds, refno, statuswinlost, statusID, winlostdate FROM dbo.bettransm WITH(rowlock)						
+				UNION
+				SELECT transid, odds, refno, statuswinlost, statusID, winlostdate FROM dbo.bettransm14 WITH(rowlock)			
+			) parlay 
+		WHERE refno IN (SELECT refno FROM @refnos)						
+		GROUP BY parlay.refno
+	)	
+	SELECT b.transid as transid					
+		,CASE
+				WHEN loseCnt > 0 THEN @matchdate --lose
+				WHEN runningCnt > 0 THEN p.matchdate_max -- running
+				WHEN NoRefund = 0 THEN p.matchdate_max-- Refund
+				WHEN p.modds < 1 THEN @matchdate -- Lose
+				WHEN p.modds = 1 THEN p.matchdate_max -- Draw
+				ELSE p.matchdate_max -- Won
+			END as winlostdate			
+		,CASE
+				WHEN loseCnt > 0 THEN 113 -- Lose
+				WHEN runningCnt > 0 THEN 0 -- running
+				WHEN NoRefund = 0 THEN 103 -- Refund
+				WHEN p.modds < 1 THEN 113 -- Lose
+				WHEN p.modds = 1 THEN 111 -- Draw
+				ELSE 112 -- Won
+			END as statusID	
+		,p.modds as modds	
+	INTO  #temp_bettrans_9			
+	FROM bettrans b WITH(NOLOCK)
+		INNER JOIN p ON b.refno = p.refno
+	WHERE b.matchid = 9		
+		AND b.bettype = 9
+		AND b.statusID NOT IN (101,102) --('VOID','REJECT')	
+		AND (b.statusID	<> CASE
+								WHEN loseCnt > 0 THEN 113 -- Lose
+								WHEN runningCnt > 0 THEN 0 -- running
+								WHEN NoRefund = 0 THEN 103 -- Refund
+								WHEN p.modds < 1 THEN 113 -- Lose
+								WHEN p.modds = 1 THEN 111 -- Draw
+								ELSE 112 -- Won
+							END
+			OR b.winlost <> CASE WHEN loseCnt > 0 OR runningCnt > 0 THEN 0 ELSE stake * p.modds END		
+		)
+		
+	SET @runcnt = @@rowcount
+	INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+	VALUES (@matchid, @runcnt, CURRENT_TIMESTAMP, NULL, 'start updating bettrans')		
 				
-		IsUpdated = CASE
-			WHEN (@oldstatusID <> @statusID) OR (@oldwinlost <> @winlost) THEN 1
-			ELSE 0 END,
-		tloseCnt = m.loseCnt
+	--
+	DECLARE @tempStatus as TABLE (statusID tinyint, winlostdate smalldatetime, isfinished bit)
+	DECLARE @tempTransID as TABLE(transID bigint, modds SMALLMONEY)
+	DECLARE @strTransIds varchar(MAX) = ''
 
-	FROM @temp_bettrans_9 T 
-			INNER JOIN @modds m ON T.refno = m.m_refno
+	CREATE INDEX IX_temp_bettrans_9 ON #temp_bettrans_9 (statusid, winlostdate)
 	
-	-------------------------------------------------------------------------------------  
+	INSERT INTO @tempStatus (statusID, winlostdate, isfinished)
+	SELECT distinct statusID, winlostdate, 0
+	FROM #temp_bettrans_9	
 
-	-- UPDATE BACK TO BETTRANS  
-	-- ONLY for ticket which result change OR winlost amount change
-	-- ONLY update winlostdate when
-		--+new status is "RUNNING" --> update to max_matchdate
-		--+current status is RUNNING (ruben = 0) and new status is NOT RUNNING --> update to @matchdate
-
-	--20150609@Jamie: Update rules 
-		-->> New status is "RUNNING" or "WON,REFUND,DRAW" --> Update the max_matchdate
-		-->> current status is RUNNING (ruben = 0) and new status is LOSE --> update to @matchdate 
-
-	IF @mode = 0
+	-- for balance table --	
+	CREATE TABLE #BalanceBefore (custid int PRIMARY KEY,balance money)	
+	CREATE TABLE #BalanceAfter (custid int PRIMARY KEY,balance money)
+	CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
+	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
+	-------------------
+	
+	WHILE (1 = 1)
 	BEGIN
-		BEGIN TRANSACTION
-			INSERT INTO dbo.bettrans_ParlayCalculateResult (transid, custid, statusID, modds, refno, winlostdate, loseCnt, matchid)
-			SELECT
-				transid, custid, statusID, modds, refno,
-				CASE
-				WHEN statusID = 0 THEN winlostdate
-				WHEN statusID IN(103,111,112) THEN winlostdate 
-				WHEN oldruben = 0 AND statusID = 113 THEN @matchdate
-				--WHEN oldruben = 0 AND statusID <> 0 THEN @matchdate
-				ELSE oldwinlostdate END,
-				tloseCnt, @matchid
-			FROM @temp_bettrans_9
-			WHERE IsUpdated = 1
+		UPDATE TOP (1) @tempStatus
+		SET isfinished = 1
+			,@statusID = statusID
+			,@winlostdate = winlostdate
+		WHERE isfinished = 0
 
-			IF @@ROWCOUNT = 0
-				UPDATE dbo.Parlay_Calculate_Queue WITH(UPDLOCK, ROWLOCK) 
-					SET IsCalculating = 2,
-					duration = DATEDIFF(ms,execTime,GETDATE())
-				WHERE matchid = @matchid AND IsCalculating = 1
+		IF @@ROWCOUNT = 0 BREAK -- no more to do
 
-
-		COMMIT TRANSACTION
-	END
-	ELSE -- @mode = 1
-	BEGIN
-		-------------------------------------------------------------
-		---        CAPTURE value BALANCE before settlement        ---
-		---------------------------VVVV------------------------------
-		DECLARE @SkipBalanceUpdate bit
-		SET @SkipBalanceUpdate = 0
-
-		CREATE TABLE #BalanceBefore (custid int PRIMARY KEY
-										, balance money
-									)
-		DECLARE  @TotalAccount int
-				,@TotalAccount_BalanceUpdate int
-
-		IF @SkipBalanceUpdate = 0
+		WHILE (1 = 1)
 		BEGIN
+			
+			DELETE @tempTransID
+			TRUNCATE TABLE #BalanceBefore
+			TRUNCATE TABLE #BalanceAfter
+			TRUNCATE TABLE #Balance
+			DELETE FROM @tblCreditPending
+			DELETE FROM @tblDebitPending
+
+			DELETE TOP (1000) #temp_bettrans_9
+			OUTPUT	deleted.transID, DELETED.modds into @tempTransID(transid, modds)
+			WHERE	statusID = @statusID 
+					AND winlostdate = @winlostdate
+
+			SET @runcnt = @@ROWCOUNT
+			IF @runcnt = 0 BREAK
+			
+			 SET @strTransIds = CONVERT(varchar(max),(  
+			   SELECT  
+					transid '@t'  
+					,NULLIF(modds,0) '@m'  
+			   FROM @tempTransID	
+			   FOR XML PATH('r'), ROOT('root'), TYPE  
+			  ))     
+			  
+			SET @strTransIds = REPLACE(REPLACE(@strTransIds, '<root><r t="', ''), '"/></root>', '')
+			SET @strTransIds = REPLACE(REPLACE(@strTransIds, '" m="', '|'), '"/><r t="', ',')
+						
+			-------------------------------------------------------------
+			---        CAPTURE value BALANCE before settlement        ---
+			---------------------------VVVV------------------------------
 			INSERT INTO #BalanceBefore
 			SELECT b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
 			FROM dbo.bettrans b with (rowlock)
-				INNER JOIN @temp_bettrans_9 t ON b.transid = t.transid
-			GROUP BY b.custid
-
-			SET @TotalAccount = @@ROWCOUNT
-		
-			-- no data? alright, stop process.
-			IF @TotalAccount = 0 
-				RETURN
-		END --IF @SkipBalanceUpdate = 0
-
-		UPDATE b WITH(ROWLOCK,UPDLOCK)
-		SET statusID = t.statusID
-			,status = t.status
-			,ruben = t.ruben
-			,winlostdate = t.winlostdate
-			,modds = t.modds
-			,winlost = t.winlost
-			,awinlost = t.awinlost
-			,mwinlost = t.mwinlost
-			,swinlost = t.swinlost
-			,playercomm = t.playercomm
-			,comm = t.comm
-			,acomm = t.acomm
-			,scomm = t.scomm
-		FROM bettrans b 
-			INNER JOIN @temp_bettrans_9 t ON b.transid = t.transid
-		WHERE t.IsUpdated = 1
-
-		-------------------------------------------------------------
-		---         CAPTURE value BALANCE after settlement        ---
-		---------------------------VVVV------------------------------
-		CREATE TABLE #BalanceAfter (custid int PRIMARY KEY
-									,balance money
-									)
-		IF @SkipBalanceUpdate = 0
-		BEGIN
+			WHERE transid IN (SELECT transid FROM @tempTransID)
+			GROUP BY b.custid				
+			--------------------------------------------------------------	
+			SET @tstime = CURRENT_TIMESTAMP			 
+						EXEC dbo.NAP_Admin_Calculate_Parlay
+				@mode = 'CAL-9'
+				,@strXML = @strTransIds 
+				,@statusID = @statusID
+				,@winlostdate = @winlostdate 
+			
+			SET @duration = datediff(s, @tstime, CURRENT_TIMESTAMP)				
+			INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, strXML, statusID)
+			VALUES (@matchid, @runcnt, @tstime, CURRENT_TIMESTAMP, @strTransIds, @statusid)
+			
+			-------------------------------------------------------------
+			---         CAPTURE value BALANCE after settlement        ---
+			---------------------------VVVV------------------------------
 			INSERT INTO #BalanceAfter
 			SELECT b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
-			FROM dbo.bettrans b with (rowlock)
-				INNER JOIN @temp_bettrans_9 t ON b.transid = t.transid
+			FROM dbo.bettrans b with(rowlock)
+			WHERE transid IN (SELECT transid FROM @tempTransID)
 			GROUP BY b.custid
-		END --IF @SkipBalanceUpdate = 0
 
-		-------------------------------------------------------------
-		---                   compare BALANCE                     ---
-		---------------------------VVVV------------------------------
-		CREATE TABLE #Balance (custid int PRIMARY KEY, balance money, Increased bit)
-		CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
+			-------------------------------------------------------------
+			---                   compare BALANCE                     ---
+			---------------------------VVVV------------------------------
+			INSERT INTO #Balance
+			SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
+			FROM #BalanceBefore b
+				INNER JOIN #BalanceAfter a ON b.custid = a.custid
+			WHERE b.balance <> a.balance			
 
-		INSERT INTO #Balance
-		SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
-		FROM #BalanceBefore b
-			INNER JOIN #BalanceAfter a ON b.custid = a.custid
-		WHERE b.balance <> a.balance
-
-		SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
-
-
-		INSERT INTO dbo.BalancePendingDebit (custid, balance)
-		SELECT custid, ABS(balance)
-		FROM #Balance
-		WHERE Increased = 0
-
-		INSERT INTO dbo.BalancePendingCredit (custid, balance)
-		SELECT custid, balance
-		FROM #Balance
-		WHERE Increased = 1
-
-		----
-		-- Add Negative Balance into BalanceNegative table 
-		----
-		INSERT INTO [bodb02].[dbo].[BalanceNegative] (
-			[ExecDate]
-			,[MatchID]
-			,[ActionID]
-			,[GroupID]
-			,[CustID]
-			,[Balance]
-			,[StatusID]
-			,[Remark]
-			)
-		SELECT GETDATE()
-			,@MatchID
-			,134 --Task_Calculate_Parlay
-			,2 -- Sportsbook Parlay Settlement 
-			,CustID
-			,Balance
-			,0
-			,NULL
-		FROM #Balance WITH (NOLOCK)
-		WHERE Increased = 0
-
-		DROP TABLE #BalanceBefore
-		DROP TABLE #Balance
-		DROP TABLE #BalanceAfter
-	END		
+			--INSERT INTO dbo.BalancePendingDebit (custid, balance)
+			--SELECT custid, ABS(balance)
+			--FROM #Balance
+			--WHERE Increased = 0
+			
+			INSERT INTO @tblDebitPending (custID, balance)
+			SELECT	custid, ABS(balance)
+			FROM	#Balance
+			WHERE	Increased = 0
+			
+			IF @@rowcount <> 0
+														EXEC dbo.Dot_BalancePendingDebitIns_xpre 
+					@BalancePending = @tblDebitPending
+					,@Type			= 1 -- Sports
+			
+			--INSERT INTO dbo.BalancePendingCredit (custid, balance)
+			--SELECT custid, balance
+			--FROM #Balance
+			--WHERE Increased = 1
+			
+			INSERT INTO @tblCreditPending (custID, balance)
+			SELECT	custid, balance
+			FROM	#Balance
+			WHERE	Increased = 1
+			
+			IF @@rowcount <> 0
+														EXEC dbo.Dot_BalancePendingCreditIns_xpre 
+					@BalancePending = @tblCreditPending
+					,@Type			= 1 -- Sports
+				
+			----
+			-- Add Negative Balance into BalanceNegative table 
+			----
+			INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+				[ExecDate]
+				,[MatchID]
+				,[ActionID]
+				,[GroupID]
+				,[CustID]
+				,[Balance]
+				,[StatusID]
+				,[Remark]
+				)
+			SELECT GETDATE()
+				,@MatchID
+				,134 --Task_Calculate_Parlay
+				,2 -- Sportsbook Parlay Settlement 
+				,CustID
+				,Balance
+				,0
+				,NULL
+			FROM #Balance WITH (NOLOCK)
+			WHERE Increased = 0				
+		END -- end while		
+	END --end while
+				
+	DROP TABLE #temp_bettrans_9
+	DROP TABLE #BalanceBefore
+	DROP TABLE #Balance
+	DROP TABLE #BalanceAfter	
 END
----------------------------------------------------------------
----------------------------------------------------------------
-
-
 
 
 GO

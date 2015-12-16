@@ -1,4 +1,11 @@
-﻿
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_TraderPerformanceDetail]    Script Date: 09/18/2015 09:39:11 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceDetail]   
  @fromdate datetime,  
  @todate datetime,  
@@ -50,6 +57,7 @@ Revisions:
  - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
  - 20141215@Johnson: get MaxBet of match by MatchMaxBet [RedmineID: #20642]
  - 20150122@Johnson: optimize sp
+ - 20150909@Jim: Remove leagueName SPECIALS (HotFix #41712)
 Param's Explanation:  
 • @isSoccer  
     = 1: Soccer  
@@ -133,7 +141,7 @@ BEGIN
 	when leaguename LIKE '%SPECIFIC 15 MINS TOTAL BOOKINGS%' then 7 
 	when leaguename LIKE '%SPECIFIC 15 MINS%' then 2 
 	when leaguename LIKE '%SPECIFIC 10 MINS%' then 8
-	when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+	when leaguename LIKE '%SINGLE TEAM OVER/UNDER%' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
 	else 0  
   end    
  from Dot_admin_Assignment_Operator a (nolock)    
@@ -165,7 +173,7 @@ BEGIN
 	when leaguename LIKE '%SPECIFIC 15 MINS TOTAL BOOKINGS%' then 7 
 	when leaguename LIKE '%SPECIFIC 15 MINS%' then 2 
 	when leaguename LIKE '%SPECIFIC 10 MINS%' then 8
-	when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+	when leaguename LIKE '%SINGLE TEAM OVER/UNDER%' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
 	else 0  
   end  
  from   

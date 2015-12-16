@@ -1,5 +1,3 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT = NULL
 	,@fta INT = NULL
@@ -94,6 +92,8 @@ AS
 		- 20150407@Kathy: Don't update 'waiting' ticket when do "Undo" action [Redmine:#33493]
 		- 20150206@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150505@Jamie: Converting error [HotFix #35259]
+		- 20150608@Kathy: Add more mode Recover for recover parlay tickets [Redmine:#35539]
+		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -101,6 +101,7 @@ AS
 */
 BEGIN
 	IF @@SERVERNAME IN ('DB042', 'DB043', 'DB044') RETURN
+
 
 	IF @mode = 1
 	BEGIN
@@ -333,7 +334,7 @@ BEGIN
 			,statusID = 103
 		WHERE matchid = @matchid 
 		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) 
-				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
+				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
 		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
@@ -351,7 +352,7 @@ BEGIN
 			,statusID = 103
 		WHERE matchid = @matchid 
 		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209) 
-				OR (bettype IN (128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
+				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
 		AND 1 = CASE WHEN @ResourceIDsREFUND IS NULL AND Bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) THEN 1  
@@ -397,6 +398,35 @@ BEGIN
 				SELECT transid
 				FROM @transtbl
 				)
+	END
+	ELSE IF @action = 'RECOVER'
+	BEGIN
+		DECLARE @tblTransIds TABLE (transid BIGINT)
+		
+		INSERT INTO @tblTransIds
+		SELECT CONVERT(BIGINT, val)
+		FROM dbo.strSplit(@VoidTransId, ',')
+		
+		UPDATE dbo.bettransm WITH (ROWLOCK, UPDLOCK)
+			SET	winlost = 0
+				,ruben = 0
+				,statuswinlost = NULL
+				,status = 'running'
+				,statusID = 0
+				,winlostdate = NULL
+		WHERE	matchid = @matchid
+				AND statusID = 102
+				AND transid IN (SELECT transid FROM @tblTransIds)
+				
+		
+		UPDATE	dbo.BetParlayDetail WITH(ROWLOCK, UPDLOCK)
+			SET winlostdate = NULL
+				,statuswinlost = NULL
+				,statusid = 0
+		WHERE	matchid = @matchid 
+				AND statusID = 102
+				AND transid IN (SELECT transid FROM @tblTransIds)
+		
 	END
 			-- ===================================================
 	ELSE IF @action = 'UNDO'
@@ -1901,6 +1931,7 @@ BEGIN
 						WHEN (betteam = N'x') AND ((@fth -@hth) -(@fta - @hta))=0 THEN 1
 						ELSE - 1
 						END
+
 				WHEN 178 THEN 
 					CASE betteam 
 						WHEN N'o' THEN ((@fth + @fta) - (@hth + @hta)) - hdp1 
@@ -2204,6 +2235,5 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
-
-
-
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]

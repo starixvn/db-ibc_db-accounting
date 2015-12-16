@@ -15,6 +15,8 @@ AS
 	DB: DB06.BODB_ACC
 	
 	Revisions:
+		-20150529@Jim: add Metric Gaming
+		- 20150728@Jim: apply Bettrade (Feature #38815)
 */
 
 BEGIN
@@ -40,7 +42,7 @@ BEGIN
 	FROM bodb02.dbo.bettrans WITH(NOLOCK)
 	WHERE matchid IN (SELECT MatchID FROM #Match)
 		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
-
+		AND bettype NOT IN (901,902,903)
 	SET @ID = 1
 	SELECT @ID = 1,@Total = COUNT(*) FROM #Match
 
@@ -60,13 +62,17 @@ BEGIN
 			SELECT @MatchID, Bettype, liveindicator, 'TB', typenamee
 			FROM #MatchBettype mb INNER JOIN bodb02.dbo.bettype WITH(NOLOCK) ON typeid = mb.bettype
 			WHERE MatchID = @MatchID 
-				AND bettype IN (1,3,7,8,20)
+				AND (bettype IN (1,3,7,8,20)
+					OR bettype BETWEEN 801 AND 808
+					)
 				AND liveindicator = 0
 			UNION ALL
 			SELECT @MatchID, Bettype, liveindicator, 'TB', typenamee
 			FROM #MatchBettype  mb INNER JOIN bodb02.dbo.bettype WITH(NOLOCK) ON typeid = mb.bettype
 			WHERE MatchID = @MatchID 
-				AND bettype IN (1,3,7,8,20)
+				AND (bettype IN (1,3,7,8,20)
+					OR bettype BETWEEN 801 AND 808
+					)
 				AND liveindicator = 1
 			UNION ALL
 			SELECT @MatchID, Bettype, liveindicator, 'BETS', typenamee
@@ -91,10 +97,9 @@ END
 
 GO
 
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
-
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Task_SaveBet_GenerateServiceJob] TO [bodbAdminNet]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Task_SaveBet_GenerateServiceJob] TO [vnteam]
 GO 

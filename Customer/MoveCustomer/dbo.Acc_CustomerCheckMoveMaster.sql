@@ -1,28 +1,31 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[Acc_CustomerCheckMoveMaster]
 	@supername	VARCHAR(40),
 	@mastername VARCHAR(40),
-	@userid		INT,	
-	@ErrCode    INT = 0 OUTPUT,
-	@ErrMsg     NVARCHAR(200) = '' OUTPUT
+	@userid		INT,
+	@ErrCode	INT = 0 OUTPUT,
+	@ErrMsg		NVARCHAR(200) = '' OUTPUT
 AS
 /*
 	Created: Johnson
 	Date: 2012-04-03
 	Task : Check moving a master to another super
-	DB: DBAGE/bodb02
+	DB: DBCUST/CustDB
 	
 	Revisions:
-				- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
-				- 20120821@Dan: add virtual soccer, remove FI
-				- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
-				- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
-				- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
-				- 20140314@Elodie: Add Keno product [Redmine:#13326]
-				- 20140818@Logan:   Exclude disabled agents, members while checking constraints. [Redmine: #19763]
-				- 20140828@Logan:   Add constraint for E-Sports status [Redmine: #20531]
-
+		- 20120726@Kiwi: Only IT Admin performs the moving for financial accounts (INTERNAL super/master/agent).
+		- 20120821@Dan: add virtual soccer, remove FI
+		- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
+		- 20131022@Elodie: Remove checking setting for Financial and Poker products [Redmine:#6480]
+		- 20131024@Elodie: Add HR Fixed Odds [Redmine:#6505]
+		- 20140314@Elodie: Add Keno product [Redmine:#13326]
+		- 20140818@Logan:   Exclude disabled agents, members while checking constraints. [Redmine: #19763]
+		- 20140828@Logan:   Add constraint for E-Sports status [Redmine: #20531]
+		- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20150707@Elodie: Add Super Live product [Redmine: #35776]
+		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
+		- 20150904@Helen: commission setting for MO [Redmine #41470]
+		- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -98,7 +101,15 @@ BEGIN
 			@mDisableEsports	    BIT,
 			@sHideKeno				BIT, 
 			@mHideKeno				BIT,
+			@mHideGoldDeluxe		BIT,
+			@sHideGoldDeluxe		BIT,
+			@mDisableSuperLive		BIT,
+			@mHideColossusBet		BIT,
+			@sHideColossusBet		BIT,
+			@sDisableSuperLive		BIT,
 			@AdminUser				VARCHAR(50)
+			, @DCSSportType			INT
+			, @DCSSportName			NVARCHAR(50)
 
 	SELECT @srecommend			= custid
 	     , @scurrency			= currency
@@ -123,6 +134,9 @@ BEGIN
 	     , @sGivenCredit		= credit
 	     , @sHideVirtualSports  = HideVirtualSports
 	     , @sHideKeno			= HideKeno
+	     , @sHideGoldDeluxe		= HideGoldDeluxe
+	     , @sHideColossusBet	= HideColossusBet
+		 , @sDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK) 
 	 WHERE username = @supername
 	   AND roleid = 4
@@ -151,6 +165,9 @@ BEGIN
 	     , @mGivenCredit		= credit
 	     , @mHideVirtualSports  = HideVirtualSports
 	     , @mHideKeno			= HideKeno 		
+	     , @mHideGoldDeluxe		= HideGoldDeluxe
+	     , @mHideColossusBet	= HideColossusBet
+		 , @mDisableSuperLive	= DisableSuperLive
 	  FROM custinfo WITH(NOLOCK)
 	 WHERE username = @mastername
 	   AND roleid = 3
@@ -278,6 +295,75 @@ BEGIN
 		RETURN
 	END
 
+	-- Check DCS Product's [disabled]
+	SELECT top 1 @DCSSportType = stt.SportType
+	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+		INNER JOIN dbo.CustProductStatus s WITH(NOLOCK)ON s.CustID = @srecommend
+		INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
+	WHERE dbo.f_GetProductStatus(s.bitmapIsDisabled, stt.bitmapOrder) = 1
+			AND dbo.f_GetProductStatus(m.bitmapIsDisabled, stt.bitmapOrder) = 0
+	
+	IF @DCSSportType <> 0
+	BEGIN
+		SELECT @DCSSportName = sportname
+		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
+		WHERE Sporttype = @DCSSportType
+		
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername 
+					+ ': master enabled '
+					+ @DCSSportName
+					+ ' but new super not enabled '
+					+ @DCSSportName
+					+ '.',
+			@ErrCode = 9111
+		return
+	END
+	-- Check DCS Product's [hidden]
+	SELECT top 1 @DCSSportType = stt.SportType
+	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+		INNER JOIN dbo.CustProductStatus s WITH(NOLOCK)ON s.CustID = @srecommend
+		INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
+	WHERE dbo.f_GetProductStatus(s.bitmapIsHidden, stt.bitmapOrder) = 1
+			AND dbo.f_GetProductStatus(m.bitmapIsHidden, stt.bitmapOrder) = 0
+	
+	IF @DCSSportType <> 0
+	BEGIN
+		SELECT @DCSSportName = sportname
+		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
+		WHERE Sporttype = @DCSSportType
+		
+		SELECT @ErrMsg = 'Master is offered '
+					+ @DCSSportName
+					+ ' but new super is not offered '
+					+ @DCSSportName
+					+ '.',
+			@ErrCode = 9112
+		return
+	END
+	
+	-- Check DCS Product's [sync]
+	SELECT top 1 @DCSSportType = stt.SportType
+	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+		INNER JOIN dbo.CustProductStatus s WITH(NOLOCK)ON s.CustID = @srecommend
+		INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
+	WHERE dbo.f_GetProductStatus(s.bitmapHasSynced, stt.bitmapOrder) = 0
+			AND dbo.f_GetProductStatus(m.bitmapHasSynced, stt.bitmapOrder) = 1
+	
+	IF @DCSSportType <> 0
+	BEGIN
+		SELECT @DCSSportName = sportname
+		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
+		WHERE Sporttype = @DCSSportType
+		
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is synchronized '
+				+ @DCSSportName
+				+ ' but new super is not synchronized '
+				+ @DCSSportName
+				+ '.',
+			@ErrCode = 9113
+		return
+	END
+	
 	--Check Casino sync:
 	IF @sSyncCasino = 0 AND @mSyncCasino = 1
 	BEGIN
@@ -341,6 +427,14 @@ BEGIN
 		RETURN
 	END
 	
+	--Super Live
+	IF @sDisableSuperLive = 1 and @mDisableSuperLive = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is enabled Super Live but new super is not enabled Super Live.'
+		     , @ErrCode = 127
+		RETURN
+	END
+
 	--Check Virtual sport enable status
 	IF @sHideVirtualSports = 1 and @mHideVirtualSports = 0
 	BEGIN
@@ -366,6 +460,23 @@ BEGIN
 		RETURN
 	END*/
 	
+	--Check Gold Deluxe sport enable status
+	IF @sHideGoldDeluxe = 1 and @mHideGoldDeluxe = 0
+	BEGIN
+		SELECT @ErrMsg = 'Master is offered Gold Deluxe but new super is not offered Gold Deluxe.',
+			@ErrCode = 125
+		return
+	END
+	
+	--Check Colossus Bet sport enable status
+	IF @sHideColossusBet = 1 and @mHideColossusBet = 0
+	BEGIN
+		SELECT @ErrMsg = 'Master is offered Colossus Bets but new super is not offered Colossus Bets.',
+			@ErrCode = 126
+		return
+	END
+
+
 	--Check Number Game
 	IF EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @mrecommend AND sporttype = 161)
 		AND NOT EXISTS(SELECT 1 FROM custsetting3rd WITH (NOLOCK) WHERE custid = @srecommend AND sporttype = 161)
@@ -400,6 +511,20 @@ BEGIN
 		RETURN
 	END
 
+	--Check commission for DCS products
+	IF EXISTS (SELECT TOP 1 1
+		FROM dbo.CustDiscount3rd_Agent s WITH (NOLOCK)
+			INNER JOIN dbo.CustDiscount3rd_Agent m WITH (NOLOCK)
+				ON s.SportType = m.sporttype  
+					AND s.BetType = m.bettype
+					AND m.CustID = @mrecommend 
+		WHERE s.CustID =  @srecommend AND s.Discount < m.Discount)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Super''s commission is less than master''s commission.',
+			@ErrCode = 9114				 
+		RETURN
+	END
+	
 	--check commission for 3rd party
 	IF EXISTS (
 			SELECT 1 
@@ -440,6 +565,101 @@ BEGIN
 		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Keno is less than master''s commission.',
 				@ErrCode = 204
 		RETURN	
+	END
+
+	--Check commission for Gold Deluxe
+	IF EXISTS(
+			SELECT	1 
+			FROM	CustSettingGame AS scs WITH(NOLOCK)
+				INNER JOIN CustSettingGame mcs WITH(NOLOCK) 
+					ON	mcs.custid = @mrecommend 
+						AND scs.sporttype = mcs.sporttype 
+						AND scs.bettype = mcs.bettype
+			WHERE	scs.custid = @srecommend 
+					AND scs.sporttype = 255 
+					AND scs.bettype = 1701
+					AND scs.sdiscount < mcs.adiscount
+	)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Gold Deluxe is less than master''s commission.',
+				@ErrCode = 204
+		RETURN	
+	END
+	
+	--Check commission for Colossus Bet
+	IF EXISTS(
+			SELECT	1 
+			FROM	AgentCommRate  scs WITH(NOLOCK)
+				JOIN AgentCommRate mcs WITH(NOLOCK) 
+					ON	mcs.custid = @mrecommend 
+						AND scs.sporttype = mcs.sporttype 
+						AND scs.bettype = mcs.bettype
+			WHERE	scs.custid = @srecommend 
+					AND scs.sporttype = 204 
+					AND scs.bettype = 18001
+					AND scs.CommRate < mcs.CommRate
+	)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Colossus Bets is less than master''s commission.',
+				@ErrCode = 210
+		RETURN	
+	END
+	
+	--Check Cash-In Share for Colossus Bet
+	IF EXISTS(
+			SELECT	1 
+			FROM	AgentCommRate  scs WITH(NOLOCK)
+				JOIN AgentCommRate mcs WITH(NOLOCK) 
+					ON	mcs.custid = @mrecommend 
+						AND scs.sporttype = mcs.sporttype 
+						AND scs.bettype = mcs.bettype
+			WHERE	scs.custid = @srecommend 
+					AND scs.sporttype = 204 
+					AND scs.bettype = 18002
+					AND scs.CommRate < mcs.CommRate
+	)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s Cash-In Share for Colossus Bets is less than master''s Cash-In Share.',
+				@ErrCode = 211
+		RETURN	
+	END
+	
+	--Check Myanmar Odds
+	DECLARE @IsMyanmarOdds_source BIT = 0
+	DECLARE @IsMyanmarOdds_destination BIT = 0
+	
+	SET @IsMyanmarOdds_destination =  dbo.fn_IsMyanmarOdds (@srecommend)
+
+	SET @IsMyanmarOdds_source = dbo.fn_IsMyanmarOdds (@srecommend_old)
+
+	
+	IF @IsMyanmarOdds_source <> @IsMyanmarOdds_destination
+	BEGIN
+		
+		SELECT @ErrMsg = 'Cannot move customer ' + @mastername + ' since amongs its new and old sites, one has % Odds.',
+				@ErrCode = 212
+		RETURN	
+	END	
+	
+	IF @IsMyanmarOdds_source = 1
+	BEGIN
+		IF EXISTS(
+				SELECT	1 
+				FROM	AgentCommRate  scs WITH(NOLOCK)
+					JOIN AgentCommRate mcs WITH(NOLOCK) 
+						ON	mcs.custid = @mrecommend 
+							AND scs.sporttype = mcs.sporttype 
+							AND scs.bettype = mcs.bettype
+				WHERE	scs.custid = @srecommend 
+						AND scs.sporttype = 1 
+						AND scs.bettype = 301
+						AND scs.CommRate < mcs.CommRate
+		)
+		BEGIN
+			SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @mastername + ': Super''s commission for Myanmar Odds is less than master''s commission.',
+					@ErrCode = 213
+			RETURN	
+		END
 	END
 
 	--Check Position Taking
@@ -484,6 +704,38 @@ BEGIN
 		RETURN
 	END
 
+	--Check Position Taking for DCS products
+	--n4<=s3+m3<=s4		IF i3=0
+	--m3<=s4 and u3<=s4	IF i3=1
+	--u3+m3>=n4 IF i3=1
+	--m3<=m4
+	IF EXISTS (SELECT TOP 1 1
+		FROM dbo.CustPTSetting3rd_Agent scs WITH (NOLOCK)
+			INNER JOIN dbo.CustPTSetting3rd_Agent mcs WITH (NOLOCK)
+				ON scs.SportType = mcs.sporttype  
+					AND scs.BetType = mcs.bettype
+					AND scs.IsLive = mcs.IsLive
+					AND mcs.CustID = @mrecommend 
+		WHERE scs.CustID =  @srecommend 
+			AND
+			(
+				--n4<=s3+m3<=s4	IF i3=0
+				((mcs.IsAutoSuperPT=0) AND ((mcs.SuperPT + mcs.MasterPT < scs.MinPT) OR (mcs.SuperPT + mcs.MasterPT > scs.SuperPT)))
+				--m3<=s4 and u3<=s4	IF i3=1
+				--u3+m3>=n4 IF i3=1
+				OR
+				((mcs.IsAutoSuperPT=1) AND ((mcs.MasterPT > scs.SuperPT) OR (mcs.AutoSuperPT > scs.SuperPT) OR (mcs.AutoSuperPT + mcs.MasterPT < scs.MinPT)))	
+				--m3<=m4
+				OR
+				(mcs.MasterPT > scs.MasterPT)	
+			)
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super position taking.',
+			@ErrCode = 9115				 
+		RETURN
+	END
+	
 	--Check Position Taking for 3rd party
 		--n4<=s3+m3<=s4		IF i3=0
 		--m3<=s4 and u3<=s4	IF i3=1
@@ -572,7 +824,38 @@ BEGIN
 			@ErrCode = 207				 
 		RETURN
 	END
-
+	
+	--Check Position Taking for Gold Deluxe
+		--n4<=s3+m3<=s4		IF i3=0
+		--m3<=s4 and u3<=s4	IF i3=1
+		--u3+m3>=n4 IF i3=1
+	IF EXISTS (
+		SELECT	1
+		FROM	CustSettingGame scs WITH(NOLOCK) 
+			INNER JOIN CustSettingGame mcs WITH(NOLOCK) 
+				ON	mcs.custid = @mrecommend 
+					AND mcs.sporttype = scs.sporttype 
+					AND mcs.bettype = scs.bettype 
+			INNER JOIN CustOverrideGame sco WITH(NOLOCK) 
+				ON	sco.custid = @srecommend 
+					AND sco.sporttype = scs.sporttype 
+					AND sco.bettype = scs.bettype
+		WHERE	scs.custid = @srecommend 
+				AND scs.sporttype = 255 
+				AND scs.bettype = 1701
+				AND (
+				--n4<=s3+m3<=s4	IF i3=0
+				(mcs.isautopositiontaking = 0 AND ((mcs.mpositiontaking + mcs.spositiontaking < sco.minpositiontaking) OR (mcs.mpositiontaking + mcs.spositiontaking > scs.spositiontaking)))
+				OR --m3<=s4 and u3<=s4	IF i3=1
+				(mcs.isautopositiontaking = 1 AND (mcs.mpositiontaking > scs.spositiontaking OR mcs.autopositiontaking > scs.spositiontaking OR mcs.mpositiontaking + mcs.autopositiontaking < sco.minpositiontaking))	 
+				)	
+	)	
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Master exceeded new super position taking.',
+			@ErrCode = 207				 
+		RETURN
+	END
+	
 	--Check Position Taking	
 		--all a2<=a4
 		--all a1<=a4
@@ -598,6 +881,69 @@ BEGIN
 		RETURN
 	END
 
+	--Check Position Taking for DCS products  --all a2<=a4
+	IF EXISTS (SELECT TOP 1 1
+		FROM dbo.custinfo c WITH(NOLOCK)
+			INNER JOIN dbo.CustPTSetting3rd_Agent s WITH (NOLOCK) ON @srecommend = s.CustID
+			INNER JOIN dbo.CustPTSetting3rd_Agent a WITH (NOLOCK)
+				ON s.SportType = a.sporttype  
+					AND s.BetType = a.bettype
+					AND s.IsLive = a.IsLive
+					AND a.CustID = c.CustID 
+		WHERE c.mrecommend = @mrecommend AND c.RoleID = 2 AND a.AgentPT > s.AgentPT
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+			@ErrCode = 91116				 
+		RETURN
+	END
+	
+	--Check Position Taking for DCS products --all a1<=a4
+	IF EXISTS (SELECT TOP 1 1
+		FROM dbo.custinfo c WITH(NOLOCK)
+			INNER JOIN dbo.CustPTSetting3rd_Agent s WITH (NOLOCK) ON @srecommend = s.CustID
+			LEFT JOIN dbo.CustPTSetting3rd_Member mem WITH (NOLOCK)
+				ON s.SportType = mem.sporttype  
+					AND s.BetType = mem.bettype
+					AND s.IsLive = mem.IsLive
+					AND mem.CustID = c.CustID 
+			LEFT JOIN dbo.CustPTGroupSetting3rd_Member memg WITH (NOLOCK)
+				ON s.SportType = memg.sporttype  
+					AND s.BetType = memg.bettype
+					AND s.IsLive = memg.IsLive
+					AND memg.AgentID = c.recommend 
+		WHERE c.mrecommend = @mrecommend  AND c.RoleID = 1 AND ISNULL(mem.AgentPT,memg.AgentPT) > s.AgentPT
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+			@ErrCode = 91117				 
+		RETURN
+	END
+	
+	--Check Position Taking for DCS products --all us1<=s4 if is1 = 1
+	IF EXISTS (SELECT TOP 1 1
+		FROM dbo.custinfo c WITH(NOLOCK)
+			INNER JOIN dbo.CustPTSetting3rd_Agent s WITH (NOLOCK) ON @srecommend = s.CustID
+			LEFT JOIN dbo.CustPTSetting3rd_Member mem WITH (NOLOCK)
+				ON s.SportType = mem.sporttype  
+					AND s.BetType = mem.bettype
+					AND s.IsLive = mem.IsLive
+					AND mem.CustID = c.CustID 
+			LEFT JOIN dbo.CustPTGroupSetting3rd_Member memg WITH (NOLOCK)
+				ON s.SportType = memg.sporttype  
+					AND s.BetType = memg.bettype
+					AND s.IsLive = memg.IsLive
+					AND memg.AgentID = c.recommend 
+		WHERE c.mrecommend = @mrecommend  AND c.RoleID = 1 
+			AND ISNULL(mem.IsAutoSuperPT,memg.IsAutoSuperPT) = 1
+			AND ISNULL(mem.AutoSuperPT,memg.AutoSuperPT) > s.SuperPT
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+			@ErrCode = 91118				 
+		RETURN
+	END
+	
 	--Check Position Taking	for 3rd party
 		--all a2<=a4
 		--all a1<=a4
@@ -640,6 +986,31 @@ BEGIN
 		return
 	END
 
+	--Check Position Taking	for Gold Deluxe
+		--all a2<=a4
+		--all a1<=a4
+	IF exists (
+			SELECT	1 
+			FROM CustSettingGame as scs with (nolock)
+				inner join CustSettingGame as acs with (nolock) 
+					ON	scs.custid = @srecommend  
+						and scs.sporttype = acs.sporttype 
+						AND scs.bettype = acs.bettype
+				INNER JOIN custInfo c WITH (NOLOCK) 
+					ON	c.custid = acs.custid 
+						AND c.roleid IN (1,2) 
+						AND c.Enabled = 1
+						and c.mrecommend = @mrecommend --get member and agent			
+			where	(acs.apositiontaking > scs.apositiontaking) 
+					AND scs.sporttype = 255
+	)
+	BEGIN	
+		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': Agent or member of existing master exceeded new super position taking.',
+			@ErrCode = 213				 
+
+		return
+	END
+	
 	----Check P2P :Game Comm
 	--IF exists(
 	--	SELECT TOP 1 1
@@ -656,6 +1027,7 @@ BEGIN
 	--END
 
 END
+
 GO
-
-
+GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
+GO

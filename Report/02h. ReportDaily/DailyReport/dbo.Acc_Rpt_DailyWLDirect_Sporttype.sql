@@ -64,10 +64,20 @@ AS
 							- Combine Mix Parlay and System Parlay into 1 section
 		- 20141203@Dom: Apply sport bettype matrix
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
+		- 20150521@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
+		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
+		- 20150723@Sophia: Apply Bettrade [#38815]
+		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
+		- 20150828@Sophia: Apply Colossus Bets [#41935]
+		- 20150917@Jim: Integrate MO product (Feature #41935)
+		- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
-		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
+		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)declare @p2 money
+set @p2=-430156.7928
+exec Acc_Rpt_DailyWLDirect_Sporttype @winlostdate='2015-09-10 00:00:00',@LineTotal=@p2 output
+select @p2
 		- DisplayOrder field:	1 -> 100: all products that enable virtual currency 
 								101 -> 200: all products that disable virtual currency 
 
@@ -78,9 +88,9 @@ BEGIN
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(site tinyint,
@@ -160,7 +170,7 @@ BEGIN
 	INSERT INTO @Bettype(bettype)
 	SELECT typeid
 	FROM bettype WITH(NOLOCK)
-	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151)
+	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304)
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
@@ -210,9 +220,9 @@ BEGIN
 			 )bm on b.transid = bm.refno 
 			 INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			 left join (select custid FROM #DepAgent) dep ON b.recommend = dep.custid
-	WHERE	b.ruben =1 
+	WHERE	b.ruben = 1 
 			--and b.bettype in (31,32,33)
-			and s.ProductID=2
+			and s.ProductID = 2
 			and b.matchid >0
 			and b.winlostdate = @winlostdate
 			--and b.status not in ('VOID','REJECT','DONE','REFUND')	
@@ -251,14 +261,14 @@ BEGIN
 	FROM bettrans b WITH(NOLOCK)
 		left join (select custid FROM #DepAgent) dep ON b.recommend = dep.custid
 	WHERE winlostdate = @winlostdate
-		AND bettype < 19001
+		AND bettype < 19001		
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
 	GROUP BY matchid, bettype, case when dep.custid is null then 1 else 2 end
 
 	--Section 2: all products that enable virtual currency, DisplayOrder field:	1 -> 100
 	SELECT
-			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as DisplayOrder,
+			case when m.sporttype> 1 THEN 4 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as DisplayOrder,
 			case when m.sporttype> 1 then 'Other Sports' else CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END end as SportName,
 			case when m.sporttype> 1 then 3 else CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as SportType,						
 			0 ibc,
@@ -278,11 +288,12 @@ BEGIN
 	WHERE	/*(b.bettype < 31 
 				OR b.bettype BETWEEN 121 AND 999
 				OR b.bettype BETWEEN 1301 and 1334)	*/
-			s.ProductId=1
-			AND s.EventType=1
+			s.ProductId = 1
+			AND s.EventType IN (1,2)
+			AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY		
-			case when m.sporttype> 1 THEN 3 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
+			case when m.sporttype> 1 THEN 4 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,
 			case when m.sporttype> 1 then 'Other Sports' else CASE WHEN t.bettype IS NOT NULL THEN 'Soccer-Major Bet Types' ELSE 'Soccer-Minor Bet Types' END end,
 			case when m.sporttype> 1 then 3 else CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end,						
 			site 		
@@ -290,7 +301,7 @@ BEGIN
 	-- Get win lost of agent '8RM'
 	UNION ALL
 	SELECT
-			case when m.sporttype> 1 THEN 3 ELSE 1 end as DisplayOrder,
+			case when m.sporttype> 1 THEN 4 ELSE 1 end as DisplayOrder,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
 			case when m.sporttype> 1 then 3 else 1 end as SportType,	
 			1 ibc,
@@ -315,13 +326,13 @@ BEGIN
 			AND b.recommend = 52466
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY	
-			case when m.sporttype> 1 THEN 3 ELSE 1 end,
+			case when m.sporttype> 1 THEN 4 ELSE 1 end,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
 			case when m.sporttype> 1 then 3 else 1 end 	
 	-- Get win lost of agent 'BARM'
 	UNION ALL
 	SELECT
-		case when m.sporttype> 1 THEN 3 ELSE 1 end as DisplayOrder,
+		case when m.sporttype> 1 THEN 4 ELSE 1 end as DisplayOrder,
 		case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end as SportName,
 		case when m.sporttype> 1 then 3 else 1 end as SportType,
 		2 ibc,
@@ -346,14 +357,14 @@ BEGIN
 		AND b.recommend = 5707545
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
 	GROUP BY	
-		case when m.sporttype> 1 THEN 3 ELSE 1 end,
+		case when m.sporttype> 1 THEN 4 ELSE 1 end,
 			case when m.sporttype> 1 then 'Other Sports' else 'Soccer' end,
 			case when m.sporttype> 1 then 3 else 1 end 
 	
 			
 	UNION ALL
 	SELECT 
-			4,'Parlay', 99, 0, site,
+			5,'Parlay', 99, 0, site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -370,7 +381,7 @@ BEGIN
 	----NUMBER GAME
 	UNION ALL
 	SELECT
-			5,'Number Game', 161, 0, site,
+			6,'Number Game', 161, 0, site,
 			SUM(winlost_virtualrate) WinLost,
 			SUM(position_virtualrate) Position,
 			SUM(commission_virtualrate) Commission,	
@@ -381,7 +392,7 @@ BEGIN
 			1 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=3
+	WHERE	s.ProductId = 3
 		--AND b.bettype BETWEEN 81 AND 120
 	GROUP BY site
 				 
@@ -390,12 +401,16 @@ BEGIN
 	/*
 	Display order for gaming
 		1. Number Game
-		2. Live Casino
-		3. Casino
-		4. Virtual Sports
+		2. Live Casino: SLI, Gold Deluxe, AG Casino, MGC Live casino
+		3. Casino:  SLI, Vegas Games, Microgaming - RNG Casino	
+		4. Virtual Sports + Gold Delulxe
 		5. Keno
 		6. Racing
-		7. Bingo
+		7. Metric Gaming- Super Live
+		8. Bingo
+		9. P2P
+		10. Bettrade
+		11. Colosuss Bets
 	*/
 	UNION ALL --Racing
 	SELECT	106,
@@ -413,7 +428,7 @@ BEGIN
 			0 EnableVirtual
 	FROM @RBWinlost
 
-	---Live Casino
+	---Live Casino + Gold Deluxe + AG Casino + Microgaming Live Casino
 	UNION ALL
 	SELECT
 			102,
@@ -431,9 +446,7 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=7
-	--b.bettype BETWEEN 1101 AND 1199
-			AND b.matchid > 0
+	WHERE	(s.ProductId IN (4,12,11,13))    -----SLI, Gold Deluxe, AG Casino, MGC Live casino				
 	GROUP BY site
 		
 	----VIRTUAL SPORT
@@ -450,11 +463,11 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=5
+	WHERE	s.ProductId = 5
 		--b.bettype BETWEEN 1201 AND 1299
 	GROUP BY site			
 	
-	----CASINO
+	----CASINO + Vegas Games + Microgaming - RNG Casino
 	UNION ALL
 	SELECT	103,'Casino', 251, 0, site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
@@ -462,19 +475,18 @@ BEGIN
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
 			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
-			0 RealTurnover,
-			0 VirtualTurnover,
+			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_actualrate END ) AS RealTurnover,
+			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_virtualrate END) AS VirtualTurnover,
 			0 EnableVirtual
-	from	#src b with (nolock)
+	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	where 	s.ProductId=6
-		--bettype IN(71, 72)
-			AND matchid IN (0, 71) 
+	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71)) ---SLI
+			OR s.ProductId IN (14,17)  --- Vegas Games, Microgaming - RNG Casino				
 	GROUP BY site 
 
 	--P2P
 	UNION ALL
-	SELECT	108,'P2P', 253, 0, 
+	SELECT	109,'P2P', 253, 0, 
 			case when dep.custid is null then 1 else 2 end as site,
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			0 Position,
@@ -496,7 +508,7 @@ BEGIN
 
 	--BINGO
 	UNION ALL
-	SELECT	107,'Bingo', 252, 0,site,
+	SELECT	108,'Bingo', 252, 0,site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
 			ISNULL(SUM(position_actualrate),0) Position,
 			ISNULL(SUM(commission_actualrate),0) Commission,
@@ -507,7 +519,7 @@ BEGIN
 			0 EnableVirtual
 	from	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	where s.ProductId=7	
+	where s.ProductId = 7	
 		--bettype = 73
 			AND matchid IN (0, 73)	
 	GROUP BY site	
@@ -526,10 +538,68 @@ BEGIN
 			0 EnableVirtual
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE	s.ProductId=8
+	WHERE	s.ProductId = 8
 		--b.bettype BETWEEN 1501 AND 1599
 	GROUP BY site
+
+	----METRIC GAMING -SUPER LIVE
+	UNION ALL
+	SELECT
+			3,'Metric Gaming - Super Live', -1, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			SUM(ISNULL(commission_actualrate,0)) Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) as VirtualLineTotal,	
+			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
+			SUM(ISNULL(turnover_actualrate,0)) VirtualTurnover,
+			0 EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 1
+			AND s.EventType = 1 
+			AND s.SubProduct = 'MG-SuperLive'
+	GROUP BY site
+
+	----BETTRADE
+	UNION ALL
+	SELECT
+			110,'Bettrade', -2, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			0 AS Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) as VirtualLineTotal,	
+			0 AS RealTurnover,
+			0 AS VirtualTurnover,
+			0 AS EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 1
+			AND s.EventType = 1 
+			AND s.SubProduct = 'BT-Comm'
+	GROUP BY site
+
+	----Colosuss Bets
+	UNION ALL
+	SELECT
+			120,'Colosuss Bets', 204, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			SUM(ISNULL(b.commission_actualrate,0)) AS Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) AS VirtualLineTotal,	
+			SUM(ISNULL(turnover_actualrate,0)) AS RealTurnover,
+			SUM(ISNULL(turnover_actualrate,0)) AS VirtualTurnover,
+			0 AS EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 15
+	GROUP BY site
+
 	ORDER BY DisplayOrder asc, ibc	, site
+
+
 					
 	SELECT	@LineTotal = ISNULL(SUM(LineTotal_actualrate), 0) 
 	FROM	#src b WITH (NOLOCK)
@@ -550,7 +620,12 @@ BEGIN
 	DROP TABLE #DepAgent
 END
 
+
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [vnteam]		
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [vnteam] AS [dbo]
+GO

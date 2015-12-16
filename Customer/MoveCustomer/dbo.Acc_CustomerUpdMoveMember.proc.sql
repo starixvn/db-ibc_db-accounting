@@ -10,7 +10,7 @@ AS
 /*
 Created: 
 Task : Move a member to another agent
-DB: DBTXN/CustDB
+DB: DBCUST/CustDB
 Original:
 
 Revisions:
@@ -54,6 +54,14 @@ Revisions:
 	- 20140611@Elodie: Implement separate setting pages for Keno [Redmine:#13156]
 	- 20140828@Logan:   Add constraint for Esports status [Redmine: #20531]
 	- 20141204@Johnson: Add new country Korea [bettype = 1514] for Keno [Redmine:#26647]
+	- 20150511@Kathy: Add Gold Deluxe product [Redmine:#34486]
+	- 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
+	- 20150707@Elodie: Add Super Live product [Redmine: #35776]	
+	- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	- 20151016@Helen: Data Type Error - [Redmine - 45677] 
+	- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
+	
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -132,6 +140,19 @@ BEGIN
           , @aGivenCredit			MONEY
           , @GivenCredit			MONEY
           , @aUsedCredit			MONEY
+          , @aDisableGoldDeluxe		BIT
+          , @DisableGoldDeluxe		BIT
+          , @aHideGoldDeluxe		BIT
+          , @HideGoldDeluxe			BIT
+          , @aDisableColossusBet	BIT
+          , @DisableColossusBet		BIT
+          , @aHideColossusBet		BIT
+          , @HideColossusBet		BIT
+		  , @aDisableSuperLive		BIT
+          , @DisableSuperLive		BIT
+          , @DCSSportType			INT
+	      , @DCSSportName			NVARCHAR(50)
+	      , @xml XML
 
     SELECT @srecommend	          = srecommend
          , @mrecommend		      = mrecommend
@@ -158,6 +179,11 @@ BEGIN
          , @aHideKeno			  = HideKeno
          , @aDisableEsports       = DisableEsports
          , @aGivenCredit		  = credit	
+         , @aDisableGoldDeluxe	  = DisableGoldDeluxe
+         , @aHideGoldDeluxe		  = HideGoldDeluxe
+         , @aDisableColossusBet	  = DisableColossusBet
+         , @aHideColossusBet	  = HideColossusBet
+		 , @aDisableSuperLive	  = DisableSuperLive
       FROM custinfo WITH(NOLOCK)
      WHERE username = @agentname
        AND roleid = 2
@@ -188,6 +214,11 @@ BEGIN
          , @HideKeno			 = HideKeno
          , @DisableEsports       = DisableEsports
          , @GivenCredit			 = credit
+         , @DisableGoldDeluxe	 = DisableGoldDeluxe 
+         , @HideGoldDeluxe		 = HideGoldDeluxe
+         , @DisableColossusBet	 = DisableColossusBet 
+         , @HideColossusBet		 = HideColossusBet
+		 , @DisableSuperLive	 = DisableSuperLive
       FROM custinfo WITH(NOLOCK)
      WHERE username = @membername
        AND roleid = 1
@@ -233,7 +264,7 @@ BEGIN
 	    RETURN
     END
     --check an account disabled or not 
-    EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable
+    EXEC dbo.Acc_CustomerSelCheckEnable
         @username = @membername
       , @ErrCode = @ErrCode OUTPUT
       , @ErrMsg = @ErrMsg OUTPUT
@@ -241,7 +272,7 @@ BEGIN
     IF @ErrCode <> 0
         RETURN
 
-    EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable
+    EXEC dbo.Acc_CustomerSelCheckEnable
         @username = @agentname
       , @ErrCode = @ErrCode OUTPUT
       , @ErrMsg = @ErrMsg OUTPUT
@@ -346,6 +377,130 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)
 	    return
     END
+    
+    --Check Gold Deluxe enable status:
+    IF @aHideGoldDeluxe = 1 AND @HideGoldDeluxe = 0
+    BEGIN
+	    SELECT @ErrMsg = 'Member is offered Gole Deluxe but new agent is not offered Gold Deluxe.',
+		    @ErrCode = 120					 
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)
+	    return
+    END
+
+	-- Check DCS Product's [disabled]
+	SELECT top 1 @DCSSportType = stt.SportType
+	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+		INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
+		INNER JOIN dbo.CustProductStatus p WITH(NOLOCK)ON p.CustID = @custid
+	WHERE dbo.f_GetProductStatus(a.bitmapIsDisabled, stt.bitmapOrder) = 1
+			AND dbo.f_GetProductStatus(p.bitmapIsDisabled, stt.bitmapOrder) = 0
+	
+	IF @DCSSportType <> 0
+	BEGIN
+		SELECT @DCSSportName = sportname
+		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
+		WHERE Sporttype = @DCSSportType
+		
+		SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is enabled '
+				+ @DCSSportName
+				+ ' but new agent is not enabled '
+				+ @DCSSportName
+				+ '.',
+		    @ErrCode = 9111				 
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)
+	    return
+	END
+	
+	-- Check DCS Product's [hidden]
+	SELECT top 1 @DCSSportType = stt.SportType
+	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+		INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
+		INNER JOIN dbo.CustProductStatus p WITH(NOLOCK)ON p.CustID = @custid
+	WHERE dbo.f_GetProductStatus(a.bitmapIsHidden, stt.bitmapOrder) = 1
+			AND dbo.f_GetProductStatus(p.bitmapIsHidden, stt.bitmapOrder) = 0
+	
+	IF @DCSSportType <> 0
+	BEGIN
+		SELECT @DCSSportName = sportname
+		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
+		WHERE Sporttype = @DCSSportType
+		
+		 SELECT @ErrMsg = 'Member is offered '
+				+ @DCSSportName
+				+ ' but new agent is not offered '
+				+ @DCSSportName
+				+ '.',
+		    @ErrCode = 9112				 
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)
+	    return
+	END
+	
+	-- Check DCS Product's [sync]
+	SELECT top 1 @DCSSportType = stt.SportType
+	FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+		INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
+		INNER JOIN dbo.CustProductStatus p WITH(NOLOCK)ON p.CustID = @custid
+	WHERE dbo.f_GetProductStatus(a.bitmapHasSynced, stt.bitmapOrder) = 0
+			AND dbo.f_GetProductStatus(p.bitmapHasSynced, stt.bitmapOrder) = 1
+	
+	IF @DCSSportType <> 0
+	BEGIN
+		SELECT @DCSSportName = sportname
+		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
+		WHERE Sporttype = @DCSSportType
+		
+		SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': member is synchronized '
+				+ @DCSSportName
+				+ ' but new agent is not synchronized '
+				+ @DCSSportName
+				+ '.',
+			@ErrCode = 9113
+		return
+	END
+
+	--Check Gold Deluxe
+    IF @aDisableGoldDeluxe = 1 AND @DisableGoldDeluxe = 0
+    BEGIN
+		UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
+           SET DisableGoldDeluxe = 1
+        WHERE custid  = @custid
+        
+        IF @@ERROR <>0 
+        BEGIN
+            SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': update unsuccessfully (custinfo).',
+                    @ErrCode = 309
+            RETURN
+        END
+    END
+
+	--Check Colossus Bet enable status
+    IF @aHideColossusBet = 1 AND @HideColossusBet = 0
+    BEGIN
+	    SELECT @ErrMsg = 'Member is offered Colossus Bets but new agent is not offered Colossus Bets.',
+		    @ErrCode = 121					 
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)
+	    return
+    END
+
+	--Check Colossus Bet
+    IF @aDisableColossusBet = 1 AND @DisableColossusBet = 0
+    BEGIN
+		UPDATE CustInfo WITH(UPDLOCK,ROWLOCK)
+           SET DisableColossusBet = 1
+        WHERE custid  = @custid
+        
+        IF @@ERROR <>0 
+        BEGIN
+            SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': update unsuccessfully (custinfo).',
+                    @ErrCode = 310
+            RETURN
+        END
+    END
+
 
     --Check CS SyncCasino between Agent AND Member 
     IF @aSyncCasino = 0 AND @SyncCasino = 1 
@@ -400,7 +555,15 @@ BEGIN
 		     , @ErrCode = 120
 		RETURN
     END
-    	
+	
+	--Super Live
+    IF @aDisableSuperLive = 1 AND @DisableSuperLive = 0
+	BEGIN
+		SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is enabled Super Live but new agent is not enabled Super Live.'
+		     , @ErrCode = 121
+		RETURN
+    END
+	    	
     IF @aSyncLiveCasino = 0 AND @SyncLiveCasino = 1
     BEGIN
 	    SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': member is synchronized Live Casino but new agent is not synchronized Live Casino.'
@@ -492,6 +655,29 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)
 	    return
     END
+    
+    --Check for DCS products
+    IF exists (
+	    SELECT 1 FROM 
+		    dbo.CustPTSetting3rd_Agent acs_old WITH(NOLOCK)
+		    INNER JOIN dbo.CustPTSetting3rd_Agent acs_new WITH(NOLOCK) 
+				ON acs_old.sporttype=acs_new.sporttype 
+					AND acs_old.bettype=acs_new.bettype
+					AND acs_old.IsLive=acs_new.IsLive
+					AND acs_new.custid = @recommend							
+	    where
+		    acs_old.custid = @recommend_old  
+		    AND acs_old.IsAutoMasterPT <> acs_new.IsAutoMasterPT
+    )
+    BEGIN
+    	
+	    SELECT @ErrMsg = 'Error agent ' + @agentname + ': Auto Mater Position Taking of new agent is not matched with old agent.',
+		    @ErrCode = 9114					 
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)
+	    return
+    END
+    
 
     --Check identical auto master position taking 3rd
     IF exists (
@@ -513,12 +699,12 @@ BEGIN
 	    return
     END
 
-    --Check identical auto master position taking for live casino
+    --Check identical auto master position taking for live casino, keno, Gold Deluxe
     IF EXISTS (
 		    SELECT 1
 		    FROM CustSettingGame acs_old WITH(NOLOCK) 
 			    INNER JOIN CustSettingGame acs_new WITH(NOLOCK) ON acs_new.custid = @recommend AND acs_new.sporttype = acs_old.sporttype AND acs_new.bettype = acs_old.bettype
-		    WHERE acs_old.custid = @recommend_old AND acs_old.sporttype in (162,202) AND (acs_old.bettype = 1101 OR acs_old.bettype between 1501 AND 1599)
+		    WHERE acs_old.custid = @recommend_old AND acs_old.sporttype in (162,202, 255) AND (acs_old.bettype = 1101 OR acs_old.bettype between 1501 AND 1599 OR acs_old.Bettype = 1701)
 			    AND acs_old.isautompositiontaking <> acs_new.isautompositiontaking
 	    )
     BEGIN
@@ -529,6 +715,91 @@ BEGIN
 	    return
     END
 
+	 -- Check Myanmar odds
+	DECLARE @IsMyanmarOdds_source BIT = 0
+	DECLARE @IsMyanmarOdds_destination BIT = 0
+	
+	SET @IsMyanmarOdds_destination = dbo.fn_IsMyanmarOdds (@srecommend)
+	SET @IsMyanmarOdds_source = dbo.fn_IsMyanmarOdds (@srecommend_old)
+	
+	IF @IsMyanmarOdds_source <> @IsMyanmarOdds_destination
+	BEGIN
+		SELECT @ErrMsg = 'Cannot move customer ' + @agentname + ' since amongs its new and old sites, one has % Odds.',
+					@ErrCode = 218
+		RETURN	
+	END	
+	
+	DECLARE @playerDiscount_Source_MO DECIMAL(9,8) = 0
+	DECLARE @discount_Destination_MO DECIMAL(9,8) = 0
+	DECLARE @adiscount_Destination_MO DECIMAL(9,8) = 0
+	DECLARE @sdiscount_Destination_MO DECIMAL(9,8) = 0
+	
+	IF @IsMyanmarOdds_source = 1
+	BEGIN
+		
+		SET @discount_Destination_MO = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @recommend AND Sporttype = 1 AND Bettype = 301 )	
+		SET @playerDiscount_Source_MO = (SELECT playerdiscount FROM CustCommRate WITH (NOLOCK) WHERE CustId = @custid AND Sporttype = 1 AND Bettype = 301)	
+						
+		IF @discount_Destination_MO < @playerDiscount_Source_MO 
+		BEGIN
+			SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': Master''s commission for Mysanmar Odds is less than moved member''s commision.',
+					@ErrCode = 219
+			RETURN	
+		END
+	END
+
+	--Check Position Taking for DCS products --all us1<=s4 if is1 = 1
+	IF EXISTS (SELECT TOP 1 1
+		FROM dbo.CustPTSetting3rd_Agent scs WITH (NOLOCK)
+			LEFT JOIN dbo.CustPTSetting3rd_Member mem WITH (NOLOCK)
+				ON scs.SportType = mem.sporttype  
+					AND scs.BetType = mem.bettype
+					AND scs.IsLive = mem.IsLive
+					AND mem.CustID = @custid 
+			LEFT JOIN dbo.CustPTGroupSetting3rd_Member memg WITH (NOLOCK)
+				ON scs.SportType = memg.sporttype  
+					AND scs.BetType = memg.bettype
+					AND scs.IsLive = memg.IsLive
+					AND memg.AgentID = @recommend_old 
+		WHERE scs.CustID  = @srecommend
+			AND ISNULL(mem.IsAutoSuperPT,memg.IsAutoSuperPT) = 1
+			AND ISNULL(mem.AutoSuperPT,memg.AutoSuperPT) > scs.SuperPT
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': Member exceeded new super position taking.',
+			@ErrCode = 9115			 
+		
+		 IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)
+	    RETURN
+	END
+	
+	--Check Position Taking for DCS products --all um1<=m3 if im1 = 1
+	IF EXISTS (SELECT TOP 1 1
+		FROM dbo.CustPTSetting3rd_Agent mcs WITH (NOLOCK)
+			LEFT JOIN dbo.CustPTSetting3rd_Member mem WITH (NOLOCK)
+				ON mcs.SportType = mem.sporttype  
+					AND mcs.BetType = mem.bettype
+					AND mcs.IsLive = mem.IsLive
+					AND mem.CustID = @custid 
+			LEFT JOIN dbo.CustPTGroupSetting3rd_Member memg WITH (NOLOCK)
+				ON mcs.SportType = memg.sporttype  
+					AND mcs.BetType = memg.bettype
+					AND mcs.IsLive = memg.IsLive
+					AND memg.AgentID = @recommend_old 
+		WHERE mcs.CustID  = @mrecommend
+			AND ISNULL(mem.IsAutoMasterPT,memg.IsAutoMasterPT) = 1
+			AND ISNULL(mem.AutoMasterPT,memg.AutoMasterPT) > mcs.MasterPT
+		)
+	BEGIN
+		SELECT @ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': Member exceeded new master position taking.',
+			@ErrCode = 9118			 
+		
+		 IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)
+	    RETURN
+	END
+	
     ----Check P2P :Game Setting
     --IF exists(
     --	SELECT TOP 1 1
@@ -613,6 +884,8 @@ BEGIN
 	    @v152apositiontaking_52 SMALLMONEY,
 	    @v153apositiontaking_51 SMALLMONEY,
 	    @v153apositiontaking_52 SMALLMONEY,
+	    
+	    @v154apositiontaking_20 SMALLMONEY,
     	
 	    @v161apositiontaking_81 SMALLMONEY,
 	    @v161apositiontaking_83 SMALLMONEY,
@@ -646,7 +919,61 @@ BEGIN
 	    @v202apositiontaking_1507 SMALLMONEY,
 	    @v202apositiontaking_1508 SMALLMONEY,
 	    @v202apositiontaking_1509 SMALLMONEY,
-	    @v202apositiontaking_1514 SMALLMONEY
+	    @v202apositiontaking_1514 SMALLMONEY,
+	    
+	    -- Gold Deluxe
+	    @v255apositiontaking_1701 SMALLMONEY,
+	    @PTXML						XML, --DCS
+	    @IsGrouped				BIT 
+	    
+	SELECT @IsGrouped = IsGrouped
+	FROM dbo.CustSettingMode3rd WITH(NOLOCK)
+	WHERE CustID = @custid
+	
+	IF ISNULL(@IsGrouped,0) = 1
+	BEGIN
+		INSERT INTO dbo.CustPTSetting3rd_Member  
+		SELECT  
+			@CustID,  
+			grpt.SportType,  
+			grpt.BetType,  
+			grpt.IsLive,  
+			grpt.SuperPT,  
+			grpt.MasterPT,  
+			grpt.AgentPT,  
+			grpt.IsAutoMasterPT,  
+			grpt.AutoMasterPT,  
+			grpt.IsAutoSuperPT,  
+			grpt.AutoSuperPT  
+		FROM dbo.CustPTGroupSetting3rd_Member grpt WITH(NOLOCK)  
+			LEFT JOIN dbo.CustPTSetting3rd_Member mempt  
+			ON mempt.CustID = @CustID  
+			AND grpt.SportType=mempt.SportType  
+			AND grpt.BetType=mempt.BetType  
+			AND grpt.IsLive=mempt.IsLive  
+		WHERE grpt.AgentID=@recommend_old AND mempt.CustID IS NULL  
+		
+		UPDATE dbo.CustSettingMode3rd WITH(ROWLOCK,UPDLOCK)  
+		SET IsGrouped = 0  
+		WHERE CustID = @CustID  
+	END
+       
+	--GET a1 of DCS Products
+	SET @xml = (
+			SELECT (
+					SELECT SportType	AS '@SportType'
+						, BetType		AS '@BetType'
+						, IsLive		AS '@IsLive'
+						, AgentPT		AS '@AgentPT'
+					FROM dbo.CustPTSetting3rd_Member WITH(NOLOCK)
+					WHERE custid = @custid
+					FOR XML PATH('PT')
+						, TYPE
+					)
+			FOR XML PATH('ROOT')
+				, TYPE
+			)
+
 
     SELECT @apositiontaking_1 = apositiontaking, @alivepositiontaking_1 = alivepositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=1 AND sporttype=1
     SELECT @apositiontaking_3 = apositiontaking, @alivepositiontaking_3 = alivepositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=3 AND sporttype=1
@@ -694,6 +1021,8 @@ BEGIN
     SELECT @v99apositiontaking_3 = apositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=3 AND sporttype=99
     SELECT @v99apositiontaking_9 = apositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=9 AND sporttype=99
     SELECT @v99apositiontaking_20 = apositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=20 AND sporttype=99
+    
+    SELECT @v154apositiontaking_20 = apositiontaking FROM custsetting WITH(NOLOCK) WHERE custid = @custid AND bettype=20 AND sporttype=154
 
     --SELECT @v201apositiontaking_2 = apositiontaking FROM custsetting3rd WITH(NOLOCK) WHERE custid = @custid AND bettype=2 AND sporttype=201
     --SELECT @v201apositiontaking_3 = apositiontaking FROM custsetting3rd WITH(NOLOCK) WHERE custid = @custid AND bettype=3 AND sporttype=201
@@ -710,6 +1039,7 @@ BEGIN
     SELECT @v152apositiontaking_52 = apositiontaking FROM custsetting3rd WITH(NOLOCK) WHERE custid = @custid AND bettype=52 AND sporttype=152
     SELECT @v153apositiontaking_51 = apositiontaking FROM custsetting3rd WITH(NOLOCK) WHERE custid = @custid AND bettype=51 AND sporttype=153
     SELECT @v153apositiontaking_52 = apositiontaking FROM custsetting3rd WITH(NOLOCK) WHERE custid = @custid AND bettype=52 AND sporttype=153
+    
 
     SELECT @v161apositiontaking_81 = apositiontaking FROM custsetting3rd WITH(NOLOCK) WHERE custid = @custid AND bettype=81 AND sporttype=161
     SELECT @v161apositiontaking_83 = apositiontaking FROM custsetting3rd WITH(NOLOCK) WHERE custid = @custid AND bettype=83 AND sporttype=161
@@ -744,6 +1074,9 @@ BEGIN
     SELECT @v202apositiontaking_1508 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1508
     SELECT @v202apositiontaking_1509 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1509
     SELECT @v202apositiontaking_1514 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 202 AND bettype = 1514
+    
+    -- Gold Deluxe
+    SELECT @v255apositiontaking_1701 = apositiontaking FROM CustSettingGame WITH(NOLOCK) WHERE custid = @custid AND sporttype = 255 AND bettype = 1701
 
     print  'Move member '+@membername+' FROM agent id '+convert(VARCHAR(20), @recommend_old)+' to agent '+@agentname+' (id ' + convert(VARCHAR(20), @recommend)+')'
 
@@ -911,6 +1244,7 @@ BEGIN
 	    @v99apositiontaking_3 = @v99apositiontaking_3,
 	    @v99apositiontaking_9 = @v99apositiontaking_9,
 	    @v99apositiontaking_20 = @v99apositiontaking_20,
+	    @v154apositiontaking_20 = @v154apositiontaking_20,
 	    @v161apositiontaking_81 = @v161apositiontaking_81,   
 	    @v161apositiontaking_83 = @v161apositiontaking_83,   
 	    --@v161apositiontaking_85 = @v161apositiontaking_85,   
@@ -943,6 +1277,49 @@ BEGIN
 	    return
     END
 
+	--Update a1 for DCS products
+	IF CAST(@xml as NVARCHAR(MAX)) = '<ROOT/>'
+	BEGIN
+		 --ROLLBACK TRANSACTION MANUALLY
+	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											    recommend = @recommend_old
+	    WHERE custid = @custid
+    	
+	    update custinfo with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											    recommend = @recommend_old
+	    WHERE custid = @custid
+    	
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)	
+	    return
+	END
+	ELSE
+	BEGIN
+		DECLARE @xmlVarchar NVARCHAR(MAX) = CAST(@xml AS NVARCHAR(MAX))
+		EXEC [dbo].[Acc_CustSetting_AgentPTOnMemberUpd] 
+			  @CustID			= @custid
+			, @PT				= @xmlVarchar
+			, @UserID			= @UserID
+			, @ErrCode			= @ErrCode	OUTPUT
+			, @ErrMsg			= @ErrMsg	OUTPUT
+			
+		IF @ErrCode > 0
+		BEGIN
+			--ROLLBACK TRANSACTION MANUALLY
+			update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+													recommend = @recommend_old
+			WHERE custid = @custid
+	    	
+			update custinfo with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+													recommend = @recommend_old
+			WHERE custid = @custid
+	    	
+			IF @ReturnErrCode = 0
+				RAISERROR(@ErrMsg, 16, 1)	
+			return
+		END
+	END
+	
     EXEC dbo.Acc_CustomerUpdMemberHR_PositionTaking 
 	    @custid = @custid,
 	    @v151apositiontaking_31 = @v151apositiontaking_31,
@@ -1198,13 +1575,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1501,
-	    @apositiontaking = @v202apositiontaking_1501,
+	    @a1 = @v202apositiontaking_1501,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1224,13 +1601,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1511,
-	    @apositiontaking = @v202apositiontaking_1511,
+	    @a1 = @v202apositiontaking_1511,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1249,13 +1626,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1503,
-	    @apositiontaking = @v202apositiontaking_1503,
+	    @a1 = @v202apositiontaking_1503,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1274,13 +1651,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1504,
-	    @apositiontaking = @v202apositiontaking_1504,
+	    @a1 = @v202apositiontaking_1504,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1299,13 +1676,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1505,
-	    @apositiontaking = @v202apositiontaking_1505,
+	    @a1 = @v202apositiontaking_1505,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1324,13 +1701,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1513,
-	    @apositiontaking = @v202apositiontaking_1513,
+	    @a1 = @v202apositiontaking_1513,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1349,13 +1726,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1507,
-	    @apositiontaking = @v202apositiontaking_1507,
+	    @a1 = @v202apositiontaking_1507,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1374,13 +1751,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1508,
-	    @apositiontaking = @v202apositiontaking_1508,
+	    @a1 = @v202apositiontaking_1508,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1399,13 +1776,13 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1509,
-	    @apositiontaking = @v202apositiontaking_1509,
+	    @a1 = @v202apositiontaking_1509,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1425,13 +1802,38 @@ BEGIN
 	    @custid  = @custid,
 	    @sporttype	= 202,
 	    @bettype = 1514,
-	    @apositiontaking = @v202apositiontaking_1514,
+	    @a1 = @v202apositiontaking_1514,
     	
 	    @UserID	= @UserID,	
-	    @ErrCode = @ErrCode_1 OUTPUT,
+	    @ErrCode = @ErrCode OUTPUT,
 	    @ErrMsg	 = @ErrMsg OUTPUT	
 
-    IF CHARINDEX('-101', @ErrCode_1) = 0
+    IF @ErrCode > 0
+    BEGIN
+	    --ROLLBACK TRANSACTION MANUALLY
+	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											    recommend = @recommend_old
+	    WHERE custid = @custid
+    	
+	    update custinfo with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
+											    recommend = @recommend_old
+	    WHERE custid = @custid
+    	
+	    IF @ReturnErrCode = 0
+		    RAISERROR(@ErrMsg, 16, 1)	
+	    return
+    END
+    
+      -- Gold Deluxe
+        EXEC dbo.Acc_CustomerUpdMemberGoldDeluxe_Positiontaking
+	    @custid  = @custid,
+	    @v255apositiontaking_1701 = @v255apositiontaking_1701,
+    	
+	    @UserID	= @UserID,	
+	    @ErrCode = @ErrCode OUTPUT,
+	    @ErrMsg	 = @ErrMsg OUTPUT	
+
+    IF @ErrCode > 0
     BEGIN
 	    --ROLLBACK TRANSACTION MANUALLY
 	    update customer with (ROWLOCK, UPDLOCK) SET srecommend = @srecommend_old, mrecommend = @mrecommend_old,
@@ -1494,7 +1896,103 @@ BEGIN
 		    RETURN 
 	    END
     END
+    
+     --Gold Deluxe
+    IF @aHideGoldDeluxe = 0 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
+    BEGIN
+	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
+	    SET		HideGoldDeluxe = 0
+	    WHERE	custid = @custid 
+	    IF @@ERROR <>0
+	    BEGIN
+		    Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+				    @ErrCode = 507
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    RETURN 
+	    END
+    END
+    
+    --Gold Deluxe
+    IF @aDisableGoldDeluxe = 0 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
+    BEGIN
+	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
+	    SET		DisableGoldDeluxe = 0
+	    WHERE	custid = @custid 
+	    IF @@ERROR <>0
+	    BEGIN
+		    Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+				    @ErrCode = 507
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    RETURN 
+	    END
+    END
 
+	--Update productstus for DCS
+	DECLARE @xmlStrDisabled XML
+	DECLARE @xmlStrHidden XML
+
+	SET @xmlStrDisabled =(
+				SELECT (
+						SELECT stt.bitmapOrder	AS '@b'
+							, 1	AS '@s'
+						FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+							INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
+							INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @custid
+						WHERE dbo.f_GetProductStatus(m.bitmapIsDisabled, stt.bitmapOrder) = 0
+								AND dbo.f_GetProductStatus(a.bitmapIsDisabled, stt.bitmapOrder) = 1
+		
+						FOR XML PATH('r')
+							, TYPE
+						)
+				FOR XML PATH('root')
+					, TYPE
+				)
+
+	IF CONVERT(VARCHAR(MAX),@xmlStrDisabled) <> '<root/>'
+	BEGIN
+		UPDATE CustProductStatus
+			SET bitmapIsDisabled = (SELECT bitmap FROM dbo.f_GenerateProductStatus_multiple (bitmapIsDisabled, CONVERT(VARCHAR(MAX),@xmlStrDisabled)))	
+		WHERE	custid = @custid
+		IF @@ERROR <>0
+		BEGIN
+			SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': update unsuccessfully (custinfo).',
+					@ErrCode = 9116
+			RETURN 
+		END
+	END
+
+	SET @xmlStrHidden =(
+				SELECT (
+						SELECT stt.bitmapOrder	AS '@b'
+							, 0	AS '@s'
+						FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+							INNER JOIN dbo.CustProductStatus a WITH(NOLOCK)ON a.CustID = @recommend
+							INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @custid
+						WHERE dbo.f_GetProductStatus(m.bitmapIsHidden, stt.bitmapOrder) = 1
+								AND dbo.f_GetProductStatus(a.bitmapIsHidden, stt.bitmapOrder) = 0
+		
+						FOR XML PATH('r')
+							, TYPE
+						)
+				FOR XML PATH('root')
+					, TYPE
+				)
+
+	IF CONVERT(VARCHAR(MAX),@xmlStrHidden) <> '<root/>'
+	BEGIN
+		UPDATE CustProductStatus
+			SET bitmapIsHidden = (SELECT bitmap FROM dbo.f_GenerateProductStatus_multiple (bitmapIsHidden, CONVERT(VARCHAR(MAX),@xmlStrHidden)))	
+		WHERE	custid = @custid
+		IF @@ERROR <>0
+		BEGIN
+			SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': update unsuccessfully (custinfo).',
+					@ErrCode = 9117
+			RETURN 
+		END
+	END
+	
     UPDATE	cg WITH (UPDLOCK,ROWLOCK)
     SET		cg.IsDisabled = 1 
     FROM CustGameType acg WITH(NOLOCK) 
@@ -1508,6 +2006,9 @@ BEGIN
 		    RAISERROR(@ErrMsg, 16, 1)
 	    return
     END 
+    
+  
+
     /*
     --Bingo & Number Game
     IF @aDisableBingo = 1 AND (@aDisableBingo <> @DisableBingo)
@@ -1633,6 +2134,38 @@ BEGIN
 		    return
     END
 
+	--Correct commission for DCS products
+	UPDATE cs
+	SET cs.SuperDiscount = scs.Discount
+	FROM dbo.CustDiscount3rd_Member cs 
+		INNER JOIN dbo.CustDiscount3rd_Agent scs WITH(NOLOCK) 
+			ON scs.custid = @srecommend 
+				AND scs.sporttype = cs.sporttype
+				AND scs.bettype = cs.bettype
+	WHERE cs.custid = @custid
+		AND ISNULL(cs.SuperDiscount, 0) < scs.Discount
+
+		
+	UPDATE cs
+	SET cs.MasterDiscount = mcs.Discount
+	FROM dbo.CustDiscount3rd_Member cs 
+		INNER JOIN dbo.CustDiscount3rd_Agent mcs WITH(NOLOCK) 
+			ON mcs.custid = @mrecommend 
+				AND mcs.sporttype = cs.sporttype
+				AND mcs.bettype = cs.bettype
+	WHERE cs.custid = @custid
+		AND ISNULL(cs.MasterDiscount, 0) < mcs.Discount
+		
+	UPDATE cs
+	SET cs.AgentDiscount = acs.Discount
+	FROM dbo.CustDiscount3rd_Member cs 
+		INNER JOIN dbo.CustDiscount3rd_Agent acs WITH(NOLOCK) 
+			ON acs.custid = @recommend 
+				AND acs.sporttype = cs.sporttype
+				AND acs.bettype = cs.bettype
+	WHERE cs.custid = @custid
+		AND ISNULL(cs.AgentDiscount, 0) < acs.Discount
+	
     --super 3rd
 
     UPDATE	cs WITH (UPDLOCK,ROWLOCK)
@@ -1649,13 +2182,14 @@ BEGIN
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
     END
-    --live casino
+    
+    --live casino, Keno, gold deluxe
 
     UPDATE cs WITH(UPDLOCK,ROWLOCK)
     SET sdiscount = scs.sdiscount
     FROM CustSettingGame scs WITH(NOLOCK)
 	    INNER JOIN CustSettingGame cs ON scs.custid = @srecommend AND scs.sporttype = cs.sporttype AND scs.bettype = cs.bettype
-    WHERE cs.custid = @custid AND cs.sporttype in (162,202) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599)
+    WHERE cs.custid = @custid AND cs.sporttype in (162,202, 255) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599 OR cs.Bettype = 1701)
 	    AND scs.sdiscount < cs.sdiscount
 
     IF @@ERROR<>0
@@ -1710,12 +2244,12 @@ BEGIN
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
     END
-    --live casino
+    --live casino, keno, gold deluxe
     UPDATE cs WITH(UPDLOCK,ROWLOCK) 
     SET adiscount = mcs.adiscount
     FROM CustSettingGame mcs WITH(NOLOCK) 
 	    INNER JOIN CustSettingGame cs ON mcs.custid = @mrecommend AND mcs.sporttype = cs.sporttype AND mcs.bettype = cs.bettype 
-    WHERE cs.custid = @custid AND cs.sporttype in (162,202) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599)
+    WHERE cs.custid = @custid AND cs.sporttype in (162,202, 255) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599 OR cs.Bettype = 1701)
 	    AND mcs.adiscount < cs.adiscount
 
     IF @@ERROR <> 0
@@ -1771,12 +2305,12 @@ BEGIN
 		    return
     END
 
-    --live casino
+    --live casino, keno, gold deluxe
     UPDATE cs WITH(UPDLOCK,ROWLOCK) 
     SET cs.discount = acs.discount
     FROM CustSettingGame acs WITH(NOLOCK)
 	    INNER JOIN CustSettingGame cs ON acs.custid = @recommend AND acs.sporttype = cs.sporttype AND acs.bettype = cs.bettype 
-    WHERE cs.custid = @custid AND cs.sporttype in (162,202) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599)
+    WHERE cs.custid = @custid AND cs.sporttype in (162,202, 255) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599 OR cs.Bettype = 1701)
 	    AND acs.discount < cs.discount
 
     IF @@ERROR <> 0
@@ -1832,18 +2366,86 @@ BEGIN
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
     END
-    --live casino 
+    --live casino , keno, gold deluxe
     UPDATE cs WITH(UPDLOCK,ROWLOCK)
     SET playerdiscount = acs.discount
     FROM CustSettingGame acs WITH(NOLOCK) 
 	    INNER JOIN CustSettingGame cs ON acs.custid = @recommend AND acs.sporttype = cs.sporttype AND acs.bettype = cs.bettype 
-    WHERE cs.custid = @custid AND cs.sporttype in (162,202) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599)
+    WHERE cs.custid = @custid AND cs.sporttype in (162,202, 255) AND (cs.bettype = 1101 OR cs.bettype between 1501 AND 1599 OR cs.Bettype = 1701)
 	    AND acs.discount < cs.playerdiscount
 
     IF @@ERROR<>0
     BEGIN
 		    SELECT @ErrMsg = 'update commission unsuccessfully.',
 		    @ErrCode = 517				 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
+
+	-- For ColossusBet
+	DECLARE @adiscount_Destination_18001 DECIMAL (9,8) = 0
+	DECLARE @adiscount_Destination_18002 DECIMAL (9,8) = 0
+	
+	DECLARE @sdiscount_Destination_18001 DECIMAL (9,8) = 0
+	DECLARE @sdiscount_Destination_18002 DECIMAL (9,8) = 0
+	
+	DECLARE @discount_Destination_18001 DECIMAL (9,8) = 0
+	DECLARE @discount_Destination_18002 DECIMAL (9,8) = 0
+	
+	SET @discount_Destination_18001 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @recommend AND Sporttype = 204 AND Bettype = 18001 )	
+	SET @discount_Destination_18002 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @recommend AND Sporttype = 204 AND Bettype = 18002 )	
+	
+	SET @adiscount_Destination_18001 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @mrecommend AND Sporttype = 204 AND Bettype = 18001)
+	SET @sdiscount_Destination_18001 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @srecommend AND Sporttype = 204 AND Bettype = 18001)
+	
+	SET @adiscount_Destination_18002 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @mrecommend AND Sporttype = 204 AND Bettype = 18002)
+	SET @sdiscount_Destination_18002 = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @srecommend AND Sporttype = 204 AND Bettype = 18002)
+	
+	
+	UPDATE CustCommRate WITH(UPDLOCK,ROWLOCK)
+		SET  sdiscount = @sdiscount_Destination_18001
+			,adiscount = @adiscount_Destination_18001
+			,discount = @discount_Destination_18001
+	WHERE CustId = @custid	
+		 AND Sporttype = 204 AND Bettype = 18001
+	
+	UPDATE CustCommRate WITH(UPDLOCK,ROWLOCK)
+		SET  sdiscount = @sdiscount_Destination_18002
+			,adiscount = @adiscount_Destination_18002
+			,discount = @discount_Destination_18002
+	WHERE CustId = @custid	
+		 AND Sporttype = 204 AND Bettype = 18002	
+		
+    IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update commission unsuccessfully.',
+		    @ErrCode = 518				 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
+
+	
+	-- For Myanmar Odds
+	IF @IsMyanmarOdds_source = 1
+	BEGIN
+		SET @adiscount_Destination_MO = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @mrecommend AND Sporttype = 1 AND Bettype = 301)
+		
+		SET @sdiscount_Destination_MO = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @srecommend AND Sporttype = 1 AND Bettype = 301)
+		
+		UPDATE CustCommRate
+			SET  sdiscount = @sdiscount_Destination_MO
+				,adiscount = @adiscount_Destination_MO
+				,discount = @discount_Destination_MO
+		WHERE CustId = @custid	
+			 AND Sporttype = 1 AND Bettype = 301
+		
+	END
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update commission unsuccessfully.',
+		    @ErrCode = 519				 
 		    IF @ReturnErrCode = 0
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
@@ -1862,7 +2464,7 @@ BEGIN
     SET @duration  = datediff (millisecond,@startRun,@endRun)
 
     BEGIN TRY
-    /*615	Acc_CustomerUpdMoveMember_xtest	Move member to new Agent*/
+    /*615	Acc_CustomerUpdMoveMember	Move member to new Agent*/
         EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		    @UserID = @UserID,
 		    @CustID = @custid,
@@ -1886,6 +2488,11 @@ BEGIN
 		    @duration = @duration	
     END CATCH
 END
-GO
 
-
+GO 
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
+GO 
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
+GO 
+GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [bodbAdminNet]
+GO 

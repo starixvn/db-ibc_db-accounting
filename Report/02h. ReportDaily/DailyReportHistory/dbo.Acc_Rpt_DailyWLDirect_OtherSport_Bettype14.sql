@@ -33,15 +33,21 @@ SET NOCOUNT ON
 		- 20130801@Johnson: Separate win loss by credit/deposit site(1: credit, 2: deposit)			
 		- 20150122@Dom: Apply sport bettype matrix
 		- 20150205@Johnson: show more info of 8RM(winlost, comm, turnover) [redmineID: #27216]
+		- 20150525@Sophia: Apply Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359]
+		- 20150723@Sophia: Exclude data of Bettrade [#38815]	 
 */
 BEGIN 
 
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductId = 1
+
+	DELETE	@SportBettype  
+	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+			OR EventType NOT IN (1,2)
 
 	Declare @tmpBettype table (Bettype int primary key, DisplayOrder int)
 	
@@ -128,10 +134,8 @@ BEGIN
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
 			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
-	WHERE
-			b.winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 and 1334)
-			AND s.ProductId=1
 			AND b.matchid > 0
 			--AND b.status NOT IN ('VOID', 'REJECT', 'Refund')
 			AND b.statusID NOT IN (101, 102, 103)
@@ -157,10 +161,8 @@ BEGIN
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 			INNER JOIN @SportBettype s ON s.bettype = b.bettype
-	WHERE
-			b.winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 and 1334)
-			AND s.ProductId=1
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101, 102, 103)
@@ -182,10 +184,8 @@ BEGIN
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 			INNER JOIN @SportBettype s ON s.bettype = b.bettype
-	WHERE
-			b.winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999 OR b.bettype BETWEEN 1301 and 1334)
-			AND s.ProductId=1
 			AND b.matchid > 0 
 			--AND b.status NOT IN ('VOID', 'REJECT','REFUND') 
 			AND b.statusID NOT IN (101, 102, 103)

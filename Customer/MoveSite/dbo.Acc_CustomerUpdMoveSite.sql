@@ -17,6 +17,9 @@ AS
 		- 20110907@Sophia: Change Linked Server from DB052 to DB053	
 		- 20120718@Dan: add 1 more field "site" in CustAgent table
 		- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
+		- 20150904@Helen: commission setting for MO [Redmine #41470]
+		- 20151026@Don: Support moving site from 766666 to other sites
+		
 	Param's Explanation:
 		@CustID: Custid of customer want to move site. We allow to move all customers except members
 		
@@ -49,10 +52,20 @@ BEGIN
 		SELECT @ErrCode = 101, @ErrMsg = 'Do not exist any site name as ' + @Site + ' in the system.'
 		RETURN
 	END
-
+	
 	DECLARE @OldSite varchar(50), @LogSPData varchar(8000)
+	DECLARE @userName VARCHAR(50)
 	SELECT @OldSite =  site from customer (nolock) where custid = @CustId	
 
+	SET @userName = (SELECT username FROM custInfo WITH (NOLOCK) WHERE custid = @CustId)
+	--IF @OldSite = '766666' OR @Site = '766666'
+	-- 20151026@Don - Support moving site from 766666 to other sites
+	IF @Site = '766666' 
+	BEGIN
+		SELECT @ErrCode = 102, @ErrMsg = 'Cannot move site for ' + @userName + ' since amongs its new and old sites, one has % Odds.'
+		RETURN
+	END
+	
 	IF @RoleId = 4 -- For Super
 	BEGIN
 		UPDATE customer WITH(ROWLOCK,UPDLOCK) SET site = @site WHERE srecommend = @CustId and RoleId IN (4,3,2)

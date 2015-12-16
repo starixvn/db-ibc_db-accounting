@@ -1,13 +1,10 @@
 USE [bodb_Report]
 GO
-/****** Object:  StoredProcedure [dbo].[Task_DailyRptStatement_CheckData]    Script Date: 06/25/2015 02:51:43 ******/
+/****** Object:  StoredProcedure [dbo].[Task_DailyRptStatement_CheckData]    Script Date: 07/19/2015 22:22:39 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.Task_DailyRptStatement_CheckData    Script Date: 4/2/2015 2:36:13 PM ******/
-
-
 ALTER PROCEDURE [dbo].[Task_DailyRptStatement_CheckData]
 	@winlostdate DATE
 	,@isCheckDataOnly BIT
@@ -19,8 +16,13 @@ AS
  Original:  
   
  Revisions:
-	@20150311@Tom: Change option ReadPast to NOLOCK when select data on bettrans table
-	@20150402@Tom: Change option NOLOCK to ROWLOCK table hint when select on bettrans to prevent dirty read by NOLOCK
+	- @20150311@Tom: Change option ReadPast to NOLOCK when select data on bettrans table
+	- @20150402@Tom: Change option NOLOCK to ROWLOCK table hint when select on bettrans to prevent dirty read by NOLOCK
+	- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
+	- 20150901@Sophia: Apply Colossus Bets [#42428]
+	- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
+					   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
+	- 20151109@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -55,6 +57,8 @@ BEGIN
 		,ErrCode INT --1: Not Exists | 2: Sum WL-TO  | 10: Transfer | 20: Opening Balance | 30: Void/ Cancelled Bet
 		)
 
+	CREATE CLUSTERED INDEX ErrCode ON #tmpCustMiss (ErrCode )
+
 	IF OBJECT_ID('tempdb..#tmpOpeningBalance') IS NOT NULL
 	BEGIN
 		DROP TABLE #tmpOpeningBalance
@@ -80,6 +84,7 @@ BEGIN
 			,Winlost			MONEY	NULL
 			,Comm				MONEY	NULL
 			,ClosingBalance		MONEY	NULL
+			,GrandPrize			MONEY	NULL
 			,ErrCode			INT
 		)
 
@@ -353,6 +358,8 @@ BEGIN
 		GROUP BY bt.srecommend
 	END
 
+	CREATE CLUSTERED INDEX CustId ON #tmpOpeningBalance (CustId)	
+	------------------------------------------------------------
 
 	INSERT INTO #tmpCustMiss (
 		Custid
@@ -423,6 +430,7 @@ BEGIN
 			--	ON bt.matchid = match.matchid				
 		WHERE 
 			bt.bettype <= 19000
+			AND bt.bettype <> 903
 			AND bt.winlostdate = @winlostdate
 			AND bt.statusID in (101, 102) -- 'VOID','REJECT'
 		GROUP BY custid
@@ -432,6 +440,49 @@ BEGIN
 			AND rpt.winlostdate = @winlostdate
 	WHERE ABS(ISNULL(tmpVoid.VoidAmt, 0) - ISNULL(rpt.VoidAmt, 0)) > 0
 		
+		
+
+	--STEP 05: Grand Prize
+	INSERT INTO #tmpCustMiss (
+		Custid
+		,Amount
+		,ErrCode
+		)
+	SELECT tmpGrandPrize.Custid
+		,tmpGrandPrize.GrandPrize AS Amount
+		,40 ErrCode
+	FROM 
+		(
+			--SELECT 
+			--	bt.custid custid
+			--	,SUM(bm.winlost - bm.stake) AS GrandPrize
+			--FROM 
+			--	bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
+			--	INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
+			--		ON bt.RefNo = bm.RefNo				
+			--WHERE 
+			--	bt.bettype = 18000
+			--	AND bt.winlostdate = @winlostdate
+			--	AND bt.statusID in (101, 102) -- 'VOID','REJECT'
+			--	AND bm.statuswinlost <> 0
+			--GROUP BY bt.custid
+
+			--UNION ALL
+
+			SELECT  custid
+					,SUM(WinAmount) AS GrandPrize
+			FROM	DBACC.bodb02.dbo.PayoutTrans WITH(NOLOCK) 
+			WHERE	winlostdate = @Winlostdate							
+			GROUP BY custid
+
+		) tmpGrandPrize 
+	LEFT JOIN [dbo].[rptStatement] rpt WITH (NOLOCK) 	
+		ON rpt.Custid = tmpGrandPrize.Custid
+			AND rpt.winlostdate = @winlostdate
+	WHERE ABS(ISNULL(tmpGrandPrize.GrandPrize, 0) - ISNULL(rpt.GrandPrize, 0)) > 0
+
+
+
 
 	/*Insert data into tmpStatement temp table*/
 	
@@ -499,19 +550,34 @@ BEGIN
 	FROM #tmpCustMiss tmp
 	WHERE tmp.ErrCode IN  (30 )
 
+	INSERT INTO #tmpStatement (
+		Custid
+		,GrandPrize
+		,ErrCode
+	)
+	SELECT 	tmp.Custid	
+		,Amount
+		,40 ErrCode
+	FROM #tmpCustMiss tmp
+	WHERE tmp.ErrCode IN  (40)
+
+
 	IF OBJECT_ID('tempdb..#tmpCustMiss') IS NOT NULL 
 	BEGIN
 		DROP TABLE #tmpCustMiss
 	END
 	 
+	CREATE CLUSTERED INDEX ErrCode ON #tmpStatement (ErrCode)
+	CREATE NONCLUSTERED INDEX CustId ON #tmpStatement (CustId)
+	
 	--Show up data 
 	IF @isCheckDataOnly = 1
 	BEGIN
 		IF EXISTS(SELECT TOP 1 1FROM #tmpStatement tmpSta
-					WHERE tmpSta.ErrCode = 1)
+					WHERE tmpSta.ErrCode  IN (1,40))
 		BEGIN
 			SELECT 
-				'Wrong W/L-TO' Reason
+				'Wrong W/L-TO-Grand Prize' Reason
 				,Custid
 				,OpeningBalance
 				,Turnover
@@ -519,9 +585,10 @@ BEGIN
 				,Winlost
 				,Comm
 				,TransferAmt
-				,ClosingBalance 
+				,ClosingBalance
+				,GrandPrize 
 			FROM #tmpStatement tmpSta
-			WHERE tmpSta.ErrCode = 1
+			WHERE tmpSta.ErrCode IN (1,40)
 		END 
 			
 		IF EXISTS(SELECT TOP 1 1FROM #tmpStatement tmpSta
@@ -658,6 +725,14 @@ BEGIN
 			WHERE rpt.CustID IS NULL 
 				AND tmpSta.ErrCode = 20
 		END
+		
+				
+		UPDATE rpt
+		SET rpt.VoidAmt = tmpSta.VoidAmt  
+		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
+		INNER JOIN   #tmpStatement tmpSta
+			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 30
+
 
 		INSERT INTO [dbo].[rptStatement] (
 			WinlostDate
@@ -676,12 +751,32 @@ BEGIN
 		WHERE rpt.CustID IS NULL 
 			AND tmpSta.ErrCode = 20
 			AND tmpSta.Custid IN (SELECT Custid FROM #tmpStatement tmpSta WHERE tmpSta.ErrCode = 30)
-			
+	
+	
+		---------
 		UPDATE rpt
-		SET rpt.VoidAmt = tmpSta.VoidAmt  
+		SET rpt.GrandPrize = tmpSta.GrandPrize  
 		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
 		INNER JOIN   #tmpStatement tmpSta
-			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 30
+			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 40
+
+			
+		INSERT INTO [dbo].[rptStatement] (
+			WinlostDate
+			,Custid
+			,GrandPrize
+		)
+		SELECT 
+			@WinlostDate WinlostDate
+			,tmpSta.Custid
+			,tmpSta.GrandPrize AS GrandPrize
+		FROM   #tmpStatement tmpSta	
+			LEFT JOIN [dbo].[rptStatement] rpt
+			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID
+		WHERE rpt.CustID IS NULL 
+			  AND tmpSta.ErrCode = 40
+			
+		
 	END
 	 
 	IF OBJECT_ID('tempdb..#tmpStatement') IS NOT NULL
@@ -689,3 +784,4 @@ BEGIN
 		DROP TABLE #tmpStatement
 	END
 END
+GO

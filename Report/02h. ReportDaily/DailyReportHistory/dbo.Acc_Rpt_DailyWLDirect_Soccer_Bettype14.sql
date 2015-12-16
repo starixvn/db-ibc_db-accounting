@@ -31,6 +31,10 @@ SET NOCOUNT ON
 		- 20141110@Johnson: include additional bettypes into report
 		- 20150108@Dom: Apply sport bettype matrix
 		- 20150204@Johnson: move 1H Double Chance bet type to major bettype [RedmineID: #27216]
+		- 20150525@Sophia: Apply Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
+		- 20150723@Sophia: Exclude data of Bettrade [#38815]
+		- 20150917@Jim: Integrate MO product (Feature #41935)	
+
 	Param's Explanation: 
 		- @SoccerType= 1: Major bettypes
 					= 2: Minor bettypes	
@@ -39,9 +43,14 @@ SET NOCOUNT ON
 
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@SportType=1
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @Sporttype = 1 
+
+	DELETE	@SportBettype  
+	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+			OR EventType NOT IN (1,2)
+
 
 	Declare @tmpBettype table (Bettype int, DisplayOrder int)
 	CREATE TABLE #DepAgent (custid int primary key)
@@ -57,30 +66,40 @@ SET NOCOUNT ON
 	Insert into @tmpBettype
 	select 1,  1 --'Handicap',
 	UNION ALL
-	Select 3,  2 --'Over/Under',
+	select 301,2 --% Handicap
 	UNION ALL
-	select 7,  3 --'1st Half Handicap',
-	UNION ALL
-	Select 8,  4 --'1st Half Over/Under',
-	UNION ALL
-	select 2,  5 --'Odd/Even',
-	UNION ALL
-	select 5,  6 --'1x2',
-	UNION ALL
-	Select 4,  7 --'Correct Score',
-	UNION ALL
-	Select 6,  8 --'Total Goal',
+	Select 3,  3 --'Over/Under',
 	UNION ALL 
-	Select 10,  10 --'Outright',
+	select 302,4 --- % Over/Under
+	UNION ALL
+	select 7,  5 --'1st Half Handicap',
+	UNION ALL 
+	select 303,6 -- 1H % Handicap
+	UNION ALL
+	Select 8,  7 --'1st Half Over/Under',
+	UNION ALL 
+	select 304,8 --1H % Over/Under
+	UNION ALL
+	select 2,  9 --'Odd/Even',
+	UNION ALL
+	select 5,  9 --'1x2',
+	UNION ALL
+	Select 4,  9 --'Correct Score',
+	UNION ALL
+	Select 6,  9 --'Total Goal',
+	UNION ALL 
+	Select 10, 10 --'Outright',
 
 	INSERT INTO @tmpBettype
 		SELECT typeid, typeid
-		FROM bettype WITH(NOLOCK)
-		WHERE (typeid > 10 AND typeid < 31) OR typeid BETWEEN 121 AND 999
+		FROM bettype b WITH(NOLOCK)
+		INNER JOIN @SportBettype s 
+			ON s.bettype = b.typeid
+		WHERE b.typeid > 10 and b.typeid NOT IN (301,302,303,304)
 	
 	DELETE @tmpBettype 
-	WHERE 1 = CASE WHEN @SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1
-					WHEN @SoccerType = 2 AND Bettype IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151) THEN 1 ELSE 0 END
+	WHERE 1 = CASE WHEN @SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304) THEN 1
+					WHEN @SoccerType = 2 AND Bettype IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304) THEN 1 ELSE 0 END
 	
 	IF ISNULL(@IncludeBettype,'') <> ''
 	BEGIN
@@ -106,7 +125,7 @@ SET NOCOUNT ON
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 	WHERE s.sporttype = 1
 	
-	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype TINYINT, matchid INT, site TINYINT, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
+	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype INT, matchid INT, site TINYINT, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
 	INSERT INTO #TempBettrans	
 	SELECT		
 			liveindicator,
@@ -123,8 +142,7 @@ SET NOCOUNT ON
 	FROM	bettrans14 b WITH (NOLOCK)	
 		inner join @SportBettype s ON s.bettype = b.bettype
 		LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		
-	WHERE
-			winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999)	
 			AND matchid >0		
 			AND statusID NOT IN (101, 102,103) 
@@ -173,8 +191,7 @@ SET NOCOUNT ON
 			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
-	WHERE
-			winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
@@ -198,8 +215,7 @@ SET NOCOUNT ON
 			inner join @SportBettype s ON s.bettype = b.bettype
 			INNER JOIN @Match m on b.matchid = m.matchid 
 			INNER JOIN @tmpBettype bt ON b.bettype = bt.Bettype
-	WHERE
-			winlostdate = @winlostdate
+	WHERE	b.winlostdate = @winlostdate
 			--AND (b.bettype < 31 OR b.bettype BETWEEN 121 AND 999) 
 			AND b.matchid > 0 
 			--AND status NOT IN ('VOID', 'REJECT','REFUND') 
