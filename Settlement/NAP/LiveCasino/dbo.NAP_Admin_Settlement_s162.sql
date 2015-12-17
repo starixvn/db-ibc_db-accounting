@@ -1,12 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s162]    Script Date: 12/17/2015 14:53:05 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_s162    Script Date: 8/11/2015 10:35:07 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_s162    Script Date: 8/11/2015 4:45:42 PM ******/
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_s162]
 	@MatchId		INT,
 	@Action			VARCHAR(10)		= 'CAL',	-- CAL  / Refund 
@@ -26,6 +24,7 @@ AS
 	Original: Admin_Settlement_s162
 	
 	Revisions:
+		- 20150421@Kathy: Offer New Game Type "No Card Baccarat" (1106) [Redmine:#31630]
 		- 20150716@Patrick: Support Gold Deluxe
 		- 20150807@Kathy: Using new balance table (BalCreditCasinoPending,BalDebitCasinoPending) [Redmine:#40125]
 
@@ -131,14 +130,14 @@ BEGIN
 		IF @action = 'CAL'
 		BEGIN
 			--bettye 1101,1102 all use Admin_Calculate_1101G for settle
-			IF (@bettype IN (1101, 1103))
+			IF (@bettype IN (1101, 1103, 1106))
 			BEGIN
 				EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 					@Command	= 'NAP_Admin_Settlement_s162-CAL'
 					,@Matchid	= @matchid
 					,@creator	= @AdminID
 					
-				EXEC NAP_Admin_Calculate_1101G 
+				EXEC NAP_Admin_Calculate_1101G
 					@matchid	= @matchid  
 					,@betteam	= @betstatus 
 					,@CommRate	= @CommRate 
@@ -158,7 +157,7 @@ BEGIN
 				FROM	MappingTable  with (rowlock) 
 				WHERE	Ballno = @betstatus
 						
-				EXEC NAP_Admin_Calculate_1101G 
+				EXEC NAP_Admin_Calculate_1101G
 					@matchid	= @matchid  
 					,@betteam	= @Newbetstatus 
 					,@CommRate	= @CommRate 
@@ -207,10 +206,10 @@ BEGIN
 		CREATE TABLE #Balance (custid INT PRIMARY KEY
 								,balance MONEY
 								,Increased BIT)
-								
+		
 		DECLARE @tblDebitPending TVP_BalanceList
 		DECLARE @tblCreditPending TVP_BalanceList
-	
+						
 		CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 		INSERT INTO #Balance
@@ -254,7 +253,7 @@ BEGIN
 			EXEC dbo.Dot_BalancePendingCreditIns 
 				@BalancePending = @tblCreditPending
 				,@Type			= 3 -- Casino
-		
+
 		-------------------------------------------------------------
 		---                   compare BALANCE for LCS Balance     ---
 		---------------------------VVVV------------------------------
@@ -313,7 +312,7 @@ BEGIN
 		SELECT @LogData = @LogData + '(' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms)'
 		EXEC dbo.WriteLog_UserLog @AdminID, @LogData
 
-	IF (@bettype in (1101,1103))
+	IF (@bettype in (1101,1103, 1106))
 	BEGIN 
 		SELECT @Remark = 'Cards result: ' + @CardsResult + '; '
 						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) as nvarchar(50)) + ' ms; '
@@ -441,8 +440,6 @@ BEGIN
 		END CATCH
 	END
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s162] TO [bodbAdminNet] AS [dbo]
