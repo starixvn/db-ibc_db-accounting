@@ -21,13 +21,14 @@ AS
 	- 20150707@Bobby: Add metric gaming bettypes (801-899)
 	- 20150715@Edward: Support for Micro Gaming
 	- 20150831@Kos: Support for Colossus Bet
+	- 20151216@Kos: Support for Cockfighting
 */
 
  BEGIN
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT, EventType INT)
+	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
 
 	INSERT INTO @SportBettype
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
@@ -39,12 +40,12 @@ AS
 	
 	SELECT @min_date = MIN(winlostdate), 
 		@max_date = MAX(winlostdate) 
-	FROM bettrans WITH (NOLOCK) 
+	FROM dbo.bettrans WITH (NOLOCK) 
 	WHERE bettype < 19001
 
 	SELECT @min_date14 = MIN(winlostdate), 
 		@max_date14 = MAX(winlostdate) 
-	FROM bettrans14 WITH (NOLOCK)
+	FROM dbo.bettrans14 WITH (NOLOCK)
 	
 	DECLARE @UserTicketTmp TABLE (
 		custid		INT, 
@@ -70,7 +71,7 @@ AS
 	FROM dbo.translog tl WITH (NOLOCK)
 		INNER JOIN @SportBettype sp 
 		ON tl.gameid = sp.BetType
-			AND (sp.ProductID IN (8, 12, 13, 15) OR tl.gameid BETWEEN 801 AND 899)
+			AND (sp.ProductID IN (8, 12, 13, 15, 19) OR tl.gameid BETWEEN 801 AND 899)
 	WHERE winlostdate = @fromdate 
 		--AND gameid between 1501 and 1599
 		AND ip = @ip 
@@ -196,7 +197,7 @@ AS
 		SUM(totalBet)- SUM(soccerBet) otherBet, 
 		SUM(totalBet) totalBet 
 	FROM #tmpUserBet u
-		INNER JOIN customer c WITH (NOLOCK) ON u.custid = c.custid 
+		INNER JOIN dbo.customer c WITH (NOLOCK) ON u.custid = c.custid 
 	GROUP BY c.custid, 
 		c.username
 	ORDER BY c.username
