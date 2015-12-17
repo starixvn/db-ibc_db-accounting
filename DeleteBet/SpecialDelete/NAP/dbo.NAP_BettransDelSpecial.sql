@@ -1,10 +1,11 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 01/12/2015 3:04:04 PM ******/
+/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 12/17/2015 17:13:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_BettransDelSpecial    Script Date: 10/12/2015 9:59:20 AM ******/
 
 ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId				INT,
@@ -12,9 +13,9 @@ ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@FromTransId			BIGINT, 
 	@ToTransId				BIGINT, 
 		
-	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 17, 153, 183, 1303, 1306, 1308
-	@Handicap155			SMALLMONEY		= 9999,		-- 155, 1316 
-	@Handicap178			SMALLMONEY		= 9999,		-- 178,197,198,204,205
+	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 17, 153, 183, 1303, 1306, 1308: Handicap, Odd/Even, Over/Under...
+	@Handicap155			SMALLMONEY		= 9999,		-- 155, 1316 : FT.1X2, 1H 1X2, First Ten Minutes 1X2, 2H 1X2...
+	@Handicap178			SMALLMONEY		= 9999,		-- 178,197,198,204,205, 401, 402, 403, 404: 2H Over/Under...
 	@OverUnder156			SMALLMONEY		= 9999,		-- 156, 1312 
 	
 	@LiveIndicator 			SMALLINT 		= 0,
@@ -26,9 +27,9 @@ ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	
     @BetTypes				VARCHAR(1000)	= '',
 	
-	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 17, 20, 153,157,168,183,185,191, 1301, 1303, 1305, 1306, 1308 
+	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 17, 20, 153,157,168,183,185,191, 1301, 1303, 1305, 1306, 1308 , 411: Handicap, Odd/Even, Over/Under...
 	@BetTeam515				NVARCHAR(10)	= 'ALL',	-- 5,15,160,164,167,176,177,180
-	@BetTeam430				VARCHAR(120) 	= '',
+	@BetTeam430				VARCHAR(120) 	= '',		-- 4, 30, 405: All Correct Scores
     @BetTeam6				VARCHAR(120) 	= '',		-- 6, 126, 131, 132
 	@BetTeam14				VARCHAR(120) 	= '',
 	@BetTeam16				VARCHAR(120) 	= '',
@@ -42,10 +43,10 @@ ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@BetTeam1317			VARCHAR(120)	= 'ALL', 	-- 1317 
 	@BetTeam1318			VARCHAR(3)		= 'ALL', 	-- 1318 	
 	@BetTeam1324			VARCHAR(3)		= 'ALL', 	-- 1324
-	@BetTeam178				VARCHAR(10)		= 'ALL',	-- 178,197,198,204,205
+	@BetTeam178				VARCHAR(10)		= 'ALL',	-- 178,197,198,204,205, 401, 402, 403, 404: 2H Over/Under...
 	@BetTeam165				VARCHAR(120)	= 'ALL',	-- 165,166
-	@BetTeam159				VARCHAR(120)	= 'ALL',	-- 159,179
-	@BetTeam161				VARCHAR(120)	= 'ALL',	-- 161,162,181,182
+	@BetTeam159				VARCHAR(120)	= 'ALL',	-- 159,179,406: All Exact Total Goals
+	@BetTeam161				VARCHAR(120)	= 'ALL',	-- 161,162,181,182,407,409,412
 	@BetTeam199				VARCHAR(120)	= 'ALL',	-- 199
 	@BetTeam202				VARCHAR(120)	= 'ALL',	-- 202
 	@BetTeam195				VARCHAR(120)	= 'ALL',	-- 195,196
@@ -53,6 +54,8 @@ ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@BetTeam169				VARCHAR(120)	= 'ALL',	-- 169,193
 	@BetTeam210				VARCHAR(10)		= 'ALL',	-- 210,173,174,188,189,190,211,212,123,214,215,133,134,135,145,146,147,148,149,150
 	@BetTeam216				VARCHAR(240)	= 'ALL',	-- 216
+	@BetTeam408				VARCHAR(120)	= 'ALL',	-- 171,408: Winning Margin	
+	@BetTeam24				VARCHAR(120)	= 'ALL',	-- 24, 151, 186, 410: All Double Chance
 	
 	@Set154					VARCHAR(3)		= 'ALL', 	-- 154, 155, 1311, 1316 
 	@Set156					VARCHAR(3)		= 'ALL', 	-- 156, 1312 
@@ -104,6 +107,8 @@ AS
 		- 20151008@Kathy: insert bettrade tickets to send API [Redmine:#43233]
 		- 20151021@Kathy: Do not show ticket 901 if its owner is not BetTrade account(betdaqid = 0)[Redmine:#43233]
 		- 20151103@Kathy: Enhance performance [Redmine:#43233]
+		- 20150712@Kathy: - Apply 28 Live Bettypes(PH) [Redmine: #48110]
+						  - Database - Change datatype [Redmine: #48660]
 		
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -148,7 +153,7 @@ BEGIN
 		bettype 			SMALLINT, 
 		betteam 			NVARCHAR(10),
 		betcheck			NVARCHAR(50),
-		odds				SMALLMONEY, 
+		odds				MONEY, 
 		OddsType			INT,
 		transdate			DATETIME,
 		IsLiveIndicator		BIT,
@@ -338,9 +343,15 @@ BEGIN
 			AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END 
 			AND b.transdate between CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END
 								AND CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-			AND b.betteam = CASE WHEN b.bettype IN (1,2, 3,7,8,12, 17, 20, 153, 157, 168, 183, 185, 191, 1301, 1303, 1305, 1306, 1308) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
+			AND b.betteam = CASE WHEN b.bettype IN (1,2, 3,7,8,12, 17, 20, 153, 157, 168, 183, 185, 191, 1301, 1303, 1305, 1306, 1308, 411) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
 								WHEN b.bettype IN (5,15,160,164,167,176,177,180) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 								ELSE b.betteam END 
+			AND CASE 
+					WHEN b.bettype IN (171,408) AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam408 = 'All' THEN betteam ELSE @BetTeam408 END,'^'))  THEN 1
+					WHEN  b.bettype IN (24, 151, 186, 410) AND b.betteam  IN (SELECT CONVERT(VARCHAR,val) FROM dbo.strSplit(CASE WHEN @BetTeam24 = 'All' THEN betteam ELSE @BetTeam24 END,'^')) THEN 1
+					WHEN b.bettype NOT IN (171,408,24, 151, 186, 410) THEN 1
+					ELSE 0
+					END = 1
 			AND CASE WHEN b.bettype IN (160,164,180) 
 							THEN CASE WHEN @BetID160=100 THEN ISNULL(b.betID ,0)
 							ELSE 
@@ -357,7 +368,8 @@ BEGIN
 									173, 174, 178, 179, 181, 182, 184, 188, 189, 
 									190, 193, 194, 195, 196, 197, 198, 199,
 									200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216,
-									1302, 1311, 1312, 1316, 1317, 1318, 1324)
+									1302, 1311, 1312, 1316, 1317, 1318, 1324,
+									401, 402, 403, 404, 405, 406, 407, 409, 412)
 			AND CASE WHEN b.bettype IN (1,3,7,8, 17, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 															WHEN @Handicap = (hdp1 + hdp2) THEN 1
 														ELSE 0 END 
@@ -366,8 +378,8 @@ BEGIN
 															 WHEN 1 THEN 0 
 															 WHEN 2 THEN 1 END
 					 
-	-- bettype = 4 -- Correct score
-	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (4,30) ) 
+	-- bettype = 4,30,405 -- Correct score
+	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (4,30,405) ) 
 		INSERT INTO #BetDelete(
 				grouptransid	
 				,transid			
@@ -427,8 +439,8 @@ BEGIN
 				ON	t.transid = b.transid
 			INNER JOIN #tblBettype tp 
 				ON	tp.bettype = b.bettype		
-			LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt 
-				ON	bt.val=b.betteam		
+			--LEFT JOIN dbo.strSplit(@betteam430,'^') AS bt 
+			--	ON	bt.val=b.betteam		
 		WHERE	b.matchid=@matchid
 				AND b.transid between @FromTransId AND @ToTransId
 				AND CASE WHEN @LiveIndicator = 2 THEN @LiveIndicator ELSE b.liveindicator END = @LiveIndicator
@@ -436,8 +448,9 @@ BEGIN
 				AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END
 				AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 								AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-				AND b.bettype in (4,30)
-				AND (@betteam430='All' OR bt.val IS NOT NULL)
+				AND b.bettype in (4,30,405)
+				--AND (@betteam430='All' OR bt.val IS NOT NULL)
+				AND (@betteam430 = 'ALL' OR b.betteam IN (SELECT val FROM dbo.strSplit(@betteam430,'^')))
 				AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) 
 															 WHEN 1 THEN 0 
 															 WHEN 2 THEN 1 END
@@ -883,8 +896,8 @@ BEGIN
 					END
 				AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END	
 
-	--178,197,198,204,205
-	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (178,197,198,204,205) )
+	--178,197,198,204,205, 401, 402, 403, 404
+	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (178,197,198,204,205, 401, 402, 403, 404) )
 		INSERT INTO #BetDelete(
 				grouptransid	
 				,transid			
@@ -952,13 +965,13 @@ BEGIN
 				AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
 				AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 								AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 	
-				AND b.bettype IN (178,197,198,204,205)
+				AND b.bettype IN (178,197,198,204,205, 401, 402, 403, 404)
 				AND (
-					  (b.bettype IN (178,197,198,204,205)	
+					  (b.bettype IN (178,197,198,204,205, 401, 402, 403, 404)	
 						AND (@BetTeam178 = 'ALL' OR b.betteam = @BetTeam178)
 					  )
 					)
-				AND 1 = CASE WHEN b.bettype IN (178,197,198,204,205) THEN CASE
+				AND 1 = CASE WHEN b.bettype IN (178,197,198,204,205, 401, 402, 403, 404) THEN CASE
 															WHEN @Handicap178 = 9999 THEN 1
 															WHEN @Handicap178 = hdp1 THEN 1
 															ELSE 0
@@ -969,8 +982,9 @@ BEGIN
 															 WHEN 1 THEN 0 
 															 WHEN 2 THEN 1 END				 
 													 
-	--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216
-	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216) )
+	--133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216,406,407,409,412
+	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,
+								201,202,210,211,212,213,214,215,216,406,407,409,412) )
 		INSERT INTO #BetDelete(
 				grouptransid	
 				,transid			
@@ -1037,7 +1051,8 @@ BEGIN
 				AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
 				AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 								AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 	
-				AND b.bettype IN (133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,201,202,210,211,212,213,214,215,216)
+				AND b.bettype IN (133,134,135,145,146,147,148,149,150,159,161,162,165,166,169,173,174,179,181,182,188,189,190,193,195,196,199,200,
+								201,202,210,211,212,213,214,215,216,406,407,409,412)
 				AND (
 						(
 						  b.bettype IN (165,166)
@@ -1045,26 +1060,12 @@ BEGIN
 						)
 						OR
 						(
-						  b.bettype IN (159)
+						  b.bettype IN (179,159,406)
 						  AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN b.betteam ELSE @BetTeam159 END, '^'))
 						)
 						OR
 						(
-						  b.bettype IN (179)
-						  AND 
-						  (
-							(b.betteam <> 'G4' AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN b.betteam ELSE @BetTeam159 END, '^')))
-							OR
-							(
-								b.betteam = 'G4'
-								AND
-								'G4&Over' IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam159 = 'ALL' THEN 'G4&Over' ELSE @BetTeam159 END, '^'))
-							)
-						  )
-						)
-						OR
-						(
-						  b.bettype IN (161,162,181,182)
+						  b.bettype IN (161,162,181,182,407,409,412)
 						  AND b.betteam IN (SELECT CONVERT(VARCHAR, val) FROM dbo.strSplit(CASE WHEN @BetTeam161 = 'ALL' THEN b.betteam ELSE @BetTeam161 END, '^'))
 						)
 						OR
@@ -1983,11 +1984,7 @@ END
 
 
 
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_BettransDelSpecial] TO [vnteam] AS [dbo]
-
