@@ -1,5 +1,14 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_WinLostSummary_Sporttype_Racing]
-	@sporttype	INT,
+USE [bodb_report]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_WinLostSummary_Sporttype_CockFighting]    Script Date: 12/17/2015 10:52:01 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_WinLostSummary_Sporttype_CockFighting]
 	@fromdate	DATETIME,
 	@todate		DATETIME
 AS
@@ -17,7 +26,7 @@ AS
 	*/
 SET NOCOUNT ON
 	Declare @RPT TABLE (
-		race varchar(50), bettype smallint, meetingid int,
+		ArenaID INT, FightNo INT,
 		realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money,
 		virtualTurnover money, virtualLineTotal money		
 	)
@@ -39,12 +48,12 @@ SET NOCOUNT ON
 			SELECT @t_date = @todate
 			
 			INSERT INTO @RPT(
-				race, bettype, meetingid, realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
+				ArenaID, FightNo, realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
 				virtualTurnover, virtualLineTotal
 			)
-			SELECT m.groupmatch as race
-				,b.bettype
-				,m.leagueid
+			SELECT e.ArenaID
+				--,b.bettype
+				,e.FightNo
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0)
 				,ISNULL(SUM(realCommission),0)
@@ -53,10 +62,10 @@ SET NOCOUNT ON
 				,ISNULL(SUM(realTurnover),0) as virtualTurnover
 				,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 			FROM rptWinlost b WITH(NOLOCK)
-				INNER JOIN bodb02.dbo.outright m WITH(NOLOCK) ON b.matchid = m.orid
+				INNER JOIN bodb02.dbo.EventInfo3rd e WITH(NOLOCK) ON b.matchid = e.FightNo
 			WHERE b.winlostdate between @f_date and @t_date
 				AND b.sporttype = @sporttype
-			GROUP BY m.groupmatch, b.bettype, m.leagueid
+			GROUP BY e.ArenaID, e.FightNo --, b.bettype
 	END
 	
 	IF @fromdate <=@movebetsday
@@ -69,12 +78,12 @@ SET NOCOUNT ON
 		SELECT @f_date = @fromdate
 				
 		INSERT INTO @RPT(
-			race, bettype, meetingid, realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
+			ArenaID, FightNo, realWinlost, realPosition, realCommission, realTurnover, realLineTotal,
 			virtualTurnover, virtualLineTotal
 		)
-		SELECT m.groupmatch as race
-			,b.bettype
-			,m.leagueid
+		SELECT e.ArenaID
+			--,b.bettype
+			,e.FightNo
 			,ISNULL(SUM(realWinlost),0)
 			,ISNULL(SUM(realPosition),0)
 			,ISNULL(SUM(realCommission),0)
@@ -83,16 +92,18 @@ SET NOCOUNT ON
 			,ISNULL(SUM(realTurnover),0) as virtualTurnover
 			,ISNULL(SUM(realLineTotal),0) as virtualLineTotal
 		FROM rptWinlost b WITH(NOLOCK)
-			INNER JOIN bodb02.dbo.outright14 m WITH(NOLOCK) ON b.matchid = m.orid
+			INNER JOIN bodb02.dbo.EventInfo3rd14 e WITH(NOLOCK) ON b.matchid = e.FightNo
 		WHERE b.winlostdate between @f_date and @t_date
 			AND b.sporttype = @sporttype
-		GROUP BY m.groupmatch,b.bettype,m.leagueid
+		GROUP BY e.ArenaID ,e.FightNo --,b.bettype
 	END
 	
 	SELECT * FROM @RPT
-	ORDER BY bettype,meetingid,CAST(race AS TINYINT)
+	ORDER BY ArenaID, FightNo
 	
 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_WinLostSummary_Sporttype_Racing] TO [bodbAdminNet]
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_WinLostSummary_Sporttype_CockFighting] TO [bodbAdminNet] AS [dbo]
