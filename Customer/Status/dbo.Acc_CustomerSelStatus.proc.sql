@@ -43,6 +43,7 @@ Revisions:
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
 	- 20151106@Patrick: Support RnG Game & rename field named DisableMicroGame to DisableMicroGameLC
+	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
 	
 
 
@@ -150,12 +151,26 @@ Param's Explanation:
 		IF @ErrCode<> 0 SELECT @IsAdminCanViewVNIP = 0 ELSE SELECT @IsAdminCanViewVNIP = 1     
 	END
 
-	-- For MuayThai
-	DECLARE @bitmapOrder INT 
-	SET @bitmapOrder = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
-
-	DECLARE @HideMuayThai BIT = 0
-    SET @HideMuayThai = (SELECT TOP 1 CASE WHEN SettingStatus = 0 THEN 0 ELSE 1 END FROM ProductSettingDetail WITH (NOLOCK) WHERE sportType =44 AND BetType = 3 AND SettingType = 4)
+	 -- For DCS Product
+    DECLARE @bitmapOrder_MuayThai INT , @bitmapOrder_CockFighting INT
+    
+    SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
+    SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
+    
+    DECLARE @IsHidden_MuayThai INT = 1
+    DECLARE @IsHidden_CockFighting INT = 1
+    
+    DECLARE @SportBook2 INT = 16
+    DECLARE @CockFighting INT = 19
+    
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
+	BEGIN
+		SET @IsHidden_MuayThai = 0
+	END
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@CockFighting,4))
+	BEGIN
+		SET @IsHidden_CockFighting = 0
+	END
     
 	SELECT	ISNULL(reject,0) AS Suspend,
 			ISNULL (closed,0) As Closed,
@@ -196,9 +211,11 @@ Param's Explanation:
 			
 		ISNULL(DisableMicrogameLC,1) as DisableMicrogameLC,
 			-- For MuayThai
-			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder),0)  AS DisableMuayThai,
-			
-			CAST(CASE WHEN @HideMuayThai = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideMuayThai,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_MuayThai),1) AS DisableMuayThai,
+			CAST(CASE WHEN @IsHidden_MuayThai = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_MuayThai),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideMuayThai,
+			-- For CockFighting
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_CockFighting),1) AS DisableCockFighting,
+			CAST(CASE WHEN @IsHidden_CockFighting = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_CockFighting),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCockFighting,
 			
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
 		ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
