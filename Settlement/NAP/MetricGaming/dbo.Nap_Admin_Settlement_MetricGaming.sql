@@ -71,7 +71,7 @@ BEGIN
 	
 	IF @Bettype = 801 AND @newBettypeTime <>  '' 
 			AND EXISTS (SELECT 1
-						FROM ResultDetail3rd WITH(NOLOCK)
+						FROM DBPRO.bodb02.dbo.ResultDetail3rd WITH(NOLOCK)
 						WHERE MatchID = @matchID
 							AND GameID = @bettype
 							AND ResultID <> @ResultID
@@ -319,7 +319,7 @@ BEGIN
 							+ ' Bettype:' + CAST(@Bettype AS VARCHAR(10)) 
 							+ ' ResultID:' + CAST (@ResultId AS VARCHAR(10))
 							+ ' BettypeTime:' + @BettypeTime
-							+ CASE WHEN @bettype = 801 AND @newBettypeTime <> '' THEN ' newBettypeTime:' + @newBettypeTime END
+							+ CASE WHEN @bettype = 801 AND @newBettypeTime <> '' THEN ' newBettypeTime:' + @newBettypeTime ELSE '' END
 							+ ' Result:' + @Result
 							+ ' IsSettleDetermined:' + CAST (@IsSettleDetermined AS VARCHAR(1))
 							+ ' SuspendedTime' + CAST(@SuspendedTime AS VARCHAR(2))
@@ -342,7 +342,8 @@ BEGIN
 	SELECT @Remark = '<Log><Event IsSettleDetermined ="' + CAST(@IsSettleDetermined AS varchar(10)) + '"'
 											+ ' Duration="'+ CAST(DATEDIFF(MILLISECOND, @start, @stop) AS VARCHAR(20)) + ' ms"'
 											+ ' TC="' + CAST(@ticketCount AS VARCHAR(20)) + '"'
-											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" >'
+											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) + '"' +											
+											+ CASE WHEN @newBettypeTime <> '' THEN  ' NewEventTime="' +  @newBettypeTime + '"' ELSE '' END + ' >'
 								+ @Result
 						  +	'</Event>'
 					+ '</Log>'
@@ -361,8 +362,8 @@ BEGIN
 		SELECT @Remark = '<Log><Event IsSettleDetermined ="' + CAST(@IsSettleDetermined AS varchar(10)) + '"'
 											+ ' Duration="'+ CAST(DATEDIFF(MILLISECOND, @start, @stop) AS VARCHAR(20)) + ' ms"'
 											+ ' TC="' + CAST(@ticketCount AS VARCHAR(20)) + '"'
-											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) +  '" >'
-											
+											+ ' Bal="' + CAST(@TotalAccount_BalanceUpdate AS VARCHAR(20)) + '/' + CAST(@TotalAccount AS VARCHAR(20)) + '"' +
+											+ CASE WHEN @newBettypeTime <> '' THEN  ' NewEventTime="' +  @newBettypeTime + '"' ELSE '' END + ' >'											
 								+ @Result
 								+ '<Error>
 									<Row Msg="'+ left(error_message(), 400)+'"/>'
