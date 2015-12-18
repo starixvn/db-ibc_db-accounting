@@ -1049,6 +1049,7 @@ BEGIN
 		-- Gold Deluxe, Microgaming Live Casino, Cock Fighting (translog)
 		IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (12, 13, 19))
 		BEGIN
+			INSERT INTO #BetListData
 			SELECT 
 				b.gameid AS bettype,
 				0 AS transid,
@@ -2853,6 +2854,7 @@ BEGIN
 	DROP TABLE #BetListDetailData
 	DROP TABLE #SportBettype
 END
+
 
 
 
