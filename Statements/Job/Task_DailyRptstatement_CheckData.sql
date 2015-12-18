@@ -20,7 +20,9 @@ AS
 	- @20150402@Tom: Change option NOLOCK to ROWLOCK table hint when select on bettrans to prevent dirty read by NOLOCK
 	- 20150727@Sophia: Apply Bettrade, exclude ticket Bettrade Comm (903) for Void/reject [#36905]
 	- 20150901@Sophia: Apply Colossus Bets [#42428]
-
+	- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
+					   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
+	- 20151109@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -451,24 +453,35 @@ BEGIN
 		,40 ErrCode
 	FROM 
 		(
-		SELECT 
-			bt.custid custid
-			,SUM(bm.winlost - bm.stake) AS GrandPrize
-		FROM 
-			bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
-			INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
-				ON bt.RefNo = bm.RefNo				
-		WHERE 
-			bt.bettype = 18000
-			AND bt.winlostdate = @winlostdate
-			AND bt.statusID in (101, 102) -- 'VOID','REJECT'
-			AND bm.statuswinlost <> 0
-		GROUP BY bt.custid
+			--SELECT 
+			--	bt.custid custid
+			--	,SUM(bm.winlost - bm.stake) AS GrandPrize
+			--FROM 
+			--	bodb02.dbo.Bettrans14 bt WITH(NOLOCK)
+			--	INNER JOIN bodb02.dbo.bettransM14 bm (nolock)
+			--		ON bt.RefNo = bm.RefNo				
+			--WHERE 
+			--	bt.bettype = 18000
+			--	AND bt.winlostdate = @winlostdate
+			--	AND bt.statusID in (101, 102) -- 'VOID','REJECT'
+			--	AND bm.statuswinlost <> 0
+			--GROUP BY bt.custid
+
+			--UNION ALL
+
+			SELECT  custid
+					,SUM(WinAmount) AS GrandPrize
+			FROM	DBACC.bodb02.dbo.PayoutTrans WITH(NOLOCK) 
+			WHERE	winlostdate = @Winlostdate							
+			GROUP BY custid
+
 		) tmpGrandPrize 
 	LEFT JOIN [dbo].[rptStatement] rpt WITH (NOLOCK) 	
 		ON rpt.Custid = tmpGrandPrize.Custid
 			AND rpt.winlostdate = @winlostdate
 	WHERE ABS(ISNULL(tmpGrandPrize.GrandPrize, 0) - ISNULL(rpt.GrandPrize, 0)) > 0
+
+
 
 
 	/*Insert data into tmpStatement temp table*/
@@ -712,6 +725,14 @@ BEGIN
 			WHERE rpt.CustID IS NULL 
 				AND tmpSta.ErrCode = 20
 		END
+		
+				
+		UPDATE rpt
+		SET rpt.VoidAmt = tmpSta.VoidAmt  
+		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
+		INNER JOIN   #tmpStatement tmpSta
+			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 30
+
 
 		INSERT INTO [dbo].[rptStatement] (
 			WinlostDate
@@ -730,15 +751,16 @@ BEGIN
 		WHERE rpt.CustID IS NULL 
 			AND tmpSta.ErrCode = 20
 			AND tmpSta.Custid IN (SELECT Custid FROM #tmpStatement tmpSta WHERE tmpSta.ErrCode = 30)
-			
-		UPDATE rpt
-		SET rpt.VoidAmt = tmpSta.VoidAmt  
-		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
-		INNER JOIN   #tmpStatement tmpSta
-			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 30
-
+	
 	
 		---------
+		UPDATE rpt
+		SET rpt.GrandPrize = tmpSta.GrandPrize  
+		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
+		INNER JOIN   #tmpStatement tmpSta
+			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 40
+
+			
 		INSERT INTO [dbo].[rptStatement] (
 			WinlostDate
 			,Custid
@@ -754,12 +776,7 @@ BEGIN
 		WHERE rpt.CustID IS NULL 
 			  AND tmpSta.ErrCode = 40
 			
-		UPDATE rpt
-		SET rpt.GrandPrize = tmpSta.GrandPrize  
-		FROM [dbo].[rptStatement] rpt WITH(ROWLOCK,UPDLOCK)
-		INNER JOIN   #tmpStatement tmpSta
-			ON rpt.WinlostDate = @WinlostDate AND rpt.CustID = tmpSta.CustID AND tmpSta.ErrCode = 40
-
+		
 	END
 	 
 	IF OBJECT_ID('tempdb..#tmpStatement') IS NOT NULL

@@ -10,6 +10,7 @@ AS
 		
 		Revisions:
 			- 20150710@Patrick: Support Gold Deluxe
+			- 20151028@Patrick: Support Company Winlimit
 
 		Parameters Explanation:	
 */
@@ -39,6 +40,11 @@ GROUP BY custid, winlostdate, bettype
 DECLARE @today SMALLDATETIME
 SET @today = convert(nvarchar(10), current_timestamp,120)
 
+CREATE TABLE #ProductSetting(Bettype SMALLINT, IsCompany BIT, IsSMA BIT)
+INSERT INTO #ProductSetting(Bettype, IsCompany, IsSMA)
+SELECT BetType, IsActive_Company, IsActive_SMA
+FROM dbo.f_Winlimit_GetProductSetting()
+
 -- perform update
 Declare @Retry int, @Success bit
 SET @Retry = 0
@@ -50,17 +56,34 @@ BEGIN TRY
 	SET @Success = 1
 	BEGIN TRANSACTION
 	
+	--for SMA Winlimit
 	UPDATE bal
 	SET Balance = bal.Balance + B.balance
 	FROM dbo.BalanceCreditGame bal 	--WITH (rowlock, updlock)
 		INNER JOIN #Balance b ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate AND bal.bettype = b.bettype
+	WHERE b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsSMA = 1)
 		
 	-- insert balance for today if not exist in balance table
 	INSERT INTO dbo.BalanceCreditGame(custid, winlostdate, bettype, balance)
-	select b.custid, b.winlostdate, b.bettype, b.balance
-	from #Balance b
+	SELECT b.custid, b.winlostdate, b.bettype, b.balance
+	FROM #Balance b
 		LEFT JOIN dbo.BalanceCreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate AND bal.bettype = b.bettype
-	WHERE bal.Winlostdate is null and b.winlostdate = @today
+	WHERE bal.Winlostdate IS NULL AND b.winlostdate = @today
+		AND b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsSMA = 1)
+
+	--for Company Winlimit
+	UPDATE bal
+	SET Winlost = bal.Winlost + B.balance
+	FROM dbo.Winlimit_CreditGame bal
+		INNER JOIN #Balance b ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate AND bal.bettype = b.bettype
+	WHERE b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsCompany = 1)
+	
+	INSERT INTO dbo.Winlimit_CreditGame(custid, winlostdate, bettype, Winlost)
+	SELECT b.custid, b.winlostdate, b.bettype, b.balance
+	FROM #Balance b
+		LEFT JOIN dbo.Winlimit_CreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate AND bal.bettype = b.bettype
+	WHERE bal.Winlostdate IS NULL AND b.winlostdate = @today
+		AND b.bettype IN (SELECT BetType FROM #ProductSetting WHERE IsCompany = 1)
 		
 	COMMIT TRANSACTION
 END TRY
@@ -76,6 +99,8 @@ IF @Success = 0 AND @Retry < 3 GOTO TryAgain
 IF @Success = 1
 	DELETE FROM dbo.BalancePendingCreditGame
 	WHERE rn <= @rn
+
+DROP TABLE #ProductSetting
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[Task_BalanceUpdCreditGame] TO [vnteam]
