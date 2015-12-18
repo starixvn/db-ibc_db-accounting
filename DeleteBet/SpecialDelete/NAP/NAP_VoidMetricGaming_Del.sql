@@ -1,10 +1,11 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_VoidMetricGaming_Del]    Script Date: 01/12/2015 3:08:38 PM ******/
+/****** Object:  StoredProcedure [dbo].[NAP_VoidMetricGaming_Del]    Script Date: 12/10/2015 10:26:12 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_VoidMetricGaming_Del    Script Date: 09/12/2015 4:42:15 PM ******/
 ALTER PROCEDURE [dbo].[NAP_VoidMetricGaming_Del]
 	@MatchId			INT,
 	@BetTypes			VARCHAR(1000)	= '',		
@@ -35,6 +36,7 @@ AS
 	Revisions:
 			  - 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 			  - 20151103@Kathy: Enhance performance [Redmine:#43233]
+			  - 20151209@Kathy: get translog.siteid for MG API [Redmine:#49019]
 			  
 	Param's Explanation:
 
@@ -1068,9 +1070,12 @@ BEGIN
 			,tmp.oddstype
 			,tmp.stake
 			,tmp.transdesc
+			,tl.SiteId
 	FROM	#BetDelete tmp
 		INNER JOIN dbo.bettrans b WITH(NOLOCK)
 			ON	tmp.transid = b.transid
+		INNER JOIN dbo.translog tl WITH(NOLOCK)
+			ON tl.translogid = tmp.refno
 	
 	DROP TABLE #BeforeUpd
 	DROP TABLE #AfterUpd
@@ -1126,24 +1131,7 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
-
-
-
-
-
-
-
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_VoidMetricGaming_Del] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_VoidMetricGaming_Del] TO [vnteam] AS [dbo]
-
-
-
-
-
