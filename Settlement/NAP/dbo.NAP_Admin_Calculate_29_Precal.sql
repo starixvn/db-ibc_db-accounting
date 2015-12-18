@@ -30,7 +30,9 @@ BEGIN
 	--Declare @tmp_mrefno TABLE (refno bigint PRIMARY KEY CLUSTERED)  
 	--INSERT INTO @tmp_mrefno (refno)
 	--	SELECT refno FROM dbo.bettransm WITH (ROWLOCK) WHERE matchid = @matchid   
-	DECLARE @temp_bettrans TABLE (
+	--DECLARE @temp_bettrans TABLE
+	CREATE TABLE #temp_bettrans  
+	(
 		[transid] [bigint] NOT NULL
 		,[refno] [bigint] PRIMARY KEY CLUSTERED
 		,[stake] [money] NOT NULL
@@ -55,7 +57,9 @@ BEGIN
 				)
 		AND NOT EXISTS (SELECT 1 FROM bettransm WITH(NOLOCK) WHERE refno = bm.refno AND statusID IN(1, 101)) -- dont calculate main ticket if subticket is still waiting or rejected
 		)
-	INSERT INTO @temp_bettrans (
+	--INSERT INTO @temp_bettrans 
+	insert into #temp_bettrans
+	(
 		[transid]
 		,[refno]
 		,[stake]
@@ -64,25 +68,29 @@ BEGIN
 		,[bitmap]
 		,[winlostdate]
 		)
-	SELECT [transid]
+	SELECT distinct [transid]
 		,b.[refno]
 		,[stake]
 		,LEN(betteam)
 		,hdp1
 		,hdp2
 		,winlostdate
-	FROM dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN refnos t ON b.refno = t.refno
+	FROM dbo.bettrans b WITH (ROWLOCK)
+		--INNER JOIN refnos t ON b.refno = t.refno
 	WHERE b.matchid = 29 AND statusID NOT IN (101, 102) --('VOID','REJECT')
 		AND betid = 0 -- main ticket of combination
+		AND refno in (select refno from refnos)
 
 	-- delete record which already created Result/Detail
 	DELETE T
-	FROM @temp_bettrans T
+	--FROM @temp_bettrans T
+	FROM #temp_bettrans T
 		INNER JOIN dbo.BetParlayResult pr ON T.refno = pr.refno
 
 	-- Results list from both bettransm & bettransm14 (for only needed Combination Ticket)
-	DECLARE @parlay_base TABLE (
+	--DECLARE @parlay_base TABLE 
+	CREATE TABLE #parlay_base 
+	(
 		refno BIGINT
 		,transid BIGINT
 		,winlostdate SMALLDATETIME
@@ -106,7 +114,9 @@ BEGIN
 		UNIQUE (refno, matchid)
 		)
 
-	INSERT INTO @parlay_base (
+	--INSERT INTO @parlay_base 
+	INSERT INTO #parlay_base
+	(
 		refno
 		,transid
 		,winlostdate
@@ -139,9 +149,12 @@ BEGIN
 		,liveindicator
 		,bm.betcheck
 	FROM dbo.bettransm bm WITH (ROWLOCK)
-		INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
+		--INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
+		INNER JOIN #temp_bettrans tb ON bm.refno = tb.refno
 
-	INSERT INTO @parlay_base (
+	--INSERT INTO @parlay_base 
+	INSERT INTO #parlay_base 
+	(
 		refno
 		,transid
 		,winlostdate
@@ -174,7 +187,8 @@ BEGIN
 		,liveindicator
 		,bm.betcheck
 	FROM dbo.bettransm14 bm WITH (ROWLOCK)
-		INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
+		--INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
+		INNER JOIN #temp_bettrans tb ON bm.refno = tb.refno
 		-- prepare Seq of each refno
 		;
 
@@ -185,12 +199,14 @@ BEGIN
 				) RN
 			,refno
 			,matchid
-		FROM @parlay_base
+		--FROM @parlay_base
+		FROM #parlay_base
 		)
 	UPDATE pb
 	SET RN = sub.RN
 	FROM sub
-		INNER JOIN @parlay_base pb ON sub.refno = pb.refno AND sub.matchid = pb.matchid
+		--INNER JOIN @parlay_base pb ON sub.refno = pb.refno AND sub.matchid = pb.matchid
+		INNER JOIN #parlay_base pb ON sub.refno = pb.refno AND sub.matchid = pb.matchid
 		-- prepare N
 		;
 
@@ -198,15 +214,17 @@ BEGIN
 	AS (
 		SELECT refno
 			,count(*) cnt
-		FROM @parlay_base
+		FROM #parlay_base
 		GROUP BY refno
 		)
 	UPDATE pb
 	SET CNT = sub.cnt
 		,bCNT = t.N
 	FROM sub
-		INNER JOIN @parlay_base pb ON sub.refno = pb.refno
-		INNER JOIN @temp_bettrans t ON t.refno = pb.refno
+		INNER JOIN #parlay_base pb ON sub.refno = pb.refno
+		INNER JOIN #temp_bettrans t ON t.refno = pb.refno
+		--INNER JOIN @parlay_base pb ON sub.refno = pb.refno
+		--INNER JOIN @temp_bettrans t ON t.refno = pb.refno
 
 	/* logic merge into above query, can remove this part later.
 	UPDATE pb
@@ -216,7 +234,7 @@ BEGIN
 	-- stop if got some ticket  CNT value is not match
 	IF EXISTS (
 			SELECT *
-			FROM @parlay_base
+			FROM #parlay_base
 			WHERE CNT <> bCNT
 			)
 	BEGIN
@@ -262,8 +280,8 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,pb.betcheck
-	FROM @parlay_base pb
-		INNER JOIN @temp_bettrans tb ON pb.refno = tb.refno
+	FROM #parlay_base pb
+		INNER JOIN #temp_bettrans tb ON pb.refno = tb.refno
 		INNER JOIN dbo.RefCombination rc ON pb.RN = rc.seq AND pb.CNT = rc.N AND (tb.bitmap & rc.bitmap) > 0
 
 	INSERT INTO dbo.BetParlayResult (
@@ -300,7 +318,7 @@ BEGIN
 		,0
 		,0
 		,0
-	FROM @temp_bettrans tb
+	FROM #temp_bettrans tb
 		INNER JOIN dbo.RefCombination rc ON tb.N = rc.N AND (tb.bitmap & rc.bitmap) > 0
 END
 GO

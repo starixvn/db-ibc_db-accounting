@@ -16,11 +16,9 @@ AS
 	DB: DB02.BODB02
 	
 	Revisions: 
-		-- 20130524@Elodie: Write settlement log for horse racing
-		-- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 */
 BEGIN
-	-- 20100720@Henry: Change SP Logfile to WriteLog_UserLog
 	SET NOCOUNT ON;	
 	
 	UPDATE dbo.outright with (rowlock,updlock)
@@ -36,28 +34,17 @@ BEGIN
 		AND matchcode = CAST(@runnerNumber as varchar(10))
 		AND oddsstatus <> 'completed'
 	
-	-- WRITE LOG
-	DECLARE @Remark VARCHAR(500)
-	BEGIN TRY
-		SET @Remark = 'Update Result for Horse ID:' + @ProgramID + ' runner:' + CAST(@runnerNumber as nvarchar(20))
-					+ ' winodds:' + CAST(@winOdds as nvarchar(20)) + ' PlaceOdds:' + CAST(@placeOdds as nvarchar(20))
-					+ ' IsFavor:' + CAST(@isFav as nvarchar(1)) + ' IsSCR:' + CAST(@isSCR as nvarchar(1))
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_SettleOutright 
-			@UserID = @userid, 
-			@MatchID = @raceNumber, 
-			@ActionID = 130, 
-			@LeagueID = 0, 
-			@EventDate = @eventdate,
-			@Remark = @Remark
-			
-	END TRY
-	BEGIN CATCH		
-		SET @Remark = 'Update Result for Horse ID:' + @ProgramID + ' race:' + CAST(@raceNumber as nvarchar(20)) + ' runner:' + CAST(@runnerNumber as nvarchar(20)) + ' eventdate:' + CAST(@eventdate as nvarchar(20))
-					+ ' winodds:' + CAST(@winOdds as nvarchar(20)) + ' PlaceOdds:' + CAST(@placeOdds as nvarchar(20))
-					+ ' IsFavor:' + CAST(@isFav as nvarchar(1)) + ' IsSCR:' + CAST(@isSCR as nvarchar(1))
-		EXEC dbo.WriteLog_UserLog @userid, @Remark
-	END CATCH	
+	Declare @LogData as nvarchar(300)
+	SET @LogData = 'Update Result for Horse ID:' + @ProgramID + ' race:' + CAST(@raceNumber as nvarchar(20)) + ' runner:' + CAST(@runnerNumber as nvarchar(20))
+		+ ' winodds:' + CAST(@winOdds as nvarchar(20)) + ' PlaceOdds:' + CAST(@placeOdds as nvarchar(20))
+		+ ' IsFavor:' + CAST(@isFav as nvarchar(1)) + ' IsSCR:' + CAST(@isSCR as nvarchar(1))
+	EXEC dbo.logfile @userid, @LogData	
 END
 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Dot_Acc_Race_ResultUpd] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Dot_Acc_Race_ResultUpd] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Dot_Acc_Race_ResultUpd] TO [ITTim] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Dot_Acc_Race_ResultUpd] TO [vnteam] AS [dbo]
+GO

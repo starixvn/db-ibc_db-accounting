@@ -17,7 +17,9 @@ AS
 	Original: Admin_PreCalculate_6
 	
 	Revisions:
-		- 20140514@Kathy: insert settled command into LAS queue [Redmine:#14286]	
+		- 20121126@Viet: separate from admin_calculate_6 for Virtual sports
+		- 20121212@Victor: Add bettype 1235 & 1236 for Virtual Tennis 	
+		- 20140512@Kathy: insert settled command into LAS queue [Redmine:#14286]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 */
 SET NOCOUNT ON
@@ -141,7 +143,7 @@ SET NOCOUNT ON
 		--SELECT @LASCommand = '',
 		--		@Remark = ''
 
-		DELETE TOP (300) #TempData
+		DELETE TOP (20) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
 			deleted.playercomm, deleted.comm, deleted.acomm, deleted.scomm, deleted.statusid, deleted.modds	
 		INTO @subtable(transid, winlost, awinlost, mwinlost, swinlost, playercomm, comm, acomm, scomm, statusid, modds)	
