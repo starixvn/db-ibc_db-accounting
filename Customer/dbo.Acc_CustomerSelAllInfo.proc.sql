@@ -64,10 +64,10 @@ Revisions:
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20151001@Percy: AG Casino & Microgaming - Outstanding Info [Redmine: #43765]
 	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
-	- 20151001@Percy: AG Casino & Microgaming - Outstanding Info [Redmine: #43765]
 	- 20151030@Percy: AG Casino & Microgaming - Outstanding Info for new Sporttype [Redmine: #46450]
 	- 20151112@Percy: AG Casino & Microgaming - Fix bug for new Sporttype [Redmine: #47441]
-
+	- 20151210@Percy: Add new product: Cock Fighting Sabong [Redmine: #48602]
+	
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -157,15 +157,23 @@ BEGIN
     SELECT @currentDate = CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120)
 	
 	-- Get sport bettype
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
-								EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
+	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
-	DELETE @SportBettype WHERE ProductID <> 11
-						   AND ProductID <> 13
-						   AND ProductID <> 17
-						   AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive')
+	DELETE @SportBettype WHERE ProductID NOT IN (11, 13, 17, 19) -- AG-Casino, MGC-LC, MGC-LC, Cock Fighting
+						   AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') --MG-Superlive
 
+	-- Tickets not in bettrans: AG-Casino, MGC-RNG
+	UPDATE @SportBettype
+	SET IsUsedBettrans = 1
+	WHERE ProductID NOT IN (11,17)
+	
+	-- Tickets running in translog: MG-Superlive, Cock Fighting
+	UPDATE @SportBettype
+	SET IsRunningTranslog = 1
+	WHERE ProductId IN (1, 19)
+	
     --Get CustID FROM DB06, WHERE got index on Username AND Username2
     EXEC @custid = DBACC.bodb02.dbo.f_GetCustIDFromUsername @username
 
@@ -574,7 +582,7 @@ BEGIN
 	    a.username as agentName,	
 	    a.Enabled as agentEnabled,
 	    m.custid as masterID,
-	    m.username as masterName,
+	   m.username as masterName,
 	    m.Enabled as masterEnabled,
 	    s.custid as superID,
 	    s.username as superName,
@@ -611,9 +619,9 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.custid = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
 		
-		-- Get Cash From TransLog
+		-- Get Outstanding From TransLog
 	    SELECT @TransLogOT = SUM(ABS(actual_stake))
 	    FROM translog(NOLOCK) WHERE custid = @custid AND statusID = 0
 		
@@ -625,11 +633,11 @@ BEGIN
 	    FROM(		
 		    SELECT 
 			    ISNULL(sum(case when ruben=1 then winlost-actual_stake+playercomm else 0 end),0) Cash,
-			    sum(case when ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then CASE WHEN winlostdate<@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake)END else 0 end) outstanding, 
+			    sum(case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then CASE WHEN winlostdate<@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake)END else 0 end) outstanding, 
 			    max(transdate) lastTxn 
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.custid = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+			WHERE BT.custid = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
 	    ) Balance
 
     END 
@@ -676,18 +684,9 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.recommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
 		
-		-- Get Today Cash on bettrans
-		SELECT
-			@todayAgentCash = ISNULL(sum(awinlost+comm-playercomm),0),
-			@todayCustCash = ISNULL(sum(winlost-actual_stake+playercomm),0)
-	    FROM bettrans BT WITH(NOLOCK)
-			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-	    WHERE BT.recommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
-		
-		-- Get Cash From TransLog
+		-- Get Outstanding From TransLog
 		SELECT @TransLogOT = SUM(actual_stake),
 			    @TransLogOTPT = SUM(actual_stake * apositiontaking)
 	    FROM translog(NOLOCK) WHERE recommend = @custid AND statusID = 0
@@ -705,13 +704,13 @@ BEGIN
 	    FROM (	
 		    SELECT 
 			    sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
-			    sum(case when ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake * apositiontaking else 0 end) agentPositionTaking, 
+			    sum(case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * apositiontaking else 0 end) agentPositionTaking, 
 			    sum(case when custid <> recommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end) customerCash, 
 			    sum(case when custid <> recommend AND ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake else 0 end) customerOutstanding, 
 			    max(transdate) lastTxn
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.recommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+			WHERE BT.recommend = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
 	    )Balance 
 
     END
@@ -768,9 +767,9 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.mrecommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
 		
-		-- Get Cash From TransLog
+		-- Get Outstanding From TransLog
 		SELECT @TransLogOT = SUM(actual_stake),
 			    @TransLogOTPT = SUM(actual_stake * mpositiontaking)
 	    FROM translog(NOLOCK) WHERE mrecommend = @custid AND statusID = 0
@@ -789,14 +788,14 @@ BEGIN
 			    ISNULL(@DisableAutoMPT,0) as DisableAutoMPT
 	    FROM (	
 		    SELECT	sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
-				    sum (case when ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake * mpositiontaking else 0 end) masterPositionTaking, 
+				    sum (case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * mpositiontaking else 0 end) masterPositionTaking, 
 				    sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
 				    sum(case when custid <> recommend AND custid <> mrecommend AND ruben=1 then winlost-actual_stake+playercomm else 0  end) customerCash, 
 				    sum(case when custid <> recommend AND custid <> mrecommend AND ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake else 0 end) customerOutstanding, 
 				    max(transdate) lastTxn
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.mrecommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+			WHERE BT.mrecommend = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
 	    )Balance 
     	
 	    /*
@@ -859,9 +858,9 @@ BEGIN
 	    FROM bettrans BT WITH(NOLOCK)
 			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 	    WHERE BT.srecommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
     	
-		-- Get Cash From TransLog
+		-- Get Outstanding From TransLog
 		SELECT @TransLogOT = SUM(actual_stake),
 			    @TransLogOTPT = SUM(actual_stake * spositiontaking)
 	    FROM translog(NOLOCK) WHERE srecommend = @custid AND statusID = 0
@@ -882,14 +881,14 @@ BEGIN
     	
 	    FROM (
 		    SELECT	sum(case when custid=srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
-				    sum(case when ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake * spositiontaking else 0 end) superPositionTaking, 
+				    sum(case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * spositiontaking else 0 end) superPositionTaking, 
 				    sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
 				    sum(case when custid=recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
 				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end) customerCash, 
 				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake else 0 end) customerOutstanding	
 		     FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.srecommend = @custid AND (S.ProductID IS NULL OR S.ProductID <> 11) AND (S.ProductID IS NULL OR S.ProductID <> 17)
+			WHERE BT.srecommend = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
 		    )Balance 
      
     END
@@ -908,6 +907,7 @@ BEGIN
 	-- For sportbook2
 	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
+
 
 
 GO
