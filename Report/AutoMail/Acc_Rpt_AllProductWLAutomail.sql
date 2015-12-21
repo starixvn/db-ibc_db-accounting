@@ -20,7 +20,10 @@ AS
 		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
 		- 20150722@Sophia: Send mail for dummy account in case of testing
 		- 20150928@Sophia: Apply Colosuss Bets and expand the range of AG Casino [#43352]
+		- 20150930@Sophia: Fix winlostyesterday at table Transfer_bk [#44701]
 		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
+		- 20151210@Sophia: Apply Cock Fighting [Redmine: #48602]
+
 		 
 	Param's Explanation:
 	
@@ -219,6 +222,8 @@ BEGIN
 							WHEN bettype BETWEEN 2008 AND 2009 THEN 19692521
 							WHEN bettype BETWEEN 901 AND 903 THEN 18371760
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
+							WHEN bettype = 1003 THEN 20174484
+
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -247,6 +252,7 @@ BEGIN
 							WHEN bettype BETWEEN 2008 AND 2009 THEN 19741787
 							WHEN bettype BETWEEN 901 AND 903 THEN 18377348
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
+							WHEN bettype = 1003 THEN  20256514
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate

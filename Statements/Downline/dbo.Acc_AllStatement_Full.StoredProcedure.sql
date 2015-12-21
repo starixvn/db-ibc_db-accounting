@@ -48,6 +48,8 @@
 		- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
 						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
 		- 20151113@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
+		- 20151221@Sophia: Exclude Cockfighting from bettrans table in case there is running ticket on bettrans [Redmine: #48602]
+		
 
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -127,7 +129,7 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 			WHERE custid = @custid
 				AND winlostdate between @_FromDate and @_ToDate
-				AND CASE WHEN s.productId = 1 AND s.SubProduct = 'MG-SuperLive' AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
+				AND CASE WHEN ((s.productId = 1 AND s.SubProduct = 'MG-SuperLive' ) OR (s.productId = 19)) AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
 				AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 				--AND statusID <> 103
 			GROUP BY winlostdate, b.bettype,

@@ -28,6 +28,7 @@ AS
 		- 20150702@Sophia: Apply Metric Gaming, Microgaming and Bettrade [#36906]
 		- 20150922@Sophia: Apply Colossus Bets and expand the range of AG Casino [#43352]
 		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
+		- 20151210@Sophia: Apply Cock Fighting [Redmine: #48602]
 							    
 
 	Param Explanation:
@@ -301,6 +302,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
+			 WHEN bettype = 1003 THEN 'Cockfighting'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	  FROM #bettranstmp
@@ -318,6 +320,8 @@ BEGIN
 			OR bettype BETWEEN 2008 AND 2009 
 			OR bettype BETWEEN 901 AND 903 
 			OR bettype BETWEEN 18000 AND 18099  
+			OR bettype BETWEEN 1400 AND 1420
+			OR bettype = 1003
 		   )
   GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -338,6 +342,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
+			 WHEN bettype = 1003 THEN 'Cockfighting'
 		   END, winlostdate
 
     UNION ALL
