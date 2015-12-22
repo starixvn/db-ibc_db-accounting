@@ -11,15 +11,14 @@ ALTER PROCEDURE [dbo].[NAP_Admin_PreCalculate_1]
 	@fta smallmoney	
 AS
 /*
-	Created by:[]
-	Date:[]
+	Created by: Kathy
+	Date:20140213
 	Task: Settlement 
 	DB: DBTRANS.BODB02
+	Original: Admin_PreCalculate_1
 
 	Revisions:
-		- 20121126@Viet: separate from admin_calculate_1 for Virtual sports		
-		- 20121212@Victor: Add bettype 1220 for Virtual Tennis Player Win
-		- 20140509@Kathy: insert settled command into LAS queue [Redmine:#14286]
+		- 20140514@Kathy: insert settled command into LAS queue [Redmine:#14286]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 */
 
@@ -137,7 +136,7 @@ SET NOCOUNT ON
 		--SELECT @LASCommand = '',
 		--	@Remark = ''
 		
-		DELETE TOP (20) #TempData
+		DELETE TOP (300) #TempData
 		OUTPUT deleted.transid, deleted.winlost, deleted.awinlost, deleted.mwinlost, deleted.swinlost, 	
 			deleted.playercomm, deleted.comm, deleted.acomm, deleted.scomm, deleted.statusid, deleted.modds	
 		INTO @subtable(transid, winlost, awinlost, mwinlost, swinlost, playercomm, comm, acomm, scomm, statusid, modds)	

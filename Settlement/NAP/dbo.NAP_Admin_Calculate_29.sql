@@ -32,9 +32,7 @@ BEGIN
 	DECLARE @commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 	-- GET list of concern Ticket  
-	--DECLARE @temp_bettrans TABLE 
-	CREATE TABLE #temp_bettrans
-	(
+	DECLARE @temp_bettrans TABLE (
 		transid BIGINT
 		,custid INT
 		,refno BIGINT PRIMARY KEY CLUSTERED
@@ -58,9 +56,7 @@ BEGIN
 				FROM dbo.strSplit(@matchids, ',')
 				)
 		)
-	--INSERT INTO @temp_bettrans 
-	INSERT INTO #temp_bettrans 
-	(
+	INSERT INTO @temp_bettrans (
 		transid
 		,custid
 		,refno
@@ -90,9 +86,7 @@ BEGIN
 		AND betid = 0 -- main ticket of combination
 
 	-- Get list of ParlayResult
-	--DECLARE @temp_parlayResult TABLE 
-	CREATE TABLE #temp_parlayResult
-	(
+	DECLARE @temp_parlayResult TABLE (
 		refno BIGINT
 		,serial INT
 		,transid BIGINT
@@ -116,9 +110,7 @@ BEGIN
 		UNIQUE (refno, serial)
 		)
 
-	--INSERT INTO @temp_parlayResult 
-	INSERT INTO #temp_parlayResult
-	(
+	INSERT INTO @temp_parlayResult (
 		refno
 		,serial
 		,transid
@@ -153,8 +145,7 @@ BEGIN
 		,0
 		,0
 	FROM dbo.BetParlayResult pr WITH (ROWLOCK)
-		--INNER JOIN @temp_bettrans t ON pr.refno = t.refno
-		INNER JOIN #temp_bettrans t ON pr.refno = t.refno
+		INNER JOIN @temp_bettrans t ON pr.refno = t.refno
 
 	-- get list of max(eventdate) - using for set winlostdate of running ticket
 	DECLARE @refno_maxeventdate TABLE (
@@ -166,8 +157,7 @@ BEGIN
 	SELECT pd.refno
 		,MAX(ISNULL(pd.winlostdate, '01 JAN 2000'))
 	FROM dbo.BetParlayDetail pd WITH (ROWLOCK)
-		--INNER JOIN @temp_bettrans t ON pd.refno = t.refno
-		INNER JOIN #temp_bettrans t ON pd.refno = t.refno
+		INNER JOIN @temp_bettrans t ON pd.refno = t.refno
 	GROUP BY pd.refno
 
 	------------------------------------------------------------  
@@ -211,8 +201,7 @@ BEGIN
 					END) AS runningCnt
 			,MAX(pd.winlostdate) AS matchdate_max
 		FROM dbo.BetParlayDetail pd WITH (ROWLOCK)
-			--INNER JOIN @temp_bettrans tb ON pd.refno = tb.refno
-			INNER JOIN #temp_bettrans tb ON pd.refno = tb.refno
+			INNER JOIN @temp_bettrans tb ON pd.refno = tb.refno
 			INNER JOIN @refno_maxeventdate rm ON pd.refno = rm.refno
 		GROUP BY pd.refno
 			,pd.serial
@@ -302,12 +291,9 @@ BEGIN
 			WHEN (@oldstatusID <> @statusID) OR (@oldwinlost <> @winlost) THEN 1
 			ELSE 0
 			END
-	FROM 
-		--@temp_parlayResult PR
-		#temp_parlayResult PR
+	FROM @temp_parlayResult PR
 		INNER JOIN EffectiveOdds m ON PR.refno = m.refno AND PR.serial = m.serial
-		--INNER JOIN @temp_bettrans TB ON PR.refno = TB.refno
-		INNER JOIN #temp_bettrans TB ON PR.refno = TB.refno
+		INNER JOIN @temp_bettrans TB ON PR.refno = TB.refno
 
 	-- update temp_ParlayResult back to betParlayResult
 	UPDATE PR
@@ -324,8 +310,7 @@ BEGIN
 		,acomm = t.acomm
 		,scomm = t.scomm
 	FROM dbo.BetParlayResult PR
-		--INNER JOIN @temp_parlayResult T ON PR.refno = T.refno AND PR.serial = T.serial
-		INNER JOIN #temp_parlayResult T ON PR.refno = T.refno AND PR.serial = T.serial
+		INNER JOIN @temp_parlayResult T ON PR.refno = T.refno AND PR.serial = T.serial
 	WHERE IsUpdated = 1
 
 	IF @@SERVERNAME NOT IN ('DBTRANS', 'DB230','DB206') RETURN
@@ -369,8 +354,7 @@ BEGIN
 		,SUM(acomm)
 		,SUM(scomm)
 	FROM dbo.BetParlayResult pr WITH (NOLOCK)
-		--INNER JOIN @temp_bettrans t ON pr.refno = t.refno
-		INNER JOIN #temp_bettrans t ON pr.refno = t.refno
+		INNER JOIN @temp_bettrans t ON pr.refno = t.refno
 	GROUP BY t.custid
 		,pr.refno
 		,pr.winlostdate

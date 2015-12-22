@@ -30,7 +30,7 @@ BEGIN
 				@SettleA4	NVARCHAR(1),
 				@Draw		NVARCHAR(1),
 				@StrLen		INT ,
-		@modds money
+				@modds money
 
 			SELECT  @StrLen = LEN(@betteam)
 			 
