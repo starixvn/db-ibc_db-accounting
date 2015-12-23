@@ -106,13 +106,12 @@ BEGIN
 	SET MaxwinLimit = t.MaxWinLimit
 		--, TotalWinAmt = CASE WHEN g.IsBlocked = 0 AND g.WinlostDate = @WinlostDate THEN g.TotalWinAmt + t.TotalWinAmount
 		--					ELSE t.TotalWinAmount END
-		, TotalWinAmt = CASE WHEN g.WinlostDate = @WinlostDate THEN g.TotalWinAmt + t.TotalWinAmount
-							ELSE t.TotalWinAmount END
+		, TotalWinAmt = t.TotalWinAmount
 		, BlockedWinAmt = t.TotalWinAmount
 		, IsBlocked = 0
 		, IsNotified = 0
 		, BlockedDate = @BlockedDate
-		, UnBlockedDate = NULL
+		, UnBlockedDate = CASE WHEN g.WinlostDate = @WinlostDate THEN @BlockedDate ELSE NULL END
 		, WinlostDate = @WinlostDate
 		, CreatedBy = NULL
 		, ModifiedBy = NULL
@@ -124,7 +123,7 @@ BEGIN
 
 	FROM dbo.WinLimit_Game g WITH(ROWLOCK, UPDLOCK)
 		INNER JOIN #CustBlockedList t ON t.CustId = g.CustID AND t.Bettype = g.Bettype
-	WHERE BlockedWinAmt < t.TotalWinAmount
+	WHERE (g.WinlostDate = @WinlostDate AND BlockedWinAmt <> t.TotalWinAmount) OR (g.WinlostDate <> @WinlostDate)
 	--WHERE (g.IsBlocked = 0 AND g.WinlostDate = @WinlostDate) OR (g.WinlostDate <> @WinlostDate)
 
 	--insert
@@ -204,4 +203,4 @@ BEGIN
 	DROP TABLE #CustBlockedList
 	
 END
-GO
+GO 
