@@ -1,13 +1,11 @@
 ﻿use bodb02
 go
 
-ALTER PROCEDURE [dbo].[Acc_BalanceGameResetYesterday]
-(
-	@CustID		INT	,	
-	@isResetYesterdayBalance	BIT OUTPUT,
-	@YesterdayBalance	MONEY OUTPUT,
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(1000) = '' OUTPUT	
+ALTER PROCEDURE dbo.Acc_BalanceGameResetYesterday (@CustID INT
+	, @IsResetYesterdayBalance BIT OUTPUT
+	, @YesterdayBalance	MONEY OUTPUT
+	, @ErrCode INT = 0 OUTPUT
+	, @ErrMsg NVARCHAR(1000) = '' OUTPUT	
 )
 AS
 /*
@@ -18,69 +16,57 @@ AS
 	Revisions:		
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database) 					       
 		- 20150723@Patrick: Support Gold deluxe
+		- 20151223@Patrick: Add Max/Loss limit for RnG Casino [Redmine: #49528]
 */
 BEGIN
 	SET NOCOUNT ON	
-	SELECT @isResetYesterdayBalance = 0, @ErrCode = 0
-	
-	-- get current setting	
-	DECLARE @isAutoResetLiveCasino BIT, @MaxWinLiveCasino SMALLMONEY
-	SELECT @isAutoResetLiveCasino = ISNULL(isAutoResetLiveCasino,0),  
-			@MaxWinLiveCasino = ISNULL(MaxWinLiveCasino,0)
-	from CustDB.dbo.Custinfo WITH (NOLOCK)
-	WHERE CustID=@CustID
-
+	SELECT @IsResetYesterdayBalance = 0, @ErrCode = 0
 	DECLARE @BetTypeIds TABLE(BetType SMALLINT)
-	
-	-- return if not weekly reset
-	IF (@isAutoResetLiveCasino = 0 AND @MaxWinLiveCasino>0)
-	BEGIN
-		INSERT INTO @BetTypeIds(BetType) VALUES(1101)
-	END
 
-	--check for GD
-	SELECT @isAutoResetLiveCasino = ISNULL(IsAutoReset, 0)
-		, @MaxWinLiveCasino = ISNULL(MaxWinLimit, 0)
-	from DBCUST.CustDB.dbo.CustWinLimit WITH (NOLOCK)
-	WHERE CustId = @CustID AND SportType = 255 AND BetType = 1701
+	--for LiveCS
+	INSERT INTO @BetTypeIds(BetType)
+	SELECT 1101 AS BetType
+	FROM CustDB.dbo.Custinfo WITH (NOLOCK)
+	WHERE CustID = @CustID AND ISNULL(isAutoResetLiveCasino, 0) = 0 AND ISNULL(MaxWinLiveCasino, 0) > 0
 
-	-- return if not weekly reset
-	IF (@isAutoResetLiveCasino = 0 AND @MaxWinLiveCasino > 0)
-	BEGIN
-		INSERT INTO @BetTypeIds(BetType) VALUES(1701)
-	END
+	--for GD & RnG CS
+	INSERT INTO @BetTypeIds(BetType)
+	SELECT bettype
+	FROM DBCUST.CustDB.dbo.CustWinLimit WITH (NOLOCK)
+	WHERE CustId = @CustID AND MaxWinlimit > 0 AND IsAutoReset = 0
 		
 	IF NOT EXISTS (SELECT TOP 1 1 FROM @BetTypeIds)
 		RETURN
 
-	DECLARE @resetDate smalldatetime
-	SELECT @resetDate = convert(nvarchar(10), current_timestamp,120)
-	
-	-- calculate yesterday balance to write log
-	DECLARE @Credit MONEY, @Debit MONEY
+	DECLARE @resetDate SMALLDATETIME, @Credit MONEY, @Debit MONEY
+	SELECT @resetDate = CONVERT(NVARCHAR(10), CURRENT_TIMESTAMP, 120)
 	
 	SELECT @Credit = SUM(Balance)
 	FROM BalanceCreditGame credit WITH (NOLOCK) 
-	WHERE custid=@custid and winlostdate<@resetDate
-		and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
+	WHERE CustId = @custid 
+		AND winlostdate < @resetDate
+		AND bettype IN (SELECT bt.BetType FROM @BetTypeIds bt)
 	
 	SELECT @Debit = SUM(Balance)
 	FROM BalanceDebitGame credit WITH (NOLOCK) 
-	WHERE custid=@custid and winlostdate<@resetDate
-		and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
+	WHERE custid=@custid 
+		AND winlostdate < @resetDate
+		AND bettype IN (SELECT bt.BetType FROM @BetTypeIds bt)
 	
-	SET @YesterdayBalance = ISNULL(@Credit,0) -  ISNULL(@Debit,0)
+	SET @YesterdayBalance = ISNULL(@Credit, 0) -  ISNULL(@Debit, 0)
 	
 	BEGIN TRY
 		BEGIN TRANSACTION	
 			--delete yesterday balance
-			DELETE dbo.BalanceCreditGame with (ROWLOCK)
-			WHERE custid=@CustID and winlostdate < @resetDate
-				and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
+			DELETE dbo.BalanceCreditGame WITH (ROWLOCK)
+			WHERE custid = @CustID 
+				AND winlostdate < @resetDate
+				AND bettype IN (SELECT bt.BetType FROM @BetTypeIds bt)
 			
-			DELETE dbo.BalanceDebitGame with (ROWLOCK)
-			WHERE custid=@CustID and winlostdate < @resetDate
-				and bettype in (SELECT bt.BetType FROM @BetTypeIds bt)
+			DELETE dbo.BalanceDebitGame WITH (ROWLOCK)
+			WHERE custid = @CustID 
+				AND winlostdate < @resetDate
+				AND bettype IN (SELECT bt.BetType FROM @BetTypeIds bt)
 			
 			-- for testing:
 			-- RAISERROR ('Reset yesterday balance live casino unsuccessful', 16, 1)
@@ -92,7 +78,7 @@ BEGIN
 		SET @ErrCode = 101
 	END CATCH
 
-	SELECT @isResetYesterdayBalance = 1		
+	SELECT @IsResetYesterdayBalance = 1		
 END
 
 
