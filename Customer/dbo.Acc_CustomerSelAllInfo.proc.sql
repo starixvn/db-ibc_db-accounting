@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
+AlTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
 
@@ -66,7 +66,7 @@ Revisions:
 	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
 	- 20151030@Percy: AG Casino & Microgaming - Outstanding Info for new Sporttype [Redmine: #46450]
 	- 20151112@Percy: AG Casino & Microgaming - Fix bug for new Sporttype [Redmine: #47441]
-	- 20151210@Percy: Add new product: Cock Fighting Sabong [Redmine: #48602]
+	- 20151210@Percy: Add new product: Cock Fighting Sabong [Redmine: #48836]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -582,7 +582,7 @@ BEGIN
 	    a.username as agentName,	
 	    a.Enabled as agentEnabled,
 	    m.custid as masterID,
-	   m.username as masterName,
+	    m.username as masterName,
 	    m.Enabled as masterEnabled,
 	    s.custid as superID,
 	    s.username as superName,
@@ -706,7 +706,7 @@ BEGIN
 			    sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
 			    sum(case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * apositiontaking else 0 end) agentPositionTaking, 
 			    sum(case when custid <> recommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end) customerCash, 
-			    sum(case when custid <> recommend AND ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake else 0 end) customerOutstanding, 
+			    sum(case when custid <> recommend AND ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake else 0 end) customerOutstanding, 
 			    max(transdate) lastTxn
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
@@ -791,7 +791,7 @@ BEGIN
 				    sum (case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * mpositiontaking else 0 end) masterPositionTaking, 
 				    sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
 				    sum(case when custid <> recommend AND custid <> mrecommend AND ruben=1 then winlost-actual_stake+playercomm else 0  end) customerCash, 
-				    sum(case when custid <> recommend AND custid <> mrecommend AND ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake else 0 end) customerOutstanding, 
+				    sum(case when custid <> recommend AND custid <> mrecommend AND ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake else 0 end) customerOutstanding, 
 				    max(transdate) lastTxn
 		    FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
@@ -885,7 +885,7 @@ BEGIN
 				    sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
 				    sum(case when custid=recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
 				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end) customerCash, 
-				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 AND (s.ProductID is null OR s.productId <> 1 OR s.SubProduct <> 'MG-Superlive') then actual_stake else 0 end) customerOutstanding	
+				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake else 0 end) customerOutstanding	
 		     FROM dbo.bettrans BT WITH(NOLOCK)
 				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
 			WHERE BT.srecommend = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
@@ -910,6 +910,7 @@ END
 
 
 
+
 GO
 
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
@@ -923,6 +924,3 @@ GO
 
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
 GO
-
- GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam]
-
