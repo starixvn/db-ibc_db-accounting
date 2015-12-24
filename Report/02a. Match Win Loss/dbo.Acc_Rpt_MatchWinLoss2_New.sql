@@ -1,4 +1,10 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
+﻿SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_Rpt_MatchWinLoss2_New    Script Date: 12/18/2015 8:37:32 AM ******/
+CREATE PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
 	@WinLost_BARM		 money = 0 OUTPUT,
@@ -28,6 +34,7 @@ AS
 			- 20150827@Sophia: Apply Colossus Bets [#41935]
 			- 20150917@Jim: Integrate MO product [RedmineID: #41935]
 			- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
+			- 20151215@Sophia: Change bettype of 8RM & BARM to negative
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
 			- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)		 
@@ -43,7 +50,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
 	UPDATE @SportBettype
 	SET liveindicator =0
@@ -163,8 +170,8 @@ BEGIN
     GROUP BY b.bettype
     
         -- 8RM & BARM
-    SELECT	case WHEN recommend = 52466 then 400 
-				 when recommend = 5707545 then 401 end bettype,	
+    SELECT	case WHEN recommend = 52466 then -400 
+				 when recommend = 5707545 then -401 end bettype,	
 			'' Hedge,	
 			LineTotal_soccer_live,
 			LineTotal_soccer_live as VirtualLineTotal_soccer_live,
@@ -584,10 +591,10 @@ BEGIN
 		
 	
     -- Resultset of 8RM and BARM
-    SELECT  @WinLost_8RM = isnull(sum(case when bettype = 400 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
-            @WinLost_BARM = isnull(sum(case when bettype = 401 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
-            @IBCTurnover_8RM = isnull(sum(case when bettype = 400 then IBCTurnover else 0 end),0),
-            @IBCTurnover_BARM = isnull(sum(case when bettype = 401 then IBCTurnover else 0 end),0)
+    SELECT  @WinLost_8RM = isnull(sum(case when bettype = -400 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
+            @WinLost_BARM = isnull(sum(case when bettype = -401 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
+            @IBCTurnover_8RM = isnull(sum(case when bettype = -400 then IBCTurnover else 0 end),0),
+            @IBCTurnover_BARM = isnull(sum(case when bettype = -401 then IBCTurnover else 0 end),0)
 	FROM	#R_8RM with (nolock)
 	-- END - Resultset of 3rd products and Parlay, Outright
 	
@@ -1166,10 +1173,17 @@ BEGIN
 END
 
 
+
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam] AS [dbo]
-GO
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
+GO 
