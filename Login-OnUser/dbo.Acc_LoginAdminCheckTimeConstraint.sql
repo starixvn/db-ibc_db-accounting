@@ -14,7 +14,7 @@ AS
 	Revision: 
 		- 20130328@Lukas: set constrain time in between 9AM and 9PM (GMT+8)
 		- 20151209@Elodie: set constrain time in between 11AM and 12PM (GMT+8)
-		- 20151228@Elodie: correct time 22 instead of 23
+		- 20151209@Elodie: set constrain time in between 10AM and 12PM (GMT+8)
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -28,7 +28,7 @@ BEGIN
 					2340	, ---pin
 					8811	  ---YEAN
 				)
-				AND DATEPART(HOUR,GETDATE()) BETWEEN 12 AND 22
+				AND DATEPART(HOUR,GETDATE()) BETWEEN 12 AND 21
 	BEGIN		
 		SELECT	@isAccess = 0,
 				@ErrMsg = 'You are not authorized to access at this time. Please contact your supervisor.',
