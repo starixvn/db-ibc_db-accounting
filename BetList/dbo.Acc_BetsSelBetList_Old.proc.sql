@@ -62,6 +62,7 @@ AS
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20151229@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 */
 
 BEGIN
@@ -148,10 +149,10 @@ BEGIN
 	)
 
 	----Get Sport Bettype Matrix------
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, EventType TINYINT, SubProduct VARCHAR(500))
 
 	INSERT INTO #SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	IF @tempBettype <> 0
 	BEGIN
@@ -457,36 +458,24 @@ BEGIN
 		INSERT INTO #BetListData
 		SELECT 
 			b.bettype,
-			CASE 
-				WHEN s.ProductId IN (6, 7) THEN b.betid
-				ELSE b.transid
-			END AS transid,
+			b.transid,
 			ISNULL(b.BetID, 0) AS betid,
 			b.refno,
-			CASE 
-				WHEN s.ProductId IN (6, 7) THEN CONVERT(VARCHAR(50), b.refno)
-				ELSE ''
-			END AS matchcode,
+			'' AS matchcode,
 			'' AS race,
 			'' AS eventdate,
 			0,
 			0,
-			sdiscount,
-			adiscount,
-			discount,
+			b.sdiscount,
+			b.adiscount,
+			b.discount,
 			0 AS homeid,
 			0 AS awayid,
 			'' AS settleTime,
+			0 AS hdp1,
+			0 AS hdp2,
 			CASE 
-				WHEN s.ProductId IN (6, 7, 9, 12) THEN b.hdp1
-				ELSE 0
-			END AS hdp1,
-			CASE 
-				WHEN s.ProductId IN (6, 7, 9, 12) THEN b.hdp2
-				ELSE 0
-			END AS hdp2,
-			CASE 
-				WHEN s.ProductId IN (6, 7, 9, 12, 19) THEN b.odds
+				WHEN s.ProductId IN (12, 19) THEN b.odds
 				ELSE 0
 			END AS odds,
 			0 AS finalodds,
@@ -500,32 +489,24 @@ BEGIN
 			b.stake,
 			b.actual_stake,
 			b.transdate,
-			CASE 
-				WHEN s.ProductId IN (6, 7, 9, 12) THEN b.betteam
-				ELSE ''
-			END AS betteam,
+			'' AS betteam,
 			b.spositiontaking,
 			b.mpositiontaking,
 			b.apositiontaking,
 			0 AS spositiontaking2,
 			0 AS mpositiontaking2,
 			0 AS apositiontaking2,
-			CASE 
-				WHEN s.ProductId IN (6, 7, 9, 12) THEN b.liveindicator
-				ELSE 0
-			END AS liveindicator,
-			CASE 
-				WHEN s.ProductId IN (6, 7, 9, 12) THEN b.modds
-				ELSE 0
-			END AS modds,
+			0 AS liveindicator,
+			0 AS modds,
 			b.custid,
-			b.livehomescore,
-			b.liveawayscore,
+			0 AS livehomescore,
+			0 AS liveawayscore,
 			0 AS finalhomescore,
 			0 AS finalawayscore,
 			0 AS leagueid,
 			CASE
-				WHEN s.ProductId = 6 THEN 251
+				WHEN s.ProductID = 6 AND s.SubProduct = '' THEN 251
+				WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.matchid
 				WHEN s.ProductId = 7 THEN 252
 				WHEN s.ProductId = 9 THEN 253
 				WHEN s.ProductId = 11 THEN 250
@@ -559,6 +540,7 @@ BEGIN
 			END AS BetCheck,
 			CASE
 				WHEN s.ProductId = 19 THEN b.transdesc
+				WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.transdesc
 				ELSE ''
 			END AS transdesc,
 			0 AS OddSpread

@@ -63,6 +63,7 @@ AS
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 		- 20151216@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20151231@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -72,10 +73,10 @@ BEGIN
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
+	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT, SubProduct VARCHAR(500))
 
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DECLARE @Data TABLE (
 		finalhomescore	INT,
@@ -100,7 +101,7 @@ BEGIN
 		settleTime		DATETIME,
 		hdp1			SMALLMONEY,
 		hdp2			SMALLMONEY,
-		odds			MONEY,   
+		odds			MONEY,
 		modds			MONEY,
 		finalodds		MONEY,
 		finalodds2		MONEY,
@@ -770,10 +771,7 @@ BEGIN
 				END AS transid,
 				ISNULL(b.BetID, 0) AS BetID,
 				b.refno,
-				CASE
-					WHEN s.ProductID IN (6, 7) THEN CONVERT(VARCHAR(50),b.refno)
-					WHEN s.ProductID IN (12) THEN ''
-				END AS matchcode,
+				'' AS matchcode,
 				'' AS race,
 				'' AS eventdate,
 				0 AS virtualrate,
@@ -838,7 +836,8 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (6, 7, 12, 19)
+				AND (s.ProductID IN (7, 12, 19)
+					OR (s.ProductId = 6 AND s.SubProduct = ''))
 
 			-- Casino, Bingo, Gold Deluxe bettrans14
 			UNION ALL
@@ -854,10 +853,7 @@ BEGIN
 				END AS transid,
 				ISNULL(b.BetID, 0) AS BetID,
 				b.refno,
-				CASE
-					WHEN s.ProductID IN (6, 7) THEN CONVERT(VARCHAR(50),b.refno)
-					WHEN s.ProductID IN (12) THEN ''
-				END AS matchcode,
+				'' AS matchcode,
 				'' AS race,
 				'' AS eventdate,
 				0 AS virtualrate,
@@ -911,7 +907,8 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (6, 7, 12)
+				AND (s.ProductID IN (7, 12)
+					OR (s.ProductId = 6 AND s.SubProduct = ''))
 
 			-- IBC keno
 			UNION ALL
@@ -1718,7 +1715,7 @@ BEGIN
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
 
-			-- Microgaming RNG Casino (not today ticket)
+			-- Microgaming RNG Casino, RNG Casino Single Wallet (not today ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1752,9 +1749,9 @@ BEGIN
 				b.stake,
 				b.actual_stake,
 				b.transdate,
-				b.betteam,
-				b.livehomescore,
-				b.liveawayscore,
+				'' AS betteam,
+				0 AS livehomescore,
+				0 AS liveawayscore,
 				0 AS liveindicator,
 				(b.winlost - b.actual_stake) AS winlost,
 				b.playercomm AS commission, 
@@ -1762,9 +1759,12 @@ BEGIN
 				b.username,
 				0 AS hthomescore,
 				0 AS htawayscore,
-				ip,
-				205 AS sporttype,
-				b.matchid,
+				b.ip,
+				CASE
+					WHEN s.ProductID = 6 THEN b.matchid
+					WHEN s.ProductID = 17 THEN 205
+				END AS Sporttype,
+				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
 				b.awinlost,
@@ -1772,17 +1772,21 @@ BEGIN
 				b.swinlost,
 				b.betfrom,
 				b.winlostdate,
-				b.betcheck,
-				'' AS transdesc,
+				'' AS betcheck,
+				CASE
+					WHEN s.ProductID = 6 THEN b.transdesc
+					ELSE ''
+				END AS transdesc,
 				0 AS OddsSpread
-			FROM bettrans AS b WITH (NOLOCK)
+			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- not today
-				AND s.ProductID = 17
+				AND (s.ProductId = 17
+					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 
-			-- Microgaming RNG Casino (today running ticket)
+			-- Microgaming RNG Casino, RNG Casino Single Wallet (today running ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1827,7 +1831,10 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				205 AS sporttype,
+				CASE
+					WHEN s.ProductID = 6 THEN b.matchid
+					WHEN s.ProductID = 17 THEN 205
+				END AS Sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -1837,7 +1844,10 @@ BEGIN
 				b.betfrom,
 				b.winlostdate,
 				'' AS betcheck,
-				'' AS transdesc,
+				CASE
+					WHEN s.ProductID = 6 THEN b.transdesc
+					ELSE ''
+				END AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettransRnG AS brng WITH (NOLOCK)
 				INNER JOIN bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
@@ -1845,7 +1855,8 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
-				AND s.ProductID = 17
+				AND (s.ProductId = 17
+					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID = 0
 			GROUP BY
 				b.transid,
@@ -1867,7 +1878,10 @@ BEGIN
 				b.discount,
 				b.spositiontaking,
 				b.mpositiontaking,
-				b.apositiontaking
+				b.apositiontaking,
+				b.matchid,
+				b.transdesc,
+				s.ProductID
 
 			-- Microgaming RNG Game (today settled ticket)
 			UNION ALL
@@ -1918,7 +1932,10 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				205 AS sporttype,
+				CASE
+					WHEN s.ProductID = 6 THEN b.matchid
+					WHEN s.ProductID = 17 THEN 205
+				END AS Sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -1928,7 +1945,10 @@ BEGIN
 				b.betfrom,
 				b.winlostdate,
 				'' AS betcheck,
-				'' AS transdesc,
+				CASE
+					WHEN s.ProductID = 6 THEN b.transdesc
+					ELSE ''
+				END AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettransRnG AS brng WITH (NOLOCK)
 				INNER JOIN bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
@@ -1936,7 +1956,8 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
-				AND s.ProductID = 17
+				AND (s.ProductId = 17
+					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (111, 112, 113, 103)
 			GROUP BY
 				b.transid,
@@ -1958,7 +1979,10 @@ BEGIN
 				b.discount,
 				b.spositiontaking,
 				b.mpositiontaking,
-				b.apositiontaking
+				b.apositiontaking,
+				b.matchid,
+				b.transdesc,
+				s.ProductID
 
 			-- AG Casino (not today ticket)
 			UNION ALL
