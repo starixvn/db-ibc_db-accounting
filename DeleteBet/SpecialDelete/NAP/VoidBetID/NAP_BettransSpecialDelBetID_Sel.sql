@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransSpecialDelBetID_Sel]    Script Date: 01/12/2015 3:06:27 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Sel] 
+﻿ALTER PROCEDURE [dbo].[NAP_BettransSpecialDelBetID_Sel] 
 	 @CustID	INT			= NULL 	
 	,@TransID	BIGINT		= NULL 
 	,@FromDate	DATETIME	= NULL
@@ -25,6 +18,7 @@ AS
 		- 20150623@Dominic: Add Metric Gaming Super Live [Redmine:##38200]
 		- 20151021@Kathy: Do not show ticket 901 if its owner is not BetTrade account(betdaqid = 0)[Redmine:#43233]
 		- 20151102@Kathy: Enhance performance [Redmine:#43233]
+		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -45,9 +39,9 @@ BEGIN
 		,awayid			INT
 		,hdp1			SMALLMONEY
 		,hdp2			SMALLMONEY
-		,odds			SMALLMONEY
-		,finalodds		SMALLMONEY
-		,finalodds2		SMALLMONEY
+		,odds			MONEY
+		,finalodds		MONEY
+		,finalodds2		MONEY
 		,OddsType		TINYINT
 		,STATUS			NVARCHAR(50)
 		,comstatus		NVARCHAR(50)
@@ -56,7 +50,7 @@ BEGIN
 		,betteam		NVARCHAR(10)
 		,betcheck		NVARCHAR(50)
 		,liveindicator	BIT
-		,modds			SMALLMONEY
+		,modds			MONEY
 		,custid			INT
 		,username		VARCHAR(30)
 		,livehomescore	INT
@@ -77,7 +71,7 @@ BEGIN
 		
 	CREATE TABLE #DetailData (
 		refno			BIGINT
-		,odds			SMALLMONEY
+		,odds			MONEY
 		,stake			MONEY
 		,STATUS			NVARCHAR(50)
 		,bettype		SMALLINT
@@ -1074,22 +1068,6 @@ BEGIN
 	FROM #DetailData
 
 END
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransSpecialDelBetID_Sel] TO [bodbAdminNet] AS [dbo]
 GO

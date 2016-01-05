@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Rpt_TicketsListingDetail]    Script Date: 12/03/2015 10:28:53 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
+﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
 	@MatchId INT,
 	@LicenseeName VARCHAR(1000),
 	@BetTypes VARCHAR(1000), 
@@ -35,6 +28,7 @@ AS
 		- 20150623@Dominic: Add Metric Gaming Super Live [Redmine:##38200]	  
 		- 20151023@Patrick: Add more field sporttype to support Muay Thai
 		- 20151302@Kathy: add modds column 
+		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 		
 	Param's Explanation:
 	- @Type: sports type
@@ -91,7 +85,7 @@ BEGIN
 		awayid INT,
 		hdp1 SMALLMONEY, 
 		hdp2 SMALLMONEY,
-		odds SMALLMONEY,
+		odds MONEY,
 		status NVARCHAR(10),
 		stake MONEY,
 		transdate DATETIME, 
@@ -114,7 +108,7 @@ BEGIN
         ChoiceAwayID INT   ,
         ChoiceHdp1 SMALLMONEY  , 
         ChoiceHdp2 SMALLMONEY  ,
-        ChoiceOdds SMALLMONEY   ,
+        ChoiceOdds MONEY   ,
 		ChoiceStake MONEY,
         ChoiceBetTeam NVARCHAR(20), 
         ChoiceBetCheck NVARCHAR(50), 
@@ -817,10 +811,6 @@ BEGIN
 		FROM bettrans WITH (NOLOCK) 
 		WHERE 0 = 1
 END
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]
 GO

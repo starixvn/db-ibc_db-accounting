@@ -28,6 +28,8 @@ AS
 		- 20141021@Kathy: Consolidate Sportting Solution and IBC bettypes [Redmine:#23129]
 		- 20150401@Dominic: Add new parent-child bettypes [Redmine:#27214]
 		- 20150623@Dominic: Add Metric Gaming Super Live [Redmine:#38200]
+		- 20150401@Kathy: Add new parent-child bettypes for PH [Redmine:#48110]
+		
 	Param's Explanation:
 	- @Type: sports type
 		0: Sportsbook
@@ -191,6 +193,18 @@ BEGIN
 		SELECT 17, 183 -- 2H Handicap
 		UNION ALL
 		SELECT 11, 199 -- Total Corners
+		UNION ALL
+        SELECT 410, 151 -- 1H Double Chance
+        UNION ALL
+        SELECT 406, 159 -- Exact Total Goals
+        UNION ALL
+        SELECT 407, 161 -- Exact Home Team Goals
+        UNION ALL
+        SELECT 409, 162 -- Exact Away Team Goals
+        UNION ALL
+        SELECT 408,171 -- Winning Margin
+        UNION ALL
+        SELECT 411, 191 -- 1H Draw No Bet
 
 	INSERT INTO #TmpBettrans
 	SELECT srecommend
@@ -628,8 +642,6 @@ END
 
 DROP TABLE #TmpBettrans
 GO
-
 GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListing] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[NAP_Rpt_TicketsListing] TO [vnteam] AS [dbo]

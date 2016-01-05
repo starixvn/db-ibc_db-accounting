@@ -11,6 +11,7 @@ AS
 	
 	Revisions: 
 		- 20141125@Kathy: Add betcheck column [Redmine:#26489]
+		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 	
 */
 BEGIN
@@ -23,7 +24,7 @@ BEGIN
 		,AwayID INT
 		,hdp1 SMALLMONEY
 		,hdp2 SMALLMONEY
-		,Odds SMALLMONEY
+		,Odds MONEY
 		,Betteam NVARCHAR(20)
 		,statusid INT
 		,Livehomescore SMALLINT

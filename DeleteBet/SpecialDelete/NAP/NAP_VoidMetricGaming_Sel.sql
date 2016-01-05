@@ -1,11 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_VoidMetricGaming_Sel]    Script Date: 01/12/2015 3:08:53 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_VoidMetricGaming_Sel]
 	@MatchId			INT,
 	@BetTypes			VARCHAR(1000)	= '',		
@@ -23,6 +15,7 @@ BEGIN
 	DB: DBTXN/BODB02
 
 	Revisions:
+		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 
 
 	Explanation's Param:
@@ -36,7 +29,7 @@ BEGIN
 		custid				INT,
 		username			VARCHAR(30),
 		username2			NVARCHAR(50),
-		odds				SMALLMONEY, 
+		odds				MONEY, 
 		OddsType			INT, 
 		transdate			DATETIME,
 		bettype				SMALLINT, 
@@ -399,11 +392,6 @@ BEGIN
 /*
 */
 END
-
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_VoidMetricGaming_Sel] TO [bodbAdminNet] AS [dbo]
 GO

@@ -1,11 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_VoidMetricGaming_Del]    Script Date: 12/10/2015 10:26:12 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_VoidMetricGaming_Del    Script Date: 09/12/2015 4:42:15 PM ******/
 ALTER PROCEDURE [dbo].[NAP_VoidMetricGaming_Del]
 	@MatchId			INT,
 	@BetTypes			VARCHAR(1000)	= '',		
@@ -36,7 +28,8 @@ AS
 	Revisions:
 			  - 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 			  - 20151103@Kathy: Enhance performance [Redmine:#43233]
-			  - 20151209@Kathy: get translog.siteid for MG API [Redmine:#49019]
+              - 20151209@Kathy: get translog.siteid for MG API [Redmine:#49019]
+			  - 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 			  
 	Param's Explanation:
 
@@ -107,7 +100,7 @@ BEGIN
 		bettype 			SMALLINT, 
 		betteam 			NVARCHAR(10),
 		betcheck			NVARCHAR(50),
-		odds				SMALLMONEY, 
+		odds				MONEY, 
 		OddsType			INT,
 		transdate			DATETIME,
 		IsLiveIndicator		BIT,

@@ -14,7 +14,9 @@ AS
 	DB: DBTXN/bodb02
 	Original:
 		
-	Revisions:
+	Revisions:	
+		- 20150810@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 	
 	Param's Explanation:
 		- @UserID : 111 (oddsfeedlog) is used when this SP is called automatically by a program
@@ -170,7 +172,7 @@ BEGIN
 		bettype 			SMALLINT, 
 		betteam 			NVARCHAR(10),
 		betcheck			NVARCHAR(50),
-		odds				SMALLMONEY, 
+		odds				MONEY, 
 		OddsType			INT,
 		transdate			DATETIME,
 		IsLiveIndicator		BIT,
@@ -184,7 +186,7 @@ BEGIN
 	
 	IF OBJECT_ID('tempdb..#Ref') IS NOT NULL DROP TABLE #Ref
 	CREATE TABLE #Ref (	refno			BIGINT, 
-						transid			INT, 
+						transid			BIGINT, 
 						custid			INT, 
 						srecommend		INT, 
 						mrecommend		INT, 
@@ -193,7 +195,7 @@ BEGIN
 						bettype			SMALLINT, 
 						hdp1			SMALLMONEY, 
 						hdp2			SMALLMONEY, 
-						odds			SMALLMONEY, 
+						odds			MONEY, 
 						betteam			NVARCHAR(20), 
 						livehomescore	SMALLINT,
 						liveawayscore	SMALLINT, 
@@ -239,6 +241,7 @@ BEGIN
 		,b.bettype
 		,b.hdp1
 		,b.hdp2
+
 		,b.odds
 		,b.betteam		
 		,b.livehomescore
@@ -285,6 +288,9 @@ BEGIN
 	CREATE TABLE #AfterUpd(
 				custid		 INT,
 				balance		 MONEY)
+				
+	DECLARE @tblDebitPending TVP_BalanceList
+	DECLARE @tblCreditPending TVP_BalanceList
 
 	INSERT INTO #BeforeUpd (custid, balance)
 	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
@@ -319,19 +325,43 @@ BEGIN
 	GROUP BY b.CustID
 
 	---INSERT data into pending balance table 
-	INSERT INTO BalancePendingCredit (custid,Balance)
+	--INSERT INTO BalancePendingCredit (custid,Balance)
+	--SELECT		a.custid, (a.balance - b.balance) as Balance
+	--FROM		#BeforeUpd b
+	--INNER JOIN	#AfterUpd a 	
+	--		ON	a.custid = b.custid
+	--WHERE	    (a.balance - b.balance) > 0
+	
+	INSERT INTO @tblCreditPending (custID, balance)
 	SELECT		a.custid, (a.balance - b.balance) as Balance
 	FROM		#BeforeUpd b
 	INNER JOIN	#AfterUpd a 	
 			ON	a.custid = b.custid
 	WHERE	    (a.balance - b.balance) > 0
+	
+	IF @@rowcount <> 0
+																																																																EXEC dbo.Dot_BalancePendingCreditIns 
+			@BalancePending = @tblCreditPending
+			,@Type			= 1 -- Sports	
 
-	INSERT INTO BalancePendingDebit (custid,Balance)
+	--INSERT INTO BalancePendingDebit (custid,Balance)
+	--SELECT		a.custid, ABS(a.balance - b.balance) as Balance
+	--FROM		#BeforeUpd b
+	--INNER JOIN	#AfterUpd a 	
+	--		ON	a.custid = b.custid
+	--WHERE	    (a.balance - b.balance) < 0
+	
+	INSERT INTO @tblDebitPending (custID, balance)
 	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
 	FROM		#BeforeUpd b
 	INNER JOIN	#AfterUpd a 	
 			ON	a.custid = b.custid
 	WHERE	    (a.balance - b.balance) < 0
+	
+	IF @@rowcount <> 0
+																																																																EXEC dbo.Dot_BalancePendingDebitIns 
+			@BalancePending = @tblDebitPending
+			,@Type			= 1 -- Sports
 	
 	------------------***** End of Special Delete *****------------------
 	SELECT @LogData ='void bet for matchid ' + CONVERT(VARCHAR(20), 
@@ -493,19 +523,43 @@ BEGIN
 		GROUP BY b.CustID
 
 		---Insert data into pending balance table 
-		INSERT INTO BalancePendingCredit (custid,Balance)
+		--INSERT INTO BalancePendingCredit (custid,Balance)
+		--SELECT		a.custid, (a.balance - b.balance) AS Balance
+		--FROM		#BeforeUpd_Par b
+		--INNER JOIN	#AfterUpd_Par a 	
+		--		ON	a.custid = b.custid
+		--WHERE	    (a.balance - b.balance) > 0
+		
+		INSERT INTO @tblCreditPending (custID, balance)
 		SELECT		a.custid, (a.balance - b.balance) AS Balance
 		FROM		#BeforeUpd_Par b
 		INNER JOIN	#AfterUpd_Par a 	
 				ON	a.custid = b.custid
 		WHERE	    (a.balance - b.balance) > 0
+	
+		IF @@rowcount <> 0
+																																																																																																EXEC dbo.Dot_BalancePendingCreditIns 
+				@BalancePending = @tblCreditPending
+				,@Type			= 1 -- Sports	
 
-		INSERT INTO BalancePendingDebit (custid,Balance)
+		--INSERT INTO BalancePendingDebit (custid,Balance)
+		--SELECT		a.custid, ABS(a.balance - b.balance) AS Balance
+		--FROM		#BeforeUpd_Par b
+		--INNER JOIN	#AfterUpd_Par a 	
+		--		ON	a.custid = b.custid
+		--WHERE	    (a.balance - b.balance) < 0
+		
+		INSERT INTO @tblDebitPending (custID, balance)
 		SELECT		a.custid, ABS(a.balance - b.balance) AS Balance
 		FROM		#BeforeUpd_Par b
 		INNER JOIN	#AfterUpd_Par a 	
 				ON	a.custid = b.custid
 		WHERE	    (a.balance - b.balance) < 0
+	
+		IF @@rowcount <> 0
+																																																																																																EXEC dbo.Dot_BalancePendingDebitIns 
+				@BalancePending = @tblDebitPending
+				,@Type			= 1 -- Sports
 			
 		DELETE #BeforeUpd_Par
 		DELETE #AfterUpd_Par
@@ -530,7 +584,6 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_InvalidGoalScorerTicketVoid] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_InvalidGoalScorerTicketVoid] TO [vnteam] AS [dbo]
-GO
 GRANT EXECUTE ON [dbo].[NAP_InvalidGoalScorerTicketVoid] TO [Dot_CoreAPI] AS [dbo]
 GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_InvalidGoalScorerTicketVoid] TO [vnteam] AS [dbo]
