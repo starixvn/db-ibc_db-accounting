@@ -2102,7 +2102,7 @@ BEGIN
 				b.discount,
 				'' AS settletime,
 				CASE
-					WHEN s.ProductId = 19 THEN b.eventID
+					WHEN s.ProductId = 19 THEN b.Gameid3rd
 					ELSE 0
 				END AS matchid,
 				0 AS transid,

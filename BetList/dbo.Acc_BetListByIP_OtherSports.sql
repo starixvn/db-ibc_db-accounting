@@ -62,7 +62,7 @@ AS
 		- 20151023@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
-		- 20151216@Kos: Support Cock Fighting (#Redmine: 48850)
+		- 20151216@Kos: Support Cockfighting (#Redmine: 48850)
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -1419,7 +1419,7 @@ BEGIN
 					WHEN s.ProductID = 19 THEN 206
 				END AS sporttype,
 				CASE
-					WHEN s.ProductID = 19 THEN b.eventID
+					WHEN s.ProductID = 19 THEN b.Gameid3rd
 					ELSE 0
 				END AS matchid,
 				0 AS IsNeutral,

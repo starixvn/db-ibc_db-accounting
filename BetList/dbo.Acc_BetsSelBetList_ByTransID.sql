@@ -68,7 +68,7 @@ AS
 		- 20151022@Kos: Return [translog].[transid3rd] and [bettransm].[betcheck] to support view CB ticket detail
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
-		- 20151216@Kos: Support Cock Fighting (#Redmine: 48850)
+		- 20151216@Kos: Support Cockfighting (#Redmine: 48850)
 */
 
 BEGIN
@@ -1115,7 +1115,7 @@ BEGIN
 				s.EventType = 3 AND
 				b.transid = @TransID  
 
-		-- Gold Deluxe, Microgaming Live Casino, Cock Fighting
+		-- Gold Deluxe, Microgaming Live Casino, Cockfighting
 		IF EXISTS (SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (12, 13, 19) AND Bettype = @Bettype)
 		BEGIN
 			INSERT INTO @Data
@@ -1279,7 +1279,7 @@ BEGIN
 				b.ip,
 				b.betfrom,
 				CASE
-					WHEN s.ProductID = 19 THEN b.eventID
+					WHEN s.ProductID = 19 THEN b.Gameid3rd
 					ELSE 0
 				END AS matchid,
 				CONVERT(BIT, 0) AS IsNeutral,

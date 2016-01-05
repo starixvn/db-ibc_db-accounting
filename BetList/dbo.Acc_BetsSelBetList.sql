@@ -1046,7 +1046,7 @@ BEGIN
 				AND b.winlostdate 	BETWEEN @FromDate AND @ToDate
 		END
 
-		-- Gold Deluxe, Microgaming Live Casino, Cock Fighting (translog)
+		-- Gold Deluxe, Microgaming Live Casino, Cockfighting (translog)
 		IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (12, 13, 19))
 		BEGIN
 			INSERT INTO #BetListData
@@ -1109,7 +1109,7 @@ BEGIN
 				b.ip,
 				b.betfrom,
 				CASE
-					WHEN s.ProductId = 19 THEN b.eventID
+					WHEN s.ProductId = 19 THEN b.Gameid3rd
 					ELSE 0
 				END AS matchid,
 				CONVERT(BIT,0) AS IsNeutral,
@@ -2597,7 +2597,7 @@ BEGIN
 				AND s.ProductId = 12
 		END
 
-		-- AG Casino, Microgaming Live Casino, Microgaming RNG Casino, Cock Fighting
+		-- AG Casino, Microgaming Live Casino, Microgaming RNG Casino, Cockfighting
 		IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID IN (11, 13, 17, 19))
 		BEGIN
 			INSERT INTO #BetListData
