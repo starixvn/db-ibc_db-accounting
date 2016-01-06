@@ -1,12 +1,4 @@
-﻿USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_LoginAdmin]    Script Date: 06/30/2015 16:01:47 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_LoginAdmin    Script Date: 12/5/2013 4:34:27 PM ******/
-ALTER PROCEDURE [dbo].[Acc_LoginAdmin]
+﻿ALTER PROCEDURE [dbo].[Acc_LoginAdmin]
 	@UserName varchar(50) OUTPUT,
 	@UserPwd varchar(50),
 	@LoginIP varchar(20),	
@@ -49,6 +41,8 @@ Revisions:
 	- 20130327@Lukas: add constraint time for some particular admins
 	- 20140730@Thien: temporarily block the access from SMS IPs
 	- 20150630@Kathy: Remove linked server DBTXNIP
+	- 20160105@Lukas: remove IP '202.78.231.x' in blocking section
+	
 Param's Explanation:
 */
 SET NOCOUNT ON
@@ -68,7 +62,7 @@ declare @LogData nvarchar(200),
 SELECT @LogData = '', @ErrMsg = '', @ErrCode = 0 -- initial value
 
 --Thien@20140730: temporarily block the access from SMS IPs
-IF LEFT(@LoginIP, 10) IN ('202.78.231','202.78.228')--, '122.147.23') 
+IF LEFT(@LoginIP, 10) IN ('202.78.228')--, '202.78.231','122.147.23') 
 BEGIN
 	SELECT  @ErrMsg = 'Unauthorized login!',
 		@ErrCode = 888
@@ -221,6 +215,7 @@ END
 				 @Duration = @Duration
 		END CATCH				 
 	END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_LoginAdmin] TO [bodbAdminNet] AS [dbo]
