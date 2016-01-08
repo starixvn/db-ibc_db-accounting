@@ -102,7 +102,7 @@ BEGIN
 	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT, SubProduct VARCHAR(500))
 
 	INSERT INTO @SportBettype
-	EXEC Acc_SportBettypeMatrix_Sel_xpre @mode = 5
+	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DECLARE @tmpStatus TABLE ([statusID] TINYINT);
 
@@ -603,12 +603,12 @@ BEGIN
 			AND s.EventType = 3
 			AND b.statusID IN (SELECT statusID FROM @tmpStatus)
 
-			-- RNG Casino, Bigno
+		-- RNG Casino, Bigno
 		INSERT INTO @Data
 		SELECT 
 			CASE
-					WHEN s.ProductID = 6 AND s.SubProduct = '' THEN 251
-					WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.matchid
+				WHEN s.ProductID = 6 AND s.SubProduct = '' THEN 251
+				WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.matchid
 				WHEN s.ProductID = 7 THEN 252
 			END AS SportType,
 			0 AS leagueid,
@@ -672,10 +672,10 @@ BEGIN
 			swinlost,
 			b.winlostdate,
 			b.BetCheck,
-				CASE
-					WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.transdesc
-					ELSE ''
-				END AS transdesc,
+			CASE
+				WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.transdesc
+				ELSE ''
+			END AS transdesc,
 			0 AS OddsSpread
 		FROM dbo.bettrans14 AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
@@ -2272,17 +2272,17 @@ BEGIN
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		END
 
-			-- Microgaming RNG Casino, RNG Casino Single Wallet 
+		-- Microgaming RNG Casino, RNG Casino Single Wallet 
 		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] <> 0)	-- not today settled ticket
 			AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 			AND @transtype = 1		-- only support transtype = 1
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
-					CASE
-						WHEN s.ProductID = 6 THEN b.matchid
-						WHEN s.ProductID = 17 THEN 205
-					END AS Sporttype,
+				CASE
+					WHEN s.ProductID = 6 THEN b.matchid
+					WHEN s.ProductID = 17 THEN 205
+				END AS Sporttype,
 				0 AS leagueid,
 				0 AS homeid,
 				0 AS awayid,
@@ -2344,10 +2344,10 @@ BEGIN
 				b.swinlost,
 				b.winlostdate,
 				'' AS BetCheck,
-					CASE
-						WHEN s.ProductID = 6 THEN b.transdesc
-						ELSE ''
-					END AS transdesc,
+				CASE
+					WHEN s.ProductID = 6 THEN b.transdesc
+					ELSE ''
+				END AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
@@ -2364,10 +2364,10 @@ BEGIN
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
-					CASE
-						WHEN s.ProductID = 6 THEN b.matchid
-						WHEN s.ProductID = 17 THEN 205
-					END AS Sporttype,
+				CASE
+					WHEN s.ProductID = 6 THEN b.matchid
+					WHEN s.ProductID = 17 THEN 205
+				END AS Sporttype,
 				0 AS leagueid,
 				0 AS homeid,
 				0 AS awayid,
@@ -2433,18 +2433,18 @@ BEGIN
 				SUM(brng.swinlost) AS swinlost,
 				b.winlostdate,
 				'' AS BetCheck,
-					CASE
-						WHEN s.ProductID = 6 THEN b.transdesc
-						ELSE ''
-					END AS transdesc,
+				CASE
+					WHEN s.ProductID = 6 THEN b.transdesc
+					ELSE ''
+				END AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettransRnG AS brng WITH (NOLOCK)
 				INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-					AND (s.ProductId = 17
-						OR (s.ProductId = 6 AND s.SubProduct <> ''))
+				AND (s.ProductId = 17
+					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			GROUP BY
 				b.transid,
@@ -2462,10 +2462,10 @@ BEGIN
 				b.comstatus,
 				b.sdiscount,
 				b.adiscount,
-					b.discount,
-					b.matchid,
-					b.transdesc,
-					s.ProductID
+				b.discount,
+				b.matchid,
+				b.transdesc,
+				s.ProductID
 		END
 			
 		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- today running ticket
@@ -2473,10 +2473,10 @@ BEGIN
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
-					CASE
-						WHEN s.ProductID = 6 THEN b.matchid
-						WHEN s.ProductID = 17 THEN 205
-					END AS Sporttype,
+				CASE
+					WHEN s.ProductID = 6 THEN b.matchid
+					WHEN s.ProductID = 17 THEN 205
+				END AS Sporttype,
 				0 AS leagueid,
 				0 AS homeid,
 				0 AS awayid,
@@ -2538,10 +2538,10 @@ BEGIN
 				0 AS swinlost,
 				b.winlostdate,
 				'' AS BetCheck,
-					CASE
-						WHEN s.ProductID = 6 THEN b.transdesc
-						ELSE ''
-					END AS transdesc,
+				CASE
+					WHEN s.ProductID = 6 THEN b.transdesc
+					ELSE ''
+				END AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettransRnG AS brng WITH (NOLOCK)
 				INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
@@ -2566,10 +2566,10 @@ BEGIN
 				b.comstatus,
 				b.sdiscount,
 				b.adiscount,
-					b.discount,
-					b.matchid,
-					b.transdesc,
-					s.ProductID
+				b.discount,
+				b.matchid,
+				b.transdesc,
+				s.ProductID
 		END
 
 		-- AG Casino

@@ -765,10 +765,7 @@ BEGIN
 				0 AS oddsid, 
 				0 AS leagueid,
 				b.bettype,
-				CASE
-					WHEN s.ProductID IN (6, 7) THEN b.betid
-					WHEN s.ProductID IN (12, 19) THEN b.transid
-				END AS transid,
+				b.transid,
 				ISNULL(b.BetID, 0) AS BetID,
 				b.refno,
 				'' AS matchcode,
@@ -847,10 +844,7 @@ BEGIN
 				0 AS oddsid, 
 				0 AS leagueid,
 				b.bettype, 
-				CASE
-					WHEN s.ProductID IN (6, 7) THEN b.betid
-					WHEN s.ProductID IN (12) THEN b.transid
-				END AS transid,
+				b.transid,
 				ISNULL(b.BetID, 0) AS BetID,
 				b.refno,
 				'' AS matchcode,

@@ -92,7 +92,7 @@ AS
 		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 		- 20151214@Kos: Remove LAS code
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
-		- 20151229@Kos: Support RNG Casino Single Wallet [Re
+		- 20151229@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 */
 
 BEGIN
