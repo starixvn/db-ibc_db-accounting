@@ -30,6 +30,8 @@ AS
 		- 20130208@Elodie: Change link server DB03 to DBPOLICY
 					       Write more log on DBTXN server in case of DBLOG server failure
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)  					       
+		- 20150808@Elodie: Balance Improvement [Redmine:#40125]
+		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -112,6 +114,7 @@ BEGIN
 		@ForexCustID	= c.custID,
 		@ForexCurrency	= c.currency,
 		@ForexActualRate= e.actualrate,
+
 		@ForexCurrName	= e.currency,
 		@ForexRecommend	= c.recommend,
 		@ForexMrecommend= c.mrecommend,
@@ -177,7 +180,18 @@ BEGIN
 	IF @FromAmount < 0 AND @FromRoleID = 1	
 	BEGIN		
 		SET @tmp = ABS(@FromAmount)
-		EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @tmp
+		--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @tmp
+				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @tmp, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
+		IF @ErrCode <> 0
+		BEGIN
+			SELECT  @ErrMsg = CASE @Language WHEN 'E'  THEN 'Transfer failed. Please try again.'
+											 WHEN 'CS' THEN N'Transfer failed. Please try again.'
+											 WHEN 'J'  THEN N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+											 ELSE N'Transfer failed. Please try again.'
+							 END, 
+					@ErrCode = 104									
+			RETURN
+		END
 	END
 
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
@@ -204,12 +218,12 @@ BEGIN
 			
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
-			EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
 		RETURN
 	END
 	---- update @FromCustID's credit if this action increase balance
 	IF @FromAmount > 0 AND @FromRoleID = 1	
-		EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @FromAmount	
+	EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @FromAmount	
 
 	
 	---- update Forex account's credit
@@ -239,9 +253,9 @@ BEGIN
 			AND bettype = 21003		
 
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-			EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-			EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp		
+		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp		
 		RETURN
 	END
 
@@ -278,20 +292,41 @@ BEGIN
 		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
 			AND refno = @refno 
 			AND matchid = 0 
-			AND bettype = 21003
-	
+			AND bettype = 21003	
+		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-			EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-			EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
 
 		RETURN
 	END
 	
 	--- update @ToCustID's credit if this action reduce balance, then insert transfer transaction into bettrans
 	--- whereas this action increase balance, insert bettrans first then update credit
-	IF @FromAmount > 0 AND @ToRoleID = 1
-		EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @ToAmount
+	IF @FromAmount > 0 AND @ToRoleID = 1		
+				EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT --EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @ToAmount
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT  @ErrMsg = CASE @Language WHEN 'E'  THEN 'Transfer failed. Please try again.'
+										 WHEN 'CS' THEN N'Transfer failed. Please try again.'
+										 WHEN 'J'  THEN N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+										 ELSE N'Transfer failed. Please try again.'
+						 END, 
+				@ErrCode = 107
+
+		DELETE bettrans WITH(ROWLOCK,UPDLOCK) 
+		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
+			AND refno = @refno 
+			AND matchid = 0 
+			AND bettype = 21003
+	
+		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
+				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
+		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp			
+		RETURN
+	END
 	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -317,12 +352,12 @@ BEGIN
 			AND bettype = 21003
 	
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-			EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-			EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
 
 		IF @FromAmount > 0 AND @ToRoleID = 1
-			EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @ToAmount
+			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @ToAmount
 		RETURN
 	END
 
@@ -331,30 +366,31 @@ BEGIN
 	IF @FromAmount < 0 AND @ToRoleID = 1
 	BEGIN
 		SET @amtTo = ABS(@ToAmount)
-		EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @amtTo
+		--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @amtTo
+		EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @amtTo, @type = 2
 	END	
-
-	---- update forex's balance		
-	DECLARE @ForexDebit MONEY,
-			@ForexCredit MONEY
-
-	SELECT	@ForexDebit		= ABS(@FromAmount*@FromExrate),
-			@ForexCredit	= ABS(@ToAmount*@ToExrate)
-
-	IF @ForexCredit > @ForexDebit
-	BEGIN
-		SET @tmp = @ForexCredit - @ForexDebit
-		EXEC Dot_BalanceUpdCredit @CustID = @ForexCustID, @balance = @tmp 
-	END
-	IF @ForexCredit < @ForexDebit
-	BEGIN
-		SET @tmp = @ForexDebit - @ForexCredit
-		EXEC Dot_BalanceUpdDebit @CustID = @ForexCustID, @balance = @tmp 
-	END		
 	
+	--20151022@Elodie: Don't update balance for dummy account
+	------ update forex's balance		
+	--DECLARE @ForexDebit MONEY,
+	--		@ForexCredit MONEY
+
+	--SELECT	@ForexDebit		= ABS(@FromAmount*@FromExrate),
+	--		@ForexCredit	= ABS(@ToAmount*@ToExrate)
+
+	--IF @ForexCredit > @ForexDebit
+	--BEGIN
+	--	SET @tmp = @ForexCredit - @ForexDebit
+	--	--EXEC Dot_BalanceUpdCredit @CustID = @ForexCustID, @balance = @tmp 
+	--	--EXEC Dot_BalanceCreditUpd @CustID = @ForexCustID, @balance = @tmp, @type = 2 
+	--END
+	--IF @ForexCredit < @ForexDebit
+	--BEGIN
+	--	SET @tmp = @ForexDebit - @ForexCredit
+	--	--EXEC Dot_BalanceUpdDebit @CustID = @ForexCustID, @balance = @tmp \
+	--		EXEC Dot_BalanceDebitUpd @CustID = @ForexCustID, @balance = @tmp, @IsForced = 1, @type = 2
+	--END		
 	
-
-
 	DECLARE @SystemExRate	FLOAT,
 			@TransExRate	FLOAT,
 			@LogData		VARCHAR(1000)
@@ -387,8 +423,6 @@ BEGIN
 		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
 	END CATCH
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsCrossTransfer] TO [bodbAdminNet] AS [dbo]

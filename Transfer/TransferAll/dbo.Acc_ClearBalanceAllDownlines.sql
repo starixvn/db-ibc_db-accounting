@@ -31,6 +31,7 @@ AS
 		- 20140826@Lukas: use maxdop hint to avoid parallelism operators -> reduce CPU usage  
 		- 20150723@Patrick: Support Gold deluxe & override code from production with 20140826@Lukas version 
 		- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
+		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -275,7 +276,7 @@ BEGIN
 
 		---update debit balance  
 		--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @memberBalance
-		EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2, @ErrCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 		IF @ErrCode <> 0
 		BEGIN
 			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102

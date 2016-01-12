@@ -39,7 +39,8 @@ Revisions:
 	- 20140826@Jamie: put RECOMPILE
 	- 20150723@Patrick: Support Gold deluxe
 	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
-	
+	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
+
 Param's Explanation:
 */ 
 SET NOCOUNT ON
@@ -214,7 +215,7 @@ BEGIN
 		
 		--update debit balance
 		--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @amount
-		EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @amount, @Type = 2, @ErrCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 		if @ErrCode <> 0
 		BEGIN
 			Select @ErrMsg = case @Language 
@@ -381,5 +382,7 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerInsClearBalance] TO [ITVivi] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerInsClearBalance] TO [vnteam] AS [dbo]

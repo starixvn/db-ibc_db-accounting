@@ -1,35 +1,36 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
- @AgentName varchar(50),  
- @UserID int,  
- @IP nvarchar(15)='',  
- @ErrMsg nvarchar(max) = '' OUTPUT,  
- @ErrCode int = 0 OUTPUT  
+	@AgentName varchar(50),  
+	@UserID int,  
+	@IP nvarchar(15)='',  
+	@ErrMsg nvarchar(max) = '' OUTPUT,  
+	@ErrCode int = 0 OUTPUT  
 AS  
  /*
-Created: 
-Task:	Transfer all
-		Customer/Transfer all
-DB: DBTXN/bodb02
-Revisions:
-	- 20090828@HuyNguyen: replace [Customer] --> [OtherTrans]	
-	- 20091003@Kiwi: Modify write log and remove CustBetCreditUpdResync
-	- 20091125@Kiwi: Remove comstatus because it's no used.	
-	- 20100424@Henry: insert data to column StatusID of Bettrans (StatusID = 131 for bettype 103)+ Update Status = 'Completed'
-	- 20100611@Henry: Write exact amount to log when transferring
-	- 20101225@Lukas: Re-arrange bettype
-	- 20111025@Sophia: Update balance credit/debit for members
-	- 20120411@Sophia: Revise balance credit/debit for members
-	- 20121015@Dan: reset yesterday balance for live casino
-	- 20121016@Dan: check existed transfer record to skip	
-	- 20121113@Viet: revise sp
-	- 20121203@Dan: skip deleted transfer record when check existed transfer. Delay updating by batch (500 customer) to avoid affect replication
-	- 20130208@Elodie: Change link server DB03 to DBPOLICY
-					   Write more log on DBTXN server in case of DBLOG server failure
-	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					   
-	- 20150723@Patrick: Support Gold deluxe
-	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
-	
-Param's Explanation:
+	Created: 
+	Task:	Transfer all
+			Customer/Transfer all
+	DB: DBTXN/bodb02
+	Revisions:
+		- 20090828@HuyNguyen: replace [Customer] --> [OtherTrans]	
+		- 20091003@Kiwi: Modify write log and remove CustBetCreditUpdResync
+		- 20091125@Kiwi: Remove comstatus because it's no used.	
+		- 20100424@Henry: insert data to column StatusID of Bettrans (StatusID = 131 for bettype 103)+ Update Status = 'Completed'
+		- 20100611@Henry: Write exact amount to log when transferring
+		- 20101225@Lukas: Re-arrange bettype
+		- 20111025@Sophia: Update balance credit/debit for members
+		- 20120411@Sophia: Revise balance credit/debit for members
+		- 20121015@Dan: reset yesterday balance for live casino
+		- 20121016@Dan: check existed transfer record to skip	
+		- 20121113@Viet: revise sp
+		- 20121203@Dan: skip deleted transfer record when check existed transfer. Delay updating by batch (500 customer) to avoid affect replication
+		- 20130208@Elodie: Change link server DB03 to DBPOLICY
+						   Write more log on DBTXN server in case of DBLOG server failure
+		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					   
+		- 20150723@Patrick: Support Gold deluxe
+		- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
+		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
+
+	Param's Explanation:
 */ 
 --Check permission for account site: @phuc20080213  
 DECLARE @ErrMsg_temp nvarchar(4000)   
@@ -230,7 +231,7 @@ if @ErrCode <>0 return
 			
 			---update debit balance
 			--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @amount
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @amount, @Type = 2, @ErrCode = @ErrCode OUTPUT
+						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 			if @ErrCode <> 0
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103

@@ -33,6 +33,7 @@ Revisions:
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database) 					       
 	- 20150723@Patrick: Support Gold deluxe
 	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
+	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 					   
 Param's Explanation:
 */
@@ -124,8 +125,6 @@ EXEC DB052.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @ToCustID, @ErrCode=@
 if @ErrCode <>0 return
 --end
 */
-
-
 if @Amount = 0 or @ExchangeRate = 0 
 BEGIN
 	SELECT @ErrMsg =  case @Language
@@ -189,7 +188,7 @@ COMMIT TRANSACTION
 		BEGIN
 			SELECT @BalanceAmount = @amount * @ExchangeRate
 			--EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @BalanceAmount 
-			EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2, @ErrCode = @ErrCode OUTPUT
+						EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 			if @ErrCode <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -202,7 +201,7 @@ COMMIT TRANSACTION
 				IF @FromRoleID  = 1
 				BEGIN
 					--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
+										EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
 				END 
 
 				delete bettrans 
@@ -234,7 +233,7 @@ COMMIT TRANSACTION
 			IF @FromRoleID  = 1
 			BEGIN
 				--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
+								EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
 			END 
 
 			delete bettrans 
@@ -265,7 +264,7 @@ COMMIT TRANSACTION
 		IF @FromRoleID  = 1
 		BEGIN
 			--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @ErrCode = @ErrCode OUTPUT
+						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 			if @ErrCode <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
