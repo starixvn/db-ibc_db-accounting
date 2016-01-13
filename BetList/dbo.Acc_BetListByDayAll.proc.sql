@@ -2376,9 +2376,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				b.sdiscount,
-				b.adiscount,
-				b.discount,
+				AVG(brng.sdiscount) AS sdiscount,
+				AVG(brng.adiscount) AS adiscount,
+				AVG(brng.discount) AS discount,
 				'' AS settletime,
 				0 AS matchid,
 				b.transid,
@@ -2460,9 +2460,6 @@ BEGIN
 				b.betfrom,
 				b.currency,
 				b.comstatus,
-				b.sdiscount,
-				b.adiscount,
-				b.discount,
 				b.matchid,
 				b.transdesc,
 				s.ProductID
@@ -2485,9 +2482,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				b.sdiscount,
-				b.adiscount,
-				b.discount,
+				AVG(brng.sdiscount) AS sdiscount,
+				AVG(brng.adiscount) AS adiscount,
+				AVG(brng.discount) AS discount,
 				'' AS settletime,
 				0 AS matchid,
 				b.transid,
@@ -2564,9 +2561,6 @@ BEGIN
 				b.betfrom,
 				b.currency,
 				b.comstatus,
-				b.sdiscount,
-				b.adiscount,
-				b.discount,
 				b.matchid,
 				b.transdesc,
 				s.ProductID
@@ -2666,9 +2660,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				b.sdiscount,
-				b.adiscount,
-				b.discount,
+				AVG(blc.sdiscount) AS sdiscount,
+				AVG(blc.adiscount) AS adiscount,
+				AVG(blc.discount) AS discount,
 				'' AS settletime,
 				0 AS matchid,
 				b.transid,
@@ -2745,10 +2739,7 @@ BEGIN
 				b.Username,
 				b.betfrom,
 				b.currency,
-				b.comstatus,
-				b.sdiscount,
-				b.adiscount,
-				b.discount
+				b.comstatus
 		END
 			
 		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- today running ticket
@@ -2765,9 +2756,9 @@ BEGIN
 				'' AS eventdate,
 				0,
 				0,
-				b.sdiscount,
-				b.adiscount,
-				b.discount,
+				AVG(blc.sdiscount) AS sdiscount,
+				AVG(blc.adiscount) AS adiscount,
+				AVG(blc.discount) AS discount,
 				'' AS settletime,
 				0 AS matchid,
 				b.transid,
@@ -2840,10 +2831,7 @@ BEGIN
 				b.Username,
 				b.betfrom,
 				b.currency,
-				b.comstatus,
-				b.sdiscount,
-				b.adiscount,
-				b.discount
+				b.comstatus
 		END
 
 		-- Microgaming RNG Game Jackpot Win
