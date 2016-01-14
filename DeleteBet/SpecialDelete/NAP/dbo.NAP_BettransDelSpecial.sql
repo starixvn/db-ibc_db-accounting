@@ -109,7 +109,7 @@ AS
 		- 20150712@Kathy: - Apply 28 Live Bettypes(PH) [Redmine: #48110]
 						  - Database - Change datatype [Redmine: #48660]
 		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: bettype 4,30,413,414,405 [Redmine:#50932]	  
-		- 20160112@patrick: Support Cricket [Redmine: #50688]
+		- 20160112@Patrick: Support Cricket [Redmine: #50688]
 		
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -372,7 +372,6 @@ BEGIN
 									200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216,
 									1302, 1311, 1312, 1316, 1317, 1318, 1324,
 									401, 402, 403, 404, 405, 406, 407, 409, 412, 413, 414)
-									401, 402, 403, 404, 405, 406, 407, 409, 412, 500)
 			AND CASE WHEN b.bettype IN (1,3,7,8, 17, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 															WHEN @Handicap = (hdp1 + hdp2) THEN 1
 														ELSE 0 END 

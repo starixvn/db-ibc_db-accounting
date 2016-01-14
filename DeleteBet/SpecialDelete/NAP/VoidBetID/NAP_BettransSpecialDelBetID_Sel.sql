@@ -19,6 +19,7 @@ AS
 		- 20151021@Kathy: Do not show ticket 901 if its owner is not BetTrade account(betdaqid = 0)[Redmine:#43233]
 		- 20151102@Kathy: Enhance performance [Redmine:#43233]
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
+		- 20160113@Patrick: Support Cricket [Redmine: #50688]
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -67,6 +68,8 @@ BEGIN
 		,TransDesc		NVARCHAR(300)
 		,betdaqid		BIGINT
 		,SoldId			BIGINT
+		,MatchStatus	NVARCHAR(50)
+		,IsDeposit		BIT
 		)
 		
 	CREATE TABLE #DetailData (
@@ -984,11 +987,14 @@ BEGIN
 			,sporttype = m.sporttype
 			,isNeutral = CAST (ISNULL(m.IsNeutral, 0) AS BIT)
 			,showtime = m.showtime
+			,MatchStatus = m.eventstatus
+			,IsDeposit = CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END
 	FROM	#Data al
 		INNER JOIN CustDB.dbo.custInfo ci WITH(NOLOCK)
 			ON al.custid = ci.custid
 		INNER JOIN dbo.match m WITH(NOLOCK)
 			ON al.matchid = m.matchid
+		LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) ON ci.srecommend = s.custid
 	WHERE	m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154  -- SB
 			OR m.sporttype = 161 -- NG
 			OR m.sporttype = 162 -- LC
@@ -1034,7 +1040,8 @@ BEGIN
 			,showtime		
 			,winlostdate	
 			,TransDesc		
-			,SoldId				
+			,SoldId			
+			,CASE WHEN bettype = 501 AND STATUS = 'running' AND MatchStatus = 'running' AND IsDeposit = 0 THEN 1 ELSE 0 END AS IsCricket	
 	FROM	#Data
 	ORDER BY GroupID, transid
 	
