@@ -29,6 +29,7 @@ AS
 		- 20150922@Sophia: Apply Colossus Bets and expand the range of AG Casino [#43352]
 		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
 		- 20151210@Sophia: Apply Cock Fighting [Redmine: #48602]
+		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 							    
 
 	Param Explanation:
@@ -147,7 +148,8 @@ BEGIN
 	    custid          int,
 	    bettype         int,
 	    liveindicator   bit,
-	    winlost         money
+	    winlost         money,
+		Sporttype		smallint
 	)
 
 	INSERT INTO #bettranstmp
@@ -162,9 +164,11 @@ BEGIN
 	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
 	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
 	                                                                                  ELSE actualrate
-	                                                                                END), 0)) as winlost
+	                                                                                END), 0)) as winlost,
+			CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END AS Sporttype
 	FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 	LEFT JOIN @dummyBalance d ON b.custid = d.custid AND d.WinlostDate= b.WinlostDate
+	LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.Sporttype = 44
 	WHERE 1 = 1
        AND b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
@@ -180,7 +184,8 @@ BEGIN
        --                                   )
        --  OR @uus <> 20)
     GROUP BY b.winlostdate, CASE WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid ELSE -1 END,
-			 b.bettype, b.liveindicator
+			 b.bettype, b.liveindicator, 
+			 CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END
 			 
 
     CREATE NONCLUSTERED INDEX #IX_bettranstmp ON #bettranstmp(custid, winlostdate, bettype)
@@ -276,8 +281,10 @@ BEGIN
 		   END Product,
 		   ISNULL(SUM(winlost), 0) winlost
 	  FROM #bettranstmp
-	 WHERE (bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72, 73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
-		or bettype between 1301 and 1334		
+	 WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72, 73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
+				or bettype between 1301 and 1334		
+			) 
+			AND (Sporttype <> 44 )
   GROUP BY liveindicator, winlostdate
 
   	 UNION ALL
@@ -287,7 +294,7 @@ BEGIN
 	     	 WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-			 WHEN bettype IN (71, 72) THEN 'Casino'
+			 WHEN bettype IN (71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'OW RNG'
 			 WHEN bettype = 73 THEN 'Bingo'
 			-- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
@@ -303,6 +310,7 @@ BEGIN
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN bettype = 1003 THEN 'Cockfighting'
+			 WHEN Sporttype = 44 THEN 'Muay Thai'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	  FROM #bettranstmp
@@ -322,12 +330,14 @@ BEGIN
 			OR bettype BETWEEN 18000 AND 18099  
 			OR bettype BETWEEN 1400 AND 1420
 			OR bettype = 1003
+			OR bettype BETWEEN 2101 AND 2399
+			OR Sporttype = 44
 		   )
   GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-			 WHEN bettype IN(71, 72) THEN 'Casino'
+			 WHEN bettype IN(71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'OW RNG'
 			 WHEN bettype = 73 THEN 'Bingo'
 			--- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
@@ -343,6 +353,7 @@ BEGIN
 			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN bettype = 1003 THEN 'Cockfighting'
+			 WHEN Sporttype = 44 THEN 'Muay Thai'
 		   END, winlostdate
 
     UNION ALL

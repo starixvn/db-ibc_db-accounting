@@ -23,6 +23,8 @@ AS
 		- 20150930@Sophia: Fix winlostyesterday at table Transfer_bk [#44701]
 		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
 		- 20151210@Sophia: Apply Cock Fighting [Redmine: #48602]
+		- 20151217@Sophia: Apply Muay Thai [Redmine: #48667]
+		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 
 		 
 	Param's Explanation:
@@ -206,7 +208,7 @@ BEGIN
 							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 6911911
 							WHEN bettype IN(9,29 ) THEN 6911913
 							WHEN bettype = 10 THEN 6911914
-							WHEN bettype IN (71,72) THEN 6911916
+							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 6911916
 							WHEN bettype BETWEEN 1101 AND 1199 THEN 6911917
 							WHEN bettype BETWEEN 81 AND 120 THEN 6911918
 							WHEN bettype IN (31,32,33) THEN 6911919
@@ -223,7 +225,7 @@ BEGIN
 							WHEN bettype BETWEEN 901 AND 903 THEN 18371760
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
 							WHEN bettype = 1003 THEN 20174484
-
+							WHEN Sporttype = 44 THEN 20174356
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -236,7 +238,7 @@ BEGIN
 							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 THEN 12005466
 							WHEN bettype IN(9,29 ) THEN 12005470
 							WHEN bettype = 10 THEN 12005483
-							WHEN bettype IN (71,72) THEN 12017095
+							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 12017095
 							WHEN bettype BETWEEN 1101 AND 1199 THEN 12962878
 							WHEN bettype BETWEEN 81 AND 120 THEN 13062600
 							WHEN bettype IN (31,32,33) THEN 13062602
@@ -253,6 +255,7 @@ BEGIN
 							WHEN bettype BETWEEN 901 AND 903 THEN 18377348
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
 							WHEN bettype = 1003 THEN  20256514
+							WHEN Sporttype = 44 THEN 20174451
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
