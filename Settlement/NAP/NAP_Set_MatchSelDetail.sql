@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 01/13/2016 14:09:40 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
     ,@excludeRefundFGLG BIT = 0
 AS
@@ -35,6 +40,7 @@ AS
 		- 20151127@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
+		- 20160106@Kathy: Integrate Cricket [Redmine:#49727] - Settle determined tickets for 'Over/Under' bet type of Cricket
 */
 BEGIN
     SET NOCOUNT ON
@@ -782,6 +788,16 @@ BEGIN
                         AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
                 ) AND @sporttype = 1
             )
+            OR (
+				EXISTS (
+					SELECT 1
+					FROM bettrans WITH (NOLOCK)
+					WHERE bettype = 3
+							AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
+							AND ruben = 0 
+							AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
+					) AND @sporttype = 50 -- Cricket
+            )
     BEGIN
         SELECT @IsSettleAbandonedMatchIBC = 1
     END
@@ -876,6 +892,7 @@ BEGIN
 
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail] TO [bodbAdminNet] AS [dbo]
 GO
