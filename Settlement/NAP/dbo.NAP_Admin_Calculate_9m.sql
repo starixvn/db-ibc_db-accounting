@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 01/15/2016 17:06:40 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT = NULL
 	,@fta INT = NULL
@@ -96,7 +103,7 @@ AS
 		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 		- 20151124@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
-		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
+		- 20160106@Kathy: - Integrate Cricket [Redmine:#49727]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -294,7 +301,7 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412,414) 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
@@ -313,7 +320,7 @@ BEGIN
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412,414) 
+		AND bettype NOT IN (7, 8, 12, 15, 21, 30, 14, 126, 127, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
 		AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
@@ -337,7 +344,7 @@ BEGIN
 			,ruben = 1
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412,414) 
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
 				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190,405) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
@@ -355,7 +362,7 @@ BEGIN
 			,statuswinlost = 0
 			,statusID = 103
 		WHERE matchid = @matchid 
-		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412,414) 
+		AND (bettype IN (7, 8, 12, 15, 21, 30, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,403,404,410,411,412) 
 				OR (bettype IN (16, 128, 133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152,177,178,183,184,185,186,187,189,190,405) AND @IsRefundHT = 1)
 			)
 		AND statusID NOT IN (101, 102)
@@ -569,6 +576,7 @@ BEGIN
 						WHEN betteam = (CAST(@fth AS VARCHAR(4)) + ':' + CAST(@fta AS VARCHAR(4))) THEN 1
 						WHEN betteam = '5:0' AND (@fth - @fta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@fth - @fta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@fth >= 5 OR @fta >= 5) THEN 1
 						ELSE - 1
 						END
 				WHEN 30 THEN -- 1st Correct Score
@@ -578,6 +586,7 @@ BEGIN
 						WHEN betteam = '0:4' AND (@hth - @hta) <= - 4 THEN 1 -- 4UP for 1st Correct Score
 						WHEN betteam = '5:0' AND (@hth - @hta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@hth - @hta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@hth >= 4 OR @hta >= 4) THEN 1
 						ELSE - 1
 						END
 				
@@ -1265,12 +1274,12 @@ BEGIN
 					CASE
 						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
-							AND CHARINDEX(CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)), transdesc) = 0 THEN 1
+							AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 						ELSE -1	END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
 						WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
-						WHEN betteam ='G6' AND ((@fth + @fta) >= CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G6' AND ((@fth + @fta) >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
 						ELSE -1 
 						END 
 				WHEN 407 THEN --Exact Home Team Goals
@@ -1317,21 +1326,12 @@ BEGIN
 						WHEN betteam = '3&over' AND (@hth + @hta) >= 3 THEN 1
 						ELSE -1
 						END
-				WHEN 413 THEN --Correct Score (aos)
+				WHEN 501 THEN --Match Winner
 					CASE 
-						WHEN betteam = CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR) THEN 1
-						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
+						WHEN betteam = 'h' AND @fth > @fta THEN 1
+						WHEN betteam = 'a' AND @fth < @fta THEN 1
 						ELSE -1
 						END
-				WHEN 414 THEN --1H Correct Score (aos)
-					CASE
-						WHEN betteam = CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR) THEN 1
-						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
-						ELSE -1
-						END
-
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -1532,6 +1532,7 @@ BEGIN
 						WHEN betteam = (CAST(@fth AS VARCHAR(4)) + ':' + CAST(@fta AS VARCHAR(4))) THEN 1
 						WHEN betteam = '5:0' AND (@fth - @fta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@fth - @fta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@fth >= 5 OR @fta >= 5) THEN 1
 						ELSE - 1
 						END
 				WHEN 30 THEN -- 1st Correct Score
@@ -1541,6 +1542,7 @@ BEGIN
 						WHEN betteam = '0:4' AND (@hth - @hta) <= - 4 THEN 1 -- 4UP for 1st Correct Score
 						WHEN betteam = '5:0' AND (@hth - @hta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@hth - @hta) <= - 5 THEN 1
+						WHEN betteam = 'AOS' AND (@fth >= 4 OR @fta >= 4) THEN 1
 						ELSE - 1
 						END
 				WHEN 16 THEN -- HT/FT
@@ -2232,7 +2234,7 @@ BEGIN
 					CASE
 						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
-							AND CHARINDEX(CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)), transdesc) = 0 THEN 1
+							AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
 						ELSE -1
 						END
 				WHEN 406 THEN --Exact Total Goals
@@ -2283,20 +2285,6 @@ BEGIN
 					CASE 
 						WHEN betteam <> '3&over' AND CAST(betteam AS INT) = (@hth + @hta) THEN 1
 						WHEN betteam = '3&over' AND (@hth + @hta) >= 3 THEN 1
-						ELSE -1
-						END
-				WHEN 413 THEN --Correct Score (aos)
-					CASE 
-						WHEN betteam = CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR) THEN 1
-						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
-						ELSE -1
-						END
-				WHEN 414 THEN --1H Correct Score (aos)
-					CASE
-						WHEN betteam = CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR) THEN 1
-						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 
@@ -2421,5 +2409,7 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]
