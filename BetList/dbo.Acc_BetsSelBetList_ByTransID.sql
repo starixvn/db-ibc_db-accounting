@@ -4109,8 +4109,11 @@ BEGIN
 		-- bettransRnG14
 		ELSE IF @WinlostDate BETWEEN @BalanceUpDay AND @MoveBetsDay
 		BEGIN
-			-- Microgaming RNG Casino
-			IF EXISTS( SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 17 AND Bettype = @Bettype )
+			-- Microgaming RNG Casino, RNG Casino Single Wallet
+			IF EXISTS(	SELECT TOP 1 1 FROM @SportBettype 
+						WHERE Bettype = @Bettype 
+							AND (ProductID = 17 
+								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
 				INSERT INTO @Data
 				SELECT
@@ -4186,8 +4189,11 @@ BEGIN
 		-- bettransRnG_bk
 		ELSE IF @WinlostDate < @BalanceUpDay
 		BEGIN
-			-- Microgaming RNG Casino
-			IF EXISTS( SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 17 AND Bettype = @Bettype )
+			-- Microgaming RNG Casino, RNG Casino Single Wallet
+			IF EXISTS(	SELECT TOP 1 1 FROM @SportBettype 
+						WHERE Bettype = @Bettype 
+							AND (ProductID = 17 
+								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
 				INSERT INTO @Data
 				SELECT
