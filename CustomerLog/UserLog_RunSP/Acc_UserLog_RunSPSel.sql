@@ -1,4 +1,16 @@
-﻿ALTER PROCEDURE [dbo].[Acc_UserLog_RunSPSel]    
+﻿USE [bodb_CustomerLog]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_UserLog_RunSPSel]    Script Date: 01/15/2016 04:47:16 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_UserLog_RunSPSel    Script Date: 1/15/2016 4:22:00 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_UserLog_RunSPSel    Script Date: 1/15/2016 12:03:46 PM ******/
+/****** Object:  Stored Procedure dbo.Acc_UserLog_RunSPSel    Script Date: 10/28/2014 11:00:20 PM ******/
+/****** Object:  Stored Procedure dbo.Acc_UserLog_RunSPSel    Script Date: 10/27/2014 9:07:26 AM ******/
+/****** Object:  Stored Procedure dbo.Acc_UserLog_RunSPSel    Script Date: 10/23/2014 2:04:42 PM ******/
+ALTER PROCEDURE [dbo].[Acc_UserLog_RunSPSel]    
     @CustId INT,
 	@CustName VARCHAR(50) = '',
     @FromDate DATETIME,
@@ -20,6 +32,8 @@ AS
 		- 20110513@Amy: Get more column TrackingValue2 
 		- 20110721@Sophia: If is Internal access and @custName is nickname then don't show data
 		- 20121029@Elodie: Get UseName = 'Admin' if ActionID BETWEEN 1142 AND 1144
+		- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+		- 20160115@Dominic: Do not show logactionid=237 if Trackingvalues is null Redmine: #50937
 
 	Description:
 	- Get paged log run sp. If @LowerActionId and @UpperActionId are both not null, get actions in range 
@@ -99,6 +113,8 @@ BEGIN
 						AND LogDate BETWEEN @FromDate AND @ToDate
 						AND  la.ActionTypeID = @ActionTypeId
 						AND IsInternal <= @IsInternal
+						AND c.roleid <= CASE WHEN @IsInternal = 1 THEN 999999 WHEN @IsInternal = 0 THEN 4 END
+						AND (ul.ActionID <> 237 OR ul.TrackingValue IS NOT NULL)
 
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
@@ -143,6 +159,8 @@ BEGIN
 						AND LogDate BETWEEN @FromDate AND @ToDate				
 						AND IsInternal <= @IsInternal
 						AND la.ActionID NOT BETWEEN @LowerActionId AND @UpperActionId
+						AND c.roleid <= CASE WHEN @IsInternal = 1 THEN 999999 WHEN @IsInternal = 0 THEN 4 END
+						AND (ul.ActionID <> 237 OR ul.TrackingValue IS NOT NULL)
 
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
@@ -188,16 +206,17 @@ BEGIN
 						AND LogDate BETWEEN @FromDate AND @ToDate
 						AND la.actionid BETWEEN @LowerActionId AND @UpperActionId
 						AND IsInternal <= @IsInternal
+						AND c.roleid <= CASE WHEN @IsInternal = 1 THEN 999999 WHEN @IsInternal = 0 THEN 4 END
+						AND (ul.ActionID <> 237 OR ul.TrackingValue IS NOT NULL)
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 END
-END 
-
+END
 GO
-GRANT EXECUTE ON [dbo].[Acc_UserLog_RunSPSel] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_UserLog_RunSPSel] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_UserLog_RunSPSel] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Acc_UserLog_RunSPSel] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_UserLog_RunSPSel] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Acc_UserLog_RunSPSel] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_UserLog_RunSPSel] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_UserLog_RunSPSel] TO [vnteam] AS [dbo]
