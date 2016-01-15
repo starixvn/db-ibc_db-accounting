@@ -2545,7 +2545,8 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID = 17
+				AND (s.ProductId = 17
+					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			GROUP BY
 				b.transid,
