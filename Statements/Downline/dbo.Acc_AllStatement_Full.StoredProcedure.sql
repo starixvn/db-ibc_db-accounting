@@ -155,10 +155,10 @@ BEGIN
 				------AND statusID <> 103
 				AND (Winlostdate < @Yesterday 
 					 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL 
-														OR s.IsUsedBettrans = 1 
-														OR (s.IsUsedBettrans = 1 AND s.IsRunningTranslog = 0 AND StatusID IN (0,1))
+														OR s.IsUsedBettrans = 1 														
 														)
 						)
+					 OR (s.IsUsedBettrans = 1 AND s.IsRunningTranslog = 0 AND StatusID IN (0,1))
 					)	
 			GROUP BY winlostdate, b.bettype,
 				CASE
@@ -201,7 +201,9 @@ BEGIN
 				FROM bettransLC (NOLOCK)
 				WHERE custid = @custid
 					AND winlostdate BETWEEN @_FromDate and @_ToDate
-					AND winlostdate >= @Yesterday
+					AND (winlostdate >= @Yesterday 
+						 OR StatusID IN (0,1) 
+						 )
 				GROUP BY winlostdate, GameId,
 					CASE
 						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
@@ -224,7 +226,9 @@ BEGIN
 				FROM bettransRNG (NOLOCK)
 				WHERE custid = @custid
 					AND winlostdate BETWEEN @_FromDate and @_ToDate
-					AND winlostdate >= @Yesterday
+					AND (winlostdate >= @Yesterday
+						OR StatusID IN (0,1) 
+						)
 				GROUP BY winlostdate, GameId,
 					CASE
 						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
