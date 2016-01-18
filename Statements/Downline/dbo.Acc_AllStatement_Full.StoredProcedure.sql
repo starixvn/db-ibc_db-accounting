@@ -114,10 +114,10 @@ SELECT @Yesterday =  CONVERT(Date,DATEADD(DD, -1, GETDATE()))
 		SET IsUsedBettrans = 1
 		WHERE ProductID NOT IN (11, 17, 6)
 	
-		-- Tickets running in translog and exlude from bettrans: MG-Superlive, Cock Fighting
+		-- Tickets running in translog and exlude from bettrans: MG-Superlive, MGC-LC, Cock Fighting
 		UPDATE @SportBettype
 		SET IsRunningTranslog = 1
-		WHERE ProductId IN (1, 19)
+		WHERE ProductId IN (1, 13, 19)
 
 		 
 --------------------------------------
