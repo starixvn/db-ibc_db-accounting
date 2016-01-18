@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_ExecRep_00]    Script Date: 07/07/2015 04:30:20 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_ExecRep_00    Script Date: 9/12/2014 9:25:10 AM ******/
-ALTER PROCEDURE [dbo].[Acc_ExecRep_00]
+﻿ALTER PROCEDURE [dbo].[Acc_ExecRep_00]
 	@custid INT = 0,
 	@recommend INT = 0,
 	@recommend_old INT = 0,
@@ -28,6 +20,7 @@ Revisions:
 	- 20100114@Kiwi: Put in "AND srecommend = @srecommend_old" when we update sum_winloss table
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Roll back updates on custinfo, customer table in main SP)  
 	- 20140904@Jamie: Missing update FOR KENO table HotFix [#21770]
+	- 20160118@Elodie: Update bettransRnG and bettransRnG14 table and fix bug for Translog and translog14 table at member level
    
 Param's Explanation:
 • @ErrCode:
@@ -47,7 +40,9 @@ DECLARE --@IsExistCust TINYINT,
 		@IsExistSum_Winloss BIT,
 		@IsExistCustinfo BIT,
 		@IsExistTransLog BIT,
-		@IsExistTransLog14 BIT 
+		@IsExistTransLog14 BIT,
+		@IsExistBettransRNG BIT,
+		@IsExistBettransRNG14 BIT 
 
 DECLARE @MinDateBettrans14 DATETIME 
 SELECT	@MinDateBettrans14 = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)		-- SET DEFAULT VALUE 
@@ -60,21 +55,19 @@ SELECT	@MinDateBettrans14 = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)		-- SET D
 IF @@SERVERNAME = 'DBTRANS'  -- IF @@SERVERNAME IN ('DBTRANS','DB230')
 BEGIN
 	SELECT @IsExistCustinfo = COUNT(*) FROM custdb.dbo.sysobjects WHERE name = 'custinfo'
-	SELECT @IsExistBettrans = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans'
-	SELECT @IsExistBettrans14 = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans14'
-	SELECT @IsExistSum_Winloss = COUNT(*) FROM dbo.sysobjects WHERE name = 'sum_winloss'
-	SELECT @IsExistTransLog = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog'
-	SELECT @IsExistTransLog14 = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog14'
 END 
 ELSE 
 BEGIN
-	SELECT @IsExistCustinfo = COUNT(*) FROM dbo.sysobjects WHERE name = 'custinfo'
-	SELECT @IsExistBettrans = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans'
-	SELECT @IsExistBettrans14 = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans14'
-	SELECT @IsExistSum_Winloss = COUNT(*) FROM dbo.sysobjects WHERE name = 'sum_winloss'
-	SELECT @IsExistTransLog = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog'
-	SELECT @IsExistTransLog14 = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog14'
+	SELECT @IsExistCustinfo = COUNT(*) FROM dbo.sysobjects WHERE name = 'custinfo'	
 END
+
+SELECT @IsExistBettrans = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans'
+SELECT @IsExistBettrans14 = COUNT(*) FROM dbo.sysobjects WHERE name = 'bettrans14'
+SELECT @IsExistSum_Winloss = COUNT(*) FROM dbo.sysobjects WHERE name = 'sum_winloss'
+SELECT @IsExistTransLog = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog'
+SELECT @IsExistTransLog14 = COUNT(1) FROM dbo.sysobjects WHERE name = 'TransLog14'
+SELECT @IsExistBettransRNG = COUNT(1) FROM dbo.sysobjects WHERE name = 'BettransRNG'
+SELECT @IsExistBettransRNG14 = COUNT(1) FROM dbo.sysobjects WHERE name = 'BettransRNG14'
 
 DECLARE @cnt INT
 DECLARE @CustInfo TABLE (CustID INT PRIMARY KEY)
@@ -373,6 +366,178 @@ BEGIN
 		END 
 	END 
 	--- End: translog14 
+
+	--- bettransRNG table 
+	IF (@IsExistBettransRNG = 1)
+	BEGIN
+		WHILE (1=1)
+		BEGIN	
+			UPDATE TOP(1000) [dbo].[bettransRNG] WITH (ROWLOCK, UPDLOCK)
+			SET srecommend = @srecommend 
+			WHERE custid IN (SELECT CustID FROM @CustInfo)  
+				AND srecommend = @srecommend_old  
+	    	
+			IF  @@ROWCOUNT < 1000
+				BREAK       
+		END
+	
+		IF (@@ERROR <> 0)
+		BEGIN		
+			--MANUALLY ROLLBACK 
+			WHILE (1=1 AND @IsExistBettrans = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend 	
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettrans14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+			
+			IF @IsExistSum_Winloss = 1 
+			BEGIN
+				UPDATE sum_winloss WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old
+				WHERE mrecommend = @mrecommend
+			END
+
+			WHILE (1=1 AND @IsExistTransLog = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE	mrecommend = @mrecommend 
+						AND srecommend = @srecommend
+						AND winlostdate >=@MinDateBettrans14
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettransRNG = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRNG] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			SELECT	@ErrMsg = 'Error master ' + CAST(@mrecommend AS VARCHAR) + ': update unsuccessfully (bettransRNG).',
+					@ErrCode = 116					 
+			RETURN
+		END 
+	END 
+	--- End: bettransRNG 
+
+	--- bettransRNG14 table 
+	IF (@IsExistBettransRNG14 = 1)
+	BEGIN
+		WHILE (1=1)
+		BEGIN	
+			UPDATE TOP(1000) [dbo].[bettransRNG14] WITH (ROWLOCK, UPDLOCK)
+			SET srecommend = @srecommend 
+			WHERE custid IN (SELECT CustID FROM @CustInfo)  
+				AND srecommend = @srecommend_old  
+	    	
+			IF  @@ROWCOUNT < 1000
+				BREAK       
+		END
+	
+		IF (@@ERROR <> 0)
+		BEGIN		
+			--MANUALLY ROLLBACK 
+			WHILE (1=1 AND @IsExistBettrans = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend 	
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettrans14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+			
+			IF @IsExistSum_Winloss = 1 
+			BEGIN
+				UPDATE sum_winloss WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old
+				WHERE mrecommend = @mrecommend
+			END
+
+			WHILE (1=1 AND @IsExistTransLog = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE	mrecommend = @mrecommend 
+						AND srecommend = @srecommend
+						AND winlostdate >=@MinDateBettrans14
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettransRNG = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRNG] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend 	
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettransRNG14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRNG14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old 
+				WHERE mrecommend = @mrecommend AND srecommend = @srecommend 	
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			SELECT	@ErrMsg = 'Error master ' + CAST(@mrecommend AS VARCHAR) + ': update unsuccessfully (bettransRNG14).',
+					@ErrCode = 116					 
+			RETURN
+		END 
+	END 
+	--- End: bettransRNG14 
 END
 ELSE IF (@roleid = 2 and @IsExistCustinfo = 1) --Perform to move agent
 BEGIN
@@ -684,6 +849,189 @@ BEGIN
 			RETURN
 		END
 	END
+
+		--bettransRNG table
+	IF (@IsExistBettransRNG = 1)
+	BEGIN
+		WHILE (1=1)
+		BEGIN
+			UPDATE TOP (1000) [dbo].[bettransRnG] WITH (ROWLOCK, UPDLOCK) 
+			SET srecommend = @srecommend, mrecommend = @mrecommend 
+			WHERE custid IN(SELECT CustID FROM @CustInfo)
+				AND srecommend = @srecommend_old 
+				AND mrecommend = @mrecommend_old
+				
+			IF  @@ROWCOUNT< 1000
+				BREAK		       
+		END
+		IF @@ERROR <> 0 
+		BEGIN
+			--ROLLBACK TRANSACTION MANUALLY
+			WHILE (1=1 AND @IsExistBettrans = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+			
+			WHILE (1=1 AND @IsExistBettrans14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)	
+					AND mrecommend = @mrecommend
+					
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END
+			
+			IF @IsExistSum_Winloss = 1
+			BEGIN
+				UPDATE sum_winloss WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+			END 
+
+			WHILE (1=1 AND @IsExistTransLog = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+			WHILE (1=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+					AND winlostdate >=@MinDateBettrans14
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettransRNG = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRnG] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			SELECT @ErrMsg = 'Error agent ' + CAST(@recommend AS VARCHAR) + ': update unsuccessfully (betransRNG).',
+				@ErrCode = 116					 
+
+			RETURN
+		END
+	END
+
+	--bettransRNG14 table
+	IF (@IsExistBettransRNG14 = 1)
+	BEGIN
+		WHILE (1=1)
+		BEGIN
+			UPDATE TOP (1000) [dbo].[bettransRnG14] WITH (ROWLOCK, UPDLOCK) 
+			SET srecommend = @srecommend, mrecommend = @mrecommend 
+			WHERE custid IN(SELECT CustID FROM @CustInfo)
+				AND srecommend = @srecommend_old 
+				AND mrecommend = @mrecommend_old
+				
+			IF  @@ROWCOUNT< 1000
+				BREAK		       
+		END
+		IF @@ERROR <> 0 
+		BEGIN
+			--ROLLBACK TRANSACTION MANUALLY
+			WHILE (1=1 AND @IsExistBettrans = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+			
+			WHILE (1=1 AND @IsExistBettrans14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)	
+					AND mrecommend = @mrecommend
+					
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END
+			
+			IF @IsExistSum_Winloss = 1
+			BEGIN
+				UPDATE sum_winloss WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+			END 
+
+			WHILE (1=1 AND @IsExistTransLog = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+			WHILE (1=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[translog14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+					AND winlostdate >=@MinDateBettrans14
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettransRNG = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRnG] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			WHILE (1=1 AND @IsExistBettransRNG14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRnG14] WITH (ROWLOCK, UPDLOCK)
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old
+				WHERE custid IN(SELECT CustID FROM @CustInfo)
+					AND mrecommend = @mrecommend
+				
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END	
+
+			SELECT @ErrMsg = 'Error agent ' + CAST(@recommend AS VARCHAR) + ': update unsuccessfully (betransRNG14).',
+				@ErrCode = 116					 
+
+			RETURN
+		END
+	END
 END
 ELSE  --@ROLEID = 1: Perform to move member
 BEGIN
@@ -851,11 +1199,13 @@ BEGIN
 	BEGIN
 		WHILE (1=1)
 		BEGIN
-			UPDATE TOP(1000) [dbo].[TransLog] WITH (ROWLOCK, UPDLOCK) 
-			SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
-			WHERE custid = @custid AND recommend = @recommend
-			IF @@ROWCOUNT < 1000
-					BREAK		
+			UPDATE TOP (1000) [dbo].[translog] WITH (ROWLOCK, UPDLOCK) 
+			SET srecommend = @srecommend, mrecommend = @mrecommend, recommend = @recommend
+			WHERE	custid = @custid
+					AND recommend = @recommend_old	
+								
+			IF  @@ROWCOUNT < 1000
+				BREAK
 		END
 		IF @@ERROR <> 0 
 		BEGIN			
@@ -908,9 +1258,9 @@ BEGIN
 		WHILE (1=1)
 		BEGIN
 			UPDATE TOP(1000) [dbo].[TransLog14] WITH (ROWLOCK, UPDLOCK) 
-			SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
-			WHERE	custid = @custid AND recommend = @recommend
-					AND winlostdate >=@MinDateBettrans14
+			SET srecommend = @srecommend, mrecommend = @mrecommend, recommend = @recommend
+			WHERE	custid = @custid
+					AND recommend = @recommend_old AND winlostdate >=@MinDateBettrans14
 			IF @@ROWCOUNT < 1000
 					BREAK		
 		END
@@ -969,7 +1319,171 @@ BEGIN
 			RETURN
 		END
 	END
+
+	--bettransRNG
+	IF (@IsExistBettransRNG = 1)
+	BEGIN
+		WHILE (1=1)
+		BEGIN
+			UPDATE TOP(1000) [dbo].[bettransRnG] WITH (ROWLOCK, UPDLOCK) 
+			SET srecommend = @srecommend, mrecommend = @mrecommend, recommend = @recommend
+			WHERE	custid = @custid AND recommend = @recommend_old
+			IF @@ROWCOUNT < 1000
+					BREAK		
+		END
+		IF @@ERROR <> 0 
+		BEGIN			
+			--ROLLBACK TRANSACTION MANUALLY
+			WHILE (1=1 AND @IsExistBettrans = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			--rollback bettrans14
+			WHILE (1=1 AND @IsExistBettrans14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans14] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END			
+
+			--rollback sum_winloss
+			IF @IsExistSum_Winloss = 1 
+			BEGIN
+				UPDATE sum_winloss WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid
+			END 
+
+			WHILE (1=1 AND @IsExistTransLog=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[TransLog] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			WHILE (1=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[TransLog14] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE	custid = @custid 
+						AND recommend = @recommend
+						AND winlostdate >=@MinDateBettrans14
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			WHILE (1=1 AND @IsExistBettransRNG = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRnG] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			SELECT @ErrMsg = 'Error member ' + CAST (@custid AS VARCHAR) + ': update unsuccessfully (bettransRnG).',
+				@ErrCode = 116		
+			RETURN
+		END
+	END
+
+	--bettransRNG14
+	IF (@IsExistBettransRNG14 = 1)
+	BEGIN
+		WHILE (1=1)
+		BEGIN
+			UPDATE TOP(1000) [dbo].[bettransRnG14] WITH (ROWLOCK, UPDLOCK) 
+			SET srecommend = @srecommend, mrecommend = @mrecommend, recommend = @recommend
+			WHERE	custid = @custid AND recommend = @recommend_old
+			IF @@ROWCOUNT < 1000
+					BREAK		
+		END
+		IF @@ERROR <> 0 
+		BEGIN			
+			--ROLLBACK TRANSACTION MANUALLY
+			WHILE (1=1 AND @IsExistBettrans = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			--rollback bettrans14
+			WHILE (1=1 AND @IsExistBettrans14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettrans14] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+
+				IF @@ROWCOUNT < 1000
+					BREAK
+			END			
+
+			--rollback sum_winloss
+			IF @IsExistSum_Winloss = 1 
+			BEGIN
+				UPDATE sum_winloss WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid
+			END 
+
+			WHILE (1=1 AND @IsExistTransLog=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[TransLog] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			WHILE (1=1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[TransLog14] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE	custid = @custid 
+						AND recommend = @recommend
+						AND winlostdate >=@MinDateBettrans14
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			WHILE (1=1 AND @IsExistBettransRNG = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRnG] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			WHILE (1=1 AND @IsExistBettransRNG14 = 1)
+			BEGIN
+				UPDATE TOP(1000) [dbo].[bettransRnG14] WITH (ROWLOCK, UPDLOCK) 
+				SET srecommend = @srecommend_old, mrecommend = @mrecommend_old, recommend = @recommend_old
+				WHERE custid = @custid AND recommend = @recommend
+				IF @@ROWCOUNT < 1000
+						BREAK		
+			END
+
+			SELECT @ErrMsg = 'Error member ' + CAST (@custid AS VARCHAR) + ': update unsuccessfully (bettransRnG14).',
+				@ErrCode = 116		
+			RETURN
+		END
+	END
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_ExecRep_00] TO [bodbAdminNet] AS [dbo]
 GO
