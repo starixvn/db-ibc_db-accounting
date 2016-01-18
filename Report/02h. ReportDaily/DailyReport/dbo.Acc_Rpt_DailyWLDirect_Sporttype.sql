@@ -70,9 +70,10 @@ AS
 		- 20150805@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 		- 20150828@Sophia: Apply Colossus Bets [#41935]
 		- 20150917@Jim: Integrate MO product (Feature #41935)
-		- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
-		- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
+		- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]		
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
+		- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
+		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -92,7 +93,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(site tinyint,

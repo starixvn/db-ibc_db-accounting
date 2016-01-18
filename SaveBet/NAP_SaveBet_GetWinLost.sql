@@ -12,11 +12,12 @@ AS
 	Created by: Dom
 	Date:2014-05-05
 	Task: Winlost Report 
-	DB: DB06.BODB02
+	DB: DB06.bodb_ACC
 	
 	Revisions:
 		-20150529@Jim: add metrix gaming
 		- 20150728@Jim: apply Bettrade (Feature #38815)
+		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
 */
 
 IF EXISTS (SELECT matchid FROM bodb02.dbo.match with (nolock) WHERE matchid = @matchid)
@@ -44,7 +45,7 @@ FROM
 		SUM( (winlost - actual_stake) * virtualrate ) winlostv,
 		SUM( (swinlost+mwinlost+awinlost) * virtualrate ) agentv,
 		SUM( (scomm) * virtualrate ) commv,
-		COUNT(*) BetCount,
+		SUM(CASE WHEN bettype = 500 THEN 0 ELSE 1 END) BetCount,
 		SUM(CASE [status] WHEN 'reject' THEN 1 ELSE 0 END) Reject,
 		SUM(CASE [status] WHEN 'void' THEN 1 ELSE 0 END) Void
 	FROM
@@ -122,7 +123,7 @@ FROM
 		SUM( (winlost - actual_stake) * virtualrate ) winlostv,
 		SUM( (swinlost+mwinlost+awinlost) * virtualrate ) agentv,
 		SUM( (scomm) * virtualrate ) commv,
-		COUNT(*) BetCount,
+		SUM(CASE WHEN bettype = 500 THEN 0 ELSE 1 END) BetCount,
 		SUM(CASE [status] WHEN 'reject' THEN 1 ELSE 0 END) Reject,
 		SUM(CASE [status] WHEN 'void' THEN 1 ELSE 0 END) Void
 	FROM

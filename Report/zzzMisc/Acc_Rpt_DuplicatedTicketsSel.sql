@@ -2,7 +2,7 @@ Use bodb_report
 Go
 /****** Object:  Stored Procedure dbo.Acc_Rpt_DuplicatedTicketsSel    Script Date: 10/23/2015 11:08:34 AM ******/
 
-CREATE PROCEDURE [dbo].[Acc_Rpt_DuplicatedTicketsSel]
+ALTER PROCEDURE [dbo].[Acc_Rpt_DuplicatedTicketsSel]
 	@Date DATETIME,
 	@CheckTime SMALLINT = 1
 AS
@@ -21,6 +21,7 @@ Revisions:
 						3	Number Game
 						4	SLI - Live Casino
 						5	Virtual Sports
+	- 20160119@Robert: Modify SP covered bettype 501. Need to exclude bettype 500 from this report. [#50274]
 Param's Explanation:
 	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
 				   Because job recurs every 30s, so we set @CheckTime = 1 minute as default
@@ -33,11 +34,11 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DELETE  @SportBettype 
-	WHERE	ProductID NOT IN (1, 3, 4, 5)
-
+	WHERE	ProductID NOT IN (1, 3, 4, 5) 
+			OR bettype IN (500)
 
 	---- ** 1. Check the transdate of LastTransID and current time  ** ----
 	DECLARE @LastTransDate DATETIME	
@@ -109,7 +110,7 @@ BEGIN
 				INNER JOIN bodb02.dbo.bettype bt with(nolock) on bt.typeid = b.bettype
 			WHERE b.custid IN (SELECT DISTINCT custid FROM #TempData)
 				AND b.statusID NOT IN (101,102)
-				--AND b.bettype NOT IN (901,902,903)
+				AND b.bettype NOT IN (500) -- exclude 500 - charged commission
 			ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID
 
 			DROP TABLE #TempData			
@@ -131,7 +132,7 @@ BEGIN
 		WHERE	t.Transdate >= @DateFrom 
 			AND t.Transdate < DATEADD(dd, 1, DATEDIFF(dd, 0, @DateFrom))
 			AND b.statusID NOT IN (101,102)
-			---AND b.bettype NOT IN (901,902,903)
+			AND b.bettype NOT IN (500) -- exclude 500 - charged commission
 		ORDER BY b.custid, b.odds, b.stake, b.balance, b.bettype, b.winlostdate, b.Username, b.transid, b.transdate, b.status, b.statusID 
 
 

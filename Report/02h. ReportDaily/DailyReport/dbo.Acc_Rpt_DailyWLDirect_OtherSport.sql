@@ -29,6 +29,7 @@ SET NOCOUNT ON
 		- 20150205@Johnson: show more info of 8RM(winlost, comm, turnover) [redmineID: #27216] 
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 		- 20150723@Sophia: Exclude data of Bettrade [#38815]
+		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
 */
 
 	----Get Sport Bettype Matrix------
