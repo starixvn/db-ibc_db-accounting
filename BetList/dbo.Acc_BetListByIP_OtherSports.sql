@@ -649,7 +649,7 @@ BEGIN
 				b.stake, 
 				b.actual_stake,
 				b.transdate, 
-				b.betteam, 					
+				b.betteam,
 				b.livehomescore, --phuong.nguyen <2008-12-30>
 				b.liveawayscore,
 				0 liveindicator, 
@@ -746,10 +746,13 @@ BEGIN
 				INNER JOIN league l WITH (NOLOCK) ON odds.leagueid = l.leagueid
 				INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 				INNER JOIN @SportBettype sbt ON sbt.Bettype = b.bettype
-				LEFT JOIN (			
-					SELECT	t.refno, t.finalodds, f.finalodds finalodds2
-					FROM	bettransm14 t WITH (NOLOCK)
-							INNER JOIN bettransm14 f WITH (NOLOCK) ON t.refno = f.refno 
+				LEFT JOIN (
+					SELECT
+						t.refno, 
+						t.finalodds, 
+						f.finalodds finalodds2
+					FROM dbo.bettransm14 t WITH (NOLOCK)
+						INNER JOIN dbo.bettransm14 f WITH (NOLOCK) ON t.refno = f.refno 
 					WHERE	t.bettype = 41 AND f.bettype = 42
 				) bmOdd ON b.transid = bmOdd.refno 
 			WHERE	sbt.eventtype = 2
@@ -823,7 +826,10 @@ BEGIN
 				b.swinlost,
 				b.betfrom,
 				b.winlostdate ,
-				b.betcheck,
+				CASE
+					WHEN s.ProductID IN (12, 19) THEN b.betcheck
+					ELSE ''
+				END AS betcheck,
 				CASE
 					WHEN s.ProductID = 19 THEN b.transdesc
 					ELSE ''
@@ -882,7 +888,8 @@ BEGIN
 				0 AS htawayscore,
 				ip,
 				CASE
-					WHEN s.ProductID = 6 THEN 251
+					WHEN s.ProductID = 6 AND s.SubProduct = '' THEN 251
+					WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.matchid
 					WHEN s.ProductID = 7 THEN 252
 					WHEN s.ProductID = 12 THEN 255
 				END AS sporttype,
@@ -894,28 +901,33 @@ BEGIN
 				b.swinlost,
 				b.betfrom,
 				b.winlostdate,
-				b.betcheck,
-				'' AS transdesc,
+				CASE
+					WHEN s.ProductID = 12 THEN b.betcheck
+					ELSE ''
+				END AS betcheck,
+				CASE
+					WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.transdesc
+					ELSE ''
+				END AS transdesc,
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND (s.ProductID IN (7, 12)
-					OR (s.ProductId = 6 AND s.SubProduct = ''))
+				AND s.ProductID IN (6, 7, 12)
 
-			-- IBC keno
+			-- Keno
 			UNION ALL
-			SELECT	
+			SELECT
 				0 finalhomescore,
 				0 finalawayscore, 
 				0 oddsid, 
 				0 leagueid,
 				b.bettype, 
-				b.betid transid,
+				b.transid,
 				ISNULL(b.BetID,0) AS BetID,
 				b.refno,
-				CONVERT(VARCHAR(50),b.refno) matchcode, 
+				'' AS matchcode, 
 				'' AS race, 
 				'' AS eventdate, 
 				0 AS virtualrate,
@@ -938,11 +950,11 @@ BEGIN
 				b.stake, 
 				b.actual_stake,
 				b.transdate, 
-				d.ChoiceId betteam,   
+				d.ChoiceId betteam,
 				b.livehomescore,
 				b.liveawayscore, 
 				0 liveindicator, 
-				(b.winlost-b.actual_stake)  winlost,
+				(b.winlost-b.actual_stake) AS winlost,
 				b.playercomm AS commission, 
 				CASE b.custid WHEN b.creator THEN b.username ELSE '' END creator, 
 				b.username,
@@ -957,11 +969,11 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				b.betfrom,
-				b.winlostdate ,
+				b.winlostdate,
 				b.betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM 	bettrans b WITH (NOLOCK)
+			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 				OUTER APPLY dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) d
 			WHERE	s.ProductID = 8
@@ -1085,7 +1097,7 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				b.betfrom,
-				b.winlostdate  ,
+				b.winlostdate,
 				b.betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
@@ -1096,7 +1108,7 @@ BEGIN
 				AND b.winlostdate = @fromdate
 				AND b.custid = @custid
 
-			--- P2P
+			-- P2P
 			UNION ALL
 			SELECT	
 				0 finalhomescore,
@@ -1107,7 +1119,7 @@ BEGIN
 				b.transid,
 				ISNULL(b.BetID,0) AS BetID,
 				b.refno,
-				'' matchcode, 
+				'' AS matchcode, 
 				'' AS race, --phuong.nguyen, get HR bet list,
 				'' AS eventdate, --phuong.nguyen
 				0 AS virtualrate,
@@ -1130,7 +1142,7 @@ BEGIN
 				b.stake, 
 				b.actual_stake,
 				b.transdate, 
-				b.betteam, 					
+				b.betteam,
 				b.livehomescore, --phuong.nguyen <2008-12-30>
 				b.liveawayscore, --end
 				0 liveindicator, 
@@ -1140,7 +1152,7 @@ BEGIN
 				b.username,
 				0 hthomescore, 
 				0 htawayscore,
-				ip, 	
+				ip,
 				253 AS sporttype,
 				b.matchid,
 				0 IsNeutral,
@@ -1149,11 +1161,11 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				b.betfrom,
-				b.winlostdate  ,
+				b.winlostdate,
 				b.betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM 	bettrans b WITH (NOLOCK)
+			FROM dbo.bettrans b WITH (NOLOCK)
 			WHERE	b.bettype = 1000
 				AND b.matchid = 1000 
 				AND b.winlostdate = @fromdate
@@ -1212,11 +1224,11 @@ BEGIN
 				b.mwinlost,
 				b.swinlost,
 				b.betfrom,
-				b.winlostdate  ,
+				b.winlostdate,
 				b.betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM 	bettrans14 b WITH (NOLOCK)
+			FROM dbo.bettrans14 b WITH (NOLOCK)
 			WHERE	b.bettype = 1000
 				AND b.matchid = 1000 
 				AND b.winlostdate = @fromdate
@@ -1286,7 +1298,7 @@ BEGIN
 			WHERE	s.ProductID = 5
 				AND s.EventType = 3
 				AND b.winlostdate = @fromdate
-				AND b.custid = @custid		
+				AND b.custid = @custid
 
 			-- Virtual HR 14
 			UNION ALL
@@ -1465,7 +1477,7 @@ BEGIN
 				0 AS modds,
 				0 AS finalodds,
 				0 AS finalodds2,
-				' ' AS OddsType,
+				0 AS OddsType,
 				b.status,
 				CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
 				b.stake,
@@ -1494,7 +1506,7 @@ BEGIN
 				b.betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM bettrans AS b WITH (NOLOCK)
+			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
@@ -1865,13 +1877,12 @@ BEGIN
 				b.creator,
 				b.IP,
 				b.betfrom,
-				b.currency,
 				b.comstatus,
 				b.matchid,
 				b.transdesc,
 				s.ProductID
 
-			-- Microgaming RNG Game (today settled ticket)
+			-- Microgaming RNG Game, RNG Casino Single Wallet (today settled ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1960,7 +1971,6 @@ BEGIN
 				b.creator,
 				b.IP,
 				b.betfrom,
-				b.currency,
 				b.comstatus,
 				b.matchid,
 				b.transdesc,
@@ -2000,9 +2010,9 @@ BEGIN
 				b.stake,
 				b.actual_stake,
 				b.transdate,
-				b.betteam,
-				b.livehomescore,
-				b.liveawayscore,
+				'' AS betteam,
+				0 AS livehomescore,
+				0 AS liveawayscore,
 				0 AS liveindicator,
 				(b.winlost - b.actual_stake) AS winlost,
 				b.playercomm AS commission, 
@@ -2012,7 +2022,7 @@ BEGIN
 				0 AS htawayscore,
 				ip,
 				250 AS sporttype,
-				b.matchid,
+				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
 				b.awinlost,
@@ -2020,10 +2030,10 @@ BEGIN
 				b.swinlost,
 				b.betfrom,
 				b.winlostdate,
-				b.betcheck,
+				'' AS betcheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM bettrans AS b WITH (NOLOCK)
+			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
@@ -2108,7 +2118,6 @@ BEGIN
 				b.creator,
 				b.IP,
 				b.betfrom,
-				b.currency,
 				b.comstatus
 
 			-- AG Casino (today settled ticket)
