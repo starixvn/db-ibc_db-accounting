@@ -1001,7 +1001,7 @@ BEGIN
 			
 	DELETE 
 	FROM #Data
-	WHERE sporttype IS NULL
+	WHERE sporttype IS NULL OR bettype = 500 /*charge comm*/
 		
 	-- ALL tickets	
 	SELECT	
