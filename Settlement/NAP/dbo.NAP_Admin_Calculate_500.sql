@@ -1,10 +1,11 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_500_xtest]    Script Date: 01/14/2016 15:11:59 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_500]    Script Date: 01/27/2016 19:20:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_500    Script Date: 1/27/2016 11:21:52 AM ******/
 /****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_500    Script Date: 14/01/2016 12:38:38 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_500] 
 	@MatchId	INT
@@ -22,6 +23,7 @@ AS
 			
 		Parameter's Explanation:
 			@Action: CAL, CAL-FT, REFUND-FT, REFUND, UNDO
+			@CustIds: IMBC Cust List
 								
 */ 
 BEGIN
@@ -252,8 +254,9 @@ BEGIN
 				,statuswinlost = 6
 			WHERE matchid = @MatchId
 				AND bettype = 500
-				AND EXISTS (SELECT 1 FROM @CustIdList s WHERE CustId = s.CustId)
+				AND custid IN (SELECT CustId FROM @CustIdList)
 				AND statusID NOT IN (101, 102) -- REJECT, VOID
+				
 		END
 		
 		DROP TABLE #NetWinCust
@@ -273,9 +276,8 @@ BEGIN
 		WHERE	matchid = @MatchId
 				AND bettype = 500
 				AND statusID NOT IN (101, 102) -- REJECT, VOID
+				
 	END
 END
-
-
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_500_xtest] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_500] TO [vnteam] AS [dbo]

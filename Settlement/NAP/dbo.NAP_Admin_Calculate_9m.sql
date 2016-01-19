@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 01/15/2016 17:06:40 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 01/19/2016 14:09:03 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1330,6 +1330,7 @@ BEGIN
 					CASE 
 						WHEN betteam = 'h' AND @fth > @fta THEN 1
 						WHEN betteam = 'a' AND @fth < @fta THEN 1
+						WHEN @fth = @fta THEN 0
 						ELSE -1
 						END
 				-- Tennis Sporting Solution 
@@ -2287,7 +2288,13 @@ BEGIN
 						WHEN betteam = '3&over' AND (@hth + @hta) >= 3 THEN 1
 						ELSE -1
 						END
-
+				WHEN 501 THEN --Match Winner
+					CASE 
+						WHEN betteam = 'h' AND @fth > @fta THEN 1
+						WHEN betteam = 'a' AND @fth < @fta THEN 1
+						WHEN @fth = @fta THEN 0
+						ELSE -1
+						END
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -2409,7 +2416,6 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
-
 
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]
