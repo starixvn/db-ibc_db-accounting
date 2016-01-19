@@ -50,7 +50,7 @@ BEGIN
 
 		--insert data to API log
 		EXEC dbo.NAP_Admin_SettlementService_Ins @ServiceType = 1
-			, @MatchId = @MatchId
+			, @MatchId = NULL
 			, @TransIds = @TransIds
 			, @Action = @Action
 			, @ServiceStatus = 0 --wating
