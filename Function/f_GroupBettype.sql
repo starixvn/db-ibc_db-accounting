@@ -1,3 +1,6 @@
+use bodb02
+go 
+
 ALTER FUNCTION [dbo].[f_GroupBettype] 
 ()
 RETURNS @GroupBettype TABLE (Bettype SMALLINT, GroupTypeId SMALLINT)
@@ -9,7 +12,7 @@ AS
  	Revisions: 
 		- 20150414@Sophia: Support BetRadar
 		- 20151204@Bobby: Grouped 6 bettypes for PH AIO
-		
+		- 20160119@Sophia: PH AIO phase 1.2 [Redmine: #51029]
 */
 
 BEGIN 
@@ -89,39 +92,39 @@ BEGIN
 	-------- Grouped 6 bettypes for PH AIO
 	--1.Exact Total Goals vs 3rd
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (406, 406)
+	VALUES (159, 159)
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (159, 406)
+	VALUES (406, 159)
 	
 	--2.Exact Home Team Goals & 3rd
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (407, 407)
+	VALUES (161, 161)
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (161, 407)
+	VALUES (407, 161)
 	
 	--3.Winning Margin & 3rd
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (408, 408)
+	VALUES (171, 171)
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (171, 408)
+	VALUES (408, 171)
 	
 	--4.Exact Away Team Goals & 3rd
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (409, 409)
+	VALUES (162, 162)
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (162, 409)
+	VALUES (409, 162)
 	
 	--5.1H Double Chance & 3rd
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (410, 410)
+	VALUES (151, 151)
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (151, 410)
+	VALUES (410, 151)
 	
 	--6.1H Draw No Bet & 3rd
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (411, 411)
+	VALUES (191, 191)
 	INSERT INTO @GroupBettype (Bettype, GroupTypeId)
-	VALUES (191, 411)
+	VALUES (411, 191)
 	
 	RETURN
 END
