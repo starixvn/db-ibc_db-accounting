@@ -569,7 +569,6 @@ BEGIN
 						WHEN betteam = (CAST(@fth AS VARCHAR(4)) + ':' + CAST(@fta AS VARCHAR(4))) THEN 1
 						WHEN betteam = '5:0' AND (@fth - @fta) >= 5 THEN 1
 						WHEN betteam = '0:5' AND (@fth - @fta) <= - 5 THEN 1
-						WHEN betteam = 'AOS' AND (@fth >= 5 OR @fta >= 5) THEN 1
 						ELSE - 1
 						END
 				WHEN 30 THEN -- 1st Correct Score
