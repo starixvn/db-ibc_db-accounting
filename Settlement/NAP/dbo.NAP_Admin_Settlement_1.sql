@@ -67,6 +67,7 @@ AS
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)		
 		- 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 		
 	Param's Explanation:
 		+ @betstatus: Used for score table, FGLG status, refund status
@@ -300,7 +301,7 @@ BEGIN
 			SELECT transid
 			FROM bettrans b WITH(NOLOCK)
 			WHERE	b.matchid = @matchid 
-				AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411,412)
+				AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411,412,414)
 				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 				AND betdaqid = 0--bettrade tickets
 
@@ -309,7 +310,7 @@ BEGIN
 				,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903, 303, 304,403,404,410,411,412)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903, 303, 304,403,404,410,411,412,414)
 					AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
 					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
@@ -418,7 +419,7 @@ need below code to determine for mark match as calculated (all bets settled)
 
 		INSERT INTO @status
 		SELECT CASE 
-					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411,412) THEN 0
+					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411,412,414) THEN 0
 					--WHEN b.bettype = 135 THEN 2
 					ELSE 1
 			   END
@@ -437,7 +438,7 @@ need below code to determine for mark match as calculated (all bets settled)
 				AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 				AND b.bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
 		GROUP BY CASE 
-					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411,412) THEN 0
+					WHEN b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209, 303, 304,403,404,410,411,412,414) THEN 0
 					--WHEN b.bettype = 135 THEN 2
 					ELSE 1
 				 END
@@ -706,7 +707,7 @@ need below code to determine for mark match as calculated (all bets settled)
 					,SUM(b.winlost - b.actual_stake + b.playercomm)
 			FROM	dbo.bettrans b WITH (ROWLOCK)
 			WHERE	b.matchid = @matchid 
-					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903, 303, 304,403,404,410,411,412)
+					AND b.bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209,901,902,903, 303, 304,403,404,410,411,412,414)
 					AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
 									THEN 1 
