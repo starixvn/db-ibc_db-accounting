@@ -43,6 +43,7 @@ AS
 		- 20151019@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 		- 20151123@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 
 	Param's Explanation:
 		
@@ -121,27 +122,36 @@ BEGIN
 
 				UPDATE b
 				SET @modds = CASE
-					WHEN b.betteam NOT IN ('0:4', '4:0', 'AOS')
+					WHEN b.betteam NOT IN ('0:4', '4:0')
 						AND @bettype = 30 --1H Correct Score
 						AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1)) THEN -1
-					WHEN b.betteam = 'AOS' --Any Other Scores
-						AND (@hth >= 4 OR @hta >= 4)
-						AND @bettype = 30 THEN 1
-					WHEN b.betteam NOT IN ('0:5', '5:0', 'AOS')
+					WHEN b.betteam NOT IN ('0:5', '5:0')
 						AND @bettype = 4 --Correct Score
-						AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1) ) THEN -1
-					WHEN b.betteam = 'AOS' --Any Other Scores
-						AND (@fth >= 5 OR @fta >= 5)
-						AND @bettype = 4 THEN 1
+						AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1)) THEN -1
+					
 					WHEN b.betteam NOT IN ('AOS')
 						AND @bettype = 405 --2H Correct Score
 						AND ((@fth-@hth) > LEFT(b.betteam,1) OR (@fta-@hta) > RIGHT(b.betteam,1)) THEN -1
 					WHEN b.betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), b.transdesc) < 0 THEN 1
+					
+					WHEN b.betteam NOT IN ('AOS')
+						AND @bettype = 413 --Correct Score (aos)
+						AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1)) THEN -1
+					WHEN b.betteam = 'AOS'
+						AND @bettype = 413
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), b.transdesc) < 0 THEN 1
+					
+					WHEN b.betteam NOT IN ('AOS')
+						AND @bettype = 414 --1H Correct Score (aos)
+						AND (@hth > LEFT(b.betteam,1) OR @hth > RIGHT(b.betteam,1)) THEN -1
+					WHEN b.betteam = 'AOS'
+						AND @bettype = 414
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), b.transdesc) < 0 THEN 1
 					ELSE NULL
 					END,
-				modds = @modds,			
+				modds = @modds,
 				@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 					WHEN '0' THEN 1
 					WHEN '1' THEN 0 
@@ -275,15 +285,16 @@ BEGIN
 					WHEN betteam = '0:4' AND @goaldiff <=  -4 and @bettype=30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '5:0' AND @goaldiff >=  5 THEN 1
 					WHEN betteam = '0:5' AND @goaldiff <= -5 THEN 1
-					WHEN betteam = 'AOS' --Any Other Scores 
-						AND (@hth >= 4 OR @hta >= 4)
-						AND @bettype = 30 THEN 1
-					WHEN betteam = 'AOS' --Any Other Scores
-						AND (@fth >= 5 OR @fta >= 5)
-						AND @bettype = 4 THEN 1
 					WHEN b.betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), b.transdesc) < 0 THEN 1
+					WHEN b.betteam = 'AOS'
+						AND @bettype = 413
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), b.transdesc) < 0 THEN 1
+					WHEN b.betteam = 'AOS'
+						AND @bettype = 414
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), b.transdesc) < 0 THEN 1
+
 					ELSE -1
 					END,
 				modds = @modds,
@@ -393,24 +404,25 @@ BEGIN
 		BEGIN
 			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 			SET @modds = CASE 
-					WHEN betteam NOT IN ('0:4', '4:0', 'AOS') 
+					WHEN betteam NOT IN ('0:4', '4:0') 
 						AND @bettype = 30 
 						AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) THEN -1
-					WHEN betteam NOT IN ('0:5', '5:0', 'AOS') 
+					WHEN betteam NOT IN ('0:5', '5:0') 
 						AND @bettype = 4 
 						AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1) ) THEN -1
-					WHEN betteam = 'AOS' --Any Other Scores
-						AND @bettype = 30 
-						AND (@hth >= 4 OR @hta >= 4) THEN 1
-					WHEN betteam = 'AOS' --Any Other Scores
-						AND @bettype = 4 
-						AND (@fth >= 5 OR @fta >= 5) THEN 1
 					WHEN betteam NOT IN ('AOS')
 						AND @bettype = 405 --2H Correct Score
-						AND ((@fth-@hth) > LEFT(betteam,1) OR (@fta-@hta) > RIGHT(betteam,1) ) THEN -1
+						AND ((@fth-@hth) > LEFT(betteam,1) OR (@fta-@hta) > RIGHT(betteam,1)) THEN -1
 					WHEN betteam = 'AOS' --Any Other Scores
-						AND @bettype = 405
-						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
+						AND @bettype = 405 --2H Correct Score
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), transdesc) < 0 THEN 1
+					WHEN betteam = 'AOS'
+						AND @bettype = 413
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) < 0 THEN 1
+					WHEN betteam = 'AOS'
+						AND @bettype = 414
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) < 0 THEN 1
+
 					ELSE NULL
 					END
 				,modds = @modds
@@ -527,15 +539,15 @@ BEGIN
 					WHEN betteam = '0:4' AND @goaldiff <= - 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '5:0' AND @goaldiff >= 5 THEN 1
 					WHEN betteam = '0:5' AND @goaldiff <= - 5 THEN 1
-					WHEN betteam = 'AOS' --Any Other Scores 
-						AND (@hth >= 4 OR @hta >= 4)
-						AND @bettype = 30 THEN 1
 					WHEN betteam = 'AOS' --Any Other Scores
-						AND (@fth >= 5 OR @fta >= 5)
-						AND @bettype = 4 THEN 1
-					WHEN betteam = 'AOS' --Any Other Scores
-						AND @bettype = 405
-						AND ((@fth-@hth) >= 4 OR (@fta-@hta) >= 4) THEN 1
+						AND @bettype = 405 --2H Correct Score
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), transdesc) < 0 THEN 1
+					WHEN betteam = 'AOS'
+						AND @bettype = 413
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) < 0 THEN 1
+					WHEN betteam = 'AOS'
+						AND @bettype = 414
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) < 0 THEN 1
 					ELSE - 1
 					END
 				,modds = @modds

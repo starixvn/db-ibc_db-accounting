@@ -263,6 +263,8 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_Main] @matchid INT
 	,@betCount_410                    INT         = NULL
 	,@betCount_411                    INT         = NULL
 	,@betCount_412                    INT         = NULL
+	,@betCount_413                    INT         = NULL
+	,@betCount_414                    INT         = NULL
 
     ,@betcount_1301                    INT            = NULL        -- Tennis SS 
     ,@betCount_1302                    INT            = NULL    
@@ -311,6 +313,7 @@ AS
         - 20151019@Kathy: add more param @IsRefundHT for calculate_4 (Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626])
 		- 20151124@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
         
     Param's Explanation:
         @action            @mode
@@ -886,6 +889,8 @@ BEGIN
 			,@betCount_410 = ' + CASE WHEN @betCount_410 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_410) END + '
 			,@betCount_411 = ' + CASE WHEN @betCount_411 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_411) END + '
 			,@betCount_412 = ' + CASE WHEN @betCount_412 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_412) END + '
+			,@betCount_413 = ' + CASE WHEN @betCount_413 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_413) END + '
+			,@betCount_414 = ' + CASE WHEN @betCount_414 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_414) END + '
             
             ,@betCount_1301 = ' + CASE WHEN @betCount_1301 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1301) END + '
             ,@betCount_1302 = ' + CASE WHEN @betCount_1302 IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(50), @betCount_1302) END + '
@@ -1592,6 +1597,18 @@ BEGIN
                         ,@bettype = 409
                         ,@totalgoal = @totalaway
                         ,@betcount = @betcount_409
+
+					--Correct Score (aos)
+					EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+                        ,@bettype = 413
+                        ,@correctscore = @correctscore
+                        ,@goaldiff = @scorediff
+						,@hth = @hth
+                        ,@hta = @hta
+                        ,@fth = @fth
+                        ,@fta = @fta
+                        ,@FGLG2 = NULL
+                        ,@betcount = @betCount_413
                 
                 END
             END -- END CAL/CAL-FT
@@ -1852,6 +1869,18 @@ BEGIN
                     ,@bettype = 412
                     ,@totalgoal = @totalht
                     ,@betcount = @betCount_412
+				
+				--1H Correct Score (aos)
+				EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+                    ,@bettype = 414
+                    ,@correctscore = @correctscore_ht
+                    ,@goaldiff = @scorediff_ht
+					,@hth = @hth
+					,@hta = @hta
+					,@fth = @fth
+					,@fta = @fta
+                    ,@FGLG2 = NULL
+                    ,@betcount = @betcount_414
 
             END
 
@@ -2950,6 +2979,22 @@ BEGIN
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+
+				--Correct Score (aos)
+				 IF @betCount_413 > 0
+                    EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+                        ,@bettype = 413
+                        ,@correctscore = NULL
+                        ,@goaldiff = NULL
+                        ,@FGLG2 = NULL
+                        ,@betcount = @betCount_413
+                        ,@hth = @hth
+                        ,@hta = @hta
+                        ,@fth = @fth
+                        ,@fta = @fta
+                        ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+                        ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 				
                 IF @row_count > 0
 				BEGIN
@@ -3479,6 +3524,39 @@ BEGIN
                         ,@betcount = @betcount_412
                         ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 						,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+
+				--Correct Score (aos)
+				IF @betcount_413 > 0
+                    EXEC dbo.NAP_Admin_Calculate_4 
+                         @matchid = @matchid
+                        ,@bettype = 413
+                        ,@correctscore = NULL
+                        ,@goaldiff = NULL
+                        ,@FGLG2 = NULL
+                        ,@betcount = @betCount_413
+                        ,@hth = @hth
+                        ,@hta = @hta
+                        ,@fth = @fth
+                        ,@fta = @fta
+                        ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+                        ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+                        ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+
+				--1H Correct Score (aos)
+				IF @betcount_414 > 0
+                    EXEC dbo.NAP_Admin_Calculate_4 @matchid = @matchid
+                        ,@bettype = 414
+                        ,@correctscore = NULL
+                        ,@goaldiff = NULL
+                        ,@FGLG2 = NULL
+                        ,@hth = @hth
+                        ,@hta = @hta
+                        ,@fth = @fth
+                        ,@fta = @fta
+                        ,@betcount = @betcount_414
+                        ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
+                        ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
                         ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
 
 				IF @row_count > 0

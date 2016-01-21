@@ -34,6 +34,7 @@ AS
 		- 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
 		- 20151127@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 */
 BEGIN
     SET NOCOUNT ON
@@ -314,7 +315,7 @@ BEGIN
 
         INSERT INTO @status
         SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: HT Corner, 5:FT Corner 
-                WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412) THEN 1
+                WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412, 414) THEN 1
                 WHEN bettype = 14 THEN 2
                 WHEN bettype = 127 THEN 3
                 WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
@@ -344,7 +345,7 @@ BEGIN
 				AND bettype NOT IN (901,902,903)--bettrade tickets
 				AND bettype NOT BETWEEN 801 AND 899 -- Metric Gaming
         GROUP BY CASE 
-                WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412) THEN 1
+                WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412, 414) THEN 1
                 WHEN bettype = 14 THEN 2
                 WHEN bettype = 127 THEN 3
                 WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
@@ -774,7 +775,7 @@ BEGIN
                             OR bettype BETWEEN 128 AND 134
                             OR bettype BETWEEN 140 AND 150 
                             OR bettype = 152
-                            OR bettype IN (159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207, 302, 304,401,402,403,404,405,406,407,408,409,412) 
+                            OR bettype IN (159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207, 302, 304,401,402,403,404,405,406,407,408,409,412,413,414) 
                         )
                         AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
                         AND ruben = 0 
