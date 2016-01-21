@@ -19,6 +19,7 @@ AS
 		- 20141030@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160121@Patrick: PH-AiO - Change request [Redmine: #51116]
 		
 	Param's Explanation:
 	@matchid: matchid of match to be settled
@@ -103,6 +104,7 @@ BEGIN
 		CNT TINYINT
 		,-- total selection count, base on bettransm/14
 		bCNT TINYINT -- total selection count, stored in bettrans
+		,transdesc NVARCHAR(200) --bet choice of bettype 413,414
 		UNIQUE (refno, matchid)
 		)
 
@@ -122,6 +124,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,betcheck
+		,transdesc
 		)
 	SELECT bm.refno
 		,bm.transid
@@ -138,6 +141,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,bm.betcheck
+		,bm.transdesc
 	FROM dbo.bettransm bm WITH (ROWLOCK)
 		INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
 
@@ -157,6 +161,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,betcheck
+		,transdesc
 		)
 	SELECT bm.refno
 		,bm.transid
@@ -173,6 +178,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,bm.betcheck
+		,bm.transdesc
 	FROM dbo.bettransm14 bm WITH (ROWLOCK)
 		INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
 		-- prepare Seq of each refno
@@ -244,6 +250,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,betcheck
+		,transdesc
 		)
 	SELECT pb.RefNo
 		,rc.Serial
@@ -262,6 +269,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,pb.betcheck
+		,pb.transdesc
 	FROM @parlay_base pb
 		INNER JOIN @temp_bettrans tb ON pb.refno = tb.refno
 		INNER JOIN dbo.RefCombination rc ON pb.RN = rc.seq AND pb.CNT = rc.N AND (tb.bitmap & rc.bitmap) > 0
