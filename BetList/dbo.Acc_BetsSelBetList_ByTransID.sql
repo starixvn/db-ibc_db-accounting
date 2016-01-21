@@ -71,6 +71,7 @@ AS
 		- 20151216@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20151222@Kos: Support search in bettransRnG and bettransLC tables
 		- 20151230@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160119@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 */
 
 BEGIN
@@ -326,7 +327,7 @@ BEGIN
 					m.showtime,
 					b.winlostdate,
 					b.BetCheck,
-					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
+					ISNULL(b.transdesc, '') AS transdesc,
 					ISNULL(b.oddsspread, 0) AS OddsSpread	-- For Myanmar Odds
 				FROM
 					dbo.bettrans AS b WITH (NOLOCK)
@@ -1991,7 +1992,7 @@ BEGIN
 					m.showtime,
 					b.winlostdate,
 					b.BetCheck,
-					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
+					ISNULL(b.transdesc, '') AS transdesc,
 					ISNULL(b.oddsspread, 0) AS OddsSpread		-- For Myanmar Odds
 				FROM
 					dbo.bettrans14 AS b WITH (NOLOCK)
@@ -2862,7 +2863,7 @@ BEGIN
 					m.showtime,
 					b.winlostdate,
 					b.BetCheck,
-					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
+					ISNULL(b.transdesc, '') AS transdesc,
 					ISNULL(b.oddsspread, 0) AS OddsSpread	-- For Myanmar Odds
 				FROM   
 					DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)   

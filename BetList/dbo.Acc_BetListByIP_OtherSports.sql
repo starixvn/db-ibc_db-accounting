@@ -64,6 +64,7 @@ AS
 		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 		- 20151216@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20151231@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160121@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -274,7 +275,7 @@ BEGIN
 				b.betfrom,
 				b.winlostdate,
 				b.betcheck,
-				CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
+				ISNULL(b.transdesc, '') AS transdesc,
 				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM dbo.bettrans14 b WITH (NOLOCK) 
 				INNER JOIN dbo.match14 match WITH (NOLOCK) ON b.matchid= match.matchid
@@ -472,7 +473,7 @@ BEGIN
 				b.betfrom,
 				b.winlostdate ,
 				b.betcheck,
-				'' AS transdesc,
+				ISNULL(b.transdesc, '') AS transdesc,
 				ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM dbo.bettrans b WITH (NOLOCK) 
 				INNER JOIN dbo.match  WITH (NOLOCK) ON b.matchid = match.matchid
@@ -2281,6 +2282,7 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
+
 
 
 

@@ -25,30 +25,32 @@ AS
 		- 20120629@Sophia: Remove function f_GetOddsByBettype, f_ShowOddsByBettype,f_GetChoice for odds, Oddstype, betteam
 		- 20150415@Sophia: Get Betcheck for BEtRadar
 		- 20151210@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
+		- 20160119@Kos: Return transdesc to support PH All In One 1.2 [#Redmine: 50897]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @BetListMP TABLE(
-		TransID BIGINT,
-		Bettype INT,
-		HomeID INT,
-		AwayID INT, 
-		hdp1 SMALLMONEY, 
-		hdp2 SMALLMONEY,
-		Odds MONEY, 
-		Betteam NVARCHAR(20),
-		statusid INT,
-		Livehomescore SMALLINT,
-		Liveawayscore SMALLINT,
-		Liveindicator BIT,
-		LeagueID INT,
-		Sporttype SMALLINT,
-		isNeutral BIT,
-		matchid INT,
-		matchcode NVARCHAR(50),
-		Betcheck NVARCHAR(50)
+		TransID			BIGINT,
+		Bettype			INT,
+		HomeID			INT,
+		AwayID			INT, 
+		hdp1			SMALLMONEY, 
+		hdp2			SMALLMONEY,
+		Odds			MONEY, 
+		Betteam			NVARCHAR(20),
+		statusid		INT,
+		Livehomescore	SMALLINT,
+		Liveawayscore	SMALLINT,
+		Liveindicator	BIT,
+		LeagueID		INT,
+		Sporttype		SMALLINT,
+		isNeutral		BIT,
+		matchid			INT,
+		matchcode		NVARCHAR(50),
+		Betcheck		NVARCHAR(50),
+		transdesc		NVARCHAR(200)
 	)
 
 	IF EXISTS(SELECT 1 FROM bettransm WITH (NOLOCK) WHERE refno = @refno)
@@ -72,10 +74,23 @@ BEGIN
 			match.isNeutral AS IsNeutral,
 			match.matchid,
 			match.matchcode,
-			bettrans.Betcheck
+			bettrans.Betcheck,
+			bettrans.transdesc
 		FROM 
-			(SELECT matchid, Bettype, transid, hdp1, hdp2, odds, betteam, statusid,
-					livehomescore, liveawayscore, liveindicator, Betcheck
+			(SELECT 
+				matchid,
+				Bettype,
+				transid,
+				hdp1,
+				hdp2,
+				odds,
+				betteam,
+				statusid,
+				livehomescore,
+				liveawayscore,
+				liveindicator,
+				Betcheck,
+				transdesc
 			FROM dbo.BettransM WITH (NOLOCK)
 			WHERE refno = @refno ) AS bettrans
 		INNER JOIN dbo.match WITH (NOLOCK) ON bettrans.matchid = match.matchid
@@ -102,10 +117,23 @@ BEGIN
 			match.isNeutral AS IsNeutral,
 			match.matchid,
 			match.matchcode,
-			bettrans.Betcheck
+			bettrans.Betcheck,
+			bettrans.transdesc
 		FROM 
-			(SELECT matchid, Bettype, transid, hdp1, hdp2, odds, betteam, statusid,
-					livehomescore, liveawayscore, liveindicator, Betcheck
+			(SELECT
+				matchid,
+				Bettype,
+				transid,
+				hdp1,
+				hdp2,
+				odds,
+				betteam,
+				statusid,
+				livehomescore,
+				liveawayscore,
+				liveindicator,
+				Betcheck,
+				transdesc
 			FROM dbo.BettransM14 WITH (NOLOCK)
 			WHERE refno = @refno) AS bettrans
 		INNER JOIN dbo.match14 AS match WITH (NOLOCK) ON bettrans.matchid = match.matchid
@@ -114,6 +142,7 @@ BEGIN
 	SELECT * FROM @BetListMP
 	ORDER BY TransID DESC
 END
+
 
 
 GO
