@@ -50,7 +50,7 @@
 		- 20151113@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 		- 20151221@Sophia: Exclude Cockfighting from bettrans table in case there is running ticket on bettrans [Redmine: #48602]
 		- 20160108@Sophia: Change request for Colossus bet [Redmin: #49967]
-		- 20160119@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
+		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
 
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
