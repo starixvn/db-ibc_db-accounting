@@ -1319,18 +1319,16 @@ BEGIN
 						END
 				WHEN 413 THEN --Correct Score (aos)
 					CASE 
-						WHEN betteam NOT IN ('AOS')
-							AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1)) THEN -1
+						WHEN betteam = CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR) THEN 1
 						WHEN betteam = 'AOS'
 							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 				WHEN 414 THEN --1H Correct Score (aos)
 					CASE
-						WHEN betteam NOT IN ('AOS')
-							AND (@hth > LEFT(betteam,1) OR @hth > RIGHT(betteam,1)) THEN -1
+						WHEN betteam = CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR) THEN 1
 						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) = 0 THEN 1
+							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 
@@ -2289,18 +2287,16 @@ BEGIN
 						END
 				WHEN 413 THEN --Correct Score (aos)
 					CASE 
-						WHEN betteam NOT IN ('AOS')
-							AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1)) THEN -1
+						WHEN betteam = CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR) THEN 1
 						WHEN betteam = 'AOS'
 							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 				WHEN 414 THEN --1H Correct Score (aos)
 					CASE
-						WHEN betteam NOT IN ('AOS')
-							AND (@hth > LEFT(betteam,1) OR @hth > RIGHT(betteam,1)) THEN -1
+						WHEN betteam = CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR) THEN 1
 						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) = 0 THEN 1
+							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 

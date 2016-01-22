@@ -146,7 +146,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,bm.betcheck
-		,bm.transdesc
+		,CASE WHEN bm.betteam = 'AOS' THEN bm.transdesc ELSE '' END AS transdesc
 	FROM dbo.bettransm bm WITH (ROWLOCK)
 		--INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
 		INNER JOIN #temp_bettrans tb ON bm.refno = tb.refno
@@ -186,7 +186,7 @@ BEGIN
 		,liveawayscore
 		,liveindicator
 		,bm.betcheck
-		,bm.transdesc
+		,CASE WHEN bm.betteam = 'AOS' THEN bm.transdesc ELSE '' END AS transdesc
 	FROM dbo.bettransm14 bm WITH (ROWLOCK)
 		--INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
 		INNER JOIN #temp_bettrans tb ON bm.refno = tb.refno
