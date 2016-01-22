@@ -1265,7 +1265,7 @@ BEGIN
 					CASE
 						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
-							AND CHARINDEX(CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)), transdesc) < 0 THEN 1
+							AND CHARINDEX(CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)), transdesc) = 0 THEN 1
 						ELSE -1	END
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
@@ -1322,7 +1322,7 @@ BEGIN
 						WHEN betteam NOT IN ('AOS')
 							AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1)) THEN -1
 						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) < 0 THEN 1
+							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 				WHEN 414 THEN --1H Correct Score (aos)
@@ -1330,7 +1330,7 @@ BEGIN
 						WHEN betteam NOT IN ('AOS')
 							AND (@hth > LEFT(betteam,1) OR @hth > RIGHT(betteam,1)) THEN -1
 						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) < 0 THEN 1
+							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 
@@ -2234,7 +2234,7 @@ BEGIN
 					CASE
 						WHEN betteam = CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)) THEN 1
 						WHEN betteam = 'AOS' --Any Other Scores
-							AND CHARINDEX(CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)), transdesc) < 0 THEN 1
+							AND CHARINDEX(CAST((@fth - @hth) AS NVARCHAR(6)) + ':' + CAST((@fta - @hta) AS NVARCHAR(6)), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 				WHEN 406 THEN --Exact Total Goals
@@ -2292,7 +2292,7 @@ BEGIN
 						WHEN betteam NOT IN ('AOS')
 							AND (@fth > LEFT(betteam,1) OR @fta > RIGHT(betteam,1)) THEN -1
 						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) < 0 THEN 1
+							AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 				WHEN 414 THEN --1H Correct Score (aos)
@@ -2300,7 +2300,7 @@ BEGIN
 						WHEN betteam NOT IN ('AOS')
 							AND (@hth > LEFT(betteam,1) OR @hth > RIGHT(betteam,1)) THEN -1
 						WHEN betteam = 'AOS'
-							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) < 0 THEN 1
+							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
 

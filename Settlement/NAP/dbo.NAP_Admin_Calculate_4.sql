@@ -134,21 +134,21 @@ BEGIN
 						AND ((@fth-@hth) > LEFT(b.betteam,1) OR (@fta-@hta) > RIGHT(b.betteam,1)) THEN -1
 					WHEN b.betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), b.transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), b.transdesc) = 0 THEN 1
 					
 					WHEN b.betteam NOT IN ('AOS')
 						AND @bettype = 413 --Correct Score (aos)
 						AND (@fth > LEFT(b.betteam,1) OR @fta > RIGHT(b.betteam,1)) THEN -1
 					WHEN b.betteam = 'AOS'
 						AND @bettype = 413
-						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), b.transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), b.transdesc) = 0 THEN 1
 					
 					WHEN b.betteam NOT IN ('AOS')
 						AND @bettype = 414 --1H Correct Score (aos)
 						AND (@hth > LEFT(b.betteam,1) OR @hth > RIGHT(b.betteam,1)) THEN -1
 					WHEN b.betteam = 'AOS'
 						AND @bettype = 414
-						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), b.transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), b.transdesc) = 0 THEN 1
 					ELSE NULL
 					END,
 				modds = @modds,
@@ -287,13 +287,13 @@ BEGIN
 					WHEN betteam = '0:5' AND @goaldiff <= -5 THEN 1
 					WHEN b.betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), b.transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), b.transdesc) = 0 THEN 1
 					WHEN b.betteam = 'AOS'
 						AND @bettype = 413
-						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), b.transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), b.transdesc) = 0 THEN 1
 					WHEN b.betteam = 'AOS'
 						AND @bettype = 414
-						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), b.transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), b.transdesc) = 0 THEN 1
 
 					ELSE -1
 					END,
@@ -415,13 +415,13 @@ BEGIN
 						AND ((@fth-@hth) > LEFT(betteam,1) OR (@fta-@hta) > RIGHT(betteam,1)) THEN -1
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), transdesc) = 0 THEN 1
 					WHEN betteam = 'AOS'
 						AND @bettype = 413
-						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
 					WHEN betteam = 'AOS'
 						AND @bettype = 414
-						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) = 0 THEN 1
 
 					ELSE NULL
 					END
@@ -541,13 +541,13 @@ BEGIN
 					WHEN betteam = '0:5' AND @goaldiff <= - 5 THEN 1
 					WHEN betteam = 'AOS' --Any Other Scores
 						AND @bettype = 405 --2H Correct Score
-						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth-@hth AS VARCHAR) + ':' + CAST(@fta-@hta AS VARCHAR), transdesc) = 0 THEN 1
 					WHEN betteam = 'AOS'
 						AND @bettype = 413
-						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@fth AS VARCHAR) + ':' + CAST(@fta AS VARCHAR), transdesc) = 0 THEN 1
 					WHEN betteam = 'AOS'
 						AND @bettype = 414
-						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) < 0 THEN 1
+						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hth AS VARCHAR), transdesc) = 0 THEN 1
 					ELSE - 1
 					END
 				,modds = @modds
