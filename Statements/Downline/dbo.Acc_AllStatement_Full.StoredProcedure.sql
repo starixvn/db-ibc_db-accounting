@@ -49,7 +49,8 @@
 						   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
 		- 20151113@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 		- 20151221@Sophia: Exclude Cockfighting from bettrans table in case there is running ticket on bettrans [Redmine: #48602]
-		
+		- 20160108@Sophia: Change request for Colossus bet [Redmin: #49967]
+		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
 
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -95,11 +96,31 @@ SET @Fromdate_bk = @_FromDate
 DECLARE @_IncludeAccBal AS BIT
 SET @_IncludeAccBal = @IncludeAccBal
 
+DECLARE @Yesterday SMALLDATETIME 
+SELECT @Yesterday =  CONVERT(Date,DATEADD(DD, -1, GETDATE()))
+		
 ----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
+		DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500), IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
+		INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
+		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5 
+	
+		DELETE @SportBettype WHERE	ProductID NOT IN (11, 13, 17, 19, 1, 6) -- AG-Casino, MGC-LC, MGC-RNG, Cockfighting
+									OR (ProductId = 1 AND SubProduct <> 'MG-Superlive') --MG-Superlive
+									OR (ProductID = 6 AND SubProduct = '') --- Old RNG Casino 
+
+		-- Tickets not check in bettrans on Yesterday and Today: AG-Casino, MGC-RNG, MBC-OneRnG
+		UPDATE @SportBettype
+		SET IsUsedBettrans = 1
+		WHERE ProductID NOT IN (11, 17, 6)
+	
+		-- Tickets running in translog and exlude from bettrans: MG-Superlive, MGC-LC, Cock Fighting
+		UPDATE @SportBettype
+		SET IsRunningTranslog = 1
+		WHERE ProductId IN (1, 13, 19)
+
+		 
+--------------------------------------
 
 IF @_ToDate >= @_BalanceUpDay
 BEGIN
@@ -129,9 +150,16 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 			WHERE custid = @custid
 				AND winlostdate between @_FromDate and @_ToDate
-				AND CASE WHEN ((s.productId = 1 AND s.SubProduct = 'MG-SuperLive' ) OR (s.productId = 19)) AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
-				AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
-				--AND statusID <> 103
+				--AND CASE WHEN ((s.productId = 1 AND s.SubProduct = 'MG-SuperLive' ) OR (s.productId = 19)) AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
+				--AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+				------AND statusID <> 103
+				AND (Winlostdate < @Yesterday 
+					 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL 
+														OR s.IsUsedBettrans = 1 														
+														)
+						)
+					 OR (s.IsUsedBettrans = 1 AND s.IsRunningTranslog = 0 AND StatusID IN (0,1))
+					)	
 			GROUP BY winlostdate, b.bettype,
 				CASE
 					WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
@@ -173,6 +201,9 @@ BEGIN
 				FROM bettransLC (NOLOCK)
 				WHERE custid = @custid
 					AND winlostdate BETWEEN @_FromDate and @_ToDate
+					AND (winlostdate >= @Yesterday 
+						 OR StatusID IN (0,1) 
+						 )
 				GROUP BY winlostdate, GameId,
 					CASE
 						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
@@ -195,6 +226,9 @@ BEGIN
 				FROM bettransRNG (NOLOCK)
 				WHERE custid = @custid
 					AND winlostdate BETWEEN @_FromDate and @_ToDate
+					AND (winlostdate >= @Yesterday
+						OR StatusID IN (0,1) 
+						)
 				GROUP BY winlostdate, GameId,
 					CASE
 						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
@@ -301,10 +335,9 @@ BEGIN
 			,0 isAllowVeify
 		FROM dbo.PayoutTrans WITH(NOLOCK) 
 		WHERE	winlostdate BETWEEN @Fromdate AND @todate
-				AND custid = @custid 	 		
-		GROUP BY refno, winlostdate, custid
-			
-			
+				AND custid = @custid 
+				AND PayoutStatusId = 4 ---Completed	 		
+		GROUP BY refno, winlostdate, custid				
 			 
 
 		--------------------------------------------------------------
@@ -330,8 +363,11 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and custid=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+			---AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 			and playercomm<>0 
+			AND (Winlostdate < @Yesterday 
+				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
+				)
 		GROUP BY winlostdate
 
 		UNION ALL
@@ -375,6 +411,7 @@ BEGIN
 		WHERE custid = @custid
 			AND winlostdate BETWEEN @_FromDate and @_ToDate
 			AND playercomm <> 0
+			AND Winlostdate >= @Yesterday
 		GROUP BY winlostdate
 
 		----3.3 BettransRNG for Microgaming RNG Casino
@@ -393,6 +430,7 @@ BEGIN
 		WHERE custid = @custid
 			AND winlostdate BETWEEN @_FromDate and @_ToDate
 			AND playercomm <> 0
+			AND Winlostdate >= @Yesterday
 		GROUP BY winlostdate
 
 
@@ -492,9 +530,13 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
-			and recommEND=@custid 
+			and recommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
+			---AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
+			AND (Winlostdate < @Yesterday 
+				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
+				)
+
 		GROUP BY winlostdate 
 		HAVING sum(awinlost) <> 0
 		
@@ -514,9 +556,12 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
-			and recommEND=@custid 
+			and recommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+			---AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+			AND (Winlostdate < @Yesterday 
+				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
+				)
 		GROUP BY winlostdate 
 		HAVING sum(comm-playercomm) <> 0		
 
@@ -533,8 +578,9 @@ BEGIN
 			,NULL
 			,0
 		FROM bettransLC WITH (NOLOCK)
-		WHERE recommEND = @custid
+		WHERE recommend = @custid
 			AND winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate
 			
 		UNION ALL
@@ -549,8 +595,9 @@ BEGIN
 			,NULL
 			,0
 		FROM bettransLC WITH (NOLOCK)
-		WHERE recommEND = @custid
+		WHERE recommend = @custid
 			AND winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate
 		HAVING sum(comm - playercomm) <> 0
 
@@ -567,8 +614,9 @@ BEGIN
 			,NULL
 			,0
 		FROM bettransRNG WITH (NOLOCK)
-		WHERE recommEND = @custid
+		WHERE recommend = @custid
 			AND winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate
 		HAVING sum(awinlost) <> 0
 
@@ -586,6 +634,7 @@ BEGIN
 		FROM bettransRNG WITH (NOLOCK)
 		WHERE recommEND = @custid
 			AND winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate
 		HAVING sum(comm - playercomm) <> 0
 		 
@@ -639,7 +688,10 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and mrecommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+			---AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+			AND (Winlostdate < @Yesterday 
+				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
+				)
 		GROUP BY winlostdate 
 		HAVING sum(mwinlost) <> 0	
 	
@@ -660,7 +712,10 @@ BEGIN
 			b.bettype between 1 and 19999 
 			and mrecommEND=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+			---AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
+			AND (Winlostdate < @Yesterday 
+				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
+				)
 		GROUP BY winlostdate 
 		HAVING sum(acomm-comm) <> 0
 
@@ -682,6 +737,7 @@ BEGIN
 			WHERE  
 				mrecommEND=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
+				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
 			HAVING sum(mwinlost) <> 0
 
@@ -700,6 +756,7 @@ BEGIN
 			WHERE 
 				mrecommEND=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
+				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
 			HAVING sum(acomm-comm) <> 0
 
@@ -720,6 +777,7 @@ BEGIN
 			WHERE  
 				mrecommEND=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
+				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
 			HAVING sum(mwinlost) <> 0
 
@@ -738,6 +796,7 @@ BEGIN
 			WHERE 
 				mrecommEND=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
+				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
 			HAVING sum(acomm-comm) <> 0
 	END
@@ -789,9 +848,12 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
-			and srecommEND=@custid 
+			and srecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
+			---AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
+			AND (Winlostdate < @Yesterday 
+				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
+				)
 		GROUP BY winlostdate 
 		HAVING sum(swinlost) <> 0
 	
@@ -811,9 +873,12 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
-			and srecommEND=@custid 
+			and srecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
-			AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
+			--AND CASE WHEN (s.productId = 11 OR s.productId = 17)	THEN 0 ELSE 1 END = 1
+			AND (Winlostdate < @Yesterday 
+				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
+				)
 		GROUP BY winlostdate 
 		HAVING sum(scomm-acomm) <> 0
 
@@ -832,8 +897,9 @@ BEGIN
 			NULL,
 			0 
 		FROM bettransLC WITH (NOLOCK) 
-		WHERE  srecommEND=@custid 
+		WHERE  srecommend=@custid 
 			and winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate 
 		HAVING sum(swinlost) <> 0
 
@@ -851,8 +917,9 @@ BEGIN
 			0 
 		FROM bettransLC  WITH (NOLOCK)  
 		WHERE 
-			srecommEND=@custid 
+			srecommend=@custid 
 			and winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate 
 		HAVING sum(scomm-acomm) <> 0
 
@@ -870,8 +937,9 @@ BEGIN
 			NULL,
 			0 
 		FROM bettransRNG WITH (NOLOCK) 
-		WHERE  srecommEND=@custid 
+		WHERE  srecommend=@custid 
 			and winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate 
 		HAVING sum(swinlost) <> 0
 
@@ -889,8 +957,9 @@ BEGIN
 			0 
 		FROM bettransRNG WITH (NOLOCK)  
 		WHERE 
-			srecommEND=@custid 
+			srecommend=@custid 
 			and winlostdate BETWEEN @_FromDate and @_ToDate
+			AND winlostdate >= @Yesterday
 		GROUP BY winlostdate 
 		HAVING sum(scomm-acomm) <> 0
 		
@@ -994,10 +1063,12 @@ BEGIN
 	END
 END
 
-SELECT	accdate, refno,totalamt,transtype,transtypeid,transdesc,creator
+SELECT	accdate, refno,SUM(totalamt) as totalamt,transtype,transtypeid,transdesc,creator
 		,checkerID ,checkerName, checkTime ,isAllowVeify			
 FROM @StatementTable
 WHERE (accdate >= @Fromdate_bk OR transdesc = 'ACCUMULATED BALANCE')
+GROUP BY accdate, refno, transtype,transtypeid,transdesc,creator
+		,checkerID ,checkerName, checkTime ,isAllowVeify			
 ORDER BY accdate, CASE WHEN transdesc like '%opening balance%' THEN 1 ELSE 2 END, transtypeid, transdesc
 
 

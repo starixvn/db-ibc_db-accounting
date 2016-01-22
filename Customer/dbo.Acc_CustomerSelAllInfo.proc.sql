@@ -66,7 +66,8 @@ Revisions:
 	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
 	- 20151030@Percy: AG Casino & Microgaming - Outstanding Info for new Sporttype [Redmine: #46450]
 	- 20151112@Percy: AG Casino & Microgaming - Fix bug for new Sporttype [Redmine: #47441]
-	- 20151210@Percy: Add new product: Cock Fighting Sabong [Redmine: #48836]
+	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #48836]
+	- 20160108@Percy: Expand new bettype for RNG Casino [Redmine: #48285]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -161,13 +162,15 @@ BEGIN
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
-	DELETE @SportBettype WHERE ProductID NOT IN (11, 13, 17, 19) -- AG-Casino, MGC-LC, MGC-LC, Cock Fighting
-						   AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') --MG-Superlive
+	DELETE @SportBettype WHERE ProductID NOT IN (6, 11, 13, 17, 19) -- RNG Casino, AG-Casino, MGC-LC, MGC-RNG, Cock Fighting
+						   AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') -- MG-Superlive
+	
+	DELETE @SportBettype WHERE ProductID = 6 AND SubProduct = '' -- Old RNG Casino: 71, 72
 
 	-- Tickets not in bettrans: AG-Casino, MGC-RNG
 	UPDATE @SportBettype
 	SET IsUsedBettrans = 1
-	WHERE ProductID NOT IN (11,17)
+	WHERE ProductID NOT IN (6,11,17)
 	
 	-- Tickets running in translog: MG-Superlive, Cock Fighting
 	UPDATE @SportBettype
