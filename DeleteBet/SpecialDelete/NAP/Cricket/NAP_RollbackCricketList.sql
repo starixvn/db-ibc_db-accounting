@@ -36,7 +36,7 @@ BEGIN
 	INSERT INTO @TmpData(MatchId, TransIds)
 	SELECT MatchId, STUFF((SELECT ',' + CAST(TransId AS VARCHAR(50))
 							FROM #TmpCricketIds tt WITH(NOLOCK) WHERE t.MatchId = tt.MatchId
-							FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 2, '')
+							FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')
 	FROM #TmpCricketIds t
 	WHERE MatchId IS NOT NULL
 	GROUP BY MatchId
