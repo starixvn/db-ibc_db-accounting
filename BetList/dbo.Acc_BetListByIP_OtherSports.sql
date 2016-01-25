@@ -65,6 +65,7 @@ AS
 		- 20151216@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20151231@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160121@Kos: Support PH All In One 1.2 [#Redmine: 50897]
+		- 20160125@Kos: Fix Colossus Bet result issue
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -1570,9 +1571,9 @@ BEGIN
 				ISNULL(bm.betcheck, '') AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM bettrans AS b WITH (NOLOCK)
+			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-				LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+				LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.refno = bm.refno AND bm.bettype = 18001
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
@@ -1715,9 +1716,9 @@ BEGIN
 				ISNULL(bm.betcheck, '') AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM bettrans14 b WITH (NOLOCK)
+			FROM dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.refno = bm.refno AND bm.bettype = 18001
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
@@ -2282,6 +2283,8 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
+
+
 
 
 

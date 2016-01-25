@@ -94,6 +94,7 @@ AS
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20151229@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160119@Kos: Support PH All In One 1.2 [#Redmine: 50897]
+		- 20160125@Kos: Fix Colossus Bet result issue
 */
 
 BEGIN
@@ -1726,7 +1727,7 @@ BEGIN
 				0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
-				LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+				LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.refno = bm.refno AND bm.bettype = 18001
 			WHERE b.custid 			= @Custid 
 				AND b.matchid 		= 204
 				AND s.ProductId 	= 15
@@ -2772,7 +2773,7 @@ BEGIN
 				0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK, INDEX=bettrans1413)
 				INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
-				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+				LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.refno = bm.refno AND bm.bettype = 18001
 			WHERE b.winlostdate BETWEEN @FromDate AND @ToDate 
 				AND b.custid = @Custid 
 				AND b.matchid = 204 
@@ -2871,6 +2872,7 @@ BEGIN
 	DROP TABLE #BetListDetailData
 	DROP TABLE #SportBettype
 END
+
 
 
 
