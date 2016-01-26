@@ -29,6 +29,7 @@ AS
 		- 20150922@Sophia: Apply Colossus Bets and expand the range of AG Casino [#43352]
 		- 20151102@Sophia: Apply Microgaming LC and RNG [RedmineID: #46450]
 		- 20151210@Sophia: Apply Cock Fighting [Redmine: #48602]
+		- 20151217@Sophia: Apply Muay Thai [Redmine: #48667]
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 							    
 
@@ -294,7 +295,7 @@ BEGIN
 	     	 WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-			 WHEN bettype IN (71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'OW RNG'
+			 WHEN bettype IN (71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
 			 WHEN bettype = 73 THEN 'Bingo'
 			-- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
@@ -328,7 +329,6 @@ BEGIN
 			OR bettype BETWEEN 2008 AND 2009 
 			OR bettype BETWEEN 901 AND 903 
 			OR bettype BETWEEN 18000 AND 18099  
-			OR bettype BETWEEN 1400 AND 1420
 			OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
 			OR Sporttype = 44
@@ -337,7 +337,7 @@ BEGIN
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-			 WHEN bettype IN(71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'OW RNG'
+			 WHEN bettype IN(71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
 			 WHEN bettype = 73 THEN 'Bingo'
 			--- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
