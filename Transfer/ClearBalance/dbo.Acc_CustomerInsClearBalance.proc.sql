@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_CustomerInsClearBalance]    Script Date: 01/27/2016 17:38:39 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_CustomerInsClearBalance    Script Date: 27/01/2016 5:35:38 PM ******/
+ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
 	@UserID int,
@@ -40,6 +48,7 @@ Revisions:
 	- 20150723@Patrick: Support Gold deluxe
 	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
+	- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
 
 Param's Explanation:
 */ 
@@ -112,31 +121,101 @@ WHERE custid = @agentid AND roleid = 2
 
 IF( @CusStatus <> '' or @CusStatus <> null)
 BEGIN
-	INSERT INTO #Member(custid,memberName,memberBalance)
+	--INSERT INTO #Member(custid,memberName,memberBalance)
 
-	SELECT b.custid ,c.username,
-		   isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-                                  when bettype > 19000 then winlost-actual_stake +playercomm 
-								  else 0 
-								  end , 0)), 0) memberBal
-	FROM  Bettrans AS b with (NOLOCK)
-	INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
-	WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1
-	GROUP BY b.custid ,c.username
+	--SELECT b.custid ,c.username,
+	--	   isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+ --                                 when bettype > 19000 then winlost-actual_stake +playercomm 
+	--							  else 0 
+	--							  end , 0)), 0) memberBal
+	--FROM  Bettrans AS b with (NOLOCK)
+	--INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+	--WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1
+	--GROUP BY b.custid ,c.username
+
+	;WITH cte_Balance AS (
+		SELECT b.custid,
+			   isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+									  when bettype > 19000 then winlost-actual_stake +playercomm 
+									  else 0 
+									  end , 0)), 0) memberBal
+		FROM  Bettrans AS b with (NOLOCK)
+		INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+		WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1
+		GROUP BY b.custid 
+
+		UNION ALL 
+		SELECT b.custid, SUM(winlost - actual_stake + playercomm) memberBal
+		FROM bettransRNG b WITH (NOLOCK)
+		WHERE b.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+		GROUP BY b.custid
+
+		UNION ALL 
+		SELECT b.custid, SUM(winlost - actual_stake + playercomm) memberBal
+		FROM bettransLC b WITH (NOLOCK)
+		WHERE b.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+		GROUP BY b.custid
+		)
+
+	INSERT INTO #Member(custid,memberName,memberBalance)
+	SELECT b.custid, c.username, SUM(memberBal)
+	FROM cte_Balance b
+		INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+	GROUP BY b.custid, c.username 
 END 
 ELSE 
 BEGIN
+	--INSERT INTO #Member(custid,memberName,memberBalance)
+	--SELECT b.custid ,c.username,
+	--	  isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+ --                                when bettype > 19000 then winlost-actual_stake +playercomm
+	--							 else 0 
+	--							 end , 0)), 0) memberBal
+	--FROM  Bettrans AS b with (NOLOCK)
+	--INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+	--WHERE b.custid in (Select convert(int, val) from dbo.strSplit (@ToCustIDs, ',' ))
+	--	  and c.recommend = @AgentID and b.ruben = 1 
+	--GROUP BY b.custid ,c.username
+
+	CREATE TABLE #ToCustIDs (custID INT)
+
+	INSERT INTO #ToCustIDs (CustID)
+	SELECT convert(int, val) 
+	from dbo.strSplit (@ToCustIDs, ',' )
+	
+	;WITH cte_Balance AS (
+		SELECT b.custid ,c.username,
+			  isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+									 when bettype > 19000 then winlost-actual_stake +playercomm
+									 else 0 
+									 end , 0)), 0) memberBal
+		FROM  Bettrans AS b with (NOLOCK)
+		INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+		WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+			  and c.recommend = @AgentID and b.ruben = 1 
+		GROUP BY b.custid ,c.username
+
+		UNION ALL 
+		SELECT b.custid, c.username, SUM(winlost - actual_stake + playercomm) memberBal
+		FROM bettransRNG b WITH (NOLOCK)
+			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+		WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+			AND c.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+		GROUP BY b.custid, c.username
+
+		UNION ALL 
+		SELECT b.custid, c.username, SUM(winlost - actual_stake + playercomm) memberBal
+		FROM bettransLC b WITH (NOLOCK)
+			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+		WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+			AND c.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+		GROUP BY b.custid, c.username
+	)
 	INSERT INTO #Member(custid,memberName,memberBalance)
-	SELECT b.custid ,c.username,
-		  isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-                                 when bettype > 19000 then winlost-actual_stake +playercomm
-								 else 0 
-								 end , 0)), 0) memberBal
-	FROM  Bettrans AS b with (NOLOCK)
-	INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
-	WHERE b.custid in (Select convert(int, val) from dbo.strSplit (@ToCustIDs, ',' ))
-		  and c.recommend = @AgentID and b.ruben = 1 
-	GROUP BY b.custid ,c.username
+	SELECT b.custid, b.username, SUM(memberBal)
+	FROM cte_Balance b
+	GROUP BY b.custid, b.username 
+
 END 
 
 DELETE FROM #Member WHERE memberBalance = 0
@@ -377,7 +456,6 @@ BEGIN
 	   else N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s): ' + @ErrItems 
 	  end  
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerInsClearBalance] TO [bodbAdminNet] AS [dbo]
 GO

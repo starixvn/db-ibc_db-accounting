@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_ClearBalanceAllDownlines]    Script Date: 01/27/2016 17:37:59 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_ClearBalanceAllDownlines    Script Date: 27/01/2016 5:35:38 PM ******/
+/****** Object:  Stored Procedure dbo.Acc_ClearBalanceAllDownlines    Script Date: 10/30/2015 11:30:31 AM ******/
+ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	
 	@UserID int = 8,
 	@IP nvarchar(15)='', 
@@ -32,6 +41,7 @@ AS
 		- 20150723@Patrick: Support Gold deluxe & override code from production with 20140826@Lukas version 
 		- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
+		- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -174,20 +184,50 @@ BEGIN
 		AND c.roleid = 3
 END;
 
-WITH B
-AS (
-	SELECT b.custid, SUM(isnull(CASE 
-					WHEN bettype < 19999
-						AND winlostdate < @winlostdate
-						OR bettype >= 19999 THEN winlost - actual_stake + playercomm
-					ELSE 0
-					END, 0)) AS MemberBalance
-	FROM bettrans b WITH (NOLOCK, INDEX = IX_custid)
-		INNER JOIN #Member m
-		ON b.custid = m.custid
-	WHERE ruben = 1
-	GROUP BY b.custid
+--WITH B
+--AS (
+--	SELECT b.custid, SUM(isnull(CASE 
+--					WHEN bettype < 19999
+--						AND winlostdate < @winlostdate
+--						OR bettype >= 19999 THEN winlost - actual_stake + playercomm
+--					ELSE 0
+--					END, 0)) AS MemberBalance
+--	FROM bettrans b WITH (NOLOCK, INDEX = IX_custid)
+--		INNER JOIN #Member m
+--		ON b.custid = m.custid
+--	WHERE ruben = 1
+--	GROUP BY b.custid
+--	)
+;WITH MemberBalance
+AS(
+	SELECT b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
+	FROM	Bettrans AS b WITH (NOLOCK, INDEX = IX_custid)
+		INNER JOIN #Member as c with (NOLOCK) 
+			on b.custid = c.custid 
+	WHERE b.ruben = 1
+	UNION ALL
+	SELECT r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm
+	FROM	dbo.bettransRnG r WITH(NOLOCK)
+		INNER JOIN #Member c WITH(NOLOCK)
+			ON r.custid = c.custid
+	WHERE	r.IsSum = 0
+			AND r.statusID NOT IN (0,1)			
+	UNION ALL
+	SELECT c.custid, l.gameID, l.winlostdate, l.winlost, l.actual_stake, l.playercomm
+	FROM	dbo.bettransLC l WITH(NOLOCK)
+		INNER JOIN #Member c WITH(NOLOCK)
+			ON l.custid = c.custid
+	WHERE	l.IsSum = 0
+			AND l.statusID NOT IN (0,1)			
+)
+,B AS (
+	SELECT custid,
+			SUM(isnull(case when bettype < 19999 and winlostdate < @WinlostDate OR bettype >= 19999 then winlost-actual_stake+playercomm 
+									else 0 end , 0)) MemberBalance
+	FROM  MemberBalance
+	GROUP BY custid
 	)
+
 UPDATE #Member
 SET memberBalance = isnull(B.MemberBalance, 0)
 FROM B
@@ -445,9 +485,28 @@ END
 --------------------------START:AGENT-MASTER-------------------------------   
 IF (@roleid > 2)
 BEGIN
-		;
-
-	WITH B
+	;WITH cteAgentBalance
+	AS(
+		SELECT	b.recommend, b.winlost, b.actual_stake, b.awinlost, b.comm, b.playercomm, b.custid, b.ruben, b.winlostdate, b.bettype
+		FROM	bettrans b WITH (NOLOCK, INDEX = IX_recommend)
+			INNER JOIN #Agent a
+				ON b.recommend = a.recommend
+		UNION ALL
+		SELECT	r.recommend, r.winlost, r.actual_stake, r.awinlost, r.comm, r.playercomm, r.custid, 1 AS ruben, r.winlostdate, r.gameID
+		FROM	dbo.bettransRnG r WITH(NOLOCK)
+			INNER JOIN #Agent a
+				ON r.recommend = a.recommend
+		WHERE	r.IsSum = 0
+				AND r.statusID NOT IN (0,1)				
+		UNION ALL
+		SELECT	l.recommend, l.winlost, l.actual_stake, l.awinlost, l.comm, l.playercomm, l.custid, 1 AS ruben, l.winlostdate, l.gameID
+		FROM	dbo.bettransLC l WITH(NOLOCK)
+			INNER JOIN #Agent a
+				ON l.recommend = a.recommend
+		WHERE	l.IsSum = 0
+				AND l.statusID NOT IN (0,1)				
+	)	
+	,B
 	AS (
 		SELECT b.recommend, isnull(sum(CASE 
 						WHEN b.custid = b.recommend THEN winlost - actual_stake
@@ -462,9 +521,7 @@ BEGIN
 							AND ruben = 1 THEN awinlost + comm + winlost - actual_stake
 						ELSE 0
 						END), 0) AS agentBalance
-		FROM bettrans b WITH (NOLOCK, INDEX = IX_recommend)
-			INNER JOIN #Agent a
-			ON b.recommend = a.recommend
+		FROM	cteAgentBalance b
 		GROUP BY b.recommend
 		)
 	UPDATE #Agent
@@ -627,9 +684,27 @@ END
 --------------------------START:MASTER-SUPER-------------------------------  
 IF @RoleID = 4
 BEGIN
-		;
-
-	WITH B
+	; WITH cteSuperBalance
+	AS(
+		SELECT  b.mrecommend, b.custid, b.winlost, b.awinlost, b.playercomm, b.actual_stake, b.mwinlost, b.acomm, b.comm, b.srecommend, b.recommend, b.ruben, b.bettype, b.winlostdate
+		FROM	dbo.bettrans b WITH (NOLOCK)
+			INNER JOIN CustDB.dbo.custinfo c
+				ON c.custid = b.custid
+		WHERE	 c.mrecommend IN (SELECT mrecommend FROM #Master)
+		UNION ALL
+		SELECT	r.mrecommend, r.custid, r.winlost, r.awinlost, r.playercomm, r.actual_stake, r.mwinlost, r.acomm, r.comm, r.srecommend, r.recommend, 1 AS ruben, r.gameID, r.winlostdate
+		FROM	dbo.bettransRnG r WITH(NOLOCK)
+		WHERE	r.mrecommend IN (SELECT mrecommend FROM #Master)
+				AND r.IsSum = 0
+				AND r.statusID NOT IN (0,1)				
+		UNION ALL
+		SELECT	l.mrecommend, l.custid, l.winlost, l.awinlost, l.playercomm, l.actual_stake, l.mwinlost, l.acomm, l.comm, l.srecommend, l.recommend, 1 AS ruben, l.gameID, l.winlostdate
+		FROM	dbo.bettransLC l WITH(NOLOCK)
+		WHERE	l.mrecommend IN (SELECT mrecommend FROM #Master)
+				AND l.IsSum = 0
+				AND l.statusID NOT IN (0,1)				
+		)	
+	,B
 	AS (
 		SELECT b.mrecommend, isnull(sum(CASE 
 						WHEN b.custid = b.mrecommend THEN winlost - actual_stake
@@ -649,13 +724,7 @@ BEGIN
 							AND ruben = 1 THEN winlost - actual_stake + mwinlost + acomm + awinlost
 						ELSE 0
 						END), 0) AS masterBalance
-		FROM bettrans b WITH (NOLOCK)
-			INNER JOIN CustDB.dbo.custinfo c
-			ON c.custid = b.custid
-		WHERE c.mrecommend IN (
-				SELECT mrecommend
-				FROM #Master
-				)
+		FROM	cteSuperBalance b
 		GROUP BY b.mrecommend
 		)
 	UPDATE #Master
@@ -844,7 +913,6 @@ BEGIN
 
 	RETURN
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbAdminNet] AS [dbo]
 GO

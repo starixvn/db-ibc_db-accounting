@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BettransInsTransferAllMembers]    Script Date: 01/27/2016 17:37:28 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_BettransInsTransferAllMembers    Script Date: 27/01/2016 5:35:38 PM ******/
+/****** Object:  Stored Procedure dbo.Acc_BettransInsTransferAllMembers    Script Date: 1/12/2016 12:56:36 PM ******/
+ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
 	@AgentName varchar(50),  
 	@UserID int,  
 	@IP nvarchar(15)='',  
@@ -29,6 +38,7 @@ AS
 		- 20150723@Patrick: Support Gold deluxe
 		- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
+		- 20160126@Kathy: get balance from bettransRNG + bettransLC [Redmine:#50674]
 
 	Param's Explanation:
 */ 
@@ -129,20 +139,39 @@ if @ErrCode <>0 return
  */
   DECLARE @WinlostDate datetime  
   SELECT @WinlostDate = convert(nvarchar(10),current_timestamp,120) 
-	
+
+  ;WITH cteBalanceMember
+  AS(
+	SELECT	b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
+	FROM	dbo.bettrans b WITH(NOLOCK)
+	WHERE	b.ruben = 1
+			AND b.custid IN (SELECT custid FROM #Member)
+	UNION ALL
+	SELECT	r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm
+	FROM	dbo.bettransRnG r WITH(NOLOCK)
+	WHERE	r.custid IN (SELECT custid FROM #Member)
+			AND r.IsSum = 0
+			AND r.statusID NOT IN (0,1)
+	UNION ALL
+	SELECT	l.custid, l.gameID, l.winlostdate, l.winlost, l.actual_stake, l.playercomm
+	FROM	dbo.bettransLC l WITH(NOLOCK)
+	WHERE	custid IN (SELECT custid FROM #Member)
+			AND l.IsSum = 0
+			AND l.statusID NOT IN (0,1)
+  )
   UPDATE #Member 
   SET memBalance = b.memBal 
   FROM #Member 
 	INNER JOIN ( 
-		SELECT custid,
-			   isnull(SUM(isnull(case when bettype < 19001 and winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-									  when bettype > 19000 then winlost-actual_stake +playercomm 
-									  else 0 
-									  end , 0)), 0) memBal	
-		FROM Bettrans with (NOLOCK)
-		WHERE ruben =1 and custid in (SELECT custid FROM #Member)
-		GROUP BY custid
-	)b ON #Member.custid = b.custid 
+			SELECT custid,
+				   isnull(SUM(isnull(case when bettype < 19001 and winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+										  when bettype > 19000 then winlost-actual_stake +playercomm 
+										  else 0 
+										  end , 0)), 0) memBal	
+			FROM cteBalanceMember 
+			GROUP BY custid
+		)b 
+		ON #Member.custid = b.custid 
  
   DELETE FROM #Member WHERE memBalance =0
   IF not exists (SELECT 1 FROM #Member)
@@ -374,7 +403,6 @@ BEGIN
 	select @ErrItems = LEFT(@ErrItems, len(@ErrItems)-1)  
 	Select @ErrMsg = N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s): ' + @ErrItems
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbAdminNet] AS [dbo]
 GO
