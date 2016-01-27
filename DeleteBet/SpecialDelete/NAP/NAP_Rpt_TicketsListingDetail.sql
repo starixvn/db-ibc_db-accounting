@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListingDetail]
 	@MatchId INT,
 	@LicenseeName VARCHAR(1000),
 	@BetTypes VARCHAR(1000), 
@@ -29,6 +31,7 @@ AS
 		- 20151023@Patrick: Add more field sporttype to support Muay Thai
 		- 20151302@Kathy: add modds column 
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
+		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: add new column transdesc [Redmine:#50932]	  
 		
 	Param's Explanation:
 	- @Type: sports type
@@ -568,6 +571,7 @@ BEGIN
 			0 as ChoiceSportType
 			,NULL AS transdesc
 			,NULL AS Sporttype
+			,'' AS transdesc
 	FROM bettrans WITH (NOLOCK)
 	WHERE 0 = 1
 END 
@@ -621,7 +625,8 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType,
 				NULL AS sporttype,
-				b.modds
+				b.modds,
+				bm.transdesc ChoiceTransDesc
 		FROM	bettransm bm WITH (NOLOCK)	
 		INNER JOIN  Bettrans b WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -686,7 +691,8 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType		,
 				NULL AS sporttype,
-				b.modds
+				b.modds,
+				bm.transdesc ChoiceTransDesc
 		FROM	Bettrans b WITH (NOLOCK) 
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -749,7 +755,8 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType,
 				NULL AS sporttype				,
-				b.modds
+				b.modds,
+				bm.transdesc ChoiceTransDesc
 		FROM	Bettrans b WITH (NOLOCK)	
 		INNER JOIN  bettransm bm WITH (NOLOCK) ON b.refno = bm.refno 
 		INNER JOIN dbo.strSplit(@BetTypes,',') t ON b.bettype = t.val
@@ -807,10 +814,15 @@ BEGIN
 				0  as ChoiceLeagueId ,
 				0 as ChoiceSportType,
 				NULL AS sporttype,
-				NULL AS modds
+				NULL AS modds,
+				'' AS transdesc
 		FROM bettrans WITH (NOLOCK) 
 		WHERE 0 = 1
 END
+
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Rpt_TicketsListingDetail] TO [bodbAdminNet] AS [dbo]
 GO
