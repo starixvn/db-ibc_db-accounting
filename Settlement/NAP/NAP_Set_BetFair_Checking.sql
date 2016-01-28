@@ -18,6 +18,7 @@ Revisions:
 	-20141023@Jamie: Exclude new bet types Sporting Solution for Tennis [Redmine:#23034] 
 	- 20150418@Jamie: Betradar phase II [Readmine:#27212]
 	- 20151215@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
+	- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
@@ -81,7 +82,7 @@ BEGIN
 				128, 129, 130, 131, 132, 143, 144,
 				133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152
 				,159,161,162,163,170,172,179,181,182,187,188,195,196,199,200,201,202,206,207 -- Betradar2
-				,401,402,403,404,405,406,407,408,409,412
+				,401,402,403,404,405,406,407,408,409,412,413,414
 				)  -- BetRadar)
 			AND statusID NOT IN (101, 102) AND ruben = 0
 			)

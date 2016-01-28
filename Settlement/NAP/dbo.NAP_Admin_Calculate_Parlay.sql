@@ -98,7 +98,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232','DB215') AND @CalledByBrokerService = 0
+	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB06', 'DBTP', 'DB231', 'DB232','DB215', 'DB234') AND @CalledByBrokerService = 0
 	BEGIN
 		-- DB052/DB053/DB054/DB06: got servicebroker, then just send a message to service broker and then let it to handle the rest.
 		DECLARE @sMessage NVARCHAR(MAX)
