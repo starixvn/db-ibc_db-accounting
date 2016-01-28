@@ -180,7 +180,8 @@ Param's Explanation:
 									SELECT	psp.bitmapOrder
 									FROM	dbo.ProductStatusProfile AS psp WITH(NOLOCK)
 									WHERE	psp.Sporttype = 211
-										AND	psp.B
+										AND	psp.Bettype = 2401
+								)
     
     SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
     
