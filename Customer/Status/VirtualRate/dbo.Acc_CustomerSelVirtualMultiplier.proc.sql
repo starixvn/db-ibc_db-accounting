@@ -10,6 +10,7 @@ AS
 		Revisions:
 			- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
 			- 20151029@Billy: Using new Virtual Rate structure [Redmine: #46541]
+			- 20160128@Billy: Update Virtual Rate's range from [-0.8, 1.6] to [-0.9, 1.6] - [Redmine: #51611]
 						
 		Parameter's Explanation:
 	*/
