@@ -15,14 +15,20 @@ Revisions:
 	- 20110830@Jamie: COUNT phonebetting's negative stake as positive number
 	- 20140305@Dom: Update outstanding for keno
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
+	- 20160125@Percy: expand new range RNG Casino [Redmine: #50674]
+
 Param's Explanation:
 	
 */  
  SET NOCOUNT ON 
  DECLARE @NegativeBetEffectiveDate datetime,@TranslogOT money
  SET @NegativeBetEffectiveDate='2011-09-01'
- DECLARE @currentDate datetime 
- SELECT @currentDate = convert(varchar(10), current_timestamp, 120)
+
+ DECLARE @today date,
+		 @yesterday date 
+ SELECT  @today = CONVERT(DATE, GETDATE())
+ SELECT  @yesterday = DATEADD(DD, -1, @today)
 
  SELECT 
 	c.username,
@@ -55,25 +61,60 @@ Param's Explanation:
 			customer.roleid = 1
 	) AS c 
 	LEFT JOIN 
-        ( SELECT custid, 
-				 isnull(SUM(CASE WHEN ruben=0 THEN (CASE WHEN winlostdate <@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake) END) END),0) outstanding,
-				 isnull(SUM(CASE WHEN ruben=1 THEN winlost-actual_stake+playercomm END), 0) balance
-		  FROM bettrans  WITH (NOLOCK)
-		  WHERE recommend =@custid 
-				AND (
-				(bettrans.bettype NOT IN (801,802,803,804,805,806)
-				AND ruben =0)
-				OR ruben <> 0
-				)
-		  GROUP BY custid
+        ( SELECT
+			custid,
+			SUM(outstanding) AS outstanding,
+			SUM(balance) AS balance
+		  FROM (
+			  SELECT custid, 
+					 isnull(SUM(CASE WHEN ruben=0 THEN (CASE WHEN winlostdate <@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake) END) END),0) outstanding,
+					 isnull(SUM(CASE WHEN ruben=1 THEN winlost-actual_stake+playercomm END), 0) balance
+			  FROM bettrans  WITH (NOLOCK)
+			  WHERE recommend =@custid 
+					AND (
+							(ruben = 0 AND (bettype NOT IN (801,802,803,804,805,806,1003) OR bettype NOT BETWEEN 2101 AND 2399))
+							OR ruben <> 0
+						)
+					AND (
+							(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+							OR CONVERT(DATE, winlostdate) < @yesterday
+						)
+			  GROUP BY custid
+			  UNION ALL
+			  SELECT custid, 
+					 isnull(SUM(CASE WHEN statusID IN (0, 1) THEN (CASE WHEN winlostdate <@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake) END) END),0) outstanding,
+					 isnull(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN statusID NOT IN (0, 1, 101, 102) THEN winlost-actual_stake+playercomm END ELSE 0 END), 0) balance
+			  FROM bettransRNG  WITH (NOLOCK)
+			  WHERE recommend =@custid 
+					AND gameID BETWEEN 2101 AND 2399
+			  GROUP BY custid
+			) AS A
+			GROUP BY custid
 		) AS b 	ON c.custid = b.custid
 	LEFT JOIN 
-		( SELECT custid, 
-				 SUM( winlost-actual_stake+playercomm) y_balance
-		  FROM bettrans  WITH (NOLOCK)
-		  WHERE recommend =@custid AND ruben =1 AND bettype < 19001 
-				AND winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)
-		  GROUP BY custid
+		( SELECT
+			custid,
+			SUM(y_balance) AS y_balance
+		  FROM (
+			  SELECT custid, 
+					 SUM( winlost-actual_stake+playercomm) y_balance
+			  FROM bettrans  WITH (NOLOCK)
+			  WHERE recommend =@custid
+				and ruben = 1
+				and bettype < 19001 and bettype NOT BETWEEN 2101 AND 2399
+				and CONVERT(DATE, winlostdate) = @today
+			  GROUP BY custid
+			  UNION ALL
+			  SELECT custid, 
+					 SUM( winlost-actual_stake+playercomm) y_balance
+			  FROM bettransRNG  WITH (NOLOCK)
+			  WHERE recommend = @custid
+				and statusID NOT IN (0, 1, 101, 102)
+				and gameID BETWEEN 2101 AND 2399
+				and CONVERT(DATE, winlostdate) = @today
+			  GROUP BY custid
+			) AS A
+			GROUP BY custid
 		) today_balance on c.custid = today_balance.custid 
 	LEFT JOIN 
 		(
@@ -84,3 +125,11 @@ Param's Explanation:
 		) translog on translog.custid = c.custid
 
 ORDER BY closed, username
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelClearBalance] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelClearBalance] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelClearBalance] TO [vnteam] AS [dbo]
+GO
