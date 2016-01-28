@@ -1,13 +1,4 @@
-﻿
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_Rpt_WinlostSummary_Sporttype    Script Date: 11/16/2015 5:15:59 PM ******/
-
- 
-ALTER  PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
     @fromdate    DATETIME,
     @todate        DATETIME    
 AS
@@ -28,6 +19,8 @@ AS
 			- 20150921@Jim: support MO (#41935)
 			- 20151020@Sophia: Fix bug missing Outright data [#30661]
 			- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+			- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
+			- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #49134]
 			
         Parameter's Explanation:
     */
@@ -36,7 +29,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),SortKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType ,SubProduct )
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode=5
+		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode=5
 	UPDATE @SportBettype
 	SET liveindicator =0
 	
@@ -194,7 +187,7 @@ BEGIN
     UNION ALL
         --Casino
         SELECT  251 as sporttype
-				,b.bettype
+				,71 as bettype
 				,0 as liveindicator
 				,0 as ibc
 				,0 as IsHedge
@@ -206,14 +199,14 @@ BEGIN
 				,ISNULL(SUM(realCommission),0)
 				,ISNULL(SUM(realLineTotal),0)
 				,ISNULL(SUM(realLineTotal),0) as virtualLineTotal --copy data from actual value
-				,0 as realTurnover
-				,NULL as virtualTurnover
+				,ISNULL(SUM(CASE WHEN b.bettype = 71 THEN 0 ELSE realTurnover END),0) as realTurnover
+				,ISNULL(SUM(CASE WHEN b.bettype = 71 THEN 0 ELSE realTurnover END),0) as virtualTurnover
         FROM dbo.rptWinlost b WITH(NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             --AND bettype = 71
 			AND s.ProductId=6
-        GROUP BY b.bettype
+        --GROUP BY b.bettype
     UNION ALL
         --Bingo
         SELECT 	252 as sporttype
@@ -522,7 +515,29 @@ BEGIN
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=15
-        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc			
+        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
+	--	Cockfighting
+		UNION ALL
+        SELECT 206 sporttype
+            ,b.bettype
+            ,b.liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,17 as OrderKey
+			,17 as SortKey
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=19
+        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	ORDER BY OrderKey ASC	
    -- ORDER BY 1,3 DESC,2,4,5
 	
@@ -557,7 +572,6 @@ BEGIN
 	DROP TABLE #TempData
     --exec Acc_Rpt_WinlostSummary_Sporttype_xtest @fromdate='2014-07-24 00:00:00',@todate='2014-07-24 00:00:00'
 END
-
 GO
 
 SET QUOTED_IDENTIFIER OFF 
@@ -571,3 +585,5 @@ GO
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
 GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
+GO
