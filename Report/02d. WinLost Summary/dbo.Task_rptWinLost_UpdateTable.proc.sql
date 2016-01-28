@@ -15,8 +15,10 @@ Revision:
 	- 20130822@Johnson: change to use rptWinlost instead rptWinlost2
 	- 20130917@Johnson: correct real turnover of racing formula
 	- 20131203@Daniel: exclude UUS tickets to avoid zero data inserted
+	- 20151216@Percy: support new product - Cockfighting [Redmine: #49027]
 */
-	
+
+BEGIN	
 	DECLARE @CommSetting TABLE
 	(	MatchID			int,
 		IBCFee			bit,
@@ -32,7 +34,7 @@ Revision:
 		WLIBC money,
 		TOPhum money
 	)
-	
+
 	SELECT distinct winlostdate FROM bettrans with (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
 	IF @@ROWCOUNT = 1
 	BEGIN				
@@ -106,8 +108,51 @@ Revision:
 		GROUP BY
 			winlostdate, b.matchid, bettype, liveindicator, status,
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
+		
+		--calculate Cockfighting winlost
+		INSERT INTO bodb_Report.dbo.rptWinlost
+			(
+				[winlostdate]
+			   ,[matchid]
+			   ,[bettype]
+			   ,[liveindicator]
+			   ,[Status]
+			   ,[IBC]
+			   ,[RealTurnover]
+			   ,[RealWinLost]
+			   ,[RealPosition]
+			   ,[RealCommission]
+			   ,[RealLineTotal]
+			   ,[VirtualTurnover]
+			   ,[VirtualLineTotal]
+			   ,[SportType]
+			   ,[exrisk]
+			)	
+		SELECT
+			winlostdate,
+			betdaqid, bettype, liveindicator, Status,
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end as ibc,
+			sum((1-tpositiontaking)*abs(stake)*actualrate) as realturnover,
+			sum((winlost-actual_stake)* actualrate)  realWinlost,
+			sum((awinlost+mwinlost+swinlost)* actualrate) realPos,
+			sum((scomm) * actualrate) realComm,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) realLineTotal,
+			sum((1-tpositiontaking)*abs(stake)*virtualrate) as virtualTurnover,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
+			0, 0
+		FROM
+			bettrans b with (nolock)
+		WHERE
+			bettype = 1003
+			AND winlostdate = @winlostdate
+			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
+			AND ruben = 1
+			AND currency <> 20
+		GROUP BY
+			winlostdate, betdaqid, bettype, liveindicator, status,
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
 
-
+		--calculate other winlost
 		INSERT INTO bodb_Report.dbo.rptWinlost
 			(
 				[winlostdate]
@@ -144,7 +189,7 @@ Revision:
 		FROM
 			bettrans b with (nolock)
 		WHERE
-			bettype < 19999 and bettype not in (31,32,33)
+			bettype < 19999 and bettype not in (31,32,33,1003)
 			AND winlostdate = @winlostdate
 			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
 			AND ruben = 1
@@ -357,9 +402,17 @@ Revision:
 	END
 	
 	DROP TABLE #bettransm
+END
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
 
 
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Task_rptWinLost_UpdateTable] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Task_rptWinLost_UpdateTable] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[Task_rptWinLost_UpdateTable] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Task_rptWinLost_UpdateTable] TO [vnteam]

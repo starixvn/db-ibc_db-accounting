@@ -70,6 +70,8 @@ AS
 		- 20150828@Sophia: Apply Colossus Bets [#41935]
 		- 20150917@Jim: Integrate MO product (Feature #41935)
 		- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
+		- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
+		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -85,7 +87,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DECLARE @P2P_LineTotal  money			
 	DECLARE @RBWinlost TABLE(site tinyint,
@@ -129,6 +131,8 @@ BEGIN
 	)
 		
 	DECLARE @Bettype TABLE(bettype int)
+
+	DECLARE @CS_Turnover TABLE (site tinyint, casino_actual_turnover MONEY, casino_virtual_turnover MONEY)
 
 	INSERT INTO #DepAgent 
 	SELECT custid
@@ -243,8 +247,10 @@ BEGIN
 
 	--------------------------------------------------------------------------------
 	INSERT INTO #src
-	SELECT	matchid, bettype,
-			CASE WHEN dep.custid is null then 1 else 2 end as site, 
+	SELECT	
+			CASE WHEN matchid IN (0, 71, 208, 209, 210) THEN 0 ELSE matchid END AS matchid,
+			CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 71 ELSE b.bettype END AS bettype,
+			CASE WHEN dep.custid is null then 1 else 2 end as site,
 			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
 			SUM((winlost-actual_stake)*virtualrate) winlost_virtualrate,
 			SUM((awinlost+mwinlost+swinlost)* actualrate) position_actualrate,
@@ -253,15 +259,40 @@ BEGIN
 			SUM(scomm*virtualrate) commission_virtualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
-			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, -- don't need calculate actualrate for system parlay
-			SUM((1-tpositiontaking)*ABS(CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END)*virtualrate) turnover_virtualrate
+			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE stake END)*actualrate) turnover_actualrate, -- don't need calculate actualrate for system parlay
+			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END END)*virtualrate) turnover_virtualrate
 	FROM bettrans14 b WITH(NOLOCK)
 		left join (select custid from #DepAgent) dep ON b.recommend = dep.custid 
 	WHERE winlostdate = @winlostdate
 		AND bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
-	GROUP BY matchid, bettype, CASE WHEN dep.custid is null then 1 else 2 end 
+	GROUP BY CASE WHEN matchid IN (0, 71, 208, 209, 210) THEN 0 ELSE matchid END,
+			 CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 71 ELSE b.bettype END,
+			 case when dep.custid is null then 1 else 2 end
+	-- Calculate turn over for Casino from bettransRNG14
+	UNION ALL
+	SELECT	
+			0 matchid,
+			71 bettype,
+			CASE WHEN dep.custid is null THEN 1 ELSE 2 END as site,
+			0 winlost_actualrate,
+			0 winlost_virtualrate,
+			0 position_actualrate,
+			0 position_virtualrate,	
+			0 commission_actualrate,
+			0 commission_virtualrate,
+			0 LineTotal_actualrate,
+			0 LineTotal_virtualrate,
+			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate,
+			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate
+	FROM bettransRNG14 b WITH(NOLOCK)
+		left join (select custid FROM #DepAgent) dep ON b.recommend = dep.custid
+	WHERE winlostdate = @winlostdate
+		AND b.gameID BETWEEN 2101 AND 2399		
+		AND b.statusID NOT IN (0, 1, 101,102,103,121)
+	GROUP BY
+			 case when dep.custid is null then 1 else 2 end 
 	
 	--Section 2: all products that enable virtual currency, DisplayOrder field:	1 -> 100
 	SELECT
@@ -404,6 +435,9 @@ BEGIN
 		7. Metric Gaming -Super live
 		8. Bingo
 		9. P2P
+		10. Bettrade
+		11. Colosuss Bets
+		12. Cockfighting
 	*/
 	UNION ALL --Racing
 	SELECT	106,'Racing', 151, 0,site,
@@ -463,12 +497,12 @@ BEGIN
 			ISNULL(SUM(commission_actualrate),0) Commission,
 			ISNULL(SUM(LineTotal_actualrate),0) AS RealLineTotal,
 			ISNULL(SUM(LineTotal_virtualrate),0) AS VirtualLineTotal,
-			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_actualrate END ) AS RealTurnover,
-			SUM(CASE WHEN s.ProductId = 6 THEN 0 ELSE turnover_virtualrate END) AS VirtualTurnover,
+			SUM(turnover_actualrate) AS RealTurnover,
+			SUM(turnover_virtualrate) AS VirtualTurnover,
 			0 EnableVirtual
 	FROM	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71)) --SLI
+	WHERE 	(s.ProductId = 6 AND matchid IN (0, 71, 208, 209, 210)) --SLI
 			OR s.ProductId IN (14, 17)  --- Vegas Games, Microgaming - RNG Casino			
 	GROUP BY site
 
@@ -604,6 +638,23 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 15
 	GROUP BY site
+	
+	----Cockfighting
+	UNION ALL
+	SELECT
+			130,'Cockfighting', 206, 0, site,
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			SUM(ISNULL(b.commission_actualrate,0)) AS Commission,	
+			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
+			SUM(ISNULL(LineTotal_actualrate,0)) AS VirtualLineTotal,	
+			SUM(ISNULL(turnover_actualrate,0)) AS RealTurnover,
+			SUM(ISNULL(turnover_actualrate,0)) AS VirtualTurnover,
+			0 AS EnableVirtual
+	FROM	#src b WITH (NOLOCK)			
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+	WHERE	s.ProductId = 19
+	GROUP BY site
 
 	ORDER BY DisplayOrder asc, ibc, site
 
@@ -626,15 +677,16 @@ BEGIN
 	DROP TABLE #src
 	DROP TABLE #DepAgent
 END
-
-
-
-
-
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam] AS [dbo]
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet]
 GO

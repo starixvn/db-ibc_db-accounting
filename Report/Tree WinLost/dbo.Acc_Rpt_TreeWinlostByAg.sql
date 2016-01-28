@@ -2,6 +2,7 @@
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@recommend INT,
+	/*
 	@showSB BIT=1,  
 	@showNG BIT=0,  
 	@ShowRB BIT=0,  
@@ -17,8 +18,10 @@
 	@showMGCRnG BIT=0, -- MGC-RNG
 	@showVG BIT=0, --Vegas Games
 	@showAGCS BIT=0, --AG Casino
-	@showCB	 BIT=0
-	
+	@showCB	 BIT=0,
+	@showCF	 BIT=0 -- Cockfighting
+	*/
+	@Products VARCHAR(4000) -- instead of all @showXXX parameters
 AS
 
 /*  
@@ -40,12 +43,23 @@ Revisions:
 	- 20150828@Jim: support Colossus Bet (#42608)
 	- 20151110@Billy : Change to new Virtual Rate structure - [Redmine: #47355]
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+	- 20151214@Percy: 1. Add new product: Cockfighting [Redmine: #49027]
+					  2. Change input parameters
+	- 20160118@Percy: Calculate turnover for RNG Casino [Redmine: #49134]
+
+Parameters explain:
+	- @Products: instead of all @showXXX parameters, have xml structure
+		<ROOT>
+			<Product ProductID="-1"	IsNoTurnover="0"	IsNoVirtual="1"/>  -- MG-SuperLive
+			<Product ProductID="1"	IsNoTurnover="0"	IsNoVirtual="0"/>  -- SB
+			<Product ProductID="19"	IsNoTurnover="0"	IsNoVirtual="0"/>  -- CF
+		</ROOT>
 
 */  
 
 SET NOCOUNT ON
 
-DECLARE @TmpCondBettype TABLE(bettype INT , isVirtual BIT) 
+--DECLARE @TmpCondBettype TABLE(bettype INT , isVirtual BIT) 
 DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)  
 --DECLARE #TmpResult TABLE (custid INT ,username NVARCHAR(100),actualrate FLOAT,Turnover MONEY, Winloss MONEY,Commission MONEY,virtualrate SMALLINT)
 --DECLARE #TmpResultAll TABLE (custid INT ,username NVARCHAR(100),Turnover MONEY, Winloss MONEY,Commission MONEY,Total MONEY,TurnoverRM MONEY,TotalRM MONEY,Virtual_Total MONEY,Variance MONEY, virtualrate SMALLINT)
@@ -72,6 +86,7 @@ DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct V
 INSERT INTO @SportBettype
 EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
 
+/*
 IF @ShowSB = 1  
 	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
 	SELECT Bettype, 1   
@@ -157,11 +172,111 @@ IF @showCB =1 -- Colossus Bet
 	FROM @SportBettype   
 	WHERE ProductID = 15
 	
+IF @showCF =1 -- Cockfighting
+	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
+	SELECT Bettype, 0   
+	FROM @SportBettype   
+	WHERE ProductID = 19
+*/
+
+IF OBJECT_ID('tempdb..#Product') IS NOT NULL
+BEGIN
+	DROP TABLE #Product
+END
+
+CREATE TABLE #Product (ProductID INT,IsNoTurnover BIT,IsNoVirtual BIT)
+	
+DECLARE @DocHandler INT
+
+BEGIN TRY
+	EXEC sp_xml_preparedocument @DocHandler OUTPUT
+		,@Products
+
+	INSERT INTO #Product (
+		ProductID
+		,IsNoTurnover
+		,IsNoVirtual
+		)
+	SELECT ProductID
+		,IsNoTurnover
+		,IsNoVirtual
+	FROM OPENXML(@DocHandler, '/ROOT/Product', 1) WITH (ProductID [int], IsNoTurnover BIT, IsNoVirtual BIT) AS Data
+
+	EXEC sp_xml_removedocument @DocHandler
+END TRY
+
+BEGIN CATCH
+	SELECT ErrCode = 100
+		,ErrMsg = N'Paramter invalid.'
+
+	RETURN
+END CATCH;
+
+IF OBJECT_ID('tempdb..#tmpBettype') IS NOT NULL
+BEGIN
+	DROP TABLE #tmpBettype
+END
+
+CREATE TABLE #tmpBettype (ProductID int, bettype int, IsNoTurnover bit, IsNoVirtual bit)
+
+IF EXISTS (SELECT TOP 1 1 FROM #Product P WHERE p.ProductID = - 1)
+BEGIN
+	;WITH tblP (ProductID,IsNoTurnover,IsNoVirtual)
+	AS (
+		SELECT 1 ProductID,IsNoTurnover,IsNoVirtual
+		FROM #Product tblP
+		WHERE tblP.ProductID = - 1
+		)
+	INSERT INTO #tmpBettype (
+		ProductID
+		,bettype
+		,IsNoTurnover
+		,IsNoVirtual
+		)
+	SELECT  tblS.ProductID
+		,tblS.bettype
+		,tblP.IsNoTurnover
+		,tblP.IsNoVirtual
+	FROM tblP
+		,@SportBettype tblS
+	WHERE tblS.ProductID = 1
+		AND tblS.SubProduct IN ('MG-SuperLive')
+END
+
+IF EXISTS (SELECT TOP 1 1 FROM #Product P WHERE p.ProductID = 1)
+BEGIN
+	INSERT INTO #tmpBettype (ProductID,bettype,IsNoTurnover,IsNoVirtual)
+	SELECT  tblP.ProductID,tblS.bettype
+		,tblP.IsNoTurnover
+		,tblP.IsNoVirtual
+	FROM @SportBettype tblS
+		INNER JOIN #Product tblP ON tblS.ProductID = tblP.ProductID
+	WHERE tblP.ProductID = 1
+		AND tblS.SubProduct NOT IN ('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
+END
+
+INSERT INTO #tmpBettype (
+	ProductID
+	,bettype
+	,IsNoTurnover
+	,IsNoVirtual
+	)
+SELECT  tblP.ProductID
+	,tblS.bettype
+	,tblP.IsNoTurnover
+	,tblP.IsNoVirtual
+FROM @SportBettype tblS
+	INNER JOIN #Product tblP ON tblS.ProductID = tblP.ProductID
+WHERE tblP.ProductID <> 1
+		
+CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,ProductID)
+
 --IF @winlostdate > @MoveBetDays
 --BEGIN
 
 --get result for Horse Racing
-	IF @ShowRB=1
+	IF EXISTS (SELECT TOP 1 1 FROM #tmpBettype WHERE ProductID = 2)
+	--IF @ShowRB=1
 	BEGIN
 	
 		INSERT INTO @tmpIBCFee (partnerID, IBCFee)  
@@ -250,8 +365,10 @@ IF @showCB =1 -- Colossus Bet
 		GROUP BY custid
 	END
 	
----get result for PORKER	
-	IF @showP2P = 1  
+	
+---get result for PORKER
+	IF EXISTS (SELECT TOP 1 1 FROM #tmpBettype WHERE ProductID = 9)	
+	--IF @showP2P = 1  
 	BEGIN
 		
 		delete #TmpResult
@@ -289,22 +406,46 @@ IF @showCB =1 -- Colossus Bet
 		FROM #TmpResult
 		GROUP BY custid
 	END
+
+--get turnover for RNG Casino from bettransRNG
+	IF EXISTS (SELECT TOP 1 1 FROM #tmpBettype WHERE ProductID = 6)
+	BEGIN
+		INSERT INTO #TmpResultAll
+		SELECT b.custid,
+			CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
+			SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
+			0 Winloss,
+			0 commission,  
+			0 total, 
+			SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+			SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
+			0 TotalRM	,
+			0 Virtual_Total
+		FROM bettransRNG b WITH(NOLOCK) 
+			INNER JOIN #tmpBettype t ON t.bettype = b.gameID AND t.ProductID = 6
+		WHERE winlostdate BETWEEN @FromDate AND @ToDate
+		   AND b.statusID NOT IN (0, 1, 101, 102, 103)   
+		   and b.currency <> 20
+		   and b.recommend = @recommend
+		GROUP BY b.custid ,
+			CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END
+	END
 ------------------------------
 
 
 INSERT INTO #TmpResultAll
 SELECT b.custid,
-	CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
-	SUM(ABS(CASE WHEN b.bettype in(71,73) then 0 ELSE stake END )*(1 - tpositiontaking)) Turnover,
+	CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
+	SUM(ABS(CASE WHEN b.bettype in(73) OR t.ProductID = 6 then 0 ELSE stake END )*(1 - tpositiontaking)) Turnover,
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,
 	SUM(scomm) commission,  
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total, 
-	SUM(ABS(CASE WHEN b.bettype in(71,73) then 0 ELSE stake END)*(1 - tpositiontaking)*actualrate) TurnoverRM,
-	SUM(ABS(CASE WHEN b.bettype in(71,73) then 0 ELSE stake END)*(1 - tpositiontaking)*(CASE WHEN t.isvirtual = 1 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
+	SUM(ABS(CASE WHEN b.bettype in(73) OR t.ProductID = 6 then 0 ELSE stake END)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+	SUM(ABS(CASE WHEN b.bettype in(73) OR t.ProductID = 6 then 0 ELSE stake END)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM	,
-	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.isvirtual = 1 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
+	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
 FROM bettrans b WITH(NOLOCK) 
-	INNER JOIN @TmpCondBettype t ON t.bettype = b.bettype 
+	INNER JOIN #tmpBettype t ON t.bettype = b.bettype AND t.ProductID NOT IN (2, 9)
 	--INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid
 WHERE winlostdate BETWEEN @FromDate AND @ToDate
    and b.ruben = 1  
@@ -312,7 +453,7 @@ WHERE winlostdate BETWEEN @FromDate AND @ToDate
    and b.currency <> 20
    and b.recommend = @recommend
 GROUP BY b.custid ,
-	CASE WHEN t.isVirtual = 0 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
+	CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
 
 
 SELECT b.custid,
@@ -390,12 +531,16 @@ DROP TABLE #TmpResultAll
 
 
 */
-
-
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [vnteam] AS [dbo]
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByAg] TO [bodbAdminNet]
 GO
