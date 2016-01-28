@@ -134,7 +134,7 @@ BEGIN
 	IF EXISTS (SELECT TOP 1 1
 				FROM @tblVirtualrate
 				WHERE virtualmultiplier > 1.6 
-					OR virtualmultiplier < 0.2
+					OR virtualmultiplier < 0.1
 				)  
 	BEGIN  
 		select @ErrMsg    = N'Invalid virtual rate.', @ErrCode = 101  
