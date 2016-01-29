@@ -1,13 +1,7 @@
-﻿USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdVirtualMultiplier]    Script Date: 06/10/2015 16:38:04 ******/
-SET ANSI_NULLS ON
+﻿SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdVirtualMultiplier    Script Date: 3/6/2015 5:53:59 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdVirtualMultiplier    Script Date: 2/9/2015 9:40:15 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdVirtualMultiplier    Script Date: 2/9/2015 9:39:33 AM ******/
 
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
     @custid int,      
@@ -42,6 +36,7 @@ Revisions:
     - 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]		
     - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
 	- 20151109@Billy: Change LogSPData definition to support over-8000-characters log - [Redmine: #46541]
+	- 20160128@Billy: Update Virtual Rate's range from [-0.8, 1.6] to [-0.9, 1.6] - [Redmine: #51611]
 Param's Explanation:  
 • @virtualmultiplier = '<ROOT>
 							<Rate SportType="1" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
@@ -134,7 +129,7 @@ BEGIN
 	IF EXISTS (SELECT TOP 1 1
 				FROM @tblVirtualrate
 				WHERE virtualmultiplier > 1.6 
-					OR virtualmultiplier < 0.2
+					OR virtualmultiplier < 0.1
 				)  
 	BEGIN  
 		select @ErrMsg    = N'Invalid virtual rate.', @ErrCode = 101  
