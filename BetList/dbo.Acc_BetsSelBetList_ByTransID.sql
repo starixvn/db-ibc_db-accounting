@@ -71,6 +71,8 @@ AS
 		- 20151216@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20151222@Kos: Support search in bettransRnG and bettransLC tables
 		- 20151230@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160119@Kos: Support PH All In One 1.2 [#Redmine: 50897]
+		- 20160125@Kos: Fix Colossus Bet result issue
 */
 
 BEGIN
@@ -326,7 +328,7 @@ BEGIN
 					m.showtime,
 					b.winlostdate,
 					b.BetCheck,
-					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
+					ISNULL(b.transdesc, '') AS transdesc,
 					ISNULL(b.oddsspread, 0) AS OddsSpread	-- For Myanmar Odds
 				FROM
 					dbo.bettrans AS b WITH (NOLOCK)
@@ -1849,7 +1851,7 @@ BEGIN
 					0 AS OddsSpread
 				FROM dbo.bettrans AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-					LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+					LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON b.refno = bm.refno AND bm.bettype = 18001
 				WHERE
 					b.custid = @Custid
 					AND s.ProductID = 15
@@ -1991,7 +1993,7 @@ BEGIN
 					m.showtime,
 					b.winlostdate,
 					b.BetCheck,
-					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
+					ISNULL(b.transdesc, '') AS transdesc,
 					ISNULL(b.oddsspread, 0) AS OddsSpread		-- For Myanmar Odds
 				FROM
 					dbo.bettrans14 AS b WITH (NOLOCK)
@@ -2707,7 +2709,7 @@ BEGIN
 					0 AS OddsSpread
 				FROM dbo.bettrans14 AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
-					LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+					LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON b.refno = bm.refno AND bm.bettype = 18001
 				WHERE b.custid = @Custid
 					AND s.ProductID = 15
 					AND b.refno = @refno
@@ -2862,7 +2864,7 @@ BEGIN
 					m.showtime,
 					b.winlostdate,
 					b.BetCheck,
-					CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc,
+					ISNULL(b.transdesc, '') AS transdesc,
 					ISNULL(b.oddsspread, 0) AS OddsSpread	-- For Myanmar Odds
 				FROM   
 					DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)   
@@ -3576,7 +3578,7 @@ BEGIN
 					0 AS OddsSpread
 				FROM DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-					LEFT JOIN DBARC.bodb_archive.dbo.bettransm AS bm WITH (NOLOCK) ON b.transid = bm.refno AND bm.bettype = 18001
+					LEFT JOIN DBARC.bodb_archive.dbo.bettransm AS bm WITH (NOLOCK) ON b.refno = bm.refno AND bm.bettype = 18001
 				WHERE b.custid = @Custid
 					AND s.ProductID = 15
 					AND b.refno = @refno
