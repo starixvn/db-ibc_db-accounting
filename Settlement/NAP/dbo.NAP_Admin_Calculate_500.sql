@@ -1,12 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_500]    Script Date: 01/27/2016 19:20:16 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_500    Script Date: 1/27/2016 11:21:52 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_500    Script Date: 14/01/2016 12:38:38 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_500] 
 	@MatchId	INT
 	,@Action	VARCHAR(20)
@@ -29,7 +20,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	IF @Action IN ('CAL', 'CAL-FT', 'VOID', 'RECOVER')
+	IF @Action IN ('CAL', 'CAL-FT', 'VOID')
 	BEGIN
 		--for case void & recover
 		IF ISNULL(@CustIds, '') <> ''
