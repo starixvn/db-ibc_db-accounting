@@ -89,6 +89,7 @@ AS
 		- 20151229@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160121@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
+		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
 
 	Param's Explanation:
 		+ @transtype: 
@@ -2353,8 +2354,8 @@ BEGIN
 		END
 
 		-- Microgaming RNG Casino, RNG Casino Single Wallet 
-		IF @transtype = 1	-- not today settled ticket
-			AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		IF @transtype = 1	-- not yesterday and today settled ticket
+			AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
@@ -2437,8 +2438,9 @@ BEGIN
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		END
 
-		IF @transtype = 1	-- today settled ticket
-			AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		IF @transtype = 1	-- yesterday and today settled ticket
+			AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
@@ -2540,10 +2542,12 @@ BEGIN
 				b.matchid,
 				b.transdesc,
 				s.ProductID
+			OPTION (RECOMPILE)
 		END
 			
-		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- today running ticket
-			AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- yesterday and today running ticket
+			AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
@@ -2641,11 +2645,12 @@ BEGIN
 				b.matchid,
 				b.transdesc,
 				s.ProductID
+			OPTION (RECOMPILE)
 		END
 
 		-- AG Casino
-		IF @transtype = 1	-- not today settled ticket
-			AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		IF @transtype = 1	-- not yesterday and today settled ticket
+			AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
@@ -2721,8 +2726,9 @@ BEGIN
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		END
 
-		IF @transtype = 1	-- today settled ticket
-			AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		IF @transtype = 1	-- yesterday and today settled ticket
+			AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
@@ -2816,8 +2822,9 @@ BEGIN
 				b.comstatus
 		END
 			
-		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- today running ticket
-			AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- yesterday and today running ticket
+			AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		BEGIN
 			INSERT INTO @Data
 			SELECT 
@@ -3391,6 +3398,7 @@ BEGIN
 	SELECT * FROM @DetailData
 	RETURN 
 END
+
 
 
 

@@ -73,6 +73,7 @@ AS
 		- 20151230@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160119@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
+		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
 		- 20160307@Kos: Hotfix Missing choice of Gold Delxue [#Redmine: 53506]
 */
 
@@ -1255,9 +1256,10 @@ BEGIN
 							AND (ProductID = 17 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
-				IF @WinlostDate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
+				IF @WinlostDate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- yesterday and today
 				BEGIN
-					-- Today running ticket
+					-- Yesterday and today running ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -1351,8 +1353,9 @@ BEGIN
 						b.matchid,
 						b.transdesc,
 						s.ProductID
+					OPTION (RECOMPILE)
 
-					-- Today settled ticket
+					-- Yesterday and today settled ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -1450,10 +1453,11 @@ BEGIN
 						b.matchid,
 						b.transdesc,
 						s.ProductID
+					OPTION (RECOMPILE)
 				END
 				ELSE
 				BEGIN
-					-- Not today settled ticket
+					-- Not yesterday and today settled ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -1535,9 +1539,10 @@ BEGIN
 			-- AG Casino
 			IF EXISTS (SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 11 AND Bettype = @Bettype)
 			BEGIN
-				IF @WinlostDate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
+				IF @WinlostDate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- yesterday and today
 				BEGIN
-					-- Today running ticket
+					-- Yesterday and today running ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -1621,8 +1626,9 @@ BEGIN
 						b.Username,
 						b.betfrom,
 						b.comstatus
+					OPTION (RECOMPILE)
 
-					-- Today settled ticket
+					-- Yesterday and today settled ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -1710,10 +1716,11 @@ BEGIN
 						b.Username,
 						b.betfrom,
 						b.comstatus
+					OPTION (RECOMPILE)
 				END
 				ELSE
 				BEGIN
-					-- Not today settled ticket
+					-- Not yesterday and today settled ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -4552,7 +4559,6 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
-
 
 
 
