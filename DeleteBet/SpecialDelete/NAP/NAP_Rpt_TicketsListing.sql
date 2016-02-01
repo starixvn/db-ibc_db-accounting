@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListing] 
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Rpt_TicketsListing]    Script Date: 01/21/2016 15:39:25 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Rpt_TicketsListing    Script Date: 20/01/2016 2:35:02 PM ******/
+ALTER PROCEDURE [dbo].[NAP_Rpt_TicketsListing] 
 	@MatchId			INT
 	,@LicenseeId		INT
 	,@BetTypes			VARCHAR(1000)
@@ -29,6 +37,7 @@ AS
 		- 20150401@Dominic: Add new parent-child bettypes [Redmine:#27214]
 		- 20150623@Dominic: Add Metric Gaming Super Live [Redmine:#38200]
 		- 20150401@Kathy: Add new parent-child bettypes for PH [Redmine:#48110]
+		- 20150119@Kathy: Changes parent-child for phase 1.2 of PH All in One:  [Redmine:#50932]	  
 		
 	Param's Explanation:
 	- @Type: sports type
@@ -194,17 +203,21 @@ BEGIN
 		UNION ALL
 		SELECT 11, 199 -- Total Corners
 		UNION ALL
-        SELECT 410, 151 -- 1H Double Chance
+        SELECT 151, 410 -- 1H Double Chance
         UNION ALL
-        SELECT 406, 159 -- Exact Total Goals
+        SELECT 159, 406 -- Exact Total Goals
         UNION ALL
-        SELECT 407, 161 -- Exact Home Team Goals
+        SELECT 161, 407 -- Exact Home Team Goals
         UNION ALL
-        SELECT 409, 162 -- Exact Away Team Goals
+        SELECT 162, 409 -- Exact Away Team Goals
         UNION ALL
-        SELECT 408,171 -- Winning Margin
+        SELECT 171, 408 -- Winning Margin
         UNION ALL
-        SELECT 411, 191 -- 1H Draw No Bet
+        SELECT 191, 411 -- 1H Draw No Bet
+        UNION ALL
+        SELECT 4, 413  --  Correct score
+        UNION ALL
+        SELECT 30, 414  -- 1H Correct score
 
 	INSERT INTO #TmpBettrans
 	SELECT srecommend

@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 01/21/2016 15:32:57 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_BettransDelSpecial    Script Date: 20/01/2016 2:35:05 PM ******/
+ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId				INT,
 	
 	@FromTransId			BIGINT, 
@@ -20,7 +28,7 @@
 	
 	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 17, 20, 153,157,168,183,185,191, 1301, 1303, 1305, 1306, 1308 , 411: Handicap, Odd/Even, Over/Under...
 	@BetTeam515				NVARCHAR(10)	= 'ALL',	-- 5,15,160,164,167,176,177,180
-	@BetTeam430				VARCHAR(120) 	= '',		-- 4, 30, 405: All Correct Scores
+	@BetTeam430				VARCHAR(120) 	= '',		-- 4, 30, 405, 413, 414: All Correct Scores
     @BetTeam6				VARCHAR(120) 	= '',		-- 6, 126, 131, 132
 	@BetTeam14				VARCHAR(120) 	= '',
 	@BetTeam16				VARCHAR(120) 	= '',
@@ -100,6 +108,7 @@ AS
 		- 20151103@Kathy: Enhance performance [Redmine:#43233]
 		- 20150712@Kathy: - Apply 28 Live Bettypes(PH) [Redmine: #48110]
 						  - Database - Change datatype [Redmine: #48660]
+		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: bettype 4,30,413,414,405 [Redmine:#50932]	  
 		
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -153,7 +162,8 @@ BEGIN
 		Stake				MONEY,
 		CurrencyName		VARCHAR(10),
 		betid				BIGINT,
-		betdaqid			BIGINT
+		betdaqid			BIGINT,
+		TransDesc			NVARCHAR(1000)
 		)
 	DECLARE @tblInvalidTrans TABLE (transid BIGINT) -- store invalid BT transid
 	
@@ -360,7 +370,7 @@ BEGIN
 									190, 193, 194, 195, 196, 197, 198, 199,
 									200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216,
 									1302, 1311, 1312, 1316, 1317, 1318, 1324,
-									401, 402, 403, 404, 405, 406, 407, 409, 412)
+									401, 402, 403, 404, 405, 406, 407, 409, 412, 413, 414)
 			AND CASE WHEN b.bettype IN (1,3,7,8, 17, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
 															WHEN @Handicap = (hdp1 + hdp2) THEN 1
 														ELSE 0 END 
@@ -369,8 +379,8 @@ BEGIN
 															 WHEN 1 THEN 0 
 															 WHEN 2 THEN 1 END
 					 
-	-- bettype = 4,30,405 -- Correct score
-	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (4,30,405) ) 
+	-- bettype = 4,30,405, 413, 414 -- Correct score
+	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (4,30,405,413,414) ) 
 		INSERT INTO #BetDelete(
 				grouptransid	
 				,transid			
@@ -398,6 +408,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,TransDesc
 		)
 		SELECT	b.transid
 				,b.transid
@@ -425,6 +436,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.transdesc
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -437,10 +449,10 @@ BEGIN
 				AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END
 				AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 								AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-				AND b.bettype in (4,30,405)
+				AND b.bettype in (4,30,405,413,414)
 				AND (@betteam430 = 'ALL' 
 					OR (
-						(b.bettype IN (4, 405) 
+						(b.bettype IN (4, 405,413,414) 
 							OR (b.bettype = 30 AND b.betteam NOT IN ('4:0', '0:4'))
 						) AND b.betteam IN (SELECT val FROM dbo.strSplit(@betteam430,'^'))
 					)
@@ -1675,6 +1687,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 		INNER JOIN CustDB.dbo.Customer ag WITH(NOLOCK)
 			ON	al.recommend = ag.custid
@@ -1707,6 +1720,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 		INNER JOIN CustDB.dbo.Customer ag WITH(NOLOCK)
 			ON	al.recommend = ag.custid
@@ -1743,6 +1757,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 		INNER JOIN CustDB.dbo.Customer ag WITH(NOLOCK)
 			ON	al.recommend = ag.custid
@@ -1776,6 +1791,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 		INNER JOIN CustDB.dbo.Customer ag WITH(NOLOCK)
 			ON	al.recommend = ag.custid
@@ -1808,6 +1824,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 	WHERE	al.recommend = 11196380
 	ORDER BY al.grouptransid, al.transid
@@ -1838,6 +1855,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 		LEFT JOIN #BetDelete sub
 			ON	al.grouptransid = sub.grouptransid
@@ -1872,6 +1890,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 	WHERE	al.recommend = 13423967
 	ORDER BY al.grouptransid, al.transid
@@ -1902,6 +1921,7 @@ BEGIN
 			,al.betid
 			,al.grouptransid
 			,al.transid
+			,al.TransDesc
 	FROM	#BetDelete al
 	WHERE	al.betdaqid = 0
 	ORDER BY al.grouptransid, al.transid

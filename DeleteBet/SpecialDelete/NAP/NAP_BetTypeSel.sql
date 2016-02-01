@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[NAP_BetTypeSel] 
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BetTypeSel]    Script Date: 01/21/2016 15:38:48 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_BetTypeSel    Script Date: 20/01/2016 2:35:03 PM ******/
+ALTER PROCEDURE [dbo].[NAP_BetTypeSel] 
     @Mode        SMALLINT = 0
     ,@MatchId    INT = 0 -- defaul value for NG, VS, LC
     ,@ErrMsg NVARCHAR(200) = '' OUTPUT
@@ -18,6 +26,7 @@ AS
         - 20150626@Dominic: Add metric gaming bettype bettypes [Redmine:#38200]
         - 20151110@Kathy: Move SP to DBPRO 
         - 20150401@Kathy: Add new parent-child bettypes for PH [Redmine:#48110]
+        - 20150119@Kathy: Changes parent-child for phase 1.2 of PH All in One:  [Redmine:#50932]	  
           
     Param's Explanation:  
     @Mode:   
@@ -90,17 +99,21 @@ BEGIN
         UNION ALL
         SELECT 11, 199 -- Total Corners
         UNION ALL
-        SELECT 410, 151 -- 1H Double Chance
+        SELECT 151, 410 -- 1H Double Chance
         UNION ALL
-        SELECT 406, 159 -- Exact Total Goals
+        SELECT 159, 406 -- Exact Total Goals
         UNION ALL
-        SELECT 407, 161 -- Exact Home Team Goals
+        SELECT 161, 407 -- Exact Home Team Goals
         UNION ALL
-        SELECT 409, 162 -- Exact Away Team Goals
+        SELECT 162, 409 -- Exact Away Team Goals
         UNION ALL
-        SELECT 408,171 -- Winning Margin
+        SELECT 171, 408 -- Winning Margin
         UNION ALL
-        SELECT 411, 191 -- 1H Draw No Bet
+        SELECT 191, 411 -- 1H Draw No Bet
+        UNION ALL
+        SELECT 4, 413  --  Correct score
+        UNION ALL
+        SELECT 30, 414  -- 1H Correct score
     
     -- @mode = 0: Single bet, 2: Early kick-off, 3: Ticket listing, 4: Mix Parlay   
     -- type = 0: Sport Book
