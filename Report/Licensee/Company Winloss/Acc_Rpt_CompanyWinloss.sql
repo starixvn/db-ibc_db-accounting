@@ -19,7 +19,7 @@ AS
 	Revisions:
 		- 20150630@Patrick: Remove the UUS line
 		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
-		- 20160119@patrick: Support BetTrade
+		- 20160119@Patrick: Support BetTrade
 
 */
 
@@ -256,6 +256,7 @@ BEGIN
 				GROUP BY b.srecommend
 			END
 			ELSE
+			BEGIN
 				INSERT INTO @SAgWinLoss(custid, CompanyWL)
 				SELECT b.srecommend
 					, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
@@ -283,10 +284,9 @@ BEGIN
 				AND b.bettype NOT IN (901,902)
 			GROUP BY b.srecommend
 		END
-
+	END
 		--select * from @SAgWinLoss
 
-	END
 	--show result
 	SELECT ROW_NUMBER() OVER(ORDER BY UserName) AS RowId
 		, UserName, SUM(CompanyWL) AS CompanyWL--, c.custid
@@ -295,6 +295,7 @@ BEGIN
 	WHERE roleid = 4
 	GROUP BY UserName
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinloss] TO [bodbLicenseeNet] AS [dbo]
 GO
