@@ -19,6 +19,7 @@ AS
 	Revisions:
 		- 20150630@Patrick: Remove the UUS line
 		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+		- 20160119@Patrick: Support BetTrade
 
 */
 
@@ -174,6 +175,7 @@ BEGIN
 				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND (bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 AND 1399)
+				AND b.bettype NOT IN (901, 902, 903)
 				AND b.statusid IN (111, 112, 113)
 				AND b.apositiontaking <> 0
 			GROUP BY b.srecommend
@@ -187,6 +189,7 @@ BEGIN
 				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND (bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 AND 1399)
+				AND b.bettype NOT IN (901, 902, 903)
 				AND b.statusid IN (111, 112, 113)
 				AND b.apositiontaking = 0
 			GROUP BY b.srecommend
@@ -203,6 +206,18 @@ BEGIN
 				AND b.statusid IN (111, 112, 113)
 			GROUP BY b.srecommend
 		END
+		ELSE IF @ProductPrefix = 'BT'
+		BEGIN
+			INSERT INTO @SAgWinLoss(CustId, CompanyWL)
+			SELECT b.srecommend
+				, - SUM(ISNULL(swinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(scomm, 0))
+			FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
+				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
+			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
+				AND b.statusid IN (111, 112, 113)
+				AND b.bettype = 903
+			GROUP BY b.srecommend
+		END
 		ELSE IF ISNULL(@ProductPrefix, '') = '' --for all products
 		BEGIN
 			INSERT INTO @SAgWinLoss(CustId, CompanyWL)
@@ -212,6 +227,7 @@ BEGIN
 				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.bettype < 19999
+				AND b.bettype NOT IN (901, 902)
 				AND b.statusid IN (111, 112, 113)
 			GROUP BY b.srecommend
 		END
@@ -223,20 +239,38 @@ BEGIN
 	BEGIN
 		IF @ToDateTmp >= @MoveBetsDay
 			SET @ToDateTmp = @MoveBetsDay
+
 		IF ISNULL(@ProductPrefix, '') <> ''
 		BEGIN
-			INSERT INTO @SAgWinLoss(custid, CompanyWL)
-			SELECT b.srecommend
-				, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
-			FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
-				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
-				INNER JOIN @SportTypeList bt ON b.SportType = bt.SportType AND b.IsBA = bt.IsBA
-			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
-				AND b.RoleId = 4
-				AND b.statusid IN (111, 112, 113, 114, 115)
-			GROUP BY b.srecommend
+			IF @ProductPrefix IN ('BT')
+			BEGIN
+				INSERT INTO @SAgWinLoss(custid, CompanyWL)
+				SELECT b.srecommend
+					, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
+				FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
+					INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
+				WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
+					AND b.RoleId = 4
+					AND b.bettype = 903
+					AND b.statusid IN (111, 112, 113, 114, 115)
+				GROUP BY b.srecommend
+			END
+			ELSE
+			BEGIN
+				INSERT INTO @SAgWinLoss(custid, CompanyWL)
+				SELECT b.srecommend
+					, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
+				FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
+					INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
+					INNER JOIN @SportTypeList bt ON b.SportType = bt.SportType AND b.IsBA = bt.IsBA
+				WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
+					AND b.RoleId = 4
+					AND b.statusid IN (111, 112, 113, 114, 115)
+					AND b.bettype NOT IN (901,902,903)
+				GROUP BY b.srecommend
+			END
 		END
-		ELSE
+		ELSE -- get all
 		BEGIN
 			INSERT INTO @SAgWinLoss(custid, CompanyWL)
 			SELECT b.srecommend
@@ -247,12 +281,12 @@ BEGIN
 				AND b.RoleId = 4
 				AND b.BetType < 19999
 				AND b.statusid IN (111, 112, 113, 114, 115)
+				AND b.bettype NOT IN (901,902)
 			GROUP BY b.srecommend
 		END
-
+	END
 		--select * from @SAgWinLoss
 
-	END
 	--show result
 	SELECT ROW_NUMBER() OVER(ORDER BY UserName) AS RowId
 		, UserName, SUM(CompanyWL) AS CompanyWL--, c.custid
@@ -261,6 +295,7 @@ BEGIN
 	WHERE roleid = 4
 	GROUP BY UserName
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinloss] TO [bodbLicenseeNet] AS [dbo]
 GO
