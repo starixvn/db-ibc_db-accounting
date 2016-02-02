@@ -1,4 +1,4 @@
-AlTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
 
@@ -36,13 +36,13 @@ Revisions:
 	- 20110315@Johnson: remove get status Horse Racing
 	- 20110429@Lukas: get downline statistics (number of Active, closed, suspended)
 	- 20110516@Lukas: re-arrange bettype
-	- 20110718@Sophia: because username2 add prefix 'Agency$', so hide the prefix when SELECT username2
-	- 20110721@Sophia: remove prefix 'Agency$' when SELECT username2
+	- 20110718@Sophia: because username2 add prefix 'Agency$', so hide the prefix WHEN SELECT username2
+	- 20110721@Sophia: remove prefix 'Agency$' WHEN SELECT username2
 	- 20110822@Elly: - Correct Turnover of sports book since Sep 01, 2011
 	- 20120131@Johnson: Get DisableLiveCasino, SyncLiveCasino status, currencyid
 	- 20120302@Jim: add more isBA column in General info return
 	- 20120504@Dom: add more IsDeposit column in General info return
-	- 20120423@Lukas: check if roleid > 4 then return
+	- 20120423@Lukas: check if roleid > 4 THEN return
 	- 20120815@Sophia: Get DisableVirtualSports, HideVirtualSports, DisableDownlinesVirtualSports
 	- 20120822@Elodie: Get Abnormal field
 	- 20120927@Johnson: Get double comm losing status
@@ -105,7 +105,6 @@ BEGIN
           , @todayMasterCash MONEY
           , @todayAgentCash MONEY
           , @todayCustCash MONEY
-		  , @todayOutstanding MONEY
 
 		  , @todaySuperCashLC MONEY
           , @todayMasterCashLC MONEY
@@ -133,7 +132,9 @@ BEGIN
 		  , @masterPositionTakingRNG MONEY
 		  , @agentPositionTakingRNG MONEY
 
-    DECLARE @currentDate DATETIME 
+    DECLARE @today DATETIME,
+			@yesterday DATETIME,
+			@transdate DATETIME
     DECLARE @membersite VARCHAR(10)
     DECLARE @TotalMAgentActive INT,
 		    @TotalMAgentClosed INT,
@@ -155,7 +156,8 @@ BEGIN
     DECLARE @NegativeBetEffectiveDate DATETIME
     SET @NegativeBetEffectiveDate='2011-09-01'
 
-    SELECT @currentDate = CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120)
+    SELECT @today = CONVERT(DATE, GETDATE())
+	SELECT @yesterday = DATEADD(DD, -1, @today)
 	
 	-- Get sport bettype
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
@@ -172,10 +174,10 @@ BEGIN
 	SET IsUsedBettrans = 1
 	WHERE ProductID NOT IN (6,11,17)
 	
-	-- Tickets running in translog: MG-Superlive, Cock Fighting
+	-- Tickets running in translog: MG-Superlive, MGC-LC, Cockfighting
 	UPDATE @SportBettype
 	SET IsRunningTranslog = 1
-	WHERE ProductId IN (1, 19)
+	WHERE ProductId IN (1, 13, 19)
 	
     --Get CustID FROM DB06, WHERE got index on Username AND Username2
     EXEC @custid = DBACC.bodb02.dbo.f_GetCustIDFromUsername @username
@@ -507,7 +509,7 @@ BEGIN
 	    lastlogged, 
 	    iplogin lastloginip, 
 	    pwdexpiry, 
-	    @credit as credit, --ci.credit, 
+	    @credit as credit, --ci.credit,
 	    e.currency,
 	    e.exchangeid,
 	    e.actualrate,
@@ -575,12 +577,12 @@ BEGIN
     ----------------------------
     -------------------------------------------------------------------------
     --Agency Info
-    SELECT case when c.roleid = 1 then c.custid else NULL end as memberID,
-	    case when c.roleid = 1 then c.username else NULL end as memberName,	
-	    case @roleid	when 1 then ISNULL(a.autosuspend,0) 
-					    when 2 then ISNULL(m.autosuspend,0) 
-					    when 3 then ISNULL(s.autosuspend,0) 
-					    else 0 end uplineAutosuspend,							    		
+    SELECT CASE WHEN c.roleid = 1 THEN c.custid ELSE NULL END as memberID,
+	    CASE WHEN c.roleid = 1 THEN c.username ELSE NULL END as memberName,	
+	    CASE @roleid	WHEN 1 THEN ISNULL(a.autosuspend,0) 
+					    WHEN 2 THEN ISNULL(m.autosuspend,0) 
+					    WHEN 3 THEN ISNULL(s.autosuspend,0) 
+					    ELSE 0 END uplineAutosuspend,							    		
 	    a.custid as agentID,
 	    a.username as agentName,	
 	    a.Enabled as agentEnabled,
@@ -599,299 +601,311 @@ BEGIN
 	    c.custid = @custid
     -------------------------------------------------------------------------
     --Balance Info
+		/*
+			I. Tickets from bettransRNG, bettransLC
+				1. Running tickets: bettransRNG, bettransLC
+				2. Settle tickets:
+					2.1 Today, yesterday: bettransRNG, bettransLC
+					2.2 <Yesterday: bettrans
+			II. Tickets from bettrans, translog
+				1. Running tickets: translog (if have), bettrans
+				2. Settle tickets: bettrans
+		*/
+
     if @roleid = 1
 	BEGIN
-		-- Get Cash and Outstanding on bettransLC
+		SELECT @transdate = max(transdate) FROM bettrans WITH(NOLOCK) WHERE custid = @custid
+
+		-- I.1, I.2.1 Get Cash and Outstanding on bettransRNG, bettransLC
 		SELECT 
-			@todayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0),
-			@todayOutstandingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
-			@yesterdayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
-	    FROM dbo.bettransLC WITH(NOLOCK)
-		WHERE custid = @custid
-			
-		-- Get Cash and Outstanding on bettransRNG
-		SELECT 
-			@todayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0),
-			@todayOutstandingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
-			@yesterdayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
+			@todayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND CONVERT(DATE, winlostdate) = @today THEN winlost-actual_stake+playercomm ELSE 0 END) ,0),
+			@yesterdayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND CONVERT(DATE, winlostdate) = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END) ,0),
+			@todayOutstandingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0)
 	    FROM dbo.bettransRNG WITH(NOLOCK)
 		WHERE custid = @custid
 
-		-- Get Cash on bettrans
-		SELECT @todayCustCash = ISNULL(SUM(winlost-actual_stake+playercomm) ,0)
-	    FROM bettrans BT WITH(NOLOCK)
-			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-	    WHERE BT.custid = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
+		SELECT 
+			@todayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND CONVERT(DATE, winlostdate) = @today THEN winlost-actual_stake+playercomm ELSE 0 END) ,0),
+			@yesterdayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND CONVERT(DATE, winlostdate) = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END) ,0),
+			@todayOutstandingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0)
+	    FROM dbo.bettransLC WITH(NOLOCK)
+		WHERE custid = @custid
 		
-		-- Get Outstanding From TransLog
-	    SELECT @TransLogOT = SUM(ABS(actual_stake))
+		-- II. 1 Get Outstanding from translog
+	    SELECT @TransLogOT = ISNULL(SUM(actual_stake),0)
 	    FROM translog(NOLOCK) WHERE custid = @custid AND statusID = 0
 		
-	    -- Get Cash and Outstanding from bettrans and Show Info
-		SELECT	ISNULL(Balance.Cash,0) + @yesterdayCustCashLC + @todayCustCashLC + @yesterdayCustCashRNG + @todayCustCashRNG Cash,
-			    ISNULL(Balance.Cash,0) - @todayCustCash + @yesterdayCustCashLC + @yesterdayCustCashRNG yesterday_Cash,
-			    ISNULL(Balance.outstanding,0) + ISNULL(@TransLogOT,0) + ISNULL(@todayOutstandingLC,0) + ISNULL(@todayOutstandingRNG,0) outstanding,
+		-- I.2.2, II.2 Get Cash and Outstanding from bettrans
+		SELECT
+			@todayCustCash = ISNULL(SUM(winlost-actual_stake+playercomm),0)
+	    FROM bettrans WITH(NOLOCK)
+	    WHERE custid = @custid
+			AND ruben = 1 AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+		    AND CONVERT(DATE, winlostdate) = @today
+		
+		SELECT	ISNULL(Balance.Cash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC + @todayCustCashRNG + @todayCustCashLC Cash,
+			    ISNULL(Balance.Cash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC - @todayCustCash yesterday_Cash,
+			    ISNULL(Balance.outstanding,0) + @TransLogOT + @todayOutstandingRNG + @todayOutstandingLC outstanding,
 			    Balance.lastTxn lastTxn 
 	    FROM(		
 		    SELECT 
-			    ISNULL(sum(case when ruben=1 then winlost-actual_stake+playercomm else 0 end),0) Cash,
-			    sum(case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then CASE WHEN winlostdate<@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake)END else 0 end) outstanding, 
-			    max(transdate) lastTxn 
-		    FROM dbo.bettrans BT WITH(NOLOCK)
-				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.custid = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
+			    ISNULL(SUM(CASE WHEN ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0) Cash,
+			    SUM(CASE WHEN ruben=0 THEN CASE WHEN winlostdate<@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake)END ELSE 0 END) outstanding, 
+			    @transdate lastTxn 
+		    FROM dbo.bettrans WITH(NOLOCK)
+			WHERE custid = @custid
+				AND (
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						OR ruben <> 0
+					)
+				AND (
+						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						OR CONVERT(DATE, winlostdate) < @yesterday
+					)
 	    ) Balance
 
     END 
-    else if @roleid = 2
+    ELSE if @roleid = 2
     BEGIN
-	    SELECT @UsedCredit = sum(credit)  
-	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
+	    SELECT @UsedCredit = SUM(credit)  
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	    WHERE roleid=1 
 		     AND recommend = @custid
-	    /*	 
-	    SELECT 
-		    @y_AgentCash = sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),
-		    @y_CustomerCash = sum(case when custid <> recommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end)
-	    FROM bettrans WITH(NOLOCK) 
-	    WHERE recommend = @custid AND bettrans.winlostdate < convert(varchar(10), CURRENT_TIMESTAMP, 120)			
-	    */
 		
-		-- Get Cash and Outstanding on bettransLC
+		SELECT @transdate = max(transdate) FROM bettrans WITH(NOLOCK) WHERE recommend = @custid
+		
+		-- I.1, I.2.1 Get Cash and Outstanding on bettransRNG, bettransLC
 		SELECT 
-			@todayAgentCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@todayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END),0),
-			@todayOutstandingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END), 0),
-			@agentPositionTakingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * apositiontaking ELSE 0 END),0),
-			@yesterdayAgentCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@yesterdayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
-	    FROM dbo.bettransLC WITH(NOLOCK)
-		WHERE recommend = @custid
-
-		-- Get Cash and Outstanding on bettransRNG
-		SELECT 
-			@todayAgentCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@todayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END),0),
-			@todayOutstandingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END), 0),
-			@agentPositionTakingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * apositiontaking ELSE 0 END),0),
-			@yesterdayAgentCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@yesterdayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
+			@todayAgentCashRNG          = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@todayCustCashRNG           = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today AND custid<>recommend AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@yesterdayAgentCashRNG      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@yesterdayCustCashRNG       = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday AND custid<>recommend AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@todayOutstandingRNG        = ISNULL(SUM(CASE WHEN custid<>recommend AND statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
+			@agentPositionTakingRNG     = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * apositiontaking ELSE 0 END),0)
 	    FROM dbo.bettransRNG WITH(NOLOCK)
 		WHERE recommend = @custid
 
-		-- Get Today Cash on bettrans
-		SELECT
-			@todayAgentCash = ISNULL(sum(awinlost+comm-playercomm),0),
-			@todayCustCash = ISNULL(sum(winlost-actual_stake+playercomm),0)
-	    FROM bettrans BT WITH(NOLOCK)
-			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-	    WHERE BT.recommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
-		
-		-- Get Outstanding From TransLog
-		SELECT @TransLogOT = SUM(actual_stake),
-			    @TransLogOTPT = SUM(actual_stake * apositiontaking)
+		SELECT 
+			@todayAgentCashLC          = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@todayCustCashLC           = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today AND custid<>recommend AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@yesterdayAgentCashLC      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@yesterdayCustCashLC       = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday AND custid<>recommend AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@todayOutstandingLC        = ISNULL(SUM(CASE WHEN custid<>recommend AND statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
+			@agentPositionTakingLC     = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * apositiontaking ELSE 0 END),0)
+	    FROM dbo.bettransLC WITH(NOLOCK)
+		WHERE recommend = @custid
+
+		-- II. 1 Get Outstanding from translog
+		SELECT @TransLogOT = ISNULL(SUM(actual_stake),0),
+			    @TransLogOTPT = ISNULL(SUM(actual_stake * apositiontaking),0)
 	    FROM translog(NOLOCK) WHERE recommend = @custid AND statusID = 0
 
-    	-- Get Cash and Outstanding from bettrans and Show Info	
+		-- I.2.2, II.2 Get Cash and Outstanding from bettrans
+		SELECT
+			@todayAgentCash = ISNULL(SUM(CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),0),
+			@todayCustCash  = ISNULL(SUM(CASE WHEN custid<>recommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0)
+	    FROM bettrans WITH(NOLOCK)
+	    WHERE recommend = @custid
+			AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+		    AND CONVERT(DATE, winlostdate) = @today
+
 	    SELECT		
-			ISNULL(Balance.agentCash,0) + @yesterdayAgentCashLC + @todayAgentCashLC + @yesterdayAgentCashRNG + @todayAgentCashRNG agentCash,
-			ISNULL(Balance.agentCash,0) - @todayAgentCash + @yesterdayAgentCashLC + @yesterdayAgentCashRNG yesterday_agentCash,
-			ISNULL(Balance.agentPositionTaking,0)+ISNULL(@TransLogOTPT,0) + @agentPositionTakingLC + @agentPositionTakingRNG agentPositionTaking,
-			ISNULL(Balance.customerCash,0) + @yesterdayCustCashLC + @todayCustCashLC + @yesterdayCustCashRNG + @todayCustCashRNG customerCash,
-			ISNULL(Balance.customerCash,0) - @todayCustCash + @yesterdayCustCashLC + @yesterdayCustCashRNG yesterday_customerCash,
-			ISNULL(Balance.customerOutstanding,0) + ISNULL(@TransLogOT,0) + ISNULL(@todayOutstandingLC,0) + ISNULL(@todayOutstandingRNG,0) customerOutstanding,
+			ISNULL(Balance.agentCash,0) + @yesterdayAgentCashRNG + @yesterdayAgentCashLC + @todayAgentCashRNG + @todayAgentCashLC agentCash,
+			ISNULL(Balance.agentCash,0) + @yesterdayAgentCashRNG + @yesterdayAgentCashLC - @todayAgentCash yesterday_agentCash,
+			ISNULL(Balance.agentPositionTaking,0)+ @TransLogOTPT + @agentPositionTakingRNG + @agentPositionTakingLC agentPositionTaking,
+			ISNULL(Balance.customerCash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC + @todayCustCashRNG + @todayCustCashLC customerCash,
+			ISNULL(Balance.customerCash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC - @todayCustCash yesterday_customerCash,
+			ISNULL(Balance.customerOutstanding,0) + @TransLogOT + @todayOutstandingRNG + @todayOutstandingLC customerOutstanding,
 			Balance.lastTxn lastTxn,
 			@UsedCredit as agentUsedCredit
 	    FROM (	
 		    SELECT 
-			    sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
-			    sum(case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * apositiontaking else 0 end) agentPositionTaking, 
-			    sum(case when custid <> recommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end) customerCash, 
-			    sum(case when custid <> recommend AND ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake else 0 end) customerOutstanding, 
-			    max(transdate) lastTxn
-		    FROM dbo.bettrans BT WITH(NOLOCK)
-				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.recommend = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
+			    SUM(CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
+			    SUM(CASE WHEN ruben=0 THEN actual_stake * apositiontaking ELSE 0 END) agentPositionTaking, 
+			    SUM(CASE WHEN custid <> recommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END) customerCash, 
+			    SUM(CASE WHEN custid <> recommend AND ruben=0 THEN actual_stake ELSE 0 END) customerOutstanding, 
+			    @transdate lastTxn
+		    FROM dbo.bettrans WITH(NOLOCK)
+			WHERE recommend = @custid
+				AND (
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						OR ruben <> 0
+					)
+				AND (
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						OR CONVERT(DATE, winlostdate) < @yesterday
+					)
 	    )Balance 
 
     END
-    else if @roleid = 3
+    ELSE if @roleid = 3
     BEGIN
 	    DECLARE @DisableAutoMPT BIT
 	    --Get disable auto MPT
 	    SELECT @DisableAutoMPT = DisableAutoMPT FROM CustMaster (nolock) WHERE CustID = @CustID
 
-	    SELECT @UsedCredit = sum(credit)  
+	    SELECT @UsedCredit = SUM(credit)  
 	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=2 
 		    AND mrecommend = @custid
-	    /*	
-	    SELECT 
-		    @y_MasterCash = sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),
-		    @y_AgentCash = sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),
-		    @y_CustomerCash = sum(case when custid <> recommend AND custid <> mrecommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end)
-	    FROM bettrans WITH(NOLOCK) 
-	    WHERE mrecommend = @custid AND bettrans.winlostdate < convert(varchar(10), CURRENT_TIMESTAMP, 120)			
-	    */
 		
-		-- Get Cash and Outstanding on bettransLC    				
+		SELECT @transdate = max(transdate) FROM bettrans WITH(NOLOCK) WHERE mrecommend = @custid
+
+		-- I.1, I.2.1 Get Cash and Outstanding on bettransRNG, bettransLC
+		SELECT
+			@todayMasterCashRNG      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@todayAgentCashRNG       = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@todayCustCashRNG        = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND CONVERT(DATE, winlostdate) = @today AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@yesterdayMasterCashRNG  = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@yesterdayAgentCashRNG   = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@yesterdayCustCashRNG    = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND CONVERT(DATE, winlostdate) = @yesterday AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@todayOutstandingRNG     = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
+			@masterPositionTakingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * mpositiontaking ELSE 0 END),0)
+	    FROM dbo.bettransRNG WITH(NOLOCK)
+		WHERE mrecommend = @custid
+					
 	    SELECT
-			@todayMasterCashLC = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@todayAgentCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@todayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END),0),
-			@todayOutstandingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END), 0),
-			@masterPositionTakingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * mpositiontaking ELSE 0 END),0),
-			@yesterdayMasterCashLC = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@yesterdayAgentCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@yesterdayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
+			@todayMasterCashLC      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@todayAgentCashLC       = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@todayCustCashLC        = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND CONVERT(DATE, winlostdate) = @today AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@yesterdayMasterCashLC  = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@yesterdayAgentCashLC   = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@yesterdayCustCashLC    = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND CONVERT(DATE, winlostdate) = @yesterday AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@todayOutstandingLC     = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
+			@masterPositionTakingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * mpositiontaking ELSE 0 END),0)
 	    FROM dbo.bettransLC WITH(NOLOCK)
 		WHERE mrecommend = @custid
 
-		-- Get Cash and Outstanding on bettransRNG
-		SELECT
-			@todayMasterCashRNG = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@todayAgentCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@todayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END),0),
-			@todayOutstandingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END), 0),
-			@masterPositionTakingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * mpositiontaking ELSE 0 END),0),
-			@yesterdayMasterCashRNG = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@yesterdayAgentCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@yesterdayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
-	    FROM dbo.bettransRNG WITH(NOLOCK)
-		WHERE mrecommend = @custid
-
-		-- Get Today Cash on bettrans
-		SELECT
-			@todayMasterCash = ISNULL(sum(mwinlost+acomm-comm),0),
-			@todayAgentCash = ISNULL(sum(awinlost+comm-playercomm),0),
-			@todayCustCash = ISNULL(sum(winlost-actual_stake+playercomm),0)
-	    FROM bettrans BT WITH(NOLOCK)
-			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-	    WHERE BT.mrecommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
-		
-		-- Get Outstanding From TransLog
-		SELECT @TransLogOT = SUM(actual_stake),
-			    @TransLogOTPT = SUM(actual_stake * mpositiontaking)
+		-- II. 1 Get Outstanding from translog
+		SELECT @TransLogOT = ISNULL(SUM(actual_stake),0),
+			    @TransLogOTPT = ISNULL(SUM(actual_stake * mpositiontaking),0)
 	    FROM translog(NOLOCK) WHERE mrecommend = @custid AND statusID = 0
+
+		-- I.2.2, II.2 Get Cash and Outstanding from bettrans
+		SELECT
+			@todayMasterCash = ISNULL(SUM(CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END),0),
+			@todayAgentCash  = ISNULL(SUM(CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),0),
+			@todayCustCash   = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0)
+	    FROM bettrans WITH(NOLOCK)
+	    WHERE mrecommend = @custid
+		    AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+		    AND CONVERT(DATE, winlostdate) = @today
 		
-		-- Get Cash and Outstanding from bettrans and Show Info	
-		SELECT	ISNULL(Balance.masterCash,0) + @yesterdayMasterCashLC + @todayMasterCashLC + @yesterdayMasterCashRNG + @todayMasterCashRNG masterCash,
-			    ISNULL(Balance.masterCash,0) - @todayMasterCash + @yesterdayMasterCashLC + @yesterdayMasterCashRNG yesterday_masterCash,
-			    ISNULL(Balance.masterPositionTaking,0) + ISNULL(@TransLogOTPT,0) + @masterPositionTakingLC + @masterPositionTakingRNG masterPositionTaking,
-				ISNULL(Balance.agentCash,0) + @yesterdayAgentCashLC + @todayAgentCashLC + @yesterdayAgentCashRNG + @todayAgentCashRNG agentCash,
-			    ISNULL(Balance.agentCash,0) - @todayAgentCash + @yesterdayAgentCashLC + @yesterdayAgentCashRNG yesterday_agentCash,
-			    ISNULL(Balance.customerCash,0) + @yesterdayCustCashLC + @todayCustCashLC + @yesterdayCustCashRNG + @todayCustCashRNG customerCash,
-			    ISNULL(Balance.customerCash,0) - @todayCustCash + @yesterdayCustCashLC + @yesterdayCustCashRNG yesterday_customerCash,
-			    ISNULL(Balance.customerOutstanding,0) + ISNULL(@TransLogOT,0) + ISNULL(@todayOutstandingLC,0) + ISNULL(@todayOutstandingRNG,0) customerOutstanding,
-			    Balance.lastTxn lastTxn,
+		SELECT	ISNULL(Balance.masterCash,0) + @yesterdayMasterCashRNG + @yesterdayMasterCashLC + @todayMasterCashRNG + @todayMasterCashLC masterCash,
+			    ISNULL(Balance.masterCash,0) + @yesterdayMasterCashRNG + @yesterdayMasterCashLC - @todayMasterCash yesterday_masterCash,
+			    ISNULL(Balance.masterPositionTaking,0) + @TransLogOTPT + @masterPositionTakingRNG + @masterPositionTakingLC masterPositionTaking,
+				ISNULL(Balance.agentCash,0) + @yesterdayAgentCashRNG + @yesterdayAgentCashLC + @todayAgentCashRNG + @todayAgentCashLC agentCash,
+			    ISNULL(Balance.agentCash,0) + @yesterdayAgentCashRNG + @yesterdayAgentCashLC - @todayAgentCash yesterday_agentCash,
+			    ISNULL(Balance.customerCash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC + @todayCustCashRNG + @todayCustCashLC customerCash,
+			    ISNULL(Balance.customerCash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC - @todayCustCash yesterday_customerCash,
+			    ISNULL(Balance.customerOutstanding,0) + @TransLogOT + @todayOutstandingRNG + @todayOutstandingLC customerOutstanding,
+			    @transdate lastTxn,
 			    @UsedCredit as masterUsedCredit,
 			    ISNULL(@DisableAutoMPT,0) as DisableAutoMPT
 	    FROM (	
-		    SELECT	sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
-				    sum (case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * mpositiontaking else 0 end) masterPositionTaking, 
-				    sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
-				    sum(case when custid <> recommend AND custid <> mrecommend AND ruben=1 then winlost-actual_stake+playercomm else 0  end) customerCash, 
-				    sum(case when custid <> recommend AND custid <> mrecommend AND ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake else 0 end) customerOutstanding, 
-				    max(transdate) lastTxn
-		    FROM dbo.bettrans BT WITH(NOLOCK)
-				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.mrecommend = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
+		    SELECT	SUM(CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END) masterCash,
+				    SUM(CASE WHEN ruben=0 THEN actual_stake * mpositiontaking ELSE 0 END) masterPositionTaking, 
+				    SUM(CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
+				    SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END) customerCash, 
+				    SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND ruben=0 THEN actual_stake ELSE 0 END) customerOutstanding
+				    --max(transdate) lastTxn
+		    FROM dbo.bettrans WITH(NOLOCK)
+			WHERE mrecommend = @custid
+				AND (
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						OR ruben <> 0
+					)
+				AND (
+						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						OR CONVERT(DATE, winlostdate) < @yesterday
+					)
 	    )Balance 
     	
-	    /*
-	    @TotalBalance = 
-				    ISNULL(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0)
-				    + ISNULL(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0)
-				    + ISNULL(sum(case when custid <> recommend AND custid <> mrecommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end),0)
-
-	    FROM bettrans WITH (NOLOCK, index=bettrans16)  
-	    WHERE mrecommend=@CustID
-	    */
     END
     ELSE IF @roleid = 4
     BEGIN
-
-	    DECLARE @transdate DATETIME
-	    SELECT @UsedCredit = sum(credit) 
+	    SELECT @UsedCredit = SUM(credit) 
 	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK)
 	    WHERE roleid=3
 		     AND srecommend = @custid
     	    	
 	    SELECT @transdate = max(transdate) FROM bettrans WITH(NOLOCK) WHERE srecommend = @custid
     	
-		-- Get Cash and Outstanding on bettransLC
-	    SELECT
-			@todaySuperCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN swinlost+scomm-acomm ELSE 0 END),0),
-			@todayMasterCashLC = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@todayAgentCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@todayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END),0),
-			@todayOutstandingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END), 0),
-			@superPositionTakingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * spositiontaking ELSE 0 END),0),
-			@yesterdaySuperCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN swinlost+scomm-acomm ELSE 0 END),0),
-			@yesterdayMasterCashLC = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@yesterdayAgentCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@yesterdayCustCashLC = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
-	    FROM dbo.bettransLC WITH(NOLOCK)
-		WHERE srecommend = @custid
-
-		-- Get Cash and Outstanding on bettransRNG
+		-- I.1, I.2.1 Get Cash and Outstanding on bettransRNG, bettransLC
 		SELECT
-			@todaySuperCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN swinlost+scomm-acomm ELSE 0 END),0),
-			@todayMasterCashRNG = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@todayAgentCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@todayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate >= @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END),0),
-			@todayOutstandingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END), 0),
-			@superPositionTakingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * spositiontaking ELSE 0 END),0),
-			@yesterdaySuperCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN swinlost+scomm-acomm ELSE 0 END),0),
-			@yesterdayMasterCashRNG = ISNULL(sum(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN mwinlost+acomm-comm ELSE 0 END),0),
-			@yesterdayAgentCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN awinlost+comm-playercomm ELSE 0 END),0),
-			@yesterdayCustCashRNG = ISNULL(SUM(CASE WHEN statusID NOT IN (0,1, 101, 102) AND winlostdate < @currentDate THEN winlost-actual_stake+playercomm ELSE 0 END) ,0)
+			@todaySuperCashRNG      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END ELSE 0 END),0),
+			@todayMasterCashRNG     = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@todayAgentCashRNG      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=recommend  THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@todayCustCashRNG       = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND CONVERT(DATE, winlostdate) = @today AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@yesterdaySuperCashRNG  = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END ELSE 0 END),0),
+			@yesterdayMasterCashRNG = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@yesterdayAgentCashRNG  = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=recommend  THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@yesterdayCustCashRNG   = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND CONVERT(DATE, winlostdate) = @yesterday AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@todayOutstandingRNG    = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
+			@superPositionTakingRNG = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * spositiontaking ELSE 0 END),0)
 	    FROM dbo.bettransRNG WITH(NOLOCK)
 		WHERE srecommend = @custid
 
-		-- Get Today Cash on bettrans
-		SELECT
-			@todaySuperCash = ISNULL(sum(swinlost+scomm-acomm),0),
-			@todayMasterCash = ISNULL(sum(mwinlost+acomm-comm),0),
-			@todayAgentCash = ISNULL(sum(awinlost+comm-playercomm),0),
-			@todayCustCash = ISNULL(sum(winlost-actual_stake+playercomm),0)
-	    FROM bettrans BT WITH(NOLOCK)
-			LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-	    WHERE BT.srecommend = @custid AND BT.ruben = 1 AND BT.bettype < 19001 
-		    AND BT.winlostdate >= @currentDate AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
-    	
-		-- Get Outstanding From TransLog
-		SELECT @TransLogOT = SUM(actual_stake),
-			    @TransLogOTPT = SUM(actual_stake * spositiontaking)
+	    SELECT
+			@todaySuperCashLC      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END ELSE 0 END),0),
+			@todayMasterCashLC     = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@todayAgentCashLC      = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @today THEN CASE WHEN custid=recommend  THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@todayCustCashLC       = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND CONVERT(DATE, winlostdate) = @today AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@yesterdaySuperCashLC  = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END ELSE 0 END),0),
+			@yesterdayMasterCashLC = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),
+			@yesterdayAgentCashLC  = ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN CASE WHEN custid=recommend  THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0),
+			@yesterdayCustCashLC   = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND CONVERT(DATE, winlostdate) = @yesterday AND statusID NOT IN (0,1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0),
+			@todayOutstandingLC    = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND statusID IN (0,1) THEN ABS(actual_stake) ELSE 0 END),0),
+			@superPositionTakingLC = ISNULL(SUM(CASE WHEN statusID IN (0,1) THEN actual_stake * spositiontaking ELSE 0 END),0)
+	    FROM dbo.bettransLC WITH(NOLOCK)
+		WHERE srecommend = @custid
+
+		-- II. 1 Get Outstanding from translog
+		SELECT @TransLogOT = ISNULL(SUM(actual_stake),0),
+			    @TransLogOTPT = ISNULL(SUM(actual_stake * spositiontaking),0)
 	    FROM translog(NOLOCK) WHERE srecommend = @custid AND statusID = 0
-    	
-		-- Get Cash and Outstanding from bettrans and Show Info	
-	    SELECT	ISNULL(Balance.superCash ,0) + @yesterdaySuperCashLC + @todaySuperCashLC + @yesterdaySuperCashRNG + @todaySuperCashRNG superCash,
-			    ISNULL(Balance.superCash ,0) - @todaySuperCash + @yesterdaySuperCashLC + @yesterdaySuperCashRNG yesterday_superCash,
-			    ISNULL(Balance.superPositionTaking,0) + ISNULL(@TransLogOTPT,0) + @superPositionTakingLC + @superPositionTakingRNG superPositionTaking,
-			    ISNULL(Balance.masterCash,0) + @yesterdayMasterCashLC + @todayMasterCashLC + @yesterdayMasterCashRNG + @todayMasterCashRNG masterCash,
-			    ISNULL(Balance.masterCash,0) - @todayMasterCash + @yesterdayMasterCashLC + @yesterdayMasterCashRNG yesterday_masterCash,
-			    ISNULL(Balance.agentCash,0) + @yesterdayAgentCashLC + @todayAgentCashLC + @yesterdayAgentCashRNG + @todayAgentCashRNG agentCash,
-			    ISNULL(Balance.agentCash,0) - @todayAgentCash + @yesterdayAgentCashLC + @yesterdayAgentCashRNG yesterday_agentCash,
-			    ISNULL(Balance.customerCash,0) + @yesterdayCustCashLC + @todayCustCashLC + @yesterdayCustCashRNG + @todayCustCashRNG customerCash,
-			    ISNULL(Balance.customerCash,0) - @todayCustCash + @yesterdayCustCashLC + @yesterdayCustCashRNG yesterday_customerCash,
-			    ISNULL(Balance.customerOutstanding,0) + ISNULL(@TransLogOT,0) + ISNULL(@todayOutstandingLC,0) + ISNULL(@todayOutstandingRNG,0) customerOutstanding,
+
+		-- I.2.2, II.2 Get Cash and Outstanding from bettrans
+		SELECT
+			@todaySuperCash = ISNULL(SUM(CASE WHEN custid=srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END),0),
+			@todayMasterCash = ISNULL(SUM(CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END),0),
+			@todayAgentCash = ISNULL(SUM(CASE WHEN custid=recommend  THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),0),
+			@todayCustCash = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0)
+	    FROM bettrans WITH(NOLOCK)
+	    WHERE srecommend = @custid
+		    AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+		    AND CONVERT(DATE, winlostdate) = @today
+  
+	    SELECT	ISNULL(Balance.superCash ,0) + @yesterdaySuperCashRNG + @yesterdaySuperCashLC + @todaySuperCashRNG + @todaySuperCashLC superCash,
+			    ISNULL(Balance.superCash ,0) + @yesterdaySuperCashRNG + @yesterdaySuperCashLC - @todaySuperCash yesterday_superCash,
+			    ISNULL(Balance.superPositionTaking,0) + @TransLogOTPT + @superPositionTakingRNG + @superPositionTakingLC superPositionTaking,
+			    ISNULL(Balance.masterCash,0) + @yesterdayMasterCashRNG + @yesterdayMasterCashLC + @todayMasterCashRNG + @todayMasterCashLC masterCash,
+			    ISNULL(Balance.masterCash,0) + @yesterdayMasterCashRNG + @yesterdayMasterCashLC - @todayMasterCash yesterday_masterCash,
+			    ISNULL(Balance.agentCash,0) + @yesterdayAgentCashRNG + @yesterdayAgentCashLC + @todayAgentCashRNG + @todayAgentCashLC agentCash,
+			    ISNULL(Balance.agentCash,0) + @yesterdayAgentCashRNG + @yesterdayAgentCashLC - @todayAgentCash yesterday_agentCash,
+			    ISNULL(Balance.customerCash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC + @todayCustCashRNG + @todayCustCashLC customerCash,
+			    ISNULL(Balance.customerCash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC - @todayCustCash yesterday_customerCash,
+			    ISNULL(Balance.customerOutstanding,0) + @TransLogOT + @todayOutstandingRNG + @todayOutstandingLC customerOutstanding,
 			    @transdate  as lastTxn,
 			    @UsedCredit as superUsedCredit
     	
 	    FROM (
-		    SELECT	sum(case when custid=srecommend then winlost-actual_stake else swinlost+scomm-acomm end) superCash,
-				    sum(case when ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake * spositiontaking else 0 end) superPositionTaking, 
-				    sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end) masterCash,
-				    sum(case when custid=recommend  then winlost-actual_stake else awinlost+comm-playercomm end) agentCash,
-				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=1 then winlost-actual_stake+playercomm else 0 end) customerCash, 
-				    sum(case when custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 AND (S.IsRunningTranslog IS NULL OR S.IsRunningTranslog = 0) then actual_stake else 0 end) customerOutstanding	
-		     FROM dbo.bettrans BT WITH(NOLOCK)
-				LEFT JOIN @SportBettype S ON BT.bettype = S.Bettype
-			WHERE BT.srecommend = @custid AND (S.IsUsedBettrans IS NULL OR S.IsUsedBettrans = 1)
+		    SELECT	SUM(CASE WHEN custid=srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END) superCash,
+				    SUM(CASE WHEN ruben=0 THEN actual_stake * spositiontaking ELSE 0 END) superPositionTaking, 
+				    SUM(CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END) masterCash,
+				    SUM(CASE WHEN custid=recommend  THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
+				    SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END) customerCash, 
+				    SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend AND ruben=0 THEN actual_stake ELSE 0 END) customerOutstanding	
+		     FROM dbo.bettrans WITH(NOLOCK)
+			WHERE srecommend = @custid
+				AND (
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						OR ruben <> 0
+					)
+				AND (
+						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						OR CONVERT(DATE, winlostdate) < @yesterday
+					)
 		    )Balance 
      
     END
@@ -910,6 +924,9 @@ BEGIN
 	-- For sportbook2
 	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
+
+
+
 
 
 
