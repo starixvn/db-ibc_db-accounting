@@ -1,4 +1,3 @@
-
 ALTER PROCEDURE dbo.Acc_CustomerSelStatus
 	@CustID		INT,
 	@AdminID	INT			= 0,
@@ -44,6 +43,7 @@ Revisions:
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
 	- 20151106@Patrick: Support RnG Game & rename field named DisableMicroGame to DisableMicroGameLC
 	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
+	- 20160114@Helen: Cricket - [Redmine: #50027]
 	
 
 
@@ -71,7 +71,9 @@ Param's Explanation:
 	DECLARE @agentid INT, @roleid TINYINT, @IsInternal BIT, @IsAdminCanViewVNIP BIT,  @LimitPerIP tinyint, @SelectedBetting bit
 			,@IsMyanmarOdds BIT = 0
 			,@srecommend INT = 0
-
+	
+	DECLARE @IsIMBC BIT = 0
+	
 	IF ISNULL(@username,'') <> ''
 		SELECT @roleid = roleid, @agentid = recommend, @custid = custid,@srecommend = srecommend
 		FROM custinfo WITH (NOLOCK)
@@ -84,7 +86,7 @@ Param's Explanation:
 	SET @LimitPerIP = 0
 	SET @SelectedBetting = 0
 	SET @IsInternal = 0
-
+	
 	IF @roleid = 4 --super
 	BEGIN
 		SELECT 
@@ -95,6 +97,9 @@ Param's Explanation:
 		FROM custSuper WITH (NOLOCK) WHERE custid = @custid
 
 		SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
+		
+		IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @CustID AND [Site] = 'IMBC')
+			SET @IsIMBC = 1
 
 	END
 	ELSE IF @roleid = 3 --master
@@ -106,6 +111,9 @@ Param's Explanation:
 		FROM custMaster WITH (NOLOCK) WHERE custid = @custid
 		
 		SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
+		
+		IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @CustID AND [Site] = 'IMBC')
+			SET @IsIMBC = 1
 	END
 	ELSE IF @roleid = 2 --agent
 	BEGIN
@@ -116,6 +124,10 @@ Param's Explanation:
 		FROM custAgent WITH (NOLOCK) WHERE custid = @custid
 		
 		SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
+		
+		IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @CustID AND [Site] = 'IMBC')
+			SET @IsIMBC = 1
+			
 	END
 	ELSE IF @roleid = 1 --member
 	BEGIN
@@ -124,8 +136,12 @@ Param's Explanation:
 		FROM custAgent WITH (NOLOCK) WHERE custid = @agentid
 		
 		SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@agentid)
+		
+		IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @agentid AND [Site] = 'IMBC')
+			SET @IsIMBC = 1
+			
 	END
-
+	
 	--Get Internal status
 	/*
 	SELECT @IsInternal = CASE @roleid WHEN 4 THEN (SELECT isnull(IsInternal, 0) FROM custSuper WITH (NOLOCK) WHERE custid = @custid)
@@ -152,16 +168,22 @@ Param's Explanation:
 	END
 
 	 -- For DCS Product
-    DECLARE @bitmapOrder_MuayThai INT , @bitmapOrder_CockFighting INT
+    DECLARE @bitmapOrder_MuayThai INT , @bitmapOrder_CockFighting INT,@bitmapOrder_Cricket INT
     
     SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
     SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
     
+    SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
+    
+    
     DECLARE @IsHidden_MuayThai INT = 1
     DECLARE @IsHidden_CockFighting INT = 1
+    DECLARE @IsHidden_Cricket INT = 1
     
     DECLARE @SportBook2 INT = 16
     DECLARE @CockFighting INT = 19
+    DECLARE @Cricket INT = 20
+    
     
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
 	BEGIN
@@ -172,6 +194,11 @@ Param's Explanation:
 		SET @IsHidden_CockFighting = 0
 	END
     
+    IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@Cricket,4))
+	BEGIN
+		SET @IsHidden_Cricket = 0
+	END
+	
 	SELECT	ISNULL(reject,0) AS Suspend,
 			ISNULL (closed,0) As Closed,
 			ISNULL (autosuspend,0) As AutoSuspend,	
@@ -209,7 +236,7 @@ Param's Explanation:
 			ISNULL(DisableColossusBet,1) as DisableColossusBet,
 			ISNULL(HideColossusBet,1) as HideColossusBet,
 			
-		ISNULL(DisableMicrogameLC,1) as DisableMicrogameLC,
+			ISNULL(DisableMicrogameLC,1) as DisableMicrogameLC,
 			-- For MuayThai
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_MuayThai),1) AS DisableMuayThai,
 			CAST(CASE WHEN @IsHidden_MuayThai = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_MuayThai),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideMuayThai,
@@ -218,8 +245,14 @@ Param's Explanation:
 			CAST(CASE WHEN @IsHidden_CockFighting = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_CockFighting),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCockFighting,
 			
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
-		ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
-		ISNULL(DisableMicrogameRNG,1) as DisableMicrogameRNG
+			ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
+			ISNULL(DisableMicrogameRNG,1) as DisableMicrogameRNG,
+			
+			-- Cricket
+			@IsIMBC AS IsIMBC,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_Cricket),1) AS DisableCricket,
+			CAST(CASE WHEN @IsHidden_Cricket = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_Cricket),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCricket
+						
 	FROM custinfo AS ci WITH (nolock)
 		LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 		LEFT JOIN CustGameType cg WITH(NOLOCK) ON ci.custid = cg.custid
@@ -259,8 +292,8 @@ Param's Explanation:
 			ci.HideColossusBet,
 			cps.bitmapIsDisabled,
 			cps.bitmapIsHidden,
-		ci.DisableMicrogameLC,
-		ci.DisableSuperLive,
+			ci.DisableMicrogameLC,
+			ci.DisableSuperLive,
 			ci.DisableMicrogameRNG
 	
 END

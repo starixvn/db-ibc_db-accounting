@@ -8,6 +8,7 @@ AS
 
 	Revisions:
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20160114@Helen: Cricket - [Redmine: #50027]
 	Param's Explanation:
 */
 
@@ -16,7 +17,7 @@ BEGIN
 
 	SELECT site, roleid, custid 
 	FROM customer WITH (NOLOCK) 
-	WHERE username = @username
+	WHERE username = @username AND [Site] <> 'IMBC'
 END
 
 
