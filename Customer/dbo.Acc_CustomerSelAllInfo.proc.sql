@@ -68,6 +68,7 @@ Revisions:
 	- 20151112@Percy: AG Casino & Microgaming - Fix bug for new Sporttype [Redmine: #47441]
 	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #48836]
 	- 20160108@Percy: Expand new bettype for RNG Casino [Redmine: #48285]
+	- 20160202@Percy: Support new sport Cricket [Redmine: #50028]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -155,6 +156,14 @@ BEGIN
 
     DECLARE @NegativeBetEffectiveDate DATETIME
     SET @NegativeBetEffectiveDate='2011-09-01'
+
+    SELECT @today = CONVERT(DATE, GETDATE())
+	SELECT @yesterday = DATEADD(DD, -1, @today)
+
+	DECLARE @netPosition MONEY = 0 -- for member
+	IF @roleid = 1
+		-- Net Balance
+		SELECT @netPosition = ISNULL(SUM(Credit - Debit), 0) FROM DBPRO.bodb02.dbo.BalNetPosition WITH (NOLOCK) WHERE custid = @custid
 
     SELECT @today = CONVERT(DATE, GETDATE())
 	SELECT @yesterday = DATEADD(DD, -1, @today)
@@ -510,6 +519,7 @@ BEGIN
 	    iplogin lastloginip, 
 	    pwdexpiry, 
 	    @credit as credit, --ci.credit,
+		@netPosition as netPosition,
 	    e.currency,
 	    e.exchangeid,
 	    e.actualrate,
@@ -924,6 +934,7 @@ BEGIN
 	-- For sportbook2
 	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
+
 
 
 
