@@ -1,7 +1,10 @@
 USE [bodb02]
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelCompleted    Script Date: 6/12/2015 8:40:34 AM ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelCompleted]    Script Date: 02/02/2016 12:54:51 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
 	,@SportType SMALLINT = 0
 	,@LeagueID INT = 0
@@ -30,6 +33,7 @@ AS
 		- 20150811@Johnson: Exclude bettrade tickets from sportbook [Redmine: 35921]
 		- 20150729@Johnson: Exclude Metric Gaming in settlement's sportbook [Redmine: #37688]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160201@Kathy: Exclude tickets of Charge Commission (bettypeid=500) [Redmine:#49727]
 
 	Param explanation: 
 		@isReLoad: 1: reload partial matches of a league, 0: not reload
@@ -209,6 +213,7 @@ BEGIN
 				--AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 				AND bettype NOT IN (901,902,903)
+				AND b.bettype <> 500 -- Charged commission
 				AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 			GROUP BY b.matchid
 			) AS C ON tm.matchid = c.matchid
@@ -278,4 +283,3 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompleted] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelCompleted] TO [vnteam] AS [dbo]
-
