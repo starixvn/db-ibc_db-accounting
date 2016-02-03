@@ -70,6 +70,7 @@ BEGIN
 		,SoldId			BIGINT
 		,MatchStatus	NVARCHAR(50)
 		,IsDeposit		BIT
+		,IsHideComm		BIT
 		)
 		
 	CREATE TABLE #DetailData (
@@ -262,7 +263,8 @@ BEGIN
 				,commission					
 				,winlostdate	
 				,TransDesc		
-				,betdaqid		
+				,betdaqid	
+				,IsHideComm	
 		)
 		SELECT	b.transid AS GroupId
 				,b.bettype
@@ -297,10 +299,11 @@ BEGIN
 				,b.betfrom
 				,b.matchid				
 				,(b.winlost - b.actual_stake) winlost
-				,b.playercomm AS commission				
+				,b.playercomm AS commission
 				,b.winlostdate
 				,b.transdesc
 				,b.betdaqid
+				,CASE WHEN b.bettype = 501 AND b.playerdiscount < 0 THEN 1 ELSE 0 END AS IsHideComm
 		FROM	bettrans AS b WITH (NOLOCK)
 			INNER JOIN dbo.match m WITH(NOLOCK)
 				ON b.matchid = m.matchid
@@ -665,7 +668,8 @@ BEGIN
 				,commission					
 				,winlostdate	
 				,TransDesc		
-				,betdaqid		
+				,betdaqid	
+				,IsHideComm	
 		)
 		SELECT 
 				b.transid GroupID
@@ -701,10 +705,11 @@ BEGIN
 				,b.betfrom
 				,b.matchid				
 				,(b.winlost - b.actual_stake) winlost
-				,b.playercomm AS commission				
+				,b.playercomm AS commission
 				,b.winlostdate
 				,b.transdesc
 				,b.betdaqid
+				,CASE WHEN b.bettype = 501 AND b.playerdiscount < 0 THEN 1 ELSE 0 END AS IsHideComm
 		FROM	bettrans AS b WITH (NOLOCK)
 			INNER JOIN dbo.match m WITH(NOLOCK)
 				ON b.matchid = m.matchid
@@ -1042,6 +1047,7 @@ BEGIN
 			,TransDesc		
 			,SoldId			
 			,CASE WHEN bettype = 501 AND STATUS = 'running' AND MatchStatus = 'running' AND IsDeposit = 0 THEN 1 ELSE 0 END AS IsCricket	
+			,CASE WHEN IsHideComm IS NULL THEN 0 ELSE IsHideComm END AS IsHideComm
 	FROM	#Data
 	ORDER BY GroupID, transid
 	
