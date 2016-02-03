@@ -366,7 +366,7 @@ BEGIN
 		WHERE Sporttype = @DCSSportType
 		
 		SELECT @ErrMsg	= 'Error Master ' + @mastername + ', agent ' + @agentname 
-						+ ': Agent has setting of '	+ @DCSSportName	+ ' but new master doesn''t have setting of ' + @DCSSportName + '.',
+						+ ': Agent has setting of ' + @DCSSportName	+ ' but new master doesn''t have setting of ' + @DCSSportName + '.',
 			@ErrCode = 9113
 		return
 	END

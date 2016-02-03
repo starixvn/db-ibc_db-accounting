@@ -26,6 +26,7 @@ AS
 		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
 		- 20150904@Helen: commission setting for MO [Redmine #41470]
 		- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
+		- 20160201@Billy: Apply for AllBet product - [Redmine: #51590]
 	Param's Explanation:
 	• @ErrCode:
 		= 0: Transaction recorded successfully.
@@ -222,7 +223,7 @@ BEGIN
 	SELECT @mIsInternal = IsInternal FROM CustMaster with (nolock) WHERE custid = @mrecommend
 	IF ISNULL(@sIsInternal, 0) = 1 AND ISNULL(@mIsInternal, 0) = 0
 	BEGIN
-		SELECT @ErrMsg = 'Error occurs. Cannot move normal(betting) master to new INTernal super.',
+		SELECT @ErrMsg = 'Error occurs. Cannot move normal(betting) master to new internal super.',
 			@ErrCode = 105					 
 		RETURN
 	END
@@ -355,11 +356,8 @@ BEGIN
 		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
 		WHERE Sporttype = @DCSSportType
 		
-		SELECT @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': master is synchronized '
-				+ @DCSSportName
-				+ ' but new super is not synchronized '
-				+ @DCSSportName
-				+ '.',
+		SELECT @ErrMsg	= 'Error super ' + @supername + ', master ' + @Mastername 
+						+ ': Master has setting of ' + @DCSSportName + ' but new super doesn''t have setting of ' + @DCSSportName + '.',
 			@ErrCode = 9113
 		return
 	END
@@ -1025,9 +1023,65 @@ BEGIN
 	--		@ErrCode = 210
 	--	return
 	--END
+	
+
+	-- Check Max Win Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllaM.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaS WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Agent AS cwllaM WITH(NOLOCK)
+			ON	cwllaM.SportType = cwllaS.SportType
+			AND	cwllaM.BetType = cwllaS.BetType
+			AND	cwllaS.CustId = @srecommend
+			AND	cwllaM.CustId = @mrecommend
+	WHERE	cwllaS.MaxWinLimit <> 0
+		AND	cwllaS.MaxWinLimit < cwllaM.MaxWinLimit
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Super ' + @supername + ', master ' + @mastername 
+						+ ': The super''s Max Win Limit for the product ' + @DCSSportName + ' is less than the master''s Max Win Limit.'
+			,	@ErrCode = 9119
+	END
+
+	-- Check Max Loss Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllaM.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaS WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Agent AS cwllaM WITH(NOLOCK)
+			ON	cwllaM.SportType = cwllaS.SportType
+			AND	cwllaM.BetType = cwllaS.BetType
+			AND	cwllaS.CustId = @srecommend
+			AND	cwllaM.CustId = @mrecommend
+	WHERE	cwllaS.MaxLossLimit <> 0
+		AND	cwllaS.MaxLossLimit < cwllaM.MaxLossLimit
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Super ' + @supername + ', master ' + @mastername 
+						+ ': The super''s Max Loss Limit for the product ' + @DCSSportName + ' is less than the master''s Max Loss Limit.'
+			,	@ErrCode = 9120
+	END
+
 
 END
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerCheckMoveMaster] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerCheckMoveMaster] TO [vnteam] AS [dbo]
 GO
