@@ -1,3 +1,5 @@
+Use bodb02
+GO
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate smalldatetime,
 	@todate   smalldatetime,
@@ -433,7 +435,6 @@ BEGIN
 			AND w.Sporttype = s.Sporttype 
 			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
 	GROUP BY w.winlostdate, w.Sporttype, w.ProductId, w.SubProduct
-
 
 	UPDATE e 
 	SET ProductName = CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE p.ProductName END
