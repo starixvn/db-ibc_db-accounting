@@ -20,6 +20,13 @@ AS
 	*/
 	SET NOCOUNT ON
 
+	-- Get sport bettype
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType)
+		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4, @ProductID = 6
+
+	DELETE @SportBettype WHERE bettype = 72
+
 	
 	SELECT	71 bettype,
 			currency,
@@ -31,10 +38,9 @@ AS
 			isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*bettrans.actualrate),0) as LineTotal			
 	FROM	bettrans14 bettrans with (NOLOCK) 
 	WHERE	winlostdate = @winlostdate 
-			AND ruben = 1 
-			AND (bettype in (71, 72) OR bettype BETWEEN 2101 AND 2399)
-			AND matchid IN (0, 71, 208, 209, 210)
-			AND status NOT in ('VOID','REJECT','done')
+			--AND ruben = 1 
+			AND bettype IN (SELECT Bettype FROM @SportBettype)
+			--AND status NOT in ('VOID','REJECT','done')
 			AND statusID NOT IN (101,102,121)
 	GROUP BY currency, currencyName 
 	ORDER BY currency
