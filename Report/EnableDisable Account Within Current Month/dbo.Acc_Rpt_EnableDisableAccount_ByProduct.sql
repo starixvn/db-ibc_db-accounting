@@ -15,9 +15,12 @@ AS
 		- 20150609@Kos: Separate CustDB to DBCUST server (Move SP to DBACC.bodb02)
 		- 20150828@Jim: support GoldDeluxe & Metric Gaming(#40262)
 		- 20150828@Jim: support Colossus Bet (#42608)
+		- 20151215@Percy: support Cockfighting [Redmine: #49027]
+		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
+
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
-	  + {251:Casino, 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
+	  + {251:Casino (include: 251, 208, 209, 210), 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
 */  
 BEGIN
 	SET NOCOUNT ON
@@ -62,6 +65,9 @@ BEGIN
 			WHEN @sportType = 255 THEN ci.DisableGoldDeluxe
 			WHEN @sportType = -1  THEN ci.DisableSuperLive
 			WHEN @sportType = 204 THEN ci.DisableColossusBet
+			WHEN @SportType = 206 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
 	JOIN dbo.CustSuper cs WITH(NOLOCK) ON ci.custid = cs.custid AND cs.IsInternal = 0
@@ -216,7 +222,7 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.Enabled = 1             
 	END
-	IF @sportType = 251
+	IF @sportType IN (251)
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -361,7 +367,45 @@ BEGIN
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.Enabled = 1             
-	END	
+	END
+	-- Cockfighting
+	IF @sportType = 206
+    BEGIN      
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+			 FROM CustProductStatus
+			 WHERE custid = ci.custid)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3
+		WHERE ci.Enabled = 1 
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+			 FROM CustProductStatus
+			 WHERE custid = ci.custid)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2
+		WHERE ci.Enabled = 1 
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			ci.roleid,
+			(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+			 FROM CustProductStatus
+			 WHERE custid = ci.custid)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
+		WHERE ci.Enabled = 1              
+	END
 
 	--Return result
 	SELECT cust.custid,cust.username,sp.SuperStatus as IsDisable,e.currency,
@@ -391,8 +435,10 @@ BEGIN
 	DROP TABLE #FiltedCreditSuper
 	DROP TABLE #FiltedDownlineAcc
 END
+GO
 
+GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet]
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [vnteam] AS [dbo]
 GO
-GRANT VIEW definition ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO vnteam

@@ -9,6 +9,7 @@ AS
   
  Revisions:
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
 
 */
 SELECT
@@ -30,49 +31,8 @@ UNION ALL
 SELECT
 	ProductID
 	,ProductName
-FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
-WHERE ProductID IN (17)
-UNION ALL
-SELECT
-	ProductID
-	,ProductName
-FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
-WHERE ProductID IN (17)
-UNION ALL
-SELECT
-	ProductID
-	,ProductName
-FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
-WHERE ProductID IN (17)
-UNION ALL
-SELECT
-	ProductID
-	,ProductName
-FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
-WHERE ProductID IN (17)
-UNION ALL
-SELECT
-	ProductID
-	,ProductName
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (14,15)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+WHERE ProductID IN (14,15,19)
 GO
 
 GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]

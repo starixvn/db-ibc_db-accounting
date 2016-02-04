@@ -4,7 +4,7 @@ AS
 	/*	Creator: Phuong Dao
 		Date: 2009-05-06
 		Task: Report 2A for Casino 
-		DB:  DB06.bodb02
+		DB: DBACC/bodb02
 		Original: 
 	
 		History:
@@ -13,6 +13,8 @@ AS
 			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
 			- 20130703@Kathy: Update matchid for RnG Casino (71) 
 			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			- 20160127@Percy: Expand new range RNG Casino [Redmine: #49134]
+
 		Explanation's Param:
 
 	*/
@@ -29,9 +31,8 @@ AS
 	FROM	bettrans with (NOLOCK) 
 	WHERE	winlostdate = @winlostdate 
 			AND ruben = 1 
-			AND bettrans.bettype in (71, 72)		     						--20120405@Hurri
-			AND bettrans.matchid IN (0, 71)
-			--AND status NOT in ('VOID','REJECT','done')
+			AND (bettype in (71, 72) OR bettype BETWEEN 2101 AND 2399)
+			AND matchid IN (0, 71, 208, 209, 210)
 			AND statusID NOT IN (101,102,121)
 	GROUP BY --bettype, 
 		currency, currencyName 
@@ -42,3 +43,4 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostCA_Details] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostCA_Details] TO [VNTeam]
+GO
