@@ -1,3 +1,8 @@
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
 	@agentname     VARCHAR(40)
   , @membername    VARCHAR(40)

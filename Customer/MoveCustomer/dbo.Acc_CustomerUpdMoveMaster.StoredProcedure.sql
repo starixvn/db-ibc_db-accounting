@@ -1,14 +1,8 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_CustomerUpdMoveMaster]    Script Date: 06/10/2015 11:37:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveMaster    Script Date: 8/21/2014 3:12:19 PM ******/
-
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdMoveMaster    Script Date: 8/21/2014 2:58:11 PM ******/
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMaster]
     @supername    VARCHAR(40),
     @mastername VARCHAR(40),

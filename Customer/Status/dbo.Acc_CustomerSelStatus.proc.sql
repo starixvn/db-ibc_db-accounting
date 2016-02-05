@@ -87,7 +87,7 @@ Param's Explanation:
 	SET @LimitPerIP = 0
 	SET @SelectedBetting = 0
 	SET @IsInternal = 0
-	
+
 	IF @roleid = 4 --super
 	BEGIN
 		SELECT 
@@ -142,7 +142,7 @@ Param's Explanation:
 			SET @IsIMBC = 1
 			
 	END
-	
+
 	--Get Internal status
 	/*
 	SELECT @IsInternal = CASE @roleid WHEN 4 THEN (SELECT isnull(IsInternal, 0) FROM custSuper WITH (NOLOCK) WHERE custid = @custid)
@@ -261,6 +261,7 @@ Param's Explanation:
 			-- For AllBet
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_AllBet), 1) AS DisableAllBet,
 			CAST(CASE WHEN @IsHidden_AllBet = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_AllBet), 1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideAllBet,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_AllBet), 0) AS SyncedAllBet,
 
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
 			ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
@@ -310,6 +311,7 @@ Param's Explanation:
 			ci.HideColossusBet,
 			cps.bitmapIsDisabled,
 			cps.bitmapIsHidden,
+			cps.bitmapHasSynced,
 			ci.DisableMicrogameLC,
 			ci.DisableSuperLive,
 			ci.DisableMicrogameRNG
