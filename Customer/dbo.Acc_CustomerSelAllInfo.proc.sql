@@ -75,6 +75,7 @@ Revisions:
 	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #48836]
 	- 20160108@Percy: Expand new bettype for RNG Casino [Redmine: #48285]
 	- 20160202@Percy: Support new sport Cricket [Redmine: #50028]
+	- 20160215@Percy: Support new product AllBet [Redmine: #50588]
 	- 20160329@Francis: Change to use inline function instead of table variable to enhance performance
 	
 Param's Explanation:
@@ -182,15 +183,23 @@ BEGIN
 	SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	/* End get sport bettype */
 	
-	DELETE @SportBettype WHERE ProductID NOT IN (6, 11, 13, 17, 19) -- RNG Casino, AG-Casino, MGC-LC, MGC-RNG, Cock Fighting
-						   AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') -- MG-Superlive
+	DELETE @SportBettype
+	WHERE ProductID
+		NOT IN (6,  -- RNG Casino
+				11, -- AG-Casino
+				13, -- MGC-LC
+				17, -- MGC-RNG
+				19, -- Cock Fighting
+				21  -- AllBet
+				)
+			AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') -- MG-Superlive
 	
 	DELETE @SportBettype WHERE ProductID = 6 AND SubProduct = '' -- Old RNG Casino: 71, 72
 
-	-- Tickets not in bettrans: AG-Casino, MGC-RNG
+	-- Tickets not in bettrans: RNG Casino, AG-Casino, MGC-RNG, AllBet
 	UPDATE @SportBettype
 	SET IsUsedBettrans = 1
-	WHERE ProductID NOT IN (6,11,17)
+	WHERE ProductID NOT IN (6,11,17, 21)
 	
 	-- Tickets running in translog: MG-Superlive, MGC-LC, Cockfighting
 	UPDATE @SportBettype
