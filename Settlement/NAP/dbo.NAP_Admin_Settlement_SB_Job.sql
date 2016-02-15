@@ -1,10 +1,3 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_SB_Job]    Script Date: 09/11/2014 17:28:00 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_SB_Job]
 AS
 /*
@@ -21,6 +14,7 @@ AS
 		- 20140528@Kathy: rotate calculating sports in queue
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160106@Kathy: Integrate Cricket [Redmine:#49727]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -42,24 +36,33 @@ BEGIN
 		,@ActionId		INT
 		,@duration		INT
 		,@pre_Sporttype SMALLINT
+		,@sporttype		SMALLINT
 
-	SELECT TOP 1 @duration	= DATEDIFF(ms, execTime, GETDATE())
-		,@keyId				= keyid
-		,@matchid			= matchid
-	FROM Single_Calculate_Queue WITH (NOLOCK)
-	WHERE IsCalculating = 1
+	SELECT	TOP 1 @duration	= DATEDIFF(ms, execTime, GETDATE())
+			,@keyId				= keyid
+			,@matchid			= matchid
+			,@sporttype			= SportType
+			,@sqlCommand		= sqlCommand
+	FROM	Single_Calculate_Queue WITH (NOLOCK)
+	WHERE	IsCalculating = 1
 
-	IF isnull(@duration, 0) > 300000 -- 5 minutes
+	IF ISNULL(@duration, 0) > 300000 -- 5 minutes
 	BEGIN
-		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
-		SET IsCalculating	= 0
-			,execTime		= NULL
-		WHERE keyid = @keyId
+		IF @sporttype = 50 AND @sqlCommand = ''
+			UPDATE	Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
+			SET		IsCalculating	= 3
+			WHERE	keyid = @keyId
+		ELSE
+			UPDATE	Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
+				SET	IsCalculating	= 0
+					,execTime		= NULL
+			WHERE	keyid = @keyId
 	END
 	ELSE IF EXISTS (
-			SELECT TOP 1 1
-			FROM Single_Calculate_Queue WITH (NOLOCK)
-			WHERE IsCalculating = 1
+			SELECT	TOP 1 1
+			FROM	dbo.Single_Calculate_Queue WITH (NOLOCK)
+			WHERE	IsCalculating = 1
+					AND sqlCommand <> ''
 			)
 	BEGIN		
 		RETURN
@@ -69,16 +72,16 @@ BEGIN
 		,@ErrMsg	= ''
 
 	-- get sporttype of previous calculated match
-	SELECT TOP 1 @pre_Sporttype = SportType
-	FROM Single_Calculate_Queue WITH (NOLOCK)
-	WHERE IsCalculating IN (2, 3)
+	SELECT	TOP 1 @pre_Sporttype = SportType
+	FROM	Single_Calculate_Queue WITH (NOLOCK)
+	WHERE	IsCalculating IN (2, 3)
 	ORDER BY execTime DESC
 
 	-- giving priority to calcualate the match which has sporttype <> previous calculated match
 	SET @keyId = (
-			SELECT TOP 1 keyid
-			FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
-			WHERE IsCalculating = 0
+			SELECT	TOP 1 keyid
+			FROM	dbo.Single_Calculate_Queue WITH (NOLOCK)
+			WHERE	IsCalculating = 0
 			ORDER BY CASE 
 						WHEN SportType = @pre_Sporttype THEN 1
 						ELSE 0
@@ -88,15 +91,15 @@ BEGIN
 				,keyid
 			)
 
-	UPDATE TOP (1) dbo.Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
-	SET IsCalculating	= 1
-		,execTime 		= GETDATE()
-		,@MatchId 		= matchid
-		,@Adminid 		= AdminId
-		,@IP			= IP
-		,@Action		= Action
-		,@sqlCommand	= sqlCommand
-	WHERE keyid = @keyId
+	UPDATE	TOP (1) dbo.Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
+		SET IsCalculating	= 1
+			,execTime 		= GETDATE()
+			,@MatchId 		= matchid
+			,@Adminid 		= AdminId
+			,@IP			= IP
+			,@Action		= Action
+			,@sqlCommand	= sqlCommand
+	WHERE	keyid = @keyId
 
 	IF @@ROWCOUNT = 0 RETURN
 
@@ -114,21 +117,21 @@ BEGIN
 	IF (ISNULL(@ErrCode, 0) <> 0 OR ISNULL(@ErrMsg, '') <> '' ) -- calculate failed set calculating = 0 and back
 		AND ISNULL(@ErrCode, 0) <> 1000006 --- 1000006: Betfair & Betdaq - Warning message
 	BEGIN
-		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
-		SET IsCalculating	= 0
-			,TryCount		= TryCount + 1
-		WHERE keyid = @keyId
+		UPDATE	Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
+			SET IsCalculating	= 0
+				,TryCount		= TryCount + 1
+		WHERE	keyid = @keyId
 
 		IF NOT EXISTS (
 				SELECT 1
-				FROM Settled_Message WITH (NOLOCK)
-				WHERE AdminId	= @AdminId
-				AND MatchId		= @MatchId
-				AND Action		= @Action
-				AND @ErrMsg		= CASE 
-									WHEN @ErrCode = 1000000 THEN Warning
-									ELSE Message
-								  END
+				FROM	Settled_Message WITH (NOLOCK)
+				WHERE	AdminId	= @AdminId
+						AND MatchId		= @MatchId
+						AND Action		= @Action
+						AND @ErrMsg		= CASE 
+											WHEN @ErrCode = 1000000 THEN Warning
+											ELSE Message
+											END
 				)
 		BEGIN
 			INSERT INTO Settled_Message (
@@ -155,11 +158,11 @@ BEGIN
 					END
 		END
 
-		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
-		SET IsCalculating	= 3
-			,duration		= DATEDIFF(ms, execTime, GETDATE())
-		WHERE keyid = @keyId
-			AND TryCount = 3
+		UPDATE	Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
+			SET IsCalculating	= 3
+				,duration		= DATEDIFF(ms, execTime, GETDATE())
+		WHERE	keyid = @keyId
+				AND TryCount = 3
 	END
 	ELSE
 	BEGIN
@@ -183,12 +186,12 @@ BEGIN
 				,NULL
 		END
 
-		UPDATE Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
-		SET IsCalculating	= 2
-			,duration		= DATEDIFF(ms, execTime, GETDATE())
-		WHERE keyid = @keyId
+		UPDATE	Single_Calculate_Queue WITH (ROWLOCK, UPDLOCK)
+			SET	IsCalculating	= 2
+				,duration		= DATEDIFF(ms, execTime, GETDATE())
+		WHERE	keyid = @keyId
 
-		SELECT @ActionId	= CASE 
+		SELECT	@ActionId	= CASE 
 									WHEN @Action = 'CAL-HT'			THEN 2
 									WHEN @Action = 'CAL-FT'			THEN 3
 									WHEN @Action = 'CAL'			THEN 4
@@ -208,15 +211,15 @@ BEGIN
 									WHEN @Action = 'Refund-LG'		THEN 22 -- Refund all LG
 									WHEN @Action = 'UNDO'			THEN 0
 									ELSE - 1
-							  END
-			,@fth 			= m.finalhomescore
-			,@fta 			= m.finalawayscore
-			,@hth 			= m.hthomescore
-			,@hta 			= m.htawayscore
-			,@GoalRecord	= m.GoalRecord
-			,@BetStatus		= m.betstatus
-		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
-		WHERE m.matchid = @MatchId
+									END
+				,@fth 			= m.finalhomescore
+				,@fta 			= m.finalawayscore
+				,@hth 			= m.hthomescore
+				,@hta 			= m.htawayscore
+				,@GoalRecord	= m.GoalRecord
+				,@BetStatus		= m.betstatus
+		FROM	DBPRO.BODB02.dbo.match m WITH (NOLOCK)
+		WHERE	m.matchid = @MatchId
 
 		IF @ActionId <> - 1
 		BEGIN
@@ -234,4 +237,12 @@ BEGIN
 END
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_SB_Job] TO [vnteam] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_SB_Job] TO [vnteam]
+GO 
