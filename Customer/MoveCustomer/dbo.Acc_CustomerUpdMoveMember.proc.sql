@@ -66,6 +66,7 @@ Revisions:
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151016@Helen: Data Type Error - [Redmine - 45677] 
 	- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
+	- 20160205@Billy:	Apply for AllBet product - [Redmine: #51590]
 	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
 	
 Param's Explanation:
@@ -475,11 +476,8 @@ BEGIN
 		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
 		WHERE Sporttype = @DCSSportType
 		
-		SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': member is synchronized '
-				+ @DCSSportName
-				+ ' but new agent is not synchronized '
-				+ @DCSSportName
-				+ '.',
+		SELECT @ErrMsg	= 'Error agent ' + @agentname + ', member ' + @membername
+						+ ': Member has setting of ' + @DCSSportName + ' but new agent doesn''t have setting of ' + @DCSSportName + '.',
 			@ErrCode = 9113
 		return
 	END
@@ -2473,6 +2471,66 @@ BEGIN
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
     END
+
+	
+	-- Update Stake Level for moved member
+	DECLARE	@updateStakeLevel	TABLE (
+									SportType				SMALLINT
+								,	BetType					INT
+								,	StakeLevelList			VARCHAR(200)
+								,	StakeLevelList_new		VARCHAR(200)
+								,	StakeLevelList_upline	VARCHAR(200)
+								);
+	
+	INSERT INTO	@updateStakeLevel
+		(	SportType     , BetType     , StakeLevelList     , StakeLevelList_new, StakeLevelList_upline)
+	SELECT	csla.SportType, csla.BetType, cslm.StakeLevelList, ''                , csla.StakeLevelList
+	FROM		dbo.CustStakeLevel_Agent AS csla WITH (NOLOCK)
+	INNER JOIN	dbo.CustStakeLevel_Member AS cslm WITH (NOLOCK)
+			ON	cslm.SportType = csla.SportType
+			AND	cslm.BetType = csla.BetType
+			AND	csla.CustID = @recommend
+			AND	cslm.CustID = @custid
+	
+	UPDATE	usl WITH (ROWLOCK, UPDLOCK)
+	SET	usl.StakeLevelList_new = fsls.String
+	FROM		@updateStakeLevel AS usl
+	INNER JOIN	dbo.CustStakeLevel_Agent AS cslaOld WITH (NOLOCK)
+			ON	cslaOld.SportType = usl.SportType
+			AND	cslaOld.BetType = usl.BetType
+	INNER JOIN	dbo.CustStakeLevel_Agent AS cslaNew WITH (NOLOCK)
+			ON	cslaNew.SportType = cslaOld.SportType
+			AND	cslaNew.BetType = cslaOld.BetType
+			AND	cslaNew.CustID = @mrecommend
+			AND	cslaOld.CustID = @mrecommend_old
+	CROSS APPLY	dbo.f_StakeLevelcorrectString(cslaOld.StakeLevelList, cslaNew.StakeLevelList) AS fslsRemoved
+	CROSS APPLY dbo.f_StakeLevelcorrectString(usl.StakeLevelList, fslsRemoved.String) AS fsls
+
+	UPDATE	usl WITH (ROWLOCK, UPDLOCK)
+	SET	usl.StakeLevelList_new = sr.LowestStakeLevel
+	FROM	@updateStakeLevel AS usl
+	CROSS APPLY	(
+		SELECT TOP(1) ISNULL(CONVERT(VARCHAR(200), sl.StakeLevelID), '') AS LowestStakeLevel
+		FROM (
+			SELECT	CAST(val AS INT) AS val
+			FROM	dbo.strSplit(usl.StakeLevelList_Upline, ',')
+		) AS ss
+		INNER JOIN	dbo.StakeLevel AS sl WITH(NOLOCK)
+				ON	ss.val = sl.StakeLevelID
+		WHERE	sl.MinStake <> 0
+			AND	sl.MaxStake <> 0
+		ORDER BY	sl.MaxStake, sl.MinStake
+	) sr
+	WHERE	usl.StakeLevelList_new = ''
+
+	UPDATE	cslm
+	SET	cslm.StakeLevelList = usl.StakeLevelList_new
+	FROM	dbo.CustStakeLevel_Member AS cslm
+	INNER JOIN	@updateStakeLevel AS usl
+			ON	usl.SportType = cslm.SportType
+			AND	usl.BetType = cslm.BetType
+	WHERE	cslm.CustID = @custid
+	
 
     DECLARE @LogSPData VARCHAR(8000)
     SELECT  @LogSPData = '<Acc_CustomerUpdMoveMember  MemberName="' + @membername + '" OldAgentId="'
