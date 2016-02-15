@@ -18,6 +18,9 @@ AS
 	DB: DBAGE.bodb02
 	Original:
 	Revisions:
+		- 20151012@Kos: Support AG Casino Single Wallet
+		- 20160215@Kos: Support AllBet [#Redmine: 50864]
+
 	Parameters:
 		- @TransType
 			+ 0 : All (DRAW/WON/LOSE/Reject/Void/Refund/Running/Waiting)
@@ -28,6 +31,14 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @SportBettype TABLE(ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
+
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
+	DELETE FROM @SportBettype
+	WHERE ProductID NOT IN (11, 21)	-- Support AG Casino, AllBet only
 
 	DECLARE @tmpStatus TABLE (statusId TINYINT)
 
@@ -92,8 +103,17 @@ BEGIN
 			(blc.acomm - blc.comm) AS acomm,
 			(blc.comm - blc.playercomm) AS comm,
 			blc.ip,
-			blc.transdesc
+			blc.transdesc,
+			CASE
+				WHEN sbt.productID IN (21) THEN blc.TranId3rd
+				ELSE ''
+			END AS BetCheck,
+			CASE
+				WHEN sbt.productID IN (21) THEN blc.GameId3rd
+				ELSE ''
+			END AS MatchCode
 		FROM dbo.bettransLC AS blc WITH (NOLOCK)
+			INNER JOIN @SportBettype AS sbt ON blc.gameID = sbt.Bettype
 		WHERE blc.custid = @CustId 
 			AND blc.RefNo = @RefNo
 			AND blc.statusID IN (SELECT statusId FROM @tmpStatus)
@@ -126,8 +146,17 @@ BEGIN
 			(blc.acomm - blc.comm) AS acomm,
 			(blc.comm - blc.playercomm) AS comm,
 			blc.ip,
-			blc.transdesc
+			blc.transdesc,
+			CASE
+				WHEN sbt.productID IN (21) THEN blc.TranId3rd
+				ELSE ''
+			END AS BetCheck,
+			CASE
+				WHEN sbt.productID IN (21) THEN blc.GameId3rd
+				ELSE ''
+			END AS MatchCode
 		FROM dbo.bettransLC14 AS blc WITH (NOLOCK)
+			INNER JOIN @SportBettype AS sbt ON blc.gameID = sbt.Bettype
 		WHERE blc.custid = @CustId AND blc.RefNo = @RefNo
 	END
 	ELSE IF EXISTS ( SELECT 1 FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK) WHERE transid = @RefNo )
@@ -158,8 +187,17 @@ BEGIN
 			(blc.acomm - blc.comm) AS acomm,
 			(blc.comm - blc.playercomm) AS comm,
 			blc.ip,
-			blc.transdesc
+			blc.transdesc,
+			CASE
+				WHEN sbt.productID IN (21) THEN blc.TranId3rd
+				ELSE ''
+			END AS BetCheck,
+			CASE
+				WHEN sbt.productID IN (21) THEN blc.GameId3rd
+				ELSE ''
+			END AS MatchCode
 		FROM DBARC.bodb_Archive.dbo.bettransLC_bk AS blc WITH (NOLOCK)
+			INNER JOIN @SportBettype AS sbt ON blc.gameID = sbt.Bettype
 		WHERE blc.custid = @CustId AND blc.RefNo = @RefNo
 	END
 END

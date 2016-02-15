@@ -556,10 +556,7 @@ BEGIN
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					CASE
-						WHEN s.ProductID = 12 THEN b.betteam
-						ELSE ''
-					END AS betteam,
+					'' AS betteam,
 					b.spositiontaking,
 					b.mpositiontaking,
 					b.apositiontaking,
@@ -1127,10 +1124,7 @@ BEGIN
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					CASE
-						WHEN s.ProductID IN (12, 13, 19) THEN b.GameID3rd
-						ELSE ''
-					END AS betteam,
+					'' AS betteam,
 					b.spositiontaking,
 					b.mpositiontaking,
 					b.apositiontaking,
@@ -2022,14 +2016,11 @@ BEGIN
 						ELSE 0
 					END AS OddsType,
 					b.status,
-					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,  
+					CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
 					b.stake,
 					b.actual_stake,
 					b.transdate,
-					CASE
-						WHEN s.ProductID = 12 THEN b.betteam
-						ELSE ''
-					END AS betteam,
+					'' AS betteam,
 					b.spositiontaking,
 					b.mpositiontaking,
 					b.apositiontaking,
