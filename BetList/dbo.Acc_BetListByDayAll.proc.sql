@@ -2259,6 +2259,7 @@ BEGIN
 				b.matchid,
 				b.transdesc,
 				s.ProductID
+			OPTION (RECOMPILE)
 		END
 
 		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- yesterday and today running ticket
@@ -2361,6 +2362,7 @@ BEGIN
 				b.matchid,
 				b.transdesc,
 				s.ProductID
+			OPTION (RECOMPILE)
 		END
 
 		-- AG Casino, AllBet
@@ -2542,8 +2544,9 @@ BEGIN
 				b.betfrom,
 				b.comstatus,
 				s.ProductID
+			OPTION (RECOMPILE)
 		END
-			
+
 		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- yesterday and today running ticket
 			AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
 				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
@@ -2638,6 +2641,7 @@ BEGIN
 				b.betfrom,
 				b.comstatus,
 				s.ProductID
+			OPTION (RECOMPILE)
 		END
 
 		-- Colossus Bet
