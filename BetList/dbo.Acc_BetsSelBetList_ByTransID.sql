@@ -1188,10 +1188,9 @@ BEGIN
 							AND (ProductID = 17 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
-				IF @WinlostDate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
-					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- yesterday and today
+				IF @WinlostDate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
 				BEGIN
-					-- Yesterday and today running ticket
+					-- Today running ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -1287,7 +1286,7 @@ BEGIN
 						s.ProductID
 					OPTION (RECOMPILE)
 
-					-- Yesterday and today settled ticket
+					-- Today settled ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,
@@ -1389,7 +1388,7 @@ BEGIN
 				END
 				ELSE
 				BEGIN
-					-- Not yesterday and today settled ticket
+					-- Not today settled ticket
 					INSERT INTO @Data
 					SELECT
 						b.bettype,

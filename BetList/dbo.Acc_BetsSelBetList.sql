@@ -100,7 +100,7 @@ AS
 */
 
 BEGIN
-	SET NOCOUNT ON  
+	SET NOCOUNT ON
 
 	DECLARE @tempBettype INT
 	
@@ -2670,6 +2670,7 @@ BEGIN
 	DROP TABLE #BetListDetailData
 	DROP TABLE #SportBettype
 END
+
 
 
 

@@ -1688,7 +1688,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)		-- not yesterday and today
+				AND @fromdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- not today
 				AND (s.ProductId = 17
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 
@@ -1760,8 +1760,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
-					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
+				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
 				AND (s.ProductId = 17
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID = 0
@@ -1855,8 +1854,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
-					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
+				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
 				AND (s.ProductId = 17
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (111, 112, 113, 103)
