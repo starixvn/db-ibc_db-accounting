@@ -890,7 +890,7 @@ INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
 			
 			-- Correct Stake Level using ExecRep
 			EXECUTE	dbo.Acc_DynamicCustSetting3rd_02 
-						@CustID			= @recommend
+						@CustID			= @mrecommend
 					,	@RoleID			= 3
 					,	@StakeLevel		= @StakeLevelExecRep;
 			

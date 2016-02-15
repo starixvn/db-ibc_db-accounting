@@ -2492,7 +2492,7 @@ BEGIN
 			AND	csla.CustID = @recommend
 			AND	cslm.CustID = @custid
 	
-	UPDATE	usl WITH (ROWLOCK, UPDLOCK)
+	UPDATE	usl
 	SET	usl.StakeLevelList_new = fsls.String
 	FROM		@updateStakeLevel AS usl
 	INNER JOIN	dbo.CustStakeLevel_Agent AS cslaOld WITH (NOLOCK)
@@ -2506,7 +2506,7 @@ BEGIN
 	CROSS APPLY	dbo.f_StakeLevelcorrectString(cslaOld.StakeLevelList, cslaNew.StakeLevelList) AS fslsRemoved
 	CROSS APPLY dbo.f_StakeLevelcorrectString(usl.StakeLevelList, fslsRemoved.String) AS fsls
 
-	UPDATE	usl WITH (ROWLOCK, UPDLOCK)
+	UPDATE	usl
 	SET	usl.StakeLevelList_new = sr.LowestStakeLevel
 	FROM	@updateStakeLevel AS usl
 	CROSS APPLY	(
@@ -2523,7 +2523,7 @@ BEGIN
 	) sr
 	WHERE	usl.StakeLevelList_new = ''
 
-	UPDATE	cslm
+	UPDATE	cslm WITH (ROWLOCK, UPDLOCK)
 	SET	cslm.StakeLevelList = usl.StakeLevelList_new
 	FROM	dbo.CustStakeLevel_Member AS cslm
 	INNER JOIN	@updateStakeLevel AS usl
