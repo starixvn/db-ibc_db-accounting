@@ -1,4 +1,4 @@
-ALTER  PROCEDURE [dbo].[Acc_Rpt_GamesActive_Products]   
+ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActive_Products]   
  
 AS  
 /*
@@ -10,7 +10,6 @@ AS
  Revisions:
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
-
 */
 SELECT
 	CONVERT(INT,-1) ProductID
@@ -20,7 +19,7 @@ SELECT
 	ProductID
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,4,11,12,13)
+WHERE ProductID IN (3,6,7,8,4,11,12,13)
 UNION ALL
 SELECT
 	ProductID
@@ -34,9 +33,11 @@ SELECT
 FROM dbo.Products WITH (NOLOCK)
 WHERE ProductID IN (14,15,19)
 GO
-
+GRANT ALTER ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT CONTROL ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
+GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_GamesActive_Products] TO [vnteam] AS [dbo]
 GO
