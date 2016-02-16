@@ -51,7 +51,7 @@
 		- 20151221@Sophia: Exclude Cockfighting from bettrans table in case there is running ticket on bettrans [Redmine: #48602]
 		- 20160108@Sophia: Change request for Colossus bet [Redmin: #49967]
 		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
-		- 20160215@Sophia: Change datatype to datetime instead of Smalldatetime
+		- 20160215@Sophia: Change datatype to datetime instead of Smalldatetime [Redmine: #52130]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
