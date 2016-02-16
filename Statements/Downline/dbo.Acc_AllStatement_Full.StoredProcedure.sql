@@ -53,6 +53,7 @@
 		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
 		- 20160215@Sophia: Change datatype to datetime instead of Smalldatetime [Redmine: #52130]
 		- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
+		- 20160216@Sophia: Apply Allbet [Redmine: #50588]
 		- 20160404@Sophia: Exclude GrandPrize out of ACCUMULATED BALANCE [Redmine: #55397]
 		
 	Param explanation : 
@@ -108,14 +109,14 @@ SELECT @Yesterday =  CONVERT(Date,DATEADD(DD, -1, GETDATE()))
 		INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
 		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5 
 	
-		DELETE @SportBettype WHERE	ProductID NOT IN (11, 13, 17, 19, 1, 6) -- AG-Casino, MGC-LC, MGC-RNG, Cockfighting
+		DELETE @SportBettype WHERE	ProductID NOT IN (11, 13, 17, 19, 1, 6, 21) -- AG-Casino, MGC-LC, MGC-RNG, Cockfighting, AllBet
 									OR (ProductId = 1 AND SubProduct <> 'MG-Superlive') --MG-Superlive
 									OR (ProductID = 6 AND SubProduct = '') --- Old RNG Casino 
 
-		-- Tickets not check in bettrans on Yesterday and Today: AG-Casino, MGC-RNG, MBC-OneRnG
+		-- Tickets not check in bettrans on Yesterday and Today: AG-Casino, MGC-RNG, MBC-OneRnG, AllBet
 		UPDATE @SportBettype
 		SET IsUsedBettrans = 1
-		WHERE ProductID NOT IN (11, 17, 6)
+		WHERE ProductID NOT IN (11, 17, 6, 21)
 	
 		-- Tickets running in translog and exlude from bettrans: MG-Superlive, MGC-LC, Cock Fighting
 		UPDATE @SportBettype
@@ -639,7 +640,7 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
-			and mrecommEND=@custid 
+			and mrecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
 			---AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 			AND (Winlostdate < @Yesterday 
@@ -663,7 +664,7 @@ BEGIN
 			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
-			and mrecommEND=@custid 
+			and mrecommend=@custid 
 			and winlostdate between @_FromDate and @_ToDate 
 			---AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
 			AND (Winlostdate < @Yesterday 
@@ -688,7 +689,7 @@ BEGIN
 				0 
 			FROM bettransLC WITH (NOLOCK) 
 			WHERE  
-				mrecommEND=@custid 
+				mrecommend=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
@@ -707,7 +708,7 @@ BEGIN
 				0  
 			FROM bettransLC  WITH (NOLOCK)  
 			WHERE 
-				mrecommEND=@custid 
+				mrecommend=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
@@ -728,7 +729,7 @@ BEGIN
 				0 
 			FROM bettransRNG WITH (NOLOCK) 
 			WHERE  
-				mrecommEND=@custid 
+				mrecommend=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
@@ -747,7 +748,7 @@ BEGIN
 				0  
 			FROM bettransRNG WITH (NOLOCK)  
 			WHERE 
-				mrecommEND=@custid 
+				mrecommend=@custid 
 				and winlostdate BETWEEN @_FromDate and @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate 
