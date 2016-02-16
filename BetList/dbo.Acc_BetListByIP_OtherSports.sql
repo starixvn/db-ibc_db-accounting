@@ -66,6 +66,7 @@ AS
 		- 20151231@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160121@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
+		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
