@@ -70,6 +70,7 @@ Revisions:
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
+	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
 	
 Param's Explanation:
 • @ErrCode:
@@ -164,6 +165,22 @@ BEGIN
       FROM    custinfo WITH(NOLOCK) 
     WHERE    username = @mastername AND roleid = 3
 
+	-- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa
+	DECLARE @_SiteSuper VARCHAR(10),@_SiteMaster VARCHAR(10)
+	
+	SELECT @_SiteSuper = site
+	FROM dbo.Customer WITH(NOLOCK)
+	WHERE CustID = @srecommend
+	
+	SELECT @_SiteMaster = site
+	FROM dbo.Customer WITH(NOLOCK)
+	WHERE CustID = @mrecommend
+	
+	IF (@_SiteSuper = 'IMBC' OR @_SiteMaster = 'IMBC') AND @_SiteSuper <> @_SiteMaster
+	BEGIN
+		SELECT @ErrMsg = 'Not allow to move customer between MBC and IMBC sites!',@ErrCode = 911								
+		RETURN	
+	END
 
     --Check Allowed downlines 
      EXEC dbo.Acc_CustomerSelCheckAllowedDownlines 

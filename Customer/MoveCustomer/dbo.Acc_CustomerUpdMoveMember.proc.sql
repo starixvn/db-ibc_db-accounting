@@ -61,6 +61,7 @@ Revisions:
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151016@Helen: Data Type Error - [Redmine - 45677] 
 	- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
+	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
 	
 Param's Explanation:
 • @ErrCode:
@@ -223,6 +224,23 @@ BEGIN
      WHERE username = @membername
        AND roleid = 1
 
+	-- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa
+	DECLARE @_SiteAgent_old VARCHAR(10),@_SiteAgent VARCHAR(10)
+	
+	SELECT @_SiteAgent_old = site
+	FROM dbo.Customer WITH(NOLOCK)
+	WHERE CustID = @recommend_old
+	
+	SELECT @_SiteAgent = site
+	FROM dbo.Customer WITH(NOLOCK)
+	WHERE CustID = @recommend
+	
+	IF (@_SiteAgent_old = 'IMBC' OR @_SiteAgent = 'IMBC') AND @_SiteAgent_old <> @_SiteAgent
+	BEGIN
+		SELECT @ErrMsg = 'Not allow to move customer between MBC and IMBC sites!',@ErrCode = 911								
+		RETURN	
+	END
+	
     -- 20130920@Elodie: Add constraint to avoid the insufficient Given Credit of any new super/master/agent being moving to.
     SELECT @aUsedCredit = SUM(credit)
       FROM custinfo WITH(NOLOCK)
