@@ -68,7 +68,7 @@ BEGIN
 		,TransDesc		NVARCHAR(300)
 		,betdaqid		BIGINT
 		,SoldId			BIGINT
-		,MatchStatus	NVARCHAR(50)
+		--,MatchStatus	NVARCHAR(50)
 		,IsDeposit		BIT
 		,IsHideComm		BIT
 		)
@@ -992,7 +992,7 @@ BEGIN
 			,sporttype = m.sporttype
 			,isNeutral = CAST (ISNULL(m.IsNeutral, 0) AS BIT)
 			,showtime = m.showtime
-			,MatchStatus = m.eventstatus
+			--,MatchStatus = m.eventstatus
 			,IsDeposit = CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END
 	FROM	#Data al
 		INNER JOIN CustDB.dbo.custInfo ci WITH(NOLOCK)
@@ -1046,7 +1046,7 @@ BEGIN
 			,winlostdate	
 			,TransDesc		
 			,SoldId			
-			,CASE WHEN bettype = 501 AND STATUS = 'running' AND MatchStatus = 'running' AND IsDeposit = 0 THEN 1 ELSE 0 END AS IsCricket	
+			,CASE WHEN bettype = 501 AND IsDeposit = 0 THEN 1 ELSE 0 END AS IsCricket	
 			,CASE WHEN IsHideComm IS NULL THEN 0 ELSE IsHideComm END AS IsHideComm
 	FROM	#Data
 	ORDER BY GroupID, transid
