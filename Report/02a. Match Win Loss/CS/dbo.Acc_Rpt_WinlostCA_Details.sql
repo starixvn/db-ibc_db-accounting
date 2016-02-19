@@ -4,7 +4,7 @@ AS
 	/*	Creator: Phuong Dao
 		Date: 2009-05-06
 		Task: Report 2A for Casino 
-		DB:  DB06.bodb02
+		DB: DBACC/bodb02
 		Original: 
 	
 		History:
@@ -13,10 +13,19 @@ AS
 			- 20120405@Hurri: Exclude bettype 72 (P2P bet ticket) in the calculation of Casino
 			- 20130703@Kathy: Update matchid for RnG Casino (71) 
 			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+			- 20160127@Percy: Expand new range RNG Casino [Redmine: #49134]
+
 		Explanation's Param:
 
 	*/
 	SET NOCOUNT ON
+
+	-- Get sport bettype
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType)
+		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4, @ProductID = 6
+
+	DELETE @SportBettype WHERE bettype = 72
 
 	SELECT	71 bettype,
 			currency,
@@ -28,10 +37,8 @@ AS
 			isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*bettrans.actualrate),0) as LineTotal			
 	FROM	bettrans with (NOLOCK) 
 	WHERE	winlostdate = @winlostdate 
-			AND ruben = 1 
-			AND bettrans.bettype in (71, 72)		     						--20120405@Hurri
-			AND bettrans.matchid IN (0, 71)
-			--AND status NOT in ('VOID','REJECT','done')
+			--AND ruben = 1 
+			AND bettype IN (SELECT Bettype FROM @SportBettype)
 			AND statusID NOT IN (101,102,121)
 	GROUP BY --bettype, 
 		currency, currencyName 
@@ -42,3 +49,4 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostCA_Details] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostCA_Details] TO [VNTeam]
+GO

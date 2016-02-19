@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_GamesActiveMember]    Script Date: 09/07/2015 15:01:52 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
  @fromdate datetime,  
  @todate datetime,  
  @BalanceUpDay datetime,
@@ -26,7 +19,9 @@ AS
     - 20140909@Daniel: include 3-Games combinations
 	- 20150529@Jim: support GD,MG and apply sport-bettype matrix
 	- 20150710@Jim:  Microgaming integration & Super Balance (Feature #38168)
-	- 20150907@Jim: Integrate CB (#42608) 
+	- 20150907@Jim: Integrate CB (#42608)
+	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
+	 
 Param's Explanation: 
 	+ @ProductList : string, collect ProductID seperate by comma ',' .Eg: @ProductList ='0,3,4,6,7'	
 */  
@@ -50,7 +45,15 @@ SELECT VAL FROM  dbo.strSplit(@ProductList,',')
 INSERT INTO @Product (ProductID,ProductPrefix)
 SELECT ProductID,ProductPrefix
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,4,11,12,13,14,15)
+WHERE ProductID IN (3,6,7,8,4,11,12,13)
+UNION ALL
+SELECT ProductID,ProductPrefix    -- ORDER BY 13, 17
+FROM dbo.Products WITH (NOLOCK)
+WHERE ProductID IN (17)
+UNION ALL
+SELECT ProductID,ProductPrefix
+FROM dbo.Products WITH (NOLOCK)
+WHERE ProductID IN (14,15,19)
 
 SELECT 
 	p.ProductPrefix
@@ -76,7 +79,7 @@ WHERE ProductID = -1
 
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
+EXEC dbo.Acc_SportBettypeMatrix_Sel_UAT1 @mode=5
 
 INSERT INTO @tmpBettype 
 	SELECT CASE p.ProductPrefix  WHEN  'AGCS' THEN 1800
@@ -183,7 +186,11 @@ DROP TABLE #tmpcust
 DROP TABLE #statistic
 DROP TABLE #exProduct 
 DROP TABLE #Result
+
 GO
+
 GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActiveMember] TO [bodbAdminNet] AS [dbo]
 GO
+
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_GamesActiveMember] TO [vnteam] AS [dbo]
+GO

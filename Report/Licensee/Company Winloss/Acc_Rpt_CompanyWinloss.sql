@@ -10,7 +10,7 @@ ALTER PROCEDURE dbo.Acc_Rpt_CompanyWinloss
 AS
 /*	Creator: 20150612@Patrick
 	Task : Get company win loss
-	DB: DB052/bodb02
+	DB: DBAGE/bodb02
 
 	Param's Explanation:
 		@ProductId default value is 0 it mean get all products
@@ -20,6 +20,7 @@ AS
 		- 20150630@Patrick: Remove the UUS line
 		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 		- 20160119@Patrick: Support BetTrade
+		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 
 */
 
@@ -91,12 +92,13 @@ BEGIN
 	ELSE IF @ProductPrefix = 'CS'
     BEGIN
 	   INSERT INTO @SportTypeList(SportType, IsBA)
-	   VALUES(251, 0)
+	   VALUES(251, 0), (208, 0), (209, 0), (210, 0)
 
 	   INSERT INTO @BetTypeList(BetType)
 	   SELECT typeid
 	   FROM bodb02.dbo.bettype WITH (NOLOCK)
 	   WHERE typeid IN (71, 72)
+			OR typeid BETWEEN 2101 AND 2399
 
     END
 	ELSE IF @ProductPrefix = 'KN'
