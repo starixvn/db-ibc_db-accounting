@@ -25,6 +25,7 @@ AS
  Revisions:
 	-20151015@Robert: revise sp
 	- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
+	- 20160222@Robert: Hotfix [Redmine: #52614]
   
  Param's Explanation:
  
@@ -53,8 +54,8 @@ BEGIN
 			SUM((winlost-actual_stake)*actualrate) AS winlost_rm,
 			SUM(winlost-actual_stake) AS winlost
 			INTO #temp
-	FROM dbo.bettrans b WITH (NOLOCK)
-	INNER JOIN @SportBettype s ON b.bettype = s.bettype AND b.matchid = s.MatchID
+	FROM dbo.bettransRNG b WITH (NOLOCK)
+	INNER JOIN @SportBettype s ON b.gameID = s.Bettype AND b.productID = s.MatchID
 	WHERE transdate BETWEEN @FromDate and @ToDate
 		AND statusID IN (112,113) 
 		AND srecommend NOT IN (SELECT custid FROM dbo.Dep_CustSuper WITH (NOLOCK))
