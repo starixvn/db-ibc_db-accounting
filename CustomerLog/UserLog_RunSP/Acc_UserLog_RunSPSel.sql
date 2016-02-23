@@ -34,6 +34,7 @@ AS
 		- 20121029@Elodie: Get UseName = 'Admin' if ActionID BETWEEN 1142 AND 1144
 		- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
 		- 20160115@Dominic: Do not show logactionid=237 if Trackingvalues is null Redmine: #50937
+		- 20160222@Dominic: Correct TrackingValue when logactionid In (1100,1101,1102,1103) and its value contain 'Hide*Cricket' Redmine: #52667
 
 	Description:
 	- Get paged log run sp. If @LowerActionId and @UpperActionId are both not null, get actions in range 
@@ -96,7 +97,9 @@ BEGIN
 										when (la.ActionID BETWEEN 2000 AND 3000) then 'Admin'
 										ELSE c.Username
 									END,
-						TrackingValue,
+						CASE WHEN ul.ActionID IN  (1100,1101,1102,1103) AND ul.TrackingValue LIKE '%Hide*Cricket%' 
+								THEN REPLACE(TrackingValue,'Hide*Cricket','HideCricket') 
+								ELSE ul.TrackingValue END TrackingValue,
 						TrackingValue2,
 						LogDate,
 						la.ActionID,
@@ -142,7 +145,9 @@ BEGIN
 										when (la.ActionID BETWEEN 2000 AND 3000 OR la.ActionID BETWEEN 1142 AND 1144) then 'Admin'
 										ELSE c.Username
 									END,
-						TrackingValue,
+						CASE WHEN ul.ActionID IN  (1100,1101,1102,1103) AND ul.TrackingValue LIKE '%Hide*Cricket%' 
+								THEN REPLACE(TrackingValue,'Hide*Cricket','HideCricket') 
+								ELSE ul.TrackingValue END TrackingValue,
 						LogDate,
 						la.ActionID,
 						ActionTypeID,
@@ -189,7 +194,9 @@ BEGIN
 										when (la.ActionID BETWEEN 2000 AND 3000 OR la.ActionID BETWEEN 1142 AND 1144) then 'Admin'
 										ELSE c.Username
 									END,
-						TrackingValue,
+						CASE WHEN ul.ActionID IN  (1100,1101,1102,1103) AND ul.TrackingValue LIKE '%Hide*Cricket%' 
+								THEN REPLACE(TrackingValue,'Hide*Cricket','HideCricket') 
+								ELSE ul.TrackingValue END TrackingValue,
 						TrackingValue2,
 						LogDate,
 						la.ActionID,
