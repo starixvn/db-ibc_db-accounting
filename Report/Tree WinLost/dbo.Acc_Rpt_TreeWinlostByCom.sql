@@ -1,26 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByCom]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,
-	@currency INT,
-	/*
-	@showSB BIT=1,  
-	@showNG BIT=0,  
-	@ShowRB BIT=0,  
-	@showLiveCasino BIT = 0,  
-	@showCasino BIT=0,  
-	@showP2P BIT=0,  
-	@showBI BIT=0,  
-	@showVS BIT = 0,
-	@showKeno BIT=0,
-	@ShowGD BIT = 0, -- Show GoldDeluxe
-	@ShowMGSL BIT = 0, -- Show Metric Gaming
-	@showMGCLC BIT=0, -- MGC-LC
-	@showMGCRnG BIT=0, -- MGC-RNG
-	@showVG BIT=0, --Vegas Games
-	@showAGCS BIT=0, --AG Casino
-	@showCB	 BIT=0,
-	@showCF	 BIT=0 -- Cockfighting
-	*/
+	@currency INT,	
 	@Products VARCHAR(4000) -- instead of all @showXXX parameters
 
 AS
@@ -48,14 +29,12 @@ Revisions:
 	- 20151214@Percy: 1. Add new product: Cockfighting [Redmine: #49027]
 					  2. Change input parameters
 	- 20160118@Percy: Calculate turnover for RNG Casino [Redmine: #49134]
+	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 */  
 
 SET NOCOUNT ON
 
---DECLARE @TmpCondBettype TABLE(bettype INT , isVirtual BIT) 
 DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)  
---DECLARE #TmpResult TABLE (srecommend INT ,username NVARCHAR(100),actualrate FLOAT,Turnover MONEY, Winloss MONEY,Commission MONEY,virtualrate SMALLINT)
---DECLARE #TmpResultAll TABLE (srecommend INT ,username NVARCHAR(100),Turnover MONEY, Winloss MONEY,Commission MONEY,Total MONEY,TurnoverRM MONEY,TotalRM MONEY,Virtual_Total MONEY,Variance MONEY, virtualrate SMALLINT)
 DECLARE @CommSetting TABLE (MatchID int, IBCFee bit, ToteCommWin smallmoney, ToteCommPlace smallmoney, ToteCommWP smallmoney, ToteFee smallmoney )
 
 
@@ -82,98 +61,7 @@ CREATE TABLE #TmpResultAll (srecommend INT ,
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
 EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
-/*
-IF @ShowSB = 1  
-	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT Bettype, 1   
-	 FROM @SportBettype   
-	 WHERE ProductID =1 
-		AND SubProduct  NOT IN ('MG-SuperLive' ,'BT-Sold','BT-Bought','BT-Comm')
 
-IF @ShowNG = 1  
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual) 
-	SELECT Bettype, 1   
-	 FROM @SportBettype   
-	 WHERE ProductID =3  
-
-IF @showLiveCasino = 1
-	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT Bettype, 0   
-	 FROM @SportBettype   
-	 WHERE ProductID = 4  
-
-IF @showCasino = 1
-	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT Bettype, 0   
-	 FROM @SportBettype   
-	 WHERE ProductID = 6 
-	
-IF @showBI = 1
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT Bettype, 0   
-	 FROM @SportBettype   
-	 WHERE ProductID = 7
-	
-IF @showVS = 1
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT Bettype, 0   
-	 FROM @SportBettype   
-	 WHERE ProductID = 5		
-	
-IF @showKeno = 1    
-	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT Bettype, 0   
-	 FROM @SportBettype   
-	 WHERE ProductID = 8
-IF @ShowGD =1 
-	 INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	 SELECT Bettype, 0   
-	 FROM @SportBettype   
-	 WHERE ProductID = 12
- 
-IF @ShowMGSL =1 
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	SELECT Bettype, 1   
-	FROM @SportBettype   
-	WHERE ProductID = 1
-		AND SubProduct= 'MG-SuperLive'
-
-IF @showMGCLC =1  -- MGC-LC
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	SELECT Bettype, 0   
-	FROM @SportBettype   
-	WHERE ProductID = 13
-
-IF @showMGCRnG =1  -- MGC-RNG
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	SELECT Bettype, 0   
-	FROM @SportBettype   
-	WHERE ProductID = 17
-
-IF @showVG =1  --- VegasGame aka Macau
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	SELECT Bettype, 0   
-	FROM @SportBettype   
-	WHERE ProductID = 14	 
-
-IF @showAGCS =1 -- AG Casino
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	SELECT Bettype, 0   
-	FROM @SportBettype   
-	WHERE ProductID = 11
-	
-IF @showCB =1 -- Colossus Bet
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	SELECT Bettype, 0   
-	FROM @SportBettype   
-	WHERE ProductID = 15
-
-IF @showCF =1 -- Cockfighting
-	INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-	SELECT Bettype, 0   
-	FROM @SportBettype   
-	WHERE ProductID = 19
-*/
 IF OBJECT_ID('tempdb..#Product') IS NOT NULL
 BEGIN
 	DROP TABLE #Product
@@ -448,7 +336,7 @@ SELECT b.srecommend,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
 	--(ISNULL(cs.virtualmultiplier,1)-1)*100 virtualrate
 FROM bettrans b WITH(NOLOCK) 
-	INNER JOIN #tmpBettype t ON t.bettype = b.bettype AND t.ProductID NOT IN (2, 9)
+	INNER JOIN #tmpBettype t ON t.bettype = b.bettype AND t.ProductID NOT IN (2, 9, 21) -- execule Racing, P2P, AllBet
 	--INNER JOIN custinfo cs WITH(NOLOCK) ON b.srecommend = cs.custid
 WHERE winlostdate BETWEEN @FromDate AND @ToDate
    and b.ruben = 1  
@@ -458,6 +346,25 @@ GROUP BY b.srecommend ,
 		--cs.username,
 		--cs.virtualmultiplier,
 		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
+
+UNION ALL -- AllBet
+SELECT b.srecommend,	
+	CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
+	SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
+	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,
+	SUM(scomm) commission,  
+	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total, 
+	SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+	SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
+	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM	,
+	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total	
+FROM bettransLC b WITH(NOLOCK) 
+	INNER JOIN #tmpBettype t ON t.bettype = b.bettype AND t.ProductID IN (21) -- AllBet	
+WHERE winlostdate BETWEEN @FromDate AND @ToDate   
+   AND b.statusID NOT IN (0, 1, 101, 102, 103)   
+   and b.currency = @currency
+GROUP BY b.srecommend ,		
+		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   		
 
 SELECT b.srecommend,
 	cs.UserName,

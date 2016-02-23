@@ -11,6 +11,7 @@
 		
 		Revisions:
 			- 20130906@Johnson: get virtual values by virtual rate instead of actual rate			
+			- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 		Parameter's Explanation:
 			- @site: 1: credit
 					2: deposit	
@@ -44,9 +45,27 @@ BEGIN
 	FROM	bettrans14 b WITH (NOLOCK)
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE	b.winlostdate = @winlostdate
-			AND b.bettype = @bettype
+			AND (b.bettype = @bettype AND bettype NOT BETWEEN 2401 and 2499) -- exclude AllBet
 			AND b.ruben = 1		
-			AND b.statusID not in (101,102,103,121)
+			AND b.statusID not in (101,102,103,121)			
+	GROUP BY site
+	
+	UNION ALL -- AllBet Data
+	
+	SELECT	ag.site,
+		sum((winlost-actual_stake)*actualrate) WinLost,
+		sum((awinlost+mwinlost+swinlost)*actualrate) Position,
+		sum(scomm*actualrate) Commission,	
+		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
+		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
+		sum((1-tpositiontaking)*stake*actualrate) RealTurnover,
+		sum((1-tpositiontaking)*stake*actualrate) VirtualTurnover
+	FROM	bettransLC14 b WITH (NOLOCK)
+		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
+	WHERE	b.winlostdate = @winlostdate
+			AND b.gameID = @bettype			
+			AND b.statusID not in (0,1,101,102,103,121)
+			AND productID = 211 -- AllBet data
 	GROUP BY site
 	ORDER BY site
 

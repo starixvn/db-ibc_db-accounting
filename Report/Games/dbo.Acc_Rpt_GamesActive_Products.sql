@@ -10,6 +10,8 @@ AS
  Revisions:
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
+	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
+
 */
 SELECT
 	CONVERT(INT,-1) ProductID
@@ -19,7 +21,7 @@ SELECT
 	ProductID
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,8,4,11,12,13)
+WHERE ProductID IN (3,6,7,8,4,11,12,13,21)
 UNION ALL
 SELECT
 	ProductID

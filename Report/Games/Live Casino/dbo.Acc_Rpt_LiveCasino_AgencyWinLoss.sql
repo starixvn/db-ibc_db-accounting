@@ -4,7 +4,7 @@ SET ANSI_NULLS ON
 GO
 
 /****** Object:  Stored Procedure dbo.Acc_Rpt_LiveCasino_AgencyWinLoss    Script Date: 12/9/2015 2:49:09 PM ******/
-CREATE PROCEDURE [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss]
+ALTER PROCEDURE [dbo].[Acc_Rpt_LiveCasino_AgencyWinLoss]
 	@fromdate datetime,
 	@todate datetime,
 	@username varchar(50) = '',
@@ -34,6 +34,7 @@ Revisions:
 	- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 	-  Jim@20151113: HotFix #46113
+	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 
 		
 Param's Explanation:
@@ -83,6 +84,10 @@ DECLARE @sql varchar(max),@UserRole int, @CustID INT, @TempDataSQL nvarchar(max)
 DECLARE @ColumnList varchar(1500)--, @custfilter nvarchar(max)
 DECLARE @groupBy varchar(max)
 DECLARE @MemIDs varchar(max)
+DECLARE @table varchar(50), @bettype varchar(50)
+
+SELECT @table = CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN ' bettransLC ' ELSE ' bettrans ' END
+SELECT @bettype = CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN ' b.gameID ' ELSE ' b.bettype ' END
 
 
 
@@ -143,7 +148,7 @@ SELECT @sqlTableExchange = @sqlTableExchange + '
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DELETE @SportBettype 
-	WHERE ProductID NOT IN (4,11,12,13)'
+	WHERE ProductID NOT IN (4,11,12,13,21)'
 
 SELECT @TempDataSQL = ''
 SELECT @TempDataSQLDW = ''
@@ -167,7 +172,7 @@ BEGIN
 	+'SELECT ' + CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
 	+'b.Currency,'+char(13)
 	--+'b.actualrate,'+char(13)
-	+CASE WHEN @ReportBy = 3 THEN 'b.bettype,'+char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN 'b.gameID as bettype,' WHEN @ReportBy = 3 AND @ProductId <> 21 THEN 'b.bettype,' +char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 4 THEN 'l.leagueid,'+char(13) ELSE '' END
 	+'count(transid),'+char(13)
 	+'sum(stake),'+char(13)
@@ -197,7 +202,7 @@ BEGIN
 	+'sum((scomm-acomm) * b.actualrate),'+char(13)
 	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm) * b.actualrate)'+char(13)
 	
-	+'FROM bettrans b with (NOLOCK)'+char(13)
+	+'FROM '+ @table +' b with (NOLOCK)'+char(13)
 	+CASE WHEN @ReportBy = 2 OR @username <> '' THEN 'INNER JOIN CustInfo ci WITH (NOLOCK) ON ci.CustId = b.CustId'+char(13) ELSE '' END
 	+CASE WHEN @GameTableID > 0 OR @ReportBy = 4 THEN 'INNER JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
 									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
@@ -213,20 +218,20 @@ BEGIN
 	 								+'LEFT JOIN DBLIC.bodb_licensee.dbo.Licensees lic with (nolock) on lc.LicenseeID = lic.LicenseeID' + char(13)
 	 ELSE ''
 	 END
-	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = ' + @bettype +char(13)
 	+'WHERE winlostdate  >= @fromdate AND winlostdate <= @todate'+char(13)
 	--+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1 '+char(13)
 	+CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
-	+'AND b.ruben = 1' + char(13)
+	+CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN '' ELSE 'AND b.ruben = 1' END + char(13)
 	+'AND statusid IN (111,112,113)'+char(13)
 	+CASE WHEN @username <> '' THEN 'AND ci.username LIKE '''+@username+'%'' '+char(13) ELSE '' END
 	+case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
 	+case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+case when @GameTypeID > 0 then '	AND '+ @bettype +' = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY'+char(13)
-	+CASE WHEN @ReportBy = 3 THEN 'b.bettype,'+char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 3 AND @ProductId <> 21 THEN 'b.bettype,' WHEN @ReportBy = 3 AND @ProductId = 21 THEN 'b.gameID,' +char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 0 OR @ReportBy = 1 THEN 'b.winlostdate,' +char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 4 THEN 'l.leagueid,'+char(13) ELSE '' END
@@ -369,8 +374,8 @@ BEGIN
 	+'sum((scomm-acomm) * b.actualrate),'+char(13)
 	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm) * b.actualrate)'+char(13)
 	
-	+'FROM bettrans b with (nolock)'+char(13)
-	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
+	+'FROM '+ @table +' b with (nolock)'+char(13)
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = '+ @bettype +char(13)
 	--+'INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid'+char(13)
 	+ CASE WHEN @UserRole = 4 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.mrecommend' 
 			WHEN @UserRole = 3 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.recommend' 
@@ -396,12 +401,12 @@ BEGIN
 	+'WHERE winlostdate  >= @fromdate and winlostdate <= @todate'+char(13)
 	---+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1' + char(13)
 	+ CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
-	+'AND b.ruben = 1' + char(13)
+	+CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN '' ELSE 'AND b.ruben = 1' END + char(13)
 	+'AND statusid IN (111,112,113)'
 	+ case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+ case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
 	+ case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+ case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+ case when @GameTypeID > 0 then '	AND '+ @bettype +' = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+ case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY b.Currency,'+char(13)
 	+'a.UserName'+char(13)

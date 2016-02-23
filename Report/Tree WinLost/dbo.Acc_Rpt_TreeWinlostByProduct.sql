@@ -1,25 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
 	@FromDate   DATETIME,
-	@ToDate   DATETIME,
-	/*
-	@showSB BIT=1,    
-	@showNG BIT=0,    
-	@ShowRB BIT=0,    
-	@showLiveCasino BIT = 0,    
-	@showCasino BIT=0,    
-	@showP2P BIT=0,    
-	@showBI BIT=0,    
-	@showVS BIT = 0,
-	@showKeno BIT=0,
-	@ShowGD BIT = 0, -- Show GoldDeluxe
-	@ShowMGSL BIT = 0, -- Show Metric Gaming
-	@showMGCLC BIT=0, -- MGC-LC
-	@showMGCRnG BIT=0, -- MGC-RNG
-	@showVG BIT=0, --Vegas Games
-	@showAGCS BIT=0, --AG Casino
-	@showCB	 BIT=0,
-	@showCF	 BIT=0, -- Cockfighting
-	*/
+	@ToDate   DATETIME,	
 	@Products VARCHAR(4000), -- instead of all @showXXX parameters
 	@TurnOver_8RM MONEY = 0 OUTPUT,    
 	@Total_8RM   MONEY = 0 OUTPUT,    
@@ -54,7 +35,7 @@ Revisions:
 	- 20151214@Percy: 1. Add new product: Cockfighting [Redmine: #49027]
 					  2. Change input parameters
 	- 20160118@Percy: Calculate turnover for RNG Casino [Redmine: #49134]
-
+	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 */    
   
   
@@ -83,100 +64,8 @@ CREATE TABLE #TmpResultAll (Currency TINYINT,
 
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
  
-/*
-IF @ShowSB = 1    
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)
- SELECT Bettype, 1   
- FROM @SportBettype   
- WHERE ProductID =1 
-	AND SubProduct NOT IN ('MG-SuperLive' ,'BT-Sold','BT-Bought','BT-Comm')
-IF @ShowNG = 1    
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT Bettype, 1   
- FROM @SportBettype   
- WHERE ProductID =3  
-
-IF @showLiveCasino = 1  
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT Bettype, 0   
- FROM @SportBettype   
- WHERE ProductID = 4  
-  
-IF @showCasino = 1  
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT Bettype, 0   
- FROM @SportBettype   
- WHERE ProductID = 6  
-
-IF @showBI = 1  
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT Bettype, 0   
- FROM @SportBettype   
- WHERE ProductID = 7
-  
-   
-IF @showVS = 1  
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT Bettype, 0   
- FROM @SportBettype   
- WHERE ProductID = 5 
-
-IF @showKeno = 1    
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT Bettype, 0   
- FROM @SportBettype   
- WHERE ProductID = 8 
-IF @ShowGD =1 
- INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
- SELECT Bettype, 0   
- FROM @SportBettype   
- WHERE ProductID = 12
- 
-IF @ShowMGSL =1 
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 1   
-FROM @SportBettype   
-WHERE ProductID = 1
-	AND SubProduct= 'MG-SuperLive'
-	
-IF @showMGCLC =1  -- MGC-LC
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 0   
-FROM @SportBettype   
-WHERE ProductID = 13
-
-IF @showMGCRnG =1  -- MGC-RNG
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 0   
-FROM @SportBettype   
-WHERE ProductID = 17
-
-IF @showVG =1  --- VegasGame aka Macau
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 0   
-FROM @SportBettype   
-WHERE ProductID = 14	 
-
-IF @showAGCS =1 -- AG Casino
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 0   
-FROM @SportBettype   
-WHERE ProductID = 11	
-
-IF @showCB =1 -- Colossus Bet
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 0   
-FROM @SportBettype   
-WHERE ProductID = 15
-
-IF @showCF =1 -- Cockfighting
-INSERT INTO @TmpCondBettype(Bettype,isVirtual)   
-SELECT Bettype, 0   
-FROM @SportBettype   
-WHERE ProductID = 19
-*/
 
 IF OBJECT_ID('tempdb..#Product') IS NOT NULL
 BEGIN
@@ -434,13 +323,33 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM ,  
 		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
 	FROM bettrans b WITH(NOLOCK)   
-		INNER JOIN #tmpBettype t on t.bettype = b.bettype AND t.ProductID NOT IN (2, 9)
+		INNER JOIN #tmpBettype t on t.bettype = b.bettype AND t.ProductID NOT IN (2, 9, 21)
 	WHERE winlostdate BETWEEN @FromDate AND @ToDate
 		AND b.ruben = 1    
 		AND b.statusID NOT IN (101, 102, 103,121)     
 		and b.currency <> 20
 	GROUP BY b.currency,
 		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END
+		
+	UNION ALL -- AllBet
+	
+	SELECT b.currency,
+		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
+		SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
+		SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,  
+		SUM(scomm) commission,    
+		SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total,   
+		SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+		SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,  
+		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM ,  
+		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
+	FROM bettransLC b WITH(NOLOCK)   
+		INNER JOIN #tmpBettype t on t.bettype = b.gameID AND t.ProductID = 21
+	WHERE winlostdate BETWEEN @FromDate AND @ToDate		
+		AND b.statusID NOT IN (0, 1, 101, 102, 103,121)     
+		and b.currency <> 20
+	GROUP BY b.currency,
+		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END	
 
 SELECT	@TurnOver_8RM     = -SUM(ABS(stake)*(1 - tpositiontaking)*actualrate),
 		@Total_8RM        = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate),    
