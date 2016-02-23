@@ -51,7 +51,8 @@
 		- 20151221@Sophia: Exclude Cockfighting from bettrans table in case there is running ticket on bettrans [Redmine: #48602]
 		- 20160108@Sophia: Change request for Colossus bet [Redmin: #49967]
 		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
-
+		- 20160215@Sophia: Change datatype to datetime instead of Smalldatetime [Redmine: #52130]
+		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
 
@@ -81,22 +82,22 @@ DECLARE @StatementTable TABLE(
 	transtypeid tinyint default 0 
 )
 
-DECLARE @_ToDate AS SMALLDATETIME
+DECLARE @_ToDate AS DATETIME
 SET @_ToDate = @todate
 
-DECLARE @_FromDate AS SMALLDATETIME
+DECLARE @_FromDate AS DATETIME
 SET @_FromDate = @Fromdate
 
-DECLARE @_BalanceUpDay AS SMALLDATETIME
+DECLARE @_BalanceUpDay AS DATETIME
 SET @_BalanceUpDay = @BalanceUpDay
 
-DECLARE @Fromdate_bk SMALLDATETIME
+DECLARE @Fromdate_bk DATETIME
 SET @Fromdate_bk = @_FromDate
 
 DECLARE @_IncludeAccBal AS BIT
 SET @_IncludeAccBal = @IncludeAccBal
 
-DECLARE @Yesterday SMALLDATETIME 
+DECLARE @Yesterday DATETIME 
 SELECT @Yesterday =  CONVERT(Date,DATEADD(DD, -1, GETDATE()))
 		
 ----Get Sport Bettype Matrix------
