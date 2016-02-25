@@ -23,10 +23,10 @@ BEGIN
 	SELECT CAST(val AS BIGINT), b.matchid
 	FROM dbo.strSplit(@CricketIds, ',') f
 		INNER JOIN dbo.bettrans b WITH(NOLOCK) ON CAST(f.val AS BIGINT) = b.transid
-		INNER JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
+		--INNER JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
 	WHERE b.bettype = 501
-		AND b.statusID = 0
-		AND m.eventstatus = 'running'
+		AND b.statusID NOT IN (101, 102)
+		--AND m.eventstatus = 'running'
 		AND NOT EXISTS (SELECT 1 FROM CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) WHERE b.srecommend = s.custid)
 
 	DECLARE @RowId INT, @MatchId INT, @TransIds VARCHAR(MAX), @StartTime DATETIME
