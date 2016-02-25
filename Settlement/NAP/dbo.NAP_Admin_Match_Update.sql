@@ -1,4 +1,10 @@
-ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Match_Update    Script Date: 25/02/2016 3:13:37 PM ******/
+CREATE PROCEDURE [dbo].[NAP_Admin_Match_Update]
 (
 	@Command VARCHAR(100),
 	@MatchID INT,
@@ -37,6 +43,7 @@ AS
 		- 20150812@Kathy: Add more command for VS sports [Redmine:#40125]
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
 		- 20151012@Patrick: Reset betstatus for Muay Thai when user do action RefundFull & RefundFT [Redmine: #45356]
+		- 20160225@Kathy: Update eventstatus, betstatus when the match is settled
 		
 */
 BEGIN
@@ -376,7 +383,8 @@ BEGIN
 		UPDATE	dbo.match WITH(ROWLOCK, UPDLOCK)
 			SET finalhomescore = @fthome
 				,finalawayscore = @ftaway
-				,eventstatus = 'completed'
+				,eventstatus = 'Completed'
+				,betstatus = NULL
 				,changetime = CURRENT_TIMESTAMP
 				,settletime = CURRENT_TIMESTAMP
 		WHERE	matchid = @matchid
@@ -384,33 +392,28 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_VS_180-REFUND'
 	BEGIN
 		UPDATE dbo.match WITH(ROWLOCK, UPDLOCK)
-			SET betstatus = 'Refund'
+			SET eventstatus = 'Completed'
+				,betstatus = 'Refund'
 				,changetime = CURRENT_TIMESTAMP
 				,settletime = CURRENT_TIMESTAMP
-		WHERE	matchid = @matchid
-	END
-	IF @Command = 'NAP_Admin_Settlement_VS_180-CAL'
-	BEGIN
-		UPDATE	dbo.match WITH(ROWLOCK, UPDLOCK)
-			SET finalhomescore = @fthome
-				,finalawayscore = @ftaway
-				,eventstatus = 'completed'
-				,changetime = CURRENT_TIMESTAMP
-				,settletime = CURRENT_TIMESTAMP
-		WHERE	matchid = @matchid
-	END
-	IF @Command = 'NAP_Admin_Settlement_VS_180-REFUND'
-	BEGIN
-		UPDATE dbo.match WITH(ROWLOCK, UPDLOCK)
-			SET betstatus = 'Refund'
-				,changetime = CURRENT_TIMESTAMP
-				,settletime = CURRENT_TIMESTAMP
+				,finalhomescore=0
+				,finalawayscore=0				
 		WHERE	matchid = @matchid
 	END
 	
 END
-GO 
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Match_Update] TO [vnteam]
-GO 
-GRANT EXECUTE ON [dbo].[NAP_Admin_Match_Update] TO [bodbAdminNet]
+
+
 GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Match_Update] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Match_Update] TO [bodbAdminNet]
+GO 
