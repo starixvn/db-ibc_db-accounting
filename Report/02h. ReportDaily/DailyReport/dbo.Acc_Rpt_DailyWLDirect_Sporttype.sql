@@ -79,7 +79,9 @@ AS
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
 		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
+		- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 		- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
+
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)declare @p2 money
@@ -102,7 +104,7 @@ BEGIN
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(
-							site tinyint,
+							site smallint,
 							winlost money,
 							pos money,
 							comm money,
@@ -111,7 +113,7 @@ BEGIN
 						)			
 	
 	CREATE TABLE #src(	srecommend INT,
-						site	TINYINT,
+						site	smallint,
 						matchid INT, 
 						bettype INT, 
 						winlost_actualrate MONEY, 
@@ -326,7 +328,9 @@ BEGIN
 	OPTION (RECOMPILE)			 
 	-- Get AllBet Data			 
 	UNION ALL
-	SELECT	CASE WHEN dep.custid is null THEN 1 ELSE 2 END as site,
+	SELECT	
+			b.srecommend,
+			1 as site,--CASE WHEN dep.custid is null THEN 1 ELSE 2 END as site,
 			b.ProductID AS matchid,
 			b.gameID AS bettype, 
 			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
@@ -339,17 +343,19 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(b.gameID)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(b.gameID)*virtualrate) turnover_virtualrate
-	FROM bettransLC b WITH(NOLOCK)
-		left join (select custid FROM #DepAgent) dep ON b.recommend = dep.custid
+	FROM bettransLC b WITH(NOLOCK)		
 	WHERE winlostdate = @winlostdate		
 		AND b.ProductID = 211 
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
-	GROUP BY b.ProductID,
-			 b.gameID,
-			 CASE WHEN dep.custid IS NULL THEN 1 ELSE 2 END
+	GROUP BY
+			b.srecommend, 
+			b.ProductID,
+			b.gameID
+			 
 	UPDATE #src
 	SET MatchID = CASE   WHEN MatchID IN (0, 71, 208, 209, 210) THEN 0 ELSE MatchID END
 		,bettype = CASE WHEN   bettype BETWEEN 2101 AND 2399 THEN 71 ELSE bettype END
+	
 	UPDATE #src
 	SET site = 2
 	WHERE 	srecommend IN (SELECT CustId FROM  #DepSuper)

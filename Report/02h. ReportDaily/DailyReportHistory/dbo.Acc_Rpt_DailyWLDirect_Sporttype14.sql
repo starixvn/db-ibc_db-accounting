@@ -101,41 +101,23 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(
-							site tinyint,
+							site smallint,
 							winlost money,
 							pos money,
 							comm money,
 							Linetotal money,							
 							turnover money								
-						)			
-	
-	CREATE TABLE #src(	srecommend INT,
-						site	TINYINT,
-						matchid INT, 
-						bettype INT, 
-						winlost_actualrate MONEY, 
-						winlost_virtualrate MONEY,
-						position_actualrate MONEY, 
-						position_virtualrate MONEY, 
-						commission_actualrate MONEY, 
-						commission_virtualrate MONEY, 
-						Linetotal_actualrate MONEY,
-						Linetotal_virtualrate MONEY,
-						turnover_actualrate MONEY,
-						turnover_virtualrate MONEY   
-					)
-							linetotal money,							
-							turnover money
-						)		
+						)				
 						
 	CREATE TABLE #src(	
+					srecommend INT,
 					matchid INT, 
 					bettype INT, 
-					site	TINYINT,
+					site	smallint,
 					winlost_actualrate MONEY, 
 					winlost_virtualrate MONEY,
 					position_actualrate MONEY, 
@@ -328,7 +310,9 @@ BEGIN
 	OPTION (RECOMPILE)			 
 	-- Get AllBet Data			 
 	UNION ALL
-	SELECT	CASE WHEN dep.custid is null THEN 1 ELSE 2 END as site,
+	SELECT	
+			b.srecommend,
+			1 as site,--CASE WHEN dep.custid is null THEN 1 ELSE 2 END as site,
 			b.ProductID AS matchid,
 			b.gameID AS bettype, 
 			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
@@ -341,19 +325,20 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(b.gameID)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(b.gameID)*virtualrate) turnover_virtualrate
-	FROM bettransLC14 b WITH(NOLOCK)
-		left join (select custid FROM #DepAgent) dep ON b.recommend = dep.custid
+	FROM bettransLC14 b WITH(NOLOCK)		
 	WHERE winlostdate = @winlostdate		
 		AND b.ProductID = 211 
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
-	GROUP BY b.ProductID,
-			 b.gameID,
-			 CASE WHEN dep.custid IS NULL THEN 1 ELSE 2 END	
+	GROUP BY 
+			b.srecommend,
+			b.ProductID,
+			b.gameID
 			 
 				 --,case when dep.custid is null then 1 else 2 end 
 	UPDATE #src
 	SET MatchID = CASE   WHEN MatchID IN (0, 71, 208, 209, 210) THEN 0 ELSE MatchID END
 		,bettype = CASE WHEN   bettype BETWEEN 2101 AND 2399 THEN 71 ELSE bettype END
+		
 	UPDATE #src
 	SET site = 2
 	WHERE 	srecommend IN (SELECT CustId FROM  #DepSuper)	 		 

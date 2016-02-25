@@ -25,6 +25,7 @@ AS
 			- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
 			- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #49134]
 			- 20160129@Jim :  Cricket - Integrate to Accounting Reports (Redmine: #51023)
+			- 20160225@Jim: offer  Allbet Live Casino [Redmine:#50921)]
         Parameter's Explanation:
     */
 BEGIN
@@ -327,7 +328,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,'' as status
-				,13 as OrderKey
+				,14 as OrderKey
 				,17 as SortKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0) 
@@ -350,7 +351,7 @@ BEGIN
             ,0 as ibc
             ,0 as IsHedge
             ,'' as status
-			,14 as OrderKey
+			,15 as OrderKey
 			,17 as SortKey
             ,ISNULL(SUM(realWinlost),0)
             ,ISNULL(SUM(realPosition),0) 
@@ -496,6 +497,28 @@ BEGIN
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=14
+        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
+	-- allbet section 
+		UNION ALL
+        SELECT 211 sporttype
+            ,b.bettype
+            ,b.liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,13 as OrderKey	
+			,17 as SortKey
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=21
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	--	ColossusBet
 		UNION ALL

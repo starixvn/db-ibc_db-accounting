@@ -334,9 +334,9 @@ SELECT b.mrecommend,
 	SUM(scomm) commission,  
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total, 
 	SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
-	SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
+	SUM(ABS(stake)*(1 - tpositiontaking)*b.virtualrate) TurnoverIBCVirtual,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM,
-	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
+	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*b.virtualrate) Virtual_Total
 FROM bettransLC b WITH(NOLOCK) 
 	INNER JOIN #tmpBettype t ON t.bettype = b.gameID AND t.ProductID = 21 -- AllBet	
 WHERE winlostdate BETWEEN @FromDate AND @ToDate   

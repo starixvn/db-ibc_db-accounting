@@ -60,7 +60,7 @@ CREATE TABLE #TmpResultAll (srecommend INT ,
 							--virtualrate SMALLINT
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel  @mode=5
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
 
 IF OBJECT_ID('tempdb..#Product') IS NOT NULL
 BEGIN
@@ -355,11 +355,11 @@ SELECT b.srecommend,
 	SUM(scomm) commission,  
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total, 
 	SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
-	SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
+	SUM(ABS(stake)*(1 - tpositiontaking)*b.virtualrate) TurnoverIBCVirtual,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM	,
-	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total	
+	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*b.virtualrate) Virtual_Total	
 FROM bettransLC b WITH(NOLOCK) 
-	INNER JOIN #tmpBettype t ON t.bettype = b.bettype AND t.ProductID IN (21) -- AllBet	
+	INNER JOIN #tmpBettype t ON t.bettype = b.gameID AND t.ProductID IN (21) -- AllBet	
 WHERE winlostdate BETWEEN @FromDate AND @ToDate   
    AND b.statusID NOT IN (0, 1, 101, 102, 103)   
    and b.currency = @currency
