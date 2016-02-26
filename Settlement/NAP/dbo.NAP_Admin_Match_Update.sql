@@ -1,10 +1,11 @@
-SET QUOTED_IDENTIFIER ON 
+USE [bodb02]
 GO
-SET ANSI_NULLS ON 
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 02/26/2016 10:25:39 ******/
+SET ANSI_NULLS ON
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Match_Update    Script Date: 25/02/2016 3:13:37 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Match_Update]
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 (
 	@Command VARCHAR(100),
 	@MatchID INT,
@@ -384,7 +385,6 @@ BEGIN
 			SET finalhomescore = @fthome
 				,finalawayscore = @ftaway
 				,eventstatus = 'Completed'
-				,betstatus = NULL
 				,changetime = CURRENT_TIMESTAMP
 				,settletime = CURRENT_TIMESTAMP
 		WHERE	matchid = @matchid
@@ -404,16 +404,8 @@ BEGIN
 END
 
 
-GO
 
-SET QUOTED_IDENTIFIER OFF 
 GO
-SET ANSI_NULLS ON 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Match_Update] TO [bodbAdminNet] AS [dbo]
 GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Match_Update] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Match_Update] TO [bodbAdminNet]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Match_Update] TO [vnteam] AS [dbo]
