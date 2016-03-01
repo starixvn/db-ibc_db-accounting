@@ -1,3 +1,13 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 01/29/2016 14:10:12 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9m    Script Date: 1/20/2016 7:07:41 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9m    Script Date: 15/01/2016 12:47:15 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT = NULL
 	,@fta INT = NULL
@@ -97,6 +107,7 @@ AS
 		- 20151124@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
+		- 20160106@Kathy: - Integrate Cricket [Redmine:#49727]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -1270,7 +1281,7 @@ BEGIN
 				WHEN 406 THEN --Exact Total Goals
 					CASE 
 						WHEN betteam LIKE 'G[0-5]' AND ((@fth + @fta) = CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
-						WHEN betteam ='G6' AND ((@fth + @fta) >= CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
+						WHEN betteam ='G6' AND ((@fth + @fta) >=CAST(RIGHT(betteam,1)AS TINYINT)) THEN 1 
 						ELSE -1 
 						END 
 				WHEN 407 THEN --Exact Home Team Goals
@@ -1325,13 +1336,19 @@ BEGIN
 						ELSE -1
 						END
 				WHEN 414 THEN --1H Correct Score (aos)
-					CASE
+					CASE 
 						WHEN betteam = CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR) THEN 1
 						WHEN betteam = 'AOS'
 							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
-
+				WHEN 501 THEN --Match Winner
+					CASE 
+						WHEN betteam = 'h' AND @fth > @fta THEN 1
+						WHEN betteam = 'a' AND @fth < @fta THEN 1
+						WHEN @fth = @fta THEN 0
+						ELSE -1
+						END
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -2299,7 +2316,13 @@ BEGIN
 							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
 						ELSE -1
 						END
-
+				WHEN 501 THEN --Match Winner
+					CASE 
+						WHEN betteam = 'h' AND @fth > @fta THEN 1
+						WHEN betteam = 'a' AND @fth < @fta THEN 1
+						WHEN @fth = @fta THEN 0
+						ELSE -1
+						END
 				-- Tennis Sporting Solution 
 				WHEN 1301 THEN -- Match Winner 
 					CASE betteam
@@ -2421,5 +2444,7 @@ BEGIN
 END
 	-- ===================================================
 	-- ===================================================
+
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_9m] TO [vnteam] AS [dbo]

@@ -1,5 +1,12 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 01/29/2016 14:30:44 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 1/28/2016 9:41:45 AM ******/
+/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 1/26/2016 4:22:38 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
     ,@excludeRefundFGLG BIT = 0
 AS
