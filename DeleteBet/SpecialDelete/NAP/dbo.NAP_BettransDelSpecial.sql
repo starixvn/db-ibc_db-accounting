@@ -26,7 +26,7 @@ ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	
     @BetTypes				VARCHAR(1000)	= '',
 	
-	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 17, 20, 153,157,168,183,185,191, 1301, 1303, 1305, 1306, 1308 , 411: Handicap, Odd/Even, Over/Under...
+	@BetTeam1378			NVARCHAR(10)	= 'ALL',	-- 1, 2, 3, 7, 8, 12, 17, 20, 153,157,168,183,185,191, 1301, 1303, 1305, 1306, 1308 , 411, 501: Handicap, Odd/Even, Over/Under...
 	@BetTeam515				NVARCHAR(10)	= 'ALL',	-- 5,15,160,164,167,176,177,180
 	@BetTeam430				VARCHAR(120) 	= '',		-- 4, 30, 405, 413, 414: All Correct Scores
     @BetTeam6				VARCHAR(120) 	= '',		-- 6, 126, 131, 132
@@ -109,6 +109,7 @@ AS
 		- 20150712@Kathy: - Apply 28 Live Bettypes(PH) [Redmine: #48110]
 						  - Database - Change datatype [Redmine: #48660]
 		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: bettype 4,30,413,414,405 [Redmine:#50932]	  
+		- 20160112@Patrick: Support Cricket [Redmine: #50688]
 		
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -344,7 +345,7 @@ BEGIN
 			AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END 
 			AND b.transdate between CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END
 								AND CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 
-			AND b.betteam = CASE WHEN b.bettype IN (1,2, 3,7,8,12, 17, 20, 153, 157, 168, 183, 185, 191, 1301, 1303, 1305, 1306, 1308, 411) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
+			AND b.betteam = CASE WHEN b.bettype IN (1,2, 3,7,8,12, 17, 20, 153, 157, 168, 183, 185, 191, 1301, 1303, 1305, 1306, 1308, 411, 501) THEN CASE WHEN @BetTeam1378 = 'ALL' THEN b.betteam ELSE @BetTeam1378 END
 								WHEN b.bettype IN (5,15,160,164,167,176,177,180) THEN CASE WHEN @BetTeam515 = 'ALL' THEN b.betteam ELSE @BetTeam515 END
 								ELSE b.betteam END 
 			AND CASE 

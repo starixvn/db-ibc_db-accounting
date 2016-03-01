@@ -19,6 +19,7 @@ AS
 		- 20151021@Kathy: Do not show ticket 901 if its owner is not BetTrade account(betdaqid = 0)[Redmine:#43233]
 		- 20151102@Kathy: Enhance performance [Redmine:#43233]
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
+		- 20160113@Patrick: Support Cricket [Redmine: #50688]
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -67,6 +68,9 @@ BEGIN
 		,TransDesc		NVARCHAR(300)
 		,betdaqid		BIGINT
 		,SoldId			BIGINT
+		--,MatchStatus	NVARCHAR(50)
+		,IsDeposit		BIT
+		,IsHideComm		BIT
 		)
 		
 	CREATE TABLE #DetailData (
@@ -259,7 +263,8 @@ BEGIN
 				,commission					
 				,winlostdate	
 				,TransDesc		
-				,betdaqid		
+				,betdaqid	
+				,IsHideComm	
 		)
 		SELECT	b.transid AS GroupId
 				,b.bettype
@@ -294,10 +299,11 @@ BEGIN
 				,b.betfrom
 				,b.matchid				
 				,(b.winlost - b.actual_stake) winlost
-				,b.playercomm AS commission				
+				,b.playercomm AS commission
 				,b.winlostdate
 				,b.transdesc
 				,b.betdaqid
+				,CASE WHEN b.bettype = 501 AND b.playerdiscount < 0 THEN 1 ELSE 0 END AS IsHideComm
 		FROM	bettrans AS b WITH (NOLOCK)
 			INNER JOIN dbo.match m WITH(NOLOCK)
 				ON b.matchid = m.matchid
@@ -662,7 +668,8 @@ BEGIN
 				,commission					
 				,winlostdate	
 				,TransDesc		
-				,betdaqid		
+				,betdaqid	
+				,IsHideComm	
 		)
 		SELECT 
 				b.transid GroupID
@@ -698,10 +705,11 @@ BEGIN
 				,b.betfrom
 				,b.matchid				
 				,(b.winlost - b.actual_stake) winlost
-				,b.playercomm AS commission				
+				,b.playercomm AS commission
 				,b.winlostdate
 				,b.transdesc
 				,b.betdaqid
+				,CASE WHEN b.bettype = 501 AND b.playerdiscount < 0 THEN 1 ELSE 0 END AS IsHideComm
 		FROM	bettrans AS b WITH (NOLOCK)
 			INNER JOIN dbo.match m WITH(NOLOCK)
 				ON b.matchid = m.matchid
@@ -984,18 +992,21 @@ BEGIN
 			,sporttype = m.sporttype
 			,isNeutral = CAST (ISNULL(m.IsNeutral, 0) AS BIT)
 			,showtime = m.showtime
+			--,MatchStatus = m.eventstatus
+			,IsDeposit = CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END
 	FROM	#Data al
 		INNER JOIN CustDB.dbo.custInfo ci WITH(NOLOCK)
 			ON al.custid = ci.custid
 		INNER JOIN dbo.match m WITH(NOLOCK)
 			ON al.matchid = m.matchid
+		LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) ON ci.srecommend = s.custid
 	WHERE	m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154  -- SB
 			OR m.sporttype = 161 -- NG
 			OR m.sporttype = 162 -- LC
 			
 	DELETE 
 	FROM #Data
-	WHERE sporttype IS NULL
+	WHERE sporttype IS NULL OR bettype = 500 /*charge comm*/
 		
 	-- ALL tickets	
 	SELECT	
@@ -1034,7 +1045,9 @@ BEGIN
 			,showtime		
 			,winlostdate	
 			,TransDesc		
-			,SoldId				
+			,SoldId			
+			,CASE WHEN bettype = 501 AND IsDeposit = 0 THEN 1 ELSE 0 END AS IsCricket	
+			,CASE WHEN IsHideComm IS NULL THEN 0 ELSE IsHideComm END AS IsHideComm
 	FROM	#Data
 	ORDER BY GroupID, transid
 	
