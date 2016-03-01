@@ -46,8 +46,8 @@ FROM
 		SUM( (swinlost+mwinlost+awinlost) * virtualrate ) agentv,
 		SUM( (scomm) * virtualrate ) commv,
 		SUM(CASE WHEN bettype = 500 THEN 0 ELSE 1 END) BetCount,
-		SUM(CASE [status] WHEN 'reject' THEN 1 ELSE 0 END) Reject,
-		SUM(CASE [status] WHEN 'void' THEN 1 ELSE 0 END) Void
+		SUM(CASE [status] WHEN 'reject' THEN (CASE WHEN bettype = 500 THEN 0 ELSE 1 END) ELSE 0 END) Reject,
+		SUM(CASE [status] WHEN 'void' THEN (CASE WHEN bettype = 500 THEN 0 ELSE 1 END) ELSE 0 END) Void
 	FROM
 		bodb02.dbo.bettrans (nolock)
 	WHERE
@@ -124,8 +124,8 @@ FROM
 		SUM( (swinlost+mwinlost+awinlost) * virtualrate ) agentv,
 		SUM( (scomm) * virtualrate ) commv,
 		SUM(CASE WHEN bettype = 500 THEN 0 ELSE 1 END) BetCount,
-		SUM(CASE [status] WHEN 'reject' THEN 1 ELSE 0 END) Reject,
-		SUM(CASE [status] WHEN 'void' THEN 1 ELSE 0 END) Void
+		SUM(CASE [status] WHEN 'reject' THEN (CASE WHEN bettype = 500 THEN 0 ELSE 1 END) ELSE 0 END) Reject,
+		SUM(CASE [status] WHEN 'void' THEN (CASE WHEN bettype = 500 THEN 0 ELSE 1 END) ELSE 0 END) Void
 	FROM
 		bodb02.dbo.bettrans14 (nolock)
 	WHERE
