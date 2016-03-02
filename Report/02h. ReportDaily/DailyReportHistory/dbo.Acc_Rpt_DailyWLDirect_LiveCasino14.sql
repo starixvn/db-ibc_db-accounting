@@ -38,7 +38,9 @@ SELECT	s.ProductID, b.bettype,
 		sum((awinlost+mwinlost+swinlost)*actualrate) Position,
 		sum(scomm*actualrate) Commission,	
 		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
-		sum((1-tpositiontaking)*stake*actualrate) Turnover
+		sum((1-tpositiontaking)*stake*actualrate) Turnover,
+		sum((winlost-actual_stake)*actualrate) ExtraPT,
+		sum((winlost-actual_stake)*actualrate) AfterExtraPT
 FROM	bettrans14 b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid 		

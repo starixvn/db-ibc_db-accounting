@@ -1,5 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino14]
-	@winlostdate	datetime
+	@winlostdate	datetime 
 AS
 	/*	Creator: Phuong Dao
 		Date: 2009-05-14
@@ -46,7 +46,9 @@ BEGIN
 		SUM(Position) Position,
 		SUM(Commission) Commission,
 		SUM(LineTotal) LineTotal,
-		SUM(Turnover) Turnover
+		SUM(Turnover) Turnover,
+		SUM(ExtraPT) ExtraPT,
+		SUM(AfterExtraPT) AfterExtraPT
 	FROM (
 		SELECT	s.ProductId,	
 				CASE s.ProductId WHEN 6 THEN 71
@@ -59,7 +61,9 @@ BEGIN
 				isnull(sum((awinlost+mwinlost+swinlost)*actualrate),0) Position,
 				isnull(sum(scomm*actualrate),0) Commission,	
 				isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate),0) LineTotal,
-				isnull(sum((1-tpositiontaking)*(CASE WHEN s.ProductID = 6 THEN 0 ELSE stake END)*actualrate),0) AS Turnover
+				isnull(sum((1-tpositiontaking)*(CASE WHEN s.ProductID = 6 THEN 0 ELSE stake END)*actualrate),0) AS Turnover,
+				isnull(sum((winlost-actual_stake)*actualrate), 0 ) ExtraPT,
+				isnull(sum((winlost-actual_stake)*actualrate), 0 ) AfterExtraPT
 		FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
@@ -82,7 +86,9 @@ BEGIN
 				0 Position,
 				0 Commission,	
 				0 LineTotal,
-				isnull(sum((1-tpositiontaking)*stake*actualrate),0) AS Turnover
+				isnull(sum((1-tpositiontaking)*stake*actualrate),0) AS Turnover,
+				0 ExtraPT,
+				0 AfterExtraPT
 		FROM	bettransRNG14 b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.bettype = b.gameID
 			left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
