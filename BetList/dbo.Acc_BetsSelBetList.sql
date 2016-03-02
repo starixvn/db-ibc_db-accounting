@@ -126,6 +126,12 @@ BEGIN
 		WHERE Bettype <> @tempBettype
 	END
 
+	DECLARE @Today	SMALLDATETIME,
+		@Yesterday	SMALLDATETIME
+
+	SELECT @Today = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0),
+		@Yesterday = DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+
 	CREATE TABLE #BetListData (
 		bettype			INT,
 		transid			BIGINT, 
@@ -1145,7 +1151,7 @@ BEGIN
 					WHERE ProductID = 17
 						OR (ProductID = 6 AND SubProduct <> ''))
 		BEGIN
-			-- Up to yesterday settled ticket
+			-- Not yesterday and today settled ticket
 			INSERT INTO #BetListData
 			SELECT
 				b.bettype,
@@ -1220,12 +1226,11 @@ BEGIN
 				AND (s.ProductId = 17
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND b.winlostdate BETWEEN @FromDate AND @ToDate
-				AND b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)	-- not today
+				AND b.winlostdate < @Yesterday	-- not yesterday and today
 
-			IF @ToDate >= DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)			-- yesterday
-				AND @FromDate <= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
+			IF @ToDate >= @Yesterday AND @FromDate <= @Today
 			BEGIN
-				-- Today running ticket
+				-- Yesterday and today running ticket
 				INSERT INTO #BetListData
 				SELECT
 					b.bettype,
@@ -1301,8 +1306,7 @@ BEGIN
 					AND (s.ProductId = 17
 						OR (s.ProductId = 6 AND s.SubProduct <> ''))
 					AND b.winlostdate BETWEEN @FromDate AND @ToDate
-					AND b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0) 
-						AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
+					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND brng.statusID = 0
 				GROUP BY
 					b.transid,
@@ -1319,7 +1323,7 @@ BEGIN
 					b.transdesc,
 					s.ProductID
 
-				-- Today settled ticket
+				-- Yesterday and today settled ticket
 				INSERT INTO #BetListData
 				SELECT
 					b.bettype,
@@ -1399,8 +1403,7 @@ BEGIN
 					AND (s.ProductId = 17
 						OR (s.ProductId = 6 AND s.SubProduct <> ''))
 					AND b.winlostdate BETWEEN @FromDate AND @ToDate
-					AND b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0) 
-						AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
+					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND brng.statusID <> 0
 				GROUP BY
 					b.transid,
@@ -1422,7 +1425,7 @@ BEGIN
 		-- AG Casino
 		IF EXISTS(SELECT TOP 1 1 FROM #SportBettype s WHERE ProductID = 11)
 		BEGIN
-			-- AG Casino (up to yesterday settled ticket)
+			-- Not yesterday and today settled ticket
 			INSERT INTO #BetListData
 			SELECT
 				b.bettype,
@@ -1490,12 +1493,11 @@ BEGIN
 			WHERE b.custid = @Custid 
 				AND s.ProductId = 11
 				AND b.winlostdate BETWEEN @FromDate AND @ToDate
-				AND b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)	-- not today
+				AND b.winlostdate < @Yesterday
 
-			IF @ToDate >= DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
-				AND @FromDate <= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
+			IF @ToDate >= @Yesterday AND @FromDate <= @Today
 			BEGIN
-				-- Today running ticket
+				-- Yesterday and today running ticket
 				INSERT INTO #BetListData
 				SELECT
 					b.bettype,
@@ -1564,8 +1566,7 @@ BEGIN
 				WHERE b.custid = @Custid 
 					AND s.ProductId = 11
 					AND b.winlostdate BETWEEN @FromDate AND @ToDate
-					AND b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0) 
-						AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
+					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND blc.statusID = 0
 				GROUP BY
 					b.transid,
@@ -1579,7 +1580,7 @@ BEGIN
 					b.betfrom,
 					b.comstatus
 
-				-- Today settled ticket
+				-- Yesterday and today settled ticket
 				INSERT INTO #BetListData
 				SELECT
 					b.bettype,
@@ -1652,8 +1653,7 @@ BEGIN
 				WHERE b.custid = @Custid 
 					AND s.ProductId = 11
 					AND b.winlostdate BETWEEN @FromDate AND @ToDate
-					AND b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0) 
-						AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
+					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND blc.statusID <> 0
 				GROUP BY
 					b.transid,

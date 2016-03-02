@@ -2518,8 +2518,8 @@ BEGIN
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
-			FROM dbo.bettransRnG AS brng WITH (NOLOCK)
-				INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
+			FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+				INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
@@ -2542,9 +2542,8 @@ BEGIN
 				b.matchid,
 				b.transdesc,
 				s.ProductID
-			OPTION (RECOMPILE)
 		END
-			
+
 		IF EXISTS (SELECT TOP 1 [statusID] FROM @tmpStatus WHERE [statusID] = 0)	-- yesterday and today running ticket
 			AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
 				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
@@ -2621,8 +2620,8 @@ BEGIN
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
-			FROM dbo.bettransRnG AS brng WITH (NOLOCK)
-				INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON brng.RefNo = b.transid
+			FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+				INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
@@ -2645,7 +2644,6 @@ BEGIN
 				b.matchid,
 				b.transdesc,
 				s.ProductID
-			OPTION (RECOMPILE)
 		END
 
 		-- AG Casino
@@ -2800,8 +2798,8 @@ BEGIN
 				'' AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM dbo.bettransLC AS blc WITH (NOLOCK)
-				INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON blc.RefNo = b.transid
+			FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+				INNER JOIN dbo.bettransLC AS blc WITH (NOLOCK) ON blc.RefNo = b.transid
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
@@ -2892,8 +2890,8 @@ BEGIN
 				'' AS BetCheck,
 				'' AS transdesc,
 				0 AS OddsSpread
-			FROM dbo.bettransLC AS blc WITH (NOLOCK)
-				INNER JOIN dbo.bettrans AS b WITH (NOLOCK) ON blc.RefNo = b.transid
+			FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+				INNER JOIN dbo.bettransLC AS blc WITH (NOLOCK) ON blc.RefNo = b.transid
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
@@ -3398,6 +3396,7 @@ BEGIN
 	SELECT * FROM @DetailData
 	RETURN 
 END
+
 
 
 
