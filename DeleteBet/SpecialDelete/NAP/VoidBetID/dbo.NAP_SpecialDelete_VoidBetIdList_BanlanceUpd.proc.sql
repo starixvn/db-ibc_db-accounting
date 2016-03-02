@@ -1,13 +1,13 @@
 USE bodb02
 GO
 
-/****** Object:  UserDefinedTableType [dbo].[BalanceList]    Script Date: 3/1/2016 9:05:16 AM ******/
-CREATE TYPE [dbo].[TVP_BalanceChange] AS TABLE(
-	custid INT
-	, balance MONEY
-	, balanceType TINYINT
-)
-GO
+--/****** Object:  UserDefinedTableType [dbo].[BalanceList]    Script Date: 3/1/2016 9:05:16 AM ******/
+--CREATE TYPE [dbo].[TVP_BalanceChange] AS TABLE(
+--	custid INT
+--	, balance MONEY
+--	, balanceType TINYINT
+--)
+--GO
 
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_BanlanceUpd]
 	@BeforeUpd	TVP_BalanceChange	READONLY
@@ -38,8 +38,8 @@ BEGIN
 	DECLARE @tblDebitCasinoPending TVP_BalanceList
 	DECLARE @tblCreditCasinoPending TVP_BalanceList
 	
-	select * from @BeforeUpd
-	select * from @AfterUpd
+	--select * from @BeforeUpd
+	--select * from @AfterUpd
 	
 	--BALANCE Credit
 	INSERT INTO @tblCreditPending (custid,Balance)  
@@ -158,6 +158,4 @@ BEGIN
 	
 	RETURN
 END
-GO
-USE [bodb02]
 GO

@@ -2,7 +2,8 @@
 	@CustID			INT				= NULL 	
 	,@TransIds		VARCHAR(MAX)	= NULL 
 	,@FromDate		DATETIME		= NULL
-	,@ToDate		DATETIME		= NULL 
+	,@ToDate		DATETIME		= NULL
+	,@Duration		INT = 0 OUTPUT	
 AS
 /*  
 	Created by: Bobby  
@@ -19,6 +20,8 @@ AS
 		- 20151021@Kathy: Do not show ticket 901 if its owner is not BetTrade account(betdaqid = 0)[Redmine:#43233]
 		- 20151102@Kathy: Enhance performance [Redmine:#43233]
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
+		- 20160113@Patrick: Support Cricket [Redmine: #50688]
+		- 20160301@Bobby: #53123 - Enhance SP void bet by Id list (allow transId up to 1000 rows)
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -30,7 +33,12 @@ BEGIN
 	
 	IF(@custid IS NULL AND @TransIds IS NULL) RETURN
 	
-	DECLARE @moveBetDay SMALLDATETIME
+	DECLARE @moveBetDay 	SMALLDATETIME
+		,@startTime			DATETIME	
+		
+	SELECT @Duration 		= 0
+		, @startTime		= CURRENT_TIMESTAMP
+		
 	
 	SELECT @moveBetDay = MAX(winlostdate) 
 	FROM dbo.bettrans14 WITH(NOLOCK)
@@ -81,6 +89,7 @@ BEGIN
 		,betdaqid		BIGINT
 		,SoldId			BIGINT
 		,recommend		INT
+		,IsHideComm		BIT DEFAULT(0)
 	)
 	
 	IF(LEN(@TransIds) > 0)
@@ -229,7 +238,8 @@ BEGIN
 			,TransDesc		
 			,betdaqid
 			,username
-			,recommend			
+			,recommend
+			,IsHideComm
 		)
 		SELECT	
 			CASE 
@@ -274,7 +284,7 @@ BEGIN
 			,b.betdaqid
 			,b.username
 			,b.recommend			
-
+			,0 AS IsHideComm
 		FROM dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN dbo.translog tl WITH(NOLOCK)
 			ON b.custid 		= tl.custid
@@ -327,7 +337,8 @@ BEGIN
 			,b.betdaqid
 			,b.username
 			,b.recommend			
-
+			,CASE WHEN b.bettype = 501 AND b.playerdiscount < 0 THEN 1 ELSE 0 END AS IsHideComm
+			
 		FROM dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN #transIdTemp temp
 				ON b.transid = temp.transid
@@ -471,10 +482,11 @@ BEGIN
 	DELETE 
 	FROM #Data
 	WHERE sporttype IS NULL
+		OR bettype = 500 /*charge comm*/
 	
 	-- UPDATE SiteName
 	;WITH CustSiteName AS (
-		SELECT DISTINCT ag.custid, ci.site
+		SELECT DISTINCT ag.custid, ci.site, ci.srecommend
 		FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
 			INNER JOIN #Data ag
 			ON ci.custid = ag.recommend
@@ -482,48 +494,14 @@ BEGIN
 	)
 	-- ALL tickets	
 	SELECT
-		GroupID
-		,bettype		
-		,transid		
-		,betid			
-		,refno			
-		,matchcode	
-		,homeid			
-		,awayid			
-		,hdp1			
-		,hdp2			
-		,odds			
-		,finalodds		
-		,finalodds2		
-		,OddsType		
-		,STATUS			
-		,comstatus		
-		,stake			
-		,transdate		
-		,betteam		
-		,betcheck		
-		,liveindicator	
-		,modds			
-		,d.custid			
-		,username		
-		,livehomescore	
-		,liveawayscore	
-		,leagueid		
-		,sporttype		
-		,betfrom		
-		,matchid		
-		,isNeutral		
-		,winlost		
-		,commission		
-		,showtime		
-		,winlostdate	
-		,TransDesc		
-		,SoldId				
+		d.*
+		,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
 		,cs.Site
-		,betdaqid
 	FROM #Data d
 		INNER JOIN CustSiteName cs 
 		ON d.custid = cs.custid
+		LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
+		ON cs.srecommend = s.custid
 	ORDER BY cs.Site
 		,GroupID
 		,transid
@@ -551,6 +529,8 @@ BEGIN
 		) bm
 	WHERE	NOT EXISTS (SELECT 1 FROM #Data WHERE transid = temp.transid)
 	
+	SELECT @Duration 		= DATEDIFF(MS, @startTime, CURRENT_TIMESTAMP)
+	
 	RETURN;
 END
 GO
@@ -558,4 +538,6 @@ GRANT EXECUTE ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [bodbAdminNet] A
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [vnteam] AS [dbo]
 GO
-exec NAP_SpecialDelete_VoidBetIdList_Sel @ToDate=NULL,@FromDate=NULL,@transids='8438600874,8443643360,8440639493,8443820904,8447579579,8438729775,8442198582,8442512176,8443425082,8442405378,', @CustID=NULL
+exec NAP_SpecialDelete_VoidBetIdList_Sel @ToDate=NULL,@FromDate=NULL
+,@transids='8216246023,8216249324'
+, @CustID=NULL
