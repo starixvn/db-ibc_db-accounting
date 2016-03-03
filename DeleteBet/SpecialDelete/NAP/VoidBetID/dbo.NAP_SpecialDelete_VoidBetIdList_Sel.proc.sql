@@ -90,6 +90,7 @@ BEGIN
 		,SoldId			BIGINT
 		,recommend		INT
 		,IsHideComm		BIT DEFAULT(0)
+		,oddsid			INT
 	)
 	
 	IF(LEN(@TransIds) > 0)
@@ -240,12 +241,10 @@ BEGIN
 			,username
 			,recommend
 			,IsHideComm
+			,oddsid
 		)
 		SELECT	
-			CASE 
-				WHEN b.bettype BETWEEN 801 AND 806 THEN b.refno 
-				ELSE b.transid 
-			END AS GroupId
+			b.refno AS GroupId
 			,b.bettype
 			,b.transid
 			,isnull(b.BetID, 0) AS BetID
@@ -285,10 +284,12 @@ BEGIN
 			,b.username
 			,b.recommend			
 			,0 AS IsHideComm
+			,b.oddsid
 		FROM dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN dbo.translog tl WITH(NOLOCK)
 			ON b.custid 		= tl.custid
 				AND b.refno 	= tl.translogid
+				AND b.matchid 	= tl.eventid
 			INNER JOIN #transIdTemp temp
 			ON tl.translogid 	= temp.transid
 			
@@ -338,6 +339,7 @@ BEGIN
 			,b.username
 			,b.recommend			
 			,CASE WHEN b.bettype = 501 AND b.playerdiscount < 0 THEN 1 ELSE 0 END AS IsHideComm
+			,b.oddsid
 			
 		FROM dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN #transIdTemp temp
@@ -348,7 +350,7 @@ BEGIN
 			AND b.bettype NOT IN (31, 32, 33, 71,72,73)	-- NOT IN [Racing, Casino]
 			AND b.bettype NOT BETWEEN 801 AND 806 
 			AND b.bettype NOT IN (901, 902, 903) -- BT subticket
-			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
+			AND b.bettype NOT BETWEEN 1501 AND 1599	-- exclude Keno
 			AND b.statusID NOT IN (101, 102)
 				
 		
@@ -445,8 +447,8 @@ BEGIN
 				AND sub.matchid = main.matchid
 	END
 	
-	-- UPDATE match event
-	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE matchid <> 9))
+	-- UPDATE eventtype = 1
+	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype NOT IN (9)))
 	BEGIN
 		UPDATE d
 		SET matchcode 	= m.matchcode
@@ -460,13 +462,17 @@ BEGIN
 		FROM #Data d
 			INNER JOIN dbo.match m WITH (NOLOCK) 
 			ON	d.matchid = m.matchid
+			
+		WHERE d.bettype NOT IN (9)
 	END
 	
-	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype = 10))
+	-- UPDATE eventtype = 2 [Outright bettype]
+	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype IN (10)))
 	BEGIN
 		UPDATE d
-		SET awayid 		= odds.teamid
-			,matchcode 	= odds.matchcode
+		SET matchcode 	= odds.matchcode
+			,homeid		= odds.teamid
+			,awayid 	= 0
 			,leagueid 	= odds.leagueid
 			,sporttype 	= l.sporttype
 			,showtime	= ''
@@ -476,13 +482,36 @@ BEGIN
 			ON	d.matchid = odds.orid
 			INNER JOIN dbo.league l WITH (NOLOCK) 
 			ON	odds.leagueid = l.leagueid
-		WHERE d.bettype = 10
+		WHERE d.bettype IN (10)
 	END
+	-- UPDATE eventtype = 3 [VS range  bettypes]
+	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype IN (1231,1232,1233,1237,1238)))
+	BEGIN
+		UPDATE d
+		SET matchcode 	= CONVERT(NVARCHAR(50), o.RacerNum)
+			,homeid 	= o.RacerID
+			,awayid 	= 0
+			,leagueid 	= r.leagueid
+			,sporttype 	= r.sporttype
+			,showtime	= CONVERT(VARCHAR(20), r.EventTime, 113) 
+			
+		FROM #Data d
+			INNER JOIN dbo.VSOutright o WITH (NOLOCK) 
+			ON d.oddsid = o.Orid
+			INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) 
+			ON r.EventID = o.EventID
+			
+		WHERE d.bettype IN (1231,1232,1233,1237,1238)
+	END
+	
 	--- Remove invalid sporttype	
 	DELETE 
 	FROM #Data
-	WHERE sporttype IS NULL
-		OR bettype = 500 /*charge comm*/
+	WHERE bettype NOT IN (9)
+		AND (
+			sporttype IS NULL
+			OR bettype = 500 /*charge comm*/
+		)
 	
 	-- UPDATE SiteName
 	;WITH CustSiteName AS (
@@ -527,7 +556,7 @@ BEGIN
 			FROM dbo.bettrans14 WITH(NOLOCK) 
 			WHERE transid = temp.transid
 		) bm
-	WHERE	NOT EXISTS (SELECT 1 FROM #Data WHERE transid = temp.transid)
+	WHERE	NOT EXISTS (SELECT 1 FROM #Data WHERE transid = temp.transid OR refno = temp.transid)
 	
 	SELECT @Duration 		= DATEDIFF(MS, @startTime, CURRENT_TIMESTAMP)
 	
