@@ -16,7 +16,7 @@ BEGIN
 
 	SELECT site, roleid, custid 
 	FROM customer WITH (NOLOCK) 
-	WHERE username = @username
+	WHERE username = @username 
 END
 
 

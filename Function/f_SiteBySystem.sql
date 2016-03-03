@@ -1,5 +1,4 @@
-﻿
-ALTER FUNCTION [dbo].[f_SiteBySystem]
+﻿ALTER FUNCTION [dbo].[f_SiteBySystem]
 (
 	@System varchar(50) = 'ACCOUNTING'
 )
@@ -23,9 +22,10 @@ Revisions:
 	- 20140117@Lukas: add group ACCYEN888
 	- 20150526@Kiwi: add ACCUT2 group
 	- 20150812@Amy: add ACCTHAI2 group
-	-20150817@Susan: add ACCIN group
+	- 20150817@Susan: add ACCIN group
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
-	
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	- 20160114@Helen: Cricket - [Redmine: #50027]
 	Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING'
 */
@@ -58,6 +58,8 @@ BEGIN
 		SELECT 1 --BEST-ODDS
 		UNION ALL 
 		SELECT 184 -- 766666
+		UNION ALL 
+		SELECT 147
 	END
 	ELSE IF (@System = 'ACCDDD')
 	BEGIN
