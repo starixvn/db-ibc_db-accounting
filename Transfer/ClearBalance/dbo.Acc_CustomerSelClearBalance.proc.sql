@@ -73,7 +73,7 @@ Param's Explanation:
 			  FROM bettrans  WITH (NOLOCK)
 			  WHERE recommend =@custid 
 					AND (
-							(ruben = 0 AND (bettype NOT IN (801,802,803,804,805,806,1003) OR bettype NOT BETWEEN 2101 AND 2499))
+							(ruben = 0 AND bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499)
 							OR ruben <> 0
 						)
 					AND (
