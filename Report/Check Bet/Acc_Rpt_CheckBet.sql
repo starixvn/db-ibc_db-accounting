@@ -1,6 +1,6 @@
 ﻿Use [BK]
 GO 
-ALTER PROCEDURE [dbo].[Acc_Rpt_CheckBet]
+alter PROCEDURE [dbo].[Acc_Rpt_CheckBet]
 	@winlostdate datetime
 as 
 /*	

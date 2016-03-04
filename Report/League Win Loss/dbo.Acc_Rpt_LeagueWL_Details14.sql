@@ -194,7 +194,7 @@ SET NOCOUNT ON
 				HomeId
 	END	
 
-	SELECT	@WinLost_8RM = -SUM(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) 
+	SELECT	@WinLost_8RM = -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) 
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match_8RM m ON
 			b.matchid = m.matchid
@@ -209,7 +209,7 @@ SET NOCOUNT ON
 			AND b.BetType = @Bettype				
 		
 	-- 20120412@Hurri: Get win lost of agent 'BARM' (@WinLost_BARM)		
-	SELECT	@WinLost_BARM = -SUM(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) 
+	SELECT	@WinLost_BARM = -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)*virtualrate) 
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match_8RM m ON
 			b.matchid = m.matchid

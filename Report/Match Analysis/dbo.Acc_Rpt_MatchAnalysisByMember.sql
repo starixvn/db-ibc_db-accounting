@@ -21,6 +21,7 @@ AS
 		- 20120215@Elodie: Change linked server DB06 to DBARC
 		- 20150529@Jim: add Metric Gaming and apply sport-bettype matrix
 		- 20150728@Jim: apply Bettrade (Feature #38815)
+		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
 
 	Explanation's Param:
 		- @matchid: the id of match
@@ -32,7 +33,9 @@ AS
 		RETURN
 	
 	DECLARE @tmp TABLE (val INT)
-
+	INSERT INTO @tmp(val) 
+	VALUES(500) -- Charged Commission
+	
 	IF (@bettypes IS NOT NULL)
 		INSERT INTO @tmp(val) SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,',')
 	
@@ -40,7 +43,9 @@ AS
 	INSERT INTO @SportBettype
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
-	DELETE 	@SportBettype WHERE bettype IN (901,902,903)
+	DELETE @SportBettype
+	WHERE bettype IN (901,902,903,9,29,10)
+		OR ProductID <> 1
 	
 
 	IF (@eventdate>@MoveBetsDay)
@@ -50,7 +55,7 @@ AS
 		(
 			SELECT 	username, 
 					MAX(currency) currency,
-					COUNT(transid) betcount,
+					SUM(CASE WHEN b.bettype = 500 THEN 0 ELSE 1 END) betcount,
 					-- MEMBER
 					ISNULL(SUM(ABS(stake)* b.actualrate),0) AS MemberTurnover,
 					ISNULL(SUM((winlost-actual_stake + playercomm)* b.actualrate),0) AS MemberWinLost,
@@ -61,16 +66,14 @@ AS
 					ISNULL(SUM(tpositiontaking*ABS(stake)* b.actualrate),0) AS SMATurnover,
 					ISNULL(SUM((swinlost + scomm + awinlost + mwinlost - playercomm)* b.actualrate),0) AS SMAWinLost
 					
-			FROM	bettrans b WITH (NOLOCK)				
+			FROM	bettrans b WITH (NOLOCK)		
+				INNER JOIN @SportBettype s on b.bettype = s.bettype					
 			WHERE			
-					matchid = @matchid
-					--support only sportbook
-					AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
-					AND	b.bettype NOT IN (9,29,10) 
+					matchid = @matchid					
 					--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 					AND b.statusID IN (111,112,113)
 					AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-					AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
+					AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
 					AND ruben = 1		
 					AND Currency <> 20		
 			GROUP BY username			
@@ -90,7 +93,7 @@ AS
 		(	
 			SELECT 	username, 
 					MAX(currency) currency,
-					COUNT(transid) betcount,
+					SUM(CASE WHEN b.bettype = 500 THEN 0 ELSE 1 END) betcount,
 					-- MEMBER
 					ISNULL(SUM(ABS(stake)* b.actualrate),0) AS MemberTurnover,
 					ISNULL(SUM((winlost-actual_stake + playercomm)* b.actualrate),0) AS MemberWinLost,
@@ -101,17 +104,14 @@ AS
 					ISNULL(SUM(tpositiontaking*ABS(stake)* b.actualrate),0) AS SMATurnover,
 					ISNULL(SUM((swinlost + scomm + awinlost + mwinlost - playercomm)* b.actualrate),0) AS SMAWinLost
 					
-			FROM	bettrans14 b WITH (NOLOCK)				
+			FROM	bettrans14 b WITH (NOLOCK)	
+				INNER JOIN @SportBettype s on b.bettype = s.bettype								
 			WHERE			
-					matchid = @matchid
-					--support only sportbook
-					AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
-					AND	b.bettype NOT IN (9,29,10) 
-
+					matchid = @matchid					
 					--AND status NOT IN ('VOID', 'REJECT','REFUND') 
 					AND b.statusID IN (111,112,113)
 					AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-					AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
+					AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
 					AND ruben = 1		
 					AND Currency <> 20		
 			GROUP BY username
@@ -131,7 +131,7 @@ AS
 		(
 			SELECT 	username, 
 					MAX(B.currency) currency,
-					COUNT(transid) betcount,
+					SUM(CASE WHEN b.bettype = 500 THEN 0 ELSE 1 END) betcount,
 					-- MEMBER
 					ISNULL(SUM(ABS(stake)* b.actualrate),0) AS MemberTurnover,
 					ISNULL(SUM((winlost-actual_stake + playercomm)* b.actualrate),0) AS MemberWinLost,
@@ -144,17 +144,14 @@ AS
 					
 			FROM	DBARC.bodb_archive.dbo.bettrans_bk b WITH (NOLOCK)				
 						INNER JOIN customer c WITH (NOLOCK) ON c.custid = b.custid
+						INNER JOIN @SportBettype s on b.bettype = s.bettype								
 			WHERE			
 					winlostdate = @eventdate	
-					AND matchid = @matchid
-					--support only sportbook
-					AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
-					AND	b.bettype NOT IN (9,29,10) 
-
+					AND matchid = @matchid					
 					AND status IN ('DRAW', 'WON','LOSE') 
 					--AND b.statusID IN (111,112,113)									
 					AND (@liveindicator IS NULL or liveindicator = @liveindicator)
-					AND (@bettypes IS NULL OR bettype IN (SELECT val FROM @tmp))
+					AND (@bettypes IS NULL OR b.bettype IN (SELECT val FROM @tmp))
 					AND ruben = 1		
 					AND b.Currency <> 20		
 			GROUP BY username			

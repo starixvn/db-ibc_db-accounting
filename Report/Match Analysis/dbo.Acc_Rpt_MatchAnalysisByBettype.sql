@@ -21,6 +21,7 @@ AS
 		- 20150529@Jim: add Metric Gaming and apply sport-bettype matrix
 		- 20150728@Jim: apply Bettrade (Feature #38815)
 		- 20150922@Jim: offer MO ( #41935)		
+		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
 	Explanation's Param:
 		- @matchid: the id of match
 		- @statusid: the status of tickets --> ALL/DRAW/WON/LOSE  (0/111/112/113)
@@ -31,6 +32,8 @@ AS
 		RETURN
 	
 	DECLARE @tmp TABLE (val INT)
+	INSERT INTO @tmp(val) 
+	VALUES(500) -- Charged Commission
 
 	IF (@bettypes IS NOT NULL)
 		INSERT INTO @tmp(val) SELECT CONVERT(INT,val) FROM dbo.strSplit(@bettypes,',')
@@ -39,7 +42,9 @@ AS
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
-	DELETE 	@SportBettype WHERE bettype IN (901,902,903)
+	DELETE @SportBettype
+	WHERE bettype IN (901,902,903,9,29,10)
+		OR ProductID <> 1
 	
 	UPDATE @SportBettype
 	SET OrderKey = CASE Bettype WHEN 1   THEN 1
@@ -57,7 +62,7 @@ AS
 	BEGIN	
 		SELECT 	
 				b.bettype,
-				COUNT(transid) betcount,
+				SUM(CASE WHEN b.bettype = 500 THEN 0 ELSE 1 END) betcount,
 				--MEMBER
 				ISNULL(SUM(ABS(stake)* b.actualrate),0) AS MemberTurnover,
 				ISNULL(SUM((winlost-actual_stake + playercomm)* b.actualrate),0) AS MemberWinLost,
@@ -71,11 +76,7 @@ AS
 		FROM	bettrans b WITH (NOLOCK)	
 				INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
 		WHERE			
-				matchid = @matchid
-				--support only sportbook
-				--AND (b.bettype < 31 OR b.Bettype BETWEEN 121 AND 999 or b.bettype BETWEEN 1301 and 1334) 
-				AND bet.ProductID=1
-				AND	b.bettype NOT IN (9,29,10) 				
+				matchid = @matchid								
 				AND statusID = CASE WHEN @statusID = 0 THEN statusID		
 									ELSE @statusID 	END
 				--AND status NOT IN ('VOID', 'REJECT','REFUND') 			
@@ -91,7 +92,7 @@ AS
 	BEGIN
 		SELECT 	
 				b.bettype,
-				COUNT(transid) betcount,
+				SUM(CASE WHEN b.bettype = 500 THEN 0 ELSE 1 END) betcount,
 				--MEMBER
 				ISNULL(SUM(ABS(stake)* b.actualrate),0) AS MemberTurnover,
 				ISNULL(SUM((winlost-actual_stake + playercomm)* b.actualrate),0) AS MemberWinLost,
@@ -105,10 +106,7 @@ AS
 		FROM	bettrans14 b WITH (NOLOCK)		
 				INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
 		WHERE			
-				matchid = @matchid
-				--support only sportbook
-				AND bet.ProductID=1
-				AND	b.bettype NOT IN (9,29,10) 
+				matchid = @matchid				
 				AND statusID = CASE WHEN @statusID = 0 THEN statusID		
 									ELSE @statusID 	END
 				--AND status NOT IN ('VOID', 'REJECT','REFUND') 
@@ -124,7 +122,7 @@ AS
 	BEGIN
 		SELECT 	
 				b.bettype,
-				COUNT(transid) betcount,
+				SUM(CASE WHEN b.bettype = 500 THEN 0 ELSE 1 END) betcount,
 				--MEMBER
 				ISNULL(SUM(ABS(stake)* b.actualrate),0) AS MemberTurnover,
 				ISNULL(SUM((winlost-actual_stake + playercomm)* b.actualrate),0) AS MemberWinLost,
@@ -140,10 +138,7 @@ AS
 				INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
 		WHERE			
 				winlostdate = @eventdate
-				AND matchid = @matchid
-				--support only sportbook
-				AND bet.ProductID=1
-				AND	b.bettype NOT IN (9,29,10) 
+				AND matchid = @matchid				
 				--AND statusID = CASE WHEN @statusID = 0 THEN statusID	ELSE @statusID 	END
 				AND status = CASE WHEN @statusID = 0 THEN status		
 								WHEN @statusID = 111 THEN 'DRAW'

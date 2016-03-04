@@ -87,7 +87,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DECLARE @P2P_LineTotal  money			
 	DECLARE @RBWinlost TABLE(site tinyint,
