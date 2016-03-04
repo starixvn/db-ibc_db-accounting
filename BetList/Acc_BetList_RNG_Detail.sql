@@ -20,6 +20,7 @@ AS
 	Revisions:
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151229@Kos: Support RNG Casino Single Wallet and use SportBettypeMatrix [Redmine: #48958]
+		- 20160304@Kos: Add MatchCode column
 
 	Parameters:
 		- @TransType
@@ -109,7 +110,8 @@ BEGIN
 			CASE
 				WHEN sbt.productID IN (6, 17) THEN brng.TranId3rd
 				ELSE ''
-			END AS BetCheck
+			END AS BetCheck,
+			'' AS MatchCode
 		FROM dbo.bettransRnG AS brng WITH (NOLOCK)
 			INNER JOIN @SportBettype AS sbt ON brng.gameID = sbt.Bettype
 		WHERE brng.custid = @CustId 
@@ -148,7 +150,8 @@ BEGIN
 			CASE
 				WHEN sbt.productID IN (6, 17) THEN brng.TranId3rd
 				ELSE ''
-			END AS BetCheck
+			END AS BetCheck,
+			'' AS MatchCode
 		FROM dbo.bettransRnG14 AS brng WITH (NOLOCK)
 			INNER JOIN @SportBettype AS sbt ON brng.gameID = sbt.Bettype
 		WHERE brng.custid = @CustId AND brng.RefNo = @RefNo
@@ -185,12 +188,14 @@ BEGIN
 			CASE
 				WHEN sbt.productID IN (6, 17) THEN brng.TranId3rd
 				ELSE ''
-			END AS BetCheck
+			END AS BetCheck,
+			'' AS MatchCode
 		FROM DBARC.bodb_Archive.dbo.bettransRnG_bk AS brng WITH (NOLOCK)
 			INNER JOIN @SportBettype AS sbt ON brng.gameID = sbt.Bettype
 		WHERE brng.custid = @CustId AND brng.RefNo = @RefNo
 	END
 END
+
 
 
 GRANT	VIEW DEFINITION	ON	Acc_BetList_RNG_Detail	TO	vnteam
