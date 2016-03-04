@@ -1,7 +1,4 @@
-﻿use bodb02
-go
-
-ALTER PROCEDURE dbo.Acc_BalanceGameResetYesterday (@CustID INT
+﻿ALTER PROCEDURE dbo.Acc_BalanceGameResetYesterday (@CustID INT
 	, @IsResetYesterdayBalance BIT OUTPUT
 	, @YesterdayBalance	MONEY OUTPUT
 	, @ErrCode INT = 0 OUTPUT
@@ -17,6 +14,8 @@ AS
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database) 					       
 		- 20150723@Patrick: Support Gold deluxe
 		- 20151223@Patrick: Add Max/Loss limit for RnG Casino [Redmine: #49528]
+		- 20160201@Elodie: Apply new rule for auto reset of OneRNG 
+		- 20160204@Elodie: Add WinLossLimit setting type for DCS [Redmine: #49606]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -33,7 +32,13 @@ BEGIN
 	INSERT INTO @BetTypeIds(BetType)
 	SELECT bettype
 	FROM DBCUST.CustDB.dbo.CustWinLimit WITH (NOLOCK)
-	WHERE CustId = @CustID AND MaxWinlimit > 0 AND IsAutoReset = 0
+	WHERE CustId = @CustID AND IsAutoReset = 0 AND ((BetType = 1701 AND MaxWinlimit > 0) OR BetType = 2101)
+
+	--for DCS Product
+	INSERT INTO @BetTypeIds(BetType)
+	SELECT bettype
+	FROM DBCUST.CustDB.dbo.CustWinLossLimit_Member WITH (NOLOCK)
+	WHERE CustId = @CustID AND IsAutoReset = 0
 		
 	IF NOT EXISTS (SELECT TOP 1 1 FROM @BetTypeIds)
 		RETURN
