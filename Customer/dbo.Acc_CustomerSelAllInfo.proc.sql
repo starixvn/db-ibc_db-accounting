@@ -161,10 +161,7 @@ BEGIN
 	SELECT @yesterday = DATEADD(DD, -1, @today)
 
 	DECLARE @netPosition MONEY = 0 -- for member
-	IF @roleid = 1
-		-- Net Balance
-		SELECT @netPosition = ISNULL(SUM(Credit - Debit), 0) FROM DBPRO.bodb02.dbo.BalNetPosition WITH (NOLOCK) WHERE custid = @custid
-
+	
     SELECT @today = CONVERT(DATE, GETDATE())
 	SELECT @yesterday = DATEADD(DD, -1, @today)
 	
@@ -201,6 +198,10 @@ BEGIN
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custid = @custid
     END
+
+	IF @roleid = 1
+		-- Net Balance
+		SELECT @netPosition = ISNULL(SUM(Credit - Debit), 0) FROM DBTXN.bodb02.dbo.BalNetPosition WITH (NOLOCK) WHERE custid = @custid
 
     IF @roleid > 4
 	    RETURN
