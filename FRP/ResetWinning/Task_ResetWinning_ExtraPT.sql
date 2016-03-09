@@ -136,17 +136,17 @@ BEGIN
 
 	IF @mode = 0 -- view
 	BEGIN
-		INSERT INTO @reset (CustID, Winlost, Winlostdate, GroupID)
+		INSERT INTO @reset (CustID, [Reset], Winlostdate, GroupID)
 		SELECT b.custid, SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)) AS Winlost, b.winlostdate, d.GroupID
 		FROM bettrans b WITH(NOLOCK)
-		INNER JOIN @dummy d
+		INNER JOIN (SELECT DISTINCT CustID, GroupID FROM @dummy) d
 			ON b.custid = d.CustID
 		WHERE b.bettype IN (21001, 21002)
 			AND b.winlostdate BETWEEN @fromdate AND @todate
 		GROUP BY b.custid, b.winlostdate, d.GroupID
 
 		;WITH DWL AS (
-			SELECT G.GroupId, ISNULL(SUM(W.Winlost*G.ExtraPT), 0) AS Winlost, W.Winlostdate
+			SELECT G.GroupId, ROUND(ISNULL(SUM(W.Winlost*G.ExtraPT), 0), 2) AS Winlost, W.Winlostdate
 			FROM @winning W
 			INNER JOIN bodb_ACC.dbo.Acc_GroupExtraPTSetting G WITH(NOLOCK)
 					 ON W.SuperID = G.SuperId
@@ -156,7 +156,7 @@ BEGIN
 					AND (W.Winlostdate >= G.FromDate AND W.Winlostdate <= G.ToDate)
 			GROUP BY G.GroupId, W.Winlostdate
 		)
-		SELECT DM.GroupId, DM.GroupName, W.Winlost, W.[Reset], DM.Winlostdate
+		SELECT DM.GroupId, DM.GroupName, ROUND(W.Winlost, 2) AS Winlost, ROUND(W.[Reset], 2) AS [Reset], DM.Winlostdate
 		FROM @dummy AS DM
 		LEFT JOIN (
 			SELECT  ISNULL(D.GroupId, rs.GroupID) AS GroupID,
@@ -168,12 +168,12 @@ BEGIN
 				ON D.GroupId = rs.GroupID AND D.Winlostdate = rs.Winlostdate
 		) AS W
 			ON DM.GroupID = W.GroupID AND DM.Winlostdate = W.Winlostdate
-		ORDER BY W.Winlostdate DESC, DM.GroupID ASC
+		ORDER BY DM.Winlostdate DESC, DM.GroupID ASC
 	END
 	ELSE IF @mode = 1 -- reset
 	BEGIN
 		;WITH DWL AS (
-			SELECT G.GroupId, G.GroupName, ISNULL(SUM(W.Winlost*G.ExtraPT), 0) AS Winlost, W.Winlostdate
+			SELECT G.GroupId, ROUND(ISNULL(SUM(W.Winlost*G.ExtraPT), 0), 2) AS Winlost, W.Winlostdate
 			FROM @winning W
 			INNER JOIN bodb_ACC.dbo.Acc_GroupExtraPTSetting G WITH(NOLOCK)
 					 ON W.SuperID = G.SuperId
@@ -181,22 +181,22 @@ BEGIN
 					AND W.Sporttype = G.Sporttype
 					AND W.SubProduct = G.SubProduct
 					AND (W.Winlostdate >= G.FromDate AND W.Winlostdate <= G.ToDate)
-			GROUP BY G.GroupId, G.GroupName, W.Winlostdate
+			GROUP BY G.GroupId, W.Winlostdate
 		)
 		INSERT INTO @reset (CustID, Winlost, [Reset], Variance, Winlostdate, GroupID, GroupName)
-		SELECT DM.CustID, W.Winlost, W.[Reset], W.Variance, DM.Winlostdate, DM.GroupID, DM.GroupName
+		SELECT DM.CustID, ROUND(W.Winlost, 2), ROUND(W.[Reset], 2), ROUND(W.Variance, 2), DM.Winlostdate, DM.GroupID, DM.GroupName
 		FROM @dummy DM
 		INNER JOIN ( -- no need left join
 			SELECT  ISNULL(D.Winlost, 0) AS Winlost,
-					ISNULL(R.Winlost, 0) AS [Reset],
-					- ISNULL(D.Winlost, 0) - ISNULL(R.Winlost, 0) AS Variance,
+					ISNULL(R.[Reset], 0) AS [Reset],
+					- ISNULL(D.Winlost, 0) - ISNULL(R.[Reset], 0) AS Variance,
 					ISNULL(D.Winlostdate, R.winlostdate) AS Winlostdate,
 					ISNULL(D.GroupId, R.GroupID) AS GroupID
 			FROM DWL AS D
 			FULL OUTER JOIN (
-				SELECT SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)) AS Winlost, b.winlostdate, d.GroupID
+				SELECT SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)) AS [Reset], b.winlostdate, d.GroupID
 				FROM bettrans b WITH(NOLOCK)
-				INNER JOIN @dummy d
+				INNER JOIN (SELECT DISTINCT CustID, GroupID FROM @dummy) d
 					ON b.custid = d.CustID
 				WHERE b.bettype IN (21001, 21002)
 					AND b.winlostdate BETWEEN @fromdate AND @todate
