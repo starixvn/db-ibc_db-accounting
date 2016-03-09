@@ -14,6 +14,7 @@ AS
 	Creator: Percy
 	Date: 20160304
 	Remark: Add new function for Reset Winning (Extra PT) [Redmine: #51721]
+	DB: DBTXN.bodb02
 
 	Revisions:
 
@@ -79,13 +80,13 @@ BEGIN
 	BEGIN 
 		INSERT INTO @DummyCust (CustID)
 		SELECT custid
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)
+		FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)
 	END 
 	ELSE
 	BEGIN 
 		INSERT INTO @DummyCust (CustID)
 		SELECT custid
-		FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)
+		FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest WITH(NOLOCK)
 
 	END 
 
