@@ -513,6 +513,11 @@ BEGIN
 			OR bettype = 500 /*charge comm*/
 		)
 	
+	-- DECLARE @TransIdSolds	VARCHAR(MAX) = ''
+	-- SELECT @TransIdSolds = @TransIdSolds  + CASE(transId AS VARCHAR(20)) + ','
+	-- FROM #data
+	-- WHERE [status] = 'SOLD'
+	
 	-- UPDATE SiteName
 	;WITH CustSiteName AS (
 		SELECT DISTINCT ag.custid, ci.site, ci.srecommend
@@ -560,6 +565,8 @@ BEGIN
 	
 	SELECT @Duration 		= DATEDIFF(MS, @startTime, CURRENT_TIMESTAMP)
 	
+	--SELECT @TransIdSolds AS TransIdSolds
+	
 	RETURN;
 END
 GO
@@ -567,6 +574,3 @@ GRANT EXECUTE ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [bodbAdminNet] A
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [vnteam] AS [dbo]
 GO
-exec NAP_SpecialDelete_VoidBetIdList_Sel @ToDate=NULL,@FromDate=NULL
-,@transids='8216246023,8216249324'
-, @CustID=NULL
