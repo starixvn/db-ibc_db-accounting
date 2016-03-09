@@ -42,7 +42,7 @@ SELECT	s.ProductID, b.bettype ,
 		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
 		sum((1-tpositiontaking)*stake*actualrate) Turnover,
 		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost-actual_stake)*actualrate*e.ExtraPT END) AS ExtraPT , 
-		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN (winlost-actual_stake)*actualrate ELSE (winlost-actual_stake)*actualrate*(1- e.ExtraPT) END) AS AfterExtraPT 
+		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN (winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate  ELSE (winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate - (winlost-actual_stake)*actualrate*e.ExtraPT END) AS AfterExtraPT 
 		 
 FROM	bettrans b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.bettype = b.bettype
