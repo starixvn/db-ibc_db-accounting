@@ -319,8 +319,8 @@ BEGIN
 			SUM(turnover_actualrate) AS RealTurnover,
 			SUM(turnover_virtualrate) AS VirtualTurnover,
 			1 EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winLost_virtualrate*e.ExtraPT END) AS ExtraPT ,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winLost_virtualrate ELSE winLost_virtualrate*(1- e.ExtraPT) END) AS AfterExtraPT 
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT 
 	FROM	#src b WITH(NOLOCK)
 				INNER JOIN @Match m on b.matchid = m.matchid
 				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
@@ -356,7 +356,7 @@ BEGIN
 			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover,
 			0 EnableVirtual,
 			0 ExtraPT ,
-			-sum(winlost-actual_stake) AfterExtraPT 
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) AfterExtraPT 
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 			LEFT JOIN @Bettype t ON b.bettype = t.bettype
@@ -390,7 +390,7 @@ BEGIN
 			-sum((1-tpositiontaking)*ABS(stake)) VirtualTurnover,
 			0 EnableVirtual,
 			0 ExtraPT ,
-			-sum(winlost-actual_stake) AfterExtraPT 
+			-sum(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) AfterExtraPT 
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN @Match m on b.matchid = m.matchid
 			LEFT JOIN @Bettype t ON b.bettype = t.bettype
@@ -418,8 +418,8 @@ BEGIN
 			SUM(turnover_actualrate) RealTurnover,
 			SUM(turnover_virtualrate) VirtualTurnover,
 			1 EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winLost_virtualrate*e.ExtraPT END) AS ExtraPT ,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winLost_virtualrate ELSE winLost_virtualrate*(1- e.ExtraPT) END) AS AfterExtraPT 
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT 
 	FROM	#src b WITH (NOLOCK) 
 			LEFT JOIN (SELECT DISTINCT superID,extraPT FROM dbo.f_ExtraPT_Sel (1,0,'',@winlostdate) WHERE ISNULL(SubProduct,'')='' AND  Sporttype<>44
 			) e  ON  b.srecommend = e.superID 
@@ -439,8 +439,8 @@ BEGIN
 			SUM(turnover_actualrate) RealTurnover,
 			SUM(turnover_virtualrate) VirtualTurnover,
 			1 EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winLost_virtualrate*e.ExtraPT END) AS ExtraPT ,  
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winLost_virtualrate ELSE winLost_virtualrate*(1- e.ExtraPT) END) AS AfterExtraPT 
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT 
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN dbo.f_ExtraPT_Sel (1,0,'',@winlostdate) e  ON s.ProductId = e.ProductId and b.srecommend = e.superID 
@@ -476,7 +476,7 @@ BEGIN
 			0 VirtualTurnover,
 			0 EnableVirtual,
 			0 ExtraPT ,
-			WinLost AfterExtraPT 
+			LineTotal AfterExtraPT 
 	FROM @RBWinlost	
 
 	---Live Casino + Gold Deluxe + AG Casino + Microgaming live casino
@@ -494,8 +494,8 @@ BEGIN
 			SUM(turnover_actualrate) RealTurnover,
 			SUM(turnover_virtualrate) VirtualTurnover,
 			0 EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT , 
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winlost_actualrate ELSE winlost_actualrate*(1- e.ExtraPT) END) AS AfterExtraPT  
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT  
 	FROM	#src b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN (SELECT DISTINCT ProductID,SuperID,ExtraPT FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting   WITH(NOLOCK)  WHERE ProductID IN (4,12,11,13) AND @winlostdate BETWEEN FromDate AND ToDate
@@ -515,8 +515,8 @@ BEGIN
 			SUM(turnover_actualrate) RealTurnover,
 			SUM(turnover_virtualrate) VirtualTurnover,
 			0 EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT , 
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winlost_actualrate ELSE winlost_actualrate*(1- e.ExtraPT) END) AS AfterExtraPT 
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT 
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN dbo.f_ExtraPT_Sel (5,0,'',@winlostdate) e  ON s.ProductId = e.ProductId and b.srecommend = e.superID 
@@ -535,8 +535,8 @@ BEGIN
 			SUM(turnover_actualrate) AS RealTurnover,
 			SUM(turnover_virtualrate) AS VirtualTurnover,
 			0 EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) ExtraPT ,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winlost_actualrate ELSE winlost_actualrate*(1- e.ExtraPT) END) AS AfterExtraPT  
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT   
 	FROM	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN (SELECT DISTINCT ProductID,SuperID,ExtraPT FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting   WITH(NOLOCK)  WHERE ProductID IN (6,14,17) AND @winlostdate BETWEEN FromDate AND ToDate
@@ -558,7 +558,7 @@ BEGIN
 			0 VirtualTurnover,
 			0 EnableVirtual,
 			0 ExtraPT ,
-			sum((winlost-actual_stake)*actualrate) AfterExtraPT 
+			sum(-1*(odds-scomm)*actualrate) AfterExtraPT 
 	from	bettrans14 bettrans with (nolock)
 		left join (select custid from #DepAgent) dep ON bettrans.recommend = dep.custid 
 	where 	bettrans.bettype = 1000
@@ -580,7 +580,7 @@ BEGIN
 			0 VirtualTurnover,
 			0 EnableVirtual,
 			0 ExtraPT,
-			ISNULL(SUM(winlost_actualrate),0) AfterExtraPT 
+			ISNULL(SUM(LineTotal_actualrate),0) AfterExtraPT 
 	from	#src b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where s.ProductId = 7	
@@ -600,8 +600,8 @@ BEGIN
 			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
 			SUM(ISNULL(turnover_actualrate,0)) VirtualTurnover,
 			0 EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,  
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winlost_actualrate ELSE winlost_actualrate*(1- e.ExtraPT) END) AS AfterExtraPT 
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT 
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN dbo.f_ExtraPT_Sel (8,0,'',@winlostdate) e  ON s.ProductId = e.ProductId and b.srecommend = e.superID 
@@ -626,7 +626,7 @@ BEGIN
 		,0 VirtualTurnover
 		,0 EnableVirtual
 		,SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT
-		,SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winlost_actualrate ELSE winlost_actualrate*(1- e.ExtraPT) END) AS AfterExtraPT    
+		,SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT     
 	FROM #src b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		LEFT JOIN dbo.f_ExtraPT_Sel (1,0,'MG-SuperLive',@winlostdate) e  ON s.ProductId = e.ProductId and b.srecommend = e.superID 
@@ -648,8 +648,8 @@ BEGIN
 			0 AS RealTurnover,
 			0 AS VirtualTurnover,
 			0 AS EnableVirtual,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,    
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN winlost_actualrate ELSE winlost_actualrate*(1- e.ExtraPT) END) AS AfterExtraPT   
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT ,
+			SUM(LineTotal_actualrate) - SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS AfterExtraPT   
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN dbo.f_ExtraPT_Sel (1,0,'BT-Comm',@winlostdate) e  ON s.ProductId = e.ProductId and b.srecommend = e.superID 
@@ -671,7 +671,7 @@ BEGIN
 			SUM(ISNULL(turnover_actualrate,0)) AS VirtualTurnover,
 			0 AS EnableVirtual,
 			0 ExtraPT ,
-			SUM(ISNULL(b.winlost_actualrate,0)) AfterExtraPT 
+			SUM(ISNULL(b.LineTotal_actualrate,0)) AfterExtraPT 
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 15
@@ -690,7 +690,7 @@ BEGIN
 			SUM(ISNULL(turnover_actualrate,0)) AS VirtualTurnover,
 			0 AS EnableVirtual,
 			0 ExtraPT ,
-			SUM(ISNULL(b.winlost_actualrate,0)) AfterExtraPT 
+			SUM(ISNULL(b.LineTotal_actualrate,0)) AfterExtraPT 
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 19
