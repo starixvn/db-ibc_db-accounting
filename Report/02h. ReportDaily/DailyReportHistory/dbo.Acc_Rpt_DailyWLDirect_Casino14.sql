@@ -18,6 +18,7 @@ AS
 			- 20150806@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 			- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 			- 20160108@Percy: Calculate turnover for new RNG Casino [Redmine: #49134]
+			- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
 		
 	*/
 BEGIN
@@ -39,7 +40,7 @@ BEGIN
 	SELECT 5707545--BARM
 				
 	SELECT
-		ProductId,
+		a.ProductId,
 		bettype,
 		site,
 		SUM(WinLost) WinLost,
@@ -47,10 +48,11 @@ BEGIN
 		SUM(Commission) Commission,
 		SUM(LineTotal) LineTotal,
 		SUM(Turnover) Turnover,
-		SUM(ExtraPT) ExtraPT,
-		SUM(AfterExtraPT) AfterExtraPT
+		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE ISNULL(WinLost,0)*e.ExtraPT END) AS ExtraPT ,  
+		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN ISNULL(WinLost,0) ELSE ISNULL(WinLost,0)*(1- e.ExtraPT) END) AS AfterExtraPT 
 	FROM (
-		SELECT	s.ProductId,	
+		SELECT	s.ProductId,
+				b.srecommend,
 				CASE s.ProductId WHEN 6 THEN 71
 								 WHEN 14 THEN 1900
 								 WHEN 13 THEN 2001
@@ -72,6 +74,7 @@ BEGIN
 				AND b.statusID NOT IN (102, 101,121,103)  ---('VOID', 'REJECT','done','REFUND') 
 				AND b.ruben = 1		
 		GROUP BY s.ProductId, 
+				b.srecommend,
 				case when dep.custid is null then 1 else 2 end,
 				CASE s.ProductId WHEN 6 THEN 71
 								 WHEN 14 THEN 1900
@@ -80,6 +83,7 @@ BEGIN
 								 END
 		UNION ALL
 		SELECT	6 ProductId,	
+				b.srecommend,
 				71 bettype,
 				case when dep.custid is null then 1 else 2 end as site,
 				0 WinLost,
@@ -95,10 +99,11 @@ BEGIN
 		WHERE	b.winlostdate = @winlostdate
 				AND s.ProductId = 6
 				AND b.statusID NOT IN (0, 1, 102, 101,121,103)
-		GROUP BY case when dep.custid is null then 1 else 2 end
+		GROUP BY b.srecommend, case when dep.custid is null then 1 else 2 end
 	) AS A
-	GROUP BY ProductId, site, bettype
-	ORDER BY ProductId, site	
+	LEFT JOIN  dbo.f_ExtraPT_Sel (6,0,'',@winlostdate) e  ON A.ProductId = e.ProductId and a.srecommend = e.superID 
+	GROUP BY a.ProductId, site, bettype
+	ORDER BY a.ProductId, site	
 
 	--GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end 
 	--ORDER BY b.Bettype, site

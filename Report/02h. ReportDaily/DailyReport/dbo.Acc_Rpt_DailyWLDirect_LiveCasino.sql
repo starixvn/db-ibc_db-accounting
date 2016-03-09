@@ -13,6 +13,7 @@ AS
 		- 20150522@Sophia: Apply Gold Deluxe and revise Sport Betype Matrix [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 		- 20151111@Percy: Change the sport type: MGC-RNG to MGC and RNG [RedmineID: #46576]
+		- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
 	
 */
 SET NOCOUNT ON
@@ -40,11 +41,14 @@ SELECT	s.ProductID, b.bettype ,
 		sum(scomm*actualrate) Commission,	
 		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
 		sum((1-tpositiontaking)*stake*actualrate) Turnover,
-		sum((winlost-actual_stake)*actualrate) ExtraPT,
-		sum((winlost-actual_stake)*actualrate) AfterExtraPT
+		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost-actual_stake)*actualrate*e.ExtraPT END) AS ExtraPT , 
+		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN (winlost-actual_stake)*actualrate ELSE (winlost-actual_stake)*actualrate*(1- e.ExtraPT) END) AS AfterExtraPT 
+		 
 FROM	bettrans b WITH (NOLOCK)
 	INNER JOIN @SportBettype s ON s.bettype = b.bettype
 	LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid
+	LEFT JOIN  (SELECT DISTINCT ProductID,SuperID,ExtraPT FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting   WITH(NOLOCK)  WHERE ProductID IN (4,12,11,13) AND @winlostdate BETWEEN FromDate AND ToDate
+				) e  ON s.ProductId = e.ProductId and b.srecommend = e.superID 
 WHERE	b.winlostdate = @winlostdate
 		AND s.ProductId IN (4,12,11,13) -- Live Casino, AG Casino, Gold Deluxe, Microgaming - Live Casino
 		AND b.ruben = 1		
