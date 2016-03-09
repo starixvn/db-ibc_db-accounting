@@ -29,22 +29,33 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
-	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50))
+	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID), @wldate DATETIME = @todate
+	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate DATETIME)
 	DECLARE @winning TABLE (SuperID INT, ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, Winlostdate DATETIME)
 	DECLARE @reset TABLE (CustID INT, Winlost MONEY, [Reset] MONEY, Variance MONEY, Winlostdate DATETIME, GroupID TINYINT, GroupName VARCHAR(50))
+	DECLARE @Date TABLE (WLDate DATETIME)
+
+	WHILE @wldate >= @fromdate
+	BEGIN
+		INSERT INTO @Date (WLDate)
+		SELECT @wldate
+
+		SELECT @wldate = DATEADD(DAY, -1, @wldate)
+	END
 
 	IF  (@SQL like '%_xtest%')
 	BEGIN
-		INSERT INTO @dummy (CustID, GroupID, GroupName)	
-		SELECT  DISTINCT CustID, GroupID, GroupName
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest WITH (NOLOCK)
+		INSERT INTO @dummy (CustID, GroupID, GroupName, Winlostdate)	
+		SELECT  DISTINCT e.CustID, e.GroupID, e.GroupName, d.WLDate
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest e WITH (NOLOCK)
+		CROSS JOIN @Date d
 	END
 	ELSE
 	BEGIN
-		INSERT INTO @dummy (CustID, GroupID, GroupName)	
-		SELECT  DISTINCT CustID, GroupID, GroupName
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH (NOLOCK)
+		INSERT INTO @dummy (CustID, GroupID, GroupName, Winlostdate)	
+		SELECT  DISTINCT e.CustID, e.GroupID, e.GroupName, d.WLDate
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK)
+		CROSS JOIN @Date d
 	END
 
 	/* winlost */
@@ -145,13 +156,19 @@ BEGIN
 					AND (W.Winlostdate >= G.FromDate AND W.Winlostdate <= G.ToDate)
 			GROUP BY G.GroupId, W.Winlostdate
 		)
-		SELECT DM.GroupId, DM.GroupName, D.Winlost, ISNULL(rs.Winlost, 0) AS [Reset], D.Winlostdate
+		SELECT DM.GroupId, DM.GroupName, W.Winlost, W.[Reset], DM.Winlostdate
 		FROM @dummy AS DM
-		LEFT JOIN DWL AS D
-			ON DM.GroupID = D.GroupId
-		LEFT JOIN @reset AS rs
-			ON D.GroupId = rs.GroupID AND D.Winlostdate = rs.Winlostdate
-		ORDER BY D.Winlostdate DESC, D.GroupID ASC
+		LEFT JOIN (
+			SELECT  ISNULL(D.GroupId, rs.GroupID) AS GroupID,
+					ISNULL(D.Winlost, 0) AS Winlost,
+					ISNULL(rs.[Reset], 0) AS [Reset],
+					ISNULL(D.Winlostdate, rs.Winlostdate) AS Winlostdate
+			FROM DWL D
+			FULL OUTER JOIN @reset rs
+				ON D.GroupId = rs.GroupID AND D.Winlostdate = rs.Winlostdate
+		) AS W
+			ON DM.GroupID = W.GroupID AND DM.Winlostdate = W.Winlostdate
+		ORDER BY W.Winlostdate DESC, DM.GroupID ASC
 	END
 	ELSE IF @mode = 1 -- reset
 	BEGIN
@@ -167,18 +184,27 @@ BEGIN
 			GROUP BY G.GroupId, G.GroupName, W.Winlostdate
 		)
 		INSERT INTO @reset (CustID, Winlost, [Reset], Variance, Winlostdate, GroupID, GroupName)
-		SELECT R.CustID, ISNULL(D.Winlost, 0), ISNULL(R.Winlost, 0), - ISNULL(D.Winlost, 0) - ISNULL(R.Winlost, 0), D.Winlostdate, D.GroupId, D.GroupName
-		FROM DWL AS D
-		LEFT JOIN (
-			SELECT b.custid, SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)) AS Winlost, b.winlostdate, d.GroupID, d.GroupName
-			FROM bettrans b WITH(NOLOCK)
-			INNER JOIN @dummy d
-				ON b.custid = d.CustID
-			WHERE b.bettype IN (21001, 21002)
-				AND b.winlostdate BETWEEN @fromdate AND @todate
-			GROUP BY b.custid, b.winlostdate, d.GroupID, d.GroupName
-		) AS R
-			ON D.GroupId = R.GroupID AND D.Winlostdate = R.Winlostdate
+		SELECT DM.CustID, W.Winlost, W.[Reset], W.Variance, DM.Winlostdate, DM.GroupID, DM.GroupName
+		FROM @dummy DM
+		INNER JOIN ( -- no need left join
+			SELECT  ISNULL(D.Winlost, 0) AS Winlost,
+					ISNULL(R.Winlost, 0) AS [Reset],
+					- ISNULL(D.Winlost, 0) - ISNULL(R.Winlost, 0) AS Variance,
+					ISNULL(D.Winlostdate, R.winlostdate) AS Winlostdate,
+					ISNULL(D.GroupId, R.GroupID) AS GroupID
+			FROM DWL AS D
+			FULL OUTER JOIN (
+				SELECT SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)) AS Winlost, b.winlostdate, d.GroupID
+				FROM bettrans b WITH(NOLOCK)
+				INNER JOIN @dummy d
+					ON b.custid = d.CustID
+				WHERE b.bettype IN (21001, 21002)
+					AND b.winlostdate BETWEEN @fromdate AND @todate
+				GROUP BY b.winlostdate, d.GroupID
+			) AS R
+				ON D.GroupId = R.GroupID AND D.Winlostdate = R.Winlostdate
+		) AS W
+			ON DM.GroupID = W.GroupID AND DM.Winlostdate = W.Winlostdate
 
 		DECLARE @variance     MONEY = 0,
                 @winlostdate  DATETIME,
