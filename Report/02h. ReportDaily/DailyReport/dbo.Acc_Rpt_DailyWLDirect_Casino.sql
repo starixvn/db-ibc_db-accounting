@@ -48,8 +48,7 @@ BEGIN
 		SUM(Commission) Commission,
 		SUM(LineTotal) LineTotal,
 		SUM(Turnover) Turnover,
-		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE ISNULL(WinLost,0)*e.ExtraPT END) AS ExtraPT ,  
-		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN ISNULL(LineTotal,0) ELSE LineTotal-WinLost*e.ExtraPT END) AS AfterExtraPT 
+		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE ISNULL(WinLost,0)*e.ExtraPT END) AS ExtraPT  
 		 
 	FROM (
 		SELECT	s.ProductId,	
