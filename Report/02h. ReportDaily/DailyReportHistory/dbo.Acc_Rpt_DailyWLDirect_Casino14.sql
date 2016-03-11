@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino14]
+﻿USE [bodb02]
+GO
+ 
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino14]
 	@winlostdate	datetime 
 AS
 	/*	Creator: Phuong Dao
@@ -109,14 +112,6 @@ BEGIN
 	
 	DROP TABLE #DepAgent
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Casino14] TO [vnteam]
 GO 

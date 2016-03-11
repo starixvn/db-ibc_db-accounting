@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_DailyWLDirect_Casino_xpre]    Script Date: 03/11/2016 13:26:52 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino]
 	@winlostdate	datetime 
 AS
 	/*	Creator: Phuong Dao
@@ -110,16 +117,8 @@ BEGIN
 	
 	DROP TABLE #DepAgent
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
 
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Casino] TO [vnteam]
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino] TO [bodbAdminNet]
-GO
