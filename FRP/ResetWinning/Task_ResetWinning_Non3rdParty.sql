@@ -389,7 +389,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	SELECT * FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '')
 
 	CREATE TABLE #ExtraPTWL
 	(
@@ -408,13 +408,12 @@ BEGIN
 			   '' AS SubProduct,
 			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0) * actualrate,0)) as winlost 		 
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
-		--INNER JOIN bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '') s
-		--	ON s.BetType = b.bettype
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate between @fromdate and @todate
 		   AND b.ruben = 1
-		   AND b.statusid NOT IN (101, 102, 103, 121)	  
-		   AND s.ProductID <> 1
+		   AND b.statusid NOT IN (101, 102, 103, 121)
+		   AND b.bettype < 19001	  
+		   AND s.ProductID IN (SELECT DISTINCT ProductID FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE ProductID <> 1)
 		GROUP BY b.winlostdate,
 			   b.srecommend,	      
 			   s.ProductId 
@@ -457,14 +456,12 @@ BEGIN
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator ,
 			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)* actualrate,0)) as winlost 		 
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)	
-		--INNER JOIN bodb02.dbo.f_SportBettypeMatrix_Sel (1, 0, 0, 2, '', '') s
-		--	ON s.BetType = b.bettype
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44
 		WHERE   b.winlostdate between @fromdate and @todate
 			AND b.ruben = 1
 			AND b.statusid NOT IN (101, 102, 103, 121)	
-			--AND b.Bettype NOT IN (9,29,10)  
+			AND b.bettype < 19001 
 			AND s.ProductID = 1 		
 		GROUP BY b.winlostdate,
 			   b.srecommend,
@@ -491,41 +488,7 @@ BEGIN
 			AND w.Sporttype = s.Sporttype 
 			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
 	GROUP BY w.winlostdate, w.ProductId, w.ProductName
-
-
-	-------Parlay
-	--;WITH wl AS(
-	--	SELECT b.winlostdate,
-	--		   b.srecommend,	      
-	--		   0 AS Sporttype,
-	--		   1 AS ProductId,
-	--		   CASE WHEN b.bettype = 10 THEN 'Outright'
-	--				ELSE 'Parlay' 
-	--				END	AS ProductName,
-	--		   '' AS SubProduct,			   
-	--		   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0),0) * actualrate) as winlost 		 
-	--	FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)	
-	--	WHERE b.bettype IN (9,29,10) 
-	--		AND b.winlostdate between @fromdate and @todate
-	--		AND b.ruben = 1
-	--		AND b.statusid NOT IN (101, 102, 103, 121)	  		
-	--	GROUP BY b.winlostdate,
-	--		   b.srecommend,
-	--		   CASE WHEN b.bettype = 10 THEN 'Outright'
-	--				ELSE 'Parlay' 
-	--				END
-	--		   )
-
-	--INSERT INTO #ExtraPTWL (winlostdate, ProductId, ProductName, ExtraPTwinlost) 
-	--SELECT	w.winlostdate, w.ProductId, w.ProductName, SUM(w.winlost *s.ExtraPT) AS ExtraPTwinlost
-	--FROM	wl w
-	--INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
-	--		ON w.srecommend = s.SuperId
-	--		AND w.ProductId = s.ProductId
-	--		AND w.SubProduct = s.SubProduct
-	--		AND w.Sporttype = s.Sporttype 
-	--		AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
-	--GROUP BY w.winlostdate, w.ProductId, w.ProductName	   	   
+	
 
 	CREATE NONCLUSTERED INDEX #IX_ExtraPTWL ON #ExtraPTWL ( winlostdate, ProductId)
 			

@@ -363,9 +363,7 @@ BEGIN
 			   s.ProductId,
 			   '' AS SubProduct,
 			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0) * actualrate,0)) as winlost 		 
-		FROM dbo.bettrans14 b WITH(READPAST, INDEX = IX_Report)
-		--INNER JOIN bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '') s
-		--	ON s.BetType = b.bettype
+		FROM dbo.bettrans14 b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate = @winlostdate
 		   --AND b.ruben = 1
@@ -409,9 +407,7 @@ BEGIN
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END AS SubProduct,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator ,
 			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)* actualrate,0)) as winlost 		 
-		FROM dbo.bettrans14 b WITH(READPAST, INDEX = IX_Report)	
-		--INNER JOIN bodb02.dbo.f_SportBettypeMatrix_Sel (1, 0, 0, 2, '', '') s
-		--	ON s.BetType = b.bettype
+		FROM dbo.bettrans14 b WITH(NOLOCK)	
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = @Winlostdate AND m.Sporttype = 44
 		WHERE   b.winlostdate = @winlostdate
@@ -463,7 +459,8 @@ BEGIN
 		SELECT 'Openning Balance' as product, SUM(ISNULL(winlost, 0)) AS winlost, 0 AS WinlostAfterExtraPT, 0 AS Reset
 		FROM #source 
 		WHERE bettype = 20000
-		
+		HAVING SUM(ISNULL(winlost, 0))  <> 0
+
 		UNION ALL
 		
 	    SELECT dm.product,
