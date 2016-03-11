@@ -46,7 +46,7 @@ RETURN
  )   
    
  SELECT  a.ProductID, a.SportType, a.SubProduct, a.SuperId,  
-   CASE WHEN a.SubProduct IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99') AND ISNULL(b.SuperId,0) <> 0 THEN a.ExtraPT+b.ExtraPT ELSE a.ExtraPT END ExtraPT,  
+   CASE WHEN a.GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99') AND ISNULL(b.SuperId,0) <> 0 THEN a.ExtraPT+b.ExtraPT ELSE a.ExtraPT END ExtraPT,  
    a.FromDate, a.ToDate  
  FROM cte_tmp a  
   LEFT JOIN cte_tmpBC b ON a.ProductId= b.ProductID  
