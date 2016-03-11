@@ -66,6 +66,7 @@ AS
 		- 20151231@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160121@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
+		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -1790,7 +1791,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- not today
+				AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)		-- not yesterday and today
 				AND (s.ProductId = 17
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 
@@ -1862,7 +1863,8 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
+				AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
 				AND (s.ProductId = 17
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID = 0
@@ -1956,7 +1958,8 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
+				AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
 				AND (s.ProductId = 17
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (111, 112, 113, 103)
@@ -1978,7 +1981,7 @@ BEGIN
 				b.transdesc,
 				s.ProductID
 
-			-- AG Casino (not today ticket)
+			-- AG Casino (not yesterday and today ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -2039,7 +2042,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- not today
+				AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)		-- not today
 				AND s.ProductID = 11
 
 			-- AG Casino (today running ticket)
@@ -2104,7 +2107,8 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
+				AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
 				AND s.ProductID = 11
 				AND blc.statusID = 0
 			GROUP BY
@@ -2188,7 +2192,8 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
+				AND @fromdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- yesterday and today
 				AND s.ProductID = 11
 				AND blc.statusID IN (111, 112, 113, 103)
 			GROUP BY
@@ -2283,6 +2288,7 @@ BEGIN
 
 	SELECT * FROM @DetailData
 END
+
 
 
 
