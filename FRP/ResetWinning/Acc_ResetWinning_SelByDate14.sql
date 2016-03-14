@@ -117,8 +117,8 @@ BEGIN
 	SELECT b.custid, b.bettype,
 	       b.liveindicator,
 	       SUM(ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
-	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * actualrate,0)) as winlost,
-			CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END AS Sporttype
+	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)),0) * actualrate) as winlost,
+			CASE WHEN ISNULL(m.Sporttype, 0) <> 0	THEN m.Sporttype ELSE 0 END AS Sporttype
 	FROM dbo.bettrans14 b WITH(NOLOCK)	
 	LEFT JOIN @DummyBalance d ON b.custid = d.custid   
 	LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = @winlostdate AND m.Sporttype = 44
@@ -127,9 +127,9 @@ BEGIN
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
-	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * actualrate,0) <> 0      
+	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)),0) * actualrate <> 0      
     GROUP BY b.custid, b.bettype, b.liveindicator, 
-			 CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END
+			 CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END
 			 
 
     CREATE NONCLUSTERED INDEX #IX_bettranstmp ON #bettranstmp( custid, bettype)
@@ -365,7 +365,7 @@ BEGIN
 			   0 AS Sporttype,
 			   s.ProductId,
 			   '' AS SubProduct,
-			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0) * actualrate,0)) as winlost 		 
+			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0),0) * actualrate) as winlost 		 
 		FROM dbo.bettrans14 b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate = @winlostdate
@@ -397,11 +397,11 @@ BEGIN
 	----- SPL, SPNL, MuayThai, Metric gaming, Bettrade, Palay, outright
 	;WITH wl AS(
 		SELECT b.srecommend,	      
-			   CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
+			   CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
 			   1 AS ProductId,
 			   CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
 					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm') THEN 'Bettrade'
-					WHEN ISNULL(m.matchid, 0) = 44 THEN 'Muay Thai'
+					WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
 					WHEN b.bettype = 10 THEN 'Outright'
 					WHEN b.bettype IN (9,29) THEN'Parlay' 
 					WHEN b.liveindicator = 1 THEN 'SPL' 
@@ -409,7 +409,7 @@ BEGIN
 				END	AS ProductName,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END AS SubProduct,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator ,
-			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)* actualrate,0)) as winlost 		 
+			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0), 0)* actualrate) as winlost 		 
 		FROM dbo.bettrans14 b WITH(NOLOCK)	
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = @Winlostdate AND m.Sporttype = 44
@@ -418,10 +418,10 @@ BEGIN
 			AND b.statusid NOT IN (101, 102, 103, 121)	
 			AND s.ProductID = 1 		
 		GROUP BY b.srecommend,
-			   CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END,
+			   CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
 			   CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
 					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm') THEN 'Bettrade'
-					WHEN ISNULL(m.matchid, 0) = 44 THEN 'Muay Thai'
+					WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
 					WHEN b.bettype = 10 THEN 'Outright'
 					WHEN b.bettype IN (9,29) THEN'Parlay' 
 					WHEN b.liveindicator = 1 THEN 'SPL'
