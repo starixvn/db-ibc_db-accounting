@@ -216,7 +216,7 @@ BEGIN
 
         IF (@resetCount = 0)
         BEGIN
-            SELECT @ErrMsg = 'No products need to reset winning!',
+            SELECT @ErrMsg = 'No codes need to reset winning!',
                    @ErrCode = 2
             RETURN
         END
