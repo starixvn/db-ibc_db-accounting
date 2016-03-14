@@ -544,7 +544,6 @@ BEGIN
         INSERT INTO @reset(winlostdate, product, WinlostAfterExtraPT, reset, latestreset, seq)
 	    SELECT dm.winlostdate,
 	           dm.product,
-	           ----ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
 			   ROUND(ISNULL(w.winlost, 0) - ISNULL(e.ExtraPTwinlost, 0), 2) AS WinlostAfterExtraPT,
 	           ROUND(ISNULL(rs.reset, 0), 2) AS reset,
 	           CASE
@@ -633,7 +632,7 @@ BEGIN
       
         SELECT winlostdate,
                product,
-               WinlostAfterExtraPT,
+               WinlostAfterExtraPT as Winlost,
                reset + latestreset AS totalreset,
                latestreset
         FROM @reset

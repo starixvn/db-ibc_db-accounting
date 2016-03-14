@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
+﻿Use bodb02
+GO 
+ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	DATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
@@ -347,7 +349,8 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	SELECT * FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '')
+
 
 
 	CREATE TABLE #ExtraPTWL
