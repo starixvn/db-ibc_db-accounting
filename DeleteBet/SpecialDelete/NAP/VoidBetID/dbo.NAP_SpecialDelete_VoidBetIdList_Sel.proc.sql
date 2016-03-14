@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] 
+﻿USE bodb02
+GO
+ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] 
 	@CustID			INT				= NULL 	
 	,@TransIds		VARCHAR(MAX)	= NULL 
 	,@FromDate		DATETIME		= NULL
@@ -22,6 +24,7 @@ AS
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 		- 20160113@Patrick: Support Cricket [Redmine: #50688]
 		- 20160301@Bobby: #53123 - Enhance SP void bet by Id list (allow transId up to 1000 rows)
+		- 20160314@Bobby: #53935 - Update changes for multiple bet trade transaction
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -48,6 +51,8 @@ BEGIN
 		, @ToDate 		= ISNULL(@ToDate, DATEADD(d, 90, @moveBetDay))
 	
 	CREATE TABLE #transIdTemp (transid BIGINT PRIMARY KEY)
+	
+	CREATE TABLE #tempMatch (matchid INT)
 	
 	CREATE TABLE #Data (
 		GroupID			BIGINT
@@ -119,7 +124,7 @@ BEGIN
 			AND 1 = CASE 
 				WHEN (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 101, 102)) THEN 1 
 				WHEN (b.bettype < 19001
-						AND b.bettype NOT IN (31, 32, 33, 71,72,73)	-- NOT IN [Racing, Casino]
+						AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
 						AND b.bettype NOT BETWEEN 801 AND 806-- MG
 						AND b.bettype NOT IN (901, 902, 903) -- BT subticket
 						AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
@@ -345,106 +350,13 @@ BEGIN
 			INNER JOIN #transIdTemp temp
 				ON b.transid = temp.transid
 				
-		WHERE	b.winlostdate >=@FromDate				
+		WHERE	b.winlostdate >= @FromDate				
 			AND b.bettype < 19001
-			AND b.bettype NOT IN (31, 32, 33, 71,72,73)	-- NOT IN [Racing, Casino]
-			AND b.bettype NOT BETWEEN 801 AND 806 
+			AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
+			AND b.bettype NOT BETWEEN 801 AND 806-- MG
 			AND b.bettype NOT IN (901, 902, 903) -- BT subticket
-			AND b.bettype NOT BETWEEN 1501 AND 1599	-- exclude Keno
+			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
 			AND b.statusID NOT IN (101, 102)
-				
-		
-	END
-	
-	-- update SoldId column: if main ticket is BT, update SoldId = transid of subticket(901)
-	CREATE TABLE #tblSoldTicket (transid BIGINT PRIMARY KEY)
-	
-	UPDATE	main
-	SET main.SoldId = sub.transid
-	OUTPUT INSERTED.SoldId
-	INTO #tblSoldTicket(transid)
-	FROM #Data main 
-		INNER JOIN dbo.bettrans sub WITH(NOLOCK)
-			ON	main.transid 	= sub.refno
-				AND sub.matchid = main.matchid
-				
-	WHERE main.betdaqid = 0 -- main ticket is BTrade
-		AND sub.bettype = 901
-	
-	-- get sub ticket of BetTrade (901)
-	IF(EXISTS (SELECT TOP 1 1 FROM #tblSoldTicket) )
-	BEGIN
-		INSERT INTO #Data(
-			GroupID			
-			,bettype		
-			,transid		
-			,betid			
-			,refno		
-			,hdp1			
-			,hdp2			
-			,odds			
-			,finalodds		
-			,finalodds2		
-			,OddsType		
-			,STATUS			
-			,comstatus		
-			,stake								
-			,transdate		
-			,betteam		
-			,betcheck		
-			,liveindicator	
-			,modds			
-			,custid						
-			,livehomescore	
-			,liveawayscore					
-			,betfrom		
-			,matchid					
-			,winlost		
-			,commission					
-			,winlostdate	
-			,TransDesc		
-			,betdaqid
-			,username
-			,recommend			
-		)
-		SELECT	
-			main.transid
-			,main.bettype
-			,sub.transid
-			,sub.betid
-			,sub.refno
-			,main.hdp1
-			,main.hdp2
-			,main.odds
-			,main.finalodds
-			,main.finalodds2
-			,main.OddsType
-			,'SOLD'
-			,main.comstatus
-			,main.stake			
-			,sub.transdate
-			,main.betteam
-			,main.betcheck
-			,main.liveindicator
-			,main.modds
-			,sub.custid
-			,main.livehomescore
-			,main.liveawayscore
-			,main.betfrom
-			,main.matchid
-			,sub.winlost - sub.actual_stake
-			,main.commission
-			,main.winlostdate
-			,main.TransDesc
-			,main.betdaqid
-			,sub.username
-			,sub.recommend			
-		FROM dbo.bettrans sub WITH(NOLOCK)
-			INNER JOIN #tblSoldTicket sold 
-				ON sub.transid 	= sold.transid
-			INNER JOIN 	#Data main
-				ON	sub.refno 	= main.transid 
-				AND sub.matchid = main.matchid
 	END
 	
 	-- UPDATE eventtype = 1
@@ -511,13 +423,145 @@ BEGIN
 		AND (
 			sporttype IS NULL
 			OR bettype = 500 /*charge comm*/
+		)	
+		
+	INSERT INTO #tempMatch(matchid)
+	SELECT DISTINCT matchid
+	FROM #Data
+	
+	-- get sub ticket of BetTrade (901)
+	IF(EXISTS (SELECT TOP 1 1 FROM #Data WHERE betdaqid = 0 ) )
+	BEGIN
+		WITH CTE_LastTransBT AS (
+			SELECT 
+				sub.refno
+				, sub.transId
+				, sub.betid
+				, sub.transdate
+				, sub.custid
+				, sub.winlost 
+				, sub.actual_stake
+				, sub.username
+				, sub.recommend
+				, sub.matchid
+				, ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo 
+				
+			FROM dbo.bettrans sub WITH(NOLOCK)
+				INNER JOIN #tempMatch tm 
+					ON sub.matchid 	= tm.matchid
+				INNER JOIN #Data main
+					ON	sub.refno 	= main.transid 
+					AND sub.matchid = main.matchid
+				
+			WHERE sub.bettype 		= 901
+				AND sub.statusID 	IN (111,112,113,103) --WON/LOSE/DRAW/REFUND
+				AND main.betdaqid	= 0
 		)
-	
-	-- DECLARE @TransIdSolds	VARCHAR(MAX) = ''
-	-- SELECT @TransIdSolds = @TransIdSolds  + CASE(transId AS VARCHAR(20)) + ','
-	-- FROM #data
-	-- WHERE [status] = 'SOLD'
-	
+		INSERT INTO #Data(
+			GroupID			
+			,bettype		
+			,transid		
+			,betid			
+			,refno		
+			,hdp1			
+			,hdp2			
+			,odds			
+			,finalodds		
+			,finalodds2		
+			,OddsType		
+			,STATUS			
+			,comstatus		
+			,stake								
+			,transdate		
+			,betteam		
+			,betcheck		
+			,liveindicator	
+			,modds			
+			,custid						
+			,livehomescore	
+			,liveawayscore					
+			,betfrom		
+			,matchid					
+			,winlost		
+			,commission					
+			,winlostdate	
+			,TransDesc		
+			,betdaqid
+			,username
+			,recommend
+			,matchcode
+			,homeid
+			,awayid
+			,leagueid
+			,sporttype
+			,IsNeutral
+			,showtime
+		)
+		SELECT	
+			main.transid
+			,main.bettype
+			,sub.transid
+			,sub.betid
+			,sub.refno
+			,main.hdp1
+			,main.hdp2
+			,main.odds
+			,main.finalodds
+			,main.finalodds2
+			,main.OddsType
+			,'SOLD'
+			,main.comstatus
+			,main.stake			
+			,sub.transdate
+			,main.betteam
+			,main.betcheck
+			,main.liveindicator
+			,main.modds
+			,sub.custid
+			,main.livehomescore
+			,main.liveawayscore
+			,main.betfrom
+			,main.matchid
+			,sub.winlost - sub.actual_stake
+			,main.commission
+			,main.winlostdate
+			,main.TransDesc
+			,main.betdaqid
+			,sub.username
+			,sub.recommend
+			,main.matchcode
+			,main.homeid
+			,main.awayid
+			,main.leagueid
+			,main.sporttype
+			,main.IsNeutral
+			,main.showtime			
+			
+		FROM CTE_LastTransBT sub WITH(NOLOCK)
+			INNER JOIN #Data main
+			ON	sub.refno 	= main.transid 
+			AND sub.matchid = main.matchid
+		
+		WHERE sub.BTNo = 1
+		
+		-- update SoldId column: if main ticket is BT, update SoldId = transid of subticket(901)
+		;WITH CTE_BetTradeSold AS (
+			SELECT transid
+				, refno
+				, matchid
+			FROM #Data
+			WHERE STATUS = 'SOLD'
+		)
+		UPDATE	main
+		SET main.SoldId = bt.transid
+		FROM #Data main 
+			INNER JOIN CTE_BetTradeSold bt
+			ON main.transId 	= bt.refno
+			AND main.matchid 	= bt.matchid
+					
+		WHERE main.betdaqid = 0 -- main ticket is BTrade
+	END
+		
 	-- UPDATE SiteName
 	;WITH CustSiteName AS (
 		SELECT DISTINCT ag.custid, ci.site, ci.srecommend
@@ -528,7 +572,43 @@ BEGIN
 	)
 	-- ALL tickets	
 	SELECT
-		d.*
+		d.transid
+		,d.bettype
+		,d.betid
+		,d.refno
+		,d.matchcode
+		,d.homeid
+		,d.awayid
+		,d.hdp1
+		,d.hdp2
+		,d.odds
+		,d.finalodds
+		,d.finalodds2
+		,d.OddsType
+		,d.STATUS
+		,d.comstatus
+		,d.stake
+		,d.transdate
+		,d.betteam
+		,d.betcheck
+		,d.liveindicator
+		,d.modds
+		,d.custid
+		,d.username
+		,d.livehomescore
+		,d.liveawayscore
+		,d.leagueid
+		,d.sporttype
+		,d.betfrom
+		,d.matchid
+		,d.isNeutral
+		,d.winlost
+		,d.commission
+		,d.showtime
+		,d.winlostdate
+		,d.TransDesc
+		,d.SoldId
+		,d.IsHideComm
 		,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
 		,cs.Site
 	FROM #Data d
@@ -564,8 +644,6 @@ BEGIN
 	WHERE	NOT EXISTS (SELECT 1 FROM #Data WHERE transid = temp.transid OR refno = temp.transid)
 	
 	SELECT @Duration 		= DATEDIFF(MS, @startTime, CURRENT_TIMESTAMP)
-	
-	--SELECT @TransIdSolds AS TransIdSolds
 	
 	RETURN;
 END

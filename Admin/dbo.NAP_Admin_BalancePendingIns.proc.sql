@@ -9,7 +9,7 @@ GO
 --)
 --GO
 
-ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_BanlanceUpd]
+ALTER PROCEDURE [dbo].[NAP_Admin_BalancePendingIns]
 	@BeforeUpd	TVP_BalanceChange	READONLY
 	,@AfterUpd	TVP_BalanceChange	READONLY
 AS
@@ -22,9 +22,6 @@ AS
   
  Param's Explanation:   
 	 
- Dependences:
-	1. TABLE #balanceGame (custid INT, winlostdate SMALLDATETIME, balance MONEY)
-	
 */
 BEGIN
 	SET NOCOUNT ON
@@ -85,18 +82,7 @@ BEGIN
 			@BalancePending = @tblCreditOthersPending
 			,@Type			= 4 -- Others
 	
-	 --update balance credit game
-	UPDATE bal
-	SET Balance = bal.Balance + ABS(tmp.balance)
-	FROM dbo.BalanceCreditGame bal WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN #balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
-	WHERE tmp.balance < 0
-
-	INSERT INTO dbo.BalanceCreditGame(CustId, WinlostDate, Balance)
-	SELECT b.custid, b.winlostdate, ABS(b.balance)
-	FROM #balanceGame b
-		LEFT JOIN dbo.BalanceCreditGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
-	WHERE bal.CustId IS NULL AND b.balance < 0
+	
 	
 	
 	--BALANCE Debit
@@ -142,18 +128,7 @@ BEGIN
 			@BalancePending = @tblDebitOthersPending
 			,@Type			= 4 -- Others
 		
-	--update balance debit game	
-	UPDATE bal
-	SET Balance = bal.Balance + tmp.balance
-	FROM dbo.BalanceDebitGame bal WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN #balanceGame tmp ON bal.custid = tmp.custid AND bal.winlostdate = tmp.winlostdate
-	WHERE tmp.balance > 0
-
-	INSERT INTO dbo.BalanceDebitGame(CustId, WinlostDate, Balance)
-	SELECT b.custid, b.winlostdate, b.balance
-	FROM #balanceGame b
-		LEFT JOIN dbo.BalanceDebitGame bal ON bal.custid = b.custid AND bal.winlostdate = b.winlostdate
-	WHERE bal.CustId IS NULL AND b.balance > 0
+	
 	
 	
 	RETURN
