@@ -245,6 +245,7 @@ BEGIN
 	                @transdesc = @transDesc,
 	                @creator = @creator,
 	                @ip = @ip,
+					@isExtraPT = 1,
 	                @ErrCode = @ErrCode OUTPUT,
                     @ErrMsg = @ErrMsg OUTPUT
 

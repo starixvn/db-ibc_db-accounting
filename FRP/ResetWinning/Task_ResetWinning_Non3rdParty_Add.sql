@@ -1,13 +1,3 @@
-USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Task_ResetWinning_Non3rdParty_Add]    Script Date: 06/03/2015 04:59:10 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 (
 	@winlostdate DATETIME,
@@ -16,6 +6,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 	@transdesc   VARCHAR(300),
 	@creator     INT,
 	@ip          VARCHAR(20),
+	@isExtraPT	 BIT = 0,
 	@ErrCode     INT = 0 OUTPUT,  
     @ErrMsg      VARCHAR(100) = '' OUTPUT
 )
@@ -30,6 +21,7 @@ AS
 						   . Remove P2P (Poker)
 						   . Revise Code
 						   . Apply AG Casino and Vegas Game [#37683]
+		- 20160315@Percy: Add params @isExtra for new function ExtraPT [Redmine: 51721]
 		
 
 */
@@ -89,19 +81,36 @@ BEGIN
 
 
 	IF @isTest = 0
-	BEGIN 
-		INSERT INTO @DummyCust (CustID)
-		SELECT custid
-		FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
-		WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
+	BEGIN
+		IF @isExtraPT = 0
+		BEGIN
+			INSERT INTO @DummyCust (CustID)
+			SELECT custid
+			FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
+			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
+		END
+		ELSE
+		BEGIN
+			INSERT INTO @DummyCust (CustID)
+			SELECT custid
+			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)
+		END
 	END 
 	ELSE
 	BEGIN 
-		INSERT INTO @DummyCust (CustID)
-		SELECT custid
-		FROM DBACC.bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
-		WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
-
+		IF @isExtraPT = 0
+		BEGIN
+			INSERT INTO @DummyCust (CustID)
+			SELECT custid
+			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
+			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
+		END
+		ELSE
+		BEGIN
+			INSERT INTO @DummyCust (CustID)
+			SELECT custid
+			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest WITH(NOLOCK)
+		END
 	END 
 	
 
@@ -150,5 +159,3 @@ GO
 
 GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty_Add] TO [vnteam] AS [dbo]
 GO
-
-
