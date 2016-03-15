@@ -238,7 +238,7 @@ BEGIN
                                            + CAST(@custid as varchar(50)) + ':'
                                            + CAST(@variance as varchar(100))
 
-               EXEC DBTRANS.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
+               EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
                     @winlostdate = @winlostdate,
 	                @custid = @custid,
 	                @amount = @variance,

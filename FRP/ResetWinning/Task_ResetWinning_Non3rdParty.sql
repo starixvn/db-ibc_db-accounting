@@ -70,6 +70,7 @@ BEGIN
     (
         winlostdate datetime,
         product     varchar(50),
+		winlost		money,
         WinlostAfterExtraPT     money,
         reset       money,
         latestreset money,
@@ -541,9 +542,10 @@ BEGIN
 	 	    WHERE b.bettype > 20000
 			GROUP BY dm.winlostdate, dm.product
 	    )
-        INSERT INTO @reset(winlostdate, product, WinlostAfterExtraPT, reset, latestreset, seq)
+        INSERT INTO @reset(winlostdate, product, winlost, WinlostAfterExtraPT, reset, latestreset, seq)
 	    SELECT dm.winlostdate,
 	           dm.product,
+			   ROUND(ISNULL(w.winlost, 0),2) AS winlost,
 			   ROUND(ISNULL(w.winlost, 0) - ISNULL(e.ExtraPTwinlost, 0), 2) AS WinlostAfterExtraPT,
 	           ROUND(ISNULL(rs.reset, 0), 2) AS reset,
 	           CASE
@@ -602,7 +604,7 @@ BEGIN
                                            + CAST(@custid as varchar(50)) + ':'
                                            + CAST(@variance as varchar(100))
 
-                EXEC DBTRANS.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
+                EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
                     @winlostdate = @winlostdate,
 	                @custid = @custid,
 	                @amount = @variance,
@@ -632,7 +634,8 @@ BEGIN
       
         SELECT winlostdate,
                product,
-               WinlostAfterExtraPT as Winlost,
+			   winlost,
+               WinlostAfterExtraPT, 
                reset + latestreset AS totalreset,
                latestreset
         FROM @reset

@@ -70,7 +70,7 @@ BEGIN
 	DECLARE @DummyCust AS TABLE (CustId INT)
 	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
 
-	IF  (@SQL like '%_xtest%' OR  @SQL like '%_xpre%' )
+	IF  (@SQL like '%_xtest%')
 	BEGIN
 		SELECT @isTest = 1
 	END
