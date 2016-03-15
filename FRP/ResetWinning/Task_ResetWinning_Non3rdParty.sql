@@ -616,15 +616,13 @@ BEGIN
 
                 IF (@ErrCode <> 0) BREAK
                     
-                IF (@seq = @maxseq)
-                BEGIN
-	                EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer
-	                    @UserID = @creator,
-	                    @FromCustID = 0,
-	                    @ToCustID = @custid,
-	                    @IP = @ip,
-	                    @Doing = @transDesc
-                END
+				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer
+					@UserID = @creator,
+					@FromCustID = 0,
+					@ToCustID = @custid,
+					@IP = @ip,
+					@Doing = @transDesc
+                
             END
 
             SET @seq = @seq + 1
