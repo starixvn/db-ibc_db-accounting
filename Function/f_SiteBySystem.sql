@@ -1,4 +1,4 @@
-﻿ALTER FUNCTION [dbo].[f_SiteBySystem]
+﻿alter FUNCTION [dbo].[f_SiteBySystem]
 (
 	@System varchar(50) = 'ACCOUNTING'
 )
@@ -8,7 +8,7 @@ AS
 /*
 Created: 
 Task : Get sites by system
-DB: DBAGE/bodb02; DBACC/bodb02
+DB:  DBTRANS.BODB02, DB053.BODB02, DB054.BODB02, DB052.BODB02, DB05.BODB02, DB06.BODB02, DBCUST.CustDB
 
 Revisions:
 	- 20100819@Ethan: Get sites by System
@@ -24,6 +24,8 @@ Revisions:
 	- 20150812@Amy: add ACCTHAI2 group
 	- 20150817@Susan: add ACCIN group
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	- 20151027@Francis: Add INDOBS,INDO2 group
+	- 20151111@Susan: Add MKK99 group
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20160114@Helen: Cricket - [Redmine: #50027]
 	Param's Explanation:
@@ -42,7 +44,12 @@ BEGIN
 		Insert Into @tbSite(siteid)
 		SELECT 22 --755555,...
 	END
-	ELSE IF (@System IN ('ACCINDO','ACCIN') )
+	--ELSE IF (@System IN ('ACCINDO','ACCIN') )
+	--BEGIN
+	--	INSERT INTO @tbSite(siteid)
+	--	SELECT 11 --INDO
+	--END
+	ELSE IF (@System IN ('ACCINDO','ACCIN','INDOBS','INDO2','INDO56','INDOWIN','INDO56B') )
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 11 --INDO
@@ -66,14 +73,23 @@ BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 11 --INDO
 	END	
+	ELSE IF (@System in ( 'MKK99','ACCMKK'))
+	BEGIN
+		INSERT INTO @tbSite(siteid)
+		SELECT 184 -- 766666
+	END	
 	Return
 END
 
-
 GO
+
 GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbAdminNet] AS [dbo]
 GO
+
 GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbExtAccNet] AS [dbo]
 GO
+
 GRANT VIEW DEFINITION ON [dbo].[f_SiteBySystem] TO [vnteam] AS [dbo]
+GO
+
 
