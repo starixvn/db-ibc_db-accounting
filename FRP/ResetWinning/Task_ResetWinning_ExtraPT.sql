@@ -184,7 +184,7 @@ BEGIN
 		INSERT INTO @reset (CustID, Winlost, [Reset], Variance, Winlostdate, GroupID, GroupName)
 		SELECT DM.CustID, ROUND(ISNULL(W.Winlost,0), 2) AS Winlost, ROUND(ISNULL(W.[Reset],0), 2) AS [Reset], ROUND(ISNULL(W.Variance,0), 2) as Variance, DM.Winlostdate, DM.GroupID, DM.GroupName
 		FROM @dummy DM
-		INNER JOIN ( -- no need left join
+		LEFT JOIN (
 			SELECT  SUM(ISNULL(w.Winlost, 0)) AS Winlost,
 					SUM(ISNULL(rs.[Reset], 0)) AS [Reset],
 					SUM(- ISNULL(w.Winlost, 0) - ISNULL(rs.[Reset], 0)) AS Variance,
