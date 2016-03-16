@@ -491,7 +491,7 @@ BEGIN
 	GROUP BY w.winlostdate, w.ProductId, w.ProductName
 	
 
-	CREATE NONCLUSTERED INDEX #IX_ExtraPTWL ON #ExtraPTWL ( winlostdate, ProductId)
+	CREATE NONCLUSTERED INDEX #IX_ExtraPTWL ON #ExtraPTWL ( winlostdate, ProductName)
 			
 	---------------------------------------------------------------------------------------------------------
 
