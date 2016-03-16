@@ -1921,7 +1921,10 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				ip,
-				250 AS sporttype,
+				CASE
+					WHEN s.ProductID = 11 THEN 250
+					WHEN s.ProductID = 21 THEN 211
+				END AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -1985,7 +1988,10 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				250 AS sporttype,
+				CASE
+					WHEN s.ProductID = 11 THEN 250
+					WHEN s.ProductID = 21 THEN 211
+				END AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -2019,7 +2025,8 @@ BEGIN
 				b.creator,
 				b.IP,
 				b.betfrom,
-				b.comstatus
+				b.comstatus,
+				s.ProductID
 
 			-- AG Casino, AllBet (yesterday and today settled ticket)
 			UNION ALL
@@ -2070,7 +2077,10 @@ BEGIN
 				0 AS hthomescore,
 				0 AS htawayscore,
 				b.ip,
-				250 AS sporttype,
+				CASE
+					WHEN s.ProductID = 11 THEN 250
+					WHEN s.ProductID = 21 THEN 211
+				END AS sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
 				'' AS showtime,
@@ -2105,7 +2115,8 @@ BEGIN
 				b.IP,
 				b.betfrom,
 				b.currency,
-				b.comstatus
+				b.comstatus,
+				s.ProductID
 		) x
 	WHERE ip = @ip
 	ORDER BY 4, 26
@@ -2113,69 +2124,69 @@ BEGIN
 	IF EXISTS (	SELECT TOP 1 1 
 				FROM @SportBettype sp 
 					INNER JOIN @Data d ON d.bettype = sp.bettype 
-				WHERE ProductID IN (4,12)) 
+				WHERE ProductID IN (4,12))
 	BEGIN
 		INSERT INTO @DetailData
 		SELECT 
-			BG.refno,
-			BG.odds,
-			BG.stake,
-			BG.status,
-			BG.apositiontaking,
-			BG.mpositiontaking,
-			BG.spositiontaking,
-			BG.bettype,
-			BG.betteam,
-			BG.TransDesc
-		FROM dbo.bettransg BG WITH (NOLOCK)
-			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (4)
-			INNER JOIN @Data B ON BG.CustID = @CustID AND (sp.Productid IN (4) AND BG.refno = B.refno AND BG.bettype = B.bettype)
+			bg.refno,
+			bg.odds,
+			bg.stake,
+			bg.status,
+			bg.apositiontaking,
+			bg.mpositiontaking,
+			bg.spositiontaking,
+			bg.bettype,
+			bg.betteam,
+			bg.TransDesc
+		FROM dbo.bettransg AS bg WITH (NOLOCK)
+			INNER JOIN @SportBettype AS sp ON bg.bettype = sp.bettype AND sp.Productid IN (4)
+			INNER JOIN @Data AS B ON bg.CustID = @CustID AND (sp.Productid IN (4) AND bg.refno = B.refno AND bg.bettype = B.bettype)
 		UNION ALL
 		SELECT 
-			BG.refno,
-			BG.odds,
-			BG.stake,
-			BG.status,
-			BG.apositiontaking,
-			BG.mpositiontaking,
-			BG.spositiontaking,
-			BG.bettype,
-			BG.betteam,
-			BG.TransDesc
-		FROM dbo.bettransg BG WITH (NOLOCK)  
-			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (12)
-			INNER JOIN @Data B ON BG.CustID = @CustID AND (sp.Productid IN (12) AND BG.refno = B.transid AND BG.bettype = B.bettype)
+			bg.refno,
+			bg.odds,
+			bg.stake,
+			bg.status,
+			bg.apositiontaking,
+			bg.mpositiontaking,
+			bg.spositiontaking,
+			bg.bettype,
+			bg.betteam,
+			bg.TransDesc
+		FROM dbo.bettransg AS bg WITH (NOLOCK)
+			INNER JOIN @SportBettype AS sp ON bg.bettype = sp.bettype AND sp.Productid IN (12)
+			INNER JOIN @Data AS B ON bg.CustID = @CustID AND (sp.Productid IN (12) AND bg.refno = B.transid AND bg.bettype = B.bettype)
 
 		INSERT INTO @DetailData
 		SELECT 
-			BG.refno,
-			BG.odds,
-			BG.stake,
-			BG.status,
-			BG.apositiontaking,
-			BG.mpositiontaking,
-			BG.spositiontaking,
-			BG.bettype,
-			BG.betteam,
-			BG.TransDesc
-		FROM dbo.bettransg14 BG WITH (NOLOCK)
-			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (4)
-			INNER JOIN @Data B ON  (BG.refno = B.refno AND BG.CustID = @CustID AND sp.Productid IN (4))
+			bg.refno,
+			bg.odds,
+			bg.stake,
+			bg.status,
+			bg.apositiontaking,
+			bg.mpositiontaking,
+			bg.spositiontaking,
+			bg.bettype,
+			bg.betteam,
+			bg.TransDesc
+		FROM dbo.bettransg14 AS bg WITH (NOLOCK)
+			INNER JOIN @SportBettype AS sp ON bg.bettype = sp.bettype AND sp.Productid IN (4)
+			INNER JOIN @Data AS B ON  (bg.refno = B.refno AND bg.CustID = @CustID AND sp.Productid IN (4))
 		UNION ALL
 		SELECT 
-			BG.refno,
-			BG.odds,
-			BG.stake,
-			BG.status,
-			BG.apositiontaking,
-			BG.mpositiontaking,
-			BG.spositiontaking,
-			BG.bettype,
-			BG.betteam,
-			BG.TransDesc
-		FROM dbo.bettransg14 BG WITH (NOLOCK)
-			INNER JOIN @SportBettype sp ON BG.bettype = sp.bettype AND sp.Productid IN (12)
-			INNER JOIN @Data B ON  (BG.refno = B.transid AND BG.CustID = @CustID AND sp.Productid IN (12))
+			bg.refno,
+			bg.odds,
+			bg.stake,
+			bg.status,
+			bg.apositiontaking,
+			bg.mpositiontaking,
+			bg.spositiontaking,
+			bg.bettype,
+			bg.betteam,
+			bg.TransDesc
+		FROM dbo.bettransg14 AS bg WITH (NOLOCK)
+			INNER JOIN @SportBettype AS sp ON bg.bettype = sp.bettype AND sp.Productid IN (12)
+			INNER JOIN @Data AS B ON (bg.refno = B.transid AND bg.CustID = @CustID AND sp.Productid IN (12))
 	END
 
 	SELECT * FROM @Data
