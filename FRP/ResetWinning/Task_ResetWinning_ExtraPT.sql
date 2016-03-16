@@ -1,6 +1,6 @@
 ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT]
-	@fromdate DATETIME,
-	@todate   DATETIME,
+	@fromdate SMALLDATETIME,
+	@todate   SMALLDATETIME,
 	@mode     TINYINT = 0,
 	@creator  INT = 5838421,
 	@ip       VARCHAR(20) = '',
@@ -187,7 +187,7 @@ BEGIN
 		LEFT JOIN (
 			SELECT  ROUND(SUM(ISNULL(w.Winlost, 0)), 2) AS Winlost,
 					ROUND(SUM(ISNULL(rs.[Reset], 0)), 2) AS [Reset],
-					ROUND(SUM(ISNULL(w.Winlost, 0)), 2) - ROUND(SUM(ISNULL(rs.[Reset], 0)), 2) AS Variance,
+					ROUND(SUM(-ISNULL(w.Winlost, 0)), 2) - ROUND(SUM(ISNULL(rs.[Reset], 0)), 2) AS Variance,
 					ISNULL(w.Winlostdate, rs.winlostdate) AS Winlostdate,
 					ISNULL(w.GroupId, rs.GroupID) AS GroupID
 			FROM WL w

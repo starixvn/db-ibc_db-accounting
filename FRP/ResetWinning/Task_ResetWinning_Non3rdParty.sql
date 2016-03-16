@@ -1,14 +1,6 @@
-Use [bodb02]
-GO
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.Task_ResetWinning_Non3rdParty    Script Date: 10/26/2015 10:32:33 AM ******/
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
-	@fromdate datetime,
-	@todate   datetime,
+	@fromdate smalldatetime,
+	@todate   smalldatetime,
 	@mode     tinyint = 0,
 	@creator  INT = 5838421,
 	@ip       VARCHAR(20) = '',
@@ -524,10 +516,6 @@ BEGIN
 		LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product and e.winlostdate = dm.winlostdate
 		ORDER BY dm.winlostdate DESC, dm.seq ASC
 
-        DROP TABLE #bettranstmp 
-        DROP TABLE #ExtraPTWL
-        
-        RETURN
 	END
 	--reset balance
 	ELSE IF (@mode = 1)
@@ -557,9 +545,6 @@ BEGIN
 		 FULL OUTER JOIN rs rs ON w.product = rs.product and w.winlostdate = rs.winlostdate
 	     RIGHT JOIN @dummyBalance dm ON dm.product = ISNULL(w.product, rs.product) and dm.winlostdate = w.winlostdate
 		 LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product and e.winlostdate = dm.winlostdate
-
-        DROP TABLE #bettranstmp
-        DROP TABLE #ExtraPTWL
 
         declare @variance     money = 0,
                 @winlostdate  datetime,
@@ -638,9 +623,9 @@ BEGIN
                latestreset
         FROM @reset
 		ORDER BY seq
-       
-	    RETURN
 	END
+	DROP TABLE #bettranstmp
+    DROP TABLE #ExtraPTWL
 END
 
 
