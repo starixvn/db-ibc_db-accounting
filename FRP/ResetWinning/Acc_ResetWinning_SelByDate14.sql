@@ -443,7 +443,7 @@ BEGIN
 	GROUP BY w.ProductId, w.ProductName
 	
 	
-	CREATE NONCLUSTERED INDEX #IX_ExtraPTWL ON #ExtraPTWL ( ProductId)
+	CREATE NONCLUSTERED INDEX #IX_ExtraPTWL ON #ExtraPTWL ( ProductName)
 			
 	---------------------------------------------------------------------------------------------------------
 
@@ -453,7 +453,7 @@ BEGIN
 	    (
 		     SELECT dm.Product,
 		           ISNULL(SUM(b.winlost), 0) AS reset
-		     FROM #bettranstmp b
+		     FROM #source b
 			 INNER JOIN @DummyBalance dm ON b.custid = dm.custid 
 	 	     WHERE bettype > 20000
 		     GROUP BY dm.product
