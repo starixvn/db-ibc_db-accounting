@@ -1,5 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino]
-	@winlostdate	datetime
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_DailyWLDirect_Casino_xpre]    Script Date: 03/11/2016 13:26:52 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino]
+	@winlostdate	datetime 
 AS
 	/*	Creator: Phuong Dao
 		Date: 2009-05-14
@@ -18,6 +25,7 @@ AS
 			- 20150806@Sophia: Get Turnover of Macau and Microgaming - RNG Casino (Group Casino)
 			- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 			- 20160108@Percy: Calculate turnover for new RNG Casino [Redmine: #49134]
+			- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -39,16 +47,19 @@ BEGIN
 	SELECT 5707545--BARM	
 	
 	SELECT
-		ProductId,
+		a.ProductId,
 		bettype,
 		site,
 		SUM(WinLost) WinLost,
 		SUM(Position) Position,
 		SUM(Commission) Commission,
 		SUM(LineTotal) LineTotal,
-		SUM(Turnover) Turnover
+		SUM(Turnover) Turnover,
+		SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE ISNULL(WinLost,0)*e.ExtraPT END) AS ExtraPT  
+		 
 	FROM (
 		SELECT	s.ProductId,	
+				b.srecommend,
 				CASE s.ProductId WHEN 6 THEN 71
 								 WHEN 14 THEN 1900
 								 WHEN 13 THEN 2001
@@ -59,7 +70,9 @@ BEGIN
 				isnull(sum((awinlost+mwinlost+swinlost)*actualrate),0) Position,
 				isnull(sum(scomm*actualrate),0) Commission,	
 				isnull(sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate),0) LineTotal,
-				isnull(sum((1-tpositiontaking)*(CASE WHEN s.ProductID = 6 THEN 0 ELSE stake END)*actualrate),0) AS Turnover
+				isnull(sum((1-tpositiontaking)*(CASE WHEN s.ProductID = 6 THEN 0 ELSE stake END)*actualrate),0) AS Turnover,
+				isnull(sum((winlost-actual_stake)*actualrate), 0 ) ExtraPT,
+				isnull(sum((winlost-actual_stake)*actualrate), 0 ) AfterExtraPT
 		FROM	bettrans b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.bettype = b.bettype
 			left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
@@ -68,6 +81,7 @@ BEGIN
 				AND b.statusID NOT IN (102, 101,121,103)  ---('VOID', 'REJECT','done','REFUND') 
 				AND b.ruben = 1		
 		GROUP BY s.ProductId, 
+				b.srecommend,
 				case when dep.custid is null then 1 else 2 end,
 				CASE s.ProductId WHEN 6 THEN 71
 								 WHEN 14 THEN 1900
@@ -75,40 +89,36 @@ BEGIN
 								 WHEN 17 THEN 2008
 								 END
 		UNION ALL
-		SELECT	6 ProductId,	
+		SELECT	6 ProductId,
+				b.srecommend,
 				71 bettype,
 				case when dep.custid is null then 1 else 2 end as site,
 				0 WinLost,
 				0 Position,
 				0 Commission,	
 				0 LineTotal,
-				isnull(sum((1-tpositiontaking)*stake*actualrate),0) AS Turnover
+				isnull(sum((1-tpositiontaking)*stake*actualrate),0) AS Turnover,
+				0 ExtraPT,
+				0 AfterExtraPT
 		FROM	bettransRNG b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.bettype = b.gameID
 			left join (select custid from #DepAgent) dep ON b.recommend = dep.custid
 		WHERE	b.winlostdate = @winlostdate
 				AND s.ProductId = 6
 				AND b.statusID NOT IN (0, 1, 102, 101,121,103)
-		GROUP BY case when dep.custid is null then 1 else 2 end
+		GROUP BY b.srecommend,case when dep.custid is null then 1 else 2 end
 	) AS A
-	GROUP BY ProductId, site, bettype
-	ORDER BY ProductId, site	
+	LEFT JOIN  dbo.f_ExtraPT_Sel (6,0,'',@winlostdate) e  ON A.ProductId = e.ProductId and a.srecommend = e.superID 
+	GROUP BY a.ProductId, site, bettype
+	ORDER BY a.ProductId, site	
 
 	--GROUP BY b.Bettype, case when dep.custid is null then 1 else 2 end 
 	--ORDER BY b.Bettype, site
 	
 	DROP TABLE #DepAgent
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
 
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Casino] TO [vnteam]
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Casino] TO [bodbAdminNet]
-GO
