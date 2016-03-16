@@ -21,6 +21,7 @@ AS
 		- 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212] - GoalRecord
 		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
@@ -35,7 +36,10 @@ BEGIN
 		,@bettype INT
 	CREATE TABLE #tmpTrans (transid BIGINT)
 
-	SELECT @ActionID = 108
+	SELECT @ActionID = CASE WHEN @action = 'CAL' THEN 108
+							WHEN @action = 'CAL-FT' THEN 163
+							WHEN @action = 'CAL-HT' THEN 164
+						ELSE -1 END
 		,@bettype = CASE 
 			WHEN @action = 'CAL-HT' THEN 127
 			ELSE 14

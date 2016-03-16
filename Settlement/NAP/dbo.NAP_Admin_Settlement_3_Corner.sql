@@ -8,6 +8,7 @@ AS
 	DB: DBTXN/bodb02
 
 	Revisions:
+		- 20160315@Patrick: Auto payout [Redmine: #53262]
 
 	Param's Explanation:
 	• @Mode:
@@ -50,8 +51,6 @@ BEGIN
 			,@betcount_208 	INT
 			,@betcount_209 	INT
 
-
-
 	SELECT	 @fthCorners	= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN HomeValue ELSE 0 END),0)
 			,@ftaCorners	= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN AwayValue ELSE 0 END),0)
 			,@hthCorners	= ISNULL(MAX(CASE WHEN ResourceID ='05' THEN HomeValue ELSE 0 END),0)
@@ -70,28 +69,42 @@ BEGIN
 			,@totalCorners		= (@fthCorners + @ftaCorners)
 			,@totalCorners_ht	= (@hthCorners + @htaCorners)
 
-
-
-	SELECT 
-		 @betcount_194 = ISNULL(SUM(CASE bettype WHEN 194 THEN 1 ELSE 0 END),0)
-		,@betcount_195 = ISNULL(SUM(CASE bettype WHEN 195 THEN 1 ELSE 0 END),0)
-		,@betcount_196 = ISNULL(SUM(CASE bettype WHEN 196 THEN 1 ELSE 0 END),0)
-		,@betcount_197 = ISNULL(SUM(CASE bettype WHEN 197 THEN 1 ELSE 0 END),0)
-		,@betcount_198 = ISNULL(SUM(CASE bettype WHEN 198 THEN 1 ELSE 0 END),0)
-		,@betcount_199 = ISNULL(SUM(CASE bettype WHEN 199 THEN 1 ELSE 0 END),0)
-		,@betcount_200 = ISNULL(SUM(CASE bettype WHEN 200 THEN 1 ELSE 0 END),0)
-		,@betcount_201 = ISNULL(SUM(CASE bettype WHEN 201 THEN 1 ELSE 0 END),0)
-		,@betcount_202 = ISNULL(SUM(CASE bettype WHEN 202 THEN 1 ELSE 0 END),0)
-		,@betcount_203 = ISNULL(SUM(CASE bettype WHEN 203 THEN 1 ELSE 0 END),0)
-		,@betcount_204 = ISNULL(SUM(CASE bettype WHEN 204 THEN 1 ELSE 0 END),0)
-		,@betcount_205 = ISNULL(SUM(CASE bettype WHEN 205 THEN 1 ELSE 0 END),0)
-		,@betcount_206 = ISNULL(SUM(CASE bettype WHEN 206 THEN 1 ELSE 0 END),0)
-		,@betcount_207 = ISNULL(SUM(CASE bettype WHEN 207 THEN 1 ELSE 0 END),0)
-		,@betcount_208 = ISNULL(SUM(CASE bettype WHEN 208 THEN 1 ELSE 0 END),0)
-		,@betcount_209 = ISNULL(SUM(CASE bettype WHEN 209 THEN 1 ELSE 0 END),0)
-	FROM	bettrans WITH (NOLOCK)
-	WHERE	matchid = @matchid 
+	IF @mode IN ('CAL', 'CAL-FT')
+	BEGIN
+		SELECT @betcount_194 = ISNULL(SUM(CASE bettype WHEN 194 THEN 1 ELSE 0 END),0)
+			, @betcount_195 = ISNULL(SUM(CASE bettype WHEN 195 THEN 1 ELSE 0 END),0)
+			, @betcount_196 = ISNULL(SUM(CASE bettype WHEN 196 THEN 1 ELSE 0 END),0)
+			, @betcount_197 = ISNULL(SUM(CASE bettype WHEN 197 THEN 1 ELSE 0 END),0)
+			, @betcount_198 = ISNULL(SUM(CASE bettype WHEN 198 THEN 1 ELSE 0 END),0)
+			, @betcount_199 = ISNULL(SUM(CASE bettype WHEN 199 THEN 1 ELSE 0 END),0)
+			, @betcount_200 = ISNULL(SUM(CASE bettype WHEN 200 THEN 1 ELSE 0 END),0)
+			, @betcount_201 = ISNULL(SUM(CASE bettype WHEN 201 THEN 1 ELSE 0 END),0)
+			, @betcount_202 = ISNULL(SUM(CASE bettype WHEN 202 THEN 1 ELSE 0 END),0)
+			, @betcount_203 = ISNULL(SUM(CASE bettype WHEN 203 THEN 1 ELSE 0 END),0)
+			, @betcount_204 = ISNULL(SUM(CASE bettype WHEN 204 THEN 1 ELSE 0 END),0)
+			, @betcount_205 = ISNULL(SUM(CASE bettype WHEN 205 THEN 1 ELSE 0 END),0)
+			, @betcount_206 = ISNULL(SUM(CASE bettype WHEN 206 THEN 1 ELSE 0 END),0)
+			, @betcount_207 = ISNULL(SUM(CASE bettype WHEN 207 THEN 1 ELSE 0 END),0)
+			, @betcount_208 = ISNULL(SUM(CASE bettype WHEN 208 THEN 1 ELSE 0 END),0)
+			, @betcount_209 = ISNULL(SUM(CASE bettype WHEN 209 THEN 1 ELSE 0 END),0)
+		FROM bettrans WITH (NOLOCK)
+		WHERE matchid = @matchid 
 			AND bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209) 
+	END
+	ELSE IF @mode IN ('CAL-HT')
+	BEGIN
+		SELECT @betcount_200 = ISNULL(SUM(CASE bettype WHEN 200 THEN 1 ELSE 0 END),0)
+			, @betcount_201 = ISNULL(SUM(CASE bettype WHEN 201 THEN 1 ELSE 0 END),0)
+			, @betcount_202 = ISNULL(SUM(CASE bettype WHEN 202 THEN 1 ELSE 0 END),0)
+			, @betcount_203 = ISNULL(SUM(CASE bettype WHEN 203 THEN 1 ELSE 0 END),0)
+			, @betcount_204 = ISNULL(SUM(CASE bettype WHEN 204 THEN 1 ELSE 0 END),0)
+			, @betcount_205 = ISNULL(SUM(CASE bettype WHEN 205 THEN 1 ELSE 0 END),0)
+			, @betcount_207 = ISNULL(SUM(CASE bettype WHEN 207 THEN 1 ELSE 0 END),0)
+			, @betcount_209 = ISNULL(SUM(CASE bettype WHEN 209 THEN 1 ELSE 0 END),0)
+		FROM dbo.bettrans WITH (NOLOCK)
+		WHERE matchid = @matchid 
+			AND bettype IN (200,201,202,203,204,205,207,209) 
+	END
 	
 	-- call execrep SP
 	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid

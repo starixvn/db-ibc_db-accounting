@@ -45,6 +45,7 @@ AS
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
 		- 20151012@Patrick: Reset betstatus for Muay Thai when user do action RefundFull & RefundFT [Redmine: #45356]
 		- 20160225@Kathy: Update eventstatus, betstatus when the match is settled
+		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		
 */
 BEGIN
@@ -276,8 +277,8 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_Corner-CAL'
 	BEGIN
 		UPDATE dbo.Match WITH (UPDLOCK,ROWLOCK)
-		SET		eventstatus = CASE WHEN @Action ='CAL' AND @NoneCornerBetDone = 1 THEN N'completed'
-								   ELSE eventstatus END 
+		SET		eventstatus = CASE WHEN @Action IN ('CAL', 'CAL-FT') AND @NoneCornerBetDone = 1 THEN N'completed'
+								    ELSE eventstatus END
 				,changetime = CURRENT_TIMESTAMP
 				,settletime = CURRENT_TIMESTAMP
 		WHERE MatchID = @MatchID 

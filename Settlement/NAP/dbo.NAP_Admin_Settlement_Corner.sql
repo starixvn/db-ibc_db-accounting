@@ -29,7 +29,7 @@ AS
 
 	Revisions:		
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
-
+		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		
 	Param's Explanation:
 
@@ -51,8 +51,10 @@ BEGIN
 			,@LogData					NVARCHAR(300)							
 
 	SELECT	@start = CURRENT_TIMESTAMP
-	SELECT	@ActionID = CASE WHEN @Action = 'CAL'	THEN 151 
-							 ELSE 0 END  
+	SELECT	@ActionID = CASE WHEN @Action = 'CAL' THEN 151 
+							 WHEN @Action = 'CAL-HT' THEN 161
+							 WHEN @Action = 'CAL-FT' THEN 162 
+						ELSE 0 END
 		
 							 
 	--Write Log Settle
@@ -122,58 +124,71 @@ BEGIN
 		)
 
 	--===
-	INSERT INTO #BalanceBefore
-	SELECT	 b.custid
-			,SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM	dbo.bettrans b WITH (ROWLOCK)
-	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
-	GROUP BY b.custid
+	IF @Action IN ('CAL', 'CAL-FT')
+	BEGIN
+		INSERT INTO #BalanceBefore
+		SELECT	 b.custid
+				,SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	b.matchid = @MatchId 
+				AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
+		GROUP BY b.custid
+	END
+	ELSE IF @Action = 'CAL-HT'
+	BEGIN
+		INSERT INTO #BalanceBefore
+		SELECT	 b.custid
+				,SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	b.matchid = @MatchId 
+				AND b.bettype IN (200,201,202,203,204,205,207,209)
+		GROUP BY b.custid
+	END
 
 
 	--===
 	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	IF @Action='CAL'
+	IF @Action IN ('CAL', 'CAL-FT', 'CAL-HT')
 	BEGIN
 
 		DECLARE @Status TABLE(CornerBet BIT, BetCount INT, InRunning INT)
 
 		INSERT INTO @Status(CornerBet, BetCount, InRunning)
-		SELECT	CASE WHEN bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209) THEN 1 
-					 ELSE 0 END 
-				, SUM(CASE WHEN statusID BETWEEN 101 AND 102 THEN 0 ELSE 1 END)
-				, SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
-		FROM	dbo.Bettrans WITH (NOLOCK)
-		WHERE	matchID = @MatchID 
-				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-				AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
-				AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
-		GROUP BY CASE WHEN bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209) THEN 1 
-					  ELSE 0 END 
+		SELECT CASE WHEN bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209) THEN 1
+				 ELSE 0 END --others
+			, SUM(CASE WHEN statusID BETWEEN 101 AND 102 THEN 0 ELSE 1 END)
+			, SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+		FROM dbo.Bettrans WITH (NOLOCK)
+		WHERE matchID = @MatchID 
+			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
+			AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
+		GROUP BY CASE WHEN bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209) THEN 1
+				 ELSE 0 END --others
 
 		IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE CornerBet = 0)
-			INSERT INTO @Status(CornerBet, BetCount, InRunning) VALUES(0,0,0)
+			INSERT INTO @Status(CornerBet, BetCount, InRunning) VALUES(0, 0, 0)
 
 		DECLARE @NoneCornerBetDone BIT
 
-		SELECT	@NoneCornerBetDone = CASE InRunning WHEN 0 THEN 1 ELSE 0 END 
-		FROM	@Status
-		WHERE	CornerBet = 0 
+		SELECT @NoneCornerBetDone = CASE InRunning WHEN 0 THEN 1 ELSE 0 END 
+		FROM @Status
+		WHERE CornerBet = 0
+		
+		SELECT @eventstatus = CASE WHEN @Action IN ('CAL', 'CAL-FT') AND @NoneCornerBetDone = 1 THEN N'completed'
+								    ELSE eventstatus END
+		FROM DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
+		WHERE m.matchid = @matchid
 
-		SELECT	@eventstatus = CASE WHEN @Action ='CAL' AND @NoneCornerBetDone = 1 THEN N'completed'
-								    ELSE eventstatus END 
-		FROM	DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
-		WHERE	m.matchid = @matchid
-
-				EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update 
 			@Command			= 'NAP_Admin_Settlement_Corner-CAL'
 			,@MatchID			= @matchid
 			,@NoneCornerBetDone = @NoneCornerBetDone
 			,@Action			= @action
 			,@creator			= @AdminID
 
-				EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s
 				@Command = 'NAP_Admin_Settlement_Corner-CAL',
 				@MatchID = @MatchID,
 				@fthCorners = @fthCorners,
@@ -188,7 +203,7 @@ BEGIN
 				@IsAuto = 0,
 				@creator = @AdminID		
 
-				EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
+		EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
 			 @matchid		= @matchid
 			,@mode			= @action	
 			
@@ -205,15 +220,27 @@ BEGIN
 	---         CAPTURE value BALANCE after settlement        ---
 	---------------------------VVVV------------------------------
 	CREATE TABLE #BalanceAfter (custid INT PRIMARY KEY, balance MONEY)
-	INSERT INTO #BalanceAfter
-	SELECT b.custid
-		,SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE	b.matchid = @matchid 
-			AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
-	GROUP BY b.custid
-
-
+	
+	IF @Action IN ('CAL', 'CAL-FT')
+	BEGIN
+		INSERT INTO #BalanceAfter
+		SELECT	 b.custid
+				,SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	b.matchid = @MatchId 
+				AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
+		GROUP BY b.custid
+	END
+	ELSE IF @Action = 'CAL-HT'
+	BEGIN
+		INSERT INTO #BalanceAfter
+		SELECT	 b.custid
+				,SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	b.matchid = @MatchId 
+				AND b.bettype IN (200,201,202,203,204,205,207,209)
+		GROUP BY b.custid
+	END
 
 	-------------------------------------------------------------
 	---                   compare BALANCE                     ---
