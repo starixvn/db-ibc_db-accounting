@@ -122,7 +122,7 @@ BEGIN
 					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END
 			)
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, Winlostdate, GroupID)
-	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM (w.Winlost * s.ExtraPT) AS Winlost, w.Winlostdate, s.GroupId
+	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) AS Winlost, w.Winlostdate, s.GroupId
 	FROM wl w
 	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
 			ON w.srecommend = s.SuperId
@@ -160,8 +160,8 @@ BEGIN
 		FROM @dummy AS DM
 		LEFT JOIN (
 			SELECT  ISNULL(w.GroupId, rs.GroupID) AS GroupID,
-					SUM(ISNULL(w.Winlost, 0)) AS Winlost,
-					SUM(ISNULL(rs.[Reset], 0)) AS [Reset],
+					ROUND(SUM(ISNULL(w.Winlost, 0)), 2) AS Winlost,
+					ROUND(SUM(ISNULL(rs.[Reset], 0)), 2) AS [Reset],
 					ISNULL(w.Winlostdate, rs.Winlostdate) AS Winlostdate
 			FROM WL w
 			FULL OUTER JOIN @LastReset rs
@@ -185,9 +185,9 @@ BEGIN
 		SELECT DM.CustID, ROUND(ISNULL(W.Winlost,0), 2) AS Winlost, ROUND(ISNULL(W.[Reset],0), 2) AS [Reset], ROUND(ISNULL(W.Variance,0), 2) as Variance, DM.Winlostdate, DM.GroupID, DM.GroupName
 		FROM @dummy DM
 		LEFT JOIN (
-			SELECT  SUM(ISNULL(w.Winlost, 0)) AS Winlost,
-					SUM(ISNULL(rs.[Reset], 0)) AS [Reset],
-					SUM(- ISNULL(w.Winlost, 0) - ISNULL(rs.[Reset], 0)) AS Variance,
+			SELECT  ROUND(SUM(ISNULL(w.Winlost, 0)), 2) AS Winlost,
+					ROUND(SUM(ISNULL(rs.[Reset], 0)), 2) AS [Reset],
+					ROUND(SUM(ISNULL(w.Winlost, 0)), 2) - ROUND(SUM(ISNULL(rs.[Reset], 0)), 2) AS Variance,
 					ISNULL(w.Winlostdate, rs.winlostdate) AS Winlostdate,
 					ISNULL(w.GroupId, rs.GroupID) AS GroupID
 			FROM WL w

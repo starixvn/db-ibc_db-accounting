@@ -513,7 +513,7 @@ BEGIN
 	           dm.product,
 	           ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
 			   CASE dm.product
-	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(w.winlost, 0)- ISNULL(e.ExtraPTwinlost, 0), 2) END AS WinlostAfterExtraPT,
+	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTwinlost, 0), 2) END AS WinlostAfterExtraPT,
 	           CASE dm.product
 	             WHEN 'Total Balance' then 0
 	             ELSE ROUND(ISNULL(rs.reset, 0), 2)
@@ -545,12 +545,12 @@ BEGIN
         INSERT INTO @reset(winlostdate, product, winlost, WinlostAfterExtraPT, reset, latestreset, seq)
 	    SELECT dm.winlostdate,
 	           dm.product,
-			   ROUND(ISNULL(w.winlost, 0),2) AS winlost,
-			   ROUND(ISNULL(w.winlost, 0) - ISNULL(e.ExtraPTwinlost, 0), 2) AS WinlostAfterExtraPT,
+			   ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
+			   ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTwinlost, 0), 2) AS WinlostAfterExtraPT,
 	           ROUND(ISNULL(rs.reset, 0), 2) AS reset,
 	           CASE
 	             WHEN  dm.Product IN ('Racing (Due to Partners)', 'Total Balance') THEN 0 
-	             ELSE ROUND(-(ISNULL(w.winlost, 0)- ISNULL(e.ExtraPTwinlost, 0)) - ISNULL(rs.reset, 0), 2)
+	             ELSE ROUND(-ISNULL(w.winlost, 0), 2)- ROUND(ISNULL(e.ExtraPTwinlost, 0), 2) - ROUND(ISNULL(rs.reset, 0), 2)
 	           END AS latestreset,
 			   dm.seq
 	     FROM @winning w	
