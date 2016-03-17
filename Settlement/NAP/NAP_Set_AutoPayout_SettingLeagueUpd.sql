@@ -27,7 +27,8 @@ BEGIN
 	SELECT @IsAutoPayout = ISNULL(@IsAutoPayout, 0), @StarTime = GETDATE()
 
 	SELECT @IsAutoPayout_Old = ISNULL(IsAutoPayout, 0)
-	FROM dbo.League l WITH(NOLOCK)
+	FROM dbo.League l WITH(NOLOCK) 
+	WHERE leagueid = @LeagueId
 	
 	--check concurrency users
 	IF @IsAutoPayout = @IsAutoPayout_Old
@@ -41,7 +42,7 @@ BEGIN
 		UPDATE m
 		SET IsAutoPayout = @IsAutoPayout
 		FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
-		WHERE m.leagueid = @LeagueId AND sporttype = 1 AND eventstatus = 'running'
+		WHERE m.leagueid = @LeagueId AND sporttype = 1 AND eventstatus <> 'completed'
 			AND (NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Single_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = m.matchid)
 				OR NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = m.matchid)
 			)
@@ -51,6 +52,23 @@ BEGIN
 			SELECT @ErrCode = 1001019, @ErrMsg = 'Failed to update auto payout setting on match.'
 			RETURN
 		END
+
+		IF EXISTS (SELECT TOP 1 1 
+					FROM dbo.match m WITH(NOLOCK)
+					WHERE m.leagueid = @LeagueId AND sporttype = 1 AND IsAutoPayout IS NULL)
+		BEGIN
+			UPDATE m
+			SET IsAutoPayout = @IsAutoPayout_Old
+			FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
+			WHERE m.leagueid = @LeagueId AND sporttype = 1 AND IsAutoPayout IS NULL
+
+			IF @@ERROR > 0
+			BEGIN
+				SELECT @ErrCode = 1001019, @ErrMsg = 'Failed to update auto payout setting on match.'
+				RETURN
+			END
+		END
+
 	END
 
 	--update setting league

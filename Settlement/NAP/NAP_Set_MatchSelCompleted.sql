@@ -29,7 +29,7 @@ AS
 		- 20150729@Johnson: Exclude Metric Gaming in settlement's sportbook [Redmine: #37688]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160201@Kathy: Exclude tickets of Charge Commission (bettypeid=500) [Redmine:#49727]
-		- 20160314@Patrick: Add more filter to support auto-payout
+		- 20160314@Patrick: Add more filter to support auto-payout [Redmine: #53262]
 
 	Param explanation: 
 		@isReLoad: 1: reload partial matches of a league, 0: not reload

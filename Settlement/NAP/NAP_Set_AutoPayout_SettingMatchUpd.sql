@@ -25,12 +25,14 @@ BEGIN
 
 	SELECT @IsAutoPayout_Old = IsAutoPayout
 	FROM dbo.match m WITH(NOLOCK)
+	WHERE m.matchid = @MatchId
 
 	IF @IsAutoPayout_Old IS NULL
 	BEGIN
 		SELECT @IsAutoPayout_Old = ISNULL(IsAutoPayout, 0)
 		FROM dbo.League l WITH(NOLOCK)
 	END
+
 	--check concurrency users
 	IF @IsAutoPayout = @IsAutoPayout_Old
 	BEGIN
@@ -38,9 +40,9 @@ BEGIN
 	END
 
 	--check match <> running
-	IF NOT EXISTS (SELECT TOP 1 1 
+	IF EXISTS (SELECT TOP 1 1 
 					FROM dbo.match m WITH(NOLOCK) 
-					WHERE matchid = @MatchId AND sporttype = 1 AND eventstatus = 'running')
+					WHERE matchid = @MatchId AND sporttype = 1 AND eventstatus = 'completed')
 	BEGIN
 		SELECT @ErrCode = 1001019, @ErrMsg = 'Failed to update auto payout setting on match.'
 		RETURN

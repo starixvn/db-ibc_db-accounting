@@ -25,7 +25,7 @@ AS
 		- 20150811@Johnson: Exclude bettrade tickets from Sportbook [Redmine: #35921]
 		- 20150729@Johnson: Exclude range bettype of Metric Gaming from settlement of SB [Redmine: #37688]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
-		- 20160314@Patrick: Add more filter to support auto-payout
+		- 20160314@Patrick: Add more filter to support auto-payout [Redmine: #53262]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -83,18 +83,18 @@ BEGIN
 
 	;WITH BetStatus AS (
 		SELECT b.matchid
-				, COUNT(b.matchid) betcount
-				, SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG
-				, SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END) AS cntHTFGLG
-			FROM dbo.bettrans b WITH (NOLOCK, INDEX = CIX_matchid_bettype)
-			WHERE EXISTS (SELECT TOP 1 1 FROM @MatchIds m WHERE b.matchid = m.MatchId)
-				AND bettype <= 19000
-				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
-				AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
-				AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-				AND bettype NOT IN (901,902,903)--bettrade
-				AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
-			GROUP BY b.matchid
+			, COUNT(b.matchid) betcount
+			, SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG
+			, SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END) AS cntHTFGLG
+		FROM dbo.bettrans b WITH (NOLOCK, INDEX = CIX_matchid_bettype)
+		WHERE EXISTS (SELECT TOP 1 1 FROM @MatchIds m WHERE b.matchid = m.MatchId)
+			AND bettype <= 19000
+			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
+			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
+			AND bettype NOT IN (901,902,903)--bettrade
+			AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
+		GROUP BY b.matchid
 	)
 	
 	SELECT m.matchid

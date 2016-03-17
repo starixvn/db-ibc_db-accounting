@@ -1,24 +1,15 @@
 
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 5/8/2015 9:44:36 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 4/24/2015 1:34:30 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_FGLG_Push    Script Date: 04/09/2014 2:25:54 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG_Push]
-	@AdminId int,
-	@action VARCHAR(10) = 'CAL-FT', -- CAL-FT, CAL-HT
-	@MatchId int,	
-	@BetStatus nvarchar(50),
-	@IncludeLastGoal bit = 0,
-	@IP varchar(15) = '',
-	@goalrecord varchar(50) = '',
-	@IsLoopTempTable BIT = 0,
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG_Push] @AdminId INT
+	, @action VARCHAR(10) = 'CAL-FT' -- CAL-FT, CAL-HT
+	, @MatchId INT
+	, @BetStatus NVARCHAR(50)
+	, @IncludeLastGoal BIT = 0
+	, @IP VARCHAR(15) = ''
+	, @goalrecord VARCHAR(50) = ''
+	, @IsLoopTempTable BIT = 0
+	, @IsAutoPayout BIT = 0
+	, @ErrCode INT = 0 OUTPUT
+	, @ErrMsg NVARCHAR(200) = '' OUTPUT
 	
 AS
 /*	Creator: Kathy
@@ -31,7 +22,7 @@ AS
 		- 20140507@Kathy: Add param @action (for bettype 1H FGLG (127)) [Redmine:#14449]
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
-		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
+		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
@@ -84,26 +75,27 @@ BEGIN
 		RETURN
 	END 
 
-	SELECT   @ErrCode = 0
-			,@ErrMsg = ''
-			,@mode = CASE when @action = 'CAL-FT' THEN CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-FTFGLG' 
-														    ELSE 'CAL-FTLG' 
-													   END
-						  ELSE CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-HTFGLG'
-								    ELSE 'CAL-HTLG'
-							   END
-				     END 
-			,@procName = OBJECT_NAME(@@procid)
-			,@sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_FGLG] @matchid = ' + CONVERT(NVARCHAR(50),@MatchId) +
-								 ', @action = ' + CASE WHEN @action IS NULL THEN 'CAL-FT' ELSE '''' + CONVERT(NVARCHAR(50), @action) + '''' END +
-								 ', @creator = ' + CONVERT(NVARCHAR(50),@AdminId) + 
-								 ', @goalrecord = '+ CASE when @GoalRecord IS NULL THEN 'NULL' ELSE '''' + CONVERT(nvarchar(50),@GoalRecord)+ '''' END +
-								 ', @betstatus = ' + CASE when @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(nvarchar(50),@BetStatus)+ '''' END +
-								 ', @IncludeLG = ' + CONVERT(NVARCHAR(1),@IncludeLastGoal) + 
-								 ', @IsLoopTempTable = ' + CONVERT(NVARCHAR(1),@IsLoopTempTable) + 
-								 ', @IP = ''' + CONVERT(NVARCHAR(50),@IP) + '''' +
-								 ', @ErrCode = @ErrCode OUTPUT' +
-								 ', @ErrMsg = @ErrMsg OUTPUT' 
+	SELECT @ErrCode = 0
+		, @ErrMsg = ''
+		, @mode = CASE when @action = 'CAL-FT' THEN CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-FTFGLG' 
+														ELSE 'CAL-FTLG' 
+													END
+						ELSE CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-HTFGLG'
+								ELSE 'CAL-HTLG'
+							END
+				    END 
+		, @procName = OBJECT_NAME(@@procid)
+		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_FGLG] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
+			+ ', @action = ' + CASE WHEN @action IS NULL THEN 'CAL-FT' ELSE '''' + CONVERT(NVARCHAR(50), @action) + '''' END 
+			+ ', @creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
+			+ ', @goalrecord = '+ CASE when @GoalRecord IS NULL THEN 'NULL' ELSE '''' + CONVERT(nvarchar(50),@GoalRecord)+ '''' END 
+			+ ', @betstatus = ' + CASE when @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(nvarchar(50),@BetStatus)+ '''' END 
+			+ ', @IncludeLG = ' + CONVERT(NVARCHAR(1), @IncludeLastGoal) 
+			+ ', @IsAutoPayout = ' + CONVERT(NVARCHAR(1), @IsAutoPayout) 
+			+ ', @IsLoopTempTable = ' + CONVERT(NVARCHAR(1), @IsLoopTempTable) 
+			+ ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
+			+ ', @ErrCode = @ErrCode OUTPUT' 
+			+ ', @ErrMsg = @ErrMsg OUTPUT' 
 
 	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
 	BEGIN
