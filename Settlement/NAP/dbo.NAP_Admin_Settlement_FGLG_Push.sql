@@ -61,17 +61,15 @@ BEGIN
 	END 
 	
 	-- check waiting ticket
-				EXEC NAP_Admin_Settlement_Checking
-		@MatchId = @MatchId
-		,@Action = @Action
-		,@Mode = 'CAL-FGLG'
-		,@ErrCode = @ErrCode OUTPUT
-		,@ErrMsg = @ErrMsg OUTPUT
+	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
+		, @Action = @Action
+		, @Mode = 'CAL-FGLG'
+		, @IsAutoPayout = @IsAutoPayout
+		, @ErrCode = @ErrCode OUTPUT
+		, @ErrMsg = @ErrMsg OUTPUT
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrCode
-			,@ErrMsg
-		
+		SELECT @ErrCode, @ErrMsg
 		RETURN
 	END 
 

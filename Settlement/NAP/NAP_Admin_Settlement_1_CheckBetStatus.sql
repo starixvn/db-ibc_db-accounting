@@ -23,8 +23,8 @@ BEGIN
 
 	SELECT @HalfTimeBetTypeIds = ',' + @HalfTimeBetTypeIds + ','
 
+	INSERT INTO @BetStatus
 	SELECT CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @HalfTimeBetTypeIds) > 0 THEN 0 ELSE 1 END
-		, SUM(CASE WHEN b.statusID IN (101, 102) THEN 0 ELSE 1 END)
 		, SUM(CASE WHEN b.statusID = 0 THEN 1 ELSE 0 END)
 	FROM dbo.bettrans b WITH(NOLOCK)
 	WHERE b.matchid = @MatchId

@@ -1,7 +1,6 @@
 USE bodb02
 GO
-ALTER PROCEDURE dbo.NAP_Set_AutoPayout_WaitingSel @MatchCode NVARCHAR(50) = ''
-	, @SportType SMALLINT = 0
+ALTER PROCEDURE dbo.NAP_Set_AutoPayout_WaitingSel @SportType SMALLINT = 0
 	, @LeagueId INT = 0 -- 0 for ALL Leagues
 AS
 /*
@@ -18,20 +17,8 @@ AS
 BEGIN
 
 	SET NOCOUNT ON 
-	DECLARE @MatchId INT, @Today DATETIME
-	SELECT @MatchCode = ISNULL(@MatchCode, ''), @LeagueID = ISNULL(@LeagueID, 0)
-		, @SportType = ISNULL(@SportType, 0), @Today = GETDATE() 
-
-	IF @MatchCode <> '' AND ISNUMERIC(@MatchCode) = 1
-	BEGIN
-		SET @MatchId = CAST(@MatchCode AS INT)
-	END
-	ELSE IF @MatchCode <> ''
-	BEGIN
-		SELECT @MatchId = MatchId 
-		FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK) 
-		WHERE MatchCode = @MatchCode
-	END
+	DECLARE @Today DATETIME
+	SELECT @LeagueID = ISNULL(@LeagueID, 0), @SportType = ISNULL(@SportType, 0), @Today = GETDATE() 
 
 	SET @Today = DATEADD(HH, -1, @Today)
 
@@ -159,7 +146,6 @@ BEGIN
 		LEFT JOIN PayoutResult rs ON tm.matchid = rs.matchid
 	WHERE m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END
 		AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END
-		AND m.matchid = CASE WHEN ISNULL(@MatchId, 0) = 0 THEN m.matchid ELSE @MatchId END
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayout_WaitingSel] TO [bodbAdminNet] AS [dbo]

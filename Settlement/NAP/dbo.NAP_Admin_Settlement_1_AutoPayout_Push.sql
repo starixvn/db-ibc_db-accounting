@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_AutoPayout_Push] @AdminId INT
     , @HalfTimeAway SMALLINT        = NULL 
     , @GoalRecord	VARCHAR(50)     = NULL
     , @BetStatus	NVARCHAR(50)    
-    , @Action		VARCHAR(10)     = 'CAL'
+    , @Action		VARCHAR(10)     = 'CAL-FT'
     , @IP			VARCHAR(15)     = ''
     , @ErrCode		INT             = 0     OUTPUT
     , @ErrMsg		NVARCHAR(200)   = ''    OUTPUT
@@ -27,6 +27,10 @@ AS
 */
 BEGIN
     SET NOCOUNT ON
+	IF @Action = 'CAL'
+	BEGIN
+		RETURN --not supported
+	END
 
     DECLARE	@matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @procName NVARCHAR(50), @sqlCommand VARCHAR(1024)
 			
@@ -69,16 +73,17 @@ BEGIN
     
     -- check waiting ticket
 	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId	= @MatchId
-        , @Action	= @Action
-        , @Mode		= 'CAL'
-        , @ErrCode	= @ErrCode OUTPUT
-        , @ErrMsg	= @ErrMsg OUTPUT
+        , @Action = @Action
+        , @Mode	= 'CAL'
+		, @IsExcludeCorner = 1
+		, @IsExcludeFGLG = 1
+		, @IsAutoPayout = 1
+        , @ErrCode = @ErrCode OUTPUT
+        , @ErrMsg = @ErrMsg OUTPUT
         
     IF @ErrCode <> 0
     BEGIN
-        SELECT	@ErrCode
-				,@ErrMsg
-        
+        SELECT	@ErrCode, @ErrMsg
         RETURN
     END
 

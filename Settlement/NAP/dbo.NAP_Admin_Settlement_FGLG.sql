@@ -119,29 +119,27 @@ BEGIN
 	CREATE TABLE #BalanceBefore (custid INT PRIMARY KEY, balance MONEY)
 	DECLARE @TotalAccount INT, @TotalAccount_BalanceUpdate INT
 
-	BEGIN
-		--===
-		INSERT INTO #tmpTrans(transid)
-		SELECT transid
-		FROM dbo.bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid 
-			AND bettype = @bettype
-			AND betdaqid = 0--bettrade tickets
+	INSERT INTO #tmpTrans(transid)
+	SELECT transid
+	FROM dbo.bettrans WITH (NOLOCK)
+	WHERE matchid = @matchid 
+		AND bettype IN (@bettype, 172)
+		AND betdaqid = 0--bettrade tickets
+		AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
 
-		INSERT INTO #BalanceBefore
-		SELECT custid, SUM(winlost - actual_stake + playercomm)
-		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903)
-			AND 1 = CASE WHEN bettype IN (901,902,903) 
-									AND refno IN (SELECT transid FROM #tmpTrans)	
-								THEN 1 
-						WHEN bettype NOT IN (901,902,903) THEN 1
-						ELSE 0 END
-		GROUP BY custid
+	INSERT INTO #BalanceBefore
+	SELECT custid, SUM(winlost - actual_stake + playercomm)
+	FROM dbo.bettrans WITH (ROWLOCK)
+	WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903,172)
+		AND 1 = CASE WHEN bettype IN (901,902,903) 
+								AND refno IN (SELECT transid FROM #tmpTrans)	
+							THEN 1 
+					WHEN bettype NOT IN (901,902,903) THEN 1
+					ELSE 0 END
+		AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+	GROUP BY custid
 
-		SET @TotalAccount = @@ROWCOUNT
-		--===
-	END
+	SET @TotalAccount = @@ROWCOUNT
 
 	-- bettype 14 : First Goal Last Goal - re-use the SP of Correct Score, so we have to call it twice		
 	DECLARE @betcount_14 INT, @betcount_127 INT, @betcount_172 INT
@@ -152,7 +150,7 @@ BEGIN
 		, @betcount_172 = ISNULL(SUM(CASE WHEN bettype = 172 THEN 1 ELSE 0 END), 0)
 	FROM dbo.bettrans WITH (NOLOCK)
 	WHERE matchid = @matchid AND bettype IN (14, 127, 172)
-		AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 THEN 1 ELSE 0 END
+		AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
 
 	IF @betcount_14 = 0 OR @betcount_127 = 0
 	BEGIN
@@ -240,12 +238,13 @@ BEGIN
 		INSERT INTO #BalanceAfter
 		SELECT custid, SUM(winlost - actual_stake + playercomm)
 		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype IN (@bettype, 901, 902, 903)
+		WHERE matchid = @matchid AND bettype IN (@bettype, 901, 902, 903, 172)
 			AND 1 = CASE WHEN bettype IN (901, 902, 903) 
 									AND refno IN (SELECT transid FROM #tmpTrans)	
 							THEN 1
 						WHEN bettype NOT IN (901,902,903) THEN 1
 						ELSE 0 END
+			AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
 		GROUP BY custid
 		--===
 	END
