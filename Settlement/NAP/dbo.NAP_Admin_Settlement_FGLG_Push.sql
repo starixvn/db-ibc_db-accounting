@@ -32,31 +32,24 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE  @matchcode nvarchar(50)
-			,@sporttype int
-			,@leagueid int
-			,@sqlCommand NVARCHAR(500)
-			,@mode varchar(20)
-			,@procName nvarchar(50)			
+	DECLARE @matchcode NVARCHAR(50), @sporttype INT, @leagueid INT
+		, @sqlCommand NVARCHAR(500), @mode VARCHAR(20), @procName NVARCHAR(50)
 
-	SELECT   @matchcode = m.matchcode
-			,@sporttype = m.sporttype
-			,@leagueid = m.leagueid
-	FROM match m with(NOLOCK)
+	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
+	FROM dbo.match m with(NOLOCK)
 	WHERE m.matchid = @MatchId
 
 	IF @@ROWCOUNT = 0 
 	BEGIN
-		SELECT	 @ErrCode	= 1000001
-				,@ErrMsg	= 'Match does not exist!'	
+		SELECT @ErrCode	= 1000001, @ErrMsg = 'Match does not exist!'	
 		RETURN
 	END 
 
-	IF EXISTS (SELECT 1 from Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
-		OR EXISTS (SELECT 1 from Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
-	BEGIN 
-		SELECT	 @ErrCode	= 1000000
-				,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+	IF EXISTS (SELECT 1 from dbo.Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
+		OR EXISTS (SELECT 1 from dbo.Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
+	BEGIN
+		SELECT @ErrCode = 1000000
+			, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
 		RETURN
 	END 
 	
@@ -76,11 +69,9 @@ BEGIN
 	SELECT @ErrCode = 0
 		, @ErrMsg = ''
 		, @mode = CASE when @action = 'CAL-FT' THEN CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-FTFGLG' 
-														ELSE 'CAL-FTLG' 
-													END
+														ELSE 'CAL-FTLG' END
 						ELSE CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-HTFGLG'
-								ELSE 'CAL-HTLG'
-							END
+								ELSE 'CAL-HTLG'	END
 				    END 
 		, @procName = OBJECT_NAME(@@procid)
 		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_FGLG] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
@@ -97,54 +88,23 @@ BEGIN
 
 	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
 	BEGIN
-		DECLARE  @fth SMALLINT
-				,@fta SMALLINT
-				,@hth SMALLINT
-				,@hta SMALLINT
-				,@ActionId INT
-
+		
 		BEGIN TRY
-			EXEC sys.sp_executesql @sqlCommand
-				,N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
-				,@ErrMsg = @ErrMsg OUTPUT
-				,@ErrCode = @ErrCode OUTPUT
+			EXEC sys.sp_executesql @sqlCommand, N'@ErrMsg VARCHAR(400) OUTPUT, @ErrCode int OUTPUT'
+				, @ErrMsg = @ErrMsg OUTPUT
+				, @ErrCode = @ErrCode OUTPUT
 		END TRY
 
 		BEGIN CATCH
-			SELECT  @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(),'')
-				   ,@ErrCode = @@error
+			SELECT @ErrMsg = @ErrMsg + ISNULL(ERROR_MESSAGE(), '')
+				, @ErrCode = @@ERROR
 			RETURN
 		END CATCH
-
-		SELECT @ActionId = CASE 
-								--WHEN @mode = 'CAL-FTFGLG' OR @mode = 'CAL-HTFGLG' THEN 1
-								WHEN @mode = 'CAL-FTFGLG' THEN 1
-								WHEN @mode = 'CAL-HTFGLG' THEN 7
-								ELSE - 1
-						   END
-			,@fth = m.finalhomescore
-			,@fta = m.finalawayscore
-			,@hth = m.hthomescore
-			,@hta = m.htawayscore
-			,@GoalRecord = m.GoalRecord
-			,@BetStatus = m.betstatus
-		FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
-		WHERE m.matchid = @MatchId
-
-		IF @ActionId <> - 1
-			EXEC Acc_Set_ConfirmedAction @matchid = @MatchId
-				,@action = @ActionId
-				,@fth = @fth
-				,@fta = @fta
-				,@hth = @hth
-				,@hta = @hta
-				,@goalrecord = @GoalRecord
-				,@betstatus = @BetStatus
-
-	END 
+		
+	END
 	ELSE
 	BEGIN
-		INSERT INTO Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
+		INSERT INTO dbo.Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @mode, @sqlCommand
 	END
 END

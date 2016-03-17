@@ -214,7 +214,7 @@ BEGIN
 			, @fth = @fth
             , @fta = @fta
 			, @betcount_14 = @betcount_14
-			, @betcount_127 = @betcount_127
+			, @betcount_172 = @betcount_172
 
 		IF @IncludeLG = 0
 		BEGIN

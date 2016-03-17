@@ -33,7 +33,6 @@ AS
 		
 	Param's Explanation:
 
-		
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -85,63 +84,37 @@ BEGIN
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
 	VALUES (1, @matchid)
 
-	IF (@@ERROR = 0)
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= 'ADD SUCCESS'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= @Remark
-		END CATCH
-	END
-	ELSE
+	IF @@ERROR > 0
 	BEGIN
 		SELECT @ErrCode = 1000000
-			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
-
+			, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+							+ LEFT(ERROR_MESSAGE(), 400)
 		RETURN
-	END
 
+	END
+	
 	-------------------------------------------------------------
 	---        CAPTURE value BALANCE before settlement        ---
 	---------------------------VVVV------------------------------
-	CREATE TABLE #BalanceBefore (
-		custid INT PRIMARY KEY
-		,balance MONEY
-		)
+	CREATE TABLE #BalanceBefore (custid INT PRIMARY KEY, balance MONEY)
 
 	--===
 	IF @Action IN ('CAL', 'CAL-FT')
 	BEGIN
 		INSERT INTO #BalanceBefore
-		SELECT	 b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM	dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @MatchId 
-				AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
+		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM dbo.bettrans b WITH (ROWLOCK)
+		WHERE b.matchid = @MatchId 
+			AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
 		GROUP BY b.custid
 	END
 	ELSE IF @Action = 'CAL-HT'
 	BEGIN
 		INSERT INTO #BalanceBefore
-		SELECT	 b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM	dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @MatchId 
-				AND b.bettype IN (200,201,202,203,204,205,207,209)
+		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM dbo.bettrans b WITH (ROWLOCK)
+		WHERE b.matchid = @MatchId 
+			AND b.bettype IN (200,201,202,203,204,205,207,209)
 		GROUP BY b.custid
 	END
 
@@ -203,15 +176,11 @@ BEGIN
 				@IsAuto = 0,
 				@creator = @AdminID		
 
-		EXEC dbo.[NAP_Admin_Settlement_3_Corner] 
-			 @matchid		= @matchid
-			,@mode			= @action	
+		EXEC dbo.[NAP_Admin_Settlement_3_Corner] @matchid = @matchid, @mode = @action	
 			
 		IF 	@eventstatus='completed'			
 		BEGIN
-			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark 
-				 @matchid	= @matchid
-				,@command	= 'C'
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid, @command	= 'C'
 		END
 
 	END
@@ -224,21 +193,19 @@ BEGIN
 	IF @Action IN ('CAL', 'CAL-FT')
 	BEGIN
 		INSERT INTO #BalanceAfter
-		SELECT	 b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM	dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @MatchId 
-				AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
+		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM dbo.bettrans b WITH (ROWLOCK)
+		WHERE b.matchid = @MatchId 
+			AND b.bettype IN (194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209)
 		GROUP BY b.custid
 	END
 	ELSE IF @Action = 'CAL-HT'
 	BEGIN
 		INSERT INTO #BalanceAfter
-		SELECT	 b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM	dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @MatchId 
-				AND b.bettype IN (200,201,202,203,204,205,207,209)
+		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM dbo.bettrans b WITH (ROWLOCK)
+		WHERE b.matchid = @MatchId 
+			AND b.bettype IN (200,201,202,203,204,205,207,209)
 		GROUP BY b.custid
 	END
 
@@ -253,72 +220,39 @@ BEGIN
 
 	INSERT INTO #Balance
 	SELECT b.custid
-		,a.balance - b.balance
-		,CASE 
-			WHEN a.balance > b.balance THEN 1
-			ELSE 0
-			END
+		, a.balance - b.balance
+		, CASE WHEN a.balance > b.balance THEN 1 ELSE 0	END
 	FROM #BalanceBefore b
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
-
-	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	--SELECT custid, ABS(balance)
-	--FROM #Balance
-	--WHERE Increased = 0
+	
 	INSERT INTO @tblDebitPending (custID, balance)
-	SELECT	custid, ABS(balance)
-	FROM	#Balance
-	WHERE	Increased = 0
+	SELECT custid, ABS(balance)
+	FROM #Balance
+	WHERE Increased = 0
 	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
-			@BalancePending = @tblDebitPending
-			,@Type			= 1 -- Sports
+	IF @@ROWCOUNT <> 0
+		EXEC dbo.Dot_BalancePendingDebitIns @BalancePending = @tblDebitPending, @Type = 1 -- Sports
 			
-	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	--SELECT custid, balance
-	--FROM #Balance
-	--WHERE Increased = 1
-
 	INSERT INTO @tblCreditPending (custID, balance)
-	SELECT	custid, balance
-	FROM	#Balance
-	WHERE	Increased = 1
+	SELECT custid, balance
+	FROM #Balance
+	WHERE Increased = 1
 	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
-			@BalancePending = @tblCreditPending
-			,@Type			= 1 -- Sports
+	IF @@ROWCOUNT <> 0
+		EXEC dbo.Dot_BalancePendingCreditIns @BalancePending = @tblCreditPending, @Type = 1 -- Sports
+
 	----
 	-- Add Negative Balance into BalanceNegative table 
 	----
-	INSERT INTO [bodb02].[dbo].[BalanceNegative] (
-		[ExecDate]
-		,[MatchID]
-		,[ActionID]
-		,[GroupID]
-		,[CustID]
-		,[Balance]
-		,[StatusID]
-		,[Remark]
-		)
-	SELECT GETDATE()
-		,@MatchID
-		,@ActionID
-		,1 -- Sportsbook Single bet Settlement 
-		,CustID
-		,Balance
-		,0
-		,NULL
+	INSERT INTO [bodb02].[dbo].[BalanceNegative] ([ExecDate], [MatchID], [ActionID], [GroupID], [CustID], [Balance], [StatusID], [Remark])
+	SELECT GETDATE(), @MatchID, @ActionID, 1/*Sportsbook Single bet Settlement*/, CustID, Balance, 0, NULL
 	FROM #Balance WITH(NOLOCK)
 	WHERE Increased = 0
 
 	---------------------------------------------------
 	DROP TABLE #Balance
-
 	DROP TABLE #BalanceBefore
-
 	DROP TABLE #BalanceAfter
 
 	-------------------------------------------------------------
@@ -336,9 +270,7 @@ BEGIN
 														   + ' FTL:' + CASE WHEN @FTLCorner IS NULL THEN '' ELSE @FTLCorner END
 														   + ' HTF:' + CASE WHEN @HTFCorner IS NULL THEN '' ELSE @HTFCorner END
 														   + ' HTL ' + CASE WHEN @HTLCorner IS NULL THEN '' ELSE @HTLCorner END 
-	EXEC dbo.WriteLog_UserLog 
-		@UserID = @AdminId
-		,@Doing = @logdata
+	EXEC dbo.WriteLog_UserLog @UserID = @AdminId, @Doing = @logdata
 
 	SELECT @Remark = 'NAP: '
 						+ CASE WHEN @fthCorners IS NULL THEN '' ELSE 'fthCorners:' + CAST(@fthCorners AS VARCHAR(50))  + ' ' END 
@@ -351,87 +283,40 @@ BEGIN
 						+ CASE WHEN @htLCorner IS NULL THEN '' ELSE 'htLCorner:' + @htLCorner + '<br/> ' END
 						+ ' Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + 'ms' 
 	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
-			@userid				= @AdminId
-			,@matchid			= @MatchID
-			,@actionid			= @ActionID
-			,@finalhomescore	= @fth
-			,@finalawayscore	= @fta
-			,@hthomescore		= @hth
-			,@htawayscore		= @hta
-			,@GoalRecord		= @goalrecord
-			,@betstatus			= @betstatus
-			,@Remark			= @Remark
-			,@ip				= @ip
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @userid = @AdminId
+			, @matchid			= @MatchID
+			, @actionid			= @ActionID
+			, @finalhomescore	= @fth
+			, @finalawayscore	= @fta
+			, @hthomescore		= @hth
+			, @htawayscore		= @hta
+			, @GoalRecord		= @goalrecord
+			, @betstatus		= @betstatus
+			, @Remark			= @Remark
+			, @ip				= @ip
 	END TRY
 
 	BEGIN CATCH
 		SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
 
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle 
-			@UserID				= @AdminId
-			,@MatchID			= @matchid
-			,@actionid			= @actionid
-			,@finalhomescore	= @fth
-			,@finalawayscore	= @fta
-			,@hthomescore		= @hth
-			,@htawayscore		= @hta
-			,@GoalRecord		= @goalrecord
-			,@betstatus			= @betstatus
-			,@Remark			= @Remark
-			,@IP				= @ip
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
+			, @MatchID			= @matchid
+			, @actionid			= @actionid
+			, @finalhomescore	= @fth
+			, @finalawayscore	= @fta
+			, @hthomescore		= @hth
+			, @htawayscore		= @hta
+			, @GoalRecord		= @goalrecord
+			, @betstatus		= @betstatus
+			, @Remark			= @Remark
+			, @IP				= @ip
 	END CATCH
 
 	--
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-	WHERE KeyID = 1 
-	AND KeyValue = @matchid
-
-	IF @@ERROR = 0
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@userid		= @AdminId
-				,@matchid	= @matchid
-				,@keyid		= 1
-				,@actionid	= @actionid
-				,@remark	= 'DEL SUCCESS'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @remark = 'DEL SUCCESS ErrMsg=' + LEFT(ERROR_MESSAGE(), 400)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@MatchID	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @actionid
-				,@Remark	= @remark
-		END CATCH
-	END
-	ELSE
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@userid		= @AdminId
-				,@matchid	= @matchid
-				,@keyid		= 1
-				,@actionid	= @actionid
-				,@remark	= 'DEL FAILED'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @remark = 'DEL FAILED ErrMsg=' + LEFT(ERROR_MESSAGE(), 400)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@MatchID	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @actionid
-				,@Remark	= @remark
-		END CATCH
-	END
+	WHERE KeyID = 1 AND KeyValue = @matchid
+	
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Corner] TO [bodbAdminNet] AS [dbo]
