@@ -1,7 +1,7 @@
 ﻿Use bodb02
 GO 
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
-	@winlostdate	DATETIME,	
+	@winlostdate	SMALLDATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
 /*	

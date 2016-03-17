@@ -29,13 +29,13 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID), @wldate DATETIME = @todate
-	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate DATETIME)
-	CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, Winlostdate DATETIME, GroupId TINYINT)
-	DECLARE @reset TABLE (CustID INT, Winlost MONEY, [Reset] MONEY, Variance MONEY, Winlostdate DATETIME, GroupID TINYINT, GroupName VARCHAR(50))
-	DECLARE @LastReset TABLE (CustID INT, [Reset] MONEY, Winlostdate DATETIME, GroupID TINYINT)
+	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID), @wldate SMALLDATETIME = @todate
+	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate SMALLDATETIME)
+	CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, Winlostdate SMALLDATETIME, GroupId TINYINT)
+	DECLARE @reset TABLE (CustID INT, Winlost MONEY, [Reset] MONEY, Variance MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT, GroupName VARCHAR(50))
+	DECLARE @LastReset TABLE (CustID INT, [Reset] MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT)
 
-	DECLARE @Date TABLE (WLDate DATETIME)
+	DECLARE @Date TABLE (WLDate SMALLDATETIME)
 
 	WHILE @wldate >= @fromdate
 	BEGIN
@@ -199,7 +199,7 @@ BEGIN
 
  
 		DECLARE @variance     MONEY = 0,
-                @winlostdate  DATETIME,
+                @winlostdate  SMALLDATETIME,
                 @custid       INT,
                 @resetCount   TINYINT = 0,
                 @transDesc    VARCHAR(300)= '',

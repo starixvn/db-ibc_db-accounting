@@ -1,6 +1,6 @@
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 (
-	@winlostdate DATETIME,
+	@winlostdate SMALLDATETIME,
 	@custid      INT,
 	@amount      MONEY,
 	@transdesc   VARCHAR(300),

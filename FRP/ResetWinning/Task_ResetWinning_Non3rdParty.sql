@@ -52,7 +52,7 @@ BEGIN
 ------------------------------------------
 	DECLARE @dummyBalance TABLE
 	(   
-	    WinlostDate datetime,
+	    WinlostDate smalldatetime,
 	    seq         tinyint,
 	    CustId      int,
 	    Product     varchar(50)
@@ -60,7 +60,7 @@ BEGIN
     
     declare @reset table
     (
-        winlostdate datetime,
+        winlostdate smalldatetime,
         product     varchar(50),
 		winlost		money,
         WinlostAfterExtraPT     money,
@@ -104,7 +104,7 @@ BEGIN
 	
 	CREATE TABLE #bettranstmp
 	(
-	    winlostdate     datetime, 
+	    winlostdate     smalldatetime, 
 	    custid          int,
 	    bettype         int,
 	    liveindicator   bit,
@@ -160,7 +160,7 @@ BEGIN
 
 	DECLARE @CommSetting TABLE
 	(
-	    winlostdate   datetime,
+	    winlostdate   smalldatetime,
 	    MatchID		  int,
 		IBCFee		  bit,
 		ToteCommWin	  smallmoney,
@@ -171,7 +171,7 @@ BEGIN
 
 	DECLARE @Winning TABLE 
 	(
-	    winlostdate datetime,
+	    winlostdate smalldatetime,
 		product     varchar(50),
 		winlost     money
 	)
@@ -386,7 +386,7 @@ BEGIN
 
 	CREATE TABLE #ExtraPTWL
 	(
-	    winlostdate     DATETIME, 
+	    winlostdate     smalldatetime, 
 		ProductId		INT,
 		ProductName		VARCHAR(50),
 		ExtraPTwinlost  MONEY
@@ -547,7 +547,7 @@ BEGIN
 		 LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product and e.winlostdate = dm.winlostdate
 
         declare @variance     money = 0,
-                @winlostdate  datetime,
+                @winlostdate  smalldatetime,
                 @custid       int,
                 @resetCount   tinyint = 0,
                 @transDesc    varchar(300)= ''
