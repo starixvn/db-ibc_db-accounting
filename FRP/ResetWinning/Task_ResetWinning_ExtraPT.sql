@@ -76,8 +76,7 @@ BEGIN
 
 	;WITH wl AS (
 			SELECT b.srecommend , s.ProductID, 0 AS Sporttype, '' AS SubProduct,
-				SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
-				ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0))*ISNULL(actualrate, 0)) AS Winlost, b.winlostdate
+				SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0))*ISNULL(actualrate, 0)) AS Winlost, b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 			INNER JOIN  @SportBettype s
 				ON s.BetType = b.bettype
@@ -105,7 +104,7 @@ BEGIN
 			SELECT	b.srecommend, 1 AS ProductID, 
 					CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype, 
 					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END AS SubProduct,
-					SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0))*ISNULL(actualrate, 0)) AS Winlost, 
+					SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) * ISNULL(actualrate, 0)) AS Winlost, 
 					b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 			INNER JOIN  @SportBettype s

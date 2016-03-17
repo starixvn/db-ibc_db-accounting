@@ -399,7 +399,7 @@ BEGIN
 			   0 AS Sporttype,
 			   s.ProductId,
 			   '' AS SubProduct,
-			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0),0) * actualrate) as winlost 		 
+			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) ,0) * actualrate) as winlost 		 
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate between @fromdate and @todate
@@ -447,7 +447,7 @@ BEGIN
 				END	AS ProductName,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END AS SubProduct,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator ,
-			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0) , 0)  * actualrate) as winlost 		 
+			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0), 0)  * actualrate) as winlost 		 
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)	
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44
