@@ -17,284 +17,82 @@ AS
  Original:   
    
  Revisions:  
-  
+	-20160318@bobby.nguyen: #54311 - Correct checking process on match with specific product/sport
+	
  Param's Explanation:   
  
  Dependences:
-	1. TABLE #tblMatch (matchid INT)
+	1. TABLE #tblMatchProcessProcess(matchid, keyValue)
 */
 BEGIN
 	SET NOCOUNT ON
+	
+	CREATE TABLE #checkProcess(KeyId TINYINT)
 	
 	SELECT @avaiableProcess = 0
 		, @ErrCode			= 0
 		, @ErrMsg			= ''
 		
+	-- Locking process
 	IF(@IsReleased = 0)
 	BEGIN
-		
-		IF @isExistParlay  = 1
+		INSERT INTO #checkProcess(KeyId)
+		SELECT DISTINCT
+			CASE 
+				WHEN ((@isExistMatch = 1 OR @isExistNG = 1)	AND ck.KeyId = 1) THEN 1 -- SB,NG,LC
+				WHEN @isExistOutright = 1 	AND ck.KeyId = 2 THEN 2	-- Outright
+				WHEN @isExistMG = 1 		AND ck.KeyId = 3 THEN 3	-- MG
+				WHEN @isExistVS = 1 		AND ck.KeyId = 4 THEN 4	-- VS Racing
+				ELSE 0
+			END AS KeyId
+		FROM dbo.TempVariableNumber ck WITH(ROWLOCK)
+			INNER JOIN #tblMatchProcess tp 
+			ON ck.KeyValue = tp.matchid AND ck.KeyID = tp.KeyID
+			
+		IF (@isExistParlay  = 1)
 		BEGIN
-			IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')  
+			IF EXISTS(SELECT 1 FROM dbo.SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')  
 			BEGIN  
 				SELECT	@ErrCode = 100  
 						,@ErrMsg = 'Another parlay settlement is in progress or some parlay tickets are being deleted, please wait a few seconds until the on-going process has finished and try again.'  
 				
-				RETURN  
+				RETURN
 			END  
 			ELSE
 			BEGIN
 				UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-					SET VValue = '1'  
-				WHERE	VName = 'isCalculatingParlay' 
-						AND VValue = '0'  
+				SET VValue 		= '1'  
+				WHERE VName 	= 'isCalculatingParlay' 
+					AND VValue 	= '0'  
 						
 				SET @avaiableProcess = 1
 			END
 		END
 		
-		IF @isExistOutright = 1
-		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.TempVariableNumber WITH(NOLOCK)
-						WHERE KeyID = 2 AND KeyValue IN (SELECT matchid FROM #tblMatch)
-					)
-			BEGIN
-				IF @isExistParlay = 1
-					UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-						SET VValue = '0'  
-					WHERE	VName = 'isCalculatingParlay' 
-							AND VValue = '1'  
-					
-				SELECT @ErrCode = 101
-					,@ErrMsg = 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
-				
-				SET @avaiableProcess = 0
-				RETURN
-			END
-			ELSE
-			BEGIN
-			
-				BEGIN TRY	
-					
-					INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
-					SELECT 2, matchid
-					FROM	#tblMatch
-					
-					SET @avaiableProcess = 1
-					
-				END TRY
-				BEGIN CATCH
-					SELECT @ErrCode = ERROR_NUMBER()
-						,@ErrMsg = ERROR_MESSAGE()
-							
-				END CATCH
-				
-				IF @ErrCode > 0
-				BEGIN
-					IF @isExistParlay = 1
-						UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-							SET VValue = '0'  
-						WHERE	VName = 'isCalculatingParlay' 
-								AND VValue = '1'  
-					
-					SELECT @ErrCode = 100
-						,@ErrMsg	= 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
-					
-					SET @avaiableProcess = 0
-					RETURN
-				END
-				
-			END
-		END 
-		
-		IF @isExistMG = 1
-		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.TempVariableNumber WITH(NOLOCK)
-						WHERE KeyID = 3 AND KeyValue IN (SELECT matchid FROM #tblMatch)
-					)
-			BEGIN
-				IF @isExistParlay = 1
-					UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-						SET VValue = '0'  
-					WHERE	VName = 'isCalculatingParlay' 
-							AND VValue = '1'  
-				
-				IF @isExistOutright = 1
-					DELETE 
-					FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-					WHERE	KeyID = 2 
-							AND KeyValue IN (SELECT matchid FROM #tblMatch)
-							
-				SELECT @ErrCode = 101
-					,@ErrMsg = 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
-				
-				SET @avaiableProcess = 0
-				
-				RETURN
-			END
-			ELSE
-			BEGIN
-				BEGIN TRY	
-					
-					INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
-					SELECT 3, matchid
-					FROM	#tblMatch
-					
-					SET @avaiableProcess = 1
-					
-				END TRY
-				BEGIN CATCH
-					SELECT @ErrCode = ERROR_NUMBER()
-						,@ErrMsg = ERROR_MESSAGE()
-							
-				END CATCH
-				
-				IF @ErrCode > 0
-				BEGIN
-					IF @isExistParlay = 1
-						UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-							SET VValue = '0'  
-						WHERE	VName = 'isCalculatingParlay' 
-								AND VValue = '1'  
-				
-					IF @isExistOutright = 1
-						DELETE 
-						FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-						WHERE	KeyID = 2 
-								AND KeyValue IN (SELECT matchid FROM #tblMatch)
-					
-					SELECT @ErrCode = 100
-						,@ErrMsg	= 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
-					
-					SET @avaiableProcess = 0
-					
-					RETURN
-				END
-				
-			END
-		END 
-		
-		IF @isExistMatch = 1 OR @isExistNG = 1
-		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.TempVariableNumber WITH(NOLOCK)
-						WHERE KeyID = 1 AND KeyValue IN (SELECT matchid FROM #tblMatch)
-					)
-			BEGIN
-				IF @isExistParlay = 1
-					UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-						SET VValue = '0'  
-					WHERE	VName = 'isCalculatingParlay' 
-							AND VValue = '1'  
-					
-				IF @isExistOutright = 1
-					DELETE 
-					FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-					WHERE	KeyID = 2 
-							AND KeyValue IN (SELECT matchid FROM #tblMatch)
-							
-				IF @isExistMG = 1
-					DELETE 
-					FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-					WHERE	KeyID = 3 
-							AND KeyValue IN (SELECT matchid FROM #tblMatch)
-							
-				SELECT @ErrCode = 101
-					,@ErrMsg = 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
-				
-				SET @avaiableProcess = 0
-				
-				RETURN
-			END
-			ELSE
-			BEGIN
-				BEGIN TRY	
-					
-					INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
-					SELECT 1, matchid
-					FROM	#tblMatch
-					
-					SET @avaiableProcess = 1
-					
-				END TRY
-				BEGIN CATCH
-					SELECT @ErrCode = ERROR_NUMBER()
-						,@ErrMsg = ERROR_MESSAGE()
-							
-				END CATCH
-				
-				IF @ErrCode > 0
-				BEGIN
-					IF @isExistParlay = 1
-						UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-							SET VValue = '0'  
-						WHERE	VName = 'isCalculatingParlay' 
-								AND VValue = '1'  
-					
-					IF @isExistOutright = 1
-						DELETE 
-						FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-						WHERE	KeyID = 2 
-								AND KeyValue IN (SELECT matchid FROM #tblMatch)
-								
-					IF @isExistMG = 1
-						DELETE 
-						FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-						WHERE	KeyID = 3 
-								AND KeyValue IN (SELECT matchid FROM #tblMatch)
-					
-					SELECT @ErrCode = 100
-						,@ErrMsg	= 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
-					
-					SET @avaiableProcess = 0
-					
-					RETURN
-				END
-				
-			END
-		END 
-		
-		IF @isExistNG = 1
+		IF (@isExistNG = 1)
 		BEGIN
 			IF EXISTS (
 				SELECT 1
-				FROM	SystemSettings WITH (NOLOCK)
-				WHERE	VValue = 1 
-						AND VName = 'isCalculatingNGManual'
-				)
+				FROM dbo.SystemSettings WITH (NOLOCK)
+				WHERE VValue 	= 1 
+					AND VName 	= 'isCalculatingNGManual'
+			)
 			BEGIN
-				IF @isExistParlay = 1
-					UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-						SET VValue = '0'  
-					WHERE	VName = 'isCalculatingParlay' 
-							AND VValue = '1'  
-					
-				IF @isExistOutright = 1
-					DELETE 
-					FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-					WHERE	KeyID = 2 
-							AND KeyValue IN (SELECT matchid FROM #tblMatch)
-							
-				IF @isExistMG = 1
-					DELETE 
-					FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-					WHERE	KeyID = 3 
-							AND KeyValue IN (SELECT matchid FROM #tblMatch)
+				UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
+					SET VValue = '0'  
+				WHERE	VName = 'isCalculatingParlay' 
 				
-				DELETE 
-				FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-				WHERE	KeyID = 1 
-						AND KeyValue IN (SELECT matchid FROM #tblMatch)
-							
-				SELECT	@ErrCode = 104
+				SELECT	@ErrCode = 101
 						,@ErrMsg = 'Another number game re-calculation is in progress or some tickets of this match are being voided, please wait a few seconds until the on-going process has finished and try again.'
 				
-				SET @avaiableProcess = 0
+				SELECT @avaiableProcess = 0
+					, @IsReleased 		= 1
 				
 				RETURN
 			END
 			ELSE
 			BEGIN
-				UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
+				UPDATE dbo.systemSettings WITH (ROWLOCK, UPDLOCK)
 				SET VValue = '1'
 				WHERE VName = 'isCalculatingNGManual'
 				
@@ -302,118 +100,69 @@ BEGIN
 			END
 		END
 		
-		IF(@IsExistVS = 1)
+		IF (NOT EXISTS (SELECT TOP 1 1 FROM #checkProcess WHERE KeyId > 0))
 		BEGIN
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.TempVariableNumber WITH(NOLOCK)
-						WHERE KeyID = 4 AND KeyValue IN (SELECT matchid FROM #tblMatch)
-					)
-			BEGIN
-				IF @isExistParlay = 1
-					UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-						SET VValue = '0'  
-					WHERE	VName = 'isCalculatingParlay' 
-							AND VValue = '1'  
-					
-				IF @isExistOutright = 1
-					DELETE 
-					FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-					WHERE	KeyID = 2 
-							AND KeyValue IN (SELECT matchid FROM #tblMatch)
-							
-				IF @isExistMG = 1
-					DELETE 
-					FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-					WHERE	KeyID = 3 
-							AND KeyValue IN (SELECT matchid FROM #tblMatch)
+			BEGIN TRY	
 				
-				IF(@isExistNG = 1)
-					UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-					SET VValue = '0'
-					WHERE VName = 'isCalculatingNGManual'
+				INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
+				SELECT DISTINCT KeyID, matchid
+				FROM #tblMatchProcess
 				
-				SELECT @ErrCode = 101
-					,@ErrMsg = 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
+				SET @avaiableProcess = 1
 				
-				SET @avaiableProcess = 0
+			END TRY
+			BEGIN CATCH
+				SELECT @ErrCode = ERROR_NUMBER()
+					,@ErrMsg 	= ERROR_MESSAGE()
+						
+			END CATCH
+			
+			IF (@ErrCode > 0)
+			BEGIN 
+				
+				SELECT @ErrCode = 103
+					,@ErrMsg	= 'These matches are being calculated or some tickets of matches are being voided, please wait a few seconds until the on-going process is completed and try again.'
+				
+				SELECT @avaiableProcess = 0
 				
 				RETURN
 			END
-			ELSE
-			BEGIN
-				BEGIN TRY	
 					
-					INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
-					SELECT 4, matchid
-					FROM	#tblMatch
-					
-					SET @avaiableProcess = 1
-					
-				END TRY
-				BEGIN CATCH
-					SELECT @ErrCode = ERROR_NUMBER()
-						,@ErrMsg = ERROR_MESSAGE()
-							
-				END CATCH
-				
-				IF @ErrCode > 0
-				BEGIN
-					IF @isExistParlay = 1
-						UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-							SET VValue = '0'  
-						WHERE	VName = 'isCalculatingParlay' 
-								AND VValue = '1'  
-					
-					IF @isExistOutright = 1
-						DELETE 
-						FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-						WHERE	KeyID = 2 
-								AND KeyValue IN (SELECT matchid FROM #tblMatch)
-								
-					IF @isExistMG = 1
-						DELETE 
-						FROM	dbo.TempVariableNumber WITH(ROWLOCK, UPDLOCK)
-						WHERE	KeyID = 3 
-								AND KeyValue IN (SELECT matchid FROM #tblMatch)
-					
-					IF(@isExistNG = 1)
-						UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-						SET VValue = '0'
-						WHERE VName = 'isCalculatingNGManual'
-					
-					SELECT @ErrCode = 100
-						,@ErrMsg	= 'This match is being calculated or some tickets of this match are being voided, please wait a few seconds until the on-going process is completed and try again.'
-					
-					SET @avaiableProcess = 0
-					
-					RETURN
-				END
-			END
 		END
-		
+		ELSE
+		BEGIN
+			SELECT @ErrCode = 102
+				,@ErrMsg	= 'These matches are being calculated or some tickets of matches are being voided, please wait a few seconds until the on-going process is completed and try again.'
+				
+			SELECT @avaiableProcess = 0
+			RETURN
+		END
 	END
-	ELSE IF (@IsReleased = 1)
+	-- releasing process
+	IF (@IsReleased = 1)
 	BEGIN
-		IF @isExistParlay = 1
+		IF (@isExistParlay = 1)
 			UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
 			SET VValue = '0'  
 			WHERE VName = 'isCalculatingParlay' 
 				AND VValue = '1'  
 				
-		IF @isExistNG = 1
+		IF (@isExistNG = 1)
 			UPDATE dbo.systemSettings WITH (ROWLOCK, UPDLOCK)
 			SET VValue = '0'
 			WHERE VName = 'isCalculatingNGManual'
 				
-		IF @isExistMatch = 1
+		IF (@isExistMatch = 1
 			OR @isExistOutright = 1
 			OR @isExistMG = 1
 			OR @isExistNG = 1
 			OR @isExistVS = 1
+		)
 		BEGIN
-			DELETE 
-			FROM dbo.TempVariableNumber
-			WHERE	KeyValue IN (SELECT matchid FROM #tblMatch)
-				AND KeyId IN (1,2,3,4)
+			DELETE ck
+			FROM dbo.TempVariableNumber ck
+				INNER JOIN #tblMatchProcess tp
+				ON ck.KeyId = tp.keyId AND ck.keyValue = tp.keyValue
 					
 		END
 	END
