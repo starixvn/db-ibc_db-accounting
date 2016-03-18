@@ -25,6 +25,7 @@ AS
 		- 20151217@Sophia: Apply Muay Thai [Redmine: #48667]
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 		- 20160307@Sophia: Apply Extra PT [Redmind: #51721]
+		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
 						    
 
 	Param Explanation:
@@ -58,6 +59,11 @@ BEGIN
 	    Product     varchar(50)
     )
     
+	DECLARE @dummyExtraPT TABLE
+	(   
+	    CustId      int
+    )
+		
     declare @reset table
     (
         winlostdate smalldatetime,
@@ -90,6 +96,11 @@ BEGIN
 		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
 		CROSS JOIN @Date d 
 		WHERE Product NOT IN ('Poker', 'Poker (Due to Partners)')
+		
+		INSERT INTO @dummyExtraPT (CustID)
+		SELECT CustID
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
+		
 	END
 	ELSE
 	BEGIN 
@@ -98,6 +109,13 @@ BEGIN
 		FROM bodb_ACC.dbo.Acc_DWLList_xtest l WITH (NOLOCK)
 		CROSS JOIN @Date d 
 		WHERE Product NOT IN ('Poker', 'Poker (Due to Partners)')
+		
+		INSERT INTO @dummyExtraPT (CustID)
+		SELECT CustID
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
+		UNION ALL
+		SELECT CustID
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest l WITH (NOLOCK)
 	END
 	
 	------------------------------------------------  
@@ -133,6 +151,7 @@ BEGIN
        AND b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
+	   AND b.CustId NOT IN (SELECT CustId FROM dummyExtraPT)
 	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
 	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
 	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1

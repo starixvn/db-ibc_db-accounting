@@ -22,6 +22,7 @@ AS
 						   . Revise Code
 						   . Apply AG Casino and Vegas Game [#37683]
 		- 20160308@Sophia: Apply Extra PT [Redmind: #51721]
+		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
 	Explanation's Param:
 
 */
@@ -29,6 +30,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @DummyBalance AS TABLE (CustId INT, Product VARCHAR(50), seq TINYINT )
+	DECLARE @dummyExtraPT TABLE(CustId INT )
 
 	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
 	IF (@SQL like '%_xtest%' )
@@ -46,6 +48,11 @@ BEGIN
 		SELECT CustID, Product, seq
 		FROM bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
 		WHERE Product NOT IN ('Total Balance','Poker', 'Poker (Due to Partners)')----, 'Racing (Due to Partners)') 
+		
+		INSERT INTO @dummyExtraPT (CustID)
+		SELECT CustID
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
+				
 	END 
 	ELSE
 	BEGIN 
@@ -53,6 +60,13 @@ BEGIN
 		SELECT CustID, Product, seq
 		FROM bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
 		WHERE Product NOT IN ('Total Balance','Poker', 'Poker (Due to Partners)')  ---'Racing (Due to Partners)')
+		
+		INSERT INTO @dummyExtraPT (CustID)
+		SELECT CustID
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
+		UNION ALL
+		SELECT CustID
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest l WITH (NOLOCK)
 	END 
 
 -------------------------------------------------  
@@ -87,6 +101,7 @@ BEGIN
 	   AND b.winlostdate = @winlostdate
 	   AND b.statusid NOT IN (101, 102, 103, 121) 
 	   AND b.bettype > 19000 
+	   AND b.custID NOT IN (SELECT CustID FROM @dummyExtraPT)
 	GROUP BY CASE
              WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
              ELSE -1
