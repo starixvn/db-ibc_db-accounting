@@ -151,7 +151,7 @@ BEGIN
        AND b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
-	   AND b.CustId NOT IN (SELECT CustId FROM dummyExtraPT)
+	   AND b.CustId NOT IN (SELECT CustId FROM @dummyExtraPT)
 	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
 	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
 	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
