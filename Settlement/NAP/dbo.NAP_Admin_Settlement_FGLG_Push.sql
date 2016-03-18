@@ -68,10 +68,10 @@ BEGIN
 
 	SELECT @ErrCode = 0
 		, @ErrMsg = ''
-		, @mode = CASE when @action = 'CAL-FT' THEN CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-FTFGLG' 
-														ELSE 'CAL-FTLG' END
+		, @mode = CASE WHEN @action = 'CAL-FT' THEN CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-FTFGLG' 
+													ELSE 'CAL-FTLG' END
 						ELSE CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-HTFGLG'
-								ELSE 'CAL-HTLG'	END
+							ELSE 'CAL-HTLG'	END
 				    END 
 		, @procName = OBJECT_NAME(@@procid)
 		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_FGLG] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 

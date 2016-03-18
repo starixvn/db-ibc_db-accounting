@@ -60,22 +60,25 @@ BEGIN
 		SELECT b.matchid
 			, SUM(CASE WHEN b.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
 			, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
-			, SUM(CASE WHEN b.bettype IN (194,195,196,197,198,199,206,208) THEN 1 ELSE 0 END) AS IsExistCorner
-			, SUM(CASE WHEN b.bettype IN (200,201,202,203,204,205,207,209) THEN 1 ELSE 0 END) AS IsExistHTCorner
+			, SUM(CASE WHEN b.bettype = 172 THEN 1 ELSE 0 END) AS IsExistResultandFirstTeamScore
+			, SUM(CASE WHEN b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208) THEN 1 ELSE 0 END) AS IsExistCorner
+			, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) THEN 1 ELSE 0 END) AS IsExistHTCorner
 		FROM dbo.bettrans b 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #tempmatch t WHERE b.matchid = t.matchid)
 			AND bettype IN (14, 127)--FGLG
-			AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) --corner
+			AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) --Corner
+			AND bettype IN (172) --ExistResultandFirstTeamScore
 		GROUP BY b.matchid
-	), PayoutResult AS (
-		SELECT rs.MatchId
-			, MAX(CASE WHEN rs.CalculationType = 1 THEN 1 ELSE 0 END) AS HTStatus
-			, MAX(CASE WHEN rs.CalculationType = 2 THEN 1 ELSE 0 END) AS FTStatus
-		FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #tempmatch t WHERE rs.MatchId = t.matchid)
-			AND StatusId IN (1, 2)
-		GROUP BY rs.MatchId
 	)
+	--, PayoutResult AS (
+	--	SELECT rs.MatchId
+	--		, MAX(CASE WHEN rs.CalculationType = 1 THEN 1 ELSE 0 END) AS HTStatus
+	--		, MAX(CASE WHEN rs.CalculationType = 2 THEN 1 ELSE 0 END) AS FTStatus
+	--	FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
+	--	WHERE EXISTS (SELECT TOP 1 1 FROM #tempmatch t WHERE rs.MatchId = t.matchid)
+	--		AND StatusId IN (1, 2)
+	--	GROUP BY rs.MatchId
+	--)
 
 	SELECT tm.matchid
 		, leagueid
@@ -116,34 +119,45 @@ BEGIN
 				WHEN a.ResultStatusID IN(0,1,3) THEN 'Running'
 				WHEN a.ResultStatusID IN (2,5) THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
-		, CASE WHEN rs.MatchId IS NOT NULL
-					AND rs.HTStatus = 1 
-					AND mr.IsHTCal = 1 
-					AND rs.FTStatus IN (0,1)
-					AND ISNULL(b.IsExistFGLG, 0) > 0 THEN 1 --can calc HT FGLG
-				WHEN rs.MatchId IS NOT NULL
-					AND rs.HTStatus = 1 
-					AND mr.IsHTCal = 1 
-					AND rs.FTStatus = 1
-					AND ISNULL(b.IsExistFGLG, 0) > 0 THEN 1 --can calc FT FGLG
+		, CASE WHEN (ISNULL(mr.IsHTCal, 0) = 1 OR ISNULL(tm.SingleStatus, -1) IN (0,1) OR ISNULL(tm.ParlayStatus, -1) IN (0,1))
+					AND b.IsExistHTFGLG = 1 AND ISNULL(mr.calculate, 0) = 0 THEN 1 --can calc HT FGLG
+				WHEN (ISNULL(mr.calculate, 0) = 1 OR ISNULL(tm.SingleStatus, 0) IN (0,1) OR ISNULL(tm.ParlayStatus, -1) IN (0,1))
+					AND ISNULL(mr.IsHTCal, 0) = 1	AND (b.IsExistFGLG = 1 OR b.IsExistResultandFirstTeamScore = 1) THEN 1 --can calc FT FGLG
 			ELSE 0 END AS IsNeedToCalculateFGLG
-		,  CASE WHEN rs.MatchId IS NOT NULL
-					AND rs.HTStatus IN (0,1) 
-					AND mr.IsHTCal = 1
-					AND rs.FTStatus = 0
-					AND ISNULL(b.IsExistHTCorner, 0) > 0 THEN 1 --can calc HT Corner
-				WHEN rs.MatchId IS NOT NULL
-					AND rs.HTStatus = 1 
-					AND mr.IsHTCal = 1 
-					AND rs.FTStatus = 1
-					AND ISNULL(b.IsExistCorner, 0) > 0 THEN 1 --can calc FT Corner
+		, CASE WHEN (ISNULL(mr.IsHTCal, 0) = 1 OR ISNULL(tm.SingleStatus, -1) IN (0,1) OR ISNULL(tm.ParlayStatus, -1) IN (0,1))
+					AND b.IsExistHTCorner = 1 AND ISNULL(mr.calculate, 0) = 0 THEN 1 --can calc HT Corner
+				WHEN (ISNULL(mr.calculate, 0) = 1 OR ISNULL(tm.SingleStatus, -1) IN (0,1) OR ISNULL(tm.ParlayStatus, -1) IN (0,1))
+					AND ISNULL(mr.IsHTCal, 0) = 1 AND b.IsExistCorner = 1 THEN 1 --can calc FT Corner
 			ELSE 0 END AS IsNeedToCalculateCorner
+
+		--, CASE WHEN rs.MatchId IS NOT NULL
+		--			AND rs.HTStatus = 1 
+		--			AND mr.IsHTCal = 1 
+		--			AND rs.FTStatus IN (0,1)
+		--			AND ISNULL(b.IsExistFGLG, 0) > 0 THEN 1 --can calc HT FGLG
+		--		WHEN rs.MatchId IS NOT NULL
+		--			AND rs.HTStatus = 1 
+		--			AND mr.IsHTCal = 1 
+		--			AND rs.FTStatus = 1
+		--			AND ISNULL(b.IsExistFGLG, 0) > 0 THEN 1 --can calc FT FGLG
+		--	ELSE 0 END AS IsNeedToCalculateFGLG
+		--,  CASE WHEN rs.MatchId IS NOT NULL
+		--			AND rs.HTStatus IN (0,1) 
+		--			AND mr.IsHTCal = 1
+		--			AND rs.FTStatus = 0
+		--			AND ISNULL(b.IsExistHTCorner, 0) > 0 THEN 1 --can calc HT Corner
+		--		WHEN rs.MatchId IS NOT NULL
+		--			AND rs.HTStatus = 1 
+		--			AND mr.IsHTCal = 1 
+		--			AND rs.FTStatus = 1
+		--			AND ISNULL(b.IsExistCorner, 0) > 0 THEN 1 --can calc FT Corner
+		--	ELSE 0 END AS IsNeedToCalculateCorner
 	FROM #tempmatch tm
 		INNER JOIN DBPRO.bodb02.dbo.match m with(NOLOCK) ON tm.matchid = m.matchid
 		INNER JOIN DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK) ON tm.matchid = mr.matchid
 		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON tm.matchID = a.MatchID
 		LEFT JOIN BetStatus b ON tm.matchid = b.matchid
-		LEFT JOIN PayoutResult rs ON tm.matchid = rs.matchid
+		--LEFT JOIN PayoutResult rs ON tm.matchid = rs.matchid
 	WHERE m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END
 		AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END
 END
