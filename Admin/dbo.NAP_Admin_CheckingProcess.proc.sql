@@ -22,7 +22,7 @@ AS
  Param's Explanation:   
  
  Dependences:
-	1. TABLE #tblMatchProcessProcess(matchid, keyValue)
+	1. TABLE #tblMatchProcessProcess(matchid, KeyID)
 */
 BEGIN
 	SET NOCOUNT ON
@@ -51,10 +51,15 @@ BEGIN
 			
 		IF (@isExistParlay  = 1)
 		BEGIN
-			IF EXISTS(SELECT 1 FROM dbo.SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')  
+			IF EXISTS(
+				SELECT 1 
+				FROM dbo.SystemSettings WITH (NOLOCK) 
+				WHERE VValue 	= 1 
+				AND VName 		= 'isCalculatingParlay'
+			)  
 			BEGIN  
-				SELECT	@ErrCode = 100  
-						,@ErrMsg = 'Another parlay settlement is in progress or some parlay tickets are being deleted, please wait a few seconds until the on-going process has finished and try again.'  
+				SELECT @ErrCode	= 100  
+					,@ErrMsg 	= 'Another parlay settlement is in progress or some parlay tickets are being deleted, please wait a few seconds until the on-going process has finished and try again.'  
 				
 				RETURN
 			END  
@@ -63,8 +68,7 @@ BEGIN
 				UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
 				SET VValue 		= '1'  
 				WHERE VName 	= 'isCalculatingParlay' 
-					AND VValue 	= '0'  
-						
+				
 				SET @avaiableProcess = 1
 			END
 		END
@@ -75,25 +79,25 @@ BEGIN
 				SELECT 1
 				FROM dbo.SystemSettings WITH (NOLOCK)
 				WHERE VValue 	= 1 
-					AND VName 	= 'isCalculatingNGManual'
+				AND VName 		= 'isCalculatingNGManual'
 			)
 			BEGIN
 				UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-					SET VValue = '0'  
-				WHERE	VName = 'isCalculatingParlay' 
+				SET VValue 		= '0'  
+				WHERE VName 	= 'isCalculatingParlay' 
+				AND @isExistParlay 	= 1
 				
-				SELECT	@ErrCode = 101
-						,@ErrMsg = 'Another number game re-calculation is in progress or some tickets of this match are being voided, please wait a few seconds until the on-going process has finished and try again.'
+				SELECT @ErrCode = 101
+					,@ErrMsg 	= 'Another number game re-calculation is in progress or some tickets of this match are being voided, please wait a few seconds until the on-going process has finished and try again.'
 				
 				SELECT @avaiableProcess = 0
-					, @IsReleased 		= 1
 				
 				RETURN
 			END
 			ELSE
 			BEGIN
 				UPDATE dbo.systemSettings WITH (ROWLOCK, UPDLOCK)
-				SET VValue = '1'
+				SET VValue 	= '1'
 				WHERE VName = 'isCalculatingNGManual'
 				
 				SET @avaiableProcess = 1
@@ -120,6 +124,16 @@ BEGIN
 			IF (@ErrCode > 0)
 			BEGIN 
 				
+				UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
+				SET VValue 			= '0'  
+				WHERE VName 		= 'isCalculatingParlay' 
+				AND @isExistParlay 	= 1
+								
+				UPDATE dbo.systemSettings WITH (ROWLOCK, UPDLOCK)
+				SET VValue 		= '0'
+				WHERE VName 	= 'isCalculatingNGManual'
+				AND @isExistNG 	= 1
+				
 				SELECT @ErrCode = 103
 					,@ErrMsg	= 'These matches are being calculated or some tickets of matches are being voided, please wait a few seconds until the on-going process is completed and try again.'
 				
@@ -141,16 +155,16 @@ BEGIN
 	-- releasing process
 	IF (@IsReleased = 1)
 	BEGIN
-		IF (@isExistParlay = 1)
-			UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
-			SET VValue = '0'  
-			WHERE VName = 'isCalculatingParlay' 
-				AND VValue = '1'  
-				
-		IF (@isExistNG = 1)
-			UPDATE dbo.systemSettings WITH (ROWLOCK, UPDLOCK)
-			SET VValue = '0'
-			WHERE VName = 'isCalculatingNGManual'
+		
+		UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
+		SET VValue 			= '0'  
+		WHERE VName 		= 'isCalculatingParlay' 
+		AND @isExistParlay 	= 1
+						
+		UPDATE dbo.systemSettings WITH (ROWLOCK, UPDLOCK)
+		SET VValue 			= '0'
+		WHERE VName 		= 'isCalculatingNGManual'
+		AND @isExistNG 		= 1
 				
 		IF (@isExistMatch = 1
 			OR @isExistOutright = 1
@@ -162,7 +176,7 @@ BEGIN
 			DELETE ck
 			FROM dbo.TempVariableNumber ck
 				INNER JOIN #tblMatchProcess tp
-				ON ck.KeyId = tp.keyId AND ck.keyValue = tp.keyValue
+				ON ck.KeyValue = tp.matchid AND ck.KeyID = tp.KeyID
 					
 		END
 	END
