@@ -257,13 +257,13 @@ BEGIN
 		, bd.srecommend
 		, sag.Username AS SagUserName
 	FROM #BetDelete bd
-		LEFT JOIN CTE_CustInfo mem 
+		INNER JOIN CTE_CustInfo mem 
 			ON bd.custid = mem.custid
-		LEFT JOIN CTE_CustInfo ag 
+		INNER JOIN CTE_CustInfo ag 
 			ON bd.recommend = ag.custid
-		LEFT JOIN CTE_CustInfo mag 
+		INNER JOIN CTE_CustInfo mag 
 			ON bd.mrecommend = mag.custid
-		LEFT JOIN CTE_CustInfo sag
+		INNER JOIN CTE_CustInfo sag
 			ON bd.srecommend = sag.custid
 	
 	--Gte invalid transids
