@@ -2,8 +2,8 @@ USE bodb_Message
 GO
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_BatchMessage_Upload]
 	@XMLMessage			XML
-	, @Creator 			INT		
-	, @Error			INT = 0 OUTPUT
+	, @CreatorId		INT		
+	, @ErrorCode		INT = 0 OUTPUT
 	, @ErrorMsg			VARCHAR(200) = '' OUTPUT
 AS
 /*	Created:20160317@bobby.nguyen
@@ -30,7 +30,7 @@ BEGIN
 	)
 	
 	SELECT @PostTime 	= CURRENT_TIMESTAMP
-		, @Error 		= 0
+		, @ErrorCode	= 0
 		, @ErrorMsg	 	= ''
 	
 	BEGIN TRY
@@ -56,10 +56,10 @@ BEGIN
 		WHERE mt.MessageId 		> 0
 			AND	mt.TargetId 	> 0
 			AND mt.BetTransId 	<> ''
-			AND msg.Creator		= @Creator
+			AND msg.Creator		= @CreatorId
 	END TRY
 	BEGIN CATCH 
-		SELECT @Error 		= ERROR_NUMBER()
+		SELECT @ErrorCode	= ERROR_NUMBER()
 			, @ErrorMsg	 	= ERROR_MESSAGE()
 	END CATCH
 	
