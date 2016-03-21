@@ -1,9 +1,4 @@
-
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
+ 
 /****** Object:  Stored Procedure dbo.Acc_Rpt_MatchWinLoss2_New14    Script Date: 12/18/2015 8:37:32 AM ******/
 CREATE PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New14]
 	@winlostdate		 datetime,
@@ -37,6 +32,7 @@ AS
 			- 20150929@Sophia: Order by for MO product [#41935]
 			- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
 			- 20151215@Sophia: Change bettype of 8RM & BARM to negative
+			- 20160226@Jim: Offer AllBet ,Cockfighting,MBC-RNG Casino,Cricket product [RedmineID: #50921]
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -222,8 +218,22 @@ BEGIN
 	WHERE	winlostdate = @winlostdate
 			AND ruben = 1  
 			AND statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
-			AND bettype <= 19000
+			AND bettype <= 19000  AND bettype NOT BETWEEN 2101 AND 2399
 	GROUP BY matchid, bettype, statusID, liveindicator
+	UNION ALL 
+	SELECT	 0 as matchid, gameID, statusID, 0 as liveindicator,
+			sum((winlost-actual_stake)*actualrate)  winlost,
+			sum((awinlost+mwinlost+swinlost)*actualrate) pos,
+			sum((scomm)*actualrate) comm,
+			sum((scomm)*virtualrate) VirtualComm,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
+			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover
+	FROM	bettransRnG14 with (nolock)
+	WHERE	winlostdate = @winlostdate
+			AND statusID  IN (111,112,113) 
+			AND  gameID   BETWEEN 2101 AND 2399
+	GROUP BY   gameID, statusID	
 	-- END - Fill data of Racing, 8RM&BARM and all sports into temporary tables 
 	
 	-- Resultset of Sportbook without Parlay and Outright
@@ -352,8 +362,8 @@ BEGIN
 			0 as virtualComm,
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,		
-			0 as IBCTurnover,
-			'Casino' as bettype
+			SUM(CASE WHEN b.bettype IN (71,72) THEN 0 ELSE IBCTurnover END )IBCTurnover,
+			'MBC - RNG Casino ' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 6
@@ -585,8 +595,34 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 15		
-					
-	
+	--- Allbet Section
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.Linetotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Allbet' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductID = 21			
+	-- Cock_Fighting Section 
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.Linetotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'CockFighting' as bettype
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductID = 19	
     -- Resultset of 8RM and BARM
     SELECT  @WinLost_8RM = isnull(sum(case when bettype = -400 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
             @WinLost_BARM = isnull(sum(case when bettype = -401 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
