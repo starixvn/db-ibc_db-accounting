@@ -1,6 +1,10 @@
-﻿USE [bodb02]
+﻿
+SET QUOTED_IDENTIFIER ON 
 GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14]
+SET ANSI_NULLS ON 
+GO
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14]
 	@winlostdate	datetime,
 	@LineTotal		money OUTPUT
 AS
@@ -140,7 +144,7 @@ BEGIN
 	)
 	
 	DECLARE @Bettype TABLE(bettype int)
-	
+	DECLARE @tmpMatch TABLE(matchid int)	
 	--deposit super
 	INSERT INTO #DepSuper 
 	SELECT DISTINCT custid FROM f_DepSuper_1('All')
@@ -179,7 +183,15 @@ BEGIN
 	SELECT typeid
 	FROM bettype WITH(NOLOCK)
 	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304)
-		
+	
+	INSERT INTO @tmpMatch(matchid  )
+	SELECT DISTINCT matchid
+	FROM dbo.bettrans14 b WITH (NOLOCK)
+	WHERE winlostdate = @winlostdate
+			AND b.bettype < 19001		
+			AND b.statusID NOT IN (101,102,103,121) 
+			AND b.ruben = 1	
+				
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
 	FROM	outright14 o WITH (NOLOCK)
@@ -242,9 +254,9 @@ BEGIN
 	--------------------------------------------------------------------------------
 	INSERT INTO #src
 	SELECT	srecommend,
-			1 as site, 
-			matchid, 
-			bettype, 
+			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END,
+			b.matchid, 
+			b.bettype, 
 			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
 			SUM((winlost-actual_stake)*virtualrate) winlost_virtualrate,
 			SUM((awinlost+mwinlost+swinlost)* actualrate) position_actualrate,
@@ -254,17 +266,20 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE stake END)*actualrate) turnover_actualrate, -- don't need calculate actualrate for system parlay
-			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END END)*virtualrate) turnover_virtualrate
+			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE CASE WHEN b.bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END END)*virtualrate) turnover_virtualrate
 			
-	FROM bettrans14 b WITH(NOLOCK )
+	FROM bettrans14 b WITH(READPAST )
+		INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
+		INNER JOIN @tmpMatch m ON b.matchid = m.matchid 
 	WHERE winlostdate = @winlostdate
-		AND bettype < 19001		
+		AND b.bettype < 19001		
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
 	GROUP BY srecommend,
-			matchid, 
-			bettype 
-			 
+			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END,
+			b.matchid, 
+			b.bettype 
+		 
 	-- Calculate turn over for Casino from bettransRNG
 	UNION ALL
 	SELECT	b.srecommend,
@@ -287,6 +302,7 @@ BEGIN
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY b.srecommend
 			 --,case when dep.custid is null then 1 else 2 end 
+	OPTION (RECOMPILE)			 
 	UPDATE #src
 	SET MatchID = CASE   WHEN MatchID IN (0, 71, 208, 209, 210) THEN 0 ELSE MatchID END
 		,bettype = CASE WHEN   bettype BETWEEN 2101 AND 2399 THEN 71 ELSE bettype END
@@ -693,8 +709,18 @@ BEGIN
 	DROP TABLE #DepSuper
 	DROP TABLE #ExtraPT_Sel
 END
+
+
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam]
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet]
-GO
+GO 
