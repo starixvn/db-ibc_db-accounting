@@ -1,7 +1,7 @@
 USE bodb_CustomerLog
 GO
 
-ALTER PROCEDURE dbo.NAP_Set_AutoPayout_ReferenceActionSel @MatchIds VARCHAR(MAX)
+ALTER PROCEDURE dbo.NAP_Set_AutoPayout_ReferenceActionByMatchSel @MatchIds VARCHAR(MAX)
 	, @ActionIds VARCHAR(1024)
 AS
 
@@ -36,5 +36,5 @@ END
 
 GO
 
-GRANT EXECUTE ON dbo.NAP_Set_AutoPayout_ReferenceActionSel TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON dbo.NAP_Set_AutoPayout_ReferenceActionByMatchSel TO [bodbAdminNet] AS [dbo]
 GO

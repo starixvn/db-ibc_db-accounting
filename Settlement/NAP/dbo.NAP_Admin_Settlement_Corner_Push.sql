@@ -29,6 +29,7 @@ AS
 
 	Revisions:		
 		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
+		- 20160317@Patrick: Auto payout [Redmine: #53262]
 
 		
 	Param's Explanation:

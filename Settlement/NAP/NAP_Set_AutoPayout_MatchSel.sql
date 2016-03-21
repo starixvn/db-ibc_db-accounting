@@ -175,6 +175,7 @@ BEGIN
 		, 0 AS IsNeedToCalculateFGLG
 		, 0 AS IsNeedToCalculateCorner
 		, ISNULL(l.IsAutoPayout, 0) AS IsAutoPayoutForLeague
+		, 0 AS IsExistResultandFirstTeamScore
 	FROM dbo.match m WITH (NOLOCK)
 		INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 		INNER JOIN dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
@@ -215,7 +216,6 @@ BEGIN
 	
 	;WITH BetStatus AS (
 		SELECT b.matchid
-			--, CASE WHEN b.bettype IN (14,127) THEN 1 ELSE 0 END IsFGLG
 			, SUM(CASE WHEN b.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
 			, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
 			, SUM(CASE WHEN b.bettype = 172 THEN 1 ELSE 0 END) AS IsExistResultandFirstTeamScore
@@ -223,10 +223,11 @@ BEGIN
 			, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) THEN 1 ELSE 0 END) AS IsExistHTCorner
 		FROM DBTXN.bodb02.dbo.bettrans b 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList m WHERE b.matchid = m.matchid)
-			AND bettype IN (14, 127)--FGLG & ResultandFirstTeamScore
-			AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) --corner
-			AND bettype IN (172)
-		GROUP BY b.matchid--, CASE WHEN b.bettype IN (14,127) THEN 1 ELSE 0 END
+			AND bettype IN (14, 127)--FGLG
+			AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) --Corner
+			AND bettype IN (172) --ResultandFirstTeamScore
+			AND StatusId NOT IN (101, 102, 103)
+		GROUP BY b.matchid
 	)
 
 	UPDATE t
@@ -237,6 +238,24 @@ BEGIN
 		, IsExistHTCorner = CASE WHEN tt.IsExistHTCorner > 0 THEN 1 ELSE 0 END
 	FROM #matchList t
 		INNER JOIN BetStatus tt ON t.matchid = tt.matchid
+
+	--for bettransm
+	;WITH BetStatusM AS (
+		SELECT bm.matchid
+			, SUM(CASE WHEN bm.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
+			, SUM(CASE WHEN bm.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
+		FROM DBTXN.bodb02.dbo.bettransm bm 
+		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList m WHERE bm.matchid = m.matchid)
+			AND bettype IN (14, 127)--FGLG
+			AND StatusId NOT IN (101, 102, 103)
+		GROUP BY bm.matchid
+	)
+
+	UPDATE t
+	SET IsExistFGLG = CASE WHEN t.IsExistFGLG = 1 OR tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
+		, IsExistHTFGLG = CASE WHEN t.IsExistHTFGLG = 1 OR tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
+	FROM #matchList t
+		INNER JOIN BetStatusM tt ON t.matchid = tt.matchid
 
 	SET @Today = DATEADD(HH, -1, GETDATE())
 
@@ -296,39 +315,35 @@ BEGIN
 		WHERE MatchID NOT IN (SELECT MatchID FROM #tmpCornerBets WHERE SettlementStatusID = 0)
 	END
 
-	--;WITH PayoutResult AS (
-	--	SELECT rs.MatchId
-	--		, MAX(CASE WHEN rs.CalculationType = 1 THEN 1 ELSE 0 END) AS HTStatus
-	--		, MAX(CASE WHEN rs.CalculationType = 2 THEN 1 ELSE 0 END) AS FTStatus
-	--	FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
-	--	WHERE EXISTS (SELECT TOP 1 1 FROM #matchList t WHERE rs.MatchId = t.matchid AND t.eventstatus = 'running')
-	--		AND StatusId IN (1, 2)
-	--	GROUP BY rs.MatchId
-	--)
+	;WITH PayoutResult AS (
+		SELECT rs.MatchId
+			, MAX(CASE WHEN rs.CalculationType = 1 THEN 1 ELSE 0 END) AS HTStatus
+			, MAX(CASE WHEN rs.CalculationType = 2 THEN 1 ELSE 0 END) AS FTStatus
+		FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
+		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList t WHERE rs.MatchId = t.matchid AND t.eventstatus = 'running')
+			AND StatusId IN (1, 2)
+		GROUP BY rs.MatchId
+	)
 
-	----update status of match in order to can be calc FGLG & Corner bettype manually
-	--UPDATE t
-	--SET IsNeedToCalculateFGLG = CASE WHEN rs.HTStatus = 1 
-	--									AND t.IsHalfTimeCal = 1 
-	--									AND rs.FTStatus IN (0,1) 
-	--									AND t.IsExistHTFGLG = 1 THEN 1 --can calc HT FGLG
-	--								WHEN rs.HTStatus = 1 
-	--									AND t.IsHalfTimeCal = 1 
-	--									AND rs.FTStatus = 1
-	--									AND t.IsExistFGLG = 1 THEN 1 --can calc FT FGLG
-	--							ELSE 0 END
-	--	, IsNeedToCalculateCorner = CASE WHEN rs.HTStatus = 1 
-	--									AND t.IsHalfTimeCal = 1 
-	--									AND rs.FTStatus IN (0,1) 
-	--									AND t.IsExistHTCorner = 1 THEN 1 --can calc HT Corner
-	--								WHEN rs.HTStatus = 1 
-	--									AND t.IsHalfTimeCal = 1 
-	--									AND rs.FTStatus = 1
-	--									AND t.IsExistCorner = 1 THEN 1 --can calc FT Corner
-	--							ELSE 0 END
+	--update status of match in order to can be calc FGLG & Corner bettype manually
+	UPDATE t
+	SET IsNeedToCalculateFGLG = CASE WHEN rs.HTStatus = 1 
+										AND t.IsHalfTimeCal = 1 
+										AND rs.FTStatus IN (0, 1) 
+										AND t.IsExistHTFGLG = 1 THEN 1 --can calc HT FGLG
+									WHEN rs.FTStatus = 1
+										AND (t.IsExistFGLG = 1 OR t.IsExistResultandFirstTeamScore = 1) THEN 1 --can calc FT FGLG
+								ELSE 0 END
+		, IsNeedToCalculateCorner = CASE WHEN rs.HTStatus = 1 
+										AND t.IsHalfTimeCal = 1 
+										AND rs.FTStatus IN (0, 1) 
+										AND t.IsExistHTCorner = 1 THEN 1 --can calc HT Corner
+									WHEN rs.FTStatus = 1
+										AND t.IsExistCorner = 1 THEN 1 --can calc FT Corner
+								ELSE 0 END
 									
-	--FROM #matchList t
-	--	INNER JOIN PayoutResult rs ON t.matchid = rs.MatchId
+	FROM #matchList t
+		INNER JOIN PayoutResult rs ON t.matchid = rs.MatchId
 
 	SELECT m.HalfTimeHomeScore
 		, m.HalfTimeAwayScore
@@ -369,18 +384,18 @@ BEGIN
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
 		, IsAutoPayout
-		, CASE WHEN (m.IsHalfTimeCal = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-					AND m.IsExistHTFGLG = 1 AND m.IsCalculated = 0 THEN 1 --can calc HT FGLG
-				WHEN (m.IsCalculated = 1 OR ISNULL(IsCalculatingSingle, 0) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-					AND m.IsHalfTimeCal = 1	AND (m.IsExistFGLG = 1 OR m.IsExistResultandFirstTeamScore = 1) THEN 1 --can calc FT FGLG
-				ELSE 0 END AS IsNeedToCalculateFGLG
-		, CASE WHEN (m.IsHalfTimeCal = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-					AND m.IsExistHTCorner = 1 AND m.IsCalculated = 0 THEN 1 --can calc HT Corner
-				WHEN (m.IsCalculated = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-					AND m.IsHalfTimeCal = 1	AND m.IsExistCorner = 1 THEN 1 --can calc FT Corner
-				ELSE 0 END AS IsNeedToCalculateCorner
-		--, IsNeedToCalculateFGLG
-		--, IsNeedToCalculateCorner
+		--, CASE WHEN (m.IsHalfTimeCal = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
+		--			AND m.IsExistHTFGLG = 1 AND m.IsCalculated = 0 THEN 1 --can calc HT FGLG
+		--		WHEN (m.IsCalculated = 1 OR ISNULL(IsCalculatingSingle, 0) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
+		--			AND m.IsHalfTimeCal = 1	AND (m.IsExistFGLG = 1 OR m.IsExistResultandFirstTeamScore = 1) THEN 1 --can calc FT FGLG
+		--		ELSE 0 END AS IsNeedToCalculateFGLG
+		--, CASE WHEN (m.IsHalfTimeCal = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
+		--			AND m.IsExistHTCorner = 1 AND m.IsCalculated = 0 THEN 1 --can calc HT Corner
+		--		WHEN (m.IsCalculated = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
+		--			AND m.IsHalfTimeCal = 1	AND m.IsExistCorner = 1 THEN 1 --can calc FT Corner
+		--		ELSE 0 END AS IsNeedToCalculateCorner
+		, IsNeedToCalculateFGLG
+		, IsNeedToCalculateCorner
 		, IsAutoPayoutForLeague
 	FROM #matchList m
 		LEFT JOIN #tempmatch t ON t.matchid = m.matchid

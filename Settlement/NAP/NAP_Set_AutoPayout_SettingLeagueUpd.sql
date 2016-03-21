@@ -43,9 +43,9 @@ BEGIN
 		SET IsAutoPayout = @IsAutoPayout
 		FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
 		WHERE m.leagueid = @LeagueId AND sporttype = 1 AND eventstatus <> 'completed'
-			AND (NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Single_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = m.matchid)
-				OR NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = m.matchid)
-			)
+			--AND (NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Single_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = m.matchid)
+				--OR NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = m.matchid)
+			--)
 
 		IF @@ERROR > 0
 		BEGIN

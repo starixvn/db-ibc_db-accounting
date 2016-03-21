@@ -36,40 +36,46 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @Today DATETIME
 	SELECT @LeagueID = CASE WHEN @isReLoad = 1 THEN ISNULL(@LeagueID, 0)
 						ELSE 0 END -- reload partial; search on LeagueID, not reload: get all leagues
-		, @Today = GETDATE()
 
-	DECLARE @MatchIds TABLE(MatchId INT, IsAutoPayout BIT)
-
-	;WITH MatchTmp AS (
-		SELECT m.matchid, m.IsAutoPayout, leagueid
-	FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
-		INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
-	WHERE m.eventdate = @Date
-		AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END
-		AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype	ELSE @sporttype	END 
-		AND m.eventstatus <> N'Completed' 
-		AND (m.kickofftime < DATEADD(s, - 6000, @Today) OR mr.ConfirmFT > 0)
-	), LeagueTmp AS (
-		SELECT leagueid, IsAutoPayout
-		FROM DBPRO.BODB02.dbo.league l WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM MatchTmp m WHERE l.leagueid = m.leagueid)
-	)
-
-	INSERT INTO @MatchIds(MatchId, IsAutoPayout)
-	SELECT m.matchid
-		, CASE WHEN m.IsAutoPayout IS NULL THEN ISNULL(l.IsAutoPayout, 0)
-				WHEN ISNULL(m.IsAutoPayout, 0) = 1 THEN 1
-			ELSE 0 END AS IsAutoPayout
-	FROM MatchTmp m
-		INNER JOIN LeagueTmp l ON m.leagueid = l.leagueid
-	WHERE 1 = CASE WHEN @IsManualSettlementOnly = 0 THEN 1
+	DECLARE @DataTmp TABLE (MatchId INT, leagueid INT, hthomescore INT, htawayscore INT, IsCalculated BIT
+		, IsMultiCaled BIT, IsRefund BIT, IsCalRefund BIT, homeid INT, awayid INT, matchcode VARCHAR(50)
+		, kickofftime DATETIME, finalhomescore INT, finalawayscore INT, betstatus NVARCHAR(50), eventstatus VARCHAR(50)
+		, sporttype SMALLINT, IsNeutral BIT, eventdate DATETIME, goalrecord VARCHAR(50), ConfirmHT INT, IsHTCal BIT
+		, IsPending BIT, IsUndecided BIT, IsAutoPayout BIT, IsAutoPayout_League BIT, ConfirmFT INT)
+	
+	DECLARE @SqlQuery VARCHAR(4000)
+	SET @SqlQuery = ''
+	SELECT @SqlQuery = 
+	'SELECT *
+	FROM OPENQUERY(DBPRO, ''SELECT m.MatchId, m.leagueid, m.hthomescore, m.htawayscore, mr.calculate
+		, mr.multiple, refund, CalRefund, homeid, awayid, matchcode
+		, kickofftime, finalhomescore, finalawayscore, betstatus, eventstatus
+		, m.sporttype, m.IsNeutral, eventdate, goalrecord, ConfirmHT, IsHTCal
+		, IsPending, IsUndecided, m.IsAutoPayout, l.IsAutoPayout AS IsAutoPayout_League, ConfirmFT
+	FROM bodb02.dbo.match m WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+		INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
+	WHERE m.eventdate = ''''' + CONVERT(VARCHAR(12), @Date, 112) + '''''
+		AND m.leagueID = CASE WHEN ''''' + CONVERT(VARCHAR(50), @LeagueID) + ''''' <> 0 THEN ''''' + CONVERT(VARCHAR(50), @LeagueID) + ''''' ELSE m.leagueID END
+		AND m.sporttype = CASE WHEN ''''' + CONVERT(VARCHAR(50), @sporttype) + ''''' <> 0 THEN ''''' + CONVERT(VARCHAR(50), @sporttype) + ''''' ELSE m.sporttype END
+		AND m.eventstatus <> ''''Compeleted''''
+		AND (m.kickofftime < DATEADD(s, - 6000, GETDATE()) OR mr.ConfirmFT > 0)
+		AND 1 = CASE WHEN ''''' + CONVERT(VARCHAR(10), @IsManualSettlementOnly) + ''''' = 0 THEN 1
 				ELSE CASE WHEN m.IsAutoPayout IS NULL AND ISNULL(l.IsAutoPayout, 0) = 1 THEN 0
 							WHEN ISNULL(m.IsAutoPayout, 0) = 1 THEN 0
 						ELSE 1 END
-				END
+				END'')'
+
+	--select @SqlQuery as '@SqlQuery'
+
+	INSERT INTO @DataTmp(MatchId, leagueid, hthomescore, htawayscore, IsCalculated
+		, IsMultiCaled, IsRefund, IsCalRefund, homeid, awayid, matchcode
+		, kickofftime, finalhomescore, finalawayscore, betstatus, eventstatus
+		, sporttype, IsNeutral, eventdate, goalrecord, ConfirmHT, IsHTCal
+		, IsPending, IsUndecided, IsAutoPayout, IsAutoPayout_League, ConfirmFT)
+	EXEC (@SqlQuery)
 
 	DECLARE @tblSingle TABLE (matchid INT, seqS INT)
 	INSERT INTO @tblSingle
@@ -85,7 +91,7 @@ BEGIN
 			, SUM(CASE WHEN bettype = 14 THEN 1	ELSE 0 END) AS cntFGLG
 			, SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END) AS cntHTFGLG
 		FROM dbo.bettrans b WITH (NOLOCK, INDEX = CIX_matchid_bettype)
-		WHERE EXISTS (SELECT TOP 1 1 FROM @MatchIds m WHERE b.matchid = m.MatchId) 
+		WHERE EXISTS (SELECT TOP 1 1 FROM @DataTmp m WHERE b.matchid = m.MatchId) 
 			AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
 			AND bettype NOT IN (901,902,903)
@@ -94,14 +100,15 @@ BEGIN
 			AND winlostdate = @Date
 		GROUP BY b.matchid
 	)
+
 	SELECT m.matchid
 		, m.leagueid
 		, hthomescore AS HalfTimeHomeScore
 		, htawayscore AS HalfTimeAwayScore
-		, ISNULL(mr.calculate, 0) AS IsCalculated
-		, ISNULL(mr.multiple, 0) AS IsMultiCaled
-		, ISNULL(mr.refund, 0) AS IsRefund
-		, ISNULL(mr.calrefund, 0) AS IsCalRefund
+		, ISNULL(m.IsCalculated, 0) AS IsCalculated
+		, ISNULL(m.IsMultiCaled, 0) AS IsMultiCaled
+		, ISNULL(m.IsRefund, 0) AS IsRefund
+		, ISNULL(m.IsCalRefund, 0) AS IsCalRefund
 		, m.homeid
 		, m.awayid
 		, m.matchcode
@@ -128,9 +135,9 @@ BEGIN
 		--			WHERE custid = mr.ConfirmFT) END AS suspenderFullTime
 		, ISNULL(ht.username, '') AS suspenderHalfTime
 		, ISNULL(ft.username, '') AS suspenderFullTime
-		, ISNULL(mr.IsHTCal, 0) AS IsHalfTimeCal
-		, ISNULL(mr.IsPending, 0) AS IsPending
-		, ISNULL(mr.isUndecided, 0) AS isUndecided
+		, ISNULL(m.IsHTCal, 0) AS IsHalfTimeCal
+		, ISNULL(m.IsPending, 0) AS IsPending
+		, ISNULL(m.isUndecided, 0) AS isUndecided
 		, CAST(CASE WHEN hthomescore IS NOT NULL 
 						AND htawayscore IS NOT NULL 
 						AND finalhomescore IS NOT NULL 
@@ -141,13 +148,13 @@ BEGIN
 		, CASE WHEN b.cntHTFGLG = 0 THEN 0 ELSE 1 END AS isExistHTFGLG
 		, b.BetCount
 		, t.seqS AS IsCalculatingSingle
-		, mm.IsAutoPayout
-	FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
-		INNER JOIN @MatchIds mm ON m.matchid = mm.MatchId
-		INNER JOIN DBPRO.BODB02.dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
+		, CASE WHEN m.IsAutoPayout IS NULL THEN ISNULL(IsAutoPayout_League, 0)
+				WHEN ISNULL(m.IsAutoPayout, 0) = 1 THEN 1
+			ELSE 0 END AS IsAutoPayout
+	FROM @DataTmp m
 		INNER JOIN BetStatus b ON m.matchid = b.matchid
-		LEFT JOIN CustDB.dbo.custinfo ht WITH (NOLOCK) ON mr.ConfirmHT > 0 AND mr.ConfirmHT = ht.custid
-		LEFT JOIN CustDB.dbo.custinfo ft WITH (NOLOCK) ON mr.ConfirmFT > 0 AND mr.ConfirmFT = ft.custid
+		LEFT JOIN CustDB.dbo.custinfo ht WITH (NOLOCK) ON m.ConfirmHT > 0 AND m.ConfirmHT = ht.custid
+		LEFT JOIN CustDB.dbo.custinfo ft WITH (NOLOCK) ON m.ConfirmFT > 0 AND m.ConfirmFT = ft.custid
 		LEFT JOIN @tblSingle t ON t.matchid = m.matchid
 	ORDER BY m.eventstatus, m.matchcode
 
@@ -160,7 +167,7 @@ BEGIN
 			, SettlementStatusID
 	FROM	DBPRO.BODB02.dbo.ResultDetail rs WITH (NOLOCK) 
 	WHERE	@Sporttype IN (0,5)
-			AND EXISTS (SELECT TOP 1 1 FROM @MatchIds m WHERE rs.MatchId = m.MatchId)
+			AND EXISTS (SELECT TOP 1 1 FROM @DataTmp m WHERE rs.MatchId = m.MatchId)
 			AND ResourceId LIKE '0[0-5]'  
 END
 

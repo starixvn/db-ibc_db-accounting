@@ -2,7 +2,7 @@ USE bodb02
 GO
 
 ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultUpd @MatchId INT
-	, @Action VARCHAR(10)
+	, @TypeId TINYINT
 	, @StatusId TINYINT
 AS
 /*
@@ -22,9 +22,7 @@ BEGIN
 	UPDATE dbo.AutoPayoutResult WITH(ROWLOCK, UPDLOCK)
 	SET StatusId = @StatusId 
 		, ModifiedDate = GETDATE()
-	WHERE MatchId = @MatchId AND CalculationType = CASE @Action WHEN 'CAL-HT' THEN 1
-																WHEN 'CAL-FT' THEN 2
-													ELSE -1	END --not support
+	WHERE MatchId = @MatchId AND CalculationType = @TypeId
 
 	UPDATE dbo.match WITH(UPDLOCK, ROWLOCK)
 	SET IsAutoPayout = 1
