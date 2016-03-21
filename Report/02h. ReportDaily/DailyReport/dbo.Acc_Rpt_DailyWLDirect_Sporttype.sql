@@ -1,6 +1,9 @@
-﻿USE [bodb02]
+﻿SET QUOTED_IDENTIFIER ON 
 GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
+SET ANSI_NULLS ON 
+GO
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
 	@winlostdate	datetime,
 	@LineTotal		money OUTPUT
 AS
@@ -140,18 +143,12 @@ BEGIN
 	)
 	
 	DECLARE @Bettype TABLE(bettype int)
+	DECLARE @tmpMatch TABLE(matchid int)	  	
 	
 	--deposit super
 	INSERT INTO #DepSuper 
 	SELECT DISTINCT custid FROM f_DepSuper_1('All')
-	--UNION 
-	--SELECT srecommend
-	--FROM custInfo with(NOLOCK)
-	--WHERE recommend =5707545
-	--	AND roleID = 2
-	/*UNION
-	SELECT 5707545--BARM*/
-			
+	
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT,fromdate,todate )
 	SELECT ProductID, Sporttype, SubProduct, SuperID, ExtraPT ,fromdate,todate
 	FROM dbo.f_ExtraPT_Sel  (0,0,'',@winlostdate)	
@@ -185,6 +182,14 @@ BEGIN
 	SELECT typeid
 	FROM bettype WITH(NOLOCK)
 	WHERE typeid IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304)
+	
+	INSERT INTO @tmpMatch(matchid  )
+	SELECT DISTINCT matchid
+	FROM dbo.bettrans b WITH (NOLOCK)
+	WHERE winlostdate = @winlostdate
+			AND b.bettype < 19001		
+			AND b.statusID NOT IN (101,102,103,121) 
+			AND b.ruben = 1		
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
@@ -193,20 +198,7 @@ BEGIN
 			INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
 	WHERE	o.eventdate = @winlostdate 
-
-	----------------------------------------------------------------------
-	/*SELECT	@FI_3rdShare = ISNULL(sum((winlost-actual_stake)*b.actualrate),0)
-	FROM	bettrans  b WITH (NOLOCK)
-	WHERE	b.ruben=1 
-			--and status NOT IN ('VOID', 'REJECT') 
-			and statusID NOT IN (102, 101) 
-			and b.winlostdate = @winlostdate and
-			b.bettype between 51 and 66 and 
-			b.matchid > 0 and 
-			b.custid in (SELECT custid FROM customer c with (nolock) 
-											INNER JOIN exchange e with (nolock) on c.currency = e.exchangeid 
-									   WHERE c.username ='FI3rdShare'+ e.currency)*/
-
+	
 	----------------------------------------------------------------------
 	INSERT INTO @RBWinlost (  site, winlost, pos, comm, Linetotal, turnover)
 	SELECT	 
@@ -262,9 +254,9 @@ BEGIN
 	--------------------------------------------------------------------------------
 	INSERT INTO #src
 	SELECT	srecommend,
-			1 as site, 
-			matchid, 
-			bettype,  
+			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END as site, 
+			b.matchid, 
+			b.bettype,  
 			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
 			SUM((winlost-actual_stake)*virtualrate) winlost_virtualrate,
 			SUM((awinlost+mwinlost+swinlost)* actualrate) position_actualrate,
@@ -274,17 +266,19 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE stake END)*actualrate) turnover_actualrate, -- don't need calculate actualrate for system parlay
-			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END END)*virtualrate) turnover_virtualrate
+			SUM((1-tpositiontaking)*ABS(CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 0 ELSE CASE WHEN b.bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END END)*virtualrate) turnover_virtualrate
 			
-	FROM bettrans b WITH(NOLOCK )
+	FROM bettrans b WITH(READPAST )
+		INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
+		INNER JOIN @tmpMatch m ON b.matchid = m.matchid 
 	WHERE winlostdate = @winlostdate
-		AND bettype < 19001		
+		AND b.bettype < 19001		
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
 	GROUP BY srecommend,
-			matchid,-- CASE WHEN matchid IN (0, 71, 208, 209, 210) THEN 0 ELSE matchid END,
-			bettype--, CASE WHEN b.bettype = 71 OR b.bettype BETWEEN 2101 AND 2399 THEN 71 ELSE b.bettype END
-			--, case when dep.custid is null then 1 else 2 end
+			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END,
+			b.matchid, 
+			b.bettype 
 	-- Calculate turn over for Casino from bettransRNG
 	UNION 
 	SELECT	b.srecommend,
@@ -307,6 +301,7 @@ BEGIN
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY b.srecommend
 			 --,case when dep.custid is null then 1 else 2 end 
+	OPTION (RECOMPILE)			 
 	UPDATE #src
 	SET MatchID = CASE   WHEN MatchID IN (0, 71, 208, 209, 210) THEN 0 ELSE MatchID END
 		,bettype = CASE WHEN   bettype BETWEEN 2101 AND 2399 THEN 71 ELSE bettype END
@@ -335,10 +330,7 @@ BEGIN
 				LEFT JOIN (SELECT  superID,SUM(extraPT) extraPT  FROM #ExtraPT_Sel WHERE ProductID = 1 AND  SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') GROUP BY superID
 							)  e  ON   b.srecommend = e.superID 
 				LEFT JOIN @Bettype t ON b.bettype = t.bettype
-	WHERE	/*(b.bettype < 31 
-				OR b.bettype BETWEEN 121 AND 999
-				OR b.bettype BETWEEN 1301 and 1334)	*/
-			s.ProductId = 1
+	WHERE	s.ProductId = 1
 			AND s.EventType IN (1,2)
 			AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
@@ -713,8 +705,18 @@ BEGIN
 	DROP TABLE #DepSuper
 	DROP TABLE #ExtraPT_Sel
 END
+
+
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [vnteam]
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]
-GO
+GO 
