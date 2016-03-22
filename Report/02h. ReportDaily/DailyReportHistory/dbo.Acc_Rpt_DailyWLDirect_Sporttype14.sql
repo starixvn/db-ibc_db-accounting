@@ -4,7 +4,7 @@ GO
 SET ANSI_NULLS ON 
 GO
  
-CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14]
+alter PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14]
 	@winlostdate	datetime,
 	@LineTotal		money OUTPUT
 AS
@@ -276,7 +276,7 @@ BEGIN
 		INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
 		INNER JOIN @tmpMatch m ON b.matchid = m.matchid 
 	WHERE winlostdate = @winlostdate
-		AND (bettype < 19001 AND bettype NOT BETWEEN 2401 and 2499) -- exclude AllBet		
+		AND (b.bettype < 19001 AND b.bettype NOT BETWEEN 2401 and 2499) -- exclude AllBet		
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
 	GROUP BY srecommend,
@@ -306,8 +306,7 @@ BEGIN
 		AND b.gameID BETWEEN 2101 AND 2399		
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY b.srecommend
-			 --,case when dep.custid is null then 1 else 2 end 
-	OPTION (RECOMPILE)			 
+			 --,case when dep.custid is null then 1 else 2 end 	
 	-- Get AllBet Data			 
 	UNION ALL
 	SELECT	
@@ -323,8 +322,8 @@ BEGIN
 			SUM(scomm*virtualrate) commission_virtualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
-			SUM((1-tpositiontaking)*ABS(b.gameID)*actualrate) turnover_actualrate, 
-			SUM((1-tpositiontaking)*ABS(b.gameID)*virtualrate) turnover_virtualrate
+			SUM((1-tpositiontaking)*ABS(b.stake)*actualrate) turnover_actualrate, 
+			SUM((1-tpositiontaking)*ABS(b.stake)*virtualrate) turnover_virtualrate
 	FROM bettransLC14 b WITH(NOLOCK)		
 	WHERE winlostdate = @winlostdate		
 		AND b.ProductID = 211 
@@ -333,6 +332,7 @@ BEGIN
 			b.srecommend,
 			b.ProductID,
 			b.gameID
+	OPTION (RECOMPILE)			 
 			 
 				 --,case when dep.custid is null then 1 else 2 end 
 	UPDATE #src

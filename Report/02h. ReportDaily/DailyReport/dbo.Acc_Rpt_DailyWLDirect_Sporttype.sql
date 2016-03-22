@@ -334,8 +334,8 @@ BEGIN
 			SUM(scomm*virtualrate) commission_virtualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
-			SUM((1-tpositiontaking)*ABS(b.gameID)*actualrate) turnover_actualrate, 
-			SUM((1-tpositiontaking)*ABS(b.gameID)*virtualrate) turnover_virtualrate
+			SUM((1-tpositiontaking)*ABS(b.stake)*actualrate) turnover_actualrate, 
+			SUM((1-tpositiontaking)*ABS(b.stake)*virtualrate) turnover_virtualrate
 	FROM bettransLC b WITH(NOLOCK)		
 	WHERE winlostdate = @winlostdate		
 		AND b.ProductID = 211 
