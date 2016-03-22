@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_6]    Script Date: 03/22/2016 11:08:39 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 /****** Object:  Stored Procedure dbo.Admin_Calculate_6    Script Date: 2/26/2014 6:01:44 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_6] @matchid INT
 	,@bettype SMALLINT
@@ -26,6 +31,7 @@ AS
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160322@Kathy: Change betteam of bettype 412 (3&over --> 3-over) [Redmine:#54596]
 		
 */
 BEGIN
@@ -38,36 +44,6 @@ BEGIN
 	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
-
-	----- LAS settlement 
-	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-	--		SELECT *
-	--		FROM sys.databases
-	--		WHERE NAME = 'LASDB'
-	--		)
-	--BEGIN
-	--	IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
-	--		BEGIN
-	--			DECLARE @LASCommand NVARCHAR(1000)
-	--				,@createdDate DATETIME
-
-	--			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_6] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-	--															+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-	--															+ ', @totalgoal = ' + CONVERT(NVARCHAR(10), @totalgoal) 
-	--															+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, 0))
-	--															+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
-	--				,@createdDate = GETDATE()
-
-	--			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_6'
-	--				,@SQLCommand = @LASCommand
-	--				,@CreatedDate = @createdDate
-	--				,@StatusID = 0 -- waiting
-	--				,@MatchID = @matchid
-	--				,@Bettype = @bettype
-	--				,@Status = 'waiting'
-	--				,@BetCount = @betcount
-	--		END
-	--END
 	
 	IF @IsSettleAbandonedMatchIBC = 1 OR @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
 	BEGIN
@@ -90,8 +66,8 @@ BEGIN
 								WHEN bettype = 202 AND betteam ='0-4' AND @totalgoal > 4 THEN -1 
 								WHEN betteam not in ('5&over') and @bettype = 129 and @totalgoal > cast(betteam as INT)  THEN -1 -- 129
 								WHEN betteam not in ('7&over') and @bettype = 130 and @totalgoal > cast(betteam as INT)  THEN -1 -- 130							
-								WHEN betteam NOT IN ('3&over') AND @bettype = 412 AND @totalgoal > CAST(betteam AS INT) THEN -1 --412
-								WHEN betteam IN ('3&over') AND @bettype = 412 AND @totalgoal >= 3 THEN 1 --412
+								WHEN betteam NOT IN ('3-over') AND @bettype = 412 AND @totalgoal > CAST(betteam AS INT) THEN -1 --412
+								WHEN betteam IN ('3-over') AND @bettype = 412 AND @totalgoal >= 3 THEN 1 --412
 								WHEN bettype IN (159,406) AND betteam LIKE 'G[0-5]' AND @totalgoal > CAST(RIGHT(betteam,1) AS TINYINT) THEN -1 
 								WHEN bettype IN (159,406) AND betteam ='G6' AND @totalgoal >= CAST(RIGHT(betteam,1) AS TINYINT) THEN 1 
 								WHEN bettype = 179 AND betteam LIKE 'G[0-3]' AND @totalgoal > CAST(RIGHT(betteam,1) AS TINYINT) THEN -1 
@@ -274,10 +250,10 @@ BEGIN
 				WHEN betteam IN ('4-over', '4&over') AND @totalgoal >= 4 THEN 1		--+ 200,201 
 				WHEN betteam IN ('7-over', '7&over') AND @totalgoal >= 7 THEN 1		-- 7-over(195, 196,202)			
 				WHEN betteam = '5&over' and bettype = 129  AND @totalgoal >= 5 THEN 1
-				WHEN betteam = '3&over' and bettype = 412  AND @totalgoal >= 3 THEN 1 --412
+				WHEN betteam = '3-over' and bettype = 412  AND @totalgoal >= 3 THEN 1 --412
 				WHEN ((betteam <> '5&over' and bettype = 129) 
 						or (betteam <> '7&over' and bettype = 130) 
-						or (betteam <> '3&over' and bettype = 412)) 
+						or (betteam <> '3-over' and bettype = 412)) 
 					AND @totalgoal = cast(betteam AS INT) THEN 1 --412
 				WHEN bettype IN (159,406) AND betteam LIKE 'G[0-5]' AND @totalgoal = CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
 				WHEN bettype IN (159,406) AND betteam ='G6' AND @totalgoal >=CAST(RIGHT(betteam,1)AS TINYINT) THEN 1 
@@ -421,5 +397,6 @@ BEGIN
 			AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (195,196,199,200,201,202) THEN 0 ELSE 1 END 
 	END
 END
+
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_6] TO [vnteam] AS [dbo]

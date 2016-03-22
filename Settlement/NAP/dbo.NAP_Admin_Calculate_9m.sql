@@ -1,13 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9m]    Script Date: 01/29/2016 14:10:12 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9m    Script Date: 1/20/2016 7:07:41 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_9m    Script Date: 15/01/2016 12:47:15 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9m] @matchid INT
 	,@fth INT = NULL
 	,@fta INT = NULL
@@ -108,6 +98,7 @@ AS
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 		- 20160106@Kathy: - Integrate Cricket [Redmine:#49727]
+		- 20160322@Kathy: Change betteam of bettype 412 (3&over --> 3-over) [Redmine:#54596]
 
 	Param's Explanation:
 		@IsRefundHT: whether or not match has been refunded HT
@@ -1324,8 +1315,8 @@ BEGIN
 						END
 				WHEN 412 THEN --Exact 1st Half Goal
 					CASE 
-						WHEN betteam <> '3&over' AND CAST(betteam AS INT) = (@hth + @hta) THEN 1
-						WHEN betteam = '3&over' AND (@hth + @hta) >= 3 THEN 1
+						WHEN betteam <> '3-over' AND CAST(betteam AS INT) = (@hth + @hta) THEN 1
+						WHEN betteam = '3-over' AND (@hth + @hta) >= 3 THEN 1
 						ELSE -1
 						END
 				WHEN 413 THEN --Correct Score (aos)
@@ -1475,7 +1466,6 @@ BEGIN
 							AND CHARINDEX(CAST(Bettype AS VARCHAR(20)),@ResourceIDsCAL)>0 THEN 1 
 				ELSE 0 END  --Betradar 2 Auto Bettypes 
 		AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-
 
 		-- BetParlayDetail
 		UPDATE pd
@@ -2298,8 +2288,8 @@ BEGIN
 						END
 				WHEN 412 THEN --Exact 1st Half Goal
 					CASE 
-						WHEN betteam <> '3&over' AND CAST(betteam AS INT) = (@hth + @hta) THEN 1
-						WHEN betteam = '3&over' AND (@hth + @hta) >= 3 THEN 1
+						WHEN betteam <> '3-over' AND CAST(betteam AS INT) = (@hth + @hta) THEN 1
+						WHEN betteam = '3-over' AND (@hth + @hta) >= 3 THEN 1
 						ELSE -1
 						END
 				WHEN 413 THEN --Correct Score (aos)
