@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+ 
 ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
@@ -19,7 +22,7 @@ AS
 		- 20160203@Sophia:	. Change the way to get report 
 							. Apply RNG Casino [Redmine: #49134]
 							. Appy Metric gaming - Superlive
-
+		- 20160229@Jim: Offer Allbet [Redmine #50921]
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
@@ -91,6 +94,7 @@ BEGIN
 			OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 			OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
 			OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 AND b.StatusID <> 0 THEN 1003 ELSE 0 END) -- Cockfighting
+			OR b.bettype BETWEEN 2401 AND (CASE WHEN @SportType = 211 AND b.StatusID <> 0 THEN 2499 ELSE 0 END) -- AllBet
 		) 
 		AND ( 
 				----b.status IN ('WON','LOSE','DRAW','running') 
@@ -169,6 +173,7 @@ BEGIN
 					OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 					OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
 					OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 THEN 1003 ELSE 0 END) -- Cockfighting
+					OR b.bettype BETWEEN 2401  AND (CASE WHEN @SportType = 211 THEN 2499 ELSE 0 END) -- AllBet
 				) 
 				AND b.status IN (3  ---DRAW
 								,12	---HALF LOSE
@@ -308,7 +313,7 @@ BEGIN
 		WHERE ce.CustID IS NULL
 	END
 	-- Cockfighting
-	IF @sportType = 206
+	IF @sportType IN (211,206)
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
@@ -320,8 +325,7 @@ BEGIN
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #AvailableMember av ON av.CustID = ci.custid                   
 	END
-
-
+	
 	--Return result
 	SELECT cs.custid,cs.username,rs.IsDisable,
 			SUM(CASE WHEN rs.BetStatus <> 'running' THEN rs.BetCount ELSE 0 END) SettledBets,

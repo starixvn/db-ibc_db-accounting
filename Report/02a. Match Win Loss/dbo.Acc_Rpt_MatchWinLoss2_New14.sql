@@ -1,6 +1,7 @@
+USE [bodb02]
+GO
  
-/****** Object:  Stored Procedure dbo.Acc_Rpt_MatchWinLoss2_New14    Script Date: 12/18/2015 8:37:32 AM ******/
-CREATE PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New14]
+ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New14]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
 	@WinLost_BARM		 money = 0 OUTPUT,
@@ -48,7 +49,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xtest @mode = 5
 	
 	UPDATE @SportBettype
 	SET liveindicator =0
@@ -363,7 +364,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,		
 			SUM(CASE WHEN b.bettype IN (71,72) THEN 0 ELSE IBCTurnover END )IBCTurnover,
-			'MBC - RNG Casino ' as bettype
+			'MBC - RNG Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 6
@@ -605,7 +606,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			sum(b.Linetotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'Allbet' as bettype
+			'AllBet' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 21			
@@ -619,7 +620,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			sum(b.Linetotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'CockFighting' as bettype
+			'CockFighting' as bettype  
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 19	
@@ -1203,19 +1204,11 @@ BEGIN
 	DROP TABLE #Racing
 	DROP TABLE #R_8RM
 END
-
-
-
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_MatchWinLoss2_New14] TO [vnteam]
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New14] TO [bodbAdminNet]
 GO 
+
+
+

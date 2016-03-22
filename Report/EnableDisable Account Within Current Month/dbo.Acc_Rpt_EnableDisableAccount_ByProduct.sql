@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+ 
 ALTER PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
 	@ListCurrency	NVARCHAR(150)	= 'all', 
 	@SportType		INT ,
@@ -17,7 +20,7 @@ AS
 		- 20150828@Jim: support Colossus Bet (#42608)
 		- 20151215@Percy: support Cockfighting [Redmine: #49027]
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
-
+		- 20160229@Jim: Offer Allbet [Redmine #50921]
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + {251:Casino (include: 251, 208, 209, 210), 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
@@ -65,7 +68,7 @@ BEGIN
 			WHEN @sportType = 255 THEN ci.DisableGoldDeluxe
 			WHEN @sportType = -1  THEN ci.DisableSuperLive
 			WHEN @sportType = 204 THEN ci.DisableColossusBet
-			WHEN @SportType = 206 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+			WHEN @SportType IN(206,211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
 										FROM CustProductStatus
 										WHERE custid = ci.custid)
 		END
@@ -368,8 +371,8 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.Enabled = 1             
 	END
-	-- Cockfighting
-	IF @sportType = 206
+	-- Cockfighting & Allbet
+	IF @sportType IN (211,206)
     BEGIN      
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -435,8 +438,7 @@ BEGIN
 	DROP TABLE #FiltedCreditSuper
 	DROP TABLE #FiltedDownlineAcc
 END
-GO
-
+Go
 GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet] AS [dbo]
 GO
 

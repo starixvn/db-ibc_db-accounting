@@ -1,7 +1,6 @@
 ﻿USE [bodb02]
 GO
  
- 
 ALTER PROCEDURE [dbo].[Acc_Rpt_MatchWinLoss2_New]
 	@winlostdate		 datetime,
 	@WinLost_8RM		 money = 0 OUTPUT,
@@ -49,7 +48,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xtest  @mode = 5
 	
 	UPDATE @SportBettype
 	SET liveindicator =0
@@ -353,7 +352,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,
 			SUM(CASE WHEN b.bettype IN (71,72) THEN 0 ELSE IBCTurnover END )IBCTurnover,
-			'MBC - RNG Casino ' as bettype
+			'MBC - RNG Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype  AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 6
@@ -609,10 +608,11 @@ BEGIN
 			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
 			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover,
 			'AllBet' as bettype
-	FROM	bettransLC with (nolock)
+	FROM	bettransLC b with (nolock)
+			INNER JOIN @SportBettype s ON s.Bettype = b.gameID  
 	WHERE	winlostdate = @winlostdate
 			AND statusID IN (111,112,113)
-			AND gameID BETWEEN 2401 AND 2499
+			AND s.ProductID = 21
  
 	-- Cock_Fighting Section
 	UNION ALL
@@ -625,7 +625,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			sum(b.Linetotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'Cock Fighting' as bettype
+			'CockFighting' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 19
@@ -1259,6 +1259,4 @@ GO
 GO 
  GRANT EXECUTE ON [dbo].[Acc_Rpt_MatchWinLoss2_New] TO [bodbAdminNet]
 GO 
-
-
 

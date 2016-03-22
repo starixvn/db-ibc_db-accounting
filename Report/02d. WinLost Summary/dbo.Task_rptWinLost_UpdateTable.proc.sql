@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Task_rptWinLost_UpdateTable]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Task_rptWinLost_UpdateTable]    Script Date: 03/22/2016 13:49:13 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Task_rptWinLost_UpdateTable]
 	@winlostdate smalldatetime
 AS
 /*
@@ -508,14 +515,6 @@ BEGIN
 	
 	DROP TABLE #bettransm
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Task_rptWinLost_UpdateTable] TO [vnteam]
 GO 
