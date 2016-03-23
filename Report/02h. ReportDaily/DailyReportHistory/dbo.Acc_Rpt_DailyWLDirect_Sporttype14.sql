@@ -275,10 +275,11 @@ BEGIN
 	FROM bettrans14 b WITH(READPAST )
 		INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
 		INNER JOIN @tmpMatch m ON b.matchid = m.matchid 
-	WHERE winlostdate = @winlostdate
-		AND (b.bettype < 19001 AND b.bettype NOT BETWEEN 2401 and 2499) -- exclude AllBet		
+	WHERE winlostdate = @winlostdate		
+		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
+		AND bet.productID <>21 -- exclude AllBet		
 	GROUP BY srecommend,
 			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END,
 			b.matchid, 
@@ -302,8 +303,9 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate,
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate
 	FROM bettransRNG14 b WITH(NOLOCK )
+		INNER JOIN @SportBettype bet ON b.gameid = bet.bettype	
 	WHERE winlostdate = @winlostdate
-		AND b.gameID BETWEEN 2101 AND 2399		
+		AND bet.ProductID= 6			
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY b.srecommend
 			 --,case when dep.custid is null then 1 else 2 end 	
@@ -324,17 +326,17 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(b.stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(b.stake)*virtualrate) turnover_virtualrate
-	FROM bettransLC14 b WITH(NOLOCK)		
+	FROM bettransLC14 b WITH(NOLOCK)
+		INNER JOIN @SportBettype bet ON b.gameid = bet.bettype				
 	WHERE winlostdate = @winlostdate		
-		AND b.ProductID = 211 
+		AND bet.ProductID = 21 
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY 
 			b.srecommend,
 			b.ProductID,
 			b.gameID
-	OPTION (RECOMPILE)			 
-			 
-				 --,case when dep.custid is null then 1 else 2 end 
+	OPTION (RECOMPILE)			 			 
+				 
 	UPDATE #src
 	SET MatchID = CASE   WHEN MatchID IN (0, 71, 208, 209, 210) THEN 0 ELSE MatchID END
 		,bettype = CASE WHEN   bettype BETWEEN 2101 AND 2399 THEN 71 ELSE bettype END
@@ -541,7 +543,7 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN (SELECT DISTINCT  SuperID,SUM(ExtraPT) ExtraPT,ProductID FROM #ExtraPT_Sel  WHERE ProductID IN (4,12,11,13) AND @winlostdate BETWEEN FromDate AND ToDate GROUP BY SuperID,ProductID
 				) e  ON   b.srecommend = e.superID AND s.ProductID=e.ProductID
-	WHERE	(s.ProductId IN (4,12,11,13))    -----SLI, Gold Deluxe, AG Casino, MGC Live casino				
+	WHERE	(s.ProductId IN (4,12,11,13,21))    -----SLI, Gold Deluxe, AG Casino, MGC Live casino, Allbet				
 	GROUP BY site
 		
 	----VIRTUAL SPORT
