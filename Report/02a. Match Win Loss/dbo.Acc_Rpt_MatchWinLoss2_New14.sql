@@ -49,7 +49,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xtest @mode = 5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
 	
 	UPDATE @SportBettype
 	SET liveindicator =0
@@ -620,7 +620,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			sum(b.Linetotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'CockFighting' as bettype  
+			'Cockfighting' as bettype  
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 19	
@@ -806,7 +806,7 @@ BEGIN
 	    -- Casino
 	UNION ALL 
 	SELECT	30 Num,
-			b.bettype,
+			71 bettype,
 			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
@@ -823,7 +823,7 @@ BEGIN
 	WHERE	s.ProductId = 6	
 		--bettype IN(71, 72) 
 		and matchid IN (0, 71) 			
-	GROUP BY b.bettype,s.orderkey
+	GROUP BY  s.orderkey
 
 	    -- Vegas Games
 	UNION ALL 

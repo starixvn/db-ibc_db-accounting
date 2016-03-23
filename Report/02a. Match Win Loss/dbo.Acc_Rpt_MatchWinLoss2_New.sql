@@ -625,7 +625,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			sum(b.Linetotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'CockFighting' as bettype
+			'Cockfighting' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 19
