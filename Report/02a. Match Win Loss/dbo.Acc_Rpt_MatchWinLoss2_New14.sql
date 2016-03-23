@@ -595,7 +595,21 @@ BEGIN
 			'Colossus Bets' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
-	WHERE	s.ProductID = 15		
+	WHERE	s.ProductID = 15
+	-- Cock_Fighting Section 
+	UNION ALL
+	SELECT	@winlostdate winlostdate,
+	        sum(b.winlost) as winlost,
+			sum(b.pos) as pos,
+			sum(b.comm) as comm,
+			sum(b.comm) as virtualComm,
+			sum(b.Linetotal) as LineTotal,
+			sum(b.Linetotal) as VirtualLineTotal,
+			sum(b.IBCTurnover) IBCTurnover,
+			'Cockfighting' as bettype  
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductID = 19		
 	--- Allbet Section
 	UNION ALL
 	SELECT	@winlostdate winlostdate,
@@ -610,20 +624,7 @@ BEGIN
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 21			
-	-- Cock_Fighting Section 
-	UNION ALL
-	SELECT	@winlostdate winlostdate,
-	        sum(b.winlost) as winlost,
-			sum(b.pos) as pos,
-			sum(b.comm) as comm,
-			sum(b.comm) as virtualComm,
-			sum(b.Linetotal) as LineTotal,
-			sum(b.Linetotal) as VirtualLineTotal,
-			sum(b.IBCTurnover) IBCTurnover,
-			'Cockfighting' as bettype  
-	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
-	WHERE	s.ProductID = 19	
+	
     -- Resultset of 8RM and BARM
     SELECT  @WinLost_8RM = isnull(sum(case when bettype = -400 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
             @WinLost_BARM = isnull(sum(case when bettype = -401 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),

@@ -817,7 +817,7 @@ ORDER BY Num ASC
 	    -- Casino
 	UNION ALL 
 	SELECT	30 Num,
-			b.bettype,
+			71 bettype,
 			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
@@ -834,7 +834,7 @@ ORDER BY Num ASC
 	WHERE	s.ProductId = 6	
 		--AND bettype IN(71, 72) 
 		and matchid IN (0, 71)  			
-	GROUP BY b.bettype,s.orderkey
+	GROUP BY  s.orderkey
 
 	   -- Vegas Game
 	UNION ALL
