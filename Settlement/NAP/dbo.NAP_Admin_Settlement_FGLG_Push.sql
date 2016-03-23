@@ -1,3 +1,5 @@
+USE bodb02
+GO
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG_Push] @AdminId INT
 	, @action VARCHAR(10) = 'CAL-FT' -- CAL-FT, CAL-HT
@@ -7,7 +9,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG_Push] @AdminId INT
 	, @IP VARCHAR(15) = ''
 	, @goalrecord VARCHAR(50) = ''
 	, @IsLoopTempTable BIT = 0
-	, @IsAutoPayout BIT = 0
+	, @IsAutoCalculatePage BIT = 0
 	, @ErrCode INT = 0 OUTPUT
 	, @ErrMsg NVARCHAR(200) = '' OUTPUT
 	
@@ -57,7 +59,7 @@ BEGIN
 	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
 		, @Action = @Action
 		, @Mode = 'CAL-FGLG'
-		, @IsAutoPayout = @IsAutoPayout
+		, @IsAutoCalculatePage = @IsAutoCalculatePage
 		, @ErrCode = @ErrCode OUTPUT
 		, @ErrMsg = @ErrMsg OUTPUT
 	IF @ErrCode <> 0
@@ -80,7 +82,7 @@ BEGIN
 			+ ', @goalrecord = '+ CASE when @GoalRecord IS NULL THEN 'NULL' ELSE '''' + CONVERT(nvarchar(50),@GoalRecord)+ '''' END 
 			+ ', @betstatus = ' + CASE when @BetStatus IS NULL THEN 'NULL' ELSE 'N''' + CONVERT(nvarchar(50),@BetStatus)+ '''' END 
 			+ ', @IncludeLG = ' + CONVERT(NVARCHAR(1), @IncludeLastGoal) 
-			+ ', @IsAutoPayout = ' + CONVERT(NVARCHAR(1), @IsAutoPayout) 
+			+ ', @IsAutoCalculatePage = ' + CONVERT(NVARCHAR(1), @IsAutoCalculatePage) 
 			+ ', @IsLoopTempTable = ' + CONVERT(NVARCHAR(1), @IsLoopTempTable) 
 			+ ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
 			+ ', @ErrCode = @ErrCode OUTPUT' 

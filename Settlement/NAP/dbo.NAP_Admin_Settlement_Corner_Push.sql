@@ -1,12 +1,8 @@
 ﻿
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
+USE bodb02
 GO
 
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Corner_Push    Script Date: 06/10/2015 11:21:40 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Corner_Push    Script Date: 7/6/2015 4:29:06 PM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Corner_Push] 
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Corner_Push] 
 	 @AdminId				INT
 	,@Matchid				INT
 	,@fthCorners			SMALLINT		= NULL

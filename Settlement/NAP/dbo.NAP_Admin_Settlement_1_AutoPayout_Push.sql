@@ -72,12 +72,12 @@ BEGIN
     END
     
     -- check waiting ticket
-	EXEC dbo.NAP_Admin_Settlement_Checking_xtest @MatchId = @MatchId
+	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
         , @Action = @Action
         , @Mode	= 'CAL'
 		, @IsExcludeCorner = 1
 		, @IsExcludeFGLG = 1
-		, @IsAutoPayout = 1
+		, @IsAutoCalculatePage = 1
         , @ErrCode = @ErrCode OUTPUT
         , @ErrMsg = @ErrMsg OUTPUT
         
@@ -88,7 +88,7 @@ BEGIN
     END
 
     SELECT @ErrCode = 0, @ErrMsg = '', @procName = OBJECT_NAME(@@PROCID)
-		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_AutoPayout_xtest] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
+		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_AutoPayout] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
                             + ', @creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
                             + ', @fth = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeHome), 'NULL') 
                             + ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeAway), 'NULL') 

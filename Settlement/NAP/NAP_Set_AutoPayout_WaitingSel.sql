@@ -65,9 +65,7 @@ BEGIN
 			, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) THEN 1 ELSE 0 END) AS IsExistHTCorner
 		FROM dbo.bettrans b 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #tempmatch t WHERE b.matchid = t.matchid)
-			AND bettype IN (14, 127)--FGLG
-			AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) --Corner
-			AND bettype IN (172) --ExistResultandFirstTeamScore
+			AND bettype IN (14, 127, 172, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209)
 			AND StatusId NOT IN (101, 102, 103)
 		GROUP BY b.matchid
 	), BetStatusM AS (

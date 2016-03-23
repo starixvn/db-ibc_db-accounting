@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG] @creator INT
 	, @IP VARCHAR(15) = ''
 	, @goalrecord VARCHAR(50) = ''
 	, @IsLoopTempTable BIT = 0
-	, @IsAutoPayout BIT = 0
+	, @IsAutoCalculatePage BIT = 0
 	, @ErrCode INT = 0 OUTPUT
 	, @ErrMsg NVARCHAR(200) = '' OUTPUT
 AS
@@ -72,12 +72,21 @@ BEGIN
 	END
 
 	---
+	DECLARE @HTDone BIT, @FTDone BIT
+	--IF @IsAutoCalculatePage = 1 AND @ActionID IN ('CAL-FT')
+	--BEGIN
+	--	EXEC dbo.NAP_Admin_Settlement_1_CheckBetStatus @MatchId = @matchid
+	--		, @HTDone = @HTDone OUTPUT
+	--		, @FTDone = @FTDone OUTPUT
+	--END
+
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_FGLG'
 		, @MatchID = @matchid
 		, @Action = @action
 		, @BetStatus = @betstatus
 		, @GoalRecord = @goalrecord
 		, @creator = @creator
+		--, @FTDone = @FTDone
 
 	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] @Command = 'NAP_Admin_Settlement_FGLG'
 		, @MatchID = @matchid
@@ -125,7 +134,7 @@ BEGIN
 	WHERE matchid = @matchid 
 		AND bettype IN (@bettype, 172)
 		AND betdaqid = 0--bettrade tickets
-		AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+		AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
 
 	INSERT INTO #BalanceBefore
 	SELECT custid, SUM(winlost - actual_stake + playercomm)
@@ -136,7 +145,7 @@ BEGIN
 							THEN 1 
 					WHEN bettype NOT IN (901,902,903) THEN 1
 					ELSE 0 END
-		AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+		AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
 	GROUP BY custid
 
 	SET @TotalAccount = @@ROWCOUNT
@@ -150,7 +159,7 @@ BEGIN
 		, @betcount_172 = ISNULL(SUM(CASE WHEN bettype = 172 THEN 1 ELSE 0 END), 0)
 	FROM dbo.bettrans WITH (NOLOCK)
 	WHERE matchid = @matchid AND bettype IN (14, 127, 172)
-		AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+		AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
 
 	IF @betcount_14 = 0 OR @betcount_127 = 0
 	BEGIN
@@ -162,7 +171,7 @@ BEGIN
 		WHERE matchid = @matchid
 	END
 
-	IF @IsAutoPayout = 1
+	IF @IsAutoCalculatePage = 1
 	BEGIN
 		SELECT @fth = m.finalhomescore, @fta = m.finalawayscore
 		FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
@@ -244,7 +253,7 @@ BEGIN
 							THEN 1
 						WHEN bettype NOT IN (901,902,903) THEN 1
 						ELSE 0 END
-			AND 1 = CASE WHEN @IsAutoPayout = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+			AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
 		GROUP BY custid
 		--===
 	END

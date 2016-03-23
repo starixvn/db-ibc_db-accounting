@@ -36,26 +36,23 @@ BEGIN
 		, @MatchId INT, @Today DATETIME
 
 	SELECT @matchcode = ISNULL(@matchcode, ''), @LeagueID = ISNULL(@LeagueID, 0)
-		, @filterBy = ISNULL(@filterBy, 0), @Today = GETDATE()
+		, @filterBy = ISNULL(@filterBy, 0), @Today = GETDATE(), @MatchId = 0
 
 	-- if entering matcode, ignore other params (excep FromDate, ToDate, sport type)
-	IF (@matchcode <> '')
+	IF @matchcode <> ''
 	BEGIN
-		SELECT @eventstatus = ''
-			, @isRefund = NULL
+		SELECT @eventstatus = '', @isRefund = NULL, @UncalOnly = NULL, @UncalMultiOnly = NULL
 			, @LeagueID = CASE WHEN @isReLoad = 1 THEN @LeagueID 
 							ELSE 0 END -- reload partial; search on LeagueID, not reload: get all leagues
-			, @UncalOnly = NULL
-			, @UncalMultiOnly = NULL
-
-		BEGIN TRY
-			SET @matchid = CASE WHEN ISNUMERIC(@matchcode) = 1 THEN CAST(@matchcode AS INT)
-							ELSE NULL END
-		END TRY
-
-		BEGIN CATCH
-			SET @matchid = NULL
-		END CATCH
+		IF ISNUMERIC(@matchcode) = 1
+		BEGIN
+			SET @MatchId = CAST(@matchcode AS INT)
+		END
+		ELSE
+		BEGIN
+			SELECT @MatchId = matchid
+			FROM dbo.match m WITH(NOLOCK) WHERE matchcode = @matchcode
+		END
 	END
 	ELSE
 	BEGIN
@@ -116,7 +113,8 @@ BEGIN
 		, IsNeedToCalculateFGLG BIT
 		, IsNeedToCalculateCorner BIT
 		, IsAutoPayoutForLeague BIT
-		, IsExistResultandFirstTeamScore BIT)
+		, IsExistResultandFirstTeamScore BIT
+		, BetCount INT)
 	
 	INSERT INTO #matchList
 	SELECT m.hthomescore
@@ -176,9 +174,10 @@ BEGIN
 		, 0 AS IsNeedToCalculateCorner
 		, ISNULL(l.IsAutoPayout, 0) AS IsAutoPayoutForLeague
 		, 0 AS IsExistResultandFirstTeamScore
+		, 0 AS BetCount
 	FROM dbo.match m WITH (NOLOCK)
-		INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 		INNER JOIN dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
+		INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 		LEFT JOIN dbo.CustInfo ci WITH(NOLOCK) ON mr.ConfirmHT > 0 AND mr.ConfirmHT = ci.custid
 		LEFT JOIN dbo.CustInfo cci WITH(NOLOCK) ON mr.ConfirmFT > 0 AND mr.ConfirmFT = cci.custid
 		LEFT JOIN dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = r.MatchId AND r.ResourceId = '00'
@@ -189,7 +188,7 @@ BEGIN
 					WHEN @UncalMultiOnly = 1 THEN hthomescore * htawayscore * finalhomescore * finalawayscore
 					WHEN @UncalMultiOnly IS NULL OR @UncalOnly IS NULL THEN 1
 			END IS NOT NULL AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END 
-		AND (@matchcode = '' OR (m.matchid = @matchid OR m.matchcode = @matchcode))
+		AND (@MatchId = 0 OR (@MatchId <> 0 AND m.matchid = @matchid))
 		AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) 
 		AND (@isRefund IS NULL
 				OR (@isRefund = 1 AND betstatus LIKE 'Refund%') 
@@ -203,8 +202,8 @@ BEGIN
 					WHEN @IsHTOverOnly = 1 
 						AND m.eventstatus IN ('Closed', 'running', 'internal')
 						AND mr.ishtcal = 0
-						AND (mr.confirmHT <> 0 OR (DATEDIFF(MM, m.kickofftime, @Today) > 40 
-													AND DATEDIFF(MM, m.kickofftime, @Today) < 100)) THEN 1
+						AND (mr.confirmHT <> 0 OR (DATEDIFF(MINUTE, m.kickofftime, @Today) > 40 
+													AND DATEDIFF(MINUTE, m.kickofftime, @Today) < 100)) THEN 1
 				ELSE 0 END
 		AND 1 = CASE WHEN @IsOverOnly = 0 THEN 1
 					WHEN @IsOverOnly = 1
@@ -214,19 +213,26 @@ BEGIN
 		AND (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
 		AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
 	
+	--CREATE NONCLUSTERED INDEX Ix_#matchList_MatchId ON #matchList(MatchId)
+
 	;WITH BetStatus AS (
 		SELECT b.matchid
-			, SUM(CASE WHEN b.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
-			, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
-			, SUM(CASE WHEN b.bettype = 172 THEN 1 ELSE 0 END) AS IsExistResultandFirstTeamScore
-			, SUM(CASE WHEN b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208) THEN 1 ELSE 0 END) AS IsExistCorner
-			, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) THEN 1 ELSE 0 END) AS IsExistHTCorner
+			, COUNT(b.matchid) AS BetCount
+			, SUM(CASE WHEN b.bettype = 14 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistFGLG
+			, SUM(CASE WHEN b.bettype = 127 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistHTFGLG
+			, SUM(CASE WHEN b.bettype = 172 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistResultandFirstTeamScore
+			, SUM(CASE WHEN b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208) AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistCorner
+			, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistHTCorner
 		FROM DBTXN.bodb02.dbo.bettrans b 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList m WHERE b.matchid = m.matchid)
-			AND bettype IN (14, 127)--FGLG
-			AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) --Corner
-			AND bettype IN (172) --ResultandFirstTeamScore
-			AND StatusId NOT IN (101, 102, 103)
+			AND b.bettype <= 19000
+			AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
+			AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
+			AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
+			AND b.bettype NOT IN (901, 902, 903)--bettrade
+			AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
+			--AND StatusId NOT IN (101, 102, 103)
+			
 		GROUP BY b.matchid
 	)
 
@@ -236,6 +242,7 @@ BEGIN
 		, IsExistResultandFirstTeamScore = CASE WHEN tt.IsExistResultandFirstTeamScore > 0 THEN 1 ELSE 0 END
 		, IsExistCorner = CASE WHEN tt.IsExistCorner > 0 THEN 1 ELSE 0 END
 		, IsExistHTCorner = CASE WHEN tt.IsExistHTCorner > 0 THEN 1 ELSE 0 END
+		, BetCount = tt.BetCount
 	FROM #matchList t
 		INNER JOIN BetStatus tt ON t.matchid = tt.matchid
 
@@ -298,7 +305,7 @@ BEGIN
 	INSERT INTO #tmpCornerBets(MatchID, SettlementStatusID)
 	SELECT MatchID, MIN(SettlementStatusID)
 	FROM dbo.ResultDetail WITH (NOLOCK)
-	WHERE @Sporttype IN(0, 1)
+	WHERE @Sporttype IN (0, 1)
 		AND MatchID IN (SELECT MatchID FROM #matchList)
 		AND ResourceID IN ('04','05','206','207','208','209')			
 	GROUP BY MatchID 
@@ -334,8 +341,8 @@ BEGIN
 									WHEN rs.FTStatus = 1
 										AND (t.IsExistFGLG = 1 OR t.IsExistResultandFirstTeamScore = 1) THEN 1 --can calc FT FGLG
 								ELSE 0 END
-		, IsNeedToCalculateCorner = CASE WHEN rs.HTStatus = 1 
-										AND t.IsHalfTimeCal = 1 
+		, IsNeedToCalculateCorner = CASE WHEN rs.HTStatus = 1
+										AND t.IsHalfTimeCal = 1
 										AND rs.FTStatus IN (0, 1) 
 										AND t.IsExistHTCorner = 1 THEN 1 --can calc HT Corner
 									WHEN rs.FTStatus = 1
@@ -384,22 +391,15 @@ BEGIN
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
 		, IsAutoPayout
-		--, CASE WHEN (m.IsHalfTimeCal = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-		--			AND m.IsExistHTFGLG = 1 AND m.IsCalculated = 0 THEN 1 --can calc HT FGLG
-		--		WHEN (m.IsCalculated = 1 OR ISNULL(IsCalculatingSingle, 0) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-		--			AND m.IsHalfTimeCal = 1	AND (m.IsExistFGLG = 1 OR m.IsExistResultandFirstTeamScore = 1) THEN 1 --can calc FT FGLG
-		--		ELSE 0 END AS IsNeedToCalculateFGLG
-		--, CASE WHEN (m.IsHalfTimeCal = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-		--			AND m.IsExistHTCorner = 1 AND m.IsCalculated = 0 THEN 1 --can calc HT Corner
-		--		WHEN (m.IsCalculated = 1 OR ISNULL(IsCalculatingSingle, -1) IN (0,1) OR ISNULL(IsCalculatingMP, -1) IN (0,1))
-		--			AND m.IsHalfTimeCal = 1	AND m.IsExistCorner = 1 THEN 1 --can calc FT Corner
-		--		ELSE 0 END AS IsNeedToCalculateCorner
 		, IsNeedToCalculateFGLG
 		, IsNeedToCalculateCorner
 		, IsAutoPayoutForLeague
+		--, BetCount
 	FROM #matchList m
 		LEFT JOIN #tempmatch t ON t.matchid = m.matchid
 		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID
+	WHERE 1 = CASE WHEN @IsHTOverOnly = 1 OR @IsOverOnly = 1 THEN CASE WHEN m.BetCount > 0 THEN 1 ELSE 0 END
+				ELSE 1 END
 	ORDER BY CASE m.eventstatus WHEN 'Completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
 		, m.eventdate
 		, m.kickofftime

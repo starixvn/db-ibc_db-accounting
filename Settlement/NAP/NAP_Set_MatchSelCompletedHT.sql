@@ -48,7 +48,7 @@ BEGIN
 		AND IsCalculating IN (1, 0)
 	GROUP BY matchid
 
-	DECLARE @DataTmp TABLE (MatchId INT, leagueid INT, hthomescore INT, htawayscore INT, IsCalculated BIT
+	CREATE TABLE #DataTmp (MatchId INT, leagueid INT, hthomescore INT, htawayscore INT, IsCalculated BIT
 		, IsMultiCaled BIT, IsRefund BIT, IsCalRefund BIT, homeid INT, awayid INT, matchcode VARCHAR(50)
 		, kickofftime DATETIME, finalhomescore INT, finalawayscore INT, betstatus NVARCHAR(50), eventstatus VARCHAR(50)
 		, sporttype SMALLINT, IsNeutral BIT, eventdate DATETIME, goalrecord VARCHAR(50), ConfirmHT INT, IsHTCal BIT
@@ -56,8 +56,13 @@ BEGIN
 	
 	DECLARE @SqlQuery VARCHAR(4000)
 	SET @SqlQuery = ''
-	SELECT @SqlQuery = 
-	'SELECT *
+	SELECT @SqlQuery = '
+	INSERT INTO #DataTmp(MatchId, leagueid, hthomescore, htawayscore, IsCalculated
+		, IsMultiCaled, IsRefund, IsCalRefund, homeid, awayid, matchcode
+		, kickofftime, finalhomescore, finalawayscore, betstatus, eventstatus
+		, sporttype, IsNeutral, eventdate, goalrecord, ConfirmHT, IsHTCal
+		, IsPending, IsUndecided, IsAutoPayout, IsAutoPayout_League)
+	SELECT *
 	FROM OPENQUERY(DBPRO, ''SELECT m.MatchId, m.leagueid, m.hthomescore, m.htawayscore, mr.calculate
 		, mr.multiple, refund, CalRefund, homeid, awayid, matchcode
 		, kickofftime, finalhomescore, finalawayscore, betstatus, eventstatus
@@ -81,12 +86,6 @@ BEGIN
 				END'')'
 
 	--select @SqlQuery as '@SqlQuery'
-
-	INSERT INTO @DataTmp(MatchId, leagueid, hthomescore, htawayscore, IsCalculated
-		, IsMultiCaled, IsRefund, IsCalRefund, homeid, awayid, matchcode
-		, kickofftime, finalhomescore, finalawayscore, betstatus, eventstatus
-		, sporttype, IsNeutral, eventdate, goalrecord, ConfirmHT, IsHTCal
-		, IsPending, IsUndecided, IsAutoPayout, IsAutoPayout_League)
 	EXEC (@SqlQuery)
 		
 	;WITH BetStatus AS (
@@ -95,7 +94,7 @@ BEGIN
 			, SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END) AS cntFGLG
 			, SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END) AS cntHTFGLG
 		FROM dbo.bettrans b WITH (NOLOCK, INDEX = CIX_matchid_bettype)
-		WHERE EXISTS (SELECT TOP 1 1 FROM @DataTmp m WHERE b.matchid = m.MatchId)
+		WHERE EXISTS (SELECT TOP 1 1 FROM #DataTmp m WHERE b.matchid = m.MatchId)
 			AND bettype <= 19000
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
@@ -150,10 +149,12 @@ BEGIN
 		, CASE WHEN m.IsAutoPayout IS NULL THEN ISNULL(IsAutoPayout_League, 0)
 				WHEN ISNULL(m.IsAutoPayout, 0) = 1 THEN 1
 			ELSE 0 END AS IsAutoPayout
-		FROM @DataTmp m
+		FROM #DataTmp m
 			INNER JOIN BetStatus b ON m.matchid = b.matchid
 			LEFT JOIN @tblSingle t ON m.matchid = t.matchid
 	ORDER BY eventstatus, matchcode
+
+	DROP TABLE #DataTmp
 END
 
 GO

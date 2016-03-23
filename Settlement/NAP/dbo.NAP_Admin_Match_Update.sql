@@ -1,10 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 02/26/2016 10:25:39 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 (
 	@Command VARCHAR(100),
@@ -244,15 +239,18 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_FGLG'
 	BEGIN
 		UPDATE match WITH(ROWLOCK,UPDLOCK)
-		SET	betstatus = case when right(@BetStatus,1) = ';' THEN @betstatus
-							 ELSE @betstatus + ';'
-						END
-			,GoalRecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
-							   WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> '' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
-							   ELSE @goalrecord 
-						  END
-			--,goalrecord = @GoalRecord
-			,changetime = GETDATE()
+		SET betstatus = CASE WHEN RIGHT(@BetStatus,1) = ';' THEN @betstatus
+						ELSE @betstatus + ';' END
+			, GoalRecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
+							   WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> ''
+									THEN REPLACE(GoalRecord, LEFT(GoalRecord, CHARINDEX(';', GoalRecord)), (LEFT(@goalrecord, CHARINDEX(';', @goalrecord)))) -- only update HT part
+							ELSE @goalrecord END
+			, eventstatus = CASE WHEN @action = 'CAL-HT' AND ISNULL(@FTDone, 0) = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-HT' AND ISNULL(@FTDone, 0) = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
+								WHEN @action = 'CAL-FT' AND ISNULL(@HTDone, 0) = 1 AND @isExcludeCorner = 0 THEN N'completed'
+								WHEN @action = 'CAL-FT' AND ISNULL(@HTDone, 0) = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'								
+							ELSE eventstatus END
+			, changetime = GETDATE()
 		WHERE matchid = @MatchID
 		
 	END
