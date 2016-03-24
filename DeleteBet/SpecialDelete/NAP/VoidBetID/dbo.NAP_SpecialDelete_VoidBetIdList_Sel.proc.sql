@@ -572,7 +572,7 @@ BEGIN
 	)
 	-- ALL tickets	
 	SELECT
-		d.transid
+		CASE WHEN d.bettype BETWEEN 801 AND 899 THEN d.refno ELSE d.transid END AS transid
 		,d.bettype
 		,d.betid
 		,d.refno
