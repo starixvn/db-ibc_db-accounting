@@ -26,7 +26,7 @@ AS
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 		- 20160307@Sophia: Apply Extra PT [Redmind: #51721]
 		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
-						    
+		- 20160324@sophia: Exclude Reset data of ExtraPT, include other transfer tickets [Redminde: #54719]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -151,7 +151,7 @@ BEGIN
        AND b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
-	   AND b.CustId NOT IN (SELECT CustId FROM @dummyExtraPT)
+	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)
 	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
 	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
 	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
