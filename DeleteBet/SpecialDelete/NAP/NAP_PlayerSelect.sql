@@ -5,10 +5,10 @@ AS
 /*  
 	Created: 20150401@Dominic  
 	Task : Get players joining in a specified match  
-	DB: DBAGE/bodb02  
+	DB: DBPRO/bodb02  
 	
 	Revisions:   
-	    
+	    - @20151110@Kathy: Move SP to DBPRO
 	Param's Explanation:  
 		- @Bettype: Comma seperated list of bet types, delimeter character is '^'
 
@@ -31,6 +31,8 @@ BEGIN
 	 WHERE o.MatchID = @MatchID
 	 ORDER BY OddsInfo
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_PlayerSelect] TO [bodbAdminNet] AS [dbo]
 GO
