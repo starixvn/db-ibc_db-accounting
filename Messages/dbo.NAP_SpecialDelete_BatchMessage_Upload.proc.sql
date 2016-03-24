@@ -43,7 +43,7 @@ BEGIN
 		
 		-- insert batch message
 		INSERT dbo.MsgTarget(MessageId, TargetId, TargetName, isRead, BetTransId ,PostTime) --messagetype: for old version
-		SELECT mt.MessageId
+		SELECT DISTINCT mt.MessageId
 			, mt.TargetId
 			, mt.TargetName
 			, 0 AS isRead

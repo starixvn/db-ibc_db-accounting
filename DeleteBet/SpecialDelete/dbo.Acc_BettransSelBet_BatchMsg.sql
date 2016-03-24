@@ -210,6 +210,22 @@ BEGIN
 		
 	WHERE bt.ProductId IN (11, 21)
 	
+	UNION ALL
+	SELECT b.transid
+		, b.RefNo
+		, b.gameid
+		, b.custid
+		, b.recommend
+		, b.mrecommend
+		, b.srecommend
+		, b.betfrom
+	FROM dbo.bettransLC14 b WITH (NOLOCK)
+		INNER JOIN #transidList t 
+		ON b.transid 		= t.transid
+		INNER JOIN #BettypeMatrix bt
+		ON b.gameid 		= bt.bettype
+		
+	WHERE bt.ProductId IN (11, 21)
 	--bettransRNG - detail tickets
 	/*
 		- OneRNG Casino			: ProductId = 6
@@ -233,6 +249,22 @@ BEGIN
 		
 	WHERE bt.ProductId IN (6, 13, 17)
 	
+	UNION ALL
+	SELECT b.transid
+		, b.RefNo
+		, b.gameid
+		, b.custid
+		, b.recommend
+		, b.mrecommend
+		, b.srecommend
+		, b.betfrom
+	FROM dbo.bettransRNG14 b WITH (NOLOCK)
+		INNER JOIN #transidList t 
+		ON b.transid 		= t.transid
+		INNER JOIN #BettypeMatrix bt
+		ON b.gameid 		= bt.bettype
+		
+	WHERE bt.ProductId IN (6, 13, 17)
 	
 	;WITH CTE_CustInfo AS 
 	(
