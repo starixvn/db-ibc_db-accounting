@@ -44,7 +44,7 @@ BEGIN
 					FROM dbo.match m WITH(NOLOCK) 
 					WHERE matchid = @MatchId AND sporttype = 1 AND eventstatus = 'completed')
 	BEGIN
-		SELECT @ErrCode = 1001019, @ErrMsg = 'Failed to update auto payout setting on match.'
+		SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
 		RETURN
 	END
 
@@ -52,7 +52,7 @@ BEGIN
 	--IF EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Single_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = @MatchId)
 	--	OR EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = @MatchId)
 	--BEGIN
-	--	SELECT @ErrCode = 1001020, @ErrMsg = 'Failed to update auto payout setting on match. Because this match is being calculated.'
+	--	SELECT @ErrCode = 1001020, @ErrMsg = 'Sorry. Not allow to update Auto Setting of completed match.'
 	--	RETURN
 	--END
 
@@ -63,7 +63,7 @@ BEGIN
 
 	IF @@ERROR > 0
 	BEGIN
-		SELECT @ErrCode = 1001019, @ErrMsg = 'Failed to update auto payout setting on match.'
+		SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
 		RETURN
 	END
 

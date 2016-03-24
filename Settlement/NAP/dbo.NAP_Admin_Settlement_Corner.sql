@@ -51,8 +51,8 @@ BEGIN
 
 	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE WHEN @Action = 'CAL' THEN 151 
-							 WHEN @Action = 'CAL-HT' THEN 161
-							 WHEN @Action = 'CAL-FT' THEN 162 
+							 WHEN @Action = 'CAL-HT' THEN 162
+							 WHEN @Action = 'CAL-FT' THEN 161 
 						ELSE 0 END
 		
 							 

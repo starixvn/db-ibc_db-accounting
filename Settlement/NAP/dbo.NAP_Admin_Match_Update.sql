@@ -245,12 +245,9 @@ BEGIN
 							   WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> ''
 									THEN REPLACE(GoalRecord, LEFT(GoalRecord, CHARINDEX(';', GoalRecord)), (LEFT(@goalrecord, CHARINDEX(';', @goalrecord)))) -- only update HT part
 							ELSE @goalrecord END
-			, eventstatus = CASE WHEN @action = 'CAL-HT' AND ISNULL(@FTDone, 0) = 1 AND @isExcludeCorner = 0 THEN N'completed'
-								WHEN @action = 'CAL-HT' AND ISNULL(@FTDone, 0) = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'
-								WHEN @action = 'CAL-FT' AND ISNULL(@HTDone, 0) = 1 AND @isExcludeCorner = 0 THEN N'completed'
-								WHEN @action = 'CAL-FT' AND ISNULL(@HTDone, 0) = 1 AND @isExcludeCorner = 1 AND @isExistRunningCornerBet = 0 THEN N'completed'								
-							ELSE eventstatus END
+			, eventstatus = CASE WHEN @action = 'CAL-FT' AND ISNULL(@FTDone, 0) = 1 THEN N'completed' ELSE eventstatus END
 			, changetime = GETDATE()
+			, settleTime = GETDATE()
 		WHERE matchid = @MatchID
 		
 	END

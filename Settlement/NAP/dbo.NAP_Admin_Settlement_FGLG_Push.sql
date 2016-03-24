@@ -36,16 +36,45 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @matchcode NVARCHAR(50), @sporttype INT, @leagueid INT
 		, @sqlCommand NVARCHAR(500), @mode VARCHAR(20), @procName NVARCHAR(50)
+		, @IsHTDone BIT, @IsFTDone BIT, @IsAutoPayout BIT
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
-	FROM dbo.match m with(NOLOCK)
+	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid, @IsAutoPayout = IsAutoPayout
+	FROM DBPRO.bodb02.dbo.match m with(NOLOCK)
 	WHERE m.matchid = @MatchId
 
 	IF @@ROWCOUNT = 0 
 	BEGIN
-		SELECT @ErrCode	= 1000001, @ErrMsg = 'Match does not exist!'	
+		SELECT @ErrCode	= 1000001, @ErrMsg = 'Match does not exist!'
 		RETURN
-	END 
+	END
+	
+	IF @IsAutoPayout IS NULL
+	BEGIN
+		SELECT @IsAutoPayout = ISNULL(IsAutoPayout, 0)
+		FROM DBPRO.bodb02.dbo.League l with(NOLOCK)
+		WHERE l.leagueid = @leagueid
+	END
+
+	--For auto payout only: check calculate HT or FT done yet?
+	IF @IsAutoCalculatePage = 1 AND @IsAutoPayout = 1
+	BEGIN
+		SELECT @IsHTDone = ISNULL(IsHTCal, 0), @IsFTDone = ISNULL(calculate, 0)
+		FROM DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK)
+		WHERE mr.matchid = @MatchId
+
+		IF @action = 'CAL-HT' AND @IsHTDone = 0
+		BEGIN
+			SELECT @ErrCode = 1000000
+				, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+			RETURN
+		END
+		ELSE IF @action = 'CAL-FT' AND @IsFTDone = 0
+		BEGIN
+			SELECT @ErrCode = 1000000
+				, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
+			RETURN
+		END
+	END
 
 	IF EXISTS (SELECT 1 from dbo.Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
 		OR EXISTS (SELECT 1 from dbo.Parlay_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1))
@@ -75,7 +104,7 @@ BEGIN
 						ELSE CASE WHEN @IncludeLastGoal = 0 THEN 'CAL-HTFGLG'
 							ELSE 'CAL-HTLG'	END
 				    END 
-		, @procName = OBJECT_NAME(@@procid)
+		, @procName = OBJECT_NAME(@@PROCID)
 		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_FGLG] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
 			+ ', @action = ' + CASE WHEN @action IS NULL THEN 'CAL-FT' ELSE '''' + CONVERT(NVARCHAR(50), @action) + '''' END 
 			+ ', @creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
@@ -110,18 +139,8 @@ BEGIN
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @mode, @sqlCommand
 	END
 END
-
-
 GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [vnteam]
 GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_FGLG_Push] TO [bodbAdminNet]
 GO 

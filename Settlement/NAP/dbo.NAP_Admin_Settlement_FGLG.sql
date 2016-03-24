@@ -72,13 +72,35 @@ BEGIN
 	END
 
 	---
-	DECLARE @HTDone BIT, @FTDone BIT
-	--IF @IsAutoCalculatePage = 1 AND @ActionID IN ('CAL-FT')
-	--BEGIN
-	--	EXEC dbo.NAP_Admin_Settlement_1_CheckBetStatus @MatchId = @matchid
-	--		, @HTDone = @HTDone OUTPUT
-	--		, @FTDone = @FTDone OUTPUT
-	--END
+	DECLARE @eventstatus VARCHAR(50)
+	IF @IsAutoCalculatePage = 1 AND @Action IN ('CAL-FT')
+	BEGIN
+		DECLARE @Status TABLE(FTFGLGBet BIT, InRunning INT)
+
+		INSERT INTO @Status(FTFGLGBet, InRunning)
+		SELECT CASE WHEN bettype IN (14, 172) THEN 1 ELSE 0 END --others
+			, SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+		FROM dbo.bettrans WITH (NOLOCK)
+		WHERE matchid = @matchid
+			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+			AND bettype NOT BETWEEN 1501 AND 1599 -- Keno
+			AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
+			AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
+		GROUP BY CASE WHEN bettype IN (14, 172) THEN 1 ELSE 0 END --others
+
+		IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE FTFGLGBet = 0)
+			INSERT INTO @Status(FTFGLGBet, InRunning) VALUES(0, 0)
+
+		DECLARE @AllDoneExceptFTFGLGBet BIT -- HTDone & FTDone & CornerDone & HTFGLGDone
+
+		SELECT @AllDoneExceptFTFGLGBet = CASE InRunning WHEN 0 THEN 1 ELSE 0 END 
+		FROM @Status
+		WHERE FTFGLGBet = 0
+		
+		SELECT @eventstatus = CASE WHEN @Action IN ('CAL-FT') AND @AllDoneExceptFTFGLGBet = 1 THEN N'completed' ELSE eventstatus END
+		FROM DBPRO.BODB02.dbo.Match m WITH(NOLOCK)
+		WHERE m.matchid = @matchid
+	END
 
 	EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_FGLG'
 		, @MatchID = @matchid
@@ -86,7 +108,7 @@ BEGIN
 		, @BetStatus = @betstatus
 		, @GoalRecord = @goalrecord
 		, @creator = @creator
-		--, @FTDone = @FTDone
+		, @FTDone = @AllDoneExceptFTFGLGBet
 
 	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] @Command = 'NAP_Admin_Settlement_FGLG'
 		, @MatchID = @matchid
@@ -235,8 +257,13 @@ BEGIN
 				, @IP = @IP
 				, @IsLoopTempTable = 1 ---Not check concurrency by TempVariableNumber table
 		END
-	END
 
+		IF @IsAutoCalculatePage = 1 AND @eventstatus = 'completed'
+		BEGIN
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid, @command = 'C'
+		END
+	END
+	
 	-------------------------------------------------------------
 	---         CAPTURE value BALANCE after settlement        ---
 	---------------------------VVVV------------------------------

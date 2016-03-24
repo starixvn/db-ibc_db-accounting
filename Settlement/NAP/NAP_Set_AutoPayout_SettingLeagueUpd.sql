@@ -49,7 +49,7 @@ BEGIN
 
 		IF @@ERROR > 0
 		BEGIN
-			SELECT @ErrCode = 1001019, @ErrMsg = 'Failed to update auto payout setting on match.'
+			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
 			RETURN
 		END
 
@@ -64,7 +64,7 @@ BEGIN
 
 			IF @@ERROR > 0
 			BEGIN
-				SELECT @ErrCode = 1001019, @ErrMsg = 'Failed to update auto payout setting on match.'
+				SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
 				RETURN
 			END
 		END
@@ -78,7 +78,7 @@ BEGIN
 
 	IF @@ERROR > 0
 	BEGIN
-		SELECT @ErrCode = 1001018, @ErrMsg = 'Failed to update auto payout setting on league.'
+		SELECT @ErrCode = 1001018, @ErrMsg = 'Cannot update auto payout setting on this league. Please try again.'
 		RETURN
 	END
 

@@ -1,12 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail]    Script Date: 01/29/2016 14:30:44 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 1/28/2016 9:41:45 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail    Script Date: 1/26/2016 4:22:38 PM ******/
+
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
     ,@excludeRefundFGLG BIT = 0
 AS
@@ -42,6 +36,7 @@ AS
 		- 20151127@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
+		- 20160315@Patrick: Auto payout [Redmine: #53262]
 */
 BEGIN
     SET NOCOUNT ON
@@ -312,18 +307,24 @@ BEGIN
 
         /**END: Check existing Corner bettypes or not **/
 
+		DECLARE @IsAutopayout BIT
+		SELECT @IsAutopayout = IsAutoPayout
+		FROM dbo.match m WITH(NOLOCK) WHERE matchid = @matchid
+
+		IF @IsAutopayout IS NULL
+		BEGIN
+			SELECT @IsAutopayout = ISNULL(IsAutoPayout, 0)
+			FROM dbo.League l WITH(NOLOCK)
+			WHERE leagueid = @LeagueID
+		END
 
         -- check match status
-        DECLARE @status TABLE (
-            [Group] TINYINT
-            ,BetCount INT
-            ,InRunning INT
-            )
+        DECLARE @status TABLE ([Group] TINYINT, BetCount INT, InRunning INT)
 
         INSERT INTO @status
         SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: HT Corner, 5:FT Corner 
                 WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412, 414) THEN 1
-                WHEN bettype = 14 THEN 2
+                WHEN bettype = 14 OR (bettype = 172 AND @IsAutopayout = 1) THEN 2
                 WHEN bettype = 127 THEN 3
                 WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
                 WHEN bettype IN (194,195,196,197,198,199,206,208) THEN 5 
@@ -353,7 +354,7 @@ BEGIN
 				AND bettype NOT BETWEEN 801 AND 899 -- Metric Gaming
         GROUP BY CASE 
                 WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412, 414) THEN 1
-                WHEN bettype = 14 THEN 2
+                WHEN bettype = 14 OR (bettype = 172 AND @IsAutopayout = 1) THEN 2
                 WHEN bettype = 127 THEN 3
                 WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
                 WHEN bettype IN (194,195,196,197,198,199,206,208) THEN 5 
@@ -367,53 +368,17 @@ BEGIN
                 ELSE 0
                 END
 
-        IF NOT EXISTS (
-                SELECT *
-                FROM @status
-                WHERE [Group] = 0
-                )
-            INSERT INTO @status
-            VALUES (
-                0
-                ,0
-                ,0
-                )
+        IF NOT EXISTS (SELECT * FROM @status WHERE [Group] = 0)
+            INSERT INTO @status VALUES (0, 0, 0)
 
-        IF NOT EXISTS (
-                SELECT *
-                FROM @status
-                WHERE [Group] = 1
-                )
-            INSERT INTO @status
-            VALUES (
-                1
-                ,0
-                ,0
-                )
+        IF NOT EXISTS (SELECT * FROM @status WHERE [Group] = 1)
+            INSERT INTO @status VALUES (1, 0, 0)
 
-        IF NOT EXISTS (
-                SELECT *
-                FROM @status
-                WHERE [Group] = 2
-                )
-            INSERT INTO @status
-            VALUES (
-                2
-                ,0
-                ,0
-                )
+        IF NOT EXISTS (SELECT * FROM @status WHERE [Group] = 2)
+            INSERT INTO @status VALUES (2, 0, 0)
 
-        IF NOT EXISTS (
-                SELECT *
-                FROM @status
-                WHERE [Group] = 3
-                )
-            INSERT INTO @status
-            VALUES (
-                3
-                ,0
-                ,0
-                )
+        IF NOT EXISTS (SELECT * FROM @status WHERE [Group] = 3)
+            INSERT INTO @status VALUES (3, 0, 0)
 
         IF NOT EXISTS (SELECT * FROM @status WHERE [Group] = 4)
             INSERT INTO @status VALUES (4,0,0)

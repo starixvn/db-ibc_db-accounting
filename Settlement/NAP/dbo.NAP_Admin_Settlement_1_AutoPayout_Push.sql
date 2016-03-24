@@ -37,6 +37,10 @@ BEGIN
     SELECT @matchcode = m.matchcode
 		, @sporttype  = m.sporttype
 		, @leagueid   = m.leagueid
+		, @HalfTimeHome = CASE WHEN @Action = 'CAL-FT' THEN m.hthomescore ELSE @HalfTimeHome END --orveride this value when CAL-FT
+		, @HalfTimeAway = CASE WHEN @Action = 'CAL-FT' THEN m.htawayscore ELSE @HalfTimeAway END --orveride this value when CAL-FT
+		, @FullTimeHome = CASE WHEN @Action = 'CAL-HT' THEN NULL ELSE @FullTimeHome END--orveride this value
+		, @FullTimeAway = CASE WHEN @Action = 'CAL-HT' THEN NULL ELSE @FullTimeAway END--orveride this value
     FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
     WHERE m.matchid = @MatchId
 
@@ -47,14 +51,6 @@ BEGIN
 
         RETURN
     END
-
-    --IF @action = 'CAL' AND @sporttype = 154 AND (@FullTimeHome = 0 OR @FullTimeHome IS NULL OR @FullTimeAway = 0 OR @FullTimeAway IS NULL)
-    --BEGIN
-    --    SELECT	@ErrCode = 1001002
-				--,@ErrMsg    = 'Score is not valid.'
-
-    --    RETURN
-    --END
 
     IF EXISTS (SELECT TOP 1 1
 				FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
@@ -125,35 +121,6 @@ BEGIN
 
             RETURN
         END CATCH
-
-    --    SELECT @ActionId = CASE WHEN @Action = 'CAL-HT' THEN 2
-    --                            WHEN @Action = 'CAL-FT' THEN 3
-    --                            WHEN @Action = 'CAL' THEN 4
-    --                            WHEN @Action = 'UNDO' THEN 0
-    --                            ELSE - 1
-				--				END
-				--,@FullTimeHome     = m.finalhomescore
-				--,@FullTimeAway     = m.finalawayscore
-				--,@HalfTimeHome     = m.hthomescore
-				--,@HalfTimeAway     = m.htawayscore
-				--,@GoalRecord    = m.GoalRecord
-				--,@BetStatus        = m.betstatus
-				--,@sporttype        = sporttype
-    --    FROM	DBPRO.BODB02.dbo.match m WITH (NOLOCK)
-    --    WHERE	m.matchid = @MatchId
-
-        --IF @ActionId <> - 1
-        --BEGIN
-        --    EXEC Acc_Set_ConfirmedAction 
-        --        @matchid		= @MatchId
-        --        ,@action		= @ActionId
-        --        ,@fth			= @FullTimeHome
-        --        ,@fta			= @FullTimeAway
-        --        ,@hth			= @HalfTimeHome
-        --        ,@hta			= @HalfTimeAway
-        --        ,@goalrecord	= @GoalRecord
-        --        ,@betstatus		= @BetStatus
-        --END --check for sure
     END
     ELSE
     BEGIN
