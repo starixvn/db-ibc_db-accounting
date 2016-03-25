@@ -34,7 +34,8 @@ Revisions:
 	- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 	-  Jim@20151113: HotFix #46113
-	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
+	- 20160223@Robert: Add new range bettype for Allbet Live Casino [RedmineID: #50921]
+
 
 		
 Param's Explanation:
@@ -84,10 +85,6 @@ DECLARE @sql varchar(max),@UserRole int, @CustID INT, @TempDataSQL nvarchar(max)
 DECLARE @ColumnList varchar(1500)--, @custfilter nvarchar(max)
 DECLARE @groupBy varchar(max)
 DECLARE @MemIDs varchar(max)
-DECLARE @table varchar(50), @bettype varchar(50)
-
-SELECT @table = CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN ' bettransLC ' ELSE ' bettrans ' END
-SELECT @bettype = CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN ' b.gameID ' ELSE ' b.bettype ' END
 
 
 
@@ -172,7 +169,7 @@ BEGIN
 	+'SELECT ' + CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
 	+'b.Currency,'+char(13)
 	--+'b.actualrate,'+char(13)
-	+CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN 'b.gameID as bettype,' WHEN @ReportBy = 3 AND @ProductId <> 21 THEN 'b.bettype,' +char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 3 THEN 'b.bettype,'+char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 4 THEN 'l.leagueid,'+char(13) ELSE '' END
 	+'count(transid),'+char(13)
 	+'sum(stake),'+char(13)
@@ -202,7 +199,7 @@ BEGIN
 	+'sum((scomm-acomm) * b.actualrate),'+char(13)
 	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm) * b.actualrate)'+char(13)
 	
-	+'FROM '+ @table +' b with (NOLOCK)'+char(13)
+	+'FROM bettrans b with (NOLOCK)'+char(13)
 	+CASE WHEN @ReportBy = 2 OR @username <> '' THEN 'INNER JOIN CustInfo ci WITH (NOLOCK) ON ci.CustId = b.CustId'+char(13) ELSE '' END
 	+CASE WHEN @GameTableID > 0 OR @ReportBy = 4 THEN 'INNER JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
 									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
@@ -218,25 +215,94 @@ BEGIN
 	 								+'LEFT JOIN DBLIC.bodb_licensee.dbo.Licensees lic with (nolock) on lc.LicenseeID = lic.LicenseeID' + char(13)
 	 ELSE ''
 	 END
-	+'INNER JOIN @SportBettype sb ON sb.Bettype = ' + @bettype +char(13)
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
 	+'WHERE winlostdate  >= @fromdate AND winlostdate <= @todate'+char(13)
 	--+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1 '+char(13)
 	+CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
-	+CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN '' ELSE 'AND b.ruben = 1' END + char(13)
+	+'AND sb.ProductID <> 21' + char(13) --excule Allbet
+	+'AND b.ruben = 1' + char(13)
 	+'AND statusid IN (111,112,113)'+char(13)
 	+CASE WHEN @username <> '' THEN 'AND ci.username LIKE '''+@username+'%'' '+char(13) ELSE '' END
 	+case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
 	+case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+case when @GameTypeID > 0 then '	AND '+ @bettype +' = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY'+char(13)
-	+CASE WHEN @ReportBy = 3 AND @ProductId <> 21 THEN 'b.bettype,' WHEN @ReportBy = 3 AND @ProductId = 21 THEN 'b.gameID,' +char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 3 THEN 'b.bettype,'+char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 0 OR @ReportBy = 1 THEN 'b.winlostdate,' +char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
 	+CASE WHEN @ReportBy = 4 THEN 'l.leagueid,'+char(13) ELSE '' END
 	+' b.Currency'+CHAR(13)
-	--+'b.actualrate'+char(13)
+	
+	--Begin get Allbet data	
+	SELECT @TempDataSQL = @TempDataSQL + ' UNION ALL '
+	+'SELECT ' + CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
+	+'b.Currency,'+char(13)
+	--+'b.actualrate,'+char(13)
+	+CASE WHEN @ReportBy = 3 THEN 'b.gameID,'+char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 4 THEN 'l.leagueid,'+char(13) ELSE '' END
+	+'count(transid),'+char(13)
+	+'sum(stake),'+char(13)
+	+'sum((1 - tpositiontaking)*stake),'+char(13)
+	+'sum(scomm),'+char(13)
+	+'sum(winlost-actual_stake),'+char(13)
+	+'sum(playercomm),'+char(13)
+	+'sum(awinlost),'+char(13)
+	+'sum(comm-playercomm),'+char(13)
+	+'sum(mwinlost),'+char(13)
+	+'sum(acomm-comm),'+char(13)
+	+'sum(swinlost),'+char(13)
+	+'sum(scomm-acomm),'+char(13)
+	+CASE WHEN @ReportBy = 0 OR @ReportBy = 1 THEN 'b.winlostdate,' +char(13) ELSE '' END
+	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)),'+char(13)
+	----------RM-----------------------
+	+'sum(stake * b.actualrate),'+char(13)
+	+'sum((1 - tpositiontaking)*stake * b.actualrate),'+char(13)
+	+'sum(scomm * b.actualrate),'+char(13)
+	+'sum((winlost-actual_stake) * b.actualrate),'+char(13)
+	+'sum(playercomm * b.actualrate),'+char(13)
+	+'sum(awinlost * b.actualrate),'+char(13)
+	+'sum((comm-playercomm) * b.actualrate),'+char(13)
+	+'sum(mwinlost * b.actualrate),'+char(13)
+	+'sum((acomm-comm) * b.actualrate),'+char(13)
+	+'sum(swinlost * b.actualrate),'+char(13)
+	+'sum((scomm-acomm) * b.actualrate),'+char(13)
+	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm) * b.actualrate)'+char(13)
+	
+	+'FROM bettransLC b with (NOLOCK)'+char(13)
+	+CASE WHEN @ReportBy = 2 OR @username <> '' THEN 'INNER JOIN CustInfo ci WITH (NOLOCK) ON ci.CustId = b.CustId'+char(13) ELSE '' END
+	+CASE WHEN @GameTableID > 0 OR @ReportBy = 4 THEN 'INNER JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
+									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
+	 ELSE ''
+	 END
+	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN (
+											SELECT lct.LicenseeID,lct.CustID
+													FROM DBLIC.bodb_licensee.dbo.LicenseeCust lct with (nolock) 
+													UNION ALL 
+													SELECT tmp.LicenseeID,tmp.CustID
+													FROM #tmpLicenseeDummy  tmp
+											) lc on b.recommend = lc.custid' + char(13)
+	 								+'LEFT JOIN DBLIC.bodb_licensee.dbo.Licensees lic with (nolock) on lc.LicenseeID = lic.LicenseeID' + char(13)
+	 ELSE ''
+	 END
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.gameID'+char(13)
+	+'WHERE winlostdate  >= @fromdate AND winlostdate <= @todate'+char(13)		
+	+'AND sb.ProductID = 21' + char(13) -- Allbet	
+	+'AND statusid IN (111,112,113)'+char(13)
+	+CASE WHEN @username <> '' THEN 'AND ci.username LIKE '''+@username+'%'' '+char(13) ELSE '' END
+	+case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
+	+case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
+	+case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
+	+case when @GameTypeID > 0 then '	AND b.gameID = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
+	+'GROUP BY'+char(13)
+	+CASE WHEN @ReportBy = 3 THEN 'b.gameID,'+char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 0 OR @ReportBy = 1 THEN 'b.winlostdate,' +char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
+	+CASE WHEN @ReportBy = 4 THEN 'l.leagueid,'+char(13) ELSE '' END
+	+' b.Currency'+CHAR(13)
+	-- END get Allbet data	
 	
 	SELECT @TempDataSQLDW = @TempDataSQLDW ---select from data warehouse
 	+'SELECT ' + CASE WHEN @ReportBy = 2 THEN 'ci.username,'+char(13) ELSE '' END
@@ -374,8 +440,8 @@ BEGIN
 	+'sum((scomm-acomm) * b.actualrate),'+char(13)
 	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm) * b.actualrate)'+char(13)
 	
-	+'FROM '+ @table +' b with (nolock)'+char(13)
-	+'INNER JOIN @SportBettype sb ON sb.Bettype = '+ @bettype +char(13)
+	+'FROM bettrans b with (nolock)'+char(13)
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.Bettype'+char(13)
 	--+'INNER JOIN custinfo ci WITH(NOLOCK) ON ci.custid = b.custid'+char(13)
 	+ CASE WHEN @UserRole = 4 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.mrecommend' 
 			WHEN @UserRole = 3 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.recommend' 
@@ -401,16 +467,83 @@ BEGIN
 	+'WHERE winlostdate  >= @fromdate and winlostdate <= @todate'+char(13)
 	---+'AND b.bettype BETWEEN 1101 AND 1199 AND b.ruben = 1' + char(13)
 	+ CASE WHEN @ProductId <> 0 THEN 'AND sb.ProductID = '+ CONVERT(VARCHAR(3),@ProductId) + char(13) ELSE '' END
-	+CASE WHEN @ReportBy = 3 AND @ProductId = 21 THEN '' ELSE 'AND b.ruben = 1' END + char(13)
+	+'AND sb.ProductID <> 21' + char(13) -- exclude Allbet
+	+'AND b.ruben = 1' + char(13)
 	+'AND statusid IN (111,112,113)'
 	+ case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
 	+ case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
 	+ case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
-	+ case when @GameTypeID > 0 then '	AND '+ @bettype +' = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+ case when @GameTypeID > 0 then '	AND b.bettype = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
 	+ case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
 	+'GROUP BY b.Currency,'+char(13)
 	+'a.UserName'+char(13)
 	--+'b.actualrate'+char(13)
+
+	-- Begin get AllBet Data
+	SELECT @TempDataSQL = @TempDataSQL + ' UNION ALL '
+	+'SELECT a.UserName,'+char(13)
+	+'b.Currency,'+char(13)	
+	+'count(transid),'+char(13)
+	+'sum(stake),'+char(13)
+	+'sum((1 - tpositiontaking)*stake),'+char(13)
+	+'sum(scomm),'+char(13)
+	+'sum(winlost-actual_stake),'+char(13)
+	+'sum(playercomm),'+char(13)
+	+'sum(awinlost),'+char(13)
+	+'sum(comm-playercomm),'+char(13)
+	+'sum(mwinlost),'+char(13)
+	+'sum(acomm-comm),'+char(13)
+	+'sum(swinlost),'+char(13)
+	+'sum(scomm-acomm),'+char(13)
+	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)),'+char(13)
+	-------------RM--------------------
+	+'sum(stake * b.actualrate),'+char(13)
+	+'sum((1 - tpositiontaking)*stake * b.actualrate),'+char(13)
+	+'sum(scomm * b.actualrate),'+char(13)
+	+'sum((winlost-actual_stake) * b.actualrate),'+char(13)
+	+'sum(playercomm * b.actualrate),'+char(13)
+	+'sum(awinlost * b.actualrate),'+char(13)
+	+'sum((comm-playercomm) * b.actualrate),'+char(13)
+	+'sum(mwinlost * b.actualrate),'+char(13)
+	+'sum((acomm-comm) * b.actualrate),'+char(13)
+	+'sum(swinlost * b.actualrate),'+char(13)
+	+'sum((scomm-acomm) * b.actualrate),'+char(13)
+	+'-sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm) * b.actualrate)'+char(13)
+	
+	+'FROM bettransLC b with (nolock)'+char(13)
+	+'INNER JOIN @SportBettype sb ON sb.Bettype = b.gameID'+char(13)	
+	+ CASE WHEN @UserRole = 4 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.mrecommend' 
+			WHEN @UserRole = 3 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.recommend' 
+			WHEN @UserRole = 2 THEN 'INNER JOIN #Agency a ON a.AgencyId = b.custid'
+			WHEN @UserRole = -1 THEN 'INNER JOIN CustInfo a ON a.custid = b.srecommend' 
+	 ELSE ''
+	 END + char(13)
+	+CASE WHEN @GameTableID > 0 THEN 'INNER JOIN [match] m WITH(NOLOCK) ON m.matchid = b.matchid'+char(13)
+									+'INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid'+char(13) 
+	 ELSE ''
+	 END + char(13)
+	+CASE WHEN @SiteID <> 0 THEN 'LEFT JOIN 
+									(
+									SELECT lct.LicenseeID,lct.CustID
+													FROM DBLIC.bodb_licensee.dbo.LicenseeCust lct with (nolock) 
+													UNION ALL 
+													SELECT tmp.LicenseeID,tmp.CustID
+													FROM #tmpLicenseeDummy1  tmp
+									)lc   on b.recommend = lc.custid' + char(13)
+								+'LEFT JOIN DBLIC.bodb_licensee.dbo.Licensees lic with (nolock) on lc.LicenseeID = lic.LicenseeID' + char(13)
+	 ELSE '' 
+	 END
+	+'WHERE winlostdate  >= @fromdate and winlostdate <= @todate'+char(13)		
+	+'AND sb.ProductID = 21' + char(13) -- Allbet	
+	+'AND statusid IN (111,112,113)'
+	+ case when @excludeTest = 1 then '	AND	b.currency <> 20' + char(13) else '' end
+	+ case when @SiteID > 0 then '	AND lc.licenseeID = ' + convert(varchar(3),@SiteID) + char(13) when @siteid = -1 then 'AND lc.licenseeID is null' else '' end + char(13)
+	+ case when @currency > 0 then '	AND b.currency = ' + convert(varchar(2),@currency) + char(13) else '' end
+	+ case when @GameTypeID > 0 then '	AND b.gameID = ' + convert(varchar(5),@GameTypeID) + char(13) else '' end--gametype filter
+	+ case when @GameTableID > 0 then '	AND l.leagueid = ' + convert(varchar(5),@GameTableID) + char(13) else '' end--gametable filter
+	+'GROUP BY b.Currency,'+char(13)
+	+'a.UserName'+char(13)
+	-- End get AllBet Data
 	
 	---Querying in DW
 	SELECT @TempDataSQLDW = @TempDataSQLDW +
