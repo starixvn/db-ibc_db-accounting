@@ -24,7 +24,7 @@ AS
 	WHERE ProductID=19
 	
 	SELECT 
-			e.ArenaID
+			e.ArenaId
 			,l.leaguename  
 			,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) winloss  
 		   ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) Position  
@@ -43,7 +43,7 @@ AS
 		b.Winlostdate = @WinlostDate  
 		AND b.ruben = 1  
 		AND b.statusID NOT IN (101, 102, 121)  
-	 GROUP BY e.ArenaID,l.leaguename  
+	 GROUP BY e.ArenaId,l.leaguename  
 	 ORDER BY l.leaguename  
  
 GO

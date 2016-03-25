@@ -29,17 +29,19 @@ AS
 	WHERE ProductID=19
 	
 	SELECT 
-		e.ArenaID
+		e.ArenaId
 		,l.leaguename  
-		,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) winlost  
-	   ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) pos  
-	   ,ISNULL(SUM (scomm * b.actualrate), 0) comm  
-	   ,ISNULL(SUM (scomm*virtualrate), 0) VirtualComm  
-	   ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate),0)as LineTotal  
+		,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) winloss  
+	   ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) Position  
+	   ,ISNULL(SUM (scomm * b.actualrate), 0) Commission  
+	   ,ISNULL(SUM (scomm*virtualrate), 0) VirtualCommission  
+	   ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate),0)as RealLineTotal  
 	   ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate),0) as VirtualLineTotal  
-	   ,ISNULL(sum((1-tpositiontaking)*abs(stake)*actualrate),0) as IBCTurnover  
+	   ,ISNULL(sum((1-tpositiontaking)*abs(stake)*actualrate),0) as RealTurnover  
  FROM dbo.bettrans b WITH (NOLOCK)  
-	  INNER JOIN dbo.EventInfo3rd e WITH (NOLOCK) ON e.ArenaID = b.betcheck
+	  INNER JOIN dbo.EventInfo3rd e WITH (NOLOCK) ON CONVERT(INT, b.betcheck) = e.ArenaID
+													AND CONVERT(INT, b.betdaqid) = e.FightNo
+													AND b.winlostdate = e.EventDate
 	  INNER JOIN dbo.league l WITH (NOLOCK) ON e.ArenaID = l.leagueid  
 	  INNER JOIN  @tblBettype bet ON b.bettype = bet.bettypeID  
  WHERE    

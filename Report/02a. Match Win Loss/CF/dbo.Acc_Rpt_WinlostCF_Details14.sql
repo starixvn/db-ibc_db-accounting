@@ -3,7 +3,7 @@ GO
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostCF_Details14]
 	@WinlostDate	DATETIME,
-	@ArenaID		INT
+	@ArenaId		INT
 AS 
 /*	
 	Creator:20160229@Jim
