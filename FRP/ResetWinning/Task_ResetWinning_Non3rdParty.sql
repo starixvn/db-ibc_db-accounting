@@ -26,7 +26,7 @@ AS
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 		- 20160307@Sophia: Apply Extra PT [Redmind: #51721]
 		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
-		- 20160324@sophia: Exclude Reset data of ExtraPT, include other transfer tickets [Redminde: #54719]
+		- 20160324@sophia: Exclude Reset data of ExtraPT, include other transfer tickets [Redmine: #54719]
 
 	Param Explanation:
 	    @mode:  0 _ view report

@@ -23,7 +23,7 @@ AS
 						   . Apply AG Casino and Vegas Game [#37683]
 		- 20160308@Sophia: Apply Extra PT [Redmind: #51721]
 		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
-		- 20160324@sophia: Exclude Reset data of ExtraPT, include other transfer tickets [Redminde: #54719]
+		- 20160324@sophia: Exclude Reset data of ExtraPT, include other transfer tickets [Redmine: #54719]
 		
 	Explanation's Param:
 
