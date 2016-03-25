@@ -27,6 +27,7 @@ Revisions:
 		- 20100112@Jamie: Get currencyName from Cache
 		- 20110516@Lukas: re-arrange bettype
 		- 20131119@Lukas: remove running/void/reject/refund tickets
+		- 20160322@Robert: Moving customers to new lines  [Redmine: #53554]
 */
 
 DECLARE @currentDate datetime, @srecommend int
@@ -47,7 +48,7 @@ BEGIN
 		INSERT INTO #MasterInfo (custid,username,srecommend, currency)
 		SELECT custid, username,srecommend, currency
 		FROM customer c with (nolock)
-		WHERE c.roleid = 3 and srecommend < 100 
+		WHERE c.roleid = 3 and (srecommend < 100 or srecommend in (21278849, 21278858))
 			and c.username like '%' + @Keyword + '%'
 			AND c.username like @FirstChar + '%'
 		
@@ -57,7 +58,7 @@ BEGIN
 		INSERT INTO #MasterInfo (custid,username,srecommend, currency)
 		SELECT custid, username,srecommend, currency
 		FROM customer c with (nolock)
-		WHERE c.roleid = 3 AND srecommend < 100 
+		WHERE c.roleid = 3 AND (srecommend < 100 or srecommend in (21278849, 21278858))
 	END 
 END 
 ELSE 

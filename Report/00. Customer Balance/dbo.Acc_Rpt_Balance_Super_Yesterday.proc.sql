@@ -29,6 +29,7 @@ Revisions:
 						Rewrite SP to enhance performance
 						Change DBTRANS server instead of DB02 server
 	- 20131119@Lukas: remove running/void/reject/refund tickets
+	- 20160322@Robert: Moving customers to new lines  [Redmine: #53554]
 							
 Parameters Explanation:
 	- Search keyword: '%keyword%'
@@ -84,7 +85,7 @@ Begin
 				ruben = 1 
 				AND statusID NOT IN (101,102,103) 
 		GROUP BY s.custid, s.username, s.currency
-		order by CASE when s.custid < 100 then 0 ELSE 1 END, s.username	
+		order by CASE when s.custid < 100 or s.custid in (21278849, 21278858) then 0 ELSE 1 END, s.username	
 	ELSE	
 	Begin
 		select @Total = sum(bal.BaseBalance)
