@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
  
-ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
+CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@CustID			INT,
@@ -317,9 +317,13 @@ BEGIN
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
-			(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-			 FROM CustProductStatus
-			 WHERE custid = ci.custid),
+				CASE WHEN @SportType IN(206)   THEN 	(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+												FROM CustProductStatus
+												WHERE custid = ci.custid)
+				WHEN @SportType IN(211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
+												FROM CustProductStatus
+												WHERE custid = ci.custid)	
+												END ,
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)

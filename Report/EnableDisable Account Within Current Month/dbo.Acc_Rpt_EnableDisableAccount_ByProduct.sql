@@ -68,9 +68,12 @@ BEGIN
 			WHEN @sportType = 255 THEN ci.DisableGoldDeluxe
 			WHEN @sportType = -1  THEN ci.DisableSuperLive
 			WHEN @sportType = 204 THEN ci.DisableColossusBet
-			WHEN @SportType IN(206,211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+			WHEN @SportType IN(206)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
 										FROM CustProductStatus
 										WHERE custid = ci.custid)
+			WHEN @SportType IN(211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)							
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
 	JOIN dbo.CustSuper cs WITH(NOLOCK) ON ci.custid = cs.custid AND cs.IsInternal = 0
@@ -378,9 +381,14 @@ BEGIN
 		SELECT sup.CustID,
 			ci.custid,
 			ci.roleid,
-			(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-			 FROM CustProductStatus
-			 WHERE custid = ci.custid)
+			CASE WHEN @sportType =206 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
+										
+				WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
+										END
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3
@@ -390,9 +398,14 @@ BEGIN
 		SELECT sup.CustID,
 			ci.custid,
 			ci.roleid,
-			(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-			 FROM CustProductStatus
-			 WHERE custid = ci.custid)
+			CASE WHEN @sportType =206 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
+										
+				WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
+										END
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2
