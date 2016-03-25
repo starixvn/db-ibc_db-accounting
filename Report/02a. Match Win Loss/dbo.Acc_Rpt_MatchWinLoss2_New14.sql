@@ -613,16 +613,16 @@ BEGIN
 	--- Allbet Section
 	UNION ALL
 	SELECT	@winlostdate winlostdate,
-	        sum(b.winlost) as winlost,
-			sum(b.pos) as pos,
-			sum(b.comm) as comm,
-			sum(b.comm) as virtualComm,
-			sum(b.Linetotal) as LineTotal,
-			sum(b.Linetotal) as VirtualLineTotal,
-			sum(b.IBCTurnover) IBCTurnover,
-			'AllBet' as bettype
-	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	        sum((winlost-actual_stake)*actualrate) as winlost,
+			sum((awinlost+mwinlost+swinlost)*actualrate) as pos,
+			sum((scomm)*actualrate) as comm,
+			sum((scomm)*virtualrate) as virtualComm,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
+			sum((1-tpositiontaking)*abs(stake)*actualrate) IBCTurnover,
+			'Allbet' as bettype
+	FROM	 bettransLC14 b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.GameID  
 	WHERE	s.ProductID = 21			
 	
     -- Resultset of 8RM and BARM
@@ -1142,7 +1142,51 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 15		
 	GROUP BY b.bettype,s.orderkey
+	
+	-- Allbet Section 
+	UNION ALL
+	SELECT 150 Num,
+			b.gameID bettype,
+			s.orderkey,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal_others,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal_others,
+			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover
+	 
+	FROM	bettransLC14 b with (nolock)
+			INNER JOIN @SportBettype s ON s.Bettype = b.gameID  
+	WHERE	winlostdate = @winlostdate
+			AND statusID IN (111,112,113)
+			AND s.ProductID = 21
+	GROUP BY b.gameID,
+			s.orderkey
+	-- Cock_Fighting Section
+	 UNION ALL
+	 SELECT	140 Num,
+			b.bettype,
+			s.orderkey,
+			'' Hedge,	
+			0 LineTotal_soccer_live,
+			0 VirtualLineTotal_soccer_live,
+			0 LineTotal_soccer,
+			0 VirtualLineTotal_soccer,
 			
+			0 as LineTotal_others_live,
+			0 as VirtualLineTotal_others_live,		
+			sum(LineTotal) as LineTotal_others,
+			sum(VirtualLineTotal) as VirtualLineTotal_others,
+			sum(IBCTurnover) as IBCTurnover
+	FROM	#tmpBettrans b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+	WHERE	s.ProductId = 19		
+	GROUP BY b.bettype,s.orderkey
+	
 	    -- 8RM & BARM
 	UNION ALL 		
 	SELECT	130 Num,

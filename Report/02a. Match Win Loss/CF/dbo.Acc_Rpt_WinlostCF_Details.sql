@@ -41,15 +41,17 @@ AS
 		 c.FightNo
 		 ,c.HomeOwner
 		 ,c.AwayOwner 
-		 ,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) winlost
-		 ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) pos
-		 ,ISNULL(SUM (scomm * b.actualrate), 0) comm
-		 ,ISNULL(SUM (scomm*virtualrate), 0) VirtualComm
-		 ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate),0)as LineTotal
+		 ,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) WinLoss
+		 ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) Position
+		 ,ISNULL(SUM (scomm * b.actualrate), 0) Commission
+		 ,ISNULL(SUM (scomm*virtualrate), 0) VirtualCommission
+		 ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate),0)as RealLineTotal
 		 ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate),0) as VirtualLineTotal
-		 ,ISNULL(sum((1-tpositiontaking)*abs(stake)*actualrate),0) as IBCTurnover
+		 ,ISNULL(sum((1-tpositiontaking)*abs(stake)*actualrate),0) as RealTurnover
 	FROM dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN cte_Fight c ON b.betcheck = c.ArenaID
+		INNER JOIN cte_Fight c  ON CONVERT(INT, b.betcheck) = c.ArenaID
+														AND CONVERT(INT, b.betdaqid) = c.FightNo
+														AND b.winlostdate = c.EventDate	
 		INNER JOIN @tblBettype bet ON b.bettype = bet.bettypeID
 	WHERE b.Winlostdate = @WinlostDate
 		  AND b.ruben = 1

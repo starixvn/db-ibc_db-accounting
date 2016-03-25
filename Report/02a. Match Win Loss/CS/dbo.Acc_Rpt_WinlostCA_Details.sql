@@ -14,7 +14,7 @@ AS
 			- 20130703@Kathy: Update matchid for RnG Casino (71) 
 			- 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
 			- 20160127@Percy: Expand new range RNG Casino [Redmine: #49134]
-
+		
 		Explanation's Param:
 
 	*/
@@ -30,15 +30,15 @@ AS
 	SELECT	71 bettype,
 			currency,
 			currencyName,
-			isnull(sum(actual_stake * bettrans.actualrate),0) Turnover,
-			isnull(sum((winlost-actual_stake)*bettrans.actualrate),0)  winlost, 
-			isnull(sum((awinlost+mwinlost+swinlost)*bettrans.actualrate),0) pos,
-			isnull(sum( scomm*bettrans.actualrate),0) comm,
-			isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*bettrans.actualrate),0) as LineTotal			
-	FROM	bettrans with (NOLOCK) 
-	WHERE	winlostdate = @winlostdate 
+			isnull(sum(actual_stake * b.actualrate),0) Turnover,
+			isnull(sum((winlost-actual_stake)*b.actualrate),0)  winlost, 
+			isnull(sum((awinlost+mwinlost+swinlost)*b.actualrate),0) pos,
+			isnull(sum( scomm*b.actualrate),0) comm,
+			isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*b.actualrate),0) as LineTotal			
+	FROM	bettransRnG b with (NOLOCK) 
+	WHERE	winlostdate = @winlostdate  
 			--AND ruben = 1 
-			AND bettype IN (SELECT Bettype FROM @SportBettype)
+			AND gameID IN (SELECT Bettype FROM @SportBettype)
 			AND statusID NOT IN (101,102,121)
 	GROUP BY --bettype, 
 		currency, currencyName 

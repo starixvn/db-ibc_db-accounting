@@ -607,7 +607,7 @@ BEGIN
 			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal,
 			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
 			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover,
-			'AllBet' as bettype
+			'Allbet' as bettype
 	FROM	bettransLC b with (nolock)
 			INNER JOIN @SportBettype s ON s.Bettype = b.gameID  
 	WHERE	winlostdate = @winlostdate
@@ -1025,7 +1025,7 @@ ORDER BY Num ASC
 	-- Allbet Section : 
 	UNION ALL
 	SELECT	76 Num,
-			b.bettype,
+			b.gameID AS bettype,
 			s.orderkey,
 			'' Hedge,	
 			0 LineTotal_soccer_live,
@@ -1035,13 +1035,13 @@ ORDER BY Num ASC
 			
 			0 as LineTotal_others_live,
 			0 as VirtualLineTotal_others_live,		
-			sum(LineTotal) as LineTotal_others,
-			sum(VirtualLineTotal) as VirtualLineTotal_others,
-			sum(IBCTurnover) as IBCTurnover
-	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate) as LineTotal_others,
+			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal_others,
+			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover
+	FROM	bettransLC b with (nolock)
+	INNER JOIN @SportBettype s ON s.Bettype = b.gameID  
 	WHERE	s.ProductId = 21		
-	GROUP BY b.bettype,s.orderkey
+	GROUP BY b.gameID,s.orderkey
 	-- Cock_Fighting Section : 
 	UNION ALL
 	SELECT	75 Num,
