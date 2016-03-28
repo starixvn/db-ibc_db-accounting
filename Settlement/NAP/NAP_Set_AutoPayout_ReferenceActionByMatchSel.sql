@@ -20,7 +20,7 @@ BEGIN
 
 	;WITH MatchTmp AS (
 		SELECT CAST(val AS INT) AS MatchId
-		FROM bodb02.dbo.strSplit(@MatchIds, ',')
+		FROM bodb02.dbo.Lrf_f_StringSplit(@MatchIds, ',')
 	), ActionLogTmp AS (
 		SELECT CAST(val AS INT) AS ActionId
 		FROM bodb02.dbo.strSplit(@ActionIds, ',')

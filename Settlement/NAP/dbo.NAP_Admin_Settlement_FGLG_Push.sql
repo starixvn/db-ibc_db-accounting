@@ -36,9 +36,8 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @matchcode NVARCHAR(50), @sporttype INT, @leagueid INT
 		, @sqlCommand NVARCHAR(500), @mode VARCHAR(20), @procName NVARCHAR(50)
-		, @IsHTDone BIT, @IsFTDone BIT, @IsAutoPayout BIT
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid, @IsAutoPayout = IsAutoPayout
+	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid
 	FROM DBPRO.bodb02.dbo.match m with(NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -46,34 +45,6 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode	= 1000001, @ErrMsg = 'Match does not exist!'
 		RETURN
-	END
-	
-	IF @IsAutoPayout IS NULL
-	BEGIN
-		SELECT @IsAutoPayout = ISNULL(IsAutoPayout, 0)
-		FROM DBPRO.bodb02.dbo.League l with(NOLOCK)
-		WHERE l.leagueid = @leagueid
-	END
-
-	--For auto payout only: check calculate HT or FT done yet?
-	IF @IsAutoCalculatePage = 1 AND @IsAutoPayout = 1
-	BEGIN
-		SELECT @IsHTDone = ISNULL(IsHTCal, 0), @IsFTDone = ISNULL(calculate, 0)
-		FROM DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK)
-		WHERE mr.matchid = @MatchId
-
-		IF @action = 'CAL-HT' AND @IsHTDone = 0
-		BEGIN
-			SELECT @ErrCode = 1000000
-				, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
-			RETURN
-		END
-		ELSE IF @action = 'CAL-FT' AND @IsFTDone = 0
-		BEGIN
-			SELECT @ErrCode = 1000000
-				, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
-			RETURN
-		END
 	END
 
 	IF EXISTS (SELECT 1 from dbo.Single_Calculate_Queue with(NOLOCK) WHERE matchid = @matchid AND IsCalculating IN (0,1) )
@@ -136,7 +107,7 @@ BEGIN
 	ELSE
 	BEGIN
 		INSERT INTO dbo.Single_Calculate_Queue(matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId, IP, Action, sqlCommand)
-		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @mode, @sqlCommand
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @action, @sqlCommand
 	END
 END
 GO

@@ -1,0 +1,57 @@
+USE bodb02
+GO
+ALTER FUNCTION dbo.f_Set_GetListAction ()
+RETURNS TABLE
+AS
+/*
+	Created: 2015107@Patrick	
+	Task: Build up half time bettype list
+	DB: DBTRANS/BODB02
+	Revisions:
+			select * from dbo.f_Set_GetListAction() order by actionid
+	Parameters Explanation:	
+		@Mode: 1: For Single ticket - Manual
+			   2: For FGLG -  Manual
+			   3: For Corner - Manual
+			   4: For Parlay - Manual
+			   5: For Single ticket - Auto payout
+
+			   
+*/
+
+RETURN (
+	SELECT 1 AS Mode, 'CAL' AS ActionName, 100 AS ActionId UNION ALL
+	SELECT 1 AS Mode, 'CAL-FT' AS ActionName, 101 AS ActionId UNION ALL
+	SELECT 1 AS Mode, 'CAL-HT' AS ActionName, 102 AS ActionId UNION ALL
+	SELECT 1 AS Mode, 'UNDO' AS ActionName, 103 AS ActionId UNION ALL
+
+	SELECT 1 AS Mode, 'REFUND-HT' AS ActionName, 110 AS ActionId UNION ALL
+	SELECT 1 AS Mode, 'REFUND-FT' AS ActionName, 111 AS ActionId UNION ALL
+
+	--FGLG
+	SELECT 2 AS Mode, 'CAL-FT' AS ActionName, 163 AS ActionId UNION ALL
+	SELECT 2 AS Mode, 'CAL-HT' AS ActionName, 164 AS ActionId UNION ALL
+	SELECT 2 AS Mode, 'CAL' AS ActionName, 108 AS ActionId UNION ALL
+
+	SELECT 2 AS Mode, 'REFUND-FGLG' AS ActionName, 112 AS ActionId UNION ALL
+
+	--Corner
+	SELECT 3 AS Mode, 'CAL-FT' AS ActionName, 161 AS ActionId UNION ALL
+	SELECT 3 AS Mode, 'CAL-HT' AS ActionName, 162 AS ActionId UNION ALL
+	SELECT 3 AS Mode, 'CAL' AS ActionName, 151 AS ActionId UNION ALL
+	
+	--Parlay
+	SELECT 4 AS Mode, 'CAL' AS ActionName, 104 AS ActionId UNION ALL
+	SELECT 4 AS Mode, 'UNDO' AS ActionName, 105 AS ActionId UNION ALL
+	SELECT 4 AS Mode, 'REFUND-FT' AS ActionName, 106 AS ActionId UNION ALL
+	SELECT 4 AS Mode, 'REFUND-HT' AS ActionName, 120 AS ActionId UNION ALL
+	SELECT 4 AS Mode, 'REFUND' AS ActionName, 107 AS ActionId UNION ALL
+
+	--Auto payout
+	SELECT 5 AS Mode, 'CAL-FT' AS ActionName, 158 AS ActionId UNION ALL
+	SELECT 5 AS Mode, 'CAL-HT' AS ActionName, 157 AS ActionId
+
+)
+GO
+
+

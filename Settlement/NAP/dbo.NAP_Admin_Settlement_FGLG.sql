@@ -244,6 +244,7 @@ BEGIN
 			, @FGLG2 = @FGLG2
 			, @fth = @fth
             , @fta = @fta
+			, @GoalRecord = @goalrecord
 			, @betcount_14 = @betcount_14
 			, @betcount_172 = @betcount_172
 

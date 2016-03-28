@@ -20,8 +20,8 @@ BEGIN
 	VALUES(1) --half time
 		, (2) --full time
 
-	SELECT MatchId, HomeValue, AwayValue, TypeId, IsUndecided, IsPending, IsConfirmHT
-		, IsConfirmFT, BetStatus, GoalRecord, IsHalfTimeCalculated
+	SELECT MatchId, HomeValue, AwayValue, TypeId, IsUndecided, IsPending, IsHalfTimeConfirmed
+		, IsFullTimeConfirmed, BetStatus, GoalRecord, IsHalfTimeCalculated
 	FROM (
 		SELECT m.matchid AS MatchId
 			, CASE WHEN mr.ConfirmHT > 0 AND f.typeId = 1 THEN m.hthomescore
@@ -36,8 +36,8 @@ BEGIN
 			, CASE WHEN f.TypeId = 1 THEN mr.ConfirmHT
 					WHEN f.TypeId = 2 THEN mr.ConfirmFT
 					ELSE 0 END AS IsConfirmed
-			, mr.ConfirmHT AS IsConfirmHT
-			, mr.ConfirmFT AS IsConfirmFT
+			, mr.ConfirmHT AS IsHalfTimeConfirmed
+			, mr.ConfirmFT AS IsFullTimeConfirmed
 			, m.betstatus AS BetStatus
 			, m.GoalRecord
 			, mr.IsHTCal AS IsHalfTimeCalculated

@@ -4,6 +4,7 @@ GO
 ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultUpd @MatchId INT
 	, @TypeId TINYINT
 	, @StatusId TINYINT
+	, @IsIncludedUpdateMatch BIT = 0
 AS
 /*
 	Creator: 20160310@Patrick
@@ -22,12 +23,17 @@ BEGIN
 	UPDATE dbo.AutoPayoutResult WITH(ROWLOCK, UPDLOCK)
 	SET StatusId = @StatusId 
 		, ModifiedDate = GETDATE()
-	WHERE MatchId = @MatchId AND CalculationType = @TypeId
+	WHERE MatchId = @MatchId 
+		AND CalculationType = @TypeId
+		AND StatusId <> @StatusId
 
-	UPDATE dbo.match WITH(UPDLOCK, ROWLOCK)
-	SET IsAutoPayout = 1
-	WHERE matchid = @MatchId
-
+	IF @IsIncludedUpdateMatch = 1
+		AND EXISTS (SELECT TOP 1 1 FROM dbo.match WITH(NOLOCK) WHERE matchid = @MatchId AND ISNULL(IsAutoPayout, 0) = 0)
+	BEGIN
+		UPDATE dbo.match WITH(UPDLOCK, ROWLOCK)
+		SET IsAutoPayout = 1
+		WHERE matchid = @MatchId
+	END
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayoutResultUpd] TO [bodbAdminNet] AS [dbo]

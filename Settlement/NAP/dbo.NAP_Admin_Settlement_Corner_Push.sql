@@ -34,9 +34,9 @@ BEGIN
 	SET NOCOUNT ON 
 
 	DECLARE @matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @sqlCommand	NVARCHAR(MAX)
-		, @procName NVARCHAR(50), @betstatus NVARCHAR(50), @IsAutoPayout BIT, @IsHTDone BIT, @IsFTDone BIT
+		, @procName NVARCHAR(50), @betstatus NVARCHAR(50)
 
-	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid, @betstatus = m.betstatus, @IsAutoPayout = IsAutoPayout
+	SELECT @matchcode = m.matchcode, @sporttype = m.sporttype, @leagueid = m.leagueid, @betstatus = m.betstatus
 	FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -44,33 +44,6 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode	= 1001001 , @ErrMsg	= 'Match does not exist!'
 		RETURN
-	END
-
-	IF @IsAutoPayout IS NULL
-	BEGIN
-		SELECT @IsAutoPayout = ISNULL(IsAutoPayout, 0)
-		FROM DBPRO.bodb02.dbo.League l WITH(NOLOCK)
-		WHERE l.leagueid = @leagueid
-	END
-
-	IF @IsAutoPayout = 1
-	BEGIN
-		SELECT @IsHTDone = ISNULL(IsHTCal, 0), @IsFTDone = ISNULL(calculate, 0)
-		FROM DBPRO.bodb02.dbo.match_remark mr WITH(NOLOCK)
-		WHERE mr.matchid = @MatchId
-
-		IF @action = 'CAL-HT' AND @IsHTDone = 0
-		BEGIN
-			SELECT @ErrCode = 1000000
-				, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
-			RETURN
-		END
-		ELSE IF @action = 'CAL-FT' AND @IsFTDone = 0
-		BEGIN
-			SELECT @ErrCode = 1000000
-				, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'	
-			RETURN
-		END
 	END
 
 	IF EXISTS (SELECT 1
@@ -87,11 +60,11 @@ BEGIN
 	END
 
 	-- check waiting ticket
-		EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
-			, @Action = @Action
-			, @Mode = 'CAL-CORNER'
-			, @ErrCode = @ErrCode OUTPUT
-			, @ErrMsg = @ErrMsg OUTPUT
+	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
+		, @Action = @Action
+		, @Mode = 'CAL-CORNER'
+		, @ErrCode = @ErrCode OUTPUT
+		, @ErrMsg = @ErrMsg OUTPUT
 	IF @ErrCode <> 0
 	BEGIN
 		SELECT @ErrCode, @ErrMsg
@@ -142,7 +115,7 @@ BEGIN
 	ELSE
 	BEGIN
 		INSERT INTO Single_Calculate_Queue (matchid, matchcode, IsCalculating, LeagueID, SportType, AdminId,IP, Action, sqlCommand)
-		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'CAL-CORNER', @sqlCommand 
+		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, @Action, @sqlCommand 
 	END
 END
 GO 
