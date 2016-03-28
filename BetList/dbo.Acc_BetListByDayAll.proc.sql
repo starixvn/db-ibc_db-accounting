@@ -90,6 +90,7 @@ AS
 		- 20160121@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
 		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
+		- 20160328@Kos: Support Grand Prize ticket which status is Expired
 
 	Param's Explanation:
 		+ @transtype: 
@@ -1235,7 +1236,7 @@ BEGIN
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 				AND EXISTS (	SELECT 1 
 								FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
-								WHERE pt.refno = b.transid AND pt.PayoutStatus = 'Completed')
+								WHERE pt.refno = b.transid AND pt.PayoutStatus IN ('Completed', 'Expired'))
 		END
 
 		UPDATE betList
@@ -3295,7 +3296,7 @@ BEGIN
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 				AND EXISTS (	SELECT 1 
 								FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
-								WHERE pt.refno = b.transid AND pt.PayoutStatus = 'Completed')
+								WHERE pt.refno = b.transid AND pt.PayoutStatus IN ('Completed', 'Expired'))
 		END
 
 		UPDATE betList
