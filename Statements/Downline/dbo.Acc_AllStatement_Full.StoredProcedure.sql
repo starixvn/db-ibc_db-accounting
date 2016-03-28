@@ -52,6 +52,7 @@
 		- 20160108@Sophia: Change request for Colossus bet [Redmin: #49967]
 		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
 		- 20160215@Sophia: Change datatype to datetime instead of Smalldatetime [Redmine: #52130]
+		- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -337,7 +338,7 @@ BEGIN
 		FROM dbo.PayoutTrans WITH(NOLOCK) 
 		WHERE	winlostdate BETWEEN @Fromdate AND @todate
 				AND custid = @custid 
-				AND PayoutStatusId = 4 ---Completed	 		
+				AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired' 		
 		GROUP BY refno, winlostdate, custid				
 			 
 
