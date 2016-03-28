@@ -76,9 +76,37 @@ BEGIN
 		, srecommend
 		, betfrom
 	)
-	-- bettrans - normal tickets
+	-- search by translog.translogid just running tickets
+	/*	
+		- Keno			: ProductId = 8
+		- Gold Deluxe	: ProductId = 12
+		- Colossus Bet	: ProductId = 15
+		- Cockfighting	: ProductId = 19
+		- SB - MG		: SubProduct = MG-SuperLive
+	*/
+	SELECT b.translogid
+		, b.translogid
+		, b.gameid
+		, b.custid
+		, b.recommend
+		, b.mrecommend
+		, b.srecommend
+		, b.betfrom
+	FROM dbo.translog AS b WITH (NOLOCK)
+		INNER JOIN #transidList t 
+		ON b.translogid	= t.transid
+		INNER JOIN #BettypeMatrix bt
+		ON b.gameid 	= bt.bettype
+		
+	WHERE b.statusid			IN (0, 1)
+		AND (bt.ProductId 		IN (8, 12, 15, 19)
+			OR bt.SubProduct 	IN ('MG-SuperLive') 		
+		)
+		
+	-- search by bettrans.transid -> all status
+	UNION ALL 
 	SELECT 
-		CASE WHEN bt.SubProduct	IN ('MG-SuperLive')	 THEN b.refno ELSE b.transid END
+		b.transid
 		, b.refno
 		, b.bettype
 		, b.custid
@@ -92,18 +120,38 @@ BEGIN
 		INNER JOIN #BettypeMatrix bt
 		ON b.bettype 	= bt.bettype
 		
-	WHERE  ( bt.SubProduct NOT IN ('MG-SuperLive') 
-			OR ( 
-				bt.SubProduct	IN ('MG-SuperLive')	
-				AND b.StatusId NOT IN (0, 1) 
-			)
-		)
-		AND bt.Bettype 	NOT IN (901, 902, 903)
+	WHERE bt.ProductId 		NOT IN (8, 12, 15, 19)
+		AND bt.SubProduct 	NOT IN ('MG-SuperLive')
+		AND bt.Bettype 		NOT IN (901, 902, 903)
 		
-	-- bettrans14 - normal tickets
+	-- search by bettrans.refno -> just settled tickets
 	UNION ALL 
 	SELECT 
-		CASE WHEN bt.SubProduct	IN ('MG-SuperLive')	 THEN b.refno ELSE b.transid END
+		b.transid
+		, b.refno
+		, b.bettype
+		, b.custid
+		, b.recommend
+		, b.mrecommend
+		, b.srecommend
+		, b.betfrom
+	FROM dbo.bettrans b WITH (NOLOCK)
+		INNER JOIN dbo.translog tl WITH(NOLOCK)
+		ON b.custid 	= tl.custid
+			AND b.refno = tl.translogid
+		INNER JOIN #transidList t 
+		ON tl.translogid = t.transid
+		INNER JOIN #BettypeMatrix bt
+		ON b.bettype 	= bt.bettype
+		
+	WHERE bt.ProductId 		IN (8, 12, 15, 19)
+		AND bt.SubProduct 	IN ('MG-SuperLive')
+		AND tl.statusid		NOT IN (0, 1)
+		
+	-- search by bettrans14.transid
+	UNION ALL 
+	SELECT 
+		b.transid
 		, b.refno
 		, b.bettype
 		, b.custid
@@ -117,78 +165,34 @@ BEGIN
 		INNER JOIN #BettypeMatrix bt
 		ON b.bettype 	= bt.bettype
 		
-	WHERE b.Bettype NOT IN (901, 902, 903)
+	WHERE bt.ProductId 		NOT IN (8, 12, 15, 19)
+		AND bt.SubProduct 	NOT IN ('MG-SuperLive')
+		AND bt.Bettype 		NOT IN (901, 902, 903)
 	
-	-- translog - settled tickets
-	UNION ALL
-	SELECT b.translogid
-		, b.translogid
-		, b.gameid
+	-- search by bettrans14.refno
+	UNION ALL 
+	SELECT 
+		b.transid
+		, b.refno
+		, b.bettype
 		, b.custid
 		, b.recommend
 		, b.mrecommend
 		, b.srecommend
 		, b.betfrom
-	FROM dbo.translog b WITH (NOLOCK)
+	FROM dbo.bettrans14 b WITH (NOLOCK)
+		INNER JOIN dbo.translog14 tl WITH(NOLOCK)
+		ON b.custid 	= tl.custid
+			AND b.refno = tl.translogid
 		INNER JOIN #transidList t 
-		ON b.translogid 	= t.transid
+		ON tl.translogid = t.transid
 		INNER JOIN #BettypeMatrix bt
-		ON b.gameid 		= bt.bettype
-	
-	WHERE bt.ProductId IN (8, 12, 15)
-		AND b.statusId NOT IN (0, 1)
-	
-	UNION ALL
-	SELECT b.translogid
-		, b.translogid
-		, b.gameid
-		, b.custid
-		, b.recommend
-		, b.mrecommend
-		, b.srecommend
-		, b.betfrom
-	FROM dbo.translog14 b WITH (NOLOCK)
-		INNER JOIN #transidList t 
-		ON b.translogid 	= t.transid
-		INNER JOIN #BettypeMatrix bt
-		ON b.gameid 		= bt.bettype
-	
-	WHERE bt.ProductId IN (8, 12, 15)
+		ON b.bettype 	= bt.bettype
 		
-	-- translog - running tickets
-	/*
-		- Keno			: ProductId = 8
-		- Gold Deluxe	: ProductId = 12
-		- Colossus Bet	: ProductId = 15
-		- Sportsbook	: Metric Gaming bettype(801-899)
-	*/
-	UNION ALL
-	SELECT b.translogid
-		, b.translogid
-		, b.gameid
-		, b.custid
-		, b.recommend
-		, b.mrecommend
-		, b.srecommend
-		, b.betfrom
-	FROM dbo.translog b WITH (NOLOCK)
-		INNER JOIN #transidList t 
-		ON b.translogid 	= t.transid
-		INNER JOIN #BettypeMatrix bt
-		ON b.gameid 		= bt.bettype
+	WHERE bt.ProductId 		IN (8, 12, 15, 19)
+		AND bt.SubProduct 	IN ('MG-SuperLive')
 		
-	WHERE (bt.ProductId IN (8, 12, 15)
-			OR bt.SubProduct IN ('MG-SuperLive')
-		)
-		AND NOT EXISTS (
-			SELECT TOP 1 1
-			FROM dbo.bettrans (NOLOCK)
-			WHERE custid 	= b.custid
-				AND refno 	= b.translogid
-		)
-		AND b.statusId IN (0, 1)
-	
-	--bettransLC - detail tickets
+	-- search by bettransLC.transid
 	/*
 		- AG Casino			: ProductId = 11
 		- AllBet			: ProductId = 21
@@ -226,8 +230,9 @@ BEGIN
 		ON b.gameid 		= bt.bettype
 		
 	WHERE bt.ProductId IN (11, 21)
-	--bettransRNG - detail tickets
-	/*
+	
+	-- search by bettransRNG.transid
+	/*	
 		- OneRNG Casino			: ProductId = 6
 		- Microgaming - LC		: ProductId = 13
 		- Microgaming - RNG		: ProductId = 17
