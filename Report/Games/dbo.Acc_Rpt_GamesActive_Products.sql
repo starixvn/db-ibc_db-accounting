@@ -21,19 +21,8 @@ SELECT
 	ProductID
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,8,4,11,12,13,21)
-UNION ALL
-SELECT
-	ProductID
-	,ProductName
-FROM dbo.Products WITH (NOLOCK)  -- ORDER BY 13, 17
-WHERE ProductID IN (17)
-UNION ALL
-SELECT
-	ProductID
-	,ProductName
-FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (14,15,19)
+WHERE ProductID IN (3,6,7,8,4,11,12,13,17,14,15,19,21)
+
 GO
 GRANT ALTER ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
 GO
