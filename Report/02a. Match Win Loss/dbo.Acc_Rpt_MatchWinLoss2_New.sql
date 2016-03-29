@@ -351,7 +351,7 @@ BEGIN
 			0 as virtualComm,
 			sum(b.Linetotal) as LineTotal,
 			0 as VirtualLineTotal,
-			SUM(CASE WHEN b.bettype IN (71,72) THEN 0 ELSE IBCTurnover END )IBCTurnover,
+			SUM(IBCTurnover )IBCTurnover,
 			'MBC - RNG Casino' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype  AND b.liveindicator=s.liveindicator
@@ -828,7 +828,7 @@ ORDER BY Num ASC
 			0 VirtualLineTotal_others_live,
 			sum(LineTotal) as  LineTotal_others,
 			0 VirtualLineTotal_others,
-			sum(case when b.bettype in (71,72) then 0 else IBCTurnover END) IBCTurnover
+			sum(IBCTurnover ) IBCTurnover
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductId = 6	
