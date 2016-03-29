@@ -94,7 +94,7 @@ BEGIN
 			OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 			OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
 			OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 AND b.StatusID <> 0 THEN 1003 ELSE 0 END) -- Cockfighting
-			OR b.bettype BETWEEN 2401 AND (CASE WHEN @SportType = 211 AND b.StatusID <> 0 THEN 2499 ELSE 0 END) -- AllBet
+			
 		) 
 		AND ( 
 				----b.status IN ('WON','LOSE','DRAW','running') 
@@ -117,7 +117,19 @@ BEGIN
 		AND b.srecommend = @CustID
 		GROUP BY b.custid,b.[status]
 
-
+		------ Allbet------
+		INSERT INTO #AvailableMember
+		SELECT b.custid,b.[status],COUNT(1) 
+		FROM dbo.bettransLC b WITH(NOLOCK)
+		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
+		AND (
+				b.gameID BETWEEN 2401 AND CASE WHEN @sportType=211 THEN 2499 ELSE 0 END 	
+			) 
+		AND (
+				b.statusId IN (111,112,113,0) 
+			)	
+		AND b.srecommend = @CustID
+		GROUP BY b.custid,b.[status]
 	END
 
 
@@ -128,25 +140,6 @@ BEGIN
 			SET @TempToDate = @MoveBetsDay
 		ELSE
 			SET  @TempToDate = @CurrentDate
-	
-		--IF @BalanceUpDay < @FirstDate 
-		--	SELECT @BalanceUpDay=@FirstDate
-			
-		--INSERT INTO #AvailableMember 
-		--SELECT smw.custid,'SETTLED',smw.BetCount 
-		--FROM dbo.sum_winloss smw WITH(NOLOCK)
-		--WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
-		--AND smw.sporttype = @SportType AND smw.srecommend = @CustID AND smw.roleid = 1
-
-					
-		--INSERT INTO #AvailableMember 
-		--SELECT d.custid,'SETTLED',d.BetCount 
-		--FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
-		--WHERE d.bettype BETWEEN  801  AND 806
-		--		  AND d.rptDate BETWEEN @BalanceUpDay AND @TempToDate
-		--		   AND d.CustID = @CustID
-
-
 			--Table CustIDList
 		CREATE TABLE #CustIdList (CustId INT)
 		INSERT INTO #CustIdList (CustId)
@@ -187,29 +180,7 @@ BEGIN
 				   
 	END
 	
-	----Get data from sum_winlost_old
-	--IF @FirstDate < @BalanceUpDay
-	--BEGIN
-	--	IF @CurrentDate >= DATEADD(dd, -1, @BalanceUpDay)
-	--		SET @TempToDate = DATEADD(dd, -1, @BalanceUpDay)
-	--	ELSE
-	--		SET @TempToDate = @CurrentDate
-			
-		--INSERT INTO #AvailableMember
-		--SELECT smwo.custid,'SETTLED',smwo.BetCount 
-		--FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
-		--WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
-		--	AND smwo.sporttype = @SportType AND smwo.srecommend = @CustID AND smwo.roleid = 1
-			
-		--INSERT INTO #AvailableMember 
-		--SELECT d.custid,'SETTLED',d.BetCount 
-		--FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
-		--WHERE d.bettype BETWEEN  801  AND 806
-		--		  AND d.rptDate BETWEEN   @FirstDate AND @TempToDate
-		--		  AND d.CustID = @CustID
 
-
-			 
 	    
 	--Get data for downline list 
     IF @sportType = 151
