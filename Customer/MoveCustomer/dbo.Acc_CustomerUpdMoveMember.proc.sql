@@ -2538,8 +2538,8 @@ BEGIN
 	INNER JOIN	dbo.CustStakeLevel_Agent AS cslaNew WITH (NOLOCK)
 			ON	cslaNew.SportType = cslaOld.SportType
 			AND	cslaNew.BetType = cslaOld.BetType
-			AND	cslaNew.CustID = @mrecommend
-			AND	cslaOld.CustID = @mrecommend_old
+			AND	cslaNew.CustID = @recommend
+			AND	cslaOld.CustID = @recommend_old
 	CROSS APPLY	dbo.f_StakeLevelcorrectString(cslaOld.StakeLevelList, cslaNew.StakeLevelList) AS fslsRemoved
 	CROSS APPLY dbo.f_StakeLevelcorrectString(usl.StakeLevelList, fslsRemoved.String) AS fsls
 
