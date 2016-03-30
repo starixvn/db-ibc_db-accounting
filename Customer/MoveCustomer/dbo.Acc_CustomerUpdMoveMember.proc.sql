@@ -1,8 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdMoveMember]
 	@agentname     VARCHAR(40)
   , @membername    VARCHAR(40)
@@ -68,6 +63,7 @@ Revisions:
 	- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
 	- 20160205@Billy:	Apply for AllBet product - [Redmine: #51590]
 	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
+	- 20160330@Elodie: Update code to correct commission for DCS product of member
 	
 Param's Explanation:
 • @ErrCode:
@@ -2164,8 +2160,15 @@ BEGIN
 				AND scs.sporttype = cs.sporttype
 				AND scs.bettype = cs.bettype
 	WHERE cs.custid = @custid
-		AND ISNULL(cs.SuperDiscount, 0) < scs.Discount
-
+		AND ISNULL(cs.SuperDiscount, 0) > scs.Discount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update super commission unsuccessfully.',
+		    @ErrCode = 600			 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
 		
 	UPDATE cs
 	SET cs.MasterDiscount = mcs.Discount
@@ -2175,7 +2178,15 @@ BEGIN
 				AND mcs.sporttype = cs.sporttype
 				AND mcs.bettype = cs.bettype
 	WHERE cs.custid = @custid
-		AND ISNULL(cs.MasterDiscount, 0) < mcs.Discount
+		AND ISNULL(cs.MasterDiscount, 0) > mcs.Discount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update master commission unsuccessfully.',
+		    @ErrCode = 601					 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
 		
 	UPDATE cs
 	SET cs.AgentDiscount = acs.Discount
@@ -2185,8 +2196,16 @@ BEGIN
 				AND acs.sporttype = cs.sporttype
 				AND acs.bettype = cs.bettype
 	WHERE cs.custid = @custid
-		AND ISNULL(cs.AgentDiscount, 0) < acs.Discount
-	
+		AND ISNULL(cs.AgentDiscount, 0) > acs.Discount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update agent commission unsuccessfully.',
+		    @ErrCode = 602					 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
+
     --super 3rd
 
     UPDATE	cs WITH (UPDLOCK,ROWLOCK)
@@ -2387,6 +2406,24 @@ BEGIN
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
     END
+
+	--member DCS product
+    UPDATE	cs WITH (UPDLOCK,ROWLOCK)
+    SET		playerdiscount = acs.discount 
+    FROM	CustDiscount3rd_Agent acs WITH(NOLOCK)
+		    INNER JOIN CustDiscount3rd_Member cs ON acs.custid = @recommend AND cs.custid = @custid 
+									     AND acs.sporttype = cs.sporttype AND acs.bettype = cs.bettype 
+
+    WHERE	acs.discount< cs.playerdiscount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update commission unsuccessfully.',
+		    @ErrCode = 603				 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
+
     --live casino , keno, gold deluxe
     UPDATE cs WITH(UPDLOCK,ROWLOCK)
     SET playerdiscount = acs.discount
@@ -2501,8 +2538,8 @@ BEGIN
 	INNER JOIN	dbo.CustStakeLevel_Agent AS cslaNew WITH (NOLOCK)
 			ON	cslaNew.SportType = cslaOld.SportType
 			AND	cslaNew.BetType = cslaOld.BetType
-			AND	cslaNew.CustID = @recommend
-			AND	cslaOld.CustID = @recommend_old
+			AND	cslaNew.CustID = @mrecommend
+			AND	cslaOld.CustID = @mrecommend_old
 	CROSS APPLY	dbo.f_StakeLevelcorrectString(cslaOld.StakeLevelList, cslaNew.StakeLevelList) AS fslsRemoved
 	CROSS APPLY dbo.f_StakeLevelcorrectString(usl.StakeLevelList, fslsRemoved.String) AS fsls
 
