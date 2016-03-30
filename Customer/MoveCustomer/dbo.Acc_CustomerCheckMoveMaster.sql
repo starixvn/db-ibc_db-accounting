@@ -1036,7 +1036,9 @@ BEGIN
 			AND	cwllaS.CustId = @srecommend
 			AND	cwllaM.CustId = @mrecommend
 	WHERE	cwllaS.MaxWinLimit <> 0
-		AND	cwllaS.MaxWinLimit < cwllaM.MaxWinLimit
+		AND	(	cwllaS.MaxWinLimit < cwllaM.MaxWinLimit
+			OR	cwllaM.MaxWinLimit = 0
+		)
 
 	IF	@DCSSportType <> 0
 	BEGIN
@@ -1049,6 +1051,8 @@ BEGIN
 	    SELECT	@ErrMsg	= 'Error Super ' + @supername + ', master ' + @mastername 
 						+ ': The super''s Max Win Limit for the product ' + @DCSSportName + ' is less than the master''s Max Win Limit.'
 			,	@ErrCode = 9119
+
+		RETURN
 	END
 
 	-- Check Max Loss Limit for DCS
@@ -1062,7 +1066,9 @@ BEGIN
 			AND	cwllaS.CustId = @srecommend
 			AND	cwllaM.CustId = @mrecommend
 	WHERE	cwllaS.MaxLossLimit <> 0
-		AND	cwllaS.MaxLossLimit < cwllaM.MaxLossLimit
+		AND	(	cwllaS.MaxLossLimit < cwllaM.MaxLossLimit
+			OR	cwllaM.MaxLossLimit = 0
+		)
 
 	IF	@DCSSportType <> 0
 	BEGIN
@@ -1075,6 +1081,8 @@ BEGIN
 	    SELECT	@ErrMsg	= 'Error Super ' + @supername + ', master ' + @mastername 
 						+ ': The super''s Max Loss Limit for the product ' + @DCSSportName + ' is less than the master''s Max Loss Limit.'
 			,	@ErrCode = 9120
+
+		RETURN
 	END
 
 
