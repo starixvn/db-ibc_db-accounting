@@ -16,6 +16,7 @@ Revisions:
 	- 20121213@Dan: Change linked server from DB052-->DBLOG
 	- 20150126@Jamie: Missing 3rd party's tickets - HotFix [#29477]
 	- 20150728@Jim: apply Bettrade (Feature #38815)
+	- 20160325@Jim: Exclude Bettrade [hotfix #54691]
 	
 Param's Explanation:
 
@@ -23,6 +24,9 @@ Param's Explanation:
 BEGIN
 	
 	SET NOCOUNT ON
+	 DECLARE @fromdate_ DATETIME  
+	 SET @fromdate_=@fromdate  
+ 
 	DECLARE @datelog DATETIME
 	SET @datelog = dateadd(d,1,@fromdate) 
 	-- Temp table to save changed stake,bet count detail
@@ -56,7 +60,7 @@ BEGIN
 			AND EventType = 1 
 			AND bettype NOT IN (901,902,903)
 	-- Consider to include bettrans_BK into query or not.
-	IF @fromdate <= (select max(distinct eventdate) from match14 (nolock))
+	IF @fromdate_<= (select max(distinct eventdate) from match14 (nolock))
 	BEGIN
 		INSERT INTO #temp(logdate,DetailID,actionid,UserID,Total_Actual,Total_Virtual,Super_Actual,Super_Virtual,Master_Actual,Master_Virtual,Agent_Actual,Agent_Virtual,IBC_Actual,IBC_Virtual)--TicketCNT,NormalCNT,RejectCNT)
 		SELECT l.logdate,l.matchid,l.actionid,l.UserID,
@@ -76,7 +80,7 @@ BEGIN
 		FROM DBLOG.bodb_customerlog.dbo.userlog_settle l WITH (nolock)
 			INNER JOIN bodb02.dbo.bettrans14 b WITH (nolock) ON (l.matchid = b.matchid AND b.currency <> 20)
 			LEFT JOIN bodb02.dbo.zzzbettrans z WITH (nolock) ON  (b.transid=z.transid)
-		WHERE		b.winlostdate = @fromdate 
+		WHERE		b.winlostdate = @fromdate_
 			AND		l.logdate between @datelog AND getdate()
 			AND		l.actionid IN(	100,-- calculate all new game
 								101,-- calculate FT
@@ -103,6 +107,7 @@ BEGIN
 							OR (l.actionid =112 AND b.bettype = 14)-- refund FGLG
 							OR (l.ActionID =142 AND b.bettype = 135) -- CAL PS 
 						))
+			AND 	b.bettype NOT IN (901,902,903)			
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
 
@@ -127,7 +132,7 @@ BEGIN
 				ON  b.transid=z.transid
 		WHERE	z.transdate between @datelog AND getdate()
 			AND z.status <> 'running'
-			AND b.winlostdate = @fromdate 
+			AND b.winlostdate = @fromdate_
 			AND	b.currency <> 20
 			and b.matchid > 29 -- exclude transfer, mix parlay, system parlay
 			--and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)	
@@ -156,7 +161,7 @@ BEGIN
 			INNER JOIN bodb02.dbo.bettrans b WITH (nolock) ON (l.matchid = b.matchid AND b.currency <> 20)
 			LEFT JOIN bodb02.dbo.zzzbettrans z WITH (nolock) ON  (b.transid=z.transid)
 		
-		WHERE		b.winlostdate = @fromdate 
+		WHERE		b.winlostdate = @fromdate_
 			AND		l.logdate between @datelog AND getdate()
 			AND		l.actionid IN(	100,-- calculate all new game
 								101,-- calculate FT
@@ -183,6 +188,7 @@ BEGIN
 							OR (l.actionid =112 AND b.bettype = 14)-- refund FGLG
 							OR (l.ActionID =142 AND b.bettype = 135) -- CAL PS 
 						))
+			AND 	b.bettype NOT IN (901,902,903)			
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
 
@@ -207,7 +213,7 @@ BEGIN
 				ON  b.transid=z.transid
 		WHERE	z.transdate between @datelog AND getdate()
 			AND z.status <> 'running'
-			AND b.winlostdate = @fromdate 
+			AND b.winlostdate = @fromdate_
 			AND	b.currency <> 20
 			and b.matchid > 29 -- exclude transfer, mix parlay, system parlay
 			--and (b.bettype < 9 OR b.bettype between 11 and 30 OR b.bettype between 121 and 999)		
@@ -231,7 +237,7 @@ BEGIN
 	WHERE actionid  IN (-1,-2,103,109,110,111,112)
 
 	-- Retrun result
-	IF @fromdate <= (select max(distinct eventdate) from match14 (nolock))
+	IF @fromdate_<= (select max(distinct eventdate) from match14 (nolock))
 	BEGIN
 		SELECT CONVERT(VARCHAR(20), logdate, 120)  [DateTime],
 				CASE #temp.actionid WHEN -1 THEN 'Void Settled Bet'  ELSE l.ActionNameEN  END [Action],
