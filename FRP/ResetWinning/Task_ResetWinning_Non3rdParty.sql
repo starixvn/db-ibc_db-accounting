@@ -26,7 +26,8 @@ AS
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 		- 20160307@Sophia: Apply Extra PT [Redmind: #51721]
 		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
-		- 20160324@sophia: Exclude Reset data of ExtraPT, include other transfer tickets [Redmine: #54719]
+		- 20160324@Sophia:  . Exclude Reset data of ExtraPT, include other transfer tickets
+							. Remove Bingo [Redmine: #54719]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -95,8 +96,7 @@ BEGIN
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 99 ELSE l.seq END  AS seq, l.Custid, l.product
 		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
 		CROSS JOIN @Date d 
-		WHERE Product NOT IN ('Poker', 'Poker (Due to Partners)')
-		
+			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
@@ -108,8 +108,7 @@ BEGIN
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 99 ELSE l.seq END  AS seq, l.Custid, l.product
 		FROM bodb_ACC.dbo.Acc_DWLList_xtest l WITH (NOLOCK)
 		CROSS JOIN @Date d 
-		WHERE Product NOT IN ('Poker', 'Poker (Due to Partners)')
-		
+			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
@@ -166,8 +165,7 @@ BEGIN
 	 
 	------------------------ 
 
-    DECLARE @RB_LineTotal money,
-            @Poker_LineTotal money
+    DECLARE @RB_LineTotal money
 
 	/*calculating racing net income*/
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
@@ -253,7 +251,7 @@ BEGIN
 		   END Product,
 		   ISNULL(SUM(winlost), 0) winlost
 	FROM #bettranstmp
-	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72, 73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
+	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
 				or bettype between 1301 and 1334		
 			) 
 			AND (Sporttype <> 44 )
@@ -267,8 +265,6 @@ BEGIN
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
 			 WHEN bettype IN (71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
-			 WHEN bettype = 73 THEN 'Bingo'
-			-- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
@@ -309,8 +305,6 @@ BEGIN
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
 			 WHEN bettype IN(71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
-			 WHEN bettype = 73 THEN 'Bingo'
-			--- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
