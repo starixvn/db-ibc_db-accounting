@@ -47,7 +47,9 @@ BEGIN
 	
 	----- End get sport bettype 
 	
-	IF @isTest = 0
+	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)	
+	
+	IF (@SQL like '%_xtest%')
 	BEGIN 
 		INSERT INTO @DummyBalance (CustID, Product, seq)
 		SELECT CustID, Product, seq
@@ -263,7 +265,7 @@ BEGIN
 	 WHERE (bettype BETWEEN 1101 AND 1199
 			OR bettype BETWEEN 31 AND 33
 			OR bettype BETWEEN 80 AND 120
-			OR bettype IN (71, 72, 73, 10,  9, 29) ---1000
+			OR bettype IN (71, 72, 10,  9, 29) ---1000
 			OR bettype BETWEEN 1201 AND 1299
 			OR bettype BETWEEN 1501 AND 1599
 			OR bettype BETWEEN 1800 AND 1899

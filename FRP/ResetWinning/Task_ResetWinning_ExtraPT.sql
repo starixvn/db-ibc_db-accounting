@@ -14,7 +14,7 @@ AS
 	DB: DBACC.bodb02
 
 	Revisions:
-		- 20160331@Sophia: change the way to use Function f_SportBettypeMatrix_Sel
+		- 20160331@Sophia: change the way to use Function f_SportBettypeMatrix_Sel [Redmine: #54719]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -59,8 +59,9 @@ BEGIN
 
 	----- End get sport bettype 
 	
+	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
 	
-	IF  (@isTest = 1)
+	IF  (@SQL like '%_xtest%')
 	BEGIN
 		INSERT INTO @dummy (CustID, GroupID, GroupName, Winlostdate)	
 		SELECT  DISTINCT e.CustID, e.GroupID, e.GroupName, d.WLDate

@@ -90,7 +90,9 @@ BEGIN
 		SELECT @wldate = DATEADD( DAY, -1, @wldate)
 	END
 
-	IF @isTest = 0
+	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+	
+	IF (@SQL like '%_xtest%')	
 	BEGIN 
 		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 99 ELSE l.seq END  AS seq, l.Custid, l.product
