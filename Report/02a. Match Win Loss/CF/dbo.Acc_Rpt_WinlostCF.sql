@@ -1,10 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_WinlostCF_xtest]    Script Date: 03/22/2016 13:46:16 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+ 
 ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostCF]
 	@WinlostDate	DATETIME 
 AS 
@@ -28,27 +24,47 @@ AS
 	FROM dbo.SportBettypeMatrix WITH (NOLOCK)
 	WHERE ProductID=19
 	
-	SELECT 
+	SELECT
 		e.ArenaId
-		,l.leaguename  
-		,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) winloss  
-	   ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) Position  
-	   ,ISNULL(SUM (scomm * b.actualrate), 0) Commission  
-	   ,ISNULL(SUM (scomm*virtualrate), 0) VirtualCommission  
-	   ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate),0)as RealLineTotal  
-	   ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate),0) as VirtualLineTotal  
-	   ,ISNULL(sum((1-tpositiontaking)*abs(stake)*actualrate),0) as RealTurnover  
- FROM dbo.bettrans b WITH (NOLOCK)  
-	  INNER JOIN dbo.EventInfo3rd e WITH (NOLOCK) ON CONVERT(INT, b.betcheck) = e.ArenaID
+		,l.leaguename 
+		,SUM(winloss) AS winloss
+		,SUM(Position) AS Position
+		,SUM(Commission) AS Commission
+		,SUM(VirtualCommission) AS VirtualCommission
+		,SUM (RealLineTotal) AS RealLineTotal
+		,SUM(VirtualLineTotal) AS VirtualLineTotal
+		,SUM(RealTurnover) AS RealTurnover
+	FROM	
+		(SELECT 
+				b.betcheck
+				,b.betdaqid
+				,winlostdate
+				,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) winloss  
+			   ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) Position  
+			   ,ISNULL(SUM (scomm * b.actualrate), 0) Commission  
+			   ,ISNULL(SUM (scomm*virtualrate), 0) VirtualCommission  
+			   ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate),0)as RealLineTotal  
+			   ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate),0) as VirtualLineTotal  
+			   ,ISNULL(sum((1-tpositiontaking)*abs(stake)*actualrate),0) as RealTurnover  
+		 FROM dbo.bettrans14 b WITH (NOLOCK)  
+			  INNER JOIN  @tblBettype bet ON b.bettype = bet.bettypeID  
+		 WHERE    
+			b.Winlostdate = @WinlostDate  
+			AND b.ruben = 1  
+			AND b.statusID NOT IN (101, 102, 121)  
+		 GROUP BY b.betcheck
+				,b.betdaqid
+				,winlostdate
+				  
+				
+		 ) b
+ INNER JOIN dbo.EventInfo3rd14 e WITH (NOLOCK) ON CONVERT(INT, b.betcheck) = e.ArenaID
 													AND CONVERT(INT, b.betdaqid) = e.FightNo
 													AND b.winlostdate = e.EventDate
-	  INNER JOIN dbo.league l WITH (NOLOCK) ON e.ArenaID = l.leagueid  
-	  INNER JOIN  @tblBettype bet ON b.bettype = bet.bettypeID  
- WHERE    
-    b.Winlostdate = @WinlostDate  
-    AND b.ruben = 1  
-    AND b.statusID NOT IN (101, 102, 121)  
- GROUP BY e.ArenaID,l.leaguename  
+INNER JOIN dbo.league l WITH (NOLOCK) ON e.ArenaID = l.leagueid 													
+GROUP BY 	e.ArenaId
+			,l.leaguename 												
+			
  ORDER BY l.leaguename  
 
 GO

@@ -623,8 +623,10 @@ BEGIN
 			'Allbet' as bettype
 	FROM	 bettransLC14 b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.GameID  
-	WHERE	s.ProductID = 21			
-	
+	 WHERE	s.ProductID = 21			
+			AND b.winlostdate = @winlostdate
+			AND b.statusID IN (111,112,113)
+				
     -- Resultset of 8RM and BARM
     SELECT  @WinLost_8RM = isnull(sum(case when bettype = -400 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),
             @WinLost_BARM = isnull(sum(case when bettype = -401 then (LineTotal_soccer_live + LineTotal_soccer + LineTotal_others_live + LineTotal_others) else 0 end),0),

@@ -1,5 +1,10 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_WinlostCF_Details14_test]    Script Date: 03/30/2016 14:45:27 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostCF_Details14]
 	@WinlostDate	DATETIME,
@@ -35,12 +40,17 @@ AS
 				,HomeOwner
 				,AwayOwner
 		FROM dbo.EventInfo3rd14 WITH (NOLOCK)	
-		WHERE ArenaID = @ArenaID		
+		WHERE ArenaID = @ArenaID	
+			  AND EventDate = @WinlostDate
 		)
+		,
+	cte_bettrans
+	AS
+		(
 	SELECT 
-		 c.FightNo
-		 ,c.HomeOwner
-		 ,c.AwayOwner 
+		  betdaqid
+		  ,betcheck
+		  ,winlostdate	
 		 ,ISNULL(SUM ((winlost - actual_stake) * b.actualrate), 0) WinLoss
 		 ,ISNULL(SUM ((awinlost + mwinlost + swinlost) * b.actualrate), 0) Position
 		 ,ISNULL(SUM (scomm * b.actualrate), 0) Commission
@@ -49,18 +59,33 @@ AS
 		 ,ISNULL(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate),0) as VirtualLineTotal
 		 ,ISNULL(sum((1-tpositiontaking)*abs(stake)*actualrate),0) as RealTurnover
 	FROM dbo.bettrans14 b WITH (NOLOCK)
-		INNER JOIN cte_Fight c  ON CONVERT(INT, b.betcheck) = c.ArenaID
-														AND CONVERT(INT, b.betdaqid) = c.FightNo
-														AND b.winlostdate = c.EventDate	
 		INNER JOIN @tblBettype bet ON b.bettype = bet.bettypeID
 	WHERE b.Winlostdate = @WinlostDate
 		  AND b.ruben = 1
 		  AND b.statusID NOT IN (101, 102, 121)
-	GROUP BY  c.FightNo
+	GROUP BY   betdaqid
+			  ,betcheck
+			  ,winlostdate	
+		)
+	SELECT 	 c.FightNo
 			 ,c.HomeOwner
-		 ,c.AwayOwner 
+			 ,c.AwayOwner 
+			,SUM(WinLoss) AS WinLoss
+			,SUM(Position) AS Position
+			,SUM(Commission) AS Commission
+			,SUM(VirtualCommission) AS VirtualCommission
+			,SUM(RealLineTotal) AS RealLineTotal
+			,SUM(VirtualLineTotal) AS VirtualLineTotal
+			,SUM (RealTurnover) AS RealTurnover
+	FROM cte_bettrans b
+		INNER JOIN cte_fight c ON   CONVERT(INT, b.betcheck) = c.ArenaID
+														AND CONVERT(INT, b.betdaqid) = c.FightNo
+														AND b.winlostdate = c.EventDate		
+    GROUP BY   c.FightNo
+			 ,c.HomeOwner
+			 ,c.AwayOwner 															
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostCF_Details] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostCF_Details14] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostCF_Details] TO [VNTeam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostCF_Details14] TO [VNTeam]
 GO		 

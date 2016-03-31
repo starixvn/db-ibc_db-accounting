@@ -1040,7 +1040,9 @@ ORDER BY Num ASC
 			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover
 	FROM	bettransLC b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.gameID  
-	WHERE	s.ProductId = 21		
+	WHERE	s.ProductId = 21
+			AND b.winlostdate = @winlostdate
+			AND b.statusID IN (111,112,113)
 	GROUP BY b.gameID,s.orderkey
 	-- Cock_Fighting Section : 
 	UNION ALL
