@@ -2629,7 +2629,7 @@ BEGIN
 				FROM dbo.bettrans14 AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid
-					AND (s.ProductID IN (11, 17)
+					AND (s.ProductID IN (11, 17, 21)
 						OR (ProductID = 6 AND SubProduct <> ''))
 					AND b.transid = @TransID
 			END
