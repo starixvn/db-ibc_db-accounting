@@ -36,15 +36,16 @@ BEGIN
 	DECLARE @DummyBalance AS TABLE (CustId INT, Product VARCHAR(50), seq TINYINT )
 	DECLARE @dummyExtraPT TABLE(CustId INT )
 
-	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
-	IF (@SQL like '%_xtest%' )
-	BEGIN
-		SELECT @isTest = 1
-	END
-	ELSE
-	BEGIN
-		SELECT @isTest = 0
-	END
+	------Get Sport Bettype Matrix------
+	-- Check SP Version
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype
+	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	
+	----- End get sport bettype 
 	
 	IF @isTest = 0
 	BEGIN 
@@ -359,13 +360,6 @@ BEGIN
 	
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------
-
-	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
-	SELECT * FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '')
-
-
 
 	CREATE TABLE #ExtraPTWL
 	(
