@@ -125,7 +125,7 @@ Param's Explanation:
 			  UNION ALL
 			  SELECT custid, 
 					 SUM( winlost-actual_stake+playercomm) y_balance
-			  FROM bettransRNG  WITH (NOLOCK)
+			  FROM bettransLC  WITH (NOLOCK)
 			  WHERE recommend = @custid
 				and statusID NOT IN (0, 1)
 				and gameID BETWEEN 2401 AND 2499
@@ -138,7 +138,8 @@ Param's Explanation:
 		(
 			SELECT TranslogOT = SUM(ABS(actual_stake)),
 					custid
-			 FROM translog(NOLOCK) WHERE recommend = @custid
+			 FROM translog(NOLOCK)
+			 WHERE recommend = @custid AND statusID = 0
 			 GROUP BY custid
 		) translog on translog.custid = c.custid
 

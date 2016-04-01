@@ -1,9 +1,3 @@
-USE [bodb02]
-GO
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
