@@ -49,7 +49,7 @@ BEGIN
 	
 	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)	
 	
-	IF (@SQL like '%_xtest%')
+	IF (@SQL not like '%_xtest%')
 	BEGIN 
 		INSERT INTO @DummyBalance (CustID, Product, seq)
 		SELECT CustID, Product, seq
