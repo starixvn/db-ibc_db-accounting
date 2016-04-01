@@ -906,6 +906,22 @@ INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
 		END;
 	END;
 
+	-- Update Daily Auto Reset Win Loss Limit for moved master
+	IF	EXISTS (SELECT 1 FROM dbo.CustWinLossLimit_Agent AS cwlla WITH (NOLOCK) WHERE cwlla.CustId = @srecommend AND cwlla.IsAutoReset = 0)
+	BEGIN
+		UPDATE	cwlla
+		SET	cwlla.IsAutoReset = 0
+		FROM		#CustInfo AS ci
+		INNER JOIN	dbo.CustWinLossLimit_Agent AS cwlla WITH (ROWLOCK, UPDLOCK)
+				ON	cwlla.CustId = ci.custid
+
+	    UPDATE	cwllm
+		SET	cwllm.IsAutoReset = 0
+		FROM		#CustInfo AS ci
+		INNER JOIN	dbo.CustWinLossLimit_Member AS cwllm WITH (ROWLOCK, UPDLOCK)
+				ON	cwllm.CustId = ci.custid
+	END
+
 
     DECLARE @LogSPData VARCHAR(8000);
 

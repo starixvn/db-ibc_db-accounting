@@ -2567,6 +2567,15 @@ BEGIN
 			ON	usl.SportType = cslm.SportType
 			AND	usl.BetType = cslm.BetType
 	WHERE	cslm.CustID = @custid
+
+	-- Update Daily Auto Reset Win Loss Limit for moved member
+	IF	EXISTS (SELECT 1 FROM dbo.CustWinLossLimit_Agent AS cwlla WITH (NOLOCK) WHERE cwlla.CustId = @recommend AND cwlla.IsAutoReset = 0)
+	BEGIN
+	    UPDATE	cwllm
+		SET	cwllm.IsAutoReset = 0
+		FROM	dbo.CustWinLossLimit_Member AS cwllm WITH (ROWLOCK, UPDLOCK)
+		WHERE	cwllm.CustId = @custid
+	END
 	
 
     DECLARE @LogSPData VARCHAR(8000)
