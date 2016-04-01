@@ -55,6 +55,7 @@
 		- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
 		- 20160216@Sophia: Apply Allbet [Redmine: #50588]
 		- 20160404@Sophia: Exclude GrandPrize out of ACCUMULATED BALANCE [Redmine: #55397]
+		- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
