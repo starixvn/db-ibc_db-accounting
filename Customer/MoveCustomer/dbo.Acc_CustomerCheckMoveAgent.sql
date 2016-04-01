@@ -1230,8 +1230,8 @@ BEGIN
 			AND	cwllaM.CustId = @mrecommend
 			AND	cwllaA.CustId = @recommend
 	WHERE	cwllaM.MaxWinLimit <> 0
-		AND	(	cwllaS.MaxWinLimit < cwllaM.MaxWinLimit
-			OR	cwllaM.MaxWinLimit = 0
+		AND	(	cwllaM.MaxWinLimit < cwllaA.MaxWinLimit
+			OR	cwllaA.MaxWinLimit = 0
 		)
 
 	IF	@DCSSportType <> 0
@@ -1258,8 +1258,8 @@ BEGIN
 			AND	cwllaM.CustId = @mrecommend
 			AND	cwllaA.CustId = @recommend
 	WHERE	cwllaM.MaxLossLimit <> 0
-		AND	(	cwllaS.MaxLossLimit < cwllaM.MaxLossLimit
-			OR	cwllaM.MaxLossLimit = 0
+		AND	(	cwllaM.MaxLossLimit < cwllaA.MaxLossLimit
+			OR	cwllaA.MaxLossLimit = 0
 		)
 
 	IF	@DCSSportType <> 0
