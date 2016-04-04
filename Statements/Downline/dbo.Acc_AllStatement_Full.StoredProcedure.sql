@@ -287,6 +287,7 @@ BEGIN
 			,0 isAllowVeify
 		FROM dbo.PayoutTrans WITH(NOLOCK) 
 		WHERE	winlostdate BETWEEN @Fromdate AND @todate
+				AND WinlostDate > @_BalanceUpDay
 				AND custid = @custid 
 				AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired' 		
 		GROUP BY winlostdate, custid				
