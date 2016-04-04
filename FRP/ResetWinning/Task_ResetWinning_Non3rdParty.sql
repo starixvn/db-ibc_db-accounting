@@ -26,7 +26,8 @@ AS
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 		- 20160307@Sophia: Apply Extra PT [Redmind: #51721]
 		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
-						    
+		- 20160324@Sophia:  . Exclude Reset data of ExtraPT, include other transfer tickets
+							. Remove Bingo [Redmine: #54719]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -39,17 +40,17 @@ AS
 BEGIN	
 	SET NOCOUNT ON
 
-	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
-
-	IF  (@SQL like '%_xtest%' )
-	BEGIN
-		SELECT @isTest = 1
-	END
-	ELSE
-	BEGIN
-		SELECT @isTest = 0
-	END
-
+	------Get Sport Bettype Matrix------
+	-- Check SP Version
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype
+	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	
+	----- End get sport bettype 
+	
 ------------------------------------------
 	DECLARE @dummyBalance TABLE
 	(   
@@ -89,14 +90,15 @@ BEGIN
 		SELECT @wldate = DATEADD( DAY, -1, @wldate)
 	END
 
-	IF @isTest = 0
+	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+	
+	IF (@SQL not like '%_xtest%')	
 	BEGIN 
 		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 99 ELSE l.seq END  AS seq, l.Custid, l.product
 		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
 		CROSS JOIN @Date d 
-		WHERE Product NOT IN ('Poker', 'Poker (Due to Partners)')
-		
+			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
@@ -108,8 +110,7 @@ BEGIN
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 99 ELSE l.seq END  AS seq, l.Custid, l.product
 		FROM bodb_ACC.dbo.Acc_DWLList_xtest l WITH (NOLOCK)
 		CROSS JOIN @Date d 
-		WHERE Product NOT IN ('Poker', 'Poker (Due to Partners)')
-		
+			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
@@ -151,7 +152,7 @@ BEGIN
        AND b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
-	   AND b.CustId NOT IN (SELECT CustId FROM @dummyExtraPT)
+	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)
 	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
 	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
 	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
@@ -166,8 +167,7 @@ BEGIN
 	 
 	------------------------ 
 
-    DECLARE @RB_LineTotal money,
-            @Poker_LineTotal money
+    DECLARE @RB_LineTotal money
 
 	/*calculating racing net income*/
 	--insert company's comm setting that is recieved from Phumelela into this temp table.
@@ -253,7 +253,7 @@ BEGIN
 		   END Product,
 		   ISNULL(SUM(winlost), 0) winlost
 	FROM #bettranstmp
-	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72, 73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
+	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
 				or bettype between 1301 and 1334		
 			) 
 			AND (Sporttype <> 44 )
@@ -267,8 +267,6 @@ BEGIN
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
 			 WHEN bettype IN (71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
-			 WHEN bettype = 73 THEN 'Bingo'
-			-- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
@@ -309,8 +307,6 @@ BEGIN
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
 			 WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
 			 WHEN bettype IN(71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
-			 WHEN bettype = 73 THEN 'Bingo'
-			--- WHEN bettype = 1000 THEN 'Poker gross income'
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
@@ -397,11 +393,6 @@ BEGIN
 
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------
-
-	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
-	SELECT * FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '')
 
 	CREATE TABLE #ExtraPTWL
 	(

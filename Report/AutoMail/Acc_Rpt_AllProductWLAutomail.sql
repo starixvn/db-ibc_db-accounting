@@ -25,6 +25,7 @@ AS
 		- 20151210@Sophia: Apply Cock Fighting [Redmine: #48602]
 		- 20151217@Sophia: Apply Muay Thai [Redmine: #48667]
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
+		- 20160330@Sophia: Remove Bingo [Redmine: #54719]
 
 		 
 	Param's Explanation:
@@ -77,7 +78,7 @@ BEGIN
 							WHEN Product = 'SPNL' THEN 'Sportsbook Non-Live' 
 						 ELSE Product END AS Product
 		FROM	bodb_ACC.dbo.Acc_DWLList WITH (NOLOCK)
-		WHERE  	Product NOT IN ('Total Balance', 'Poker', 'Poker (Due to Partners)')
+		WHERE  	Product NOT IN ('Total Balance')
 	END
 	ELSE 
 	BEGIN 
@@ -91,7 +92,7 @@ BEGIN
 							WHEN Product = 'SPNL' THEN 'Sportsbook Non-Live' 
 						 ELSE Product END AS Product
 		FROM 	bodb_ACC.dbo.Acc_DWLList_xtest WITH (NOLOCK)
-		WHERE  	Product NOT IN ('Total Balance', 'Poker', 'Poker (Due to Partners)')	
+		WHERE  	Product NOT IN ('Total Balance')
 	END
 
 	DECLARE @_fromdate    DATETIME,
@@ -204,15 +205,14 @@ BEGIN
 	BEGIN 	
 		INSERT INTO #TempCustTrans
 		SELECT DISTINCT custid = CASE 
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 AND Sporttype <> 44 THEN 6911909
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 AND Sporttype <> 44 THEN 6911911
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 AND Sporttype <> 44 THEN 6911909
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 AND Sporttype <> 44 THEN 6911911
 							WHEN bettype IN(9,29 ) THEN 6911913
 							WHEN bettype = 10 THEN 6911914
 							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 6911916
 							WHEN bettype BETWEEN 1101 AND 1199 THEN 6911917
 							WHEN bettype BETWEEN 81 AND 120 THEN 6911918
-							WHEN bettype IN (31,32,33) THEN 6911919
-							WHEN bettype = 73 THEN 6913085
+							WHEN bettype IN (31,32,33) THEN 6911919							
 							WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
 							WHEN bettype BETWEEN 1501 AND 1599 THEN 14054918
 							WHEN bettype IN (31,32,33) THEN 7723121
@@ -234,15 +234,14 @@ BEGIN
 	BEGIN 
 		INSERT INTO #TempCustTrans
 		SELECT DISTINCT custid = CASE 
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1  AND Sporttype <> 44 THEN 9398886
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72,73) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0  AND Sporttype <> 44 THEN 12005466
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1  AND Sporttype <> 44 THEN 9398886
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0  AND Sporttype <> 44 THEN 12005466
 							WHEN bettype IN(9,29 ) THEN 12005470
 							WHEN bettype = 10 THEN 12005483
 							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 12017095
 							WHEN bettype BETWEEN 1101 AND 1199 THEN 12962878
 							WHEN bettype BETWEEN 81 AND 120 THEN 13062600
 							WHEN bettype IN (31,32,33) THEN 13062602
-							WHEN bettype = 73 THEN 13062771
 							WHEN bettype BETWEEN 1201 AND 1299 THEN 13062615
 							WHEN bettype BETWEEN 1501 AND 1599 THEN 13062664
 							WHEN bettype IN (31,32,33) THEN 13062630

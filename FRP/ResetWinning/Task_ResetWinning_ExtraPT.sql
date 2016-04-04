@@ -14,6 +14,7 @@ AS
 	DB: DBACC.bodb02
 
 	Revisions:
+		- 20160331@Sophia: change the way to use Function f_SportBettypeMatrix_Sel [Redmine: #54719]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -23,18 +24,18 @@ AS
 	              1 _ Error
 	              2 _ Already reset
 
-	Noted: use inline func: bodb02.dbo.f_SportBettypeMatrix_Sel(@ProductID, @Sporttype, @Bettype, @SubProduct, @ProductPrefix)
+	Noted: use inline func: bodb02.dbo.f_SportBettypeMatrix_Sel(@ProductID, @Sporttype, @Bettype, @IsLive, @SubProduct, @ProductPrefix, @IsTest)
 			instead of sp Acc_SportBettypeMatrix_Sel
 */
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID), @wldate SMALLDATETIME = @todate
 	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate SMALLDATETIME)
 	CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, Winlostdate SMALLDATETIME, GroupId TINYINT)
 	DECLARE @reset TABLE (CustID INT, Winlost MONEY, [Reset] MONEY, Variance MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT, GroupName VARCHAR(50))
 	DECLARE @LastReset TABLE (CustID INT, [Reset] MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT)
 
+	DECLARE @wldate SMALLDATETIME = @todate
 	DECLARE @Date TABLE (WLDate SMALLDATETIME)
 
 	WHILE @wldate >= @fromdate
@@ -44,7 +45,22 @@ BEGIN
 
 		SELECT @wldate = DATEADD(DAY, -1, @wldate)
 	END
+	
+	----Get Sport Bettype Matrix------
+	-- Check SP Version
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype
+	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
+	DELETE @SportBettype WHERE ProductId NOT IN (SELECT DISTINCT ProductID FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK))
+
+	----- End get sport bettype 
+	
+	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+	
 	IF  (@SQL like '%_xtest%')
 	BEGIN
 		INSERT INTO @dummy (CustID, GroupID, GroupName, Winlostdate)	
@@ -59,13 +75,6 @@ BEGIN
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK)
 		CROSS JOIN @Date d
 	END
-
-	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
-	SELECT * FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '')
-
-	DELETE @SportBettype WHERE ProductId NOT IN (SELECT DISTINCT ProductID FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK))
 
 
 	/* winlost */
@@ -123,7 +132,7 @@ BEGIN
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, Winlostdate, GroupID)
 	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) AS Winlost, w.Winlostdate, s.GroupId
 	FROM wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
+	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
