@@ -75,7 +75,7 @@ Revisions:
 	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #48836]
 	- 20160108@Percy: Expand new bettype for RNG Casino [Redmine: #48285]
 	- 20160202@Percy: Support new sport Cricket [Redmine: #50028]
-	- 20160328@Francis: Change to use inline function instead of table variable to enhance performance
+	- 20160329@Francis: Change to use inline function instead of table variable to enhance performance
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -176,8 +176,7 @@ BEGIN
 	-- Check SP Version
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = bodb02.dbo.f_CheckSPVersion(@@PROCID)
-		
-	-- Get sport bettype
+	
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
 	INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
 	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
