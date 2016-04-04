@@ -53,6 +53,7 @@
 		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
 		- 20160215@Sophia: Change datatype to datetime instead of Smalldatetime [Redmine: #52130]
 		- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
+		- 20160404@Sophia: Exclude GrandPrize out of ACCUMULATED BALANCE [Redmine: #55397]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -984,6 +985,7 @@ BEGIN
 			SELECT @AccBal = isnull(SUM(totalamt),0)
 			FROM @StatementTable
 			WHERE accdate < @Fromdate_bk
+				  AND transtype <> 'GP'
 		END
 		ELSE 
 		BEGIN
@@ -1005,6 +1007,7 @@ BEGIN
 			FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
 			WHERE custid = @custid 
 				AND accdate >= @BUDate AND accdate < @Fromdate_bk
+				AND transtype <> 'GP'
 		END
 
 		IF EXISTS(SELECT 1 FROM @StatementTable WHERE accdate >= @Fromdate_bk AND @AccBal <>0) 
