@@ -270,62 +270,11 @@ BEGIN
 
 		  
 		--------------2.Grand Prize 
-		----2.1 bettrans
-		--IF @_Todate >= @MoveBetDay
-		--BEGIN 
-		--	INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-		--	SELECT b.winlostdate AS accdate
-		--		,b.RefNo as refno
-		--		,sum(bm.winlost - bm.stake) AS totalamt
-		--		,'GP' transtype
-		--		,4 transtypeid
-		--		,'Grand Prize' transdesc
-		--		,'' Creator
-		--		,NULL checkerID
-		--		,'' checkerName
-		--		,NULL checkTime
-		--		,0 isAllowVeify
-		--	FROM bettrans b WITH (NOLOCK)
-		--		INNER JOIN BettransM bm WITH (NOLOCK)
-		--			ON b.RefNo = bm.RefNo
-		--	WHERE b.bettype = 18000
-		--		AND b.custid = @custid
-		--		AND b.winlostdate BETWEEN @MoveBetDay AND @_ToDate
-		--		AND b.Ruben = 1
-		--		AND bm.statuswinlost <> 0
-		--	GROUP BY b.RefNo, b.winlostdate
-		--END
-		
-		--IF @_FromDate <= @MoveBetDay
-		--BEGIN 
-		--	INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-		--	SELECT b.winlostdate AS accdate
-		--		,b.RefNo as  refno
-		--		,sum(bm.winlost - bm.stake) AS totalamt
-		--		,'GP' transtype
-		--		, 4 transtypeid
-		--		,'Grand Prize' transdesc
-		--		,'' Creator
-		--		,NULL checkerID
-		--		,'' checkerName
-		--		,NULL checkTime
-		--		,0 isAllowVeify
-		--	FROM bettrans14 b WITH (NOLOCK)
-		--		INNER JOIN BettransM14 bm WITH (NOLOCK)
-		--			ON b.RefNo = bm.RefNo
-		--	WHERE b.bettype = 18000
-		--		AND b.custid = @custid
-		--		AND b.winlostdate BETWEEN @_FromDate AND @MoveBetDay
-		--		AND b.Ruben = 1
-		--		AND bm.statuswinlost <> 0
-		--	GROUP BY b.RefNo, b.winlostdate
-		--END
-
-		
+	
 		---2.2 PayoutTrans - Grand Prize of Microgaming RNG Casino	 			
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 		SELECT winlostdate AS accdate
-			,refno as refno
+			,0 as refno
 			,SUM (WinAmount) AS totalamt
 			,'GP' transtype
 			, 4 transtypeid
@@ -339,7 +288,7 @@ BEGIN
 		WHERE	winlostdate BETWEEN @Fromdate AND @todate
 				AND custid = @custid 
 				AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired' 		
-		GROUP BY refno, winlostdate, custid				
+		GROUP BY winlostdate, custid				
 			 
 
 		--------------------------------------------------------------
