@@ -28,11 +28,11 @@ AS
 		- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
 		- 20160201@Billy: Apply for AllBet product - [Redmine: #51590]
 	Param's Explanation:
-	• @ErrCode:
+	- @ErrCode:
 		= 0: Transaction recorded successfully.
 		> 0: Specific Error.
 		Max errorcode 210
-	• @ErrMsg: Error description.
+	- @ErrMsg: Error description.
 */
 
 BEGIN

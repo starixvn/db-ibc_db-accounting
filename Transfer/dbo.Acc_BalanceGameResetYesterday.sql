@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE dbo.Acc_BalanceGameResetYesterday (@CustID INT
+ALTER PROCEDURE dbo.Acc_BalanceGameResetYesterday (@CustID INT
 	, @IsResetYesterdayBalance BIT OUTPUT
 	, @YesterdayBalance	MONEY OUTPUT
 	, @ErrCode INT = 0 OUTPUT

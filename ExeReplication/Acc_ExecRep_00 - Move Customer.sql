@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ExecRep_00]
+ALTER PROCEDURE [dbo].[Acc_ExecRep_00]
 	@custid INT = 0,
 	@recommend INT = 0,
 	@recommend_old INT = 0,

@@ -49,9 +49,9 @@ Revisions:
 
 
 Param's Explanation:
-• @system: = NAP : internal login from NAP
+â€¢ @system: = NAP : internal login from NAP
 			NAPEXT:internal login from NAP EXT
-• @CustID: customer id.   
+â€¢ @CustID: customer id.   
 */
 
 	SET NOCOUNT ON

@@ -66,11 +66,11 @@ Revisions:
 	- 20160330@Elodie: Update code to correct commission for DCS product of member
 	
 Param's Explanation:
-• @ErrCode:
+- @ErrCode:
     = 0: Transaction recorded successfully.
     > 0: Specific Error. 
 	Max errorcode:	133
-• @ErrMsg: Error description.
+- @ErrMsg: Error description.
 Note: Check Disable status between Agent AND Member 
 */
 BEGIN
