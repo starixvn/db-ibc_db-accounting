@@ -1245,6 +1245,8 @@ BEGIN
 	    SELECT	@ErrMsg	= 'Error Master ' + @mastername + ', agent ' + @agentname 
 						+ ': The master''s Max Win Limit for the product ' + @DCSSportName + ' is less than the agent''s Max Win Limit.'
 			,	@ErrCode = 9121
+			
+		RETURN
 	END
 
 	-- Check Max Loss Limit for DCS
@@ -1273,6 +1275,8 @@ BEGIN
 	    SELECT	@ErrMsg	= 'Error Master ' + @mastername + ', agent ' + @agentname 
 						+ ': The master''s Max Loss Limit for the product ' + @DCSSportName + ' is less than the agent''s Max Loss Limit.'
 			,	@ErrCode = 9122
+			
+		RETURN
 	END
 
 END

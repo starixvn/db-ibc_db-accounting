@@ -478,6 +478,66 @@ BEGIN
 		return
 	END
 
+	-- Check Max Win Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllm.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaA WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Member AS cwllm WITH(NOLOCK)
+			ON	cwllm.SportType = cwllaA.SportType
+			AND	cwllm.BetType = cwllaA.BetType
+			AND	cwllaA.CustId = @recommend
+			AND	cwllm.CustId = @custid
+	WHERE	cwllaA.MaxWinLimit <> 0
+		AND	(	cwllaA.MaxWinLimit < cwllm.MaxWinLimit
+			OR	cwllm.MaxWinLimit = 0
+		)
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Agent ' + @agentname + ', member ' + @membername 
+						+ ': The agent''s Max Win Limit for the product ' + @DCSSportName + ' is less than the member''s Max Win Limit.'
+			,	@ErrCode = 9119
+
+		RETURN
+	END
+
+	-- Check Max Loss Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllm.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaA WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Member AS cwllm WITH(NOLOCK)
+			ON	cwllm.SportType = cwllaA.SportType
+			AND	cwllm.BetType = cwllaA.BetType
+			AND	cwllaA.CustId = @recommend
+			AND	cwllm.CustId = @custid
+	WHERE	cwllaA.MaxLossLimit <> 0
+		AND	(	cwllaA.MaxLossLimit < cwllm.MaxLossLimit
+			OR	cwllm.MaxLossLimit = 0
+		)
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Agent ' + @agentname + ', member ' + @membername 
+						+ ': The agent''s Max Loss Limit for the product ' + @DCSSportName + ' is less than the member''s Max Loss Limit.'
+			,	@ErrCode = 9120
+
+		RETURN
+	END
+
 	--Check Gold Deluxe
     IF @aDisableGoldDeluxe = 1 AND @DisableGoldDeluxe = 0
     BEGIN
