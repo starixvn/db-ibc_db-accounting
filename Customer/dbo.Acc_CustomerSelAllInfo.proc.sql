@@ -1,3 +1,9 @@
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
@@ -69,6 +75,7 @@ Revisions:
 	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #48836]
 	- 20160108@Percy: Expand new bettype for RNG Casino [Redmine: #48285]
 	- 20160202@Percy: Support new sport Cricket [Redmine: #50028]
+	- 20160329@Francis: Change to use inline function instead of table variable to enhance performance
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -165,10 +172,15 @@ BEGIN
     SELECT @today = CONVERT(DATE, GETDATE())
 	SELECT @yesterday = DATEADD(DD, -1, @today)
 	
-	-- Get sport bettype
+	/* Get sport bettype */
+	-- Check SP Version
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
-	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
+	SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	/* End get sport bettype */
 	
 	DELETE @SportBettype WHERE ProductID NOT IN (6, 11, 13, 17, 19) -- RNG Casino, AG-Casino, MGC-LC, MGC-RNG, Cock Fighting
 						   AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') -- MG-Superlive
@@ -935,24 +947,11 @@ BEGIN
 	-- For sportbook2
 	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
-
-
-
-
-
-
-
-
 GO
-
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
 GO
-
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
-GO
