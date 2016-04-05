@@ -175,11 +175,11 @@ BEGIN
 	/* Get sport bettype */
 	-- Check SP Version
 	DECLARE @isTest BIT = 0
-	SELECT  @isTest = bodb02.dbo.f_CheckSPVersion(@@PROCID)
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
 	INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
-	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	/* End get sport bettype */
 	
 	DELETE @SportBettype WHERE ProductID NOT IN (6, 11, 13, 17, 19) -- RNG Casino, AG-Casino, MGC-LC, MGC-RNG, Cock Fighting
