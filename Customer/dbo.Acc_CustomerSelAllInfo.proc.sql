@@ -172,7 +172,7 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT, EventType INT, SubProduct VARCHAR(500), IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
 	INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
 	SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	/* End get sport bettype */
@@ -193,7 +193,7 @@ BEGIN
 	-- Tickets not in bettrans: RNG Casino, AG-Casino, MGC-RNG, AllBet
 	UPDATE @SportBettype
 	SET IsUsedBettrans = 1
-	WHERE ProductID NOT IN (6,11,17, 21)
+	WHERE ProductID NOT IN (6, 11, 17, 21)
 	
 	-- Tickets running in translog: MG-Superlive, MGC-LC, Cockfighting
 	UPDATE @SportBettype
@@ -958,3 +958,4 @@ GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbExtAccNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelAllInfo] TO [vnteam] AS [dbo]
+GO
