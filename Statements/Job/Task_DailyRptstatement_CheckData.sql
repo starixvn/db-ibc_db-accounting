@@ -23,6 +23,7 @@ AS
 	- 20151019@Sophia: Apply AG Casino - Add table BettransLC [#43810]
 					   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
 	- 20151109@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
+	- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -472,7 +473,8 @@ BEGIN
 			SELECT  custid
 					,SUM(WinAmount) AS GrandPrize
 			FROM	DBACC.bodb02.dbo.PayoutTrans WITH(NOLOCK) 
-			WHERE	winlostdate = @Winlostdate							
+			WHERE	winlostdate = @Winlostdate	
+					AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'			
 			GROUP BY custid
 
 		) tmpGrandPrize 

@@ -52,6 +52,8 @@
 		- 20160108@Sophia: Change request for Colossus bet [Redmin: #49967]
 		- 20160121@Sophia: Apply MBC One RNG Casino [Redmine: #48285]
 		- 20160215@Sophia: Change datatype to datetime instead of Smalldatetime [Redmine: #52130]
+		- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
+		- 20160404@Sophia: Exclude GrandPrize out of ACCUMULATED BALANCE [Redmine: #55397]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -269,62 +271,11 @@ BEGIN
 
 		  
 		--------------2.Grand Prize 
-		----2.1 bettrans
-		--IF @_Todate >= @MoveBetDay
-		--BEGIN 
-		--	INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-		--	SELECT b.winlostdate AS accdate
-		--		,b.RefNo as refno
-		--		,sum(bm.winlost - bm.stake) AS totalamt
-		--		,'GP' transtype
-		--		,4 transtypeid
-		--		,'Grand Prize' transdesc
-		--		,'' Creator
-		--		,NULL checkerID
-		--		,'' checkerName
-		--		,NULL checkTime
-		--		,0 isAllowVeify
-		--	FROM bettrans b WITH (NOLOCK)
-		--		INNER JOIN BettransM bm WITH (NOLOCK)
-		--			ON b.RefNo = bm.RefNo
-		--	WHERE b.bettype = 18000
-		--		AND b.custid = @custid
-		--		AND b.winlostdate BETWEEN @MoveBetDay AND @_ToDate
-		--		AND b.Ruben = 1
-		--		AND bm.statuswinlost <> 0
-		--	GROUP BY b.RefNo, b.winlostdate
-		--END
-		
-		--IF @_FromDate <= @MoveBetDay
-		--BEGIN 
-		--	INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-		--	SELECT b.winlostdate AS accdate
-		--		,b.RefNo as  refno
-		--		,sum(bm.winlost - bm.stake) AS totalamt
-		--		,'GP' transtype
-		--		, 4 transtypeid
-		--		,'Grand Prize' transdesc
-		--		,'' Creator
-		--		,NULL checkerID
-		--		,'' checkerName
-		--		,NULL checkTime
-		--		,0 isAllowVeify
-		--	FROM bettrans14 b WITH (NOLOCK)
-		--		INNER JOIN BettransM14 bm WITH (NOLOCK)
-		--			ON b.RefNo = bm.RefNo
-		--	WHERE b.bettype = 18000
-		--		AND b.custid = @custid
-		--		AND b.winlostdate BETWEEN @_FromDate AND @MoveBetDay
-		--		AND b.Ruben = 1
-		--		AND bm.statuswinlost <> 0
-		--	GROUP BY b.RefNo, b.winlostdate
-		--END
-
-		
+	
 		---2.2 PayoutTrans - Grand Prize of Microgaming RNG Casino	 			
 		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
 		SELECT winlostdate AS accdate
-			,refno as refno
+			,0 as refno
 			,SUM (WinAmount) AS totalamt
 			,'GP' transtype
 			, 4 transtypeid
@@ -336,9 +287,10 @@ BEGIN
 			,0 isAllowVeify
 		FROM dbo.PayoutTrans WITH(NOLOCK) 
 		WHERE	winlostdate BETWEEN @Fromdate AND @todate
+				AND WinlostDate > @_BalanceUpDay
 				AND custid = @custid 
-				AND PayoutStatusId = 4 ---Completed	 		
-		GROUP BY refno, winlostdate, custid				
+				AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired' 		
+		GROUP BY winlostdate, custid				
 			 
 
 		--------------------------------------------------------------
@@ -1034,6 +986,7 @@ BEGIN
 			SELECT @AccBal = isnull(SUM(totalamt),0)
 			FROM @StatementTable
 			WHERE accdate < @Fromdate_bk
+				  AND transtype <> 'GP'
 		END
 		ELSE 
 		BEGIN
@@ -1055,6 +1008,7 @@ BEGIN
 			FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
 			WHERE custid = @custid 
 				AND accdate >= @BUDate AND accdate < @Fromdate_bk
+				AND transtype <> 'GP'
 		END
 
 		IF EXISTS(SELECT 1 FROM @StatementTable WHERE accdate >= @Fromdate_bk AND @AccBal <>0) 
