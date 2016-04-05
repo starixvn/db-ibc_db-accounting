@@ -1,6 +1,10 @@
-﻿Use bodb02
-GO 
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
+﻿SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_ResetWinning_SelByDate14    Script Date: 4/4/2016 5:12:28 PM ******/
+CREATE PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	SMALLDATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
@@ -277,7 +281,6 @@ BEGIN
 			OR bettype BETWEEN 18000 AND 18099  
 			OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
-			OR bettype BETWEEN 2401 AND 2499
 			OR Sporttype = 44
 			OR bettype BETWEEN 2401 AND 2499
 		   )
@@ -364,40 +367,6 @@ BEGIN
 	
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------
-
-	CREATE TABLE #ExtraPTWL
-	(
-	    ProductId		INT,
-		ProductName		VARCHAR(50),
-		ExtraPTwinlost  MONEY
-	)
-	----Non sportsbook
-	;WITH wl AS(
-		SELECT b.srecommend,	      
-			   0 AS Sporttype,
-			   s.ProductId,
-			   '' AS SubProduct,
-			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) ,0) * actualrate) as winlost 		 
-		FROM dbo.bettrans14 b WITH(NOLOCK)
-		INNER JOIN @SportBettype s ON s.BetType = b.bettype
-		WHERE  b.winlostdate = @winlostdate
-		   --AND b.ruben = 1
-		   AND b.statusid NOT IN (101, 102, 103, 121)	  
-		   AND s.ProductID <> 1
-		GROUP BY b.srecommend,	      
-			   s.ProductId 
-			   )
-	INSERT INTO #ExtraPTWL (ProductId, ExtraPTwinlost) 
-	SELECT	w.ProductId, SUM (w.winlost *s.ExtraPT) AS ExtraPTwinlost
-	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
-			ON w.srecommend = s.SuperId
-			AND w.ProductId = s.ProductId
-			AND w.SubProduct = s.SubProduct
-			AND w.Sporttype = s.Sporttype 
-			AND @winlostdate BETWEEN s.FromDate AND s.ToDate
-	GROUP BY w.Sporttype, w.ProductId, w.SubProduct
-
 
 	CREATE TABLE #ExtraPTWL
 	(
@@ -525,9 +494,19 @@ BEGIN
        
 END
 
+
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam] AS [dbo]
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet]
 GO 

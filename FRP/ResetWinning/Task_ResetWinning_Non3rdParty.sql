@@ -29,7 +29,6 @@ AS
 		- 20160324@Sophia:  . Exclude Reset data of ExtraPT, include other transfer tickets
 							. Remove Bingo [Redmine: #54719]
 		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
-						    
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -300,8 +299,8 @@ BEGIN
 			OR bettype BETWEEN 18000 AND 18099  
 			OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
-			OR bettype BETWEEN 2401 AND 2499
 			OR Sporttype = 44
+			OR bettype BETWEEN 2401 AND 2499 
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -435,6 +434,7 @@ BEGIN
 			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
 	GROUP BY w.winlostdate, w.Sporttype, w.ProductId, w.SubProduct
 
+
 	UPDATE e 
 	SET ProductName = CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE p.ProductName END
 	FROM #ExtraPTWL e
@@ -496,7 +496,6 @@ BEGIN
 
 	CREATE NONCLUSTERED INDEX #IX_ExtraPTWL ON #ExtraPTWL ( winlostdate, ProductName)
 			
-	---------------------------------------------------------------------------------------------------------
 	---------------------------------------------------------------------------------------------------------
 
     --view report
@@ -639,6 +638,7 @@ BEGIN
 	DROP TABLE #bettranstmp
     DROP TABLE #ExtraPTWL
 END
+
 
 
 
