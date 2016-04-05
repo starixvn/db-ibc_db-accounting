@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransDelSpecial]    Script Date: 01/21/2016 15:32:57 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_BettransDelSpecial    Script Date: 20/01/2016 2:35:05 PM ******/
-ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
+﻿ALTER PROCEDURE [dbo].[NAP_BettransDelSpecial]
 	@MatchId				INT,
 	
 	@FromTransId			BIGINT, 
@@ -111,6 +103,7 @@ AS
 		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: bettype 4,30,413,414,405 [Redmine:#50932]	  
 		- 20160112@Patrick: Support Cricket [Redmine: #50688]
 		- 20160401@Bobby: #55354 - Update changes for new message structure
+		- 20160405@Kathy: Allow to void settled ticket [Redmine:#54344]
 		
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -131,8 +124,6 @@ BEGIN
 			,@isExistBT			BIT = 0
 			
 	CREATE TABLE #tblBettype (bettype SMALLINT PRIMARY KEY)	
-		
-	DECLARE @Status	TABLE (statusID TINYINT)		
 	
 	CREATE TABLE #tblTransIds (transid BIGINT PRIMARY KEY)	
 	
@@ -179,19 +170,6 @@ BEGIN
 	
 	SET @InvalidTrans = ''
 			
-	SELECT	@eventdate = eventdate
-	FROM	match WITH(NOLOCK)
-	WHERE	matchid = @MatchId
-			
-	EXEC dbo.Acc_CheckSettledDate
-		@winlostdate	= @eventdate, 
-		@UserID			= @UserID, 
-		@ErrCode		= @ErrCode OUTPUT, 
-		@ErrMsg			= @ErrMsg OUTPUT
-		
-	If @ErrCode <> 0
-		RETURN
-
 	-- Check password	
 	IF NOT EXISTS (SELECT 1
 					FROM custDB.dbo.customer WITH(NOLOCK)
@@ -1138,64 +1116,8 @@ BEGIN
 		
 	------------------***** End of insert all data into #BetDelete *****------------------
 	--------------------------------------------------------------------------------------
-	
-	INSERT INTO @Status VALUES (102),(101), (112), (113), (111) -- Void, Reject, Won, Lose, Draw
-	
-	IF EXISTS (SELECT 1 FROM #BetDelete WHERE statusID IN (111,112,113) )
-	BEGIN
-		DELETE 
-		FROM	dbo.TempVariableNumber WITH (ROWLOCK,UPDLOCK)
-		WHERE	KeyID = @KeyID 
-				AND KeyValue = @MatchId
-		
-		IF (@@Error = 0)
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = 'DEL SUCCESS SPName=NAP_BettransDelSpecial'
-		END TRY
-		BEGIN CATCH
-			SELECT @Remark = 'DEL SUCCESS SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID = @UserID, 
-				@MatchId = @MatchId, 
-				@KeyID = @KeyID,
-				@ActionID = 0, 
-				@Remark = @Remark
-		END CATCH
-		ELSE
-		BEGIN
-			BEGIN TRY
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = 'DEL FAILED SPName=NAP_BettransDelSpecial'
-			END TRY
-			BEGIN CATCH
-				SELECT @Remark = 'DEL FAILED SPName=NAP_BettransDelSpecial ErrMsg=' + LEFT(error_message(), 400)
-				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-					@UserID = @UserID, 
-					@MatchId = @MatchId, 
-					@KeyID = @KeyID,
-					@ActionID = 0, 
-					@Remark = @Remark
-			END CATCH
-		END
-		
-		SELECT	@ErrCode = 100
-				,@ErrMsg = 'You can only void the unsettled or refunded tickets.'
-	
-		RETURN
-	END
-	ELSE
-	BEGIN
-		DELETE FROM #BetDelete WHERE statusID IN (SELECT * FROM @Status)
-	END
+
+	DELETE FROM #BetDelete WHERE statusID IN (102, 101) -- VOID, REJECT
 	
 	-- delete main ticket if it's BT but subticket is not exists in SOLD list
 	DELETE
@@ -1814,6 +1736,7 @@ BEGIN
 	
 	RETURN
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_BettransDelSpecial] TO [bodbAdminNet] AS [dbo]
 GO
