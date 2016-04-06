@@ -19,11 +19,11 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @IsAutoPayout_Old BIT, @StarTime DATETIME, @EndTime DATETIME, @Remark VARCHAR(1024)
+	DECLARE @IsAutoPayout_Old BIT, @StarTime DATETIME, @EndTime DATETIME, @Remark VARCHAR(1024), @LeagueId INT
 	
 	SELECT @IsAutoPayout = ISNULL(@IsAutoPayout, 0), @StarTime = GETDATE()
 
-	SELECT @IsAutoPayout_Old = IsAutoPayout
+	SELECT @IsAutoPayout_Old = IsAutoPayout, @LeagueId = leagueid
 	FROM dbo.match m WITH(NOLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -31,6 +31,7 @@ BEGIN
 	BEGIN
 		SELECT @IsAutoPayout_Old = ISNULL(IsAutoPayout, 0)
 		FROM dbo.League l WITH(NOLOCK)
+		WHERE LeagueId = @LeagueId
 	END
 
 	--check concurrency users
@@ -44,7 +45,7 @@ BEGIN
 					FROM dbo.match m WITH(NOLOCK) 
 					WHERE matchid = @MatchId AND sporttype = 1 AND eventstatus = 'completed')
 	BEGIN
-		SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
+		SELECT @ErrCode = 1001023, @ErrMsg = 'Sorry. Not allow to update Auto Setting of completed match.'
 		RETURN
 	END
 

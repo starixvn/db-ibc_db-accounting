@@ -21,24 +21,14 @@ BEGIN
 	DECLARE @TypeId TINYINT, @Remark VARCHAR(500), @Mode TINYINT, @ActionId INT
 		, @fth INT, @fta INT, @hth INT, @hta INT, @goalrecord NVARCHAR(50), @betstatus NVARCHAR(50)
 
-	SELECT @TypeId = CASE WHEN @Action = 'CAL-HT' THEN 1
-						WHEN @Action = 'CAL-FT' THEN 2
-					ELSE -1 END
-
-	--update status for autopayout result
-	EXEC DBPRO.bodb02.dbo.NAP_Set_AutoPayoutResultUpd @MatchId = @MatchId
-		, @TypeId = @TypeId
-		, @StatusId = 3 --failed
-		, @IsIncludedUpdateMatch = 0
-
-	SELECT @Mode = CASE WHEN CHARINDEX('NAP_Admin_Settlement_1', @sqlCommand) > 0
-							OR CHARINDEX('NAP_Admin_Settlement_RefundHT', @sqlCommand) > 0
-							OR CHARINDEX('NAP_Admin_Settlement_RefundFT', @sqlCommand) > 0 THEN 1
+	SELECT @Mode = CASE WHEN CHARINDEX('NAP_Admin_Settlement_1_AutoPayout', @sqlCommand) > 0 THEN 5
 						WHEN CHARINDEX('NAP_Admin_Settlement_FGLG', @sqlCommand) > 0
 							OR CHARINDEX('NAP_Admin_Settlement_Refund_FGLG', @sqlCommand) > 0 THEN 2
 						WHEN CHARINDEX('NAP_Admin_Settlement_Corner', @sqlCommand) > 0 THEN 3
 						WHEN CHARINDEX('NAP_Admin_Settlement_Parlay', @sqlCommand) > 0 THEN 4
-						WHEN CHARINDEX('NAP_Admin_Settlement_1_AutoPayout', @sqlCommand) > 0 THEN 5
+						WHEN CHARINDEX('NAP_Admin_Settlement_1', @sqlCommand) > 0
+							OR CHARINDEX('NAP_Admin_Settlement_RefundHT', @sqlCommand) > 0
+							OR CHARINDEX('NAP_Admin_Settlement_RefundFT', @sqlCommand) > 0 THEN 1
 					ELSE NULL END
 	IF @Mode IS NULL
 		RETURN
@@ -49,6 +39,19 @@ BEGIN
 
 	IF @ActionId IS NULL
 		RETURN
+
+	IF @Mode = 5
+	BEGIN
+		SELECT @TypeId = CASE WHEN @Action = 'CAL-HT' THEN 1
+							WHEN @Action = 'CAL-FT' THEN 2
+						ELSE -1 END
+
+		--update status for autopayout result
+		EXEC DBPRO.bodb02.dbo.NAP_Set_AutoPayoutResultUpd @MatchId = @MatchId
+			, @TypeId = @TypeId
+			, @StatusId = 3 --failed
+			, @IsIncludedUpdateMatch = 0
+	END
 
 	SELECT @Remark = 'Failed: ' + @ErrMsg
 		, @fth = m.finalhomescore

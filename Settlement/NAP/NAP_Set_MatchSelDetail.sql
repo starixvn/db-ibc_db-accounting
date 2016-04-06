@@ -2,7 +2,8 @@ USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail] @matchid INT
-    ,@excludeRefundFGLG BIT = 0
+    , @excludeRefundFGLG BIT = 0
+	, @IsAutoCalculatePage BIT = 0
 AS
 /*
     Created by: 20120913
@@ -184,19 +185,18 @@ BEGIN
 
 
         -- @isExistResultandFirstTeamScore
-        IF EXISTS (    
-            SELECT TOP 1 1
-            FROM bettrans WITH(NOLOCK)
-            WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102)
-        )
+        IF EXISTS (SELECT TOP 1 1
+					FROM dbo.bettrans WITH(NOLOCK)
+					WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102))
+		BEGIN
             SELECT @isExistResultandFirstTeamScore = 1
-        ELSE IF EXISTS
-            (
-            SELECT TOP 1 1
-            FROM bettransm WITH(NOLOCK)
-            WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102)
-            )
+		END
+        ELSE IF EXISTS (SELECT TOP 1 1
+							FROM dbo.bettransm WITH(NOLOCK)
+							WHERE matchid = @matchid AND bettype = 172 AND statusID NOT IN (101, 102))
+		BEGIN
             SELECT @isExistResultandFirstTeamScore = 1
+		END
 
         /**START: Check existing Corner bettypes or not **/
         IF EXISTS(
@@ -307,16 +307,16 @@ BEGIN
 
         /**END: Check existing Corner bettypes or not **/
 
-		DECLARE @IsAutopayout BIT
-		SELECT @IsAutopayout = IsAutoPayout
-		FROM dbo.match m WITH(NOLOCK) WHERE matchid = @matchid
+		--DECLARE @IsAutopayout BIT
+		--SELECT @IsAutopayout = IsAutoPayout
+		--FROM dbo.match m WITH(NOLOCK) WHERE matchid = @matchid
 
-		IF @IsAutopayout IS NULL
-		BEGIN
-			SELECT @IsAutopayout = ISNULL(IsAutoPayout, 0)
-			FROM dbo.League l WITH(NOLOCK)
-			WHERE leagueid = @LeagueID
-		END
+		--IF @IsAutopayout IS NULL
+		--BEGIN
+		--	SELECT @IsAutopayout = ISNULL(IsAutoPayout, 0)
+		--	FROM dbo.League l WITH(NOLOCK)
+		--	WHERE leagueid = @LeagueID
+		--END
 
         -- check match status
         DECLARE @status TABLE ([Group] TINYINT, BetCount INT, InRunning INT)
@@ -324,7 +324,7 @@ BEGIN
         INSERT INTO @status
         SELECT CASE -- 0:FT , 1:HT , 2:FGLG , 3: HTFGLG , 4: HT Corner, 5:FT Corner 
                 WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412, 414) THEN 1
-                WHEN bettype = 14 OR (bettype = 172 AND @IsAutopayout = 1) THEN 2
+                WHEN bettype = 14 OR (bettype = 172 AND @IsAutoCalculatePage = 1) THEN 2
                 WHEN bettype = 127 THEN 3
                 WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
                 WHEN bettype IN (194,195,196,197,198,199,206,208) THEN 5 
@@ -354,7 +354,7 @@ BEGIN
 				AND bettype NOT BETWEEN 801 AND 899 -- Metric Gaming
         GROUP BY CASE 
                 WHEN bettype IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151,165,167,179,181,182,188,191, 303, 304, 403, 404, 410, 411, 412, 414) THEN 1
-                WHEN bettype = 14 OR (bettype = 172 AND @IsAutopayout = 1) THEN 2
+                WHEN bettype = 14 OR (bettype = 172 AND @IsAutoCalculatePage = 1) THEN 2
                 WHEN bettype = 127 THEN 3
                 WHEN bettype IN (200,201,202,203,204,205,207,209) THEN 4
                 WHEN bettype IN (194,195,196,197,198,199,206,208) THEN 5 

@@ -167,7 +167,7 @@ BEGIN
 							THEN 1 
 					WHEN bettype NOT IN (901,902,903) THEN 1
 					ELSE 0 END
-		AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+		AND 1 = CASE WHEN @IsAutoCalculatePage = 0 AND bettype = 172 AND @action = 'CAL-FT' THEN 0 ELSE 1 END
 	GROUP BY custid
 
 	SET @TotalAccount = @@ROWCOUNT
@@ -181,7 +181,7 @@ BEGIN
 		, @betcount_172 = ISNULL(SUM(CASE WHEN bettype = 172 THEN 1 ELSE 0 END), 0)
 	FROM dbo.bettrans WITH (NOLOCK)
 	WHERE matchid = @matchid AND bettype IN (14, 127, 172)
-		AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+		AND 1 = CASE WHEN @IsAutoCalculatePage = 0 AND bettype = 172 AND @action = 'CAL-FT' THEN 0 ELSE 1 END
 
 	IF @betcount_14 = 0 OR @betcount_127 = 0
 	BEGIN
@@ -281,7 +281,7 @@ BEGIN
 							THEN 1
 						WHEN bettype NOT IN (901,902,903) THEN 1
 						ELSE 0 END
-			AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+			AND 1 = CASE WHEN @IsAutoCalculatePage = 0 AND bettype = 172 AND @action = 'CAL-FT' THEN 0 ELSE 1 END
 		GROUP BY custid
 		--===
 	END
