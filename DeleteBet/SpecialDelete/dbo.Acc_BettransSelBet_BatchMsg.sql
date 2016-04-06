@@ -83,7 +83,7 @@ BEGIN
 		INNER JOIN #productIdList p ON sb.ProductId = p.ProductId
 		
 	WHERE sb.SubProduct NOT IN ('MG-SuperLive') 
-		AND sb.Bettype 	NOT IN (901, 902, 903)
+		AND sb.Bettype 	NOT IN (901, 902, 903, 500)
 	
 	-- Check metric gaming
 	IF(EXISTS (
