@@ -66,6 +66,7 @@ AS
 		- 20160119@Kos: Support PH All In One 1.2 [#Redmine: 50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
 		- 20160204@Kos: Support AllBet [#Redmine: 50864]
+		- 20160331@Kos: Support Voidbridge [#Redmine: 54925]
 */
 
 BEGIN
@@ -454,7 +455,8 @@ BEGIN
 	END
 
 	-- RNG Casino, Bingo, P2P, Gold Deluxe, AG Casino, Microgaming Live Casino, Microgaming RNG Casino, Cockfighting, AllBet
-	IF EXISTS(SELECT TOP 1 1 FROM #SportBettype WHERE ProductID IN (6, 7, 9, 11, 12, 13, 17, 19, 21))
+	-- Voidbridge
+	IF EXISTS(SELECT TOP 1 1 FROM #SportBettype WHERE ProductID IN (6, 7, 9, 11, 12, 13, 17, 19, 21, 22))
 	BEGIN
 		INSERT INTO #BetListData
 		SELECT
@@ -516,6 +518,7 @@ BEGIN
 				WHEN s.ProductId = 17 THEN 205
 				WHEN s.ProductId = 19 THEN 206
 				WHEN s.ProductId = 21 THEN 211
+				WHEN s.ProductId = 22 THEN 212
 			END AS sporttype,
 			b.ip,
 			b.betfrom,
@@ -542,7 +545,7 @@ BEGIN
 			END AS BetCheck,
 			CASE
 				WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.transdesc
-				WHEN s.ProductId = 19 THEN b.transdesc
+				WHEN s.ProductId IN (19, 22) THEN b.transdesc
 				ELSE ''
 			END AS transdesc,
 			0 AS OddsSpread
@@ -550,7 +553,7 @@ BEGIN
 			INNER JOIN #SportBettype AS s ON s.Bettype = b.bettype
 		WHERE b.custid = @Custid
 			AND b.winlostdate BETWEEN @FromDate AND @ToDate
-			AND s.ProductId IN (6, 7, 9, 11, 12, 13, 17, 19, 21)
+			AND s.ProductId IN (6, 7, 9, 11, 12, 13, 17, 19, 21, 22)
 	END
 
 	-- Keno

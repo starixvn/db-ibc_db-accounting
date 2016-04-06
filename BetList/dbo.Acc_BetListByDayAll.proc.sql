@@ -92,6 +92,7 @@ AS
 		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
 		- 20160215@Kos: Support AllBet [#Redmine: 50864]
 		- 20160328@Kos: Support Grand Prize ticket which status is Expired
+		- 20160331@Kos: Support Voidbridge [#Redmine: 54925]
 
 	Param's Explanation:
 		+ @transtype: 
@@ -610,6 +611,7 @@ BEGIN
 			AND b.statusID IN (SELECT statusID FROM @tmpStatus)
 
 		-- RNG Casino, Bingo, Gold Deluxe, Microgaming Live Casino, Microgaming RNG Casino, AG Casino, Cockfighting, AllBet
+		-- Voidbridge
 		IF @transtype <> 4
 		BEGIN
 			INSERT INTO @Data
@@ -624,6 +626,7 @@ BEGIN
 					WHEN s.ProductID = 17 THEN 205
 					WHEN s.ProductID = 19 THEN 206
 					WHEN s.ProductID = 21 THEN 211
+					WHEN s.ProductID = 22 THEN 212
 				END AS SportType,
 				0 AS leagueid,
 				0 AS homeid,
@@ -701,7 +704,7 @@ BEGIN
 				END AS betcheck,
 				CASE
 					WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.transdesc
-					WHEN s.ProductId = 19 THEN b.transdesc
+					WHEN s.ProductId IN (19, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -709,7 +712,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (6, 7, 11, 12, 13, 17, 19, 21)
+				AND s.ProductID IN (6, 7, 11, 12, 13, 17, 19, 21, 22)
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus);
 		END
 
@@ -2068,7 +2071,7 @@ BEGIN
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		END
 
-		-- Microgaming RNG Casino, RNG Casino Single Wallet 
+		-- Microgaming RNG Casino, RNG Casino Single Wallet, Voidbridge
 		IF @transtype = 1	-- not today settled ticket
 			AND @fromdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		BEGIN
@@ -2077,6 +2080,7 @@ BEGIN
 				CASE
 					WHEN s.ProductID = 6 THEN b.matchid
 					WHEN s.ProductID = 17 THEN 205
+					WHEN s.ProductID = 22 THEN 212
 				END AS Sporttype,
 				0 AS leagueid,
 				0 AS homeid,
@@ -2140,7 +2144,7 @@ BEGIN
 				b.winlostdate,
 				'' AS BetCheck,
 				CASE
-					WHEN s.ProductID = 6 THEN b.transdesc
+					WHEN s.ProductID IN (6, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -2148,7 +2152,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-					AND (s.ProductId = 17
+					AND (s.ProductId IN (17, 22)
 						OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		END
@@ -2161,6 +2165,7 @@ BEGIN
 				CASE
 					WHEN s.ProductID = 6 THEN b.matchid
 					WHEN s.ProductID = 17 THEN 205
+					WHEN s.ProductID = 22 THEN 212
 				END AS Sporttype,
 				0 AS leagueid,
 				0 AS homeid,
@@ -2228,7 +2233,7 @@ BEGIN
 				b.winlostdate,
 				'' AS BetCheck,
 				CASE
-					WHEN s.ProductID = 6 THEN b.transdesc
+					WHEN s.ProductID IN (6, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -2237,7 +2242,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND (s.ProductId = 17
+				AND (s.ProductId IN (17, 22)
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			GROUP BY
@@ -2267,6 +2272,7 @@ BEGIN
 				CASE
 					WHEN s.ProductID = 6 THEN b.matchid
 					WHEN s.ProductID = 17 THEN 205
+					WHEN s.ProductID = 22 THEN 212
 				END AS Sporttype,
 				0 AS leagueid,
 				0 AS homeid,
@@ -2330,7 +2336,7 @@ BEGIN
 				b.winlostdate,
 				'' AS BetCheck,
 				CASE
-					WHEN s.ProductID = 6 THEN b.transdesc
+					WHEN s.ProductID IN (6, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -2339,7 +2345,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND (s.ProductId = 17
+				AND (s.ProductId IN (17, 22)
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			GROUP BY

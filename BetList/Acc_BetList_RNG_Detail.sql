@@ -21,6 +21,7 @@ AS
 		- 20151030@Kos: Change ProductId/SportType of Microgaming RNG Casino
 		- 20151229@Kos: Support RNG Casino Single Wallet and use SportBettypeMatrix [Redmine: #48958]
 		- 20160304@Kos: Add MatchCode column
+		- 20160331@Kos: Support Voidbridge [#Redmine: 54925]
 
 	Parameters:
 		- @TransType
@@ -39,9 +40,8 @@ BEGIN
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DELETE FROM @SportBettype
-	WHERE ProductID NOT IN (6, 17)	-- Support Microgaming RNG Casino, RNG Casino Single Wallet
+	WHERE ProductID NOT IN (6, 17, 22)	-- Support Microgaming RNG Casino, RNG Casino Single Wallet, Voidbridge
 		OR (ProductID = 6 AND SubProduct = '')
-
 
 	DECLARE @tmpStatus TABLE (statusId TINYINT)
 
@@ -108,7 +108,7 @@ BEGIN
 			brng.ip,
 			brng.transdesc,
 			CASE
-				WHEN sbt.productID IN (6, 17) THEN brng.TranId3rd
+				WHEN sbt.productID IN (6, 17, 22) THEN brng.TranId3rd
 				ELSE ''
 			END AS BetCheck,
 			'' AS MatchCode
@@ -148,7 +148,7 @@ BEGIN
 			brng.ip,
 			brng.transdesc,
 			CASE
-				WHEN sbt.productID IN (6, 17) THEN brng.TranId3rd
+				WHEN sbt.productID IN (6, 17, 22) THEN brng.TranId3rd
 				ELSE ''
 			END AS BetCheck,
 			'' AS MatchCode
@@ -186,7 +186,7 @@ BEGIN
 			brng.ip,
 			brng.transdesc,
 			CASE
-				WHEN sbt.productID IN (6, 17) THEN brng.TranId3rd
+				WHEN sbt.productID IN (6, 17, 22) THEN brng.TranId3rd
 				ELSE ''
 			END AS BetCheck,
 			'' AS MatchCode
