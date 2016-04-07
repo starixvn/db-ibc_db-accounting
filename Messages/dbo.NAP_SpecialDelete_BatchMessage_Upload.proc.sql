@@ -26,7 +26,7 @@ BEGIN
 		MessageId 		INT
 		,TargetId 		INT
 		,TargetName 	NVARCHAR(30)
-		,BetTransId 	VARCHAR(2000)
+		,BetTransId 	VARCHAR(MAX)
 	)
 	
 	SELECT @PostTime 	= CURRENT_TIMESTAMP
@@ -38,7 +38,7 @@ BEGIN
 		SELECT Msg.Item.value('@MessageId', 'int') AS MessageId
 			, Msg.Item.value('@TargetId', 'int') AS MessageId
 			, Msg.Item.value('@TargetName', 'nvarchar(30)') AS MessageId
-			, Msg.Item.value('@BetTransId', 'varchar(2000)') AS MessageId
+			, Msg.Item.value('@BetTransId', 'varchar(MAX)') AS MessageId
 		FROM @XMLMessage.nodes('/Messages/Item') as Msg(Item) 
 		
 		-- insert batch message
