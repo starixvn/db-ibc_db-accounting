@@ -4,7 +4,7 @@ GO
 SET ANSI_NULLS ON 
 GO
  
-alter PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14]
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14]
 	@winlostdate	datetime,
 	@LineTotal		money OUTPUT
 AS
@@ -83,6 +83,9 @@ AS
 		- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
 		- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
+		- 20160407@Sophia: Fix bug Allbet - wrong temp table definition [#redmine: #55628] 
+		
+		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)declare @p2 money
@@ -105,7 +108,7 @@ BEGIN
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(
-							site smallint,
+							site TINYINT,
 							winlost money,
 							pos money,
 							comm money,
@@ -115,10 +118,10 @@ BEGIN
 						
 	CREATE TABLE #src(	
 					srecommend INT,
+					site	TINYINT,
 					matchid INT, 
-					bettype INT, 
-					site	smallint,
-					winlost_actualrate MONEY, 
+					bettype INT, 					
+					winlost_actualrate MONEY,
 					winlost_virtualrate MONEY,
 					position_actualrate MONEY, 
 					position_virtualrate MONEY, 
