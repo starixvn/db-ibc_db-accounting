@@ -90,6 +90,7 @@ BEGIN
 			, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
 			, SUM(CASE WHEN b.bettype = 14 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
 			, SUM(CASE WHEN b.bettype = 127 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+			, SUM(CASE WHEN b.bettype = 172 THEN 1 ELSE 0 END) AS IsExistResultandFirstTeamScore
 			, SUM(CASE WHEN b.bettype = 172 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningResultandFirstTeamScore
 			, SUM(CASE WHEN b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningCorner
 			, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTCorner
@@ -104,7 +105,7 @@ BEGIN
 			, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
 			, SUM(CASE WHEN b.bettype = 14 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
 			, SUM(CASE WHEN b.bettype = 127 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
-		FROM dbo.bettrans b WITH(NOLOCK)
+		FROM dbo.bettransm b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #MatchInQueue t WHERE b.matchid = t.matchid)
 			AND bettype IN (14, 127)--FGLG
 			AND StatusId NOT IN (101, 102, 103)
@@ -148,7 +149,7 @@ BEGIN
 						AND htawayscore IS NOT NULL 
 						AND finalhomescore IS NOT NULL 
 						AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore
-		, CASE WHEN ISNULL(b.IsExistFGLG, 0) > 0 OR ISNULL(bm.IsExistFGLG, 0) > 0 THEN 1 ELSE 0 END AS IsExistFGLG
+		, CASE WHEN ISNULL(b.IsExistFGLG, 0) > 0 OR ISNULL(b.IsExistResultandFirstTeamScore, 0) > 0 OR ISNULL(bm.IsExistFGLG, 0) > 0 THEN 1 ELSE 0 END AS IsExistFGLG
 		, CASE WHEN ISNULL(b.IsExistHTFGLG, 0) > 0 OR ISNULL(bm.IsExistHTFGLG, 0) > 0 THEN 1 ELSE 0 END AS IsExistHTFGLG
 		, CASE WHEN ISNULL(b.IsExistRunningCorner, 0) > 0 THEN 1 ELSE 0 END AS IsExistCorner
 		, CASE WHEN ISNULL(b.IsExistRunningHTCorner, 0) > 0 THEN 1 ELSE 0 END AS IsExistHTCorner

@@ -272,10 +272,9 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_Corner-CAL'
 	BEGIN
 		UPDATE dbo.Match WITH (UPDLOCK,ROWLOCK)
-		SET		eventstatus = CASE WHEN @Action IN ('CAL', 'CAL-FT') AND @NoneCornerBetDone = 1 THEN N'completed'
-								    ELSE eventstatus END
-				,changetime = CURRENT_TIMESTAMP
-				,settletime = CURRENT_TIMESTAMP
+		SET eventstatus = CASE WHEN @NoneCornerBetDone = 1 THEN N'completed' ELSE eventstatus END
+			, changetime = CURRENT_TIMESTAMP
+			, settletime = CURRENT_TIMESTAMP
 		WHERE MatchID = @MatchID 
 	END
 	IF @Command = 'NAP_Admin_Settlement_s161-Refund'

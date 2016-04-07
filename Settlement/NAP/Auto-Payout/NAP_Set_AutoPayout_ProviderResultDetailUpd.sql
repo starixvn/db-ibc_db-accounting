@@ -51,6 +51,7 @@ BEGIN
 			, AwayValue = @AwayValue
 			, CreatedDate = GETDATE()
 		WHERE MatchId = @MatchId AND SourceId = @SourceId AND TypeId = @TypeId
+			AND (HomeValue <> @HomeValue OR AwayValue <> @AwayValue)
 
 		IF @@ERROR <> 0
 		BEGIN
