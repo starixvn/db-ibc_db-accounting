@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
  
-CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
+ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@CustID			INT,
@@ -23,6 +23,8 @@ AS
 							. Apply RNG Casino [Redmine: #49134]
 							. Appy Metric gaming - Superlive
 		- 20160229@Jim: Offer Allbet [Redmine #50921]
+		- 20160407@Sophia: Fix bug low performance - need to call Openquery [redmine: #55623]
+
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
@@ -147,11 +149,51 @@ BEGIN
 		FROM	dbo.CustInfo WITH(NOLOCK)
 		WHERE	srecommend = @CustID AND RoleID = 1
 
+		DECLARE @CustIdList VARCHAR(2000)
+
+		SELECT  @CustIdList = substring((SELECT ( ', ' +  cast(CustId as varchar(20)) )
+                           FROM #CustIdList                         
+                           ORDER BY CustId                             
+                           FOR XML PATH( '' )
+                          ), 3, 1000 ) 
 
 
+		DECLARE @sql VARCHAR(2000) 
+		SET @sql = 	'
+				SELECT * FROM  OPENQUERY ( DBWH ,''
+				SELECT b.custid,''SETTLED'',SUM(b.BetCount)
+				FROM bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
+				WHERE	b.rptDate BETWEEN @FirstDate AND @TempToDate			
+						AND (
+							b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
+							OR b.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
+							OR b.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
+							OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
+							OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
+							OR b.bettype BETWEEN 2101 AND (CASE WHEN @sportType=251 THEN 2399 ELSE 0 END) 
+							OR b.bettype BETWEEN 801 AND (CASE WHEN @sportType= -1 THEN 806 ELSE 0 END)
+							OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
+							OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
+							OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
+							OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
+							OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 THEN 1003 ELSE 0 END) -- Cockfighting
+							OR b.bettype BETWEEN 2401  AND (CASE WHEN @SportType = 211 THEN 2499 ELSE 0 END) -- AllBet
+						) 
+						AND b.status IN (3  ---DRAW
+										,12	---HALF LOSE
+										,13	---HALF WON
+										,4	---LOSE
+										,8	---WON								 
+										)	
+						AND CustID IN (' + @CustIdList  + ')
+						GROUP BY b.custid '' )'			 
+		
 		INSERT INTO #AvailableMember 
+		EXEC (@sql)	
+ 
+ 
 		SELECT b.custid,'SETTLED',SUM(b.BetCount)
-		FROM DBWH.bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
+		FROM bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
 		WHERE	b.rptDate BETWEEN @FirstDate AND @TempToDate			
 				AND (
 					b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
