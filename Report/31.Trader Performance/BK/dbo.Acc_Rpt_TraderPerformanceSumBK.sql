@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSumBK]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_TraderPerformanceSumBK]    Script Date: 04/08/2016 03:39:21 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_Rpt_TraderPerformanceSumBK    Script Date: 4/5/2016 3:21:23 PM ******/
+ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSumBK]
  @fromdate datetime ,  
  @todate datetime,  
  @isSoccer bit =1  
@@ -42,18 +50,16 @@
   - 20140121@Johnson: category leagues by major or minor 
   - 20140519@Johnson: Remove bettype from league name [RedmineID:#16022]						
   - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
+  - 20160317@Robert - Incorporate 1X2 HDP and 1H 1X2 HDP bet types into Trader Performance Report[#54184]
+  - 20160408@Francis: Revise SP to enhance performance
  Param's Explanation:  
  • @isSoccer  
   = 1: Soccer  
   = 0: Other Sport  
 */  
-/* 
-select * from _tmp_traderOld
-return
-*/
 
-SET NOCOUNT ON
-
+SET NOCOUNT ON  
+  
 
 Declare @countOrphan int  
 --DECLARE @NegativeBetEffectiveDate datetime
@@ -71,7 +77,7 @@ DECLARE @temp_daao TABLE
 )  
   
   
-IF @isSoccer = 1   
+IF @isSoccer = 1
 BEGIN  
  insert @temp_daao (custid,username,matchID, bettype,OUtype,category)  
  select a.operatorid, username,  m.matchID,  
@@ -95,7 +101,8 @@ BEGIN
    when leaguename LIKE '%SPECIFIC 15 MINS TOTAL BOOKINGS%' then 7 
    when leaguename LIKE '%SPECIFIC 15 MINS%' then 2 
    when leaguename LIKE '%SPECIFIC 10 MINS%' then 8
-   when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+   when leaguename LIKE '%SINGLE TEAM OVER/UNDER%' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+   
    else 0  
   end ,
   l.category 
@@ -123,7 +130,7 @@ BEGIN
    when leaguename LIKE '%SPECIFIC 15 MINS TOTAL BOOKINGS%' then 7 
    when leaguename LIKE '%SPECIFIC 15 MINS%' then 2 
    when leaguename LIKE '%SPECIFIC 10 MINS%' then 8
-   when leaguename LIKE '%SPECIALS' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
+   when leaguename LIKE '%SINGLE TEAM OVER/UNDER%' and (t.teamname LIKE '%Over' or t.teamname LIKE '%Under') THEN 9    
    else 0  
   end ,
   l.category   
@@ -142,7 +149,7 @@ BEGIN
   
 END  
  -- OTHER SPORTS   
-ELSE IF @isSoccer = 0  
+ELSE IF @isSoccer = 0
  BEGIN  
   insert @temp_daao (custid,username,matchID, bettype, OUtype, category)  
   select a.operatorid, username,  m.matchID,  
@@ -181,11 +188,8 @@ ELSE IF @isSoccer = 0
    and a.matchid is NULL  
  END  
   
-select * into #bettrans from bodb_archive.dbo.bettrans_bk b with (nolock)
-where LiveIndicator = 1 and   
- b.statusID not in (101,102,103,121,111)    
- and b.winlostdate between @fromdate and @todate
-  
+
+BEGIN  
     create table #userMatch  
  (  
   custid int primary key,  
@@ -197,6 +201,23 @@ where LiveIndicator = 1 and
   Others int
  )  
  
+create table #bettrans_bk (matchid int, bettype int, scomm money, winlost money, awinlost money, mwinlost money, swinlost money,
+							actual_stake money, stake money, tpositiontaking smallmoney, virtualrate float, modds smallmoney)
+	
+create clustered index [CIX_matchid_bettype] on #bettrans_bk (matchid asc, bettype asc)
+
+insert into #bettrans_bk (matchid, bettype, scomm, winlost, awinlost, mwinlost, swinlost,
+							actual_stake, stake, tpositiontaking, virtualrate, modds)
+select matchid, bettype, scomm, winlost, awinlost, mwinlost, swinlost,
+		actual_stake, stake, tpositiontaking, virtualrate, modds
+from bodb_Archive.dbo.bettrans_bk b (nolock)
+where b.statusID not in (101,102,103,121,111)   
+   AND b.ruben =1  
+   AND b.bettype in (1,3,7,8,5,15,2,12,124,125)   
+   AND b.winlostdate between @fromdate AND @todate
+   AND b.LiveIndicator = 1  
+   AND b.currency <> 20
+ 
  DECLARE @countMajorOrphan int, @countMinor1Orphan int, @countMinor2Orphan int, @countMinor3Orphan int , @countOthersOrphan int
  
  insert #userMatch (custid,nMatch, Major,Minor1,Minor2,Minor3,Others) 
@@ -204,9 +225,8 @@ where LiveIndicator = 1 and
  FROM( 
 	 select t.custid, ISNULL(t.category,'Others') as category, count(distinct t.matchID) as cntMatch
 	 from @temp_daao t  
-	  inner join #bettrans b with (nolock) on b.matchid=t.matchid and b.bettype = t.bettype  
-
-	 group by t.custid ,ISNULL(t.category,'Others')  ) as s
+	  inner join #bettrans_bk b with (nolock) on b.matchid=t.matchid and (b.bettype = t.bettype  or (b.bettype = 124 AND t.BetType = 5) OR (b.bettype = 125 AND t.BetType = 15))
+	  group by t.custid ,ISNULL(t.category,'Others')  ) as s
  PIVOT(
 	SUM(s.cntMatch)
 	FOR category in (Major, Minor1, Minor2, Minor3, Others)
@@ -215,8 +235,8 @@ where LiveIndicator = 1 and
  ; WITH T AS(  
  select ISNULL(t.category,'Others') category, count(distinct t.matchID) countOrphan
  from @temp_daao t  
-  inner join #bettrans b with (nolock) on b.matchid=t.matchid and t.bettype = 0  
-  GROUP by ISNULL(t.category,'Others')
+  inner join #bettrans_bk b with (nolock) on b.matchid=t.matchid and t.bettype = 0  
+ GROUP by ISNULL(t.category,'Others')
  )
  
  SELECT @countMajorOrphan = SUM(CASE when category = 'Major' THEN countOrphan ELSE 0 end),
@@ -226,6 +246,22 @@ where LiveIndicator = 1 and
 		@countOthersOrphan = SUM(CASE when category = 'Others' THEN countOrphan ELSE 0 end)
  FROM T 
  
+ 
+select b.matchid,bettype,
+    sum(case when b.bettype IN (5,15,124,125)
+									 then ABS(b.stake)*(1-b.tpositiontaking)*b.virtualrate
+							WHEN b.bettype IN (1,2,3,7,8,12) 
+									then(case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate 
+							else 0 end) as stake,              
+   --Winlost  
+   -sum((winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate) as winlost,
+   --Commission  
+   sum(scomm*b.virtualrate) as comm,  
+   --Live BetCount      
+    count(1) as bet    
+INTO #bettrans
+from #bettrans_bk b
+GROUP by matchid, bettype	
   
  select   
  custid, username, matchno,   
@@ -319,274 +355,233 @@ where LiveIndicator = 1 and
    
    --turn over: hdp, ou, ht hdp, ht ou, 1x2, 1st1x2, ng    
         
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 0  
-        then(case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_hdp,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 0  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_ou,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 7    
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1sthdp,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 8 and OUtype = 0    
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stou,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 5  and OUtype = 0 then ABS(b.stake)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1x2,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 15 and OUtype = 0 then ABS(b.stake)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1st1x2,
-    --sum((case when b.recommend not in (52466, 5707545) and b.bettype = 22   
-    --    then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end) *(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_ng,    
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 2   
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_oe,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 12   
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stoe,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 8 and OUtype = 1  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end) *(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stNoOfCorners,        
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 1  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_NoOfCorners,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 2  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minhdp,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 2  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minOU,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 5 and OUtype = 2  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15min1x2,  
-    --1st Total Bookings + Total Bookings 
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 8 and OUtype = 3  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end) *(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stTotalBookings,        
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 3  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_TotalBookings,  
-    -- Next Corner          
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 4  
-        then(case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_NextCorner,  
-    -- Next Booking          
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 5  
-        then(case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_NextBooking,  
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 6  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minCorners,
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 7  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minTotalBookings,
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 8  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_10minHDP,
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 8  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_10minOU,
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 5 and OUtype = 8  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_10min1x2,           
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype IN (3,8) and OUtype = 9  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_SingleTeamOU,      
-        
+     sum(case when b.bettype=1 and OUtype = 0 then stake else 0 end) as stake_hdp,  
+    sum(case when b.bettype=2 then stake else 0 end) as stake_oe,              
+    sum(case when b.bettype=3 and OUtype = 0 then stake else 0 end) as stake_ou,  
+    sum(case when (b.bettype=5 or b.bettype=124) and OUtype = 0 then stake else 0 end) as stake_1x2, 
+    sum(case when b.bettype=7 THEN stake else 0 end) as stake_1sthdp,  
+    sum(case when b.bettype=12  then stake else 0 end) as stake_1stoe, 
+    sum(case when b.bettype=8 and OUtype = 0 then stake else 0 end) as stake_1stou,
+    sum(case when (b.bettype=15 or b.bettype=125) and OUtype = 0 then stake else 0 end) as stake_1st1x2,    
+    sum((case when b.bettype = 8 and OUtype = 1 then stake else 0 end)) as stake_1stNoOfCorners,  
+    sum((case when b.bettype = 3 and OUtype = 1 then stake else 0 end)) as stake_NoOfCorners,  
+    sum((case when b.bettype = 1 and OUtype = 2 then stake else 0 end)) as stake_15minhdp,  
+    sum((case when b.bettype = 3 and OUtype = 2 then stake else 0 end)) as stake_15minOU,  
+	sum((case when b.bettype = 5 and OUtype = 2 then stake else 0 end)) as stake_15min1x2,          
+    --1st Total Bookings + Total Bookings
+    sum((case when b.bettype = 8 and OUtype = 3 then stake else 0 end)) as stake_1stTotalBookings,        
+    sum((case when b.bettype = 3 and OUtype = 3 then stake else 0 end)) as stake_TotalBookings,  
+    sum((case when b.bettype =1 and OUtype = 4 then stake else 0 end)) as stake_NextCorner,
+    sum((case when b.bettype =1 and OUtype = 5 then stake else 0 end)) as stake_NextBooking,  
+    sum((case when b.bettype =3 and OUtype = 6 then stake else 0 end)) as stake_15minCorners,
+    sum((case when b.bettype =3 and OUtype = 7 then stake else 0 end)) as stake_15minTotalBookings,
+    sum((case when b.bettype =1 and OUtype = 8 then stake else 0 end)) as stake_10minHdp,
+    sum((case when b.bettype =3 and OUtype = 8 then stake else 0 end)) as stake_10minOU,
+    sum((case when b.bettype =5 and OUtype = 8 then stake else 0 end)) as stake_10min1x2,
+    sum((case when  OUtype = 9 and b.bettype IN (3,8) then stake else 0 end)) as stake_SingleTeamOU,
+  
    --Winlost  
-    -sum(case when b.bettype=1 and OUtype = 0  then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_hdp,  
-    -sum(case when b.bettype=3 and OUtype = 0  then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_ou,  
-    -sum(case when b.bettype=7  then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1sthdp,  
-    -sum(case when b.bettype=8 and OUtype = 0 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stou,  
-    -sum(case when b.bettype=5 AND OUtype = 0 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1x2,  
-    -sum(case when b.bettype=15 AND OUtype = 0 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1st1x2,  
+    sum(case when b.bettype=1 and OUtype = 0 then winlost else 0 end) as winlost_hdp,  
+    sum(case when b.bettype=2 then winlost else 0 end) as winlost_oe,  
+    sum(case when b.bettype=3  and OUtype = 0 then winlost else 0 end) as winlost_ou,  
+    sum(case when (b.bettype=5 or b.bettype=124) AND OUtype = 0 then winlost else 0 end) as winlost_1x2,  
+    sum(case when b.bettype=7 then winlost else 0 end) as winlost_1sthdp,  
+    sum(case when b.bettype=8 and OUtype = 0 then winlost else 0 end) as winlost_1stou,  
+    sum(case when b.bettype=12 then winlost else 0 end) as winlost_1stoe,  
+    sum(case when (b.bettype=15 or b.bettype=125) AND OUtype = 0 then winlost else 0 end) as winlost_1st1x2,  
    -- -sum(case when b.bettype=22 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_ng,  
-    -sum(case when b.bettype=2 then  (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_oe,  
-    -sum(case when b.bettype=12 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stoe,  
-    -sum(case when b.bettype=8 and OUtype = 1 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stNoOfCorners,  
-    -sum(case when b.bettype=3 and OUtype = 1 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_NoOfCorners,  
-    -sum(case when b.bettype=1 and OUtype = 2 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minhdp,
-    -sum(case when b.bettype=3 and OUtype = 2 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minOU,
-    -sum(case when b.bettype=5 and OUtype = 2 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15min1x2,  
-    --1st Total Bookings + Total Bookings
-    -sum(case when b.bettype=8 and OUtype = 3 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stTotalBookings,  
-    -sum(case when b.bettype=3 and OUtype = 3 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_TotalBookings,  
-    --Next Corner  
-    -sum(case when b.bettype = 1 and OUtype = 4 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_NextCorner,  
-    --Next Booking
-    -sum(case when b.bettype = 1 and OUtype = 5 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_NextBooking,      
-    -sum(case when b.bettype=3 and OUtype = 6 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minCorners, 
-    -sum(case when b.bettype=3 and OUtype = 7 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minTotalBookings, 
-	-sum(case when b.bettype=1 and OUtype = 8 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_10minHDP, 
-    -sum(case when b.bettype=3 and OUtype = 8 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_10minOU,
-    -sum(case when b.bettype=5 and OUtype = 8 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_10min1x2,  
-    -sum(case when b.bettype IN (3,8) and OUtype = 9 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_SingleTeamOU, 
-    
+    sum(case when b.bettype=8 and OUtype = 1 then winlost else 0 end) as winlost_1stNoOfCorners,  
+    sum(case when b.bettype=3 and OUtype = 1 then winlost else 0 end) as winlost_NoOfCorners,  
+    sum(case when b.bettype=1 and OUtype = 2 then winlost else 0 end) as winlost_15minhdp,  
+    sum(case when b.bettype=3 and OUtype = 2 then winlost else 0 end) as winlost_15minOU,  
+    sum(case when b.bettype=5 and OUtype = 2 then winlost else 0 end) as winlost_15min1x2,  
+    --1st No.of Yellow Cards + No.of Yellow Cards  
+    sum(case when b.bettype=8 and OUtype = 3 then winlost else 0 end) as winlost_1stTotalBookings,  
+    sum(case when b.bettype=3 and OUtype = 3 then winlost else 0 end) as winlost_TotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 4 then winlost else 0 end) as winlost_NextCorner,  
+    sum(case when b.bettype =1 and OUtype = 5 then winlost else 0 end) as winlost_NextBooking,  
+    sum(case when b.bettype =3 and OUtype = 6 then winlost else 0 end) as winlost_15minCorners,  
+    sum(case when b.bettype =3 and OUtype = 7 then winlost else 0 end) as winlost_15minTotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 8 then winlost else 0 end) as winlost_10minHdp,  
+    sum(case when b.bettype =3 and OUtype = 8 then winlost else 0 end) as winlost_10minOU,  
+    sum(case when b.bettype =5 and OUtype = 8 then winlost else 0 end) as winlost_10min1x2,  
+    sum(case when OUtype = 9 and b.bettype IN (3,8) then winlost else 0 end) as winlost_SingleTeamOU,  
+   
    --Commission  
-    sum(case when b.bettype=1 and OUtype = 0  then scomm*b.virtualrate else 0 end) as comm_hdp,  
-    sum(case when b.bettype=3 and OUtype = 0 then scomm*b.virtualrate else 0 end) as comm_ou,  
-    sum(case when b.bettype=7  then scomm*b.virtualrate else 0 end) as comm_1sthdp,  
-    sum(case when b.bettype=8 and OUtype = 0 then scomm*b.virtualrate else 0 end) as comm_1stou,  
-    sum(case when b.bettype=5 AND OUtype = 0 then scomm*b.virtualrate else 0 end) as comm_1x2,  
-    sum(case when b.bettype=15 AND OUtype = 0 then scomm*b.virtualrate else 0 end) as comm_1st1x2,  
+    sum(case when b.bettype=1 and OUtype = 0 then comm else 0 end) as comm_hdp,  
+    sum(case when b.bettype=2 then comm else 0 end) as comm_oe,  
+    sum(case when b.bettype=3  and OUtype = 0 then comm else 0 end) as comm_ou,  
+    sum(case when (b.bettype=5 or b.bettype=124) and OUtype = 0 then comm else 0 end) as comm_1x2,  
+    sum(case when b.bettype=7 then comm else 0 end) as comm_1sthdp,  
+    sum(case when b.bettype=8 and OUtype = 0 then comm else 0 end) as comm_1stou,  
+    sum(case when b.bettype=12 then comm else 0 end) as comm_1stoe,  
+    sum(case when (b.bettype=15 or b.bettype=125) and OUtype = 0 then comm else 0 end) as comm_1st1x2,  
     --sum(case when b.bettype=22 then scomm*b.virtualrate else 0 end) as comm_ng,  
-    sum(case when b.bettype = 2 then scomm*b.virtualrate else 0 end) as comm_oe,  
-    sum(case when b.bettype = 12 then scomm*b.virtualrate else 0 end) as comm_1stoe,  
-    sum(case when b.bettype=8 and OUtype = 1 then scomm*b.virtualrate else 0 end) as comm_1stNoOfCorners,  
-    sum(case when b.bettype=3 and OUtype = 1  then scomm*b.virtualrate else 0 end) as comm_NoOfCorners,  
-    sum(case when b.bettype=1 and OUtype = 2 then scomm*b.virtualrate else 0 end) as comm_15minhdp,  
-    sum(case when b.bettype=3 and OUtype = 2 then scomm*b.virtualrate else 0 end) as comm_15minOU,  
-    sum(case when b.bettype=5 and OUtype = 2 then scomm*b.virtualrate else 0 end) as comm_15min1x2,  
-    --1st Total Bookings + Total Bookings
-    sum(case when b.bettype=8 and OUtype = 3 then scomm*b.virtualrate else 0 end) as comm_1stTotalBookings,  
-    sum(case when b.bettype=3 and OUtype = 3  then scomm*b.virtualrate else 0 end) as comm_TotalBookings,  
-    sum(case when b.bettype = 1 and OUtype = 4  then scomm*b.virtualrate else 0 end) as comm_NextCorner,  
-    sum(case when b.bettype = 1 and OUtype = 5  then scomm*b.virtualrate else 0 end) as comm_NextBooking,  
-    sum(case when b.bettype=3 and OUtype = 6 then scomm*b.virtualrate else 0 end) as comm_15minCorners, 
-    sum(case when b.bettype=3 and OUtype = 7 then scomm*b.virtualrate else 0 end) as comm_15minTotalBookings,   
-    sum(case when b.bettype=1 and OUtype = 8 then scomm*b.virtualrate else 0 end) as comm_10minHdp,  
-    sum(case when b.bettype=3 and OUtype = 8 then scomm*b.virtualrate else 0 end) as comm_10minOU,  
-    sum(case when b.bettype=5 and OUtype = 8 then scomm*b.virtualrate else 0 end) as comm_10min1x2,  
-    sum(case when b.bettype IN (3,8) and OUtype = 9 then scomm*b.virtualrate else 0 end) as comm_SingleTeamOU,  
-    
+    sum(case when b.bettype=8 and OUtype = 1  then comm else 0 end) as comm_1stNoOfCorners,  
+    sum(case when b.bettype=3 and OUtype = 1  then comm else 0 end) as comm_NoOfCorners,  
+    sum(case when b.bettype=1 and OUtype = 2 then comm else 0 end) as comm_15minhdp,  
+    sum(case when b.bettype=3 and OUtype = 2 then comm else 0 end) as comm_15minOU,  
+    sum(case when b.bettype=5 and OUtype = 2 then comm else 0 end) as comm_15min1x2,  
+    --1st No.of Yellow Cards + No.of Yellow Cards  
+    sum(case when b.bettype=8 and OUtype = 3 then comm else 0 end) as comm_1stTotalBookings,  
+    sum(case when b.bettype=3 and OUtype = 3  then comm else 0 end) as comm_TotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 4  then comm else 0 end) as comm_NextCorner,
+    sum(case when b.bettype =1 and OUtype = 5  then comm else 0 end) as comm_NextBooking,
+    sum(case when b.bettype =3 and OUtype = 6  then comm else 0 end) as comm_15minCorners,
+    sum(case when b.bettype =3 and OUtype = 7  then comm else 0 end) as comm_15minTotalBookings,
+    sum(case when b.bettype =1 and OUtype = 8  then comm else 0 end) as comm_10minHdp,
+    sum(case when b.bettype =3 and OUtype = 8  then comm else 0 end) as comm_10minOU,
+    sum(case when b.bettype =5 and OUtype = 8  then comm else 0 end) as comm_10min1x2,
+    sum(case when OUtype = 9 and b.bettype IN (3,8) then comm else 0 end) as comm_SingleTeamOU,  
+      
    --Live BetCount      
-    sum(case when b.bettype = 1 and OUtype = 0 then 1 else 0 end) as bet_hdp,  
-    sum(case when b.bettype = 3 and OUtype = 0 then 1 else 0 end) as bet_ou,  
-    sum(case when b.bettype = 7 then 1 else 0 end) as bet_1sthdp,  
-    sum(case when b.bettype = 8 and OUtype = 0 then 1 else 0 end) as bet_1stou,  
-    sum(case when b.bettype = 5 and OUtype = 0 then 1 else 0 end) as bet_1x2,  
-    sum(case when b.bettype = 15 and OUtype = 0 then 1 else 0 end) as bet_1st1x2,  
-    sum(case when b.bettype = 2 then 1 else 0 end) as bet_oe,  
-    sum(case when b.bettype =12 then 1 else 0 end) as bet_1stoe,  
-    sum(case when b.bettype = 8 and OUtype =1 then 1 else 0 end) as bet_1stNoOfCorners,  
-    sum(case when b.bettype = 3 and OUType =1 then 1 else 0 end) as bet_NoOfCorners,  
-    sum(case when b.bettype = 1 and OUType =2 then 1 else 0 end) as bet_15minhdp, 
-    sum(case when b.bettype = 3 and OUType =2 then 1 else 0 end) as bet_15minOU, 
-    sum(case when b.bettype = 5 and OUType =2 then 1 else 0 end) as bet_15min1x2,  
-    sum(case when b.bettype = 8 and OUType = 3 then 1 else 0 end) as bet_1stTotalBookings,  
-    sum(case when b.bettype = 3 and OUType = 3 then 1 else 0 end) as bet_TotalBookings,  
-    sum(case when b.bettype = 1 and OUtype = 4 then 1 else 0 end) as bet_NextCorner,
-    sum(case when b.bettype = 1 and OUtype = 5 then 1 else 0 end) as bet_NextBooking,  
-    sum(case when b.bettype = 3 and OUtype = 6 then 1 else 0 end) as bet_15minCorners,
-    sum(case when b.bettype = 3 and OUtype = 7 then 1 else 0 end) as bet_15minTotalBookings,  
-    sum(case when b.bettype = 1 and OUtype = 8 then 1 else 0 end) as bet_10minHdp,
-    sum(case when b.bettype = 3 and OUtype = 8 then 1 else 0 end) as bet_10minOU,
-    sum(case when b.bettype = 5 and OUtype = 8 then 1 else 0 end) as bet_10min1x2,
-    sum(case when b.bettype IN (3,8) and OUtype = 9 then 1 else 0 end) as bet_SingleTeamOU
-   from #bettrans b with(nolock)   
-    inner join @temp_daao cm on b.matchid=cm.matchid and b.bettype = cm.bettype  
-                inner join #userMatch um on um.custid=cm.custid  
+    sum(case when b.bettype = 1 and OUtype = 0 then bet else 0 end) as bet_hdp,  
+    sum(case when b.bettype = 2 then bet else 0 end) as bet_oe,  
+    sum(case when b.bettype = 3 and OUtype = 0 then bet else 0 end) as bet_ou,  
+    sum(case when b.bettype = 7 then bet else 0 end) as bet_1sthdp,  
+    sum(case when b.bettype = 8 and OUtype = 0 then bet else 0 end) as bet_1stou,  
+    sum(case when (b.bettype=5 or b.bettype=124) and OUtype = 0 then bet else 0 end) as bet_1x2,  
+    sum(case when b.bettype =12 then bet else 0 end) as bet_1stoe,  
+    sum(case when (b.bettype=15 or b.bettype=125) and OUtype = 0 then bet else 0 end) as bet_1st1x2,  
+    sum(case when b.bettype = 8 and OUtype =1 then bet else 0 end) as bet_1stNoOfCorners,  
+    sum(case when b.bettype = 3 and OUType =1 then bet else 0 end) as bet_NoOfCorners,  
+    sum(case when b.bettype = 1 and OUType =2 then bet else 0 end) as bet_15minhdp,  
+    sum(case when b.bettype = 3 and OUType =2 then bet else 0 end) as bet_15minOU,  
+    sum(case when b.bettype = 5 and OUType =2 then bet else 0 end) as bet_15min1x2,  
+    sum(case when b.bettype = 8 and OUType = 3 then bet else 0 end) as bet_1stTotalBookings,  
+    sum(case when b.bettype = 3 and OUType = 3 then bet else 0 end) as bet_TotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 4 then bet else 0 end) as bet_NextCorner,
+    sum(case when b.bettype =1 and OUtype = 5 then bet else 0 end) as bet_NextBooking,
+    sum(case when b.bettype =3 and OUtype = 6 then bet else 0 end) as bet_15minCorners,
+    sum(case when b.bettype =3 and OUtype = 7 then bet else 0 end) as bet_15minTotalBookings,
+    sum(case when b.bettype =1 and OUtype = 8 then bet else 0 end) as bet_10minHdp,
+    sum(case when b.bettype =3 and OUtype = 8 then bet else 0 end) as bet_10minOU,
+    sum(case when b.bettype =5 and OUtype = 8 then bet else 0 end) as bet_10min1x2,
+    sum(case when OUtype = 9 and b.bettype IN (3,8) then bet else 0 end) as bet_SingleTeamOU
+   from #bettrans b 
+    inner join @temp_daao cm on b.matchid=cm.matchid and (b.bettype = cm.bettype  or (b.bettype = 124 AND cm.BetType = 5) OR (b.bettype = 125 AND cm.BetType = 15))
+                inner join #userMatch um on um.custid=cm.custid     
    group by cm.username,cm.custid,um.nMatch , Major, Minor1, Minor2, Minor3, Others 
    UNION ALL  
    select 0, '(Unassigned)',ISNULL(@countMajorOrphan,0) + ISNULL(@countMinor1Orphan,0) + ISNULL(@countMinor2Orphan,0) + ISNULL(@countMinor3Orphan,0) + ISNULL(@countOthersOrphan ,0) as matchno, ISNULL(@countMajorOrphan,0) Major, ISNULL(@countMinor1Orphan,0), ISNULL(@countMinor2Orphan,0), ISNULL(@countMinor3Orphan,0), ISNULL(@countOthersOrphan ,0),
      
    --turn over: hdp, ou, ht hdp, ht ou, 1x2, 1st1x2, ng    
         
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 0  
-        then(case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_hdp,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 0  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_ou,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 7    
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1sthdp,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 8 and OUtype = 0    
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stou,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 5 and OUtype = 0 then ABS(b.stake)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1x2,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 15 and OUtype = 0 then ABS(b.stake)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1st1x2,      
-    --sum((case when b.recommend not in (52466, 5707545) and b.bettype = 22   
-    --    then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end) *(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_ng,      
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 2   
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_oe,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 12   
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stoe,          
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 8 and OUtype = 1  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stNoOfCorners,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 1  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_NoOfCorners,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 2  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minhdp,  
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 2  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minOU,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 5 and OUtype = 2  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15min1x2,          
+    sum(case when b.bettype=1 and OUtype = 0 then stake else 0 end) as stake_hdp,  
+    sum(case when b.bettype=2 then stake else 0 end) as stake_oe,              
+    sum(case when b.bettype=3 and OUtype = 0 then stake else 0 end) as stake_ou,  
+    sum(case when (b.bettype=5 or b.bettype=124) and OUtype = 0 then stake else 0 end) as stake_1x2, 
+    sum(case when b.bettype=7 THEN stake else 0 end) as stake_1sthdp,  
+    sum(case when b.bettype=12  then stake else 0 end) as stake_1stoe, 
+    sum(case when b.bettype=8 and OUtype = 0 then stake else 0 end) as stake_1stou,
+    sum(case when (b.bettype=15 or b.bettype=125) and OUtype = 0 then stake else 0 end) as stake_1st1x2,    
+    sum((case when b.bettype = 8 and OUtype = 1 then stake else 0 end)) as stake_1stNoOfCorners,  
+    sum((case when b.bettype = 3 and OUtype = 1 then stake else 0 end)) as stake_NoOfCorners,  
+    sum((case when b.bettype = 1 and OUtype = 2 then stake else 0 end)) as stake_15minhdp,  
+    sum((case when b.bettype = 3 and OUtype = 2 then stake else 0 end)) as stake_15minOU,  
+	sum((case when b.bettype = 5 and OUtype = 2 then stake else 0 end)) as stake_15min1x2,          
     --1st Total Bookings + Total Bookings
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 8 and OUtype = 3  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end) *(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_1stTotalBookings,        
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 3  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_TotalBookings,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 4  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_NextCorner,
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 5  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_NextBooking,  
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 6  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minCorners,
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 7  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_15minTotalBookings,
-    sum((case when b.recommend not in (52466, 5707545) and b.bettype = 1 and OUtype = 8  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_10minHdp,
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 3 and OUtype = 8  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_10minOU,
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype = 5 and OUtype = 8  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_10min1x2,                
-	sum((case when b.recommend not in (52466, 5707545) and b.bettype IN (3,8) and OUtype = 9  
-        then (case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate else 0 end)) as stake_SingleTeamOU,        
-              
+    sum((case when b.bettype = 8 and OUtype = 3 then stake else 0 end)) as stake_1stTotalBookings,        
+    sum((case when b.bettype = 3 and OUtype = 3 then stake else 0 end)) as stake_TotalBookings,  
+    sum((case when b.bettype =1 and OUtype = 4 then stake else 0 end)) as stake_NextCorner,
+    sum((case when b.bettype =1 and OUtype = 5 then stake else 0 end)) as stake_NextBooking,  
+    sum((case when b.bettype =3 and OUtype = 6 then stake else 0 end)) as stake_15minCorners,
+    sum((case when b.bettype =3 and OUtype = 7 then stake else 0 end)) as stake_15minTotalBookings,
+    sum((case when b.bettype =1 and OUtype = 8 then stake else 0 end)) as stake_10minHdp,
+    sum((case when b.bettype =3 and OUtype = 8 then stake else 0 end)) as stake_10minOU,
+    sum((case when b.bettype =5 and OUtype = 8 then stake else 0 end)) as stake_10min1x2,
+    sum((case when  OUtype = 9 and b.bettype IN (3,8) then stake else 0 end)) as stake_SingleTeamOU,
+  
    --Winlost  
-    -sum(case when b.bettype=1 and OUtype = 0 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_hdp,  
-    -sum(case when b.bettype=3 and OUtype = 0  then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_ou,  
-    -sum(case when b.bettype=7  then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1sthdp,  
-    -sum(case when b.bettype=8 and OUtype = 0  then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stou,  
-    -sum(case when b.bettype=5 and OUtype = 0 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1x2,  
-    -sum(case when b.bettype=15 and OUtype = 0 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1st1x2,  
+    sum(case when b.bettype=1 and OUtype = 0 then winlost else 0 end) as winlost_hdp,  
+    sum(case when b.bettype=2 then winlost else 0 end) as winlost_oe,  
+    sum(case when b.bettype=3  and OUtype = 0 then winlost else 0 end) as winlost_ou,  
+    sum(case when (b.bettype=5 or b.bettype=124) AND OUtype = 0 then winlost else 0 end) as winlost_1x2,  
+    sum(case when b.bettype=7 then winlost else 0 end) as winlost_1sthdp,  
+    sum(case when b.bettype=8 and OUtype = 0 then winlost else 0 end) as winlost_1stou,  
+    sum(case when b.bettype=12 then winlost else 0 end) as winlost_1stoe,  
+    sum(case when (b.bettype=15 or b.bettype=125) AND OUtype = 0 then winlost else 0 end) as winlost_1st1x2,  
    -- -sum(case when b.bettype=22 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_ng,  
-    -sum(case when b.bettype =2 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_oe,  
-    -sum(case when b.bettype =12 then (winlost-actual_stake +awinlost + mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stoe,  
-    -sum(case when b.bettype=8 and OUtype = 1 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stNoOfCorners,  
-    -sum(case when b.bettype=3 and OUtype = 1 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_NoOfCorners,  
-    -sum(case when b.bettype=1 and OUtype = 2 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minhdp,  
-    -sum(case when b.bettype=3 and OUtype = 2 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minOU,  
-    -sum(case when b.bettype=5 and OUtype = 2 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15min1x2,  
-    --1st Total Bookings + Total Bookings
-    -sum(case when b.bettype=8 and OUtype = 3 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_1stTotalBookings,  
-    -sum(case when b.bettype=3 and OUtype = 3 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_TotalBookings,  
-    -sum(case when b.bettype = 1 and OUtype = 4 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_NextCorner,  
-    -sum(case when b.bettype = 1 and OUtype = 5 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_NextBooking,  
-    -sum(case when b.bettype = 3 and OUtype = 6 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minCorners,
-    -sum(case when b.bettype = 3 and OUtype = 7 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_15minTotalBookings,
-    -sum(case when b.bettype = 1 and OUtype = 8 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_10minHdp,
-    -sum(case when b.bettype = 3 and OUtype = 8 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_10minOU,
-    -sum(case when b.bettype = 5 and OUtype = 8 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_10min1x2,
-    -sum(case when b.bettype IN (3,8) and OUtype = 9 then (winlost-actual_stake + awinlost+mwinlost+swinlost)*b.virtualrate else 0 end) as winlost_SingleTeamOU,
-       
-     
-   --Commission  
-    sum(case when b.bettype=1 and OUtype = 0 then scomm*b.virtualrate else 0 end) as comm_hdp,  
-    sum(case when b.bettype=3 and OUtype = 0 then scomm*b.virtualrate else 0 end) as comm_ou,  
-    sum(case when b.bettype=7  then scomm*b.virtualrate else 0 end) as comm_1sthdp,  
-    sum(case when b.bettype=8 and OUtype = 0  then scomm*b.virtualrate else 0 end) as comm_1stou,  
-    sum(case when b.bettype=5 AND OUtype = 0  then scomm*b.virtualrate else 0 end) as comm_1x2,  
-    sum(case when b.bettype=15 AND OUtype = 0 then scomm*b.virtualrate else 0 end) as comm_1st1x2,  
-    --sum(case when b.bettype=22 then scomm*b.virtualrate else 0 end) as comm_ng,  
-    sum(case when b.bettype = 2 then scomm*b.virtualrate else 0 end) as comm_oe,  
-    sum(case when b.bettype = 12 then scomm*b.virtualrate else 0 end) as comm_1stoe,  
-    sum(case when b.bettype=8 and OUtype = 1  then scomm*b.virtualrate else 0 end) as comm_1stNoOfCorners,  
-    sum(case when b.bettype=3 and OUtype = 1  then scomm*b.virtualrate else 0 end) as comm_NoOfCorners,  
-    sum(case when b.bettype=1 and OUtype = 2 then scomm*b.virtualrate else 0 end) as comm_15minhdp,  
-    sum(case when b.bettype=3 and OUtype = 2 then scomm*b.virtualrate else 0 end) as comm_15minOU,  
-    sum(case when b.bettype=5 and OUtype = 2 then scomm*b.virtualrate else 0 end) as comm_15min1x2,  
+    sum(case when b.bettype=8 and OUtype = 1 then winlost else 0 end) as winlost_1stNoOfCorners,  
+    sum(case when b.bettype=3 and OUtype = 1 then winlost else 0 end) as winlost_NoOfCorners,  
+    sum(case when b.bettype=1 and OUtype = 2 then winlost else 0 end) as winlost_15minhdp,  
+    sum(case when b.bettype=3 and OUtype = 2 then winlost else 0 end) as winlost_15minOU,  
+    sum(case when b.bettype=5 and OUtype = 2 then winlost else 0 end) as winlost_15min1x2,  
     --1st No.of Yellow Cards + No.of Yellow Cards  
-    sum(case when b.bettype=8 and OUtype = 3 then scomm*b.virtualrate else 0 end) as comm_1stTotalBookings,  
-    sum(case when b.bettype=3 and OUtype = 3  then scomm*b.virtualrate else 0 end) as comm_TotalBookings,  
-    sum(case when b.bettype = 1 and OUtype = 4  then scomm*b.virtualrate else 0 end) as comm_NextCorner,  
-    sum(case when b.bettype = 1 and OUtype = 5  then scomm*b.virtualrate else 0 end) as comm_NextBooking,  
-    sum(case when b.bettype = 3 and OUtype = 6  then scomm*b.virtualrate else 0 end) as comm_15minCorners,  
-    sum(case when b.bettype = 3 and OUtype = 7  then scomm*b.virtualrate else 0 end) as comm_15minTotalBookings,  
-    sum(case when b.bettype = 1 and OUtype = 8  then scomm*b.virtualrate else 0 end) as comm_10minHdp,  
-    sum(case when b.bettype = 3 and OUtype = 8  then scomm*b.virtualrate else 0 end) as comm_10minOU,  
-    sum(case when b.bettype = 5 and OUtype = 8  then scomm*b.virtualrate else 0 end) as comm_10min1x2,  
-    sum(case when b.bettype IN (3,8) and OUtype = 9  then scomm*b.virtualrate else 0 end) as comm_SingleTeamOU,    
-   --Live BetCount      
-    sum(case when b.bettype = 1 and OUtype = 0 then 1 else 0 end) as bet_hdp,  
-    sum(case when b.bettype = 3 and OUtype = 0 then 1 else 0 end) as bet_ou,  
-    sum(case when b.bettype = 7 then 1 else 0 end) as bet_1sthdp,  
-    sum(case when b.bettype = 8 and OUtype = 0 then 1 else 0 end) as bet_1stou,  
-    sum(case when b.bettype = 5 and OUtype = 0 then 1 else 0 end) as bet_1x2,  
-    sum(case when b.bettype = 15 and OUtype = 0 then 1 else 0 end) as bet_1st1x2,  
-    sum(case when b.bettype = 2 then 1 else 0 end) as bet_oe,  
-    sum(case when b.bettype =12 then 1 else 0 end) as bet_1stoe,  
-    sum(case when b.bettype = 8 and OUtype =1 then 1 else 0 end) as bet_1stNoOfCorners,  
-    sum(case when b.bettype = 3 and OUType =1 then 1 else 0 end) as bet_NoOfCorners,  
-    sum(case when b.bettype = 1 and OUType =2 then 1 else 0 end) as bet_15minhdp, 
-    sum(case when b.bettype = 3 and OUType =2 then 1 else 0 end) as bet_15minOU, 
-    sum(case when b.bettype = 5 and OUType =2 then 1 else 0 end) as bet_15min1x2,  
-    sum(case when b.bettype = 8 and OUType = 3 then 1 else 0 end) as bet_1stTotalBookings,  
-    sum(case when b.bettype = 3 and OUType = 3 then 1 else 0 end) as bet_TotalBookings,  
-    sum(case when b.bettype = 1 and OUtype = 4 then 1 else 0 end) as bet_NextCorner,
-    sum(case when b.bettype = 1 and OUtype = 5 then 1 else 0 end) as bet_NextBooking,  
-    sum(case when b.bettype = 3 and OUtype = 6 then 1 else 0 end) as bet_15minCorners,
-    sum(case when b.bettype = 3 and OUtype = 7 then 1 else 0 end) as bet_15minTotalBookings,
-    sum(case when b.bettype = 1 and OUtype = 8 then 1 else 0 end) as bet_10minHdp,
-    sum(case when b.bettype = 3 and OUtype = 8 then 1 else 0 end) as bet_10minOU,
-    sum(case when b.bettype = 5 and OUtype = 8 then 1 else 0 end) as bet_10min1x2,
-    sum(case when b.bettype IN (3,8) and OUtype = 9 then 1 else 0 end) as bet_SingleTeamOU
+    sum(case when b.bettype=8 and OUtype = 3 then winlost else 0 end) as winlost_1stTotalBookings,  
+    sum(case when b.bettype=3 and OUtype = 3 then winlost else 0 end) as winlost_TotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 4 then winlost else 0 end) as winlost_NextCorner,  
+    sum(case when b.bettype =1 and OUtype = 5 then winlost else 0 end) as winlost_NextBooking,  
+    sum(case when b.bettype =3 and OUtype = 6 then winlost else 0 end) as winlost_15minCorners,  
+    sum(case when b.bettype =3 and OUtype = 7 then winlost else 0 end) as winlost_15minTotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 8 then winlost else 0 end) as winlost_10minHdp,  
+    sum(case when b.bettype =3 and OUtype = 8 then winlost else 0 end) as winlost_10minOU,  
+    sum(case when b.bettype =5 and OUtype = 8 then winlost else 0 end) as winlost_10min1x2,  
+    sum(case when OUtype = 9 and b.bettype IN (3,8) then winlost else 0 end) as winlost_SingleTeamOU,  
+   
+   --Commission  
+    sum(case when b.bettype=1 and OUtype = 0 then comm else 0 end) as comm_hdp,  
+    sum(case when b.bettype=2 then comm else 0 end) as comm_oe,  
+    sum(case when b.bettype=3  and OUtype = 0 then comm else 0 end) as comm_ou,  
+    sum(case when (b.bettype=5 or b.bettype=124) and OUtype = 0 then comm else 0 end) as comm_1x2,  
+    sum(case when b.bettype=7 then comm else 0 end) as comm_1sthdp,  
+    sum(case when b.bettype=8 and OUtype = 0 then comm else 0 end) as comm_1stou,  
+    sum(case when b.bettype=12 then comm else 0 end) as comm_1stoe,  
+    sum(case when (b.bettype=15 or b.bettype=125) and OUtype = 0 then comm else 0 end) as comm_1st1x2,  
+    --sum(case when b.bettype=22 then scomm*b.virtualrate else 0 end) as comm_ng,  
+    sum(case when b.bettype=8 and OUtype = 1  then comm else 0 end) as comm_1stNoOfCorners,  
+    sum(case when b.bettype=3 and OUtype = 1  then comm else 0 end) as comm_NoOfCorners,  
+    sum(case when b.bettype=1 and OUtype = 2 then comm else 0 end) as comm_15minhdp,  
+    sum(case when b.bettype=3 and OUtype = 2 then comm else 0 end) as comm_15minOU,  
+    sum(case when b.bettype=5 and OUtype = 2 then comm else 0 end) as comm_15min1x2,  
+    --1st No.of Yellow Cards + No.of Yellow Cards  
+    sum(case when b.bettype=8 and OUtype = 3 then comm else 0 end) as comm_1stTotalBookings,  
+    sum(case when b.bettype=3 and OUtype = 3  then comm else 0 end) as comm_TotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 4  then comm else 0 end) as comm_NextCorner,
+    sum(case when b.bettype =1 and OUtype = 5  then comm else 0 end) as comm_NextBooking,
+    sum(case when b.bettype =3 and OUtype = 6  then comm else 0 end) as comm_15minCorners,
+    sum(case when b.bettype =3 and OUtype = 7  then comm else 0 end) as comm_15minTotalBookings,
+    sum(case when b.bettype =1 and OUtype = 8  then comm else 0 end) as comm_10minHdp,
+    sum(case when b.bettype =3 and OUtype = 8  then comm else 0 end) as comm_10minOU,
+    sum(case when b.bettype =5 and OUtype = 8  then comm else 0 end) as comm_10min1x2,
+    sum(case when OUtype = 9 and b.bettype IN (3,8) then comm else 0 end) as comm_SingleTeamOU,  
       
-   from #bettrans b with(nolock)   
-    inner join @temp_daao cm on b.matchid=cm.matchid and cm.bettype = 0  
+   --Live BetCount      
+    sum(case when b.bettype = 1 and OUtype = 0 then bet else 0 end) as bet_hdp,  
+    sum(case when b.bettype = 2 then bet else 0 end) as bet_oe,  
+    sum(case when b.bettype = 3 and OUtype = 0 then bet else 0 end) as bet_ou,  
+    sum(case when b.bettype = 7 then bet else 0 end) as bet_1sthdp,  
+    sum(case when b.bettype = 8 and OUtype = 0 then bet else 0 end) as bet_1stou,  
+    sum(case when (b.bettype=5 or b.bettype=124) and OUtype = 0 then bet else 0 end) as bet_1x2,  
+    sum(case when b.bettype =12 then bet else 0 end) as bet_1stoe,  
+    sum(case when (b.bettype=15 or b.bettype=125) and OUtype = 0 then bet else 0 end) as bet_1st1x2,  
+    sum(case when b.bettype = 8 and OUtype =1 then bet else 0 end) as bet_1stNoOfCorners,  
+    sum(case when b.bettype = 3 and OUType =1 then bet else 0 end) as bet_NoOfCorners,  
+    sum(case when b.bettype = 1 and OUType =2 then bet else 0 end) as bet_15minhdp,  
+    sum(case when b.bettype = 3 and OUType =2 then bet else 0 end) as bet_15minOU,  
+    sum(case when b.bettype = 5 and OUType =2 then bet else 0 end) as bet_15min1x2,  
+    sum(case when b.bettype = 8 and OUType = 3 then bet else 0 end) as bet_1stTotalBookings,  
+    sum(case when b.bettype = 3 and OUType = 3 then bet else 0 end) as bet_TotalBookings,  
+    sum(case when b.bettype =1 and OUtype = 4 then bet else 0 end) as bet_NextCorner,
+    sum(case when b.bettype =1 and OUtype = 5 then bet else 0 end) as bet_NextBooking,
+    sum(case when b.bettype =3 and OUtype = 6 then bet else 0 end) as bet_15minCorners,
+    sum(case when b.bettype =3 and OUtype = 7 then bet else 0 end) as bet_15minTotalBookings,
+    sum(case when b.bettype =1 and OUtype = 8 then bet else 0 end) as bet_10minHdp,
+    sum(case when b.bettype =3 and OUtype = 8 then bet else 0 end) as bet_10minOU,
+    sum(case when b.bettype =5 and OUtype = 8 then bet else 0 end) as bet_10min1x2,
+    sum(case when OUtype = 9 and b.bettype IN (3,8) then bet else 0 end) as bet_SingleTeamOU
+      
+   from #bettrans b    
+    inner join @temp_daao cm on b.matchid=cm.matchid and cm.bettype = 0     
  ) as a  
  order by username  
     drop table #userMatch  
+	drop table #bettrans_bk
+	drop table #bettrans
+END
+
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [vnteam] AS [dbo]
