@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSumBK]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_Rpt_TraderPerformanceSumBK]    Script Date: 04/08/2016 03:39:21 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Acc_Rpt_TraderPerformanceSumBK    Script Date: 4/5/2016 3:21:23 PM ******/
+ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSumBK]
  @fromdate datetime ,  
  @todate datetime,  
  @isSoccer bit =1  
@@ -43,6 +51,7 @@
   - 20140519@Johnson: Remove bettype from league name [RedmineID:#16022]						
   - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
   - 20160317@Robert - Incorporate 1X2 HDP and 1H 1X2 HDP bet types into Trader Performance Report[#54184]
+  - 20160408@Francis: Revise SP to enhance performance
  Param's Explanation:  
  • @isSoccer  
   = 1: Soccer  
@@ -192,6 +201,23 @@ BEGIN
   Others int
  )  
  
+create table #bettrans_bk (matchid int, bettype int, scomm money, winlost money, awinlost money, mwinlost money, swinlost money,
+							actual_stake money, stake money, tpositiontaking smallmoney, virtualrate float, modds smallmoney)
+	
+create clustered index [CIX_matchid_bettype] on #bettrans_bk (matchid asc, bettype asc)
+
+insert into #bettrans_bk (matchid, bettype, scomm, winlost, awinlost, mwinlost, swinlost,
+							actual_stake, stake, tpositiontaking, virtualrate, modds)
+select matchid, bettype, scomm, winlost, awinlost, mwinlost, swinlost,
+		actual_stake, stake, tpositiontaking, virtualrate, modds
+from bodb_Archive.dbo.bettrans_bk b (nolock)
+where b.statusID not in (101,102,103,121,111)   
+   AND b.ruben =1  
+   AND b.bettype in (1,3,7,8,5,15,2,12,124,125)   
+   AND b.winlostdate between @fromdate AND @todate
+   AND b.LiveIndicator = 1  
+   AND b.currency <> 20
+ 
  DECLARE @countMajorOrphan int, @countMinor1Orphan int, @countMinor2Orphan int, @countMinor3Orphan int , @countOthersOrphan int
  
  insert #userMatch (custid,nMatch, Major,Minor1,Minor2,Minor3,Others) 
@@ -199,12 +225,8 @@ BEGIN
  FROM( 
 	 select t.custid, ISNULL(t.category,'Others') as category, count(distinct t.matchID) as cntMatch
 	 from @temp_daao t  
-	  inner join bodb_archive.dbo.bettrans_bk b with (nolock) on b.matchid=t.matchid and (b.bettype = t.bettype  or (b.bettype = 124 AND t.BetType = 5) OR (b.bettype = 125 AND t.BetType = 15))
-	 where LiveIndicator = 1 and   
-	 --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
-	 b.statusID not in (101,102,103,121,111)   
-	 and b.currency <> 20 
-	 group by t.custid ,ISNULL(t.category,'Others')  ) as s
+	  inner join #bettrans_bk b with (nolock) on b.matchid=t.matchid and (b.bettype = t.bettype  or (b.bettype = 124 AND t.BetType = 5) OR (b.bettype = 125 AND t.BetType = 15))
+	  group by t.custid ,ISNULL(t.category,'Others')  ) as s
  PIVOT(
 	SUM(s.cntMatch)
 	FOR category in (Major, Minor1, Minor2, Minor3, Others)
@@ -213,11 +235,7 @@ BEGIN
  ; WITH T AS(  
  select ISNULL(t.category,'Others') category, count(distinct t.matchID) countOrphan
  from @temp_daao t  
-  inner join bodb_archive.dbo.bettrans_bk b with (nolock) on b.matchid=t.matchid and t.bettype = 0  
- where LiveIndicator = 1 and   
- --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
- b.statusID not in (101,102,103,121,111)   
- and b.currency <> 20
+  inner join #bettrans_bk b with (nolock) on b.matchid=t.matchid and t.bettype = 0  
  GROUP by ISNULL(t.category,'Others')
  )
  
@@ -242,13 +260,7 @@ select b.matchid,bettype,
    --Live BetCount      
     count(1) as bet    
 INTO #bettrans
-from bodb_archive.dbo.bettrans_bk b with(nolock) 
-WHERE  b.statusID not in (101,102,103,121,111)   
-   AND b.ruben =1  
-   AND b.bettype in (1,3,7,8,5,15,2,12,124,125)   
-   AND b.winlostdate between @fromdate AND @todate
-   AND LiveIndicator = 1  
-   AND b.currency <> 20
+from #bettrans_bk b
 GROUP by matchid, bettype	
   
  select   
@@ -564,9 +576,12 @@ GROUP by matchid, bettype
  ) as a  
  order by username  
     drop table #userMatch  
-END  
+	drop table #bettrans_bk
+	drop table #bettrans
+END
+
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [vnteam] AS [dbo]
