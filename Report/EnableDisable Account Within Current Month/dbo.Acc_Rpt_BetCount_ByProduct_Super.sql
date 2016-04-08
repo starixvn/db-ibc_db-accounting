@@ -141,24 +141,9 @@ BEGIN
 			SET @TempToDate = @MoveBetsDay
 		ELSE
 			SET  @TempToDate = @CurrentDate
-			--Table CustIDList
-		CREATE TABLE #CustIdList (CustId INT)
-		INSERT INTO #CustIdList (CustId)
-		SELECT	CustID 
-		FROM	dbo.CustInfo WITH(NOLOCK)
-		WHERE	srecommend = @CustID AND RoleID = 1
 
-		DECLARE @CustIdList VARCHAR(MAX)
-
-		SELECT  @CustIdList = substring((SELECT ( ',' +  cast(CustId as varchar(20)) )
-                           FROM #CustIdList                         
-                           ORDER BY CustId                             
-                           FOR XML PATH( '' )
-                          ), 2, 8000 ) 
-
-
-		DECLARE @sql1 VARCHAR(MAX), @sql2 VARCHAR(100)
-		SET @sql1 = 	'
+		DECLARE @sql VARCHAR(MAX) 
+		SET @sql = 	'
 				SELECT * FROM  OPENQUERY ( DBWH ,''
 				SELECT b.custid,''''SETTLED'''',SUM(b.BetCount)
 				FROM bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
@@ -183,18 +168,16 @@ BEGIN
 										,4	---LOSE
 										,8	---WON								 
 										)	
-						AND CustID IN (' 
-
-		SET @sql2 = ')
+						AND CustID IN ( 
+										SELECT	CustID 
+										FROM	bodb02.dbo.CustInfo WITH(NOLOCK)
+										WHERE	srecommend = '+ CONVERT(VARCHAR(50),@CustID) +' AND RoleID = 1 )
 						GROUP BY b.custid '' )'		 
 		
-		IF @CustIdList <> ''  
-		BEGIN 		
-			INSERT INTO #AvailableMember 
-			EXEC (@sql1 + @CustIdList + @sql2)	
-		END 
- 			
-		DROP TABLE #CustIdList    
+				
+		INSERT INTO #AvailableMember 
+		EXEC (@sql)	
+		
 	END
 	
 
