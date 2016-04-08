@@ -17,30 +17,34 @@ AS
 BEGIN
 
 	SET NOCOUNT ON 
-	DECLARE @Today DATETIME
-	SELECT @LeagueID = ISNULL(@LeagueID, 0), @SportType = ISNULL(@SportType, 0), @Today = GETDATE() 
+	DECLARE @Today DATETIME, @RowId INT, @Count INT
+	SELECT @LeagueID = ISNULL(@LeagueID, 0), @SportType = ISNULL(@SportType, 0), @Today = GETDATE(), @RowId = 0
 
 	SET @Today = DATEADD(HH, -1, @Today)
+
+	CREATE TABLE #MatchInQueue (RowId INT IDENTITY(1,1), MatchId INT, SingleStatus INT, ParlayStatus INT, IsSingle BIT, IsMixParlay BIT)
 
 	;WITH SingleTicket AS (
 		SELECT matchid, MIN(IsCalculating) AS IsCalculating
 		FROM dbo.Single_Calculate_Queue s WITH(NOLOCK)
-		WHERE Starttime > @Today
+		WHERE Starttime > @Today AND SportType = 1
 		GROUP BY matchid 
 	), ParlayTicket AS (
 		SELECT p.matchid, MIN(IsCalculating) AS IsCalculating
 		FROM dbo.Parlay_Calculate_Queue p WITH(NOLOCK)
 		WHERE Starttime > @Today
 		GROUP BY matchid 
-	)	
+	)
+	INSERT INTO #MatchInQueue(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay)
 	SELECT ISNULL(sg.matchid, pl.matchid) AS MatchId
 		, sg.IsCalculating AS SingleStatus
 		, pl.IsCalculating AS ParlayStatus
 		, CAST(ISNULL(sg.IsCalculating, 0) AS BIT) AS IsSingle
 		, CAST(ISNULL(pl.IsCalculating, 0) AS BIT) AS IsMixParlay
-	INTO #MatchInQueue
 	FROM SingleTicket sg
 		FULL OUTER JOIN ParlayTicket pl on sg.matchid = pl.matchid
+
+	SET @Count = @@ROWCOUNT
 
 	CREATE TABLE #tmpAutoSettle1s(MatchID INT, ResultStatusID TINYINT)
 	INSERT INTO #tmpAutoSettle1s(MatchID, ResultStatusID)
@@ -59,30 +63,40 @@ BEGIN
 			, refund BIT, calrefund BIT, homeid INT, awayid INT, matchcode VARCHAR(50), finalhomescore INT, finalawayscore INT
 			, betstatus NVARCHAR(50), eventstatus VARCHAR(50), SettlementStatus135 TINYINT, sporttype SMALLINT, isNeutral BIT
 			, goalrecord VARCHAR(50), IsHTCal BIT, isPending BIT, isUndecided BIT, IsAutoPayout BIT, IsAutoPayout_League BIT, ConfirmHT INT, ConfirmFT INT)
+
 	DECLARE @SqlQuery VARCHAR(MAX), @MatchIds VARCHAR(MAX)
+	
+	WHILE @Count > @RowId
+	BEGIN
+		SELECT @MatchIds = NULL
 
-	SELECT @MatchIds = COALESCE(@MatchIds + ',' + CAST(MatchId AS NVARCHAR), CAST(MatchId AS NVARCHAR))
-	FROM #MatchInQueue
+		SELECT @MatchIds = COALESCE(@MatchIds + ',' + CAST(MatchId AS VARCHAR), CAST(MatchId AS VARCHAR))
+		FROM #MatchInQueue
+		WHERE RowId BETWEEN @RowId AND @RowId + 512 --maximum data via remote server < 8000 chars
 
-	SET @SqlQuery = '
-		INSERT INTO #MatchData(matchid, leagueid, hthomescore, htawayscore, calculate, multiple
-			, refund, calrefund, homeid, awayid, matchcode, finalhomescore, finalawayscore
-			, betstatus, eventstatus, SettlementStatus135, sporttype, isNeutral
-			, goalrecord, IsHTCal, isPending, isUndecided, IsAutoPayout, IsAutoPayout_League, ConfirmHT, ConfirmFT)
-		SELECT *
-		FROM OPENQUERY(DBPRO, ''SELECT m.matchid, m.leagueid, hthomescore, htawayscore, calculate, mr.multiple
+		SET @RowId = @RowId + 512
+
+		IF ISNULL(@MatchIds, '') = '' OR @@ROWCOUNT = 0
+		SET @SqlQuery = '
+			INSERT INTO #MatchData(matchid, leagueid, hthomescore, htawayscore, calculate, multiple
 				, refund, calrefund, homeid, awayid, matchcode, finalhomescore, finalawayscore
-				, betstatus, eventstatus, SettlementStatus135, m.sporttype, mr.isNeutral
-				, goalrecord, IsHTCal, isPending, isUndecided, m.IsAutoPayout, l.IsAutoPayout AS IsAutoPayout_League, ConfirmHT, ConfirmFT
-		FROM bodb02.dbo.match m WITH(NOLOCK)
-			INNER JOIN bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
-			INNER JOIN bodb02.dbo.league l WITH(NOLOCK) ON m.leagueid = l.leagueid
-		WHERE m.matchid IN (' + @MatchIds + ') 
-			AND m.leagueID = CASE WHEN ''''' + CAST(@LeagueID AS VARCHAR) + ''''' <> 0 THEN ''''' + CAST(@LeagueID AS VARCHAR) + ''''' ELSE m.leagueID END
-			AND m.sporttype = CASE WHEN ''''' + CAST(@sporttype AS VARCHAR) + ''''' = 0 THEN m.sporttype ELSE ''''' + CAST(@sporttype AS VARCHAR) + ''''' END'')
-	'
-	--PRINT (@SqlQuery)
-	EXEC (@SqlQuery)
+				, betstatus, eventstatus, SettlementStatus135, sporttype, isNeutral
+				, goalrecord, IsHTCal, isPending, isUndecided, IsAutoPayout, IsAutoPayout_League, ConfirmHT, ConfirmFT)
+			SELECT *
+			FROM OPENQUERY(DBPRO, ''SELECT m.matchid, m.leagueid, hthomescore, htawayscore, calculate, mr.multiple
+					, refund, calrefund, homeid, awayid, matchcode, finalhomescore, finalawayscore
+					, betstatus, eventstatus, SettlementStatus135, m.sporttype, mr.isNeutral
+					, goalrecord, IsHTCal, isPending, isUndecided, m.IsAutoPayout, l.IsAutoPayout AS IsAutoPayout_League, ConfirmHT, ConfirmFT
+			FROM bodb02.dbo.match m WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+				INNER JOIN bodb02.dbo.league l WITH(NOLOCK) ON m.leagueid = l.leagueid
+			WHERE m.matchid IN (' + @MatchIds + ') 
+				AND m.leagueID = CASE WHEN ''''' + CAST(@LeagueID AS VARCHAR) + ''''' <> 0 THEN ''''' + CAST(@LeagueID AS VARCHAR) + ''''' ELSE m.leagueID END
+				AND m.sporttype = CASE WHEN ''''' + CAST(@sporttype AS VARCHAR) + ''''' = 0 THEN m.sporttype ELSE ''''' + CAST(@sporttype AS VARCHAR) + ''''' END'')
+		'
+		--PRINT (@SqlQuery)
+		EXEC (@SqlQuery)
+	END
 
 	;WITH BetStatus AS (
 		SELECT b.matchid
