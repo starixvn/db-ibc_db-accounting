@@ -151,14 +151,14 @@ BEGIN
 
 		DECLARE @CustIdList VARCHAR(2000)
 
-		SELECT  @CustIdList = substring((SELECT ( ', ' +  cast(CustId as varchar(20)) )
+		SELECT  @CustIdList = substring((SELECT ( ',' +  cast(CustId as varchar(20)) )
                            FROM #CustIdList                         
                            ORDER BY CustId                             
                            FOR XML PATH( '' )
-                          ), 3, 1000 ) 
+                          ), 2, 2000 ) 
 
 
-		DECLARE @sql VARCHAR(2000) 
+		DECLARE @sql VARCHAR(MAX) 
 		SET @sql = 	'
 				SELECT * FROM  OPENQUERY ( DBWH ,''
 				SELECT b.custid,''SETTLED'',SUM(b.BetCount)
