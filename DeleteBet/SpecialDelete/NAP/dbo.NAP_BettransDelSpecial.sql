@@ -1696,6 +1696,7 @@ BEGIN
 			, ci.username
 			, ci.username2
 			, ci.site
+			, ci.currency
 		FROM CustDB.dbo.Customer ci WITH(NOLOCK)
 			INNER JOIN CTE_CustIdAll ca ON ci.custid = ca.custid
 		
@@ -1723,17 +1724,19 @@ BEGIN
 		,al.grouptransid
 		,al.transid
 		,al.TransDesc
+		,al.custid
+		,al.recommend
+		,al.mrecommend
+		,al.srecommend
 		-----------------------------
+		,ci.currency
 		,ci.username
 		,ci.username2
 		,ci.username AS CustUserName
 		,ci.username2 as CustUserName2
-		,al.recommend
 		,ag.UserName AS AgUserName
-		,al.mrecommend
-		,mag.UserName AS MagUserName
-		,al.srecommend
-		,sag.Username AS SagUserName
+		,ma.UserName AS MagUserName
+		,su.Username AS SagUserName
 		---------------------------------------
 		,CASE 
 			WHEN al.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN 'Betfair' 
@@ -1782,8 +1785,9 @@ BEGIN
 				@ActionID	= 0, 
 				@Remark		= @Remark
 		END CATCH
-		ELSE
-		BEGIN
+	END
+	ELSE
+	BEGIN
 			BEGIN TRY
 				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
 					@UserID		= @UserID, 
@@ -1802,7 +1806,6 @@ BEGIN
 					@ActionID	= 0, 
 					@Remark		= @Remark
 			END CATCH
-		END	
 	END
 	
 	DROP TABLE #BeforeUpd

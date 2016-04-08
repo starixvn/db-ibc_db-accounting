@@ -30,6 +30,7 @@ AS
 			  - 20151103@Kathy: Enhance performance [Redmine:#43233]
               - 20151209@Kathy: get translog.siteid for MG API [Redmine:#49019]
 			  - 20150712@Kathy: Database - Change datatype [Redmine: #48660]
+			  - 20160401@Bobby: #55354 - Update changes for new message structure
 			  
 	Param's Explanation:
 
@@ -265,8 +266,8 @@ BEGIN
 	FROM	dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN #tblTransIds t
 			ON	b.refno = t.transid
-				AND b.matchid = @matchid
-	WHERE	b.bettype IN (SELECT bettype FROM @tblBettype)
+	WHERE	b.matchid = @matchid
+			AND b.bettype IN (SELECT bettype FROM @tblBettype)
 			AND b.statusID NOT IN (0, 101,102 ) -- running, reject, void
 			AND b.winlostdate >=@FromDate
 			AND 1 = CASE WHEN b.Bettype IN (801,803,804,805) THEN CASE 
@@ -790,268 +791,97 @@ BEGIN
 	WHERE 
 		MATCH.matchid = @MatchId
 
-
-	-- update username/username2/site
-	UPDATE	b
-		SET username = c.username
-			,username2 = c.username2
-			,creatorName = cr.username
-			,site = ag.site
-	FROM	#BetDelete b
-		INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK)
-			ON b.custid = c.custid
-		INNER JOIN CustDB.dbo.Customer cr WITH(NOLOCK)
-			ON b.creator = cr.custid
-		INNER JOIN CustDB.dbo.Customer ag WITH(NOLOCK)
+	
+	-- Output new message structure
+	DECLARE @isITAdmin BIT 
+	
+	-- CHECK IT GROUP or NOT ?   
+	IF EXISTS (SELECT TOP 1 1 FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1 AND a.custid = @UserID) -- Check UserID in IT group
+	BEGIN  
+		SELECT @isITAdmin = 1   
+	END  		
+	
+	;WITH CTE_CustIdAll AS (
+		SELECT DISTINCT t.custid
+		FROM #BetDelete b
+		CROSS APPLY (
+			VALUES (custid)
+			,(creator)
+			,(recommend)
+			,(mrecommend)
+			,(srecommend)
+		) AS t (custid)
+	), CTE_CustInfo AS (
+		SELECT ci.custid
+			, ci.username
+			, ci.username2
+			, ci.site
+			, ci.currency
+		FROM CustDB.dbo.Customer ci WITH(NOLOCK)
+			INNER JOIN CTE_CustIdAll ca ON ci.custid = ca.custid
+		
+	)
+	SELECT	b.custid
+		,b.actual_stake winlost
+		,b.odds
+		,b.OddsType
+		,b.transdate
+		,b.bettype
+		,b.betfrom
+		,b.transid
+		,b.refno
+		,b.betteam
+		,b.betcheck
+		,b.hdp1
+		,b.hdp2
+		,b.betfrom
+		,b.isLiveIndicator
+		,b.livehomescore
+		,b.liveawayscore
+		,b.stake
+		,b.CurrencyName
+		,b.site
+		,b.STATUS
+		,b.SecAcceptFlag
+		,b.betid
+		,b.transdesc
+		,b.recommend
+		,b.mrecommend
+		,b.srecommend
+		-----------------------------
+		,ci.currency
+		,ci.username
+		,ci.username2
+		,cr.username AS creator
+		,ci.username AS CustUserName
+		,ci.username2 as CustUserName2
+		,ag.UserName AS AgUserName
+		,ma.UserName AS MagUserName
+		,su.Username AS SagUserName
+		---------------------------------------
+		,CASE 
+			WHEN b.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN 'Betfair' 
+			ELSE su.site 
+		END AS EmailGroup
+		,su.site 
+		,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
+		,@isITAdmin	AS IsITSupport
+		
+	FROM #BetDelete b WITH (NOLOCK)
+		INNER JOIN CTE_CustInfo ci WITH(NOLOCK)
+			ON b.custid = ci.custid
+		INNER JOIN CTE_CustInfo cr WITH(NOLOCK)
+			ON b.creator = cr.custid	
+		INNER JOIN CTE_CustInfo ag WITH(NOLOCK)
 			ON b.recommend = ag.custid
+		INNER JOIN CTE_CustInfo ma WITH(NOLOCK)
+			ON b.mrecommend = ma.custid
+		INNER JOIN CTE_CustInfo su WITH(NOLOCK)
+			ON b.srecommend = su.custid
+		LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
+			ON b.srecommend = s.custid
 	
-	-- All ticket voided
-	SELECT b.refno transid, 
-			b.custid, 
-			b.username AS CustUserName,
-			b.username2 as CustUserName2,
-			b.recommend, 
-			ag.UserName AS AgUserName,
-			b.mrecommend, 
-			mag.UserName AS MagUserName, 
-			b.srecommend, 
-			sag.Username AS SagUserName,
-			b.status, 
-			b.SecAcceptFlag
-	FROM	#BetDelete b (nolock)
-		INNER JOIN custDB.dbo.custinfo ag  (nolock) 
-			ON	b.recommend  = ag.custid
-		INNER JOIN custDB.dbo.custinfo mag (nolock) 
-			ON	b.mrecommend = mag.custid
-		INNER JOIN custDB.dbo.custinfo sag (nolock) 
-			ON	b.srecommend = sag.custid
-	
-	-- Send mail when void deposit
-	SELECT	b.custid
-			,b.actual_stake winlost
-			,b.username
-			,b.username2
-			,b.odds
-			,b.OddsType
-			,b.transdate
-			,b.bettype
-			,b.betfrom
-			,b.transid
-			,b.refno
-			,betteam
-			,betcheck
-			,hdp1
-			,hdp2
-			,betfrom
-			,b.isLiveIndicator
-			,livehomescore
-			,liveawayscore
-			,b.creatorName creator
-			,stake
-			,b.CurrencyName
-			,b.site
-			,b.STATUS
-			,b.SecAcceptFlag
-			,b.betid
-			,b.transdesc
-	FROM	#BetDelete b
-	WHERE	EXISTS (SELECT 1 FROM custDB.dbo.Dep_CustSuper WITH(NOLOCK) WHERE custid = b.srecommend)
-	ORDER BY transid
-
-	-- Send mail when void 12EU tickets 
-	SELECT	b.custid
-			,b.actual_stake winlost
-			,b.username
-			,b.username2
-			,b.odds
-			,b.OddsType
-			,b.transdate
-			,b.bettype
-			,b.betfrom
-			,b.transid
-			,b.refno
-			,betteam
-			,betcheck
-			,hdp1
-			,hdp2
-			,betfrom
-			,b.isLiveIndicator
-			,livehomescore
-			,liveawayscore
-			,b.creatorName creator
-			,stake
-			,b.CurrencyName
-			,'12EU' AS site
-			,b.STATUS
-			,b.SecAcceptFlag
-			,b.betid
-			,b.transdesc
-	FROM	#BetDelete b
-	WHERE	b.username = '12EU'
-	ORDER BY transid
-	
-	-----Send mail when void any real tickets by IT
-	SELECT	b.custid
-			,b.actual_stake winlost
-			,b.username
-			,b.username2
-			,b.odds
-			,b.OddsType
-			,b.transdate
-			,b.bettype
-			,b.betfrom
-			,b.transid
-			,b.refno
-			,betteam
-			,betcheck
-			,hdp1
-			,hdp2
-			,betfrom
-			,b.isLiveIndicator
-			,livehomescore
-			,liveawayscore
-			,b.creatorName creator
-			,stake
-			,b.CurrencyName
-			,b.site
-			,b.STATUS
-			,b.SecAcceptFlag
-			,b.betid
-			,b.transdesc
-	FROM	#BetDelete b
-	WHERE	EXISTS (SELECT 1 FROM custDB.dbo.customer WITH (NOLOCK) WHERE CURRENCY <> 20 AND roleid = 4 AND custid = b.srecommend)
-			AND @UserID IN (SELECT a.custid	FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1) -- Check UserID in IT group	     					   
-	ORDER BY transid
-    	   
-
-	-- Send mail when void UUS tickets
-	SELECT	b.custid
-			,b.actual_stake winlost
-			,b.username
-			,b.username2
-			,b.odds
-			,b.OddsType
-			,b.transdate
-			,b.bettype
-			,b.betfrom
-			,b.transid
-			,b.refno
-			,betteam
-			,betcheck
-			,hdp1
-			,hdp2
-			,betfrom
-			,b.isLiveIndicator
-			,livehomescore
-			,liveawayscore
-			,b.creatorName creator
-			,stake
-			,b.CurrencyName
-			,b.site
-			,b.STATUS
-			,b.SecAcceptFlag
-			,b.betid
-			,b.transdesc
-	FROM	#BetDelete b
-	WHERE	EXISTS (SELECT 1 FROM custDB.dbo.customer WITH(NOLOCK) WHERE CURRENCY = 20 AND roleid = 4 AND custid = b.srecommend)		
-			AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1) -- Check UserID in IT group		     					   
-	ORDER BY transid    
-
-	-----Send mail when void Foobet tickets
-	SELECT	b.custid
-			,b.actual_stake winlost
-			,b.username
-			,b.username2
-			,b.odds
-			,b.OddsType
-			,b.transdate
-			,b.bettype
-			,b.betfrom
-			,b.transid
-			,b.refno
-			,betteam
-			,betcheck
-			,hdp1
-			,hdp2
-			,betfrom
-			,b.isLiveIndicator
-			,livehomescore
-			,liveawayscore
-			,b.creatorName creator
-			,stake
-			,b.CurrencyName
-			,'Foobet' AS site
-			,b.STATUS
-			,b.SecAcceptFlag
-			,b.betid
-			,b.transdesc
-	FROM	#BetDelete b WITH (NOLOCK)
-	WHERE	b.recommend = 11196380 	     					   
-	ORDER BY transid  
-	
-	-----Send mail when void Betfair tickets
-	SELECT	b.custid
-			,b.actual_stake winlost
-			,b.username
-			,b.username2
-			,b.odds
-			,b.OddsType
-			,b.transdate
-			,b.bettype
-			,b.betfrom
-			,b.transid
-			,b.refno
-			,betteam
-			,betcheck
-			,hdp1
-			,hdp2
-			,betfrom
-			,b.isLiveIndicator
-			,livehomescore
-			,liveawayscore
-			,b.creatorName creator
-			,stake
-			,b.CurrencyName
-			,'BetFair' AS site
-			,b.STATUS
-			,b.SecAcceptFlag
-			,b.betid
-			,b.transdesc
-	FROM	#BetDelete b WITH (NOLOCK)
-	WHERE	b.custid IN (1077687, 2331, 115770, 15523642) -- Betfair: BFOS, BF, ITibc102, BF3	     					   
-	ORDER BY transid    
-
-	-----Send mail when void OneExchange tickets
-	SELECT	b.custid
-			,b.actual_stake winlost
-			,b.username
-			,b.username2
-			,b.odds
-			,b.OddsType
-			,b.transdate
-			,b.bettype
-			,b.betfrom
-			,b.transid
-			,b.refno
-			,betteam
-			,betcheck
-			,hdp1
-			,hdp2
-			,betfrom
-			,b.isLiveIndicator
-			,livehomescore
-			,liveawayscore
-			,b.creatorName creator
-			,stake
-			,b.CurrencyName
-			,'OneExchange' AS site
-			,b.STATUS
-			,b.SecAcceptFlag
-			,b.betid
-			,b.transdesc
-	FROM	#BetDelete b WITH (NOLOCK)
-	WHERE	b.recommend = 13423967		     					   
-	ORDER BY transid    
+	ORDER BY b.transid
 	
 	 --Metric API Calling  
 	SELECT	tmp.refno 
