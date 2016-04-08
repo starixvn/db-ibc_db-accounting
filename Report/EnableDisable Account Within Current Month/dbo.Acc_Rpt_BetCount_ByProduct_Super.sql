@@ -88,8 +88,7 @@ BEGIN
 			b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
 			OR b.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
 			OR b.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
-			OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
-			OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
+			OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)			
 			OR b.bettype BETWEEN 801 AND (CASE WHEN @sportType= -1 AND b.StatusID <> 0 THEN 806 ELSE 0 END)
 			OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 AND b.StatusID <> 0 THEN 1599 ELSE 0 END)
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
@@ -149,35 +148,34 @@ BEGIN
 		FROM	dbo.CustInfo WITH(NOLOCK)
 		WHERE	srecommend = @CustID AND RoleID = 1
 
-		DECLARE @CustIdList VARCHAR(2000)
+		DECLARE @CustIdList VARCHAR(MAX)
 
 		SELECT  @CustIdList = substring((SELECT ( ',' +  cast(CustId as varchar(20)) )
                            FROM #CustIdList                         
                            ORDER BY CustId                             
                            FOR XML PATH( '' )
-                          ), 2, 2000 ) 
+                          ), 2, 8000 ) 
 
 
-		DECLARE @sql VARCHAR(MAX) 
-		SET @sql = 	'
+		DECLARE @sql1 VARCHAR(MAX), @sql2 VARCHAR(100)
+		SET @sql1 = 	'
 				SELECT * FROM  OPENQUERY ( DBWH ,''
-				SELECT b.custid,''SETTLED'',SUM(b.BetCount)
+				SELECT b.custid,''''SETTLED'''',SUM(b.BetCount)
 				FROM bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
-				WHERE	b.rptDate BETWEEN @FirstDate AND @TempToDate			
+				WHERE	b.rptDate BETWEEN '''''+ CONVERT(VARCHAR(10),@FirstDate, 121)+ ''''' AND '''''+  CONVERT(VARCHAR(10),@CurrentDate, 121)  + '''''
 						AND (
-							b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
-							OR b.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
-							OR b.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
-							OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
-							OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
-							OR b.bettype BETWEEN 2101 AND (CASE WHEN @sportType=251 THEN 2399 ELSE 0 END) 
-							OR b.bettype BETWEEN 801 AND (CASE WHEN @sportType= -1 THEN 806 ELSE 0 END)
-							OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
-							OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
-							OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
-							OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-							OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 THEN 1003 ELSE 0 END) -- Cockfighting
-							OR b.bettype BETWEEN 2401  AND (CASE WHEN @SportType = 211 THEN 2499 ELSE 0 END) -- AllBet
+							b.bettype BETWEEN 31 AND CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =151 THEN 49 ELSE 0 END
+							OR b.bettype BETWEEN 81 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =161 THEN 120 ELSE 0 END)
+							OR b.bettype BETWEEN 1101 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =162 THEN 1199 ELSE 0 END)
+							OR b.bettype BETWEEN 1201 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =180 THEN 1299 ELSE 0 END)
+							OR b.bettype BETWEEN 2101 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =251 THEN 2399 ELSE 0 END) 
+							OR b.bettype BETWEEN 801 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = -1 THEN 806 ELSE 0 END)
+							OR b.bettype BETWEEN 1501 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =202 THEN 1599 ELSE 0 END)
+							OR b.bettype BETWEEN 73 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 252 THEN 73 ELSE 0 END)
+							OR b.bettype BETWEEN 1701 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
+							OR b.bettype BETWEEN 18000 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 204 THEN 18005 ELSE 0 END) -- Colossus Bet
+							OR b.bettype BETWEEN 1003 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 206 THEN 1003 ELSE 0 END) -- Cockfighting
+							OR b.bettype BETWEEN 2401  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 211 THEN 2499 ELSE 0 END) -- AllBet
 						) 
 						AND b.status IN (3  ---DRAW
 										,12	---HALF LOSE
@@ -185,41 +183,18 @@ BEGIN
 										,4	---LOSE
 										,8	---WON								 
 										)	
-						AND CustID IN (' + @CustIdList  + ')
-						GROUP BY b.custid '' )'			 
+						AND CustID IN (' 
+
+		SET @sql2 = ')
+						GROUP BY b.custid '' )'		 
 		
-		INSERT INTO #AvailableMember 
-		EXEC (@sql)	
- 
- 
-		SELECT b.custid,'SETTLED',SUM(b.BetCount)
-		FROM bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
-		WHERE	b.rptDate BETWEEN @FirstDate AND @TempToDate			
-				AND (
-					b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 2101 AND (CASE WHEN @sportType=251 THEN 2399 ELSE 0 END) 
-					OR b.bettype BETWEEN 801 AND (CASE WHEN @sportType= -1 THEN 806 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
-					OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
-					OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
-					OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-					OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 THEN 1003 ELSE 0 END) -- Cockfighting
-					OR b.bettype BETWEEN 2401  AND (CASE WHEN @SportType = 211 THEN 2499 ELSE 0 END) -- AllBet
-				) 
-				AND b.status IN (3  ---DRAW
-								,12	---HALF LOSE
-								,13	---HALF WON
-								,4	---LOSE
-								,8	---WON								 
-								)	
-				AND CustID IN (Select CustID FROM #CustIdList)
-		GROUP BY b.custid 
-	
-				   
+		IF @CustIdList <> ''  
+		BEGIN 		
+			INSERT INTO #AvailableMember 
+			EXEC (@sql1 + @CustIdList + @sql2)	
+		END 
+ 			
+		DROP TABLE #CustIdList    
 	END
 	
 
@@ -355,6 +330,7 @@ BEGIN
 	--Drop temp tables
 	DROP TABLE #FiltedDownlineAcc
 	DROP TABLE #AvailableMember
+
 END
 
 GO
