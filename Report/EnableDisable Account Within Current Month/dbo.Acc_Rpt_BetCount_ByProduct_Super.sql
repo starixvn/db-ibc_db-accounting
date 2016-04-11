@@ -1,7 +1,11 @@
-USE [bodb02]
+SET QUOTED_IDENTIFIER ON 
 GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_Rpt_BetCount_ByProduct_Super    Script Date: 4/8/2016 4:33:33 PM ******/
  
-ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
+CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@CustID			INT,
@@ -147,7 +151,7 @@ BEGIN
 				SELECT * FROM  OPENQUERY ( DBWH ,''
 				SELECT b.custid,''''SETTLED'''',SUM(b.BetCount)
 				FROM bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
-				WHERE	b.rptDate BETWEEN '''''+ CONVERT(VARCHAR(10),@FirstDate, 121)+ ''''' AND '''''+  CONVERT(VARCHAR(10),@CurrentDate, 121)  + '''''
+				WHERE	b.rptDate BETWEEN '''''+ CONVERT(VARCHAR(10),@FirstDate, 121)+ ''''' AND '''''+  CONVERT(VARCHAR(10),@TempToDate, 121)  + '''''
 						AND (
 							b.bettype BETWEEN 31 AND CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =151 THEN 49 ELSE 0 END
 							OR b.bettype BETWEEN 81 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =161 THEN 120 ELSE 0 END)
@@ -316,10 +320,17 @@ BEGIN
 
 END
 
+
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [vnteam] AS [dbo]
-GO
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
+GO 
