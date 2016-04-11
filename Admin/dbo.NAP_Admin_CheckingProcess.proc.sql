@@ -145,6 +145,16 @@ BEGIN
 		END
 		ELSE
 		BEGIN
+			UPDATE	dbo.systemSettings WITH (ROWLOCK, UPDLOCK)  
+			SET VValue 			= '0'  
+			WHERE VName 		= 'isCalculatingParlay' 
+			AND @isExistParlay 	= 1
+							
+			UPDATE dbo.systemSettings WITH (ROWLOCK, UPDLOCK)
+			SET VValue 		= '0'
+			WHERE VName 	= 'isCalculatingNGManual'
+			AND @isExistNG 	= 1
+				
 			SELECT @ErrCode = 102
 				,@ErrMsg	= 'These matches are being calculated or some tickets of matches are being voided, please wait a few seconds until the on-going process is completed and try again.'
 				
