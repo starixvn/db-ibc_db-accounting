@@ -85,15 +85,18 @@ AS
 		- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
 		- 20160407@Sophia: Fix bug Allbet - wrong temp table definition [#redmine: #55628] 
 		- 20160415@Sophia:  . Fix bug After ExtraPT of Sportbook  [Redmine: #55533]
-							. Remove P2P, Bingo
-		
+		           . Remove P2P, Bingo
+		- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product [RedmineID#55584]
+							
 		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)declare @p2 money
-set @p2=-430156.7928
-exec Acc_Rpt_DailyWLDirect_Sporttype @winlostdate='2015-09-10 00:00:00',@LineTotal=@p2 output
-select @p2
+		  SET @p2 = -430156.7928;
+		  EXEC Acc_Rpt_DailyWLDirect_Sporttype
+			  @winlostdate = '2015-09-10 00:00:00',
+			  @LineTotal = @p2 OUTPUT;
+		  SELECT @p2;
 		- DisplayOrder field:	1 -> 100: all products that enable virtual currency 
 								101 -> 200: all products that disable virtual currency 
 
@@ -111,8 +114,11 @@ BEGIN
  
 	 DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	 INSERT INTO @SportBettype
-	 SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
- 	 ----- End get sport bettype
+	SELECT ProductID,
+              Bettype,
+              EventType,
+              SubProduct
+     FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 
 	DECLARE @RBWinlost TABLE(
 							site TINYINT,
@@ -630,14 +636,14 @@ BEGIN
 	----METRIC GAMING -SUPER LIVE
 	UNION ALL
 	SELECT
-			3,'Metric Gaming - Super Live', -1, 0, site,
-			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
-			SUM(ISNULL(b.position_actualrate,0)) Position,
-			SUM(ISNULL(commission_actualrate,0)) Commission,	
+			3,'Metric Gaming - Superlive', -1, 0, site,
+			SUM(ISNULL(b.winlost_virtualrate,0)) WinLost,
+			SUM(ISNULL(b.position_virtualrate,0)) Position,
+			SUM(ISNULL(commission_virtualrate,0)) Commission,	
 			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
-			SUM(ISNULL(LineTotal_actualrate,0)) as VirtualLineTotal,	
+			SUM(ISNULL(Linetotal_virtualrate,0)) as VirtualLineTotal,	
 			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
-			SUM(ISNULL(turnover_actualrate,0)) VirtualTurnover,
+			SUM(ISNULL(turnover_virtualrate,0)) VirtualTurnover,
 			0 EnableVirtual,
 			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT   
 	FROM	#src b WITH (NOLOCK)			
