@@ -1,6 +1,6 @@
 ﻿USE [bodb_Report]
 GO
- 
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
     @fromdate    DATETIME,
     @todate        DATETIME    
@@ -24,7 +24,7 @@ AS
 			- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 			- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
 			- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #49134]
-			- 20160129@Jim :  Cricket - Integrate to Accounting Reports (Redmine: #51023)
+			- 20160225@Jim: offer  Allbet Live Casino [Redmine:#50921)]
         Parameter's Explanation:
     */
 BEGIN
@@ -32,7 +32,7 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),SortKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType ,SubProduct )
-		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel   @mode=5
+		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	UPDATE @SportBettype
 	SET liveindicator =0
 	
@@ -152,7 +152,7 @@ BEGIN
 								 WHEN 'BT-Comm' THEN -2
 								 ELSE	b.sporttype
 								 END sporttype
-				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899) or b.bettype IN (901,902,903) or b.bettype IN (500,501)) then b.bettype else 19999 end 
+				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899) or b.bettype IN (901,902,903)) then b.bettype else 19999 end 
 					as bettypec
 				,b.liveindicator
 				,ibc
@@ -178,7 +178,7 @@ BEGIN
         GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 
 								   WHEN 'BT-Comm' THEN -2
 								   ELSE	b.sporttype END
-				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899)or b.bettype IN (901,902,903) or b.bettype IN (500,501)) then b.bettype else 19999 end
+				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899)or b.bettype IN (901,902,903)) then b.bettype else 19999 end
 				,b.liveindicator 
 				,ibc
 				,CASE WHEN b.bettype in (1,3,7,8) then b.bettype else 19999 end        
@@ -327,7 +327,7 @@ BEGIN
 				,0 as ibc
 				,0 as IsHedge
 				,'' as status
-				,13 as OrderKey
+				,14 as OrderKey
 				,17 as SortKey
 				,ISNULL(SUM(realWinlost),0)
 				,ISNULL(SUM(realPosition),0) 
@@ -350,7 +350,7 @@ BEGIN
             ,0 as ibc
             ,0 as IsHedge
             ,'' as status
-			,14 as OrderKey
+			,15 as OrderKey
 			,17 as SortKey
             ,ISNULL(SUM(realWinlost),0)
             ,ISNULL(SUM(realPosition),0) 
@@ -496,6 +496,28 @@ BEGIN
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=14
+        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
+	-- allbet section 
+		UNION ALL
+        SELECT 211 sporttype
+            ,b.bettype
+            ,b.liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,13 as OrderKey	
+			,17 as SortKey
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=21
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	--	ColossusBet
 		UNION ALL

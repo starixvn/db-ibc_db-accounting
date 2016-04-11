@@ -26,6 +26,7 @@ AS
 		- 20151217@Sophia: Apply Muay Thai [Redmine: #48667]
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 		- 20160330@Sophia: Remove Bingo [Redmine: #54719]
+		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
 
 		 
 	Param's Explanation:
@@ -226,6 +227,7 @@ BEGIN
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
 							WHEN bettype = 1003 THEN 20174484
 							WHEN Sporttype = 44 THEN 20174356
+							WHEN bettype BETWEEN 2401 AND 2499 THEN 20664406
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -255,6 +257,7 @@ BEGIN
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
 							WHEN bettype = 1003 THEN  20256514
 							WHEN Sporttype = 44 THEN 20174451
+							WHEN bettype BETWEEN 2401 AND 2499 THEN 20805826
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate

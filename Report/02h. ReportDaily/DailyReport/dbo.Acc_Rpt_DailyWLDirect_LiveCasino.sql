@@ -16,6 +16,7 @@ AS
 		- 20150522@Sophia: Apply Gold Deluxe and revise Sport Betype Matrix [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 		- 20151111@Percy: Change the sport type: MGC-RNG to MGC and RNG [RedmineID: #46576]
+		- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 		- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
 	
 */
@@ -57,6 +58,24 @@ WHERE	b.winlostdate = @winlostdate
 		AND b.ruben = 1		
 		AND b.statusID not in (101,102,103,121)
 GROUP BY s.ProductID, b.Bettype, case when dep.custid is null then 1 else 2 end 
+
+UNION ALL -- AllBet Data
+
+SELECT	s.ProductID, b.gameId,
+		case when dep.custid is null then 1 else 2 end as site,
+		sum((winlost-actual_stake)*actualrate) WinLost,
+		sum((awinlost+mwinlost+swinlost)*actualrate) Position,
+		sum(scomm*actualrate) Commission,	
+		sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal,
+		sum((1-tpositiontaking)*stake*actualrate) Turnover,
+		0 AS ExtraPT
+FROM	bettransLC b WITH (NOLOCK)
+	INNER JOIN @SportBettype s ON s.bettype = b.gameID
+	LEFT JOIN (select custid from #DepAgent) dep ON b.recommend = dep.custid
+WHERE	b.winlostdate = @winlostdate
+		AND s.ProductId IN (21) -- AllBet		
+		AND b.statusID not in (0,1,101,102,103,121)
+GROUP BY s.ProductID, b.gameID, case when dep.custid is null then 1 else 2 end 
 ORDER BY b.Bettype, site
 
 DROP TABLE #DepAgent
@@ -68,3 +87,4 @@ GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino] TO [bodbAdminNet] AS [
 GO
 
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_LiveCasino] TO [vnteam] AS [dbo]
+GO

@@ -1,4 +1,11 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_Rpt_BetCount_ByProduct_Super    Script Date: 4/8/2016 4:33:33 PM ******/
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
 	@CustID			INT,
@@ -19,6 +26,8 @@ AS
 		- 20160203@Sophia:	. Change the way to get report 
 							. Apply RNG Casino [Redmine: #49134]
 							. Appy Metric gaming - Superlive
+		- 20160229@Jim: Offer Allbet [Redmine #50921]
+		- 20160407@Sophia: Fix bug low performance - need to call Openquery [redmine: #55623]
 
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
@@ -83,14 +92,14 @@ BEGIN
 			b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
 			OR b.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
 			OR b.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
-			OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
-			OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
+			OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)			
 			OR b.bettype BETWEEN 801 AND (CASE WHEN @sportType= -1 AND b.StatusID <> 0 THEN 806 ELSE 0 END)
 			OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 AND b.StatusID <> 0 THEN 1599 ELSE 0 END)
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
 			OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 			OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
 			OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 AND b.StatusID <> 0 THEN 1003 ELSE 0 END) -- Cockfighting
+			
 		) 
 		AND ( 
 				----b.status IN ('WON','LOSE','DRAW','running') 
@@ -113,7 +122,19 @@ BEGIN
 		AND b.srecommend = @CustID
 		GROUP BY b.custid,b.[status]
 
-
+		------ Allbet------
+		INSERT INTO #AvailableMember
+		SELECT b.custid,b.[status],COUNT(1) 
+		FROM dbo.bettransLC b WITH(NOLOCK)
+		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
+		AND (
+				b.gameID BETWEEN 2401 AND CASE WHEN @sportType=211 THEN 2499 ELSE 0 END 	
+			) 
+		AND (
+				b.statusId IN (111,112,113,0) 
+			)	
+		AND b.srecommend = @CustID
+		GROUP BY b.custid,b.[status]
 	END
 
 
@@ -124,87 +145,46 @@ BEGIN
 			SET @TempToDate = @MoveBetsDay
 		ELSE
 			SET  @TempToDate = @CurrentDate
-	
-		--IF @BalanceUpDay < @FirstDate 
-		--	SELECT @BalanceUpDay=@FirstDate
-			
-		--INSERT INTO #AvailableMember 
-		--SELECT smw.custid,'SETTLED',smw.BetCount 
-		--FROM dbo.sum_winloss smw WITH(NOLOCK)
-		--WHERE smw.winlostdate BETWEEN @BalanceUpDay AND @TempToDate
-		--AND smw.sporttype = @SportType AND smw.srecommend = @CustID AND smw.roleid = 1
 
-					
-		--INSERT INTO #AvailableMember 
-		--SELECT d.custid,'SETTLED',d.BetCount 
-		--FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
-		--WHERE d.bettype BETWEEN  801  AND 806
-		--		  AND d.rptDate BETWEEN @BalanceUpDay AND @TempToDate
-		--		   AND d.CustID = @CustID
-
-
-			--Table CustIDList
-		CREATE TABLE #CustIdList (CustId INT)
-		INSERT INTO #CustIdList (CustId)
-		SELECT	CustID 
-		FROM	dbo.CustInfo WITH(NOLOCK)
-		WHERE	srecommend = @CustID AND RoleID = 1
-
-
-
+		DECLARE @sql VARCHAR(MAX) 
+		SET @sql = 	'
+				SELECT * FROM  OPENQUERY ( DBWH ,''
+				SELECT b.custid,''''SETTLED'''',SUM(b.BetCount)
+				FROM bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
+				WHERE	b.rptDate BETWEEN '''''+ CONVERT(VARCHAR(10),@FirstDate, 121)+ ''''' AND '''''+  CONVERT(VARCHAR(10),@TempToDate, 121)  + '''''
+						AND (
+							b.bettype BETWEEN 31 AND CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =151 THEN 49 ELSE 0 END
+							OR b.bettype BETWEEN 81 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =161 THEN 120 ELSE 0 END)
+							OR b.bettype BETWEEN 1101 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =162 THEN 1199 ELSE 0 END)
+							OR b.bettype BETWEEN 1201 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =180 THEN 1299 ELSE 0 END)
+							OR b.bettype BETWEEN 2101 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =251 THEN 2399 ELSE 0 END) 
+							OR b.bettype BETWEEN 801 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = -1 THEN 806 ELSE 0 END)
+							OR b.bettype BETWEEN 1501 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' =202 THEN 1599 ELSE 0 END)
+							OR b.bettype BETWEEN 73 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 252 THEN 73 ELSE 0 END)
+							OR b.bettype BETWEEN 1701 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
+							OR b.bettype BETWEEN 18000 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 204 THEN 18005 ELSE 0 END) -- Colossus Bet
+							OR b.bettype BETWEEN 1003 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 206 THEN 1003 ELSE 0 END) -- Cockfighting
+							OR b.bettype BETWEEN 2401  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 211 THEN 2499 ELSE 0 END) -- AllBet
+						) 
+						AND b.status IN (3  ---DRAW
+										,12	---HALF LOSE
+										,13	---HALF WON
+										,4	---LOSE
+										,8	---WON								 
+										)	
+						AND CustID IN ( 
+										SELECT	CustID 
+										FROM	bodb02.dbo.CustInfo WITH(NOLOCK)
+										WHERE	srecommend = '+ CONVERT(VARCHAR(50),@CustID) +' AND RoleID = 1 )
+						GROUP BY b.custid '' )'		 
+		
+				
 		INSERT INTO #AvailableMember 
-		SELECT b.custid,'SETTLED',SUM(b.BetCount)
-		FROM DBWH.bodb_account.dbo.mcCustBettingDaily b WITH (NOLOCK)					 
-		WHERE	b.rptDate BETWEEN @FirstDate AND @TempToDate			
-				AND (
-					b.bettype BETWEEN 31 AND CASE WHEN @sportType=151 THEN 49 ELSE 0 END
-					OR b.bettype BETWEEN 81 AND (CASE WHEN @sportType=161 THEN 120 ELSE 0 END)
-					OR b.bettype BETWEEN 1101 AND (CASE WHEN @sportType=162 THEN 1199 ELSE 0 END)
-					OR b.bettype BETWEEN 1201 AND (CASE WHEN @sportType=180 THEN 1299 ELSE 0 END)
-					OR b.bettype BETWEEN 71 AND (CASE WHEN @sportType=251 THEN 71 ELSE 0 END)
-					OR b.bettype BETWEEN 2101 AND (CASE WHEN @sportType=251 THEN 2399 ELSE 0 END) 
-					OR b.bettype BETWEEN 801 AND (CASE WHEN @sportType= -1 THEN 806 ELSE 0 END)
-					OR b.bettype BETWEEN 1501 AND (CASE WHEN @sportType=202 THEN 1599 ELSE 0 END)
-					OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
-					OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
-					OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-					OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 THEN 1003 ELSE 0 END) -- Cockfighting
-				) 
-				AND b.status IN (3  ---DRAW
-								,12	---HALF LOSE
-								,13	---HALF WON
-								,4	---LOSE
-								,8	---WON								 
-								)	
-				AND CustID IN (Select CustID FROM #CustIdList)
-		GROUP BY b.custid 
-	
-				   
+		EXEC (@sql)	
+		
 	END
 	
-	----Get data from sum_winlost_old
-	--IF @FirstDate < @BalanceUpDay
-	--BEGIN
-	--	IF @CurrentDate >= DATEADD(dd, -1, @BalanceUpDay)
-	--		SET @TempToDate = DATEADD(dd, -1, @BalanceUpDay)
-	--	ELSE
-	--		SET @TempToDate = @CurrentDate
-			
-		--INSERT INTO #AvailableMember
-		--SELECT smwo.custid,'SETTLED',smwo.BetCount 
-		--FROM bodb_Summary.dbo.sum_winloss_old smwo WITH(NOLOCK)
-		--WHERE smwo.winlostdate BETWEEN @FirstDate AND @TempToDate
-		--	AND smwo.sporttype = @SportType AND smwo.srecommend = @CustID AND smwo.roleid = 1
-			
-		--INSERT INTO #AvailableMember 
-		--SELECT d.custid,'SETTLED',d.BetCount 
-		--FROM DBWH.bodb_account.dbo.mcCustBettingDaily d WITH (NOLOCK)			
-		--WHERE d.bettype BETWEEN  801  AND 806
-		--		  AND d.rptDate BETWEEN   @FirstDate AND @TempToDate
-		--		  AND d.CustID = @CustID
 
-
-			 
 	    
 	--Get data for downline list 
     IF @sportType = 151
@@ -308,20 +288,23 @@ BEGIN
 		WHERE ce.CustID IS NULL
 	END
 	-- Cockfighting
-	IF @sportType = 206
+	IF @sportType IN (211,206)
     BEGIN            
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
-			(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-			 FROM CustProductStatus
-			 WHERE custid = ci.custid),
+				CASE WHEN @SportType IN(206)   THEN 	(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+												FROM CustProductStatus
+												WHERE custid = ci.custid)
+				WHEN @SportType IN(211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
+												FROM CustProductStatus
+												WHERE custid = ci.custid)	
+												END ,
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN #AvailableMember av ON av.CustID = ci.custid                   
 	END
-
-
+	
 	--Return result
 	SELECT cs.custid,cs.username,rs.IsDisable,
 			SUM(CASE WHEN rs.BetStatus <> 'running' THEN rs.BetCount ELSE 0 END) SettledBets,
@@ -334,12 +317,20 @@ BEGIN
 	--Drop temp tables
 	DROP TABLE #FiltedDownlineAcc
 	DROP TABLE #AvailableMember
+
 END
 
+
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [vnteam] AS [dbo]
-GO
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
+GO 

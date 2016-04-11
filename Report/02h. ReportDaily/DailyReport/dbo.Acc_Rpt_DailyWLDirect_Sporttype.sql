@@ -3,7 +3,7 @@ GO
 SET ANSI_NULLS ON 
 GO
  
-CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype]
 	@winlostdate	datetime,
 	@LineTotal		money OUTPUT
 AS
@@ -79,7 +79,9 @@ AS
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
 		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
+		- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 		- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
+
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)declare @p2 money
@@ -98,11 +100,11 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 
 	DECLARE @P2P_LineTotal MONEY
 	DECLARE @RBWinlost TABLE(
-							site tinyint,
+							site smallint,
 							winlost money,
 							pos money,
 							comm money,
@@ -111,7 +113,7 @@ BEGIN
 						)			
 	
 	CREATE TABLE #src(	srecommend INT,
-						site	TINYINT,
+						site	smallint,
 						matchid INT, 
 						bettype INT, 
 						winlost_actualrate MONEY, 
@@ -149,6 +151,7 @@ BEGIN
 	INSERT INTO #DepSuper 
 	SELECT DISTINCT custid FROM f_DepSuper_1('All')
 	
+			
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT,fromdate,todate )
 	SELECT ProductID, Sporttype, SubProduct, SuperID, ExtraPT ,fromdate,todate
 	FROM dbo.f_ExtraPT_Sel  (0,0,'',@winlostdate)	
@@ -188,8 +191,7 @@ BEGIN
 	FROM dbo.bettrans b WITH (NOLOCK)
 	WHERE winlostdate = @winlostdate
 			AND b.bettype < 19001		
-			AND b.statusID NOT IN (101,102,103,121) 
-			AND b.ruben = 1		
+		 
 		
 	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
@@ -199,6 +201,19 @@ BEGIN
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
 	WHERE	o.eventdate = @winlostdate 
 	
+	----------------------------------------------------------------------
+	/*SELECT	@FI_3rdShare = ISNULL(sum((winlost-actual_stake)*b.actualrate),0)
+	FROM	bettrans  b WITH (NOLOCK)
+	WHERE	b.ruben=1 
+			--and status NOT IN ('VOID', 'REJECT') 
+			and statusID NOT IN (102, 101) 
+			and b.winlostdate = @winlostdate and
+			b.bettype between 51 and 66 and 
+			b.matchid > 0 and 
+			b.custid in (SELECT custid FROM customer c with (nolock) 
+											INNER JOIN exchange e with (nolock) on c.currency = e.exchangeid 
+									   WHERE c.username ='FI3rdShare'+ e.currency)*/
+
 	----------------------------------------------------------------------
 	INSERT INTO @RBWinlost (  site, winlost, pos, comm, Linetotal, turnover)
 	SELECT	 
@@ -255,8 +270,8 @@ BEGIN
 	INSERT INTO #src
 	SELECT	srecommend,
 			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END as site, 
-			b.matchid, 
-			b.bettype,  
+			CASE  WHEN b.matchID IN (0, 71, 208, 209, 210) THEN 0 ELSE b.matchid END AS matchid,
+			CASE  WHEN bet.ProductID = 6 THEN 71 ELSE b.bettype END bettype, 
 			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
 			SUM((winlost-actual_stake)*virtualrate) winlost_virtualrate,
 			SUM((awinlost+mwinlost+swinlost)* actualrate) position_actualrate,
@@ -272,13 +287,14 @@ BEGIN
 		INNER JOIN @SportBettype bet ON b.bettype = bet.bettype
 		INNER JOIN @tmpMatch m ON b.matchid = m.matchid 
 	WHERE winlostdate = @winlostdate
-		AND b.bettype < 19001		
+		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
+		AND bet.productID <>21
 	GROUP BY srecommend,
 			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END,
-			b.matchid, 
-			b.bettype 
+			CASE  WHEN b.matchID IN (0, 71, 208, 209, 210) THEN 0 ELSE b.matchid END  ,
+			CASE  WHEN bet.ProductID = 6 THEN 71 ELSE b.bettype END  
 	-- Calculate turn over for Casino from bettransRNG
 	UNION 
 	SELECT	b.srecommend,
@@ -296,18 +312,51 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate,
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate
 	FROM bettransRNG b WITH(NOLOCK )
+		INNER JOIN @SportBettype bet ON b.gameid = bet.bettype	
 	WHERE winlostdate = @winlostdate
-		AND b.gameID BETWEEN 2101 AND 2399		
+		AND bet.ProductID= 6	
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY b.srecommend
 			 --,case when dep.custid is null then 1 else 2 end 
+			 
+	 	 
+	-- Get AllBet Data			 
+	UNION ALL
+	SELECT	
+			b.srecommend,
+			1 as site,--CASE WHEN dep.custid is null THEN 1 ELSE 2 END as site,
+			b.ProductID AS matchid,
+			b.gameID AS bettype, 
+			SUM((winlost-actual_stake)*actualrate) winlost_actualrate,
+			SUM((winlost-actual_stake)*virtualrate) winlost_virtualrate,
+			SUM((awinlost+mwinlost+swinlost)* actualrate) position_actualrate,
+			SUM((awinlost+mwinlost+swinlost)*virtualrate) position_virtualrate,	
+			SUM(scomm*actualrate) commission_actualrate,
+			SUM(scomm*virtualrate) commission_virtualrate,
+			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
+			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
+			SUM((1-tpositiontaking)*ABS(b.stake)*actualrate) turnover_actualrate, 
+			SUM((1-tpositiontaking)*ABS(b.stake)*virtualrate) turnover_virtualrate
+	FROM bettransLC b WITH(NOLOCK)	
+		INNER JOIN @SportBettype bet ON b.gameid = bet.bettype		
+	WHERE winlostdate = @winlostdate		
+		AND bet.ProductID = 21 
+		AND b.statusID NOT IN (0, 1, 101,102,103,121)
+	GROUP BY
+			b.srecommend, 
+			b.ProductID,
+			b.gameID
 	OPTION (RECOMPILE)			 
+	
 	UPDATE #src
 	SET MatchID = CASE   WHEN MatchID IN (0, 71, 208, 209, 210) THEN 0 ELSE MatchID END
 		,bettype = CASE WHEN   bettype BETWEEN 2101 AND 2399 THEN 71 ELSE bettype END
+
 	UPDATE #src
 	SET site = 2
 	WHERE 	srecommend IN (SELECT CustId FROM  #DepSuper)
+			 
+			 
 	--Section 2: all products that enable virtual currency, DisplayOrder field:	1 -> 100
 	SELECT
 			case when m.sporttype> 1 THEN 4 ELSE CASE WHEN t.bettype IS NOT NULL THEN 1 ELSE 2 END end as DisplayOrder,
@@ -330,7 +379,8 @@ BEGIN
 				LEFT JOIN (SELECT  superID,SUM(extraPT) extraPT  FROM #ExtraPT_Sel WHERE ProductID = 1 AND  SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') GROUP BY superID
 							)  e  ON   b.srecommend = e.superID 
 				LEFT JOIN @Bettype t ON b.bettype = t.bettype
-	WHERE	s.ProductId = 1
+	WHERE	 
+			s.ProductId = 1
 			AND s.EventType IN (1,2)
 			AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 			AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END -- 20120628@Elodie: check case of matchid = orid
@@ -451,7 +501,7 @@ BEGIN
 	/*
 	Display order for gaming
 		1. Number Game
-		2. Live Casino: SLI, Gold Deluxe, AG Casino, MGC Live casino
+		2. Live Casino: SLI, Gold Deluxe, AG Casino, MGC Live casino, AllBet
 		3. Casino:  SLI, Vegas Games, Microgaming - RNG Casino	
 		4. Virtual Sports + Gold Delulxe
 		5. Keno
@@ -480,7 +530,7 @@ BEGIN
 			0 ExtraPT 
 	FROM @RBWinlost
 
-	---Live Casino + Gold Deluxe + AG Casino + Microgaming Live Casino
+	---Live Casino + Gold Deluxe + AG Casino + Microgaming Live Casino + AllBet
 	UNION ALL
 	SELECT
 			102,
@@ -501,7 +551,9 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	LEFT JOIN (SELECT DISTINCT  SuperID,SUM(ExtraPT) ExtraPT,ProductID FROM #ExtraPT_Sel  WHERE ProductID IN (4,12,11,13) AND @winlostdate BETWEEN FromDate AND ToDate GROUP BY SuperID,ProductID
 				) e  ON   b.srecommend = e.superID AND s.ProductID=e.ProductID
-	WHERE	(s.ProductId IN (4,12,11,13))    -----SLI, Gold Deluxe, AG Casino, MGC Live casino				
+				
+	WHERE	(s.ProductId IN (4,12,11,13,21))    -----SLI, Gold Deluxe, AG Casino, MGC Live casino, AllBet				
+				
 	GROUP BY site
 		
 	----VIRTUAL SPORT
@@ -684,7 +736,11 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE	s.ProductId = 19
 	GROUP BY site
+
 	ORDER BY DisplayOrder asc, ibc	, site
+					
+
+
 					
 	SELECT	@LineTotal = ISNULL(SUM(LineTotal_actualrate), 0) 
 	FROM	#src b WITH (NOLOCK)
@@ -705,14 +761,14 @@ BEGIN
 	DROP TABLE #DepSuper
 	DROP TABLE #ExtraPT_Sel
 END
-
-
+GO 
 GO
 
 SET QUOTED_IDENTIFIER OFF 
 GO
 SET ANSI_NULLS ON 
 GO
+
 
 
 GO 

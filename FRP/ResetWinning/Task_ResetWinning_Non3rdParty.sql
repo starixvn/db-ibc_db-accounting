@@ -28,6 +28,7 @@ AS
 		- 20160318@Sophia: Exclude data transfer of ExtraPT [Redmine: #54423]
 		- 20160324@Sophia:  . Exclude Reset data of ExtraPT, include other transfer tickets
 							. Remove Bingo [Redmine: #54719]
+		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -111,10 +112,7 @@ BEGIN
 		FROM bodb_ACC.dbo.Acc_DWLList_xtest l WITH (NOLOCK)
 		CROSS JOIN @Date d 
 			
-		INSERT INTO @dummyExtraPT (CustID)
-		SELECT CustID
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
-		UNION ALL
+		INSERT INTO @dummyExtraPT (CustID)	
 		SELECT CustID
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest l WITH (NOLOCK)
 	END
@@ -281,6 +279,7 @@ BEGIN
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
+			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -301,6 +300,7 @@ BEGIN
 			OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
 			OR Sporttype = 44
+			OR bettype BETWEEN 2401 AND 2499 
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -321,6 +321,7 @@ BEGIN
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
+			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 		   END, winlostdate
 
 	UNION ALL

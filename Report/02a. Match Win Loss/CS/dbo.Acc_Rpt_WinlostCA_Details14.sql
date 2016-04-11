@@ -27,24 +27,23 @@ AS
 
 	DELETE @SportBettype WHERE bettype = 72
 
-	
 	SELECT	71 bettype,
 			currency,
 			currencyName,
-			isnull(sum(actual_stake * bettrans.actualrate),0)  Turnover,
-			isnull(sum((winlost-actual_stake)*bettrans.actualrate),0)  winlost, 
-			isnull(sum((awinlost+mwinlost+swinlost)*bettrans.actualrate),0) pos,
-			isnull(sum( scomm*bettrans.actualrate),0) comm,
-			isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*bettrans.actualrate),0) as LineTotal			
-	FROM	bettrans14 bettrans with (NOLOCK) 
-	WHERE	winlostdate = @winlostdate 
+			isnull(sum(actual_stake * b.actualrate),0) Turnover,
+			isnull(sum((winlost-actual_stake)*b.actualrate),0)  winlost, 
+			isnull(sum((awinlost+mwinlost+swinlost)*b.actualrate),0) pos,
+			isnull(sum( scomm*b.actualrate),0) comm,
+			isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*b.actualrate),0) as LineTotal			
+	FROM	bettransRnG14 b with (NOLOCK) 
+	WHERE	winlostdate = @winlostdate  
 			--AND ruben = 1 
-			AND bettype IN (SELECT Bettype FROM @SportBettype)
-			--AND status NOT in ('VOID','REJECT','done')
+			AND gameID IN (SELECT Bettype FROM @SportBettype)
 			AND statusID NOT IN (101,102,121)
-	GROUP BY currency, currencyName 
-	ORDER BY currency
-
+	GROUP BY --bettype, 
+		currency, currencyName 
+	ORDER BY bettype, currency
+	
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostCA_Details14] TO [bodbAdminNet]

@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Task_rptWinLost_UpdateTable]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Task_rptWinLost_UpdateTable]    Script Date: 03/22/2016 13:49:13 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Task_rptWinLost_UpdateTable]
 	@winlostdate smalldatetime
 AS
 /*
@@ -16,6 +23,7 @@ Revision:
 	- 20130917@Johnson: correct real turnover of racing formula
 	- 20131203@Daniel: exclude UUS tickets to avoid zero data inserted
 	- 20151216@Percy: support new product - Cockfighting [Redmine: #49027]
+	- 20160225@Jim: offer  Allbet Live Casino [Redmine:#50921)]
 */
 
 BEGIN	
@@ -189,7 +197,7 @@ BEGIN
 		FROM
 			bettrans b with (nolock)
 		WHERE
-			bettype < 19999 and bettype not in (31,32,33,1003)
+			(bettype < 19999 and bettype not in (31,32,33,1003) and bettype not between 2401 and 2499)
 			AND winlostdate = @winlostdate
 			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
 			AND ruben = 1
@@ -197,7 +205,59 @@ BEGIN
 		GROUP BY
 			winlostdate, matchid, bettype, liveindicator, status,
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
-
+		-- AllBet Section
+		INSERT INTO bodb_Report.dbo.rptWinlost
+			(
+				[winlostdate]
+			   ,[matchid]
+			   ,[bettype]
+			   ,[liveindicator]
+			   ,[Status]
+			   ,[IBC]
+			   ,[RealTurnover]
+			   ,[RealWinLost]
+			   ,[RealPosition]
+			   ,[RealCommission]
+			   ,[RealLineTotal]
+			   ,[VirtualTurnover]
+			   ,[VirtualLineTotal]
+			   ,[SportType]
+			   ,[exrisk]
+			)
+		SELECT
+			winlostdate,
+			productID,
+			gameID,
+			0 asliveindicator,
+			Status,
+			CASE WHEN recommend = 52466   THEN 1 
+				 WHEN recommend = 5707545 THEN 2 ELSE 0
+				 END AS ibc,
+			SUM((1-tpositiontaking)*ABS(stake)*actualrate) as realturnover,
+			SUM((winlost-actual_stake)* actualrate)  realWinlost,
+			SUM((awinlost+mwinlost+swinlost)* actualrate) realPos,
+			SUM((scomm) * actualrate) realComm,
+			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) realLineTotal,
+			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) as virtualTurnover,
+			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
+			211,
+			0
+		FROM
+			dbo.bettransLC b WITH (NOLOCK)
+		WHERE
+			gameID BETWEEN 2401 AND 2499
+			AND winlostdate = @winlostdate
+			AND statusID   IN (111,112,113) --(/Won/lose/Draw)
+			AND currency <> 20
+		GROUP BY
+			winlostdate,
+			productID,
+			gameID,
+			status,
+			CASE WHEN recommend = 52466   THEN 1 
+				 WHEN recommend = 5707545 THEN 2 ELSE 0
+				 END		
+		-- End Allbet
 		UPDATE bodb_Report.dbo.rptWinlost
 		SET SportType = CASE
 			WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
@@ -351,7 +411,7 @@ BEGIN
 			FROM
 				bettrans14 b with (nolock)
 			WHERE
-				bettype < 19999 and bettype not in (31,32,33)
+				(bettype < 19999 and bettype not in (31,32,33) and bettype not between 2401 and 2499)
 				AND winlostdate = @winlostdate
 				AND statusID NOT IN (101, 102,103,121) ----('VOID','REJECT','DONE','REFUND')
 				AND ruben = 1
@@ -359,7 +419,59 @@ BEGIN
 			GROUP BY
 				winlostdate, matchid, bettype, liveindicator, status,
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
-
+			--- Allbet section
+			INSERT INTO bodb_Report.dbo.rptWinlost
+				(
+					[winlostdate]
+				   ,[matchid]
+				   ,[bettype]
+				   ,[liveindicator]
+				   ,[Status]
+				   ,[IBC]
+				   ,[RealTurnover]
+				   ,[RealWinLost]
+				   ,[RealPosition]
+				   ,[RealCommission]
+				   ,[RealLineTotal]
+				   ,[VirtualTurnover]
+				   ,[VirtualLineTotal]
+				   ,[SportType]
+				   ,[exrisk]
+				)		
+			SELECT
+				winlostdate,
+				productID,
+				gameID,
+				0 asliveindicator,
+				Status,
+				CASE WHEN recommend = 52466   THEN 1 
+					 WHEN recommend = 5707545 THEN 2 ELSE 0
+					 END AS ibc,
+				SUM((1-tpositiontaking)*ABS(stake)*actualrate) as realturnover,
+				SUM((winlost-actual_stake)* actualrate)  realWinlost,
+				SUM((awinlost+mwinlost+swinlost)* actualrate) realPos,
+				SUM((scomm) * actualrate) realComm,
+				SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) realLineTotal,
+				SUM((1-tpositiontaking)*ABS(stake)*virtualrate) as virtualTurnover,
+				SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
+				211,
+				0
+			FROM
+				dbo.bettransLC14 b WITH (NOLOCK)
+			WHERE
+				gameID BETWEEN 2401 AND 2499
+				AND winlostdate = @winlostdate
+				AND statusID IN (111,112,113) --(/Won/lose/Draw)
+				AND currency <> 20
+			GROUP BY
+				winlostdate,
+				productID,
+				gameID,
+				status,
+				CASE WHEN recommend = 52466   THEN 1 
+					 WHEN recommend = 5707545 THEN 2 ELSE 0
+					 END
+			-- End Allbet
 			UPDATE bodb_Report.dbo.rptWinlost
 			SET SportType = CASE
 				WHEN leaguename LIKE '%NFL%' AND l.sporttype = 2 THEN 3
@@ -403,14 +515,6 @@ BEGIN
 	
 	DROP TABLE #bettransm
 END
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Task_rptWinLost_UpdateTable] TO [vnteam]
 GO 

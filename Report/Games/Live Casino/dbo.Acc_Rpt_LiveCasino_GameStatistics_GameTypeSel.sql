@@ -13,7 +13,7 @@ SET NOCOUNT ON
 		- 20150601@Sophia: Apply Gold Deluxe [#35359] 
 		- 20150702@Sophia: Apply Microgaming and SuperBalance [#38168]
 		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
-	
+		- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 	Parameters Explanation:
 		- @ProductID = 0 : All
 					 = 4 : Live Casino
@@ -30,7 +30,7 @@ SET NOCOUNT ON
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5 
 
 	DELETE @SportBettype 
-	WHERE ProductID NOT IN (4,11,12,13) 
+	WHERE ProductID NOT IN (4,11,12,13,21) 
 		  
 
 	SELECT	s.ProductId, b.typeID, b.typenamee 
