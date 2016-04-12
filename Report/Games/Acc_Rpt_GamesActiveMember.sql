@@ -22,6 +22,7 @@ AS
 	- 20150907@Jim: Integrate CB (#42608)
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
+	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 	 
 Param's Explanation: 
 	+ @ProductList : string, collect ProductID seperate by comma ',' .Eg: @ProductList ='0,3,4,6,7'	
@@ -46,7 +47,7 @@ SELECT VAL FROM  dbo.strSplit(@ProductList,',')
 INSERT INTO @Product (ProductID,ProductPrefix)
 SELECT ProductID,ProductPrefix
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,8,4,11,12,13,21)
+WHERE ProductID IN (3,6,7,8,4,11,12,13,21,22)
 UNION ALL
 SELECT ProductID,ProductPrefix    -- ORDER BY 13, 17
 FROM dbo.Products WITH (NOLOCK)
@@ -78,9 +79,17 @@ UPDATE @Product
 SET ProductPrefix = 'MG'
 WHERE ProductID = -1	
 
+DECLARE @isTest BIT= 0;
+SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
+    SELECT ProductID,
+		  Bettype,
+		  EventType,
+		  SubProduct
+    FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+
+
 
 INSERT INTO @tmpBettype 
 	SELECT CASE p.ProductPrefix  WHEN  'AGCS' THEN 1800

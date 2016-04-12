@@ -88,7 +88,6 @@ AS
 							. Remove P2P, Bingo
 		- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product [RedmineID#55584]
 							
-		
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
 		- @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)declare @p2 money
@@ -118,7 +117,7 @@ BEGIN
               Bettype,
               EventType,
               SubProduct
-     FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+     	 FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 	 --- End Sport Bettype Matrix------
 	 
 	DECLARE @RBWinlost TABLE(
@@ -325,7 +324,7 @@ BEGIN
 	WHERE winlostdate = @winlostdate
 		AND bet.ProductID = 6			
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
-	GROUP BY b.srecommend
+	GROUP BY b.srecommend,
 			 
 			 
 	-- Get AllBet Data			 
@@ -645,7 +644,7 @@ BEGIN
 			SUM(ISNULL(Linetotal_virtualrate,0)) as VirtualLineTotal,	
 			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
 			SUM(ISNULL(turnover_virtualrate,0)) VirtualTurnover,
-			0 EnableVirtual,
+			1 EnableVirtual,
 			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT   
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype

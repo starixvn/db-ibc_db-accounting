@@ -114,7 +114,7 @@ BEGIN
             Bettype,
             EventType,
             SubProduct
-     FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+     	 FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 	 --- End Sport Bettype Matrix------
 		
 	 DECLARE @RBWinlost TABLE(
@@ -140,7 +140,7 @@ BEGIN
 						Linetotal_virtualrate MONEY,
 						turnover_actualrate MONEY,
 						turnover_virtualrate MONEY   
-					)
+					)     
 
 	--CREATE TABLE #DepAgent (custid int primary key)
 	CREATE TABLE #DepSuper (custid int )
@@ -336,7 +336,7 @@ BEGIN
 	WHERE winlostdate = @winlostdate
 		AND bet.ProductID = 6	
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
-	GROUP BY b.srecommend
+	GROUP BY b.srecommend,
 			 
 			 
 	 	 
@@ -364,6 +364,7 @@ BEGIN
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY
 			b.srecommend 			
+
 	OPTION (RECOMPILE)			 
 	
 
@@ -659,7 +660,7 @@ BEGIN
 			SUM(ISNULL(Linetotal_virtualrate,0)) as VirtualLineTotal,	
 			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
 			SUM(ISNULL(turnover_virtualrate,0)) VirtualTurnover,
-			0 EnableVirtual,
+			1 EnableVirtual,
 			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT   
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype

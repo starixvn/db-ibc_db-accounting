@@ -25,14 +25,22 @@ AS
 			- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
 			- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #49134]
 			- 20160225@Jim: offer  Allbet Live Casino [Redmine:#50921)]
+			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
         Parameter's Explanation:
     */
 BEGIN
 	SET NOCOUNT ON
 	----Get Sport Bettype Matrix------
+	DECLARE @isTest BIT= 0;
+     SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),SortKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType ,SubProduct )
-		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
+	SELECT ProductID,
+            Bettype,
+            EventType,
+            SubProduct
+     FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+
 	UPDATE @SportBettype
 	SET liveindicator =0
 	
@@ -519,6 +527,30 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=21
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
+	   
+	   -- Voidbridge section 
+		UNION ALL
+        SELECT 212 sporttype
+            ,b.bettype
+            ,b.liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,13 as OrderKey	
+			,17 as SortKey
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=22
+        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
+
 	--	ColossusBet
 		UNION ALL
         SELECT 204 sporttype
@@ -543,7 +575,7 @@ BEGIN
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
 	--	Cockfighting
 		UNION ALL
-        SELECT 206 sporttype
+		  SELECT 206 sporttype
             ,b.bettype
             ,b.liveindicator
             ,ibc
@@ -564,6 +596,27 @@ BEGIN
             AND s.ProductId=19
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	ORDER BY OrderKey ASC	
+        /*SELECT 206 sporttype
+            ,b.bettype
+            ,b.liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,17 as OrderKey
+			,17 as SortKey
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId=19
+        GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
+	ORDER BY OrderKey ASC	*/
    -- ORDER BY 1,3 DESC,2,4,5
 	
 	UPDATE #TempData SET IsHedge =1,

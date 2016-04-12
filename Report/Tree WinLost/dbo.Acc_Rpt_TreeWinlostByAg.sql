@@ -28,6 +28,7 @@ Revisions:
 					  2. Change input parameters
 	- 20160118@Percy: Calculate turnover for RNG Casino [Redmine: #49134]
 	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
+	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 
 Parameters explain:
 	- @Products: instead of all @showXXX parameters, have xml structure
@@ -61,9 +62,16 @@ CREATE TABLE #TmpResultAll (custid INT ,
 							TurnoverIBCVirtual MONEY,
 							TotalRM MONEY,
 							Virtual_Total MONEY)
+
+DECLARE @isTest BIT= 0;
+SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
 DECLARE @SportBettype TABLE(ProductID INT,Bettype INT,EventType INT,SubProduct VARCHAR(200))
 INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
+    SELECT ProductID,
+              Bettype,
+              EventType,
+              SubProduct
+    FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 
 IF OBJECT_ID('tempdb..#Product') IS NOT NULL
 BEGIN
@@ -293,23 +301,23 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		GROUP BY custid
 	END
 
---get turnover for RNG Casino from bettransRNG
-	IF EXISTS (SELECT TOP 1 1 FROM #tmpBettype WHERE ProductID = 6)
+--get data from bettransRNG	
 	BEGIN
 		INSERT INTO #TmpResultAll
 		SELECT b.custid,
-			CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
-			SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
-			0 Winloss,
-			0 commission,  
-			0 total, 
-			SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
-			SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
-			0 TotalRM	,
-			0 Virtual_Total
+			 CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
+			 SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
+			 SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,
+			 SUM(scomm) commission,  
+			 SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total, 
+			 SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+			 SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
+			 SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM	,
+			 SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
 		FROM bettransRNG b WITH(NOLOCK) 
-			INNER JOIN #tmpBettype t ON t.bettype = b.gameID AND t.ProductID = 6
+			INNER JOIN #tmpBettype t ON t.bettype = b.gameID 
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
+		AND t.ProductID IN (6, 17, 22)
 		   AND b.statusID NOT IN (0, 1, 101, 102, 103)   
 		   and b.currency <> 20
 		   and b.recommend = @recommend
@@ -322,21 +330,22 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 INSERT INTO #TmpResultAll
 SELECT b.custid,
 	CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
-	SUM(ABS(CASE WHEN b.bettype in(73) OR t.ProductID = 6 then 0 ELSE stake END )*(1 - tpositiontaking)) Turnover,
+	SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,
 	SUM(scomm) commission,  
 	SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total, 
-	SUM(ABS(CASE WHEN b.bettype in(73) OR t.ProductID = 6 then 0 ELSE stake END)*(1 - tpositiontaking)*actualrate) TurnoverRM,
-	SUM(ABS(CASE WHEN b.bettype in(73) OR t.ProductID = 6 then 0 ELSE stake END)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
+	SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+	SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM	,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
 FROM bettrans b WITH(NOLOCK) 
-	INNER JOIN #tmpBettype t ON t.bettype = b.bettype AND t.ProductID NOT IN (2, 9, 21)	
+	INNER JOIN #tmpBettype t ON t.bettype = b.bettype 
 WHERE winlostdate BETWEEN @FromDate AND @ToDate
-   and b.ruben = 1  
-   AND b.statusID NOT IN (101, 102, 103)   
-   and b.currency <> 20
-   and b.recommend = @recommend
+    AND t.ProductID NOT IN (2, 9, 17, 21, 22)	
+    and b.ruben = 1  
+    AND b.statusID NOT IN (101, 102, 103)   
+    and b.currency <> 20
+    and b.recommend = @recommend
 GROUP BY b.custid ,
 	CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
 	
@@ -352,11 +361,12 @@ SELECT b.custid,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM	,
 	SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*b.virtualrate) Virtual_Total
 FROM bettransLC b WITH(NOLOCK) 
-	INNER JOIN #tmpBettype t ON t.bettype = b.gameID AND t.ProductID = 21
+	INNER JOIN #tmpBettype t ON t.bettype = b.gameID 
 WHERE winlostdate BETWEEN @FromDate AND @ToDate   
-   AND b.statusID NOT IN (0, 1, 101, 102, 103)   
-   and b.currency <> 20
-   and b.recommend = @recommend
+    AND t.ProductID = 21
+    AND b.statusID NOT IN (0, 1, 101, 102, 103)   
+    and b.currency <> 20
+    and b.recommend = @recommend
 GROUP BY b.custid ,
 	CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END   
 
