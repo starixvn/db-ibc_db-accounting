@@ -62,7 +62,8 @@ BEGIN
 	CREATE TABLE #MatchData (matchid INT, leagueid INT, hthomescore INT, htawayscore INT, calculate BIT, multiple BIT
 			, refund BIT, calrefund BIT, homeid INT, awayid INT, matchcode VARCHAR(50), finalhomescore INT, finalawayscore INT
 			, betstatus NVARCHAR(50), eventstatus VARCHAR(50), SettlementStatus135 TINYINT, sporttype SMALLINT, isNeutral BIT
-			, goalrecord VARCHAR(50), IsHTCal BIT, isPending BIT, isUndecided BIT, IsAutoPayout BIT, IsAutoPayout_League BIT, ConfirmHT INT, ConfirmFT INT)
+			, goalrecord VARCHAR(50), IsHTCal BIT, isPending BIT, isUndecided BIT, IsAutoPayout BIT, IsAutoPayout_League BIT
+			, ConfirmHT INT, ConfirmFT INT, HTStatus BIT, FTStatus BIT)
 
 	DECLARE @SqlQuery VARCHAR(MAX), @MatchIds VARCHAR(MAX)
 	
@@ -74,28 +75,40 @@ BEGIN
 		FROM #MatchInQueue
 		WHERE RowId BETWEEN @RowId AND @RowId + 512 --maximum data via remote server < 8000 chars
 
-		SET @RowId = @RowId + 512
-
 		IF ISNULL(@MatchIds, '') = '' OR @@ROWCOUNT = 0
+			BREAK
+
 		SET @SqlQuery = '
 			INSERT INTO #MatchData(matchid, leagueid, hthomescore, htawayscore, calculate, multiple
 				, refund, calrefund, homeid, awayid, matchcode, finalhomescore, finalawayscore
 				, betstatus, eventstatus, SettlementStatus135, sporttype, isNeutral
-				, goalrecord, IsHTCal, isPending, isUndecided, IsAutoPayout, IsAutoPayout_League, ConfirmHT, ConfirmFT)
+				, goalrecord, IsHTCal, isPending, isUndecided, IsAutoPayout, IsAutoPayout_League
+				, ConfirmHT, ConfirmFT, HTStatus, FTStatus)
 			SELECT *
 			FROM OPENQUERY(DBPRO, ''SELECT m.matchid, m.leagueid, hthomescore, htawayscore, calculate, mr.multiple
 					, refund, calrefund, homeid, awayid, matchcode, finalhomescore, finalawayscore
 					, betstatus, eventstatus, SettlementStatus135, m.sporttype, mr.isNeutral
-					, goalrecord, IsHTCal, isPending, isUndecided, m.IsAutoPayout, l.IsAutoPayout AS IsAutoPayout_League, ConfirmHT, ConfirmFT
+					, goalrecord, IsHTCal, isPending, isUndecided, m.IsAutoPayout, l.IsAutoPayout AS IsAutoPayout_League
+					, ConfirmHT, ConfirmFT
+					, MAX(CASE WHEN rs.CalculationType = 1 THEN 1 ELSE 0 END) AS HTStatus
+					, MAX(CASE WHEN rs.CalculationType = 2 THEN 1 ELSE 0 END) AS FTStatus
 			FROM bodb02.dbo.match m WITH(NOLOCK)
 				INNER JOIN bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 				INNER JOIN bodb02.dbo.league l WITH(NOLOCK) ON m.leagueid = l.leagueid
+				LEFT JOIN bodb02.dbo.AutoPayoutResult rs WITH(NOLOCK) ON m.matchid = rs.matchid AND StatusId IN (1,2)
 			WHERE m.matchid IN (' + @MatchIds + ') 
 				AND m.leagueID = CASE WHEN ''''' + CAST(@LeagueID AS VARCHAR) + ''''' <> 0 THEN ''''' + CAST(@LeagueID AS VARCHAR) + ''''' ELSE m.leagueID END
-				AND m.sporttype = CASE WHEN ''''' + CAST(@sporttype AS VARCHAR) + ''''' = 0 THEN m.sporttype ELSE ''''' + CAST(@sporttype AS VARCHAR) + ''''' END'')
-		'
+				AND m.sporttype = CASE WHEN ''''' + CAST(@sporttype AS VARCHAR) + ''''' = 0 THEN m.sporttype ELSE ''''' + CAST(@sporttype AS VARCHAR) + ''''' END
+			GROUP BY m.matchid, m.leagueid, hthomescore, htawayscore, calculate, mr.multiple
+					, refund, calrefund, homeid, awayid, matchcode, finalhomescore, finalawayscore
+					, betstatus, eventstatus, SettlementStatus135, m.sporttype, mr.isNeutral
+					, goalrecord, IsHTCal, isPending, isUndecided, m.IsAutoPayout, l.IsAutoPayout
+					, ConfirmHT, ConfirmFT
+		'')'
 		--PRINT (@SqlQuery)
 		EXEC (@SqlQuery)
+		SET @RowId = @RowId + 512
+
 	END
 
 	;WITH BetStatus AS (
@@ -124,14 +137,6 @@ BEGIN
 			AND bettype IN (14, 127)--FGLG
 			AND StatusId NOT IN (101, 102, 103)
 		GROUP BY b.matchid
-	), PayoutResult AS (
-		SELECT rs.MatchId
-			, MAX(CASE WHEN rs.CalculationType = 1 THEN 1 ELSE 0 END) AS HTStatus
-			, MAX(CASE WHEN rs.CalculationType = 2 THEN 1 ELSE 0 END) AS FTStatus
-		FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #MatchInQueue t WHERE rs.MatchId = t.matchid)
-			AND StatusId IN (1, 2)
-		GROUP BY rs.MatchId
 	)
 
 	SELECT tm.matchid
@@ -173,24 +178,20 @@ BEGIN
 				WHEN a.ResultStatusID IN(0,1,3) THEN 'Running'
 				WHEN a.ResultStatusID IN (2,5) THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
-		, CASE WHEN rs.MatchId IS NOT NULL
-					AND rs.HTStatus = 1 
+		, CASE WHEN t.HTStatus IS NOT NULL AND t.HTStatus = 1 
+					AND t.FTStatus IS NOT NULL AND t.FTStatus IN (0, 1)
 					AND t.IsHTCal = 1 
-					AND rs.FTStatus IN (0,1)
 					AND (ISNULL(b.IsExistRunningHTFGLG, 0) > 0 OR ISNULL(bm.IsExistRunningHTFGLG, 0) > 0) THEN 1 --can calc HT FGLG
-				WHEN rs.MatchId IS NOT NULL
-					AND rs.FTStatus = 1
-					AND t.IsHTCal = 1 
+				WHEN t.FTStatus IS NOT NULL AND t.FTStatus = 1
+					AND t.IsHTCal = 1
 					AND (ISNULL(b.IsExistRunningFGLG, 0) > 0  OR ISNULL(bm.IsExistRunningFGLG, 0) > 0 
 							OR ISNULL(IsExistRunningResultandFirstTeamScore, 0) > 0) THEN 1 --can calc FT FGLG
 			ELSE 0 END AS IsNeedToCalculateFGLG
-		, CASE WHEN rs.MatchId IS NOT NULL
-					AND rs.HTStatus IN (0,1) 
+		, CASE WHEN t.HTStatus IS NOT NULL AND t.HTStatus = 1
+					AND t.FTStatus IS NOT NULL AND t.FTStatus IN (0, 1)
 					AND t.IsHTCal = 1
-					AND rs.FTStatus = 0
 					AND ISNULL(b.IsExistRunningHTCorner, 0) > 0 THEN 1 --can calc HT Corner
-				WHEN rs.MatchId IS NOT NULL
-					AND rs.FTStatus = 1
+				WHEN t.FTStatus IS NOT NULL AND t.FTStatus = 1
 					AND t.IsHTCal = 1
 					AND ISNULL(b.IsExistRunningCorner, 0) > 0 THEN 1 --can calc FT Corner
 			ELSE 0 END AS IsNeedToCalculateCorner
@@ -204,7 +205,6 @@ BEGIN
 		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON tm.matchID = a.MatchID
 		LEFT JOIN BetStatus b ON tm.matchid = b.matchid
 		LEFT JOIN BetStatusM bm ON tm.matchid = bm.matchid
-		LEFT JOIN PayoutResult rs ON tm.matchid = rs.matchid
 
 	DROP TABLE #MatchInQueue
 	DROP TABLE #MatchData
