@@ -1,6 +1,10 @@
-﻿Use bodb02
-GO 
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
+﻿SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_ResetWinning_SelByDate14    Script Date: 4/4/2016 5:12:28 PM ******/
+CREATE PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	SMALLDATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
@@ -490,9 +494,19 @@ BEGIN
        
 END
 
+
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam] AS [dbo]
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet]
 GO 

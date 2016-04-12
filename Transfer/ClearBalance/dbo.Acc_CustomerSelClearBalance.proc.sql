@@ -17,6 +17,7 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
 	- 20160125@Percy: expand new range RNG Casino [Redmine: #50674]
+	- 20160215@Percy: support AllBet [Redmine: #50588]
 
 Param's Explanation:
 	
@@ -72,21 +73,29 @@ Param's Explanation:
 			  FROM bettrans  WITH (NOLOCK)
 			  WHERE recommend =@custid 
 					AND (
-							(ruben = 0 AND (bettype NOT IN (801,802,803,804,805,806,1003) OR bettype NOT BETWEEN 2101 AND 2399))
+							(ruben = 0 AND bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499)
 							OR ruben <> 0
 						)
 					AND (
-							(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+							(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
 							OR CONVERT(DATE, winlostdate) < @yesterday
 						)
 			  GROUP BY custid
 			  UNION ALL
 			  SELECT custid, 
-					 isnull(SUM(CASE WHEN statusID IN (0, 1) THEN (CASE WHEN winlostdate <@NegativeBetEffectiveDate THEN actual_stake ELSE ABS(actual_stake) END) END),0) outstanding,
-					 isnull(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN statusID NOT IN (0, 1, 101, 102) THEN winlost-actual_stake+playercomm END ELSE 0 END), 0) balance
+					 isnull(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END),0) outstanding,
+					 isnull(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0) balance
 			  FROM bettransRNG  WITH (NOLOCK)
 			  WHERE recommend =@custid 
 					AND gameID BETWEEN 2101 AND 2399
+			  GROUP BY custid
+			  UNION ALL
+			  SELECT custid, 
+					 isnull(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END),0) outstanding,
+					 isnull(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0) balance
+			  FROM bettransLC  WITH (NOLOCK)
+			  WHERE recommend =@custid 
+					AND gameID BETWEEN 2401 AND 2499
 			  GROUP BY custid
 			) AS A
 			GROUP BY custid
@@ -101,7 +110,7 @@ Param's Explanation:
 			  FROM bettrans  WITH (NOLOCK)
 			  WHERE recommend =@custid
 				and ruben = 1
-				and bettype < 19001 and bettype NOT BETWEEN 2101 AND 2399
+				and bettype < 19001 and bettype NOT BETWEEN 2101 AND 2499
 				and CONVERT(DATE, winlostdate) = @today
 			  GROUP BY custid
 			  UNION ALL
@@ -109,8 +118,17 @@ Param's Explanation:
 					 SUM( winlost-actual_stake+playercomm) y_balance
 			  FROM bettransRNG  WITH (NOLOCK)
 			  WHERE recommend = @custid
-				and statusID NOT IN (0, 1, 101, 102)
+				and statusID NOT IN (0, 1)
 				and gameID BETWEEN 2101 AND 2399
+				and CONVERT(DATE, winlostdate) = @today
+			  GROUP BY custid
+			  UNION ALL
+			  SELECT custid, 
+					 SUM( winlost-actual_stake+playercomm) y_balance
+			  FROM bettransLC  WITH (NOLOCK)
+			  WHERE recommend = @custid
+				and statusID NOT IN (0, 1)
+				and gameID BETWEEN 2401 AND 2499
 				and CONVERT(DATE, winlostdate) = @today
 			  GROUP BY custid
 			) AS A
@@ -120,7 +138,8 @@ Param's Explanation:
 		(
 			SELECT TranslogOT = SUM(ABS(actual_stake)),
 					custid
-			 FROM translog(NOLOCK) WHERE recommend = @custid
+			 FROM translog(NOLOCK)
+			 WHERE recommend = @custid AND statusID = 0
 			 GROUP BY custid
 		) translog on translog.custid = c.custid
 

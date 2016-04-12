@@ -1,11 +1,14 @@
+
 SET QUOTED_IDENTIFIER ON 
 GO
 SET ANSI_NULLS ON 
 GO
 
+/****** Object:  Stored Procedure dbo.Acc_Rpt_AllProductWLAutomail    Script Date: 4/4/2016 5:12:28 PM ******/
+
 /****** Object:  Stored Procedure dbo.Acc_Rpt_AllProductWLAutomail    Script Date: 10/26/2015 10:32:33 AM ******/
 
-ALTER PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
+CREATE PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
 	@AllowSendEmail BIT = 0 OUTPUT
 AS
 /*
@@ -295,6 +298,7 @@ BEGIN
 	DROP TABLE #TempCustTrans
 
 END
+
 
 
 
