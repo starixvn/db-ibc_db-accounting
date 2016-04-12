@@ -44,13 +44,14 @@ Revisions:
 	- 20151106@Patrick: Support RnG Game & rename field named DisableMicroGame to DisableMicroGameLC
 	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
 	- 20160114@Helen: Cricket - [Redmine: #50027]
+	- 20160127@Billy: Member information for AllBet - [Redmine: #51591]
 	
 
 
 Param's Explanation:
-• @system: = NAP : internal login from NAP
+â€¢ @system: = NAP : internal login from NAP
 			NAPEXT:internal login from NAP EXT
-• @CustID: customer id.   
+â€¢ @CustID: customer id.   
 */
 
 	SET NOCOUNT ON
@@ -86,7 +87,7 @@ Param's Explanation:
 	SET @LimitPerIP = 0
 	SET @SelectedBetting = 0
 	SET @IsInternal = 0
-	
+
 	IF @roleid = 4 --super
 	BEGIN
 		SELECT 
@@ -141,7 +142,7 @@ Param's Explanation:
 			SET @IsIMBC = 1
 			
 	END
-	
+
 	--Get Internal status
 	/*
 	SELECT @IsInternal = CASE @roleid WHEN 4 THEN (SELECT isnull(IsInternal, 0) FROM custSuper WITH (NOLOCK) WHERE custid = @custid)
@@ -168,22 +169,32 @@ Param's Explanation:
 	END
 
 	 -- For DCS Product
-    DECLARE @bitmapOrder_MuayThai INT , @bitmapOrder_CockFighting INT,@bitmapOrder_Cricket INT
+    DECLARE	@bitmapOrder_MuayThai		INT
+		,	@bitmapOrder_CockFighting	INT
+		,	@bitmapOrder_Cricket		INT
+		,	@bitmapOrder_AllBet			INT
     
     SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
     SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
+	SET	@bitmapOrder_AllBet =	(
+									SELECT	psp.bitmapOrder
+									FROM	dbo.ProductStatusProfile AS psp WITH(NOLOCK)
+									WHERE	psp.Sporttype = 211
+										AND	psp.Bettype = 2401
+								)
     
     SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
     
     
-    DECLARE @IsHidden_MuayThai INT = 1
-    DECLARE @IsHidden_CockFighting INT = 1
-    DECLARE @IsHidden_Cricket INT = 1
+    DECLARE	@IsHidden_MuayThai			INT = 1
+		,	@IsHidden_CockFighting		INT = 1
+		,	@IsHidden_Cricket			INT = 1
+		,	@IsHidden_AllBet			INT = 1
     
-    DECLARE @SportBook2 INT = 16
-    DECLARE @CockFighting INT = 19
-    DECLARE @Cricket INT = 20
-    
+    DECLARE	@SportBook2					INT = 16
+		,	@CockFighting				INT = 19
+		,	@Cricket					INT = 20
+		,	@AllBet						INT = 21
     
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
 	BEGIN
@@ -192,6 +203,10 @@ Param's Explanation:
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@CockFighting,4))
 	BEGIN
 		SET @IsHidden_CockFighting = 0
+	END
+    IF EXISTS(SELECT TOP(1) 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@AllBet, 4))
+	BEGIN
+	    SET	@IsHidden_AllBet = 0
 	END
     
     IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@Cricket,4))
@@ -243,7 +258,11 @@ Param's Explanation:
 			-- For CockFighting
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_CockFighting),1) AS DisableCockFighting,
 			CAST(CASE WHEN @IsHidden_CockFighting = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_CockFighting),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCockFighting,
-			
+			-- For AllBet
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_AllBet), 1) AS DisableAllBet,
+			CAST(CASE WHEN @IsHidden_AllBet = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_AllBet), 1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideAllBet,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_AllBet), 0) AS SyncedAllBet,
+
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
 			ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
 			ISNULL(DisableMicrogameRNG,1) as DisableMicrogameRNG,
@@ -292,6 +311,7 @@ Param's Explanation:
 			ci.HideColossusBet,
 			cps.bitmapIsDisabled,
 			cps.bitmapIsHidden,
+			cps.bitmapHasSynced,
 			ci.DisableMicrogameLC,
 			ci.DisableSuperLive,
 			ci.DisableMicrogameRNG

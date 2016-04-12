@@ -27,12 +27,13 @@ AS
 		- 20150825@Helen: Colossus Bet - [Redmine: #41264]	
 		- 20150904@Helen: commission setting for MO [Redmine #41470]
 		- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
+		- 20160201@Billy: Apply for AllBet product - [Redmine: #51590]
 	Param's Explanation:
-	• @ErrCode:
+	- @ErrCode:
 		= 0: Transaction recorded successfully.
 		> 0: Specific Error.
 		Max errorcode: 214
-	• @ErrMsg: Error description.
+	- @ErrMsg: Error description.
 */
 
 BEGIN
@@ -364,11 +365,8 @@ BEGIN
 		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
 		WHERE Sporttype = @DCSSportType
 		
-		SELECT @ErrMsg = 'Error Master ' + @mastername + ', agent ' + @agentname + ': agent is synchronized '
-				+ @DCSSportName
-				+ ' but new master is not synchronized '
-				+ @DCSSportName
-				+ '.',
+		SELECT @ErrMsg	= 'Error Master ' + @mastername + ', agent ' + @agentname 
+						+ ': Agent has setting of ' + @DCSSportName	+ ' but new master doesn''t have setting of ' + @DCSSportName + '.',
 			@ErrCode = 9113
 		return
 	END
@@ -1220,6 +1218,67 @@ BEGIN
 	--		@ErrCode = 214
 	--	return
 	--END
+
+	-- Check Max Win Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllaA.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaM WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Agent AS cwllaA WITH(NOLOCK)
+			ON	cwllaA.SportType = cwllaM.SportType
+			AND	cwllaA.BetType = cwllaM.BetType
+			AND	cwllaM.CustId = @mrecommend
+			AND	cwllaA.CustId = @recommend
+	WHERE	cwllaM.MaxWinLimit <> 0
+		AND	(	cwllaM.MaxWinLimit < cwllaA.MaxWinLimit
+			OR	cwllaA.MaxWinLimit = 0
+		)
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Master ' + @mastername + ', agent ' + @agentname 
+						+ ': The master''s Max Win Limit for the product ' + @DCSSportName + ' is less than the agent''s Max Win Limit.'
+			,	@ErrCode = 9121
+			
+		RETURN
+	END
+
+	-- Check Max Loss Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllaA.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaM WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Agent AS cwllaA WITH(NOLOCK)
+			ON	cwllaA.SportType = cwllaM.SportType
+			AND	cwllaA.BetType = cwllaM.BetType
+			AND	cwllaM.CustId = @mrecommend
+			AND	cwllaA.CustId = @recommend
+	WHERE	cwllaM.MaxLossLimit <> 0
+		AND	(	cwllaM.MaxLossLimit < cwllaA.MaxLossLimit
+			OR	cwllaA.MaxLossLimit = 0
+		)
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Master ' + @mastername + ', agent ' + @agentname 
+						+ ': The master''s Max Loss Limit for the product ' + @DCSSportName + ' is less than the agent''s Max Loss Limit.'
+			,	@ErrCode = 9122
+			
+		RETURN
+	END
+
 END
 
 GO

@@ -61,14 +61,16 @@ Revisions:
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20151016@Helen: Data Type Error - [Redmine - 45677] 
 	- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
+	- 20160205@Billy:	Apply for AllBet product - [Redmine: #51590]
 	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
+	- 20160330@Elodie: Update code to correct commission for DCS product of member
 	
 Param's Explanation:
-• @ErrCode:
+- @ErrCode:
     = 0: Transaction recorded successfully.
     > 0: Specific Error. 
 	Max errorcode:	133
-• @ErrMsg: Error description.
+- @ErrMsg: Error description.
 Note: Check Disable status between Agent AND Member 
 */
 BEGIN
@@ -470,13 +472,70 @@ BEGIN
 		FROM DBPRO.bodb02.dbo.sports WITH(NOLOCK)
 		WHERE Sporttype = @DCSSportType
 		
-		SELECT @ErrMsg = 'Error Agent ' + @agentname + ', member ' + @membername + ': member is synchronized '
-				+ @DCSSportName
-				+ ' but new agent is not synchronized '
-				+ @DCSSportName
-				+ '.',
+		SELECT @ErrMsg	= 'Error agent ' + @agentname + ', member ' + @membername
+						+ ': Member has setting of ' + @DCSSportName + ' but new agent doesn''t have setting of ' + @DCSSportName + '.',
 			@ErrCode = 9113
 		return
+	END
+
+	-- Check Max Win Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllm.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaA WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Member AS cwllm WITH(NOLOCK)
+			ON	cwllm.SportType = cwllaA.SportType
+			AND	cwllm.BetType = cwllaA.BetType
+			AND	cwllaA.CustId = @recommend
+			AND	cwllm.CustId = @custid
+	WHERE	cwllaA.MaxWinLimit <> 0
+		AND	(	cwllaA.MaxWinLimit < cwllm.MaxWinLimit
+			OR	cwllm.MaxWinLimit = 0
+		)
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Agent ' + @agentname + ', member ' + @membername 
+						+ ': The agent''s Max Win Limit for the product ' + @DCSSportName + ' is less than the member''s Max Win Limit.'
+			,	@ErrCode = 9119
+
+		RETURN
+	END
+
+	-- Check Max Loss Limit for DCS
+	SELECT	@DCSSportType = 0
+
+	SELECT TOP(1)	@DCSSportType = cwllm.SportType
+	FROM		dbo.CustWinLossLimit_Agent AS cwllaA WITH(NOLOCK)
+	INNER JOIN	dbo.CustWinLossLimit_Member AS cwllm WITH(NOLOCK)
+			ON	cwllm.SportType = cwllaA.SportType
+			AND	cwllm.BetType = cwllaA.BetType
+			AND	cwllaA.CustId = @recommend
+			AND	cwllm.CustId = @custid
+	WHERE	cwllaA.MaxLossLimit <> 0
+		AND	(	cwllaA.MaxLossLimit < cwllm.MaxLossLimit
+			OR	cwllm.MaxLossLimit = 0
+		)
+
+	IF	@DCSSportType <> 0
+	BEGIN
+		SELECT	TOP(1) @DCSSportName = p.ProductName
+		FROM		dbo.ProductSettingDetail AS psd WITH(NOLOCK)
+		INNER JOIN	DBPRO.bodb02.dbo.Products AS p WITH(NOLOCK)
+				ON	p.ProductID = psd.ProductID
+		WHERE	psd.SportType = @DCSSportType
+
+	    SELECT	@ErrMsg	= 'Error Agent ' + @agentname + ', member ' + @membername 
+						+ ': The agent''s Max Loss Limit for the product ' + @DCSSportName + ' is less than the member''s Max Loss Limit.'
+			,	@ErrCode = 9120
+
+		RETURN
 	END
 
 	--Check Gold Deluxe
@@ -2161,8 +2220,15 @@ BEGIN
 				AND scs.sporttype = cs.sporttype
 				AND scs.bettype = cs.bettype
 	WHERE cs.custid = @custid
-		AND ISNULL(cs.SuperDiscount, 0) < scs.Discount
-
+		AND ISNULL(cs.SuperDiscount, 0) > scs.Discount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update super commission unsuccessfully.',
+		    @ErrCode = 600			 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
 		
 	UPDATE cs
 	SET cs.MasterDiscount = mcs.Discount
@@ -2172,7 +2238,15 @@ BEGIN
 				AND mcs.sporttype = cs.sporttype
 				AND mcs.bettype = cs.bettype
 	WHERE cs.custid = @custid
-		AND ISNULL(cs.MasterDiscount, 0) < mcs.Discount
+		AND ISNULL(cs.MasterDiscount, 0) > mcs.Discount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update master commission unsuccessfully.',
+		    @ErrCode = 601					 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
 		
 	UPDATE cs
 	SET cs.AgentDiscount = acs.Discount
@@ -2182,8 +2256,16 @@ BEGIN
 				AND acs.sporttype = cs.sporttype
 				AND acs.bettype = cs.bettype
 	WHERE cs.custid = @custid
-		AND ISNULL(cs.AgentDiscount, 0) < acs.Discount
-	
+		AND ISNULL(cs.AgentDiscount, 0) > acs.Discount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update agent commission unsuccessfully.',
+		    @ErrCode = 602					 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
+
     --super 3rd
 
     UPDATE	cs WITH (UPDLOCK,ROWLOCK)
@@ -2384,6 +2466,24 @@ BEGIN
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
     END
+
+	--member DCS product
+    UPDATE	cs WITH (UPDLOCK,ROWLOCK)
+    SET		playerdiscount = acs.discount 
+    FROM	CustDiscount3rd_Agent acs WITH(NOLOCK)
+		    INNER JOIN CustDiscount3rd_Member cs ON acs.custid = @recommend AND cs.custid = @custid 
+									     AND acs.sporttype = cs.sporttype AND acs.bettype = cs.bettype 
+
+    WHERE	acs.discount< cs.playerdiscount
+	IF @@ERROR<>0
+    BEGIN
+		    SELECT @ErrMsg = 'update commission unsuccessfully.',
+		    @ErrCode = 603				 
+		    IF @ReturnErrCode = 0
+			    RAISERROR(@ErrMsg, 16, 1)
+		    return
+    END
+
     --live casino , keno, gold deluxe
     UPDATE cs WITH(UPDLOCK,ROWLOCK)
     SET playerdiscount = acs.discount
@@ -2468,6 +2568,75 @@ BEGIN
 			    RAISERROR(@ErrMsg, 16, 1)
 		    return
     END
+
+	
+	-- Update Stake Level for moved member
+	DECLARE	@updateStakeLevel	TABLE (
+									SportType				SMALLINT
+								,	BetType					INT
+								,	StakeLevelList			VARCHAR(200)
+								,	StakeLevelList_new		VARCHAR(200)
+								,	StakeLevelList_upline	VARCHAR(200)
+								);
+	
+	INSERT INTO	@updateStakeLevel
+		(	SportType     , BetType     , StakeLevelList     , StakeLevelList_new, StakeLevelList_upline)
+	SELECT	csla.SportType, csla.BetType, cslm.StakeLevelList, ''                , csla.StakeLevelList
+	FROM		dbo.CustStakeLevel_Agent AS csla WITH (NOLOCK)
+	INNER JOIN	dbo.CustStakeLevel_Member AS cslm WITH (NOLOCK)
+			ON	cslm.SportType = csla.SportType
+			AND	cslm.BetType = csla.BetType
+			AND	csla.CustID = @recommend
+			AND	cslm.CustID = @custid
+	
+	UPDATE	usl
+	SET	usl.StakeLevelList_new = fsls.String
+	FROM		@updateStakeLevel AS usl
+	INNER JOIN	dbo.CustStakeLevel_Agent AS cslaOld WITH (NOLOCK)
+			ON	cslaOld.SportType = usl.SportType
+			AND	cslaOld.BetType = usl.BetType
+	INNER JOIN	dbo.CustStakeLevel_Agent AS cslaNew WITH (NOLOCK)
+			ON	cslaNew.SportType = cslaOld.SportType
+			AND	cslaNew.BetType = cslaOld.BetType
+			AND	cslaNew.CustID = @recommend
+			AND	cslaOld.CustID = @recommend_old
+	CROSS APPLY	dbo.f_StakeLevelcorrectString(cslaOld.StakeLevelList, cslaNew.StakeLevelList) AS fslsRemoved
+	CROSS APPLY dbo.f_StakeLevelcorrectString(usl.StakeLevelList, fslsRemoved.String) AS fsls
+
+	UPDATE	usl
+	SET	usl.StakeLevelList_new = sr.LowestStakeLevel
+	FROM	@updateStakeLevel AS usl
+	CROSS APPLY	(
+		SELECT TOP(1) ISNULL(CONVERT(VARCHAR(200), sl.StakeLevelID), '') AS LowestStakeLevel
+		FROM (
+			SELECT	CAST(val AS INT) AS val
+			FROM	dbo.strSplit(usl.StakeLevelList_Upline, ',')
+		) AS ss
+		INNER JOIN	dbo.StakeLevel AS sl WITH(NOLOCK)
+				ON	ss.val = sl.StakeLevelID
+		WHERE	sl.MinStake <> 0
+			AND	sl.MaxStake <> 0
+		ORDER BY	sl.MaxStake, sl.MinStake
+	) sr
+	WHERE	usl.StakeLevelList_new = ''
+
+	UPDATE	cslm WITH (ROWLOCK, UPDLOCK)
+	SET	cslm.StakeLevelList = usl.StakeLevelList_new
+	FROM	dbo.CustStakeLevel_Member AS cslm
+	INNER JOIN	@updateStakeLevel AS usl
+			ON	usl.SportType = cslm.SportType
+			AND	usl.BetType = cslm.BetType
+	WHERE	cslm.CustID = @custid
+
+	-- Update Daily Auto Reset Win Loss Limit for moved member
+	IF	EXISTS (SELECT 1 FROM dbo.CustWinLossLimit_Agent AS cwlla WITH (NOLOCK) WHERE cwlla.CustId = @recommend AND cwlla.IsAutoReset = 0)
+	BEGIN
+	    UPDATE	cwllm
+		SET	cwllm.IsAutoReset = 0
+		FROM	dbo.CustWinLossLimit_Member AS cwllm WITH (ROWLOCK, UPDLOCK)
+		WHERE	cwllm.CustId = @custid
+	END
+	
 
     DECLARE @LogSPData VARCHAR(8000)
     SELECT  @LogSPData = '<Acc_CustomerUpdMoveMember  MemberName="' + @membername + '" OldAgentId="'

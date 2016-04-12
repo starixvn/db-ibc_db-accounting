@@ -1,6 +1,5 @@
-use bodb02
-go
-ALTER PROCEDURE [dbo].[Task_BalanceGameResetYesterday] @sporttype SMALLINT = -1
+ALTER PROCEDURE [dbo].[Task_BalanceGameResetYesterday] 
+	@sporttype SMALLINT = -1
 	, @bettype SMALLINT = 1101
 AS
 /*
@@ -13,6 +12,8 @@ AS
 			- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo by link database)
 			- 20150710@Patrick: Remove insert default balance value & remove deposit account & support Gold deluxe
 			- 20150910@Patrick: Re-arrange code to reduce time & CPU cost
+			- 20160201@Elodie: Apply new rule for auto reset of OneRNG 
+			- 20160204@Elodie: Add WinLossLimit setting type for DCS [Redmine: #49606]
 
 		Parameters Explanation:	
 */
@@ -23,17 +24,26 @@ IF @bettype = 1101 --LiveCS
 BEGIN
 	INSERT INTO #WeeklyResetCustomer(custid, srecommend)
 	SELECT custid, srecommend
-	SELECT custid, srecommend
 	FROM CustDB.dbo.custinfo WITH (NOLOCK)
 	WHERE roleid = 1 AND MaxWinLiveCasino > 0 AND isAutoResetLiveCasino = 0
 END
-ELSE --others 3rd products
+ELSE IF @bettype IN (1701,2101) --GoldDeluxe & OneRNG
 BEGIN
 	INSERT INTO #WeeklyResetCustomer(custid, srecommend)
 	SELECT c.custid, srecommend
 	FROM CustDB.dbo.custinfo c WITH (NOLOCK)
 		INNER JOIN DBCUST.CustDB.dbo.CustWinLimit cwl WITH (NOLOCK) ON cwl.CustId = c.custid AND cwl.sporttype = @sporttype AND cwl.bettype = @bettype
-	WHERE c.roleid = 1 AND cwl.MaxWinLimit > 0 AND cwl.IsAutoReset = 0
+	WHERE c.roleid = 1 AND IsAutoReset = 0 AND ((BetType = 1701 AND MaxWinlimit > 0) OR BetType = 2101)
+	
+END
+ELSE --others DCS products
+BEGIN
+	INSERT INTO #WeeklyResetCustomer(custid, srecommend)
+	SELECT c.custid, srecommend
+	FROM CustDB.dbo.custinfo c WITH (NOLOCK)
+		INNER JOIN DBCUST.CustDB.dbo.CustWinLossLimit_Member cwl WITH (NOLOCK) ON cwl.CustId = c.custid AND cwl.sporttype = @sporttype AND cwl.bettype = @bettype
+	WHERE c.roleid = 1 AND IsAutoReset = 0
+	
 END
 
 DECLARE @Yesterday SMALLDATETIME
