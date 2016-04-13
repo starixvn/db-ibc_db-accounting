@@ -18,6 +18,7 @@ AS
    
  Revisions:  
 	-20160318@bobby.nguyen: #54311 - Correct checking process on match with specific product/sport
+	-20160318@bobby.nguyen: #55930 - Exclude bettype 9 from match locking table
 	
  Param's Explanation:   
  
@@ -48,7 +49,9 @@ BEGIN
 		FROM dbo.TempVariableNumber ck WITH(ROWLOCK)
 			INNER JOIN #tblMatchProcess tp 
 			ON ck.KeyValue = tp.matchid AND ck.KeyID = tp.KeyID
-			
+		
+		WHERE tp.KeyID > 0
+		
 		IF (@isExistParlay  = 1)
 		BEGIN
 			IF EXISTS(
@@ -111,6 +114,7 @@ BEGIN
 				INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) 
 				SELECT DISTINCT KeyID, matchid
 				FROM #tblMatchProcess
+				WHERE KeyID > 0
 				
 				SET @avaiableProcess = 1
 				
