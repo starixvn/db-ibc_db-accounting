@@ -59,6 +59,7 @@ Revisions:
  - 20150122@Johnson: optimize sp
  - 20150909@Jim: Remove leagueName SPECIALS (HotFix #41712)
  - 20160317@Robert - Incorporate 1X2 HDP and 1H 1X2 HDP bet types into Trader Performance Report[#54184]
+ - 20160414@Robert - Trader Performance Report - Mismatch Turnover data with TGR/Performance Detail report[RedmineId: #55948]
 Param's Explanation:  
 • @isSoccer  
     = 1: Soccer  
@@ -253,9 +254,9 @@ GROUP BY t.matchid, t.custid
 	
 
 select b.matchid,bettype,
-    sum(case when b.bettype IN (5,15,124,125)
+    sum(case when b.bettype IN (5,15)
 									 then ABS(b.stake)*(1-b.tpositiontaking)*b.virtualrate
-							WHEN b.bettype IN (1,2,3,7,8,12) 
+							WHEN b.bettype IN (1,2,3,7,8,12,124,125) 
 									then(case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate 
 							else 0 end) as stake,              
    --Winlost  
