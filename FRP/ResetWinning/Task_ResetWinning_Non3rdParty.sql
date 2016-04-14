@@ -29,6 +29,7 @@ AS
 		- 20160324@Sophia:  . Exclude Reset data of ExtraPT, include other transfer tickets
 							. Remove Bingo [Redmine: #54719]
 		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
+		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -280,6 +281,7 @@ BEGIN
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
+			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Voidbridge'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -301,6 +303,7 @@ BEGIN
 			OR bettype BETWEEN 2101 AND 2399
 			OR Sporttype = 44
 			OR bettype BETWEEN 2401 AND 2499 
+			OR bettype BETWEEN 4001 AND 7999
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -322,6 +325,7 @@ BEGIN
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
+			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Voidbridge'
 		   END, winlostdate
 
 	UNION ALL

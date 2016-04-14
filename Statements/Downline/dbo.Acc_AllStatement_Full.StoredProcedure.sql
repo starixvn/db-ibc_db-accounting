@@ -113,14 +113,14 @@ SELECT @Yesterday =  CONVERT(Date,DATEADD(DD, -1, GETDATE()))
 		INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
 		SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 	
-		DELETE @SportBettype WHERE	ProductID NOT IN (11, 13, 17, 19, 1, 6, 21) -- AG-Casino, MGC-LC, MGC-RNG, Cockfighting, AllBet
+		DELETE @SportBettype WHERE	ProductID NOT IN (11, 13, 17, 19, 1, 6, 21, 22) -- AG-Casino, MGC-LC, MGC-RNG, Cockfighting, AllBet, Voidbridge
 									OR (ProductId = 1 AND SubProduct <> 'MG-Superlive') --MG-Superlive
 									OR (ProductID = 6 AND SubProduct = '') --- Old RNG Casino 
 
 		-- Tickets not check in bettrans on Yesterday and Today: AG-Casino, MGC-RNG, MBC-OneRnG, AllBet
 		UPDATE @SportBettype
 		SET IsUsedBettrans = 1
-		WHERE ProductID NOT IN (11, 17, 6, 21)
+		WHERE ProductID NOT IN (11, 17, 6, 21, 22)
 	
 		-- Tickets running in translog and exlude from bettrans: MG-Superlive, MGC-LC, Cock Fighting
 		UPDATE @SportBettype
