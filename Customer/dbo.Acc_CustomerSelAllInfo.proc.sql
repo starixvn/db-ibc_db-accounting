@@ -71,6 +71,7 @@ Revisions:
 	- 20160202@Percy: Support new sport Cricket [Redmine: #50028]
 	- 20160215@Percy: Support new product AllBet [Redmine: #50588]
 	- 20160329@Francis: Change to use inline function instead of table variable to enhance performance
+	- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -179,12 +180,13 @@ BEGIN
 	
 	DELETE @SportBettype
 	WHERE ProductID
-		NOT IN (6,  -- RNG Casino
-				11, -- AG-Casino
-				13, -- MGC-LC
-				17, -- MGC-RNG
-				19, -- Cock Fighting
-				21  -- AllBet
+		NOT IN ( 6  -- RNG Casino
+				,11 -- AG-Casino
+				,13 -- MGC-LC
+				,17 -- MGC-RNG
+				,19 -- Cock Fighting
+				,21 -- AllBet
+				,22 -- Voidbridge
 				)
 			AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') -- MG-Superlive
 	
@@ -193,7 +195,7 @@ BEGIN
 	-- Tickets not in bettrans: RNG Casino, AG-Casino, MGC-RNG, AllBet
 	UPDATE @SportBettype
 	SET IsUsedBettrans = 1
-	WHERE ProductID NOT IN (6, 11, 17, 21)
+	WHERE ProductID NOT IN (6, 11, 17, 21, 22)
 	
 	-- Tickets running in translog: MG-Superlive, MGC-LC, Cockfighting
 	UPDATE @SportBettype
