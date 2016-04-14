@@ -1,16 +1,8 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_TraderPerformanceSumBK]    Script Date: 04/08/2016 03:39:21 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_Rpt_TraderPerformanceSumBK    Script Date: 4/5/2016 3:21:23 PM ******/
-ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSumBK]
- @fromdate datetime ,  
+﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSum_14]  
+ @fromdate datetime,  
  @todate datetime,  
  @isSoccer bit =1  
- AS
+AS  
   
 /*  
  Created: 20090122@[creator]  
@@ -47,11 +39,11 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSumBK]
 						• 1st Total Bookings, Next Booking, Total Bookings
 						• Total Bookings 15mins O /U,Corners 15mins O/U 
 						• 10 mins O/U, Single Team O/U
-  - 20140121@Johnson: category leagues by major or minor 
-  - 20140519@Johnson: Remove bettype from league name [RedmineID:#16022]						
+  - 20140121@Johnson: category leagues by major or minor
+  - 20140519@Johnson: Remove bettype from league name [RedmineID:#16022] 						
   - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
   - 20160317@Robert - Incorporate 1X2 HDP and 1H 1X2 HDP bet types into Trader Performance Report[#54184]
-  - 20160408@Francis: Revise SP to enhance performance
+  - 20160414@Robert - Trader Performance Report - Mismatch Turnover data with TGR/Performance Detail report[RedmineId: #55948]
  Param's Explanation:  
  • @isSoccer  
   = 1: Soccer  
@@ -59,7 +51,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSumBK]
 */  
 
 SET NOCOUNT ON  
-  
+ 
 
 Declare @countOrphan int  
 --DECLARE @NegativeBetEffectiveDate datetime
@@ -77,7 +69,7 @@ DECLARE @temp_daao TABLE
 )  
   
   
-IF @isSoccer = 1
+IF @isSoccer = 1 
 BEGIN  
  insert @temp_daao (custid,username,matchID, bettype,OUtype,category)  
  select a.operatorid, username,  m.matchID,  
@@ -108,7 +100,7 @@ BEGIN
   l.category 
  from bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)  
   inner join customer c with(nolock) on a.operatorid=c.custid  
-  inner join bodb_archive.dbo.match_bk m with(nolock) on a.matchid=m.matchid  
+  inner join match14 m with(nolock) on a.matchid=m.matchid  
   inner join team t with(nolock) on m.homeid=t.teamid        
   inner join team ta with(nolock) on m.awayid=ta.teamid     
   inner join league l with(nolock) on m.leagueid=l.leagueid  
@@ -136,7 +128,7 @@ BEGIN
   l.category   
  from   
   bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)  
-  right join bodb_archive.dbo.match_bk m with(nolock) on a.matchid = m.matchid  
+  right join match14 m with(nolock) on a.matchid = m.matchid  
   inner join team t with(nolock) on m.homeid=t.teamid   
   inner join team ta with(nolock) on m.awayid=ta.teamid         
   inner join league l with(nolock) on m.leagueid=l.leagueid  
@@ -149,7 +141,7 @@ BEGIN
   
 END  
  -- OTHER SPORTS   
-ELSE IF @isSoccer = 0
+ELSE IF @isSoccer = 0 
  BEGIN  
   insert @temp_daao (custid,username,matchID, bettype, OUtype, category)  
   select a.operatorid, username,  m.matchID,  
@@ -166,7 +158,7 @@ ELSE IF @isSoccer = 0
 	l.category   
   from bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)  
    inner join customer c with(nolock) on a.operatorid=c.custid  
-   inner join bodb_archive.dbo.match_bk m with(nolock) on a.matchid=m.matchid  
+   inner join match14 m with(nolock) on a.matchid=m.matchid  
    inner join league l with(nolock) on m.leagueid=l.leagueid  
   where  
    m.eventdate between @fromdate and @todate  
@@ -178,7 +170,7 @@ ELSE IF @isSoccer = 0
   select NULL, NULL,  m.matchID,0,0 ,l.category   
   from   
    bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)  
-   right join bodb_archive.dbo.match_bk m with(nolock) on a.matchid = m.matchid  
+   right join match14 m with(nolock) on a.matchid = m.matchid  
    inner join league l with(nolock) on m.leagueid=l.leagueid  
   where  
    m.eventdate between @fromdate and @todate  
@@ -201,23 +193,6 @@ BEGIN
   Others int
  )  
  
-create table #bettrans_bk (matchid int, bettype int, scomm money, winlost money, awinlost money, mwinlost money, swinlost money,
-							actual_stake money, stake money, tpositiontaking smallmoney, virtualrate float, modds smallmoney)
-	
-create clustered index [CIX_matchid_bettype] on #bettrans_bk (matchid asc, bettype asc)
-
-insert into #bettrans_bk (matchid, bettype, scomm, winlost, awinlost, mwinlost, swinlost,
-							actual_stake, stake, tpositiontaking, virtualrate, modds)
-select matchid, bettype, scomm, winlost, awinlost, mwinlost, swinlost,
-		actual_stake, stake, tpositiontaking, virtualrate, modds
-from bodb_Archive.dbo.bettrans_bk b (nolock)
-where b.statusID not in (101,102,103,121,111)   
-   AND b.ruben =1  
-   AND b.bettype in (1,3,7,8,5,15,2,12,124,125)   
-   AND b.winlostdate between @fromdate AND @todate
-   AND b.LiveIndicator = 1  
-   AND b.currency <> 20
- 
  DECLARE @countMajorOrphan int, @countMinor1Orphan int, @countMinor2Orphan int, @countMinor3Orphan int , @countOthersOrphan int
  
  insert #userMatch (custid,nMatch, Major,Minor1,Minor2,Minor3,Others) 
@@ -225,8 +200,12 @@ where b.statusID not in (101,102,103,121,111)
  FROM( 
 	 select t.custid, ISNULL(t.category,'Others') as category, count(distinct t.matchID) as cntMatch
 	 from @temp_daao t  
-	  inner join #bettrans_bk b with (nolock) on b.matchid=t.matchid and (b.bettype = t.bettype  or (b.bettype = 124 AND t.BetType = 5) OR (b.bettype = 125 AND t.BetType = 15))
-	  group by t.custid ,ISNULL(t.category,'Others')  ) as s
+	  inner join bettrans14 b with (nolock) on b.matchid=t.matchid and (b.bettype = t.bettype  or (b.bettype = 124 AND t.BetType = 5) OR (b.bettype = 125 AND t.BetType = 15))
+	 where LiveIndicator = 1 and   
+	 --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
+	 b.statusID not in (101,102,103,121,111)   
+	 and b.currency <> 20 
+	 group by t.custid ,ISNULL(t.category,'Others')  ) as s
  PIVOT(
 	SUM(s.cntMatch)
 	FOR category in (Major, Minor1, Minor2, Minor3, Others)
@@ -235,7 +214,11 @@ where b.statusID not in (101,102,103,121,111)
  ; WITH T AS(  
  select ISNULL(t.category,'Others') category, count(distinct t.matchID) countOrphan
  from @temp_daao t  
-  inner join #bettrans_bk b with (nolock) on b.matchid=t.matchid and t.bettype = 0  
+  inner join bettrans14 b with (nolock) on b.matchid=t.matchid and t.bettype = 0  
+ where LiveIndicator = 1 and   
+ --b.status not in ('VOID','REJECT','DRAW','DONE','REFUND')  
+ b.statusID not in (101,102,103,121,111)   
+ and b.currency <> 20
  GROUP by ISNULL(t.category,'Others')
  )
  
@@ -248,9 +231,9 @@ where b.statusID not in (101,102,103,121,111)
  
  
 select b.matchid,bettype,
-    sum(case when b.bettype IN (5,15,124,125)
+    sum(case when b.bettype IN (5,15)
 									 then ABS(b.stake)*(1-b.tpositiontaking)*b.virtualrate
-							WHEN b.bettype IN (1,2,3,7,8,12) 
+							WHEN b.bettype IN (1,2,3,7,8,12,124,125) 
 									then(case when b.modds = 0.25 OR b.modds = -0.25 then b.stake/2 else b.stake end)*(1-b.tpositiontaking)*b.virtualrate 
 							else 0 end) as stake,              
    --Winlost  
@@ -260,7 +243,13 @@ select b.matchid,bettype,
    --Live BetCount      
     count(1) as bet    
 INTO #bettrans
-from #bettrans_bk b
+from bettrans14 b with(nolock) 
+WHERE  b.statusID not in (101,102,103,121,111)   
+   AND b.ruben =1  
+   AND b.bettype in (1,3,7,8,5,15,2,12,124,125)   
+   AND b.winlostdate between @fromdate AND @todate
+   AND LiveIndicator = 1  
+   AND b.currency <> 20
 GROUP by matchid, bettype	
   
  select   
@@ -576,12 +565,9 @@ GROUP by matchid, bettype
  ) as a  
  order by username  
     drop table #userMatch  
-	drop table #bettrans_bk
-	drop table #bettrans
-END
-
+END  
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSum_14] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformanceSumBK] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformanceSum_14] TO [vnteam]
