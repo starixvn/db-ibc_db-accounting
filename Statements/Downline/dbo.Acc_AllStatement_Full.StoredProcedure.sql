@@ -56,6 +56,7 @@
 		- 20160216@Sophia: Apply Allbet [Redmine: #50588]
 		- 20160404@Sophia: Exclude GrandPrize out of ACCUMULATED BALANCE [Redmine: #55397]
 		- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
+		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -105,10 +106,12 @@ DECLARE @Yesterday DATETIME
 SELECT @Yesterday =  CONVERT(Date,DATEADD(DD, -1, GETDATE()))
 		
 ----Get Sport Bettype Matrix------
+		DECLARE @isTest BIT = 0
+		SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
 		DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500), IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
 		INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
-		EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5 
+		SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 	
 		DELETE @SportBettype WHERE	ProductID NOT IN (11, 13, 17, 19, 1, 6, 21) -- AG-Casino, MGC-LC, MGC-RNG, Cockfighting, AllBet
 									OR (ProductId = 1 AND SubProduct <> 'MG-Superlive') --MG-Superlive
