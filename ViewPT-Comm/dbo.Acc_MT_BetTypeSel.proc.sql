@@ -1,4 +1,18 @@
-﻿ALTER PROCEDURE [dbo].[Acc_MT_BetTypeSel]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_MT_BetTypeSel]    Script Date: 4/19/2016 2:18:12 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_MT_BetTypeSel]    Script Date: 4/19/2016 2:18:12 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_MT_BetTypeSel_xtest]
 	@Sporttype INT = NULL
 AS
 
@@ -12,11 +26,17 @@ Revisions:
 	- 20091201@Kiwi: Union with CustSetting3rd.
 	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB, use temp table for bettype)
     - 20151021@Billy: Add support for DCS -- UNION with ProductSettingDetail
-
+	- 20160409@Winnie: Fix bug Bug #56129: [NAP] should show only ".: ALL :." option in bettype drop down list
 */
 
 SET NOCOUNT ON
 
+IF (@Sporttype IS NOT NULL) AND ((SELECT COUNT(BetType) FROM ProductSettingDetail(NOLOCK) where SportType=@Sporttype AND SettingType=1) =1)
+BEGIN
+SELECT NULL AS bettype, NULL AS typenamee 
+WHERE 1=0
+RETURN
+END
 ----- 20150610@Kos -------------------
 DECLARE @tmp_Bettype TABLE (TypeID INT, TypeNamee NVARCHAR(50))
 
@@ -42,6 +62,7 @@ FROM
 	INNER JOIN @tmp_Bettype b ON t.bettype = b.typeid
 WHERE t.custid IN( 73104) AND t.sporttype = ISNULL(@sporttype, t.sporttype)
 ORDER BY t.bettype
+
 
 
 GO
