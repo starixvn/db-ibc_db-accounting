@@ -1189,7 +1189,8 @@ BEGIN
 							AND (ProductID IN (17, 22) 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
-				IF @WinlostDate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
+				IF @WinlostDate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- yesterday and today
 				BEGIN
 					-- Today running ticket
 					INSERT INTO @Data
