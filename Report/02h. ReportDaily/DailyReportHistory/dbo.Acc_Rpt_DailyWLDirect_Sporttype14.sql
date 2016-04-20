@@ -85,7 +85,7 @@ AS
 		- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
 		- 20160407@Sophia: Fix bug Allbet - wrong temp table definition [#redmine: #55628] 
 		- 20160415@Sophia:  . Fix bug After ExtraPT of Sportbook  [Redmine: #55533]
-		           . Remove P2P, Bingo
+							. Remove P2P, Bingo
 		- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product [RedmineID#55584]
 							
 		
@@ -114,12 +114,13 @@ BEGIN
  
 	 DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
 	 INSERT INTO @SportBettype
-	SELECT ProductID,
+	 SELECT ProductID,
               Bettype,
               EventType,
               SubProduct
      FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
-
+	 --- End Sport Bettype Matrix------
+	 
 	DECLARE @RBWinlost TABLE(
 							site TINYINT,
 							winlost money,
