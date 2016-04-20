@@ -25,6 +25,7 @@ AS
 		- 20160113@Patrick: Support Cricket [Redmine: #50688]
 		- 20160301@Bobby: #53123 - Enhance SP void bet by Id list (allow transId up to 1000 rows)
 		- 20160314@Bobby: #53935 - Update changes for multiple bet trade transaction
+		- 20160413@Bobby: #55893 - Update change request for grouping tickets
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -564,11 +565,36 @@ BEGIN
 		
 	-- UPDATE SiteName
 	;WITH CustSiteName AS (
-		SELECT DISTINCT ag.custid, ci.site, ci.srecommend
+		SELECT DISTINCT ag.custid, ci.site, ci.srecommend, ci.mrecommend
 		FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
 			INNER JOIN #Data ag
 			ON ci.custid = ag.recommend
 		
+	)
+	--format group
+	, CTE_GroupInfo AS (
+		SELECT DISTINCT d.custid
+			,cs.mrecommend
+			,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
+			,CASE 
+				WHEN (
+					d.recommend NOT IN (52466)
+					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+					AND s.custid IS NULL
+				) THEN '0-Credit'
+				WHEN d.recommend IN (52466) THEN '1-8RM'
+				WHEN (
+					d.recommend NOT IN (52466)
+					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+					AND s.custid IS NOT NULL
+				) THEN '2-Deposit'
+				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
+			END AS GroupName
+		FROM #Data d
+			INNER JOIN CustSiteName cs 
+			ON d.custid = cs.custid
+			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
+			ON cs.srecommend = s.custid
 	)
 	-- ALL tickets	
 	SELECT
@@ -609,16 +635,25 @@ BEGIN
 		,d.TransDesc
 		,d.SoldId
 		,d.IsHideComm
-		,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
-		,cs.Site
+		,g.IsDeposit
+		,SUBSTRING(g.GroupName, 3, 30) AS GroupName
+		
 	FROM #Data d
-		INNER JOIN CustSiteName cs 
-		ON d.custid = cs.custid
-		LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
-		ON cs.srecommend = s.custid
-	ORDER BY cs.Site
-		,GroupID
-		,transid
+		INNER JOIN CTE_GroupInfo g
+		ON d.custid = g.custid
+		
+	WHERE NOT EXISTS (
+			SELECT TOP 1 1 
+			FROM  dbo.[f_GetBetDaqCustomer] (1) 
+			WHERE custid = d.custid
+		) --betdaq
+		AND d.username 		<> '12EU'
+		AND g.mrecommend 	NOT IN (105181, 118473, 105183) --MHC
+		AND d.recommend 	NOT IN (11196380) --Foobet
+		AND d.recommend 	NOT IN (13423967) --OneExchange
+		
+	ORDER BY g.GroupName
+		,d.transid
 	
 	-->> Ticket in Details for LiveCS
 	SELECT BG.refno

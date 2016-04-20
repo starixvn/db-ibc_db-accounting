@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Dot_Msg_SetUsrMessage]
 	@TargetId int,
 	@TargetName nvarchar(50) = '',
 	@isRead bit = 0,
-	@BetTransId varchar(2000) = '',
+	@BetTransId varchar(max) = '',
 	@PostTime DATETIME = NULL ,
 	@Creator INT =0
 AS
@@ -14,6 +14,7 @@ AS
 	Revisions: 
 		20120723@Scott(DB07): Set PostTime from Dot_Msg_SetMessage retuen value
 		20120920@Jamie: Add @Creator for write log in future 
+		20160408@Bobby: #54218 - Extend bettransid to varchar(max)
 */
 
 BEGIN
