@@ -21,6 +21,8 @@ AS
 		- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 		- 20160119@Patrick: Support BetTrade
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
+		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
+
 
 */
 
@@ -160,6 +162,16 @@ BEGIN
 	   WHERE typeid BETWEEN 2008 AND 2009
 
     END
+    ELSE IF @ProductPrefix = 'VB'
+    BEGIN
+	   INSERT INTO @SportTypeList(SportType, IsBA)
+	   VALUES(212, 0)
+
+	   INSERT INTO @BetTypeList(BetType)
+	   SELECT typeid
+	   FROM bodb02.dbo.bettype WITH (NOLOCK)
+	   WHERE typeid BETWEEN 4001 AND 7999
+    END
 	
 	INSERT INTO @Super(custid, currency)
 	SELECT DISTINCT CustID, currency
@@ -196,7 +208,7 @@ BEGIN
 				AND b.apositiontaking = 0
 			GROUP BY b.srecommend
 		END
-		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG')
+		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG', 'VB')
 		BEGIN
 			INSERT INTO @SAgWinLoss(CustId, CompanyWL)
 			SELECT b.srecommend
