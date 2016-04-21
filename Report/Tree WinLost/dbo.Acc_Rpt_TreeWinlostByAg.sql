@@ -71,7 +71,7 @@ INSERT INTO @SportBettype
               Bettype,
               EventType,
               SubProduct
-    FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+    FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 
 IF OBJECT_ID('tempdb..#Product') IS NOT NULL
 BEGIN

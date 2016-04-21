@@ -118,7 +118,7 @@ BEGIN
               Bettype,
               EventType,
               SubProduct
-     	 FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+      FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 	 --- End Sport Bettype Matrix------
 	 
 	DECLARE @RBWinlost TABLE(
