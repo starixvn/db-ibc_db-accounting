@@ -4,7 +4,8 @@
     @sporttype    INT = 0,
     @bettype    INT = 0,
     @liveindicator BIT = 0,
-	@drilldownbytype tinyint
+    @drilldownbytype tinyint,
+    @SubProduct varchar(50) = ''
  AS
     /*
         Created: Johnson
@@ -18,12 +19,16 @@
 			- 20140327@Dom: Add Hedge Field
 			- 20140804@Dom: [Feature #19394] Remove Hedge match
 			- 20150924@Jim: Offer MO
+			- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product, using sporttype bettype matrix function [RedmineID: #55584]
+
         Parameter's Explanation:
 		@type = 1 drilldown for sport
 		@type = 2 drilldown for bettype
     */
 SET NOCOUNT ON
     
+    SELECT @SubProduct = ISNULL(@SubProduct, '')
+
     Declare @RPT TABLE (eventdate datetime,
         matchid int, matchcode nvarchar(50) COLLATE SQL_Latin1_General_CP1_CS_AS,
         HomeId int, AwayId int,        
@@ -31,6 +36,21 @@ SET NOCOUNT ON
         realWinLost money, realPosition money, realCommission money, realTurnover money, realLineTotal money,
         virtualTurnover money, virtualLineTotal money, isNeutral bit,orderkey tinyint
     )
+
+    DECLARE @isTest BIT= 0;
+    SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
+    DECLARE @SportBettype TABLE
+    (ProductID  INT,
+	Bettype    INT,
+	EventType  INT,
+	SubProduct VARCHAR(500)
+    );
+    INSERT INTO @SportBettype
+       SELECT ProductID,
+              Bettype,
+              EventType,
+              SubProduct
+       FROM bodb02.dbo.f_SportBettypeMatrix_Sel(1, 0, 0, 2, '', '', @isTest);
     
     Declare @movebetdate datetime,
             @f_date datetime,
@@ -142,6 +162,7 @@ SET NOCOUNT ON
 				,ISNULL(SUM(virtualLineTotal),0)
 				,m.isNeutral            
 			FROM rptWinlost b WITH(NOLOCK)
+				INNER JOIN @SportBettype sb on b.bettype = sb.Bettype
 				INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND b.sporttype = @sporttype
@@ -152,7 +173,9 @@ SET NOCOUNT ON
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
 						ELSE 0 END = 1
-			GROUP BY eventdate,b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
+				AND CASE WHEN @bettype = 0 AND @SubProduct <> '' THEN sb.SubProduct
+						ELSE @SubProduct END = @SubProduct
+			GROUP BY eventdate,b.matchid, matchcode, homeid, awayid, liveindicator, b.bettype, leagueid, isNeutral
         
 			IF @bettype IN (0,19999) AND @sporttype <=99
 			BEGIN
@@ -177,6 +200,7 @@ SET NOCOUNT ON
 					,ISNULL(SUM(virtualLineTotal),0)
 					,CONVERT(BIT,0) as IsNeutral    
 				FROM rptWinlost b WITH(NOLOCK)
+				     INNER JOIN @SportBettype sb on b.bettype = sb.Bettype
 					INNER JOIN bodb02.dbo.outright m WITH(NOLOCK) ON b.matchid = m.orid
 				WHERE winlostdate BETWEEN @f_date AND @t_date
 					AND b.sporttype = @sporttype
@@ -184,6 +208,8 @@ SET NOCOUNT ON
 					AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
 						ELSE 0 END = 1
+				    AND CASE WHEN @bettype = 0 AND @SubProduct <> '' THEN sb.SubProduct
+						ELSE @SubProduct END = @SubProduct
 				GROUP BY eventdate,b.matchid, m.matchcode, m.teamid, b.bettype, m.leagueid    
 			END 
 		END
@@ -295,7 +321,8 @@ SET NOCOUNT ON
 				,ISNULL(SUM(virtualLineTotal),0)
 				,m.isNeutral            
 			FROM rptWinlost b WITH(NOLOCK)
-				INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid
+				INNER JOIN @SportBettype sb on b.bettype = sb.Bettype
+				INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid				
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND b.sporttype = @sporttype
 				AND CASE WHEN @bettype = 0 THEN 1
@@ -305,7 +332,9 @@ SET NOCOUNT ON
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
 						ELSE 0 END = 1
-			GROUP BY eventdate,b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
+				AND CASE WHEN @bettype = 0 AND @SubProduct <> '' THEN sb.SubProduct
+						ELSE @SubProduct END = @SubProduct
+			GROUP BY eventdate,b.matchid, matchcode, homeid, awayid, liveindicator, b.bettype, leagueid, isNeutral
         
 			IF @bettype IN (0,19999) AND @sporttype <=99
 			BEGIN
@@ -330,13 +359,16 @@ SET NOCOUNT ON
 					,ISNULL(SUM(virtualLineTotal),0)
 					,CONVERT(BIT,0) as IsNeutral    
 				FROM rptWinlost b WITH(NOLOCK)
-					INNER JOIN bodb02.dbo.outright14 m WITH(NOLOCK) ON b.matchid = m.orid
+				     INNER JOIN @SportBettype sb on b.bettype = sb.Bettype
+					INNER JOIN bodb02.dbo.outright14 m WITH(NOLOCK) ON b.matchid = m.orid					
 				WHERE winlostdate BETWEEN @f_date AND @t_date
 					AND b.sporttype = @sporttype
 					AND b.bettype = 10
 					AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
 						ELSE 0 END = 1
+				    AND CASE WHEN @bettype = 0 AND @SubProduct <> '' THEN sb.SubProduct
+						ELSE @SubProduct END = @SubProduct
 				GROUP BY eventdate,b.matchid, m.matchcode, m.teamid, b.bettype, m.leagueid    
 			END    
 		END       
@@ -399,4 +431,7 @@ SET NOCOUNT ON
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype_SB] TO [bodbAdminNet]
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype_SB] TO [vnteam]
 

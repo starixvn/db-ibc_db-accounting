@@ -34,6 +34,7 @@ AS
 			- 20151109@Sophia: Microgaming RNG Casino New sporttype [RedmineID: #46576]
 			- 20151215@Sophia: Change bettype of 8RM & BARM to negative
 			- 20160226@Jim: Offer AllBet ,Cockfighting,MBC-RNG Casino,Cricket product [RedmineID: #50921]
+			- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product - using sporttype bettype matrix function [RedmineID: #55584]
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -47,9 +48,15 @@ BEGIN
 	SET NOCOUNT ON		
 
 	----Get Sport Bettype Matrix------
+	DECLARE @isTest BIT= 0;
+     SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500),OrderKey TINYINT,liveindicator BIT)
 	INSERT INTO @SportBettype (ProductID  , Bettype  ,EventType  ,SubProduct)
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel  @mode = 5
+	SELECT ProductID,
+              Bettype,
+              EventType,
+              SubProduct
+     FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 	
 	UPDATE @SportBettype
 	SET liveindicator =0
@@ -554,11 +561,11 @@ BEGIN
 	        sum(b.winlost) as winlost,
 			sum(b.pos) as pos,
 			sum(b.comm) as comm,
-			0 as virtualComm,
+			sum(b.VirtualComm) as virtualComm,
 			sum(b.Linetotal) as LineTotal,
-			0 as VirtualLineTotal,
+			sum(b.VirtualLineTotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'Metric Gaming - Super Live' as bettype
+			'Metric Gaming - Superlive' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE s.ProductID = 1
@@ -701,15 +708,15 @@ BEGIN
 			b.bettype,
 			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
-			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
-			sum(case when b.liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
-			sum(case when b.liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
-			sum(case when b.liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			0 as LineTotal_soccer_live,
+			0 as VirtualLineTotal_soccer_live,
+			0 as LineTotal_soccer,
+			0 as VirtualLineTotal_soccer,
 			
-			sum(case when b.liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
-			sum(case when b.liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
-			sum(case when b.liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
-			sum(case when b.liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(case when b.liveindicator = 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when b.liveindicator = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when b.liveindicator = 0 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when b.liveindicator = 0 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)
