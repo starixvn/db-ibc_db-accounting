@@ -32,7 +32,7 @@ BEGIN
 		RETURN --not supported
 	END
 
-    DECLARE	@matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @procName NVARCHAR(50), @sqlCommand VARCHAR(1024)
+    DECLARE	@matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @procName NVARCHAR(50), @sqlCommand NVARCHAR(1024)
 			
     SELECT @matchcode = m.matchcode
 		, @sporttype  = m.sporttype
@@ -43,14 +43,22 @@ BEGIN
 		, @FullTimeAway = CASE WHEN @Action = 'CAL-HT' THEN NULL ELSE @FullTimeAway END--orveride this value
     FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
     WHERE m.matchid = @MatchId
-
-    IF @@ROWCOUNT = 0
+	
+	IF @@ROWCOUNT = 0
     BEGIN
         SELECT @ErrCode = 1001001
 			, @ErrMsg   = 'Match does not exist!'
 
         RETURN
     END
+
+	----hard code for testing purpose --> will be removed when releasing
+	--IF @leagueid NOT IN (165, 42037)
+	--BEGIN
+	--	SELECT @ErrCode = 113
+	--		, @ErrMsg   = 'This error use for testing purpose.'
+	--	RETURN
+	--END
 
     IF EXISTS (SELECT TOP 1 1
 				FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
