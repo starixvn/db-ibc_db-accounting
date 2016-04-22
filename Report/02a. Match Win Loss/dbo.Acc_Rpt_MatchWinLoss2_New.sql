@@ -226,7 +226,7 @@ BEGIN
 			sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate) as VirtualLineTotal,
 			sum((1-tpositiontaking)*abs(stake)*actualrate) as IBCTurnover
 	FROM	bettrans b with (nolock)
-	   INNER JOIN @SportBettype sb on b.bettype = sb.Bettype
+	   INNER JOIN @SportBettype sb on b.bettype = sb.Bettype AND b.liveindicator = sb.liveindicator
 	WHERE	winlostdate = @winlostdate
 			AND ruben = 1  
 			AND statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
@@ -246,6 +246,7 @@ BEGIN
 	WHERE	winlostdate = @winlostdate
 			AND statusID  IN (111,112,113) 
 			AND sb.ProductID IN(6, 17, 22) --gameID   BETWEEN 2101 AND 2399
+			AND sb.liveindicator = 0
 	GROUP BY   gameID, statusID	
 	
 
@@ -626,6 +627,7 @@ BEGIN
 	WHERE	winlostdate = @winlostdate
 			AND statusID IN (111,112,113)
 			AND s.ProductID = 21
+			AND s.liveindicator = 0
  
 	-- Cock_Fighting Section
 	UNION ALL
@@ -650,13 +652,13 @@ BEGIN
 	          sum(b.winlost) as winlost,
 			sum(b.pos) as pos,
 			sum(b.comm) as comm,
-			sum(b.comm) as virtualComm,
+			sum(b.VirtualComm) as virtualComm,
 			sum(b.Linetotal) as LineTotal,
-			sum(b.Linetotal) as VirtualLineTotal,
+			sum(b.VirtualLineTotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
 			'Voidbridge' as bettype
 	FROM	#tmpBettrans b with (nolock)
-	INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE	s.ProductID = 22
 ORDER BY Num ASC
 	
@@ -1072,6 +1074,7 @@ ORDER BY Num ASC
 	WHERE	s.ProductId = 21
 			AND b.winlostdate = @winlostdate
 			AND b.statusID IN (111,112,113)
+			AND s.liveindicator = 0
 	GROUP BY b.gameID,s.orderkey
 
 	-- Cock_Fighting Section : 
@@ -1113,7 +1116,7 @@ ORDER BY Num ASC
 			
 			sum(IBCTurnover) as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)			
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE  	s.ProductId = 22		
 	GROUP BY 
 			b.bettype, 

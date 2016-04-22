@@ -167,7 +167,7 @@ BEGIN
 							OR b.bettype BETWEEN 18000 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 204 THEN 18005 ELSE 0 END) -- Colossus Bet
 							OR b.bettype BETWEEN 1003 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 206 THEN 1003 ELSE 0 END) -- Cockfighting
 							OR b.bettype BETWEEN 2401  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 211 THEN 2499 ELSE 0 END) -- AllBet
-							OR b.bettype BETWEEN 4001  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 211 THEN 7999 ELSE 0 END) -- Voidbridge
+							OR b.bettype BETWEEN 4001  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 212 THEN 7999 ELSE 0 END) -- Voidbridge
 						) 
 						AND b.status IN (3  ---DRAW
 										,12	---HALF LOSE

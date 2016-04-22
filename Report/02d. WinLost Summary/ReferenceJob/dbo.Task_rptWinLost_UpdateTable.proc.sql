@@ -481,7 +481,7 @@ BEGIN
 				bettransRnG14 b with (nolock)
 				    INNER JOIN @SportBettype sb on b.gameID = sb.Bettype
 			WHERE
-				sb.ProductID IN (6, 17, 21)
+				sb.ProductID IN (6, 17, 22)
 				AND winlostdate = @winlostdate
 				AND statusID NOT IN (0, 1, 101, 102,103,121) ----('VOID','REJECT','DONE','REFUND')
 				AND currency <> 20
