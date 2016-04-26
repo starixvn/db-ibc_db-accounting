@@ -1,10 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Match_Update]    Script Date: 02/26/2016 10:25:39 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 (
 	@Command VARCHAR(100),
@@ -45,6 +40,7 @@ AS
 		- 20150918@Johnson: Check status of corner tickets when settle FT [Redmine: #43806]
 		- 20151012@Patrick: Reset betstatus for Muay Thai when user do action RefundFull & RefundFT [Redmine: #45356]
 		- 20160225@Kathy: Update eventstatus, betstatus when the match is settled
+		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		
 */
 BEGIN
@@ -243,15 +239,15 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_FGLG'
 	BEGIN
 		UPDATE match WITH(ROWLOCK,UPDLOCK)
-		SET	betstatus = case when right(@BetStatus,1) = ';' THEN @betstatus
-							 ELSE @betstatus + ';'
-						END
-			,GoalRecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
-							   WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> '' THEN REPLACE(GoalRecord,LEFT(GoalRecord,CHARINDEX(';',GoalRecord)),(LEFT(@goalrecord,CHARINDEX(';',@goalrecord)))) -- only update HT part
-							   ELSE @goalrecord 
-						  END
-			--,goalrecord = @GoalRecord
-			,changetime = GETDATE()
+		SET betstatus = CASE WHEN RIGHT(@BetStatus,1) = ';' THEN @betstatus
+						ELSE @betstatus + ';' END
+			, GoalRecord = CASE WHEN @goalrecord IS NULL OR @goalrecord = '' THEN goalrecord 
+							   WHEN @action = 'CAL-HT' AND ISNULL(GoalRecord,'') <> ''
+									THEN REPLACE(GoalRecord, LEFT(GoalRecord, CHARINDEX(';', GoalRecord)), (LEFT(@goalrecord, CHARINDEX(';', @goalrecord)))) -- only update HT part
+							ELSE @goalrecord END
+			, eventstatus = CASE WHEN @action = 'CAL-FT' AND ISNULL(@FTDone, 0) = 1 THEN N'completed' ELSE eventstatus END
+			, changetime = GETDATE()
+			, settleTime = GETDATE()
 		WHERE matchid = @MatchID
 		
 	END
@@ -276,10 +272,9 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_Corner-CAL'
 	BEGIN
 		UPDATE dbo.Match WITH (UPDLOCK,ROWLOCK)
-		SET		eventstatus = CASE WHEN @Action ='CAL' AND @NoneCornerBetDone = 1 THEN N'completed'
-								   ELSE eventstatus END 
-				,changetime = CURRENT_TIMESTAMP
-				,settletime = CURRENT_TIMESTAMP
+		SET eventstatus = CASE WHEN @NoneCornerBetDone = 1 THEN N'completed' ELSE eventstatus END
+			, changetime = CURRENT_TIMESTAMP
+			, settletime = CURRENT_TIMESTAMP
 		WHERE MatchID = @MatchID 
 	END
 	IF @Command = 'NAP_Admin_Settlement_s161-Refund'
