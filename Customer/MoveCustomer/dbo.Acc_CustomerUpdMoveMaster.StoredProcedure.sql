@@ -66,6 +66,7 @@ Revisions:
 	- 20151030@Dominic: Add MuayThai product [Redmine: #46732]
 	- 20160205@Billy:	Apply for AllBet product - [Redmine: #51590]
 	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
+	- 20160426@Winnie: fix  Bug #56653 [Move account: IsHidden of move master is changed to 0]
 	
 Param's Explanation:
 • @ErrCode:
@@ -357,68 +358,68 @@ BEGIN
         END;
     END;
 
-	DECLARE @xmlStrDisabled XML;
-	DECLARE @xmlStrHidden XML;
+	--DECLARE @xmlStrDisabled XML;
+	--DECLARE @xmlStrHidden XML;
 
-	SET @xmlStrDisabled =(
-				SELECT (
-						SELECT stt.bitmapOrder	AS '@b'
-							, 1	AS '@s'
-						FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
-							INNER JOIN dbo.CustProductStatus s WITH(NOLOCK)ON s.CustID = @srecommend
-							INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
-						WHERE dbo.f_GetProductStatus(s.bitmapIsDisabled, stt.bitmapOrder) = 1
-								AND dbo.f_GetProductStatus(m.bitmapIsDisabled, stt.bitmapOrder) = 0
+	--SET @xmlStrDisabled =(
+	--			SELECT (
+	--					SELECT stt.bitmapOrder	AS '@b'
+	--						, 1	AS '@s'
+	--					FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+	--						INNER JOIN dbo.CustProductStatus s WITH(NOLOCK)ON s.CustID = @srecommend
+	--						INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
+	--					WHERE dbo.f_GetProductStatus(s.bitmapIsDisabled, stt.bitmapOrder) = 1
+	--							AND dbo.f_GetProductStatus(m.bitmapIsDisabled, stt.bitmapOrder) = 0
 		
-						FOR XML PATH('r')
-							, TYPE
-						)
-				FOR XML PATH('root')
-					, TYPE
-				);
+	--					FOR XML PATH('r')
+	--						, TYPE
+	--					)
+	--			FOR XML PATH('root')
+	--				, TYPE
+	--			);
 
-	IF CONVERT(VARCHAR(MAX),@xmlStrDisabled) <> '<root/>'
-	BEGIN
-		UPDATE CustProductStatus
-			SET bitmapIsDisabled = (SELECT bitmap FROM dbo.f_GenerateProductStatus_multiple (bitmapIsDisabled, CONVERT(VARCHAR(MAX),@xmlStrDisabled)))	
-		WHERE	custid IN(SELECT CustID FROM #CustInfo);
-		IF @@ERROR <>0
-		BEGIN
-			SELECT    @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-                    @ErrCode = 9111;
-            RETURN;
-		END;
-	END;
+	--IF CONVERT(VARCHAR(MAX),@xmlStrDisabled) <> '<root/>'
+	--BEGIN
+	--	UPDATE CustProductStatus
+	--		SET bitmapIsDisabled = (SELECT bitmap FROM dbo.f_GenerateProductStatus_multiple (bitmapIsDisabled, CONVERT(VARCHAR(MAX),@xmlStrDisabled)))	
+	--	WHERE	custid IN(SELECT CustID FROM #CustInfo);
+	--	IF @@ERROR <>0
+	--	BEGIN
+	--		SELECT    @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
+ --                   @ErrCode = 9111;
+ --           RETURN;
+	--	END;
+	--END;
 
-	SET @xmlStrHidden =(
-				SELECT (
-						SELECT stt.bitmapOrder	AS '@b'
-							, 0	AS '@s'
-						FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
-							INNER JOIN dbo.CustProductStatus s WITH(NOLOCK)ON s.CustID = @srecommend
-							INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
-						WHERE dbo.f_GetProductStatus(s.bitmapIsHidden, stt.bitmapOrder) = 0
-								AND dbo.f_GetProductStatus(m.bitmapIsHidden, stt.bitmapOrder) = 1
+	--SET @xmlStrHidden =(
+	--			SELECT (
+	--					SELECT stt.bitmapOrder	AS '@b'
+	--						, 0	AS '@s'
+	--					FROM dbo.ProductStatusProfile stt WITH(NOLOCK)
+	--						INNER JOIN dbo.CustProductStatus s WITH(NOLOCK)ON s.CustID = @srecommend
+	--						INNER JOIN dbo.CustProductStatus m WITH(NOLOCK)ON m.CustID = @mrecommend
+	--					WHERE dbo.f_GetProductStatus(s.bitmapIsHidden, stt.bitmapOrder) = 0
+	--							AND dbo.f_GetProductStatus(m.bitmapIsHidden, stt.bitmapOrder) = 1
 		
-						FOR XML PATH('r')
-							, TYPE
-						)
-				FOR XML PATH('root')
-					, TYPE
-				);
+	--					FOR XML PATH('r')
+	--						, TYPE
+	--					)
+	--			FOR XML PATH('root')
+	--				, TYPE
+	--			);
 
-	IF CONVERT(VARCHAR(MAX),@xmlStrHidden) <> '<root/>'
-	BEGIN
-		UPDATE CustProductStatus
-			SET bitmapIsHidden = (SELECT bitmap FROM dbo.f_GenerateProductStatus_multiple (bitmapIsHidden, CONVERT(VARCHAR(MAX),@xmlStrHidden)))	
-		WHERE	custid IN(SELECT CustID FROM #CustInfo);
-		IF @@ERROR <>0
-		BEGIN
-			SELECT    @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
-                    @ErrCode = 9112;
-            RETURN; 
-		END;
-	END;
+	--IF CONVERT(VARCHAR(MAX),@xmlStrHidden) <> '<root/>'
+	--BEGIN
+	--	UPDATE CustProductStatus
+	--		SET bitmapIsHidden = (SELECT bitmap FROM dbo.f_GenerateProductStatus_multiple (bitmapIsHidden, CONVERT(VARCHAR(MAX),@xmlStrHidden)))	
+	--	WHERE	custid IN(SELECT CustID FROM #CustInfo);
+	--	IF @@ERROR <>0
+	--	BEGIN
+	--		SELECT    @ErrMsg = 'Error super ' + @supername + ', master ' + @Mastername + ': update unsuccessfully (custinfo).',
+ --                   @ErrCode = 9112;
+ --           RETURN; 
+	--	END;
+	--END;
 
     IF @sDisableOutright = 1 AND (@sDisableOutright <> @mDisableOutright)
     BEGIN
