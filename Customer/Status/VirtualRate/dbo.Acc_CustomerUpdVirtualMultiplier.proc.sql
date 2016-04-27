@@ -3,52 +3,52 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[Acc_CustomerUpdVirtualMultiplier]   
-    @custid int,      
-    @EnableVirtualrate BIT = 0,
-    @virtualmultiplier VARCHAR(MAX)='',  
-    @UserID int,  
-    @IP varchar(15) = '',  
-    @IsLicenseeUser bit = 0,  
-    @ErrCode int = 0 OUTPUT,  
-    @ErrMsg nvarchar(4000) = '' OUTPUT  
+ALTER PROCEDURE	dbo.Acc_CustomerUpdVirtualMultiplier   
+					@custid				INT
+				,	@EnableVirtualrate	BIT				= 0
+				,	@virtualmultiplier	VARCHAR(MAX)	= ''
+				,	@UserID				INT
+				,	@IP					VARCHAR(15)		= ''
+				,	@IsLicenseeUser		BIT				= 0
+				,	@ErrCode			INT				= 0		OUTPUT
+				,	@ErrMsg				NVARCHAR(4000)	= ''	OUTPUT  
 AS  
 /*  
-Created:   
-Task : Update virtualmultiplier.  
-DB: DBTXN/CustDB
-Original:  
+	Created:	
+	Task:		Update virtualmultiplier.  
+	DB:			DBTXN/CustDB
+	Original:	
   
-Revisions:  
-    - 20090917@Phuc: Write log into dblog.  
-    - 20091008@Kiwi: Remove WriteLog_UserLog  
-    - 20100107@Lewin: Change LogSPData format, write log by new function  
-    - 20101021@Henry: Record execution time  
-    - 20110907@Sophia: Change Linked Server from DB052 to DB053  
-    - 20110914@Henry: Allow Licensee user to change Virtual-rate when turn on/off BA  
-    - 20121126@Lukas: do not allow run this function during peak hour at weekend  
-    - 20121126@Thien: revise Lukas's version, to put restriction in all days with different limitation  
-    - 20121126@Thien: revise again, to put into ExecRep (Acc_ExecRep_04)  
-    - 20121206@Scott : Check Allowed downlines during peak hour at weekend  
-    - 20120306@Lukas: change linked-server alias  
-    - 20131108@Elodie: Splitting bodb02 into CustDB (call Acc_ExecRep_Cust_04 instead of Acc_ExecRep_04)
-	- 20141125@Jamie: Use Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]
-    - 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]		
-    - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
-	- 20151109@Billy: Change LogSPData definition to support over-8000-characters log - [Redmine: #46541]
-	- 20160128@Billy: Update Virtual Rate's range from [-0.8, 1.6] to [-0.9, 1.6] - [Redmine: #51611]
-Param's Explanation:  
-• @virtualmultiplier = '<ROOT>
-							<Rate SportType="1" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
-							<Rate SportType="1" BetType="1" IsLive="1" VirtualMultiplier="1.5" />	
-							<Rate SportType="99" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
-							<Rate SportType="99" BetType="1" IsLive="1" VirtualMultiplier="1.5" />	
-						</ROOT>'		
-• @ErrCode:  
-    = 0: update successfully.  
-    > 0: Specific Error.  
-    
-• @ErrMsg: Error description.  
+	Revisions:  
+	    - 20090917@Phuc:	Write log into dblog.  
+	    - 20091008@Kiwi:	Remove WriteLog_UserLog  
+	    - 20100107@Lewin: Change LogSPData format, write log by new function  
+	    - 20101021@Henry: Record execution time  
+	    - 20110907@Sophia: Change Linked Server from DB052 to DB053  
+	    - 20110914@Henry: Allow Licensee user to change Virtual-rate when turn on/off BA  
+	    - 20121126@Lukas: do not allow run this function during peak hour at weekend  
+	    - 20121126@Thien: revise Lukas's version, to put restriction in all days with different limitation  
+	    - 20121126@Thien: revise again, to put into ExecRep (Acc_ExecRep_04)  
+	    - 20121206@Scott : Check Allowed downlines during peak hour at weekend  
+	    - 20120306@Lukas: change linked-server alias  
+	    - 20131108@Elodie: Splitting bodb02 into CustDB (call Acc_ExecRep_Cust_04 instead of Acc_ExecRep_04)
+		- 20141125@Jamie: Use Acc_CustomerInfo_Execrep_04 instead of Acc_ExecRep_Cust_04 [Redmine:#26497]
+	    - 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]		
+	    - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
+		- 20151109@Billy: Change LogSPData definition to support over-8000-characters log - [Redmine: #46541]
+		- 20160128@Billy: Update Virtual Rate's range from [-0.8, 1.6] to [-0.9, 1.6] - [Redmine: #51611]
+	Param's Explanation:  
+	• @virtualmultiplier = '<ROOT>
+								<Rate SportType="1" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
+								<Rate SportType="1" BetType="1" IsLive="1" VirtualMultiplier="1.5" />	
+								<Rate SportType="99" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
+								<Rate SportType="99" BetType="1" IsLive="1" VirtualMultiplier="1.5" />	
+							</ROOT>'		
+	• @ErrCode:  
+	    = 0: update successfully.  
+	    > 0: Specific Error.  
+	    
+	• @ErrMsg: Error description.  
 */  
 BEGIN  
 	SET NOCOUNT ON  
@@ -293,8 +293,8 @@ END
 
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdVirtualMultiplier] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON dbo.Acc_CustomerUpdVirtualMultiplier TO bodbAdminNet AS dbo
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerUpdVirtualMultiplier] TO [bodbLicenseeNet] AS [dbo]
+GRANT EXECUTE ON dbo.Acc_CustomerUpdVirtualMultiplier TO bodbLicenseeNet AS dbo
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerUpdVirtualMultiplier] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON dbo.Acc_CustomerUpdVirtualMultiplier TO vnteam AS dbo
