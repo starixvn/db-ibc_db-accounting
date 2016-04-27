@@ -1,4 +1,4 @@
-﻿alter FUNCTION [dbo].[f_SiteBySystem]
+﻿ALTER FUNCTION [dbo].[f_SiteBySystem]
 (
 	@System varchar(50) = 'ACCOUNTING'
 )
@@ -28,6 +28,7 @@ Revisions:
 	- 20151111@Susan: Add MKK99 group
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	- 20160114@Helen: Cricket - [Redmine: #50027]
+	- 20160427@Susan: Add new group ACCUSDOTH
 	Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING'
 */
@@ -54,7 +55,7 @@ BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 11 --INDO
 	END
-	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668','ACCNTD','ACCIRR','ACCUSD','ACCUT','ACCYEN888','ACCUT2'))
+	ELSE IF (@System IN ('ACCYEN','ACCYEN789','ACCYEN889','ACCYEN668','ACCNTD','ACCIRR','ACCUSD','ACCUT','ACCYEN888','ACCUT2','ACCUSDOTH'))
 	BEGIN
 		INSERT INTO @tbSite(siteid)
 		SELECT 3 --789y
@@ -82,14 +83,8 @@ BEGIN
 END
 
 GO
-
 GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT SELECT ON [dbo].[f_SiteBySystem] TO [bodbExtAccNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[f_SiteBySystem] TO [vnteam] AS [dbo]
-GO
-
-

@@ -1,13 +1,4 @@
-﻿USE [CustDB]
-GO
-/****** Object:  UserDefinedFunction [dbo].[f_CurrencyBySystem]    Script Date: 09/10/2015 05:51:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  User Defined Function dbo.f_CurrencyBySystem    Script Date: 5/21/2014 9:18:05 AM ******/
-
-ALTER FUNCTION [dbo].[f_CurrencyBySystem]
+﻿ALTER FUNCTION [dbo].[f_CurrencyBySystem]
 (
 	@System varchar(50) = 'ACCOUNTING'
 )
@@ -18,7 +9,7 @@ AS
 /*
 Created: 
 Task : Get currencies by system
-DB:   DBTXN/bodb02; DBAGE/bodb02; DBCUST/CUSTDB
+DB:   DBTXN/bodb02; DBAGE/bodb02
 
 Revisions:
 	- 20100720@Shifu: Get currencies by System
@@ -32,8 +23,11 @@ Revisions:
 	- 20140521@Kiwi: add NTD currency into group ACCUT
 	- 20150526@Kiwi: add new group ACCUT2
 	- 20150812@Amy: add ACCTHAI2 group
-	-20150817@Susan:add ACCIN group
-	-20150909@Susan: add ACCYEN668 group
+	- 20150817@Susan:add ACCIN group
+	- 20150909@Susan: add ACCYEN668 group
+	- 20151027@Francis: add INDOBS, INDO2 group
+	- 20151111@Susan: Add MKK99 group
+	- 20160427@Susan: Add ACCUSDOTH group
 Param's Explanation:
 	- @System: input system name 'ACCTHAI', 'ACCOUNTING', 'ACCINDO'
 */
@@ -50,7 +44,7 @@ BEGIN
 		Insert Into @tbCurrency(exchangeID)
 		SELECT 43 --THB,...
 	END
-	ELSE IF (@System IN('ACCINDO', 'ACCIN'))
+	ELSE IF (@System IN('ACCINDO', 'ACCIN','INDOBS','INDO2'))
 	BEGIN
 		Insert Into @tbCurrency(exchangeID)
 		SELECT 22 --IND
@@ -100,13 +94,28 @@ BEGIN
 		UNION ALL 
 		SELECT 17	--- 	NTD	
 	END
+	ELSE IF (@System in ( 'MKK99','ACCMKK'))
+	BEGIN
+		INSERT INTO @tbCurrency(ExchangeID)
+		SELECT 70 --MKK
+	END
+	ELSE IF (@System IN('INDO56','INDOWIN','INDO56B'))
+	BEGIN
+		Insert Into @tbCurrency(exchangeID)
+		SELECT 22 --IND
+		UNION SELECT 33 --IDD
+		UNION SELECT 34 --IDR
+		UNION SELECT 15 --IN
+	END	
+	ELSE IF (@system = 'ACCUSDOTH')
+	BEGIN
+		INSERT INTO @tbCurrency(ExchangeID)
+		SELECT 16	--- 	Yen
+		UNION ALL SELECT 17	--- 	NTD
+		UNION ALL SELECT 40	--- 	IRR
+	END
 	Return
 END
-
-
-
-
-
 
 GO
 GRANT SELECT ON [dbo].[f_CurrencyBySystem] TO [bodbAdminNet] AS [dbo]
