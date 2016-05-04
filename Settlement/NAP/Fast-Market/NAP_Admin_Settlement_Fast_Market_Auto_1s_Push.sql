@@ -59,16 +59,55 @@ BEGIN
 		RETURN
 	END
 
-	--check waiting ticket --TODO
-	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
-		, @Action = @Action
-		, @Mode = 'CAL-FM'
-		, @ErrCode = @ErrCode OUTPUT
-		, @ErrMsg = @ErrMsg OUTPUT
-	IF @ErrCode <> 0
+	--check waiting ticket
+	DECLARE @ResultDetail TABLE(BetType SMALLINT, Position TINYINT)
+	DECLARE @XmlData XML, @PositionList VARCHAR(1204), @BetType SMALLINT
+	;WITH TmpData AS (
+		SELECT T.C.value('../@id', 'SMALLINT') AS Bettype
+			, T.C.value('./@position', 'TINYINT') AS Position
+		FROM @XmlData.nodes('/bettypes/bettype/item') AS T(C)
+	)
+
+	INSERT INTO @ResultDetail (BetType, Position)
+	SELECT BetType, Position
+	FROM TmpData
+	ORDER BY Bettype, Position
+
+	DECLARE @BettypeIds TABLE (BetType SMALLINT, IsFinished BIT)
+	INSERT INTO @BettypeIds(BetType, IsFinished)
+	SELECT BetType, 0
+	FROM @ResultDetail
+	GROUP BY BetType
+
+	WHILE 1 = 1
 	BEGIN
-		SELECT @ErrCode, @ErrMsg
-		RETURN
+		SET @PositionList = NULL
+		UPDATE TOP(1) @BettypeIds
+		SET IsFinished = 1
+			, @BetType = BetType
+		WHERE IsFinished = 0
+		
+		IF @@ROWCOUNT = 0 BREAK
+
+		SELECT @PositionList = COALESCE(@PositionList + ',' + CAST(CONVERT(TINYINT, Position) AS VARCHAR), CAST(CONVERT(TINYINT, Position) AS VARCHAR))
+		FROM @ResultDetail
+		WHERE BetType = @BetType AND Position IS NOT NULL
+
+		SET @PositionList = ',' + @PositionList + ','
+
+		EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
+			, @BetType = @BetType
+			, @PositionList = @PositionList
+			, @Action = @Action
+			, @Mode = 'CAL-FM'
+			, @ErrCode = @ErrCode OUTPUT
+			, @ErrMsg = @ErrMsg OUTPUT
+		IF @ErrCode <> 0
+		BEGIN
+			SELECT @ErrCode, @ErrMsg
+			RETURN
+		END
+
 	END
 
 	SELECT @ErrCode = 0, @ErrMsg = '', @procName = OBJECT_NAME(@@PROCID)
