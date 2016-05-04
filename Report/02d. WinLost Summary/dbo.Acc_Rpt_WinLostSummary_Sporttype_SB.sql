@@ -20,6 +20,8 @@
 			- 20140804@Dom: [Feature #19394] Remove Hedge match
 			- 20150924@Jim: Offer MO
 			- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product, using sporttype bettype matrix function [RedmineID: #55584]
+			- 20160504@Robert: Win Loss Summary (2d) - Cannot drilldown to match win loss detail from Number Game product [RedmineID: #56989]
+
 
         Parameter's Explanation:
 		@type = 1 drilldown for sport
@@ -50,7 +52,7 @@ SET NOCOUNT ON
               Bettype,
               EventType,
               SubProduct
-       FROM bodb02.dbo.f_SportBettypeMatrix_Sel(1, 0, 0, 2, '', '', @isTest);
+       FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
     
     Declare @movebetdate datetime,
             @f_date datetime,
