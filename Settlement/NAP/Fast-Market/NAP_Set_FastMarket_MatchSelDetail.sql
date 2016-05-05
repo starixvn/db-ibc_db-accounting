@@ -26,7 +26,7 @@ BEGIN
 
 	DECLARE @ResultDetail TABLE(BetType SMALLINT, Position TINYINT, BetStatus TINYINT, BetOption TINYINT, ResultStatus TINYINT)
 
-	SELECT @RowIndex = 1  
+	SELECT @RowIndex = 1
 	WHILE EXISTS (SELECT TOP 1 1 FROM @BetTypeIds WHERE RowIndex = @RowIndex)
 	BEGIN
 		SELECT @bettype = bettype FROM @BetTypeIds WHERE RowIndex = @RowIndex
