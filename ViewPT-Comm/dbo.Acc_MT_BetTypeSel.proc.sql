@@ -12,7 +12,13 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE [dbo].[Acc_MT_BetTypeSel_xtest]
+USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_MT_BetTypeSel]    Script Date: 4/19/2016 2:18:12 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 	@Sporttype INT = NULL
 AS
 
@@ -31,7 +37,7 @@ Revisions:
 
 SET NOCOUNT ON
 
-IF (@Sporttype IS NOT NULL) AND ((SELECT COUNT(BetType) FROM ProductSettingDetail(NOLOCK) where SportType=@Sporttype AND SettingType=1) =1)
+IF (@Sporttype IS NOT NULL) AND ((SELECT COUNT( DISTINCT BetType) FROM ProductSettingDetail(NOLOCK) where SportType=@Sporttype AND SettingType=1) =1)
 BEGIN
 SELECT NULL AS bettype, NULL AS typenamee 
 WHERE 1=0
