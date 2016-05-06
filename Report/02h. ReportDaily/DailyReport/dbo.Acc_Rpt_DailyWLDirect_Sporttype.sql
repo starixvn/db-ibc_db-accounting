@@ -1,4 +1,4 @@
-﻿SET QUOTED_IDENTIFIER ON 
+﻿ SET QUOTED_IDENTIFIER ON 
 GO
 SET ANSI_NULLS ON 
 GO
@@ -84,7 +84,7 @@ AS
 		- 20160415@Sophia:  . Fix bug After ExtraPT of Sportbook  [Redmine: #55533]
 							. Remove P2P, Bingo
 		- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product [RedmineID#55584]
-
+		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
  
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -114,7 +114,7 @@ BEGIN
             Bettype,
             EventType,
             SubProduct
-     FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+      FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
 	 --- End Sport Bettype Matrix------
 		
 	 DECLARE @RBWinlost TABLE(
@@ -309,7 +309,7 @@ BEGIN
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
-		AND bet.productID NOT IN (6,21)
+		AND bet.productID NOT IN (6,17,21,22)
 	GROUP BY srecommend,
 			CASE WHEN recommend =5707545 THEN 2 ELSE  1 END,
 			b.matchid ,
@@ -334,7 +334,7 @@ BEGIN
 	FROM bettransRNG b WITH(NOLOCK )
 		INNER JOIN @SportBettype bet ON b.gameid = bet.bettype	
 	WHERE winlostdate = @winlostdate
-		AND bet.ProductID = 6	
+		AND bet.ProductID IN (6,17,22)	
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
 	GROUP BY b.srecommend
 			 
@@ -601,7 +601,7 @@ BEGIN
 		--b.bettype BETWEEN 1201 AND 1299
 	GROUP BY site			
 	
-	----CASINO + Macau + Microgaming - RNG Casino
+	----CASINO + Macau + Microgaming - RNG Casino, Voidbridge
 	UNION ALL
 	SELECT	103,'Casino', 251, 0, site,
 			ISNULL(SUM(winlost_actualrate),0) WinLost,
@@ -618,7 +618,7 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = s.ProductId	
-	WHERE   s.ProductId IN (6,14,17)  --- SLI, Macau, Microgaming - RNG Casino				
+	WHERE   s.ProductId IN (6,14,17,22)  --- SLI, Macau, Microgaming - RNG Casino, Voidbridge				
 	GROUP BY site 
 
 	--P2P : remove
@@ -659,7 +659,7 @@ BEGIN
 			SUM(ISNULL(Linetotal_virtualrate,0)) as VirtualLineTotal,	
 			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
 			SUM(ISNULL(turnover_virtualrate,0)) VirtualTurnover,
-			0 EnableVirtual,
+			1 EnableVirtual,
 			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE winlost_actualrate*e.ExtraPT END) AS ExtraPT   
 	FROM	#src b WITH (NOLOCK)			
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype

@@ -21,6 +21,8 @@ AS
 		- 20151215@Percy: support Cockfighting [Redmine: #49027]
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20160229@Jim: Offer Allbet [Redmine #50921]
+		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
+
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
 	  + {251:Casino (include: 251, 208, 209, 210), 151:Racing,252:Bingo,161:Number Game,162:Live Casino,180:Virtual Sports,202:Keno}
@@ -74,6 +76,9 @@ BEGIN
 			WHEN @SportType IN(211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
 										FROM CustProductStatus
 										WHERE custid = ci.custid)							
+			WHEN @SportType IN(212)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)									  
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
 	JOIN dbo.CustSuper cs WITH(NOLOCK) ON ci.custid = cs.custid AND cs.IsInternal = 0
@@ -375,7 +380,7 @@ BEGIN
 		WHERE ci.Enabled = 1             
 	END
 	-- Cockfighting & Allbet
-	IF @sportType IN (211,206)
+	IF @sportType IN (211,206,212)
     BEGIN      
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
@@ -386,6 +391,10 @@ BEGIN
 										WHERE custid = ci.custid)
 										
 				WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
+																		
+				WHEN @sportType =212 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
 										FROM CustProductStatus
 										WHERE custid = ci.custid)
 										END
@@ -405,6 +414,10 @@ BEGIN
 				WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
 										FROM CustProductStatus
 										WHERE custid = ci.custid)
+
+				WHEN @sportType =212 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
 										END
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
@@ -420,6 +433,9 @@ BEGIN
 										 FROM CustProductStatus
 										 WHERE custid = ci.custid)
 			 WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
+										FROM CustProductStatus
+										WHERE custid = ci.custid)
+			 WHEN @sportType =212 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
 										FROM CustProductStatus
 										WHERE custid = ci.custid)
 			 END
