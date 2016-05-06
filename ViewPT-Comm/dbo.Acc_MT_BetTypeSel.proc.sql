@@ -1,24 +1,11 @@
 ﻿USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_MT_BetTypeSel]    Script Date: 4/19/2016 2:18:12 PM ******/
+/****** Object:  StoredProcedure [dbo].[Acc_MT_BetTypeSel]    Script Date: 5/6/2016 11:20:45 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_MT_BetTypeSel]    Script Date: 4/19/2016 2:18:12 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_MT_BetTypeSel]    Script Date: 4/19/2016 2:18:12 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+ALTER PROCEDURE [dbo].[Acc_MT_BetTypeSel]
 	@Sporttype INT = NULL
 AS
 
