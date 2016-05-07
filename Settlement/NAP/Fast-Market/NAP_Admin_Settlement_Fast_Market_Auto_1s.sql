@@ -91,14 +91,14 @@ BEGIN
 
 	;WITH TmpData AS (
 		SELECT T.C.value('../@id', 'SMALLINT') AS Bettype
-			, T.C.value('./@position', 'TINYINT') AS Position
-			, T.C.value('./@result', 'TINYINT') AS BetOption
+			, T.C.value('./@p', 'TINYINT') AS Position
+			, T.C.value('./@r', 'TINYINT') AS BetOption
 			, CASE WHEN @Action = 'CAL' AND @IsAuto = 0 THEN 5
 					WHEN @Action = 'CAL' AND @IsAuto = 1 THEN 4
 					WHEN @Action = 'REFUND' THEN 6
 					WHEN @Action = 'UNDO' THEN 2
 					ELSE 0 END AS ResultStatus
-		FROM @XmlData.nodes('/bettypes/bettype/item') AS T(C)
+		FROM @XmlData.nodes('/r/b/r') AS T(C)
 	)
 
 	INSERT INTO @ResultDetail (BetType, Position, BetOption, ResultStatus)
@@ -108,7 +108,9 @@ BEGIN
 	
 	DECLARE @BetType SMALLINT, @Position TINYINT, @BetOption TINYINT, @ResultStatus TINYINT, @RowIndex INT
 		, @betcount_221 INT, @betcount_222 INT, @betcount_223 INT, @betcount_224 INT, @IsRuntimeError BIT
+		, @Remark_221 VARCHAR(500), @Remark_222 VARCHAR(500), @Remark_223 VARCHAR(500), @Remark_224 VARCHAR(500) 
 
+	SELECT @Remark_221 = '', @Remark_222 = '', @Remark_223 = '', @Remark_224 = ''
 	SELECT @RowIndex = 1, @IsRuntimeError = 0
 	BEGIN TRY
 		WHILE EXISTS (SELECT TOP 1 1 FROM @ResultDetail WHERE RowIndex = @RowIndex)
@@ -186,6 +188,15 @@ BEGIN
 					, @betcount_223 = @betcount_223
 					, @betcount_224 = @betcount_224
 			END
+			--prepare data to write log
+			IF @BetType = 221
+				SET @Remark_221 = @Remark_221 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
+			ELSE IF @BetType = 222
+				SET @Remark_222 = @Remark_222 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
+			ELSE IF @BetType = 223
+				SET @Remark_223 = @Remark_223 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
+			ELSE IF @BetType = 224
+				SET @Remark_224 = @Remark_224 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
 		END
 	END TRY
 	BEGIN CATCH
@@ -308,13 +319,17 @@ BEGIN
 	SELECT @stop = CURRENT_TIMESTAMP
 
 	SELECT @logdata = 'NAP: Auto-Settlement (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
-		+ ' Result:' + @Results + '(' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + ' ms)'
+		+ '(' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 
 	EXEC dbo.WriteLog_UserLog @UserID = @AdminId, @Doing = @logdata
 
-	SELECT @Remark = 'NAP: Result:' + ISNULL(@Results,'') + ' <br/> '
-						+ ' IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
+	SELECT @Remark = 'NAP: IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
 						+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + 'ms'
+		, @Remark_221 = 'b:221' + @Remark_221
+		, @Remark_222 = 'b:222' + @Remark_222
+		, @Remark_223 = 'b:223' + @Remark_223
+		, @Remark_224 = 'b:224' + @Remark_224
+
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @userid = @AdminId
 			, @matchid			= @MatchID

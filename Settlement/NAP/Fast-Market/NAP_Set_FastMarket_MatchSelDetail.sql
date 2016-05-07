@@ -24,12 +24,25 @@ BEGIN
 	INSERT INTO @BetTypeIds(bettype)
 	VALUES(221), (222), (223), (224)
 
+	DECLARE @BetStatus TABLE (bettype SMALLINT, Position TINYINT, TicketCount INT, TicketRunning INT)
+	INSERT INTO @BetStatus(bettype, Position, TicketCount, TicketRunning)
+	SELECT b.bettype
+		, hdp1 AS Position
+		, SUM(CASE WHEN StatusID IN (101, 102) THEN 0 ELSE 1 END) AS TicketCount
+        , SUM(CASE WHEN StatusID = 0 THEN 1 ELSE 0 END) AS TicketRunning
+	FROM dbo.bettrans b WITH(NOLOCK)
+	WHERE matchid = @MatchId
+		AND bettype IN (SELECT bettype FROM @BetTypeIds)
+		--AND StatusId NOT IN (101, 102, 103)
+	GROUP BY bettype, hdp1
+
 	DECLARE @ResultDetail TABLE(BetType SMALLINT, Position TINYINT, BetStatus TINYINT, BetOption TINYINT, ResultStatus TINYINT)
 
 	SELECT @RowIndex = 1
 	WHILE EXISTS (SELECT TOP 1 1 FROM @BetTypeIds WHERE RowIndex = @RowIndex)
 	BEGIN
-		SELECT @bettype = bettype FROM @BetTypeIds WHERE RowIndex = @RowIndex
+		SELECT @bettype = bettype, @ResultHT = NULL, @ResultFT = NULL, @ResultStatusHT = NULL, @ResultStatusFT = NULL
+		FROM @BetTypeIds WHERE RowIndex = @RowIndex
 		SET @RowIndex = @RowIndex + 1
 
 		--for result
@@ -40,6 +53,12 @@ BEGIN
 		SELECT @ResultStatusHT = HomeValue, @ResultStatusFT = AwayValue
 		FROM DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
 		WHERE MatchId = @MatchId AND ResourceID = (@bettype * 100)
+
+		IF ISNULL(@ResultHT, '') = '' AND ISNULL(@ResultFT, '') = ''
+			AND NOT EXISTS (SELECT TOP 1 1 FROM @BetStatus WHERE bettype = @bettype)
+		BEGIN
+			CONTINUE
+		END
 
 		--for HT
 		IF ISNULL(@ResultHT, '') = ''
@@ -77,28 +96,18 @@ BEGIN
 	END
 
 	DELETE FROM @ResultDetail WHERE BetType IN (222,224) AND Position > 85
-	
-	;WITH BetStatus AS (
-		SELECT b.bettype
-			, hdp1 AS Position
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE matchid = @MatchId
-			AND bettype IN (SELECT bettype FROM @BetTypeIds)
-			AND StatusId NOT IN (101, 102, 103)
-		GROUP BY bettype, hdp1
-	)
 
-	UPDATE rs
-	SET BetStatus = 1
-	FROM @ResultDetail rs
-	INNER JOIN BetStatus b ON rs.bettype = b.bettype AND rs.Position = b.Position
-
-	SELECT BetType
-		, Position
+	SELECT rs.BetType
+		, rs.Position
 		, BetOption AS Result
 		, ResultStatus
-		, BetStatus AS TicketStatus
-	FROM @ResultDetail
+		, CASE WHEN b.bettype IS NULL THEN 4 --N'No Ticket'
+			ELSE CASE WHEN TicketCount = 0 THEN 4 --N'No Ticket'
+				WHEN TicketRunning = 0 THEN 3 --N'Calculated'
+				ELSE 2 --N'Running' 
+		END END AS TicketStatus
+	FROM @ResultDetail rs
+	LEFT JOIN @BetStatus b ON rs.bettype = b.bettype AND rs.Position = b.Position
 
 END
 

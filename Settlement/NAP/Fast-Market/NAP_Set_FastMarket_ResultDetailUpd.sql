@@ -6,7 +6,7 @@ ALTER PROCEDURE dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId INT
 	, @Position TINYINT
 	, @BetOption TINYINT
 	, @ResultStatus TINYINT
-	, @Action VARCHAR = 'CAL'
+	, @Action VARCHAR(20) = 'CAL'
 
 	, @ErrCode INT OUTPUT
 	, @ErrMsg VARCHAR(200) OUTPUT
@@ -26,49 +26,47 @@ BEGIN
 	SET NOCOUNT ON
 	IF @Action IN ('CAL', 'UNDO', 'REFUND')
 	BEGIN
+		DECLARE @ResourceId_BetOption VARCHAR(50), @ResourceId_ResultStatus VARCHAR(50), @ResourceId INT
+		SELECT @ResourceId = @bettype * 100
+		SELECT @ResourceId_BetOption = CAST((@ResourceId) + 1 AS VARCHAR), @ResourceId_ResultStatus = CAST(@ResourceId AS VARCHAR)
+
+		--betoptions
+		IF NOT EXISTS (SELECT TOP 1 1 FROM bodb02.dbo.ResultDetail WITH(NOLOCK) WHERE MatchId = @MatchId AND ResourceId = @ResourceId_BetOption)
+		BEGIN
+			INSERT INTO bodb02.dbo.ResultDetail(MatchId, ResourceId, HomeValue, AwayValue)
+			VALUES(@MatchId, @ResourceId_BetOption, REPLICATE(CHAR('0'), 50), REPLICATE(CHAR('0'), 50))
+		END
+
+		--result status
+		IF NOT EXISTS (SELECT TOP 1 1 FROM bodb02.dbo.ResultDetail WITH(NOLOCK) WHERE MatchId = @MatchId AND ResourceId = @ResourceId_ResultStatus)
+		BEGIN
+			INSERT INTO bodb02.dbo.ResultDetail(MatchId, ResourceId, HomeValue, AwayValue)
+			VALUES(@MatchId, @ResourceId_ResultStatus, REPLICATE('0', 50), REPLICATE('0', 50))
+		END
+
 		IF @Position <= 44
 		BEGIN
 			--for result status - HT
 			UPDATE bodb02.dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-			SET HomeValue = dbo.f_SetChar(CASE WHEN DATALENGTH(HomeValue) = 50 THEN HomeValue
-												WHEN HomeValue IS NULL THEN REPLICATE('0', 50)
-												ELSE HomeValue + REPLICATE('0', 50 - DATALENGTH(HomeValue)) END 
-											, @Position
-											, ISNULL(@ResultStatus, 0)
-										)
-			WHERE MatchId = @MatchId AND ResourceId = @bettype * 100
+			SET HomeValue = dbo.f_SetChar(HomeValue, @Position, ISNULL(@ResultStatus, 0))
+			WHERE MatchId = @MatchId AND ResourceId = @ResourceId_ResultStatus
 
 			--for betoption - HT
 			UPDATE bodb02.dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-			SET HomeValue = dbo.f_SetByte(CASE WHEN DATALENGTH(HomeValue) = 50 THEN HomeValue
-												WHEN HomeValue IS NULL THEN REPLICATE(CHAR('0'), 50)
-												ELSE HomeValue + REPLICATE(CHAR('0'), 50 - DATALENGTH(HomeValue)) END
-											, @Position
-											, ISNULL(@BetOption, CHAR('0'))
-										)
-			WHERE MatchId = @MatchId AND ResourceId = (@bettype * 100) + 1
+			SET HomeValue = dbo.f_SetByte(HomeValue, @Position, ISNULL(@BetOption, CHAR('0')))
+			WHERE MatchId = @MatchId AND ResourceId = @ResourceId_BetOption
 		END
 		ELSE
 		BEGIN
 			--for result status - FT
 			UPDATE bodb02.dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-			SET AwayValue = dbo.f_SetChar(CASE WHEN DATALENGTH(AwayValue) = 50 THEN AwayValue
-												WHEN AwayValue IS NULL THEN REPLICATE('0', 50)
-												ELSE AwayValue + REPLICATE('0', 50 - DATALENGTH(AwayValue)) END 
-											, @Position
-											, ISNULL(@ResultStatus, 0)
-										)
-			WHERE MatchId = @MatchId AND ResourceId = @bettype * 100
+			SET AwayValue = dbo.f_SetChar(AwayValue, @Position, ISNULL(@ResultStatus, 0))
+			WHERE MatchId = @MatchId AND ResourceId = @ResourceId_ResultStatus
 
 			--for betoption - FT
 			UPDATE bodb02.dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-			SET AwayValue = dbo.f_SetByte(CASE WHEN DATALENGTH(AwayValue) = 50 THEN AwayValue
-												WHEN AwayValue IS NULL THEN REPLICATE(CHAR('0'), 50)
-												ELSE AwayValue + REPLICATE(CHAR('0'), 50 - DATALENGTH(AwayValue)) END
-											, @Position
-											, ISNULL(@BetOption, CHAR('0'))
-										)
-			WHERE MatchId = @MatchId AND ResourceId = (@bettype * 100) + 1
+			SET AwayValue = dbo.f_SetByte(AwayValue, @Position, ISNULL(@BetOption, CHAR('0')))
+			WHERE MatchId = @MatchId AND ResourceId = @ResourceId_BetOption
 		END
 	END
 END

@@ -116,6 +116,10 @@ BEGIN
             ,playTime = datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) 
             ,m.homeid
             ,m.awayid
+			,m.hthomescore
+			,m.htawayscore
+			,m.finalhomescore
+			,m.finalawayscore
             ,IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
             ,m.betstatus
             ,m.GoalRecord

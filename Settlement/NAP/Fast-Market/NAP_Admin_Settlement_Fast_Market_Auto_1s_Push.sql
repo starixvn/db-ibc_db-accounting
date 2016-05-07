@@ -32,7 +32,7 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 
-	DECLARE @matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @sqlCommand NVARCHAR(MAX), @procName NVARCHAR(50)
+	DECLARE @matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @sqlCommand NVARCHAR(MAX), @procName NVARCHAR(128)
 
 	SELECT @matchcode = m.matchcode
 		, @sporttype = m.sporttype
@@ -62,10 +62,23 @@ BEGIN
 	--check waiting ticket
 	DECLARE @ResultDetail TABLE(BetType SMALLINT, Position TINYINT)
 	DECLARE @XmlData XML, @PositionList VARCHAR(1204), @BetType SMALLINT
+	
+	SET @Results = --REPLACE(
+						REPLACE(
+							REPLACE(
+								REPLACE(
+									REPLACE(
+										REPLACE(@Results, 'bettypes', 'r')
+									, 'bettype', 'b')
+								, 'item', 'r')
+							, 'result', 'r')
+						, 'position', 'p')
+					--, ' ', '')
+	SET @XmlData =  CONVERT(XML, @Results)
 	;WITH TmpData AS (
 		SELECT T.C.value('../@id', 'SMALLINT') AS Bettype
-			, T.C.value('./@position', 'TINYINT') AS Position
-		FROM @XmlData.nodes('/bettypes/bettype/item') AS T(C)
+			, T.C.value('./@p', 'TINYINT') AS Position
+		FROM @XmlData.nodes('/r/b/r') AS T(C)
 	)
 
 	INSERT INTO @ResultDetail (BetType, Position)
@@ -120,12 +133,13 @@ BEGIN
 															+ ', @ErrCode = @ErrCode OUTPUT' 
 															+ ', @ErrMsg = @ErrMsg OUTPUT'
 														
-	IF LEN(@sqlCommand)> 1000 --Max Field 
-	BEGIN
-		SELECT @ErrCode = 1001010
-			, @ErrMsg = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'	
-		RETURN
-	END
+	--
+	--IF LEN(@sqlCommand)> 4000 --Max Field 
+	--BEGIN
+	--	SELECT @ErrCode = 1001010
+	--		, @ErrMsg = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'	
+	--	RETURN
+	--END
 	
 	IF (@procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_') -- UAT1 -->UAT9
 	BEGIN
