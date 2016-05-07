@@ -32,7 +32,7 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 	DECLARE @Start DATETIME, @Stop DATETIME, @fth INT, @fta INT, @hth INT, @hta INT
-		, @ActionID INT, @Remark VARCHAR(500), @LogData NVARCHAR(300)							
+		, @ActionID INT, @Remark VARCHAR(3000), @LogData NVARCHAR(300)							
 
 	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE WHEN @Action = 'CAL' THEN 165 
@@ -111,6 +111,9 @@ BEGIN
 		, @Remark_221 VARCHAR(500), @Remark_222 VARCHAR(500), @Remark_223 VARCHAR(500), @Remark_224 VARCHAR(500) 
 
 	SELECT @Remark_221 = '', @Remark_222 = '', @Remark_223 = '', @Remark_224 = ''
+	DECLARE @LogRemarks TABLE(RowIndex INT IDENTITY(1,1), BetType SMALLINT, Remark VARCHAR(MAX))
+	INSERT INTO @LogRemarks(bettype, Remark) VALUES(221, 'b^221'), (222, 'b^222'), (223, 'b^223'), (224, 'b^224')
+
 	SELECT @RowIndex = 1, @IsRuntimeError = 0
 	BEGIN TRY
 		WHILE EXISTS (SELECT TOP 1 1 FROM @ResultDetail WHERE RowIndex = @RowIndex)
@@ -188,15 +191,12 @@ BEGIN
 					, @betcount_223 = @betcount_223
 					, @betcount_224 = @betcount_224
 			END
+
 			--prepare data to write log
-			IF @BetType = 221
-				SET @Remark_221 = @Remark_221 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
-			ELSE IF @BetType = 222
-				SET @Remark_222 = @Remark_222 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
-			ELSE IF @BetType = 223
-				SET @Remark_223 = @Remark_223 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
-			ELSE IF @BetType = 224
-				SET @Remark_224 = @Remark_224 + ';' + 'p:' + CAST(@Position AS VARCHAR) + ';r:' + CAST(@BetOption AS VARCHAR)
+			UPDATE @LogRemarks
+			SET Remark = Remark + '|' + 'p^' + CAST(@Position AS VARCHAR) + '|r^' + CAST(@BetOption AS VARCHAR)
+			WHERE bettype = @BetType
+			
 		END
 	END TRY
 	BEGIN CATCH
@@ -324,42 +324,60 @@ BEGIN
 	EXEC dbo.WriteLog_UserLog @UserID = @AdminId, @Doing = @logdata
 
 	SELECT @Remark = 'NAP: IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
-						+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + 'ms'
-		, @Remark_221 = 'b:221' + @Remark_221
-		, @Remark_222 = 'b:222' + @Remark_222
-		, @Remark_223 = 'b:223' + @Remark_223
-		, @Remark_224 = 'b:224' + @Remark_224
+			+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + 'ms' + ' <br/> '
+	
+	DECLARE @Remark_Tmp VARCHAR(3000), @LogDate DATETIME, @Count INT
+	SELECT @RowIndex = 1, @LogDate = GETDATE(), @Count = COUNT(1)
+	FROM @LogRemarks
 
-	BEGIN TRY
-		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @userid = @AdminId
-			, @matchid			= @MatchID
-			, @actionid			= @ActionID
-			, @finalhomescore	= @fth
-			, @finalawayscore	= @fta
-			, @hthomescore		= @hth
-			, @htawayscore		= @hta
-			, @GoalRecord		= ''
-			, @betstatus		= ''
-			, @Remark			= @Remark
-			, @ip				= @ip
-	END TRY
+	WHILE EXISTS (SELECT TOP 1 1 FROM @LogRemarks WHERE RowIndex = @RowIndex)
+	BEGIN
+		SET @Remark_Tmp = ''
+		SELECT @Remark_Tmp = Remark FROM @LogRemarks WHERE RowIndex = @RowIndex
+		SET @RowIndex = @RowIndex + 1
+		
+		SET @Remark = @Remark + @Remark_Tmp + ' <br/> '
+		
+		IF DATALENGTH(@Remark) < 2000
+		BEGIN
+			IF @RowIndex <> @Count + 1
+				CONTINUE
+		END
+		
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @userid = @AdminId
+				, @LogDate			= @LogDate
+				, @matchid			= @MatchID
+				, @actionid			= @ActionID
+				, @finalhomescore	= @fth
+				, @finalawayscore	= @fta
+				, @hthomescore		= @hth
+				, @htawayscore		= @hta
+				, @GoalRecord		= ''
+				, @betstatus		= ''
+				, @Remark			= @Remark
+				, @ip				= @ip
+		END TRY
 
-	BEGIN CATCH
-		SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
+		BEGIN CATCH
+			SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
 
-		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
-			, @MatchID			= @matchid
-			, @actionid			= @actionid
-			, @finalhomescore	= @fth
-			, @finalawayscore	= @fta
-			, @hthomescore		= @hth
-			, @htawayscore		= @hta
-			, @GoalRecord		= ''
-			, @betstatus		= ''
-			, @Remark			= @Remark
-			, @IP				= @ip
-	END CATCH
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
+				, @LogDate			= @LogDate
+				, @MatchID			= @matchid
+				, @actionid			= @actionid
+				, @finalhomescore	= @fth
+				, @finalawayscore	= @fta
+				, @hthomescore		= @hth
+				, @htawayscore		= @hta
+				, @GoalRecord		= ''
+				, @betstatus		= ''
+				, @Remark			= @Remark
+				, @IP				= @ip
+		END CATCH
 
+		SET @Remark = ''
+	END
 	--
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)

@@ -8,8 +8,9 @@
     @htawayscore INT,
     @GoalRecord VARCHAR(50),
     @betstatus NVARCHAR(50),
-    @Remark VARCHAR(500) = '',	
-	@IP varchar(15)=''
+    @Remark VARCHAR(3000) = '',	
+	@IP varchar(15)='',
+	@LogDate DATETIME = NULL
 AS
 /*
 Creator: Daniel
@@ -19,6 +20,7 @@ Task: Insert LOGS for settlement function
 
 Revision:
 	- 20110110@Jamie: Change size of Remark to 500
+	- 20160507@Patrick: Add more param @LogDate & change size of Remark to 3000
 
 */
 
@@ -27,6 +29,7 @@ SET NOCOUNT ON;
 INSERT INTO dbo.UserLog_Settle
 (	
 	UserID,
+	LogDate,
 	MatchID,
 	ActionID,
 	[finalhomescore],
@@ -41,6 +44,7 @@ INSERT INTO dbo.UserLog_Settle
 VALUES
 (	
 	@UserID,
+	CASE WHEN @LogDate IS NULL THEN GETDATE() ELSE @LogDate END,
 	@MatchID,
 	@ActionID,
 	@finalhomescore,
