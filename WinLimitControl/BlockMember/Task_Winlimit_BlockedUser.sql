@@ -9,6 +9,7 @@ AS
 	DB: DBTXN/bodb02
 	Revisions:
 		- 20151211@Patrick: Remove action blocked member [Redmine: #49194]
+		- 20160507@Patrick: #57213 - Voidbridge integration
 
 	Param's Explanation:
 		
@@ -36,21 +37,31 @@ BEGIN
 	DECLARE @WinlostDate SMALLDATETIME, @BlockedDate DATETIME
 	SELECT @WinlostDate = CAST(GETDATE() AS DATE)
 
-	INSERT INTO #DataTmp(CustId, ProductId, Bettype, TotalWinAmount, WinlostDate, Currency)
-	SELECT ISNULL(c.CustId, d.CustId) AS CustId
-		, p.ProductId
-		, ISNULL(c.BetType, d.BetType) AS Bettype
-		, SUM(ISNULL(c.Winlost, 0) - ISNULL(d.Winlost, 0)) AS TotalWinAmount
-		, @WinlostDate AS WinlostDate
-		, cc.currency
-	FROM dbo.Winlimit_CreditGame c WITH(NOLOCK)
-		FULL OUTER JOIN dbo.Winlimit_DebitGame d WITH(NOLOCK)
-			ON c.CustId = d.CustId AND c.WinlostDate = d.WinlostDate AND c.BetType = d.Bettype
-		INNER JOIN #ProductSetting p ON ISNULL(c.BetType, d.BetType) = p.Bettype
-		INNER JOIN CustDB.dbo.Customer cc WITH(NOLOCK) ON ISNULL(c.CustId, d.CustId) = cc.custid
-	WHERE ISNULL(c.WinlostDate, d.WinlostDate) = @WinlostDate
-	GROUP BY ISNULL(c.CustId, d.CustId), p.ProductId, ISNULL(c.BetType, d.BetType), cc.currency
+	INSERT INTO #DataTmp(CustId, WinlostDate, Bettype, TotalWinAmount)
+	SELECT CustId, WinlostDate, BetType, SUM(Winlost)
+	FROM (
+		SELECT CustId, WinlostDate, BetType, Winlost
+		FROM dbo.Winlimit_CreditGame c WITH(NOLOCK)
+		WHERE WinlostDate = @WinlostDate
+			AND EXISTS (SELECT TOP 1 1 FROM #ProductSetting s WHERE c.BetType = s.Bettype)
+
+		UNION ALL
+		SELECT CustId, WinlostDate, BetType, - Winlost
+		FROM dbo.Winlimit_DebitGame c WITH(NOLOCK)
+		WHERE WinlostDate = @WinlostDate
+			AND EXISTS (SELECT TOP 1 1 FROM #ProductSetting s WHERE c.BetType = s.Bettype)
+	)t
+	GROUP BY CustId, WinlostDate, BetType
+
+	UPDATE t 
+	SET Currency = cc.currency
+		, ProductId = s.ProductId
+	FROM #DataTmp t
+		INNER JOIN #ProductSetting s on t.Bettype = s.Bettype
+		INNER JOIN CustDB.dbo.Customer cc WITH(NOLOCK) ON t.CustId = cc.custid
 	
+	--select * from #DataTmp
+
 	CREATE TABLE #CustBlockedList (CustId INT, ProductId TINYINT, Bettype SMALLINT, MaxWinLimit MONEY
 		, TotalWinAmount MONEY, WinlostDate SMALLDATETIME)
 
@@ -87,7 +98,8 @@ BEGIN
 		INNER JOIN #CustWinlimitSetting s ON t.CustId = s.CustId AND t.ProductId = s.ProductId
 	WHERE s.MaxWinLimit = 0
 
-	--select * from @CustBlockedList
+	--select * from #CustBlockedList
+
 	IF NOT EXISTS (SELECT TOP 1 1 FROM #CustBlockedList)
 	BEGIN
 		DROP TABLE #HistoryData
@@ -104,11 +116,11 @@ BEGIN
 	--incase reached MaxWinLimit again
 	UPDATE g
 	SET MaxwinLimit = t.MaxWinLimit
-		--, TotalWinAmt = CASE WHEN g.IsBlocked = 0 AND g.WinlostDate = @WinlostDate THEN g.TotalWinAmt + t.TotalWinAmount
-		--					ELSE t.TotalWinAmount END
-		, TotalWinAmt = t.TotalWinAmount
+		, TotalWinAmt = CASE WHEN g.IsBlocked = 0 AND g.WinlostDate = @WinlostDate THEN g.TotalWinAmt + t.TotalWinAmount
+							ELSE t.TotalWinAmount END
+		--, TotalWinAmt = t.TotalWinAmount
 		, BlockedWinAmt = t.TotalWinAmount
-		, IsBlocked = 0
+		, IsBlocked = 1
 		, IsNotified = 0
 		, BlockedDate = @BlockedDate
 		, UnBlockedDate = CASE WHEN g.WinlostDate = @WinlostDate THEN @BlockedDate ELSE NULL END
@@ -122,23 +134,23 @@ BEGIN
 		, UnBlockedDate, IsNotified, BetType, BlockedWinAmt, ModifiedBy, CreatedBy, WinlostDate)
 
 	FROM dbo.WinLimit_Game g WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN #CustBlockedList t ON t.CustId = g.CustID AND t.Bettype = g.Bettype
-	WHERE (g.WinlostDate = @WinlostDate AND BlockedWinAmt <> t.TotalWinAmount) OR (g.WinlostDate <> @WinlostDate)
+		INNER JOIN #CustBlockedList t ON t.CustId = g.CustID AND g.WinlostDate = t.WinlostDate AND t.Bettype = g.Bettype
+	WHERE g.IsBlocked = 0-- AND g.WinlostDate <> @WinlostDate
+	--WHERE (g.WinlostDate = @WinlostDate AND BlockedWinAmt <> t.TotalWinAmount) OR (g.WinlostDate <> @WinlostDate)
 	--WHERE (g.IsBlocked = 0 AND g.WinlostDate = @WinlostDate) OR (g.WinlostDate <> @WinlostDate)
 
 	--insert
-	INSERT INTO dbo.WinLimit_Game(CustId, ProductID, Bettype, MaxWinLimit, BlockedWinAmt, TotalWinAmt, IsBlocked, BlockedDate
-		, UnBlockedDate, IsNotified, CreatedBy, WinlostDate)
-	
-	OUTPUT inserted.CustId, inserted.ProductId, inserted.MaxWinLimit, inserted.TotalWinAmt, inserted.IsBlocked, inserted.BlockedDate
-		, inserted.UnBlockedDate, inserted.IsNotified, inserted.BetType, inserted.BlockedWinAmt, inserted.ModifiedBy, inserted.CreatedBy, inserted.WinlostDate
-	INTO #HistoryData(CustId, ProductId, MaxWinLimit, TotalWinAmt, IsBlocked, BlockedDate
-		, UnBlockedDate, IsNotified, BetType, BlockedWinAmt, ModifiedBy, CreatedBy, WinlostDate)
-
-	SELECT t.CustId, t.ProductId, t.Bettype, t.MaxwinLimit, t.TotalWinAmount, t.TotalWinAmount, 0, @BlockedDate
-		, NULL, 0, NULL, @WinlostDate
+	INSERT INTO dbo.WinLimit_Game(CustId, ProductID, Bettype, MaxWinLimit, BlockedWinAmt, TotalWinAmt
+		, IsBlocked, BlockedDate, UnBlockedDate, IsNotified, CreatedBy, WinlostDate)
+		OUTPUT inserted.CustId, inserted.ProductId, inserted.MaxWinLimit, inserted.TotalWinAmt, inserted.IsBlocked
+			, inserted.BlockedDate, inserted.UnBlockedDate, inserted.IsNotified, inserted.BetType, inserted.BlockedWinAmt
+			, inserted.ModifiedBy, inserted.CreatedBy, inserted.WinlostDate
+		INTO #HistoryData(CustId, ProductId, MaxWinLimit, TotalWinAmt, IsBlocked, BlockedDate
+			, UnBlockedDate, IsNotified, BetType, BlockedWinAmt, ModifiedBy, CreatedBy, WinlostDate)
+	SELECT t.CustId, t.ProductId, t.Bettype, t.MaxwinLimit, t.TotalWinAmount, t.TotalWinAmount
+		, 1, @BlockedDate, NULL, 0, NULL, @WinlostDate
 	FROM #CustBlockedList t
-		LEFT JOIN dbo.WinLimit_Game g WITH(NOLOCK) ON t.CustId = g.CustID AND t.Bettype = g.Bettype
+		LEFT JOIN dbo.WinLimit_Game g WITH(NOLOCK) ON t.CustId = g.CustID AND t.WinlostDate = g.WinlostDate AND t.Bettype = g.Bettype
 	WHERE g.CustID IS NULL
 
 	DECLARE @StrData VARCHAR(MAX), @XmlData XML, @RowCount INT, @ReTry INT
