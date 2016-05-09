@@ -36,6 +36,7 @@ AS
 			- 20160226@Jim: Offer AllBet ,Cockfighting,MBC-RNG Casino,Cricket product [RedmineID: #50921]
 			- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product - using sporttype bettype matrix function [RedmineID: #55584]
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
+			- 20160509@Robert: Rename product "Voidbridge" to "Macau Games" [RedmineID: #57182]
 		Explanation's Param:
 		    - @WinLost_8RM: winlost for outsource 
 		    - @WinLost_BARM: winlost for outsource (We use agent 'BARM' to put all outsoucing transactions which follow BA danger customers)
@@ -228,7 +229,7 @@ BEGIN
 	WHERE	winlostdate = @winlostdate
 			AND ruben = 1  
 			AND statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
-			AND sb.ProductID not in (6, 17, 21, 22)--AND b.bettype <= 19000 AND b.bettype NOT BETWEEN 2101 AND 2399 -- MBC-RNG Casino, Microgaming-RNG Casino, Allbet and Voidbridge
+			AND sb.ProductID not in (6, 17, 21, 22)--AND b.bettype <= 19000 AND b.bettype NOT BETWEEN 2101 AND 2399 -- MBC-RNG Casino, Microgaming-RNG Casino, Allbet and Macau Games
 	GROUP BY matchid, b.bettype, statusID, b.liveindicator
 	UNION ALL 
 	SELECT	 0 as matchid, gameID, statusID, 0 as liveindicator,
@@ -639,7 +640,7 @@ BEGIN
 			AND b.statusID IN (111,112,113)
 			AND s.liveindicator = 0
 
-    -- Voidbridge Section
+    -- Macau Games Section
      UNION ALL
 	SELECT	
 			@winlostdate winlostdate,
@@ -650,7 +651,7 @@ BEGIN
 			sum(b.Linetotal) as LineTotal,
 			sum(b.VirtualLineTotal) as VirtualLineTotal,
 			sum(b.IBCTurnover) IBCTurnover,
-			'Voidbridge' as bettype
+			'Macau Games' as bettype
 	FROM	#tmpBettrans b with (nolock)
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND s.liveindicator = b.liveindicator
 	WHERE	s.ProductID = 22
@@ -1218,7 +1219,7 @@ BEGIN
 	WHERE	s.ProductId = 19		
 	GROUP BY b.bettype,s.orderkey
 
-	-- Voidbridge
+	-- Macau Games
 	UNION ALL
 	SELECT	77 Num,
 			b.bettype,
