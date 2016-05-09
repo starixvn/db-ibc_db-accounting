@@ -37,6 +37,7 @@ AS
 	    - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckAllowedDownlines to DBCUST.CustDB) [Redmine:#36216]
 		- 20151109@Billy: Change LogSPData definition to support over-8000-characters log - [Redmine: #46541]
 		- 20160128@Billy: Update Virtual Rate's range from [-0.8, 1.6] to [-0.9, 1.6] - [Redmine: #51611]
+		- 20160422@Billy:	Exclude Auto Adjusted VR Members when update VR - [Redmine: #56525]
 	Param's Explanation:  
 	• @virtualmultiplier = '<ROOT>
 								<Rate SportType="1" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
@@ -63,7 +64,9 @@ BEGIN
 									,IsLive	BIT
 									,VirtualMultiplier SMALLMONEY	
 								)
-	DECLARE @DocHandler INT														
+	DECLARE @DocHandler INT		
+	
+	DECLARE	@lockedVRmembers	VARCHAR(MAX)												
 	 
 	set @startRun = getdate()  
 	  
@@ -149,14 +152,24 @@ BEGIN
 		return  
 	END  
 	*/  
-	  
 	
-								EXEC dbo.Acc_CustomerInfo_Execrep_04   
-			@custid = @custid,  
-			@roleid = @roleid,  
-			@action = 'VirtualMultiplier',
-			@EnableVirtualrate = @EnableVirtualrate,  
-			@virtualmultiplier = @virtualmultiplier 	
+	-- SELECT locked VR member
+	
+	SELECT	@lockedVRmembers =	(
+		SELECT	DISTINCT ulvrs.CustID '@CustID'
+		FROM	DBLOG.bodb_CustomerLog.dbo.UserLog_VirtualRateSettings AS ulvrs WITH (NOLOCK)
+		FOR XML PATH ('LockedVR')
+	,	ROOT ('ROOT')
+	);
+		
+	EXECUTE	dbo.Acc_CustomerInfo_Execrep_04   
+				@custid = @custid
+			,	@roleid = @roleid
+			,	@action = 'VirtualMultiplier'
+			,	@EnableVirtualrate = @EnableVirtualrate
+			,	@virtualmultiplier = @virtualmultiplier
+			,	@lockedVRmembers = @lockedVRmembers
+				
 	 
 	Declare @LogSPData varchar(MAX) = '',
 			@LogSPData2 varchar(MAX)= ''  
