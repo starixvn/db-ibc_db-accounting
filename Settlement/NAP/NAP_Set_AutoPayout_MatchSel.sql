@@ -31,6 +31,7 @@ AS
 	- 20160930@Bobby: #65002 - Implement Auto CAL page info: update Instant match status & enable link FGLG when existing parlay tickets
 	- 20161026@Bobby: #65002 - Do refactor code and move to DBTXN
 	- 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
+	- 20160509@Patrick: Fast market integration [Redmine: #56367]
       
  Param explanation:  
 	@MatchCode: match code
@@ -140,6 +141,7 @@ BEGIN
 		, IsEnabledGoalRecordFT BIT
 		, LivePeriod	TINYINT
 		, IsHT			BIT
+		, IsExistRunningFastMarket BIT
 		, livehomescore	INT
 		, liveawayscore	INT
 	)
@@ -218,6 +220,7 @@ BEGIN
 		, 0 AS IsEnabledGoalRecordHT
 		, 0 AS IsEnabledGoalRecordFT
 		, mr.LivePeriod
+		, 0 AS IsExistRunningFastMarket
 		, mr.IsHT
 		, m.livehomescore
 		, m.liveawayscore
@@ -290,6 +293,7 @@ BEGIN
 		;WITH BetStatus AS (
 			SELECT b.matchid
 				, SUM(ISNULL(b.betCount, 0)) AS BetCount
+			        , SUM(CASE WHEN b.bettype IN (221, 222, 223, 224) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFastMarket
 				, SUM(CASE WHEN f.GroupId = 4 THEN 1 ELSE 0 END) AS IsExistFGLG
 				, SUM(CASE WHEN f.GroupId = 3 THEN 1 ELSE 0 END) AS IsExistHTFGLG
 				, SUM(CASE WHEN f.GroupId = 4 AND (b.runningBet > 0) THEN 1 ELSE 0 END) AS IsExistRunningFGLG
@@ -320,6 +324,7 @@ BEGIN
 			, IsExistAutoBettypes = CASE WHEN tt.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
 			, IsRunningAutoBettypes = CASE WHEN tt.IsRunningAutoBettypes = 1 THEN 1 ELSE 0 END
 			, BetCount = tt.BetCount
+		, IsExistRunningFastMarket = CASE WHEN tt.IsExistRunningFastMarket > 0 THEN 1 ELSE 0 END
 		FROM #matchList t
 			INNER JOIN BetStatus tt ON t.matchid = tt.matchid
 	
