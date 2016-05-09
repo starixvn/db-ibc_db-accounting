@@ -22,7 +22,8 @@ BEGIN
 			SELECT 12, 1701, 1, 0 UNION
 			SELECT 13, 2001, 0, 1 UNION
 			SELECT 17, 2008, 0, 1 UNION ALL
-			SELECT ProductID, bettype, 1, 0  FROM DBCUST.CustDB.dbo.ProductSettingDetail WHERE SettingType = 6
+			SELECT ProductID, bettype, 1, 0  FROM DBCUST.CustDB.dbo.ProductSettingDetail WHERE SettingType = 6 AND ProductId <> 22 UNION ALL
+			SELECT ProductID, bettype, 1, 1  FROM DBCUST.CustDB.dbo.ProductSettingDetail WHERE SettingType = 6 AND ProductId = 22
 		) a INNER JOIN dbo.Products p WITH(NOLOCK) ON a.ProductId = p.ProductID
 	)
 
