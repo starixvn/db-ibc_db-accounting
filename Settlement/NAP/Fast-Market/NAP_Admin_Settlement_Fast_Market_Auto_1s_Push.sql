@@ -21,13 +21,13 @@ AS
 	Revisions:
 
 	Param's Explanation:
-		- @ResultList = '<bettypes>
-							<bettype id="">
-								<item position="" result="" />
-								<item position="" result="" />
-							</bettype>
+		- @ResultList = '<BetTypes>
+							<BetType Id="">
+								<Item Position="" Result="" />
+								<Item Position="" Result="" />
+							</BetType>
 	
-						</bettypes>'
+						</BetTypes>'
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -68,15 +68,15 @@ BEGIN
 							REPLACE(
 								REPLACE(
 									REPLACE(
-										REPLACE(@Results, 'bettypes', 'r')
-									, 'bettype', 'b')
-								, 'item', 'r')
-							, 'result', 'r')
-						, 'position', 'p')
+										REPLACE(@Results, 'BetTypes', 'r')
+									, 'BetType', 'b')
+								, 'Item', 'r')
+							, 'Result', 'r')
+						, 'Position', 'p')
 					--, ' ', '')
 	SET @XmlData =  CONVERT(XML, @Results)
 	;WITH TmpData AS (
-		SELECT T.C.value('../@id', 'SMALLINT') AS Bettype
+		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
 			, T.C.value('./@p', 'TINYINT') AS Position
 		FROM @XmlData.nodes('/r/b/r') AS T(C)
 	)

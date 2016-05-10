@@ -90,7 +90,7 @@ BEGIN
 	DECLARE @ResultDetail TABLE(BetType SMALLINT, Position TINYINT, BetOption TINYINT, ResultStatus TINYINT, RowIndex INT IDENTITY(1,1))
 
 	;WITH TmpData AS (
-		SELECT T.C.value('../@id', 'SMALLINT') AS Bettype
+		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
 			, T.C.value('./@p', 'TINYINT') AS Position
 			, T.C.value('./@r', 'TINYINT') AS BetOption
 			, CASE WHEN @Action = 'CAL' AND @IsAuto = 0 THEN 5
