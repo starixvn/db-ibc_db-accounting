@@ -281,7 +281,7 @@ BEGIN
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
-			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Voidbridge'
+			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -325,7 +325,7 @@ BEGIN
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
-			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Voidbridge'
+			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 		   END, winlostdate
 
 	UNION ALL
