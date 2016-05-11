@@ -200,7 +200,7 @@ BEGIN
 	 
 	--deposit super
 	INSERT INTO #DepSuper 
-	SELECT DISTINCT custid FROM f_DepSuper_1('All')
+	SELECT custid FROM f_DepSuper_1('All')
 	
 			
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT )
