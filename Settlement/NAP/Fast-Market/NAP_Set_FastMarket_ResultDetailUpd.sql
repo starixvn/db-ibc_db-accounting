@@ -23,6 +23,7 @@ AS
 		
 */
 BEGIN
+	
 	SET NOCOUNT ON
 	IF @Action IN ('CAL', 'UNDO', 'REFUND')
 	BEGIN

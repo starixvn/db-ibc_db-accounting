@@ -9,8 +9,8 @@ ALTER PROCEDURE dbo.NAP_Admin_Settlement_Fast_Market_Auto_1s_Push @MatchId INT
 	, @AdminId INT = 0
 	, @Ip VARCHAR(20) = ''
 
-	, @ErrCode INT OUTPUT
-	, @ErrMsg VARCHAR(200) OUTPUT
+	, @ErrCode INT = 0 OUTPUT
+	, @ErrMsg VARCHAR(200) = '' OUTPUT
 AS
 /*
 	Created: 20160428@Patrick
