@@ -25,7 +25,7 @@ BEGIN
 			SELECT 13, 2001, 0, 1 UNION
 			SELECT 17, 2008, 0, 1 UNION ALL
 			SELECT 22, 4001, 1, 1
-		) a INNER JOIN dbo.Products p WITH(NOLOCK) ON a.ProductId = p.ProductID
+		) a INNER JOIN DBPRO.bodb02.dbo.Products p WITH(NOLOCK) ON a.ProductId = p.ProductID
 	)
 
 	RETURN
