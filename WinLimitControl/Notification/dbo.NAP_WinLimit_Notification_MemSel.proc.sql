@@ -60,18 +60,18 @@ BEGIN
 		, c.username
 		, c.username2
 		, e.code
-		, CASE	WHEN s.site IS NOT NULL THEN s.site 
-				ELSE 
-					CASE	WHEN (s.site IS NULL AND sc.site = '789y') THEN 'maxbet789y'
-							ELSE 'maxbet'
-					END 
-		END AS SiteName
+		--, CASE WHEN s.site IS NOT NULL THEN s.site 
+		--	ELSE
+		--		CASE WHEN (s.site IS NULL AND sc.site = '789y') THEN 'maxbet789y'
+		--		ELSE 'maxbet' END 
+		--END AS SiteName
+		, '' AS SiteName
 	FROM CustDB.dbo.Customer c WITH(NOLOCK)
-		INNER JOIN CTE_CustId temp ON c.custid = temp.custid
-		INNER JOIN CustDB.dbo.Customer sc WITH(NOLOCK) ON c.srecommend = sc.custid -- credit member
-		LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) ON c.srecommend = s.custid-- deposit member
+		--INNER JOIN CTE_CustId temp ON c.custid = temp.custid
+		--INNER JOIN CustDB.dbo.Customer sc WITH(NOLOCK) ON c.recommend = sc.custid -- credit member
+		--LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) ON c.srecommend = s.custid -- deposit member
 		INNER JOIN CustDB.dbo.exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
-	WHERE sc.roleid = 4
+	WHERE EXISTS (SELECT TOP 1 1 FROM CTE_CustId t WHERE c.custid = t.custid)
 		
 	SELECT g.custid
 		, c.username
