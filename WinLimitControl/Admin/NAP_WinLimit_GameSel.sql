@@ -35,9 +35,9 @@ BEGIN
 	FROM dbo.f_Winlimit_GetProductSetting() p
 	WHERE @ProductID = 0 OR ProductID = @ProductID
 
-	DECLARE @CustId INT, @Today SMALLDATETIME
+	DECLARE @CustId INT--, @Today SMALLDATETIME
 	
-	SELECT @Today = CONVERT(DATE, CURRENT_TIMESTAMP)
+	--SELECT @Today = CONVERT(DATE, CURRENT_TIMESTAMP)
 	IF ISNULL(@UserName, '') = ''
 		SET @UserName = ''
 	ELSE
@@ -54,7 +54,7 @@ BEGIN
 		FROM dbo.WinLimit_Game g WITH (NOLOCK)
 			INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId
 			INNER JOIN @tempProduct p ON g.Bettype = p.bettype
-		WHERE WinlostDate BETWEEN @FromDate AND @Today
+		WHERE WinlostDate BETWEEN @FromDate AND @ToDate
 			AND (@ExchangeID = 0 OR @ExchangeID = c.currency)
 			AND (@ExcludeTestData = 0 OR c.currency NOT IN (20,27,28))
 	
@@ -77,7 +77,7 @@ BEGIN
 			FROM dbo.WinLimit_Game g WITH (NOLOCK)
 				INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId
 				INNER JOIN @tempProduct p ON g.Bettype = p.bettype
-			WHERE WinlostDate BETWEEN @FromDate AND @Today
+			WHERE WinlostDate BETWEEN @FromDate AND @ToDate
 				AND (@ExchangeID = 0 OR @ExchangeID = c.currency)
 				AND (@ExcludeTestData = 0 OR c.currency NOT IN (20,27,28))
 		)
@@ -94,10 +94,11 @@ BEGIN
 		FROM dbo.WinLimit_Game g WITH (NOLOCK)
 			INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId
 			INNER JOIN @tempProduct p ON g.Bettype = p.bettype
-		WHERE WinlostDate BETWEEN @FromDate AND @Today
+		WHERE g.CustId = @CustId
+			AND WinlostDate BETWEEN @FromDate AND @ToDate
 			AND (@ExchangeID = 0 OR @ExchangeID = c.currency)
 			AND (@ExcludeTestData = 0 OR c.currency NOT IN (20,27,28))
-			--AND g.WinlostDate = @ToDay
+		
 		;WITH DataTmp AS (
 			SELECT ROW_NUMBER() OVER (ORDER BY g.BlockedDate DESC) AS RowNum
 				, g.CustID
@@ -118,7 +119,7 @@ BEGIN
 				INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON g.CustId = c.CustId
 				INNER JOIN @tempProduct p ON g.Bettype = p.bettype
 			WHERE g.CustId = @CustId
-				AND WinlostDate BETWEEN @FromDate AND @Today
+				AND WinlostDate BETWEEN @FromDate AND @ToDate
 				AND (@ExchangeID = 0 OR @ExchangeID = c.currency)
 				AND (@ExcludeTestData = 0 OR c.currency NOT IN (20,27,28))
 		)
@@ -138,7 +139,7 @@ BEGIN
 		, rs.BlockedDate AS BlockedTime
 		, rs.CreatedBy AS BlockedBy
 		, c.UserName AS BlockedByUserName
-		, CASE WHEN DATEADD(MINUTE, -3, BlockedDate) > GETDATE() THEN 1 ELSE 0 END AS IsNotified
+		, CAST(CASE WHEN DATEADD(MINUTE, -3, GETDATE()) < BlockedDate AND rs.IsBlocked = 1 THEN 1 ELSE 0 END AS BIT) AS IsNotified
 		, WinlostDate
 	FROM #tempResult rs
 		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId

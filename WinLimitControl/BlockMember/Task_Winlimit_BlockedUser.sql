@@ -123,11 +123,11 @@ BEGIN
 		, IsBlocked = 1
 		, IsNotified = 0
 		, BlockedDate = @BlockedDate
-		, UnBlockedDate = CASE WHEN g.WinlostDate = @WinlostDate THEN @BlockedDate ELSE NULL END
+		, UnBlockedDate = NULL--CASE WHEN g.WinlostDate = @WinlostDate THEN @BlockedDate ELSE NULL END
 		, WinlostDate = @WinlostDate
 		, CreatedBy = NULL
 		, ModifiedBy = NULL
-
+		
 	OUTPUT inserted.CustId, inserted.ProductId, inserted.MaxWinLimit, inserted.TotalWinAmt, inserted.IsBlocked, inserted.BlockedDate
 		, inserted.UnBlockedDate, inserted.IsNotified, inserted.BetType, inserted.BlockedWinAmt, inserted.ModifiedBy, inserted.CreatedBy, inserted.WinlostDate
 	INTO #HistoryData(CustId, ProductId, MaxWinLimit, TotalWinAmt, IsBlocked, BlockedDate

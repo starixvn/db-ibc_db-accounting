@@ -1,12 +1,14 @@
+
 ALTER FUNCTION [dbo].[f_Winlimit_GetProductSetting] ()
 RETURNS @ProductSetting TABLE (ProductId TINYINT, ProductName VARCHAR(50), BetType SMALLINT, IsActive_SMA BIT, IsActive_Company BIT)
 AS
 /*
 	Created: 2015107@Patrick	
 	Task: Setting SMA & Company have check max winning or not
-	DB: DBTRANS/BODB02
+	DB: DBTRANS/BODB02; DBCUST/CUSTDB
 	Revisions:
 		- 20151224@Patrick: Support RnG Casino [Redmine: #49803]
+		- 20160507@Patrick: #57213 - Voidbridge integration
 
 	Parameters Explanation:	
 */
@@ -22,8 +24,12 @@ BEGIN
 			SELECT 12, 1701, 1, 0 UNION
 			SELECT 13, 2001, 0, 1 UNION
 			SELECT 17, 2008, 0, 1 UNION ALL
-			SELECT ProductID, bettype, 1, 0  FROM DBCUST.CustDB.dbo.ProductSettingDetail WHERE SettingType = 6 AND ProductId <> 22 UNION ALL
-			SELECT ProductID, bettype, 1, 1  FROM DBCUST.CustDB.dbo.ProductSettingDetail WHERE SettingType = 6 AND ProductId = 22
+			SELECT ProductID, bettype, 1, 0  
+			FROM DBCUST.CustDB.dbo.ProductSettingDetail WITH(NOLOCK) 
+			WHERE SettingType = 6 AND ProductId <> 22 UNION ALL
+			SELECT ProductID, bettype, 1, 1  
+			FROM DBCUST.CustDB.dbo.ProductSettingDetail WITH(NOLOCK)
+			WHERE SettingType = 6 AND ProductId = 22
 		) a INNER JOIN dbo.Products p WITH(NOLOCK) ON a.ProductId = p.ProductID
 	)
 
