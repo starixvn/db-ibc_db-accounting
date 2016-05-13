@@ -117,9 +117,18 @@ BEGIN
 
 	SELECT @RowIndex = 1, @IsRuntimeError = 0
 	BEGIN TRY
+		-- Mark this match as running
+		IF @Action = 'UNDO'
+			EXEC dbo.NAP_Set_FastMarket_Completed @MatchId = @matchid
+					, @IsFastMarketCompleted = 0
+					, @AdminId = @AdminId
+					, @IP = @IP
+
 		WHILE EXISTS (SELECT TOP 1 1 FROM @ResultDetail WHERE RowIndex = @RowIndex)
 		BEGIN
-			SELECT @BetType = BetType, @Position = Position, @BetOption = BetOption, @ResultStatus = ResultStatus
+			SELECT @BetType = BetType, @Position = Position
+				, @BetOption = CASE WHEN @Action = 'UNDO' THEN ASCII(CHAR('0')) ELSE BetOption END
+				, @ResultStatus = CASE WHEN @Action = 'UNDO' THEN 0 ELSE ResultStatus END
 			FROM @ResultDetail
 			WHERE RowIndex = @RowIndex
 
@@ -128,21 +137,25 @@ BEGIN
 			IF @BetType IS NULL OR @Position IS NULL
 				CONTINUE
 
-			--update result detail
-			EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
-				, @BetType = @BetType
-				, @Position = @Position
-				, @BetOption = @BetOption
-				, @ResultStatus = @ResultStatus
-				, @Action = @Action
-
-				, @ErrCode = @ErrCode OUTPUT
-				, @ErrMsg = @ErrMsg OUTPUT
-
-			IF @ErrCode > 0
+			IF @Action IN ('CAL', 'UNDO')
 			BEGIN
-				--TODO
-				BREAK
+				--update result detail
+				EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
+					, @BetType = @BetType
+					, @Position = @Position
+					, @BetOption = @BetOption
+					, @ResultStatus = @ResultStatus
+					, @Action = @Action
+
+					, @AdminId = @AdminId
+					, @ErrCode = @ErrCode OUTPUT
+					, @ErrMsg = @ErrMsg OUTPUT
+
+				--IF @ErrCode > 0
+				--BEGIN
+				--	--TODO
+				--	BREAK
+				--END
 			END
 
 			--get betcount
@@ -319,19 +332,19 @@ BEGIN
 	EXEC dbo.WriteLog_UserLog @UserID = @AdminId, @Doing = @logdata
 	
 	SET @LogResult = CONVERT(VARCHAR(MAX),(SELECT BetType '@Id'
-		,STUFF((select ',' + cast(Position as VARCHAR(3)) from @ResultDetail where BetType = r.BetType for XML PATH ('')),1,1,'') as 'Item/@Position'
-		,STUFF((select ',' + cast(BetOption as VARCHAR(3)) from @ResultDetail where BetType = r.BetType for XML PATH ('')),1,1,'') as 'Item/@Result'
+		, STUFF((SELECT ',' + CAST(Position AS VARCHAR(3)) FROM @ResultDetail WHERE BetType = r.BetType FOR XML PATH ('')),1,1,'') AS 'Item/@Position'
+		, CASE WHEN @Action = 'CAL' THEN STUFF((SELECT ',' + CAST(BetOption AS VARCHAR(3)) FROM @ResultDetail WHERE BetType = r.BetType FOR XML PATH ('')),1,1,'') END AS 'Item/@Result'
 	FROM @ResultDetail r
 	GROUP BY BetType
-	FOR XML PATH('Bettype'), root ('Bettypes'), TYPE))
-
-	
+	FOR XML PATH('BetType'), ROOT ('BetTypes'), TYPE))
+		
 	SELECT @Remark = 'NAP: IsAuto:' + CAST(@IsAuto AS VARCHAR(1))
 			+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + 'ms' 
-			+ '|' -- signal for web
-			+ @LogResult
 			
 	BEGIN TRY
+		SELECT @Remark = @Remark + '|'  -- signal for web
+						+ @LogResult
+	
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @userid = @AdminId
 			, @matchid			= @MatchID
 			, @actionid			= @ActionID
@@ -346,7 +359,8 @@ BEGIN
 	END TRY
 
 	BEGIN CATCH
-		SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250)
+		SELECT @remark = @remark + ' ErrMsg=' + LEFT(ERROR_MESSAGE(), 250) + '|' -- signal for web
+							+ @LogResult
 
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @MatchID			= @matchid
@@ -361,15 +375,12 @@ BEGIN
 			, @IP				= @ip
 	END CATCH
 
+
 	DELETE
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
 	WHERE KeyID = 1 AND KeyValue = @matchid
 	
 END
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s] TO [bodbAdminNet] AS [dbo]
