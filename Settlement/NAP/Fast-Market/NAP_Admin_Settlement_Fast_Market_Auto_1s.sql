@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s]    Script Date: 05/13/2016 12:52:29 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s]    Script Date: 05/16/2016 13:24:34 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -381,6 +381,7 @@ BEGIN
 	WHERE KeyID = 1 AND KeyValue = @matchid
 	
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s] TO [bodbAdminNet] AS [dbo]
