@@ -17,6 +17,7 @@ AS
     Revisions:
         - 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
         - 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
+	- 20160505@Patrick: Move code select match info to another SP [RedmineId: #56587]
 
     Param's Explanation:
 */
@@ -36,24 +37,10 @@ BEGIN
         ,InRunning			INT
         ,GroupId			SMALLINT
     )
-
-    DECLARE    @IsSettleAbandonedMatchIBC    BIT = 0 
+	
 				,@IsExistFgLg BIT = 0
 				,@IsExistHtFgLg BIT = 0
-
-    IF EXISTS (
-                SELECT 1
-                FROM bettrans b WITH (NOLOCK)
-                    INNER JOIN dbo.f_Set_GetGroupBettypes() f
-                        ON b.bettype = f.BetType
-                WHERE    f.GroupId = 8
-                        AND f.IsDetermined = 1
-                        AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
-                        AND ruben = 0 
-            )
-    BEGIN
-        SELECT @IsSettleAbandonedMatchIBC = 1
-    END
+               
     
     INSERT INTO @tmpTicketStatus(ResourceID, BetCount, InRunning, GroupId)
     SELECT    
@@ -108,28 +95,7 @@ BEGIN
 		SET @IsExistFgLg = 1
 	
 	
-    -- Match Info 
-    SELECT    m.LeagueID
-            ,m.MatchID
-            ,m.matchcode
-            ,m.kickofftime
-            ,playTime = datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) 
-            ,m.homeid
-            ,m.awayid
-			,m.hthomescore AS HalfTimeHomeScore
-			,m.htawayscore AS HalfTimeAwayScore
-			,m.finalhomescore
-			,m.finalawayscore
-            ,IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
-            ,m.betstatus
-            ,m.GoalRecord
-            ,m.finalhomescore
-            ,m.finalawayscore
-            ,@IsExistFgLg AS IsExistFgLg
-            ,@IsExistHtFgLg AS IsExistHtFgLg
-    FROM    Match m WITH (NOLOCK)
-    WHERE    MatchID = @MatchID
-	
+
     -- Detail
     ;WITH cteBettype 
     AS(
