@@ -64,7 +64,7 @@ Revisions:
 	- 20160205@Billy:	Apply for AllBet product - [Redmine: #51590]
 	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
 	- 20160330@Elodie: Update code to correct commission for DCS product of member
-	- 20160426@Winnie: fix  Bug #56653 [Move account: IsHidden of move master is changed to 0]
+	- 20160426@Winnie: fix  Bug #56653 [Move account: IsHidden of move master is changed to 0]  & #56802[[NAP] Move member: HideGoldDeluxe of moved member is changed to 0]
 	
 Param's Explanation:
 - @ErrCode:
@@ -1976,20 +1976,20 @@ BEGIN
     END
     
      --Gold Deluxe
-    IF @aHideGoldDeluxe = 0 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
-    BEGIN
-	    UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
-	    SET		HideGoldDeluxe = 0
-	    WHERE	custid = @custid 
-	    IF @@ERROR <>0
-	    BEGIN
-		    Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
-				    @ErrCode = 507
-		    IF @ReturnErrCode = 0
-			    RAISERROR(@ErrMsg, 16, 1)
-		    RETURN 
-	    END
-    END
+    --IF @aHideGoldDeluxe = 0 AND (@aHideGoldDeluxe <> @HideGoldDeluxe)
+    --BEGIN
+	   -- UPDATE	Custinfo WITH (UPDLOCK,ROWLOCK)
+	   -- SET		HideGoldDeluxe = 0
+	   -- WHERE	custid = @custid 
+	   -- IF @@ERROR <>0
+	   -- BEGIN
+		  --  Select	@ErrMsg = 'Error member ' + @membername + ', agent ' + @agentname + ': update unsuccessfully (custinfo).',
+				--    @ErrCode = 507
+		  --  IF @ReturnErrCode = 0
+			 --   RAISERROR(@ErrMsg, 16, 1)
+		  --  RETURN 
+	   -- END
+    --END
     
     --Gold Deluxe
     IF @aDisableGoldDeluxe = 0 AND (@aDisableGoldDeluxe <> @DisableGoldDeluxe)
@@ -2615,9 +2615,7 @@ BEGIN
 		) AS ss
 		INNER JOIN	dbo.StakeLevel AS sl WITH(NOLOCK)
 				ON	ss.val = sl.StakeLevelID
-		WHERE	sl.MinStake <> 0
-			AND	sl.MaxStake <> 0
-		ORDER BY	sl.MaxStake, sl.MinStake
+		ORDER BY	sl.MaxStake, sl.MinStake, sl.GameGroupID
 	) sr
 	WHERE	usl.StakeLevelList_new = ''
 
@@ -2676,7 +2674,6 @@ BEGIN
 		    @duration = @duration	
     END CATCH
 END
-
 GO 
 GRANT EXECUTE ON [dbo].[Acc_CustomerUpdMoveMember] TO [vnteam]
 GO 
