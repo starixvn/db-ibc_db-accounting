@@ -45,13 +45,13 @@ Revisions:
 	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
 	- 20160114@Helen: Cricket - [Redmine: #50027]
 	- 20160127@Billy: Member information for AllBet - [Redmine: #51591]
-	
+	- 20160407@Winnie: VoidBridge - [Redmine: #55259 ]
 
 
 Param's Explanation:
-â€¢ @system: = NAP : internal login from NAP
+• @system: = NAP : internal login from NAP
 			NAPEXT:internal login from NAP EXT
-â€¢ @CustID: customer id.   
+• @CustID: customer id.   
 */
 
 	SET NOCOUNT ON
@@ -87,7 +87,7 @@ Param's Explanation:
 	SET @LimitPerIP = 0
 	SET @SelectedBetting = 0
 	SET @IsInternal = 0
-
+	
 	IF @roleid = 4 --super
 	BEGIN
 		SELECT 
@@ -142,7 +142,7 @@ Param's Explanation:
 			SET @IsIMBC = 1
 			
 	END
-
+	
 	--Get Internal status
 	/*
 	SELECT @IsInternal = CASE @roleid WHEN 4 THEN (SELECT isnull(IsInternal, 0) FROM custSuper WITH (NOLOCK) WHERE custid = @custid)
@@ -173,6 +173,7 @@ Param's Explanation:
 		,	@bitmapOrder_CockFighting	INT
 		,	@bitmapOrder_Cricket		INT
 		,	@bitmapOrder_AllBet			INT
+		,	@bitmapOrder_VoidBridge		INT
     
     SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
     SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
@@ -184,17 +185,20 @@ Param's Explanation:
 								)
     
     SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
+	SET @bitmapOrder_VoidBridge = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 212 AND Bettype = 4001)
     
     
     DECLARE	@IsHidden_MuayThai			INT = 1
 		,	@IsHidden_CockFighting		INT = 1
 		,	@IsHidden_Cricket			INT = 1
 		,	@IsHidden_AllBet			INT = 1
+		,	@IsHidden_VoidBridge		INT = 1
     
     DECLARE	@SportBook2					INT = 16
 		,	@CockFighting				INT = 19
 		,	@Cricket					INT = 20
 		,	@AllBet						INT = 21
+		,	@VoidBridge					INT = 22
     
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
 	BEGIN
@@ -212,6 +216,10 @@ Param's Explanation:
     IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@Cricket,4))
 	BEGIN
 		SET @IsHidden_Cricket = 0
+	END
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@VoidBridge,4))
+	BEGIN
+		SET @IsHidden_VoidBridge = 0
 	END
 	
 	SELECT	ISNULL(reject,0) AS Suspend,
@@ -266,7 +274,11 @@ Param's Explanation:
 			ISNULL(DisableSuperLive,1) as DisableSuperLive,
 			ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
 			ISNULL(DisableMicrogameRNG,1) as DisableMicrogameRNG,
-			
+			-- For VoidBridge
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_VoidBridge), 1) AS DisableVoidBridge,
+			CAST(CASE WHEN @IsHidden_VoidBridge = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_VoidBridge), 1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideVoidBridge,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_VoidBridge), 0) AS SyncedVoidBridge,
+
 			-- Cricket
 			@IsIMBC AS IsIMBC,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_Cricket),1) AS DisableCricket,
