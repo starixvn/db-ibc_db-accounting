@@ -76,6 +76,7 @@ AS
 		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
 		- 20160204@Kos: Support AllBet [#Redmine: 50864]
 		- 20160307@Kos: Hotfix Missing choice of Gold Deluxe [#Redmine: 53506]
+		- 20160331@Kos: Support Voidbridge [#Redmine: 54925]
 */
 
 BEGIN
@@ -1182,13 +1183,14 @@ BEGIN
 					AND b.translogid = @refno
 			END
 
-			-- Microgaming RNG Casino, RNG Casino Single Wallet
+			-- Microgaming RNG Casino, RNG Casino Single Wallet, Voidbridge
 			IF EXISTS (	SELECT TOP 1 1 FROM @SportBettype
 						WHERE Bettype = @Bettype
-							AND (ProductID = 17 
+							AND (ProductID IN (17, 22) 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
-				IF @WinlostDate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- today
+				IF @WinlostDate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- yesterday and today
 				BEGIN
 					-- Today running ticket
 					INSERT INTO @Data
@@ -1237,6 +1239,7 @@ BEGIN
 						CASE
 							WHEN s.ProductID = 6 THEN b.matchid
 							WHEN s.ProductID = 17 THEN 205
+							WHEN s.ProductID = 22 THEN 212
 						END AS Sporttype,
 						b.ip,
 						b.betfrom,
@@ -1255,7 +1258,7 @@ BEGIN
 						b.winlostdate,
 						'' AS BetCheck,
 						CASE
-							WHEN s.ProductID = 6 THEN b.transdesc
+							WHEN s.ProductID IN (6, 22) THEN b.transdesc
 							ELSE ''
 						END AS transdesc,
 						0 AS OddsSpread
@@ -1264,7 +1267,7 @@ BEGIN
 						INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 					WHERE
 						b.custid = @Custid
-						AND (s.ProductId = 17
+						AND (s.ProductId IN (17, 22)
 							OR (s.ProductId = 6 AND s.SubProduct <> ''))
 						AND b.transid = @TransId
 						AND brng.statusid = 0
@@ -1284,7 +1287,6 @@ BEGIN
 						b.matchid,
 						b.transdesc,
 						s.ProductID
-					OPTION (RECOMPILE)
 
 					-- Today settled ticket
 					INSERT INTO @Data
@@ -1337,6 +1339,7 @@ BEGIN
 						CASE
 							WHEN s.ProductID = 6 THEN b.matchid
 							WHEN s.ProductID = 17 THEN 205
+							WHEN s.ProductID = 22 THEN 212
 						END AS Sporttype,
 						b.ip,
 						b.betfrom,
@@ -1355,7 +1358,7 @@ BEGIN
 						b.winlostdate,
 						'' AS BetCheck,
 						CASE
-							WHEN s.ProductID = 6 THEN b.transdesc
+							WHEN s.ProductID IN (6, 22) THEN b.transdesc
 							ELSE ''
 						END AS transdesc,
 						0 AS OddsSpread
@@ -1364,7 +1367,7 @@ BEGIN
 						INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 					WHERE
 						b.custid = @Custid
-						AND (s.ProductId = 17
+						AND (s.ProductId IN (17, 22)
 							OR (s.ProductId = 6 AND s.SubProduct <> ''))
 						AND b.transid = @TransId
 						AND brng.statusid <> 0
@@ -1384,7 +1387,6 @@ BEGIN
 						b.matchid,
 						b.transdesc,
 						s.ProductID
-					OPTION (RECOMPILE)
 				END
 				ELSE
 				BEGIN
@@ -1435,6 +1437,7 @@ BEGIN
 						CASE
 							WHEN s.ProductID = 6 THEN b.matchid
 							WHEN s.ProductID = 17 THEN 205
+							WHEN s.ProductID = 22 THEN 212
 						END AS Sporttype,
 						b.ip,
 						b.betfrom,
@@ -1453,7 +1456,7 @@ BEGIN
 						b.winlostdate,
 						'' AS BetCheck,
 						CASE
-							WHEN s.ProductID = 6 THEN b.transdesc
+							WHEN s.ProductID IN (6, 22) THEN b.transdesc
 							ELSE ''
 						END AS transdesc,
 						0 AS OddsSpread
@@ -1461,7 +1464,7 @@ BEGIN
 						INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 					WHERE
 						b.custid = @Custid
-						AND (s.ProductId = 17
+						AND (s.ProductId IN (17, 22)
 							OR (s.ProductId = 6 AND s.SubProduct <> ''))
 						AND b.transid = @TransId
 				END
@@ -2550,10 +2553,10 @@ BEGIN
 					AND b.refno = @refno
 			END
 
-			-- Microgaming RNG Casino, AG Casino, RNG Casino Single Wallet, AllBet
+			-- Microgaming RNG Casino, AG Casino, RNG Casino Single Wallet, AllBet, Voidbridge
 			IF EXISTS(	SELECT TOP 1 1 FROM @SportBettype
 						WHERE Bettype = @Bettype 
-							AND (ProductID IN (11, 17, 21) 
+							AND (ProductID IN (11, 17, 21, 22) 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
 				INSERT INTO @Data
@@ -2604,6 +2607,7 @@ BEGIN
 						WHEN s.ProductID = 11 THEN 250
 						WHEN s.ProductID = 17 THEN 205
 						WHEN s.ProductID = 21 THEN 211
+						WHEN s.ProductID = 22 THEN 212
 					END AS sporttype,
 					b.ip,
 					b.betfrom,
@@ -2622,14 +2626,14 @@ BEGIN
 					b.winlostdate,
 					'' AS BetCheck,
 					CASE
-						WHEN s.ProductID = 6 THEN b.transdesc
+						WHEN s.ProductID IN (6, 22) THEN b.transdesc
 						ELSE ''
 					END AS transdesc,
 					0 AS OddsSpread
 				FROM dbo.bettrans14 AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid
-					AND (s.ProductID IN (11, 17, 21)
+					AND (s.ProductID IN (11, 17, 21, 22)
 						OR (ProductID = 6 AND SubProduct <> ''))
 					AND b.transid = @TransID
 			END
@@ -3378,10 +3382,10 @@ BEGIN
 					AND b.refno = @refno
 			END
 
-			-- Microgaming RNG Casino, AG Casino, RNG Casino Single Wallet, AllBet
+			-- Microgaming RNG Casino, AG Casino, RNG Casino Single Wallet, AllBet, Voidbridge
 			IF EXISTS (	SELECT TOP 1 1 FROM @SportBettype s 
 						WHERE Bettype = @Bettype
-							AND (ProductID IN (11, 17, 21) 
+							AND (ProductID IN (11, 17, 21, 22) 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
 				INSERT INTO @Data
@@ -3432,6 +3436,7 @@ BEGIN
 						WHEN s.ProductID = 11 THEN 250
 						WHEN s.ProductID = 17 THEN 205
 						WHEN s.ProductID = 21 THEN 211
+						WHEN s.ProductID = 22 THEN 212
 					END AS sporttype,
 					b.ip,
 					b.betfrom,
@@ -3450,14 +3455,14 @@ BEGIN
 					b.winlostdate,
 					'' AS BetCheck,
 					CASE
-						WHEN s.ProductID = 6 THEN b.transdesc
+						WHEN s.ProductID IN (6, 22) THEN b.transdesc
 						ELSE ''
 					END AS transdesc,
 					0 AS OddsSpread
 				FROM DBARC.bodb_archive.dbo.bettrans_bk AS b WITH (NOLOCK)
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 				WHERE b.custid = @Custid
-					AND (s.ProductID IN (11, 17, 21)
+					AND (s.ProductID IN (11, 17, 21, 22)
 						OR (ProductID = 6 AND SubProduct <> ''))
 					AND b.transid = @TransID
 			END
@@ -3841,7 +3846,7 @@ BEGIN
 			-- Microgaming RNG Casino, RNG Casino Single Wallet
 			IF EXISTS(	SELECT TOP 1 1 FROM @SportBettype 
 						WHERE Bettype = @Bettype 
-							AND (ProductID = 17 
+							AND (ProductID IN (17, 22) 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
 				INSERT INTO @Data
@@ -3910,7 +3915,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 				WHERE b.custid = @Custid
 					AND b.transid = @TransID
-					AND (s.ProductId = 17
+					AND (s.ProductId IN (17, 22)
 						OR (s.ProductId = 6 AND s.SubProduct <> ''))
 			END
 		END
@@ -3921,7 +3926,7 @@ BEGIN
 			-- Microgaming RNG Casino, RNG Casino Single Wallet
 			IF EXISTS(	SELECT TOP 1 1 FROM @SportBettype 
 						WHERE Bettype = @Bettype 
-							AND (ProductID = 17 
+							AND (ProductID IN (17, 22) 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
 				INSERT INTO @Data
@@ -3990,7 +3995,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 				WHERE b.custid = @Custid
 					AND b.transid = @TransID
-					AND (s.ProductId = 17
+					AND (s.ProductId IN (17, 22)
 						OR (s.ProductId = 6 AND s.SubProduct <> ''))
 			END
 		END
@@ -4001,7 +4006,7 @@ BEGIN
 			-- Microgaming RNG Casino, RNG Casino Single Wallet
 			IF EXISTS(	SELECT TOP 1 1 FROM @SportBettype 
 						WHERE Bettype = @Bettype 
-							AND (ProductID = 17 
+							AND (ProductID IN (17, 22) 
 								OR (ProductID = 6 AND SubProduct <> '')))
 			BEGIN
 				INSERT INTO @Data
@@ -4070,7 +4075,7 @@ BEGIN
 					INNER JOIN @SportBettype AS s ON s.Bettype = b.gameID
 				WHERE b.custid = @Custid
 					AND b.transid = @TransID
-					AND (s.ProductId = 17
+					AND (s.ProductId IN (17, 22)
 						OR (s.ProductId = 6 AND s.SubProduct <> ''))
 			END
 		END

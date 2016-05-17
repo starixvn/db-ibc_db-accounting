@@ -68,6 +68,7 @@ AS
 		- 20160125@Kos: Fix Colossus Bet result issue
 		- 20160129@Kos: Support RNG Casino Single Wallet yesterday running ticket
 		- 20160215@Kos: Support AllBet [#Redmine: 50864]
+		- 20160331@Kos: Support Voidbridge [#Redmine: 54925]
 
 	Param's Explanation:
 		• @fromdate = @winlostdate
@@ -868,7 +869,8 @@ BEGIN
 				AND (s.ProductID IN (7, 12, 13, 19)
 					OR (s.ProductId = 6 AND s.SubProduct = ''))
 
-			-- Casino, Bingo, Gold Deluxe, Microgaming Live Casino, Microgaming RNG Casino, AG Casino, Cockfighting, AllBet bettrans14
+			-- Casino, Bingo, Gold Deluxe, Microgaming Live Casino, Microgaming RNG Casino, AG Casino, Cockfighting, AllBet 
+			-- Voidbridge bettrans14
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -929,6 +931,7 @@ BEGIN
 					WHEN s.ProductID = 17 THEN 205
 					WHEN s.ProductID = 19 THEN 206
 					WHEN s.ProductID = 21 THEN 211
+					WHEN s.ProductID = 22 THEN 212
 				END AS sporttype,
 				CASE
 					WHEN s.ProductID = 12 THEN b.matchid
@@ -948,7 +951,7 @@ BEGIN
 				END AS betcheck,
 				CASE
 					WHEN s.ProductID = 6 AND s.SubProduct <> '' THEN b.transdesc
-					WHEN s.ProductID = 19 THEN b.transdesc
+					WHEN s.ProductID IN (19, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -956,7 +959,7 @@ BEGIN
 				INNER JOIN @SportBettype AS s ON s.Bettype = b.bettype
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
-				AND s.ProductID IN (6, 7, 11, 12, 13, 17, 19, 21)
+				AND s.ProductID IN (6, 7, 11, 12, 13, 17, 19, 21, 22)
 
 			-- Keno
 			UNION ALL
@@ -1621,7 +1624,7 @@ BEGIN
 				AND b.winlostdate = @fromdate
 				AND s.ProductID = 15
 
-			-- Microgaming RNG Casino, RNG Casino Single Wallet (not yesterday and today ticket)
+			-- Microgaming RNG Casino, RNG Casino Single Wallet, Voidbridge (not yesterday and today ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1669,6 +1672,7 @@ BEGIN
 				CASE
 					WHEN s.ProductID = 6 THEN b.matchid
 					WHEN s.ProductID = 17 THEN 205
+					WHEN s.ProductID = 22 THEN 212
 				END AS Sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
@@ -1680,7 +1684,7 @@ BEGIN
 				b.winlostdate,
 				'' AS betcheck,
 				CASE
-					WHEN s.ProductID = 6 THEN b.transdesc
+					WHEN s.ProductID IN (6, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -1689,10 +1693,10 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- not today
-				AND (s.ProductId = 17
+				AND (s.ProductId IN (17, 22)
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 
-			-- Microgaming RNG Casino, RNG Casino Single Wallet (yesterday and today running ticket)
+			-- Microgaming RNG Casino, RNG Casino Single Wallet, Voidbridge (yesterday and today running ticket)
 			UNION ALL
 			SELECT
 				0 AS finalhomescore,
@@ -1740,6 +1744,7 @@ BEGIN
 				CASE
 					WHEN s.ProductID = 6 THEN b.matchid
 					WHEN s.ProductID = 17 THEN 205
+					WHEN s.ProductID = 22 THEN 212
 				END AS Sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
@@ -1751,7 +1756,7 @@ BEGIN
 				b.winlostdate,
 				'' AS betcheck,
 				CASE
-					WHEN s.ProductID = 6 THEN b.transdesc
+					WHEN s.ProductID IN (6, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -1761,7 +1766,7 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
-				AND (s.ProductId = 17
+				AND (s.ProductId IN (17, 22)
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID = 0
 			GROUP BY
@@ -1834,6 +1839,7 @@ BEGIN
 				CASE
 					WHEN s.ProductID = 6 THEN b.matchid
 					WHEN s.ProductID = 17 THEN 205
+					WHEN s.ProductID = 22 THEN 212
 				END AS Sporttype,
 				0 AS matchid,
 				0 AS IsNeutral,
@@ -1845,7 +1851,7 @@ BEGIN
 				b.winlostdate,
 				'' AS betcheck,
 				CASE
-					WHEN s.ProductID = 6 THEN b.transdesc
+					WHEN s.ProductID IN (6, 22) THEN b.transdesc
 					ELSE ''
 				END AS transdesc,
 				0 AS OddsSpread
@@ -1855,7 +1861,7 @@ BEGIN
 			WHERE b.custid = @custid
 				AND b.winlostdate = @fromdate
 				AND @fromdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)		-- today
-				AND (s.ProductId = 17
+				AND (s.ProductId IN (17, 22)
 					OR (s.ProductId = 6 AND s.SubProduct <> ''))
 				AND brng.statusID IN (111, 112, 113, 103)
 			GROUP BY
