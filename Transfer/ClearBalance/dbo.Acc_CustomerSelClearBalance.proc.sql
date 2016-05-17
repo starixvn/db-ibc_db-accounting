@@ -18,6 +18,7 @@ Revisions:
 	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
 	- 20160125@Percy: expand new range RNG Casino [Redmine: #50674]
 	- 20160215@Percy: support AllBet [Redmine: #50588]
+	- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 
 Param's Explanation:
 	
@@ -73,11 +74,18 @@ Param's Explanation:
 			  FROM bettrans  WITH (NOLOCK)
 			  WHERE recommend =@custid 
 					AND (
-							(ruben = 0 AND bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499)
+							(ruben = 0
+								AND bettype NOT IN (801,802,803,804,805,806,1003)
+								AND bettype NOT BETWEEN 2101 AND 2499
+								AND bettype NOT BETWEEN 4001 AND 7999
+							)
 							OR ruben <> 0
 						)
 					AND (
-							(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+							(CONVERT(DATE, winlostdate) >= @yesterday
+								AND bettype NOT BETWEEN 2101 AND 2499
+								AND bettype NOT BETWEEN 4001 AND 7999
+							)
 							OR CONVERT(DATE, winlostdate) < @yesterday
 						)
 			  GROUP BY custid
@@ -87,7 +95,7 @@ Param's Explanation:
 					 isnull(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0) balance
 			  FROM bettransRNG  WITH (NOLOCK)
 			  WHERE recommend =@custid 
-					AND gameID BETWEEN 2101 AND 2399
+					AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			  GROUP BY custid
 			  UNION ALL
 			  SELECT custid, 
@@ -110,7 +118,7 @@ Param's Explanation:
 			  FROM bettrans  WITH (NOLOCK)
 			  WHERE recommend =@custid
 				and ruben = 1
-				and bettype < 19001 and bettype NOT BETWEEN 2101 AND 2499
+				and bettype < 19001 and bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
 				and CONVERT(DATE, winlostdate) = @today
 			  GROUP BY custid
 			  UNION ALL
@@ -119,7 +127,7 @@ Param's Explanation:
 			  FROM bettransRNG  WITH (NOLOCK)
 			  WHERE recommend = @custid
 				and statusID NOT IN (0, 1)
-				and gameID BETWEEN 2101 AND 2399
+				and (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 				and CONVERT(DATE, winlostdate) = @today
 			  GROUP BY custid
 			  UNION ALL

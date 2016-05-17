@@ -1,14 +1,4 @@
-
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_Rpt_AllProductWLAutomail    Script Date: 4/4/2016 5:12:28 PM ******/
-
-/****** Object:  Stored Procedure dbo.Acc_Rpt_AllProductWLAutomail    Script Date: 10/26/2015 10:32:33 AM ******/
-
-CREATE PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
+ALTER PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
 	@AllowSendEmail BIT = 0 OUTPUT
 AS
 /*
@@ -30,7 +20,7 @@ AS
 		- 20160114@Sophia: Apply OW RNG [Redmine: #48285]
 		- 20160330@Sophia: Remove Bingo [Redmine: #54719]
 		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
-
+		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 		 
 	Param's Explanation:
 	
@@ -231,6 +221,7 @@ BEGIN
 							WHEN bettype = 1003 THEN 20174484
 							WHEN Sporttype = 44 THEN 20174356
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20664406
+							WHEN bettype BETWEEN 4001 AND 7999 THEN 21535688
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -261,6 +252,7 @@ BEGIN
 							WHEN bettype = 1003 THEN  20256514
 							WHEN Sporttype = 44 THEN 20174451
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20805826
+							WHEN bettype BETWEEN 4001 AND 7999 THEN 21526102
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate

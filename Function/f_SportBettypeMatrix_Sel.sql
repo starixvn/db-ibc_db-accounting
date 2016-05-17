@@ -1,12 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  UserDefinedFunction [dbo].[f_SportBettypeMatrix_Sel]    Script Date: 04/01/2016 02:50:42 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 
-/****** Object:  User Defined Function dbo.f_SportBettypeMatrix_Sel    Script Date: 3/23/2016 2:46:17 PM ******/
 ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 (
 	 @ProductID		TINYINT		 = 0
@@ -21,9 +15,10 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 	Creator: Percy	
 	Date: 20160323
 	Task: Get SportType_Bettype
-	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02, DBEAS.bodb_EAS, DBPRO.bodb02, DBDWH.bodb02
+	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02, DBPRO.bodb02, DBDWH.bodb02
 		
 	Revisions:
+		- 20160505@Percy: Return 2 columns RefTable, CasinoType
 		
 	Paramters Explanation:
  		@ProductID, @SportType, @BetType
@@ -48,9 +43,11 @@ SELECT DISTINCT
 	,ma.BetType
 	,ma.EventType
 	,ma.SubProduct
-FROM dbo.SportBettypeMatrix ma WITH(NOLOCK)
-INNER JOIN dbo.Products p WITH(NOLOCK)
-	ON p.ProductID = ma.ProductID
+	,ma.RefTable
+	,p.CasinoType
+FROM
+	dbo.SportBettypeMatrix ma WITH(NOLOCK)
+	INNER JOIN dbo.Products p WITH(NOLOCK) ON p.ProductID = ma.ProductID
 WHERE   (@ProductID		= 0  OR  ma.ProductID	= @ProductID)
 	AND (@SportType		= 0  OR  ma.SportType	= @SportType)
 	AND (@BetType		= 0  OR  ma.BetType		= @BetType)			
@@ -59,10 +56,3 @@ WHERE   (@ProductID		= 0  OR  ma.ProductID	= @ProductID)
 	AND (@ProductPrefix = '' OR  p.ProductPrefix IN (SELECT val FROM strSplit(@ProductPrefix, ',')))
 	AND (ma.IsTest		= 0	 OR  ma.IsTest		= @IsTest)
 GO
-GRANT VIEW DEFINITION ON [dbo].[f_SportBettypeMatrix_Sel] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT SELECT ON [dbo].[f_SportBettypeMatrix_Sel] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT SELECT ON [dbo].[f_SportBettypeMatrix_Sel] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[f_SportBettypeMatrix_Sel] TO [vnteam] AS [dbo]
