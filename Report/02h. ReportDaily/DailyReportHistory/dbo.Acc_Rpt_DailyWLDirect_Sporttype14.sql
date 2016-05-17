@@ -204,7 +204,7 @@ BEGIN
 	
 	--deposit super
 	INSERT INTO #DepSuper 
-	SELECT custid FROM f_DepSuper_1('All')
+	SELECT DISTINCT custid FROM f_DepSuper_1('All')
 	
 			
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT )
@@ -779,7 +779,7 @@ BEGIN
 	,(103, 6, 'Casino', 251)
 	,(104, 5, 'Virtual Sports', 180)
 	,(105, 8, 'Keno', 202)
-	,(108, 15,'Colosuss Bets', 204)
+	,(108, 15,'Colossus Bets', 204)
 
 	UPDATE	R
 	SET		DisplayOrder = P.DisplayOrder,

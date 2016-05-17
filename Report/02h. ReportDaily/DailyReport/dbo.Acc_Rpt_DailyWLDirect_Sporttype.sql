@@ -84,7 +84,7 @@ AS
 							. Remove P2P, Bingo
 		- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product [RedmineID#55584]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
-		- 20160504@Sophia: Refactor code, Remove Cockfighting 
+		- 20160504@Sophia: Refactor code, Remove Cockfighting
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -200,7 +200,7 @@ BEGIN
 	 
 	--deposit super
 	INSERT INTO #DepSuper 
-	SELECT custid FROM f_DepSuper_1('All')
+	SELECT DISTINCT custid FROM f_DepSuper_1('All')
 	
 			
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT )
@@ -208,7 +208,8 @@ BEGIN
 	FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
 	WHERE	@winlostdate BETWEEN FromDate AND Todate
 	GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate
-	 
+	
+	---CREATE CLUSTERED INDEX IX_ExtraPT ON #ExtraPT_Sel (SuperID, ExtraPT)
 	
 	INSERT INTO @tmpIBCFee (partnerID, IBCFee)
 		SELECT 1,1 --RACE-PHU
@@ -427,7 +428,8 @@ BEGIN
 			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END
   
 	-- Get from Datail table  
-	-- Get bettransRNG data	
+	-- Get bettransRNG data
+	
 	INSERT INTO #srcDetail (srecommend ,site , winlost_actualrate , winlost_virtualrate , position_actualrate , position_virtualrate , commission_actualrate , commission_virtualrate , 
 							Linetotal_actualrate , Linetotal_virtualrate , turnover_actualrate , turnover_virtualrate, ProductId )
 	SELECT	b.srecommend,
@@ -772,7 +774,7 @@ BEGIN
 	,(103, 6, 'Casino', 251)
 	,(104, 5, 'Virtual Sports', 180)
 	,(105, 8, 'Keno', 202)
-	,(108, 15,'Colosuss Bets', 204)
+	,(108, 15,'Colossus Bets', 204)
 
 	UPDATE	R
 	SET		DisplayOrder = P.DisplayOrder,
@@ -798,7 +800,7 @@ BEGIN
 	GROUP BY DisplayOrder, SportName, SportType, ibc, site, ProductId
 	ORDER BY DisplayOrder asc, ibc, site	
 
-	
+					
 	DROP TABLE #src
 	DROP TABLE #srcDetail
 	DROP TABLE #DepSuper
