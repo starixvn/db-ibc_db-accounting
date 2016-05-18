@@ -29,7 +29,7 @@ AS
 		DB: DBCust/CustDB
 		
 		Revisions:
-		
+			- 20160511@Dominic: Change SP to use f_Winlimit_GetProductSetting at DBCUST.custDB [Redmine: #57151]
 		Parameters Explanation:	
 			@CustId	: Player ID.
 	*/
@@ -37,8 +37,7 @@ BEGIN
 	SET NOCOUNT ON;
 	DECLARE @ProductSetting TABLE(ProductId TINYINT, ProductName VARCHAR(50), BetType SMALLINT, IsActive_Company BIT)
 	INSERT INTO @ProductSetting
-	SELECT ProductId, ProductName, BetType, IsActive_Company
-	FROM OPENQUERY(DBTXN,'SELECT ProductId, ProductName, BetType, IsActive_Company FROM bodb02.dbo.f_Winlimit_GetProductSetting()')
+	SELECT ProductId, ProductName, BetType, IsActive_Company FROM dbo.f_Winlimit_GetProductSetting()
 
 	DECLARE @ROLEID int = 1, -- Search member level only.
 			@CustID int,

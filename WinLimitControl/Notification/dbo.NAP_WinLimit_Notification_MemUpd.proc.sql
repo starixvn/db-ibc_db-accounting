@@ -1,3 +1,6 @@
+USE bodb02
+GO
+
 ALTER PROCEDURE [dbo].[NAP_WinLimit_Notification_MemUpd]
 (
 	@MemNotify		XML
@@ -12,13 +15,14 @@ DB: DBTXN.bodb02
 Original:
 Revisions:
 	- 20150702@bobby.nguyen: Initial
+	- 20160507@Patrick: #57213 - Voidbridge integration
 	
 Param's Explanation:
 	• @ErrCode	:
 		= 0		: Transaction recorded successfully.
 		> 0		: Specific Error.
 	• @ErrMsg	: Error description.
-	• @MemNotify: XML.format(<notify><row custid = "1" productid="1" /></notify>)
+	• @MemNotify: XML.format(<notify><row custid = "1" productid="1" winlostdate="" /></notify>)
 */
 BEGIN
 	SET NOCOUNT ON
@@ -27,6 +31,7 @@ BEGIN
 	(
 		custid			INT
 		, productid		TINYINT
+		, winlostdate	SMALLDATETIME
 	)
 	
 	-- RESET output
@@ -36,7 +41,8 @@ BEGIN
 	INSERT INTO #tempMemNotify
 	SELECT  
        Tbl.Col.value('@custid', 'INT'),  
-       Tbl.Col.value('@productid', 'TINYINT')
+       Tbl.Col.value('@productid', 'TINYINT'),
+	   Tbl.Col.value('@winlostdate', 'SMALLDATETIME')
 
 	FROM @MemNotify.nodes('//notify/row') Tbl(Col)
 	
@@ -52,8 +58,9 @@ BEGIN
 	SET g.IsNotified = 1
 	FROM dbo.WinLimit_Game g WITH(ROWLOCK, UPDLOCK)
 		INNER JOIN #tempMemNotify t
-		ON g.custid 	= t.custid
-		AND g.productid = t.productid
+		ON g.custid 		= t.custid
+		AND g.winlostdate	= t.winlostdate
+		AND g.productid		= t.productid
 	
 	
 	RETURN;

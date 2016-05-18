@@ -33,7 +33,7 @@ AS
 		DB: DBCUST/CustDB
 		
 		Revisions:
-		
+			- 20160511@Dominic: Change SP to use f_Winlimit_GetProductSetting at DBCUST.custDB [Redmine: #57151]
 		Parameters Explanation:	
 			@UserName	: User Name.
 			@ExchangeID : Currency ID.
@@ -63,8 +63,7 @@ BEGIN
 	)
 	
 	INSERT INTO @ProductSetting
-	SELECT ProductId, ProductName, BetType, IsActive_Company
-	FROM OPENQUERY(DBTXN,'SELECT ProductId, ProductName, BetType, IsActive_Company FROM bodb02.dbo.f_Winlimit_GetProductSetting() WHERE IsActive_Company = 1')
+	SELECT ProductId, ProductName, BetType, IsActive_Company FROM dbo.f_Winlimit_GetProductSetting() WHERE IsActive_Company = 1
 	
 	INSERT INTO @TVP_CustSetting
 	SELECT	DENSE_RANK() OVER(ORDER BY
