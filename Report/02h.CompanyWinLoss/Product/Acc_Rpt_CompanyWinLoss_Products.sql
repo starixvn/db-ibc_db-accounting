@@ -423,9 +423,9 @@ BEGIN
 				 WHEN b.sporttype IN (2,44) THEN -4 				 
 				 END as ProductID,	
 			site,
-			SUM(winLost_virtualrate) AS winlost,
-			SUM(position_virtualrate) AS Position,
-			SUM(commission_virtualrate) AS Commission,	
+			SUM(winLost_actualrate) AS winlost,
+			SUM(position_actualrate) AS Position,
+			SUM(commission_actualrate) AS Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,
 			SUM(turnover_actualrate) AS RealTurnover,
@@ -450,9 +450,9 @@ BEGIN
 	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
 	SELECT
 			b.ProductID, site,
-			SUM(ISNULL(b.winlost_virtualrate,0)) WinLost,
-			SUM(ISNULL(b.position_virtualrate,0)) Position,
-			SUM(ISNULL(commission_virtualrate,0)) Commission,	
+			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
+			SUM(ISNULL(b.position_actualrate,0)) Position,
+			SUM(ISNULL(commission_actualrate,0)) Commission,	
 			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
 			SUM(ISNULL(Linetotal_virtualrate,0)) as VirtualLineTotal,	
 			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
@@ -473,9 +473,9 @@ BEGIN
 	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
 	SELECT 
 			b.ProductId, site,
-			SUM(winlost_virtualrate) WinLost,
-			SUM(position_virtualrate) Position,
-			SUM(commission_virtualrate) Commission,	
+			SUM(winlost_actualrate) WinLost,
+			SUM(position_actualrate) Position,
+			SUM(commission_actualrate) Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
 			SUM(turnover_actualrate) RealTurnover,
@@ -495,9 +495,9 @@ BEGIN
 	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
 	SELECT
 		    b.ProductId, site,
-			SUM(winlost_virtualrate) WinLost,
-			SUM(position_virtualrate) Position,
-			SUM(commission_virtualrate) Commission,	
+			SUM(winlost_actualrate) WinLost,
+			SUM(position_actualrate) Position,
+			SUM(commission_actualrate) Commission,	
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
 			SUM(turnover_actualrate) RealTurnover,
