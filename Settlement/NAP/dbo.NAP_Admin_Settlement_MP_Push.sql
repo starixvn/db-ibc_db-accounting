@@ -158,7 +158,7 @@ BEGIN
 					BREAK
 					 
 				BEGIN TRY
-					EXEC [NAP_Admin_Settlement_MP] @matchid = @matchid
+										EXEC [NAP_Admin_Settlement_MP] @matchid = @matchid
 						,@creator = @AdminId
 						,@action  = @action
 						,@IP      = @IP
@@ -186,18 +186,7 @@ BEGIN
 		END
 	END
 END
-
-
 GO
-
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [vnteam] AS [dbo]
