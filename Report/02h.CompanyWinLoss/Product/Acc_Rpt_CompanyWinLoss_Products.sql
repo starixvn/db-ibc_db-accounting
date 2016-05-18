@@ -690,21 +690,7 @@ BEGIN
 	INNER JOIN @ProductOrder P
 			ON P.ProductID = R.ProductId
 			AND P.Site = CASE WHEN P.Site <> 0 THEN r.Site ELSE 0 END  
-	
 
-	--SELECT	DisplayOrder, site, 
-	--		SUM (winlost) AS winlost, 
-	--		SUM (Position) AS Position, 
-	--		SUM (Commission) AS Commission, 
-	--		SUM (RealLineTotal) AS RealLineTotal, 
-	--		SUM (VirtualLineTotal) AS VirtualLineTotal, 
-	--		SUM (RealTurnover) AS RealTurnover, 
-	--		SUM (VirtualTurnover) AS VirtualTurnover, 
-	--		SUM (ExtraPT) AS ExtraPT, 
-	--		ProductId
-	--FROM	
-	--GROUP BY DisplayOrder, site, ProductId
-	--ORDER BY DisplayOrder asc,  site	
 
 	 SELECT		CASE WHEN d.DisplayOrder = 100 THEN 'RM' ELSE d.ProductName END AS GroupName,
                 CASE WHEN d.DisplayOrder = 100 THEN d.ProductName
@@ -718,7 +704,10 @@ BEGIN
                 d.VirtualLineTotal AS VirtualIncome,
                 d.RealLineTotal - d.VirtualLineTotal AS VarianceIncome,
                 d.RealTurnover AS RealTurnover,
-                d.VirtualTurnover AS VirtualTurnover
+                d.VirtualTurnover AS VirtualTurnover, 
+				d.extraPT, 
+				d.RealLineTotal - d.extraPT AS AfterExtraPT 
+
         FROM #Result d            
 		ORDER BY DisplayOrder ASC,  site	
 
