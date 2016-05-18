@@ -1,12 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_MP_Push]    Script Date: 10/07/2015 11:08:07 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 10/6/2015 1:45:54 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_MP_Push    Script Date: 02/10/2015 9:57:16 AM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -28,6 +19,7 @@ AS
 		- 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493]		
 		- 20150922@Johnson: check result status from ResultDetail [Redmine: #43806]
 		- 20151002@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
+		- 20160429@Kathy: Enhance performance [Redmine:#52426]
 	Param's Explanation:		
 		
 */
@@ -119,7 +111,7 @@ BEGIN
 	END
 	
 	-- check waiting ticket
-				EXEC NAP_Admin_Settlement_Checking
+	EXEC NAP_Admin_Settlement_Checking
 		@MatchIds = @MatchIds	OUTPUT
 		,@Action = @Action
 		,@Mode = 'CAL-MP'	
@@ -156,14 +148,6 @@ BEGIN
 	BEGIN
 		IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_' -- UAT1 -->UAT9
 		BEGIN
-			DECLARE @ActionId INT
-
-			SELECT @ActionId = CASE 
-									WHEN @Action = 'REFUND-HT' THEN 14
-									WHEN @Action = 'REFUND-FT' THEN 15
-									WHEN @Action = 'REFUND' THEN 16
-									ELSE - 1
-							   END
 
 			WHILE(1 = 1)
 			BEGIN
@@ -174,7 +158,7 @@ BEGIN
 					BREAK
 					 
 				BEGIN TRY
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																EXEC [NAP_Admin_Settlement_Parlay] @matchids = @matchid
+										EXEC [NAP_Admin_Settlement_MP] @matchid = @matchid
 						,@creator = @AdminId
 						,@action  = @action
 						,@IP      = @IP
@@ -187,16 +171,6 @@ BEGIN
 						  ,@ErrCode = @@error
 					RETURN
 				END CATCH
-
-				IF @action = 'CAL'
-					EXEC Acc_Set_ConfirmedActionParlay @matchids = @matchid
-				ELSE
-				BEGIN
-
-				IF @ActionId <> - 1
-					EXEC Acc_Set_ConfirmedAction @matchid = @matchid
-						,@action = @ActionId
-				END
 
 				DELETE 
 				FROM @match
