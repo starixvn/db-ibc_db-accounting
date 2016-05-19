@@ -84,7 +84,7 @@ AS
 							. Remove P2P, Bingo
 		- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product [RedmineID#55584]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
-		- 20160504@Sophia: Refactor code, Remove Cockfighting
+		- 20160504@Sophia: Refactor code, Enhance Performance , Remove Cockfighting [Redmind: #56764]
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -200,7 +200,7 @@ BEGIN
 	 
 	--deposit super
 	INSERT INTO #DepSuper 
-	SELECT DISTINCT custid FROM f_DepSuper_1('All')
+	SELECT custid FROM f_DepSuper_1('All')
 	
 			
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT )
