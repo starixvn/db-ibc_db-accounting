@@ -28,7 +28,7 @@ Parameters:
 @IsLive: 2 - ALL. 0 - Non-Live. 1 - Live
 
 Example:
-EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@StartDate='2016-01-01', @SportType=1, @BetType=1, @IsHedge = 0, @IsLive = 2
+EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@StartDate='2016-01-01', @SportType=2, @BetType=1, @IsHedge = 0, @IsLive = 2
 
 */
 
@@ -37,45 +37,34 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
 
          CREATE TABLE #Match
          (matchid   INT,
-          sporttype SMALLINT,
-          type      VARCHAR(10),
-          eventdate DATETIME
+          leagueid  INT,
+          homeid    INT,
+          awayid    INT,
+          matchcode NVARCHAR(50),
+          isneutral BIT,
+          eventdate DATETIME,
          );
          INSERT INTO #Match
-                SELECT DISTINCT
-                       m.matchid,
-                       l.sporttype,
-                       m.type,
-                       eventdate
-                FROM
-                (
-                    SELECT matchid,
-                           leagueid,
-                           eventdate,
-                           'match' AS type
-                    FROM Match WITH (NOLOCK)
-                    WHERE eventdate BETWEEN @StartDate AND @EndDate
-                    UNION ALL
-                    SELECT orid,
-                           leagueid,
-                           eventdate,
-                           'outright' AS type
-                    FROM outright WITH (NOLOCK)
-                    WHERE eventdate BETWEEN @StartDate AND @EndDate
-                ) m
-                INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid
-                WHERE l.sporttype = @SportType;
+                SELECT m.matchid,
+                       m.leagueid,
+                       m.homeid,
+                       m.awayid,
+                       m.matchcode,
+                       m.isneutral,
+                       m.eventdate
+                FROM Match m WITH (NOLOCK)
+                WHERE m.sporttype = @SportType
+                      AND eventdate BETWEEN @StartDate AND @EndDate;
      END;
      BEGIN -- #Data
 
          CREATE TABLE #Data
          (MatchId         INT,
           MatchCode       VARCHAR(100),
-          EventDate       DATETIME,
-          SportType       INT,
           IsNeutral       BIT,
           HomeId          INT,
           AwayId          INT,
+          EventDate       DATETIME,
           LeagueId        INT,
           MemberWinLoss   MONEY,
           SMAWinLoss      MONEY,
@@ -86,131 +75,44 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
           VirtualTurnover MONEY
          );
      END;
-     BEGIN -- Outright
-
-         IF @BetType = 10
-             BEGIN
-                 INSERT INTO #Data
-                        SELECT b.matchid,
-                               o.matchcode,
-                               o.eventdate,
-                               1 AS SportType,
-                               0 AS IsNeutral,
-                               o.TeamId AS HomeId,
-                               0 AS AwayId,
-                               l.leagueid,
-                               SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
-                               SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                               SUM(scomm * actualrate) Commission,
-                               SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                               SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                               SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) RealTurnover,
-                               SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
-                        FROM bettrans b WITH (nolock)
-                             INNER JOIN outright o WITH (nolock) ON b.matchid = o.orid
-                             INNER JOIN league l WITH (nolock) ON o.leagueid = l.leagueid
-                             INNER JOIN sports sp WITH (nolock) ON l.sporttype = sp.sporttype
-                        WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                              AND b.matchid > 0
-                              AND b.BetType = 10
-                              AND b.ruben = 1
-                              AND b.statusID NOT IN(101, 102, 103, 121)
-                        GROUP BY b.matchid,
-                                 o.matchcode,
-                                 o.eventdate,
-                                 o.TeamId,
-                                 l.leagueid;
-             END;
-     END;
-     BEGIN -- Hedge
-
-         IF @BetType <> 10
-            AND @IsHedge = 1
-             BEGIN
-                 INSERT INTO #Data
-                        SELECT b.matchid,
-                               m.matchcode,
-                               m.eventdate,
-                               m.sporttype,
-                               ISNULL(m.isNeutral, 0) AS IsNeutral,
-                               m.HomeId,
-                               m.AwayId,
-                               m.leagueid,
-                               SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
-                               SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                               SUM(scomm * actualrate) Commission,
-                               SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                               SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                               SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) RealTurnover,
-                               SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
-                        FROM bettrans b WITH (nolock)
-                             INNER JOIN match m WITH (nolock) ON b.matchid = m.matchid
-                        WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                              AND b.BetType = @BetType
-                              AND (@IsLive > 1
-                                   OR b.liveindicator = @IsLive)
-                              AND matchcode LIKE '%hedge%'
-                              AND b.matchid > 0
-                              AND b.ruben = 1
-                              AND statusID NOT IN(101, 102, 103, 121)
-                        GROUP BY b.matchid,
-                                 m.matchcode,
-                                 m.eventdate,
-                                 m.sporttype,
-                                 m.HomeId,
-                                 m.AwayId,
-                                 m.leagueid,
-                                 m.isNeutral
-                        ORDER BY m.leagueid,
-                                 m.matchcode,
-                                 m.HomeId;
-             END;
-     END;
-     BEGIN -- Non-Hedge
-
-         IF @BetType <> 10
-            AND @IsHedge = 0
-             BEGIN
-                 INSERT INTO #Data
-                        SELECT b.matchid,
-                               m.matchcode,
-                               m.eventdate,
-                               m.sporttype,
-                               ISNULL(m.isNeutral, 0) AS IsNeutral,
-                               m.HomeId,
-                               m.AwayId,
-                               m.leagueid,
-                               SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
-                               SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                               SUM(scomm * actualrate) Commission,
-                               SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                               SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                               SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) RealTurnover,
-                               SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
-                        FROM bettrans b WITH (nolock)
-                             INNER JOIN match m WITH (nolock) ON b.matchid = m.matchid
-                        WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                              AND b.BetType = @BetType
-                              AND (@IsLive > 1
-                                   OR b.liveindicator = @IsLive)
-                              AND m.matchcode NOT LIKE '%hedge%'
-                              AND b.matchid > 0
-                              AND b.ruben = 1
-                              AND statusID NOT IN(101, 102, 103, 121)
-                        GROUP BY b.matchid,
-                                 m.matchcode,
-                                 m.eventdate,
-                                 m.sporttype,
-                                 m.HomeId,
-                                 m.AwayId,
-                                 b.liveindicator,
-                                 b.BetType,
-                                 m.leagueid,
-                                 m.isNeutral
-                        ORDER BY m.leagueid,
-                                 m.matchcode,
-                                 m.HomeId;
-             END;
+     BEGIN -- INSERT INTO #Data
+         INSERT INTO #Data
+                SELECT b.matchid,
+                       m.matchcode,
+                       ISNULL(m.isNeutral, 0) AS IsNeutral,
+                       m.HomeId,
+                       m.AwayId,
+                       m.eventdate,
+                       m.leagueid,
+                       SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
+                       SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+                       SUM(scomm * actualrate) Commission,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
+                       SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
+                FROM bettrans b WITH (nolock)
+                     INNER JOIN #Match m ON b.matchid = m.matchid
+                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                      AND b.BetType = @BetType
+                      AND (@IsLive > 1
+                           OR b.liveindicator = @IsLive)
+                      AND ((@IsHedge = 1
+                            AND m.matchcode LIKE '%hedge%')
+                           OR (@IsHedge = 0
+                               AND m.matchcode NOT LIKE '%hedge%'))
+                      AND b.ruben = 1
+                      AND statusID NOT IN(101, 102, 103, 121)
+                GROUP BY b.matchid,
+                         m.matchcode,
+                         m.isNeutral,
+                         m.HomeId,
+                         m.AwayId,
+                         m.eventdate,
+                         m.leagueid
+                ORDER BY m.leagueid,
+                         m.matchcode,
+                         m.HomeId;
      END;
      BEGIN -- RM
 
@@ -221,11 +123,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                            THEN '8RM'
                            ELSE 'BARM'
                        END MatchCode,
-                       '1990-01-01' AS EventDate,
-                       0 AS SportType,
                        0 AS IsNeutral,
                        0 HomeId,
                        0 AwayId,
+                       '1990-01-01' EventDate,
                        0 LeagueId,
                        -SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
                        -SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
@@ -240,12 +141,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
-                      AND m.type = CASE
-                                       WHEN b.BetType = 10
-                                       THEN 'outright'
-                                       ELSE 'match'
-                                   END
-                      AND b.matchid > 0
                       AND b.ruben = 1
                       AND b.statusID NOT IN(101, 102, 103, 121)
                      AND b.recommend IN(52466, 5707545)
@@ -259,11 +154,11 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
 
          SELECT d.MatchId,
                 d.MatchCode,
-                d.EventDate,
-                d.SportType,
+                @SportType SportType,
                 d.IsNeutral,
                 d.HomeId,
                 d.AwayId,
+                d.EventDate,
                 d.LeagueId,
                 d.MemberWinLoss AS MemberWinLoss,
                 d.SMAWinLoss AS SMAWinLoss,

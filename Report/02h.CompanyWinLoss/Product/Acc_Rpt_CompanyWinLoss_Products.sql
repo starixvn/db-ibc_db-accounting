@@ -1,11 +1,15 @@
- SET QUOTED_IDENTIFIER ON 
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_Products]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products];
 GO
-SET ANSI_NULLS ON 
-GO
- 
-ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products]
+CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products]
 	 @StartDate SMALLDATETIME,
-     @EndDate   SMALLDATETIME
+      @EndDate   SMALLDATETIME
 AS
 /*	Creator: Sophia.Nguyen
 	Date: 2016-05-11
