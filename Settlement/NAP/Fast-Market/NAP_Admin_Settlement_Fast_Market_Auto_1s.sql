@@ -137,26 +137,17 @@ BEGIN
 			IF @BetType IS NULL OR @Position IS NULL
 				CONTINUE
 
-			IF @Action IN ('CAL', 'UNDO')
-			BEGIN
-				--update result detail
-				EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
-					, @BetType = @BetType
-					, @Position = @Position
-					, @BetOption = @BetOption
-					, @ResultStatus = @ResultStatus
-					, @Action = @Action
+			--update result detail
+			EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
+				, @BetType = @BetType
+				, @Position = @Position
+				, @BetOption = @BetOption
+				, @ResultStatus = @ResultStatus
+				, @Action = @Action
 
-					, @AdminId = @AdminId
-					, @ErrCode = @ErrCode OUTPUT
-					, @ErrMsg = @ErrMsg OUTPUT
-
-				--IF @ErrCode > 0
-				--BEGIN
-				--	--TODO
-				--	BREAK
-				--END
-			END
+				, @AdminId = @AdminId
+				, @ErrCode = @ErrCode OUTPUT
+				, @ErrMsg = @ErrMsg OUTPUT
 
 			--get betcount
 			SELECT @betcount_221 = ISNULL(SUM(CASE bettype WHEN 221 THEN 1 ELSE 0 END), 0)
