@@ -14,28 +14,29 @@ AS
 /*
     Created :   Logan
     Task    :   Update status of E-Sports
-    DB      :   DBTXN/CustDB
+    DB      :   DBCUST/CustDB
     Original:
 
     Revisions:
-    	- 20140820@Logan: Initial version [Redmine: #20792]
-        - 20140926@Logan: Allow specific admin using the function
+		- 20140820@Logan: Initial version [Redmine: #20792]
+		- 20140926@Logan: Allow specific admin using the function
 		- 20150606@Elodie: Separate CustDB to DBCUST server (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB)
+		- 20160517@Billy: Allow ESports Setting for Adminut1 - [Redmine: #56563]
     Param's Explanation:
 	
 */
 BEGIN
 
     SET NOCOUNT ON
-    IF @UserID NOT IN (352361, 352362, 661969, 12383608, 12383613)
-    BEGIN
-        SELECT @ErrCode = 101
-             , @ErrMsg = 'Function is under maintenance.'
+    --IF @UserID NOT IN (352361, 352362, 661969, 12383608, 12383613)
+    --BEGIN
+    --    SELECT @ErrCode = 101
+    --         , @ErrMsg = 'Function is under maintenance.'
 
-        RETURN
-    END
-    ELSE
-    BEGIN
+    --    RETURN
+    --END
+    --ELSE
+    --BEGIN
         DECLARE @startRun DATETIME
               , @endRun   DATETIME
               , @duration INT
@@ -217,7 +218,7 @@ BEGIN
 		      , @duration = @duration
         END CATCH
 
-    END
+    --END
 END
 
 GO
