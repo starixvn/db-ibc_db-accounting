@@ -98,8 +98,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
           ToteFee
          )
                 SELECT DISTINCT
-                       o.orid AS matchid,
-                       o.leagueid,
+                       o.orid AS MatchId,
+                       o.LeagueId,
                        t.IBCFee,
                        o.groupmatch,
                        p.ToteCommWin,
@@ -107,12 +107,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
                        (p.ToteCommWin + p.ToteCommPlace) / 2 AS ToteCommWP,
                        p.ToteFee
                 FROM outright AS o WITH (NOLOCK)
-                     INNER JOIN LeagueDetail AS p WITH (NOLOCK) ON o.leagueId = p.leagueId
+                     INNER JOIN LeagueDetail AS p WITH (NOLOCK) ON o.LeagueId = p.LeagueId
                                                                    AND p.programDate = o.programDate
-                     INNER JOIN League AS l WITH (NOLOCK) ON p.leagueid = l.leagueid
-                     INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.leagueid = r.meetingId
+                     INNER JOIN League AS l WITH (NOLOCK) ON p.LeagueId = l.LeagueId
+                     INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.LeagueId = r.meetingId
                      INNER JOIN @IBCFee AS t ON r.partnerId = t.partnerId
-                WHERE o.eventdate BETWEEN @StartDate AND @EndDate
+                WHERE o.EventDate BETWEEN @StartDate AND @EndDate
                       AND l.sporttype = @sporttype;
      END;
      BEGIN -- #Data
@@ -130,7 +130,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
      BEGIN -- INSERT INTO #Data
 
          INSERT INTO #Data
-                SELECT cs.MeetingId AS leagueid,
+                SELECT cs.MeetingId AS LeagueId,
                        cs.Race AS Race,
                        SUM((b.winlost - b.actual_stake) * b.actualrate) AS MemberWinLoss,
                        SUM((b.awinlost + b.mwinlost + b.swinlost) * b.actualrate) AS SMAWinLoss,
@@ -166,7 +166,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
                                ELSE b.actual_stake * ISNULL(oddsspread, 0) * b.actualrate
                            END) AS RealTurnover
                 FROM bettrans AS b WITH (nolock)
-                     INNER JOIN #CommSetting AS cs ON b.matchid = cs.matchid
+                     INNER JOIN #CommSetting AS cs ON b.MatchId = cs.MatchId
                      LEFT JOIN
                 (
                     SELECT refno,
@@ -192,7 +192,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
                 ) AS bm ON b.transid = bm.refno
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
-                      AND b.matchid > 0
+                      AND b.MatchId > 0
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY cs.MeetingId,
@@ -200,7 +200,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
      END;
      BEGIN -- Query
 
-         SELECT l.leagueid AS GroupId,
+         SELECT l.LeagueId AS GroupId,
                 l.leaguename AS GroupName,
                 d.Race AS RowName,
                 d.MemberWinLoss AS MemberWinLoss,
@@ -209,7 +209,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
                 d.RealIncome AS RealIncome,
                 d.RealTurnover AS RealTurnover
          FROM #Data AS d
-              INNER JOIN league AS l WITH (NOLOCK) ON l.leagueid = d.leagueid
+              INNER JOIN league AS l WITH (NOLOCK) ON l.LeagueId = d.LeagueId
          ORDER BY GroupName,
                   RowName;
      END;

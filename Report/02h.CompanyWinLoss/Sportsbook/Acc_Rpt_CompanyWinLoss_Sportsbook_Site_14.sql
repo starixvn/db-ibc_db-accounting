@@ -46,8 +46,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site_14] @StartDate='2016-01-01', @EndDa
                                Site
                         FROM customer AS c WITH (NOLOCK)
                         WHERE c.RoleID = 2
-                              AND c.CustId <> 5707545
-                              AND EXISTS
+                              AND c.CustId NOT IN(52466, 5707545)
+                        AND EXISTS
                         (
                             SELECT 1
                             FROM f_DepSuper_1('All') dep
@@ -64,8 +64,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site_14] @StartDate='2016-01-01', @EndDa
                                Site
                         FROM customer AS c WITH (NOLOCK)
                         WHERE c.RoleID = 2
-                              AND c.CustId <> 52466
-                              AND NOT EXISTS
+                              AND c.CustId NOT IN(52466, 5707545)
+                        AND NOT EXISTS
                         (
                             SELECT 1
                             FROM f_DepSuper_1('All') dep
@@ -78,34 +78,34 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site_14] @StartDate='2016-01-01', @EndDa
      END;
      BEGIN -- Match
          CREATE TABLE #Match
-         (matchid INT,
+         (MatchId INT,
           type    VARCHAR(10),
-          PRIMARY KEY(matchid, type)
+          PRIMARY KEY(MatchId, type)
          );
          INSERT INTO #Match
-                SELECT m.matchid,
+                SELECT m.MatchId,
                        m.type
                 FROM
                 (
-                    SELECT matchid,
-                           leagueid,
+                    SELECT MatchId,
+                           LeagueId,
                            'match' AS type
                     FROM match14 WITH (nolock)
                     WHERE @BetType <> 10
-                          AND eventdate BETWEEN @StartDate AND @EndDate
+                          AND EventDate BETWEEN @StartDate AND @EndDate
                           AND ((@IsHedge = 1
-                                AND matchcode LIKE '%Hedge%')
+                                AND MatchCode LIKE '%Hedge%')
                                OR (@IsHedge = 0
-                                   AND matchcode NOT LIKE '%Hedge%'))
+                                   AND MatchCode NOT LIKE '%Hedge%'))
                     UNION ALL
                     SELECT orid,
-                           leagueid,
+                           LeagueId,
                            'outright' AS type
                     FROM outright14 WITH (nolock)
                     WHERE @BetType = 10
-                          AND eventdate BETWEEN @StartDate AND @EndDate
+                          AND EventDate BETWEEN @StartDate AND @EndDate
                 ) m
-                INNER JOIN league l WITH (nolock) ON m.leagueid = l.leagueid
+                INNER JOIN league l WITH (nolock) ON m.LeagueId = l.LeagueId
                 INNER JOIN sports sp WITH (nolock) ON l.sporttype = sp.sporttype
                 WHERE sp.sporttype = @sporttype;
      END;
@@ -134,7 +134,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site_14] @StartDate='2016-01-01', @EndDa
                        SUM((1 - tpositiontaking) * stake * virtualrate) VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN #DepositAgent ag ON b.recommend = ag.custid
-                     INNER JOIN #Match m ON b.matchid = m.matchid
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1

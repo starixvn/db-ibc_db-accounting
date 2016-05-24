@@ -92,7 +92,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_SportType_14] @StartDate='2016-01-01', @EndD
      BEGIN -- #CommSetting
 
          CREATE TABLE #CommSetting
-         (matchid       INT PRIMARY KEY,
+         (MatchId       INT PRIMARY KEY,
           IBCFee        BIT,
           sporttype     TINYINT,
           ToteCommWin   SMALLMONEY,
@@ -109,12 +109,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_SportType_14] @StartDate='2016-01-01', @EndD
                        (p.ToteCommWin + p.ToteCommPlace) / 2 AS ToteCommWP,
                        p.ToteFee
                 FROM outright14 AS m WITH (NOLOCK)
-                     INNER JOIN LeagueDetail AS p WITH (NOLOCK) ON m.leagueid = p.leagueid
+                     INNER JOIN LeagueDetail AS p WITH (NOLOCK) ON m.LeagueId = p.LeagueId
                                                                    AND p.programDate = m.programDate
-                     INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.leagueid = r.meetingid
-                     INNER JOIN league AS l WITH (NOLOCK) ON m.leagueid = l.leagueid
+                     INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.LeagueId = r.meetingid
+                     INNER JOIN league AS l WITH (NOLOCK) ON m.LeagueId = l.LeagueId
                      INNER JOIN @IBCFee AS t ON r.partnerId = t.partnerId
-                WHERE m.eventdate BETWEEN @StartDate AND @EndDate
+                WHERE m.EventDate BETWEEN @StartDate AND @EndDate
                       AND l.sporttype BETWEEN 151 AND 153;
      END;
      BEGIN -- #Data
@@ -172,7 +172,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_SportType_14] @StartDate='2016-01-01', @EndD
                                ELSE b.actual_stake * ISNULL(oddsspread, 0) * b.actualrate
                            END) AS RealTurnover
                 FROM bettrans14 AS b WITH (nolock)
-                     INNER JOIN #CommSetting AS cs ON b.matchid = cs.matchid
+                     INNER JOIN #CommSetting AS cs ON b.MatchId = cs.MatchId
                      LEFT JOIN
                 (
                     SELECT refno,
@@ -203,7 +203,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_SportType_14] @StartDate='2016-01-01', @EndD
                 ) AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                      AND b.matchid > 0
+                      AND b.MatchId > 0
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY cs.sporttype,

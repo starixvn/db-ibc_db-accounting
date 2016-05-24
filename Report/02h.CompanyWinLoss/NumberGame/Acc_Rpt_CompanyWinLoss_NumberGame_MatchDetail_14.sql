@@ -42,35 +42,35 @@ EXEC [Acc_Rpt_CompanyWinLoss_NumberGame_MatchDetail_14] @BetType=81,@IsLive=0,@S
      BEGIN -- Insert Into #Data
 
          INSERT INTO #Data
-                SELECT m.leagueid,
-                       m.matchcode,
+                SELECT m.LeagueId,
+                       m.MatchCode,
                        SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
                        SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) AS RealTurnover
                 FROM bettrans14 AS b WITH (nolock)
-                     INNER JOIN match14 AS m WITH (nolock) ON b.matchid = m.matchid
+                     INNER JOIN match14 AS m WITH (nolock) ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
                       AND b.liveindicator = @IsLive
-                      AND b.matchid > 0
+                      AND b.MatchId > 0
                       AND b.ruben = 1
                       AND statusId NOT IN(101, 102, 103, 121)
-                GROUP BY m.matchcode,
-                         m.leagueid;
+                GROUP BY m.MatchCode,
+                         m.LeagueId;
      END;
      BEGIN -- Query      
 
          SELECT l.leaguename AS GroupName,
-                d.matchcode AS RowName,
+                d.MatchCode AS RowName,
                 d.MemberWinLoss,
                 d.SMAWinLoss,
                 d.Commission,
                 d.RealIncome,
                 d.RealTurnover
          FROM #Data AS d
-              INNER JOIN league AS l WITH (nolock) ON l.leagueid = d.leagueid
+              INNER JOIN league AS l WITH (nolock) ON l.LeagueId = d.LeagueId
          WHERE l.sporttype = 161
          ORDER BY GroupName,
                   RowName;

@@ -27,32 +27,32 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSportsbook_MatchDetail_14] @StartDate='2016-
 
      SET NOCOUNT ON;
      SELECT m.MatchId,
-            m.matchcode,
+            m.MatchCode,
             m.HomeId,
             m.AwayId,
-            m.leagueid,
+            m.LeagueId,
             SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
             SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
             SUM(scomm * actualrate) Commission,
             SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
             SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) AS RealTurnover
      FROM bettrans14 AS b WITH (nolock)
-          INNER JOIN match14 AS m WITH (nolock) ON b.matchid = m.matchid
+          INNER JOIN match14 AS m WITH (nolock) ON b.MatchId = m.MatchId
      WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
            AND b.BetType = @BetType
            AND m.SportType = @SportType
-           AND b.matchid > 0
+           AND b.MatchId > 0
            AND b.ruben = 1
            AND statusId NOT IN(101, 102, 103, 121)
      GROUP BY m.MatchId,
-              m.matchcode,
+              m.MatchCode,
               m.HomeId,
               m.AwayId,
-              m.leagueid
-     ORDER BY m.leagueid,
-              m.matchcode,
+              m.LeagueId
+     ORDER BY m.LeagueId,
+              m.MatchCode,
               m.HomeId,
-              m.awayid;
+              m.AwayId;
 
 -------------------
 

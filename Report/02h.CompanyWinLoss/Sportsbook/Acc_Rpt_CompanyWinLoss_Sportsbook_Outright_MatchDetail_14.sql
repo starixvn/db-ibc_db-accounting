@@ -31,19 +31,19 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
      BEGIN -- #Match
 
          CREATE TABLE #Match
-         (matchid   INT,
-          leagueid  INT,
+         (MatchId   INT,
+          LeagueId  INT,
           teamid    INT,
-          matchcode NVARCHAR(50)
+          MatchCode NVARCHAR(50)
          );
          INSERT INTO #Match
                 SELECT orid,
-                       o.leagueid,
+                       o.LeagueId,
                        o.teamid,
-                       o.matchcode
+                       o.MatchCode
                 FROM outright14 o WITH (NOLOCK)
-                     INNER JOIN league l WITH (NOLOCK) ON o.leagueid = l.leagueid
-                WHERE eventdate BETWEEN @StartDate AND @EndDate
+                     INNER JOIN league l WITH (NOLOCK) ON o.LeagueId = l.LeagueId
+                WHERE EventDate BETWEEN @StartDate AND @EndDate
                       AND l.sporttype = @SportType;
      END;
      BEGIN -- #Data
@@ -66,10 +66,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
 
 
          INSERT INTO #Data
-                SELECT m.matchid,
-                       m.matchcode,
+                SELECT m.MatchId,
+                       m.MatchCode,
                        m.TeamId,
-                       m.leagueid,
+                       m.LeagueId,
                        SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
                        SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
@@ -78,20 +78,20 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
                        SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) RealTurnover,
                        SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
                 FROM bettrans14 b WITH (nolock)
-                     INNER JOIN #Match m WITH (nolock) ON b.matchid = m.matchid
+                     INNER JOIN #Match m WITH (nolock) ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = 10
                       AND b.ruben = 1
                       AND b.statusID NOT IN(101, 102, 103, 121)
-                GROUP BY m.matchid,
-                         m.matchcode,
+                GROUP BY m.MatchId,
+                         m.MatchCode,
                          m.TeamId,
-                         m.leagueid;
+                         m.LeagueId;
      END;
      BEGIN -- RM
 
          INSERT INTO #Data
-                SELECT 0 AS matchid,
+                SELECT 0 AS MatchId,
                        CASE
                            WHEN b.recommend = 52466
                            THEN '8RM'
@@ -107,7 +107,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
                        -SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover,
                        -SUM((1 - tpositiontaking) * stake * virtualrate) AS VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
-                     INNER JOIN #Match m ON b.matchid = m.matchid
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = 10
                       AND b.ruben = 1

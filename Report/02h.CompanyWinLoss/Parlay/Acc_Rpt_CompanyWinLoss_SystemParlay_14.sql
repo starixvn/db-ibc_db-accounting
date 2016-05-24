@@ -40,7 +40,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                                Site
                         FROM customer AS c WITH (NOLOCK)
                         WHERE c.RoleID = 2
-                              AND c.CustId <> 5707545
+                              AND c.CustId NOT IN(52466, 5707545)
                               AND EXISTS
                         (
                             SELECT 1
@@ -59,7 +59,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                                Site
                         FROM customer AS c WITH (NOLOCK)
                         WHERE c.RoleID = 2
-                              AND c.CustId <> 52466
+                              AND c.CustId NOT IN(52466, 5707545)
                               AND NOT EXISTS
                         (
                             SELECT 1

@@ -72,12 +72,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType_14]	@StartDate='2016-01-01'
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
                 FROM bettrans14 AS b WITH (NOLOCK)
-                     INNER JOIN match14 AS m WITH (NOLOCK) ON b.matchid = m.matchid
+                     INNER JOIN match14 AS m WITH (NOLOCK) ON b.MatchId = m.MatchId
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND sb.EventType = 1
-                      AND b.matchid > 0
+                      AND b.MatchId > 0
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY m.sporttype,
@@ -102,12 +102,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType_14]	@StartDate='2016-01-01'
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
                 FROM bettrans14 AS b WITH (NOLOCK)
-                     INNER JOIN VSRaceInfo AS r WITH (NOLOCK) ON b.matchid = r.EventId
+                     INNER JOIN VSRaceInfo AS r WITH (NOLOCK) ON b.MatchId = r.EventId
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND sb.EventType = 3
-                      AND b.matchid > 0
+                      AND b.MatchId > 0
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY r.sporttype,

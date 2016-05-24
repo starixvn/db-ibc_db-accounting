@@ -50,20 +50,20 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualRacing_MatchDetail_14] @StartDate='2016-01-0
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) AS RealTurnover
                 FROM bettrans14 AS b WITH (nolock)
-                     INNER JOIN VSRaceInfo AS r WITH (nolock) ON b.matchid = r.EventId
+                     INNER JOIN VSRaceInfo AS r WITH (nolock) ON b.MatchId = r.EventId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
                       AND r.SportType = @SportType
-                      AND b.matchid > 0
+                      AND b.MatchId > 0
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
-                GROUP BY r.leagueid,
+                GROUP BY r.LeagueId,
                          r.EventTime;
      END;
      BEGIN -- Query
 
          SELECT l.leaguename AS GroupName,
-                l.leagueid AS GroupId,
+                l.LeagueId AS GroupId,
                 SUBSTRING(CONVERT( VARCHAR, d.EventType, 108), 1, 5) AS RowName,
                 d.MemberWinLoss AS MemberWinLoss,
                 d.SMAWinLoss AS SMAWinLoss,
@@ -71,7 +71,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualRacing_MatchDetail_14] @StartDate='2016-01-0
                 d.RealIncome AS RealIncome,
                 d.RealTurnover AS RealTurnover
          FROM #Data AS d
-              INNER JOIN league AS l WITH (NOLOCK) ON d.LeagueId = l.leagueid
+              INNER JOIN league AS l WITH (NOLOCK) ON d.LeagueId = l.LeagueId
          ORDER BY GroupName,
                   RowName;
      END;

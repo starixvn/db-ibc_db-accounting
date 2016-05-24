@@ -88,32 +88,32 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
      BEGIN -- #Match
 
          CREATE TABLE #Match
-         (matchid   INT,
-          matchcode NVARCHAR(50),
+         (MatchId   INT,
+          MatchCode NVARCHAR(50),
           type      VARCHAR(10),
-          PRIMARY KEY(matchid, type)
+          PRIMARY KEY(MatchId, type)
          );
          INSERT INTO #Match
-                SELECT m.matchid,
-                       m.matchcode,
+                SELECT m.MatchId,
+                       m.MatchCode,
                        m.type
                 FROM
                 (
-                    SELECT matchid,
-                           leagueid,
-                           matchcode,
+                    SELECT MatchId,
+                           LeagueId,
+                           MatchCode,
                            'match' AS type
                     FROM match14 WITH (NOLOCK)
-                    WHERE eventdate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate BETWEEN @StartDate AND @EndDate
                     UNION ALL
                     SELECT orid,
-                           leagueid,
-                           matchcode,
+                           LeagueId,
+                           MatchCode,
                            'outright' AS type
                     FROM outright14 WITH (NOLOCK)
-                    WHERE eventdate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate BETWEEN @StartDate AND @EndDate
                 ) m
-                INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid
+                INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId
                 WHERE l.sporttype = 1;
      END;
      BEGIN -- #Data
@@ -136,7 +136,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
          INSERT INTO #Data
                 SELECT sb.BetType GroupId,
                        CASE
-                           WHEN m.matchcode LIKE '%hedge%'
+                           WHEN m.MatchCode LIKE '%hedge%'
                            THEN sb.BetTypeName+' (hedge)'
                            ELSE sb.BetTypeName
                        END GroupName,
@@ -156,7 +156,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
                 FROM bettrans14 AS b WITH (NOLOCK)
                      INNER JOIN @BetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
-                     INNER JOIN #Match m ON b.matchid = m.matchid
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
@@ -169,7 +169,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY sb.BetType,
                          CASE
-                             WHEN m.matchcode LIKE '%hedge%'
+                             WHEN m.MatchCode LIKE '%hedge%'
                              THEN sb.BetTypeName+' (hedge)'
                              ELSE sb.BetTypeName
                          END,
@@ -202,7 +202,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
                        -SUM((1 - tpositiontaking) * stake * virtualrate) AS VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN @BetType AS sb ON sb.BetType = b.BetType
-                     INNER JOIN #Match m ON b.matchid = m.matchid
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)

@@ -95,19 +95,19 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
           ToteFee
          )
                 SELECT DISTINCT
-                       o.orid AS matchid,
+                       o.orid AS MatchId,
                        t.IBCFee,
                        p.ToteCommWin,
                        p.ToteCommPlace,
                        (p.ToteCommWin + p.ToteCommPlace) / 2 AS ToteCommWP,
                        p.ToteFee
                 FROM outright AS o WITH (NOLOCK)
-                     INNER JOIN LeagueDetail AS p WITH (NOLOCK) ON o.leagueId = p.leagueId
+                     INNER JOIN LeagueDetail AS p WITH (NOLOCK) ON o.LeagueId = p.LeagueId
                                                                    AND p.programDate = o.programDate
-                     INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.leagueid = r.meetingid
-                     INNER JOIN league AS l WITH (NOLOCK) ON p.leagueid = l.leagueid
+                     INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.LeagueId = r.meetingid
+                     INNER JOIN league AS l WITH (NOLOCK) ON p.LeagueId = l.LeagueId
                      INNER JOIN @IBCFee AS t ON r.partnerId = t.partnerId
-                WHERE o.eventdate BETWEEN @StartDate AND @EndDate
+                WHERE o.EventDate BETWEEN @StartDate AND @EndDate
                       AND l.sporttype = @SportType;
      END;
      BEGIN -- #DepositAgent
@@ -194,7 +194,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                                ELSE b.actual_stake * ISNULL(oddsspread, 0) * b.actualrate
                            END) AS RealTurnover
                 FROM bettrans AS b WITH (nolock)
-                     INNER JOIN #CommSetting AS cs ON b.matchid = cs.matchid
+                     INNER JOIN #CommSetting AS cs ON b.MatchId = cs.MatchId
                      LEFT JOIN
                 (
                     SELECT refno,
@@ -221,7 +221,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                      INNER JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
-                      AND b.matchid > 0
+                      AND b.MatchId > 0
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY Site;

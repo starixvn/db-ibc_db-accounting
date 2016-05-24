@@ -128,7 +128,7 @@ BEGIN
 	DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)
 
 	DECLARE @CommSetting TABLE
-	(	MatchID			int,
+	(	MatchId			int,
 		IBCFee			bit,
 		ToteCommWin		smallmoney,
 		ToteCommPlace	smallmoney,
@@ -163,13 +163,13 @@ BEGIN
 		SELECT 202,1 --HAR-TABCORPNSW	
 
 	 		
-	INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
-	SELECT	DISTINCT o.orid as matchid, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
+	INSERT INTO @CommSetting (MatchId, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
+	SELECT	DISTINCT o.orid as MatchId, t.IBCFee, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
 	FROM outright14 o WITH (NOLOCK)
-			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.LeagueID AND p.programDate = o.programDate
-			INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid
+			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.LeagueId = p.LeagueId AND p.programDate = o.programDate
+			INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.LeagueId
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
-	WHERE	o.eventdate BETWEEN @StartDate AND @EndDate
+	WHERE	o.EventDate BETWEEN @StartDate AND @EndDate
 	
 	
 	----------------------------------- 
@@ -189,7 +189,7 @@ BEGIN
 			sum(case when b.bettype = 33 then bm.TOIBC*b.actualrate else b.actual_stake*isnull(oddsspread,0)*b.actualrate end) as turnover
 			
 	FROM bettrans14 b with (nolock)
-			INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid 
+			INNER JOIN @CommSetting as cs ON b.MatchId = cs.MatchId 
 			 left join (
 				select	refno,
 						sum(case when bettype = 32 and liveawayscore =0 then 0 else stake*isnull(oddsspread,0) end) TOIBC,
@@ -202,7 +202,7 @@ BEGIN
 			 left join (select custid FROM #DepSuper) dep ON b.srecommend = dep.custid
 	WHERE	b.ruben = 1 
 			and s.ProductID = 2
-			and b.matchid >0
+			and b.MatchId >0
 			and b.winlostdate BETWEEN @StartDate AND @EndDate
 			and b.statusID not in (101,102,103,121)	
 	GROUP BY  case when dep.custid is null then 1 else 2 end
@@ -210,17 +210,17 @@ BEGIN
 	-------------------------------------- End of Racing -------------------------------------------------
  
 
-	CREATE TABLE #Match (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
+	CREATE TABLE #Match (MatchId INT, sporttype smallint, type varchar(10), primary key(MatchId, type))
 	INSERT INTO #Match 
-	SELECT	m.matchid, 
+	SELECT	m.MatchId, 
 			s.sporttype,
 			m.type
 	FROM (
-			SELECT matchid, leagueid, exrisk, matchcode, 'match' as type FROM match14 WITH (NOLOCK) WHERE eventdate BETWEEN @StartDate AND @EndDate
+			SELECT MatchId, LeagueId, exrisk, MatchCode, 'match' as type FROM match14 WITH (NOLOCK) WHERE EventDate BETWEEN @StartDate AND @EndDate
 			UNION ALL
-			SELECT orid, leagueid, 0, matchcode, 'outright' as type FROM outright14 WITH (NOLOCK) WHERE eventdate BETWEEN @StartDate AND @EndDate
+			SELECT orid, LeagueId, 0, MatchCode, 'outright' as type FROM outright14 WITH (NOLOCK) WHERE EventDate BETWEEN @StartDate AND @EndDate
 			)m	
-	INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid	
+	INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId	
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 
 
@@ -247,7 +247,7 @@ BEGIN
 			1 As ProductId   
 	FROM bettrans14 b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
-		INNER JOIN #Match m ON b.matchid = m.matchid 		
+		INNER JOIN #Match m ON b.MatchId = m.MatchId 		
 	WHERE winlostdate BETWEEN @StartDate AND @EndDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
@@ -285,7 +285,7 @@ BEGIN
 			1 As ProductId   
 	FROM bettrans14 b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
-		INNER JOIN #Match m ON b.matchid = m.matchid   
+		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend = 5707545 
 		AND	b.winlostdate BETWEEN @StartDate AND @EndDate
 		AND b.bettype < 19001
@@ -632,7 +632,7 @@ BEGIN
 			0 as ExtraPT  
 	FROM bettrans14 b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
-		INNER JOIN #Match m ON b.matchid = m.matchid   
+		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend IN (52466, 5707545)
 		AND	b.winlostdate BETWEEN @StartDate AND @EndDate
 		AND b.bettype < 19001

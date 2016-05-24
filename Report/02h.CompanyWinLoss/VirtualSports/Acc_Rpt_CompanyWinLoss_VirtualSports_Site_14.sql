@@ -79,12 +79,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_Site_14] @StartDate='2016-01-01', @En
                     SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                     SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
              FROM bettrans14 AS b WITH (NOLOCK)
-                  INNER JOIN match14 AS m WITH (NOLOCK) ON b.matchid = m.matchid
+                  INNER JOIN match14 AS m WITH (NOLOCK) ON b.MatchId = m.MatchId
                   INNER JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
              WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                    AND b.BetType = @BetType
                    AND m.sporttype = @SportType
-                   AND b.matchid > 0
+                   AND b.MatchId > 0
                    AND b.ruben = 1
                    AND b.statusId NOT IN(101, 102, 103, 121)
              GROUP BY Site
@@ -99,12 +99,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_Site_14] @StartDate='2016-01-01', @En
                     SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                     SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
              FROM bettrans14 AS b WITH (NOLOCK)
-                  INNER JOIN VSRaceInfo AS r WITH (NOLOCK) ON r.EventId = b.matchid
+                  INNER JOIN VSRaceInfo AS r WITH (NOLOCK) ON r.EventId = b.MatchId
                   INNER JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
              WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                    AND b.BetType = @BetType
                    AND r.sporttype = @SportType
-                   AND b.matchid > 0
+                   AND b.MatchId > 0
                    AND b.ruben = 1
                    AND b.statusId NOT IN(101, 102, 103, 121)
              GROUP BY Site

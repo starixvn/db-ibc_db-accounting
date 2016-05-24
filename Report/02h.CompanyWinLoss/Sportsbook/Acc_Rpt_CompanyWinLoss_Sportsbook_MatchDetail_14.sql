@@ -36,25 +36,25 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
      BEGIN -- #Match
 
          CREATE TABLE #Match
-         (matchid   INT,
-          leagueid  INT,
-          homeid    INT,
-          awayid    INT,
-          matchcode NVARCHAR(50),
-          isneutral BIT,
-          eventdate DATETIME,
+         (MatchId   INT,
+          MatchCode NVARCHAR(50),
+          IsNeutral BIT,
+          EventDate DATETIME,
+          LeagueId  INT,
+          HomeId    INT,
+          AwayId    INT
          );
          INSERT INTO #Match
-                SELECT m.matchid,
-                       m.leagueid,
-                       m.homeid,
-                       m.awayid,
-                       m.matchcode,
-                       m.isneutral,
-                       m.eventdate
+                SELECT m.MatchId,
+                       m.MatchCode,
+                       m.IsNeutral,
+                       m.EventDate,
+                       m.LeagueId,
+                       m.HomeId,
+                       m.AwayId
                 FROM match14 m WITH (NOLOCK)
                 WHERE m.sporttype = @SportType
-                      AND eventdate BETWEEN @StartDate AND @EndDate;
+                      AND EventDate BETWEEN @StartDate AND @EndDate;
      END;
      BEGIN -- #Data
 
@@ -62,10 +62,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
          (MatchId         INT,
           MatchCode       VARCHAR(100),
           IsNeutral       BIT,
-          HomeId          INT,
-          AwayId          INT,
           EventDate       DATETIME,
           LeagueId        INT,
+          HomeId          INT,
+          AwayId          INT,
           MemberWinLoss   MONEY,
           SMAWinLoss      MONEY,
           Commission      MONEY,
@@ -77,13 +77,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
      END;
      BEGIN -- INSERT INTO #Data
          INSERT INTO #Data
-                SELECT b.matchid,
-                       m.matchcode,
-                       ISNULL(m.isNeutral, 0) AS IsNeutral,
+                SELECT b.MatchId,
+                       m.MatchCode,
+                       ISNULL(m.IsNeutral, 0) AS IsNeutral,
+                       m.EventDate,
+                       m.LeagueId,
                        m.HomeId,
                        m.AwayId,
-                       m.eventdate,
-                       m.leagueid,
                        SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
                        SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
@@ -92,42 +92,42 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
                        SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) RealTurnover,
                        SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
                 FROM bettrans14 b WITH (nolock)
-                     INNER JOIN #Match m ON b.matchid = m.matchid
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
                       AND ((@IsHedge = 1
-                            AND m.matchcode LIKE '%hedge%')
+                            AND m.MatchCode LIKE '%hedge%')
                            OR (@IsHedge = 0
-                               AND m.matchcode NOT LIKE '%hedge%'))
+                               AND m.MatchCode NOT LIKE '%hedge%'))
                       AND b.ruben = 1
                       AND statusID NOT IN(101, 102, 103, 121)
-                GROUP BY b.matchid,
-                         m.matchcode,
-                         m.isNeutral,
+                GROUP BY b.MatchId,
+                         m.MatchCode,
+                         m.IsNeutral,
                          m.HomeId,
                          m.AwayId,
-                         m.eventdate,
-                         m.leagueid
-                ORDER BY m.leagueid,
-                         m.matchcode,
+                         m.EventDate,
+                         m.LeagueId
+                ORDER BY m.LeagueId,
+                         m.MatchCode,
                          m.HomeId;
      END;
      BEGIN -- RM
 
          INSERT INTO #Data
-                SELECT 0 AS matchid,
+                SELECT 0 AS MatchId,
                        CASE
                            WHEN b.recommend = 52466
                            THEN '8RM'
                            ELSE 'BARM'
                        END MatchCode,
                        0 AS IsNeutral,
-                       0 HomeId,
-                       0 AwayId,
                        '1990-01-01' EventDate,
                        0 LeagueId,
+                       0 HomeId,
+                       0 AwayId,
                        -SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
                        -SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
@@ -136,7 +136,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
                        -SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover,
                        -SUM((1 - tpositiontaking) * stake * virtualrate) AS VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
-                     INNER JOIN #Match m ON b.matchid = m.matchid
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
@@ -154,12 +154,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
 
          SELECT d.MatchId,
                 d.MatchCode,
-                @SportType SportType,
                 d.IsNeutral,
+                d.EventDate,
+                @SportType SportType,
+                d.LeagueId,
                 d.HomeId,
                 d.AwayId,
-                d.EventDate,
-                d.LeagueId,
                 d.MemberWinLoss AS MemberWinLoss,
                 d.SMAWinLoss AS SMAWinLoss,
                 d.Commission AS Commission,
@@ -173,6 +173,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
                   MatchCode;
      END;
      DROP TABLE #Match;
+     DROP TABLE #Data;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] TO [bodbAdminNet];
 GO
