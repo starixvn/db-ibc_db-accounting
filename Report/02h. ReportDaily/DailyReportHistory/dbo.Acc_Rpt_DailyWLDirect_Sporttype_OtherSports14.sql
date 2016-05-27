@@ -16,7 +16,7 @@ AS
 		- 20150122@Dom: Apply sport bettype matrix
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and Sport Betype Matrix [#35359]
 		- 20150723@Sophia: Exclude data of Bettrade [#38815]	
-		- 20160523@Sophia: Refactor code, Enhance Performance [Redmind: #56764]	
+		- 20160523@Sophia: Refactor code, Enhance Performance [Redmind: #57987]	
 	Explanation's Param:
 		
 */

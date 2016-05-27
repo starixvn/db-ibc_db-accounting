@@ -20,7 +20,7 @@ AS
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and Sport Betype Matrix [#35359]
 		- 20150723@Sophia: Exclude data of Bettrade [#38815]	
 		- 20150917@Jim: Integrate MO product (Feature #41935)
-		- 20160523@Sophia: Refactor code, Enhance Performance [Redmind: #56764]	
+		- 20160523@Sophia: Refactor code, Enhance Performance [Redmind: #57987]	
 	Explanation's Param:
 		- @SoccerType =	 0: All bettype(major and minor bettype)
 					= 1: report soccer for major bettype
