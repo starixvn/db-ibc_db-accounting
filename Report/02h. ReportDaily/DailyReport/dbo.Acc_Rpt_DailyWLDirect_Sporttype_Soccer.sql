@@ -143,7 +143,13 @@ BEGIN
 
 	---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 	UPDATE 	c
-	SET		c.WinLost = ISNULL(c.WinLost,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.WinLost,0) ELSE ISNULL(d.WinLost,0) END 
+	SET		c.WinLost = ISNULL(c.WinLost,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.WinLost,0) ELSE ISNULL(d.WinLost,0) END,
+			c.Position = ISNULL(c.Position,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.Position,0) ELSE ISNULL(d.Position,0) END,
+			c.Commission = ISNULL(c.Commission,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.Commission,0) ELSE ISNULL(d.Commission,0) END,
+			c.RealLineTotal = ISNULL(c.RealLineTotal,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.RealLineTotal,0) ELSE ISNULL(d.RealLineTotal,0) END,
+			c.VirtualLineTotal = ISNULL(c.VirtualLineTotal,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.VirtualLineTotal,0) ELSE ISNULL(d.VirtualLineTotal,0) END,
+			c.RealTurnover = ISNULL(c.RealTurnover,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.RealTurnover,0) ELSE ISNULL(d.RealTurnover,0) END,
+			c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
 	FROM	#Result c
 	FULL JOIN  #Result d
 			ON	c.SportType = d.SportType
