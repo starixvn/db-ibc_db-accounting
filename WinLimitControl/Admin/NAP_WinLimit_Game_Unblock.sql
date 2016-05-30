@@ -14,11 +14,20 @@ AS
 		DB: DBTXN/bodb02
 		
 		Revisions:
-		
+		- 20160520@Helen: Fix concurrency isue [Redmine: 57680]
 		Parameters Explanation:	
 	*/
 BEGIN
 	SET NOCOUNT ON
+	
+	IF EXISTS (SELECT 1 FROM WinLimit_Game WITH (NOLOCK) WHERE IsBlocked = 0 AND ProductID = @ProductId AND Custid = @CustId AND WinlostDate= @WinlostDate)
+	BEGIN
+		
+		SELECT	@ErrCode	= 2,
+				@ErrMsg		= 'Invalid data because it has changed by some other people. Please refresh the page.'
+	
+		RETURN			
+	END
 	
 	DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT, @LogSPData VARCHAR(MAX), @CurrentDate DATETIME, @BetType SMALLINT
 	SELECT @CurrentDate = GETDATE(), @StartRun = @CurrentDate
