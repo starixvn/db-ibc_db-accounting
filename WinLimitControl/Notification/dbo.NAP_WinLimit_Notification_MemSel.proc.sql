@@ -14,6 +14,8 @@ Original:
 Revisions:
 	- 20150702@bobby.nguyen: Initial
 	- 20160507@Patrick: #57213 - Voidbridge integration
+	- 20160523@Helen: Hardcode for UUS - [Redmine: 57940]
+	- 20160524@Helen: Change condition to send email - [Redmine: 57940]
 	
 Param's Explanation:
 	• @ErrCode:
@@ -33,16 +35,17 @@ BEGIN
 		, SiteName		NVARCHAR(100)
 	)
 	
+	CREATE TABLE #tempWLGame (custid INT, WinlostDate SMALLDATETIME,bettype SMALLINT)
 	-- RESET output
 	SELECT 	@ErrCode 	= 0
 			, @ErrMsg 	= ''
 	
+	INSERT INTO #tempWLGame
 	SELECT g.CustID
 		, g.WinlostDate
 		, g.bettype
-	INTO #tempWLGame		
 	FROM dbo.WinLimit_Game g WITH(NOLOCK)
-	WHERE g.IsBlocked = 1 AND g.IsNotified = 0
+	WHERE g.IsNotified = 0
 	
 	IF @@ROWCOUNT = 0
 	BEGIN
@@ -59,7 +62,7 @@ BEGIN
 	SELECT c.custid
 		, c.username
 		, c.username2
-		, e.code
+		, CASE WHEN e.ExchangeID = 20 THEN 'UUS' ELSE e.code END AS code
 		--, CASE WHEN s.site IS NOT NULL THEN s.site 
 		--	ELSE
 		--		CASE WHEN (s.site IS NULL AND sc.site = '789y') THEN 'maxbet789y'
