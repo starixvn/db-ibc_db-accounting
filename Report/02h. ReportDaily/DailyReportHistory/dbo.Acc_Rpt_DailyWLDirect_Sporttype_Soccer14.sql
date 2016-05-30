@@ -190,6 +190,7 @@ BEGIN
 	GROUP BY m.sporttype, CASE WHEN  b.recommend = 52466 THEN 1 ELSE 2 END
  
 	SELECT * FROM #Result
+	ORDER BY SportType 
  
 	DROP TABLE #DepSuper
 	DROP TABLE #Match
