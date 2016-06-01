@@ -20,6 +20,7 @@ AS
 		- 20150922@Johnson: check result status from ResultDetail [Redmine: #43806]
 		- 20151002@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 		- 20160429@Kathy: Enhance performance [Redmine:#52426]
+		- 20160524@Kathy: Exclude ComboParlay 
 	Param's Explanation:		
 		
 */
@@ -31,6 +32,9 @@ BEGIN
 			,@HaveWaitingTicket VARCHAR(200)
 			,@procName nvarchar(50)	
 			,@matchid int
+			,@comboMatchIds VARCHAR(4000) 
+	
+	SET @comboMatchIds = @matchids
 		
 	DECLARE @subErrCode		INT
 			,@subErrMsg		NVARCHAR(200)
@@ -122,8 +126,21 @@ BEGIN
 	
 	DELETE FROM @match
 	WHERE matchid IN (SELECT val FROM dbo.strSplit(@MatchIds, ','))
-
-	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '')
+	
+	-- check Combo Parlay tickets
+	DECLARE @HaveComboParlayTicket VARCHAR(200) = ''
+	
+	EXEC NAP_Admin_ComboParlay_Checking
+		@MatchIds	= @comboMatchIds OUTPUT
+	
+	SELECT @HaveComboParlayTicket = COALESCE(@HaveComboParlayTicket + ',' + m.matchcode, m.matchcode)
+	FROM dbo.match m WITH(NOLOCK)
+	WHERE m.matchid IN (SELECT val FROM dbo.strSplit(@comboMatchIds, ','))
+	
+	DELETE FROM @match
+	WHERE matchid IN (SELECT val FROM dbo.strSplit(@comboMatchIds, ','))
+	
+	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '' OR ISNULL(@HaveComboParlayTicket,'') <> '')
 	BEGIN
 		SELECT   @ErrCode = 1001011
 				,@ErrMsg = 'All matches are being calculated, except following matches ' 
@@ -139,8 +156,12 @@ BEGIN
 									THEN '(existing some PENDING tickets): ' + @HaveWaitingTicket
 									ELSE ''
 								END
+							+ CASE WHEN ISNULL(@HaveComboParlayTicket, '') <> ''
+									THEN '(existing NEW Combo Parlay tickets): ' + @HaveComboParlayTicket
+									ELSE ''
+								END
 	END
-
+	
 	IF EXISTS (
 				SELECT TOP 1 1
 				FROM @match
