@@ -421,8 +421,10 @@ BEGIN
 		PayToMetricGaming	MONEY
 	)
 
-	DECLARE @BAComm MONEY = 0
-	SELECT @BAComm = SUM(AComm) FROM #TempData WHERE ProductId = 3
+	DECLARE @BAComm MONEY = 0, @BAWinloss MONEY = 0
+	SELECT	@BAComm = SUM(AComm),
+			@BAWinloss = SUM(AmountToCompany)
+	FROM #TempData WHERE ProductId = 3
 
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
 	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), ISNULL(SUM(MinFeeApplied - Discount - Rebate) - @BAComm, 0), 0, 0
@@ -435,7 +437,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId = 0 AND rptDate = @tmpDate), -- LicenseeWL
+			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId IN (0, 3) AND rptDate = @tmpDate), -- LicenseeWL + BA Winloss
 			(SELECT ISNULL(SUM(AComm), 0) FROM #TempData WHERE ProductId = 3 AND rptDate = @tmpDate), -- BA Commission
 			0, 0
 
