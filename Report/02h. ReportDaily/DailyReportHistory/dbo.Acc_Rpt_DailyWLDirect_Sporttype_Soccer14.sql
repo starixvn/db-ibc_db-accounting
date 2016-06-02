@@ -50,8 +50,8 @@ BEGIN
 	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
 		OR EventType NOT IN (1,2)
 		OR (@SoccerType = 1 AND Bettype NOT IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304))
-		OR (@SoccerType = 2 AND Bettype IN (1,2,3,5,6,7,8,12,15,24,25,28,121,122,123,126,151,301,302,303,304))
-		
+		OR (@SoccerType = 2 AND Bettype IN (1,3,7,8,122,123,151,301,302,303,304))
+		---- '2,5,6,12,15,24,25,28,121,126' : this is Major bettypes but with the Soccer - Minor Report, it will include these bettypes too
 
 	IF @SoccerType <> 2 
 	BEGIN 
