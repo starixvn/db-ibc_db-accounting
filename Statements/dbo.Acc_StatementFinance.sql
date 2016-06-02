@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_StatementFinance]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_StatementFinance]
     @RefNo BIGINT = 0,
 	@Username VARCHAR(30) = null,
 	@FilterBy TINYINT = null,
@@ -17,6 +20,7 @@ AS
 			+ DB052 --> DBEXT 
 			+ DB053/bodb_Summary --> DBSUM
 			+ bodb_Report --> DBRPT/bodb_Report
+		- 20160602@Percy: Hotfix - Opening balance is shown wrongly [Redmine: #58410]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -345,98 +349,76 @@ BEGIN
 
 END
 
+DECLARE @AccBal MONEY = 0
+
 IF (@_IncludeAccBal = 1) AND (@CustID > 0)
 BEGIN
-	DECLARE @NoOfRows INT, @AccBal MONEY
-	
 	IF @FromDate_Bk <> @_BalanceUpDay
 	BEGIN
-		
-		SELECT @NoOfRows = COUNT(*), @AccBal = ISNULL(SUM(totalamt),0)
+		SELECT @AccBal = ISNULL(SUM(totalamt),0)
 		FROM #StatementTable
 		WHERE 
             ( (@FilterBy = 1 AND winlostdate < @FromDate_Bk)
             OR (@FilterBy = 2 AND transdate < @FromDate_Bk)
             )
-
-		IF EXISTS( 
-		        SELECT 1 
-		        FROM #StatementTable 
-		        WHERE (@AccBal <> 0 OR (@NoOfRows > 0 AND @AccBal = 0))
-		            AND
-		                ( (@FilterBy = 1 AND winlostdate >= @FromDate_Bk)
-                        OR (@FilterBy = 2 AND transdate >= @FromDate_Bk)
-                        )
-        ) 
-			INSERT INTO #StatementTable(
-			        TransID,
-	                TransDate,
-	                WinlostDate,
-	                RefNo,
-	                TotalAmt,
-	                TransType,
-	                TransDesc,
-	                Creator,
-	                CheckerID,
-	                CheckerName,
-	                CheckTime,
-	                IsAllowVerify,
-	                IsReversal)
-			    SELECT 0, '', '', 0, @AccBal, 'Bal', 'ACCUMULATED BALANCE', NULL, 0, '', NULL, 0, 1
-        
-        -- In case, there are no transactions about 'OPENING BALANCE' or 'ACCUMULATED BALANCE', insert 'ACCUMULATED BALANCE' row with 'TotalAmt' zero
-        IF EXISTS( 
-		        SELECT *
-		        FROM #StatementTable 
-        )
-            IF NOT EXISTS( 
-		            SELECT 1 
-		            FROM #StatementTable 
-		            WHERE TransType = 'Bal'
-            ) 
-			    INSERT INTO #StatementTable(
-			            TransID,
-	                    TransDate,
-	                    WinlostDate,
-	                    RefNo,
-	                    TotalAmt,
-	                    TransType,
-	                    TransDesc,
-	                    Creator,
-	                    CheckerID,
-	                    CheckerName,
-	                    CheckTime,
-	                    IsAllowVerify,
-	                    IsReversal)
-			        SELECT 0, '', '', 0, 0, 'Bal', 'ACCUMULATED BALANCE', NULL, 0, '', NULL, 0, 1
-
 	END
 END
 
 -- Result
-IF @_RefNo > 0
-    SELECT 
-        tmp.TransID,
-        tmp.TransDate [TransDate],
-        tmp.WinlostDate [WinlostDate],
-        tmp.RefNo [RefNo],
-        ISNULL(tmp.TotalAmt,0) [TotalAmount],
-        tmp.TransType [TransType],
-        tmp.TransDesc [TransDescription],
-        ISNULL(c.Username,'') [Creator],
-        tmp.CheckerID [CheckerID],
-        tmp.CheckerName [CheckerName],
-        tmp.CheckTime [CheckTime],
-        tmp.IsAllowVerify [IsAllowVerify],
-        tmp.IsReversal [IsReversal],
-        tmp.IsExpand [IsExpand]
-    FROM #StatementTable tmp
-        LEFT JOIN dbo.Customer c (NOLOCK) ON tmp.creator = c.custid
-    ORDER BY 
-        tmp.winlostdate,
-        tmp.TransID
-
 IF @CustID > 0
+BEGIN
+	IF NOT EXISTS (SELECT TOP 1 1 FROM #StatementTable
+					WHERE TransType = 'Bal'
+						AND
+		                (
+							(@FilterBy = 1 AND winlostdate = @FromDate_Bk)
+							OR (@FilterBy = 2 AND transdate = @FromDate_Bk)
+                        )
+					)
+	INSERT INTO #StatementTable(
+		TransID,
+		TransDate,
+		WinlostDate,
+		RefNo,
+		TotalAmt,
+		TransType,
+		TransDesc,
+		Creator,
+		CheckerID,
+		CheckerName,
+		CheckTime,
+		IsAllowVerify,
+		IsReversal)
+	SELECT 0, '', '', 0, @AccBal, 'Bal', 'ACCUMULATED BALANCE', NULL, 0, '', NULL, 0, 1
+
+	SELECT 
+		tmp.TransID,
+		tmp.TransDate [TransDate],
+		tmp.WinlostDate [WinlostDate],
+		tmp.RefNo [RefNo],
+		ISNULL(tmp.TotalAmt,0) [TotalAmount],
+		tmp.TransType [TransType],
+		tmp.TransDesc [TransDescription],
+		ISNULL(c.Username,'') [Creator],
+		tmp.CheckerID [CheckerID],
+		tmp.CheckerName [CheckerName],
+		tmp.CheckTime [CheckTime],
+		tmp.IsAllowVerify [IsAllowVerify],
+		tmp.IsReversal [IsReversal],
+		tmp.IsExpand [IsExpand]
+	FROM #StatementTable tmp
+		LEFT JOIN dbo.Customer c (NOLOCK) ON tmp.creator = c.custid
+	WHERE 
+		tmp.winlostdate >= @FromDate_Bk 
+		OR transdesc = 'ACCUMULATED BALANCE'
+	ORDER BY 
+		tmp.winlostdate,
+		CASE WHEN tmp.transdesc LIKE 'OPENING BALANCE%' THEN 1 ELSE 2 END,
+		tmp.TransID
+END
+
+IF @_RefNo > 0
+BEGIN
     SELECT 
         tmp.TransID,
         tmp.TransDate [TransDate],
@@ -454,14 +436,10 @@ IF @CustID > 0
         tmp.IsExpand [IsExpand]
     FROM #StatementTable tmp
         LEFT JOIN dbo.Customer c (NOLOCK) ON tmp.creator = c.custid
-    WHERE 
-        tmp.winlostdate >= @FromDate_Bk 
-        OR transdesc = 'ACCUMULATED BALANCE'
     ORDER BY 
         tmp.winlostdate,
-        CASE WHEN tmp.transdesc LIKE 'OPENING BALANCE%' THEN 1 ELSE 2 END,
         tmp.TransID
-
+END
 DROP TABLE #StatementTable
 
 GO
