@@ -1,13 +1,4 @@
-﻿
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s_Push    Script Date: 06/10/2015 11:21:40 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s_Push    Script Date: 6/1/2015 11:08:35 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s_Push    Script Date: 5/8/2015 9:44:34 AM ******/
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
 	 @AdminId			INT				= 148		-- calculated by system (default)
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -27,6 +18,7 @@ AS
 	
 	Revisions:
 		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
+		- 20160524@Kathy: Exclude ComboParlay
 	Param's Explanation:
 */		
 BEGIN
@@ -126,6 +118,17 @@ BEGIN
 		RETURN
 	END
 
+	-- combo parlay
+	IF @Action = 'UNDO'
+	BEGIN		
+		EXEC NAP_Admin_ComboParlay_Checking
+				@MatchIds = @MatchId	
+				,@ErrCode = @ErrCode OUTPUT
+				,@ErrMsg = @ErrMsg OUTPUT	
+				
+		IF @ErrCode <> 0
+			RETURN
+	END
 
 	SELECT	 @ErrCode		= 0
 			,@ErrMsg		= ''
@@ -188,18 +191,9 @@ BEGIN
 	END
 
 END
-
-
 GO
-
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO
-SET ANSI_NULLS ON 
-
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet]
-GO 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam] AS [dbo]
