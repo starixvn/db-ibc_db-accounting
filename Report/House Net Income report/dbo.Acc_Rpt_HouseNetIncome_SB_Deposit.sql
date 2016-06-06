@@ -2,7 +2,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit]
 	@FromDate DATE,
 	@ToDate	DATE
 AS  
-/*  Created: Victor  
+/*  
+	Created: Victor  
 	Date: 2016-05-23  
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
@@ -31,15 +32,17 @@ BEGIN
 	-- End region
 
 	-- Region: Get exchange rate info
-	CREATE	TABLE #Exchange (
-			ExchangeDate	DATE,
-			ExchangeID		INT,
-			Rate			FLOAT)
+	CREATE	TABLE #Exchange			(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
+	CREATE	TABLE #ExchangeOANDA	(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
 
 	INSERT INTO #Exchange(ExchangeDate, ExchangeID, Rate)
 	SELECT ExchangeDate, Currency, Rate
 	FROM DBWH.bodb_account.dbo.tbl_Currency_Daily WITH (NOLOCK) 
 	WHERE ExchangeDate BETWEEN @FromDate AND @ToDate
+
+	INSERT INTO #ExchangeOANDA(ExchangeDate, ExchangeID, Rate)
+	SELECT ExchangeDate, ExchangeID, BaseCurrencyRate
+	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FromDate, @ToDate, 'MYR')
 	-- End region
 
 	-- Region: Discount & Rebate Settings
@@ -202,7 +205,7 @@ BEGIN
 
 	UPDATE m SET m.FeeAmount = m.FeeAmount * e.Rate
 	FROM @MinFeeGroup m
-	INNER JOIN #Exchange e ON m.ToDate = e.ExchangeDate AND m.CurrencyId = e.ExchangeID
+		INNER JOIN #Exchange e ON e.ExchangeDate = @ToDate AND m.CurrencyId = e.ExchangeID
 
 	-- Region: Get Amount by Product
 	CREATE	TABLE #TempData (
@@ -422,12 +425,12 @@ BEGIN
 	)
 
 	DECLARE @BAComm MONEY = 0, @BAWinloss MONEY = 0
-	SELECT	@BAComm = SUM(AComm),
-			@BAWinloss = SUM(AmountToCompany)
+	SELECT	@BAComm = ISNULL(SUM(AComm), 0),
+			@BAWinloss = ISNULL(SUM(AmountToCompany), 0)
 	FROM #TempData WHERE ProductId = 3
 
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), ISNULL(SUM(MinFeeApplied - Discount - Rebate) - @BAComm, 0), 0, 0
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied) + @BAWinloss, 0), ISNULL(SUM(MinFeeApplied - Discount - Rebate) - @BAComm, 0), 0, 0
 	FROM #SBResult
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200)
@@ -487,7 +490,7 @@ BEGIN
 	SET LicenseeWL = LicenseeWL * e.Rate,
 		AmtLicensee = AmtLicensee * e.Rate
 	FROM #MetricGamingData b
-		INNER JOIN #Exchange e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyID
+		INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyID
 
 	-- Get Metric Gaming charge info
 	DECLARE @ProductChargeInfo TABLE (
@@ -504,7 +507,7 @@ BEGIN
 			ci.MinAmount * ex.Rate,
 			ci.MaxAmount * ex.Rate
 	FROM bodb_licensee.dbo.OAS_ChargeInfo ci
-	INNER JOIN #Exchange ex ON ci.BaseCurrencyId = ex.ExchangeID AND ex.ExchangeDate = @ToDate
+	INNER JOIN #ExchangeOANDA ex ON ci.BaseCurrencyId = ex.ExchangeID AND ex.ExchangeDate = @ToDate
 	WHERE ci.ProductID = 0 AND ci.FromParty = 1 AND ci.ChargeType = 4 -- Get Charge Rate to Billing for Metric Gaming
 		AND ((ci.FromDate BETWEEN @FromDate AND @Todate)
 			OR (ci.ToDate BETWEEN @FromDate AND @Todate)
@@ -583,7 +586,7 @@ BEGIN
 			INNER JOIN @PartyChargeInfo p ON b.ProductID = p.ProductID 
 											AND b.SiteID = p.LicenseeId
 											AND b.rptDate BETWEEN p.FromDate AND p.ToDate
-			INNER JOIN #Exchange e ON e.ExchangeDate = b.rptDate AND e.ExchangeID = b.CurrencyId
+			INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.rptDate AND e.ExchangeID = b.CurrencyId
 	WHERE	b.rptDate BETWEEN @FromDate AND @ToDate
 			AND (b.CurrencyID <> 20)
 			AND b.StatusId BETWEEN 111 AND 113
@@ -605,7 +608,7 @@ BEGIN
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
 	SELECT @SQL =	'SELECT * ' + CHAR(13) +
-					'FROM	(SELECT [Order], [RptDate], Figure, value FROM #FinalResult' + CHAR(13) +
+					'FROM	(SELECT [Order], [RptDate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT 1, ''House Income'', LicenseeWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
