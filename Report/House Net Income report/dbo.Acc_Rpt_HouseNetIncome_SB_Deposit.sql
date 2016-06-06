@@ -628,6 +628,7 @@ BEGIN
 
 	-- Region: Drop tmp table
 	DROP TABLE #Exchange
+	DROP TABLE #ExchangeOANDA
 	DROP TABLE #TempData
 	DROP TABLE #SBResult
 	DROP TABLE #FinalResult
