@@ -12,34 +12,130 @@ AS
 */  
 BEGIN  
 	SET NOCOUNT ON  
-	DECLARE @Result TABLE (
-		[Date] VARCHAR(12),
-		HouseWL MONEY,
-		ExtraPT MONEY
+
+	DECLARE @FDate DATE, @TDate DATE
+	SELECT @FDate = @FromDate, @TDate = @ToDate
+	
+	-- Region: Get exchange rate info
+	CREATE	TABLE #Exchange (
+			ExchangeDate	DATE,
+			ExchangeID		INT,
+			Rate			FLOAT)
+
+	INSERT INTO #Exchange(ExchangeDate, ExchangeID, Rate)
+	SELECT ExchangeDate, Currency, Rate
+	FROM DBWH.bodb_account.dbo.tbl_Currency_Daily WITH (NOLOCK) 
+	WHERE ExchangeDate BETWEEN @FDate AND @TDate
+
+	-- End region
+
+	CREATE TABLE #FinalResult (
+		RptDate		VARCHAR(10),
+		HouseWL		MONEY,
+		ExtraPT		MONEY
 	)
 
-	INSERT INTO @Result ([Date], HouseWL, ExtraPT)
-	SELECT '01', 243.452, 12.4351
-	UNION SELECT '02', 2134.34, 62.12
-	UNION SELECT '03', 4454.25, 65.44
-	UNION SELECT '04', 346.213, 1.56
-	UNION SELECT '05', 123.466, 124.23
-	UNION SELECT '06', 178.1234, 23.56
-	UNION SELECT 'FullRange', 47454.474, 784.54
+	DECLARE @tmpDate DATE, @DateList VARCHAR(200) = '[FullRange]'
+	SELECT @tmpDate = @FDate
 
-	SELECT * 
-	FROM (SELECT [Order], [Date], Figure, value FROM @Result
-			CROSS APPLY
-			(SELECT 1, 'House Income', HouseWL 
-			UNION ALL
-			SELECT 2, 'Extra PT', ExtraPT) c ([Order], Figure, value)) a
-	PIVOT
+	WHILE @tmpDate <= @TDate
+	BEGIN
+		INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
+		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 0, 0
+
+		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
+	END
+
+	SELECT @DateList = COALESCE(@DateList + ',', '') + '[' + CONVERT(VARCHAR(10), RptDate) + ']' FROM #FinalResult 
+
+	-- Sport - Bettype Matrix
+	CREATE TABLE #SportBettypeMatrix (ProductID INT, Bettype INT, EventType INT, SubProduct VARCHAR(500))
+
+	INSERT INTO #SportBettypeMatrix (ProductID, Bettype, EventType, SubProduct)
+	SELECT ProductID, BetType, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel(1,0,0,2,'','SB',0) WHERE SubProduct NOT IN ('BT-Sold','BT-Bought','BT-Comm')
+
+	-- Daily Extra PT
+	;WITH ExtraPT AS
 	(
-		MAX(value)
-		FOR [Date] in ([FullRange], [01], [02], [03], [04], [05], [06])
-	) piv
-	ORDER BY [Order] 
-	
+		SELECT b.rptDate, SUM(b.extraWinloss) AS ExtraPT
+		FROM bodb_account.dbo.rptGroupWinloss b WITH (NOLOCK)
+			INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype
+			LEFT JOIN bodb_Account.dbo.tbl_Site s WITH (NOLOCK) ON s.siteid = b.SiteID
+		WHERE	rptdate BETWEEN @FDate AND @TDate 
+				AND sb.ProductID = 1
+				AND b.statusid <> 14
+		GROUP BY b.rptDate
+	)
+	UPDATE f
+	SET ExtraPT = e.ExtraPT
+	FROM #FinalResult f
+		INNER JOIN ExtraPT e ON CONVERT(VARCHAR(2), e.rptDate, 106) = f.RptDate
+
+	-- 8RM & BARM
+	;WITH RMWinloss AS
+	(
+		SELECT b.rptDate, 
+			SUM(b.WinlossIBC + b.CommissionS) AS RMWinloss
+		FROM bodb_Account.dbo.mcSiteDaily b WITH (NOLOCK) 
+		WHERE rptDate BETWEEN @FDate AND @TDate 
+			AND b.siteID IN (-2, -4) 
+			AND b.[status] <> 14
+		GROUP BY b.rptDate
+	)
+	UPDATE f
+	SET HouseWL = RMWinloss
+	FROM #FinalResult f
+		INNER JOIN RMWinloss wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
+
+	-- House WL
+	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY)
+	INSERT INTO #TmpHouseWL (rptDate, HouseWL)
+	SELECT 
+		b.rptDate,
+		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS)*ex.rate),0) HouseWL
+	FROM bodb_Account.dbo.mcSiteDaily b WITH(NOLOCK)
+		INNER JOIN #exchange ex ON b.rptdate = ex.exchangedate AND b.currencyid = ex.ExchangeID
+		INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype AND Sb.ProductID = 1
+		LEFT JOIN bodb_Account.dbo.tbl_Site s WITH (NOLOCK) ON s.siteid = b.SiteID
+	WHERE 
+		b.rptDate BETWEEN @FDate AND @TDate 
+		AND b.status != 14
+		AND (b.SiteID = -2 OR s.isDeposit = 0) -- Credit data only
+	GROUP BY b.rptDate
+	OPTION (RECOMPILE)
+
+	UPDATE f
+	SET HouseWL = f.HouseWL + wl.HouseWL
+	FROM #FinalResult f
+		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
+
+	-- FullRange amount
+	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
+	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT)
+	FROM #FinalResult
+
+	---------------------------------------------------- Select the output -------------------------------------------------------
+	DECLARE @SQL VARCHAR(1000)
+	SELECT @SQL =	'SELECT * ' + CHAR(13) +
+					'FROM	(SELECT [Order], [RptDate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
+							'CROSS APPLY' + CHAR(13) +
+							'(SELECT 1, ''House Income'', HouseWL' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT 3, ''Extra PT'', ExtraPT) c ([Order], Figure, value)) a' + CHAR(13) +
+					'PIVOT' + CHAR(13) +
+					'(' + CHAR(13) +
+						'MAX(value)' + CHAR(13) +
+						'FOR [RptDate] in (' + @DateList + ')' + CHAR(13) +
+					') piv' + CHAR(13) +
+					'ORDER BY [Order]'
+
+	EXEC(@SQL)
+
+	-- Drop tmp table
+	DROP TABLE #SportBettypeMatrix
+	DROP TABLE #TmpHouseWL
+	DROP TABLE #Exchange
+	DROP TABLE #FinalResult
 END
 GO
 

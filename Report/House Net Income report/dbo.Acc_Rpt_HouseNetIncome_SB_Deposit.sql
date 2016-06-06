@@ -13,6 +13,10 @@ AS
 */  
 BEGIN  
 	SET NOCOUNT ON  
+
+	DECLARE @FDate DATE, @TDate DATE
+	SELECT @FDate = @FromDate, @TDate = @ToDate
+
 	-- Region: Active licensees
 	DECLARE @tmpParty TABLE (PartyID INT, IsDeposit BIT)
 	INSERT INTO @tmpParty (PartyID, IsDeposit)
@@ -23,9 +27,9 @@ BEGIN
 		INNER JOIN bodb_licensee.dbo.LA_ChargeInfo_SystemMapping map ON map.ChargeID = ci.ChargeID and map.SystemID = 2
 	WHERE	p.PartyType = 1 AND
 			ci.ProductId = 0 -- SB
-			AND ((ci.FromDate BETWEEN @FromDate AND @Todate)
-				OR (ci.ToDate BETWEEN @FromDate AND @Todate)
-				OR (ci.FromDate < @FromDate AND @Todate < ci.ToDate))
+			AND ((ci.FromDate BETWEEN @FDate AND @TDate)
+				OR (ci.ToDate BETWEEN @FDate AND @TDate)
+				OR (ci.FromDate < @FDate AND @TDate < ci.ToDate))
 
 	DECLARE @PartyIDs VARCHAR(1000)
 	SELECT	@PartyIDs = COALESCE(@PartyIDs + ',', '') + CONVERT(VARCHAR(10), PartyId) FROM @tmpParty WHERE IsDeposit = 1
@@ -38,11 +42,11 @@ BEGIN
 	INSERT INTO #Exchange(ExchangeDate, ExchangeID, Rate)
 	SELECT ExchangeDate, Currency, Rate
 	FROM DBWH.bodb_account.dbo.tbl_Currency_Daily WITH (NOLOCK) 
-	WHERE ExchangeDate BETWEEN @FromDate AND @ToDate
+	WHERE ExchangeDate BETWEEN @FDate AND @TDate
 
 	INSERT INTO #ExchangeOANDA(ExchangeDate, ExchangeID, Rate)
 	SELECT ExchangeDate, ExchangeID, BaseCurrencyRate
-	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FromDate, @ToDate, 'MYR')
+	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR')
 	-- End region
 
 	-- Region: Discount & Rebate Settings
@@ -60,7 +64,7 @@ BEGIN
 		SELECT	dg.DiscountGroupId,dg.DiscountGroupType,dga.PartyId, dg.CurrencyId, dg.FromDate, dg.ToDate
 		FROM	bodb_Licensee.dbo.LA_DiscountGroupHeader dg WITH(NOLOCK)
 				INNER JOIN bodb_Licensee.dbo.LA_DiscountGroupAssignment dga WITH(NOLOCK) ON dga.DiscountGroupId = dg.DiscountGroupId
-		WHERE	@FromDate<= ToDate AND FromDate<=@ToDate
+		WHERE	@FDate<= ToDate AND FromDate<=@TDate
 	)
 
 	DELETE	d FROM @DiscountGroupHeader d
@@ -114,7 +118,7 @@ BEGIN
 		d.ToAmount = d.ToAmount * e.Rate
 	FROM @DiscountGroup d
 	INNER JOIN #Exchange e ON
-		e.ExchangeDate = @ToDate AND
+		e.ExchangeDate = @TDate AND
 		d.BaseCurrency = e.ExchangeID AND
 		d.DiscountGroupType = 1 -- discount = 1
 
@@ -135,7 +139,7 @@ BEGIN
 	INSERT INTO @PartyChargeInfo(PartyId, LicenseeId, IsDeposit, ProductID, Rate, Fromdate, Todate, Bettype)
 	(
 		SELECT	ci.PartyID, ci.LicenseeID, ci.isDeposit, ci.ProductID, ci.DI_Rate, ci.Fromdate, ci.ToDate, ISNULL(sbr.Bettype, ci.Bettype)
-		FROM	bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FromDate, @ToDate, @ProductList, 'OA', 1) ci
+		FROM	bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FDate, @TDate, @ProductList, 'OA', 1) ci
 			LEFT JOIN bodb_licensee..Sport_Bettype_Reference sbr WITH(NOLOCK) ON sbr.BettypeRef = ci.Bettype
 		WHERE	DI_Rate > 0 AND ProductId <> 1 --exclude RB
 	)
@@ -143,9 +147,9 @@ BEGIN
 	
 	--  Minimum fee is calculated for all currencies that licensee offer. There is no minimum fee when data display individual currency.
 	-- Region: MinfeeGroup Date range
-	DECLARE @Month TINYINT = MONTH(@FromDate)
-	DECLARE @FirstDate DATETIME = DATEADD(mm, DATEDIFF(mm, 0, @FromDate), 0)
-	DECLARE @LastDate DATETIME = DATEADD (dd, -1, DATEADD(mm, DATEDIFF(mm, 0, @FromDate) + 1, 0))
+	DECLARE @Month TINYINT = MONTH(@FDate)
+	DECLARE @FirstDate DATETIME = DATEADD(mm, DATEDIFF(mm, 0, @FDate), 0)
+	DECLARE @LastDate DATETIME = DATEADD (dd, -1, DATEADD(mm, DATEDIFF(mm, 0, @FDate) + 1, 0))
 	DECLARE @DaysInMonth INT = DATEDIFF(day, @FirstDate, @LastDate) + 1
 
 	DECLARE @PartyGroup AS TABLE (PartyGroupId INT, PartyId INT)
@@ -179,8 +183,8 @@ BEGIN
 				mf.ProductId,
 				mf.CurrencyId,
 				mf.FeeAmount,
-				CASE WHEN @FromDate >= mf.FromDate THEN @FromDate ELSE mf.FromDate END AS FromDate,
-				CASE WHEN @ToDate < mf.ToDate THEN @ToDate ELSE mf.ToDate END AS ToDate
+				CASE WHEN @FDate >= mf.FromDate THEN @FDate ELSE mf.FromDate END AS FromDate,
+				CASE WHEN @TDate < mf.ToDate THEN @TDate ELSE mf.ToDate END AS ToDate
 		FROM	bodb_licensee.dbo.LA_MinFee mf WITH(NOLOCK)
 		WHERE	((mf.FeeTypeId = 1)
 					OR mf.FeeTypeId = 2 AND EXISTS (SELECT	PartyId
@@ -205,7 +209,7 @@ BEGIN
 
 	UPDATE m SET m.FeeAmount = m.FeeAmount * e.Rate
 	FROM @MinFeeGroup m
-		INNER JOIN #Exchange e ON e.ExchangeDate = @ToDate AND m.CurrencyId = e.ExchangeID
+		INNER JOIN #Exchange e ON e.ExchangeDate = @TDate AND m.CurrencyId = e.ExchangeID
 
 	-- Region: Get Amount by Product
 	CREATE	TABLE #TempData (
@@ -233,7 +237,7 @@ BEGIN
 													AND p.LicenseeId = b.SiteId
 													AND (b.rptDate BETWEEN p.FromDate AND p.ToDate)
 													AND (p.Bettype = -1 OR p.Bettype = b.Bettype)
-		WHERE	b.rptDate BETWEEN @FromDate AND @ToDate
+		WHERE	b.rptDate BETWEEN @FDate AND @TDate
 				AND b.CurrencyID <> 20
 				AND b.customercategory NOT IN (27, 28)
 				AND b.Bettype NOT IN (901,902,903)
@@ -361,7 +365,7 @@ BEGIN
 				,SUM(AmountToCompany) WLFeeApplied
 				,SUM(AmountToCompany) AmountToCompany
 		FROM #TempData
-		GROUP BY PartyId, ProductId, CASE WHEN MONTH(rptDate) = MONTH(@FromDate) THEN 1 ELSE 0 END
+		GROUP BY PartyId, ProductId, CASE WHEN MONTH(rptDate) = MONTH(@FDate) THEN 1 ELSE 0 END
 
 		-- merge to minfee group
 		UPDATE s 
@@ -434,9 +438,9 @@ BEGIN
 	FROM #SBResult
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200)
-	SELECT @tmpDate = @FromDate
+	SELECT @tmpDate = @FDate
 
-	WHILE @tmpDate <= @ToDate
+	WHILE @tmpDate <= @TDate
 	BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
@@ -458,7 +462,7 @@ BEGIN
 	DELETE FROM @PartyChargeInfo
 	INSERT INTO @PartyChargeInfo(PartyId, LicenseeId, IsDeposit, ProductID, Rate, Fromdate, Todate)
 	SELECT	PartyID, LicenseeID, isDeposit, ProductID, DI_Rate, Fromdate, Todate
-	FROM	bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIds, @FromDate, @ToDate, 'SB', 'OA', 0)
+	FROM	bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIds, @FDate, @TDate, 'SB', 'OA', 0)
 	WHERE	DI_Rate > 0
 
 	CREATE TABLE #MetricGamingData (LicenseeID INT, PartyID INT, RptDate DATE, CurrencyID INT, LicenseeWL MONEY, AmtLicensee MONEY)
@@ -478,7 +482,7 @@ BEGIN
 	FROM	bodb_licensee.dbo.rpt_Betting b WITH (NOLOCK)
 			INNER JOIN @PartyChargeInfo p ON b.SiteID = p.LicenseeId 
 			AND b.rptDate BETWEEN p.FromDate AND p.ToDate
-	WHERE	b.rptDate BETWEEN @FromDate AND @ToDate
+	WHERE	b.rptDate BETWEEN @FDate AND @TDate
 			AND (b.CurrencyID <> 20)
 			AND b.[Status] BETWEEN 111 AND 113
 			AND b.customercategory NOT IN (27, 28)
@@ -502,16 +506,16 @@ BEGIN
 
 	INSERT INTO @ProductChargeInfo(Rate, FromDate, ToDate, MinAmount, MaxAmount)
 	SELECT	ci.Rate,
-			CASE WHEN @FromDate >= ci.FromDate THEN @FromDate ELSE ci.FromDate END AS FromDate,
-			CASE WHEN @ToDate < ci.ToDate THEN @ToDate ELSE ci.ToDate END AS ToDate,
+			CASE WHEN @FDate >= ci.FromDate THEN @FDate ELSE ci.FromDate END AS FromDate,
+			CASE WHEN @TDate < ci.ToDate THEN @TDate ELSE ci.ToDate END AS ToDate,
 			ci.MinAmount * ex.Rate,
 			ci.MaxAmount * ex.Rate
 	FROM bodb_licensee.dbo.OAS_ChargeInfo ci
-	INNER JOIN #ExchangeOANDA ex ON ci.BaseCurrencyId = ex.ExchangeID AND ex.ExchangeDate = @ToDate
+	INNER JOIN #ExchangeOANDA ex ON ci.BaseCurrencyId = ex.ExchangeID AND ex.ExchangeDate = @TDate
 	WHERE ci.ProductID = 0 AND ci.FromParty = 1 AND ci.ChargeType = 4 -- Get Charge Rate to Billing for Metric Gaming
-		AND ((ci.FromDate BETWEEN @FromDate AND @Todate)
-			OR (ci.ToDate BETWEEN @FromDate AND @Todate)
-			OR (ci.FromDate < @FromDate AND @Todate < ci.ToDate))
+		AND ((ci.FromDate BETWEEN @FDate AND @TDate)
+			OR (ci.ToDate BETWEEN @FDate AND @TDate)
+			OR (ci.FromDate < @FDate AND @TDate < ci.ToDate))
 
 	; WITH WLAmount AS
 	(
@@ -576,7 +580,7 @@ BEGIN
 	DELETE FROM @PartyChargeInfo
 	INSERT INTO @PartyChargeInfo(PartyId, LicenseeId, IsDeposit, ProductID, Rate, Fromdate, Todate)
 	SELECT	PartyID, LicenseeID, isDeposit, ProductID, DI_Rate, Fromdate, Todate
-	FROM	bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIds, @FromDate, @ToDate, 'SB', 'OA', 0)
+	FROM	bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIds, @FDate, @TDate, 'SB', 'OA', 0)
 
 	DECLARE @MuayThaiData TABLE (rptDate DATE, AmtDueMuayThai MONEY)
 	INSERT INTO @MuayThaiData
@@ -587,7 +591,7 @@ BEGIN
 											AND b.SiteID = p.LicenseeId
 											AND b.rptDate BETWEEN p.FromDate AND p.ToDate
 			INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.rptDate AND e.ExchangeID = b.CurrencyId
-	WHERE	b.rptDate BETWEEN @FromDate AND @ToDate
+	WHERE	b.rptDate BETWEEN @FDate AND @TDate
 			AND (b.CurrencyID <> 20)
 			AND b.StatusId BETWEEN 111 AND 113
 			AND b.customercategory NOT IN (27, 28)
