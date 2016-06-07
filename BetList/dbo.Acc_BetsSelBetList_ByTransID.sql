@@ -77,6 +77,7 @@ AS
 		- 20160204@Kos: Support AllBet [#Redmine: 50864]
 		- 20160307@Kos: Hotfix Missing choice of Gold Deluxe [#Redmine: 53506]
 		- 20160331@Kos: Support Voidbridge [#Redmine: 54925]
+		- 20160606@Kos: Unable to search Gold Deluxe ticket [#Redmine: 58852]
 */
 
 BEGIN
@@ -1092,6 +1093,7 @@ BEGIN
 			-- Gold Deluxe, Microgaming Live Casino, Cockfighting, Colossus Bet (translog)
 			IF EXISTS (SELECT TOP 1 1 FROM @SportBettype s WHERE ProductID IN (12, 13, 15, 19) AND Bettype = @Bettype)
 			BEGIN
+				INSERT INTO @Data
 				SELECT 
 					b.gameid AS bettype,
 					b.translogid AS transid,
