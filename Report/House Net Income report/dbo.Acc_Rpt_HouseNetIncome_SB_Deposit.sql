@@ -229,7 +229,7 @@ BEGIN
 				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				p.ProductId,
-				SUM((-ISNULL(b.MemberWL, 0) * p.Rate) - (CASE WHEN b.ProductId = 3 THEN ISNULL(b.CommissionA, 0) ELSE 0 END)) * e.Rate,
+				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate,
 				1 AS IsApplyMinFee
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID
@@ -429,12 +429,12 @@ BEGIN
 	)
 
 	DECLARE @BAComm MONEY = 0, @BAWinloss MONEY = 0
-	SELECT	@BAComm = ISNULL(SUM(AComm), 0),
+	SELECT	@BAComm = ISNULL(-SUM(AComm), 0),
 			@BAWinloss = ISNULL(SUM(AmountToCompany), 0)
 	FROM #TempData WHERE ProductId = 3
 
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied) + @BAWinloss, 0), ISNULL(SUM(MinFeeApplied - Discount - Rebate) - @BAComm, 0), 0, 0
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied) + @BAWinloss, 0), ISNULL(SUM(MinFeeApplied - Discount - Rebate) + @BAComm, 0), 0, 0
 	FROM #SBResult
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200)
@@ -445,7 +445,7 @@ BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
 			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId IN (0, 3) AND rptDate = @tmpDate), -- LicenseeWL + BA Winloss
-			(SELECT ISNULL(SUM(AComm), 0) FROM #TempData WHERE ProductId = 3 AND rptDate = @tmpDate), -- BA Commission
+			(SELECT ISNULL(-SUM(AComm), 0) FROM #TempData WHERE ProductId = 3 AND rptDate = @tmpDate), -- BA Commission
 			0, 0
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
