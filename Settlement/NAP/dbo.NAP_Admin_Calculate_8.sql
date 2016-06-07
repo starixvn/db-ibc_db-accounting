@@ -27,7 +27,7 @@ AS
         - 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160425@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
-		- 20160507@Patrick: Use Option Force Order & Reduce scan table bettrans incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
+		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match

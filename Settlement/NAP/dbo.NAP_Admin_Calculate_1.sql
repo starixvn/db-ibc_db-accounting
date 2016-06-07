@@ -34,7 +34,7 @@ AS
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160425@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
-		- 20160507@Patrick: Use Option Force Order & Reduce scan table bettrans incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
+		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
         
 */
 BEGIN
