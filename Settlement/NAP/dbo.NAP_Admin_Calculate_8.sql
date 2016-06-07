@@ -27,6 +27,7 @@ AS
         - 20151125@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160425@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
+		- 20160507@Patrick: Use Option Force Order & Reduce scan table bettrans incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -375,16 +376,19 @@ BEGIN
         
 			--PRINT @@ROWCOUNT
 
-			DECLARE @currList TABLE(custid INT)
+			CREATE TABLE #currList (custid INT PRIMARY KEY)
+			DECLARE @MinCustId INT
 			WHILE 1 = 1
 			BEGIN
-				DELETE FROM @currList
+				DELETE FROM #currList
 
 				DELETE TOP (1000)
-				FROM #tempCust OUTPUT DELETED.custid INTO @currList
+				FROM #tempCust OUTPUT DELETED.custid INTO #currList
 				IF @@ROWCOUNT = 0 BREAK
 
-				UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+				SELECT @MinCustId = MIN(custid) FROM #currList
+
+				UPDATE b
 				SET @modds = CASE 
 						WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
 						WHEN betteam IN ('a', 'u') THEN hdp1 - @totalht
@@ -570,13 +574,17 @@ BEGIN
 						WHEN @modds < 0 THEN 113 --LOSE
 						END
 					,ruben = 1
-				WHERE matchid = @matchid 
-					AND EXISTS (SELECT TOP 1 1 FROM @currList t WHERE t.custid = bettrans.custid)
+				FROM #currList t
+					INNER JOIN dbo.bettrans b WITH (ROWLOCK, UPDLOCK) ON t.custid = b.custid
+				WHERE matchid = @matchid
+					AND b.custid >= @MinCustId
 					AND bettype = @bettype 
 					AND statusID NOT IN (101, 102)
+				OPTION (FORCE ORDER)
 
 				--PRINT @@ROWCOUNT
 			END
+			DROP TABLE #currList
 			DROP TABLE #tempCust
         END
     END
