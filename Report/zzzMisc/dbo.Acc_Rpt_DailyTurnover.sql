@@ -16,6 +16,7 @@ Revisions:
 	-20121031@Jim: add more bettype for Sportbook (new Tennis: 1301->1304)
 	- 20150126@Jamie: Missing 3rd party's tickets - HotFix [#29477]
 	- 20150728@Jim: apply Bettrade (Feature #38815)
+	- 20160607@Jim:Add More Actions of Settlement to Daily Turnover Report (#57781)
 Param's Explanation:
 
 */
@@ -42,7 +43,7 @@ SELECT	Bettype
 FROM	SportBettypeMatrix WITH (NOLOCK)
 WHERE	ProductID = 1
 		AND EventType = 1 
-		AND bettype NOT IN (901,902,903)
+		AND bettype NOT IN (901,902,903,500)
 
 -- Consider to include bettrans_BK into query or not.
 IF @fromdate <= (select max(distinct eventdate) from match14 (nolock))

@@ -57,6 +57,7 @@ BEGIN
 	SELECT ActionID
 		  ,	CONVERT(INT,strbettye) AS BettypeID
 	FROM dbo.[v_ActionIDBettype]
+	WHERE CONVERT(INT,strbettye) <> 0
 	
 	CREATE TABLE #tmpUserLog  (logdate DATETIME
 							   ,matchId INT
