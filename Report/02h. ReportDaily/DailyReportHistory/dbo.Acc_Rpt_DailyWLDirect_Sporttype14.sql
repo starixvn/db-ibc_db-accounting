@@ -290,14 +290,15 @@ BEGIN
 	CREATE TABLE #match14 (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
 	INSERT INTO #match14 
 	SELECT	m.matchid, 
-			l.sporttype,
+			s.sporttype,
 			m.type
 	FROM (
-			SELECT matchid, leagueid,'match' as type FROM match14 WITH (NOLOCK) WHERE eventdate = @winlostdate
+			SELECT matchid, leagueid, exrisk, matchcode, 'match' as type FROM match14 WITH (NOLOCK) WHERE eventdate = @winlostdate
 			UNION ALL
-			SELECT orid, leagueid, 'outright' as type FROM outright14 WITH (NOLOCK) WHERE eventdate = @winlostdate
+			SELECT orid, leagueid, 0, matchcode, 'outright' as type FROM outright14 WITH (NOLOCK) WHERE eventdate = @winlostdate
 			)m	
-	INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid	 
+	INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid	
+	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 
 
 	--------------------------------------------------------------------------------
@@ -825,7 +826,7 @@ GO
 
 
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam]
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [vnteam]
 GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet]
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]
 GO 

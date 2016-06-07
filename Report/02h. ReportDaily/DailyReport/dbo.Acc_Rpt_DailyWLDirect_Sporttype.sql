@@ -285,14 +285,16 @@ BEGIN
 	CREATE TABLE #Match (matchid INT, sporttype smallint, type varchar(10), primary key(matchid, type))
 	INSERT INTO #Match 
 	SELECT	m.matchid, 
-			l.sporttype,
+			s.sporttype,
 			m.type
 	FROM (
-			SELECT matchid, leagueid, 'match' as type FROM match WITH (NOLOCK) WHERE eventdate = @winlostdate
+			SELECT matchid, leagueid, exrisk, matchcode, 'match' as type FROM match WITH (NOLOCK) WHERE eventdate = @winlostdate
 			UNION ALL
-			SELECT orid, leagueid, 'outright' as type FROM outright WITH (NOLOCK) WHERE eventdate = @winlostdate
+			SELECT orid, leagueid, 0, matchcode, 'outright' as type FROM outright WITH (NOLOCK) WHERE eventdate = @winlostdate
 			)m	
 	INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid	
+	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
+
 
 	--------------------------------------------------------------------------------
 	---1. Sportsbook only and outright
