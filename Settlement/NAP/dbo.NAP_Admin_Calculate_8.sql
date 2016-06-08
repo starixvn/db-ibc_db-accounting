@@ -361,6 +361,8 @@ BEGIN
 
                 IF @affectedagents <> 100 
                     BREAK
+
+				WAITFOR DELAY '00:00:00:010'
             END 
             DROP TABLE #tmpRecommend
         END
@@ -582,6 +584,7 @@ BEGIN
 					AND statusID NOT IN (101, 102)
 				OPTION (FORCE ORDER)
 
+				WAITFOR DELAY '00:00:00:010'
 				--PRINT @@ROWCOUNT
 			END
 			DROP TABLE #currList

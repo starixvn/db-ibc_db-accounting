@@ -258,6 +258,8 @@ BEGIN
 
             IF @affectedagents <> 100
                 BREAK
+
+			WAITFOR DELAY '00:00:00:010'
         END
 
         DROP TABLE #tmpRecommend
@@ -495,6 +497,8 @@ BEGIN
 								ELSE 0 END
 			OPTION (FORCE ORDER)
 			--PRINT @@ROWCOUNT
+
+			WAITFOR DELAY '00:00:00:010'
 		END
 		DROP TABLE #currList
 		DROP TABLE #tempCust

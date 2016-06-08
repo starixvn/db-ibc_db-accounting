@@ -222,6 +222,8 @@ BEGIN
 
             IF @affectedagents <> 100
                 BREAK
+
+			WAITFOR DELAY '00:00:00:010'
         END
         DROP TABLE #tmpRecommend
     END
@@ -436,6 +438,8 @@ BEGIN
 				AND bettype = @bettype
 				AND statusID NOT IN (101, 102)--[status] NOT IN (N'VOID', N'REJECT')
 			OPTION (FORCE ORDER)
+
+			WAITFOR DELAY '00:00:00:010'
 
 			--PRINT @@ROWCOUNT
 		END
