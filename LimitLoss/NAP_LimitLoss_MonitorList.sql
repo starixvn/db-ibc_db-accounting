@@ -1,4 +1,15 @@
-﻿ALTER PROCEDURE [dbo].[NAP_LimitLoss_MonitorList]
+USE [bodb_Age]
+GO
+
+/****** Object:  StoredProcedure [dbo].[NAP_LimitLoss_MonitorList]    Script Date: 06/08/2016 18:15:05 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_LimitLoss_MonitorList    Script Date: 6/27/2014 1:18:44 PM ******/
+ALTER PROCEDURE [dbo].[NAP_LimitLoss_MonitorList]
 AS
 /*
 	Created: Elodie
@@ -8,14 +19,15 @@ AS
 
 	Revisions:
 		- 20140620@Elodie: Add icon to indicate loss movement [Redmine:#17906]
+		- 20160607@Aaron: Get CustId [Redmine: #58855]
 	Parameter's explaination: 
 	
-	Example: EXEC NAP_LimitLoss_MonitorList
+	Example:  EXEC NAP_LimitLoss_MonitorList
 	
 */
 SET NOCOUNT ON
 
-SELECT	c.Username, c.roleid, e.currency, t.YesterdayBalance, t.TotalBalance, t.MaxLoss, t.LevelID,
+SELECT	c.CustId, c.Username, c.roleid, e.currency, t.YesterdayBalance, t.TotalBalance, t.MaxLoss, t.LevelID,
 		CASE WHEN t.OldLevelID > t.LevelID THEN -1
 			 WHEN t.OldLevelID < t.LevelID THEN 1
 			 ELSE 0 END AS Movement,
@@ -26,11 +38,9 @@ SELECT	c.Username, c.roleid, e.currency, t.YesterdayBalance, t.TotalBalance, t.M
 		INNER JOIN bodb02.dbo.custInfo c WITH (NOLOCK) ON t.CustID = c.custid
 		INNER JOIN bodb02.dbo.exchange e WITH (NOLOCK) on c.currency = e.exchangeid
 	WHERE t.LevelID > 0
-	ORDER BY PercentageLoss DESC, t.TotalBalance, c.username	
+	ORDER BY PercentageLoss DESC, t.TotalBalance, c.username
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_LimitLoss_MonitorList] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_LimitLoss_MonitorList] TO [vnteam]
-
- 
