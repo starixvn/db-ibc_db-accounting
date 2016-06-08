@@ -54,12 +54,16 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType] @EndDate='2020-01-01',@StartDate='2
                      INNER JOIN #SportBetType sb ON sb.BetType = b.typeid
                 WHERE b.typeid > 10
                       AND b.typeid NOT IN(301, 302, 303, 304);
-         DELETE @BetType
-         WHERE @IsMajor = 1
-               AND BetType NOT IN(1, 2, 3, 5, 6, 7, 8, 12, 15, 24, 25, 28, 121, 122, 123, 126, 151, 301, 302, 303, 304);
-         DELETE @BetType
-         WHERE @IsMajor = 0
-               AND BetType IN(1, 2, 3, 5, 6, 7, 8, 12, 15, 24, 25, 28, 121, 122, 123, 126, 151, 301, 302, 303, 304);
+         IF @IsMajor = 1
+             BEGIN
+                 DELETE @BetType
+                 WHERE Bettype NOT IN(1, 2, 3, 5, 6, 7, 8, 12, 15, 24, 25, 28, 121, 122, 123, 126, 151, 301, 302, 303, 304);
+             END;
+         ELSE
+             BEGIN
+                 DELETE @BetType
+                 WHERE Bettype IN(1, 2, 3, 5, 6, 7, 8, 12, 15, 24, 25, 28, 121, 122, 123, 126, 151, 301, 302, 303, 304);
+             END;
          UPDATE b
            SET
                b.BetTypeName = bt.typenamee
@@ -237,8 +241,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType] @EndDate='2020-01-01',@StartDate='2
                 d.RealTurnover AS RealTurnover,
                 d.VirtualTurnover AS VirtualTurnover
          FROM #Data AS d
-         ORDER BY DisplayOrder,
-                  RowName;
+         ORDER BY CASE
+                      WHEN d.GroupName LIKE '%(hedge)%'
+                      THEN 1
+                      ELSE 0
+                  END,
+                  DisplayOrder;
      END;
      DROP TABLE #SportBetType;
      DROP TABLE #DepositAgent;
