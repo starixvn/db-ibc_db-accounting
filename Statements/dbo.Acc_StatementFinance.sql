@@ -326,8 +326,8 @@ BEGIN
 	    WHERE 
             tf.custid = @CustID
 	        AND 
-                ( (@FilterBy = 1 AND tf.winlostdate >= @_FromDate AND tf.winlostdate < @_ToDate)
-                OR (@FilterBy = 2 AND tf.transdate >= @_FromDate AND tf.transdate < @_ToDate)
+                ( (@FilterBy = 1 AND tf.winlostdate >= CASE @_FromDate WHEN @FromDate_Bk THEN '19000101' ELSE @_FromDate END AND tf.winlostdate < @_ToDate)
+                OR (@FilterBy = 2 AND tf.transdate >= CASE @_FromDate WHEN @FromDate_Bk THEN '19000101' ELSE @_FromDate END AND tf.transdate < @_ToDate)
                 )
 
     IF @CustID > 0
