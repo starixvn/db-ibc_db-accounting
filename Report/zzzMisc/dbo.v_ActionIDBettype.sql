@@ -86,19 +86,19 @@ UNION
 SELECT  152 AS ActionID,
 		strbettye FROM
 				(SELECT val AS strbettye FROM
-											bodb02.dbo.strSplit('801, 802, 803, 804, 805, 806',',') 
+											bodb02.dbo.strSplit('801,803, 804, 805, 806',',') 
 																 )b	
 UNION 
 SELECT  153 AS ActionID,
 		strbettye FROM
 				(SELECT val AS strbettye FROM
-											bodb02.dbo.strSplit('801, 802, 803, 804, 805, 806',',') 
+											bodb02.dbo.strSplit('801,803, 804, 805, 806',',') 
 																 )b	
 UNION 
 SELECT  154 AS ActionID,
 		strbettye FROM
 				(SELECT val AS strbettye FROM
-											bodb02.dbo.strSplit('801, 802, 803, 804, 805, 806',',') 
+											bodb02.dbo.strSplit('801,803, 804, 805, 806',',') 
 																 )b		
 UNION 
 SELECT  157 AS ActionID,
