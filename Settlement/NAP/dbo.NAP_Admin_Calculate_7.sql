@@ -19,6 +19,7 @@ AS
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160425@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
+		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
 
 */
 BEGIN
@@ -221,6 +222,8 @@ BEGIN
 
             IF @affectedagents <> 100
                 BREAK
+
+			WAITFOR DELAY '00:00:00:010'
         END
         DROP TABLE #tmpRecommend
     END
@@ -236,16 +239,20 @@ BEGIN
         
 		--PRINT @@ROWCOUNT
 
-		DECLARE @currList TABLE(custid INT)
+		CREATE TABLE #currList (custid INT PRIMARY KEY)
+		DECLARE @MinCustId INT
+
 		WHILE 1 = 1
 		BEGIN
-			DELETE FROM @currList
+			DELETE FROM #currList
 
 			DELETE TOP (1000)
-			FROM #tempCust OUTPUT DELETED.custid INTO @currList
+			FROM #tempCust OUTPUT DELETED.custid INTO #currList
 			IF @@ROWCOUNT = 0 BREAK
 
-			UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+			SELECT @MinCustId = MIN(custid) FROM #currList
+
+			UPDATE b
 			SET @modds = CASE betteam
 					WHEN 'h' THEN (hdp2 - hdp1) + (@hth - livehomescore) - (@hta - liveawayscore)
 					WHEN 'a' THEN (hdp1 - hdp2) - (@hth - livehomescore) + (@hta - liveawayscore)
@@ -424,13 +431,19 @@ BEGIN
 					WHEN @modds < 0 THEN 113 --LOSE
 					END
 				,ruben = 1
+			FROM #currList t
+				INNER JOIN dbo.bettrans b WITH (ROWLOCK, UPDLOCK) ON t.custid = b.custid
 			WHERE matchid = @matchid 
-				AND EXISTS (SELECT TOP 1 1 FROM @currList t WHERE t.custid = bettrans.custid)
+				AND b.custid >= @MinCustId
 				AND bettype = @bettype
 				AND statusID NOT IN (101, 102)--[status] NOT IN (N'VOID', N'REJECT')
+			OPTION (FORCE ORDER)
+
+			WAITFOR DELAY '00:00:00:010'
 
 			--PRINT @@ROWCOUNT
 		END
+		DROP TABLE #currList
 		DROP TABLE #tempCust
     END
 END

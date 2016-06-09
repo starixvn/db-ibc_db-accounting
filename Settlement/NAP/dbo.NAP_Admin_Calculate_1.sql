@@ -34,6 +34,7 @@ AS
         - 20151026@Kathy: Change Myanmar Odds commision formula [Redmine:#46284]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160425@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
+		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
         
 */
 BEGIN
@@ -257,6 +258,8 @@ BEGIN
 
             IF @affectedagents <> 100
                 BREAK
+
+			WAITFOR DELAY '00:00:00:010'
         END
 
         DROP TABLE #tmpRecommend
@@ -273,16 +276,20 @@ BEGIN
         
         --PRINT @@ROWCOUNT
 
-        DECLARE @currList TABLE(custid INT)
+        CREATE TABLE #currList (custid INT PRIMARY KEY)
+		DECLARE @MinCustId INT
+
 		WHILE 1 = 1
         BEGIN
-            DELETE FROM @currList
+            DELETE FROM #currList
 
             DELETE TOP (1000)
-            FROM #tempCust OUTPUT DELETED.custid INTO @currList
+            FROM #tempCust OUTPUT DELETED.custid INTO #currList
             IF @@ROWCOUNT = 0 BREAK
 
-			UPDATE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+			SELECT @MinCustId = MIN(CustId) FROM #currList
+
+			UPDATE b
 			SET @fth = CASE WHEN bettype IN (154,155,1311, 1316) AND BetID = 801 AND @SelectedSet LIKE '%1%' THEN @TotalGameHomeSet1 
 							WHEN bettype IN (154,155,1311, 1316) AND BetID = 802 AND @SelectedSet LIKE '%2%' THEN @TotalGameHomeSet2 
 							WHEN bettype IN (154,155,1311, 1316) AND BetID = 803 AND @SelectedSet LIKE '%3%' THEN @TotalGameHomeSet3 
@@ -474,8 +481,10 @@ BEGIN
 					WHEN @modds < 0 THEN 113 --LOSE
 					END
 				,ruben = 1
+			FROM #currList t 
+				INNER JOIN dbo.bettrans b WITH (ROWLOCK, UPDLOCK) ON t.custid = b.custid
 			WHERE matchid = @matchid 
-				AND EXISTS (SELECT TOP 1 1 FROM @currList t WHERE t.custid = bettrans.custid)
+				AND b.custid >= @MinCustId
 				AND bettype = @bettype 
 				AND statusID NOT IN (101,102) -- REJECT & VOID 
 				AND 1 = CASE WHEN @bettype = 183 and @isRefundHT = 1 THEN 0 ELSE 1 END
@@ -486,8 +495,12 @@ BEGIN
 								WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1
 								WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1
 								ELSE 0 END
+			OPTION (FORCE ORDER)
 			--PRINT @@ROWCOUNT
+
+			WAITFOR DELAY '00:00:00:010'
 		END
+		DROP TABLE #currList
 		DROP TABLE #tempCust
     END
 END
