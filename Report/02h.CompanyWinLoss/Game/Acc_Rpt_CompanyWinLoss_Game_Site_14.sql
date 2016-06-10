@@ -39,15 +39,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
                        RefTable
                 FROM bodb02.dbo.f_SportBetTypeMatrix_Sel(0, 0, @BetType, 2, '', '', @isTest);
      END;
-     BEGIN -- #DepositAgent
+     BEGIN -- #Agent
 
-         CREATE TABLE #DepositAgent
+         CREATE TABLE #Agent
          (CustId INT PRIMARY KEY,
           Site   NVARCHAR(50)
          );
          IF @Site = 'Deposit'
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -61,7 +61,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
              END;
          ELSE
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -101,7 +101,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                            SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
                     FROM bettrans14 AS b WITH (NOLOCK)
-                         JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
+                         JOIN #Agent AS dep ON b.recommend = dep.CustId
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND b.BetType = @BetType
                           AND b.ruben = 1
@@ -124,7 +124,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                            SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
                     FROM bettransRnG14 b WITH (NOLOCK)
-                         JOIN #DepositAgent dep ON b.recommend = dep.custid
+                         JOIN #Agent dep ON b.recommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND b.gameId = @BetType
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
@@ -147,7 +147,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                            SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
                     FROM bettransLC14 b WITH (NOLOCK)
-                         JOIN #DepositAgent dep ON b.recommend = dep.custid
+                         JOIN #Agent dep ON b.recommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND b.gameId = @BetType
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
@@ -166,7 +166,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
          ORDER BY RowName;
      END;
      DROP TABLE #SportBetType;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #Agent;
      DROP TABLE #Data;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Game_Site_14] TO [bodbAdminNet];

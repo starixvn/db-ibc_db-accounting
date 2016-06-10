@@ -55,17 +55,18 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor] @EndDate='2020-01-01',@StartDat
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositAgent
-                SELECT CustId
-                FROM custInfo WITH (NOLOCK)
-                WHERE srecommend IN
+                SELECT c.CustId
+                FROM customer AS c WITH (NOLOCK)
+                WHERE c.RoleID = 2
+                      AND EXISTS
                 (
-                    SELECT CustId
-                    FROM f_DepSuper_1('All')
+                    SELECT 1
+                    FROM f_DepSuper_1('All') dep
+                    WHERE c.srecommend = dep.CustId
                 )
-                AND roleid = 2
                 AND CustId <> 5707545
                 UNION
-                SELECT 5707545; --BARM	
+                SELECT 5707545; --BARM
 
      END;
      BEGIN -- #Match

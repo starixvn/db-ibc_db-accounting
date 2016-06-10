@@ -110,15 +110,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                 WHERE o.EventDate BETWEEN @StartDate AND @EndDate
                       AND l.sporttype = @SportType;
      END;
-     BEGIN -- #DepositAgent
+     BEGIN -- #Agent
 
-         CREATE TABLE #DepositAgent
+         CREATE TABLE #Agent
          (CustId INT PRIMARY KEY,
           Site   NVARCHAR(50)
          );
          IF @Site = 'Deposit'
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -132,7 +132,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
              END;
          ELSE
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -218,7 +218,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                     FROM bettransm WITH (nolock)
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
-                     INNER JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
+                     INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
                       AND b.MatchId > 0
@@ -237,7 +237,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
          FROM #Data AS d
          ORDER BY RowName;
      END;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #Agent;
      DROP TABLE #CommSetting;
      DROP TABLE #Data;
 GO

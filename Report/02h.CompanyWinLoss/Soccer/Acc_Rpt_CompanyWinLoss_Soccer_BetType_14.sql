@@ -8,9 +8,9 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Soccer_BetType_14];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @StartDate SMALLDATETIME,
-                                                                  @EndDate   SMALLDATETIME,
-                                                                  @IsMajor   BIT           = 1,
-                                                                  @IsLive    INT           = 2
+                                                               @EndDate   SMALLDATETIME,
+                                                               @IsMajor   BIT           = 1,
+                                                               @IsLive    INT           = 2
 AS
 
 /*
@@ -76,14 +76,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositAgent
-                SELECT CustId
-                FROM custInfo WITH (NOLOCK)
-                WHERE srecommend IN
+                SELECT c.CustId
+                FROM customer AS c WITH (NOLOCK)
+                WHERE c.RoleID = 2
+                      AND EXISTS
                 (
-                    SELECT CustId
-                    FROM f_DepSuper_1('All')
+                    SELECT 1
+                    FROM f_DepSuper_1('All') dep
+                    WHERE c.srecommend = dep.CustId
                 )
-                AND roleid = 2
                 AND CustId <> 5707545
                 UNION
                 SELECT 5707545; --BARM	

@@ -33,15 +33,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
 */
 
      SET NOCOUNT ON;
-     BEGIN -- #DepositAgent
+     BEGIN -- #Agent
 
-         CREATE TABLE #DepositAgent
+         CREATE TABLE #Agent
          (CustId INT PRIMARY KEY,
           Site   NVARCHAR(50)
          );
          IF @Site = 'Deposit'
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -53,13 +53,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
                             FROM f_DepSuper_1('All') dep
                             WHERE c.srecommend = dep.CustId
                         );
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT 5707545,
                                'BEST-ODDS'; --BARM
              END;
          ELSE
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -71,7 +71,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
                             FROM f_DepSuper_1('All') dep
                             WHERE c.srecommend = dep.CustId
                         );
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT 52466,
                                'XYZBET';--8RM;
              END;
@@ -133,7 +133,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
                        SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
                        SUM((1 - tpositiontaking) * stake * virtualrate) VirtualTurnover
                 FROM bettrans b WITH (NOLOCK)
-                     INNER JOIN #DepositAgent ag ON b.recommend = ag.custid
+                     INNER JOIN #Agent ag ON b.recommend = ag.custid
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
@@ -162,7 +162,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
          FROM #Data AS d
          ORDER BY RowName;
      END;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #Agent;
      DROP TABLE #Match;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Sportsbook_Site] TO [bodbAdminNet];

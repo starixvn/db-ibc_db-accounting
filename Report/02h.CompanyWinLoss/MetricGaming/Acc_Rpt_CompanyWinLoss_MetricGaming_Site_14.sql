@@ -29,15 +29,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] @StartDate='2016-01-01', @End
 */
 
      SET NOCOUNT ON;
-     BEGIN -- #DepositAgent
+     BEGIN -- #Agent
 
-         CREATE TABLE #DepositAgent
+         CREATE TABLE #Agent
          (CustId INT PRIMARY KEY,
           Site   NVARCHAR(50)
          );
          IF @Site = 'Deposit'
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -51,7 +51,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] @StartDate='2016-01-01', @End
              END;
          ELSE
              BEGIN
-                 INSERT INTO #DepositAgent
+                 INSERT INTO #Agent
                         SELECT c.CustId,
                                Site
                         FROM customer AS c WITH (NOLOCK)
@@ -88,7 +88,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] @StartDate='2016-01-01', @End
                        SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
                        SUM((1 - tpositiontaking) * stake * virtualrate) VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
-                     INNER JOIN #DepositAgent ag ON b.recommend = ag.custid
+                     INNER JOIN #Agent ag ON b.recommend = ag.custid
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
@@ -111,7 +111,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] @StartDate='2016-01-01', @End
          FROM #Data AS d
          ORDER BY RowName;
      END;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #Agent;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] TO [bodbAdminNet];
 GO

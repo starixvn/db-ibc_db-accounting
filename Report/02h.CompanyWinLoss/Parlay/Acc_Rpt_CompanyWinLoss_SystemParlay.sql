@@ -41,13 +41,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay] @EndDate='2020-01-01',@StartDate='201
                         FROM customer AS c WITH (NOLOCK)
                         WHERE c.RoleID = 2
                               AND c.CustId NOT IN(52466, 5707545)
-                              AND EXISTS
+                        AND EXISTS
                         (
                             SELECT 1
                             FROM f_DepSuper_1('All') dep
                             WHERE c.srecommend = dep.CustId
-                        );
-                 INSERT INTO #DepositAgent
+                        )
+                        UNION
                         SELECT 5707545,
                                'BEST-ODDS'; --BARM
              END;
@@ -60,13 +60,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay] @EndDate='2020-01-01',@StartDate='201
                         FROM customer AS c WITH (NOLOCK)
                         WHERE c.RoleID = 2
                               AND c.CustId NOT IN(52466, 5707545)
-                              AND NOT EXISTS
+                        AND NOT EXISTS
                         (
                             SELECT 1
                             FROM f_DepSuper_1('All') dep
                             WHERE c.srecommend = dep.CustId
-                        );
-                 INSERT INTO #DepositAgent
+                        )
+                        UNION
                         SELECT 52466,
                                'XYZBET';--8RM;
              END;
