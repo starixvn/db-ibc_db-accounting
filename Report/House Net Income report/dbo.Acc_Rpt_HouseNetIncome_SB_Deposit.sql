@@ -367,6 +367,19 @@ BEGIN
 		FROM #TempData
 		GROUP BY PartyId, ProductId, CASE WHEN MONTH(rptDate) = MONTH(@FDate) THEN 1 ELSE 0 END
 
+		-- Include parties that didn't have any tickets in the selected date range
+		INSERT INTO @SumByProducts (PartyId,ProductId,WinLoss,AComm,MinFeeApplied,WLFeeApplied,AmountToCompany)
+		SELECT PartyId
+			,ProductID
+			,0 Winloss
+			,0 AComm
+			,0 MinFeeApplied
+			,0 WLFeeApplied
+			,0 AmountToCompany
+		FROM @MinFeeGroup mf
+		WHERE PartyId NOT IN (SELECT PartyId FROM #TempData WHERE ProductId = mf.ProductId)
+			AND mf.FeeType = 1
+
 		-- merge to minfee group
 		UPDATE s 
 		SET AmountToCompany = m.AmountToCompany
@@ -404,7 +417,6 @@ BEGIN
 		Discount		MONEY,
 		Rebate			MONEY
 	)
-
 
 	INSERT INTO #SBResult (PartyId, SportbookFee, Discount, Rebate, MinFeeApplied, WLFeeApplied)
 	SELECT	p.PartyId, 
