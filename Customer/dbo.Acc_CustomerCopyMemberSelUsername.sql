@@ -32,13 +32,13 @@ BEGIN
 			   WHEN @roleid=2 THEN age.username
 			   WHEN @roleid=3 THEN mas.username
 			   WHEN @roleid=4 THEN sup.username END =@Username
-	SELECT @memberid AS UserId,@memberUsername AS UserName, 1 AS Role
+	SELECT @memberid AS CustId,@memberUsername AS UserName, 1 AS RoleId
 	UNION
-	SELECT @agentid AS UserId,@agentUsername AS UserName, 2 AS Role
+	SELECT @agentid AS CustId,@agentUsername AS UserName, 2 AS RoleId
 	UNION
-	SELECT @masterid AS UserId,@masterUsername AS UserName, 3 AS Role
+	SELECT @masterid AS CustId,@masterUsername AS UserName, 3 AS RoleId
 	UNION
-	SELECT @supperid AS UserId,@supperUsername AS UserName, 4 AS Role
+	SELECT @supperid AS CustId,@supperUsername AS UserName, 4 AS RoleId
 	   
     END
 
