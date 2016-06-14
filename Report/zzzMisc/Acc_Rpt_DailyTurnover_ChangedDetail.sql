@@ -190,15 +190,24 @@ BEGIN
 		IBC_Actual = IBC_Actual * -1,
 		IBC_Virtual =IBC_Virtual  * -1
 	WHERE actionid  IN (-1,-2,103,109,110,111,112)
-
-	-- Retrun result
+	
+	SELECT DISTINCT
+			c.CustID	
+			,c.UserName
+	INTO #tmpCust	
+	FROM  #temp  t
+		INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON t.UserID = c.CustID
+	INSERT INTO #tmpCust(CustID,UserName)
+	SELECT 0,''
+	
+		-- Retrun result
 	IF @fromdate_<= (select max(distinct eventdate) from match14 (nolock))
 	BEGIN
 		SELECT CONVERT(VARCHAR(20), logdate, 120)  [DateTime],
 				CASE #temp.actionid WHEN -1 THEN 'Void Settled Bet'  ELSE l.ActionNameEN  END [Action],
 				CASE #temp.actionid WHEN -1 THEN convert( nvarchar(50),DetailID) WHEN -2 THEN convert( nvarchar(50),DetailID)  
 												ELSE teamname.homename + '-vs-' + teamname.awayname + ' $ ' + convert( nvarchar(50),teamname.matchcode) END [Detail] ,
-				c.username [Username],
+				  ISNULL(c.username,'')  [Username],
 				Total_Actual,Total_Virtual,Super_Actual,Super_Virtual,Master_Actual,Master_Virtual,Agent_Actual,Agent_Virtual,IBC_Actual,IBC_Virtual--TicketCNT,NormalCNT,RejectCNT
 		FROM #temp 
 			LEFT JOIN DBLOG.bodb_CustomerLog.dbo.LogAction l ON #temp.actionid = l.actionid
@@ -206,7 +215,7 @@ BEGIN
 						FROM bodb02.dbo.[match14] m INNER JOIN bodb02.dbo.team ht ON m.homeid = ht.teamid
 										INNER JOIN bodb02.dbo.team at ON m.awayid = at.teamid) as teamname
 				ON #temp.actionid <> -1 AND #temp.DetailID = teamname.matchid
-			INNER JOIN  bodb02.dbo.Customer c ON c.custID = #temp.UserID
+			INNER JOIN #tmpCust c ON c.custID = #temp.UserID
 		ORDER BY logdate DESC	
 	END
 	ELSE
@@ -215,7 +224,7 @@ BEGIN
 				CASE #temp.actionid WHEN -1 THEN 'Void Settled Bet'  ELSE l.ActionNameEN  END [Action],
 				CASE #temp.actionid WHEN -1 THEN convert( nvarchar(50),DetailID) WHEN -2 THEN convert( nvarchar(50),DetailID)  
 												ELSE teamname.homename + '-vs-' + teamname.awayname + ' $ ' + convert( nvarchar(50),teamname.matchcode) END [Detail] ,
-				c.username [Username],
+				 ISNULL(c.username,'')   [Username],
 				Total_Actual,Total_Virtual,Super_Actual,Super_Virtual,Master_Actual,Master_Virtual,Agent_Actual,Agent_Virtual,IBC_Actual,IBC_Virtual--TicketCNT,NormalCNT,RejectCNT
 		FROM #temp 
 			LEFT JOIN DBLOG.bodb_CustomerLog.dbo.LogAction l ON #temp.actionid = l.actionid
@@ -223,12 +232,14 @@ BEGIN
 						FROM bodb02.dbo.[match] m INNER JOIN bodb02.dbo.team ht ON m.homeid = ht.teamid
 										INNER JOIN bodb02.dbo.team at ON m.awayid = at.teamid) as teamname
 				ON #temp.actionid <> -1 AND #temp.DetailID = teamname.matchid
-			INNER JOIN  bodb02.dbo.Customer c ON c.custID = #temp.UserID
+			INNER JOIN  #tmpCust c ON c.custID = #temp.UserID
 		ORDER BY logdate DESC	
 	END
 
 
 	DROP TABLE #temp		
+	DROP TABLE #tmpUserLog
+	DROP TABLE #tmpCust
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [bodbAdminNet] AS [dbo]
