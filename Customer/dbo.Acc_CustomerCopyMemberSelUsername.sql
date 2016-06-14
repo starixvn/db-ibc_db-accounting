@@ -21,6 +21,18 @@ BEGIN
     SELECT @roleid = roleID
 	FROM custinfo WITH(NOLOCK)
 	WHERE username=@Username
+	
+	IF @roleid IS NULL
+	BEGIN
+	SELECT NULL AS CustId,NULL AS UserName, 1 AS RoleId
+	UNION
+	SELECT NULL AS CustId,NULL AS UserName, 2 AS RoleId
+	UNION
+	SELECT NULL AS CustId,NULL AS UserName, 3 AS RoleId
+	UNION
+	SELECT NULL AS CustId,NULL AS UserName, 4 AS RoleId
+	RETURN
+	END
     
 	SELECT TOP 1 @memberid=mem.custid,@agentid=age.custid,@supperid=sup.custid,@masterid=mas.custid,
 	@memberUsername=mem.username,@agentUsername=age.username,@supperUsername=sup.username,@masterUsername=mas.username
