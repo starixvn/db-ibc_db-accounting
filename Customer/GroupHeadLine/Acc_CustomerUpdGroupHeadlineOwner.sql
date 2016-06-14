@@ -11,7 +11,7 @@ AS
 	Created: Elodie
 	Date: 2016-06-10
 	Task : Update headline type  
-	DB: DBACC/bodb02
+	DB: DBCUST/CustDB
 	Original:  
 	
 	Revisions:
@@ -57,21 +57,19 @@ BEGIN
 	IF @ErrCode <>0 
 		RETURN
 
-	SELECT @Old_OwnerName = ci.username, @GroupID = GroupID 
+	SELECT @Old_OwnerName = ISNULL(ci.username,''), @GroupID = GroupID 
 	FROM dbo.custInfo ci WITH (NOLOCK) 
-		LEFT JOIN dbo.CustGroupHeadline hl WITH (NOLOCK) ON ci.custid = hl.OwnerID AND hl.CustID = @HeadlineID 
+		RIGHT JOIN dbo.CustGroupHeadline hl WITH (NOLOCK) ON ci.custid = hl.OwnerID 
+	WHERE hl.CustID = @HeadlineID 
 	
-	IF @Old_OwnerName <> ''
-	BEGIN
-		UPDATE  CustGroupHeadline WITH (ROWLOCK, UPDLOCK) 
-		SET		OwnerID = @OwnerID
-		WHERE	CustID = @HeadlineID
-	END
-	ELSE
-	BEGIN
+	UPDATE  CustGroupHeadline WITH (ROWLOCK, UPDLOCK) 
+	SET		OwnerID = @OwnerID
+	WHERE	CustID = @HeadlineID
+	
+	IF @@ROWCOUNT = 0
 		INSERT INTO dbo.CustGroupHeadline( CustID, GroupID, OwnerID, HeadlineType)
 		SELECT @HeadlineID, 0, @OwnerID, NULL
-	END
+	
 	---Write log 
 	DECLARE @LogSPData NVARCHAR(MAX), @TrackingValue2 NVARCHAR(MAX)
 
