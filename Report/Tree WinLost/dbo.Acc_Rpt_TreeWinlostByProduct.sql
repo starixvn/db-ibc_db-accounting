@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
+﻿Use bodb02
+GO 
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,	
 	@Products VARCHAR(4000), -- instead of all @showXXX parameters
@@ -37,7 +40,7 @@ Revisions:
 	- 20160118@Percy: Calculate turnover for RNG Casino [Redmine: #49134]
 	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
-
+	- 20160615@Sophia: Change READPAST to ROWLOCK because of the Deadlock [Redmind: #59254]
 */    
   
   
@@ -222,7 +225,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 					else 0 end))-- commIncomeIBC  
 				) Winloss,  
 				SUM(scomm) Commission
-			FROM bettrans b with (READPAST)  
+			FROM bettrans b with (NOLOCK)  
 				INNER JOIN @CommSetting as cs ON b.matchid = cs.matchid  
 				LEFT JOIN ( select refno,
 								sum(case when bettype = 32 and liveawayscore = 0 then 0 else stake*isnull(oddsspread,0) end) TOIBC,  
@@ -270,7 +273,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 				0 Turnover,
 				isnull(sum(-1*(odds)),0)  Winlost,   
 				SUM(scomm) commission
-			from bettrans b with (READPAST)  
+			from bettrans b with (NOLOCK)  
 			where b.bettype IN( SELECT bettype FROM @SportBettype WHERE ProductID = 9)
 				and b.matchid = 1000   
 				and b.ruben=1    
@@ -307,7 +310,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		  SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,  
 		  SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM ,  
 		  SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
-	   FROM bettransRNG b WITH(READPAST)   
+	   FROM bettransRNG b WITH(ROWLOCK)   
 		  INNER JOIN #tmpBettype t on t.bettype = b.gameID 
 	   WHERE winlostdate BETWEEN @FromDate AND @ToDate  
 		  AND t.ProductID in (6, 17, 22)
@@ -328,7 +331,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,  
 		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM ,  
 		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
-	FROM bettrans b WITH(READPAST)   
+	FROM bettrans b WITH(ROWLOCK)   
 		INNER JOIN #tmpBettype t on t.bettype = b.bettype
 	WHERE winlostdate BETWEEN @FromDate AND @ToDate
 	     AND t.ProductID NOT IN (2, 6, 9, 17, 21, 22)
@@ -350,7 +353,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		SUM(ABS(stake)*(1 - tpositiontaking)*b.virtualrate) TurnoverIBCVirtual,  
 		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM ,  
 		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*b.virtualrate) Virtual_Total
-	FROM bettransLC b WITH(READPAST)   
+	FROM bettransLC b WITH(ROWLOCK)   
 		INNER JOIN #tmpBettype t on t.bettype = b.gameID 
 	WHERE winlostdate BETWEEN @FromDate AND @ToDate	
 	     AND t.ProductID = 21	
@@ -363,7 +366,7 @@ SELECT	@TurnOver_8RM     = -SUM(ABS(stake)*(1 - tpositiontaking)*actualrate),
 		@Total_8RM        = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate),    
 		@VirtualTotal_8RM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))  
 		--@Variance_8RM=@Total_8RM-@VirtualTotal_8RM  
-FROM bettrans b WITH(READPAST)    
+FROM bettrans b WITH(NOLOCK)    
 	INNER JOIN #tmpBettype t on t.bettype = b.bettype
 WHERE recommend = 52466 AND    
 	ruben=1 AND    
@@ -374,7 +377,7 @@ SELECT	@TurnOver_BARM = -SUM(ABS(stake)*(1 - tpositiontaking)*actualrate),
 		@Total_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate),    
 		@VirtualTotal_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))
 		--@Variance_BARM=@Total_BARM-@VirtualTotal_BARM  
-FROM bettrans b WITH(READPAST)   
+FROM bettrans b WITH(NOLOCK)   
 	INNER JOIN #tmpBettype t on t.bettype = b.bettype   
 WHERE recommend = 5707545 AND    
 	ruben=1 AND    

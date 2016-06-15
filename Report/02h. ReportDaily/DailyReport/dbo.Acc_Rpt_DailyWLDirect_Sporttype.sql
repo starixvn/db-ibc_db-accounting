@@ -1,4 +1,7 @@
-﻿ SET QUOTED_IDENTIFIER ON 
+﻿use bodb02
+GO
+
+SET QUOTED_IDENTIFIER ON 
 GO
 SET ANSI_NULLS ON 
 GO
@@ -85,6 +88,7 @@ AS
 		- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product [RedmineID#55584]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 		- 20160504@Sophia: Refactor code, Enhance Performance , Remove Cockfighting [Redmind: #56764]
+		- 20160615@Sophia: Change READPAST to NOLOCK because of the Deadlock [Redmind: #59254]
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -318,7 +322,7 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
 			1 As ProductId   
-	FROM bettrans b WITH (READPAST)
+	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.matchid = m.matchid 		
 	WHERE winlostdate = @winlostdate
@@ -358,7 +362,7 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
 			1 As ProductId   
-	FROM bettrans b WITH (READPAST)
+	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.matchid = m.matchid   
 	WHERE  b.recommend = 5707545 
@@ -414,7 +418,7 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
 			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END AS ProductID
-	FROM bettrans b WITH (READPAST)
+	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype
 	WHERE winlostdate = @winlostdate
 		AND b.bettype < 19001
