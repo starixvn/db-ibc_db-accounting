@@ -71,22 +71,6 @@ BEGIN
 	FROM #FinalResult f
 		INNER JOIN ExtraPT e ON CONVERT(VARCHAR(2), e.rptDate, 106) = f.RptDate
 
-	-- 8RM & BARM
-	;WITH RMWinloss AS
-	(
-		SELECT b.rptDate, 
-			SUM(b.WinlossIBC + b.CommissionS) AS RMWinloss
-		FROM bodb_Account.dbo.mcSiteDaily b WITH (NOLOCK) 
-		WHERE rptDate BETWEEN @FDate AND @TDate 
-			AND b.siteID IN (-2, -4) 
-			AND b.[status] <> 14
-		GROUP BY b.rptDate
-	)
-	UPDATE f
-	SET HouseWL = RMWinloss
-	FROM #FinalResult f
-		INNER JOIN RMWinloss wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
-
 	-- House WL
 	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY)
 	INSERT INTO #TmpHouseWL (rptDate, HouseWL)
@@ -96,11 +80,11 @@ BEGIN
 	FROM bodb_Account.dbo.mcSiteDaily b WITH(NOLOCK)
 		INNER JOIN #exchange ex ON b.rptdate = ex.exchangedate AND b.currencyid = ex.ExchangeID
 		INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype AND Sb.ProductID = 1
-		LEFT JOIN bodb_Account.dbo.tbl_Site s WITH (NOLOCK) ON s.siteid = b.SiteID
+		INNER JOIN bodb_Account.dbo.tbl_Site s WITH (NOLOCK) ON s.siteid = b.SiteID
 	WHERE 
 		b.rptDate BETWEEN @FDate AND @TDate 
 		AND b.status != 14
-		AND (b.SiteID = -2 OR s.isDeposit = 0) -- Credit data only
+		AND s.isDeposit = 0 -- Credit data only
 	GROUP BY b.rptDate
 	OPTION (RECOMPILE)
 
