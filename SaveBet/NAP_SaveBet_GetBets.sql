@@ -19,10 +19,16 @@ AS
 	
 	Revisions:
 		- 20150728@Jim: apply Bettrade (Feature #38815)
-		
+		- 20160615@Jim: support to show TEAM statistic figures for Metric Gaming (HotFix #59341)
 */
 
 -- original is Dot_Admin_cteamlist
+DECLARE @MetricBettype AS TABLE (bettype INT)
+INSERT INTO @MetricBettype (bettype)
+SELECT DISTINCT bettype
+FROM bodb02.dbo.SportBettypeMatrix WITH (NOLOCK)
+WHERE SubProduct='MG-SuperLive'
+
 IF @bettype IN (901,902,903)
 	BEGIN 
 		SELECT N'This report does not support bettrade ticket !'
@@ -49,7 +55,7 @@ IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
 		b.transdate, 
 		b.transid, 
 		'' typenamee, 
-		b.betteam,
+		CASE WHEN ISNULL(t.bettype,0)<> 0 THEN b.transdesc ELSE  b.betteam  END betteam ,
 		b.betfrom
 		,b.stake * (1- b.tpositiontaking) cpstake
 		,CAST(b.actualrate as DECIMAL(9,6)) actualrate
@@ -58,6 +64,8 @@ IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
 	bodb02.dbo.bettrans b with (nolock)
 	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
 	INNER JOIN bodb02.dbo.customer cr with (nolock) ON b.creator = cr.custid
+	LEFT JOIN @MetricBettype t ON b.bettype = t.bettype
+	
 	--INNER JOIN bettype bt with(nolock) ON b.bettype = bt.typeid
 	WHERE
 		b.matchid = @matchid 
@@ -90,7 +98,7 @@ ELSE
 		b.transdate, 
 		b.transid, 
 		'' typenamee, 
-		b.betteam,
+		CASE WHEN ISNULL(t.bettype,0)<> 0 THEN b.transdesc ELSE  b.betteam  END betteam ,
 		b.betfrom
 		,b.stake * (1- b.tpositiontaking) cpstake
 		,CAST(b.actualrate as DECIMAL(9,6)) actualrate
@@ -99,6 +107,7 @@ ELSE
 	bodb02.dbo.bettrans14 b with (nolock)
 	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
 	INNER JOIN bodb02.dbo.customer cr with (nolock) ON b.creator = cr.custid
+	LEFT JOIN @MetricBettype t ON b.bettype = t.bettype
 	--INNER JOIN bettype bt with(nolock) ON b.bettype = bt.typeid
 	WHERE
 		b.matchid = @matchid 
