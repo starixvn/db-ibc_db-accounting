@@ -31,7 +31,7 @@ Revisions:
 	- 20160118@Percy: Calculate turnover for RNG Casino [Redmine: #49134]
 	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
-	- 20160615@Sophia: Change NOLOCK to ROWLOCK because of the Deadlock [Redmind: #59254]
+	- 20160615@Sophia: Change READPAST to ROWLOCK because of the Deadlock [Redmind: #59254]
 */  
 
 SET NOCOUNT ON
