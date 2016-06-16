@@ -60,7 +60,6 @@ BEGIN
 		SELECT b.rptDate, SUM(b.extraWinloss) AS ExtraPT
 		FROM bodb_account.dbo.rptGroupWinloss b WITH (NOLOCK)
 			INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype
-			LEFT JOIN bodb_Account.dbo.tbl_Site s WITH (NOLOCK) ON s.siteid = b.SiteID
 		WHERE	rptdate BETWEEN @FDate AND @TDate 
 				AND sb.ProductID = 1
 				AND b.statusid <> 14
