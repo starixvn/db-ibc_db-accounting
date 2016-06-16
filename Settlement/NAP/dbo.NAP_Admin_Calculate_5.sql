@@ -195,7 +195,7 @@ BEGIN
 		BEGIN
 			DELETE FROM #currList
 
-			DELETE TOP (1000)
+			DELETE TOP (800)
 			FROM #tempCust OUTPUT DELETED.custid INTO #currList
 			IF @@ROWCOUNT = 0 BREAK
 
