@@ -628,7 +628,7 @@ BEGIN
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT 1, ''House Income'', LicenseeWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
-							'SELECT 3, ''Other Fees Charge Licensees'', OtherFees' + CHAR(13) +
+							'SELECT 2, ''Other Fees Charge Licensees'', OtherFees' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
 							'SELECT 4, ''Pay to Muay Thai'', PayToMuayThai' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
