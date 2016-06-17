@@ -1,12 +1,15 @@
-﻿ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
-	@custid int,
-	@Fromdate datetime,
-	@todate datetime,
-	@BalanceUpDay datetime,
-	@MoveBetDay		DATETIME,
-	@IncludeAccBal bit = 1,
-	@showExchangeRate bit = 1
- AS
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
+	@custid				INT,
+	@Fromdate			DATETIME,
+	@todate				DATETIME,
+	@BalanceUpDay		DATETIME,
+	@MoveBetDay			DATETIME,
+	@IncludeAccBal		BIT = 1,
+	@showExchangeRate	BIT = 1
+AS
  
  /*
 	Created by: Henry
@@ -65,223 +68,188 @@
 SET NOCOUNT ON
 
 DECLARE @roleid INT
+SELECT  @roleid = roleid FROM customer WITH (NOLOCK) WHERE custid = @custid
 
-SELECT @roleid = roleid FROM customer (nolock) WHERE custid = @custid
-
-DECLARE @bet TABLE (  
-	winlostdate DATETIME, bettype SMALLINT, statusID TINYINT,  
-	transdate DATETIME, transdesc NVARCHAR(300),  
-	stake MONEY, actual_stake MONEY, winlost MONEY, playercomm MONEY) 
-
-DECLARE @StatementTable TABLE(
-	accdate datetime,
-	refno bigint,
-	totalamt money,
-	transtype nvarchar(100),
-	transdesc nvarchar(350),
-	creator varchar(50),
-	checkerID int null,
-	checkerName varchar(50) null,
-	checkTime datetime null,
-	isAllowVeify bit default 0,-- display check box "Verify"   ,
-	transtypeid tinyint default 0 
+DECLARE @StatementTable TABLE
+(
+	accdate			DATETIME,
+	refno			BIGINT,
+	totalamt		MONEY,
+	transtype		NVARCHAR(100),
+	transtypeid		TINYINT DEFAULT 0,
+	transdesc		NVARCHAR(350),
+	creator			VARCHAR(50),
+	checkerID		INT NULL,
+	checkerName		VARCHAR(50) NULL,
+	checkTime		DATETIME NULL,
+	isAllowVeify	BIT DEFAULT 0-- display check box "Verify"
 )
 
-DECLARE @_ToDate AS DATETIME
-SET @_ToDate = @todate
-
-DECLARE @_FromDate AS DATETIME
-SET @_FromDate = @Fromdate
-
-DECLARE @_BalanceUpDay AS DATETIME
-SET @_BalanceUpDay = @BalanceUpDay
-
-DECLARE @Fromdate_bk DATETIME
-SET @Fromdate_bk = @_FromDate
-
-DECLARE @_IncludeAccBal AS BIT
-SET @_IncludeAccBal = @IncludeAccBal
+DECLARE @_FromDate DATETIME, @_ToDate DATETIME, @_BalanceUpDay DATETIME, @Fromdate_bk DATETIME, @_IncludeAccBal BIT
+SELECT  @_FromDate = @Fromdate, @_ToDate = @todate, @_BalanceUpDay = @BalanceUpDay, @Fromdate_bk = @Fromdate, @_IncludeAccBal = @IncludeAccBal
 
 DECLARE @Yesterday DATETIME 
-SELECT @Yesterday =  CONVERT(Date,DATEADD(DD, -1, GETDATE()))
+SELECT  @Yesterday = CONVERT(DATE, DATEADD(DD, -1, GETDATE()))
 		
 ----Get Sport Bettype Matrix------
-		DECLARE @isTest BIT = 0
-		SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+DECLARE @isTest BIT = 0
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-		DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500), IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
-		INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
-		SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
-	
-		DELETE @SportBettype WHERE	ProductID NOT IN (11, 13, 17, 19, 1, 6, 21, 22) -- AG-Casino, MGC-LC, MGC-RNG, Cockfighting, AllBet, Voidbridge
-									OR (ProductId = 1 AND SubProduct <> 'MG-Superlive') --MG-Superlive
-									OR (ProductID = 6 AND SubProduct = '') --- Old RNG Casino 
-
-		-- Tickets not check in bettrans on Yesterday and Today: AG-Casino, MGC-RNG, MBC-OneRnG, AllBet
-		UPDATE @SportBettype
-		SET IsUsedBettrans = 1
-		WHERE ProductID NOT IN (11, 17, 6, 21, 22)
-	
-		-- Tickets running in translog and exlude from bettrans: MG-Superlive, MGC-LC, Cock Fighting
-		UPDATE @SportBettype
-		SET IsRunningTranslog = 1
-		WHERE ProductId IN (1, 13, 19)
-
-		 
---------------------------------------
+CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT)
+INSERT INTO #SportBettype (ProductID, Bettype, RefTable)
+SELECT ProductID, Bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
+-- RefTable: 0-bettrans, 1-bettransRnG, 2-bettransLC, 3-translog
 
 IF @_ToDate >= @_BalanceUpDay
 BEGIN
-	--always Get all data FROM latest BUDate -> @todate for calculating ACCUMULATED BALANCE row
+	-- always get all data from latest BUDate -> @todate for calculating ACCUMULATED BALANCE row
 	IF (@_FromDate > @_BalanceUpDay)
 	BEGIN
 		SELECT @Fromdate_bk = @_FromDate
 		SELECT @_FromDate = @_BalanceUpDay
 	END	
- 
+
+	-- Customer
 	IF @roleid = 1
 	BEGIN
-		------------1. Betting, Void/Reject, Outstanding  
-		---- 1.1 bettrans
-		INSERT INTO @bet(winlostdate, bettype, statusID, transdate, transdesc, stake, actual_stake, winlost, playercomm )			 
-			SELECT winlostdate, b.bettype, 
+		------------1. Betting, Void/Reject, Outstanding
+		;WITH cte_bet (winlostdate, bettype, statusID, transdate, transdesc, stake, actual_stake, winlost, playercomm) AS
+		(
+			---- 1.1 bettrans
+			SELECT
+				winlostdate,
+				b.bettype,
 				CASE
-					WHEN statusID IN (102,101) THEN 102 --'VOID','REJECT'
-					WHEN statusID IN (0,1) THEN 0 --'running', 'waiting'
-				ELSE 131 END,
-				CASE WHEN b.bettype <= 19999 THEN NULL ELSE transdate END,
-				CASE WHEN b.bettype <= 19999 THEN '' ELSE transdesc END,
-				SUM(CASE WHEN b.bettype IN(33,43) AND b.liveawayscore = 0 AND b.livehomescore <> 0 AND ruben = 1
-					THEN b.stake/2 ELSE b.stake END),
-				SUM(actual_stake), SUM(winlost), SUM(playercomm)
-			FROM bettrans b (NOLOCK)
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
-			WHERE custid = @custid
-				AND winlostdate between @_FromDate and @_ToDate
-				--AND CASE WHEN ((s.productId = 1 AND s.SubProduct = 'MG-SuperLive' ) OR (s.productId = 19)) AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
-				--AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
-				------AND statusID <> 103
-				AND (Winlostdate < @Yesterday 
-					 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL 
-														OR s.IsUsedBettrans = 1 														
-														)
-						)
-					 OR (s.IsUsedBettrans = 1 AND s.IsRunningTranslog = 0 AND StatusID IN (0,1))
-					)	
+					WHEN statusID IN (102, 101) THEN 102 -- 'VOID', 'REJECT'
+					WHEN statusID IN (0, 1) THEN 0 -- 'running', 'waiting'
+					ELSE 131 END AS statusID,
+				CASE WHEN b.bettype <= 19999 THEN NULL ELSE transdate END AS transdate,
+				CASE WHEN b.bettype <= 19999 THEN '' ELSE transdesc END AS transdesc,
+				SUM(CASE WHEN b.bettype IN (33, 43) AND liveawayscore = 0 AND livehomescore <> 0 AND ruben = 1 THEN b.stake/2 ELSE b.stake END) AS stake,
+				SUM(actual_stake) AS actual_stake,
+				SUM(winlost) AS winlost,
+				SUM(playercomm) AS playercomm
+			FROM
+				bettrans b WITH (NOLOCK)
+				LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
+			WHERE
+				custid = @custid
+				AND winlostdate BETWEEN @_FromDate AND @_ToDate
+				AND (
+					winlostdate < @Yesterday
+					OR (winlostdate >= @Yesterday AND ISNULL(s.RefTable, 0) NOT IN (1, 2))
+				)
+				AND (
+					statusID NOT IN (0, 1)
+					OR (statusID IN (0, 1) AND ISNULL(s.RefTable, 0) NOT IN (1, 2, 3))
+				)
 			GROUP BY winlostdate, b.bettype,
 				CASE
-					WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
-					WHEN statusID IN (0,1) THEN 0--'running', 'waiting'
-				ELSE 131 END,
+					WHEN statusID IN (102,101) THEN 102
+					WHEN statusID IN (0,1) THEN 0
+					ELSE 131 END,
 				CASE WHEN b.bettype <= 19999 THEN NULL ELSE transdate END,
 				CASE WHEN b.bettype <= 19999 THEN '' ELSE transdesc END			
 			
-			---- 1.2 TransLog
+			---- 1.2 translog
 			UNION ALL
-			SELECT  winlostdate, 
-					GameId as bettype, 
-					0 StatusID,
-					NULL transdate,
-					'' transdesc,
-					SUM(stake),
-					SUM(actual_stake),
-					0,
-					0
-			FROM translog(NOLOCK)
-			WHERE custid = @custid
-				AND winlostdate BETWEEN @_FromDate and @_ToDate
+			SELECT
+				winlostdate, 
+				GameId, 
+				0 AS StatusID,
+				NULL AS transdate,
+				'' AS transdesc,
+				SUM(stake),
+				SUM(actual_stake),
+				0 AS winlost,
+				0 AS playercomm
+			FROM translog WITH (NOLOCK)
+			WHERE
+				custid = @custid
+				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND statusID = 0
 			GROUP BY GameId, winlostdate
 
-			----1.3 Get data FROM BettransLC for AG Casino  			
-				INSERT INTO @bet(winlostdate, bettype, statusID, transdate, transdesc, stake, actual_stake, winlost, playercomm )
-				SELECT winlostdate, GameId, 
-					CASE
-					WHEN statusID IN (102,101) THEN 102 --'VOID','REJECT'
-					WHEN statusID IN (0,1) THEN 0 --'running', 'waiting'
-						ELSE 131 END,
-					NULL transdate,
-					'' transdesc,
-					SUM(stake),
-					SUM(actual_stake), 
-					SUM(winlost), 
-					SUM(playercomm)
-				FROM bettransLC (NOLOCK)
-				WHERE custid = @custid
-					AND winlostdate BETWEEN @_FromDate and @_ToDate
-					AND (winlostdate >= @Yesterday 
-						 OR StatusID IN (0,1) 
-						 )
-				GROUP BY winlostdate, GameId,
-					CASE
-						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
-						WHEN statusID IN (0,1) THEN 0--'running', 'waiting'
-					ELSE 131 END	
+			---- 1.3 bettransLC
+			UNION ALL
+			SELECT
+				winlostdate,
+				GameId,
+				CASE WHEN statusID IN (0,1) THEN 0 ELSE 131 END,
+				NULL transdate,
+				'' transdesc,
+				SUM(stake),
+				SUM(actual_stake),
+				SUM(winlost),
+				SUM(playercomm)
+			FROM bettransLC WITH (NOLOCK)
+			WHERE
+				custid = @custid
+				AND winlostdate BETWEEN @_FromDate AND @_ToDate
+				AND (
+					winlostdate >= @Yesterday 
+					OR StatusID IN (0, 1)
+				)
+				AND statusID NOT IN (101, 102) -- exclude Void/Reject
+			GROUP BY winlostdate, GameId,
+				CASE WHEN statusID IN (0, 1) THEN 0 ELSE 131 END
 				
-				----1.4 Get data today FROM BettransRNG for Microgaming
-				UNION ALL 
-				SELECT winlostdate, GameId, 
-					CASE
-					WHEN statusID IN (102,101) THEN 102 --'VOID','REJECT'
-					WHEN statusID IN (0,1) THEN 0 --'running', 'waiting'
-						ELSE 131 END,
-					NULL transdate,
-					'' transdesc,
-					SUM(stake),
-					SUM(actual_stake), 
-					SUM(winlost), 
-					SUM(playercomm)
-				FROM bettransRNG (NOLOCK)
-				WHERE custid = @custid
-					AND winlostdate BETWEEN @_FromDate and @_ToDate
-					AND (winlostdate >= @Yesterday
-						OR StatusID IN (0,1) 
-						)
-				GROUP BY winlostdate, GameId,
-					CASE
-						WHEN statusID IN (102,101) THEN 102--'VOID','REJECT'
-						WHEN statusID IN (0,1) THEN 0--'running', 'waiting'
-					ELSE 131 END					 
-			
-		
-		---------------------
+			---- 1.4 bettransRnG
+			UNION ALL 
+			SELECT
+				winlostdate,
+				GameId,
+				CASE WHEN statusID IN (0, 1) THEN 0 ELSE 131 END,
+				NULL transdate,
+				'' transdesc,
+				SUM(stake),
+				SUM(actual_stake),
+				SUM(winlost),
+				SUM(playercomm)
+			FROM bettransRNG (NOLOCK)
+			WHERE
+				custid = @custid
+				AND winlostdate BETWEEN @_FromDate and @_ToDate
+				AND (
+					winlostdate >= @Yesterday
+					OR StatusID IN (0, 1) 
+				)
+				AND statusID NOT IN (101, 102) -- exclude Void/Reject
+			GROUP BY winlostdate, GameId,
+				CASE WHEN statusID IN (0,1) THEN 0 ELSE 131 END			 
+		)
+		INSERT INTO @StatementTable
+		SELECT
+			winlostdate accdate,
+			0 refno,
+			SUM(CASE WHEN statusID = 131 THEN winlost-actual_stake ELSE 0 END) totalamt, 
+			'BET' transtype,
+			CASE statusID
+				WHEN 131 THEN 1
+				WHEN 102 THEN 2
+				ELSE 3 END transtypeid, -- statusID = 0
+			CASE statusID
+				WHEN 131 THEN 'Betting Statement'
+				WHEN 102 THEN 'Void/Cancelled Bet'
+				ELSE 'Outstanding Bet' END transdesc,  
+			'' Creator,
+			NULL checkerID,
+			'' checkerName, 
+			NULL checkTime,
+			0 isAllowVeify
+		FROM cte_bet
+		WHERE
+			(statusID = 131 AND bettype <= 19999)
+			OR (statusID = 102 AND bettype <> 903)
+			OR (statusID = 0 AND bettype NOT IN (23001,23002,23101,23102,23201,23202))
+		GROUP BY winlostdate
 
-		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-		SELECT winlostdate, 0,SUM(winlost-actual_stake) totalamt , 
-				'BET' transtype,1, 'Betting Statement' transdesc,  
-				'' Creator,	 NULL,'', NULL,0
-		FROM	@bet
-		WHERE	bettype <= 19999 
-				AND statusID = 131
-		GROUP BY winlostdate  
-
-		UNION ALL
-		SELECT winlostdate, 0, 0 as totalamt,
-			--SUM(stake) totalamt , 
-				'BET' transtype,2, 'Void/Cancelled Bet' transdesc,  
-				'' Creator,	 NULL,   '', NULL,	   0
-		FROM	@bet  
-		WHERE	statusID = 102
-				AND Bettype <> 903
-		GROUP BY winlostdate  
-
-		UNION ALL
-		SELECT winlostdate, 0,0 as totalamt ,
-			--SUM(stake) totalamt , 
-				'BET' transtype,3, 'Outstanding Bet' transdesc,  
-				'' Creator,	 NULL,   '', NULL,	   0
-		FROM	@bet  
-		WHERE	statusID = 0  AND bettype NOT IN (23001,23002,23101,23102,23201,23202) -- 20120405@Hurri
-		GROUP BY winlostdate 
-
-		  
-		--------------2.Grand Prize 
-	
-		---2.2 PayoutTrans - Grand Prize of Microgaming RNG Casino	 			
-		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-		SELECT winlostdate AS accdate
-			,0 as refno
-			,SUM (WinAmount) AS totalamt
+		--------------2.Grand Prize			
+		INSERT INTO @StatementTable
+		SELECT
+			winlostdate accdate
+			,0 refno
+			,SUM (WinAmount) totalamt
 			,'GP' transtype
 			, 4 transtypeid
 			,'Grand Prize' transdesc
@@ -290,74 +258,81 @@ BEGIN
 			,'' checkerName
 			,NULL checkTime
 			,0 isAllowVeify
-		FROM dbo.PayoutTrans WITH(NOLOCK) 
-		WHERE	winlostdate BETWEEN @Fromdate AND @todate
-				AND WinlostDate > @_BalanceUpDay
-				AND custid = @custid 
-				AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired' 		
-		GROUP BY winlostdate, custid				
-			 
+		FROM dbo.PayoutTrans WITH (NOLOCK) 
+		WHERE
+			winlostdate BETWEEN @Fromdate AND @todate
+			AND WinlostDate > @_BalanceUpDay
+			AND custid = @custid 
+			AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'
+		GROUP BY winlostdate, custid
 
-		--------------------------------------------------------------
-		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, 
-					checkTime, isAllowVeify)
-	
 		---------------3. Comm, Transfer
-		---3.1 bettrans
+		---- 3.1 bettrans
+		INSERT INTO @StatementTable
 		SELECT 
 			winlostdate accdate,
 			0,
-			sum(playercomm) totalamt,
+			SUM(playercomm) totalamt,
 			'COM' transtype, 
-			'Commission' transdesc ,
+			'Commission' transdesc,
 			'' Creator,
 			NULL,
 			'',
 			NULL,
 			0  
 		FROM bettrans b WITH (NOLOCK)  
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
+			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
-			b.bettype between 1 and 19999 
-			and custid=@custid 
-			and winlostdate between @_FromDate and @_ToDate 
-			---AND CASE WHEN (s.productId = 11 OR s.productId = 17) THEN 0 ELSE 1 END = 1
-			and playercomm<>0 
-			AND (Winlostdate < @Yesterday 
-				 OR (Winlostdate >= @Yesterday AND (s.IsUsedBettrans IS NULL OR s.IsUsedBettrans = 1))
-				)
+			b.bettype <= 19999 
+			AND custid = @custid 
+			AND winlostdate BETWEEN @_FromDate AND @_ToDate
+			AND playercomm <> 0 
+			AND (
+				winlostdate < @Yesterday 
+				OR (winlostdate >= @Yesterday AND ISNULL(RefTable, 0) NOT IN (1, 2))
+			)
 		GROUP BY winlostdate
 
 		UNION ALL
 		SELECT 
 			transdate accdate,
 			refno,
-			sum(winlost-actual_stake) totalamt,
-			typenamee transtype,
-			transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + cast(actualrate as varchar(10)) ELSE '' END as transdesc, 
-			isnull(c.username,'') Creator,
-			CASE WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE bettrans.betid END, --BalanceUP AND Transfer to Casino/Bingo/P2P
-			CASE WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE bettrans.betcheck END,
-			CASE WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE bettrans.checkTime END,
-			CASE WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
-		FROM bettrans  WITH (NOLOCK) inner join bettype WITH (NOLOCK) on bettype.typeid=bettrans.bettype 
-		left join customer c WITH (NOLOCK) on bettrans.creator = c.custid 
+			SUM(winlost-actual_stake) totalamt,
+			bt.typenamee transtype,
+			transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
+			ISNULL(c.username,'') Creator,
+			CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END, --BalanceUP AND Transfer to Casino/Bingo/P2P
+			CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
+			CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
+			CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
+		FROM
+			bettrans b WITH (NOLOCK)
+			INNER JOIN bettype bt WITH (NOLOCK) ON bt.typeid = b.bettype 
+			LEFT JOIN customer c WITH (NOLOCK) on b.creator = c.custid 
 		WHERE 
 			bettype >= 20000 
-			and bettrans.custid=@custid 
-			and bettype.typeid NOT IN (23001,23002,23101,23102,23201,23202) AND (winlost-actual_stake) <> 0 
-			and winlostdate between @_FromDate and @_ToDate 
-		GROUP BY typenamee,
-				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + cast(actualrate as varchar(10)) ELSE '' END
-				,transdate,transid, bettype.typeid,c.username
-				,bettrans.betid, bettrans.betcheck, bettrans.checkTime, bettrans.refno 
+			AND b.custid=@custid 
+			AND bt.typeid NOT IN (23001,23002,23101,23102,23201,23202)
+			AND (winlost-actual_stake) <> 0 
+			AND winlostdate BETWEEN @_FromDate and @_ToDate 
+		GROUP BY
+			transdate,
+			refno,
+			bt.typenamee,
+			transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,
+			transid,
+			bt.typeid,
+			c.username,
+			b.betid,
+			b.betcheck,
+			b.checkTime
 
-
-		---3.2 BettransLC for AG Casino
-		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)
-		SELECT winlostdate as accdate
+		---- 3.2 bettransLC
+		INSERT INTO @StatementTable
+		SELECT
+			winlostdate AS accdate
 			,0
-			,sum(playercomm) totalamt
+			,SUM(playercomm) totalamt
 			,'COM' transtype
 			,'Commission' transdesc
 			,'' Creator
@@ -366,13 +341,14 @@ BEGIN
 			,NULL
 			,0
 		FROM bettransLC WITH (NOLOCK)
-		WHERE custid = @custid
-			AND winlostdate BETWEEN @_FromDate and @_ToDate
+		WHERE
+			custid = @custid
+			AND winlostdate BETWEEN @_FromDate AND @_ToDate
 			AND playercomm <> 0
 			AND Winlostdate >= @Yesterday
 		GROUP BY winlostdate
 
-		----3.3 BettransRNG for Microgaming RNG Casino
+		---- 3.3 bettransRNG
 		UNION ALL 
 		SELECT winlostdate as accdate
 			,0
@@ -385,36 +361,36 @@ BEGIN
 			,NULL
 			,0
 		FROM bettransRNG WITH (NOLOCK)
-		WHERE custid = @custid
-			AND winlostdate BETWEEN @_FromDate and @_ToDate
+		WHERE
+			custid = @custid
+			AND winlostdate BETWEEN @_FromDate AND @_ToDate
 			AND playercomm <> 0
 			AND Winlostdate >= @Yesterday
 		GROUP BY winlostdate
 
-
 		-------------4. Cancelled/Deleted Bets
 		IF @_FromDate <= @MoveBetDay
-			INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transtypeid,transdesc,creator,checkerID, checkerName, 
-							checkTime, isAllowVeify)
+			INSERT INTO @StatementTable
 			SELECT DISTINCT
 				eventdate accdate,
 				0,
 				0 totalamt, 
-				'BET' transtype, 2,
+				'BET' transtype,
+				2,
 				'Cancelled/Deleted Bets' transdesc, 
 				'' Creator,
 				NULL,
 				'',
 				NULL,
 				0 
-			FROM zzzbettrans b WITH (NOLOCK)
-				INNER JOIN Match m  WITH (NOLOCK)
-					ON m.matchid = b.matchid
+			FROM
+				zzzbettrans b WITH (NOLOCK)
+				INNER JOIN Match m  WITH (NOLOCK) ON m.matchid = b.matchid
 			WHERE 
-				bettype between 1 and 19999 
-				AND Bettype <> 903
-				and custid=@custid 
-				and eventdate between @_FromDate and @MoveBetDay 
+				bettype <= 19999 
+				AND bettype <> 903
+				AND custid = @custid 
+				AND eventdate BETWEEN @_FromDate AND @MoveBetDay 
 			GROUP BY eventdate
 			
 			--Remove All
@@ -423,37 +399,38 @@ BEGIN
 				eventdate accdate,
 				0,
 				0 totalamt,
-				'BET' transtype, 2, 
+				'BET' transtype,
+				2, 
 				'Cancelled/Deleted Bets' transdesc, 
 				'' Creator,
 				NULL,
 				'',
 				NULL,
 				0 
-			FROM zzzbettrans b WITH (NOLOCK)
-				INNER JOIN match14 m WITH (NOLOCK)
-					ON m.matchid = b.matchid
+			FROM
+				zzzbettrans b WITH (NOLOCK)
+				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 			WHERE 
-				bettype between 1 and 19999 
-				AND Bettype <> 903
-				and custid=@custid 
-				and eventdate between @_FromDate and @MoveBetDay 
-		GROUP BY eventdate
-
+				bettype <= 19999 
+				AND bettype <> 903
+				AND custid = @custid 
+				AND eventdate BETWEEN @_FromDate AND @MoveBetDay 
+			GROUP BY eventdate
 	END
+	-- end Customer --
 
-	-- AGENT
+	-- Agent --
 	IF @roleid = 2 
 	BEGIN
 		---------------1. Transfer	
-		INSERT INTO @StatementTable(accdate, refno, totalamt,transtype,transdesc,creator,checkerID, checkerName, checkTime, isAllowVeify)	
+		INSERT INTO @StatementTable
 		SELECT 
 			transdate accdate,
 			refno,
-			sum(winlost-actual_stake) totalamt ,
+			SUM(winlost-actual_stake) totalamt ,
 			typenamee transtype,
-			transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + cast(actualrate as varchar(10)) ELSE '' END as transdesc , 			
-			isnull(c.username,'') Creator,
+			transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 			
+			ISNULL(c.username,'') Creator,
 			CASE WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE bettrans.betid END,
 			CASE WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE bettrans.betcheck END,
 			CASE WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE bettrans.checkTime END,
@@ -485,7 +462,7 @@ BEGIN
 			NULL,
 			0 
 		FROM bettrans b WITH (NOLOCK) 
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
+			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
 			and recommend=@custid 
@@ -511,7 +488,7 @@ BEGIN
 			NULL,
 			0 
 		FROM bettrans b WITH (NOLOCK)  
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
+			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
 			and recommend=@custid 
@@ -641,7 +618,7 @@ BEGIN
 			NULL,
 			0 
 		FROM bettrans b WITH (NOLOCK) 
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
+			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
 			and mrecommend=@custid 
@@ -665,7 +642,7 @@ BEGIN
 			NULL,
 			0  
 		FROM bettrans b WITH (NOLOCK)  
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
+			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
 			and mrecommend=@custid 
@@ -803,7 +780,7 @@ BEGIN
 			NULL,
 			0 
 		FROM bettrans b WITH (NOLOCK) 
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
+			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
 			and srecommend=@custid 
@@ -828,7 +805,7 @@ BEGIN
 			NULL,
 			0 
 		FROM bettrans b WITH (NOLOCK)  
-			LEFT JOIN @SportBettype s ON s.bettype = b.bettype 
+			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype between 1 and 19999 
 			and srecommend=@custid 
