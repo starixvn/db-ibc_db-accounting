@@ -226,7 +226,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                 d.Commission AS Commission,
                 d.RealIncome AS RealIncome,
                 d.RealTurnover AS RealTurnover,
-                d.ExtraPT AS ExtraPT,
+                -d.ExtraPT AS ExtraPT,
                 d.RealIncome - d.ExtraPT AS AfterExtraPT
          FROM #Data AS d
          ORDER BY GroupName,

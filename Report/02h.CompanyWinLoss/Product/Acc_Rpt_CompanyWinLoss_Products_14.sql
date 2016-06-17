@@ -709,7 +709,7 @@ BEGIN
                 d.RealLineTotal - d.VirtualLineTotal AS VarianceIncome,
                 d.RealTurnover AS RealTurnover,
                 d.VirtualTurnover AS VirtualTurnover, 
-				d.extraPT, 
+				-d.extraPT AS extraPT, 
 				d.RealLineTotal - d.extraPT AS AfterExtraPT 
 
         FROM #Result d            
