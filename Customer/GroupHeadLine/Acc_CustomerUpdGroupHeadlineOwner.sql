@@ -96,7 +96,7 @@ BEGIN
 		@CustID = @HeadlineID,
 		@ActionID = 661,
 		@TrackingValue = @LogSPData,
-		@TrackingValue2 = NULL,
+		@TrackingValue2 = @TrackingValue2,
 		@Duration = @Duration
 END
 		 
