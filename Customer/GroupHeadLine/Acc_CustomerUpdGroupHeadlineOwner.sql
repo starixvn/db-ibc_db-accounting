@@ -73,16 +73,16 @@ BEGIN
 	---Write log 
 	DECLARE @LogSPData NVARCHAR(MAX), @TrackingValue2 NVARCHAR(MAX)
 
-	SELECT @LogSPData = '<Acc_CustomerUpdGroupHeadlineType CustID="' + CONVERT (VARCHAR(20), @HeadlineID) + '" ' + 
+	SELECT @LogSPData = '<Acc_CustomerUpdGroupHeadlineOwner CustID="' + CONVERT (VARCHAR(20), @HeadlineID) + '" ' + 
 			'GroupID="' + CONVERT (VARCHAR(20), @GroupID) + '" ' + 
-			'Owner="' + CONVERT (VARCHAR(3), @OwnerName) + '" ' +
+			'Owner="' + CONVERT (VARCHAR(30), @OwnerName) + '" ' +
 			'IP="' + coalesce (cast (@IP AS VARCHAR(15)), space (1)) + '" ' +
 			'ErrCode="' + coalesce (cast (@ErrCode AS VARCHAR(10)), space (1)) + '" ' +
 			'ErrMsg="' + @ErrMsg + '" />'
 
-	SELECT @TrackingValue2 = '<Acc_CustomerUpdGroupHeadlineType CustID="' + CONVERT (VARCHAR(20), @HeadlineID) + '" ' + 
+	SELECT @TrackingValue2 = '<Acc_CustomerUpdGroupHeadlineOwner CustID="' + CONVERT (VARCHAR(20), @HeadlineID) + '" ' + 
 			'GroupID="' + CONVERT (VARCHAR(20), @GroupID) + '" ' + 
-			'Owner="' + CONVERT (VARCHAR(3), @Old_OwnerName) + '" ' +
+			'Owner="' + CONVERT (VARCHAR(30), @Old_OwnerName) + '" ' +
 			'IP="' + coalesce (cast (@IP AS VARCHAR(15)), space (1)) + '" ' +
 			'ErrCode="' + coalesce (cast (@ErrCode AS VARCHAR(10)), space (1)) + '" ' +
 			'ErrMsg="' + @ErrMsg + '" />'

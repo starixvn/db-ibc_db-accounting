@@ -23,8 +23,7 @@ AS
 		- 20160607@Elodie: Add headline type and their owner [Redmine:#51923]
 						   Modify code to enhance performance 
 
-	Example: exec Acc_CustomerSelByGroupHeadline @siteid=default,@currency=0,@open=1,@suspended=0,@closed=1,@disabled=1,@roleid=0,@username=default,@groupheadline=default,@Owner='',@HeadlineType='1'
-
+	Example: exec Acc_CustomerSelByGroupHeadline @siteid='',@currency=0,@open=1,@suspended=1,@closed=1,@disabled=1,@roleid=3,@username='',@groupheadline=''
 */    
 BEGIN    
     SET NOCOUNT ON    
@@ -162,8 +161,7 @@ BEGIN
 		LEFT JOIN #tmpGroupHeadline hl WITH(NOLOCK) ON  ci.custid = hl.HeadlineID
 	WHERE c.custid NOT IN (SELECT  custid FROM custaccount WITH(NOLOCK)) 
 		AND (@username = '' OR ci.username=@username) 
-		AND @groupheadline='' AND @HeadlineType = '' 
-		AND (@Owner = '' OR (@Owner <> '' AND hl.OwnerName = @Owner))
+		AND @groupheadline=''
     
 	--get resulset fOR SELECT all status    
     IF (@open = 1 AND @suspended  = 1 AND @closed = 1 AND @disabled = 1)    
