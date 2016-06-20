@@ -1,20 +1,19 @@
+
 ALTER FUNCTION [dbo].[f_GetBytes] (		
   @data VARCHAR(50)		
-) RETURNS @res TABLE (pos TINYINT, bitmap TINYINT)		
+) RETURNS TABLE
 AS
 /*
 	DB: DBPROD.BODB02/DBTXN.BODB02
 */
-BEGIN		
-	DECLARE @pos TINYINT		
-	SET @pos = 1		
-		
-	IF DATALENGTH(@data) > 0		
-	WHILE @pos <= DATALENGTH(@data)		
-	BEGIN		
-		INSERT INTO @res VALUES (@pos-1, ASCII(SUBSTRING(@data, @pos, 1)))		
-		SET @pos = @pos + 1		
-	END		
-		
-	RETURN
-END		
+RETURN (
+	WITH dataTmp AS (
+		SELECT 0 AS pos, ASCII(SUBSTRING(@data, 1, 1)) AS bitmap
+		UNION ALL
+		SELECT pos + 1, ASCII(SUBSTRING(@data, pos + 2, 1))
+		FROM dataTmp 
+		WHERE pos + 1 < DATALENGTH(@data)
+	)
+	SELECT pos, bitmap
+	FROM dataTmp
+)	
