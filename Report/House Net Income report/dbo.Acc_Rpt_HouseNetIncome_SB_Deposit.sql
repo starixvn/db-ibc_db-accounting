@@ -558,7 +558,7 @@ BEGIN
 		GROUP BY m.rptDate
 	)
 	UPDATE r
-	SET PayToMetricGaming = AmtByDate
+	SET PayToMetricGaming = -AmtByDate
 	FROM AmtByDate m
 		INNER JOIN #FinalResult r ON r.RptDate = m.rptDate
 
@@ -584,7 +584,7 @@ BEGIN
 		FROM WLAmount wl
 	)
 	UPDATE #FinalResult
-	SET PayToMetricGaming = (SELECT SUM(AmtDue) FROM AmtByRange)
+	SET PayToMetricGaming = -(SELECT SUM(AmtDue) FROM AmtByRange)
 	WHERE RptDate LIKE 'FullRange'
 
 	---------------------------------------------------- Pay to Muay Thai -------------------------------------------------------
@@ -612,12 +612,12 @@ BEGIN
 
 	-- Update Full range value
 	UPDATE #FinalResult 
-	SET PayToMuayThai = (SELECT ISNULL(SUM(AmtDueMuayThai), 0) FROM @MuayThaiData)
+	SET PayToMuayThai = -(SELECT ISNULL(SUM(AmtDueMuayThai), 0) FROM @MuayThaiData)
 	WHERE RptDate LIKE 'FullRange'
 
 	-- Update daily amount
 	UPDATE r
-	SET PayToMuayThai = d.AmtDueMuayThai
+	SET PayToMuayThai = -d.AmtDueMuayThai
 	FROM #FinalResult r
 		INNER JOIN @MuayThaiData d ON r.RptDate = CONVERT(VARCHAR(2), d.RptDate, 106)
 
