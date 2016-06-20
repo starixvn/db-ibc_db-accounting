@@ -101,7 +101,13 @@ BEGIN
 			INNER JOIN bodb02.dbo.bettrans14 b WITH (nolock) ON (l.matchid = b.matchid AND b.currency <> 20 )
 			INNER JOIN @BettypeAction bet ON l.actionID = bet.actionID AND b.bettype= bet.BettypeID
 			LEFT JOIN bodb02.dbo.zzzbettrans z WITH (nolock) ON  (b.transid=z.transid)
-		WHERE	 b.winlostdate = @fromdate_
+		WHERE	b.winlostdate = @fromdate_
+				AND (bet.actionID = 126 AND ( b.custid IN (50057, 879241, 103873, 78761, 851668, 878902)  OR  b.recommend IN (1688156))
+					  OR bet.actionID <> 126	
+						)
+				AND (bet.actionID = 135 AND (b.custid IN (2331, 1077687, 115770, 15523642) )
+					 OR bet.actionID <> 135	
+					)		
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
 
@@ -150,6 +156,12 @@ BEGIN
 			INNER JOIN @BettypeAction bet ON l.actionID = bet.actionID AND b.bettype= bet.BettypeID
 			LEFT JOIN bodb02.dbo.zzzbettrans z WITH (nolock) ON  (b.transid=z.transid)
 		WHERE	 b.winlostdate = @fromdate_
+				 AND (bet.actionID = 126 AND ( b.custid IN (50057, 879241, 103873, 78761, 851668, 878902)  OR  b.recommend IN (1688156))
+					  OR bet.actionID <> 126	
+						)
+				AND (bet.actionID = 135 AND (b.custid IN (2331, 1077687, 115770, 15523642) )
+					 OR bet.actionID <> 135	
+					)	
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
 
@@ -189,7 +201,7 @@ BEGIN
 		Agent_Virtual = Agent_Virtual * -1,
 		IBC_Actual = IBC_Actual * -1,
 		IBC_Virtual =IBC_Virtual  * -1
-	WHERE actionid  IN (-1,-2,103,109,110,111,112)
+	WHERE actionid  IN (-1,-2,103,109,110,111,112,126,135,149,150,153,154,166,167)
 	
 	SELECT DISTINCT
 			c.CustID	
