@@ -1,108 +1,92 @@
-USE [CustDB]
+USE [CustDB];
 GO
-
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingSel]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingSel_xtest]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel_xtest];
 GO
-
-USE [CustDB]
+USE [CustDB];
 GO
 
 /****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustSettingSel]    Script Date: 07/07/2015 16:09:41 ******/
-SET ANSI_NULLS ON
-GO
 
-SET QUOTED_IDENTIFIER ON
+SET ANSI_NULLS ON;
 GO
-
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel]
-	@UserName			VARCHAR(100)	= '',
-	@ExchangeID			INT				= 0,
-	@ProductID			TINYINT 		= 0,
-	@ExcludeTestData	BIT				= 1,
-	@PageIndex			INT 			= 1,
-	@PageSize			INT 			= 50,
-	@SortOrder			TINYINT			= 1,
-	@TotalRow			INT 			= 0		OUTPUT
+SET QUOTED_IDENTIFIER ON;
+GO
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel_xtest] @UserName            NVARCHAR(100) = '',
+                                                           @Site                VARCHAR(50)   = NULL,
+                                                           @CurrencyID          INT           = NULL,
+                                                           @ProductID           TINYINT       = NULL,
+                                                           @ExcludeTestCurrency BIT           = 1
 AS
-	/*
-		Created: Phillip	
-		Date: 2015-06-30
-		Task: #38608 - Implement function to control Player's Win Limit on specific Product
-		
-		DB: DBCUST/CustDB
-		
-		Revisions:
-			- 20160511@Dominic: Change SP to use f_Winlimit_GetProductSetting at DBCUST.custDB [Redmine: #57151]
-		Parameters Explanation:	
-			@UserName	: User Name.
-			@ExchangeID : Currency ID.
-			@ProductID	: Game ID.
-			@PageIndex	: Page Index.
-			@PageSize	: Page Size.
-			@TotalRow	: Total Row.
-	*/
-BEGIN
-	SET NOCOUNT ON;
-	DECLARE @TVP_CustSetting TABLE
-	(
-		RowNum INT,
-		CustID INT,
-		UserName VARCHAR(30),
-		ExchangeID INT,
-		ProductID TINYINT,
-		PlayerWinLimit MONEY,
-		CurrencyWinLimit MONEY
-	)
-	DECLARE @ProductSetting TABLE
-	(
-		ProductId TINYINT, 
-		ProductName VARCHAR(50), 
-		BetType SMALLINT, 
-		IsActive_Company BIT
-	)
 	
-	INSERT INTO @ProductSetting
-	SELECT ProductId, ProductName, BetType, IsActive_Company FROM dbo.f_Winlimit_GetProductSetting() WHERE IsActive_Company = 1
+/*
+Created: Jacob	
+Date: 2016-06-30
+Task: #57722 - CWL - Phase 2 - Support RED and Yellow level
+
+DB: DBCUST/CustDB		
+Revisions:
 	
-	INSERT INTO @TVP_CustSetting
-	SELECT	DENSE_RANK() OVER(ORDER BY
-				CASE WHEN @SortOrder = 1 THEN c.username END ASC,
-				CASE WHEN @SortOrder = 2 THEN c.username END DESC
-			) AS RowNum
-			,cs.CustID
-			,c.username
-			,c.currency ExchangeID
-			,cs.ProductID
-			,cs.MaxWinLimit PlayerWinLimit
-			,wg.MaxWinLimit CurrencyWinLimit
-	FROM	dbo.WinLimit_CustSetting cs WITH (NOLOCK)
-			INNER JOIN dbo.Customer c WITH (NOLOCK) 
-			ON cs.CustID = c.custid
-			INNER JOIN DBPRO.bodb02.dbo.WinLimit_GlobalSetting wg WITH (NOLOCK)
-			ON cs.ProductID = wg.ProductID AND c.currency = wg.ExchangeID
-			INNER JOIN @ProductSetting p
-			ON cs.ProductID = p.ProductID
-			INNER JOIN dbo.exchange e WITH (NOLOCK)
-			ON c.currency = e.exchangeid AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
-	WHERE	(@UserName = '' OR c.username = @UserName)
-			AND (@ExchangeID = 0 OR c.currency = @ExchangeID)
-			AND (@ProductID = 0 OR cs.ProductID = @ProductID)
-		
-	SELECT	@TotalRow = ISNULL(MAX(RowNum), 0) 
-	FROM	@TVP_CustSetting
-	
-	SELECT	CustID
-			,UserName
-			,ExchangeID
-			,ProductID
-			,PlayerWinLimit 
-			,CurrencyWinLimit
-	FROM	@TVP_CustSetting
-	WHERE	RowNum BETWEEN ((@PageIndex - 1) * @PageSize + 1) AND (@PageIndex * @PageSize)
-END
+Parameters Explanation:	
+
+Example: EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
+
+*/
+
+
+     BEGIN -- #Site
+
+         CREATE TABLE #Site
+         (AgentId INT,
+          Site    VARCHAR(50)
+         );
+         INSERT INTO #Site
+                SELECT CustId,
+                       [Site]
+                FROM Customer c WITH (NOLOCK)
+                WHERE(ISNULL(@Site, '') = ''
+                      OR Site = @Site)
+                     AND roleid = 2;
+     END;
+     BEGIN -- Query
+         SELECT c.CustID,
+                c.username AS UserName,
+                c.currency AS CurrencyId,
+                s.Site,
+                ps.ProductId AS ProductId,
+                ps.BetTypeId AS BetTypeId,
+                ps.LevelID AS LevelID,
+                ISNULL(cs.MaxWinLimit, 0) PlayerWinLimit,
+                ISNULL(pd.MaxWinLimit, 0) CurrencyWinLimit
+         FROM Winlimit_ProductSetting ps WITH (NOLOCK)
+              INNER JOIN WinLimit_CustGameSetting cs WITH (NOLOCK) ON ps.ProductID = cs.ProductID
+                                                                      AND ps.BettypeID = cs.BettypeID
+                                                                      AND ps.LevelID = cs.LevelID
+              INNER JOIN custInfo c WITH (NOLOCK) ON cs.CustID = c.custid
+              INNER JOIN #Site s WITH (NOLOCK) ON s.AgentId = c.recommend
+              LEFT JOIN WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductID = pd.ProductID
+                                                                          AND ps.BettypeID = pd.BettypeID
+                                                                          AND ps.LevelID = pd.BettypeID
+         WHERE ps.SettingStatus = 1
+               AND (ISNULL(@UserName, '') = ''
+                    OR c.username = @UserName)
+               AND (@CurrencyID IS NULL
+                    OR c.currency = @CurrencyID)
+               AND (@ProductID IS NULL
+                    OR ps.ProductID = @ProductID)
+               AND (@ExcludeTestCurrency = 0
+                    OR c.currency NOT IN(20, 27, 28))
+         ORDER BY c.Username;
+     END;
+         DROP TABLE #Site;
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel_xtest] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingSel] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingSel_xtest] TO [vnteam];
 GO
