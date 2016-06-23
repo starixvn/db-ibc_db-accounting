@@ -1,13 +1,4 @@
-IF EXISTS
-(
-    SELECT *
-    FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_Products_14]')
-          AND type IN(N'P', N'PC')
-)
-    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products_14];
-GO
-CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products_14]
+ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products_14]
 	 @StartDate SMALLDATETIME,
       @EndDate   SMALLDATETIME
 AS
@@ -17,7 +8,8 @@ AS
 	DB: DBACC/bodb02	
 		
 	Revisions:
-		 
+		 - 20160622@Sophia: . Remove group by ExtraPT to avoid duplicated data.[Redmine: #59732]
+							. Ignore param @EndDate because of the performance, and business supports only one day 
 
 	Explanation's Param:
 	
@@ -102,14 +94,13 @@ BEGIN
 	
 	
 	---- Extra PT 
-	CREATE TABLE #ExtraPT_Sel (ProductID INT,Sporttype INT ,SubProduct VARCHAR(100),SuperID INT,ExtraPT DECIMAL(9,8), FromDate DATETIME, ToDate DATETIME )
+	CREATE TABLE #ExtraPT_Sel (ProductID INT,Sporttype INT ,SubProduct VARCHAR(100),SuperID INT,ExtraPT DECIMAL(9,8))
 			
-	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT )
-	SELECT	ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT 
+	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT )
+	SELECT	ProductID, SportType, SubProduct, SuperId,SUM(ExtraPT) AS ExtraPT 
 	FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
-	WHERE	@StartDate BETWEEN FromDate AND Todate
-			OR @EndDate BETWEEN FromDate AND Todate
-	GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate
+	WHERE	@StartDate BETWEEN FromDate AND Todate		
+	GROUP BY ProductID, SportType, SubProduct, SuperId
 
 
 	
@@ -169,7 +160,7 @@ BEGIN
 			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.LeagueId = p.LeagueId AND p.programDate = o.programDate
 			INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.LeagueId
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
-	WHERE	o.EventDate BETWEEN @StartDate AND @EndDate
+	WHERE	o.EventDate = @StartDate
 	
 	
 	----------------------------------- 
@@ -203,7 +194,7 @@ BEGIN
 	WHERE	b.ruben = 1 
 			and s.ProductID = 2
 			and b.MatchId >0
-			and b.winlostdate BETWEEN @StartDate AND @EndDate
+			and b.winlostdate = @StartDate
 			and b.statusID not in (101,102,103,121)	
 	GROUP BY  case when dep.custid is null then 1 else 2 end
 
@@ -216,9 +207,9 @@ BEGIN
 			s.sporttype,
 			m.type
 	FROM (
-			SELECT MatchId, LeagueId, exrisk, MatchCode, 'match' as type FROM match14 WITH (NOLOCK) WHERE EventDate BETWEEN @StartDate AND @EndDate
+			SELECT MatchId, LeagueId, exrisk, MatchCode, 'match' as type FROM match14 WITH (NOLOCK) WHERE EventDate = @StartDate
 			UNION ALL
-			SELECT orid, LeagueId, 0, MatchCode, 'outright' as type FROM outright14 WITH (NOLOCK) WHERE EventDate BETWEEN @StartDate AND @EndDate
+			SELECT orid, LeagueId, 0, MatchCode, 'outright' as type FROM outright14 WITH (NOLOCK) WHERE EventDate = @StartDate
 			)m	
 	INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId	
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
@@ -248,7 +239,7 @@ BEGIN
 	FROM bettrans14 b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId 		
-	WHERE winlostdate BETWEEN @StartDate AND @EndDate
+	WHERE winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
@@ -287,7 +278,7 @@ BEGIN
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend = 5707545 
-		AND	b.winlostdate BETWEEN @StartDate AND @EndDate
+		AND	b.winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
@@ -341,7 +332,7 @@ BEGIN
 			s.CasinoType
 	FROM bettrans14 b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype
-	WHERE winlostdate BETWEEN @StartDate AND @EndDate
+	WHERE winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
@@ -374,7 +365,7 @@ BEGIN
 			s.ProductID, s.CasinoType
 	FROM bettransRnG14 b WITH(NOLOCK)
 		INNER JOIN #SportBettype s ON b.gameid = s.bettype	
-	WHERE winlostdate BETWEEN @StartDate AND @EndDate
+	WHERE winlostdate = @StartDate
 		----AND s.ProductID IN (6,17,22) 	---- OW RNG(6), Microgaming - RNG Casino (17), Voidbridge (22)
 		AND s.RefTable = 1  --- Use Table BettransRNG
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
@@ -400,7 +391,7 @@ BEGIN
 			s.ProductID, s.CasinoType
 	FROM bettransLC14 b WITH(NOLOCK)	
 		INNER JOIN #SportBettype s ON b.gameid = s.bettype
-	WHERE winlostdate BETWEEN @StartDate AND @EndDate
+	WHERE winlostdate = @StartDate
 		----AND s.ProductID = 21  ---- AllBet (21)
 		AND s.RefTable = 2  --- Use Table BettransLC
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
@@ -634,7 +625,7 @@ BEGIN
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend IN (52466, 5707545)
-		AND	b.winlostdate BETWEEN @StartDate AND @EndDate
+		AND	b.winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103) 
 		AND b.ruben = 1	
@@ -726,17 +717,7 @@ BEGIN
 	
 END
 GO 
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
-
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [vnteam]
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [bodbAdminNet]
-GO 
+GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [bodbAdminNet]
+GO
