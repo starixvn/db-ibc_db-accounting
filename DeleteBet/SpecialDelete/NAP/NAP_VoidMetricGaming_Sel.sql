@@ -66,9 +66,6 @@ BEGIN
 	DECLARE @Event805Tbl TABLE(Custom1 VARCHAR(50))
 	INSERT @Event805Tbl(Custom1)
 	SELECT val FROM dbo.strSplit(@Event805, '^')
-	
-	DECLARE @FromDate	DATETIME
-	SELECT	@FromDate =  CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)
 		
 	INSERT INTO #SpecialDeleteBets
 	SELECT
@@ -106,7 +103,6 @@ BEGIN
 		INNER JOIN dbo.match mat WITH(NOLOCK) ON mat.matchid = b.EventID		
 	WHERE
 		b.EventID=@MatchId 
-		AND mat.eventdate >=@FromDate
 		AND b.gameid IN (801,803,804,805,806) --AND bs.refno IS NULL	
 		AND b.statusID NOT IN (101,102 ) -- reject, void
 		AND 1 = CASE WHEN b.GameID IN (801,803,804,805) THEN CASE 

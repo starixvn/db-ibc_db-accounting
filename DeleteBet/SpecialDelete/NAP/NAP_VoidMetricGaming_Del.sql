@@ -39,21 +39,12 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	
-	DECLARE @FromDate	DATETIME
-			,@LogData	NVARCHAR(500)
-			,@eventdate DATETIME 
+	DECLARE @LogData	NVARCHAR(500)
 			,@Remark	VARCHAR(500)		
 			,@avaiableProcess BIT = 0
 	
 	CREATE TABLE #tblMatchProcess (matchid INT, KeyID TINYINT)
-	
-	SELECT	@FromDate =  CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)
-
-	--Check settled Date	
-	SELECT @eventdate = eventdate
-	FROM match WITH(NOLOCK)
-	WHERE matchid = @MatchId
-			
+				
 	-- Check password	
 	IF NOT EXISTS (SELECT 1
 					FROM custDB.dbo.customer WITH(NOLOCK)
@@ -220,7 +211,6 @@ BEGIN
 	WHERE	b.matchid = @matchid
 			AND b.bettype IN (SELECT bettype FROM @tblBettype)
 			AND b.statusID NOT IN (0, 101,102 ) -- running, reject, void
-			AND b.winlostdate >=@FromDate
 			AND 1 = CASE WHEN b.Bettype IN (801,803,804,805) THEN CASE 
 									WHEN b.Bettype = 801
 										AND EXISTS(
@@ -319,7 +309,6 @@ BEGIN
 			AND b.gameID IN (SELECT bettype FROM @tblBettype)
 			AND b.gameid IN (801,803,804,805,806)
 			AND b.statusID = 0
-			AND b.winlostdate >=@FromDate
 			AND 1 = CASE WHEN b.GameID IN (801,803,804,805) THEN CASE 
 									WHEN b.GameID = 801
 										AND EXISTS(
