@@ -736,7 +736,6 @@ BEGIN
 			,b.liveawayscore
 			,b.stake
 			,b.CurrencyName
-			,b.site
 			,b.STATUS
 			,b.SecAcceptFlag
 			,b.betid

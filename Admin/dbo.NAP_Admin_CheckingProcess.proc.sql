@@ -56,8 +56,6 @@ BEGIN
 	-- Locking process
 	IF(@IsReleased = 0 )
 	BEGIN
-				
-		WHERE tp.KeyID > 0
 		
 		IF (@isExistParlay  = 1)
 		BEGIN
