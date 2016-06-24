@@ -38,47 +38,19 @@ AS
 */
 
      SET NOCOUNT ON;
-     BEGIN -- Check custname is valid or not.
-         DECLARE @CustID INT, @CurrencyID INT, @CurrencyName NVARCHAR(50), @AgentId INT;
-         SELECT @CustID = c.custid,
-                @CurrencyID = e.exchangeid,
-                @CurrencyName = e.currency,
-                @AgentId = c.recommend
-         FROM dbo.Customer c WITH (NOLOCK)
-              INNER JOIN dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
-                                                         AND (@ExcludeTestData = 0
-                                                              OR e.currency NOT IN('UUS', 'H', 'C'))
-         WHERE c.username = @Username
-               AND c.roleid = 1;
-         IF @CustID IS NULL
-             BEGIN
-                 SELECT 3 AS ErrorCode,
-                        '' AS ErrorMessage;
-                 RETURN;
-             END;
-     END;
-     BEGIN -- SiteId
-         DECLARE @SiteId INT, @SiteName VARCHAR(50);
-         SELECT @SiteId = s.siteid,
-                @SiteName = c.[site]
-         FROM dbo.Customer c WITH (NOLOCK)
-              INNER JOIN dbo.[Site] s WITH (NOLOCK) ON c.site = s.site
-         WHERE CustId = @AgentId;
-     END;
-     BEGIN -- Check Currency Win Limit is set or not
-         DECLARE @CurrencySettingCount INT;
-         SELECT @CurrencySettingCount = COUNT(1)
-         FROM WinLimit_ProductSettingDetail WITH (NOLOCK)
-         WHERE ExchangeID = @CurrencyID
-               AND SiteId = @SiteId;
-         IF @CurrencySettingCount = 0
-             BEGIN
-                 SELECT 4 AS ErrorCode,
-                        'Site: '+@SiteName+'. Currency: '+@CurrencyName AS ErrorMessage;
-                 RETURN;
-             END;
-     END;
-     SELECT 0 AS ErrorCode,
+     DECLARE @CustID INT;
+     SELECT @CustID = c.custid
+     FROM dbo.Customer c WITH (NOLOCK)
+          INNER JOIN dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
+                                                     AND (@ExcludeTestData = 0
+                                                          OR e.currency NOT IN('UUS', 'H', 'C'))
+     WHERE c.username = @Username
+           AND c.roleid = 1;
+     SELECT CASE
+                WHEN @CustID IS NULL
+                THEN 3
+                ELSE 0
+            END AS ErrorCode,
             '' AS ErrorMessage;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductCheck_xtest] TO [bodbAdminNet];

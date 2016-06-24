@@ -38,15 +38,14 @@ AS
 	
 	Parameters Explanation:	
 	
-	EXEC [NAP_WinLimit_CustNotConfigProductCheck_xtest] @Username = '166HK488' , @ExcludeTestData = 0
 	
 */
-
 
      SET NOCOUNT ON;
      DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT, @MaxWinLimitOld MONEY;
      SELECT @StartRun = GETDATE();
-     BEGIN -- Save State
+     SELECT @MaxWinLimit = ISNULL(@MaxWinLimit, 0);
+     BEGIN -- SAVE State
 
          SELECT @MaxWinLimitOld = MaxWinLimit
          FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
@@ -72,24 +71,33 @@ AS
               INNER JOIN dbo.[Site] s WITH (NOLOCK) ON c.site = s.site
          WHERE CustId = @AgentId;
      END;
-     BEGIN --Validate player win limit < currency win limit
-
-         DECLARE @CurrencyWinLimit MONEY;
-         SELECT @CurrencyWinLimit = ISNULL(MaxWinLimit, 0)
-         FROM dbo.WinLimit_ProductSettingDetail WITH (NOLOCK)
-         WHERE ProductID = @ProductID
+     BEGIN -- VALIDATE Current Level must be between previous level and next level
+         DECLARE @PreviousMaxWinLimit MONEY, @NextMaxWinLimit MONEY;
+         SELECT @PreviousMaxWinLimit = ISNULL(MaxWinLimit, 0)
+         FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
+         WHERE CustID = @CustID
+               AND ProductID = @ProductID
                AND BetTypeId = @BetTypeId
-               AND LevelId = @LevelId
-               AND ExchangeId = @CurrencyId
-               AND SiteId = @SiteId;
-         IF @CurrencyWinLimit < @MaxWinLimit
-            AND @CurrencyWinLimit > 0
+               AND LevelId = @LevelId - 1;
+         SELECT @NextMaxWinLimit = ISNULL(MaxWinLimit, 0)
+         FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
+         WHERE CustID = @CustID
+               AND ProductID = @ProductID
+               AND BetTypeId = @BetTypeId
+               AND LevelId = @LevelId + 1;
+         IF((@MaxWinLimit > 0
+             AND @PreviousMaxWinLimit > 0
+             AND @MaxWinLimit <= @PreviousMaxWinLimit)
+            OR (@MaxWinLimit > 0
+                AND @NextMaxWinLimit > 0
+                AND @MaxWinLimit >= @NextMaxWinLimit))
              BEGIN
                  SELECT 3 AS ErrorCode,
-                        'Player WinLimit cannot greater than Currency WinLimit.' AS ErrorMessage;
+                        'Player Win Limit must be between previous level and next level.' AS ErrorMessage;
                  RETURN;
              END;
      END;
+     
      BEGIN -- UPDATE
 
          BEGIN TRY
@@ -103,11 +111,11 @@ AS
          END TRY
          BEGIN CATCH
              SELECT 4 AS ErrorCode,
-                    'This setting cannot be inserted because of an database internal error.' AS ErrorMessage;
+                    'This setting cannot be updated because of an database internal error.' AS ErrorMessage;
              RETURN;
          END CATCH;
      END;
-     BEGIN -- Log
+     BEGIN -- LOG
          SELECT @EndRun = GETDATE(),
                 @Duration = DATEDIFF(millisecond, @StartRun, @EndRun);
          DECLARE @TrackingValue VARCHAR(300), @TrackingValue2 VARCHAR(300);
@@ -127,6 +135,9 @@ AS
          BEGIN CATCH
          END CATCH;
      END;
+     SELECT 0 AS ErrorCode,
+            '' AS ErrorMessage;
+     RETURN;
 GO
 GRANT EXECUTE ON [dbo].NAP_WinLimit_CustSettingUpd_xtest TO [bodbAdminNet];
 GO

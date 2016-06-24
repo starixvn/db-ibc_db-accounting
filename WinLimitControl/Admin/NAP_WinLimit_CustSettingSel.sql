@@ -39,22 +39,25 @@ Example: EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
 
 */
 
-
-     BEGIN -- #Site
+     SET NOCOUNT ON;
+     BEGIN -- #Site  
 
          CREATE TABLE #Site
          (AgentId INT,
+          SiteId  INT,
           Site    VARCHAR(50)
          );
          INSERT INTO #Site
-                SELECT CustId,
-                       [Site]
+                SELECT c.CustId,
+                       s.SiteId,
+                       s.[Site]
                 FROM Customer c WITH (NOLOCK)
-                WHERE(ISNULL(@Site, '') = ''
-                      OR Site = @Site)
+                     INNER JOIN dbo.[Site] s WITH (NOLOCK) ON s.[Site] = c.[Site]
+                WHERE(ISNULL(@Site, 0) = 0
+                      OR s.[SiteId] = @Site)
                      AND roleid = 2;
      END;
-     BEGIN -- Query
+     BEGIN -- Query  
          SELECT c.CustID,
                 c.username AS UserName,
                 c.currency AS CurrencyId,
@@ -70,9 +73,11 @@ Example: EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
                                                                       AND ps.LevelID = cs.LevelID
               INNER JOIN custInfo c WITH (NOLOCK) ON cs.CustID = c.custid
               INNER JOIN #Site s WITH (NOLOCK) ON s.AgentId = c.recommend
-              LEFT JOIN WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductID = pd.ProductID
-                                                                          AND ps.BettypeID = pd.BettypeID
-                                                                          AND ps.LevelID = pd.BettypeID
+              INNER JOIN WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductID = pd.ProductID
+                                                                           AND ps.BettypeID = pd.BettypeID
+                                                                           AND ps.LevelID = pd.LevelID
+                                                                           AND pd.SiteId = s.SiteId
+                                                                           AND pd.ExchangeId = c.currency
          WHERE ps.SettingStatus = 1
                AND (ISNULL(@UserName, '') = ''
                     OR c.username = @UserName)
@@ -84,7 +89,7 @@ Example: EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
                     OR c.currency NOT IN(20, 27, 28))
          ORDER BY c.Username;
      END;
-         DROP TABLE #Site;
+     DROP TABLE #Site;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel_xtest] TO [bodbAdminNet];
 GO
