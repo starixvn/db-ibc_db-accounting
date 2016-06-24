@@ -31,9 +31,9 @@ AS
 -- original is Dot_Admin_cteamlist
 	DECLARE @MetricBettype AS TABLE (bettype INT)
 	INSERT INTO @MetricBettype (bettype)
-	SELECT DISTINCT typeid
-	FROM bodb02.dbo.bettype WITH (NOLOCK)
-	WHERE  typeid BETWEEN 801 AND 806
+	SELECT   distinct bettype
+	 FROM bodb02.dbo.SportBettypeMatrix WITH (NOLOCK)
+	 WHERE SportType = 1 and SubProduct = 'MG-SuperLive'
 
 IF @bettype IN (901,902,903)
 	BEGIN 
