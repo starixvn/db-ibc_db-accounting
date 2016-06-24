@@ -90,7 +90,7 @@ DECLARE @_FromDate DATETIME, @_ToDate DATETIME, @_BalanceUpDay DATETIME, @Fromda
 SELECT  @_FromDate = @Fromdate, @_ToDate = @todate, @_BalanceUpDay = @BalanceUpDay, @Fromdate_bk = @Fromdate, @_IncludeAccBal = @IncludeAccBal
 
 DECLARE @Yesterday DATETIME 
-SELECT  @Yesterday = CONVERT(DATE, DATEADD(DD, -1, GETDATE()))
+SELECT  @Yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 		
 ----Get Sport Bettype Matrix------
 DECLARE @isTest BIT = 0
