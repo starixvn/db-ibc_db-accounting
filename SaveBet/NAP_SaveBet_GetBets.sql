@@ -29,11 +29,15 @@ AS
 */
 
 -- original is Dot_Admin_cteamlist
+	DECLARE @isTest BIT= 0;
+    SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
+	 
 	DECLARE @MetricBettype AS TABLE (bettype INT)
 	INSERT INTO @MetricBettype (bettype)
-	SELECT   distinct bettype
-	 FROM bodb02.dbo.SportBettypeMatrix WITH (NOLOCK)
-	 WHERE SportType = 1 and SubProduct = 'MG-SuperLive'
+	SELECT  DISTINCT
+         Bettype
+	FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '',@isTest)
+	where subproduct='MG-SuperLive'
 
 IF @bettype IN (901,902,903)
 	BEGIN 
