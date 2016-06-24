@@ -1626,7 +1626,9 @@ BEGIN
 				ON al.srecommend = su.custid
 			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
 				ON al.srecommend = s.custid
-	
+		
+		ORDER BY al.grouptransid, al.transid
+		
 		DROP TABLE #BeforeUpd
 		DROP TABLE #AfterUpd
 	
