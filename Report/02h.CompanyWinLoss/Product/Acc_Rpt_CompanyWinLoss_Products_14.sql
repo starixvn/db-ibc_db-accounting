@@ -693,18 +693,24 @@ BEGIN
 					 WHEN d.Site = 1 THEN 'Credit' 
 					 WHEN d.Site = 2 THEN 'Deposit' 
 					END AS RowName,
-                d.winlost AS MemberWinLoss,
-                d.Position AS SMAWinLoss,
-                d.Commission AS Commission,
-                d.RealLineTotal AS RealIncome,
-                d.VirtualLineTotal AS VirtualIncome,
-                d.RealLineTotal - d.VirtualLineTotal AS VarianceIncome,
-                d.RealTurnover AS RealTurnover,
-                d.VirtualTurnover AS VirtualTurnover, 
-				-d.extraPT AS extraPT,
-				d.RealLineTotal - d.extraPT AS AfterExtraPT 
-
-        FROM #Result d            
+				d.DisplayOrder, site,
+                SUM (d.winlost) AS MemberWinLoss,
+                SUM (d.Position) AS SMAWinLoss,
+                SUM (d.Commission) AS Commission,
+                SUM (d.RealLineTotal) AS RealIncome,
+                SUM (d.VirtualLineTotal) AS VirtualIncome,
+                SUM (d.RealLineTotal - d.VirtualLineTotal) AS VarianceIncome,
+                SUM (d.RealTurnover) AS RealTurnover,
+                SUM (d.VirtualTurnover) AS VirtualTurnover, 
+				SUM (-d.extraPT) AS extraPT,
+				SUM (d.RealLineTotal - d.extraPT) AS AfterExtraPT 
+        FROM #Result d   
+		GROUP BY CASE WHEN d.DisplayOrder = 100 THEN 'RM' ELSE d.ProductName END,
+                 CASE WHEN d.DisplayOrder = 100 THEN d.ProductName
+					 WHEN d.Site = 1 THEN 'Credit' 
+					 WHEN d.Site = 2 THEN 'Deposit' 
+					END,  
+				d.DisplayOrder, site        
 		ORDER BY DisplayOrder ASC,  site	
 
 	
