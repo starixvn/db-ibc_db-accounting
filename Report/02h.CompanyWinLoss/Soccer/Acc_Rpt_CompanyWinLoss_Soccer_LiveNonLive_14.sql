@@ -119,8 +119,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
-                       SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover,
-                       SUM((1 - tpositiontaking) * stake * virtualrate) AS VirtualTurnover
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans14 AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
@@ -162,8 +162,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                        SUM(scomm * actualrate) Commission,
                        -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
-                       -SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover,
-                       -SUM((1 - tpositiontaking) * stake * virtualrate) AS VirtualTurnover
+                       -SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       -SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
@@ -203,6 +203,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
      END;
      DROP TABLE #SportBetType;
      DROP TABLE #DepositAgent;
+     DROP TABLE #Match;
      DROP TABLE #Data;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] TO [bodbAdminNet];

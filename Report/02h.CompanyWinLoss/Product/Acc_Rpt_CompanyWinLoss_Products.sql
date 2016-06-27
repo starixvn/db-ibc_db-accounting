@@ -568,7 +568,7 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
-	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colosuss Bets (3rd)
+	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colossus Bets (3rd)
 			OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
 			OR b.ProductId IN (6, 14) --- Macau (Casino)
 	GROUP BY site, CASE WHEN b.CasinoType = 1 THEN 6   ---- Casino
@@ -668,7 +668,7 @@ BEGIN
 	,(9, 8, 'Keno')
 	,(10, 2, 'Racing')
 	,(11, -2, 'Bettrade')
-	,(12, 15, 'Colosuss Bets')
+	,(12, 15, 'Colossus Bets')
 
 		
 	INSERT INTO @ProductOrder (DisplayOrder, ProductId, ProductName, Site)
@@ -713,7 +713,8 @@ BEGIN
 	DROP TABLE #DepSuper
 	DROP TABLE #ExtraPT_Sel
 	DROP TABLE #Match
-	DROP TABLE #Result
+	DROP TABLE #Result	
+	DROP TABLE #SportBettype
 	
 	
 END

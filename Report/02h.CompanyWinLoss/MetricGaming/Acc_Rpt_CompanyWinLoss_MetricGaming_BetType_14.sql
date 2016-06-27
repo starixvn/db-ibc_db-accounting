@@ -79,8 +79,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_BetType_14] @EndDate='2020-01-01',@Sta
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                       SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
-                       SUM((1 - tpositiontaking) * stake * virtualrate) VirtualTurnover
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
                 FROM bettrans14 AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.recommend = dep.CustId

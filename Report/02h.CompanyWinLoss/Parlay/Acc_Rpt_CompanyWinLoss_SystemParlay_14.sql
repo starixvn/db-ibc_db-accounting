@@ -103,8 +103,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
-                           SUM((1 - tpositiontaking) * stake * virtualrate) VirtualTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
+                           SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
                     FROM bettrans14 b WITH (NOLOCK)
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND BetType = 29
@@ -139,8 +139,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
-                           SUM((1 - tpositiontaking) * stake * virtualrate) VirtualTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
+                           SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
                     FROM bettrans14 b WITH (NOLOCK)
                          INNER JOIN #DepositAgent dep ON b.recommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate

@@ -58,7 +58,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType] @StartDate='2016-01-01', @EndDate
                 SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                 SUM(scomm * actualrate) Commission,
                 SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
          FROM bettrans AS b WITH (NOLOCK)
               INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
               LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId

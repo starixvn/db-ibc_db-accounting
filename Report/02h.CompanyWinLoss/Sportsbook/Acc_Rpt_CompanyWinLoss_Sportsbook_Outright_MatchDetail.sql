@@ -104,8 +104,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail] @EndDate='2020-01-
                        SUM(scomm * actualrate) Commission,
                        -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
-                       -SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover,
-                       -SUM((1 - tpositiontaking) * stake * virtualrate) AS VirtualTurnover
+                       -SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       -SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans b WITH (NOLOCK)
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
@@ -140,6 +140,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail] @EndDate='2020-01-
                   HomeId;
      END;
      DROP TABLE #Match;
+     DROP TABLE #Data;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail] TO [bodbAdminNet];
 GO

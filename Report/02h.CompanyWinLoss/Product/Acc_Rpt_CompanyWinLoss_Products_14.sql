@@ -8,8 +8,9 @@ AS
 	DB: DBACC/bodb02	
 		
 	Revisions:
-		 - 20160622@Sophia: . Remove group by ExtraPT to avoid duplicated data.[Redmine: #59732]
+		- 20160622@Sophia: 	. Remove group by ExtraPT to avoid duplicated data. [Redmine: #59732]
 							. Ignore param @EndDate because of the performance, and business supports only one day 
+		 
 
 	Explanation's Param:
 	
@@ -17,6 +18,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
+		
 	 ------Get Sport Bettype Matrix------
 	 -- Check SP Version	 
 	 DECLARE @isTest BIT = 0
@@ -96,12 +98,11 @@ BEGIN
 	---- Extra PT 
 	CREATE TABLE #ExtraPT_Sel (ProductID INT,Sporttype INT ,SubProduct VARCHAR(100),SuperID INT,ExtraPT DECIMAL(9,8))
 			
-	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT )
-	SELECT	ProductID, SportType, SubProduct, SuperId,SUM(ExtraPT) AS ExtraPT 
+	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT) 
+	SELECT	ProductID, SportType, SubProduct, SuperId, SUM(ExtraPT) AS ExtraPT 
 	FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
-	WHERE	@StartDate BETWEEN FromDate AND Todate		
+	WHERE	@StartDate BETWEEN FromDate AND Todate
 	GROUP BY ProductID, SportType, SubProduct, SuperId
-
 
 	
 	----------------------	Racing -------------------------------------
@@ -194,7 +195,7 @@ BEGIN
 	WHERE	b.ruben = 1 
 			and s.ProductID = 2
 			and b.MatchId >0
-			and b.winlostdate = @StartDate
+			and b.winlostdate = @StartDate 
 			and b.statusID not in (101,102,103,121)	
 	GROUP BY  case when dep.custid is null then 1 else 2 end
 
@@ -567,7 +568,7 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
-	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colosuss Bets (3rd)
+	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colossus Bets (3rd)
 			OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
 			OR b.ProductId IN (6, 14) --- Macau (Casino)
 	GROUP BY site, CASE WHEN b.CasinoType = 1 THEN 6   ---- Casino
@@ -667,7 +668,7 @@ BEGIN
 	,(9, 8, 'Keno')
 	,(10, 2, 'Racing')
 	,(11, -2, 'Bettrade')
-	,(12, 15, 'Colosuss Bets')
+	,(12, 15, 'Colossus Bets')
 
 		
 	INSERT INTO @ProductOrder (DisplayOrder, ProductId, ProductName, Site)
@@ -700,7 +701,7 @@ BEGIN
                 d.RealLineTotal - d.VirtualLineTotal AS VarianceIncome,
                 d.RealTurnover AS RealTurnover,
                 d.VirtualTurnover AS VirtualTurnover, 
-				-d.extraPT AS extraPT, 
+				-d.extraPT AS extraPT,
 				d.RealLineTotal - d.extraPT AS AfterExtraPT 
 
         FROM #Result d            
@@ -712,12 +713,14 @@ BEGIN
 	DROP TABLE #DepSuper
 	DROP TABLE #ExtraPT_Sel
 	DROP TABLE #Match
-	DROP TABLE #Result
+	DROP TABLE #Result	
+	DROP TABLE #SportBettype
 	
 	
 END
+
 GO 
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [vnteam]
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [vnteam]
 GO 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [bodbAdminNet]
-GO
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products_14] TO [bodbAdminNet]
+GO 

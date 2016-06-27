@@ -99,7 +99,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
                            SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                     FROM bettrans14 AS b WITH (NOLOCK)
                          JOIN #Agent AS dep ON b.recommend = dep.CustId
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
@@ -122,7 +122,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
                            SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                     FROM bettransRnG14 b WITH (NOLOCK)
                          JOIN #Agent dep ON b.recommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
@@ -145,7 +145,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site_14] @BetType = 2101,@EndDate='2020-01-01'
                            SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                     FROM bettransLC14 b WITH (NOLOCK)
                          JOIN #Agent dep ON b.recommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate

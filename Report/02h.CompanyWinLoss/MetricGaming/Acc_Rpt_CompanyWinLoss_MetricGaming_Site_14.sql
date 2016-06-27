@@ -85,8 +85,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] @StartDate='2016-01-01', @End
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                       SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
-                       SUM((1 - tpositiontaking) * stake * virtualrate) VirtualTurnover
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN #Agent ag ON b.recommend = ag.custid
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
@@ -112,6 +112,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] @StartDate='2016-01-01', @End
          ORDER BY RowName;
      END;
      DROP TABLE #Agent;
+     DROP TABLE #Data;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_MetricGaming_Site_14] TO [bodbAdminNet];
 GO

@@ -70,7 +70,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_NumberGame_Site_14]  @StartDate='2016-01-01', @EndD
                 SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                 SUM(scomm * actualrate) Commission,
                 SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
          FROM bettrans14 AS b WITH (NOLOCK)
               INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
          WHERE b.winlostdate BETWEEN @StartDate AND @EndDate

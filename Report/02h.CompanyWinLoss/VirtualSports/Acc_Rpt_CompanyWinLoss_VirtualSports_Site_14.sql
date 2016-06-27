@@ -77,7 +77,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_Site_14] @StartDate='2016-01-01', @En
                     SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                     SUM(scomm * actualrate) Commission,
                     SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                    SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                    SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
              FROM bettrans14 AS b WITH (NOLOCK)
                   INNER JOIN match14 AS m WITH (NOLOCK) ON b.MatchId = m.MatchId
                   INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
@@ -97,7 +97,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_Site_14] @StartDate='2016-01-01', @En
                     SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                     SUM(scomm * actualrate) Commission,
                     SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                    SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                    SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
              FROM bettrans14 AS b WITH (NOLOCK)
                   INNER JOIN VSRaceInfo AS r WITH (NOLOCK) ON r.EventId = b.MatchId
                   INNER JOIN #Agent AS dep ON b.recommend = dep.CustId

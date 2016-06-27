@@ -70,7 +70,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType]	@StartDate='2016-01-01', @
                        SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                       SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                 FROM bettrans AS b WITH (NOLOCK)
                      INNER JOIN match AS m WITH (NOLOCK) ON b.MatchId = m.MatchId
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
@@ -100,7 +100,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType]	@StartDate='2016-01-01', @
                        SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                       SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                 FROM bettrans AS b WITH (NOLOCK)
                      INNER JOIN VSRaceInfo AS r WITH (NOLOCK) ON b.MatchId = r.EventId
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType

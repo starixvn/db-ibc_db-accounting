@@ -105,8 +105,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
      (
          SELECT 1
          FROM #SportBetType
-         WHERE RefTable <> 1
-               AND RefTable <> 2
+         WHERE RefTable NOT IN(1, 2)
      )
          BEGIN
              INSERT INTO #Data
@@ -121,16 +120,16 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                            SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover,
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
                            SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT
                     FROM bettrans AS b WITH (NOLOCK)
                          INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                          LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                          LEFT JOIN #ExtraPT e ON b.srecommend = e.superID
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND sb.RefTable = 0
-                          AND b.ruben = 1
-                          AND b.statusId NOT IN(101, 102, 103, 121)
+                          AND sb.RefTable NOT IN(1, 2)
+                         AND b.ruben = 1
+                         AND b.statusId NOT IN(101, 102, 103, 121)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
                              CASE
@@ -158,14 +157,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                            SUM((awinlost + mwinlost + swinlost) * actualrate) SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
                            SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT
                     FROM bettransRNG b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                          LEFT JOIN #ExtraPT e ON b.srecommend = e.superID
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND sb.RefTable = 2
+                          AND sb.RefTable = 1
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
@@ -197,14 +196,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                            SUM((awinlost + mwinlost + swinlost) * actualrate) SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover,
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
                            SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT
                     FROM bettransLC b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                          LEFT JOIN #ExtraPT e ON b.srecommend = e.superID
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND sb.RefTable = 3
+                          AND sb.RefTable = 2
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY sb.ProductId,
                              sb.ProductName,

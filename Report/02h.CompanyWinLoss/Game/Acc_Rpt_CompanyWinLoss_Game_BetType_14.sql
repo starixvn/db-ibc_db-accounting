@@ -67,8 +67,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
      (
          SELECT 1
          FROM #SportBetType
-         WHERE RefTable <> 1
-               AND RefTable <> 2
+         WHERE RefTable NOT IN(1, 2)
      )
          BEGIN
              INSERT INTO #Data
@@ -83,14 +82,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                            SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) AS RealTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                     FROM bettrans14 AS b WITH (NOLOCK)
                          INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                          LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND sb.RefTable = 0
-                          AND b.ruben = 1
-                          AND b.statusId NOT IN(101, 102, 103, 121)
+                          AND sb.RefTable NOT IN(1, 2)
+                         AND b.ruben = 1
+                         AND b.statusId NOT IN(101, 102, 103, 121)
                     GROUP BY sb.BetType,
                              sb.BetTypeName,
                              CASE
@@ -118,12 +117,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                            SUM((awinlost + mwinlost + swinlost) * actualrate) SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover
                     FROM bettransRnG14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.recommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND sb.RefTable = 2
+                          AND sb.RefTable = 1
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY sb.BetType,
                              sb.BetTypeName,
@@ -152,12 +151,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                            SUM((awinlost + mwinlost + swinlost) * actualrate) SMAWinLoss,
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                           SUM((1 - tpositiontaking) * stake * actualrate) RealTurnover
+                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover
                     FROM bettransLC14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.recommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND sb.RefTable = 3
+                          AND sb.RefTable = 2
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY sb.BetType,
                              sb.BetTypeName,

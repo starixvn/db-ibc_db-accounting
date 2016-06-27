@@ -75,6 +75,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_NumberGame_MatchDetail_14] @BetType=81,@IsLive=0,@S
          ORDER BY GroupName,
                   RowName;
      END;
+     DROP TABLE #Data;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_NumberGame_MatchDetail_14] TO [bodbAdminNet];
 GO
