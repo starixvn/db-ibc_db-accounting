@@ -61,31 +61,19 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
      END;
      BEGIN --#ExtraPT
          CREATE TABLE #ExtraPT
-         (ProductID  INT,
-          Sporttype  INT,
-          SubProduct VARCHAR(100),
-          SuperID    INT,
-          FromDate   DATETIME,
-          ToDate     DATETIME,
-          ExtraPT    DECIMAL(9, 8)
+         (ProductID INT,
+          SuperID   INT,
+          ExtraPT   DECIMAL(9, 8)
          );
          INSERT INTO #ExtraPT
                 SELECT ProductID,
-                       SportType,
-                       SubProduct,
                        SuperId,
-                       FromDate,
-                       ToDate,
                        SUM(ExtraPT) AS ExtraPT
                 FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
                 WHERE @StartDate BETWEEN FromDate AND Todate
                       OR @EndDate BETWEEN FromDate AND Todate
                 GROUP BY ProductID,
-                         SportType,
-                         SubProduct,
-                         SuperId,
-                         FromDate,
-                         ToDate;
+                         SuperId;
      END;
      BEGIN -- #Data
 
@@ -126,6 +114,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                          INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                          LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                          LEFT JOIN #ExtraPT e ON b.srecommend = e.superID
+                                                 AND sb.ProductId = e.ProductId
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND sb.RefTable NOT IN(1, 2)
                          AND b.ruben = 1
@@ -163,6 +152,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                          LEFT JOIN #ExtraPT e ON b.srecommend = e.superID
+                                                 AND sb.ProductId = e.ProductId
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND sb.RefTable = 1
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
@@ -202,6 +192,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                          LEFT JOIN #ExtraPT e ON b.srecommend = e.superID
+                                                 AND sb.ProductId = e.ProductId
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND sb.RefTable = 2
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
