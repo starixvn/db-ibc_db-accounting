@@ -17,7 +17,7 @@ Revisions:
 	- 20150126@Jamie: Missing 3rd party's tickets - HotFix [#29477]
 	- 20150728@Jim: apply Bettrade (Feature #38815)
 	- 20160325@Jim: Exclude Bettrade [hotfix #54691]
-	
+	- 20160607@Jim:Add More Actions of Settlement to Daily Turnover Report (#57781)
 Param's Explanation:
 
 */
@@ -44,15 +44,38 @@ BEGIN
 					Agent_Actual MONEY,
 					IBC_Virtual MONEY,
 					IBC_Actual MONEY
-					--TicketCNT INT,
-					--NormalCNT INT,
-					--RejectCNT INT
 			)
 
 	DECLARE	@tmpBettypes TABLE(
 		Bettype		INT
 	)
-
+	DECLARE @BettypeAction AS TABLE (
+	ActionID INT
+	,BettypeID INT
+	)
+	INSERT INTO @BettypeAction ( ActionID,BettypeID)
+	SELECT ActionID
+		  ,	CONVERT(INT,strbettye) AS BettypeID
+	FROM dbo.[v_ActionIDBettype]
+	WHERE CONVERT(INT,strbettye) <> 0
+	
+	CREATE TABLE #tmpUserLog  (logdate DATETIME
+							   ,matchId INT
+							   ,actionId INT
+							   ,UserID INT
+							   )
+							   
+	INSERT INTO #tmpUserLog (LogDate,MatchID,ActionID,UserID)						   
+			SELECT LogDate,MatchID,ActionID,UserID
+			FROM DBLOG.bodb_customerlog.dbo.userlog_settle   WITH (nolock)
+			WHERE logdate between @datelog AND getdate()
+				AND ActionID IN (SELECT DISTINCT ActionID FROM @BettypeAction)
+	UNION 
+		   SELECT LogDate,MatchID,ActionID,UserID
+			FROM DBLOG.bodb_customerlog.dbo.UserLog_Settle3rd   WITH (nolock)
+			WHERE logdate between @datelog AND getdate()
+				AND ActionID IN (SELECT DISTINCT ActionID FROM @BettypeAction)
+				
 	INSERT INTO @tmpBettypes(Bettype)
 	SELECT	Bettype 
 	FROM	SportBettypeMatrix WITH (NOLOCK)
@@ -74,40 +97,17 @@ BEGIN
 				sum(abs(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else b.stake end) *apositiontaking * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end) Agent_Virtual,
 				sum(abs(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else b.stake end) * (1-tpositiontaking) * actualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end) IBC_Actual,
 				sum(abs(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else b.stake end) * (1-tpositiontaking) * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end) IBC_Virtual
-				--SUM(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else 1 end)  +0  TicketCNT,
-				--SUM(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else 1 end)  NormalCNT,
-				--0 RejectCNT
-		FROM DBLOG.bodb_customerlog.dbo.userlog_settle l WITH (nolock)
-			INNER JOIN bodb02.dbo.bettrans14 b WITH (nolock) ON (l.matchid = b.matchid AND b.currency <> 20)
+		FROM #tmpUserLog l  
+			INNER JOIN bodb02.dbo.bettrans14 b WITH (nolock) ON (l.matchid = b.matchid AND b.currency <> 20 )
+			INNER JOIN @BettypeAction bet ON l.actionID = bet.actionID AND b.bettype= bet.BettypeID
 			LEFT JOIN bodb02.dbo.zzzbettrans z WITH (nolock) ON  (b.transid=z.transid)
-		WHERE		b.winlostdate = @fromdate_
-			AND		l.logdate between @datelog AND getdate()
-			AND		l.actionid IN(	100,-- calculate all new game
-								101,-- calculate FT
-								102,-- calculate HT
-								103,-- Undo Settlement
-								108,-- Calculate FGLG
-								109,-- Refund All
-								110,-- Refund HT
-								111,-- Refund FT
-								112,-- Refund FGLG
-								123,-- Calculate All for Abandoned/Postponed match
-								124,-- Calculate FT for Abandoned/Postponed match
-								125,-- Calculate HT for Abandoned/Postponed match	
-								142 -- CAL PS 
-							)
-			AND		((l.actionid IN(100,123) AND b.bettype <> 14 )-- cal all
-							OR ((l.actionid IN(101,124) AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- cal FT
-							OR (l.actionid IN(102,125) AND b.bettype IN(7,8,15,12,21,30,125) )-- cal HT
-							OR (l.actionid =103 ) -- undo
-							OR (l.actionid =108 AND b.bettype = 14 )-- cal FGLG
-							OR (l.actionid  = 109 AND b.bettype <> 14 )-- refund all 
-							OR (l.actionid  = 111 AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- refund  FT
-							OR (l.actionid =110 AND b.bettype IN(7,8,15,12,21,30,125) )-- refund HT
-							OR (l.actionid =112 AND b.bettype = 14)-- refund FGLG
-							OR (l.ActionID =142 AND b.bettype = 135) -- CAL PS 
-						))
-			AND 	b.bettype NOT IN (901,902,903)			
+		WHERE	b.winlostdate = @fromdate_
+				AND (bet.actionID = 126 AND ( b.custid IN (50057, 879241, 103873, 78761, 851668, 878902)  OR  b.recommend IN (1688156))
+					  OR bet.actionID <> 126	
+						)
+				AND (bet.actionID = 135 AND (b.custid IN (2331, 1077687, 115770, 15523642) )
+					 OR bet.actionID <> 135	
+					)		
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
 
@@ -124,9 +124,6 @@ BEGIN
 			abs(b.stake) *apositiontaking * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end Agent_Virtual,
 			abs(b.stake) * (1-tpositiontaking) * actualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end IBC_Actual,
 			abs(b.stake) * (1-tpositiontaking) * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end IBC_Virtual
-			--CASE z.status WHEN 'running' THEN 1 ELSE 0 END TicketCNT,
-			--CASE z.status WHEN 'running' THEN 0 ELSE 1 END NormalCNT,
-			--1 RejectCNT
 		FROM	 bodb02.dbo.zzzbettrans z WITH (nolock)
 				INNER JOIN bodb02.dbo.bettrans14 b  WITH (nolock)
 				ON  b.transid=z.transid
@@ -154,41 +151,17 @@ BEGIN
 				sum(abs(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else b.stake end) *apositiontaking * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end) Agent_Virtual,
 				sum(abs(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else b.stake end) * (1-tpositiontaking) * actualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end) IBC_Actual,
 				sum(abs(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else b.stake end) * (1-tpositiontaking) * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end) IBC_Virtual
-				--SUM(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else 1 end)  +0  TicketCNT,
-				--SUM(case when b.statusID IN (101,102) and z.transdate < l.logdate then 0 else 1 end)  NormalCNT,
-				--0 RejectCNT
-		FROM DBLOG.bodb_customerlog.dbo.userlog_settle l WITH (nolock)
+		FROM #tmpUserLog l WITH (nolock)
 			INNER JOIN bodb02.dbo.bettrans b WITH (nolock) ON (l.matchid = b.matchid AND b.currency <> 20)
+			INNER JOIN @BettypeAction bet ON l.actionID = bet.actionID AND b.bettype= bet.BettypeID
 			LEFT JOIN bodb02.dbo.zzzbettrans z WITH (nolock) ON  (b.transid=z.transid)
-		
-		WHERE		b.winlostdate = @fromdate_
-			AND		l.logdate between @datelog AND getdate()
-			AND		l.actionid IN(	100,-- calculate all new game
-								101,-- calculate FT
-								102,-- calculate HT
-								103,-- Undo Settlement
-								108,-- Calculate FGLG
-								109,-- Refund All
-								110,-- Refund HT
-								111,-- Refund FT
-								112,-- Refund FGLG
-								123,-- Calculate All for Abandoned/Postponed match
-								124,-- Calculate FT for Abandoned/Postponed match
-								125,-- Calculate HT for Abandoned/Postponed match	
-								142 -- CAL PS 	
-							)
-			AND		((l.actionid IN(100,123) AND b.bettype <> 14 )-- cal all
-							OR ((l.actionid IN(101,124) AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- cal FT
-							OR (l.actionid IN(102,125) AND b.bettype IN(7,8,15,12,21,30,125) )-- cal HT
-							OR (l.actionid =103 ) -- undo
-							OR (l.actionid =108 AND b.bettype = 14 )-- cal FGLG
-							OR (l.actionid  = 109 AND b.bettype <> 14 )-- refund all 
-							OR (l.actionid  = 111 AND b.bettype NOT IN(7,8,15,12,21,30,125,14))-- refund  FT
-							OR (l.actionid =110 AND b.bettype IN(7,8,15,12,21,30,125) )-- refund HT
-							OR (l.actionid =112 AND b.bettype = 14)-- refund FGLG
-							OR (l.ActionID =142 AND b.bettype = 135) -- CAL PS 
-						))
-			AND 	b.bettype NOT IN (901,902,903)			
+		WHERE	 b.winlostdate = @fromdate_
+				 AND (bet.actionID = 126 AND ( b.custid IN (50057, 879241, 103873, 78761, 851668, 878902)  OR  b.recommend IN (1688156))
+					  OR bet.actionID <> 126	
+						)
+				AND (bet.actionID = 135 AND (b.custid IN (2331, 1077687, 115770, 15523642) )
+					 OR bet.actionID <> 135	
+					)	
 		GROUP BY l.logdate,l.matchid,l.actionid,l.UserID
 		ORDER BY l.logdate,l.matchid,l.actionid,l.UserID
 
@@ -205,9 +178,6 @@ BEGIN
 			abs(b.stake) *apositiontaking * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end Agent_Virtual,
 			abs(b.stake) * (1-tpositiontaking) * actualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end IBC_Actual,
 			abs(b.stake) * (1-tpositiontaking) * virtualrate * case when b.betteam in ('a','h') then case when abs(b.odds) > 1 then abs(b.odds) else 1 end else 1 end IBC_Virtual
-			--CASE z.status WHEN 'running' THEN 1 ELSE 0 END TicketCNT,
-			--CASE z.status WHEN 'running' THEN 0 ELSE 1 END NormalCNT,
-			--1 RejectCNT
 		FROM	 bodb02.dbo.zzzbettrans z WITH (nolock)
 				INNER JOIN bodb02.dbo.bettrans b  WITH (nolock)
 				ON  b.transid=z.transid
@@ -231,19 +201,25 @@ BEGIN
 		Agent_Virtual = Agent_Virtual * -1,
 		IBC_Actual = IBC_Actual * -1,
 		IBC_Virtual =IBC_Virtual  * -1
-		--NormalCNT = NormalCNT * -1,
-		--RejectCNT = CASE WHEN actionid IN(-1,-2) THEN RejectCNT WHEN actionid IN(109,110,111,112) THEN  NormalCNT ELSE RejectCNT  * -1 END,
-		--TicketCNT =  (NormalCNT * -1) + CASE WHEN actionid IN(-1,-2) THEN RejectCNT WHEN actionid IN(109,110,111,112) THEN  NormalCNT  ELSE RejectCNT  * -1 END
-	WHERE actionid  IN (-1,-2,103,109,110,111,112)
-
-	-- Retrun result
+	WHERE actionid  IN (-1,-2,103,109,110,111,112,126,135,149,150,153,154,166,167)
+	
+	SELECT DISTINCT
+			c.CustID	
+			,c.UserName
+	INTO #tmpCust	
+	FROM  #temp  t
+		INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON t.UserID = c.CustID
+	INSERT INTO #tmpCust(CustID,UserName)
+	SELECT 0,''
+	
+		-- Retrun result
 	IF @fromdate_<= (select max(distinct eventdate) from match14 (nolock))
 	BEGIN
 		SELECT CONVERT(VARCHAR(20), logdate, 120)  [DateTime],
 				CASE #temp.actionid WHEN -1 THEN 'Void Settled Bet'  ELSE l.ActionNameEN  END [Action],
 				CASE #temp.actionid WHEN -1 THEN convert( nvarchar(50),DetailID) WHEN -2 THEN convert( nvarchar(50),DetailID)  
 												ELSE teamname.homename + '-vs-' + teamname.awayname + ' $ ' + convert( nvarchar(50),teamname.matchcode) END [Detail] ,
-				c.username [Username],
+				  ISNULL(c.username,'')  [Username],
 				Total_Actual,Total_Virtual,Super_Actual,Super_Virtual,Master_Actual,Master_Virtual,Agent_Actual,Agent_Virtual,IBC_Actual,IBC_Virtual--TicketCNT,NormalCNT,RejectCNT
 		FROM #temp 
 			LEFT JOIN DBLOG.bodb_CustomerLog.dbo.LogAction l ON #temp.actionid = l.actionid
@@ -251,7 +227,7 @@ BEGIN
 						FROM bodb02.dbo.[match14] m INNER JOIN bodb02.dbo.team ht ON m.homeid = ht.teamid
 										INNER JOIN bodb02.dbo.team at ON m.awayid = at.teamid) as teamname
 				ON #temp.actionid <> -1 AND #temp.DetailID = teamname.matchid
-			INNER JOIN  bodb02.dbo.Customer c ON c.custID = #temp.UserID
+			INNER JOIN #tmpCust c ON c.custID = #temp.UserID
 		ORDER BY logdate DESC	
 	END
 	ELSE
@@ -260,7 +236,7 @@ BEGIN
 				CASE #temp.actionid WHEN -1 THEN 'Void Settled Bet'  ELSE l.ActionNameEN  END [Action],
 				CASE #temp.actionid WHEN -1 THEN convert( nvarchar(50),DetailID) WHEN -2 THEN convert( nvarchar(50),DetailID)  
 												ELSE teamname.homename + '-vs-' + teamname.awayname + ' $ ' + convert( nvarchar(50),teamname.matchcode) END [Detail] ,
-				c.username [Username],
+				 ISNULL(c.username,'')   [Username],
 				Total_Actual,Total_Virtual,Super_Actual,Super_Virtual,Master_Actual,Master_Virtual,Agent_Actual,Agent_Virtual,IBC_Actual,IBC_Virtual--TicketCNT,NormalCNT,RejectCNT
 		FROM #temp 
 			LEFT JOIN DBLOG.bodb_CustomerLog.dbo.LogAction l ON #temp.actionid = l.actionid
@@ -268,12 +244,14 @@ BEGIN
 						FROM bodb02.dbo.[match] m INNER JOIN bodb02.dbo.team ht ON m.homeid = ht.teamid
 										INNER JOIN bodb02.dbo.team at ON m.awayid = at.teamid) as teamname
 				ON #temp.actionid <> -1 AND #temp.DetailID = teamname.matchid
-			INNER JOIN  bodb02.dbo.Customer c ON c.custID = #temp.UserID
+			INNER JOIN  #tmpCust c ON c.custID = #temp.UserID
 		ORDER BY logdate DESC	
 	END
 
 
 	DROP TABLE #temp		
+	DROP TABLE #tmpUserLog
+	DROP TABLE #tmpCust
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyTurnover_ChangedDetail] TO [bodbAdminNet] AS [dbo]
