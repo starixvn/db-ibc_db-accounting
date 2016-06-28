@@ -120,7 +120,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover
                     FROM bettransRnG14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
-                         LEFT JOIN #DepositSuper dep ON b.recommend = dep.custid
+                         LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND sb.RefTable = 1
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
@@ -154,7 +154,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover
                     FROM bettransLC14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
-                         LEFT JOIN #DepositSuper dep ON b.recommend = dep.custid
+                         LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND sb.RefTable = 2
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
