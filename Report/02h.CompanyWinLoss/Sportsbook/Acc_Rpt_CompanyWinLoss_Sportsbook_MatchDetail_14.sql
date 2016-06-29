@@ -133,8 +133,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
                        SUM(scomm * actualrate) Commission,
                        -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                        -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
-                       -SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
-                       -SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate

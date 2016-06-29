@@ -605,7 +605,6 @@ BEGIN
 				 WHEN b.CasinoType = 2 THEN 4  ---Live Casino
 				 ELSE b.ProductId END
 
-
 	-----2. Total ----------------------------------------------------------------
 	-- Get win lost of agent '8RM' , 'BARM'
 	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
