@@ -69,7 +69,10 @@ AS
 SET NOCOUNT ON
 
 DECLARE @roleid INT
-SELECT  @roleid = roleid FROM customer WITH (NOLOCK) WHERE custid = @custid
+SELECT  @roleid = roleid FROM customer WITH (NOLOCK) WHERE custid = @CID
+
+DECLARE @CID INT -- to prevent bad parameter sniffing
+SELECT  @CID = @custid
 
 DECLARE @StatementTable TABLE
 (
@@ -96,12 +99,29 @@ SELECT  @Yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 DECLARE @isTest BIT = 0
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT)
-INSERT INTO #SportBettype (ProductID, Bettype, RefTable)
-SELECT ProductID, Bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
+CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT, VoidRejectGroup TINYINT)
+INSERT INTO #SportBettype (ProductID, Bettype, RefTable, VoidRejectGroup)
+SELECT ProductID, Bettype, RefTable, 3 FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 WHERE RefTable <> 0 -- get bettype in translog, bettransRnG, bettransLC
 -- RefTable: 0-bettrans, 1-bettransRnG, 2-bettransLC, 3-translog
 
+-- For get data on zzzbettrans table --
+	/* VoidRejectGroup:
+		1. exclude zzzbettrans
+		2. zzzbettrans only
+		3. zzzbettrans inner join match/match14
+	*/
+UPDATE #SportBettype
+SET VoidRejectGroup = 1 -- exclude zzzbettrans
+WHERE RefTable IN (1, 2) -- bettype in Casino Games (bettransRnG/LC)
+
+UPDATE #SportBettype
+SET VoidRejectGroup = 2 -- zzzbettrans only
+WHERE
+	(ProductID = 11 AND bettype = 1800) -- AG Casino
+	OR (ProductID IN (8, 12, 13, 15)) -- Keno, Gold Deluxe, MGC-Live Casino, Colossus Bet
+
+---- End Get Sport Bettype Matrix------
 IF @_ToDate >= @_BalanceUpDay
 BEGIN
 	-- always get all data from latest BUDate -> @todate for calculating ACCUMULATED BALANCE row
@@ -133,15 +153,15 @@ BEGIN
 				bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 			WHERE
-				custid = @custid
+				custid = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
-					OR (winlostdate >= @Yesterday AND ISNULL(s.RefTable, 0) NOT IN (1, 2))
+					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude settle ticket on bettransRnG/LC today, yesterday
 				)
 				AND (
 					statusID NOT IN (0, 1)
-					OR (statusID IN (0, 1) AND ISNULL(s.RefTable, 0) NOT IN (1, 2, 3))
+					OR (statusID IN (0, 1) AND s.RefTable IS NULL) -- exclude running ticket on bettransRnG/LC, translog
 				)
 				AND (
 					b.bettype <> 500
@@ -167,7 +187,7 @@ BEGIN
 				0 AS winlost
 			FROM translog WITH (NOLOCK)
 			WHERE
-				custid = @custid
+				custid = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND statusID = 0
 			GROUP BY GameId, winlostdate
@@ -184,7 +204,7 @@ BEGIN
 				SUM(winlost)
 			FROM bettransLC WITH (NOLOCK)
 			WHERE
-				custid = @custid
+				custid = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate >= @Yesterday 
@@ -206,7 +226,7 @@ BEGIN
 				SUM(winlost)
 			FROM bettransRNG (NOLOCK)
 			WHERE
-				custid = @custid
+				custid = @CID
 				AND winlostdate BETWEEN @_FromDate and @_ToDate
 				AND (
 					winlostdate >= @Yesterday
@@ -269,13 +289,13 @@ BEGIN
 		WHERE
 			winlostdate BETWEEN @Fromdate AND @todate
 			AND WinlostDate > @_BalanceUpDay
-			AND custid = @custid 
+			AND custid = @CID 
 			AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'
-		GROUP BY winlostdate, custid
+		GROUP BY winlostdate
 
 		---------------3. Comm, Transfer
 		---- 3.1 bettrans
-		INSERT INTO @StatementTable
+		INSERT INTO @StatementTable -- comm
 		SELECT
 			winlostdate accdate,
 			0,
@@ -292,16 +312,16 @@ BEGIN
 			LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 		WHERE 
 			b.bettype <= 19999 
-			AND custid = @custid 
+			AND custid = @CID 
 			AND winlostdate BETWEEN @_FromDate AND @_ToDate
 			AND playercomm <> 0 
 			AND (
 				winlostdate < @Yesterday 
-				OR (winlostdate >= @Yesterday AND ISNULL(RefTable, 0) NOT IN (1, 2))
+				OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 			)
 		GROUP BY winlostdate
 
-		UNION ALL
+		INSERT INTO @StatementTable -- transfer
 		SELECT 
 			transdate accdate,
 			refno,
@@ -320,7 +340,7 @@ BEGIN
 			LEFT JOIN customer c WITH (NOLOCK) on b.creator = c.custid 
 		WHERE 
 			bettype >= 20000 
-			AND b.custid=@custid 
+			AND b.custid=@CID 
 			AND bt.typeid NOT IN (23001,23002,23101,23102,23201,23202)
 			AND (winlost-actual_stake) <> 0 
 			AND winlostdate BETWEEN @_FromDate and @_ToDate 
@@ -352,7 +372,7 @@ BEGIN
 			,0
 		FROM bettransLC WITH (NOLOCK)
 		WHERE
-			custid = @custid
+			custid = @CID
 			AND winlostdate BETWEEN @_FromDate AND @_ToDate
 			AND playercomm <> 0
 			AND Winlostdate >= @Yesterday
@@ -373,16 +393,40 @@ BEGIN
 			,0
 		FROM bettransRNG WITH (NOLOCK)
 		WHERE
-			custid = @custid
+			custid = @CID
 			AND winlostdate BETWEEN @_FromDate AND @_ToDate
 			AND playercomm <> 0
 			AND Winlostdate >= @Yesterday
 		GROUP BY winlostdate
 
 		-------------4. Cancelled/Deleted Bets
-		---- 4.1 zzzbettrans
 		IF @_FromDate <= @MoveBetDay
 		BEGIN
+		---- 4.1 zzzbettrans
+			--- zzzbettrans only
+			INSERT INTO @StatementTable
+			SELECT DISTINCT
+				b.winlostdate accdate,
+				0,
+				0 totalamt,
+				'BET' transtype,
+				2,
+				'Cancelled/Deleted Bets' transdesc,
+				'' Creator,
+				NULL,
+				'',
+				NULL,
+				0
+			FROM
+				zzzbettrans b WITH (NOLOCK)
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+			WHERE
+				s.VoidRejectGroup = 2 --- zzzbettrans only
+				AND custid = @CID
+				AND winlostdate >= @_BalanceUpDay
+			GROUP BY winlostdate
+
+			--- zzzbettrans inner join match/match14
 			INSERT INTO @StatementTable
 			SELECT DISTINCT
 				m.eventdate accdate,
@@ -399,11 +443,12 @@ BEGIN
 			FROM
 				zzzbettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid
+				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
 				b.bettype <= 19999
 				AND b.bettype <> 903
-				AND NOT EXISTS (SELECT s.bettype FROM #SportBettype s WHERE s.bettype = b.bettype) -- exclude Casino Games and ticket on translog
-				AND custid = @custid
+				AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
+				AND custid = @CID
 			GROUP BY eventdate
 			UNION ALL
 			SELECT DISTINCT
@@ -421,34 +466,13 @@ BEGIN
 			FROM
 				zzzbettrans b WITH (NOLOCK)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
+				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
 				b.bettype <= 19999
 				AND b.bettype <> 903
-				AND NOT EXISTS (SELECT s.bettype FROM #SportBettype s WHERE s.bettype = b.bettype) -- exclude Casino Games and ticket on translog
-				AND custid = @custid
+				AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
+				AND custid = @CID
 			GROUP BY eventdate
-			-- ticket on translog not join table match/match14 --
-			UNION ALL
-			SELECT DISTINCT
-				b.winlostdate accdate,
-				0,
-				0 totalamt,
-				'BET' transtype,
-				2,
-				'Cancelled/Deleted Bets' transdesc,
-				'' Creator,
-				NULL,
-				'',
-				NULL,
-				0
-			FROM
-				zzzbettrans b WITH (NOLOCK)
-				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
-			WHERE
-				s.RefTable = 3
-				AND custid = @custid
-				AND winlostdate >= @_BalanceUpDay
-			GROUP BY winlostdate
 		END
 	END
 	-- End Customer --
@@ -476,7 +500,7 @@ BEGIN
 			LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid 
 		WHERE 
 			bettype >= 20000
-			AND b.custid = @custid
+			AND b.custid = @CID
 			AND winlostdate BETWEEN @_FromDate AND @_ToDate 
 			GROUP BY
 				transdate,
@@ -503,11 +527,11 @@ BEGIN
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
 				b.bettype <= 19999
-				AND recommend = @custid
+				AND recommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
-					OR (winlostdate >= @Yesterday AND ISNULL(s.RefTable, 0) NOT IN (1, 2))
+					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
 			GROUP BY winlostdate
 
@@ -518,7 +542,7 @@ BEGIN
 				SUM(awinlost) pos_totalamt,
 				SUM(comm-playercomm) com_totalamt
 			FROM dbo.bettransLC WITH (NOLOCK)
-			WHERE recommend = @custid
+			WHERE recommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
@@ -530,7 +554,7 @@ BEGIN
 				SUM(awinlost) pos_totalamt,
 				SUM(comm-playercomm) com_totalamt
 			FROM dbo.bettransRnG WITH (NOLOCK)
-			WHERE recommend = @custid
+			WHERE recommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
@@ -593,7 +617,7 @@ BEGIN
 			LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid 
 		WHERE 
 			bettype >= 20000 
-			AND b.custid = @custid 
+			AND b.custid = @CID 
 			AND winlostdate BETWEEN @_FromDate AND @_ToDate 
 		GROUP BY
 			transdate,
@@ -613,18 +637,18 @@ BEGIN
 			--- 2.1. Bettrans
 			SELECT
 				winlostdate accdate,
-				SUM(awinlost) pos_totalamt,
-				SUM(comm-playercomm) com_totalamt
+				SUM(mwinlost) pos_totalamt,
+				SUM(acomm-comm) com_totalamt
 			FROM
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
 				b.bettype <= 19999
-				AND mrecommend = @custid
+				AND mrecommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
-					OR (winlostdate >= @Yesterday AND ISNULL(s.RefTable, 0) NOT IN (1, 2))
+					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
 			GROUP BY winlostdate
 
@@ -632,10 +656,10 @@ BEGIN
 			UNION ALL
 			SELECT
 				winlostdate accdate,
-				SUM(awinlost) pos_totalamt,
-				SUM(comm-playercomm) com_totalamt
+				SUM(mwinlost) pos_totalamt,
+				SUM(acomm-comm) com_totalamt
 			FROM dbo.bettransLC WITH (NOLOCK)
-			WHERE mrecommend = @custid
+			WHERE mrecommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
@@ -644,10 +668,10 @@ BEGIN
 			UNION ALL
 			SELECT
 				winlostdate accdate,
-				SUM(awinlost) pos_totalamt,
-				SUM(comm-playercomm) com_totalamt
+				SUM(mwinlost) pos_totalamt,
+				SUM(acomm-comm) com_totalamt
 			FROM dbo.bettransRnG WITH (NOLOCK)
-			WHERE mrecommend = @custid
+			WHERE mrecommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
@@ -710,7 +734,7 @@ BEGIN
 			LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid  
 		WHERE 
 			bettype >= 20000 
-			AND b.custid=@custid 
+			AND b.custid=@CID 
 			AND bt.typeid=b.bettype  
 			AND winlostdate BETWEEN @_FromDate AND @_ToDate
 		GROUP BY
@@ -731,18 +755,18 @@ BEGIN
 			--- 2.1. Bettrans
 			SELECT
 				winlostdate accdate,
-				SUM(awinlost) pos_totalamt,
-				SUM(comm-playercomm) com_totalamt
+				SUM(swinlost) pos_totalamt,
+				SUM(scomm-acomm) com_totalamt
 			FROM
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
 				b.bettype <= 19999
-				AND srecommend = @custid
+				AND srecommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
-					OR (winlostdate >= @Yesterday AND ISNULL(s.RefTable, 0) NOT IN (1, 2))
+					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
 			GROUP BY winlostdate
 
@@ -750,10 +774,10 @@ BEGIN
 			UNION ALL
 			SELECT
 				winlostdate accdate,
-				SUM(awinlost) pos_totalamt,
-				SUM(comm-playercomm) com_totalamt
+				SUM(swinlost) pos_totalamt,
+				SUM(scomm-acomm) com_totalamt
 			FROM dbo.bettransLC WITH (NOLOCK)
-			WHERE srecommend = @custid
+			WHERE srecommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
@@ -762,10 +786,10 @@ BEGIN
 			UNION ALL
 			SELECT
 				winlostdate accdate,
-				SUM(awinlost) pos_totalamt,
-				SUM(comm-playercomm) com_totalamt
+				SUM(swinlost) pos_totalamt,
+				SUM(scomm-acomm) com_totalamt
 			FROM dbo.bettransRnG WITH (NOLOCK)
-			WHERE srecommend = @custid
+			WHERE srecommend = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
@@ -819,7 +843,7 @@ BEGIN
 	
 	SELECT	TOP 1 @_FromDate = ISNULL(accdate, @Fromdate)
 	FROM	bodb_Report.dbo.[Statement] WITH (NOLOCK)
-	WHERE	custid = @custid AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate
+	WHERE	custid = @CID AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate
 	ORDER BY accdate DESC
  
 	INSERT INTO @StatementTable
@@ -840,7 +864,7 @@ BEGIN
 		0
 	FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 	WHERE
-		custid = @custid
+		custid = @CID
 		AND accdate BETWEEN @_FromDate AND @_ToDate
 	
 	UNION ALL --- @Lukas add missing transaction
@@ -858,7 +882,7 @@ BEGIN
 		0 
 	FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 	WHERE
-		custid = @custid
+		custid = @CID
 		AND accdate > @_ToDate AND accdate <= DATEADD(DAY, 2, @_ToDate)
 		AND @lateTransaction = 1
 		AND transtype IN ('Dep','Wit')
@@ -883,7 +907,7 @@ BEGIN
 			--get latest old BUDate
 			SELECT TOP 1 @BUDate = accdate
 			FROM bodb_Report.dbo.[Statement] WITH (NOLOCK)
-			WHERE custid = @custid AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate_bk
+			WHERE custid = @CID AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate_bk
 			ORDER BY accdate DESC
 			
 			--if cannot find any old BU row, get BUDate FROM last BUDate before @Fromdate
@@ -896,7 +920,7 @@ BEGIN
 			--get acc bal FROM statement old (Statement):		
 			SELECT @AccBal = ISNULL(SUM(totalamt),0)
 			FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
-			WHERE custid = @custid AND accdate >= @BUDate AND accdate < @Fromdate_bk AND transtype <> 'GP'
+			WHERE custid = @CID AND accdate >= @BUDate AND accdate < @Fromdate_bk AND transtype <> 'GP'
 		END
 
 		IF EXISTS(SELECT 1 FROM @StatementTable WHERE accdate >= @Fromdate_bk AND @AccBal <> 0) 
