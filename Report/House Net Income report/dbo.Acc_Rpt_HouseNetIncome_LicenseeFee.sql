@@ -17,9 +17,9 @@ BEGIN
 	DECLARE @ProductList TABLE (ProductID INT, ProductCode VARCHAR(10))
 
 	INSERT INTO @ProductList (ProductID, ProductCode)
-	SELECT p.Productid, val
+	SELECT CASE WHEN pl.val = 'SB' THEN 0 ELSE p.Productid END ProductID, val
 	FROM dbo.Lrf_f_StringSplit(@Products, ',') pl
-		INNER JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.ProductPrefix = pl.val
+		LEFT JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.ProductPrefix = pl.val
 
 	DECLARE @FDate DATE, @TDate DATE
 	SELECT @FDate = @FromDate, @TDate = @ToDate
@@ -295,7 +295,7 @@ BEGIN
 
 	-- Include parties that didn't have any tickets in the selected date range
 	INSERT INTO #SumByProducts (PartyId,ProductId,WinLoss,AComm,MinFeeApplied,WLFeeApplied,AmountToCompany)
-	SELECT PartyId
+	SELECT mf.PartyId
 		,ProductID
 		,0 Winloss
 		,0 AComm
@@ -303,7 +303,8 @@ BEGIN
 		,0 WLFeeApplied
 		,0 AmountToCompany
 	FROM @MinFeeGroup mf
-	WHERE PartyId NOT IN (SELECT PartyId FROM #TempData WHERE ProductId = mf.ProductId)
+		INNER JOIN @tmpParty p ON p.PartyID = mf.PartyId
+	WHERE mf.PartyId NOT IN (SELECT PartyId FROM #TempData WHERE ProductId = mf.ProductId)
 		AND mf.FeeType = 1
 
 	-- merge to minfee group
@@ -318,7 +319,7 @@ BEGIN
 	-- Update negative amount
 	UPDATE #SumByProducts
 	SET WLFeeApplied = CASE WHEN WLFeeApplied > 0 THEN WLFeeApplied ELSE 0 END,
-		AmountToCompany = CASE WHEN AmountToCompany > 0 THEN AmountToCompany ELSE 0 END
+		AmountToCompany = CASE WHEN AmountToCompany > 0 OR ProductId = 3 THEN AmountToCompany ELSE 0 END
 	
 
 	-- Region: Result
