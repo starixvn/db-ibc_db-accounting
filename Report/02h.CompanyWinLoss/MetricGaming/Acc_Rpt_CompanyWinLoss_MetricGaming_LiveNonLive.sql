@@ -93,9 +93,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_LiveNonLive] @EndDate='2020-01-01',@St
                              WHEN dep.CustId IS NULL
                              THEN 'Credit'
                              ELSE 'Deposit'
-                         END
-                ORDER BY GroupName,
-                         RowName;
+                         END;
      END;
      BEGIN -- Query
 

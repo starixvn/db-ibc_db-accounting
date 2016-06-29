@@ -92,9 +92,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay] @EndDate='2020-01-01',@StartDate='2016-01-0
                              WHEN dep.CustId IS NULL
                              THEN 'Credit'
                              ELSE 'Deposit'
-                         END
-                ORDER BY GroupId DESC,
-                         RowName ASC;
+                         END;
      END;
      BEGIN -- Query
 

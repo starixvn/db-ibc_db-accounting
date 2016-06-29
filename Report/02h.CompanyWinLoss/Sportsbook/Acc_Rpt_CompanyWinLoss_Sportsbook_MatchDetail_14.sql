@@ -109,10 +109,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail_14] @EndDate='2020-01-01',@S
                          m.HomeId,
                          m.AwayId,
                          m.EventDate,
-                         m.LeagueId
-                ORDER BY m.LeagueId,
-                         m.MatchCode,
-                         m.HomeId;
+                         m.LeagueId;
      END;
      BEGIN -- RM
 

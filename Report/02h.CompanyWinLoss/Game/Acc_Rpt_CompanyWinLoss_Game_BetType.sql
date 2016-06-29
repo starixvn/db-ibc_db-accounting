@@ -177,7 +177,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType] @EndDate='2020-01-01',@StartDate='201
                 d.RealIncome AS RealIncome,
                 d.RealTurnover AS RealTurnover
          FROM #Data AS d
-         ORDER BY RowName;
+         ORDER BY GroupName,
+                  RowName;
      END;
      DROP TABLE #SportBetType;
      DROP TABLE #DepositSuper;

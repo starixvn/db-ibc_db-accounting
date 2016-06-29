@@ -217,7 +217,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor] @EndDate='2020-01-01',@StartDat
      DROP TABLE #SportBetType;
      DROP TABLE #DepositAgent;
      DROP TABLE #Data;
-	 DROP TABLE #Match;
+     DROP TABLE #Match;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor] TO [bodbAdminNet];
 GO

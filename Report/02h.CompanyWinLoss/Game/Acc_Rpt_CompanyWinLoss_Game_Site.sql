@@ -128,8 +128,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND b.gameId = @BetType
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
-                    GROUP BY dep.Site
-                    ORDER BY RowName;
+                    GROUP BY dep.Site;
          END;
      IF EXISTS -- bettransLC
      (
@@ -151,8 +150,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                     WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                           AND b.gameId = @BetType
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
-                    GROUP BY dep.Site
-                    ORDER BY RowName;
+                    GROUP BY dep.Site;
          END;
      BEGIN -- Query
 

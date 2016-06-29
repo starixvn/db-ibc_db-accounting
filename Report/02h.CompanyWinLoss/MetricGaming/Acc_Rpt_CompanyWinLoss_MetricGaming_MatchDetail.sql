@@ -102,17 +102,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_MatchDetail] @EndDate='2020-01-01',@St
                       AND b.ruben = 1
                       AND statusID NOT IN(101, 102, 103, 121)
                 GROUP BY b.MatchId,
-                       m.MatchCode,
-                       m.IsNeutral,
-                       m.EventDate,
-                       m.SportType,
-                       m.LeagueId,
-                       m.HomeId,
-                       m.AwayId,
-                       m.LeagueId
-                ORDER BY m.LeagueId,
                          m.MatchCode,
-                         m.HomeId;
+                         m.IsNeutral,
+                         m.EventDate,
+                         m.SportType,
+                         m.LeagueId,
+                         m.HomeId,
+                         m.AwayId,
+                         m.LeagueId;
      END;
      BEGIN -- Query
 

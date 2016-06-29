@@ -162,9 +162,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                                  WHEN dep.CustId IS NULL
                                  THEN 'Credit'
                                  ELSE 'Deposit'
-                             END
-                    ORDER BY GroupName,
-                             RowName;
+                             END;
          END;
      IF EXISTS -- bettransLC
      (
@@ -202,9 +200,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                                  WHEN dep.CustId IS NULL
                                  THEN 'Credit'
                                  ELSE 'Deposit'
-                             END
-                    ORDER BY GroupName,
-                             RowName;
+                             END;
          END;
      BEGIN -- Query
 
