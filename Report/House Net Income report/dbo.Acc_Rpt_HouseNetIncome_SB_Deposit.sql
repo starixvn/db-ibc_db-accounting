@@ -435,7 +435,8 @@ BEGIN
 	CREATE TABLE #FinalResult (
 		RptDate				VARCHAR(10),
 		LicenseeWL			MONEY,
-		OtherFees			MONEY,
+		MinFee				MONEY,
+		BAComm				MONEY,
 		PayToMuayThai		MONEY,
 		PayToMetricGaming	MONEY
 	)
@@ -445,8 +446,8 @@ BEGIN
 			@BAWinloss = ISNULL(SUM(AmountToCompany), 0)
 	FROM #TempData WHERE ProductId = 3
 
-	INSERT INTO #FinalResult (rptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied) + @BAWinloss, 0), ISNULL(SUM(MinFeeApplied - Discount - Rebate) + @BAComm, 0), 0, 0
+	INSERT INTO #FinalResult (rptDate, LicenseeWL, MinFee, BAComm, PayToMuayThai, PayToMetricGaming)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied) + @BAWinloss, 0), ISNULL(SUM(MinFeeApplied), 0), ISNULL(@BAComm, 0), 0, 0
 	FROM #SBResult
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200)
@@ -454,9 +455,10 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (RptDate, LicenseeWL, OtherFees, PayToMuayThai, PayToMetricGaming)
+		INSERT INTO #FinalResult (RptDate, LicenseeWL, MinFee, BAComm, PayToMuayThai, PayToMetricGaming)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
 			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId IN (0, 3) AND rptDate = @tmpDate), -- LicenseeWL + BA Winloss
+			0 AS MinFee,
 			(SELECT ISNULL(-SUM(AComm), 0) FROM #TempData WHERE ProductId = 3 AND rptDate = @tmpDate), -- BA Commission
 			0, 0
 
@@ -624,15 +626,17 @@ BEGIN
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
 	SELECT @SQL =	'SELECT * ' + CHAR(13) +
-					'FROM	(SELECT [Order], [RptDate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
+					'FROM	(SELECT ProductCode, [Order], [RptDate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
 							'CROSS APPLY' + CHAR(13) +
-							'(SELECT 1, ''House Income'', LicenseeWL' + CHAR(13) +
+							'(SELECT ''SB'', 1, ''House Income'', LicenseeWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
-							'SELECT 2, ''Other Fees Charge Licensees'', OtherFees' + CHAR(13) +
+							'SELECT ''SB'', 2, ''Licensing Minimum Fee'', MinFee' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
-							'SELECT 4, ''Pay to Muay Thai'', PayToMuayThai' + CHAR(13) +
+							'SELECT ''SB'', 5, ''BA Commission'', BAComm' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
-							'SELECT 5, ''Pay to Metric Gaming'', PayToMetricGaming) c ([Order], Figure, value)) a' + CHAR(13) +
+							'SELECT ''SB'', 6, ''Pay to Muay Thai'', PayToMuayThai' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT ''SB'', 7, ''Pay to Metric Gaming'', PayToMetricGaming) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
 					'PIVOT' + CHAR(13) +
 					'(' + CHAR(13) +
 						'MAX(value)' + CHAR(13) +
