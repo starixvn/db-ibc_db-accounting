@@ -68,11 +68,11 @@ AS
  */
 SET NOCOUNT ON
 
-DECLARE @roleid INT
-SELECT  @roleid = roleid FROM customer WITH (NOLOCK) WHERE custid = @CID
-
 DECLARE @CID INT -- to prevent bad parameter sniffing
 SELECT  @CID = @custid
+
+DECLARE @roleid INT
+SELECT  @roleid = roleid FROM customer WITH (NOLOCK) WHERE custid = @CID
 
 DECLARE @StatementTable TABLE
 (
@@ -99,29 +99,12 @@ SELECT  @Yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 DECLARE @isTest BIT = 0
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT, VoidRejectGroup TINYINT)
-INSERT INTO #SportBettype (ProductID, Bettype, RefTable, VoidRejectGroup)
-SELECT ProductID, Bettype, RefTable, 3 FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
+CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT, VoidRejectGroup TINYINT) -- VoidRejectGroup for get data from zzzbettrans
+INSERT INTO #SportBettype (ProductID, Bettype, RefTable)
+SELECT ProductID, Bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 WHERE RefTable <> 0 -- get bettype in translog, bettransRnG, bettransLC
 -- RefTable: 0-bettrans, 1-bettransRnG, 2-bettransLC, 3-translog
 
--- For get data on zzzbettrans table --
-	/* VoidRejectGroup:
-		1. exclude zzzbettrans
-		2. zzzbettrans only
-		3. zzzbettrans inner join match/match14
-	*/
-UPDATE #SportBettype
-SET VoidRejectGroup = 1 -- exclude zzzbettrans
-WHERE RefTable IN (1, 2) -- bettype in Casino Games (bettransRnG/LC)
-
-UPDATE #SportBettype
-SET VoidRejectGroup = 2 -- zzzbettrans only
-WHERE
-	(ProductID = 11 AND bettype = 1800) -- AG Casino
-	OR (ProductID IN (8, 12, 13, 15)) -- Keno, Gold Deluxe, MGC-Live Casino, Colossus Bet
-
----- End Get Sport Bettype Matrix------
 IF @_ToDate >= @_BalanceUpDay
 BEGIN
 	-- always get all data from latest BUDate -> @todate for calculating ACCUMULATED BALANCE row
@@ -287,7 +270,7 @@ BEGIN
 			,0 isAllowVeify
 		FROM dbo.PayoutTrans WITH (NOLOCK) 
 		WHERE
-			winlostdate BETWEEN @Fromdate AND @todate
+			winlostdate BETWEEN @_Fromdate AND @_ToDate
 			AND WinlostDate > @_BalanceUpDay
 			AND custid = @CID 
 			AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'
@@ -403,6 +386,25 @@ BEGIN
 		IF @_FromDate <= @MoveBetDay
 		BEGIN
 		---- 4.1 zzzbettrans
+
+			-- For get data on zzzbettrans table --
+				/* VoidRejectGroup:
+					1. exclude zzzbettrans
+					2. zzzbettrans only
+					3. zzzbettrans inner join match/match14
+				*/
+			UPDATE #SportBettype
+			SET VoidRejectGroup = 3 -- default: zzzbettrans inner join match/match14
+
+			UPDATE #SportBettype
+			SET VoidRejectGroup = 1 -- exclude zzzbettrans
+			WHERE RefTable IN (1, 2) -- bettype in Casino Games (bettransRnG/LC)
+
+			UPDATE #SportBettype
+			SET VoidRejectGroup = 2 -- zzzbettrans only
+			WHERE ProductID IN (8, 12, 13, 15) -- Keno, Gold Deluxe, MGC-Live Casino, Colossus Bet
+					-- (ProductID = 11 AND bettype = 1800) -- need to add AG Casino  (#SportBettype no have)
+
 			--- zzzbettrans only
 			INSERT INTO @StatementTable
 			SELECT DISTINCT
@@ -419,10 +421,13 @@ BEGIN
 				0
 			FROM
 				zzzbettrans b WITH (NOLOCK)
-				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				INNER JOIN
+					(SELECT bettype FROM #SportBettype WHERE VoidRejectGroup = 2 --- zzzbettrans only
+					 UNION SELECT 1800 -- AG Casino
+					) s ON s.Bettype = b.bettype
 			WHERE
-				s.VoidRejectGroup = 2 --- zzzbettrans only
-				AND custid = @CID
+				custid = @CID
+				AND winlostdate BETWEEN @_Fromdate AND @MoveBetDay
 				AND winlostdate >= @_BalanceUpDay
 			GROUP BY winlostdate
 
@@ -446,7 +451,8 @@ BEGIN
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
 				b.bettype <= 19999
-				AND b.bettype <> 903
+				AND b.bettype NOT IN (500, 903) -- exclude 500, 903 (1800 for AG Casino: no need)
+				AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 				AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 				AND custid = @CID
 			GROUP BY eventdate
@@ -469,7 +475,8 @@ BEGIN
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
 				b.bettype <= 19999
-				AND b.bettype <> 903
+				AND b.bettype NOT IN (903, 500) -- exclude 500, 903 (1800 for AG Casino: no need)
+				AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 				AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 				AND custid = @CID
 			GROUP BY eventdate
@@ -566,6 +573,7 @@ BEGIN
 			0 refno,
 			SUM(pos_totalamt) totalamt,
 			'POS' transtype,
+			NULL,
 			'Position' transdesc,
 			'' Creator,
 			NULL,
@@ -582,6 +590,7 @@ BEGIN
 			0 refno,
 			SUM(com_totalamt) totalamt,
 			'COM' transtype,
+			NULL,
 			'Commission' transdesc,
 			'' Creator,
 			NULL,
@@ -683,6 +692,7 @@ BEGIN
 			0 refno,
 			SUM(pos_totalamt) totalamt,
 			'POS' transtype,
+			NULL,
 			'Position' transdesc,
 			'' Creator,
 			NULL,
@@ -699,6 +709,7 @@ BEGIN
 			0 refno,
 			SUM(com_totalamt) totalamt,
 			'COM' transtype,
+			NULL,
 			'Commission' transdesc,
 			'' Creator,
 			NULL,
@@ -801,6 +812,7 @@ BEGIN
 			0 refno,
 			SUM(pos_totalamt) totalamt,
 			'POS' transtype,
+			NULL,
 			'Position' transdesc,
 			'' Creator,
 			NULL,
@@ -817,6 +829,7 @@ BEGIN
 			0 refno,
 			SUM(com_totalamt) totalamt,
 			'COM' transtype,
+			NULL,
 			'Commission' transdesc,
 			'' Creator,
 			NULL,
@@ -841,9 +854,9 @@ BEGIN
 				@lateTransaction = 1		
 	END
 	
-	SELECT	TOP 1 @_FromDate = ISNULL(accdate, @Fromdate)
+	SELECT	TOP 1 @_FromDate = ISNULL(accdate, @Fromdate_bk)
 	FROM	bodb_Report.dbo.[Statement] WITH (NOLOCK)
-	WHERE	custid = @CID AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate
+	WHERE	custid = @CID AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate_bk
 	ORDER BY accdate DESC
  
 	INSERT INTO @StatementTable
