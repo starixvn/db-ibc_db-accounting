@@ -38,14 +38,14 @@ AS
 
      SET NOCOUNT ON;
      BEGIN -- @CustID, @CurrencyID.
-         DECLARE @CustID INT, @CurrencyID INT, @CurrencyName NVARCHAR(50), @AgentId INT;
+         DECLARE @CustID INT, @CurrencyID INT, @CurrencyName NVARCHAR(50), @AgentId INT, @SuperId INT;
          SELECT @CustID = c.custid,
                 @CurrencyID = e.exchangeid,
                 @CurrencyName = e.currency,
-                @AgentId = c.recommend
+                @AgentId = c.recommend,
+                @SuperId = c.srecommend
          FROM dbo.Customer c WITH (NOLOCK)
               INNER JOIN dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
-
          WHERE c.username = @Username
                AND c.roleid = 1;
      END;
@@ -56,6 +56,52 @@ AS
          FROM dbo.Customer c WITH (NOLOCK)
               INNER JOIN dbo.[Site] s WITH (NOLOCK) ON c.site = s.site
          WHERE CustId = @AgentId;
+     END;
+     BEGIN-- @IsDeposit
+         DECLARE @IsDeposit INT;
+         SELECT @IsDeposit = CASE
+                                 WHEN EXISTS
+         (
+             SELECT 1
+             FROM f_DepSuper_1('All')
+             WHERE CustId = @SuperId
+         )
+                                 THEN 1
+                                 ELSE 0
+                             END;
+     END;
+     BEGIN -- @OfferProducts
+         DECLARE @OfferProducts TABLE
+         (ProductId   INT,
+          ProductName NVARCHAR(50),
+          BetTypeId   INT,
+          LevelId     INT
+         );
+         IF @IsDeposit = 0
+             BEGIN
+                 INSERT INTO @OfferProducts
+                        SELECT p.ProductId,
+                               p.ProductName,
+                               ps.BettypeID,
+                               ps.LevelId
+                        FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
+                             INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON ps.ProductId = p.ProductId;
+             END;
+         ELSE
+             BEGIN
+                 INSERT INTO @OfferProducts
+                        SELECT p.ProductId,
+                               p.ProductName,
+                               ps.BettypeID,
+                               ps.LevelId
+                        FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
+                             INNER JOIN DBPRO.bodb02.dbo.Products p ON ps.ProductId = p.ProductId
+                             INNER JOIN DBLIC.bodb_licensee.dbo.LicenseeProduct3rd lp WITH (NOLOCK) ON ps.ProductId = lp.ProductId
+                             INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lp.licenseeId
+                             INNER JOIN dbo.[Site] s WITH (NOLOCK) ON l.LicenseeName = s.[site]
+                        WHERE s.[siteid] = @SiteId
+                              AND ps.SettingStatus = 1;
+             END;
      END;
      BEGIN -- @ExistedSetting
          DECLARE @ExistedSetting TABLE
@@ -83,21 +129,19 @@ AS
                 @CurrencyName Currency,
                 p.ProductId,
                 p.ProductName,
-                pd.BetTypeId,
-                pd.LevelId,
-                pd.MaxWinLimit AS CurrencyWinLimit
-         FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
-              INNER JOIN DBPRO.bodb02.dbo.Products p ON ps.ProductId = p.ProductId
-              INNER JOIN dbo.WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductId = pd.ProductId
-                                                                               AND ps.BetTypeId = pd.BetTypeId
-                                                                               AND ps.LevelId = pd.LevelId
-              LEFT JOIN @ExistedSetting e ON e.ProductId = ps.ProductId
-                                             AND e.BetTypeId = ps.BetTypeId
-                                             AND e.LevelId = ps.LevelId
-         WHERE pd.SiteId = @SiteId
-               AND pd.ExchangeId = @CurrencyId
-               AND e.MaxWinLimit IS NULL
-               AND ps.SettingStatus = 1;
+                p.BetTypeId,
+                p.LevelId,
+                ISNULL(pd.MaxWinLimit, 0) AS CurrencyWinLimit
+         FROM @OfferProducts p
+              LEFT JOIN @ExistedSetting e ON e.ProductId = p.ProductId
+                                             AND e.BetTypeId = p.BetTypeId
+                                             AND e.LevelId = p.LevelId
+              LEFT JOIN dbo.WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON p.ProductId = pd.ProductId
+                                                                              AND p.BetTypeId = pd.BetTypeId
+                                                                              AND p.LevelId = pd.LevelId
+                                                                              AND pd.ExchangeId = @CurrencyId
+                                                                              AND pd.SiteId = @SiteId
+         WHERE e.MaxWinLimit IS NULL;
      END;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel_xtest] TO [bodbAdminNet];
