@@ -1,64 +1,53 @@
-USE [bodb02]
-GO
-
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CurrencySel]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[NAP_WinLimit_CurrencySel]
-GO
-
-USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CurrencySel]    Script Date: 07/07/2015 16:08:46 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySel]
-	@ExcludeUsed		BIT	= 0,
-	@ExcludeTestData	BIT = 1
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySel] @SiteId              INT = NULL,
+                                                  @IsCreditSite        BIT = 0,
+                                                  @ExcludeTestCurrency BIT = 0
 AS
-	/*
+	
+/*
 		Created: Phillip	
 		Date: 2015-06-26
 		Task: #38608 - Implement function to control Player's Win Limit on specific Product
 
-		DB: DBTXN/bodb02
+		DB: DBCUST/CustDB
 		
 		Revisions:
+		20160616@Franklin: Implement Game Win Limit Control phase2 [#57722].
 		
 		Parameters Explanation:	
-			@ExcludeUsed: Exclude used Currency.
-	*/
-BEGIN
-	SET NOCOUNT ON;
-	IF @ExcludeUsed = 0
-	BEGIN
-		SELECT		ExchangeID
-					,Code + ' (' + currency + ')' AS ExchangeName
-		FROM		CustDB.dbo.exchange WITH (NOLOCK)
-		WHERE		@ExcludeTestData = 0 OR currency NOT IN ('UUS', 'H', 'C')
-		ORDER BY	ExchangeName
-	END
-	ELSE
-	BEGIN
-		DECLARE		@TotalProduct INT
-		
-		SELECT		@TotalProduct = COUNT(1)
-		FROM		dbo.f_Winlimit_GetProductSetting()
-		
-		SELECT		e.exchangeid
-					,e.Code + ' (' + e.currency + ')' AS ExchangeName
-		FROM		CustDB.dbo.exchange e WITH (NOLOCK)
-					LEFT OUTER JOIN dbo.WinLimit_GlobalSetting gs WITH (NOLOCK)
-					ON e.exchangeid = gs.ExchangeID
-		GROUP BY	e.exchangeid, e.Code, e.currency
-		HAVING		COUNT(gs.ProductID) <> @TotalProduct
-	END
-END
+		   @SiteId: Site Or Licensee ID.
+		   @IsCreditSite: Is Credit Site.
+		   @ExcludeTestCurrency: Exclude used Currency.
+*/
+
+     BEGIN
+         SET NOCOUNT ON;
+         IF @SiteId IS NULL
+            OR @IsCreditSite = 1
+             BEGIN
+                 SELECT ex.exchangeid AS ExchangeId,
+                        ex.Code+' ('+ex.currency+')' AS ExchangeName
+                 FROM dbo.exchange ex WITH (NOLOCK)
+                 WHERE @ExcludeTestCurrency = 0
+                       OR ex.currency NOT IN('UUS', 'H', 'C')
+                 ORDER BY ExchangeName;
+             END;
+         ELSE
+             BEGIN
+                 SELECT DISTINCT
+                        ex.exchangeid AS ExchangeId,
+                        ex.Code+' ('+ex.currency+')' AS ExchangeName
+                 FROM DBLIC.bodb_licensee.dbo.LicenseeCust lc WITH (NOLOCK)
+                      INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lc.LicenseeID
+                      INNER JOIN dbo.exchange ex WITH (NOLOCK) ON lc.Currency = ex.exchangeid
+                      INNER JOIN dbo.site s WITH (NOLOCK) ON s.site = l.LicenseeName
+                 WHERE s.siteid = @SiteId
+                       AND (@ExcludeTestCurrency = 0
+                            OR ex.currency NOT IN('UUS', 'H', 'C'))
+                 ORDER BY ExchangeName;
+             END;
+     END;
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySel] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySel] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CurrencySel] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CurrencySel] TO [vnteam];
 GO
