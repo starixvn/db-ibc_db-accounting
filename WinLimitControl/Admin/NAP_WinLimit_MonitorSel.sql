@@ -89,7 +89,8 @@ AS
               CurrencyMaxWinLimitLevel SMALLINT,
               CurrencyMaxWinLimit      MONEY,
               PlayerMaxWinLimitLevel   SMALLINT,
-              PlayerMaxWinLimit        MONEY
+              PlayerMaxWinLimit        MONEY,
+              IsNotified               BIT
              );
              INSERT INTO #WinLimitMonitor
              (CustId,
@@ -124,7 +125,8 @@ AS
                            wlpsd.LevelID,
                            wlpsd.MaxWinLimit,
                            wlcgs.LevelID,
-                           wlcgs.MaxWinLimit
+                           wlcgs.MaxWinLimit,
+                           wlcgm.IsNotified
                     FROM WinLimit_CustGameMonitoring wlcgm WITH (NOLOCK)
                          INNER JOIN #CustInfo ci WITH (NOLOCK) ON ci.CustId = wlcgm.CustID
                          INNER JOIN dbo.WinLimit_ProductSettingDetail wlpsd WITH (NOLOCK) ON wlpsd.ProductID = wlcgm.ProductID
@@ -173,6 +175,7 @@ AS
                        AND wlcgmh.ProductID = wlm.ProductId
                        AND wlcgmh.ActionID NOT IN(2, 4)
              ) AS NumberReachedLimit,
+                    wlm.IsNotified,
                     wlcgs.IsBlockedPlaceBet,
                     wlcgs.IsBlockedTransfer
              FROM #WinLimitMonitor wlm
