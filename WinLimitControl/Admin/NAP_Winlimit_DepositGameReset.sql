@@ -41,7 +41,7 @@ AS
              UPDATE cg
                SET
                    cg.WinLost = 0
-             FROM dbo.WinLimit_DepositGame cg WITH (ROWLOCK, UPDLOCK)
+             FROM dbo.Winlimit_DebitGame cg WITH (ROWLOCK, UPDLOCK)
              WHERE cg.CustId = @CustId
                    AND cg.BetType = @BetTypeId;
          END TRY
