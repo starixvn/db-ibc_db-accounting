@@ -20,6 +20,7 @@ SET QUOTED_IDENTIFIER ON;
 GO
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel_xtest] @CustID    INT,
                                                            @ProductID TINYINT,
+                                                           @BetTypeId INT,
                                                            @UserID    INT         = 0,
                                                            @IP        VARCHAR(20) = ''
 AS
@@ -43,22 +44,18 @@ AS
      DECLARE @MaxWinLimitOld1 MONEY, @MaxWinLimitOld2 MONEY, @MaxWinLimitOld3 MONEY;
      DECLARE @ErrCode INT= 0, @ErrMsg NVARCHAR(200)= '';
      SELECT @StartRun = GETDATE();
-     BEGIN -- Save Old State
-         SELECT @MaxWinLimitOld1 = MaxWinLimit
-         FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
-         WHERE CustID = @CustID
-               AND ProductID = @ProductID
-               AND LevelID = 1;
-         SELECT @MaxWinLimitOld2 = MaxWinLimit
-         FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
-         WHERE CustID = @CustID
-               AND ProductID = @ProductID
-               AND LevelID = 2;
-         SELECT @MaxWinLimitOld3 = MaxWinLimit
-         FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
-         WHERE CustID = @CustID
-               AND ProductID = @ProductID
-               AND LevelID = 3;
+     BEGIN -- SAVE Old State
+         DECLARE @OldState TABLE
+         (LevelId     INT,
+          MaxWinLimit MONEY
+         );
+         INSERT INTO @OldState
+                SELECT LevelId,
+                       MaxWinLimit
+                FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
+                WHERE CustID = @CustID
+                      AND ProductID = @ProductID
+                      AND BetTypeId = @BetTypeId;
      END;
      BEGIN -- Delete
          BEGIN TRY
@@ -76,7 +73,27 @@ AS
          SELECT @EndRun = GETDATE(),
                 @Duration = DATEDIFF(millisecond, @StartRun, @EndRun);
          DECLARE @LogSPData VARCHAR(300);
-         SELECT @LogSPData = '<NAP_WinLimit_CustSettingDel '+'" CustID ="'+CONVERT( VARCHAR(20), @CustID)+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID)+'" OrangeMaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimitOld1)+'" YellowMaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimitOld2)+'" RedMaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimitOld3)+'" UserId="'+CONVERT(VARCHAR(20), @UserId)+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
+         DECLARE @LevelId INT, @MaxWinLimitOld MONEY;
+         SET @LogSPData = '<NAP_WinLimit_CustSettingDel ';
+         SET @LogSPData = @LogSPData+'" CustID ="'+CONVERT(VARCHAR(20), @CustID);
+         SET @LogSPData = @LogSPData+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID);
+         SET @LogSPData = @LogSPData+'" BetTypeId="'+CONVERT(VARCHAR(20), @BetTypeId);
+         WHILE EXISTS
+         (
+             SELECT 1
+             FROM @OldState
+         )
+             BEGIN
+                 SELECT @LevelId = LevelId,
+                        @MaxWinLimitOld = MaxWinLimit
+                 FROM @OldState;
+                 SET @LogSPData = @LogSPData+'" MaxWinLimitLevel'+CONVERT(VARCHAR(20), @LevelId)+'="'+CONVERT(VARCHAR(20), @MaxWinLimitOld);
+                 DELETE @OldState
+                 WHERE LevelId = @LevelId
+                       AND MaxWinLimit = @MaxWinLimitOld;
+             END;
+         SET @LogSPData = @LogSPData+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
+         SET @LogSPData = @LogSPData+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
          BEGIN TRY
              EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
                   @UserID = @UserID,

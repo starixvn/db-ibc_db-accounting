@@ -54,12 +54,6 @@ AS
                AND BetTypeId = @BetTypeId
                AND LevelId = @LevelId;
      END;
-     IF(@MaxWinLimitOld IS NULL)
-         BEGIN
-             SELECT 2 AS ErrorCode,
-                    'This setting does not exist.' AS ErrorMessage;
-             RETURN;
-         END;
      BEGIN -- @CurrencyId, @SiteId
          DECLARE @SiteId INT, @SiteName VARCHAR(50), @AgentId INT, @CurrencyId INT;
          SELECT @CurrencyId = c.currency,
@@ -97,7 +91,6 @@ AS
                  RETURN;
              END;
      END;
-     
      BEGIN -- UPDATE
 
          BEGIN TRY
@@ -119,8 +112,22 @@ AS
          SELECT @EndRun = GETDATE(),
                 @Duration = DATEDIFF(millisecond, @StartRun, @EndRun);
          DECLARE @TrackingValue VARCHAR(300), @TrackingValue2 VARCHAR(300);
-         SELECT @TrackingValue = '<NAP_WinLimit_CustSettingUpd '+'" CustID ="'+CONVERT( VARCHAR(20), @CustID)+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID)+'" BetTypeID="'+CONVERT(VARCHAR(20), @BetTypeID)+'" LevelID="'+CONVERT(VARCHAR(20), @LevelID)+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimit)+'" UserId="'+CONVERT(VARCHAR(20), @UserId)+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
-         SELECT @TrackingValue2 = '<NAP_WinLimit_CustSettingUpd '+'" CustID ="'+CONVERT( VARCHAR(20), @CustID)+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID)+'" BetTypeID="'+CONVERT(VARCHAR(20), @BetTypeID)+'" LevelID="'+CONVERT(VARCHAR(20), @LevelID)+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimitOld)+'" UserId="'+CONVERT(VARCHAR(20), @UserId)+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
+         SET @TrackingValue = '<NAP_WinLimit_CustSettingUpd ';
+         SET @TrackingValue = @TrackingValue+'" CustID ="'+CONVERT(VARCHAR(20), @CustID);
+         SET @TrackingValue = @TrackingValue+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID);
+         SET @TrackingValue = @TrackingValue+'" BetTypeID="'+CONVERT(VARCHAR(20), @BetTypeID);
+         SET @TrackingValue = @TrackingValue+'" LevelID="'+CONVERT(VARCHAR(20), @LevelID);
+         SET @TrackingValue = @TrackingValue+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimit);
+         SET @TrackingValue = @TrackingValue+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
+         SET @TrackingValue = @TrackingValue+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
+         SET @TrackingValue2 = '<NAP_WinLimit_CustSettingUpd ';
+         SET @TrackingValue2 = @TrackingValue2+'" CustID ="'+CONVERT(VARCHAR(20), @CustID);
+         SET @TrackingValue2 = @TrackingValue2+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID);
+         SET @TrackingValue2 = @TrackingValue2+'" BetTypeID="'+CONVERT(VARCHAR(20), @BetTypeID);
+         SET @TrackingValue2 = @TrackingValue2+'" LevelID="'+CONVERT(VARCHAR(20), @LevelID);
+         SET @TrackingValue2 = @TrackingValue2+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimitOld);
+         SET @TrackingValue2 = @TrackingValue2+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
+         SET @TrackingValue2 = @TrackingValue2+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
          SELECT @EndRun = GETDATE(),
                 @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun);
          BEGIN TRY

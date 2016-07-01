@@ -52,7 +52,7 @@ AS
 */
 
      SET NOCOUNT ON;
-     DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT, @LogSPData VARCHAR(300);
+     DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT;
      SELECT @StartRun = GETDATE();
      SELECT @OrangeMaxWinLimit = ISNULL(@OrangeMaxWinLimit, 0),
             @YellowMaxWinLimit = ISNULL(@YellowMaxWinLimit, 0),
@@ -103,7 +103,7 @@ AS
                  SELECT 2 AS ErrorCode,
                         'This setting already existed.' AS ErrorMessage;
                  RETURN;
-             END;         
+             END;
      END;
      BEGIN -- INSERT
          BEGIN TRY
@@ -128,9 +128,31 @@ AS
          END CATCH;
      END;
      BEGIN --LOG
+         DECLARE @LevelId INT, @MaxWinLimit MONEY, @LogSPData VARCHAR(300);
          SELECT @EndRun = GETDATE(),
                 @Duration = DATEDIFF(millisecond, @StartRun, @EndRun);
-         SELECT @LogSPData = '<NAP_WinLimit_CustSettingIns '+'"CustId ="'+CONVERT( VARCHAR(20), @CustId)+'" ProductId ="'+CONVERT(VARCHAR(20), @ProductId)+'" BetTypeId ="'+CONVERT(VARCHAR(20), @BetTypeId)+'" SiteId ="'+CONVERT(VARCHAR(20), @SiteId)+'" CurrencyId ="'+CONVERT(VARCHAR(20), @CurrencyId)+'" @OrangeMaxWinLimit ="'+CONVERT(VARCHAR(20), @OrangeMaxWinLimit)+'" @YellowMaxWinLimit ="'+CONVERT(VARCHAR(20), @YellowMaxWinLimit)+'" @RedMaxWinLimit ="'+CONVERT(VARCHAR(20), @RedMaxWinLimit)+'" UserID ="'+CONVERT(VARCHAR(20), @UserID)+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
+         SELECT @LogSPData = '<NAP_WinLimit_CustSettingIns ';
+         SET @LogSPData = @LogSPData+'"CustId ="'+CONVERT(VARCHAR(20), @CustId);
+         SET @LogSPData = @LogSPData+'" ProductId ="'+CONVERT(VARCHAR(20), @ProductId);
+         SET @LogSPData = @LogSPData+'" BetTypeId ="'+CONVERT(VARCHAR(20), @BetTypeId);
+         SET @LogSPData = @LogSPData+'" SiteId ="'+CONVERT(VARCHAR(20), @SiteId);
+         SET @LogSPData = @LogSPData+'" CurrencyId ="'+CONVERT(VARCHAR(20), @CurrencyId);
+         WHILE EXISTS
+         (
+             SELECT 1
+             FROM @InsertingSettings
+         )
+             BEGIN
+                 SELECT @LevelId = LevelId,
+                        @MaxWinLimit = MaxWinLimit
+                 FROM @InsertingSettings;
+                 SET @LogSPData = @LogSPData+'" MaxWinLimitLevel'+CONVERT(VARCHAR(20), @LevelId)+'="'+CONVERT(VARCHAR(20), @MaxWinLimit);
+                 DELETE @InsertingSettings
+                 WHERE LevelId = @LevelId
+                       AND MaxWinLimit = @MaxWinLimit;
+             END;
+         SET @LogSPData = @LogSPData+'" UserID ="'+CONVERT(VARCHAR(20), @UserID);
+         SET @LogSPData = @LogSPData+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
          BEGIN TRY
              EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
                   @UserID = @UserID,
