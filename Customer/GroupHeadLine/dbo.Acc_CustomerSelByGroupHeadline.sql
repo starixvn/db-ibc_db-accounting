@@ -155,6 +155,7 @@ BEGIN
 	WHERE (@username = '' OR ci.username=@username) 
 		AND (@groupheadline = '' OR hl.GroupName=@groupheadline)    
 		AND hl.GroupID <> 0
+       AND (@Userid IS NULL OR (@Userid IS NOT NULL AND site NOT IN (SELECT site FROM @tmp )))
     
 	UNION ALL    
 	SELECT  0 custheadlineid,'Not assigned to group' , c.custid ,ci.username,isnull(ci.reject,0) issuspend,    
