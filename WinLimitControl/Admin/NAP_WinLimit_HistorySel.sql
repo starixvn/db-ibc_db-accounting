@@ -64,18 +64,18 @@ AS
                            wlcgs.LevelID,
                            wlcgs.MaxWinLimit
                     FROM dbo.WinLimit_CustGameMonitoring_History wlcgmh WITH (NOLOCK)
-                         INNER JOIN dbo.Winlimit_ActionSetting was WITH (NOLOCK) ON was.ActionID = wlcgmh.ActionID
                          INNER JOIN dbo.WinLimit_ProductSettingDetail wlpsd WITH (NOLOCK) ON wlpsd.ProductID = wlcgmh.ProductID
                                                                                              AND wlpsd.BettypeID = wlcgmh.BettypeID
-                                                                                             AND wlpsd.SiteID = @SiteId
                          LEFT JOIN dbo.WinLimit_CustGameSetting wlcgs WITH (NOLOCK) ON wlcgs.CustID = wlcgmh.CustID
                                                                                        AND wlcgs.ProductID = wlcgmh.ProductID
                                                                                        AND wlcgs.BettypeID = wlcgmh.BettypeID
-                                                                                       AND wlcgmh.CustID = @CustId;
+                         INNER JOIN dbo.Winlimit_ActionSetting was WITH (NOLOCK) ON was.ActionID = wlcgmh.ActionID
+                    WHERE wlcgmh.CustID = @CustId
+                          AND wlpsd.ExchangeID = @CurrencyId
+                          AND wlpsd.SiteID = @SiteId;
          END;
          BEGIN -- Query data
-             SELECT DISTINCT
-                    wlh.ModifiedDate,
+             SELECT wlh.ModifiedDate,
                     ISNULL(wlh.PlayerMaxWinLimitLevel, wlh.CurrencyMaxWinLimitLevel) AS Level,
                     CASE
                         WHEN(wlh.PlayerMaxWinLimit IS NULL)
