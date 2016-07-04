@@ -75,7 +75,8 @@ AS
                           AND wlpsd.SiteID = @SiteId;
          END;
          BEGIN -- Query data
-             SELECT wlh.ModifiedDate,
+             SELECT DISTINCT
+                    wlh.ModifiedDate,
                     ISNULL(wlh.PlayerMaxWinLimitLevel, wlh.CurrencyMaxWinLimitLevel) AS Level,
                     CASE
                         WHEN(wlh.PlayerMaxWinLimit IS NULL)
