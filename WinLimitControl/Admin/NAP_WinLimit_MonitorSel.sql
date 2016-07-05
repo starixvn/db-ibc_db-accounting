@@ -108,7 +108,8 @@ AS
               CurrencyMaxWinLimitLevel,
               CurrencyMaxWinLimit,
               PlayerMaxWinLimitLevel,
-              PlayerMaxWinLimit
+              PlayerMaxWinLimit,
+              IsNotified
              )
                     SELECT wlcgm.CustID,
                            ci.UserName,
@@ -169,7 +170,7 @@ AS
              (
                  SELECT COUNT(1)
                  FROM dbo.WinLimit_CustGameMonitoring_History wlcgmh WITH (NOLOCK)
-                 WHERE wlcgmh.ModifiedDate BETWEEN @FromDate AND @Todate
+                 WHERE wlcgmh.ModifiedDate BETWEEN CONVERT( DATETIME, CONVERT(NVARCHAR(101), wlm.ModifiedDate, 111)+' 00:00:00') AND CONVERT(DATETIME, CONVERT(NVARCHAR(101), wlm.ModifiedDate, 111)+' 23:59:59.997')
                        AND wlcgmh.LevelID = wlm.ReachedLimitLevel
                        AND wlcgmh.CustID = wlm.CustId
                        AND wlcgmh.ProductID = wlm.ProductId
