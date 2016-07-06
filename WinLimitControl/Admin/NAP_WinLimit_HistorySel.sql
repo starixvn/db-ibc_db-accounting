@@ -70,7 +70,8 @@ AS
                                                                                        AND wlcgs.ProductID = wlcgmh.ProductID
                                                                                        AND wlcgs.BettypeID = wlcgmh.BettypeID
                          INNER JOIN dbo.Winlimit_ActionSetting was WITH (NOLOCK) ON was.ActionID = wlcgmh.ActionID
-                    WHERE wlcgmh.CustID = @CustId
+                    WHERE wlcgmh.ProductID = @ProductId
+                          AND wlcgmh.CustID = @CustId
                           AND wlpsd.ExchangeID = @CurrencyId
                           AND wlpsd.SiteID = @SiteId;
          END;
