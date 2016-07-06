@@ -147,7 +147,7 @@ BEGIN
 		, rs.CreatedBy AS BlockedBy
 		, c.UserName AS BlockedByUserName
 	FROM #tempResult rs
-		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
+		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS'))
 		LEFT JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON rs.CreatedBy = c.CustId
 	ORDER BY RowNum ASC
 	

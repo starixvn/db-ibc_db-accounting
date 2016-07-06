@@ -28,7 +28,7 @@ AS
                         ex.Code+' ('+ex.currency+')' AS ExchangeName
                  FROM dbo.exchange ex WITH (NOLOCK)
                  WHERE @ExcludeTestCurrency = 0
-                       OR ex.currency NOT IN('UUS', 'H', 'C')
+                       OR ex.currency NOT IN('UUS')
                  ORDER BY ExchangeName;
              END;
          ELSE
@@ -42,7 +42,7 @@ AS
                       INNER JOIN dbo.site s WITH (NOLOCK) ON s.site = l.LicenseeName
                  WHERE s.siteid = @SiteId
                        AND (@ExcludeTestCurrency = 0
-                            OR ex.currency NOT IN('UUS', 'H', 'C'))
+                            OR ex.currency NOT IN('UUS'))
                  ORDER BY ExchangeName;
              END;
      END;

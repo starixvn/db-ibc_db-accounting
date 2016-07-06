@@ -156,7 +156,7 @@ AS
          BEGIN TRY
              EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
                   @UserID = @UserID,
-                  @CustID = @UserID,
+                  @CustID = @CustID,
                   @ActionID = 31203,
                   @TrackingValue = @LogSPData,
                   @Duration = @Duration;

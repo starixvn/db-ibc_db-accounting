@@ -57,7 +57,7 @@ AS
                               AND (@CurrencyId IS NULL
                                    OR lc.Currency = @CurrencyId)
                               AND (@ExcludeTestCurrency = 0
-                                   OR lc.CurrencyName NOT IN('UUS', 'H', 'C'));
+                                   OR lc.CurrencyName NOT IN('UUS'));
              ELSE
              INSERT INTO #ProductSiteCurrencySetting
                     SELECT @ProductId,
@@ -67,7 +67,7 @@ AS
                     WHERE(@CurrencyId IS NULL
                           OR ex.exchangeid = @CurrencyId)
                          AND (@ExcludeTestCurrency = 0
-                              OR ex.currency NOT IN('UUS', 'H', 'C'));
+                              OR ex.currency NOT IN('UUS'));
          END;
          BEGIN -- Query Data
              SELECT pscs.ProductId,

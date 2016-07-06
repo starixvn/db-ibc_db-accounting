@@ -153,7 +153,7 @@ BEGIN
 		, c.username AS UnblockedByUserName
 	FROM #tempResult rs
 		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) 
-			ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
+			ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS'))
 		LEFT JOIN dbo.WinLimit_CreditGame wc WITH (NOLOCK) 
 			ON rs.CustId = wc.CustId AND rs.bettype = wc.Bettype AND wc.Winlostdate = @Today
 		LEFT JOIN dbo.WinLimit_DebitGame wd WITH (NOLOCK)

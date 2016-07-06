@@ -15,11 +15,12 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId    INT,
-                                                                    @ProductId INT,
-                                                                    @BetTypeId INT,
-                                                                    @ActionId  INT,
-                                                                    @UserId    INT
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId       INT,
+                                                                    @ProductId    INT,
+                                                                    @BetTypeId    INT,
+                                                                    @ActionId     INT,
+                                                                    @ModifiedDate DATETIME,
+                                                                    @UserId       INT
 AS
 	
 /*
@@ -36,6 +37,7 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
    @CustId = 662531, 
    @ProductId =22,
    @BetTypeId=4001,  
+   @ModifiedDate='2016-07-04 14:56:14.027',
    @UserId=1
 */
 
@@ -68,14 +70,15 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
                            TotalWinAmt,
                            WinAmt,
                            @ActionId,
-                           GETDATE(),
+                           ModifiedDate,
                            IsNotified,
                            @UserId,
                            @UserId
                     FROM dbo.WinLimit_CustGameMonitoring
                     WHERE CustId = @CustId
                           AND ProductId = @ProductId
-                          AND BetTypeId = @BetTypeId;
+                          AND BetTypeId = @BetTypeId
+                          AND CAST(ModifiedDate AS DATETIME2(0)) = CAST(@ModifiedDate AS DATETIME2(0));
          END TRY
          BEGIN CATCH
              SELECT 1 AS ErrorCode,

@@ -4,10 +4,10 @@ IF EXISTS
 (
     SELECT *
     FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_Winlimit_DepositGameReset]')
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_Winlimit_DebitGameReset]')
           AND type IN(N'P', N'PC')
 )
-    DROP PROCEDURE [dbo].[NAP_Winlimit_DepositGameReset];
+    DROP PROCEDURE [dbo].[NAP_Winlimit_DebitGameReset];
 GO
 USE [bodb02];
 GO
@@ -15,7 +15,7 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_Winlimit_DepositGameReset] @CustId    INT,
+CREATE PROCEDURE [dbo].[NAP_Winlimit_DebitGameReset] @CustId    INT,
                                                      @BetTypeId INT
 AS
 	
@@ -29,7 +29,7 @@ AS
 	Revisions:
 	
 	Parameters Explanation:	
-	EXEC [NAP_Winlimit_DepositGameReset] 
+	EXEC [NAP_Winlimit_DebitGameReset] 
 	   @CustId = 662531, 
 	   @BetTypeId=4001
 	
@@ -47,14 +47,14 @@ AS
          END TRY
          BEGIN CATCH
              SELECT 1 AS ErrorCode,
-                    'The deposit win limit cannot be reseted because of an database internal error.' AS ErrorMessage;
+                    'The debit win limit cannot be reseted because of an database internal error.' AS ErrorMessage;
              RETURN;
          END CATCH;
      END;
      SELECT 0 AS ErrorCode,
             '' AS ErrorMessage;
 GO
-GRANT EXECUTE ON [dbo].[NAP_Winlimit_DepositGameReset] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[NAP_Winlimit_DebitGameReset] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Winlimit_DepositGameReset] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[NAP_Winlimit_DebitGameReset] TO [vnteam];
 GO
