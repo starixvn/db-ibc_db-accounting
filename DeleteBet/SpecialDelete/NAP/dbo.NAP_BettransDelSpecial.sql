@@ -104,6 +104,7 @@ AS
 		- 20160112@Patrick: Support Cricket [Redmine: #50688]
 		- 20160401@Bobby: #55354 - Update changes for new message structure
 		- 20160405@Kathy: Allow to void settled ticket [Redmine:#54344]
+		- 20160706@Kathy: Get Refno for Lucky Single Ticket [R
 		
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -164,7 +165,8 @@ BEGIN
 		CurrencyName		VARCHAR(10),
 		betid				BIGINT,
 		betdaqid			BIGINT,
-		TransDesc			NVARCHAR(1000)
+		TransDesc			NVARCHAR(1000),
+		refno				BIGINT
 		)
 	DECLARE @tblInvalidTrans TABLE (transid BIGINT) -- store invalid BT transid
 	
@@ -277,6 +279,7 @@ BEGIN
 			,CurrencyName	
 			,betid			
 			,betdaqid
+			,refno
 	)
 	SELECT	b.transid
 			,b.transid
@@ -304,6 +307,7 @@ BEGIN
 			,b.CurrencyName
 			,b.betid
 			,b.betdaqid
+			,b.refno
 	FROM	dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN #tblTransIds t 
 			ON	t.transid = b.transid
@@ -381,6 +385,7 @@ BEGIN
 				,betid			
 				,betdaqid
 				,TransDesc
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -409,6 +414,7 @@ BEGIN
 				,b.betid
 				,b.betdaqid
 				,b.transdesc
+				,b.refno
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -465,6 +471,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -492,6 +499,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.refno
 		FROM	dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -541,6 +549,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -568,6 +577,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.refno
 		FROM	dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -615,6 +625,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -642,6 +653,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.refno
 		FROM	dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -691,6 +703,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -718,6 +731,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.refno
 		FROM	dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -785,6 +799,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -812,6 +827,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.refno
 		FROM	dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -905,6 +921,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -932,6 +949,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.refno
 		FROM	dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -992,6 +1010,7 @@ BEGIN
 				,CurrencyName	
 				,betid			
 				,betdaqid
+				,refno
 		)
 		SELECT	b.transid
 				,b.transid
@@ -1019,6 +1038,7 @@ BEGIN
 				,b.CurrencyName
 				,b.betid
 				,b.betdaqid
+				,b.refno
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #tblTransIds t 
 				ON	t.transid = b.transid
@@ -1546,6 +1566,7 @@ BEGIN
 		BEGIN  
 			SELECT @isITAdmin = 1   
 		END  		
+			,al.refno
 		
 		;WITH CTE_CustIdAll AS (
 			SELECT DISTINCT t.custid
@@ -1565,6 +1586,7 @@ BEGIN
 				, ci.currency
 			FROM CustDB.dbo.Customer ci WITH(NOLOCK)
 				INNER JOIN CTE_CustIdAll ca ON ci.custid = ca.custid
+			,al.refno
 			
 		)
 		SELECT	al.odds
@@ -1613,6 +1635,7 @@ BEGIN
 			,CASE WHEN al.betdaqid = 0 THEN 1 ELSE 0 END AS isBetTrade
 			,@isITAdmin	AS IsITSupport
 				
+			,al.refno
 		FROM	#BetDelete al
 			INNER JOIN CTE_CustInfo ci WITH(NOLOCK)
 				ON al.custid = ci.custid
@@ -1626,7 +1649,11 @@ BEGIN
 				ON al.srecommend = su.custid
 			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
 				ON al.srecommend = s.custid
+			,al.refno
+			,al.refno
+			,al.refno
 		
+			,al.refno
 		ORDER BY al.grouptransid, al.transid
 		
 		DROP TABLE #BeforeUpd
