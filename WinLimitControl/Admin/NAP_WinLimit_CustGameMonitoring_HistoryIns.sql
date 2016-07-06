@@ -19,7 +19,6 @@ CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId     
                                                                     @ProductId    INT,
                                                                     @BetTypeId    INT,
                                                                     @ActionId     INT,
-                                                                    @ModifiedDate DATETIME,
                                                                     @UserId       INT
 AS
 	
@@ -37,7 +36,6 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
    @CustId = 662531, 
    @ProductId =22,
    @BetTypeId=4001,  
-   @ModifiedDate='2016-07-04 14:56:14.027',
    @UserId=1
 */
 
@@ -61,24 +59,24 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
               ModifiedBy,
               CreatedBy
              )
-                    SELECT CustID,
-                           ProductID,
-                           BettypeID,
-                           WinlostDate,
-                           LevelID,
-                           MaxWinLimit,
-                           TotalWinAmt,
-                           WinAmt,
-                           @ActionId,
-                           ModifiedDate,
-                           IsNotified,
-                           @UserId,
-                           @UserId
+                    SELECT TOP 1 CustID,
+                                 ProductID,
+                                 BettypeID,
+                                 WinlostDate,
+                                 LevelID,
+                                 MaxWinLimit,
+                                 TotalWinAmt,
+                                 WinAmt,
+                                 @ActionId,
+                                 GETDATE(),
+                                 IsNotified,
+                                 @UserId,
+                                 @UserId
                     FROM dbo.WinLimit_CustGameMonitoring
                     WHERE CustId = @CustId
                           AND ProductId = @ProductId
                           AND BetTypeId = @BetTypeId
-                          AND CAST(ModifiedDate AS DATETIME2(0)) = CAST(@ModifiedDate AS DATETIME2(0));
+                    ORDER BY ModifiedBy DESC;
          END TRY
          BEGIN CATCH
              SELECT 1 AS ErrorCode,

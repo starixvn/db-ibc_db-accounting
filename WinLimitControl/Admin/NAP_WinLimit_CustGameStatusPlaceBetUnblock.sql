@@ -51,6 +51,7 @@ Parameters Explanation:
              UPDATE dbo.WinLimit_CustGameStatus
                SET
                    IsBlockedPlaceBet = 0,
+                   ActionID = 2,
                    ModifiedDate = GETDATE()
              WHERE CustId = @CustId
                    AND ProductId = @ProductId

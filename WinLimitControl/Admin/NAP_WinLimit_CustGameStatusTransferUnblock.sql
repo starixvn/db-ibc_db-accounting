@@ -51,6 +51,7 @@ Parameters Explanation:
              UPDATE dbo.WinLimit_CustGameStatus
                SET
                    IsBlockedTransfer = 0,
+                   ActionId = 4,
                    ModifiedDate = GETDATE()
              WHERE CustId = @CustId
                    AND ProductId = @ProductId
