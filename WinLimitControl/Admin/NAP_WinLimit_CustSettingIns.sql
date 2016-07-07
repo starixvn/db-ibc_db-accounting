@@ -74,7 +74,7 @@ AS
           @RedMaxWinLimit
          );
      END;
-     BEGIN -- VALIDATE
+     BEGIN -- VALIDATE Input
          IF(@OrangeMaxWinLimit > 0 --Check if @OrangeMaxWinLimit < @YellowMaxWinLimit
             AND @YellowMaxWinLimit > 0
             AND @OrangeMaxWinLimit >= @YellowMaxWinLimit)
@@ -105,6 +105,22 @@ AS
                  RETURN;
              END;
      END;
+     
+     IF NOT EXISTS -- VALIDATE Currency Setting
+     (
+         SELECT 1
+         FROM dbo.WinLimit_ProductSettingDetail
+         WHERE ProductId = @ProductId
+               AND BetTypeId = @BetTypeId
+               AND ExchangeId = @CurrencyId
+               AND SiteId = @SiteId
+     )
+         BEGIN
+             SELECT 3 AS ErrorCode,
+                    'The currency win limit was not set.' AS ErrorMessage;
+             RETURN;
+         END;
+         
      BEGIN -- INSERT
          BEGIN TRY
              INSERT INTO dbo.WinLimit_CustGameSetting

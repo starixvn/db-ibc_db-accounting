@@ -32,7 +32,7 @@ AS
 	
 	Parameters Explanation:	
 	
-	EXEC [NAP_WinLimit_CustNotConfigProductSel_xtest] @Username = '166HK488'
+	EXEC [NAP_WinLimit_CustNotConfigProductSel_xtest] @Username = 'SPONUUS01045'
 	
 */
 
