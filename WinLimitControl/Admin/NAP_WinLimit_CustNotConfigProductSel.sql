@@ -85,7 +85,12 @@ AS
                                ps.BettypeID,
                                ps.LevelId
                         FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
-                             INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON ps.ProductId = p.ProductId;
+                             INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON ps.ProductId = p.ProductId
+                             INNER JOIN dbo.WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductId = pd.ProductId
+                                                                                              AND ps.BetTypeId = pd.BetTypeId
+                                                                                              AND ps.LevelId = pd.LevelId
+                                                                                              AND pd.ExchangeId = @CurrencyId
+                                                                                              AND pd.SiteId = @SiteId;
              END;
          ELSE
              BEGIN
@@ -131,7 +136,12 @@ AS
                 p.ProductName,
                 p.BetTypeId,
                 p.LevelId,
-                ISNULL(pd.MaxWinLimit, 0) AS CurrencyWinLimit
+                ISNULL(pd.MaxWinLimit, 0) AS CurrencyWinLimit,
+                CASE
+                    WHEN pd.MaxWinLimit IS NULL
+                    THEN 0
+                    ELSE 1
+                END HasCurrencySetting
          FROM @OfferProducts p
               LEFT JOIN @ExistedSetting e ON e.ProductId = p.ProductId
                                              AND e.BetTypeId = p.BetTypeId

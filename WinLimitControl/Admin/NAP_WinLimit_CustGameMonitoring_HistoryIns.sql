@@ -15,11 +15,11 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId       INT,
-                                                                    @ProductId    INT,
-                                                                    @BetTypeId    INT,
-                                                                    @ActionId     INT,
-                                                                    @UserId       INT
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId    INT,
+                                                                    @ProductId INT,
+                                                                    @BetTypeId INT,
+                                                                    @ActionId  INT,
+                                                                    @UserId    INT
 AS
 	
 /*
@@ -36,6 +36,7 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
    @CustId = 662531, 
    @ProductId =22,
    @BetTypeId=4001,  
+   @ActionId =2,
    @UserId=1
 */
 
