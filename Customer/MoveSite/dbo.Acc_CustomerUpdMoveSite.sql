@@ -19,7 +19,7 @@ AS
 		- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
 		- 20150904@Helen: commission setting for MO [Redmine #41470]
 		- 20151026@Don: Support moving site from 766666 to other sites
-		
+		- 20160707@Winnie: Feature #48948 Hide_special_sites_from_unautorized_users
 	Param's Explanation:
 		@CustID: Custid of customer want to move site. We allow to move all customers except members
 		
@@ -33,6 +33,24 @@ BEGIN
 	declare @endRun datetime
 	declare @duration int
 	set @startRun = getdate()
+	
+	DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
+	DECLARE @tmpUserid VARCHAR(50)
+	
+	DECLARE @SearchQuery varchar(1024)
+	SELECT @tmpUserid=CAST(@Userid AS VARCHAR(50))
+	SELECT @SearchQuery = 'SELECT * 
+	FROM OPENQUERY(DBPOLICY, 
+	''SELECT siteid , site,SpecialGroup FROM bodb02.dbo.f_GetDeniedSiteByUser( ''''' + @tmpUserid + ''''')'')'
+
+	INSERT INTO  @tmp (siteid , site,SpecialGroup)
+	EXECUTE(@SearchQuery)	
+	
+	IF (@site IN (SELECT site FROM @tmp ))
+	BEGIN
+		SELECT @ErrCode = 103, @ErrMsg ='You don''t have permission to access'
+		RETURN
+	END
 	
 	--Check permission for account site: @phuc20080213
 	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[MoveSite]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
