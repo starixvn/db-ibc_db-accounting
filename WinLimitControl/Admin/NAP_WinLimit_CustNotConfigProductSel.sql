@@ -85,12 +85,7 @@ AS
                                ps.BettypeID,
                                ps.LevelId
                         FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
-                             INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON ps.ProductId = p.ProductId
-                             INNER JOIN dbo.WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductId = pd.ProductId
-                                                                                              AND ps.BetTypeId = pd.BetTypeId
-                                                                                              AND ps.LevelId = pd.LevelId
-                                                                                              AND pd.ExchangeId = @CurrencyId
-                                                                                              AND pd.SiteId = @SiteId;
+                             INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON ps.ProductId = p.ProductId;
              END;
          ELSE
              BEGIN
