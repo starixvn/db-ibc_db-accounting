@@ -99,14 +99,34 @@ AS
                  BEGIN -- Write Log
                      SELECT @EndRun = GETDATE(),
                             @Duration = DATEDIFF(millisecond, @StartRun, @EndRun);
-                     SELECT TrackingValue1 = '<NAP_WinLimit_CurrencySettingUpd '+'" ProductID ="'+CONVERT( VARCHAR(20), @ProductId)+'" BettypeID="'+CONVERT(VARCHAR(20), @BettypeId)+'" ExchangeID="'+CONVERT(VARCHAR(20), @CurrencyId)+'" SiteID="'+CONVERT(VARCHAR(20), @SiteId)+'" LevelID="'+CONVERT(VARCHAR(20), @LevelId)+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @OldMaxWinLimit)+'" IsBlockedPlaceBet="'+CONVERT(VARCHAR(20), @OldIsBlockedPlaceBet)+'" IsBlockedTransfer="'+CONVERT(VARCHAR(20), @OldIsBlockedTransfer)+'" UserId="'+CONVERT(VARCHAR(20), @UserId)+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
+                     SET @TrackingValue1 = '<NAP_WinLimit_CurrencySettingUpd ';
+                     SET @TrackingValue1 = @TrackingValue1+'" ProductID ="'+CONVERT(VARCHAR(20), @ProductId);
+                     SET @TrackingValue1 = @TrackingValue1+'" BettypeID="'+CONVERT(VARCHAR(20), @BettypeId);
+                     SET @TrackingValue1 = @TrackingValue1+'" ExchangeID="'+CONVERT(VARCHAR(20), @CurrencyId);
+                     SET @TrackingValue1 = @TrackingValue1+'" SiteID="'+CONVERT(VARCHAR(20), @SiteId);
+                     SET @TrackingValue1 = @TrackingValue1+'" LevelID="'+CONVERT(VARCHAR(20), @LevelId);
+                     SET @TrackingValue1 = @TrackingValue1+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @OldMaxWinLimit);
+                     SET @TrackingValue1 = @TrackingValue1+'" IsBlockedPlaceBet="'+CONVERT(VARCHAR(20), @OldIsBlockedPlaceBet);
+                     SET @TrackingValue1 = @TrackingValue1+'" IsBlockedTransfer="'+CONVERT(VARCHAR(20), @OldIsBlockedTransfer);
+                     SET @TrackingValue1 = @TrackingValue1+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
+                     SET @TrackingValue1 = @TrackingValue1+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
                      DECLARE @TrackingValue2 VARCHAR(500);
-                     SELECT @TrackingValue2 = '<NAP_WinLimit_CurrencySettingUpd '+'" ProductID ="'+CONVERT( VARCHAR(20), @ProductId)+'" BettypeID="'+CONVERT(VARCHAR(20), @BettypeId)+'" ExchangeID="'+CONVERT(VARCHAR(20), @CurrencyId)+'" SiteID="'+CONVERT(VARCHAR(20), @SiteId)+'" LevelID="'+CONVERT(VARCHAR(20), @LevelId)+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimit)+'" IsBlockedPlaceBet="'+CONVERT(VARCHAR(20), @IsBlockedPlaceBet)+'" IsBlockedTransfer="'+CONVERT(VARCHAR(20), @IsBlockedTransfer)+'" UserId="'+CONVERT(VARCHAR(20), @UserId)+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
+                     SET @TrackingValue2 = '<NAP_WinLimit_CurrencySettingUpd ';
+                     SET @TrackingValue2 = @TrackingValue2+'" ProductID ="'+CONVERT(VARCHAR(20), @ProductId);
+                     SET @TrackingValue2 = @TrackingValue2+'" BettypeID="'+CONVERT(VARCHAR(20), @BettypeId);
+                     SET @TrackingValue2 = @TrackingValue2+'" ExchangeID="'+CONVERT(VARCHAR(20), @CurrencyId);
+                     SET @TrackingValue2 = @TrackingValue2+'" SiteID="'+CONVERT(VARCHAR(20), @SiteId);
+                     SET @TrackingValue2 = @TrackingValue2+'" LevelID="'+CONVERT(VARCHAR(20), @LevelId);
+                     SET @TrackingValue2 = @TrackingValue2+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimit);
+                     SET @TrackingValue2 = @TrackingValue2+'" IsBlockedPlaceBet="'+CONVERT(VARCHAR(20), @IsBlockedPlaceBet);
+                     SET @TrackingValue2 = @TrackingValue2+'" IsBlockedTransfer="'+CONVERT(VARCHAR(20), @IsBlockedTransfer);
+                     SET @TrackingValue2 = @TrackingValue2+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
+                     SET @TrackingValue2 = @TrackingValue2+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
                      EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
                           @UserID = @UserID,
                           @ActionID = 31201,
-                          @TrackingValue = TrackingValue1,
-                          @TrackingValue2 = TrackingValue2,
+                          @TrackingValue = @TrackingValue1,
+                          @TrackingValue2 = @TrackingValue2,
                           @Duration = @Duration;
                  END;
              END;
@@ -145,7 +165,17 @@ AS
                  BEGIN -- Write log
                      SELECT @EndRun = GETDATE(),
                             @Duration = DATEDIFF(millisecond, @StartRun, @EndRun);
-                     SELECT @TrackingValue1 = '<NAP_WinLimit_CurrencySettingUpd '+'" ProductID ="'+CONVERT( VARCHAR(20), @ProductId)+'" BettypeID="'+CONVERT(VARCHAR(20), @BettypeId)+'" ExchangeID="'+CONVERT(VARCHAR(20), @CurrencyId)+'" SiteID="'+CONVERT(VARCHAR(20), @SiteId)+'" LevelID="'+CONVERT(VARCHAR(20), @LevelId)+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimit)+'" IsBlockedPlaceBet="'+CONVERT(VARCHAR(20), @IsBlockedPlaceBet)+'" IsBlockedTransfer="'+CONVERT(VARCHAR(20), @IsBlockedTransfer)+'" UserId="'+CONVERT(VARCHAR(20), @UserId)+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
+                     SET @TrackingValue1 = '<NAP_WinLimit_CurrencySettingUpd ';
+                     SET @TrackingValue1 = @TrackingValue1+'" ProductID ="'+CONVERT(VARCHAR(20), @ProductId);
+                     SET @TrackingValue1 = @TrackingValue1+'" BettypeID="'+CONVERT(VARCHAR(20), @BettypeId);
+                     SET @TrackingValue1 = @TrackingValue1+'" ExchangeID="'+CONVERT(VARCHAR(20), @CurrencyId);
+                     SET @TrackingValue1 = @TrackingValue1+'" SiteID="'+CONVERT(VARCHAR(20), @SiteId);
+                     SET @TrackingValue1 = @TrackingValue1+'" LevelID="'+CONVERT(VARCHAR(20), @LevelId);
+                     SET @TrackingValue1 = @TrackingValue1+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimit);
+                     SET @TrackingValue1 = @TrackingValue1+'" IsBlockedPlaceBet="'+CONVERT(VARCHAR(20), @IsBlockedPlaceBet);
+                     SET @TrackingValue1 = @TrackingValue1+'" IsBlockedTransfer="'+CONVERT(VARCHAR(20), @IsBlockedTransfer);
+                     SET @TrackingValue1 = @TrackingValue1+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
+                     SET @TrackingValue1 = @TrackingValue1+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
                      EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
                           @UserID = @UserID,
                           @ActionID = 31201,

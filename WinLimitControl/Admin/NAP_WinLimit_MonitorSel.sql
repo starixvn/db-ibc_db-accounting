@@ -178,11 +178,24 @@ AS
              ) AS NumberReachedLimit,
                     wlm.IsNotified,
                     wlcgs.IsBlockedPlaceBet,
-                    wlcgs.IsBlockedTransfer
+                    wlcgs.IsBlockedTransfer,
+                    CASE
+                        WHEN custWinLimitMaxTime.ModifiedDate IS NOT NULL
+                        THEN 1
+                        ELSE 0
+                    END AS IsEnableUnBlock
              FROM #WinLimitMonitor wlm
                   INNER JOIN dbo.WinLimit_CustGameStatus wlcgs WITH (NOLOCK) ON wlcgs.ProductID = wlm.ProductId
                                                                                 AND wlcgs.BettypeID = wlm.BettypeId
                                                                                 AND wlcgs.CustID = wlm.CustId
+                  LEFT JOIN
+             (
+                 SELECT wlcgm.CustID,
+                        MAX(wlcgm.ModifiedDate) AS ModifiedDate
+                 FROM dbo.WinLimit_CustGameMonitoring wlcgm
+                 GROUP BY wlcgm.CustID
+             ) AS custWinLimitMaxTime ON custWinLimitMaxTime.CustId = wlm.CustId
+                                         AND custWinLimitMaxTime.ModifiedDate = wlm.ModifiedDate
              ORDER BY ReachedLimitTime DESC;
          END;
          DROP TABLE #Site;
