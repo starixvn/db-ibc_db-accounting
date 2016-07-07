@@ -69,7 +69,7 @@ BEGIN
 	INSERT INTO #updatedMsgTarget (MsgTargetId, BetTransId, IsDeleted)
 	SELECT MsgTargetId
 		,BetTransId = STUFF((
-			SELECT ',' + ud.transid FROM (
+			SELECT ', ' + ud.transid FROM (
 				SELECT MsgTargetId, transid, IsDeleted
 					FROM CTE_UpdateMsgTarget
 				UNION ALL
@@ -77,7 +77,7 @@ BEGIN
 				FROM CTE_KeepLastTransID
 			) AS ud
 			WHERE ud.MsgTargetId = temp.MsgTargetId
-			FOR XML PATH(''), TYPE).value('.[1]', 'VARCHAR(MAX)'), 1, 1, '')
+			FOR XML PATH(''), TYPE).value('.[1]', 'VARCHAR(MAX)'), 1, 2, '')
 		, IsDeleted = ISNULL((SELECT MAX(ISdeleted) FROM CTE_KeepLastTransID del
 						WHERE del.MsgTargetId = temp.MsgTargetId
 					), 0)
@@ -91,20 +91,6 @@ BEGIN
 	FROM dbo.msgTarget mt
 		INNER JOIN #updatedMsgTarget up 
 		ON mt.MsgTargetId = up.MsgTargetId			
-
-	--update back to main message
-	UPDATE msg WITH(ROWLOCK,UPDLOCK) 
-	SET isDeleted = 1
-	FROM dbo.Msg msg
-	WHERE MessageId IN (
-		SELECT MessageId 
-		FROM dbo.MsgTarget ck WITH(NOLOCK) 
-		WHERE MessageId IN (SELECT DISTINCT MessageId FROM #tempMsgTarget )
-		GROUP BY MessageId
-		HAVING SUM(CASE WHEN isDeleted = 0 THEN 1 ELSE 0 END) = 0
-			
-	)
-	AND msg.isDeleted = 0
 	
 	-- Write Log 
 	INSERT INTO [bodb_Message].[dbo].[MsgLog]
