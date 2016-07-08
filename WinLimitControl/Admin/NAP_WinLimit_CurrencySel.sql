@@ -27,8 +27,9 @@ AS
                  SELECT ex.exchangeid AS ExchangeId,
                         ex.Code+' ('+ex.currency+')' AS ExchangeName
                  FROM dbo.exchange ex WITH (NOLOCK)
-                 WHERE @ExcludeTestCurrency = 0
-                       OR ex.currency NOT IN('UUS')
+                 WHERE(@ExcludeTestCurrency = 0
+                       OR ex.currency NOT IN('UUS'))
+                 AND ex.currency NOT IN('H', 'C')
                  ORDER BY ExchangeName;
              END;
          ELSE
@@ -43,6 +44,7 @@ AS
                  WHERE s.siteid = @SiteId
                        AND (@ExcludeTestCurrency = 0
                             OR ex.currency NOT IN('UUS'))
+                      AND ex.currency NOT IN('H', 'C')
                  ORDER BY ExchangeName;
              END;
      END;
