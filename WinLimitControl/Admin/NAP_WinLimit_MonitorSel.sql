@@ -193,7 +193,9 @@ AS
                  SELECT wlcgm.CustID,
                         MAX(wlcgm.ModifiedDate) AS ModifiedDate
                  FROM dbo.WinLimit_CustGameMonitoring wlcgm
-                 GROUP BY wlcgm.CustID
+                 GROUP BY wlcgm.CustID,
+                          wlcgm.ProductID,
+                          wlcgm.BettypeID
              ) AS custWinLimitMaxTime ON custWinLimitMaxTime.CustId = wlm.CustId
                                          AND custWinLimitMaxTime.ModifiedDate = wlm.ModifiedDate
              ORDER BY ReachedLimitTime DESC;
