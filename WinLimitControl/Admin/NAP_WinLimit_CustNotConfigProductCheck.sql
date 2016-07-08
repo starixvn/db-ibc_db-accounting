@@ -74,7 +74,7 @@ AS
          IF @CurrencySettingCount = 0
              BEGIN
                  SELECT 4 AS ErrorCode,
-                        'Site: '+@SiteName+'. Currency: '+@CurrencyName AS ErrorMessage;
+                        'Currency '+@CurrencyName+' on Site: '+@SiteName AS ErrorMessage;
                  RETURN;
              END;
      END;
