@@ -26,52 +26,6 @@ AS
 
      BEGIN
          SET NOCOUNT ON;
-         BEGIN -- temp table #Site
-             CREATE TABLE #Site
-             (AgentId  INT,
-              SiteId   INT,
-              SiteName NVARCHAR(50),
-             );
-             INSERT INTO #Site
-                    SELECT c.custid,
-                           s.siteid,
-                           s.site
-                    FROM dbo.Customer c WITH (NOLOCK)
-                         INNER JOIN dbo.Site s WITH (NOLOCK) ON s.site = c.site
-                    WHERE c.roleid = 2;
-         END;
-         BEGIN -- temp table #CustInfo
-             CREATE TABLE #CustInfo
-             (CustId     INT,
-              UserName   NVARCHAR(50),
-              SiteId     INT,
-              SiteName   NVARCHAR(50),
-              CurrencyId INT
-             );
-             INSERT INTO #CustInfo
-             (CustId,
-              UserName,
-              SiteId,
-              SiteName,
-              CurrencyId
-             )
-             (
-                 SELECT ci.custid,
-                        ci.username,
-                        s.SiteId,
-                        s.SiteName,
-                        ci.currency AS CurrencyId
-                 FROM dbo.custInfo ci WITH (NOLOCK)
-                      INNER JOIN #Site s WITH (NOLOCK) ON s.AgentId = ci.recommend
-                 WHERE(@SiteId IS NULL
-                       OR s.SiteId = @SiteId)
-                      AND (@CurrencyId IS NULL
-                           OR ci.currency = @CurrencyId)
-                      AND ci.roleid = 1
-                      AND (@UserName IS NULL
-                           OR ci.username = @UserName)
-             );
-         END;
          BEGIN -- temp table data
              CREATE TABLE #WinLimitMonitor
              (CustId                   INT,
@@ -112,7 +66,7 @@ AS
               IsNotified
              )
                     SELECT wlcgm.CustID,
-                           ci.UserName,
+                           ci.username,
                            wlcgm.ProductID,
                            wlcgm.BettypeID,
                            wlcgm.LevelID,
@@ -120,26 +74,35 @@ AS
                            wlcgm.TotalWinAmt,
                            wlcgm.WinAmt,
                            wlcgm.ModifiedDate,
-                           ci.CurrencyId,
-                           ci.SiteId,
-                           ci.SiteName,
+                           c.currency,
+                           s.siteid,
+                           s.site,
                            wlpsd.LevelID,
                            wlpsd.MaxWinLimit,
                            wlcgs.LevelID,
                            wlcgs.MaxWinLimit,
                            wlcgm.IsNotified
                     FROM WinLimit_CustGameMonitoring wlcgm WITH (NOLOCK)
-                         INNER JOIN #CustInfo ci WITH (NOLOCK) ON ci.CustId = wlcgm.CustID
+                         INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON wlcgm.CustID = ci.CustID
+                         INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.custid = ci.recommend
+                         INNER JOIN dbo.Site s WITH (NOLOCK) ON s.site = c.site
                          INNER JOIN dbo.WinLimit_ProductSettingDetail wlpsd WITH (NOLOCK) ON wlpsd.ProductID = wlcgm.ProductID
                                                                                              AND wlpsd.BettypeID = wlcgm.BettypeID
-                                                                                             AND ci.CurrencyId = wlpsd.ExchangeID
-                                                                                             AND ci.SiteId = wlpsd.SiteID
+                                                                                             AND c.currency = wlpsd.ExchangeID
+                                                                                             AND s.siteid = wlpsd.SiteID
                          LEFT JOIN dbo.WinLimit_CustGameSetting wlcgs WITH (NOLOCK) ON wlcgs.CustID = wlcgm.CustID
                                                                                        AND wlcgs.ProductID = wlcgm.ProductID
                                                                                        AND wlcgs.BettypeID = wlcgm.BettypeID
                     WHERE wlcgm.ModifiedDate BETWEEN @FromDate AND @Todate
                           AND (@ProductId IS NULL
-                               OR wlcgm.ProductID = @ProductId);
+                               OR wlcgm.ProductID = @ProductId)
+                          AND (@SiteId IS NULL
+                               OR s.SiteId = @SiteId)
+                          AND (@CurrencyId IS NULL
+                               OR ci.currency = @CurrencyId)
+                          AND ci.roleid = 1
+                          AND (@UserName IS NULL
+                               OR ci.username = @UserName);
          END;
          BEGIN -- Query data
              SELECT DISTINCT
@@ -200,8 +163,6 @@ AS
                                          AND custWinLimitMaxTime.ModifiedDate = wlm.ModifiedDate
              ORDER BY ReachedLimitTime DESC;
          END;
-         DROP TABLE #Site;
-         DROP TABLE #CustInfo;
          DROP TABLE #WinLimitMonitor;
      END;
 GO
