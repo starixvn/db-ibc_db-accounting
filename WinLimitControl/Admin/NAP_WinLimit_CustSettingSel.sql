@@ -35,61 +35,44 @@ Revisions:
 	
 Parameters Explanation:	
 
-Example: EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
+Example: 
+EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
 
 */
 
      SET NOCOUNT ON;
-     BEGIN -- #Site  
-
-         CREATE TABLE #Site
-         (AgentId INT,
-          SiteId  INT,
-          Site    VARCHAR(50)
-         );
-         INSERT INTO #Site
-                SELECT c.CustId,
-                       s.SiteId,
-                       s.[Site]
-                FROM Customer c WITH (NOLOCK)
-                     INNER JOIN dbo.[Site] s WITH (NOLOCK) ON s.[Site] = c.[Site]
-                WHERE(ISNULL(@Site, 0) = 0
-                      OR s.[SiteId] = @Site)
-                     AND roleid = 2;
-     END;
-     BEGIN -- Query  
-         SELECT c.CustID,
-                c.username AS UserName,
-                c.currency AS CurrencyId,
-                s.Site,
-                ps.ProductId AS ProductId,
-                ps.BetTypeId AS BetTypeId,
-                ps.LevelID AS LevelID,
-                ISNULL(cs.MaxWinLimit, 0) PlayerWinLimit,
-                ISNULL(pd.MaxWinLimit, 0) CurrencyWinLimit
-         FROM Winlimit_ProductSetting ps WITH (NOLOCK)
-              INNER JOIN WinLimit_CustGameSetting cs WITH (NOLOCK) ON ps.ProductID = cs.ProductID
+     SELECT c.CustID,
+            c.username AS UserName,
+            c.currency AS CurrencyId,
+            s.Site,
+            ps.ProductId AS ProductId,
+            ps.BetTypeId AS BetTypeId,
+            ps.LevelID AS LevelID,
+            ISNULL(cs.MaxWinLimit, 0) PlayerWinLimit,
+            ISNULL(pd.MaxWinLimit, 0) CurrencyWinLimit
+     FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
+          INNER JOIN dbo.WinLimit_CustGameSetting cs WITH (NOLOCK) ON ps.ProductID = cs.ProductID
                                                                       AND ps.BettypeID = cs.BettypeID
                                                                       AND ps.LevelID = cs.LevelID
-              INNER JOIN custInfo c WITH (NOLOCK) ON cs.CustID = c.custid
-              INNER JOIN #Site s WITH (NOLOCK) ON s.AgentId = c.recommend
-              LEFT JOIN WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductID = pd.ProductID
-                                                                           AND ps.BettypeID = pd.BettypeID
-                                                                           AND ps.LevelID = pd.LevelID
-                                                                           AND pd.SiteId = s.SiteId
-                                                                           AND pd.ExchangeId = c.currency
-         WHERE ps.SettingStatus = 1
-               AND (ISNULL(@UserName, '') = ''
-                    OR c.username = @UserName)
-               AND (@CurrencyID IS NULL
-                    OR c.currency = @CurrencyID)
-               AND (@ProductID IS NULL
-                    OR ps.ProductID = @ProductID)
-               AND (@ExcludeTestCurrency = 0
-                    OR c.currency NOT IN(20, 27, 28))
-         ORDER BY c.Username;
-     END;
-     DROP TABLE #Site;
+          INNER JOIN dbo.custInfo c WITH (NOLOCK) ON cs.CustID = c.custid
+          INNER JOIN dbo.customer a WITH (NOLOCK) ON a.custid = c.recommend
+                                                     AND a.roleid = 2
+          INNER JOIN dbo.[Site] s WITH (NOLOCK) ON s.[site] = a.[site]
+          LEFT JOIN dbo.WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductID = pd.ProductID
+                                                                          AND ps.BettypeID = pd.BettypeID
+                                                                          AND ps.LevelID = pd.LevelID
+                                                                          AND pd.SiteId = s.SiteId
+                                                                          AND pd.ExchangeId = c.currency
+     WHERE ps.SettingStatus = 1
+           AND (ISNULL(@UserName, '') = ''
+                OR c.username = @UserName)
+           AND (@CurrencyID IS NULL
+                OR c.currency = @CurrencyID)
+           AND (@ProductID IS NULL
+                OR ps.ProductID = @ProductID)
+           AND (@ExcludeTestCurrency = 0
+                OR c.currency NOT IN(20, 27, 28))
+     ORDER BY c.Username;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel_xtest] TO [bodbAdminNet];
 GO
