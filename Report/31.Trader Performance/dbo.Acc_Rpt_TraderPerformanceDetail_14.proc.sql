@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceDetail_14]   
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceDetail_14]   
  @fromdate datetime,  
  @todate datetime,  
  @isSoccer bit = 1   
@@ -50,6 +53,7 @@ Revisions:
  - 20141215@Johnson: get MaxBet of match by MatchMaxBet [RedmineID: #20642]
  - 20160317@Robert - Incorporate 1X2 HDP and 1H 1X2 HDP bet types into Trader Performance Report[#54184]
  - 20160414@Robert - Trader Performance Report - Mismatch Turnover data with TGR/Performance Detail report[RedmineId: #55948]
+ - 20160711@Percy: Fix duplicate data [RedmineID: #60562]
 Param's Explanation:  
 • @isSoccer  
     = 1: Soccer  
@@ -107,7 +111,7 @@ insert into @bettype
 if @isSoccer = 1 
 BEGIN  
  insert @temp_daao  
- select c.custid, c.username, m.leagueid, m.matchid,  
+ select distinct c.custid, c.username, m.leagueid, m.matchid,  
   m.homeid,  
   m.awayid,  
   m.eventdate,  
@@ -185,7 +189,7 @@ END
 ELSE if @isSoccer = 0 
 BEGIN  
  insert @temp_daao  
- select c.custid, c.username, m.leagueid, m.matchid,  
+ select distinct c.custid, c.username, m.leagueid, m.matchid,  
   m.homeid,  
   m.awayid,  
   m.eventdate,  
