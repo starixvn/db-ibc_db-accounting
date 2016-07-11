@@ -4,21 +4,21 @@ IF EXISTS
 (
     SELECT *
     FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].NAP_WinLimit_CustSettingUpd_xtest')
+    WHERE object_id = OBJECT_ID(N'[dbo].NAP_WinLimit_CustSettingUpd')
           AND type IN(N'P', N'PC')
 )
-    DROP PROCEDURE [dbo].NAP_WinLimit_CustSettingUpd_xtest;
+    DROP PROCEDURE [dbo].NAP_WinLimit_CustSettingUpd;
 GO
 USE [CustDB];
 GO
 
-/****** Object:  StoredProcedure [dbo].NAP_WinLimit_CustSettingUpd_xtest    Script Date: 07/07/2015 16:09:49 ******/
+/****** Object:  StoredProcedure [dbo].NAP_WinLimit_CustSettingUpd    Script Date: 07/07/2015 16:09:49 ******/
 
 SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].NAP_WinLimit_CustSettingUpd_xtest @CustID      INT,
+CREATE PROCEDURE [dbo].NAP_WinLimit_CustSettingUpd @CustID      INT,
                                                          @ProductID   INT,
                                                          @BetTypeID   INT,
                                                          @LevelID     INT,
@@ -146,7 +146,7 @@ AS
             '' AS ErrorMessage;
      RETURN;
 GO
-GRANT EXECUTE ON [dbo].NAP_WinLimit_CustSettingUpd_xtest TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].NAP_WinLimit_CustSettingUpd TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].NAP_WinLimit_CustSettingUpd_xtest TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].NAP_WinLimit_CustSettingUpd TO [vnteam];
 GO

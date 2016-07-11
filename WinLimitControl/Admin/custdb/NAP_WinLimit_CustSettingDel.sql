@@ -4,10 +4,10 @@ IF EXISTS
 (
     SELECT *
     FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingDel_xtest]')
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingDel]')
           AND type IN(N'P', N'PC')
 )
-    DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel_xtest];
+    DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel];
 GO
 USE [CustDB];
 GO
@@ -18,7 +18,7 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel_xtest] @CustID    INT,
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel] @CustID    INT,
                                                            @ProductID TINYINT,
                                                            @BetTypeId INT,
                                                            @UserID    INT         = 0,
@@ -108,7 +108,7 @@ AS
      SELECT @ErrCode AS ErrorCode,
             @ErrMsg AS ErrorMessage;
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingDel_xtest] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingDel] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingDel_xtest] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingDel] TO [vnteam];
 GO

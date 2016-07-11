@@ -4,10 +4,10 @@ IF EXISTS
 (
     SELECT *
     FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingSel_xtest]')
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingSel]')
           AND type IN(N'P', N'PC')
 )
-    DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel_xtest];
+    DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel];
 GO
 USE [CustDB];
 GO
@@ -18,7 +18,7 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel_xtest] @UserName            NVARCHAR(100) = '',
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel] @UserName            NVARCHAR(100) = '',
                                                            @Site                VARCHAR(50)   = NULL,
                                                            @CurrencyID          INT           = NULL,
                                                            @ProductID           TINYINT       = NULL,
@@ -36,7 +36,7 @@ Revisions:
 Parameters Explanation:	
 
 Example: 
-EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
+EXEC [NAP_WinLimit_CustSettingSel] @ExcludeTestCurrency = 0
 
 */
 
@@ -74,7 +74,7 @@ EXEC [NAP_WinLimit_CustSettingSel_xtest] @ExcludeTestCurrency = 0
                 OR c.currency NOT IN(20, 27, 28))
      ORDER BY c.Username;
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel_xtest] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingSel_xtest] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingSel] TO [vnteam];
 GO

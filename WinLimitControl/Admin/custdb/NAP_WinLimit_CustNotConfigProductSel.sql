@@ -4,21 +4,21 @@ IF EXISTS
 (
     SELECT *
     FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustNotConfigProductSel_xtest]')
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustNotConfigProductSel]')
           AND type IN(N'P', N'PC')
 )
-    DROP PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel_xtest];
+    DROP PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel];
 GO
 USE [CustDB];
 GO
 
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustNotConfigProductSel_xtest]    Script Date: 07/07/2015 16:09:00 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustNotConfigProductSel]    Script Date: 07/07/2015 16:09:00 ******/
 
 SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel_xtest] @Username VARCHAR(100) = ''
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductSel] @Username VARCHAR(100) = ''
 AS
 	
 /*
@@ -32,7 +32,7 @@ AS
 	
 	Parameters Explanation:	
 	
-	EXEC [NAP_WinLimit_CustNotConfigProductSel_xtest] @Username = 'SPONUUS01045'
+	EXEC [NAP_WinLimit_CustNotConfigProductSel] @Username = 'SPONUUS01045'
 	
 */
 
@@ -149,7 +149,7 @@ AS
          WHERE e.MaxWinLimit IS NULL;
      END;
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel_xtest] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustNotConfigProductSel_xtest] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [vnteam];
 GO

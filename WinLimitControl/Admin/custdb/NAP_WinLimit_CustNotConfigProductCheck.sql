@@ -4,21 +4,21 @@ IF EXISTS
 (
     SELECT *
     FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustNotConfigProductCheck_xtest]')
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustNotConfigProductCheck]')
           AND type IN(N'P', N'PC')
 )
-    DROP PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductCheck_xtest];
+    DROP PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductCheck];
 GO
 USE [CustDB];
 GO
 
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustNotConfigProductCheck_xtest]    Script Date: 07/07/2015 16:09:00 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustNotConfigProductCheck]    Script Date: 07/07/2015 16:09:00 ******/
 
 SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductCheck_xtest] @Username        VARCHAR(100) = '',
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductCheck] @Username        VARCHAR(100) = '',
                                                                       @ExcludeTestData BIT          = 1
 AS
 	
@@ -33,7 +33,7 @@ AS
 	
 	Parameters Explanation:	
 	
-	EXEC [NAP_WinLimit_CustNotConfigProductCheck_xtest] @Username = '166HK488' , @ExcludeTestData = 0
+	EXEC [NAP_WinLimit_CustNotConfigProductCheck] @Username = '166HK488' , @ExcludeTestData = 0
 	
 */
 
@@ -81,7 +81,7 @@ AS
      SELECT 0 AS ErrorCode,
             '' AS ErrorMessage;
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductCheck_xtest] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductCheck] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustNotConfigProductCheck_xtest] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustNotConfigProductCheck] TO [vnteam];
 GO
