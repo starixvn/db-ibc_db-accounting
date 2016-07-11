@@ -77,7 +77,7 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
                     WHERE CustId = @CustId
                           AND ProductId = @ProductId
                           AND BetTypeId = @BetTypeId
-                    ORDER BY ModifiedBy DESC;
+                    ORDER BY ModifiedDate DESC;
          END TRY
          BEGIN CATCH
              SELECT 1 AS ErrorCode,
