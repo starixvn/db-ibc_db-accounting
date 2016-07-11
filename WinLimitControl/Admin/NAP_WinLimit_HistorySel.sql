@@ -101,7 +101,7 @@ AS
                         ELSE
              (
                  SELECT ci.username
-                 FROM dbo.custInfo ci
+                 FROM dbo.custInfo ci WITH (NOLOCK)
                  WHERE ci.custid = wlh.ModifiedBy
              )
                     END AS ProceededBy
