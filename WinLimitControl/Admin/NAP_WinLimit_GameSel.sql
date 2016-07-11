@@ -1,4 +1,20 @@
-ALTER PROCEDURE dbo.NAP_WinLimit_GameSel @FromDate SMALLDATETIME
+USE [CustDB];
+GO
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_GameSel]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[NAP_WinLimit_GameSel];
+GO
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+
+CREATE PROCEDURE dbo.NAP_WinLimit_GameSel @FromDate SMALLDATETIME
 	, @ToDate SMALLDATETIME
 	, @UserName VARCHAR(50) = ''
 	, @ExchangeID INT = 0

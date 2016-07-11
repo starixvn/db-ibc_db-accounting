@@ -1,6 +1,18 @@
 USE [bodb02]
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_UnblockedMemberSel]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel];
 GO
-ALTER PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+CREATE PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
 	@UserName			VARCHAR(100)	= '',
 	@ExchangeID			INT				= 0,
 	@ProductID			TINYINT			= 0,
