@@ -15,7 +15,6 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-
 CREATE PROCEDURE NAP_WinLimit_CurrencySettingSel @ProductId           INT,
                                                  @SiteId              INT,
                                                  @IsCreditSite        BIT = 0,
@@ -70,6 +69,7 @@ AS
                                lc.Currency
                         FROM DBLIC.bodb_licensee.dbo.LicenseeCust lc WITH (NOLOCK)
                              INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lc.LicenseeID
+                             INNER JOIN exchange ex WITH (NOLOCK) ON ex.exchangeid = lc.Currency
                              INNER JOIN dbo.site s ON s.site = l.LicenseeName
                         WHERE s.siteid = @SiteId
                               AND (@CurrencyId IS NULL
