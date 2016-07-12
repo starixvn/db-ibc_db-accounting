@@ -140,7 +140,7 @@ BEGIN
 
 	
 	------------- get result --------------
-	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype INT, isHedge VARCHAR(20), site tinyint, WinLost MONEY, Position MONEY, Commission MONEY, LineTotal_actualrate MONEY, LineTotal_virtualrate MONEY, Turnover_actualrate MONEY, Turnover_virtualrate MONEY)
+	CREATE TABLE #TempBettrans (liveindicator BIT, Bettype INT, isHedge VARCHAR(20), site tinyint, WinLost MONEY, Position MONEY, Commission MONEY, RealLineTotal MONEY, VirtualLineTotal MONEY, RealTurnover MONEY, VirtualTurnover MONEY)
 	INSERT INTO #TempBettrans	
 	SELECT		
 			liveindicator,
@@ -150,10 +150,10 @@ BEGIN
 			sum((winlost-actual_stake)*virtualrate) WinLost,
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
-			sum((1-tpositiontaking)*ABS(stake)*actualrate) Turnover_actualrate,
-			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover_virtualrate
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
+			sum((1-tpositiontaking)*ABS(stake)*actualrate) RealTurnover,
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)	
 		INNER JOIN #Match m on b.matchid = m.matchid
 		inner join #SportBettype s ON s.bettype = b.bettype
@@ -181,10 +181,10 @@ BEGIN
 			sum((winlost-actual_stake)*virtualrate) WinLost,
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) LineTotal_actualrate,
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
-			sum((1-tpositiontaking)*ABS(stake)*actualrate) Turnover_actualrate,
-			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover_virtualrate
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
+			sum((1-tpositiontaking)*ABS(stake)*actualrate) RealTurnover,
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover
 	FROM	bettrans14 b WITH (NOLOCK)
 			INNER JOIN #Match m on b.matchid = m.matchid
 			INNER JOIN #SportBettype t ON t.bettype = b.bettype	
@@ -205,10 +205,10 @@ BEGIN
 	SET		c.WinLost = ISNULL(c.WinLost,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.WinLost,0) ELSE ISNULL(d.WinLost,0) END,
 			c.Position = ISNULL(c.Position,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.Position,0) ELSE ISNULL(d.Position,0) END,
 			c.Commission = ISNULL(c.Commission,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.Commission,0) ELSE ISNULL(d.Commission,0) END,
-			c.LineTotal_actualrate = ISNULL(c.LineTotal_actualrate,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.LineTotal_actualrate,0) ELSE ISNULL(d.LineTotal_actualrate,0) END,
-			c.LineTotal_virtualrate = ISNULL(c.LineTotal_virtualrate,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.LineTotal_virtualrate,0) ELSE ISNULL(d.LineTotal_virtualrate,0) END,
-			c.Turnover_actualrate = ISNULL(c.Turnover_actualrate,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.Turnover_actualrate,0) ELSE ISNULL(d.Turnover_actualrate,0) END,
-			c.Turnover_virtualrate = ISNULL(c.Turnover_virtualrate,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.Turnover_virtualrate,0) ELSE ISNULL(d.Turnover_virtualrate,0) END
+			c.RealLineTotal = ISNULL(c.RealLineTotal,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.RealLineTotal,0) ELSE ISNULL(d.RealLineTotal,0) END,
+			c.VirtualLineTotal = ISNULL(c.VirtualLineTotal,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.VirtualLineTotal,0) ELSE ISNULL(d.VirtualLineTotal,0) END,
+			c.RealTurnover = ISNULL(c.RealTurnover,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.RealTurnover,0) ELSE ISNULL(d.RealTurnover,0) END,
+			c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.Site = 1 THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
 	FROM	#TempBettrans c
 	FULL JOIN  #TempBettrans d
 			ON	c.Bettype = d.Bettype
