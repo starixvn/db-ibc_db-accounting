@@ -11,7 +11,9 @@ AS
 		NAP_Set_WaitingSel
 	
 	Revision:
-	Param's explanation:  
+		- 20160713@Patrick: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+
+	Param's explanation: 
 		
 */
 BEGIN
@@ -64,7 +66,8 @@ BEGIN
 	FROM DBPRO.bodb02.dbo.ResultDetail rs WITH (NOLOCK)
 	WHERE @Sporttype IN (0, 1)
 		AND EXISTS (SELECT TOP 1 1 FROM #MatchInQueue t WHERE rs.MatchId = t.MatchId)
-		AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217')
+		AND (ResourceID IN (SELECT CAST(BetType AS VARCHAR(50)) FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+			--('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217') --auto betradar
 				OR ResourceID LIKE '160__'
 				OR ResourceID LIKE '164__'
 				OR ResourceID LIKE '169__'
@@ -126,28 +129,36 @@ BEGIN
 
 	;WITH BetStatus AS (
 		SELECT b.matchid
-			, SUM(CASE WHEN b.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
-			, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
-			, SUM(CASE WHEN b.bettype = 14 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
-			, SUM(CASE WHEN b.bettype = 127 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
-			, SUM(CASE WHEN b.bettype = 172 THEN 1 ELSE 0 END) AS IsExistResultandFirstTeamScore
-			, SUM(CASE WHEN b.bettype = 172 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningResultandFirstTeamScore
-			, SUM(CASE WHEN b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningCorner
-			, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTCorner
+			--, SUM(CASE WHEN b.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
+			--, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
+			--, SUM(CASE WHEN b.bettype = 14 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
+			--, SUM(CASE WHEN b.bettype = 127 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+			--, SUM(CASE WHEN b.bettype = 172 THEN 1 ELSE 0 END) AS IsExistResultandFirstTeamScore
+			--, SUM(CASE WHEN b.bettype = 172 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningResultandFirstTeamScore
+			--, SUM(CASE WHEN b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningCorner
+			--, SUM(CASE WHEN b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTCorner
+			, SUM(CASE WHEN f.GroupId = 4 THEN 1 ELSE 0 END) AS IsExistFGLG
+			, SUM(CASE WHEN f.GroupId = 3 THEN 1 ELSE 0 END) AS IsExistHTFGLG
+			, SUM(CASE WHEN f.GroupId = 4 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
+			, SUM(CASE WHEN f.GroupId = 3 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+			, SUM(CASE WHEN f.GroupId = 6 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningCorner
+			, SUM(CASE WHEN f.GroupId = 5 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTCorner
 		FROM dbo.bettrans b WITH(NOLOCK)
+			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON GroupId IN (3, 4, 5, 6) AND b.bettype = f.BetType
 		WHERE EXISTS (SELECT TOP 1 1 FROM #MatchInQueue t WHERE b.matchid = t.matchid AND t.IsInQueue = 1)
-			AND bettype IN (14, 127, 172, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209)
+			--AND bettype IN (14, 127, 172, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209)
 			AND StatusId NOT IN (101, 102, 103)
 		GROUP BY b.matchid
 	), BetStatusM AS (
 		SELECT b.matchid
-			, SUM(CASE WHEN b.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
-			, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
-			, SUM(CASE WHEN b.bettype = 14 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
-			, SUM(CASE WHEN b.bettype = 127 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+			, SUM(CASE WHEN f.GroupId = 4 THEN 1 ELSE 0 END) AS IsExistFGLG
+			, SUM(CASE WHEN f.GroupId = 3 THEN 1 ELSE 0 END) AS IsExistHTFGLG
+			, SUM(CASE WHEN f.GroupId = 4 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
+			, SUM(CASE WHEN f.GroupId = 3 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
 		FROM dbo.bettransm b WITH(NOLOCK)
+			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON GroupId IN (3, 4) AND b.bettype = f.BetType
 		WHERE EXISTS (SELECT TOP 1 1 FROM #MatchInQueue t WHERE b.matchid = t.matchid AND t.IsInQueue = 1)
-			AND bettype IN (14, 127)--FGLG
+			--AND bettype IN (14, 127)--FGLG
 			AND StatusId NOT IN (101, 102, 103)
 		GROUP BY b.matchid
 	)
@@ -181,7 +192,7 @@ BEGIN
 						AND htawayscore IS NOT NULL 
 						AND finalhomescore IS NOT NULL 
 						AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore
-		, CASE WHEN ISNULL(b.IsExistFGLG, 0) > 0 OR ISNULL(b.IsExistResultandFirstTeamScore, 0) > 0 OR ISNULL(bm.IsExistFGLG, 0) > 0 THEN 1 ELSE 0 END AS IsExistFGLG
+		, CASE WHEN ISNULL(b.IsExistFGLG, 0) > 0 OR ISNULL(bm.IsExistFGLG, 0) > 0 THEN 1 ELSE 0 END AS IsExistFGLG
 		, CASE WHEN ISNULL(b.IsExistHTFGLG, 0) > 0 OR ISNULL(bm.IsExistHTFGLG, 0) > 0 THEN 1 ELSE 0 END AS IsExistHTFGLG
 		, CASE WHEN ISNULL(b.IsExistRunningCorner, 0) > 0 THEN 1 ELSE 0 END AS IsExistCorner
 		, CASE WHEN ISNULL(b.IsExistRunningHTCorner, 0) > 0 THEN 1 ELSE 0 END AS IsExistHTCorner
@@ -197,8 +208,7 @@ BEGIN
 					AND (ISNULL(b.IsExistRunningHTFGLG, 0) > 0 OR ISNULL(bm.IsExistRunningHTFGLG, 0) > 0) THEN 1 --can calc HT FGLG
 				WHEN t.FTStatus IS NOT NULL AND t.FTStatus = 1
 					AND t.IsHTCal = 1
-					AND (ISNULL(b.IsExistRunningFGLG, 0) > 0  OR ISNULL(bm.IsExistRunningFGLG, 0) > 0 
-							OR ISNULL(IsExistRunningResultandFirstTeamScore, 0) > 0) THEN 1 --can calc FT FGLG
+					AND (ISNULL(b.IsExistRunningFGLG, 0) > 0  OR ISNULL(bm.IsExistRunningFGLG, 0) > 0) THEN 1 --can calc FT FGLG
 			ELSE 0 END AS IsNeedToCalculateFGLG
 		, CASE WHEN t.HTStatus IS NOT NULL AND t.HTStatus = 1
 					AND t.FTStatus IS NOT NULL AND t.FTStatus IN (0, 1)

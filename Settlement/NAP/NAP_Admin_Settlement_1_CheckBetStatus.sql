@@ -10,6 +10,7 @@ AS
 	Original: NAP_Admin_Settlement_1
 	
 	Revisions:
+		- 20160713@Patrick: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		
 	Param's Explanation:
  
@@ -19,7 +20,7 @@ BEGIN
 	DECLARE @HalfTimeBetTypeIds VARCHAR(1024)
 
 	SELECT @HalfTimeBetTypeIds = COALESCE(@HalfTimeBetTypeIds + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
-	FROM dbo.f_GetHalfTimeBetType() f
+	FROM dbo.f_Set_GetGroupBettypes() f WHERE GroupId = 1
 
 	SELECT @HalfTimeBetTypeIds = ',' + @HalfTimeBetTypeIds + ','
 
@@ -31,7 +32,8 @@ BEGIN
 		AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 		AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
 		AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
-		AND b.bettype NOT IN (135, 160, 164, 168, 169, 173, 174, 175, 176, 180, 192, 193, 210, 211, 212, 213, 214, 215, 216, 217) --Auto settle Betradar
+		AND b.bettype NOT IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+		--(135, 160, 164, 168, 169, 173, 174, 175, 176, 180, 192, 193, 210, 211, 212, 213, 214, 215, 216, 217) --Auto settle Betradar
 	GROUP BY CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @HalfTimeBetTypeIds) > 0 THEN 0 ELSE 1 END
 
 	IF NOT EXISTS (SELECT 1 FROM @BetStatus WHERE FTBet = 0)
