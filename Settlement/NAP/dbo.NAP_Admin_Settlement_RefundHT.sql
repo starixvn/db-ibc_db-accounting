@@ -1,4 +1,3 @@
-
 USE bodb02
 GO
 
@@ -38,6 +37,8 @@ AS
         - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
 		- 20151126@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
+		- 20160705@Kathy: - PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+						  - Capture balance incase of failure
     
     Param's Explanation:
     • @matchid: matchid of match to Refund HT
@@ -68,36 +69,8 @@ BEGIN
 
     SELECT @ActionID = 110
 
-    INSERT INTO dbo.TempVariableNumber (
-        KeyID
-        ,KeyValue
-        )
-    VALUES (
-        1
-        ,@matchid
-        )
-
-    IF (@@Error = 0)
-    BEGIN
-        BEGIN TRY
-            EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                ,@Matchid = @matchid
-                ,@KeyID = 1
-                ,@ActionID = @ActionID
-                ,@Remark = 'ADD SUCCESS'
-        END TRY
-
-        BEGIN CATCH
-            SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(error_message(), 400)
-
-            EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                ,@Matchid = @matchid
-                ,@KeyID = 1
-                ,@ActionID = @ActionID
-                ,@Remark = @Remark
-        END CATCH
-    END
-    ELSE
+    INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue) VALUES (1, @matchid)
+    IF (@@Error <> 0)
     BEGIN
         SELECT @ErrCode = 1000000
             ,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
@@ -108,6 +81,7 @@ BEGIN
     ---
     DECLARE @start DATETIME
         ,@stop DATETIME
+        ,@strBettypes VARCHAR(MAX) = ''
 
     SELECT @start = CURRENT_TIMESTAMP
 
@@ -131,21 +105,13 @@ BEGIN
     DECLARE @tblCreditPending TVP_BalanceList
 
     CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
-
+	
     INSERT INTO #BalanceBefore
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
     WHERE matchid = @matchid 
-		  AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
-                            128,
-                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
-                            ,16 -- refund FT ticket
-                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
-                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match 
-                            ,303, 304 -- Myanmar odds
-							,403,404,405,410,411,412,414
-                            ) 
+			AND bettype IN (SELECT BetType FROM dbo.f_GetGroupBettypes() WHERE GroupId IN (1,4,9)) 
     GROUP BY custid
 
     IF @IsSettleAbandonedMatch = 1
@@ -165,47 +131,6 @@ BEGIN
         DELETE
         FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
         WHERE KeyID = 1 AND KeyValue = @matchid
-
-        IF (@@Error = 0)
-        BEGIN
-            BEGIN TRY
-                EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                    ,@Matchid = @matchid
-                    ,@KeyID = 1
-                    ,@ActionID = @ActionID
-                    ,@Remark = 'DEL SUCCESS'
-            END TRY
-
-            BEGIN CATCH
-                SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
-
-                EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                    ,@Matchid = @matchid
-                    ,@KeyID = 1
-                    ,@ActionID = @ActionID
-                    ,@Remark = @Remark
-            END CATCH
-        END
-        ELSE
-        BEGIN
-            BEGIN TRY
-                EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                    ,@Matchid = @matchid
-                    ,@KeyID = 1
-                    ,@ActionID = @ActionID
-                    ,@Remark = 'DEL FAILED'
-            END TRY
-
-            BEGIN CATCH
-                SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
-
-                EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                    ,@Matchid = @matchid
-                    ,@KeyID = 1
-                    ,@ActionID = @ActionID
-                    ,@Remark = @Remark
-            END CATCH
-        END
 
 		EXEC dbo.NAP_Admin_Settlement_Refund_All @matchid = @matchid
             ,@creator = @adminid
@@ -233,136 +158,170 @@ BEGIN
 
         RETURN
     END
+	
+	BEGIN TRY
+		IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
+		BEGIN
+			DECLARE @ScoreLog VARCHAR(100)
 
-    IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetFair = 1
-    BEGIN
-        DECLARE @ScoreLog VARCHAR(100)
+			SELECT @ScoreLog = ' HTHScore=' + CAST(@hth AS VARCHAR(10)) + ' HTAScore=' + CAST(@hta AS VARCHAR(10))
 
-        SELECT @ScoreLog = ' HTHScore=' + CAST(@hth AS VARCHAR(10)) + ' HTAScore=' + CAST(@hta AS VARCHAR(10))
+			DECLARE @totalht SMALLMONEY
 
-        DECLARE @totalht SMALLMONEY
+			SELECT @totalht = (@hth + @hta)
 
-        SELECT @totalht = (@hth + @hta)
+			IF @totalht IS NULL
+			BEGIN
+				SELECT @ErrCode = 1000005
+					,@ErrMsg = 'Cannot settle determined ticket(s) without HT Score!'
 
-        IF @totalht IS NULL
-        BEGIN
-            SELECT @ErrCode = 1000005
-                ,@ErrMsg = 'Cannot settle determined ticket(s) without HT Score!'
+				-----
+				DELETE
+				FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+				WHERE KeyID = 1 AND KeyValue = @matchid
 
-            -----
-            DELETE
-            FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-            WHERE KeyID = 1 AND KeyValue = @matchid
+				RETURN
+			END
 
-            IF (@@Error = 0)
-            BEGIN
-                BEGIN TRY
-                    EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                        ,@Matchid = @matchid
-                        ,@KeyID = 1
-                        ,@ActionID = @ActionID
-                        ,@Remark = 'DEL SUCCESS'
-                END TRY
+			DECLARE @betcount_8 INT
 
-                BEGIN CATCH
-                    SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
+			SELECT @betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
+			FROM bettrans WITH (NOLOCK)
+			WHERE matchid = @matchid 
+			AND bettype = 8 
+			AND 1 = CASE 
+						WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
+						WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
+						ELSE 0
+					END 
+			AND statusID NOT IN (101, 102)
+			
+			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+				,@action = 'REFUND'
+				,@mode = 'HT'
+				,@betcount_8 = @betcount_8 -- bettype
+				,@totalht = @totalht
+				,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
+				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
+		END
 
-                    EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                        ,@Matchid = @matchid
-                        ,@KeyID = 1
-                        ,@ActionID = @ActionID
-                        ,@Remark = @Remark
-                END CATCH
-            END
-            ELSE
-            BEGIN
-                BEGIN TRY
-                    EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                        ,@Matchid = @matchid
-                        ,@KeyID = 1
-                        ,@ActionID = @ActionID
-                        ,@Remark = 'DEL FAILED'
-                END TRY
+		/* --- END Settle Abandoned Match ---*/
+		DECLARE @RowCount INT
 
-                BEGIN CATCH
-                    SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
+		 EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
+			,@Matchid = @matchid
+			,@RowCount = @Rowcount OUTPUT
+			,@creator = @adminid
 
-                    EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                        ,@Matchid = @matchid
-                        ,@KeyID = 1
-                        ,@ActionID = @ActionID
-                        ,@Remark = @Remark
-                END CATCH
-            END
+		EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
+			@Command            = 'NAP_Admin_Settlement_RefundHT'
+			,@MatchID            = @matchid
+			,@isExistTotalCorner= @isExistTotalCorner
+			,@isExistHTFCorner    = @isExistHTFCorner
+			,@isExistHTLCorner    = @isExistHTLCorner
+			,@creator            = @adminid
 
-            RETURN
-        END
+		IF @Rowcount > 0
+		BEGIN
+			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid
+				,@command = 'F'
 
-        DECLARE @betcount_8 INT
+			SELECT @strBettypes = @strBettypes + ',' + CAST(bettype AS VARCHAR(10))
+			FROM	dbo.f_GetGroupBettypes ()
+			WHERE	groupId IN (1,4,9)
+			
+			SET @strBettypes = STUFF(@strBettypes,1,1,'')
 
-        SELECT @betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
-        FROM bettrans WITH (NOLOCK)
-        WHERE matchid = @matchid 
-        AND bettype = 8 
-        AND 1 = CASE 
-                    WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-                    WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
-                    ELSE 0
-                END 
-        AND statusID NOT IN (101, 102)
+			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+				,@action = 'REFUND'
+				,@mode = 'HT'
+				,@IsExcludeBetdaq = @IsExcludeBetdaq
+				,@IsExcludeBetfair = @IsExcludeBetfair
+				,@strBettypes = @strBettypes 
+				,@row_count = @RowCount
+		END
+	END TRY
+	BEGIN CATCH
+		INSERT INTO #BalanceAfter
+		SELECT custid
+			,SUM(winlost - actual_stake + playercomm)
+		FROM dbo.bettrans WITH (ROWLOCK)
+		WHERE matchid = @matchid 
+		  AND bettype IN (SELECT BetType FROM dbo.f_GetGroupBettypes() WHERE GroupId IN (1,4,9)) 
+		GROUP BY custid
+		
+		INSERT INTO #Balance
+		SELECT b.custid
+			,a.balance - b.balance
+			,CASE 
+				WHEN a.balance > b.balance THEN 1
+				ELSE 0
+				END
+		FROM #BalanceBefore b
+			INNER JOIN #BalanceAfter a ON b.custid = a.custid
+		WHERE b.balance <> a.balance
+	    
+		INSERT INTO @tblDebitPending (custID, balance)
+		SELECT	custid, ABS(balance)
+		FROM	#Balance
+		WHERE	Increased = 0
+		
+		IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingDebitIns
+				@BalancePending = @tblDebitPending
+				,@Type			= 1 -- Sports
+	    
+		INSERT INTO @tblCreditPending (custID, balance)
+		SELECT	custid, balance
+		FROM	#Balance
+		WHERE	Increased = 1
+		
+		IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingCreditIns 
+				@BalancePending = @tblCreditPending
+				,@Type			= 1 -- Sports
 
-								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-            ,@action = 'REFUND'
-            ,@mode = 'HT'
-            ,@betcount_8 = @betcount_8 -- bettype
-            ,@totalht = @totalht
-            ,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
-            ,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
-    END
-
-    /* --- END Settle Abandoned Match ---*/
-    DECLARE @RowCount INT
-
-                                EXEC DBPRO.BODB02.dbo.NAP_Admin_Match_Update @Command = 'NAP_Admin_Settlement_RefundHT'
-        ,@Matchid = @matchid
-        ,@RowCount = @Rowcount OUTPUT
-        ,@creator = @adminid
-
-    EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] 
-        @Command            = 'NAP_Admin_Settlement_RefundHT'
-        ,@MatchID            = @matchid
-        ,@isExistTotalCorner= @isExistTotalCorner
-        ,@isExistHTFCorner    = @isExistHTFCorner
-        ,@isExistHTLCorner    = @isExistHTLCorner
-        ,@creator            = @adminid
-
-    IF @Rowcount > 0
-    BEGIN
-        EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid
-            ,'F'
-
-								EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-            ,@action = 'REFUND'
-            ,@mode = 'HT'
-            ,@IsExcludeBetdaq = @IsExcludeBetdaq
-            ,@IsExcludeBetfair = @IsExcludeBetfair
-            ,@row_count = @RowCount
-    END
-
+		----
+		-- Add Negative Balance into BalanceNegative table 
+		----
+		INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+			[ExecDate]
+			,[MatchID]
+			,[ActionID]
+			,[GroupID]
+			,[CustID]
+			,[Balance]
+			,[StatusID]
+			,[Remark]
+			)
+		SELECT GETDATE()
+			,@MatchID
+			,@ActionID
+			,1 -- Sportsbook Single bet Settlement 
+			,CustID
+			,Balance
+			,0
+			,NULL
+		FROM #Balance WITH (NOLOCK)
+		WHERE Increased = 0
+		
+		DROP TABLE #Balance
+		DROP TABLE #BalanceBefore
+		DROP TABLE #BalanceAfter
+	    
+		SELECT	@ErrCode = 1001017 
+				,@ErrMsg = ERROR_MESSAGE()
+		
+		RETURN
+		
+	END CATCH
+	
     INSERT INTO #BalanceAfter
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
     WHERE matchid = @matchid 
-      AND bettype IN (7, 8, 15, 12, 21, 30, 125, 126, 129, 136, 138, 143, 151, 
-                            128,
-                            133, 134, 140, 141, 142, 146, 147, 148, 149, 150, 152 -- BetRadar: refund FT ticket in case of 30x3 match
-                            ,16 -- refund FT ticket
-                            ,165,167,179,181,182,188,191,200,201,202,203,204,205,207,209    --Betradar 2 HT tickets
-                            ,177,178,183,184,185,186,187,189,190        -- Betradar 2 FT ticket in case of 30x3 match                     
-                            ,303, 304 -- Myanmar odds
-							,403,404,405,410,411,412,414
-                            ) 
+      AND bettype IN (SELECT BetType FROM dbo.f_GetGroupBettypes() WHERE GroupId IN (1,4,9)) 
     GROUP BY custid
 
     -------------------------------------------------------------
@@ -378,15 +337,6 @@ BEGIN
     FROM #BalanceBefore b
         INNER JOIN #BalanceAfter a ON b.custid = a.custid
     WHERE b.balance <> a.balance
-
-    --INSERT INTO dbo.BalancePendingDebit (
-    --    custid
-    --    ,balance
-    --    )
-    --SELECT custid
-    --    ,ABS(balance)
-    --FROM #Balance
-    --WHERE Increased = 0
     
     INSERT INTO @tblDebitPending (custID, balance)
 	SELECT	custid, ABS(balance)
@@ -397,15 +347,6 @@ BEGIN
 		EXEC dbo.Dot_BalancePendingDebitIns
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
-
-    --INSERT INTO dbo.BalancePendingCredit (
-    --    custid
-    --    ,balance
-    --    )
-    --SELECT custid
-    --    ,balance
-    --FROM #Balance
-    --WHERE Increased = 1
     
     INSERT INTO @tblCreditPending (custID, balance)
 	SELECT	custid, balance
@@ -544,47 +485,6 @@ BEGIN
     DELETE
     FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
     WHERE KeyID = 1 AND KeyValue = @matchid
-
-    IF (@@Error = 0)
-    BEGIN
-        BEGIN TRY
-            EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                ,@Matchid = @matchid
-                ,@KeyID = 1
-                ,@ActionID = @ActionID
-                ,@Remark = 'DEL SUCCESS'
-        END TRY
-
-        BEGIN CATCH
-            SELECT @Remark = 'DEL SUCCESS ErrMsg=' + left(error_message(), 400)
-
-            EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                ,@Matchid = @matchid
-                ,@KeyID = 1
-                ,@ActionID = @ActionID
-                ,@Remark = @Remark
-        END CATCH
-    END
-    ELSE
-    BEGIN
-        BEGIN TRY
-            EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                ,@Matchid = @matchid
-                ,@KeyID = 1
-                ,@ActionID = @ActionID
-                ,@Remark = 'DEL FAILED'
-        END TRY
-
-        BEGIN CATCH
-            SELECT @Remark = 'DEL FAILED ErrMsg=' + left(error_message(), 400)
-
-            EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking @UserID = @adminID
-                ,@Matchid = @matchid
-                ,@KeyID = 1
-                ,@ActionID = @ActionID
-                ,@Remark = @Remark
-        END CATCH
-    END
 END
 
 

@@ -25,6 +25,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchIBC		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
+	,@str2ndBettypes				VARCHAR(MAX) = NULL
 	
 AS
 /*
@@ -45,6 +46,7 @@ AS
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 		- 20160613@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 
 	Param's Explanation:
 		
@@ -62,42 +64,13 @@ BEGIN
 		,@commLostRate SMALLMONEY
 		,@matchdate DATETIME
 
-	----- LAS settlement 
-	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-	--		SELECT *
-	--		FROM sys.databases
-	--		WHERE NAME = 'LASDB'
-	--		)
-	--BEGIN
-	--	IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
-	--		BEGIN
-	--			DECLARE @LASCommand NVARCHAR(1000)
-	--				,@createdDate DATETIME
-
-	--			SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_4] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-	--															+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-	--															+ ', @correctscore = ' + CASE WHEN @correctscore IS NULL THEN 'NULL' ELSE '''' + CONVERT(NVARCHAR(50), @correctscore) + '''' END
-	--															+ ', @goaldiff = ' + CASE WHEN @goaldiff IS NULL THEN 'NULL' ELSE CONVERT(NVARCHAR(10), @goaldiff) END
-	--															+ ', @FGLG2 = ''' + ISNULL(@FGLG2, '') + '''' 
-	--															+ ', @hth = ' + CONVERT(NVARCHAR(10), @hth) 
-	--															+ ', @hta = ' + CONVERT(NVARCHAR(10), @hta) 
-	--															+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
-	--															+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
-	--															+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), @IsSettleAbandonedMatchIBC)
-	--															+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-																
-	--				,@createdDate = GETDATE()
-
-	--			EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_4'
-	--				,@SQLCommand = @LASCommand
-	--				,@CreatedDate = @createdDate
-	--				,@StatusID = 0 -- waiting
-	--				,@MatchID = @matchid
-	--				,@Bettype = @bettype
-	--				,@Status = 'waiting'
-	--				,@BetCount = @betcount
-	--		END
-	--END
+	DECLARE @xml XML	
+	SET @xml = CONVERT(XML, REPLACE('<root><r t="' + @str2ndBettypes + '"/></root>', ',','"/><r t="'))
+			
+	DECLARE @tbl2ndBettypes TABLE (bettype SMALLINT PRIMARY KEY)
+	INSERT INTO @tbl2ndBettypes (bettype)
+	SELECT T.c.value('./@t','SMALLINT')
+	FROM @xml.nodes('/root/r') AS T(c)
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
 	BEGIN
@@ -150,6 +123,8 @@ BEGIN
 					WHEN b.betteam = 'AOS'
 						AND @bettype = 414
 						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), b.transdesc) = 0 THEN 1
+					WHEN b.bettype = 16 THEN CASE
+												WHEN
 					ELSE NULL
 					END,
 				modds = @modds,
@@ -254,9 +229,13 @@ BEGIN
 								WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 1
 								WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
 								WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
-								WHEN @IsRefundHT = 1 THEN 0
 								ELSE 0
 							END
+					AND 1 = CASE
+								WHEN b.bettype IN (SELECT bettype FROM @tbl2ndBettypes) THEN 0
+								ELSE 1
+							END
+
 				IF @affectedagents <> 100 
 					BREAK
 			END
