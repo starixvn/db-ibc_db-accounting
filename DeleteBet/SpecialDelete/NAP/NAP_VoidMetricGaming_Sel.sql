@@ -16,8 +16,8 @@ BEGIN
 
 	Revisions:
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
-
-
+		- 20160401@Bobby: #55354 - Update changes for new message structure
+	
 	Explanation's Param:
 
 
@@ -66,9 +66,6 @@ BEGIN
 	DECLARE @Event805Tbl TABLE(Custom1 VARCHAR(50))
 	INSERT @Event805Tbl(Custom1)
 	SELECT val FROM dbo.strSplit(@Event805, '^')
-	
-	DECLARE @FromDate	DATETIME
-	SELECT	@FromDate =  CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)
 		
 	INSERT INTO #SpecialDeleteBets
 	SELECT
@@ -106,7 +103,6 @@ BEGIN
 		INNER JOIN dbo.match mat WITH(NOLOCK) ON mat.matchid = b.EventID		
 	WHERE
 		b.EventID=@MatchId 
-		AND mat.eventdate >=@FromDate
 		AND b.gameid IN (801,803,804,805,806) --AND bs.refno IS NULL	
 		AND b.statusID NOT IN (101,102 ) -- reject, void
 		AND 1 = CASE WHEN b.GameID IN (801,803,804,805) THEN CASE 
@@ -175,7 +171,7 @@ BEGIN
 	AND IsDeposit = 0
 	AND mrecommend NOT IN (105181, 118473, 105183) -- MHC
 	AND recommend NOT IN (11196380, 13423967) -- Foobet, 1E
-	AND custid NOT IN (1077687, 2331, 115770, 15523642) -- Betfair: BFOS, BF, ITibc102, BF3
+	AND custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
 	ORDER BY transid
 	
 	--2. For Deposit bets
@@ -209,125 +205,9 @@ BEGIN
 	AND IsDeposit = 1	
 	AND mrecommend NOT IN (105181, 118473, 105183)
 	AND recommend NOT IN (11196380, 13423967) -- Foobet: 11196380, 1E: 13423967
-	AND custid NOT IN (1077687, 2331, 115770, 15523642) -- Betfair: BFOS, BF, ITibc102, BF3
+	AND custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
 	ORDER BY transid
 		
-	--3. For Special bets: betdaq
-	SELECT transid	, refno	
-		   ,custid		
-		   ,username	
-		   ,username2	
-		   ,odds		
-		   ,OddsType	
-		   ,transdate	
-		   ,bettype		
-		   ,betteam	
-		   ,betcheck	
-		   ,hdp1		
-		   ,hdp2		
-		   ,IsLiveIndicator
-		   ,livehomescore
-		   ,liveawayscore
-		   ,creator		
-		   ,Stake		
-		   ,CurrencyName
-		   ,status		
-		   ,mrecommend	
-		   ,recommend	
-		   ,SecAcceptFlag	
-		   ,betid 
-		   ,transdesc
-	FROM #SpecialDeleteBets
-	WHERE custid IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1))
-	ORDER BY IsDeposit desc, transid
-
-	--4. For 12EU
-	SELECT transid	, refno	
-		   ,custid		
-		   ,username	
-		   ,username2	
-		   ,odds		
-		   ,OddsType	
-		   ,transdate	
-		   ,bettype		
-		   ,betteam	
-		   ,betcheck	
-		   ,hdp1		
-		   ,hdp2		
-		   ,IsLiveIndicator
-		   ,livehomescore
-		   ,liveawayscore
-		   ,creator		
-		   ,Stake		
-		   ,CurrencyName
-		   ,status		
-		   ,mrecommend	
-		   ,recommend	
-		   ,SecAcceptFlag
-		   ,betid	
-		   ,transdesc 
-	FROM #SpecialDeleteBets
-	WHERE username = '12EU'
-	ORDER BY IsDeposit desc, transid
-
-	--5. For member of master: MHCEU (105181), MHCRM (118473), MHCUS(105183)
-	SELECT transid	, refno	
-		   ,custid		
-		   ,username	
-		   ,username2	
-		   ,odds		
-		   ,OddsType	
-		   ,transdate	
-		   ,bettype		
-		   ,betteam	
-		   ,betcheck	
-		   ,hdp1		
-		   ,hdp2		
-		   ,IsLiveIndicator
-		   ,livehomescore
-		   ,liveawayscore
-		   ,creator		
-		   ,Stake		
-		   ,CurrencyName	
-		   ,status		
-		   ,mrecommend	
-		   ,recommend	
-		   ,SecAcceptFlag
-		   ,betid
-		   ,transdesc	 
-	FROM #SpecialDeleteBets
-	WHERE mrecommend IN (105181, 118473, 105183)
-	ORDER BY IsDeposit desc, transid
-
-	--6: For member of Foobet
-	SELECT transid, refno		
-		   ,custid		
-		   ,username	
-		   ,username2	
-		   ,odds		
-		   ,OddsType	
-		   ,transdate	
-		   ,bettype		
-		   ,betteam	
-		   ,betcheck	
-		   ,hdp1		
-		   ,hdp2		
-		   ,IsLiveIndicator
-		   ,livehomescore
-		   ,liveawayscore
-		   ,creator		
-		   ,Stake		
-		   ,CurrencyName
-		   ,status		
-		   ,mrecommend	
-		   ,recommend	
-		   ,SecAcceptFlag	
-		   ,betid
-		   ,transdesc
-	FROM #SpecialDeleteBets 
-	WHERE recommend = 11196380
-	ORDER BY IsDeposit desc, transid
-
 	--7: For Betfair
 	SELECT transid	, refno	
 		   ,custid		
@@ -354,36 +234,7 @@ BEGIN
 		   ,betid
 		   ,transdesc
 	FROM #SpecialDeleteBets 
-	WHERE custid IN (1077687, 2331, 115770, 15523642) -- Betfair: BFOS, BF, ITibc102, BF3
-	ORDER BY IsDeposit desc, transid
-
-	--8: For ONEEXCHANGE
-	SELECT transid	, refno	
-		   ,custid		
-		   ,username	
-		   ,username2	
-		   ,odds		
-		   ,OddsType	
-		   ,transdate	
-		   ,bettype		
-		   ,betteam		
-		   ,betcheck
-		   ,hdp1		
-		   ,hdp2		
-		   ,IsLiveIndicator
-		   ,livehomescore
-		   ,liveawayscore
-		   ,creator		
-		   ,Stake		
-		   ,CurrencyName		
-		   ,status		
-		   ,mrecommend	
-		   ,recommend	
-		   ,SecAcceptFlag
-		   ,betid	
-		   ,transdesc
-	FROM #SpecialDeleteBets 
-	WHERE recommend IN (13423967)
+	WHERE custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
 	ORDER BY IsDeposit desc, transid
 
 	DROP TABLE #SpecialDeleteBets
