@@ -142,8 +142,8 @@ BEGIN
   end    
  from bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)    
   inner join match14 m with(nolock) on a.matchid=m.matchid  
-  inner join team t with(nolock) on m.homeid=t.teamid       
-  inner join team ta with(nolock) on m.awayid=ta.teamid   
+  left join team t with(nolock) on m.homeid=t.teamid       
+  --left join team ta with(nolock) on m.awayid=ta.teamid   
   inner join customer c with(nolock) on a.operatorid=c.custid  
   inner join league l with(nolock) on m.leagueid=l.leagueid    
  where  
@@ -175,8 +175,8 @@ BEGIN
  from   
   bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)  
   right join match14 m with(nolock) on a.matchid = m.matchid  
-  inner join team t with(nolock) on m.homeid=t.teamid    
-  inner join team ta with(nolock) on m.awayid=ta.teamid    
+  left join team t with(nolock) on m.homeid=t.teamid    
+  --left join team ta with(nolock) on m.awayid=ta.teamid    
   inner join league l with(nolock) on m.leagueid=l.leagueid  
  where  
   m.eventdate between @fromdate and @todate  

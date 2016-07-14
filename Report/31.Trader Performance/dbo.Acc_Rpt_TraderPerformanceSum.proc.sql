@@ -111,8 +111,8 @@ BEGIN
  from Dot_admin_Assignment_Operator a (nolock)  
   inner join customer c with(nolock) on a.operatorid=c.custid  
   inner join match m with(nolock) on a.matchid=m.matchid  
-  inner join team t with(nolock) on m.homeid=t.teamid        
-  inner join team ta with(nolock) on m.awayid=ta.teamid     
+  left join team t with(nolock) on m.homeid=t.teamid        
+  --left join team ta with(nolock) on m.awayid=ta.teamid     
   inner join league l with(nolock) on m.leagueid=l.leagueid  
  where  
   m.eventdate between @fromdate and @todate  
@@ -139,8 +139,8 @@ BEGIN
  from   
   Dot_admin_Assignment_Operator a (nolock)  
   right join match m with(nolock) on a.matchid = m.matchid  
-  inner join team t with(nolock) on m.homeid=t.teamid   
-  inner join team ta with(nolock) on m.awayid=ta.teamid         
+  left join team t with(nolock) on m.homeid=t.teamid   
+  --left join team ta with(nolock) on m.awayid=ta.teamid         
   inner join league l with(nolock) on m.leagueid=l.leagueid  
  where  
   m.eventdate between @fromdate and @todate  
