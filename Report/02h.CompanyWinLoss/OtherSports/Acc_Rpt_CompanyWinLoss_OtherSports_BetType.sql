@@ -152,9 +152,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType] @EndDate='2020-01-01',@StartDa
                        'RM' AS GroupName,
                        CASE
                            WHEN b.recommend = 52466
-                           THEN '8RM'
+                           THEN '8RM Total'
                            WHEN b.recommend = 5707545
-                           THEN 'BARM'
+                           THEN 'BARM Total'
                            ELSE ''
                        END AS RowName,
                        -SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
@@ -180,9 +180,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType] @EndDate='2020-01-01',@StartDa
                      AND b.recommend IN(52466, 5707545)
                 GROUP BY CASE
                              WHEN b.recommend = 52466
-                             THEN '8RM'
+                             THEN '8RM Total'
                              WHEN b.recommend = 5707545
-                             THEN 'BARM'
+                             THEN 'BARM Total'
                              ELSE ''
                          END;
      END;

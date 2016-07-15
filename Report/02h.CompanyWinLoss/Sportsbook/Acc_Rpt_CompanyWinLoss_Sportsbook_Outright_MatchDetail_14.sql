@@ -94,8 +94,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
                 SELECT 0 AS MatchId,
                        CASE
                            WHEN b.recommend = 52466
-                           THEN '8RM'
-                           ELSE 'BARM'
+                           THEN '8RM Total'
+                           ELSE 'BARM Total'
                        END MatchCode,
                        0 TeamId,
                        0 LeagueId,
@@ -115,8 +115,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
                      AND b.recommend IN(52466, 5707545)
                 GROUP BY CASE
                              WHEN b.recommend = 52466
-                             THEN '8RM'
-                             ELSE 'BARM'
+                             THEN '8RM Total'
+                             ELSE 'BARM Total'
                          END;
      END;
      BEGIN -- Query
