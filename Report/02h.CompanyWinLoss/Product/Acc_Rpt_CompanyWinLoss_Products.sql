@@ -618,8 +618,8 @@ BEGIN
 			SUM (scomm) Commission,	
 			-SUM (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) RealLineTotal,
 			-SUM (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
-			-SUM ((1-tpositiontaking)*ABS(stake)) RealTurnover,
-			-SUM ((1-tpositiontaking)*ABS(stake)) VirtualTurnover,	
+			SUM ((1-tpositiontaking)*ABS(stake)) RealTurnover,
+			SUM ((1-tpositiontaking)*ABS(stake)) VirtualTurnover,	
 			0 as ExtraPT  
 	FROM bettrans b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
