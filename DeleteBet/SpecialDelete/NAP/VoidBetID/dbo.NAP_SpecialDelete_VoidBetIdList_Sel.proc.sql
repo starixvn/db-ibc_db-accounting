@@ -1,5 +1,3 @@
-﻿USE bodb02
-GO
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] 
 	@CustID			INT				= NULL 	
 	,@TransIds		VARCHAR(MAX)	= NULL 
@@ -26,6 +24,7 @@ AS
 		- 20160301@Bobby: #53123 - Enhance SP void bet by Id list (allow transId up to 1000 rows)
 		- 20160314@Bobby: #53935 - Update changes for multiple bet trade transaction
 		- 20160413@Bobby: #55893 - Update change request for grouping tickets
+		- 20160714@Kathy: change the order of result: groupname, groupid, transid		
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -653,6 +652,7 @@ BEGIN
 		AND d.recommend 	NOT IN (13423967) --OneExchange
 		
 	ORDER BY g.GroupName
+		,d.GroupID
 		,d.transid
 	
 	-->> Ticket in Details for LiveCS
@@ -667,6 +667,7 @@ BEGIN
 		ON BG.refno = B.refno
 	WHERE B.Bettype BETWEEN 1101 AND 1199
 	
+
 	-- invalid trans
 	SELECT	transid AS InvalidTrans
 			,ISNULL(bm.isMoved, 0) AS isMoved
@@ -682,8 +683,3 @@ BEGIN
 	
 	RETURN;
 END
-GO
-GRANT EXECUTE ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [vnteam] AS [dbo]
-GO
