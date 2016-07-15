@@ -674,8 +674,8 @@ BEGIN
 	VALUES 	
 	 (100, -98, 'Soccer 8RM', 1)
 	, (100, -98, 'Soccer BARM', 2)
-	, (100, -99, 'Other Sports 8RM', 1)
-	, (100, -99, 'Other Sports BARM', 2)
+	, (101, -99, 'Other Sports 8RM', 1)
+	, (101, -99, 'Other Sports BARM', 2)
 
 
 	UPDATE	R
@@ -687,8 +687,8 @@ BEGIN
 			AND P.Site = CASE WHEN P.Site <> 0 THEN r.Site ELSE 0 END  
 
 
-	 SELECT		CASE WHEN d.DisplayOrder = 100 THEN 'RM' ELSE d.ProductName END AS GroupName,
-                CASE WHEN d.DisplayOrder = 100 THEN d.ProductName
+	 SELECT		CASE WHEN d.DisplayOrder IN (100,101)  THEN 'RM' ELSE d.ProductName END AS GroupName,
+                CASE WHEN d.DisplayOrder IN (100,101) THEN d.ProductName
 					 WHEN d.Site = 1 THEN 'Credit' 
 					 WHEN d.Site = 2 THEN 'Deposit' 
 					END AS RowName,
@@ -704,8 +704,8 @@ BEGIN
 				SUM (-d.extraPT) AS extraPT,
 				SUM (d.RealLineTotal - d.extraPT) AS AfterExtraPT 
         FROM #Result d   
-		GROUP BY CASE WHEN d.DisplayOrder = 100 THEN 'RM' ELSE d.ProductName END,
-                 CASE WHEN d.DisplayOrder = 100 THEN d.ProductName
+		GROUP BY CASE WHEN d.DisplayOrder IN (100,101) THEN 'RM' ELSE d.ProductName END,
+                 CASE WHEN d.DisplayOrder IN (100,101) THEN d.ProductName
 					 WHEN d.Site = 1 THEN 'Credit' 
 					 WHEN d.Site = 2 THEN 'Deposit' 
 					END,  
