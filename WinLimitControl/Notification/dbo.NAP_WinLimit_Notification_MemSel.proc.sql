@@ -47,7 +47,7 @@ AS
          FROM WinLimit_CustGameMonitoring wl WITH (NOLOCK)
               INNER JOIN Customer c WITH (NOLOCK) ON c.custid = wl.CustID
               INNER JOIN Customer ag WITH (NOLOCK) ON ag.custid = c.recommend
-              INNER JOIN DB02.bodb02.dbo.Products p WITH (NOLOCK) ON p.ProductID = wl.ProductID
+              INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON p.ProductID = wl.ProductID
               INNER JOIN exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
               INNER JOIN Winlimit_LevelSetting l WITH (NOLOCK) ON l.LevelId = wl.LevelId
          WHERE wl.IsNotified = 0;
