@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSum_14]  
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSum_14]  
  @fromdate datetime,  
  @todate datetime,  
  @isSoccer bit =1  
@@ -44,6 +47,7 @@ AS
   - 20140617@Johnson: Add more columns 10mins hdp, 10mins 1x2 [RedmineID: #17685]
   - 20160317@Robert - Incorporate 1X2 HDP and 1H 1X2 HDP bet types into Trader Performance Report[#54184]
   - 20160414@Robert - Trader Performance Report - Mismatch Turnover data with TGR/Performance Detail report[RedmineId: #55948]
+  - 20160711@Percy: Fix duplicate data [RedmineID: #60562]
  Param's Explanation:  
  • @isSoccer  
   = 1: Soccer  
@@ -72,7 +76,7 @@ DECLARE @temp_daao TABLE
 IF @isSoccer = 1 
 BEGIN  
  insert @temp_daao (custid,username,matchID, bettype,OUtype,category)  
- select a.operatorid, username,  m.matchID,  
+ select distinct a.operatorid, username,  m.matchID,  
    case when (a.bettype = 1 or a.bettype=5) and (a.operatortype = 1) then 1   
      when (a.bettype = 1 and a.operatortype = 2) then 7   
      when (a.bettype = 2 and a.operatortype = 1) then 3  
@@ -101,8 +105,8 @@ BEGIN
  from bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)  
   inner join customer c with(nolock) on a.operatorid=c.custid  
   inner join match14 m with(nolock) on a.matchid=m.matchid  
-  inner join team t with(nolock) on m.homeid=t.teamid        
-  inner join team ta with(nolock) on m.awayid=ta.teamid     
+  left join team t with(nolock) on m.homeid=t.teamid        
+  --left join team ta with(nolock) on m.awayid=ta.teamid     
   inner join league l with(nolock) on m.leagueid=l.leagueid  
  where  
   m.eventdate between @fromdate and @todate  
@@ -129,8 +133,8 @@ BEGIN
  from   
   bodb_archive.dbo.Dot_admin_Assignment_Operator_bk a (nolock)  
   right join match14 m with(nolock) on a.matchid = m.matchid  
-  inner join team t with(nolock) on m.homeid=t.teamid   
-  inner join team ta with(nolock) on m.awayid=ta.teamid         
+  left join team t with(nolock) on m.homeid=t.teamid   
+  --left join team ta with(nolock) on m.awayid=ta.teamid         
   inner join league l with(nolock) on m.leagueid=l.leagueid  
  where  
   m.eventdate between @fromdate and @todate  
@@ -144,7 +148,7 @@ END
 ELSE IF @isSoccer = 0 
  BEGIN  
   insert @temp_daao (custid,username,matchID, bettype, OUtype, category)  
-  select a.operatorid, username,  m.matchID,  
+  select distinct a.operatorid, username,  m.matchID,  
     case when (a.bettype = 1 or a.bettype =5)  and (a.operatortype = 1) then 1   
       when (a.bettype = 1 and a.operatortype = 2) then 7   
       when (a.bettype = 2 and a.operatortype = 1) then 3  
