@@ -96,7 +96,16 @@ AS
                                ps.LevelId
                         FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
                              INNER JOIN DBPRO.bodb02.dbo.Products p ON ps.ProductId = p.ProductId
-                             INNER JOIN DBLIC.bodb_licensee.dbo.LicenseeProduct3rd lp WITH (NOLOCK) ON ps.ProductId = lp.ProductId
+                             INNER JOIN
+                        (
+                            SELECT CASE
+                                       WHEN ProductID = 14
+                                       THEN 13
+                                       ELSE ProductID
+                                   END AS ProductID,
+                                   LicenseeId
+                            FROM DBLIC.bodb_licensee.dbo.LicenseeProduct3rd WITH (NOLOCK)
+                        ) AS lp ON ps.ProductId = lp.ProductId
                              INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lp.licenseeId
                              INNER JOIN dbo.[Site] s WITH (NOLOCK) ON l.LicenseeName = s.[site]
                         WHERE s.[siteid] = @SiteId
