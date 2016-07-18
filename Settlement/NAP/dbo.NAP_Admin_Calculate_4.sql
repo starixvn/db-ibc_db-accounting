@@ -20,12 +20,11 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@CorrectScoreSet3				NVARCHAR(10)= NULL 
 	,@CorrectScoreSet4				NVARCHAR(10)= NULL 
 	,@CorrectScoreSet5				NVARCHAR(10)= NULL 
-	,@IsRefundHT					BIT = 0
 	,@betcount						INT = 0
 	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchIBC		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
-	,@str2ndBettypes				VARCHAR(MAX) = NULL
+	,@IsHTCal						BIT = 0
 	
 AS
 /*
@@ -63,14 +62,6 @@ BEGIN
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 		,@matchdate DATETIME
-
-	DECLARE @xml XML	
-	SET @xml = CONVERT(XML, REPLACE('<root><r t="' + @str2ndBettypes + '"/></root>', ',','"/><r t="'))
-			
-	DECLARE @tbl2ndBettypes TABLE (bettype SMALLINT PRIMARY KEY)
-	INSERT INTO @tbl2ndBettypes (bettype)
-	SELECT T.c.value('./@t','SMALLINT')
-	FROM @xml.nodes('/root/r') AS T(c)
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
 	BEGIN
@@ -124,7 +115,14 @@ BEGIN
 						AND @bettype = 414
 						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), b.transdesc) = 0 THEN 1
 					WHEN b.bettype = 16 THEN CASE
-												WHEN
+												WHEN @IsHTCal = 1 THEN CASE
+																			WHEN @hth > @hta AND LEFT(betteam,1) IN ('D','A') THEN -1
+																			WHEN @hth = @hta AND LEFT(betteam,1) IN ('H','A') THEN -1
+																			WHEN @hth < @hta AND LEFT(betteam,1) IN ('D','H') THEN -1
+																			ELSE NULL
+																	   END
+												ELSE NULL
+											 END
 					ELSE NULL
 					END,
 				modds = @modds,
@@ -230,10 +228,6 @@ BEGIN
 								WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
 								WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) THEN 1
 								ELSE 0
-							END
-					AND 1 = CASE
-								WHEN b.bettype IN (SELECT bettype FROM @tbl2ndBettypes) THEN 0
-								ELSE 1
 							END
 
 				IF @affectedagents <> 100 
@@ -363,7 +357,7 @@ BEGIN
 					matchid=@matchid AND
 					bettype=@bettype 
 					AND statusID NOT IN (101,102)
-					AND 1 = CASE WHEN @bettype IN (16,405) AND @IsRefundHT = 1 THEN 0
+					AND 1 = CASE 
 								 WHEN @bettype <> 1317 THEN 1 
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
 								 WHEN @bettype = 1317 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
@@ -508,8 +502,7 @@ BEGIN
 			    AND	statusID NOT IN (101, 102)
 				AND 1 = CASE WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
 							 WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
-							 WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
-							 WHEN @IsRefundHT = 1 THEN 0
+							 WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1							
 							 ELSE 0
 						END
 		END
@@ -646,7 +639,7 @@ BEGIN
 					AND b.custid >= @MinCustId
 					AND bettype = @bettype
 					AND statusID NOT IN (101,102)
-					AND 1 = CASE WHEN @bettype IN (16,405) AND @IsRefundHT = 1 THEN 0
+					AND 1 = CASE 
 									WHEN @bettype <> 1317  THEN 1 
 									WHEN @bettype = 1317 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
 									WHEN @bettype = 1317 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1

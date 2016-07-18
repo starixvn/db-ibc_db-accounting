@@ -81,7 +81,7 @@ BEGIN
     ---
     DECLARE @start DATETIME
         ,@stop DATETIME
-        ,@strBettypes VARCHAR(MAX) = ''
+        ,@strBettypes VARCHAR(MAX) 
 
     SELECT @start = CURRENT_TIMESTAMP
 
@@ -111,7 +111,7 @@ BEGIN
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
     WHERE matchid = @matchid 
-			AND bettype IN (SELECT BetType FROM dbo.f_GetGroupBettypes() WHERE GroupId IN (1,4,9)) 
+			AND bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE Is3x30 = 1 ) 
     GROUP BY custid
 
     IF @IsSettleAbandonedMatch = 1
@@ -182,24 +182,10 @@ BEGIN
 
 				RETURN
 			END
-
-			DECLARE @betcount_8 INT
-
-			SELECT @betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
-			FROM bettrans WITH (NOLOCK)
-			WHERE matchid = @matchid 
-			AND bettype = 8 
-			AND 1 = CASE 
-						WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
-						WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
-						ELSE 0
-					END 
-			AND statusID NOT IN (101, 102)
-			
+			-- bettype 8
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'REFUND'
-				,@mode = 'HT'
-				,@betcount_8 = @betcount_8 -- bettype
+				,@mode = 'ABANDONED-HT'
 				,@totalht = @totalht
 				,@IsSettleAbandonedMatch = @IsSettleAbandonedMatch
 				,@IsSettleAbandonedMatchBetFair = @IsSettleAbandonedMatchBetFair
@@ -226,28 +212,25 @@ BEGIN
 			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid
 				,@command = 'F'
 
-			SELECT @strBettypes = @strBettypes + ',' + CAST(bettype AS VARCHAR(10))
-			FROM	dbo.f_GetGroupBettypes ()
-			WHERE	groupId IN (1,4,9)
-			
-			SET @strBettypes = STUFF(@strBettypes,1,1,'')
+			SELECT @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
+			FROM	dbo.f_Set_GetGroupBettypes ()
+			WHERE	Is3x30 = 1
 
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'REFUND'
-				,@mode = 'HT'
+				,@mode = 'REFUND-HT'
 				,@IsExcludeBetdaq = @IsExcludeBetdaq
 				,@IsExcludeBetfair = @IsExcludeBetfair
 				,@strBettypes = @strBettypes 
-				,@row_count = @RowCount
 		END
 	END TRY
 	BEGIN CATCH
 		INSERT INTO #BalanceAfter
-		SELECT custid
-			,SUM(winlost - actual_stake + playercomm)
-		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid 
-		  AND bettype IN (SELECT BetType FROM dbo.f_GetGroupBettypes() WHERE GroupId IN (1,4,9)) 
+		SELECT	custid
+				,SUM(winlost - actual_stake + playercomm)
+		FROM	dbo.bettrans WITH (ROWLOCK)
+		WHERE	matchid = @matchid 
+				AND bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE Is3x30 = 1) 
 		GROUP BY custid
 		
 		INSERT INTO #Balance
@@ -321,7 +304,7 @@ BEGIN
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans WITH (ROWLOCK)
     WHERE matchid = @matchid 
-      AND bettype IN (SELECT BetType FROM dbo.f_GetGroupBettypes() WHERE GroupId IN (1,4,9)) 
+      AND bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE Is3x30 = 1 ) 
     GROUP BY custid
 
     -------------------------------------------------------------

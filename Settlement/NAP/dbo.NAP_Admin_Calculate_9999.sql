@@ -9,8 +9,6 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9999] @matchid INT
 	,@IsSettleAbandonedMatch BIT = 0 -- BetDaq
 	,@IsSettleAbandonedMatchBetFair BIT = 0 -- BetFair
 	,@IsHTCal BIT = 0
-	,@isRefundHT BIT = 0
-	,@str2ndBettypes VARCHAR(MAX) = NULL
 AS
 /*
 	Created by: Kathy
@@ -38,14 +36,6 @@ BEGIN
 		,@csFT NVARCHAR(10) -- FT correct score
 		,@csHT NVARCHAR(10) -- HT correct score
 		,@result NVARCHAR(10)
-	
-	DECLARE @xml XML	
-	SET @xml = CONVERT(XML, REPLACE('<root><r t="' + @str2ndBettypes + '"/></root>', ',','"/><r t="'))
-			
-	DECLARE @tbl2ndBettypes TABLE (bettype SMALLINT PRIMARY KEY)
-	INSERT INTO @tbl2ndBettypes (bettype)
-	SELECT T.c.value('./@t','SMALLINT')
-	FROM @xml.nodes('/root/r') AS T(c)
 	
 	IF @bettype NOT IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152, 189, 190, 416, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443, 444)
 	BEGIN		
@@ -212,10 +202,6 @@ BEGIN
 					,ruben = 1	
 			WHERE	matchid = @matchid			
 					AND bettype = @bettype	
-					AND 1 = CASE 
-								WHEN @IsRefundHT = 1 AND bettype IN (SELECT bettype FROM @tbl2ndBettypes) THEN 0 								
-								ELSE 1 
-							END
 								
 								
 		END	
@@ -237,17 +223,17 @@ BEGIN
 															ELSE NULL
 														END
 								WHEN bettype = 419 THEN CASE	
-															WHEN @fth > 0 AND @fta > 0 THEN CASE
-																								WHEN betteam = '1H' AND @hth + @hta > 0 THEN 1
-																								WHEN betteam = '2H' AND (@fth + @fta - @hth - @hta) > 0 THEN 1
-																								ELSE -1
-																							END
+															WHEN @fth + @fta > 0 THEN CASE
+																							WHEN betteam = '1H' AND @hth + @hta > 0 THEN 1
+																							WHEN betteam = '2H' AND @hth + @hta = 0 THEN 1
+																							ELSE -1
+																					  END
 															ELSE NULL
 														END
 								WHEN bettype = 420 THEN CASE	
 															WHEN @fth > 0 THEN CASE
 																					WHEN betteam = '1H' AND @hth > 0 THEN 1
-																					WHEN betteam = '2H' AND (@fth - @hth) > 0 THEN 1
+																					WHEN betteam = '2H' AND @hth = 0 THEN 1
 																					ELSE -1
 																				END
 															ELSE NULL
@@ -255,7 +241,7 @@ BEGIN
 								WHEN bettype = 421 THEN CASE	
 															WHEN @fta > 0 THEN CASE
 																					WHEN betteam = '1H' AND @hta > 0 THEN 1
-																					WHEN betteam = '2H' AND (@fta - @hta) > 0 THEN 1
+																					WHEN betteam = '2H' AND @hta = 0 THEN 1
 																					ELSE -1
 																				END
 															ELSE NULL
@@ -443,10 +429,6 @@ BEGIN
 								WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
 								WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
 								ELSE 0
-							END
-					AND 1 = CASE
-								WHEN @IsRefundHT = 1 AND bettype IN (SELECT bettype FROM @tbl2ndBettypes) THEN 0
-								ELSE 1
 							END
 		END
 	END
@@ -658,16 +640,15 @@ BEGIN
 														 END 
 											WHEN 145 THEN 
 														 CASE 
-															WHEN @IsHTCal = 1 OR @IsRefundHT = 1 THEN -- suspended in 2nd half/ 3x30 match
-																					CASE 
-																						WHEN betteam = 'y' AND @fth > 0 AND @fta > 0 THEN 1
-																						WHEN betteam = 'n' AND @fth > 0 AND @fta > 0 THEN -1
-																					END
 															WHEN @IsHTCal = 0 THEN -- suspended in 1st half
 																					CASE  
 																						WHEN betteam = 'y' AND @hth > 0 AND @hta > 0 THEN 1
 																						WHEN betteam = 'n' AND @hth > 0 AND @hta > 0 THEN -1
 																					END
+															ELSE CASE 
+																	WHEN betteam = 'y' AND @fth > 0 AND @fta > 0 THEN 1
+																	WHEN betteam = 'n' AND @fth > 0 AND @fta > 0 THEN -1
+																END
 														 END 
 											WHEN 146 THEN 
 														 CASE 
@@ -700,11 +681,10 @@ BEGIN
 														 END
 											WHEN 152 THEN
 														 CASE 
-															WHEN @IsHTCal = 0 AND @IsRefundHT = 0 THEN 
-																										CASE
-																											WHEN LEFT(betteam,2) = '4+' AND (@hth + @hta) >= 4 THEN 1
-																											WHEN LEFT(betteam,2) <> '4+' AND (LEFT(LEFT(betteam,3),1) < @hth OR RIGHT(LEFT(betteam,3),1) < @hta) THEN -1
-																										END
+															WHEN @IsHTCal = 0 THEN CASE
+																						WHEN LEFT(betteam,2) = '4+' AND (@hth + @hta) >= 4 THEN 1
+																						WHEN LEFT(betteam,2) <> '4+' AND (LEFT(LEFT(betteam,3),1) < @hth OR RIGHT(LEFT(betteam,3),1) < @hta) THEN -1
+																					END
 															ELSE CASE 
 																	WHEN betteam = '4+/4+' AND (@hth + @hta) >= 4 AND (@fth + @fta) >= 4 THEN 1
 																	WHEN LEFT(betteam,3) <> @csHT  THEN -1		
@@ -714,11 +694,10 @@ BEGIN
 														END
 											WHEN 416 THEN
 														 CASE 
-															WHEN @IsHTCal = 0 AND @IsRefundHT = 0 THEN 
-																										CASE
-																											WHEN LEFT(betteam,2) = '4+' AND (@hth + @hta) >= 4 THEN 1
-																											WHEN LEFT(betteam,2) <> '4+' AND (LEFT(LEFT(betteam,3),1) < @hth OR RIGHT(LEFT(betteam,3),1) < @hta) THEN -1
-																										END
+															WHEN @IsHTCal = 0 THEN CASE
+																						WHEN LEFT(betteam,2) = '4+' AND (@hth + @hta) >= 4 THEN 1
+																						WHEN LEFT(betteam,2) <> '4+' AND (LEFT(LEFT(betteam,3),1) < @hth OR RIGHT(LEFT(betteam,3),1) < @hta) THEN -1
+																					END
 															ELSE CASE 
 																	WHEN betteam = '4+/4+' AND (@hth + @hta) >= 4 AND (@fth + @fta) >= 4 THEN 1
 																	WHEN LEFT(betteam,3) <> @csHT  THEN -1		
@@ -865,11 +844,7 @@ BEGIN
 		WHERE matchid = @matchid 
 		AND bettype = @bettype 
 		AND statusID NOT IN (101, 102) -- reject, void
-		AND 1 = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 AND @IsSettleAbandonedMatchIBC = 0 
-							AND ((@isRefundHT = 1 AND bettype IN (145)) -- settle only bettype 145 when match has been refunded HT
-									OR ( @isRefundHT = 0 AND bettype IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152,189,190,416,433,434,435,436,437,438,439,440,441,442,443,444)) 
-								)
-						THEN 1
+		AND 1 = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 AND @IsSettleAbandonedMatchIBC = 0 THEN 1
 					 WHEN (
 							(@IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156))
 							OR (@IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642))
@@ -886,10 +861,6 @@ BEGIN
 																	) 
 												)
 										)
-									 THEN 1
-								  WHEN @isRefundHT = 1 -- 3x30 match: refundHT, Settle determined ticket
-										AND bettype = 145
-										AND @fth > 0 AND @fta > 0
 									 THEN 1
 								  WHEN @IsHTCal = 1 -- suspended in 2nd Half
 										AND 1 = CASE WHEN bettype IN (133,438) AND @hth <= @hta THEN 1

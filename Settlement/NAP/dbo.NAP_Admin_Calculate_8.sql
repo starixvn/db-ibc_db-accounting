@@ -54,6 +54,11 @@ BEGIN
         SET @modds = CASE WHEN betteam IN ('h', 'o') THEN @totalht - hdp1
                                   WHEN betteam IN ('a', 'u') THEN hdp1 - @totalht
                                   WHEN RIGHT(betteam,1) ='u' THEN hdp1 - @totalht    -- 143 
+                                  WHEN bettype = 426 THEN CASE
+															WHEN @totalht > 0 AND betteam = 'NG' THEN -1
+															ELSE NULL
+														  END
+															
                                   ELSE NULL 
                                   END 
 			,modds = @modds                                        

@@ -1,14 +1,3 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_3]    Script Date: 01/29/2016 13:50:39 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_3    Script Date: 1/20/2016 7:07:48 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_3    Script Date: 15/01/2016 12:47:13 PM ******/
-
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] @matchid INT
     , @mode VARCHAR(6) = 'CAL'
     , @isExcludeCorner BIT = 0 
@@ -94,167 +83,10 @@ BEGIN
             ,@FTFCorner            	VARCHAR(10) =''
             ,@FTLCorner            	VARCHAR(10) =''
             ,@HTFCorner            	VARCHAR(10) =''
-            ,@HTLCorner            	VARCHAR(10) =''
-
-    --ticket count
-    DECLARE @betcount_1		INT
-            ,@betcount_2	INT
-            ,@betcount_3    INT
-            ,@betcount_4    INT
-            ,@betcount_5 	INT
-            ,@betcount_6 	INT
-            ,@betcount_16   INT
-            ,@betcount_20   INT
-            ,@betcount_22   INT
-            ,@betcount_13   INT
-            ,@betcount_24   INT
-            ,@betcount_25   INT
-            ,@betcount_26   INT
-            ,@betcount_27   INT
-            ,@betcount_28   INT
-            ,@betcount_121 	INT
-            ,@betcount_122 	INT
-            ,@betcount_123 	INT
-            ,@betcount_124 	INT
-            ,@betcount_128 	INT  -- HT/FT Odd/Even            
-            ,@betcount_130 	INT -- Exact Goal
-            ,@betcount_131 	INT -- Home Team Total Goal
-            ,@betcount_132 	INT -- Away Team Total Goal            
-            ,@betcount_137 	INT -- Home Team Odd/Even            
-            ,@betcount_139 	INT -- Away Team Odd/Even            
-            ,@betcount_144 	INT -- Result/Total Goals
-            -- VS
-            ,@betcount_1201 INT
-            ,@betcount_1203 INT
-            ,@betcount_1204 INT
-            ,@betcount_1205 INT
-            ,@betcount_1206 INT
-            ,@betcount_1224 INT
-            --HT ticket
-            ,@betcount_7 	INT
-            ,@betcount_8 	INT
-            ,@betcount_12 	INT
-            ,@betcount_15 	INT
-            ,@betcount_21 	INT
-            ,@betcount_30 	INT
-            ,@betcount_125 	INT
-            ,@betcount_126 	INT
-            ,@betcount_129 	INT -- 1H Exact Goal
-            ,@betcount_136 	INT -- 1H Home Team Odd/Even
-            ,@betcount_138 	INT -- 1H Away Team Odd/Even
-            ,@betcount_143 	INT -- 1H Result/Total Goals    
-            -- BetRadar
-            ,@betcount_133 	INT
-            ,@betcount_134 	INT
-            ,@betcount_140 	INT
-            ,@betcount_141 	INT
-            ,@betcount_142 	INT    
-            ,@betcount_145 	INT
-            ,@betcount_146 	INT
-            ,@betcount_147 	INT
-            ,@betcount_148 	INT
-            ,@betcount_149 	INT
-            ,@betcount_150 	INT
-            ,@betcount_151 	INT
-            ,@betcount_152 	INT
-
-            ,@betcount_157 	INT 
-            ,@betcount_159 	INT
-            ,@betcount_161 	INT
-            ,@betcount_162 	INT
-            ,@betcount_163 	INT
-            ,@betcount_165 	INT
-            ,@betcount_166 	INT
-            ,@betcount_167 	INT
-            ,@betcount_170 	INT
-            ,@betcount_171 	INT
-            ,@betcount_172 	INT
-            ,@betcount_177 	INT
-            ,@betcount_178 	INT
-            ,@betcount_179 	INT
-            ,@betcount_181 	INT
-            ,@betcount_182 	INT
-            ,@betcount_183 	INT
-            ,@betcount_184 	INT
-            ,@betcount_185 	INT
-            ,@betcount_186 	INT
-            ,@betcount_187 	INT
-            ,@betcount_188 	INT
-            ,@betcount_189 	INT
-            ,@betcount_190 	INT
-            ,@betcount_191 	INT
-            ,@betcount_194 	INT
-            ,@betcount_195 	INT
-            ,@betcount_196 	INT
-            ,@betcount_197 	INT
-            ,@betcount_198 	INT
-            ,@betcount_199 	INT
-            ,@betcount_200 	INT
-            ,@betcount_201 	INT
-            ,@betcount_202 	INT
-            ,@betcount_203 	INT
-            ,@betcount_204 	INT
-            ,@betcount_205 	INT
-            ,@betcount_206 	INT
-            ,@betcount_207 	INT
-            ,@betcount_208 	INT
-            ,@betcount_209 	INT
-            ,@betcount_301 	INT
-            ,@betcount_302 	INT
-            ,@betcount_303 	INT
-            ,@betcount_304 	INT
-			,@betcount_401 	INT
-			,@betcount_402 	INT
-			,@betcount_403 	INT
-			,@betcount_404 	INT
-			,@betcount_405 	INT
-			,@betcount_406 	INT
-			,@betcount_407 	INT
-			,@betcount_408 	INT
-			,@betcount_409 	INT
-			,@betcount_410 	INT
-			,@betcount_411 	INT
-			,@betcount_412 	INT
-			,@betcount_413  INT
-			,@betcount_414  INT
-            ,@betcount_501	INT
-            
-            ,@betcount_415	INT
-            ,@betcount_416	INT
-            ,@betcount_417	INT
-            ,@betcount_418	INT
-            ,@betcount_419	INT
-            ,@betcount_420	INT
-            ,@betcount_421	INT
-            ,@betcount_422	INT
-            ,@betcount_423	INT
-            ,@betcount_424	INT
-            ,@betcount_425	INT
-            ,@betcount_426	INT
-            ,@betcount_427	INT
-            ,@betcount_428	INT
-            ,@betcount_429	INT
-            ,@betcount_430	INT
-            ,@betcount_431	INT
-            ,@betcount_432	INT
-            ,@betcount_433	INT
-            ,@betcount_434	INT
-            ,@betcount_435	INT
-            ,@betcount_436	INT
-            ,@betcount_437	INT
-            ,@betcount_438	INT
-            ,@betcount_439	INT
-            ,@betcount_440	INT
-            ,@betcount_441	INT
-            ,@betcount_442	INT
-            ,@betcount_443	INT
-            ,@betcount_444	INT
-            ,@betcount_445	INT
-            ,@betcount_446	INT
-            ,@betcount_447	INT
-            
+            ,@HTLCorner            	VARCHAR(10) =''     
             ,@strBettypes VARCHAR(MAX)
-            ,@str2ndBettypes VARCHAR (MAX) -- group bettypes related to 2nd result
+            
+            ,@betcount_501			INT = 0
 
     SELECT	@fth = FinalHomeScore
 			,@fta = FinalAwayScore
@@ -391,170 +223,37 @@ BEGIN
 
         RETURN
     END
-
-    IF @Mode IN ('CAL-FT', 'CAL')
-    BEGIN
-        SELECT @betcount_1 = ISNULL(SUM(CASE bettype WHEN 1 THEN 1 ELSE 0 END), 0)
-            ,@betcount_2 = ISNULL(SUM(CASE bettype WHEN 2 THEN 1 ELSE 0 END), 0)
-            ,@betcount_3 = ISNULL(SUM(CASE bettype WHEN 3 THEN 1 ELSE 0 END), 0)
-            ,@betcount_4 = ISNULL(SUM(CASE bettype WHEN 4 THEN 1 ELSE 0 END), 0)
-            ,@betcount_5 = ISNULL(SUM(CASE bettype WHEN 5 THEN 1 ELSE 0 END), 0)
-            ,@betcount_6 = ISNULL(SUM(CASE bettype WHEN 6 THEN 1 ELSE 0 END), 0)
-            ,@betcount_13 = ISNULL(SUM(CASE bettype WHEN 13 THEN 1 ELSE 0 END), 0)
-            ,@betcount_16 = ISNULL(SUM(CASE bettype WHEN 16 THEN 1 ELSE 0 END), 0)
-            ,@betcount_20 = ISNULL(SUM(CASE bettype WHEN 20 THEN 1 ELSE 0 END), 0)
-            ,@betcount_22 = ISNULL(SUM(CASE bettype WHEN 22 THEN 1 ELSE 0 END), 0)
-            ,@betcount_24 = ISNULL(SUM(CASE bettype WHEN 24 THEN 1 ELSE 0 END), 0)
-            ,@betcount_25 = ISNULL(SUM(CASE bettype WHEN 25 THEN 1 ELSE 0 END), 0)
-            ,@betcount_26 = ISNULL(SUM(CASE bettype WHEN 26 THEN 1 ELSE 0 END), 0)
-            ,@betcount_27 = ISNULL(SUM(CASE bettype WHEN 27 THEN 1 ELSE 0 END), 0)
-            ,@betcount_28 = ISNULL(SUM(CASE bettype WHEN 28 THEN 1 ELSE 0 END), 0)
-            ,@betcount_121 = ISNULL(SUM(CASE bettype WHEN 121 THEN 1 ELSE 0 END), 0)
-            ,@betcount_122 = ISNULL(SUM(CASE bettype WHEN 122 THEN 1 ELSE 0 END), 0)
-            ,@betcount_123 = ISNULL(SUM(CASE bettype WHEN 123 THEN 1 ELSE 0 END), 0)
-            ,@betcount_124 = ISNULL(SUM(CASE bettype WHEN 124 THEN 1 ELSE 0 END), 0)
-            ,@betcount_128 = ISNULL(SUM(CASE bettype WHEN 128 THEN 1 ELSE 0 END), 0)
-            ,@betcount_130 = ISNULL(SUM(CASE bettype WHEN 130 THEN 1 ELSE 0 END), 0)
-            ,@betcount_131 = ISNULL(SUM(CASE bettype WHEN 131 THEN 1 ELSE 0 END), 0)
-            ,@betcount_132 = ISNULL(SUM(CASE bettype WHEN 132 THEN 1 ELSE 0 END), 0)
-            ,@betcount_133 = ISNULL(SUM(case bettype when 133 then 1 else 0 end), 0)
-            ,@betcount_134 = ISNULL(SUM(case bettype when 134 then 1 else 0 end), 0)
-            ,@betcount_137 = ISNULL(SUM(CASE bettype WHEN 137 THEN 1 ELSE 0 END), 0)
-            ,@betcount_139 = ISNULL(SUM(CASE bettype WHEN 139 THEN 1 ELSE 0 END), 0)
-            ,@betcount_140 = ISNULL(SUM(case bettype when 140 then 1 else 0 end), 0)
-            ,@betcount_141 = ISNULL(SUM(case bettype when 141 then 1 else 0 end), 0)
-            ,@betcount_142 = ISNULL(SUM(case bettype when 142 then 1 else 0 end), 0)
-            ,@betcount_144 = ISNULL(SUM(CASE bettype WHEN 144 THEN 1 ELSE 0 END), 0)
-            ,@betcount_145 = ISNULL(SUM(case bettype when 145 then 1 else 0 end), 0)
-            ,@betcount_146 = ISNULL(SUM(case bettype when 146 then 1 else 0 end), 0)
-            ,@betcount_147 = ISNULL(SUM(case bettype when 147 then 1 else 0 end), 0)
-            ,@betcount_148 = ISNULL(SUM(case bettype when 148 then 1 else 0 end), 0)
-            ,@betcount_149 = ISNULL(SUM(case bettype when 149 then 1 else 0 end), 0)
-            ,@betcount_150 = ISNULL(SUM(case bettype when 150 then 1 else 0 end), 0)
-            ,@betcount_152 = ISNULL(SUM(case bettype when 152 then 1 else 0 end), 0)
-
-            ,@betcount_157 = ISNULL(SUM(CASE bettype WHEN 157 THEN 1 ELSE 0 END),0)
-            ,@betcount_159 = ISNULL(SUM(CASE bettype WHEN 159 THEN 1 ELSE 0 END),0)
-            ,@betcount_161 = ISNULL(SUM(CASE bettype WHEN 161 THEN 1 ELSE 0 END),0)
-            ,@betcount_162 = ISNULL(SUM(CASE bettype WHEN 162 THEN 1 ELSE 0 END),0)
-            ,@betcount_163 = ISNULL(SUM(CASE bettype WHEN 163 THEN 1 ELSE 0 END),0)
-            ,@betcount_166 = ISNULL(SUM(CASE bettype WHEN 166 THEN 1 ELSE 0 END),0)
-            ,@betcount_170 = ISNULL(SUM(CASE bettype WHEN 170 THEN 1 ELSE 0 END),0)
-            ,@betcount_171 = ISNULL(SUM(CASE bettype WHEN 171 THEN 1 ELSE 0 END),0)
-            ,@betcount_172 = ISNULL(SUM(CASE bettype WHEN 172 THEN 1 ELSE 0 END),0)
-            ,@betcount_177 = ISNULL(SUM(CASE bettype WHEN 177 THEN 1 ELSE 0 END),0)
-            ,@betcount_178 = ISNULL(SUM(CASE bettype WHEN 178 THEN 1 ELSE 0 END),0)
-            ,@betcount_183 = ISNULL(SUM(CASE bettype WHEN 183 THEN 1 ELSE 0 END),0)
-            ,@betcount_184 = ISNULL(SUM(CASE bettype WHEN 184 THEN 1 ELSE 0 END),0)
-            ,@betcount_185 = ISNULL(SUM(CASE bettype WHEN 185 THEN 1 ELSE 0 END),0)
-            ,@betcount_186 = ISNULL(SUM(CASE bettype WHEN 186 THEN 1 ELSE 0 END),0)
-            ,@betcount_187 = ISNULL(SUM(CASE bettype WHEN 187 THEN 1 ELSE 0 END),0)
-            ,@betcount_189 = ISNULL(SUM(CASE bettype WHEN 189 THEN 1 ELSE 0 END),0)
-            ,@betcount_190 = ISNULL(SUM(CASE bettype WHEN 190 THEN 1 ELSE 0 END),0)
-            ,@betcount_194 = ISNULL(SUM(CASE bettype WHEN 194 THEN 1 ELSE 0 END),0)
-            ,@betcount_195 = ISNULL(SUM(CASE bettype WHEN 195 THEN 1 ELSE 0 END),0)
-            ,@betcount_196 = ISNULL(SUM(CASE bettype WHEN 196 THEN 1 ELSE 0 END),0)
-            ,@betcount_197 = ISNULL(SUM(CASE bettype WHEN 197 THEN 1 ELSE 0 END),0)
-            ,@betcount_198 = ISNULL(SUM(CASE bettype WHEN 198 THEN 1 ELSE 0 END),0)
-            ,@betcount_199 = ISNULL(SUM(CASE bettype WHEN 199 THEN 1 ELSE 0 END),0)
-            ,@betcount_206 = ISNULL(SUM(CASE bettype WHEN 206 THEN 1 ELSE 0 END),0)
-            ,@betcount_208 = ISNULL(SUM(CASE bettype WHEN 208 THEN 1 ELSE 0 END),0)
-            ,@betcount_301 = ISNULL(SUM(CASE bettype WHEN 301 THEN 1 ELSE 0 END),0)
-            ,@betcount_302 = ISNULL(SUM(CASE bettype WHEN 302 THEN 1 ELSE 0 END),0)
-			,@betcount_401 = ISNULL(SUM(CASE bettype WHEN 401 THEN 1 ELSE 0 END),0)
-			,@betcount_402 = ISNULL(SUM(CASE bettype WHEN 402 THEN 1 ELSE 0 END),0)
-			,@betcount_405 = ISNULL(SUM(CASE bettype WHEN 405 THEN 1 ELSE 0 END),0)
-			,@betcount_406 = ISNULL(SUM(CASE bettype WHEN 406 THEN 1 ELSE 0 END),0)
-			,@betcount_407 = ISNULL(SUM(CASE bettype WHEN 407 THEN 1 ELSE 0 END),0)
-			,@betcount_408 = ISNULL(SUM(CASE bettype WHEN 408 THEN 1 ELSE 0 END),0)
-			,@betcount_409 = ISNULL(SUM(CASE bettype WHEN 409 THEN 1 ELSE 0 END),0)
-			,@betcount_413 = ISNULL(SUM(CASE bettype WHEN 413 THEN 1 ELSE 0 END),0)
-			,@betcount_501 = ISNULL(SUM(CASE bettype WHEN 501 THEN 1 ELSE 0 END),0)
-			
-			,@betcount_1201 = ISNULL(SUM(CASE bettype WHEN 1201 THEN 1 ELSE 0 END), 0)
-            ,@betcount_1203 = ISNULL(SUM(CASE bettype WHEN 1203 THEN 1 ELSE 0 END), 0)
-            ,@betcount_1204 = ISNULL(SUM(CASE bettype WHEN 1204 THEN 1 ELSE 0 END), 0)
-            ,@betcount_1205 = ISNULL(SUM(CASE bettype WHEN 1205 THEN 1 ELSE 0 END), 0)
-            ,@betcount_1206 = ISNULL(SUM(CASE bettype WHEN 1206 THEN 1 ELSE 0 END), 0)
-            ,@betcount_1224 = ISNULL(SUM(CASE bettype WHEN 1224 THEN 1 ELSE 0 END), 0)
-        FROM    bettrans WITH (NOLOCK)
-        WHERE    matchid = @matchid    
-				AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 THEN 0 ELSE 1 END
-                AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (194,195,196,197,198,199,206,208) THEN 0 
-                             ELSE 1 END                             
-    END
-
-    IF @Mode IN ('CAL-HT', 'CAL') AND @SportType NOT IN (180, 181, 182, 183, 184, 185, 186)
-    BEGIN
-        SELECT @betcount_7 = ISNULL(SUM(CASE bettype WHEN 7 THEN 1 ELSE 0 END), 0)
-            ,@betcount_8 = ISNULL(SUM(CASE bettype WHEN 8 THEN 1 ELSE 0 END), 0)
-            ,@betcount_12 = ISNULL(SUM(CASE bettype WHEN 12 THEN 1 ELSE 0 END), 0)
-            ,@betcount_15 = ISNULL(SUM(CASE bettype WHEN 15 THEN 1 ELSE 0 END), 0)
-            ,@betcount_21 = ISNULL(SUM(CASE bettype WHEN 21 THEN 1 ELSE 0 END), 0)
-            ,@betcount_30 = ISNULL(SUM(CASE bettype WHEN 30 THEN 1 ELSE 0 END), 0)
-            ,@betcount_125 = ISNULL(SUM(CASE bettype WHEN 125 THEN 1 ELSE 0 END), 0)
-            ,@betcount_126 = ISNULL(SUM(CASE bettype WHEN 126 THEN 1 ELSE 0 END), 0)
-            ,@betcount_129 = ISNULL(SUM(CASE bettype WHEN 129 THEN 1 ELSE 0 END), 0)
-            ,@betcount_136 = ISNULL(SUM(CASE bettype WHEN 136 THEN 1 ELSE 0 END), 0)
-            ,@betcount_138 = ISNULL(SUM(CASE bettype WHEN 138 THEN 1 ELSE 0 END), 0)
-            ,@betcount_143 = ISNULL(SUM(CASE bettype WHEN 143 THEN 1 ELSE 0 END), 0)
-            ,@betcount_151 = ISNULL(SUM(case bettype when 151 then 1 else 0 end), 0)
-
-            ,@betcount_165 = ISNULL(SUM(CASE bettype WHEN 165 THEN 1 ELSE 0 END),0)
-            ,@betcount_167 = ISNULL(SUM(CASE bettype WHEN 167 THEN 1 ELSE 0 END),0)
-            ,@betcount_179 = ISNULL(SUM(CASE bettype WHEN 179 THEN 1 ELSE 0 END),0)
-            ,@betcount_181 = ISNULL(SUM(CASE bettype WHEN 181 THEN 1 ELSE 0 END),0)
-            ,@betcount_182 = ISNULL(SUM(CASE bettype WHEN 182 THEN 1 ELSE 0 END),0)
-            ,@betcount_188 = ISNULL(SUM(CASE bettype WHEN 188 THEN 1 ELSE 0 END),0)
-            ,@betcount_191 = ISNULL(SUM(CASE bettype WHEN 191 THEN 1 ELSE 0 END),0)
-            ,@betcount_200 = ISNULL(SUM(CASE bettype WHEN 200 THEN 1 ELSE 0 END),0)
-            ,@betcount_201 = ISNULL(SUM(CASE bettype WHEN 201 THEN 1 ELSE 0 END),0)
-            ,@betcount_202 = ISNULL(SUM(CASE bettype WHEN 202 THEN 1 ELSE 0 END),0)
-            ,@betcount_203 = ISNULL(SUM(CASE bettype WHEN 203 THEN 1 ELSE 0 END),0)
-            ,@betcount_204 = ISNULL(SUM(CASE bettype WHEN 204 THEN 1 ELSE 0 END),0)
-            ,@betcount_205 = ISNULL(SUM(CASE bettype WHEN 205 THEN 1 ELSE 0 END),0)
-            ,@betcount_207 = ISNULL(SUM(CASE bettype WHEN 207 THEN 1 ELSE 0 END),0)
-            ,@betcount_209 = ISNULL(SUM(CASE bettype WHEN 209 THEN 1 ELSE 0 END),0)
-            ,@betcount_303 = ISNULL(SUM(CASE bettype WHEN 303 THEN 1 ELSE 0 END),0)
-            ,@betcount_304 = ISNULL(SUM(CASE bettype WHEN 304 THEN 1 ELSE 0 END),0)
-			,@betcount_403 = ISNULL(SUM(CASE bettype WHEN 403 THEN 1 ELSE 0 END),0)
-			,@betcount_404 = ISNULL(SUM(CASE bettype WHEN 404 THEN 1 ELSE 0 END),0)
-			,@betcount_410 = ISNULL(SUM(CASE bettype WHEN 410 THEN 1 ELSE 0 END),0)
-			,@betcount_411 = ISNULL(SUM(CASE bettype WHEN 411 THEN 1 ELSE 0 END),0)
-			,@betcount_412 = ISNULL(SUM(CASE bettype WHEN 412 THEN 1 ELSE 0 END),0)
-			,@betcount_414 = ISNULL(SUM(CASE bettype WHEN 414 THEN 1 ELSE 0 END),0)
-        FROM bettrans WITH (NOLOCK)
-        WHERE matchid = @matchid 
-                AND 1 = CASE WHEN @isExcludeCorner = 1 AND bettype IN (200,201,202,203,204,205,207,209) THEN 0 
-                             ELSE 1 END 
-    END
 	
 	--using this way to avoid more param @betcount
-	SELECT	@strBettypes = @strBettypes + ',' + CAST(bettype AS VARCHAR(10))
+	;WITH cteBettypes
+	AS(
+		SELECT Bettype
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	@mode IN ('CAL-HT', 'CAL') 
+				AND GroupId IN (1,5) -- HT + HT Corner
+				AND 1 = CASE
+							WHEN @isExcludeCorner = 1 AND GroupId = 5 THEN 0 -- exclude HT corner
+							ELSE 1
+						END
+		UNION ALL
+		SELECT Bettype
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	@mode IN ('CAL-FT', 'CAL') 
+				AND GroupId IN (2,6) -- FT, FT Corner
+				AND 1 = CASE
+							WHEN @isRefundHT = 1 AND Is3x30 = 1 AND GroupId = 2 THEN 0 -- If this match has been refund HT --> refund all bettypes related to 2nd result 
+							WHEN @isExcludeCorner = 1 AND GroupId = 6 THEN 0 -- exclude FT corner
+							WHEN @IsAutoCalculatePage = 1 AND BetType = 172 THEN 0 
+							ELSE 1
+						END
+				
+	)
+	SELECT	@strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
 	FROM	bettrans WITH(NOLOCK)
-			matchid = @matchid
-			AND bettype IN (SELECT	bettype 
-							FROM	dbo.f_GetGroupBettypes() 
-							WHERE	1 = CASE
-											WHEN @Action = 'CAL-HT' AND GroupId IN (1,4) THEN 1 
-											WHEN @Action = 'CAL-FT' AND GroupId = 10 THEN 1
-											WHEN @Action = 'CAL' AND GroupId IN (1,4,10) THEN 1
-											ELSE 0
-										END
-											
-						)
+	WHERE 	matchid = @matchid
+			AND bettype IN (SELECT bettype FROM cteBettypes)
 	GROUP BY bettype
-
-	SET @strBettypes = STUFF(@strBettypes,1,1,'')
-
-	SELECT	@str2ndBettypes = @str2ndBettypes + ',' + CAST(bettype AS VARCHAR(10))
-	FROM	bettrans WITH(NOLOCK)
-			matchid = @matchid
-			AND bettype IN (SELECT bettype FROM dbo.f_GetGroupBettypes() WHERE GroupId = 9) -- group bettypes related to 2nd result
-	GROUP BY bettype
-
-	SET @str2ndBettypes = STUFF(@str2ndBettypes,1,1,'')
-
+	
     -- call execrep SP
 	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
         ,@mode = @mode
@@ -604,127 +303,8 @@ BEGIN
         ,@htFCorner = @htFCorner
         ,@htLCorner = @htLCorner
         ,@isRefundHT = @isRefundHT      
-        ,@isExcludeCorner = @isExcludeCorner
-        ,@betcount_1 = @betcount_1
-        ,@betcount_2 = @betcount_2
-        ,@betcount_3 = @betcount_3
-        ,@betcount_4 = @betcount_4
-        ,@betcount_5 = @betcount_5
-        ,@betcount_6 = @betcount_6
-        ,@betcount_16 = @betcount_16
-        ,@betcount_20 = @betcount_20
-        ,@betcount_22 = @betcount_22
-        ,@betcount_13 = @betcount_13
-        ,@betcount_24 = @betcount_24
-        ,@betcount_25 = @betcount_25
-        ,@betcount_26 = @betcount_26
-        ,@betcount_27 = @betcount_27
-        ,@betcount_28 = @betcount_28
-        ,@betcount_124 = @betcount_124
-        ,@betcount_121 = @betcount_121
-        ,@betcount_122 = @betcount_122
-        ,@betcount_123 = @betcount_123
-        ,@betcount_128 = @betcount_128
-        ,@betcount_130 = @betcount_130
-        ,@betcount_131 = @betcount_131
-        ,@betcount_132 = @betcount_132
-        ,@betcount_133 = @betcount_133
-        ,@betcount_134 = @betcount_134
-        ,@betcount_137 = @betcount_137
-        ,@betcount_139 = @betcount_139
-        ,@betcount_140 = @betcount_140
-        ,@betcount_141 = @betcount_141
-        ,@betcount_142 = @betcount_142
-        ,@betcount_144 = @betcount_144
-        ,@betcount_145 = @betcount_145
-        ,@betcount_146 = @betcount_146
-        ,@betcount_147 = @betcount_147
-        ,@betcount_148 = @betcount_148
-        ,@betcount_149 = @betcount_149
-        ,@betcount_150 = @betcount_150
-        ,@betcount_152 = @betcount_152
-        ,@betcount_1201 = @betcount_1201
-        ,@betcount_1203 = @betcount_1203
-        ,@betcount_1204 = @betcount_1204
-        ,@betcount_1205 = @betcount_1205
-        ,@betcount_1206 = @betcount_1206
-        ,@betcount_1224 = @betcount_1224
-        ,@betcount_7 = @betcount_7
-        ,@betcount_8 = @betcount_8
-        ,@betcount_12 = @betcount_12
-        ,@betcount_15 = @betcount_15
-        ,@betcount_21 = @betcount_21
-        ,@betcount_30 = @betcount_30
-        ,@betcount_125 = @betcount_125
-        ,@betcount_126 = @betcount_126
-        ,@betcount_129 = @betcount_129                    
-        ,@betcount_136 = @betcount_136                
-        ,@betcount_138 = @betcount_138    
-        ,@betcount_143 = @betcount_143
-        ,@betcount_151 = @betcount_151
-        ,@betcount_157 = @betcount_157
-        ,@betcount_159 = @betcount_159
-        ,@betcount_161     = @betcount_161
-        ,@betcount_162     = @betcount_162
-        ,@betcount_163     = @betcount_163
-        ,@betcount_165     = @betcount_165
-        ,@betcount_166     = @betcount_166
-        ,@betcount_167     = @betcount_167
-        ,@betcount_170     = @betcount_170
-        ,@betcount_171     = @betcount_171
-        ,@betcount_172     = @betcount_172
-        ,@betcount_177     = @betcount_177
-        ,@betcount_178     = @betcount_178
-        ,@betcount_179     = @betcount_179
-        ,@betcount_181     = @betcount_181
-        ,@betcount_182     = @betcount_182
-        ,@betcount_183     = @betcount_183
-        ,@betcount_184     = @betcount_184
-        ,@betcount_185     = @betcount_185
-        ,@betcount_186     = @betcount_186
-        ,@betcount_187     = @betcount_187
-        ,@betcount_188     = @betcount_188
-        ,@betcount_189     = @betcount_189
-        ,@betcount_190     = @betcount_190
-        ,@betcount_191     = @betcount_191
-        ,@betcount_194     = @betcount_194
-        ,@betcount_195     = @betcount_195
-        ,@betcount_196     = @betcount_196
-        ,@betcount_197     = @betcount_197
-        ,@betcount_198     = @betcount_198
-        ,@betcount_199     = @betcount_199
-        ,@betcount_200     = @betcount_200
-        ,@betcount_201     = @betcount_201
-        ,@betcount_202     = @betcount_202
-        ,@betcount_203     = @betcount_203
-        ,@betcount_204     = @betcount_204
-        ,@betcount_205     = @betcount_205
-        ,@betcount_206     = @betcount_206
-        ,@betcount_207     = @betcount_207
-        ,@betcount_208     = @betcount_208
-        ,@betcount_209     = @betcount_209
-        ,@betcount_301     = @betcount_301
-        ,@betcount_302     = @betcount_302
-        ,@betcount_303     = @betcount_303
-        ,@betcount_304     = @betcount_304
-		,@betcount_401     = @betcount_401
-		,@betcount_402     = @betcount_402
-		,@betcount_403     = @betcount_403
-		,@betcount_404     = @betcount_404
-		,@betcount_405     = @betcount_405
-		,@betcount_406     = @betcount_406
-		,@betcount_407     = @betcount_407
-		,@betcount_408     = @betcount_408
-		,@betcount_409     = @betcount_409
-		,@betcount_410     = @betcount_410
-		,@betcount_411     = @betcount_411
-		,@betcount_412     = @betcount_412
-		,@betcount_413     = @betcount_413
-		,@betcount_414     = @betcount_414
-        ,@betcount_501     = @betcount_501
+        ,@isExcludeCorner = @isExcludeCorner  
 		,@strBettypes	   = @strBettypes
-		,@str2ndBettypes   = @str2ndBettypes
-					  
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 					   
         --Cricket: Charged Commision

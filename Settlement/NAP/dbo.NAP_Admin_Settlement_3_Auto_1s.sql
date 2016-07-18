@@ -10,33 +10,12 @@ AS
 	Original: 
 	
 	Revisions:
-
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 	Param's Explanation:
 */	
 BEGIN
 	SET NOCOUNT ON 
-	DECLARE	 @betCount_135			INT = 0
-			,@betCount_160			INT = 0 
-			,@betCount_164			INT = 0
-			,@betCount_168			INT = 0
-			,@betCount_169			INT = 0
-			,@betCount_173			INT = 0
-			,@betCount_174			INT = 0
-			,@betCount_175			INT = 0
-			,@betCount_176			INT = 0
-			,@betCount_192			INT = 0
-			,@betCount_193			INT = 0
-			,@betCount_180			INT = 0
-			,@betCount_210			INT = 0
-			,@betCount_211			INT = 0
-			,@betCount_212			INT = 0
-			,@betCount_213			INT = 0
-			,@betCount_214			INT = 0
-			,@betCount_215			INT = 0
-			,@betCount_216			INT = 0
-			,@betCount_217			INT = 0
-
-			,@penaltyshootout		VARCHAR(10)	=''
+	DECLARE	 @penaltyshootout		VARCHAR(10)	=''
 			,@matchDecidedMethod	VARCHAR(10)	=''
 			,@1st10Min1x2			VARCHAR(10)	=''
 			,@1stGoalTime10Min		VARCHAR(10)	=''
@@ -58,6 +37,10 @@ BEGIN
 			,@NextGoalTime15Min		VARCHAR(MAX)=''
 			,@ExtraNextGoal			VARCHAR(MAX)=''
 			,@GoalScorerAnytime		VARCHAR(MAX)=''
+			
+			,@FirstGoalMethod		VARCHAR(10) = ''
+
+			,@strBettypes			VARCHAR(MAX)
 
 	DECLARE	@tmpResourceIDs TABLE(
 		ResourceID	VARCHAR(20)
@@ -90,31 +73,10 @@ BEGIN
 			AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
 			AND SettlementStatusID = 4 
 
-	SELECT	 @betCount_135	= ISNULL(SUM(CASE WHEN bettype = 135 THEN 1 ELSE 0 END),0)
-			,@betCount_160	= ISNULL(SUM(CASE WHEN bettype = 160 THEN 1 ELSE 0 END),0)
-			,@betCount_164	= ISNULL(SUM(CASE WHEN bettype = 164 THEN 1 ELSE 0 END),0)
-			,@betCount_168	= ISNULL(SUM(CASE WHEN bettype = 168 THEN 1 ELSE 0 END),0)
-			,@betCount_169  = ISNULL(SUM(CASE WHEN bettype = 169 THEN 1 ELSE 0 END),0)
-			,@betCount_173	= ISNULL(SUM(CASE WHEN bettype = 173 THEN 1 ELSE 0 END),0)
-			,@betCount_174	= ISNULL(SUM(CASE WHEN bettype = 174 THEN 1 ELSE 0 END),0)
-			,@betCount_175  = ISNULL(SUM(CASE WHEN bettype = 175 THEN 1 ELSE 0 END),0)
-			,@betCount_176  = ISNULL(SUM(CASE WHEN bettype = 176 THEN 1 ELSE 0 END),0)
-			,@betCount_192  = ISNULL(SUM(CASE WHEN bettype = 192 THEN 1 ELSE 0 END),0)
-			,@betCount_193  = ISNULL(SUM(CASE WHEN bettype = 193 THEN 1 ELSE 0 END),0)
-			,@betCount_180  = ISNULL(SUM(CASE WHEN bettype = 180 THEN 1 ELSE 0 END),0)	
-			,@betCount_210	= ISNULL(SUM(CASE WHEN bettype = 210 THEN 1 ELSE 0 END),0)
-			,@betCount_211	= ISNULL(SUM(CASE WHEN bettype = 211 THEN 1 ELSE 0 END),0)
-			,@betCount_212	= ISNULL(SUM(CASE WHEN bettype = 212 THEN 1 ELSE 0 END),0)
-			,@betCount_213	= ISNULL(SUM(CASE WHEN bettype = 213 THEN 1 ELSE 0 END),0)
-			,@betCount_214	= ISNULL(SUM(CASE WHEN bettype = 214 THEN 1 ELSE 0 END),0)
-			,@betCount_215	= ISNULL(SUM(CASE WHEN bettype = 215 THEN 1 ELSE 0 END),0)
-			,@betCount_216	= ISNULL(SUM(CASE WHEN bettype = 216 THEN 1 ELSE 0 END),0)
-			,@betCount_217	= ISNULL(SUM(CASE WHEN bettype = 217 THEN 1 ELSE 0 END),0)
+	SELECT	 @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
 	FROM	dbo.Bettrans WITH (NOLOCK)
 	WHERE	MatchID = @MatchID 
-			AND( Bettype IN (135,160,164,168,169,173,174,175,176,180,192,193)
-					OR Bettype BETWEEN 210 AND 217 
-			)
+			AND Bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE groupId = 8)
 			AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
 			AND StatusID NOT BETWEEN 101 AND 102 
 
@@ -135,6 +97,7 @@ BEGIN
 			,@HTPlayerSentOffAway	= ISNULL(MAX(CASE WHEN ResourceID='215' THEN AwayValue ELSE '' END),'') --AwayValue
 
 			,@GoalScorerFirst		= ISNULL(MAX(CASE WHEN ResourceID='217' THEN HomeValue ELSE '' END),'')
+			,@FirstGoalMethod		= ISNULL(MAX(CASE WHEN ResourceID='424' THEN HomeValue ELSE '' END),'')
 	FROM	@tmpResultDetail
 	WHERE	MatchID = @MatchID 
 			AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
@@ -173,26 +136,8 @@ BEGIN
 				,@HTPlayerSentOffAway	= @HTPlayerSentOffAway
 				,@GoalScorerAnytime		= @GoalScorerAnytime
 				,@GoalScorerFirst		= @GoalScorerFirst
-				,@betCount_135			= @betCount_135
-				,@betCount_160			= @betCount_160
-				,@betCount_164			= @betCount_164
-				,@betCount_168			= @betCount_168
-				,@betCount_169			= @betCount_169
-				,@betCount_173			= @betCount_173
-				,@betCount_174			= @betCount_174
-				,@betCount_175			= @betCount_175
-				,@betCount_176			= @betCount_176
-				,@betCount_180			= @betCount_180
-				,@betCount_192			= @betCount_192
-				,@betCount_193			= @betCount_193
-				,@betCount_210			= @betCount_210
-				,@betCount_211			= @betCount_211
-				,@betCount_212			= @betCount_212
-				,@betCount_213			= @betCount_213
-				,@betCount_214			= @betCount_214
-				,@betCount_215			= @betCount_215
-				,@betCount_216			= @betCount_216
-				,@betCount_217			= @betCount_217
+				,@FirstGoalMethod		= @FirstGoalMethod
+				,@strBettypes			= @strBettypes
 				,@CalledByBrokerService = 0	
 
 END

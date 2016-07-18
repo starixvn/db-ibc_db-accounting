@@ -3,9 +3,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_24] @matchid INT
 	,@bettype SMALLINT
 	,@scorediff SMALLMONEY
-	,@isRefundHT BIT = 0
 	,@betcount INT = 0
-	,@str2ndBettypes VARCHAR(MAX) = NULL
 AS
 /*
 	Created by: Kathy
@@ -32,14 +30,6 @@ BEGIN
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 	
-	DECLARE @xml XML	
-	SET @xml = CONVERT(XML, REPLACE('<root><r t="' + @str2ndBettypes + '"/></root>', ',','"/><r t="'))
-			
-	DECLARE @tbl2ndBettypes TABLE (bettype SMALLINT PRIMARY KEY)
-	INSERT INTO @tbl2ndBettypes (bettype)
-	SELECT T.c.value('./@t','SMALLINT')
-	FROM @xml.nodes('/root/r') AS T(c)
-
 	UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 	SET @modds = CASE 
 			WHEN betteam = '1X' AND @scorediff >= 0 THEN 1
@@ -180,7 +170,6 @@ BEGIN
 	WHERE matchid = @matchid AND bettype = @bettype AND
 		--status NOT IN ('VOID', 'REJECT')
 		statusID NOT IN (101, 102)
-		AND 1 = CASE WHEN @bettype IN (SELECT bettype FROM @tbl2ndBettypes) and @isRefundHT = 1 THEN 0 ELSE 1 END
 END
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_24] TO [vnteam] AS [dbo]

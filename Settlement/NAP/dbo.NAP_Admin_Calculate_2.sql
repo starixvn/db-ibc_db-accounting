@@ -16,9 +16,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_2] @matchid INT
 	,@IsSettleAbandonedMatchIBC		BIT = 0
 	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
-	,@isRefundHT					BIT = 0
 	,@isExcludeCorner				BIT = 0 
-	,@str2ndBettypes				VARCHAR(MAX) = NULL
 	-- add any params, please modify script in 'special section'
 AS
 /*
@@ -48,14 +46,6 @@ BEGIN
 	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
-		
-	DECLARE @xml XML	
-	SET @xml = CONVERT(XML, REPLACE('<root><r t="' + @str2ndBettypes + '"/></root>', ',','"/><r t="'))
-			
-	DECLARE @tbl2ndBettypes TABLE (bettype SMALLINT PRIMARY KEY)
-	INSERT INTO @tbl2ndBettypes (bettype)
-	SELECT T.c.value('./@t','SMALLINT')
-	FROM @xml.nodes('/root/r') AS T(c)
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB231','DB215')
 	BEGIN
@@ -265,7 +255,6 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END 
-				AND 1 = CASE WHEN @bettype IN (SELECT bettype FROM @tbl2ndBettypes) and @isRefundHT = 1 THEN 0 ELSE 1 END
 				AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (194,203) THEN 0 ELSE 1 END 
 				AND statusID NOT IN (101, 102)
 				AND 1 = CASE 
@@ -469,7 +458,6 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END
-			AND 1 = CASE WHEN @bettype IN (SELECT bettype FROM @tbl2ndBettypes) and @isRefundHT = 1 THEN 0 ELSE 1 END
 			AND 1 = CASE WHEN @isExcludeCorner = 1 AND  @bettype IN (194,203) THEN 0 ELSE 1 END 
 	END
 END

@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundHT]    Script Date: 10/30/2015 08:33:38 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundHT]    Script Date: 07/15/2016 09:32:27 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -9,7 +9,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundHT] @matchid INT
     ,@IsExcludeBetdaq BIT = 0
     ,@IsExcludeBetfair BIT = 0
-    ,@strBettypes VARCHAR(MAX) = ''
+    ,@strBettypes VARCHAR(MAX) = NULL
 AS
 /*    Created by: Kathy
     Date: 20140213
@@ -66,8 +66,7 @@ BEGIN
             ,scomm = 0
         WHERE matchid = @matchid
             --AND [status] not in (N'Void', N'Reject')
-            AND statusID NOT IN (103, 101, 102)         
-            AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)    
+            AND statusID NOT IN (103, 101, 102)          
             AND bettype IN (SELECT bettype FROM @tblBettypes)
             AND 1 = CASE 
                         WHEN @IsExcludeBetdaq = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 0
@@ -79,6 +78,7 @@ BEGIN
             BREAK
     END
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundHT] TO [bodbAdminNet] AS [dbo]
 GO

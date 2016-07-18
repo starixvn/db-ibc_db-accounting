@@ -1,9 +1,7 @@
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_5] @matchid INT
 	,@bettype SMALLINT
 	,@whowin SMALLMONEY
-	,@isRefundHT BIT = 0
 	,@betcount INT = 0
-	,@str2ndBettypes VARCHAR(MAX) = NULL
 AS
 /*
 	Created by: Kathy
@@ -29,14 +27,6 @@ BEGIN
 	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
-	
-	DECLARE @xml XML	
-	SET @xml = CONVERT(XML, REPLACE('<root><r t="' + @str2ndBettypes + '"/></root>', ',','"/><r t="'))
-			
-	DECLARE @tbl2ndBettypes TABLE (bettype SMALLINT PRIMARY KEY)
-	INSERT INTO @tbl2ndBettypes (bettype)
-	SELECT T.c.value('./@t','SMALLINT')
-	FROM @xml.nodes('/root/r') AS T(c)
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
 	BEGIN
@@ -153,7 +143,6 @@ BEGIN
 				matchid=@matchid AND
 				bettype=@bettype AND
 				statusID NOT IN (101,102)
-				AND 1 = CASE WHEN @bettype IN (SELECT bettype FROM @tbl2ndBettypes) and @isRefundHT = 1 THEN 0 ELSE 1 END
 
 			IF @affectedagents <> 100
 				BREAK
@@ -326,7 +315,6 @@ BEGIN
 				AND b.custid >= @MinCustId
 				AND bettype = @bettype 
 				AND statusID NOT IN (101, 102)
-				AND 1 = CASE WHEN @bettype IN (SELECT bettype FROM @tbl2ndBettypes) and @isRefundHT = 1 THEN 0 ELSE 1 END
 			OPTION (FORCE ORDER)
 			--PRINT @@ROWCOUNT
 
