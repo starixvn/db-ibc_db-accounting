@@ -243,7 +243,7 @@ BEGIN
 				AND 1 = CASE
 							WHEN @isRefundHT = 1 AND Is3x30 = 1 AND GroupId = 2 THEN 0 -- If this match has been refund HT --> refund all bettypes related to 2nd result 
 							WHEN @isExcludeCorner = 1 AND GroupId = 6 THEN 0 -- exclude FT corner
-							WHEN @IsAutoCalculatePage = 1 AND BetType = 172 THEN 0 
+							WHEN @IsAutoCalculatePage = 1 AND IsUsedGoalRecordValue = 1 THEN 0
 							ELSE 1
 						END
 				

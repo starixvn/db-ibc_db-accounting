@@ -9,6 +9,7 @@ AS
 	Original: 
 	
 	Revisions:
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 
 	Param's Explanation:
 */
@@ -26,7 +27,7 @@ BEGIN
 	IF EXISTS (
 				SELECT 1
 				FROM bettrans WITH (NOLOCK)
-				WHERE	Bettype = 216 
+				WHERE	Bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8 AND IsDetermined = 1)
 						AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
 						AND ruben = 0 
 						--AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
@@ -55,13 +56,14 @@ BEGIN
 					WHEN bettype = 215 THEN '215'
 					WHEN bettype = 216 THEN '216'
 					WHEN bettype = 217 THEN '217'
+					WHEN bettype = 426 THEN '426'
 					ELSE 0 END AS ResourceID
 			,SUM(CASE	WHEN StatusID BETWEEN 101 AND 102 THEN 0
 						ELSE 1 END)
 			,SUM(CASE	WHEN StatusID = 0 THEN 1 
 						ELSE 0 END)
 	FROM	dbo.Bettrans WITH (NOLOCK)
-	WHERE	bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
+	WHERE	bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
 			AND matchID = @MatchID 
 	GROUP BY CASE	WHEN bettype = 135 THEN '135'
 					WHEN bettype = 160 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
@@ -83,6 +85,7 @@ BEGIN
 					WHEN bettype = 215 THEN '215'
 					WHEN bettype = 216 THEN '216'
 					WHEN bettype = 217 THEN '217'
+					WHEN bettype = 426 THEN '426'
 					ELSE 0 END
 
 
@@ -120,7 +123,7 @@ BEGIN
 						,r.SettlementStatusID
 				FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) 
 				WHERE	r.MatchID = @MatchID
-							AND( r.ResourceID IN ('135','168','192','193','217')
+							AND( r.ResourceID IN ('135','168','192','193','217','426')
 									OR r.ResourceID LIKE '17[3-6]'
 									OR r.ResourceID LIKE '21[0-5]'
 									OR r.ResourceID LIKE '160__'

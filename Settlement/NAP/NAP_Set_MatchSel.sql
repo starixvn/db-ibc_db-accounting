@@ -24,6 +24,7 @@ AS
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160805@Kathy: Write log duration
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
       
  Param explanation:  
 	@MatchCode: match code
@@ -342,7 +343,7 @@ BEGIN
 	FROM	ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
-			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217')
+			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217','426')
 					OR ResourceID LIKE '160__'
 					OR ResourceID LIKE '164__'
 					OR ResourceID LIKE '169__'
