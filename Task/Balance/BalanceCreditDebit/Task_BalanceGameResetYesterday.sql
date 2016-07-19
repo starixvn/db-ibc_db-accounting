@@ -14,6 +14,7 @@ AS
 			- 20150910@Patrick: Re-arrange code to reduce time & CPU cost
 			- 20160201@Elodie: Apply new rule for auto reset of OneRNG 
 			- 20160204@Elodie: Add WinLossLimit setting type for DCS [Redmine: #49606]
+			- 20160718@Elodie: Reset data from yesterday backward [Redmine: #60993]
 
 		Parameters Explanation:	
 */
@@ -55,7 +56,7 @@ BEGIN
 	DELETE TOP (50000) bal
 	FROM dbo.BalanceCreditGame bal WITH (ROWLOCK)
 		LEFT JOIN #WeeklyResetCustomer t ON bal.CustId = t.CustId
-	WHERE winlostdate = @Yesterday AND bettype = @bettype
+	WHERE winlostdate <= @Yesterday AND bettype = @bettype
 		 AND t.CustId IS NULL
 	OPTION (MAXDOP 4)
 		
@@ -70,7 +71,7 @@ BEGIN
 	DELETE TOP (50000) bal
 	FROM dbo.BalanceDebitGame bal WITH (ROWLOCK)
 		LEFT JOIN #WeeklyResetCustomer t ON bal.CustId = t.CustId
-	WHERE winlostdate = @Yesterday AND bettype = @bettype
+	WHERE winlostdate <= @Yesterday AND bettype = @bettype
 		 AND t.CustId IS NULL
 	OPTION (MAXDOP 4)
 		
@@ -93,15 +94,17 @@ BEGIN
 END
 
 --remove deposit account
-IF EXISTS (SELECT TOP 1 1 FROM dbo.BalanceCreditGame bal WITH(NOLOCK)
-				INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype AND winlostdate = @Yesterday
+IF EXISTS (	SELECT TOP 1 1 FROM dbo.BalanceCreditGame bal WITH(NOLOCK)
+				INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype 
+			WHERE winlostdate <= @Yesterday
 		)
 BEGIN
 	WHILE 1 = 1
 	BEGIN
 		DELETE TOP (50000) bal
 		FROM dbo.BalanceCreditGame bal WITH (ROWLOCK)
-			INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype AND winlostdate = @Yesterday
+			INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype 
+		WHERE winlostdate <= @Yesterday
 		
 		IF @@ROWCOUNT < 50000
 			BREAK
@@ -110,15 +113,17 @@ BEGIN
 	END
 END
 
-IF EXISTS (SELECT TOP 1 1 FROM dbo.BalanceDebitGame bal WITH(NOLOCK)
-				INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype AND winlostdate = @Yesterday
+IF EXISTS (	SELECT TOP 1 1 FROM dbo.BalanceDebitGame bal WITH(NOLOCK)
+				INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype 
+			WHERE winlostdate <= @Yesterday
 		)
 BEGIN
 	WHILE 1 = 1
 	BEGIN
 		DELETE TOP (50000) bal
 		FROM dbo.BalanceDebitGame bal WITH (ROWLOCK)
-			INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype AND winlostdate = @Yesterday
+			INNER JOIN #WeeklyResetCustomer t ON bal.CustId = t.custid AND bal.bettype = @bettype 
+		WHERE winlostdate <= @Yesterday
 		
 		IF @@ROWCOUNT < 50000
 			BREAK
