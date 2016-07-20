@@ -13,7 +13,8 @@ AS
 		- 20130225@Elodie: Add Virtual Horse Racing report
 		- 20141211@Sophia: change the range of bettypes of Tennis (1301 -> 1399)
 		- 20150420@Sophia: Apply Sport Bettype Matrix 
-		- 20150724@Sophia: Exclude data of Bettrade [#38815] 
+		- 20150724@Sophia: Exclude data of Bettrade [#38815]
+		- 20160427@Percy: Support ComboParlay [Redmine: #56572]
 
 	Param's explanation:		
 	
@@ -22,13 +23,15 @@ BEGIN
 	SET NOCOUNT ON 	
  
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT, EventType INT, SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
+	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
+	
 	DELETE	@SportBettype  
 	WHERE	SubProduct IN ( 'BT-Sold','BT-Bought','BT-Comm') 
-
 
 	CREATE TABLE #tmp(transid BIGINT)
     --insert into #tmp
@@ -80,6 +83,21 @@ BEGIN
 			convert(NVARCHAR(50), RacerNum) matchcode,
 			'VSOutright' as type
 	FROM bodb02.dbo.VSOutright with (NOLOCK) where eventdate = @winlostdate
+
+	-- Support Mix Parlay, System Parlay
+	UNION ALL
+	SELECT 9 as matchid,
+		   0 as homeid,
+		   0 as awayid,
+		   '' as matchcode,
+		   'match' as type
+
+	UNION ALL
+	SELECT 29 as matchid,
+		   0 as homeid,
+		   0 as awayid,
+		   '' as matchcode,
+		   'match' as type
 		
 	--Check ticket of sport book, racing, numbergame, virtual sports but Casino, P2P, Live CS, Bingo	
 	select  bt.transid, 

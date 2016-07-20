@@ -14,7 +14,8 @@ as
 		- 20130225@Elodie: Add Virtual Horse Racing report
 		- 20141211@Sophia: change the range of bettypes of Tennis (1301 -> 1399)
 		- 20141224@Dom: Apply Sport Bettype Matrix 
-		- 20150724@Sophia: Exclude data of Bettrade [#38815] 
+		- 20150724@Sophia: Exclude data of Bettrade [#38815]
+		- 20160427@Percy: Support ComboParlay [Redmine: #56572]
 
 	Param's explanation:
 		- SQL execution: exec Acc_Rpt_CheckBet @winlostdate='Aug  13 2012 12:00:00:000AM'
@@ -23,15 +24,17 @@ as
 Begin
 	SET NOCOUNT ON 	
 	 
-		----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
+	----Get Sport Bettype Matrix------
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT, EventType INT, SubProduct VARCHAR(500))
+	INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
+	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
+	
 	DELETE	@SportBettype  
 	WHERE	SubProduct IN ( 'BT-Sold','BT-Bought','BT-Comm') 
 	
-
 	declare @CheckNormalBet int, @CheckRejectBet int
 	
 	select @CheckNormalBet = count(1)
