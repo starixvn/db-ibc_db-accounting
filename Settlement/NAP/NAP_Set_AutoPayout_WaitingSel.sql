@@ -143,8 +143,13 @@ BEGIN
 			, SUM(CASE WHEN f.GroupId = 3 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
 			, SUM(CASE WHEN f.GroupId = 6 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningCorner
 			, SUM(CASE WHEN f.GroupId = 5 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTCorner
+			, SUM(CASE WHEN f.GroupId = 1 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordHT
+			, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordFT
 		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON GroupId IN (3, 4, 5, 6) AND b.bettype = f.BetType
+			INNER JOIN (
+				SELECT GroupId, IsUsedGoalRecordValue, BetType
+				FROM dbo.f_Set_GetGroupBettypes() f WHERE GroupId IN (1, 2, 3, 4, 5, 6)
+			)f ON b.bettype = f.BetType
 		WHERE EXISTS (SELECT TOP 1 1 FROM #MatchInQueue t WHERE b.matchid = t.matchid AND t.IsInQueue = 1)
 			--AND bettype IN (14, 127, 172, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209)
 			AND StatusId NOT IN (101, 102, 103)
@@ -155,8 +160,13 @@ BEGIN
 			, SUM(CASE WHEN f.GroupId = 3 THEN 1 ELSE 0 END) AS IsExistHTFGLG
 			, SUM(CASE WHEN f.GroupId = 4 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
 			, SUM(CASE WHEN f.GroupId = 3 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+			, SUM(CASE WHEN f.GroupId = 1 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordHT
+			, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordFT
 		FROM dbo.bettransm b WITH(NOLOCK)
-			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON GroupId IN (3, 4) AND b.bettype = f.BetType
+			INNER JOIN (
+				SELECT GroupId, IsUsedGoalRecordValue, BetType
+				FROM dbo.f_Set_GetGroupBettypes() f WHERE GroupId IN (1, 2, 3, 4)
+			)f ON b.bettype = f.BetType
 		WHERE EXISTS (SELECT TOP 1 1 FROM #MatchInQueue t WHERE b.matchid = t.matchid AND t.IsInQueue = 1)
 			--AND bettype IN (14, 127)--FGLG
 			AND StatusId NOT IN (101, 102, 103)
@@ -205,10 +215,12 @@ BEGIN
 		, CASE WHEN t.HTStatus IS NOT NULL AND t.HTStatus = 1 
 					AND t.FTStatus IS NOT NULL AND t.FTStatus IN (0, 1)
 					AND t.IsHTCal = 1 
-					AND (ISNULL(b.IsExistRunningHTFGLG, 0) > 0 OR ISNULL(bm.IsExistRunningHTFGLG, 0) > 0) THEN 1 --can calc HT FGLG
+					AND (ISNULL(b.IsExistRunningHTFGLG, 0) > 0 OR ISNULL(bm.IsExistRunningHTFGLG, 0) > 0
+						OR ISNULL(b.IsEnabledGoalRecordHT, 0) > 1 OR ISNULL(bm.IsEnabledGoalRecordHT, 0) > 1) THEN 1 --can calc HT FGLG
 				WHEN t.FTStatus IS NOT NULL AND t.FTStatus = 1
 					AND t.IsHTCal = 1
-					AND (ISNULL(b.IsExistRunningFGLG, 0) > 0  OR ISNULL(bm.IsExistRunningFGLG, 0) > 0) THEN 1 --can calc FT FGLG
+					AND (ISNULL(b.IsExistRunningFGLG, 0) > 0  OR ISNULL(bm.IsExistRunningFGLG, 0) > 0
+						OR ISNULL(b.IsEnabledGoalRecordFT, 0) > 1 OR ISNULL(bm.IsEnabledGoalRecordFT, 0) > 1) THEN 1 --can calc FT FGLG
 			ELSE 0 END AS IsNeedToCalculateFGLG
 		, CASE WHEN t.HTStatus IS NOT NULL AND t.HTStatus = 1
 					AND t.FTStatus IS NOT NULL AND t.FTStatus IN (0, 1)
@@ -218,11 +230,13 @@ BEGIN
 					AND t.IsHTCal = 1
 					AND ISNULL(b.IsExistRunningCorner, 0) > 0 THEN 1 --can calc FT Corner
 			ELSE 0 END AS IsNeedToCalculateCorner
-		, CASE t.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custInfo ci (NOLOCK) WHERE ci.custid = t.ConfirmHT ) END suspenderHalfTime 
-		, CASE t.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custInfo ci (NOLOCK) WHERE ci.custid = t.ConfirmFT ) END suspenderFullTime
+		, CASE t.ConfirmHT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custInfo ci (NOLOCK) WHERE ci.custid = t.ConfirmHT) END suspenderHalfTime 
+		, CASE t.ConfirmFT WHEN 0 THEN '' ELSE (SELECT username FROM CustDB.dbo.custInfo ci (NOLOCK) WHERE ci.custid = t.ConfirmFT) END suspenderFullTime
 		, CASE WHEN t.IsAutoPayout IS NULL THEN ISNULL(t.IsAutoPayout_League, 0)
 					 WHEN t.IsAutoPayout = 1 THEN 1
 				ELSE 0 END AS IsAutoPayout
+		, CASE WHEN ISNULL(b.IsEnabledGoalRecordHT, 0) > 1 OR ISNULL(bm.IsEnabledGoalRecordHT, 0) > 1 THEN 1 ELSE 0 END IsEnabledGoalRecordHT
+		, CASE WHEN ISNULL(b.IsEnabledGoalRecordFT, 0) > 1 OR ISNULL(bm.IsEnabledGoalRecordFT, 0) > 1 THEN 1 ELSE 0 END IsEnabledGoalRecordFT
 	FROM #MatchInQueue tm
 		INNER JOIN #MatchData t ON tm.MatchId = t.matchid
 		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON tm.matchID = a.MatchID

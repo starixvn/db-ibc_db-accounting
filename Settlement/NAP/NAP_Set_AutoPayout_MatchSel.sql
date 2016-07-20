@@ -118,7 +118,9 @@ BEGIN
 		, IsNeedToCalculateCorner BIT
 		, IsAutoPayoutForLeague BIT
 		--, IsExistRunningResultandFirstTeamScore BIT
-		, BetCount INT)
+		, BetCount INT
+		, IsEnabledGoalRecordHT BIT
+		, IsEnabledGoalRecordFT BIT)
 	
 	INSERT INTO #matchList
 	SELECT m.hthomescore
@@ -181,6 +183,8 @@ BEGIN
 		, ISNULL(l.IsAutoPayout, 0) AS IsAutoPayoutForLeague
 		--, 0 AS IsExistRunningResultandFirstTeamScore
 		, 0 AS BetCount
+		, 0 AS IsEnabledGoalRecordHT
+		, 0 AS IsEnabledGoalRecordFT
 	FROM dbo.match m WITH (NOLOCK)
 		INNER JOIN dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
 		INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
@@ -238,6 +242,8 @@ BEGIN
 			, SUM(CASE WHEN f.GroupId = 3 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
 			, SUM(CASE WHEN f.GroupId = 6 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningCorner
 			, SUM(CASE WHEN f.GroupId = 5 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTCorner
+			, SUM(CASE WHEN f.GroupId = 1 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordHT
+			, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordFT
 		FROM DBTXN.bodb02.dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON b.bettype = f.BetType
 		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList m WHERE b.matchid = m.matchid)
@@ -260,6 +266,8 @@ BEGIN
 		--, IsExistRunningResultandFirstTeamScore = CASE WHEN tt.IsExistRunningResultandFirstTeamScore > 0 THEN 1 ELSE 0 END
 		, IsExistRunningCorner = CASE WHEN tt.IsExistRunningCorner > 0 THEN 1 ELSE 0 END
 		, IsExistRunningHTCorner = CASE WHEN tt.IsExistRunningHTCorner > 0 THEN 1 ELSE 0 END
+		, IsEnabledGoalRecordHT = CASE WHEN tt.IsEnabledGoalRecordHT > 0 THEN 1 ELSE 0 END
+		, IsEnabledGoalRecordFT = CASE WHEN tt.IsEnabledGoalRecordFT > 0 THEN 1 ELSE 0 END
 		, BetCount = tt.BetCount
 	FROM #matchList t
 		INNER JOIN BetStatus tt ON t.matchid = tt.matchid
@@ -275,8 +283,10 @@ BEGIN
 			, SUM(CASE WHEN f.GroupId = 3 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistHTFGLG
 			, SUM(CASE WHEN f.GroupId = 4 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
 			, SUM(CASE WHEN f.GroupId = 3 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+			, SUM(CASE WHEN f.GroupId = 1 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordHT
+			, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordFT
 		FROM DBTXN.bodb02.dbo.bettransm bm WITH(NOLOCK)
-			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON GroupId IN (3, 4) AND bm.bettype = f.BetType
+			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON GroupId IN (1, 2, 3, 4) AND bm.bettype = f.BetType
 		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList m WHERE bm.matchid = m.matchid)
 			--AND bettype IN (14, 127)--FGLG
 			--AND StatusId NOT IN (101, 102, 103)
@@ -288,6 +298,8 @@ BEGIN
 		, IsExistHTFGLG = CASE WHEN t.IsExistHTFGLG = 1 OR tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
 		, IsExistRunningFGLG = CASE WHEN t.IsExistRunningFGLG = 1 OR tt.IsExistRunningFGLG > 0 THEN 1 ELSE 0 END
 		, IsExistRunningHTFGLG = CASE WHEN t.IsExistRunningHTFGLG = 1 OR tt.IsExistRunningHTFGLG > 0 THEN 1 ELSE 0 END
+		, IsEnabledGoalRecordHT = CASE WHEN tt.IsEnabledGoalRecordHT > 0 THEN 1 ELSE 0 END
+		, IsEnabledGoalRecordFT = CASE WHEN tt.IsEnabledGoalRecordFT > 0 THEN 1 ELSE 0 END
 	FROM #matchList t
 		INNER JOIN BetStatusM tt ON t.matchid = tt.matchid
 
@@ -365,10 +377,10 @@ BEGIN
 	SET IsNeedToCalculateFGLG = CASE WHEN rs.HTStatus = 1 
 										AND t.IsHalfTimeCal = 1 
 										AND rs.FTStatus IN (0, 1) 
-										AND t.IsExistRunningHTFGLG = 1 THEN 1 --can calc HT FGLG
+										AND (t.IsExistRunningHTFGLG = 1 OR t.IsEnabledGoalRecordHT = 0) THEN 1 --can calc HT FGLG
 									WHEN rs.FTStatus = 1
 										AND t.IsHalfTimeCal = 1
-										AND (t.IsExistRunningFGLG = 1) THEN 1 --can calc FT FGLG
+										AND (t.IsExistRunningFGLG = 1 OR t.IsEnabledGoalRecordFT = 0) THEN 1 --can calc FT FGLG
 								ELSE 0 END
 		, IsNeedToCalculateCorner = CASE WHEN rs.HTStatus = 1
 										AND t.IsHalfTimeCal = 1
@@ -424,6 +436,8 @@ BEGIN
 		, IsNeedToCalculateFGLG
 		, IsNeedToCalculateCorner
 		, IsAutoPayoutForLeague
+		, IsEnabledGoalRecordHT
+		, IsEnabledGoalRecordFT
 	FROM #matchList m
 		LEFT JOIN #tempmatch t ON t.matchid = m.matchid
 		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID
