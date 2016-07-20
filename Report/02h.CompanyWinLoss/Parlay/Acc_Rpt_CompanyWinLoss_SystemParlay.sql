@@ -20,7 +20,9 @@ DB: DBACC/bodb02
 
 Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
-- 20160720@Sophia: Revise Sp
+- 20160720@Sophia: . Revise SP
+				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay] @EndDate='2020-01-01',@StartDate='2016-01-01', @Site= 'ALL'
 
@@ -73,7 +75,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay] @EndDate='2020-01-01',@StartDate='201
 					   SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
 					   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
 				FROM bettrans b WITH (NOLOCK)
-				WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+				WHERE b.winlostdate = @StartDate
 					  AND BetType = 29
 					  AND ruben = 1
 					  AND statusID NOT IN(101, 102, 103, 121)
@@ -112,7 +114,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay] @EndDate='2020-01-01',@StartDate='201
 					   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
 				FROM bettrans b WITH (NOLOCK)
 				 INNER JOIN #DepositSuper dep ON b.srecommend = dep.custid
-				WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+				WHERE b.winlostdate = @StartDate
 					  AND BetType = 29
 					  AND ruben = 1
 					  AND statusID NOT IN(101, 102, 103, 121)
@@ -150,7 +152,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay] @EndDate='2020-01-01',@StartDate='201
 					   SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
 					   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
 				FROM bettrans b WITH (NOLOCK)
-				WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+				WHERE b.winlostdate = @StartDate
 					  AND BetType = 29
 					  AND ruben = 1
 					  AND statusID NOT IN(101, 102, 103, 121)
