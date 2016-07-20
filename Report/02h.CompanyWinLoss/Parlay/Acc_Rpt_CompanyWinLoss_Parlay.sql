@@ -25,21 +25,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay] @EndDate='2020-01-01',@StartDate='2016-01-0
 */
 
      SET NOCOUNT ON;
-     BEGIN -- #DepositAgent
-         CREATE TABLE #DepositAgent(custid INT PRIMARY KEY);
-         INSERT INTO #DepositAgent
-                SELECT c.CustId
-                FROM customer AS c WITH (NOLOCK)
-                WHERE c.RoleID = 2
-                      AND EXISTS
-                (
-                    SELECT 1
-                    FROM f_DepSuper_1('All') dep
-                    WHERE c.srecommend = dep.CustId
-                )
-                AND CustId <> 5707545
-                UNION
-                SELECT 5707545; --BARM
+     BEGIN -- #DepositSuper
+         CREATE TABLE #DepositSuper
+         (CustId INT PRIMARY KEY
+         );
+         INSERT INTO #DepositSuper
+			SELECT CustId
+			FROM f_DepSuper_1('All');
      END;
      BEGIN -- #Data
 
@@ -77,7 +69,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay] @EndDate='2020-01-01',@StartDate='2016-01-0
                        SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
                 FROM bettrans b WITH (NOLOCK)
-                     LEFT JOIN #DepositAgent dep ON b.recommend = dep.custid
+                     LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND BetType IN(9, 29)
                      AND b.ruben = 1
@@ -112,7 +104,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay] @EndDate='2020-01-01',@StartDate='2016-01-0
                   RowName;
      END;
      DROP TABLE #Data;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #DepositSuper;
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Parlay] TO [bodbAdminNet];
 GO

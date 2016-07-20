@@ -83,7 +83,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_BetType_14] @EndDate='2020-01-01',@Sta
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
                 FROM bettrans14 AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositSuper AS dep ON b.recommend = dep.CustId
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)

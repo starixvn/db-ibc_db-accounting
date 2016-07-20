@@ -194,14 +194,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_BetType_14] @StartDate='2016-01-01', @EndDat
                             THEN stake * (1 - tpositiontaking - ISNULL(oddsspread, 0))
                             ELSE 0
                         END) AS TOPhum
-             FROM bettransm14 WITH (nolock)
+             FROM bettransm14 bm WITH (nolock)
+			 INNER JOIN #SportBetType AS sb ON sb.BetType = bm.BetType
              GROUP BY refno
          ) AS bm ON b.transid = bm.refno
               LEFT JOIN
          (
              SELECT CustId
              FROM #DepositSuper
-         ) AS dep ON b.recommend = dep.CustId
+         ) AS dep ON b.srecommend = dep.CustId
          WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                AND b.MatchId > 0
                AND b.ruben = 1

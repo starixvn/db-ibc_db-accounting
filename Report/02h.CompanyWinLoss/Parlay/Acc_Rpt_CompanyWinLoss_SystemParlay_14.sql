@@ -20,56 +20,22 @@ DB: DBACC/bodb02
 
 Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
+- 20160720@Sophia: Revise Sp
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='2016-01-01', @Site= 'ALL'
 
 */
 
      SET NOCOUNT ON;
-     BEGIN -- #DepositAgent
+     BEGIN -- #DepositSuper
 
-         CREATE TABLE #DepositAgent
-         (CustId INT PRIMARY KEY,
-          Site   NVARCHAR(50)
+         CREATE TABLE #DepositSuper
+         (CustId INT PRIMARY KEY		  
          );
-         IF @Site = 'Deposit'
-            OR @Site = 'ALL'
-             BEGIN
-                 INSERT INTO #DepositAgent
-                        SELECT c.CustId,
-                               Site
-                        FROM customer AS c WITH (NOLOCK)
-                        WHERE c.RoleID = 2
-                              AND c.CustId NOT IN(52466, 5707545)
-                        AND EXISTS
-                        (
-                            SELECT 1
-                            FROM f_DepSuper_1('All') dep
-                            WHERE c.srecommend = dep.CustId
-                        )
-                        UNION
-                        SELECT 5707545,
-                               'BEST-ODDS'; --BARM
-             END;
-         IF @Site = 'Credit'
-            OR @Site = 'ALL'
-             BEGIN
-                 INSERT INTO #DepositAgent
-                        SELECT c.CustId,
-                               Site
-                        FROM customer AS c WITH (NOLOCK)
-                        WHERE c.RoleID = 2
-                              AND c.CustId NOT IN(52466, 5707545)
-                        AND NOT EXISTS
-                        (
-                            SELECT 1
-                            FROM f_DepSuper_1('All') dep
-                            WHERE c.srecommend = dep.CustId
-                        )
-                        UNION
-                        SELECT 52466,
-                               'XYZBET';--8RM;
-             END;
+         INSERT INTO #DepositSuper
+			SELECT CustId
+			FROM f_DepSuper_1('All');
+			
      END;
      BEGIN -- #Data
 
@@ -85,82 +51,126 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
           VirtualTurnover MONEY
          );
      END;
-     IF @Site = 'ALL'
-         BEGIN
-             INSERT INTO #Data
-                    SELECT CASE liveawayscore
-                               WHEN 1
-                               THEN 'Soccer Sport Total'
-                               WHEN 2
-                               THEN 'Others Sport Total'
-                               WHEN 3
-                               THEN 'Multi Sport Total'
-                               ELSE ''
-                           END AS GroupName,
-                           'System Parlay('+status+')' AS RowName,
-                           SUM((winlost - actual_stake) * virtualrate) MemberWinLost,
-                           SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                           SUM(scomm * actualrate) Commission,
-                           SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                           SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
-                           SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
-                    FROM bettrans14 b WITH (NOLOCK)
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND BetType = 29
-                          AND ruben = 1
-                          AND statusID NOT IN(101, 102, 103, 121)
-                    GROUP BY 'System Parlay('+status+')',
-                             CASE liveawayscore
-                                 WHEN 1
-                                 THEN 'Soccer Sport Total'
-                                 WHEN 2
-                                 THEN 'Others Sport Total'
-                                 WHEN 3
-                                 THEN 'Multi Sport Total'
-                                 ELSE ''
-                             END;
-         END;
-     ELSE
-         BEGIN -- Query
-             INSERT INTO #Data
-                    SELECT CASE liveawayscore
-                               WHEN 1
-                               THEN 'Soccer Sport Total'
-                               WHEN 2
-                               THEN 'Others Sport Total'
-                               WHEN 3
-                               THEN 'Multi Sport Total'
-                               ELSE ''
-                           END AS GroupName,
-                           'System Parlay('+status+')' AS RowName,
-                           SUM((winlost - actual_stake) * virtualrate) MemberWinLost,
-                           SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                           SUM(scomm * actualrate) Commission,
-                           SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
-                           SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
-                           SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
-                           SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
-                    FROM bettrans14 b WITH (NOLOCK)
-                         INNER JOIN #DepositAgent dep ON b.recommend = dep.custid
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                          AND BetType = 29
-                          AND b.ruben = 1
-                          AND statusID NOT IN(101, 102, 103, 121)
-                    GROUP BY 'System Parlay('+status+')',
-                             CASE liveawayscore
-                                 WHEN 1
-                                 THEN 'Soccer Sport Total'
-                                 WHEN 2
-                                 THEN 'Others Sport Total'
-                                 WHEN 3
-                                 THEN 'Multi Sport Total'
-                                 ELSE ''
-                             END;
-         END;
+   
+    IF @Site= 'ALL' 
+    BEGIN
+			INSERT INTO #Data
+				SELECT CASE liveawayscore
+						   WHEN 1
+						   THEN 'Soccer Sport Total'
+						   WHEN 2
+						   THEN 'Others Sport Total'
+						   WHEN 3
+						   THEN 'Multi Sport Total'
+						   ELSE ''
+					   END AS GroupName,
+					   'System Parlay('+status+')' AS RowName,					
+					   SUM((winlost - actual_stake) * virtualrate) MemberWinLost,
+					   SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+					   SUM(scomm * actualrate) Commission,
+					   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
+					   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
+					   SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
+					   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
+				FROM bettrans14 b WITH (NOLOCK)
+				WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+					  AND BetType = 29
+					  AND ruben = 1
+					  AND statusID NOT IN(101, 102, 103, 121)
+				GROUP BY 'System Parlay('+status+')',
+						 CASE liveawayscore
+							 WHEN 1
+							 THEN 'Soccer Sport Total'
+							 WHEN 2
+							 THEN 'Others Sport Total'
+							 WHEN 3
+							 THEN 'Multi Sport Total'
+							 ELSE ''
+						 END 
+						 
+    END;
+    ELSE 
+	IF @Site= 'Deposit' 
+	BEGIN 
+				INSERT INTO #Data
+				SELECT CASE liveawayscore
+						   WHEN 1
+						   THEN 'Soccer Sport Total'
+						   WHEN 2
+						   THEN 'Others Sport Total'
+						   WHEN 3
+						   THEN 'Multi Sport Total'
+						   ELSE ''
+					   END AS GroupName,
+					   'System Parlay('+status+')' AS RowName,
+					   SUM((winlost - actual_stake) * virtualrate) MemberWinLost,
+					   SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+					   SUM(scomm * actualrate) Commission,
+					   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
+					   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
+					   SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
+					   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
+				FROM bettrans14 b WITH (NOLOCK)
+				 INNER JOIN #DepositSuper dep ON b.srecommend = dep.custid
+				WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+					  AND BetType = 29
+					  AND ruben = 1
+					  AND statusID NOT IN(101, 102, 103, 121)
+				GROUP BY 'System Parlay('+status+')',
+						 CASE liveawayscore
+							 WHEN 1
+							 THEN 'Soccer Sport Total'
+							 WHEN 2
+							 THEN 'Others Sport Total'
+							 WHEN 3
+							 THEN 'Multi Sport Total'
+							 ELSE ''
+						 END 
+						 
+	END
+	ELSE 
+	IF @Site= 'Credit' 
+	BEGIN 
+			INSERT INTO #Data
+				SELECT CASE liveawayscore
+						   WHEN 1
+						   THEN 'Soccer Sport Total'
+						   WHEN 2
+						   THEN 'Others Sport Total'
+						   WHEN 3
+						   THEN 'Multi Sport Total'
+						   ELSE ''
+					   END AS GroupName,
+					   'System Parlay('+status+')' AS RowName,
+					   SUM((winlost - actual_stake) * virtualrate) MemberWinLost,
+					   SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+					   SUM(scomm * actualrate) Commission,
+					   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
+					   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) VirtualIncome,
+					   SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
+					   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
+				FROM bettrans14 b WITH (NOLOCK)
+				WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+					  AND BetType = 29
+					  AND ruben = 1
+					  AND statusID NOT IN(101, 102, 103, 121)
+					  AND NOT EXISTS (SELECT 1 FROM #DepositSuper dep WHERE b.srecommend = dep.custid)
+				GROUP BY 'System Parlay('+status+')',
+						 CASE liveawayscore
+							 WHEN 1
+							 THEN 'Soccer Sport Total'
+							 WHEN 2
+							 THEN 'Others Sport Total'
+							 WHEN 3
+							 THEN 'Multi Sport Total'
+							 ELSE ''
+						 END 
+	END 
+	
+		 
      BEGIN -- Query
 
-         SELECT d.GroupName AS GroupName,
+            SELECT d.GroupName AS GroupName,
                 d.RowName AS RowName,
                 d.MemberWinLoss AS MemberWinLoss,
                 d.SMAWinLoss AS SMAWinLoss,
@@ -172,10 +182,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                 d.VirtualTurnover AS VirtualTurnover
          FROM #Data AS d
          ORDER BY GroupName DESC,
-                  RowName;
+                  RowName; 
      END;
      DROP TABLE #Data;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #DepositSuper;
 
 -------------------
 

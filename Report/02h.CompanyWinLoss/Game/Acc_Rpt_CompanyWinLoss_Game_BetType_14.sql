@@ -20,7 +20,9 @@ DB: DBACC/bodb02
 
 Revisions:
 - 20160222@Franklin: Initialize Company Win Loss Report
-
+- 20160720@Sophia: . Revise SP
+				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+				   
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='2016-01-01',@ProductId=6
 */
@@ -86,7 +88,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                     FROM bettrans14 AS b WITH (NOLOCK)
                          INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                          LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                    WHERE b.winlostdate = @StartDate
                           AND sb.RefTable NOT IN(1, 2)
                          AND b.ruben = 1
                          AND b.statusId NOT IN(101, 102, 103, 121)
@@ -121,7 +123,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                     FROM bettransRnG14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                    WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 1
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY sb.BetType,
@@ -155,7 +157,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                     FROM bettransLC14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                    WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 2
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY sb.BetType,

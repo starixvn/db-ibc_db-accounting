@@ -21,7 +21,9 @@ DB: DBACC/bodb02
 
 Revisions:
 - 20160222@Franklin: Initialize Company Win Loss Report
-
+- 20160720@Sophia: . Revise SP
+				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+				   
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@Site = 'Credit',@StartDate='2016-01-01'
 */
@@ -102,7 +104,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                     FROM bettrans AS b WITH (NOLOCK)
                          JOIN #Agent AS dep ON b.recommend = dep.CustId
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                    WHERE b.winlostdate = @StartDate
                           AND b.BetType = @BetType
                           AND b.ruben = 1
                           AND b.statusId NOT IN(101, 102, 103, 121)
@@ -125,7 +127,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                     FROM bettransRNG b WITH (NOLOCK)
                          JOIN #Agent dep ON b.recommend = dep.custid
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                    WHERE b.winlostdate = @StartDate
                           AND b.gameId = @BetType
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY dep.Site;
@@ -147,7 +149,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
                     FROM bettransLC b WITH (NOLOCK)
                          JOIN #Agent dep ON b.recommend = dep.custid
-                    WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                    WHERE b.winlostdate = @StartDate
                           AND b.gameId = @BetType
                           AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
                     GROUP BY dep.Site;

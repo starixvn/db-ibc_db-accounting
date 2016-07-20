@@ -193,7 +193,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_SportType] @StartDate='2016-01-01', @EndDate
                                    THEN stake * (1 - tpositiontaking - ISNULL(oddsspread, 0))
                                    ELSE 0
                                END) AS TOPhum
-                    FROM bettransm WITH (nolock)
+                    FROM bettransm bm WITH (nolock)
+					INNER JOIN #SportBetType AS sb ON sb.BetType = bm.BetType
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
                      LEFT JOIN

@@ -188,6 +188,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail] @StartDate='2016-01-01', @EndDa
                                    ELSE 0
                                END) AS TOPhum
                     FROM bettransm WITH (nolock)
+					WHERE Bettype = @Bettype
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
