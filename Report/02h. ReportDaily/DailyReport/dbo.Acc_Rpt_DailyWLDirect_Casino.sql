@@ -1,10 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Acc_Rpt_DailyWLDirect_Casino_xpre]    Script Date: 03/11/2016 13:26:52 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Casino]
 	@winlostdate	datetime 
 AS
@@ -27,6 +23,7 @@ AS
 			- 20160108@Percy: Calculate turnover for new RNG Casino [Redmine: #49134]
 			- 20160308@Jim: Incorporate Extra PT into 2h report [#53194]
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
+			- 20160722@Percy: Incorporate Macau Games into ExtraPT [RedmineID: #60883]
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -53,6 +50,13 @@ BEGIN
 	UNION
 	SELECT 5707545--BARM	
 	
+	;WITH CTE AS
+	(
+		SELECT	ProductID, SportType, SubProduct, SuperId, SUM(ExtraPT) AS ExtraPT 
+		FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
+		WHERE	@winlostdate BETWEEN FromDate AND Todate AND ProductID IN (6, 22)
+		GROUP BY ProductID, SportType, SubProduct, SuperId
+	)
 	SELECT
 		a.ProductId,
 		bettype,
@@ -111,7 +115,7 @@ BEGIN
 								 WHEN 22 THEN 4001
 								 END	
 	) AS A
-	LEFT JOIN  dbo.f_ExtraPT_Sel (6,0,'',@winlostdate) e  ON A.ProductId = e.ProductId and a.srecommend = e.superID 
+	LEFT JOIN CTE e ON A.ProductId = e.ProductId and a.srecommend = e.superID
 	GROUP BY a.ProductId, site, bettype
 	ORDER BY a.ProductId, site	
 	

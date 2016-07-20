@@ -1,6 +1,4 @@
-﻿SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
+﻿USE [bodb02]
 GO
  
 ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14]
@@ -89,6 +87,7 @@ AS
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 		- 20160422@Sophia: Refactor code, Enhance Performance , Remove Cockfighting [Redmind: #56764]
 		- 20160615@Sophia: Change READPAST to NOLOCK because of the Deadlock [Redmind: #59254]
+		- 20160718@Percy: Remove FromDate, ToDate fields when select from Acc_GroupExtraPTSetting [RedmineID: #60973]
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -169,7 +168,7 @@ BEGIN
 					)
 
 	CREATE TABLE #DepSuper (custid int )
-	CREATE TABLE #ExtraPT_Sel (ProductID INT,Sporttype INT ,SubProduct VARCHAR(100),SuperID INT,ExtraPT DECIMAL(9,8),fromdate DATETIME, todate DATETIME  )
+	CREATE TABLE #ExtraPT_Sel (ProductID INT,Sporttype INT ,SubProduct VARCHAR(100),SuperID INT,ExtraPT DECIMAL(9,8))
 	
 	CREATE TABLE #Result (
 						DisplayOrder	INT,
@@ -208,11 +207,11 @@ BEGIN
 	SELECT custid FROM f_DepSuper_1('All')
 	
 			
-	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT )
-	SELECT	ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT 
+	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID,ExtraPT )
+	SELECT	ProductID, SportType, SubProduct, SuperId, SUM(ExtraPT) AS ExtraPT 
 	FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
 	WHERE	@winlostdate BETWEEN FromDate AND Todate
-	GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate
+	GROUP BY ProductID, SportType, SubProduct, SuperId
 	
 	---CREATE CLUSTERED INDEX IX_ExtraPT ON #ExtraPT_Sel (SuperID, ExtraPT)
 	
@@ -806,7 +805,6 @@ BEGIN
 	GROUP BY DisplayOrder, SportName, SportType, ibc, site, ProductId
 	ORDER BY DisplayOrder asc, ibc, site	
 
-
 	DROP TABLE #src
 	DROP TABLE #srcDetail
 	DROP TABLE #DepSuper
@@ -814,20 +812,10 @@ BEGIN
 	DROP TABLE #Match14
 	DROP TABLE #Result
 	
-	
 END
 GO 
+
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [vnteam]
 GO
-
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype14] TO [bodbAdminNet]
 GO
-SET ANSI_NULLS ON 
-GO
-
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Sporttype] TO [bodbAdminNet]
-GO 
