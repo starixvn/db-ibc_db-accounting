@@ -202,6 +202,7 @@ BEGIN
 					,ruben = 1	
 			WHERE	matchid = @matchid			
 					AND bettype = @bettype	
+					AND statusID NOT IN (101, 102)
 								
 								
 		END	

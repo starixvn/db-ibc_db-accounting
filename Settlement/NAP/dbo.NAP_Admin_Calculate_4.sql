@@ -62,7 +62,8 @@ BEGIN
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
 		,@matchdate DATETIME
-
+		,@result NVARCHAR(10)
+	
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
 	BEGIN
 		DECLARE @affectedagents INT
@@ -236,6 +237,29 @@ BEGIN
 		END
 		ELSE
 		BEGIN
+			SET @result = CASE @bettype 
+							WHEN 16 THEN CASE
+											WHEN @hth > @hta THEN 'H' + CASE
+																			WHEN @fth > @fta THEN 'H'
+																			WHEN @fth = @fta THEN 'D'
+																			WHEN @fth < @fta THEN 'A'
+																			ELSE NULL
+																		END
+											WHEN @hth = @hta THEN 'D' + CASE
+																			WHEN @fth > @fta THEN 'H'
+																			WHEN @fth = @fta THEN 'D'
+																			WHEN @fth < @fta THEN 'A'
+																			ELSE NULL
+																		END
+											WHEN @hth < @hta THEN 'A' + CASE
+																			WHEN @fth > @fta THEN 'H'
+																			WHEN @fth = @fta THEN 'D'
+																			WHEN @fth < @fta THEN 'A'
+																			ELSE NULL
+																		END
+									END
+							ELSE NULL
+						END
 			WHILE 1=1
 			BEGIN
 				DELETE
@@ -246,7 +270,6 @@ BEGIN
 
 				UPDATE b
 				SET 
-				
 				@correctscore	= CASE  WHEN bettype = 1317 AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN @CorrectScoreSet1
 										WHEN bettype = 1317 AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN @CorrectScoreSet2
 										WHEN bettype = 1317 AND @SelectedSet LIKE '%3%' AND BetID = 803 THEN @CorrectScoreSet3
@@ -254,7 +277,7 @@ BEGIN
 										WHEN bettype = 1317 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @CorrectScoreSet5
 										ELSE @correctscore END 					
 				,@modds = CASE
-					WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
+					WHEN (betteam = @correctscore OR betteam = @FGLG2) AND bettype <> 16 THEN 1
 					WHEN betteam = '4:0' AND @goaldiff >= 4 and @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '0:4' AND @goaldiff <= -4 and @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
 					WHEN betteam = '5:0' AND @goaldiff >= 5 THEN 1
@@ -268,7 +291,10 @@ BEGIN
 					WHEN b.betteam = 'AOS'
 						AND @bettype = 414
 						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), b.transdesc) = 0 THEN 1
-
+					WHEN bettype = 16 THEN CASE
+												WHEN betteam = @result THEN 1
+												ELSE -1
+											END
 					ELSE -1
 					END,
 				modds = @modds,
@@ -406,7 +432,15 @@ BEGIN
 					WHEN betteam = 'AOS'
 						AND @bettype = 414
 						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
-
+					WHEN bettype = 16 THEN CASE
+												WHEN @IsHTCal = 1 THEN CASE
+																			WHEN @hth > @hta AND LEFT(betteam,1) IN ('D','A') THEN -1
+																			WHEN @hth = @hta AND LEFT(betteam,1) IN ('H','A') THEN -1
+																			WHEN @hth < @hta AND LEFT(betteam,1) IN ('D','H') THEN -1
+																			ELSE NULL
+																	   END
+												ELSE NULL
+											 END
 					ELSE NULL
 					END
 				,modds = @modds
@@ -508,6 +542,30 @@ BEGIN
 		END
 		ELSE
 		BEGIN
+		SET @result = CASE @bettype 
+						WHEN 16 THEN CASE
+										WHEN @hth > @hta THEN 'H' + CASE
+																		WHEN @fth > @fta THEN 'H'
+																		WHEN @fth = @fta THEN 'D'
+																		WHEN @fth < @fta THEN 'A'
+																		ELSE NULL
+																	END
+										WHEN @hth = @hta THEN 'D' + CASE
+																		WHEN @fth > @fta THEN 'H'
+																		WHEN @fth = @fta THEN 'D'
+																		WHEN @fth < @fta THEN 'A'
+																		ELSE NULL
+																	END
+										WHEN @hth < @hta THEN 'A' + CASE
+																		WHEN @fth > @fta THEN 'H'
+																		WHEN @fth = @fta THEN 'D'
+																		WHEN @fth < @fta THEN 'A'
+																		ELSE NULL
+																	END
+								END
+						ELSE NULL
+					END
+					
 			CREATE TABLE #tempCust(custid INT PRIMARY KEY)
 
 			INSERT INTO #tempCust(custid)
@@ -540,7 +598,7 @@ BEGIN
 											WHEN bettype = 1317 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN @CorrectScoreSet5
 											ELSE @correctscore END
 					,@modds = CASE 
-						WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
+						WHEN (betteam = @correctscore OR betteam = @FGLG2 AND bettype <> 16) THEN 1
 						WHEN betteam = '4:0' AND @goaldiff >= 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
 						WHEN betteam = '0:4' AND @goaldiff <= - 4 AND @bettype = 30 THEN 1 -- 4UP for 1st Correct Score
 						WHEN betteam = '5:0' AND @goaldiff >= 5 THEN 1
@@ -554,6 +612,10 @@ BEGIN
 						WHEN betteam = 'AOS'
 							AND @bettype = 414
 							AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
+						WHEN bettype = 16 THEN CASE
+												WHEN betteam = @result THEN 1
+												ELSE -1
+											END
 						ELSE - 1
 						END
 					,modds = @modds

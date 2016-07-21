@@ -8,7 +8,7 @@ GO
 /****** Object:  Stored Procedure dbo.Admin_Calculate_6    Script Date: 2/26/2014 6:01:44 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_6] @matchid INT
 	,@bettype SMALLINT
-	,@totalgoal SMALLMONEY
+	,@totalgoal INT
 	,@betcount INT = 0
 	,@IsHTCal	 BIT = 0
 	,@IsSettleAbandonedMatch BIT = 0
@@ -250,7 +250,7 @@ BEGIN
 										ELSE CAST(@totalgoal AS NVARCHAR(10)) 
 									  END
 					  END		
-		
+					  
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 		SET @modds = CASE 
 				WHEN bettype = 1206 AND betteam = cast(cast(@totalgoal AS TINYINT) AS VARCHAR(5)) THEN 1
