@@ -1,14 +1,4 @@
-﻿USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Acc_BettransSelBet_BatchMsg]    Script Date: 06/15/2015 09:09:46 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Acc_BettransSelBet_BatchMsg] (
+﻿ALTER PROCEDURE [dbo].[Acc_BettransSelBet_BatchMsg] (
 	@TransIds 		VARCHAR(MAX)
 	,@ProductIds 	VARCHAR(1000) = ''
 ) 
@@ -28,6 +18,7 @@ AS
   - 20150615@Dominic: Exclude 3 sub-tickets of BetTrade (901,902,903)  
   - 20150625@Dominic: Add ticket from translog/translog14 [Redmine:#38200]  
   - 20160317@bobby.nguyen: #54218 - Upload bacth message enhancement
+  - 20160317@bobby.nguyen: #57700 - Add Macau Game product
   
 Explanation's Param:  
 	- @ProductIds: [1-99]
@@ -279,11 +270,12 @@ BEGIN
 	/*	
 		- CS: ProductId = 6
 		- MGCRNG: ProductId = 17
+		- VB: ProductId = 22
 	*/
 	IF (EXISTS (
 			SELECT TOP 1 1
 			FROM #productIdList
-			WHERE ProductId 	IN (6, 17)
+			WHERE ProductId 	IN (6, 17, 22)
 		)
 	)
 	BEGIN
@@ -312,7 +304,7 @@ BEGIN
 			INNER JOIN #productBettype bt
 			ON b.gameid 		= bt.bettype
 			
-		WHERE bt.ProductId IN (6, 17)
+		WHERE bt.ProductId IN (6, 17, 22)
 		
 		UNION ALL
 		SELECT b.transid
@@ -330,7 +322,7 @@ BEGIN
 			ON b.gameid 		= bt.bettype
 			
 		WHERE b.winlostdate  >= @balanUpDate
-			AND bt.ProductId IN (6, 17)
+			AND bt.ProductId IN (6, 17, 22)
 	END
 	
 	;WITH CTE_CustInfo AS 
@@ -376,8 +368,3 @@ BEGIN
 	
 	RETURN
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransSelBet_BatchMsg] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelBet_BatchMsg] TO [vnteam] AS [dbo]
-GO
