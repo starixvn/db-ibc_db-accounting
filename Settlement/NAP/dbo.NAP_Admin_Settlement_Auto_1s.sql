@@ -1,14 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Auto_1s]    Script Date: 10/19/2015 23:26:44 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s    Script Date: 10/14/2015 1:15:07 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s    Script Date: 23/09/2015 9:57:55 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s    Script Date: 9/23/2015 9:52:33 AM ******/
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
 	 @AdminID						INT				= 148		-- calculated by system (default)
 	,@MatchID						INT
 	,@ResourceIDs					VARCHAR(MAX)	= '' 
@@ -29,6 +19,7 @@ AS
 	Revisions:
 		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
+		- 20160525@Kathy: Change the main Parlay Settlement SP
 
 	Param's Explanation:
 */	
@@ -147,7 +138,7 @@ BEGIN
 	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	IF @Action='CAL'
 	BEGIN
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
 			@Command			= 'NAP_Admin_Settlement_Auto_1s-CAL',
 			@MatchID			= @MatchID,
 			@ResourceIDs		= @ResourceIDs, 
@@ -155,7 +146,7 @@ BEGIN
 			@IsAuto				= @IsAuto,
 			@creator			= @AdminID 			
 
-								EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
+																																																																																																																																EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
 			 @matchid		= @matchid
 			,@ResourceIDs	= @ResourceIDs
 			,@mode			= @action						
@@ -163,20 +154,20 @@ BEGIN
 	END
 	ELSE IF @action = 'UNDO'
 	BEGIN
-								EXEC dbo.NAP_Admin_Calculate_Main 
+		EXEC dbo.NAP_Admin_Calculate_Main 
 			 @matchid		= @matchid
 			,@ResourceIDs	= @ResourceIDs
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
 
-		EXEC dbo.NAP_Admin_Settlement_Parlay
-			@matchids		= @matchid
-			,@creator		= @AdminID
-			,@ResourceIDs	= @ResourceIDs
-			,@action		= 'UNDO'
-			,@IP			= @IP
-
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+		EXEC dbo.NAP_Admin_Settlement_MP
+				@matchid		= @matchid
+				,@creator		= @AdminID
+				,@action		= 'UNDO'
+				,@ResourceIDs	= @ResourceIDs
+				,@IP			= @IP
+				
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
 			@Command			= 'NAP_Admin_Settlement_Auto_1s-UNDO',
 			@MatchID			= @MatchID,
 			@ResourceIDs		= @ResourceIDs, 
@@ -231,7 +222,7 @@ BEGIN
 				RETURN 	
 			END
 
-												EXEC dbo.NAP_Admin_Calculate_Main 
+																																																																																																																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
 				 @matchid					= @matchid
 				,@ResourceIDs				= @ResourceIDs
 				,@action					= 'REFUND'	
@@ -249,7 +240,7 @@ BEGIN
 					@IsAuto				= @IsAuto,
 					@creator			= @AdminID 	
 
-								EXEC dbo.NAP_Admin_Calculate_Main 
+																																																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
 			 @matchid					= @matchid
 			,@ResourceIDs				= @ResourceIDs
 			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
@@ -308,7 +299,7 @@ BEGIN
 	WHERE	Increased = 0
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
+																EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
@@ -323,7 +314,7 @@ BEGIN
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
+																EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 
@@ -461,9 +452,21 @@ BEGIN
 		END CATCH
 	END
 END
+
+
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [bodbAdminNet] AS [dbo]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [Dot_CoreAPI] AS [dbo]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [vnteam] AS [dbo]
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [Dot_CoreAPI]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [bodbAdminNet]
+GO 
