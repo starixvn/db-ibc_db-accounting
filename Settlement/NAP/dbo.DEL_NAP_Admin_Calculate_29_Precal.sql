@@ -1,7 +1,12 @@
 USE [bodb02]
 GO
-
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_Precal] (@matchids VARCHAR(2000)) WITH RECOMPILE
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_29_PreCal]    Script Date: 04/12/2016 15:38:56 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_29_PreCal]
+	(@matchids VARCHAR(2000)) WITH RECOMPILE
 AS
 /*
 	Created: Kathy
@@ -15,6 +20,7 @@ AS
 		- 20150506@Kathy: Do not calculate main ticket if subticket is still waiting or rejected [Redmine:#35336]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
+		- 20161204@Kathy: Review SP - Combo parlay [Redmine:#55270] 
 		
 	Param's Explanation:
 	@matchid: matchid of match to be settled
@@ -26,19 +32,13 @@ BEGIN
 	--Declare @tmp_mrefno TABLE (refno bigint PRIMARY KEY CLUSTERED)  
 	--INSERT INTO @tmp_mrefno (refno)
 	--	SELECT refno FROM dbo.bettransm WITH (ROWLOCK) WHERE matchid = @matchid   
-	--DECLARE @temp_bettrans TABLE
 	CREATE TABLE #temp_bettrans  
 	(
 		[transid] [bigint] NOT NULL
 		,[refno] [bigint] PRIMARY KEY CLUSTERED
-		,[stake] [money] NOT NULL
-		,[N] [tinyint] NOT NULL
-		,-- total selection (match)
-		[cnt] [smallint] NOT NULL
-		,-- total sub-ticket count
-		[bitmap] [smallint] NOT NULL
-		,-- bitmap to identify which parlay set is choosen
-		[winlostdate] [smalldatetime] NOT NULL
+		,[N] [tinyint] NOT NULL		-- total selection (match)
+		,[bitmapR] [int] NOT NULL	-- bitmapR to identify which parlay set is choosen
+		,[winlostdate] [smalldatetime] NOT NULL
 		)
 		-- GET list of concern Ticket
 		;
@@ -58,28 +58,22 @@ BEGIN
 	(
 		[transid]
 		,[refno]
-		,[stake]
 		,[N]
-		,[cnt]
-		,[bitmap]
+		,[bitmapR]
 		,[winlostdate]
 		)
 	SELECT distinct [transid]
 		,b.[refno]
-		,[stake]
-		,LEN(betteam)
-		,hdp1
 		,hdp2
+		,CAST(betteam as int)
 		,winlostdate
 	FROM dbo.bettrans b WITH (ROWLOCK)
-		--INNER JOIN refnos t ON b.refno = t.refno
 	WHERE b.matchid = 29 AND statusID NOT IN (101, 102) --('VOID','REJECT')
 		AND betid = 0 -- main ticket of combination
 		AND refno in (select refno from refnos)
 
 	-- delete record which already created Result/Detail
 	DELETE T
-	--FROM @temp_bettrans T
 	FROM #temp_bettrans T
 		INNER JOIN dbo.BetParlayResult pr ON T.refno = pr.refno
 
@@ -101,36 +95,15 @@ BEGIN
 		,livehomescore SMALLINT
 		,liveawayscore SMALLINT
 		,liveindicator BIT
+		,SetStake money
 		,betcheck NVARCHAR(50) 
-		,RN TINYINT
-		,-- set No. for selection in the combination
-		CNT TINYINT
-		,-- total selection count, base on bettransm/14
-		bCNT TINYINT -- total selection count, stored in bettrans
 		,transdesc NVARCHAR(200)
+		,RN TINYINT		-- set No. for selection in the combination
 		UNIQUE (refno, matchid)
 		)
 
 	--INSERT INTO @parlay_base 
-	INSERT INTO #parlay_base
-	(
-		refno
-		,transid
-		,winlostdate
-		,statuswinlost
-		,statusid
-		,matchid
-		,bettype
-		,odds
-		,betteam
-		,hdp1
-		,hdp2
-		,livehomescore
-		,liveawayscore
-		,liveindicator
-		,betcheck
-		,transdesc
-		)
+	;WITH _source AS (
 	SELECT bm.refno
 		,bm.transid
 		,bm.winlostdate
@@ -145,13 +118,19 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,stake AS SetStake
 		,bm.betcheck
-		,CASE WHEN bm.betteam = 'AOS' THEN bm.transdesc ELSE '' END AS transdesc
-	FROM dbo.bettransm bm WITH (ROWLOCK)
-		--INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
-		INNER JOIN #temp_bettrans tb ON bm.refno = tb.refno
-
-	--INSERT INTO @parlay_base 
+		,bm.transdesc --CASE WHEN bm.betteam = 'AOS' THEN bm.transdesc ELSE '' END AS transdesc
+		,RN = ROW_NUMBER() OVER (PARTITION BY bm.refno ORDER BY bm.matchid)
+	FROM
+		#temp_bettrans tb
+		INNER JOIN (
+			SELECT * FROM dbo.bettransm WITH (ROWLOCK)
+			UNION ALL
+			SELECT * FROM dbo.bettransm14 WITH (ROWLOCK)
+		) AS bm ON tb.refno = bm.refno
+	)
+	--
 	INSERT INTO #parlay_base 
 	(
 		refno
@@ -168,83 +147,30 @@ BEGIN
 		,livehomescore
 		,liveawayscore
 		,liveindicator
+		,SetStake
 		,betcheck
 		,transdesc
+		,RN
 		)
-	SELECT bm.refno
-		,bm.transid
-		,bm.winlostdate
-		,statuswinlost
-		,statusid
-		,matchid
-		,bettype
-		,odds
-		,betteam
-		,hdp1
-		,hdp2
-		,livehomescore
-		,liveawayscore
-		,liveindicator
-		,bm.betcheck
-		,CASE WHEN bm.betteam = 'AOS' THEN bm.transdesc ELSE '' END AS transdesc
-	FROM dbo.bettransm14 bm WITH (ROWLOCK)
-		--INNER JOIN @temp_bettrans tb ON bm.refno = tb.refno
-		INNER JOIN #temp_bettrans tb ON bm.refno = tb.refno
-		-- prepare Seq of each refno
-		;
+	SELECT * FROM _source
 
-	WITH sub
-	AS (
-		SELECT ROW_NUMBER() OVER (
-				PARTITION BY refno ORDER BY matchid
-				) RN
-			,refno
-			,matchid
-		--FROM @parlay_base
-		FROM #parlay_base
-		)
-	UPDATE pb
-	SET RN = sub.RN
-	FROM sub
-		--INNER JOIN @parlay_base pb ON sub.refno = pb.refno AND sub.matchid = pb.matchid
-		INNER JOIN #parlay_base pb ON sub.refno = pb.refno AND sub.matchid = pb.matchid
-		-- prepare N
-		;
 
-	WITH sub
-	AS (
-		SELECT refno
-			,count(*) cnt
-		FROM #parlay_base
-		GROUP BY refno
-		)
-	UPDATE pb
-	SET CNT = sub.cnt
-		,bCNT = t.N
-	FROM sub
-		INNER JOIN #parlay_base pb ON sub.refno = pb.refno
-		INNER JOIN #temp_bettrans t ON t.refno = pb.refno
-		--INNER JOIN @parlay_base pb ON sub.refno = pb.refno
-		--INNER JOIN @temp_bettrans t ON t.refno = pb.refno
-
-	/* logic merge into above query, can remove this part later.
-	UPDATE pb
-	SET bCNT = sub.N
-	FROM @temp_bettrans sub
-	INNER JOIN @parlay_base pb ON sub.refno = pb.refno*/
 	-- stop if got some ticket  CNT value is not match
 	IF EXISTS (
-			SELECT *
-			FROM #parlay_base
-			WHERE CNT <> bCNT
+			SELECT 1
+			FROM #temp_bettrans tb
+				INNER JOIN
+				(SELECT refno, count(*) cnt FROM #parlay_base GROUP BY refno) AS SUB ON tb.refno = SUB.refno
+			WHERE sub.cnt <> tb.N
 			)
 	BEGIN
-		PRINT 'ERROR cnt <> bcnt'
+		PRINT 'ERROR cnt <> N'
 
-		RETURN - 1
+		RETURN -1
 	END
 
 	-- insert information into parlayDetail/Result
+	;WITH ParlayStake AS (SELECT refno, RN, setstake FROM #parlay_base)
 	INSERT INTO dbo.BetParlayDetail (
 		RefNo
 		,Serial
@@ -273,7 +199,7 @@ BEGIN
 		,statusid
 		,matchid
 		,bettype
-		,tb.stake / tb.cnt
+		,ps.SetStake
 		,odds
 		,betteam
 		,hdp1
@@ -285,7 +211,9 @@ BEGIN
 		,pb.transdesc
 	FROM #parlay_base pb
 		INNER JOIN #temp_bettrans tb ON pb.refno = tb.refno
-		INNER JOIN dbo.RefCombination rc ON pb.RN = rc.seq AND pb.CNT = rc.N AND (tb.bitmap & rc.bitmap) > 0
+		INNER JOIN dbo.RefCombinationSet rcs ON tb.N = rcs.N AND (tb.bitmapR & rcs.bitmapR) > 0
+		INNER JOIN dbo.RefCombination rc ON rcs.N = rc.N AND rcs.R = rc.R AND pb.RN = rc.seq
+		INNER JOIN ParlayStake ps ON ps.refno = tb.refno AND ps.RN = rc.R
 
 	INSERT INTO dbo.BetParlayResult (
 		RefNo
@@ -306,11 +234,11 @@ BEGIN
 		,scomm
 		)
 	SELECT DISTINCT tb.RefNo
-		,rc.Serial
+		,pd.Serial
 		,0
 		,tb.winlostdate
 		,0
-		,tb.stake / tb.cnt
+		,pd.stake
 		,0
 		,0
 		,0
@@ -322,14 +250,10 @@ BEGIN
 		,0
 		,0
 	FROM #temp_bettrans tb
-		INNER JOIN dbo.RefCombination rc ON tb.N = rc.N AND (tb.bitmap & rc.bitmap) > 0
+		INNER JOIN dbo.BetParlayDetail pd ON tb.refno = pd.refno
 END
+
 GO
-
-GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_29_Precal] TO [vnteam] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_29_PreCal] TO [vnteam] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29_Precal] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_29_PreCal] TO [vnteam] AS [dbo]

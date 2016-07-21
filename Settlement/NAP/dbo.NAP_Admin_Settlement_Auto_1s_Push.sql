@@ -18,7 +18,6 @@ AS
 	
 	Revisions:
 		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
-		- 20160524@Kathy: Exclude ComboParlay
 	Param's Explanation:
 */		
 BEGIN
@@ -118,18 +117,6 @@ BEGIN
 		RETURN
 	END
 
-	-- combo parlay
-	IF @Action = 'UNDO'
-	BEGIN		
-		EXEC NAP_Admin_ComboParlay_Checking
-				@MatchIds = @MatchId	
-				,@ErrCode = @ErrCode OUTPUT
-				,@ErrMsg = @ErrMsg OUTPUT	
-				
-		IF @ErrCode <> 0
-			RETURN
-	END
-
 	SELECT	 @ErrCode		= 0
 			,@ErrMsg		= ''
 			,@procName		= OBJECT_NAME(@@procid)
@@ -191,9 +178,19 @@ BEGIN
 	END
 
 END
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI] AS [dbo]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam] AS [dbo]
+
+
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI]
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet]
+GO 
