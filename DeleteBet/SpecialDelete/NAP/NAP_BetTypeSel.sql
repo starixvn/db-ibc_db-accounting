@@ -27,6 +27,7 @@ AS
         - 20151110@Kathy: Move SP to DBPRO 
         - 20150401@Kathy: Add new parent-child bettypes for PH [Redmine:#48110]
         - 20150119@Kathy: Changes parent-child for phase 1.2 of PH All in One:  [Redmine:#50932]	  
+		- 20160721@Bobby: #61240 - Implement parent-child for PHAIO new 19 bet types
           
     Param's Explanation:  
     @Mode:   
@@ -114,7 +115,46 @@ BEGIN
         SELECT 4, 413  --  Correct score
         UNION ALL
         SELECT 30, 414  -- 1H Correct score
-    
+		----------------------------------
+		UNION ALL
+        SELECT 172, 415  -- Result And First Team To Score
+		UNION ALL
+        SELECT 152, 416  -- Half Time/Full Time Correct Score
+		UNION ALL
+        SELECT 188, 427  -- 1H Both Team to Score
+		UNION ALL
+        SELECT 184, 428  -- 2H  Odd/Even
+		UNION ALL
+        SELECT 177, 430  -- 2H 1X2
+		UNION ALL
+        SELECT 186, 431  -- 2H Double Chance
+		UNION ALL
+		SELECT 185, 432	--2H Draw No Bet 
+		UNION ALL
+		SELECT 146, 433	--2H Both Teams To Score 
+		UNION ALL
+		SELECT 189, 434	--Both Halves Over 1.5 Yes/No 
+		UNION ALL
+		SELECT 190, 435	--Both Halves Under 1.5 Yes/No 
+		UNION ALL
+		SELECT 147, 436	--Home To Score In Both Halves 
+		UNION ALL
+		SELECT 148, 437	--Away To Score In Both Halves 
+		UNION ALL
+		SELECT 133, 438	--Home To Win Both Halves 
+		UNION ALL
+		SELECT 134, 439	--Away To Win Both Halves 
+		UNION ALL
+		SELECT 149, 440	--Home To Win Either Half 
+		UNION ALL
+		SELECT 150, 441	--Away To Win Either Half 
+		UNION ALL
+		SELECT 140, 442	--Highest Scoring Half  
+		UNION ALL
+		SELECT 141, 443	--Highest Scoring Half Home Team 
+		UNION ALL
+		SELECT 142, 444	--Highest Scoring Half Away Team 
+		
     -- @mode = 0: Single bet, 2: Early kick-off, 3: Ticket listing, 4: Mix Parlay   
     -- type = 0: Sport Book
     IF @Mode IN (0, 2, 3, 4)
