@@ -71,8 +71,8 @@ BEGIN
         ,typeid            INT
     )
     
-    INSERT INTO @tmpConsolidatedBettypes
-        SELECT 153, 1308 -- Game Handicap
+    INSERT INTO @tmpConsolidatedBettypes (parentid, typeid)
+    SELECT 153 AS parentid, 1308 AS typeid -- Game Handicap
         UNION ALL
         SELECT 154, 1311 -- Set x Winner
         UNION ALL
