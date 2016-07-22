@@ -51,7 +51,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_NumberGame_MatchDetail_14] @BetType=81,@IsLive=0,@S
                        SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) AS RealTurnover
                 FROM bettrans14 AS b WITH (nolock)
                      INNER JOIN match14 AS m WITH (nolock) ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND b.liveindicator = @IsLive
                       AND b.MatchId > 0

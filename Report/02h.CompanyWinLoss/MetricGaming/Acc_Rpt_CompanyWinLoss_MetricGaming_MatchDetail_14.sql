@@ -51,7 +51,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_MatchDetail_14] @EndDate='2020-01-01',
                        m.HomeId,
                        m.AwayId
                 FROM match14 m WITH (NOLOCK)
-                WHERE EventDate BETWEEN @StartDate AND @EndDate;
+                WHERE EventDate = @StartDate
      END;
      BEGIN -- #Data
 
@@ -93,9 +93,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_MatchDetail_14] @EndDate='2020-01-01',
                        SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
                 FROM bettrans14 b WITH (nolock)
                      INNER JOIN match14 m WITH (nolock) ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
-                      AND m.EventDate BETWEEN @StartDate AND @EndDate
+                      AND m.EventDate = @StartDate
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
                       AND b.MatchId > 0

@@ -36,24 +36,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
                 WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
                 AND EventType IN(1, 2);
      END;
-     BEGIN -- #DepositAgent
+     BEGIN -- #DepositSuper
 
-         CREATE TABLE #DepositAgent
+          CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
-         INSERT INTO #DepositAgent
-                SELECT c.CustId
-                FROM customer AS c WITH (NOLOCK)
-                WHERE c.RoleID = 2
-                      AND EXISTS
-                (
-                    SELECT 1
-                    FROM f_DepSuper_1('All') dep
-                    WHERE c.srecommend = dep.CustId
-                )
-                AND CustId <> 5707545
-                UNION
-                SELECT 5707545; --BARM
+         INSERT INTO #DepositSuper
+                SELECT CustId
+                FROM f_DepSuper_1('All');
 
      END;
      BEGIN -- #Match
@@ -72,13 +62,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
                            LeagueId,
                            'match' AS type
                     FROM Match WITH (NOLOCK)
-                    WHERE EventDate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate = @StartDate
                     UNION ALL
                     SELECT orid,
                            LeagueId,
                            'outright' AS type
                     FROM outright WITH (NOLOCK)
-                    WHERE EventDate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate = @StartDate
                 ) m
                 INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId
                 WHERE l.sporttype > 1;
@@ -120,7 +110,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #Match AS m ON b.MatchId = m.MatchId
                 WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
                       AND m.type = CASE
@@ -142,45 +132,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
                              ELSE 'Deposit'
                          END;
      END;
-     BEGIN -- RM   
-
-         INSERT INTO #Data
-                SELECT 0 AS GroupId,
-                       'RM' AS GroupName,
-                       CASE
-                           WHEN b.recommend = 52466
-                           THEN '8RM Total'
-                           WHEN b.recommend = 5707545
-                           THEN 'BARM Total'
-                           ELSE ''
-                       END AS Site,
-                       -SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
-                       -SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                       SUM(scomm * actualrate) Commission,
-                       -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                       -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
-                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
-                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
-                FROM bettrans b WITH (NOLOCK)
-                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     INNER JOIN #Match AS m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                      AND m.type = CASE
-                                       WHEN b.BetType = 10
-                                       THEN 'outright'
-                                       ELSE 'match'
-                                   END
-                      AND b.ruben = 1
-                      AND b.statusID NOT IN(101, 102, 103, 121)
-                     AND b.recommend IN(52466, 5707545)
-                GROUP BY CASE
-                             WHEN b.recommend = 52466
-                             THEN '8RM Total'
-                             WHEN b.recommend = 5707545
-                             THEN 'BARM Total'
-                             ELSE ''
-                         END;
-     END;
+    
      BEGIN -- Query
 
          SELECT d.GroupId AS GroupId,
@@ -199,7 +151,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
                   RowName;
      END;
      DROP TABLE #SportBetType;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #DepositSuper;
      DROP TABLE #Match;
      DROP TABLE #Data;
 GO

@@ -62,7 +62,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] @StartDate='2016-01-01', @EndD
          FROM bettrans14 AS b WITH (NOLOCK)
               INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
               LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-         WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+         WHERE b.winlostdate = @StartDate
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)
          GROUP BY sb.BetType,

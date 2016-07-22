@@ -84,7 +84,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_BetType_14] @EndDate='2020-01-01',@Sta
                 FROM bettrans14 AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
                       AND b.ruben = 1

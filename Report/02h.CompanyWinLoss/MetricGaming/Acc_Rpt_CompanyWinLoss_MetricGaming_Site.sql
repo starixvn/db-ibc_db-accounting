@@ -89,7 +89,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_Site] @StartDate='2016-01-01', @EndDat
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) VirtualTurnover
                 FROM bettrans b WITH (NOLOCK)
                      INNER JOIN #Agent ag ON b.recommend = ag.custid
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
