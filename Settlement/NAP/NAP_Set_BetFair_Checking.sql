@@ -59,13 +59,15 @@ BEGIN
 
 	IF EXISTS (
 			SELECT 1
-			FROM bettrans WITH (NOLOCK)
+			FROM bettrans b WITH (NOLOCK)
+				LEFT JOIN dbo.f_Set_GetGroupBettypes() f
+					ON b.bettype = f.BetType
 			WHERE	custid IN (2331, 1077687, 115770, 15523642) 
 					AND matchid = @matchid 
 					AND ruben = 0
-					AND bettype NOT BETWEEN 1301 AND 1399	-- Sportting solution exclude in Betdaq/Betfair 
-					AND bettype NOT BETWEEN 153 AND 156		-- Tennis new bet types
-					AND bettype NOT IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+					AND f.bettype NOT BETWEEN 1301 AND 1399	-- Sportting solution exclude in Betdaq/Betfair 
+					AND f.bettype NOT BETWEEN 153 AND 156		-- Tennis new bet types
+					AND f.GroupId <> 8
 			)
 	BEGIN
 		SELECT @IsMovebetfair = 1
@@ -76,9 +78,11 @@ BEGIN
 	IF EXISTS (
 			SELECT 1
 			FROM bettrans b WITH (NOLOCK)
+				INNER JOIN dbo.f_Set_GetGroupBettypes() f
+					ON b.bettype = f.BetType
 			WHERE custid IN (2331, 1077687, 115770, 15523642) 
 			AND matchid = @matchid 
-			AND EXISTS (SELECT TOP 1 1 FROM dbo.f_Set_GetGroupBettypes () WHERE b.bettype = BetType AND IsDetermined = 1)
+			AND f.IsDetermined = 1
 			AND statusID NOT IN (101, 102) AND ruben = 0
 			)
 	BEGIN

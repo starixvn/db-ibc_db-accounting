@@ -66,15 +66,17 @@ BEGIN
 
 	IF EXISTS (
 				SELECT 1 
-				FROM bettrans WITH (NOLOCK) 
+				FROM bettrans b WITH (NOLOCK) 
+					LEFT JOIN dbo.f_Set_GetGroupBettypes() f
+						ON b.bettype = f.BetType
 				WHERE 
 						(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 								OR recommend = 1688156	)
 						AND matchid = @matchid 
 						AND ruben = 0
-						AND bettype NOT BETWEEN 1301 AND 1399	-- Sportting solution exclude in Betdaq/Betfair 
-						AND bettype NOT BETWEEN 153 AND 156		-- Tennis new bet types 
-						AND bettype NOT IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+						AND b.bettype NOT BETWEEN 1301 AND 1399	-- Sportting solution exclude in Betdaq/Betfair 
+						AND b.bettype NOT BETWEEN 153 AND 156		-- Tennis new bet types 
+						AND f.GroupId <> 8
 			   )
 	BEGIN
 		SELECT	@isMoveBetDaq = 1, @isExcludeBetDaq = 1, @IsRefundRunningBetDaq = 1  	
@@ -84,11 +86,13 @@ BEGIN
 	IF EXISTS (
 				SELECT 1 
 				FROM bettrans b WITH (NOLOCK) 
+					INNER JOIN dbo.f_Set_GetGroupBettypes() f
+						ON b.bettype = f.BetType
 				WHERE 
 						(	custid IN (50057, 879241, 103873, 78761, 851668, 878902) 
 							OR recommend = 1688156	)
 						AND matchid = @matchid 
-						AND EXISTS (SELECT TOP 1 1 FROM dbo.f_Set_GetGroupBettypes () WHERE b.bettype = BetType AND IsDetermined = 1)
+						AND f.IsDetermined = 1
 						AND statusID NOT IN (101, 102)
 						AND ruben = 0 
 			   )

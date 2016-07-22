@@ -73,11 +73,13 @@ BEGIN
 			AND ResourceID IN (SELECT ResourceID FROM @tmpResourceIDs)
 			AND SettlementStatusID = 4 
 
-	SELECT	 @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
-	FROM	dbo.Bettrans WITH (NOLOCK)
+	SELECT	 @strBettypes = COALESCE(@strBettypes + ',' + CAST(b.bettype AS VARCHAR(10)), CAST(b.bettype AS VARCHAR(10))) 
+	FROM	dbo.Bettrans b WITH (NOLOCK)
+		INNER JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.BetType
 	WHERE	MatchID = @MatchID 
-			AND Bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE groupId = 8)
-			AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
+			AND f.groupId = 8
+			AND	b.Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
 			AND StatusID NOT BETWEEN 101 AND 102 
 
 	SELECT	 @penaltyshootout		= ISNULL(MAX(CASE WHEN ResourceID='135' THEN HomeValue ELSE '' END),'')

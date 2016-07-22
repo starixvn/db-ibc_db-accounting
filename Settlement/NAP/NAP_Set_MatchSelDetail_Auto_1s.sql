@@ -26,8 +26,11 @@ BEGIN
 
 	IF EXISTS (
 				SELECT 1
-				FROM bettrans WITH (NOLOCK)
-				WHERE	Bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8 AND IsDetermined = 1)
+				FROM bettrans b WITH (NOLOCK)
+					INNER JOIN dbo.f_Set_GetGroupBettypes() f
+						ON b.bettype = f.BetType
+				WHERE	f.GroupId = 8 
+						AND f.IsDetermined = 1
 						AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
 						AND ruben = 0 
 						--AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)
@@ -36,56 +39,58 @@ BEGIN
 		SELECT @IsSettleAbandonedMatchIBC = 1
 	END
 	INSERT INTO @tmpTicketStatus(ResourceID, BetCount, InRunning)
-	SELECT	CASE	WHEN bettype = 135 THEN '135'
-					WHEN bettype = 160 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 164 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 168 THEN '168'
-					WHEN bettype = 169 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 173 THEN '173'
-					WHEN bettype = 174 THEN '174'
-					WHEN bettype = 175 THEN '175'
-					WHEN bettype = 176 THEN '176'
-					WHEN bettype = 180 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 192 THEN '192'
-					WHEN bettype = 193 THEN '193'
-					WHEN bettype = 210 THEN '210'
-					WHEN bettype = 211 THEN '211'
-					WHEN bettype = 212 THEN '212'
-					WHEN bettype = 213 THEN '213'
-					WHEN bettype = 214 THEN '214'
-					WHEN bettype = 215 THEN '215'
-					WHEN bettype = 216 THEN '216'
-					WHEN bettype = 217 THEN '217'
-					WHEN bettype = 426 THEN '426'
+	SELECT	CASE	WHEN b.bettype = 135 THEN '135'
+					WHEN b.bettype = 160 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 164 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 168 THEN '168'
+					WHEN b.bettype = 169 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 173 THEN '173'
+					WHEN b.bettype = 174 THEN '174'
+					WHEN b.bettype = 175 THEN '175'
+					WHEN b.bettype = 176 THEN '176'
+					WHEN b.bettype = 180 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 192 THEN '192'
+					WHEN b.bettype = 193 THEN '193'
+					WHEN b.bettype = 210 THEN '210'
+					WHEN b.bettype = 211 THEN '211'
+					WHEN b.bettype = 212 THEN '212'
+					WHEN b.bettype = 213 THEN '213'
+					WHEN b.bettype = 214 THEN '214'
+					WHEN b.bettype = 215 THEN '215'
+					WHEN b.bettype = 216 THEN '216'
+					WHEN b.bettype = 217 THEN '217'
+					WHEN b.bettype = 426 THEN '426'
 					ELSE 0 END AS ResourceID
 			,SUM(CASE	WHEN StatusID BETWEEN 101 AND 102 THEN 0
 						ELSE 1 END)
 			,SUM(CASE	WHEN StatusID = 0 THEN 1 
 						ELSE 0 END)
-	FROM	dbo.Bettrans WITH (NOLOCK)
-	WHERE	bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+	FROM	dbo.Bettrans b WITH (NOLOCK)
+		INNER JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.BetType
+	WHERE	f.GroupId = 8
 			AND matchID = @MatchID 
-	GROUP BY CASE	WHEN bettype = 135 THEN '135'
-					WHEN bettype = 160 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 164 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 168 THEN '168'
-					WHEN bettype = 169 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 173 THEN '173'
-					WHEN bettype = 174 THEN '174'
-					WHEN bettype = 175 THEN '175'
-					WHEN bettype = 176 THEN '176'
-					WHEN bettype = 180 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
-					WHEN bettype = 192 THEN '192'
-					WHEN bettype = 193 THEN '193'
-					WHEN bettype = 210 THEN '210'
-					WHEN bettype = 211 THEN '211'
-					WHEN bettype = 212 THEN '212'
-					WHEN bettype = 213 THEN '213'
-					WHEN bettype = 214 THEN '214'
-					WHEN bettype = 215 THEN '215'
-					WHEN bettype = 216 THEN '216'
-					WHEN bettype = 217 THEN '217'
-					WHEN bettype = 426 THEN '426'
+	GROUP BY CASE	WHEN b.bettype = 135 THEN '135'
+					WHEN b.bettype = 160 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 164 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 168 THEN '168'
+					WHEN b.bettype = 169 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 173 THEN '173'
+					WHEN b.bettype = 174 THEN '174'
+					WHEN b.bettype = 175 THEN '175'
+					WHEN b.bettype = 176 THEN '176'
+					WHEN b.bettype = 180 THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5)
+					WHEN b.bettype = 192 THEN '192'
+					WHEN b.bettype = 193 THEN '193'
+					WHEN b.bettype = 210 THEN '210'
+					WHEN b.bettype = 211 THEN '211'
+					WHEN b.bettype = 212 THEN '212'
+					WHEN b.bettype = 213 THEN '213'
+					WHEN b.bettype = 214 THEN '214'
+					WHEN b.bettype = 215 THEN '215'
+					WHEN b.bettype = 216 THEN '216'
+					WHEN b.bettype = 217 THEN '217'
+					WHEN b.bettype = 426 THEN '426'
 					ELSE 0 END
 
 

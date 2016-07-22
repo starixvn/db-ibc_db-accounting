@@ -117,9 +117,9 @@ BEGIN
 						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), b.transdesc) = 0 THEN 1
 					WHEN b.bettype = 16 THEN CASE
 												WHEN @IsHTCal = 1 THEN CASE
-																			WHEN @hth > @hta AND LEFT(betteam,1) IN ('D','A') THEN -1
-																			WHEN @hth = @hta AND LEFT(betteam,1) IN ('H','A') THEN -1
-																			WHEN @hth < @hta AND LEFT(betteam,1) IN ('D','H') THEN -1
+																			WHEN @hth > @hta AND LEFT(betteam,1) IN ('0','2') THEN -1
+																			WHEN @hth = @hta AND LEFT(betteam,1) IN ('1','2') THEN -1
+																			WHEN @hth < @hta AND LEFT(betteam,1) IN ('0','1') THEN -1
 																			ELSE NULL
 																	   END
 												ELSE NULL
@@ -239,22 +239,22 @@ BEGIN
 		BEGIN
 			SET @result = CASE @bettype 
 							WHEN 16 THEN CASE
-											WHEN @hth > @hta THEN 'H' + CASE
-																			WHEN @fth > @fta THEN 'H'
-																			WHEN @fth = @fta THEN 'D'
-																			WHEN @fth < @fta THEN 'A'
+											WHEN @hth > @hta THEN '1:' + CASE
+																			WHEN @fth > @fta THEN '1'
+																			WHEN @fth = @fta THEN '0'
+																			WHEN @fth < @fta THEN '2'
 																			ELSE NULL
 																		END
-											WHEN @hth = @hta THEN 'D' + CASE
-																			WHEN @fth > @fta THEN 'H'
-																			WHEN @fth = @fta THEN 'D'
-																			WHEN @fth < @fta THEN 'A'
+											WHEN @hth = @hta THEN '0:' + CASE
+																			WHEN @fth > @fta THEN '1'
+																			WHEN @fth = @fta THEN '0'
+																			WHEN @fth < @fta THEN '2'
 																			ELSE NULL
 																		END
-											WHEN @hth < @hta THEN 'A' + CASE
-																			WHEN @fth > @fta THEN 'H'
-																			WHEN @fth = @fta THEN 'D'
-																			WHEN @fth < @fta THEN 'A'
+											WHEN @hth < @hta THEN '2:' + CASE
+																			WHEN @fth > @fta THEN '1'
+																			WHEN @fth = @fta THEN '0'
+																			WHEN @fth < @fta THEN '2'
 																			ELSE NULL
 																		END
 									END
@@ -434,9 +434,9 @@ BEGIN
 						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
 					WHEN bettype = 16 THEN CASE
 												WHEN @IsHTCal = 1 THEN CASE
-																			WHEN @hth > @hta AND LEFT(betteam,1) IN ('D','A') THEN -1
-																			WHEN @hth = @hta AND LEFT(betteam,1) IN ('H','A') THEN -1
-																			WHEN @hth < @hta AND LEFT(betteam,1) IN ('D','H') THEN -1
+																			WHEN @hth > @hta AND LEFT(betteam,1) IN ('0','2') THEN -1
+																			WHEN @hth = @hta AND LEFT(betteam,1) IN ('1','2') THEN -1
+																			WHEN @hth < @hta AND LEFT(betteam,1) IN ('0','1') THEN -1
 																			ELSE NULL
 																	   END
 												ELSE NULL
@@ -544,22 +544,22 @@ BEGIN
 		BEGIN
 		SET @result = CASE @bettype 
 						WHEN 16 THEN CASE
-										WHEN @hth > @hta THEN 'H' + CASE
-																		WHEN @fth > @fta THEN 'H'
-																		WHEN @fth = @fta THEN 'D'
-																		WHEN @fth < @fta THEN 'A'
+										WHEN @hth > @hta THEN '1:' + CASE
+																		WHEN @fth > @fta THEN '1'
+																		WHEN @fth = @fta THEN '0'
+																		WHEN @fth < @fta THEN '2'
 																		ELSE NULL
 																	END
-										WHEN @hth = @hta THEN 'D' + CASE
-																		WHEN @fth > @fta THEN 'H'
-																		WHEN @fth = @fta THEN 'D'
-																		WHEN @fth < @fta THEN 'A'
+										WHEN @hth = @hta THEN '0:' + CASE
+																		WHEN @fth > @fta THEN '1'
+																		WHEN @fth = @fta THEN '0'
+																		WHEN @fth < @fta THEN '2'
 																		ELSE NULL
 																	END
-										WHEN @hth < @hta THEN 'A' + CASE
-																		WHEN @fth > @fta THEN 'H'
-																		WHEN @fth = @fta THEN 'D'
-																		WHEN @fth < @fta THEN 'A'
+										WHEN @hth < @hta THEN '2:' + CASE
+																		WHEN @fth > @fta THEN '1'
+																		WHEN @fth = @fta THEN '0'
+																		WHEN @fth < @fta THEN '2'
 																		ELSE NULL
 																	END
 								END

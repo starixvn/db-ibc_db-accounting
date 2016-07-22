@@ -109,9 +109,11 @@ BEGIN
     INSERT INTO #BalanceBefore
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
-    FROM dbo.bettrans WITH (ROWLOCK)
-    WHERE matchid = @matchid 
-			AND bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE Is3x30 = 1 ) 
+    FROM dbo.bettrans b WITH (ROWLOCK)
+		INNER JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.BetType
+    WHERE	matchid = @matchid 
+			AND f.Is3x30 = 1
     GROUP BY custid
 
     IF @IsSettleAbandonedMatch = 1
@@ -228,9 +230,11 @@ BEGIN
 		INSERT INTO #BalanceAfter
 		SELECT	custid
 				,SUM(winlost - actual_stake + playercomm)
-		FROM	dbo.bettrans WITH (ROWLOCK)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+			INNER JOIN dbo.f_Set_GetGroupBettypes() f
+				ON b.bettype = f.BetType
 		WHERE	matchid = @matchid 
-				AND bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE Is3x30 = 1) 
+				AND f.Is3x30 = 1
 		GROUP BY custid
 		
 		INSERT INTO #Balance
@@ -302,9 +306,11 @@ BEGIN
     INSERT INTO #BalanceAfter
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
-    FROM dbo.bettrans WITH (ROWLOCK)
-    WHERE matchid = @matchid 
-      AND bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE Is3x30 = 1 ) 
+    FROM dbo.bettrans b WITH (ROWLOCK)
+		INNER JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.BetType
+    WHERE	matchid = @matchid 
+			AND f.Is3x30 = 1
     GROUP BY custid
 
     -------------------------------------------------------------

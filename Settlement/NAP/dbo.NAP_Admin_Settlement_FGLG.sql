@@ -91,7 +91,7 @@ BEGIN
 					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
 					AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
 					AND b.bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
-					AND b.bettype NOT IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8) --Auto settle Betradar
+					AND f.GroupId <> 8 --Auto settle Betradar
 		) result
 		GROUP BY FTFGLGBet
 
@@ -159,10 +159,12 @@ BEGIN
 
 	INSERT INTO #tmpTrans(transid)
 	SELECT	transid
-	FROM	dbo.bettrans WITH (NOLOCK)
+	FROM	dbo.bettrans b WITH (NOLOCK)
+		LEFT JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.bettype
 	WHERE	matchid = @matchid 
-			AND (bettype = (@bettype) 
-				OR (bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 2 AND IsUsedGoalRecordValue = 1)
+			AND (b.bettype = (@bettype) 
+				OR (f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1
 					AND @IsAutoCalculatePage = 1 
 					AND @Action = 'CAL-FT'
 				)
@@ -171,18 +173,20 @@ BEGIN
 
 	INSERT INTO #BalanceBefore
 	SELECT	custid, SUM(winlost - actual_stake + playercomm)
-	FROM	dbo.bettrans WITH (ROWLOCK)
+	FROM	dbo.bettrans b WITH (ROWLOCK)
+		LEFT JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.bettype
 	WHERE	matchid = @matchid 
-			AND (bettype IN (@bettype,901,902,903)
-				OR (bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 2 AND IsUsedGoalRecordValue = 1)
+			AND (b.bettype IN (@bettype,901,902,903)
+				OR (f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1
 					AND @IsAutoCalculatePage = 1 
 					AND @Action = 'CAL-FT'
 				)
 			)
-			AND 1 = CASE WHEN bettype IN (901,902,903) 
+			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND refno IN (SELECT transid FROM #tmpTrans)	
 								THEN 1 
-						WHEN bettype NOT IN (901,902,903) THEN 1
+						WHEN b.bettype NOT IN (901,902,903) THEN 1
 						ELSE 0 END
 	GROUP BY custid
 
@@ -330,18 +334,21 @@ BEGIN
 		--===
 		INSERT INTO #BalanceAfter
 		SELECT	custid, SUM(winlost - actual_stake + playercomm)
-		FROM	dbo.bettrans WITH (ROWLOCK)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+			LEFT JOIN dbo.f_Set_GetGroupBettypes() f
+				ON b.bettype = f.bettype
 		WHERE	matchid = @matchid 
-				AND (bettype IN (@bettype,901,902,903)
-					OR (bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 2 AND IsUsedGoalRecordValue = 1)
+				AND (b.bettype IN (@bettype,901,902,903)
+					OR (f.GroupId = 2 
+						AND f.IsUsedGoalRecordValue = 1
 						AND @IsAutoCalculatePage = 1 
 						AND @Action = 'CAL-FT'
 					)
 				)
-				AND 1 = CASE WHEN bettype IN (901, 902, 903) 
+				AND 1 = CASE WHEN b.bettype IN (901, 902, 903) 
 										AND refno IN (SELECT transid FROM #tmpTrans)	
 								THEN 1
-							WHEN bettype NOT IN (901,902,903) THEN 1
+							WHEN b.bettype NOT IN (901,902,903) THEN 1
 							ELSE 0 END
 		GROUP BY custid
 		--===

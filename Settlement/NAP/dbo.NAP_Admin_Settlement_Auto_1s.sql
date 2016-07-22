@@ -104,16 +104,20 @@ BEGIN
 	INSERT INTO #tmpTrans(transid)
 	SELECT transid
 	FROM dbo.bettrans b WITH (ROWLOCK)
+		INNER JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.bettype
 	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+			AND f.GroupId = 8
 			AND betdaqid = 0--bettrade tickets
 
 	INSERT INTO #BalanceBefore
 	SELECT	 b.custid
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
+		INNER JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.bettype
 	WHERE	b.matchid = @MatchId 
-			AND (b.bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8) OR bettype IN (901, 902, 903))
+			AND (f.GroupId = 8 OR b.bettype IN (901, 902, 903))
 			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 								AND b.refno IN (SELECT transid FROM #tmpTrans)	
 						THEN 1 
@@ -194,11 +198,14 @@ BEGIN
 
 				SET @strBettypes = NULL
 				
-				SELECT	 @strDeterminedBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
-				FROM	dbo.Bettrans WITH (NOLOCK)
+				SELECT	 @strDeterminedBettypes = COALESCE(@strBettypes + ',' + CAST(b.bettype AS VARCHAR(10)), CAST(b.bettype AS VARCHAR(10))) 
+				FROM	dbo.Bettrans b WITH (NOLOCK)
+					INNER JOIN dbo.f_Set_GetGroupBettypes() f
+						ON b.bettype = f.bettype
 				WHERE	MatchID = @MatchID 
-						AND bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE groupId = 8 AND IsDetermined = 1)
-						AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
+						AND f.GroupId = 8 
+						AND f.IsDetermined = 1
+						AND	b.Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
 						AND StatusID NOT BETWEEN 101 AND 102 
 	
 				SELECT	@GoalScorerAnytime		= @GoalScorerAnytime + CASE WHEN t.ResourceID LIKE '216__' THEN ISNULL(r.HomeValue,'') +',' ELSE '' END 
@@ -248,8 +255,10 @@ BEGIN
 		SELECT b.custid
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 		FROM dbo.bettrans b WITH (ROWLOCK)
+			INNER JOIN dbo.f_Set_GetGroupBettypes() f
+				ON b.bettype = f.bettype
 		WHERE	b.matchid = @matchid 
-				AND (b.bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8) OR bettype IN (901, 902, 903))
+				AND (f.GroupId = 8 OR b.bettype IN (901, 902, 903))
 				AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 										AND b.refno IN (SELECT transid FROM #tmpTrans)	
 									THEN 1 
@@ -326,8 +335,10 @@ BEGIN
 	SELECT b.custid
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
+		INNER JOIN dbo.f_Set_GetGroupBettypes() f
+			ON b.bettype = f.bettype
 	WHERE	b.matchid = @matchid 
-			AND (b.bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8) OR bettype IN (901, 902, 903))
+			AND (f.GroupId = 8 OR b.bettype IN (901, 902, 903))
 			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
 									AND b.refno IN (SELECT transid FROM #tmpTrans)	
 								THEN 1 
