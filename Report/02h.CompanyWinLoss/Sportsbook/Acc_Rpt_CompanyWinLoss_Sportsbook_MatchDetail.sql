@@ -54,7 +54,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                        m.AwayId
                 FROM Match m WITH (NOLOCK)
                 WHERE m.sporttype = @SportType
-                      AND EventDate BETWEEN @StartDate AND @EndDate;
+                      AND EventDate = @StartDate;
      END;
      BEGIN -- #Data
 
@@ -93,7 +93,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                        SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
                 FROM bettrans b WITH (nolock)
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
@@ -134,7 +134,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans b WITH (NOLOCK)
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)

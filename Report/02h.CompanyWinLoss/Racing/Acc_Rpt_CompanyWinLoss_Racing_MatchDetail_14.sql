@@ -112,7 +112,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail_14] @StartDate='2016-01-01', @En
                      INNER JOIN League AS l WITH (NOLOCK) ON p.LeagueId = l.LeagueId
                      INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.LeagueId = r.meetingId
                      INNER JOIN @IBCFee AS t ON r.partnerId = t.partnerId
-                WHERE o.EventDate BETWEEN @StartDate AND @EndDate
+                WHERE o.EventDate = @StartDate
                       AND l.sporttype = @sporttype;
      END;
      BEGIN -- #Data
@@ -191,7 +191,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail_14] @StartDate='2016-01-01', @En
 					WHERE Bettype = @Bettype
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND b.MatchId > 0
                       AND b.ruben = 1

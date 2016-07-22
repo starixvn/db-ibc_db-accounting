@@ -75,7 +75,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType]	@StartDate='2016-01-01', @
                      INNER JOIN match AS m WITH (NOLOCK) ON b.MatchId = m.MatchId
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND sb.EventType = 1
                       AND b.MatchId > 0
                       AND b.ruben = 1
@@ -105,7 +105,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType]	@StartDate='2016-01-01', @
                      INNER JOIN VSRaceInfo AS r WITH (NOLOCK) ON b.MatchId = r.EventId
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND sb.EventType = 3
                       AND b.MatchId > 0
                       AND b.ruben = 1

@@ -203,7 +203,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_BetType_14] @StartDate='2016-01-01', @EndDat
              SELECT CustId
              FROM #DepositSuper
          ) AS dep ON b.srecommend = dep.CustId
-         WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+         WHERE b.winlostdate = @StartDate
                AND b.MatchId > 0
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)

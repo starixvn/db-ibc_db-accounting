@@ -51,7 +51,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualRacing_MatchDetail] @StartDate='2016-01-01',
                        SUM((1 - tpositiontaking) * ABS(b.stake) * actualrate) AS RealTurnover
                 FROM bettrans AS b WITH (nolock)
                      INNER JOIN VSRaceInfo AS r WITH (nolock) ON b.MatchId = r.EventId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND r.SportType = @SportType
                       AND b.MatchId > 0

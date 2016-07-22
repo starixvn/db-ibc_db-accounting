@@ -157,6 +157,106 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                              THEN 'Credit'
                              ELSE 'Deposit'
                          END;
+						 
+			INSERT INTO #Data
+                SELECT CASE
+                           WHEN sb.IsMajor = 1
+                           THEN 'Soccer-Major Bet Types'
+                           ELSE 'Soccer-Minor Bet Types'
+                       END,
+                       CASE
+                           WHEN dep.CustId IS NULL
+                           THEN 'Credit'
+                           ELSE 'Deposit'
+                       END AS RowName,
+                       SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
+                       SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+                       SUM(scomm * actualrate) Commission,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
+                FROM bettrans AS b WITH (NOLOCK)
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
+                WHERE b.winlostdate = @StartDate
+                      AND (@IsLive > 1
+                           OR b.liveIndicator = @IsLive)
+                      AND m.type = CASE
+                                       WHEN b.BetType = 10
+                                       THEN 'outright'
+                                       ELSE 'match'
+                                   END
+                      AND b.ruben = 1
+                      AND b.statusId NOT IN(101, 102, 103, 121)
+                GROUP BY CASE
+                             WHEN sb.IsMajor = 1
+                             THEN 'Soccer-Major Bet Types'
+                             ELSE 'Soccer-Minor Bet Types'
+                         END,
+                         CASE
+                             WHEN dep.CustId IS NULL
+                             THEN 'Credit'
+                             ELSE 'Deposit'
+                         END;
+						 
+			------ BARM (site only)			 
+			INSERT INTO #Data
+                SELECT CASE
+                           WHEN sb.IsMajor = 1
+                           THEN 'Soccer-Major Bet Types'
+                           ELSE 'Soccer-Minor Bet Types'
+                       END,
+                       'BARM' AS RowName,
+                       SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
+                       SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+                       SUM(scomm * actualrate) Commission,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
+                FROM bettrans AS b WITH (NOLOCK)
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
+                WHERE b.recommend = 5707545 
+					  AND b.winlostdate = @StartDate
+                      AND (@IsLive > 1
+                           OR b.liveIndicator = @IsLive)
+                      AND m.type = CASE
+                                       WHEN b.BetType = 10
+                                       THEN 'outright'
+                                       ELSE 'match'
+                                   END
+                      AND b.ruben = 1
+                      AND b.statusId NOT IN(101, 102, 103, 121)
+                GROUP BY CASE
+                             WHEN sb.IsMajor = 1
+                             THEN 'Soccer-Major Bet Types'
+                             ELSE 'Soccer-Minor Bet Types'
+                         END
+						 
+		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
+		UPDATE 	c
+		SET		c.MemberWinLoss = ISNULL(c.MemberWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.MemberWinLoss,0) ELSE ISNULL(d.MemberWinLoss,0) END,
+				c.SMAWinLoss = ISNULL(c.SMAWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.SMAWinLoss,0) ELSE ISNULL(d.SMAWinLoss,0) END,
+				c.Commission = ISNULL(c.Commission,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.Commission,0) ELSE ISNULL(d.Commission,0) END,
+				c.RealIncome = ISNULL(c.RealIncome,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.RealIncome,0) ELSE ISNULL(d.RealIncome,0) END,
+				c.VirtualIncome = ISNULL(c.VirtualIncome,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualIncome,0) ELSE ISNULL(d.VirtualIncome,0) END,
+				c.RealTurnover = ISNULL(c.RealTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.RealTurnover,0) ELSE ISNULL(d.RealTurnover,0) END,
+				c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
+		FROM	#Data c
+		FULL JOIN  #Data d
+				ON	c.Bettype = d.Bettype
+					AND c.isHedge = d.isHedge
+					AND c.liveindicator = d.liveindicator
+					AND d.RowName = 'BARM' 
+					AND c.RowName IN ('Credit', 'Deposit')
+
+		-----Delete BARM row used for calculate
+		DELETE #Data WHERE RowName = 'BARM' 
+			
      END;
      BEGIN -- RM   
 

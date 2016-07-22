@@ -43,7 +43,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail] @EndDate='2020-01-
                        o.MatchCode
                 FROM outright o WITH (NOLOCK)
                      INNER JOIN league l WITH (NOLOCK) ON o.LeagueId = l.LeagueId
-                WHERE EventDate BETWEEN @StartDate AND @EndDate
+                WHERE EventDate = @StartDate
                       AND l.sporttype = @SportType;
      END;
      BEGIN -- #Data
@@ -79,7 +79,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail] @EndDate='2020-01-
                        SUM((1 - tpositiontaking) * ABS(b.stake) * virtualrate) VirtualTurnover
                 FROM bettrans b WITH (nolock)
                      INNER JOIN #Match m WITH (nolock) ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = 10
                       AND b.ruben = 1
                       AND b.statusID NOT IN(101, 102, 103, 121)
@@ -108,7 +108,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail] @EndDate='2020-01-
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans b WITH (NOLOCK)
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = 10
                       AND b.ruben = 1
                       AND b.statusID NOT IN(101, 102, 103, 121)

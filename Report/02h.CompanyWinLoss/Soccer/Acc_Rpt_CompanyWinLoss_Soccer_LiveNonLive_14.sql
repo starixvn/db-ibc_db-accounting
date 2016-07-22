@@ -18,7 +18,10 @@ Task:  Casino Integration Improvement - Implement Company Winloss By Products re
 DB: DBACC/bodb02
 
 Revisions:
-- 20160301@Jacob: Initialize Company Win Loss Report
+- 20160301@Jacob Initialize Company Win Loss Report
+- 20160720@Sophia: . Revise SP
+				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+				   
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@StartDate='2016-01-01'
 
@@ -35,25 +38,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                 WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
                 AND EventType IN(1, 2);
      END;
-     BEGIN -- #DepositAgent
+     BEGIN -- #DepositSuper
 
-         CREATE TABLE #DepositAgent
+		 CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
-         INSERT INTO #DepositAgent
-                SELECT c.CustId
-                FROM customer AS c WITH (NOLOCK)
-                WHERE c.RoleID = 2
-                      AND EXISTS
-                (
-                    SELECT 1
-                    FROM f_DepSuper_1('All') dep
-                    WHERE c.srecommend = dep.CustId
-                )
-                AND CustId <> 5707545
-                UNION
-                SELECT 5707545; --BARM
-
+         INSERT INTO #DepositSuper
+                SELECT CustId
+                FROM f_DepSuper_1('All');
+	 
      END;
      BEGIN -- #Match
 
@@ -74,14 +67,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                            MatchCode,
                            'match' AS type
                     FROM match14 WITH (NOLOCK)
-                    WHERE EventDate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate = @StartDate
                     UNION ALL
                     SELECT orid,
                            LeagueId,
                            MatchCode,
                            'outright' AS type
                     FROM outright14 WITH (NOLOCK)
-                    WHERE EventDate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate = @StartDate
                 ) m
                 INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId
                 WHERE l.sporttype = 1;
@@ -123,9 +116,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans14 AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND m.type = CASE
                                        WHEN b.BetType = 10
                                        THEN 'outright'
@@ -144,6 +137,64 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                              THEN 'Credit'
                              ELSE 'Deposit'
                          END;
+						 						 
+			------ BARM (site only)
+			INSERT INTO #Data
+                SELECT liveindicator AS GroupId,
+                       CASE liveindicator
+                           WHEN 1
+                           THEN 'Soccer Live'
+                           ELSE 'Soccer Non-Live'
+                       END AS GroupName,
+                       'BARM' AS RowName,
+                       SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
+                       SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+                       SUM(scomm * actualrate) Commission,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
+                FROM bettrans14 AS b WITH (NOLOCK)
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+                     INNER JOIN #Match m ON b.MatchId = m.MatchId
+                WHERE b.recommend = 5707545 
+					  AND b.winlostdate = @StartDate
+                      AND m.type = CASE
+                                       WHEN b.BetType = 10
+                                       THEN 'outright'
+                                       ELSE 'match'
+                                   END
+                      AND b.ruben = 1
+                      AND b.statusId NOT IN(101, 102, 103, 121)
+                GROUP BY liveindicator,
+                         CASE liveindicator
+                             WHEN 1
+                             THEN 'Soccer Live'
+                             ELSE 'Soccer Non-Live'
+                         END
+						 
+		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
+		UPDATE 	c
+		SET		c.MemberWinLoss = ISNULL(c.MemberWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.MemberWinLoss,0) ELSE ISNULL(d.MemberWinLoss,0) END,
+				c.SMAWinLoss = ISNULL(c.SMAWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.SMAWinLoss,0) ELSE ISNULL(d.SMAWinLoss,0) END,
+				c.Commission = ISNULL(c.Commission,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.Commission,0) ELSE ISNULL(d.Commission,0) END,
+				c.RealIncome = ISNULL(c.RealIncome,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.RealIncome,0) ELSE ISNULL(d.RealIncome,0) END,
+				c.VirtualIncome = ISNULL(c.VirtualIncome,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualIncome,0) ELSE ISNULL(d.VirtualIncome,0) END,
+				c.RealTurnover = ISNULL(c.RealTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.RealTurnover,0) ELSE ISNULL(d.RealTurnover,0) END,
+				c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
+		FROM	#Data c
+		FULL JOIN  #Data d
+				ON	c.Bettype = d.Bettype
+					AND c.isHedge = d.isHedge
+					AND c.liveindicator = d.liveindicator
+					AND d.RowName = 'BARM' 
+					AND c.RowName IN ('Credit', 'Deposit')
+
+			-----Delete BARM row used for calculate
+			DELETE #Data WHERE RowName = 'BARM' 		
+			
+			
      END;
      BEGIN -- RM   
 
@@ -167,7 +218,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND m.type = CASE
                                        WHEN b.BetType = 10
                                        THEN 'outright'
@@ -202,7 +253,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                   RowName;
      END;
      DROP TABLE #SportBetType;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #DepositSuper;
      DROP TABLE #Match;
      DROP TABLE #Data;
 GO

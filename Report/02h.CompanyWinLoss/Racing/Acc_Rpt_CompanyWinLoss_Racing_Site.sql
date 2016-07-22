@@ -107,7 +107,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                      INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.LeagueId = r.meetingid
                      INNER JOIN league AS l WITH (NOLOCK) ON p.LeagueId = l.LeagueId
                      INNER JOIN @IBCFee AS t ON r.partnerId = t.partnerId
-                WHERE o.EventDate BETWEEN @StartDate AND @EndDate
+                WHERE o.EventDate = @StartDate
                       AND l.sporttype = @SportType;
      END;
      BEGIN -- #Agent
@@ -220,7 +220,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
                      INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND b.MatchId > 0
                       AND b.ruben = 1

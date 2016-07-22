@@ -117,7 +117,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_BetType] @StartDate='2016-01-01', @EndDate='
                      INNER JOIN RacingMeeting AS r WITH (NOLOCK) ON p.LeagueId = r.meetingid
                      INNER JOIN league AS l WITH (NOLOCK) ON p.LeagueId = l.LeagueId
                      INNER JOIN @IBCFee AS t ON r.partnerId = t.partnerId
-                WHERE o.EventDate BETWEEN @StartDate AND @EndDate
+                WHERE o.EventDate = @StartDate
                       AND l.sporttype = @SportType;
      END;
      BEGIN -- #DepositSuper
@@ -203,7 +203,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_BetType] @StartDate='2016-01-01', @EndDate='
              SELECT CustId
              FROM #DepositSuper
          ) AS dep ON b.srecommend = dep.CustId
-         WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+         WHERE b.winlostdate = @StartDate
                AND b.MatchId > 0
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)

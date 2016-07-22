@@ -92,7 +92,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
                            'match' AS type
                     FROM Match WITH (nolock)
                     WHERE @BetType <> 10
-                          AND EventDate BETWEEN @StartDate AND @EndDate
+                          AND EventDate = @StartDate
                           AND ((@IsHedge = 1
                                 AND MatchCode LIKE '%Hedge%')
                                OR (@IsHedge = 0
@@ -103,7 +103,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
                            'outright' AS type
                     FROM outright WITH (nolock)
                     WHERE @BetType = 10
-                          AND EventDate BETWEEN @StartDate AND @EndDate
+                          AND EventDate = @StartDate
                 ) m
                 INNER JOIN league l WITH (nolock) ON m.LeagueId = l.LeagueId
                 INNER JOIN sports sp WITH (nolock) ON l.sporttype = sp.sporttype
@@ -135,7 +135,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site] @StartDate='2016-01-01', @EndDate=
                 FROM bettrans b WITH (NOLOCK)
                      INNER JOIN #Agent ag ON b.recommend = ag.custid
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)

@@ -75,7 +75,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_Site_14] @StartDate='2016-01-01', @EndDat
                 SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
          FROM bettrans14 AS b WITH (NOLOCK)
               INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
-         WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+         WHERE b.winlostdate = @StartDate
                AND b.BetType = @BetType
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)
