@@ -184,9 +184,9 @@ BEGIN
 			INNER JOIN @CommSetting as cs ON b.MatchId = cs.MatchId 
 			 left join (
 				select	refno,
-						sum(case when bettype = 32 and liveawayscore =0 then 0 else stake*isnull(oddsspread,0) end) TOIBC,
+						sum(case when bm.bettype = 32 and liveawayscore =0 then 0 else stake*isnull(oddsspread,0) end) TOIBC,
 						-sum((winlost - stake)*isnull(oddsspread,0)) WLIBC,
-						sum(case when bettype = 32 and liveawayscore = 0 then 0 when bettype = 31 or (bettype = 32 and liveawayscore <> 0) then stake*(1 -tpositiontaking - isnull(oddsspread,0)) else 0 end) TOPhum
+						sum(case when bm.bettype = 32 and liveawayscore = 0 then 0 when bm.bettype = 31 or (bm.bettype = 32 and liveawayscore <> 0) then stake*(1 -tpositiontaking - isnull(oddsspread,0)) else 0 end) TOPhum
 				FROM bettransm14 bm with (nolock)
 				INNER JOIN #SportBettype s ON s.Bettype = bm.bettype 
 				WHERE 	s.ProductID = 2

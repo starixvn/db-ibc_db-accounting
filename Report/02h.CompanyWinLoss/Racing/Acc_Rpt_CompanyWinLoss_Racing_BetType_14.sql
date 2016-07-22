@@ -178,18 +178,18 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_BetType_14] @StartDate='2016-01-01', @EndDat
          (
              SELECT refno,
                     SUM(CASE
-                            WHEN BetType = 32
+                            WHEN bm.BetType = 32
                                  AND liveawayscore = 0
                             THEN 0
                             ELSE stake * ISNULL(oddsspread, 0)
                         END) AS TOIBC,
                     -SUM((winlost - stake) * ISNULL(oddsspread, 0)) AS WLIBC,
                     SUM(CASE
-                            WHEN BetType = 32
+                            WHEN bm.BetType = 32
                                  AND liveawayscore = 0
                             THEN 0
-                            WHEN BetType = 31
-                                 OR (BetType = 32
+                            WHEN bm.BetType = 31
+                                 OR (bm.BetType = 32
                                      AND liveawayscore <> 0)
                             THEN stake * (1 - tpositiontaking - ISNULL(oddsspread, 0))
                             ELSE 0
