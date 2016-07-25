@@ -3,7 +3,6 @@ GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_25] @matchid INT
 	,@bettype SMALLINT
 	,@scorediff SMALLMONEY
-	,@isRefundHT BIT = 0
 	,@betcount INT = 0
 AS
 /*
