@@ -196,7 +196,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
 				   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
 			FROM bettrans14 AS b WITH (NOLOCK)
 				 INNER JOIN @BetType AS sb ON sb.BetType = b.BetType
-				 LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
 				 INNER JOIN #Match m ON b.MatchId = m.MatchId
 			WHERE  	b.recommend = 5707545 
 					AND b.winlostdate = @StartDate
@@ -229,9 +228,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
 				c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
 		FROM	#Data c
 		FULL JOIN  #Data d
-				ON	c.Bettype = d.Bettype
-					AND c.isHedge = d.isHedge
-					AND c.liveindicator = d.liveindicator
+				ON	c.GroupId = d.GroupId
+					AND c.GroupName = d.GroupName
 					AND d.RowName = 'BARM' 
 					AND c.RowName IN ('Credit', 'Deposit')
 

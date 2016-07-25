@@ -49,24 +49,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                IsMajor = 1
          WHERE BetType IN(1, 2, 3, 5, 6, 7, 8, 12, 15, 24, 25, 28, 121, 122, 123, 126, 151, 301, 302, 303, 304);
      END;
-     BEGIN -- #DepositAgent
+     BEGIN -- #DepositSuper
 
-         CREATE TABLE #DepositAgent
+         CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
-         INSERT INTO #DepositAgent
-                SELECT c.CustId
-                FROM customer AS c WITH (NOLOCK)
-                WHERE c.RoleID = 2
-                      AND EXISTS
-                (
-                    SELECT 1
-                    FROM f_DepSuper_1('All') dep
-                    WHERE c.srecommend = dep.CustId
-                )
-                AND CustId <> 5707545
-                UNION
-                SELECT 5707545; --BARM
+         INSERT INTO #DepositSuper
+                SELECT CustId
+                FROM f_DepSuper_1('All');
 
      END;
      BEGIN -- #Match
@@ -115,49 +105,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
          );
      END;
      BEGIN -- Major AND Minor
-         INSERT INTO #Data
-                SELECT CASE
-                           WHEN sb.IsMajor = 1
-                           THEN 'Soccer-Major Bet Types'
-                           ELSE 'Soccer-Minor Bet Types'
-                       END,
-                       CASE
-                           WHEN dep.CustId IS NULL
-                           THEN 'Credit'
-                           ELSE 'Deposit'
-                       END AS RowName,
-                       SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
-                       SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                       SUM(scomm * actualrate) Commission,
-                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
-                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
-                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
-                FROM bettrans14 AS b WITH (NOLOCK)
-                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositAgent AS dep ON b.recommend = dep.CustId
-                     INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
-                      AND (@IsLive > 1
-                           OR b.liveIndicator = @IsLive)
-                      AND m.type = CASE
-                                       WHEN b.BetType = 10
-                                       THEN 'outright'
-                                       ELSE 'match'
-                                   END
-                      AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
-                GROUP BY CASE
-                             WHEN sb.IsMajor = 1
-                             THEN 'Soccer-Major Bet Types'
-                             ELSE 'Soccer-Minor Bet Types'
-                         END,
-                         CASE
-                             WHEN dep.CustId IS NULL
-                             THEN 'Credit'
-                             ELSE 'Deposit'
-                         END;
-						 
+       						 
 			INSERT INTO #Data
                 SELECT CASE
                            WHEN sb.IsMajor = 1
@@ -176,7 +124,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
                        SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
-                FROM bettrans AS b WITH (NOLOCK)
+                FROM bettrans14 AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
@@ -216,9 +164,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
                        SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
-                FROM bettrans AS b WITH (NOLOCK)
-                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+                FROM bettrans14 AS b WITH (NOLOCK)
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType                    
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.recommend = 5707545 
 					  AND b.winlostdate = @StartDate
@@ -248,9 +195,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
 				c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
 		FROM	#Data c
 		FULL JOIN  #Data d
-				ON	c.Bettype = d.Bettype
-					AND c.isHedge = d.isHedge
-					AND c.liveindicator = d.liveindicator
+				ON	c.GroupName = d.GroupName
 					AND d.RowName = 'BARM' 
 					AND c.RowName IN ('Credit', 'Deposit')
 
@@ -315,7 +260,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                   RowName;
      END;
      DROP TABLE #SportBetType;
-     DROP TABLE #DepositAgent;
+     DROP TABLE #DepositSuper;
      DROP TABLE #Data;
      DROP TABLE #Match;
 GO

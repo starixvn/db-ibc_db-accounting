@@ -157,7 +157,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.recommend = 5707545 
 					  AND b.winlostdate = @StartDate
@@ -174,6 +173,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                              THEN 'Soccer Live'
                              ELSE 'Soccer Non-Live'
                          END
+	
+	 
 						 
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
@@ -186,14 +187,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
 				c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
 		FROM	#Data c
 		FULL JOIN  #Data d
-				ON	c.Bettype = d.Bettype
-					AND c.isHedge = d.isHedge
-					AND c.liveindicator = d.liveindicator
+				ON	c.GroupId = d.GroupId					
 					AND d.RowName = 'BARM' 
 					AND c.RowName IN ('Credit', 'Deposit')
 
+ 
 			-----Delete BARM row used for calculate
-			DELETE #Data WHERE RowName = 'BARM' 			 
+		DELETE #Data WHERE RowName = 'BARM' 			 
 						 
 						 
      END;
