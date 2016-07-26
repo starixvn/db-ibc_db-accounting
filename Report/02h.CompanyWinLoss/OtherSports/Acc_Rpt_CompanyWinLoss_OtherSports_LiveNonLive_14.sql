@@ -38,13 +38,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] @EndDate='2020-01-01',@
      END;
      BEGIN -- #DepositSuper
 
-        CREATE TABLE #DepositSuper
+         CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositSuper
                 SELECT CustId
                 FROM f_DepSuper_1('All');
-
      END;
      BEGIN -- #Match
 
@@ -132,7 +131,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] @EndDate='2020-01-01',@
                              ELSE 'Deposit'
                          END;
      END;
-     
      BEGIN -- Query
 
          SELECT d.GroupId AS GroupId,

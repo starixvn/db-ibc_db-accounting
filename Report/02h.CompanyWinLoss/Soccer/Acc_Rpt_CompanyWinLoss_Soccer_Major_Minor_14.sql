@@ -20,7 +20,9 @@ DB: DBACC/bodb02
 
 Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
-
+- 20160720@Sophia: . Revise SP
+				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+				   
 Parameters:
 @IsLive: 2 - ALL. 0 - Non-Live. 1 - Live
 Example:
@@ -49,15 +51,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                IsMajor = 1
          WHERE BetType IN(1, 2, 3, 5, 6, 7, 8, 12, 15, 24, 25, 28, 121, 122, 123, 126, 151, 301, 302, 303, 304);
      END;
-     BEGIN -- #DepositSuper
+	BEGIN -- #DepositSuper
 
-         CREATE TABLE #DepositSuper
+		 CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositSuper
                 SELECT CustId
                 FROM f_DepSuper_1('All');
-
+	 
      END;
      BEGIN -- #Match
 
@@ -78,14 +80,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                            MatchCode,
                            'match' AS type
                     FROM match14 WITH (NOLOCK)
-                    WHERE EventDate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate = @StartDate
                     UNION ALL
                     SELECT orid,
                            LeagueId,
                            MatchCode,
                            'outright' AS type
                     FROM outright14 WITH (NOLOCK)
-                    WHERE EventDate BETWEEN @StartDate AND @EndDate
+                    WHERE EventDate = @StartDate
                 ) m
                 INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId
                 WHERE l.sporttype = 1;
@@ -105,7 +107,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
          );
      END;
      BEGIN -- Major AND Minor
-       						 
 			INSERT INTO #Data
                 SELECT CASE
                            WHEN sb.IsMajor = 1
@@ -148,7 +149,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                              THEN 'Credit'
                              ELSE 'Deposit'
                          END;
-						 
+     END
+     BEGIN -- Sophia
 			------ BARM (site only)			 
 			INSERT INTO #Data
                 SELECT CASE
@@ -165,7 +167,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                        SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans14 AS b WITH (NOLOCK)
-                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType                    
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
                 WHERE b.recommend = 5707545 
 					  AND b.winlostdate = @StartDate
@@ -199,9 +201,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
 					AND d.RowName = 'BARM' 
 					AND c.RowName IN ('Credit', 'Deposit')
 
-		-----Delete BARM row used for calculate
-		DELETE #Data WHERE RowName = 'BARM' 
-			
+			-----Delete BARM row used for calculate
+			DELETE #Data WHERE RowName = 'BARM' 					 
+						 
+						 
      END;
      BEGIN -- RM   
 
@@ -224,7 +227,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND (@IsLive > 1
                            OR b.liveIndicator = @IsLive)
                       AND m.type = CASE

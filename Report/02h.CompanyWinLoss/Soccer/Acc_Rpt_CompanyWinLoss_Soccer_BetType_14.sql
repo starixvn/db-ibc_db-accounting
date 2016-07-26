@@ -23,7 +23,7 @@ Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
 - 20160720@Sophia: . Revise SP
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
-				   
+
 Parameters:
 @IsLive: 2 - ALL. 0 - Non-Live. 1 - Live
 Example:
@@ -72,7 +72,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
          FROM @BetType b
               INNER JOIN BetType(NOLOCK) bt ON b.BetType = bt.typeid;
      END;
-      BEGIN -- #DepositSuper
+     BEGIN -- #DepositSuper
 
 		 CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
@@ -131,52 +131,53 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
      END;
      BEGIN -- Bet Type
          INSERT INTO #Data
-                SELECT sb.BetType GroupId,
-                       CASE
-                           WHEN m.MatchCode LIKE '%hedge%'
-                           THEN sb.BetTypeName+' (hedge)'
-                           ELSE sb.BetTypeName
-                       END GroupName,
-                       sb.DisplayOrder,
-                       CASE
-                           WHEN dep.CustId IS NULL
-                           THEN 'Credit'
-                           ELSE 'Deposit'
-                       END AS RowName,
-                       SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
-                       SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                       SUM(scomm * actualrate) Commission,
-                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
-                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
-                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
-                FROM bettrans14 AS b WITH (NOLOCK)
-                     INNER JOIN @BetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-                     INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate = @StartDate
-                      AND (@IsLive > 1
-                           OR b.liveindicator = @IsLive)
-                      AND m.type = CASE
-                                       WHEN b.BetType = 10
-                                       THEN 'outright'
-                                       ELSE 'match'
-                                   END
-                      AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
-                GROUP BY sb.BetType,
-                         CASE
-                             WHEN m.MatchCode LIKE '%hedge%'
-                             THEN sb.BetTypeName+' (hedge)'
-                             ELSE sb.BetTypeName
-                         END,
-                         sb.DisplayOrder,
-                         CASE
-                             WHEN dep.CustId IS NULL
-                             THEN 'Credit'
-                             ELSE 'Deposit'
-                         END;
-						 
+			SELECT sb.BetType GroupId,
+				   CASE
+					   WHEN m.MatchCode LIKE '%hedge%'
+					   THEN sb.BetTypeName+' (hedge)'
+					   ELSE sb.BetTypeName
+				   END GroupName,
+				   sb.DisplayOrder,
+				   CASE
+					   WHEN dep.CustId IS NULL
+					   THEN 'Credit'
+					   ELSE 'Deposit'
+				   END AS RowName,
+				   SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
+				   SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+				   SUM(scomm * actualrate) Commission,
+				   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
+				   SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
+				   SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+				   SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
+			FROM bettrans14 AS b WITH (NOLOCK)
+				 INNER JOIN @BetType AS sb ON sb.BetType = b.BetType
+				 LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+				 INNER JOIN #Match m ON b.MatchId = m.MatchId
+			WHERE b.winlostdate = @StartDate
+				  AND (@IsLive > 1
+					   OR b.liveindicator = @IsLive)
+				  AND m.type = CASE
+								   WHEN b.BetType = 10
+								   THEN 'outright'
+								   ELSE 'match'
+							   END
+				  AND b.ruben = 1
+				  AND b.statusId NOT IN(101, 102, 103, 121)
+			GROUP BY sb.BetType,
+					 CASE
+						 WHEN m.MatchCode LIKE '%hedge%'
+						 THEN sb.BetTypeName+' (hedge)'
+						 ELSE sb.BetTypeName
+					 END,
+					 sb.DisplayOrder,
+					 CASE
+						 WHEN dep.CustId IS NULL
+						 THEN 'Credit'
+						 ELSE 'Deposit'
+					 END;
+	END
+	BEGIN -- Sophia				 
 		------ BARM (site only)
 		 INSERT INTO #Data
 			SELECT sb.BetType GroupId,
@@ -233,10 +234,11 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
 					AND d.RowName = 'BARM' 
 					AND c.RowName IN ('Credit', 'Deposit')
 
+
 		-----Delete BARM row used for calculate
 		DELETE #Data WHERE RowName = 'BARM' 
 
-						
+						 
      END;
      BEGIN -- RM   
 

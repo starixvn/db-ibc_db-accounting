@@ -18,9 +18,10 @@ Task:  Casino Integration Improvement - Implement Company Winloss By Products re
 DB: DBACC/bodb02
 
 Revisions:
-- 20160301@Jacob Initialize Company Win Loss Report
+- 20160301@Jacob: Initialize Company Win Loss Report
 - 20160720@Sophia: . Revise SP
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+				   
 				   
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@StartDate='2016-01-01'
@@ -38,7 +39,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                 WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
                 AND EventType IN(1, 2);
      END;
-     BEGIN -- #DepositSuper
+      BEGIN -- #DepositSuper
 
 		 CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
@@ -95,7 +96,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
          );
      END;
      BEGIN -- Live AND Non-Live
-         INSERT INTO #Data
+			INSERT INTO #Data
                 SELECT liveindicator AS GroupId,
                        CASE liveindicator
                            WHEN 1
@@ -137,7 +138,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                              THEN 'Credit'
                              ELSE 'Deposit'
                          END;
-						 						 
+     END
+     BEGIN -- Sophia			
 			------ BARM (site only)
 			INSERT INTO #Data
                 SELECT liveindicator AS GroupId,
@@ -172,6 +174,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                              THEN 'Soccer Live'
                              ELSE 'Soccer Non-Live'
                          END
+	
+	 
 						 
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
@@ -184,14 +188,15 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
 				c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
 		FROM	#Data c
 		FULL JOIN  #Data d
-				ON	c.GroupId = d.GroupId
+				ON	c.GroupId = d.GroupId					
 					AND d.RowName = 'BARM' 
 					AND c.RowName IN ('Credit', 'Deposit')
 
+ 
 			-----Delete BARM row used for calculate
-			DELETE #Data WHERE RowName = 'BARM' 		
-			
-			
+		DELETE #Data WHERE RowName = 'BARM' 			 
+						 
+						 
      END;
      BEGIN -- RM   
 

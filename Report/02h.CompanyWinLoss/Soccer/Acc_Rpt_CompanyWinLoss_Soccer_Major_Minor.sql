@@ -149,7 +149,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor] @EndDate='2020-01-01',@StartDat
                              THEN 'Credit'
                              ELSE 'Deposit'
                          END;
-						 
+     END
+     BEGIN -- Sophia
 			------ BARM (site only)			 
 			INSERT INTO #Data
                 SELECT CASE

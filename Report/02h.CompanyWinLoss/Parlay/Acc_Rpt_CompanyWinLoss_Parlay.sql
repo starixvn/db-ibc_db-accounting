@@ -64,7 +64,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay] @EndDate='2020-01-01',@StartDate='2016-01-0
                            THEN 'Credit'
                            ELSE 'Deposit'
                        END AS RowName,
-                       SUM((winlost - actual_stake) * virtualrate) MemberWinlost,
+                       SUM((winlost - actual_stake) * actualrate) MemberWinlost,
                        SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,

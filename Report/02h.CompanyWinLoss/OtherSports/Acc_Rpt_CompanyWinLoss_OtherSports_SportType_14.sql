@@ -39,7 +39,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
                 WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
                 AND EventType IN(1, 2);
      END;
-     BEGIN -- #DepositAgent
+     BEGIN -- #DepositSuper
 
         CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
@@ -48,7 +48,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
                 SELECT CustId
                 FROM f_DepSuper_1('All');
 				
-
      END;
      BEGIN -- #Match
 
@@ -76,7 +75,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
                            LeagueId,
                            'outright' AS type
                     FROM outright14 WITH (NOLOCK)
-                    WHERE EventDate = @StartDate 
+                    WHERE EventDate = @StartDate
                 ) m
                 INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId
                 INNER JOIN sports s WITH (NOLOCK) ON s.sporttype = l.sporttype
@@ -117,7 +116,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #Match AS m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
                       AND m.type = CASE
@@ -135,7 +134,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
                              ELSE 'Deposit'
                          END;
      END;
-   
+      
      BEGIN -- Query
 
          SELECT d.GroupId AS GroupId,

@@ -21,6 +21,7 @@ Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
 - 20160720@Sophia: . Revise SP
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_Parlay_14] @EndDate='2020-01-01',@StartDate='2016-01-01'
 
@@ -28,7 +29,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay_14] @EndDate='2020-01-01',@StartDate='2016-0
 
      SET NOCOUNT ON;
      BEGIN -- #DepositSuper
-          CREATE TABLE #DepositSuper
+         CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositSuper
@@ -63,7 +64,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay_14] @EndDate='2020-01-01',@StartDate='2016-0
                            THEN 'Credit'
                            ELSE 'Deposit'
                        END AS RowName,
-                       SUM((winlost - actual_stake) * virtualrate) MemberWinlost,
+                       SUM((winlost - actual_stake) * actualrate) MemberWinlost,
                        SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
                        SUM(scomm * actualrate) Commission,
                        SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,

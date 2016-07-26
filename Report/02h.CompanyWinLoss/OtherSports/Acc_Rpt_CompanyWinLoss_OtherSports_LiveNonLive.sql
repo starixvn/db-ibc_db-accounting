@@ -38,13 +38,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
      END;
      BEGIN -- #DepositSuper
 
-          CREATE TABLE #DepositSuper
+         CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositSuper
                 SELECT CustId
                 FROM f_DepSuper_1('All');
-
      END;
      BEGIN -- #Match
 
@@ -112,7 +111,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #Match AS m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate BETWEEN @StartDate AND @EndDate
+                WHERE b.winlostdate = @StartDate
                       AND m.type = CASE
                                        WHEN b.BetType = 10
                                        THEN 'outright'
@@ -132,7 +131,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive] @EndDate='2020-01-01',@Sta
                              ELSE 'Deposit'
                          END;
      END;
-    
      BEGIN -- Query
 
          SELECT d.GroupId AS GroupId,

@@ -9,7 +9,7 @@ IF EXISTS
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14] @StartDate SMALLDATETIME,
                                                              @EndDate   SMALLDATETIME,
-                                                             @Site      VARCHAR(20)   = 'ALL'
+                                                             @Site      NVARCHAR(20)   = 'ALL'
 AS
 
 /*
@@ -20,8 +20,9 @@ DB: DBACC/bodb02
 
 Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
-- 20160720@Sophia: . Revise Sp
+- 20160720@Sophia: . Revise SP
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='2016-01-01', @Site= 'ALL'
 
@@ -189,6 +190,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
      DROP TABLE #DepositSuper;
 
 -------------------
+ 
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14] TO [bodbAdminNet];

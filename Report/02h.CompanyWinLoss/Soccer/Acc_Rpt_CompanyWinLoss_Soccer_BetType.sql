@@ -176,7 +176,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType] @EndDate='2020-01-01',@StartDate='2
 						 THEN 'Credit'
 						 ELSE 'Deposit'
 					 END;
-						 
+	END
+	BEGIN -- Sophia				 
 		------ BARM (site only)
 		 INSERT INTO #Data
 			SELECT sb.BetType GroupId,

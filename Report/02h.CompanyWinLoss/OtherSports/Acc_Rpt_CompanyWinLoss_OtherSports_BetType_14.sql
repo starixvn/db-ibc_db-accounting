@@ -46,14 +46,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType_14] @EndDate='2020-01-01',@Star
                 AND EventType IN(1, 2);
      END;
      BEGIN -- #DepositSuper
-        
+
          CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositSuper
                 SELECT CustId
                 FROM f_DepSuper_1('All');
-
+              
      END;
      BEGIN -- #Match
 

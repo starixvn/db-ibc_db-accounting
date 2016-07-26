@@ -135,7 +135,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site_14] @StartDate='2016-01-01', @EndDa
                 FROM bettrans14 b WITH (NOLOCK)
                      INNER JOIN #Agent ag ON b.recommend = ag.custid
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.winlostdate = @StartDate 
+                WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
