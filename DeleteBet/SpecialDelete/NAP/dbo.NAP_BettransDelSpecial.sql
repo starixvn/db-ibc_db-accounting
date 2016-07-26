@@ -4,9 +4,9 @@
 	@FromTransId			BIGINT, 
 	@ToTransId				BIGINT, 
 		
-	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 17, 153, 183, 1303, 1306, 1308: Handicap, Odd/Even, Over/Under...
+	@Handicap 				SMALLMONEY		= 9999,		-- 1, 3, 7, 8, 17, 153, 183, 1303, 1306, 1308,18: Handicap, Odd/Even, Over/Under...
 	@Handicap155			SMALLMONEY		= 9999,		-- 155, 1316 : FT.1X2, 1H 1X2, First Ten Minutes 1X2, 2H 1X2...
-	@Handicap178			SMALLMONEY		= 9999,		-- 178,197,198,204,205, 401, 402, 403, 404: 2H Over/Under...
+	@Handicap178			SMALLMONEY		= 9999,		-- 178,197,198,204,205, 401, 402, 403, 404, 18: 2H Over/Under...
 	@OverUnder156			SMALLMONEY		= 9999,		-- 156, 1312 
 	
 	@LiveIndicator 			SMALLINT 		= 0,
@@ -34,7 +34,7 @@
 	@BetTeam1317			VARCHAR(120)	= 'ALL', 	-- 1317 
 	@BetTeam1318			VARCHAR(3)		= 'ALL', 	-- 1318 	
 	@BetTeam1324			VARCHAR(3)		= 'ALL', 	-- 1324
-	@BetTeam178				VARCHAR(10)		= 'ALL',	-- 178,197,198,204,205, 401, 402, 403, 404: 2H Over/Under...
+	@BetTeam178				VARCHAR(10)		= 'ALL',	-- 178,197,198,204,205, 401, 402, 403, 404, 18: 2H Over/Under...
 	@BetTeam165				VARCHAR(120)	= 'ALL',	-- 165,166
 	@BetTeam159				VARCHAR(120)	= 'ALL',	-- 159,179,406: All Exact Total Goals
 	@BetTeam161				VARCHAR(120)	= 'ALL',	-- 161,162,181,182,407,409,412
@@ -349,7 +349,7 @@ BEGIN
 									200, 201, 202, 203, 204, 205, 210, 211, 212, 213, 214, 215, 216,
 									1302, 1311, 1312, 1316, 1317, 1318, 1324,
 									401, 402, 403, 404, 405, 406, 407, 409, 412, 413, 414,
-									427, 428, 433, 434, 435, 436, 437, 438, 439, 440, 441 
+									427, 428, 433, 434, 435, 436, 437, 438, 439, 440, 441,18
 								)
 									
 			AND CASE WHEN b.bettype IN (1,3,7,8, 17, 153, 183, 1303, 1306, 1308) THEN CASE WHEN @Handicap = 9999 THEN 1
@@ -897,8 +897,8 @@ BEGIN
 					END
 				AND ISNULL(SecAcceptFlag,0) = CASE @SecondAcceptFlag WHEN 0 THEN ISNULL(SecAcceptFlag,0) WHEN 1 THEN 0 WHEN 2 THEN 1 END	
 
-	--178,197,198,204,205, 401, 402, 403, 404
-	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (178,197,198,204,205, 401, 402, 403, 404) )
+	--178,197,198,204,205, 401, 402, 403, 404, 18
+	IF EXISTS( SELECT TOP 1 1 FROM #tblBettype WHERE bettype IN (178,197,198,204,205, 401, 402, 403, 404, 18) )
 		INSERT INTO #BetDelete(
 				grouptransid	
 				,transid			
@@ -968,13 +968,13 @@ BEGIN
 				AND b.liveawayscore = CASE WHEN @LiveAwayScore IS NOT NULL AND @LiveIndicator = 1 THEN @LiveAwayScore ELSE b.liveawayscore END	
 				AND b.transdate BETWEEN CASE WHEN @FromTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @FromTransdate ELSE b.transdate END 
 								AND		CASE WHEN @ToTransdate IS NOT NULL AND @LiveIndicator = 1 THEN @ToTransdate ELSE b.transdate END 	
-				AND b.bettype IN (178,197,198,204,205, 401, 402, 403, 404)
+				AND b.bettype IN (178,197,198,204,205, 401, 402, 403, 404, 18)
 				AND (
-					  (b.bettype IN (178,197,198,204,205, 401, 402, 403, 404)	
+					  (b.bettype IN (178,197,198,204,205, 401, 402, 403, 404, 18)	
 						AND (@BetTeam178 = 'ALL' OR b.betteam = @BetTeam178)
 					  )
 					)
-				AND 1 = CASE WHEN b.bettype IN (178,197,198,204,205, 401, 402, 403, 404) THEN CASE
+				AND 1 = CASE WHEN b.bettype IN (178,197,198,204,205, 401, 402, 403, 404, 18) THEN CASE
 															WHEN @Handicap178 = 9999 THEN 1
 															WHEN @Handicap178 = hdp1 THEN 1
 															ELSE 0
