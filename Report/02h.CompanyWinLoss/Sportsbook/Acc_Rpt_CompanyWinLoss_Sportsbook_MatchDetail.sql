@@ -54,7 +54,11 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                        m.AwayId
                 FROM Match m WITH (NOLOCK)
                 WHERE m.sporttype = @SportType
-                      AND EventDate = @StartDate;
+                      AND EventDate = @StartDate
+                      AND ((@IsHedge = 1
+                            AND m.MatchCode LIKE '%hedge%')
+                           OR (@IsHedge = 0
+                               AND m.MatchCode NOT LIKE '%hedge%'));
      END;
      BEGIN -- #Data
 
@@ -97,10 +101,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                       AND b.BetType = @BetType
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
-                      AND ((@IsHedge = 1
-                            AND m.MatchCode LIKE '%hedge%')
-                           OR (@IsHedge = 0
-                               AND m.MatchCode NOT LIKE '%hedge%'))
                       AND b.ruben = 1
                       AND statusID NOT IN(101, 102, 103, 121)
                 GROUP BY b.MatchId,
