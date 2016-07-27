@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelByGroupHeadline]
   , @groupheadline VARCHAR(30) = ''    
   , @Owner VARCHAR(50) = ''
   , @HeadlineType VARCHAR(20) = ''
+  , @IsTest BIT = 0
 AS    
     
 /*    
@@ -88,7 +89,7 @@ BEGIN
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON ca.custid = c.custid AND c.roleid = 4
 			INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON ca.custid = cs.custid AND cs.IsInternal = 0    
         WHERE (@currency = 0 OR c.currency = @currency)
-			AND c.currency NOT IN (20, 27, 28)
+			AND ((@IsTest = 0 AND c.currency NOT IN (20, 27, 28)) OR @IsTest = 1)
     END
 
     --get direct master    
@@ -100,7 +101,7 @@ BEGIN
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON a.custid = c.custid
 			INNER JOIN dbo.CustMaster cm WITH(NOLOCK) ON cm.custid = c.custid AND cm.isInternal = 0
          WHERE (@currency = 0 OR c.currency = @currency)
-			AND c.currency NOT IN (20, 27, 28)    
+			AND ((@IsTest = 0 AND c.currency NOT IN (20, 27, 28)) OR @IsTest = 1)
     END     
     
     --get direct agent    
@@ -112,14 +113,14 @@ BEGIN
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON a.custid = c.custid
 			INNER JOIN dbo.CustAgent ca WITH(NOLOCK) ON ca.custid = c.custid AND ca.IsInternal = 0    
         WHERE (@currency = 0 OR c.currency = @currency)
-			AND c.currency NOT IN (20, 27, 28)    
+			AND ((@IsTest = 0 AND c.currency NOT IN (20, 27, 28)) OR @IsTest = 1)
     END
     
     --get direct memeber    
     IF (@roleid = 0 OR @roleid = 1)    
     BEGIN     
         INSERT INTO #tmpDirectCust (custid, site, currency, roleid)
-        SELECT c.custid, c.site, c.currency, c.roleid    
+        SELECT c.custid, cc.site, c.currency, c.roleid    
         FROM dbo.f_GetDirectAgency(2) a
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON a.custid = c.custid
 			INNER JOIN dbo.Customer cc WITH(NOLOCK) ON c.recommend = cc.custid    
@@ -127,7 +128,7 @@ BEGIN
 									FROM dbo.CustAgent WITH(NOLOCK)
                                     WHERE IsInternal = 1)
            AND (@currency = 0 OR c.currency = @currency)
-           AND c.currency NOT IN (20, 27, 28)    
+           AND ((@IsTest = 0 AND c.currency NOT IN (20, 27, 28)) OR @IsTest = 1)
     END
     
     --apply filter by site    
