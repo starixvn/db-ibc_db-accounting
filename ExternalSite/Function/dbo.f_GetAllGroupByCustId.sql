@@ -1,7 +1,7 @@
-USE [bodb_Age]
+USE [bodb_ACC]
 GO
 
-ALTER FUNCTION [dbo].[GetAllGroupByCustId]
+ALTER FUNCTION [dbo].[f_GetAllGroupExtraPTByCustId]
 (
 	@CustID INT
 )
@@ -13,36 +13,39 @@ ALTER FUNCTION [dbo].[GetAllGroupByCustId]
 	Remark: get all group by superId
 
 	Revisions:
+		- Return table @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), FromDate DATETIME, ToDate DATETIME, [Primary] TINYINT)
+			+ Primary: 0: no, 1: is primary, 2: to be primary
 */
 
-RETURNS @CustGroup TABLE (NormalGroup NVARCHAR(MAX), ExtraPTGroup NVARCHAR(MAX))
+RETURNS @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] TINYINT, OrderId TINYINT)
 AS
 BEGIN
-	DECLARE @GroupDate TABLE (GroupName NVARCHAR(100), FromDate DATETIME, ToDate DATETIME)
-	DECLARE @OpenQuery NVARCHAR(MAX)
-	SELECT  @OpenQuery = 
-		'SELECT * FROM OPENQUERY(DBACC, ''SELECT GroupName,MIN(FromDate),MIN(ToDate) FROM Acc_GroupExtraPTSetting WITH(NOLOCK)
-											WHERE SuperId = ' + CONVERT(NVARCHAR(20), @CustID) + ' GROUP BY GroupId, GroupName '')'
-	INSERT INTO @GroupDate (GroupName, FromDate, ToDate)
-	EXEC (@OpenQuery)
+	INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
+	SELECT d.GroupId, d.GroupName, s.EffectiveDate, CASE WHEN s.EffectiveDate IS NULL THEN 0 ELSE CASE WHEN s.EffectiveDate <= CONVERT(DATE, GETDATE()) THEN 1 ELSE 2 END END, 10
+	FROM
+		dbo.Acc_DWLList_ExtraPT d WITH(NOLOCK)
+		LEFT JOIN
+		(
+			SELECT GroupName, MIN(FromDate) AS EffectiveDate
+			FROM bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
+			WHERE SuperID = @CustID AND (CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate OR FromDate > CONVERT(DATE, GETDATE()))
+			GROUP BY GroupName
+		) s ON d.GroupName = s.GroupName
+	WHERE d.GroupName <> 'BC'
+	
+	IF NOT EXISTS (SELECT TOP 1 1 FROM @CustExtraPTGroup WHERE [Primary] = 1)
+	BEGIN
+		DECLARE @EffectiveDate DATETIME
+		SELECT  @EffectiveDate = MAX(ToDate) FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID
 
-	;WITH CTE AS
-	(
-		SELECT
-			c.CustID,
-			CASE WHEN g.FromDate IS NULL THEN c.GroupName ELSE '' END AS Normal,
-			CASE WHEN g.FromDate IS NULL THEN '' ELSE c.GroupName +','+CONVERT(VARCHAR(10), g.FromDate, 120)+','+CONVERT(NVARCHAR(1),IsPayOut) END AS Extra
-		FROM
-			dbo.Acc_CustGroup c WITH(NOLOCK)
-			LEFT JOIN @GroupDate g ON c.GroupName = g.GroupName
-		WHERE c.CustID = @CustID
-	)
-	INSERT INTO @CustGroup
-	SELECT
-		(SELECT STUFF((SELECT ';' + Normal FROM CTE FOR XML PATH('')), 1, 1, '')) AS NormalGroup,
-		(SELECT STUFF((SELECT ';' + Extra  FROM CTE FOR XML PATH('')), 1, 1, '')) AS ExtraPTGroup
-	FROM CTE
-	GROUP BY CustID
+		INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
+		SELECT 0, 'No Extra PT', DATEADD(DAY, 1, @EffectiveDate), 1, 1
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
+		SELECT 0, 'No Extra PT', NULL, 0, 1
+	END
 
 	RETURN
 END

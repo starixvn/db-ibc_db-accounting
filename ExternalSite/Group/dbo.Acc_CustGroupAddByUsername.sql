@@ -1,10 +1,12 @@
-﻿
-ALTER PROCEDURE  [dbo].[Acc_CustGroupAddByUsername]
-	@Username varchar(50),
-	@GroupName varchar(50),
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(1000) = '' OUTPUT,
-	@UserID int 
+﻿USE [bodb_Age]
+GO
+
+ALTER PROCEDURE  [dbo].[Acc_CustGroupAddByUsername_xtest]
+	@Username	varchar(50),
+	@GroupName	varchar(50),
+	@ErrCode	int = 0 OUTPUT,
+	@ErrMsg		nvarchar(1000) = '' OUTPUT,
+	@UserID		int 
 AS
 /*
 	Created by: [Henry]
@@ -17,7 +19,7 @@ AS
 		- 20110913@Jamie: Put linked server DBLOG because switching to DB053
 		- 20110927@Lukas: modify to be able to put 1 customer into 2 groups
 		- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE, change linked server DB03 to DBPOLICY, DB06 to DBARC
-
+		- 20160729@Percy: insert into setting table if group is extra pt group [RedmineID: #60883]
 */
 	SET NOCOUNT ON 
 	
@@ -26,10 +28,15 @@ AS
 	declare @duration int
 	set @startRun = getdate()
 	
-	--Check permission for account site
+	-- Check permission for account site
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission
+		@custid=@UserID,
+		@funcname='[Admin_ManageExAcc]',
+		@ErrCode=@ErrCode output,
+		@ErrMsg=@ErrMsg output,
+		@System = 'ACCOUNTING'
 	
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[Admin_ManageExAcc]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output, @System = 'ACCOUNTING'
-	If @ErrCode <> 0
+	IF @ErrCode <> 0
 		RETURN
 		
 	
@@ -85,33 +92,41 @@ AS
 	if exists (select 1 from Acc_CustGroup (nolock) where CustID = @CustID AND GroupName = @GroupName)
 	begin
 		Select @ErrMsg = 	N'This username was added before, please check again!'
-					
 			, @ErrCode = 105
 			return
 	end
 	
 	insert into Acc_CustGroup (CustID,RoleID,GroupName)
 	values (@CustID, @RoleID,@GroupName)
-	
-	
+
+	-- Check Extra PT Group
+	IF EXISTS (SELECT 1 FROM OPENQUERY(DBACC, 'SELECT GroupName FROM bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)') WHERE GroupName = @GroupName)
+	BEGIN
+		EXEC DBACC.bodb_ACC.dbo.Acc_GroupExtraPTSetting_Ins
+			@CustID = @CustID,
+			@GroupName = @GroupName,
+			@ErrCode = @ErrCode OUTPUT,
+			@ErrMsg = @ErrMsg OUTPUT,
+			@UserID	= @UserID
+	END
 	
 	--Write log data
 	declare @LogData nvarchar(1000)
 	
 	SET @LogData = '<Acc_CustGroupAddByUsername UserID="' + CONVERT(VARCHAR(20), @UserID)
-	+ '" CustID="' + CONVERT(VARCHAR(50), @CustID)
-	+ '" Username="' + CONVERT(VARCHAR(50), @Username)
-	+ '" Group="' + CONVERT(VARCHAR(50), @GroupName) + '" />'
+					+ '" CustID="' + CONVERT(VARCHAR(50), @CustID)
+					+ '" Username="' + CONVERT(VARCHAR(50), @Username)
+					+ '" Group="' + CONVERT(VARCHAR(50), @GroupName) + '" />'
 
 	set @endRun = getdate()
 	set @duration  = datediff (millisecond,@startRun,@endRun)
 
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-	@UserID = @UserID,
-	@CustID = @CustID,
-	@ActionID = 618,
-	@TrackingValue = @LogData	,
-	@duration = @duration
+		@UserID = @UserID,
+		@CustID = @CustID,
+		@ActionID = 618,
+		@TrackingValue = @LogData,
+		@duration = @duration
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustGroupAddByUsername] TO [bodbAdminNet]

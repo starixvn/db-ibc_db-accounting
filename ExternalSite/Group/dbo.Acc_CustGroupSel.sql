@@ -1,7 +1,7 @@
 ﻿USE [bodb_Age]
 GO
 
-ALTER PROCEDURE  [dbo].[Acc_CustGroupSel]
+ALTER PROCEDURE  [dbo].[Acc_CustGroupSel_xtest]
 	@GroupName varchar(50) = null,
 	@Userid		INT=NULL
 AS
@@ -17,6 +17,7 @@ AS
 		- 20160721@Percy: Return NormalGroup and ExtraPTGroup columns [RedmineID: #60883]
 
 */
+BEGIN
 	SET NOCOUNT ON
 	IF @Userid IS NULL
 	BEGIN	
@@ -26,7 +27,8 @@ AS
 	IF @GroupName = ''
 		SET @GroupName = null
 
-	DECLARE @GroupExtraPT TABLE (GroupName NVARCHAR(100))
+	DECLARE @GroupExtraPT TABLE (GroupName VARCHAR(50))
+	DECLARE @GroupExtraPTSetting TABLE (SuperId INT, GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, IsPrimary BIT)
 	END
 	ELSE
 	BEGIN
@@ -67,6 +69,25 @@ AS
 	INSERT INTO @GroupExtraPT (GroupName)
 	SELECT GroupName FROM OPENQUERY(DBACC, 'SELECT GroupName FROM bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)')
 
+	INSERT INTO @GroupExtraPTSetting (SuperId, GroupId, GroupName, EffectiveDate, IsPrimary)
+	SELECT * FROM OPENQUERY(DBACC, 'SELECT SuperId, GroupId, GroupName, EffectiveDate, CONVERT(BIT, 1) AS IsPrimary
+									FROM
+									(
+										SELECT
+											SuperId, GroupId, GroupName, MIN(FromDate) AS EffectiveDate,
+											ROW_NUMBER() OVER(PARTITION BY SuperId, GroupId, GroupName ORDER BY MIN(FromDate) DESC) AS RN
+										FROM bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
+										WHERE CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate
+										GROUP BY SuperId, GroupId, GroupName
+									) A
+									WHERE RN = 1
+									UNION
+									SELECT
+										SuperId, GroupId, GroupName, FromDate, CONVERT(BIT, 0)
+									FROM bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
+									WHERE FromDate > CONVERT(DATE, GETDATE())'
+								)
+
 	;WITH CTE AS
 	(
 		SELECT
@@ -75,28 +96,33 @@ AS
 			c.GroupName,
 			CASE WHEN e.GroupName IS NULL THEN c.GroupName ELSE NULL END AS Normal,
 			CASE WHEN e.GroupName IS NULL THEN NULL ELSE
-				CASE WHEN c.EffectiveDate = (SELECT MAX(EffectiveDate) FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE EffectiveDate <= @today AND CustID = c.CustID) THEN c.GroupName +','+CONVERT(VARCHAR(10), c.EffectiveDate, 101)+',1'
-					 WHEN c.EffectiveDate > @today THEN c.GroupName +','+CONVERT(VARCHAR(10), c.EffectiveDate, 101)+',0'
-					 ELSE c.GroupName +',,0' END
+				CASE WHEN s.GroupName IS NULL THEN e.GroupName + ',,0'
+					 ELSE s.GroupName + ',' + CONVERT(VARCHAR(10), s.EffectiveDate, 101) + ',' + CONVERT(VARCHAR(1), s.IsPrimary) END
 			END AS Extra
 		FROM
 			dbo.Acc_CustGroup c WITH(NOLOCK)
 			LEFT JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
+			LEFT JOIN @GroupExtraPTSetting s ON c.CustID = s.SuperId AND c.GroupName = s.GroupName
 	)
-	SELECT 
-		a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin,
-		(SELECT CASE WHEN Normal IS NULL THEN '' ELSE STUFF((SELECT ';' + Normal FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '') END) AS NormalGroup,
-		(SELECT CASE WHEN Extra  IS NULL THEN '' ELSE STUFF((SELECT ';' + Extra  FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '') END) AS ExtraPTGroup
-	FROM 
-		CTE a
-		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CustID = c.CustID
-	WHERE a.GroupName = COALESCE(@GroupName,a.GroupName)
-	GROUP BY a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName, c.iplogin, Normal, Extra
-	ORDER BY GroupName, username	
+	SELECT a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin, NormalGroup, ExtraPTGroup
+	FROM
+	(
+		SELECT 
+			a.CustID, a.roleid, a.GroupName,
+			(SELECT STUFF((SELECT ';' + Normal FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS NormalGroup,
+			(SELECT STUFF((SELECT ';' + Extra  FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS ExtraPTGroup
+		FROM CTE a
+		WHERE a.GroupName = COALESCE(@GroupName,a.GroupName)
+		GROUP BY a.CustID, a.roleid, a.GroupName
+	) a
+	INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CustID = c.CustID
+	ORDER BY GroupName, username
+END
 	
 	END
-
 GO
+
 GRANT EXECUTE ON [dbo].[Acc_CustGroupSel] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustGroupSel] TO [vnteam]
+GO

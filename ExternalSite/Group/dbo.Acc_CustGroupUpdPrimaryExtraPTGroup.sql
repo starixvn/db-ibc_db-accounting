@@ -5,8 +5,10 @@ ALTER PROCEDURE dbo.Acc_CustGroupUpdPrimaryExtraPTGroup
 	@CustID			INT,
 	@GroupName		VARCHAR(50),
 	@EffectiveDate	DATETIME,
+	@UserID			INT,
+	@IP				VARCHAR(20),
 	@ErrCode		TINYINT = 0 OUTPUT,
-	@ErrMsg			NVARCHAR(1000) OUTPUT
+	@ErrMsg			NVARCHAR(1000) = '' OUTPUT
 AS
 /*
 	Creator: Percy
@@ -19,35 +21,68 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	IF @EffectiveDate < CONVERT(DATE, GETDATE())
+	DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT
+	SELECT  @StartRun = GETDATE()
+
+	IF @EffectiveDate IS NULL OR @EffectiveDate < CONVERT(DATE, GETDATE())
 		RETURN
+
+	-- Check permission for account site
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission
+		@CustID = @UserID,
+		@FuncName = '[Admin_ManageExAcc]',
+		@ErrCode = @ErrCode OUTPUT,
+		@ErrMsg = @ErrMsg OUTPUT,
+		@System = 'ACCOUNTING'
+	
+	IF @ErrCode <> 0
+		RETURN
+
+	IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID)
+	BEGIN
+		SELECT
+			@ErrCode = 101,
+			@ErrMsg = N'This Customer does not exist'
+		RETURN
+	END
+
+	IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID AND GroupName = @GroupName)
+	BEGIN
+		SELECT
+			@ErrCode = 102,
+			@ErrMsg = N'This Customer does not belong to this group!'
+		RETURN
+	END
 
 	-- Update table Acc_GroupExtraPTSetting
 	EXEC DBACC.bodb_ACC.dbo.Acc_GroupExtraPTSetting_Upd
 		@CustID = @CustID,
 		@GroupName = @GroupName,
 		@EffectiveDate = @EffectiveDate,
+		@UserID = @UserID,
 		@ErrCode = @ErrCode OUTPUT,
 		@ErrMsg = @ErrMsg OUTPUT
 
 	IF @ErrCode <> 0
 		RETURN
 
-	-- Update table Acc_CustGroup
-	IF @EffectiveDate = CONVERT(DATE, GETDATE()) -- set primary
-	BEGIN
-		UPDATE dbo.Acc_CustGroup
-		SET EffectiveDate = CASE WHEN GroupName = @GroupName THEN @EffectiveDate ELSE NULL END
-		WHERE CustID = @CustID
-		
-	END
-	ELSE -- to be primary
-	BEGIN
-		UPDATE dbo.Acc_CustGroup
-		SET EffectiveDate = CASE WHEN GroupName = @GroupName THEN @EffectiveDate ELSE NULL END
-		WHERE CustID = @CustID AND EffectiveDate > CONVERT(DATE, GETDATE())
-	END
+	-- Write log
+	DECLARE @LogData NVARCHAR(MAX)
+	SELECT  @LogData = '<Acc_CustGroupUpdPrimaryExtraPTGroup CustID="' + CONVERT(NVARCHAR(20), @CustID)
+						+ '" PrimaryGroup="' + @GroupName
+						+ '" EffectiveDate="' + CONVERT(NVARCHAR(10), @EffectiveDate, 120)
+						+ '" IP="' + @IP
+						+ '" ErrCode="' + CONVERT(NVARCHAR(4), @ErrCode)
+						+ '" ErrMsg="' + @ErrMsg + '" />'
+	SELECT @EndRun = GETDATE()
+	SELECT @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun)
 
+	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+		@UserID = @UserID,
+		@CustID = @CustID,
+		@ActionID = 662,
+		@TrackingValue = @LogData,
+		@Duration = @Duration
 END
 GO
 

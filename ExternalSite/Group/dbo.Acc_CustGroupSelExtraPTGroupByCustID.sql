@@ -19,20 +19,23 @@ BEGIN
 	DECLARE @today DATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
-	DECLARE @GroupExtraPT TABLE (GroupName NVARCHAR(100), OrderID SMALLINT)
+	DECLARE @GroupExtraPT TABLE (GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] TINYINT, OrderId TINYINT)
+	DECLARE @SQL NVARCHAR(MAX)
+	SELECT  @SQL = 'SELECT * FROM OPENQUERY(DBACC, ''SELECT GroupName, EffectiveDate, [Primary], OrderId FROM bodb_Acc.dbo.f_GetAllGroupExtraPTByCustId(' + CONVERT(NVARCHAR(15), @CustID) + ')'')'
 
-	INSERT INTO @GroupExtraPT (GroupName, OrderID)
-	SELECT GroupName, 10 FROM OPENQUERY(DBACC, 'SELECT GroupName FROM bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)')
-	UNION SELECT N'No Extra PT', 1
+	INSERT INTO @GroupExtraPT (GroupName, EffectiveDate, [Primary], OrderId)
+	EXEC (@SQL)
 
 	SELECT
 		c.GroupName,
-		CASE WHEN c.EffectiveDate = (SELECT MAX(EffectiveDate) FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE EffectiveDate <= @today AND CustID = c.CustID) THEN c.EffectiveDate ELSE NULL END AS EffectiveDate
+		CASE WHEN e.[Primary] = 1 THEN e.EffectiveDate ELSE NULL END AS EffectiveDate
 	FROM
-		dbo.Acc_CustGroup c WITH(NOLOCK)
+		(
+			SELECT GroupName FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID
+			UNION SELECT 'No Extra PT'
+		) c
 		INNER JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
-	WHERE c.CustID = @CustID
-	ORDER BY e.OrderID, e.GroupName
+	ORDER BY e.OrderId, e.GroupName
 END
 GO
 
