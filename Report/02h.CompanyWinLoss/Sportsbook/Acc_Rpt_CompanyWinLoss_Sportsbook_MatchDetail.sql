@@ -11,7 +11,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @StartDat
                                                                        @EndDate   SMALLDATETIME,
                                                                        @SportType SMALLINT      = 1,
                                                                        @BetType   INT           = 1,
-                                                                       @IsHedge   BIT           = 0,
+                                                                       @IsHedge   INT           = 2,
                                                                        @IsLive    INT           = 2
 AS
 
@@ -26,7 +26,7 @@ Revisions:
 
 Parameters:
 @IsLive: 2 - ALL. 0 - Non-Live. 1 - Live
-
+@IsHedge: 2 - ALL. 0 - Non-Hedge. 1 - Hedge
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@StartDate='2016-01-01', @SportType=2, @BetType=1, @IsHedge = 0, @IsLive = 2
 
@@ -55,8 +55,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_MatchDetail] @EndDate='2020-01-01',@Star
                 FROM Match m WITH (NOLOCK)
                 WHERE m.sporttype = @SportType
                       AND EventDate = @StartDate
-                      AND ((@IsHedge = 1
-                            AND m.MatchCode LIKE '%hedge%')
+                      AND (@IsHedge = 2
+                           OR (@IsHedge = 1
+                               AND m.MatchCode LIKE '%hedge%')
                            OR (@IsHedge = 0
                                AND m.MatchCode NOT LIKE '%hedge%'));
      END;

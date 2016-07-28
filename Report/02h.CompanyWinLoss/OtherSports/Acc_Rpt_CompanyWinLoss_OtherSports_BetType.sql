@@ -53,7 +53,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType] @EndDate='2020-01-01',@StartDa
          INSERT INTO #DepositSuper
                 SELECT CustId
                 FROM f_DepSuper_1('All');
-              
      END;
      BEGIN -- #Match
 
@@ -135,7 +134,48 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType] @EndDate='2020-01-01',@StartDa
                              ELSE 'Deposit'
                          END;
      END;
-    
+     BEGIN -- RM   
+
+         INSERT INTO #Data
+                SELECT 0,
+                       'RM',
+                       CASE
+                           WHEN b.recommend = 52466
+                           THEN '8RM Total'
+                           WHEN b.recommend = 5707545
+                           THEN 'BARM Total'
+                           ELSE ''
+                       END AS RowName,
+                       -SUM((winlost - actual_stake) * actualrate) MemberWinLoss,
+                       -SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+                       SUM(scomm * actualrate) Commission,
+                       -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
+                       -SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * virtualrate) AS VirtualIncome,
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
+                       SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
+                FROM bettrans b WITH (NOLOCK)
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+                     INNER JOIN #Match AS m ON b.MatchId = m.MatchId
+                WHERE b.winlostdate = @StartDate
+                      AND (@IsLive > 1
+                           OR b.liveindicator = @IsLive)
+                      AND m.type = CASE
+                                       WHEN b.BetType = 10
+                                       THEN 'outright'
+                                       ELSE 'match'
+                                   END
+                      AND b.ruben = 1
+                      AND b.statusId NOT IN(101, 102, 103, 121)
+                     AND b.recommend IN(52466, 5707545)
+                GROUP BY CASE
+                             WHEN b.recommend = 52466
+                             THEN '8RM Total'
+                             WHEN b.recommend = 5707545
+                             THEN 'BARM Total'
+                             ELSE ''
+                         END;
+     END;
      BEGIN -- Query
 
          SELECT d.GroupId AS GroupId,
