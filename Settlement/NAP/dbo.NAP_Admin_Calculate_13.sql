@@ -48,8 +48,8 @@ BEGIN
 	
 	SET @home_firstteam2goals = CHARINDEX('H',@ResultString,(CHARINDEX('H',@ResultString)+1))
 	SET @away_firstteam2goals = CHARINDEX('A',@ResultString,(CHARINDEX('A',@ResultString)+1))	
-	SET @home_firstteam3goals = CHARINDEX('H',@ResultString, @home_firstteam2goals + 1)
-	SET @away_firstteam3goals = CHARINDEX('A',@ResultString, @away_firstteam2goals + 1)	
+	SET @home_firstteam3goals = CASE WHEN @home_firstteam2goals > 0 THEN CHARINDEX('H',@ResultString, @home_firstteam2goals + 1) ELSE 0 END
+	SET @away_firstteam3goals = CASE WHEN @away_firstteam2goals > 0 THEN CHARINDEX('A',@ResultString, @away_firstteam2goals + 1) ELSE 0 END
 	
 	SET @result = CASE @bettype
 					WHEN 422 THEN CASE 
