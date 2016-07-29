@@ -248,11 +248,14 @@ BEGIN
 						END
 				
 	)
-	SELECT	@strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
-	FROM	bettrans WITH(NOLOCK)
-	WHERE 	matchid = @matchid
-			AND bettype IN (SELECT bettype FROM cteBettypes)
-	GROUP BY bettype
+	SELECT @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
+	FROM (
+		SELECT	bettype
+		FROM	bettrans WITH(NOLOCK)
+		WHERE 	matchid = @matchid
+		GROUP BY bettype
+	)b 
+	WHERE b.bettype IN (SELECT bettype FROM cteBettypes)
 	
     -- call execrep SP
 	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid

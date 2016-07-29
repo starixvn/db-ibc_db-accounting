@@ -37,7 +37,22 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @ActionID INT, @bettype INT
+	DECLARE @ActionID INT
+			, @bettype INT
+			,@strFTBettypes VARCHAR(MAX)
+			,@strAutoBetRadarBettypes VARCHAR(MAX)
+
+	SELECT 	@strFTBettypes = COALESCE(@strFTBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes() f 
+	WHERE  	f.IsUsedGoalRecordValue = 1
+			AND f.GroupId = 2
+
+	SELECT 	@strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes() f 
+	WHERE  	f.GroupId = 8
+
+	SET @strAutoBetRadarBettypes = ',' + @strAutoBetRadarBettypes + ','
+
 	CREATE TABLE #tmpTrans (transid BIGINT)
 	
 	SELECT @ActionID = CASE WHEN @action = 'CAL' THEN 108
@@ -79,21 +94,18 @@ BEGIN
 		DECLARE @Status TABLE(FTFGLGBet BIT, InRunning INT)
 
 		INSERT INTO @Status(FTFGLGBet, InRunning)
-		SELECT FTFGLGBet
-			,SUM(CASE WHEN result.statusID = 0 THEN 1 ELSE 0 END)
-		FROM(
-			SELECT	CASE WHEN f.IsUsedGoalRecordValue = 1 THEN 1 ELSE 0 END AS FTFGLGBet
-					,b.statusID
-			FROM	dbo.bettrans b WITH(NOLOCK)
-				LEFT JOIN dbo.f_Set_GetGroupBettypes() f
-					ON b.bettype = f.BetType
-			WHERE	matchid = @matchid
-					AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-					AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
-					AND b.bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
-					AND f.GroupId <> 8 --Auto settle Betradar
-		) result
-		GROUP BY FTFGLGBet
+		SELECT	CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 OR b.bettype IN (14, 127) THEN 1 ELSE 0 END AS FTFGLGBet
+				,SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+		FROM	dbo.bettrans b WITH(NOLOCK)
+		WHERE	matchid = @matchid
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
+				AND b.bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
+				AND 1 = CASE 
+							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strAutoBetRadarBettypes) > 0 THEN 0 
+							ELSE 1 
+						END   --Auto settle Betradar
+		GROUP BY CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 OR b.bettype IN (14, 127) THEN 1 ELSE 0 END
 
 		IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE FTFGLGBet = 0)
 			INSERT INTO @Status(FTFGLGBet, InRunning) VALUES(0, 0)
@@ -160,34 +172,29 @@ BEGIN
 	INSERT INTO #tmpTrans(transid)
 	SELECT	transid
 	FROM	dbo.bettrans b WITH (NOLOCK)
-		LEFT JOIN dbo.f_Set_GetGroupBettypes() f
-			ON b.bettype = f.bettype
 	WHERE	matchid = @matchid 
-			AND (b.bettype = (@bettype) 
-				OR (f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1
-					AND @IsAutoCalculatePage = 1 
-					AND @Action = 'CAL-FT'
-				)
-			)
 			AND betdaqid = 0--bettrade tickets
+			AND 1 = CASE 
+						WHEN b.bettype = @bettype THEN 1
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 AND @IsAutoCalculatePage = 1 AND @Action = 'CAL-FT' THEN 1
+						ELSE 0
+					END
+						
 
 	INSERT INTO #BalanceBefore
 	SELECT	custid, SUM(winlost - actual_stake + playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
-		LEFT JOIN dbo.f_Set_GetGroupBettypes() f
-			ON b.bettype = f.bettype
 	WHERE	matchid = @matchid 
-			AND (b.bettype IN (@bettype,901,902,903)
-				OR (f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1
-					AND @IsAutoCalculatePage = 1 
-					AND @Action = 'CAL-FT'
-				)
-			)
-			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
-									AND refno IN (SELECT transid FROM #tmpTrans)	
-								THEN 1 
+			AND 1 = CASE 
+						WHEN b.bettype IN (901,902,903) AND refno IN (SELECT transid FROM #tmpTrans) THEN 1 
 						WHEN b.bettype NOT IN (901,902,903) THEN 1
-						ELSE 0 END
+						ELSE 0 
+					END
+			AND 1 = CASE 
+						WHEN b.bettype IN (@bettype, 901, 902, 903) THEN 1
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 AND @IsAutoCalculatePage = 1 AND @Action = 'CAL-FT' THEN 1
+						ELSE 0
+					END
 	GROUP BY custid
 
 	SET @TotalAccount = @@ROWCOUNT
@@ -198,7 +205,6 @@ BEGIN
 			,@goaldiff			SMALLMONEY
 			,@fth				INT
 			,@fta				INT
-			,@strBettypes		VARCHAR(MAX)
 			,@WinFromBehind		NVARCHAR(1)
 
 	SELECT @betcount_14 = ISNULL(SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END), 0)
@@ -212,11 +218,6 @@ BEGIN
 		SELECT @fth = m.finalhomescore, @fta = m.finalawayscore
 		FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
 		WHERE m.matchid = @matchid
-		
-		SELECT @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
-		FROM	dbo.f_Set_GetGroupBettypes ()
-		WHERE	GroupId = 2
-				AND IsUsedGoalRecordValue = 1
 				
 		-- Win from behind
 		DECLARE @curHome INT = 0
@@ -306,7 +307,7 @@ BEGIN
 			, @GoalRecord = @goalrecord
 			, @WinFromBehind = @WinFromBehind
 			, @betcount_14 = @betcount_14
-			, @strBettypes = @strBettypes
+			, @strBettypes = @strFTBettypes
 
 		IF @IncludeLG = 0
 		BEGIN
@@ -335,21 +336,17 @@ BEGIN
 		INSERT INTO #BalanceAfter
 		SELECT	custid, SUM(winlost - actual_stake + playercomm)
 		FROM	dbo.bettrans b WITH (ROWLOCK)
-			LEFT JOIN dbo.f_Set_GetGroupBettypes() f
-				ON b.bettype = f.bettype
 		WHERE	matchid = @matchid 
-				AND (b.bettype IN (@bettype,901,902,903)
-					OR (f.GroupId = 2 
-						AND f.IsUsedGoalRecordValue = 1
-						AND @IsAutoCalculatePage = 1 
-						AND @Action = 'CAL-FT'
-					)
-				)
-				AND 1 = CASE WHEN b.bettype IN (901, 902, 903) 
-										AND refno IN (SELECT transid FROM #tmpTrans)	
-								THEN 1
+				AND 1 = CASE 
+							WHEN b.bettype IN (901, 902, 903) AND refno IN (SELECT transid FROM #tmpTrans) THEN 1
 							WHEN b.bettype NOT IN (901,902,903) THEN 1
-							ELSE 0 END
+							ELSE 0 
+						END
+				AND 1 = CASE 
+						WHEN b.bettype IN (@bettype, 901, 902, 903) THEN 1
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 AND @IsAutoCalculatePage = 1 AND @Action = 'CAL-FT' THEN 1
+						ELSE 0
+					END
 		GROUP BY custid
 		--===
 	END

@@ -83,6 +83,10 @@ BEGIN
         ,@stop DATETIME
         ,@strBettypes VARCHAR(MAX) 
 
+	SELECT @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
+	FROM	dbo.f_Set_GetGroupBettypes ()
+	WHERE	Is3x30 = 1
+
     SELECT @start = CURRENT_TIMESTAMP
 
     CREATE TABLE #BalanceBefore (
@@ -110,10 +114,11 @@ BEGIN
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans b WITH (ROWLOCK)
-		INNER JOIN dbo.f_Set_GetGroupBettypes() f
-			ON b.bettype = f.BetType
     WHERE	matchid = @matchid 
-			AND f.Is3x30 = 1
+			AND 1 = CASE
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 0 
+						ELSE 1 
+					END
     GROUP BY custid
 
     IF @IsSettleAbandonedMatch = 1
@@ -214,10 +219,6 @@ BEGIN
 			EXEC DBPRO.BODB02.dbo.NAP_updateMatch_remark @matchid = @matchid
 				,@command = 'F'
 
-			SELECT @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
-			FROM	dbo.f_Set_GetGroupBettypes ()
-			WHERE	Is3x30 = 1
-
 			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'REFUND'
 				,@mode = 'REFUND-HT'
@@ -231,10 +232,11 @@ BEGIN
 		SELECT	custid
 				,SUM(winlost - actual_stake + playercomm)
 		FROM	dbo.bettrans b WITH (ROWLOCK)
-			INNER JOIN dbo.f_Set_GetGroupBettypes() f
-				ON b.bettype = f.BetType
 		WHERE	matchid = @matchid 
-				AND f.Is3x30 = 1
+				AND 1 = CASE
+							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 0 
+							ELSE 1 
+						END
 		GROUP BY custid
 		
 		INSERT INTO #Balance
@@ -307,10 +309,11 @@ BEGIN
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
     FROM dbo.bettrans b WITH (ROWLOCK)
-		INNER JOIN dbo.f_Set_GetGroupBettypes() f
-			ON b.bettype = f.BetType
     WHERE	matchid = @matchid 
-			AND f.Is3x30 = 1
+			AND 1 = CASE
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 0 
+						ELSE 1 
+					END
     GROUP BY custid
 
     -------------------------------------------------------------
