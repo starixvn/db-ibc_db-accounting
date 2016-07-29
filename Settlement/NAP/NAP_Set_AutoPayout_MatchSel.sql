@@ -377,10 +377,10 @@ BEGIN
 	SET IsNeedToCalculateFGLG = CASE WHEN rs.HTStatus = 1 
 										AND t.IsHalfTimeCal = 1 
 										AND rs.FTStatus IN (0, 1) 
-										AND (t.IsExistRunningHTFGLG = 1 OR t.IsEnabledGoalRecordHT = 0) THEN 1 --can calc HT FGLG
+										AND (t.IsExistRunningHTFGLG = 1 OR t.IsEnabledGoalRecordHT = 1) THEN 1 --can calc HT FGLG
 									WHEN rs.FTStatus = 1
 										AND t.IsHalfTimeCal = 1
-										AND (t.IsExistRunningFGLG = 1 OR t.IsEnabledGoalRecordFT = 0) THEN 1 --can calc FT FGLG
+										AND (t.IsExistRunningFGLG = 1 OR t.IsEnabledGoalRecordFT = 1) THEN 1 --can calc FT FGLG
 								ELSE 0 END
 		, IsNeedToCalculateCorner = CASE WHEN rs.HTStatus = 1
 										AND t.IsHalfTimeCal = 1
