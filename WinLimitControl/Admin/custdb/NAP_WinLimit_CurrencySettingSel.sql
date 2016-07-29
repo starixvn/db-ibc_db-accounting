@@ -15,11 +15,11 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE NAP_WinLimit_CurrencySettingSel @ProductId           INT,
-                                                 @SiteId              INT,
-                                                 @IsCreditSite        BIT = 0,
-                                                 @CurrencyId          INT = NULL,
-                                                 @ExcludeTestCurrency BIT = 0
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel] @ProductId           INT,
+                                                         @SiteId              INT,
+                                                         @IsCreditSite        BIT = 0,
+                                                         @CurrencyId          INT = NULL,
+                                                         @ExcludeTestCurrency BIT = 0
 AS
 
 /*
@@ -39,29 +39,32 @@ AS
 	   @CurrencyId	: Currency ID
 */
 
-     BEGIN
-         SET NOCOUNT ON;
-         BEGIN
-             CREATE TABLE #ProductSetting
-             (ProductId TINYINT,
-              BettypeId SMALLINT,
-              LevelId   TINYINT
-             );
-             CREATE TABLE #ProductSiteCurrencySetting
-             (ProductId  TINYINT,
-              SiteId     SMALLINT,
-              CurrencyId TINYINT
-             );
-             INSERT INTO #ProductSetting
-             (ProductId,
-              BettypeId,
-              LevelId
-             )
-                    SELECT fps.ProductId,
-                           fps.BettypeId,
-                           fps.LevelId
-                    FROM dbo.f_Nap_WinLimit_ProductSettingSel(@ProductId) fps;
-             IF @IsCreditSite = 0
+
+     SET NOCOUNT ON;
+     BEGIN -- #ProductSetting
+         CREATE TABLE #ProductSetting
+         (ProductId TINYINT,
+          BettypeId SMALLINT,
+          LevelId   TINYINT
+         );
+         INSERT INTO #ProductSetting
+         (ProductId,
+          BettypeId,
+          LevelId
+         )
+                SELECT fps.ProductId,
+                       fps.BettypeId,
+                       fps.LevelId
+                FROM dbo.f_Nap_WinLimit_ProductSettingSel(@ProductId) fps;
+     END;
+     BEGIN --#ProductSiteCurrencySetting
+         CREATE TABLE #ProductSiteCurrencySetting
+         (ProductId  TINYINT,
+          SiteId     SMALLINT,
+          CurrencyId TINYINT
+         );
+         IF @IsCreditSite = 0
+             BEGIN
                  INSERT INTO #ProductSiteCurrencySetting
                         SELECT DISTINCT
                                @ProductId,
@@ -71,46 +74,49 @@ AS
                              INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lc.LicenseeID
                              INNER JOIN exchange ex WITH (NOLOCK) ON ex.exchangeid = lc.Currency
                              INNER JOIN dbo.site s ON s.site = l.LicenseeName
+                                                      AND s.isActive = 1
                         WHERE s.siteid = @SiteId
                               AND (@CurrencyId IS NULL
                                    OR lc.Currency = @CurrencyId)
                               AND (@ExcludeTestCurrency = 0
                                    OR lc.CurrencyName NOT IN('UUS'))
                              AND lc.CurrencyName NOT IN('H', 'C');
-             ELSE
-             INSERT INTO #ProductSiteCurrencySetting
-                    SELECT @ProductId,
-                           @SiteId,
-                           ex.exchangeid
-                    FROM dbo.exchange ex WITH (NOLOCK)
-                    WHERE(@CurrencyId IS NULL
-                          OR ex.exchangeid = @CurrencyId)
-                         AND (@ExcludeTestCurrency = 0
-                              OR ex.currency NOT IN('UUS'))
-                    AND ex.currency NOT IN('H', 'C');
-         END;
-         BEGIN -- Query Data
-             SELECT pscs.ProductId,
-                    ps.BettypeId,
-                    pscs.CurrencyId,
-                    pscs.SiteId,
-                    ps.LevelId AS Level,
-                    ISNULL(wlpsd.MaxWinLimit, 0) AS MaxWinLimit,
-                    ISNULL(wlpsd.IsBlockedPlaceBet, 0) AS IsBlockedPlaceBet,
-                    ISNULL(wlpsd.IsBlockedTransfer, 0) AS IsBlockedTransfer
-             FROM #ProductSiteCurrencySetting pscs
-                  INNER JOIN #ProductSetting ps ON pscs.ProductId = ps.ProductId
-                  LEFT JOIN dbo.WinLimit_ProductSettingDetail wlpsd WITH (NOLOCK) ON wlpsd.ProductID = pscs.ProductId
-                                                                                     AND wlpsd.BettypeID = ps.BettypeId
-                                                                                     AND wlpsd.SiteID = pscs.SiteId
-                                                                                     AND wlpsd.LevelID = ps.LevelId
-                                                                                     AND wlpsd.ExchangeID = pscs.CurrencyId
-             ORDER BY pscs.CurrencyId,
-                      ps.LevelId;
-         END;
+             END;
+         ELSE
+             BEGIN
+                 INSERT INTO #ProductSiteCurrencySetting
+                        SELECT @ProductId,
+                               @SiteId,
+                               ex.exchangeid
+                        FROM dbo.exchange ex WITH (NOLOCK)
+                        WHERE(@CurrencyId IS NULL
+                              OR ex.exchangeid = @CurrencyId)
+                             AND (@ExcludeTestCurrency = 0
+                                  OR ex.currency NOT IN('UUS'))
+                        AND ex.currency NOT IN('H', 'C');
+             END;
      END;
-         DROP TABLE #ProductSetting;
-         DROP TABLE #ProductSiteCurrencySetting;
+     BEGIN -- Query Data
+         SELECT pscs.ProductId,
+                ps.BettypeId,
+                pscs.CurrencyId,
+                pscs.SiteId,
+                ps.LevelId AS Level,
+                ISNULL(wlpsd.MaxWinLimit, 0) AS MaxWinLimit,
+                ISNULL(wlpsd.IsBlockedPlaceBet, 0) AS IsBlockedPlaceBet,
+                ISNULL(wlpsd.IsBlockedTransfer, 0) AS IsBlockedTransfer
+         FROM #ProductSiteCurrencySetting pscs
+              INNER JOIN #ProductSetting ps ON pscs.ProductId = ps.ProductId
+              LEFT JOIN dbo.WinLimit_ProductSettingDetail wlpsd WITH (NOLOCK) ON wlpsd.ProductID = pscs.ProductId
+                                                                                 AND wlpsd.BettypeID = ps.BettypeId
+                                                                                 AND wlpsd.SiteID = pscs.SiteId
+                                                                                 AND wlpsd.LevelID = ps.LevelId
+                                                                                 AND wlpsd.ExchangeID = pscs.CurrencyId
+         ORDER BY pscs.CurrencyId,
+                  ps.LevelId;
+     END;
+     DROP TABLE #ProductSetting;
+     DROP TABLE #ProductSiteCurrencySetting;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CurrencySettingSel] TO [bodbAdminNet];
 GO

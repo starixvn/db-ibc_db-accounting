@@ -37,6 +37,20 @@ AS
 */
 
      SET NOCOUNT ON;
+     BEGIN -- #ProductSetting
+         CREATE TABLE #ProductSetting
+         (ProductId TINYINT,
+          BettypeId SMALLINT
+         );
+         INSERT INTO #ProductSetting
+         (ProductId,
+          BettypeId
+         )
+                SELECT DISTINCT
+                       fps.ProductId,
+                       fps.BettypeId
+                FROM dbo.f_Nap_WinLimit_ProductSettingSel(NULL) fps;
+     END;
      BEGIN -- @CustID, @CurrencyID.
          DECLARE @CustID INT, @CurrencyID INT, @CurrencyName NVARCHAR(50), @AgentId INT, @SuperId INT;
          SELECT @CustID = c.custid,
@@ -98,18 +112,27 @@ AS
                              INNER JOIN DBPRO.bodb02.dbo.Products p ON ps.ProductId = p.ProductId
                              INNER JOIN
                         (
-                            SELECT CASE
+                            SELECT DISTINCT
+                                   CASE
                                        WHEN ProductID = 14
                                        THEN 13
                                        ELSE ProductID
                                    END AS ProductID,
                                    LicenseeId
                             FROM DBLIC.bodb_licensee.dbo.LicenseeProduct3rd WITH (NOLOCK)
+                            WHERE ProductID IN
+                            (
+                                SELECT CASE
+                                           WHEN ProductId = 13
+                                           THEN 14
+                                           ELSE ProductId
+                                       END
+                                FROM #ProductSetting
+                            )
                         ) AS lp ON ps.ProductId = lp.ProductId
                              INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lp.licenseeId
                              INNER JOIN dbo.[Site] s WITH (NOLOCK) ON l.LicenseeName = s.[site]
-                        WHERE s.[siteid] = @SiteId
-                              AND ps.SettingStatus = 1;
+                        WHERE s.[siteid] = @SiteId;
              END;
      END;
      BEGIN -- @ExistedSetting
@@ -157,6 +180,7 @@ AS
                                                                               AND pd.SiteId = @SiteId
          WHERE e.MaxWinLimit IS NULL;
      END;
+     DROP TABLE #ProductSetting;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductSel] TO [bodbAdminNet];
 GO
