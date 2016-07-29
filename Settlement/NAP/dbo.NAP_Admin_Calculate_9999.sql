@@ -221,6 +221,10 @@ BEGIN
 																								WHEN (betteam = 'YO' AND (@fth + @fta) > hdp1) THEN 1
 																								ELSE NULL
 																							END
+															WHEN (@fth > 0 OR @fta > 0) AND @fth + @fta > hdp1 THEN CASE
+																														WHEN LEFT(betteam,1) = 'U' THEN -1
+																														ELSE NULL
+																													END
 															ELSE NULL
 														END
 								WHEN bettype = 419 THEN CASE	
@@ -229,6 +233,10 @@ BEGIN
 																							WHEN betteam = '2H' AND @hth + @hta = 0 THEN 1
 																							ELSE -1
 																					  END
+															WHEN @IsHTCal = 1 AND @fth + @fta = 0 THEN CASE 
+																									WHEN betteam = '1H' THEN -1
+																									ELSE NULL
+																								END																					  
 															ELSE NULL
 														END
 								WHEN bettype = 420 THEN CASE	
@@ -237,6 +245,11 @@ BEGIN
 																					WHEN betteam = '2H' AND @hth = 0 THEN 1
 																					ELSE -1
 																				END
+															WHEN @IsHTCal = 1 AND @fth = 0 THEN CASE 
+																									WHEN betteam = '1H' THEN -1
+																									ELSE NULL
+																								END
+													
 															ELSE NULL
 														END
 								WHEN bettype = 421 THEN CASE	
@@ -245,6 +258,10 @@ BEGIN
 																					WHEN betteam = '2H' AND @hta = 0 THEN 1
 																					ELSE -1
 																				END
+															WHEN @IsHTCal = 1 AND @fta = 0 THEN CASE 
+																									WHEN betteam = '1H' THEN -1
+																									ELSE NULL
+																								END
 															ELSE NULL
 														END
 								WHEN bettype = 445 THEN	CASE 

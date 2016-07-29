@@ -45,7 +45,7 @@ BEGIN
 	SELECT 	@strFTBettypes = COALESCE(@strFTBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
 	FROM	dbo.f_Set_GetGroupBettypes() f 
 	WHERE  	f.IsUsedGoalRecordValue = 1
-			AND f.GroupId = 2
+			AND f.GroupId = 2 AND @IsAutoCalculatePage = 1
 
 	SELECT 	@strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
 	FROM	dbo.f_Set_GetGroupBettypes() f 

@@ -116,8 +116,8 @@ BEGIN
     FROM dbo.bettrans b WITH (ROWLOCK)
     WHERE	matchid = @matchid 
 			AND 1 = CASE
-						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 0 
-						ELSE 1 
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+						ELSE 0 
 					END
     GROUP BY custid
 
@@ -234,8 +234,8 @@ BEGIN
 		FROM	dbo.bettrans b WITH (ROWLOCK)
 		WHERE	matchid = @matchid 
 				AND 1 = CASE
-							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 0 
-							ELSE 1 
+							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+							ELSE 0 
 						END
 		GROUP BY custid
 		
@@ -311,8 +311,8 @@ BEGIN
     FROM dbo.bettrans b WITH (ROWLOCK)
     WHERE	matchid = @matchid 
 			AND 1 = CASE
-						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 0 
-						ELSE 1 
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+						ELSE 0 
 					END
     GROUP BY custid
 
