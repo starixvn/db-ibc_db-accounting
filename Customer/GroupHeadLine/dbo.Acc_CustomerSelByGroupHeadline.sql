@@ -11,6 +11,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelByGroupHeadline]
   , @Owner VARCHAR(50) = ''
   , @HeadlineType VARCHAR(20) = ''
   , @IsTest BIT = 0
+  , @Userid INT=NULL
 AS    
     
 /*    
@@ -23,12 +24,24 @@ AS
         - 20141001@Logan: Use f_DirectAgencyList instead of using Acc_CustDirect
 		- 20160607@Elodie: Add headline type and their owner [Redmine:#51923]
 						   Modify code to enhance performance 
+		- 20160620@Winnie: #48948 Hide_special_sites_from_unautorized_users
 
 	Example: exec Acc_CustomerSelByGroupHeadline @siteid=default,@currency=0,@open=1,@suspended=0,@closed=1,@disabled=1,@roleid=0,@username=default,@groupheadline=default,@Owner='',@HeadlineType='1'
 
 */    
 BEGIN    
     SET NOCOUNT ON    
+    
+    DECLARE @SearchQuery varchar(1024)
+	DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
+	DECLARE @tmpUserid VARCHAR(50)
+	SELECT @tmpUserid=CAST(@Userid AS VARCHAR(50))
+	SELECT @SearchQuery = 'SELECT * 
+	FROM OPENQUERY(DBPOLICY, 
+	''SELECT siteid , site,SpecialGroup FROM bodb02.dbo.f_GetDeniedSiteByUser( ''''' + @tmpUserid + ''''')'')'
+
+	INSERT INTO  @tmp (siteid , site,SpecialGroup)
+	EXECUTE(@SearchQuery)	
     
     CREATE TABLE #tmpDirectCust 
     (
@@ -155,7 +168,6 @@ BEGIN
 	WHERE (@username = '' OR ci.username=@username) 
 		AND (@groupheadline = '' OR hl.GroupName=@groupheadline)    
 		AND hl.GroupID <> 0
-       AND (@Userid IS NULL OR (@Userid IS NOT NULL AND site NOT IN (SELECT site FROM @tmp )))
     
 	UNION ALL    
 	SELECT  0 custheadlineid,'Not assigned to group' , c.custid ,ci.username,isnull(ci.reject,0) issuspend,    
@@ -174,6 +186,7 @@ BEGIN
 		SELECT r.*, e.currency AS CurrencyName
 		FROM  #tmpResultAll r
 			INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.Currency = e.exchangeid
+			WHERE (@Userid IS NULL OR (@Userid IS NOT NULL AND site NOT IN (SELECT site FROM @tmp )))
 		ORDER BY custheadlineid,custid    
     
      RETURN   
@@ -215,6 +228,7 @@ BEGIN
 	SELECT r.*, e.currency AS CurrencyName
 	FROM  #tmpResult r
 		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.Currency = e.exchangeid
+		WHERE (@Userid IS NULL OR (@Userid IS NOT NULL AND site NOT IN (SELECT site FROM @tmp )))
 	ORDER BY custheadlineid,custid   
 
 END
