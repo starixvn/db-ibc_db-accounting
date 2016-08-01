@@ -264,34 +264,58 @@ BEGIN
 																								END
 															ELSE NULL
 														END
-								WHEN bettype = 445 THEN	CASE 
-															WHEN @IsHTCal = 0 AND @hth > 0 AND @hta > 0 THEN CASE
-																								WHEN LEFT(betteam,1) = 'N' THEN -1
-																								ELSE NULL
-																							END
-															WHEN @IsHTCal = 1 AND @fth + @fta = 0 THEN CASE
-																											WHEN LEFT(betteam,1) = 'Y' THEN -1
-																											ELSE NULL
-																									   END
-															WHEN @IsHTCal = 1 AND @fth >0 AND @fta > 0 THEN CASE
-																												WHEN @hth + @hta = 0 THEN CASE
-																																				WHEN LEFT(betteam,1) = 'Y' THEN -1
-																																				WHEN betteam = 'NN' THEN -1
-																																				WHEN betteam = 'NY' THEN 1
-																																				ELSE NULL
-																																		  END
-																												WHEN @fth = @hth AND @fta = @hta THEN CASE
-																																							WHEN LEFT(betteam,1) = 'N' THEN -1
-																																							ELSE NULL
-																																					  END
-																												WHEN @hth > 0 AND @hta > 0 AND @fth > @hth AND @fta > @hta THEN CASE
-																																													WHEN betteam = 'YY' THEN 1
-																																													ELSE -1
-																																												END
-																												ELSE NULL
-																											END
-															ELSE NULL
-														END
+								WHEN bettype = 445 THEN	
+									CASE @IsHTCal
+									WHEN 0 THEN --abandoned 1H
+										CASE 
+											WHEN (@hth > 0 AND @hta > 0) THEN --both of teams have scored
+												CASE
+													WHEN LEFT(betteam,1) = 'N' THEN -1
+													ELSE NULL
+												END
+											ELSE NULL
+										END
+									WHEN 1 THEN --abandoned 2H
+										CASE 
+											WHEN (@fth + @fta = 0) THEN NULL --both teams no score
+											WHEN (@fth > 0 AND @fta > 0) THEN --both teams have scored
+												CASE
+													WHEN (@hth + @hta = 0) THEN NULL
+													WHEN (@hth > 0 AND @hta > 0) THEN 
+													CASE
+														WHEN betteam = 'YY' THEN 1
+														WHEN betteam = 'YN' THEN -1
+														WHEN betteam = 'NY' THEN -1
+														WHEN betteam = 'NN' THEN -1
+														ELSE NULL
+													END	
+													ELSE 
+													CASE
+														WHEN betteam = 'YY' THEN -1
+														WHEN betteam = 'YN' THEN -1
+														WHEN betteam = 'NY' THEN 1
+														WHEN betteam = 'NN' THEN -1
+														ELSE NULL
+													END
+												END
+											ELSE --not both of teams have scored
+											CASE 
+												WHEN (@hth + @hta = 0) THEN NULL
+												WHEN (@hth > 0 AND @hta > 0) THEN
+												CASE
+													WHEN betteam = 'NY' THEN -1
+													WHEN betteam = 'NN' THEN -1
+													ELSE NULL
+												END
+												ELSE
+												CASE 
+													WHEN betteam = 'YY' THEN -1
+													WHEN betteam = 'YN' THEN -1
+													ELSE NULL
+												END
+											END
+										END
+									END
 								WHEN bettype = 446 THEN	CASE 
 															WHEN @IsHTCal = 0 AND @hth > 0 THEN CASE
 																									WHEN LEFT(betteam,1) = 'N' THEN -1
