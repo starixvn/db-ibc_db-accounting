@@ -277,10 +277,32 @@ BEGIN
 										END
 									WHEN 1 THEN --abandoned 2H
 										CASE 
-											WHEN (@fth + @fta = 0) THEN NULL --both teams no score
+											WHEN (@fth + @fta = 0 OR ((@fth + @fta) > 0 and (@fth = 0 OR @fta = 0) )) THEN  --not both teams haved score
+												CASE 
+													WHEN (@hth + @hta = 0 OR ((@hth + @hta) > 0 and (@hth = 0 OR @hta = 0) )) THEN
+													CASE 
+														WHEN betteam = 'YY' THEN -1
+														WHEN betteam = 'YN' THEN -1
+														ELSE NULL
+													END
+													WHEN (@hth > 0 AND @hta > 0) THEN
+													CASE
+														WHEN betteam = 'NY' THEN -1
+														WHEN betteam = 'NN' THEN -1
+														ELSE NULL
+													END
+													ELSE NULL
+												END
 											WHEN (@fth > 0 AND @fta > 0) THEN --both teams have scored
 												CASE
-													WHEN (@hth + @hta = 0) THEN NULL
+													WHEN (@hth + @hta = 0 OR ((@hth + @hta) > 0 and (@hth = 0 OR @hta = 0) )) THEN
+													CASE
+														WHEN betteam = 'YY' THEN -1
+														WHEN betteam = 'YN' THEN -1
+														WHEN betteam = 'NY' THEN 1
+														WHEN betteam = 'NN' THEN -1
+														ELSE NULL
+													END
 													WHEN (@hth > 0 AND @hta > 0) THEN 
 													CASE
 														WHEN betteam = 'YY' THEN 1
@@ -289,31 +311,10 @@ BEGIN
 														WHEN betteam = 'NN' THEN -1
 														ELSE NULL
 													END	
-													ELSE 
-													CASE
-														WHEN betteam = 'YY' THEN -1
-														WHEN betteam = 'YN' THEN -1
-														WHEN betteam = 'NY' THEN 1
-														WHEN betteam = 'NN' THEN -1
-														ELSE NULL
-													END
+													ELSE NULL 
 												END
-											ELSE --not both of teams have scored
-											CASE 
-												WHEN (@hth + @hta = 0) THEN NULL
-												WHEN (@hth > 0 AND @hta > 0) THEN
-												CASE
-													WHEN betteam = 'NY' THEN -1
-													WHEN betteam = 'NN' THEN -1
-													ELSE NULL
-												END
-												ELSE
-												CASE 
-													WHEN betteam = 'YY' THEN -1
-													WHEN betteam = 'YN' THEN -1
-													ELSE NULL
-												END
-											END
+											ELSE NULL 
+											
 										END
 									END
 								WHEN bettype = 446 THEN	CASE 
