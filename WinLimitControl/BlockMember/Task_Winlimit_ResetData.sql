@@ -8,6 +8,8 @@ AS
 	Task : Reset data
 	DB: DBTXN/bodb02
 	Revisions:
+	
+		- 20160714@Helen: CWL - Phase 2 [Redmine: 57722]
 	Param's Explanation:
 		
 */
@@ -16,17 +18,19 @@ BEGIN
 	
 	--get product setting
 	CREATE TABLE #ProductSetting(RowId INT IDENTITY(1,1), ProductId TINYINT, Bettype SMALLINT)
+	
 	INSERT INTO #ProductSetting(ProductId, Bettype)
-	SELECT ProductId, BetType
-	FROM dbo.f_Winlimit_GetProductSetting() WHERE IsActive_Company = 1
+	SELECT DISTINCT ProductID, BettypeID
+	FROM DBCUST.CUSTDB.dbo.Winlimit_ProductSetting WITH (NOLOCK)
+	WHERE SettingStatus IN (0,1)
 
 	--get blocked list members
-	CREATE TABLE #BlockedListMember (CustId INT, BetType SMALLINT)
+	CREATE TABLE #BlockedListMember (CustId INT, ProductId TINYINT, BetType SMALLINT)
 
-	INSERT INTO #BlockedListMember(CustId, BetType)
-	SELECT CustId, BetType
-	FROM dbo.WinLimit_Game WITH(NOLOCK)
-	WHERE IsBlocked = 1
+	INSERT INTO #BlockedListMember(CustId,ProductId , BetType)
+	SELECT CustId, ProductId, BetTypeID
+	FROM DBCUST.CUSTDB.dbo.WinLimit_CustGameStatus WITH(NOLOCK)
+	WHERE IsBlockedPlaceBet = 1 OR IsBlockedTransfer = 1
 
 	SET @RowId = 1
 	WHILE EXISTS (SELECT TOP 1 1 FROM #ProductSetting WHERE RowId = @RowId)
