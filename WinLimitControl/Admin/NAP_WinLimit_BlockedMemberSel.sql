@@ -1,7 +1,21 @@
 USE [bodb02]
 GO
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_BlockedMemberSel]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[NAP_WinLimit_BlockedMemberSel];
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_BlockedMemberSel]
+GO
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+
+CREATE PROCEDURE [dbo].[NAP_WinLimit_BlockedMemberSel]
 	@UserName			VARCHAR(100)	= '',
 	@ExchangeID			INT				= 0,
 	@ProductID			TINYINT			= 0,
@@ -147,7 +161,7 @@ BEGIN
 		, rs.CreatedBy AS BlockedBy
 		, c.UserName AS BlockedByUserName
 	FROM #tempResult rs
-		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
+		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS'))
 		LEFT JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON rs.CreatedBy = c.CustId
 	ORDER BY RowNum ASC
 	

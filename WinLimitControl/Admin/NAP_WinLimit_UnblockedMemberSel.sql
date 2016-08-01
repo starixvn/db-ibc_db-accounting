@@ -1,6 +1,18 @@
 USE [bodb02]
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_UnblockedMemberSel]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel];
 GO
-ALTER PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+CREATE PROCEDURE [dbo].[NAP_WinLimit_UnblockedMemberSel]
 	@UserName			VARCHAR(100)	= '',
 	@ExchangeID			INT				= 0,
 	@ProductID			TINYINT			= 0,
@@ -153,7 +165,7 @@ BEGIN
 		, c.username AS UnblockedByUserName
 	FROM #tempResult rs
 		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) 
-			ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS', 'H', 'C'))
+			ON rs.Currency = e.ExchangeId AND (@ExcludeTestData = 0 OR e.currency NOT IN ('UUS'))
 		LEFT JOIN dbo.WinLimit_CreditGame wc WITH (NOLOCK) 
 			ON rs.CustId = wc.CustId AND rs.bettype = wc.Bettype AND wc.Winlostdate = @Today
 		LEFT JOIN dbo.WinLimit_DebitGame wd WITH (NOLOCK)

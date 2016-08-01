@@ -1,6 +1,22 @@
-USE bodb02
+USE [CustDB];
 GO
-ALTER PROCEDURE dbo.NAP_WinLimit_Game_Unblock @CustId INT
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_Game_Unblock]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[NAP_WinLimit_Game_Unblock];
+GO
+USE [CustDB];
+GO
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+
+CREATE PROCEDURE dbo.NAP_WinLimit_Game_Unblock @CustId INT
 	, @ProductId TINYINT
 	, @WinlostDate SMALLDATETIME
 	, @UserId INT = 0
