@@ -175,7 +175,23 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                              ELSE 'Soccer Non-Live'
                          END
 	
-	 
+		--- set data default for 'Deposit' if there is no data
+		INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
+							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
+		SELECT	GroupId, GroupName, 'Deposit' AS RowName,
+				0 AS MemberWinLoss, 0 AS SMAWinLoss, 0 AS Commission, 
+				0 AS RealIncome, 0 AS VirtualIncome, 0 AS RealTurnover, 0 AS VirtualTurnover          
+		FROM (
+			SELECT	GroupId,
+					GroupName
+			FROM	#Data
+			WHERE	RowName = 'BARM'			
+			EXCEPT			
+			SELECT  GroupId,
+					GroupName
+			FROM	#Data
+			WHERE	RowName = 'Deposit'
+		)  D
 						 
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c

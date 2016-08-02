@@ -185,7 +185,23 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                              THEN 'Soccer-Major Bet Types'
                              ELSE 'Soccer-Minor Bet Types'
                          END
-						 
+		
+		--- set data default for 'Deposit' if there is no data
+		INSERT INTO #Data ( GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
+							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
+		SELECT	GroupName, 'Deposit' AS RowName,
+				0 AS MemberWinLoss, 0 AS SMAWinLoss, 0 AS Commission, 
+				0 AS RealIncome, 0 AS VirtualIncome, 0 AS RealTurnover, 0 AS VirtualTurnover          
+		FROM (
+			SELECT	GroupName
+			FROM	#Data
+			WHERE	RowName = 'BARM'			
+			EXCEPT			
+			SELECT  GroupName
+			FROM	#Data
+			WHERE	RowName = 'Deposit'
+		)  D
+						 				 
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
 		SET		c.MemberWinLoss = ISNULL(c.MemberWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.MemberWinLoss,0) ELSE ISNULL(d.MemberWinLoss,0) END,

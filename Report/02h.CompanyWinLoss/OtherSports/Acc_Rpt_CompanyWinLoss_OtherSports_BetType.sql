@@ -149,8 +149,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType] @EndDate='2020-01-01',@StartDa
                        SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
                 FROM bettrans AS b WITH (NOLOCK)
-                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType                    
                      INNER JOIN #Match AS m ON b.MatchId = m.MatchId
                 WHERE b.recommend = 5707545
 					  AND b.winlostdate = @StartDate
@@ -164,14 +163,25 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType] @EndDate='2020-01-01',@StartDa
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY sb.BetType,
-                         sb.BetTypeName,
-                         CASE
-                             WHEN dep.CustId IS NULL
-                             THEN 'Credit'
-                             ELSE 'Deposit'
-                         END;
+                         sb.BetTypeName
 						 
-			
+		INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
+							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
+		SELECT	GroupId, GroupName,	'Deposit' AS RowName,
+				0 AS MemberWinLoss, 0 AS SMAWinLoss, 0 AS Commission, 
+				0 AS RealIncome, 0 AS VirtualIncome, 0 AS RealTurnover, 0 AS VirtualTurnover          
+		FROM (
+			SELECT	GroupId,
+					GroupName
+			FROM	#Data
+			WHERE	RowName = 'BARM'			
+			EXCEPT			
+			SELECT  GroupId,
+					GroupName
+			FROM	#Data
+			WHERE	RowName = 'Deposit'
+		)  D
+					
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
 		SET		c.MemberWinLoss = ISNULL(c.MemberWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.MemberWinLoss,0) ELSE ISNULL(d.MemberWinLoss,0) END,

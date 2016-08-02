@@ -150,7 +150,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType] @EndDate='2020-01-01',@Start
                        SUM((1 - tpositiontaking) * ABS(stake) * virtualrate) AS VirtualTurnover
 			  FROM bettrans AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN #Match AS m ON b.MatchId = m.MatchId
                 WHERE b.recommend = 5707545
 					  AND b.winlostdate = @StartDate
@@ -164,13 +163,24 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType] @EndDate='2020-01-01',@Start
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY m.SportType,
-                         m.SportName,
-                         CASE
-                             WHEN dep.CustId IS NULL
-                             THEN 'Credit'
-                             ELSE 'Deposit'
-                         END;  
-						 
+                         m.SportName
+		
+		INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
+							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
+		SELECT	GroupId, GroupName,	'Deposit' AS RowName,
+				0 AS MemberWinLoss, 0 AS SMAWinLoss, 0 AS Commission, 
+				0 AS RealIncome, 0 AS VirtualIncome, 0 AS RealTurnover, 0 AS VirtualTurnover          
+		FROM (
+			SELECT	GroupId,
+					GroupName
+			FROM	#Data
+			WHERE	RowName = 'BARM'			
+			EXCEPT			
+			SELECT  GroupId,
+					GroupName
+			FROM	#Data
+			WHERE	RowName = 'Deposit'
+		)  D								 
 			
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
