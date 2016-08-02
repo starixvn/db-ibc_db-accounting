@@ -1,4 +1,5 @@
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9999] @matchid INT
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_9999] 
+	@matchid INT
 	,@bettype SMALLINT
 	,@fth	INT = NULL
 	,@fta	INT = NULL
@@ -219,19 +220,38 @@ BEGIN
 															WHEN @fth > 0 AND @fta > 0 AND LEFT(betteam,1) = 'N' THEN -1 
 															ELSE NULL
 														END
-								WHEN bettype = 418 THEN CASE 
-															WHEN @fth > 0 AND @fta > 0 THEN CASE
-																								WHEN (LEFT(betteam,1) = 'N') THEN -1
-																								WHEN (betteam = 'YU' AND (@fth + @fta) > hdp1) THEN -1
-																								WHEN (betteam = 'YO' AND (@fth + @fta) > hdp1) THEN 1
-																								ELSE NULL
-																							END
-															WHEN (@fth > 0 OR @fta > 0) AND @fth + @fta > hdp1 THEN CASE
-																														WHEN LEFT(betteam,1) = 'U' THEN -1
-																														ELSE NULL
-																													END
-															ELSE NULL
-														END
+								WHEN bettype = 418 THEN 
+									CASE 
+										/*WHEN @fth > 0 AND @fta > 0 THEN CASE
+																			WHEN (LEFT(betteam,1) = 'N') THEN -1
+																			WHEN (betteam = 'YU' AND (@fth + @fta) > hdp1) THEN -1
+																			WHEN (betteam = 'YO' AND (@fth + @fta) > hdp1) THEN 1
+																			ELSE NULL
+																		END*/
+										WHEN (@fth > 0 AND @fta > 0) THEN
+											CASE 
+												WHEN (@fth + @fta < hdp1) THEN
+													CASE
+														WHEN LEFT(betteam,1) = 'N' THEN -1
+														ELSE NULL
+													END
+												WHEN (@fth + @fta > hdp1) THEN
+													CASE
+														WHEN betteam = 'YO' THEN 1
+														WHEN betteam = 'YU' THEN -1
+														WHEN betteam = 'NO' THEN -1
+														WHEN betteam = 'NU' THEN -1
+														ELSE NULL
+													END
+												ELSE NULL
+											END
+										WHEN (@fth > 0 OR @fta > 0) AND (@fth + @fta > hdp1) THEN 
+											CASE
+												WHEN RIGHT(betteam,1) = 'U' THEN -1
+												ELSE NULL
+											END
+										ELSE NULL
+									END
 								WHEN bettype = 419 THEN CASE	
 															WHEN @fth + @fta > 0 THEN CASE
 																							WHEN betteam = '1H' AND @hth + @hta > 0 THEN 1
@@ -678,18 +698,18 @@ BEGIN
 													CASE betteam
 														WHEN '1h' THEN
 															CASE 
-																WHEN (@fth = 0 AND @fta = 0) THEN -1
-																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) = (@fth2H + @fta2H))) THEN -1
 																ELSE NULL
 															END
 														WHEN '2h' THEN
 															CASE 
-																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN 1
 																ELSE NULL
 															END
 														WHEN 'tie' THEN
 															CASE 
-																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN -1
 																ELSE NULL
 															END
 														ELSE NULL
@@ -702,18 +722,18 @@ BEGIN
 													CASE betteam
 														WHEN '1h' THEN
 															CASE 
-																WHEN (@fth = 0) THEN -1
-																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																WHEN (@hth >= 0 AND @fth2H > @hth) THEN -1
+																WHEN (@hth >= 0 AND @fth2H = @hth) THEN -1
 																ELSE NULL
 															END
 														WHEN '2h' THEN
 															CASE 
-																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																WHEN (@hth >= 0 AND @fth2H > @hth) THEN 1
 																ELSE NULL
 															END
 														WHEN 'tie' THEN
 															CASE 
-																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																WHEN (@hth >= 0 AND @fth2H > @hth) THEN -1
 																ELSE NULL
 															END
 														ELSE NULL
@@ -730,8 +750,8 @@ BEGIN
 													CASE betteam
 														WHEN '1h' THEN
 															CASE 
-																WHEN (@fta = 0) THEN -1
 																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN -1
+																WHEN (@hta >= 0 AND @fta2H = @hta ) THEN -1
 																ELSE NULL
 															END
 														WHEN '2h' THEN
@@ -864,18 +884,18 @@ BEGIN
 													CASE betteam
 														WHEN '1h' THEN
 															CASE 
-																WHEN (@fth = 0 AND @fta = 0) THEN -1
-																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) = (@fth2H + @fta2H))) THEN -1
 																ELSE NULL
 															END
 														WHEN '2h' THEN
 															CASE 
-																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN 1
 																ELSE NULL
 															END
 														WHEN 'tie' THEN
 															CASE 
-																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN -1
 																ELSE NULL
 															END
 														ELSE NULL
@@ -888,18 +908,18 @@ BEGIN
 													CASE betteam
 														WHEN '1h' THEN
 															CASE 
-																WHEN (@fth = 0) THEN -1
-																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																WHEN (@hth >= 0 AND @fth2H > @hth) THEN -1
+																WHEN (@hth >= 0 AND @fth2H = @hth) THEN -1
 																ELSE NULL
 															END
 														WHEN '2h' THEN
 															CASE 
-																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																WHEN (@hth >= 0 AND @fth2H > @hth) THEN 1
 																ELSE NULL
 															END
 														WHEN 'tie' THEN
 															CASE 
-																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																WHEN (@hth >= 0 AND @fth2H > @hth) THEN -1
 																ELSE NULL
 															END
 														ELSE NULL
@@ -916,8 +936,8 @@ BEGIN
 													CASE betteam
 														WHEN '1h' THEN
 															CASE 
-																WHEN (@fta = 0) THEN -1
 																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN -1
+																WHEN (@hta >= 0 AND @fta2H = @hta ) THEN -1
 																ELSE NULL
 															END
 														WHEN '2h' THEN
@@ -1050,18 +1070,18 @@ BEGIN
 														CASE betteam
 															WHEN '1h' THEN
 																CASE 
-																	WHEN (@fth = 0 AND @fta = 0) THEN 1
-																	WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																	WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN 1
+																	WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) = (@fth2H + @fta2H))) THEN 1
 																	ELSE 0
 																END
 															WHEN '2h' THEN
 																CASE 
-																	WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																	WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN 1
 																	ELSE 0
 																END
 															WHEN 'tie' THEN
 																CASE 
-																	WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																	WHEN ((@hth + @hta >= 0) AND ((@hth + @hta) < (@fth2H + @fta2H))) THEN 1
 																	ELSE 0
 																END
 															ELSE 0
@@ -1070,18 +1090,18 @@ BEGIN
 														CASE betteam
 															WHEN '1h' THEN
 																CASE 
-																	WHEN (@fth = 0) THEN 1
-																	WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																	WHEN (@hth >= 0 AND @fth2H > @hth) THEN 1
+																	WHEN (@hth >= 0 AND @fth2H = @hth) THEN 1
 																	ELSE 0
 																END
 															WHEN '2h' THEN
 																CASE 
-																	WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																	WHEN (@hth >= 0 AND @fth2H > @hth) THEN 1
 																	ELSE 0
 																END
 															WHEN 'tie' THEN
 																CASE 
-																	WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																	WHEN (@hth >= 0 AND @fth2H > @hth) THEN 1
 																	ELSE 0
 																END
 															ELSE 0
@@ -1090,8 +1110,8 @@ BEGIN
 														CASE betteam
 															WHEN '1h' THEN
 																CASE 
-																	WHEN (@fta = 0) THEN 1
 																	WHEN (@hta >= 0 AND @fta2H > @hta ) THEN 1
+																	WHEN (@hta >= 0 AND @fta2H = @hta ) THEN 1
 																	ELSE 0
 																END
 															WHEN '2h' THEN
