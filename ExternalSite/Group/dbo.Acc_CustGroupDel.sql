@@ -1,7 +1,7 @@
 ﻿USE [bodb_Age]
 GO
 
-ALTER PROCEDURE  [dbo].[Acc_CustGroupDel_xtest]
+ALTER PROCEDURE  [dbo].[Acc_CustGroupDel]
 	@CustID int,
 	@GroupName	VARCHAR(50),
 	@ErrCode int = 0 OUTPUT,

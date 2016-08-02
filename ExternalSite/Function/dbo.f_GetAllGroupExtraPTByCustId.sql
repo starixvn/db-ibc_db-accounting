@@ -9,12 +9,10 @@ ALTER FUNCTION [dbo].[f_GetAllGroupExtraPTByCustId]
 /*
 	Creator: Percy
 	Date: 20160720
-	DBAGE.bodb_Age
+	DBACC.bodb_ACC
 	Remark: get all group by superId
 
 	Revisions:
-		- Return table @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), FromDate DATETIME, ToDate DATETIME, [Primary] TINYINT)
-			+ Primary: 0: no, 1: is primary, 2: to be primary
 */
 
 RETURNS @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] TINYINT, OrderId TINYINT)
@@ -36,8 +34,9 @@ BEGIN
 	IF NOT EXISTS (SELECT TOP 1 1 FROM @CustExtraPTGroup WHERE [Primary] = 1)
 	BEGIN
 		DECLARE @EffectiveDate DATETIME
-		SELECT  @EffectiveDate = MAX(ToDate) FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID
 
+		SELECT  @EffectiveDate = MAX(ToDate) FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND ToDate < CONVERT(DATE, GETDATE())
+		
 		INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
 		SELECT 0, 'No Extra PT', DATEADD(DAY, 1, @EffectiveDate), 1, 1
 	END

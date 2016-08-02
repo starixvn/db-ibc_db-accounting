@@ -1,7 +1,7 @@
 ﻿USE [bodb_Age]
 GO
 
-ALTER PROCEDURE  [dbo].[Acc_CustGroupSel_xtest]
+ALTER PROCEDURE  [dbo].[Acc_CustGroupSel]
 	@GroupName varchar(50) = null,
 	@Userid		INT=NULL
 AS

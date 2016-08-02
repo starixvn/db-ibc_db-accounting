@@ -1,7 +1,7 @@
 ﻿USE [bodb_Age]
 GO
 
-ALTER PROCEDURE  [dbo].[Acc_CustGroupAddByUsername_xtest]
+ALTER PROCEDURE  [dbo].[Acc_CustGroupAddByUsername]
 	@Username	varchar(50),
 	@GroupName	varchar(50),
 	@ErrCode	int = 0 OUTPUT,
@@ -102,14 +102,21 @@ AS
 	-- Check Extra PT Group
 	IF EXISTS (SELECT 1 FROM OPENQUERY(DBACC, 'SELECT GroupName FROM bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)') WHERE GroupName = @GroupName)
 	BEGIN
-		EXEC DBACC.bodb_ACC.dbo.Acc_GroupExtraPTSetting_Ins
-			@CustID = @CustID,
-			@GroupName = @GroupName,
-			@ErrCode = @ErrCode OUTPUT,
-			@ErrMsg = @ErrMsg OUTPUT,
-			@UserID	= @UserID
+		UPDATE dbo.Acc_CustGroup WITH(ROWLOCK, UPDLOCK)
+		SET IsPayout = 1
+		WHERE CustID = @CustID AND GroupName = @GroupName
+		
+		DECLARE @today DATETIME
+		SELECT  @today = CONVERT(DATE, GETDATE())
+
+		IF NOT EXISTS (SELECT TOP 1 1 FROM DBACC.bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate)
+		BEGIN
+		SELECT
+			@ErrCode = 106,
+			@ErrMsg = 'Please select the Extra PT effective date for the customer ' + @Username + '.'
+		END
 	END
-	
+
 	--Write log data
 	declare @LogData nvarchar(1000)
 	

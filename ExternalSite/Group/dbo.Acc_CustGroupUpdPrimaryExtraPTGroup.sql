@@ -46,12 +46,15 @@ BEGIN
 		RETURN
 	END
 
-	IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID AND GroupName = @GroupName)
+	IF @GroupName <> 'No Extra PT'
 	BEGIN
-		SELECT
-			@ErrCode = 102,
-			@ErrMsg = N'This Customer does not belong to this group!'
-		RETURN
+		IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID AND GroupName = @GroupName)
+		BEGIN
+			SELECT
+				@ErrCode = 102,
+				@ErrMsg = N'This Customer does not belong to this group!'
+			RETURN
+		END
 	END
 
 	-- Update table Acc_GroupExtraPTSetting

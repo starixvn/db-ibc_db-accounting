@@ -28,7 +28,8 @@ BEGIN
 
 	SELECT
 		c.GroupName,
-		CASE WHEN e.[Primary] = 1 THEN e.EffectiveDate ELSE NULL END AS EffectiveDate
+		CASE WHEN e.[Primary] = 1 THEN e.EffectiveDate ELSE NULL END AS EffectiveDate,
+		CASE WHEN e.[Primary] = 1 THEN CONVERT(BIT, 1) ELSE CONVERT(BIT, 0) END AS IsPrimary
 	FROM
 		(
 			SELECT GroupName FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID

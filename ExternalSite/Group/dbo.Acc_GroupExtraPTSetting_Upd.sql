@@ -1,7 +1,7 @@
 USE [bodb_ACC]
 GO
 
-ALTER PROCEDURE dbo.Acc_GroupExtraPTSetting_Upd
+ALTER PROCEDURE [dbo].[Acc_GroupExtraPTSetting_Upd]
 	@CustID			INT,
 	@GroupName		VARCHAR(50),
 	@EffectiveDate	DATETIME = NULL,
@@ -57,7 +57,19 @@ BEGIN
 				RETURN
 			END
 		END
-	
+
+		IF @GroupName = 'No Extra PT'
+		BEGIN
+			IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND FromDate > @today)
+			AND NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate)
+			BEGIN
+				SELECT
+					@ErrCode = 102,
+					@ErrMsg = N'Please select a primary group.'
+				RETURN
+			END
+		END
+		
 		-- Update old setting
 		DECLARE @Curr_Primary TABLE (GroupName VARCHAR(50), IsDeleted BIT)
 		INSERT INTO @Curr_Primary (GroupName, IsDeleted)
@@ -65,20 +77,20 @@ BEGIN
 			GroupName,
 			CASE WHEN FromDate > @today THEN 1 ELSE 0 END
 		FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND (@EffectiveDate BETWEEN FromDate AND ToDate OR FromDate > @EffectiveDate)
+			AND GroupName <> 'BC'
 
 		IF NOT EXISTS (SELECT TOP 1 1 FROM @Curr_Primary WHERE IsDeleted = 0)
 		BEGIN
 			INSERT INTO @Curr_Primary (GroupName, IsDeleted)
 			SELECT TOP 1 GroupName, 0
 			FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
-			WHERE ToDate < @EffectiveDate AND GroupName <> 'BC'
-			ORDER BY ToDate DESC
+			WHERE @today BETWEEN FromDate AND ToDate AND GroupName <> 'BC' AND SuperId = @CustID
 		END
 		
-		IF @GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
+		IF EXISTS (SELECT TOP 1 1 FROM @Curr_Primary WHERE GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99'))
 		BEGIN
 			INSERT INTO @Curr_Primary (GroupName, IsDeleted)
-			SELECT 'BC', IsDeleted FROM @Curr_Primary WHERE GroupName = @GroupName
+			SELECT 'BC', IsDeleted FROM @Curr_Primary WHERE GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
 		END
 		
 		IF EXISTS (SELECT TOP 1 1 FROM @Curr_Primary WHERE IsDeleted = 1)
@@ -95,6 +107,12 @@ BEGIN
 			WHERE SuperId = @CustID AND GroupName IN (SELECT GroupName FROM @Curr_Primary WHERE IsDeleted = 0)
 				AND @today BETWEEN FromDate AND ToDate
 
+			IF @@ROWCOUNT <> 0
+			BEGIN
+				DELETE dbo.Acc_GroupExtraPTSetting
+				WHERE ToDate < FromDate AND SuperId = @CustID
+			END
+
 			IF @GroupName <> 'No Extra PT'
 			BEGIN
 				-- Insert new setting
@@ -103,13 +121,13 @@ BEGIN
 
 				INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
 				SELECT DISTINCT @CustID, @GroupID, @GroupName, ProductId, Sporttype, SubProduct, ExtraPT, @EffectiveDate, '99991231'
-				FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE GroupName = @GroupName
+				FROM dbo.f_GetSettingProductExtraPTGroup(@GroupName)
 
 				IF @GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
 				BEGIN
 					INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
 					SELECT DISTINCT @CustID, 18, 'BC', ProductId, Sporttype, SubProduct, ExtraPT, @EffectiveDate, '99991231'
-					FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE GroupName = 'BC'
+					FROM dbo.f_GetSettingProductExtraPTGroup('BC')
 				END
 			END
 		END
