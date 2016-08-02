@@ -36,6 +36,11 @@ BEGIN
 		,@csFT NVARCHAR(10) -- FT correct score
 		,@csHT NVARCHAR(10) -- HT correct score
 		,@result NVARCHAR(10)
+		,@fth2H	INT 
+		,@fta2H	INT 
+	
+	SELECT @fth2H 	= @fth - @hth
+		,@fta2H 	= @fta - @hta
 	
 	IF @bettype NOT IN (133, 134, 140, 141, 142, 145, 146, 147, 148, 149, 150, 152, 189, 190, 416, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443, 444)
 	BEGIN		
@@ -277,7 +282,7 @@ BEGIN
 										END
 									WHEN 1 THEN --abandoned 2H
 										CASE 
-											WHEN (@fth + @fta = 0 OR ((@fth + @fta) > 0 and (@fth = 0 OR @fta = 0) )) THEN  --not both teams haved score
+											WHEN (@fth2H + @fta2H = 0 OR ((@fth2H + @fta2H) > 0 and (@fth2H = 0 OR @fta2H = 0) )) THEN  --not both teams haved score
 												CASE 
 													WHEN (@hth + @hta = 0 OR ((@hth + @hta) > 0 and (@hth = 0 OR @hta = 0) )) THEN
 													CASE 
@@ -293,7 +298,7 @@ BEGIN
 													END
 													ELSE NULL
 												END
-											WHEN (@fth > 0 AND @fta > 0) THEN --both teams have scored
+											WHEN (@fth2H > 0 AND @fta2H > 0) THEN --both teams have scored
 												CASE
 													WHEN (@hth + @hta = 0 OR ((@hth + @hta) > 0 and (@hth = 0 OR @hta = 0) )) THEN
 													CASE
@@ -667,20 +672,85 @@ BEGIN
 															WHEN betteam = 'n' AND @hta <= @hth THEN 1
 														 END
 											WHEN 140 THEN 
-														 CASE
-															WHEN (betteam = '1h' OR betteam = 'tie') AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN -1
-															WHEN betteam = '2h' AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN 1 
-														 END
+												CASE @IsHTCal
+													WHEN 0 THEN NULL --abandoned 1H
+													WHEN 1 THEN --abandoned 2H
+													CASE betteam
+														WHEN '1h' THEN
+															CASE 
+																WHEN (@fth = 0 AND @fta = 0) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																ELSE NULL
+															END
+														WHEN '2h' THEN
+															CASE 
+																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																ELSE NULL
+															END
+														WHEN 'tie' THEN
+															CASE 
+																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																ELSE NULL
+															END
+														ELSE NULL
+													END
+												END
 											WHEN 141 THEN
-														 CASE
-															WHEN (betteam = '1h' OR betteam = 'tie') AND @hth < (@fth - @hth) THEN -1
-															WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
-														 END
-											WHEN 142 THEN 
-														 CASE 
-															WHEN (betteam = '1h' OR betteam = 'tie') AND @hta < (@fta - @hta) THEN -1
-															WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
-														 END 
+												CASE @IsHTCal
+													WHEN 0 THEN NULL --abandoned 1H
+													WHEN 1 THEN --abandoned 2H
+													CASE betteam
+														WHEN '1h' THEN
+															CASE 
+																WHEN (@fth = 0) THEN -1
+																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																ELSE NULL
+															END
+														WHEN '2h' THEN
+															CASE 
+																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																ELSE NULL
+															END
+														WHEN 'tie' THEN
+															CASE 
+																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																ELSE NULL
+															END
+														ELSE NULL
+													END
+												END
+												/*CASE
+													WHEN (betteam = '1h' OR betteam = 'tie') AND @hth < (@fth - @hth) THEN -1
+													WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
+												END*/
+											WHEN 142 THEN
+												CASE @IsHTCal
+													WHEN 0 THEN NULL --abandoned 1H
+													WHEN 1 THEN --abandoned 2H
+													CASE betteam
+														WHEN '1h' THEN
+															CASE 
+																WHEN (@fta = 0) THEN -1
+																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN -1
+																ELSE NULL
+															END
+														WHEN '2h' THEN
+															CASE 
+																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN 1
+																ELSE NULL
+															END
+														WHEN 'tie' THEN
+															CASE 
+																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN -1
+																ELSE NULL
+															END
+														ELSE NULL
+													END
+												END
+												/*CASE 
+													WHEN (betteam = '1h' OR betteam = 'tie') AND @hta < (@fta - @hta) THEN -1
+													WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
+												END */
 											WHEN 145 THEN 
 														 CASE 
 															WHEN @IsHTCal = 0 THEN -- suspended in 1st half
@@ -788,20 +858,85 @@ BEGIN
 															WHEN betteam = 'n' AND @hta > @hth THEN -1
 														 END
 											WHEN 442 THEN 
-														 CASE
-															WHEN (betteam = '1h' OR betteam = 'tie') AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN -1
-															WHEN betteam = '2h' AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN 1 
-														 END
+												CASE @IsHTCal
+													WHEN 0 THEN NULL --abandoned 1H
+													WHEN 1 THEN --abandoned 2H
+													CASE betteam
+														WHEN '1h' THEN
+															CASE 
+																WHEN (@fth = 0 AND @fta = 0) THEN -1
+																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																ELSE NULL
+															END
+														WHEN '2h' THEN
+															CASE 
+																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																ELSE NULL
+															END
+														WHEN 'tie' THEN
+															CASE 
+																WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN -1
+																ELSE NULL
+															END
+														ELSE NULL
+													END
+												END
 											WHEN 443 THEN
-														 CASE
-															WHEN (betteam = '1h' OR betteam = 'tie') AND @hth < (@fth - @hth) THEN -1
-															WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
-														 END
+												CASE @IsHTCal
+													WHEN 0 THEN NULL --abandoned 1H
+													WHEN 1 THEN --abandoned 2H
+													CASE betteam
+														WHEN '1h' THEN
+															CASE 
+																WHEN (@fth = 0) THEN -1
+																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																ELSE NULL
+															END
+														WHEN '2h' THEN
+															CASE 
+																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																ELSE NULL
+															END
+														WHEN 'tie' THEN
+															CASE 
+																WHEN (@hth >= 0 AND @fth2H > @hth ) THEN -1
+																ELSE NULL
+															END
+														ELSE NULL
+													END
+												END
+												/*CASE
+													WHEN (betteam = '1h' OR betteam = 'tie') AND @hth < (@fth - @hth) THEN -1
+													WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
+												END*/
 											WHEN 444 THEN 
-														 CASE 
-															WHEN (betteam = '1h' OR betteam = 'tie') AND @hta < (@fta - @hta) THEN -1
-															WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
-														 END									
+												CASE @IsHTCal
+													WHEN 0 THEN NULL --abandoned 1H
+													WHEN 1 THEN --abandoned 2H
+													CASE betteam
+														WHEN '1h' THEN
+															CASE 
+																WHEN (@fta = 0) THEN -1
+																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN -1
+																ELSE NULL
+															END
+														WHEN '2h' THEN
+															CASE 
+																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN 1
+																ELSE NULL
+															END
+														WHEN 'tie' THEN
+															CASE 
+																WHEN (@hta >= 0 AND @fta2H > @hta ) THEN -1
+																ELSE NULL
+															END
+														ELSE NULL
+													END
+												END
+												/*CASE 
+													WHEN (betteam = '1h' OR betteam = 'tie') AND @hta < (@fta - @hta) THEN -1
+													WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
+												END*/
 										 END
 							END	
 			,modds = @modds									
@@ -892,8 +1027,8 @@ BEGIN
 							(@IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156))
 							OR (@IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642))
 							OR (@IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156))
-						)			
-						THEN CASE WHEN @IsHTCal = 0 -- Suspended in 1st Half
+						) THEN 
+						CASE WHEN @IsHTCal = 0 -- Suspended in 1st Half
 										AND 
 										(
 											(bettype = 145 AND @hth > 0 AND @hta > 0) 
@@ -908,9 +1043,69 @@ BEGIN
 								  WHEN @IsHTCal = 1 -- suspended in 2nd Half
 										AND 1 = CASE WHEN bettype IN (133,438) AND @hth <= @hta THEN 1
 													WHEN bettype IN (134,439) AND @hta <= @hth THEN 1
-													WHEN bettype IN (140,442) AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN 1
+													/*WHEN bettype IN (140,442) AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN 1
 													WHEN bettype IN (141,443) AND @hth < (@fth - @hth) THEN 1
-													WHEN bettype IN (142,444) AND @hta < (@fta - @hta) THEN 1
+													WHEN bettype IN (142,444) AND @hta < (@fta - @hta) THEN 1*/
+													WHEN bettype IN (140,442) THEN
+														CASE betteam
+															WHEN '1h' THEN
+																CASE 
+																	WHEN (@fth = 0 AND @fta = 0) THEN 1
+																	WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																	ELSE 0
+																END
+															WHEN '2h' THEN
+																CASE 
+																	WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																	ELSE 0
+																END
+															WHEN 'tie' THEN
+																CASE 
+																	WHEN ((@hth + @hta >= 0) AND ((@fth2H + @fta2H) > (@hth + @hta))) THEN 1
+																	ELSE 0
+																END
+															ELSE 0
+														END
+													WHEN bettype IN (141,443) THEN
+														CASE betteam
+															WHEN '1h' THEN
+																CASE 
+																	WHEN (@fth = 0) THEN 1
+																	WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																	ELSE 0
+																END
+															WHEN '2h' THEN
+																CASE 
+																	WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																	ELSE 0
+																END
+															WHEN 'tie' THEN
+																CASE 
+																	WHEN (@hth >= 0 AND @fth2H > @hth ) THEN 1
+																	ELSE 0
+																END
+															ELSE 0
+														END
+													WHEN bettype IN (142,444) THEN
+														CASE betteam
+															WHEN '1h' THEN
+																CASE 
+																	WHEN (@fta = 0) THEN 1
+																	WHEN (@hta >= 0 AND @fta2H > @hta ) THEN 1
+																	ELSE 0
+																END
+															WHEN '2h' THEN
+																CASE 
+																	WHEN (@hta >= 0 AND @fta2H > @hta ) THEN 1
+																	ELSE 0
+																END
+															WHEN 'tie' THEN
+																CASE 
+																	WHEN (@hta >= 0 AND @fta2H > @hta ) THEN 1
+																	ELSE 0
+																END
+															ELSE 0
+														END
 													WHEN bettype = 145 AND @fth > 0 AND @fta > 0 THEN 1
 													WHEN bettype IN (146,433) AND (@fth - @hth) > 0 AND (@fta - @hta) > 0 THEN 1
 													WHEN bettype IN (147,436) AND ((@hth = 0) OR (@hth > 0 AND (@fth - @hth) > 0)) THEN 1
