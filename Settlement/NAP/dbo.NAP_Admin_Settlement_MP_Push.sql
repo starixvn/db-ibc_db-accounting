@@ -21,6 +21,8 @@ AS
 		- 20151002@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 		- 20160429@Kathy: Enhance performance [Redmine:#52426]
 		- 20160714@Kathy: Add checking SystemSettings before doing Parlay Settlement on UAT
+		- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
+
 	Param's Explanation:		
 		
 */
@@ -93,6 +95,48 @@ BEGIN
 					AND ResourceId NOT IN ('00','01','08')
 					AND ResultStatusId NOT IN (2,5))
 	END
+
+	--have running tickets of 14 & 127 on bettrans & bettransm for auto payout
+	DECLARE @Tmp TABLE(MatchId INT, matchcode VARCHAR(100))
+	IF EXISTS (SELECT TOP 1 1
+				FROM dbo.bettrans WITH(NOLOCK)
+				WHERE matchid IN (SELECT matchid FROM @match)
+					AND bettype IN (14,127)
+					AND statusID = 0
+			)
+	BEGIN
+		-- exclude matches were not keyscore yet
+		DELETE m
+		OUTPUT DELETED.matchid, DELETED.matchcode INTO @Tmp(MatchId, matchcode)
+		FROM @match m
+		WHERE EXISTS (SELECT 1 FROM dbo.bettrans b WITH(NOLOCK)
+						WHERE m.matchid = b.matchid
+							AND bettype IN (14,127)
+							AND statusID = 0)
+	END
+
+	IF EXISTS (SELECT TOP 1 1
+					FROM dbo.bettransm WITH(NOLOCK)
+					WHERE matchid IN (SELECT matchid FROM @match)
+						AND bettype IN (14,127)
+						AND statusID = 0
+		)
+	BEGIN
+		DELETE m
+		OUTPUT DELETED.matchid, DELETED.matchcode INTO @Tmp(MatchId, matchcode)
+		FROM @match m
+		WHERE EXISTS (SELECT 1 FROM dbo.bettransm b WITH(NOLOCK)
+						WHERE m.matchid = b.matchid
+							AND bettype IN (14,127)
+							AND statusID = 0)
+	END
+
+	IF EXISTS (SELECT TOP 1 1 FROM @Tmp)
+	BEGIN
+		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
+		FROM @Tmp
+	END
+	--End: have running tickets of 14 & 127 on bettrans & bettransm for auto payout
 
 	IF EXISTS (SELECT 1
 				FROM @match
