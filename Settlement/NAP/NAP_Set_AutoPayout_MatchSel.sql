@@ -20,6 +20,7 @@ AS
  Original: Acc_Set_MatchSel
 		 - NAP_Acc_Set_MatchSel
  Revisions:  
+	- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
       
  Param explanation:  
 	@MatchCode: match code
@@ -341,7 +342,7 @@ BEGIN
 			, MAX(CASE WHEN rs.CalculationType = 1 THEN 1 ELSE 0 END) AS HTStatus
 			, MAX(CASE WHEN rs.CalculationType = 2 THEN 1 ELSE 0 END) AS FTStatus
 		FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList t WHERE rs.MatchId = t.matchid AND t.eventstatus = 'running')
+		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList t WHERE rs.MatchId = t.matchid AND t.eventstatus IN ('running', 'Completed'))
 			AND StatusId IN (1, 2)
 		GROUP BY rs.MatchId
 	)
