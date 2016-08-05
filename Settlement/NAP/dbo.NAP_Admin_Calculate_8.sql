@@ -76,7 +76,7 @@ BEGIN
                 WHEN @modds >= 0.5 THEN actual_stake + stake * (CASE 
                         WHEN odds < 0 THEN 1
                         ELSE (CASE 
-                                WHEN bettype IN (143) THEN odds - 1
+                                WHEN bettype IN (143,426) THEN odds - 1
                                 ELSE odds END
                                 ) END
                         ) -- WIN
@@ -87,7 +87,7 @@ BEGIN
                 WHEN @modds >= 0.5 THEN stake * (CASE 
                         WHEN odds < 0 THEN 1
                         ELSE (CASE 
-                                WHEN bettype IN (143) THEN odds - 1
+                                WHEN bettype IN (143,426) THEN odds - 1
                                 ELSE odds END
                                 ) END
                         ) * - apositiontaking
@@ -98,7 +98,7 @@ BEGIN
                 WHEN @modds >= 0.5 THEN stake * (CASE 
                         WHEN odds < 0 THEN 1
                         ELSE (CASE 
-                                WHEN bettype IN (143) THEN odds - 1
+                                WHEN bettype IN (143,426) THEN odds - 1
                                 ELSE odds END
                                 ) END
                         ) * - mpositiontaking
@@ -109,7 +109,7 @@ BEGIN
                 WHEN @modds >= 0.5 THEN stake * (CASE 
                         WHEN odds < 0 THEN 1
                         ELSE (CASE 
-                                WHEN bettype IN (143) THEN odds - 1
+                                WHEN bettype IN (143,426) THEN odds - 1
                                 ELSE odds END
                                 ) END
                         ) * - spositiontaking
