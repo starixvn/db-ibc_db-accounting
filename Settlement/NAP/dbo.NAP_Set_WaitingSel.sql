@@ -1,8 +1,6 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel]
 	@MatchCode nvarchar(50) = '',
-	@SportType tinyint = 0,
+	@SportType smallint = 0,
 	@LeagueID int = 0 -- 0 for ALL Leagues
 AS
 /*
@@ -17,6 +15,9 @@ AS
 		- 20140711@Kathy: get Penalty Shootout status
 		- 20141007@Jamie: Get Tennis in new table [Redmine: #23034]
 		- 20150420@Jamie: Betradar phase II [Readmine:#27212]
+		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160805@Kathy: Write log duration
+
 	Param's explanation:  
 		
 */
@@ -24,7 +25,13 @@ BEGIN
 
 	SET NOCOUNT ON 
 	DECLARE @matchid int 
+			,@StartTime DATETIME
+			,@EndTime	DATETIME
+			,@SqlCommand VARCHAR(MAX)
+			
 	SELECT @MatchCode = ISNULL(@MatchCode,''), @LeagueID = ISNULL(@LeagueID,0),@SportType = ISNULL(@SportType, 0)
+	
+	SET @StartTime = GETDATE()
 
 	IF (@matchcode <> '')
 	BEGIN TRY	
@@ -180,8 +187,21 @@ BEGIN
 	FROM	DBPRO.bodb02.dbo.[ResultDetail] WITH (NOLOCK) 
 	WHERE	MatchID IN (SELECT MatchID FROM #tempmatch)	
 			AND ResourceId LIKE '0[0-5]' 
+			
+	SET @EndTime = GETDATE()
+	
+	IF DATEDIFF(MILLISECOND,@StartTime, @EndTime) > 1000
+	BEGIN
+		SET @SqlCommand = 'EXEC NAP_Set_WaitingSel @MatchCode =''' + ISNULL(@MatchCode,'') + ''', @SportType = ' + CONVERT(VARCHAR(10),@SportType) + ', @LeagueId =' + CONVERT(VARCHAR(10),@LeagueId)
+	
+		INSERT INTO SettlementRunSPLog(LogDate, SqlCommand, StartTime, EndTime)
+		SELECT GETDATE(), @SqlCommand, @StartTime, @EndTime
+	END
 END
+
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam] AS [dbo]
+
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet]
+GO 

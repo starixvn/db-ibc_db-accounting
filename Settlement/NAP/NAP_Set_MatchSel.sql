@@ -1,5 +1,3 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
 	,@ToDate DATETIME
 	,@SportType SMALLINT = 0
@@ -25,6 +23,7 @@ AS
 		- 20150130@Jamie: Betradar phase II [Readmine:#27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160805@Kathy: Write log duration
       
  Param explanation:  
 	@MatchCode: match code
@@ -42,7 +41,12 @@ BEGIN
 		,@eventstatus NVARCHAR(50)
 		,@isRefund BIT
 		,@matchid INT
-
+		,@StartTime DATETIME
+		,@EndTime	DATETIME
+		,@SqlCommand VARCHAR(MAX)
+	
+	SET @StartTime = GETDATE()
+	
 	SELECT @matchcode = ISNULL(@matchcode, '')
 		,@LeagueID = ISNULL(@LeagueID, 0)
 		,@filterBy = ISNULL(@filterBy, 0)
@@ -444,8 +448,29 @@ BEGIN
 			AND MatchID IN (SELECT MatchID FROM #matchList)
 
 	DROP TABLE #matchList
+	
+	SET @EndTime = GETDATE()
+	
+	IF DATEDIFF(MILLISECOND,@StartTime, @EndTime) > 10000
+	BEGIN
+		SET @SqlCommand = 'EXEC NAP_Set_MatchSel @FromDate =''' + CONVERT(VARCHAR(20),@FromDate) + ''''
+						+ ', @ToDate = ''' + CONVERT(VARCHAR(20),@ToDate) + ''''
+						+ ', @SportType =' + CONVERT(VARCHAR(10),@SportType) 
+						+ ', @LeagueID =' + CONVERT(VARCHAR(10),@LeagueID)  
+						+ ', @MatchCode =''' + ISNULL(@MatchCode,'') + ''''
+						+ ', @StatusId = '+ CONVERT(VARCHAR(10),@StatusId)  
+						+ ', @FilterBy = '+ CONVERT(VARCHAR(10),@FilterBy)  
+						+ ', @AutoSettlementOnly = '+ CONVERT(VARCHAR(10),@AutoSettlementOnly)  
+						+ ', @IsReLoad = '+ CONVERT(VARCHAR(10),@IsReLoad)  
+						
+	
+		INSERT INTO SettlementRunSPLog(LogDate, SqlCommand, StartTime, EndTime)
+		SELECT GETDATE(), @SqlCommand, @StartTime, @EndTime
+	END
 END
-GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSel] TO [vnteam] AS [dbo]
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSel] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet]
+GO 
