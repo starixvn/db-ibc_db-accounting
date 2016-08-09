@@ -62,6 +62,7 @@ AS
 		- 20160620@Percy:
 			1. recalculate Void/Reject for Casino game products [RedmineID: #59366]
 			2. enhance performance: using right index on bettrans, bettransRnG/LC, translog
+		- 20160809@Percy: Change Void tickets label [RedmineID: #62192]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -435,7 +436,7 @@ BEGIN
 				0 totalamt,
 				'BET' transtype,
 				2,
-				'Cancelled/Deleted Bets' transdesc,
+				'Void/Cancelled Bet' transdesc,
 				'' Creator,
 				NULL,
 				'',
@@ -461,7 +462,7 @@ BEGIN
 				0 totalamt,
 				'BET' transtype,
 				2,
-				'Cancelled/Deleted Bets' transdesc,
+				'Void/Cancelled Bet' transdesc,
 				'' Creator,
 				NULL,
 				'',
@@ -485,7 +486,7 @@ BEGIN
 				0 totalamt,
 				'BET' transtype,
 				2,
-				'Cancelled/Deleted Bets' transdesc,
+				'Void/Cancelled Bet' transdesc,
 				'' Creator,
 				NULL,
 				'',
