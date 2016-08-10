@@ -1,14 +1,5 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_ClearBalanceAllDownlines]    Script Date: 01/27/2016 17:37:59 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_ClearBalanceAllDownlines    Script Date: 27/01/2016 5:35:38 PM ******/
-/****** Object:  Stored Procedure dbo.Acc_ClearBalanceAllDownlines    Script Date: 10/30/2015 11:30:31 AM ******/
-ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
-	@AgentName varchar(50),	
+﻿CREATE PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
+	@AgentName varchar(50),	-- S99BD
 	@UserID int = 8,
 	@IP nvarchar(15)='', 
 	@ErrMsg nvarchar(max) = '' OUTPUT,
@@ -42,535 +33,341 @@ AS
 		- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
+		- 20160722@Viet: Improve performance [Redmine:#58288]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
 */ 
-
-SET NOCOUNT ON
-
------- 20121109@Viet: do not allow this SP to run once cpu is high --------  
-DECLARE @ispermit BIT
-
-EXEC dbo.Server_IsHeavyLoadPermitted @ispermit OUTPUT
-
-IF @ispermit = 0
 BEGIN
-	SELECT @errcode = 1, @errmsg = 'oops! Server is too busy, please try again later!'
+	SET NOCOUNT ON
 
-	RETURN
-END
+	------ 20121109@Viet: do not allow this SP to run once cpu is high --------  
+	DECLARE @ispermit BIT
 
------- /20121109@Viet: do not allow this SP to run once cpu is high --------  
---Check permission  
-DECLARE @ErrMsg_temp NVARCHAR(4000)
+	EXEC dbo.Server_IsHeavyLoadPermitted @ispermit OUTPUT
 
--- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call  
-EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[OtherTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg_temp OUTPUT
-
-SELECT @ErrMsg = @ErrMsg_temp
-
-IF @ErrCode <> 0 RETURN
-
-DECLARE @roleid INT, @AgentID INT, @Amount MONEY, @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @currency INT, @actualrate FLOAT, @currencyName NVARCHAR(10), @membername VARCHAR(50), @agentusername VARCHAR(50), @mastername VARCHAR(50), @supername VARCHAR(50), @memberBalance MONEY, @agentBalance MONEY, @masterBalance MONEY, @ABSmemberBalance MONEY
-DECLARE @LogData VARCHAR(1000)
-DECLARE @refno BIGINT, @grefno INT, @Now DATETIME
-DECLARE @ErrItems NVARCHAR(max), @SkipTransfer BIT, @isSucc VARCHAR(10)
-
-SELECT @isSucc = 'false', @ErrItems = ''
-
-DECLARE @count INT, @batch INT
-
-SELECT @batch = 500, @count = 0
-
-DECLARE @WinlostDate DATETIME
-
-SELECT @WinlostDate = convert(NVARCHAR(10), current_timestamp, 120)
-
-SELECT @roleid = roleid, @AgentID = custid
-FROM CustDB.dbo.Custinfo(NOLOCK)
-WHERE username = @AgentName
-
-IF isnull(@AgentID, 0) = 0
-	OR @roleid NOT IN (2, 3, 4)
-BEGIN
-	SELECT @ErrMsg = @AgentName + ':' + 'Invalid Agent Username', @ErrCode = 101
-
-	RETURN
-END
-
-/*--20091017@Thien: not check this function so that upline can get back the used credit  
---Check disable user  
-EXEC DB052.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @AgentID, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output  
-if @ErrCode <>0 return  
-*/
---==========================================================  
---CREATING TEMP TABLES  
---==========================================================  
-CREATE TABLE #Member (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT, currency INT, actualrate FLOAT, currencyName NVARCHAR(10), membername VARCHAR(50), agentname VARCHAR(50), memberBalance MONEY DEFAULT 0)
-
-CREATE TABLE #SkippedMember (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT)
-
-CREATE TABLE #Agent (recommend INT PRIMARY KEY, mrecommend INT, srecommend INT, currency INT, actualrate FLOAT, currencyName NVARCHAR(10), agentname VARCHAR(50), mastername VARCHAR(50), agentBalance MONEY DEFAULT 0)
-
-CREATE TABLE #Master (mrecommend INT PRIMARY KEY, srecommend INT, currency INT, actualrate FLOAT, currencyName NVARCHAR(10), mastername VARCHAR(50), supername VARCHAR(50), masterBalance MONEY DEFAULT 0)
-
-IF @roleid = 2
-BEGIN
-	INSERT INTO #Member (custid, recommend, mrecommend, srecommend, currency, actualrate, currencyName, membername, agentname)
-	SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, ag.username
-	FROM CustDB.dbo.Custinfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.custinfo ag WITH (NOLOCK)
-		ON c.recommend = ag.custid
-		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
-		ON c.currency = e.exchangeid
-	WHERE c.recommend = @AgentID
-		AND c.roleid = 1
-END
-
-IF @roleid = 3
-BEGIN
-	INSERT INTO #Member (custid, recommend, mrecommend, srecommend, currency, actualrate, currencyName, membername, agentname)
-	SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, ag.username
-	FROM CustDB.dbo.Custinfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.custinfo ag WITH (NOLOCK)
-		ON c.recommend = ag.custid
-		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
-		ON c.currency = e.exchangeid
-	WHERE c.mrecommend = @AgentID
-		AND c.roleid = 1
-
-	INSERT INTO #Agent (recommend, mrecommend, srecommend, currency, actualrate, currencyName, agentname, mastername)
-	SELECT DISTINCT c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, mag.username
-	FROM CustDB.dbo.Custinfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.custinfo mag WITH (NOLOCK)
-		ON c.mrecommend = mag.custid
-		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
-		ON c.currency = e.exchangeid
-	WHERE c.mrecommend = @AgentID
-		AND c.roleid = 2
-END
-
-IF @roleid = 4
-BEGIN
-	INSERT INTO #Member (custid, recommend, mrecommend, srecommend, currency, actualrate, currencyName, membername, agentname)
-	SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, ag.username
-	FROM CustDB.dbo.Custinfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.custinfo ag WITH (NOLOCK)
-		ON c.recommend = ag.custid
-		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
-		ON c.currency = e.exchangeid
-	WHERE c.srecommend = @AgentID
-		AND c.roleid = 1
-
-	INSERT INTO #Agent (recommend, mrecommend, srecommend, currency, actualrate, currencyName, agentname, mastername)
-	SELECT DISTINCT c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, mag.username
-	FROM CustDB.dbo.Custinfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.custinfo mag WITH (NOLOCK)
-		ON c.mrecommend = mag.custid
-		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
-		ON c.currency = e.exchangeid
-	WHERE c.srecommend = @AgentID
-		AND c.roleid = 2
-
-	INSERT INTO #Master (mrecommend, srecommend, currency, actualrate, currencyName, mastername, supername)
-	SELECT DISTINCT c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, sag.username
-	FROM CustDB.dbo.Custinfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.custinfo sag WITH (NOLOCK)
-		ON c.srecommend = sag.custid
-		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
-		ON c.currency = e.exchangeid
-	WHERE c.srecommend = @AgentID
-		AND c.roleid = 3
-END;
-
---WITH B
---AS (
---	SELECT b.custid, SUM(isnull(CASE 
---					WHEN bettype < 19999
---						AND winlostdate < @winlostdate
---						OR bettype >= 19999 THEN winlost - actual_stake + playercomm
---					ELSE 0
---					END, 0)) AS MemberBalance
---	FROM bettrans b WITH (NOLOCK, INDEX = IX_custid)
---		INNER JOIN #Member m
---		ON b.custid = m.custid
---	WHERE ruben = 1
---	GROUP BY b.custid
---	)
-;WITH MemberBalance
-AS(
-	SELECT b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
-	FROM	Bettrans AS b WITH (NOLOCK, INDEX = IX_custid)
-		INNER JOIN #Member as c with (NOLOCK) 
-			on b.custid = c.custid 
-	WHERE b.ruben = 1
-	UNION ALL
-	SELECT r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm
-	FROM	dbo.bettransRnG r WITH(NOLOCK)
-		INNER JOIN #Member c WITH(NOLOCK)
-			ON r.custid = c.custid
-	WHERE	r.IsSum = 0
-			AND r.statusID NOT IN (0,1)			
-	UNION ALL
-	SELECT c.custid, l.gameID, l.winlostdate, l.winlost, l.actual_stake, l.playercomm
-	FROM	dbo.bettransLC l WITH(NOLOCK)
-		INNER JOIN #Member c WITH(NOLOCK)
-			ON l.custid = c.custid
-	WHERE	l.IsSum = 0
-			AND l.statusID NOT IN (0,1)			
-)
-,B AS (
-	SELECT custid,
-			SUM(isnull(case when bettype < 19999 and winlostdate < @WinlostDate OR bettype >= 19999 then winlost-actual_stake+playercomm 
-									else 0 end , 0)) MemberBalance
-	FROM  MemberBalance
-	GROUP BY custid
-	)
-
-UPDATE #Member
-SET memberBalance = isnull(B.MemberBalance, 0)
-FROM B
-WHERE #Member.custid = B.custid
-OPTION (MAXDOP 1)
-
-DELETE #Member
-WHERE memberBalance = 0
-
--- Start Transfer (CURSOR Loop)   
-SET @Now = CURRENT_TIMESTAMP
-
---------------------------START:MEMBER-AGENT-------------------------------  
-DECLARE CS_custid CURSOR
-FOR
-SELECT custid, recommend, mrecommend, srecommend, currency, actualrate, currencyName, membername, agentname, memberBalance
-FROM #Member
-
-OPEN CS_custid
-
-FETCH NEXT
-FROM CS_custid
-INTO @custid, @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @membername, @agentusername, @memberBalance
-
-WHILE @@FETCH_STATUS = 0
-BEGIN
-	-- print @agentusername +':'+ 'MEMBER-AGENT-->Member:' + @membername + ' ' + cast(@memberBalance as varchar(30))  
-	UPDATE ref WITH (ROWLOCK, UPDLOCK)
-	SET @grefno = transcode = transcode + 1
-	WHERE refid = 'acc'
-
-	IF @@Error <> 0
+	IF @ispermit = 0
 	BEGIN
-		SELECT @ErrMsg = 'Insert Failed', @ErrCode = 114
+		SELECT @errcode = 1, @errmsg = 'oops! Server is too busy, please try again later!'
+		RETURN
+	END
+
+	------ /20121109@Viet: do not allow this SP to run once cpu is high --------  
+	--Check permission  
+	DECLARE @ErrMsg_temp NVARCHAR(4000)
+
+	-- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call  
+	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[OtherTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg_temp OUTPUT
+
+	SELECT @ErrMsg = @ErrMsg_temp
+
+	IF @ErrCode <> 0 RETURN
+
+	DECLARE @roleid INT, @AgentID INT, @Amount MONEY, @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @currency INT, @actualrate FLOAT, @currencyName NVARCHAR(10), @membername VARCHAR(50), @agentusername VARCHAR(50), @mastername VARCHAR(50), @supername VARCHAR(50), @memberBalance MONEY, @agentBalance MONEY, @masterBalance MONEY, @ABSmemberBalance MONEY
+	DECLARE @LogData VARCHAR(1000)
+	DECLARE @refno BIGINT, @grefno INT, @Now DATETIME
+	DECLARE @ErrItems NVARCHAR(max), @SkipTransfer BIT, @isSucc VARCHAR(10)
+
+	SELECT @isSucc = 'false', @ErrItems = ''
+
+	DECLARE @count INT, @batch INT
+
+	SELECT @batch = 500, @count = 0
+
+	DECLARE @WinlostDate DATETIME
+
+	SELECT @WinlostDate = convert(NVARCHAR(10), current_timestamp, 120)
+
+	SELECT @roleid = roleid, @AgentID = custid, @AgentName = username
+	FROM CustDB.dbo.Custinfo(NOLOCK)
+	WHERE username = @AgentName
+
+	IF isnull(@AgentID, 0) = 0
+		OR @roleid NOT IN (2, 3, 4)
+	BEGIN
+		SELECT @ErrMsg = @AgentName + ':' + 'Invalid Agent Username', @ErrCode = 101
 
 		RETURN
 	END
 
-	SELECT @refno = 200000000000 + @grefno
-
-	SELECT @SkipTransfer = 0
-
-	--Check for existing transfer (allow only one transfer per day) - Tho@09062008    
-	IF (
-			EXISTS (
-				SELECT 1
-				FROM bettrans WITH (NOLOCK)
-				WHERE custid = @custid
-					AND bettype IN (21003, 21004)
-					AND (
-						transdate BETWEEN convert(VARCHAR(10), current_timestamp, 120)
-							AND convert(VARCHAR(10), current_timestamp, 120) + ' 23:59:59'
-						)
-					AND liveindicator = 0
-				)
-			)
+	/*--20091017@Thien: not check this function so that upline can get back the used credit  
+	--Check disable user  
+	EXEC DB052.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @AgentID, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output  
+	if @ErrCode <>0 return  
+	*/
+	--==========================================================  
+	--CREATING TEMP TABLES  
+	--==========================================================  
+	DECLARE @agList as table (custid int primary key, username varchar(50))
+	CREATE TABLE #tempdata (custid int, recommend int, mrecommend int, winlost money, actual_stake money, playercomm money, awinlost money, comm money, mwinlost money, acomm money)
+	
+	IF @roleid = 2
 	BEGIN
-		SELECT @SkipTransfer = 1
+		INSERT INTO @agList(custid, username) values(@AgentID, @AgentName)
+	END
+	
+	IF @roleid = 3
+	BEGIN
+		INSERT INTO @agList (custid, username)
+		SELECT custid, username
+		FROM CustDB.dbo.custInfo WITH(NOLOCK)
+		WHERE mrecommend = @AgentID
+			AND roleid = 2
+	END
+	
+	IF @roleid = 4
+	BEGIN
+		INSERT INTO @agList (custid, username)
+		SELECT custid, username
+		FROM CustDB.dbo.custInfo WITH(NOLOCK)
+		WHERE srecommend = @AgentID
+			AND roleid = 2
+			
+		DECLARE @masterlist AS TABLE (custid INT)
+		INSERT INTO @masterlist (custid)
+		SELECT custid
+		FROM custdb.dbo.custinfo WITH (NOLOCK)
+		WHERE srecommend = @agentID
+			AND roleid = 3
+			
+		-- master data		
+		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+		SELECT b.custid, b.recommend, b.mrecommend
+			,SUM(winlost) winlost
+			,SUM(actual_stake) actual_stake
+			,SUM(playercomm) playercomm
+			,SUM(awinlost) awinlost
+			,SUM(comm) comm
+			,SUM(mwinlost) mwinlost
+			,SUM(acomm) acomm
+		FROM @masterlist c
+			INNER JOIN dbo.bettrans b WITH(NOLOCK) ON c.custid = b.custid
+		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+			AND ruben = 1
+		GROUP BY b.custid, b.recommend, b.mrecommend
+		
+		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+		SELECT b.custid, b.recommend, b.mrecommend
+			,SUM(winlost) winlost
+			,SUM(actual_stake) actual_stake
+			,SUM(playercomm) playercomm
+			,SUM(awinlost) awinlost
+			,SUM(comm) comm
+			,SUM(mwinlost) mwinlost
+			,SUM(acomm) acomm
+		FROM @masterlist c
+			INNER JOIN dbo.bettransRnG b WITH(NOLOCK) ON c.custid = b.custid
+		WHERE IsSum = 0
+			AND statusID NOT IN (0,1)
+			AND winlostdate < @winlostdate
+		GROUP BY b.custid, b.recommend, b.mrecommend
+		
+		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+		SELECT b.custid, b.recommend, b.mrecommend
+			,SUM(winlost) winlost
+			,SUM(actual_stake) actual_stake
+			,SUM(playercomm) playercomm
+			,SUM(awinlost) awinlost
+			,SUM(comm) comm
+			,SUM(mwinlost) mwinlost
+			,SUM(acomm) acomm
+		FROM @masterlist c
+			INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON c.custid = b.custid
+		WHERE IsSum = 0
+			AND statusID NOT IN (0,1)
+			AND winlostdate < @winlostdate
+		GROUP BY b.custid, b.recommend, b.mrecommend
+	END
+		
+	-- member & agent data	
+	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+	SELECT b.custid, b.recommend, b.mrecommend	
+		,SUM(winlost) winlost
+		,SUM(actual_stake) actual_stake
+		,SUM(playercomm) playercomm
+		,SUM(awinlost) awinlost
+		,SUM(comm) comm
+		,SUM(mwinlost) mwinlost
+		,SUM(acomm) acomm
+	FROM @agList ag
+		INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
+	WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+		AND ruben = 1
+	GROUP BY b.custid, b.recommend, b.mrecommend
 
-		SELECT @ErrItems = @ErrItems + @membername + ', '
+	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+	SELECT b.custid, b.recommend, b.mrecommend	
+		,SUM(winlost) winlost
+		,SUM(actual_stake) actual_stake
+		,SUM(playercomm) playercomm
+		,SUM(awinlost) awinlost
+		,SUM(comm) comm
+		,SUM(mwinlost) mwinlost
+		,SUM(acomm) acomm
+	FROM @agList ag
+		INNER JOIN dbo.bettransRnG b WITH(NOLOCK) ON ag.custid = b.recommend
+	WHERE IsSum = 0
+		AND statusID NOT IN (0,1)
+		AND winlostdate < @winlostdate
+	GROUP BY b.custid, b.recommend, b.mrecommend
+		
+	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+	SELECT b.custid, b.recommend, b.mrecommend	
+		,SUM(winlost) winlost
+		,SUM(actual_stake) actual_stake
+		,SUM(playercomm) playercomm
+		,SUM(awinlost) awinlost
+		,SUM(comm) comm
+		,SUM(mwinlost) mwinlost
+		,SUM(acomm) acomm
+	FROM @agList ag
+		INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON ag.custid = b.recommend
+	WHERE IsSum = 0
+		AND statusID NOT IN (0,1)
+		AND winlostdate < @winlostdate
+	GROUP BY b.custid, b.recommend, b.mrecommend
+		
+	CREATE TABLE #Member (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT, currency INT, actualrate FLOAT, currencyName NVARCHAR(10), membername VARCHAR(50), agentname VARCHAR(50), memberBalance MONEY DEFAULT 0)
+	CREATE TABLE #SkippedMember (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT)
+	CREATE TABLE #Agent (recommend INT PRIMARY KEY, mrecommend INT, srecommend INT, currency INT, actualrate FLOAT, currencyName NVARCHAR(10), agentname VARCHAR(50), mastername VARCHAR(50), agentBalance MONEY DEFAULT 0)
+	CREATE TABLE #Master (mrecommend INT PRIMARY KEY, srecommend INT, currency INT, actualrate FLOAT, currencyName NVARCHAR(10), mastername VARCHAR(50), supername VARCHAR(50), masterBalance MONEY DEFAULT 0)
 
-		INSERT #SkippedMember (custid, recommend, mrecommend, srecommend)
-		SELECT @custid, @recommend, @mrecommend, @srecommend
+	;WITH b AS (
+		select custid, SUM(isnull(winlost-actual_stake+playercomm, 0)) as memberBalance
+		FROM #tempdata
+		WHERE custid <> recommend AND custid <> mrecommend		
+		group by custid
+		having SUM(isnull(winlost-actual_stake+playercomm, 0)) <> 0		
+	)
+	INSERT INTO #Member (custid, recommend, mrecommend, srecommend, currency, actualrate, currencyName, membername, agentname, memberBalance)
+	SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, ag.username, isnull(b.memberBalance, 0)
+	FROM b
+		INNER JOIN CustDB.dbo.Custinfo c WITH (NOLOCK) ON b.custid = c.custid
+		INNER JOIN @agList ag ON c.recommend = ag.custid
+		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
+	WHERE c.roleid = 1
+			 
+	IF @roleid IN (3,4)
+	BEGIN	
+		;WITH b AS (
+			SELECT recommend, sum(awinlost + comm + winlost - actual_stake)	AS agentBalance	
+			FROM #tempdata
+			GROUP BY recommend
+			having sum(awinlost + comm + winlost - actual_stake) <> 0
+		)
+		
+		INSERT INTO #Agent (recommend, mrecommend, srecommend, currency, actualrate, currencyName, agentname, mastername, agentBalance)
+		SELECT c.recommend, c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, mag.username, isnull(b.agentBalance, 0)
+		FROM b
+			INNER JOIN CustDB.dbo.Custinfo c WITH(NOLOCK) ON b.recommend = c.custid
+			INNER JOIN CustDB.dbo.Custinfo mag WITH(NOLOCK) ON c.mrecommend = mag.custid
+			INNER JOIN CustDB.dbo.Exchange e WITH(NOLOCK) ON c.currency = e.exchangeid 
+		WHERE c.roleid = 2		
 	END
 
-	IF (
-			@memberBalance > 0
-			AND @SkipTransfer = 0
-			)
+	IF @roleid = 4
 	BEGIN
-		INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-		VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21004, 'From Customer::' + @membername, @memberBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
+		;WITH b AS (
+			SELECT mrecommend, sum(winlost - actual_stake + mwinlost + acomm + awinlost) as masterBalance		
+			FROM #tempdata b
+			GROUP BY mrecommend
+			having sum(winlost - actual_stake + mwinlost + acomm + awinlost) <> 0
+		)
 
-		IF @@Error <> 0
-		BEGIN
-			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 101
+		INSERT INTO #Master (mrecommend, srecommend, currency, actualrate, currencyName, mastername, supername, masterBalance)
+		SELECT c.mrecommend, c.srecommend, c.currency, e.actualrate, e.currency, c.username, @AgentName, isnull(b.masterBalance, 0)
+		FROM b
+			INNER JOIN CustDB.dbo.Custinfo c WITH(NOLOCK) on b.mrecommend = c.custid
+			INNER JOIN CustDB.dbo.Exchange e WITH(NOLOCK) ON c.currency = e.exchangeid 			
+		WHERE c.roleid = 3		
+	END;	
 
-			DELETE dbo.bettrans
-			WHERE custid IN (@recommend, @custid)
-				AND matchid = 0
-				AND bettype IN (21003, 21004)
-				AND refno = @refno
+	-- Start Transfer (CURSOR Loop)   
+	SET @Now = CURRENT_TIMESTAMP
 
-			RETURN
-		END
+	--------------------------START:MEMBER-AGENT-------------------------------  
+	DECLARE CS_custid CURSOR
+	FOR
+	SELECT custid, recommend, mrecommend, srecommend, currency, actualrate, currencyName, membername, agentname, memberBalance
+	FROM #Member
 
-		---update debit balance  
-		--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @memberBalance
-				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
-		IF @ErrCode <> 0
-		BEGIN
-			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
-
-			DELETE dbo.bettrans
-			WHERE custid IN (@recommend, @custid)
-				AND matchid = 0
-				AND bettype IN (21003, 21004)
-				AND refno = @refno
-
-			RETURN
-		END
-
-		INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-		VALUES (0, @UserID, @custid, @membername, @refno, @Now, 21004, 'To Customer::' + @agentusername, 0, @memberBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
-
-		IF @@Error <> 0
-		BEGIN
-			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
-
-			DELETE dbo.bettrans
-			WHERE custid IN (@recommend, @custid)
-				AND matchid = 0
-				AND bettype IN (21003, 21004)
-				AND refno = @refno
-
-			--rollback balance  
-			--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @memberBalance
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2
-			RETURN
-		END
-
-		SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Member ' + @membername + ' to Agent ' + @agentusername + ' with amount ' + convert(VARCHAR(20), @memberBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
-
-		DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
-
-		-- reset yesterday balance for live casino         
-								EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
-
-		SELECT @LogData = @LogData + CASE 
-				WHEN @isResetYesterdayBalance = 1 THEN CASE 
-						WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetBalanceGame = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')'
-						ELSE '. (ResetBalanceGame = fail)'
-						END
-				ELSE ''
-				END
-
-		SET @isSucc = 'true'
-
-		BEGIN TRY
-			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @custid, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
-		END TRY
-
-		BEGIN CATCH
-			SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
-
-			EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @custid, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
-		END CATCH
-
-		SET @count = @count + 1
-
-		IF @count % @batch = 0
-			WAITFOR DELAY '000:00:00.280'
-	END
-	ELSE IF (
-			@memberBalance < 0
-			AND @SkipTransfer = 0
-			)
-	BEGIN
-		--SET @memberBalance = abs(@memberBalance)      
-		INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-		VALUES (0, @UserID, @recommend, @agentusername, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @membername, 0, abs(@memberBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
-
-		IF @@Error <> 0
-		BEGIN
-			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103
-
-			DELETE dbo.bettrans
-			WHERE custid IN (@recommend, @custid)
-				AND matchid = 0
-				AND bettype IN (21003, 21004)
-				AND refno = @refno
-
-			RETURN
-		END
-
-		INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-		VALUES (0, @UserID, @custid, @membername, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentusername, abs(@memberBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
-
-		IF @@Error <> 0
-		BEGIN
-			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 104
-
-			DELETE dbo.bettrans
-			WHERE custid IN (@recommend, @custid)
-				AND matchid = 0
-				AND bettype IN (21003, 21004)
-				AND refno = @refno
-
-			RETURN
-		END
-
-		---update credit balance  
-		SELECT @ABSmemberBalance = abs(@memberBalance)
-
-		--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSmemberBalance
-		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @ABSmemberBalance, @Type = 2
-
-		SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Agent ' + @agentusername + ' to Member ' + @membername + ' with amount ' + convert(VARCHAR(20), @memberBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
-
-		-- reset yesterday balance for live casino         
-								EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
-
-		SELECT @LogData = @LogData + CASE 
-				WHEN @isResetYesterdayBalance = 1 THEN CASE 
-						WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetBalanceGame = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')'
-						ELSE '. (ResetBalanceGame = fail)'
-						END
-				ELSE ''
-				END
-
-		SET @isSucc = 'true'
-
-		BEGIN TRY
-			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @custid, @IP = @IP, @Doing = @LogData
-		END TRY
-
-		BEGIN CATCH
-			SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
-
-			EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @custid, @IP = @IP, @Doing = @LogData
-		END CATCH
-
-		SET @count = @count + 1
-
-		IF @count % @batch = 0
-			WAITFOR DELAY '000:00:00.280'
-	END
+	OPEN CS_custid
 
 	FETCH NEXT
 	FROM CS_custid
 	INTO @custid, @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @membername, @agentusername, @memberBalance
-END
-
-CLOSE CS_custid
-
-DEALLOCATE CS_custid
-
--- skip master, agent of skipped member  
-IF @ErrItems <> ''
-BEGIN
-	DELETE #Agent
-	WHERE #Agent.recommend IN (
-			SELECT recommend
-			FROM #SkippedMember
-			)
-
-	DELETE #Master
-	WHERE #Master.mrecommend IN (
-			SELECT mrecommend
-			FROM #SkippedMember
-			)
-END
-
---------------------------END:MEMBER-AGENT-------------------------------   
---------------------------START:AGENT-MASTER-------------------------------   
-IF (@roleid > 2)
-BEGIN
-	;WITH cteAgentBalance
-	AS(
-		SELECT	b.recommend, b.winlost, b.actual_stake, b.awinlost, b.comm, b.playercomm, b.custid, b.ruben, b.winlostdate, b.bettype
-		FROM	bettrans b WITH (NOLOCK, INDEX = IX_recommend)
-			INNER JOIN #Agent a
-				ON b.recommend = a.recommend
-		UNION ALL
-		SELECT	r.recommend, r.winlost, r.actual_stake, r.awinlost, r.comm, r.playercomm, r.custid, 1 AS ruben, r.winlostdate, r.gameID
-		FROM	dbo.bettransRnG r WITH(NOLOCK)
-			INNER JOIN #Agent a
-				ON r.recommend = a.recommend
-		WHERE	r.IsSum = 0
-				AND r.statusID NOT IN (0,1)				
-		UNION ALL
-		SELECT	l.recommend, l.winlost, l.actual_stake, l.awinlost, l.comm, l.playercomm, l.custid, 1 AS ruben, l.winlostdate, l.gameID
-		FROM	dbo.bettransLC l WITH(NOLOCK)
-			INNER JOIN #Agent a
-				ON l.recommend = a.recommend
-		WHERE	l.IsSum = 0
-				AND l.statusID NOT IN (0,1)				
-	)	
-	,B
-	AS (
-		SELECT b.recommend, isnull(sum(CASE 
-						WHEN b.custid = b.recommend THEN winlost - actual_stake
-						ELSE awinlost + comm - playercomm
-						END), 0) + isnull(sum(CASE 
-						WHEN b.custid <> b.recommend
-							AND ruben = 1 THEN winlost - actual_stake + playercomm
-						ELSE 0
-						END), 0) - isnull(sum(CASE 
-						WHEN bettype < 19999
-							AND winlostdate >= @WinlostDate
-							AND ruben = 1 THEN awinlost + comm + winlost - actual_stake
-						ELSE 0
-						END), 0) AS agentBalance
-		FROM	cteAgentBalance b
-		GROUP BY b.recommend
-		)
-	UPDATE #Agent
-	SET agentBalance = isnull(B.agentBalance, 0)
-	FROM B
-	WHERE #Agent.recommend = B.recommend
-	OPTION (MAXDOP 1)
-
-	DELETE #Agent
-	WHERE agentBalance = 0
-
-	DECLARE CS_agent CURSOR
-	FOR
-	SELECT DISTINCT recommend, mrecommend, srecommend, currency, actualrate, currencyName, agentname, mastername, agentBalance
-	FROM #Agent
-
-	OPEN CS_agent
-
-	FETCH NEXT
-	FROM CS_agent
-	INTO @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @agentusername, @mastername, @agentBalance
 
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
-		-- print @agentusername +':'+ 'AGENT-MASTER-->Agent:' + @agentusername+ ' ' + cast(@agentBalance as varchar(30))  
+		-- print @agentusername +':'+ 'MEMBER-AGENT-->Member:' + @membername + ' ' + cast(@memberBalance as varchar(30))  
 		UPDATE ref WITH (ROWLOCK, UPDLOCK)
 		SET @grefno = transcode = transcode + 1
 		WHERE refid = 'acc'
 
 		IF @@Error <> 0
 		BEGIN
-			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 115
+			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 114
 
 			RETURN
 		END
 
 		SELECT @refno = 200000000000 + @grefno
 
-		IF @agentBalance > 0
+		SELECT @SkipTransfer = 0
+
+		--Check for existing transfer (allow only one transfer per day) - Tho@09062008    
+		IF (
+				EXISTS (
+					SELECT 1
+					FROM bettrans WITH (NOLOCK)
+					WHERE custid = @custid
+						AND bettype IN (21003, 21004)
+						AND (
+							transdate BETWEEN convert(VARCHAR(10), current_timestamp, 120)
+								AND convert(VARCHAR(10), current_timestamp, 120) + ' 23:59:59'
+							)
+						AND liveindicator = 0
+					)
+				)
+		BEGIN
+			SELECT @SkipTransfer = 1
+
+			SELECT @ErrItems = @ErrItems + @membername + ', '
+
+			INSERT #SkippedMember (custid, recommend, mrecommend, srecommend)
+			SELECT @custid, @recommend, @mrecommend, @srecommend
+		END
+
+		IF (
+				@memberBalance > 0
+				AND @SkipTransfer = 0
+				)
 		BEGIN
 			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'From Customer::' + @agentusername, @agentBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131)
+			VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21004, 'From Customer::' + @membername, @memberBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
 
 			IF @@Error <> 0
 			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 105
+				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 101
 
 				DELETE dbo.bettrans
-				WHERE custid IN (@mrecommend, @recommend)
+				WHERE custid IN (@recommend, @custid)
+					AND matchid = 0
+					AND bettype IN (21003, 21004)
+					AND refno = @refno
+
+				RETURN
+			END
+
+			---update debit balance  
+			--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @memberBalance
+					EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
+
+				DELETE dbo.bettrans
+				WHERE custid IN (@recommend, @custid)
 					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
@@ -579,33 +376,49 @@ BEGIN
 			END
 
 			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, @agentBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131)
+			VALUES (0, @UserID, @custid, @membername, @refno, @Now, 21004, 'To Customer::' + @agentusername, 0, @memberBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
 
 			IF @@Error <> 0
 			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 106
+				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
 
 				DELETE dbo.bettrans
-				WHERE custid IN (@mrecommend, @recommend)
+				WHERE custid IN (@recommend, @custid)
 					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
 
+				--rollback balance  
+				--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @memberBalance
+				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2
 				RETURN
 			END
+
+			SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Member ' + @membername + ' to Agent ' + @agentusername + ' with amount ' + convert(VARCHAR(20), @memberBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
+
+			DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
+
+			-- reset yesterday balance for live casino         
+									EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
+
+			SELECT @LogData = @LogData + CASE 
+					WHEN @isResetYesterdayBalance = 1 THEN CASE 
+							WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetBalanceGame = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')'
+							ELSE '. (ResetBalanceGame = fail)'
+							END
+					ELSE ''
+					END
 
 			SET @isSucc = 'true'
 
-			SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from agent ' + @agentusername + ' to Master ' + @mastername + ' with amount ' + convert(VARCHAR(20), @agentBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
-
 			BEGIN TRY
-				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
+				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @custid, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
 			END TRY
 
 			BEGIN CATCH
 				SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
 
-				EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
+				EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @custid, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
 			END CATCH
 
 			SET @count = @count + 1
@@ -613,18 +426,21 @@ BEGIN
 			IF @count % @batch = 0
 				WAITFOR DELAY '000:00:00.280'
 		END
-		ELSE IF @agentBalance < 0
+		ELSE IF (
+				@memberBalance < 0
+				AND @SkipTransfer = 0
+				)
 		BEGIN
-			--SET @agentBalance = abs(@agentBalance)  
+			--SET @memberBalance = abs(@memberBalance)      
 			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @agentusername, 0, abs(@agentBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131)
+			VALUES (0, @UserID, @recommend, @agentusername, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @membername, 0, abs(@memberBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
 
 			IF @@Error <> 0
 			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 107
+				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103
 
 				DELETE dbo.bettrans
-				WHERE custid IN (@mrecommend, @recommend)
+				WHERE custid IN (@recommend, @custid)
 					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
@@ -633,33 +449,50 @@ BEGIN
 			END
 
 			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'From Customer::' + @mastername, abs(@agentBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131)
+			VALUES (0, @UserID, @custid, @membername, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentusername, abs(@memberBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
 
 			IF @@Error <> 0
 			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 108
+				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 104
 
 				DELETE dbo.bettrans
-				WHERE custid IN (@mrecommend, @recommend)
+				WHERE custid IN (@recommend, @custid)
 					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
 
 				RETURN
 			END
+
+			---update credit balance  
+			SELECT @ABSmemberBalance = abs(@memberBalance)
+
+			--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSmemberBalance
+			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @ABSmemberBalance, @Type = 2
+
+			SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Agent ' + @agentusername + ' to Member ' + @membername + ' with amount ' + convert(VARCHAR(20), @memberBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
+
+			-- reset yesterday balance for live casino         
+									EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
+
+			SELECT @LogData = @LogData + CASE 
+					WHEN @isResetYesterdayBalance = 1 THEN CASE 
+							WHEN @ErrCode_ResetYesterdayBalance = 0 THEN '. (ResetBalanceGame = suscess, YesterdayBalance =' + CAST(@YesterdayBalance AS VARCHAR(50)) + ')'
+							ELSE '. (ResetBalanceGame = fail)'
+							END
+					ELSE ''
+					END
 
 			SET @isSucc = 'true'
 
-			SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Master ' + @mastername + ' to Agent ' + @agentusername + ' with amount ' + convert(VARCHAR(20), @agentBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
-
 			BEGIN TRY
-				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
+				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @custid, @IP = @IP, @Doing = @LogData
 			END TRY
 
 			BEGIN CATCH
 				SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
 
-				EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
+				EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @custid, @IP = @IP, @Doing = @LogData
 			END CATCH
 
 			SET @count = @count + 1
@@ -667,255 +500,373 @@ BEGIN
 			IF @count % @batch = 0
 				WAITFOR DELAY '000:00:00.280'
 		END
+
+		FETCH NEXT
+		FROM CS_custid
+		INTO @custid, @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @membername, @agentusername, @memberBalance
+	END
+
+	CLOSE CS_custid
+
+	DEALLOCATE CS_custid
+
+	-- skip master, agent of skipped member  
+	IF @ErrItems <> ''
+	BEGIN
+		DELETE #Agent
+		WHERE #Agent.recommend IN (
+				SELECT recommend
+				FROM #SkippedMember
+				)
+
+		DELETE #Master
+		WHERE #Master.mrecommend IN (
+				SELECT mrecommend
+				FROM #SkippedMember
+				)
+	END
+
+	--------------------------END:MEMBER-AGENT-------------------------------   
+	--------------------------START:AGENT-MASTER-------------------------------   
+	IF (@roleid > 2)
+	BEGIN		
+		DECLARE CS_agent CURSOR
+		FOR
+		SELECT recommend, mrecommend, srecommend, currency, actualrate, currencyName, agentname, mastername, agentBalance
+		FROM #Agent
+
+		OPEN CS_agent
 
 		FETCH NEXT
 		FROM CS_agent
 		INTO @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @agentusername, @mastername, @agentBalance
+
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			-- print @agentusername +':'+ 'AGENT-MASTER-->Agent:' + @agentusername+ ' ' + cast(@agentBalance as varchar(30))  
+			UPDATE ref WITH (ROWLOCK, UPDLOCK)
+			SET @grefno = transcode = transcode + 1
+			WHERE refid = 'acc'
+
+			IF @@Error <> 0
+			BEGIN
+				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 115
+
+				RETURN
+			END
+
+			SELECT @refno = 200000000000 + @grefno
+
+			IF @agentBalance > 0
+			BEGIN
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
+				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'From Customer::' + @agentusername, @agentBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 105
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@mrecommend, @recommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
+				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, @agentBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 106
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@mrecommend, @recommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				SET @isSucc = 'true'
+
+				SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from agent ' + @agentusername + ' to Master ' + @mastername + ' with amount ' + convert(VARCHAR(20), @agentBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
+
+				BEGIN TRY
+					EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
+				END TRY
+
+				BEGIN CATCH
+					SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
+
+					EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @recommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
+				END CATCH
+
+				SET @count = @count + 1
+
+				IF @count % @batch = 0
+					WAITFOR DELAY '000:00:00.280'
+			END
+			ELSE IF @agentBalance < 0
+			BEGIN
+				--SET @agentBalance = abs(@agentBalance)  
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
+				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @agentusername, 0, abs(@agentBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 107
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@mrecommend, @recommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
+				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'From Customer::' + @mastername, abs(@agentBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 108
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@mrecommend, @recommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				SET @isSucc = 'true'
+
+				SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Master ' + @mastername + ' to Agent ' + @agentusername + ' with amount ' + convert(VARCHAR(20), @agentBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
+
+				BEGIN TRY
+					EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
+				END TRY
+
+				BEGIN CATCH
+					SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
+
+					EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @recommend, @IP = @IP, @Doing = @LogData
+				END CATCH
+
+				SET @count = @count + 1
+
+				IF @count % @batch = 0
+					WAITFOR DELAY '000:00:00.280'
+			END
+
+			FETCH NEXT
+			FROM CS_agent
+			INTO @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @agentusername, @mastername, @agentBalance
+		END
+
+		CLOSE CS_agent
+
+		DEALLOCATE CS_agent
+
+		DROP TABLE #Agent
+			--------------------------END:AGENT-MASTER-------------------------------  
 	END
 
-	CLOSE CS_agent
+	--------------------------START:MASTER-SUPER-------------------------------  
+	IF @RoleID = 4
+	BEGIN		
+		DECLARE CS_master CURSOR
+		FOR
+		SELECT mrecommend, srecommend, currency, actualrate, currencyName, mastername, supername, masterBalance
+		FROM #Master
 
-	DEALLOCATE CS_agent
-
-	DROP TABLE #Agent
-		--------------------------END:AGENT-MASTER-------------------------------  
-END
-
---------------------------START:MASTER-SUPER-------------------------------  
-IF @RoleID = 4
-BEGIN
-	; WITH cteSuperBalance
-	AS(
-		SELECT  b.mrecommend, b.custid, b.winlost, b.awinlost, b.playercomm, b.actual_stake, b.mwinlost, b.acomm, b.comm, b.srecommend, b.recommend, b.ruben, b.bettype, b.winlostdate
-		FROM	dbo.bettrans b WITH (NOLOCK)
-			INNER JOIN CustDB.dbo.custinfo c
-				ON c.custid = b.custid
-		WHERE	 c.mrecommend IN (SELECT mrecommend FROM #Master)
-		UNION ALL
-		SELECT	r.mrecommend, r.custid, r.winlost, r.awinlost, r.playercomm, r.actual_stake, r.mwinlost, r.acomm, r.comm, r.srecommend, r.recommend, 1 AS ruben, r.gameID, r.winlostdate
-		FROM	dbo.bettransRnG r WITH(NOLOCK)
-		WHERE	r.mrecommend IN (SELECT mrecommend FROM #Master)
-				AND r.IsSum = 0
-				AND r.statusID NOT IN (0,1)				
-		UNION ALL
-		SELECT	l.mrecommend, l.custid, l.winlost, l.awinlost, l.playercomm, l.actual_stake, l.mwinlost, l.acomm, l.comm, l.srecommend, l.recommend, 1 AS ruben, l.gameID, l.winlostdate
-		FROM	dbo.bettransLC l WITH(NOLOCK)
-		WHERE	l.mrecommend IN (SELECT mrecommend FROM #Master)
-				AND l.IsSum = 0
-				AND l.statusID NOT IN (0,1)				
-		)	
-	,B
-	AS (
-		SELECT b.mrecommend, isnull(sum(CASE 
-						WHEN b.custid = b.mrecommend THEN winlost - actual_stake
-						ELSE mwinlost + acomm - comm
-						END), 0) + isnull(sum(CASE 
-						WHEN b.custid <> b.mrecommend
-							AND b.custid <> b.recommend
-							AND b.custid <> b.srecommend
-							AND ruben = 1 THEN winlost - actual_stake + playercomm
-						ELSE 0
-						END), 0) + IsNull(sum(CASE 
-						WHEN b.custid = b.recommend THEN winlost - actual_stake
-						ELSE awinlost + comm - playercomm
-						END), 0) - IsNull(sum(CASE 
-						WHEN bettype < 19999
-							AND winlostdate >= @WinlostDate
-							AND ruben = 1 THEN winlost - actual_stake + mwinlost + acomm + awinlost
-						ELSE 0
-						END), 0) AS masterBalance
-		FROM	cteSuperBalance b
-		GROUP BY b.mrecommend
-		)
-	UPDATE #Master
-	SET masterBalance = isnull(B.masterBalance, 0)
-	FROM B
-	WHERE #Master.mRecommend = B.mRecommend
-	OPTION (RECOMPILE, MAXDOP 1)
-
-	DELETE #Master
-	WHERE masterBalance = 0
-
-	DECLARE CS_master CURSOR
-	FOR
-	SELECT DISTINCT mrecommend, srecommend, currency, actualrate, currencyName, mastername, supername, masterBalance
-	FROM #Master
-
-	OPEN CS_master
-
-	FETCH NEXT
-	FROM CS_master
-	INTO @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @mastername, @supername, @masterBalance
-
-	WHILE @@FETCH_STATUS = 0
-	BEGIN
-		-- print @agentusername +':'+ 'MASTER-SUPER-->Master:' + @mastername+ ' ' + cast(@masterBalance as varchar(30))  
-		UPDATE ref WITH (ROWLOCK, UPDLOCK)
-		SET @grefno = transcode = transcode + 1
-		WHERE refid = 'acc'
-
-		IF @@Error <> 0
-		BEGIN
-			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 116
-
-			RETURN
-		END
-
-		SELECT @refno = 200000000000 + @grefno
-
-		IF @masterBalance > 0
-		BEGIN
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-			VALUES (0, @UserID, @srecommend, @supername, @refno, @Now, 21003, 'From Customer::' + @mastername, @masterBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131)
-
-			IF @@Error <> 0
-			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 109
-
-				DELETE dbo.bettrans
-				WHERE custid IN (@srecommend, @mrecommend)
-					AND matchid = 0
-					AND bettype IN (21003, 21004)
-					AND refno = @refno
-
-				RETURN
-			END
-
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-			VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @supername, 0, @masterBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131)
-
-			IF @@Error <> 0
-			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 110
-
-				DELETE dbo.bettrans
-				WHERE custid IN (@srecommend, @mrecommend)
-					AND matchid = 0
-					AND bettype IN (21003, 21004)
-					AND refno = @refno
-
-				RETURN
-			END
-
-			SET @isSucc = 'true'
-
-			SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Master ' + @mastername + ' to Super ' + @supername + ' with amount ' + convert(VARCHAR(20), @masterBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
-
-			BEGIN TRY
-				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @srecommend, @IP = @IP, @Doing = @LogData
-			END TRY
-
-			BEGIN CATCH
-				SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
-
-				EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @srecommend, @IP = @IP, @Doing = @LogData
-			END CATCH
-
-			SET @count = @count + 1
-
-			IF @count % @batch = 0
-				WAITFOR DELAY '000:00:00.280'
-		END
-		ELSE IF @masterBalance < 0
-		BEGIN
-			--SET @masterBalance = abs(@masterBalance)  
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-			VALUES (0, @UserID, @srecommend, @supername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, abs(@masterBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131)
-
-			IF @@Error <> 0
-			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 111
-
-				DELETE dbo.bettrans
-				WHERE custid IN (@srecommend, @mrecommend)
-					AND matchid = 0
-					AND bettype IN (21003, 21004)
-					AND refno = @refno
-
-				RETURN
-			END
-
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-			VALUES (0, @UserID, @mrecommend, @mastername, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @supername, abs(@masterBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131)
-
-			IF @@Error <> 0
-			BEGIN
-				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 112
-
-				DELETE dbo.bettrans
-				WHERE custid IN (@srecommend, @mrecommend)
-					AND matchid = 0
-					AND bettype IN (21003, 21004)
-					AND refno = @refno
-
-				RETURN
-			END
-
-			SET @isSucc = 'true'
-
-			SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Super ' + @supername + ' to Master ' + @mastername + ' with amount ' + convert(VARCHAR(20), @masterBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
-
-			BEGIN TRY
-				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @srecommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
-			END TRY
-
-			BEGIN CATCH
-				SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
-
-				EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @srecommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
-			END CATCH
-
-			SET @count = @count + 1
-
-			IF @count % @batch = 0
-				WAITFOR DELAY '000:00:00.280'
-		END
+		OPEN CS_master
 
 		FETCH NEXT
 		FROM CS_master
 		INTO @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @mastername, @supername, @masterBalance
+
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			-- print @agentusername +':'+ 'MASTER-SUPER-->Master:' + @mastername+ ' ' + cast(@masterBalance as varchar(30))  
+			UPDATE ref WITH (ROWLOCK, UPDLOCK)
+			SET @grefno = transcode = transcode + 1
+			WHERE refid = 'acc'
+
+			IF @@Error <> 0
+			BEGIN
+				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 116
+
+				RETURN
+			END
+
+			SELECT @refno = 200000000000 + @grefno
+
+			IF @masterBalance > 0
+			BEGIN
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
+				VALUES (0, @UserID, @srecommend, @supername, @refno, @Now, 21003, 'From Customer::' + @mastername, @masterBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 109
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@srecommend, @mrecommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
+				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @supername, 0, @masterBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 110
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@srecommend, @mrecommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				SET @isSucc = 'true'
+
+				SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Master ' + @mastername + ' to Super ' + @supername + ' with amount ' + convert(VARCHAR(20), @masterBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
+
+				BEGIN TRY
+					EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @srecommend, @IP = @IP, @Doing = @LogData
+				END TRY
+
+				BEGIN CATCH
+					SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
+
+					EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @mrecommend, @ToCustID = @srecommend, @IP = @IP, @Doing = @LogData
+				END CATCH
+
+				SET @count = @count + 1
+
+				IF @count % @batch = 0
+					WAITFOR DELAY '000:00:00.280'
+			END
+			ELSE IF @masterBalance < 0
+			BEGIN
+				--SET @masterBalance = abs(@masterBalance)  
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
+				VALUES (0, @UserID, @srecommend, @supername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, abs(@masterBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 111
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@srecommend, @mrecommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
+				VALUES (0, @UserID, @mrecommend, @mastername, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @supername, abs(@masterBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131)
+
+				IF @@Error <> 0
+				BEGIN
+					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 112
+
+					DELETE dbo.bettrans
+					WHERE custid IN (@srecommend, @mrecommend)
+						AND matchid = 0
+						AND bettype IN (21003, 21004)
+						AND refno = @refno
+
+					RETURN
+				END
+
+				SET @isSucc = 'true'
+
+				SELECT @LogData = 'Transfer (clear balance) all downlines: Transfer from Super ' + @supername + ' to Master ' + @mastername + ' with amount ' + convert(VARCHAR(20), @masterBalance) + ' Ref.No ' + convert(VARCHAR(20), @refno)
+
+				BEGIN TRY
+					EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @srecommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
+				END TRY
+
+				BEGIN CATCH
+					SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
+
+					EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @srecommend, @ToCustID = @mrecommend, @IP = @IP, @Doing = @LogData
+				END CATCH
+
+				SET @count = @count + 1
+
+				IF @count % @batch = 0
+					WAITFOR DELAY '000:00:00.280'
+			END
+
+			FETCH NEXT
+			FROM CS_master
+			INTO @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @mastername, @supername, @masterBalance
+		END
+
+		CLOSE CS_master
+
+		DEALLOCATE CS_master
+
+		DROP TABLE #Master
 	END
 
-	CLOSE CS_master
+	--------------------------END:MASTER-SUPER-------------------------------  
+	DROP TABLE #Member
+	DROP TABLE #tempdata
+	DROP TABLE #SkippedMember	
 
-	DEALLOCATE CS_master
+	IF (@isSucc = 'true')
+	BEGIN
+		SELECT @LogData = 'Transfer (clear balance) all downlines: for Agent/Master/Super ' + @AgentName
 
-	DROP TABLE #Master
-END
+		BEGIN TRY
+			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @AgentID, @ToCustID = 0, @IP = @IP, @Doing = @LogData
+		END TRY
 
---------------------------END:MASTER-SUPER-------------------------------  
-DROP TABLE #Member
+		BEGIN CATCH
+			SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
 
-DROP TABLE #SkippedMember
+			EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @AgentID, @ToCustID = 0, @IP = @IP, @Doing = @LogData
+		END CATCH
+	END
 
-IF (@isSucc = 'true')
-BEGIN
-	SELECT @LogData = 'Transfer (clear balance) all downlines: for Agent/Master/Super ' + @AgentName
+	IF @ErrItems <> ''
+	BEGIN
+		SELECT @ErrCode = 113
 
-	BEGIN TRY
-		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @AgentID, @ToCustID = 0, @IP = @IP, @Doing = @LogData
-	END TRY
+		SELECT @ErrItems = LEFT(@ErrItems, len(@ErrItems) - 1)
 
-	BEGIN CATCH
-		SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
+		SELECT @ErrMsg = N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s) and their upline (master, agent): ' + @ErrItems
 
-		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @AgentID, @ToCustID = 0, @IP = @IP, @Doing = @LogData
-	END CATCH
-END
+		RETURN
+	END
 
-IF @ErrItems <> ''
-BEGIN
-	SELECT @ErrCode = 113
-
-	SELECT @ErrItems = LEFT(@ErrItems, len(@ErrItems) - 1)
-
-	SELECT @ErrMsg = N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s) and their upline (master, agent): ' + @ErrItems
-
-	RETURN
 END
 GO
+
 GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbAdminNet] AS [dbo]
 GO
+
 GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbExtAccNet] AS [dbo]
 GO
+
 GRANT VIEW DEFINITION ON [dbo].[Acc_ClearBalanceAllDownlines] TO [vnteam] AS [dbo]
+GO

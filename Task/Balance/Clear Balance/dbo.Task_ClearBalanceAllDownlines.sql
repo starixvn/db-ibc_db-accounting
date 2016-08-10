@@ -1,20 +1,11 @@
-﻿ USE [bodb02]
+﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Task_ClearBalanceAllDownlines]    Script Date: 9/25/2014 2:56:09 PM ******/
+/****** Object:  StoredProcedure [dbo].[Task_ClearBalanceAllDownlines]    Script Date: 08/10/2016 14:14:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
-
-/*
--- prepare for running
-
-UPDATE Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-SET status = 'waiting'
-WHERE isActive = 1 
-
-*/
+ 
 
 ALTER PROCEDURE [dbo].[Task_ClearBalanceAllDownlines]
 (
@@ -27,37 +18,43 @@ AS
 	Task: Clear balance for downlines of agent
 	
 	Revisions: 
-		- 20140925@Johnson: Add option clear balance for all members under agent and remove column isActive
+	- 20140925@Johnson: Add option clear balance for all members under agent and remove column isActive
+	- 20150617@Daniel: Separating custDB to new server DBCUST [Redmine:#36216]		
+	- 20150701@Kathy: Correct condition to break WHILE loop [Redmine:#36216]
+	- 20160810@Lukas: Add finished time for each SMA customer		
 */
 BEGIN
 
 	DECLARE @CustID int, @Username varchar(50), @TransferType INT
-	DECLARE @Today datetime
-	DECLARE @ErrCode int, @ErrMsg NVARCHAR(MAX) 
+	DECLARE @Today datetime, @finishedtime datetime
+	DECLARE @ErrCode int, @ErrMsg NVARCHAR(MAX), @msg VARCHAR(1000) 
 	DECLARE @OLD_lasttransfer datetime
 
-	SET @today = DATEADD(dd, DATEDIFF(d, 0, CURRENT_TIMESTAMP), 0)
+	SET @today = CURRENT_TIMESTAMP
 
 	-- prepare for running
-	UPDATE custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-	SET status = 'waiting'
-	WHERE LastTransfer < @today
-		AND status <> 'waiting'
+		EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList @mode = 0
 
 	WHILE (1 = 1)
 	BEGIN
-		IF (custdb.dbo.f_IsContinueClearBalance() = 0) BREAK -- control from outside
+		IF (dbo.f_IsContinueClearBalance() = 0) BREAK -- control from outside
+
+		SELECT TOP 1
+		  @CustID = custid,
+		  @TransferType = TransferType		
+		  ,@OLD_lasttransfer = LastTransfer  
+		FROM DBCUST.custdb.dbo.Acc_ClearBalanceList WITH(NOLOCK)
+		WHERE [status] = 'waiting'
+
+		--IF(@CustID IS NULL) BREAK -- no more to transfer
+		IF @@rowcount = 0 BREAK -- no more to transfer
 		
-		UPDATE TOP (1) custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-		SET @OLD_lasttransfer = LastTransfer
-			,LastTransfer = CURRENT_TIMESTAMP
-			,msg = ''
-			,status = 'running'
-			,@CustID = custid
-			,@TransferType = TransferType
-		WHERE status = 'waiting'
-		IF @@ROWCOUNT = 0 BREAK -- no more to transfer
-			
+		EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList 
+		  @custid = @custid,
+		  @status = 'running',
+		  @LastTransfer = @today,
+		  @msg = ''
+  					
 		SELECT @Username = username 
 		FROM custdb.dbo.custInfo WITH(NOLOCK)
 		WHERE custid = @CustID
@@ -65,10 +62,11 @@ BEGIN
 			
 		IF @@ROWCOUNT = 0
 		BEGIN
-			UPDATE custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-			SET msg = 'InValid CustID!!!'
-				,status = 'failed'
-			WHERE custid = @CustID
+		
+		    EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList 
+			 @custid = @custid,
+			 @status = 'failed',
+			 @msg = 'InValid CustID!!!'		  	
 			
 			CONTINUE
 		END
@@ -82,20 +80,25 @@ BEGIN
 				,@ErrMsg = @ErrMsg OUTPUT 
 				,@ErrCode = @ErrCode OUTPUT
 			
+			SET @finishedtime = GETDATE()
+			
 			IF @ErrCode <> 0
 			BEGIN
-				UPDATE custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-				SET msg = LEFT(@ErrMsg, 1000) -- just in case more than 1000 characters
-					,status = 'failed'
-				WHERE custid = @CustID
+				SET @msg = LEFT(@ErrMsg, 1000)						
+				EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList 
+				    @custid = @custid,
+				    @status = 'failed',
+				    @LastTransfer = @finishedtime,
+				    @msg = @msg -- just in case more than 1000 characters					 			
 				
 				CONTINUE
 			END
 			ELSE  --- successful
-			BEGIN
-				UPDATE custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-				SET status = 'completed'
-				WHERE custid = @CustID
+			BEGIN				
+				EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList 				   
+				    @custid = @custid,
+				    @status = 'completed',
+				    @LastTransfer = @finishedtime		
 			END	
 				
 		END
@@ -105,31 +108,39 @@ BEGIN
 				,@UserID = 862400 -- starix2
 				,@ErrMsg = @ErrMsg OUTPUT 
 				,@ErrCode = @ErrCode OUTPUT
-			
+				
+			SET @finishedtime = GETDATE()
 			IF @ErrCode = 1 -- server is busy, rollback lasttransfer value, wait 5 seconds and continue
 			BEGIN
-				UPDATE custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-				SET LastTransfer = @OLD_lasttransfer
-					,status = 'waiting'			
-				WHERE custid = @CustID
+			
+				EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList 
+				    @custid = @custid,
+				    @status = 'waiting',
+				    @LastTransfer = @OLD_lasttransfer				    		
 				
 				WAITFOR DELAY '00:00:05'
 				CONTINUE
 			END
 			ELSE IF @ErrCode <> 0
 			BEGIN
-				UPDATE custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-				SET msg = LEFT(@ErrMsg, 1000) -- just in case more than 1000 characters
-					,status = 'failed'
-				WHERE custid = @CustID
+				SET @msg = LEFT(@ErrMsg, 1000)				
 				
+				EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList 
+				    @custid = @custid,
+				    @status = 'failed',
+				    @LastTransfer = @finishedtime,
+				    @msg = @msg -- just in case more than 1000 characters
+				    						
 				CONTINUE
 			END
 			ELSE  --- successful
-			BEGIN
-				UPDATE custdb.dbo.Acc_ClearBalanceList WITH(ROWLOCK, UPDLOCK)
-				SET status = 'completed'
-				WHERE custid = @CustID
+			BEGIN				 
+				
+				EXEC DBCUST.custDB.dbo.Task_UpdClearBalanceList 
+				    @custid = @custid,
+				    @status = 'completed',
+				    @LastTransfer = @finishedtime
+				    
 			END
 		END
 		
