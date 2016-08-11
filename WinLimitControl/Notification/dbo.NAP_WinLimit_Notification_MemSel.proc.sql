@@ -17,6 +17,7 @@ Revisions:
 	- 20160524@Helen: Change condition to send email - [Redmine: 57940]
 	- 20160701@Robert: CWL - Phase 2 - Support RED and Yellow level - [Redmine: 57722]
 	- 20160802@Robert: CWL Phase 2 - Wrong Exchange Rate using in the email notification - [Redmine: 61839]
+	- 20160802@Robert: CWL Phase 2 - email notification Enhancement - [Redmine: 62253]
 
 	
 Param's Explanation:
@@ -38,6 +39,7 @@ AS
                     ELSE e.CurrencyCode
                 END AS code,
                 ag.site,
+                s.isLicensee  AS IsDeposit,
                 p.ProductName,
                 p.ProductId,
                 wl.BettypeId,
@@ -51,6 +53,7 @@ AS
          FROM WinLimit_CustGameMonitoring wl WITH (NOLOCK)
               INNER JOIN Customer c WITH (NOLOCK) ON c.custid = wl.CustID
               INNER JOIN Customer ag WITH (NOLOCK) ON ag.custid = c.recommend
+              INNER JOIN Site S WITH (NOLOCK) ON S.site = ag.site 
               INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON p.ProductID = wl.ProductID
               INNER JOIN Winlimit_LevelSetting l WITH (NOLOCK) ON l.LevelId = wl.LevelId
               INNER JOIN
@@ -60,7 +63,7 @@ AS
                     fEx.MYR AS Rate
              FROM Lrf_f_GetExchangeDaily(@Fromdate, @Todate) AS fEx
          ) e ON c.currency = e.CurrencyId
-         WHERE wl.IsNotified = 0;
+         WHERE wl.IsNotified = 0 AND S.isActive = 1;
      END;
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [vnteam];
