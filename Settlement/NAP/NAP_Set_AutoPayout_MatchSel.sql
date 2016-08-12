@@ -22,6 +22,7 @@ AS
  Revisions:  
 	- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
 	- 20160713@Patrick: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+	- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
       
  Param explanation:  
 	@MatchCode: match code
@@ -253,7 +254,7 @@ BEGIN
 			AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 			AND b.bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
-			AND b.bettype NOT IN (901, 902, 903)--bettrade
+			AND b.bettype NOT BETWEEN 901 AND 910 --bettrade
 			AND b.bettype NOT BETWEEN 801 AND 899--Metric Gaming
 			--AND StatusId NOT IN (101, 102, 103)
 			
