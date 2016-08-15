@@ -18,6 +18,7 @@ AS
 
 	Revisions:
 		- 20160331@Sophia: change the way to use Function f_SportBettypeMatrix_Sel [Redmine: #54719]
+		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -115,7 +116,7 @@ BEGIN
 	;WITH wl AS (
 			SELECT	b.srecommend, 1 AS ProductID, 
 					CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype, 
-					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END AS SubProduct,
+					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END AS SubProduct,
 					SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) * ISNULL(actualrate, 0)) AS Winlost, 
 					b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
@@ -130,7 +131,7 @@ BEGIN
 				AND s.productID = 1 
 			GROUP BY b.winlostdate, b.srecommend,
 					CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END, 
-					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END
+					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END
 			)
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, Winlostdate, GroupID)
 	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) AS Winlost, w.Winlostdate, s.GroupId
