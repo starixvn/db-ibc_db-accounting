@@ -1,5 +1,6 @@
-﻿ALTER PROCEDURE  [dbo].[Acc_CustomerSelVirtualMultiplier] 
-	@CustID int
+﻿ALTER PROCEDURE  [dbo].[Acc_CustomerSelVirtualMultiplier_xtest] 
+	@CustID int,
+	@IsTest BIT=0
 AS
 	/*
 		Created: 
@@ -11,7 +12,7 @@ AS
 			- 20141226@Johnson: Separate virtual rate by sporttype, bettype [Redmine: #25840]	
 			- 20151029@Billy: Using new Virtual Rate structure [Redmine: #46541]
 			- 20160128@Billy: Update Virtual Rate's range from [-0.8, 1.6] to [-0.9, 1.6] - [Redmine: #51611]
-						
+			- 20160816@Winnie: Change sp for UAT purpose [Redmine: #61713]			
 		Parameter's Explanation:
 	*/
 BEGIN
@@ -48,7 +49,7 @@ BEGIN
     INNER JOIN  ProfileVirtualSetting       AS pvs WITH(NOLOCK)
             ON  cvs.seqNo = pvs.seqNo
     WHERE       cvs.custid = @CustID
-			AND pvs.isActive = 1
+			AND ((@IsTest=0 AND pvs.isActive = 1) OR (@IsTest=1))
 	ORDER BY sporttype, isLive DESC, bettype
 
     SELECT custid, sporttype, bettype, islive, virtualMultiplier
