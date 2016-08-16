@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail_Auto_1s]
+﻿﻿ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail_Auto_1s]
 	@MatchID		INT
 
 AS

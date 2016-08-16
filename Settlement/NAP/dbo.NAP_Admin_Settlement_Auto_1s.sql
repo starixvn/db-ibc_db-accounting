@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
+﻿﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
 	 @AdminID						INT				= 148		-- calculated by system (default)
 	,@MatchID						INT
 	,@ResourceIDs					VARCHAR(MAX)	= '' 

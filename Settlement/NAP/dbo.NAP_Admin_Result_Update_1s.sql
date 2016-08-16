@@ -37,6 +37,7 @@ AS
 		- 20150604@Jamie: Apply for Soccer ONLY 
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150928@Johnson: update result of corner without single corner ticket [Redmine: #44415]
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 	Param's Explanation: 
 		@Results: 'H,1,X,NL,...'  NL: Blank result of Bettype 216 
 */
@@ -423,6 +424,8 @@ BEGIN
 		INSERT INTO @tmpResultDetail(ResourceID,HomeValue,AwayValue)
 
 		SELECT'00', CAST(@fth AS VARCHAR(50)), CAST(@fta AS VARCHAR(50)) 
+		UNION ALL 
+		SELECT '08', @GoalSequence,NULL 
 		UNION ALL 
 		SELECT '04', '0', '0' WHERE @isExistTotalCorner = 1 
 								OR EXISTS (SELECT 1 FROM ResultDetail WITH(NOLOCK)

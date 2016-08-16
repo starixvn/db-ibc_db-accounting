@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3_Auto_1s] 
+﻿﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3_Auto_1s] 
   @MatchID		INT
  ,@ResourceIDs	VARCHAR(MAX)	= '' 
  ,@Mode			VARCHAR(6)		= 'CAL'

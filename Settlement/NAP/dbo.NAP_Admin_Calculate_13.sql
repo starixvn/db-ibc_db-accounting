@@ -21,6 +21,7 @@ AS
 		- 20140729@Kathy: Add one more account(BF3) into BetFair's group [Redmine:#19665]
 		- 20150507@Jamie: Settlement Betradar 2 
 		- 20151208@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		
 */
 BEGIN
@@ -30,47 +31,40 @@ BEGIN
 
 	SET NOCOUNT ON
 
-	----- LAS settlement 
-	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-	--		SELECT *
-	--		FROM sys.databases
-	--		WHERE NAME = 'LASDB'
-	--		)
-	--BEGIN
-	--	IF (@IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetFair = 0 ) or @IsSettleAbandonedMatchIBC = 1
-	--		BEGIN
-	--		DECLARE @LASCommand NVARCHAR(1000)
-	--			,@createdDate DATETIME
-
-	--		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_13] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-	--							+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-	--							+ ', @fth = ' + CONVERT(NVARCHAR(10), @fth) 
-	--							+ ', @fta = ' + CONVERT(NVARCHAR(10), @fta) 
-	--							+ ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, ''))
-	--							+ ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0)) 						
-	--			,@createdDate = GETDATE()
-
-	--		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_13'
-	--			,@SQLCommand = @LASCommand
-	--			,@CreatedDate = @createdDate
-	--			,@StatusID = 0 -- waiting
-	--			,@MatchID = @matchid
-	--			,@Bettype = @bettype
-	--			,@Status = 'waiting'
-	--			,@BetCount = @betcount
-	--	END
-	--END
-
 	DECLARE  @modds MONEY
 			,@commWinRate SMALLMONEY
 			,@commLostRate SMALLMONEY
 			,@FirstGoal NVARCHAR(50) 
-
+			,@result NVARCHAR(10)
+			,@home_firstteam2goals INT
+			,@away_firstteam2goals INT
+			,@home_firstteam3goals INT
+			,@away_firstteam3goals INT
+			
 	SELECT	@modds = 0
 
 	SELECT	@FirstGoal=''
 	SELECT	@FirstGoal = LEFT(REPLACE(ISNULL(@ResultString,''),';',''),1) --172 
-
+	
+	SET @home_firstteam2goals = CHARINDEX('H',@ResultString,(CHARINDEX('H',@ResultString)+1))
+	SET @away_firstteam2goals = CHARINDEX('A',@ResultString,(CHARINDEX('A',@ResultString)+1))	
+	SET @home_firstteam3goals = CASE WHEN @home_firstteam2goals > 0 THEN CHARINDEX('H',@ResultString, @home_firstteam2goals + 1) ELSE 0 END
+	SET @away_firstteam3goals = CASE WHEN @away_firstteam2goals > 0 THEN CHARINDEX('A',@ResultString, @away_firstteam2goals + 1) ELSE 0 END
+	
+	SET @result = CASE @bettype
+					WHEN 422 THEN CASE 
+									WHEN (@home_firstteam2goals > 0 AND @away_firstteam2goals = 0) OR (@home_firstteam2goals <> 0 AND @home_firstteam2goals - @away_firstteam2goals < 0) THEN 'H'
+									WHEN (@away_firstteam2goals > 0 AND @home_firstteam2goals = 0) OR (@away_firstteam2goals <> 0 AND @away_firstteam2goals - @home_firstteam2goals < 0) THEN 'A'
+									ELSE 'N'
+								  END
+					WHEN 423 THEN CASE
+									WHEN (@home_firstteam3goals > 0 AND @away_firstteam3goals = 0) OR (@home_firstteam3goals <> 0 AND @home_firstteam3goals - @away_firstteam3goals < 0) THEN 'H'
+									WHEN (@away_firstteam3goals > 0 AND @home_firstteam3goals = 0) OR (@away_firstteam3goals <> 0 AND @away_firstteam3goals - @home_firstteam3goals < 0) THEN 'A'
+									ELSE 'N'
+								  END
+					WHEN 425 THEN @ResultString									
+				  END
+	
 	IF @IsSettleAbandonedMatch = 1 OR @IsSettleAbandonedMatchBetfair = 1 OR @IsSettleAbandonedMatchIBC = 1
 	BEGIN
 		
@@ -80,13 +74,20 @@ BEGIN
 				WHEN betteam = 'an' AND @fth > 0  THEN 1
 				WHEN betteam = 'hy' AND @fta > 0  THEN -1
 				WHEN betteam = 'hn' AND @fta > 0  THEN 1
-				WHEN betteam = 'HH' AND @FirstGoal ='A' THEN -1		--172
+				WHEN betteam = 'HH' AND @FirstGoal ='A' THEN -1		--172,415
 				WHEN betteam = 'DH' AND @FirstGoal ='A' THEN -1 
 				WHEN betteam = 'AH' AND @FirstGoal ='A' THEN -1 
 				WHEN betteam = 'HA' AND @FirstGoal ='H' THEN -1 
 				WHEN betteam = 'DA' AND @FirstGoal ='H' THEN -1 
 				WHEN betteam = 'AA' AND @FirstGoal ='H' THEN -1 
 				WHEN betteam = 'NO' AND (@FirstGoal='H' OR @FirstGoal='A') THEN -1 
+				WHEN bettype IN (422, 423) THEN CASE
+											WHEN @result IN ('H', 'A') THEN CASE 
+																				WHEN betteam = @result THEN 1
+																				ELSE -1
+																			END
+											ELSE NULL
+										END
 				ELSE NULL
 				END
 			,modds = @modds
@@ -105,14 +106,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						)
 				WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						) * 0.5
@@ -125,14 +126,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking * 0.5
@@ -145,14 +146,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking * 0.5
@@ -165,14 +166,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking * 0.5
@@ -245,13 +246,17 @@ BEGIN
 				WHEN betteam = 'hn' AND @fta > 0 THEN 1
 				WHEN betteam = 'ay' AND @fth = 0 THEN 1
 				WHEN betteam = 'an' AND @fth > 0 THEN 1
-				WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1  --172 
+				WHEN betteam = 'HH' AND @FirstGoal='H' AND (@fth - @fta) >0 THEN 1  --172, 415 
 				WHEN betteam = 'DH' AND @FirstGoal='H' AND (@fth - @fta) =0 THEN 1
 				WHEN betteam = 'AH' AND @FirstGoal='H' AND (@fth - @fta) <0 THEN 1
 				WHEN betteam = 'HA' AND @FirstGoal='A' AND (@fth - @fta) >0 THEN 1
 				WHEN betteam = 'DA' AND @FirstGoal='A' AND (@fth - @fta) =0 THEN 1
 				WHEN betteam = 'AA' AND @FirstGoal='A' AND (@fth - @fta) <0 THEN 1
 				WHEN betteam = 'NO' AND @fth =0 AND @fta= 0 THEN 1
+				WHEN bettype IN (422, 423, 425) THEN CASE 
+											WHEN betteam = @result THEN 1
+											ELSE -1
+										END
 				ELSE - 1
 				END
 			,modds = @modds
@@ -270,14 +275,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						)
 				WHEN @modds = 0.25 THEN actual_stake + stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						) * 0.5
@@ -289,14 +294,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - apositiontaking * 0.5
@@ -308,14 +313,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - mpositiontaking * 0.5
@@ -327,14 +332,14 @@ BEGIN
 				WHEN @modds > 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking
 				WHEN @modds = 0.25 THEN stake * (CASE 
 						WHEN odds < 0 THEN 1
 						ELSE (CASE 
-								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172) THEN odds - 1
+								WHEN bettype IN (4, 5, 6, 13, 15, 16, 24, 25, 26, 27, 28,172,415,422,423,425) THEN odds - 1
 								ELSE odds END
 								) END
 						) * - spositiontaking * 0.5

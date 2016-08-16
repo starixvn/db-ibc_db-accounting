@@ -469,6 +469,7 @@ BEGIN
 	END
 END
 
+
 GO 
  GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSel] TO [vnteam]
 GO 

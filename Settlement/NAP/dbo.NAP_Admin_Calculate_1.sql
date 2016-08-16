@@ -16,7 +16,6 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_1]
     ,@TotalGameAwaySet3        SMALLMONEY    = NULL 
     ,@TotalGameAwaySet4        SMALLMONEY    = NULL 
     ,@TotalGameAwaySet5        SMALLMONEY    = NULL 
-    ,@isRefundHT            BIT = 0
     ,@betcount                INT = 0
     -- add any params, please modify script in 'special section'
 AS
@@ -35,6 +34,7 @@ AS
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160425@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
 		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
         
 */
 BEGIN
@@ -46,31 +46,8 @@ BEGIN
         ,@commWinRate SMALLMONEY
         ,@commLostRate SMALLMONEY
         ,@RemoteCount INT
-
+	
     IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
-
-    ----- LAS settlement 
-    --IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215') AND EXISTS (
-    --        SELECT *
-    --        FROM sys.databases
-    --        WHERE NAME = 'LASDB'
-    --        )
-    --BEGIN
-    --    DECLARE @LASCommand NVARCHAR(1000)
-    --        ,@createdDate DATETIME
-
-    --    SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_1] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) + ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) + ', @fth = ' + CONVERT(NVARCHAR(10), @fth) + ', @fta = ' + CONVERT(NVARCHAR(10), @fta) + ', @betcount = ' + CONVERT(NVARCHAR(10), @betcount)
-    --        ,@createdDate = GETDATE()
-
-    --    EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_1'
-    --        ,@SQLCommand = @LASCommand
-    --        ,@CreatedDate = @createdDate
-    --        ,@StatusID = 0 -- waiting
-    --        ,@MatchID = @matchid
-    --        ,@Bettype = @bettype
-    --        ,@Status = 'waiting'
-    --        ,@BetCount = @betcount
-    --END
 
     IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054','DB231','DB215')
     BEGIN
@@ -246,8 +223,7 @@ BEGIN
             WHERE
                 matchid=@matchid 
                 AND Bettype = @bettype
-                AND statusID NOT IN (101,102) -- REJECT & VOID 
-                AND 1 = CASE WHEN @bettype = 183 and @isRefundHT = 1 THEN 0 ELSE 1 END
+                AND statusID NOT IN (101,102) -- REJECT & VOID   
                 AND 1 = CASE WHEN @Bettype NOT IN (154,155,1311, 1316) THEN 1
                              WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
                              WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1
@@ -486,8 +462,7 @@ BEGIN
 			WHERE matchid = @matchid 
 				AND b.custid >= @MinCustId
 				AND bettype = @bettype 
-				AND statusID NOT IN (101,102) -- REJECT & VOID 
-				AND 1 = CASE WHEN @bettype = 183 and @isRefundHT = 1 THEN 0 ELSE 1 END
+				AND statusID NOT IN (101,102) -- REJECT & VOID 				
 				AND 1 = CASE WHEN @Bettype NOT IN (154,155,1311, 1316) THEN 1
 								WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%1%' AND BetID = 801 THEN 1
 								WHEN @Bettype IN (154,155,1311, 1316) AND @SelectedSet LIKE '%2%' AND BetID = 802 THEN 1

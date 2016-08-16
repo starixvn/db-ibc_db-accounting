@@ -16,7 +16,6 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_2] @matchid INT
 	,@IsSettleAbandonedMatchIBC		BIT = 0
 	,@IsSettleAbandonedMatch		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
-	,@isRefundHT					BIT = 0
 	,@isExcludeCorner				BIT = 0 
 	-- add any params, please modify script in 'special section'
 AS
@@ -33,6 +32,7 @@ AS
 		- 20150415@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20151209@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 
 */
 BEGIN
@@ -46,40 +46,6 @@ BEGIN
 	DECLARE @modds MONEY
 		,@commWinRate SMALLMONEY
 		,@commLostRate SMALLMONEY
-
-	---- LAS settlement 
-	--IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232','DB215')
-	--	AND EXISTS (
-	--		SELECT *
-	--		FROM sys.databases
-	--		WHERE NAME = 'LASDB'
-	--		)
-	--BEGIN
-	--	DECLARE @LASCommand NVARCHAR(1000)
-	--		,@createdDate DATETIME
-
-	--	SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_2] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-	--													+ ', @bettype = ' + CONVERT(NVARCHAR(10), @bettype) 
-	--													+ ', @oddeven = ' + CASE WHEN @oddeven IS NULL THEN 'NULL' 
-	--																			   ELSE CONVERT(NVARCHAR(50), @oddeven)
-	--																		  END 
-	--													+ ', @oddevenht = ' + CASE WHEN @oddevenht IS NULL THEN 'NULL' 
-	--																			   ELSE CONVERT(NVARCHAR(50), @oddevenht)
-	--																		  END 
-	--													+ ', @isRefundHT = ' + CONVERT(NVARCHAR(10), @isRefundHT) 
-	--												    + ', @betcount = ' + CONVERT(NVARCHAR(10), ISNULL(@betcount, '')) 
-	--												    + ', @IsSettleAbandonedMatchIBC = ' + CONVERT(NVARCHAR(10), ISNULL(@IsSettleAbandonedMatchIBC, 0))
-	--		,@createdDate = GETDATE()
-
-	--	EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_2'
-	--		,@SQLCommand = @LASCommand
-	--		,@CreatedDate = @createdDate
-	--		,@StatusID = 0 -- waiting
-	--		,@MatchID = @matchid
-	--		,@Bettype = @bettype
-	--		,@Status = 'waiting'
-	--		,@BetCount = @betcount
-	--END
 
 	IF @@SERVERNAME IN ('DB052', 'DB053', 'DB054', 'DB231','DB215')
 	BEGIN
@@ -127,8 +93,8 @@ BEGIN
 					ELSE CASE -- normal settlement
 							WHEN betteam = 'h' AND @oddeven = 1 THEN 1
 							WHEN betteam = 'a' AND @oddeven = 0 THEN 1
-							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --184, 194, 1318
-							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --184, 194, 1318  
+							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --184, 194, 1318, 428
+							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --184, 194, 1318, 428
 							WHEN b.betteam = 'oo' AND @oddevenht = 1 AND @oddeven = 1 THEN 1 -- 128
 							WHEN b.betteam = 'oe' AND @oddevenht = 1 AND @oddeven = 0 THEN 1 -- 128
 							WHEN b.betteam = 'eo' AND @oddevenht = 0 AND @oddeven = 1 THEN 1 -- 128
@@ -289,7 +255,6 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END 
-				AND 1 = CASE WHEN @bettype IN (128,184) and @isRefundHT = 1 THEN 0 ELSE 1 END
 				AND 1 = CASE WHEN @isExcludeCorner = 1 AND @bettype IN (194,203) THEN 0 ELSE 1 END 
 				AND statusID NOT IN (101, 102)
 				AND 1 = CASE 
@@ -333,8 +298,8 @@ BEGIN
 					ELSE CASE -- normal settlement
 							WHEN betteam = 'h' AND @oddeven = 1 THEN 1
 							WHEN betteam = 'a' AND @oddeven = 0 THEN 1
-							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --184, 194, 203, 1318
-							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --184, 194, 203, 1318  
+							WHEN betteam = 'o' AND @oddeven = 1 AND @oddevenht IS NULL THEN 1 --184, 194, 203, 1318, 428
+							WHEN betteam = 'e' AND @oddeven = 0 AND @oddevenht IS NULL THEN 1 --184, 194, 203, 1318, 428 
 							WHEN betteam = 'oo' AND @oddevenht = 1 AND @oddeven = 1 THEN 1 -- 128
 							WHEN betteam = 'oe' AND @oddevenht = 1 AND @oddeven = 0 THEN 1 -- 128
 							WHEN betteam = 'eo' AND @oddevenht = 0 AND @oddeven = 1 THEN 1 -- 128
@@ -493,7 +458,6 @@ BEGIN
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%4%' AND BetID = 804 THEN 1 
 							 WHEN @bettype = 1318 AND @SelectedSet LIKE '%5%' AND BetID = 805 THEN 1 
 							 ELSE 0 END
-			AND 1 = CASE WHEN @bettype IN (128,184) and @isRefundHT = 1 THEN 0 ELSE 1 END
 			AND 1 = CASE WHEN @isExcludeCorner = 1 AND  @bettype IN (194,203) THEN 0 ELSE 1 END 
 	END
 END

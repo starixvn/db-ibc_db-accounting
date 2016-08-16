@@ -26,6 +26,7 @@ AS
 		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
@@ -36,7 +37,22 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @ActionID INT, @bettype INT
+	DECLARE @ActionID INT
+			, @bettype INT
+			,@strFTBettypes VARCHAR(MAX)
+			,@strAutoBetRadarBettypes VARCHAR(MAX)
+
+	SELECT 	@strFTBettypes = COALESCE(@strFTBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes() f 
+	WHERE  	f.IsUsedGoalRecordValue = 1
+			AND f.GroupId = 2 AND @IsAutoCalculatePage = 1
+
+	SELECT 	@strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes() f 
+	WHERE  	f.GroupId = 8
+
+	SET @strAutoBetRadarBettypes = ',' + @strAutoBetRadarBettypes + ','
+
 	CREATE TABLE #tmpTrans (transid BIGINT)
 	
 	SELECT @ActionID = CASE WHEN @action = 'CAL' THEN 108
@@ -78,15 +94,18 @@ BEGIN
 		DECLARE @Status TABLE(FTFGLGBet BIT, InRunning INT)
 
 		INSERT INTO @Status(FTFGLGBet, InRunning)
-		SELECT CASE WHEN bettype IN (14, 172) THEN 1 ELSE 0 END --others
-			, SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
-		FROM dbo.bettrans WITH (NOLOCK)
-		WHERE matchid = @matchid
-			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-			AND bettype NOT BETWEEN 1501 AND 1599 -- Keno
-			AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
-			AND bettype NOT IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217) --Auto settle Betradar
-		GROUP BY CASE WHEN bettype IN (14, 172) THEN 1 ELSE 0 END --others
+		SELECT	CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 OR b.bettype IN (14, 127) THEN 1 ELSE 0 END AS FTFGLGBet
+				,SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+		FROM	dbo.bettrans b WITH(NOLOCK)
+		WHERE	matchid = @matchid
+				AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
+				AND b.bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
+				AND 1 = CASE 
+							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strAutoBetRadarBettypes) > 0 THEN 0 
+							ELSE 1 
+						END   --Auto settle Betradar
+		GROUP BY CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 OR b.bettype IN (14, 127) THEN 1 ELSE 0 END
 
 		IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE FTFGLGBet = 0)
 			INSERT INTO @Status(FTFGLGBet, InRunning) VALUES(0, 0)
@@ -151,37 +170,85 @@ BEGIN
 	DECLARE @TotalAccount INT, @TotalAccount_BalanceUpdate INT
 
 	INSERT INTO #tmpTrans(transid)
-	SELECT transid
-	FROM dbo.bettrans WITH (NOLOCK)
-	WHERE matchid = @matchid 
-		AND bettype IN (@bettype, 172)
-		AND betdaqid = 0--bettrade tickets
-		AND 1 = CASE WHEN @IsAutoCalculatePage = 1 AND bettype = 172 AND @action = 'CAL-FT' THEN 1 ELSE 0 END
+	SELECT	transid
+	FROM	dbo.bettrans b WITH (NOLOCK)
+	WHERE	matchid = @matchid 
+			AND betdaqid = 0--bettrade tickets
+			AND 1 = CASE 
+						WHEN b.bettype = @bettype THEN 1
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 AND @IsAutoCalculatePage = 1 AND @Action = 'CAL-FT' THEN 1
+						ELSE 0
+					END
+						
 
 	INSERT INTO #BalanceBefore
-	SELECT custid, SUM(winlost - actual_stake + playercomm)
-	FROM dbo.bettrans WITH (ROWLOCK)
-	WHERE matchid = @matchid AND bettype IN (@bettype,901,902,903,172)
-		AND 1 = CASE WHEN bettype IN (901,902,903) 
-								AND refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1 
-					WHEN bettype NOT IN (901,902,903) THEN 1
-					ELSE 0 END
-		AND 1 = CASE WHEN @IsAutoCalculatePage = 0 AND bettype = 172 AND @action = 'CAL-FT' THEN 0 ELSE 1 END
+	SELECT	custid, SUM(winlost - actual_stake + playercomm)
+	FROM	dbo.bettrans b WITH (ROWLOCK)
+	WHERE	matchid = @matchid 
+			AND 1 = CASE 
+						WHEN b.bettype IN (901,902,903) AND refno IN (SELECT transid FROM #tmpTrans) THEN 1 
+						WHEN b.bettype NOT IN (901,902,903) THEN 1
+						ELSE 0 
+					END
+			AND 1 = CASE 
+						WHEN b.bettype IN (@bettype, 901, 902, 903) THEN 1
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 AND @IsAutoCalculatePage = 1 AND @Action = 'CAL-FT' THEN 1
+						ELSE 0
+					END
 	GROUP BY custid
 
 	SET @TotalAccount = @@ROWCOUNT
 
 	-- bettype 14 : First Goal Last Goal - re-use the SP of Correct Score, so we have to call it twice		
-	DECLARE @betcount_14 INT, @betcount_127 INT, @betcount_172 INT
-		, @goaldiff SMALLMONEY, @fth INT, @fta INT
+	DECLARE		@betcount_14	INT
+			,@betcount_127		INT
+			,@goaldiff			SMALLMONEY
+			,@fth				INT
+			,@fta				INT
+			,@WinFromBehind		NVARCHAR(1)
 
 	SELECT @betcount_14 = ISNULL(SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END), 0)
 		, @betcount_127 = ISNULL(SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END), 0)
-		, @betcount_172 = ISNULL(SUM(CASE WHEN bettype = 172 THEN 1 ELSE 0 END), 0)
 	FROM dbo.bettrans WITH (NOLOCK)
-	WHERE matchid = @matchid AND bettype IN (14, 127, 172)
-		AND 1 = CASE WHEN @IsAutoCalculatePage = 0 AND bettype = 172 AND @action = 'CAL-FT' THEN 0 ELSE 1 END
+	WHERE matchid = @matchid 
+		AND bettype IN (14, 127)
+		
+	IF @IsAutoCalculatePage = 1
+	BEGIN
+		SELECT @fth = m.finalhomescore, @fta = m.finalawayscore
+		FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
+		WHERE m.matchid = @matchid
+				
+		-- Win from behind
+		DECLARE @curHome INT = 0
+				,@curAway INT = 0
+				,@index INT = 1
+				
+		IF (@fth <> @fta) AND (@fth + @fta) > 2
+		BEGIN
+			WHILE (@index <= LEN(REPLACE(@GoalRecord,';','')))
+			BEGIN
+				IF SUBSTRING(REPLACE(@GoalRecord,';',''),@index, 1) = 'H'
+					SET @curHome = @curHome + 1
+					
+				IF SUBSTRING(REPLACE(@GoalRecord,';',''),@index, 1) = 'A' 
+					SET @curAway = @curAway + 1				
+				
+				IF @fth > @fta AND @curHome < @curAway 
+				BEGIN
+					SET @WinFromBehind = 'H' 
+					BREAK
+				END
+				IF @fta > @fth AND @curAway < @curHome
+				BEGIN
+					SET @WinFromBehind = 'A'
+					BREAK
+				END
+				
+				SET @index = @index + 1
+			END
+		END		
+	END
 
 	IF @betcount_14 = 0 OR @betcount_127 = 0
 	BEGIN
@@ -191,13 +258,6 @@ BEGIN
 								ELSE @betcount_127 END
 		FROM dbo.bettransm WITH (NOLOCK)
 		WHERE matchid = @matchid
-	END
-
-	IF @IsAutoCalculatePage = 1
-	BEGIN
-		SELECT @fth = m.finalhomescore, @fta = m.finalawayscore
-		FROM DBPRO.bodb02.dbo.match m WITH(NOLOCK)
-		WHERE m.matchid = @matchid
 	END
 
 	SET @goaldiff = 0
@@ -245,8 +305,9 @@ BEGIN
 			, @fth = @fth
             , @fta = @fta
 			, @GoalRecord = @goalrecord
+			, @WinFromBehind = @WinFromBehind
 			, @betcount_14 = @betcount_14
-			, @betcount_172 = @betcount_172
+			, @strBettypes = @strFTBettypes
 
 		IF @IncludeLG = 0
 		BEGIN
@@ -273,15 +334,19 @@ BEGIN
 	BEGIN
 		--===
 		INSERT INTO #BalanceAfter
-		SELECT custid, SUM(winlost - actual_stake + playercomm)
-		FROM dbo.bettrans WITH (ROWLOCK)
-		WHERE matchid = @matchid AND bettype IN (@bettype, 901, 902, 903, 172)
-			AND 1 = CASE WHEN bettype IN (901, 902, 903) 
-									AND refno IN (SELECT transid FROM #tmpTrans)	
-							THEN 1
-						WHEN bettype NOT IN (901,902,903) THEN 1
-						ELSE 0 END
-			AND 1 = CASE WHEN @IsAutoCalculatePage = 0 AND bettype = 172 AND @action = 'CAL-FT' THEN 0 ELSE 1 END
+		SELECT	custid, SUM(winlost - actual_stake + playercomm)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	matchid = @matchid 
+				AND 1 = CASE 
+							WHEN b.bettype IN (901, 902, 903) AND refno IN (SELECT transid FROM #tmpTrans) THEN 1
+							WHEN b.bettype NOT IN (901,902,903) THEN 1
+							ELSE 0 
+						END
+				AND 1 = CASE 
+						WHEN b.bettype IN (@bettype, 901, 902, 903) THEN 1
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 AND @IsAutoCalculatePage = 1 AND @Action = 'CAL-FT' THEN 1
+						ELSE 0
+					END
 		GROUP BY custid
 		--===
 	END

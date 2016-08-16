@@ -18,6 +18,7 @@ AS
 		- 20141007@Jamie: Get Tennis in new table [Redmine: #23034]
 		- 20150420@Jamie: Betradar phase II [Readmine:#27212]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 
 	Param's explanation:  
 		
@@ -72,7 +73,7 @@ BEGIN
 	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #tempmatch)
-			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217')
+			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217','426')
 					OR ResourceID LIKE '160__'
 					OR ResourceID LIKE '164__'
 					OR ResourceID LIKE '169__'
