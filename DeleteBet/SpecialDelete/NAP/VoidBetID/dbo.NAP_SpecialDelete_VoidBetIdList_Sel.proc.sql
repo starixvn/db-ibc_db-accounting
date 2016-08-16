@@ -445,6 +445,7 @@ BEGIN
 				, sub.username
 				, sub.recommend
 				, sub.matchid
+				, sub.bettype
 				, ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo 
 				
 			FROM dbo.bettrans sub WITH(NOLOCK)
