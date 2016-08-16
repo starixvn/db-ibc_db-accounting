@@ -24,7 +24,8 @@ AS
 		- 20160301@Bobby: #53123 - Enhance SP void bet by Id list (allow transId up to 1000 rows)
 		- 20160314@Bobby: #53935 - Update changes for multiple bet trade transaction
 		- 20160413@Bobby: #55893 - Update change request for grouping tickets
-		- 20160714@Kathy: change the order of result: groupname, groupid, transid		
+		- 20160714@Kathy: change the order of result: groupname, groupid, transid
+		- 20160816@Bobby: #62527 - Update BT's info for showing bet list		
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -499,9 +500,9 @@ BEGIN
 		)
 		SELECT	
 			main.transid
-			,main.bettype
+			,sub.bettype
 			,sub.transid
-			,sub.betid
+			,main.bettype AS betid
 			,sub.refno
 			,main.hdp1
 			,main.hdp2

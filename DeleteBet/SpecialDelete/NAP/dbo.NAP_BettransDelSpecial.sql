@@ -1225,7 +1225,7 @@ BEGIN
 					,sub.creator						
 					,tmpmain.hdp1
 					,tmpmain.hdp2
-					,tmpmain.bettype
+					,sub.bettype
 					,tmpmain.betteam
 					,tmpmain.betcheck
 					,tmpmain.odds
@@ -1236,7 +1236,7 @@ BEGIN
 					,tmpmain.liveawayscore
 					,tmpmain.Stake
 					,tmpmain.CurrencyName
-					,sub.betid
+					,tmpmain.bettype AS betid
 					,tmpmain.betdaqid
 			FROM	dbo.bettrans sub WITH(NOLOCK)
 				INNER JOIN #BetDelete tmpmain 
@@ -1664,9 +1664,6 @@ BEGIN
 			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
 				ON al.srecommend = s.custid
 		ORDER BY al.grouptransid, al.transid
-		
-		DROP TABLE #BeforeUpd
-		DROP TABLE #AfterUpd
 	
 	END
 	------ releasing SD process
