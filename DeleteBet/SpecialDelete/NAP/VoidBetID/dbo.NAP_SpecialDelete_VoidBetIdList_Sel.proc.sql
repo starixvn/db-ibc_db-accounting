@@ -127,7 +127,7 @@ BEGIN
 				WHEN (b.bettype < 19001
 						AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
 						AND b.bettype NOT BETWEEN 801 AND 806-- MG
-						AND b.bettype NOT IN (901, 902, 903) -- BT subticket
+						AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 						AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
 						AND b.statusID NOT IN (101, 102)
 					) THEN 1
@@ -355,7 +355,7 @@ BEGIN
 			AND b.bettype < 19001
 			AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
-			AND b.bettype NOT IN (901, 902, 903) -- BT subticket
+			AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
 			AND b.statusID NOT IN (101, 102)
 	END

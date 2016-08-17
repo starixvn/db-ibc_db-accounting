@@ -19,6 +19,7 @@ AS
   - 20150625@Dominic: Add ticket from translog/translog14 [Redmine:#38200]  
   - 20160317@bobby.nguyen: #54218 - Upload bacth message enhancement
   - 20160317@bobby.nguyen: #57700 - Add Macau Game product
+  - 20160817@bobby.nguyen: #62572 - Exclude BT's bettype 904
   
 Explanation's Param:  
 	- @ProductIds: [1-99]
@@ -74,7 +75,7 @@ BEGIN
 		INNER JOIN #productIdList p ON sb.ProductId = p.ProductId
 		
 	WHERE sb.SubProduct NOT IN ('MG-SuperLive') 
-		AND sb.Bettype 	NOT IN (901, 902, 903, 500)
+		AND sb.Bettype 	NOT IN (901, 902, 903, 904, 500)
 	
 	-- Check metric gaming
 	IF(EXISTS (
