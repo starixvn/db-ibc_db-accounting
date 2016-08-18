@@ -1348,12 +1348,12 @@ BEGIN
 			BEGIN TRY
 				DECLARE @TempData TABLE(RowId INT IDENTITY(1,1), MatchId INT, CustIds VARCHAR(MAX))
 				INSERT INTO @TempData(MatchId, CustIds)
-				SELECT MatchId, STUFF((SELECT ',' + CAST(CustId AS VARCHAR(50))
-										FROM #BetDelete tt where tt.MatchId = t.MatchId AND tt.betdaqid = 0
-										FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')
+				SELECT @MatchId AS matchid
+					, STUFF((SELECT ',' + CAST(CustId AS VARCHAR(50))
+										FROM #BetDelete tt WHERE tt.betdaqid = 0
+										FOR XML PATH (''), ROOT('str'), TYPE ).VALUE('/str[1]','VARCHAR(MAX)'), 1, 1, '')
 				FROM #BetDelete t
 				WHERE t.betdaqid = 0
-				GROUP BY MatchId
 				
 				DECLARE @RowId INT, @MatchIdTmp INT, @CustIds VARCHAR(MAX)
 				SELECT @RowId = 1
