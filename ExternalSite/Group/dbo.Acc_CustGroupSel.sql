@@ -18,54 +18,17 @@ AS
 
 */
 BEGIN
-	SET NOCOUNT ON
-	IF @Userid IS NULL
-	BEGIN	
+	SET NOCOUNT ON 
+
 	DECLARE @today DATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
 	
 	IF @GroupName = ''
-		SET @GroupName = null
+		SET @GroupName = NULL
 
 	DECLARE @GroupExtraPT TABLE (GroupName VARCHAR(50))
 	DECLARE @GroupExtraPTSetting TABLE (SuperId INT, GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, IsPrimary BIT)
-	END
-	ELSE
-	BEGIN
-	DECLARE @SearchQuery varchar(1024)
-	DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
-	DECLARE @tmpUserid VARCHAR(50)
-	CREATE TABLE #TempCustGroup(CustID INT,Username VARCHAR(50),Firstname NVARCHAR(50),Lastname NVARCHAR(50),RoleId TINYINT,Groupname VARCHAR(50),iplogin NVARCHAR(20),recommendId INT,site VARCHAR(10))
 
-	SELECT @tmpUserid=CAST(@Userid AS VARCHAR(50))
-	SELECT @SearchQuery = 'SELECT * 
-	FROM OPENQUERY(DBPOLICY, 
-	''SELECT siteid , site,SpecialGroup FROM bodb02.dbo.f_GetDeniedSiteByUser( ''''' + @tmpUserid + ''''')'')'
-
-	INSERT INTO  @tmp (siteid , site,SpecialGroup)
-	EXECUTE(@SearchQuery)	
-	
-	if @GroupName = ''
-	set @GroupName = null
-	
-	INSERT INTO #TempCustGroup(CustID ,Username ,Firstname,Lastname ,RoleId ,Groupname ,iplogin,recommendId,site)
-	select 
-		a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin,c.recommend,site
-	from 
-		Acc_CustGroup a (nolock) 
-	inner join bodb02.dbo.customer c (nolock) on a.CustID = c.CustID
-	where GroupName = COALESCE(@GroupName,GroupName)
-	order by GroupName, username	
-	
-	UPDATE a SET a.site=b.site
-	FROM #TempCustGroup a
-	INNER JOIN bodb02.dbo.Customer b (NOLOCK) ON a.recommendId=b.custid
-	WHERE a.RoleId=1
-	DELETE FROM #TempCustGroup WHERE site IN(SELECT site FROM @tmp)
-	
-	select 
-		CustID, username,firstname, lastname, roleid, GroupName , iplogin
-	FROM #TempCustGroup
 	INSERT INTO @GroupExtraPT (GroupName)
 	SELECT GroupName FROM OPENQUERY(DBACC, 'SELECT GroupName FROM bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)')
 
@@ -87,42 +50,103 @@ BEGIN
 									FROM bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
 									WHERE FromDate > CONVERT(DATE, GETDATE())'
 								)
-
-	;WITH CTE AS
-	(
-		SELECT
-			c.CustID,
-			c.roleid,
-			c.GroupName,
-			CASE WHEN e.GroupName IS NULL THEN c.GroupName ELSE NULL END AS Normal,
-			CASE WHEN e.GroupName IS NULL THEN NULL ELSE
-				CASE WHEN s.GroupName IS NULL THEN e.GroupName + ',,0'
-					 ELSE s.GroupName + ',' + CONVERT(VARCHAR(10), s.EffectiveDate, 101) + ',' + CONVERT(VARCHAR(1), s.IsPrimary) END
-			END AS Extra
-		FROM
-			dbo.Acc_CustGroup c WITH(NOLOCK)
-			LEFT JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
-			LEFT JOIN @GroupExtraPTSetting s ON c.CustID = s.SuperId AND c.GroupName = s.GroupName
-	)
-	SELECT a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin, NormalGroup, ExtraPTGroup
-	FROM
-	(
-		SELECT 
-			a.CustID, a.roleid, a.GroupName,
-			(SELECT STUFF((SELECT ';' + Normal FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS NormalGroup,
-			(SELECT STUFF((SELECT ';' + Extra  FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS ExtraPTGroup
-		FROM CTE a
-		WHERE a.GroupName = COALESCE(@GroupName,a.GroupName)
-		GROUP BY a.CustID, a.roleid, a.GroupName
-	) a
-	INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CustID = c.CustID
-	ORDER BY GroupName, username
-END
 	
+	IF @Userid IS NULL
+	BEGIN	
+		;WITH CTE AS
+		(
+			SELECT
+				c.CustID,
+				c.roleid,
+				c.GroupName,
+				CASE WHEN e.GroupName IS NULL THEN c.GroupName ELSE NULL END AS Normal,
+				CASE WHEN e.GroupName IS NULL THEN NULL ELSE
+					CASE WHEN s.GroupName IS NULL THEN e.GroupName + ',,0'
+						 ELSE s.GroupName + ',' + CONVERT(VARCHAR(10), s.EffectiveDate, 101) + ',' + CONVERT(VARCHAR(1), s.IsPrimary) END
+				END AS Extra
+			FROM
+				dbo.Acc_CustGroup c WITH(NOLOCK)
+				LEFT JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
+				LEFT JOIN @GroupExtraPTSetting s ON c.CustID = s.SuperId AND c.GroupName = s.GroupName
+		)
+		SELECT a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin, NormalGroup, ExtraPTGroup
+		FROM
+		(
+			SELECT 
+				a.CustID, a.roleid, a.GroupName,
+				(SELECT STUFF((SELECT ';' + Normal FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS NormalGroup,
+				(SELECT STUFF((SELECT ';' + Extra  FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS ExtraPTGroup
+			FROM CTE a
+			WHERE a.GroupName = COALESCE(@GroupName,a.GroupName)
+			GROUP BY a.CustID, a.roleid, a.GroupName
+		) a
+		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CustID = c.CustID
+		ORDER BY GroupName, username
 	END
-GO
+	ELSE
+	BEGIN
+		DECLARE @SearchQuery varchar(1024)
+		DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
+		DECLARE @tmpUserid VARCHAR(50)
+		CREATE TABLE #TempCustGroup(CustID INT,Username VARCHAR(50),Firstname NVARCHAR(50),Lastname NVARCHAR(50),RoleId TINYINT,Groupname VARCHAR(50),iplogin NVARCHAR(20),recommendId INT,site VARCHAR(10))
+	
+		SELECT @tmpUserid=CAST(@Userid AS VARCHAR(50))
+		SELECT @SearchQuery = 'SELECT * 
+		FROM OPENQUERY(DBPOLICY, 
+		''SELECT siteid , site,SpecialGroup FROM bodb02.dbo.f_GetDeniedSiteByUser( ''''' + @tmpUserid + ''''')'')'
 
+		INSERT INTO  @tmp (siteid , site,SpecialGroup)
+		EXECUTE(@SearchQuery)	
+	
+		INSERT INTO #TempCustGroup(CustID ,Username ,Firstname,Lastname ,RoleId ,Groupname ,iplogin,recommendId,site)
+		select 
+			a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin,c.recommend,site
+		from 
+			Acc_CustGroup a (nolock) 
+			inner join bodb02.dbo.customer c (nolock) on a.CustID = c.CustID
+		order by GroupName, username	
+	
+		UPDATE a SET a.site=b.site
+		FROM #TempCustGroup a
+		INNER JOIN bodb02.dbo.Customer b (NOLOCK) ON a.recommendId=b.custid
+		WHERE a.RoleId=1
+	
+		DELETE FROM #TempCustGroup WHERE site IN (SELECT site FROM @tmp)
+
+		;WITH CTE AS
+		(
+			SELECT
+				c.CustID,
+				c.roleid,
+				c.GroupName,
+				CASE WHEN e.GroupName IS NULL THEN c.GroupName ELSE NULL END AS Normal,
+				CASE WHEN e.GroupName IS NULL THEN NULL ELSE
+					CASE WHEN s.GroupName IS NULL THEN e.GroupName + ',,0'
+						 ELSE s.GroupName + ',' + CONVERT(VARCHAR(10), s.EffectiveDate, 101) + ',' + CONVERT(VARCHAR(1), s.IsPrimary) END
+				END AS Extra
+			FROM
+				#TempCustGroup c
+				LEFT JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
+				LEFT JOIN @GroupExtraPTSetting s ON c.CustID = s.SuperId AND c.GroupName = s.GroupName
+		)
+		SELECT a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin, NormalGroup, ExtraPTGroup
+		FROM
+		(
+			SELECT 
+				a.CustID, a.roleid, a.GroupName,
+				(SELECT STUFF((SELECT ';' + Normal FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS NormalGroup,
+				(SELECT STUFF((SELECT ';' + Extra  FROM CTE WHERE custid = a.CustID FOR XML PATH('')), 1, 1, '')) AS ExtraPTGroup
+			FROM CTE a
+			WHERE a.GroupName = COALESCE(@GroupName,a.GroupName)
+			GROUP BY a.CustID, a.roleid, a.GroupName
+		) a
+		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CustID = c.CustID
+		ORDER BY GroupName, username
+
+		DROP TABLE #TempCustGroup
+	END
+END
+GO
 GRANT EXECUTE ON [dbo].[Acc_CustGroupSel] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_CustGroupSel] TO [vnteam]
-GO
