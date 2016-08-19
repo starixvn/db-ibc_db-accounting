@@ -1351,7 +1351,7 @@ BEGIN
 				SELECT @MatchId AS matchid
 					, STUFF((SELECT ',' + CAST(CustId AS VARCHAR(50))
 										FROM #BetDelete tt WHERE tt.betdaqid = 0
-										FOR XML PATH (''), ROOT('str'), TYPE ).VALUE('/str[1]','VARCHAR(MAX)'), 1, 1, '')
+										FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')
 				FROM #BetDelete t
 				WHERE t.betdaqid = 0
 				
