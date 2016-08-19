@@ -44,7 +44,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_Major_Minor_14] @EndDate='2020-01-01',@Start
                 SELECT BetType,
                        0
                 FROM bodb02.dbo.f_SportBetTypeMatrix_Sel(1, 1, 0, 2, '', '', @isTest)
-                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
+                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm', 'BT-Winloss')
                 AND EventType IN(1, 2);
          UPDATE #SportBetType
            SET

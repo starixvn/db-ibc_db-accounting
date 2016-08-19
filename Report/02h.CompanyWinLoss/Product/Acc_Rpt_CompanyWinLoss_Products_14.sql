@@ -288,7 +288,7 @@ BEGIN
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') 
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm','BT-Winloss') 
 	GROUP BY  
 			CASE WHEN m.sporttype = 44 THEN 44 
 				 WHEN m.Sporttype = 1 THEN 1				
@@ -331,7 +331,7 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
-			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END AS ProductID,
+			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 WHEN 'BT-Winloss' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END AS ProductID,
 			s.CasinoType
 	FROM bettrans14 b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype

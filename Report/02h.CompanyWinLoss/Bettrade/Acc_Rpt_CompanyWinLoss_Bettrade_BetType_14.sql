@@ -34,7 +34,11 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] @StartDate='2016-01-01', @EndD
          INSERT INTO #SportBetType
                 SELECT BetType,
                        'Bettrade'
-                FROM dbo.f_SportBetTypeMatrix_Sel(1, 0, 0, 2, 'BT-Comm', '', @isTest);
+                FROM dbo.f_SportBetTypeMatrix_Sel(1, 0, 0, 2, 'BT-Comm', '', @isTest)
+                UNION
+                SELECT BetType,
+                       'Bettrade'
+                FROM dbo.f_SportBetTypeMatrix_Sel(1, 0, 0, 2, 'BT-Winloss', '', @isTest);
      END;
      BEGIN -- #DepositSuper
 

@@ -37,7 +37,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
          INSERT INTO #SportBetType
                 SELECT s.BetType
                 FROM dbo.f_SportBetTypeMatrix_Sel(1, 0, 0, 2, '', '', @isTest) s
-                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
+                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm', 'BT-Winloss')
                 AND EventType IN(1, 2);
      END;
      BEGIN -- #DepositSuper

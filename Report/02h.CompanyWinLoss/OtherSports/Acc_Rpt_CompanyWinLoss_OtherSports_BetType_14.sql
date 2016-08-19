@@ -43,7 +43,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_BetType_14] @EndDate='2020-01-01',@Star
                        b.typenamee
                 FROM dbo.f_SportBetTypeMatrix_Sel(1, @SportType, 0, 2, '', '', @isTest) s
                      INNER JOIN BetType b WITH (NOLOCK) ON s.BetType = b.typeid
-                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
+                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm', 'BT-Winloss')
                 AND EventType IN(1, 2);
      END;
      BEGIN -- #DepositSuper
