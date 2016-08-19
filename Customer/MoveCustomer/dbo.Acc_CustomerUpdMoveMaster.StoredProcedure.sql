@@ -67,7 +67,7 @@ Revisions:
 	- 20160205@Billy:	Apply for AllBet product - [Redmine: #51590]
 	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
 	- 20160426@Winnie: fix  Bug #56653 [Move account: IsHidden of move master is changed to 0]
-	
+	- 20160426@Winnie: fix  Bug #62755 [NAP - IsDailyAutoReset of downline is changed to 0 after moving downline although both downline and upline has IsDailyAutoReset=1]
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -908,21 +908,34 @@ INNER JOIN CustSettingGame scs WITH(NOLOCK) ON scs.custid = @srecommend
 	END;
 
 	-- Update Daily Auto Reset Win Loss Limit for moved master
-	IF	EXISTS (SELECT 1 FROM dbo.CustWinLossLimit_Agent AS cwlla WITH (NOLOCK) WHERE cwlla.CustId = @srecommend AND cwlla.IsAutoReset = 0)
+	CREATE TABLE #WinLossLimit_tmp (SportType SMALLINT, BetType INT)
+	
+	INSERT INTO #WinLossLimit_tmp (SportType,BetType)
+	SELECT SportType,BetType
+	FROM dbo.CustWinLossLimit_Agent AS s WITH (NOLOCK) 
+	WHERE s.Custid=@srecommend AND IsAutoReset=0
+	
+	IF EXISTS (SELECT 1 FROM #WinLossLimit_tmp)
 	BEGIN
 		UPDATE	cwlla
-		SET	cwlla.IsAutoReset = 0
+			SET	cwlla.IsAutoReset = 0
 		FROM		#CustInfo AS ci
-		INNER JOIN	dbo.CustWinLossLimit_Agent AS cwlla WITH (ROWLOCK, UPDLOCK)
-				ON	cwlla.CustId = ci.custid
-
-	    UPDATE	cwllm
-		SET	cwllm.IsAutoReset = 0
+			INNER JOIN	dbo.CustWinLossLimit_Agent AS cwlla WITH (ROWLOCK, UPDLOCK)
+			ON	cwlla.CustId = ci.custid 
+			INNER JOIN #WinLossLimit_tmp S
+			ON cwlla.sporttype=s.sporttype AND cwlla.bettype=s.bettype
+			WHERE cwlla.IsAutoReset = 1
+			
+		UPDATE	cwlla
+			SET	cwlla.IsAutoReset = 0
 		FROM		#CustInfo AS ci
-		INNER JOIN	dbo.CustWinLossLimit_Member AS cwllm WITH (ROWLOCK, UPDLOCK)
-				ON	cwllm.CustId = ci.custid
-	END
-
+			INNER JOIN	dbo.CustWinLossLimit_Member AS cwlla WITH (ROWLOCK, UPDLOCK)
+			ON	cwlla.CustId = ci.custid 
+			INNER JOIN #WinLossLimit_tmp S
+			ON cwlla.sporttype=s.sporttype AND cwlla.bettype=s.bettype
+			WHERE cwlla.IsAutoReset = 1
+		END	
+	DROP TABLE #WinLossLimit_tmp
 
     DECLARE @LogSPData VARCHAR(8000);
 

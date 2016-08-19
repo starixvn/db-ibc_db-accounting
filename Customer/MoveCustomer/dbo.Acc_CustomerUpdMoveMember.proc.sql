@@ -65,6 +65,7 @@ Revisions:
 	- 20160218@Dominic: Not allow to move a IMBC customer to MBC line and vice versa [Redmine: #50221]
 	- 20160330@Elodie: Update code to correct commission for DCS product of member
 	- 20160426@Winnie: fix  Bug #56653 [Move account: IsHidden of move master is changed to 0]  & #56802[[NAP] Move member: HideGoldDeluxe of moved member is changed to 0]
+	- 20160819@Winnie: fix  Bug #62755 [NAP - IsDailyAutoReset of downline is changed to 0 after moving downline although both downline and upline has IsDailyAutoReset=1]
 	
 Param's Explanation:
 - @ErrCode:
@@ -2627,15 +2628,17 @@ BEGIN
 			AND	usl.BetType = cslm.BetType
 	WHERE	cslm.CustID = @custid
 
-	-- Update Daily Auto Reset Win Loss Limit for moved member
-	IF	EXISTS (SELECT 1 FROM dbo.CustWinLossLimit_Agent AS cwlla WITH (NOLOCK) WHERE cwlla.CustId = @recommend AND cwlla.IsAutoReset = 0)
-	BEGIN
-	    UPDATE	cwllm
-		SET	cwllm.IsAutoReset = 0
-		FROM	dbo.CustWinLossLimit_Member AS cwllm WITH (ROWLOCK, UPDLOCK)
-		WHERE	cwllm.CustId = @custid
-	END
+	-- Update Daily Auto Reset Win Loss Limit for moved member	
 	
+		UPDATE	cwlla
+		SET	cwlla.IsAutoReset = 0
+		FROM		#CustInfo AS ci
+		INNER JOIN	dbo.CustWinLossLimit_Member AS cwlla WITH (ROWLOCK, UPDLOCK)
+		ON	cwlla.CustId = ci.custid 
+		INNER JOIN CustWinLossLimit_Agent s
+		ON s.Custid=@recommend AND cwlla.sporttype=s.sporttype AND cwlla.bettype=s.bettype
+		WHERE s.IsAutoReset=0	AND 	cwlla.IsAutoReset = 1
+
 
     DECLARE @LogSPData VARCHAR(8000)
     SELECT  @LogSPData = '<Acc_CustomerUpdMoveMember  MemberName="' + @membername + '" OldAgentId="'
