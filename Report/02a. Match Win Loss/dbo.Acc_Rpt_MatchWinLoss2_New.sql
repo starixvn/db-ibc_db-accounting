@@ -36,6 +36,7 @@ AS
 			- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product - using sporttype bettype matrix function [RedmineID: #55584]
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
 			- 20160509@Robert: Rename product "Voidbridge" to "Macau Games" [RedmineID: #57182]
+			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
@@ -293,7 +294,7 @@ BEGIN
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE s.ProductID = 1
 		AND s.EventType = 1	
-		AND s.SubProduct NOT IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm')
+		AND s.SubProduct NOT IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss')
 	--((bettype < 31 AND bettype <> 10) OR bettype between 121 and 999 OR bettype between 1301 and 1334) 
 	GROUP BY	l.leaguenametc,
 				s.bettype,
@@ -593,7 +594,7 @@ BEGIN
 	INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE s.ProductID = 1
 		AND s.EventType = 1	
-		AND s.SubProduct = 'BT-Comm'
+		AND s.SubProduct IN ('BT-Comm', 'BT-Winloss')
 
 
 	-- Colossus Bets
@@ -723,7 +724,7 @@ ORDER BY Num ASC
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE  	s.ProductId = 1
 		AND s.EventType = 1
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss')
 				/*((bettype < 31 and bettype <> 10) 
 				OR bettype between 121 and 999 
 				OR (bettype BETWEEN 1201 and 1299 and b.bettype not in (1231, 1232, 1233, 1237, 1238))
@@ -765,7 +766,7 @@ ORDER BY Num ASC
 		---Bettrade
 	UNION ALL 
 	SELECT	12 Num,
-			b.bettype,
+			903,
 			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
 			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
@@ -784,7 +785,7 @@ ORDER BY Num ASC
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 	WHERE  	s.ProductId = 1
 		AND s.EventType = 1
-		AND s.SubProduct = 'BT-Comm'				
+		AND s.SubProduct IN ('BT-Comm', 'BT-Winloss') 
 	GROUP BY 
 			b.bettype, 
 			s.orderkey,

@@ -26,6 +26,7 @@ AS
 			- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #49134]
 			- 20160225@Jim: offer  Allbet Live Casino [Redmine:#50921)]
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
+			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
         Parameter's Explanation:
     */
 BEGIN
@@ -158,6 +159,7 @@ BEGIN
         INSERT INTO #TempData
         SELECT CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1
 								 WHEN 'BT-Comm' THEN -2
+								 WHEN 'BT-Winloss' THEN -2
 								 ELSE	b.sporttype
 								 END sporttype
 				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899) or b.bettype IN (901,902,903)) then b.bettype else 19999 end 
@@ -168,6 +170,7 @@ BEGIN
 				,'' status 
 				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 
 								   WHEN  'BT-Comm' THEN 15	
+								   WHEN  'BT-Winloss' THEN 15	
 									ELSE 1 END AS OrderKey
 				,s.SortKey					
 				,ISNULL(SUM(realWinlost),0) as realWinlost
@@ -185,6 +188,7 @@ BEGIN
 		   AND ((s.ProductID = 1 AND s.SubProduct NOT IN ('BT-Sold','BT-Bought')) OR s.ProductID = 3) -- SB or NG
         GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 
 								   WHEN 'BT-Comm' THEN -2
+								   WHEN 'BT-Winloss' THEN -2
 								   ELSE	b.sporttype END
 				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899)or b.bettype IN (901,902,903)) then b.bettype else 19999 end
 				,b.liveindicator 
@@ -193,6 +197,7 @@ BEGIN
 				,CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END
 				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 
 								    WHEN  'BT-Comm' THEN 15
+								    WHEN  'BT-Winloss' THEN 15
 									ELSE 1 END
 				,s.SortKey						
     UNION ALL

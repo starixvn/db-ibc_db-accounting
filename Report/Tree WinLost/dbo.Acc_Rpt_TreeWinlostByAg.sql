@@ -30,6 +30,7 @@ Revisions:
 	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 	- 20160615@Sophia: Change READPAST to ROWLOCK because of the Deadlock [Redmind: #59254]
+	- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 Parameters explain:
 	- @Products: instead of all @showXXX parameters, have xml structure
@@ -147,7 +148,7 @@ BEGIN
 	FROM @SportBettype tblS
 		INNER JOIN #Product tblP ON tblS.ProductID = tblP.ProductID
 	WHERE tblP.ProductID = 1
-		AND tblS.SubProduct NOT IN ('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
+		AND tblS.SubProduct NOT IN ('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm', 'BT-Winloss')
 END
 
 INSERT INTO #tmpBettype (

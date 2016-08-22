@@ -15,6 +15,7 @@ as
 		- 20150420@Sophia: Apply Sport Bettype Matrix 
 		- 20150724@Sophia: Exclude data of Bettrade [#38815]
 		- 20160427@Percy: Support ComboParlay [Redmine: #56572]
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 	Param's explanation:		
 	
@@ -31,7 +32,7 @@ Begin
 	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 	
 	DELETE	@SportBettype  
-	WHERE	SubProduct IN ( 'BT-Sold','BT-Bought','BT-Comm') 
+	WHERE	SubProduct IN ( 'BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss') 
 
 
 	CREATE TABLE #tmp(transid BIGINT)

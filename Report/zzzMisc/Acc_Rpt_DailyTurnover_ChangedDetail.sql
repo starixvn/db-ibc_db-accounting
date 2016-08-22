@@ -18,6 +18,7 @@ Revisions:
 	- 20150728@Jim: apply Bettrade (Feature #38815)
 	- 20160325@Jim: Exclude Bettrade [hotfix #54691]
 	- 20160607@Jim:Add More Actions of Settlement to Daily Turnover Report (#57781)
+	- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 Param's Explanation:
 
 */
@@ -81,7 +82,7 @@ BEGIN
 	FROM	SportBettypeMatrix WITH (NOLOCK)
 	WHERE	ProductID = 1
 			AND EventType = 1 
-			AND bettype NOT IN (901,902,903)
+			AND bettype NOT IN (901,902,903, 904)
 	-- Consider to include bettrans_BK into query or not.
 	IF @fromdate_<= (select max(distinct eventdate) from match14 (nolock))
 	BEGIN

@@ -71,6 +71,7 @@ AS
 		- 20150506@Bobby: Add transdesc column for metric gaming bettypes (801-899)
 		- 20150729@Edward: Support Microgaming and Exclude 3 transactions Sold/Bought/BT Comm
 		- 20151012@Kos: Support Microgaming RNG Game and AG Casino
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 	
 	Param's Explanation: 
 		+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -214,7 +215,7 @@ BEGIN
 	INSERT INTO @SportBettype
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductPrefix=@ProductPrefix
 
-	DELETE @SportBettype WHERE ProductID = 1 AND Bettype IN (901, 902, 903)
+	DELETE @SportBettype WHERE ProductID = 1 AND Bettype IN (901, 902, 903, 904)
 
 	IF @tdate > @MoveBetsDay
 	BEGIN

@@ -85,6 +85,7 @@ AS
 		- 20160504@Sophia: Refactor code, Enhance Performance , Remove Cockfighting [Redmind: #56764]
 		- 20160615@Sophia: Change READPAST to NOLOCK because of the Deadlock [Redmind: #59254]
 		- 20160718@Percy: Remove FromDate, ToDate fields when select from Acc_GroupExtraPTSetting [RedmineID: #60973]
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 	Explanation's Param:
 		- @FI_3rdShare: winloss of Third party 
@@ -166,7 +167,7 @@ BEGIN
 					)
 
 	CREATE TABLE #DepSuper (custid int )
-	CREATE TABLE #ExtraPT_Sel (ProductID INT,Sporttype INT ,SubProduct VARCHAR(100),SuperID INT,ExtraPT DECIMAL(9,8))
+	CREATE TABLE #ExtraPT_Sel (ProductID INT,Sporttype INT ,SubProduct VARCHAR(100),SuperID INT,ExtraPT DECIMAL(9,8),fromdate DATETIME, todate DATETIME  )
 	
 	CREATE TABLE #Result (
 						DisplayOrder	INT,
@@ -203,11 +204,11 @@ BEGIN
 	SELECT custid FROM f_DepSuper_1('All')
 	
 			
-	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT )
-	SELECT	ProductID, SportType, SubProduct, SuperId, SUM(ExtraPT) AS ExtraPT 
+	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT )
+	SELECT	ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT 
 	FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
 	WHERE	@winlostdate BETWEEN FromDate AND Todate
-	GROUP BY ProductID, SportType, SubProduct, SuperId
+	GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate
 	
 	---CREATE CLUSTERED INDEX IX_ExtraPT ON #ExtraPT_Sel (SuperID, ExtraPT)
 	
@@ -328,7 +329,7 @@ BEGIN
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') 
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss') 
 	GROUP BY srecommend,
 			CASE WHEN m.sporttype = 44 THEN 44 
 				 WHEN m.Sporttype > 1 THEN 3 
@@ -369,7 +370,7 @@ BEGIN
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') 
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss') 
 	GROUP BY  
 			CASE WHEN m.sporttype = 44 THEN 44 
 				 WHEN m.Sporttype > 1 THEN 3 
@@ -413,7 +414,17 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
-			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END AS ProductID
+			CASE s.SubProduct
+				WHEN 'MG-SuperLive' THEN -1
+				WHEN 'BT-Comm' THEN -2
+				WHEN 'BT-Winloss' THEN -2
+				ELSE CASE
+					    WHEN s.EventType = 0
+						    AND ProductID = 1
+					    THEN-3
+					    ELSE s.ProductID
+					END
+			END AS ProductID
 	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype
 	WHERE winlostdate = @winlostdate
@@ -421,11 +432,21 @@ BEGIN
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
 		AND (s.productID NOT IN (1,6,17,22,21) ---- OW RNG(6), Microgaming - RNG Casino (17), Voidbridge (22),  Allbet (21)	
-			OR (s.productID = 1 AND s.SubProduct IN ('MG-SuperLive','BT-Comm')) ---Metric Gaming - Superlive , Bettrade
+			OR (s.productID = 1 AND s.SubProduct IN ('MG-SuperLive','BT-Comm', 'BT-Winloss')) ---Metric Gaming - Superlive , Bettrade
 			OR (s.productID = 1 AND s.EventType = 0 ) ----Palay
 			)	
 	GROUP BY srecommend ,
-			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END
+	   CASE s.SubProduct
+		  WHEN 'MG-SuperLive' THEN -1
+		  WHEN 'BT-Comm' THEN -2
+		  WHEN 'BT-Winloss' THEN -2
+		  ELSE CASE
+				 WHEN s.EventType = 0
+					 AND ProductID = 1
+				 THEN-3
+				 ELSE s.ProductID
+			  END
+	   END
   
 	-- Get from Datail table  
 	-- Get bettransRNG data
@@ -692,7 +713,7 @@ BEGIN
 			AND b.ProductId = -2
 			AND e.ProductId = 1 
 			AND e.Sporttype = 0
-			AND e.SubProduct = 'BT-Comm'
+			AND e.SubProduct IN ('BT-Comm', 'BT-Winloss')
 	WHERE	b.ProductId = -2
 	GROUP BY site, b.ProductId
 
