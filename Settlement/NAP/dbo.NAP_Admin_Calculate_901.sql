@@ -99,7 +99,7 @@ BEGIN
 	IF @@ROWCOUNT = 0 RETURN
 	
 	--BEGIN recover refund tickets 
-	SELECT transid, refno, bettype, statusid, status, actual_stake, winlost, awinlost, discount, oddsspread
+	SELECT transid, refno, bettype, statusid, status, actual_stake, winlost, awinlost, discount, odds
 	INTO #bettrans
 	FROM bettrans WITH(NOLOCK)
 	WHERE matchid = @matchid
@@ -139,7 +139,7 @@ BEGIN
 	
 	
 	UPDATE	b903
-	SET		@winlost = b901.winlost * b903.discount * b902.oddsspread,
+	SET		@winlost = b901.winlost * b903.odds,
 			@statusID = CASE 
 							WHEN @winlost = b903.actual_stake THEN 111
 							WHEN @winlost > b903.actual_stake THEN 112
@@ -156,11 +156,8 @@ BEGIN
 	FROM	#bettrans b903 
 		INNER JOIN #bettrans b901 
 			ON	b903.refno= b901.refno 											
-		INNER JOIN #bettrans b902
-			ON	b902.refno = b903.refno
 	WHERE	b903.bettype = 903
 			AND b901.bettype = 901		
-			AND b902.bettype = 902
 	
 	UPDATE b
 	SET b.status = b1.status,

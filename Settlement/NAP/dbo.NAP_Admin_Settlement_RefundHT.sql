@@ -136,8 +136,9 @@ BEGIN
 					END
 
 			AND 1 = CASE 
-						WHEN bettype BETWEEN 901 AND 910 
-								AND refno IN (SELECT transid FROM #tmpTrans)	
+						WHEN (bettype BETWEEN 901 AND 910 
+									AND refno IN (SELECT transid FROM #tmpTrans))
+								OR b.bettype = 904 -- The 904 refno is equal to single ticket
 							THEN 1 
 						WHEN bettype NOT BETWEEN 901 AND 910 THEN 1
 						ELSE 0 
@@ -268,8 +269,9 @@ BEGIN
 						ELSE 0 
 					END
 				AND 1 = CASE 
-							WHEN bettype BETWEEN 901 AND 910 
-									AND refno IN (SELECT transid FROM #tmpTrans)	
+							WHEN (bettype BETWEEN 901 AND 910 
+										AND refno IN (SELECT transid FROM #tmpTrans))
+									OR b.bettype = 904 -- The 904 refno is equal to single ticket
 								THEN 1 
 							WHEN bettype NOT BETWEEN 901 AND 910 THEN 1
 							ELSE 0 
@@ -353,8 +355,9 @@ BEGIN
 						ELSE 0 
 					END
 			AND 1 = CASE 
-						WHEN bettype BETWEEN 901 AND 910 
-								AND refno IN (SELECT transid FROM #tmpTrans)	
+						WHEN (bettype BETWEEN 901 AND 910 
+									AND refno IN (SELECT transid FROM #tmpTrans))
+								OR b.bettype = 904 -- The 904 refno is equal to single ticket	
 							THEN 1 
 						WHEN bettype NOT BETWEEN 901 AND 910 THEN 1
 						ELSE 0 
