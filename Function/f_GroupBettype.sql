@@ -1,8 +1,7 @@
-use bodb02
-go 
+USE [bodb02]
+GO
 
-ALTER FUNCTION [dbo].[f_GroupBettype] 
-()
+ALTER FUNCTION [dbo].[f_GroupBettype] ()
 RETURNS TABLE
 RETURN
 
@@ -15,9 +14,8 @@ RETURN
 		- 20151204@Bobby: Grouped 6 bettypes for PH AIO
 		- 20160119@Sophia: PH AIO phase 1.2 [Redmine: #51029]
 		- 20160426@Sophia: Change to in line Func-High Availability Step 4 [Redmine: #55746]
+		- 20160712@Percy: PH AIO phase 2 [Redmine: #53152]
 */
-
-  
 	-------- Grouped bettype for Sporting Solution
 	SELECT 153 AS Bettype, 153 AS GroupTypeId
 	UNION ALL 
@@ -86,55 +84,37 @@ RETURN
 	SELECT 11, 11	
 	UNION ALL  
 	SELECT 199, 11	
-	-------- Grouped 6 bettypes for PH AIO
-	--1.Exact Total Goals vs 3rd
-		
-	UNION ALL  
-	SELECT 159, 159	
-	UNION ALL  
-	SELECT 406, 159
-
-	--2.Exact Home Team Goals & 3rd
-			
-	UNION ALL  
-	SELECT 161, 161	
-	UNION ALL  
-	SELECT 407, 161
-		
-	--3.Winning Margin & 3rd
-				
-	UNION ALL  
-	SELECT 171, 171	
-	UNION ALL  
-	SELECT 408, 171
-		
-	--4.Exact Away Team Goals & 3rd
-	UNION ALL  
-	SELECT 162, 162	
-	UNION ALL  
-	SELECT 409, 162
-		
-	--5.1H Double Chance & 3rd
-	UNION ALL  
-	SELECT 151, 151	
-	UNION ALL  
-	SELECT 410, 151
-
-	
-	--6.1H Draw No Bet & 3rd
-	UNION ALL  
-	SELECT 191, 191	
-	UNION ALL  
-	SELECT 411, 191 	 
-
-	--7. CorrectScore 
-	UNION ALL  
-	SELECT 413, 4	
-	UNION ALL  
-	SELECT 414, 30 
-
-
-
+	-------- Grouped bettypes for PH AIO
+	UNION ALL
+	SELECT * FROM ( VALUES
+		 (159, 159), (406, 159) -- Exact Total Goals
+		,(161, 161), (407, 161) -- Exact Home Team Goals
+		,(171, 171), (408, 171) -- Winning Margin
+		,(162, 162), (409, 162) -- Exact Away Team Goals
+		,(151, 151), (410, 151) -- 1H Double Chance
+		,(191, 191), (411, 191) -- 1H Draw No Bet
+		,(  4,   4), (413,   4) -- Correct Score
+		,( 30,  30), (414,  30) -- 1H Correct Score
+		,(172, 172), (415, 172) -- Result And First Team To Score
+		,(152, 152), (416, 152) -- Half Time/Full Time Correct Score
+		,(188, 188), (427, 188) -- 1H Both Team to Score
+		,(184, 184), (428, 184) -- 2H Odd/Even
+		,(177, 177), (430, 177) -- 2H 1X2
+		,(186, 186), (431, 186) -- 2H Double Chance
+		,(185, 185), (432, 185) -- 2H Draw No Bet
+		,(146, 146), (433, 146) -- 2H Both Teams To Score
+		,(189, 189), (434, 189) -- Both Halves Over 1.5 Yes/No
+		,(190, 190), (435, 190) -- Both Halves Under 1.5 Yes/No
+		,(147, 147), (436, 147) -- Home To Score In Both Halves
+		,(148, 148), (437, 148) -- Away To Score In Both Halves
+		,(133, 133), (438, 133) -- Home To Win Both Halves
+		,(134, 134), (439, 134) -- Away To Win Both Halves
+		,(149, 149), (440, 149) -- Home To Win Either Half
+		,(150, 150), (441, 150) -- Away To Win Either Half
+		,(140, 140), (442, 140) -- Highest Scoring Half
+		,(141, 141), (443, 141) -- Highest Scoring Half Home Team
+		,(142, 142), (444, 142) -- Highest Scoring Half Away Team
+	) PH (Bettype, GroupTypeId)
 GO 
 GRANT SELECT ON [dbo].[f_GroupBettype] TO [bodbDownlineNet]
 GO 
