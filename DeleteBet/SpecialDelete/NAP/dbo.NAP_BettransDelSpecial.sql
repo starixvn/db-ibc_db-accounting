@@ -169,8 +169,9 @@ BEGIN
 		betdaqid			BIGINT,
 		TransDesc			NVARCHAR(1000),
 		refno				BIGINT
-		)
+	)
 	DECLARE @tblInvalidTrans TABLE (transid BIGINT) -- store invalid BT transid
+	DECLARE @tblCustBT902 TABLE (custid INT) --store BT's custid 
 	
 	DECLARE @Remark			VARCHAR(500)
 			,@KeyID			INT
@@ -1245,6 +1246,19 @@ BEGIN
 						AND tmpmain.betdaqid = 0			
 						AND sub.matchid = @matchid
 			WHERE sub.transid IN (SELECT transid FROM #tblTransIdSolds)
+			
+			--insert custBT 
+			INSERT INTO @tblCustBT902( custid )
+			SELECT sub902.custid
+			FROM dbo.bettrans sub902 WITH (NOLOCK)
+				INNER JOIN #BetDelete tmpmain with(NOLOCK)
+				ON	sub902.refno = tmpmain.transid
+						
+			WHERE sub902.matchid 		= @matchid
+				AND sub902.bettype 		= 902
+				AND tmpmain.betdaqid 	= 0
+			GROUP BY sub902.custid
+			
 		END	
 		
 		-- Step 1: Backup into zzzbettrans
@@ -1290,11 +1304,21 @@ BEGIN
 			UNION ALL
 			SELECT	sub.custid, sub.winlost, sub.actual_stake, sub.playercomm
 			FROM	bettrans sub WITH (NOLOCK)
-					INNER JOIN #BetDelete tmpmain with(NOLOCK)
-						ON	sub.refno = tmpmain.transid
-							AND sub.bettype BETWEEN 901 AND 910
-							AND tmpmain.betdaqid = 0
-							AND sub.matchid = @matchid
+				INNER JOIN #BetDelete tmpmain with(NOLOCK)
+					ON	sub.refno = tmpmain.transid
+						AND sub.bettype BETWEEN 901 AND 910
+						AND tmpmain.betdaqid = 0
+						AND sub.matchid = @matchid
+			WHERE @isExistBT = 1
+							
+			UNION ALL
+			SELECT	sub904.custid, sub904.winlost, sub904.actual_stake, sub904.playercomm
+			FROM	bettrans sub904 WITH (NOLOCK)
+					INNER JOIN @tblCustBT902 temp
+					ON sub904.custid = temp.custid
+						
+			WHERE sub904.matchid 		= @matchid
+				AND sub904.bettype 		= 904
 		) tmp
 		GROUP BY custid
 		
@@ -1394,11 +1418,21 @@ BEGIN
 			UNION ALL
 			SELECT	sub.custid, sub.winlost, sub.actual_stake, sub.playercomm
 			FROM	bettrans sub WITH (NOLOCK)
-					INNER JOIN #BetDelete tmpmain with(NOLOCK)
-						ON	sub.refno = tmpmain.transid
-							AND sub.bettype BETWEEN 901 AND 910
-							AND tmpmain.betdaqid = 0
-							AND sub.matchid = @matchid
+				INNER JOIN #BetDelete tmpmain with(NOLOCK)
+					ON	sub.refno = tmpmain.transid
+						AND sub.bettype BETWEEN 901 AND 910
+						AND tmpmain.betdaqid = 0
+						AND sub.matchid = @matchid
+			WHERE @isExistBT = 1
+							
+			UNION ALL
+			SELECT	sub904.custid, sub904.winlost, sub904.actual_stake, sub904.playercomm
+			FROM	bettrans sub904 WITH (NOLOCK)
+					INNER JOIN @tblCustBT902 temp
+					ON sub904.custid = temp.custid
+						
+			WHERE sub904.matchid 		= @matchid
+				AND sub904.bettype 		= 904
 		) tmp
 		GROUP BY custid
 
