@@ -1,0 +1,193 @@
+USE [bodb_ACC]
+GO
+
+ALTER FUNCTION [dbo].[f_GetSettingProductExtraPTGroup]
+(
+	@GroupName VARCHAR(50) = NULL
+)
+
+/*
+	Creator: Percy
+	Date: 20160720
+	DBACC.bodb_ACC
+	Remark: get setting of extra PT group
+
+	Revisions:
+*/
+
+RETURNS @ExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), ProductID TINYINT, Sporttype SMALLINT, SubProduct VARCHAR(500), ExtraPT DECIMAL(9, 8))
+AS
+BEGIN
+
+	IF @GroupName = ''
+		SELECT @GroupName = NULL
+
+	DECLARE @AllExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), ProductID TINYINT, Sporttype SMALLINT, SubProduct VARCHAR(500), ExtraPT DECIMAL(9, 8))
+	INSERT INTO @AllExtraPTGroup (GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT)
+	VALUES
+		(1,'ACCMKK',1,0,'',0.03000000),
+		(1,'ACCMKK',1,0,'BT-Bought',0.00000000),
+		(1,'ACCMKK',1,0,'BT-Comm',0.00000000),
+		(1,'ACCMKK',1,0,'BT-Sold',0.00000000),
+		(1,'ACCMKK',1,0,'MG-SuperLive',0.03000000),
+		(1,'ACCMKK',1,44,'',0.03000000),
+		(2,'MKK99',1,0,'',0.03000000),
+		(2,'MKK99',1,0,'BT-Bought',0.00000000),
+		(2,'MKK99',1,0,'BT-Comm',0.00000000),
+		(2,'MKK99',1,0,'BT-Sold',0.00000000),
+		(2,'MKK99',1,0,'MG-SuperLive',0.03000000),
+		(2,'MKK99',1,44,'',0.03000000),
+		(3,'ACCTHAI',1,0,'',0.05000000),
+		(3,'ACCTHAI',1,0,'BT-Bought',0.00000000),
+		(3,'ACCTHAI',1,0,'BT-Comm',0.00000000),
+		(3,'ACCTHAI',1,0,'BT-Sold',0.00000000),
+		(3,'ACCTHAI',1,0,'MG-SuperLive',0.05000000),
+		(3,'ACCTHAI',1,44,'',0.05000000),
+		(4,'ACCTHAI2',1,0,'',0.03000000),
+		(4,'ACCTHAI2',1,0,'BT-Bought',0.00000000),
+		(4,'ACCTHAI2',1,0,'BT-Comm',0.00000000),
+		(4,'ACCTHAI2',1,0,'BT-Sold',0.00000000),
+		(4,'ACCTHAI2',1,0,'MG-SuperLive',0.03000000),
+		(4,'ACCTHAI2',1,44,'',0.03000000),
+		(5,'ACCTHAI56',1,0,'',0.03000000),
+		(5,'ACCTHAI56',1,0,'BT-Bought',0.00000000),
+		(5,'ACCTHAI56',1,0,'BT-Comm',0.00000000),
+		(5,'ACCTHAI56',1,0,'BT-Sold',0.00000000),
+		(5,'ACCTHAI56',1,0,'MG-SuperLive',0.03000000),
+		(5,'ACCTHAI56',1,44,'',0.03000000),
+		(6,'ACCTHAI99',1,0,'',0.03000000),
+		(6,'ACCTHAI99',1,0,'BT-Bought',0.00000000),
+		(6,'ACCTHAI99',1,0,'BT-Comm',0.00000000),
+		(6,'ACCTHAI99',1,0,'BT-Sold',0.00000000),
+		(6,'ACCTHAI99',1,0,'MG-SuperLive',0.03000000),
+		(6,'ACCTHAI99',1,44,'',0.03000000),
+		(7,'INDO2',1,0,'',0.03000000),
+		(7,'INDO2',1,0,'BT-Bought',0.00000000),
+		(7,'INDO2',1,0,'BT-Comm',0.00000000),
+		(7,'INDO2',1,0,'BT-Sold',0.00000000),
+		(7,'INDO2',1,0,'MG-SuperLive',0.03000000),
+		(7,'INDO2',1,44,'',0.03000000),
+		(8,'INDO56',1,0,'',0.03000000),
+		(8,'INDO56',1,0,'BT-Bought',0.00000000),
+		(8,'INDO56',1,0,'BT-Comm',0.00000000),
+		(8,'INDO56',1,0,'BT-Sold',0.00000000),
+		(8,'INDO56',1,0,'MG-SuperLive',0.03000000),
+		(8,'INDO56',1,44,'',0.03000000),
+		(9,'INDOBS',1,0,'',0.03000000),
+		(9,'INDOBS',1,0,'BT-Bought',0.00000000),
+		(9,'INDOBS',1,0,'BT-Comm',0.00000000),
+		(9,'INDOBS',1,0,'BT-Sold',0.00000000),
+		(9,'INDOBS',1,0,'MG-SuperLive',0.03000000),
+		(9,'INDOBS',1,44,'',0.03000000),
+		(10,'INDOWIN',1,0,'',0.03000000),
+		(10,'INDOWIN',1,0,'BT-Bought',0.00000000),
+		(10,'INDOWIN',1,0,'BT-Comm',0.00000000),
+		(10,'INDOWIN',1,0,'BT-Sold',0.00000000),
+		(10,'INDOWIN',1,0,'MG-SuperLive',0.03000000),
+		(10,'INDOWIN',1,44,'',0.03000000),
+		(11,'ACCDDD',1,0,'',0.03000000),
+		(11,'ACCDDD',1,0,'BT-Bought',0.00000000),
+		(11,'ACCDDD',1,0,'BT-Comm',0.00000000),
+		(11,'ACCDDD',1,0,'BT-Sold',0.00000000),
+		(11,'ACCDDD',1,0,'MG-SuperLive',0.03000000),
+		(11,'ACCDDD',1,44,'',0.03000000),
+		(12,'ACCIN',1,0,'',0.03000000),
+		(12,'ACCIN',1,0,'BT-Bought',0.00000000),
+		(12,'ACCIN',1,0,'BT-Comm',0.00000000),
+		(12,'ACCIN',1,0,'BT-Sold',0.00000000),
+		(12,'ACCIN',1,0,'MG-SuperLive',0.03000000),
+		(12,'ACCIN',1,44,'',0.03000000),
+		(13,'ACCIRR',1,0,'',0.01500000),
+		(13,'ACCIRR',1,0,'BT-Bought',0.00000000),
+		(13,'ACCIRR',1,0,'BT-Comm',0.00000000),
+		(13,'ACCIRR',1,0,'BT-Sold',0.00000000),
+		(13,'ACCIRR',1,0,'MG-SuperLive',0.01500000),
+		(13,'ACCIRR',1,44,'',0.01500000),
+		(13,'ACCIRR',12,0,'',0.05000000),
+		(13,'ACCIRR',3,0,'',0.05000000),
+		(13,'ACCIRR',4,0,'',0.13000000),
+		(13,'ACCIRR',5,0,'',0.05000000),
+		(13,'ACCIRR',6,0,'',0.05000000),
+		(13,'ACCIRR',8,0,'',0.05000000),
+		(14,'ACCUT2',1,0,'',0.01500000),
+		(14,'ACCUT2',1,0,'BT-Bought',0.00000000),
+		(14,'ACCUT2',1,0,'BT-Comm',0.00000000),
+		(14,'ACCUT2',1,0,'BT-Sold',0.00000000),
+		(14,'ACCUT2',1,0,'MG-SuperLive',0.01500000),
+		(14,'ACCUT2',1,44,'',0.01500000),
+		(14,'ACCUT2',12,0,'',0.05000000),
+		(14,'ACCUT2',3,0,'',0.05000000),
+		(14,'ACCUT2',4,0,'',0.13000000),
+		(14,'ACCUT2',5,0,'',0.05000000),
+		(14,'ACCUT2',6,0,'',0.05000000),
+		(14,'ACCUT2',8,0,'',0.05000000),
+		(15,'ACCYEN789',1,0,'',0.02000000),
+		(15,'ACCYEN789',1,0,'BT-Bought',0.00000000),
+		(15,'ACCYEN789',1,0,'BT-Comm',0.00000000),
+		(15,'ACCYEN789',1,0,'BT-Sold',0.00000000),
+		(15,'ACCYEN789',1,0,'MG-SuperLive',0.02000000),
+		(15,'ACCYEN789',1,44,'',0.02000000),
+		(15,'ACCYEN789',12,0,'',0.05000000),
+		(15,'ACCYEN789',3,0,'',0.05000000),
+		(15,'ACCYEN789',4,0,'',0.13000000),
+		(15,'ACCYEN789',5,0,'',0.05000000),
+		(15,'ACCYEN789',6,0,'',0.05000000),
+		(15,'ACCYEN789',8,0,'',0.05000000),
+		(16,'ACCYEN889',1,0,'',0.02500000),
+		(16,'ACCYEN889',1,0,'BT-Bought',0.00000000),
+		(16,'ACCYEN889',1,0,'BT-Comm',0.00000000),
+		(16,'ACCYEN889',1,0,'BT-Sold',0.00000000),
+		(16,'ACCYEN889',1,0,'MG-SuperLive',0.02500000),
+		(16,'ACCYEN889',1,44,'',0.02500000),
+		(16,'ACCYEN889',12,0,'',0.05000000),
+		(16,'ACCYEN889',3,0,'',0.05000000),
+		(16,'ACCYEN889',4,0,'',0.13000000),
+		(16,'ACCYEN889',5,0,'',0.05000000),
+		(16,'ACCYEN889',6,0,'',0.05000000),
+		(16,'ACCYEN889',8,0,'',0.05000000),
+		(17,'ACCNTD',1,0,'',0.01500000),
+		(17,'ACCNTD',1,0,'BT-Bought',0.00000000),
+		(17,'ACCNTD',1,0,'BT-Comm',0.00000000),
+		(17,'ACCNTD',1,0,'BT-Sold',0.00000000),
+		(17,'ACCNTD',1,0,'MG-SuperLive',0.01500000),
+		(17,'ACCNTD',1,44,'',0.01500000),
+		(17,'ACCNTD',12,0,'',0.05000000),
+		(17,'ACCNTD',3,0,'',0.05000000),
+		(17,'ACCNTD',4,0,'',0.13000000),
+		(17,'ACCNTD',5,0,'',0.05000000),
+		(17,'ACCNTD',6,0,'',0.05000000),
+		(17,'ACCNTD',8,0,'',0.05000000),
+		(18,'BC',1,0,'',0.02000000),
+		(18,'BC',1,0,'BT-Bought',0.00000000),
+		(18,'BC',1,0,'BT-Comm',0.00000000),
+		(18,'BC',1,0,'BT-Sold',0.00000000),
+		(18,'BC',1,0,'MG-SuperLive',0.02000000),
+		(18,'BC',1,44,'',0.02000000),
+		(19,'ACCUT',1,0,'',0.01500000),
+		(19,'ACCUT',1,0,'BT-Bought',0.00000000),
+		(19,'ACCUT',1,0,'BT-Comm',0.00000000),
+		(19,'ACCUT',1,0,'BT-Sold',0.00000000),
+		(19,'ACCUT',1,0,'MG-SuperLive',0.01500000),
+		(19,'ACCUT',1,44,'',0.01500000),
+		(19,'ACCUT',12,0,'',0.05000000),
+		(19,'ACCUT',3,0,'',0.05000000),
+		(19,'ACCUT',4,0,'',0.13000000),
+		(19,'ACCUT',5,0,'',0.05000000),
+		(19,'ACCUT',6,0,'',0.05000000),
+		(19,'ACCUT',8,0,'',0.05000000),
+		-- Macau Games --
+		
+		(13,'ACCIRR',22,0,'',0.05000000),
+		(14,'ACCUT2',22,0,'',0.05000000),
+		(15,'ACCYEN789',22,0,'',0.05000000),
+		(16,'ACCYEN889',22,0,'',0.05000000),
+		(17,'ACCNTD',22,0,'',0.05000000),
+		(19,'ACCUT',22,0,'',0.05000000)
+
+	INSERT INTO @ExtraPTGroup(GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT)
+	SELECT GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT
+	FROM @AllExtraPTGroup
+	WHERE GroupName = COALESCE(@GroupName, GroupName)
+
+	RETURN
+END

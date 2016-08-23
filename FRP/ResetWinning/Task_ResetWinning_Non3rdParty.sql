@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate smalldatetime,
 	@todate   smalldatetime,
@@ -47,9 +50,9 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	
 	----- End get sport bettype 
 	
@@ -430,7 +433,7 @@ BEGIN
 	INSERT INTO #ExtraPTWL (winlostdate, ProductId, ExtraPTwinlost) 
 	SELECT	w.winlostdate, w.ProductId, SUM (w.winlost *s.ExtraPT) AS ExtraPTwinlost
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
+	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
@@ -489,7 +492,7 @@ BEGIN
 	INSERT INTO #ExtraPTWL (winlostdate, ProductId, ProductName, ExtraPTwinlost) 
 	SELECT	w.winlostdate, w.ProductId, w.ProductName, SUM (w.winlost *s.ExtraPT) AS ExtraPTwinlost
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
+	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
@@ -642,23 +645,11 @@ BEGIN
 	DROP TABLE #bettranstmp
     DROP TABLE #ExtraPTWL
 END
-
-
-
-
-
 GO
 
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
+GO 
+GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
+GO 
+GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [bodbAdminNet]
 GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [bodbAdminNet]
-GO 

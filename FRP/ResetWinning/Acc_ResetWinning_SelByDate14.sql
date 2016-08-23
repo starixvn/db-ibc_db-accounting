@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	SMALLDATETIME,	
 	@totalBalance	MONEY = 0 OUTPUT
 AS
@@ -40,9 +43,9 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	
 	----- End get sport bettype 
 	
@@ -219,7 +222,6 @@ BEGIN
 		INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
 	 WHERE o.eventdate = @Winlostdate
 
-
 	INSERT INTO @Winning( product, winlost)
 	---- sportsbook live & non-live
 	SELECT CASE
@@ -302,7 +304,6 @@ BEGIN
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 	         END
-	
 
 	---------------------------------------------------
     ---- get Racing line total
@@ -390,14 +391,13 @@ BEGIN
 	INSERT INTO #ExtraPTWL (ProductId, ExtraPTwinlost) 
 	SELECT	w.ProductId, SUM (w.winlost *s.ExtraPT) AS ExtraPTwinlost
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
+	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
 			AND w.Sporttype = s.Sporttype 
 			AND @winlostdate BETWEEN s.FromDate AND s.ToDate
 	GROUP BY w.Sporttype, w.ProductId, w.SubProduct
-
 
 	UPDATE e 
 	SET ProductName = CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE p.ProductName END
@@ -446,14 +446,13 @@ BEGIN
 	INSERT INTO #ExtraPTWL ( ProductId, ProductName, ExtraPTwinlost) 
 	SELECT  w.ProductId, w.ProductName, SUM (w.winlost * s.ExtraPT) AS ExtraPTwinlost
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
+	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
 			AND w.Sporttype = s.Sporttype 
 			AND @winlostdate BETWEEN s.FromDate AND s.ToDate	
 	GROUP BY w.ProductId, w.ProductName
-	
 	
 	CREATE NONCLUSTERED INDEX #IX_ExtraPTWL ON #ExtraPTWL ( ProductName)
 			
@@ -487,23 +486,12 @@ BEGIN
 		RIGHT JOIN @DummyBalance dm ON dm.product = ISNULL(w.product, rs.product)
 		LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product	 
 		---ORDER BY dm.seq
- 
-       
 END
-
-
 GO
 
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
+GO 
+GRANT VIEW DEFINITION ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
+GO 
+GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet]
 GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet]
-GO 

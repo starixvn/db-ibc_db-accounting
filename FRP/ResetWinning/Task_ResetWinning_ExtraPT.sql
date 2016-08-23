@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT]
 	@fromdate SMALLDATETIME,
 	@todate   SMALLDATETIME,
@@ -51,9 +54,9 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	SELECT ProductID, Bettype, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
 	DELETE @SportBettype WHERE ProductId NOT IN (SELECT DISTINCT ProductID FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK))
 
@@ -99,7 +102,7 @@ BEGIN
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, Winlostdate, GroupId)
 	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM (w.Winlost * s.ExtraPT) AS Winlost, w.Winlostdate, s.GroupId
 	FROM wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s
+	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
@@ -140,8 +143,6 @@ BEGIN
 			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
 	GROUP BY w.ProductID, w.Sporttype, w.SubProduct, w.Winlostdate, s.GroupId
 
-	
-	
 	---Last reset
 
 	INSERT INTO @LastReset (CustID, [Reset], Winlostdate, GroupID)
@@ -152,7 +153,6 @@ BEGIN
 	WHERE b.bettype IN (21001, 21002)
 		AND b.winlostdate BETWEEN @fromdate AND @todate
 	GROUP BY b.custid, b.winlostdate, d.GroupID
-	
 
 	IF @mode = 0 -- view
 	BEGIN
@@ -265,10 +265,7 @@ BEGIN
 					@ToCustID = @custid,
 					@IP = @ip,
 					@Doing = @transDesc
-                
-				 
             END
-			
 
             SET @seq = @seq + 1
 
@@ -288,14 +285,11 @@ BEGIN
 
 	DROP TABLE #winning
 END
-
 GO
 
 GRANT EXECUTE ON [dbo].[Task_ResetWinning_ExtraPT] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT EXECUTE ON [dbo].[Task_ResetWinning_ExtraPT] TO [vnteam] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_ExtraPT] TO [vnteam] AS [dbo]
 GO
