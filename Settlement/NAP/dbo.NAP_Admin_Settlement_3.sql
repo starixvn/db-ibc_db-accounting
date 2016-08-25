@@ -89,16 +89,6 @@ BEGIN
             ,@strBettypes 			VARCHAR(MAX)
             
             ,@betcount_501			INT = 0
-			
-			-- for FGLG
-			, @FGLG1 				VARCHAR(10)
-			, @FGLG2 				VARCHAR(10)
-			, @FLString 			VARCHAR(10)
-			, @HT_FGLG1 			VARCHAR(10)
-			, @HT_FGLG2 			VARCHAR(10)
-			, @HT_FLString 			VARCHAR(10)
-			, @temp_betstatus 		NVARCHAR(50)
-			, @goaldiff				SMALLMONEY
 	
     SELECT	@fth = FinalHomeScore
 			,@fta = FinalAwayScore
@@ -112,6 +102,16 @@ BEGIN
     FROM	DBPRO.BODB02.dbo.Match WITH (NOLOCK)
     WHERE	matchid = @matchid
 	
+	BEGIN -- for FGLG declaration
+	DECLARE @FGLG1 				VARCHAR(10)
+		, @FGLG2 				VARCHAR(10)
+		, @FLString 			VARCHAR(10)
+		, @HT_FGLG1 			VARCHAR(10)
+		, @HT_FGLG2 			VARCHAR(10)
+		, @HT_FLString 			VARCHAR(10)
+		, @temp_betstatus 		NVARCHAR(50)
+		, @goaldiff				SMALLMONEY
+		
 	SELECT @FGLG1 			= ''
 		, @FGLG2 			= ''
 		, @HT_FGLG1 		= ''
@@ -136,8 +136,9 @@ BEGIN
 			, @FGLG2 = CASE @FLString WHEN '0-0' THEN ''
 							ELSE RIGHT(@FLString,1) + ':2' END
 	END
-	
-    IF @Sporttype = 1 
+	END
+    
+	IF @Sporttype = 1 
     BEGIN
 
         SELECT  @fthCorners		= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN HomeValue ELSE 0 END),0)
@@ -345,11 +346,15 @@ BEGIN
         ,@isRefundHT = @isRefundHT      
         ,@isExcludeCorner = @isExcludeCorner  
 		,@strBettypes	   = @strBettypes
+		
 		-- including FGLG
-		,@FGLG1 = @FGLG1
 		,@HT_FGLG1 = @HT_FGLG1
-		,@goaldiff = @goaldiff
+		,@HT_FGLG2 = @HT_FGLG2
+		,@FGLG1 = @FGLG1
 		,@FGLG2 = @FGLG2
+		,@goaldiff = @goaldiff
+		
+		
 		-- using by service broker
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 					   

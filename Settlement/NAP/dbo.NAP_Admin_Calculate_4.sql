@@ -25,7 +25,6 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@IsSettleAbandonedMatchIBC		BIT = 0
 	,@IsSettleAbandonedMatchBetFair BIT = 0
 	,@IsHTCal						BIT = 0
-	,@calMode						VARCHAR(20) = 'CAL'
 	
 AS
 /*
