@@ -1,14 +1,6 @@
 USE [bodb_ACC]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_SaveBet_GetBets]    Script Date: 06/15/2016 06:45:27 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.NAP_SaveBet_GetBets    Script Date: 10/6/2015 5:38:24 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_SaveBet_GetBets    Script Date: 10/6/2015 1:28:38 PM ******/
 
-/****** Object:  Stored Procedure dbo.NAP_SaveBet_GetBets    Script Date: 9/10/2014 3:22:02 PM ******/
 ALTER PROCEDURE [dbo].[NAP_SaveBet_GetBets] 
 	@matchid int,
 	@bettype smallint,
@@ -19,12 +11,13 @@ AS
 	Created by: Dom
 	Date:2014-05-06
 	Task: Get Bets Report 
-	DB: DB06.BODB_ACC
+	DB: DBACC.bodb_ACC
 	
 	Revisions:
 		- 20150728@Jim: apply Bettrade (Feature #38815)
 		- 20151001@Jim:support MO (Feature #41935)
 		- 20160615@Jim: support to show TEAM statistic figures for Metric Gaming (HotFix #59341)
+		- 20160810@Percy: return homeid, awayid [RedmineID: #53523]
 		
 */
 
@@ -40,11 +33,16 @@ AS
 	where subproduct='MG-SuperLive'
 
 IF @bettype IN (901,902,903)
-	BEGIN 
-		SELECT N'This report does not support bettrade ticket !'
-		RETURN
-	END 
-IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
+BEGIN 
+	SELECT N'This report does not support bettrade ticket !'
+	RETURN
+END 
+
+DECLARE @homeid INT, @awayid INT
+SELECT  @homeid = homeid, @awayid = awayid FROM bodb02.dbo.match WITH(NOLOCK) WHERE matchid = @matchid
+
+IF @homeid IS NOT NULL
+BEGIN
 	SELECT
 		0 positiontaking, 
 		0 comm,
@@ -71,6 +69,8 @@ IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
 		,CAST(b.actualrate as DECIMAL(9,6)) actualrate
 		,CAST(b.virtualrate as DECIMAL(9,6)) virtualrate
 		,b.oddsspread
+		,@homeid homeid
+		,@awayid awayid
 	FROM 
 	bodb02.dbo.bettrans b with (nolock)
 	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
@@ -87,7 +87,10 @@ IF EXISTS (SELECT matchid FROM bodb02.dbo.match WHERE matchid = @matchid)
 --select * from bettype (nolock)
 -- exec Save_BetList 419522
 	ORDER BY b.betteam, b.transid
+END
 ELSE
+BEGIN
+	SELECT  @homeid = homeid, @awayid = awayid FROM bodb02.dbo.match14 WITH(NOLOCK) WHERE matchid = @matchid
 	SELECT
 		0 positiontaking, 
 		0 comm,
@@ -114,6 +117,8 @@ ELSE
 		,CAST(b.actualrate as DECIMAL(9,6)) actualrate
 		,CAST(b.virtualrate as DECIMAL(9,6)) virtualrate
 		,b.oddsspread
+		,@homeid homeid
+		,@awayid awayid
 	FROM 
 	bodb02.dbo.bettrans14 b with (nolock)
 	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
@@ -130,8 +135,10 @@ ELSE
 --select * from bettype (nolock)
 -- exec Save_BetList 419522
 	ORDER BY b.betteam, b.transid
-	GO 
- GRANT EXECUTE ON [dbo].[NAP_SaveBet_GetBets] TO [bodbAdminNet]
+END
+
 GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_SaveBet_GetBets] TO [vnteam]
+GRANT EXECUTE ON [dbo].[NAP_SaveBet_GetBets] TO [bodbAdminNet]
+GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_SaveBet_GetBets] TO [vnteam]
 GO 
