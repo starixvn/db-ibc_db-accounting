@@ -542,7 +542,7 @@ BEGIN
 			AND b.ProductId = -2
 			AND e.ProductId = 1 
 			AND e.Sporttype = 0
-			AND (e.SubProduct = 'BT-Comm' OR e.SubProduct = 'BT-Winloss')
+			AND (e.SubProduct = 'BT-Comm' OR e.SubProduct ='BT-Winloss')
 	WHERE	b.ProductId = -2
 	GROUP BY site, b.ProductId
 
@@ -571,9 +571,10 @@ BEGIN
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
 	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colossus Bets (3rd)
-			--OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
-			--OR b.ProductId IN (6, 14) --- Macau (Casino)
+			--- OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
+			--- OR b.ProductId IN (6, 14) --- Macau (Casino)
 			OR b.CasinoType IN (1,2)
+			
 	GROUP BY site, CASE WHEN b.CasinoType = 1 THEN 6   ---- Casino
 				 WHEN b.CasinoType = 2 THEN 4  ---Live Casino
 				 ELSE b.ProductId END
@@ -601,8 +602,8 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
-	WHERE	-- b.ProductId IN (21)    ----Allbet (LiveCasino)
-			-- OR  b.ProductId IN (6,17,22) --- OW RNG + Microgaming - RNG Casino, Macau Games (Casino)
+	WHERE	--- b.ProductId IN (21)    ----Allbet (LiveCasino)
+			---OR  b.ProductId IN (6,17,22) --- OW RNG + Microgaming - RNG Casino, Macau Games (Casino)
 			b.CasinoType IN (1,2)
 	GROUP BY site, 
 			 CASE WHEN b.CasinoType = 1 THEN 6  ---- Casino

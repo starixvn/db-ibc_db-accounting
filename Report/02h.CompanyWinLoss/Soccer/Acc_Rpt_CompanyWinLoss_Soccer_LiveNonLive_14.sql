@@ -175,7 +175,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                              ELSE 'Soccer Non-Live'
                          END
 	
-	  --- set data default for 'Deposit' if there is no data
+		--- set data default for 'Deposit' if there is no data
 		INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
 							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
 		SELECT	GroupId, GroupName, 'Deposit' AS RowName,

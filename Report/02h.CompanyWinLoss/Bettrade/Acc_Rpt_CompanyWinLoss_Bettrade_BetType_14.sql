@@ -28,16 +28,13 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] @StartDate='2016-01-01', @EndD
          DECLARE @isTest BIT= 0;
          SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
          CREATE TABLE #SportBetType
-         (BetType     INT,
-          BetTypeName NVARCHAR(50)
+         (BetType     INT          
          );
          INSERT INTO #SportBetType
-                SELECT BetType,
-                       'Bettrade'
+                SELECT BetType                       
                 FROM dbo.f_SportBetTypeMatrix_Sel(1, 0, 0, 2, 'BT-Comm', '', @isTest)
                 UNION
-                SELECT BetType,
-                       'Bettrade'
+                SELECT BetType
                 FROM dbo.f_SportBetTypeMatrix_Sel(1, 0, 0, 2, 'BT-Winloss', '', @isTest);
      END;
      BEGIN -- #DepositSuper
@@ -51,8 +48,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] @StartDate='2016-01-01', @EndD
      END;
      BEGIN -- Query
 
-         SELECT sb.BetType AS GroupId,
-                sb.BetTypeName AS GroupName,
+         SELECT 0 AS GroupId,
+                'Bettrade' AS GroupName,
                 CASE
                     WHEN dep.CustId IS NULL
                     THEN 'Credit'
@@ -69,9 +66,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] @StartDate='2016-01-01', @EndD
          WHERE b.winlostdate = @StartDate
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)
-         GROUP BY sb.BetType,
-                  sb.BetTypeName,
-                  CASE
+         GROUP BY CASE
                       WHEN dep.CustId IS NULL
                       THEN 'Credit'
                       ELSE 'Deposit'
@@ -84,5 +79,5 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] @StartDate='2016-01-01', @EndD
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] TO [vnteam];
+GRANT VIEW DEFINITION ON[dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_BetType_14] TO[vnteam];
 GO

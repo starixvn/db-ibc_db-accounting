@@ -132,7 +132,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
                              WHEN dep.CustId IS NULL
                              THEN 'Credit'
                              ELSE 'Deposit'
-                         END;
+                         END;  
+                         
      END;
      BEGIN -- Sophia				 
 		------ BARM only
@@ -162,10 +163,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY m.SportType,
-                         m.SportName  
-						 
-		              
-       	INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
+                         m.SportName
+		
+		INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
 							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
 		SELECT	GroupId, GroupName,	'Deposit' AS RowName,
 				0 AS MemberWinLoss, 0 AS SMAWinLoss, 0 AS Commission, 
@@ -180,7 +180,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
 					GroupName
 			FROM	#Data
 			WHERE	RowName = 'Deposit'
-		)  D
+		)  D								 
 			
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
@@ -201,8 +201,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14] @EndDate='2020-01-01',@St
 
 		-----Delete BARM row used for calculate
 		DELETE #Data WHERE RowName = 'BARM' 
-	 END;
-	  
+								 
+     END;
+     
      BEGIN -- RM   
 
          INSERT INTO #Data

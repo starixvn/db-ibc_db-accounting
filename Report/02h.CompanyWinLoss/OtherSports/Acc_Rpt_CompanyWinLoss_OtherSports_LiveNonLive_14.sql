@@ -167,9 +167,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] @EndDate='2020-01-01',@
                              WHEN 1
                              THEN 'Other Sports Live'
                              ELSE 'Other Sports Non-Live'
-                         END                        
-		              
-       	INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
+                         END 
+                         
+                                 
+        INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
 							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
 		SELECT	GroupId, GroupName,	'Deposit' AS RowName,
 				0 AS MemberWinLoss, 0 AS SMAWinLoss, 0 AS Commission, 
@@ -185,7 +186,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] @EndDate='2020-01-01',@
 			FROM	#Data
 			WHERE	RowName = 'Deposit'
 		)  D
-			
+								
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
 		SET		c.MemberWinLoss = ISNULL(c.MemberWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.MemberWinLoss,0) ELSE ISNULL(d.MemberWinLoss,0) END,
@@ -208,7 +209,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] @EndDate='2020-01-01',@
 	 END;
 	 
      BEGIN -- RM   
-
+     
          INSERT INTO #Data
                 SELECT 0,
                        'RM',
