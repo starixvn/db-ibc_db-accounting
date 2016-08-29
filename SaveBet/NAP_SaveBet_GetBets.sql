@@ -18,6 +18,7 @@ AS
 		- 20151001@Jim:support MO (Feature #41935)
 		- 20160615@Jim: support to show TEAM statistic figures for Metric Gaming (HotFix #59341)
 		- 20160810@Percy: return homeid, awayid [RedmineID: #53523]
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 		
 */
 
@@ -32,7 +33,7 @@ AS
 	FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '',@isTest)
 	where subproduct='MG-SuperLive'
 
-IF @bettype IN (901,902,903)
+IF @bettype IN (901,902,903,904)
 BEGIN 
 	SELECT N'This report does not support bettrade ticket !'
 	RETURN

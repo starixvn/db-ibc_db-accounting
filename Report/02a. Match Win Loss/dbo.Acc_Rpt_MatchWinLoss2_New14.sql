@@ -760,15 +760,15 @@ BEGIN
 			903,
 			s.orderkey,
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end Hedge,
-			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer_live,
-			sum(case when b.liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
-			sum(case when b.liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_soccer,
-			sum(case when b.liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_soccer_live,
+			sum(case when b.liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer_live,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_soccer,
+			sum(case when b.liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_soccer,
 			
-			sum(case when b.liveindicator = 1 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others_live,
-			sum(case when b.liveindicator = 1 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
-			sum(case when b.liveindicator = 0 and sporttype <> 1 then LineTotal else 0 end) as LineTotal_others,
-			sum(case when b.liveindicator = 0 and sporttype <> 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then LineTotal else 0 end) as LineTotal_others_live,
+			sum(case when b.liveindicator = 0 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others_live,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then LineTotal else 0 end) as LineTotal_others,
+			sum(case when b.liveindicator = 1 and sporttype = 1 then VirtualLineTotal else 0 end) as VirtualLineTotal_others,
 			
 			0 as IBCTurnover
 	FROM 	#tmpBettrans b with (nolock)

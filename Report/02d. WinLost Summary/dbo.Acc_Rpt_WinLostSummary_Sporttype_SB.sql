@@ -21,6 +21,7 @@
 			- 20150924@Jim: Offer MO
 			- 20160408@Robert: Support drill-down to the match winloss details for Megic Gaming - Superlive product, using sporttype bettype matrix function [RedmineID: #55584]
 			- 20160504@Robert: Win Loss Summary (2d) - Cannot drilldown to match win loss detail from Number Game product [RedmineID: #56989]
+			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 
         Parameter's Explanation:
@@ -53,7 +54,8 @@ SET NOCOUNT ON
               EventType,
               SubProduct
        FROM bodb02.dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
-    
+    Delete from @SportBettype where Bettype in (901,902,903,904)
+
     Declare @movebetdate datetime,
             @f_date datetime,
             @t_date datetime
@@ -104,6 +106,7 @@ SET NOCOUNT ON
 						ELSE 0 END = 1
 				AND m.matchcode not like '%hedge%'
 				AND B.IBC = 0
+				AND b.bettype NOT IN (901, 902, 903, 904)
 			GROUP BY eventdate,b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
         
 			IF @bettype IN (0,19999) AND @sporttype <=99
@@ -175,8 +178,7 @@ SET NOCOUNT ON
 				AND CASE WHEN @bettype = 0 THEN 1
 						WHEN liveindicator = @liveindicator THEN 1
 						ELSE 0 END = 1
-				AND CASE WHEN @bettype = 0 AND @SubProduct <> '' THEN sb.SubProduct
-						ELSE @SubProduct END = @SubProduct
+				AND CASE WHEN @bettype = 0 AND @SubProduct <> '' THEN sb.SubProduct ELSE @SubProduct  END = @SubProduct				
 			GROUP BY eventdate,b.matchid, matchcode, homeid, awayid, liveindicator, b.bettype, leagueid, isNeutral
         
 			IF @bettype IN (0,19999) AND @sporttype <=99
@@ -263,6 +265,7 @@ SET NOCOUNT ON
 						ELSE 0 END = 1
 				AND m.matchcode not like '%hedge%'
 				AND B.IBC = 0
+				AND b.bettype NOT IN (901, 902, 903, 904)
 			GROUP BY eventdate,b.matchid, matchcode, homeid, awayid, liveindicator, bettype, leagueid, isNeutral
         
 			IF @bettype IN (0,19999) AND @sporttype <=99
@@ -401,35 +404,28 @@ SET NOCOUNT ON
 						ELSE 17
 						END
 			
+	   IF(@drilldownbytype = 1 AND @sporttype = 1 AND @bettype = 0 AND @SubProduct = '')
+	   BEGIN
+		  DELETE r
+		  FROM @RPT r
+			  INNER JOIN @SportBettype sb ON r.bettype = sb.Bettype
+		  WHERE sb.SubProduct = 'MG-SuperLive';
+	   END
+
         SELECT  CASE WHEN d.matchcode like '%hedge%' OR r.matchcode like '%hedge%' THEN ISNULL(d.matchcode,r.matchcode) END HedgeGroup,
             CASE WHEN r.matchcode like '%hedge%' THEN 1 ELSE 0 END IsHedge,    
             r.* FROM @RPT r
         OUTER APPLY (
             select * from @HedgeMatch h where h.leagueid = r.leagueid and h.homeid = r.HomeId and h.awayid = r.AwayId and h.evendate = r.eventdate and h.matchid <> r.matchid
-        )D
-		--WHERE r.matchcode NOT Like '%hedge%'
+        )D		
         ORDER BY 
-				r.orderkey
-				,r.HomeId,
+			 r.orderkey,
+			 r.HomeId,
                 r.AwayId,
                 r.leagueid,
                 r.matchcode,
                 r.bettype
 		
-
-    /*
-    SELECT * FROM @RPT
-    ORDER BY
-    liveindicator DESC,
-    bettype, 
-    leagueid,
-    --leaguename,
-    CASE WHEN matchcode LIKE '%EX%' THEN 1 ELSE 0 END, 
-    matchcode, 
-    Homeid--home    
-    */
-
-	
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype_SB] TO [bodbAdminNet]

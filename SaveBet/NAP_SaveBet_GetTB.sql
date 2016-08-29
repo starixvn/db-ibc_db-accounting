@@ -19,6 +19,7 @@ AS
 	
 	Revisions:
 		- 20150728@Jim: apply Bettrade (Feature #38815)
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 */
 
 SET NOCOUNT ON
@@ -36,7 +37,7 @@ SET NOCOUNT ON
 
 	Declare @FTHomeScore smallint, @FTAwayScore smallint, @HTHomeScore smallint, @HTAwayScore smallint
 
-IF @bettype IN (901,902,903)
+IF @bettype IN (901,902,903,904)
 BEGIN 
 	SELECT N'This report does not support bettrade ticket !'
 	RETURN

@@ -17,6 +17,7 @@ AS
 	
 	Revisions:
 		- 20150728@Jim: apply Bettrade (Feature #38815)
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 */
 
 
@@ -80,7 +81,7 @@ FROM (
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
 		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
-		AND b.bettype NOT IN (901,902,903)
+		AND b.bettype NOT IN (901,902,903,904)
 ) b
 
 ELSE
@@ -143,7 +144,7 @@ FROM (
 		matchid = @matchid
 		AND status NOT IN ('void','reject')
 		AND b.bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
-		AND b.bettype NOT IN (901,902,903)
+		AND b.bettype NOT IN (901,902,903,904)
 ) b
 
 GO

@@ -17,6 +17,7 @@ AS
 	Revisions:
 		-20150529@Jim: add Metric Gaming
 		- 20150728@Jim: apply Bettrade (Feature #38815)
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 */
 
 BEGIN
@@ -42,7 +43,7 @@ BEGIN
 	FROM bodb02.dbo.bettrans WITH(NOLOCK)
 	WHERE matchid IN (SELECT MatchID FROM #Match)
 		AND bettype NOT IN(SELECT bettype FROM bodb02.dbo.f_VSHorseRacingByBettype())
-		AND bettype NOT IN (901,902,903)
+		AND bettype NOT IN (901,902,903,904)
 	SET @ID = 1
 	SELECT @ID = 1,@Total = COUNT(*) FROM #Match
 
