@@ -20,11 +20,9 @@ AS
 				2: Mix Live and Non Live: contains Live and Dead Ball 
 
 			+ SportType (Liveawayscore):
-				1: Soccer: soccer only 
-				2: Tennis: tennis only
-				3: Basketball: basketball only
-				4: Mixed Sports: soccer and at least 1 other sport
-				5: Mixed Others Sports: other sports, not soccer
+				Sporttype: Sport Name (1: Soccer, 2: Basketball, 3 Football, ...)
+				-1: Mixed Sports: soccer and at least 1 other sport
+				-2: Mixed Others Sports: other sports, not soccer
 				
 		-20121203@Elodie: Get data between @FromDate AND @ToDate
 		- 20121217@Lukas: exclude UUS currency
@@ -100,7 +98,7 @@ END
 CREATE NONCLUSTERED INDEX IX_Refno_SportType ON #MixParlay (Refno, SportType)
 
 UPDATE #MixParlay
-SET SportType = 4
+SET SportType = -1
 WHERE SportType = 3
 
 CREATE TABLE #OtherSport (Refno BIGINT, SportType SMALLINT)
