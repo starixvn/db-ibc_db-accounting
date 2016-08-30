@@ -35,7 +35,8 @@ BEGIN
 	CREATE TABLE #FinalResult (
 		RptDate		VARCHAR(10),
 		HouseWL		MONEY,
-		ExtraPT		MONEY
+		ExtraPT		MONEY,
+		PayToSupplier MONEY
 	)
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200) = '[FullRange]'
@@ -43,8 +44,8 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
-		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 0, 0
+		INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
+		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 0, 0, 0
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
@@ -97,9 +98,12 @@ BEGIN
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
 	-- FullRange amount
-	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
-	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT)
+	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
+	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT), 0
 	FROM #FinalResult
+
+	UPDATE #FinalResult 
+	SET PayToSupplier = -(HouseWL + ExtraPT)*0.4
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
@@ -108,7 +112,9 @@ BEGIN
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT ''LC'', 1, ''House Income'', HouseWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
-							'SELECT ''LC'', 2, ''Extra PT'', ExtraPT) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
+							'SELECT ''LC'', 2, ''Extra PT'', ExtraPT' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT ''LC'', 4, ''Pay to supplier'', PayToSupplier) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
 					'PIVOT' + CHAR(13) +
 					'(' + CHAR(13) +
 						'MAX(value)' + CHAR(13) +
