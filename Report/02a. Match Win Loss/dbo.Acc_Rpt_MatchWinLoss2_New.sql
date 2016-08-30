@@ -37,6 +37,7 @@ AS
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
 			- 20160509@Robert: Rename product "Voidbridge" to "Macau Games" [RedmineID: #57182]
 			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+			- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 
 		Explanation's Param:
 			- @WinLost_8RM: winlost for outsource 
@@ -215,11 +216,11 @@ BEGIN
 	)rm
 	
         -- All sports
-	CREATE TABLE #tmpBettrans (matchid int, bettype int, statusID int, liveindicator bit, winlost money, pos money, comm money, VirtualComm money, LineTotal money, VirtualLineTotal money, IBCTurnover money)
+	CREATE TABLE #tmpBettrans (matchid int, bettype int, betteam NVARCHAR(10) NULL, statusID int, liveindicator bit, winlost money, pos money, comm money, VirtualComm money, LineTotal money, VirtualLineTotal money, IBCTurnover money)
 	CREATE INDEX IX_bettype on #tmpBettrans(bettype)
 	
-	INSERT INTO #tmpBettrans (matchid, bettype, statusID, liveindicator, winlost, pos, comm, VirtualComm, LineTotal, VirtualLineTotal, IBCTurnover)
-	SELECT  matchid, b.bettype, statusID, b.liveindicator,
+	INSERT INTO #tmpBettrans (matchid, bettype, betteam, statusID, liveindicator, winlost, pos, comm, VirtualComm, LineTotal, VirtualLineTotal, IBCTurnover)
+	SELECT  matchid, b.bettype, b.betteam, statusID, b.liveindicator,
 			sum((winlost-actual_stake)*actualrate)  winlost,
 			sum((awinlost+mwinlost+swinlost)*actualrate) pos,
 			sum((scomm)*actualrate) comm,
@@ -233,9 +234,9 @@ BEGIN
 			AND ruben = 1  
 			AND statusID not in (101,102,103,121) --('VOID','REJECT','REFUND','DONE')
 			AND sb.ProductID not in (6, 17, 21, 22)--AND b.bettype <= 19000 AND b.bettype NOT BETWEEN 2101 AND 2399 -- MBC-RNG Casino, Microgaming-RNG Casino, Allbet and Macau Games
-		GROUP BY matchid, b.bettype, statusID, b.liveindicator
+		GROUP BY matchid, b.bettype, b.betteam, statusID, b.liveindicator
 	UNION ALL 
-	SELECT	 0 as matchid, gameID, statusID, 0 as liveindicator,
+	SELECT	 0 as matchid, gameID, '',  statusID, 0 as liveindicator,
 			sum((winlost-actual_stake)*actualrate)  winlost,
 			sum((awinlost+mwinlost+swinlost)*actualrate) pos,
 			sum((scomm)*actualrate) comm,
@@ -1144,7 +1145,7 @@ ORDER BY Num ASC
 			SUM(IBCTurnover) IBCTurnover
 	FROM
 		(
-			SELECT 	bettype,
+			SELECT 	CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END bettype,
 					17 as orderkey,
 					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*actualrate), 0) as LineTotal_soccer,
 					isnull(sum((winlost-actual_stake + awinlost+mwinlost+swinlost + scomm)*virtualrate), 0) as VirtualLineTotal_soccer
@@ -1156,11 +1157,11 @@ ORDER BY Num ASC
 					matchid IN (9, 29) and
 					statusid NOT IN (101,102,103,121)
 					and refno IN (SELECT refno FROM bettransm with (nolock) inner join match with (nolock) on bettransm.matchid = match.matchid WHERE sporttype=1)
-			GROUP BY bettype
+			GROUP BY CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END
 		) m1
 		inner join
 		(
-			SELECT 	bettype,
+			SELECT 	CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END bettype,
 					isnull(sum(LineTotal), 0) as LineTotal,
 					isnull(sum(VirtualLineTotal), 0) as VirtualLineTotal,
 					isnull(sum(IBCTurnover), 0) as IBCTurnover
@@ -1168,7 +1169,7 @@ ORDER BY Num ASC
 			WHERE 
 					bettype IN (9, 29) and
 					matchid IN (9, 29)
-			GROUP BY bettype
+			GROUP BY CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END
 		) m2 on m1.bettype = m2.bettype		
 	GROUP BY m1.bettype,m1.orderkey	
 	    -- Outright

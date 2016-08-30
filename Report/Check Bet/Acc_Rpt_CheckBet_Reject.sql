@@ -16,6 +16,7 @@ as
 		- 20150724@Sophia: Exclude data of Bettrade [#38815]
 		- 20160427@Percy: Support ComboParlay [Redmine: #56572]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+		- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 
 	Param's explanation:		
 	
@@ -100,7 +101,9 @@ Begin
 	select  bt.transid, 
 			bt.transdate,
 			bt.CurrencyName,
-			bt.bettype,
+			CASE WHEN bt.bettype = 9 OR (bt.bettype = 29 AND bt.betteam = '1') THEN 9  
+                                        WHEN bt.bettype = 29 AND bt.betteam <> '1' THEN 29 
+                                        ELSE bt.bettype END bettype, 
 			bt.Username,
 			bt.stake, 			
 			bt.odds, 			

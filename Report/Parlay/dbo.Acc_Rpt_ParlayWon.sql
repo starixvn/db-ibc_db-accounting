@@ -11,11 +11,11 @@ Created: 20120821@Sophia
 Task : List of users won Parlay of others sport
 	   Note: CompanyWinlost no need to get commission
 
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original: Acc_Rpt_MixParlayWon
 
 Revisions:
-		
+		- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 Param's Explanation:
 	• @WinlostDate:
 		- Date of Win lost
@@ -47,7 +47,7 @@ BEGIN
 		FROM bettrans b WITH (nolock)
 			INNER join bettransm bm WITH (nolock) ON b.refno = bm.refno
 			INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE b.bettype = @bettype 
+		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
 			AND b.matchid = @_matchid
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
@@ -68,7 +68,7 @@ BEGIN
 		FROM bettrans14 b WITH (nolock)
 			INNER join bettransm14 bm WITH (nolock) ON b.refno = bm.refno
 			INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE b.bettype = @bettype 
+		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
 			AND b.matchid = @_matchid 
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20

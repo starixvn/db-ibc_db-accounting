@@ -24,6 +24,7 @@ AS
 		- 20120215@Elodie: Change linked server DB06 to DBACC
 		- 20130805@Johnson: filter by site
 		- 20130819@Johnson: separate sports by liveawayscore field to correct multi-sports and other sports formula
+		- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 	- Parameter's Explanation:
 		- @bettype - 9: mix parlay
 					- 29 : combination  mix parlay
@@ -53,15 +54,13 @@ BEGIN
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
-			sum((1-tpositiontaking)*(ABS(case when bettype=29 and betid>0 then  actual_stake else stake end))*virtualrate) Turnover
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover
 	FROM	bettrans14 bettrans WITH (NOLOCK)
 	WHERE
 			bettrans.ruben=1 AND
-			bettype = @bettype AND
+			CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END  = @bettype AND
 			 matchid = @_matchid AND
-			bettrans.winlostdate = @winlostdate
-			--bettrans.matchid=0
-			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.winlostdate = @winlostdate			
 			AND bettrans.statusID NOT IN (101,102,103)			
 	GROUP BY status, liveawayscore 	
 END
@@ -89,16 +88,14 @@ BEGIN
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
-			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover
 	FROM	bettrans14 bettrans WITH (NOLOCK)
 		INNER JOIN #DepAgent ag ON bettrans.recommend = ag.custid
 	WHERE
 			bettrans.ruben=1 AND
-			bettype = @bettype AND
+			CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END = @bettype AND
 			 matchid = @_matchid AND
-			bettrans.winlostdate = @winlostdate
-			--bettrans.matchid=0
-			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
+			bettrans.winlostdate = @winlostdate			
 			AND bettrans.statusID NOT IN (101,102,103)			
 	GROUP BY status, liveawayscore 
 		

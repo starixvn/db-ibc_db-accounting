@@ -23,6 +23,7 @@ Revisions:
 						5	Virtual Sports
 	- 20160119@Robert: Modify SP covered bettype 501. Need to exclude bettype 500 from this report. [#50274]
 	- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+	- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 Param's Explanation:
 	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
 				   Because job recurs every 30s, so we set @CheckTime = 1 minute as default
@@ -65,7 +66,9 @@ BEGIN
 					b.odds, 
 					b.stake, 
 					b.balance, 
-					b.bettype,
+					CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9  
+					WHEN b.bettype = 29 AND b.betteam <> '1' THEN 29 
+					ELSE b.bettype END bettype,
 					b.winlostdate, 
 					b.matchid,
 					b.ip,
@@ -78,8 +81,7 @@ BEGIN
 				and custid not in (50057,879241,103873, 851668, 878902) --betdaq
 				and custid NOT IN (1077687) -- Betfair
 				and recommend not in (11196380) -- foobet
-				and transdate BETWEEN @date AND DATEADD(dd, 1, @date)
-				--and winlostdate >= @_date
+				and transdate BETWEEN @date AND DATEADD(dd, 1, @date)				
 				and custid > 0
 				and recommend NOT IN (5707545,52466) -- exclude members under BARM,8RM
 				and currency NOT IN (20, 27, 28)
@@ -88,7 +90,9 @@ BEGIN
 					b.odds, 
 					b.stake, 
 					b.balance, 
-					b.bettype,
+					CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9  
+					WHEN b.bettype = 29 AND b.betteam <> '1' THEN 29 
+					ELSE b.bettype END,
 					b.winlostdate, 
 					b.matchid,
 					b.ip,

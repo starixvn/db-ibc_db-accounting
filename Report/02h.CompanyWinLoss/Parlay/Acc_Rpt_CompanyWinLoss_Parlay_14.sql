@@ -8,7 +8,7 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Parlay_14];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Parlay_14] @StartDate SMALLDATETIME,
-                                                       @EndDate   SMALLDATETIME
+                                                          @EndDate   SMALLDATETIME
 AS
 
 /*
@@ -21,6 +21,7 @@ Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
 - 20160720@Sophia: . Revise SP
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
+- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_Parlay_14] @EndDate='2020-01-01',@StartDate='2016-01-01'
@@ -29,12 +30,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay_14] @EndDate='2020-01-01',@StartDate='2016-0
 
      SET NOCOUNT ON;
      BEGIN -- #DepositSuper
-         CREATE TABLE #DepositSuper
-         (CustId INT PRIMARY KEY
-         );
+         CREATE TABLE #DepositSuper(CustId INT PRIMARY KEY);
          INSERT INTO #DepositSuper
-			SELECT CustId
-			FROM f_DepSuper_1('All');
+                SELECT CustId
+                FROM f_DepSuper_1('All');
      END;
      BEGIN -- #Data
 
@@ -53,11 +52,19 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay_14] @EndDate='2020-01-01',@StartDate='2016-0
      END;
      BEGIN -- Query
          INSERT INTO #Data
-                SELECT BetType AS GroupId,
+                SELECT CASE
+                           WHEN bettype = 9
+                                OR (bettype = 29
+                                    AND betteam = '1')
+                           THEN 9
+                           ELSE 29
+                       END AS GroupId,
                        CASE
-                           WHEN BetType = 29
-                           THEN 'System Parlay'
-                           ELSE 'Mix Parlay'
+                           WHEN bettype = 9
+                                OR (bettype = 29
+                                    AND betteam = '1')
+                           THEN 'Mix Parlay'
+                           ELSE 'System Parlay'
                        END AS GroupName,
                        CASE
                            WHEN dep.CustId IS NULL
@@ -77,11 +84,19 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay_14] @EndDate='2020-01-01',@StartDate='2016-0
                       AND BetType IN(9, 29)
                      AND b.ruben = 1
                      AND b.statusID NOT IN(101, 102, 103, 121)
-                GROUP BY BetType,
+                GROUP BY CASE
+                             WHEN bettype = 9
+                                  OR (bettype = 29
+                                      AND betteam = '1')
+                             THEN 9
+                             ELSE 29
+                         END,
                          CASE
-                             WHEN BetType = 29
-                             THEN 'System Parlay'
-                             ELSE 'Mix Parlay'
+                             WHEN bettype = 9
+                                  OR (bettype = 29
+                                      AND betteam = '1')
+                             THEN 'Mix Parlay'
+                             ELSE 'System Parlay'
                          END,
                          CASE
                              WHEN dep.CustId IS NULL
