@@ -1,5 +1,3 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompleted] @Date DATETIME
 	, @SportType SMALLINT = 0
 	, @LeagueID INT = 0-- 0 for ALL Leagues   
@@ -30,6 +28,7 @@ AS
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160201@Kathy: Exclude tickets of Charge Commission (bettypeid=500) [Redmine:#49727]
 		- 20160314@Patrick: Add more filter to support auto-payout [Redmine: #53262]
+		- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
 
 	Param explanation: 
 		@isReLoad: 1: reload partial matches of a league, 0: not reload
@@ -93,7 +92,7 @@ BEGIN
 		WHERE EXISTS (SELECT TOP 1 1 FROM #DataTmp m WHERE b.matchid = m.MatchId) 
 			AND b.bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-			AND bettype NOT IN (901,902,903)
+			AND bettype NOT BETWEEN 901 AND 910
 			AND b.bettype <> 500 -- Charged commission
 			AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 			AND winlostdate = @Date

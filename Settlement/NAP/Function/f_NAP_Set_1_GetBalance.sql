@@ -10,6 +10,7 @@ AS
 	
 	Revisions:
 		- 20160713@Patrick: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+		- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
 		
 	Param's Explanation:
 		@Mode: 1: Used for Auto payout process
@@ -55,8 +56,10 @@ BEGIN
 			AND 1 = CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strAutoBetRadarBettypes) > 0 THEN 0 
 						ELSE 1 END
 			--(135, 160, 164, 168, 169, 173, 174, 175, 176, 180, 192, 193, 210, 211, 212, 213, 214, 215, 216, 217) -- Auto settle Betradar
-			AND 1 = CASE WHEN b.bettype IN (901, 902, 903) AND b.refno IN (SELECT transid FROM BetTradeTransId) THEN 1 
-						 WHEN b.bettype NOT IN (901, 902, 903) THEN 1
+			AND 1 = CASE WHEN (b.bettype BETWEEN 901 AND 910 AND b.refno IN (SELECT transid FROM BetTradeTransId))
+								OR b.bettype = 904 -- The 904 refno is equal to single ticket	
+							 THEN 1 
+						 WHEN b.bettype NOT BETWEEN 901 AND 910 THEN 1
 					ELSE 0 END
 		GROUP BY b.custid
 
@@ -79,13 +82,18 @@ BEGIN
 		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm) AS balance
 		FROM dbo.bettrans b WITH (ROWLOCK)
 		WHERE b.matchid = @matchid
-				AND 1 = CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strHTBettypes) > 0 THEN 1
-							ELSE 0 END
+				AND 1 = CASE 
+							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strHTBettypes) > 0 THEN 1
+							WHEN b.bettype BETWEEN 901 AND 910 THEN 1
+							ELSE 0 
+						END
 				-- IN (7, 8, 12, 15, 21, 30, 125, 126, 129, 136, 138, 143, 151, 165, 167, 179, 181, 182, 188, 191, 200, 201, 202, 203, 204, 205, 207, 209, 901, 902, 903, 303, 304, 403, 404, 410, 411, 412, 414)
 				--AND b.bettype NOT IN (135, 160, 164, 168, 169, 173, 174, 175, 176, 180, 192, 193, 210, 211, 212, 213, 214, 215, 216, 217)
-				AND 1 = CASE WHEN b.bettype IN (901, 902, 903) AND b.refno IN (SELECT transid FROM BetTradeTransId) THEN 1 
-							 WHEN b.bettype NOT IN (901, 902, 903) THEN 1
-						ELSE 0 END
+				AND 1 = CASE WHEN (b.bettype BETWEEN 901 AND 910 AND b.refno IN (SELECT transid FROM BetTradeTransId))
+								OR b.bettype = 904 -- The 904 refno is equal to single ticket	
+							 THEN 1 
+						 WHEN b.bettype NOT BETWEEN 901 AND 910 THEN 1
+					ELSE 0 END
 		GROUP BY b.custid
 
 		--SET @TotalAccount = @@ROWCOUNT
@@ -114,8 +122,10 @@ BEGIN
 			AND 1 = CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strAutoBetRadarBettypes) > 0 THEN 0 
 						ELSE 1 END
 			--(135, 160, 164, 168, 169, 173, 174, 175, 176, 180, 192, 193, 210, 211, 212, 213, 214, 215, 216, 217)
-			AND 1 = CASE WHEN b.bettype IN (901, 902, 903) AND b.refno IN (SELECT transid FROM BetTradeTransId) THEN 1 
-						 WHEN b.bettype NOT IN (901, 902, 903) THEN 1
+			AND 1 = CASE WHEN (b.bettype BETWEEN 901 AND 910 AND b.refno IN (SELECT transid FROM BetTradeTransId))
+								OR b.bettype = 904 -- The 904 refno is equal to single ticket	
+							 THEN 1 
+						 WHEN b.bettype NOT BETWEEN 901 AND 910 THEN 1
 					ELSE 0 END
 		GROUP BY b.custid
 	END

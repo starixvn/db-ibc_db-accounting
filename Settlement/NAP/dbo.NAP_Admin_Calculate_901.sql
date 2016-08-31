@@ -14,6 +14,7 @@
 		DB: DBTXN/BODB02
 		
 		Revisions:
+			- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
 		
 		Parameter's Explantion:
 	*/
@@ -22,6 +23,7 @@ BEGIN
 	IF @@SERVERNAME IN ('DB04', 'DB042', 'DB043', 'DB044') RETURN
 	
 	DECLARE @statusID INT
+			,@winlost MONEY
 	
 	DECLARE @tmpBettype TABLE(bettype INT)
 	CREATE TABLE #tmp (transid BIGINT)
@@ -97,7 +99,7 @@ BEGIN
 	IF @@ROWCOUNT = 0 RETURN
 	
 	--BEGIN recover refund tickets 
-	SELECT transid, refno, bettype, statusid, status, actual_stake, winlost, awinlost, discount 
+	SELECT transid, refno, bettype, statusid, status, actual_stake, winlost, awinlost, discount, odds
 	INTO #bettrans
 	FROM bettrans WITH(NOLOCK)
 	WHERE matchid = @matchid
@@ -135,16 +137,27 @@ BEGIN
 	WHERE b1.bettype = 902
 		AND b2.bettype = 901
 	
-	UPDATE b1
-	SET status = 'LOSE',
-		statusID = 113,
-		winlost = 0,
-		awinlost = b2.winlost*b1.discount
-	FROM #bettrans b1 
-		INNER JOIN #bettrans b2 ON b1.refno= b2.refno 											
-	WHERE b1.bettype = 903
-		AND b2.bettype = 901		
 	
+	UPDATE	b903
+	SET		@winlost = b901.winlost * b903.odds,
+			@statusID = CASE 
+							WHEN @winlost = b903.actual_stake THEN 111
+							WHEN @winlost > b903.actual_stake THEN 112
+							ELSE 113
+						END,
+			statusId = @statusID,
+			status = CASE 
+							WHEN @statusID = 111 THEN 'DRAW'
+							WHEN @statusID = 112 THEN 'WON'
+							ELSE 'LOSE'
+					END,
+			winlost = @winlost,
+			awinlost = b901.winlost* b903.discount
+	FROM	#bettrans b903 
+		INNER JOIN #bettrans b901 
+			ON	b903.refno= b901.refno 											
+	WHERE	b903.bettype = 903
+			AND b901.bettype = 901		
 	
 	UPDATE b
 	SET b.status = b1.status,

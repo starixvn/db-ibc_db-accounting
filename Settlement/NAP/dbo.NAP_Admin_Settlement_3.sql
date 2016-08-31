@@ -23,6 +23,7 @@ AS
        - 20160106@Kathy: Integrate Cricket [Redmine:#49727]
 	   - 20160314@Patrick: Support auto-payout [Redmine: #53262]
 	   - 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+       - 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
        
     Param's Explanation:
     • @Mode:
@@ -314,6 +315,12 @@ BEGIN
         EXEC dbo.NAP_Admin_Calculate_500
 			@MatchId = @matchId
 			,@Action = @Mode
+			
+		-- BetTrade Winlost Sharing
+		IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans WITH(NOLOCK) WHERE matchid = @matchid AND bettype BETWEEN 901 AND 910)
+			EXEC dbo.NAP_Admin_Calculate_904
+				@MatchId = @matchid
+				,@Action = @Mode
 END
 
 GO

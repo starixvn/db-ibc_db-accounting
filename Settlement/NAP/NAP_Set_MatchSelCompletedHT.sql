@@ -1,5 +1,3 @@
-USE [bodb02]
-GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompletedHT] @Date DATETIME
 	, @SportType SMALLINT = 0
 	, @LeagueID INT = 0 -- 0 for ALL Leagues
@@ -26,6 +24,7 @@ AS
 		- 20150729@Johnson: Exclude range bettype of Metric Gaming from settlement of SB [Redmine: #37688]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160314@Patrick: Add more filter to support auto-payout [Redmine: #53262]
+		- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -99,7 +98,7 @@ BEGIN
 			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238)
 			AND bettype NOT BETWEEN 1301 AND 1334 -- exclude sporting solution product
 			AND bettype NOT BETWEEN 1501 and 1599 -- Keno
-			AND bettype NOT IN (901,902,903)--bettrade
+			AND bettype NOT BETWEEN 901 AND 910 --bettrade
 			AND bettype NOT BETWEEN 801 AND 899--Metric Gaming
 		GROUP BY b.matchid
 	)

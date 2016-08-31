@@ -3,7 +3,7 @@
 	@ResourceIDs VARCHAR(MAX)=NULL,
 	@IsSettleAbandonedMatchIBC BIT = 0,
 	@action	VARCHAR(30)= 'REFUND',
-	@mode	VARCHAR(30)= 'ALL',
+	@mode	VARCHAR(30)= 'REFUND',
 	@LGOnly BIT = 0--refund last goal
 	
 AS
@@ -14,6 +14,7 @@ AS
 		Task: Refund for bettrade tickets
 		
 		Revisions:
+			- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
 		
 		Parameter's Explanation:
 	*/
@@ -31,11 +32,11 @@ BEGIN
 	CREATE TABLE #tmp (transid BIGINT, BTbuyback money)
 	
 	CREATE TABLE #tmpRef(refno BIGINT)
-	
+		
 	IF @action = 'REFUND'
 	BEGIN
 		--Refund from manual settlement
-		IF @mode IN ('FT','ALL') AND @ResourceIDs IS NULL
+		IF @mode IN ('REFUND-FT','REFUND') AND @ResourceIDs IS NULL
 		BEGIN
 			INSERT INTO @tmpBettype(bettype)
 					SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 
@@ -43,7 +44,7 @@ BEGIN
 				UNION SELECT 18 UNION SELECT 22 UNION SELECT 157 UNION SELECT 177 
 				UNION SELECT 178 UNION SELECT 183 UNION SELECT 184 
 		END
-		IF @mode IN ('HT','ALL') AND @ResourceIDs IS NULL
+		IF @mode IN ('REFUND-HT','REFUND') AND @ResourceIDs IS NULL
 		BEGIN
 			INSERT INTO @tmpBettype(bettype)
 					SELECT 7 UNION SELECT 8 UNION SELECT 12 UNION SELECT 15
@@ -86,8 +87,7 @@ BEGIN
 					ELSE 0 
 				END
 		AND 1 = CASE WHEN @IsSettleAbandonedMatchIBC = 1 
-						AND statusID IN (112, 113)
-						AND bettype IN (4, 6, 30, 126) THEN 0
+						AND statusID IN (112, 113) THEN 0
 				ELSE 1 END
 		AND 1= CASE WHEN bettype IN (14,127) 
 						AND right(betteam, 1) = CASE WHEN @LGOnly = 1 THEN '2' ELSE right(betteam, 1) END 
@@ -192,4 +192,4 @@ BEGIN
 	DROP TABLE #tmp
 	DROP TABLE #tmpRef
 				
-END 
+END

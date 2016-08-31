@@ -32,6 +32,7 @@ AS
         - 20140710@Kathy: Apply BetRadar - PenaltyShootout(135) [Redmine:#17142]    
         - 20140811@Kathy: Support new 11 bettypes [Redmine:#19667]
         - 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+        - 20150611@Johnson: Add bettrade [Redmine: #35921]
         - 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20150919@Kathy: Intergrate Myanmar Odds ( 4 new bettypes: 301->304)
         - 20151016@Kathy: Refund HT/FT & 2nd FT bettypes in case of match 3x30 [Redmine:#45626]
@@ -39,6 +40,7 @@ AS
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 		- 20160705@Kathy: - PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 						  - Capture balance incase of failure
+		- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [R
     
     Param's Explanation:
     • @matchid: matchid of match to Refund HT
@@ -105,11 +107,23 @@ BEGIN
         ,Increased BIT
         )
         
+    CREATE TABLE #tmpTrans (transid BIGINT)
+    
     DECLARE @tblDebitPending TVP_BalanceList
     DECLARE @tblCreditPending TVP_BalanceList
 
     CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 	
+	INSERT INTO #tmpTrans
+	SELECT transid
+	FROM dbo.bettrans b WITH (ROWLOCK)
+	WHERE matchid = @matchid 
+		AND 1 = CASE
+					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+					ELSE 0 
+				END
+		AND betdaqid = 0--bettrade tickets
+		
     INSERT INTO #BalanceBefore
     SELECT custid
         ,SUM(winlost - actual_stake + playercomm)
@@ -117,6 +131,16 @@ BEGIN
     WHERE	matchid = @matchid 
 			AND 1 = CASE
 						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+						WHEN b.bettype BETWEEN 901 AND 910 THEN 1
+						ELSE 0 
+					END
+
+			AND 1 = CASE 
+						WHEN (bettype BETWEEN 901 AND 910 
+									AND refno IN (SELECT transid FROM #tmpTrans))
+								OR b.bettype = 904 -- The 904 refno is equal to single ticket
+							THEN 1 
+						WHEN bettype NOT BETWEEN 901 AND 910 THEN 1
 						ELSE 0 
 					END
     GROUP BY custid
@@ -225,6 +249,12 @@ BEGIN
 				,@IsExcludeBetdaq = @IsExcludeBetdaq
 				,@IsExcludeBetfair = @IsExcludeBetfair
 				,@strBettypes = @strBettypes 
+		
+		-- BetTrade Winlost Sharing
+		IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans WITH(NOLOCK) WHERE matchid = @matchid AND bettype BETWEEN 901 AND 910)
+			EXEC dbo.NAP_Admin_Calculate_904
+				@MatchId = @matchid
+				,@Action = 'REFUND-HT'
 		END
 	END TRY
 	BEGIN CATCH
@@ -234,7 +264,16 @@ BEGIN
 		FROM	dbo.bettrans b WITH (ROWLOCK)
 		WHERE	matchid = @matchid 
 				AND 1 = CASE
-							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+						WHEN b.bettype BETWEEN 901 AND 910 THEN 1
+						ELSE 0 
+					END
+				AND 1 = CASE 
+							WHEN (bettype BETWEEN 901 AND 910 
+										AND refno IN (SELECT transid FROM #tmpTrans))
+									OR b.bettype = 904 -- The 904 refno is equal to single ticket
+								THEN 1 
+							WHEN bettype NOT BETWEEN 901 AND 910 THEN 1
 							ELSE 0 
 						END
 		GROUP BY custid
@@ -312,6 +351,15 @@ BEGIN
     WHERE	matchid = @matchid 
 			AND 1 = CASE
 						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1 
+						WHEN b.bettype BETWEEN 901 AND 910 THEN 1
+						ELSE 0 
+					END
+			AND 1 = CASE 
+						WHEN (bettype BETWEEN 901 AND 910 
+									AND refno IN (SELECT transid FROM #tmpTrans))
+								OR b.bettype = 904 -- The 904 refno is equal to single ticket	
+							THEN 1 
+						WHEN bettype NOT BETWEEN 901 AND 910 THEN 1
 						ELSE 0 
 					END
     GROUP BY custid
