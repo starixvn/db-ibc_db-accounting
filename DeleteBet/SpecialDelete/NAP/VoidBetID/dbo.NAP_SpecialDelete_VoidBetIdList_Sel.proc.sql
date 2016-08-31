@@ -24,7 +24,8 @@ AS
 		- 20160301@Bobby: #53123 - Enhance SP void bet by Id list (allow transId up to 1000 rows)
 		- 20160314@Bobby: #53935 - Update changes for multiple bet trade transaction
 		- 20160413@Bobby: #55893 - Update change request for grouping tickets
-		- 20160714@Kathy: change the order of result: groupname, groupid, transid		
+		- 20160714@Kathy: change the order of result: groupname, groupid, transid
+		- 20160816@Bobby: #62527 - Update BT's info for showing bet list		
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -126,7 +127,7 @@ BEGIN
 				WHEN (b.bettype < 19001
 						AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
 						AND b.bettype NOT BETWEEN 801 AND 806-- MG
-						AND b.bettype NOT IN (901, 902, 903) -- BT subticket
+						AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 						AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
 						AND b.statusID NOT IN (101, 102)
 					) THEN 1
@@ -354,7 +355,7 @@ BEGIN
 			AND b.bettype < 19001
 			AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
-			AND b.bettype NOT IN (901, 902, 903) -- BT subticket
+			AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
 			AND b.statusID NOT IN (101, 102)
 	END
@@ -444,6 +445,7 @@ BEGIN
 				, sub.username
 				, sub.recommend
 				, sub.matchid
+				, sub.bettype
 				, ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo 
 				
 			FROM dbo.bettrans sub WITH(NOLOCK)
@@ -499,9 +501,9 @@ BEGIN
 		)
 		SELECT	
 			main.transid
-			,main.bettype
+			,sub.bettype
 			,sub.transid
-			,sub.betid
+			,main.bettype AS betid
 			,sub.refno
 			,main.hdp1
 			,main.hdp2

@@ -106,6 +106,7 @@ AS
 		- 20160405@Kathy: Allow to void settled ticket [Redmine:#54344]
 		- 20160706@Kathy: Get Refno for Lucky Single Ticket [Redmine:#55272]
 		- 20160722@Bobby: #61240 - Implement parent-child for PHAIO new 19 bet types
+		- 20160810@Bobby: #62223 - Apply new business terms for VOID bet function
 		
 	Param's Explanation: Special bet delete option
 		- @SecondAcceptFlag: 
@@ -168,8 +169,9 @@ BEGIN
 		betdaqid			BIGINT,
 		TransDesc			NVARCHAR(1000),
 		refno				BIGINT
-		)
+	)
 	DECLARE @tblInvalidTrans TABLE (transid BIGINT) -- store invalid BT transid
+	DECLARE @tblCustBT902 TABLE (custid INT) --store BT's custid 
 	
 	DECLARE @Remark			VARCHAR(500)
 			,@KeyID			INT
@@ -1178,16 +1180,8 @@ BEGIN
 		FROM #BetDelete
 		
 		------------------***** Begin Special Delete *****------------------		                                                                                                                                               
-		CREATE TABLE #BeforeUpd (
-				custid		 INT,
-				balance		 MONEY)
-			
-		CREATE TABLE #AfterUpd(
-					custid		 INT,
-					balance		 MONEY)
-
-		DECLARE @tblDebitPending TVP_BalanceList
-		DECLARE @tblCreditPending TVP_BalanceList
+		DECLARE @BeforeUpd 	TVP_BalanceChange
+		DECLARE @AfterUpd 	TVP_BalanceChange
 		
 		IF (@isExistBT = 1 AND EXISTS (SELECT TOP 1 1 FROM #tblTransIdSolds))
 		BEGIN
@@ -1232,7 +1226,7 @@ BEGIN
 					,sub.creator						
 					,tmpmain.hdp1
 					,tmpmain.hdp2
-					,tmpmain.bettype
+					,sub.bettype
 					,tmpmain.betteam
 					,tmpmain.betcheck
 					,tmpmain.odds
@@ -1243,7 +1237,7 @@ BEGIN
 					,tmpmain.liveawayscore
 					,tmpmain.Stake
 					,tmpmain.CurrencyName
-					,sub.betid
+					,tmpmain.bettype AS betid
 					,tmpmain.betdaqid
 			FROM	dbo.bettrans sub WITH(NOLOCK)
 				INNER JOIN #BetDelete tmpmain 
@@ -1252,6 +1246,19 @@ BEGIN
 						AND tmpmain.betdaqid = 0			
 						AND sub.matchid = @matchid
 			WHERE sub.transid IN (SELECT transid FROM #tblTransIdSolds)
+			
+			--insert custBT 
+			INSERT INTO @tblCustBT902( custid )
+			SELECT sub902.custid
+			FROM dbo.bettrans sub902 WITH (NOLOCK)
+				INNER JOIN #BetDelete tmpmain with(NOLOCK)
+				ON	sub902.refno = tmpmain.transid
+						
+			WHERE sub902.matchid 		= @matchid
+				AND sub902.bettype 		= 902
+				AND tmpmain.betdaqid 	= 0
+			GROUP BY sub902.custid
+			
 		END	
 		
 		-- Step 1: Backup into zzzbettrans
@@ -1283,8 +1290,10 @@ BEGIN
 				AND tmpmain.betdaqid = 0		
 			
 		-- Capture balance before updating Bettrans
-		INSERT INTO #BeforeUpd (custid, balance)
-		SELECT	custid, SUM (winlost - actual_stake + playercomm) balance
+		INSERT INTO @BeforeUpd (custid, balance, balanceType)
+		SELECT	custid
+			, SUM (winlost - actual_stake + playercomm) balance
+			, 1 AS balanceType
 		FROM (
 			SELECT	main.custid, main.winlost, main.actual_stake, main.playercomm
 			FROM	bettrans main WITH (NOLOCK)
@@ -1295,11 +1304,21 @@ BEGIN
 			UNION ALL
 			SELECT	sub.custid, sub.winlost, sub.actual_stake, sub.playercomm
 			FROM	bettrans sub WITH (NOLOCK)
-					INNER JOIN #BetDelete tmpmain with(NOLOCK)
-						ON	sub.refno = tmpmain.transid
-							AND sub.bettype IN (901, 902, 903)
-							AND tmpmain.betdaqid = 0
-							AND sub.matchid = @matchid
+				INNER JOIN #BetDelete tmpmain with(NOLOCK)
+					ON	sub.refno = tmpmain.transid
+						AND sub.bettype BETWEEN 901 AND 910
+						AND tmpmain.betdaqid = 0
+						AND sub.matchid = @matchid
+			WHERE @isExistBT = 1
+							
+			UNION ALL
+			SELECT	sub904.custid, sub904.winlost, sub904.actual_stake, sub904.playercomm
+			FROM	bettrans sub904 WITH (NOLOCK)
+					INNER JOIN @tblCustBT902 temp
+					ON sub904.custid = temp.custid
+						
+			WHERE sub904.matchid 		= @matchid
+				AND sub904.bettype 		= 904
 		) tmp
 		GROUP BY custid
 		
@@ -1348,11 +1367,47 @@ BEGIN
 					AND sub.bettype IN (901, 902, 903)
 					AND tmpmain.betdaqid = 0
 					AND sub.matchid = @matchid
+					
+			--Pre-CAL 904
+			BEGIN TRY
+				DECLARE @TempData TABLE(RowId INT IDENTITY(1,1), MatchId INT, CustIds VARCHAR(MAX))
+				INSERT INTO @TempData(MatchId, CustIds)
+				SELECT @MatchId AS matchid
+					, STUFF((SELECT ',' + CAST(CustId AS VARCHAR(50))
+										FROM #BetDelete tt WHERE tt.betdaqid = 0
+										FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')
+				FROM #BetDelete t
+				WHERE t.betdaqid = 0
+				
+				DECLARE @RowId INT, @MatchIdTmp INT, @CustIds VARCHAR(MAX)
+				SELECT @RowId = 1
+				WHILE EXISTS (SELECT TOP 1 1 FROM @TempData WHERE RowId = @RowId)
+				BEGIN
+					SELECT @MatchIdTmp = MatchId
+						, @CustIds = CustIds
+					FROM @TempData t 
+					WHERE RowId = @RowId
+					
+					EXEC dbo.NAP_Admin_Calculate_904 
+						@MatchId 	= @MatchIdTmp
+						, @Action 	= 'VOID'
+						, @CustIds 	= @CustIds
+						
+					SET @RowId = @RowId + 1
+				END
+				
+			END TRY 
+			BEGIN CATCH
+				SELECT	@ErrCode = 904
+					,@ErrMsg = 'Called NAP_Admin_Calculate_904 with error.'
+			END CATCH
 		END
 		
 		-- Capture balance after updating Bettrans
-		INSERT INTO #AfterUpd (custid, balance)
-		SELECT	custid, SUM (winlost - actual_stake + playercomm) balance
+		INSERT INTO @AfterUpd (custid, balance, balanceType)
+		SELECT	custid
+			, SUM (winlost - actual_stake + playercomm) balance
+			, 1 AS balanceType
 		FROM (
 			SELECT	main.custid, main.winlost, main.actual_stake, main.playercomm
 			FROM	bettrans main WITH (NOLOCK)
@@ -1363,38 +1418,28 @@ BEGIN
 			UNION ALL
 			SELECT	sub.custid, sub.winlost, sub.actual_stake, sub.playercomm
 			FROM	bettrans sub WITH (NOLOCK)
-					INNER JOIN #BetDelete tmpmain with(NOLOCK)
-						ON	sub.refno = tmpmain.transid
-							AND sub.bettype IN (901, 902, 903)
-							AND tmpmain.betdaqid = 0
-							AND sub.matchid = @matchid
+				INNER JOIN #BetDelete tmpmain with(NOLOCK)
+					ON	sub.refno = tmpmain.transid
+						AND sub.bettype BETWEEN 901 AND 910
+						AND tmpmain.betdaqid = 0
+						AND sub.matchid = @matchid
+			WHERE @isExistBT = 1
+							
+			UNION ALL
+			SELECT	sub904.custid, sub904.winlost, sub904.actual_stake, sub904.playercomm
+			FROM	bettrans sub904 WITH (NOLOCK)
+					INNER JOIN @tblCustBT902 temp
+					ON sub904.custid = temp.custid
+						
+			WHERE sub904.matchid 		= @matchid
+				AND sub904.bettype 		= 904
 		) tmp
 		GROUP BY custid
 
-		-- Compare balance
-		INSERT INTO @tblCreditPending (custID, balance)
-		SELECT		a.custid, (a.balance - b.balance) as Balance
-		FROM		#BeforeUpd b
-		INNER JOIN	#AfterUpd a 	
-				ON	a.custid = b.custid
-		WHERE	    (a.balance - b.balance) > 0	
-
-		IF @@rowcount <> 0
-			EXEC dbo.Dot_BalancePendingCreditIns 
-				@BalancePending = @tblCreditPending
-				,@Type			= 1 -- Sports
-		
-		INSERT INTO @tblDebitPending (custID, balance)
-		SELECT		a.custid, ABS(a.balance - b.balance) as Balance
-		FROM		#BeforeUpd b
-		INNER JOIN	#AfterUpd a 	
-				ON	a.custid = b.custid
-		WHERE	    (a.balance - b.balance) < 0
-		
-		IF @@rowcount <> 0
-			EXEC dbo.Dot_BalancePendingDebitIns 
-				@BalancePending = @tblDebitPending
-				,@Type			= 1 -- Sports
+		---INSERT data into pending balance table   
+		EXEC [dbo].[NAP_Admin_BalancePendingIns]
+			@BeforeUpd	 = @beforeUpd
+			, @AfterUpd	 = @afterUpd
 		
 		
 		IF (@isExistBT = 1)
@@ -1653,9 +1698,6 @@ BEGIN
 			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
 				ON al.srecommend = s.custid
 		ORDER BY al.grouptransid, al.transid
-		
-		DROP TABLE #BeforeUpd
-		DROP TABLE #AfterUpd
 	
 	END
 	------ releasing SD process
