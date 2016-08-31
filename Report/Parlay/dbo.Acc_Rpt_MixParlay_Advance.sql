@@ -22,7 +22,7 @@ AS
 			+ SportType (Liveawayscore):
 				Sporttype: Sport Name (1: Soccer, 2: Basketball, 3 Football, ...)
 				-1: Mixed Sports: soccer and at least 1 other sport
-				-2: Mixed Others Sports: other sports, not soccer
+				-2: Mixed Other Sports: other sports, not soccer
 				
 		-20121203@Elodie: Get data between @FromDate AND @ToDate
 		- 20121217@Lukas: exclude UUS currency
@@ -111,12 +111,25 @@ UPDATE os
 SET os.SportType = dbo.f_GetSportParlayByRefno(os.Refno)
 FROM #OtherSport os
 
+; WITH Result AS (
+	SELECT
+		9 AS bettype, LiveType, ISNULL(os.SportType, mp.SportType) SportType, [status],
+		SUM(WinLost) WinLost, SUM(turnoverp) turnoverp, SUM(Position) Position, SUM(Commission) Commission, SUM(LineTotal) LineTotal, SUM(Turnover) Turnover
+	FROM #MixParlay mp
+		LEFT JOIN #OtherSport os ON mp.Refno = os.Refno
+	GROUP BY LiveType, ISNULL(os.SportType, mp.SportType), [status]
+),
+Sport AS (
+	SELECT SportType, SportName, 1 AS RN FROM dbo.Sports WITH(NOLOCK) WHERE SportType = 1
+	UNION SELECT SportType, SportName, ROW_NUMBER() OVER(ORDER BY SportName) + 1 AS RN FROM dbo.Sports WITH(NOLOCK) WHERE SportType <> 1
+	UNION SELECT -1, 'Mixed Sports', 2000
+	UNION SELECT -2, 'Mixed Other Sports', 2001
+)
 SELECT
-	9 AS bettype, LiveType, ISNULL(os.SportType, mp.SportType), [status],
-	SUM(WinLost) WinLost, SUM(turnoverp) turnoverp, SUM(Position) Position, SUM(Commission) Commission, SUM(LineTotal), SUM(Turnover) Turnover
-FROM #MixParlay mp
-	LEFT JOIN #OtherSport os ON mp.Refno = os.Refno
-GROUP BY LiveType, ISNULL(os.SportType, mp.SportType), [status]
+	r.*
+FROM Result r
+	INNER JOIN Sport s ON r.SportType = s.SportType
+ORDER BY s.RN, r.LiveType, r.[status]
 
 DROP TABLE #MixParlay
 DROP TABLE #OtherSport

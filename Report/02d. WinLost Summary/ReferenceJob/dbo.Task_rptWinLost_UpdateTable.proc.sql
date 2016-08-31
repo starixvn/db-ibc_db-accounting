@@ -1,10 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Task_rptWinLost_UpdateTable]    Script Date: 03/22/2016 13:49:13 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+
 ALTER PROCEDURE [dbo].[Task_rptWinLost_UpdateTable]
 	@winlostdate smalldatetime
 AS
@@ -25,6 +21,12 @@ Revision:
 	- 20151216@Percy: support new product - Cockfighting [Redmine: #49027]
 	- 20160225@Jim: offer  Allbet Live Casino [Redmine:#50921)]
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sportype bettype matrix function and change the way to get data MBC-RNG Casino, Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
+	- 20160830@Percy:
+		1. Using exrisk column to indicate what is System Parlay or Mix parlay of Combo Parlay [RedmineID: #63022]
+			- Mix Parlay:	     (bettrans.bettype 29 AND bettrans.betteam = '1')  ---> rptWinLost.bettype = 29 AND rptWinLost.exrisk = 1 
+														 OR (bettrans.Bettype = 9) ---> rptWinLost.bettype =  9 AND rptWinLost.exrisk = 0 
+			- System Parlay:	(bettrans.bettype 29 and bettrans.betteam <> '1')  ---> rptWinLost.bettype = 29 AND rptWinLost.exrisk = 0 
+		2. Remove condition: bettrans.bettype = 29 and bettrans.betid > 0
 */
 
 BEGIN	
@@ -171,7 +173,51 @@ BEGIN
 			winlostdate, betdaqid, bettype, liveindicator, status,
 			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
 
-		--calculate other winlost
+		-- Combo Parlay (bettype = 29)
+		INSERT INTO bodb_Report.dbo.rptWinlost
+			(
+				[winlostdate]
+			   ,[matchid]
+			   ,[bettype]
+			   ,[liveindicator]
+			   ,[Status]
+			   ,[IBC]
+			   ,[RealTurnover]
+			   ,[RealWinLost]
+			   ,[RealPosition]
+			   ,[RealCommission]
+			   ,[RealLineTotal]
+			   ,[VirtualTurnover]
+			   ,[VirtualLineTotal]
+			   ,[SportType]
+			   ,[exrisk]
+			)	
+		SELECT
+			winlostdate,
+			matchid, b.bettype, liveindicator, Status,
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end as ibc,
+			sum((1-tpositiontaking)*abs(stake)*actualrate) as realturnover,
+			sum((winlost-actual_stake)* actualrate)  realWinlost,
+			sum((awinlost+mwinlost+swinlost)* actualrate) realPos,
+			sum((scomm) * actualrate) realComm,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) realLineTotal,
+			sum((1-tpositiontaking)*abs(stake)*virtualrate) as virtualTurnover,
+			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
+			0 SportType,
+			CASE WHEN betteam = N'1' THEN 1 ELSE 0 END exrisk
+		FROM bettrans b with (nolock)
+		WHERE
+			bettype = 29
+			AND winlostdate = @winlostdate
+			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
+			AND ruben = 1
+			AND currency <> 20
+		GROUP BY
+			winlostdate, matchid, b.bettype, liveindicator, status,
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end,
+			CASE WHEN betteam = N'1' THEN 1 ELSE 0 END
+
+		-- calculate other winlost
 		INSERT INTO bodb_Report.dbo.rptWinlost
 			(
 				[winlostdate]
@@ -199,16 +245,14 @@ BEGIN
 			sum((awinlost+mwinlost+swinlost)* actualrate) realPos,
 			sum((scomm) * actualrate) realComm,
 			sum((case when b.bettype = 1000 then -1*(odds-scomm) else winlost-actual_stake+awinlost+mwinlost+swinlost+scomm end)*actualrate) realLineTotal,
-			sum((1-tpositiontaking)*abs(CASE WHEN b.bettype IN (71,73,1000) THEN 0 
-											WHEN b.bettype = 29 AND betid > 0 THEN actual_stake 
-											ELSE stake END)*virtualrate) as virtualTurnover,
+			sum((1-tpositiontaking)*abs(CASE WHEN b.bettype IN (71,73,1000) THEN 0 ELSE stake END)*virtualrate) as virtualTurnover,
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
 			0 SportType, 0 exrisk
 		FROM
 			bettrans b with (nolock)
 			inner join @SportBettype sb on b.bettype = sb.Bettype
 		WHERE
-			(b.bettype < 19999 and b.bettype not in (31,32,33,1003))
+			(b.bettype < 19999 and b.bettype not in (29,31,32,33,1003))
 			AND sb.ProductID NOT IN (6, 17, 21, 22)
 			AND winlostdate = @winlostdate
 			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
@@ -346,7 +390,7 @@ BEGIN
 			DELETE FROM bodb_Report.dbo.rptWinlost
 			WHERE winlostdate = @winlostdate
 		
-			--calculate racing winlost
+			-- calculate racing winlost
 			INSERT INTO @CommSetting (MatchID, IBCFee, ToteCommWin, ToteCommPlace, ToteCommWP, ToteFee)
 			SELECT	DISTINCT o.orid as matchid, CASE WHEN r.partnerID IN (2,3,4) THEN 0 ELSE 1 END, p.ToteCommWin, p.ToteCommPlace, (p.ToteCommWin + p.ToteCommPlace)/2 ToteCommWP, p.ToteFee 
 			FROM	outright14 o WITH (NOLOCK)
@@ -414,7 +458,55 @@ BEGIN
 				winlostdate, b.matchid, bettype, liveindicator, status,
 				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
 
-
+			-- Combo Parlay (bettype = 29)
+			INSERT INTO bodb_Report.dbo.rptWinlost
+				(
+					[winlostdate]
+				   ,[matchid]
+				   ,[bettype]
+				   ,[liveindicator]
+				   ,[Status]
+				   ,[IBC]
+				   ,[RealTurnover]
+				   ,[RealWinLost]
+				   ,[RealPosition]
+				   ,[RealCommission]
+				   ,[RealLineTotal]
+				   ,[VirtualTurnover]
+				   ,[VirtualLineTotal]
+				   ,[SportType]
+				   ,[exrisk]
+				)				
+			SELECT
+				winlostdate,
+				matchid, 
+				b.bettype, liveindicator, Status,
+				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end ibc,
+				sum(abs(stake)*actualrate) as realturnover,
+				sum((winlost-actual_stake)* actualrate)  realWinlost,
+				sum((awinlost+mwinlost+swinlost)* actualrate) realPos,
+				sum((scomm) * actualrate) realComm,
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) realLineTotal,
+				sum((1-tpositiontaking)*abs(stake)*virtualrate) as virtualTurnover,
+				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
+				0 SportType,
+				CASE WHEN betteam = N'1' THEN 1 ELSE 0 END exrisk
+			FROM
+				bettrans14 b with (nolock)
+			WHERE
+				bettype = 29
+				AND winlostdate = @winlostdate
+				AND statusID NOT IN (101, 102,103,121) ----('VOID','REJECT','DONE','REFUND')
+				AND ruben = 1
+				AND currency <> 20
+			GROUP BY
+				winlostdate, 
+				matchid, 
+				b.bettype, liveindicator, status,
+				case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end,
+				CASE WHEN betteam = N'1' THEN 1 ELSE 0 END
+			
+			
 			INSERT INTO bodb_Report.dbo.rptWinlost
 				(
 					[winlostdate]
@@ -444,7 +536,6 @@ BEGIN
 				sum((scomm) * actualrate) realComm,
 				sum((case when b.bettype = 1000 then -1*(odds-scomm) else winlost-actual_stake+awinlost+mwinlost+swinlost+scomm end)*actualrate) realLineTotal,
 				sum((1-tpositiontaking)*abs(CASE WHEN b.bettype IN (71,73,1000) THEN 0 
-												WHEN b.bettype = 29 AND betid > 0 THEN actual_stake 
 												ELSE stake END)*virtualrate) as virtualTurnover,
 				sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
 				0 SportType, 0 exrisk
@@ -452,7 +543,7 @@ BEGIN
 				bettrans14 b with (nolock)
 				    INNER JOIN @SportBettype sb on b.bettype = sb.Bettype
 			WHERE
-				(b.bettype < 19999 and b.bettype not in (31,32,33)) 
+				(b.bettype < 19999 and b.bettype not in (29,31,32,33))
 				AND sb.ProductID NOT IN (6, 17, 21, 22)
 				AND winlostdate = @winlostdate
 				AND statusID NOT IN (101, 102,103,121) ----('VOID','REJECT','DONE','REFUND')
