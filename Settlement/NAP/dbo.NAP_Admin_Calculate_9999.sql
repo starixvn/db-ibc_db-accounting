@@ -22,6 +22,7 @@ AS
 		- 20150413@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+		- 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
 		
 */
 BEGIN
@@ -39,6 +40,8 @@ BEGIN
 		,@result NVARCHAR(10)
 		,@fth2H	INT 
 		,@fta2H	INT 
+		,@ExcludingHTChoice NVARCHAR(1000)
+		,@ExcludingFTChoice NVARCHAR(1000)
 	
 	SELECT @fth2H 	= @fth - @hth
 		,@fta2H 	= @fta - @hta
@@ -510,7 +513,9 @@ BEGIN
 						END
 						
 		UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
-		SET @modds = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetfair = 0 AND @IsSettleAbandonedMatchIBC = 0
+		SET @ExcludingHTChoice = CASE WHEN bettype = 416 THEN SUBSTRING(transdecs,0, CHARINDEX('/',transdecs)) ELSE NULL END
+			,@ExcludingFTChoice = CASE WHEN bettype = 416 THEN SUBSTRING(transdecs,CHARINDEX('/',transdecs)+1,LEN(transdecs)) ELSE NULL END
+			,@modds = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetfair = 0 AND @IsSettleAbandonedMatchIBC = 0
 									THEN CASE bettype
 											WHEN 133 THEN -- Home To Win Both Halves
 														 CASE 
@@ -599,10 +604,25 @@ BEGIN
 															ELSE -1 
 														END		
 											WHEN 416 THEN -- Half Time/Full Time Correct Score (own)
-														 CASE 
-															WHEN betteam = @csHT + '/' + @csFT THEN 1
+														CASE 
+															WHEN CHARINDEX('AOS',betteam) = 0 THEN CASE
+																										WHEN betteam = CAST(@hth AS NVARCHAR(10)) + ':' + CAST(@hta AS NVARCHAR(10)) + '/' + CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)) THEN 1
+																										ELSE -1
+																									END
+															WHEN CHARINDEX('AOS/AOS',betteam) = 1 THEN CASE
+																											WHEN CHARINDEX(CAST(@hth AS NVARCHAR(10)) + ':' + CAST(@hta AS NVARCHAR(10)),@ExcludingHTChoice) = 0 AND CHARINDEX(CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)),@ExcludingFTChoice) = 0 THEN 1
+																											ELSE 0
+																										END
+															WHEN CHARINDEX('/AOS',betteam) = 1 THEN CASE
+																										WHEN betteam = CAST(@hth AS NVARCHAR(10)) + ':' + CAST(@hta AS NVARCHAR(10)) + '/AOS' AND CHARINDEX(CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)),@ExcludingFTChoice) = 0 THEN 1
+																										ELSE -1
+																									END
+															WHEN CHARINDEX('AOS/',betteam) = 1 THEN CASE
+																										WHEN betteam = 'AOS/' + CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)) AND CHARINDEX(CAST(@hth AS NVARCHAR(10)) + ':' + CAST(@hta AS NVARCHAR(10)),@ExcludingHTChoice) = 0 THEN 1
+																										ELSE -1
+																									END
 															ELSE -1
-														 END
+														END
 											WHEN 433 THEN -- 2H Both Teams To Score (own)
 														 CASE 
 															WHEN betteam = 'y' AND (@fth - @hth) > 0 AND (@fta - @hta) > 0 THEN 1
@@ -739,10 +759,6 @@ BEGIN
 														ELSE NULL
 													END
 												END
-												/*CASE
-													WHEN (betteam = '1h' OR betteam = 'tie') AND @hth < (@fth - @hth) THEN -1
-													WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
-												END*/
 											WHEN 142 THEN
 												CASE @IsHTCal
 													WHEN 0 THEN NULL --abandoned 1H
@@ -767,10 +783,6 @@ BEGIN
 														ELSE NULL
 													END
 												END
-												/*CASE 
-													WHEN (betteam = '1h' OR betteam = 'tie') AND @hta < (@fta - @hta) THEN -1
-													WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
-												END */
 											WHEN 145 THEN 
 														 CASE 
 															WHEN @IsHTCal = 0 THEN -- suspended in 1st half
@@ -826,18 +838,23 @@ BEGIN
 																 END
 														END
 											WHEN 416 THEN
-														 CASE 
-															WHEN @IsHTCal = 0 THEN CASE
-																						WHEN LEFT(betteam,2) = '4+' AND (@hth + @hta) >= 4 THEN 1
-																						WHEN LEFT(betteam,2) <> '4+' AND (LEFT(LEFT(betteam,3),1) < @hth OR RIGHT(LEFT(betteam,3),1) < @hta) THEN -1
+														CASE
+															WHEN CHARINDEX('AOS/',betteam) = 0 THEN CASE
+																										WHEN CAST(LEFT(betteam,1) AS INT) < @hth OR CAST(RIGHT(SUBSTRING(betteam,0,CHARINDEX('/',betteam)-1),1) AS INT) < @hta THEN -1
+																									END
+															WHEN @IsHTCal = 1 THEN CASE 
+																						WHEN CHARINDEX('AOS/',betteam) = 1 THEN CASE
+																																	WHEN CHARINDEX(CAST(@hth AS NVARCHAR(10)) + ':' + CAST(@hta AS NVARCHAR(10)),@ExcludingHTChoice) > 0 THEN -1
+																																	WHEN CHARINDEX('/AOS',betteam) = 1 AND CHARINDEX(CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)),@ExcludingFTChoice) = 0 THEN 1
+																																END
+																						WHEN CHARINDEX('/AOS',betteam) = 0 THEN CASE
+																																	WHEN CAST(LEFT(SUBSTRING(betteam,CHARINDEX('/',betteam) + 1, LEN(betteam)),1)  AS INT) < @fth OR CAST(RIGHT(betteam,1) AS INT) < @fta THEN -1
+																																END																						
+																						WHEN CHARINDEX('/AOS',betteam) = 1 THEN CASE
+																																	WHEN CAST(LEFT(betteam,1) AS INT) = @hth AND CAST(RIGHT(SUBSTRING(betteam,0,CHARINDEX('/',betteam)-1),1) AS INT) = @hta AND CHARINDEX(CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)),@ExcludingFTChoice) = 0 THEN 1
+																																END
 																					END
-															ELSE CASE 
-																	WHEN betteam = '4+/4+' AND (@hth + @hta) >= 4 AND (@fth + @fta) >= 4 THEN 1
-																	WHEN LEFT(betteam,3) <> @csHT  THEN -1		
-																	WHEN RIGHT(betteam,2) = '4+' AND (@fth + @fta) >= 4 THEN 1
-																	WHEN RIGHT(betteam,2) <>'4+' AND (LEFT(RIGHT(betteam,3),1) < @fth OR RIGHT(RIGHT(betteam,3),1) < @fta) THEN -1																																																
-																 END
-														END		
+														END
 											WHEN 433 THEN 
 														 CASE 
 															WHEN betteam = 'y' AND (@fth - @hth) > 0 AND (@fta - @hta) > 0 THEN 1
@@ -925,10 +942,6 @@ BEGIN
 														ELSE NULL
 													END
 												END
-												/*CASE
-													WHEN (betteam = '1h' OR betteam = 'tie') AND @hth < (@fth - @hth) THEN -1
-													WHEN betteam = '2h' AND @hth < (@fth - @hth) THEN 1
-												END*/
 											WHEN 444 THEN 
 												CASE @IsHTCal
 													WHEN 0 THEN NULL --abandoned 1H
@@ -953,10 +966,6 @@ BEGIN
 														ELSE NULL
 													END
 												END
-												/*CASE 
-													WHEN (betteam = '1h' OR betteam = 'tie') AND @hta < (@fta - @hta) THEN -1
-													WHEN betteam = '2h' AND @hta < (@fta - @hta) THEN 1
-												END*/
 										 END
 							END	
 			,modds = @modds									
@@ -1063,9 +1072,6 @@ BEGIN
 								  WHEN @IsHTCal = 1 -- suspended in 2nd Half
 										AND 1 = CASE WHEN bettype IN (133,438) AND @hth <= @hta THEN 1
 													WHEN bettype IN (134,439) AND @hta <= @hth THEN 1
-													/*WHEN bettype IN (140,442) AND (@hth + @hta) < (@fth - @hth + @fta - @hta) THEN 1
-													WHEN bettype IN (141,443) AND @hth < (@fth - @hth) THEN 1
-													WHEN bettype IN (142,444) AND @hta < (@fta - @hta) THEN 1*/
 													WHEN bettype IN (140,442) THEN
 														CASE betteam
 															WHEN '1h' THEN

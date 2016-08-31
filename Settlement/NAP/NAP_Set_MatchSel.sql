@@ -24,6 +24,7 @@ AS
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160805@Kathy: Write log duration
+		- 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
       
  Param explanation:  
 	@MatchCode: match code
@@ -246,9 +247,7 @@ BEGIN
 	) tmp
 	LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
 	where (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
-	AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
-	--AND ISNULL(mr.SettlementStatus135,0) = CASE when @AutoSettlementOnly = 1 THEN 1 ELSE ISNULL(mr.SettlementStatus135,0) END  
-	
+	AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)	
 	
 	SELECT @rowcount = 0
 		,@max_matchid = 0
@@ -342,7 +341,7 @@ BEGIN
 	FROM	ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
-			AND (ResourceID IN ('135','168','173','174','175','176','192','193','210','211','212','213','214','215','216','217')
+			AND (ResourceId IN (SELECT CAST(BetType AS VARCHAR(20)) FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
 					OR ResourceID LIKE '160__'
 					OR ResourceID LIKE '164__'
 					OR ResourceID LIKE '169__'

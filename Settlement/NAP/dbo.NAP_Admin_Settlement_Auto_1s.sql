@@ -20,6 +20,7 @@ AS
 		- 20150610@Johnson: Add bettrade [Redmine: #35921]
 		- 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 		- 20160525@Kathy: Change the main Parlay Settlement SP
+		- 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
 
 	Param's Explanation:
 */	
@@ -35,7 +36,9 @@ BEGIN
 			,@betstatus					VARCHAR(50) 
 			,@ActionID					INT
 			,@Remark					VARCHAR(500)
-			,@LogData					NVARCHAR(300)							
+			,@LogData					NVARCHAR(300)
+			,@strAutoBetRadarBettypes	VARCHAR(MAX)
+			,@strBettypes				VARCHAR(MAX)								
 
 	CREATE TABLE #tmpTrans (transid BIGINT)
 
@@ -47,7 +50,6 @@ BEGIN
 		
 							 
 	--Write Log Settle
-
 	SELECT	 @fth			= finalhomescore
 			,@fta			= finalawayscore
 			,@hth			= hthomescore
@@ -74,29 +76,7 @@ BEGIN
 	INSERT INTO dbo.TempVariableNumber (KeyID, KeyValue)
 	VALUES (1, @matchid)
 
-	IF (@@ERROR = 0)
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= 'ADD SUCCESS'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @Remark = 'ADD SUCCESS ErrMsg=' + left(ERROR_MESSAGE(), 400)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@Matchid	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @ActionID
-				,@Remark	= @Remark
-		END CATCH
-	END
-	ELSE
+	IF (@@ERROR <> 0)
 	BEGIN
 		SELECT @ErrCode = 1000000
 			,@ErrMsg	= 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
@@ -111,29 +91,22 @@ BEGIN
 		custid INT PRIMARY KEY
 		,balance MONEY
 		)
-
+	
 	--===
-	INSERT INTO #tmpTrans(transid)
-	SELECT transid
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217)
-			AND betdaqid = 0--bettrade tickets
-
+	SELECT 	@strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes() f 
+	WHERE  	f.GroupId = 8 -- auto betradar
+	
 	INSERT INTO #BalanceBefore
 	SELECT	 b.custid
 			,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @MatchId 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217,901,902,903)
-			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
-								AND b.refno IN (SELECT transid FROM #tmpTrans)	
-						THEN 1 
-					WHEN b.bettype NOT IN (901,902,903) THEN 1
-					ELSE 0 END
+			AND 1 = CASE 
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strAutoBetRadarBettypes + ',') > 0 THEN 1 
+						ELSE 0 
+					END
 	GROUP BY b.custid
-
-
 	--===
 	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	IF @Action='CAL'
@@ -146,7 +119,7 @@ BEGIN
 			@IsAuto				= @IsAuto,
 			@creator			= @AdminID 			
 
-																																																																																																																																EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
+		EXEC dbo.NAP_Admin_Settlement_3_Auto_1s 
 			 @matchid		= @matchid
 			,@ResourceIDs	= @ResourceIDs
 			,@mode			= @action						
@@ -159,6 +132,7 @@ BEGIN
 			,@ResourceIDs	= @ResourceIDs
 			,@action		= 'CAL'		-- Default Action for UNDO Settlement 
 			,@mode			= 'UNDO' 
+			,@strBettypes	= @strAutoBetRadarBettypes
 
 		EXEC dbo.NAP_Admin_Settlement_MP
 				@matchid		= @matchid
@@ -181,9 +155,9 @@ BEGIN
 		
 		IF @IsSettleAbandonedMatchIBC = 1 
 		BEGIN
-			DECLARE	 @betCount_216			INT	= 0
-					,@GoalScorerAnytime		VARCHAR(MAX)=''
-
+			DECLARE	 @GoalScorerAnytime		VARCHAR(MAX)=''
+					,@FirstGoalMethod		VARCHAR(2)=''
+			
 			DECLARE	@tmpResourceIDs	TABLE(
 				 ID			INT IDENTITY(1,1)
 				,ResourceID	VARCHAR(20)
@@ -203,50 +177,72 @@ BEGIN
 			SET		HomeValue = NULL
 			WHERE	HomeValue ='NL'
 
-			SELECT	 @betCount_216	= ISNULL(SUM(CASE WHEN bettype = 216 THEN 1 ELSE 0 END),0)
-			FROM	dbo.Bettrans WITH (NOLOCK)
-			WHERE	MatchID = @MatchID 
-					AND Bettype = 216
-					AND	Bettype IN  (SELECT Bettype FROM @tmpResourceIDs)
-					AND StatusID NOT BETWEEN 101 AND 102 
-	
-			SELECT	@GoalScorerAnytime		= @GoalScorerAnytime + CASE WHEN t.ResourceID LIKE '216__' THEN ISNULL(r.HomeValue,'') +',' ELSE '' END 
+			;WITH cteBettypes
+			AS
+			(
+				SELECT	BetType
+				FROM	dbo.f_Set_GetGroupBettypes()
+				WHERE	GroupId = 8
+						AND IsDetermined = 1
+			)
+			SELECT	@strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+			FROM	dbo.bettrans WITH(NOLOCK)
+			WHERE	matchid = @MatchId
+					AND bettype NOT BETWEEN 101 AND 102
+					AND bettype IN (SELECT Bettype FROM @tmpResourceIDs)
+					AND bettype IN (SELECT Bettype FROM cteBettypes)
+			GROUP BY bettype
+			
+			SELECT	@GoalScorerAnytime		= @GoalScorerAnytime + CASE WHEN t.ResourceID LIKE '216__' THEN ISNULL(r.HomeValue,'') +',' ELSE '' END 			
 			FROM	@tmpResourceIDs t
 					INNER JOIN @tmpResults r ON t.ID = r.ID 
-			WHERE	t.ResourceID LIKE '216__'	
+			WHERE	t.ResourceID LIKE '216__'
 
 			IF ISNULL(@GoalScorerAnytime,'') =''
 			BEGIN
 				SELECT	 @ErrCode	= 1001014
-						,@ErrMsg	= 'Cannot settle determined ticket(s) without suspended result!'		
+						,@ErrMsg	= 'Cannot settle determined ticket(s) without suspended result!'	
+						
+				DELETE
+				FROM	dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+				WHERE	KeyID = 1 
+						AND KeyValue = @matchid	
+						
 				RETURN 	
 			END
 
-																																																																																																																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
+			EXEC dbo.NAP_Admin_Calculate_Main 
 				 @matchid					= @matchid
 				,@ResourceIDs				= @ResourceIDs
 				,@action					= 'REFUND'	
-				,@mode						= 'ALL' 
+				,@mode						= 'ABANDONED' 
 				,@GoalScorerAnytime			= @GoalScorerAnytime
+				,@FirstGoalMethod			= @FirstGoalMethod
 				,@IsSettleAbandonedMatchIBC	= @IsSettleAbandonedMatchIBC
-				,@betCount_216				= @betCount_216
+				,@strBettypes				= @strBettypes
 		END
 
-								EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
-					@Command			= 'NAP_Admin_Settlement_Auto_1s-REFUND',
-					@MatchID			= @MatchID,
-					@ResourceIDs		= @ResourceIDs, 
-					@Results			= @Results,
-					@IsAuto				= @IsAuto,
-					@creator			= @AdminID 	
-
-																																																																																																																																EXEC dbo.NAP_Admin_Calculate_Main 
+		EXEC DBPRO.BODB02.dbo.NAP_Admin_Result_Update_1s 
+			@Command			= 'NAP_Admin_Settlement_Auto_1s-REFUND',
+			@MatchID			= @MatchID,
+			@ResourceIDs		= @ResourceIDs, 
+			@Results			= @Results,
+			@IsAuto				= @IsAuto,
+			@creator			= @AdminID 	
+		
+		SET @strBettypes = NULL
+		SELECT	@strBettypes = COALESCE(@strBettypes + ',' + CAST(f.bettype AS VARCHAR(10)) + '|' + CAST(f.GroupID AS VARCHAR(10)), CAST(f.bettype AS VARCHAR(10))+ '|' + CAST(f.GroupID AS VARCHAR(10))) 
+		FROM	dbo.f_Set_GetGroupBettypes() f					
+		WHERE	f.GroupId = 8			
+		GROUP BY f.bettype, f.groupId
+			
+		EXEC dbo.NAP_Admin_Calculate_Main 
 			 @matchid					= @matchid
 			,@ResourceIDs				= @ResourceIDs
 			,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
 			,@action					= 'REFUND'	
-			,@mode						= 'ALL' 
-			,@row_count					= 1 
+			,@mode						= 'REFUND' 
+			,@strBettypes				= @strBettypes
 	END
 
 
@@ -259,16 +255,11 @@ BEGIN
 		,SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM dbo.bettrans b WITH (ROWLOCK)
 	WHERE	b.matchid = @matchid 
-			AND b.bettype IN (135,160,164,168,169,173,174,175,176,180,192,193,210,211,212,213,214,215,216,217,901,902,903)
-			AND 1 = CASE WHEN b.bettype IN (901,902,903) 
-									AND b.refno IN (SELECT transid FROM #tmpTrans)	
-								THEN 1 
-						WHEN b.bettype NOT IN (901,902,903) THEN 1
-						ELSE 0 END
+			AND 1 = CASE 
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strAutoBetRadarBettypes + ',') > 0 THEN 1 
+						ELSE 0 
+					END
 	GROUP BY b.custid
-
-
-
 	-------------------------------------------------------------
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
@@ -289,32 +280,23 @@ BEGIN
 		INNER JOIN #BalanceAfter a ON b.custid = a.custid
 	WHERE b.balance <> a.balance
 
-	--INSERT INTO dbo.BalancePendingDebit (custid, balance)
-	--SELECT custid, ABS(balance)
-	--FROM #Balance
-	--WHERE Increased = 0
 	INSERT INTO @tblDebitPending (custID, balance)
 	SELECT	custid, ABS(balance)
 	FROM	#Balance
 	WHERE	Increased = 0
 	
 	IF @@rowcount <> 0
-																EXEC dbo.Dot_BalancePendingDebitIns 
+		EXEC dbo.Dot_BalancePendingDebitIns 
 			@BalancePending = @tblDebitPending
 			,@Type			= 1 -- Sports
 
-	
-	--INSERT INTO dbo.BalancePendingCredit (custid, balance)
-	--SELECT custid, balance
-	--FROM #Balance
-	--WHERE Increased = 1
 	INSERT INTO @tblCreditPending (custID, balance)
 	SELECT	custid, balance
 	FROM	#Balance
 	WHERE	Increased = 1
 	
 	IF @@rowcount <> 0
-																EXEC dbo.Dot_BalancePendingCreditIns 
+		EXEC dbo.Dot_BalancePendingCreditIns 
 			@BalancePending = @tblCreditPending
 			,@Type			= 1 -- Sports
 
@@ -406,51 +388,6 @@ BEGIN
 	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
 	WHERE KeyID = 1 
 	AND KeyValue = @matchid
-
-	IF @@ERROR = 0
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@userid		= @AdminId
-				,@matchid	= @matchid
-				,@keyid		= 1
-				,@actionid	= @actionid
-				,@remark	= 'DEL SUCCESS'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @remark = 'DEL SUCCESS ErrMsg=' + LEFT(ERROR_MESSAGE(), 400)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@MatchID	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @actionid
-				,@Remark	= @remark
-		END CATCH
-	END
-	ELSE
-	BEGIN
-		BEGIN TRY
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@userid		= @AdminId
-				,@matchid	= @matchid
-				,@keyid		= 1
-				,@actionid	= @actionid
-				,@remark	= 'DEL FAILED'
-		END TRY
-
-		BEGIN CATCH
-			SELECT @remark = 'DEL FAILED ErrMsg=' + LEFT(ERROR_MESSAGE(), 400)
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Settle_Checking 
-				@UserID		= @AdminId
-				,@MatchID	= @matchid
-				,@KeyID		= 1
-				,@ActionID	= @actionid
-				,@Remark	= @remark
-		END CATCH
-	END
 END
 
 
