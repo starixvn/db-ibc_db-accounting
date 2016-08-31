@@ -33,6 +33,7 @@ AS
 							. Remove Bingo [Redmine: #54719]
 		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
 		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
+		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -255,7 +256,7 @@ BEGIN
 		   END Product,
 		   ISNULL(SUM(winlost), 0) winlost
 	FROM #bettranstmp
-	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903))
+	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904))
 				or bettype between 1301 and 1334		
 			) 
 			AND (Sporttype <> 44 )
@@ -279,7 +280,7 @@ BEGIN
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
 			 WHEN bettype BETWEEN 2001 AND 2007 THEN 'Microgaming - Live Casino'
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
-			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
+			 WHEN bettype BETWEEN 901 AND 904 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
@@ -300,7 +301,7 @@ BEGIN
 			OR bettype BETWEEN 801 AND 899
 			OR bettype BETWEEN 2001 AND 2007  
 			OR bettype BETWEEN 2008 AND 2009 
-			OR bettype BETWEEN 901 AND 903 
+			OR bettype BETWEEN 901 AND 904 
 			OR bettype BETWEEN 18000 AND 18099  
 			OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
@@ -323,7 +324,7 @@ BEGIN
 			 WHEN bettype BETWEEN 801 AND 899 THEN 'Metric Gaming - Super Live'
 			 WHEN bettype BETWEEN 2001 AND 2007 THEN 'Microgaming - Live Casino'
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
-			 WHEN bettype BETWEEN 901 AND 903 THEN 'Bettrade'
+			 WHEN bettype BETWEEN 901 AND 904 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
@@ -456,15 +457,15 @@ BEGIN
 			   CASE WHEN ISNULL(m.Sporttype, 0) <> 0	THEN m.Sporttype ELSE 0 END AS Sporttype,
 			   1 AS ProductId,
 			   CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
-					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm') THEN 'Bettrade'
+					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN 'Bettrade'
 					WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
 					WHEN b.bettype = 10 THEN 'Outright'
 					WHEN b.bettype IN (9,29) THEN'Parlay' 
 					WHEN b.liveindicator = 1 THEN 'SPL' 
 					WHEN b.liveindicator = 0 THEN 'SPNL'  								     
 				END	AS ProductName,
-			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END AS SubProduct,
-			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator ,
+			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END AS SubProduct,
+			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator ,
 			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0), 0)  * actualrate) as winlost 		 
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)	
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
@@ -478,15 +479,15 @@ BEGIN
 			   b.srecommend,
 			   CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
 			   CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
-					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm') THEN 'Bettrade'
+					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN 'Bettrade'
 					WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
 					WHEN b.bettype = 10 THEN 'Outright'
 					WHEN b.bettype IN (9,29) THEN'Parlay' 
 					WHEN b.liveindicator = 1 THEN 'SPL'
 					WHEN b.liveindicator = 0 THEN 'SPNL' 								     
 			   END,			   
-			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') THEN s.SubProduct ELSE '' END,
-			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END
+			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END,
+			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END
 			   )
 
 	INSERT INTO #ExtraPTWL (winlostdate, ProductId, ProductName, ExtraPTwinlost) 

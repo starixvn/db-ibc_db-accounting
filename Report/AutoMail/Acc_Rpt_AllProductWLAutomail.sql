@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_AllProductWLAutomail]
 	@AllowSendEmail BIT = 0 OUTPUT
 AS
@@ -21,6 +24,7 @@ AS
 		- 20160330@Sophia: Remove Bingo [Redmine: #54719]
 		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
 		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
+		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
 		 
 	Param's Explanation:
 	
@@ -199,8 +203,8 @@ BEGIN
 	BEGIN 	
 		INSERT INTO #TempCustTrans
 		SELECT DISTINCT custid = CASE 
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 AND Sporttype <> 44 THEN 6911909
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 AND Sporttype <> 44 THEN 6911911
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 AND Sporttype <> 44 THEN 6911909
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 AND Sporttype <> 44 THEN 6911911
 							WHEN bettype IN(9,29 ) THEN 6911913
 							WHEN bettype = 10 THEN 6911914
 							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 6911916
@@ -216,7 +220,7 @@ BEGIN
 							WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
 							WHEN bettype BETWEEN 2001 AND 2007 THEN 18256397
 							WHEN bettype BETWEEN 2008 AND 2009 THEN 19692521
-							WHEN bettype BETWEEN 901 AND 903 THEN 18371760
+							WHEN bettype BETWEEN 901 AND 904 THEN 18371760
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
 							WHEN bettype = 1003 THEN 20174484
 							WHEN Sporttype = 44 THEN 20174356
@@ -230,8 +234,8 @@ BEGIN
 	BEGIN 
 		INSERT INTO #TempCustTrans
 		SELECT DISTINCT custid = CASE 
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1  AND Sporttype <> 44 THEN 9398886
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 903)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0  AND Sporttype <> 44 THEN 12005466
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1  AND Sporttype <> 44 THEN 9398886
+							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,31,32,33,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0  AND Sporttype <> 44 THEN 12005466
 							WHEN bettype IN(9,29 ) THEN 12005470
 							WHEN bettype = 10 THEN 12005483
 							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 12017095
@@ -247,7 +251,7 @@ BEGIN
 							WHEN bettype BETWEEN 801 AND 899 THEN 18254387 
 							WHEN bettype BETWEEN 2001 AND 2007 THEN 18377344
 							WHEN bettype BETWEEN 2008 AND 2009 THEN 19741787
-							WHEN bettype BETWEEN 901 AND 903 THEN 18377348
+							WHEN bettype BETWEEN 901 AND 904 THEN 18377348
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
 							WHEN bettype = 1003 THEN  20256514
 							WHEN Sporttype = 44 THEN 20174451
