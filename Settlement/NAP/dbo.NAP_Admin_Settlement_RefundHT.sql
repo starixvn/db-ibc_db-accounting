@@ -41,7 +41,8 @@ AS
 		- 20160705@Kathy: - PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 						  - Capture balance incase of failure
 		- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [R
-    
+		- 20160905@Bobby: #63553 - Include FGLG (14,127) bet types
+		
     Param's Explanation:
     • @matchid: matchid of match to Refund HT
     • @IsExcludeBetdaq: Is Exclude betdaq tickets or not
@@ -84,11 +85,18 @@ BEGIN
     DECLARE @start DATETIME
         ,@stop DATETIME
         ,@strBettypes VARCHAR(MAX) 
+		,@matchdate DATETIME
 
 	SELECT @strBettypes = COALESCE(@strBettypes + ',' + CAST(bettype AS VARCHAR(10)), CAST(bettype AS VARCHAR(10))) 
 	FROM	dbo.f_Set_GetGroupBettypes ()
 	WHERE	Is3x30 = 1
-
+	
+	
+	SELECT @matchdate = eventdate
+    FROM	DBPRO.BODB02.dbo.Match WITH (NOLOCK)
+    WHERE	matchid = @matchid
+	
+	
     SELECT @start = CURRENT_TIMESTAMP
 
     CREATE TABLE #BalanceBefore (
@@ -106,7 +114,7 @@ BEGIN
         ,balance MONEY
         ,Increased BIT
         )
-        
+       
     CREATE TABLE #tmpTrans (transid BIGINT)
     
     DECLARE @tblDebitPending TVP_BalanceList
@@ -249,6 +257,7 @@ BEGIN
 				,@IsExcludeBetdaq = @IsExcludeBetdaq
 				,@IsExcludeBetfair = @IsExcludeBetfair
 				,@strBettypes = @strBettypes 
+				,@matchdate		= @matchdate
 		
 		-- BetTrade Winlost Sharing
 		IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans WITH(NOLOCK) WHERE matchid = @matchid AND bettype BETWEEN 901 AND 910)
