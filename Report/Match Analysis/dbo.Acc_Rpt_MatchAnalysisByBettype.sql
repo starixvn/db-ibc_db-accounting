@@ -22,6 +22,7 @@ AS
 		- 20150728@Jim: apply Bettrade (Feature #38815)
 		- 20150922@Jim: offer MO ( #41935)		
 		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 	Explanation's Param:
 		- @matchid: the id of match
 		- @statusid: the status of tickets --> ALL/DRAW/WON/LOSE  (0/111/112/113)
@@ -43,7 +44,7 @@ AS
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	DELETE @SportBettype
-	WHERE bettype IN (901,902,903,9,29,10)
+	WHERE bettype IN (901,902,903,903,9,29,10)
 		OR ProductID <> 1
 	
 	UPDATE @SportBettype

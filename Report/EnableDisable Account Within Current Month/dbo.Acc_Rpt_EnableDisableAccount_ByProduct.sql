@@ -21,7 +21,7 @@ AS
 		- 20151215@Percy: support Cockfighting [Redmine: #49027]
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20160229@Jim: Offer Allbet [Redmine #50921]
-		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
+		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]		
 
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency

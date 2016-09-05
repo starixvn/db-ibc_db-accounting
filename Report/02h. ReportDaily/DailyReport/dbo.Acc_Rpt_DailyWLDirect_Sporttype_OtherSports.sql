@@ -17,6 +17,7 @@ AS
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and Sport Betype Matrix [#35359]
 		- 20150723@Sophia: Exclude data of Bettrade [#38815]	
 		- 20160523@Sophia: Refactor code, Enhance Performance [Redmind: #57987]	
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 	Explanation's Param:
 		
@@ -40,7 +41,7 @@ SET NOCOUNT ON
 
 
 	DELETE	#SportBettype  
-	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss')
 		OR EventType NOT IN (1,2)
 
 

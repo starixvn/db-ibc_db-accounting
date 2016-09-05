@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Bettrade_Site14] 
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Bettrade_Site14] 
 	@winlostdate DATETIME
 	,@site TINYINT
 
@@ -9,6 +9,7 @@ AS
 	DB: DBACC/bodb02 
 		
 	Revisions:
+	   - 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 			
 	Parameter's Explanation:
 		- @site: 1: credit
@@ -45,7 +46,7 @@ BEGIN
 		INNER JOIN #DepAgent ag
 		ON b.recommend = ag.custid
 	WHERE b.winlostdate = @winlostdate
-		AND b.bettype = 903
+		AND b.bettype IN (903, 904)
 		AND b.ruben = 1
 		AND b.statusID NOT IN (101, 102, 103, 121)
 	GROUP BY site

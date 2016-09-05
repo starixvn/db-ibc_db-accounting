@@ -39,7 +39,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
          INSERT INTO #SportBetType
                 SELECT s.BetType
                 FROM dbo.f_SportBetTypeMatrix_Sel(1, 1, 0, 2, '', '', @isTest) s
-                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
+                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm', 'BT-Winloss')
                 AND EventType IN(1, 2);
      END;
      BEGIN -- Bet Type
@@ -235,8 +235,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_BetType_14] @EndDate='2020-01-01',@StartDate
 					DisplayOrder
 			FROM	#Data
 			WHERE	RowName = 'Deposit'
-		)  D	
-		
+		)  D
+			
 		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
 		UPDATE 	c
 		SET		c.MemberWinLoss = ISNULL(c.MemberWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.MemberWinLoss,0) ELSE ISNULL(d.MemberWinLoss,0) END,

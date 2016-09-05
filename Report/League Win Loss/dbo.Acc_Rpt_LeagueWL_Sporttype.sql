@@ -23,6 +23,7 @@ AS
 		- 20150526@Sophia: Apply Sport Bettype Matrix [#34486]		
 		- 20150723@Sophia: Exclude data of Bettrade [#38815]
 		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 		Explanation's Param:
 			- @winlostdate: the date want to view report
@@ -40,7 +41,7 @@ SET NOCOUNT ON
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductID = 1
 
 	DELETE	@SportBettype  
-	WHERE	(SubProduct IN ('BT-Sold','BT-Bought','BT-Comm'))
+	WHERE	(SubProduct IN ('BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss'))
 
 
 	--Declare @temp table to contain all matches based on @winlostdate

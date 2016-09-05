@@ -22,6 +22,7 @@ Revisions:
 						4	SLI - Live Casino
 						5	Virtual Sports
 	- 20160119@Robert: Modify SP covered bettype 501. Need to exclude bettype 500 from this report. [#50274]
+	- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 Param's Explanation:
 	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
 				   Because job recurs every 30s, so we set @CheckTime = 1 minute as default
@@ -38,7 +39,7 @@ BEGIN
 
 	DELETE  @SportBettype 
 	WHERE	ProductID NOT IN (1, 3, 4, 5) 
-			OR bettype IN (500)
+			OR bettype IN (500, 901, 902, 903, 904)
 
 	---- ** 1. Check the transdate of LastTransID and current time  ** ----
 	DECLARE @LastTransDate DATETIME	

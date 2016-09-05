@@ -49,7 +49,7 @@ AS
   - 20150909@Jim: Remove leagueName SPECIALS (HotFix #41712)
   - 20160317@Robert - Incorporate 1X2 HDP and 1H 1X2 HDP bet types into Trader Performance Report[#54184]
   - 20160414@Robert - Trader Performance Report - Mismatch Turnover data with TGR/Performance Detail report[RedmineId: #55948]
-  - 20160711@Percy: Fix duplicate data [RedmineID: #60562]
+  - 20160711@Percy: Fix duplicate data [RedmineID: #60562]  
  Param's Explanation:  
  • @isSoccer  
   = 1: Soccer  

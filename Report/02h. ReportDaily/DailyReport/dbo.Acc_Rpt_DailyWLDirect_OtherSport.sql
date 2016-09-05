@@ -30,6 +30,7 @@ SET NOCOUNT ON
 		- 20150525@Sophia: Apply Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 		- 20150723@Sophia: Exclude data of Bettrade [#38815]
 		- 20160125@Robert: Cricket - Integrate to Accounting Reports [#50274]
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 */
 
 	----Get Sport Bettype Matrix------
@@ -38,7 +39,7 @@ SET NOCOUNT ON
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5, @ProductId = 1
 
 	DELETE	@SportBettype  
-	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+	WHERE	SubProduct IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss')
 			OR EventType NOT IN (1,2)
 
 	

@@ -58,6 +58,7 @@ AS
 			- 20150520@Sophia: Apply Gold Deluxe and Metric Gaming - SuperLive and revise Sport Betype Matrix [#35359] 
 			- 20150701@Sophia: Apply Microgaming and Super Balance [#38168]
 			- 20150723@Sophia: Apply Bettrade [#38815]
+			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 	*/
 	SET NOCOUNT ON
 
@@ -144,7 +145,7 @@ AS
 			inner join @SportBettype s on s.bettype = b.bettype
 	where   s.ProductId = 1 
 		AND s.eventtype = 1
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm')
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm', 'BT-Winloss')
 		/*((bettype < 31 and bettype <> 10) 
 				OR bettype between 121 and 999 				
 				OR bettype BETWEEN 1301 and 1334)	*/
@@ -201,7 +202,7 @@ AS
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype 
 	WHERE  	s.ProductId = 1
 		AND s.EventType = 1
-		AND s.SubProduct = 'BT-Comm'				
+		AND s.SubProduct IN ('BT-Comm', 'BT-Winloss')
 	GROUP BY 
 			b.bettype, 
 			case when matchcode like '%hedge%' then ' (hedge)' else '' end

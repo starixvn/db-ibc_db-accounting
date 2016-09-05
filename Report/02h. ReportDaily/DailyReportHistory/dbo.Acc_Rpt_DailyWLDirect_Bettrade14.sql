@@ -6,6 +6,7 @@ AS
 	DB: DBACC/bodb02
 	
 	Revisions: 
+	   - 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 		
 */
 
@@ -35,7 +36,7 @@ SELECT	b.bettype
 		LEFT JOIN (SELECT custid FROM #DepAgent ) dep
 			ON b.recommend = dep.custid
 	WHERE b.winlostdate = @winlostdate
-		AND b.Bettype = 903
+		AND b.Bettype IN (903, 904)
 		AND b.ruben = 1
 		AND b.statusID NOT IN (101, 102, 103, 121)
 	GROUP BY b.Bettype

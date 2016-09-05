@@ -249,7 +249,7 @@ BEGIN
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') 
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm','BT-Winloss') 
 	GROUP BY srecommend,
 			CASE WHEN m.sporttype = 44 THEN 44 
 				 WHEN m.Sporttype = 1 THEN 1				
@@ -288,7 +288,7 @@ BEGIN
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') 
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm','BT-Winloss') 
 	GROUP BY  
 			CASE WHEN m.sporttype = 44 THEN 44 
 				 WHEN m.Sporttype = 1 THEN 1				
@@ -331,7 +331,7 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal_virtualrate,
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
-			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END AS ProductID,
+			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 WHEN 'BT-Winloss' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END AS ProductID,
 			s.CasinoType
 	FROM bettrans14 b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype
@@ -341,11 +341,11 @@ BEGIN
 		AND b.ruben = 1	
 		AND	( ----s.productID NOT IN (1,6,17,22,21) ---- OW RNG(6), Microgaming - RNG Casino (17), Voidbridge (22),  Allbet (21)	
 			(s.productID <> 1 AND s.RefTable NOT IN (1,2))  ------ not have data detail in bettransRNG and BettransLC 
-			OR (s.productID = 1 AND s.SubProduct IN ('MG-SuperLive','BT-Comm')) ---Metric Gaming - Superlive , Bettrade
+			OR (s.productID = 1 AND s.SubProduct IN ('MG-SuperLive','BT-Comm','BT-Winloss')) ---Metric Gaming - Superlive , Bettrade
 			OR (s.productID = 1 AND s.EventType = 0 ) ----Palay
 			)	
 	GROUP BY srecommend ,
-			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END,
+			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 WHEN 'BT-Winloss' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END,
 			s.CasinoType
    
 
@@ -542,7 +542,7 @@ BEGIN
 			AND b.ProductId = -2
 			AND e.ProductId = 1 
 			AND e.Sporttype = 0
-			AND e.SubProduct = 'BT-Comm'
+			AND (e.SubProduct = 'BT-Comm' OR e.SubProduct ='BT-Winloss')
 	WHERE	b.ProductId = -2
 	GROUP BY site, b.ProductId
 
@@ -571,9 +571,10 @@ BEGIN
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
 	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colossus Bets (3rd)
-			--OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
-			--OR b.ProductId IN (6, 14) --- Macau (Casino)
+			--- OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
+			--- OR b.ProductId IN (6, 14) --- Macau (Casino)
 			OR b.CasinoType IN (1,2)
+			
 	GROUP BY site, CASE WHEN b.CasinoType = 1 THEN 6   ---- Casino
 				 WHEN b.CasinoType = 2 THEN 4  ---Live Casino
 				 ELSE b.ProductId END
@@ -601,8 +602,8 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
-	WHERE	-- b.ProductId IN (21)    ----Allbet (LiveCasino)
-			-- OR  b.ProductId IN (6,17,22) --- OW RNG + Microgaming - RNG Casino, Macau Games (Casino)
+	WHERE	--- b.ProductId IN (21)    ----Allbet (LiveCasino)
+			---OR  b.ProductId IN (6,17,22) --- OW RNG + Microgaming - RNG Casino, Macau Games (Casino)
 			b.CasinoType IN (1,2)
 	GROUP BY site, 
 			 CASE WHEN b.CasinoType = 1 THEN 6  ---- Casino
@@ -636,7 +637,7 @@ BEGIN
 		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
-		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm') 
+		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm','BT-Winloss') 
 	GROUP BY  
 			CASE WHEN m.Sporttype = 1 THEN -98				
 				 ELSE -99

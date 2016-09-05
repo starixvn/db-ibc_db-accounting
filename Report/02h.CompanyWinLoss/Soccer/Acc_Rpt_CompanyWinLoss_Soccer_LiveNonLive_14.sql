@@ -36,7 +36,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
          INSERT INTO #SportBetType
                 SELECT BetType
                 FROM bodb02.dbo.f_SportBetTypeMatrix_Sel(1, 1, 0, 2, '', '', @isTest)
-                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm')
+                WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm', 'BT-Winloss')
                 AND EventType IN(1, 2);
      END;
       BEGIN -- #DepositSuper
@@ -175,7 +175,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive_14] @EndDate='2020-01-01',@Start
                              ELSE 'Soccer Non-Live'
                          END
 	
-	  --- set data default for 'Deposit' if there is no data
+		--- set data default for 'Deposit' if there is no data
 		INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
 							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
 		SELECT	GroupId, GroupName, 'Deposit' AS RowName,

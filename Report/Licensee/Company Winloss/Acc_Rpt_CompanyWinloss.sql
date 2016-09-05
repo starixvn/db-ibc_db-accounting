@@ -22,6 +22,7 @@ AS
 		- 20160119@Patrick: Support BetTrade
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 
 
 */
@@ -189,7 +190,7 @@ BEGIN
 				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND (bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 AND 1399)
-				AND b.bettype NOT IN (901, 902, 903)
+				AND b.bettype NOT IN (901, 902, 903, 904)
 				AND b.statusid IN (111, 112, 113)
 				AND b.apositiontaking <> 0
 			GROUP BY b.srecommend
@@ -203,7 +204,7 @@ BEGIN
 				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND (bettype < 31 OR bettype BETWEEN 121 AND 999 OR bettype BETWEEN 1301 AND 1399)
-				AND b.bettype NOT IN (901, 902, 903)
+				AND b.bettype NOT IN (901, 902, 903, 904)
 				AND b.statusid IN (111, 112, 113)
 				AND b.apositiontaking = 0
 			GROUP BY b.srecommend
@@ -229,7 +230,7 @@ BEGIN
 				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.statusid IN (111, 112, 113)
-				AND b.bettype = 903
+				AND b.bettype IN (903, 904)
 			GROUP BY b.srecommend
 		END
 		ELSE IF ISNULL(@ProductPrefix, '') = '' --for all products
@@ -265,7 +266,7 @@ BEGIN
 					INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 				WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 					AND b.RoleId = 4
-					AND b.bettype = 903
+					AND b.bettype IN (903, 904)
 					AND b.statusid IN (111, 112, 113, 114, 115)
 				GROUP BY b.srecommend
 			END
@@ -280,7 +281,7 @@ BEGIN
 				WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 					AND b.RoleId = 4
 					AND b.statusid IN (111, 112, 113, 114, 115)
-					AND b.bettype NOT IN (901,902,903)
+					AND b.bettype NOT IN (901,902,903,904)
 				GROUP BY b.srecommend
 			END
 		END
@@ -295,7 +296,7 @@ BEGIN
 				AND b.RoleId = 4
 				AND b.BetType < 19999
 				AND b.statusid IN (111, 112, 113, 114, 115)
-				AND b.bettype NOT IN (901,902)
+				AND b.bettype NOT IN (901,902,903,904)
 			GROUP BY b.srecommend
 		END
 	END
