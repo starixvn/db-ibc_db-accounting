@@ -299,7 +299,7 @@ SET NOCOUNT ON
 						WHEN liveindicator = @liveindicator THEN 1
 						ELSE 0 END = 1
 					AND m.matchcode not like '%hedge%'
-					AND B.IBC = 0
+					AND B.IBC = 0					
 				GROUP BY eventdate,b.matchid, m.matchcode, m.teamid, b.bettype, m.leagueid    
 			END     
 		END
@@ -404,7 +404,7 @@ SET NOCOUNT ON
 						ELSE 17
 						END
 			
-	   IF(@drilldownbytype = 1 AND @sporttype = 1 AND @bettype = 0 AND @SubProduct = '')
+	   IF(@drilldownbytype IN (1,2) AND @sporttype = 1 AND @bettype IN (0,19999) AND @SubProduct = '')	   
 	   BEGIN
 		  DELETE r
 		  FROM @RPT r
