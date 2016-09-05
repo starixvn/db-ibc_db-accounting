@@ -111,6 +111,9 @@ UPDATE os
 SET os.SportType = dbo.f_GetSportParlayByRefno(os.Refno)
 FROM #OtherSport os
 
+DECLARE @max_sporttype INT
+SELECT  @max_sporttype = MAX(Sporttype) FROM dbo.Sports WITH(NOLOCK)
+
 ; WITH Result AS (
 	SELECT
 		9 AS bettype, LiveType, ISNULL(os.SportType, mp.SportType) SportType, [status],
@@ -122,8 +125,8 @@ FROM #OtherSport os
 Sport AS (
 	SELECT SportType, SportName, 1 AS RN FROM dbo.Sports WITH(NOLOCK) WHERE SportType = 1
 	UNION SELECT SportType, SportName, ROW_NUMBER() OVER(ORDER BY SportName) + 1 AS RN FROM dbo.Sports WITH(NOLOCK) WHERE SportType <> 1
-	UNION SELECT -1, 'Mixed Sports', 2000
-	UNION SELECT -2, 'Mixed Other Sports', 2001
+	UNION SELECT -1, 'Mixed Sports', @max_sporttype + 1
+	UNION SELECT -2, 'Mixed Other Sports', @max_sporttype + 2
 )
 SELECT
 	r.*

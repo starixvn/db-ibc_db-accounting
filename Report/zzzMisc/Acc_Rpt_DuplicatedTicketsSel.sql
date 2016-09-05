@@ -1,6 +1,5 @@
-Use bodb_report 
-Go
-/****** Object:  Stored Procedure dbo.Acc_Rpt_DuplicatedTicketsSel    Script Date: 10/23/2015 11:08:34 AM ******/
+USE [bodb_report] 
+GO
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_DuplicatedTicketsSel]
 	@Date DATETIME,

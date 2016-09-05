@@ -1,14 +1,9 @@
-IF EXISTS
-(
-    SELECT *
-    FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_Parlay]')
-          AND type IN(N'P', N'PC')
-)
-    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Parlay];
+USE [bodb02]
 GO
-CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Parlay] @StartDate SMALLDATETIME,
-                                                       @EndDate   SMALLDATETIME
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Parlay]
+	@StartDate SMALLDATETIME,
+    @EndDate   SMALLDATETIME
 AS
 
 /*

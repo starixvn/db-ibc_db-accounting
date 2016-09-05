@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_MixParlay]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_MixParlay]
 	@winlostdate	datetime,
 	@bettype		int,
 	@site			tinyint = 0

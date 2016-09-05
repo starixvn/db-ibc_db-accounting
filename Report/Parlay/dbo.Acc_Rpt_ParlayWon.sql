@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_ParlayWon]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_ParlayWon]
 	@WinlostDate	DATETIME,
 	@Bettype		INT = 9,
     @IsSoccer		BIT	= 0,    
@@ -48,7 +51,7 @@ BEGIN
 			INNER join bettransm bm WITH (nolock) ON b.refno = bm.refno
 			INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
 		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
-			AND b.matchid = @_matchid
+			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate
@@ -69,7 +72,7 @@ BEGIN
 			INNER join bettransm14 bm WITH (nolock) ON b.refno = bm.refno
 			INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
 		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
-			AND b.matchid = @_matchid 
+			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate
@@ -92,8 +95,8 @@ BEGIN
 		FROM bettrans b WITH (nolock)
 			INNER join bettransm bm WITH (nolock) ON b.refno = bm.refno
 			INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE b.bettype = @bettype
-			AND b.matchid = @_matchid
+		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
+			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate
@@ -113,8 +116,8 @@ BEGIN
 		FROM bettrans14 b WITH (nolock)
 			INNER join bettransm14 bm WITH (nolock) ON b.refno = bm.refno
 			INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE b.bettype = @bettype 
-			AND b.matchid = @_matchid 
+		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
+			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate

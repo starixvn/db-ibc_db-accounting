@@ -1,4 +1,6 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Parlay]
+﻿USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Parlay]
 	@winlostdate	DATETIME
 AS
 	/*

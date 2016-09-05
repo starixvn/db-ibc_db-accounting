@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_CheckBet_Normal]
+﻿USE [bk]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_CheckBet_Normal]
 	@winlostdate datetime
 AS 
 /*	

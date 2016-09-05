@@ -23,6 +23,11 @@ BEGIN
 	FROM dbo.bettransm bm WITH(NOLOCK)
 		INNER JOIN dbo.match m WITH(NOLOCK) ON bm.matchid = m.matchid
 	WHERE bm.refno = @Refno
+	UNION
+	SELECT DISTINCT m.sporttype
+	FROM dbo.bettransm14 bm WITH(NOLOCK)
+		INNER JOIN dbo.match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
+	WHERE bm.refno = @Refno
 
 	IF (SELECT COUNT(1) FROM @Sport) = 1
 	BEGIN

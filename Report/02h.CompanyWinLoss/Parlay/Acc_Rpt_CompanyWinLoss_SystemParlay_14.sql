@@ -1,15 +1,10 @@
-IF EXISTS
-(
-    SELECT *
-    FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14]')
-          AND type IN(N'P', N'PC')
-)
-    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14];
+USE [bodb02]
 GO
-CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14] @StartDate SMALLDATETIME,
-                                                                @EndDate   SMALLDATETIME,
-                                                                @Site      NVARCHAR(20)  = 'ALL'
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14]
+	@StartDate SMALLDATETIME,
+    @EndDate   SMALLDATETIME,
+    @Site      NVARCHAR(20)  = 'ALL'
 AS
 
 /*
@@ -22,7 +17,7 @@ Revisions:
 - 20160301@Jacob: Initialize Company Win Loss Report
 - 20160720@Sophia: . Revise SP
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
-
+- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='2016-01-01', @Site= 'ALL'
 
