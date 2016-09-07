@@ -3,10 +3,13 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFGLG] @matchid INT
-	,@action varchar(10) = 'REFUND'
-	,@LGOnly BIT
-	,@matchdate DATETIME
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFGLG] 
+	@matchid 				INT
+	,@action 				VARCHAR(10) = 'REFUND'
+	,@LGOnly 				BIT
+	,@matchdate 			DATETIME
+	,@IsExcludeBetdaq     	BIT = 0
+    ,@IsExcludeBetfair		BIT = 0
 AS
 /*	Created by: Kathy
 	Date: 20140213
@@ -16,7 +19,7 @@ AS
 	Revisions: 
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
-		- 20160905@Bobby: Remove LAS stattement
+		- 20160905@Bobby: #63679 - Remove LAS stattement & exclude betdaq, betfair
 				
 */
 BEGIN
@@ -67,12 +70,16 @@ BEGIN
 				,scomm = 0
 				,ruben = 1
 			FROM dbo.bettrans b with(ROWLOCK, UPDLOCK) 
-			INNER JOIN @currecommend ag ON b.recommend = ag.recommend
+				INNER JOIN @currecommend ag ON b.recommend = ag.recommend
 			WHERE matchid = @matchid
-			AND statusID NOT IN (103, 101, 102) 
-			AND ((@bettype = 0 AND bettype IN (14,127)) 
+				AND statusID NOT IN (103, 101, 102) 
+				AND ((@bettype = 0 AND bettype IN (14,127)) 
 					OR (bettype = @bettype))
-			AND right(betteam, 1) = CASE WHEN @LGOnly = 1 THEN '2' ELSE right(betteam, 1) END
+				AND right(betteam, 1) = CASE WHEN @LGOnly = 1 THEN '2' ELSE right(betteam, 1) END
+				AND 1 = CASE 
+						WHEN @IsExcludeBetdaq = 1 AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 0
+						WHEN @IsExcludeBetfair = 1 AND b.custid IN (2331, 1077687, 115770, 15523642) THEN 0
+					ELSE 1 END
 
 			IF @affectedagents <> 100
 				BREAK
@@ -106,6 +113,10 @@ BEGIN
 					WHEN @LGOnly = 1 THEN '2'
 					ELSE right(betteam, 1)
 					END
+				AND 1 = CASE 
+						WHEN @IsExcludeBetdaq = 1 AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 0
+						WHEN @IsExcludeBetfair = 1 AND b.custid IN (2331, 1077687, 115770, 15523642) THEN 0
+					ELSE 1 END
 
 			IF @@ROWCOUNT < 10000
 				BREAK
