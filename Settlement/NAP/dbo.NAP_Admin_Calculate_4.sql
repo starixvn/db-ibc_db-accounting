@@ -89,10 +89,8 @@ BEGIN
 
 				UPDATE b
 				SET @modds = CASE
-					WHEN (@bettype IN (14, 127) 
-							AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
-							AND (betteam = @correctscore OR betteam = @FGLG2)
-						) THEN 1
+					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' )) THEN --just for betchoice FG and NG
+						CASE WHEN (betteam = @correctscore OR betteam = @FGLG2)	THEN 1 ELSE -1 END
 					WHEN b.betteam NOT IN ('0:4', '4:0')
 						AND @bettype = 30 --1H Correct Score
 						AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1)) THEN -1
@@ -411,10 +409,8 @@ BEGIN
 		BEGIN
 			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 			SET @modds = CASE 
-					WHEN (@bettype IN (14, 127) 
-							AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
-							AND (betteam = @correctscore OR betteam = @FGLG2)
-						) THEN 1
+					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' )) THEN --just for betchoice FG and NG
+						CASE WHEN (betteam = @correctscore OR betteam = @FGLG2)	THEN 1 ELSE -1 END
 					WHEN betteam NOT IN ('0:4', '4:0') 
 						AND @bettype = 30 
 						AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) THEN -1
