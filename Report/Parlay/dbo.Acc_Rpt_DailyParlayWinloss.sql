@@ -49,7 +49,8 @@ BEGIN
 	FROM	bettrans WITH (NOLOCK)
 	WHERE
 			ruben=1 AND
-			((bettype = 9 AND matchid = 9) OR (bettype = 29 AND matchid = 29 AND betteam = N'1')) AND
+			bettype IN (9, 29) AND matchid IN (9, 29) AND -- prevent page split
+			N'1' = CASE WHEN bettype = 29 THEN betteam ELSE N'1' END AND
 			winlostdate between @FromDate AND @ToDate and 
 			statusID NOT IN (101,102,103) AND
 			currency <> 20
@@ -96,7 +97,8 @@ BEGIN
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE
 			ruben=1 AND
-			((bettype = 9 AND matchid = 9) OR (bettype = 29 AND matchid = 29 AND betteam = N'1')) AND
+			bettype IN (9, 29) AND matchid IN (9, 29) AND -- prevent page split
+			N'1' = CASE WHEN bettype = 29 THEN betteam ELSE N'1' END AND
 			winlostdate between @FromDate AND @ToDate and 
 			statusID NOT IN (101,102,103) AND
 			currency <> 20

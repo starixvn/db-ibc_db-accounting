@@ -36,7 +36,7 @@ AS
 */
 SET NOCOUNT ON
 
-CREATE TABLE #MixParlay (Refno BIGINT, LiveType SMALLINT, SportType SMALLINT, [status] NVARCHAR(20), WinLost MONEY, turnoverp MONEY, Position MONEY, Commission MONEY, LineTotal MONEY, Turnover MONEY)
+CREATE TABLE #MixParlay (Refno BIGINT, LiveType SMALLINT, SportType SMALLINT, [status] NVARCHAR(20), WinLost FLOAT, turnoverp FLOAT, Position FLOAT, Commission FLOAT, LineTotal FLOAT, Turnover FLOAT)
 
 IF @site = 0
 BEGIN
@@ -52,7 +52,8 @@ BEGIN
 	FROM	bettrans WITH (NOLOCK)
 	WHERE
 			ruben=1 AND
-			((bettype = 9 AND matchid = 9) OR (bettype = 29 AND matchid = 29 AND betteam = N'1')) AND
+			bettype IN (9, 29) AND matchid IN (9, 29) AND -- prevent page split
+			N'1' = CASE WHEN bettype = 29 THEN betteam ELSE N'1' END AND
 			winlostdate between @FromDate AND @ToDate and
 			statusID NOT IN (101,102,103) AND
 			currency <> 20
@@ -87,7 +88,8 @@ ELSE BEGIN
 		INNER JOIN #DepAgent ag ON bettrans.recommend = ag.custid
 	WHERE
 			ruben=1 AND
-			((bettype = 9 AND matchid = 9) OR (bettype = 29 AND matchid = 29 AND betteam = N'1')) AND
+			bettype IN (9, 29) AND matchid IN (9, 29) AND -- prevent page split
+			N'1' = CASE WHEN bettype = 29 THEN betteam ELSE N'1' END AND
 			winlostdate between @FromDate AND @ToDate and
 			statusID NOT IN (101,102,103) AND
 			currency <> 20

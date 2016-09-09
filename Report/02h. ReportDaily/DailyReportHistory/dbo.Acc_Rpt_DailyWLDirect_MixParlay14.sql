@@ -41,14 +41,6 @@ AS
 */
 SET NOCOUNT ON
 
-DECLARE @_matchid INT
-
-IF @bettype = 9
-	SELECT @_matchid = 9
-ELSE IF @bettype = 29
-	SELECT @_matchid = 29
-
-
 IF @site = 0
 BEGIN	
 	SELECT 
@@ -60,11 +52,12 @@ BEGIN
 			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover
 	FROM	bettrans14 bettrans WITH (NOLOCK)
 	WHERE
-			bettrans.ruben=1 AND
-			CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END  = @bettype AND
-			 matchid = @_matchid AND
-			bettrans.winlostdate = @winlostdate			
-			AND bettrans.statusID NOT IN (101,102,103)			
+			bettrans.ruben=1 AND			
+			matchid IN (9,29) AND
+			bettype IN (9,29) AND
+			bettrans.winlostdate = @winlostdate AND			
+			bettrans.statusID NOT IN (101,102,103) AND
+			(@bettype = CASE WHEN bettype = 29 AND betteam <> N'1' THEN 29 ELSE 9 END) 
 	GROUP BY status, liveawayscore 	
 END
 ELSE 
@@ -95,11 +88,12 @@ BEGIN
 	FROM	bettrans14 bettrans WITH (NOLOCK)
 		INNER JOIN #DepAgent ag ON bettrans.recommend = ag.custid
 	WHERE
-			bettrans.ruben=1 AND
-			CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 9 ELSE 29 END = @bettype AND
-			 matchid = @_matchid AND
-			bettrans.winlostdate = @winlostdate			
-			AND bettrans.statusID NOT IN (101,102,103)			
+			bettrans.ruben=1 AND			
+			matchid IN(9,29) AND
+			bettype IN(9,29) AND
+			bettrans.winlostdate = @winlostdate AND
+			bettrans.statusID NOT IN (101,102,103) AND
+			(@bettype = CASE WHEN bettype = 29 AND betteam <> N'1' THEN 29 ELSE 9 END) 
 	GROUP BY status, liveawayscore 
 		
 	DROP TABLE #DepAgent
