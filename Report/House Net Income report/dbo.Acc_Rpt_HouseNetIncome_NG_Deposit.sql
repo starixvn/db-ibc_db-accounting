@@ -11,7 +11,7 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions:
+    Revisions:  20160909@Harper - #63853 - Return wrong data Pay to Supplier
 	Param's Explanation:   
 */  
 BEGIN  
@@ -125,7 +125,7 @@ BEGIN
 	)
 
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (SELECT -0.4 * SUM(WinLoss) FROM #TempData)
+	SELECT 'FullRange', ISNULL(SUM(AmountToCompany), 0), -0.4 * ISNULL(SUM(AmountToCompany), 0)
 	FROM #FeeData
 	WHERE ProductID = 2
 
@@ -136,8 +136,8 @@ BEGIN
 	BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId = 2 AND rptDate = @tmpDate), -- LicenseeWL
-			(SELECT -0.4 * SUM(WinLoss) FROM #TempData WHERE rptDate = @tmpDate)
+		(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId = 2 AND rptDate = @tmpDate), -- LicenseeWL
+		(SELECT -0.4 * SUM(AmountToCompany) FROM #TempData WHERE rptDate = @tmpDate)  
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END

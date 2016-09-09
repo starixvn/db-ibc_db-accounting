@@ -8,7 +8,8 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions:
+    Revisions: 20160909@Harper - #63899 - Rebate and Discount should be included when calculating the Pay to Suplplier
+
 	Param's Explanation:   
 */  
 BEGIN  
@@ -116,7 +117,15 @@ BEGIN
 			INNER JOIN t ON t.DiscountGroupId = d.DiscountGroupId AND t.PartyId = d.PartyId
 		WHERE d.DiscountGroupType = 1 AND t.Total NOT BETWEEN d.FromAmount AND d.ToAmount
 	
-	SELECT	CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END ProductCode,
+	CREATE TABLE #RebateDiscount (	ProductId		INT,
+									ProductCode		VARCHAR(10),
+									[Order]			INT,
+									Figure			VARCHAR(200),
+									FullRange		MONEY)
+
+	INSERT INTO #RebateDiscount (ProductId, ProductCode, [Order], Figure, FullRange)	
+	SELECT	s.ProductId,
+			CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END ProductCode,
 			CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END [Order],
 			'Rebate & Discount' Figure,
 			-SUM(CASE WHEN s.AmountToCompany < 0 THEN 0 ELSE s.AmountToCompany * (ISNULL(d.Rate, 0) + (1 - ISNULL(d.Rate, 0)) * ISNULL(r.Rate,0)) END) AS FullRange
@@ -124,10 +133,12 @@ BEGIN
 		LEFT JOIN bodb_licensee.dbo.Product3rd p ON p.Productid = s.ProductId
 		LEFT JOIN #DiscountGroup d ON s.PartyId = d.PartyId AND d.ProductId = s.ProductId AND d.DiscountGroupType = 1 -- discount = 1
 		LEFT JOIN #DiscountGroup r ON s.PartyId = r.PartyId AND r.ProductId = s.ProductId AND r.DiscountGroupType = 2 -- rebate = 2
-	GROUP BY	CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
+	GROUP BY	s.ProductId,
+				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
 				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END
 	UNION ALL
-	SELECT	ProductPrefix AS ProductCode,
+	SELECT	ProductId,
+			ProductPrefix AS ProductCode,
 			3 AS [Order],
 			'Rebate & Discount' Figure,
 			0 AS FullRange
@@ -135,16 +146,31 @@ BEGIN
 	WHERE Productid NOT IN (SELECT DISTINCT ProductID FROM #FeeData)
 		AND Productid IN (2,4,5,6,8)
 	UNION ALL
-	SELECT 'SB' AS ProductCode,
+	SELECT  0,
+			'SB' AS ProductCode,
 			4 AS [Order],
 			'Rebate & Discount' Figure,
 			0 AS FullRange 
 	WHERE NOT EXISTS (SELECT 1 FROM #FeeData WHERE ProductId = 0)
-		
+
+	SELECT	r.ProductCode, 
+			r.[Order], 
+			r.Figure, 
+			r.FullRange
+	FROM #RebateDiscount r	
+	UNION ALL
+	SELECT	r.ProductCode, 
+			4 AS [Order], 
+			'Pay to supplier' AS Figure, 
+			ISNULL(r.FullRange, 0) * -0.4 AS FullRange
+	FROM #RebateDiscount r
+	WHERE r.ProductId IN (2, 4)
+			
 	DROP TABLE #Exchange
 	DROP TABLE #DiscountGroupHeader
 	DROP TABLE #DiscountGroup
 	DROP TABLE #FeeData
+	DROP TABLE #RebateDiscount
 END
 GO
 
