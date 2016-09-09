@@ -18,7 +18,7 @@ DB: DBAGE.bodb02
 Original: Acc_Rpt_MixParlayWon
 
 Revisions:
-		- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
+		- 20160826@Percy: Enhance System/Mix Parlay [RedmineID: #63022]
 Param's Explanation:
 	• @WinlostDate:
 		- Date of Win lost
@@ -46,19 +46,16 @@ BEGIN
 			b.stake, b.actual_stake, b.winlost-b.actual_stake AS Winlost,
 			b.stake*b.actualrate AS stake_RM, b.actual_stake*b.actualrate AS actual_stake_RM, (b.winlost-b.actual_stake)*b.actualrate AS Winlost_RM,
 			b.stake*(1-b.tpositiontaking)*b.actualrate AS CompanyStake_RM, b.actual_stake*(1-b.tpositiontaking)*b.actualrate AS CompanyActual_stake_RM, (b.winlost-b.actual_stake)*(1-b.tpositiontaking)*b.actualrate AS CompanyWinlost_RM,
-			COUNT(1) selection, b.odds, b.modds
+			CASE WHEN RAND() + 1 > 0 AND b.bettype = 9 THEN CONVERT(INT, RIGHT(b.betcheck, LEN(b.betcheck) - 1)) ELSE CONVERT(INT, b.hdp2) END selection, b.odds, b.modds
 		FROM bettrans b WITH (nolock)
-			INNER join bettransm bm WITH (nolock) ON b.refno = bm.refno
-			INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
-			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
+		WHERE
+			b.bettype IN (9, 29)
+			AND b.matchid IN (9, 29)
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate
-		GROUP BY
-			b.transid, b.username, b.currencyname, b.actualrate,
-			b.stake, b.winlost, b.actual_stake, b.odds, b.modds , b.refno, b.tpositiontaking
-		HAVING MIN(m.sporttype) = 1
+			AND b.liveawayscore IN (1, 3)
+			AND (@bettype = CASE WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 29 ELSE 9 END)
 		ORDER BY b.transid
 	END
 	ELSE
@@ -67,19 +64,16 @@ BEGIN
 			b.stake, b.actual_stake, b.winlost-b.actual_stake AS Winlost,
 			b.stake*b.actualrate AS stake_RM, b.actual_stake*b.actualrate AS actual_stake_RM, (b.winlost-b.actual_stake)*b.actualrate AS Winlost_RM,
 			b.stake*(1-b.tpositiontaking)*b.actualrate AS CompanyStake_RM, b.actual_stake*(1-b.tpositiontaking)*b.actualrate AS CompanyActual_stake_RM, (b.winlost-b.actual_stake)*(1-b.tpositiontaking)*b.actualrate AS CompanyWinlost_RM,
-			COUNT(1) selection, b.odds , b.modds
+			CASE WHEN RAND() + 1 > 0 AND b.bettype = 9 THEN CONVERT(INT, RIGHT(b.betcheck, LEN(b.betcheck) - 1)) ELSE CONVERT(INT, b.hdp2) END selection, b.odds , b.modds
 		FROM bettrans14 b WITH (nolock)
-			INNER join bettransm14 bm WITH (nolock) ON b.refno = bm.refno
-			INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
-			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
+		WHERE
+			b.bettype IN (9, 29)
+			AND b.matchid IN (9, 29)
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate
-		GROUP BY
-			b.transid, b.username, b.currencyname, b.actualrate,
-			b.stake, b.winlost, b.actual_stake, b.odds, b.modds , b.refno, b.tpositiontaking
-		HAVING MIN(m.sporttype) = 1
+			AND b.liveawayscore IN (1, 3)
+			AND (@bettype = CASE WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 29 ELSE 9 END)
 		ORDER BY b.transid
 	END
 END
@@ -91,19 +85,16 @@ BEGIN
 			b.stake, b.actual_stake, b.winlost-b.actual_stake AS Winlost,
 			b.stake*b.actualrate AS stake_RM, b.actual_stake*b.actualrate AS actual_stake_RM, (b.winlost-b.actual_stake)*b.actualrate AS Winlost_RM,
 			b.stake*(1-b.tpositiontaking)*b.actualrate AS CompanyStake_RM, b.actual_stake*(1-b.tpositiontaking)*b.actualrate AS CompanyActual_stake_RM, (b.winlost-b.actual_stake)*(1-b.tpositiontaking)*b.actualrate AS CompanyWinlost_RM,
-			COUNT(1) selection, b.odds, b.modds
+			CASE WHEN RAND() + 1 > 0 AND b.bettype = 9 THEN CONVERT(INT, RIGHT(b.betcheck, LEN(b.betcheck) - 1)) ELSE CONVERT(INT, b.hdp2) END selection, b.odds, b.modds
 		FROM bettrans b WITH (nolock)
-			INNER join bettransm bm WITH (nolock) ON b.refno = bm.refno
-			INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
-			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
+		WHERE
+			b.bettype IN (9, 29)
+			AND b.matchid IN (9, 29)
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate
-		GROUP BY
-			b.transid, b.username, b.currencyname, b.actualrate,
-			b.stake, b.winlost, b.actual_stake, b.odds , b.modds, b.refno, b.tpositiontaking
-		HAVING MIN(m.sporttype) <> 1
+			AND b.liveawayscore = 2
+			AND (@bettype = CASE WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 29 ELSE 9 END)
 		ORDER BY b.transid
 	END
 	ELSE
@@ -112,24 +103,19 @@ BEGIN
 			b.stake, b.actual_stake, b.winlost-b.actual_stake AS Winlost,
 			b.stake*b.actualrate AS stake_RM, b.actual_stake*b.actualrate AS actual_stake_RM, (b.winlost-b.actual_stake)*b.actualrate AS Winlost_RM,
 			b.stake*(1-b.tpositiontaking)*b.actualrate AS CompanyStake_RM, b.actual_stake*(1-b.tpositiontaking)*b.actualrate AS CompanyActual_stake_RM, (b.winlost-b.actual_stake)*(1-b.tpositiontaking)*b.actualrate AS CompanyWinlost_RM,
-			COUNT(1) selection, b.odds , b.modds
+			CASE WHEN RAND() + 1 > 0 AND b.bettype = 9 THEN CONVERT(INT, RIGHT(b.betcheck, LEN(b.betcheck) - 1)) ELSE CONVERT(INT, b.hdp2) END selection, b.odds , b.modds
 		FROM bettrans14 b WITH (nolock)
-			INNER join bettransm14 bm WITH (nolock) ON b.refno = bm.refno
-			INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
-		WHERE CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END  = @bettype
-			AND b.matchid = CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9 ELSE 29 END
+		WHERE
+			b.bettype IN (9, 29)
+			AND b.matchid IN (9, 29)
 			AND b.statusID = 112 -- WON
 			AND b.Currency <> 20
 			AND b.winlostdate = @WinlostDate
-		GROUP BY
-			b.transid, b.username, b.currencyname, b.actualrate,
-			b.stake, b.winlost, b.actual_stake, b.odds , b.modds, b.refno, b.tpositiontaking
-		HAVING MIN(m.sporttype) <> 1
+			AND b.liveawayscore = 2
+			AND (@bettype = CASE WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 29 ELSE 9 END)
 		ORDER BY b.transid
 	END
 END
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_ParlayWon] TO [bodbAdminNet]
