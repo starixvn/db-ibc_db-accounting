@@ -23,6 +23,7 @@ AS
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+		- 20160909@Robert: Offer Colossus Bets for Cash Model (#63144)
 
 
 */
@@ -173,6 +174,16 @@ BEGIN
 	   FROM bodb02.dbo.bettype WITH (NOLOCK)
 	   WHERE typeid BETWEEN 4001 AND 7999
     END
+    ELSE IF @ProductPrefix = 'CB'
+    BEGIN
+	   INSERT INTO @SportTypeList(SportType, IsBA)
+	   VALUES(204, 1)
+
+	   INSERT INTO @BetTypeList(BetType)
+	   SELECT typeid
+	   FROM bodb02.dbo.bettype WITH (NOLOCK)
+	   WHERE typeid = 18000
+    END
 	
 	INSERT INTO @Super(custid, currency)
 	SELECT DISTINCT CustID, currency
@@ -209,7 +220,7 @@ BEGIN
 				AND b.apositiontaking = 0
 			GROUP BY b.srecommend
 		END
-		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG', 'VB')
+		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG', 'VB', 'CB')
 		BEGIN
 			INSERT INTO @SAgWinLoss(CustId, CompanyWL)
 			SELECT b.srecommend
