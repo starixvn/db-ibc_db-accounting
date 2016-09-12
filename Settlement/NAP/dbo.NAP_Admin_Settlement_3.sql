@@ -292,8 +292,20 @@ BEGIN
 		FROM	bettrans WITH(NOLOCK)
 		WHERE 	matchid = @matchid
 		GROUP BY bettype
-	)b 
+		
+		UNION ALL
+		SELECT	bettype
+		FROM	bettransm WITH(NOLOCK)
+		WHERE 	matchid = @matchid
+			AND 1 = CASE 
+					WHEN @mode IN ('CAL-HT') AND bettype IN (127) THEN 1 
+					WHEN @mode IN ('CAL-FT') AND bettype IN (14) THEN 1 
+					WHEN @mode IN ('CAL') AND bettype IN (14,127) THEN 1 
+				ELSE 0 END
+		GROUP BY bettype
+	) AS b 
 	WHERE b.bettype IN (SELECT bettype FROM cteBettypes)
+	GROUP BY bettype
 	
     -- call execrep SP
 	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid

@@ -89,7 +89,7 @@ BEGIN
 
 				UPDATE b
 				SET @modds = CASE
-					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' )) THEN --just for betchoice FG and NG
+					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' ) AND ISNULL(@FGLG2,'') <> '' ) THEN --just for betchoice FG and NG
 						CASE WHEN (betteam = @correctscore OR betteam = @FGLG2)	THEN 1 ELSE -1 END
 					WHEN b.betteam NOT IN ('0:4', '4:0')
 						AND @bettype = 30 --1H Correct Score
@@ -409,7 +409,7 @@ BEGIN
 		BEGIN
 			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 			SET @modds = CASE 
-					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' )) THEN --just for betchoice FG and NG
+					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' ) AND ISNULL(@FGLG2,'') <> '') THEN --just for betchoice FG and NG
 						CASE WHEN (betteam = @correctscore OR betteam = @FGLG2)	THEN 1 ELSE -1 END
 					WHEN betteam NOT IN ('0:4', '4:0') 
 						AND @bettype = 30 
@@ -725,7 +725,7 @@ BEGIN
 		END
 	END
 
-	IF @FGLG2 IS NULL OR @FGLG2 = ''
+	IF (ISNULL(@FGLG2,'') = '' AND ISNULL(@correctscore, '0:0') <> '0:0')
 		SET @FGLG2 = @correctscore
 
 	-------------Start:Settle FGLG for bettransm-------------
@@ -764,7 +764,10 @@ BEGIN
 			AND statusID NOT IN (101, 102) --VOID, REJECT
 			AND (
 				ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
-				OR @IsSettleAbandonedMatchIBC = 1 AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
+				OR (@IsSettleAbandonedMatchIBC = 1 
+					AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
+					AND ISNULL(@FGLG2,'') <> '' 
+				)
 			)
 
 		UPDATE dbo.betParlayDetail WITH (ROWLOCK, UPDLOCK)
@@ -786,7 +789,10 @@ BEGIN
 			AND statusID NOT IN (101, 102) --VOID, REJECT
 			AND (
 				ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
-				OR @IsSettleAbandonedMatchIBC = 1 AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
+				OR (@IsSettleAbandonedMatchIBC = 1 
+					AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
+					AND ISNULL(@FGLG2,'') <> '' 
+				)
 			)
 		-------------Stop:Settle FGLG for bettransm-------------
 	END

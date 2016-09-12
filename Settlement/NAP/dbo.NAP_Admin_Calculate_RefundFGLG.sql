@@ -157,8 +157,7 @@ BEGIN
 				END
 			AND 1 = CASE 
 					WHEN @IsSettleAbandonedMatchIBC = 1 		
-						AND statusID IN (112, 113) 
-						AND bettype IN (14,127) THEN 0
+						AND statusID IN (112, 113) THEN 0
 					ELSE 1 END
 
 		--	IF @@ROWCOUNT < 10000 BREAK
@@ -173,8 +172,7 @@ BEGIN
 				END
 			AND 1 = CASE 
 					WHEN @IsSettleAbandonedMatchIBC = 1 		
-						AND statusID IN (112, 113) 
-						AND bettype IN (14,127) THEN 0
+						AND statusID IN (112, 113) THEN 0
 					ELSE 1 END
 	END
 		-------------End: Refund FGLG for bettransm-------------
