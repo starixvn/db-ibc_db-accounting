@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[NAP_Set_WaitingSel] @MatchCode NVARCHAR(50) = ''
+ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel] @MatchCode NVARCHAR(50) = ''
 	, @SportType SMALLINT = 0
 	, @LeagueId INT = 0 -- 0 for ALL Leagues
 AS

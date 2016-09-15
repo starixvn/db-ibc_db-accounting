@@ -1,4 +1,4 @@
-﻿﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3_Auto_1s] 
+﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3_Auto_1s] 
   @MatchID		INT
  ,@ResourceIDs	VARCHAR(MAX)	= '' 
  ,@Mode			VARCHAR(6)		= 'CAL'
@@ -16,7 +16,7 @@ AS
 */	
 BEGIN
 	SET NOCOUNT ON 
-	DECLARE	@strBettype				VARCHAR(MAX)
+	DECLARE	@strBettypes				VARCHAR(MAX)
 
 			,@penaltyshootout		VARCHAR(10)	=''
 			,@matchDecidedMethod	VARCHAR(10)	=''
@@ -80,7 +80,7 @@ BEGIN
 		FROM	dbo.f_Set_GetGroupBettypes()
 		WHERE	GroupId = 8
 	)
-	SELECT	@strBettype = COALESCE(@strBettype + ',' + CAST(b.bettype AS VARCHAR(10)),CAST(b.bettype AS VARCHAR(10)))
+	SELECT	@strBettypes = COALESCE(@strBettypes + ',' + CAST(b.bettype AS VARCHAR(10)),CAST(b.bettype AS VARCHAR(10)))
 	FROM	(
 		SELECT	b.bettype
 		FROM	dbo.bettrans b WITH(NOLOCK)
@@ -148,7 +148,7 @@ BEGIN
 				,@GoalScorerAnytime		= @GoalScorerAnytime
 				,@GoalScorerFirst		= @GoalScorerFirst
 				,@FirstGoalMethod		= @FirstGoalMethod
-				,@strBettype			= @strBettype
+				,@strBettypes			= @strBettypes
 				,@CalledByBrokerService = 0	
 
 END
