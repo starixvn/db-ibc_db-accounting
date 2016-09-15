@@ -1,3 +1,5 @@
+USE [bodb02]
+GO
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] 
 	@CustID			INT				= NULL 	
 	,@TransIds		VARCHAR(MAX)	= NULL 
@@ -126,7 +128,7 @@ BEGIN
 			AND 1 = CASE 
 				WHEN (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 101, 102)) THEN 1 
 				WHEN (b.bettype < 19001
-						AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
+						AND b.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
 						AND b.bettype NOT BETWEEN 801 AND 806-- MG
 						AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 						AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
@@ -354,7 +356,7 @@ BEGIN
 				
 		WHERE	b.winlostdate >= @FromDate				
 			AND b.bettype < 19001
-			AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
+			AND b.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
 			AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
