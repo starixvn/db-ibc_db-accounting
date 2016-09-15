@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products]
 	 @StartDate SMALLDATETIME,
       @EndDate   SMALLDATETIME
@@ -11,7 +14,7 @@ AS
 		- 20160622@Sophia: 	. Remove group by ExtraPT to avoid duplicated data. [Redmine: #59732]
 							. Ignore param @EndDate because of the performance, and business supports only one day 
 		 
-
+		- 20160915@Percy: Integrate NG2 [RedmineID: #63460]
 	Explanation's Param:
 	
 */
@@ -570,7 +573,7 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
-	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colossus Bets (3rd)
+	WHERE	b.ProductId IN (5,8,15,23) ---Virtual Sports, Keno, Colossus Bets, NG2 (3rd)
 			--- OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
 			--- OR b.ProductId IN (6, 14) --- Macau (Casino)
 			OR b.CasinoType IN (1,2)
@@ -673,6 +676,7 @@ BEGIN
 	,(10, 2, 'Racing')
 	,(11, -2, 'Bettrade')
 	,(12, 15, 'Colossus Bets')
+	,(13, 23, 'NG2')
 
 		
 	INSERT INTO @ProductOrder (DisplayOrder, ProductId, ProductName, Site)
@@ -730,7 +734,7 @@ BEGIN
 END
 
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [vnteam]
 GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [bodbAdminNet]
 GO 
