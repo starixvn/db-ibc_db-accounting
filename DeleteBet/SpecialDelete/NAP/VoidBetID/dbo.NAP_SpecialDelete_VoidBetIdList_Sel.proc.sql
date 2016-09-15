@@ -25,7 +25,8 @@ AS
 		- 20160314@Bobby: #53935 - Update changes for multiple bet trade transaction
 		- 20160413@Bobby: #55893 - Update change request for grouping tickets
 		- 20160714@Kathy: change the order of result: groupname, groupid, transid
-		- 20160816@Bobby: #62527 - Update BT's info for showing bet list		
+		- 20160816@Bobby: #62527 - Update BT's info for showing bet list	
+		- 20160914@Kent: Add logic for suporting void system parlay [Redmine:#63202]	
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -361,7 +362,7 @@ BEGIN
 	END
 	
 	-- UPDATE eventtype = 1
-	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype NOT IN (9)))
+	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype NOT IN (9, 29)))
 	BEGIN
 		UPDATE d
 		SET matchcode 	= m.matchcode
@@ -376,7 +377,7 @@ BEGIN
 			INNER JOIN dbo.match m WITH (NOLOCK) 
 			ON	d.matchid = m.matchid
 			
-		WHERE d.bettype NOT IN (9)
+		WHERE d.bettype NOT IN (9, 29)
 	END
 	
 	-- UPDATE eventtype = 2 [Outright bettype]
@@ -420,7 +421,7 @@ BEGIN
 	--- Remove invalid sporttype	
 	DELETE 
 	FROM #Data
-	WHERE bettype NOT IN (9)
+	WHERE bettype NOT IN (9, 29)
 		AND (
 			sporttype IS NULL
 			OR bettype = 500 /*charge comm*/
