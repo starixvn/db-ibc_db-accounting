@@ -1,6 +1,6 @@
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdGroupHeadlineOwner]
 	@HeadlineID INT,
-	@OwnerName VARCHAR(30),
+	@OwnerName NVARCHAR(200),
 	@UserID INT,
 	@ErrCode INT = 0 OUTPUT,
 	@ErrMsg NVARCHAR(500) = '' OUTPUT,
@@ -15,6 +15,7 @@ AS
 	Original:  
 	
 	Revisions:
+		- 20160915@Elodie: SMA Mangement allows to input freetext for Owner info [Redmine:#63349]
 
 */
 BEGIN
@@ -23,7 +24,7 @@ BEGIN
 	DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT
 	SET @StartRun = GETDATE()
 
-	Declare @Old_OwnerID INT, @Old_OwnerName VARCHAR(30) = '', @OwnerID INT = 0, @GroupID SMALLINT = 0
+	Declare @Old_OwnerName VARCHAR(30) = '', @GroupID SMALLINT = 0
 
 	--Check permission for account site 
 	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @CustID=@UserID, @funcname='[SMAManagement]', @ErrCode=@ErrCode OUTPUT, @ErrMsg=@ErrMsg OUTPUT
@@ -37,38 +38,21 @@ BEGIN
 		RETURN
 	END
 
-	IF @OwnerName = ''
-	BEGIN
-		SELECT @OwnerID = NULL
-	END
-	ELSE
-	BEGIN
-		SELECT @OwnerID = custid FROM dbo.custInfo WITH (NOLOCK) WHERE username = @OwnerName AND roleid BETWEEN 1 AND 4
-
-		IF @OwnerID = 0
-		BEGIN
-			SELECT @ErrMsg = 'Invalid username.'
-				 , @ErrCode = 102
-			RETURN
-		END
-	END
-
 	EXEC Acc_CustomerSelCheckEnable @CustID = @HeadlineID, @ErrCode=@ErrCode OUTPUT, @ErrMsg=@ErrMsg OUTPUT
 	IF @ErrCode <>0 
 		RETURN
 
-	SELECT @Old_OwnerName = ISNULL(ci.username,''), @GroupID = GroupID 
-	FROM dbo.custInfo ci WITH (NOLOCK) 
-		RIGHT JOIN dbo.CustGroupHeadline hl WITH (NOLOCK) ON ci.custid = hl.OwnerID 
+	SELECT @Old_OwnerName = hl.OwnerName, @GroupID = GroupID 
+	FROM dbo.CustGroupHeadline hl WITH (NOLOCK)
 	WHERE hl.CustID = @HeadlineID 
 	
 	UPDATE  CustGroupHeadline WITH (ROWLOCK, UPDLOCK) 
-	SET		OwnerID = @OwnerID
+	SET		OwnerName = @OwnerName
 	WHERE	CustID = @HeadlineID
 	
 	IF @@ROWCOUNT = 0
-		INSERT INTO dbo.CustGroupHeadline( CustID, GroupID, OwnerID, HeadlineType)
-		SELECT @HeadlineID, 0, @OwnerID, NULL
+		INSERT INTO dbo.CustGroupHeadline( CustID, GroupID, HeadlineType, OwnerName)
+		SELECT @HeadlineID, 0, NULL, @OwnerName
 	
 	---Write log 
 	DECLARE @LogSPData NVARCHAR(MAX), @TrackingValue2 NVARCHAR(MAX)

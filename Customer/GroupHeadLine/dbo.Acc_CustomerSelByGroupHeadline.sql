@@ -26,6 +26,7 @@ AS
                            Modify code to enhance performance 
         - 20160620@Winnie: #48948 Hide_special_sites_from_unautorized_users
         - 20160829@Elodie: Modify code to get supers who is not assigned to group [Redmine:#63216]
+		- 20160915@Elodie: SMA Mangement allows to input freetext for Owner info [Redmine:#63349]
 
     Example: exec Acc_CustomerSelByGroupHeadline @siteid=default,@currency=0,@open=1,@suspended=0,@closed=1,@disabled=1,@roleid=0,@username=default,@groupheadline=default,@Owner='',@HeadlineType='1'
 
@@ -151,12 +152,11 @@ BEGIN
        OR [site] NOT IN (SELECT [SITE] FROM [SITE] WHERE islicensee = 0 AND isactive=1)    
       
     --apply filter by Owner and Headline Type    
-    INSERT INTO #tmpGroupHeadline(HeadlineID, GroupName, GroupID, HeadlineType, OwnerID, OwnerName)    
-    SELECT hl.CustID, cu.username, hl.GroupID, hl.HeadlineType, hl.OwnerID, ci. username
+    INSERT INTO #tmpGroupHeadline(HeadlineID, GroupName, GroupID, HeadlineType, OwnerName)    
+	SELECT hl.CustID, cu.username, hl.GroupID, hl.HeadlineType, hl.OwnerName
     FROM dbo.CustGroupHeadline hl WITH (NOLOCK)
         INNER JOIN dbo.custInfo cu WITH (NOLOCK) ON hl.CustID = cu.custid
-        LEFT JOIN dbo.custInfo ci WITH (NOLOCK) ON hl.OwnerID = ci.custid
-    WHERE (@Owner = '' OR ci.username = @Owner) AND (@HeadlineType = '' OR hl.HeadlineType IN (SELECT val FROM dbo.strSplit(@HeadlineType, ',')))        
+	WHERE (@Owner = '' OR hl.OwnerName = @Owner) AND (@HeadlineType = '' OR hl.HeadlineType IN (SELECT val FROM dbo.strSplit(@HeadlineType, ',')))		
 
     INSERT INTO #tmpResultAll 
     SELECT  hl.HeadlineID Custheadlineid ,hl.GroupName groupname, ca.custid ,ci.username,isnull(ci.reject,0) issuspend,    
