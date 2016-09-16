@@ -11,7 +11,7 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions:
+    Revisions: 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
 	Param's Explanation:   
 */  
 BEGIN  
@@ -39,7 +39,7 @@ BEGIN
 
 	
 	UPDATE @tmpParty 
-	SET VSRate = CASE WHEN IsDeposit = 0 THEN 0.01 ELSE 0.075 END
+	SET VSRate = 0.075
 	-- End region
 
 	DECLARE @PartyChargeInfo AS TABLE (
@@ -129,7 +129,7 @@ BEGIN
 	DECLARE @DailyPayAmt TABLE (rptDate DATE, IsDeposit BIT, Amount MONEY)
 	
 	INSERT INTO @DailyPayAmt (rptDate, IsDeposit, Amount)
-	SELECT d.rptDate, p.IsDeposit, SUM(d.WinLoss * p.VSRate)
+	SELECT d.rptDate, p.IsDeposit, SUM(d.WinLoss * (-p.VSRate)) -- (-1) * 75%
 	FROM #TempData d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
 	GROUP BY d.rptDate, p.IsDeposit

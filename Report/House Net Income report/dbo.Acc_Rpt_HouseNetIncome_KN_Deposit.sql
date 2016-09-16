@@ -11,7 +11,7 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions:
+    Revisions: 20160916@Harper - #64211 - Add (-1) when caculate value for PayToSupplier
 	Param's Explanation:   
 */  
 BEGIN  
@@ -38,13 +38,11 @@ BEGIN
 	SELECT	@PartyIDs = COALESCE(@PartyIDs + ',', '') + CONVERT(VARCHAR(10), PartyId) FROM @tmpParty
 
 	UPDATE @tmpParty 
-	SET PartyGroup = CASE 
-						WHEN IsDeposit = 0 THEN 'Credit' 
+	SET PartyGroup = CASE 						
 						WHEN IsDeposit = 1 AND PartyID = 14 THEN '12bet'
 						ELSE 'Licensees'
 					 END,
-		KNRate = CASE 
-					WHEN IsDeposit = 0 THEN 0.03 
+		KNRate = CASE 					
 					WHEN IsDeposit = 1 AND PartyID = 14 THEN 0.03
 					ELSE 0.05
 				 END
@@ -138,7 +136,7 @@ BEGIN
 	DECLARE @DailyPayAmt TABLE (rptDate DATE, PartyGroup VARCHAR(20), Amount MONEY)
 	
 	INSERT INTO @DailyPayAmt (rptDate, PartyGroup, Amount)
-	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * p.KNRate)
+	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * -p.KNRate)
 	FROM #TempData d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
 	GROUP BY d.rptDate, p.PartyGroup

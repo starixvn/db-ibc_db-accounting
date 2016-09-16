@@ -10,7 +10,7 @@ AS
     Task : House month-to-date Net Income report
     DB: DBWH/bodb_dwrs  
    
-    Revisions:
+    Revisions: 20160916@Harper - #64211 - Caculate value for PayToSupplier for Credit
 	Param's Explanation:   
 */  
 BEGIN  
@@ -33,9 +33,10 @@ BEGIN
 	-- End region
 
 	CREATE TABLE #FinalResult (
-		RptDate		VARCHAR(10),
-		HouseWL		MONEY,
-		ExtraPT		MONEY
+		RptDate			VARCHAR(10),
+		HouseWL			MONEY,
+		ExtraPT			MONEY,
+		PayToSupplier	MONEY
 	)
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200) = '[FullRange]'
@@ -43,8 +44,8 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
-		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 0, 0
+		INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
+		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 0, 0, 0
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
@@ -74,11 +75,12 @@ BEGIN
 		INNER JOIN ExtraPT e ON CONVERT(VARCHAR(2), e.rptDate, 106) = f.RptDate
 
 	-- House WL
-	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY)
-	INSERT INTO #TmpHouseWL (rptDate, HouseWL)
+	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY, MemberWL MONEY)
+	INSERT INTO #TmpHouseWL (rptDate, HouseWL, MemberWL)
 	SELECT 
 		b.rptDate,
-		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS)*ex.rate),0) HouseWL
+		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS)*ex.rate),0) HouseWL,
+		ISNULL(SUM(winlossP * ex.rate), 0) MemberWL
 	FROM bodb_Account.dbo.mcSiteDaily b WITH(NOLOCK)
 		INNER JOIN #exchange ex ON b.rptdate = ex.exchangedate AND b.currencyid = ex.ExchangeID
 		INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype
@@ -96,9 +98,15 @@ BEGIN
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
+	-- PayToSupplier
+	UPDATE f
+	SET f.PayToSupplier = wl.MemberWL * (-0.03)
+	FROM #FinalResult f
+		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
+
 	-- FullRange amount
-	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
-	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT)
+	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
+	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT), SUM(PayToSupplier)
 	FROM #FinalResult
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
@@ -108,7 +116,9 @@ BEGIN
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT ''KN'', 1, ''House Income'', HouseWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
-							'SELECT ''KN'', 2, ''Extra PT'', ExtraPT) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
+							'SELECT ''KN'', 2, ''Extra PT'', ExtraPT' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT ''KN'', 4, ''Pay to supplier'', PayToSupplier) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
 					'PIVOT' + CHAR(13) +
 					'(' + CHAR(13) +
 						'MAX(value)' + CHAR(13) +

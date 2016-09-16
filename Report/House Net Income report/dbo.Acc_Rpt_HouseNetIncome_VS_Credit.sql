@@ -10,7 +10,7 @@ AS
     Task : House month-to-date Net Income report
     DB: DBWH/bodb_dwrs  
    
-    Revisions:
+    Revisions: 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
 	Param's Explanation:   
 */  
 BEGIN  
@@ -33,9 +33,10 @@ BEGIN
 	-- End region
 
 	CREATE TABLE #FinalResult (
-		RptDate		VARCHAR(10),
-		HouseWL		MONEY,
-		ExtraPT		MONEY
+		RptDate			VARCHAR(10),
+		HouseWL			MONEY,
+		ExtraPT			MONEY,
+		PayToSupplier	MONEY
 	)
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200) = '[FullRange]'
@@ -43,8 +44,8 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
-		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 0, 0
+		INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
+		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 0, 0, 0
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
@@ -96,9 +97,14 @@ BEGIN
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
+	-- Pay To Supplier
+	UPDATE f
+	SET PayToSupplier = -0.01 * f.HouseWL
+	FROM #FinalResult f
+
 	-- FullRange amount
-	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT)
-	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT)
+	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
+	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT), SUM(PayToSupplier)
 	FROM #FinalResult
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
@@ -108,7 +114,9 @@ BEGIN
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT ''VS'', 1, ''House Income'', HouseWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
-							'SELECT ''VS'', 2, ''Extra PT'', ExtraPT) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
+							'SELECT ''VS'', 2, ''Extra PT'', ExtraPT' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT ''VS'', 4, ''Pay to supplier'', PayToSupplier) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
 					'PIVOT' + CHAR(13) +
 					'(' + CHAR(13) +
 						'MAX(value)' + CHAR(13) +

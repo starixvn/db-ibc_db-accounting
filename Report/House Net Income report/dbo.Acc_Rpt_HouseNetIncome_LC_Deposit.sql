@@ -78,9 +78,8 @@ BEGIN
 			WinLoss			MONEY,
 			AComm			MONEY,
 			ProductId		TINYINT,
-			AmountToCompany MONEY,
-			IsApplyMinFee	BIT)
-	INSERT INTO #TempData (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany, IsApplyMinFee)
+			AmountToCompany MONEY)
+	INSERT INTO #TempData (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
 	(
 		SELECT	p.PartyId,
 				b.rptDate,
@@ -88,8 +87,7 @@ BEGIN
 				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				p.ProductId,
-				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate,
-				1 AS IsApplyMinFee
+				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID
 				INNER JOIN @PartyChargeInfo p ON	b.ProductId = p.ProductID 
