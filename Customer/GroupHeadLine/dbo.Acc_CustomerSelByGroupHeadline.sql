@@ -18,7 +18,7 @@ AS
     Created by: Scott    
     Date: 2012-11-20    
     Task : GET customer by group headline    
-    DB: DB052.bodb02    
+    DB: DBACC/bodb02    
     Original SP:
     Revisions:
         - 20141001@Logan: Use f_DirectAgencyList instead of using Acc_CustDirect
@@ -97,10 +97,10 @@ BEGIN
     --get super account     
     IF (@roleid = 0 OR @roleid = 4)    
     BEGIN     
-        INSERT INTO #tmpDirectCust (custid, site, currency, roleid)
+		INSERT INTO #tmpDirectCust (custid, site, currency, roleid)
         SELECT c.custid, c.site, c.currency, c.roleid    
         FROM dbo.Customer c WITH(NOLOCK) 
-            INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON c.custid = cs.custid AND cs.IsInternal = 0 AND c.roleid = 4     
+			INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON c.custid = cs.custid AND cs.IsInternal = 0 AND c.roleid = 4     
         WHERE (@currency = 0 OR c.currency = @currency)
             AND ((@IsTest = 0 AND c.currency NOT IN (20, 27, 28)) OR @IsTest = 1)
     END
@@ -175,7 +175,7 @@ BEGIN
     FROM #tmpDirectCust c    
         INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = c.custid     
         LEFT JOIN #tmpGroupHeadline hl WITH(NOLOCK) ON  ci.custid = hl.HeadlineID
-    WHERE NOT EXISTS (SELECT 1 FROM custaccount ca WITH(NOLOCK) WHERE ca.custid = c.custid AND ca.groupID  <> 0) 
+	WHERE NOT EXISTS (SELECT 1 FROM custaccount ca WITH(NOLOCK) WHERE ca.custid = c.custid AND ca.groupID  <> 0) 
         AND (@username = '' OR ci.username=@username) 
         AND @groupheadline='' AND @HeadlineType = '' 
         AND (@Owner = '' OR (@Owner <> '' AND hl.OwnerName = @Owner))
