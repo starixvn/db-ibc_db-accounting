@@ -10,7 +10,7 @@ ALTER PROCEDURE dbo.Acc_Rpt_CompanyWinloss
 AS
 /*	Creator: 20150612@Patrick
 	Task : Get company win loss
-	DB: DBAGE/bodb02
+	DB: DBAEXT/bodb02
 
 	Param's Explanation:
 		@ProductId default value is 0 it mean get all products
@@ -23,6 +23,7 @@ AS
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+		- 20160919@Robert: Licensee / Company Win Loss: Missing data of Bettrade when generating report for All Products [RedmineID: #64312]
 
 
 */
@@ -296,7 +297,7 @@ BEGIN
 				AND b.RoleId = 4
 				AND b.BetType < 19999
 				AND b.statusid IN (111, 112, 113, 114, 115)
-				AND b.bettype NOT IN (901,902,903,904)
+				AND b.bettype NOT IN (901,902)
 			GROUP BY b.srecommend
 		END
 	END
