@@ -139,7 +139,7 @@ BEGIN
 	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * p.KNRate), SUM(-d.WinLoss), p.KNRate
 	FROM #TempData d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
-	GROUP BY d.rptDate, p.PartyGroup
+	GROUP BY d.rptDate, p.PartyGroup, p.KNRate
 	
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
 	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (-1) * (SELECT KNRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END FROM @DailyPayAmt GROUP BY KNRate)
