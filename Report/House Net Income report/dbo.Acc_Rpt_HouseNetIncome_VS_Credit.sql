@@ -11,6 +11,7 @@ AS
     DB: DBWH/bodb_dwrs  
    
     Revisions: 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
+			   20160919@Harper - #64338 - PayToSupplier of FullMonth is incorrect
 	Param's Explanation:   
 */  
 BEGIN  
@@ -99,7 +100,7 @@ BEGIN
 
 	-- Pay To Supplier
 	UPDATE f
-	SET PayToSupplier = -0.01 * f.HouseWL
+	SET PayToSupplier = -0.01 * (CASE WHEN f.HouseWL < 0 THEN 0 ELSE f.HouseWL END)
 	FROM #FinalResult f
 
 	-- FullRange amount

@@ -12,6 +12,7 @@ AS
     DB: DBEXT/bodb02  
    
     Revisions: 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
+			   20160919@Harper - #64338 - PayToSupplier of FullMonth is incorrect
 	Param's Explanation:   
 */  
 BEGIN  
@@ -135,7 +136,7 @@ BEGIN
 	GROUP BY d.rptDate, p.IsDeposit
 
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (SELECT SUM(CASE WHEN Amount > 0 THEN 0 ELSE Amount END) FROM @DailyPayAmt)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (SELECT SUM(CASE WHEN Amount < 0 THEN 0 ELSE Amount END) FROM @DailyPayAmt)
 	FROM #FeeData
 	WHERE ProductID = 5
 
