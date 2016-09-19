@@ -142,7 +142,7 @@ BEGIN
 	GROUP BY d.rptDate, p.PartyGroup
 	
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (SELECT SUM(CASE WHEN Amount > 0 THEN 0 ELSE Amount END) FROM @DailyPayAmt)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (SELECT SUM(CASE WHEN Amount < 0 THEN 0 ELSE Amount END) FROM @DailyPayAmt)
 	FROM #FeeData
 	WHERE ProductID = 8
 

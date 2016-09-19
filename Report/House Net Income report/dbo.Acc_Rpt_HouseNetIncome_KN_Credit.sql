@@ -100,7 +100,7 @@ BEGIN
 
 	-- PayToSupplier
 	UPDATE f
-	SET f.PayToSupplier = wl.MemberWL * (-0.03)
+	SET f.PayToSupplier = (CASE WHEN wl.MemberWL > 0 THEN 0 ELSE wl.MemberWL END) * (-0.03)
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
