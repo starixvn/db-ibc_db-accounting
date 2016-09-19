@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelByGroupHeadline]
   , @roleid INT=0
   , @username VARCHAR(30) = ''
   , @groupheadline VARCHAR(30) = ''    
-  , @Owner VARCHAR(50) = ''
+  , @Owner NVARCHAR(100) = ''
   , @HeadlineType VARCHAR(20) = ''
   , @IsTest BIT = 0
   , @Userid INT=NULL

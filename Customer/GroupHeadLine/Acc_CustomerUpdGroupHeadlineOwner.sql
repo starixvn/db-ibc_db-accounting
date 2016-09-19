@@ -1,6 +1,6 @@
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdGroupHeadlineOwner]
 	@HeadlineID INT,
-	@OwnerName NVARCHAR(200),
+	@OwnerName NVARCHAR(100),
 	@UserID INT,
 	@ErrCode INT = 0 OUTPUT,
 	@ErrMsg NVARCHAR(500) = '' OUTPUT,
@@ -24,7 +24,7 @@ BEGIN
 	DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT
 	SET @StartRun = GETDATE()
 
-	Declare @Old_OwnerName VARCHAR(30) = '', @GroupID SMALLINT = 0
+	Declare @Old_OwnerName NVARCHAR(100) = '', @GroupID SMALLINT = 0
 
 	--Check permission for account site 
 	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @CustID=@UserID, @funcname='[SMAManagement]', @ErrCode=@ErrCode OUTPUT, @ErrMsg=@ErrMsg OUTPUT
@@ -59,14 +59,14 @@ BEGIN
 
 	SELECT @LogSPData = '<Acc_CustomerUpdGroupHeadlineOwner CustID="' + CONVERT (VARCHAR(20), @HeadlineID) + '" ' + 
 			'GroupID="' + CONVERT (VARCHAR(20), @GroupID) + '" ' + 
-			'Owner="' + CONVERT (VARCHAR(30), @OwnerName) + '" ' +
+			'Owner="' + @OwnerName + '" ' +
 			'IP="' + coalesce (cast (@IP AS VARCHAR(15)), space (1)) + '" ' +
 			'ErrCode="' + coalesce (cast (@ErrCode AS VARCHAR(10)), space (1)) + '" ' +
 			'ErrMsg="' + @ErrMsg + '" />'
 
 	SELECT @TrackingValue2 = '<Acc_CustomerUpdGroupHeadlineOwner CustID="' + CONVERT (VARCHAR(20), @HeadlineID) + '" ' + 
 			'GroupID="' + CONVERT (VARCHAR(20), @GroupID) + '" ' + 
-			'Owner="' + CONVERT (VARCHAR(30), @Old_OwnerName) + '" ' +
+			'Owner="' + @Old_OwnerName + '" ' +
 			'IP="' + coalesce (cast (@IP AS VARCHAR(15)), space (1)) + '" ' +
 			'ErrCode="' + coalesce (cast (@ErrCode AS VARCHAR(10)), space (1)) + '" ' +
 			'ErrMsg="' + @ErrMsg + '" />'
