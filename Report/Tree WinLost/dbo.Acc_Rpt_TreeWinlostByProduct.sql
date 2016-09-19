@@ -4,16 +4,13 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,	
-	@Products VARCHAR(4000), -- instead of all @showXXX parameters
+	@Products VARCHAR(4000),
 	@TurnOver_8RM MONEY = 0 OUTPUT,    
 	@Total_8RM   MONEY = 0 OUTPUT,    
-	@VirtualTotal_8RM  MONEY = 0 OUTPUT,    
-	--@Variance_8RM  MONEY = 0 OUTPUT,    
+	@VirtualTotal_8RM  MONEY = 0 OUTPUT,    	
 	@TurnOver_BARM MONEY = 0 OUTPUT, 
 	@Total_BARM   MONEY = 0 OUTPUT,    
-	@VirtualTotal_BARM  MONEY = 0 OUTPUT  
---@Variance_BARM  MONEY = 0 OUTPUT    
-  
+	@VirtualTotal_BARM  MONEY = 0 OUTPUT    
 AS  
   
 /*    
@@ -42,12 +39,12 @@ Revisions:
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 	- 20160615@Sophia: Change READPAST to ROWLOCK because of the Deadlock [Redmind: #59254]
 	- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+	- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
 */    
   
   
 SET NOCOUNT ON  
   
---DECLARE @TmpCondBettype TABLE(bettype INT , isVirtual BIT)   
 DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)  
 DECLARE @CommSetting TABLE (MatchID int, IBCFee bit, ToteCommWin smallmoney, ToteCommPlace smallmoney, ToteCommWP smallmoney, ToteFee smallmoney )
 
@@ -365,8 +362,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 
 SELECT	@TurnOver_8RM     = -SUM(ABS(stake)*(1 - tpositiontaking)*actualrate),
 		@Total_8RM        = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate),    
-		@VirtualTotal_8RM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))  
-		--@Variance_8RM=@Total_8RM-@VirtualTotal_8RM  
+		@VirtualTotal_8RM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))  		
 FROM bettrans b WITH(NOLOCK)    
 	INNER JOIN #tmpBettype t on t.bettype = b.bettype
 WHERE recommend = 52466 AND    
@@ -376,8 +372,7 @@ WHERE recommend = 52466 AND
 
 SELECT	@TurnOver_BARM = -SUM(ABS(stake)*(1 - tpositiontaking)*actualrate),
 		@Total_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate),    
-		@VirtualTotal_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))
-		--@Variance_BARM=@Total_BARM-@VirtualTotal_BARM  
+		@VirtualTotal_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))		
 FROM bettrans b WITH(NOLOCK)   
 	INNER JOIN #tmpBettype t on t.bettype = b.bettype   
 WHERE recommend = 5707545 AND    
