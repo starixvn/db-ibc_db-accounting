@@ -59,7 +59,7 @@ BEGIN
       , GroupName NVARCHAR(100)
       , GroupID SMALLINT 
       , HeadlineType TINYINT NULL
-      , OwnerName VARCHAR(30) NULL
+      , OwnerName NVARCHAR(100) NULL
       , OwnerID INT NULL
     )
 
@@ -76,7 +76,7 @@ BEGIN
       , Currency INT
       , RoleID INT
       , HeadlineType TINYINT
-      , OwnerName VARCHAR(30)
+      , OwnerName NVARCHAR(100)
     )
 
     CREATE TABLE #tmpResultAll
@@ -92,7 +92,7 @@ BEGIN
       , Currency INT
       , RoleID INT
       , HeadlineType TINYINT
-      , OwnerName VARCHAR(30)
+      , OwnerName NVARCHAR(100)
     )    
     
     --get super account     
