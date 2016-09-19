@@ -100,14 +100,14 @@ BEGIN
 
 	-- PayToSupplier
 	UPDATE f
-	SET f.PayToSupplier = (CASE WHEN wl.MemberWL > 0 THEN 0 ELSE wl.MemberWL END) * (-0.03)
+	SET f.PayToSupplier = wl.MemberWL * (-0.03)
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
 	-- FullRange amount
 	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
-	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT), SUM(PayToSupplier)
-	FROM #FinalResult
+	SELECT 'FullRange', SUM(f.HouseWL), SUM(f.ExtraPT), -0.03 * (SELECT CASE WHEN SUM(MemberWL) > 0 THEN 0 ELSE SUM(MemberWL) END FROM #TmpHouseWL)
+	FROM #FinalResult f
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
