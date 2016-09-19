@@ -127,16 +127,16 @@ BEGIN
 		PayToSupplier		MONEY
 	)
 
-	DECLARE @DailyPayAmt TABLE (rptDate DATE, IsDeposit BIT, Amount MONEY)
+	DECLARE @DailyPayAmt TABLE (rptDate DATE, IsDeposit BIT, Amount MONEY, LicenseeWL MONEY, VSRate FLOAT)
 	
-	INSERT INTO @DailyPayAmt (rptDate, IsDeposit, Amount)
-	SELECT d.rptDate, p.IsDeposit, SUM(d.WinLoss * (-p.VSRate)) -- (-1) * 75%
+	INSERT INTO @DailyPayAmt (rptDate, IsDeposit, Amount, LicenseeWL, VSRate)
+	SELECT d.rptDate, p.IsDeposit, SUM(d.WinLoss * p.VSRate), SUM(-d.WinLoss), p.VSRate
 	FROM #TempData d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
-	GROUP BY d.rptDate, p.IsDeposit
+	GROUP BY d.rptDate, p.IsDeposit, p.VSRate
 
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (SELECT SUM(CASE WHEN Amount < 0 THEN 0 ELSE Amount END) FROM @DailyPayAmt)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), -1 * (SELECT VSRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END FROM @DailyPayAmt GROUP BY VSRate)
 	FROM #FeeData
 	WHERE ProductID = 5
 

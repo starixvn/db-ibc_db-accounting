@@ -133,16 +133,16 @@ BEGIN
 		PayToSupplier		MONEY
 	)
 	
-	DECLARE @DailyPayAmt TABLE (rptDate DATE, PartyGroup VARCHAR(20), Amount MONEY)
+	DECLARE @DailyPayAmt TABLE (rptDate DATE, PartyGroup VARCHAR(20), Amount MONEY, LicenseeWL MONEY, KNRate FLOAT)
 	
-	INSERT INTO @DailyPayAmt (rptDate, PartyGroup, Amount)
-	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * -p.KNRate)
+	INSERT INTO @DailyPayAmt (rptDate, PartyGroup, Amount, LicenseeWL, KNRate)
+	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * p.KNRate), SUM(-d.WinLoss), p.KNRate
 	FROM #TempData d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
 	GROUP BY d.rptDate, p.PartyGroup
 	
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (SELECT SUM(CASE WHEN Amount < 0 THEN 0 ELSE Amount END) FROM @DailyPayAmt)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (-1) * (SELECT KNRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END FROM @DailyPayAmt GROUP BY KNRate)
 	FROM #FeeData
 	WHERE ProductID = 8
 
