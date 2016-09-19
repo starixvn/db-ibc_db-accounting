@@ -27,6 +27,7 @@ AS
 			- 20160225@Jim: offer  Allbet Live Casino [Redmine:#50921)]
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
 			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+			- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
         Parameter's Explanation:
     */
 BEGIN
@@ -307,7 +308,7 @@ BEGIN
 				,ISNULL(SUM(virtualTurnover),0)
         FROM dbo.rptWinlost b WITH(NOLOCK)
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
-            AND bettype = 9
+            AND (bettype = 9 or (bettype = 29 and exrisk = 1))
         GROUP BY status
     UNION ALL
         SELECT  98 --system parlay
@@ -327,7 +328,7 @@ BEGIN
 				,ISNULL(SUM(virtualTurnover),0)
         FROM dbo.rptWinlost b WITH(NOLOCK)
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
-            AND bettype = 29
+            AND bettype = 29 and exrisk <> 1  
         GROUP BY status
     UNION ALL
         --racing

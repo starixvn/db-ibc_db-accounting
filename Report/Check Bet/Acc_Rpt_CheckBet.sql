@@ -1,8 +1,9 @@
-﻿Use [BK]
-GO 
-alter PROCEDURE [dbo].[Acc_Rpt_CheckBet]
+﻿USE [BK]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_CheckBet]
 	@winlostdate datetime
-as 
+AS 
 /*	
 	Created by: Elodie
 	Date: 20120816

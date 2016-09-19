@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_MixParlay14]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_MixParlay14]
 	@winlostdate	datetime,
 	@bettype		int,
 	@site			tinyint = 0
@@ -24,6 +27,7 @@ AS
 		- 20120215@Elodie: Change linked server DB06 to DBACC
 		- 20130805@Johnson: filter by site
 		- 20130819@Johnson: separate sports by liveawayscore field to correct multi-sports and other sports formula
+		- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 	- Parameter's Explanation:
 		- @bettype - 9: mix parlay
 					- 29 : combination  mix parlay
@@ -37,14 +41,6 @@ AS
 */
 SET NOCOUNT ON
 
-DECLARE @_matchid INT
-
-IF @bettype = 9
-	SELECT @_matchid = 9
-ELSE IF @bettype = 29
-	SELECT @_matchid = 29
-
-
 IF @site = 0
 BEGIN	
 	SELECT 
@@ -53,16 +49,15 @@ BEGIN
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
-			sum((1-tpositiontaking)*(ABS(case when bettype=29 and betid>0 then  actual_stake else stake end))*virtualrate) Turnover
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover
 	FROM	bettrans14 bettrans WITH (NOLOCK)
 	WHERE
-			bettrans.ruben=1 AND
-			bettype = @bettype AND
-			 matchid = @_matchid AND
-			bettrans.winlostdate = @winlostdate
-			--bettrans.matchid=0
-			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
-			AND bettrans.statusID NOT IN (101,102,103)			
+			bettrans.ruben=1 AND			
+			matchid IN (9,29) AND
+			bettype IN (9,29) AND
+			bettrans.winlostdate = @winlostdate AND			
+			bettrans.statusID NOT IN (101,102,103) AND
+			(@bettype = CASE WHEN bettype = 29 AND betteam <> N'1' THEN 29 ELSE 9 END) 
 	GROUP BY status, liveawayscore 	
 END
 ELSE 
@@ -89,17 +84,16 @@ BEGIN
 			sum((awinlost+mwinlost+swinlost)*virtualrate) Position,
 			sum(scomm*virtualrate) Commission,	
 			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) LineTotal,
-			sum((1-tpositiontaking)*ABS(case when bettype=29 and betid>0 then  actual_stake else stake end)*virtualrate) Turnover
+			sum((1-tpositiontaking)*ABS(stake)*virtualrate) Turnover
 	FROM	bettrans14 bettrans WITH (NOLOCK)
 		INNER JOIN #DepAgent ag ON bettrans.recommend = ag.custid
 	WHERE
-			bettrans.ruben=1 AND
-			bettype = @bettype AND
-			 matchid = @_matchid AND
-			bettrans.winlostdate = @winlostdate
-			--bettrans.matchid=0
-			--and bettrans.status NOT IN ('VOID','REJECT','REFUND')
-			AND bettrans.statusID NOT IN (101,102,103)			
+			bettrans.ruben=1 AND			
+			matchid IN(9,29) AND
+			bettype IN(9,29) AND
+			bettrans.winlostdate = @winlostdate AND
+			bettrans.statusID NOT IN (101,102,103) AND
+			(@bettype = CASE WHEN bettype = 29 AND betteam <> N'1' THEN 29 ELSE 9 END) 
 	GROUP BY status, liveawayscore 
 		
 	DROP TABLE #DepAgent

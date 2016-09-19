@@ -1,4 +1,7 @@
-﻿  ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Parlay14]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyWLDirect_Parlay14]
 	@winlostdate	DATETIME
 AS
 	/*
@@ -8,6 +11,7 @@ AS
 		DB: DBACC/bodb02
 		
 		Revisions:
+		  - 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 		
 	*/
 BEGIN
@@ -23,8 +27,9 @@ BEGIN
 	UNION
 	SELECT 5707545--BARM
 	
-	SELECT	CASE WHEN bettype = 29 THEN 1 ELSE 2 END AS DisplayOrder,
-			CASE WHEN bettype = 29 THEN 'System Parlay' ELSE 'Mix Parlay' END as SportName,			
+	SELECT
+			CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 2 ELSE 1 END DisplayOrder,
+			CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 'Mix Parlay' ELSE 'System Parlay' END SportName,		
 			CASE WHEN dep.custid is null THEN 1 ELSE 2 END as site,
 			bettype, 
 			SUM((winlost-actual_stake)*virtualrate) Winlost,
@@ -33,7 +38,7 @@ BEGIN
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) RealLineTotal,
 			SUM((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) VirtualLineTotal,
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) RealTurnover, -- don't need calculate actualrate for system parlay
-			SUM((1-tpositiontaking)*ABS(CASE WHEN bettype = 29 AND betid > 0 THEN actual_stake ELSE stake END)*virtualrate) VirtualTurnover,			
+			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) VirtualTurnover,			
 			1 EnableVirtual
 	FROM bettrans14 b WITH(NOLOCK)
 		left join (select custid FROM #DepAgent) dep ON b.recommend = dep.custid
@@ -41,8 +46,8 @@ BEGIN
 		AND bettype IN (9,29)
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
-	GROUP BY CASE WHEN bettype = 29 THEN 1 ELSE 2 END,
-			CASE WHEN bettype = 29 THEN 'System Parlay' ELSE 'Mix Parlay' END,			
+	GROUP BY CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 2 ELSE 1 END,
+			CASE WHEN bettype = 9 OR (bettype = 29 AND betteam = '1') THEN 'Mix Parlay' ELSE 'System Parlay' END,			
 			CASE WHEN dep.custid is null THEN 1 ELSE 2 END ,
 			bettype
 	

@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_DailyParlayWinloss]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_DailyParlayWinloss]
 	@FromDate datetime,
 	@ToDate datetime,
 	@site	tinyint = 0 
@@ -13,6 +16,7 @@ AS
 		- 20121217@Lukas: exclude UUS currency
 		- 20130402@Dom.Cao: add turnoverp
 		- 20130805@Johnson: filter by site
+		- 20160826@Percy: Enhance System/Mix Parlay [RedmineID: #63022]
 	Parameter's Explanation:
 		- Combinations: Bettrans.betcheck is stored the number of selection by format 'm4', 'm3' ...
 		- LiveType (Livehomescore):
@@ -30,8 +34,11 @@ SET NOCOUNT ON
 IF @site = 0
 BEGIN 
 	SELECT 
-			case when betcheck in ('m2','m3','m4','m5') then betcheck else 'm6' end as Combinations, 
-			livehomescore as LiveType, status, 
+			CASE bettype
+				WHEN  9 THEN CASE WHEN RAND() + 1 > 0 AND betcheck in ('m2','m3','m4','m5') THEN betcheck ELSE 'm6' END
+				WHEN 29 THEN CASE WHEN RAND() + 1 > 0 AND CONVERT(INT, hdp2) < 6 THEN 'm' + CONVERT(VARCHAR(10), CONVERT(INT, hdp2)) ELSE 'm6' END END AS Combinations, 
+			livehomescore as LiveType,
+			[status], 
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			SUM(stake*actualrate) turnoverp,
 			count(1) BetCount,
@@ -42,13 +49,17 @@ BEGIN
 	FROM	bettrans WITH (NOLOCK)
 	WHERE
 			ruben=1 AND
-			bettype = 9 AND
-			matchid = 9 AND 
+			bettype IN (9, 29) AND matchid IN (9, 29) AND -- prevent page split
+			N'1' = CASE WHEN bettype = 29 THEN betteam ELSE N'1' END AND
 			winlostdate between @FromDate AND @ToDate and 
 			statusID NOT IN (101,102,103) AND
 			currency <> 20
-	GROUP BY  case when betcheck in ('m2','m3','m4','m5') then betcheck else 'm6' end, livehomescore, status
-	ORDER BY  case when betcheck in ('m2','m3','m4','m5') then betcheck else 'm6' end, livehomescore, status
+	GROUP BY  CASE bettype
+				WHEN  9 THEN CASE WHEN RAND() + 1 > 0 AND betcheck in ('m2','m3','m4','m5') THEN betcheck ELSE 'm6' END
+				WHEN 29 THEN CASE WHEN RAND() + 1 > 0 AND CONVERT(INT, hdp2) < 6 THEN 'm' + CONVERT(VARCHAR(10), CONVERT(INT, hdp2)) ELSE 'm6' END END, livehomescore, [status]
+	ORDER BY  CASE bettype
+				WHEN  9 THEN CASE WHEN RAND() + 1 > 0 AND betcheck in ('m2','m3','m4','m5') THEN betcheck ELSE 'm6' END
+				WHEN 29 THEN CASE WHEN RAND() + 1 > 0 AND CONVERT(INT, hdp2) < 6 THEN 'm' + CONVERT(VARCHAR(10), CONVERT(INT, hdp2)) ELSE 'm6' END END, livehomescore, [status]
 END
 ELSE
 BEGIN
@@ -69,8 +80,12 @@ BEGIN
 	SELECT 5707545 WHERE @site =2 --BARM
 			
 	SELECT 
-			case when betcheck in ('m2','m3','m4','m5') then betcheck else 'm6' end as Combinations, 
-			livehomescore as LiveType, status, 
+			CASE bettype
+				WHEN  9 THEN CASE WHEN RAND() + 1 > 0 AND betcheck in ('m2','m3','m4','m5') THEN betcheck ELSE 'm6' END
+				WHEN 29 THEN CASE WHEN RAND() + 1 > 0 AND CONVERT(INT, hdp2) < 6 THEN 'm' + CONVERT(VARCHAR(10), CONVERT(INT, hdp2)) ELSE 'm6' END
+				END AS Combinations, 
+			livehomescore as LiveType,
+			[status], 
 			sum((winlost-actual_stake)*actualrate) WinLost,
 			SUM(stake*actualrate) turnoverp,
 			count(1) BetCount,
@@ -82,13 +97,17 @@ BEGIN
 		INNER JOIN #DepAgent ag ON b.recommend = ag.custid
 	WHERE
 			ruben=1 AND
-			bettype = 9 AND
-			matchid = 9 AND 
+			bettype IN (9, 29) AND matchid IN (9, 29) AND -- prevent page split
+			N'1' = CASE WHEN bettype = 29 THEN betteam ELSE N'1' END AND
 			winlostdate between @FromDate AND @ToDate and 
 			statusID NOT IN (101,102,103) AND
 			currency <> 20
-	GROUP BY  case when betcheck in ('m2','m3','m4','m5') then betcheck else 'm6' end, livehomescore, status
-	ORDER BY  case when betcheck in ('m2','m3','m4','m5') then betcheck else 'm6' end, livehomescore, status
+	GROUP BY  CASE bettype
+				WHEN  9 THEN CASE WHEN RAND() + 1 > 0 AND betcheck in ('m2','m3','m4','m5') THEN betcheck ELSE 'm6' END
+				WHEN 29 THEN CASE WHEN RAND() + 1 > 0 AND CONVERT(INT, hdp2) < 6 THEN 'm' + CONVERT(VARCHAR(10), CONVERT(INT, hdp2)) ELSE 'm6' END END, livehomescore, [status]
+	ORDER BY  CASE bettype
+				WHEN  9 THEN CASE WHEN RAND() + 1 > 0 AND betcheck in ('m2','m3','m4','m5') THEN betcheck ELSE 'm6' END
+				WHEN 29 THEN CASE WHEN RAND() + 1 > 0 AND CONVERT(INT, hdp2) < 6 THEN 'm' + CONVERT(VARCHAR(10), CONVERT(INT, hdp2)) ELSE 'm6' END END, livehomescore, [status]
 	
 	DROP TABLE #DepAgent
 END
