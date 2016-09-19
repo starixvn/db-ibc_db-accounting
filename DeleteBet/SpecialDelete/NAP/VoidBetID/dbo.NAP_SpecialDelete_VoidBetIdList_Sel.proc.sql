@@ -1,5 +1,12 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel]    Script Date: 09/19/2016 14:06:00 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_SpecialDelete_VoidBetIdList_Sel    Script Date: 9/19/2016 2:01:29 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_SpecialDelete_VoidBetIdList_Sel    Script Date: 9/19/2016 9:24:10 AM ******/
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] 
 	@CustID			INT				= NULL 	
 	,@TransIds		VARCHAR(MAX)	= NULL 
