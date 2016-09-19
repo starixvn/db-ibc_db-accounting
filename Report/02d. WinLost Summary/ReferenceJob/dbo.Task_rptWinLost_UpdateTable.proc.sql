@@ -27,6 +27,7 @@ Revision:
 														 OR (bettrans.Bettype = 9) ---> rptWinLost.bettype =  9 AND rptWinLost.exrisk = 0 
 			- System Parlay:	(bettrans.bettype 29 and bettrans.betteam <> '1')  ---> rptWinLost.bettype = 29 AND rptWinLost.exrisk = 0 
 		2. Remove condition: bettrans.bettype = 29 and bettrans.betid > 0
+	- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
 */
 
 BEGIN	
@@ -48,13 +49,22 @@ BEGIN
 
 	DECLARE @isTest BIT= 0;
      SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500))
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500), SportType INT)
 	INSERT INTO @SportBettype
 	SELECT ProductID,
               Bettype,
               EventType,
-              SubProduct
-     FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest);
+              SubProduct,
+		    0 SportType
+     FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
+
+    UPDATE sb
+    SET
+	   sb.SportType = matrix.SportType
+    FROM @SportBettype sb
+	   INNER JOIN SportBettypeMatrix matrix (NOLOCK) ON sb.ProductID = matrix.ProductID
+		  AND sb.Bettype = matrix.BetType
+		  AND sb.SubProduct = matrix.SubProduct
 
 	SELECT distinct winlostdate cnt FROM bettrans with (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
 	IF @@ROWCOUNT = 1
@@ -128,50 +138,7 @@ BEGIN
 			AND currency <> 20
 		GROUP BY
 			winlostdate, b.matchid, bettype, liveindicator, status,
-			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
-		
-		--calculate Cockfighting winlost
-		INSERT INTO bodb_Report.dbo.rptWinlost
-			(
-				[winlostdate]
-			   ,[matchid]
-			   ,[bettype]
-			   ,[liveindicator]
-			   ,[Status]
-			   ,[IBC]
-			   ,[RealTurnover]
-			   ,[RealWinLost]
-			   ,[RealPosition]
-			   ,[RealCommission]
-			   ,[RealLineTotal]
-			   ,[VirtualTurnover]
-			   ,[VirtualLineTotal]
-			   ,[SportType]
-			   ,[exrisk]
-			)	
-		SELECT
-			winlostdate,
-			betdaqid, bettype, liveindicator, Status,
-			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end as ibc,
-			sum((1-tpositiontaking)*abs(stake)*actualrate) as realturnover,
-			sum((winlost-actual_stake)* actualrate)  realWinlost,
-			sum((awinlost+mwinlost+swinlost)* actualrate) realPos,
-			sum((scomm) * actualrate) realComm,
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*actualrate) realLineTotal,
-			sum((1-tpositiontaking)*abs(stake)*virtualrate) as virtualTurnover,
-			sum((winlost-actual_stake+awinlost+mwinlost+swinlost+scomm)*virtualrate) as virtualLineTotal,
-			0, 0
-		FROM
-			bettrans b with (nolock)
-		WHERE
-			bettype = 1003
-			AND winlostdate = @winlostdate
-			AND statusID NOT IN (101, 102,103,121) --('VOID','REJECT','DONE','REFUND')
-			AND ruben = 1
-			AND currency <> 20
-		GROUP BY
-			winlostdate, betdaqid, bettype, liveindicator, status,
-			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end
+			case when recommend = 52466 then 1 when recommend = 5707545 then 2 else 0 end	
 
 		-- Combo Parlay (bettype = 29)
 		INSERT INTO bodb_Report.dbo.rptWinlost
@@ -380,6 +347,14 @@ BEGIN
 		WHERE bodb_Report.dbo.rptWinlost.matchid = r.EventID
 		AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
 		AND bodb_Report.dbo.rptWinlost.bettype in (1231, 1232, 1233, 1237, 1238)			
+
+		--NG2
+		UPDATE rpt
+		SET rpt.SportType = sb.SportType
+		FROM bodb_Report.dbo.rptWinlost rpt WITH(NOLOCK)
+		  INNER JOIN @SportBettype sb on  rpt.bettype = sb.Bettype
+		WHERE sb.ProductID = 23 
+		AND rpt.winlostdate =  @winlostdate
 	END
 	ELSE
 	BEGIN -- check from BetTrans14
@@ -673,6 +648,14 @@ BEGIN
 			WHERE bodb_Report.dbo.rptWinlost.matchid = r.EventID
 			AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
 			AND bodb_Report.dbo.rptWinlost.bettype in (1231, 1232, 1233, 1237, 1238)	
+
+		     --NG2
+		    UPDATE rpt
+		    SET rpt.SportType = sb.SportType
+		    FROM bodb_Report.dbo.rptWinlost rpt WITH(NOLOCK)
+			 INNER JOIN @SportBettype sb on  rpt.bettype = sb.Bettype
+		    WHERE sb.ProductID = 23 
+		    AND rpt.winlostdate =  @winlostdate
 		END
 	END
 	
