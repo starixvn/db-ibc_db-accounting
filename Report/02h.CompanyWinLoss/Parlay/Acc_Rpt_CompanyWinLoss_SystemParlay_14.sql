@@ -18,6 +18,7 @@ Revisions:
 - 20160720@Sophia: . Revise SP
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
 - 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
+
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='2016-01-01', @Site= 'ALL'
 

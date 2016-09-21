@@ -13,8 +13,8 @@ AS
 	Revisions:
 		- 20160622@Sophia: 	. Remove group by ExtraPT to avoid duplicated data. [Redmine: #59732]
 							. Ignore param @EndDate because of the performance, and business supports only one day 
+		 
 		- 20160915@Percy: Integrate NG2 [RedmineID: #63460]
-
 	Explanation's Param:
 	
 */
