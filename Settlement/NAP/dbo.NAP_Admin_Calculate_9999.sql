@@ -1,6 +1,6 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9999]    Script Date: 09/15/2016 10:34:51 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_9999]    Script Date: 09/19/2016 16:57:36 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -52,7 +52,7 @@ BEGIN
         ,@ExcludingHTChoice NVARCHAR(1000)
         ,@ExcludingFTChoice NVARCHAR(1000)
         ,@htbetteam NVARCHAR(10)
-        ,@2ndbetteam NVARCHAR(10)
+        ,@ftbetteam NVARCHAR(10)
     
     SELECT @fth2H     = @fth - @hth
         ,@fta2H     = @fta - @hta
@@ -230,10 +230,15 @@ BEGIN
         BEGIN
             UPDATE bettrans WITH(ROWLOCK, UPDLOCK)
                 SET @modds = CASE 
-                                WHEN bettype = 417 THEN CASE 
-                                                            WHEN @fth > 0 AND @fta > 0 AND LEFT(betteam,1) = 'N' THEN -1 
-                                                            ELSE NULL
-                                                        END
+                                WHEN bettype = 417 THEN CASE
+															WHEN LEFT(betteam,1) = 'N' THEN CASE
+																								WHEN @fth > 0 AND @fta > 0 THEN -1
+																								WHEN @fth > @fta AND RIGHT(betteam,1) IN ('A','D') THEN -1
+																								WHEN @fth < @fta AND RIGHT(betteam,1) IN ('H','D') THEN -1
+																								ELSE NULL
+																							END
+															ELSE NULL
+														END
                                 WHEN bettype = 418 THEN 
                                     CASE 
                                         /*WHEN @fth > 0 AND @fta > 0 THEN CASE
@@ -527,7 +532,7 @@ BEGIN
         SET @ExcludingHTChoice = CASE WHEN bettype = 416 THEN SUBSTRING(transdesc,0, CHARINDEX('/',transdesc)) ELSE NULL END
             ,@ExcludingFTChoice = CASE WHEN bettype = 416 THEN SUBSTRING(transdesc,CHARINDEX('/',transdesc)+1,LEN(transdesc)) ELSE NULL END
             ,@htbetteam = CASE WHEN bettype = 416 THEN SUBSTRING(betteam,0,CHARINDEX('/',betteam)) ELSE NULL END
-            ,@2ndbetteam = CASE WHEN bettype = 416 THEN SUBSTRING(betteam,CHARINDEX('/',betteam)+1, LEN(betteam)) ELSE NULL END
+            ,@ftbetteam = CASE WHEN bettype = 416 THEN SUBSTRING(betteam,CHARINDEX('/',betteam)+1, LEN(betteam)) ELSE NULL END
             
             ,@modds = CASE WHEN @IsSettleAbandonedMatch = 0 AND @IsSettleAbandonedMatchBetfair = 0 AND @IsSettleAbandonedMatchIBC = 0
                                     THEN CASE bettype
@@ -858,19 +863,19 @@ BEGIN
 																														WHEN CAST(LEFT(@htbetteam,1) AS INT) < @hth OR CAST(RIGHT(@htbetteam,1) AS INT) < @hta THEN -1																							
 																													  END
 																						ELSE  CASE
-																									WHEN @2ndbetteam = 'AOS' THEN CASE WHEN @hth > 4 OR @hta > 4 THEN 1 END
-																									WHEN LEFT(@2ndbetteam,1) < @hth OR RIGHT(@2ndbetteam,1) < @hta THEN -1
+																									WHEN @ftbetteam = 'AOS' THEN CASE WHEN @hth > 4 OR @hta > 4 THEN 1 END
+																									WHEN LEFT(@ftbetteam,1) < @hth OR RIGHT(@ftbetteam,1) < @hta THEN -1
 																							  END
 																					END
 															ELSE CASE 
 																	WHEN @htbetteam <> 'AOS' THEN CASE
-																										WHEN CAST(LEFT(@htbetteam,1) AS INT) < @hth OR CAST(RIGHT(@htbetteam,1) AS INT) < @hta THEN -1
-																										WHEN @2ndbetteam <> 'AOS' THEN CASE WHEN LEFT(@2ndbetteam,1) < @fth OR RIGHT(@2ndbetteam,1) < @fta THEN -1 END
+																										WHEN CAST(LEFT(@htbetteam,1) AS INT) <> @hth OR CAST(RIGHT(@htbetteam,1) AS INT) <> @hta THEN -1
+																										WHEN @ftbetteam <> 'AOS' THEN CASE WHEN LEFT(@ftbetteam,1) < @fth OR RIGHT(@ftbetteam,1) < @fta THEN -1 END
 																										WHEN CAST(LEFT(@htbetteam,1) AS INT) = @hth AND CAST(RIGHT(@htbetteam,1) AS INT) = @hta AND CHARINDEX(CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)),@ExcludingFTChoice) = 0 THEN 1
 																								  END
 																	ELSE CASE 
 																				WHEN CHARINDEX(CAST(@hth AS NVARCHAR(10)) + ':' + CAST(@hta AS NVARCHAR(10)),@ExcludingHTChoice) > 0 THEN -1
-																				WHEN @2ndbetteam <> 'AOS' THEN CASE WHEN LEFT(@2ndbetteam,1) < @fth OR RIGHT(@2ndbetteam,1) < @fta THEN -1 END
+																				WHEN @ftbetteam <> 'AOS' THEN CASE WHEN LEFT(@ftbetteam,1) < @fth OR RIGHT(@ftbetteam,1) < @fta THEN -1 END
 																				WHEN CHARINDEX(CAST(@fth AS NVARCHAR(10)) + ':' + CAST(@fta AS NVARCHAR(10)),@ExcludingFTChoice) = 0 THEN 1
 																		  END
 																END	
@@ -1091,6 +1096,8 @@ BEGIN
                 END 
     END
 END
+
+
 
 
 
