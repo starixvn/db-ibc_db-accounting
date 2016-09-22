@@ -8,8 +8,9 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions: 20160909@Harper - #63899 - Rebate and Discount should be included when calculating the Pay to Suplplier
-
+    Revisions: 
+		- 20160909@Harper - #63899 - Rebate and Discount should be included when calculating the Pay to Suplplier
+		- 20160922@Harper - #64527 - Cannot calculate the Rebate of Keno and Number Game
 	Param's Explanation:   
 */  
 BEGIN  
@@ -81,8 +82,7 @@ BEGIN
 	SELECT @ProductList = COALESCE(@ProductList + ',', '') + CONVERT(VARCHAR(10), ProductPrefix) 
 	FROM (SELECT DISTINCT CASE WHEN d.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END AS ProductPrefix
 		FROM #DiscountGroup d
-			LEFT JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.Productid = d.ProductId
-		WHERE DiscountGroupType = 1) t
+			LEFT JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.Productid = d.ProductId) t
 
 	-- Convert discount amount to base currency
 	UPDATE d SET
