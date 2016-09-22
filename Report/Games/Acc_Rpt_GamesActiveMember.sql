@@ -1,8 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
- @fromdate datetime,  
- @todate datetime,  
- @BalanceUpDay datetime,
- @ProductList VARCHAR(200)
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
+	@fromdate		DATETIME,  
+	@todate			DATETIME,  
+	@BalanceUpDay	DATETIME,
+	@ProductList	VARCHAR(200)
 AS  
  
 /*  
@@ -190,8 +193,6 @@ SELECT
 	,CASE a.GameName WHEN 'MG' THEN 'MG-SuperLive' ELSE p.ProductName END GameName
 FROM #statistic a 
 LEFT JOIN dbo.Products p ON a.gameName=p.ProductPrefix 
-
-  
  
 DROP TABLE #tmpcust
 DROP TABLE #statistic

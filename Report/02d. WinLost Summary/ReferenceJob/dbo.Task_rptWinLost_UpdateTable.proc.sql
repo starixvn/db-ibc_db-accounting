@@ -49,7 +49,7 @@ BEGIN
 
 	DECLARE @isTest BIT= 0;
      SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500), SportType INT)
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT,SubProduct VARCHAR(500), SportType INT) -- using Sporttype column for NG2 (NG2 has not matchid)
 	INSERT INTO @SportBettype
 	SELECT ProductID,
               Bettype,
@@ -59,12 +59,9 @@ BEGIN
      FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 
     UPDATE sb
-    SET
-	   sb.SportType = matrix.SportType
+    SET sb.SportType = s.SportType
     FROM @SportBettype sb
-	   INNER JOIN SportBettypeMatrix matrix (NOLOCK) ON sb.ProductID = matrix.ProductID
-		  AND sb.Bettype = matrix.BetType
-		  AND sb.SubProduct = matrix.SubProduct
+	   INNER JOIN SportBettypeMatrix s WITH(NOLOCK) ON sb.BetType = s.BetType AND s.ProductID = 23 -- NG2
 
 	SELECT distinct winlostdate cnt FROM bettrans with (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
 	IF @@ROWCOUNT = 1

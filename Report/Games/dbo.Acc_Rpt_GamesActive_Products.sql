@@ -1,5 +1,7 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActive_Products]   
- 
+USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActive_Products]
 AS  
 /*
  Created: Jim
@@ -26,8 +28,6 @@ WHERE ProductID IN (3,6,7,8,4,11,12,13,17,14,15,19,21,22,23)
 
 GO
 GRANT ALTER ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT CONTROL ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
 GO

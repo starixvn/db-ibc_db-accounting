@@ -2,8 +2,8 @@
 GO
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
-    @fromdate    DATETIME,
-    @todate        DATETIME    
+    @fromdate   DATETIME,
+    @todate     DATETIME    
 AS
     /*
         Created: Johnson
