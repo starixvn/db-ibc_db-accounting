@@ -10,8 +10,10 @@ AS
     Task : House month-to-date Net Income report
     DB: DBWH/bodb_dwrs  
    
-    Revisions: 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
-			   20160919@Harper - #64338, #64352 - PayToSupplier is incorrect
+    Revisions: 
+		- 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
+		- 20160919@Harper - #64338, #64352 - PayToSupplier is incorrect
+		- 20160922@Harper - #64429 - Edit status ID
 	Param's Explanation:   
 */  
 BEGIN  
@@ -67,7 +69,7 @@ BEGIN
 			INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype
 		WHERE	rptdate BETWEEN @FDate AND @TDate 
 				AND sb.ProductID = 5
-				AND b.statusid NOT IN (9,10,14,18)
+				AND b.statusid <> 14
 		GROUP BY b.rptDate
 	)
 	UPDATE f
@@ -89,7 +91,7 @@ BEGIN
 		b.rptDate BETWEEN @FDate AND @TDate 
 		AND s.isDeposit = 0 -- Credit data only
 		AND Sb.ProductID = 5
-		AND b.status NOT IN (9,10,14,18)
+		AND b.status <> 14
 	GROUP BY b.rptDate
 	OPTION (RECOMPILE)
 

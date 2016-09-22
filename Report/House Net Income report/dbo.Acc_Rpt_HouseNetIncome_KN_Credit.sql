@@ -10,7 +10,9 @@ AS
     Task : House month-to-date Net Income report
     DB: DBWH/bodb_dwrs  
    
-    Revisions: 20160916@Harper - #64211 - Caculate value for PayToSupplier for Credit
+    Revisions: 
+		- 20160916@Harper - #64211 - Caculate value for PayToSupplier for Credit
+		- 20160922@Harper - #64429 - Edit status ID
 	Param's Explanation:   
 */  
 BEGIN  
@@ -66,7 +68,7 @@ BEGIN
 			INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype
 		WHERE	rptdate BETWEEN @FDate AND @TDate 
 				AND sb.ProductID = 8
-				AND b.statusid NOT IN (-1,9,10,14,18)
+				AND b.statusid <> 14
 		GROUP BY b.rptDate
 	)
 	UPDATE f
@@ -89,7 +91,7 @@ BEGIN
 		b.rptDate BETWEEN @FDate AND @TDate 
 		AND s.isDeposit = 0 -- Credit data only
 		AND Sb.ProductID = 8
-		AND b.status NOT IN (-1,9,10,14,18)
+		AND b.status <> 14
 	GROUP BY b.rptDate
 	OPTION (RECOMPILE)
 

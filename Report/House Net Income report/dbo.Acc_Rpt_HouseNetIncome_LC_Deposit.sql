@@ -11,7 +11,9 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions:  20160909@Harper - #63853 - Return wrong data Pay to Supplier
+    Revisions:  
+		- 20160909@Harper - #63853 - Return wrong data Pay to Supplier
+		- 20160922@Harper - #63926 - Remove IsApplyMinFee
 	Param's Explanation:   
 */  
 BEGIN  
@@ -71,7 +73,7 @@ BEGIN
 	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR')
 	-- End region
 
-	CREATE	TABLE #TempData (
+	CREATE	TABLE #TempDataLC (
 			PartyId			INT,
 			rptDate			DATETIME,
 			CurrencyId		INT,
@@ -79,7 +81,7 @@ BEGIN
 			AComm			MONEY,
 			ProductId		TINYINT,
 			AmountToCompany MONEY)
-	INSERT INTO #TempData (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
+	INSERT INTO #TempDataLC (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
 	(
 		SELECT	p.PartyId,
 				b.rptDate,
@@ -101,7 +103,7 @@ BEGIN
 		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate
 	)
 
-	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempData (PartyId, ProductId)
+	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataLC (PartyId, ProductId)
 
 	-- Region: Result
 	CREATE TABLE #FeeData (
@@ -134,8 +136,8 @@ BEGIN
 	BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId = 4 AND rptDate = @tmpDate), -- LicenseeWL
-		(SELECT -0.4 * SUM(AmountToCompany) FROM #TempData WHERE rptDate = @tmpDate)  
+			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataLC WHERE ProductId = 4 AND rptDate = @tmpDate), -- LicenseeWL
+		(SELECT -0.4 * SUM(AmountToCompany) FROM #TempDataLC WHERE rptDate = @tmpDate)  
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
@@ -163,7 +165,7 @@ BEGIN
 	-- Region: Drop tmp table
 	DROP TABLE #Exchange
 	DROP TABLE #ExchangeOANDA
-	DROP TABLE #TempData
+	DROP TABLE #TempDataLC
 	DROP TABLE #FeeData
 	DROP TABLE #FinalResult
 END
