@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelByGroupHeadline]
   , @roleid INT=0
   , @username VARCHAR(30) = ''
   , @groupheadline VARCHAR(30) = ''    
-  , @Owner VARCHAR(50) = ''
+  , @Owner NVARCHAR(100) = ''
   , @HeadlineType VARCHAR(20) = ''
   , @IsTest BIT = 0
   , @Userid INT=NULL
@@ -18,7 +18,7 @@ AS
     Created by: Scott    
     Date: 2012-11-20    
     Task : GET customer by group headline    
-    DB: DB052.bodb02    
+    DB: DBACC/bodb02    
     Original SP:
     Revisions:
         - 20141001@Logan: Use f_DirectAgencyList instead of using Acc_CustDirect
@@ -26,6 +26,7 @@ AS
                            Modify code to enhance performance 
         - 20160620@Winnie: #48948 Hide_special_sites_from_unautorized_users
         - 20160829@Elodie: Modify code to get supers who is not assigned to group [Redmine:#63216]
+		- 20160915@Elodie: SMA Mangement allows to input freetext for Owner info [Redmine:#63349]
 
     Example: exec Acc_CustomerSelByGroupHeadline @siteid=default,@currency=0,@open=1,@suspended=0,@closed=1,@disabled=1,@roleid=0,@username=default,@groupheadline=default,@Owner='',@HeadlineType='1'
 
@@ -58,7 +59,7 @@ BEGIN
       , GroupName NVARCHAR(100)
       , GroupID SMALLINT 
       , HeadlineType TINYINT NULL
-      , OwnerName VARCHAR(30) NULL
+      , OwnerName NVARCHAR(100) NULL
       , OwnerID INT NULL
     )
 
@@ -75,7 +76,7 @@ BEGIN
       , Currency INT
       , RoleID INT
       , HeadlineType TINYINT
-      , OwnerName VARCHAR(30)
+      , OwnerName NVARCHAR(100)
     )
 
     CREATE TABLE #tmpResultAll
@@ -91,16 +92,16 @@ BEGIN
       , Currency INT
       , RoleID INT
       , HeadlineType TINYINT
-      , OwnerName VARCHAR(30)
+      , OwnerName NVARCHAR(100)
     )    
     
     --get super account     
     IF (@roleid = 0 OR @roleid = 4)    
     BEGIN     
-        INSERT INTO #tmpDirectCust (custid, site, currency, roleid)
+		INSERT INTO #tmpDirectCust (custid, site, currency, roleid)
         SELECT c.custid, c.site, c.currency, c.roleid    
         FROM dbo.Customer c WITH(NOLOCK) 
-            INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON c.custid = cs.custid AND cs.IsInternal = 0 AND c.roleid = 4     
+			INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON c.custid = cs.custid AND cs.IsInternal = 0 AND c.roleid = 4     
         WHERE (@currency = 0 OR c.currency = @currency)
             AND ((@IsTest = 0 AND c.currency NOT IN (20, 27, 28)) OR @IsTest = 1)
     END
@@ -151,12 +152,11 @@ BEGIN
        OR [site] NOT IN (SELECT [SITE] FROM [SITE] WHERE islicensee = 0 AND isactive=1)    
       
     --apply filter by Owner and Headline Type    
-    INSERT INTO #tmpGroupHeadline(HeadlineID, GroupName, GroupID, HeadlineType, OwnerID, OwnerName)    
-    SELECT hl.CustID, cu.username, hl.GroupID, hl.HeadlineType, hl.OwnerID, ci. username
+    INSERT INTO #tmpGroupHeadline(HeadlineID, GroupName, GroupID, HeadlineType, OwnerName)    
+	SELECT hl.CustID, cu.username, hl.GroupID, hl.HeadlineType, hl.OwnerName
     FROM dbo.CustGroupHeadline hl WITH (NOLOCK)
         INNER JOIN dbo.custInfo cu WITH (NOLOCK) ON hl.CustID = cu.custid
-        LEFT JOIN dbo.custInfo ci WITH (NOLOCK) ON hl.OwnerID = ci.custid
-    WHERE (@Owner = '' OR ci.username = @Owner) AND (@HeadlineType = '' OR hl.HeadlineType IN (SELECT val FROM dbo.strSplit(@HeadlineType, ',')))        
+	WHERE (@Owner = '' OR hl.OwnerName = @Owner) AND (@HeadlineType = '' OR hl.HeadlineType IN (SELECT val FROM dbo.strSplit(@HeadlineType, ',')))		
 
     INSERT INTO #tmpResultAll 
     SELECT  hl.HeadlineID Custheadlineid ,hl.GroupName groupname, ca.custid ,ci.username,isnull(ci.reject,0) issuspend,    
@@ -175,7 +175,7 @@ BEGIN
     FROM #tmpDirectCust c    
         INNER JOIN custinfo ci WITH(NOLOCK) ON  ci.custid = c.custid     
         LEFT JOIN #tmpGroupHeadline hl WITH(NOLOCK) ON  ci.custid = hl.HeadlineID
-    WHERE NOT EXISTS (SELECT 1 FROM custaccount ca WITH(NOLOCK) WHERE ca.custid = c.custid AND ca.groupID  <> 0) 
+	WHERE NOT EXISTS (SELECT 1 FROM custaccount ca WITH(NOLOCK) WHERE ca.custid = c.custid AND ca.groupID  <> 0) 
         AND (@username = '' OR ci.username=@username) 
         AND @groupheadline='' AND @HeadlineType = '' 
         AND (@Owner = '' OR (@Owner <> '' AND hl.OwnerName = @Owner))
