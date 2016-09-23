@@ -1,15 +1,10 @@
-IF EXISTS
-(
-    SELECT *
-    FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType_14]')
-          AND type IN(N'P', N'PC')
-)
-    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType_14];
+USE [bodb02]
 GO
-CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType_14] @StartDate SMALLDATETIME,
-                                                                    @EndDate   SMALLDATETIME,
-                                                                    @ProductId INT
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType_14]
+	@StartDate SMALLDATETIME,
+    @EndDate   SMALLDATETIME,
+    @ProductId INT
 AS
 
 /*	
@@ -18,21 +13,25 @@ Task:  Integrate new product NG2 [#63460]
 DB: DBACC/bodb02
 
 Revisions: 
-- 20160921@Jacob: NG2 - Redmine[#63460]
+	- 20160921@Jacob: NG2 - Redmine[#63460]
+	- 20160923@Percy: Using local variable to prevent bad parameter sniffing [RedmineID: #64573]
 Example: 
 EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType_14] @StartDate='2016-01-01', @EndDate='2020-01-01', @ProductId = 23
 		
 */
-
-
+BEGIN
      SET NOCOUNT ON;
+
+	 DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @ProID INT
+	 SELECT  @FDate = @StartDate, @TDate = @EndDate, @ProID = @ProductId
+
      BEGIN --#SportBetType     
          DECLARE @isTest BIT= 0;
          SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
          CREATE TABLE #SportBetType(BetType INT);
          INSERT INTO #SportBetType
                 SELECT s.BetType
-                FROM dbo.f_SportBetTypeMatrix_Sel(@ProductId, 0, 0, 2, '', '', @isTest) s;
+                FROM dbo.f_SportBetTypeMatrix_Sel(@ProID, 0, 0, 2, '', '', @isTest) s;
      END;
      BEGIN -- #DepositSuper
 
@@ -72,7 +71,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType_14] @StartDate='2016-01-01', @E
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                      INNER JOIN match14 AS m WITH (NOLOCK) ON b.MatchId = m.MatchId
-                WHERE b.winlostdate = @StartDate
+                WHERE b.winlostdate = @FDate
                       AND b.ruben = 1
                       AND b.statusId NOT IN(101, 102, 103, 121)
                 GROUP BY m.sporttype,
@@ -100,6 +99,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType_14] @StartDate='2016-01-01', @E
      DROP TABLE #Data;
      DROP TABLE #SportBetType;
      DROP TABLE #DepositSuper;
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType_14] TO [bodbAdminNet];
 GO

@@ -33,7 +33,7 @@ AS
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
 	  + @CustID: SuperID
-	  + {251: Casino (include : 251, 208, 209, 210), 151:Racing, 252:Bingo, 161:Number Game, 162:Live Casino, 180:Virtual Sports, 202:Keno,  -1 : Metric Gaming - Superlive, 206: Cockfingting}
+	  + {251: Casino (include : 251, 208, 209, 210), 151:Racing, 252:Bingo, 161:Number Game, 162:Live Casino, 180:Virtual Sports, 202:Keno,  -1 : Metric Gaming - Superlive}
 
   
 */  
@@ -166,7 +166,6 @@ BEGIN
 							OR b.bettype BETWEEN 73 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 252 THEN 73 ELSE 0 END)
 							OR b.bettype BETWEEN 1701 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 							OR b.bettype BETWEEN 18000 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-							OR b.bettype BETWEEN 1003 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 206 THEN 1003 ELSE 0 END) -- Cockfighting
 							OR b.bettype BETWEEN 2401  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 211 THEN 2499 ELSE 0 END) -- AllBet
 							OR b.bettype BETWEEN 4001  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 212 THEN 7999 ELSE 0 END) -- Voidbridge
 							OR b.bettype BETWEEN 2501  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 213 THEN 2699 ELSE 0 END) -- NG2
@@ -291,13 +290,17 @@ BEGIN
 	END
 	IF @sportType IN (211,212,213)
     BEGIN
-		DECLARE @bitmapOrder TINYINT
-		SELECT  @bitmapOrder = bitmapOrder FROM dbo.ProductStatusProfile WITH(NOLOCK) WHERE Sporttype = @SportType
+		DECLARE @bitmapOrder TABLE (bitmapOrder TINYINT)
+		INSERT INTO @bitmapOrder (bitmapOrder)
+		SELECT bitmapOrder FROM dbo.ProductStatusProfile WITH(NOLOCK) WHERE Sporttype = @SportType
 	    
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
-				(SELECT CASE (SELECT value FROM dbo.f_CustSetting_ProductStatusSel(bitmapIsDisabled, @bitmapOrder)) WHEN 0 THEN 0 ELSE 1 END
-			FROM CustProductStatus WITH(NOLOCK) WHERE custid = ci.custid),
+				(SELECT CASE MIN(CONVERT(INT, f.value)) WHEN 0 THEN 0 ELSE 1 END
+			FROM CustProductStatus cps WITH(NOLOCK)
+				CROSS APPLY @bitmapOrder b
+				CROSS APPLY f_CustSetting_ProductStatusSel(cps.bitmapIsDisabled, b.bitmapOrder) f
+			WHERE custid = ci.custid),
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)

@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByAg]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByAg]
 	@FromDate   DATETIME,
 	@ToDate   DATETIME,  
 	@recommend INT,	

@@ -532,7 +532,7 @@ BEGIN
             AND s.ProductId=21
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	   
-	   -- Voidbridge section 
+	   -- Macau Games section 
 		UNION ALL
         SELECT 212 sporttype
             ,b.bettype

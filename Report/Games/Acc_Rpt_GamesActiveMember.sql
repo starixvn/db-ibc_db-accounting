@@ -59,7 +59,7 @@ WHERE ProductID IN (17)
 UNION ALL
 SELECT ProductID,ProductPrefix
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (14,15,19)
+WHERE ProductID IN (14,15)
 
 SELECT 
 	p.ProductPrefix

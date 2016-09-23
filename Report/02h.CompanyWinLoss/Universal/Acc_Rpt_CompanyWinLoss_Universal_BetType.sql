@@ -1,16 +1,11 @@
-IF EXISTS
-(
-    SELECT *
-    FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType]')
-          AND type IN(N'P', N'PC')
-)
-    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType];
+USE [bodb02]
 GO
-CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate SMALLDATETIME,
-                                                                  @EndDate   SMALLDATETIME,
-                                                                  @ProductId INT,
-                                                                  @SportType INT = 0
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType]
+	@StartDate SMALLDATETIME,
+    @EndDate   SMALLDATETIME,
+    @ProductId INT,
+    @SportType INT = 0
 AS
 
 /*	
@@ -20,13 +15,19 @@ DB: DBACC/bodb02
 
 Revisions: 
 	 - 20160222@Franklin: Initialize Company Win Loss Report - Universal
+	 - 20160923@Percy:
+		1. Add params @Sporttype to support by Sporttype [RedmineID: #63460]
+		2. Using local variable to prevent bad parameter sniffing [RedmineID: #64573]
 Example: 
 EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate='2016-09-13', @EndDate='2020-01-01', @ProductId = 15, @SportType = 0
 		
 */
-
-
+BEGIN
      SET NOCOUNT ON;
+
+	 DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @ProID INT, @Sport INT
+	 SELECT  @FDate = @StartDate, @TDate = @EndDate, @ProID = @ProductId, @Sport = @SportType
+
      BEGIN --#SportBetType     
          DECLARE @isTest BIT= 0;
          SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -37,7 +38,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate='2016-09-13', @EndDat
          INSERT INTO #SportBetType
                 SELECT b.typeid,
                        b.typenamee
-                FROM dbo.f_SportBetTypeMatrix_Sel(@ProductId, 0, @SportType, 2, '', '', @isTest) s
+                FROM dbo.f_SportBetTypeMatrix_Sel(@ProID, @Sport, 0, 2, '', '', @isTest) s
                      INNER JOIN BetType b WITH (NOLOCK) ON s.BetType = b.typeid;
      END;
      BEGIN -- #DepositSuper
@@ -66,7 +67,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate='2016-09-13', @EndDat
          FROM bettrans AS b WITH (NOLOCK)
               INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
               LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-         WHERE b.winlostdate = @StartDate
+         WHERE b.winlostdate = @FDate
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)
          GROUP BY sb.BetType,
@@ -81,6 +82,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate='2016-09-13', @EndDat
      END;
      DROP TABLE #SportBetType;
      DROP TABLE #DepositSuper;
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType] TO [bodbAdminNet];
 GO

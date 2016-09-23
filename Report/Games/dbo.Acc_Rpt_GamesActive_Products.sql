@@ -14,7 +14,9 @@ AS
 	- 20151210@Percy: Add new product: Cockfighting Sabong [Redmine: #49027]
 	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
-	- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
+	- 20160916@Robert:
+		1. Integrate new product NG2 [RedmindID: #63460]
+		2. Remove Cockfighting - ProductID = 19
 */
 SELECT
 	CONVERT(INT,-1) ProductID
@@ -24,7 +26,7 @@ SELECT
 	ProductID
 	,ProductName
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,8,4,11,12,13,17,14,15,19,21,22,23)
+WHERE ProductID IN (3,6,7,8,4,11,12,13,17,14,15,21,22,23)
 
 GO
 GRANT ALTER ON [dbo].[Acc_Rpt_GamesActive_Products] TO [bodbAdminNet] AS [dbo]
