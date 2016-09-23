@@ -11,7 +11,9 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions: 20160916@Harper - #64211 - Add (-1) when caculate value for PayToSupplier
+    Revisions: 
+		- 20160916@Harper - #64211 - Add (-1) when caculate value for PayToSupplier
+		- 20160923@Harper - #64582 - PayToSupplier should use ExchangeOANDA
 	Param's Explanation:   
 */  
 BEGIN  
@@ -95,7 +97,7 @@ BEGIN
 		SELECT	p.PartyId,
 				b.rptDate,
 				b.CurrencyID,
-				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
+				SUM(ISNULL(b.MemberWL, 0)),
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				p.ProductId,
 				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate
@@ -136,9 +138,10 @@ BEGIN
 	DECLARE @DailyPayAmt TABLE (rptDate DATE, PartyGroup VARCHAR(20), Amount MONEY, LicenseeWL MONEY, KNRate FLOAT)
 	
 	INSERT INTO @DailyPayAmt (rptDate, PartyGroup, Amount, LicenseeWL, KNRate)
-	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * p.KNRate), SUM(-d.WinLoss), p.KNRate
+	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * oanda.Rate * p.KNRate), SUM(-d.WinLoss * oanda.Rate), p.KNRate
 	FROM #TempData d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
+		INNER JOIN #ExchangeOANDA oanda ON d.rptDate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
 	GROUP BY d.rptDate, p.PartyGroup, p.KNRate
 	
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)

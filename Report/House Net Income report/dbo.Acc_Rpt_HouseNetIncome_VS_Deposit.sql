@@ -11,8 +11,10 @@ AS
     Task : House month-to-date Net Income report
     DB: DBEXT/bodb02  
    
-    Revisions: 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
-			   20160919@Harper - #64338 - PayToSupplier of FullMonth is incorrect
+    Revisions: 
+		- 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
+		- 20160919@Harper - #64338 - PayToSupplier of FullMonth is incorrect
+		- 20160923@Harper - #64582 - PayToSupplier should use ExchangeOANDA
 	Param's Explanation:   
 */  
 BEGIN  
@@ -73,10 +75,10 @@ BEGIN
 
 	INSERT INTO #ExchangeOANDA(ExchangeDate, ExchangeID, Rate)
 	SELECT ExchangeDate, ExchangeID, BaseCurrencyRate
-	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR')
+	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR') -- Currency ID = 2
 	-- End region
 
-	CREATE	TABLE #TempData (
+	CREATE	TABLE #TempDataVS (
 			PartyId			INT,
 			rptDate			DATETIME,
 			CurrencyId		INT,
@@ -84,12 +86,12 @@ BEGIN
 			AComm			MONEY,
 			ProductId		TINYINT,
 			AmountToCompany MONEY)
-	INSERT INTO #TempData (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
+	INSERT INTO #TempDataVS (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
 	(
 		SELECT	p.PartyId,
 				b.rptDate,
 				b.CurrencyID,
-				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
+				SUM(ISNULL(b.MemberWL, 0)),
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				p.ProductId,
 				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate
@@ -106,7 +108,7 @@ BEGIN
 		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate
 	)
 
-	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempData (PartyId, ProductId)
+	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataVS (PartyId, ProductId)
 
 	-- Region: Result
 	CREATE TABLE #FeeData (
@@ -130,9 +132,10 @@ BEGIN
 	DECLARE @DailyPayAmt TABLE (rptDate DATE, IsDeposit BIT, Amount MONEY, LicenseeWL MONEY, VSRate FLOAT)
 	
 	INSERT INTO @DailyPayAmt (rptDate, IsDeposit, Amount, LicenseeWL, VSRate)
-	SELECT d.rptDate, p.IsDeposit, SUM(d.WinLoss * p.VSRate), SUM(-d.WinLoss), p.VSRate
-	FROM #TempData d
+	SELECT d.rptDate, p.IsDeposit, SUM(d.WinLoss * oanda.Rate * p.VSRate), SUM(-d.WinLoss * oanda.Rate), p.VSRate
+	FROM #TempDataVS d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
+		INNER JOIN #ExchangeOANDA oanda ON d.rptDate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
 	GROUP BY d.rptDate, p.IsDeposit, p.VSRate
 
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
@@ -147,7 +150,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId = 5 AND rptDate = @tmpDate), -- LicenseeWL
+			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataVS WHERE ProductId = 5 AND rptDate = @tmpDate), -- LicenseeWL
 			(SELECT ISNULL(SUM(Amount), 0) FROM @DailyPayAmt WHERE rptDate = @tmpDate)
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
@@ -176,7 +179,7 @@ BEGIN
 	-- Region: Drop tmp table
 	DROP TABLE #Exchange
 	DROP TABLE #ExchangeOANDA
-	DROP TABLE #TempData
+	DROP TABLE #TempDataVS
 	DROP TABLE #FeeData
 	DROP TABLE #FinalResult
 END

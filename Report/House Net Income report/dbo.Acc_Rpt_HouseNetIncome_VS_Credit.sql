@@ -14,6 +14,7 @@ AS
 		- 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
 		- 20160919@Harper - #64338, #64352 - PayToSupplier is incorrect
 		- 20160922@Harper - #64429 - Edit status ID
+		- 20160923@Harper - #64582 - PayToSupplier should use ExchangeOANDA
 	Param's Explanation:   
 */  
 BEGIN  
@@ -23,16 +24,17 @@ BEGIN
 	SELECT @FDate = @FromDate, @TDate = @ToDate
 	
 	-- Region: Get exchange rate info
-	CREATE	TABLE #Exchange (
-			ExchangeDate	DATE,
-			ExchangeID		INT,
-			Rate			FLOAT)
+	CREATE	TABLE #Exchange			(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
+	CREATE	TABLE #ExchangeOANDA	(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
 
 	INSERT INTO #Exchange(ExchangeDate, ExchangeID, Rate)
 	SELECT ExchangeDate, Currency, Rate
 	FROM bodb_account.dbo.tbl_Currency_Daily WITH (NOLOCK) 
 	WHERE ExchangeDate BETWEEN @FDate AND @TDate
 
+	INSERT INTO #ExchangeOANDA(ExchangeDate, ExchangeID, Rate)
+	SELECT ExchangeDate, ExchangeID, BaseCurrencyRate
+	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR') -- Currency ID = 2
 	-- End region
 
 	CREATE TABLE #FinalResult (
@@ -78,13 +80,15 @@ BEGIN
 		INNER JOIN ExtraPT e ON CONVERT(VARCHAR(2), e.rptDate, 106) = f.RptDate
 
 	-- House WL
-	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY)
-	INSERT INTO #TmpHouseWL (rptDate, HouseWL)
+	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY, WinLossOANDA MONEY)
+	INSERT INTO #TmpHouseWL (rptDate, HouseWL, WinLossOANDA)
 	SELECT 
 		b.rptDate,
-		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS)*ex.rate),0) HouseWL
+		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * ex.rate),0) HouseWL,
+		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * oanda.rate),0) WinLossOANDA
 	FROM bodb_Account.dbo.mcSiteDaily b WITH(NOLOCK)
 		INNER JOIN #exchange ex ON b.rptdate = ex.exchangedate AND b.currencyid = ex.ExchangeID
+		INNER JOIN #ExchangeOANDA oanda ON b.rptdate = oanda.exchangedate AND b.currencyid = oanda.ExchangeID
 		INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype
 		INNER JOIN bodb_Account.dbo.tbl_Site s WITH (NOLOCK) ON s.siteid = b.SiteID
 	WHERE 
@@ -102,8 +106,9 @@ BEGIN
 
 	-- Pay To Supplier
 	UPDATE f
-	SET PayToSupplier = -0.01 * f.HouseWL
+	SET PayToSupplier = -0.01 * wl.WinLossOANDA
 	FROM #FinalResult f
+		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
 	DECLARE @SumHouseWL MONEY
 	SELECT @SumHouseWL = SUM(HouseWL) FROM #FinalResult
@@ -111,9 +116,12 @@ BEGIN
 	DECLARE @SumExtraPT MONEY
 	SELECT @SumExtraPT = SUM(ExtraPT) FROM #FinalResult
 
+	DECLARE @SumPayToSupplier MONEY
+	SELECT @SumPayToSupplier = SUM(WinLossOANDA) FROM #TmpHouseWL
+
 	-- FullRange amount
 	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
-	VALUES('FullRange', @SumHouseWL, @SumExtraPT, -0.01 * (CASE WHEN @SumHouseWL < 0 THEN 0 ELSE @SumHouseWL END))
+	VALUES('FullRange', @SumHouseWL, @SumExtraPT, -0.01 * (CASE WHEN @SumPayToSupplier < 0 THEN 0 ELSE @SumPayToSupplier END))
 	
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
