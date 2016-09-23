@@ -137,6 +137,7 @@ BEGIN
 	DROP TABLE #SportBettypeMatrix
 	DROP TABLE #TmpHouseWL
 	DROP TABLE #Exchange
+	DROP TABLE #ExchangeOANDA
 	DROP TABLE #FinalResult
 END
 GO

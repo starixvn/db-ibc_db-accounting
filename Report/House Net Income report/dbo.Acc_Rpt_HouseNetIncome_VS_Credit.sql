@@ -80,12 +80,12 @@ BEGIN
 		INNER JOIN ExtraPT e ON CONVERT(VARCHAR(2), e.rptDate, 106) = f.RptDate
 
 	-- House WL
-	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY, WinLossOANDA MONEY)
-	INSERT INTO #TmpHouseWL (rptDate, HouseWL, WinLossOANDA)
+	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY, HouseWLOANDA MONEY)
+	INSERT INTO #TmpHouseWL (rptDate, HouseWL, HouseWLOANDA)
 	SELECT 
 		b.rptDate,
 		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * ex.rate),0) HouseWL,
-		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * oanda.rate),0) WinLossOANDA
+		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * oanda.rate),0) HouseWLOANDA
 	FROM bodb_Account.dbo.mcSiteDaily b WITH(NOLOCK)
 		INNER JOIN #exchange ex ON b.rptdate = ex.exchangedate AND b.currencyid = ex.ExchangeID
 		INNER JOIN #ExchangeOANDA oanda ON b.rptdate = oanda.exchangedate AND b.currencyid = oanda.ExchangeID
@@ -106,7 +106,7 @@ BEGIN
 
 	-- Pay To Supplier
 	UPDATE f
-	SET PayToSupplier = -0.01 * wl.WinLossOANDA
+	SET PayToSupplier = -0.01 * wl.HouseWLOANDA
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
@@ -117,7 +117,7 @@ BEGIN
 	SELECT @SumExtraPT = SUM(ExtraPT) FROM #FinalResult
 
 	DECLARE @SumPayToSupplier MONEY
-	SELECT @SumPayToSupplier = SUM(WinLossOANDA) FROM #TmpHouseWL
+	SELECT @SumPayToSupplier = SUM(HouseWLOANDA) FROM #TmpHouseWL
 
 	-- FullRange amount
 	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
@@ -146,6 +146,7 @@ BEGIN
 	DROP TABLE #SportBettypeMatrix
 	DROP TABLE #TmpHouseWL
 	DROP TABLE #Exchange
+	DROP TABLE #ExchangeOANDA
 	DROP TABLE #FinalResult
 END
 GO
