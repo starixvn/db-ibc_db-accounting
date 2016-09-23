@@ -9,7 +9,8 @@ IF EXISTS
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType_14] @StartDate SMALLDATETIME,
                                                                   @EndDate   SMALLDATETIME,
-                                                                  @ProductId INT
+                                                                  @ProductId INT,
+                                                                  @SportType INT = 0
 AS
 
 /*	
@@ -20,7 +21,7 @@ DB: DBACC/bodb02
 Revisions: 
 	 - 20160222@Franklin: Initialize Company Win Loss Report - Universal
 Example: 
-EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType_14] @StartDate='2016-01-01', @EndDate='2020-01-01', @ProductId = 15
+EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType_14] @StartDate='2016-09-13', @EndDate='2020-01-01', @ProductId = 15, @SportType = 0
 		
 */
 
@@ -36,7 +37,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType_14] @StartDate='2016-01-01', @End
          INSERT INTO #SportBetType
                 SELECT b.typeid,
                        b.typenamee
-                FROM dbo.f_SportBetTypeMatrix_Sel(@ProductId, 0, 0, 2, '', '', @isTest) s
+                FROM dbo.f_SportBetTypeMatrix_Sel(@ProductId, 0, @SportType, 2, '', '', @isTest) s
                      INNER JOIN BetType b WITH (NOLOCK) ON s.BetType = b.typeid;
      END;
      BEGIN -- #DepositSuper
