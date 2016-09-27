@@ -31,9 +31,19 @@ BEGIN
 	FROM bodb_account.dbo.tbl_Currency_Daily WITH (NOLOCK) 
 	WHERE ExchangeDate BETWEEN @FDate AND @TDate
 
+	DECLARE @OpenQuery NVARCHAR(1000)
+	SELECT @OpenQuery = N'SELECT * ' 
+						+ N'FROM OPENQUERY(DBEXT, '
+						+ N'''SELECT ExchangeDate, ExchangeID, BaseCurrencyRate '
+						+ N'FROM bodb02.dbo.LA_f_ExchangeDailySel('''''
+						+ CAST(@FDate AS NVARCHAR(50)) + ''''''
+						+ N','''''
+						+ CAST(@TDate AS NVARCHAR(50)) + ''''''
+						+ N',''''MYR'''''			
+						+ N')'')'
+					
 	INSERT INTO #ExchangeOANDA(ExchangeDate, ExchangeID, Rate)
-	SELECT ExchangeDate, ExchangeID, BaseCurrencyRate
-	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR') -- Currency ID = 2
+	EXECUTE (@OpenQuery)
 	-- End region
 
 	CREATE TABLE #FinalResult (
