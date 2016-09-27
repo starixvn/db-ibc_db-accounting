@@ -14,6 +14,7 @@ AS
     Revisions: 
 		- 20160916@Harper - #64211 - Add (-1) when caculate value for PayToSupplier
 		- 20160923@Harper - #64582 - PayToSupplier should use ExchangeOANDA
+		- 20160926@Harper - #64744 - Full Range should be SUM from 2 Keno Rate
 	Param's Explanation:   
 */  
 BEGIN  
@@ -84,7 +85,7 @@ BEGIN
 	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR')
 	-- End region
 
-	CREATE	TABLE #TempData (
+	CREATE	TABLE #TempDataKN (
 			PartyId			INT,
 			rptDate			DATETIME,
 			CurrencyId		INT,
@@ -92,7 +93,7 @@ BEGIN
 			AComm			MONEY,
 			ProductId		TINYINT,
 			AmountToCompany MONEY)
-	INSERT INTO #TempData (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
+	INSERT INTO #TempDataKN (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
 	(
 		SELECT	p.PartyId,
 				b.rptDate,
@@ -114,7 +115,7 @@ BEGIN
 		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate
 	)
 
-	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempData (PartyId, ProductId)
+	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataKN (PartyId, ProductId)
 
 	-- Region: Result
 	CREATE TABLE #FeeData (
@@ -139,13 +140,21 @@ BEGIN
 	
 	INSERT INTO @DailyPayAmt (rptDate, PartyGroup, Amount, LicenseeWL, KNRate)
 	SELECT d.rptDate, p.PartyGroup, SUM(d.WinLoss * oanda.Rate * p.KNRate), SUM(-d.WinLoss * oanda.Rate), p.KNRate
-	FROM #TempData d
+	FROM #TempDataKN d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
 		INNER JOIN #ExchangeOANDA oanda ON d.rptDate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
 	GROUP BY d.rptDate, p.PartyGroup, p.KNRate
 	
+	DECLARE @PayToSupplier MONEY
+	SET @PayToSupplier = (	SELECT SUM(PayForEach)
+							FROM (
+									SELECT (KNRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END) PayForEach 
+									FROM @DailyPayAmt 
+									GROUP BY KNRate
+								 ) AS t )
+								
 	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (-1) * (SELECT KNRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END FROM @DailyPayAmt GROUP BY KNRate)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (-1) * @PayToSupplier
 	FROM #FeeData
 	WHERE ProductID = 8
 
@@ -156,7 +165,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId = 8 AND rptDate = @tmpDate), -- LicenseeWL
+			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataKN WHERE ProductId = 8 AND rptDate = @tmpDate), -- LicenseeWL
 			(SELECT ISNULL(SUM(Amount), 0) FROM @DailyPayAmt WHERE rptDate = @tmpDate)
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
@@ -185,7 +194,7 @@ BEGIN
 	-- Region: Drop tmp table
 	DROP TABLE #Exchange
 	DROP TABLE #ExchangeOANDA
-	DROP TABLE #TempData
+	DROP TABLE #TempDataKN
 	DROP TABLE #FeeData
 	DROP TABLE #FinalResult
 END
