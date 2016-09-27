@@ -13,7 +13,7 @@ AS
     Revisions: 
 		- 20160916@Harper - #64211 - Caculate value for PayToSupplier for Credit
 		- 20160922@Harper - #64429 - Edit status ID
-		- 20160923@Harper - #64582 - PayToSupplier should use ExchangeOANDA
+		- 20160923@Harper - #64582, #64799 - PayToSupplier should use ExchangeOANDA
 	Param's Explanation:   
 */  
 BEGIN  
@@ -115,13 +115,13 @@ BEGIN
 
 	-- PayToSupplier
 	UPDATE f
-	SET f.PayToSupplier = wl.MemberWL * (-0.03)
+	SET f.PayToSupplier = wl.MemberWL * 0.03
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 			
 	-- FullRange amount
 	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
-	SELECT 'FullRange', SUM(f.HouseWL), SUM(f.ExtraPT), -0.03 * (SELECT CASE WHEN SUM(MemberWL) > 0 THEN 0 ELSE SUM(MemberWL) END FROM #TmpHouseWL)
+	SELECT 'FullRange', SUM(f.HouseWL), SUM(f.ExtraPT), 0.03 * (SELECT CASE WHEN SUM(MemberWL) > 0 THEN 0 ELSE SUM(MemberWL) END FROM #TmpHouseWL)
 	FROM #FinalResult f
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
