@@ -11,6 +11,7 @@ AS
 		- 20111230@Henry: remove virtual concept
 		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily  
 		- 20120803@Jim: add playercomm value ( for give commision to member) 
+		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
 	Param's Explanation:  
 */  
 BEGIN  
@@ -105,7 +106,7 @@ BEGIN
 		--SUM (b.commvirtual) AS CommVirtual,
 		SUM(b.betcount) AS BetCount	
 		
-	FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH ( NOLOCK )  
+	FROM bodb_licenseereport.dbo.rptLicWinloss2 b WITH ( NOLOCK )  
 		INNER JOIN bodb_Licensee.dbo.LicenseeCust lc WITH (NOLOCK) ON b.recommend = lc.custid
 		INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lc.LicenseeID
 	WHERE 
