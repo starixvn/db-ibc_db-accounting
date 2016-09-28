@@ -1,5 +1,10 @@
 ﻿USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Corner]    Script Date: 09/27/2016 14:21:25 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Corner] @AdminId INT
 	, @Matchid				INT
@@ -24,6 +29,7 @@ AS
 	Revisions:		
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
+		- 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
 		
 	Param's Explanation:
 
@@ -31,15 +37,31 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 	DECLARE	 @start DATETIME, @stop DATETIME, @eventstatus NVARCHAR(50), @fth INT, @fta INT, @hth INT
-		, @hta INT, @goalrecord VARCHAR(50), @betstatus VARCHAR(50), @ActionID INT, @Remark VARCHAR(500), @LogData NVARCHAR(300)							
+		, @hta INT, @goalrecord VARCHAR(50), @betstatus VARCHAR(50), @ActionID INT, @Remark VARCHAR(500), @LogData NVARCHAR(300)		
+		,@strBettypes VARCHAR(MAX)	
+		,@strAutoBetRadarBettypes VARCHAR(MAX)	
 
 	SELECT @start = CURRENT_TIMESTAMP
 	SELECT @ActionID = CASE WHEN @Action = 'CAL' THEN 151 
 							 WHEN @Action = 'CAL-HT' THEN 162
 							 WHEN @Action = 'CAL-FT' THEN 161 
 						ELSE 0 END
-	--Write Log Settle
-
+	
+	SELECT	@strBettypes = COALESCE(@strBettypes + ',' + CAST(BetType AS VARCHAR),CAST(BetType AS VARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes()
+	WHERE	1 = CASE 
+					WHEN @Action = 'CAL' AND GroupId IN (5,6) THEN 1
+					WHEN @Action = 'CAL-FT' AND GroupId = 6 THEN 1
+					WHEN @Action = 'CAL-HT' AND GroupId = 5 THEN 1
+					ELSE 0
+				END
+						
+			
+	
+	SELECT	@strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(BetType AS VARCHAR),CAST(BetType AS VARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes()
+	WHERE	GroupId = 8
+	
 	SELECT @fth = finalhomescore
 		, @fta = finalawayscore
 		, @hth = hthomescore
@@ -78,34 +100,15 @@ BEGIN
 	CREATE TABLE #BalanceBefore (custid INT PRIMARY KEY, balance MONEY)
 
 	--===
-	IF @Action = 'CAL-FT'
-	BEGIN
-		INSERT INTO #BalanceBefore
-		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @MatchId 
-			AND b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208)
-		GROUP BY b.custid
-	END
-	ELSE IF @Action = 'CAL-HT'
-	BEGIN
-		INSERT INTO #BalanceBefore
-		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @MatchId 
-			AND b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209)
-		GROUP BY b.custid
-	END
-	ELSE IF @Action = 'CAL'
-	BEGIN
-		INSERT INTO #BalanceBefore
-		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @MatchId 
-			AND b.bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209)
-		GROUP BY b.custid
-	END
-
+	INSERT INTO #BalanceBefore
+	SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM dbo.bettrans b WITH (ROWLOCK)
+	WHERE b.matchid = @MatchId 
+			AND 1 = CASE
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1
+						ELSE 0
+					END
+	GROUP BY b.custid
 
 	--===
 	--^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -115,22 +118,23 @@ BEGIN
 		DECLARE @Status TABLE(CornerBet TINYINT, BetCount INT, InRunning INT)
 
 		INSERT INTO @Status(CornerBet, BetCount, InRunning)
-		SELECT CASE WHEN @Action = 'CAL' AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) THEN 1
-					WHEN @Action = 'CAL-HT' AND bettype IN (200, 201, 202, 203, 204, 205, 207, 209) THEN 2
-					WHEN @Action = 'CAL-FT' AND bettype IN (194, 195, 196, 197, 198, 199, 206, 208) THEN 3
-				ELSE 0 END --others
-			, SUM(CASE WHEN statusID BETWEEN 101 AND 102 THEN 0 ELSE 1 END)
-			, SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
-		FROM dbo.Bettrans WITH (NOLOCK)
-		WHERE matchID = @MatchID 
-			AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
-			AND bettype NOT BETWEEN 1501 AND 1599 -- Keno
-			AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
-			AND bettype NOT IN (135, 160, 164, 168, 169, 173, 174, 175, 176, 180, 192, 193, 210, 211, 212, 213, 214, 215, 216, 217) --Auto settle Betradar
-		GROUP BY CASE WHEN @Action = 'CAL' AND bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209) THEN 1
-					WHEN @Action = 'CAL-HT' AND bettype IN (200, 201, 202, 203, 204, 205, 207, 209) THEN 2
-					WHEN @Action = 'CAL-FT' AND bettype IN (194, 195, 196, 197, 198, 199, 206, 208) THEN 3
-				ELSE 0 END --others
+		SELECT	CASE WHEN CHARINDEX(',' + CAST(bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1
+					ELSE 0 
+				END --others
+				, SUM(CASE WHEN statusID BETWEEN 101 AND 102 THEN 0 ELSE 1 END)
+				, SUM(CASE WHEN statusID = 0 THEN 1 ELSE 0 END)
+		FROM	dbo.Bettrans WITH (NOLOCK)
+		WHERE	matchID = @MatchID 
+				AND bettype NOT IN (10, 31, 32, 33, 1231, 1232, 1233, 1237, 1238) -- Outright, VSRacing
+				AND bettype NOT BETWEEN 1501 AND 1599 -- Keno
+				AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
+				AND 1 = CASE 
+							WHEN CHARINDEX(',' + CAST(bettype AS VARCHAR) + ',', ',' + @strAutoBetRadarBettypes + ',') > 0 THEN 0 
+							ELSE 1 
+						END
+		GROUP BY CASE WHEN CHARINDEX(',' + CAST(bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1
+					ELSE 0 
+				END
 
 		IF NOT EXISTS(SELECT TOP 1 1 FROM @Status WHERE CornerBet = 0)
 			INSERT INTO @Status(CornerBet, BetCount, InRunning) VALUES(0, 0, 0)
@@ -181,33 +185,15 @@ BEGIN
 	---------------------------VVVV------------------------------
 	CREATE TABLE #BalanceAfter (custid INT PRIMARY KEY, balance MONEY)
 	
-	IF @Action = 'CAL-FT'
-	BEGIN
-		INSERT INTO #BalanceAfter
-		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @MatchId 
-			AND b.bettype IN (194, 195, 196, 197, 198, 199, 206, 208)
-		GROUP BY b.custid
-	END
-	ELSE IF @Action = 'CAL-HT'
-	BEGIN
-		INSERT INTO #BalanceAfter
-		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @MatchId 
-			AND b.bettype IN (200, 201, 202, 203, 204, 205, 207, 209)
-		GROUP BY b.custid
-	END
-	ELSE IF @Action = 'CAL'
-	BEGIN
-		INSERT INTO #BalanceAfter
-		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @MatchId 
-			AND b.bettype IN (194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209)
-		GROUP BY b.custid
-	END
+	INSERT INTO #BalanceAfter
+	SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM dbo.bettrans b WITH (ROWLOCK)
+	WHERE b.matchid = @MatchId 
+			AND 1 = CASE
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1
+						ELSE 0
+					END
+	GROUP BY b.custid
 
 	-------------------------------------------------------------
 	---                   compare BALANCE                     ---
@@ -318,6 +304,7 @@ BEGIN
 	WHERE KeyID = 1 AND KeyValue = @matchid
 	
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Corner] TO [bodbAdminNet] AS [dbo]
 GO
