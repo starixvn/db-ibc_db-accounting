@@ -268,7 +268,10 @@ BEGIN
 		SELECT Bettype
 		FROM	dbo.f_Set_GetGroupBettypes()
 		WHERE	@mode IN ('CAL-HT', 'CAL') 
-				AND GroupId IN (1,3,5) -- HT + HT Corner + HT FGLG
+				AND 1 = CASE 
+							WHEN @IsAutoCalculatePage = 1 AND GroupId IN (1,5) THEN 1 
+							WHEN @IsAutoCalculatePage = 0 AND GroupId IN (1,3,5) THEN 1 
+							ELSE 0 END -- HT + HT Corner + HT FGLG
 				AND 1 = CASE
 							WHEN @isExcludeCorner = 1 AND GroupId = 5 THEN 0 -- exclude HT corner
 							ELSE 1
@@ -277,7 +280,10 @@ BEGIN
 		SELECT Bettype
 		FROM	dbo.f_Set_GetGroupBettypes()
 		WHERE	@mode IN ('CAL-FT', 'CAL') 
-				AND GroupId IN (2,4,6) -- FT, FT Corner + FT FGLG
+				AND 1 = CASE 
+							WHEN @IsAutoCalculatePage = 1 AND GroupId IN (2,6) THEN 1 
+							WHEN @IsAutoCalculatePage = 0 AND GroupId IN (2,4,6) THEN 1 
+							ELSE 0 END -- FT, FT Corner + FT FGLG
 				AND 1 = CASE
 							WHEN @isRefundHT = 1 AND Is3x30 = 1 AND GroupId = 2 THEN 0 -- If this match has been refund HT --> refund all bettypes related to 2nd result 
 							WHEN @isExcludeCorner = 1 AND GroupId = 6 THEN 0 -- exclude FT corner
@@ -302,6 +308,7 @@ BEGIN
 					WHEN @mode IN ('CAL-FT') AND bettype IN (14) THEN 1 
 					WHEN @mode IN ('CAL') AND bettype IN (14,127) THEN 1 
 				ELSE 0 END
+			AND @IsAutoCalculatePage = 0
 		GROUP BY bettype
 	) AS b 
 	WHERE b.bettype IN (SELECT bettype FROM cteBettypes)
