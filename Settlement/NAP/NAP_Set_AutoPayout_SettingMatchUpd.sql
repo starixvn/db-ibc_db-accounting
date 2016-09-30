@@ -1,41 +1,42 @@
 USE bodb02
 GO
-ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingMatchUpd @MatchId INT
-	, @IsAutoPayout BIT
-	, @AdminId INT
-
-	, @IP VARCHAR(20) = ''
-	, @ErrCode INT = 0 OUTPUT
-	, @ErrMsg NVARCHAR(200) = '' OUTPUT
+ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingMatchUpd 
+	@MatchId 			INT
+	, @AutoSetting 		TINYINT
+	, @AdminId 			INT
+	, @IP 				VARCHAR(20) = ''
+	, @ErrCode 			INT = 0 OUTPUT
+	, @ErrMsg 			NVARCHAR(200) = '' OUTPUT
 AS
 /*	Creator: 20160303@Patrick
 	Task: Auto Payout - update setting on match
 	DB: DBPRO/BODB02
 	
 	Revisions:
+		- 20160930@Bobby: #65003 - Merge Auto Payout and Inst CAL setting
 		
 	Param's Explanation:
  
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @IsAutoPayout_Old BIT, @StarTime DATETIME, @EndTime DATETIME, @Remark VARCHAR(1024), @LeagueId INT
+	DECLARE @AutoSetting_Old BIT, @StarTime DATETIME, @EndTime DATETIME, @Remark VARCHAR(1024), @LeagueId INT
 	
-	SELECT @IsAutoPayout = ISNULL(@IsAutoPayout, 0), @StarTime = GETDATE()
+	SELECT @AutoSetting = ISNULL(@AutoSetting, 0), @StarTime = GETDATE()
 
-	SELECT @IsAutoPayout_Old = IsAutoPayout, @LeagueId = leagueid
+	SELECT @AutoSetting_Old = AutoSetting, @LeagueId = leagueid
 	FROM dbo.match m WITH(NOLOCK)
 	WHERE m.matchid = @MatchId
 
-	IF @IsAutoPayout_Old IS NULL
+	IF @AutoSetting_Old IS NULL
 	BEGIN
-		SELECT @IsAutoPayout_Old = ISNULL(IsAutoPayout, 0)
+		SELECT @AutoSetting_Old = ISNULL(AutoSetting, 0)
 		FROM dbo.League l WITH(NOLOCK)
 		WHERE LeagueId = @LeagueId
 	END
 
 	--check concurrency users
-	IF @IsAutoPayout = @IsAutoPayout_Old
+	IF @AutoSetting = @AutoSetting_Old
 	BEGIN
 		RETURN
 	END
@@ -58,7 +59,7 @@ BEGIN
 	--END
 
 	UPDATE m
-	SET IsAutoPayout = @IsAutoPayout
+	SET AutoSetting = @AutoSetting
 	FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
 	WHERE m.matchid = @MatchId
 
@@ -70,7 +71,7 @@ BEGIN
 
 	SELECT @EndTime = GETDATE()
 	SELECT @Remark = 'NAP: Update auto payout setting on match:' + CAST(@MatchId AS NVARCHAR(10)) 
-		+ ' IsAutoPayout:' + CAST(ISNULL(@IsAutoPayout, 0) AS NVARCHAR(10))
+		+ ' AutoSetting:' + CAST(ISNULL(@AutoSetting, 0) AS NVARCHAR(10))
 		+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @StarTime, @EndTime) AS NVARCHAR(50)) + ' ms'
 
 	BEGIN TRY

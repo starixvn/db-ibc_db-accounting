@@ -1,17 +1,19 @@
 USE bodb02
 GO
-ALTER PROCEDURE dbo.NAP_Set_AutoPayout_MatchSel @FromDate DATETIME
-	, @ToDate DATETIME
-	, @SportType SMALLINT = 0
-	, @LeagueID INT = 0 -- 0 for ALL Leagues
-	, @MatchCode NVARCHAR(50) = ''
-	, @StatusId TINYINT = 0
-	, @FilterBy TINYINT = 0
-	, @AutoSettlementOnly BIT = 0 
-	, @IsReLoad BIT = 0
-	, @AutoPayoutOnly BIT = 0
-	, @IsHTOverOnly BIT = 0
-	, @IsOverOnly BIT = 0
+ALTER PROCEDURE dbo.NAP_Set_AutoPayout_MatchSel 
+	@FromDate 				DATETIME
+	, @ToDate 				DATETIME
+	, @SportType 			SMALLINT = 0
+	, @LeagueID 			INT = 0 -- 0 for ALL Leagues
+	, @MatchCode 			NVARCHAR(50) = ''
+	, @StatusId 			TINYINT = 0
+	, @FilterBy 			TINYINT = 0
+	, @AutoSettlementOnly 	BIT = 0 
+	, @IsReLoad 			BIT = 0
+	, @AutoPayoutOnly 		BIT = 0
+	, @IsHTOverOnly 		BIT = 0
+	, @IsOverOnly 			BIT = 0
+	, @InstantCalOnly 		BIT = 0
 AS
 /*  
  Created by: 20160311@Patrick
@@ -23,6 +25,7 @@ AS
 	- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
 	- 20160713@Patrick: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 	- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
+	- 20160930@Bobby: #65002 - Implement Auto CAL page info: update Instant match status
       
  Param explanation:  
 	@MatchCode: match code
@@ -112,16 +115,18 @@ BEGIN
 		, IsExistRunningHTFGLG BIT
 		, WinOdds MONEY
 		, PlaceOdds MONEY
-		, IsAutoPayout BIT
+		, AutoSetting TINYINT
 		, IsExistRunningCorner BIT
 		, IsExistRunningHTCorner BIT
 		, IsNeedToCalculateFGLG BIT
 		, IsNeedToCalculateCorner BIT
-		, IsAutoPayoutForLeague BIT
+		, AutoSettingForLeague TINYINT
 		--, IsExistRunningResultandFirstTeamScore BIT
 		, BetCount INT
 		, IsEnabledGoalRecordHT BIT
-		, IsEnabledGoalRecordFT BIT)
+		, IsEnabledGoalRecordFT BIT
+		--for instant calcukation status
+	)
 	
 	INSERT INTO #matchList
 	SELECT m.hthomescore
@@ -174,14 +179,12 @@ BEGIN
 		, 0 AS IsExistRunningHTFGLG
 		, 0 AS WinOdds
 		, 0 AS PlaceOdds
-		, CASE WHEN m.IsAutoPayout IS NULL THEN ISNULL(l.IsAutoPayout, 0)
-					 WHEN m.IsAutoPayout = 1 THEN 1
-				ELSE 0 END AS IsAutoPayout
+		, ISNULL(m.AutoSetting, 0) AS AutoSetting
 		, 0 AS IsExistRunningCorner
 		, 0 AS IsExistRunningHTCorner
 		, 0 AS IsNeedToCalculateFGLG
 		, 0 AS IsNeedToCalculateCorner
-		, ISNULL(l.IsAutoPayout, 0) AS IsAutoPayoutForLeague
+		, ISNULL(l.AutoSetting, 0) AS AutoSettingForLeague
 		--, 0 AS IsExistRunningResultandFirstTeamScore
 		, 0 AS BetCount
 		, 0 AS IsEnabledGoalRecordHT
@@ -205,10 +208,6 @@ BEGIN
 				OR (@isRefund = 1 AND betstatus LIKE 'Refund%') 
 				OR (@isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%')
 			)
-		AND 1 = CASE WHEN @AutoPayoutOnly = 0 THEN 1
-						WHEN @AutoPayoutOnly = 1 AND m.IsAutoPayout IS NULL AND ISNULL(l.IsAutoPayout, 0) = 1 THEN 1
-						WHEN @AutoPayoutOnly = 1 AND ISNULL(m.IsAutoPayout, 0) = 1 THEN 1
-				ELSE 0 END
 		AND 1 = CASE WHEN @IsHTOverOnly = 0 THEN 1
 					WHEN @IsHTOverOnly = 1 
 						AND m.eventstatus IN ('Closed', 'running', 'internal')
@@ -223,6 +222,28 @@ BEGIN
 				ELSE 0 END
 		AND (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
 		AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
+		--check filer auto payout	
+		AND (
+			@AutoPayoutOnly = 0
+			OR (
+				@AutoPayoutOnly = 1 
+				AND (
+					(m.AutoSetting IS NULL AND (2 & l.AutoSetting = 2))
+					OR (2 & m.AutoSetting = 2)
+				)
+			)
+		)
+		--check filer InstantCalOnly
+		AND (
+			@InstantCalOnly = 0
+			OR (
+				@InstantCalOnly = 1 
+				AND (
+					(m.AutoSetting IS NULL AND (4 & l.AutoSetting = 4))
+					OR (4 & m.AutoSetting = 4)
+				)
+			)
+		)
 	
 	--CREATE NONCLUSTERED INDEX Ix_#matchList_MatchId ON #matchList(MatchId)
 
@@ -372,9 +393,10 @@ BEGIN
 		FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList t WHERE rs.MatchId = t.matchid AND t.eventstatus IN ('running', 'Completed'))
 			AND StatusId IN (1, 2)
+			AND CalculationType IN (1, 2)
 		GROUP BY rs.MatchId
+		
 	)
-
 	--update status of match in order to can be calc FGLG & Corner bettype manually
 	UPDATE t
 	SET IsNeedToCalculateFGLG = CASE WHEN rs.HTStatus = 1 
@@ -396,7 +418,77 @@ BEGIN
 									
 	FROM #matchList t
 		INNER JOIN PayoutResult rs ON t.matchid = rs.MatchId
-
+	
+	--Checking for Inst match info
+	BEGIN 
+	
+	CREATE TABLE #InstMatchInfo (MatchId INT, HomeValue VARCHAR(50), AwayValue VARCHAR(50), InstantStatus VARCHAR(50),CalculationType TINYINT, InstPriority TINYINT)
+	
+	INSERT INTO #InstMatchInfo (MatchId, HomeValue, AwayValue, InstantStatus,CalculationType,Priority)
+	SELECT t.MatchId
+		, 0 AS HomeValue
+		, 0 AS AwayValue
+		, 'Live!' AS InstantStatus
+		, CASE t.IsHalfTimeCal = 0 THEN 101 ELSE 102 END AS CalculationType
+		, 4 AS InstPriority
+	FROM #matchList t 
+	WHERE 4 & t.AutoSetting = 4
+		AND t.eventstatus IN ('running')
+	
+	;WITH InstMatchConfirm AS (
+		SELECT MatchId
+			,HomeValue
+			,AwayValue
+			,InstantStatus
+			,CalculationType
+		FROM (
+			SELECT m.MatchId
+				, prd.HomeValue
+				, prd.AwayValue
+				, 'Confirm' AS InstantStatus
+				, prd.TypeId AS CalculationType
+				, ROW_NUMBER() OVER(ORDER BY prd.CreatedDate DESC) AS RowIdx
+			FROM #InstMatchInfo m
+				LEFT JOIN dbo.ProviderResultDetail prd WITH(NOLOCK)
+				ON m.matchid = prd.matchID
+				
+			WHERE prd.TypeId IN (101, 102)
+		) AS temp
+		WHERE temp.RowIdx = 1
+	)
+	UPDATE d
+	SET HomeValue 			= u.HomeValue
+		, AwayValue			= u.AwayValue
+		, InstantStatus		= u.InstantStatus
+		, CalculationType	= u.CalculationType
+		, InstPriority			= 3
+	FROM #InstMatchInfo d
+		INNER JOIN InstMatchConfirm u 
+		ON d.matchID = u.matchID
+		
+	;WITH InstMatchInProgress AS (
+		SELECT m.MatchId
+			, aps.HomeValue
+			, aps.AwayValue
+			, 'Ins. Calculating' AS InstantStatus
+			, aps.CalculationType
+		FROM #InstMatchInfo m
+			LEFT JOIN dbo.AutoPayoutResult aps WITH(NOLOCK)
+			ON m.matchid = aps.matchID
+			
+		WHERE aps.StatusId IN (1) --waiting & calculating
+			AND aps.CalculationType IN (101, 102)	
+	)
+	UPDATE d
+	SET HomeValue 			= u.HomeValue
+		, AwayValue			= u.AwayValue
+		, InstantStatus		= u.InstantStatus
+		, CalculationType	= u.CalculationType
+		, InstPriority		= 1
+	FROM #InstMatchInfo d
+		INNER JOIN InstMatchInProgress u ON d.matchID = u.matchID
+	END
+	
 	SELECT m.HalfTimeHomeScore
 		, m.HalfTimeAwayScore
 		, m.IsCalculated
@@ -435,15 +527,23 @@ BEGIN
 				WHEN a.SettlementStatusID = 0 THEN 'Running'
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
-		, IsAutoPayout
+		, AutoSetting
 		, IsNeedToCalculateFGLG
 		, IsNeedToCalculateCorner
-		, IsAutoPayoutForLeague
+		, AutoSettingForLeague
 		, IsEnabledGoalRecordHT
 		, IsEnabledGoalRecordFT
+		
+		/*Instant match info*/
+		, im.HomeValue AS InstHomeScore
+		, im.AwayValue AS InstAwayScore
+		, im.InstantStatus AS InstantStatus
+		, im.CalculationType AS InstCalculationType
 	FROM #matchList m
 		LEFT JOIN #tempmatch t ON t.matchid = m.matchid
 		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID
+		LEFT JOIN #InstMatchInfo im ON m.matchid = im.matchid
+		
 	WHERE 1 = CASE WHEN @IsHTOverOnly = 1 OR @IsOverOnly = 1 THEN CASE WHEN m.BetCount > 0 THEN 1 ELSE 0 END
 				ELSE 1 END
 	ORDER BY CASE m.eventstatus WHEN 'Completed' THEN 1 WHEN 'Refund' THEN 1 ELSE 0 END
@@ -459,6 +559,7 @@ BEGIN
 	DROP TABLE #tmpAutoSettle1s
 	DROP TABLE #matchList
 	DROP TABLE #tmpCornerBets
+	DROP TABLE #InstMatchInfo
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayout_MatchSel] TO [bodbAdminNet] AS [dbo]
