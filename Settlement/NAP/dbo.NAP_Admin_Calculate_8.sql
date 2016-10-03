@@ -29,6 +29,7 @@ AS
 		- 20160425@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
 		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+		- 20141003@Bobby: #65026 - Correct SDT for bettype OU[3,8]
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -158,8 +159,12 @@ BEGIN
                     WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
                     ELSE 0
                 END 
-            AND hdp1 <= CASE WHEN @bettype IN (8,403,404) AND (@IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1)THEN @comparedValue  -- @comparedValue = @totalht - 0.5
-                             WHEN @bettype <> 8 AND @IsSettleAbandonedMatchIBC = 1 THEN @comparedValue 
+            AND hdp1 <= CASE WHEN (@bettype IN (8,403,404) 
+								AND (
+									(@IsSettleAbandonedMatch = 1  AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156))
+									OR (@IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642))
+								)) THEN @comparedValue  -- @comparedValue = @totalht - 0.5
+                             WHEN @bettype <> 8 AND (@IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156)) THEN @comparedValue 
                              ELSE -1
                         END
     END -- END settle determined ticket
