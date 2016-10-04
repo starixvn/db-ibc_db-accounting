@@ -40,9 +40,14 @@ BEGIN
 
 	DECLARE @UncalOnly BIT, @UncalMultiOnly BIT, @EventStatus NVARCHAR(50), @IsRefund BIT
 		, @MatchId INT, @Today DATETIME
+		, @AutoSetting TINYINT
 
-	SELECT @matchcode = ISNULL(@matchcode, ''), @LeagueID = ISNULL(@LeagueID, 0)
-		, @filterBy = ISNULL(@filterBy, 0), @Today = GETDATE(), @MatchId = 0
+	SELECT @matchcode 	= ISNULL(@matchcode, '')
+		, @LeagueID 	= ISNULL(@LeagueID, 0)
+		, @filterBy 	= ISNULL(@filterBy, 0)
+		, @Today 		= GETDATE()
+		, @MatchId 		= 0
+		, @AutoSetting 	= POWER(2*ISNULL(@AutoPayoutOnly, 0),1) + POWER(2*ISNULL(@InstantCalOnly, 0),2)
 
 	-- if entering matcode, ignore other params (excep FromDate, ToDate, sport type)
 	IF @matchcode <> ''
@@ -125,8 +130,10 @@ BEGIN
 		, BetCount INT
 		, IsEnabledGoalRecordHT BIT
 		, IsEnabledGoalRecordFT BIT
-		--for instant calcukation status
+		
 	)
+	--for instant match info
+	CREATE TABLE #InstMatchInfo (MatchId INT, HomeValue VARCHAR(50), AwayValue VARCHAR(50), InstantStatus VARCHAR(50),CalculationType TINYINT, InstPriority TINYINT)
 	
 	INSERT INTO #matchList
 	SELECT m.hthomescore
@@ -222,28 +229,9 @@ BEGIN
 				ELSE 0 END
 		AND (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
 		AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
-		--check filer auto payout	
-		AND (
-			@AutoPayoutOnly = 0
-			OR (
-				@AutoPayoutOnly = 1 
-				AND (
-					(m.AutoSetting IS NULL AND (2 & l.AutoSetting = 2))
-					OR (2 & m.AutoSetting = 2)
-				)
-			)
-		)
-		--check filer InstantCalOnly
-		AND (
-			@InstantCalOnly = 0
-			OR (
-				@InstantCalOnly = 1 
-				AND (
-					(m.AutoSetting IS NULL AND (4 & l.AutoSetting = 4))
-					OR (4 & m.AutoSetting = 4)
-				)
-			)
-		)
+		
+		--check auto setting
+		AND (@AutoSetting = 0 OR ISNULL(m.AutoSetting, ISNULL(l.AutoSetting, 0)) = @AutoSetting)
 	
 	--CREATE NONCLUSTERED INDEX Ix_#matchList_MatchId ON #matchList(MatchId)
 
@@ -420,73 +408,71 @@ BEGIN
 		INNER JOIN PayoutResult rs ON t.matchid = rs.MatchId
 	
 	--Checking for Inst match info
+	IF (@AutoSetting = 0 OR 4 & @AutoSetting = 4)
 	BEGIN 
-	
-	CREATE TABLE #InstMatchInfo (MatchId INT, HomeValue VARCHAR(50), AwayValue VARCHAR(50), InstantStatus VARCHAR(50),CalculationType TINYINT, InstPriority TINYINT)
-	
-	INSERT INTO #InstMatchInfo (MatchId, HomeValue, AwayValue, InstantStatus,CalculationType,InstPriority)
-	SELECT t.MatchId
-		, 0 AS HomeValue
-		, 0 AS AwayValue
-		, 'Live!' AS InstantStatus
-		, CASE WHEN t.IsHalfTimeCal = 0 THEN 101 ELSE 102 END AS CalculationType
-		, 4 AS InstPriority
-	FROM #matchList t 
-	WHERE 4 & t.AutoSetting = 4
-		AND t.eventstatus IN ('running')
-	
-	;WITH InstMatchConfirm AS (
-		SELECT MatchId
-			,HomeValue
-			,AwayValue
-			,InstantStatus
-			,CalculationType
-		FROM (
-			SELECT m.MatchId
-				, prd.HomeValue
-				, prd.AwayValue
-				, 'Confirm' AS InstantStatus
-				, prd.TypeId AS CalculationType
-				, ROW_NUMBER() OVER(ORDER BY prd.CreatedDate DESC) AS RowIdx
-			FROM #InstMatchInfo m
-				LEFT JOIN dbo.ProviderResultDetail prd WITH(NOLOCK)
-				ON m.matchid = prd.matchID
-				
-			WHERE prd.TypeId IN (101, 102)
-		) AS temp
-		WHERE temp.RowIdx = 1
-	)
-	UPDATE d
-	SET HomeValue 			= u.HomeValue
-		, AwayValue			= u.AwayValue
-		, InstantStatus		= u.InstantStatus
-		, CalculationType	= u.CalculationType
-		, InstPriority			= 3
-	FROM #InstMatchInfo d
-		INNER JOIN InstMatchConfirm u 
-		ON d.matchID = u.matchID
+		INSERT INTO #InstMatchInfo (MatchId, HomeValue, AwayValue, InstantStatus,CalculationType,InstPriority)
+		SELECT t.MatchId
+			, 0 AS HomeValue
+			, 0 AS AwayValue
+			, 'Live!' AS InstantStatus
+			, 0 AS CalculationType
+			, 4 AS InstPriority
+		FROM #matchList t 
+		WHERE 4 & t.AutoSetting = 4
+			AND t.eventstatus IN ('running')
 		
-	;WITH InstMatchInProgress AS (
-		SELECT m.MatchId
-			, aps.HomeValue
-			, aps.AwayValue
-			, 'Ins. Calculating' AS InstantStatus
-			, aps.CalculationType
-		FROM #InstMatchInfo m
-			LEFT JOIN dbo.AutoPayoutResult aps WITH(NOLOCK)
-			ON m.matchid = aps.matchID
+		;WITH InstMatchConfirm AS (
+			SELECT MatchId
+				,HomeValue
+				,AwayValue
+				,InstantStatus
+				,CalculationType
+			FROM (
+				SELECT m.MatchId
+					, prd.HomeValue
+					, prd.AwayValue
+					, 'Confirm' AS InstantStatus
+					, prd.TypeId AS CalculationType
+					, ROW_NUMBER() OVER(PARTITION BY prd.matchid ORDER BY prd.CreatedDate DESC) AS RowIdx
+				FROM #InstMatchInfo m
+					INNER JOIN dbo.ProviderResultDetail prd WITH(NOLOCK)
+					ON m.matchid = prd.matchID
+					
+				WHERE prd.TypeId IN (101, 102)
+			) AS temp
+			WHERE temp.RowIdx = 1
+		)
+		UPDATE d
+		SET HomeValue 			= u.HomeValue
+			, AwayValue			= u.AwayValue
+			, InstantStatus		= u.InstantStatus
+			, CalculationType	= u.CalculationType
+			, InstPriority		= 3
+		FROM #InstMatchInfo d
+			INNER JOIN InstMatchConfirm u 
+			ON d.matchID = u.matchID
 			
-		WHERE aps.StatusId IN (1) --waiting & calculating
-			AND aps.CalculationType IN (101, 102)	
-	)
-	UPDATE d
-	SET HomeValue 			= u.HomeValue
-		, AwayValue			= u.AwayValue
-		, InstantStatus		= u.InstantStatus
-		, CalculationType	= u.CalculationType
-		, InstPriority		= 1
-	FROM #InstMatchInfo d
-		INNER JOIN InstMatchInProgress u ON d.matchID = u.matchID
+		;WITH InstMatchInProgress AS (
+			SELECT m.MatchId
+				, aps.HomeValue
+				, aps.AwayValue
+				, 'Ins. Calculating' AS InstantStatus
+				, aps.CalculationType
+			FROM #InstMatchInfo m
+				LEFT JOIN dbo.AutoPayoutResult aps WITH(NOLOCK)
+				ON m.matchid = aps.matchID
+				
+			WHERE aps.StatusId IN (1) --waiting & calculating
+				AND aps.CalculationType IN (101, 102)	
+		)
+		UPDATE d
+		SET HomeValue 			= u.HomeValue
+			, AwayValue			= u.AwayValue
+			, InstantStatus		= u.InstantStatus
+			, CalculationType	= u.CalculationType
+			, InstPriority		= 1
+		FROM #InstMatchInfo d
+			INNER JOIN InstMatchInProgress u ON d.matchID = u.matchID
 	END
 	
 	SELECT m.HalfTimeHomeScore
