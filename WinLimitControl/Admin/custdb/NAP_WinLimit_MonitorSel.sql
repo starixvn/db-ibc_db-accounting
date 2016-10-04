@@ -9,7 +9,6 @@ IF EXISTS
 )
     DROP PROCEDURE [dbo].[NAP_WinLimit_MonitorSel];
 GO
-
 GO
 SET ANSI_NULLS ON;
 GO
@@ -17,171 +16,175 @@ SET QUOTED_IDENTIFIER ON;
 GO
 CREATE PROCEDURE NAP_WinLimit_MonitorSel @FromDate   DATETIME,
                                          @ToDate     DATETIME,
-                                         @ProductId  INT          = NULL,
-                                         @UserName   NVARCHAR(50) = NULL,
-                                         @SiteId     INT          = NULL,
-                                         @CurrencyId INT          = NULL
+                                         @ProductId  INT          = 0,
+                                         @UserName   NVARCHAR(50) = '',
+                                         @SiteId     INT          = 0,
+                                         @CurrencyId INT          = 0
 AS
 
 /*
-	Created: Franklin	
-	Date: 2016-06-29
-	Task: #57722 - Implement Game Win Limit Control phase2
-	
-	DB: DBCUST/CustDB
-	
-	Revisions:
-	
-	Parameters Explanation:	
-	   @FromDate: From date
-	   @ToDate: To Date
-	   @ProductId: Product ID
-	   @UserName: UserName
-	   @SiteId: Site ID
-	   @CurrencyId: Currency ID
+Created: Franklin	
+Date: 2016-06-22
+Task: #57722 - Implement Game Win Limit Control phase2
+
+DB: DBCUST/CustDB
+
+Revisions:
+20160923@Jacob: Risk & Control - Phase 3 [#61220].
+
+Parameters Explanation:	
+   @FromDate: From date
+   @ToDate: To Date
+   @ProductId: Product ID
+   @UserName: UserName
+   @SiteId: Site ID
+   @CurrencyId: Currency ID
+   
+Example:
+EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
 */
 
-     BEGIN
-         SET NOCOUNT ON;
-         BEGIN -- temp table data
-             CREATE TABLE #WinLimitMonitor
-             (CustId                   INT,
-              UserName                 NVARCHAR(50),
-              ProductId                INT,
-              BettypeId                INT,
-              ReachedLimitLevel        SMALLINT,
-              MaxWinLimit              MONEY,
-              TotalWinAmount           MONEY,
-              WinAmount                MONEY,
-              ModifiedDate             DATETIME,
-              CurrencyId               INT,
-              SiteId                   INT,
-              SiteName                 NVARCHAR(50),
-              CurrencyMaxWinLimitLevel SMALLINT,
-              CurrencyMaxWinLimit      MONEY,
-              PlayerMaxWinLimitLevel   SMALLINT,
-              PlayerMaxWinLimit        MONEY,
-              IsNotified               BIT
-             );
-             INSERT INTO #WinLimitMonitor
-             (CustId,
-              UserName,
-              ProductId,
-              BettypeId,
-              ReachedLimitLevel,
-              MaxWinLimit,
-              TotalWinAmount,
-              WinAmount,
-              ModifiedDate,
-              CurrencyId,
-              SiteId,
-              SiteName,
-              CurrencyMaxWinLimitLevel,
-              CurrencyMaxWinLimit,
-              PlayerMaxWinLimitLevel,
-              PlayerMaxWinLimit,
-              IsNotified
-             )
-                    SELECT wlcgm.CustID,
-                           ci.username,
-                           wlcgm.ProductID,
-                           wlcgm.BettypeID,
-                           wlcgm.LevelID,
-                           wlcgm.MaxWinLimit,
-                           wlcgm.TotalWinAmt,
-                           wlcgm.WinAmt,
-                           wlcgm.ModifiedDate,
-                           c.currency,
-                           s.siteid,
-                           s.site,
-                           wlpsd.LevelID,
-                           wlpsd.MaxWinLimit,
-                           wlcgs.LevelID,
-                           wlcgs.MaxWinLimit,
-                           wlcgm.IsNotified
-                    FROM WinLimit_CustGameMonitoring wlcgm WITH (NOLOCK)
-                         INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON wlcgm.CustID = ci.CustID
-                         INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.custid = ci.recommend
-                         INNER JOIN dbo.Site s WITH (NOLOCK) ON s.site = c.site
-                         INNER JOIN dbo.WinLimit_ProductSettingDetail wlpsd WITH (NOLOCK) ON wlpsd.ProductID = wlcgm.ProductID
-                                                                                             AND wlpsd.BettypeID = wlcgm.BettypeID
-                                                                                             AND c.currency = wlpsd.ExchangeID
-                                                                                             AND s.siteid = wlpsd.SiteID
-                         LEFT JOIN dbo.WinLimit_CustGameSetting wlcgs WITH (NOLOCK) ON wlcgs.CustID = wlcgm.CustID
-                                                                                       AND wlcgs.ProductID = wlcgm.ProductID
-                                                                                       AND wlcgs.BettypeID = wlcgm.BettypeID
-                    WHERE wlcgm.ModifiedDate BETWEEN @FromDate AND @Todate
-                          AND (@ProductId IS NULL
-                               OR wlcgm.ProductID = @ProductId)
-                          AND (@SiteId IS NULL
-                               OR s.SiteId = @SiteId)
-                          AND (@CurrencyId IS NULL
-                               OR ci.currency = @CurrencyId)
-                          AND ci.roleid = 1
-                          AND (@UserName IS NULL
-                               OR ci.username = @UserName);
-         END;
-         BEGIN -- Query data
-             SELECT DISTINCT
-                    wlm.CustId,
-                    wlm.UserName,
-                    wlm.SiteId,
-                    wlm.SiteName,
-                    wlm.CurrencyId,
-                    wlm.ProductId,
-                    wlm.BettypeId,
-                    ISNULL(wlm.PlayerMaxWinLimitLevel, wlm.CurrencyMaxWinLimitLevel) AS Level,
-                    CASE
-                        WHEN(wlm.PlayerMaxWinLimit IS NULL)
-                        THEN CASE
-                                 WHEN wlm.CurrencyMaxWinLimitLevel = wlm.ReachedLimitLevel
-                                 THEN wlm.MaxWinLimit
-                                 ELSE wlm.CurrencyMaxWinLimit
-                             END
-                        ELSE CASE
-                                 WHEN wlm.PlayerMaxWinLimitLevel = wlm.ReachedLimitLevel
-                                 THEN wlm.MaxWinLimit
-                                 ELSE wlm.PlayerMaxWinLimit
-                             END
-                    END AS MaxWinLimit,
-                    wlm.TotalWinAmount,
-                    wlm.ModifiedDate AS ReachedLimitTime,
-                    wlm.ReachedLimitLevel,
-             (
-                 SELECT COUNT(1)
-                 FROM dbo.WinLimit_CustGameMonitoring_History wlcgmh WITH (NOLOCK)
-                 WHERE wlcgmh.ModifiedDate BETWEEN CONVERT( DATETIME, CONVERT(NVARCHAR(101), wlm.ModifiedDate, 111)+' 00:00:00') AND CONVERT(DATETIME, CONVERT(NVARCHAR(101), wlm.ModifiedDate, 111)+' 23:59:59.997')
-                       AND wlcgmh.LevelID = wlm.ReachedLimitLevel
-                       AND wlcgmh.CustID = wlm.CustId
-                       AND wlcgmh.ProductID = wlm.ProductId
-                       AND wlcgmh.ActionID NOT IN(2, 4)
-             ) AS NumberReachedLimit,
-                    wlm.IsNotified,
-                    wlcgs.IsBlockedPlaceBet,
-                    wlcgs.IsBlockedTransfer,
-                    CASE
-                        WHEN custWinLimitMaxTime.ModifiedDate IS NOT NULL
-                        THEN 1
-                        ELSE 0
-                    END AS IsEnableUnBlock
-             FROM #WinLimitMonitor wlm
-                  INNER JOIN dbo.WinLimit_CustGameStatus wlcgs WITH (NOLOCK) ON wlcgs.ProductID = wlm.ProductId
-                                                                                AND wlcgs.BettypeID = wlm.BettypeId
-                                                                                AND wlcgs.CustID = wlm.CustId
-                  LEFT JOIN
-             (
-                 SELECT wlcgm.CustID,
-                        MAX(wlcgm.ModifiedDate) AS ModifiedDate
-                 FROM dbo.WinLimit_CustGameMonitoring wlcgm
-                 GROUP BY wlcgm.CustID,
-                          wlcgm.ProductID,
-                          wlcgm.BettypeID
-             ) AS custWinLimitMaxTime ON custWinLimitMaxTime.CustId = wlm.CustId
-                                         AND custWinLimitMaxTime.ModifiedDate = wlm.ModifiedDate
-             ORDER BY ReachedLimitTime DESC;
-         END;
-         DROP TABLE #WinLimitMonitor;
+
+     SET NOCOUNT ON;
+     BEGIN -- #WinLimitMonitor
+         CREATE TABLE #WinLimitMonitor
+         (CustId                   INT,
+          UserName                 NVARCHAR(50),
+          ProductId                INT,
+          BettypeId                INT,
+          GroupId                  INT,
+          ReachedLimitLevel        SMALLINT,
+          MaxWinLimit              MONEY,
+          TotalWinAmount           MONEY,
+          WinAmount                MONEY,
+          ModifiedDate             DATETIME,
+          CurrencyId               INT,
+          SiteId                   INT,
+          CurrencyMaxWinLimitLevel SMALLINT,
+          CurrencyMaxWinLimit      MONEY,
+          PlayerMaxWinLimitLevel   SMALLINT,
+          PlayerMaxWinLimit        MONEY,
+          IsNotified               BIT
+         );
+         INSERT INTO #WinLimitMonitor
+         (CustId,
+          UserName,
+          ProductId,
+          BettypeId,
+          GroupId,
+          ReachedLimitLevel,
+          MaxWinLimit,
+          TotalWinAmount,
+          WinAmount,
+          ModifiedDate,
+          CurrencyId,
+          SiteId,
+          CurrencyMaxWinLimitLevel,
+          CurrencyMaxWinLimit,
+          PlayerMaxWinLimitLevel,
+          PlayerMaxWinLimit,
+          IsNotified
+         )
+                SELECT cm.CustID,
+                       ci.username,
+                       cm.ProductID,
+                       cm.BettypeID,
+                       gs.GroupID,
+                       cm.LevelID,
+                       cm.MaxWinLimit,
+                       cm.TotalWinAmt,
+                       cm.WinAmt,
+                       cm.ModifiedDate,
+                       c.currency,
+                       s.siteid,
+                       ps.LevelID,
+                       ps.MaxWinLimit,
+                       cs.LevelID,
+                       cs.MaxWinLimit,
+                       cm.IsNotified
+                FROM WinLimit_CustGameMonitoring cm WITH (NOLOCK)
+                     INNER JOIN dbo.WinLimit_GameGroupSetting gs WITH (NOLOCK) ON cm.BettypeID = gs.BetTypeID
+                                                                                  AND cm.ProductID = gs.ProductID
+                     INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON cm.CustID = ci.CustID
+                     INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.custid = ci.recommend
+                     INNER JOIN dbo.Site s WITH (NOLOCK) ON s.site = c.site
+                     INNER JOIN dbo.WinLimit_ProductSettingDetail ps WITH (NOLOCK) ON ps.ProductID = cm.ProductID
+                                                                                      AND ps.GroupID = gs.GroupID
+                                                                                      AND c.currency = ps.ExchangeID
+                                                                                      AND s.siteid = ps.SiteID
+                     LEFT JOIN dbo.WinLimit_CustGameSetting cs WITH (NOLOCK) ON cs.CustID = cm.CustID
+                                                                                AND cs.ProductID = cm.ProductID
+                                                                                AND cs.GroupID = gs.GroupID
+                WHERE cm.ModifiedDate BETWEEN @FromDate AND @Todate
+                      AND (@ProductId = 0
+                           OR cm.ProductID = @ProductId)
+                      AND (@SiteId = 0
+                           OR s.SiteId = @SiteId)
+                      AND (@CurrencyId = 0
+                           OR ci.currency = @CurrencyId)
+                      AND ci.roleid = 1
+                      AND (LEN(@UserName) = 0
+                           OR ci.username = @UserName);
      END;
+     BEGIN -- Query data
+         SELECT m.CustId,
+                m.UserName,
+                m.SiteId,
+                m.CurrencyId,
+                m.ProductId,
+                m.BettypeId,
+                m.GroupId,
+                ISNULL(m.PlayerMaxWinLimitLevel, m.CurrencyMaxWinLimitLevel) AS Level,
+                CASE
+                    WHEN(m.PlayerMaxWinLimit IS NULL)
+                    THEN CASE
+                             WHEN m.CurrencyMaxWinLimitLevel = m.ReachedLimitLevel
+                             THEN m.MaxWinLimit
+                             ELSE m.CurrencyMaxWinLimit
+                         END
+                    ELSE CASE
+                             WHEN m.PlayerMaxWinLimitLevel = m.ReachedLimitLevel
+                             THEN m.MaxWinLimit
+                             ELSE m.PlayerMaxWinLimit
+                         END
+                END AS MaxWinLimit,
+                m.TotalWinAmount,
+                m.ModifiedDate AS ReachedLimitTime,
+                m.ReachedLimitLevel,
+         (
+             SELECT COUNT(1)
+             FROM dbo.WinLimit_CustGameMonitoring_History h WITH (NOLOCK)
+             WHERE h.ModifiedDate BETWEEN CONVERT( DATETIME, CONVERT(NVARCHAR(101), m.ModifiedDate, 111)+' 00:00:00') AND CONVERT(DATETIME, CONVERT(NVARCHAR(101), m.ModifiedDate, 111)+' 23:59:59.997')
+                   AND h.LevelID = m.ReachedLimitLevel
+                   AND h.CustID = m.CustId
+                   AND h.ProductID = m.ProductId
+                   AND h.ActionID NOT IN(2, 4)
+         ) AS NumberReachedLimit,
+                m.IsNotified,
+                cs.IsBlockedPlaceBet,
+                cs.IsBlockedTransfer,
+                CASE
+                    WHEN custWinLimitMaxTime.ModifiedDate IS NOT NULL
+                    THEN 1
+                    ELSE 0
+                END AS IsEnableUnBlock
+         FROM #WinLimitMonitor m
+              INNER JOIN dbo.WinLimit_CustGameStatus cs WITH (NOLOCK) ON cs.ProductID = m.ProductId
+                                                                         AND cs.BettypeID = m.BettypeId
+                                                                         AND cs.CustID = m.CustId
+              LEFT JOIN
+         (
+             SELECT cm.CustID,
+                    MAX(cm.ModifiedDate) AS ModifiedDate
+             FROM dbo.WinLimit_CustGameMonitoring cm
+             GROUP BY cm.CustID,
+                      cm.ProductID,
+                      cm.BettypeID
+         ) AS custWinLimitMaxTime ON custWinLimitMaxTime.CustId = m.CustId
+                                     AND custWinLimitMaxTime.ModifiedDate = m.ModifiedDate
+         ORDER BY ReachedLimitTime DESC;
+     END;
+     DROP TABLE #WinLimitMonitor;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_MonitorSel] TO [bodbAdminNet];
 GO

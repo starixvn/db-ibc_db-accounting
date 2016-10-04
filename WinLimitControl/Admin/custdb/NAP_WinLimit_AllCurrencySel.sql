@@ -17,23 +17,24 @@ CREATE PROCEDURE NAP_WinLimit_AllCurrencySel
 AS
 
 /*
-	Created: Franklin	
-	Date: 2016-06-22
-	Task: #57722 - Implement Game Win Limit Control phase2
-	
-	DB: DBCUST/CustDB
-	
-	Revisions:
-	
-	Parameters Explanation:	
+Created: Franklin	
+Date: 2016-06-22
+Task: #57722 - Implement Game Win Limit Control phase2
+
+DB: DBCUST/CustDB
+
+Revisions:
+20160923@Jacob: Risk & Control - Phase 3 [#61220].
+
+Parameters Explanation:
+EXEC NAP_WinLimit_AllCurrencySel
 */
 
-     BEGIN
-         SET NOCOUNT ON;
-         SELECT e.exchangeid AS CurrencyId,
-                e.Code+' ('+e.currency+')' AS CurrencyName
-         FROM dbo.exchange e WITH (NOLOCK);
-     END;
+
+     SET NOCOUNT ON;
+     SELECT e.exchangeid AS Id,
+            e.Code+' ('+e.currency+')' AS Name
+     FROM dbo.exchange e WITH (NOLOCK);
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_AllCurrencySel] TO [bodbAdminNet];
 GO

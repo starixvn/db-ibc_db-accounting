@@ -4,36 +4,39 @@ IF EXISTS
 (
     SELECT *
     FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustNotConfigProductCheck]')
+    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustSettingValidateInsertingUser]')
           AND type IN(N'P', N'PC')
 )
-    DROP PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductCheck];
+    DROP PROCEDURE [dbo].[NAP_WinLimit_CustSettingValidateInsertingUser];
 GO
 USE [CustDB];
 GO
 
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustNotConfigProductCheck]    Script Date: 07/07/2015 16:09:00 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_CustSettingValidateInsertingUser]    Script Date: 07/07/2015 16:09:00 ******/
 
 SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustNotConfigProductCheck] @Username        VARCHAR(100) = '',
-                                                                      @ExcludeTestData BIT          = 1
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingValidateInsertingUser] @Username        VARCHAR(100)  = '',
+                                                                       @ExcludeTestData BIT           = 1,
+                                                                       @ErrorCode       INT           = 0 OUTPUT,
+                                                                       @ErrorMessage    NVARCHAR(200) = '' OUTPUT
 AS
 	
 /*
-	Created: Jacob	
-	Date: 2016-06-30
-	Task: #38608 - Implement function to control Player's Win Limit on specific Product
-	
-	DB: DBCust/CustDB
-	
-	Revisions:
-	
-	Parameters Explanation:	
-	
-	EXEC [NAP_WinLimit_CustNotConfigProductCheck] @Username = '166HK488' , @ExcludeTestData = 0
+Created: Franklin	
+Date: 2016-06-22
+Task: #57722 - Implement Game Win Limit Control phase2
+
+DB: DBCUST/CustDB
+
+Revisions:
+20160923@Jacob: Risk & Control - Phase 3 [#61220].
+
+Parameters Explanation:
+
+EXEC [NAP_WinLimit_CustSettingValidateInsertingUser] @Username = '166HK488' , @ExcludeTestData = 0
 	
 */
 
@@ -73,15 +76,15 @@ AS
                AND SiteId = @SiteId;
          IF @CurrencySettingCount = 0
              BEGIN
-                 SELECT 4 AS ErrorCode,
-                        'Currency '+@CurrencyName+' on Site: '+@SiteName AS ErrorMessage;
+                 SELECT @ErrorCode = 4,
+                        @ErrorMessage = 'Currency '+@CurrencyName+' on Site: '+@SiteName;
                  RETURN;
              END;
      END;
-     SELECT 0 AS ErrorCode,
-            '' AS ErrorMessage;
+     SELECT @ErrorCode = 0,
+            @ErrorMessage = '';
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustNotConfigProductCheck] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingValidateInsertingUser] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustNotConfigProductCheck] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustSettingValidateInsertingUser] TO [vnteam];
 GO

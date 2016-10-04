@@ -15,11 +15,13 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameStatusPlaceBetUnblock] @CustId    INT,
-                                                                    @ProductId INT,
-                                                                    @BetTypeId INT,
-                                                                    @UserID    INT         = 0,
-                                                                    @IP        VARCHAR(20) = ''
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameStatusPlaceBetUnblock] @CustId       INT,
+                                                                    @ProductId    INT,
+                                                                    @BetTypeId    INT,
+                                                                    @UserID       INT           = 0,
+                                                                    @IP           VARCHAR(20)   = '',
+                                                                    @ErrorCode    INT           = 0 OUTPUT,
+                                                                    @ErrorMessage NVARCHAR(500) = '' OUTPUT
 AS
 	
 /*
@@ -58,8 +60,8 @@ Parameters Explanation:
                    AND BetTypeId = @BetTypeId;
          END TRY
          BEGIN CATCH
-             SELECT 1 AS ErrorCode,
-                    'The setting of PlaceBet/Withdraw cannot be changed because of an database internal error.' AS ErrorMessage;
+             SELECT @ErrorCode = 1,
+                    @ErrorMessage = 'The setting of PlaceBet/Withdraw cannot be changed because of an database internal error.';
              RETURN;
          END CATCH;
      END;
@@ -83,8 +85,8 @@ Parameters Explanation:
          BEGIN CATCH
          END CATCH;
      END;
-     SELECT 0 AS ErrorCode,
-            '' AS ErrorMessage;
+     SELECT @ErrorCode = 0,
+            @ErrorMessage = '';
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustGameStatusPlaceBetUnblock] TO [bodbAdminNet];
 GO

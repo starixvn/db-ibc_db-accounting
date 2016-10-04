@@ -15,11 +15,13 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId    INT,
-                                                                    @ProductId INT,
-                                                                    @BetTypeId INT,
-                                                                    @ActionId  INT,
-                                                                    @UserId    INT
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId       INT,
+                                                                    @ProductId    INT,
+                                                                    @BetTypeId    INT,
+                                                                    @ActionId     INT,
+                                                                    @UserId       INT,
+                                                                    @ErrorCode    INT           = 0 OUTPUT,
+                                                                    @ErrorMessage NVARCHAR(500) = '' OUTPUT
 AS
 	
 /*
@@ -43,50 +45,48 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
      SET NOCOUNT ON;
      DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT, @LogSPData VARCHAR(300);
      SELECT @StartRun = GETDATE();
-     BEGIN -- INSERT
-         BEGIN TRY
-             INSERT INTO dbo.WinLimit_CustGameMonitoring_History
-             (CustID,
-              ProductID,
-              BettypeID,
-              WinlostDate,
-              LevelID,
-              MaxWinLimit,
-              TotalWinAmt,
-              WinAmt,
-              ActionID,
-              ModifiedDate,
-              IsNotified,
-              ModifiedBy,
-              CreatedBy
-             )
-                    SELECT TOP 1 CustID,
-                                 ProductID,
-                                 BettypeID,
-                                 WinlostDate,
-                                 LevelID,
-                                 MaxWinLimit,
-                                 TotalWinAmt,
-                                 WinAmt,
-                                 @ActionId,
-                                 GETDATE(),
-                                 IsNotified,
-                                 @UserId,
-                                 @UserId
-                    FROM dbo.WinLimit_CustGameMonitoring
-                    WHERE CustId = @CustId
-                          AND ProductId = @ProductId
-                          AND BetTypeId = @BetTypeId
-                    ORDER BY ModifiedDate DESC;
-         END TRY
-         BEGIN CATCH
-             SELECT 1 AS ErrorCode,
-                    'The monitoring history cannot be inserted because of an database internal error.' AS ErrorMessage;
-             RETURN;
-         END CATCH;
-     END;
-     SELECT 0 AS ErrorCode,
-            '' AS ErrorMessage;
+    BEGIN TRY
+        INSERT INTO dbo.WinLimit_CustGameMonitoring_History
+        (CustID,
+         ProductID,
+         BettypeID,
+         WinlostDate,
+         LevelID,
+         MaxWinLimit,
+         TotalWinAmt,
+         WinAmt,
+         ActionID,
+         ModifiedDate,
+         IsNotified,
+         ModifiedBy,
+         CreatedBy
+        )
+               SELECT TOP 1 CustID,
+                            ProductID,
+                            BettypeID,
+                            WinlostDate,
+                            LevelID,
+                            MaxWinLimit,
+                            TotalWinAmt,
+                            WinAmt,
+                            @ActionId,
+                            GETDATE(),
+                            IsNotified,
+                            @UserId,
+                            @UserId
+               FROM dbo.WinLimit_CustGameMonitoring
+               WHERE CustId = @CustId
+                     AND ProductId = @ProductId
+                     AND BetTypeId = @BetTypeId
+               ORDER BY ModifiedDate DESC;
+    END TRY
+    BEGIN CATCH
+        SELECT @ErrorCode = 1,
+               @ErrorMessage = 'The monitoring history cannot be inserted because of an database internal error.';
+        RETURN;
+    END CATCH;
+     SELECT @ErrorCode = 0,
+            @ErrorMessage = '';
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] TO [bodbAdminNet];
 GO

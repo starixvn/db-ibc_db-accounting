@@ -18,25 +18,28 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].NAP_WinLimit_CustSettingUpd @CustID      INT,
-                                                         @ProductID   INT,
-                                                         @BetTypeID   INT,
-                                                         @LevelID     INT,
-                                                         @MaxWinLimit MONEY,
-                                                         @UserID      INT         = 0,
-                                                         @IP          VARCHAR(20) = ''
+CREATE PROCEDURE [dbo].NAP_WinLimit_CustSettingUpd @CustID       INT,
+                                                   @ProductID    INT,
+                                                   @GroupId      INT,
+                                                   @LevelID      INT,
+                                                   @MaxWinLimit  MONEY         = 0,
+                                                   @UserID       INT           = 0,
+                                                   @IP           VARCHAR(20)   = '',
+                                                   @ErrorCode    INT           = 0,
+                                                   @ErrorMessage NVARCHAR(100) = ''
 AS
 	
 /*
-	Created: Jacob	
-	Date: 2016-06-30
-	Task: #38608 - Implement function to control Player's Win Limit on specific Product
-	
-	DB: DBCust/CustDB
-	
-	Revisions:
-	
-	Parameters Explanation:	
+Created: Franklin	
+Date: 2016-06-22
+Task: #57722 - Implement Game Win Limit Control phase2
+
+DB: DBCUST/CustDB
+
+Revisions:
+20160923@Jacob: Risk & Control - Phase 3 [#61220].
+
+Parameters Explanation:
 	
 	
 */
@@ -44,52 +47,14 @@ AS
      SET NOCOUNT ON;
      DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT, @MaxWinLimitOld MONEY;
      SELECT @StartRun = GETDATE();
-     SELECT @MaxWinLimit = ISNULL(@MaxWinLimit, 0);
      BEGIN -- SAVE State
 
          SELECT @MaxWinLimitOld = MaxWinLimit
          FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
          WHERE CustID = @CustID
                AND ProductID = @ProductID
-               AND BetTypeId = @BetTypeId
+               AND GroupId = @GroupId
                AND LevelId = @LevelId;
-     END;
-     BEGIN -- @CurrencyId, @SiteId
-         DECLARE @SiteId INT, @SiteName VARCHAR(50), @AgentId INT, @CurrencyId INT;
-         SELECT @CurrencyId = c.currency,
-                @AgentId = c.recommend
-         FROM dbo.Customer c WITH (NOLOCK)
-         WHERE CustId = @CustId;
-         SELECT @SiteId = s.siteid
-         FROM dbo.Customer c WITH (NOLOCK)
-              INNER JOIN dbo.[Site] s WITH (NOLOCK) ON c.site = s.site
-         WHERE CustId = @AgentId;
-     END;
-     BEGIN -- VALIDATE Current Level must be between previous level and next level
-         DECLARE @PreviousMaxWinLimit MONEY, @NextMaxWinLimit MONEY;
-         SELECT @PreviousMaxWinLimit = ISNULL(MaxWinLimit, 0)
-         FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
-         WHERE CustID = @CustID
-               AND ProductID = @ProductID
-               AND BetTypeId = @BetTypeId
-               AND LevelId = @LevelId - 1;
-         SELECT @NextMaxWinLimit = ISNULL(MaxWinLimit, 0)
-         FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
-         WHERE CustID = @CustID
-               AND ProductID = @ProductID
-               AND BetTypeId = @BetTypeId
-               AND LevelId = @LevelId + 1;
-         IF((@MaxWinLimit > 0
-             AND @PreviousMaxWinLimit > 0
-             AND @MaxWinLimit <= @PreviousMaxWinLimit)
-            OR (@MaxWinLimit > 0
-                AND @NextMaxWinLimit > 0
-                AND @MaxWinLimit >= @NextMaxWinLimit))
-             BEGIN
-                 SELECT 3 AS ErrorCode,
-                        'Player Win Limit must be between previous level and next level.' AS ErrorMessage;
-                 RETURN;
-             END;
      END;
      BEGIN -- UPDATE
 
@@ -99,12 +64,12 @@ AS
                    MaxWinLimit = @MaxWinLimit
              WHERE CustID = @CustID
                    AND ProductID = @ProductID
-                   AND BetTypeId = @BetTypeId
+                   AND Groupid = @GroupId
                    AND LevelId = @LevelId;
          END TRY
          BEGIN CATCH
-             SELECT 4 AS ErrorCode,
-                    'This setting cannot be updated because of an database internal error.' AS ErrorMessage;
+             SELECT @ErrorCode = 4,
+                    @ErrorMessage = 'This setting cannot be updated because of an database internal error.';
              RETURN;
          END CATCH;
      END;
@@ -115,7 +80,7 @@ AS
          SET @TrackingValue = '<NAP_WinLimit_CustSettingUpd ';
          SET @TrackingValue = @TrackingValue+'" CustID ="'+CONVERT(VARCHAR(20), @CustID);
          SET @TrackingValue = @TrackingValue+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID);
-         SET @TrackingValue = @TrackingValue+'" BetTypeID="'+CONVERT(VARCHAR(20), @BetTypeID);
+         SET @TrackingValue = @TrackingValue+'" GroupId="'+CONVERT(VARCHAR(20), @GroupId);
          SET @TrackingValue = @TrackingValue+'" LevelID="'+CONVERT(VARCHAR(20), @LevelID);
          SET @TrackingValue = @TrackingValue+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimit);
          SET @TrackingValue = @TrackingValue+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
@@ -123,7 +88,7 @@ AS
          SET @TrackingValue2 = '<NAP_WinLimit_CustSettingUpd ';
          SET @TrackingValue2 = @TrackingValue2+'" CustID ="'+CONVERT(VARCHAR(20), @CustID);
          SET @TrackingValue2 = @TrackingValue2+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID);
-         SET @TrackingValue2 = @TrackingValue2+'" BetTypeID="'+CONVERT(VARCHAR(20), @BetTypeID);
+         SET @TrackingValue2 = @TrackingValue2+'" GroupId="'+CONVERT(VARCHAR(20), @GroupId);
          SET @TrackingValue2 = @TrackingValue2+'" LevelID="'+CONVERT(VARCHAR(20), @LevelID);
          SET @TrackingValue2 = @TrackingValue2+'" MaxWinLimit="'+CONVERT(VARCHAR(20), @MaxWinLimitOld);
          SET @TrackingValue2 = @TrackingValue2+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
@@ -142,9 +107,8 @@ AS
          BEGIN CATCH
          END CATCH;
      END;
-     SELECT 0 AS ErrorCode,
-            '' AS ErrorMessage;
-     RETURN;
+     SELECT @ErrorCode = 0,
+            @ErrorMessage = '';
 GO
 GRANT EXECUTE ON [dbo].NAP_WinLimit_CustSettingUpd TO [bodbAdminNet];
 GO
