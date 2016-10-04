@@ -18,16 +18,15 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	
+	DECLARE @srecommend INT,@mrecommend INT,@recommend INT
 	IF @custid IS NULL
-		SELECT @custid = custid FROM customer WITH(NOLOCK) WHERE username = @username
-				
-	IF EXISTS (SELECT 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @custid)
-		SELECT @isSmartPunter = 1
-	ELSE 
-		SELECT @isSmartPunter = 0
-	IF @isSmartPunter = 0
-	BEGIN	
+		SELECT @custid = custid,@srecommend=srecommend,@mrecommend=mrecommend,@recommend=recommend FROM customer WITH(NOLOCK) WHERE username = @username
+	ELSE
+		SELECT @srecommend=srecommend,@mrecommend=mrecommend,@recommend=recommend FROM customer WITH(NOLOCK) WHERE custid = @custid	
+			
+	IF EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @custid )
+	BEGIN
+	SELECT @isSmartPunter = 1
 	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns
 			@Userid = @userid,
 			@Custid = @CustID,
@@ -35,6 +34,43 @@ BEGIN
 			@IP = @IP,
 			@IsRestricted = @IsRestricted
 	END
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @recommend )
+	BEGIN
+	SELECT @isSmartPunter = 1
+	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns
+			@Userid = @userid,
+			@Custid = @CustID,
+			@ActionID = @ActionID,
+			@IP = @IP,
+			@IsRestricted = @IsRestricted,
+			@UplineID=@recommend
+	END
+	ELSE IF  EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @mrecommend )
+	BEGIN
+	SELECT @isSmartPunter = 1
+	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns
+			@Userid = @userid,
+			@Custid = @CustID,
+			@ActionID = @ActionID,
+			@IP = @IP,
+			@IsRestricted = @IsRestricted,
+			@UplineID=@mrecommend
+	END
+	ELSE IF  EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @srecommend )
+	BEGIN
+	SELECT @isSmartPunter = 1
+	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns
+			@Userid = @userid,
+			@Custid = @CustID,
+			@ActionID = @ActionID,
+			@IP = @IP,
+			@IsRestricted = @IsRestricted,
+			@UplineID=@srecommend
+	END
+	ELSE 
+		SELECT @isSmartPunter = 0
+		
+	
 END
 
 
