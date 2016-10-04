@@ -1,3 +1,6 @@
+USE bodb_dwrs
+GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_SB_Credit]
 	@FromDate DATE,
 	@ToDate	DATE
@@ -8,6 +11,7 @@ AS
     DB: DBWH/bodb_dwrs  
    
     Revisions:
+		- 20160922@Harper - #64429 - Edit status ID
 	Param's Explanation:   
 */  
 BEGIN  
@@ -82,7 +86,7 @@ BEGIN
 		INNER JOIN bodb_Account.dbo.tbl_Site s WITH (NOLOCK) ON s.siteid = b.SiteID
 	WHERE 
 		b.rptDate BETWEEN @FDate AND @TDate 
-		AND b.status != 14
+		AND b.status <> 14
 		AND s.isDeposit = 0 -- Credit data only
 	GROUP BY b.rptDate
 	OPTION (RECOMPILE)
