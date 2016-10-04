@@ -179,7 +179,7 @@ BEGIN
 		, 0 AS IsExistRunningHTFGLG
 		, 0 AS WinOdds
 		, 0 AS PlaceOdds
-		, ISNULL(m.AutoSetting, 0) AS AutoSetting
+		, ISNULL(m.AutoSetting, ISNULL(l.AutoSetting, 0)) AS AutoSetting
 		, 0 AS IsExistRunningCorner
 		, 0 AS IsExistRunningHTCorner
 		, 0 AS IsNeedToCalculateFGLG
@@ -424,12 +424,12 @@ BEGIN
 	
 	CREATE TABLE #InstMatchInfo (MatchId INT, HomeValue VARCHAR(50), AwayValue VARCHAR(50), InstantStatus VARCHAR(50),CalculationType TINYINT, InstPriority TINYINT)
 	
-	INSERT INTO #InstMatchInfo (MatchId, HomeValue, AwayValue, InstantStatus,CalculationType,Priority)
+	INSERT INTO #InstMatchInfo (MatchId, HomeValue, AwayValue, InstantStatus,CalculationType,InstPriority)
 	SELECT t.MatchId
 		, 0 AS HomeValue
 		, 0 AS AwayValue
 		, 'Live!' AS InstantStatus
-		, CASE t.IsHalfTimeCal = 0 THEN 101 ELSE 102 END AS CalculationType
+		, CASE WHEN t.IsHalfTimeCal = 0 THEN 101 ELSE 102 END AS CalculationType
 		, 4 AS InstPriority
 	FROM #matchList t 
 	WHERE 4 & t.AutoSetting = 4
@@ -535,10 +535,11 @@ BEGIN
 		, IsEnabledGoalRecordFT
 		
 		/*Instant match info*/
-		, im.HomeValue AS InstHomeScore
-		, im.AwayValue AS InstAwayScore
-		, im.InstantStatus AS InstantStatus
-		, im.CalculationType AS InstCalculationType
+		, ISNULL(im.HomeValue,0) AS InstHomeScore
+		, ISNULL(im.AwayValue,0) AS InstAwayScore
+		, ISNULL(im.InstantStatus,'') AS InstantStatus
+		, ISNULL(im.CalculationType,0) AS InstCalculationType
+		
 	FROM #matchList m
 		LEFT JOIN #tempmatch t ON t.matchid = m.matchid
 		LEFT JOIN #tmpAutoSettle1s a WITH (NOLOCK) ON m.matchID = a.MatchID

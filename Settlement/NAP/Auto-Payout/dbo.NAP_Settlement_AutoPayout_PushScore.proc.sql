@@ -25,7 +25,10 @@ BEGIN
 	DECLARE @TypeId 	TINYINT
 		, @SourceId		TINYINT
 		
-	SELECT @TypeId 		=  CASE WHEN @IsHTScore = 1 THEN 101 ELSE 102 END
+	SELECT @TypeId 		=  CASE WHEN @IsHTScore = 1 THEN 101 
+								WHEN @IsHTScore = 0 THEN 102
+								ELSE 0 
+							END
 		, @SourceId		= 100 -- internal source type
 	
 	IF ( 
@@ -33,16 +36,10 @@ BEGIN
 			SELECT TOP 1 1
 			FROM dbo.[match] m WITH (NOLOCK)
 			WHERE matchid = @MatchId
-				AND 4 & m.AutoSetting = 4
 		)
-		AND NOT EXISTS (
-			SELECT TOP 1 1
-			FROM dbo.ProviderResultDetail WITH (NOLOCK)
-			WHERE matchid = @MatchId
-				AND TypeId = @TypeId
-				AND HomeValue = @HomeScore
-				AND AwayValue = @AwayScore
-		)
+		AND @TypeId IN (101, 102)
+		AND ISNULL(@HomeScore, 0) > 0
+		AND ISNULL(@AwayScore, 0) > 0
 	)
 	BEGIN
 		INSERT INTO dbo.ProviderResultDetail (

@@ -16,25 +16,39 @@ AS
 		- 20160930@Bobby: #65003 - Merge Auto Payout and Inst CAL setting
 		
 	Param's Explanation:
- 
+		- @AutoType: TINYINT 
+			+ 1: Auto Payout
+			+ 2: Inst Calculation
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @AutoSetting_Old BIT, @StarTime DATETIME, @EndTime DATETIME, @Remark VARCHAR(1024), @LeagueId INT
+	DECLARE @AutoSetting_Old 	BIT
+		, @StarTime 			DATETIME
+		, @EndTime 				DATETIME
+		, @Remark 				VARCHAR(1024)
+		, @LeagueId 			INT
+		, @AutoType				TINYINT
 	
-	SELECT @AutoSetting = ISNULL(@AutoSetting, 0), @StarTime = GETDATE()
-
+	SELECT @AutoSetting 		= ISNULL(@AutoSetting, 0)
+		, @StarTime 			= GETDATE()
+	
 	SELECT @AutoSetting_Old = AutoSetting, @LeagueId = leagueid
 	FROM dbo.match m WITH(NOLOCK)
 	WHERE m.matchid = @MatchId
-
+	
 	IF @AutoSetting_Old IS NULL
 	BEGIN
 		SELECT @AutoSetting_Old = ISNULL(AutoSetting, 0)
 		FROM dbo.League l WITH(NOLOCK)
 		WHERE LeagueId = @LeagueId
 	END
-
+	
+	SELECT @AutoType			= CASE 
+									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 1 
+									WHEN (4 & @AutoSetting_Old <> 4 & @AutoSetting) THEN 2 
+									ELSE 0 
+								END
+								
 	--check concurrency users
 	IF @AutoSetting = @AutoSetting_Old
 	BEGIN
@@ -42,11 +56,19 @@ BEGIN
 	END
 
 	--check match <> running
-	IF EXISTS (SELECT TOP 1 1 
-					FROM dbo.match m WITH(NOLOCK) 
-					WHERE matchid = @MatchId AND sporttype = 1 AND eventstatus = 'completed')
+	IF EXISTS (
+		SELECT TOP 1 1 
+		FROM dbo.match m WITH(NOLOCK) 
+		WHERE matchid = @MatchId 
+			AND sporttype = 1 
+			AND 1 = CASE 
+					WHEN @AutoType = 1 AND eventstatus = 'completed' THEN 1
+					WHEN @AutoType = 2 AND eventstatus <> 'running' THEN 1
+					ELSE 0 
+				END
+	)
 	BEGIN
-		SELECT @ErrCode = 1001023, @ErrMsg = 'Sorry. Not allow to update Auto Setting of completed match.'
+		SELECT @ErrCode = 1001023, @ErrMsg = 'Sorry. Not allow to update Auto Setting on this match.'
 		RETURN
 	END
 
@@ -72,6 +94,7 @@ BEGIN
 	SELECT @EndTime = GETDATE()
 	SELECT @Remark = 'NAP: Update auto payout setting on match:' + CAST(@MatchId AS NVARCHAR(10)) 
 		+ ' AutoSetting:' + CAST(ISNULL(@AutoSetting, 0) AS NVARCHAR(10))
+		+ ' AutoType:' + CAST(ISNULL(@AutoType, 0) AS NVARCHAR(10))
 		+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @StarTime, @EndTime) AS NVARCHAR(50)) + ' ms'
 
 	BEGIN TRY
@@ -93,7 +116,7 @@ BEGIN
 
 		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @Matchid			= @MatchId
-			, @ActionID			= 159
+			, @ActionID			= 160
 			, @finalhomescore	= NULL
 			, @finalawayscore	= NULL
 			, @hthomescore		= NULL
