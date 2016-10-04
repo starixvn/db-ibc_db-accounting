@@ -158,7 +158,7 @@ BEGIN
                     WHEN @IsSettleAbandonedMatchIBC = 1 AND @bettype <> 3 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
                     ELSE 0
                 END 
-            AND hdp1 <= CASE WHEN @bettype IN (8,403,404) AND (@IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1)THEN @comparedValue  -- @comparedValue = @totalht - 0.5
+            AND hdp1 <= CASE WHEN @bettype IN (8,403,404,426,143) AND (@IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1)THEN @comparedValue  -- @comparedValue = @totalht - 0.5
                              WHEN @bettype <> 8 AND @IsSettleAbandonedMatchIBC = 1 THEN @comparedValue 
                              ELSE -1
                         END
