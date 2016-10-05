@@ -19,13 +19,15 @@ BEGIN
 		SELECT a.ProductId, p.ProductName, a.BetType, a.IsActive_SMA, a.IsActive_Company
 		FROM (
 			--SELECT 3 AS ProductId, 81 AS BetType, 0 AS IsActive_SMA, 1 AS IsActive_Company UNION
-			SELECT 4 AS ProductId, 1101 AS BetType, 1 AS IsActive_SMA, 0 AS IsActive_Company UNION --LC
-			SELECT 6, 2101, 1, 1 UNION
+			SELECT 4 AS ProductId, 1101 AS BetType, 1 AS IsActive_SMA, 0 AS IsActive_Company UNION ALL--LC
+			SELECT 6, 2101, 1, 1 UNION ALL
 			--SELECT 8, 1501, 0, 1 UNION
-			SELECT 12, 1701, 1, 0 UNION
-			SELECT 13, 2001, 0, 1 UNION
+			SELECT 12, 1701, 1, 0 UNION ALL
+			SELECT 13, 2001, 0, 1 UNION ALL
 			SELECT 17, 2008, 0, 1 UNION ALL
-			SELECT 22, 4001, 1, 1
+			SELECT 22, 4001, 1, 1 UNION ALL
+			SELECT 21, 2401, 1, 1
+			
 		) a INNER JOIN DBPRO.bodb02.dbo.Products p WITH(NOLOCK) ON a.ProductId = p.ProductID
 	)
 
