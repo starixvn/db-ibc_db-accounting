@@ -22,7 +22,7 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @AutoSetting_Old 	BIT
+	DECLARE @AutoSetting_Old 	TINYINT
 		, @StarTime 			DATETIME
 		, @EndTime 				DATETIME
 		, @Remark 				VARCHAR(1024)
@@ -44,8 +44,8 @@ BEGIN
 	END
 	
 	SELECT @AutoType			= CASE 
-									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 1 
-									WHEN (4 & @AutoSetting_Old <> 4 & @AutoSetting) THEN 2 
+									WHEN (1 & @AutoSetting_Old <> 1 & @AutoSetting) THEN 1 
+									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 2 
 									ELSE 0 
 								END
 								
@@ -63,7 +63,7 @@ BEGIN
 			AND sporttype = 1 
 			AND 1 = CASE 
 					WHEN @AutoType = 1 AND eventstatus = 'completed' THEN 1
-					WHEN @AutoType = 2 AND eventstatus <> 'running' THEN 1
+					WHEN @AutoType = 2 AND eventstatus NOT IN ('running', 'closed', 'Refund HT') THEN 1
 					ELSE 0 
 				END
 	)

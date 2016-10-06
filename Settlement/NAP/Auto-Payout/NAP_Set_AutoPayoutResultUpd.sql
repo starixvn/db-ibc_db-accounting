@@ -11,6 +11,8 @@ AS
 	Task: Update status of auto payout result
 	DB: DBPRO/bodb02
 	Revisions:
+		- 20160930@Bobby: #65003 - Implement Instant Calculation
+		
 	Param's Explanation:
 		- @StatusId: 0: New
 					 1: Waiting
@@ -28,10 +30,10 @@ BEGIN
 		AND StatusId <> @StatusId
 
 	IF @IsIncludedUpdateMatch = 1
-		AND EXISTS (SELECT TOP 1 1 FROM dbo.match WITH(NOLOCK) WHERE matchid = @MatchId AND ISNULL(IsAutoPayout, 0) = 0)
+		AND EXISTS (SELECT TOP 1 1 FROM dbo.match WITH(NOLOCK) WHERE matchid = @MatchId AND ISNULL(AutoSetting, 0) = 0)
 	BEGIN
 		UPDATE dbo.match WITH(UPDLOCK, ROWLOCK)
-		SET IsAutoPayout = 1
+		SET AutoSetting =  CASE WHEN @TypeId IN (101, 102) THEN 2 ELSE 1 END
 		WHERE matchid = @MatchId
 	END
 END

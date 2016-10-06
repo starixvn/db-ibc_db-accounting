@@ -27,11 +27,12 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @AutoSetting_Old 	BIT
+	DECLARE @AutoSetting_Old 	TINYINT
 		, @StarTime 			DATETIME
 		, @EndTime 				DATETIME
 		, @Remark 				VARCHAR(1024)
 		, @AutoType				TINYINT
+		, @bitChanged			TINYINT
 	
 	SELECT @AutoSetting = ISNULL(@AutoSetting, 0), @StarTime = GETDATE()
 
@@ -40,9 +41,13 @@ BEGIN
 	WHERE leagueid = @LeagueId
 	
 	SELECT @AutoType			= CASE 
-									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 1 
-									WHEN (4 & @AutoSetting_Old <> 4 & @AutoSetting) THEN 2 
+									WHEN (1 & @AutoSetting_Old <> 1 & @AutoSetting) THEN 1 --AutoPayout
+									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 2 --InstCalc
 									ELSE 0 
+								END
+			,@bitChanged		= CASE 
+									WHEN @AutoType = 1 THEN 1 & @AutoSetting
+									WHEN @AutoType = 2 THEN 2 & @AutoSetting
 								END
 								
 	--check concurrency users
@@ -55,16 +60,20 @@ BEGIN
 	BEGIN
 		--update running match
 		UPDATE m
-		SET AutoSetting = @AutoSetting
+		SET AutoSetting = CASE 
+							WHEN @AutoType = 1 THEN @bitChanged + (2 & AutoSetting)
+							WHEN @AutoType = 2 THEN (1 & AutoSetting) + @bitChanged
+							ELSE m.AutoSetting
+						END
 		FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
 		WHERE m.leagueid 	= @LeagueId 
-			AND sporttype 	= 1 
-			AND 1 = CASE 
+				AND sporttype 	= 1 
+				AND 1 = CASE 
 					WHEN @AutoType = 1 AND eventstatus <> 'completed' THEN 1
-					WHEN @AutoType = 2 AND eventstatus = 'running' THEN 1
+					WHEN @AutoType = 2 AND eventstatus IN ('running', 'closed') THEN 1
 					ELSE 0 
 				END
-
+				
 		IF @@ERROR > 0
 		BEGIN
 			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
