@@ -10,7 +10,8 @@ GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_Site] @StartDate SMALLDATETIME,
                                                                @EndDate   SMALLDATETIME,
                                                                @BetType   INT,
-                                                               @Site      NVARCHAR(50)
+                                                               @Site      NVARCHAR(50),
+                                                               @IsLive    INT           = 2
 AS
 
 /*
@@ -76,6 +77,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_Site] @StartDate='2016-01-01', @EndDate='
          FROM bettrans AS b WITH (NOLOCK)
               INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
          WHERE b.winlostdate = @StartDate
+               AND (@IsLive = 2
+                    OR b.liveindicator = @IsLive)
                AND b.BetType = @BetType
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)
