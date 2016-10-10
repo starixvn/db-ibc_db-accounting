@@ -59,8 +59,7 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                        p.LevelId,
                        s.GroupId
                 FROM dbo.f_Nap_WinLimit_ProductSettingSel(@ProductId) p
-                     INNER JOIN dbo.WinLimit_GameGroupSetting s WITH (NOLOCK) ON p.ProductId = s.ProductId
-                                                                                 AND p.BetTypeId = s.BetTypeId;
+                     INNER JOIN dbo.WinLimit_GameGroupSetting s WITH (NOLOCK) ON p.ProductId = s.ProductId;
      END;
      BEGIN --#ProductSiteCurrencySetting
          CREATE TABLE #ProductSiteCurrencySetting

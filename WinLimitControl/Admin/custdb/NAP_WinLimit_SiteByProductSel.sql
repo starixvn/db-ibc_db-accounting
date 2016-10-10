@@ -34,20 +34,7 @@ EXEC [NAP_WinLimit_SiteByProductSel]
 
 
      SET NOCOUNT ON;
-     BEGIN -- #ProductSetting
-         CREATE TABLE #ProductSetting
-         (ProductId TINYINT,
-          Bettype   SMALLINT
-         );
-         INSERT INTO #ProductSetting
-         (ProductId,
-          Bettype
-         )
-                SELECT DISTINCT
-                       ps.ProductId,
-                       ps.BettypeId
-                FROM dbo.f_Nap_WinLimit_ProductSettingSel(@ProductId) ps;
-     END;
+    
      BEGIN -- Deposit Licensee
          CREATE TABLE #Party
          (PartyId    INT PRIMARY KEY,
@@ -107,7 +94,7 @@ EXEC [NAP_WinLimit_SiteByProductSel]
                                    THEN 14
                                    ELSE ProductId
                                END
-                        FROM #ProductSetting
+                        FROM dbo.f_Nap_WinLimit_ProductSettingSel(@ProductId)
                     )
                 ) AS lp3rd
                 INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lp3rd.licenseeId
@@ -135,7 +122,6 @@ EXEC [NAP_WinLimit_SiteByProductSel]
          ORDER BY GroupName,
                   SiteName;
      END;
-     DROP TABLE #ProductSetting;
      DROP TABLE #Party;
      DROP TABLE #PartyGroup;
      DROP TABLE #DepositLicenseeProduct;

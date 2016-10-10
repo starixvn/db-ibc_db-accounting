@@ -39,14 +39,14 @@ SELECT * FROM [f_Nap_WinLimit_ProductSettingSel] (0)
 */
 
      RETURN
-     SELECT wps.ProductID AS ProductId,
-            wps.BettypeID AS BettypeId,
-            wps.LevelID AS LevelId,
-            wps.SettingStatus AS SettingStatus
-     FROM dbo.Winlimit_ProductSetting wps WITH (NOLOCK)
+     SELECT ProductID AS ProductId,
+            BettypeID AS BettypeId,
+            LevelID AS LevelId,
+            SettingStatus AS SettingStatus
+     FROM dbo.Winlimit_ProductSetting WITH (NOLOCK)
      WHERE(@ProductId = 0
-           OR wps.ProductID = @ProductId)
-          AND wps.SettingStatus <= CASE
+           OR ProductID = @ProductId)
+          AND SettingStatus <= CASE
                                        WHEN(OBJECT_NAME(@@PROCID) LIKE '%[_]xtest%'
                                             OR OBJECT_NAME(@@PROCID) LIKE '%[_]xpre%'
                                             OR OBJECT_NAME(@@PROCID) LIKE '%[_]uat[1-9]%')

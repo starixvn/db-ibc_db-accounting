@@ -54,8 +54,7 @@ EXEC [NAP_WinLimit_CustSettingUndefinedProductSettingSel] @Username = 'SPONUUS01
                        s.GroupId,
                        p.LevelId
                 FROM dbo.f_Nap_WinLimit_ProductSettingSel(0) p
-                     INNER JOIN dbo.WinLimit_GameGroupSetting s ON p.ProductId = s.ProductId
-                                                                   AND p.BetTypeId = s.BetTypeId;
+                     INNER JOIN dbo.WinLimit_GameGroupSetting s ON p.ProductId = s.ProductId;
      END;
      BEGIN -- @CustID, @CurrencyID.
          DECLARE @CustID INT, @CurrencyID INT, @AgentId INT, @SuperId INT;
