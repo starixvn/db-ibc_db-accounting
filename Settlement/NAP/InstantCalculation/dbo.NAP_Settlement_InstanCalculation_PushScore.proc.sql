@@ -37,8 +37,7 @@ BEGIN
 			WHERE matchid = @MatchId
 		)
 		AND @TypeId IN (101, 102)
-		AND ISNULL(@HomeScore, 0) > 0
-		AND ISNULL(@AwayScore, 0) > 0
+		AND (ISNULL(@HomeScore, 0) + ISNULL(@AwayScore, 0)) > 0
 	)
 	BEGIN
 		INSERT INTO dbo.ProviderResultDetail (
