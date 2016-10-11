@@ -1,6 +1,5 @@
-USE [bodb02]
-GO
-
+use bodb02
+GO 
 ALTER FUNCTION [dbo].[f_GroupBettype] ()
 RETURNS TABLE
 RETURN
@@ -15,6 +14,7 @@ RETURN
 		- 20160119@Sophia: PH AIO phase 1.2 [Redmine: #51029]
 		- 20160426@Sophia: Change to in line Func-High Availability Step 4 [Redmine: #55746]
 		- 20160712@Percy: PH AIO phase 2 [Redmine: #53152]
+		- 20161007@Sophia: PHAIO Phase 2 , add more couple of Parent - Child [Redmine: #65406]
 */
 	-------- Grouped bettype for Sporting Solution
 	SELECT 153 AS Bettype, 153 AS GroupTypeId
@@ -114,7 +114,13 @@ RETURN
 		,(140, 140), (442, 140) -- Highest Scoring Half
 		,(141, 141), (443, 141) -- Highest Scoring Half Home Team
 		,(142, 142), (444, 142) -- Highest Scoring Half Away Team
+
+		,(429, 429), (187, 429) -- Exact 2H Goals
+		,(412, 412), (179, 412) -- Exact 1H Goals
+
 	) PH (Bettype, GroupTypeId)
+
+
 GO 
 GRANT SELECT ON [dbo].[f_GroupBettype] TO [bodbDownlineNet]
 GO 
