@@ -18,12 +18,12 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel] @CustID      INT,
-                                                     @ProductID   TINYINT,
-                                                     @GroupId     INT,
-                                                     @UserID      INT           = 0,
-                                                     @IP          VARCHAR(20)   = '',
-                                                     @ErrorCode   INT           = 0 OUTPUT,
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel] @CustID       INT,
+                                                     @ProductID    TINYINT,
+                                                     @GroupId      INT,
+                                                     @UserID       INT           = 0,
+                                                     @IP           VARCHAR(20)   = '',
+                                                     @ErrorCode    INT           = 0 OUTPUT,
                                                      @ErrorMessage NVARCHAR(200) = '' OUTPUT
 AS
 
@@ -64,7 +64,8 @@ EXEC [NAP_WinLimit_CustSettingDel] @CustId = 1, @ProductId = 1, @GroupId = 1, @U
          BEGIN TRY
              DELETE dbo.WinLimit_CustGameSetting
              WHERE CustID = @CustID
-                   AND ProductID = @ProductID;
+                   AND ProductID = @ProductID
+                   AND GroupId = @GroupId;
          END TRY
          BEGIN CATCH
              SELECT @ErrorCode = 2,

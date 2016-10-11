@@ -115,6 +115,7 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                                                                              AND s.LevelID = p.LevelId
                                                                              AND s.SiteID = pc.SiteId
                                                                              AND s.ExchangeID = pc.CurrencyId
+                                                                             and s.GroupID = p.GroupId
          ORDER BY pc.CurrencyId,
                   p.LevelId;
      END;
