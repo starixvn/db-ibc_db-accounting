@@ -36,8 +36,14 @@ Revisions:
 
 Parameters Explanation:
 
-EXEC [NAP_WinLimit_CustSettingValidateInsertingUser] @Username = '166HK488' , @ExcludeTestData = 0
-	
+declare @p2 int
+set @p2=0
+declare @p4 nvarchar(200)
+set @p4=0
+exec NAP_WinLimit_CustSettingValidateInsertingUser @Username='166HK488',@ErrorCode=@p2 output,@ExcludeTestData=0,@ErrorMessage=@p4 output
+select @p2, @p4
+
+
 */
 
      SET NOCOUNT ON;
@@ -55,8 +61,8 @@ EXEC [NAP_WinLimit_CustSettingValidateInsertingUser] @Username = '166HK488' , @E
                AND c.roleid = 1;
          IF @CustID IS NULL
              BEGIN
-                 SELECT 3 AS ErrorCode,
-                        '' AS ErrorMessage;
+                 SELECT @ErrorCode = 3,
+                        @ErrorMessage = '';
                  RETURN;
              END;
      END;
@@ -81,8 +87,6 @@ EXEC [NAP_WinLimit_CustSettingValidateInsertingUser] @Username = '166HK488' , @E
                  RETURN;
              END;
      END;
-     SELECT @ErrorCode = 0,
-            @ErrorMessage = '';
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingValidateInsertingUser] TO [bodbAdminNet];
 GO
