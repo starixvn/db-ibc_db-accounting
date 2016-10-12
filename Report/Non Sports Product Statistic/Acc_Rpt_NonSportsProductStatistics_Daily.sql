@@ -57,7 +57,7 @@ AS
 				
 	Query exam: 
 
-	EXEC Acc_Rpt_NonSportsProductStatistics_Daily @WinlostDate = '2016-09-22' ,
+	EXEC Acc_Rpt_NonSportsProductStatistics_Daily @WinlostDate = '2016-10-03' ,
 	@ProductID='4,12,21,11,13,6,17,14,22,3,8,5', 
 	@Bettype='1101, 1102, 1103, 1104,1700, 1701, 1702, 1703,2401, 2402, 2403, 2404, 2405,1800, 1801, 1802, 1803, 1804,2001, 2002, 2003, 2004, 2005, 2006, 2007,2008, 2009,1900,1501,1515',
  	@LeagueID='15223, 50717',
@@ -70,7 +70,7 @@ SET NOCOUNT ON
 	DECLARE @WLDate DATETIME , @IsMBC BIT, @IsSite BIT
 	SELECT @WLDate = @WinlostDate
 
-	CREATE TABLE #Data ( ReportBy DATE,  CustId INT,
+	CREATE TABLE #Data (   ReportBy NVARCHAR(1000),  CustId INT,
 						   BetCount INT, CurrencyId INT, Currency NVARCHAR(50), 
 						   TotalBets MONEY, TotalBetsBase MONEY, 
 						   TotalWins MONEY, TotalWinsBase MONEY, 
@@ -80,7 +80,7 @@ SET NOCOUNT ON
 						   CompanyComm MONEY,  CompanyCommBase MONEY
 						   )
 
-	CREATE TABLE #Result ( ReportBy DATE, NoOfPlayers INT, 
+	CREATE TABLE #Result ( ReportBy NVARCHAR(1000), NoOfPlayers INT, 
 						   BetCount INT, CurrencyId INT, Currency NVARCHAR(50), 
 						   TotalBets MONEY, TotalBetsBase MONEY, 
 						   TotalWins MONEY, TotalWinsBase MONEY, 
@@ -248,7 +248,7 @@ SET NOCOUNT ON
 							   CompanyComm, CompanyCommBase							   
 							   )
 	
-		SELECT  b.WinlostDate AS ReportBy,B.CustID,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,B.CustID,  
 				COUNT(CASE WHEN b.StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -301,7 +301,7 @@ SET NOCOUNT ON
 							   CompanyComm, CompanyCommBase							   
 							   )
 	
-		SELECT  b.WinlostDate AS ReportBy,B.CustID,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,B.CustID,  
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -355,7 +355,7 @@ SET NOCOUNT ON
 							   CompanyComm, CompanyCommBase							   
 							   )
 	
-		SELECT  b.WinlostDate AS ReportBy,B.CustID,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,B.CustID,  
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -407,7 +407,7 @@ SET NOCOUNT ON
 						CompanyComm, CompanyCommBase							   
 					   )
 	
-		SELECT  b.WinlostDate AS ReportBy, b.CustId,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy, b.CustId,  
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
