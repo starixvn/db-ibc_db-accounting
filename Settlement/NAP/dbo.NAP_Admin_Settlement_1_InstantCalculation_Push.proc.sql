@@ -42,7 +42,7 @@ BEGIN
 	EXEC dbo.NAP_Settlement_InstantCalculation_Checking 
 		@MatchId 			= @MatchId
         , @HomeScore		= @HomeScore
-		, @AwayScore		= @HomeScore
+		, @AwayScore		= @AwayScore
 		, @Action 			= @Action
         , @ErrCode 			= @ErrCode OUTPUT
         , @ErrMsg 			= @ErrMsg OUTPUT
@@ -97,7 +97,6 @@ BEGIN
 	
 	IF @ErrCode <> 0
     BEGIN
-        SELECT	@ErrCode, @ErrMsg
         RETURN
     END
 	

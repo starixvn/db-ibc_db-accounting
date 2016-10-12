@@ -24,7 +24,7 @@ AS
 	- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
 	- 20160713@Patrick: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 	- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
-	- 20160930@Bobby: #65002 - Implement Auto CAL page info: update Instant match status
+	- 20160930@Bobby: #65002 - Implement Auto CAL page info: update Instant match status & enable link FGLG when existing parlay tickets
       
  Param explanation:  
 	@MatchCode: match code
@@ -130,6 +130,8 @@ BEGIN
 		, IsEnabledGoalRecordFT BIT
 		, LivePeriod	TINYINT
 		, IsHT			BIT
+		, livehomescore	INT
+		, liveawayscore	INT
 	)
 	--for instant match info
 	CREATE TABLE #InstMatchInfo (
@@ -204,6 +206,8 @@ BEGIN
 		, 0 AS IsEnabledGoalRecordFT
 		, mr.LivePeriod
 		, mr.IsHT
+		, m.livehomescore
+		, m.liveawayscore
 	FROM dbo.match m WITH (NOLOCK)
 		INNER JOIN dbo.match_remark mr WITH (NOLOCK) ON m.matchid = mr.matchid
 		INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
@@ -238,9 +242,19 @@ BEGIN
 		AND (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
 		AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)
 		
-		--check auto setting
-		AND (@AutoSetting = 0 OR ISNULL(m.AutoSetting, ISNULL(l.AutoSetting, 0)) = @AutoSetting)
-	
+	--check auto setting
+	IF (@AutoSetting > 0)
+	BEGIN
+		DELETE m
+		FROM #matchList m
+		WHERE 1 = (
+			CASE 
+				WHEN m.AutoSetting IS NULL AND @AutoSetting & m.AutoSettingForLeague <> @AutoSetting THEN 1
+				WHEN m.AutoSetting IS NOT NULL AND @AutoSetting & m.AutoSetting <> @AutoSetting THEN 1
+				ELSE 0
+			END
+		)
+	END
 	--CREATE NONCLUSTERED INDEX Ix_#matchList_MatchId ON #matchList(MatchId)
 
 	;WITH BetStatus AS (
@@ -277,12 +291,25 @@ BEGIN
 			
 		GROUP BY b.matchid
 	)
-
+	--for bettransm
+	, BetStatusFGLG AS ( 
+		SELECT b.matchid
+			, COUNT(b.matchid) AS BetCount
+			, SUM(CASE WHEN b.bettype IN (14,172,415,422,423,425) THEN 1 ELSE 0 END) AS IsExistFGLG
+			, SUM(CASE WHEN b.bettype  IN (127) THEN 1 ELSE 0 END) AS IsExistHTFGLG
+			, SUM(CASE WHEN b.bettype  IN (14,172,415,422,423,425) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
+			, SUM(CASE WHEN b.bettype  IN (127) AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+		FROM DBTXN.bodb02.dbo.bettransm b WITH(NOLOCK)
+		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList m WHERE b.matchid = m.matchid)
+			AND b.bettype IN (14,127,172,415,422,423,425)
+		GROUP BY b.matchid
+	)		
+	
 	UPDATE t
-	SET IsExistFGLG = CASE WHEN tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
-		, IsExistHTFGLG = CASE WHEN tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
-		, IsExistRunningFGLG = CASE WHEN tt.IsExistRunningFGLG > 0 OR tt.IsExistRunningUseGoalRecordFT > 0 THEN 1 ELSE 0 END
-		, IsExistRunningHTFGLG = CASE WHEN tt.IsExistRunningHTFGLG > 0 OR tt.IsExistRunningUseGoalRecordHT > 0 THEN 1 ELSE 0 END
+	SET IsExistFGLG = CASE WHEN (tt.IsExistFGLG > 0 OR fglg.IsExistFGLG > 0) THEN 1 ELSE 0 END
+		, IsExistHTFGLG = CASE WHEN (tt.IsExistHTFGLG > 0 OR fglg.IsExistHTFGLG > 0) THEN 1 ELSE 0 END
+		, IsExistRunningFGLG = CASE WHEN (tt.IsExistRunningFGLG > 0 OR fglg.IsExistRunningFGLG > 0 OR tt.IsExistRunningUseGoalRecordFT > 0) THEN 1 ELSE 0 END
+		, IsExistRunningHTFGLG = CASE WHEN (tt.IsExistRunningHTFGLG > 0 OR fglg.IsExistRunningHTFGLG > 0 OR tt.IsExistRunningUseGoalRecordHT > 0) THEN 1 ELSE 0 END
 		--, IsExistRunningResultandFirstTeamScore = CASE WHEN tt.IsExistRunningResultandFirstTeamScore > 0 THEN 1 ELSE 0 END
 		, IsExistRunningCorner = CASE WHEN tt.IsExistRunningCorner > 0 THEN 1 ELSE 0 END
 		, IsExistRunningHTCorner = CASE WHEN tt.IsExistRunningHTCorner > 0 THEN 1 ELSE 0 END
@@ -291,37 +318,7 @@ BEGIN
 		, BetCount = tt.BetCount
 	FROM #matchList t
 		INNER JOIN BetStatus tt ON t.matchid = tt.matchid
-
-	--for bettransm
-	;WITH BetStatusM AS (
-		SELECT bm.matchid
-			--, SUM(CASE WHEN bm.bettype = 14 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistFGLG
-			--, SUM(CASE WHEN bm.bettype = 127 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistHTFGLG
-			--, SUM(CASE WHEN bm.bettype = 14 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
-			--, SUM(CASE WHEN bm.bettype = 127 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
-			, SUM(CASE WHEN f.GroupId = 4 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistFGLG
-			, SUM(CASE WHEN f.GroupId = 3 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsExistHTFGLG
-			, SUM(CASE WHEN f.GroupId = 4 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningFGLG
-			, SUM(CASE WHEN f.GroupId = 3 AND StatusId = 0 THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
-			--, SUM(CASE WHEN f.GroupId = 1 AND f.IsUsedGoalRecordValue = 1 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsEnabledGoalRecordHT
-			--, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 AND StatusId NOT IN (101, 102, 103) THEN 1 ELSE 0 END) AS IsEnabledGoalRecordFT
-		FROM DBTXN.bodb02.dbo.bettransm bm WITH(NOLOCK)
-			INNER JOIN dbo.f_Set_GetGroupBettypes() f ON GroupId IN (3, 4) AND bm.bettype = f.BetType
-		WHERE EXISTS (SELECT TOP 1 1 FROM #matchList m WHERE bm.matchid = m.matchid)
-			--AND bettype IN (14, 127)--FGLG
-			--AND StatusId NOT IN (101, 102, 103)
-		GROUP BY bm.matchid
-	)
-
-	UPDATE t
-	SET IsExistFGLG = CASE WHEN t.IsExistFGLG = 1 OR tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
-		, IsExistHTFGLG = CASE WHEN t.IsExistHTFGLG = 1 OR tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
-		, IsExistRunningFGLG = CASE WHEN t.IsExistRunningFGLG = 1 OR tt.IsExistRunningFGLG > 0 THEN 1 ELSE 0 END
-		, IsExistRunningHTFGLG = CASE WHEN t.IsExistRunningHTFGLG = 1 OR tt.IsExistRunningHTFGLG > 0 THEN 1 ELSE 0 END
-		--, IsEnabledGoalRecordHT = CASE WHEN tt.IsEnabledGoalRecordHT > 0 THEN 1 ELSE 0 END
-		--, IsEnabledGoalRecordFT = CASE WHEN tt.IsEnabledGoalRecordFT > 0 THEN 1 ELSE 0 END
-	FROM #matchList t
-		INNER JOIN BetStatusM tt ON t.matchid = tt.matchid
+		LEFT JOIN BetStatusFGLG fglg ON t.matchid = fglg.matchid
 
 	SET @Today = DATEADD(HH, -1, GETDATE())
 
@@ -430,13 +427,13 @@ BEGIN
 			AND t.eventstatus IN ('running')
 		
 		;WITH InstMatchConfirm AS (
-			SELECT MatchId
-				,HomeValue
-				,AwayValue
-				,StatusId
-				,CalculationType
+			SELECT temp.MatchId
+				,temp.HomeValue
+				,temp.AwayValue
+				,temp.StatusId
+				,temp.CalculationType
 			FROM (
-				SELECT m.MatchId
+				SELECT prd.MatchId
 					, prd.HomeValue
 					, prd.AwayValue
 					, 1 AS StatusId --to Confirm
@@ -445,10 +442,16 @@ BEGIN
 				FROM #InstMatchInfo m
 					INNER JOIN dbo.ProviderResultDetail prd WITH(NOLOCK)
 					ON m.matchid = prd.matchID
-					
 				WHERE prd.TypeId IN (101, 102)
 			) AS temp
+				LEFT JOIN dbo.AutoPayoutResult aps WITH(NOLOCK)
+				ON temp.matchid = aps.matchID
+				AND temp.CalculationType = aps.CalculationType
+				AND temp.HomeValue 	= aps.HomeValue
+				AND temp.AwayValue 	= aps.AwayValue
+				
 			WHERE temp.RowIdx = 1
+				AND ISNULL(aps.StatusId, 3) = 3 --Not confirm or FAILED to re-confirm
 		)
 		UPDATE d
 		SET InstantHomeScore			= u.HomeValue
@@ -464,7 +467,7 @@ BEGIN
 			SELECT m.MatchId
 				, aps.HomeValue
 				, aps.AwayValue
-				, 1 AS StatusId --to Confirm
+				, 2 AS StatusId -- has confirmed
 				, aps.CalculationType
 			FROM #InstMatchInfo m
 				INNER JOIN dbo.AutoPayoutResult aps WITH(NOLOCK)
@@ -530,6 +533,8 @@ BEGIN
 		, IsEnabledGoalRecordFT
 		
 		/*Instant match info*/
+		, m.livehomescore
+		, m.liveawayscore
 		, m.IsHT
 		, m.LivePeriod
 		, ISNULL(im.InstantHomeScore, '') AS InstantHomeScore

@@ -30,6 +30,7 @@ AS
 		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		- 20141003@Bobby: #65026 - Correct SDT for bettype OU[3,8]
+		- 20161011@Bobby: #65515 - Enable SDT for bet types (3,8)
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -159,7 +160,7 @@ BEGIN
                     ELSE 0
                 END 
             AND hdp1 <= CASE WHEN @bettype IN (8,403,404,426,143) AND (@IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1)THEN @comparedValue  -- @comparedValue = @totalht - 0.5
-                             WHEN @bettype <> 8 AND @IsSettleAbandonedMatchIBC = 1 THEN @comparedValue 
+                             WHEN @IsSettleAbandonedMatchIBC = 1 THEN @comparedValue 
                              ELSE -1
                         END
     END -- END settle determined ticket

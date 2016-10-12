@@ -1,5 +1,7 @@
 ALTER PROCEDURE [dbo].[NAP_Admin_InstantCalculate_3]
-	@strTransIds 	VARCHAR(MAX)
+	@matchid 		INT
+    ,@action		VARCHAR(10)
+	,@strTransIds 	VARCHAR(MAX)
 AS
 /*    
 	Creator: 20161004@Bobby
