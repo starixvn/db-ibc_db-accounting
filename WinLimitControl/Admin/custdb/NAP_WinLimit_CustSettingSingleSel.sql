@@ -45,7 +45,7 @@ EXEC [NAP_WinLimit_CustSettingSingleSel] @CustId=18766097, @ProductId=6, @GroupI
             ProductId,
             GroupId,
             LevelId,
-            MaxWinLimit
+            MaxWinLimit_RM
      FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
      WHERE CustID = @CustID
            AND ProductID = @ProductID
