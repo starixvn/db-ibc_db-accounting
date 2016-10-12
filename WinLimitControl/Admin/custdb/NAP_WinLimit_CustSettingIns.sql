@@ -62,7 +62,7 @@ EXEC [NAP_WinLimit_CustSettingIns]
               ProductID,
               GroupId,
               LevelID,
-              MaxWinLimit
+              MaxWinLimit_RM
              )
              VALUES
              (@CustId,
@@ -90,7 +90,8 @@ EXEC [NAP_WinLimit_CustSettingIns]
          SET @LogSPData = @LogSPData+'" BetTypeId ="'+CONVERT(VARCHAR(20), @GroupId);
          SET @LogSPData = @LogSPData+'" SiteId ="'+CONVERT(VARCHAR(20), @SiteId);
          SET @LogSPData = @LogSPData+'" CurrencyId ="'+CONVERT(VARCHAR(20), @CurrencyId);
-         SET @LogSPData = @LogSPData+'" LevelId'+CONVERT(VARCHAR(20), @LevelId)+'="'+CONVERT(VARCHAR(20), @MaxWinLimit);
+         SET @LogSPData = @LogSPData+'" LevelId'+CONVERT(VARCHAR(20), @LevelId);
+         SET @LogSPData = @LogSPData+'" MaxWinLimit'+CONVERT(VARCHAR(20), @MaxWinLimit);
          SET @LogSPData = @LogSPData+'" UserID ="'+CONVERT(VARCHAR(20), @UserID);
          SET @LogSPData = @LogSPData+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
          BEGIN TRY

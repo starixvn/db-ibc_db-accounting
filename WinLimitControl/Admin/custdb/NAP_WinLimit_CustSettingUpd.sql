@@ -49,7 +49,7 @@ Parameters Explanation:
      SELECT @StartRun = GETDATE();
      BEGIN -- SAVE State
 
-         SELECT @MaxWinLimitOld = MaxWinLimit
+         SELECT @MaxWinLimitOld = MaxWinLimit_RM
          FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
          WHERE CustID = @CustID
                AND ProductID = @ProductID
@@ -61,7 +61,7 @@ Parameters Explanation:
          BEGIN TRY
              UPDATE dbo.WinLimit_CustGameSetting WITH(ROWLOCK, UPDLOCK)
                SET
-                   MaxWinLimit = @MaxWinLimit
+                   MaxWinLimit_RM = @MaxWinLimit
              WHERE CustID = @CustID
                    AND ProductID = @ProductID
                    AND Groupid = @GroupId

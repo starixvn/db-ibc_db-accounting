@@ -50,11 +50,11 @@ EXEC [NAP_WinLimit_CustSettingDel] @CustId = 1, @ProductId = 1, @GroupId = 1, @U
      BEGIN -- SAVE Old State
          DECLARE @OldState TABLE
          (LevelId     INT,
-          MaxWinLimit MONEY
+          MaxWinLimit_RM MONEY
          );
          INSERT INTO @OldState
                 SELECT LevelId,
-                       MaxWinLimit
+                       MaxWinLimit_RM
                 FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
                 WHERE CustID = @CustID
                       AND ProductID = @ProductID
@@ -89,12 +89,11 @@ EXEC [NAP_WinLimit_CustSettingDel] @CustId = 1, @ProductId = 1, @GroupId = 1, @U
          )
              BEGIN
                  SELECT @LevelId = LevelId,
-                        @MaxWinLimitOld = MaxWinLimit
+                        @MaxWinLimitOld = MaxWinLimit_RM
                  FROM @OldState;
                  SET @LogSPData = @LogSPData+'" MaxWinLimitLevel'+CONVERT(VARCHAR(20), @LevelId)+'="'+CONVERT(VARCHAR(20), @MaxWinLimitOld);
                  DELETE @OldState
                  WHERE LevelId = @LevelId
-                       AND MaxWinLimit = @MaxWinLimitOld;
              END;
          SET @LogSPData = @LogSPData+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
          SET @LogSPData = @LogSPData+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';

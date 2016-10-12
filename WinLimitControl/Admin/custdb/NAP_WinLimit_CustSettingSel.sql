@@ -65,7 +65,7 @@ EXEC [NAP_WinLimit_CustSettingSel] @ExcludeTestCurrency = 0
                 p.ProductId,
                 cs.GroupId,
                 cs.LevelID,
-                ISNULL(cs.MaxWinLimit, 0) MaxWinLimit
+                ISNULL(cs.MaxWinLimit_RM, 0) MaxWinLimit
          FROM dbo.WinLimit_CustGameSetting cs WITH (NOLOCK)
               INNER JOIN @Products p ON cs.ProductId = p.ProductId
                                         AND cs.LevelId = p.LevelId
