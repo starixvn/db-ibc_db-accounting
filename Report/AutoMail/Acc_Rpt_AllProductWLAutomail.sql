@@ -25,6 +25,7 @@ AS
 		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
 		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
+		- 20161013@Percy: Apply NG2 [RedmineID: #64117]
 		 
 	Param's Explanation:
 	
@@ -226,6 +227,7 @@ BEGIN
 							WHEN Sporttype = 44 THEN 20174356
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20664406
 							WHEN bettype BETWEEN 4001 AND 7999 THEN 21535688
+							WHEN bettype BETWEEN 2501 AND 2699 THEN 23765766
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -257,6 +259,7 @@ BEGIN
 							WHEN Sporttype = 44 THEN 20174451
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20805826
 							WHEN bettype BETWEEN 4001 AND 7999 THEN 21526102
+							WHEN bettype BETWEEN 2501 AND 2699 THEN 23766923
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
