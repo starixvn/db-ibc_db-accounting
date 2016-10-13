@@ -31,6 +31,9 @@ Parameters Explanation:
      @SiteId: Site Or Licensee ID.  
      @IsCreditSite: Is Credit Site.  
      @ExcludeTestCurrency: Exclude used Currency.  
+     
+Example:
+EXEC [NAP_WinLimit_CurrencySel] @SiteId=32, @IsCreditSite = 1, @ExcludeTestCurrency = 0
 */
 
      SET NOCOUNT ON;
@@ -47,6 +50,9 @@ Parameters Explanation:
      ELSE
      IF @IsCreditSite = 1 -- Currencies for credit site
          BEGIN
+             DECLARE @Dual TABLE(DUMMY VARCHAR(1));
+             INSERT INTO @Dual
+             VALUES('X');
              SELECT 'MYR (RM)' Name,
                     2 Id
              UNION
@@ -121,6 +127,11 @@ Parameters Explanation:
              UNION
              SELECT 'INR (INR)',
                     61
+             UNION
+             SELECT '(UUS))',
+                    20
+             FROM @Dual
+             WHERE @ExcludeTestCurrency = 0
              ORDER BY Name;
          END;
      ELSE -- Currencies for deposit site
