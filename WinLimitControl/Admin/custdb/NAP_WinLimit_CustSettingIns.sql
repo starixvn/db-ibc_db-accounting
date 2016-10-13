@@ -73,6 +73,12 @@ EXEC [NAP_WinLimit_CustSettingIns]
              );
              SELECT @ErrorCode = 0,
                     @ErrorMessage = '';
+             EXEC dbo.Task_Winlimit_CurrencyMaxWinLimitUpd
+                  @IsCurrencySetting = 0,
+                  @CustID = @CustID,
+                  @ProductID = @ProductId,
+                  @GroupId = @GroupId,
+                  @LevelID = @LevelId;
          END TRY
          BEGIN CATCH
              SELECT @ErrorCode = 5,

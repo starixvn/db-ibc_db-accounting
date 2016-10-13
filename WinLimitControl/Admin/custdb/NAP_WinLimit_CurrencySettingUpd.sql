@@ -90,6 +90,13 @@ Parameters Explanation:
                        AND s.ExchangeID = @CurrencyId
                        AND s.SiteID = @SiteId
                        AND s.LevelID = @LevelId;
+                 EXEC Task_Winlimit_CurrencyMaxWinLimitUpd
+                      @IsCurrencySetting = 1,
+                      @ProductID = @ProductId,
+                      @GroupId = @GroupId,
+                      @CurrencyId = @CurrencyId,
+                      @SiteID = @SiteId,
+                      @LevelID = @LevelId;
              END TRY
              BEGIN CATCH
                  SELECT @ErrorCode = 500,
@@ -157,6 +164,13 @@ Parameters Explanation:
                   @IsBlockedPlaceBet,
                   @IsBlockedTransfer
                  );
+                 EXEC Task_Winlimit_CurrencyMaxWinLimitUpd
+                      @IsCurrencySetting = 1,
+                      @ProductID = @ProductId,
+                      @GroupId = @GroupId,
+                      @CurrencyId = @CurrencyId,
+                      @SiteID = @SiteId,
+                      @LevelID = @LevelId;
              END TRY
              BEGIN CATCH
                  SELECT @ErrorCode = 500,

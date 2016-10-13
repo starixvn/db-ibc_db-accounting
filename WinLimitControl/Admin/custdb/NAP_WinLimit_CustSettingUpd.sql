@@ -66,6 +66,12 @@ Parameters Explanation:
                    AND ProductID = @ProductID
                    AND Groupid = @GroupId
                    AND LevelId = @LevelId;
+             EXEC Task_Winlimit_CurrencyMaxWinLimitUpd
+                  @IsCurrencySetting = 0,
+                  @CustID = @CustID,
+                  @ProductID = @ProductId,
+                  @GroupId = @GroupId,
+                  @LevelID = @LevelId;
          END TRY
          BEGIN CATCH
              SELECT @ErrorCode = 4,
