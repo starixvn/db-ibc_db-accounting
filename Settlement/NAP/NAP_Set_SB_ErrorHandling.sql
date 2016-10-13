@@ -79,6 +79,7 @@ BEGIN
 			, @StatusId = 3 --failed
 			, @IsIncludedUpdateMatch = 0
 		
+		-- Re-update confirmed instant score
 		SELECT TOP(1)
 			@fth = CASE WHEN @TypeId = 102 THEN HomeValue ELSE 0 END
 			, @fta = CASE WHEN @TypeId = 102 THEN AwayValue ELSE 0 END
