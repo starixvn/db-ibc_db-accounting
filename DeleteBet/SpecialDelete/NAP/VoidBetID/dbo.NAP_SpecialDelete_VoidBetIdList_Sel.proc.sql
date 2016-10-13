@@ -1,3 +1,12 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel]    Script Date: 09/19/2016 14:06:00 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.NAP_SpecialDelete_VoidBetIdList_Sel    Script Date: 9/19/2016 2:01:29 PM ******/
+/****** Object:  Stored Procedure dbo.NAP_SpecialDelete_VoidBetIdList_Sel    Script Date: 9/19/2016 9:24:10 AM ******/
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] 
 	@CustID			INT				= NULL 	
 	,@TransIds		VARCHAR(MAX)	= NULL 
@@ -25,7 +34,8 @@ AS
 		- 20160314@Bobby: #53935 - Update changes for multiple bet trade transaction
 		- 20160413@Bobby: #55893 - Update change request for grouping tickets
 		- 20160714@Kathy: change the order of result: groupname, groupid, transid
-		- 20160816@Bobby: #62527 - Update BT's info for showing bet list		
+		- 20160816@Bobby: #62527 - Update BT's info for showing bet list	
+		- 20160914@Kent: Add logic for suporting void system parlay [Redmine:#63202]	
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -125,7 +135,7 @@ BEGIN
 			AND 1 = CASE 
 				WHEN (b.bettype BETWEEN 801 AND 806 AND b.statusID NOT IN (0, 101, 102)) THEN 1 
 				WHEN (b.bettype < 19001
-						AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
+						AND b.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
 						AND b.bettype NOT BETWEEN 801 AND 806-- MG
 						AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 						AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
@@ -353,7 +363,7 @@ BEGIN
 				
 		WHERE	b.winlostdate >= @FromDate				
 			AND b.bettype < 19001
-			AND b.bettype NOT IN (31,32,33,71,72,73,29)	-- NOT IN [Racing, Casino,SystemParlay]
+			AND b.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
 			AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
@@ -361,7 +371,7 @@ BEGIN
 	END
 	
 	-- UPDATE eventtype = 1
-	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype NOT IN (9)))
+	IF(EXISTS(SELECT TOP 1 1 FROM #data WHERE bettype NOT IN (9, 29)))
 	BEGIN
 		UPDATE d
 		SET matchcode 	= m.matchcode
@@ -376,7 +386,7 @@ BEGIN
 			INNER JOIN dbo.match m WITH (NOLOCK) 
 			ON	d.matchid = m.matchid
 			
-		WHERE d.bettype NOT IN (9)
+		WHERE d.bettype NOT IN (9, 29)
 	END
 	
 	-- UPDATE eventtype = 2 [Outright bettype]
@@ -420,7 +430,7 @@ BEGIN
 	--- Remove invalid sporttype	
 	DELETE 
 	FROM #Data
-	WHERE bettype NOT IN (9)
+	WHERE bettype NOT IN (9, 29)
 		AND (
 			sporttype IS NULL
 			OR bettype = 500 /*charge comm*/
