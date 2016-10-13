@@ -1,4 +1,5 @@
-ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit]
+ 
+CREATE PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit]
 	@FromDate DATE,
 	@ToDate	DATE
 AS  
@@ -9,6 +10,7 @@ AS
     DB: DBEXT/bodb02  
    
     Revisions:
+		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
 	Param's Explanation:   
 */  
 BEGIN  
@@ -178,7 +180,7 @@ BEGIN
 						THEN (-b.WinLoss - b.WinLossA - b.WinLossS - b.WinLossM - b.CommissionS) * p.Rate
 						ELSE -b.WinLoss * p.Rate 
 				END) AmtLicensee
-	FROM	bodb_licensee.dbo.rpt_Betting b WITH (NOLOCK)
+	FROM	bodb_licenseereport.dbo.rpt_Betting b WITH (NOLOCK)
 			INNER JOIN @PartyChargeInfo p ON b.SiteID = p.LicenseeId 
 			AND b.rptDate BETWEEN p.FromDate AND p.ToDate
 	WHERE	b.rptDate BETWEEN @FDate AND @TDate
@@ -341,6 +343,14 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit] TO [bodbAdminNet]
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit] TO vnteam
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit] TO [bodbAdminNet]
+GO 
