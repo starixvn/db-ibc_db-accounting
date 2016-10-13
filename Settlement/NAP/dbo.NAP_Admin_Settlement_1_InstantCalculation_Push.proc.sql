@@ -37,7 +37,12 @@ BEGIN
 								WHEN @Action = 'INST-FT' THEN 102
 								ELSE 0
 							END
-												
+	SELECT @sporttype 	= m.sporttype
+		, @leagueid 	= m.leagueid
+		, @matchcode	= m.matchcode
+	FROM DBPRO.BODB02.dbo.match m WITH(NOLOCK)
+	WHERE m.matchid = @matchid
+	
 	-- checking for instant match validation
 	EXEC dbo.NAP_Settlement_InstantCalculation_Checking 
 		@MatchId 			= @MatchId

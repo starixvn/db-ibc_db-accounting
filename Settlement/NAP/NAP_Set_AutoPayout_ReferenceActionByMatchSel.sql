@@ -10,7 +10,7 @@ AS
 	DB: DB052/bodb_CustomerLog
 	
 	Revision:	
-		- 20160930@Bobby: #65002 - Add HomeValue & AwayValue info
+		- 20160930@Bobby: #65002 - Add HomeScore & AwayScore info
       
 	Param's Explanation:
 		
@@ -31,11 +31,11 @@ BEGIN
 		, CASE 	WHEN ActionID = 178 THEN hthomescore 
 				WHEN ActionID = 179 THEN finalhomescore 
 				ELSE 0 
-		END AS HomeValue
+		END AS HomeScore
 		, CASE 	WHEN ActionID = 178 THEN htawayscore 
 				WHEN ActionID = 179 THEN finalawayscore 
 				ELSE 0 
-		END AS AwayValue
+		END AS AwayScore
 		
 	FROM dbo.UserLog_Settle l WITH(NOLOCK)
 	WHERE EXISTS (SELECT TOP 1 1 FROM MatchTmp f WHERE f.MatchId = l.MatchID)

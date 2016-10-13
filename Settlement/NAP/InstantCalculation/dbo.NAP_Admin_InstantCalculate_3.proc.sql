@@ -113,6 +113,7 @@ BEGIN
 		INNER JOIN #instantTicket t
 		ON b.transid = t.transid
 	
+	DROP TABLE #instantTicket;
 	RETURN;
 	
 END
