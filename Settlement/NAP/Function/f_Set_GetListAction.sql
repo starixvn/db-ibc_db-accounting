@@ -8,13 +8,15 @@ AS
 	Task: Build up half time bettype list
 	DB: DBTRANS/BODB02
 	Revisions:
-			select * from dbo.f_Set_GetListAction() order by actionid
+		-20161013@Bobby: #65178 - Implement Instant calculation process
+			
 	Parameters Explanation:	
 		@Mode: 1: For Single ticket - Manual
 			   2: For FGLG -  Manual
 			   3: For Corner - Manual
 			   4: For Parlay - Manual
 			   5: For Single ticket - Auto payout
+			   6: For Single ticket - Instant Calculation
 
 			   
 */
@@ -49,8 +51,11 @@ RETURN (
 
 	--Auto payout
 	SELECT 5 AS Mode, 'CAL-FT' AS ActionName, 158 AS ActionId UNION ALL
-	SELECT 5 AS Mode, 'CAL-HT' AS ActionName, 157 AS ActionId
-
+	SELECT 5 AS Mode, 'CAL-HT' AS ActionName, 157 AS ActionId UNION ALL
+	
+	--Instant Calculation
+	SELECT 6 AS Mode, 'INST-HT' AS ActionName, 178 AS ActionId UNION ALL
+	SELECT 6 AS Mode, 'INST-FT' AS ActionName, 179 AS ActionId
 )
 GO
 

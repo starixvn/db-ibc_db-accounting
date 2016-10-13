@@ -247,13 +247,14 @@ BEGIN
 	BEGIN
 		DELETE m
 		FROM #matchList m
-		WHERE 1 = (
+		WHERE @AutoSetting & m.AutoSetting <> @AutoSetting
+		/*1 = (
 			CASE 
 				WHEN m.AutoSetting IS NULL AND @AutoSetting & m.AutoSettingForLeague <> @AutoSetting THEN 1
 				WHEN m.AutoSetting IS NOT NULL AND @AutoSetting & m.AutoSetting <> @AutoSetting THEN 1
 				ELSE 0
 			END
-		)
+		)*/
 	END
 	--CREATE NONCLUSTERED INDEX Ix_#matchList_MatchId ON #matchList(MatchId)
 

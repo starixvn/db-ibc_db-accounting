@@ -15,13 +15,16 @@ AS
 	DB: DBTXN/bodb02
 	
 	Revisions:
+		-20161013@Bobby: #65178 - Implement Instant calculation process
 */
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @TypeId TINYINT, @Remark VARCHAR(500), @Mode TINYINT, @ActionId INT
 		, @fth INT, @fta INT, @hth INT, @hta INT, @goalrecord NVARCHAR(50), @betstatus NVARCHAR(50)
 
-	SELECT @Mode = CASE WHEN CHARINDEX('NAP_Admin_Settlement_1_AutoPayout', @sqlCommand) > 0 THEN 5
+	SELECT @Mode = CASE 
+						WHEN CHARINDEX('NAP_Admin_Settlement_1_InstantCalculation', @sqlCommand) > 0 THEN 6
+						WHEN CHARINDEX('NAP_Admin_Settlement_1_AutoPayout', @sqlCommand) > 0 THEN 5
 						WHEN CHARINDEX('NAP_Admin_Settlement_FGLG', @sqlCommand) > 0
 							OR CHARINDEX('NAP_Admin_Settlement_Refund_FGLG', @sqlCommand) > 0 THEN 2
 						WHEN CHARINDEX('NAP_Admin_Settlement_Corner', @sqlCommand) > 0 THEN 3
@@ -39,7 +42,18 @@ BEGIN
 
 	IF @ActionId IS NULL
 		RETURN
-
+	
+	SELECT @Remark = 'Failed: ' + @ErrMsg
+		, @fth = m.finalhomescore
+		, @fta = m.finalawayscore
+		, @hth = m.hthomescore
+		, @hta = m.htawayscore
+		, @GoalRecord = m.GoalRecord
+		, @BetStatus = m.betstatus
+	FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
+	WHERE m.matchid = @MatchId
+	
+	--Auto payout
 	IF @Mode = 5
 	BEGIN
 		SELECT @TypeId = CASE WHEN @Action = 'CAL-HT' THEN 1
@@ -52,17 +66,31 @@ BEGIN
 			, @StatusId = 3 --failed
 			, @IsIncludedUpdateMatch = 0
 	END
+	--Instant Calculation
+	IF @Mode = 6
+	BEGIN
+		SELECT @TypeId = CASE WHEN @Action = 'INST-HT' THEN 101
+							WHEN @Action = 'INST-FT' THEN 102
+						ELSE -1 END
 
-	SELECT @Remark = 'Failed: ' + @ErrMsg
-		, @fth = m.finalhomescore
-		, @fta = m.finalawayscore
-		, @hth = m.hthomescore
-		, @hta = m.htawayscore
-		, @GoalRecord = m.GoalRecord
-		, @BetStatus = m.betstatus
-	FROM DBPRO.BODB02.dbo.match m WITH (NOLOCK)
-	WHERE m.matchid = @MatchId
-
+		--update status for autopayout result
+		EXEC DBPRO.bodb02.dbo.NAP_Set_AutoPayoutResultUpd @MatchId = @MatchId
+			, @TypeId = @TypeId
+			, @StatusId = 3 --failed
+			, @IsIncludedUpdateMatch = 0
+		
+		SELECT TOP(1)
+			@fth = CASE WHEN @TypeId = 102 THEN HomeValue ELSE 0 END
+			, @fta = CASE WHEN @TypeId = 102 THEN AwayValue ELSE 0 END
+			, @hth = CASE WHEN @TypeId = 101 THEN HomeValue ELSE 0 END
+			, @hta = CASE WHEN @TypeId = 101 THEN AwayValue ELSE 0 END
+		FROM DBPRO.BODB02.dbo.AutoPayoutResult WITH (NOLOCK)
+		WHERE matchid = @MatchId
+			AND CalculationType = @TypeId
+		ORDER BY CreatedDate DESC
+	
+	END
+	
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @userid = @AdminId
 			, @matchid = @matchid
