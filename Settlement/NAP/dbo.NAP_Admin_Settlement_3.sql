@@ -24,6 +24,7 @@ AS
 	   - 20160314@Patrick: Support auto-payout [Redmine: #53262]
 	   - 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
        - 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
+	   - 20160824@Bobby: #62921 - Include FGLG (14,127) bet types
        
     Param's Explanation:
     • @Mode:
@@ -85,10 +86,10 @@ BEGIN
             ,@FTLCorner            	VARCHAR(10) =''
             ,@HTFCorner            	VARCHAR(10) =''
             ,@HTLCorner            	VARCHAR(10) =''     
-            ,@strBettypes VARCHAR(MAX)
+            ,@strBettypes 			VARCHAR(MAX)
             
             ,@betcount_501			INT = 0
-
+	
     SELECT	@fth = FinalHomeScore
 			,@fta = FinalAwayScore
 			,@hth = HTHomeScore
@@ -100,8 +101,44 @@ BEGIN
 			,@matchCode = ISNULL(matchCode, '')
     FROM	DBPRO.BODB02.dbo.Match WITH (NOLOCK)
     WHERE	matchid = @matchid
-
-    IF @Sporttype = 1 
+	
+	BEGIN -- for FGLG declaration
+	DECLARE @FGLG1 				VARCHAR(10)
+		, @FGLG2 				VARCHAR(10)
+		, @FLString 			VARCHAR(10)
+		, @HT_FGLG1 			VARCHAR(10)
+		, @HT_FGLG2 			VARCHAR(10)
+		, @HT_FLString 			VARCHAR(10)
+		, @temp_betstatus 		NVARCHAR(50)
+		, @goaldiff				SMALLMONEY
+		
+	SELECT @FGLG1 			= ''
+		, @FGLG2 			= ''
+		, @HT_FGLG1 		= ''
+		, @HT_FGLG2 		= ''
+		, @temp_betstatus 	= @betstatus
+		, @goaldiff 		= 0
+	
+	IF CHARINDEX('1FL:', @temp_betstatus) > 0 
+	BEGIN
+		SELECT @HT_FLString = SUBSTRING(@temp_betstatus, CHARINDEX('1FL:',@temp_betstatus) + 4, 3)
+			, @temp_betstatus = REPLACE(@temp_betstatus, SUBSTRING(@temp_betstatus, CHARINDEX('1FL:', @temp_betstatus), 7),'')
+			, @HT_FGLG1 = CASE @HT_FLString WHEN '0-0' THEN '0:0'
+							ELSE LEFT(@HT_FLString, 1) + ':1' END
+			, @HT_FGLG2 = CASE @HT_FLString WHEN '0-0' THEN ''
+							ELSE RIGHT(@HT_FLString, 1) + ':2' END
+	END
+	IF CHARINDEX('FL:', @temp_betstatus) > 0
+	BEGIN
+		SELECT @FLString = SUBSTRING(@temp_betstatus, CHARINDEX('FL:',@temp_betstatus) + 3, 3)
+			, @FGLG1 = CASE @FLString WHEN '0-0' THEN '0:0'
+							ELSE LEFT(@FLString,1) + ':1' END
+			, @FGLG2 = CASE @FLString WHEN '0-0' THEN ''
+							ELSE RIGHT(@FLString,1) + ':2' END
+	END
+	END
+    
+	IF @Sporttype = 1 
     BEGIN
 
         SELECT  @fthCorners		= ISNULL(MAX(CASE WHEN ResourceID ='04' THEN HomeValue ELSE 0 END),0)
@@ -231,7 +268,10 @@ BEGIN
 		SELECT Bettype
 		FROM	dbo.f_Set_GetGroupBettypes()
 		WHERE	@mode IN ('CAL-HT', 'CAL') 
-				AND GroupId IN (1,5) -- HT + HT Corner
+				AND 1 = CASE 
+							WHEN @IsAutoCalculatePage = 1 AND GroupId IN (1,5) THEN 1 
+							WHEN @IsAutoCalculatePage = 0 AND GroupId IN (1,3,5) THEN 1 
+							ELSE 0 END -- HT + HT Corner + HT FGLG
 				AND 1 = CASE
 							WHEN @isExcludeCorner = 1 AND GroupId = 5 THEN 0 -- exclude HT corner
 							ELSE 1
@@ -240,7 +280,10 @@ BEGIN
 		SELECT Bettype
 		FROM	dbo.f_Set_GetGroupBettypes()
 		WHERE	@mode IN ('CAL-FT', 'CAL') 
-				AND GroupId IN (2,6) -- FT, FT Corner
+				AND 1 = CASE 
+							WHEN @IsAutoCalculatePage = 1 AND GroupId IN (2,6) THEN 1 
+							WHEN @IsAutoCalculatePage = 0 AND GroupId IN (2,4,6) THEN 1 
+							ELSE 0 END -- FT, FT Corner + FT FGLG
 				AND 1 = CASE
 							WHEN @isRefundHT = 1 AND Is3x30 = 1 AND GroupId = 2 THEN 0 -- If this match has been refund HT --> refund all bettypes related to 2nd result 
 							WHEN @isExcludeCorner = 1 AND GroupId = 6 THEN 0 -- exclude FT corner
@@ -255,8 +298,21 @@ BEGIN
 		FROM	bettrans WITH(NOLOCK)
 		WHERE 	matchid = @matchid
 		GROUP BY bettype
-	)b 
+		
+		UNION ALL
+		SELECT	bettype
+		FROM	bettransm WITH(NOLOCK)
+		WHERE 	matchid = @matchid
+			AND 1 = CASE 
+					WHEN @mode IN ('CAL-HT') AND bettype IN (127) THEN 1 
+					WHEN @mode IN ('CAL-FT') AND bettype IN (14) THEN 1 
+					WHEN @mode IN ('CAL') AND bettype IN (14,127) THEN 1 
+				ELSE 0 END
+			AND @IsAutoCalculatePage = 0
+		GROUP BY bettype
+	) AS b 
 	WHERE b.bettype IN (SELECT bettype FROM cteBettypes)
+	GROUP BY bettype
 	
     -- call execrep SP
 	EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
@@ -309,6 +365,16 @@ BEGIN
         ,@isRefundHT = @isRefundHT      
         ,@isExcludeCorner = @isExcludeCorner  
 		,@strBettypes	   = @strBettypes
+		
+		-- including FGLG
+		,@HT_FGLG1 = @HT_FGLG1
+		,@HT_FGLG2 = @HT_FGLG2
+		,@FGLG1 = @FGLG1
+		,@FGLG2 = @FGLG2
+		,@goaldiff = @goaldiff
+		
+		
+		-- using by service broker
 		,@CalledByBrokerService = 0 -- this one is called by NAP_Admin_Settlement_3 instead :)
 					   
         --Cricket: Charged Commision

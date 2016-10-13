@@ -46,6 +46,7 @@ AS
 		- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 		- 20160613@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+		- 20160824@Bobby: #62921 - Include FGLG (14,127) bet types into settle determindable
 
 	Param's Explanation:
 		
@@ -88,6 +89,8 @@ BEGIN
 
 				UPDATE b
 				SET @modds = CASE
+					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' ) AND ISNULL(@FGLG2,'') <> '' ) THEN --just for betchoice FG and NG
+						CASE WHEN (betteam = @correctscore OR betteam = @FGLG2)	THEN 1 ELSE -1 END
 					WHEN b.betteam NOT IN ('0:4', '4:0')
 						AND @bettype = 30 --1H Correct Score
 						AND (@hth > LEFT(b.betteam,1) OR @hta > RIGHT(b.betteam,1)) THEN -1
@@ -406,6 +409,8 @@ BEGIN
 		BEGIN
 			UPDATE bettrans WITH (ROWLOCK, UPDLOCK)
 			SET @modds = CASE 
+					WHEN (@bettype IN (14, 127) AND RIGHT(betteam, 1) IN ('0', '1' ) AND ISNULL(@FGLG2,'') <> '') THEN --just for betchoice FG and NG
+						CASE WHEN (betteam = @correctscore OR betteam = @FGLG2)	THEN 1 ELSE -1 END
 					WHEN betteam NOT IN ('0:4', '4:0') 
 						AND @bettype = 30 
 						AND (@hth > LEFT(betteam,1) OR @hta > RIGHT(betteam,1) ) THEN -1
@@ -432,7 +437,7 @@ BEGIN
 					WHEN betteam = 'AOS'
 						AND @bettype = 414
 						AND CHARINDEX(CAST(@hth AS VARCHAR) + ':' + CAST(@hta AS VARCHAR), transdesc) = 0 THEN 1
-					WHEN bettype = 16 THEN CASE
+					WHEN @bettype = 16 THEN CASE
 												WHEN @IsHTCal = 1 THEN CASE
 																			WHEN @hth > @hta AND LEFT(betteam,1) IN ('0','2') THEN -1
 																			WHEN @hth = @hta AND LEFT(betteam,1) IN ('1','2') THEN -1
@@ -441,6 +446,7 @@ BEGIN
 																	   END
 												ELSE NULL
 											 END
+					--WHEN bettype IN (14,127) AND 
 					ELSE NULL
 					END
 				,modds = @modds
@@ -719,11 +725,11 @@ BEGIN
 		END
 	END
 
-	IF @FGLG2 IS NULL OR @FGLG2 = ''
+	IF (ISNULL(@FGLG2,'') = '' AND ISNULL(@correctscore, '0:0') <> '0:0')
 		SET @FGLG2 = @correctscore
 
 	-------------Start:Settle FGLG for bettransm-------------
-	IF @bettype in(14, 127)
+	IF (@bettype IN(14, 127))
 	BEGIN
 		SELECT @matchdate = eventdate
 		FROM match WITH (NOLOCK)
@@ -753,7 +759,16 @@ BEGIN
 				END
 		-- ========================
 		FROM dbo.bettransm WITH (INDEX = IX_matchid)
-		WHERE bettype = @bettype AND matchid = @matchid AND statusID NOT IN (101, 102) --VOID, REJECT
+		WHERE bettype = @bettype 
+			AND matchid = @matchid 
+			AND statusID NOT IN (101, 102) --VOID, REJECT
+			AND (
+				ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
+				OR (@IsSettleAbandonedMatchIBC = 1 
+					AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
+					AND ISNULL(@FGLG2,'') <> '' 
+				)
+			)
 
 		UPDATE dbo.betParlayDetail WITH (ROWLOCK, UPDLOCK)
 		SET @modds = CASE 
@@ -769,8 +784,17 @@ BEGIN
 				WHEN @modds <= - 0.5 THEN 4 -- LOSE
 				WHEN @modds >= 0.5 THEN 2 -- WIN
 				END
-		WHERE bettype = @bettype AND matchid = @matchid AND statusID NOT IN (101, 102) --VOID, REJECT
-			-------------Stop:Settle FGLG for bettransm-------------
+		WHERE bettype = @bettype 
+			AND matchid = @matchid 
+			AND statusID NOT IN (101, 102) --VOID, REJECT
+			AND (
+				ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
+				OR (@IsSettleAbandonedMatchIBC = 1 
+					AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
+					AND ISNULL(@FGLG2,'') <> '' 
+				)
+			)
+		-------------Stop:Settle FGLG for bettransm-------------
 	END
 END
 

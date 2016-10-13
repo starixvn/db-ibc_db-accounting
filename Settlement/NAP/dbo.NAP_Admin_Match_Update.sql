@@ -41,6 +41,7 @@ AS
 		- 20151012@Patrick: Reset betstatus for Muay Thai when user do action RefundFull & RefundFT [Redmine: #45356]
 		- 20160225@Kathy: Update eventstatus, betstatus when the match is settled
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
+		- 20160907@bobby: #63765 - Update betstatus when doing refund HT/FT/ALL
 		
 */
 BEGIN
@@ -95,10 +96,8 @@ BEGIN
 	IF @Command = 'NAP_Admin_Settlement_Refund_All'
 	BEGIN
 		DECLARE @Sporttype INT 
-		SELECT @betstatus = CASE WHEN charindex('PS:',betstatus) > 0 THEN STUFF(betstatus, CHARINDEX('PS:',betstatus),5,'') -- PS:Y; or PS:N;
-								 ELSE ISNULL(betstatus,'')
-							END
-			,@Sporttype = sporttype
+		
+		SELECT @Sporttype = sporttype
 		FROM match with(NOLOCK)
 		WHERE matchid = @matchid
 
@@ -189,12 +188,7 @@ BEGIN
 	END
 	IF @Command = 'NAP_Admin_Settlement_RefundFT'
 	BEGIN
-		SELECT @betstatus = CASE WHEN charindex('PS:',betstatus) > 0 THEN STUFF(betstatus, CHARINDEX('PS:',betstatus),5,'') -- PS:Y; or PS:N;
-								 ELSE ISNULL(betstatus, '')
-							END
-		FROM match with(NOLOCK)
-		WHERE matchid = @matchid AND sporttype NOT IN (44)
-
+		
 		IF ISNULL(@betstatus , '') = ''
 		BEGIN
 			SET @betstatus = ''
@@ -202,11 +196,13 @@ BEGIN
 
 		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
 		SET finalhomescore=0, finalawayscore=0, 
-			betstatus = CASE WHEN CHARINDEX('Refund;', @betstatus) > 0 
-									THEN @betstatus 
+			betstatus = CASE WHEN CHARINDEX('Refund;', betstatus) > 0 
+									THEN betstatus 
 							 ELSE 'Refund FT;' + CASE WHEN CHARINDEX('Refund HT;',@betstatus) > 0 
 															THEN REPLACE(@betstatus, 'Refund HT;', '') 
-													  ELSE REPLACE(@betstatus, 'Refund FT;', '')
+													WHEN CHARINDEX('Refund FT;',@betstatus) > 0 
+															THEN REPLACE(@betstatus, 'Refund FT;', '') 
+													  ELSE @betstatus
 												 END
 						END
 			,eventstatus = CASE WHEN @HTDone=1 THEN 'Completed' ELSE eventstatus END 

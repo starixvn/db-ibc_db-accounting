@@ -1,12 +1,18 @@
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFGLG]    Script Date: 08/27/2014 14:03:02 ******/
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_RefundFGLG]    Script Date: 9/8/2016 12:47:19 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFGLG] @matchid INT
-	,@action varchar(10) = 'REFUND'
-	,@LGOnly BIT
-	,@matchdate DATETIME
+ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_RefundFGLG] 
+	@matchid 				INT
+	,@action 				VARCHAR(10) = 'REFUND'
+	,@LGOnly 				BIT
+	,@matchdate 			DATETIME
+	,@IsExcludeBetdaq     	BIT = 0
+    ,@IsExcludeBetfair		BIT = 0
+	,@IsSettleAbandonedMatchIBC BIT = 0
 AS
 /*	Created by: Kathy
 	Date: 20140213
@@ -16,36 +22,11 @@ AS
 	Revisions: 
 		- 20140426@Kathy: Add 1H FGLG (127) [Redmine:#14449]
 		- 20140610@Kathy: Using clustered index(CIX_recommend_matchid_bettype) in DB052, DB053, DB054		
+		- 20160905@Bobby: #63679 - Remove LAS stattement & exclude betdaq, betfair
 				
 */
 BEGIN
 	SET NOCOUNT ON
-
-	--- LAS settlement 
-	IF @@SERVERNAME IN ('DB052', 'DB054', 'DB231', 'DB232') AND EXISTS (
-			SELECT *
-			FROM sys.databases
-			WHERE NAME = 'LASDB'
-			)
-	BEGIN
-		DECLARE @LASCommand NVARCHAR(1000)
-			,@createdDate DATETIME
-
-		SELECT @LASCommand = 'EXEC [dbo].[Admin_Calculate_RefundFGLG] @matchid = ' + CONVERT(NVARCHAR(10), @matchid) 
-							+ ', @action = ''' + CONVERT(NVARCHAR(10),@action) + ''''
-							+ ', @LGOnly = ' + CONVERT(NVARCHAR(10), @LGOnly) 
-							+ ', @matchdate = ''' + CONVERT(NVARCHAR(20), @matchdate, 110) + ''''
-			,@createdDate = GETDATE()
-
-		EXEC LASDB.[dbo].[Las_GeneratingSettlementCommand] @SPName = 'Admin_Calculate_RefundFGLG'
-			,@SQLCommand = @LASCommand
-			,@CreatedDate = @createdDate
-			,@StatusID = 0 -- waiting
-			,@MatchID = @matchid
-			,@Bettype = 0 -- hardcode
-			,@Status = 'waiting'
-			,@BetCount = 0
-	END
 
 	DECLARE @bettype int
 
@@ -92,12 +73,22 @@ BEGIN
 				,scomm = 0
 				,ruben = 1
 			FROM dbo.bettrans b with(ROWLOCK, UPDLOCK) 
-			INNER JOIN @currecommend ag ON b.recommend = ag.recommend
+				INNER JOIN @currecommend ag ON b.recommend = ag.recommend
 			WHERE matchid = @matchid
-			AND statusID NOT IN (103, 101, 102) 
-			AND ((@bettype = 0 AND bettype IN (14,127)) 
+				AND statusID NOT IN (103, 101, 102) 
+				AND ((@bettype = 0 AND bettype IN (14,127)) 
 					OR (bettype = @bettype))
-			AND right(betteam, 1) = CASE WHEN @LGOnly = 1 THEN '2' ELSE right(betteam, 1) END
+				AND right(betteam, 1) = CASE WHEN @LGOnly = 1 THEN '2' ELSE right(betteam, 1) END
+				AND 1 = CASE 
+						WHEN @IsExcludeBetdaq = 1 AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 0
+						WHEN @IsExcludeBetfair = 1 AND b.custid IN (2331, 1077687, 115770, 15523642) THEN 0
+					ELSE 1 END
+				AND 1 = CASE 
+						WHEN @IsSettleAbandonedMatchIBC = 1 
+								AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
+									AND b.recommend <> 1688156) 
+								AND statusID IN (112, 113) THEN 0
+						ELSE 1 END
 
 			IF @affectedagents <> 100
 				BREAK
@@ -109,7 +100,7 @@ BEGIN
 	BEGIN
 		WHILE 1 = 1
 		BEGIN
-			UPDATE TOP (10000) dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+			UPDATE TOP (10000) b 
 			SET STATUS = 'Refund'
 				,statusID = 103
 				,winlost = actual_stake
@@ -121,6 +112,7 @@ BEGIN
 				,acomm = 0
 				,scomm = 0
 				,ruben = 1
+			FROM dbo.bettrans b WITH (ROWLOCK, UPDLOCK)
 			WHERE matchid = @matchid
 				--AND [status] not in ('Void', 'Reject')
 				AND statusID NOT IN (103, 101, 102) 
@@ -131,6 +123,16 @@ BEGIN
 					WHEN @LGOnly = 1 THEN '2'
 					ELSE right(betteam, 1)
 					END
+				AND 1 = CASE 
+						WHEN @IsExcludeBetdaq = 1 AND (b.custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR b.recommend = 1688156) THEN 0
+						WHEN @IsExcludeBetfair = 1 AND b.custid IN (2331, 1077687, 115770, 15523642) THEN 0
+					ELSE 1 END
+				AND 1 = CASE 
+						WHEN @IsSettleAbandonedMatchIBC = 1 
+								AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) 
+									AND b.recommend <> 1688156) 
+								AND statusID IN (112, 113) THEN 0
+						ELSE 1 END
 
 			IF @@ROWCOUNT < 10000
 				BREAK
@@ -148,11 +150,15 @@ BEGIN
 			,statuswinlost = 0
 			,ruben = 1
 		WHERE ((@bettype = 0 and bettype in (14, 127)) OR (bettype = @bettype))
-		AND matchid = @matchid 
-		AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
+			AND matchid = @matchid 
+			AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
 				WHEN @LGOnly = 1 THEN '2'
 				ELSE right(betteam, 1)
 				END
+			AND 1 = CASE 
+					WHEN @IsSettleAbandonedMatchIBC = 1 		
+						AND statusID IN (112, 113) THEN 0
+					ELSE 1 END
 
 		--	IF @@ROWCOUNT < 10000 BREAK
 		UPDATE dbo.betParlayDetail WITH (ROWLOCK, UPDLOCK)
@@ -160,14 +166,17 @@ BEGIN
 			,statusID = 103
 			,statuswinlost = 0
 		WHERE ((@bettype = 0 and bettype IN (14, 127)) OR (bettype = @bettype)) 
-		AND matchid = @matchid AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
+			AND matchid = @matchid AND statusID NOT IN (103, 101, 102) AND right(betteam, 1) = CASE 
 				WHEN @LGOnly = 1 THEN '2'
 				ELSE right(betteam, 1)
 				END
+			AND 1 = CASE 
+					WHEN @IsSettleAbandonedMatchIBC = 1 		
+						AND statusID IN (112, 113) THEN 0
+					ELSE 1 END
 	END
 		-------------End: Refund FGLG for bettransm-------------
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Calculate_RefundFGLG] TO [bodbAdminNet] AS [dbo]
