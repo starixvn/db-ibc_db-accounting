@@ -37,6 +37,17 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 13, @CustId = 18766106
 
 
      SET NOCOUNT ON;
+     BEGIN -- Query SiteId and ExchangeId
+         DECLARE @CurrencyId INT, @AgentId INT, @SiteId INT;
+         SELECT @CurrencyId = currency,
+                @AgentId = recommend
+         FROM dbo.Customer WITH (NOLOCK)
+         WHERE custid = @CustId;
+         SELECT @SiteId = s.siteid
+         FROM dbo.Customer c WITH (NOLOCK)
+              INNER JOIN dbo.[Site] s WITH (NOLOCK) ON c.site = s.site
+         WHERE CustId = @AgentId;
+     END;
      BEGIN -- temp table data
          CREATE TABLE #WinLimitHistory
          (BetTypeId                INT,
@@ -89,9 +100,12 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 13, @CustId = 18766106
                                                                                   AND h.ProductID = gs.ProductID
                      INNER JOIN dbo.WinLimit_ProductSettingDetail ps WITH (NOLOCK) ON ps.ProductID = h.ProductID
                                                                                       AND ps.GroupID = gs.GroupID
+                                                                                      AND ps.SiteID = @SiteId
+                                                                                      AND ps.ExchangeID = @CurrencyId
                      LEFT JOIN dbo.WinLimit_CustGameSetting cs WITH (NOLOCK) ON cs.CustID = h.CustID
                                                                                 AND cs.ProductID = h.ProductID
                                                                                 AND cs.GroupID = gs.GroupID
+                                                                                AND cs.LevelId = ps.LevelId
                      INNER JOIN dbo.Winlimit_ActionSetting a WITH (NOLOCK) ON a.ActionID = h.ActionID
                 WHERE h.ProductID = @ProductId
                       AND h.CustID = @CustId;
@@ -103,7 +117,7 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 13, @CustId = 18766106
                 h.ModifiedDate,
                 ISNULL(h.PlayerMaxWinLimitLevel, h.CurrencyMaxWinLimitLevel) AS Level,
                 CASE
-                    WHEN(h.PlayerMaxWinLimit IS NULL)
+                    WHEN(ISNULL(h.PlayerMaxWinLimit, 0) = 0)
                     THEN CASE
                              WHEN h.CurrencyMaxWinLimitLevel = h.ReachedLimitLevel
                              THEN h.MaxWinLimit

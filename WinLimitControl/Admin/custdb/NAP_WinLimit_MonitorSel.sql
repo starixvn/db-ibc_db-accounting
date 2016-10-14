@@ -110,11 +110,12 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                      INNER JOIN dbo.Site s WITH (NOLOCK) ON s.site = c.site
                      INNER JOIN dbo.WinLimit_ProductSettingDetail ps WITH (NOLOCK) ON ps.ProductID = cm.ProductID
                                                                                       AND ps.GroupID = gs.GroupID
-                                                                                      AND c.currency = ps.ExchangeID
-                                                                                      AND s.siteid = ps.SiteID
+                                                                                      AND ps.ExchangeID = c.currency
+                                                                                      AND ps.SiteID = s.siteid
                      LEFT JOIN dbo.WinLimit_CustGameSetting cs WITH (NOLOCK) ON cs.CustID = cm.CustID
                                                                                 AND cs.ProductID = cm.ProductID
                                                                                 AND cs.GroupID = gs.GroupID
+                                                                                AND cs.LevelId = ps.LevelId
                 WHERE cm.ModifiedDate BETWEEN @FromDate AND @Todate
                       AND (@ProductId = 0
                            OR cm.ProductID = @ProductId)
@@ -136,7 +137,7 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                 m.GroupId,
                 ISNULL(m.PlayerMaxWinLimitLevel, m.CurrencyMaxWinLimitLevel) AS Level,
                 CASE
-                    WHEN(m.PlayerMaxWinLimit IS NULL)
+                    WHEN(ISNULL(m.PlayerMaxWinLimit, 0) = 0)
                     THEN CASE
                              WHEN m.CurrencyMaxWinLimitLevel = m.ReachedLimitLevel
                              THEN m.MaxWinLimit
