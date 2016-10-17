@@ -18,7 +18,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Daily]
 	@GameIncomeType	SMALLINT = 0,
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
-	@HousePTValue   INT = 0,
+	@HousePTValue   MONEY = 0,
 	@IsDrillDown	BIT = 0
 
 
@@ -61,7 +61,8 @@ AS
 	@ProductID='4,12,21,11,13,6,17,14,22,3,8,5', 
 	@Bettype='1101, 1102, 1103, 1104,1700, 1701, 1702, 1703,2401, 2402, 2403, 2404, 2405,1800, 1801, 1802, 1803, 1804,2001, 2002, 2003, 2004, 2005, 2006, 2007,2008, 2009,1900,1501,1515',
  	@LeagueID='15223, 50717',
- 	@Sporttype='180, 181, 182, 183, 184, 185, 186'
+ 	@Sporttype='180, 181, 182, 183, 184, 185, 186',@HousePTType	= 1,
+	@HousePTValue  = 0.8
 */
 
 BEGIN 
@@ -283,8 +284,8 @@ SET NOCOUNT ON
 				  OR (NOT EXISTS (SELECT 1 From #tmpAllDepSuper d WHERE d.srecommend = b.srecommend) AND @IsMBC = 1)
 				)
 			AND (	
-					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue/100)
-				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue/100)
+					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
+				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
 		GROUP BY  b.WinlostDate,  b.Currency, b.custID 
@@ -336,8 +337,8 @@ SET NOCOUNT ON
 				  OR (NOT EXISTS (SELECT 1 From #tmpAllDepSuper d WHERE d.srecommend = b.srecommend) AND @IsMBC = 1)
 				)
 			AND (	
-					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue/100)
-				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue/100)
+					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
+				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
 		GROUP BY  b.WinlostDate,  b.Currency, b.custID 
@@ -390,8 +391,8 @@ SET NOCOUNT ON
 				  OR (NOT EXISTS (SELECT 1 From #tmpAllDepSuper d WHERE d.srecommend = b.srecommend) AND @IsMBC = 1)
 				)
 			AND (	
-					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue/100)
-				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue/100)
+					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
+				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
 		GROUP BY  b.WinlostDate,  b.Currency, b.custID 
@@ -457,8 +458,8 @@ SET NOCOUNT ON
 				  OR (NOT EXISTS (SELECT 1 From #tmpAllDepSuper d WHERE d.srecommend = b.srecommend) AND @IsMBC = 1)
 				)
 			AND (	
-					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue/100)
-				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue/100)
+					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
+				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
 		GROUP BY  b.WinlostDate,  b.Currency, b.CustId 
