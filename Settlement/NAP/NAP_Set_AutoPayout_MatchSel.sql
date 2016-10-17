@@ -141,6 +141,8 @@ BEGIN
 		, InstantStatusId 			TINYINT
 		, InstantCalculationType 	TINYINT DEFAULT(0)
 		, InstantPriority 			TINYINT
+		, isPending					BIT
+		, isUndecided				BIT
 	)
 	
 	INSERT INTO #matchList
@@ -416,13 +418,15 @@ BEGIN
 	--Checking for Inst match info
 	IF (@AutoSetting = 0 OR 2 & @AutoSetting = 2)
 	BEGIN 
-		INSERT INTO #InstMatchInfo (MatchId, InstantHomeScore, InstantAwayScore, InstantStatusId,InstantCalculationType,InstantPriority)
+		INSERT INTO #InstMatchInfo (MatchId, InstantHomeScore, InstantAwayScore, InstantStatusId,InstantCalculationType,InstantPriority, isPending, isUndecided)
 		SELECT t.MatchId
 			, 0 AS HomeValue
 			, 0 AS AwayValue
 			, 0 AS StatusId
 			, 0 AS CalculationType
 			, 4 AS Priority
+			, t.isPending
+			, t.isUndecided
 		FROM #matchList t 
 		WHERE 2 & t.AutoSetting = 2
 			AND t.eventstatus IN ('running')
@@ -431,30 +435,45 @@ BEGIN
 			SELECT temp.MatchId
 				,temp.HomeValue
 				,temp.AwayValue
-				,temp.StatusId
+				, 1 AS StatusId --to Confirm
 				,temp.CalculationType
 			FROM (
 				SELECT prd.MatchId
 					, prd.HomeValue
 					, prd.AwayValue
-					, 1 AS StatusId --to Confirm
 					, prd.TypeId AS CalculationType
-					, ROW_NUMBER() OVER(PARTITION BY prd.matchid ORDER BY prd.CreatedDate DESC) AS RowIdx
+					, COUNT(ProviderResultDetailId) AS NumOfScore
+					, ROW_NUMBER() OVER(
+						PARTITION BY prd.matchid, prd.TypeId
+						ORDER BY MAX(CreatedDate) DESC
+					) AS RowIdx
 				FROM #InstMatchInfo m
 					INNER JOIN dbo.ProviderResultDetail prd WITH(NOLOCK)
 					ON m.matchid = prd.matchID
 				WHERE prd.TypeId IN (101, 102)
 					AND m.isPending = 0
 					AND m.isUndecided = 0
+				GROUP BY prd.MatchId
+					, prd.HomeValue
+					, prd.AwayValue
+					, prd.TypeId
+			
 			) AS temp
 				LEFT JOIN dbo.AutoPayoutResult aps WITH(NOLOCK)
-				ON temp.matchid = aps.matchID
-				AND temp.CalculationType = aps.CalculationType
-				AND temp.HomeValue 	= aps.HomeValue
-				AND temp.AwayValue 	= aps.AwayValue
-				
+					ON temp.matchid = aps.matchID
+					AND temp.CalculationType = aps.CalculationType
+					AND temp.HomeValue 	= aps.HomeValue
+					AND temp.AwayValue 	= aps.AwayValue
+					
 			WHERE temp.RowIdx = 1
-				AND ISNULL(aps.StatusId, 3) = 3 --Not confirm or FAILED to re-confirm
+				AND (
+					aps.StatusId IS NULL --not confirm yet
+					OR aps.StatusId = 3 --FAILED to re-confirm
+					OR (
+						aps.StatusId = 2 --abnormal case -> re-calculate
+						AND temp.NumOfScore > 1 
+					)
+				)
 		)
 		UPDATE d
 		SET InstantHomeScore			= u.HomeValue
