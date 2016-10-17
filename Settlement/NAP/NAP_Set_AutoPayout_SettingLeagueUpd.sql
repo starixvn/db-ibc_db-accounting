@@ -33,6 +33,7 @@ BEGIN
 		, @Remark 				VARCHAR(1024)
 		, @AutoType				TINYINT
 		, @bitChanged			TINYINT
+		, @actionLogId			INT
 	
 	SELECT @AutoSetting = ISNULL(@AutoSetting, 0), @StarTime = GETDATE()
 
@@ -48,6 +49,11 @@ BEGIN
 			,@bitChanged		= CASE 
 									WHEN @AutoType = 1 THEN 1 & @AutoSetting
 									WHEN @AutoType = 2 THEN 2 & @AutoSetting
+								END
+			, @actionLogId		= CASE 
+									WHEN @AutoType = 1 THEN 159 
+									WHEN @AutoType = 2 THEN 180
+									ELSE -1 
 								END
 								
 	--check concurrency users
@@ -76,7 +82,7 @@ BEGIN
 				
 		IF @@ERROR > 0
 		BEGIN
-			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
+			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto setting on this match. Please try again.'
 			RETURN
 		END
 	END
@@ -92,7 +98,7 @@ BEGIN
 
 		IF @@ERROR > 0
 		BEGIN
-			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
+			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto setting on this match. Please try again.'
 			RETURN
 		END
 	END
@@ -104,12 +110,12 @@ BEGIN
 
 	IF @@ERROR > 0
 	BEGIN
-		SELECT @ErrCode = 1001018, @ErrMsg = 'Cannot update auto payout setting on this league. Please try again.'
+		SELECT @ErrCode = 1001018, @ErrMsg = 'Cannot update auto setting on this league. Please try again.'
 		RETURN
 	END
 
 	SELECT @EndTime = GETDATE()
-	SELECT @Remark = 'NAP: Update auto payout setting on league:' + CAST(@LeagueId AS NVARCHAR(10)) 
+	SELECT @Remark = 'NAP: Update auto setting on league:' + CAST(@LeagueId AS NVARCHAR(10)) 
 		+ ' AutoSetting:' + CAST(ISNULL(@AutoSetting, 0) AS NVARCHAR(10))
 		+ ' AutoType:' + CAST(ISNULL(@AutoType, 0) AS NVARCHAR(10))
 		+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @StarTime, @EndTime) AS NVARCHAR(50)) + ' ms'
@@ -117,7 +123,7 @@ BEGIN
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @Matchid			= NULL
-			, @ActionID			= 159
+			, @ActionID			= @actionLogId
 			, @finalhomescore	= NULL
 			, @finalawayscore	= NULL
 			, @hthomescore		= NULL
@@ -133,7 +139,7 @@ BEGIN
 
 		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @Matchid			= NULL
-			, @ActionID			= 159
+			, @ActionID			= @actionLogId
 			, @finalhomescore	= NULL
 			, @finalawayscore	= NULL
 			, @hthomescore		= NULL

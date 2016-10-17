@@ -444,6 +444,8 @@ BEGIN
 					INNER JOIN dbo.ProviderResultDetail prd WITH(NOLOCK)
 					ON m.matchid = prd.matchID
 				WHERE prd.TypeId IN (101, 102)
+					AND m.isPending = 0
+					AND m.isUndecided = 0
 			) AS temp
 				LEFT JOIN dbo.AutoPayoutResult aps WITH(NOLOCK)
 				ON temp.matchid = aps.matchID

@@ -17,28 +17,50 @@ AS
 	Task: Auto payout - Insert result
 	DB: DBPRO/bodb02
 	Revisions:
+		- 20160930@Bobby: #65003 - Implement Instant Calculation
 */
 BEGIN
 	SET NOCOUNT ON
+	
+	DECLARE @StatusIdCheck TINYINT, @AutoPayoutResultId INT
 
-	IF EXISTS (SELECT TOP 1 1 
-				FROM dbo.AutoPayoutResult WITH(NOLOCK) 
-				WHERE MatchId = @MatchId 
-					AND CalculationType = @TypeId
-					AND 1 = CASE 
-								WHEN @TypeId IN (1, 2) THEN 1
-								WHEN @TypeId IN (101, 102) THEN 
-									CASE WHEN HomeValue = @HomeValue AND AwayValue = @AwayValue THEN 1 ELSE 0 END
-								ELSE 0 
-							END
+	SELECT TOP 1 @AutoPayoutResultId = AutoPayoutResultId
+		, @StatusIdCheck = StatusId 
+	FROM dbo.AutoPayoutResult WITH(NOLOCK) 
+	WHERE MatchId = @MatchId 
+		AND CalculationType = @TypeId
+		AND 1 = CASE 
+					WHEN @TypeId IN (1, 2) THEN 1
+					WHEN @TypeId IN (101, 102) THEN 
+						CASE WHEN HomeValue = @HomeValue AND AwayValue = @AwayValue THEN 1 ELSE 0 END
+					ELSE 0 
+				END
+
+	IF ( 
+		(@TypeId IN (1, 2) AND @AutoPayoutResultId > 0) --Auto Payout
+		OR 
+		(@TypeId IN (101, 102) AND @AutoPayoutResultId > 0 AND  @StatusIdCheck <> 3) --Instant Calculation
 	)
 	BEGIN
 		SELECT @ErrCode = 1001021, @ErrMsg = 'Failed to insert result detail (duplicate data).'
 		RETURN
 	END
-
-	INSERT INTO dbo.AutoPayoutResult (MatchId, SourceId, CalculationType, HomeValue, AwayValue, StatusId, TryCount, CreatedDate, ModifiedDate)
-	VALUES(@MatchId, @SourceId, @TypeId, @HomeValue, @AwayValue, @StatusId, 0, GETDATE(), GETDATE())
+	
+	--Instant Calculation - FAILED
+	IF (
+		@TypeId IN (101, 102)
+		AND @StatusIdCheck = 3
+	)
+	BEGIN
+		UPDATE dbo.AutoPayoutResult WITH(ROWLOCK,UPDLOCK)
+		SET StatusId = @StatusId
+		WHERE AutoPayoutResultId = @AutoPayoutResultId
+	END
+	ELSE
+	BEGIN
+		INSERT INTO dbo.AutoPayoutResult (MatchId, SourceId, CalculationType, HomeValue, AwayValue, StatusId, TryCount, CreatedDate, ModifiedDate)
+		VALUES(@MatchId, @SourceId, @TypeId, @HomeValue, @AwayValue, @StatusId, 0, GETDATE(), GETDATE())
+	END
 
 	IF @@ERROR <> 0
 	BEGIN

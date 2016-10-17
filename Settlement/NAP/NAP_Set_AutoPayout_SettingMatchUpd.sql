@@ -28,9 +28,11 @@ BEGIN
 		, @Remark 				VARCHAR(1024)
 		, @LeagueId 			INT
 		, @AutoType				TINYINT
+		, @actionLogId			INT
 	
 	SELECT @AutoSetting 		= ISNULL(@AutoSetting, 0)
 		, @StarTime 			= GETDATE()
+		
 	
 	SELECT @AutoSetting_Old = AutoSetting, @LeagueId = leagueid
 	FROM dbo.match m WITH(NOLOCK)
@@ -47,6 +49,11 @@ BEGIN
 									WHEN (1 & @AutoSetting_Old <> 1 & @AutoSetting) THEN 1 
 									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 2 
 									ELSE 0 
+								END
+			, @actionLogId		= CASE 
+									WHEN @AutoType = 1 THEN 160 
+									WHEN @AutoType = 2 THEN 181
+									ELSE -1 
 								END
 								
 	--check concurrency users
@@ -68,7 +75,7 @@ BEGIN
 				END
 	)
 	BEGIN
-		SELECT @ErrCode = 1001023, @ErrMsg = 'Sorry. Not allow to update Auto Setting on this match.'
+		SELECT @ErrCode = 1001023, @ErrMsg = 'Sorry. Not allow to update auto Setting on this match.'
 		RETURN
 	END
 
@@ -87,12 +94,12 @@ BEGIN
 
 	IF @@ERROR > 0
 	BEGIN
-		SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
+		SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto setting on this match. Please try again.'
 		RETURN
 	END
 
 	SELECT @EndTime = GETDATE()
-	SELECT @Remark = 'NAP: Update auto payout setting on match:' + CAST(@MatchId AS NVARCHAR(10)) 
+	SELECT @Remark = 'NAP: Update auto setting on match:' + CAST(@MatchId AS NVARCHAR(10)) 
 		+ ' AutoSetting:' + CAST(ISNULL(@AutoSetting, 0) AS NVARCHAR(10))
 		+ ' AutoType:' + CAST(ISNULL(@AutoType, 0) AS NVARCHAR(10))
 		+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @StarTime, @EndTime) AS NVARCHAR(50)) + ' ms'
@@ -100,7 +107,7 @@ BEGIN
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @Matchid			= @MatchId
-			, @ActionID			= 160
+			, @ActionID			= @actionLogId
 			, @finalhomescore	= NULL
 			, @finalawayscore	= NULL
 			, @hthomescore		= NULL
@@ -116,7 +123,7 @@ BEGIN
 
 		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @Matchid			= @MatchId
-			, @ActionID			= 160
+			, @ActionID			= @actionLogId
 			, @finalhomescore	= NULL
 			, @finalawayscore	= NULL
 			, @hthomescore		= NULL

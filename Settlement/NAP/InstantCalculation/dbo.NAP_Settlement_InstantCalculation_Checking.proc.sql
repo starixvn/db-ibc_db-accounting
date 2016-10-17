@@ -106,12 +106,12 @@ BEGIN
 					, CASE 
 						WHEN ods.modds >= 0.5 THEN 112 --WON
 						WHEN ods.modds <= - 0.5 THEN 113 --LOSE    
-						WHEN ods.modds IS NULL THEN statusID
+						ELSE 0
 					END AS statusID
 					, CASE 
 						WHEN ods.moddsCheck >= 0.5 THEN 112 --WON
 						WHEN ods.moddsCheck <= - 0.5 THEN 113 --LOSE    
-						WHEN ods.moddsCheck IS NULL THEN statusID
+						ELSE 0
 					END AS statusIDCheck
 				FROM dbo.bettrans b WITH(NOLOCK)
 					CROSS APPLY (
@@ -134,8 +134,8 @@ BEGIN
 			)
 			SELECT @instantCheck = SUM(1)
 			FROM instantTicketCheck
-			WHERE statusID 		IN (112,113) 
-				AND statusID 	<> statusIDCheck 
+			WHERE statusIDCheck 	IN (112,113) 
+				AND statusIDCheck 	<> statusID
 			
 			IF(@instantCheck > 0)
 			BEGIN

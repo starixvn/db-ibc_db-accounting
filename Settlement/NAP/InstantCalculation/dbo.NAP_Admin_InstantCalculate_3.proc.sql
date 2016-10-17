@@ -26,7 +26,7 @@ BEGIN
 	
 	INSERT INTO #instantTicket (transid, modds)
 	SELECT T.C.value('./@t', 'BIGINT') 		AS transid
-			,T.C.value('./@m', 'MONEY') 	AS statusId
+			,T.C.value('./@m', 'MONEY') 	AS modds
 	FROM @xmlInstantTicket.nodes('/root/r') AS T(C)
 	OPTION (OPTIMIZE FOR (@xmlInstantTicket = NULL ))
 
@@ -104,7 +104,7 @@ BEGIN
 		,StatusID = CASE 
 			WHEN t.modds >= 0.5 THEN 112 --WON
 			WHEN t.modds <= - 0.5 THEN 113 --LOSE
-			WHEN t.modds IS NULL THEN statusID
+			WHEN t.modds IS NULL THEN b.statusID
 			END
 		,ruben = CASE WHEN t.modds IS NULL THEN ruben
 					  ELSE 1
