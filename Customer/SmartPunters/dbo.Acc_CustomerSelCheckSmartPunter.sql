@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelCheckSmartPunter ]
+﻿ALTER PROCEDURE [dbo].Acc_CustomerSelCheckSmartPunter
 	@custid INT = NULL,
 	@username VARCHAR(50) = '',
 	@isSmartPunter BIT = 0 OUTPUT,
@@ -27,6 +27,7 @@ BEGIN
 	IF EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @custid )
 	BEGIN
 	SELECT @isSmartPunter = 1
+	IF(@ActionID<>0)
 	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns 
 			@Userid = @userid,
 			@Custid = @CustID,
@@ -37,6 +38,7 @@ BEGIN
 	ELSE IF EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @recommend )
 	BEGIN
 	SELECT @isSmartPunter = 1
+	IF(@ActionID<>0)
 	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns 
 			@Userid = @userid,
 			@Custid = @CustID,
@@ -48,6 +50,7 @@ BEGIN
 	ELSE IF  EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @mrecommend )
 	BEGIN
 	SELECT @isSmartPunter = 1
+	IF(@ActionID<>0)
 	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns 
 			@Userid = @userid,
 			@Custid = @CustID,
@@ -59,6 +62,7 @@ BEGIN
 	ELSE IF  EXISTS (SELECT TOP 1 1 FROM SmartPunterList WITH(NOLOCK) WHERE custid = @srecommend )
 	BEGIN
 	SELECT @isSmartPunter = 1
+	IF(@ActionID<>0)
 	EXEC DBLOG.bodb_CustomerLog.dbo.NAP_UserLog_SmartPunterIns 
 			@Userid = @userid,
 			@Custid = @CustID,
@@ -74,4 +78,4 @@ BEGIN
 END
 
 
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckSmartPunter] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_CustomerSelCheckSmartPunter_xtest] TO [bodbAdminNet]
