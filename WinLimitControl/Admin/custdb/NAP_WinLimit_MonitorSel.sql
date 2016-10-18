@@ -159,13 +159,14 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                    AND h.LevelID = m.ReachedLimitLevel
                    AND h.CustID = m.CustId
                    AND h.ProductID = m.ProductId
+                   AND h.BetTypeId = m.BetTypeId
                    AND h.ActionID NOT IN(2, 4)
          ) AS NumberReachedLimit,
                 m.IsNotified,
                 cs.IsBlockedPlaceBet,
                 cs.IsBlockedTransfer,
                 CASE
-                    WHEN custWinLimitMaxTime.ModifiedDate IS NOT NULL
+                    WHEN cm.ModifiedDate IS NOT NULL
                     THEN 1
                     ELSE 0
                 END AS IsEnableUnBlock
@@ -175,14 +176,18 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                                                                          AND cs.CustID = m.CustId
               LEFT JOIN
          (
-             SELECT cm.CustID,
-                    MAX(cm.ModifiedDate) AS ModifiedDate
-             FROM dbo.WinLimit_CustGameMonitoring cm
-             GROUP BY cm.CustID,
-                      cm.ProductID,
-                      cm.BettypeID
-         ) AS custWinLimitMaxTime ON custWinLimitMaxTime.CustId = m.CustId
-                                     AND custWinLimitMaxTime.ModifiedDate = m.ModifiedDate
+             SELECT CustID,
+                    ProductID,
+                    BettypeID,
+                    MAX(ModifiedDate) AS ModifiedDate
+             FROM dbo.WinLimit_CustGameMonitoring WITH (NOLOCK)
+             GROUP BY CustID,
+                      ProductID,
+                      BettypeID
+         ) AS cm ON cm.CustId = m.CustId
+                    AND cm.ModifiedDate = m.ModifiedDate
+                    AND cm.ProductID = m.ProductID
+                    AND cm.BettypeID = m.BettypeID
          ORDER BY ReachedLimitTime DESC;
      END;
      DROP TABLE #WinLimitMonitor;

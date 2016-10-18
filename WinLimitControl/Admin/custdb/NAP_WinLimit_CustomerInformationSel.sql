@@ -44,19 +44,13 @@ EXEC [NAP_WinLimit_CustomerInformationSel] @CustId = 807023
      DECLARE @AgentId INT= 0, @Agent NVARCHAR(50)= '';
      DECLARE @MasterId INT= 0, @Master NVARCHAR(50)= '';
      DECLARE @SuperId INT= 0, @Super NVARCHAR(50)= '';
-     DECLARE @Status BIT= 0, @IsCreditSite BIT= 0;
+     DECLARE @IsCreditSite BIT= 0;
      
      -- User information
      SELECT @Username = ISNULL(username, ''),
             @AgentId = ISNULL(recommend, 0),
             @MasterId = ISNULL(recommend, 0),
-            @SuperId = ISNULL(recommend, 0),
-            @Status = CASE
-                          WHEN closed = 0
-                               AND reject = 0
-                          THEN 1
-                          ELSE 0
-                      END
+            @SuperId = ISNULL(recommend, 0)
      FROM dbo.custInfo WITH (NOLOCK)
      WHERE custid = @CustId;
      -- Site
@@ -85,7 +79,6 @@ EXEC [NAP_WinLimit_CustomerInformationSel] @CustId = 807023
             @Username Username,
             @Site SiteName,
             @IsCreditSite IsCreditSite,
-            @Status [Status],
             @AgentId AgentId,
             @Agent Agent,
             @MasterId MasterId,

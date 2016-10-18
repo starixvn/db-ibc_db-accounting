@@ -25,8 +25,8 @@ CREATE PROCEDURE [dbo].NAP_WinLimit_CustSettingUpd @CustID       INT,
                                                    @MaxWinLimit  MONEY         = 0,
                                                    @UserID       INT           = 0,
                                                    @IP           VARCHAR(20)   = '',
-                                                   @ErrorCode    INT           = 0,
-                                                   @ErrorMessage NVARCHAR(100) = ''
+                                                   @ErrorCode    INT           = 0 OUTPUT,
+                                                   @ErrorMessage NVARCHAR(100) = '' OUTPUT
 AS
 	
 /*
