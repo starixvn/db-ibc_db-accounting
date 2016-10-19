@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
@@ -72,6 +75,7 @@ Revisions:
 	- 20160215@Percy: Support new product AllBet [Redmine: #50588]
 	- 20160329@Francis: Change to use inline function instead of table variable to enhance performance
 	- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
+	- 20161019@Percy: Support show OTP info [RedmineID: #64871]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -529,6 +533,10 @@ BEGIN
 	SELECT @credit = credit
 	FROM DBCUST.CustDB.dbo.CustInfo WITH(NOLOCK)
 	WHERE custid = @custid
+
+	DECLARE @OTPCreateDate DATETIME
+	SELECT  @OTPCreateDate = CreatedDate FROM DBCUST.CustDB.dbo.CustOTP WITH(NOLOCK)
+	WHERE custid = @custid
 	
     SELECT c.custid, c.username, c.firstname, c.lastname, 
 	    c.username2, 		
@@ -594,7 +602,8 @@ BEGIN
 	    @IsHideDirectStatus IsHideDirectStatus,
 	    @IsCheckedDirectStatus IsCheckDirectStatus,
 	    @IsDisabledDirectStatus IsDisabledDirectStatus,
-		@HasDownline AS HasDownline
+		@HasDownline AS HasDownline, 
+		@OTPCreateDate AS OTPCreateDate
 		
     FROM customer c WITH(NOLOCK)
 	    inner join custinfo ci WITH(NOLOCK) on c.custid = ci.custid
