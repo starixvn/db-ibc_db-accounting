@@ -1,6 +1,10 @@
 USE [bodb02]
 GO
 
+CREATE PROC Acc_Rpt_WinLimit_HandHistory_LiveCasino
+	@CustomerID INT,
+	@ReachedDate DATETIME
+AS
 /*
 	Created:	Harper@20161013
 	Task:		#61220: Generate data for HandHistory tab of Email Template Phase 3
@@ -9,32 +13,26 @@ GO
 	Revisions:
 
 	Param's Explanation:
-		@UserID: User that reach Win Limit
+		@CustomerID: Customer that reach Win Limit
 		@ReachedDate: date that user reach win limit
 
-	EXEC NAP_WinLimit_GenerateHandHistoryForEmail @UserID = 18205717, @ReachedDate = '20161010' WITH RECOMPILE
+	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustomerID = 18205717, @ReachedDate = '20161010' WITH RECOMPILE
 */
-
-ALTER PROC NAP_WinLimit_GenerateHandHistoryForEmail
-	@UserID INT,
-	@ReachedDate DATETIME
-AS
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @ShortReachedDate DATE = CONVERT(VARCHAR(10), @ReachedDate, 111)	
 
 	DECLARE @TmpCasino TABLE
-	(
-		TranstionID		INT,
-		StatusID		INT,
-		WinLoss			MONEY,
+	(	
+		Transid			INT,
+		Bettype			SMALLINT,
 		GameCode		NVARCHAR(50),
 		Brand			VARCHAR(5),
 		Game			VARCHAR(50),
 		GameType		NVARCHAR(50),
 		GameGroup		NVARCHAR(1000),
-		BetType			NVARCHAR(50),
+		Betteam			NVARCHAR(50),
 		BetDate			DATETIME,
 		GameDate		DATETIME,
 		TimeDiff		TIME,
@@ -52,27 +50,38 @@ BEGIN
 		A				MONEY
 	)
 
+	-- Get sport bettype
+	-- Check SP Version
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	
+	DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
+
+	INSERT INTO @SportBettype (ProductID, Bettype)
+	SELECT ProductID, Bettype 
+	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)	
+	WHERE ProductID = 4 --Live Casino
+
 	INSERT INTO @TmpCasino	        
 	SELECT
 		bg.transid
-		, bg.statusID 	
-		, bg.winlost	
+		, bg.bettype	
 		, m.matchcode		AS GameCode
 		, 'SLI'				AS Brand
 		, 'Live Casino'		AS Game
-		, b.typenamee		AS GameType
+		, ''				AS GameType
 		, l.leaguename		AS GameGroup
-		, bg.betteam		AS BetType
+		, bg.betteam		AS Betteam
 		, bg.transdate		AS BetDate
-		, m.eventdate		AS GameDate -- Need To Confirm
+		, m.eventdate		AS GameDate
 		, ''				AS TimeDiff 
 		, CONVERT(TIME, (m.kickofftime - m.settletime)) AS GameDuration
 		, bg.stake			AS TotalBet
 		, (bg.winlost - bg.stake)	AS PlayerWL
-		, 0							AS GameInCome 
+		, (bg.stake - bg.winlost)	AS GameInCome 
 		, (1 - bg.tpositiontaking) * bg.stake			AS CompanyTurnOver
 		, bg.scomm					AS CompanyComm
-		, 0							AS CompanyNetIncome 
+		, ((bg.stake - bg.winlost) * (1 - bg.tpositiontaking)) - bg.scomm AS CompanyNetIncome 
 		, m.betstatus				AS Result
 		, (1 - bg.tpositiontaking)	AS H
 		, bg.spositiontaking		AS S
@@ -80,35 +89,32 @@ BEGIN
 		, bg.apositiontaking		AS A
 	FROM dbo.bettransG bg (NOLOCK)
 		INNER JOIN dbo.match m (NOLOCK) ON bg.matchid = m.matchid
-		INNER JOIN dbo.bettype b (NOLOCK) ON bg.bettype = b.typeid
+		INNER JOIN @SportBettype s ON s.Bettype = bg.bettype		
 		INNER JOIN dbo.League l (NOLOCK) ON m.leagueid = l.leagueid
-	WHERE m.sporttype = 162 AND bg.bettype IN (1101, 1102, 1103, 1104) -- For Live Casino
-		AND bg.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund
-		AND bg.custid = @UserID AND CONVERT(VARCHAR(10), bg.transdate, 111) = @ShortReachedDate 
+	WHERE bg.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund
+		AND bg.custid = @CustomerID AND CONVERT(VARCHAR(10), bg.transdate, 111) = @ShortReachedDate 
 
 	-- Update Time Difference
 	UPDATE T
 	SET T.TimeDiff = CONVERT(TIME, R.TimeDiff)
 	FROM
 	(
-		SELECT B.TranstionID, (B.GameDate - A.GameDate) AS TimeDiff
+		SELECT B.Transid, (B.GameDate - A.GameDate) AS TimeDiff
 		FROM @TmpCasino A CROSS JOIN @TmpCasino B
-		WHERE B.TranstionID IN (SELECT MIN (C.TranstionID) FROM @TmpCasino C WHERE C.TranstionID > A.TranstionID)		
-	) AS R INNER JOIN @TmpCasino T ON R.TranstionID = T.TranstionID	
-	
-	-- Update Game Income, Company Net Income
-	UPDATE @TmpCasino
-	SET GameIncome = TotalBet - WinLoss
-	
-	UPDATE @TmpCasino
-	SET CompanyNetIncome = (GameIncome * H) - CompanyComm
+		WHERE B.Transid IN (SELECT MIN (C.Transid) FROM @TmpCasino C WHERE C.Transid > A.Transid)		
+	) AS R INNER JOIN @TmpCasino T ON R.Transid = T.Transid		
+
+	--Update GameType
+	UPDATE T
+	SET T.GameType = b.typenamee
+	FROM @TmpCasino T INNER JOIN dbo.bettype b (NOLOCK) ON T.bettype = b.typeid
 
 	SELECT GameCode,
 		Brand,
 		Game,
 		GameType,
 		GameGroup,
-		BetType,
+		Betteam AS Bettype,
 		BetDate,
 		GameDate,
 		TimeDiff,
@@ -126,9 +132,9 @@ BEGIN
 		A	
 	FROM @TmpCasino
 
-	SELECT t.GameCode, COUNT(t.TranstionID) AS NoTicket, SUM(t.TotalBet) AS TotalBet, SUM(t.GameIncome) AS GameInCome
+	SELECT t.GameCode, COUNT(t.Transid) AS NoTicket, SUM(t.TotalBet) AS TotalBet, SUM(t.GameIncome) AS GameInCome, t.GameDuration
 	FROM @TmpCasino t
-	GROUP BY t.GameCode
+	GROUP BY t.GameCode, t.GameDuration
 
 END
 GO
