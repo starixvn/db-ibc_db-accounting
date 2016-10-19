@@ -1,8 +1,8 @@
 USE [bodb02]
 GO
 
-CREATE PROC Acc_Rpt_WinLimit_HandHistory_LiveCasino
-	@CustomerID INT,
+CREATE PROCEDURE Acc_Rpt_WinLimit_HandHistory_LiveCasino
+	@CustID INT,
 	@ReachedDate DATETIME
 AS
 /*
@@ -13,17 +13,17 @@ AS
 	Revisions:
 
 	Param's Explanation:
-		@CustomerID: Customer that reach Win Limit
+		@CustID: Customer that reach Win Limit
 		@ReachedDate: date that user reach win limit
 
-	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustomerID = 18205717, @ReachedDate = '20161010' WITH RECOMPILE
+	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustID = 18205717, @ReachedDate = '20161010' WITH RECOMPILE
 */
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @ShortReachedDate DATE = CONVERT(VARCHAR(10), @ReachedDate, 111)	
 
-	DECLARE @TmpCasino TABLE
+	DECLARE @TmpLiveCasino TABLE
 	(	
 		Transid			INT,
 		Bettype			SMALLINT,
@@ -62,7 +62,7 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)	
 	WHERE ProductID = 4 --Live Casino
 
-	INSERT INTO @TmpCasino	        
+	INSERT INTO @TmpLiveCasino	        
 	SELECT
 		bg.transid
 		, bg.bettype	
@@ -73,7 +73,7 @@ BEGIN
 		, l.leaguename		AS GameGroup
 		, bg.betteam		AS Betteam
 		, bg.transdate		AS BetDate
-		, m.eventdate		AS GameDate
+		, m.kickofftime		AS GameDate
 		, ''				AS TimeDiff 
 		, CONVERT(TIME, (m.kickofftime - m.settletime)) AS GameDuration
 		, bg.stake			AS TotalBet
@@ -92,7 +92,7 @@ BEGIN
 		INNER JOIN @SportBettype s ON s.Bettype = bg.bettype		
 		INNER JOIN dbo.League l (NOLOCK) ON m.leagueid = l.leagueid
 	WHERE bg.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund
-		AND bg.custid = @CustomerID AND CONVERT(VARCHAR(10), bg.transdate, 111) = @ShortReachedDate 
+		AND bg.custid = @CustID AND CONVERT(VARCHAR(10), bg.winlostdate, 111) = @ShortReachedDate 
 
 	-- Update Time Difference
 	UPDATE T
@@ -100,16 +100,16 @@ BEGIN
 	FROM
 	(
 		SELECT B.Transid, (B.GameDate - A.GameDate) AS TimeDiff
-		FROM @TmpCasino A CROSS JOIN @TmpCasino B
-		WHERE B.Transid IN (SELECT MIN (C.Transid) FROM @TmpCasino C WHERE C.Transid > A.Transid)		
-	) AS R INNER JOIN @TmpCasino T ON R.Transid = T.Transid		
+		FROM @TmpLiveCasino A CROSS JOIN @TmpLiveCasino B
+		WHERE B.Transid IN (SELECT MIN (C.Transid) FROM @TmpLiveCasino C WHERE C.Transid > A.Transid)		
+	) AS R INNER JOIN @TmpLiveCasino T ON R.Transid = T.Transid		
 
 	--Update GameType
 	UPDATE T
 	SET T.GameType = b.typenamee
-	FROM @TmpCasino T INNER JOIN dbo.bettype b (NOLOCK) ON T.bettype = b.typeid
+	FROM @TmpLiveCasino T INNER JOIN dbo.bettype b (NOLOCK) ON T.bettype = b.typeid
 
-	SELECT GameCode,
+	SELECT GameCode,	
 		Brand,
 		Game,
 		GameType,
@@ -130,11 +130,13 @@ BEGIN
 		S,
 		M,
 		A	
-	FROM @TmpCasino
+	FROM @TmpLiveCasino
+	ORDER BY GameCode
 
 	SELECT t.GameCode, COUNT(t.Transid) AS NoTicket, SUM(t.TotalBet) AS TotalBet, SUM(t.GameIncome) AS GameInCome, t.GameDuration
-	FROM @TmpCasino t
+	FROM @TmpLiveCasino t
 	GROUP BY t.GameCode, t.GameDuration
+	ORDER BY t.GameCode
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [bodbAdminNet]
