@@ -2,10 +2,11 @@ USE bodb02
 GO 
  
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistic_SiteSel]
+	@ProductID		VARCHAR(MAX)=''
 AS
 /*
 	Created by: 20160908@Sophia.Nguyen
-	Task : Get Company 
+	Task : Get Company dropdown by ProductId [Redmine: #62430]
 	DB: DBACC/bodb02
 	
 	Revisions:	
@@ -16,18 +17,45 @@ AS
 
 BEGIN
 SET NOCOUNT ON
+ 
+	
+	CREATE TABLE #tmpProductID (
+			ProductID int
+		)
+	
+	IF @ProductID <> ''
+	BEGIN 
+		INSERT INTO #tmpProductID (ProductID)
+		SELECT
+			val
+		FROM [dbo].strSplit(@ProductID, ',')
+	END 
+	ELSE 
+	BEGIN 
+		INSERT INTO #tmpProductID (ProductID)
+		SELECT	ProductID
+		FROM	dbo.Products WITH (NOLOCK)
+		WHERE   CasinoType IN (1,2) 
+				OR ProductID IN (3, 5, 8)
+	END 
 
-	SELECT Site 
-	FROM (
-			--SELECT 'ALL' as Site , -1 AS OrderId --- All: Credit and Deposit
-			--UNION 
-			SELECT 'MBC' as Site,  0 AS OrderId  --- Credit only
-			UNION
-			SELECT	Licenseename as Site, LicenseeId As OrderId 
-			FROM	DBLIC.bodb_Licensee.dbo.Licensees
-			WHERE	IsDeposit = 1
-		) A
-	ORDER BY A.OrderId
+	
+	----Get Site
+
+	SELECT 'MBC Group' as Site,  0 AS OrderId  --- Credit only
+	UNION
+	SELECT DISTINCT l.Licenseename as Site, l.LicenseeId As OrderId 				
+	FROM
+		dbo.Products b WITH (NOLOCK) 
+		INNER JOIN DBLIC.bodb_Licensee.dbo.Product3rd p WITH (NOLOCK) ON p.ProductPrefix = b.ProductPrefix
+		INNER JOIN DBLIC.bodb_Licensee.dbo.LicenseeProduct3rd lp WITH (NOLOCK) ON lp.productid = p.productid
+		INNER JOIN DBLIC.bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.licenseeid = lp.licenseeid
+		INNER JOIN DBLIC.bodb_Licensee.dbo.SystemLicensee s WITH (NOLOCK) ON s.licenseeid = l.licenseeid
+		INNER JOIN #tmpProductID m ON b.ProductID=m.ProductID
+	WHERE s.systemId = 3 AND l.IsDeposit = 1
+	GROUP BY l.LicenseeID, l.Licenseename
+	ORDER BY OrderId
+
 
 END 
  

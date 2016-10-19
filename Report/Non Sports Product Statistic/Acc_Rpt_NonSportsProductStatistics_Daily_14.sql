@@ -430,7 +430,7 @@ SET NOCOUNT ON
 		FROM  dbo.Bettrans14 b WITH (NOLOCK)
 			INNER JOIN #SportBettype s 
 				ON s.Bettype = b.bettype 
-			INNER JOIN Match m WITH (NOLOCK) 
+			INNER JOIN Match14 m WITH (NOLOCK) 
 				ON m.MatchId = b.matchid
 		WHERE b.WinlostDate = @WLDate
 			AND s.ProductID IN (3,4,5) --- NumberGame, SLI-Live Casino, VirtualSport
