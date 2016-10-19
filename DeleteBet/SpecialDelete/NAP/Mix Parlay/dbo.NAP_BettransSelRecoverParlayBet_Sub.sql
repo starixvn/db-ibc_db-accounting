@@ -215,8 +215,7 @@ BEGIN
 			 ,t.transdesc    
 	FROM	@tblRecoverBet t		
 		LEFT JOIN dbo.f_GetBetDaqCustomer(1) f
-			ON t.custid = f.CustID			
-	WHERE t.bettype <> 500	
+			ON t.custid = f.CustID	
 
 	--- invalid trans info
 	SELECT t.transid AS InvalidTrans
