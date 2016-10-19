@@ -135,6 +135,8 @@ BEGIN
 	SELECT t.GameCode, COUNT(t.Transid) AS NoTicket, SUM(t.TotalBet) AS TotalBet, SUM(t.GameIncome) AS GameInCome, t.GameDuration
 	FROM @TmpCasino t
 	GROUP BY t.GameCode, t.GameDuration
-
 END
 GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [vnteam]
