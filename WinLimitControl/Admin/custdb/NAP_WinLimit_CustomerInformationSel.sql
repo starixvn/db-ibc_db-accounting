@@ -44,7 +44,7 @@ EXEC [NAP_WinLimit_CustomerInformationSel] @CustId = 807023
      DECLARE @AgentId INT= 0, @Agent NVARCHAR(50)= '';
      DECLARE @MasterId INT= 0, @Master NVARCHAR(50)= '';
      DECLARE @SuperId INT= 0, @Super NVARCHAR(50)= '';
-     DECLARE @IsCreditSite BIT= 0;
+     DECLARE @IsCreditUser BIT= 0;
      
      -- User information
      SELECT @Username = ISNULL(username, ''),
@@ -53,14 +53,7 @@ EXEC [NAP_WinLimit_CustomerInformationSel] @CustId = 807023
             @SuperId = ISNULL(recommend, 0)
      FROM dbo.custInfo WITH (NOLOCK)
      WHERE custid = @CustId;
-     -- Site
-     SELECT @IsCreditSite = CASE
-                                WHEN isDeposit = 0
-                                THEN 1
-                                ELSE 0
-                            END
-     FROM dbo.[Site] WITH (NOLOCK)
-     WHERE [site] = @Site;
+   
      -- Agent
      SELECT @Agent = ISNULL(username, ''),
             @Site = [site]
@@ -74,11 +67,21 @@ EXEC [NAP_WinLimit_CustomerInformationSel] @CustId = 807023
      SELECT @Super = ISNULL(username, '')
      FROM dbo.custInfo WITH (NOLOCK)
      WHERE custid = @SuperId;
+     
+     -- Site
+     SELECT @IsCreditUser = CASE
+                                WHEN isDeposit = 0
+                                THEN 1
+                                ELSE 0
+                            END
+     FROM dbo.[Site] WITH (NOLOCK)
+     WHERE [site] = @Site;
+     
      -- Query
      SELECT @CustId CustId,
             @Username Username,
             @Site SiteName,
-            @IsCreditSite IsCreditSite,
+            @IsCreditUser IsCreditUser,
             @AgentId AgentId,
             @Agent Agent,
             @MasterId MasterId,
