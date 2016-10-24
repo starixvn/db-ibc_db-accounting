@@ -40,10 +40,10 @@ EXEC [NAP_WinLimit_CustomerSiteByCustIdSel] @CustIdList = '791088,807023,807567'
      SET NOCOUNT ON;
      DECLARE @Customer TABLE(CustId INT);
      INSERT INTO @Customer(CustId)
-            SELECT  CONVERT(INT, val)
+            SELECT CONVERT( INT, val)
             FROM dbo.strSplit(@CustIdList, ',');
-            
-     SELECT c.username,
+     SELECT c.custid,
+            c.username,
             a.[site] SiteName
      FROM dbo.custInfo c WITH (NOLOCK)
           INNER JOIN @Customer u ON c.custid = u.custid

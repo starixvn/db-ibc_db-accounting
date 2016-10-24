@@ -35,7 +35,8 @@ EXEC [NAP_Winlimit_UserByIPSel] @IP = '127.0.0.1'
      DECLARE @Today SMALLDATETIME;
      SELECT @Today = CONVERT( DATE, GETDATE());
      SELECT CustId,
-            winlostdate
+            winlostdate LastAccessedDate,
+            IP
      FROM dbo.bettrans AS b WITH (NOLOCK)
      WHERE winlostdate = @Today
            AND ip = @IP;

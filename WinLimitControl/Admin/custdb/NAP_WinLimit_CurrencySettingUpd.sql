@@ -69,7 +69,7 @@ Parameters Explanation:
      )
          BEGIN -- Update
              DECLARE @OldMaxWinLimit MONEY, @OldIsBlockedPlaceBet BIT, @OldIsBlockedTransfer BIT;
-             SELECT @OldMaxWinLimit = MaxWinLimit,
+             SELECT @OldMaxWinLimit = MaxWinLimit_RM,
                     @OldIsBlockedPlaceBet = IsBlockedPlaceBet,
                     @OldIsBlockedTransfer = IsBlockedTransfer
              FROM dbo.WinLimit_ProductSettingDetail WITH (NOLOCK)

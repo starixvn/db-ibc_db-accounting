@@ -49,8 +49,8 @@ EXEC [NAP_WinLimit_CustomerInformationSel] @CustId = 807023
      -- User information
      SELECT @Username = ISNULL(username, ''),
             @AgentId = ISNULL(recommend, 0),
-            @MasterId = ISNULL(recommend, 0),
-            @SuperId = ISNULL(recommend, 0)
+            @MasterId = ISNULL(mrecommend, 0),
+            @SuperId = ISNULL(srecommend, 0)
      FROM dbo.custInfo WITH (NOLOCK)
      WHERE custid = @CustId;
    
