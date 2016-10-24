@@ -1,10 +1,11 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 10/19/2015 11:23:06 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 10/24/2016 04:04:26 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_4    Script Date: 21/10/2016 5:15:55 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@bettype						SMALLINT
 	,@correctscore					NVARCHAR(10) = NULL
@@ -47,7 +48,7 @@ AS
 		- 20160613@Patrick: Reduce escalation lock when updating large amount of data [Redmine: #56550]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		- 20160824@Bobby: #62921 - Include FGLG (14,127) bet types into settle determindable
-
+		- 20161021@Kathy: Using new non-clustered index (match_bettype) to update BetParlayDetail [Redmine:#65990]
 	Param's Explanation:
 		
 		
@@ -733,7 +734,7 @@ BEGIN
 	BEGIN
 		SELECT @matchdate = eventdate
 		FROM match WITH (NOLOCK)
-		WHERE matchid = @matchid
+		WHERE matchid = @matchid	
 
 		UPDATE dbo.bettransm WITH (UPDLOCK)
 		SET @modds = CASE 
@@ -770,7 +771,15 @@ BEGIN
 				)
 			)
 
-		UPDATE dbo.betParlayDetail WITH (ROWLOCK, UPDLOCK)
+		CREATE TABLE #Refno (Refno BIGINT, Serial INT, rid BIGINT)
+	
+		INSERT INTO #Refno (RefNo, Serial, rid)
+		SELECT	RefNo, Serial, rID
+		FROM	dbo.BetParlayDetail WITH(ROWLOCK)
+		WHERE	matchid = @matchid 
+				AND bettype = @bettype 			
+				
+		UPDATE pd
 		SET @modds = CASE 
 				WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
 				ELSE - 1
@@ -784,20 +793,19 @@ BEGIN
 				WHEN @modds <= - 0.5 THEN 4 -- LOSE
 				WHEN @modds >= 0.5 THEN 2 -- WIN
 				END
-		WHERE bettype = @bettype 
-			AND matchid = @matchid 
-			AND statusID NOT IN (101, 102) --VOID, REJECT
-			AND (
-				ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
-				OR (@IsSettleAbandonedMatchIBC = 1 
-					AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
-					AND ISNULL(@FGLG2,'') <> '' 
+		FROM	dbo.betParlayDetail pd WITH (ROWLOCK, UPDLOCK)
+			INNER JOIN #Refno r
+				ON	pd.RefNo = r.Refno
+					AND pd.Serial = r.Serial
+					AND pd.rID = r.rid
+		WHERE	statusID NOT IN (101, 102) --VOID, REJECT
+				AND (
+					ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
+					OR (@IsSettleAbandonedMatchIBC = 1 
+						AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
+						AND ISNULL(@FGLG2,'') <> '' 
+					)
 				)
-			)
 		-------------Stop:Settle FGLG for bettransm-------------
 	END
 END
-
-
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_4] TO [vnteam] AS [dbo]
