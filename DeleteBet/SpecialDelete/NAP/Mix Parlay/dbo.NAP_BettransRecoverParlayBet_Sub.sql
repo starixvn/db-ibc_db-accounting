@@ -8,7 +8,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Sub] 
 	@UserId				INT,	
 	@IP					VARCHAR(50),
-	@SubTransIds		VARCHAR(4000)	= '',
+	@MainTransIds		VARCHAR(4000)	= '',
 	@matchid			BIGINT,
 	
 	@SettledMainTranIds	VARCHAR(4000) OUTPUT,
@@ -28,15 +28,16 @@ BEGIN
 	
 	DECLARE @beforeDaysNum INT = 3
 	
-	DECLARE @before_yesterday DATETIME	
+	DECLARE @before_yesterday	DATETIME	
 		   ,@isExistMatch		BIT = 1
 		   ,@isExistMG			BIT = 0
 		   ,@isExistBT			BIT = 0
 		   ,@avaiableProcess	BIT	= 0
 		   ,@MatchDate			DATETIME
-		   ,@transids_29 VARCHAR(MAX) = ''
-		   ,@refnos_29	 VARCHAR(MAX) = ''
+		   ,@transids_29		VARCHAR(MAX) = ''
+		   ,@refnos_29			VARCHAR(MAX) = ''
 		   ,@LogData			NVARCHAR(500)
+		   ,@SubTransIds		VARCHAR(4000) = ''
 	
 	DECLARE @tblRecoverBet TABLE (
 		SubTransID				BIGINT		 
@@ -47,8 +48,8 @@ BEGIN
 		,SubHdp1				SMALLMONEY   
 		,SubHdp2				SMALLMONEY
 		,matchid				INT	
-					
-		,statuswinlost			TINYINT
+		
+		,balance				MONEY					
 		,custid					INT
 		,isdeposit				TINYINT
 		,mrecommend				INT
@@ -78,18 +79,28 @@ BEGIN
 		,leagueid				INT 
 		,betcheck				NVARCHAR(50)
 		,transdesc				NVARCHAR(200)
+	)	
+	
+	CREATE TABLE #tblMainTicket 
+	(
+		transid		BIGINT
+	   ,refno		BIGINT	   
+	   ,StatusId	TINYINT	   
+	   ,custid		INT
+	   ,balance		MONEY
 	)
-	DECLARE @tblSubTransIds TABLE (transid BIGINT)	
-	DECLARE @tblMainTicket		TABLE (transid			BIGINT
-										,refno			BIGINT
-										,winlost		MONEY
-										,Status			NVARCHAR(10)
-										,bettype		SMALLINT
-								)
-	DECLARE @tblSettledBeforeRecoveredMainTicket TABLE (transid	BIGINT)							
-	DECLARE @tblBeforeBalance	TABLE (custid INT, balance MONEY)
-	DECLARE @tblAfterBalance	TABLE (custid INT, balance MONEY)
+	CREATE CLUSTERED INDEX IDX_tblMainTicket_custid_transid ON #tblMainTicket(custid, transid)
+	
+	DECLARE @tblMainTransIds TABLE (transid BIGINT)
+	
+	DECLARE @tblSettledBeforeRecoveredMainTicket TABLE (transid	BIGINT)
+								
+	DECLARE @tblBeforeBalance TABLE (custid INT PRIMARY KEY, balance MONEY)
+	
+	DECLARE @tblAfterBalance TABLE (custid INT PRIMARY KEY, balance MONEY)
+	
 	DECLARE @tblDebitPending TVP_BalanceList
+	
 	DECLARE @tblCreditPending TVP_BalanceList		
 	
 	SELECT @before_yesterday = CONVERT(VARCHAR(10), DATEADD(day, - @beforeDaysNum, GETDATE()), 120)
@@ -111,11 +122,23 @@ BEGIN
 		WHERE VName = 'isCalculatingParlay'
 	END		  
 	
-	BEGIN TRY		
-		INSERT INTO @tblSubTransIds
-		SELECT ss.val
-		FROM dbo.strSplit(@SubTransIds, ',') ss				
+	BEGIN TRY
+		--> parse @MainTransIds
+		INSERT INTO @tblMainTransIds(transid)
+		SELECT ss.val AS transid
+		FROM dbo.strSplit(@MainTransIds, ',') ss
 		
+		IF @@ROWCOUNT = 0
+		BEGIN
+			------ release Parlay procesee	
+			UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
+				SET VValue = '0'
+			WHERE VName = 'isCalculatingParlay'
+			
+			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+			RETURN
+		END
+			
 		--> query all sub tickets to recover
 		INSERT INTO @tblRecoverBet(
 				 SubTransID			 
@@ -126,8 +149,8 @@ BEGIN
 				,SubHdp1		
 				,SubHdp2
 				,matchid
-										
-				,statuswinlost
+				
+				,balance										
 				,custid
 				,isdeposit
 				,mrecommend				
@@ -165,8 +188,8 @@ BEGIN
 				,bm.hdp1 AS SubHdp1		
 				,bm.hdp2 AS SubHdp2	
 				,bm.matchid AS matchid	
-								
-				,b.statuswinlost AS statuswinlost
+				
+				,b.winlost - b.actual_stake + b.playercomm AS balance								
 				,b.custid AS custid
 				,case when EXISTS (select TOP 1 1 from custDB.dbo.Dep_CustSuper with(nolock) WHERE custid = b.srecommend) then 1 else 0 end AS isdeposit
 				,b.mrecommend AS mrecommend
@@ -176,7 +199,7 @@ BEGIN
 				,b.Username AS UserName
 				,b.transdate AS TransDate	
 				,b.bettype AS BetType	
-				,bm.refno AS Refno	
+				,b.refno AS Refno	
 				,b.[status] AS [Status]
 				,b.statusID AS StatusId
 				,b.winlost-b.actual_stake AS WinLost
@@ -196,17 +219,18 @@ BEGIN
 				,m.leagueid AS leagueid 
 				,b.betcheck AS betcheck
 				,bm.transdesc AS transdesc
-		FROM @tblSubTransIds t
-			INNER JOIN bettransm bm WITH (NOLOCK)
-					ON t.transid = bm.transid
+		FROM @tblMainTransIds t
 			INNER JOIN dbo.bettrans b WITH (NOLOCK)
+					ON t.transid = b.transid
+			INNER JOIN bettransm bm WITH (NOLOCK)
 					ON bm.refno	= b.refno	   							
 			INNER JOIN dbo.match m WITH(NOLOCK)
-					ON	m.matchid = bm.matchid			   
-		WHERE	b.bettype = 29	
-				AND bm.statusid = 102
-				AND b.winlostdate >= @before_yesterday
-				AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)	
+					ON	bm.matchid = m.matchid
+		WHERE bm.matchid = @MatchId
+		  AND b.bettype = 29	
+		  AND bm.statusid = 102
+		  AND b.winlostdate >= @before_yesterday
+		  AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)	
 				
 		IF @@ROWCOUNT = 0
 		BEGIN
@@ -217,20 +241,26 @@ BEGIN
 			
 			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
 			RETURN
-		END								
+		END										
+	
+		--> get list of MainTranIds	
+		INSERT INTO #tblMainTicket(transid
+								 , refno								 
+								 , StatusId								 
+								 , custid
+								 , balance)
+		SELECT t.transid
+			 , t.refno			 
+			 , t.StatusId			 
+			 , t.custid
+			 , t.balance
+		FROM @tblRecoverBet t		
 		
-		INSERT INTO @tblMainTicket (transid, refno, winlost, Status, bettype)
-		SELECT DISTINCT b.transid, b.refno, b.winlost, b.status, b.bettype
-		FROM	@tblRecoverBet t
-			INNER JOIN dbo.bettrans b WITH(NOLOCK)
-				ON	t.refno = b.refno
-		WHERE	b.matchid IN (29)
-				AND b.bettype IN (29)
-				
+		--> capture list of settled main transIDs before do recover
 		INSERT INTO @tblSettledBeforeRecoveredMainTicket(transid)
 		SELECT transid
-		FROM @tblMainTicket
-		WHERE [Status] IN ('WON', 'LOSE', 'DRAW')
+		FROM #tblMainTicket
+		WHERE StatusId IN (111, 112, 113) -- 'DRAW', 'WON', 'LOSE'
 				
 		SELECT  @MatchDate = eventdate
 		FROM	dbo.match WITH(NOLOCK)
@@ -238,43 +268,36 @@ BEGIN
 			
 		--> capture @tblBeforeBalance
 		INSERT INTO @tblBeforeBalance (custid, balance)
-		SELECT	b.custid
-				,SUM (b.winlost - b.actual_stake + b.playercomm) balance
-		FROM	bettrans b WITH (NOLOCK)
-			INNER JOIN @tblMainTicket t 
-				ON	b.transid = t.transid
-		WHERE	b.matchid IN (29) 
-				AND b.bettype IN(29)
-		GROUP BY b.CustID
+		SELECT	t.custid
+				,SUM(t.balance) balance
+		FROM #tblMainTicket t					
+		GROUP BY t.CustID
 				  
 		--> Do recover
 		-- for bettransM
-		EXEC dbo.NAP_Admin_Calculate_MP_broker
-		@matchid = @matchid
-		,@matchdate = @MatchDate
-		,@mode = 'RECOVER' -- update bettransM + BetParlayDetail
-		,@VoidTransID = @SubTransIds
+		SELECT @SubTransIds = @SubTransIds + 
+							  CASE WHEN @SubTransIds <> '' THEN ',' ELSE '' END +
+							  CONVERT(VARCHAR(20), SubTransID)
+		FROM @tblRecoverBet
 		
-		-- for bettrans
-		UPDATE bettrans
-		SET statusid = 0
-			,status = 'running'
-		WHERE transid IN (SELECT transid FROM @tblMainTicket)
+		EXEC dbo.NAP_Admin_Calculate_MP_broker
+			@matchid = @matchid
+			,@matchdate = @MatchDate
+			,@mode = 'RECOVER' -- update bettransM + BetParlayDetail
+			,@VoidTransID = @SubTransIds				
 		
 		SELECT @transids_29 = @transids_29 + CONVERT(VARCHAR(20), transid) + ','
-			 , @refnos_29 = @refnos_29 + refno + '|' + CONVERT(VARCHAR(20), transid) + ','
-		FROM @tblMainTicket
-		
-		-- betparlaydetail/betparlayresult
-		-- call pre-cal		
+			 , @refnos_29 = @refnos_29 + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid) + ','
+		FROM #tblMainTicket
+			
+		-- call pre-cal: betparlaydetail/betparlayresult		
 		EXEC dbo.NAP_Admin_Calculate_MP_broker 
 			@matchid	= @MatchId
 			,@matchdate = @MatchDate
 			,@strXML	= @transids_29
 			,@mode		= 'PRECAL-29'
-			
-		-- re-settle for main ticket
-		-- call cal_29	
+				
+		-- call cal_29: re-settle for main ticket
 		EXEC dbo.NAP_Admin_Calculate_MP_broker
 			@matchdate = @MatchDate
 			,@strXML	= @refnos_29  -- main transid + refno: refno|transid,refno|transid...
@@ -282,14 +305,12 @@ BEGIN
 		
 		--> capture @tblAfterBalance
 		INSERT INTO @tblAfterBalance (custid, balance)
-		SELECT	b.custid
+		SELECT	t.custid
 				,SUM (b.winlost - b.actual_stake + b.playercomm) balance
-		FROM	bettrans b WITH (NOLOCK)
-			INNER JOIN @tblMainTicket t 
-				ON	b.transid = t.transid
-		WHERE	b.matchid IN(29)
-				AND b.bettype IN(29)
-		GROUP BY b.CustID
+		FROM #tblMainTicket t	
+			INNER JOIN bettrans b WITH (NOLOCK) 
+				ON t.transid = b.transid		
+		GROUP BY t.CustID
 		
 		--> update credit balance of cust
 		INSERT INTO @tblCreditPending (custID, balance)
@@ -298,7 +319,7 @@ BEGIN
 		INNER JOIN	@tblAfterBalance a 	
 				ON	a.custid = b.custid
 		WHERE	    (a.balance - b.balance) > 0
-		
+				
 		IF @@rowcount <> 0
 			EXEC dbo.Dot_BalancePendingCreditIns 
 				@BalancePending = @tblCreditPending
@@ -345,7 +366,7 @@ BEGIN
 		SELECT @LogData = 'Recover Parlay bets having transid: ' + @transids_29 + ' IP=' + @Ip
 		EXEC WriteLog_UserLog 
 			 @UserId = @UserId,
-			 @Doing = @LogData 				
+			 @Doing = @LogData 
 	END TRY
 	BEGIN CATCH
 		------ release Parlay procesee	
@@ -356,7 +377,27 @@ BEGIN
 		SELECT @ErrCode = 100,
 				@ErrMsg = 'Invalid TransIds'
 		RETURN
-	END CATCH			
+		
+		--DECLARE @ErrorMessage NVARCHAR(4000);  
+		--DECLARE @ErrorSeverity INT;  
+		--DECLARE @ErrorState INT;  
+		--DECLARE @ErrorLine INT;  
+	  
+		--SELECT   
+		--	@ErrorMessage = ERROR_MESSAGE(),  
+		--	@ErrorSeverity = ERROR_SEVERITY(),  
+		--	@ErrorState = ERROR_STATE(),
+		--	@ErrorLine = ERROR_LINE();			
+		--PRINT @ErrorLine			  
+	  
+		---- Use RAISERROR inside the CATCH block to return error  
+		---- information about the original error that caused  
+		---- execution to jump to the CATCH block.  
+		--RAISERROR (@ErrorMessage, -- Message text.  
+		--		   @ErrorSeverity, -- Severity.  
+		--		   @ErrorState -- State.  
+		--		   );
+	END CATCH		 								
 	
 	--> Data for sending mail: Rule R1 + Rule R2 + Rule R3 + Rule R4
 	SELECT	t.SubTransID     
