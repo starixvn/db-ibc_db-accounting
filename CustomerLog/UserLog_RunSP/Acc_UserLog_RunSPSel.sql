@@ -36,7 +36,7 @@ AS
 		- 20160115@Dominic: Do not show logactionid=237 if Trackingvalues is null Redmine: #50937
 		- 20160222@Dominic: Correct TrackingValue when logactionid In (1100,1101,1102,1103) and its value contain 'Hide*Cricket' Redmine: #52667
 		- 20160222@Dominic: Correct TrackingValue when logactionid In (1100,1101,1102,1103) and its value contain 'Hide*Cricket' Redmine: #52667
-		- 20161018@Winnie: Exclude 31003 to 31007 for logactionid of smartpunter RedmineID #63077
+		- 20161018@Winnie: Handle logactionid range of smartpunter RedmineID #63077
 	Description:
 	- Get paged log run sp. If @LowerActionId and @UpperActionId are both not null, get actions in range 
 	
@@ -118,8 +118,8 @@ BEGIN
 						AND  la.ActionTypeID = @ActionTypeId
 						AND IsInternal <= @IsInternal
 						AND c.roleid <= CASE WHEN @IsInternal = 1 THEN 999999 WHEN @IsInternal = 0 THEN 4 END
-						AND (ul.ActionID <> 237 OR ul.TrackingValue IS NOT NULL)
-						AND ul.ActionID NOT BETWEEN 31003 AND 31007
+						AND (ul.ActionID <> 237 OR ul.TrackingValue IS NOT NULL)	
+						AND ul.ActionID NOT BETWEEN 31000 AND 31100					
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 	ELSE
@@ -167,7 +167,7 @@ BEGIN
 						AND la.ActionID NOT BETWEEN @LowerActionId AND @UpperActionId
 						AND c.roleid <= CASE WHEN @IsInternal = 1 THEN 999999 WHEN @IsInternal = 0 THEN 4 END
 						AND (ul.ActionID <> 237 OR ul.TrackingValue IS NOT NULL)
-						AND ul.ActionID NOT BETWEEN 31003 AND 31007
+						AND ul.ActionID NOT BETWEEN 31000 AND 31100
 
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
@@ -217,7 +217,7 @@ BEGIN
 						AND IsInternal <= @IsInternal
 						AND c.roleid <= CASE WHEN @IsInternal = 1 THEN 999999 WHEN @IsInternal = 0 THEN 4 END
 						AND (ul.ActionID <> 237 OR ul.TrackingValue IS NOT NULL)
-						AND ul.ActionID NOT BETWEEN 31003 AND 31007
+						
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 END
