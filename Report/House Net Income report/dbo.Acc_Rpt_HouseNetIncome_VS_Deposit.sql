@@ -15,6 +15,7 @@ AS
 		- 20160915@Harper - #64211 - Rebate and Discount should be included when calculating the Pay to Suplplier
 		- 20160919@Harper - #64338 - PayToSupplier of FullMonth is incorrect
 		- 20160923@Harper - #64582 - PayToSupplier should use ExchangeOANDA
+		- 20161024@Harper - #65699: HAIFA - Apply new charge rate discount for HNI report
 	Param's Explanation:   
 */  
 BEGIN  
@@ -78,6 +79,19 @@ BEGIN
 	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR') -- Currency ID = 2
 	-- End region
 
+	-- Region: HAIFA - Adding more discount rate
+	CREATE TABLE #DiscountGroup(DiscountGroupId		SMALLINT,
+								DiscountGroupType	TINYINT,
+								FromAmount			MONEY,
+								ToAmount			MONEY,
+								Rate				MONEY,
+								PartyId				INT,
+								ProductId			TINYINT,
+								BaseCurrency		INT)
+	INSERT INTO #DiscountGroup( DiscountGroupId, DiscountGroupType, FromAmount, ToAmount, Rate, PartyId, ProductId, BaseCurrency)
+	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductID = 5 -- VS
+	-- End Region: HAIFA
+	
 	CREATE	TABLE #TempDataVS (
 			PartyId			INT,
 			rptDate			DATETIME,
@@ -85,8 +99,9 @@ BEGIN
 			WinLoss			MONEY,
 			AComm			MONEY,
 			ProductId		TINYINT,
-			AmountToCompany MONEY)
-	INSERT INTO #TempDataVS (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
+			AmountToCompany MONEY,
+			DiscountAmount	MONEY)
+	INSERT INTO #TempDataVS (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany, DiscountAmount)
 	(
 		SELECT	p.PartyId,
 				b.rptDate,
@@ -94,18 +109,20 @@ BEGIN
 				SUM(ISNULL(b.MemberWL, 0)),
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				p.ProductId,
-				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate
+				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate,
+				SUM(-ISNULL(b.MemberWL, 0)) * ISNULL(d.Rate, 0) * e.Rate 
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID
 				INNER JOIN @PartyChargeInfo p ON	b.ProductId = p.ProductID 
 													AND p.LicenseeId = b.SiteId
 													AND (b.rptDate BETWEEN p.FromDate AND p.ToDate)
 													AND (p.Bettype = -1 OR p.Bettype = b.Bettype)
+				LEFT JOIN #DiscountGroup d ON d.PartyId = p.PartyId AND d.ProductId = p.ProductID
 		WHERE	b.rptDate BETWEEN @FDate AND @TDate
 				AND b.CurrencyID <> 20
 				AND b.customercategory NOT IN (27, 28)
 				AND b.StatusId NOT IN (-1, 103) -- Exclude Reject , Void, Refund
-		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate
+		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate, d.Rate
 	)
 
 	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataVS (PartyId, ProductId)
@@ -126,6 +143,7 @@ BEGIN
 	CREATE TABLE #FinalResult (
 		RptDate				VARCHAR(10),
 		LicenseeWL			MONEY,
+		DiscountWL			MONEY,
 		PayToSupplier		MONEY
 	)
 
@@ -138,8 +156,8 @@ BEGIN
 		INNER JOIN #ExchangeOANDA oanda ON d.rptDate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
 	GROUP BY d.rptDate, p.IsDeposit, p.VSRate
 
-	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), -1 * (SELECT VSRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END FROM @DailyPayAmt GROUP BY VSRate)
+	INSERT INTO #FinalResult (rptDate, LicenseeWL, DiscountWL, PayToSupplier)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), 0, -1 * (SELECT VSRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END FROM @DailyPayAmt GROUP BY VSRate)
 	FROM #FeeData
 	WHERE ProductID = 5
 
@@ -148,9 +166,10 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
+		INSERT INTO #FinalResult (RptDate, LicenseeWL, DiscountWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
 			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataVS WHERE ProductId = 5 AND rptDate = @tmpDate), -- LicenseeWL
+			(SELECT ISNULL(SUM(DiscountAmount), 0) FROM #TempDataVS WHERE ProductId = 5 AND rptDate = @tmpDate), -- DiscountWL
 			(SELECT ISNULL(SUM(Amount), 0) FROM @DailyPayAmt WHERE rptDate = @tmpDate)
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
@@ -165,6 +184,8 @@ BEGIN
 					'FROM	(SELECT ProductCode, [Order], [RptDate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT ''VS'', 1, ''House Income'', LicenseeWL' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT ''VS'', 3, ''Rebate & Discount'', DiscountWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
 							'SELECT ''VS'', 4, ''Pay to supplier'', PayToSupplier) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
 					'PIVOT' + CHAR(13) +

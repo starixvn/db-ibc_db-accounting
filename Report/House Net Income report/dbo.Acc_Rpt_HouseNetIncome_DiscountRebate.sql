@@ -11,6 +11,7 @@ AS
     Revisions: 
 		- 20160909@Harper - #63899 - Rebate and Discount should be included when calculating the Pay to Suplplier
 		- 20160922@Harper - #64527 - Cannot calculate the Rebate of Keno and Number Game
+		- 20161024@Harper - #65699: HAIFA - Apply new charge rate discount for HNI report
 	Param's Explanation:   
 */  
 BEGIN  
@@ -38,7 +39,7 @@ BEGIN
 		SELECT	dg.DiscountGroupId,dg.DiscountGroupType,dga.PartyId, dg.CurrencyId, dg.FromDate, dg.ToDate
 		FROM	bodb_Licensee.dbo.LA_DiscountGroupHeader dg WITH(NOLOCK)
 				INNER JOIN bodb_Licensee.dbo.LA_DiscountGroupAssignment dga WITH(NOLOCK) ON dga.DiscountGroupId = dg.DiscountGroupId
-		WHERE	@FDate<= ToDate AND FromDate<=@TDate
+		WHERE	@FDate <= ToDate AND FromDate <= @TDate
 	)
 
 	DELETE	d FROM #DiscountGroupHeader d
@@ -52,6 +53,12 @@ BEGIN
 					FROM	#DiscountGroupHeader g
 					WHERE	g.DiscountGroupType = 2 AND d.PartyId = g.PartyId)
 			AND d.DiscountGroupType = 2
+
+	DELETE	d FROM #DiscountGroupHeader d
+	WHERE	d.ToDate < (SELECT	MAX(g.ToDate)
+					FROM	#DiscountGroupHeader g
+					WHERE	g.DiscountGroupType = 3 AND d.PartyId = g.PartyId)
+			AND d.DiscountGroupType = 3
 
 	CREATE TABLE #DiscountGroup(DiscountGroupId		SMALLINT,
 								DiscountGroupType	TINYINT,
@@ -83,7 +90,46 @@ BEGIN
 	FROM (SELECT DISTINCT CASE WHEN d.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END AS ProductPrefix
 		FROM #DiscountGroup d
 			LEFT JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.Productid = d.ProductId) t
+	
+	-- Region: GEt Winloss data
+	DECLARE @PartyIDs VARCHAR(1000)
+	SELECT	@PartyIDs = COALESCE(@PartyIDs + ',', '') + CONVERT(VARCHAR(10), PartyId) FROM #DiscountGroup WHERE DiscountGroupType = 3
+	
+	CREATE	TABLE #TempDataWL (
+			PartyId			INT,
+			rptDate			DATETIME,
+			CurrencyId		INT,
+			WinLoss			MONEY,
+			AComm			MONEY,
+			ProductId		TINYINT,
+			AmountToCompany MONEY,
+			IsApplyMinFee	BIT)
+	INSERT INTO #TempDataWL (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany, IsApplyMinFee)
+	(
+		SELECT	d.PartyId,
+				b.rptDate,
+				b.CurrencyID,
+				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
+				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
+				d.ProductId,
+				SUM(ISNULL(b.MemberWL, 0)) * ISNULL(d.Rate, 0) * e.Rate,
+				1 AS IsApplyMinFee
+		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
+				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID	
+				INNER JOIN bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FDate, @TDate, 'SB,BA', 'OA', 1) ci ON ci.LicenseeID = b.SiteID				
+				INNER JOIN #DiscountGroup d ON d.PartyId = ci.PartyID AND d.ProductId = b.ProductID
+		WHERE	d.DiscountGroupType = 3
+				AND b.rptDate BETWEEN @FDate AND @TDate
+				AND b.CurrencyID <> 20
+				AND b.customercategory NOT IN (27, 28)
+				AND b.Bettype NOT IN (901,902,903)
+				AND b.StatusId NOT IN (-1, 103) -- Exclude Reject , Void, Refund
+		GROUP BY b.rptdate, b.SiteId, d.PartyId,b.CurrencyID, d.ProductId, e.Rate, d.Rate
+	)
 
+	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataWL (PartyId, ProductId)
+	-- End Region
+	
 	-- Convert discount amount to base currency
 	UPDATE d SET
 		d.FromAmount = d.FromAmount * e.Rate,
@@ -133,6 +179,17 @@ BEGIN
 		LEFT JOIN bodb_licensee.dbo.Product3rd p ON p.Productid = s.ProductId
 		LEFT JOIN #DiscountGroup d ON s.PartyId = d.PartyId AND d.ProductId = s.ProductId AND d.DiscountGroupType = 1 -- discount = 1
 		LEFT JOIN #DiscountGroup r ON s.PartyId = r.PartyId AND r.ProductId = s.ProductId AND r.DiscountGroupType = 2 -- rebate = 2
+	GROUP BY	s.ProductId,
+				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
+				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END
+	UNION ALL
+	SELECT	s.ProductId,
+			CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END ProductCode,
+			CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END [Order],
+			'Rebate & Discount' Figure,
+			-SUM(CASE WHEN s.AmountToCompany < 0 THEN 0 ELSE s.AmountToCompany END) AS FullRange
+	FROM	#TempDataWL s -- discount = 3
+		LEFT JOIN bodb_licensee.dbo.Product3rd p ON p.Productid = s.ProductId
 	GROUP BY	s.ProductId,
 				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
 				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END

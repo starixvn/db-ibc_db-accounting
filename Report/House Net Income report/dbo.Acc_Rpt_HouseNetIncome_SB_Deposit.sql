@@ -1,5 +1,7 @@
- 
-CREATE PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit]
+USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit]
 	@FromDate DATE,
 	@ToDate	DATE
 AS  
@@ -11,6 +13,7 @@ AS
    
     Revisions:
 		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
+		- 20161024@Harper - #65699: HAIFA - Apply new charge rate discount for HNI report
 	Param's Explanation:   
 */  
 BEGIN  
@@ -70,7 +73,20 @@ BEGIN
 	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR')
 	-- End region
 
-	CREATE	TABLE #TempData (
+	-- Region: HAIFA - Adding more discount rate
+	CREATE TABLE #DiscountGroup(DiscountGroupId		SMALLINT,
+								DiscountGroupType	TINYINT,
+								FromAmount			MONEY,
+								ToAmount			MONEY,
+								Rate				MONEY,
+								PartyId				INT,
+								ProductId			TINYINT,
+								BaseCurrency		INT)
+	INSERT INTO #DiscountGroup( DiscountGroupId, DiscountGroupType, FromAmount, ToAmount, Rate, PartyId, ProductId, BaseCurrency)
+	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductID = 0 -- SB
+	-- End Region: HAIFA
+
+	CREATE	TABLE #TempDataSB (
 			PartyId			INT,
 			rptDate			DATETIME,
 			CurrencyId		INT,
@@ -78,8 +94,9 @@ BEGIN
 			AComm			MONEY,
 			ProductId		TINYINT,
 			AmountToCompany MONEY,
-			IsApplyMinFee	BIT)
-	INSERT INTO #TempData (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany, IsApplyMinFee)
+			IsApplyMinFee	BIT,
+			DiscountAmount	MONEY)
+	INSERT INTO #TempDataSB (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany, IsApplyMinFee, DiscountAmount)
 	(
 		SELECT	p.PartyId,
 				b.rptDate,
@@ -87,23 +104,25 @@ BEGIN
 				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				p.ProductId,
-				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate,
-				1 AS IsApplyMinFee
+				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate * (1 - ISNULL(d.Rate, 0)),
+				1 AS IsApplyMinFee,
+				SUM(-ISNULL(b.MemberWL, 0)) * ISNULL(d.Rate, 0) * e.Rate 
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID
 				INNER JOIN @PartyChargeInfo p ON	b.ProductId = p.ProductID 
 													AND p.LicenseeId = b.SiteId
 													AND (b.rptDate BETWEEN p.FromDate AND p.ToDate)
 													AND (p.Bettype = -1 OR p.Bettype = b.Bettype)
+				LEFT JOIN #DiscountGroup d ON d.PartyId = p.PartyId AND d.ProductId = p.ProductID
 		WHERE	b.rptDate BETWEEN @FDate AND @TDate
 				AND b.CurrencyID <> 20
 				AND b.customercategory NOT IN (27, 28)
 				AND b.Bettype NOT IN (901,902,903)
 				AND b.StatusId NOT IN (-1, 103) -- Exclude Reject , Void, Refund
-		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate
+		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate, d.Rate
 	)
 
-	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempData (PartyId, ProductId)
+	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataSB (PartyId, ProductId)
 
 	-- Region: Result
 	CREATE TABLE #FeeData (
@@ -121,6 +140,7 @@ BEGIN
 	CREATE TABLE #FinalResult (
 		RptDate				VARCHAR(10),
 		LicenseeWL			MONEY,
+		DiscountWL			MONEY,
 		MinFee				MONEY,
 		BAComm				MONEY,
 		PayToMuayThai		MONEY,
@@ -132,8 +152,8 @@ BEGIN
 			@BAWinloss = ISNULL(SUM(AmountToCompany), 0)
 	FROM #FeeData WHERE ProductId = 3
 
-	INSERT INTO #FinalResult (rptDate, LicenseeWL, MinFee, BAComm, PayToMuayThai, PayToMetricGaming)
-	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied) + @BAWinloss, 0), ISNULL(SUM(MinFeeApplied), 0), ISNULL(@BAComm, 0), 0, 0
+	INSERT INTO #FinalResult (rptDate, LicenseeWL, DiscountWL, MinFee, BAComm, PayToMuayThai, PayToMetricGaming)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied) + @BAWinloss, 0), 0, ISNULL(SUM(MinFeeApplied), 0), ISNULL(@BAComm, 0), 0, 0
 	FROM #FeeData
 	WHERE ProductID = 0
 
@@ -142,11 +162,12 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (RptDate, LicenseeWL, MinFee, BAComm, PayToMuayThai, PayToMetricGaming)
+		INSERT INTO #FinalResult (RptDate, LicenseeWL, DiscountWL, MinFee, BAComm, PayToMuayThai, PayToMetricGaming)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempData WHERE ProductId IN (0, 3) AND rptDate = @tmpDate), -- LicenseeWL + BA Winloss
+			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataSB WHERE ProductId IN (0, 3) AND rptDate = @tmpDate), -- LicenseeWL + BA Winloss
+			(SELECT ISNULL(SUM(DiscountAmount), 0) FROM #TempDataSB WHERE ProductId IN (0, 3) AND rptDate = @tmpDate),
 			0 AS MinFee,
-			(SELECT ISNULL(-SUM(AComm), 0) FROM #TempData WHERE ProductId = 3 AND rptDate = @tmpDate), -- BA Commission
+			(SELECT ISNULL(-SUM(AComm), 0) FROM #TempDataSB WHERE ProductId = 3 AND rptDate = @tmpDate), -- BA Commission
 			0, 0
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
@@ -318,6 +339,8 @@ BEGIN
 							'(SELECT ''SB'', 1, ''House Income'', LicenseeWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
 							'SELECT ''SB'', 2, ''Licensing Minimum Fee'', MinFee' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT ''SB'', 4, ''Rebate & Discount'', DiscountWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
 							'SELECT ''SB'', 5, ''BA Commission'', BAComm' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
