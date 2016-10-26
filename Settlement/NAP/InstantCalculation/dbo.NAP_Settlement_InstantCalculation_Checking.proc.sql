@@ -103,16 +103,12 @@ BEGIN
 			--select instant bettype
 			;WITH instantTicketCheck AS (
 				SELECT transid
+					, statusID
 					, CASE 
 						WHEN ods.modds >= 0.5 THEN 112 --WON
 						WHEN ods.modds <= - 0.5 THEN 113 --LOSE    
 						ELSE 0
-					END AS statusID
-					, CASE 
-						WHEN ods.moddsCheck >= 0.5 THEN 112 --WON
-						WHEN ods.moddsCheck <= - 0.5 THEN 113 --LOSE    
-						ELSE 0
-					END AS statusIDCheck
+					END AS statusCheck
 				FROM dbo.bettrans b WITH(NOLOCK)
 					CROSS APPLY (
 						SELECT 
@@ -121,21 +117,14 @@ BEGIN
 								WHEN betteam IN ('a') THEN hdp1 - @totalgoal
 								ELSE NULL 
 							END AS modds
-							, CASE 
-								WHEN betteam IN ('h') THEN @totalGoalCheck - hdp1
-								WHEN betteam IN ('a') THEN hdp1 - @totalGoalCheck
-								ELSE NULL 
-							END AS moddsCheck
 					) AS ods
 				WHERE matchid 	= @matchid 
 					AND EXISTS (SELECT TOP 1 1 FROM #instantBettype ib WHERE ib.bettype = b.bettype)
-					--AND b.hdp1 <= @comparedValue
-					AND b.statusId IN (0, 112, 113)
+					AND b.statusId IN (112, 113)
 			)
 			SELECT @instantCheck = SUM(1)
 			FROM instantTicketCheck
-			WHERE statusIDCheck 	IN (112,113) 
-				AND statusIDCheck 	<> statusID
+			WHERE statusCheck 	<> statusID
 			
 			IF(@instantCheck > 0)
 			BEGIN

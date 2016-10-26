@@ -7,6 +7,7 @@ AS
 	DB: DBPRO/BODB02
 	
 	Revisions:
+		20161019@Bobby: @#65002 - Add checking AutoSetting on match & league
 		
 	Param's Explanation:
  
@@ -47,9 +48,7 @@ BEGIN
 			CROSS APPLY @typeIds f
 		WHERE m.eventstatus = 'running' and m.sporttype = 1
 			AND (mr.ConfirmHT > 0 OR mr.ConfirmFT > 0)
-			AND 1 = CASE WHEN m.IsAutoPayout IS NULL THEN ISNULL(l.IsAutoPayout, 0)
-						 WHEN m.IsAutoPayout = 1 THEN 1
-					ELSE 0 END
+			AND 1 & ISNULL(m.AutoSetting, ISNULL(l.AutoSetting, 0)) = 1
 			AND NOT EXISTS (SELECT TOP 1 1 
 								FROM dbo.AutoPayoutResult rs WITH(NOLOCK) 
 								WHERE rs.MatchId = m.matchid 

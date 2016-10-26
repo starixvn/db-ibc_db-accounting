@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultIns 
+ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultIns
 	@MatchId INT
 	, @SourceId TINYINT
 	, @TypeId TINYINT
@@ -53,22 +53,6 @@ BEGIN
 	IF (@TypeId IN (101, 102) AND @AutoPayoutResultId > 0 
 		AND (
 			@StatusIdCheck IN (0,1) -- waiting|running
-			OR 
-			(@StatusIdCheck = 2 
-				AND NOT EXISTS (
-					SELECT 1 
-					FROM dbo.ProviderResultDetail WITH(NOLOCK)
-					WHERE MatchId = @MatchId 
-						AND TypeId = @TypeId
-						AND HomeValue = @HomeValue 
-						AND AwayValue = @AwayValue
-					GROUP BY MatchId
-						, TypeId
-						, HomeValue
-						, AwayValue
-					HAVING COUNT(1) > 1
-				)
-			)
 		)
 	)
 	BEGIN
@@ -80,23 +64,9 @@ BEGIN
 	IF (@TypeId IN (101, 102)
 		AND (
 			@StatusIdCheck = 3 --FAILED to re-confirm
-			OR (
-				@StatusIdCheck = 2 --abnormal N-case to re-calculate
-				AND EXISTS (
-					SELECT 1 
-					FROM dbo.ProviderResultDetail WITH(NOLOCK)
-					WHERE MatchId = @MatchId 
-						AND TypeId = @TypeId
-						AND HomeValue = @HomeValue 
-						AND AwayValue = @AwayValue
-					GROUP BY MatchId
-						, TypeId
-						, HomeValue
-						, AwayValue
-					HAVING COUNT(1) > 1
-				)
-			)
-		)
+			OR 
+			@StatusIdCheck = 2 --abnormal N-case to re-calculate
+		)	
 	)	
 	BEGIN
 		
@@ -109,13 +79,23 @@ BEGIN
 		INSERT INTO dbo.AutoPayoutResult (MatchId, SourceId, CalculationType, HomeValue, AwayValue, StatusId, TryCount, CreatedDate, ModifiedDate)
 		VALUES(@MatchId, @SourceId, @TypeId, @HomeValue, @AwayValue, @StatusId, 0, GETDATE(), GETDATE())
 	END
-
+	
+	IF (@TypeId IN (101, 102) )
+	BEGIN
+		UPDATE dbo.ProviderResultDetail WITH(ROWLOCK,UPDLOCK)
+		SET IsConfirmed = 1
+		WHERE MatchId = @MatchId
+			AND TypeId = @TypeId
+			AND SourceId = 100
+			AND HomeValue = @HomeValue
+			AND AwayValue = @AwayValue
+	END
+	
 	IF @@ERROR <> 0
 	BEGIN
 		SELECT @ErrCode = 1001022, @ErrMsg = 'Failed to insert result detail.'
 		RETURN
 	END
-		
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayoutResultIns] TO [bodbAdminNet] AS [dbo]

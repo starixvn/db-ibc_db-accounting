@@ -54,10 +54,13 @@ BEGIN
 	WHERE m.matchid = @MatchId
 	
 	--Auto payout
-	IF @Mode = 5
+	IF @Mode IN (5,6)
 	BEGIN
-		SELECT @TypeId = CASE WHEN @Action = 'CAL-HT' THEN 1
+		SELECT @TypeId = CASE 
+							WHEN @Action = 'CAL-HT' THEN 1
 							WHEN @Action = 'CAL-FT' THEN 2
+							WHEN @Action = 'INST-HT' THEN 101
+							WHEN @Action = 'INST-FT' THEN 102
 						ELSE -1 END
 
 		--update status for autopayout result
@@ -68,23 +71,13 @@ BEGIN
 	END
 	--Instant Calculation
 	IF @Mode = 6
-	BEGIN
-		SELECT @TypeId = CASE WHEN @Action = 'INST-HT' THEN 101
-							WHEN @Action = 'INST-FT' THEN 102
-						ELSE -1 END
-
-		--update status for autopayout result
-		EXEC DBPRO.bodb02.dbo.NAP_Set_AutoPayoutResultUpd @MatchId = @MatchId
-			, @TypeId = @TypeId
-			, @StatusId = 3 --failed
-			, @IsIncludedUpdateMatch = 0
-		
+	BEGIN	
 		-- Re-update confirmed instant score
 		SELECT TOP(1)
-			@fth = CASE WHEN @TypeId = 102 THEN HomeValue ELSE 0 END
-			, @fta = CASE WHEN @TypeId = 102 THEN AwayValue ELSE 0 END
-			, @hth = CASE WHEN @TypeId = 101 THEN HomeValue ELSE 0 END
-			, @hta = CASE WHEN @TypeId = 101 THEN AwayValue ELSE 0 END
+			@fth = CASE WHEN @TypeId = 102 THEN HomeValue ELSE @fth END
+			, @fta = CASE WHEN @TypeId = 102 THEN AwayValue ELSE @fta END
+			, @hth = CASE WHEN @TypeId = 101 THEN HomeValue ELSE @hth END
+			, @hta = CASE WHEN @TypeId = 101 THEN AwayValue ELSE @hta END
 		FROM DBPRO.BODB02.dbo.AutoPayoutResult WITH (NOLOCK)
 		WHERE matchid = @MatchId
 			AND CalculationType = @TypeId

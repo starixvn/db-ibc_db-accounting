@@ -47,6 +47,7 @@ BEGIN
 			, HomeValue
 			, AwayValue
 			, CreatedDate
+			, IsConfirmed
 		)
 		VALUES ( 
 			@MatchId
@@ -55,6 +56,7 @@ BEGIN
 			, @HomeScore
 			, @AwayScore
 			, GETDATE()
+			, 0
 		)
 	END
 	RETURN	

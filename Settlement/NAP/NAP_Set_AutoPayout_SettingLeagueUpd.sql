@@ -67,8 +67,8 @@ BEGIN
 		--update running match
 		UPDATE m
 		SET AutoSetting = CASE 
-							WHEN @AutoType = 1 THEN @bitChanged + (2 & AutoSetting)
-							WHEN @AutoType = 2 THEN (1 & AutoSetting) + @bitChanged
+							WHEN @AutoType = 1 THEN @bitChanged + (2 & ISNULL(m.AutoSetting, 0))
+							WHEN @AutoType = 2 THEN (1 & ISNULL(m.AutoSetting, 0)) + @bitChanged
 							ELSE m.AutoSetting
 						END
 		FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
