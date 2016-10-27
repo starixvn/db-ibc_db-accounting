@@ -1,6 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransSelBet_BatchMsg] (
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Acc_BettransSelBet_BatchMsg]    Script Date: 10/13/2016 14:01:08 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Acc_BettransSelBet_BatchMsg] (
 	@TransIds 		VARCHAR(MAX)
 	,@ProductIds 	VARCHAR(1000) = ''
+	,@GroupName		VARCHAR(20)
 ) 
 AS
 /*  
@@ -20,6 +28,7 @@ AS
   - 20160317@bobby.nguyen: #54218 - Upload bacth message enhancement
   - 20160317@bobby.nguyen: #57700 - Add Macau Game product
   - 20160817@bobby.nguyen: #62572 - Exclude BT's bettype 904
+  - 20161013@Kathy: Add NG2 [Redmine:#63211]
   
 Explanation's Param:  
 	- @ProductIds: [1-99]
@@ -97,12 +106,7 @@ BEGIN
 		- LC: ProductId = 4
 		- VS: ProductId = 5
 	*/
-	IF (EXISTS (
-			SELECT TOP 1 1
-			FROM #productIdList
-			WHERE ProductId IN (1, 3, 4, 5)
-		)
-	)
+	IF @GroupName = 'Group 1'
 	BEGIN
 		INSERT INTO #BetDelete (
 			transid
@@ -129,8 +133,6 @@ BEGIN
 			INNER JOIN #productBettype bt
 			ON b.bettype 	= bt.bettype
 			
-		WHERE bt.ProductId 	IN (1, 3, 4, 5)
-			
 		UNION ALL 
 		SELECT 
 			b.transid
@@ -146,8 +148,6 @@ BEGIN
 			ON b.transid = t.transid
 			INNER JOIN #productBettype bt
 			ON b.bettype 	= bt.bettype
-			
-		WHERE bt.ProductId 	IN (1, 3, 4, 5)
 	END
 	-- search by group 2
 	/*	
@@ -158,12 +158,7 @@ BEGIN
 		- CK: ProductId = 19
 		- SB-MG: ProductId = 1 - SubProduct = 'MG-SuperLive'
 	*/
-	IF (EXISTS (
-			SELECT TOP 1 1
-			FROM #productIdList
-			WHERE ProductId 	IN (8, 12, 13, 15, 19, @MG_ProductId)
-		)
-	)
+	IF @GroupName = 'Group 2'
 	BEGIN
 		INSERT INTO #BetDelete (
 			transid
@@ -189,8 +184,6 @@ BEGIN
 			INNER JOIN #productBettype bt
 			ON b.gameid 	= bt.bettype
 			
-		WHERE bt.ProductId 		IN (8, 12, 13, 15, 19, @MG_ProductId)
-			
 		UNION ALL 
 		SELECT b.translogid
 			, b.translogid
@@ -206,22 +199,14 @@ BEGIN
 			INNER JOIN #productBettype bt
 			ON b.gameid 	= bt.bettype
 			
-		WHERE b.winlostdate >= @balanUpDate
-			AND (
-				bt.ProductId IN (8, 12, 13, 15, 19, @MG_ProductId)
-			)
+		WHERE b.winlostdate >= @balanUpDate		
 	END	
 	-- search by group 3
 	/*	
 		- AGC: ProductId = 11
 		- AB: ProductId = 21
 	*/
-	IF (EXISTS (
-			SELECT TOP 1 1
-			FROM #productIdList
-			WHERE ProductId 	IN (11, 21)
-		)
-	)
+	IF @GroupName = 'Group 3'
 	BEGIN
 		INSERT INTO #BetDelete (
 			transid
@@ -247,7 +232,6 @@ BEGIN
 			INNER JOIN #productBettype bt
 			ON b.gameid 		= bt.bettype
 			
-		WHERE bt.ProductId IN (11, 21)
 		UNION ALL
 		SELECT b.transid
 			, b.RefNo
@@ -264,7 +248,6 @@ BEGIN
 			ON b.gameid 	= bt.bettype
 			
 		WHERE b.winlostdate  >= @balanUpDate
-			AND bt.ProductId IN (11, 21)
 	END
 	
 	-- search by group 4
@@ -273,12 +256,7 @@ BEGIN
 		- MGCRNG: ProductId = 17
 		- VB: ProductId = 22
 	*/
-	IF (EXISTS (
-			SELECT TOP 1 1
-			FROM #productIdList
-			WHERE ProductId 	IN (6, 17, 22)
-		)
-	)
+	IF @GroupName = 'Group 4'
 	BEGIN
 		INSERT INTO #BetDelete (
 			transid
@@ -304,9 +282,7 @@ BEGIN
 			ON b.transid 		= t.transid
 			INNER JOIN #productBettype bt
 			ON b.gameid 		= bt.bettype
-			
-		WHERE bt.ProductId IN (6, 17, 22)
-		
+	
 		UNION ALL
 		SELECT b.transid
 			, b.RefNo
@@ -323,7 +299,6 @@ BEGIN
 			ON b.gameid 		= bt.bettype
 			
 		WHERE b.winlostdate  >= @balanUpDate
-			AND bt.ProductId IN (6, 17, 22)
 	END
 	
 	;WITH CTE_CustInfo AS 
@@ -369,3 +344,8 @@ BEGIN
 	
 	RETURN
 END
+
+GO
+GRANT EXECUTE ON [dbo].[Acc_BettransSelBet_BatchMsg] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BettransSelBet_BatchMsg] TO [vnteam] AS [dbo]

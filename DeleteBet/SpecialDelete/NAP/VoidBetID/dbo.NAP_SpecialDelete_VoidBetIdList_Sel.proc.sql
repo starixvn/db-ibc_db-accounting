@@ -1,12 +1,10 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel]    Script Date: 09/19/2016 14:06:00 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel]    Script Date: 10/13/2016 12:40:47 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.NAP_SpecialDelete_VoidBetIdList_Sel    Script Date: 9/19/2016 2:01:29 PM ******/
-/****** Object:  Stored Procedure dbo.NAP_SpecialDelete_VoidBetIdList_Sel    Script Date: 9/19/2016 9:24:10 AM ******/
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] 
 	@CustID			INT				= NULL 	
 	,@TransIds		VARCHAR(MAX)	= NULL 
@@ -36,6 +34,7 @@ AS
 		- 20160714@Kathy: change the order of result: groupname, groupid, transid
 		- 20160816@Bobby: #62527 - Update BT's info for showing bet list	
 		- 20160914@Kent: Add logic for suporting void system parlay [Redmine:#63202]	
+		- 20161013@Kathy: Exclude phone betting tickets [Redmine:#63211]
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -142,6 +141,7 @@ BEGIN
 						AND b.statusID NOT IN (101, 102)
 					) THEN 1
 				ELSE 0 END
+			AND b.betfrom <> 'p'
 	END
 	
 	--Search by TransIds
@@ -368,6 +368,7 @@ BEGIN
 			AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
 			AND b.statusID NOT IN (101, 102)
+			AND b.betfrom <> 'p'
 	END
 	
 	-- UPDATE eventtype = 1
@@ -387,6 +388,7 @@ BEGIN
 			ON	d.matchid = m.matchid
 			
 		WHERE d.bettype NOT IN (9, 29)
+			
 	END
 	
 	-- UPDATE eventtype = 2 [Outright bettype]
@@ -695,3 +697,7 @@ BEGIN
 	
 	RETURN;
 END
+GO
+GRANT EXECUTE ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_SpecialDelete_VoidBetIdList_Sel] TO [vnteam] AS [dbo]
