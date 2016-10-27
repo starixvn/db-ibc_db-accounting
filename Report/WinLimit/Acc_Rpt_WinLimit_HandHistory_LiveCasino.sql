@@ -3,7 +3,8 @@ GO
 
 CREATE PROCEDURE Acc_Rpt_WinLimit_HandHistory_LiveCasino
 	@CustID INT,
-	@ReachedDate DATETIME
+	@ReachedDate DATETIME,
+	@BetType NVARCHAR(50)
 AS
 /*
 	Created:	Harper@20161013
@@ -93,7 +94,7 @@ BEGIN
 		INNER JOIN dbo.League l (NOLOCK) ON m.leagueid = l.leagueid
 	WHERE bg.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund
 		AND bg.custid = @CustID AND CONVERT(VARCHAR(10), bg.winlostdate, 111) = @ShortReachedDate 
-
+		AND bg.betteam = @BetType
 	-- Update Time Difference
 	UPDATE T
 	SET T.TimeDiff = CONVERT(TIME, R.TimeDiff)
