@@ -5,7 +5,8 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail_Auto_1s]
-    @MatchID        INT
+    @MatchID					INT
+    ,@IsSettleAbandonedMatchIBC	BIT = 0 OUTPUT
 
 AS
 /*    Creator: Jamie
@@ -17,7 +18,7 @@ AS
     Revisions:
         - 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
         - 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
-	- 20160505@Patrick: Move code select match info to another SP [RedmineId: #56587]
+		- 20160505@Patrick: Move code select match info to another SP [RedmineId: #56587]
 
     Param's Explanation:
 */
@@ -38,10 +39,20 @@ BEGIN
         ,GroupId			SMALLINT
     )
 	
-				,@IsExistFgLg BIT = 0
-				,@IsExistHtFgLg BIT = 0
-               
-    
+	IF EXISTS (
+			SELECT 1
+			FROM bettrans b WITH (NOLOCK)
+				INNER JOIN dbo.f_Set_GetGroupBettypes() f
+					ON b.bettype = f.BetType
+			WHERE    f.GroupId = 8
+					AND f.IsDetermined = 1
+					AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
+					AND ruben = 0 
+		)
+	BEGIN
+		SELECT @IsSettleAbandonedMatchIBC = 1
+	END
+	
     INSERT INTO @tmpTicketStatus(ResourceID, BetCount, InRunning, GroupId)
     SELECT    
             CASE

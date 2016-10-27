@@ -7,15 +7,15 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s] @MatchId INT
-	, @Action VARCHAR(20)
-	, @Results VARCHAR(MAX)
+	,@Action	VARCHAR(20)
+	,@Results	VARCHAR(MAX)
 
-	, @IsAuto BIT = 0
-	, @AdminId INT = 0
-	, @Ip VARCHAR(20) = ''
+	,@IsAuto	BIT				= 0
+	,@AdminId	INT				= 0
+	,@Ip		VARCHAR(20)		= ''
 
-	, @ErrCode INT = 0 OUTPUT
-	, @ErrMsg VARCHAR(200) = '' OUTPUT
+	,@ErrCode	INT				= 0		OUTPUT
+	,@ErrMsg	VARCHAR(200)	= ''	OUTPUT
 AS
 /*
 	Created: 20160427@Patrick
@@ -35,24 +35,39 @@ AS
 						</r>
 */
 BEGIN
-	SET NOCOUNT ON 
-	DECLARE @Start DATETIME, @Stop DATETIME, @fth INT, @fta INT, @hth INT, @hta INT
-		, @ActionID INT, @Remark VARCHAR(3000), @LogData NVARCHAR(300)						
-		, @LogResult VARCHAR(MAX) = ''	
+	SET NOCOUNT ON
+	 
+	DECLARE		@Start 		DATETIME
+				,@Stop 		DATETIME
+				,@fth		INT
+				,@fta 		INT
+				,@hth 		INT
+				,@hta 		INT
+				,@ActionID	INT
+				,@Remark	VARCHAR(3000)
+				,@LogData	NVARCHAR(300)						
+				,@LogResult VARCHAR(MAX) = ''	
+				,@strFMBettypes	VARCHAR(MAX)
 
 	SELECT	@start = CURRENT_TIMESTAMP
-	SELECT	@ActionID = CASE WHEN @Action = 'CAL' THEN 165 
-							 WHEN @Action = 'UNDO' THEN 166 
-							 WHEN @Action = 'REFUND' THEN 167
-							 ELSE 0 END  
+	SELECT	@ActionID = CASE 
+							WHEN @Action = 'CAL' THEN 165 
+							WHEN @Action = 'UNDO' THEN 166 
+							WHEN @Action = 'REFUND' THEN 167
+							ELSE 0 
+						END  
 	--Write Log Settle
-	SELECT	 @fth			= finalhomescore
-			,@fta			= finalawayscore
-			,@hth			= hthomescore
-			,@hta			= htawayscore
-	FROM	DBPRO.BODB02.dbo.match WITH (NOLOCK)
+	SELECT	 @fth = finalhomescore
+			,@fta = finalawayscore
+			,@hth = hthomescore
+			,@hta = htawayscore
+	FROM	dbo.match WITH (NOLOCK)
 	WHERE	matchid = @matchid
-	SELECT @Results
+	
+	SELECT  @strFMBettypes = COALESCE(@strFMBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+    FROM    dbo.f_Set_GetGroupBettypes() f 
+    WHERE   f.GroupId = 9 -- FM
+	
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (SELECT 1 
 				FROM dbo.TempVariableNumber t WITH(NOLOCK)
@@ -83,17 +98,26 @@ BEGIN
 	DECLARE @tblDebitPending TVP_BalanceList
 	DECLARE @tblCreditPending TVP_BalanceList
 
-	INSERT INTO #BalanceBefore
-	SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE b.matchid = @MatchId 
-		AND b.bettype IN (221,222,223,224)
+	INSERT INTO	#BalanceBefore
+	SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM	dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @MatchId 
+			AND 1 = CASE 
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFMBettypes + ',') > 0 THEN 0
+						ELSE 1
+					END
 	GROUP BY b.custid
 	
 	DECLARE @XmlData XML
 	SET @XmlData =  CONVERT(XML, @Results)
 
-	DECLARE @ResultDetail TABLE(BetType SMALLINT, Position TINYINT, BetOption TINYINT, ResultStatus TINYINT, RowIndex INT IDENTITY(1,1))
+	DECLARE @ResultDetail TABLE(
+		BetType			SMALLINT
+		,Position		TINYINT
+		,BetOption		TINYINT
+		,ResultStatus	TINYINT
+		,RowIndex		INT IDENTITY(1,1)
+	)
 
 	;WITH TmpData AS (
 		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
@@ -106,23 +130,26 @@ BEGIN
 					ELSE 0 END AS ResultStatus
 		FROM @XmlData.nodes('/r/b/r') AS T(C)
 	)
-
 	INSERT INTO @ResultDetail (BetType, Position, BetOption, ResultStatus)
 	SELECT BetType, Position, BetOption, ResultStatus
 	FROM TmpData
 	ORDER BY Bettype, Position
 	
-	DECLARE @BetType SMALLINT, @Position TINYINT, @BetOption TINYINT, @ResultStatus TINYINT, @RowIndex INT
-		, @betcount_221 INT, @betcount_222 INT, @betcount_223 INT, @betcount_224 INT, @IsRuntimeError BIT
+	DECLARE @BetType		SMALLINT
+			,@Position		TINYINT
+			,@BetOption		TINYINT
+			,@ResultStatus	TINYINT
+			,@RowIndex		INT
+			,@IsRuntimeError BIT
 
 	SELECT @RowIndex = 1, @IsRuntimeError = 0
 	BEGIN TRY
 		-- Mark this match as running
 		IF @Action = 'UNDO'
 			EXEC dbo.NAP_Set_FastMarket_Completed @MatchId = @matchid
-					, @IsFastMarketCompleted = 0
-					, @AdminId = @AdminId
-					, @IP = @IP
+					,@IsFastMarketCompleted = 0
+					,@AdminId = @AdminId
+					,@IP = @IP
 
 		WHILE EXISTS (SELECT TOP 1 1 FROM @ResultDetail WHERE RowIndex = @RowIndex)
 		BEGIN
@@ -139,62 +166,43 @@ BEGIN
 
 			--update result detail
 			EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
-				, @BetType = @BetType
-				, @Position = @Position
-				, @BetOption = @BetOption
-				, @ResultStatus = @ResultStatus
-				, @Action = @Action
+				,@BetType = @BetType
+				,@Position = @Position
+				,@BetOption = @BetOption
+				,@ResultStatus = @ResultStatus
+				,@Action = @Action
+				,@AdminId = @AdminId
 
-				, @AdminId = @AdminId
-				, @ErrCode = @ErrCode OUTPUT
-				, @ErrMsg = @ErrMsg OUTPUT
-
-			--get betcount
-			SELECT @betcount_221 = ISNULL(SUM(CASE bettype WHEN 221 THEN 1 ELSE 0 END), 0)
-				, @betcount_222 = ISNULL(SUM(CASE bettype WHEN 222 THEN 1 ELSE 0 END), 0)
-				, @betcount_223 = ISNULL(SUM(CASE bettype WHEN 223 THEN 1 ELSE 0 END), 0)
-				, @betcount_224 = ISNULL(SUM(CASE bettype WHEN 224 THEN 1 ELSE 0 END), 0)
-			FROM dbo.bettrans WITH(NOLOCK)
-			WHERE matchid = @MatchId
-				AND bettype = @BetType
-				AND hdp1 = @Position
-
-			IF @Action = 'CAL'
+			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans WITH(NOLOCK) WHERE matchid = @matchid AND bettype = @BetType AND hdp1 = @Position)
 			BEGIN
-				EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-					, @action = 'CAL-FM'
-					, @mode = 'CAL'
-					, @hdp1 = @Position
-					, @betoption = @BetOption
-					, @betcount_221 = @betcount_221
-					, @betcount_222 = @betcount_222
-					, @betcount_223 = @betcount_223
-					, @betcount_224 = @betcount_224
+				IF @Action = 'CAL'
+				BEGIN
+					EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+						,@action = 'CAL-FM'
+						,@mode = 'CAL'
+						,@hdp1 = @Position
+						,@betoption = @BetOption
+						,@strBettypes = @BetType
 
-			END
-			ELSE IF @Action = 'REFUND'
-			BEGIN
-				EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-					, @action = 'REFUND'
-					, @mode = 'FastMarket'
-					, @hdp1 = @Position
-					, @betoption = @BetOption
-					, @betcount_221 = @betcount_221
-					, @betcount_222 = @betcount_222
-					, @betcount_223 = @betcount_223
-					, @betcount_224 = @betcount_224
-			END
-			ELSE IF @Action = 'UNDO'
-			BEGIN
-				EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-					, @action = 'CAL-FM'
-					, @mode = 'UNDO'
-					, @hdp1 = @Position
-					, @betoption = @BetOption
-					, @betcount_221 = @betcount_221
-					, @betcount_222 = @betcount_222
-					, @betcount_223 = @betcount_223
-					, @betcount_224 = @betcount_224
+				END
+				ELSE IF @Action = 'REFUND'
+				BEGIN
+					EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+						,@action = 'REFUND'
+						,@mode = 'REFUND-FM'
+						,@hdp1 = @Position
+						,@betoption = @BetOption
+						,@strBettypes = @BetType
+				END
+				ELSE IF @Action = 'UNDO'
+				BEGIN
+					EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+						,@action = 'CAL-FM'
+						,@mode = 'UNDO'
+						,@hdp1 = @Position
+						,@betoption = @BetOption
+						,@strBettypes = @BetType
+				END
 			END
 		END
 	END TRY
@@ -204,10 +212,13 @@ BEGIN
 		---         CAPTURE value BALANCE after settlement        ---
 		---------------------------VVVV------------------------------
 		INSERT INTO #BalanceAfter
-		SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM dbo.bettrans b WITH (ROWLOCK)
-		WHERE b.matchid = @MatchId 
-			AND b.bettype IN (221,222,223,224)
+		SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+		FROM	dbo.bettrans b WITH (ROWLOCK)
+		WHERE	b.matchid = @MatchId 
+				AND 1 = CASE 
+							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFMBettypes + ',') > 0 THEN 0
+							ELSE 1
+						END
 		GROUP BY b.custid
 
 		-------------------------------------------------------------
@@ -216,15 +227,17 @@ BEGIN
 		CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 		INSERT INTO #Balance
-		SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
-		FROM #BalanceBefore b
-			INNER JOIN #BalanceAfter a ON b.custid = a.custid
-		WHERE b.balance <> a.balance
+		SELECT	b.custid, a.balance - b.balance
+				,CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
+		FROM	#BalanceBefore b
+			INNER JOIN #BalanceAfter a 
+				ON	b.custid = a.custid
+		WHERE	b.balance <> a.balance
 	
 		INSERT INTO @tblDebitPending (custID, balance)
-		SELECT custid, ABS(balance)
-		FROM #Balance
-		WHERE Increased = 0
+		SELECT	custid, ABS(balance)
+		FROM	#Balance
+		WHERE	Increased = 0
 	
 		IF @@ROWCOUNT <> 0
 		BEGIN
@@ -232,9 +245,9 @@ BEGIN
 		END
 
 		INSERT INTO @tblCreditPending (custID, balance)
-		SELECT custid, balance
-		FROM #Balance
-		WHERE Increased = 1
+		SELECT	custid, balance
+		FROM	#Balance
+		WHERE	Increased = 1
 	
 		IF @@ROWCOUNT <> 0
 		BEGIN
@@ -243,17 +256,19 @@ BEGIN
 		----
 		-- Add Negative Balance into BalanceNegative table 
 		----
-		INSERT INTO [bodb02].[dbo].[BalanceNegative] ([ExecDate], [MatchID], [ActionID], [GroupID], [CustID], [Balance], [StatusID], [Remark])
+		INSERT INTO [dbo].[BalanceNegative] ([ExecDate], [MatchID], [ActionID], [GroupID], [CustID], [Balance], [StatusID], [Remark])
 		SELECT GETDATE(), @MatchID, @ActionID, 1, CustID, Balance, 0, NULL
-		FROM #Balance WITH(NOLOCK)
-		WHERE Increased = 0
+		FROM	#Balance WITH(NOLOCK)
+		WHERE	Increased = 0
 
 		---------------------------------------------------
 		DROP TABLE #Balance
 		DROP TABLE #BalanceBefore
 		DROP TABLE #BalanceAfter
 		
-		SELECT @ErrCode = 1001017, @ErrMsg = ERROR_MESSAGE()
+		SELECT	@ErrCode = 1001017
+				,@ErrMsg = ERROR_MESSAGE()
+		
 		RETURN
 
 	END CATCH
@@ -262,10 +277,13 @@ BEGIN
 	---         CAPTURE value BALANCE after settlement        ---
 	---------------------------VVVV------------------------------
 	INSERT INTO #BalanceAfter
-	SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM dbo.bettrans b WITH (ROWLOCK)
-	WHERE b.matchid = @MatchId 
-		AND b.bettype IN (221,222,223,224)
+	SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
+	FROM	dbo.bettrans b WITH (ROWLOCK)
+	WHERE	b.matchid = @MatchId 
+			AND 1 = CASE 
+						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFMBettypes + ',') > 0 THEN 0
+						ELSE 1
+					END
 	GROUP BY b.custid
 
 	-------------------------------------------------------------
@@ -275,15 +293,17 @@ BEGIN
 	CREATE INDEX IX_Balance_Increased ON #Balance (Increased)
 
 	INSERT INTO #Balance
-	SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
-	FROM #BalanceBefore b
-		INNER JOIN #BalanceAfter a ON b.custid = a.custid
+	SELECT	b.custid, a.balance - b.balance
+			,CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
+	FROM	#BalanceBefore b
+		INNER JOIN #BalanceAfter a 
+			ON	b.custid = a.custid
 	WHERE b.balance <> a.balance
 	
 	INSERT INTO @tblDebitPending (custID, balance)
-	SELECT custid, ABS(balance)
-	FROM #Balance
-	WHERE Increased = 0
+	SELECT	custid, ABS(balance)
+	FROM	#Balance
+	WHERE	Increased = 0
 	
 	IF @@ROWCOUNT <> 0
 	BEGIN
@@ -291,9 +311,9 @@ BEGIN
 	END
 
 	INSERT INTO @tblCreditPending (custID, balance)
-	SELECT custid, balance
-	FROM #Balance
-	WHERE Increased = 1
+	SELECT	custid, balance
+	FROM	#Balance
+	WHERE	Increased = 1
 	
 	IF @@ROWCOUNT <> 0
 	BEGIN
@@ -303,9 +323,9 @@ BEGIN
 	-- Add Negative Balance into BalanceNegative table 
 	----
 	INSERT INTO [bodb02].[dbo].[BalanceNegative] ([ExecDate], [MatchID], [ActionID], [GroupID], [CustID], [Balance], [StatusID], [Remark])
-	SELECT GETDATE(), @MatchID, @ActionID, 1, CustID, Balance, 0, NULL
-	FROM #Balance WITH(NOLOCK)
-	WHERE Increased = 0
+	SELECT	GETDATE(), @MatchID, @ActionID, 1, CustID, Balance, 0, NULL
+	FROM	#Balance WITH(NOLOCK)
+	WHERE	Increased = 0
 
 	---------------------------------------------------
 	DROP TABLE #Balance
@@ -365,11 +385,11 @@ BEGIN
 			, @Remark			= @Remark
 			, @IP				= @ip
 	END CATCH
-
-
+	
 	DELETE
-	FROM dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
-	WHERE KeyID = 1 AND KeyValue = @matchid
+	FROM	dbo.TempVariableNumber WITH (ROWLOCK, UPDLOCK)
+	WHERE	KeyID = 1 
+			AND KeyValue = @matchid
 	
 END
 

@@ -1,13 +1,16 @@
 USE bodb02
 GO
-
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE dbo.NAP_Set_MatchSelInfo_Auto_1s
 	@MatchID		INT
 
 AS
 /*	Creator: 20160516@Patrick
 	Task: Auto Settlement - Select match info
-	DB: DBTXN/BODB02
+	DB: DBPRO/BODB02
 	Original: 
 	
 	Revisions:
@@ -17,33 +20,20 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 
-	DECLARE	@IsSettleAbandonedMatchIBC	BIT = 0 
-
-	IF EXISTS (SELECT 1
-				FROM dbo.bettrans WITH (NOLOCK)
-				WHERE bettype = 216 
-					AND matchid = @matchid AND statusID NOT IN (101, 102, 103) 
-					AND ruben = 0 
-			)
-	BEGIN
-		SELECT @IsSettleAbandonedMatchIBC = 1
-	END
-
 	-- Match Info 
 	SELECT	m.LeagueID
-			, m.MatchID
-			, m.matchcode
-			, m.kickofftime
-			, playTime = datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) 
-			, m.homeid
-			, m.awayid
-			, m.hthomescore AS HalfTimeHomeScore
-			, m.htawayscore AS HalfTimeAwayScore
-			, m.finalhomescore
-			, m.finalawayscore
-			, IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC 
-	FROM DBPRO.bodb02.dbo.Match m WITH (NOLOCK)
-	WHERE MatchID = @MatchID
+			,m.MatchID
+			,m.matchcode
+			,m.kickofftime
+			,playTime = datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) 
+			,m.homeid
+			,m.awayid
+			,m.hthomescore AS HalfTimeHomeScore
+			,m.htawayscore AS HalfTimeAwayScore
+			,m.finalhomescore
+			,m.finalawayscore
+	FROM	dbo.Match m WITH (NOLOCK)
+	WHERE	MatchID = @MatchID
 
 END
 GO

@@ -1,5 +1,9 @@
 ﻿USE [bodb02]
 GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_BetFair_Checking] 
 	@matchid INT = 0
 AS
@@ -20,6 +24,7 @@ Revisions:
 	- 20151215@Patrick: Apply 28 Live Bettypes for Settlement [Redmine:#47843]
 	- 20160120@Patrick: PH-AiO - Change request [Redmine: #51116]
 	- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+	- 20160428@Kathy: Exclude Fast Market bettypes [Redmine:#56367]
 
 Note: For settlement SPs should hardcode the custid of betfair customer to avoid replication problem
 	* List of Betfair Customers 
@@ -67,7 +72,7 @@ BEGIN
 					AND ruben = 0
 					AND f.bettype NOT BETWEEN 1301 AND 1399	-- Sportting solution exclude in Betdaq/Betfair 
 					AND f.bettype NOT BETWEEN 153 AND 156		-- Tennis new bet types
-					AND f.GroupId <> 8
+					AND f.IsAuto = 0
 			)
 	BEGIN
 		SELECT @IsMovebetfair = 1
@@ -83,6 +88,7 @@ BEGIN
 			WHERE custid IN (2331, 1077687, 115770, 15523642) 
 			AND matchid = @matchid 
 			AND f.IsDetermined = 1
+			AND f.IsAuto = 0
 			AND statusID NOT IN (101, 102) AND ruben = 0
 			)
 	BEGIN

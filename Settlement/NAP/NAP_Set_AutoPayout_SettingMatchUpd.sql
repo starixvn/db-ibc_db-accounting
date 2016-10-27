@@ -82,14 +82,6 @@ BEGIN
 		RETURN
 	END
 
-	----check match in Queue
-	--IF EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Single_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = @MatchId)
-	--	OR EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue q WITH(NOLOCK) WHERE q.matchid = @MatchId)
-	--BEGIN
-	--	SELECT @ErrCode = 1001020, @ErrMsg = 'Sorry. Not allow to update Auto Setting of completed match.'
-	--	RETURN
-	--END
-
 	UPDATE m
 	SET AutoSetting = @AutoSetting
 	FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
