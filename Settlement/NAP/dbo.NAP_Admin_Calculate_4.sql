@@ -1,11 +1,10 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 10/24/2016 04:04:26 ******/
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 10/27/2016 13:25:55 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.NAP_Admin_Calculate_4    Script Date: 21/10/2016 5:15:55 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Admin_Calculate_4] @matchid INT
 	,@bettype						SMALLINT
 	,@correctscore					NVARCHAR(10) = NULL
@@ -49,6 +48,7 @@ AS
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		- 20160824@Bobby: #62921 - Include FGLG (14,127) bet types into settle determindable
 		- 20161021@Kathy: Using new non-clustered index (match_bettype) to update BetParlayDetail [Redmine:#65990]
+		- 20161025@Kathy:  Avoid deadlock issue [Redmine:#65990]
 	Param's Explanation:
 		
 		
@@ -781,23 +781,27 @@ BEGIN
 				
 		UPDATE pd
 		SET @modds = CASE 
-				WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
-				ELSE - 1
-				END
-			,winlostdate = @matchdate
+						WHEN pd.rid = r.rid THEN CASE 
+													WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
+													ELSE - 1
+												 END
+						ELSE NULL
+					END
+			,winlostdate = CASE WHEN @modds IS NOT NULL THEN @matchdate ELSE pd.winlostdate END
 			,statusID = CASE 
 				WHEN @modds < 0 THEN 113 --LOSE
 				WHEN @modds > 0 THEN 112 --WON
+				ELSE pd.statusid
 				END
 			,statuswinlost = CASE 
 				WHEN @modds <= - 0.5 THEN 4 -- LOSE
 				WHEN @modds >= 0.5 THEN 2 -- WIN
+				ELSE pd.statuswinlost
 				END
 		FROM	dbo.betParlayDetail pd WITH (ROWLOCK, UPDLOCK)
 			INNER JOIN #Refno r
 				ON	pd.RefNo = r.Refno
 					AND pd.Serial = r.Serial
-					AND pd.rID = r.rid
 		WHERE	statusID NOT IN (101, 102) --VOID, REJECT
 				AND (
 					ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
@@ -809,3 +813,9 @@ BEGIN
 		-------------Stop:Settle FGLG for bettransm-------------
 	END
 END
+
+
+
+
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Calculate_4] TO [vnteam] AS [dbo]
