@@ -34,6 +34,8 @@ AS
 		- 20160404@Sophia: Apply Allbet [Redmine: #50588]
 		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
+		- 20161004@Percy: Refno Issue [RedmineID: #65007]
+		- 20161013@Percy: Apply NG2 [RedmineID: #64117]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -286,6 +288,7 @@ BEGIN
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
+			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -308,6 +311,7 @@ BEGIN
 			OR Sporttype = 44
 			OR bettype BETWEEN 2401 AND 2499 
 			OR bettype BETWEEN 4001 AND 7999
+			OR bettype BETWEEN 2501 AND 2699
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -330,6 +334,7 @@ BEGIN
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
+			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 		   END, winlostdate
 
 	UNION ALL
@@ -381,6 +386,7 @@ BEGIN
 				         ELSE 0
 				       END) TOPhum
   			  FROM bettransm WITH(NOLOCK)
+			  WHERE bettype IN (31,32,33)
 		  GROUP BY refno
 		   ) bm ON b.transid = bm.refno
 	WHERE 1 = 1
