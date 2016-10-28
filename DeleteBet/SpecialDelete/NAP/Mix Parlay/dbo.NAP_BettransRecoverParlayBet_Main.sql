@@ -38,7 +38,7 @@ BEGIN
 
 	DECLARE @tblTransIds TABLE (transid BIGINT PRIMARY KEY)
 	DECLARE @tblNoResettleTransIds TABLE (transid BIGINT PRIMARY KEY)
-	DECLARE @beforeDaysNum INT = 3
+	DECLARE @beforeDaysNum INT = 2
 	DECLARE @before_yesterday DATETIME	
 
 	SELECT @before_yesterday = CONVERT(VARCHAR(10), DATEADD(day, - @beforeDaysNum, GETDATE()), 120)
