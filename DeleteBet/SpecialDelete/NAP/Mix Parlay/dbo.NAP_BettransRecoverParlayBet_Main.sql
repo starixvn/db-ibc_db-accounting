@@ -256,7 +256,7 @@ BEGIN
 					AND b.mrecommend NOT IN (105181, 118473, 105183) -- MHC
 					AND b.recommend NOT IN (11196380, 13423967, 52466) -- Foobet, 1E, 8RM
 					AND b.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-						THEN 'Normal' --1. For Normal bets
+						THEN 'Credit' --1. For Normal bets
 				WHEN b.recommend = 52466
 						THEN '8RM' ----2: For 8RM
 				WHEN f.CustID IS NULL -- Betdaq
