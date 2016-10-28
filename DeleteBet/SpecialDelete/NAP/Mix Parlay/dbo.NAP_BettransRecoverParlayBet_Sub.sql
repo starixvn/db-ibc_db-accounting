@@ -8,6 +8,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Sub] 
 	@UserId				INT,	
 	@IP					VARCHAR(50),
+	@BetType			VARCHAR(20)		= 'All',
 	@MainTransIds		VARCHAR(4000)	= '',
 	@matchid			BIGINT,
 	
@@ -28,11 +29,7 @@ BEGIN
 	
 	DECLARE @beforeDaysNum INT = 3
 	
-	DECLARE @before_yesterday	DATETIME	
-		   ,@isExistMatch		BIT = 1
-		   ,@isExistMG			BIT = 0
-		   ,@isExistBT			BIT = 0
-		   ,@avaiableProcess	BIT	= 0
+	DECLARE @before_yesterday	DATETIME		   
 		   ,@MatchDate			DATETIME
 		   ,@transids_29		VARCHAR(MAX) = ''
 		   ,@refnos_29			VARCHAR(MAX) = ''
@@ -230,7 +227,13 @@ BEGIN
 		  AND b.bettype = 29	
 		  AND bm.statusid = 102
 		  AND b.winlostdate >= @before_yesterday
-		  AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)	
+		  AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)
+		  AND CASE
+					WHEN @BetType = 'all' THEN 1
+					WHEN @BetType = 'Mix Parlay' THEN CASE WHEN b.betteam = 1 THEN 1 ELSE 0 END
+					WHEN @BetType = 'System Parlay' THEN CASE WHEN b.betteam = 1 THEN 0 ELSE 1 END
+					ELSE 0
+			  END	= 1	
 				
 		IF @@ROWCOUNT = 0
 		BEGIN
@@ -363,7 +366,7 @@ BEGIN
 		WHERE b.statusID = 0				
 		
 		--> write log		
-		SELECT @LogData = 'Recover Parlay bets having transid: ' + @transids_29 + ' IP=' + @Ip
+		SELECT @LogData = 'Recover Parlay bets having transid: IP=' + @Ip + ' ' + @transids_29
 		EXEC WriteLog_UserLog 
 			 @UserId = @UserId,
 			 @Doing = @LogData 
@@ -375,28 +378,10 @@ BEGIN
 		WHERE VName = 'isCalculatingParlay'
 	
 		SELECT @ErrCode = 100,
-				@ErrMsg = 'Invalid TransIds'
-		RETURN
-		
-		--DECLARE @ErrorMessage NVARCHAR(4000);  
-		--DECLARE @ErrorSeverity INT;  
-		--DECLARE @ErrorState INT;  
-		--DECLARE @ErrorLine INT;  
-	  
-		--SELECT   
-		--	@ErrorMessage = ERROR_MESSAGE(),  
-		--	@ErrorSeverity = ERROR_SEVERITY(),  
-		--	@ErrorState = ERROR_STATE(),
-		--	@ErrorLine = ERROR_LINE();			
-		--PRINT @ErrorLine			  
-	  
-		---- Use RAISERROR inside the CATCH block to return error  
-		---- information about the original error that caused  
-		---- execution to jump to the CATCH block.  
-		--RAISERROR (@ErrorMessage, -- Message text.  
-		--		   @ErrorSeverity, -- Severity.  
-		--		   @ErrorState -- State.  
-		--		   );
+				@ErrMsg = 'Recover Parlay failed with error : Unable to recover these parlay bets: list of bet id ' 
+						  + @MainTransIds 
+						  + ' Recover failed due to this error'
+		RETURN				
 	END CATCH		 								
 	
 	--> Data for sending mail: Rule R1 + Rule R2 + Rule R3 + Rule R4
@@ -484,4 +469,11 @@ BEGIN
 		
 	RETURN;							
 END
+GO
+
+GRANT EXECUTE ON [dbo].[NAP_BettransRecoverParlayBet_Sub] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_BettransRecoverParlayBet_Sub] TO [vnteam] AS [dbo]
+GO
+
 
