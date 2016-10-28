@@ -1,10 +1,11 @@
 USE bodb02
 GO
 
-ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultUpd @MatchId INT
-	, @TypeId TINYINT
-	, @StatusId TINYINT
-	, @IsIncludedUpdateMatch BIT = 0
+ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultUpd 
+	@MatchId 					INT
+	, @TypeId 					TINYINT
+	, @StatusId 				TINYINT
+	, @IsIncludedUpdateMatch 	BIT = 0
 AS
 /*
 	Creator: 20160310@Patrick
@@ -21,7 +22,19 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-
+	
+	DECLARE @AutoSetting 		TINYINT	
+		, @AutoSettingLeague	TINYINT
+			
+	SELECT TOP 1 
+		@AutoSetting 			= m.AutoSetting
+		, @AutoSettingLeague	= l.AutoSetting
+	FROM dbo.match m WITH(NOLOCK) 
+		INNER JOIN dbo.league l WITH(NOLOCK) ON m.leagueid = m.league
+	WHERE matchid 	= @MatchId 
+		AND ISNULL(AutoSetting, 0) = 0
+	
+	
 	UPDATE dbo.AutoPayoutResult WITH(ROWLOCK, UPDLOCK)
 	SET StatusId = @StatusId 
 		, ModifiedDate = GETDATE()
@@ -29,11 +42,13 @@ BEGIN
 		AND CalculationType = @TypeId
 		AND StatusId <> @StatusId
 
-	IF @IsIncludedUpdateMatch = 1
-		AND EXISTS (SELECT TOP 1 1 FROM dbo.match WITH(NOLOCK) WHERE matchid = @MatchId AND ISNULL(AutoSetting, 0) = 0)
+	IF (
+		@IsIncludedUpdateMatch = 1
+		AND @AutoSetting ISNULL AND @AutoSettingLeague IS NOT NULL
+	)
 	BEGIN
 		UPDATE dbo.match WITH(UPDLOCK, ROWLOCK)
-		SET AutoSetting =  CASE WHEN @TypeId IN (101, 102) THEN 2 ELSE 1 END
+		SET AutoSetting =  AutoSettingLeague
 		WHERE matchid = @MatchId
 	END
 END

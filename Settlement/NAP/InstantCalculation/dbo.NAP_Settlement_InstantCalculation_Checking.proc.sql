@@ -63,14 +63,17 @@ BEGIN
 		, @leagueid   		= m.leagueid
 		, @isPending		= ISNULL(mr.isPending, 0)
 		, @isUnDecided		= ISNULL(mr.isUnDecided, 0)
-    FROM DBPRO.bodb02.dbo.match m WITH (NOLOCK)
-		INNER JOIN DBPRO.bodb02.dbo.match_remark mr WITH (NOLOCK)
+    FROM dbo.match m WITH (NOLOCK)
+		INNER JOIN dbo.league l WITH (NOLOCK)
+		ON m.leagueid		= l.leagueid
+		INNER JOIN dbo.match_remark mr WITH (NOLOCK)
 		ON m.matchid 		= mr.matchid
     WHERE m.matchid 			= @MatchId
 		AND m.sporttype			= 1
-		AND 2 & m.AutoSetting 	= 2
+		AND 2 & ISNULL(m.AutoSetting, l.AutoSetting) = 2
 	
 	IF (@matchcode 		IS NULL --does not exist match
+		OR CHARINDEX('hedge', @matchcode) > 0 -- does not allow doing Inst.C for hedge match
 		OR @isPending 	= 1
 		OR @isUnDecided = 1
 	)
