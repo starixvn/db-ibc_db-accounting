@@ -13,6 +13,7 @@ ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Sub]
 	@matchid			BIGINT,
 	
 	@SettledMainTranIds	VARCHAR(4000) OUTPUT,
+	@NegativeBalanceUsers VARCHAR(4000) OUTPUT,
 	@ErrCode			INT	OUTPUT,
 	@ErrMsg				NVARCHAR(200) OUTPUT
 AS
@@ -35,6 +36,7 @@ BEGIN
 		   ,@refnos_29			VARCHAR(MAX) = ''
 		   ,@LogData			NVARCHAR(500)
 		   ,@SubTransIds		VARCHAR(4000) = ''
+		   ,@CustIds			VARCHAR(4000) = ''
 	
 	DECLARE @tblRecoverBet TABLE (
 		SubTransID				BIGINT		 
@@ -364,7 +366,17 @@ BEGIN
 		FROM @tblSettledBeforeRecoveredMainTicket t			 
 			 INNER JOIN dbo.bettrans b WITH(NOLOCK)
 					 ON t.transid = b.transid
-		WHERE b.statusID = 0				
+		WHERE b.statusID = 0
+		
+		--> Build list of customer name with negative balance
+		SET @NegativeBalanceUsers = ''
+		SELECT @CustIds = @CustIds +
+						  CASE WHEN @CustIds <> '' THEN ',' ELSE '' END + 
+						  CONVERT(VARCHAR(20), t.custid)
+		FROM @tblRecoverBet t
+		EXEC [dbo].[NAP_CustNegativeBalance_Sel] 	
+			@CustIds = @CustIds,
+			@NegativeBalanceUsers = @NegativeBalanceUsers OUTPUT				
 		
 		--> write log		
 		SELECT @LogData = 'Recover Parlay bets having transid: IP=' + @Ip + ' ' + @transids_29
