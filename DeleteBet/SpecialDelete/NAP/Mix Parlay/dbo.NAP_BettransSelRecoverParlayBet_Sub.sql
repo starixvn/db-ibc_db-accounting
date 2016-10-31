@@ -36,7 +36,8 @@ BEGIN
 		,SubBetTeam				NVARCHAR(20)  
 		,SubBetType				INT  
 		,SubHdp1				SMALLMONEY   
-		,SubHdp2				SMALLMONEY				
+		,SubHdp2				SMALLMONEY	
+		,SubTransDesc			NVARCHAR(200)			
 				
 		,custid					INT
 		,isdeposit				TINYINT
@@ -53,6 +54,7 @@ BEGIN
 		,BetTeam				NVARCHAR(20)
 		,livehomescore			SMALLINT 
 		,liveawayscore			SMALLINT 
+		,liveindicator			BIT
 		,Stake					MONEY
 		,Odds					MONEY
 		,OddsType				TINYINT
@@ -62,8 +64,7 @@ BEGIN
 		,awayid					INT 
 		,sporttype				SMALLINT 
 		,leagueid				INT 
-		,betcheck				NVARCHAR(50)
-		,transdesc				NVARCHAR(200)
+		,betcheck				NVARCHAR(50)		
 	)		
 	DECLARE @tblTransIds TABLE (transid BIGINT)
 	DECLARE @before_yesterday DATETIME	
@@ -81,7 +82,8 @@ BEGIN
 			,SubBetTeam	
 			,SubBetType
 			,SubHdp1		
-			,SubHdp2						
+			,SubHdp2
+			,SubTransDesc						
 						
 			,custid
 			,isdeposit
@@ -98,6 +100,7 @@ BEGIN
 			,BetTeam
 			,livehomescore 
 			,liveawayscore 
+			,liveindicator
 			,Stake	
 			,Odds
 			,OddsType
@@ -107,15 +110,15 @@ BEGIN
 			,awayid 
 			,sporttype 
 			,leagueid 
-			,betcheck
-			,transdesc)
+			,betcheck)
 	SELECT  bm.transid AS SubTransID			 
 			,bm.betcheck AS SubBetCheck	
 			,bm.odds AS SubOdds
 			,bm.betteam AS SubBetTeam	
 			,bm.bettype AS SubBetType
 			,bm.hdp1 AS SubHdp1		
-			,bm.hdp2 AS SubHdp2						
+			,bm.hdp2 AS SubHdp2	
+			,bm.transdesc AS SubTransDesc					
 						
 			,b.custid AS custid
 			,case when EXISTS (select TOP 1 1 from custDB.dbo.Dep_CustSuper with(nolock) WHERE custid = b.srecommend) then 1 else 0 end AS isdeposit
@@ -129,9 +132,10 @@ BEGIN
 			,b.[status] AS [Status]
 			,b.winlost-b.actual_stake AS WinLost
 			,b.betid AS betid	
-			,b.betteam AS BetTeam
-			,b.livehomescore AS livehomescore 
-			,b.liveawayscore AS liveawayscore 
+			,b.betteam AS BetTeam			
+			,bm.livehomescore AS livehomescore 
+			,bm.liveawayscore AS liveawayscore 
+			,bm.liveindicator						
 			,b.stake AS Stake	
 			,b.odds AS Odds
 			,b.OddsType AS OddsType
@@ -141,8 +145,7 @@ BEGIN
 			,m.awayid AS awayid 
 			,m.sporttype AS sporttype 
 			,m.leagueid AS leagueid 
-			,b.betcheck AS betcheck
-			,bm.transdesc AS transdesc
+			,b.betcheck AS betcheck			
 	FROM @tblTransIds t
 		INNER JOIN dbo.bettrans b WITH (NOLOCK)
 				ON t.transid = b.transid			   
@@ -155,7 +158,7 @@ BEGIN
 			AND bm.statusid = 102
 			AND b.winlostdate >= @before_yesterday
 			AND (b.betfrom IS NULL OR b.betfrom <> 'p')
-			AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)		
+			AND (m.sporttype BETWEEN 1 AND 99)		
 			AND CASE
 					WHEN @BetType = 'all' THEN 1
 					WHEN @BetType = 'Mix Parlay' THEN CASE WHEN b.betteam = 1 THEN 1 ELSE 0 END
@@ -169,7 +172,8 @@ BEGIN
 			 ,t.SubBetTeam  
 			 ,t.SubBetType     
 			 ,t.SubHdp1       
-			 ,t.SubHdp2     
+			 ,t.SubHdp2 
+			 ,t.SubTransDesc    
 			 
 			 ,T1.GroupName
 			 
@@ -183,7 +187,8 @@ BEGIN
 			 ,t.betid     
 			 ,t.BetTeam    
 			 ,t.livehomescore   
-			 ,t.liveawayscore   
+			 ,t.liveawayscore 
+			 ,t.liveindicator  
 			 ,t.Stake     
 			 ,t.Odds     
 			 ,t.OddsType    
@@ -193,8 +198,7 @@ BEGIN
 			 ,t.awayid     
 			 ,t.sporttype    
 			 ,t.leagueid    
-			 ,t.betcheck    
-			 ,t.transdesc    
+			 ,t.betcheck			   
 	FROM	@tblRecoverBet t		
 		LEFT JOIN dbo.f_GetBetDaqCustomer(1) f
 			ON t.custid = f.CustID

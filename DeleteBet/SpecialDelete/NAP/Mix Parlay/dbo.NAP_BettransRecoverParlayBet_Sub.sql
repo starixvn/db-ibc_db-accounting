@@ -37,6 +37,7 @@ BEGIN
 		   ,@LogData			NVARCHAR(500)
 		   ,@SubTransIds		VARCHAR(4000) = ''
 		   ,@CustIds			VARCHAR(4000) = ''
+		   ,@AvaiableProcess	BIT
 	
 	DECLARE @tblRecoverBet TABLE (
 		SubTransID				BIGINT		 
@@ -47,6 +48,7 @@ BEGIN
 		,SubHdp1				SMALLMONEY   
 		,SubHdp2				SMALLMONEY
 		,matchid				INT	
+		,SubTransDesc			NVARCHAR(200)
 		
 		,balance				MONEY					
 		,custid					INT
@@ -65,7 +67,8 @@ BEGIN
 		,betid					BIGINT 
 		,BetTeam				NVARCHAR(20)
 		,livehomescore			SMALLINT 
-		,liveawayscore			SMALLINT 
+		,liveawayscore			SMALLINT
+		,liveindicator			BIT 
 		,Stake					MONEY
 		,Odds					MONEY
 		,OddsType				TINYINT
@@ -76,8 +79,7 @@ BEGIN
 		,awayid					INT 
 		,sporttype				SMALLINT 
 		,leagueid				INT 
-		,betcheck				NVARCHAR(50)
-		,transdesc				NVARCHAR(200)
+		,betcheck				NVARCHAR(50)		
 	)	
 	
 	CREATE TABLE #tblMainTicket 
@@ -106,38 +108,29 @@ BEGIN
 		  ,@ErrCode = 0
 		  ,@ErrMsg = ''
 		  
-	--- Check for concurrent running
-	IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
-	BEGIN
-		SELECT @ErrCode = 101
-			,@ErrMsg	= 'Another parlay settlement is in progress or some parlay tickets are being voided, please wait a few seconds until the on-going process has finished and try again.'
-		 
-		RETURN
-	END
-	ELSE 
-	BEGIN
-		UPDATE SystemSettings WITH (ROWLOCK, UPDLOCK)
-			SET VValue = '1'
-		WHERE VName = 'isCalculatingParlay'
-	END		  
+	--> parse @MainTransIds
+	INSERT INTO @tblMainTransIds(transid)
+	SELECT ss.val AS transid
+	FROM dbo.strSplit(@MainTransIds, ',') ss
 	
-	BEGIN TRY
-		--> parse @MainTransIds
-		INSERT INTO @tblMainTransIds(transid)
-		SELECT ss.val AS transid
-		FROM dbo.strSplit(@MainTransIds, ',') ss
-		
-		IF @@ROWCOUNT = 0
-		BEGIN
-			------ release Parlay procesee	
-			UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-				SET VValue = '0'
-			WHERE VName = 'isCalculatingParlay'
-			
-			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
-			RETURN
-		END
-			
+	IF @@ROWCOUNT = 0
+	BEGIN		
+		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		RETURN
+	END		  
+		  
+	--- Check for concurrent running
+	EXEC [dbo].[NAP_Admin_CheckingProcess]
+			@IsExistParlay = 1			
+		  , @IsReleased	= 0
+		  , @AvaiableProcess = @AvaiableProcess OUTPUT
+		  , @ErrCode = @ErrCode OUTPUT
+		  , @ErrMsg	= @ErrMsg OUTPUT
+	
+	IF @avaiableProcess = 0					 
+		RETURN		  
+	
+	BEGIN TRY									
 		--> query all sub tickets to recover
 		INSERT INTO @tblRecoverBet(
 				 SubTransID			 
@@ -148,6 +141,7 @@ BEGIN
 				,SubHdp1		
 				,SubHdp2
 				,matchid
+				,SubTransDesc
 				
 				,balance										
 				,custid
@@ -167,6 +161,7 @@ BEGIN
 				,BetTeam
 				,livehomescore 
 				,liveawayscore 
+				,liveindicator
 				,Stake	
 				,Odds
 				,OddsType
@@ -177,8 +172,7 @@ BEGIN
 				,awayid 
 				,sporttype 
 				,leagueid 
-				,betcheck
-				,transdesc)
+				,betcheck)
 		SELECT  bm.transid AS SubTransID			 
 				,bm.betcheck AS SubBetCheck	
 				,bm.odds AS SubOdds
@@ -186,7 +180,8 @@ BEGIN
 				,bm.bettype AS SubBetType
 				,bm.hdp1 AS SubHdp1		
 				,bm.hdp2 AS SubHdp2	
-				,bm.matchid AS matchid	
+				,bm.matchid AS matchid
+				,bm.transdesc AS SubTransDesc	
 				
 				,b.winlost - b.actual_stake + b.playercomm AS balance								
 				,b.custid AS custid
@@ -204,8 +199,9 @@ BEGIN
 				,b.winlost-b.actual_stake AS WinLost
 				,b.betid AS betid	
 				,b.betteam AS BetTeam
-				,b.livehomescore AS livehomescore 
-				,b.liveawayscore AS liveawayscore 
+				,bm.livehomescore AS livehomescore 
+				,bm.liveawayscore AS liveawayscore
+				,bm.liveindicator AS liveindicator 
 				,b.stake AS Stake	
 				,b.odds AS Odds
 				,b.OddsType AS OddsType
@@ -216,8 +212,7 @@ BEGIN
 				,m.awayid AS awayid 
 				,m.sporttype AS sporttype 
 				,m.leagueid AS leagueid 
-				,b.betcheck AS betcheck
-				,bm.transdesc AS transdesc
+				,b.betcheck AS betcheck				
 		FROM @tblMainTransIds t
 			INNER JOIN dbo.bettrans b WITH (NOLOCK)
 					ON t.transid = b.transid
@@ -230,7 +225,7 @@ BEGIN
 		  AND bm.statusid = 102
 		  AND b.winlostdate >= @before_yesterday
 		  AND (b.betfrom IS NULL OR b.betfrom <> 'p')
-		  AND (m.sporttype BETWEEN 1 AND 99 OR m.sporttype = 154)
+		  AND (m.sporttype BETWEEN 1 AND 99)
 		  AND CASE
 					WHEN @BetType = 'all' THEN 1
 					WHEN @BetType = 'Mix Parlay' THEN CASE WHEN b.betteam = 1 THEN 1 ELSE 0 END
@@ -241,9 +236,12 @@ BEGIN
 		IF @@ROWCOUNT = 0
 		BEGIN
 			------ release Parlay procesee	
-			UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-				SET VValue = '0'
-			WHERE VName = 'isCalculatingParlay'
+			EXEC [dbo].[NAP_Admin_CheckingProcess]
+				@IsExistParlay = 1			
+			  , @IsReleased	= 1
+			  , @AvaiableProcess = @AvaiableProcess OUTPUT
+			  , @ErrCode = @ErrCode OUTPUT
+			  , @ErrMsg	= @ErrMsg OUTPUT			
 			
 			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
 			RETURN
@@ -386,9 +384,12 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		------ release Parlay procesee	
-		UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-			SET VValue = '0'
-		WHERE VName = 'isCalculatingParlay'
+		EXEC [dbo].[NAP_Admin_CheckingProcess]
+			@IsExistParlay = 1			
+		  , @IsReleased	= 1
+		  , @AvaiableProcess = @AvaiableProcess OUTPUT
+		  , @ErrCode = @ErrCode OUTPUT
+		  , @ErrMsg	= @ErrMsg OUTPUT
 	
 		SELECT @ErrCode = 100,
 				@ErrMsg = 'Recover Parlay failed with error : Unable to recover these parlay bets: list of bet id ' 
@@ -404,7 +405,8 @@ BEGIN
 			 ,t.SubBetTeam  
 			 ,t.SubBetType     
 			 ,t.SubHdp1       
-			 ,t.SubHdp2     
+			 ,t.SubHdp2 
+			 ,t.SubTransDesc    
 			 
 			 ,T1.GroupName    
 			 
@@ -418,7 +420,8 @@ BEGIN
 			 ,t.betid     
 			 ,t.BetTeam    
 			 ,t.livehomescore   
-			 ,t.liveawayscore   
+			 ,t.liveawayscore 
+			 ,t.liveindicator  
 			 ,t.Stake     
 			 ,t.Odds     
 			 ,t.OddsType    
@@ -428,8 +431,7 @@ BEGIN
 			 ,t.awayid     
 			 ,t.sporttype    
 			 ,t.leagueid    
-			 ,t.betcheck    
-			 ,t.transdesc  
+			 ,t.betcheck    			   
 			 ,CASE
 				WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
 					 OR (EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency = 20 AND c.roleid = 4 AND c.custid = t.srecommend)
@@ -479,9 +481,12 @@ BEGIN
 	WHERE T1.GroupName IS NOT NULL						  			
 			
 	------ release Parlay procesee	
-	UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-		SET VValue = '0'
-	WHERE VName = 'isCalculatingParlay'
+	EXEC [dbo].[NAP_Admin_CheckingProcess]
+			@IsExistParlay = 1			
+		  , @IsReleased	= 1
+		  , @AvaiableProcess = @AvaiableProcess OUTPUT
+		  , @ErrCode = @ErrCode OUTPUT
+		  , @ErrMsg	= @ErrMsg OUTPUT
 		
 	RETURN;							
 END
