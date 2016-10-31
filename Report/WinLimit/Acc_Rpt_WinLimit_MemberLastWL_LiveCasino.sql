@@ -1,46 +1,87 @@
 USE [bodb02]
 GO
 
-CREATE PROCEDURE Acc_Rpt_WinLimit_MemberLastWL_LiveCasino
-	@CustID INT,
-	@ReachedDate DATETIME
+ALTER PROCEDURE Acc_Rpt_WinLimit_MemberLastWL_LiveCasino	
+	@ReachedDate	DATETIME,
+	@ProductID		VARCHAR(MAX) = '',
+	@Username		VARCHAR(MAX) = ''
 AS
 /*
 	Created:	Harper@20161025
 	Task:		#61220: Generate data for Section 3 - Member Last Win/Loss
-	DB:			DBEXT.bodb02
+	DB:			DBACC.bodb02
 
 	Revisions:
 
-	Param's Explanation:
-		@CustID: Customer that reach Win Limit
-		@ReachedDate: date that user reach win limit
-
-	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustID = 18205717, @ReachedDate = '20161010' WITH RECOMPILE
+	Param's Explanation:	
+	
+	EXEC Acc_Rpt_WinLimit_MemberLastWL_LiveCasino '20161024', 4, 'C9888HH22'
 */
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @ShortReachedDate DATE = CONVERT(VARCHAR(10), @ReachedDate, 111)	
+	DECLARE @SportBettype TABLE (ProductID INT, Bettype INT, BettypeName VARCHAR(50))
+	DECLARE @TmpCust TABLE (CustID INT, UserName VARCHAR(50))
+	
+	-- Get Sport Bettype
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)	
+
+	IF @ProductID <> ''
+	BEGIN
+		INSERT INTO @SportBettype (ProductID, Bettype)
+		SELECT ProductID, Bettype 
+		FROM [dbo].strSplit(@ProductID, ',') f
+			INNER JOIN dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest) s ON f.val = s.ProductID	
+
+		UPDATE p
+		SET p.BettypeName = b.typenamee
+		FROM @SportBettype p
+			LEFT JOIN bettype b (NOLOCK) ON p.Bettype = b.typeid	
+	END	
+	-- End
+
+	-- Get User Name
+	IF @Username <> ''
+	BEGIN
+		INSERT INTO @TmpCust (CustID, UserName)
+		SELECT c.CustID, c.username
+		FROM [dbo].strSplit(@UserName, ',') f
+			INNER JOIN dbo.customer c (NOLOCK) ON c.username = f.val 
+		WHERE c.roleid = 1
+	END
+	-- End
 	
 	SELECT b.custid
-		, b.winlostdate
-		, b.bettype
-		, b.currency
-		, b.CurrencyName
-		, b.transid AS BetCount
-		, b.actual_stake AS TotalBet
-		, b.actual_stake - b.winlost AS GameIncome
-		, CASE WHEN b.actual_stake <= 0 THEN 0 ELSE b.winlost/b.actual_stake END AS GamePayout
+		, c.UserName
+		, b.winlostdate		AS WinLossDate
+		, s.BettypeName		AS Bettype
+		, b.CurrencyName	AS Currency
+		, b.transid			AS BetCount
+
+		, b.actual_stake	AS TotalBet
+		, (b.actual_stake - b.winlost) AS GameIncome
+		, CASE 
+			WHEN b.actual_stake <= 0 THEN 0 
+			ELSE b.winlost/b.actual_stake 
+			END				AS GamePayout
 		, (1 - b.tpositiontaking) * b.stake AS CompanyTurnOver
 		, (b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) AS CompanyNetIncome		
-		, b.actual_stake * b.actualrate AS BasedTotalBet
-		, (b.actual_stake - b.winlost) * b.actualrate AS BasedGameIncome
-		, ((1 - b.tpositiontaking) * b.stake) * b.actualrate AS BasedCompanyTurnOver
-		, (b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) * b.actualrate AS BasedCompanyNetIncome
+
+		, (b.actual_stake * b.actualrate)	AS TotalBetsRM
+		, (b.actual_stake - b.winlost) * b.actualrate AS GameIncomeRM
+		, ((1 - b.tpositiontaking) * b.stake) * b.actualrate AS CompanyTurnOverRM
+		, (b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) * b.actualrate AS CompanyNetIncomeRM
 	FROM dbo.bettrans b (NOLOCK)
-	WHERE b.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund		
-		AND b.custid = @CustID AND CONVERT(VARCHAR(10), b.winlostdate, 111) = @ShortReachedDate 
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+		INNER JOIN @TmpCust c ON b.custid = c.CustID
+	WHERE b.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund				
+		AND CONVERT(VARCHAR(10), b.winlostdate, 111) = @ShortReachedDate 
 	
 END
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [vnteam]
 GO

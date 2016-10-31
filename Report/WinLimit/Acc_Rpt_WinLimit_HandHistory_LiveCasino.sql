@@ -9,7 +9,7 @@ AS
 /*
 	Created:	Harper@20161013
 	Task:		#61220: Generate data for HandHistory tab of Email Template Phase 3
-	DB:			DBEXT.bodb02
+	DB:			DBACC.bodb02
 
 	Revisions:
 
@@ -139,8 +139,10 @@ BEGIN
 	FROM @TmpLiveCasino t
 	GROUP BY t.GameCode, t.GameDuration
 	ORDER BY t.GameCode
+
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [bodbAdminNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [vnteam]
+GO
