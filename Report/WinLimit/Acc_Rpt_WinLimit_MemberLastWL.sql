@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-ALTER PROCEDURE Acc_Rpt_WinLimit_MemberLastWL_LiveCasino	
+CREATE PROCEDURE Acc_Rpt_WinLimit_MemberLastWL
 	@ReachedDate	DATETIME,
 	@ProductID		VARCHAR(MAX) = '',
 	@Username		VARCHAR(MAX) = ''
@@ -15,7 +15,7 @@ AS
 
 	Param's Explanation:	
 	
-	EXEC Acc_Rpt_WinLimit_MemberLastWL_LiveCasino '20161024', 4, 'C9888HH22'
+	EXEC Acc_Rpt_WinLimit_MemberLastWL '20161024', 4, 'C9888HH22'
 */
 BEGIN
 	SET NOCOUNT ON
