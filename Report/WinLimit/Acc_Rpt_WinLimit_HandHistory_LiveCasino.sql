@@ -1,10 +1,10 @@
 USE [bodb02]
 GO
 
-CREATE PROCEDURE Acc_Rpt_WinLimit_HandHistory_LiveCasino
+ALTER PROCEDURE Acc_Rpt_WinLimit_HandHistory_LiveCasino
 	@CustID INT,
 	@ReachedDate DATETIME,
-	@BetType NVARCHAR(50)
+	@BetType INT
 AS
 /*
 	Created:	Harper@20161013
@@ -94,7 +94,8 @@ BEGIN
 		INNER JOIN dbo.League l (NOLOCK) ON m.leagueid = l.leagueid
 	WHERE bg.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund
 		AND bg.custid = @CustID AND CONVERT(VARCHAR(10), bg.winlostdate, 111) = @ShortReachedDate 
-		AND bg.betteam = @BetType
+		AND bg.bettype = @BetType
+
 	-- Update Time Difference
 	UPDATE T
 	SET T.TimeDiff = CONVERT(TIME, R.TimeDiff)
@@ -121,7 +122,7 @@ BEGIN
 		TimeDiff,
 		GameDuration,
 		TotalBet,
-		PlayerWL,
+		PlayerWL AS PlayerWinLoss,
 		GameIncome,
 		CompanyTurnOver,
 		CompanyComm,
@@ -134,7 +135,7 @@ BEGIN
 	FROM @TmpLiveCasino
 	ORDER BY GameCode
 
-	SELECT t.GameCode, COUNT(t.Transid) AS NoTicket, SUM(t.TotalBet) AS TotalBet, SUM(t.GameIncome) AS GameInCome, t.GameDuration
+	SELECT t.GameCode, SUM(t.TotalBet) AS TotalBet, SUM(t.GameIncome) AS GameInCome, t.GameDuration
 	FROM @TmpLiveCasino t
 	GROUP BY t.GameCode, t.GameDuration
 	ORDER BY t.GameCode
