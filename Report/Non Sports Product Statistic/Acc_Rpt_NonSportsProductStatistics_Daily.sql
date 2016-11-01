@@ -39,7 +39,7 @@ AS
 			 - @ProductID: string filter by Product 
 			 - @BetType: string filter by bettype
 			 - @LeagueId: string filter by LeagueId (ProductID = 3 - Number Game get LeagueId)  
-			 - @Sporrtype: string filter by Sporrtype (ProductID = 5 - Virtual Sports get Sporttype)
+			 - @Sporttype: string filter by Sporttype (ProductID = 5 - Virtual Sports get Sporttype)
 			 - @GameTableId: filter by specific game table (ProductID = 4 - Live Casino get leagueID)
 			 - @currency: 
 				-1: All and convert to RM
@@ -397,7 +397,7 @@ SET NOCOUNT ON
 				 )
 		GROUP BY  b.WinlostDate,  b.Currency, b.custID 
 
-	----2. NumberGame & Live Casino - Game Table : filer by LeagueID
+	----2. NumberGame & Live Casino & VirtualSport (Soccer) 
 		INSERT INTO #Data ( ReportBy, CustID,   
 						BetCount, CurrencyId , 
 						TotalBets, TotalBetsBase, 
@@ -435,6 +435,7 @@ SET NOCOUNT ON
 				ON m.MatchId = b.matchid
 		WHERE b.WinlostDate = @WLDate
 			AND s.ProductID IN (3,4,5) --- NumberGame, SLI-Live Casino, VirtualSport
+			AND s.Eventtype = 1
 			AND (
 					(
 						(EXISTS (SELECT 1 From #tmpLeagueId l WHERE l.LeagueId = m.leagueid) AND s.ProductID = 3)
@@ -465,6 +466,63 @@ SET NOCOUNT ON
 		GROUP BY  b.WinlostDate,  b.Currency, b.CustId 
 
 
+	----3.  VirtualSport (HR) 
+		INSERT INTO #Data ( ReportBy, CustID,   
+						BetCount, CurrencyId , 
+						TotalBets, TotalBetsBase, 
+						TotalWins, TotalWinsBase, 
+						TotalRefund, TotalRefundBase,
+						CompanyTurnover, CompanyTurnoverBase,  
+						CompanyGrossIncome, CompanyGrossIncomeBase, 
+						CompanyComm, CompanyCommBase							   
+					   )
+	
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy, b.CustId,  
+				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
+
+				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
+				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+
+				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
+				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+
+				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+
+				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+								
+				- SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
+				- SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
+
+				- SUM(scomm) AS CompanyComm,
+				- SUM(scomm *actualrate) AS CompanyCommBase
+		FROM  dbo.Bettrans b WITH (NOLOCK)
+			INNER JOIN #SportBettype s 
+				ON s.Bettype = b.bettype 
+			INNER JOIN VSRaceInfo r WITH (NOLOCK) 
+				ON r.EventId = b.matchid
+		WHERE b.WinlostDate = @WLDate
+			AND s.ProductID = 5 --- VirtualSport (HR)
+			AND s.Eventtype = 3
+			AND (	
+					EXISTS (SELECT 1 From #tmpSporttype sp WHERE sp.Sporttype = r.sporttype)
+					OR @Sporttype = ''
+				)
+			AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
+			AND (b.currency = @currency OR @currency IN (0,-1)) 			
+			AND (EXISTS (SELECT 1 From #Temp_MemIDs m WHERE m.CustID = b.custId) OR @Username = '')
+			AND (EXISTS (SELECT 1 From #tmpDevice f WHERE f.betfrom = b.betfrom) OR @Device = '')
+			AND ( @Site = 'ALL'
+				  OR (EXISTS (SELECT 1 From #tmpSiteSuper s WHERE s.srecommend = b.srecommend) AND @IsSite = 1)
+				  OR (NOT EXISTS (SELECT 1 From #tmpAllDepSuper d WHERE d.srecommend = b.srecommend) AND @IsMBC = 1)
+				)
+			AND (	
+					(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
+				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
+				 OR @HousePTType = 0 
+				 )
+		GROUP BY  b.WinlostDate,  b.Currency, b.CustId 	
 
 
 ---Get CurrencyName
