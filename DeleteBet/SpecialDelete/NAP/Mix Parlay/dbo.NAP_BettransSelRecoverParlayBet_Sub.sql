@@ -255,8 +255,10 @@ BEGIN
 		FROM InvalidTransID t
 			 LEFT JOIN bettrans b WITH(NOLOCK)
 					ON t.transid = b.transid
+					   AND b.bettype = 29
 			 LEFT JOIN bettrans14 b14 WITH(NOLOCK)
-					ON t.transid = b14.transid					
+					ON t.transid = b14.transid	
+					   AND b.bettype = 29				
 	)
 	SELECT t.transid AS InvalidTrans
 		 , CASE
