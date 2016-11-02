@@ -10,7 +10,8 @@ GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_Site_14] @StartDate SMALLDATETIME,
                                                                @EndDate   SMALLDATETIME,
                                                                @BetType   INT,
-                                                               @Site      NVARCHAR(50)
+                                                               @Site      NVARCHAR(50),
+                                                               @IsLive    INT           = 2
 AS
 
 /*
@@ -20,7 +21,7 @@ DB: DBACC/bodb02
 
 Revisions: 	 
 	 - 20160222@Robert: Improve Company Win Loss Report - Universal Product
-		
+	 - 20161001@Jacob: Integrate new product NG2 - #63460	
 Parameter's Explanation:
 	- @Site: credit, deposit	
 Example: 
@@ -76,6 +77,8 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_Site_14] @StartDate='2016-01-01', @EndDat
          FROM bettrans14 AS b WITH (NOLOCK)
               INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
          WHERE b.winlostdate = @StartDate
+               AND (@IsLive = 2
+                    OR b.liveindicator = @IsLive)
                AND b.BetType = @BetType
                AND b.ruben = 1
                AND b.statusId NOT IN(101, 102, 103, 121)

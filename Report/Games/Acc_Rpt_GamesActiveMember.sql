@@ -1,8 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
- @fromdate datetime,  
- @todate datetime,  
- @BalanceUpDay datetime,
- @ProductList VARCHAR(200)
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_GamesActiveMember]  
+	@fromdate		DATETIME,  
+	@todate			DATETIME,  
+	@BalanceUpDay	DATETIME,
+	@ProductList	VARCHAR(200)
 AS  
  
 /*  
@@ -23,6 +26,7 @@ AS
 	- 20151111@Percy: Change the sport type: MGC_LC-RNG to LC and RNG [RedmineID: #46576]
 	- 20160223@Robert: Add new range bettype for Allbet Live Casino #50921
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
+	- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
 	 
 Param's Explanation: 
 	+ @ProductList : string, collect ProductID seperate by comma ',' .Eg: @ProductList ='0,3,4,6,7'	
@@ -47,7 +51,7 @@ SELECT VAL FROM  dbo.strSplit(@ProductList,',')
 INSERT INTO @Product (ProductID,ProductPrefix)
 SELECT ProductID,ProductPrefix
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (3,6,7,8,4,11,12,13,21,22)
+WHERE ProductID IN (3,6,7,8,4,11,12,13,21,22,23)
 UNION ALL
 SELECT ProductID,ProductPrefix    -- ORDER BY 13, 17
 FROM dbo.Products WITH (NOLOCK)
@@ -55,7 +59,7 @@ WHERE ProductID IN (17)
 UNION ALL
 SELECT ProductID,ProductPrefix
 FROM dbo.Products WITH (NOLOCK)
-WHERE ProductID IN (14,15,19)
+WHERE ProductID IN (14,15)
 
 SELECT 
 	p.ProductPrefix
@@ -189,8 +193,6 @@ SELECT
 	,CASE a.GameName WHEN 'MG' THEN 'MG-SuperLive' ELSE p.ProductName END GameName
 FROM #statistic a 
 LEFT JOIN dbo.Products p ON a.gameName=p.ProductPrefix 
-
-  
  
 DROP TABLE #tmpcust
 DROP TABLE #statistic

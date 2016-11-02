@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products]
 	 @StartDate SMALLDATETIME,
       @EndDate   SMALLDATETIME
@@ -11,31 +14,34 @@ AS
 		- 20160622@Sophia: 	. Remove group by ExtraPT to avoid duplicated data. [Redmine: #59732]
 							. Ignore param @EndDate because of the performance, and business supports only one day 
 		 
-
+		- 20160915@Percy: Integrate NG2 [RedmineID: #63460]
+		- 20160922@Percy: Use local parameter to prevent bad parameter sniffing [RedmindID: #64573]
 	Explanation's Param:
 	
 */
 BEGIN
 	SET NOCOUNT ON
 	
+	DECLARE @winlostdate DATETIME
+	SELECT  @winlostdate = @StartDate
 		
-	 ------Get Sport Bettype Matrix------
-	 -- Check SP Version	 
-	 DECLARE @isTest BIT = 0
-	 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	------Get Sport Bettype Matrix------
+	-- Check SP Version	 
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
  
-	 CREATE TABLE #SportBettype (ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500), RefTable TINYINT, CasinoType TINYINT)
-	 INSERT INTO #SportBettype ( ProductID, Bettype, EventType, SubProduct, RefTable, CasinoType)
-	 SELECT ProductID,
-            Bettype,
-            EventType,
-            SubProduct,
-			RefTable,
-			CasinoType
-     FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	CREATE TABLE #SportBettype (ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500), RefTable TINYINT, CasinoType TINYINT)
+	INSERT INTO #SportBettype ( ProductID, Bettype, EventType, SubProduct, RefTable, CasinoType)
+	SELECT ProductID,
+        Bettype,
+        EventType,
+        SubProduct,
+		RefTable,
+		CasinoType
+    FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
 	 
-	 --- End Sport Bettype Matrix------
+	--- End Sport Bettype Matrix------
 	
 	
 	CREATE TABLE #src(	srecommend INT,
@@ -101,7 +107,7 @@ BEGIN
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT) 
 	SELECT	ProductID, SportType, SubProduct, SuperId, SUM(ExtraPT) AS ExtraPT 
 	FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
-	WHERE	@StartDate BETWEEN FromDate AND Todate
+	WHERE	@winlostdate BETWEEN FromDate AND Todate
 	GROUP BY ProductID, SportType, SubProduct, SuperId
 
 	
@@ -161,7 +167,7 @@ BEGIN
 			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.LeagueId = p.LeagueId AND p.programDate = o.programDate
 			INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.LeagueId
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
-	WHERE	o.EventDate = @StartDate
+	WHERE	o.EventDate = @winlostdate
 	
 	
 	----------------------------------- 
@@ -197,7 +203,7 @@ BEGIN
 	WHERE	b.ruben = 1 
 			and s.ProductID = 2
 			and b.MatchId >0
-			and b.winlostdate = @StartDate 
+			and b.winlostdate = @winlostdate 
 			and b.statusID not in (101,102,103,121)	
 	GROUP BY  case when dep.custid is null then 1 else 2 end
 
@@ -210,9 +216,9 @@ BEGIN
 			s.sporttype,
 			m.type
 	FROM (
-			SELECT MatchId, LeagueId, exrisk, MatchCode, 'match' as type FROM match WITH (NOLOCK) WHERE EventDate = @StartDate
+			SELECT MatchId, LeagueId, exrisk, MatchCode, 'match' as type FROM match WITH (NOLOCK) WHERE EventDate = @winlostdate
 			UNION ALL
-			SELECT orid, LeagueId, 0, MatchCode, 'outright' as type FROM outright WITH (NOLOCK) WHERE EventDate = @StartDate
+			SELECT orid, LeagueId, 0, MatchCode, 'outright' as type FROM outright WITH (NOLOCK) WHERE EventDate = @winlostdate
 			)m	
 	INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId	
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
@@ -242,7 +248,7 @@ BEGIN
 	FROM bettrans b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId 		
-	WHERE winlostdate = @StartDate
+	WHERE winlostdate = @winlostdate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
@@ -281,7 +287,7 @@ BEGIN
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend = 5707545 
-		AND	b.winlostdate = @StartDate
+		AND	b.winlostdate = @winlostdate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
@@ -335,7 +341,7 @@ BEGIN
 			s.CasinoType
 	FROM bettrans b WITH (READPAST)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype
-	WHERE winlostdate = @StartDate
+	WHERE winlostdate = @winlostdate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
@@ -368,7 +374,7 @@ BEGIN
 			s.ProductID, s.CasinoType
 	FROM bettransRNG b WITH(NOLOCK)
 		INNER JOIN #SportBettype s ON b.gameid = s.bettype	
-	WHERE winlostdate = @StartDate
+	WHERE winlostdate = @winlostdate
 		----AND s.ProductID IN (6,17,22) 	---- OW RNG(6), Microgaming - RNG Casino (17), Voidbridge (22)
 		AND s.RefTable = 1  --- Use Table BettransRNG
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
@@ -394,7 +400,7 @@ BEGIN
 			s.ProductID, s.CasinoType
 	FROM bettransLC b WITH(NOLOCK)	
 		INNER JOIN #SportBettype s ON b.gameid = s.bettype
-	WHERE winlostdate = @StartDate
+	WHERE winlostdate = @winlostdate
 		----AND s.ProductID = 21  ---- AllBet (21)
 		AND s.RefTable = 2  --- Use Table BettransLC
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
@@ -570,7 +576,7 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
-	WHERE	b.ProductId IN (5,8,15) ---Virtual Sports, Keno, Colossus Bets (3rd)
+	WHERE	b.ProductId IN (5,8,15,23) ---Virtual Sports, Keno, Colossus Bets, NG2 (3rd)
 			--- OR b.ProductId IN (4,11,12,13)    -----SLI, AG Casino, Gold Deluxe, MGC Live casino  (liveCasino)
 			--- OR b.ProductId IN (6, 14) --- Macau (Casino)
 			OR b.CasinoType IN (1,2)
@@ -630,7 +636,7 @@ BEGIN
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend IN (52466, 5707545)
-		AND	b.winlostdate = @StartDate
+		AND	b.winlostdate = @winlostdate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103) 
 		AND b.ruben = 1	
@@ -673,6 +679,7 @@ BEGIN
 	,(10, 2, 'Racing')
 	,(11, -2, 'Bettrade')
 	,(12, 15, 'Colossus Bets')
+	,(13, 23, 'NG2')
 
 		
 	INSERT INTO @ProductOrder (DisplayOrder, ProductId, ProductName, Site)
@@ -730,7 +737,7 @@ BEGIN
 END
 
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [vnteam]
 GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Products] TO [bodbAdminNet]
 GO 

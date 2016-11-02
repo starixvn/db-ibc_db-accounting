@@ -2,8 +2,8 @@
 GO
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_WinlostSummary_Sporttype]
-    @fromdate    DATETIME,
-    @todate        DATETIME    
+    @fromdate   DATETIME,
+    @todate     DATETIME    
 AS
     /*
         Created: Johnson
@@ -28,6 +28,7 @@ AS
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
 			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 			- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
+			- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
         Parameter's Explanation:
     */
 BEGIN
@@ -531,7 +532,7 @@ BEGIN
             AND s.ProductId=21
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	   
-	   -- Voidbridge section 
+	   -- Macau Games section 
 		UNION ALL
         SELECT 212 sporttype
             ,b.bettype
@@ -576,9 +577,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=15
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
-	--	Cockfighting
+	--	NG2
 		UNION ALL
-		  SELECT 206 sporttype
+		  SELECT sporttype
             ,b.bettype
             ,b.liveindicator
             ,ibc
@@ -596,7 +597,7 @@ BEGIN
         FROM rptWinlost b WITH(NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND s.ProductId=19
+            AND s.ProductId=23
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	ORDER BY OrderKey ASC	    
 	

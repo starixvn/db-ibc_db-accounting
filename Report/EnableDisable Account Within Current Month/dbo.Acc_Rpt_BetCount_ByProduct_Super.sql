@@ -1,9 +1,5 @@
-SET QUOTED_IDENTIFIER ON 
+USE [bodb02]
 GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_Rpt_BetCount_ByProduct_Super    Script Date: 4/8/2016 4:33:33 PM ******/
  
 ALTER PROCEDURE [dbo].[Acc_Rpt_BetCount_ByProduct_Super]
 	@MoveBetsDay	SMALLDATETIME,
@@ -29,12 +25,15 @@ AS
 		- 20160229@Jim: Offer Allbet [Redmine #50921]
 		- 20160407@Sophia: Fix bug low performance - need to call Openquery [redmine: #55623]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
+		- 20160916@Robert:
+			1. Integrate new product NG2 [RedmindID: #63460]
+			2. Clean code of Cockfighting
 
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
 	  + @CustID: SuperID
-	  + {251: Casino (include : 251, 208, 209, 210), 151:Racing, 252:Bingo, 161:Number Game, 162:Live Casino, 180:Virtual Sports, 202:Keno,  -1 : Metric Gaming - Superlive, 206: Cockfingting}
+	  + {251: Casino (include : 251, 208, 209, 210), 151:Racing, 252:Bingo, 161:Number Game, 162:Live Casino, 180:Virtual Sports, 202:Keno,  -1 : Metric Gaming - Superlive}
 
   
 */  
@@ -59,17 +58,15 @@ BEGIN
 	
 	SELECT @CurrentDate = CAST(GETDATE() AS DATE)
 	SELECT @FirstDate = CONVERT(VARCHAR(25),DATEADD(dd,-(DAY(@CurrentDate)-1),@CurrentDate),101)   --- First date of the month
-
-
     
-    --Get running Keno bet,Cockfighting,MG-Superlive 
-    IF  @sportType IN( 202,206,-1)                       
+    --Get running Keno, MG-Superlive 
+    IF @sportType IN( 202,-1)                       
     BEGIN
 		INSERT INTO #AvailableMember
 		SELECT tl.custid,tl.[status],COUNT(1) 
 		FROM dbo.translog tl WITH(NOLOCK)
-		WHERE (tl.productID IN ( 202, 206)
-			  OR tl.GameID BETWEEN 801  AND 806
+		WHERE (tl.productID IN (202)
+			  OR tl.GameID BETWEEN 801 AND 806
 			)
 			AND tl.srecommend = @CustID
 			AND tl.StatusId = 0 
@@ -77,7 +74,7 @@ BEGIN
     END
     
     
-    --Get data from bettrans       
+    -- Get data from bettrans
 	IF @CurrentDate > @MoveBetsDay
 	BEGIN
 		IF @FirstDate <= @MoveBetsDay 
@@ -99,8 +96,7 @@ BEGIN
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
 			OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 			OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-			OR b.bettype BETWEEN 1003 AND (CASE WHEN @SportType = 206 AND b.StatusID <> 0 THEN 1003 ELSE 0 END) -- Cockfighting			
-			
+			OR b.bettype BETWEEN 2501 AND (CASE WHEN @SportType = 213 AND b.StatusID <> 0 THEN 2699 ELSE 0 END) -- NG2			
 		) 
 		AND ( 
 				----b.status IN ('WON','LOSE','DRAW','running') 
@@ -109,38 +105,43 @@ BEGIN
 		AND b.srecommend = @CustID
 		GROUP BY b.custid,b.[status]
 		
-		------ OW RNG Casino------
-		INSERT INTO #AvailableMember
-		SELECT b.custid,b.[status],COUNT(1) 
-		FROM dbo.bettransRNG b WITH(NOLOCK)
-		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
-		AND (
-				b.gameID BETWEEN 2101 AND CASE WHEN @sportType=251 THEN 2399 ELSE 0 END 	
-				OR b.gameID BETWEEN 4001 AND CASE WHEN @sportType=212 THEN 7999 ELSE 0 END 	
-			) 
-		AND (
-				b.statusId IN (111,112,113,0) 
-			)	
-		AND b.srecommend = @CustID
-		GROUP BY b.custid,b.[status]		
+		-- Get data from bettransRnG
+		IF @sportType IN (251, 212)
+		BEGIN
+			INSERT INTO #AvailableMember
+			SELECT b.custid,b.[status],COUNT(1) 
+			FROM dbo.bettransRNG b WITH(NOLOCK)
+			WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
+			AND (
+					b.gameID BETWEEN 2101 AND CASE WHEN @sportType=251 THEN 2399 ELSE 0 END 	
+					OR b.gameID BETWEEN 4001 AND CASE WHEN @sportType=212 THEN 7999 ELSE 0 END 	
+				) 
+			AND (
+					b.statusId IN (111,112,113,0) 
+				)	
+			AND b.srecommend = @CustID
+			GROUP BY b.custid,b.[status]
+		END	
 
-		------ Allbet------
-		INSERT INTO #AvailableMember
-		SELECT b.custid,b.[status],COUNT(1) 
-		FROM dbo.bettransLC b WITH(NOLOCK)
-		WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
-		AND (
-				b.gameID BETWEEN 2401 AND CASE WHEN @sportType=211 THEN 2499 ELSE 0 END 	
-			) 
-		AND (
-				b.statusId IN (111,112,113,0) 
-			)	
-		AND b.srecommend = @CustID
-		GROUP BY b.custid,b.[status]
+		-- Get data from bettransLC
+		IF @sportType IN (211)
+		BEGIN
+			INSERT INTO #AvailableMember
+			SELECT b.custid,b.[status],COUNT(1) 
+			FROM dbo.bettransLC b WITH(NOLOCK)
+			WHERE b.winlostdate BETWEEN @TempFromDate AND @CurrentDate
+			AND (
+					b.gameID BETWEEN 2401 AND CASE WHEN @sportType=211 THEN 2499 ELSE 0 END 	
+				) 
+			AND (
+					b.statusId IN (111,112,113,0) 
+				)	
+			AND b.srecommend = @CustID
+			GROUP BY b.custid,b.[status]
+		END
 	END
 
-
-	--Get data from sum_winlost
+	--Get data from bodb_account.dbo.mcCustBettingDaily
 	IF @FirstDate <= @MoveBetsDay
 	BEGIN
 		IF @CurrentDate >= @MoveBetsDay
@@ -165,9 +166,9 @@ BEGIN
 							OR b.bettype BETWEEN 73 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 252 THEN 73 ELSE 0 END)
 							OR b.bettype BETWEEN 1701 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 							OR b.bettype BETWEEN 18000 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +' = 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-							OR b.bettype BETWEEN 1003 AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 206 THEN 1003 ELSE 0 END) -- Cockfighting
 							OR b.bettype BETWEEN 2401  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 211 THEN 2499 ELSE 0 END) -- AllBet
 							OR b.bettype BETWEEN 4001  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 212 THEN 7999 ELSE 0 END) -- Voidbridge
+							OR b.bettype BETWEEN 2501  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 213 THEN 2699 ELSE 0 END) -- NG2
 						) 
 						AND b.status IN (3  ---DRAW
 										,12	---HALF LOSE
@@ -184,11 +185,8 @@ BEGIN
 				
 		INSERT INTO #AvailableMember 
 		EXEC (@sql)	
-		
 	END
 	
-
-	    
 	--Get data for downline list 
     IF @sportType = 151
     BEGIN            
@@ -290,21 +288,19 @@ BEGIN
 			LEFT JOIN CustEnableKeno ce ON ce.CustID = av.custid    
 		WHERE ce.CustID IS NULL
 	END
-	-- Cockfighting
-	IF @sportType IN (211,206,212)
-    BEGIN            
+	IF @sportType IN (211,212,213)
+    BEGIN
+		DECLARE @bitmapOrder TABLE (bitmapOrder TINYINT)
+		INSERT INTO @bitmapOrder (bitmapOrder)
+		SELECT bitmapOrder FROM dbo.ProductStatusProfile WITH(NOLOCK) WHERE Sporttype = @SportType
+	    
 		INSERT INTO #FiltedDownlineAcc
 		SELECT ci.custid,
-				CASE WHEN @SportType IN(206)   THEN 	(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-												FROM CustProductStatus
-												WHERE custid = ci.custid)
-				WHEN @SportType IN(211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
-												FROM CustProductStatus
-												WHERE custid = ci.custid)				
-				WHEN @SportType IN(212)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
-												FROM CustProductStatus
-												WHERE custid = ci.custid)	
-												END ,
+				(SELECT CASE MIN(CONVERT(INT, f.value)) WHEN 0 THEN 0 ELSE 1 END
+			FROM CustProductStatus cps WITH(NOLOCK)
+				CROSS APPLY @bitmapOrder b
+				CROSS APPLY f_CustSetting_ProductStatusSel(cps.bitmapIsDisabled, b.bitmapOrder) f
+			WHERE custid = ci.custid),
 			av.BetStatus,
 			av.BetCount
 		FROM dbo.custInfo ci WITH(NOLOCK)
@@ -325,18 +321,8 @@ BEGIN
 	DROP TABLE #AvailableMember
 
 END
-
-
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [vnteam]
 GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
-GO 
+GRANT EXECUTE ON [dbo].[Acc_Rpt_BetCount_ByProduct_Super] TO [bodbAdminNet]
+GO

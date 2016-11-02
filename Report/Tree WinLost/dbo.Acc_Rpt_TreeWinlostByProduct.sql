@@ -1,19 +1,18 @@
-﻿Use bodb02
+﻿USE [bodb02]
 GO 
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_TreeWinlostByProduct]  
 	@FromDate   DATETIME,
-	@ToDate   DATETIME,	
-	@Products VARCHAR(4000), -- instead of all @showXXX parameters
-	@TurnOver_8RM MONEY = 0 OUTPUT,    
-	@Total_8RM   MONEY = 0 OUTPUT,    
-	@VirtualTotal_8RM  MONEY = 0 OUTPUT,    
-	--@Variance_8RM  MONEY = 0 OUTPUT,    
-	@TurnOver_BARM MONEY = 0 OUTPUT, 
-	@Total_BARM   MONEY = 0 OUTPUT,    
-	@VirtualTotal_BARM  MONEY = 0 OUTPUT  
---@Variance_BARM  MONEY = 0 OUTPUT    
-  
+	@ToDate		DATETIME,	
+	@Products	VARCHAR(4000),
+	-- 8RM account
+	@TurnOver_8RM		MONEY = 0 OUTPUT,    
+	@Total_8RM			MONEY = 0 OUTPUT,    
+	@VirtualTotal_8RM	MONEY = 0 OUTPUT,    	
+	-- BARM account
+	@TurnOver_BARM		MONEY = 0 OUTPUT, 
+	@Total_BARM			MONEY = 0 OUTPUT,    
+	@VirtualTotal_BARM  MONEY = 0 OUTPUT    
 AS  
   
 /*    
@@ -42,12 +41,15 @@ Revisions:
 	- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 	- 20160615@Sophia: Change READPAST to ROWLOCK because of the Deadlock [Redmind: #59254]
 	- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+	- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
 */    
   
   
-SET NOCOUNT ON  
+SET NOCOUNT ON
+
+DECLARE @FDate DATETIME, @TDate DATETIME
+SELECT  @FDate = @FromDate, @TDate = @ToDate
   
---DECLARE @TmpCondBettype TABLE(bettype INT , isVirtual BIT)   
 DECLARE @tmpIBCFee TABLE(partnerID int,IBCFee bit)  
 DECLARE @CommSetting TABLE (MatchID int, IBCFee bit, ToteCommWin smallmoney, ToteCommPlace smallmoney, ToteCommWP smallmoney, ToteFee smallmoney )
 
@@ -209,7 +211,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 				INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.leagueID = p.leagueID and p.programDate = o.programDate  
 				INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid  
 				INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID  
-			WHERE o.eventdate BETWEEN @FromDate AND @ToDate	
+			WHERE o.eventdate BETWEEN @FDate AND @TDate	
 		
 		INSERT INTO #TmpResult
 			SELECT b.currency,
@@ -238,7 +240,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 			WHERE b.ruben =1   
 				and b.bettype IN (SELECT bettype FROM @SportBettype WHERE ProductID = 2)  
 				and b.matchid >0  
-				and b.winlostdate BETWEEN @FromDate AND @ToDate
+				and b.winlostdate BETWEEN @FDate AND @TDate
 				and b.statusID not in (101,102,103,121)  
 				and b.currency <> 20
 			GROUP BY b.currency,
@@ -265,7 +267,6 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 	IF EXISTS (SELECT TOP 1 1 FROM #tmpBettype WHERE ProductID = 9)	
 	--IF @showP2P = 1  
 	BEGIN
-		
 		TRUNCATE TABLE #TmpResult
 	
 		INSERT INTO	#TmpResult
@@ -278,7 +279,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 			where b.bettype IN( SELECT bettype FROM @SportBettype WHERE ProductID = 9)
 				and b.matchid = 1000   
 				and b.ruben=1    
-				and b.winlostdate BETWEEN @FromDate AND @ToDate
+				and b.winlostdate BETWEEN @FDate AND @TDate
 				and statusID NOT in (101,102,103,121)  
 				and b.currency <> 20
 			group by  b.currency,b.actualrate
@@ -299,7 +300,7 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		GROUP BY Currency	
 	END
 
-    BEGIN---get data from bettransRNG
+	---get data from bettransRNG
 	INSERT INTO #TmpResultAll  
 	   SELECT b.currency,
 		  CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
@@ -313,36 +314,15 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		  SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
 	   FROM bettransRNG b WITH(ROWLOCK)   
 		  INNER JOIN #tmpBettype t on t.bettype = b.gameID 
-	   WHERE winlostdate BETWEEN @FromDate AND @ToDate  
+	   WHERE winlostdate BETWEEN @FDate AND @TDate  
 		  AND t.ProductID in (6, 17, 22)
 		  AND b.statusID NOT IN (0, 1, 101, 102, 103,121)     
 		  and b.currency <> 20
 	   GROUP BY b.currency,
 		  CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END
-    END
-------------------------------
-	INSERT INTO #TmpResultAll  
-	SELECT b.currency,
-		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
-		SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
-		SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,  
-		SUM(scomm) commission,    
-		SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total,   
-		SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
-		SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,  
-		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM ,  
-		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
-	FROM bettrans b WITH(ROWLOCK)   
-		INNER JOIN #tmpBettype t on t.bettype = b.bettype
-	WHERE winlostdate BETWEEN @FromDate AND @ToDate
-	     AND t.ProductID NOT IN (2, 6, 9, 17, 21, 22)
-		AND b.ruben = 1    
-		AND b.statusID NOT IN (101, 102, 103,121)     
-		and b.currency <> 20
-	GROUP BY b.currency,
-		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END
-		
-	UNION ALL -- AllBet
+	
+	---get data from bettransLC
+	INSERT INTO #TmpResultAll 
 	
 	SELECT b.currency,
 		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
@@ -356,33 +336,53 @@ CREATE CLUSTERED INDEX IDX_Bettype_bettype_ProductID ON #tmpBettype(bettype,Prod
 		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*b.virtualrate) Virtual_Total
 	FROM bettransLC b WITH(ROWLOCK)   
 		INNER JOIN #tmpBettype t on t.bettype = b.gameID 
-	WHERE winlostdate BETWEEN @FromDate AND @ToDate	
+	WHERE winlostdate BETWEEN @FDate AND @TDate	
 	     AND t.ProductID = 21	
 		AND b.statusID NOT IN (0, 1, 101, 102, 103,121)     
 		and b.currency <> 20
 	GROUP BY b.currency,
 		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END	
+	
+	---get data from bettrans
+	INSERT INTO #TmpResultAll  
+	SELECT b.currency,
+		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END VirtualRateType,  
+		SUM(ABS(stake)*(1 - tpositiontaking)) Turnover,
+		SUM(swinlost + mwinlost + awinlost + winlost-actual_stake) Winloss,  
+		SUM(scomm) commission,    
+		SUM(swinlost + mwinlost + awinlost + winlost-actual_stake+scomm) total,   
+		SUM(ABS(stake)*(1 - tpositiontaking)*actualrate) TurnoverRM,
+		SUM(ABS(stake)*(1 - tpositiontaking)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) TurnoverIBCVirtual,  
+		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate)  TotalRM ,  
+		SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END)) Virtual_Total
+	FROM bettrans b WITH(ROWLOCK)   
+		INNER JOIN #tmpBettype t on t.bettype = b.bettype
+	WHERE winlostdate BETWEEN @FDate AND @TDate
+	     AND t.ProductID NOT IN (2, 6, 9, 17, 21, 22)
+		AND b.ruben = 1    
+		AND b.statusID NOT IN (101, 102, 103,121)     
+		and b.currency <> 20
+	GROUP BY b.currency,
+		CASE WHEN t.IsNoVirtual = 1 THEN 0 ELSE CASE WHEN b.virtualrate-b.actualrate < 0 THEN -1 WHEN b.virtualrate-b.actualrate > 0 THEN 1 ELSE 0 END END
 
 SELECT	@TurnOver_8RM     = -SUM(ABS(stake)*(1 - tpositiontaking)*actualrate),
 		@Total_8RM        = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate),    
-		@VirtualTotal_8RM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))  
-		--@Variance_8RM=@Total_8RM-@VirtualTotal_8RM  
+		@VirtualTotal_8RM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))  		
 FROM bettrans b WITH(NOLOCK)    
 	INNER JOIN #tmpBettype t on t.bettype = b.bettype
 WHERE recommend = 52466 AND    
 	ruben=1 AND    
-	winlostdate  between @FromDate and @ToDate   AND   
+	winlostdate  between @FDate and @TDate   AND   
 	b.statusID NOT IN (101, 102, 103,121)
 
 SELECT	@TurnOver_BARM = -SUM(ABS(stake)*(1 - tpositiontaking)*actualrate),
 		@Total_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*actualrate),    
-		@VirtualTotal_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))
-		--@Variance_BARM=@Total_BARM-@VirtualTotal_BARM  
+		@VirtualTotal_BARM = -SUM((swinlost + mwinlost + awinlost + winlost-actual_stake+scomm)*(CASE WHEN t.IsNoVirtual = 0 THEN b.virtualrate ELSE actualrate END))		
 FROM bettrans b WITH(NOLOCK)   
 	INNER JOIN #tmpBettype t on t.bettype = b.bettype   
 WHERE recommend = 5707545 AND    
 	ruben=1 AND    
-	winlostdate  between @FromDate and @ToDate  AND  
+	winlostdate  between @FDate and @TDate  AND  
 	b.statusID NOT IN (101, 102, 103,121)
 		
 ---record set main data
@@ -404,33 +404,9 @@ WHERE recommend = 5707545 AND
 
 DROP TABLE #TmpResult
 DROP TABLE #TmpResultAll
-/*
-
-[Acc_Rpt_TreeWinlostByProduct_xtest]
-	@FromDate   ='20130618',
-	@ToDate   ='20140630',
-
-	@showSB =1,
-	@showNG =1,
-	@ShowRB =1,
-	@showLiveCasino = 1,
-	@showCasino =1,
-	@showP2P =1,
-	@showBI =1,
-	@showVS = 1
-
- 
- */
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
 
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [vnteam]
 GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TreeWinlostByProduct] TO [bodbAdminNet]
 GO

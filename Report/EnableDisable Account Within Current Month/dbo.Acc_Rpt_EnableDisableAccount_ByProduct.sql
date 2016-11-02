@@ -3,7 +3,7 @@ GO
  
 ALTER PROCEDURE [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct]
 	@ListCurrency	NVARCHAR(150)	= 'all', 
-	@SportType		INT ,
+	@SportType		INT,
 	@ShowEnabled	BIT				=	1,
 	@ShowDisabled	BIT				=	1
 AS  
@@ -22,6 +22,9 @@ AS
 		- 20160108@Percy: Add new range bettype for Casino [Redmine: #49134]
 		- 20160229@Jim: Offer Allbet [Redmine #50921]
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]		
+		- 20160916@Robert:
+			1. Integrate new product NG2 [RedmindID: #63460]
+			2. Clean code of Cockfighting
 
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
@@ -52,6 +55,21 @@ BEGIN
 	SELECT custid FROM dbo.Dep_CustSuper
 	UNION
 	SELECT custid FROM dbo.Acc_CustDirect WHERE roleid = 4
+
+	-- DCS setting --
+	DECLARE @bitmapOrder TABLE (bitmapOrder TINYINT) -- using for sporttype that has many settings
+	IF @SportType = 211
+	BEGIN
+		INSERT INTO @bitmapOrder (bitmapOrder)
+		SELECT bitmapOrder FROM dbo.ProductStatusProfile WITH(NOLOCK) WHERE Sporttype = @SportType
+	END
+
+	DECLARE @bitmap TINYINT -- using for sporttype that has 1 setting
+	IF @SportType IN (212,213)
+	BEGIN
+		SELECT  @bitmap = bitmapOrder FROM dbo.ProductStatusProfile WITH(NOLOCK) WHERE Sporttype = @SportType
+	END
+	-- end DCS setting --
 	
 	INSERT INTO #FiltedCreditSuper(CustID,SuperStatus)
 	SELECT ci.custid,
@@ -70,18 +88,17 @@ BEGIN
 			WHEN @sportType = 255 THEN ci.DisableGoldDeluxe
 			WHEN @sportType = -1  THEN ci.DisableSuperLive
 			WHEN @sportType = 204 THEN ci.DisableColossusBet
-			WHEN @SportType IN(206)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
+			WHEN @SportType = 211 THEN (SELECT CASE MIN(CONVERT(INT, f.value)) WHEN 0 THEN 0 ELSE 1 END
+												FROM CustProductStatus cps WITH(NOLOCK)
+												CROSS APPLY @bitmapOrder b
+												CROSS APPLY f_CustSetting_ProductStatusSel(cps.bitmapIsDisabled, b.bitmapOrder) f
+											WHERE custid = ci.custid)
+			WHEN @SportType IN (212,213) THEN (SELECT CASE (SELECT value FROM dbo.f_CustSetting_ProductStatusSel(bitmapIsDisabled, @bitmap)) WHEN 0 THEN 0 ELSE 1 END 
 										FROM CustProductStatus
 										WHERE custid = ci.custid)
-			WHEN @SportType IN(211)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)							
-			WHEN @SportType IN(212)   THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)									  
 		END
 	FROM dbo.custInfo ci WITH(NOLOCK)
-	JOIN dbo.CustSuper cs WITH(NOLOCK) ON ci.custid = cs.custid AND cs.IsInternal = 0
+	JOIN dbo.CustSuper cs WITH(NOLOCK) ON ci.custid = cs.custid AND cs.IsInternal = 0	
 	WHERE ci.roleid=4 AND ci.Enabled = 1 AND ci.custid NOT IN ( SELECT custid
 																FROM dep_custsuper WITH(NOLOCK))
 		AND (@ListCurrency= 'all' OR ci.currency IN(SELECT val
@@ -379,71 +396,90 @@ BEGIN
 		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1  
 		WHERE ci.Enabled = 1             
 	END
-	-- Cockfighting & Allbet
-	IF @sportType IN (211,206,212)
+	-- Allbet, Macau Games, NG2
+	IF @sportType IN (211)
     BEGIN      
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
 			ci.custid,
-			ci.roleid,
-			CASE WHEN @sportType =206 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-										
-				WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-																		
-				WHEN @sportType =212 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-										END
+			3,
+			1
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 3
-		WHERE ci.Enabled = 1 
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID-- AND ci.roleid = 3
+		WHERE ci.Enabled = 1 AND ci.roleid = 3
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
 			ci.custid,
-			ci.roleid,
-			CASE WHEN @sportType =206 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-										
-				WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-
-				WHEN @sportType =212 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-										END
+			2,
+			1
 		FROM dbo.custInfo ci WITH(NOLOCK)
 		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 2
-		WHERE ci.Enabled = 1 
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID -- AND ci.roleid = 2
+		WHERE ci.Enabled = 1 AND ci.roleid = 2
 		
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,
 			ci.custid,
-			ci.roleid,
-			CASE WHEN @sportType =206 THEN	
-										(SELECT CASE substring(bitmapIsDisabled, 1 + (1/8), 1) & POWER(2, 1%8) WHEN 0 THEN 0 ELSE 1 END
-										 FROM CustProductStatus
-										 WHERE custid = ci.custid)
-			 WHEN @sportType =211 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (3/8), 1) & POWER(2, 3%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-			 WHEN @sportType =212 THEN (SELECT CASE substring(bitmapIsDisabled, 1 + (4/8), 1) & POWER(2, 4%8) WHEN 0 THEN 0 ELSE 1 END
-										FROM CustProductStatus
-										WHERE custid = ci.custid)
-			 END
+			1,
+			1
 		FROM dbo.custInfo ci WITH(NOLOCK)
-		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID AND ci.roleid = 1
-		WHERE ci.Enabled = 1              
-	END
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID-- AND ci.roleid = 1
+		WHERE ci.Enabled = 1 AND ci.roleid = 1
 
+		CREATE CLUSTERED INDEX IX_CustID ON #FiltedDownlineAcc (CustID)
+
+		UPDATE fda
+		SET fda.IsDisable = A.IsDisable
+		FROM #FiltedDownlineAcc fda
+			INNER JOIN (SELECT fda.CustID, CASE MIN(CONVERT(INT, f.value)) WHEN 0 THEN 0 ELSE 1 END AS IsDisable
+						FROM CustProductStatus cps WITH(NOLOCK)
+							INNER JOIN #FiltedDownlineAcc fda ON cps.CustID = fda.CustID
+							CROSS APPLY @bitmapOrder b
+							CROSS APPLY f_CustSetting_ProductStatusSel(cps.bitmapIsDisabled, b.bitmapOrder) f
+						GROUP BY fda.CustID
+						) A ON fda.CustID = A.CustID
+	END
+	-- Macau Games, NG2
+	IF @sportType IN (212,213)
+    BEGIN      
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			3,
+			(SELECT CASE (SELECT value FROM dbo.f_CustSetting_ProductStatusSel(bitmapIsDisabled, @bitmap)) WHEN 0 THEN 0 ELSE 1 END 
+							FROM CustProductStatus
+							WHERE custid = ci.custid)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustMaster cm WITH(NOLOCK) ON ci.custid = cm.custid AND cm.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID-- AND ci.roleid = 3
+		WHERE ci.Enabled = 1 AND ci.roleid = 3
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			2,
+			(SELECT CASE (SELECT value FROM dbo.f_CustSetting_ProductStatusSel(bitmapIsDisabled, @bitmap)) WHEN 0 THEN 0 ELSE 1 END 
+							FROM CustProductStatus
+							WHERE custid = ci.custid)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN dbo.CustAgent ca WITH(NOLOCK) ON ci.custid = ca.custid AND ca.IsInternal = 0
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID -- AND ci.roleid = 2
+		WHERE ci.Enabled = 1 AND ci.roleid = 2
+		
+		INSERT INTO #FiltedDownlineAcc
+		SELECT sup.CustID,
+			ci.custid,
+			1,
+			(SELECT CASE (SELECT value FROM dbo.f_CustSetting_ProductStatusSel(bitmapIsDisabled, @bitmap)) WHEN 0 THEN 0 ELSE 1 END 
+							FROM CustProductStatus
+							WHERE custid = ci.custid)
+		FROM dbo.custInfo ci WITH(NOLOCK)
+		JOIN #FiltedCreditSuper sup ON ci.srecommend = sup.CustID-- AND ci.roleid = 1
+		WHERE ci.Enabled = 1 AND ci.roleid = 1
+	END
+	
 	--Return result
 	SELECT cust.custid,cust.username,sp.SuperStatus as IsDisable,e.currency,
 			ISNULL(rs.MasterEnabled,0)	MasterEnabled,
@@ -466,15 +502,13 @@ BEGIN
 	FROM #FiltedDownlineAcc dl 
 	GROUP BY dl.SuperID) rs ON sp.CustID = rs.SuperID
 	ORDER BY cust.username,e.currency
-
 	
 	--Drop temp tables
 	DROP TABLE #FiltedCreditSuper
 	DROP TABLE #FiltedDownlineAcc
 END
-Go
+GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [bodbAdminNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_EnableDisableAccount_ByProduct] TO [vnteam] AS [dbo]
 GO
