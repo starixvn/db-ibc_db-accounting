@@ -220,7 +220,7 @@ BEGIN
 		WHERE bm.matchid = @MatchId
 		  AND b.bettype = 29	
 		  AND bm.statusid = 102
-		  AND b.winlostdate >= @before_yesterday
+		  AND bm.winlostdate >= @before_yesterday
 		  AND (b.betfrom IS NULL OR b.betfrom <> 'p')
 		  AND (m.sporttype BETWEEN 1 AND 99)
 		  AND CASE
