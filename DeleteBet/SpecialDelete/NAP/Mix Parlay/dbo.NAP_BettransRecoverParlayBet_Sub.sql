@@ -364,8 +364,12 @@ BEGIN
 		SET @NegativeBalanceUsers = ''
 		SELECT @CustIds = @CustIds +
 						  CASE WHEN @CustIds <> '' THEN ',' ELSE '' END + 
-						  CONVERT(VARCHAR(20), t.custid)
-		FROM @tblRecoverBet t
+						  CONVERT(VARCHAR(20), b.custid)
+		FROM @tblBeforeBalance b
+			 INNER JOIN	@tblAfterBalance a 	
+					 ON a.custid = b.custid
+		WHERE b.balance > a.balance				
+		
 		EXEC [dbo].[NAP_CustNegativeBalance_Sel] 	
 			@CustIds = @CustIds,
 			@NegativeBalanceUsers = @NegativeBalanceUsers OUTPUT				
