@@ -37,7 +37,14 @@ BEGIN
 		,SubBetType				INT  
 		,SubHdp1				SMALLMONEY   
 		,SubHdp2				SMALLMONEY	
-		,SubTransDesc			NVARCHAR(200)			
+		,SubTransDesc			NVARCHAR(200)	
+		,SubLivehomescore		SMALLINT 
+		,SubLiveawayscore		SMALLINT 
+		,SubLiveindicator		BIT	
+		,SubHomeID				INT 
+		,SubAwayID				INT 
+		,SubSportType			SMALLINT 
+		,SubLeagueID			INT	
 				
 		,custid					INT
 		,isdeposit				TINYINT
@@ -51,19 +58,11 @@ BEGIN
 		,Status					NVARCHAR(10)
 		,WinLost				MONEY
 		,betid					BIGINT 
-		,BetTeam				NVARCHAR(20)
-		,livehomescore			SMALLINT 
-		,liveawayscore			SMALLINT 
-		,liveindicator			BIT
+		,BetTeam				NVARCHAR(20)		
 		,Stake					MONEY
-		,Odds					MONEY
-		,OddsType				TINYINT
+		,Odds					MONEY		
 		,hdp1					SMALLMONEY
-		,hdp2					SMALLMONEY
-		,homeid					INT 
-		,awayid					INT 
-		,sporttype				SMALLINT 
-		,leagueid				INT 
+		,hdp2					SMALLMONEY		 
 		,betcheck				NVARCHAR(50)		
 	)		
 	DECLARE @tblTransIds TABLE (transid BIGINT)
@@ -83,7 +82,14 @@ BEGIN
 			,SubBetType
 			,SubHdp1		
 			,SubHdp2
-			,SubTransDesc						
+			,SubTransDesc
+			,SubLivehomescore 
+			,SubLiveawayscore 
+			,SubLiveindicator
+			,SubHomeID
+			,SubAwayID
+			,SubSportType 
+			,SubLeagueID
 						
 			,custid
 			,isdeposit
@@ -97,19 +103,11 @@ BEGIN
 			,Status
 			,WinLost
 			,betid	
-			,BetTeam
-			,livehomescore 
-			,liveawayscore 
-			,liveindicator
+			,BetTeam			
 			,Stake	
-			,Odds
-			,OddsType
+			,Odds			
 			,hdp1
-			,hdp2
-			,homeid	
-			,awayid 
-			,sporttype 
-			,leagueid 
+			,hdp2			 
 			,betcheck)
 	SELECT  bm.transid AS SubTransID			 
 			,bm.betcheck AS SubBetCheck	
@@ -118,7 +116,14 @@ BEGIN
 			,bm.bettype AS SubBetType
 			,bm.hdp1 AS SubHdp1		
 			,bm.hdp2 AS SubHdp2	
-			,bm.transdesc AS SubTransDesc					
+			,bm.transdesc AS SubTransDesc	
+			,bm.livehomescore AS SubLivehomescore 
+			,bm.liveawayscore AS SubLiveawayscore 
+			,bm.liveindicator AS SubLiveindicator
+			,m.homeid AS SubHomeID
+			,m.awayid AS SubAwayID
+			,m.sporttype AS SubSportType 
+			,m.leagueid AS SubLeagueID				
 						
 			,b.custid AS custid
 			,case when EXISTS (select TOP 1 1 from custDB.dbo.Dep_CustSuper with(nolock) WHERE custid = b.srecommend) then 1 else 0 end AS isdeposit
@@ -128,23 +133,15 @@ BEGIN
 			,b.Username AS UserName
 			,b.transdate AS TransDate	
 			,b.bettype AS BetType	
-			,bm.refno AS Refno	
+			,b.refno AS Refno	
 			,b.[status] AS [Status]
 			,b.winlost-b.actual_stake AS WinLost
 			,b.betid AS betid	
-			,b.betteam AS BetTeam			
-			,bm.livehomescore AS livehomescore 
-			,bm.liveawayscore AS liveawayscore 
-			,bm.liveindicator						
+			,b.betteam AS BetTeam												
 			,b.stake AS Stake	
-			,b.odds AS Odds
-			,b.OddsType AS OddsType
+			,b.odds AS Odds			
 			,b.hdp1 AS hdp1
-			,b.hdp2 AS hdp2
-			,m.homeid AS homeid	
-			,m.awayid AS awayid 
-			,m.sporttype AS sporttype 
-			,m.leagueid AS leagueid 
+			,b.hdp2 AS hdp2			 
 			,b.betcheck AS betcheck			
 	FROM @tblTransIds t
 		INNER JOIN dbo.bettrans b WITH (NOLOCK)
@@ -156,7 +153,7 @@ BEGIN
 	WHERE	bm.matchid = @MatchId
 			AND b.bettype = 29	
 			AND bm.statusid = 102
-			AND b.winlostdate >= @before_yesterday
+			AND bm.winlostdate >= @before_yesterday
 			AND (b.betfrom IS NULL OR b.betfrom <> 'p')
 			AND (m.sporttype BETWEEN 1 AND 99)		
 			AND CASE
@@ -166,6 +163,39 @@ BEGIN
 					ELSE 0
 				END	= 1													
 	
+	-- UPDATE SiteName
+	;WITH CustSiteName AS (
+		SELECT DISTINCT ag.custid, ci.site, ci.srecommend, ci.mrecommend
+		FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
+			INNER JOIN @tblRecoverBet ag
+			ON ci.custid = ag.recommend
+		
+	)
+	--format group
+	, CTE_GroupInfo AS (
+		SELECT DISTINCT d.custid
+			,cs.mrecommend
+			,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
+			,CASE 
+				WHEN (
+					d.recommend NOT IN (52466)
+					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+					AND s.custid IS NULL
+				) THEN '0-Credit'
+				WHEN d.recommend IN (52466) THEN '1-8RM'
+				WHEN (
+					d.recommend NOT IN (52466)
+					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+					AND s.custid IS NOT NULL
+				) THEN '2-Deposit'
+				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
+			END AS GroupName
+		FROM @tblRecoverBet d
+			INNER JOIN CustSiteName cs 
+			ON d.custid = cs.custid
+			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
+			ON cs.srecommend = s.custid
+	)
 	SELECT	t.SubTransID     
 			 ,t.SubBetCheck  
 			 ,t.SubOdds      
@@ -173,10 +203,15 @@ BEGIN
 			 ,t.SubBetType     
 			 ,t.SubHdp1       
 			 ,t.SubHdp2 
-			 ,t.SubTransDesc    
-			 
-			 ,T1.GroupName
-			 
+			 ,t.SubTransDesc 
+			 ,t.SubLivehomescore   
+			 ,t.SubLiveawayscore 
+			 ,t.SubLiveindicator 
+			 ,t.SubHomeID
+			 ,t.SubAwayID
+			 ,t.SubSportType 
+			 ,t.SubLeagueID  			 
+			 ,SUBSTRING(g.GroupName, 3, 30) AS GroupName			 
 			 ,t.transid    
 			 ,t.UserName    
 			 ,t.TransDate     
@@ -185,58 +220,31 @@ BEGIN
 			 ,t.[Status]     
 			 ,t.WinLost    
 			 ,t.betid     
-			 ,t.BetTeam    
-			 ,t.livehomescore   
-			 ,t.liveawayscore 
-			 ,t.liveindicator  
+			 ,t.BetTeam    			   
 			 ,t.Stake     
-			 ,t.Odds     
-			 ,t.OddsType    
+			 ,t.Odds     			     
 			 ,t.hdp1     
-			 ,t.hdp2     
-			 ,t.homeid     
-			 ,t.awayid     
-			 ,t.sporttype    
-			 ,t.leagueid    
+			 ,t.hdp2     			 
 			 ,t.betcheck			   
-	FROM	@tblRecoverBet t		
-		LEFT JOIN dbo.f_GetBetDaqCustomer(1) f
-			ON t.custid = f.CustID
-		CROSS APPLY (SELECT CASE
-								WHEN f.CustID IS NULL
-									AND t.username <> '12EU'
-									AND t.IsDeposit = 0
-									AND t.mrecommend NOT IN (105181, 118473, 105183) -- MHC
-									AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet, 1E, 8RM
-									AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-										THEN 'Credit' --1. For Normal bets
-								WHEN t.recommend = 52466
-										THEN '8RM' ----2: For 8RM
-								WHEN f.CustID IS NULL -- Betdaq
-									AND t.username <> '12EU' 
-									AND t.IsDeposit = 1	
-									AND t.mrecommend NOT IN (105181, 118473, 105183)
-									AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet: 11196380, 1E: 13423967, 8RM: 52466
-									AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
-										THEN 'Deposit' ----3. For Deposit bets
-								WHEN t.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
-										THEN 'Betfair' ----8: For Betfair
-								ELSE NULL
-						  END AS GroupName) AS T1								
-	WHERE T1.GroupName IS NOT NULL				
+	FROM @tblRecoverBet t
+		 INNER JOIN CTE_GroupInfo g
+			     ON t.custid = g.custid										
+	WHERE g.GroupName IS NOT NULL
+	ORDER BY g.GroupName, t.transid				
 
 	--- invalid trans info
 	SELECT t.transid AS InvalidTrans
-		,CASE 
-			WHEN t.transid IN (
-					SELECT b14.transid
-					FROM dbo.bettrans14 b14 WITH (NOLOCK)
-					WHERE b14.transid = t.transid
-					) THEN 1
-			ELSE 0
-			END AS isMoved
-	FROM @tblTransIds t
-	WHERE NOT EXISTS (SELECT TOP 1 1 FROM @tblRecoverBet r WHERE r.transid = t.transid)
+		  ,CASE 
+				WHEN EXISTS (SELECT TOP 1 1 FROM bettransm14 WITH(NOLOCK) WHERE refno = b.refno) THEN 1
+				ELSE 0
+		   END AS isMoved
+	 FROM @tblTransIds t
+		  LEFT JOIN @tblRecoverBet r
+				 ON r.transid = t.transid
+		  LEFT JOIN bettrans b
+				 ON t.transid = b.transid
+	 WHERE r.transid IS NULL
+	    OR EXISTS (SELECT TOP 1 1 FROM bettransm14 WITH(NOLOCK) WHERE refno = b.refno)		
 END
 GO
 
