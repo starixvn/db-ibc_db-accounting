@@ -375,6 +375,98 @@ BEGIN
 		EXEC WriteLog_UserLog 
 			 @UserId = @UserId,
 			 @Doing = @LogData 
+			 
+		--> Data for sending mail: Rule R1 + Rule R2 + Rule R3 + Rule R4
+		-- UPDATE SiteName
+		;WITH CustSiteName AS (
+			SELECT DISTINCT ag.custid, ci.site, ci.srecommend, ci.mrecommend
+			FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
+				INNER JOIN @tblRecoverBet ag
+				ON ci.custid = ag.recommend
+			
+		)
+		--format group
+		, CTE_GroupInfo AS (
+			SELECT DISTINCT d.custid
+				,cs.mrecommend
+				,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
+				,CASE 
+					WHEN (
+						d.recommend NOT IN (52466)
+						AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+						AND s.custid IS NULL
+					) THEN '0-Credit'
+					WHEN d.recommend IN (52466) THEN '1-8RM'
+					WHEN (
+						d.recommend NOT IN (52466)
+						AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+						AND s.custid IS NOT NULL
+					) THEN '2-Deposit'
+					WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
+				END AS GroupName
+			FROM @tblRecoverBet d
+				INNER JOIN CustSiteName cs 
+				ON d.custid = cs.custid
+				LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
+				ON cs.srecommend = s.custid
+		)
+		SELECT	t.SubTransID     
+				 ,t.SubBetCheck  
+				 ,t.SubOdds      
+				 ,t.SubBetTeam  
+				 ,t.SubBetType     
+				 ,t.SubHdp1       
+				 ,t.SubHdp2 
+				 ,t.SubTransDesc 
+				 ,t.SubLivehomescore   
+				 ,t.SubLiveawayscore 
+				 ,t.SubLiveindicator
+				 ,t.SubHomeID
+				 ,t.SubAwayID
+				 ,t.SubSportType 
+				 ,t.SubLeagueID     			 
+				 ,SUBSTRING(g.GroupName, 3, 30) AS GroupName			 
+				 ,t.transid    
+				 ,t.UserName    
+				 ,t.TransDate     
+				 ,t.BetType    
+				 ,t.Refno     
+				 ,t.[Status]     
+				 ,t.WinLost    
+				 ,t.betid     
+				 ,t.BetTeam    			 
+				 ,t.Stake     
+				 ,t.Odds     			   
+				 ,t.hdp1     
+				 ,t.hdp2			     
+				 ,t.betcheck    			   
+				 ,CASE
+					WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
+						 OR (EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency = 20 AND c.roleid = 4 AND c.custid = t.srecommend)
+							AND @UserID NOT IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1) -- Check UserID not in IT group
+							)
+								THEN CAST(1 AS BIT)
+					ELSE CAST(0 AS BIT)
+				  END AS IsCsd
+				 ,CASE
+					WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency = 20 AND c.roleid = 4 AND c.custid = t.srecommend)
+						 AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
+								THEN CAST(1 AS BIT)
+					ELSE CAST(0 AS BIT)
+				  END AS IsItQa
+				 ,CASE
+					WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
+						 AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
+								THEN CAST(1 AS BIT)
+					ELSE CAST(0 AS BIT)							
+				  END AS IsItSupport
+				 ,t.betfrom AS BetFrom
+				 ,CURRENT_TIMESTAMP AS [DateTime]
+		FROM @tblRecoverBet t
+			 INNER JOIN CTE_GroupInfo g
+					 ON t.custid = g.custid										
+		WHERE g.GroupName IS NOT NULL
+		ORDER BY g.GroupName, t.transid			 
 	END TRY
 	BEGIN CATCH
 		------ release Parlay procesee	
@@ -387,99 +479,7 @@ BEGIN
 						  + @MainTransIds 
 						  + ' Recover failed due to this error'
 		RETURN				
-	END CATCH		 								
-	
-	--> Data for sending mail: Rule R1 + Rule R2 + Rule R3 + Rule R4
-	-- UPDATE SiteName
-	;WITH CustSiteName AS (
-		SELECT DISTINCT ag.custid, ci.site, ci.srecommend, ci.mrecommend
-		FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
-			INNER JOIN @tblRecoverBet ag
-			ON ci.custid = ag.recommend
-		
-	)
-	--format group
-	, CTE_GroupInfo AS (
-		SELECT DISTINCT d.custid
-			,cs.mrecommend
-			,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
-			,CASE 
-				WHEN (
-					d.recommend NOT IN (52466)
-					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NULL
-				) THEN '0-Credit'
-				WHEN d.recommend IN (52466) THEN '1-8RM'
-				WHEN (
-					d.recommend NOT IN (52466)
-					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NOT NULL
-				) THEN '2-Deposit'
-				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
-			END AS GroupName
-		FROM @tblRecoverBet d
-			INNER JOIN CustSiteName cs 
-			ON d.custid = cs.custid
-			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
-			ON cs.srecommend = s.custid
-	)
-	SELECT	t.SubTransID     
-			 ,t.SubBetCheck  
-			 ,t.SubOdds      
-			 ,t.SubBetTeam  
-			 ,t.SubBetType     
-			 ,t.SubHdp1       
-			 ,t.SubHdp2 
-			 ,t.SubTransDesc 
-			 ,t.SubLivehomescore   
-			 ,t.SubLiveawayscore 
-			 ,t.SubLiveindicator
-			 ,t.SubHomeID
-			 ,t.SubAwayID
-			 ,t.SubSportType 
-			 ,t.SubLeagueID     			 
-			 ,SUBSTRING(g.GroupName, 3, 30) AS GroupName			 
-			 ,t.transid    
-			 ,t.UserName    
-			 ,t.TransDate     
-			 ,t.BetType    
-			 ,t.Refno     
-			 ,t.[Status]     
-			 ,t.WinLost    
-			 ,t.betid     
-			 ,t.BetTeam    			 
-			 ,t.Stake     
-			 ,t.Odds     			   
-			 ,t.hdp1     
-			 ,t.hdp2			     
-			 ,t.betcheck    			   
-			 ,CASE
-				WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-					 OR (EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency = 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-						AND @UserID NOT IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1) -- Check UserID not in IT group
-						)
-							THEN CAST(1 AS BIT)
-				ELSE CAST(0 AS BIT)
-			  END AS IsCsd
-			 ,CASE
-				WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency = 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-					 AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
-							THEN CAST(1 AS BIT)
-				ELSE CAST(0 AS BIT)
-			  END AS IsItQa
-			 ,CASE
-				WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-					 AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
-							THEN CAST(1 AS BIT)
-				ELSE CAST(0 AS BIT)							
-			  END AS IsItSupport
-			 ,t.betfrom AS BetFrom
-			 ,CURRENT_TIMESTAMP AS [DateTime]
-	FROM @tblRecoverBet t
-		 INNER JOIN CTE_GroupInfo g
-			     ON t.custid = g.custid										
-	WHERE g.GroupName IS NOT NULL
-	ORDER BY g.GroupName, t.transid							  			
+	END CATCH									  			
 			
 	------ release Parlay procesee	
 	EXEC [dbo].[NAP_Admin_CheckingProcess]
