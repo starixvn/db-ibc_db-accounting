@@ -233,18 +233,36 @@ BEGIN
 	ORDER BY g.GroupName, t.transid				
 
 	--- invalid trans info
+	/*
+	cases : 
+		1/ transid in bettrans, subtransid in bettransm14 => isMoved = 1
+		2/ transid in bettrans14, subtransid in bettransm14 => isMoved = 1
+		3/ transid not in DB => isMoved = 0
+		4/ transid in bettrans, subtransid in bettransm => valid
+	*/
+	;WITH InvalidTransID AS
+	(
+		SELECT t.transid		 
+		FROM @tblTransIds t
+		WHERE NOT EXISTS (SELECT TOP 1 1 
+						  FROM @tblRecoverBet 
+						  WHERE transid = t.transid)
+	),
+	InvalidTransInfo AS
+	(
+		SELECT t.transid, ISNULL(b.refno, b14.refno) AS refno
+		FROM InvalidTransID t
+			 LEFT JOIN bettrans b WITH(NOLOCK)
+					ON t.transid = b.transid
+			 LEFT JOIN bettrans14 b14 WITH(NOLOCK)
+					ON t.transid = b14.transid					
+	)
 	SELECT t.transid AS InvalidTrans
-		  ,CASE 
-				WHEN EXISTS (SELECT TOP 1 1 FROM bettransm14 WITH(NOLOCK) WHERE refno = b.refno) THEN 1
-				ELSE 0
+		 , CASE
+				WHEN t.refno IS NULL THEN 0 -- case 3
+				ELSE 1 -- case 1 + 2
 		   END AS isMoved
-	 FROM @tblTransIds t
-		  LEFT JOIN @tblRecoverBet r
-				 ON r.transid = t.transid
-		  LEFT JOIN bettrans b
-				 ON t.transid = b.transid
-	 WHERE r.transid IS NULL
-	    OR EXISTS (SELECT TOP 1 1 FROM bettransm14 WITH(NOLOCK) WHERE refno = b.refno)		
+	FROM InvalidTransInfo t		
 END
 GO
 
