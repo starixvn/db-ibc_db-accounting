@@ -49,6 +49,13 @@ BEGIN
 		,SubHdp2				SMALLMONEY
 		,matchid				INT	
 		,SubTransDesc			NVARCHAR(200)
+		,SubLivehomescore		SMALLINT 
+		,SubLiveawayscore		SMALLINT 
+		,SubLiveindicator		BIT
+		,SubHomeID				INT 
+		,SubAwayID				INT 
+		,SubSportType			SMALLINT 
+		,SubLeagueID			INT
 		
 		,balance				MONEY					
 		,custid					INT
@@ -65,20 +72,12 @@ BEGIN
 		,StatusId				TINYINT
 		,WinLost				MONEY
 		,betid					BIGINT 
-		,BetTeam				NVARCHAR(20)
-		,livehomescore			SMALLINT 
-		,liveawayscore			SMALLINT
-		,liveindicator			BIT 
+		,BetTeam				NVARCHAR(20)		 
 		,Stake					MONEY
-		,Odds					MONEY
-		,OddsType				TINYINT
+		,Odds					MONEY		
 		,hdp1					SMALLMONEY
 		,hdp2					SMALLMONEY
-		,betfrom				NVARCHAR(1)
-		,homeid					INT 
-		,awayid					INT 
-		,sporttype				SMALLINT 
-		,leagueid				INT 
+		,betfrom				NVARCHAR(1)		
 		,betcheck				NVARCHAR(50)		
 	)	
 	
@@ -127,7 +126,7 @@ BEGIN
 		  , @ErrCode = @ErrCode OUTPUT
 		  , @ErrMsg	= @ErrMsg OUTPUT
 	
-	IF @avaiableProcess = 0					 
+	IF (@ErrCode <> 0 OR @avaiableProcess = 0)					 
 		RETURN		  
 	
 	BEGIN TRY									
@@ -142,6 +141,13 @@ BEGIN
 				,SubHdp2
 				,matchid
 				,SubTransDesc
+				,SubLivehomescore 
+				,SubLiveawayscore 
+				,SubLiveindicator
+				,SubHomeID
+				,SubAwayID
+				,SubSportType 
+				,SubLeagueID
 				
 				,balance										
 				,custid
@@ -158,20 +164,12 @@ BEGIN
 				,StatusId
 				,WinLost
 				,betid	
-				,BetTeam
-				,livehomescore 
-				,liveawayscore 
-				,liveindicator
+				,BetTeam				
 				,Stake	
-				,Odds
-				,OddsType
+				,Odds				
 				,hdp1
 				,hdp2
-				,betfrom
-				,homeid	
-				,awayid 
-				,sporttype 
-				,leagueid 
+				,betfrom				
 				,betcheck)
 		SELECT  bm.transid AS SubTransID			 
 				,bm.betcheck AS SubBetCheck	
@@ -181,7 +179,14 @@ BEGIN
 				,bm.hdp1 AS SubHdp1		
 				,bm.hdp2 AS SubHdp2	
 				,bm.matchid AS matchid
-				,bm.transdesc AS SubTransDesc	
+				,bm.transdesc AS SubTransDesc
+				,bm.livehomescore AS SubLivehomescore 
+				,bm.liveawayscore AS SubLiveawayscore
+				,bm.liveindicator AS SubLiveindicator	
+				,m.homeid AS SubHomeID
+				,m.awayid AS SubAwayID
+				,m.sporttype AS SubSportType 
+				,m.leagueid AS SubLeagueID
 				
 				,b.winlost - b.actual_stake + b.playercomm AS balance								
 				,b.custid AS custid
@@ -198,20 +203,12 @@ BEGIN
 				,b.statusID AS StatusId
 				,b.winlost-b.actual_stake AS WinLost
 				,b.betid AS betid	
-				,b.betteam AS BetTeam
-				,bm.livehomescore AS livehomescore 
-				,bm.liveawayscore AS liveawayscore
-				,bm.liveindicator AS liveindicator 
+				,b.betteam AS BetTeam				 
 				,b.stake AS Stake	
-				,b.odds AS Odds
-				,b.OddsType AS OddsType
+				,b.odds AS Odds				
 				,b.hdp1 AS hdp1
 				,b.hdp2 AS hdp2
-				,b.betfrom AS betfrom
-				,m.homeid AS homeid	
-				,m.awayid AS awayid 
-				,m.sporttype AS sporttype 
-				,m.leagueid AS leagueid 
+				,b.betfrom AS betfrom				 
 				,b.betcheck AS betcheck				
 		FROM @tblMainTransIds t
 			INNER JOIN dbo.bettrans b WITH (NOLOCK)
@@ -238,10 +235,7 @@ BEGIN
 			------ release Parlay procesee	
 			EXEC [dbo].[NAP_Admin_CheckingProcess]
 				@IsExistParlay = 1			
-			  , @IsReleased	= 1
-			  , @AvaiableProcess = @AvaiableProcess OUTPUT
-			  , @ErrCode = @ErrCode OUTPUT
-			  , @ErrMsg	= @ErrMsg OUTPUT			
+			  , @IsReleased	= 1			  			
 			
 			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
 			RETURN
@@ -386,10 +380,7 @@ BEGIN
 		------ release Parlay procesee	
 		EXEC [dbo].[NAP_Admin_CheckingProcess]
 			@IsExistParlay = 1			
-		  , @IsReleased	= 1
-		  , @AvaiableProcess = @AvaiableProcess OUTPUT
-		  , @ErrCode = @ErrCode OUTPUT
-		  , @ErrMsg	= @ErrMsg OUTPUT
+		  , @IsReleased	= 1		  
 	
 		SELECT @ErrCode = 100,
 				@ErrMsg = 'Recover Parlay failed with error : Unable to recover these parlay bets: list of bet id ' 
@@ -399,6 +390,39 @@ BEGIN
 	END CATCH		 								
 	
 	--> Data for sending mail: Rule R1 + Rule R2 + Rule R3 + Rule R4
+	-- UPDATE SiteName
+	;WITH CustSiteName AS (
+		SELECT DISTINCT ag.custid, ci.site, ci.srecommend, ci.mrecommend
+		FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
+			INNER JOIN @tblRecoverBet ag
+			ON ci.custid = ag.recommend
+		
+	)
+	--format group
+	, CTE_GroupInfo AS (
+		SELECT DISTINCT d.custid
+			,cs.mrecommend
+			,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
+			,CASE 
+				WHEN (
+					d.recommend NOT IN (52466)
+					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+					AND s.custid IS NULL
+				) THEN '0-Credit'
+				WHEN d.recommend IN (52466) THEN '1-8RM'
+				WHEN (
+					d.recommend NOT IN (52466)
+					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+					AND s.custid IS NOT NULL
+				) THEN '2-Deposit'
+				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
+			END AS GroupName
+		FROM @tblRecoverBet d
+			INNER JOIN CustSiteName cs 
+			ON d.custid = cs.custid
+			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
+			ON cs.srecommend = s.custid
+	)
 	SELECT	t.SubTransID     
 			 ,t.SubBetCheck  
 			 ,t.SubOdds      
@@ -406,10 +430,15 @@ BEGIN
 			 ,t.SubBetType     
 			 ,t.SubHdp1       
 			 ,t.SubHdp2 
-			 ,t.SubTransDesc    
-			 
-			 ,T1.GroupName    
-			 
+			 ,t.SubTransDesc 
+			 ,t.SubLivehomescore   
+			 ,t.SubLiveawayscore 
+			 ,t.SubLiveindicator
+			 ,t.SubHomeID
+			 ,t.SubAwayID
+			 ,t.SubSportType 
+			 ,t.SubLeagueID     			 
+			 ,SUBSTRING(g.GroupName, 3, 30) AS GroupName			 
 			 ,t.transid    
 			 ,t.UserName    
 			 ,t.TransDate     
@@ -418,19 +447,11 @@ BEGIN
 			 ,t.[Status]     
 			 ,t.WinLost    
 			 ,t.betid     
-			 ,t.BetTeam    
-			 ,t.livehomescore   
-			 ,t.liveawayscore 
-			 ,t.liveindicator  
+			 ,t.BetTeam    			 
 			 ,t.Stake     
-			 ,t.Odds     
-			 ,t.OddsType    
+			 ,t.Odds     			   
 			 ,t.hdp1     
-			 ,t.hdp2     
-			 ,t.homeid     
-			 ,t.awayid     
-			 ,t.sporttype    
-			 ,t.leagueid    
+			 ,t.hdp2			     
 			 ,t.betcheck    			   
 			 ,CASE
 				WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
@@ -454,39 +475,16 @@ BEGIN
 			  END AS IsItSupport
 			 ,t.betfrom AS BetFrom
 			 ,CURRENT_TIMESTAMP AS [DateTime]
-	FROM	@tblRecoverBet t		
-		LEFT JOIN dbo.f_GetBetDaqCustomer(1) f
-			ON t.custid = f.CustID
-		CROSS APPLY (SELECT CASE
-								WHEN f.CustID IS NULL
-									AND t.username <> '12EU'
-									AND t.IsDeposit = 0
-									AND t.mrecommend NOT IN (105181, 118473, 105183) -- MHC
-									AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet, 1E, 8RM
-									AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-										THEN 'Credit' --1. For Normal bets
-								WHEN t.recommend = 52466
-										THEN '8RM' ----2: For 8RM
-								WHEN f.CustID IS NULL -- Betdaq
-									AND t.username <> '12EU' 
-									AND t.IsDeposit = 1	
-									AND t.mrecommend NOT IN (105181, 118473, 105183)
-									AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet: 11196380, 1E: 13423967, 8RM: 52466
-									AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
-										THEN 'Deposit' ----3. For Deposit bets
-								WHEN t.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
-										THEN 'Betfair' ----8: For Betfair
-								ELSE NULL										
-						  END AS GroupName) AS T1
-	WHERE T1.GroupName IS NOT NULL						  			
+	FROM @tblRecoverBet t
+		 INNER JOIN CTE_GroupInfo g
+			     ON t.custid = g.custid										
+	WHERE g.GroupName IS NOT NULL
+	ORDER BY g.GroupName, t.transid							  			
 			
 	------ release Parlay procesee	
 	EXEC [dbo].[NAP_Admin_CheckingProcess]
 			@IsExistParlay = 1			
-		  , @IsReleased	= 1
-		  , @AvaiableProcess = @AvaiableProcess OUTPUT
-		  , @ErrCode = @ErrCode OUTPUT
-		  , @ErrMsg	= @ErrMsg OUTPUT
+		  , @IsReleased	= 1		  
 		
 	RETURN;							
 END
