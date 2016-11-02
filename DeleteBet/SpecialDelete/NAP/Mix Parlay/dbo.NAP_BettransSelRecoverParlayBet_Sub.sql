@@ -239,6 +239,7 @@ BEGIN
 		2/ transid in bettrans14, subtransid in bettransm14 => isMoved = 1
 		3/ transid not in DB => isMoved = 0
 		4/ transid in bettrans, subtransid in bettransm => valid
+		5/ transid in bettrans14, subtransid in bettransm => isMoved = 1
 	*/
 	;WITH InvalidTransID AS
 	(
