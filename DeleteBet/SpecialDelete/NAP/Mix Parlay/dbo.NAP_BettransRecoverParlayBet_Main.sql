@@ -340,9 +340,7 @@ BEGIN
 		  , @IsReleased	= 1		  
 	
 		SELECT @ErrCode = 100,
-				@ErrMsg = 'Recover Parlay failed with error : Unable to recover these parlay bets: list of bet id ' 
-						  + @TransIds 
-						  + ' Recover failed due to this error'
+				@ErrMsg = 'Unable to recover these parlay bets'
 		RETURN
 	END CATCH
 
