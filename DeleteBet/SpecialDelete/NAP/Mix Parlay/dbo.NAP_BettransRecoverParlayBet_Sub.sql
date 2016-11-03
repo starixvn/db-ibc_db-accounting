@@ -88,8 +88,7 @@ BEGIN
 	   ,refno		BIGINT	   
 	   ,StatusId	TINYINT	   
 	   ,custid		INT
-	   ,balance		MONEY
-	   ,MatchEventStatus NVARCHAR(50)
+	   ,balance		MONEY	   
 	)
 	CREATE CLUSTERED INDEX IDX_tblMainTicket_custid_transid ON #tblMainTicket(custid, transid)
 	
