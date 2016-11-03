@@ -1,3 +1,4 @@
+/********This is SIT environment*******/
 USE bodb02
 GO
 
@@ -25,31 +26,49 @@ BEGIN
 	
 	DECLARE @AutoSetting 		TINYINT	
 		, @AutoSettingLeague	TINYINT
-			
-	SELECT TOP 1 
-		@AutoSetting 			= m.AutoSetting
-		, @AutoSettingLeague	= l.AutoSetting
-	FROM dbo.match m WITH(NOLOCK) 
-		INNER JOIN dbo.league l WITH(NOLOCK) ON m.leagueid = m.league
-	WHERE matchid 	= @MatchId 
-		AND ISNULL(AutoSetting, 0) = 0
+		, @AutoPayoutResultId	INT
 	
-	
-	UPDATE dbo.AutoPayoutResult WITH(ROWLOCK, UPDLOCK)
-	SET StatusId = @StatusId 
-		, ModifiedDate = GETDATE()
-	WHERE MatchId = @MatchId 
-		AND CalculationType = @TypeId
-		AND StatusId <> @StatusId
-
-	IF (
-		@IsIncludedUpdateMatch = 1
-		AND @AutoSetting ISNULL AND @AutoSettingLeague IS NOT NULL
-	)
+	IF(@TypeId IN (101, 102)) --Instant Calculation
 	BEGIN
-		UPDATE dbo.match WITH(UPDLOCK, ROWLOCK)
-		SET AutoSetting =  AutoSettingLeague
-		WHERE matchid = @MatchId
+		SELECT @AutoPayoutResultId = MAX(AutoPayoutResultId)
+		FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
+		WHERE MatchId 			= @MatchId 
+			AND CalculationType = @TypeId
+			AND StatusId		IN (0, 1) --is waiting/calculating
+			
+		UPDATE TOP(1) rs
+		SET StatusId 				= @StatusId 
+			, ModifiedDate 			= GETDATE()
+		FROM dbo.AutoPayoutResult rs WITH(ROWLOCK, UPDLOCK)
+		WHERE AutoPayoutResultId	= @AutoPayoutResultId
+	END
+	ELSE --Auto Payout
+	BEGIN
+		UPDATE dbo.AutoPayoutResult WITH(ROWLOCK, UPDLOCK)
+		SET StatusId = @StatusId 
+			, ModifiedDate = GETDATE()
+		WHERE MatchId = @MatchId 
+			AND CalculationType = @TypeId
+			AND StatusId <> @StatusId
+	END
+	
+	IF (@IsIncludedUpdateMatch = 1)
+	BEGIN
+		SELECT TOP 1 
+			@AutoSetting 			= m.AutoSetting
+			, @AutoSettingLeague	= l.AutoSetting
+		FROM dbo.match m WITH(NOLOCK) 
+			INNER JOIN dbo.league l WITH(NOLOCK) 
+			ON m.leagueid = l.leagueid
+			
+		WHERE matchid 	= @MatchId 
+		
+		IF (@AutoSetting IS NULL AND @AutoSettingLeague IS NOT NULL)
+		BEGIN
+			UPDATE dbo.match WITH(UPDLOCK, ROWLOCK)
+			SET AutoSetting =  @AutoSettingLeague
+			WHERE matchid = @MatchId
+		END
 	END
 END
 GO

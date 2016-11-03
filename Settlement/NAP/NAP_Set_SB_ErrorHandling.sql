@@ -81,7 +81,7 @@ BEGIN
 		FROM DBPRO.BODB02.dbo.AutoPayoutResult WITH (NOLOCK)
 		WHERE matchid = @MatchId
 			AND CalculationType = @TypeId
-		ORDER BY CreatedDate DESC
+		ORDER BY AutoPayoutResultId DESC
 	
 	END
 	

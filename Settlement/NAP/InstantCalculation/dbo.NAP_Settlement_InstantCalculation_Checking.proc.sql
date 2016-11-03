@@ -15,6 +15,7 @@ AS
 	DB: DBTXN/bodb02
 	Revisions:
 		- 20160930@Bobby: #65003 - Check validation of instant process 
+		- 20161031@Bobby: #66484 - Allow score [0-0] to do Inst.Calc
 		
 	Param's Explanation:
 		- @Action: ['INST-HT', 'INST-FT']
@@ -78,9 +79,16 @@ BEGIN
 		OR @isUnDecided = 1
 	)
     BEGIN
-        SELECT @ErrCode = 1001001
+		IF(CHARINDEX('hedge', @matchcode) > 0)
+		BEGIN
+			SELECT @ErrCode = 1001004
+			, @ErrMsg   = 'The selected match is a hedge match. Therefore, it cannot be instantly calculated!'
+		END
+		ELSE
+		BEGIN
+			SELECT @ErrCode = 1001001
 			, @ErrMsg   = 'This match is invalid or disabled instant calculation setting!'
-
+		END
         RETURN
     END
 	
@@ -93,7 +101,7 @@ BEGIN
 			WHERE matchid 			= @matchid
 				AND CalculationType = @CalculationType
 				AND StatusId		= 2 -- completed
-			ORDER BY CreatedDate DESC
+			ORDER BY AutoPayoutResultId DESC
 		) 
 		SELECT @totalGoalCheck = HomeScore + AwayScore
 		FROM InstMatchResult
@@ -108,6 +116,7 @@ BEGIN
 				SELECT transid
 					, statusID
 					, CASE 
+						WHEN @totalgoal = 0 THEN 0 --abnormal case -> change from [x-y] to [0-0] -> reset all to running
 						WHEN ods.modds >= 0.5 THEN 112 --WON
 						WHEN ods.modds <= - 0.5 THEN 113 --LOSE    
 						ELSE 0
@@ -122,6 +131,7 @@ BEGIN
 							END AS modds
 					) AS ods
 				WHERE matchid 	= @matchid 
+					AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) --exclude betdaq/betfair
 					AND EXISTS (SELECT TOP 1 1 FROM #instantBettype ib WHERE ib.bettype = b.bettype)
 					AND b.statusId IN (112, 113)
 			)
@@ -132,7 +142,7 @@ BEGIN
 			IF(@instantCheck > 0)
 			BEGIN
 				SELECT @ErrCode = 1001002
-					, @ErrMsg   = 'The previous instant calculation was wrong. It dues to the difference between the current and previous instant score!'
+					, @ErrMsg   = 'There are some ''WON''/''LOSE'' tickets of 1H/FT Over/Under bet types which need to be un-calculated with the score. Please contact CSD and ask CSD to uncalculate this match first. Then, please try to execute instant calculation again.'
 
 				RETURN
 			END

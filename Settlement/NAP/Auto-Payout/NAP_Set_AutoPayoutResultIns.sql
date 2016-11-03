@@ -82,13 +82,19 @@ BEGIN
 	
 	IF (@TypeId IN (101, 102) )
 	BEGIN
-		UPDATE dbo.ProviderResultDetail WITH(ROWLOCK,UPDLOCK)
+		;WITH CTE_ResultDetailLast AS (
+			SELECT MAX(ProviderResultDetailId) AS ProviderResultDetailId
+			FROM dbo.ProviderResultDetail WITH(NOLOCK)
+			WHERE MatchId = @MatchId
+				AND TypeId = @TypeId
+				AND HomeValue = @HomeValue
+				AND AwayValue = @AwayValue
+		)
+		UPDATE rs
 		SET IsConfirmed = 1
-		WHERE MatchId = @MatchId
-			AND TypeId = @TypeId
-			AND SourceId = 100
-			AND HomeValue = @HomeValue
-			AND AwayValue = @AwayValue
+		FROM dbo.ProviderResultDetail rs WITH(ROWLOCK,UPDLOCK)
+			INNER JOIN CTE_ResultDetailLast t
+			ON rs.ProviderResultDetailId = t.ProviderResultDetailId
 	END
 	
 	IF @@ERROR <> 0

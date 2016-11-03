@@ -343,7 +343,7 @@ BEGIN
 								END) AS runningBetFGLG
 							,COUNT(1) AS betCountFGLG
 					FROM	dbo.bettransm b WITH(NOLOCK)
-					WHERE	b.matchid = m.MatchId AND bettype IN (14,127)
+					WHERE	b.matchid = m.MatchId AND bettype IN (14,127,424)
 							AND b.statusID NOT BETWEEN 101 AND 103
 					GROUP BY b.bettype
 				) AS b

@@ -13,9 +13,10 @@ AS
 	DB: DBPRO/bodb02
 	Revisions:
 		- 20160930@Bobby: #65001 - Integrate with admin site to gather score value once being confirmed.
+		- 20161031@Bobby: #66484 - Allow score [0-0] to do Inst.Calc
 		
 	Param's Explanation:
-		- @IsHTScore: [0:FT, 1:HT]
+		- @IsHTScore: [0:2H, 1:1H]
 
 */
 BEGIN
@@ -37,7 +38,7 @@ BEGIN
 			WHERE matchid = @MatchId
 		)
 		AND @TypeId IN (101, 102)
-		AND (ISNULL(@HomeScore, 0) + ISNULL(@AwayScore, 0)) > 0
+		AND (ISNULL(@HomeScore, 0) >= 0 AND ISNULL(@AwayScore, 0) >= 0)
 	)
 	BEGIN
 		INSERT INTO dbo.ProviderResultDetail (
