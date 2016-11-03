@@ -1,3 +1,9 @@
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_MP_Push] (
 	@MatchIds VARCHAR(4000)
 	,@AdminId INT
@@ -47,6 +53,18 @@ BEGIN
 						  ,hta SMALLINT
 						 )
 						 
+	DECLARE @tblExcludingResourceIds TABLE (ResourceId VARCHAR(20))
+	INSERT INTO @tblExcludingResourceIds (ResourceId)
+	SELECT	CAST(BetType AS VARCHAR) + '__' AS ResourceId
+	FROM	dbo.f_Set_GetGroupBettypes()
+	WHERE	GroupId = 9
+	
+	INSERT INTO @tblExcludingResourceIds (ResourceId)
+	SELECT	CAST(BetType AS VARCHAR) + '__' AS ResourceId
+	FROM	dbo.f_Set_GetGroupBettypes()
+	WHERE	GroupId = 9
+	
+	INSERT INTO @tblExcludingResourceIds (ResourceId) VALUES ('00'), ('01'), ('08')
 	
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''

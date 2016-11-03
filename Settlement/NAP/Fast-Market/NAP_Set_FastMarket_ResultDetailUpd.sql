@@ -5,13 +5,10 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId INT
-	,@BetType			SMALLINT
-	,@Position			TINYINT
-	,@BetOption			TINYINT
-	,@ResultStatus		TINYINT
-	,@Action			VARCHAR(20) = 'CAL'
-
-	,@AdminId			INT = 0
+	,@Results		VARCHAR(MAX)
+	,@Action		VARCHAR(20) = 'CAL'
+	,@IsAuto		BIT = 0
+	,@AdminId		INT = 0
 AS
 /*
 	Created: 20160427@Patrick
@@ -28,77 +25,85 @@ BEGIN
 	
 	SET NOCOUNT ON
 	
-	DECLARE @ResourceId_BetOption		VARCHAR(50)
-			,@ResourceId_ResultStatus	VARCHAR(50)
-			,@ResourceId				INT
+	DECLARE @xmlData XML
+			,@ResultStatus TINYINT
+			
+	SET @xmlData = CONVERT(XML, @Results)
+	SET @ResultStatus = CASE 
+							WHEN @Action = 'CAL' AND @IsAuto = 0 THEN 5
+							WHEN @Action = 'CAL' AND @IsAuto = 1 THEN 4
+							WHEN @Action = 'REFUND' THEN 6
+							WHEN @Action = 'UNDO' THEN 2
+							ELSE 0
+						END	
 	
-	SELECT	@ResourceId = @bettype * 100
-			,@ResourceId_BetOption = CAST((@ResourceId) + 1 AS VARCHAR)
-			,@ResourceId_ResultStatus = CAST(@ResourceId AS VARCHAR)
-
-	--betoptions
-	IF NOT EXISTS (SELECT	TOP 1 1 
-					FROM	dbo.ResultDetail WITH(NOLOCK) 
-					WHERE	MatchId = @MatchId 
-							AND ResourceId = @ResourceId_BetOption
-						)
+	DECLARE @tblResults TABLE (
+		ResourceId				VARCHAR(20) -- 22X00
+		,ResourceId_BetOption	VARCHAR(20) -- 22X01
+		,position				TINYINT
+		,betOption				TINYINT
+	)
+	
+	;WITH TmpData AS (
+		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
+			, T.C.value('./@p', 'TINYINT') AS Position
+			, T.C.value('./@r', 'TINYINT') AS BetOption
+		FROM @xmlData.nodes('/r/b/r') AS T(C)
+	)
+	INSERT INTO @tblResults (ResourceId, ResourceId_BetOption, position, betOption)
+	SELECT	CAST(bettype * 100 AS VARCHAR(20)) ResourceId -- 22X00
+			,CAST(bettype * 100 + 1 AS VARCHAR(20)) ResourceId -- 22X01
+			,Position
+			,betOption
+	FROM	TmpData
+		
+	-- result status
+	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, HomeValue, AwayValue, CreateBy, CreateDate, LastModifyBy, LastModifyDate)
+	SELECT	@matchId, t.ResourceId, REPLICATE('0', 50), REPLICATE('0', 50), @AdminId, GETDATE(), @AdminId, GETDATE()
+	FROM	@tblResults t
+	WHERE	NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(NOLOCK) WHERE MatchId = @matchid AND t.ResourceId = ResourceId)
+	GROUP BY t.ResourceId
+	
+	-- betoption
+	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, HomeValue, AwayValue, CreateBy, CreateDate, LastModifyBy, LastModifyDate)
+	SELECT	@matchId, t.ResourceId_BetOption, REPLICATE(CHAR('0'), 50), REPLICATE(CHAR('0'), 50), @AdminId, GETDATE(), @AdminId, GETDATE()
+	FROM	@tblResults t
+	WHERE	NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(NOLOCK) WHERE MatchId = @matchid AND t.ResourceId_BetOption = ResourceId)
+	GROUP BY t.ResourceId_BetOption
+	
+	UPDATE	r
+		SET	HomeValue = CASE 
+							WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.HomeValue, t.Position, @ResultStatus)) 
+							ELSE HomeValue 
+						END
+			,AwayValue =CASE 
+							WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.AwayValue, t.Position - 45, @ResultStatus)) 
+							ELSE AwayValue 
+						END
+			,LastModifyBy = @AdminId
+			,LastModifyDate = GETDATE()
+	FROM	dbo.ResultDetail r WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN @tblResults t
+			ON	r.MatchId = @matchid
+				AND r.ResourceId = t.ResourceId
+				
+	IF @Action IN ('CAL', 'UNDO')
 	BEGIN
-		INSERT INTO dbo.ResultDetail(MatchId, ResourceId, HomeValue, AwayValue, CreateBy, CreateDate, LastModifyBy, LastModifyDate)
-		VALUES(@MatchId, @ResourceId_BetOption, REPLICATE(CHAR('0'), 50), REPLICATE(CHAR('0'), 50), @AdminId, GETDATE(), @AdminId, GETDATE())
-	END
-
-	--result status
-	IF NOT EXISTS (SELECT	TOP 1 1 
-					FROM	dbo.ResultDetail WITH(NOLOCK) 
-					WHERE	MatchId = @MatchId 
-							AND ResourceId = @ResourceId_ResultStatus
-						)
-	BEGIN
-		INSERT INTO bodb02.dbo.ResultDetail(MatchId, ResourceId, HomeValue, AwayValue, CreateBy, CreateDate, LastModifyBy, LastModifyDate)
-		VALUES(@MatchId, @ResourceId_ResultStatus, REPLICATE('0', 50), REPLICATE('0', 50), @AdminId, GETDATE(), @AdminId, GETDATE())
-	END
-
-	IF @Position <= 44
-	BEGIN
-		--for result status - HT
-		UPDATE	dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-		SET		HomeValue = dbo.f_SetChar(HomeValue, @Position, ISNULL(@ResultStatus, 0))
+		UPDATE	r
+			SET	HomeValue = CASE
+								WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.HomeValue, t.Position, t.betOption))
+								ELSE HomeValue
+							END
+				,AwayValue = CASE
+								WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.AwayValue, t.Position - 45, t.betOption))
+								ELSE HomeValue
+							END
 				,LastModifyBy = @AdminId
 				,LastModifyDate = GETDATE()
-		WHERE	MatchId = @MatchId 
-				AND ResourceId = @ResourceId_ResultStatus
-
-		IF @Action IN ('CAL', 'UNDO')
-		BEGIN
-			--for betoption - HT
-			UPDATE	dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-			SET		HomeValue = dbo.f_SetByte(HomeValue, @Position, ISNULL(@BetOption, CHAR('0')))
-					,LastModifyBy = @AdminId
-					,LastModifyDate = GETDATE()
-			WHERE	MatchId = @MatchId 
-					AND ResourceId = @ResourceId_BetOption
-		END
-	END
-	ELSE
-	BEGIN
-		--for result status - FT
-		UPDATE	dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-		SET		AwayValue = dbo.f_SetChar(AwayValue, @Position, ISNULL(@ResultStatus, 0))
-				,LastModifyBy = @AdminId
-				,LastModifyDate = GETDATE()
-		WHERE	MatchId = @MatchId 
-				AND ResourceId = @ResourceId_ResultStatus
-
-		IF @Action IN ('CAL', 'UNDO')
-		BEGIN
-			--for betoption - FT
-			UPDATE	dbo.ResultDetail WITH(ROWLOCK, UPDLOCK)
-			SET		AwayValue = dbo.f_SetByte(AwayValue, @Position, ISNULL(@BetOption, CHAR('0')))
-					,LastModifyBy = @AdminId
-					,LastModifyDate = GETDATE()
-			WHERE	MatchId = @MatchId 
-					AND ResourceId = @ResourceId_BetOption
-		END
+		FROM	dbo.ResultDetail r WITH(ROWLOCK, UPDLOCK)
+			INNER JOIN @tblResults t
+				ON r.MatchId = @matchid
+					AND r.ResourceId = t.ResourceId_BetOption
 	END
 END
 

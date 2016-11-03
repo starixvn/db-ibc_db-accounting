@@ -1,6 +1,9 @@
-USE bodb02
+USE [bodb02]
 GO
-
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_AutoPayout_Push] @AdminId INT
     , @MatchId		INT
     , @FullTimeHome	SMALLINT        = NULL
@@ -22,6 +25,7 @@ AS
 		NAP_Admin_Settlement_1_AutoPayout
 
     Revisions:        
+		- 20161028@Kathy: Extend sqlCommand column to varchar(max) [Redmine:#56367]
     Param's Explanation:
         
 */
@@ -32,7 +36,7 @@ BEGIN
 		RETURN --not supported
 	END
 
-    DECLARE	@matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @procName NVARCHAR(50), @sqlCommand NVARCHAR(1024)
+    DECLARE	@matchcode NVARCHAR(50), @sporttype INT, @leagueid INT, @procName NVARCHAR(50), @sqlCommand NVARCHAR(MAX)
 			
     SELECT @matchcode = m.matchcode
 		, @sporttype  = m.sporttype
@@ -51,14 +55,6 @@ BEGIN
 
         RETURN
     END
-
-	----hard code for testing purpose --> will be removed when releasing
-	--IF @leagueid NOT IN (165, 42037)
-	--BEGIN
-	--	SELECT @ErrCode = 113
-	--		, @ErrMsg   = 'This error use for testing purpose.'
-	--	RETURN
-	--END
 
     IF EXISTS (SELECT TOP 1 1
 				FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
@@ -106,13 +102,6 @@ BEGIN
                             + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
                             + ', @ErrCode = @ErrCode OUTPUT' 
                             + ', @ErrMsg = @ErrMsg OUTPUT'
-                                                          
-    IF LEN(@sqlCommand)> 1000 --Max Field 
-    BEGIN
-        SELECT @ErrCode = 1001010
-			, @ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'    
-        RETURN 
-    END
 
     IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_' -- UAT1 -->UAT9
     BEGIN

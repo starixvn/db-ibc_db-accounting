@@ -126,10 +126,10 @@ BEGIN
 								WHEN ISNULL(t.BetCount,0) = 0 AND p.InRunning > 0 THEN 'Parlay Running'
                                 ELSE 'Calculated'
                             END
-             ,HomeValue = CASE WHEN r.ResourceId BETWEEN 214 AND 215 THEN r.AwayValue ELSE r.HomeValue END
-            ,r.OtherInfo
-            ,r.ResultStatusID
-            ,r.SettlementStatusID
+         ,HomeValue = CASE WHEN r.ResourceId BETWEEN 214 AND 215 THEN r.AwayValue ELSE r.HomeValue END
+        ,r.OtherInfo
+        ,r.ResultStatusID
+        ,r.SettlementStatusID
     FROM    @tmpTicketStatus t
 			FULL JOIN @tmpTicketStatusParlay p
 				ON t.resourceId = p.ResourceID

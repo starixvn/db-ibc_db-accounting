@@ -42,7 +42,14 @@ BEGIN
 			,@leagueid		INT
 			,@sqlCommand	NVARCHAR(MAX)
 			,@procName		NVARCHAR(128)
-
+			,@xmlData		XML
+	
+	DECLARE @tblResultDetail TABLE (
+		bettype		SMALLINT
+		,ResourceId	VARCHAR(20)
+		,Position	TINYINT
+	)
+	 
 	SELECT	@matchcode = m.matchcode
 			,@sporttype = m.sporttype
 			,@leagueid = m.leagueid
@@ -73,12 +80,6 @@ BEGIN
 		RETURN
 	END
 
-	--check waiting ticket
-	DECLARE @ResultDetail TABLE(BetType SMALLINT, Position TINYINT)
-	DECLARE @XmlData		XML
-			,@PositionList	VARCHAR(1204)
-			,@BetType		SMALLINT
-	
 	SET @Results = REPLACE(
 						REPLACE(
 							REPLACE(
@@ -89,56 +90,62 @@ BEGIN
 						, 'Result', 'r')
 					, 'Position', 'p')
 					
-	SET @XmlData =  CONVERT(XML, @Results)
-	
-	;WITH TmpData AS (
-		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
-			, T.C.value('./@p', 'TINYINT') AS Position
-		FROM @XmlData.nodes('/r/b/r') AS T(C)
-	)
-	INSERT INTO @ResultDetail (BetType, Position)
-	SELECT	BetType, Position
-	FROM	TmpData
-	ORDER BY Bettype, Position
-
-	DECLARE @BettypeIds TABLE (BetType SMALLINT, IsFinished BIT)
-	INSERT INTO @BettypeIds(BetType, IsFinished)
-	SELECT	BetType, 0
-	FROM	@ResultDetail
-	GROUP BY BetType
-
-	WHILE 1 = 1
+	IF @IsAuto = 1
 	BEGIN
-		SET @PositionList = NULL
+		SET @xmlData = CONVERT(XML, @Results)
 		
-		UPDATE	TOP(1) @BettypeIds
-		SET		IsFinished = 1
-				,@BetType = BetType
-		WHERE	IsFinished = 0
+		;WITH TmpData AS (
+			SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
+				, T.C.value('./@p', 'TINYINT') AS Position
+			FROM @xmlData.nodes('/r/b/r') AS T(C)
+		)
+		INSERT INTO @tblResultDetail (bettype, ResourceId, Position)
+		SELECT	bettype
+				,CAST(BetType * 100 AS VARCHAR(20)) AS ResourceId
+				,Position
+		FROM TmpData
 		
-		IF @@ROWCOUNT = 0 BREAK
-
-		SELECT	@PositionList = COALESCE(@PositionList + ',' + CAST(CONVERT(TINYINT, Position) AS VARCHAR), CAST(CONVERT(TINYINT, Position) AS VARCHAR))
-		FROM	@ResultDetail
-		WHERE	BetType = @BetType 
-				AND Position IS NOT NULL
-
-		EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
-			,@BetType = @BetType
-			,@PositionList = @PositionList
-			,@Action = @Action
-			,@Mode = 'CAL-FM'
-			,@ErrCode = @ErrCode OUTPUT
-			,@ErrMsg = @ErrMsg OUTPUT
-			
-		IF @ErrCode <> 0
+		IF EXISTS (SELECT TOP 1 1 FROM @tblResultDetail WHERE bettype NOT IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 9)) -- FM
 		BEGIN
-			SELECT	@ErrCode
-					,@ErrMsg
-			
+			SELECT	 @ErrCode	= 1001016
+					,@ErrMsg	= 'There are some bettypes not belong to Fast Market' 
+
 			RETURN
 		END
+		
+		IF EXISTS (SELECT	TOP 1 1
+					FROM	@tblResultDetail t
+						CROSS APPLY (
+							SELECT	TOP 1 r.ResourceId
+							FROM	DBPRO.bodb02.dbo.ResultDetail r WITH(NOLOCK)
+							WHERE	r.matchid = @matchid
+									AND t.ResourceId = r.ResourceId
+									AND	'5' = (SELECT TOP 1 [char] FROM dbo.f_Set_GetChar(CASE WHEN t.Position <=44 THEN r.HomeValue ELSE r.AwayValue END
+																						 ,CASE WHEN t.Position <=44 THEN t.Position ELSE t.Position - 45 END 
+																							))
+						) r
+		)
+		BEGIN
+			SELECT	 @ErrCode	= 1001012
+					,@ErrMsg	= 'The auto-settlement failed due to a result that has been settled previously by manual.' 
 
+			RETURN
+		END
+	END
+	
+	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
+		,@xmlData = @Results
+		,@Action = @Action
+		,@Mode = 'CAL-FM'
+		,@ErrCode = @ErrCode OUTPUT
+		,@ErrMsg = @ErrMsg OUTPUT
+		
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT	@ErrCode
+				,@ErrMsg
+		
+		RETURN
 	END
 
 	SELECT	@ErrCode = 0

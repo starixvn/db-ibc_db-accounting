@@ -1,5 +1,6 @@
 USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[NAP_Set_WaitingSel]    Script Date: 10/31/2016 11:06:02 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -67,37 +68,45 @@ BEGIN
 		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid
 	
 	DECLARE @TmpAutoSettle1s TABLE (MatchId INT, SettlementStatusID INT, FM_SettlementStatusID INT)
+	;WITH cteAutoResultDetail
+	AS(
+		SELECT	CASE 
+					WHEN BetType IN (160,164,169,180,216) OR GroupId = 9 THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+				,GroupId
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	IsAuto = 1
+	)
 	INSERT INTO @TmpAutoSettle1s(MatchId, SettlementStatusID, FM_SettlementStatusID)
-	SELECT	MatchId
-			, MIN(CASE WHEN ResourceId NOT IN ('22100', '22200', '22300', '22400', '22500', '22101', '22201', '22301', '22401', '22501') 
-						THEN SettlementStatusID ELSE NULL END)
-			, CASE WHEN MIN(CASE WHEN ResourceId IN ('22100', '22200', '22300', '22400', '22500') THEN SettlementStatusID END) IS NULL 
-						THEN MIN(CASE WHEN ResourceId IN ('22101', '22201', '22301', '22401', '22501') THEN 0 END ) 
-				ELSE MIN(CASE WHEN ResourceId IN ('22100', '22200', '22300', '22400', '22500') THEN SettlementStatusID END) 
-			END
-	FROM DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
-	WHERE @Sporttype IN (0, 1)
-		AND MatchID IN (SELECT MatchID FROM @TempMatch)
-		AND (ResourceId IN (SELECT CAST(BetType AS VARCHAR(20)) FROM dbo.f_Set_GetGroupBettypes() WHERE IsAuto = 1 )
-				OR ResourceID LIKE '160__'
-				OR ResourceID LIKE '164__'
-				OR ResourceID LIKE '169__'
-				OR ResourceID LIKE '180__'
-				OR ResourceID LIKE '216__')
-				OR ResourceId IN ('22100', '22200', '22300', '22400', '22500', '22101', '22201', '22301', '22401','22501')
-	GROUP BY MatchId
+	SELECT	r.MatchId
+			,r.SettlementStatusID
+			,r.FM_SettlementStatusID
+	FROM	@TempMatch m
+		CROSS APPLY (
+			SELECT	TOP 1 r.matchid
+					,MIN(CASE WHEN c.groupId = 8 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS SettlementStatusID
+					,MIN(CASE WHEN c.groupId = 9 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS FM_SettlementStatusID
+			FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
+				INNER JOIN cteAutoResultDetail c
+					ON	r.ResourceId LIKE c.ResourceId
+			WHERE	r.MatchId = m.matchid
+					AND @sporttype IN (0,1)
+			GROUP BY r.MatchId
+		)r
+	
 	
 	UPDATE t
 	SET AutoSettleResultStatus = CASE	
-									WHEN a.SettlementStatusID IS NULL THEN 'N/A'
-									WHEN a.SettlementStatusID = 0 THEN 'Running'
-									WHEN a.SettlementStatusID > 0 THEN 'Completed'
+									WHEN tt.SettlementStatusID IS NULL THEN 'N/A'
+									WHEN tt.SettlementStatusID = 0 THEN 'Running'
+									WHEN tt.SettlementStatusID > 0 THEN 'Completed'
 									ELSE '' 
 								END
 		,AutoSettleFastMarket = CASE 
-									WHEN a.FM_SettlementStatusID IS NULL THEN 'N/A'
-									WHEN a.FM_SettlementStatusID = 0 THEN 'Running'
-									WHEN a.FM_SettlementStatusID > 0 THEN 'Completed'
+									WHEN tt.FM_SettlementStatusID IS NULL THEN 'N/A'
+									WHEN tt.FM_SettlementStatusID = 0 THEN 'Running'
+									WHEN tt.FM_SettlementStatusID > 0 THEN 'Completed'
 									ELSE ''
 								END
 	FROM @TempMatch t
@@ -174,3 +183,8 @@ BEGIN
 
 END
 
+
+GO
+GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam] AS [dbo]

@@ -1,6 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s]    Script Date: 05/16/2016 13:24:34 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -48,6 +47,11 @@ BEGIN
 				,@LogData	NVARCHAR(300)						
 				,@LogResult VARCHAR(MAX) = ''	
 				,@strFMBettypes	VARCHAR(MAX)
+				,@XmlData XML
+				,@rowcount	INT
+				,@top INT = 2147483647
+				
+	SET @XmlData =  CONVERT(XML, @Results)
 
 	SELECT	@start = CURRENT_TIMESTAMP
 	SELECT	@ActionID = CASE 
@@ -63,11 +67,7 @@ BEGIN
 			,@hta = htawayscore
 	FROM	dbo.match WITH (NOLOCK)
 	WHERE	matchid = @matchid
-	
-	SELECT  @strFMBettypes = COALESCE(@strFMBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
-    FROM    dbo.f_Set_GetGroupBettypes() f 
-    WHERE   f.GroupId = 9 -- FM
-	
+
 	-- check and not allow attempt to settlement same game while it's still not finish
 	IF EXISTS (SELECT 1 
 				FROM dbo.TempVariableNumber t WITH(NOLOCK)
@@ -87,7 +87,25 @@ BEGIN
 			, @ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
 		RETURN
 	END
+	
+	CREATE TABLE #tblResultDetail (
+		BetType			SMALLINT
+		,Position		TINYINT
+		,BetOption		TINYINT
+	)
 
+	CREATE INDEX IX_ResultDetail_Bettype ON #tblResultDetail (BetType)
+	
+	;WITH TmpData AS (
+		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
+			, T.C.value('./@p', 'TINYINT') AS Position
+			, T.C.value('./@r', 'TINYINT') AS BetOption
+		FROM @XmlData.nodes('/r/b/r') AS T(C)
+	)
+	INSERT INTO #tblResultDetail (BetType, Position, BetOption)
+	SELECT BetType, Position, BetOption
+	FROM TmpData	
+	
 	-------------------------------------------------------------
 	---        CAPTURE value BALANCE before settlement        ---
 	---------------------------VVVV------------------------------
@@ -100,49 +118,21 @@ BEGIN
 
 	INSERT INTO	#BalanceBefore
 	SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM	dbo.bettrans b WITH (ROWLOCK)
-	WHERE	b.matchid = @MatchId 
-			AND 1 = CASE 
-						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFMBettypes + ',') > 0 THEN 0
-						ELSE 1
-					END
+	FROM	#tblResultDetail r
+		CROSS APPLY (
+			 SELECT TOP (@top) b.custid
+					,b.winlost
+					,b.actual_stake
+					,b.playercomm
+			 FROM	dbo.bettrans b WITH (ROWLOCK)
+			 WHERE	b.matchid = @MatchId 
+					AND b.bettype = r.BetType
+					AND b.hdp1 = r.Position
+		) b
 	GROUP BY b.custid
 	
-	DECLARE @XmlData XML
-	SET @XmlData =  CONVERT(XML, @Results)
-
-	DECLARE @ResultDetail TABLE(
-		BetType			SMALLINT
-		,Position		TINYINT
-		,BetOption		TINYINT
-		,ResultStatus	TINYINT
-		,RowIndex		INT IDENTITY(1,1)
-	)
-
-	;WITH TmpData AS (
-		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
-			, T.C.value('./@p', 'TINYINT') AS Position
-			, T.C.value('./@r', 'TINYINT') AS BetOption
-			, CASE WHEN @Action = 'CAL' AND @IsAuto = 0 THEN 5
-					WHEN @Action = 'CAL' AND @IsAuto = 1 THEN 4
-					WHEN @Action = 'REFUND' THEN 6
-					WHEN @Action = 'UNDO' THEN 2
-					ELSE 0 END AS ResultStatus
-		FROM @XmlData.nodes('/r/b/r') AS T(C)
-	)
-	INSERT INTO @ResultDetail (BetType, Position, BetOption, ResultStatus)
-	SELECT BetType, Position, BetOption, ResultStatus
-	FROM TmpData
-	ORDER BY Bettype, Position
+	SET @rowcount = @@rowcount
 	
-	DECLARE @BetType		SMALLINT
-			,@Position		TINYINT
-			,@BetOption		TINYINT
-			,@ResultStatus	TINYINT
-			,@RowIndex		INT
-			,@IsRuntimeError BIT
-
-	SELECT @RowIndex = 1, @IsRuntimeError = 0
 	BEGIN TRY
 		-- Mark this match as running
 		IF @Action = 'UNDO'
@@ -151,59 +141,19 @@ BEGIN
 					,@AdminId = @AdminId
 					,@IP = @IP
 
-		WHILE EXISTS (SELECT TOP 1 1 FROM @ResultDetail WHERE RowIndex = @RowIndex)
+		-- update resultstatus
+		EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
+			,@Results = @Results
+			,@Action = @Action
+			,@IsAuto = @IsAuto
+			,@AdminId = @AdminId			
+		
+		IF @rowcount > 0
 		BEGIN
-			SELECT @BetType = BetType, @Position = Position
-				, @BetOption = CASE WHEN @Action = 'UNDO' THEN ASCII(CHAR('0')) ELSE BetOption END
-				, @ResultStatus = CASE WHEN @Action = 'UNDO' THEN 0 ELSE ResultStatus END
-			FROM @ResultDetail
-			WHERE RowIndex = @RowIndex
-
-			SET @RowIndex = @RowIndex + 1
-
-			IF @BetType IS NULL OR @Position IS NULL
-				CONTINUE
-
-			--update result detail
-			EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
-				,@BetType = @BetType
-				,@Position = @Position
-				,@BetOption = @BetOption
-				,@ResultStatus = @ResultStatus
-				,@Action = @Action
-				,@AdminId = @AdminId
-
-			IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans WITH(NOLOCK) WHERE matchid = @matchid AND bettype = @BetType AND hdp1 = @Position)
-			BEGIN
-				IF @Action = 'CAL'
-				BEGIN
-					EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-						,@action = 'CAL-FM'
-						,@mode = 'CAL'
-						,@hdp1 = @Position
-						,@betoption = @BetOption
-						,@strBettypes = @BetType
-
-				END
-				ELSE IF @Action = 'REFUND'
-				BEGIN
-					EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-						,@action = 'REFUND'
-						,@mode = 'REFUND-FM'
-						,@hdp1 = @Position
-						,@betoption = @BetOption
-						,@strBettypes = @BetType
-				END
-				ELSE IF @Action = 'UNDO'
-				BEGIN
-					EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
-						,@action = 'CAL-FM'
-						,@mode = 'UNDO'
-						,@hdp1 = @Position
-						,@betoption = @BetOption
-						,@strBettypes = @BetType
-				END
-			END
+			EXEC dbo.NAP_Admin_Calculate_Main_xtest @matchid = @matchid
+				,@action = 'CAL-FM'
+				,@mode = @Action
+				,@XmlData = @Results
 		END
 	END TRY
 	BEGIN CATCH
@@ -213,14 +163,18 @@ BEGIN
 		---------------------------VVVV------------------------------
 		INSERT INTO #BalanceAfter
 		SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-		FROM	dbo.bettrans b WITH (ROWLOCK)
-		WHERE	b.matchid = @MatchId 
-				AND 1 = CASE 
-							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFMBettypes + ',') > 0 THEN 0
-							ELSE 1
-						END
+		FROM	#tblResultDetail r
+			CROSS APPLY (
+				 SELECT TOP (@top) b.custid
+						,b.winlost
+						,b.actual_stake
+						,b.playercomm
+				 FROM	dbo.bettrans b WITH (ROWLOCK)
+				 WHERE	b.matchid = @MatchId 
+						AND b.bettype = r.BetType
+						AND b.hdp1 = r.Position
+			) b
 		GROUP BY b.custid
-
 		-------------------------------------------------------------
 		---                   compare BALANCE                     ---
 		---------------------------VVVV------------------------------
@@ -278,14 +232,18 @@ BEGIN
 	---------------------------VVVV------------------------------
 	INSERT INTO #BalanceAfter
 	SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
-	FROM	dbo.bettrans b WITH (ROWLOCK)
-	WHERE	b.matchid = @MatchId 
-			AND 1 = CASE 
-						WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFMBettypes + ',') > 0 THEN 0
-						ELSE 1
-					END
+	FROM	#tblResultDetail r
+		CROSS APPLY (
+			 SELECT TOP (@top) b.custid
+					,b.winlost
+					,b.actual_stake
+					,b.playercomm
+			 FROM	dbo.bettrans b WITH (ROWLOCK)
+			 WHERE	b.matchid = @MatchId 
+					AND b.bettype = r.BetType
+					AND b.hdp1 = r.Position
+		) b
 	GROUP BY b.custid
-
 	-------------------------------------------------------------
 	---                   compare BALANCE                     ---
 	---------------------------VVVV------------------------------
@@ -343,9 +301,9 @@ BEGIN
 	EXEC dbo.WriteLog_UserLog @UserID = @AdminId, @Doing = @logdata
 	
 	SET @LogResult = CONVERT(VARCHAR(MAX),(SELECT BetType '@Id'
-		, STUFF((SELECT ',' + CAST(Position AS VARCHAR(3)) FROM @ResultDetail WHERE BetType = r.BetType FOR XML PATH ('')),1,1,'') AS 'Item/@Position'
-		, CASE WHEN @Action = 'CAL' THEN STUFF((SELECT ',' + CAST(BetOption AS VARCHAR(3)) FROM @ResultDetail WHERE BetType = r.BetType FOR XML PATH ('')),1,1,'') END AS 'Item/@Result'
-	FROM @ResultDetail r
+		, STUFF((SELECT ',' + CAST(Position AS VARCHAR(3)) FROM #tblResultDetail WHERE BetType = r.BetType FOR XML PATH ('')),1,1,'') AS 'Item/@Position'
+		, CASE WHEN @Action = 'CAL' THEN STUFF((SELECT ',' + CAST(BetOption AS VARCHAR(3)) FROM #tblResultDetail WHERE BetType = r.BetType FOR XML PATH ('')),1,1,'') END AS 'Item/@Result'
+	FROM #tblResultDetail r
 	GROUP BY BetType
 	FOR XML PATH('BetType'), ROOT ('BetTypes'), TYPE))
 		
