@@ -196,7 +196,7 @@ BEGIN
 					'ORDER BY [Order]'
 
 	EXEC(@SQL)
-	PRINT @SQL
+	
 	-- Region: Drop tmp table
 	DROP TABLE #Exchange
 	DROP TABLE #ExchangeOANDA

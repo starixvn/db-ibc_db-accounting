@@ -359,7 +359,7 @@ BEGIN
 	-- Region: Drop tmp table
 	DROP TABLE #Exchange
 	DROP TABLE #ExchangeOANDA
-	DROP TABLE #TempData
+	DROP TABLE #TempDataSB
 	DROP TABLE #FeeData
 	DROP TABLE #FinalResult
 	DROP TABLE #DiscountGroup
