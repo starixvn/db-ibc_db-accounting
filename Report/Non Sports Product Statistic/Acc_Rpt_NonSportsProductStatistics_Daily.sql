@@ -439,15 +439,15 @@ SET NOCOUNT ON
 			AND (
 					(
 						(EXISTS (SELECT 1 From #tmpLeagueId l WHERE l.LeagueId = m.leagueid) AND s.ProductID = 3)
-						OR @LeagueId = ''
+						OR (@LeagueId = '' AND s.ProductID = 3)
 					)
-				AND (
+				OR (
 						(EXISTS (SELECT 1 From #tmpGameTableId g WHERE g.GameTableID = m.leagueid) AND s.ProductID = 4)
-						OR @GameTableId = ''
+						OR (@GameTableId = '' AND s.ProductID = 4)
 					)
-				AND (
+				OR (
 						(EXISTS (SELECT 1 From #tmpSporttype sp WHERE sp.Sporttype = m.sporttype) AND s.ProductID = 5)
-						OR @Sporttype = ''
+						OR (@Sporttype = '' AND s.ProductID = 5)
 					)
 				)
 			AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)

@@ -1,10 +1,15 @@
-USE [bodb02]
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType];
 GO
-
-ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType]
-	@StartDate SMALLDATETIME,
-	@EndDate   SMALLDATETIME,
-	@ProductId INT
+CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate SMALLDATETIME,
+																	@EndDate   SMALLDATETIME,
+																	@ProductId INT
 AS
 
 /*	
