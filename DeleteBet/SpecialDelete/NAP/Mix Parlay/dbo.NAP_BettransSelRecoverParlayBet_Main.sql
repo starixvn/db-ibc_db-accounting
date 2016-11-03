@@ -121,41 +121,8 @@ BEGIN
 				WHEN @BetType = 'System Parlay' THEN CASE WHEN b.betteam = 1 THEN 0 ELSE 1 END
 				ELSE 0
 			END	= 1			
-	
-	-- UPDATE SiteName
-	;WITH CustSiteName AS (
-		SELECT DISTINCT ag.custid, ci.site, ci.srecommend, ci.mrecommend
-		FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
-			INNER JOIN @tblRecoverBet ag
-			ON ci.custid = ag.recommend
 		
-	)
-	--format group
-	, CTE_GroupInfo AS (
-		SELECT DISTINCT d.custid
-			,cs.mrecommend
-			,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
-			,CASE 
-				WHEN (
-					d.recommend NOT IN (52466)
-					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NULL
-				) THEN '0-Credit'
-				WHEN d.recommend IN (52466) THEN '1-8RM'
-				WHEN (
-					d.recommend NOT IN (52466)
-					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NOT NULL
-				) THEN '2-Deposit'
-				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
-			END AS GroupName
-		FROM @tblRecoverBet d
-			INNER JOIN CustSiteName cs 
-			ON d.custid = cs.custid
-			LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
-			ON cs.srecommend = s.custid
-	)
-	SELECT	SUBSTRING(g.GroupName, 3, 30) AS GroupName			 
+	SELECT	SUBSTRING(T1.GroupName, 3, 30) AS GroupName			 
 			 ,t.transid    
 			 ,t.UserName    
 			 ,t.TransDate     
@@ -174,10 +141,31 @@ BEGIN
 			 ,t.betcheck    
 			 ,t.transdesc    
 	FROM @tblRecoverBet t
-		 INNER JOIN CTE_GroupInfo g
-				 ON t.custid = g.custid										
-	WHERE g.GroupName IS NOT NULL
-	ORDER BY g.GroupName, t.transid								
+		LEFT JOIN dbo.f_GetBetDaqCustomer(1) f
+			   ON t.custid = f.CustID
+		CROSS APPLY (SELECT CASE
+								WHEN f.CustID IS NULL
+									AND t.username <> '12EU'
+									AND t.IsDeposit = 0
+									AND t.mrecommend NOT IN (105181, 118473, 105183) -- MHC
+									AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet, 1E, 8RM
+									AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+										THEN '0-Credit' --1. For Normal bets
+								WHEN t.recommend = 52466
+										THEN '1-8RM' ----2: For 8RM
+								WHEN f.CustID IS NULL -- Betdaq
+									AND t.username <> '12EU' 
+									AND t.IsDeposit = 1	
+									AND t.mrecommend NOT IN (105181, 118473, 105183)
+									AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet: 11196380, 1E: 13423967, 8RM: 52466
+									AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
+										THEN '2-Deposit' ----3. For Deposit bets
+								WHEN t.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
+										THEN '3-BetFair' ----8: For Betfair
+								ELSE NULL
+						    END AS GroupName) AS T1								
+	WHERE T1.GroupName IS NOT NULL
+	ORDER BY T1.GroupName, t.transid								
 
 	--- invalid trans info
 	SELECT t.transid AS InvalidTrans

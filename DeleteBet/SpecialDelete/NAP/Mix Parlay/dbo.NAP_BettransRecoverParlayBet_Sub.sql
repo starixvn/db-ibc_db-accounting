@@ -38,6 +38,7 @@ BEGIN
 		   ,@SubTransIds		VARCHAR(4000) = ''
 		   ,@CustIds			VARCHAR(4000) = ''
 		   ,@AvaiableProcess	BIT
+		   ,@UserIDNotInITGroup BIT
 	
 	DECLARE @tblRecoverBet TABLE (
 		SubTransID				BIGINT		 
@@ -55,7 +56,7 @@ BEGIN
 		,SubHomeID				INT 
 		,SubAwayID				INT 
 		,SubSportType			SMALLINT 
-		,SubLeagueID			INT
+		,SubLeagueID			INT		
 		
 		,balance				MONEY					
 		,custid					INT
@@ -88,6 +89,7 @@ BEGIN
 	   ,StatusId	TINYINT	   
 	   ,custid		INT
 	   ,balance		MONEY
+	   ,MatchEventStatus NVARCHAR(50)
 	)
 	CREATE CLUSTERED INDEX IDX_tblMainTicket_custid_transid ON #tblMainTicket(custid, transid)
 	
@@ -147,7 +149,7 @@ BEGIN
 				,SubHomeID
 				,SubAwayID
 				,SubSportType 
-				,SubLeagueID
+				,SubLeagueID				
 				
 				,balance										
 				,custid
@@ -186,7 +188,7 @@ BEGIN
 				,m.homeid AS SubHomeID
 				,m.awayid AS SubAwayID
 				,m.sporttype AS SubSportType 
-				,m.leagueid AS SubLeagueID
+				,m.leagueid AS SubLeagueID				
 				
 				,b.winlost - b.actual_stake + b.playercomm AS balance								
 				,b.custid AS custid
@@ -251,7 +253,7 @@ BEGIN
 			 , t.refno			 
 			 , t.StatusId			 
 			 , t.custid
-			 , t.balance
+			 , t.balance			 
 		FROM @tblRecoverBet t		
 		
 		--> capture list of settled main transIDs before do recover
@@ -350,15 +352,21 @@ BEGIN
 					AND zm.matchid = t.matchid
 					AND zm.transid = t.SubTransID				
 				
-		--> Build list of changed status main transids, exclude full-lose
+		--> Build list of changed status main transids that corresponding match needs to re-settle
 		SET @SettledMainTranIds = ''
-		SELECT @SettledMainTranIds = @SettledMainTranIds + 
-									 CASE WHEN @SettledMainTranIds <> '' THEN ',' ELSE '' END +
-									 CONVERT(VARCHAR(20), t.transid)
-		FROM @tblSettledBeforeRecoveredMainTicket t			 
-			 INNER JOIN dbo.bettrans b WITH(NOLOCK)
-					 ON t.transid = b.transid
-		WHERE b.statusID = 0
+		IF EXISTS (SELECT TOP 1 1
+				   FROM dbo.match WITH(NOLOCK)
+				   WHERE matchid = @matchid
+				     AND eventstatus = 'completed')
+		BEGIN				   
+			SELECT @SettledMainTranIds = @SettledMainTranIds + 
+										 CASE WHEN @SettledMainTranIds <> '' THEN ',' ELSE '' END +
+										 CONVERT(VARCHAR(20), t.transid)
+			FROM @tblSettledBeforeRecoveredMainTicket t			 
+				 INNER JOIN dbo.bettrans b WITH(NOLOCK)
+						 ON t.transid = b.transid			 
+			WHERE b.statusID = 0
+		END
 		
 		--> Build list of customer name with negative balance
 		SET @NegativeBalanceUsers = ''
@@ -381,39 +389,12 @@ BEGIN
 			 @Doing = @LogData 
 			 
 		--> Data for sending mail: Rule R1 + Rule R2 + Rule R3 + Rule R4
-		-- UPDATE SiteName
-		;WITH CustSiteName AS (
-			SELECT DISTINCT ag.custid, ci.site, ci.srecommend, ci.mrecommend
-			FROM CUSTDB.dbo.Customer ci WITH(NOLOCK)
-				INNER JOIN @tblRecoverBet ag
-				ON ci.custid = ag.recommend
-			
-		)
-		--format group
-		, CTE_GroupInfo AS (
-			SELECT DISTINCT d.custid
-				,cs.mrecommend
-				,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
-				,CASE 
-					WHEN (
-						d.recommend NOT IN (52466)
-						AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-						AND s.custid IS NULL
-					) THEN '0-Credit'
-					WHEN d.recommend IN (52466) THEN '1-8RM'
-					WHEN (
-						d.recommend NOT IN (52466)
-						AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-						AND s.custid IS NOT NULL
-					) THEN '2-Deposit'
-					WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
-				END AS GroupName
-			FROM @tblRecoverBet d
-				INNER JOIN CustSiteName cs 
-				ON d.custid = cs.custid
-				LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) 
-				ON cs.srecommend = s.custid
-		)
+		SET @UserIDNotInITGroup = 0
+		IF NOT EXISTS (SELECT TOP 1 1 
+					   FROM DBPOLICY.bodb02.dbo.accCustomer_1 a 
+					   WHERE a.GroupID = 1
+					  	 AND a.custid = @UserID)
+			SET @UserIDNotInITGroup = 1	
 		SELECT	t.SubTransID     
 				 ,t.SubBetCheck  
 				 ,t.SubOdds      
@@ -429,7 +410,7 @@ BEGIN
 				 ,t.SubAwayID
 				 ,t.SubSportType 
 				 ,t.SubLeagueID     			 
-				 ,SUBSTRING(g.GroupName, 3, 30) AS GroupName			 
+				 ,SUBSTRING(T1.GroupName, 3, 30) AS GroupName			 
 				 ,t.transid    
 				 ,t.UserName    
 				 ,t.TransDate     
@@ -445,32 +426,63 @@ BEGIN
 				 ,t.hdp2			     
 				 ,t.betcheck    			   
 				 ,CASE
-					WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-						 OR (EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency = 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-							AND @UserID NOT IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1) -- Check UserID not in IT group
+					WHEN T2.a IS NOT NULL 
+						 OR (T3.a IS NOT NULL 
+							 AND @UserIDNotInITGroup = 1 -- Check UserID not in IT group
 							)
 								THEN CAST(1 AS BIT)
 					ELSE CAST(0 AS BIT)
 				  END AS IsCsd
 				 ,CASE
-					WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency = 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-						 AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
+					WHEN T3.a IS NOT NULL 
+						 AND @UserIDNotInITGroup = 0
 								THEN CAST(1 AS BIT)
 					ELSE CAST(0 AS BIT)
 				  END AS IsItQa
 				 ,CASE
-					WHEN EXISTS (SELECT 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE c.currency <> 20 AND c.roleid = 4 AND c.custid = t.srecommend)
-						 AND @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
+					WHEN T2.a IS NOT NULL 
+						 AND @UserIDNotInITGroup = 0
 								THEN CAST(1 AS BIT)
 					ELSE CAST(0 AS BIT)							
 				  END AS IsItSupport
 				 ,t.betfrom AS BetFrom
 				 ,CURRENT_TIMESTAMP AS [DateTime]
 		FROM @tblRecoverBet t
-			 INNER JOIN CTE_GroupInfo g
-					 ON t.custid = g.custid										
-		WHERE g.GroupName IS NOT NULL
-		ORDER BY g.GroupName, t.transid			 
+			LEFT JOIN dbo.f_GetBetDaqCustomer(1) f
+				   ON t.custid = f.CustID
+			CROSS APPLY (SELECT CASE
+									WHEN f.CustID IS NULL
+										AND t.username <> '12EU'
+										AND t.IsDeposit = 0
+										AND t.mrecommend NOT IN (105181, 118473, 105183) -- MHC
+										AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet, 1E, 8RM
+										AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+											THEN '0-Credit' --1. For Normal bets
+									WHEN t.recommend = 52466
+											THEN '1-8RM' ----2: For 8RM
+									WHEN f.CustID IS NULL -- Betdaq
+										AND t.username <> '12EU' 
+										AND t.IsDeposit = 1	
+										AND t.mrecommend NOT IN (105181, 118473, 105183)
+										AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet: 11196380, 1E: 13423967, 8RM: 52466
+										AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
+											THEN '2-Deposit' ----3. For Deposit bets
+									WHEN t.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
+											THEN '3-BetFair' ----8: For Betfair
+									ELSE NULL
+							    END AS GroupName) AS T1	
+			OUTER APPLY (SELECT TOP 1 1 AS a
+						 FROM CustDB.dbo.Customer c WITH(NOLOCK) 
+						 WHERE c.currency <> 20 
+						   AND c.roleid = 4 
+						   AND c.custid = t.srecommend) AS T2
+			OUTER APPLY (SELECT TOP 1 1 AS a
+						 FROM CustDB.dbo.Customer c WITH(NOLOCK) 
+						 WHERE c.currency = 20 
+						   AND c.roleid = 4 
+						   AND c.custid = t.srecommend) AS T3						   							    							
+		WHERE T1.GroupName IS NOT NULL
+		ORDER BY T1.GroupName, t.transid			 
 	END TRY
 	BEGIN CATCH
 		------ release Parlay procesee	
@@ -479,9 +491,7 @@ BEGIN
 		  , @IsReleased	= 1		  
 	
 		SELECT @ErrCode = 100,
-				@ErrMsg = 'Recover Parlay failed with error : Unable to recover these parlay bets: list of bet id ' 
-						  + @MainTransIds 
-						  + ' Recover failed due to this error'
+				@ErrMsg = 'Unable to recover these parlay bets'
 		RETURN				
 	END CATCH									  			
 			

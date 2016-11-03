@@ -216,18 +216,20 @@ BEGIN
 								WHEN t.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
 										THEN '3-BetFair' ----8: For Betfair
 								ELSE NULL
-						  END AS GroupName) AS T1								
+						    END AS GroupName) AS T1								
 	WHERE T1.GroupName IS NOT NULL
 	ORDER BY T1.GroupName, t.transid				
 
 	--- invalid trans info
 	/*
 	cases : 
-		1/ transid in bettrans, subtransid in bettransm14 => isMoved = 1
+		1/ transid in bettrans AND subtransid in bettransm => isMoved = 0 (not satisfied additional conditions of search)
+		
 		2/ transid in bettrans14, subtransid in bettransm14 => isMoved = 1
-		3/ transid not in DB => isMoved = 0
-		4/ transid in bettrans, subtransid in bettransm => valid
-		5/ transid in bettrans14, subtransid in bettransm => isMoved = 1
+		3/ transid in bettrans14, subtransid in bettransm => isMoved = 1		
+		4/ transid in bettrans, subtransid in bettransm14 => isMoved = 1
+								
+		5/ transid not in bettrans OR subtransid not in bettransm  => isMoved = 0 (not real ticket)
 	*/
 	;WITH InvalidTransID AS
 	(
@@ -236,24 +238,29 @@ BEGIN
 		WHERE NOT EXISTS (SELECT TOP 1 1 
 						  FROM @tblRecoverBet 
 						  WHERE transid = t.transid)
-	),
-	InvalidTransInfo AS
-	(
-		SELECT t.transid, ISNULL(b.refno, b14.refno) AS refno
-		FROM InvalidTransID t
-			 LEFT JOIN bettrans b WITH(NOLOCK)
-					ON t.transid = b.transid
-					   AND b.bettype = 29
-			 LEFT JOIN bettrans14 b14 WITH(NOLOCK)
-					ON t.transid = b14.transid	
-					   AND b.bettype = 29				
 	)
-	SELECT t.transid AS InvalidTrans
+	SELECT t.transid
 		 , CASE
-				WHEN t.refno IS NULL THEN 0 -- case 3
-				ELSE 1 -- case 1 + 2
+				WHEN b.transid IS NOT NULL
+					 AND bm.transid IS NOT NULL
+						THEN 0 -- case 1
+				WHEN b14.transid IS NOT NULL
+					 OR bm14.transid IS NOT NULL
+						THEN 1 -- case 2 + 3 + 4				
+				ELSE 0 -- case 5 					
 		   END AS isMoved
-	FROM InvalidTransInfo t		
+	FROM InvalidTransID t
+		 LEFT JOIN bettrans b WITH(NOLOCK)
+				ON t.transid = b.transid
+				   AND b.bettype = 29
+		 LEFT JOIN bettransm bm WITH (NOLOCK)
+				ON b.refno = bm.refno
+				   AND bm.matchid = @MatchId
+		 LEFT JOIN bettrans14 b14 WITH(NOLOCK)
+				ON t.transid = b14.transid
+		 LEFT JOIN bettransm14 bm14 WITH(NOLOCK)
+				ON ISNULL(b.refno, b14.refno) = bm14.refno
+				   AND bm14.matchid = @MatchId		
 END
 GO
 
