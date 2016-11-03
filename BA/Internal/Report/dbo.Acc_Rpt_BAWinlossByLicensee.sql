@@ -22,6 +22,7 @@ AS
     Revisions:  
 		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily  
 		- 20120803@Jim: add playercomm value( for give commision to member) 
+		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
 	Param's Explanation:  
 	  + @ReportType: 1-Daily; 2-Monthly;  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -128,7 +129,7 @@ BEGIN
 					ELSE 1 END
 				ELSE 1 END	
 			
-		FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH ( NOLOCK )  
+		FROM bodb_licenseereport.dbo.rptLicWinloss2 b WITH ( NOLOCK )  
 			INNER JOIN bodb_Licensee.dbo.LicenseeCust lc WITH (NOLOCK) ON b.recommend = lc.custid
 			INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lc.LicenseeID
 		WHERE 
