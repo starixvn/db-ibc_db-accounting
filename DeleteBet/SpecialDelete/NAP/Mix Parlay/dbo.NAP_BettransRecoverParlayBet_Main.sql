@@ -1,12 +1,20 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_BettransRecoverParlayBet_Main]    Script Date: 11/03/2016 15:51:19 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Main] 
-	@BetType			VARCHAR(20)		= 'All',
-	@TransIds			VARCHAR(MAX)	= '',
-	@UserId				INT, 
-	@IP					VARCHAR(50),
+	@BetType				VARCHAR(20)		= 'All',
+	@TransIds				VARCHAR(MAX)	= '',
+	@UserId					INT, 
+	@IP						VARCHAR(50),
 
-	@SettledMainTranIds	VARCHAR(4000)	= ''	OUTPUT,
-	@ErrCode			INT				= 0		OUTPUT,
-	@ErrMsg				VARCHAR(300)	= ''	OUTPUT
+	@SettledMainTranIds		VARCHAR(4000)	= ''	OUTPUT,
+	@NegativeBalanceUsers	VARCHAR(4000)	= ''	OUTPUT,
+	@ErrCode				INT				= 0		OUTPUT,
+	@ErrMsg					VARCHAR(300)	= ''	OUTPUT
 AS
 /*
 	Created: Elodie
@@ -32,9 +40,11 @@ BEGIN
 			,@RowNumber			INT	= 1
 			,@tmp_TransIds		VARCHAR(MAX)
 			,@refnos_29			VARCHAR(MAX)
+			,@CustIds			VARCHAR(MAX) = ''
 			,@tmp_MatchId		INT
 			,@MatchDate			DATETIME
 			,@IsITAdmin			BIT = 0
+			,@AvaiableProcess	BIT
 
 	DECLARE @tblTransIds TABLE (transid BIGINT PRIMARY KEY)
 	DECLARE @tblNoResettleTransIds TABLE (transid BIGINT PRIMARY KEY)
@@ -60,266 +70,286 @@ BEGIN
 	DECLARE @tblAfterBalance	TABLE (custid INT, balance MONEY)
 	
 	--- Check for concurrent running
-	IF EXISTS(SELECT 1 FROM SystemSettings WITH (NOLOCK) WHERE VValue = 1 AND VName = 'isCalculatingParlay')
-	BEGIN
-		SELECT @ErrCode = 101
-			,@ErrMsg	= 'Another parlay settlement is in progress or some parlay tickets are being voided, please wait a few seconds until the on-going process has finished and try again.'
-		 
-		RETURN
-	END
-	ELSE 
-	BEGIN
-		UPDATE SystemSettings WITH (ROWLOCK, UPDLOCK)
-			SET VValue = '1'
-		WHERE VName = 'isCalculatingParlay'
-	END
-
-	--Transid which user input
-	INSERT INTO @tblTransIds
-	SELECT val
-	FROM dbo.strSplit(@TransIds, ',') 
-
-	--Transid list is recovered
-	INSERT INTO #tblRecoverBet (
-				transid
-				,matchid
-				,refno
-				,custid
-	)
-	SELECT	b.transid
-			,b.matchid
-			,b.refno
-			,b.custid
-	FROM	@tblTransIds s 
-		INNER JOIN bettrans b WITH(NOLOCK) ON s.transid = b.transid
-	WHERE b.matchid = 29 AND b.bettype = 29
-		AND b.winlostdate >= @before_yesterday
-		AND CASE
-				WHEN @BetType = 'all' THEN 1
-				WHEN @BetType = 'Mix Parlay' THEN CASE WHEN b.betteam = 1 THEN 1 ELSE 0 END
-				WHEN @BetType = 'System Parlay' THEN CASE WHEN b.betteam = 1 THEN 0 ELSE 1 END
-				ELSE 0
-			END	= 1	
+	EXEC [dbo].[NAP_Admin_CheckingProcess]
+			@IsExistParlay = 1			
+		  , @IsReleased	= 0
+		  , @AvaiableProcess = @AvaiableProcess OUTPUT
+		  , @ErrCode = @ErrCode OUTPUT
+		  , @ErrMsg	= @ErrMsg OUTPUT
 	
-	IF @@ROWCOUNT = 0
-	BEGIN
-			------ release Parlay procesee	
-		UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-		SET VValue = '0'
-		WHERE VName = 'isCalculatingParlay'
-	    
-		RETURN
-	END
+	IF (@ErrCode <> 0 OR @avaiableProcess = 0)					 
+		RETURN		
 	
-	INSERT INTO @tblNoResettleTransIds (transid)
-	SELECT t.transid
-	FROM dbo.bettransm b WITH(NOLOCK) 
-		INNER JOIN #tblRecoverBet t ON t.refno = b.refno
-		INNER JOIN dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
-	WHERE m.eventstatus <> 'completed'
-	GROUP BY t.transid
+	BEGIN TRY
+		--Transid which user input
+		INSERT INTO @tblTransIds
+		SELECT val
+		FROM dbo.strSplit(@TransIds, ',') 
 
-	-- Get match list
-	SELECT	ROW_NUMBER() OVER (PARTITION BY t.transid ORDER BY m.eventdate DESC) AS RowNumber,
-			b.matchid, t.transid, t.refno
-	INTO #tmpMatch
-	FROM	dbo.bettransm b WITH(NOLOCK) 
-		INNER JOIN #tblRecoverBet t ON t.refno = b.refno	
-		INNER JOIN dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid			
-	WHERE NOT EXISTS (SELECT 1 FROM @tblNoResettleTransIds WHERE transid = t.transid)
-
-	-- Match list is auto settled
-	INSERT INTO @tblMatchIds (RowNumber, matchid, transid, refno)
-	SELECT	DENSE_RANK() OVER (ORDER BY t.matchid) AS RowNumber,
-			t.matchid, t.transid, t.refno
-	FROM	#tmpMatch t
-	WHERE RowNumber = 1
-
-	---- capture balance before recover
-	INSERT INTO @tblBeforeBalance (custid, balance)
-	SELECT	b.custid
-			,SUM (b.winlost - b.actual_stake + b.playercomm) balance
-	FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN #tblRecoverBet t ON b.transid = t.transid
-	GROUP BY b.CustID
-	---- end capture
+		--Transid list is recovered
+		INSERT INTO #tblRecoverBet (
+					transid
+					,matchid
+					,refno
+					,custid
+		)
+		SELECT	b.transid
+				,b.matchid
+				,b.refno
+				,b.custid
+		FROM	@tblTransIds s 
+			INNER JOIN bettrans b WITH(NOLOCK) ON s.transid = b.transid
+		WHERE b.matchid = 29 AND b.bettype = 29
+			AND b.winlostdate >= @before_yesterday
+			AND CASE
+					WHEN @BetType = 'all' THEN 1
+					WHEN @BetType = 'Mix Parlay' THEN CASE WHEN b.betteam = 1 THEN 1 ELSE 0 END
+					WHEN @BetType = 'System Parlay' THEN CASE WHEN b.betteam = 1 THEN 0 ELSE 1 END
+					ELSE 0
+				END	= 1	
 	
-	UPDATE	b WITH(ROWLOCK, UPDLOCK)
-	SET status = 'running'
-		,statusID = 0
-		,ruben = 0
-		,modds = 0
-		,winlost = 0
-		,awinlost = 0
-		,mwinlost = 0
-		,swinlost = 0
-		,playercomm = 0
-		,comm = 0
-		,acomm = 0
-		,scomm = 0				
-	FROM dbo.bettrans b
-		INNER JOIN #tblRecoverBet t ON b.transid = t.transid
+		IF @@ROWCOUNT = 0
+		BEGIN
+				------ release Parlay procesee	
+			EXEC [dbo].[NAP_Admin_CheckingProcess]
+					@IsExistParlay = 1			
+				  , @IsReleased	= 1			  			
+			
+			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+			RETURN
+		END
+	
+		INSERT INTO @tblNoResettleTransIds (transid)
+		SELECT t.transid
+		FROM dbo.bettransm b WITH(NOLOCK) 
+			INNER JOIN #tblRecoverBet t ON t.refno = b.refno
+			INNER JOIN dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+		WHERE m.eventstatus <> 'completed'
+		GROUP BY t.transid
 
-	WHILE (1 = 1)
-	BEGIN
-		SELECT	TOP 1 @tmp_MatchId = matchid
+		-- Get match list
+		SELECT	ROW_NUMBER() OVER (PARTITION BY t.transid ORDER BY m.eventdate DESC) AS RowNumber,
+				b.matchid, t.transid, t.refno
+		INTO #tmpMatch
+		FROM	dbo.bettransm b WITH(NOLOCK) 
+			INNER JOIN #tblRecoverBet t ON t.refno = b.refno	
+			INNER JOIN dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid			
+		WHERE NOT EXISTS (SELECT 1 FROM @tblNoResettleTransIds WHERE transid = t.transid)
+
+		-- Match list is auto settled
+		INSERT INTO @tblMatchIds (RowNumber, matchid, transid, refno)
+		SELECT	DENSE_RANK() OVER (ORDER BY t.matchid) AS RowNumber,
+				t.matchid, t.transid, t.refno
+		FROM	#tmpMatch t
+		WHERE RowNumber = 1
+
+		---- capture balance before recover
+		INSERT INTO @tblBeforeBalance (custid, balance)
+		SELECT	b.custid
+				,SUM (b.winlost - b.actual_stake + b.playercomm) balance
+		FROM	bettrans b WITH (NOLOCK)
+			INNER JOIN #tblRecoverBet t ON b.transid = t.transid
+		GROUP BY b.CustID
+		---- end capture
+	
+		UPDATE	b WITH(ROWLOCK, UPDLOCK)
+		SET status = 'running'
+			,statusID = 0
+			,ruben = 0
+			,modds = 0
+			,winlost = 0
+			,awinlost = 0
+			,mwinlost = 0
+			,swinlost = 0
+			,playercomm = 0
+			,comm = 0
+			,acomm = 0
+			,scomm = 0				
+		FROM dbo.bettrans b
+			INNER JOIN #tblRecoverBet t ON b.transid = t.transid
+
+		WHILE (1 = 1)
+		BEGIN
+			SELECT	TOP 1 @tmp_MatchId = matchid
+			FROM	@tblMatchIds
+			WHERE	RowNumber = @RowNumber
+		
+			IF @@rowcount = 0
+				BREAK		
+		
+			SET @RowNumber = @RowNumber + 1
+		
+			SELECT  @MatchDate = eventdate
+			FROM	dbo.match WITH(NOLOCK)
+			WHERE	matchid = @tmp_MatchId
+
+			SELECT @tmp_TransIds = ''
+			SELECT  @tmp_TransIds = @tmp_TransIds + CONVERT(VARCHAR(20), transid) + ','
+			FROM	@tblMatchIds
+			WHERE	matchid = @tmp_MatchId
+
+			SELECT @refnos_29 = ''
+			SELECT 	@refnos_29 = @refnos_29 + ',' + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid)
+			FROM	@tblMatchIds
+			WHERE	matchid = @tmp_MatchId
+
+			SET @refnos_29 = STUFF(@refnos_29,1,1,'')
+		
+			EXEC dbo.NAP_Admin_Calculate_MP_broker 
+				@matchid = @tmp_MatchId
+				,@mode = 'PRECAL-29'
+				,@matchdate = @matchdate
+				,@strXML = @tmp_TransIds
+
+			EXEC dbo.NAP_Admin_Calculate_MP_broker
+					@matchdate = @MatchDate
+					,@strXML	= @refnos_29
+					,@mode		= '29' 
+		END
+
+		-- capture after recover
+		INSERT INTO @tblAfterBalance (custid, balance)
+		SELECT	b.custid
+				,SUM (b.winlost - b.actual_stake + b.playercomm) balance
+		FROM	bettrans b WITH (NOLOCK)
+			INNER JOIN #tblRecoverBet t ON b.transid = t.transid
+		GROUP BY b.CustID
+	
+		DECLARE @tblDebitPending TVP_BalanceList
+		DECLARE @tblCreditPending TVP_BalanceList
+	
+		INSERT INTO @tblCreditPending (custID, balance)
+		SELECT		a.custid, (a.balance - b.balance) AS Balance
+		FROM		@tblBeforeBalance b
+		INNER JOIN	@tblAfterBalance a 	
+				ON	a.custid = b.custid
+		WHERE	    (a.balance - b.balance) > 0
+	
+		IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingCreditIns 
+				@BalancePending = @tblCreditPending
+				,@Type			= 1 -- Sports		
+
+		INSERT INTO @tblDebitPending (custID, balance)
+		SELECT		a.custid, ABS(a.balance - b.balance) AS Balance
+		FROM		@tblBeforeBalance b
+		INNER JOIN	@tblAfterBalance a 	
+				ON	a.custid = b.custid
+		WHERE	    (a.balance - b.balance) < 0	
+	
+		IF @@rowcount <> 0
+			EXEC dbo.Dot_BalancePendingDebitIns 
+				@BalancePending = @tblDebitPending
+				,@Type			= 1 -- Sports
+	
+		-- end capture
+
+		--> Build list of customer name with negative balance
+		SET @NegativeBalanceUsers = ''
+		SELECT @CustIds = @CustIds +
+						  CASE WHEN @CustIds <> '' THEN ',' ELSE '' END + 
+						  CONVERT(VARCHAR(20), b.custid)
+		FROM @tblBeforeBalance b
+			 INNER JOIN	@tblAfterBalance a ON a.custid = b.custid 
+		WHERE b.balance > a.balance				
+		
+		EXEC [dbo].[NAP_CustNegativeBalance_Sel] 	
+			@CustIds = @CustIds,
+			@NegativeBalanceUsers = @NegativeBalanceUsers OUTPUT	
+
+		--transid is auto settled
+		SELECT @SettledMainTranIds = ''
+		SELECT  @SettledMainTranIds = @SettledMainTranIds + ',' + CONVERT(VARCHAR(20), transid) 
 		FROM	@tblMatchIds
-		WHERE	RowNumber = @RowNumber
-		
-		IF @@rowcount = 0
-			BREAK		
-		
-		SET @RowNumber = @RowNumber + 1
-		
-		SELECT  @MatchDate = eventdate
-		FROM	dbo.match WITH(NOLOCK)
-		WHERE	matchid = @tmp_MatchId
 
-		SELECT @tmp_TransIds = ''
-		SELECT  @tmp_TransIds = @tmp_TransIds + CONVERT(VARCHAR(20), transid) + ','
-		FROM	@tblMatchIds
-		WHERE	matchid = @tmp_MatchId
+		SET @SettledMainTranIds = STUFF(@SettledMainTranIds,1,1,'')
 
-		SELECT @refnos_29 = ''
-		SELECT 	@refnos_29 = @refnos_29 + ',' + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid)
-		FROM	@tblMatchIds
-		WHERE	matchid = @tmp_MatchId
+		IF @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
+			SELECT @IsITAdmin = 1
 
-		SET @refnos_29 = STUFF(@refnos_29,1,1,'')
-		
-		EXEC dbo.NAP_Admin_Calculate_MP_broker 
-			@matchid = @tmp_MatchId
-			,@mode = 'PRECAL-29'
-			,@matchdate = @matchdate
-			,@strXML = @tmp_TransIds
+		;WITH CTE_GroupInfo AS (
+			SELECT DISTINCT t.custid
+				,b.mrecommend
+				,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
+				,CASE 
+					WHEN (
+						b.recommend NOT IN (52466)
+						AND b.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+						AND s.custid IS NULL
+					) THEN '0-Credit'
+					WHEN b.recommend IN (52466) THEN '1-8RM'
+					WHEN (
+						b.recommend NOT IN (52466)
+						AND b.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+						AND s.custid IS NOT NULL
+					) THEN '2-Deposit'
+					WHEN b.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
+				END AS GroupName
+			FROM	#tblRecoverBet t
+				INNER JOIN bettrans b WITH (NOLOCK) ON b.transid = t.transid
+				LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) ON b.srecommend = s.custid
+		)
+		SELECT	CASE WHEN c.currency <> 20 AND @IsITAdmin = 1 THEN 1 ELSE 0 END AS IsITSupport -- Recover real tickets by IT ==> Send mail with recipient list "IT Support"
+				,CASE WHEN c.currency <> 20 OR (c.currency = 20 AND @IsITAdmin = 0 )THEN 1 ELSE 0 END AS IsCSD --Recover real tickets => send mail to CSD , Recover UUS tickets by CSD: send mail CSD
+				,CASE WHEN c.currency = 20 AND @IsITAdmin = 1 THEN 1 ELSE 0 END AS IsITQA -- Recover UUS tickets by IT => Send mail with recipient list "IT QA"
+				 ,SUBSTRING(g.GroupName, 3, 30) AS GroupName	
+				,b.transid    
+				,b.Username
+				,TransDate     
+				,BetType    
+				,b.Refno     
+				,Status     
+				,WinLost    
+				,betid      
+				,BetTeam    
+				,livehomescore    
+				,liveawayscore    
+				,Stake     
+				,Odds     
+				,hdp1     
+				,hdp2     
+				,NULL AS homeid      
+				,NULL AS awayid      
+				,NULL AS sporttype     
+				,NULL AS leagueid     
+				,betcheck    
+				,transdesc   
+				,'' AS BetFrom
+				,GETDATE() AS [DateTime] 
+		FROM	#tblRecoverBet t
+				INNER JOIN bettrans b WITH (NOLOCK) ON b.transid = t.transid
+				INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid = b.srecommend
+				INNER JOIN CTE_GroupInfo g ON t.custid = g.custid	
+		WHERE g.GroupName IS NOT NULL
+		ORDER BY g.GroupName, t.transid		
 
-		EXEC dbo.NAP_Admin_Calculate_MP_broker
-				@matchdate = @MatchDate
-				,@strXML	= @refnos_29
-				,@mode		= '29' 
-	END
-
-	-- capture after recover
-	INSERT INTO @tblAfterBalance (custid, balance)
-	SELECT	b.custid
-			,SUM (b.winlost - b.actual_stake + b.playercomm) balance
-	FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN #tblRecoverBet t ON b.transid = t.transid
-	GROUP BY b.CustID
+		DELETE	z
+		FROM	dbo.zzzbettrans z WITH(ROWLOCK, UPDLOCK)
+			INNER JOIN #tblRecoverBet t  ON	z.custid = t.custid AND z.matchid = t.matchid AND z.transid = t.transid
 	
-	DECLARE @tblDebitPending TVP_BalanceList
-	DECLARE @tblCreditPending TVP_BalanceList
-	
-	INSERT INTO @tblCreditPending (custID, balance)
-	SELECT		a.custid, (a.balance - b.balance) AS Balance
-	FROM		@tblBeforeBalance b
-	INNER JOIN	@tblAfterBalance a 	
-			ON	a.custid = b.custid
-	WHERE	    (a.balance - b.balance) > 0
-	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingCreditIns 
-			@BalancePending = @tblCreditPending
-			,@Type			= 1 -- Sports		
-
-	INSERT INTO @tblDebitPending (custID, balance)
-	SELECT		a.custid, ABS(a.balance - b.balance) AS Balance
-	FROM		@tblBeforeBalance b
-	INNER JOIN	@tblAfterBalance a 	
-			ON	a.custid = b.custid
-	WHERE	    (a.balance - b.balance) < 0	
-	
-	IF @@rowcount <> 0
-		EXEC dbo.Dot_BalancePendingDebitIns 
-			@BalancePending = @tblDebitPending
-			,@Type			= 1 -- Sports
-	
-	-- end capture
-
-	--transid is auto settled
-	SELECT @SettledMainTranIds = ''
-	SELECT  @SettledMainTranIds = @SettledMainTranIds + ',' + CONVERT(VARCHAR(20), transid) 
-	FROM	@tblMatchIds
-
-	SET @SettledMainTranIds = STUFF(@SettledMainTranIds,1,1,'')
-
-	IF @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
-		SELECT @IsITAdmin = 1
-
-	SELECT	CASE WHEN c.currency <> 20 AND @IsITAdmin = 1 THEN 1 ELSE 0 END AS IsITSupport -- Recover real tickets by IT ==> Send mail with recipient list "IT Support"
-			,CASE WHEN c.currency <> 20 OR (c.currency = 20 AND @IsITAdmin = 0 )THEN 1 ELSE 0 END AS IsCSD --Recover real tickets => send mail to CSD , Recover UUS tickets by CSD: send mail CSD
-			,CASE WHEN c.currency = 20 AND @IsITAdmin = 1 THEN 1 ELSE 0 END AS IsITQA -- Recover UUS tickets by IT => Send mail with recipient list "IT QA"
-			,CASE
-				WHEN f.CustID IS NULL
-					AND b.username <> '12EU'
-					AND NOT EXISTS (SELECT TOP 1 1 FROM custDB.dbo.Dep_CustSuper WITH(NOLOCK) WHERE custid = b.srecommend)
-					AND b.mrecommend NOT IN (105181, 118473, 105183) -- MHC
-					AND b.recommend NOT IN (11196380, 13423967, 52466) -- Foobet, 1E, 8RM
-					AND b.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-						THEN 'Credit' --1. For Normal bets
-				WHEN b.recommend = 52466
-						THEN '8RM' ----2: For 8RM
-				WHEN f.CustID IS NULL -- Betdaq
-					AND b.username <> '12EU' 
-					--AND EXISTS (select TOP 1 1 from custDB.dbo.Dep_CustSuper with(nolock) WHERE custid = b.srecommend)
-					AND b.mrecommend NOT IN (105181, 118473, 105183)
-					AND b.recommend NOT IN (11196380, 13423967, 52466) -- Foobet: 11196380, 1E: 13423967, 8RM: 52466
-					AND b.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
-						THEN 'Deposit' ----3. For Deposit bets
-				WHEN t.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
-						THEN 'Betfair' ----8: For Betfair
-			END AS GroupName    
-			,b.transid    
-			,b.Username
-			,TransDate     
-			,BetType    
-			,b.Refno     
-			,Status     
-			,WinLost    
-			,betid      
-			,BetTeam    
-			,livehomescore    
-			,liveawayscore    
-			,Stake     
-			,Odds     
-			,OddsType    
-			,hdp1     
-			,hdp2     
-			,NULL AS homeid      
-			,NULL AS awayid      
-			,NULL AS sporttype     
-			,NULL AS leagueid     
-			,betcheck    
-			,transdesc   
-			,'' AS BetFrom
-			,GETDATE() AS [DateTime] 
-	FROM	#tblRecoverBet t
-			INNER JOIN bettrans b WITH (NOLOCK) ON b.transid = t.transid
-			INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid = b.srecommend
-			LEFT JOIN dbo.f_GetBetDaqCustomer(1) f ON t.custid = f.CustID	
-
-	DELETE	z
-	FROM	dbo.zzzbettrans z WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN #tblRecoverBet t  ON	z.custid = t.custid AND z.matchid = t.matchid AND z.transid = t.transid
-		
-	
-	SELECT @LogData =	'NAP_BettransRecoverParlayBet_Main: Recover bet have transid: ' + @TransIds + ' IP: ' + @IP
+		SELECT @LogData =	'NAP_BettransRecoverParlayBet_Main: Recover bet have transid: ' + @TransIds + ' IP: ' + @IP
 						
-	EXEC WriteLog_UserLog 
-	     @UserId = @UserId,
-	     @Doing = @LogData 
+		EXEC WriteLog_UserLog 
+			 @UserId = @UserId,
+			 @Doing = @LogData 
+	END TRY
+	BEGIN CATCH
+		------ release Parlay procesee	
+		EXEC [dbo].[NAP_Admin_CheckingProcess]
+			@IsExistParlay = 1			
+		  , @IsReleased	= 1		  
 	
+		SELECT @ErrCode = 100,
+				@ErrMsg = 'Recover Parlay failed with error : Unable to recover these parlay bets: list of bet id ' 
+						  + @TransIds 
+						  + ' Recover failed due to this error'
+		RETURN
+	END CATCH
+
 	------ release Parlay procesee	
-	UPDATE systemSettings WITH (ROWLOCK, UPDLOCK)
-	    SET VValue = '0'
-    WHERE VName = 'isCalculatingParlay'
+	EXEC [dbo].[NAP_Admin_CheckingProcess]
+			@IsExistParlay = 1			
+		  , @IsReleased	= 1	
 
 END
-
-GO
-GRANT EXECUTE ON [dbo].[NAP_BettransRecoverParlayBet_Main] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_BettransRecoverParlayBet_Main] TO [vnteam] AS [dbo]
-GO
-
 
