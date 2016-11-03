@@ -89,7 +89,7 @@ BEGIN
 								ProductId			TINYINT,
 								BaseCurrency		INT)
 	INSERT INTO #DiscountGroup( DiscountGroupId, DiscountGroupType, FromAmount, ToAmount, Rate, PartyId, ProductId, BaseCurrency)
-	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductID = 5 -- VS
+	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductCodes = 'VS'
 	-- End Region: HAIFA
 	
 	CREATE	TABLE #TempDataVS (
@@ -196,12 +196,13 @@ BEGIN
 					'ORDER BY [Order]'
 
 	EXEC(@SQL)
-
+	PRINT @SQL
 	-- Region: Drop tmp table
 	DROP TABLE #Exchange
 	DROP TABLE #ExchangeOANDA
 	DROP TABLE #TempDataVS
 	DROP TABLE #FeeData
+	DROP TABLE #DiscountGroup
 	DROP TABLE #FinalResult
 END
 GO

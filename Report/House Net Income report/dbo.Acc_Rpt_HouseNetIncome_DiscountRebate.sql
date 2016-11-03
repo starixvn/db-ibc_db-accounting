@@ -20,9 +20,9 @@ BEGIN
 	DECLARE @FDate DATE, @TDate DATE
 	SELECT @FDate = @FromDate, @TDate = @ToDate
 
-	CREATE	TABLE #Exchange			(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
+	CREATE	TABLE #Exchange	(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
 
-	INSERT INTO #Exchange(ExchangeDate, ExchangeID, Rate)
+	INSERT INTO #Exchange (ExchangeDate, ExchangeID, Rate)
 	SELECT ExchangeDate, Currency, Rate
 	FROM DBWH.bodb_account.dbo.tbl_Currency_Daily WITH (NOLOCK) 
 	WHERE ExchangeDate BETWEEN @FDate AND @TDate
@@ -87,9 +87,11 @@ BEGIN
 	DECLARE @ProductList VARCHAR(1000) = NULL
 
 	SELECT @ProductList = COALESCE(@ProductList + ',', '') + CONVERT(VARCHAR(10), ProductPrefix) 
-	FROM (SELECT DISTINCT CASE WHEN d.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END AS ProductPrefix
-		FROM #DiscountGroup d
-			LEFT JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.Productid = d.ProductId) t
+	FROM (
+			SELECT DISTINCT CASE WHEN d.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END AS ProductPrefix
+			FROM #DiscountGroup d
+				LEFT JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.Productid = d.ProductId
+		) t
 	
 	-- Region: GEt Winloss data
 	DECLARE @PartyIDs VARCHAR(1000)
@@ -102,9 +104,8 @@ BEGIN
 			WinLoss			MONEY,
 			AComm			MONEY,
 			ProductId		TINYINT,
-			AmountToCompany MONEY,
-			IsApplyMinFee	BIT)
-	INSERT INTO #TempDataWL (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany, IsApplyMinFee)
+			AmountToCompany MONEY)
+	INSERT INTO #TempDataWL (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,AmountToCompany)
 	(
 		SELECT	d.PartyId,
 				b.rptDate,
@@ -112,11 +113,10 @@ BEGIN
 				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				d.ProductId,
-				SUM(ISNULL(b.MemberWL, 0)) * ISNULL(d.Rate, 0) * e.Rate,
-				1 AS IsApplyMinFee
+				SUM(ISNULL(b.MemberWL, 0)) * ISNULL(d.Rate, 0) * e.Rate
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID	
-				INNER JOIN bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FDate, @TDate, 'SB,BA', 'OA', 1) ci ON ci.LicenseeID = b.SiteID				
+				INNER JOIN bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FDate, @TDate, 'SB,BA,VS', 'OA', 1) ci ON ci.LicenseeID = b.SiteID				
 				INNER JOIN #DiscountGroup d ON d.PartyId = ci.PartyID AND d.ProductId = b.ProductID
 		WHERE	d.DiscountGroupType = 3
 				AND b.rptDate BETWEEN @FDate AND @TDate
@@ -182,18 +182,21 @@ BEGIN
 	GROUP BY	s.ProductId,
 				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
 				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END
+	
 	UNION ALL
+	-- For Product that have discount group type = 3, discount based on Licensee WL
 	SELECT	s.ProductId,
 			CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END ProductCode,
 			CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END [Order],
 			'Rebate & Discount' Figure,
 			-SUM(CASE WHEN s.AmountToCompany < 0 THEN 0 ELSE s.AmountToCompany END) AS FullRange
-	FROM	#TempDataWL s -- discount = 3
+	FROM	#TempDataWL s
 		LEFT JOIN bodb_licensee.dbo.Product3rd p ON p.Productid = s.ProductId
 	GROUP BY	s.ProductId,
 				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
 				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END
-	UNION ALL
+	
+	UNION ALL	
 	SELECT	ProductId,
 			ProductPrefix AS ProductCode,
 			3 AS [Order],
@@ -202,6 +205,7 @@ BEGIN
 	FROM bodb_licensee.dbo.Product3rd WITH (NOLOCK)
 	WHERE Productid NOT IN (SELECT DISTINCT ProductID FROM #FeeData)
 		AND Productid IN (2,4,5,6,8)
+
 	UNION ALL
 	SELECT  0,
 			'SB' AS ProductCode,
@@ -213,15 +217,18 @@ BEGIN
 	SELECT	r.ProductCode, 
 			r.[Order], 
 			r.Figure, 
-			r.FullRange
+			SUM(r.FullRange) AS FullRange
 	FROM #RebateDiscount r	
+	GROUP BY r.ProductCode, r.[Order], r.Figure
+
 	UNION ALL
+	-- NG & LC need to inlude Rebate Discount value to PayToSupplier
 	SELECT	r.ProductCode, 
 			4 AS [Order], 
 			'Pay to supplier' AS Figure, 
 			ISNULL(r.FullRange, 0) * -0.4 AS FullRange
 	FROM #RebateDiscount r
-	WHERE r.ProductId IN (2, 4)
+	WHERE r.ProductId IN (2, 4) -- NG, LC
 			
 	DROP TABLE #Exchange
 	DROP TABLE #DiscountGroupHeader
