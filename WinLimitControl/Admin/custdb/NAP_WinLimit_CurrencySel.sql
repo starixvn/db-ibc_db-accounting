@@ -128,7 +128,7 @@ EXEC [NAP_WinLimit_CurrencySel] @SiteId=32, @IsCreditSite = 1, @ExcludeTestCurre
              SELECT 'INR (INR)',
                     61
              UNION
-             SELECT '(UUS))',
+             SELECT '(UUS)',
                     20
              FROM @Dual
              WHERE @ExcludeTestCurrency = 0
