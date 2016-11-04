@@ -22,7 +22,7 @@ AS
 	DB: DBTXN/bodb02
 
 	Revisions: 		
-
+		- 20161104@Kent: Correct logic for GroupName [Redmine:#65531]
 	Example: 
 		DECLARE @ErrCode INT, @ErrMsg VARCHAR(300)
 		EXEC NAP_BettransRecoverParlayBet_Main @BetType = 'All', @TransIds = '10094287060761,10094287060762,10094287060763,10094287060764', @UserID = 8, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
@@ -57,6 +57,9 @@ BEGIN
 								,matchid		INT
 								,refno			BIGINT 
 								,custid			INT
+								,mrecommend		INT
+								,recommend		INT
+								,isdeposit		TINYINT
 								)
 	CREATE INDEX IX_RecoverBet ON #tblRecoverBet (refno)
 	
@@ -92,11 +95,17 @@ BEGIN
 					,matchid
 					,refno
 					,custid
+					,mrecommend
+					,recommend
+					,isdeposit
 		)
 		SELECT	b.transid
 				,b.matchid
 				,b.refno
 				,b.custid
+				,b.mrecommend
+				,b.recommend
+				,case when EXISTS (select TOP 1 1 from custDB.dbo.Dep_CustSuper with(nolock) WHERE custid = b.srecommend) then 1 else 0 end AS isdeposit
 		FROM	@tblTransIds s 
 			INNER JOIN bettrans b WITH(NOLOCK) ON s.transid = b.transid
 		WHERE b.matchid = 29 AND b.bettype = 29
@@ -264,35 +273,16 @@ BEGIN
 
 		SET @SettledMainTranIds = STUFF(@SettledMainTranIds,1,1,'')
 
-		IF @UserID IN (SELECT a.custid FROM DBPOLICY.bodb02.dbo.accCustomer_1 a WHERE a.GroupID = 1)
+		IF EXISTS (SELECT TOP 1 1 
+				   FROM DBPOLICY.bodb02.dbo.accCustomer_1 a 
+				   WHERE a.GroupID = 1
+					 AND a.custid  = @UserID)
 			SELECT @IsITAdmin = 1
 
-		;WITH CTE_GroupInfo AS (
-			SELECT DISTINCT t.custid
-				,b.mrecommend
-				,CASE WHEN s.custid IS NOT NULL THEN 1 ELSE 0 END AS IsDeposit
-				,CASE 
-					WHEN (
-						b.recommend NOT IN (52466)
-						AND b.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-						AND s.custid IS NULL
-					) THEN '0-Credit'
-					WHEN b.recommend IN (52466) THEN '1-8RM'
-					WHEN (
-						b.recommend NOT IN (52466)
-						AND b.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-						AND s.custid IS NOT NULL
-					) THEN '2-Deposit'
-					WHEN b.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
-				END AS GroupName
-			FROM	#tblRecoverBet t
-				INNER JOIN bettrans b WITH (NOLOCK) ON b.transid = t.transid
-				LEFT JOIN CustDB.dbo.Dep_CustSuper s WITH(NOLOCK) ON b.srecommend = s.custid
-		)
 		SELECT	CASE WHEN c.currency <> 20 AND @IsITAdmin = 1 THEN 1 ELSE 0 END AS IsITSupport -- Recover real tickets by IT ==> Send mail with recipient list "IT Support"
 				,CASE WHEN c.currency <> 20 OR (c.currency = 20 AND @IsITAdmin = 0 )THEN 1 ELSE 0 END AS IsCSD --Recover real tickets => send mail to CSD , Recover UUS tickets by CSD: send mail CSD
 				,CASE WHEN c.currency = 20 AND @IsITAdmin = 1 THEN 1 ELSE 0 END AS IsITQA -- Recover UUS tickets by IT => Send mail with recipient list "IT QA"
-				 ,SUBSTRING(g.GroupName, 3, 30) AS GroupName	
+				,SUBSTRING(T1.GroupName, 3, 30) AS GroupName
 				,b.transid    
 				,b.Username
 				,TransDate     
@@ -319,16 +309,37 @@ BEGIN
 		FROM	#tblRecoverBet t
 				INNER JOIN bettrans b WITH (NOLOCK) ON b.transid = t.transid
 				INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid = b.srecommend
-				INNER JOIN CTE_GroupInfo g ON t.custid = g.custid	
-		WHERE g.GroupName IS NOT NULL
-		ORDER BY g.GroupName, t.transid		
+				LEFT JOIN dbo.f_GetBetDaqCustomer(1) f
+					   ON t.custid = f.CustID
+				CROSS APPLY (SELECT CASE
+										WHEN f.CustID IS NULL
+											AND b.username <> '12EU'
+											AND t.IsDeposit = 0
+											AND t.mrecommend NOT IN (105181, 118473, 105183) -- MHC
+											AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet, 1E, 8RM
+											AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
+												THEN '0-Credit' --1. For Normal bets
+										WHEN t.recommend = 52466
+												THEN '1-8RM' ----2: For 8RM
+										WHEN f.CustID IS NULL -- Betdaq
+											AND b.username <> '12EU' 
+											AND t.IsDeposit = 1	
+											AND t.mrecommend NOT IN (105181, 118473, 105183)
+											AND t.recommend NOT IN (11196380, 13423967, 52466) -- Foobet: 11196380, 1E: 13423967, 8RM: 52466
+											AND t.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
+												THEN '2-Deposit' ----3. For Deposit bets
+										WHEN t.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) -- Betfair: BFOS, BF, ITibc102, BF3
+												THEN '3-BetFair' ----8: For Betfair
+										ELSE NULL
+									END AS GroupName) AS T1				
+		WHERE T1.GroupName IS NOT NULL
+		ORDER BY T1.GroupName, t.transid				
 
 		DELETE	z
 		FROM	dbo.zzzbettrans z WITH(ROWLOCK, UPDLOCK)
 			INNER JOIN #tblRecoverBet t  ON	z.custid = t.custid AND z.matchid = t.matchid AND z.transid = t.transid
-	
-		SELECT @LogData =	'NAP_BettransRecoverParlayBet_Main: Recover bet have transid: ' + @TransIds + ' IP: ' + @IP
-						
+			
+		SELECT @LogData = 'Recover Parlay bets having transid: IP=' + @Ip + ' ' + @TransIds				
 		EXEC WriteLog_UserLog 
 			 @UserId = @UserId,
 			 @Doing = @LogData 
