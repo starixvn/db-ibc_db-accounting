@@ -18,7 +18,7 @@ Revisions:
 	- 20160701@Robert: CWL - Phase 2 - Support RED and Yellow level - [Redmine: 57722]
 	- 20160802@Robert: CWL Phase 2 - Wrong Exchange Rate using in the email notification - [Redmine: 61839]
 	- 20160802@Robert: CWL Phase 2 - email notification Enhancement - [Redmine: 62253]
-
+	- 20161027@Robert: CWL Phase 3 - email notification Enhancement - [Redmine: 61220]
 	
 Param's Explanation:
 	• @ErrCode:
@@ -49,7 +49,8 @@ AS
                 wl.ModifiedDate,
                 wl.WinlostDate,
                 wl.LevelId,
-                l.LevelName
+                l.LevelName,
+				e.Rate AS ExchangeRate
          FROM WinLimit_CustGameMonitoring wl WITH (NOLOCK)
               INNER JOIN Customer c WITH (NOLOCK) ON c.custid = wl.CustID
               INNER JOIN Customer ag WITH (NOLOCK) ON ag.custid = c.recommend
