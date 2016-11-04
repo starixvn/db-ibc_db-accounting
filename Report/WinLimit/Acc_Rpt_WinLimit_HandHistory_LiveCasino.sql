@@ -17,7 +17,7 @@ AS
 		@CustID: Customer that reach Win Limit
 		@ReachedDate: date that user reach win limit
 
-	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustID = 18205717, @ReachedDate = '20161010' WITH RECOMPILE
+	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustID = 23946479, @ReachedDate = '20161026', @Bettype = 1103
 */
 BEGIN
 	SET NOCOUNT ON
@@ -44,7 +44,9 @@ BEGIN
 		CompanyTurnOver MONEY,
 		CompanyComm		MONEY,
 		CompanyNetIncome MONEY,
-		Result			NVARCHAR(100),
+		Betstatus		NVARCHAR(100),
+		Eventstatus		NVARCHAR(100),
+		Finalhomescore  INT,
 		H				MONEY,
 		S				MONEY,
 		M				MONEY,
@@ -83,7 +85,9 @@ BEGIN
 		, (1 - bg.tpositiontaking) * bg.stake			AS CompanyTurnOver
 		, bg.scomm					AS CompanyComm
 		, ((bg.stake - bg.winlost) * (1 - bg.tpositiontaking)) - bg.scomm AS CompanyNetIncome 
-		, m.betstatus				AS Result
+		, m.betstatus
+		, m.eventstatus
+		, m.finalhomescore	
 		, (1 - bg.tpositiontaking)	AS H
 		, bg.spositiontaking		AS S
 		, bg.mpositiontaking		AS M
@@ -127,7 +131,9 @@ BEGIN
 		CompanyTurnOver,
 		CompanyComm,
 		CompanyNetIncome,
-		Result,
+		Betstatus,
+		Eventstatus,
+		Finalhomescore,
 		H,
 		S,
 		M,

@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-CREATE PROCEDURE Acc_Rpt_WinLimit_MemberLastWL
+ALTER PROCEDURE Acc_Rpt_WinLimit_MemberLastWL
 	@ReachedDate	DATETIME,
 	@ProductID		VARCHAR(MAX) = '',
 	@Username		VARCHAR(MAX) = ''
@@ -55,30 +55,34 @@ BEGIN
 	
 	SELECT b.custid
 		, c.UserName
-		, b.winlostdate		AS WinLossDate
-		, s.BettypeName		AS Bettype
-		, b.CurrencyName	AS Currency
-		, b.transid			AS BetCount
-
-		, b.actual_stake	AS TotalBet
-		, (b.actual_stake - b.winlost) AS GameIncome
+		, b.winlostdate			AS WinLossDate
+		, s.BettypeName			AS Bettype
+		, b.CurrencyName		AS Currency
+		
+		, COUNT(b.transid)		AS BetCount
+		, SUM(b.actual_stake)	AS TotalBet
+		, SUM(b.actual_stake - b.winlost) AS GameIncome
 		, CASE 
-			WHEN b.actual_stake <= 0 THEN 0 
-			ELSE b.winlost/b.actual_stake 
-			END				AS GamePayout
-		, (1 - b.tpositiontaking) * b.stake AS CompanyTurnOver
-		, (b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) AS CompanyNetIncome		
+			WHEN SUM(b.actual_stake) <= 0 THEN 0 
+			ELSE SUM(b.winlost) * 100 / SUM(b.actual_stake)
+			END	AS GamePayout
+		, SUM((1 - b.tpositiontaking) * b.stake) AS CompanyTurnOver
+		, SUM(b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) AS CompanyNetIncome		
 
-		, (b.actual_stake * b.actualrate)	AS TotalBetsRM
-		, (b.actual_stake - b.winlost) * b.actualrate AS GameIncomeRM
-		, ((1 - b.tpositiontaking) * b.stake) * b.actualrate AS CompanyTurnOverRM
-		, (b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) * b.actualrate AS CompanyNetIncomeRM
+		, SUM(b.actual_stake * b.actualrate)	AS TotalBetsRM
+		, SUM((b.actual_stake - b.winlost) * b.actualrate) AS GameIncomeRM
+		, SUM((1 - b.tpositiontaking) * b.stake * b.actualrate) AS CompanyTurnOverRM
+		, SUM((b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) * b.actualrate) AS CompanyNetIncomeRM
 	FROM dbo.bettrans b (NOLOCK)
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		INNER JOIN @TmpCust c ON b.custid = c.CustID
 	WHERE b.statusID NOT IN (0, 1, 101, 102, 103) -- running, void, reject, refund				
 		AND CONVERT(VARCHAR(10), b.winlostdate, 111) = @ShortReachedDate 
-	
+	GROUP BY b.CustID, 
+			  c.UserName,
+			  b.winlostdate,	
+			  s.BettypeName,		  
+			  b.CurrencyName
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [bodbAdminNet]
