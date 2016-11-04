@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Sub]
 	@UserId				INT,	
 	@IP					VARCHAR(50),
 	@BetType			VARCHAR(20)		= 'All',
-	@MainTransIds		VARCHAR(4000)	= '',
+	@MainTransIds		VARCHAR(MAX)	= '',
 	@matchid			BIGINT,
 	
 	@SettledMainTranIds	VARCHAR(4000) OUTPUT,

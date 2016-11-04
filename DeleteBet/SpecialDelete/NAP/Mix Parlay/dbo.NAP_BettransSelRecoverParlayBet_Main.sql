@@ -7,7 +7,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[NAP_BettransSelRecoverParlayBet_Main] 
 	@BetType		VARCHAR(20) = 'all'
-	,@TransIds		VARCHAR(4000)	= ''
+	,@TransIds		VARCHAR(MAX)	= ''
 AS
 /*
 	Created: Kathy

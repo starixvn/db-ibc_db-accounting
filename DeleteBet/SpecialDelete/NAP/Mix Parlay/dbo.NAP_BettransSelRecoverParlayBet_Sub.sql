@@ -8,7 +8,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_BettransSelRecoverParlayBet_Sub] 
 	@BetType		VARCHAR(20) = 'all'
 	,@MatchId		BIGINT			= 0	
-	,@TransIds		VARCHAR(4000)	= ''
+	,@TransIds		VARCHAR(MAX)	= ''
 AS
 /*
 	Created: Kathy
