@@ -63,4 +63,7 @@ BEGIN
 	RETURN	
 END
 GO
-
+GRANT EXECUTE ON [dbo].[NAP_Settlement_InstantCalculation_PushScore] TO [Dot_Admin] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Settlement_InstantCalculation_PushScore] TO [vnteam] AS [dbo]
+GO
