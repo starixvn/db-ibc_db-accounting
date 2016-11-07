@@ -1,10 +1,17 @@
-USE [bodb02];
+IF EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType]')
+          AND type IN(N'P', N'PC')
+)
+    DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType];
 GO
-ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate SMALLDATETIME,
-                                                                 @EndDate   SMALLDATETIME,
-                                                                 @ProductId INT,
-                                                                 @SportType INT           = 0,
-                                                                 @IsLive    INT           = 2
+CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate SMALLDATETIME,
+                                                                  @EndDate   SMALLDATETIME,
+                                                                  @ProductId INT,
+                                                                  @SportType INT           = 0,
+                                                                  @IsLive    INT           = 2
 AS
 
 /*	
