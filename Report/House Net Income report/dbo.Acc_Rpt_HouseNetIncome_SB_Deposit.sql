@@ -83,7 +83,7 @@ BEGIN
 								ProductId			TINYINT,
 								BaseCurrency		INT)
 	INSERT INTO #DiscountGroup( DiscountGroupId, DiscountGroupType, FromAmount, ToAmount, Rate, PartyId, ProductId, BaseCurrency)
-	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductCodes = 'SB'
+	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductCodes = 'SB,BA'
 	-- End Region: HAIFA
 
 	CREATE	TABLE #TempDataSB (
@@ -371,7 +371,6 @@ SET QUOTED_IDENTIFIER OFF
 GO
 SET ANSI_NULLS ON 
 GO
-
 
 GO 
  GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_HouseNetIncome_SB_Deposit] TO [vnteam]

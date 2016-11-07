@@ -1,10 +1,10 @@
 USE bodb02
 GO
 
-CREATE PROCEDURE Acc_Rpt_HouseNetIncome_DiscountInWinLoss
-	@FromDate DATE,
-	@ToDate	DATE,
-	@ProductID INT
+ALTER PROCEDURE Acc_Rpt_HouseNetIncome_DiscountInWinLoss
+	@FromDate		DATE,
+	@ToDate			DATE,
+	@ProductCodes	VARCHAR(100)
 AS 
 /*
 	Created:	Harper@20161024
@@ -19,6 +19,13 @@ BEGIN
 		
 	DECLARE @FDate DATE, @TDate DATE
 	SELECT @FDate = @FromDate, @TDate = @ToDate
+
+	DECLARE @ProductList TABLE (ProductID INT, ProductCode VARCHAR(10))
+
+	INSERT INTO @ProductList (ProductID, ProductCode)
+	SELECT CASE WHEN pl.val = 'SB' THEN 0 ELSE p.Productid END ProductID, val
+	FROM dbo.Lrf_f_StringSplit(@ProductCodes, ',') pl
+		LEFT JOIN bodb_licensee.dbo.Product3rd p WITH (NOLOCK) ON p.ProductPrefix = pl.val
 
 	CREATE	TABLE #Exchange	(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
 
@@ -69,14 +76,8 @@ BEGIN
 		FROM	#DiscountGroupHeader dg 
 				INNER JOIN bodb_Licensee.dbo.LA_DiscountGroupDetail dgd (NOLOCK) ON dg.DiscountGroupId = dgd.DiscountGroupId
 				INNER JOIN bodb_Licensee.dbo.LA_DiscountGroupProduct dgp (NOLOCK) ON dg.DiscountGroupId = dgp.DiscountGroupId
-		WHERE	dgp.ProductId = @ProductID
-	)
-	
-	UPDATE d SET
-		d.FromAmount = d.FromAmount * e.Rate,
-		d.ToAmount = d.ToAmount * e.Rate
-	FROM #DiscountGroup d
-		INNER JOIN #Exchange e ON e.ExchangeDate = @TDate AND d.BaseCurrency = e.ExchangeID
+				INNER JOIN @ProductList p ON dgp.ProductId = p.ProductID
+	)	
 
 	SELECT DiscountGroupId, 
 		DiscountGroupType, 
@@ -93,3 +94,9 @@ BEGIN
 	DROP TABLE #DiscountGroupHeader
 END
 GO
+
+GO 
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_HouseNetIncome_DiscountInWinLoss] TO [vnteam]
+GO 
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_DiscountInWinLoss] TO [bodbAdminNet]
+GO 
