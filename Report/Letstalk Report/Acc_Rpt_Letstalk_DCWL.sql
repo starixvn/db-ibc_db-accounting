@@ -1,5 +1,9 @@
-Use BODB02
-GO 
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Acc_Rpt_Letstalk_DCWL    Script Date: 11/8/2016 3:28:07 PM ******/
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_Letstalk_DCWL]
 	@WinlostDate	DATETIME
@@ -642,12 +646,32 @@ DECLARE
 --FROM    #Result 
 --ORDER BY ReportBy
   
+  
+		DECLARE @ProductData AS TABLE (ProductID INT,  ProductName Varchar(50), Betfrom  Varchar(50) )
+		INSERT INTO @ProductData 
+
+		SELECT  P.ProductId, 
+				CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END AS ProductName, 
+				A.BetFrom
+		FROM dbo.Products P WITH (NOLOCK) 
+		CROSS APPLY 
+		(	SELECT 'Mobile' AS BetFrom
+			UNION ALL
+			SELECT 'Desktop' AS BetFrom
+		) A
+		WHERE P.ProductID IN (4,6)
 
 
 
 		CREATE TABLE  #ResultData (ProductId INT, ProductName Varchar(50), Betfrom  Varchar(50), CompanyTurnoverBase MONEY, CompanyNetIncomeBase MONEY )
-
 		INSERT INTO #ResultData
+		SELECT	P.ProductId, P.ProductName, 
+				CASE WHEN A.BetFrom IS NULL THEN P.Betfrom ELSE A.BetFrom END AS BetFrom, 
+				CASE WHEN A.BetFrom IS NULL THEN 0 ELSE A.CompanyTurnoverBase END AS CompanyTurnoverBase, 
+				CASE WHEN A.BetFrom IS NULL THEN 0 ELSE A.CompanyNetIncomeBase END AS CompanyNetIncomeBase  
+		FROM	@ProductData P 
+		LEFT  JOIN 
+		(
 		SELECT  D.ProductId, 
 				CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END AS ProductName, 
 				CASE WHEN BetFrom IN ('i','d','e','a','u','j') THEN 'Desktop' ELSE 'Mobile' END  As BetFrom,  
@@ -655,13 +679,13 @@ DECLARE
 				SUM (CompanyGrossIncomeBase) + SUM (CompanyCommBase) AS CompanyNetIncomeBase
 		FROM	#Data D
 			INNER JOIN dbo.Products P WITH (NOLOCK) ON P.ProductID = D.ProductID
-		WHERE BetFrom IN ('i','d','e','a','u','j',
-						'p','h','n','s','l','w','m') 
-		GROUP BY D.ProductId, CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END, 
+		WHERE BetFrom IN ('i','d','e','a','u','j','p','h','n','s','l','w','m') 
+		GROUP BY D.ProductId, 				
 				CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END,  
-				CASE WHEN BetFrom IN ('i','d','e','a','u','j') THEN 'Desktop' ELSE 'Mobile' END 
-
-
+				CASE WHEN BetFrom IN ('i','d','e','a','u','j') THEN 'Desktop' ELSE 'Mobile' END ) A
+				
+			ON A.ProductID = P.ProductID AND A.BetFrom = P.Betfrom
+		 
 
 		SELECT  ProductId, ProductName, IndicatorName,
 				CASE WHEN betfrom = 'SUM' and  indicatorname = 'Winloss' THEN 'HWL'  ELSE CASE WHEN betfrom = 'SUM' and  indicatorname = 'Turnover' THEN 'TO' ELSE betfrom END END as IndicatorKey,
@@ -740,7 +764,15 @@ DECLARE
 
 
 END 
+
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
 GO 
- 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_Letstalk_DCWL] TO [bodbAdminNet]
+ GRANT EXECUTE ON [dbo].[Acc_Rpt_Letstalk_DCWL] TO [bodbAdminNet]
 GO 
