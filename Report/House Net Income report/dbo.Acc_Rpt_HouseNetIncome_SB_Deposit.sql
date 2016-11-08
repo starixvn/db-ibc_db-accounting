@@ -104,7 +104,7 @@ BEGIN
 				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
 				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
 				p.ProductId,
-				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate * (1 - ISNULL(d.Rate, 0)),
+				SUM(-ISNULL(b.MemberWL, 0) * p.Rate) * e.Rate,
 				1 AS IsApplyMinFee,
 				SUM(-ISNULL(b.MemberWL, 0)) * ISNULL(d.Rate, 0) * e.Rate 
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
