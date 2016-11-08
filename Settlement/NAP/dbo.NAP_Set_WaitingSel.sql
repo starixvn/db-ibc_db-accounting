@@ -86,7 +86,7 @@ BEGIN
 		CROSS APPLY (
 			SELECT	TOP 1 r.matchid
 					,MIN(CASE WHEN c.groupId = 8 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS SettlementStatusID
-					,MIN(CASE WHEN c.groupId = 9 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS FM_SettlementStatusID
+					,MIN(CASE WHEN c.groupId = 9 AND r.ResourceId % 100 = 0 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS FM_SettlementStatusID
 			FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
 				INNER JOIN cteAutoResultDetail c
 					ON	r.ResourceId LIKE c.ResourceId

@@ -27,6 +27,7 @@ BEGIN
 	
 	DECLARE @xmlData XML
 			,@ResultStatus TINYINT
+			,@id INT
 			
 	SET @xmlData = CONVERT(XML, @Results)
 	SET @ResultStatus = CASE 
@@ -38,7 +39,8 @@ BEGIN
 						END	
 	
 	DECLARE @tblResults TABLE (
-		ResourceId				VARCHAR(20) -- 22X00
+		Id						INT IDENTITY (1,1)
+		,ResourceId				VARCHAR(20) -- 22X00
 		,ResourceId_BetOption	VARCHAR(20) -- 22X01
 		,position				TINYINT
 		,betOption				TINYINT
@@ -56,6 +58,8 @@ BEGIN
 			,Position
 			,betOption
 	FROM	TmpData
+	
+	SET @id = @@rowcount
 		
 	-- result status
 	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, HomeValue, AwayValue, CreateBy, CreateDate, LastModifyBy, LastModifyDate)
@@ -71,40 +75,47 @@ BEGIN
 	WHERE	NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(NOLOCK) WHERE MatchId = @matchid AND t.ResourceId_BetOption = ResourceId)
 	GROUP BY t.ResourceId_BetOption
 	
-	UPDATE	r
-		SET	HomeValue = CASE 
-							WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.HomeValue, t.Position, @ResultStatus)) 
-							ELSE HomeValue 
-						END
-			,AwayValue =CASE 
-							WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.AwayValue, t.Position - 45, @ResultStatus)) 
-							ELSE AwayValue 
-						END
-			,LastModifyBy = @AdminId
-			,LastModifyDate = GETDATE()
-	FROM	dbo.ResultDetail r WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN @tblResults t
-			ON	r.MatchId = @matchid
-				AND r.ResourceId = t.ResourceId
-				
-	IF @Action IN ('CAL', 'UNDO')
-	BEGIN
+	WHILE (@id > 0)
+	BEGIN 
 		UPDATE	r
-			SET	HomeValue = CASE
-								WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.HomeValue, t.Position, t.betOption))
-								ELSE HomeValue
+			SET	HomeValue = CASE 
+								WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.HomeValue, t.Position, @ResultStatus)) 
+								ELSE HomeValue 
 							END
-				,AwayValue = CASE
-								WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.AwayValue, t.Position - 45, t.betOption))
-								ELSE HomeValue
+				,AwayValue =CASE 
+								WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.AwayValue, t.Position - 45, @ResultStatus)) 
+								ELSE AwayValue 
 							END
 				,LastModifyBy = @AdminId
 				,LastModifyDate = GETDATE()
 		FROM	dbo.ResultDetail r WITH(ROWLOCK, UPDLOCK)
 			INNER JOIN @tblResults t
-				ON r.MatchId = @matchid
-					AND r.ResourceId = t.ResourceId_BetOption
-	END
+				ON	r.MatchId = @matchid
+					AND r.ResourceId = t.ResourceId
+					AND t.Id = @id
+		
+		IF @Action IN ('CAL', 'UNDO')
+		BEGIN
+			UPDATE	r
+				SET	HomeValue = CASE
+									WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.HomeValue, t.Position, t.betOption))
+									ELSE HomeValue
+								END
+					,AwayValue = CASE
+									WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.AwayValue, t.Position - 45, t.betOption))
+									ELSE r.AwayValue
+								END
+					,LastModifyBy = @AdminId
+					,LastModifyDate = GETDATE()
+			FROM	dbo.ResultDetail r WITH(ROWLOCK, UPDLOCK)
+				INNER JOIN @tblResults t
+					ON r.MatchId = @matchid
+						AND r.ResourceId = t.ResourceId_BetOption
+						AND t.Id = @id
+		END
+		
+		SET @id = @id - 1
+	END			
 END
 
 GO

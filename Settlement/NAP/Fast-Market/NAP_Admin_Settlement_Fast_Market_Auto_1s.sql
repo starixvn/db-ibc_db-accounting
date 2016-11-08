@@ -150,7 +150,7 @@ BEGIN
 		
 		IF @rowcount > 0
 		BEGIN
-			EXEC dbo.NAP_Admin_Calculate_Main_xtest @matchid = @matchid
+			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action = 'CAL-FM'
 				,@mode = @Action
 				,@XmlData = @Results
