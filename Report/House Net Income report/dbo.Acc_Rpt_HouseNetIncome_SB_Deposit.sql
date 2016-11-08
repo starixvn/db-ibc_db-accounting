@@ -117,7 +117,7 @@ BEGIN
 		WHERE	b.rptDate BETWEEN @FDate AND @TDate
 				AND b.CurrencyID <> 20
 				AND b.customercategory NOT IN (27, 28)
-				AND b.Bettype NOT IN (901,902,903)
+				AND b.Bettype NOT IN (901,902,903,904)
 				AND b.StatusId NOT IN (-1, 103) -- Exclude Reject , Void, Refund
 		GROUP BY b.rptdate, b.SiteId, p.PartyId,b.CurrencyID, p.ProductId, e.Rate, d.Rate
 	)
