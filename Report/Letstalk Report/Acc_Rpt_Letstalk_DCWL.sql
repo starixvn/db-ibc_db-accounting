@@ -675,7 +675,7 @@ DECLARE
 		SELECT  D.ProductId, 
 				CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END AS ProductName, 
 				CASE WHEN BetFrom IN ('i','d','e','a','u','j') THEN 'Desktop' ELSE 'Mobile' END  As BetFrom,  
-				SUM (CompanyTurnoverBase) AS CompanyTurnoverBase , 
+				SUM (TotalBetsBase) AS CompanyTurnoverBase , 
 				SUM (CompanyGrossIncomeBase) + SUM (CompanyCommBase) AS CompanyNetIncomeBase
 		FROM	#Data D
 			INNER JOIN dbo.Products P WITH (NOLOCK) ON P.ProductID = D.ProductID
