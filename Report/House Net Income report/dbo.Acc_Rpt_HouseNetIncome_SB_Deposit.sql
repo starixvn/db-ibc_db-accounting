@@ -165,7 +165,7 @@ BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, DiscountWL, MinFee, BAComm, PayToMuayThai, PayToMetricGaming)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
 			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataSB WHERE ProductId IN (0, 3) AND rptDate = @tmpDate), -- LicenseeWL + BA Winloss
-			(SELECT ISNULL(SUM(DiscountAmount), 0) FROM #TempDataSB WHERE ProductId IN (0, 3) AND rptDate = @tmpDate),
+			(SELECT -ISNULL(SUM(DiscountAmount), 0) FROM #TempDataSB WHERE ProductId = 0 AND rptDate = @tmpDate),
 			0 AS MinFee,
 			(SELECT ISNULL(-SUM(AComm), 0) FROM #TempDataSB WHERE ProductId = 3 AND rptDate = @tmpDate), -- BA Commission
 			0, 0

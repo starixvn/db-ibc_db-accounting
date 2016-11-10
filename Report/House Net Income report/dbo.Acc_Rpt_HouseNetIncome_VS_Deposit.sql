@@ -169,7 +169,7 @@ BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, DiscountWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
 			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataVS WHERE ProductId = 5 AND rptDate = @tmpDate), -- LicenseeWL
-			(SELECT ISNULL(SUM(DiscountAmount), 0) FROM #TempDataVS WHERE ProductId = 5 AND rptDate = @tmpDate), -- DiscountWL
+			(SELECT -ISNULL(SUM(DiscountAmount), 0) FROM #TempDataVS WHERE ProductId = 5 AND rptDate = @tmpDate), -- DiscountWL
 			(SELECT ISNULL(SUM(Amount), 0) FROM @DailyPayAmt WHERE rptDate = @tmpDate)
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)

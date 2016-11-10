@@ -1,7 +1,7 @@
 USE bodb02
 GO
 
-ALTER PROCEDURE Acc_Rpt_HouseNetIncome_DiscountInWinLoss
+CREATE PROCEDURE Acc_Rpt_HouseNetIncome_DiscountInWinLoss
 	@FromDate		DATE,
 	@ToDate			DATE,
 	@ProductCodes	VARCHAR(100)
