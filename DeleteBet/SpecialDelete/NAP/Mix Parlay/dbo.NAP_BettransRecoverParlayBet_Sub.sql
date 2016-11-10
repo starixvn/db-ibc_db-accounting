@@ -553,7 +553,9 @@ BEGIN
 	------ release Parlay procesee	
 	EXEC [dbo].[NAP_Admin_CheckingProcess]
 			@IsExistParlay = 1			
-		  , @IsReleased	= 1		  
+		  , @IsReleased	= 1	
+		  
+	DROP TABLE #t		  	  
 		
 	RETURN;							
 END

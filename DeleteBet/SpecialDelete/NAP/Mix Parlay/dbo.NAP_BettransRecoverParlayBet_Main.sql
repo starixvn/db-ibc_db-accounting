@@ -72,6 +72,38 @@ BEGIN
 	DECLARE @tblBeforeBalance	TABLE (custid INT, balance MONEY)
 	DECLARE @tblAfterBalance	TABLE (custid INT, balance MONEY)
 	
+	SELECT	1 AS IsITSupport -- Recover real tickets by IT ==> Send mail with recipient list "IT Support"
+			,1 AS IsCSD --Recover real tickets => send mail to CSD , Recover UUS tickets by CSD: send mail CSD
+			,1 AS IsITQA -- Recover UUS tickets by IT => Send mail with recipient list "IT QA"
+			,'' AS GroupName
+			,b.transid    
+			,b.Username
+			,TransDate     
+			,BetType    
+			,b.Refno     
+			,Status     
+			,WinLost    
+			,betid      
+			,BetTeam    
+			,livehomescore    
+			,liveawayscore    
+			,Stake     
+			,Odds     
+			,hdp1     
+			,hdp2     
+			,NULL AS homeid      
+			,NULL AS awayid      
+			,NULL AS sporttype     
+			,NULL AS leagueid     
+			,betcheck    
+			,transdesc   
+			,'' AS BetFrom
+			,GETDATE() AS [DateTime] 
+				INTO #t
+	FROM	#tblRecoverBet t
+			INNER JOIN bettrans b WITH (NOLOCK) ON b.transid = t.transid
+	WHERE 1 = 0
+	
 	--- Check for concurrent running
 	EXEC [dbo].[NAP_Admin_CheckingProcess]
 			@IsExistParlay = 1			
@@ -80,8 +112,13 @@ BEGIN
 		  , @ErrCode = @ErrCode OUTPUT
 		  , @ErrMsg	= @ErrMsg OUTPUT
 	
-	IF (@ErrCode <> 0 OR @avaiableProcess = 0)					 
+	IF (@ErrCode <> 0 OR @avaiableProcess = 0)
+	BEGIN					 
+		SELECT * FROM #t
+		DROP TABLE #t
+		
 		RETURN		
+	END
 	
 	BEGIN TRY
 		--Transid which user input
@@ -110,6 +147,7 @@ BEGIN
 			INNER JOIN bettrans b WITH(NOLOCK) ON s.transid = b.transid
 		WHERE b.matchid = 29 AND b.bettype = 29
 			AND b.winlostdate >= @before_yesterday
+			AND b.statusid = 102
 			AND CASE
 					WHEN @BetType = 'all' THEN 1
 					WHEN @BetType = 'Mix Parlay' THEN CASE WHEN b.betteam = 1 THEN 1 ELSE 0 END
@@ -125,6 +163,10 @@ BEGIN
 				  , @IsReleased	= 1			  			
 			
 			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+			
+			SELECT * FROM #t
+			DROP TABLE #t
+		
 			RETURN
 		END
 	
@@ -352,6 +394,10 @@ BEGIN
 	
 		SELECT @ErrCode = 100,
 				@ErrMsg = 'Unable to recover these parlay bets'
+				
+		SELECT * FROM #t
+		DROP TABLE #t
+						
 		RETURN
 	END CATCH
 
@@ -359,6 +405,7 @@ BEGIN
 	EXEC [dbo].[NAP_Admin_CheckingProcess]
 			@IsExistParlay = 1			
 		  , @IsReleased	= 1	
-
+	
+	DROP TABLE #t
 END
 
