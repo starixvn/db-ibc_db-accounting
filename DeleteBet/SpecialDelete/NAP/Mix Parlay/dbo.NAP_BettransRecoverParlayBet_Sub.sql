@@ -102,7 +102,46 @@ BEGIN
 	
 	DECLARE @tblDebitPending TVP_BalanceList
 	
-	DECLARE @tblCreditPending TVP_BalanceList		
+	DECLARE @tblCreditPending TVP_BalanceList
+		
+	SELECT	t.SubTransID     
+			 ,t.SubBetCheck  
+			 ,t.SubOdds      
+			 ,t.SubBetTeam  
+			 ,t.SubBetType     
+			 ,t.SubHdp1       
+			 ,t.SubHdp2 
+			 ,t.SubTransDesc 
+			 ,t.SubLivehomescore   
+			 ,t.SubLiveawayscore 
+			 ,t.SubLiveindicator
+			 ,t.SubHomeID
+			 ,t.SubAwayID
+			 ,t.SubSportType 
+			 ,t.SubLeagueID     			 
+			 ,'' AS GroupName			 
+			 ,t.transid    
+			 ,t.UserName    
+			 ,t.TransDate     
+			 ,t.BetType    
+			 ,t.Refno     
+			 ,t.[Status]     
+			 ,t.WinLost    
+			 ,t.betid     
+			 ,t.BetTeam    			 
+			 ,t.Stake     
+			 ,t.Odds     			   
+			 ,t.hdp1     
+			 ,t.hdp2			     
+			 ,t.betcheck    			   
+			 ,CAST(1 AS BIT) AS IsCsd
+			 ,CAST(1 AS BIT) AS IsItQa
+			 ,CAST(1 AS BIT) AS IsItSupport
+			 ,t.betfrom AS BetFrom
+			 ,CURRENT_TIMESTAMP AS [DateTime]
+				INTO #t
+	FROM @tblRecoverBet t
+	WHERE 1 = 0		
 	
 	SELECT @before_yesterday = CONVERT(VARCHAR(10), DATEADD(day, - @beforeDaysNum, GETDATE()), 120)
 		  ,@ErrCode = 0
@@ -116,6 +155,10 @@ BEGIN
 	IF @@ROWCOUNT = 0
 	BEGIN		
 		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		
+		SELECT * FROM #t
+		DROP TABLE #t
+		
 		RETURN
 	END		  
 		  
@@ -127,8 +170,13 @@ BEGIN
 		  , @ErrCode = @ErrCode OUTPUT
 		  , @ErrMsg	= @ErrMsg OUTPUT
 	
-	IF (@ErrCode <> 0 OR @avaiableProcess = 0)					 
-		RETURN		  
+	IF (@ErrCode <> 0 OR @avaiableProcess = 0)
+	BEGIN	
+		SELECT * FROM #t
+		DROP TABLE #t
+					 
+		RETURN		 
+	END 
 	
 	BEGIN TRY									
 		--> query all sub tickets to recover
@@ -239,6 +287,10 @@ BEGIN
 			  , @IsReleased	= 1			  			
 			
 			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+			
+			SELECT * FROM #t
+			DROP TABLE #t
+		
 			RETURN
 		END										
 	
@@ -491,6 +543,10 @@ BEGIN
 	
 		SELECT @ErrCode = 100,
 				@ErrMsg = 'Unable to recover these parlay bets'
+				
+		SELECT * FROM #t
+		DROP TABLE #t
+							
 		RETURN				
 	END CATCH									  			
 			
