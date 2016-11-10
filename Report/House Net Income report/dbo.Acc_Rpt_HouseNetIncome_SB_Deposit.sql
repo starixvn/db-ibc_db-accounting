@@ -83,7 +83,7 @@ BEGIN
 								ProductId			TINYINT,
 								BaseCurrency		INT)
 	INSERT INTO #DiscountGroup( DiscountGroupId, DiscountGroupType, FromAmount, ToAmount, Rate, PartyId, ProductId, BaseCurrency)
-	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductCodes = 'SB,BA'
+	EXEC Acc_Rpt_HouseNetIncome_DiscountInWinLoss @FromDate = @FDate, @ToDate = @TDate, @ProductCodes = 'SB'
 	-- End Region: HAIFA
 
 	CREATE	TABLE #TempDataSB (
