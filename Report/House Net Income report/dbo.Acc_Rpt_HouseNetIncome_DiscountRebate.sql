@@ -1,5 +1,6 @@
 USE bodb02
 GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_DiscountRebate]
 	@FromDate DATE,
 	@ToDate	DATE
@@ -241,6 +242,7 @@ BEGIN
 	DROP TABLE #DiscountGroup
 	DROP TABLE #FeeData
 	DROP TABLE #RebateDiscount
+	DROP TABLE #TempDataWL
 END
 GO
 

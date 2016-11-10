@@ -1,3 +1,6 @@
+USE bodb02
+GO
+
 ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_LicenseeFee]
 	@FromDate DATE,
 	@ToDate	DATE,
