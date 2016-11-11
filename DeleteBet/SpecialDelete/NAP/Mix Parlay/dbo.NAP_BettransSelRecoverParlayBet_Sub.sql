@@ -239,7 +239,7 @@ BEGIN
 						  FROM @tblRecoverBet 
 						  WHERE transid = t.transid)
 	)
-	SELECT t.transid
+	SELECT t.transid AS InvalidTrans
 		 , CASE
 				WHEN b.transid IS NOT NULL
 					 AND bm.transid IS NOT NULL
