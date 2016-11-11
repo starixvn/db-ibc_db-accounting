@@ -57,7 +57,10 @@ BEGIN
 								END
 								
 	--check concurrency users
-	IF @AutoSetting = @AutoSetting_Old
+	IF (
+		@AutoSetting = @AutoSetting_Old
+		OR @AutoType = 2 --disable for updating instant setting temporary
+	)
 	BEGIN
 		RETURN
 	END
