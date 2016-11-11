@@ -11,7 +11,7 @@ ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Main]
 	@UserId					INT, 
 	@IP						VARCHAR(50),
 
-	@SettledMainTranIds		VARCHAR(4000)	= ''	OUTPUT,
+	@SettledMainTranIds		VARCHAR(MAX)	= ''	OUTPUT,
 	@NegativeBalanceUsers	VARCHAR(4000)	= ''	OUTPUT,
 	@ErrCode				INT				= 0		OUTPUT,
 	@ErrMsg					VARCHAR(300)	= ''	OUTPUT
@@ -23,6 +23,7 @@ AS
 
 	Revisions: 		
 		- 20161104@Kent: Correct logic for GroupName [Redmine:#65531]
+		- 20161111@Kent: Correct WinLost when for returned table [Redmine:#65531]
 	Example: 
 		DECLARE @ErrCode INT, @ErrMsg VARCHAR(300)
 		EXEC NAP_BettransRecoverParlayBet_Main @BetType = 'All', @TransIds = '10094287060761,10094287060762,10094287060763,10094287060764', @UserID = 8, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
@@ -331,7 +332,7 @@ BEGIN
 				,BetType    
 				,b.Refno     
 				,Status     
-				,WinLost    
+				,WinLost - stake AS WinLost    
 				,betid      
 				,BetTeam    
 				,livehomescore    

@@ -10,8 +10,8 @@ ALTER PROCEDURE [dbo].[NAP_BettransSelRecoverParlayBet_Main]
 	,@TransIds		VARCHAR(MAX)	= ''
 AS
 /*
-	Created: Kathy
-	Date: 20131022
+	Created: Kent
+	Date: 20161111
 	DB: DBTXN/bodb02
 
 	Revisions: 		

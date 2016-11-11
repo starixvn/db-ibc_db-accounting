@@ -12,36 +12,46 @@ ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Sub]
 	@MainTransIds		VARCHAR(MAX)	= '',
 	@matchid			BIGINT,
 	
-	@SettledMainTranIds	VARCHAR(4000) OUTPUT,
+	@SettledMainTranIds	VARCHAR(MAX) OUTPUT,
 	@NegativeBalanceUsers VARCHAR(4000) OUTPUT,
 	@ErrCode			INT	OUTPUT,
 	@ErrMsg				NVARCHAR(200) OUTPUT
 AS
 /*
 	Created: Kent
-	Date: 20161019
+	Date: 20161111
 	DB: DBTXN/bodb02
 
 	Revisions: 		
 		- 20161019@Kent: Recover sub voided Parlay tickets [Redmine:#65531]
+	
+	Param's Explanation:			
+			- @BetType:
+			'all': All
+			'Mix Parlay': Mix Parlay
+			'System Parlay': System Parlay
 */
 BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE @beforeDaysNum INT = 2
+		  , @RecoverPatchSize INT = 100
 	
 	DECLARE @before_yesterday	DATETIME		   
 		   ,@MatchDate			DATETIME
 		   ,@transids_29		VARCHAR(MAX) = ''
 		   ,@refnos_29			VARCHAR(MAX) = ''
 		   ,@LogData			NVARCHAR(500)
-		   ,@SubTransIds		VARCHAR(4000) = ''
+		   ,@SubTransIds		VARCHAR(MAX) = ''
 		   ,@CustIds			VARCHAR(4000) = ''
 		   ,@AvaiableProcess	BIT
 		   ,@UserIDNotInITGroup BIT
+		   ,@RowNumber			BIGINT
 	
 	DECLARE @tblRecoverBet TABLE (
-		SubTransID				BIGINT		 
+		 RowNumber				BIGINT IDENTITY(1, 1) PRIMARY KEY
+		 
+		,SubTransID				BIGINT		 
 		,SubBetCheck			NVARCHAR(50)
 		,SubOdds				MONEY   
 		,SubBetTeam				NVARCHAR(20)  
@@ -326,20 +336,31 @@ BEGIN
 				  
 		--> Do recover
 		-- for bettransM
-		SELECT @SubTransIds = @SubTransIds + 
-							  CASE WHEN @SubTransIds <> '' THEN ',' ELSE '' END +
-							  CONVERT(VARCHAR(20), SubTransID)
-		FROM @tblRecoverBet
-		
-		EXEC dbo.NAP_Admin_Calculate_MP_broker
-			@matchid = @matchid
-			,@matchdate = @MatchDate
-			,@mode = 'RECOVER' -- update bettransM + BetParlayDetail
-			,@VoidTransID = @SubTransIds				
+		SET @RowNumber = 0
+		WHILE (1 = 1)
+		BEGIN
+			SET @SubTransIds = ''
+			SELECT @SubTransIds = @SubTransIds + 
+								  CASE WHEN @SubTransIds <> '' THEN ',' ELSE '' END +
+								  CONVERT(VARCHAR(20), SubTransID)
+			FROM @tblRecoverBet
+			WHERE RowNumber BETWEEN (@RowNumber + 1) AND (@RowNumber + @RecoverPatchSize)						
+			
+			IF @SubTransIds = ''
+				BREAK
+			
+			EXEC dbo.NAP_Admin_Calculate_MP_broker
+				@matchid = @matchid
+				,@matchdate = @MatchDate
+				,@mode = 'RECOVER' -- update bettransM + BetParlayDetail
+				,@VoidTransID = @SubTransIds
+				
+			SET @RowNumber = @RowNumber + @RecoverPatchSize				
+		END				
 		
 		SELECT @transids_29 = @transids_29 + CONVERT(VARCHAR(20), transid) + ','
 			 , @refnos_29 = @refnos_29 + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid) + ','
-		FROM #tblMainTicket
+		FROM #tblMainTicket				
 			
 		-- call pre-cal: betparlaydetail/betparlayresult		
 		EXEC dbo.NAP_Admin_Calculate_MP_broker 

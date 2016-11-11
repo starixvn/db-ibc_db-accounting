@@ -11,7 +11,7 @@ ALTER PROCEDURE [dbo].[NAP_CustNegativeBalance_Sel]
 AS
 /*
 	Created: Kent
-	Date: 20161026
+	Date: 20161111
 	DB: DBTXN/bodb02
 
 	Revisions: 		
