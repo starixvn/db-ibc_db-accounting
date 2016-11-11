@@ -12,7 +12,7 @@ ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Main]
 	@IP						VARCHAR(50),
 
 	@SettledMainTranIds		VARCHAR(MAX)	= ''	OUTPUT,
-	@NegativeBalanceUsers	VARCHAR(4000)	= ''	OUTPUT,
+	@NegativeBalanceUsers	VARCHAR(MAX)	= ''	OUTPUT,
 	@ErrCode				INT				= 0		OUTPUT,
 	@ErrMsg					VARCHAR(300)	= ''	OUTPUT
 AS

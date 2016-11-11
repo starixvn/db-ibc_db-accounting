@@ -13,7 +13,7 @@ ALTER PROCEDURE [dbo].[NAP_BettransRecoverParlayBet_Sub]
 	@matchid			BIGINT,
 	
 	@SettledMainTranIds	VARCHAR(MAX) OUTPUT,
-	@NegativeBalanceUsers VARCHAR(4000) OUTPUT,
+	@NegativeBalanceUsers VARCHAR(MAX) OUTPUT,
 	@ErrCode			INT	OUTPUT,
 	@ErrMsg				NVARCHAR(200) OUTPUT
 AS
@@ -43,7 +43,7 @@ BEGIN
 		   ,@refnos_29			VARCHAR(MAX) = ''
 		   ,@LogData			NVARCHAR(500)
 		   ,@SubTransIds		VARCHAR(MAX) = ''
-		   ,@CustIds			VARCHAR(4000) = ''
+		   ,@CustIds			VARCHAR(MAX) = ''
 		   ,@AvaiableProcess	BIT
 		   ,@UserIDNotInITGroup BIT
 		   ,@RowNumber			BIGINT

@@ -6,8 +6,8 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[NAP_CustNegativeBalance_Sel] 	
-	@CustIds			  VARCHAR(4000)	= '',
-    @NegativeBalanceUsers VARCHAR(4000) OUTPUT
+	@CustIds			  VARCHAR(MAX)	= '',
+    @NegativeBalanceUsers VARCHAR(MAX) OUTPUT
 AS
 /*
 	Created: Kent
