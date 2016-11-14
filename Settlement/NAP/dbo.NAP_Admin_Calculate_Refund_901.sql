@@ -15,6 +15,7 @@ AS
 		
 		Revisions:
 			- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
+			- 20161108@Kathy: Settlement for new server [Redmine:#66849]
 		
 		Parameter's Explanation:
 	*/
@@ -144,7 +145,7 @@ BEGIN
 	END
 	
 	--BEGIN: Cancel BetTradeSelling/BetTradeSellingCancelled ON DBTXN
-	IF @@SERVERNAME IN ('DBTRANS','DB06','DBTP','DB230','DB232','DB206','DB234')
+	IF @@SERVERNAME IN ('DBTRANS','DB06','DBTP','DB230','DB232','DB206','DB234', 'SITDB06', 'DBLicAPI', 'SITDBLicAPI')
 	BEGIN		
 		UPDATE b
 		SET Remark = 'SB refund ticket',
