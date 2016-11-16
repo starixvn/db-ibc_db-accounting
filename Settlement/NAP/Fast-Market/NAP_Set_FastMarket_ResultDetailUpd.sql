@@ -56,7 +56,7 @@ BEGIN
 	SELECT	CAST(bettype * 100 AS VARCHAR(20)) ResourceId -- 22X00
 			,CAST(bettype * 100 + 1 AS VARCHAR(20)) ResourceId -- 22X01
 			,Position
-			,betOption
+			,ISNULL(betOption,0)
 	FROM	TmpData
 	
 	SET @id = @@rowcount
@@ -94,7 +94,7 @@ BEGIN
 					AND r.ResourceId = t.ResourceId
 					AND t.Id = @id
 		
-		IF @Action IN ('CAL', 'UNDO')
+		IF @Action IN ('CAL', 'UNDO') AND @IsAuto = 0
 		BEGIN
 			UPDATE	r
 				SET	HomeValue = CASE

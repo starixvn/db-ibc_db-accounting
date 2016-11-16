@@ -1,6 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s_Push]    Script Date: 10/25/2016 14:10:22 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -26,7 +25,7 @@ AS
 	Revisions:
 
 	Param's Explanation:
-		- @ResultList = '<BetTypes>
+		- @Result = '<BetTypes>
 							<BetType Id="">
 								<Item Position="" Result="" />
 								<Item Position="" Result="" />
@@ -45,9 +44,11 @@ BEGIN
 			,@xmlData		XML
 	
 	DECLARE @tblResultDetail TABLE (
-		bettype		SMALLINT
-		,ResourceId	VARCHAR(20)
-		,Position	TINYINT
+		bettype					SMALLINT
+		,ResourceId				VARCHAR(20)
+		,ResourceId_BetOption	VARCHAR(20)
+		,Position				TINYINT
+		,BetOption				TINYINT
 	)
 	 
 	SELECT	@matchcode = m.matchcode
@@ -79,32 +80,25 @@ BEGIN
 		
 		RETURN
 	END
-
-	SET @Results = REPLACE(
-						REPLACE(
-							REPLACE(
-								REPLACE(
-									REPLACE(@Results, 'BetTypes', 'r')
-								, 'BetType', 'b')
-							, 'Item', 'r')
-						, 'Result', 'r')
-					, 'Position', 'p')
-					
+			
+	SET @xmlData = CONVERT(XML, @Results)
+		
+	;WITH TmpData AS (
+		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
+			, T.C.value('./@Position', 'TINYINT') AS Position
+			, T.C.value('./@Result', 'TINYINT') AS BetOption
+		FROM @xmlData.nodes('/BetTypes/BetType/Item') AS T(C)
+	)
+	INSERT INTO @tblResultDetail (bettype, ResourceId, ResourceId_BetOption, Position, BetOption)
+	SELECT	bettype
+			,CAST(BetType * 100 AS VARCHAR(20)) AS ResourceId
+			,CAST(BetType * 100 + 1 AS VARCHAR(20)) AS ResourceId_BetOption
+			,Position
+			,BetOption
+	FROM TmpData
+		
 	IF @IsAuto = 1
-	BEGIN
-		SET @xmlData = CONVERT(XML, @Results)
-		
-		;WITH TmpData AS (
-			SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
-				, T.C.value('./@p', 'TINYINT') AS Position
-			FROM @xmlData.nodes('/r/b/r') AS T(C)
-		)
-		INSERT INTO @tblResultDetail (bettype, ResourceId, Position)
-		SELECT	bettype
-				,CAST(BetType * 100 AS VARCHAR(20)) AS ResourceId
-				,Position
-		FROM TmpData
-		
+	BEGIN		
 		IF EXISTS (SELECT TOP 1 1 FROM @tblResultDetail WHERE bettype NOT IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 9)) -- FM
 		BEGIN
 			SELECT	 @ErrCode	= 1001016
@@ -131,7 +125,24 @@ BEGIN
 
 			RETURN
 		END
+		
+		UPDATE t
+		SET	BetOption = (SELECT TOP 1 byte FROM dbo.f_Set_GetByte(CASE WHEN t.Position <=44 THEN r.HomeValue ELSE AwayValue END, t.Position))
+		FROM	@tblResultDetail t
+			INNER JOIN DBPRO.bodb02.dbo.ResultDetail r WITH (ROWLOCK)
+				ON	r.matchId = @matchid
+					AND r.ResourceId = t.ResourceId_BetOption	
 	END
+	
+	SET @Results = CAST((
+					SELECT bettype '@Id'
+						,(SELECT Position '@p'
+								,BetOption '@r'
+							FROM @tblResultDetail WHERE r.bettype = bettype FOR XML PATH('r'), TYPE)
+					FROM @tblResultDetail r
+					GROUP BY r.bettype
+					FOR XML PATH('b'), ROOT ('r'), TYPE
+				) AS VARCHAR(MAX))		
 	
 	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
 		,@xmlData = @Results
@@ -182,7 +193,6 @@ BEGIN
 		SELECT @MatchId, @matchcode, 0, @leagueid, @sporttype, @AdminId, @IP, 'CAL-FM', @sqlCommand
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s_Push] TO [bodbAdminNet] AS [dbo]
 GO

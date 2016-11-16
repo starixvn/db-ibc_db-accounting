@@ -30,7 +30,7 @@ RETURN
 	)
 	SELECT	CASE 
 				WHEN pos <=0 OR pos > DATALENGTH(data) THEN '0'
-				ELSE SUBSTRING(@data, @pos, 1)
+				ELSE SUBSTRING(data, pos, 1)
 			END	AS char		
 	FROM	ctePos										
 )

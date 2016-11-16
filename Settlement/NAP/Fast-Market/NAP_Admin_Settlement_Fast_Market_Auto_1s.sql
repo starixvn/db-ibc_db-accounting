@@ -25,11 +25,20 @@ AS
 	Revisions:
 
 	Param's Explanation:
-		- @ResultList = <r>
+		If @IsAuto = 0:
+			@ResultList = <r>
 							<b Id="221">
 								<r p="0" r="36" />
 								<r p="1" r="1" />
 								<r p="2" r="4" />
+							</b>
+						</r>
+		If @IsAuto = 1:
+			@ResultList = <r>
+							<b Id="221">
+								<r p="0"/>
+								<r p="1"/>
+								<r p="2"/>
 							</b>
 						</r>
 */
@@ -90,6 +99,7 @@ BEGIN
 	
 	CREATE TABLE #tblResultDetail (
 		BetType			SMALLINT
+		,ResourceId		VARCHAR(20)
 		,Position		TINYINT
 		,BetOption		TINYINT
 	)
@@ -97,15 +107,22 @@ BEGIN
 	CREATE INDEX IX_ResultDetail_Bettype ON #tblResultDetail (BetType)
 	
 	;WITH TmpData AS (
-		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
-			, T.C.value('./@p', 'TINYINT') AS Position
-			, T.C.value('./@r', 'TINYINT') AS BetOption
-		FROM @XmlData.nodes('/r/b/r') AS T(C)
+		SELECT	T.C.value('../@Id', 'SMALLINT') AS Bettype
+				,T.C.value('./@p', 'TINYINT') AS Position
+				,T.C.value('./@r', 'TINYINT') AS BetOption
+		FROM	@XmlData.nodes('/r/b/r') AS T(C)
 	)
-	INSERT INTO #tblResultDetail (BetType, Position, BetOption)
-	SELECT BetType, Position, BetOption
-	FROM TmpData	
-	
+	INSERT INTO #tblResultDetail (
+		BetType
+		,ResourceId
+		,Position
+		,BetOption
+	)
+	SELECT	BetType
+			,CAST(BetType * 100 + 1 AS VARCHAR(20)) AS ResourceId
+			,Position
+			,ISNULL(BetOption,0)
+	FROM TmpData
 	-------------------------------------------------------------
 	---        CAPTURE value BALANCE before settlement        ---
 	---------------------------VVVV------------------------------
