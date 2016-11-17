@@ -279,6 +279,7 @@ BEGIN
 						,COUNT(1) AS betCount
 				FROM dbo.bettrans b WITH(NOLOCK)
 				WHERE b.matchid = m.MatchId
+					AND b.statusID NOT IN (101, 102)
 				GROUP BY b.bettype
 			) AS b
 		OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
@@ -343,8 +344,9 @@ BEGIN
 								END) AS runningBetFGLG
 							,COUNT(1) AS betCountFGLG
 					FROM	dbo.bettransm b WITH(NOLOCK)
-					WHERE	b.matchid = m.MatchId AND bettype IN (14,127,424)
-							AND b.statusID NOT BETWEEN 101 AND 103
+					WHERE	b.matchid = m.MatchId 
+							AND bettype IN (14,127,424)
+							AND b.statusID NOT IN (101, 102)
 					GROUP BY b.bettype
 				) AS b
 			OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
