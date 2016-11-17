@@ -25,6 +25,7 @@ AS
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160314@Patrick: Add more filter to support auto-payout [Redmine: #53262]
 		- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
+		- 20161013@Bobby: #65002 - Update changes for Instant Calculation 
 */
 BEGIN
 	SET NOCOUNT ON
@@ -51,7 +52,7 @@ BEGIN
 		, IsMultiCaled BIT, IsRefund BIT, IsCalRefund BIT, homeid INT, awayid INT, matchcode VARCHAR(50)
 		, kickofftime DATETIME, finalhomescore INT, finalawayscore INT, betstatus NVARCHAR(50), eventstatus VARCHAR(50)
 		, sporttype SMALLINT, IsNeutral BIT, eventdate DATETIME, goalrecord VARCHAR(50), ConfirmHT INT, IsHTCal BIT
-		, IsPending BIT, IsUndecided BIT, IsAutoPayout BIT, IsAutoPayout_League BIT)
+		, IsPending BIT, IsUndecided BIT, AutoSetting TINYINT, AutoSetting_League TINYINT)
 	
 	DECLARE @SqlQuery VARCHAR(4000)
 	SET @SqlQuery = ''
@@ -60,13 +61,13 @@ BEGIN
 		, IsMultiCaled, IsRefund, IsCalRefund, homeid, awayid, matchcode
 		, kickofftime, finalhomescore, finalawayscore, betstatus, eventstatus
 		, sporttype, IsNeutral, eventdate, goalrecord, ConfirmHT, IsHTCal
-		, IsPending, IsUndecided, IsAutoPayout, IsAutoPayout_League)
+		, IsPending, IsUndecided, AutoSetting, AutoSetting_League)
 	SELECT *
 	FROM OPENQUERY(DBPRO, ''SELECT m.MatchId, m.leagueid, m.hthomescore, m.htawayscore, mr.calculate
 		, mr.multiple, refund, CalRefund, homeid, awayid, matchcode
 		, kickofftime, finalhomescore, finalawayscore, betstatus, eventstatus
 		, m.sporttype, m.IsNeutral, eventdate, goalrecord, ConfirmHT, IsHTCal
-		, IsPending, IsUndecided, m.IsAutoPayout, l.IsAutoPayout AS IsAutoPayout_League
+		, IsPending, IsUndecided, m.AutoSetting, l.AutoSetting AS AutoSetting_League
 	FROM bodb02.dbo.match m WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 		INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
@@ -79,8 +80,8 @@ BEGIN
 				OR mr.confirmHT <> 0)
 		AND mr.ishtcal = 0
 		AND 1 = CASE WHEN ''''' + CONVERT(VARCHAR(10), @IsManualSettlementOnly) + ''''' = 0 THEN 1
-				ELSE CASE WHEN m.IsAutoPayout IS NULL AND ISNULL(l.IsAutoPayout, 0) = 1 THEN 0
-							WHEN ISNULL(m.IsAutoPayout, 0) = 1 THEN 0
+				ELSE CASE WHEN m.AutoSetting IS NULL AND (1 & ISNULL(l.AutoSetting, 0) = 1) THEN 0
+							WHEN (1 & ISNULL(m.AutoSetting, 0) = 1) THEN 0
 						ELSE 1 END
 				END'')'
 
@@ -145,9 +146,7 @@ BEGIN
 		, CASE WHEN b.cntFGLG = 0 THEN 0 ELSE 1 END AS isExistFGLG
 		, CASE WHEN b.cntHTFGLG = 0 THEN 0 ELSE 1 END AS isExistHTFGLG
 		, t.seqS AS IsCalculatingSingle
-		, CASE WHEN m.IsAutoPayout IS NULL THEN ISNULL(IsAutoPayout_League, 0)
-				WHEN ISNULL(m.IsAutoPayout, 0) = 1 THEN 1
-			ELSE 0 END AS IsAutoPayout
+		, ISNULL(m.AutoSetting, ISNULL(m.AutoSetting_League, 0)) AS AutoSetting
 		FROM #DataTmp m
 			INNER JOIN BetStatus b ON m.matchid = b.matchid
 			LEFT JOIN @tblSingle t ON m.matchid = t.matchid

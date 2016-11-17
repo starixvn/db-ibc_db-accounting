@@ -1,51 +1,84 @@
 USE bodb02
 GO
-ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingMatchUpd @MatchId INT
-	, @IsAutoPayout BIT
-	, @AdminId INT
-
-	, @IP VARCHAR(20) = ''
-	, @ErrCode INT = 0 OUTPUT
-	, @ErrMsg NVARCHAR(200) = '' OUTPUT
+ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingMatchUpd 
+	@MatchId 			INT
+	, @AutoSetting 		TINYINT
+	, @AdminId 			INT
+	, @IP 				VARCHAR(20) = ''
+	, @ErrCode 			INT = 0 OUTPUT
+	, @ErrMsg 			NVARCHAR(200) = '' OUTPUT
 AS
 /*	Creator: 20160303@Patrick
 	Task: Auto Payout - update setting on match
 	DB: DBPRO/BODB02
 	
 	Revisions:
+		- 20160930@Bobby: #65003 - Merge Auto Payout and Inst CAL setting
 		
 	Param's Explanation:
- 
+		- @AutoType: TINYINT 
+			+ 1: Auto Payout
+			+ 2: Inst Calculation
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @IsAutoPayout_Old BIT, @StarTime DATETIME, @EndTime DATETIME, @Remark VARCHAR(1024), @LeagueId INT
+	DECLARE @AutoSetting_Old 	TINYINT
+		, @StarTime 			DATETIME
+		, @EndTime 				DATETIME
+		, @Remark 				VARCHAR(1024)
+		, @LeagueId 			INT
+		, @AutoType				TINYINT
+		, @actionLogId			INT
 	
-	SELECT @IsAutoPayout = ISNULL(@IsAutoPayout, 0), @StarTime = GETDATE()
-
-	SELECT @IsAutoPayout_Old = IsAutoPayout, @LeagueId = leagueid
+	SELECT @AutoSetting 		= ISNULL(@AutoSetting, 0)
+		, @StarTime 			= GETDATE()
+		
+	
+	SELECT @AutoSetting_Old = AutoSetting, @LeagueId = leagueid
 	FROM dbo.match m WITH(NOLOCK)
 	WHERE m.matchid = @MatchId
-
-	IF @IsAutoPayout_Old IS NULL
+	
+	IF @AutoSetting_Old IS NULL
 	BEGIN
-		SELECT @IsAutoPayout_Old = ISNULL(IsAutoPayout, 0)
+		SELECT @AutoSetting_Old = ISNULL(AutoSetting, 0)
 		FROM dbo.League l WITH(NOLOCK)
 		WHERE LeagueId = @LeagueId
 	END
-
+	
+	SELECT @AutoType			= CASE 
+									WHEN (1 & @AutoSetting_Old <> 1 & @AutoSetting) THEN 1 
+									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 2 
+									ELSE 0 
+								END
+			, @actionLogId		= CASE 
+									WHEN @AutoType = 1 THEN 160 
+									WHEN @AutoType = 2 THEN 181
+									ELSE -1 
+								END
+								
 	--check concurrency users
-	IF @IsAutoPayout = @IsAutoPayout_Old
+	IF (
+		@AutoSetting = @AutoSetting_Old
+		OR @AutoType = 2 --disable for updating instant setting temporary
+	)
 	BEGIN
 		RETURN
 	END
 
 	--check match <> running
-	IF EXISTS (SELECT TOP 1 1 
-					FROM dbo.match m WITH(NOLOCK) 
-					WHERE matchid = @MatchId AND sporttype = 1 AND eventstatus = 'completed')
+	IF EXISTS (
+		SELECT TOP 1 1 
+		FROM dbo.match m WITH(NOLOCK) 
+		WHERE matchid = @MatchId 
+			AND sporttype = 1 
+			AND 1 = CASE 
+					WHEN @AutoType = 1 AND eventstatus = 'completed' THEN 1
+					WHEN @AutoType = 2 AND eventstatus NOT IN ('running', 'closed', 'Refund HT') THEN 1
+					ELSE 0 
+				END
+	)
 	BEGIN
-		SELECT @ErrCode = 1001023, @ErrMsg = 'Sorry. Not allow to update Auto Setting of completed match.'
+		SELECT @ErrCode = 1001023, @ErrMsg = 'Sorry. Not allow to update auto Setting on this match.'
 		RETURN
 	END
 
@@ -58,25 +91,26 @@ BEGIN
 	--END
 
 	UPDATE m
-	SET IsAutoPayout = @IsAutoPayout
+	SET AutoSetting = @AutoSetting
 	FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
 	WHERE m.matchid = @MatchId
 
 	IF @@ERROR > 0
 	BEGIN
-		SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto payout setting on this match. Please try again.'
+		SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto setting on this match. Please try again.'
 		RETURN
 	END
 
 	SELECT @EndTime = GETDATE()
-	SELECT @Remark = 'NAP: Update auto payout setting on match:' + CAST(@MatchId AS NVARCHAR(10)) 
-		+ ' IsAutoPayout:' + CAST(ISNULL(@IsAutoPayout, 0) AS NVARCHAR(10))
+	SELECT @Remark = 'NAP: Update auto setting on match:' + CAST(@MatchId AS NVARCHAR(10)) 
+		+ ' AutoSetting:' + CAST(ISNULL(@AutoSetting, 0) AS NVARCHAR(10))
+		+ ' AutoType:' + CAST(ISNULL(@AutoType, 0) AS NVARCHAR(10))
 		+ ' Duration:' + CAST(DATEDIFF(MILLISECOND, @StarTime, @EndTime) AS NVARCHAR(50)) + ' ms'
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @Matchid			= @MatchId
-			, @ActionID			= 160
+			, @ActionID			= @actionLogId
 			, @finalhomescore	= NULL
 			, @finalawayscore	= NULL
 			, @hthomescore		= NULL
@@ -92,7 +126,7 @@ BEGIN
 
 		EXEC DBTXN.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @AdminId
 			, @Matchid			= @MatchId
-			, @ActionID			= 159
+			, @ActionID			= @actionLogId
 			, @finalhomescore	= NULL
 			, @finalawayscore	= NULL
 			, @hthomescore		= NULL
