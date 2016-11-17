@@ -102,36 +102,27 @@ BEGIN
 	
 	CREATE	TABLE #TempDataWL (
 			PartyId			INT,
-			rptDate			DATETIME,
-			CurrencyId		INT,
-			WinLoss			MONEY,
-			AComm			MONEY,
-			ProductId		TINYINT,
-			DiscountWL		MONEY)
-	INSERT INTO #TempDataWL (PartyId,rptDate,CurrencyId,WinLoss,AComm,ProductId,DiscountWL)
+			ProductId		TINYINT,			
+			LicenseeWL		MONEY
+			)
+	INSERT INTO #TempDataWL (PartyId,ProductId, LicenseeWL)
 	(
-		SELECT	d.PartyId,
-				b.rptDate,
-				b.CurrencyID,
-				SUM(ISNULL(b.MemberWL, 0)) * e.Rate,
-				SUM(ISNULL(b.CommissionA, 0)) * e.Rate,
-				d.ProductId,
-				SUM(-ISNULL(b.MemberWL, 0)) * ISNULL(d.Rate, 0) * e.Rate
+		SELECT	ci.PartyId,				
+				SUM(-ISNULL(b.MemberWL, 0) * e.Rate),				
+				b.ProductId				
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID	
 				INNER JOIN bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FDate, @TDate, 'SB,VS', 'OA', 1) ci
 					ON ci.LicenseeID = b.SiteID	
 					AND ci.ProductID = b.ProductID
 					AND (b.rptDate BETWEEN ci.Fromdate AND ci.Todate)
-					AND (b.Bettype = -1 OR b.Bettype = ci.Bettype)
-				INNER JOIN #DiscountGroup d ON d.PartyId = ci.PartyID AND d.ProductId = b.ProductID
-		WHERE	d.DiscountGroupType = 3
-				AND b.rptDate BETWEEN @FDate AND @TDate
+					AND (b.Bettype = -1 OR b.Bettype = ci.Bettype)				
+		WHERE	b.rptDate BETWEEN @FDate AND @TDate
 				AND b.CurrencyID <> 20
 				AND b.customercategory NOT IN (27, 28)
 				AND b.Bettype NOT IN (901,902,903,904)
 				AND b.StatusId NOT IN (-1, 103) -- Exclude Reject , Void, Refund
-		GROUP BY b.rptdate, b.SiteId, d.PartyId,b.CurrencyID, d.ProductId, e.Rate, d.Rate
+		GROUP BY ci.PartyId, b.ProductId
 	)
 
 	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataWL (PartyId, ProductId)
@@ -196,9 +187,10 @@ BEGIN
 			CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END ProductCode,
 			CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END [Order],
 			'Rebate & Discount' Figure,
-			-SUM(CASE WHEN s.DiscountWL < 0 THEN 0 ELSE s.DiscountWL END) AS FullRange
+			-SUM(CASE WHEN s.LicenseeWL < 0 THEN 0 ELSE s.LicenseeWL * ISNULL(d.Rate, 0) END) AS FullRange
 	FROM	#TempDataWL s
 		LEFT JOIN bodb_licensee.dbo.Product3rd p ON p.Productid = s.ProductId
+		LEFT JOIN #DiscountGroup d ON s.PartyId = d.PartyId AND d.ProductId = s.ProductId AND d.DiscountGroupType = 3
 	GROUP BY	s.ProductId,
 				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
 				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END
