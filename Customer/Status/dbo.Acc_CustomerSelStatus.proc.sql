@@ -46,6 +46,7 @@ Revisions:
 	- 20160114@Helen: Cricket - [Redmine: #50027]
 	- 20160127@Billy: Member information for AllBet - [Redmine: #51591]
 	- 20160407@Winnie: VoidBridge - [Redmine: #55259 ]
+	- 20160801@Elodie: NG2 product - [Redmine: #60809]
 	- 20160815@Winnie: AllBet add more status for Bettype VIP Barcarat - [Redmine: #61733 ]
 
 
@@ -176,6 +177,7 @@ Param's Explanation:
 		,	@bitmapOrder_AllBet			INT
 		,	@bitmapOrder_AllBetVIP		INT
 		,	@bitmapOrder_VoidBridge		INT
+		,	@bitmapOrder_NG2			INT
     
     SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
     SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
@@ -194,6 +196,7 @@ Param's Explanation:
     
     SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
 	SET @bitmapOrder_VoidBridge = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 212 AND Bettype = 4001)
+	SET @bitmapOrder_NG2 = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 213 AND Bettype = 2501)
     
     
     DECLARE	@IsHidden_MuayThai			INT = 1
@@ -201,12 +204,14 @@ Param's Explanation:
 		,	@IsHidden_Cricket			INT = 1
 		,	@IsHidden_AllBet			INT = 1
 		,	@IsHidden_VoidBridge		INT = 1
+		,	@IsHidden_NG2				INT = 1
     
     DECLARE	@SportBook2					INT = 16
 		,	@CockFighting				INT = 19
 		,	@Cricket					INT = 20
 		,	@AllBet						INT = 21
 		,	@VoidBridge					INT = 22
+		,	@NG2						INT = 23
     
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
 	BEGIN
@@ -229,7 +234,11 @@ Param's Explanation:
 	BEGIN
 		SET @IsHidden_VoidBridge = 0
 	END
-	
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@NG2,11))
+	BEGIN
+		SET @IsHidden_NG2 = 0
+	END
+
 	SELECT	ISNULL(reject,0) AS Suspend,
 			ISNULL (closed,0) As Closed,
 			ISNULL (autosuspend,0) As AutoSuspend,	
@@ -291,8 +300,13 @@ Param's Explanation:
 			-- Cricket
 			@IsIMBC AS IsIMBC,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_Cricket),1) AS DisableCricket,
-			CAST(CASE WHEN @IsIMBC = 1 AND @IsHidden_Cricket = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_Cricket),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCricket
-						
+			CAST(CASE WHEN @IsIMBC = 1 AND @IsHidden_Cricket = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_Cricket),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCricket,
+			
+			-- For NG2
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_NG2),1) AS DisableNG2,
+			CAST(CASE WHEN @IsHidden_NG2 = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_NG2),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideNG2,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_NG2), 0) AS SyncedNG2
+					
 	FROM custinfo AS ci WITH (nolock)
 		LEFT JOIN CustMaster AS cm WITH (NOLOCK) ON ci.CustID = cm.custid
 		LEFT JOIN CustGameType cg WITH(NOLOCK) ON ci.custid = cg.custid
