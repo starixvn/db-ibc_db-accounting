@@ -107,9 +107,9 @@ BEGIN
 			)
 	INSERT INTO #TempDataWL (PartyId,ProductId, LicenseeWL)
 	(
-		SELECT	ci.PartyId,				
-				SUM(-ISNULL(b.MemberWL, 0) * e.Rate),				
-				b.ProductId				
+		SELECT	ci.PartyId,	
+				b.ProductId	,			
+				SUM(-ISNULL(b.MemberWL, 0) * e.Rate)	
 		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID	
 				INNER JOIN bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FDate, @TDate, 'SB,VS', 'OA', 1) ci
