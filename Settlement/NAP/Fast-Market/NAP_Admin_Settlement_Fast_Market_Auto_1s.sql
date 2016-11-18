@@ -19,7 +19,7 @@ AS
 /*
 	Created: 20160427@Patrick
 	Task: Fast market - Auto/Manual settlement
-	DB: DBPRO.BODB02
+	DB: DBTXN.BODB02
 	Original:
 	
 	Revisions:
@@ -52,7 +52,7 @@ BEGIN
 				,@hth 		INT
 				,@hta 		INT
 				,@ActionID	INT
-				,@Remark	VARCHAR(3000)
+				,@Remark	VARCHAR(MAX)
 				,@LogData	NVARCHAR(300)						
 				,@LogResult VARCHAR(MAX) = ''	
 				,@strFMBettypes	VARCHAR(MAX)

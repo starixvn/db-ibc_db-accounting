@@ -34,7 +34,7 @@ BEGIN
 							WHEN @Action = 'CAL' AND @IsAuto = 0 THEN 5
 							WHEN @Action = 'CAL' AND @IsAuto = 1 THEN 4
 							WHEN @Action = 'REFUND' THEN 6
-							WHEN @Action = 'UNDO' THEN 2
+							WHEN @Action = 'UNDO' THEN 0
 							ELSE 0
 						END	
 	

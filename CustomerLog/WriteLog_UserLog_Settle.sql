@@ -15,7 +15,7 @@ ALTER PROCEDURE [dbo].[WriteLog_UserLog_Settle]
     @htawayscore INT,
     @GoalRecord VARCHAR(50),
     @betstatus NVARCHAR(50),
-    @Remark VARCHAR(3000) = '',	
+    @Remark VARCHAR(MAX) = '',	
 	@IP varchar(15)='',
 	@LogDate DATETIME = NULL
 AS
