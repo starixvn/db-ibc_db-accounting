@@ -26,6 +26,7 @@ AS
 	- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
 	- 20160930@Bobby: #65002 - Implement Auto CAL page info: update Instant match status & enable link FGLG when existing parlay tickets
 	- 20161026@Bobby: #65002 - Do refactor code and move to DBTXN
+	- 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
       
  Param explanation:  
 	@MatchCode: match code
@@ -46,7 +47,6 @@ BEGIN
 		, @filterBy 	= ISNULL(@filterBy, 0)
 		, @Today 		= GETDATE()
 		, @MatchId 		= 0
-		--, @AutoSetting 	= CAST(ISNULL(@AutoPayoutOnly,0) AS TINYINT) + POWER(2*ISNULL(@InstantCalOnly, 0),1)
 
 	-- if entering matcode, ignore other params (excep FromDate, ToDate, sport type)
 	IF @matchcode <> ''
@@ -117,6 +117,8 @@ BEGIN
 		, IsExistHTFGLG BIT
 		, IsExistRunningFGLG BIT
 		, IsExistRunningHTFGLG BIT
+		, IsExistAutoBettypes BIT
+		, IsExistAutoBettypesParlay BIT
 		, WinOdds MONEY
 		, PlaceOdds MONEY
 		, AutoSetting TINYINT
@@ -125,7 +127,7 @@ BEGIN
 		, IsNeedToCalculateFGLG BIT
 		, IsNeedToCalculateCorner BIT
 		, AutoSettingForLeague TINYINT
-		--, IsExistRunningResultandFirstTeamScore BIT
+		
 		, BetCount INT
 		, IsEnabledGoalRecordHT BIT
 		, IsEnabledGoalRecordFT BIT
@@ -179,14 +181,6 @@ BEGIN
 		, m.goalrecord
 		, ISNULL(ci.username, '') AS suspenderHT
 		, ISNULL(cci.username, '') AS suspenderFT
-		--, CASE WHEN mr.ConfirmHT = 0 THEN ''
-		--	ELSE (SELECT username
-		--			FROM dbo.custinfo WITH (NOLOCK)
-		--			WHERE custid = mr.ConfirmHT) END suspenderHT
-		--, CASE WHEN mr.ConfirmFT = 0 THEN ''
-		--	ELSE (SELECT username
-		--			FROM dbo.custinfo WITH (NOLOCK)
-		--			WHERE custid = mr.ConfirmFT) END suspenderFT
 		, ISNULL(mr.IsHTCal, 0) AS IsHTCal
 		, ISNULL(mr.calculate, 0) AS calculate
 		, ISNULL(mr.isPending, 0) AS isPending
@@ -200,6 +194,8 @@ BEGIN
 		, 0 AS IsExistHTFGLG
 		, 0 AS IsExistRunningFGLG
 		, 0 AS IsExistRunningHTFGLG
+		, 0 AS IsExistAutoBettypes
+		, 0 AS IsExistAutoBettypesParlay
 		, 0 AS WinOdds
 		, 0 AS PlaceOdds
 		, ISNULL(m.AutoSetting, ISNULL(l.AutoSetting, 0)) AS AutoSetting
@@ -208,7 +204,6 @@ BEGIN
 		, 0 AS IsNeedToCalculateFGLG
 		, 0 AS IsNeedToCalculateCorner
 		, ISNULL(l.AutoSetting, 0) AS AutoSettingForLeague
-		--, 0 AS IsExistRunningResultandFirstTeamScore
 		, 0 AS BetCount
 		, 0 AS IsEnabledGoalRecordHT
 		, 0 AS IsEnabledGoalRecordFT
@@ -221,7 +216,6 @@ BEGIN
 		INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 		LEFT JOIN CustDB.dbo.CustInfo ci WITH(NOLOCK) ON mr.ConfirmHT > 0 AND mr.ConfirmHT = ci.custid
 		LEFT JOIN CustDB.dbo.CustInfo cci WITH(NOLOCK) ON mr.ConfirmFT > 0 AND mr.ConfirmFT = cci.custid
-		--LEFT JOIN dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = r.MatchId AND r.ResourceId = '00'
 	WHERE m.eventdate BETWEEN @FromDate AND @ToDate
 		AND m.sporttype = 1 --soccer only
 		AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END 			
@@ -259,8 +253,7 @@ BEGIN
 	END
 	
 	BEGIN --update status
-		DECLARE @n INT = 2147483647
-		
+		DECLARE @n INT = 2147483647		
 		
 		--checking bettrans
 		INSERT INTO #tempBettrans (matchid, bettype, runningBet, betCount)
@@ -297,6 +290,7 @@ BEGIN
 				, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 AND b.betCount > 0 THEN 1 ELSE 0 END) AS IsEnabledGoalRecordFT
 				, SUM(CASE WHEN f.GroupId = 1 AND f.IsUsedGoalRecordValue = 1 AND b.runningBet > 0 THEN 1 ELSE 0 END) AS IsExistRunningUseGoalRecordHT
 				, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 AND b.runningBet > 0 THEN 1 ELSE 0 END) AS IsExistRunningUseGoalRecordFT
+				, SUM(CASE WHEN f.GroupId = 8 THEN 1 ELSE 0 END) AS IsExistAutoBettypes
 			from #tempBettrans b
 				INNER JOIN dbo.f_Set_GetGroupBettypes() f 
 				ON b.bettype = f.BetType
@@ -312,67 +306,70 @@ BEGIN
 			, IsExistRunningHTCorner = CASE WHEN tt.IsExistRunningHTCorner > 0 THEN 1 ELSE 0 END
 			, IsEnabledGoalRecordHT = CASE WHEN tt.IsEnabledGoalRecordHT > 0 THEN 1 ELSE 0 END
 			, IsEnabledGoalRecordFT = CASE WHEN tt.IsEnabledGoalRecordFT > 0 THEN 1 ELSE 0 END
+			, IsExistAutoBettypes = CASE WHEN tt.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
 			, BetCount = tt.BetCount
 		FROM #matchList t
 			INNER JOIN BetStatus tt ON t.matchid = tt.matchid
 	
-		
-	
 		--checking bettransm
-		IF(EXISTS(SELECT TOP 1 1 FROM #matchList WHERE IsExistFGLG = 0 OR IsExistHTFGLG = 0 OR IsExistRunningFGLG = 0 OR IsExistRunningHTFGLG = 0))
-		BEGIN
-			INSERT INTO #tempBettrans (matchid, bettype, runningBet, betCount, IsParlay)
-			SELECT	m.matchid
-				,b.bettype
-				,b.runningBetFGLG
-				,b.betCountFGLG
-				,1 AS IsParlay
-			FROM (
-					SELECT TOP (@n) MatchId 
-					FROM #matchList
-					WHERE IsExistFGLG = 0 
-						OR IsExistHTFGLG = 0 
-						OR IsExistRunningFGLG = 0 
-						OR IsExistRunningHTFGLG = 0
-				) AS m
-				CROSS APPLY 
-				(
-					SELECT	b.bettype
-							,SUM(CASE 
-									WHEN b.statusID = 0 AND GETDATE() > '20160801' THEN 1 -- using hint to force Compute Scalar included in Aggregate Operator 
-									ELSE 0 
-								END) AS runningBetFGLG
-							,COUNT(1) AS betCountFGLG
-					FROM	dbo.bettransm b WITH(NOLOCK)
-					WHERE	b.matchid = m.MatchId 
-							AND bettype IN (14,127,424)
-							AND b.statusID NOT IN (101, 102)
-					GROUP BY b.bettype
-				) AS b
-			OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
+		DECLARE @strBettypesParlay VARCHAR (MAX)
+		
+		SELECT  @strBettypesParlay = COALESCE(@strBettypesParlay + ',' + CAST(BetType AS VARCHAR),CAST(BetType AS VARCHAR))
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	GroupId IN (3,4,8)
+		
+		INSERT INTO #tempBettrans (matchid, bettype, runningBet, betCount, IsParlay)
+		SELECT	m.matchid
+			,b.bettype
+			,b.runningBet
+			,b.betCount
+			,1 AS IsParlay
+		FROM (
+				SELECT TOP (@n) MatchId 
+				FROM #matchList
+			) AS m
+			CROSS APPLY 
+			(
+				SELECT	b.bettype
+						,SUM(CASE 
+								WHEN b.statusID = 0 AND GETDATE() > '20160801' THEN 1 -- using hint to force Compute Scalar included in Aggregate Operator 
+								ELSE 0 
+							END) AS runningBet
+						,COUNT(1) AS betCount
+				FROM	dbo.bettransm b WITH(NOLOCK)
+				WHERE	b.matchid = m.MatchId 
+						AND 1 = CASE
+									WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
+									ELSE 0
+								END
+						AND b.statusID NOT IN (101, 102)
+				GROUP BY b.bettype
+			) AS b
+		OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
 	
-			;WITH BetStatusM AS (
-				SELECT b.matchid
-					, SUM(CASE WHEN f.GroupId = 4 AND (b.betCount > 0) THEN 1 ELSE 0 END) AS IsExistFGLG
-					, SUM(CASE WHEN f.GroupId = 3 AND (b.betCount > 0) THEN 1 ELSE 0 END) AS IsExistHTFGLG
-					, SUM(CASE WHEN f.GroupId = 4 AND (b.runningBet > 0) THEN 1 ELSE 0 END) AS IsExistRunningFGLG
-					, SUM(CASE WHEN f.GroupId = 3 AND (b.runningBet > 0) THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
-				FROM #tempBettrans b WITH(NOLOCK)
-					INNER JOIN dbo.f_Set_GetGroupBettypes() f 
-					ON b.bettype = f.BetType AND b.IsParlay = 1
-					
-				GROUP BY b.matchid
-			)
+		;WITH BetStatusM AS (
+			SELECT b.matchid
+				, SUM(CASE WHEN f.GroupId = 4 AND (b.betCount > 0) THEN 1 ELSE 0 END) AS IsExistFGLG
+				, SUM(CASE WHEN f.GroupId = 3 AND (b.betCount > 0) THEN 1 ELSE 0 END) AS IsExistHTFGLG
+				, SUM(CASE WHEN f.GroupId = 4 AND (b.runningBet > 0) THEN 1 ELSE 0 END) AS IsExistRunningFGLG
+				, SUM(CASE WHEN f.GroupId = 3 AND (b.runningBet > 0) THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
+				, SUM(CASE WHEN f.GroupId = 8 AND (b.betCount > 0) THEN 1 ELSE 0 END) AS IsExistAutoBettypesParlay
+			FROM #tempBettrans b WITH(NOLOCK)
+				INNER JOIN dbo.f_Set_GetGroupBettypes() f 
+				ON b.bettype = f.BetType AND b.IsParlay = 1
+				
+			GROUP BY b.matchid
+		)
 
-			UPDATE t
-			SET IsExistFGLG = CASE WHEN t.IsExistFGLG = 1 OR tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
-				, IsExistHTFGLG = CASE WHEN t.IsExistHTFGLG = 1 OR tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
-				, IsExistRunningFGLG = CASE WHEN t.IsExistRunningFGLG = 1 OR tt.IsExistRunningFGLG > 0 THEN 1 ELSE 0 END
-				, IsExistRunningHTFGLG = CASE WHEN t.IsExistRunningHTFGLG = 1 OR tt.IsExistRunningHTFGLG > 0 THEN 1 ELSE 0 END
-			FROM #matchList t
-				INNER JOIN BetStatusM tt 
-				ON t.matchid = tt.matchid
-		END
+		UPDATE t
+		SET IsExistFGLG = CASE WHEN t.IsExistFGLG = 1 OR tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
+			, IsExistHTFGLG = CASE WHEN t.IsExistHTFGLG = 1 OR tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
+			, IsExistRunningFGLG = CASE WHEN t.IsExistRunningFGLG = 1 OR tt.IsExistRunningFGLG > 0 THEN 1 ELSE 0 END
+			, IsExistRunningHTFGLG = CASE WHEN t.IsExistRunningHTFGLG = 1 OR tt.IsExistRunningHTFGLG > 0 THEN 1 ELSE 0 END
+			, IsExistAutoBettypesParlay = CASE WHEN tt.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
+		FROM #matchList t
+			INNER JOIN BetStatusM tt 
+			ON t.matchid = tt.matchid
 	END
 	
 	SET @Today = DATEADD(HH, -1, GETDATE())
@@ -400,30 +397,32 @@ BEGIN
 	INTO #tempmatch
 	FROM SingleTicket sg
 		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid 
+
+	;WITH cteAutoResultDetail
+	AS(
+		SELECT	CASE 
+					WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+				,GroupId
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	GroupId = 8
+	)	
+	INSERT INTO #tmpAutoSettle1s(MatchID, SettlementStatusID)
+	SELECT rs.MatchID
+		, MIN(rs.SettlementStatusID)
+	FROM DBPRO.bodb02.dbo.ResultDetail rs WITH (NOLOCK) 
+			INNER JOIN cteAutoResultDetail c
+				ON	rs.ResourceId LIKE c.ResourceId
+	WHERE @Sporttype IN (0, 1)
+		AND rs.MatchID IN (SELECT MatchID FROM #matchList)	
+	GROUP BY rs.matchid
 	
-	BEGIN --Auto Betradar
-		DECLARE @tblAutoBetradar TABLE (matchid INT, ResourceID VARCHAR(20) )
-		INSERT INTO @tblAutoBetradar (matchid, ResourceID)
-		SELECT t.matchid 
-			, t.bettype AS ResourceID
-		FROM #tempBettrans t 
-			INNER JOIN dbo.f_Set_GetGroupBettypes() bt 
-			ON t.bettype = bt.bettype		
-		WHERE bt.GroupId = 8
-
-		INSERT INTO #tmpAutoSettle1s(MatchID, SettlementStatusID)
-		SELECT m.MatchID
-			, MIN(rs.SettlementStatusID)
-		FROM @tblAutoBetradar AS m
-			INNER JOIN DBPRO.bodb02.dbo.ResultDetail rs WITH (NOLOCK) 
-			ON m.matchid = rs.MatchId AND (m.ResourceID = rs.ResourceId OR rs.ResourceID LIKE m.ResourceID + '__')
-		GROUP BY m.matchid 
-
-		IF @AutoSettlementOnly = 1 --Running Auto bettypes ONLY ( BETRADAR USED)
-		BEGIN
-			DELETE FROM #matchList
-			WHERE MatchID NOT IN (SELECT MatchID FROM #tmpAutoSettle1s WHERE SettlementStatusID = 0)
-		END
+	
+	IF @AutoSettlementOnly = 1 --Running Auto bettypes ONLY ( BETRADAR USED)
+	BEGIN
+		DELETE FROM #matchList
+		WHERE MatchID NOT IN (SELECT MatchID FROM #tmpAutoSettle1s WHERE SettlementStatusID = 0)
 	END
 	
 	IF @StatusID = 5 --match-conner
@@ -612,8 +611,9 @@ BEGIN
 		, m.PlaceOdds
 		, t.IsCalculatingSingle
 		, t.IsCalculatingMP
-		, CASE WHEN a.SettlementStatusID IS NULL THEN 'N/A'
-				WHEN a.SettlementStatusID = 0 THEN 'Running'
+		, CASE WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
+				WHEN (a.SettlementStatusID IS NULL OR a.SettlementStatusID = 0) AND m.IsExistAutoBettypes > 0 THEN 'Running'
+				WHEN (a.SettlementStatusID IS NULL OR a.SettlementStatusID = 0) AND m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
 		, AutoSetting

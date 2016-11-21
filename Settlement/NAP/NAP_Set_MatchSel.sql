@@ -12,7 +12,7 @@ AS
  Created by: Kathy
  Date: 20131223
  Task: Match results for calculating settlement 
- DB: DBPRO/BODB02
+ DB: DBTXN/BODB02
  Original: Acc_Set_MatchSel
  Revisions:  
 		- 20140417@Kathy: re-arrange order list (follow by old system)
@@ -25,6 +25,7 @@ AS
 		- 20151207@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20160805@Kathy: Write log duration
 		- 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
+		- 20161118@Kathy: Changes on Auto Settlement - Move sp to DBTXN [Redmine:#67328]
       
  Param explanation:  
 	@MatchCode: match code
