@@ -55,17 +55,11 @@ AS
 			0	: Not drilldown
 			> 0	: drilldown with this currency to Company level
 
-	EXEC Acc_Rpt_NonSportsProductStatistics_Currency 
-	@TotalBetValue=$0.0000,
-	@DrillDownCurrency=22,
-	@Sporttype='185,182,181,184,180,183,186',
-	@ProductId='4,11,12,13,21,22,14,17,6,8,5,3',@Username='',
-	@BetType='1103,1104,1101,1102,1800,1801,1803,1802,1804,1701,1700,1703,1702,2001,2005,2003,2007,2004,2002,2006,2401,2405,2403,2404,2402,4001,4002,4003,4004,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,4016,4017,4018,4019,4020,4021,4022,4023,4024,4025,4026,4027,4028,4029,4030,1900,2009,2008,2201,2203,2202,2204,2206,2205,2301,2303,2302,2305,2304,2308,2310,2307,2306,2309,2143,2145,2144,2146,2101,2113,2142,2102,2103,2112,2119,2177,71,2105,72,2157,2155,2172,2158,2173,2171,2115,2148,2121,2118,2139,2114,2140,2162,2166,2151,2135,2149,2132,2168,2160,2161,2136,2169,2110,2152,2147,2170,2127,2128,2137,2133,2167,2126,2159,2175,2131,2107,2150,2117,2125,2124,2164,2163,2106,2134,2138,2104,2123,2108,2111,2176,2109,2130,2141,2165,2174,2120,2122,2116,2129,2156,2154,2153,1501,1502,1504,1511,1514,1509,1507,1515,1516,1513,1508,1503,1506,1505',
-	@GameIncomeValue=$0.0000,@HousePTValue=$0.0000,@HousePTType=0,@GameIncomeType=0,
-	@WinlostDate='2016-11-07 00:00:00',@TotalBetType=0,@ExcludeTest=1,@LeagueId='15223,50717',
-	@Device='a,d,e,h,i,f,j,l,m,n,p,s,u,w',
-	@GameTableId='22994,22995,22996,23618,23751,26120,26121,28680,28681,28682,28683,32157',
-	@Currency=-1,@Site='All'
+	exec Acc_Rpt_NonSportsProductStatistics_Currency_14 @TotalBetValue=0.0000,@Sporttype='',@ProductId='21',
+	@Username='',@BetType='2401,2405,2403,2404,2402',@GameIncomeValue=0.0000,
+	@HousePTValue=0.0000,@HousePTType=0,@GameIncomeType=0,@TotalBetType=0,@WinlostDate='2016-11-06 00:00:00',
+	@DrillDownCurrency=47,@ExcludeTest=1,@LeagueId='',@Device='a,d,e,h,i,f,j,l,m,n,p,s,u,w',
+	@GameTableId='',@Currency=-1,@Site='All'
 */
 BEGIN
 	SET NOCOUNT ON
@@ -170,8 +164,8 @@ BEGIN
 
 	CREATE TABLE #SportBettype (ProductID INT, Bettype INT, EvenType INT, SubProduct VARCHAR(500), RefTable SMALLINT)
 	
-	INSERT INTO #SportBettype (ProductID, Bettype, SubProduct, RefTable)
-	SELECT s.ProductID, s.BetType, s.SubProduct, s.RefTable
+	INSERT INTO #SportBettype (ProductID, Bettype, EvenType, SubProduct, RefTable)
+	SELECT s.ProductID, s.BetType, s.EventType, s.SubProduct, s.RefTable
 	FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
 		INNER JOIN #tmp_ProductID p ON p.ProductID = s.ProductID
 
@@ -215,7 +209,7 @@ BEGIN
 		SELECT ss.site, c.srecommend, ss.isDeposit
 		FROM dbo.Customer c WITH (NOLOCK) 
 			INNER JOIN dbo.Site ss WITH (NOLOCK) ON ss.Site = c.site
-		WHERE c.roleid = 4 AND ss.isActive = 1	
+		WHERE c.roleid = 4	
 	END
 
 	CREATE NONCLUSTERED INDEX Idx_SrecommendID ON #tmp_Company (Srecommend)
@@ -394,6 +388,7 @@ BEGIN
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
+			AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
 		GROUP BY b.Srecommend, b.custid, b.currency
 		
 		-- 2b. By Bettype for Casino Product
@@ -449,6 +444,7 @@ BEGIN
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
+			AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
 		GROUP BY b.Srecommend, b.custid, b.currency		
 	END
 
@@ -625,12 +621,12 @@ BEGIN
 			FROM #Data b
 			GROUP BY b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
-					OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
-					OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
+					OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
+					OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
 					)
 				AND (@GameIncomeType = 0
-					OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
-					OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
+					OR (@GameIncomeType = 1 AND SUM(b.TotalBets - b.TotalWins) >= @GameIncomeValue) 
+					OR (@GameIncomeType = -1 AND SUM(b.TotalBets - b.TotalWins) <= @GameIncomeValue)
 					)
 		END
 	END
@@ -705,12 +701,12 @@ BEGIN
 				INNER JOIN #tmp_Company c ON b.Srecommend = c.Srecommend
 			GROUP BY c.SiteName, b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
-					OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
-					OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
+					OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
+					OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
 					)
 				AND (@GameIncomeType = 0
-					OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
-					OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
+					OR (@GameIncomeType = 1 AND SUM(b.TotalBets - b.TotalWins) >= @GameIncomeValue) 
+					OR (@GameIncomeType = -1 AND SUM(b.TotalBets - b.TotalWins) <= @GameIncomeValue)
 					)
 		END
 	END
@@ -771,6 +767,7 @@ BEGIN
 			SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncome,
 			SUM(b.CompanyCommBase) AS CompanyComm
 		FROM #Data b
+		WHERE EXISTS (SELECT 1 FROM #tmp_Company c WHERE b.Srecommend = c.Srecommend)
 	END
 
 	DROP TABLE #Data

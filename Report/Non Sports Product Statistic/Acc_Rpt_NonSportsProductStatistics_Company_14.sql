@@ -150,8 +150,8 @@ SET NOCOUNT ON
 
 	CREATE TABLE #SportBettype (ProductID INT, Bettype INT, EvenType INT, SubProduct VARCHAR(500), RefTable SMALLINT)
 	
-	INSERT INTO #SportBettype (ProductID, Bettype, SubProduct, RefTable)
-	SELECT s.ProductID, s.BetType, s.SubProduct, s.RefTable
+	INSERT INTO #SportBettype (ProductID, Bettype, EvenType, SubProduct, RefTable)
+	SELECT s.ProductID, s.BetType, s.EventType, s.SubProduct, s.RefTable
 	FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
 		INNER JOIN #tmp_ProductID p ON p.ProductID = s.ProductID
 
@@ -187,6 +187,15 @@ SET NOCOUNT ON
 			WHERE c.roleid = 4
 				AND NOT EXISTS (SELECT 1 FROM dbo.f_DepSuper_1('ALL') f WHERE c.srecommend = f.CustID)
 		END
+
+		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site IN ('Licensee Group'))					
+		BEGIN
+			INSERT INTO #tmp_Company (SiteName, Srecommend, isDeposit)
+			SELECT c.site, c.srecommend, 1
+			FROM dbo.Customer c WITH (NOLOCK)
+			WHERE c.roleid = 4
+				AND EXISTS (SELECT 1 FROM dbo.f_DepSuper_1('ALL') f WHERE c.srecommend = f.CustID)
+		END		
 		
 	END
 	ELSE
@@ -195,7 +204,7 @@ SET NOCOUNT ON
 		SELECT ss.site, c.srecommend, ss.isDeposit
 		FROM dbo.Customer c WITH (NOLOCK) 
 			INNER JOIN dbo.Site ss WITH (NOLOCK) ON ss.Site = c.site
-		WHERE c.roleid = 4 AND ss.isActive = 1	
+		WHERE c.roleid = 4
 	END
 
 	CREATE NONCLUSTERED INDEX Idx_SrecommendID ON #tmp_Company (Srecommend)
@@ -473,7 +482,7 @@ SET NOCOUNT ON
 				- SUM(CompanyCommBase) AS CompanyCommBase
 
 		FROM  #tmp_bettrans b
-			INNER JOIN dbo.match m WITH (NOLOCK) ON m.matchid = b.matchid
+			INNER JOIN dbo.match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 		WHERE b.EvenType = 1
 			AND (
 				(b.ProductID = 3 AND (@LeagueId = '' OR (EXISTS (SELECT 1 FROM #tmp_LeagueID l WHERE l.LeagueID = m.leagueid)))) OR
@@ -660,12 +669,12 @@ SET NOCOUNT ON
 			b.CurrencyID , 
 			b.Currency
 		HAVING (@TotalBetType = 0
-				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
-				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
+				OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
+				OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
 				)
 			AND (@GameIncomeType = 0
-				OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
-				OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
+				OR (@GameIncomeType = 1 AND SUM(b.TotalBets - b.TotalWins) >= @GameIncomeValue) 
+				OR (@GameIncomeType = -1 AND SUM(b.TotalBets - b.TotalWins) <= @GameIncomeValue)
 				)	
 	END
 	
