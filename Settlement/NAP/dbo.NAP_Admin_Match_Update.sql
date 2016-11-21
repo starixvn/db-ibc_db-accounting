@@ -2,24 +2,24 @@ USE [bodb02]
 GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Match_Update]
 (
-	@Command VARCHAR(100),
-	@MatchID INT,
-	@FTHome SMALLINT = NULL,
-	@FTAway SMALLINT = NULL,
-	@HTHome SMALLINT = NULL,
-	@HTAway SMALLINT = NULL,
-	@BetStatus		NVARCHAR(50)= NULL,
-	@GoalRecord		VARCHAR(50)	= NULL,
-	@SelectedSet	VARCHAR(50)	= NULL, 
-	@Action VARCHAR(10)			= NULL,
-	@FTDone BIT = 0,
-	@HTDone BIT = 0,
-	@NoneCornerBetDone	BIT = 0, 
-	@HTNoneCornerBetDone	BIT = 0,
-	@isExcludeCorner	BIT = 0,
-	@isExistRunningCornerBet BIT = 0,
-	@RowCount INT = 0 OUTPUT,
-	@Creator INT = 0
+	@Command 					VARCHAR(100),
+	@MatchID 					INT,
+	@FTHome 					SMALLINT = NULL,
+	@FTAway 					SMALLINT = NULL,
+	@HTHome 					SMALLINT = NULL,
+	@HTAway 					SMALLINT = NULL,
+	@BetStatus					NVARCHAR(50)= NULL,
+	@GoalRecord					VARCHAR(50)	= NULL,
+	@SelectedSet				VARCHAR(50)	= NULL, 
+	@Action 					VARCHAR(10)			= NULL,
+	@FTDone 					BIT = 0,
+	@HTDone 					BIT = 0,
+	@NoneCornerBetDone			BIT = 0, 
+	@HTNoneCornerBetDone		BIT = 0,
+	@isExcludeCorner			BIT = 0,
+	@isExistRunningCornerBet 	BIT = 0,
+	@RowCount 					INT = 0 OUTPUT,
+	@Creator 					INT = 0
 ) 
 AS
 /*
@@ -42,6 +42,7 @@ AS
 		- 20160225@Kathy: Update eventstatus, betstatus when the match is settled
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		- 20160907@bobby: #63765 - Update betstatus when doing refund HT/FT/ALL
+		- 20161118@Bobby: #67551 - Update changes for refunding SDT - ABANDONED match
 		
 */
 BEGIN
@@ -186,6 +187,35 @@ BEGIN
 			WHERE matchid=@MatchID
 		END
 	END
+	IF @Command = 'NAP_Admin_Settlement_Refund_All-ABANDONED'
+	BEGIN
+		DECLARE @Sporttype INT 
+		
+		SET @betstatus = ISNULL(@betstatus, '')
+		
+		SELECT @Sporttype = sporttype
+		FROM match with(NOLOCK)
+		WHERE matchid = @matchid
+
+		IF @sporttype =  1 
+		BEGIN
+			UPDATE match WITH(ROWLOCK,UPDLOCK) 
+			SET eventstatus='Completed'
+				, ruben				= 1
+				, finalhomescore	= NULL
+				, finalawayscore	= NULL
+				, hthomescore 		= @HTHome
+				, htawayscore 		= @HTAway
+				, betstatus 		= 'ABANDONED 1H;' + CASE 
+											WHEN CHARINDEX('ABANDONED 2H;',@betstatus) > 0 THEN REPLACE(@betstatus,'ABANDONED 2H;','')
+											WHEN CHARINDEX('ABANDONED 1H;',@betstatus) > 0 THEN REPLACE(@betstatus,'ABANDONED 1H;','')
+											ELSE @betstatus
+										END
+				,GoalRecord = @GoalRecord
+				,changetime = GETDATE(), settleTime = GETDATE()
+			WHERE matchid=@MatchID
+		END 
+	END
 	IF @Command = 'NAP_Admin_Settlement_RefundFT'
 	BEGIN
 		
@@ -207,6 +237,34 @@ BEGIN
 						END
 			,eventstatus = CASE WHEN @HTDone=1 THEN 'Completed' ELSE eventstatus END 
 			,changetime  = GETDATE(), settleTime = GETDATE()
+		WHERE matchid=@MatchID 
+			  AND (@HTDone = 1 
+					OR	@HTNoneCornerBetDone = 1 
+				  )
+
+		--- get rowcount
+		SET @RowCount = @@ROWCOUNT
+	END
+	IF @Command = 'NAP_Admin_Settlement_RefundFT-ABANDONED'
+	BEGIN
+		
+		SET @betstatus = ISNULL(@betstatus, '')
+
+		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
+		SET finalhomescore		= @FTHome
+			, finalawayscore	= @FTAway
+			, betstatus 		= CASE 
+									WHEN CHARINDEX('ABANDONED;', betstatus) > 0 THEN betstatus 
+									ELSE 'ABANDONED 2H;' + CASE 
+															WHEN CHARINDEX('ABANDONED 1H;',@betstatus) > 0 THEN REPLACE(@betstatus, 'ABANDONED 1H;', '') 
+															WHEN CHARINDEX('ABANDONED 2H;',@betstatus) > 0 THEN REPLACE(@betstatus, 'ABANDONED 2H;', '') 
+															ELSE @betstatus
+														END
+						END
+			,eventstatus = CASE WHEN @HTDone=1 THEN 'Completed' ELSE eventstatus END 
+			,changetime  = GETDATE()
+			,settleTime = GETDATE()
+			,GoalRecord = @GoalRecord
 		WHERE matchid=@MatchID 
 			  AND (@HTDone = 1 
 					OR	@HTNoneCornerBetDone = 1 

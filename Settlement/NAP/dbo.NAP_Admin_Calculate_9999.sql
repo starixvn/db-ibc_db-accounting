@@ -32,6 +32,7 @@ AS
         - 20151210@Patrick: Database - Change datatype [Redmine: #48660]
         - 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
         - 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
+		- 20161118@Bobby: #67462 - Implement SDT for Over/Under bettypes full winlost
         
 */
 BEGIN
@@ -991,7 +992,42 @@ BEGIN
                                                         ELSE NULL
                                                     END
                                                 END
-                                         END
+											--#67462-Implement SDT for over/under full WL
+											WHEN 189 THEN 
+                                                CASE 
+													WHEN betteam = 'y' AND @hta + @hth < 1.5 THEN -1
+													WHEN betteam = 'n' AND @hta + @hth < 1.5 THEN 1
+													------
+													WHEN betteam = 'y' AND @hta + @hth > 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
+													WHEN betteam = 'n' AND @hta + @hth > 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+                                                END
+											WHEN 190 THEN 
+                                                CASE 
+													WHEN betteam = 'y' AND @hta + @hth > 1.5 THEN -1
+													WHEN betteam = 'n' AND @hta + @hth > 1.5 THEN 1
+													------
+													WHEN betteam = 'y' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
+													WHEN betteam = 'n' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+                                                END
+											WHEN 434 THEN 
+                                                CASE 
+													WHEN betteam = 'y' AND @hta + @hth < 1.5 THEN -1
+													WHEN betteam = 'n' AND @hta + @hth < 1.5 THEN 1
+													------
+													WHEN betteam = 'y' AND @hta + @hth > 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
+													WHEN betteam = 'n' AND @hta + @hth > 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+                                                END
+											WHEN 435 THEN 
+                                                CASE 
+													WHEN betteam = 'y' AND @hta + @hth > 1.5 THEN -1
+													WHEN betteam = 'n' AND @hta + @hth > 1.5 THEN 1
+													------
+													WHEN betteam = 'y' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
+													WHEN betteam = 'n' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+                                                END
+											--#67462
+                                         END 
+
                             END    
             ,modds = @modds                                    
             ,@commWinRate = CASE comstatus

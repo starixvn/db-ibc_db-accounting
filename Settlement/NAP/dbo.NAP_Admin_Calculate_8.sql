@@ -30,6 +30,7 @@ AS
 		- 20160507@Patrick: Use Option Force Order & limit scanning on bettrans table incase merge join for batchNo n > 1 to reduce lock escalation [Redmine: #58464]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		- 20141003@Bobby: #65026 - Correct SDT for bettype OU[3,8]
+		- 20161118@Bobby: #67462 - Implement SDT for Over/Under bettypes full winlost
 
     Param's Explanation:
         + @IsSettleAbandonedMatch: Settle determined tickets for Abandoned/Postponed Match
@@ -155,13 +156,14 @@ BEGIN
             AND 1 = CASE 
                     WHEN @IsSettleAbandonedMatch = 1 AND (custid IN (50057, 879241, 103873, 78761, 851668, 878902) OR recommend = 1688156) THEN 1
                     WHEN @IsSettleAbandonedMatchBetFair = 1 AND custid IN (2331, 1077687, 115770, 15523642) THEN 1
-                    WHEN @IsSettleAbandonedMatchIBC = 1 AND @bettype <> 8 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
+                    WHEN @IsSettleAbandonedMatchIBC = 1 AND (custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND recommend <> 1688156) THEN 1
                     ELSE 0
                 END 
-            AND hdp1 <= CASE WHEN @bettype IN (8,403,404,426,143) AND (@IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1)THEN @comparedValue  -- @comparedValue = @totalht - 0.5
+			AND hdp1 <= @comparedValue 
+            /*AND hdp1 <= CASE WHEN @bettype IN (8,403,404,426,143) AND (@IsSettleAbandonedMatch = 1  OR @IsSettleAbandonedMatchBetFair = 1)THEN @comparedValue  -- @comparedValue = @totalht - 0.5
                              WHEN @bettype <> 8 AND @IsSettleAbandonedMatchIBC = 1 THEN @comparedValue 
                              ELSE -1
-                        END
+                        END*/
     END -- END settle determined ticket
     ELSE
     BEGIN

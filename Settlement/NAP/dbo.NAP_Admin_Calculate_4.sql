@@ -49,6 +49,8 @@ AS
 		- 20160824@Bobby: #62921 - Include FGLG (14,127) bet types into settle determindable
 		- 20161021@Kathy: Using new non-clustered index (match_bettype) to update BetParlayDetail [Redmine:#65990]
 		- 20161025@Kathy:  Avoid deadlock issue [Redmine:#65990]
+		- 20161121@Bobby: #67462 - Remove code SDT for parlay bet types 14,127 when doing refund single SDT
+		
 	Param's Explanation:
 		
 		
@@ -725,11 +727,11 @@ BEGIN
 			DROP TABLE #tempCust
 		END
 	END
-
+	
+	/*-------------Start:Settle FGLG for bettransm-------------
 	IF (ISNULL(@FGLG2,'') = '' AND ISNULL(@correctscore, '0:0') <> '0:0')
 		SET @FGLG2 = @correctscore
 
-	-------------Start:Settle FGLG for bettransm-------------
 	IF (@bettype IN(14, 127))
 	BEGIN
 		SELECT @matchdate = eventdate
@@ -810,8 +812,10 @@ BEGIN
 						AND ISNULL(@FGLG2,'') <> '' 
 					)
 				)
-		-------------Stop:Settle FGLG for bettransm-------------
+		
 	END
+	-------------Stop:Settle FGLG for bettransm-------------*/
+	RETURN
 END
 
 
