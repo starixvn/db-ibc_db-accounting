@@ -14,6 +14,7 @@ ALTER FUNCTION [dbo].[f_GetSettingProductExtraPTGroup]
 
 	Revisions:
 		- 20160907@Percy: Add setting of new Group: ACCMMK [RedmineID: #63726]
+		- 20161117@Percy: Reset setting of NG2 [RedmineID: #67219]
 */
 
 RETURNS @ExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), ProductID TINYINT, Sporttype SMALLINT, SubProduct VARCHAR(500), ExtraPT DECIMAL(9, 8))
@@ -216,26 +217,12 @@ BEGIN
 		(20,'ACCMMK',1,44,'',0.0300000),
 
 		-- NG2
-		(1,'ACCMKK',23,0,'',0.03000000),
-		(2,'MKK99',23,0,'',0.03000000),
-		(3,'ACCTHAI',23,0,'',0.05000000),
-		(4,'ACCTHAI2',23,0,'',0.03000000),
-		(5,'ACCTHAI56',23,0,'',0.03000000),
-		(6,'ACCTHAI99',23,0,'',0.03000000),
-		(7,'INDO2',23,0,'',0.03000000),
-		(8,'INDO56',23,0,'',0.03000000),
-		(9,'INDOBS',23,0,'',0.03000000),
-		(10,'INDOWIN',23,0,'',0.03000000),
-		(11,'ACCDDD',23,0,'',0.03000000),
-		(12,'ACCIN',23,0,'',0.03000000),
-		(13,'ACCIRR',23,0,'',0.01500000),
-		(14,'ACCUT2',23,0,'',0.01500000),
-		(15,'ACCYEN789',23,0,'',0.02000000),
-		(16,'ACCYEN889',23,0,'',0.02500000),
-		(17,'ACCNTD',23,0,'',0.01500000),
-		(18,'BC',23,0,'',0.02000000),
-		(19,'ACCUT',23,0,'',0.01500000),
-		(20,'ACCMMK',23,0,'',0.0300000)
+		(13,'ACCIRR',23,0,'',0.05000000),
+		(14,'ACCUT2',23,0,'',0.05000000),
+		(15,'ACCYEN789',23,0,'',0.05000000),
+		(16,'ACCYEN889',23,0,'',0.05000000),
+		(17,'ACCNTD',23,0,'',0.05000000),
+		(19,'ACCUT',23,0,'',0.05000000)
 
 	INSERT INTO @ExtraPTGroup(GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT)
 	SELECT GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT
