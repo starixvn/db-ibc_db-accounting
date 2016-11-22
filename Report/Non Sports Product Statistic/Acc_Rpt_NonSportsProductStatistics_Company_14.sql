@@ -607,8 +607,9 @@ SET NOCOUNT ON
 			          CompanyGrossIncome ,
 			          CompanyComm
 			        )
-			SELECT c.IsDeposit,
-				CASE WHEN @Site NOT IN ('MBC Group', 'Licensee Group') THEN c.SiteName ELSE @Site END AS SiteName,
+			SELECT 
+				CASE WHEN @Site = 'All' THEN 1 ELSE c.IsDeposit END AS IsDeposit,
+				CASE WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END AS SiteName,
 				COUNT(DISTINCT CustID) AS NoOfPlayers, 
 				SUM(BetCount) AS BetCount ,
 				b.CurrencyID , 
@@ -621,8 +622,8 @@ SET NOCOUNT ON
 				SUM (CompanyCommBase) AS CompanyComm
 			FROM #Data b
 				INNER JOIN #tmp_Company c ON b.Srecommend = c.Srecommend
-			GROUP BY c.IsDeposit,
-				CASE WHEN @Site NOT IN ('MBC Group', 'Licensee Group') THEN c.SiteName ELSE @Site END,
+			GROUP BY CASE WHEN @Site = 'All' THEN 1 ELSE c.IsDeposit END,
+				CASE WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END,
 				b.CurrencyID , 
 				b.Currency
 			HAVING (@TotalBetType = 0
@@ -651,8 +652,9 @@ SET NOCOUNT ON
 			        CompanyGrossIncome ,
 			        CompanyComm
 			    )
-		SELECT c.IsDeposit,
-			CASE WHEN @Site IN ('MBC Group', 'Licensee Group') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END AS SiteName,
+		SELECT 
+			CASE WHEN @Site = 'All' AND @IsDrillDown = 1 THEN 1 ELSE c.IsDeposit END AS IsDeposit,
+			CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END AS SiteName,
 			COUNT(DISTINCT CustID) AS NoOfPlayers, 
 			SUM(BetCount) AS BetCount ,
 			b.CurrencyID AS CurrencyId, 
@@ -665,8 +667,8 @@ SET NOCOUNT ON
 			SUM (b.CompanyComm) AS CompanyComm
 		FROM #Data b
 			INNER JOIN #tmp_Company c ON b.Srecommend = c.Srecommend
-		GROUP BY c.IsDeposit,
-			CASE WHEN @Site IN ('MBC Group', 'Licensee Group') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END,
+		GROUP BY CASE WHEN @Site = 'All' AND @IsDrillDown = 1 THEN 1 ELSE c.IsDeposit END,
+			CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END,
 			b.CurrencyID , 
 			b.Currency
 		HAVING (@TotalBetType = 0
