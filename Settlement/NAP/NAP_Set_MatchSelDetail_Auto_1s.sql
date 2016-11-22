@@ -1,12 +1,9 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_MatchSelDetail_Auto_1s]    Script Date: 09/15/2016 10:01:10 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Set_MatchSelDetail_Auto_1s    Script Date: 13/09/2016 2:08:16 PM ******/
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSelDetail_Auto_1s]
     @MatchID        INT
 
@@ -19,6 +16,7 @@ AS
     
     Revisions:
         - 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
+        - 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
 
     Param's Explanation:
 */
@@ -26,6 +24,12 @@ BEGIN
     SET NOCOUNT ON 
             
     DECLARE    @tmpTicketStatus TABLE(
+         ResourceID        VARCHAR(20)
+        ,BetCount        INT
+        ,InRunning        INT
+    )
+    
+    DECLARE    @tmpTicketStatusParlay TABLE(
          ResourceID        VARCHAR(20)
         ,BetCount        INT
         ,InRunning        INT
@@ -49,10 +53,7 @@ BEGIN
     
     INSERT INTO @tmpTicketStatus(ResourceID, BetCount, InRunning)
     SELECT    
-            CASE
-                WHEN b.bettype IN (160, 164, 169, 180) THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5) 
-                ELSE b.bettype 
-            END AS ResourceID
+            b.bettype
             ,SUM(CASE    WHEN StatusID BETWEEN 101 AND 102 THEN 0
                         ELSE 1 END)
             ,SUM(CASE    WHEN StatusID = 0 THEN 1 
@@ -62,11 +63,22 @@ BEGIN
             ON b.bettype = f.BetType
     WHERE    f.GroupId = 8
             AND matchID = @MatchID 
-    GROUP BY CASE
-                WHEN b.bettype IN (160, 164, 169, 180) THEN SUBSTRING(CAST(betID AS VARCHAR(20)),2,5) 
-                ELSE b.bettype 
-            END
-
+    GROUP BY b.bettype
+	
+	INSERT INTO @tmpTicketStatusParlay(ResourceID, BetCount, InRunning)
+    SELECT    
+            bm.bettype            
+            ,SUM(CASE    WHEN bm.StatusID BETWEEN 101 AND 102 THEN 0
+                        ELSE 1 END)
+            ,SUM(CASE    WHEN bm.StatusID = 0 THEN 1 
+                        ELSE 0 END)
+    FROM    dbo.Bettransm bm WITH (NOLOCK)
+        INNER JOIN dbo.f_Set_GetGroupBettypes() f
+            ON bm.bettype = f.BetType
+    WHERE    f.GroupId = 8
+            AND matchID = @MatchID 
+    GROUP BY bm.bettype
+	
     -- Match Info 
     SELECT    m.LeagueID
             ,m.MatchID
@@ -79,19 +91,33 @@ BEGIN
     FROM    DBPRO.bodb02.dbo.Match m WITH (NOLOCK)
     WHERE    MatchID = @MatchID
 
-    -- Detail           
-    SELECT     ResourceID = CASE WHEN COALESCE(r.ResourceID,t.ResourceID) ='216' THEN '21601' ELSE COALESCE(r.ResourceID,t.ResourceID) END 
-            ,TicketStatus = CASE WHEN t.ResourceID IS NULL OR t.BetCount = 0 THEN 'No Ticket'
-                                 WHEN t.InRunning = 0 THEN 'Calculated'
-                                 ELSE 'Running' END 
+    -- Detail
+    ;WITH cteBettype 
+    AS(
+		SELECT	CASE 
+					WHEN BetType IN (160, 164, 169, 180, 216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	GroupId = 8
+    )           
+    SELECT     ResourceID = CASE WHEN COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) ='216' THEN '21601' ELSE COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) END 
+            ,TicketStatus = CASE 
+								WHEN ISNULL(t.BetCount,0) = 0 AND ISNULL(p.BetCount,0) = 0 THEN 'No Ticket'
+								WHEN t.InRunning > 0 THEN 'Running'
+								WHEN ISNULL(t.BetCount,0) = 0 AND p.InRunning > 0 THEN 'Parlay Running'
+                                ELSE 'Calculated'
+                            END
              ,HomeValue = CASE WHEN r.ResourceId BETWEEN 214 AND 215 THEN r.AwayValue ELSE r.HomeValue END
             ,r.OtherInfo
             ,r.ResultStatusID
             ,r.SettlementStatusID
 
     FROM    @tmpTicketStatus t
+			FULL JOIN @tmpTicketStatusParlay p
+				ON t.resourceId = p.ResourceID
             FULL JOIN( 
-                SELECT     r.MatchID  
+                SELECT  r.MatchID  
                         ,r.ResourceId
                         ,CASE WHEN r.ResourceID LIKE '216__' THEN '216' ELSE r.ResourceID END AS ResourceID2 
                         ,r.HomeValue
@@ -100,14 +126,9 @@ BEGIN
                         ,r.ResultStatusID
                         ,r.SettlementStatusID
                 FROM    DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) 
-                WHERE    r.MatchID = @MatchID
-                        AND (r.ResourceId IN (SELECT CAST(BetType AS VARCHAR(20)) FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
-                                    OR r.ResourceID LIKE '160__'
-                                    OR r.ResourceID LIKE '164__'
-                                    OR r.ResourceID LIKE '169__'
-                                    OR r.ResourceID LIKE '180__'
-                                    OR r.ResourceID LIKE '216__'
-                            )
+					INNER JOIN	cteBettype c
+						ON	r.MatchID = @MatchID
+							AND r.ResourceId LIKE c.ResourceId                        
             ) r ON t.ResourceID = r.ResourceId2
     ORDER BY ResourceID ASC 
 

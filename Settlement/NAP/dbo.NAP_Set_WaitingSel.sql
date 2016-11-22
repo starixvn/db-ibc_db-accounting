@@ -69,11 +69,11 @@ BEGIN
 		WHERE	GroupId = 8
 	)	
 	UPDATE	m
-		SET SettlementStatusID = r.SettlementStatusID
+		SET SettlementStatusID = rs.SettlementStatusID
 	FROM	@TempMatch m
 		CROSS APPLY (
 			SELECT	TOP 1 r.MatchID
-					,MIN(SettlementStatusId) AS SettlementStatusId
+					,MIN(r.SettlementStatusId) AS SettlementStatusId
 			FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
 				INNER JOIN cteAutoResultDetail c
 					ON	r.ResourceId = c.ResourceId
