@@ -177,7 +177,7 @@ BEGIN
 								AND s.ProductID = p.ProductID)							
 	END		
 	-- End Product Group
-
+	
 	-- Get Site	
 	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), Srecommend INT, isDeposit BIT)
 
@@ -346,7 +346,7 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.productID, b.custid,
+		SELECT	s.ProductID, b.custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -380,7 +380,7 @@ BEGIN
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
-		GROUP BY b.productID, b.custid, b.currency
+		GROUP BY s.productID, b.custid, b.currency
 		
 		-- 2b. By Bettype for Casino Product
 		INSERT INTO #Data
@@ -401,7 +401,7 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.productID, b.custid,
+		SELECT	s.productID, b.custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -435,9 +435,9 @@ BEGIN
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
-		GROUP BY b.productID, b.custid, b.currency		
+		GROUP BY s.productID, b.custid, b.currency		
 	END
-
+	
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID IN (3, 4, 5))
 	BEGIN
 		-- 3. NumberGame - Live Casino - Virtual Sport (Soccer)
@@ -544,7 +544,7 @@ BEGIN
 	FROM #Data d
 		INNER JOIN dbo.Exchange e ON e.exchangeid = d.CurrencyID
 	-- End Currency Name	
-
+	
 	-- Get Product Name
 	IF @CasinoType = -1 -- Group in Product Group
 	BEGIN

@@ -1,7 +1,7 @@
 USE bodb02
 GO
 
-ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Product_SportLeagueGameType_14]
+ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Product_SportLeagueGameType_14_Test]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
 	@Username		VARCHAR(50) = '',
@@ -705,7 +705,7 @@ BEGIN
 	END	
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
 
-	SELECT  NULL AS ReportById,
+	SELECT  Bettype AS ReportById,
 			BettypeName AS ReportBy, 
 			NoOfPlayers,
 			BetCount,
