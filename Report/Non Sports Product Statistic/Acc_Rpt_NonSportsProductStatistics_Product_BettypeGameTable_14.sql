@@ -300,7 +300,7 @@ BEGIN
 				  CompanyCommBase
 				)
 		SELECT b.Bettype, b.BettypeName, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,
@@ -462,7 +462,7 @@ BEGIN
 		SELECT	CASE WHEN ProductID = 4 THEN m.leagueid ELSE b.Bettype END AS Bettype, 
 				CASE WHEN ProductID = 4 THEN '' ELSE b.BettypeName END AS BettypeName,
 				b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,
@@ -515,7 +515,7 @@ BEGIN
 				  CompanyCommBase
 				)
 		SELECT	b.Bettype, b.BettypeName, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,

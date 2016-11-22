@@ -303,7 +303,7 @@ BEGIN
 				  CompanyCommBase
 				)
 		SELECT b.ProductID, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,
@@ -460,7 +460,7 @@ BEGIN
 				  CompanyCommBase
 				)	
 		SELECT	b.ProductID, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,
@@ -510,7 +510,7 @@ BEGIN
 				  CompanyCommBase
 				)
 		SELECT	b.ProductID, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,

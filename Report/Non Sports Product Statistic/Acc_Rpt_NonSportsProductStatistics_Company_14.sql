@@ -304,7 +304,7 @@ SET NOCOUNT ON
 				  CompanyCommBase
 				)
 		SELECT b.Srecommend, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,
@@ -325,7 +325,7 @@ SET NOCOUNT ON
 				- SUM(CompanyCommBase) AS CompanyCommBase
 
 		FROM  #tmp_bettrans b
-		WHERE b.RefTable IN (0, 3)
+		WHERE b.RefTable IN (0, 3) AND b.ProductID NOT IN (3, 4, 5)
 		GROUP BY b.Srecommend, b.custid, b.CurrencyID
 		
 		-- 2a. By Bettype for Casino Product
@@ -461,7 +461,7 @@ SET NOCOUNT ON
 				  CompanyCommBase
 				)	
 		SELECT	b.Srecommend, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,
@@ -484,6 +484,7 @@ SET NOCOUNT ON
 		FROM  #tmp_bettrans b
 			INNER JOIN dbo.match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 		WHERE b.EvenType = 1
+			AND b.ProductID IN (3, 4, 5)
 			AND (
 				(b.ProductID = 3 AND (@LeagueId = '' OR (EXISTS (SELECT 1 FROM #tmp_LeagueID l WHERE l.LeagueID = m.leagueid)))) OR
 				(b.ProductID = 4 AND (@GameTableId = '' OR (EXISTS (SELECT 1 FROM #tmp_GameTableID g WHERE g.GameTableID = m.leagueid)))) OR
@@ -511,7 +512,7 @@ SET NOCOUNT ON
 				  CompanyCommBase
 				)
 		SELECT	b.Srecommend, b.custid,
-				COUNT( BetCount ) AS BetCount, b.CurrencyID,
+				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
 				SUM(TotalBetsBase)  AS TotalBetsBase,
