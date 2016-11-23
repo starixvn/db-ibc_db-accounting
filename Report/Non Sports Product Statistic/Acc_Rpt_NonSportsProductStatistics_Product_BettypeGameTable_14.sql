@@ -162,6 +162,16 @@ BEGIN
 	FROM #SportBettype s
 	WHERE s.ProductID NOT IN (3, 5) -- NumberGame, Virtual Sport
 		AND NOT EXISTS (SELECT b.Bettype FROM #tmp_BetType b WHERE b.Bettype = s.Bettype)
+	
+	DECLARE @IsDrillDownFromRM INT
+	SELECT @IsDrillDownFromRM = COUNT (*) FROM #tmp_BetType
+
+	IF @IsDrillDownFromRM = 1
+	BEGIN
+		DELETE s
+		FROM #SportBettype s
+		WHERE NOT EXISTS (SELECT 1 FROM #tmp_BetType b WHERE b.Bettype = s.Bettype)
+	END 	
 	-- End Sport Bettype Matrix
 
 	-- Handle Sport Type/League/GameType		
@@ -542,6 +552,13 @@ BEGIN
 			AND (@Sporttype = '' OR (EXISTS(SELECT 1 FROM #tmp_SportType st WHERE st.Sporttype = r.SportType)))			  
 		GROUP BY b.Bettype, b.BettypeName, b.custid, b.CurrencyID
 	END
+
+	-- Get Currency name
+	UPDATE d
+	SET d.Currency = e.currency
+	FROM #Data d
+		INNER JOIN dbo.Exchange e ON e.exchangeid = d.CurrencyID
+	-- End Currency Name
 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID = 4)
 	BEGIN

@@ -78,7 +78,7 @@ BEGIN
 						 TotalRefund MONEY, TotalRefundBase MONEY,
 						 CompanyTurnOver MONEY, CompanyTurnOverBase MONEY,
 						 CompanyGrossIncome MONEY, CompanyGrossIncomeBase MONEY,
-						 CompanyComm MONEY, CompanyCommBase MONEY
+						 CompanyComm MONEY, CompanyCommBase MONEY, OrderBy INT
 						)
 	CREATE TABLE #Result (  ProductID INT, ProductName VARCHAR(50), NoOfPlayers INT,
 							BetCount INT, CurrencyID INT, Currency NVARCHAR(50)	,
@@ -87,7 +87,7 @@ BEGIN
 							TotalRefund MONEY, TotalRefundBase MONEY,
 							CompanyTurnOver MONEY, CompanyTurnOverBase MONEY,
 							CompanyGrossIncome MONEY, CompanyGrossIncomeBase MONEY,
-							CompanyComm MONEY, CompanyCommBase MONEY							
+							CompanyComm MONEY, CompanyCommBase MONEY, OrderBy INT							
 						)
 
 	------------------------------------------I. Handle Parameter ------------------------------------------------------
@@ -550,19 +550,22 @@ BEGIN
 	IF @CasinoType = -1 -- Group in Product Group
 	BEGIN
 		UPDATE s
-		SET s.ProductID = 2,
-			s.ProductName = 'RNG Casino'		
+		SET s.ProductID = 1,
+			s.ProductName = 'RNG Casino',
+			s.OrderBy = 2		
 		FROM #Data s			
 		WHERE EXISTS (SELECT 1 FROM dbo.Products p WITH (NOLOCK) WHERE p.CasinoType = 1 AND s.ProductID = p.ProductID)
 
 		UPDATE s
-		SET s.ProductID = 1,
-			s.ProductName = 'Live Casino'		
+		SET s.ProductID = 2,
+			s.ProductName = 'Live Casino',
+			s.OrderBy = 1		
 		FROM #Data s
 		WHERE EXISTS (SELECT 1 FROM dbo.Products p WITH (NOLOCK) WHERE p.CasinoType = 2 AND s.ProductID = p.ProductID)
 
 		UPDATE d
-		SET d.ProductName = p.ProductName
+		SET d.ProductName = p.ProductName,
+			d.OrderBy = 3
 		FROM #Data d
 			INNER JOIN dbo.Products p ON d.ProductID = p.ProductID
 		WHERE p.ProductID IN (3, 5, 8)
@@ -600,7 +603,8 @@ BEGIN
 					TotalRefundBase,
 					CompanyTurnOverBase,
 					CompanyGrossIncomeBase,
-					CompanyCommBase
+					CompanyCommBase,
+					OrderBy
 			        )
 			SELECT b.ProductID,
 				b.ProductName,
@@ -619,9 +623,10 @@ BEGIN
 				SUM(b.TotalRefundBase) AS TotalRefundBase,
 				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
-				SUM(b.CompanyCommBase) AS CompanyCommBase
+				SUM(b.CompanyCommBase) AS CompanyCommBase,
+				b.OrderBy
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName
+			GROUP BY b.ProductID, b.ProductName, b.OrderBy
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
@@ -651,7 +656,8 @@ BEGIN
 					TotalRefundBase,
 					CompanyTurnOverBase,
 					CompanyGrossIncomeBase,
-					CompanyCommBase
+					CompanyCommBase,
+					OrderBy
 			        )
 			SELECT b.ProductID,
 				b.ProductName,
@@ -670,9 +676,10 @@ BEGIN
 				SUM(b.TotalRefundBase) AS TotalRefundBase,
 				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
-				SUM(b.CompanyCommBase) AS CompanyCommBase
+				SUM(b.CompanyCommBase) AS CompanyCommBase,
+				b.OrderBy
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
+			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency, b.OrderBy
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
@@ -703,7 +710,8 @@ BEGIN
 				TotalRefundBase,
 				CompanyTurnOverBase,
 				CompanyGrossIncomeBase,
-				CompanyCommBase
+				CompanyCommBase,
+				OrderBy
 		        )
 		SELECT b.ProductID,
 				b.ProductName,
@@ -722,9 +730,10 @@ BEGIN
 				SUM(b.TotalRefundBase) AS TotalRefundBase,
 				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
-				SUM(b.CompanyCommBase) AS CompanyCommBase
+				SUM(b.CompanyCommBase) AS CompanyCommBase,
+				b.OrderBy
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
+			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency, b.OrderBy
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
@@ -750,7 +759,7 @@ BEGIN
 				CompanyGrossIncome,
 				CompanyComm 
 		FROM #Result	
-		ORDER BY ProductID, Currency		
+		ORDER BY OrderBy, Currency		
 	END
 	ELSE
 	BEGIN

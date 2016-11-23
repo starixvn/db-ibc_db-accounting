@@ -553,18 +553,18 @@ BEGIN
 		INNER JOIN dbo.Exchange e ON e.exchangeid = d.CurrencyID
 	-- End Currency Name
 
-	IF (EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID = 6)) AND @IsDrillDown = 1
-	BEGIN	
-		IF (EXISTS (SELECT 1 FROM #tmp_SportType t WHERE EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix WITH (NOLOCK) WHERE ProductID = 6 AND t.Sporttype = SportType)))
-		BEGIN
-			DELETE d		
-			FROM #Data d
-			WHERE NOT EXISTS (SELECT 1 
-							FROM dbo.SportBettypeMatrix m WITH (NOLOCK) 							
-							WHERE m.ProductID = 6 AND d.Bettype = m.BetType 
-								AND m.SportType IN (SELECT Sporttype FROM #tmp_SportType)						
-							)
-		END														
+	DECLARE @IsDrillDownFromRM INT
+	SELECT @IsDrillDownFromRM = COUNT (*) FROM #tmp_SportType
+
+	IF (EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID = 6)) AND @IsDrillDownFromRM = 1
+	BEGIN		
+		DELETE d		
+		FROM #Data d
+		WHERE NOT EXISTS (SELECT 1 
+						FROM dbo.SportBettypeMatrix m WITH (NOLOCK) 							
+						WHERE m.ProductID = 6 AND d.Bettype = m.BetType 
+							AND m.SportType IN (SELECT Sporttype FROM #tmp_SportType)						
+						)															
 	END
 	-- Get Bettype Name
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID = 3)
