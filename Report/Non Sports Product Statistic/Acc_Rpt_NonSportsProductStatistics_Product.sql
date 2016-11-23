@@ -169,6 +169,7 @@ BEGIN
 	-- Handle Product Group		
 	IF @CasinoType <> -1 -- @CasinoType = 0_KN, VS, NG, 1_RNG Casino, 2_Live Casino
 	BEGIN
+
 		DELETE s
 		FROM #SportBettype s
 		WHERE NOT EXISTS (SELECT 1 
@@ -549,13 +550,13 @@ BEGIN
 	IF @CasinoType = -1 -- Group in Product Group
 	BEGIN
 		UPDATE s
-		SET s.ProductID = 1,
+		SET s.ProductID = 2,
 			s.ProductName = 'RNG Casino'		
 		FROM #Data s			
 		WHERE EXISTS (SELECT 1 FROM dbo.Products p WITH (NOLOCK) WHERE p.CasinoType = 1 AND s.ProductID = p.ProductID)
 
 		UPDATE s
-		SET s.ProductID = 2,
+		SET s.ProductID = 1,
 			s.ProductName = 'Live Casino'		
 		FROM #Data s
 		WHERE EXISTS (SELECT 1 FROM dbo.Products p WITH (NOLOCK) WHERE p.CasinoType = 2 AND s.ProductID = p.ProductID)
@@ -582,18 +583,24 @@ BEGIN
 		IF @IsDrillDown = 0
 		BEGIN
 			INSERT INTO #Result
-			        ( ProductID ,
-			          ProductName ,
-			          NoOfPlayers ,
-			          BetCount ,
-			          CurrencyID ,
-			          Currency ,
-			          TotalBets ,
-			          TotalWins ,
-			          TotalRefund ,
-			          CompanyTurnOver ,
-			          CompanyGrossIncome ,
-			          CompanyComm
+			    (	ProductID ,
+			        ProductName ,
+			        NoOfPlayers ,
+			        BetCount ,
+			        CurrencyID ,
+			        Currency ,
+			        TotalBets ,
+			        TotalWins ,
+			        TotalRefund ,
+			        CompanyTurnOver ,
+			        CompanyGrossIncome ,
+			        CompanyComm,
+					TotalBetsBase,
+					TotalWinsBase,
+					TotalRefundBase,
+					CompanyTurnOverBase,
+					CompanyGrossIncomeBase,
+					CompanyCommBase
 			        )
 			SELECT b.ProductID,
 				b.ProductName,
@@ -606,7 +613,13 @@ BEGIN
 				SUM(b.TotalRefundBase) AS TotalRefund,
 				SUM(b.CompanyTurnOverBase) AS CompanyTurnOver,
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncome,            
-				SUM(b.CompanyCommBase) AS CompanyComm
+				SUM(b.CompanyCommBase) AS CompanyComm,
+				SUM(b.TotalBetsBase) AS TotalBetsBase,
+				SUM(b.TotalWinsBase) AS TotalWinsBase,
+				SUM(b.TotalRefundBase) AS TotalRefundBase,
+				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
+				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
+				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
 			GROUP BY b.ProductID, b.ProductName
 			HAVING (@TotalBetType = 0
@@ -621,18 +634,24 @@ BEGIN
 		ELSE -- @Currency = -1, @IsDrillDown = 1
 		BEGIN
 			INSERT INTO #Result
-			        ( ProductID ,
-			          ProductName ,
-			          NoOfPlayers ,
-			          BetCount ,
-			          CurrencyID ,
-			          Currency ,
-			          TotalBets ,
-			          TotalWins ,
-			          TotalRefund ,
-			          CompanyTurnOver ,
-			          CompanyGrossIncome ,
-			          CompanyComm
+			    (	ProductID ,
+			        ProductName ,
+			        NoOfPlayers ,
+			        BetCount ,
+			        CurrencyID ,
+			        Currency ,
+			        TotalBets ,
+			        TotalWins ,
+			        TotalRefund ,
+			        CompanyTurnOver ,
+			        CompanyGrossIncome ,
+			        CompanyComm,
+					TotalBetsBase,
+					TotalWinsBase,
+					TotalRefundBase,
+					CompanyTurnOverBase,
+					CompanyGrossIncomeBase,
+					CompanyCommBase
 			        )
 			SELECT b.ProductID,
 				b.ProductName,
@@ -645,7 +664,13 @@ BEGIN
 				SUM(b.TotalRefundBase) AS TotalRefund,
 				SUM(b.CompanyTurnOverBase) AS CompanyTurnOver,
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncome,            
-				SUM(b.CompanyCommBase) AS CompanyComm
+				SUM(b.CompanyCommBase) AS CompanyComm,
+				SUM(b.TotalBetsBase) AS TotalBetsBase,
+				SUM(b.TotalWinsBase) AS TotalWinsBase,
+				SUM(b.TotalRefundBase) AS TotalRefundBase,
+				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
+				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
+				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
 			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
@@ -661,18 +686,24 @@ BEGIN
 	ELSE -- @Currency <> -1 => Original Currency
 	BEGIN
 		INSERT INTO #Result
-		        ( ProductID ,
-		          ProductName ,
-		          NoOfPlayers ,
-		          BetCount ,
-		          CurrencyID ,
-		          Currency ,
-		          TotalBets ,
-		          TotalWins ,
-		          TotalRefund ,
-		          CompanyTurnOver ,
-		          CompanyGrossIncome ,
-		          CompanyComm
+		    (	ProductID ,
+		        ProductName ,
+		        NoOfPlayers ,
+		        BetCount ,
+		        CurrencyID ,
+		        Currency ,
+		        TotalBets ,
+			    TotalWins ,
+			    TotalRefund ,
+			    CompanyTurnOver ,
+			    CompanyGrossIncome ,
+			    CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				TotalRefundBase,
+				CompanyTurnOverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase
 		        )
 		SELECT b.ProductID,
 				b.ProductName,
@@ -685,7 +716,13 @@ BEGIN
 				SUM(b.TotalRefund) AS TotalRefund,
 				SUM(b.CompanyTurnOver) AS CompanyTurnOver,
 				SUM(b.CompanyGrossIncome) AS CompanyGrossIncome,            
-				SUM(b.CompanyComm) AS CompanyComm
+				SUM(b.CompanyComm) AS CompanyComm,
+				SUM(b.TotalBetsBase) AS TotalBetsBase,
+				SUM(b.TotalWinsBase) AS TotalWinsBase,
+				SUM(b.TotalRefundBase) AS TotalRefundBase,
+				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
+				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
+				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
 			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
@@ -712,22 +749,21 @@ BEGIN
 			CompanyGrossIncome,
 			CompanyComm 
 	FROM #Result	
-	ORDER BY ProductID, Currency		
+	ORDER BY ProductName, Currency		
 
 	SELECT
         'GrandTotal' AS ReportBy,
-        COUNT(DISTINCT b.custid) NoOfPlayers,
-        SUM(b.BetCount) BetCount,
+        SUM(c.NoOfPlayers) NoOfPlayers,
+        SUM(c.BetCount) BetCount,
         2 as CurrencyId, 
         'RM' AS Currency,
-        SUM(b.TotalBetsBase) TotalBets,
-        SUM(b.TotalWinsBase) TotalWins,
-        SUM(b.TotalRefundBase) TotalRefund,
-        SUM(b.CompanyTurnOverBase) CompanyTurnOver,
-		SUM(b.CompanyGrossIncomeBase) CompanyGrossIncome,
-		SUM(b.CompanyCommBase) CompanyComm
-    FROM #Data b
-		INNER JOIN  #Result c ON (@Currency = -1 OR c.CurrencyId = b.CurrencyId) AND b.ProductName = c.ProductName
+        SUM(c.TotalBetsBase) TotalBets,
+        SUM(c.TotalWinsBase) TotalWins,
+        SUM(c.TotalRefundBase) TotalRefund,
+        SUM(c.CompanyTurnOverBase) CompanyTurnOver,
+		SUM(c.CompanyGrossIncomeBase) CompanyGrossIncome,
+		SUM(c.CompanyCommBase) CompanyComm
+    FROM #Result c
 
 	DROP TABLE #Data
 	DROP TABLE #Result
