@@ -14,12 +14,13 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE NAP_WinLimit_MonitorSel @FromDate   DATETIME,
-                                         @ToDate     DATETIME,
-                                         @ProductId  INT          = 0,
-                                         @UserName   NVARCHAR(50) = '',
-                                         @SiteId     INT          = 0,
-                                         @CurrencyId INT          = 0
+CREATE PROCEDURE NAP_WinLimit_MonitorSel @FromDate        DATETIME,
+                                         @ToDate          DATETIME,
+                                         @ProductId       INT          = 0,
+                                         @UserName        NVARCHAR(50) = '',
+                                         @SiteId          INT          = 0,
+                                         @CurrencyId      INT          = 0,
+                                         @ExcludeTestData BIT          = 1
 AS
 
 /*
@@ -48,23 +49,19 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
      SET NOCOUNT ON;
      BEGIN -- #WinLimitMonitor
          CREATE TABLE #WinLimitMonitor
-         (CustId                   INT,
-          UserName                 NVARCHAR(50),
-          ProductId                INT,
-          BettypeId                INT,
-          GroupId                  INT,
-          ReachedLimitLevel        SMALLINT,
-          MaxWinLimit              MONEY,
-          TotalWinAmount           MONEY,
-          WinAmount                MONEY,
-          ModifiedDate             DATETIME,
-          CurrencyId               INT,
-          SiteId                   INT,
-          CurrencyMaxWinLimitLevel SMALLINT,
-          CurrencyMaxWinLimit      MONEY,
-          PlayerMaxWinLimitLevel   SMALLINT,
-          PlayerMaxWinLimit        MONEY,
-          IsNotified               BIT
+         (CustId             INT,
+          UserName           NVARCHAR(50),
+          ProductId          INT,
+          BettypeId          INT,
+          GroupId            INT,
+          ReachedLimitLevel  SMALLINT,
+          TotalWinAmount     MONEY,
+          TotalWinAmountRM   MONEY,
+          MaxWinLimitSetting XML,
+          ModifiedDate       DATETIME,
+          CurrencyId         INT,
+          SiteId             INT,
+          IsNotified         BIT
          );
          INSERT INTO #WinLimitMonitor
          (CustId,
@@ -73,16 +70,12 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
           BettypeId,
           GroupId,
           ReachedLimitLevel,
-          MaxWinLimit,
           TotalWinAmount,
-          WinAmount,
+          TotalWinAmountRM,
+          MaxWinLimitSetting,
           ModifiedDate,
           CurrencyId,
           SiteId,
-          CurrencyMaxWinLimitLevel,
-          CurrencyMaxWinLimit,
-          PlayerMaxWinLimitLevel,
-          PlayerMaxWinLimit,
           IsNotified
          )
                 SELECT cm.CustID,
@@ -91,16 +84,12 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                        cm.BettypeID,
                        gs.GroupID,
                        cm.LevelID,
-                       cm.MaxWinLimit,
                        cm.TotalWinAmt,
-                       cm.WinAmt,
+                       cm.TotalWinAmt_RM,
+                       cm.MaxWinLimitSetting,
                        cm.ModifiedDate,
                        c.currency,
                        s.siteid,
-                       ps.LevelID,
-                       ps.MaxWinLimit,
-                       cs.LevelID,
-                       cs.MaxWinLimit,
                        cm.IsNotified
                 FROM WinLimit_CustGameMonitoring cm WITH (NOLOCK)
                      INNER JOIN dbo.WinLimit_GameGroupSetting gs WITH (NOLOCK) ON cm.BettypeID = gs.BetTypeID
@@ -108,14 +97,6 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                      INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON cm.CustID = ci.CustID
                      INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.custid = ci.recommend
                      INNER JOIN dbo.Site s WITH (NOLOCK) ON s.site = c.site
-                     INNER JOIN dbo.WinLimit_ProductSettingDetail ps WITH (NOLOCK) ON ps.ProductID = cm.ProductID
-                                                                                      AND ps.GroupID = gs.GroupID
-                                                                                      AND ps.ExchangeID = c.currency
-                                                                                      AND ps.SiteID = s.siteid
-                     LEFT JOIN dbo.WinLimit_CustGameSetting cs WITH (NOLOCK) ON cs.CustID = cm.CustID
-                                                                                AND cs.ProductID = cm.ProductID
-                                                                                AND cs.GroupID = gs.GroupID
-                                                                                AND cs.LevelId = ps.LevelId
                 WHERE cm.ModifiedDate BETWEEN @FromDate AND @Todate
                       AND (@ProductId = 0
                            OR cm.ProductID = @ProductId)
@@ -123,9 +104,11 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                            OR s.SiteId = @SiteId)
                       AND (@CurrencyId = 0
                            OR ci.currency = @CurrencyId)
-                      AND ci.roleid = 1
-                      AND (LEN(@UserName) = 0
-                           OR ci.username = @UserName);
+                      AND (@ExcludeTestData = 0
+                           OR ci.currency NOT IN(20, 72)) -- UUS & YNG
+                     AND ci.roleid = 1
+                     AND (LEN(@UserName) = 0
+                          OR ci.username = @UserName);
      END;
      BEGIN -- Query data
          SELECT m.CustId,
@@ -135,21 +118,9 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                 m.ProductId,
                 m.BettypeId,
                 m.GroupId,
-                ISNULL(m.PlayerMaxWinLimitLevel, m.CurrencyMaxWinLimitLevel) AS Level,
-                CASE
-                    WHEN(ISNULL(m.PlayerMaxWinLimit, 0) = 0)
-                    THEN CASE
-                             WHEN m.CurrencyMaxWinLimitLevel = m.ReachedLimitLevel
-                             THEN m.MaxWinLimit
-                             ELSE m.CurrencyMaxWinLimit
-                         END
-                    ELSE CASE
-                             WHEN m.PlayerMaxWinLimitLevel = m.ReachedLimitLevel
-                             THEN m.MaxWinLimit
-                             ELSE m.PlayerMaxWinLimit
-                         END
-                END AS MaxWinLimit,
                 m.TotalWinAmount,
+                m.TotalWinAmountRM,
+                m.MaxWinLimitSetting,
                 m.ModifiedDate AS ReachedLimitTime,
                 m.ReachedLimitLevel,
          (

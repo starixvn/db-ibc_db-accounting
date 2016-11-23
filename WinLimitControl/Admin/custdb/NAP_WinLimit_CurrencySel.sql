@@ -130,6 +130,9 @@ EXEC [NAP_WinLimit_CurrencySel] @SiteId=32, @IsCreditSite = 1, @ExcludeTestCurre
              UNION
              SELECT '(UUS)',
                     20
+             UNION
+             SELECT '(YNG)',
+                    72
              FROM @Dual
              WHERE @ExcludeTestCurrency = 0
              ORDER BY Name;

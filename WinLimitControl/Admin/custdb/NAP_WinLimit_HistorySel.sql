@@ -32,109 +32,73 @@ Parameters Explanation:
    @ProductId: Product ID
    @CustId: Cust ID
 Example:
-EXEC [NAP_WinLimit_HistorySel] @ProductId = 13, @CustId = 18766106
+EXEC [NAP_WinLimit_HistorySel] @ProductId = 4, @CustId = 1368173
 */
 
 
      SET NOCOUNT ON;
-     BEGIN -- Query SiteId and ExchangeId
-         DECLARE @CurrencyId INT, @AgentId INT, @SiteId INT;
-         SELECT @CurrencyId = currency,
-                @AgentId = recommend
-         FROM dbo.Customer WITH (NOLOCK)
-         WHERE custid = @CustId;
-         SELECT @SiteId = s.siteid
+     BEGIN -- Currency
+         DECLARE @CurrencyCode VARCHAR(20);
+         SELECT @CurrencyCode = e.Currency
          FROM dbo.Customer c WITH (NOLOCK)
-              INNER JOIN dbo.[Site] s WITH (NOLOCK) ON c.site = s.site
-         WHERE CustId = @AgentId;
+              INNER JOIN dbo.exchange e WITH (NOLOCK) ON c.Currency = e.ExchangeId
+         WHERE c.CustId = @CustId;
      END;
      BEGIN -- temp table data
          CREATE TABLE #WinLimitHistory
-         (BetTypeId                INT,
-          GroupId                  INT,
-          ReachedLimitLevel        SMALLINT,
-          MaxWinLimit              MONEY,
-          TotalWinAmount           MONEY,
-          WinAmount                MONEY,
-          ActionName               NVARCHAR(50),
-          ModifiedDate             DATETIME,
-          ModifiedBy               INT,
-          CreatedBy                INT,
-          CurrencyMaxWinLimitLevel SMALLINT,
-          CurrencyMaxWinLimit      MONEY,
-          PlayerMaxWinLimitLevel   SMALLINT,
-          PlayerMaxWinLimit        MONEY
+         (BetTypeId          INT,
+          GroupId            INT,
+          ReachedLimitLevel  SMALLINT,
+          TotalWinAmount     MONEY,
+          TotalWinAmountRM   MONEY,
+          MaxWinLimitSetting XML,
+          ActionName         NVARCHAR(50),
+          ModifiedDate       DATETIME,
+          ModifiedBy         INT,
+          CreatedBy          INT
          );
          INSERT INTO #WinLimitHistory
          (BetTypeId,
           GroupId,
           ReachedLimitLevel,
-          MaxWinLimit,
           TotalWinAmount,
-          WinAmount,
+          TotalWinAmountRM,
+          MaxWinLimitSetting,
           ActionName,
           ModifiedDate,
           ModifiedBy,
-          CreatedBy,
-          CurrencyMaxWinLimitLevel,
-          CurrencyMaxWinLimit,
-          PlayerMaxWinLimitLevel,
-          PlayerMaxWinLimit
+          CreatedBy
          )
                 SELECT h.BetTypeId,
                        gs.GroupId,
                        h.LevelID,
-                       h.MaxWinLimit,
                        h.TotalWinAmt,
-                       h.WinAmt,
+                       h.TotalWinAmt_RM,
+                       h.MaxWinLimitSetting,
                        a.ActionName,
                        h.ModifiedDate,
                        h.ModifiedBy,
-                       h.CreatedBy,
-                       ps.LevelID,
-                       ps.MaxWinLimit,
-                       cs.LevelID,
-                       cs.MaxWinLimit
+                       h.CreatedBy
                 FROM dbo.WinLimit_CustGameMonitoring_History h WITH (NOLOCK)
                      INNER JOIN dbo.WinLimit_GameGroupSetting gs WITH (NOLOCK) ON h.BettypeID = gs.BetTypeID
                                                                                   AND h.ProductID = gs.ProductID
-                     INNER JOIN dbo.WinLimit_ProductSettingDetail ps WITH (NOLOCK) ON ps.ProductID = h.ProductID
-                                                                                      AND ps.GroupID = gs.GroupID
-                                                                                      AND ps.SiteID = @SiteId
-                                                                                      AND ps.ExchangeID = @CurrencyId
-                     LEFT JOIN dbo.WinLimit_CustGameSetting cs WITH (NOLOCK) ON cs.CustID = h.CustID
-                                                                                AND cs.ProductID = h.ProductID
-                                                                                AND cs.GroupID = gs.GroupID
-                                                                                AND cs.LevelId = ps.LevelId
                      INNER JOIN dbo.Winlimit_ActionSetting a WITH (NOLOCK) ON a.ActionID = h.ActionID
                 WHERE h.ProductID = @ProductId
                       AND h.CustID = @CustId;
      END;
      BEGIN -- Query data
-         SELECT DISTINCT
-                h.GroupId,
+         SELECT h.GroupId,
                 h.BetTypeId,
                 h.ModifiedDate,
-                ISNULL(h.PlayerMaxWinLimitLevel, h.CurrencyMaxWinLimitLevel) AS Level,
-                CASE
-                    WHEN(ISNULL(h.PlayerMaxWinLimit, 0) = 0)
-                    THEN CASE
-                             WHEN h.CurrencyMaxWinLimitLevel = h.ReachedLimitLevel
-                             THEN h.MaxWinLimit
-                             ELSE h.CurrencyMaxWinLimit
-                         END
-                    ELSE CASE
-                             WHEN h.PlayerMaxWinLimitLevel = h.ReachedLimitLevel
-                             THEN h.MaxWinLimit
-                             ELSE h.PlayerMaxWinLimit
-                         END
-                END AS MaxWinLimit,
+                h.MaxWinLimitSetting,
                 h.TotalWinAmount,
+                @CurrencyCode Currency,
+                h.TotalWinAmountRM,
                 h.ReachedLimitLevel,
                 h.ActionName,
                 CASE
                     WHEN h.ModifiedBy IS NULL
-                    THEN 'System'
+                    THEN ''
                     ELSE
          (
              SELECT c.username
