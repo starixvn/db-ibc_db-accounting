@@ -66,7 +66,7 @@ SET NOCOUNT ON
 	DECLARE @WLDate DATETIME
 	SELECT @WLDate = @WinlostDate
 
-	CREATE TABLE #Data ( Srecommend INT, CustID INT,
+	CREATE TABLE #Data ( recommend INT, CustID INT,
 						 BetCount INT, CurrencyID INT, Currency NVARCHAR(50),
 						 TotalBets MONEY, TotalBetsBase MONEY,
 						 TotalWins MONEY, TotalWinsBase MONEY,
@@ -162,56 +162,68 @@ SET NOCOUNT ON
 	-- End Sport Bettype Matrix
 
 	-- Get Site	
-	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), Srecommend INT, isDeposit BIT)
+	CREATE TABLE #recommend (SiteName VARCHAR(50), recommend INT, isDeposit BIT)
+	DECLARE @isDrillDownLicensee BIT
+	SELECT  @isDrillDownLicensee = 0
 
-	IF @Site <> 'ALL'
+	IF @Site = 'All'
+	BEGIN
+		INSERT INTO #recommend (SiteName, recommend, isDeposit)
+		SELECT ss.site, c.recommend, ss.isDeposit
+		FROM dbo.Customer c WITH (NOLOCK)
+			INNER JOIN dbo.Site ss WITH (NOLOCK) ON ss.Site = c.site
+		WHERE c.roleid = 2
+	END
+	ELSE IF @Site = 'Licensee Group' -- all deposit drill down
+	BEGIN
+		INSERT INTO #recommend (SiteName, recommend, isDeposit)
+		SELECT c.site, c.custid, 1
+		FROM dbo.Dep_CustSuper d WITH (NOLOCK)
+			INNER JOIN dbo.Customer c WITH (NOLOCK) ON d.custid = c.srecommend
+		WHERE c.roleid = 2
+	END
+	ELSE
 	BEGIN
 		INSERT INTO #tmp_Site (Site)
 		SELECT RTRIM(LTRIM(val)) FROM dbo.strSplit(@Site, ',')
 
-		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site NOT IN ('MBC Group')) -- Deposit Or Credit Drill Down
+		IF EXISTS (SELECT TOP 1 1 FROM #tmp_Site WHERE Site IN ('MBC Group'))					
+		BEGIN
+			INSERT INTO #recommend (SiteName, recommend, isDeposit)
+			SELECT c.site, c.custid, 0
+			FROM dbo.Customer c WITH(NOLOCK)
+				LEFT JOIN dbo.Dep_CustSuper d WITH(NOLOCK) ON c.srecommend = d.custid
+			WHERE c.roleid = 2 AND d.custid IS NULL
+		END
+
+		IF EXISTS (SELECT TOP 1 1 FROM #tmp_Site WHERE Site NOT IN ('MBC Group', 'Licensee Group'))
 		BEGIN	
-			INSERT INTO #tmp_Company (SiteName, Srecommend, isDeposit)
-			SELECT s.Site, c.srecommend, ss.isDeposit
-			FROM #tmp_Site s
-				INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
-				INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
-			WHERE c.roleid = 4
+			INSERT INTO #recommend (SiteName, recommend, isDeposit)
+			SELECT c.site, c.custid, ss.isDeposit
+			FROM dbo.Customer c WITH (NOLOCK) 
+				INNER JOIN dbo.Site ss WITH (NOLOCK) ON ss.Site = c.site
+				INNER JOIN #tmp_Site s ON ss.site = s.Site
+			WHERE c.roleid = 2
+			
+			IF EXISTS (SELECT TOP 1 1 FROM #recommend WHERE isDeposit = 1)
+				IF (SELECT COUNT(1) FROM #tmp_Site) <> 1
+					SELECT @isDrillDownLicensee = 1
 		END
-
-		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site IN ('MBC Group'))					
+		ELSE IF	EXISTS (SELECT TOP 1 1 FROM #tmp_Site WHERE Site IN ('Licensee Group'))
 		BEGIN
-			INSERT INTO #tmp_Company (SiteName, Srecommend, isDeposit)
-			SELECT c.site, c.srecommend, 0
-			FROM dbo.Customer c WITH (NOLOCK)
-			WHERE c.roleid = 4
-				AND NOT EXISTS (SELECT 1 FROM dbo.f_DepSuper_1('ALL') f WHERE c.srecommend = f.CustID)
+			INSERT INTO #recommend (SiteName, recommend, isDeposit)
+			SELECT c.site, c.custid, 1
+			FROM dbo.Dep_CustSuper d WITH (NOLOCK)
+				INNER JOIN dbo.Customer c WITH (NOLOCK) ON d.custid = c.srecommend
+			WHERE c.roleid = 2
 		END
-
-		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site IN ('Licensee Group'))					
-		BEGIN
-			INSERT INTO #tmp_Company (SiteName, Srecommend, isDeposit)
-			SELECT c.site, c.srecommend, 1
-			FROM dbo.Customer c WITH (NOLOCK)
-			WHERE c.roleid = 4
-				AND EXISTS (SELECT 1 FROM dbo.f_DepSuper_1('ALL') f WHERE c.srecommend = f.CustID)
-		END		
-		
-	END
-	ELSE
-	BEGIN
-		INSERT INTO #tmp_Company (SiteName, Srecommend, isDeposit)
-		SELECT ss.site, c.srecommend, ss.isDeposit
-		FROM dbo.Customer c WITH (NOLOCK) 
-			INNER JOIN dbo.Site ss WITH (NOLOCK) ON ss.Site = c.site
-		WHERE c.roleid = 4
 	END
 
-	CREATE NONCLUSTERED INDEX Idx_SrecommendID ON #tmp_Company (Srecommend)
+	CREATE NONCLUSTERED INDEX Idx_recommendID ON #recommend (recommend)
 	-- End Site	
 	------------------------------------------II. Get Real Data For Report ------------------------------------------------------
 	-- Select temp data of bettrans
-	CREATE TABLE #tmp_bettrans ( Srecommend INT, CustID INT,
+	CREATE TABLE #tmp_bettrans ( recommend INT, CustID INT,
 						 BetCount BIGINT, CurrencyID INT, Currency NVARCHAR(50),
 						 TotalBets MONEY, TotalBetsBase MONEY,
 						 TotalWins MONEY, TotalWinsBase MONEY,
@@ -222,7 +234,7 @@ SET NOCOUNT ON
 						 RefTable SMALLINT, EvenType INT, Matchid INT, ProductID INT
 						)
 	INSERT INTO #tmp_bettrans
-	        ( Srecommend ,
+	        ( recommend ,
 	          CustID ,
 	          BetCount ,
 	          CurrencyID ,
@@ -243,7 +255,7 @@ SET NOCOUNT ON
 			  Matchid,
 			  ProductID
 	        )	
-	SELECT b.Srecommend, b.custid, 
+	SELECT b.recommend, b.custid,
 				COUNT(CASE WHEN b.statusID IN (111, 112, 113) THEN b.transid ELSE NULL END) AS BetCount, b.currency,
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -269,24 +281,25 @@ SET NOCOUNT ON
 	FROM  dbo.bettrans14 b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 	WHERE b.winlostdate = @WLDate
+		AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 		AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 		AND (b.currency = @Currency OR @Currency IN (0, -1))
 		AND (EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE m.CustID = b.custid) OR @Username = '')
 		AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 		AND ( @Site = 'ALL'
-				  OR (EXISTS (SELECT 1 From #tmp_Company s WHERE s.srecommend = b.srecommend))
+				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
 		AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 			OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 			OR @HousePTType = 0)
-	GROUP BY b.Srecommend, b.custid, b.currency, s.RefTable, s.EvenType, b.matchid, s.ProductID	
+	GROUP BY b.recommend, b.custid, b.currency, s.RefTable, s.EvenType, b.matchid, s.ProductID	
 
 	--- Check condition 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID NOT IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
 	BEGIN		
 		-- 1. By bettype for normal product
 		INSERT INTO #Data
-				( Srecommend,
+				( recommend,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	         
@@ -303,7 +316,7 @@ SET NOCOUNT ON
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT b.Srecommend, b.custid,
+		SELECT b.recommend, b.custid,
 				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
@@ -326,11 +339,11 @@ SET NOCOUNT ON
 
 		FROM  #tmp_bettrans b
 		WHERE b.RefTable IN (0, 3) AND b.ProductID NOT IN (3, 4, 5)
-		GROUP BY b.Srecommend, b.custid, b.CurrencyID
+		GROUP BY b.recommend, b.custid, b.CurrencyID
 		
 		-- 2a. By Bettype for Casino Product
 		INSERT INTO #Data
-				( Srecommend ,
+				( recommend ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	          
@@ -347,7 +360,7 @@ SET NOCOUNT ON
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.Srecommend, b.custid,
+		SELECT	b.recommend, b.custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -370,22 +383,23 @@ SET NOCOUNT ON
 		FROM dbo.bettransRnG14 b WITH (NOLOCK)
 			INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 		WHERE b.winlostdate = @WLDate
+			AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 			AND s.RefTable = 1		
 			AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 			AND (b.currency = @Currency OR @Currency IN (0, -1))	
 			AND (EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE m.CustID = b.custid) OR @Username = '')
 			AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 			AND ( @Site = 'ALL'
-				  OR (EXISTS (SELECT 1 From #tmp_Company s WHERE s.srecommend = b.srecommend))
+				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
-		GROUP BY b.Srecommend, b.custid, b.currency
+		GROUP BY b.recommend, b.custid, b.currency
 		
 		-- 2b. By Bettype for Casino Product
 		INSERT INTO #Data
-				( Srecommend ,
+				( recommend ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	          
@@ -402,7 +416,7 @@ SET NOCOUNT ON
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.Srecommend, b.custid,
+		SELECT	b.recommend, b.custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -425,25 +439,26 @@ SET NOCOUNT ON
 		FROM dbo.bettransLC14 b WITH (NOLOCK)
 			INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 		WHERE b.winlostdate = @WLDate
+			AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 			AND s.RefTable = 2	
 			AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 			AND (b.currency = @Currency OR @Currency IN (0, -1))			
 			AND (EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE m.CustID = b.custid) OR @Username = '')
 			AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 			AND ( @Site = 'ALL'
-				  OR (EXISTS (SELECT 1 From #tmp_Company s WHERE s.srecommend = b.srecommend))
+				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
-		GROUP BY b.Srecommend, b.custid, b.currency		
+		GROUP BY b.recommend, b.custid, b.currency		
 	END
 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID IN (3, 4, 5))
 	BEGIN
 		-- 3. NumberGame - Live Casino - Virtual Sport (Soccer)
 		INSERT INTO #Data
-				( Srecommend ,
+				( recommend ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,
@@ -460,7 +475,7 @@ SET NOCOUNT ON
 				  CompanyComm ,
 				  CompanyCommBase
 				)	
-		SELECT	b.Srecommend, b.custid,
+		SELECT	b.recommend, b.custid,
 				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
@@ -490,11 +505,11 @@ SET NOCOUNT ON
 				(b.ProductID = 4 AND (@GameTableId = '' OR (EXISTS (SELECT 1 FROM #tmp_GameTableID g WHERE g.GameTableID = m.leagueid)))) OR
 				(b.ProductID = 5 AND (@Sporttype = '' OR (EXISTS (SELECT 1 FROM #tmp_SportType st WHERE st.Sporttype = m.sporttype))))
 			)	
-		GROUP BY b.Srecommend, b.custid, b.CurrencyID
+		GROUP BY b.recommend, b.custid, b.CurrencyID
 	
 		-- 4. Virtual Sport (HR)
 		INSERT INTO #Data
-				( Srecommend ,
+				( recommend ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	          
@@ -511,7 +526,7 @@ SET NOCOUNT ON
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.Srecommend, b.custid,
+		SELECT	b.recommend, b.custid,
 				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
@@ -537,7 +552,7 @@ SET NOCOUNT ON
 		WHERE b.ProductID = 5
 			AND b.EvenType = 3
 			AND (@Sporttype = '' OR (EXISTS(SELECT 1 FROM #tmp_SportType st WHERE st.Sporttype = r.SportType)))			  
-		GROUP BY b.Srecommend, b.custid, b.CurrencyID
+		GROUP BY b.recommend, b.custid, b.CurrencyID
 	END
 
 	-- Get Currency name
@@ -569,7 +584,7 @@ SET NOCOUNT ON
 			        )
 			SELECT c.IsDeposit,
 					c.SiteName,
-					COUNT(DISTINCT CustID) AS NoOfPlayers, 
+					COUNT(DISTINCT custid) AS NoOfPlayers,
 					SUM(BetCount) AS BetCount ,
 					-1 as CurrencyId, 
 					'RM' AS Currency,
@@ -580,7 +595,7 @@ SET NOCOUNT ON
 					SUM (CompanyGrossIncomeBase) AS CompanyGrossIncome,
 					SUM (CompanyCommBase) AS CompanyComm
 			FROM #Data b
-				INNER JOIN #tmp_Company c ON b.Srecommend = c.Srecommend
+				INNER JOIN #recommend c ON b.recommend = c.recommend
 			GROUP BY c.IsDeposit, c.SiteName
 			HAVING (@TotalBetType = 0
 					OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
@@ -609,8 +624,9 @@ SET NOCOUNT ON
 			        )
 			SELECT 
 				CASE WHEN @Site = 'All' THEN 1 ELSE c.IsDeposit END AS IsDeposit,
-				CASE WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END AS SiteName,
-				COUNT(DISTINCT CustID) AS NoOfPlayers, 
+				CASE	WHEN @isDrillDownLicensee = 1 THEN 'Licensee Group'
+						WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END AS SiteName,
+				COUNT(DISTINCT custid) AS NoOfPlayers,
 				SUM(BetCount) AS BetCount ,
 				b.CurrencyID , 
 				b.Currency ,
@@ -621,9 +637,10 @@ SET NOCOUNT ON
 				SUM (CompanyGrossIncomeBase) AS CompanyGrossIncome,
 				SUM (CompanyCommBase) AS CompanyComm
 			FROM #Data b
-				INNER JOIN #tmp_Company c ON b.Srecommend = c.Srecommend
+				INNER JOIN #recommend c ON b.recommend = c.recommend
 			GROUP BY CASE WHEN @Site = 'All' THEN 1 ELSE c.IsDeposit END,
-				CASE WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END,
+				CASE	WHEN @isDrillDownLicensee = 1 THEN 'Licensee Group'
+						WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END,
 				b.CurrencyID , 
 				b.Currency
 			HAVING (@TotalBetType = 0
@@ -655,7 +672,7 @@ SET NOCOUNT ON
 		SELECT 
 			CASE WHEN @Site = 'All' AND @IsDrillDown = 1 THEN 1 ELSE c.IsDeposit END AS IsDeposit,
 			CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END AS SiteName,
-			COUNT(DISTINCT CustID) AS NoOfPlayers, 
+			COUNT(DISTINCT custid) AS NoOfPlayers,
 			SUM(BetCount) AS BetCount ,
 			b.CurrencyID AS CurrencyId, 
 			b.Currency AS Currency,
@@ -666,7 +683,7 @@ SET NOCOUNT ON
 			SUM (b.CompanyGrossIncome) AS CompanyGrossIncome,
 			SUM (b.CompanyComm) AS CompanyComm
 		FROM #Data b
-			INNER JOIN #tmp_Company c ON b.Srecommend = c.Srecommend
+			INNER JOIN #recommend c ON b.recommend = c.recommend
 		GROUP BY CASE WHEN @Site = 'All' AND @IsDrillDown = 1 THEN 1 ELSE c.IsDeposit END,
 			CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END,
 			b.CurrencyID , 
@@ -703,7 +720,7 @@ SET NOCOUNT ON
 		SELECT
 			c.IsDeposit,
 			CASE WHEN c.isDeposit = 0 THEN 'MBC Group' ELSE 'Licensee Group' END ReportBy,
-			COUNT(DISTINCT b.custid) NoOfPlayers,
+			COUNT(DISTINCT custid) AS NoOfPlayers,
 			SUM(b.BetCount) BetCount,
 			@Currency CurrencyId, 
 			'RM' AS Currency,
@@ -715,14 +732,14 @@ SET NOCOUNT ON
 			SUM(b.CompanyCommBase) CompanyComm
 		FROM #Data b
 			INNER JOIN  #Result c ON (@Currency = -1 OR c.CurrencyId = b.CurrencyId)
-		WHERE EXISTS (SELECT 1 FROM #tmp_Company t WHERE t.Srecommend = b.Srecommend AND c.SiteName = t.SiteName)
+		WHERE EXISTS (SELECT 1 FROM #recommend t WHERE t.recommend = b.recommend AND c.SiteName = t.SiteName)
 		GROUP BY c.isDeposit,
 			CASE WHEN c.isDeposit = 0 THEN 'MBC Group' ELSE 'Licensee Group' END
 		UNION ALL
 		SELECT
 			2 AS IsDeposit,
 			'GrandTotalRM' AS ReportBy,
-			COUNT(DISTINCT b.custid) NoOfPlayers,
+			COUNT(DISTINCT custid) AS NoOfPlayers,
 			SUM(b.BetCount) BetCount,
 			-1 as CurrencyId, 
 			'RM' AS Currency,
@@ -734,14 +751,14 @@ SET NOCOUNT ON
 			SUM(b.CompanyCommBase) CompanyComm
 		FROM #Data b
 			INNER JOIN  #Result c ON (@Currency = -1 OR c.CurrencyId = b.CurrencyId)
-		WHERE EXISTS (SELECT 1 FROM #tmp_Company t WHERE t.Srecommend = b.Srecommend AND c.SiteName = t.SiteName)
+		WHERE EXISTS (SELECT 1 FROM #recommend t WHERE t.recommend = b.recommend AND c.SiteName = t.SiteName)
 	END
 	ELSE
 	BEGIN
 		SELECT
 			2 AS IsDeposit,
 			'GrandTotalRM' AS ReportBy,
-			COUNT(DISTINCT b.custid) NoOfPlayers,
+			COUNT(DISTINCT custid) AS NoOfPlayers,
 			SUM(b.BetCount) BetCount,
 			-1 as CurrencyId, 
 			'RM' AS Currency,
@@ -758,7 +775,7 @@ SET NOCOUNT ON
 	DROP TABLE #Result
 	DROP TABLE #SportBettype
 	DROP TABLE #tmp_BetType
-	DROP TABLE #tmp_Company
+	DROP TABLE #recommend
 	DROP TABLE #tmp_Devide
 	DROP TABLE #tmp_GameTableID
 	DROP TABLE #tmp_LeagueID
