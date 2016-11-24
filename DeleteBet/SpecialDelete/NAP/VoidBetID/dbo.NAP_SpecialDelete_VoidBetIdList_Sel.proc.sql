@@ -592,20 +592,16 @@ BEGIN
 				WHEN (
 					d.recommend NOT IN (52466)
 					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NULL
-					AND d.betfrom <> 'p'
+					AND s.custid IS NULL					
 				) THEN '0-Credit'
-				WHEN d.recommend IN (52466) AND d.betfrom <> 'p' THEN '1-8RM'
+				WHEN d.recommend IN (52466)	THEN '1-8RM'
 				WHEN (
 					d.recommend NOT IN (52466)
 					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NOT NULL
-					AND d.betfrom <> 'p'
+					AND s.custid IS NOT NULL					
 				) THEN '2-Deposit'
-				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) 
-					 AND d.betfrom <> 'p'
-				  THEN '3-BetFair'
-				WHEN d.betfrom = 'p' THEN '4-Phone Betting'
+				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) 					 
+				  THEN '3-BetFair'				
 			END AS GroupName
 		FROM #Data d
 			INNER JOIN CustSiteName cs 
@@ -653,11 +649,15 @@ BEGIN
 		,d.SoldId
 		,d.IsHideComm
 		,g.IsDeposit
-		,SUBSTRING(g.GroupName, 3, 30) AS GroupName
+		,SUBSTRING(T.GroupName, 3, 30) AS GroupName
 		
 	FROM #Data d
 		INNER JOIN CTE_GroupInfo g
 		ON d.custid = g.custid
+		OUTER APPLY (SELECT CASE 
+								WHEN d.betfrom = 'p' THEN '4-Phone Betting'
+								ELSE g.GroupName
+							END AS GroupName) AS T
 		
 	WHERE NOT EXISTS (
 			SELECT TOP 1 1 
@@ -669,7 +669,7 @@ BEGIN
 		AND d.recommend 	NOT IN (11196380) --Foobet
 		AND d.recommend 	NOT IN (13423967) --OneExchange
 		
-	ORDER BY g.GroupName
+	ORDER BY T.GroupName
 		,d.GroupID
 		,d.transid
 	
