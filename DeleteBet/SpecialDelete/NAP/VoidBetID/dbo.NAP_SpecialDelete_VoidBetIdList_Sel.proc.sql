@@ -605,7 +605,7 @@ BEGIN
 				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) 
 					 AND d.betfrom <> 'p'
 				  THEN '3-BetFair'
-				WHEN d.betfrom = 'p' THEN 'Phone Betting'
+				WHEN d.betfrom = 'p' THEN '4-Phone Betting'
 			END AS GroupName
 		FROM #Data d
 			INNER JOIN CustSiteName cs 
