@@ -176,7 +176,7 @@ BEGIN
 			FROM #tmp_Site s
 				INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
 				INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
-			WHERE c.roleid = 4
+			WHERE c.roleid = 4 -- Super
 		END
 
 		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site IN ('MBC Group'))					
