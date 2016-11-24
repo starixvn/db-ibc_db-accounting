@@ -230,7 +230,7 @@ BEGIN
 			,0 as WinOdds
 			,0 as PlaceOdds
 		FROM	dbo.match m WITH (NOLOCK)
-				LEFT JOIN dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = r.MatchId AND r.ResourceId ='00'
+				LEFT JOIN DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = r.MatchId AND r.ResourceId ='00'
 		WHERE m.eventdate BETWEEN @FromDate AND @ToDate 
 			AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END 			
 			AND CASE WHEN @UncalMultiOnly = 0 THEN 1 
@@ -276,7 +276,7 @@ BEGIN
 							   FOR XML PATH('match') ,ROOT('root')
 				)
 		-- FGLG
-		EXEC DBTXN.bodb02.dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid
+		EXEC dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid
 			,@betstatus = @betstatus OUTPUT
 
 		--Create an internal representation of the XML document.      
@@ -294,7 +294,7 @@ BEGIN
 
 
 		-- HT FGLG
-		EXEC DBTXN.bodb02.dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid
+		EXEC dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid
 			,@bettype = 127
 			,@betstatus = @betstatus OUTPUT
 
@@ -314,7 +314,7 @@ BEGIN
 	;WITH SingleTicket AS
 	(
 		SELECT matchid, max(IsCalculating)  IsCalculating
-		FROM DBTXN.bodb02.dbo.Single_Calculate_Queue s WITH(NOLOCK)
+		FROM dbo.Single_Calculate_Queue s WITH(NOLOCK)
 		WHERE Starttime > DATEADD(HH,-1,GETDATE())
 		AND s.IsCalculating IN (0,1)
 		group by matchid 
@@ -322,7 +322,7 @@ BEGIN
 	ParlayTicket AS
 	(
 		SELECT p.matchid, min(IsCalculating)  IsCalculating
-		FROM DBTXN.bodb02.dbo.Parlay_Calculate_Queue p WITH(NOLOCK)
+		FROM dbo.Parlay_Calculate_Queue p WITH(NOLOCK)
 		WHERE Starttime > DATEADD(HH,-1,GETDATE())
 		AND p.IsCalculating IN (0,1)
 		group by matchid 
@@ -339,7 +339,7 @@ BEGIN
 	)
 	INSERT INTO #tmpAutoSettle1s(MatchID,SettlementStatusID)
 	SELECT	MatchID, MIN(SettlementStatusID)
-	FROM	ResultDetail WITH (NOLOCK)
+	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
 			AND (ResourceId IN (SELECT CAST(BetType AS VARCHAR(20)) FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
@@ -357,7 +357,7 @@ BEGIN
 	)
 	INSERT INTO #tmpCornerBets(MatchID,SettlementStatusID)
 	SELECT	MatchID, MIN(SettlementStatusID)
-	FROM	ResultDetail WITH (NOLOCK)
+	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
 			AND ResourceID IN ('04','05','206','207','208','209')			
@@ -442,7 +442,7 @@ BEGIN
 			, AwayValue
 			, ResultStatusID
 			, SettlementStatusID
-	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
+	FROM	DBPRO.bodb02.dbo.[ResultDetail] WITH (NOLOCK) 
 	WHERE	@Sporttype IN (0,5)
 			AND ResourceId LIKE '0[0-5]'  
 			AND MatchID IN (SELECT MatchID FROM #matchList)
