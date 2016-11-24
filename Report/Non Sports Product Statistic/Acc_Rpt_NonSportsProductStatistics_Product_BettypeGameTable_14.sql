@@ -731,21 +731,39 @@ BEGIN
 					)
 	END	
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
-
-	SELECT  Bettype AS ReportById,
-			BettypeName AS ReportBy, 
-			NoOfPlayers,
-			BetCount,
-			CurrencyId,
-			Currency,
-			TotalBets,
-			TotalWins,
-			TotalRefund,
-			CompanyTurnOver,
-			CompanyGrossIncome,
-			CompanyComm 
-	FROM #Result	
-	ORDER BY BettypeName, Currency		
+	IF @IsDrillDown = 0 OR @IsDrillDownFromRM = 1
+	BEGIN
+		SELECT  Bettype AS ReportById,
+				BettypeName AS ReportBy, 
+				NoOfPlayers,
+				BetCount,
+				CurrencyId,
+				Currency,
+				TotalBets,
+				TotalWins,
+				TotalRefund,
+				CompanyTurnOver,
+				CompanyGrossIncome,
+				CompanyComm 
+		FROM #Result	
+		ORDER BY BettypeName, Currency		
+	END
+	ELSE IF @IsDrillDown = 1 AND @IsDrillDownFromRM <> 1
+	BEGIN
+		SELECT 	SUM(NoOfPlayers) AS NoOfPlayers,
+				SUM(BetCount) AS BetCount,
+				CurrencyId AS CurrencyId,
+				Currency AS Currency,
+				SUM(TotalBets) AS TotalBets,
+				SUM(TotalWins) AS TotalWins,
+				SUM(TotalRefund) AS TotalRefund,
+				SUM(CompanyTurnOver) AS CompanyTurnOver,
+				SUM(CompanyGrossIncome) AS CompanyGrossIncome,
+				SUM(CompanyComm) AS CompanyComm
+		FROM #Result	
+		GROUP BY CurrencyId, Currency
+		ORDER BY Currency		
+	END
 
 	SELECT
         'GrandTotal' AS ReportBy,
