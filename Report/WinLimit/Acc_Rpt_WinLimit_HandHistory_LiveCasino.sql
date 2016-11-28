@@ -17,7 +17,7 @@ AS
 		@CustID: Customer that reach Win Limit
 		@ReachedDate: date that user reach win limit
 
-	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustID = 23946479, @ReachedDate = '20161026', @Bettype = 1103
+	EXEC Acc_Rpt_WinLimit_HandHistory_LiveCasino @CustID = 23946479, @ReachedDate = '20161128', @Bettype = 1103
 */
 BEGIN
 	SET NOCOUNT ON
@@ -78,7 +78,7 @@ BEGIN
 		, bg.transdate		AS BetDate
 		, m.kickofftime		AS GameDate
 		, ''				AS TimeDiff 
-		, CONVERT(TIME, (m.kickofftime - m.settletime)) AS GameDuration
+		, CONVERT(TIME, (m.settletime - m.kickofftime)) AS GameDuration
 		, bg.stake			AS TotalBet
 		, (bg.winlost - bg.stake)	AS PlayerWL
 		, (bg.stake - bg.winlost)	AS GameInCome 
