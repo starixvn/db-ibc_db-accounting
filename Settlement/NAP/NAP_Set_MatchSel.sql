@@ -1,4 +1,5 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] @FromDate DATETIME
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] 
+	@FromDate DATETIME
 	,@ToDate DATETIME
 	,@SportType SMALLINT = 0
 	,@LeagueID INT = 0 -- 0 for ALL Leagues
@@ -140,7 +141,9 @@ BEGIN
 		,IsExistHTFGLG BIT
 		,WinOdds MONEY
 		,PlaceOdds MONEY
-		)
+		,IsExistAutoBettypes BIT
+		,IsExistAutoBettypesParlay BIT
+	)
 
 	DECLARE @strmatchid VARCHAR(MAX)
 		,@betstatus VARCHAR(8000)
@@ -198,58 +201,143 @@ BEGIN
 		,tmp.IsExistHTFGLG
 		,tmp.WinOdds
 		,tmp.PlaceOdds
+		,0 AS IsExistAutoBettypes
+		,0 AS IsExistAutoBettypesParlay
 	FROM (
-		SELECT hthomescore
-			,htawayscore			
-			,m.matchid
-			,m.leagueid
-			,m.homeid
-			,m.awayid
-			,m.matchcode
-			,m.kickofftime
-			,m.finalhomescore
-			,m.finalawayscore
-			,m.betstatus
-			,CASE 
-				WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'
-				WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'
-				WHEN m.betstatus LIKE 'Refund%' THEN 'Refund'
-				ELSE m.eventstatus
-				END AS eventstatus
-			,'' AS Foddsstatus
-			,m.sporttype
-			,ISNULL(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
-			,m.eventdate
-			,m.goalrecord						
-			,CASE 
-				WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1
-				ELSE 0
-				END IsKeyscore
-			,0 as IsExistFGLG
-			,0 as IsExistHTFGLG
-			,0 as WinOdds
-			,0 as PlaceOdds
-		FROM	dbo.match m WITH (NOLOCK)
-				LEFT JOIN DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = r.MatchId AND r.ResourceId ='00'
-		WHERE m.eventdate BETWEEN @FromDate AND @ToDate 
-			AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END 			
-			AND CASE WHEN @UncalMultiOnly = 0 THEN 1 
-					 WHEN @UncalMultiOnly = 1 THEN hthomescore * htawayscore * finalhomescore * finalawayscore
-					 WHEN @UncalMultiOnly IS NULL OR @UncalOnly IS NULL THEN 1
-				END IS NOT NULL AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END 
-			AND (@matchcode = '' OR (m.matchid = @matchid OR m.matchcode = @matchcode)) 
-			AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) 
-			AND (@isRefund IS NULL 
-					OR (m.sporttype <> 5 AND @isRefund = 1 AND betstatus LIKE 'Refund%') 
-					OR (m.sporttype <> 5 AND @isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%')
-					OR (m.sporttype = 5 AND @isRefund = 1 AND ISNULL(r.SettlementStatusID,0) BETWEEN 1 AND 3)
-					OR (m.sporttype = 5 AND @isRefund = 0 AND ISNULL(r.SettlementStatusID,0) NOT BETWEEN 1 AND 3)
-				)
-	) tmp
-	LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
-	where (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
-	AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)	
+			SELECT hthomescore
+				,htawayscore			
+				,m.matchid
+				,m.leagueid
+				,m.homeid
+				,m.awayid
+				,m.matchcode
+				,m.kickofftime
+				,m.finalhomescore
+				,m.finalawayscore
+				,m.betstatus
+				,CASE 
+					WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'
+					WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'
+					WHEN m.betstatus LIKE 'Refund%' THEN 'Refund'
+					ELSE m.eventstatus
+					END AS eventstatus
+				,'' AS Foddsstatus
+				,m.sporttype
+				,ISNULL(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
+				,m.eventdate
+				,m.goalrecord						
+				,CASE 
+					WHEN hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL THEN 1
+					ELSE 0
+					END IsKeyscore
+				,0 as IsExistFGLG
+				,0 as IsExistHTFGLG
+				,0 as WinOdds
+				,0 as PlaceOdds
+			FROM	dbo.match m WITH (NOLOCK)
+					LEFT JOIN DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK) ON m.matchID = r.MatchId AND r.ResourceId ='00'
+			WHERE m.eventdate BETWEEN @FromDate AND @ToDate 
+				AND m.leagueID = CASE WHEN @LeagueID <> 0 THEN @LeagueID ELSE m.leagueID END 			
+				AND CASE WHEN @UncalMultiOnly = 0 THEN 1 
+						 WHEN @UncalMultiOnly = 1 THEN hthomescore * htawayscore * finalhomescore * finalawayscore
+						 WHEN @UncalMultiOnly IS NULL OR @UncalOnly IS NULL THEN 1
+					END IS NOT NULL AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END 
+				AND (@matchcode = '' OR (m.matchid = @matchid OR m.matchcode = @matchcode)) 
+				AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) 
+				AND (@isRefund IS NULL 
+						OR (m.sporttype <> 5 AND @isRefund = 1 AND betstatus LIKE 'Refund%') 
+						OR (m.sporttype <> 5 AND @isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%')
+						OR (m.sporttype = 5 AND @isRefund = 1 AND ISNULL(r.SettlementStatusID,0) BETWEEN 1 AND 3)
+						OR (m.sporttype = 5 AND @isRefund = 0 AND ISNULL(r.SettlementStatusID,0) NOT BETWEEN 1 AND 3)
+					)
+		) AS tmp
+		LEFT JOIN dbo.match_remark mr WITH (NOLOCK) ON tmp.matchid = mr.matchid
+		WHERE (@UncalOnly = 0 OR ISNULL(mr.calculate, 0) = 0 OR @UncalOnly IS NULL) 
+			AND (@UncalMultiOnly = 0 OR ISNULL(mr.multiple, 0) = 0 OR @UncalMultiOnly IS NULL)	
 	
+	--check FGLG & BetRadar
+	DECLARE @strBettypesParlay	VARCHAR (MAX)		
+		,@n						INT = 2147483647
+
+	SELECT  @strBettypesParlay = COALESCE(@strBettypesParlay + ',' + CAST(BetType AS VARCHAR),CAST(BetType AS VARCHAR))
+	FROM	dbo.f_Set_GetGroupBettypes()
+	WHERE	GroupId IN (3,4,8)
+	
+	SET @strBettypesParlay = ',' + @strBettypesParlay + ','
+	
+	CREATE TABLE #BettypeExtraStatus(matchid INT, bettype SMALLINT, IsParLay BIT DEFAULT(0))
+		
+	INSERT INTO #BettypeExtraStatus (matchid, bettype)
+	SELECT m.matchid, chk.bettype
+	FROM (
+		SELECT TOP (@n) MatchId FROM #matchList
+	) AS m
+		CROSS APPLY 
+		(
+			SELECT b.bettype
+			FROM dbo.bettrans b WITH(NOLOCK)
+			WHERE b.matchid = m.MatchId
+				AND 1 = CASE
+					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
+					ELSE 0
+				END
+			GROUP BY b.bettype
+		) AS chk
+	OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
+	
+	;WITH MatchExtraStatus AS (
+		SELECT matchid
+			,SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END ) AS cntFGLG
+			,SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END ) AS cntHTFGLG
+			,SUM(CASE WHEN bettype NOT IN (14,127) THEN 1 ELSE 0 END ) AS cntAutoBettypes
+		FROM #BettypeExtraStatus
+		GROUP BY matchid
+	)
+	UPDATE m
+	SET IsExistFGLG 			= CASE WHEN ext.cntFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistHTFGLG 			= CASE WHEN ext.cntHTFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypes 	= CASE WHEN ext.cntAutoBettypes > 0 THEN 1 ELSE 0 END
+	FROM #matchList m
+		INNER JOIN MatchExtraStatus ext 
+		ON m.matchid = ext.matchid
+	
+	-- check bettransm
+	INSERT INTO #BettypeExtraStatus (matchid, bettype, IsParLay)
+	SELECT m.matchid, chk.bettype, 1
+	FROM (
+		SELECT TOP (@n) MatchId FROM #matchList
+	) AS m
+		CROSS APPLY 
+		(
+			SELECT b.bettype
+			FROM dbo.bettransm b WITH(NOLOCK)
+			WHERE b.matchid = m.MatchId
+				AND 1 = CASE
+					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
+					ELSE 0
+				END
+			GROUP BY b.bettype
+		) AS chk
+	OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
+	
+	;WITH MatchExtraStatusParlay AS (
+		SELECT matchid
+			,SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END ) AS cntFGLG
+			,SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END ) AS cntHTFGLG
+			,SUM(CASE WHEN bettype NOT IN (14,127) THEN 1 ELSE 0 END ) AS cntAutoBettypesParlay
+		FROM #BettypeExtraStatus
+		WHERE IsParLay = 1
+		GROUP BY matchid
+	)
+	UPDATE m
+	SET IsExistFGLG 			= CASE WHEN  m.IsExistFGLG = 1 OR ext.cntFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistHTFGLG 			= CASE WHEN  m.IsExistFGLG = 1 OR ext.cntHTFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypesParlay 	= CASE WHEN ext.cntAutoBettypesParlay > 0 THEN 1 ELSE 0 END
+	FROM #matchList m
+		INNER JOIN MatchExtraStatusParlay ext 
+		ON m.matchid = ext.matchid
+	
+	/*
 	SELECT @rowcount = 0
 		,@max_matchid = 0
 
@@ -309,7 +397,7 @@ BEGIN
 					,cnt
 					FROM OPENXML(@intDocHandle, '/root/match', 2) WITH (matchid INT, cnt INT)
 			) rs ON m.matchid = rs.matchid
-	END
+	END*/
 
 	;WITH SingleTicket AS
 	(
@@ -328,41 +416,34 @@ BEGIN
 		group by matchid 
 	)	
 
-	select isnull(sg.matchid, pl.matchid) matchid, sg.IsCalculating IsCalculatingSingle, pl.IsCalculating IsCalculatingMP
-	into #tempmatch
-	from SingleTicket sg
-		full outer join ParlayTicket pl on sg.matchid = pl.matchid 
+	SELECT ISNULL(sg.matchid, pl.matchid) matchid, sg.IsCalculating IsCalculatingSingle, pl.IsCalculating IsCalculatingMP
+	INTO #tempmatch
+	FROM SingleTicket sg
+		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid 
 
 	CREATE TABLE #tmpAutoSettle1s(
 		 MatchID		INT
 		,SettlementStatusID	TINYINT 
 	)
+	
+	;WITH cteAutoResultDetail
+	AS(
+		SELECT	CASE 
+					WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+				,GroupId
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	GroupId = 8
+	)	
 	INSERT INTO #tmpAutoSettle1s(MatchID,SettlementStatusID)
 	SELECT	MatchID, MIN(SettlementStatusID)
-	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
+	FROM	DBPRO.bodb02.dbo.ResultDetail rs WITH (NOLOCK)
+		INNER JOIN cteAutoResultDetail c
+				ON	rs.ResourceId LIKE c.ResourceId
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
-			AND (ResourceId IN (SELECT CAST(BetType AS VARCHAR(20)) FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
-					OR ResourceID LIKE '160__'
-					OR ResourceID LIKE '164__'
-					OR ResourceID LIKE '169__'
-					OR ResourceID LIKE '180__'
-					OR ResourceID LIKE '216__' 
-				)
 	GROUP BY MatchID 
-
-	CREATE TABLE #tmpCornerBets(
-		 MatchID		INT
-		,SettlementStatusID	TINYINT
-	)
-	INSERT INTO #tmpCornerBets(MatchID,SettlementStatusID)
-	SELECT	MatchID, MIN(SettlementStatusID)
-	FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
-	WHERE	@Sporttype IN(0,1)
-			AND MatchID IN (SELECT MatchID FROM #matchList)
-			AND ResourceID IN ('04','05','206','207','208','209')			
-	GROUP BY MatchID 
-
 
 	IF @AutoSettlementOnly = 1 --Running Auto bettypes ONLY ( BETRADAR USED)
 	BEGIN
@@ -376,6 +457,18 @@ BEGIN
 
 	IF @StatusID = 5 
 	BEGIN
+		CREATE TABLE #tmpCornerBets(
+			 MatchID		INT
+			,SettlementStatusID	TINYINT
+		)
+		INSERT INTO #tmpCornerBets(MatchID,SettlementStatusID)
+		SELECT	MatchID, MIN(SettlementStatusID)
+		FROM	DBPRO.bodb02.dbo.ResultDetail WITH (NOLOCK)
+		WHERE	@Sporttype IN(0,1)
+				AND MatchID IN (SELECT MatchID FROM #matchList)
+				AND ResourceID IN ('04','05','206','207','208','209')			
+		GROUP BY MatchID 
+		
 		DELETE FROM #matchList
 		WHERE	MatchID NOT IN (
 			SELECT	MatchID
@@ -383,7 +476,6 @@ BEGIN
 			WHERE	SettlementStatusID = 0 
 		)
 	END 
-
 
 	SELECT m.HalfTimeHomeScore
 		,m.HalfTimeAwayScore
@@ -419,8 +511,9 @@ BEGIN
 		,m.PlaceOdds
 		,t.IsCalculatingSingle
 		,t.IsCalculatingMP
-		,CASE	WHEN a.SettlementStatusID IS NULL THEN 'N/A'
-				WHEN a.SettlementStatusID = 0 THEN 'Running'
+		,CASE	WHEN (a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0) THEN 'N/A'
+				WHEN ((ISNULL(a.SettlementStatusID,0) = 0 AND m.IsExistAutoBettypes > 0) AND m.IsExistAutoBettypesParlay = 0) THEN 'Running'
+				WHEN (ISNULL(a.SettlementStatusID,0) = 0 AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0) THEN 'Parlay Running'
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 				ELSE '' END AS AutoSettleResultStatus
 	FROM	#matchList m

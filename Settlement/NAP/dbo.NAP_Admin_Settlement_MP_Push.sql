@@ -22,6 +22,7 @@ AS
 		- 20160429@Kathy: Enhance performance [Redmine:#52426]
 		- 20160714@Kathy: Add checking SystemSettings before doing Parlay Settlement on UAT
 		- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
+		- 20161125@Bobby: @#67822 - check single and parlay ticket for AUTO bet types
 
 	Param's Explanation:		
 		
@@ -74,15 +75,46 @@ BEGIN
 						AND ResultStatusId NOT IN (2,5)
 				)				
 	BEGIN
+		;WITH cteAutoResultDetail
+		AS(
+			SELECT	BetType
+					,CASE 
+						WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+						ELSE CAST(BetType AS VARCHAR(20))
+					END AS ResourceId
+			FROM	dbo.f_Set_GetGroupBettypes()
+			WHERE	GroupId = 8
+		)	
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
-			OR matchid IN (
-				SELECT matchid
-				FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
-				WHERE matchid IN (SELECT matchid FROM @match)
-					AND ResourceId NOT IN ('00','01','08')
-					AND ResultStatusId NOT IN (2,5))
+			OR (
+				matchid IN (
+					SELECT matchid
+					FROM DBPRO.BODB02.dbo.ResultDetail rs WITH(NOLOCK)
+						INNER JOIN cteAutoResultDetail c 
+						ON rs.ResourceId LIKE c.ResourceId
+					WHERE matchid IN (SELECT matchid FROM @match)
+						AND ResultStatusId NOT IN (2,5)
+					GROUP BY matchid
+				)
+				AND matchid IN (
+					SELECT matchid
+					FROM dbo.bettrans b WITH(NOLOCK)
+						INNER JOIN cteAutoResultDetail c ON b.BetType = c.BetType
+					WHERE b.matchid IN (SELECT matchid FROM @match)
+					GROUP BY matchid
+					HAVING COUNT(1) > 0
+					
+					UNION ALL
+					SELECT matchid
+					FROM dbo.bettransm b WITH(NOLOCK)
+						INNER JOIN cteAutoResultDetail c ON b.BetType = c.BetType
+					WHERE b.matchid IN (SELECT matchid FROM @match)
+					GROUP BY matchid
+					HAVING COUNT(1) > 0
+				)
+			)
 
 		-- exclude matches were not keyscore yet
 		DELETE
