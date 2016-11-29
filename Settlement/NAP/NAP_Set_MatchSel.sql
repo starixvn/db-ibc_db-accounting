@@ -281,6 +281,11 @@ BEGIN
 					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
 					ELSE 0
 				END
+				AND 1 = CASE 
+							WHEN bettype IN (14,127) THEN 1
+							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
+							ELSE 0 
+						END
 			GROUP BY b.bettype
 		) AS chk
 	OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
@@ -316,6 +321,11 @@ BEGIN
 					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
 					ELSE 0
 				END
+				AND 1 = CASE 
+							WHEN bettype IN (14,127) THEN 1
+							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
+							ELSE 0 
+						END
 			GROUP BY b.bettype
 		) AS chk
 	OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
@@ -511,9 +521,9 @@ BEGIN
 		,m.PlaceOdds
 		,t.IsCalculatingSingle
 		,t.IsCalculatingMP
-		,CASE	WHEN (a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0) THEN 'N/A'
-				WHEN ((ISNULL(a.SettlementStatusID,0) = 0 AND m.IsExistAutoBettypes > 0) AND m.IsExistAutoBettypesParlay = 0) THEN 'Running'
-				WHEN (ISNULL(a.SettlementStatusID,0) = 0 AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0) THEN 'Parlay Running'
+		,CASE	WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
+				WHEN a.SettlementStatusID = 0 OR m.IsExistAutoBettypes > 0 THEN 'Running'
+				WHEN ISNULL(m.SettlementStatusID,0) = 0 AND m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
 				ELSE '' END AS AutoSettleResultStatus
 	FROM	#matchList m

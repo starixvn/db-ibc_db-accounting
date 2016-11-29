@@ -76,8 +76,8 @@ BEGIN
 					,MIN(r.SettlementStatusId) AS SettlementStatusId
 			FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
 				INNER JOIN cteAutoResultDetail c
-					ON	r.ResourceId = c.ResourceId
-						AND r.MatchId = m.MatchId
+					ON	r.MatchId = m.MatchId
+						AND r.ResourceId LIKE c.ResourceId
 			GROUP BY r.MatchID
 		) rs
 	
@@ -89,17 +89,29 @@ BEGIN
 		INNER JOIN (
 			SELECT  b.matchid, b.bettype
 			FROM	dbo.bettrans b WITH (NOLOCK)
+			WHERE matchid IN (SELECT matchid FROM @TempMatch)
+				AND 1 = CASE 
+							WHEN bettype IN (14,127) THEN 1
+							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
+							ELSE 0 
+						END
 			GROUP BY b.matchid, b.bettype
 		) b
 			ON	f.BetType = b.bettype
 	WHERE f.GroupId IN (3,4,8)
 
 	INSERT INTO #tblBetStatus (matchid, groupId, IsParlay)
-	SELECT bm.matchid, f.GroupId, 0
+	SELECT bm.matchid, f.GroupId, 1
 	FROM dbo.f_Set_GetGroupBettypes() f
 		INNER JOIN (
 			SELECT  bm.matchid, bm.bettype
 			FROM	dbo.bettransm bm WITH (NOLOCK)
+			WHERE matchid IN (SELECT matchid FROM @TempMatch)
+				AND 1 = CASE 
+							WHEN bettype IN (14,127) THEN 1
+							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
+							ELSE 0 
+						END
 			GROUP BY bm.matchid, bm.bettype
 		) bm
 			ON	f.BetType = bm.bettype
@@ -149,8 +161,8 @@ BEGIN
 		, tm.SingleStatus AS IsCalculatingSingle
 		, tm.ParlayStatus AS IsCalculatingMP
 		, CASE WHEN tm.SettlementStatusID IS NULL AND tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay = 0 THEN 'N/A'
-				WHEN (tm.SettlementStatusID IS NULL OR tm.SettlementStatusID = 0) AND tm.IsExistAutoBettypes > 0 THEN 'Running'
-				WHEN (tm.SettlementStatusID IS NULL OR tm.SettlementStatusID = 0) AND tm.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN tm.SettlementStatusID = 0 OR tm.IsExistAutoBettypes > 0 THEN 'Running'
+				WHEN ISNULL(tm.SettlementStatusID,0) = 0 AND tm.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN tm.SettlementStatusID > 0 THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
 	FROM dbo.match m WITH(NOLOCK)
