@@ -14,7 +14,7 @@ AS
 	
 	Param's Explanation:   
 
-	EXEC Acc_Rpt_HouseNetIncome_AGC_Deposit '20160801', '20160831'
+	EXEC Acc_Rpt_HouseNetIncome_AGC_Deposit '20160901', '20160930'
 */  
 BEGIN  
 	SET NOCOUNT ON  
@@ -83,30 +83,7 @@ BEGIN
 	INSERT INTO #ExchangeOANDA(ExchangeDate, ExchangeID, CNY, USD, MYR)
 	SELECT ExchangeDate, ExchangeID, CompareCurrencyRate1, CompareCurrencyRate2, BaseCurrencyRate
 	FROM bodb02.dbo.LA_f_ExchangeDailyForSpecRange(@FDate, @TDate, 'CNY', 'USD', 'MYR')
-	-- End region
-
-	-- Region: Get Temp Agent
-	CREATE TABLE #TempAgent (CustId INT, 
-							Currency INT,
-							PartyID INT,
-							PartyName NVARCHAR(100),
-							FromDate DATETIME,
-							Todate DATETIME)
-
-	INSERT INTO #TempAgent (CustID, Currency, PartyID, PartyName, FromDate, Todate)
-	SELECT	CustID, Currency, p.PartyID, p.PartyName,
-		CASE WHEN @FDate < ci.FromDate THEN ci.FromDate ELSE @FDate END AS FromDate,
-		CASE WHEN @TDate > ci.ToDate THEN ci.ToDate ELSE @TDate END AS ToDate
-	FROM bodb_Licensee.dbo.f_SelLicenseeCust(0) lc
-		INNER JOIN bodb_Licensee.dbo.OAS_Party p WITH (NOLOCK) ON lc.LicenseeID = p.OldRefID AND p.PartyType = 1	
-		INNER JOIN bodb_licensee.dbo.OAS_ChargeInfo ci WITH (NOLOCK) ON ci.FromParty = p.PartyID
-		INNER JOIN bodb_licensee.dbo.LA_ChargeInfo_SystemMapping cs WITH (NOLOCK) ON ci.ChargeID = cs.ChargeID AND cs.SystemID = 2
-	WHERE lc.Currency <> 20 
-		AND p.PartyID IN (SELECT val FROM bodb02.dbo.Lrf_f_StringSplit(@PartyIDs, ','))
-		AND ci.ChargeType = 1
-		AND ci.ProductID = 10
-		AND (@FDate BETWEEN ci.FromDate AND ci.ToDate OR @TDate BETWEEN ci.FromDate AND ci.ToDate)
-	-- End region
+	-- End region	
 	
 	CREATE	TABLE #TempDataAGC (
 			PartyId			INT,
@@ -117,21 +94,25 @@ BEGIN
 			AmountToCompany MONEY)
 	INSERT INTO #TempDataAGC (PartyId, Winlostdate, CurrencyId, WinLoss, LicenseeWL, AmountToCompany)
 	(
-		SELECT	ag.PartyId,
-				b.Winlostdate,
-				co.Currency,
-				SUM(ISNULL(b.WinLost, 0)),
-				SUM(-ISNULL(b.WinLost, 0)),
-				SUM(-ISNULL(b.WinLost, 0) * pc.Rate * e.Rate)
-		FROM	DBACC.bodb_report.dbo.rptDepWinlost_AGCasino b WITH (NOLOCK)
-				INNER JOIN DBACC.bodb02.dbo.Custinfo co WITH (NOLOCK) ON b.Custid = co.CustID
-				INNER JOIN #TempAgent ag ON co.recommend = ag.CustID AND co.currency=ag.Currency
-				INNER JOIN @PartyChargeInfo pc ON pc.PartyId = ag.PartyID AND b.Winlostdate BETWEEN pc.FromDate AND pc.ToDate
-				INNER JOIN #Exchange e ON b.Winlostdate = e.ExchangeDate AND co.Currency = e.ExchangeID
-		WHERE	b.Winlostdate BETWEEN ag.FromDate AND ag.Todate
-		GROUP BY b.Winlostdate, ag.PartyId, co.Currency
+		SELECT	p.PartyId,
+				b.rptdate,
+				b.CurrencyID,
+				SUM(ISNULL(b.MemberWL, 0)),
+				SUM(-ISNULL(b.MemberWL, 0)),
+				SUM(-ISNULL(b.MemberWL, 0) * p.Rate * e.Rate)
+		FROM	bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
+				INNER JOIN #Exchange e ON b.rptDate = e.ExchangeDate AND b.CurrencyId = e.ExchangeID
+				INNER JOIN @PartyChargeInfo p ON	b.ProductId = p.ProductID 
+													AND p.LicenseeId = b.SiteId
+													AND (b.rptDate BETWEEN p.FromDate AND p.ToDate)
+													AND (p.Bettype = -1 OR p.Bettype = b.Bettype)
+		WHERE	b.rptDate BETWEEN @FDate AND @TDate
+				AND b.CurrencyID <> 20
+				AND b.customercategory NOT IN (27, 28)
+				AND b.StatusId NOT IN (-1, 103) -- Exclude Reject , Void, Refund
+		GROUP BY b.rptdate, p.PartyId, b.CurrencyID		
 	)
-
+	
 	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataAGC (PartyId)
 		
 	-- Region: Get Rate
@@ -190,9 +171,8 @@ BEGIN
 
 	INSERT INTO #FeeData(PartyId, ProductID, AComm, MinFeeApplied, WLFeeApplied, AmountToCompany)
 	EXEC dbo.Acc_Rpt_HouseNetIncome_LicenseeFee @FromDate = @FDate, @ToDate = @TDate, @Products = 'AGC'
-
-	--SELECT * FROM @DailyPayAmt							
-	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
+							
+	INSERT INTO #FinalResult (Winlostdate, LicenseeWL, PayToSupplier)
 	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (-1) * @PayToSupplier
 	FROM #FeeData	
 
@@ -234,6 +214,7 @@ BEGIN
 	DROP TABLE #ExchangeOANDA
 	DROP TABLE #TempDataAGC
 	DROP TABLE #FinalResult
+	DROP TABLE #FeeData
 END
 GO
 
