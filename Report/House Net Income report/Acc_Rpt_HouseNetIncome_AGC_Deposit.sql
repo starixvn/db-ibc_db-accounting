@@ -87,12 +87,12 @@ BEGIN
 	
 	CREATE	TABLE #TempDataAGC (
 			PartyId			INT,
-			Winlostdate		DATETIME,
+			RptDate		DATETIME,
 			CurrencyId		INT,
 			WinLoss			MONEY,	
 			LicenseeWL		MONEY,
 			AmountToCompany MONEY)
-	INSERT INTO #TempDataAGC (PartyId, Winlostdate, CurrencyId, WinLoss, LicenseeWL, AmountToCompany)
+	INSERT INTO #TempDataAGC (PartyId, RptDate, CurrencyId, WinLoss, LicenseeWL, AmountToCompany)
 	(
 		SELECT	p.PartyId,
 				b.rptdate,
@@ -121,8 +121,8 @@ BEGIN
 						SUM(CASE WHEN t.ParentID = 1 THEN b.LicenseeWL * cny.CNY ELSE b.LicenseeWL * usd.USD END) AS SumApplyValue
 					FROM #TempDataAGC b
 						INNER JOIN @tmpParty t ON b.PartyId = t.PartyID
-						INNER JOIN #ExchangeOANDA cny ON b.CurrencyId = cny.ExchangeID AND cny.ExchangeDate = b.Winlostdate
-						INNER JOIN #ExchangeOANDA usd ON b.CurrencyId = usd.ExchangeID AND usd.ExchangeDate = b.Winlostdate
+						INNER JOIN #ExchangeOANDA cny ON b.CurrencyId = cny.ExchangeID AND cny.ExchangeDate = b.RptDate
+						INNER JOIN #ExchangeOANDA usd ON b.CurrencyId = usd.ExchangeID AND usd.ExchangeDate = b.RptDate
 					GROUP BY ParentID
 				)	 
 	 UPDATE t	 
@@ -138,19 +138,19 @@ BEGIN
 
 	-- Region: Result	
 	CREATE TABLE #FinalResult (
-		Winlostdate			VARCHAR(10),
+		RptDate			VARCHAR(10),
 		LicenseeWL			MONEY,
 		PayToSupplier		MONEY
 	)
 	
-	DECLARE @DailyPayAmt TABLE (Winlostdate DATE, ParentID INT, AmountDaily MONEY, LicenseeWL MONEY, AGCRate FLOAT)
+	DECLARE @DailyPayAmt TABLE (RptDate DATE, ParentID INT, AmountDaily MONEY, LicenseeWL MONEY, AGCRate FLOAT)
 	
-	INSERT INTO @DailyPayAmt (Winlostdate, ParentID, AmountDaily, LicenseeWL, AGCRate)
-	SELECT d.Winlostdate, p.ParentID, SUM(d.WinLoss * oanda.MYR * p.AGCRate), SUM(d.LicenseeWL * oanda.MYR), p.AGCRate
+	INSERT INTO @DailyPayAmt (RptDate, ParentID, AmountDaily, LicenseeWL, AGCRate)
+	SELECT d.RptDate, p.ParentID, SUM(d.WinLoss * oanda.MYR * p.AGCRate), SUM(d.LicenseeWL * oanda.MYR), p.AGCRate
 	FROM #TempDataAGC d
 		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
-		INNER JOIN #ExchangeOANDA oanda ON d.Winlostdate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
-	GROUP BY d.Winlostdate, p.ParentID, p.AGCRate
+		INNER JOIN #ExchangeOANDA oanda ON d.RptDate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
+	GROUP BY d.RptDate, p.ParentID, p.AGCRate
 	
 	DECLARE @PayToSupplier MONEY
 	SET @PayToSupplier = (	SELECT SUM(PayForEach)
@@ -172,7 +172,7 @@ BEGIN
 	INSERT INTO #FeeData(PartyId, ProductID, AComm, MinFeeApplied, WLFeeApplied, AmountToCompany)
 	EXEC dbo.Acc_Rpt_HouseNetIncome_LicenseeFee @FromDate = @FDate, @ToDate = @TDate, @Products = 'AGC'
 							
-	INSERT INTO #FinalResult (Winlostdate, LicenseeWL, PayToSupplier)
+	INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
 	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (-1) * @PayToSupplier
 	FROM #FeeData	
 
@@ -181,21 +181,21 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (Winlostdate, LicenseeWL, PayToSupplier)
+		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataAGC WHERE Winlostdate = @tmpDate), -- LicenseeWL
-			(SELECT ISNULL(SUM(AmountDaily), 0) FROM @DailyPayAmt WHERE Winlostdate = @tmpDate)
+			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataAGC WHERE RptDate = @tmpDate), -- LicenseeWL
+			(SELECT ISNULL(SUM(AmountDaily), 0) FROM @DailyPayAmt WHERE RptDate = @tmpDate)
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
 
-	SELECT @DateList = COALESCE(@DateList + ',', '') + '[' + CONVERT(VARCHAR(10), Winlostdate) + ']' FROM #FinalResult 
+	SELECT @DateList = COALESCE(@DateList + ',', '') + '[' + CONVERT(VARCHAR(10), RptDate) + ']' FROM #FinalResult 
 	-- End region
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
 	SELECT @SQL =	'SELECT * ' + CHAR(13) +
-					'FROM	(SELECT ProductCode, [Order], [Winlostdate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
+					'FROM	(SELECT ProductCode, [Order], [RptDate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT ''AGC'', 1, ''House Income'', LicenseeWL' + CHAR(13) +
 							'UNION ALL' + CHAR(13) +
@@ -203,7 +203,7 @@ BEGIN
 					'PIVOT' + CHAR(13) +
 					'(' + CHAR(13) +
 						'MAX(value)' + CHAR(13) +
-						'FOR [Winlostdate] in (' + @DateList + ')' + CHAR(13) +
+						'FOR [RptDate] in (' + @DateList + ')' + CHAR(13) +
 					') piv' + CHAR(13) +
 					'ORDER BY [Order]'
 
