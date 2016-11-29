@@ -5,6 +5,7 @@ ALTER PROCEDURE dbo.NAP_Settlement_InstantCalculation_Checking
 	@MatchId			INT
     , @HomeScore		VARCHAR(50)
 	, @AwayScore		VARCHAR(50)
+	, @GoalRecord		VARCHAR(50)
     , @Action			VARCHAR(10)
 	, @ErrCode 			INT = 0 OUTPUT
 	, @ErrMsg 			VARCHAR(250) = '' OUTPUT
@@ -27,7 +28,10 @@ BEGIN
 	DECLARE @matchcode		VARCHAR(30)
 		, @leagueid			INT
 		, @totalGoal		TINYINT
+		, @totalGoal1H		TINYINT
+		, @totalGoal2H		TINYINT
 		, @totalGoalCheck	TINYINT
+		, @goalRecordCheck	VARCHAR(50)
 		, @isPending		BIT
 		, @isUnDecided		BIT
 		, @comparedValue 	SMALLMONEY
@@ -35,7 +39,14 @@ BEGIN
 		, @CalculationType	TINYINT
 		, @hScore			TINYINT
 		, @aScore			TINYINT
-	
+		, @hScore1H			TINYINT
+		, @aScore1H			TINYINT
+		, @hScore2H			TINYINT
+		, @aScore2H			TINYINT
+		, @hthomescore		TINYINT
+		, @htawayscore		TINYINT
+		, @FGNG				VARCHAR(50)
+		
 	CREATE TABLE #instantBettype (bettype SMALLINT)
 	
 	SELECT @ErrCode			= 0
@@ -52,11 +63,13 @@ BEGIN
 		, @comparedValue	= @totalGoal - 0.5
 	
 	INSERT INTO #instantBettype (bettype)
-	SELECT 3 AS bettype
-	WHERE @CalculationType IN (101, 102)
-	UNION ALL
-	SELECT 8 AS bettype
-	WHERE @CalculationType IN (101)
+	SELECT bettype
+	FROM dbo.f_Set_Instant_GetBettypes()
+	WHERE 1	= 	CASE 
+					WHEN @CalculationType = 101 AND InstantType & 1 = 1 THEN 1
+					WHEN @CalculationType = 102 AND InstantType & 2 = 2 THEN 1
+					ELSE 0 
+				END
 	
 	-- checking for instant match status
     SELECT 
@@ -64,6 +77,8 @@ BEGIN
 		, @leagueid   		= m.leagueid
 		, @isPending		= ISNULL(mr.isPending, 0)
 		, @isUnDecided		= ISNULL(mr.isUnDecided, 0)
+		, @hthomescore		= ISNULL(hthomescore, 0)
+		, @htawayscore		= ISNULL(htawayscore, 0)
     FROM dbo.match m WITH (NOLOCK)
 		INNER JOIN dbo.league l WITH (NOLOCK)
 		ON m.leagueid		= l.leagueid
@@ -92,23 +107,49 @@ BEGIN
         RETURN
     END
 	
+	--SET scores in 1H & 2H
+	SELECT @hScore1H	= CASE WHEN @CalculationType = 101 THEN @hScore ELSE @hthomescore END
+		, @aScore1H		= CASE WHEN @CalculationType = 101 THEN @aScore ELSE @htawayscore END 
+		, @hScore2H		= CASE WHEN @CalculationType = 102 THEN @hScore-@hScore1H ELSE 0 END
+		, @aScore2H		= CASE WHEN @CalculationType = 102 THEN @aScore-@aScore1H ELSE 0 END
+		, @totalGoal1H	= @hScore1H + @aScore1H
+		, @totalGoal2H	= @hScore2H + @aScore2H
+		, @FGNG			= CASE 
+							WHEN LEFT(@GoalRecord, 1) = 'H' THEN '1'  
+							WHEN LEFT(@GoalRecord, 1) = 'A' THEN '2'  
+							END + ':1'
+							
 	BEGIN TRY
 		;WITH InstMatchResult AS (
 			SELECT TOP 1 
 				CAST(HomeValue AS TINYINT) AS HomeScore
 				,CAST(AwayValue AS TINYINT) AS AwayScore
+				,gc.GoalRecord
 			FROM DBPRO.bodb02.dbo.AutoPayoutResult aps WITH (NOLOCK)
+				CROSS APPLY (
+					SELECT HomeValue AS GoalRecord
+					FROM DBPRO.bodb02.dbo.AutoPayoutResult aps WITH (NOLOCK)
+					WHERE matchid 			= @matchid
+						AND CalculationType = 103 -- FGLG
+						AND StatusId		= 2 -- completed
+					ORDER BY AutoPayoutResultId DESC
+				) AS gc
 			WHERE matchid 			= @matchid
 				AND CalculationType = @CalculationType
 				AND StatusId		= 2 -- completed
 			ORDER BY AutoPayoutResultId DESC
 		) 
-		SELECT @totalGoalCheck = HomeScore + AwayScore
+		SELECT @totalGoalCheck 	= HomeScore + AwayScore
+			,@goalRecordCheck	= GoalRecord
 		FROM InstMatchResult
 		
 		IF(
 			ISNULL(@totalGoalCheck, 0) > 0 -- check is first instant calculation or not
-			AND @totalGoal < @totalGoalCheck
+			AND (
+				@totalGoal < @totalGoalCheck
+				OR LEFT(@GoalRecord, 1) <> LEFT(@goalRecordCheck, 1)
+			)
+			
 		)
 		BEGIN			
 			--select instant bettype
@@ -116,19 +157,22 @@ BEGIN
 				SELECT transid
 					, statusID
 					, CASE 
-						WHEN @totalgoal = 0 THEN 0 --abnormal case -> change from [x-y] to [0-0] -> reset all to running
+						WHEN @totalGoal = 0 THEN 0 --abnormal case -> change from [x-y] to [0-0] -> reset all to running
 						WHEN ods.modds >= 0.5 THEN 112 --WON
-						WHEN ods.modds <= - 0.5 THEN 113 --LOSE    
+						WHEN ods.modds <= -0.5 THEN 113 --LOSE    
 						ELSE 0
 					END AS statusCheck
 				FROM dbo.bettrans b WITH(NOLOCK)
 					CROSS APPLY (
-						SELECT 
-							CASE 
-								WHEN betteam IN ('h') THEN @totalgoal - hdp1
-								WHEN betteam IN ('a') THEN hdp1 - @totalgoal
-								ELSE NULL 
-							END AS modds
+						SELECT [dbo].[f_Set_GetGroupBettypes](
+																b.bettype
+																, b.betteam
+																, b.hdp1
+																, b.hdp2
+																, @totalGoal
+																, @totalGoal1H
+																, @totalGoal2H
+															) AS modds
 					) AS ods
 				WHERE matchid 	= @matchid 
 					AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) --exclude betdaq/betfair
