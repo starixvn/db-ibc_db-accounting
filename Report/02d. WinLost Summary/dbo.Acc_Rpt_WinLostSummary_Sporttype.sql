@@ -29,6 +29,7 @@ AS
 			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 			- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 			- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
+			- 20161129@Robert: NAP Reports - Integrate Fishing World Product [RedmindID: #67757]
         Parameter's Explanation:
     */
 BEGIN
@@ -597,7 +598,7 @@ BEGIN
         FROM rptWinlost b WITH(NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND s.ProductId=23
+            AND s.ProductId IN (23, 24)
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	ORDER BY OrderKey ASC	    
 	
