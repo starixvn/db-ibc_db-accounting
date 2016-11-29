@@ -1,0 +1,243 @@
+USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_AGC_Deposit]
+	@FromDate DATE,
+	@ToDate	DATE
+AS  
+/*  
+	Created:	20161125@Harper  
+    Task :		House month-to-date Net Income report for AG Casino
+    DB:			DBEXT/bodb02  
+   
+    Revisions:  
+	
+	Param's Explanation:   
+
+	EXEC Acc_Rpt_HouseNetIncome_AGC_Deposit '20160801', '20160831'
+*/  
+BEGIN  
+	SET NOCOUNT ON  
+
+	DECLARE @FDate DATE, @TDate DATE
+	SELECT @FDate = @FromDate, @TDate = @ToDate
+
+	-- Region: Active licensees
+	DECLARE @TempPartyList AS TABLE(PartyId	INT, PartyName VARCHAR(200), BranchName	VARCHAR(200), ParentId INT)
+	
+	INSERT INTO @TempPartyList
+	EXECUTE bodb_licensee.dbo.LA_PartyListSel
+	
+	DECLARE @tmpParty TABLE (PartyID INT, IsDeposit BIT, ParentID INT, AGCRate FLOAT)
+
+	INSERT INTO @tmpParty (PartyID, IsDeposit)	
+	SELECT DISTINCT ci.FromParty, pd.IsDeposit
+	FROM bodb_licensee.dbo.OAS_Party p WITH (NOLOCK)
+		INNER JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID
+		INNER JOIN bodb_licensee.dbo.OAS_ChargeInfo ci WITH (NOLOCK) ON p.PartyID = ci.FromParty
+		INNER JOIN bodb_licensee.dbo.LA_ChargeInfo_SystemMapping map ON map.ChargeID = ci.ChargeID and map.SystemID = 2
+	WHERE	p.PartyType = 1
+			AND ci.ProductId = 10 -- AG Casino (in Product3rd)
+			AND ((ci.FromDate BETWEEN @FDate AND @TDate)
+				OR (ci.ToDate BETWEEN @FDate AND @TDate)
+				OR (ci.FromDate < @FDate AND @TDate < ci.ToDate))
+
+	DECLARE @PartyIDs VARCHAR(1000)
+	SELECT	@PartyIDs = COALESCE(@PartyIDs + ',', '') + CONVERT(VARCHAR(10), PartyId) FROM @tmpParty
+	-- End region
+
+	UPDATE p
+	SET p.ParentID = f.ParentId
+	FROM @tmpParty p
+		INNER JOIN @TempPartyList f ON p.PartyID = f.PartyID
+
+	-- Region: ChargeInfo
+	DECLARE @PartyChargeInfo AS TABLE (
+			PartyId			INT,
+			LicenseeId		INT,
+			IsDeposit		BIT,
+			ProductID		INT,
+			Rate			MONEY,
+			FromDate		SMALLDATETIME,
+			ToDate			SMALLDATETIME,
+			Bettype			INT)
+
+	INSERT INTO @PartyChargeInfo(PartyId, LicenseeId, IsDeposit, ProductID, Rate, Fromdate, Todate, Bettype)
+	(
+		SELECT	ci.PartyID, ci.LicenseeID, ci.isDeposit, ci.ProductID, ci.DI_Rate, ci.Fromdate, ci.ToDate, ISNULL(sbr.Bettype, ci.Bettype)
+		FROM	bodb_licensee.dbo.LA_f_ChargeInfo(@PartyIDs, @FDate, @TDate, 'AGC', 'OA', 1) ci
+			LEFT JOIN bodb_licensee..Sport_Bettype_Reference sbr WITH(NOLOCK) ON sbr.BettypeRef = ci.Bettype
+		WHERE	DI_Rate > 0 AND ProductId <> 1 --exclude RB
+	)
+	-- End region
+
+	-- Region: Get exchange rate info
+	CREATE	TABLE #Exchange		(ExchangeDate DATE, ExchangeID INT, Rate FLOAT)
+	CREATE	TABLE #ExchangeOANDA(ExchangeDate DATE, ExchangeID INT, CNY FLOAT, USD FLOAT, MYR FLOAT)
+
+	INSERT INTO #Exchange(ExchangeDate, ExchangeID, Rate)
+	SELECT ExchangeDate, Currency, Rate
+	FROM DBWH.bodb_account.dbo.tbl_Currency_Daily WITH (NOLOCK) 
+	WHERE ExchangeDate BETWEEN @FDate AND @TDate		
+
+	INSERT INTO #ExchangeOANDA(ExchangeDate, ExchangeID, CNY, USD, MYR)
+	SELECT ExchangeDate, ExchangeID, CompareCurrencyRate1, CompareCurrencyRate2, BaseCurrencyRate
+	FROM bodb02.dbo.LA_f_ExchangeDailyForSpecRange(@FDate, @TDate, 'CNY', 'USD', 'MYR')
+	-- End region
+
+	-- Region: Get Temp Agent
+	CREATE TABLE #TempAgent (CustId INT, 
+							Currency INT,
+							PartyID INT,
+							PartyName NVARCHAR(100),
+							FromDate DATETIME,
+							Todate DATETIME)
+
+	INSERT INTO #TempAgent (CustID, Currency, PartyID, PartyName, FromDate, Todate)
+	SELECT	CustID, Currency, p.PartyID, p.PartyName,
+		CASE WHEN @FDate < ci.FromDate THEN ci.FromDate ELSE @FDate END AS FromDate,
+		CASE WHEN @TDate > ci.ToDate THEN ci.ToDate ELSE @TDate END AS ToDate
+	FROM bodb_Licensee.dbo.f_SelLicenseeCust(0) lc
+		INNER JOIN bodb_Licensee.dbo.OAS_Party p WITH (NOLOCK) ON lc.LicenseeID = p.OldRefID AND p.PartyType = 1	
+		INNER JOIN bodb_licensee.dbo.OAS_ChargeInfo ci WITH (NOLOCK) ON ci.FromParty = p.PartyID
+		INNER JOIN bodb_licensee.dbo.LA_ChargeInfo_SystemMapping cs WITH (NOLOCK) ON ci.ChargeID = cs.ChargeID AND cs.SystemID = 2
+	WHERE lc.Currency <> 20 
+		AND p.PartyID IN (SELECT val FROM bodb02.dbo.Lrf_f_StringSplit(@PartyIDs, ','))
+		AND ci.ChargeType = 1
+		AND ci.ProductID = 10
+		AND (@FDate BETWEEN ci.FromDate AND ci.ToDate OR @TDate BETWEEN ci.FromDate AND ci.ToDate)
+	-- End region
+	
+	CREATE	TABLE #TempDataAGC (
+			PartyId			INT,
+			Winlostdate		DATETIME,
+			CurrencyId		INT,
+			WinLoss			MONEY,	
+			LicenseeWL		MONEY,
+			AmountToCompany MONEY)
+	INSERT INTO #TempDataAGC (PartyId, Winlostdate, CurrencyId, WinLoss, LicenseeWL, AmountToCompany)
+	(
+		SELECT	ag.PartyId,
+				b.Winlostdate,
+				co.Currency,
+				SUM(ISNULL(b.WinLost, 0)),
+				SUM(-ISNULL(b.WinLost, 0)),
+				SUM(-ISNULL(b.WinLost, 0) * pc.Rate * e.Rate)
+		FROM	DBACC.bodb_report.dbo.rptDepWinlost_AGCasino b WITH (NOLOCK)
+				INNER JOIN DBACC.bodb02.dbo.Custinfo co WITH (NOLOCK) ON b.Custid = co.CustID
+				INNER JOIN #TempAgent ag ON co.recommend = ag.CustID AND co.currency=ag.Currency
+				INNER JOIN @PartyChargeInfo pc ON pc.PartyId = ag.PartyID AND b.Winlostdate BETWEEN pc.FromDate AND pc.ToDate
+				INNER JOIN #Exchange e ON b.Winlostdate = e.ExchangeDate AND co.Currency = e.ExchangeID
+		WHERE	b.Winlostdate BETWEEN ag.FromDate AND ag.Todate
+		GROUP BY b.Winlostdate, ag.PartyId, co.Currency
+	)
+
+	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataAGC (PartyId)
+		
+	-- Region: Get Rate
+	; WITH sums AS 
+				(	SELECT t.ParentID,
+						SUM(CASE WHEN t.ParentID = 1 THEN b.LicenseeWL * cny.CNY ELSE b.LicenseeWL * usd.USD END) AS SumApplyValue
+					FROM #TempDataAGC b
+						INNER JOIN @tmpParty t ON b.PartyId = t.PartyID
+						INNER JOIN #ExchangeOANDA cny ON b.CurrencyId = cny.ExchangeID AND cny.ExchangeDate = b.Winlostdate
+						INNER JOIN #ExchangeOANDA usd ON b.CurrencyId = usd.ExchangeID AND usd.ExchangeDate = b.Winlostdate
+					GROUP BY ParentID
+				)	 
+	 UPDATE t	 
+	 SET t.AGCRate = CASE WHEN t.ParentId = 1
+						THEN
+							CASE WHEN SumApplyValue <= 15000000 THEN 0.08 ELSE 0.07 END
+						ELSE
+							CASE WHEN SumApplyValue <= 2500000 THEN 0.08 ELSE 0.07 END
+						END
+	 FROM @tmpParty t
+		INNER JOIN sums s ON t.ParentID = s.ParentID			
+	-- End Region
+
+	-- Region: Result	
+	CREATE TABLE #FinalResult (
+		Winlostdate			VARCHAR(10),
+		LicenseeWL			MONEY,
+		PayToSupplier		MONEY
+	)
+	
+	DECLARE @DailyPayAmt TABLE (Winlostdate DATE, ParentID INT, AmountDaily MONEY, LicenseeWL MONEY, AGCRate FLOAT)
+	
+	INSERT INTO @DailyPayAmt (Winlostdate, ParentID, AmountDaily, LicenseeWL, AGCRate)
+	SELECT d.Winlostdate, p.ParentID, SUM(d.WinLoss * oanda.MYR * p.AGCRate), SUM(d.LicenseeWL * oanda.MYR), p.AGCRate
+	FROM #TempDataAGC d
+		INNER JOIN @tmpParty p ON p.PartyID = d.PartyId
+		INNER JOIN #ExchangeOANDA oanda ON d.Winlostdate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
+	GROUP BY d.Winlostdate, p.ParentID, p.AGCRate
+	
+	DECLARE @PayToSupplier MONEY
+	SET @PayToSupplier = (	SELECT SUM(PayForEach)
+							FROM (
+									SELECT (AGCRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END) PayForEach 
+									FROM @DailyPayAmt 
+									GROUP BY AGCRate
+								 ) AS t )
+	
+	CREATE TABLE #FeeData (
+		PartyId			INT,
+		ProductID		INT,
+		AComm			MONEY,
+		MinFeeApplied	MONEY,
+		WLFeeApplied	MONEY,
+		AmountToCompany	MONEY
+	)
+
+	INSERT INTO #FeeData(PartyId, ProductID, AComm, MinFeeApplied, WLFeeApplied, AmountToCompany)
+	EXEC dbo.Acc_Rpt_HouseNetIncome_LicenseeFee @FromDate = @FDate, @ToDate = @TDate, @Products = 'AGC'
+
+	--SELECT * FROM @DailyPayAmt							
+	INSERT INTO #FinalResult (rptDate, LicenseeWL, PayToSupplier)
+	SELECT 'FullRange', ISNULL(SUM(WLFeeApplied), 0), (-1) * @PayToSupplier
+	FROM #FeeData	
+
+	DECLARE @tmpDate DATE, @DateList VARCHAR(200)
+	SELECT @tmpDate = @FDate
+
+	WHILE @tmpDate <= @TDate
+	BEGIN
+		INSERT INTO #FinalResult (Winlostdate, LicenseeWL, PayToSupplier)
+		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
+			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataAGC WHERE Winlostdate = @tmpDate), -- LicenseeWL
+			(SELECT ISNULL(SUM(AmountDaily), 0) FROM @DailyPayAmt WHERE Winlostdate = @tmpDate)
+
+		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
+	END
+
+	SELECT @DateList = COALESCE(@DateList + ',', '') + '[' + CONVERT(VARCHAR(10), Winlostdate) + ']' FROM #FinalResult 
+	-- End region
+
+	---------------------------------------------------- Select the output -------------------------------------------------------
+	DECLARE @SQL VARCHAR(1000)
+	SELECT @SQL =	'SELECT * ' + CHAR(13) +
+					'FROM	(SELECT ProductCode, [Order], [Winlostdate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
+							'CROSS APPLY' + CHAR(13) +
+							'(SELECT ''AGC'', 1, ''House Income'', LicenseeWL' + CHAR(13) +
+							'UNION ALL' + CHAR(13) +
+							'SELECT ''AGC'', 4, ''Pay to supplier'', PayToSupplier) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
+					'PIVOT' + CHAR(13) +
+					'(' + CHAR(13) +
+						'MAX(value)' + CHAR(13) +
+						'FOR [Winlostdate] in (' + @DateList + ')' + CHAR(13) +
+					') piv' + CHAR(13) +
+					'ORDER BY [Order]'
+
+	EXEC(@SQL)
+
+	-- Region: Drop tmp table
+	DROP TABLE #Exchange
+	DROP TABLE #ExchangeOANDA
+	DROP TABLE #TempDataAGC
+	DROP TABLE #FinalResult
+END
+GO
+
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_AGC_Deposit] TO [bodbAdminNet]
+GO
+GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_AGC_Deposit] TO vnteam
+GO
