@@ -8,8 +8,8 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate SMALLDATETIME,
-                                                                    @EndDate   SMALLDATETIME,
-                                                                    @ProductId INT
+																	@EndDate   SMALLDATETIME,
+																	@ProductId INT
 AS
 
 /*	
@@ -20,35 +20,23 @@ DB: DBACC/bodb02
 Revisions: 
 	- 20160921@Jacob: NG2 - Redmine[#63460]
 	- 20160923@Percy: Using local variable to prevent bad parameter sniffing [RedmineID: #64573]
-	- 20161123@Jacob: Get sport type from bet type - SportBettypeMatrix [RedmineID: #67688]
 Example: 
-EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate='2016-11-07', @EndDate='2020-01-01', @ProductId = 23
+EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate='2016-01-01', @EndDate='2020-01-01', @ProductId = 23
 		
 */
-
-
+BEGIN
      SET NOCOUNT ON;
-     DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @ProID INT;
-     SELECT @FDate = @StartDate,
-            @TDate = @EndDate,
-            @ProID = @ProductId;
+
+	 DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @ProID INT
+	 SELECT  @FDate = @StartDate, @TDate = @EndDate, @ProID = @ProductId
+
      BEGIN --#SportBetType     
          DECLARE @isTest BIT= 0;
          SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
-         CREATE TABLE #SportBetType
-         (BetType   INT,
-          SportType INT,
-          SportName NVARCHAR(100)
-         );
+         CREATE TABLE #SportBetType(BetType INT);
          INSERT INTO #SportBetType
-                SELECT DISTINCT
-                       t.BetType,
-                       t.SportType,
-                       d.SportName
-                FROM dbo.f_SportBetTypeMatrix_Sel(@ProID, 0, 0, 2, '', '', @isTest) s
-                     INNER JOIN dbo.SportBettypeMatrix t WITH (NOLOCK) ON t.BetType = s.BetType
-                                                                          AND t.ProductId = s.ProductId
-                     INNER JOIN dbo.Sports AS d WITH (NOLOCK) ON d.SportType = t.SportType;
+                SELECT s.BetType
+                FROM dbo.f_SportBetTypeMatrix_Sel(@ProID, 0, 0, 2, '', '', @isTest) s;
      END;
      BEGIN -- #DepositSuper
 
@@ -59,38 +47,64 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate='2016-11-07', @EndD
                 SELECT CustId
                 FROM f_DepSuper_1('All');
      END;
+     BEGIN -- #Data
+
+         CREATE TABLE #Data
+         (SportType     INT,
+          Site          NVARCHAR(50),
+          MemberWinLoss MONEY,
+          SMAWinLoss    MONEY,
+          Commission    MONEY,
+          RealIncome    MONEY,
+          RealTurnover  MONEY
+         );
+     END;
+     BEGIN --  INSERT INTO #Data
+         INSERT INTO #Data
+                SELECT m.sporttype,
+                       CASE
+                           WHEN dep.CustId IS NULL
+                           THEN 'Credit'
+                           ELSE 'Deposit'
+                       END AS RowName,
+                       SUM((winlost - actual_stake) * actualrate) AS MemberWinLoss,
+                       SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
+                       SUM(scomm * actualrate) Commission,
+                       SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
+                       SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
+                FROM bettrans AS b WITH (NOLOCK)
+                     INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
+                     LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
+                     INNER JOIN match AS m WITH (NOLOCK) ON b.MatchId = m.MatchId
+                WHERE b.winlostdate = @FDate
+                      AND b.ruben = 1
+                      AND b.statusId NOT IN(101, 102, 103, 121)
+                GROUP BY m.sporttype,
+                         CASE
+                             WHEN dep.CustId IS NULL
+                             THEN 'Credit'
+                             ELSE 'Deposit'
+                         END;
+     END;
      BEGIN -- Query
 
-         SELECT sb.SportType GroupId,
-                sb.SportName GroupName,
-                CASE
-                    WHEN dep.CustId IS NULL
-                    THEN 'Credit'
-                    ELSE 'Deposit'
-                END AS RowName,
-                SUM((winlost - actual_stake) * actualrate) AS MemberWinLoss,
-                SUM((awinlost + mwinlost + swinlost) * actualrate) AS SMAWinLoss,
-                SUM(scomm * actualrate) Commission,
-                SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
-                SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover
-         FROM bettrans AS b WITH (NOLOCK)
-              INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
-              LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
-         WHERE b.winlostdate = @FDate
-               AND b.ruben = 1
-               AND b.statusId NOT IN(101, 102, 103, 121)
-         GROUP BY sb.SportType,
-                  sb.SportName,
-                  CASE
-                      WHEN dep.CustId IS NULL
-                      THEN 'Credit'
-                      ELSE 'Deposit'
-                  END
+         SELECT s.SportType AS GroupId,
+                s.SportName AS GroupName,
+                d.Site AS RowName,
+                d.MemberWinLoss AS MemberWinLoss,
+                d.SMAWinLoss AS SMAWinLoss,
+                d.Commission AS Commission,
+                d.RealIncome AS RealIncome,
+                d.RealTurnover AS RealTurnover
+         FROM #Data AS d
+              INNER JOIN Sports AS s WITH (NOLOCK) ON d.SportType = s.SportType
          ORDER BY GroupName,
                   RowName;
      END;
+     DROP TABLE #Data;
      DROP TABLE #SportBetType;
      DROP TABLE #DepositSuper;
+END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType] TO [bodbAdminNet];
 GO
