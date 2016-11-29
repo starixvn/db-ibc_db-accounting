@@ -27,8 +27,8 @@ BEGIN
 		la.ActionNameEN,
 		l.finalhomescore,
 		l.finalawayscore,  
-		l.hthomescore,
-		l.htawayscore,
+		l.hthomescore AS HalfTimeHomeScore,
+		l.htawayscore AS HalfTimeAwayScore,
 		l.GoalRecord,
 		l.betstatus,
 		l.Remark,
@@ -41,10 +41,6 @@ BEGIN
 	ORDER BY logdate ASC
 
 END
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_UserLog_Settle_MatchSelByID] TO [bodbAdminNet] AS [dbo]
 GO

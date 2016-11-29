@@ -153,7 +153,7 @@ BEGIN
 	BEGIN TRY
 		-- Mark this match as running
 		IF @Action = 'UNDO'
-			EXEC dbo.NAP_Set_FastMarket_Completed @MatchId = @matchid
+			EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_Completed @MatchId = @matchid
 					,@IsFastMarketCompleted = 0
 					,@AdminId = @AdminId
 					,@IP = @IP
