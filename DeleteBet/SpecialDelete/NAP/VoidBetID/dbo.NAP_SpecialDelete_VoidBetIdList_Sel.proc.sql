@@ -35,6 +35,7 @@ AS
 		- 20160816@Bobby: #62527 - Update BT's info for showing bet list	
 		- 20160914@Kent: Add logic for suporting void system parlay [Redmine:#63202]	
 		- 20161013@Kathy: Exclude phone betting tickets [Redmine:#63211]
+		- 20161124@Kent: Include phone betting tickets and add new GroupName "Phone Betting" [Redmine:#67751]
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
@@ -140,8 +141,7 @@ BEGIN
 						AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
 						AND b.statusID NOT IN (101, 102)
 					) THEN 1
-				ELSE 0 END
-			AND b.betfrom <> 'p'
+				ELSE 0 END			
 	END
 	
 	--Search by TransIds
@@ -367,8 +367,7 @@ BEGIN
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
 			AND b.bettype NOT IN (901, 902, 903, 904) -- BT subticket
 			AND b.bettype NOT BETWEEN 1501 AND 1599					-- NOT IN Keno
-			AND b.statusID NOT IN (101, 102)
-			AND b.betfrom <> 'p'
+			AND b.statusID NOT IN (101, 102)			
 	END
 	
 	-- UPDATE eventtype = 1
@@ -593,15 +592,16 @@ BEGIN
 				WHEN (
 					d.recommend NOT IN (52466)
 					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NULL
+					AND s.custid IS NULL					
 				) THEN '0-Credit'
-				WHEN d.recommend IN (52466) THEN '1-8RM'
+				WHEN d.recommend IN (52466)	THEN '1-8RM'
 				WHEN (
 					d.recommend NOT IN (52466)
 					AND d.custid NOT IN (1077687,2331,115770,15523642,15042477,16041068,16041058)
-					AND s.custid IS NOT NULL
+					AND s.custid IS NOT NULL					
 				) THEN '2-Deposit'
-				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN '3-BetFair'
+				WHEN d.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) 					 
+				  THEN '3-BetFair'				
 			END AS GroupName
 		FROM #Data d
 			INNER JOIN CustSiteName cs 
@@ -649,11 +649,15 @@ BEGIN
 		,d.SoldId
 		,d.IsHideComm
 		,g.IsDeposit
-		,SUBSTRING(g.GroupName, 3, 30) AS GroupName
+		,SUBSTRING(T.GroupName, 3, 30) AS GroupName
 		
 	FROM #Data d
 		INNER JOIN CTE_GroupInfo g
 		ON d.custid = g.custid
+		OUTER APPLY (SELECT CASE 
+								WHEN d.betfrom = 'p' THEN '4-Phone Betting'
+								ELSE g.GroupName
+							END AS GroupName) AS T
 		
 	WHERE NOT EXISTS (
 			SELECT TOP 1 1 
@@ -665,7 +669,7 @@ BEGIN
 		AND d.recommend 	NOT IN (11196380) --Foobet
 		AND d.recommend 	NOT IN (13423967) --OneExchange
 		
-	ORDER BY g.GroupName
+	ORDER BY T.GroupName
 		,d.GroupID
 		,d.transid
 	
