@@ -7,12 +7,12 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse]
 	 @LogID			BIGINT  
-    ,@ReturnValue	VARCHAR(MAX)= ''
+    ,@ReturnValue	NVARCHAR(MAX)= ''
 	,@ReturnCode	INT = 0 
 AS
 /*
 Creator: 20160809@Jamie 
-Task: Insert API calling statistic
+Task: Insert API calling statistic [RedmineID:#62306]
 DB: DBLOG.BODB_CUSTOMERLOG
 
 Revisions:
@@ -24,6 +24,7 @@ Param's Explanation:
 
 BEGIN 
 	SET NOCOUNT ON
+	SET ANSI_NULLS ON
 
 	UPDATE [UserLog_ExternalAPI] WITH (UPDLOCK,ROWLOCK)
 	SET	StatusID		= 1		-- Repond 
@@ -33,3 +34,20 @@ BEGIN
 	WHERE	LogID = @LogID 
 
 END 
+GO
+GRANT EXECUTE ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [bodbDownlineNetView] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [bodbLicenseeNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [Dot_Admin] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [Dot_Member] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[WriteLog_UserLog_ExternalAPI_UpdResponse] TO [vnteam] AS [dbo]
+GO

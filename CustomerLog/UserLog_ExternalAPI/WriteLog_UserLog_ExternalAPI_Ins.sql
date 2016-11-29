@@ -14,13 +14,11 @@ ALTER PROCEDURE [dbo].[WriteLog_UserLog_ExternalAPI_Ins]
 	,@CustID		INT
 	,@ActionID		INT
 	,@TrackingValue	XML
-    ,@ReturnValue	VARCHAR(MAX)=NULL
-	,@ReturnCode	INT = NULL
-	,@LogID			BIGINT = 0 OUTPUT 
+	,@LogID			BIGINT = 0 OUTPUT -- Note: Not using @LogID VN cannot read 
 AS
 /*
 Creator: 20160809@Jamie 
-Task: Insert API calling statistic
+Task: Insert API calling statistic [RedmineID: #62306]
 DB: DBLOG.BODB_CUSTOMERLOG
 
 Revisions:
@@ -65,8 +63,27 @@ BEGIN
 				,CURRENT_TIMESTAMP
 				,0   --- 0: Waiting ; 1: Completed 
 				,0	 --  0: Not notified yet 	
-				,@ReturnCode
-				,@ReturnValue
+				,NULL
+				,NULL
 				)
 	SELECT @LogID = SCOPE_IDENTITY() 
 END 
+
+
+GO
+GRANT EXECUTE ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [bodbDownlineNetView] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [bodbLicenseeNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [Dot_Admin] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [Dot_Member] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].WriteLog_UserLog_ExternalAPI_Ins TO [vnteam] AS [dbo]
+GO
