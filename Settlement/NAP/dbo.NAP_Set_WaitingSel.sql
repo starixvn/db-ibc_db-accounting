@@ -1,3 +1,9 @@
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER OFF
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel] @MatchCode NVARCHAR(50) = ''
 	, @SportType SMALLINT = 0
 	, @LeagueId INT = 0 -- 0 for ALL Leagues
@@ -47,7 +53,7 @@ BEGIN
 		GROUP BY matchid 
 	)
 	
-	INSERT INTO @TempMatch(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay, IsExistFGLG, IsExistHTFGLG)
+	INSERT INTO @TempMatch(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay, IsExistFGLG, IsExistHTFGLG, IsExistAutoBettypes, IsExistAutoBettypesParlay)
 	SELECT ISNULL(sg.matchid, pl.matchid) AS MatchId
 		, sg.IsCalculating AS SingleStatus
 		, pl.IsCalculating AS ParlayStatus
@@ -55,6 +61,8 @@ BEGIN
 		, CAST(ISNULL(pl.IsCalculating, 0) AS BIT) AS IsMixParlay
 		, CONVERT(BIT, 0) AS IsExistFGLG
 		, CONVERT(BIT, 0) AS IsExistHTFGLG
+		, 0 AS IsExistAutoBettypes
+		, 0 AS IsExistAutoBettypesParlay
 	FROM SingleTicket sg
 		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid
 	
@@ -95,6 +103,7 @@ BEGIN
 							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
 							ELSE 0 
 						END
+				AND b.statusID NOT IN (101, 102)
 			GROUP BY b.matchid, b.bettype
 		) b
 			ON	f.BetType = b.bettype
@@ -112,11 +121,12 @@ BEGIN
 							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
 							ELSE 0 
 						END
+				AND bm.statusID NOT IN (101, 102)
 			GROUP BY bm.matchid, bm.bettype
 		) bm
 			ON	f.BetType = bm.bettype
 	WHERE f.GroupId = 8
-	
+
 	;WITH cteBetStatus
 	AS(
 		SELECT matchid
@@ -128,12 +138,12 @@ BEGIN
 		GROUP BY matchid
 	)
 	UPDATE t
-	SET IsExistFGLG = CASE WHEN t.IsExistFGLG > 0 THEN 1 ELSE 0 END
-		,IsExistHTFGLG = CASE WHEN t.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
-		,IsExistAutoBettypes = CASE WHEN t.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
-		,IsExistAutoBettypesParlay = CASE WHEN t.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
+	SET IsExistFGLG = CASE WHEN tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistHTFGLG = CASE WHEN tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypes = CASE WHEN tt.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypesParlay = CASE WHEN tt.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
 	FROM @TempMatch t
-	INNER JOIN cteBetStatus tt ON t.MatchId = tt.MatchId
+	INNER JOIN cteBetStatus tt ON t.MatchId = tt.MatchId	
 	
 	SELECT m.matchid, m.leagueid, m.homeid, m.awayid, m.matchcode, m.finalhomescore, m.finalawayscore
 		, m.betstatus, m.sporttype, m.goalrecord
@@ -162,8 +172,8 @@ BEGIN
 		, tm.ParlayStatus AS IsCalculatingMP
 		, CASE WHEN tm.SettlementStatusID IS NULL AND tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay = 0 THEN 'N/A'
 				WHEN tm.SettlementStatusID = 0 OR tm.IsExistAutoBettypes > 0 THEN 'Running'
-				WHEN ISNULL(tm.SettlementStatusID,0) = 0 AND tm.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN tm.SettlementStatusID > 0 THEN 'Completed'
+				WHEN tm.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
 			ELSE '' END AS AutoSettleResultStatus
 	FROM dbo.match m WITH(NOLOCK)
 		INNER JOIN @TempMatch tm ON m.matchid = tm.matchid
@@ -193,3 +203,9 @@ BEGIN
 
 END
 
+
+
+GO
+GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam] AS [dbo]

@@ -64,68 +64,55 @@ BEGIN
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid IN ( SELECT val
 					   FROM dbo.strSplit(@matchids, ',') ) 
-
+	
+	DECLARE @tblRunningAutoSettle TABLE (matchid INT)
+	
+	INSERT INTO @tblRunningAutoSettle
+	SELECT matchid
+	FROM	dbo.bettrans WITH(NOLOCK)
+	WHERE	matchid IN (SELECT matchid FROM @match)
+			AND statusID = 0
+			AND bettype IN (SELECT bettype FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+	GROUP BY matchid
+	
+	;WITH cteBetStatusM
+	AS(
+		SELECT	matchid
+				,CASE 
+					WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+		FROM	dbo.bettransm WITH(NOLOCK)
+		WHERE	matchid IN (SELECT matchid FROM @match)
+				AND statusID = 0
+				AND bettype IN (SELECT BetType FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
+		GROUP BY matchid, bettype		
+	)
+	INSERT INTO @tblRunningAutoSettle (matchid)
+	SELECT	c.matchid
+	FROM	cteBetStatusM c
+		LEFT JOIN DBPRO.BODB02.dbo.ResultDetail r WITH(NOLOCK)
+			ON	c.matchid = r.matchid
+				AND r.ResourceId LIKE c.ResourceId
+	WHERE	r.ResultStatusId NOT IN (2,5)
+		
 	IF EXISTS (SELECT 1
 				FROM @match
 				WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL ) AND @action <> 'UNDO'
 		OR EXISTS (SELECT 1
-					FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
-					WHERE matchid IN (SELECT matchid FROM @match)
-						AND ResourceId NOT IN ('00','01','08')
-						AND ResultStatusId NOT IN (2,5)
+					FROM @tblRunningAutoSettle
 				)				
 	BEGIN
-		;WITH cteAutoResultDetail
-		AS(
-			SELECT	BetType
-					,CASE 
-						WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
-						ELSE CAST(BetType AS VARCHAR(20))
-					END AS ResourceId
-			FROM	dbo.f_Set_GetGroupBettypes()
-			WHERE	GroupId = 8
-		)	
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
-			OR (
-				matchid IN (
-					SELECT matchid
-					FROM DBPRO.BODB02.dbo.ResultDetail rs WITH(NOLOCK)
-						INNER JOIN cteAutoResultDetail c 
-						ON rs.ResourceId LIKE c.ResourceId
-					WHERE matchid IN (SELECT matchid FROM @match)
-						AND ResultStatusId NOT IN (2,5)
-					GROUP BY matchid
-				)
-				AND matchid IN (
-					SELECT matchid
-					FROM dbo.bettrans b WITH(NOLOCK)
-						INNER JOIN cteAutoResultDetail c ON b.BetType = c.BetType
-					WHERE b.matchid IN (SELECT matchid FROM @match)
-					GROUP BY matchid
-					HAVING COUNT(1) > 0
-					
-					UNION ALL
-					SELECT matchid
-					FROM dbo.bettransm b WITH(NOLOCK)
-						INNER JOIN cteAutoResultDetail c ON b.BetType = c.BetType
-					WHERE b.matchid IN (SELECT matchid FROM @match)
-					GROUP BY matchid
-					HAVING COUNT(1) > 0
-				)
-			)
+			OR matchid IN (SELECT matchid FROM @tblRunningAutoSettle)
 
 		-- exclude matches were not keyscore yet
 		DELETE
 		FROM @match
 		WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL
-			OR matchid IN (
-				SELECT matchid
-				FROM DBPRO.BODB02.dbo.ResultDetail WITH(NOLOCK)
-				WHERE matchid IN (SELECT matchid FROM @match)
-					AND ResourceId NOT IN ('00','01','08')
-					AND ResultStatusId NOT IN (2,5))
+				OR matchid IN (SELECT matchid FROM @tblRunningAutoSettle)
 	END
 
 	--have running tickets of 14 & 127 on bettrans & bettransm for auto payout
@@ -217,7 +204,7 @@ BEGIN
 									ELSE ''
 								END
 	END
-
+	
 	IF EXISTS (
 				SELECT TOP 1 1
 				FROM @match

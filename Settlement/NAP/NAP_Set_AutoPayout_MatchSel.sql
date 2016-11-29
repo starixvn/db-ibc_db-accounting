@@ -1,6 +1,10 @@
-USE bodb02
+USE [bodb02]
 GO
-ALTER PROCEDURE dbo.NAP_Set_AutoPayout_MatchSel
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_AutoPayout_MatchSel]
 	@FromDate 				DATETIME
 	, @ToDate 				DATETIME
 	, @SportType 			SMALLINT = 0
@@ -272,6 +276,11 @@ BEGIN
 						,COUNT(1) AS betCount
 				FROM dbo.bettrans b WITH(NOLOCK)
 				WHERE b.matchid = m.MatchId
+					AND 1 = CASE 
+							WHEN bettype IN (14,127) THEN 1
+							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
+							ELSE 0 
+						END
 					AND b.statusID NOT IN (101, 102)
 				GROUP BY b.bettype
 			) AS b
@@ -339,14 +348,19 @@ BEGIN
 				FROM	dbo.bettransm b WITH(NOLOCK)
 				WHERE	b.matchid = m.MatchId 
 						AND 1 = CASE
-									WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
+									WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',',' + @strBettypesParlay + ',') > 0 THEN 1
 									ELSE 0
 								END
+						AND 1 = CASE 
+							WHEN bettype IN (14,127) THEN 1
+							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
+							ELSE 0 
+						END
 						AND b.statusID NOT IN (101, 102)
 				GROUP BY b.bettype
 			) AS b
 		OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
-	
+		
 		;WITH BetStatusM AS (
 			SELECT b.matchid
 				, SUM(CASE WHEN f.GroupId = 4 AND (b.betCount > 0) THEN 1 ELSE 0 END) AS IsExistFGLG
@@ -374,29 +388,33 @@ BEGIN
 	
 	SET @Today = DATEADD(HH, -1, GETDATE())
 
-	;WITH SingleTicket AS (
-		SELECT matchid, MAX(IsCalculating) AS IsCalculating
-		FROM dbo.Single_Calculate_Queue s WITH(NOLOCK)
-		WHERE Starttime > @Today AND s.IsCalculating IN (0,1)
+	;WITH cteSingleTicket AS (
+		SELECT	matchid
+				,MIN(IsCalculating) AS IsCalculating
+		FROM	dbo.Single_Calculate_Queue s WITH(NOLOCK)
+		WHERE	Starttime > @Today 
+				AND s.IsCalculating IN (0,1)
+				AND SportType = 1
+				AND s.LeagueID = CASE WHEN @LeagueId = 0 THEN s.LeagueID ELSE @LeagueId END
 		GROUP BY matchid
-	), ParlayTicket AS (
-		SELECT p.matchid, min(IsCalculating)  IsCalculating
-		FROM dbo.Parlay_Calculate_Queue p WITH(NOLOCK)
+	), cteParlayTicket AS (
+		SELECT	p.matchid
+				,MIN(IsCalculating) AS IsCalculating
+		FROM	dbo.Parlay_Calculate_Queue p WITH(NOLOCK)
 			INNER JOIN dbo.match m WITH (NOLOCK)
-			ON p.matchid = m.matchid
-		WHERE p.Starttime > @Today
-			AND p.IsCalculating IN (0,1)
-			AND m.sporttype = 1
-			AND m.leagueid = CASE WHEN @LeagueId = 0 THEN m.leagueid ELSE @LeagueId END
-		GROUP BY p.matchid
-	)	
-
+				ON p.matchid = m.matchid
+		WHERE	Starttime > @Today
+				AND p.IsCalculating IN (0,1)
+				AND m.sporttype = 1
+				AND m.leagueid = CASE WHEN @LeagueId = 0 THEN m.leagueid ELSE @LeagueId END
+		GROUP BY p.matchid 
+	)
 	SELECT ISNULL(sg.matchid, pl.matchid) AS matchid
 		, sg.IsCalculating AS IsCalculatingSingle
 		, pl.IsCalculating AS IsCalculatingMP
 	INTO #tempmatch
-	FROM SingleTicket sg
-		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid 
+	FROM cteSingleTicket sg
+		FULL OUTER JOIN cteParlayTicket pl ON sg.matchid = pl.matchid 
 
 	;WITH cteAutoResultDetail
 	AS(
@@ -576,7 +594,7 @@ BEGIN
 			INNER JOIN InstMatchInProgress u 
 			ON d.matchID = u.matchID
 	END
-	
+
 	SELECT m.HalfTimeHomeScore
 		, m.HalfTimeAwayScore
 		, m.IsCalculated
@@ -612,9 +630,9 @@ BEGIN
 		, t.IsCalculatingSingle
 		, t.IsCalculatingMP
 		, CASE WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
-				WHEN (a.SettlementStatusID IS NULL OR a.SettlementStatusID = 0) AND m.IsExistAutoBettypes > 0 THEN 'Running'
-				WHEN (a.SettlementStatusID IS NULL OR a.SettlementStatusID = 0) AND m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN a.SettlementStatusID = 0 OR m.IsExistAutoBettypes > 0 THEN 'Running'
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
+				WHEN m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'				
 			ELSE '' END AS AutoSettleResultStatus
 		, AutoSetting
 		, IsNeedToCalculateFGLG
@@ -656,8 +674,12 @@ BEGIN
 	DROP TABLE #InstMatchInfo
 	DROP TABLE #tempBettrans
 END
+
+
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayout_MatchSel] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Set_AutoPayout_MatchSel] TO [vnteam] AS [dbo]
-GO

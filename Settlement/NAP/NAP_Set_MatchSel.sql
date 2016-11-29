@@ -1,3 +1,9 @@
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchSel] 
 	@FromDate DATETIME
 	,@ToDate DATETIME
@@ -278,7 +284,7 @@ BEGIN
 			FROM dbo.bettrans b WITH(NOLOCK)
 			WHERE b.matchid = m.MatchId
 				AND 1 = CASE
-					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
+					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strBettypesParlay) > 0 THEN 1
 					ELSE 0
 				END
 				AND 1 = CASE 
@@ -286,6 +292,7 @@ BEGIN
 							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
 							ELSE 0 
 						END
+				AND b.statusID NOT IN (101, 102)
 			GROUP BY b.bettype
 		) AS chk
 	OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
@@ -326,6 +333,7 @@ BEGIN
 							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
 							ELSE 0 
 						END
+				AND b.statusID NOT IN (101, 102)
 			GROUP BY b.bettype
 		) AS chk
 	OPTION (OPTIMIZE FOR (@n = 1))	-- using hint to force Optimize execute temp table first
@@ -411,7 +419,7 @@ BEGIN
 
 	;WITH SingleTicket AS
 	(
-		SELECT matchid, max(IsCalculating)  IsCalculating
+		SELECT matchid, MIN(IsCalculating)  IsCalculating
 		FROM dbo.Single_Calculate_Queue s WITH(NOLOCK)
 		WHERE Starttime > DATEADD(HH,-1,GETDATE())
 		AND s.IsCalculating IN (0,1)
@@ -523,8 +531,8 @@ BEGIN
 		,t.IsCalculatingMP
 		,CASE	WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
 				WHEN a.SettlementStatusID = 0 OR m.IsExistAutoBettypes > 0 THEN 'Running'
-				WHEN ISNULL(m.SettlementStatusID,0) = 0 AND m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN a.SettlementStatusID > 0 THEN 'Completed'
+				WHEN m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
 				ELSE '' END AS AutoSettleResultStatus
 	FROM	#matchList m
 			LEFT JOIN #tempmatch t ON t.matchid = m.matchid
@@ -573,8 +581,10 @@ BEGIN
 END
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSel] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet]
-GO 
+
+
+
+GO
+GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSel] TO [vnteam] AS [dbo]
