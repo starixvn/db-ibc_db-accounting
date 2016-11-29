@@ -35,9 +35,11 @@ BEGIN
 	FROM bodb_licensee.dbo.OAS_Party p WITH (NOLOCK)
 		INNER JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID
 		INNER JOIN bodb_licensee.dbo.OAS_ChargeInfo ci WITH (NOLOCK) ON p.PartyID = ci.FromParty
-		INNER JOIN bodb_licensee.dbo.LA_ChargeInfo_SystemMapping map ON map.ChargeID = ci.ChargeID and map.SystemID = 2
 	WHERE	p.PartyType = 1
 			AND ci.ProductId = 10 -- AG Casino (in Product3rd)
+			AND EXISTS (SELECT 1 
+						FROM bodb_licensee.dbo.LA_ChargeInfo_SystemMapping map WITH (NOLOCK) 
+						WHERE map.ChargeID = ci.ChargeID and map.SystemID = 2)
 			AND ((ci.FromDate BETWEEN @FDate AND @TDate)
 				OR (ci.ToDate BETWEEN @FDate AND @TDate)
 				OR (ci.FromDate < @FDate AND @TDate < ci.ToDate))
@@ -115,7 +117,7 @@ BEGIN
 	
 	CREATE NONCLUSTERED INDEX Idx_InvoiceData ON #TempDataAGC (PartyId)
 		
-	-- Region: Get Rate
+	-- Region: Get Rate, using Compare rate to get charge rate
 	; WITH sums AS 
 				(	SELECT t.ParentID,
 						SUM(CASE WHEN t.ParentID = 1 THEN b.LicenseeWL * cny.CNY ELSE b.LicenseeWL * usd.USD END) AS SumApplyValue
@@ -143,6 +145,7 @@ BEGIN
 		PayToSupplier		MONEY
 	)
 	
+	-- Pay to Supplier using OANDA rate (CurrencyID = 2 => MYR)
 	DECLARE @DailyPayAmt TABLE (RptDate DATE, ParentID INT, AmountDaily MONEY, LicenseeWL MONEY, AGCRate FLOAT)
 	
 	INSERT INTO @DailyPayAmt (RptDate, ParentID, AmountDaily, LicenseeWL, AGCRate)
@@ -152,6 +155,7 @@ BEGIN
 		INNER JOIN #ExchangeOANDA oanda ON d.RptDate = oanda.ExchangeDate AND d.CurrencyId = oanda.ExchangeID
 	GROUP BY d.RptDate, p.ParentID, p.AGCRate
 	
+	-- For monthly value
 	DECLARE @PayToSupplier MONEY
 	SET @PayToSupplier = (	SELECT SUM(PayForEach)
 							FROM (
@@ -184,7 +188,7 @@ BEGIN
 		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
 			(SELECT ISNULL(SUM(AmountToCompany), 0) FROM #TempDataAGC WHERE RptDate = @tmpDate), -- LicenseeWL
-			(SELECT ISNULL(SUM(AmountDaily), 0) FROM @DailyPayAmt WHERE RptDate = @tmpDate)
+			(SELECT ISNULL(SUM(AmountDaily), 0) FROM @DailyPayAmt WHERE RptDate = @tmpDate)		-- PayToSupplier
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
