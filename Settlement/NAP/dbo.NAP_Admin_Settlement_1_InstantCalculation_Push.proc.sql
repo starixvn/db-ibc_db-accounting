@@ -4,6 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_InstantCalculation_Push] 
 	@AdminId 			INT
     , @MatchId			INT
+	, @InstKey			INT
     , @HomeScore		VARCHAR(50)
 	, @AwayScore		VARCHAR(50)
     , @Action			VARCHAR(10)
@@ -31,6 +32,7 @@ BEGIN
 		, @procName 		NVARCHAR(50)
 		, @sqlCommand 		NVARCHAR(1000)
 		, @CalculationType	TINYINT
+		, @InstantCompleted	BIT
 	
 	SELECT @CalculationType	= CASE 
 								WHEN @Action = 'INST-HT' THEN 101
@@ -46,11 +48,11 @@ BEGIN
 	-- checking for instant match validation
 	EXEC dbo.NAP_Settlement_InstantCalculation_Checking 
 		@MatchId 			= @MatchId
-        , @HomeScore		= @HomeScore
-		, @AwayScore		= @AwayScore
+		, @InstKey			= @InstKey
 		, @Action 			= @Action
         , @ErrCode 			= @ErrCode OUTPUT
         , @ErrMsg 			= @ErrMsg OUTPUT
+		, @InstantCompleted	= @InstantCompleted	OUTPUT
         
     IF (@ErrCode <> 0)
     BEGIN
@@ -76,8 +78,10 @@ BEGIN
 		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_InstantCalculation] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
                             + ', @Creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
                             + ', @Action = ''' + ISNULL(CONVERT(NVARCHAR(50), @Action), 'NULL') + ''''
+							+ ', @InstKey = ''' + ISNULL(CONVERT(NVARCHAR(50), @InstKey), 'NULL') + ''''
 							+ ', @HomeScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @HomeScore), 'NULL') + ''''
 							+ ', @AwayScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @AwayScore), 'NULL') + ''''
+							+ ', @InstantCompleted = ''' + ISNULL(CONVERT(NVARCHAR(50), @InstantCompleted), 'NULL') + ''''
                             + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
                             + ', @ErrCode = @ErrCode OUTPUT' 
                             + ', @ErrMsg = @ErrMsg OUTPUT'
@@ -94,6 +98,7 @@ BEGIN
 		@MatchId 		= @matchid
 		, @SourceId 	= 100
 		, @TypeId 		= @CalculationType
+		, @InstKey		= @InstKey
 		, @HomeValue 	= @HomeScore
 		, @AwayValue 	= @AwayScore
 		, @StatusId 	= 1 --waiting

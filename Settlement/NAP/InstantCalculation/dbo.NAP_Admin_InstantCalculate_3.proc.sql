@@ -20,9 +20,8 @@ BEGIN
 		, @commWinRate 			SMALLMONEY
         , @commLostRate 		SMALLMONEY
 		
-	CREATE TABLE #instantTicket (transid BIGINT, modds MONEY)		
+	CREATE TABLE #instantTicket (transid BIGINT PRIMARY KEY, modds MONEY)		
 	
-	--SET @xmlInstantTicket = CONVERT(XML, N'<root><r t="' + REPLACE(REPLACE(@strTransIds, '|', '" m="'), ',', '"/><r t="') + '"/></root>')
 	SET @xmlInstantTicket = CONVERT(XML, @strTransIds)
 	
 	INSERT INTO #instantTicket (transid, modds)
@@ -33,9 +32,11 @@ BEGIN
 	
 	IF(@@ROWCOUNT = 0) RETURN
 	
-	--select * from #instantTicket
-	 UPDATE b
-	 SET modds = t.modds 
+	--CALCULATE PROCESS
+	IF (@action = 'CAL-INST')
+	BEGIN
+		UPDATE b
+		SET modds = t.modds 
 		 ,@commWinRate = CASE comstatus -- 0 : pay normal, both win/lost -- 1 : pay 'double' ONLY on lost
 			 WHEN '0' THEN 1
 			 WHEN '1' THEN 0
@@ -111,9 +112,32 @@ BEGIN
 		 ,ruben = CASE WHEN t.modds IS NULL THEN ruben
 					   ELSE 1
 				  END
-	 FROM dbo.bettrans b WITH(ROWLOCK, UPDLOCK)
-		 INNER JOIN #instantTicket t
-		 ON b.transid = t.transid
+		FROM dbo.bettrans b WITH(ROWLOCK, UPDLOCK)
+			INNER JOIN #instantTicket t
+			ON b.transid = t.transid
+		OPTION(MAXDOP 1)
+	END
+	
+	--UNDO Process
+	IF(@action = 'UNDO-INST')
+	BEGIN
+		UPDATE b
+		SET ruben 		= 0
+			,STATUS 	= 'running'
+			,statusID 	= 0
+			,winlost 	= 0
+			,awinlost 	= 0
+			,mwinlost 	= 0
+			,swinlost 	= 0
+			,playercomm = 0
+			,comm 		= 0
+			,acomm 		= 0
+			,scomm 		= 0
+		FROM dbo.bettrans b WITH (ROWLOCK, UPDLOCK)
+		INNER JOIN #instantTicket t
+			ON b.transid = t.transid
+		OPTION(MAXDOP 1)
+	END
 	
 	DROP TABLE #instantTicket;
 	RETURN;

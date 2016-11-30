@@ -43,7 +43,11 @@ AS
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		- 20160907@bobby: #63765 - Update betstatus when doing refund HT/FT/ALL
 		- 20161118@Bobby: #67551 - Update changes for refunding SDT - ABANDONED match
+		- 20161128@Bobby: #67760 - Implement IS for FGLG bet types
 		
+	Parameters Explanation:    
+	
+	
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -449,7 +453,23 @@ BEGIN
 				,finalawayscore=0				
 		WHERE	matchid = @matchid
 	END
-	
+	IF @Command = 'NAP_Admin_Settlement_1_InstantCalculation'
+	BEGIN
+		DECLARE @Sporttype INT 
+		
+		SET @betstatus = ISNULL(@betstatus, '')
+		
+		SELECT @Sporttype = sporttype
+		FROM dbo.match WITH(NOLOCK)
+		WHERE matchid = @matchid
+
+		IF @sporttype =  1 
+		BEGIN
+			UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
+			SET betstatus 	= betstatus + @betstatus
+			WHERE matchid	= @MatchID
+		END 
+	END
 END
 
 

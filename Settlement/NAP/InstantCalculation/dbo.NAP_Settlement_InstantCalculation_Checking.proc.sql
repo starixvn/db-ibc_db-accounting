@@ -3,12 +3,13 @@ GO
 
 ALTER PROCEDURE dbo.NAP_Settlement_InstantCalculation_Checking
 	@MatchId			INT
-    , @HomeScore		VARCHAR(50)
-	, @AwayScore		VARCHAR(50)
-	, @GoalRecord		VARCHAR(50)
+	, @InstKey			INT
+	, @HomeScore		VARCHAR(50) = ''
+	, @AwayScore		VARCHAR(50) = ''
     , @Action			VARCHAR(10)
 	, @ErrCode 			INT = 0 OUTPUT
 	, @ErrMsg 			VARCHAR(250) = '' OUTPUT
+	, @InstantCompleted	BIT = 0 OUTPUT
 AS
 /*
 	Creator: 20160930@Bobby
@@ -17,7 +18,7 @@ AS
 	Revisions:
 		- 20160930@Bobby: #65003 - Check validation of instant process 
 		- 20161031@Bobby: #66484 - Allow score [0-0] to do Inst.Calc
-		
+		- 20161128@Bobby: #67760 - Implement IS for FGLG bet types
 	Param's Explanation:
 		- @Action: ['INST-HT', 'INST-FT']
 
@@ -45,12 +46,32 @@ BEGIN
 		, @aScore2H			TINYINT
 		, @hthomescore		TINYINT
 		, @htawayscore		TINYINT
-		, @FGNG				VARCHAR(50)
+		, @FGNG				VARCHAR(50)		
+		, @GoalRecord		VARCHAR(50)
+		, @InstKeyValue		VARCHAR(50)
 		
 	CREATE TABLE #instantBettype (bettype SMALLINT)
 	
+	SET @InstKeyValue		= CAST(@InstKey AS VARCHAR(50))
+	
+	SELECT
+		@HomeScore			= ps.HomeValue
+		, @AwayScore		= ps.AwayValue
+		, @GoalRecord		= ISNULL(fgng.GoalRecord, '')
+	FROM DBPRO.bodb02.dbo.ProviderResultDetail ps WITH (NOLOCK) 
+		OUTER APPLY (	
+			SELECT HomeValue AS GoalRecord
+			FROM DBPRO.bodb02.dbo.ProviderResultDetail ps WITH (NOLOCK) 
+			WHERE MatchId 			= @MatchId
+				AND CalculationType = 103 --FGNG
+				AND AwayValue 		= @InstKeyValue
+				
+		) AS fgng
+	WHERE ProviderResultDetailId = @InstKey
+	
 	SELECT @ErrCode			= 0
 		, @ErrMsg			= ''
+		, @InstantCompleted	= 0
 		, @instantCheck		= 0
 		, @CalculationType	= CASE 
 								WHEN @Action = 'INST-HT' THEN 101
@@ -84,8 +105,8 @@ BEGIN
 		ON m.leagueid		= l.leagueid
 		INNER JOIN dbo.match_remark mr WITH (NOLOCK)
 		ON m.matchid 		= mr.matchid
-    WHERE m.matchid 			= @MatchId
-		AND m.sporttype			= 1
+    WHERE m.matchid 		= @MatchId
+		AND m.sporttype		= 1
 		AND 2 & ISNULL(m.AutoSetting, l.AutoSetting) = 2
 	
 	IF (@matchcode 		IS NULL --does not exist match
@@ -130,7 +151,7 @@ BEGIN
 					SELECT HomeValue AS GoalRecord
 					FROM DBPRO.bodb02.dbo.AutoPayoutResult aps WITH (NOLOCK)
 					WHERE matchid 			= @matchid
-						AND CalculationType = 103 -- FGLG
+						AND CalculationType = 103 -- FGNG
 						AND StatusId		= 2 -- completed
 					ORDER BY AutoPayoutResultId DESC
 				) AS gc
@@ -143,7 +164,11 @@ BEGIN
 			,@goalRecordCheck	= GoalRecord
 		FROM InstMatchResult
 		
-		IF(
+		-- CHECK any instant scores has been completed
+		SET @InstantCompleted = CASE WHEN ISNULL(@totalGoalCheck, 0) > 0 THEN 1 ELSE 0 END
+		
+		-- CHECK for abandoned case
+		IF (
 			ISNULL(@totalGoalCheck, 0) > 0 -- check is first instant calculation or not
 			AND (
 				@totalGoal < @totalGoalCheck
@@ -172,6 +197,8 @@ BEGIN
 																, @totalGoal
 																, @totalGoal1H
 																, @totalGoal2H
+																, @FGNG
+																, @CalculationType
 															) AS modds
 					) AS ods
 				WHERE matchid 	= @matchid 

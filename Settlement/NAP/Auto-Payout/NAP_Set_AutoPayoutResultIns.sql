@@ -2,13 +2,14 @@ USE [bodb02]
 GO
 
 ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultIns
-	@MatchId INT
-	, @SourceId TINYINT
-	, @TypeId TINYINT
-	, @HomeValue VARCHAR(50)
-	, @AwayValue VARCHAR(50)
-	, @StatusId TINYINT
-	, @ErrCode INT = 0 OUTPUT
+	@MatchId 		INT
+	, @SourceId 	TINYINT
+	, @TypeId 		TINYINT
+	, @HomeValue 	VARCHAR(50)
+	, @AwayValue 	VARCHAR(50)
+	, @StatusId 	TINYINT
+	, @InstKey		INT = NULL
+	, @ErrCode 		INT = 0 OUTPUT
 	, @ErrMsg NVARCHAR(200) = '' OUTPUT
 	
 AS
@@ -18,6 +19,7 @@ AS
 	DB: DBPRO/bodb02
 	Revisions:
 		- 20160930@Bobby: #65003 - Implement Instant Calculation
+		- 20161128@Bobby: #67760 - Implement IS for FGLG bet types
 		
 	Param's Explanation:
 		@TypeId:
@@ -29,8 +31,12 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE @StatusIdCheck TINYINT, @AutoPayoutResultId INT
-
+	DECLARE @StatusIdCheck 		TINYINT
+		, @AutoPayoutResultId 	INT
+		, @InstKeyValue			VARCHAR(50)
+	
+	SET @InstKeyValue 			= CAST(ISNULL(@InstKey,0) AS VARCHAR(50))
+	
 	SELECT TOP 1 @AutoPayoutResultId = AutoPayoutResultId
 		, @StatusIdCheck = StatusId 
 	FROM dbo.AutoPayoutResult WITH(NOLOCK) 
@@ -69,7 +75,6 @@ BEGIN
 		)	
 	)	
 	BEGIN
-		
 		UPDATE dbo.AutoPayoutResult WITH(ROWLOCK,UPDLOCK)
 		SET StatusId = @StatusId
 		WHERE AutoPayoutResultId = @AutoPayoutResultId
@@ -82,19 +87,14 @@ BEGIN
 	
 	IF (@TypeId IN (101, 102) )
 	BEGIN
-		;WITH CTE_ResultDetailLast AS (
-			SELECT MAX(ProviderResultDetailId) AS ProviderResultDetailId
-			FROM dbo.ProviderResultDetail WITH(NOLOCK)
-			WHERE MatchId = @MatchId
-				AND TypeId = @TypeId
-				AND HomeValue = @HomeValue
-				AND AwayValue = @AwayValue
-		)
 		UPDATE rs
 		SET IsConfirmed = 1
 		FROM dbo.ProviderResultDetail rs WITH(ROWLOCK,UPDLOCK)
-			INNER JOIN CTE_ResultDetailLast t
-			ON rs.ProviderResultDetailId = t.ProviderResultDetailId
+		WHERE rs.ProviderResultDetailId = @InstKey
+			OR (
+				MatchId 		= @MatchId 
+				AND AwayValue 	= @InstKeyValue
+			)
 	END
 	
 	IF @@ERROR <> 0

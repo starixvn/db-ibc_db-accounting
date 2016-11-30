@@ -27,6 +27,9 @@ BEGIN
 	
 	DECLARE @TypeId 	TINYINT
 		, @SourceId		TINYINT
+		, @RefInfo		VARCHAR(50)
+		, @InstKey		INT
+		, @CreatedDate	DATETIME
 		
 	SELECT @TypeId 		=  CASE WHEN @IsHTScore = 1 THEN 101 
 								WHEN @IsHTScore = 0 THEN 102
@@ -34,6 +37,7 @@ BEGIN
 							END
 		, @SourceId		= 100 -- internal source type
 		, @GoalRecord	= ISNULL(@GoalRecord,'')
+		, @CreatedDate	= GETDATE()
 	
 	IF ( 
 		EXISTS (
@@ -60,18 +64,33 @@ BEGIN
 			, @TypeId
 			, CAST(@HomeScore AS VARCHAR(50))
 			, CAST(@AwayScore AS VARCHAR(50))
-			, GETDATE()
+			, @CreatedDate
 			, 0
-		UNION ALL
-		SELECT
-			@MatchId
-			, @SourceId
-			, 103 --FGLG
-			, @GoalRecord
-			, ''
-			, GETDATE()
-			, 0
-		WHERE @GoalRecord <> ''
+		
+		-- SET Instant Key Information
+		SET @InstKey = SCOPE_IDENTITY()
+		
+		IF(@InstId> 0 AND @GoalRecord <> '')
+		BEGIN
+			SET @RefInfo = CAST(@InstKey AS VARCHAR(20))
+			INSERT INTO dbo.ProviderResultDetail (
+				MatchId
+				, SourceId
+				, TypeId
+				, HomeValue
+				, AwayValue
+				, CreatedDate
+				, IsConfirmed
+			)
+			SELECT
+				@MatchId
+				, @SourceId
+				, 103 --FGLG
+				, @GoalRecord
+				, @RefInfo
+				, @CreatedDate
+				, 0
+		END
 	END
 	RETURN	
 END
