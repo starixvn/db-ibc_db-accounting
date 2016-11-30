@@ -249,7 +249,9 @@ SET NOCOUNT ON
 							   CompanyComm, CompanyCommBase							   
 							   )
 	
-		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,B.CustID,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,
+				b.CustID,
+
 				COUNT(CASE WHEN b.StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -273,6 +275,7 @@ SET NOCOUNT ON
 			INNER JOIN #SportBettype s 
 				ON s.Bettype = b.bettype 
 		WHERE b.WinlostDate = @WLDate
+			AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 			AND s.ProductID NOT IN (3,4,5)   --- NumberGame, SLI-Live Casino, Virtual Sport 
 			AND s.RefTable IN (0,3)
 			AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
@@ -288,7 +291,7 @@ SET NOCOUNT ON
 				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
-		GROUP BY  b.WinlostDate,  b.Currency, b.custID 
+		GROUP BY  b.WinlostDate,  b.Currency, b.CustID
 		 
 
 		---1b. By bettype for Casino Product
@@ -302,7 +305,9 @@ SET NOCOUNT ON
 							   CompanyComm, CompanyCommBase							   
 							   )
 	
-		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,B.CustID,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,
+				b.CustID,
+
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -326,6 +331,7 @@ SET NOCOUNT ON
 			INNER JOIN #SportBettype s 
 				ON s.Bettype = b.GameId 
 		WHERE b.WinlostDate = @WLDate
+			AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 			AND s.ProductID NOT IN (3,4,5)   --- NumberGame, SLI-Live Casino, Virtual Sport 
 			AND s.RefTable = 1
 			AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
@@ -341,7 +347,7 @@ SET NOCOUNT ON
 				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
-		GROUP BY  b.WinlostDate,  b.Currency, b.custID 
+		GROUP BY  b.WinlostDate,  b.Currency, b.CustID
 
 		 
 
@@ -356,7 +362,9 @@ SET NOCOUNT ON
 							   CompanyComm, CompanyCommBase							   
 							   )
 	
-		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,B.CustID,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,
+				b.CustID,
+
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -380,6 +388,7 @@ SET NOCOUNT ON
 			INNER JOIN #SportBettype s 
 				ON s.Bettype = b.GameId 
 		WHERE b.WinlostDate = @WLDate
+			AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 			AND s.ProductID NOT IN (3,4,5)   --- NumberGame, SLI-Live Casino, Virtual Sport 
 			AND s.RefTable = 2
 			AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
@@ -395,7 +404,7 @@ SET NOCOUNT ON
 				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
-		GROUP BY  b.WinlostDate,  b.Currency, b.custID 
+		GROUP BY  b.WinlostDate,  b.Currency, b.CustID
 
 	----2. NumberGame & Live Casino & VirtualSport (Soccer) 
 		INSERT INTO #Data ( ReportBy, CustID,   
@@ -408,7 +417,9 @@ SET NOCOUNT ON
 						CompanyComm, CompanyCommBase							   
 					   )
 	
-		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy, b.CustId,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,
+				b.CustID,
+
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -434,6 +445,7 @@ SET NOCOUNT ON
 			INNER JOIN Match m WITH (NOLOCK) 
 				ON m.MatchId = b.matchid
 		WHERE b.WinlostDate = @WLDate
+			AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 			AND s.ProductID IN (3,4,5) --- NumberGame, SLI-Live Casino, VirtualSport
 			AND s.Eventtype = 1
 			AND (
@@ -463,7 +475,7 @@ SET NOCOUNT ON
 				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
-		GROUP BY  b.WinlostDate,  b.Currency, b.CustId 
+		GROUP BY  b.WinlostDate,  b.Currency, b.CustID
 
 
 	----3.  VirtualSport (HR) 
@@ -477,7 +489,9 @@ SET NOCOUNT ON
 						CompanyComm, CompanyCommBase							   
 					   )
 	
-		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy, b.CustId,  
+		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy,
+				b.CustID,
+
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -503,6 +517,7 @@ SET NOCOUNT ON
 			INNER JOIN VSRaceInfo r WITH (NOLOCK) 
 				ON r.EventId = b.matchid
 		WHERE b.WinlostDate = @WLDate
+			AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 			AND s.ProductID = 5 --- VirtualSport (HR)
 			AND s.Eventtype = 3
 			AND (	
@@ -522,7 +537,7 @@ SET NOCOUNT ON
 				 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				 OR @HousePTType = 0 
 				 )
-		GROUP BY  b.WinlostDate,  b.Currency, b.CustId 	
+		GROUP BY  b.WinlostDate,  b.Currency, b.CustID
 
 
 ---Get CurrencyName
@@ -567,7 +582,7 @@ BEGIN
 			INSERT INTO #Result (ReportBy, NoOfPlayers, BetCount, CurrencyId, Currency, 
 								TotalBets, TotalWins, TotalRefund, CompanyTurnover, CompanyGrossIncome, CompanyComm)
 			SELECT  ReportBy, 
-					COUNT(DISTINCT CustID) AS NoOfPlayers, 
+					COUNT(DISTINCT custid) AS NoOfPlayers,
 					SUM(BetCount) AS BetCount ,
 					CurrencyId, Currency,
 					SUM (TotalBetsBase) AS TotalBets, 
@@ -599,7 +614,7 @@ BEGIN
 							   CompanyGrossIncome, CompanyGrossIncomeBase, 
 							   CompanyComm, CompanyCommBase	)
 		SELECT   ReportBy, 
-				 COUNT(DISTINCT CustID) AS NoOfPlayers,  
+				 COUNT(DISTINCT custid) AS NoOfPlayers,
 				 SUM(BetCount) AS BetCount, 
 				 CurrencyId, Currency,
 				 SUM(TotalBets) AS TotalBets, 
@@ -630,7 +645,7 @@ SELECT  ReportBy, NoOfPlayers, BetCount, CurrencyId, Currency,
 		TotalBets, TotalWins, TotalRefund, 
 		CompanyTurnover, CompanyGrossIncome, CompanyComm
 FROM    #Result 
-ORDER BY ReportBy
+ORDER BY ReportBy, Currency
  
 
 -------------------------------------------------------
