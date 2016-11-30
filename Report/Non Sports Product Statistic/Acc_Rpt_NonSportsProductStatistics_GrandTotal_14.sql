@@ -203,6 +203,7 @@ BEGIN
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate = @WLDate
+				AND b.matchid >= 0
 				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 				AND s.RefTable IN (0, 3)
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
@@ -303,7 +304,7 @@ BEGIN
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 	END
-	ELSE -- filter custid
+	ELSE -- non filter custid
 	BEGIN
 		IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE RefTable IN (0, 3)) -- bettrans
 		BEGIN
@@ -334,7 +335,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate = @WLDate
 				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
-				AND b.matchid > 0
+				AND b.matchid >= 0
 				AND s.RefTable IN (0, 3)
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 				AND (b.currency = @Currency OR @Currency IN (0, -1))
@@ -567,7 +568,7 @@ BEGIN
 		r.CompanyComm
 	FROM Result r
 		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
-	--ORDER BY e.currency
+	ORDER BY e.currency
 
 	--- Total
 	SELECT
