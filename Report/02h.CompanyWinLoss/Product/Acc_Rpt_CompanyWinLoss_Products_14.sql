@@ -16,6 +16,7 @@ AS
 		 
 		- 20160915@Percy: Integrate NG2 [RedmineID: #63460]
 		- 20160922@Percy: Use local parameter to prevent bad parameter sniffing [RedmindID: #64573]
+		- 20161130@Percy: Integrate Fishing World [RedmineID: #67757]
 		- 20161213@Sophia: Remove parameter @winlostdate, use @StartDate to obtain parameter sniffing [RedmindID: #68634]
 	Explanation's Param:
 	
@@ -609,9 +610,9 @@ BEGIN
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
 			AND e.ProductID = b.ProductId	
-	WHERE	--- b.ProductId IN (21)    ----Allbet (LiveCasino)
+	WHERE b.ProductId IN (24)    -- Fishing World
 			---OR  b.ProductId IN (6,17,22) --- OW RNG + Microgaming - RNG Casino, Macau Games (Casino)
-			b.CasinoType IN (1,2)
+			OR b.CasinoType IN (1,2)
 	GROUP BY site, 
 			 CASE WHEN b.CasinoType = 1 THEN 6  ---- Casino
 				 WHEN b.CasinoType = 2 THEN 4  ---Live Casino
@@ -681,7 +682,7 @@ BEGIN
 	,(11, -2, 'Bettrade')
 	,(12, 15, 'Colossus Bets')
 	,(13, 23, 'NG2')
-
+	,(14, 24, 'Fishing World')
 		
 	INSERT INTO @ProductOrder (DisplayOrder, ProductId, ProductName, Site)
 	VALUES 	
