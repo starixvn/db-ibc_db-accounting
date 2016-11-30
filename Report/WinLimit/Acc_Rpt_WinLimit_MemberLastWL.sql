@@ -46,7 +46,7 @@ BEGIN
 	IF @Username <> ''
 	BEGIN
 		INSERT INTO @TmpCust (CustID, UserName)
-		SELECT c.CustID, c.username
+		SELECT DISTINCT c.CustID, c.username
 		FROM [dbo].strSplit(@UserName, ',') f
 			INNER JOIN dbo.customer c (NOLOCK) ON c.username = f.val 
 		WHERE c.roleid = 1
@@ -60,7 +60,7 @@ BEGIN
 		, b.CurrencyName		AS Currency
 		
 		, COUNT(b.transid)		AS BetCount
-		, SUM(b.actual_stake)	AS TotalBet
+		, SUM(b.actual_stake)	AS TotalBets
 		, SUM(b.actual_stake - b.winlost) AS GameIncome
 		, CASE 
 			WHEN SUM(b.actual_stake) <= 0 THEN 0 
