@@ -8,7 +8,10 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_FishingWorld_BetType_14];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_FishingWorld_BetType_14] @StartDate SMALLDATETIME,
-                                                                  @EndDate   SMALLDATETIME
+                                                                     @EndDate   SMALLDATETIME,
+                                                                     @ProductId INT           = 24,
+                                                                     @SportType INT           = 0,
+                                                                     @IsLive    INT           = 2
 AS
 
 
@@ -21,6 +24,11 @@ DB: DBACC/bodb02
 Revisions:
 - 20161201@Jacob: Integrate Fishing World Product [#67757]
    
+Parameters:
+@ProductId: Jacob add this dummy parameter to make it consistent with [Acc_Rpt_CompanyWinLoss_Universal_BetType]
+@SportType: Jacob add this dummy parameter to make it consistent with [Acc_Rpt_CompanyWinLoss_Universal_BetType]
+@IsLive: Jacob add this dummy parameter to make it consistent with [Acc_Rpt_CompanyWinLoss_Universal_BetType]
+
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_FishingWorld_BetType_14] @EndDate='2020-01-01',@StartDate='2016-11-28'
 */

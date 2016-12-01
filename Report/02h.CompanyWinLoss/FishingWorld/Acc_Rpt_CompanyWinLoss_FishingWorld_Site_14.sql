@@ -10,7 +10,8 @@ GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_FishingWorld_Site_14] @StartDate SMALLDATETIME,
                                                                @EndDate   SMALLDATETIME,
                                                                @BetType   INT,
-                                                               @Site      NVARCHAR(50)
+                                                               @Site      NVARCHAR(50),
+                                                               @IsLive    INT           = 2
 AS
 
 /*
@@ -20,8 +21,10 @@ Task:  Integrate Fishing World Product [#67757]
 DB: DBACC/bodb02
 
 Revisions:
-- 20161201@Jacob: Integrate Fishing World Product [#67757]
-   
+    20161201@Jacob: Integrate Fishing World Product [#67757]
+Parameters:
+    @IsLive: Jacob add this dummy parameter to make it consistent with [Acc_Rpt_CompanyWinLoss_Universal_Site]
+
 Example:
 EXEC [Acc_Rpt_CompanyWinLoss_FishingWorld_Site_14] @BetType = 1011,@EndDate='2020-01-01',@Site = 'Credit',@StartDate='2016-11-27'
 */

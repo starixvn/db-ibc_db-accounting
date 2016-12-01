@@ -8,8 +8,8 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType_14];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType_14] @StartDate SMALLDATETIME,
-                                                                       @EndDate   SMALLDATETIME,
-                                                                       @ProductId INT
+                                                                    @EndDate   SMALLDATETIME,
+                                                                    @ProductId INT
 AS
 
 /*	
