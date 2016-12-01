@@ -1,7 +1,7 @@
 USE bodb02
 GO
 
-CREATE PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide]
+ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Device]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
 	@Username		VARCHAR(50) = '',
@@ -23,7 +23,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide]
 AS
 /*
 	Created	: 20161118@Harper
-	Task	: #62430_Non Sports Product Statistic - Devide Report
+	Task	: #62430_Non Sports Product Statistic - Device Report
 	DB		: DBACC/bodb02
 	
 	Revision:
@@ -53,7 +53,7 @@ AS
 		- @HousePTValue : Value to compare with @HousePTType
 		- @IsDrillDown: If click on Grand Total or on the Grid of column Currency
 
-	EXEC [Acc_Rpt_NonSportsProductStatistics_Device] @WinlostDate = '2016-11-07',
+	EXEC [Acc_Rpt_NonSportsProductStatistics_Device] @WinlostDate = '2016-11-21',
 	@ProductID = '4,12,21,11,13,6,17,14,22,3,8,5', 
 	@Bettype = '1101,1102,1103,1104,1700,1701,1702,1703,2401,2402,2403,2404,2405,1800,1801,1802,1803,1804,2001,2002,2003,2004,2005,2006,2007,2008,2009,1900,1501,1515',
  	@LeagueID = '15223, 50717',
@@ -69,7 +69,7 @@ BEGIN
 	DECLARE @WLDate DATETIME
 	SELECT @WLDate = @WinlostDate
 
-	CREATE TABLE #Data ( Betfrom INT, Device VARCHAR(50), CustID INT,
+	CREATE TABLE #Data ( Betfrom NVARCHAR(5), Device NVARCHAR(50), CustID INT,
 						 BetCount INT, CurrencyID INT, Currency NVARCHAR(50),
 						 TotalBets MONEY, TotalBetsBase MONEY,
 						 TotalWins MONEY, TotalWinsBase MONEY,
@@ -78,7 +78,7 @@ BEGIN
 						 CompanyGrossIncome MONEY, CompanyGrossIncomeBase MONEY,
 						 CompanyComm MONEY, CompanyCommBase MONEY
 						)
-	CREATE TABLE #Result (  Betfrom INT, Device VARCHAR(50), NoOfPlayers INT,
+	CREATE TABLE #Result (  Betfrom NVARCHAR(5), Device NVARCHAR(50), NoOfPlayers INT,
 							BetCount INT, CurrencyID INT, Currency NVARCHAR(50)	,
 							TotalBets MONEY, TotalBetsBase MONEY,
 							TotalWins MONEY, TotalWinsBase MONEY,
@@ -205,7 +205,7 @@ BEGIN
 						 CompanyTurnOver MONEY, CompanyTurnOverBase MONEY,
 						 CompanyGrossIncome MONEY, CompanyGrossIncomeBase MONEY,
 						 CompanyComm MONEY, CompanyCommBase MONEY,
-						 RefTable SMALLINT, EvenType INT, Matchid INT, Betfrom INT, ProductID INT
+						 RefTable SMALLINT, EvenType INT, Matchid INT, Betfrom NVARCHAR(5), ProductID INT
 						)
 	INSERT INTO #tmp_bettrans
 	        ( CustID ,
@@ -534,9 +534,9 @@ BEGIN
 	
 	-- Get Device
 	UPDATE d
-	SET d.Device = 
+	SET d.Device = CASE WHEN d.Betfrom IN ('i', 'f') THEN 'Internet' ELSE f.fullname END
 	FROM #Data d
-		INNER JOIN 
+		INNER JOIN DBDW2.bodb_Account.dbo.tbl_Betfrom f ON f.betfrom = d.Betfrom
 
 	UPDATE d
 	SET d.Betfrom = CASE WHEN d.Betfrom IN ('i','f') THEN 'i,f' ELSE d.Betfrom END
@@ -549,8 +549,8 @@ BEGIN
 		IF @IsDrillDown = 0
 		BEGIN
 			INSERT INTO #Result
-			    (	ProductID ,
-			        ProductName ,
+			    (	Betfrom ,
+			        Device ,
 			        NoOfPlayers ,
 			        BetCount ,
 			        CurrencyID ,
@@ -568,8 +568,8 @@ BEGIN
 					CompanyGrossIncomeBase,
 					CompanyCommBase
 			        )
-			SELECT b.ProductID,
-				b.ProductName,
+			SELECT b.Betfrom,
+				b.Device,
 				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
 				SUM(b.BetCount) AS BetCount,
 				-1 AS CurrencyID,
@@ -587,7 +587,7 @@ BEGIN
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
 				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName
+			GROUP BY b.Betfrom, b.Device
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
@@ -600,8 +600,8 @@ BEGIN
 		ELSE -- @Currency = -1, @IsDrillDown = 1
 		BEGIN
 			INSERT INTO #Result
-			    (	ProductID ,
-			        ProductName ,
+			    (	Betfrom ,
+			        Device ,
 			        NoOfPlayers ,
 			        BetCount ,
 			        CurrencyID ,
@@ -619,8 +619,8 @@ BEGIN
 					CompanyGrossIncomeBase,
 					CompanyCommBase
 			        )
-			SELECT b.ProductID,
-				b.ProductName,
+			SELECT b.Betfrom,
+				b.Device,
 				COUNT(DISTINCT b.custid) NoOfPlayers,
 				SUM(b.BetCount) BetCount,
 				b.CurrencyId AS CurrencyId,
@@ -638,7 +638,7 @@ BEGIN
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
 				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
+			GROUP BY b.Betfrom, b.Device, b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
@@ -652,8 +652,8 @@ BEGIN
 	ELSE -- @Currency <> -1 => Original Currency
 	BEGIN
 		INSERT INTO #Result
-		    (	ProductID ,
-		        ProductName ,
+		    (	Betfrom ,
+		        Device ,
 		        NoOfPlayers ,
 		        BetCount ,
 		        CurrencyID ,
@@ -671,8 +671,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyCommBase
 		        )
-		SELECT b.ProductID,
-				b.ProductName,
+		SELECT b.Betfrom,
+				b.Device,
 				COUNT(DISTINCT b.custid) NoOfPlayers,
 				SUM(b.BetCount) BetCount,
 				b.CurrencyId AS CurrencyId,
@@ -690,7 +690,7 @@ BEGIN
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
 				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
+			GROUP BY b.Betfrom, b.Device, b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
@@ -701,42 +701,22 @@ BEGIN
 					)
 	END	
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
-
-	IF @CasinoType = -1 
-	BEGIN
-		SELECT  ProductID AS ReportById,
-				ProductName AS ReportBy, 
-				NoOfPlayers,
-				BetCount,
-				CurrencyId,
-				Currency,
-				TotalBets,
-				TotalWins,
-				TotalRefund,
-				CompanyTurnOver,
-				CompanyGrossIncome,
-				CompanyComm 
-		FROM #Result	
-		ORDER BY ProductName, Currency		
-	END
-	ELSE
-	BEGIN
-		SELECT  ProductID AS ReportById,
-			ProductName AS ReportBy, 
-			NoOfPlayers,
-			BetCount,
-			CurrencyId,
-			Currency,
-			TotalBets,
-			TotalWins,
-			TotalRefund,
-			CompanyTurnOver,
-			CompanyGrossIncome,
-			CompanyComm 
-		FROM #Result	
-		ORDER BY ProductName, Currency	
-	END	
-
+		
+	SELECT  Betfrom,
+		Device, 
+		NoOfPlayers,
+		BetCount,
+		CurrencyId,
+		Currency,
+		TotalBets,
+		TotalWins,
+		TotalRefund,
+		CompanyTurnOver,
+		CompanyGrossIncome,
+		CompanyComm 
+	FROM #Result	
+	ORDER BY Device, Currency	
+		
 	SELECT
         'GrandTotal' AS ReportBy,
         SUM(c.NoOfPlayers) NoOfPlayers,
@@ -767,7 +747,7 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Device] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Device] TO [vnteam];
 GO

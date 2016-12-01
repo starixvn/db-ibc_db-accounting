@@ -1,7 +1,7 @@
 USE bodb02
 GO
 
-CREATE PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide]
+ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Device_14]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
 	@Username		VARCHAR(50) = '',
@@ -19,8 +19,7 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide]
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
-	@IsDrillDown	BIT = 0,
-	@CasinoType		INT = -1
+	@IsDrillDown	BIT = 0
 AS
 /*
 	Created	: 20161118@Harper
@@ -54,7 +53,7 @@ AS
 		- @HousePTValue : Value to compare with @HousePTType
 		- @IsDrillDown: If click on Grand Total or on the Grid of column Currency
 
-	EXEC [Acc_Rpt_NonSportsProductStatistics_Product] @WinlostDate = '2016-11-07',
+	EXEC [Acc_Rpt_NonSportsProductStatistics_Device] @WinlostDate = '2016-11-21',
 	@ProductID = '4,12,21,11,13,6,17,14,22,3,8,5', 
 	@Bettype = '1101,1102,1103,1104,1700,1701,1702,1703,2401,2402,2403,2404,2405,1800,1801,1802,1803,1804,2001,2002,2003,2004,2005,2006,2007,2008,2009,1900,1501,1515',
  	@LeagueID = '15223, 50717',
@@ -62,8 +61,7 @@ AS
  	@Device = 'a,d,e,f,h,i,j,l,m,n,p,s,t,u,w',
  	@GameTableId = '22994,22995,22996,23618,23751,26120,26121,28680,28681,28682,28683,32157',
  	@Currency = -1,
- 	@IsDrillDown = 0,
-	@CasinoType = 2
+ 	@IsDrillDown = 0
 */
 BEGIN
 	SET NOCOUNT ON
@@ -71,7 +69,7 @@ BEGIN
 	DECLARE @WLDate DATETIME
 	SELECT @WLDate = @WinlostDate
 
-	CREATE TABLE #Data ( ProductID INT, ProductName VARCHAR(50), CustID INT,
+	CREATE TABLE #Data ( Betfrom NVARCHAR(5), Device NVARCHAR(50), CustID INT,
 						 BetCount INT, CurrencyID INT, Currency NVARCHAR(50),
 						 TotalBets MONEY, TotalBetsBase MONEY,
 						 TotalWins MONEY, TotalWinsBase MONEY,
@@ -80,7 +78,7 @@ BEGIN
 						 CompanyGrossIncome MONEY, CompanyGrossIncomeBase MONEY,
 						 CompanyComm MONEY, CompanyCommBase MONEY
 						)
-	CREATE TABLE #Result (  ProductID INT, ProductName VARCHAR(50), NoOfPlayers INT,
+	CREATE TABLE #Result (  Betfrom NVARCHAR(5), Device NVARCHAR(50), NoOfPlayers INT,
 							BetCount INT, CurrencyID INT, Currency NVARCHAR(50)	,
 							TotalBets MONEY, TotalBetsBase MONEY,
 							TotalWins MONEY, TotalWinsBase MONEY,
@@ -164,22 +162,10 @@ BEGIN
 	FROM #SportBettype s
 	WHERE s.ProductID NOT IN (3, 5) -- NumberGame, Virtual Sport
 		AND NOT EXISTS (SELECT b.Bettype FROM #tmp_BetType b WHERE b.Bettype = s.Bettype)
-	-- End Sport Bettype Matrix
-
-	-- Handle Product Group		
-	IF @CasinoType <> -1 -- @CasinoType = 0_KN, VS, NG, 1_RNG Casino, 2_Live Casino
-	BEGIN
-		DELETE s
-		FROM #SportBettype s
-		WHERE NOT EXISTS (SELECT 1 
-						FROM dbo.Products p WITH (NOLOCK) 
-						WHERE p.CasinoType = @CasinoType
-								AND s.ProductID = p.ProductID)							
-	END		
-	-- End Product Group
+	-- End Sport Bettype Matrix	
 	
 	-- Get Site	
-	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), Srecommend INT, isDeposit BIT)
+	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), Srecommend INT)
 
 	IF @Site <> 'ALL'
 	BEGIN
@@ -188,18 +174,17 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site NOT IN ('MBC Group')) -- Deposit Or Credit Drill Down
 		BEGIN	
-			INSERT INTO #tmp_Company (SiteName, Srecommend, isDeposit)
-			SELECT s.Site, c.srecommend, ss.isDeposit
+			INSERT INTO #tmp_Company (SiteName, Srecommend)
+			SELECT s.Site, c.srecommend
 			FROM #tmp_Site s
-				INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
-				INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
+				INNER JOIN dbo.Customer c WITH (NOLOCK) ON s.Site = c.site
 			WHERE c.roleid = 4
 		END
 
 		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site IN ('MBC Group'))					
 		BEGIN
-			INSERT INTO #tmp_Company (SiteName, Srecommend, isDeposit)
-			SELECT c.site, c.srecommend, 0
+			INSERT INTO #tmp_Company (SiteName, Srecommend)
+			SELECT c.site, c.srecommend
 			FROM dbo.Customer c WITH (NOLOCK)
 			WHERE c.roleid = 4
 				AND NOT EXISTS (SELECT 1 FROM dbo.f_DepSuper_1('ALL') f WHERE c.srecommend = f.CustID)
@@ -220,7 +205,7 @@ BEGIN
 						 CompanyTurnOver MONEY, CompanyTurnOverBase MONEY,
 						 CompanyGrossIncome MONEY, CompanyGrossIncomeBase MONEY,
 						 CompanyComm MONEY, CompanyCommBase MONEY,
-						 RefTable SMALLINT, EvenType INT, Matchid INT, ProductID INT
+						 RefTable SMALLINT, EvenType INT, Matchid INT, Betfrom NVARCHAR(5), ProductID INT
 						)
 	INSERT INTO #tmp_bettrans
 	        ( CustID ,
@@ -241,6 +226,7 @@ BEGIN
 			  RefTable,
 			  EvenType,
 			  Matchid,
+			  Betfrom,
 			  ProductID
 	        )	
 	SELECT b.custid, 
@@ -264,9 +250,9 @@ BEGIN
 			SUM(scomm) AS CompanyComm,
 			SUM(scomm *actualrate) AS CompanyCommBase,
 
-			s.RefTable, s.EvenType, b.matchid, s.ProductID
+			s.RefTable, s.EvenType, b.matchid, b.betfrom, s.ProductID
 
-	FROM  dbo.bettrans b WITH (NOLOCK)
+	FROM  dbo.bettrans14 b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 	WHERE b.winlostdate = @WLDate
 		AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
@@ -279,14 +265,14 @@ BEGIN
 		AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 			OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 			OR @HousePTType = 0)
-	GROUP BY s.ProductID, b.custid, b.currency, s.RefTable, s.EvenType, b.matchid	
+	GROUP BY s.ProductID, b.custid, b.currency, s.RefTable, s.EvenType, b.matchid, b.betfrom	
 
 	--- Check condition 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID NOT IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
 	BEGIN		
 		-- 1. By bettype for normal product
 		INSERT INTO #Data
-				( ProductID,
+				( Betfrom,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	         
@@ -303,7 +289,7 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT b.ProductID, b.custid,
+		SELECT b.Betfrom, b.custid,
 				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
@@ -326,11 +312,11 @@ BEGIN
 
 		FROM  #tmp_bettrans b
 		WHERE b.RefTable IN (0, 3) AND b.ProductID NOT IN (3, 4, 5)
-		GROUP BY b.ProductID, b.custid, b.CurrencyID
+		GROUP BY b.Betfrom, b.custid, b.CurrencyID
 		
 		-- 2a. By Bettype for Casino Product
 		INSERT INTO #Data
-				( ProductID ,
+				( Betfrom ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	          
@@ -347,7 +333,7 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	s.ProductID, b.custid,
+		SELECT	b.Betfrom, b.custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -367,7 +353,7 @@ BEGIN
 
 				- SUM(scomm) AS CompanyComm,
 				- SUM(scomm *actualrate) AS CompanyCommBase
-		FROM dbo.bettransRnG b WITH (NOLOCK)
+		FROM dbo.bettransRnG14 b WITH (NOLOCK)
 			INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 		WHERE b.winlostdate = @WLDate
 			AND s.RefTable = 1		
@@ -381,11 +367,11 @@ BEGIN
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
-		GROUP BY s.productID, b.custid, b.currency
+		GROUP BY b.betfrom, b.custid, b.currency
 		
 		-- 2b. By Bettype for Casino Product
 		INSERT INTO #Data
-				( ProductID ,
+				( Betfrom ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	          
@@ -402,7 +388,7 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	s.productID, b.custid,
+		SELECT	b.betfrom, b.custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
 				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
@@ -422,7 +408,7 @@ BEGIN
 
 				- SUM(scomm) AS CompanyComm,
 				- SUM(scomm *actualrate) AS CompanyCommBase
-		FROM dbo.bettransLC b WITH (NOLOCK)
+		FROM dbo.bettransLC14 b WITH (NOLOCK)
 			INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 		WHERE b.winlostdate = @WLDate
 			AND s.RefTable = 2	
@@ -436,14 +422,14 @@ BEGIN
 			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
-		GROUP BY s.productID, b.custid, b.currency		
+		GROUP BY b.betfrom, b.custid, b.currency		
 	END
 	
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID IN (3, 4, 5))
 	BEGIN
 		-- 3. NumberGame - Live Casino - Virtual Sport (Soccer)
 		INSERT INTO #Data
-				( ProductID ,
+				( Betfrom ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,
@@ -460,7 +446,7 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)	
-		SELECT	b.ProductID, b.custid,
+		SELECT	b.Betfrom, b.custid,
 				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
@@ -482,18 +468,18 @@ BEGIN
 				- SUM(CompanyCommBase) AS CompanyCommBase
 
 		FROM  #tmp_bettrans b
-			INNER JOIN dbo.match m WITH (NOLOCK) ON m.matchid = b.matchid
+			INNER JOIN dbo.match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 		WHERE b.EvenType = 1 AND b.ProductID IN (3, 4, 5)
 			AND (
 				(b.ProductID = 3 AND (@LeagueId = '' OR (EXISTS (SELECT 1 FROM #tmp_LeagueID l WHERE l.LeagueID = m.leagueid)))) OR
 				(b.ProductID = 4 AND (@GameTableId = '' OR (EXISTS (SELECT 1 FROM #tmp_GameTableID g WHERE g.GameTableID = m.leagueid)))) OR
 				(b.ProductID = 5 AND (@Sporttype = '' OR (EXISTS (SELECT 1 FROM #tmp_SportType st WHERE st.Sporttype = m.sporttype))))
 			)	
-		GROUP BY b.ProductID, b.custid, b.CurrencyID
+		GROUP BY b.Betfrom, b.custid, b.CurrencyID
 	
 		-- 4. Virtual Sport (HR)
 		INSERT INTO #Data
-				( ProductID ,
+				( Betfrom ,
 				  CustID ,
 				  BetCount ,
 				  CurrencyID ,	          
@@ -510,7 +496,7 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.ProductID, b.custid,
+		SELECT	b.Betfrom, b.custid,
 				SUM( BetCount ) AS BetCount, b.CurrencyID,
 
 				SUM(TotalBets) AS TotalBets,
@@ -536,7 +522,7 @@ BEGIN
 		WHERE b.ProductID = 5
 			AND b.EvenType = 3
 			AND (@Sporttype = '' OR (EXISTS(SELECT 1 FROM #tmp_SportType st WHERE st.Sporttype = r.SportType)))			  
-		GROUP BY b.ProductID, b.custid, b.CurrencyID
+		GROUP BY b.Betfrom, b.custid, b.CurrencyID
 	END
 
 	-- Get Currency name
@@ -546,36 +532,16 @@ BEGIN
 		INNER JOIN dbo.Exchange e ON e.exchangeid = d.CurrencyID
 	-- End Currency Name	
 	
-	-- Get Product Name
-	IF @CasinoType = -1 -- Group in Product Group
-	BEGIN
-		UPDATE s
-		SET s.ProductID = 1,
-			s.ProductName = 'RNG Casino'		
-		FROM #Data s			
-		WHERE EXISTS (SELECT 1 FROM dbo.Products p WITH (NOLOCK) WHERE p.CasinoType = 1 AND s.ProductID = p.ProductID)
+	-- Get Device
+	UPDATE d
+	SET d.Device = CASE WHEN d.Betfrom IN ('i', 'f') THEN 'Internet' ELSE f.fullname END
+	FROM #Data d
+		INNER JOIN DBDW2.bodb_Account.dbo.tbl_Betfrom f ON f.betfrom = d.Betfrom
 
-		UPDATE s
-		SET s.ProductID = 2,
-			s.ProductName = 'Live Casino'	
-		FROM #Data s
-		WHERE EXISTS (SELECT 1 FROM dbo.Products p WITH (NOLOCK) WHERE p.CasinoType = 2 AND s.ProductID = p.ProductID)
-
-		UPDATE d
-		SET d.ProductName = p.ProductName
-		FROM #Data d
-			INNER JOIN dbo.Products p ON d.ProductID = p.ProductID
-		WHERE p.ProductID IN (3, 5, 8)
-	END
-	ELSE -- @CasinoType <> -1
-	BEGIN
-		UPDATE d
-		SET d.ProductName = CASE WHEN d.ProductId = 4 THEN 'SLI' ELSE p.ProductName END
-		FROM #Data d
-			INNER JOIN dbo.Products p ON d.ProductID = p.ProductID
-		WHERE @CasinoType <> -1
-	END
-	--End Product Name
+	UPDATE d
+	SET d.Betfrom = CASE WHEN d.Betfrom IN ('i','f') THEN 'i,f' ELSE d.Betfrom END
+	FROM #Data d
+	-- End Device
 	------------------------------------------III. Drill down data ------------------------------------------------------
 
 	IF @Currency = -1 -- BaseRM
@@ -583,8 +549,8 @@ BEGIN
 		IF @IsDrillDown = 0
 		BEGIN
 			INSERT INTO #Result
-			    (	ProductID ,
-			        ProductName ,
+			    (	Betfrom ,
+			        Device ,
 			        NoOfPlayers ,
 			        BetCount ,
 			        CurrencyID ,
@@ -602,8 +568,8 @@ BEGIN
 					CompanyGrossIncomeBase,
 					CompanyCommBase
 			        )
-			SELECT b.ProductID,
-				b.ProductName,
+			SELECT b.Betfrom,
+				b.Device,
 				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
 				SUM(b.BetCount) AS BetCount,
 				-1 AS CurrencyID,
@@ -621,7 +587,7 @@ BEGIN
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
 				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName
+			GROUP BY b.Betfrom, b.Device
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
@@ -634,8 +600,8 @@ BEGIN
 		ELSE -- @Currency = -1, @IsDrillDown = 1
 		BEGIN
 			INSERT INTO #Result
-			    (	ProductID ,
-			        ProductName ,
+			    (	Betfrom ,
+			        Device ,
 			        NoOfPlayers ,
 			        BetCount ,
 			        CurrencyID ,
@@ -653,8 +619,8 @@ BEGIN
 					CompanyGrossIncomeBase,
 					CompanyCommBase
 			        )
-			SELECT b.ProductID,
-				b.ProductName,
+			SELECT b.Betfrom,
+				b.Device,
 				COUNT(DISTINCT b.custid) NoOfPlayers,
 				SUM(b.BetCount) BetCount,
 				b.CurrencyId AS CurrencyId,
@@ -672,7 +638,7 @@ BEGIN
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
 				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
+			GROUP BY b.Betfrom, b.Device, b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
@@ -686,8 +652,8 @@ BEGIN
 	ELSE -- @Currency <> -1 => Original Currency
 	BEGIN
 		INSERT INTO #Result
-		    (	ProductID ,
-		        ProductName ,
+		    (	Betfrom ,
+		        Device ,
 		        NoOfPlayers ,
 		        BetCount ,
 		        CurrencyID ,
@@ -705,8 +671,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyCommBase
 		        )
-		SELECT b.ProductID,
-				b.ProductName,
+		SELECT b.Betfrom,
+				b.Device,
 				COUNT(DISTINCT b.custid) NoOfPlayers,
 				SUM(b.BetCount) BetCount,
 				b.CurrencyId AS CurrencyId,
@@ -724,7 +690,7 @@ BEGIN
 				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
 				SUM(b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-			GROUP BY b.ProductID, b.ProductName, b.CurrencyID, b.Currency
+			GROUP BY b.Betfrom, b.Device, b.CurrencyID, b.Currency
 			HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
@@ -735,42 +701,22 @@ BEGIN
 					)
 	END	
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
-
-	IF @CasinoType = -1 
-	BEGIN
-		SELECT  ProductID AS ReportById,
-				ProductName AS ReportBy, 
-				NoOfPlayers,
-				BetCount,
-				CurrencyId,
-				Currency,
-				TotalBets,
-				TotalWins,
-				TotalRefund,
-				CompanyTurnOver,
-				CompanyGrossIncome,
-				CompanyComm 
-		FROM #Result	
-		ORDER BY ProductName, Currency		
-	END
-	ELSE
-	BEGIN
-		SELECT  ProductID AS ReportById,
-			ProductName AS ReportBy, 
-			NoOfPlayers,
-			BetCount,
-			CurrencyId,
-			Currency,
-			TotalBets,
-			TotalWins,
-			TotalRefund,
-			CompanyTurnOver,
-			CompanyGrossIncome,
-			CompanyComm 
-		FROM #Result	
-		ORDER BY ProductName, Currency	
-	END	
-
+		
+	SELECT  Betfrom,
+		Device, 
+		NoOfPlayers,
+		BetCount,
+		CurrencyId,
+		Currency,
+		TotalBets,
+		TotalWins,
+		TotalRefund,
+		CompanyTurnOver,
+		CompanyGrossIncome,
+		CompanyComm 
+	FROM #Result	
+	ORDER BY Device, Currency	
+		
 	SELECT
         'GrandTotal' AS ReportBy,
         SUM(c.NoOfPlayers) NoOfPlayers,
@@ -801,7 +747,7 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide] TO [bodbAdminNet];
+GRANT EXECUTE ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Device_14] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Devide] TO [vnteam];
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_NonSportsProductStatistics_Device_14] TO [vnteam];
 GO
