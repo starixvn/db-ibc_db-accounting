@@ -149,6 +149,8 @@ BEGIN
 		,PlaceOdds MONEY
 		,IsExistAutoBettypes BIT
 		,IsExistAutoBettypesParlay BIT
+		,IsRunningAutoBettypes BIT
+		,IsRunningAutoBettypesParlay BIT
 	)
 
 	DECLARE @strmatchid VARCHAR(MAX)
@@ -209,6 +211,8 @@ BEGIN
 		,tmp.PlaceOdds
 		,0 AS IsExistAutoBettypes
 		,0 AS IsExistAutoBettypesParlay
+		,0 AS IsRunningAutoBettypes
+		,0 AS IsRunningAutoBettypesParlay
 	FROM (
 			SELECT hthomescore
 				,htawayscore			
@@ -271,27 +275,22 @@ BEGIN
 	
 	SET @strBettypesParlay = ',' + @strBettypesParlay + ','
 	
-	CREATE TABLE #BettypeExtraStatus(matchid INT, bettype SMALLINT, IsParLay BIT DEFAULT(0))
+	CREATE TABLE #BettypeExtraStatus(matchid INT, bettype SMALLINT, isRunning BIT, IsParLay BIT DEFAULT(0))
 		
-	INSERT INTO #BettypeExtraStatus (matchid, bettype)
-	SELECT m.matchid, chk.bettype
+	INSERT INTO #BettypeExtraStatus (matchid, bettype, isRunning)
+	SELECT m.matchid, chk.bettype, chk.IsRunning
 	FROM (
 		SELECT TOP (@n) MatchId FROM #matchList
 	) AS m
 		CROSS APPLY 
 		(
-			SELECT b.bettype
+			SELECT b.bettype, MAX(CASE WHEN b.statusID = 0 THEN 1 ELSE 0 END) AS IsRunning
 			FROM dbo.bettrans b WITH(NOLOCK)
 			WHERE b.matchid = m.MatchId
 				AND 1 = CASE
 					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strBettypesParlay) > 0 THEN 1
 					ELSE 0
 				END
-				AND 1 = CASE 
-							WHEN bettype IN (14,127) THEN 1
-							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
-							ELSE 0 
-						END
 				AND b.statusID NOT IN (101, 102)
 			GROUP BY b.bettype
 		) AS chk
@@ -302,6 +301,7 @@ BEGIN
 			,SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END ) AS cntFGLG
 			,SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END ) AS cntHTFGLG
 			,SUM(CASE WHEN bettype NOT IN (14,127) THEN 1 ELSE 0 END ) AS cntAutoBettypes
+			,MAX(CASE WHEN bettype NOT IN (14,127) AND isRunning = 1 THEN 1 ELSE 0 END) IsRunningAutoBettypes
 		FROM #BettypeExtraStatus
 		GROUP BY matchid
 	)
@@ -309,30 +309,27 @@ BEGIN
 	SET IsExistFGLG 			= CASE WHEN ext.cntFGLG > 0 THEN 1 ELSE 0 END
 		,IsExistHTFGLG 			= CASE WHEN ext.cntHTFGLG > 0 THEN 1 ELSE 0 END
 		,IsExistAutoBettypes 	= CASE WHEN ext.cntAutoBettypes > 0 THEN 1 ELSE 0 END
+		,IsRunningAutoBettypes 	= CASE WHEN ext.IsRunningAutoBettypes = 1 THEN 1 ELSE 0 END
 	FROM #matchList m
 		INNER JOIN MatchExtraStatus ext 
 		ON m.matchid = ext.matchid
 	
 	-- check bettransm
-	INSERT INTO #BettypeExtraStatus (matchid, bettype, IsParLay)
-	SELECT m.matchid, chk.bettype, 1
+	INSERT INTO #BettypeExtraStatus (matchid, bettype, isRunning, IsParLay)
+	SELECT m.matchid, chk.bettype, chk.IsRunning, 1
 	FROM (
 		SELECT TOP (@n) MatchId FROM #matchList
 	) AS m
 		CROSS APPLY 
 		(
 			SELECT b.bettype
+				,MAX(CASE WHEN b.statusID = 0 THEN 1 ELSE 0 END) AS IsRunning
 			FROM dbo.bettransm b WITH(NOLOCK)
 			WHERE b.matchid = m.MatchId
 				AND 1 = CASE
 					WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',@strBettypesParlay) > 0 THEN 1
 					ELSE 0
 				END
-				AND 1 = CASE 
-							WHEN bettype IN (14,127) THEN 1
-							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
-							ELSE 0 
-						END
 				AND b.statusID NOT IN (101, 102)
 			GROUP BY b.bettype
 		) AS chk
@@ -343,6 +340,7 @@ BEGIN
 			,SUM(CASE WHEN bettype = 14 THEN 1 ELSE 0 END ) AS cntFGLG
 			,SUM(CASE WHEN bettype = 127 THEN 1 ELSE 0 END ) AS cntHTFGLG
 			,SUM(CASE WHEN bettype NOT IN (14,127) THEN 1 ELSE 0 END ) AS cntAutoBettypesParlay
+			,MAX(CASE WHEN bettype NOT IN (14,127) AND isRunning = 1 THEN 1 ELSE 0 END) IsRunningAutoBettypesParlay
 		FROM #BettypeExtraStatus
 		WHERE IsParLay = 1
 		GROUP BY matchid
@@ -351,72 +349,11 @@ BEGIN
 	SET IsExistFGLG 			= CASE WHEN  m.IsExistFGLG = 1 OR ext.cntFGLG > 0 THEN 1 ELSE 0 END
 		,IsExistHTFGLG 			= CASE WHEN  m.IsExistFGLG = 1 OR ext.cntHTFGLG > 0 THEN 1 ELSE 0 END
 		,IsExistAutoBettypesParlay 	= CASE WHEN ext.cntAutoBettypesParlay > 0 THEN 1 ELSE 0 END
+		,IsRunningAutoBettypesParlay = CASE WHEN ext.IsRunningAutoBettypesParlay = 1 THEN 1 ELSE 0 END
 	FROM #matchList m
 		INNER JOIN MatchExtraStatusParlay ext 
 		ON m.matchid = ext.matchid
 	
-	/*
-	SELECT @rowcount = 0
-		,@max_matchid = 0
-
-	WHILE (1 = 1)
-	BEGIN
-		DELETE @tmp_match
-
-		INSERT INTO @tmp_match (matchid)
-		SELECT TOP 1000 matchid
-		FROM #matchList
-		WHERE matchid > @max_matchid
-		ORDER BY matchid ASC
-
-		SELECT @rowcount = @@rowcount
-
-		IF @rowcount = 0
-			BREAK;
-
-		SELECT @max_matchid = MAX(matchid)
-		FROM @tmp_match
-
-		SELECT @strmatchid = ( SELECT matchid 
-							   FROM @tmp_match
-							   FOR XML PATH('match') ,ROOT('root')
-				)
-		-- FGLG
-		EXEC dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid
-			,@betstatus = @betstatus OUTPUT
-
-		--Create an internal representation of the XML document.      
-		EXEC sp_xml_preparedocument @intDocHandle OUTPUT
-			,@betstatus
-
-
-		UPDATE m
-		SET IsExistFGLG = ISNULL(rs.cnt,0)		
-		FROM #matchList m
-		INNER JOIN ( SELECT matchid 
-					,cnt
-					FROM OPENXML(@intDocHandle, '/root/match', 2) WITH (matchid INT, cnt INT)
-			) rs ON m.matchid = rs.matchid
-
-
-		-- HT FGLG
-		EXEC dbo.NAP_Set_MatchBetStatusSel @matchid = @strmatchid
-			,@bettype = 127
-			,@betstatus = @betstatus OUTPUT
-
-		--Create an internal representation of the XML document.      
-		EXEC sp_xml_preparedocument @intDocHandle OUTPUT
-			,@betstatus
-
-		UPDATE m
-		SET IsExistHTFGLG = ISNULL(rs.cnt,0)		
-		FROM #matchList m
-		INNER JOIN ( SELECT matchid 
-					,cnt
-					FROM OPENXML(@intDocHandle, '/root/match', 2) WITH (matchid INT, cnt INT)
-			) rs ON m.matchid = rs.matchid
-	END*/
-
 	;WITH SingleTicket AS
 	(
 		SELECT matchid, MIN(IsCalculating)  IsCalculating
@@ -530,9 +467,11 @@ BEGIN
 		,t.IsCalculatingSingle
 		,t.IsCalculatingMP
 		,CASE	WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
-				WHEN a.SettlementStatusID = 0 OR m.IsExistAutoBettypes > 0 THEN 'Running'
-				WHEN a.SettlementStatusID > 0 THEN 'Completed'
-				WHEN m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN a.SettlementStatusID = 0 OR m.IsRunningAutoBettypes > 0 THEN 'Running'
+				WHEN a.SettlementStatusID > 0 
+					OR (m.IsExistAutoBettypes > 0 AND m.IsRunningAutoBettypes = 0)
+					OR (m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0 AND m.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
+				WHEN m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
 				ELSE '' END AS AutoSettleResultStatus
 	FROM	#matchList m
 			LEFT JOIN #tempmatch t ON t.matchid = m.matchid
@@ -579,6 +518,8 @@ BEGIN
 		SELECT GETDATE(), @SqlCommand, @StartTime, @EndTime
 	END
 END
+
+
 
 
 

@@ -39,7 +39,10 @@ BEGIN
 	IF ISNUMERIC(@MatchCode) = 1
 		SET @matchid = CAST(@MatchCode AS INT)
 	
-	DECLARE @TempMatch TABLE (MatchId INT, SingleStatus INT, ParlayStatus INT, IsSingle BIT, IsMixParlay BIT, IsExistFGLG BIT, IsExistHTFGLG BIT, SettlementStatusID TINYINT, IsExistAutoBettypes BIT, IsExistAutoBettypesParlay BIT)
+	DECLARE @TempMatch TABLE (MatchId INT, SingleStatus INT, ParlayStatus INT, IsSingle BIT, IsMixParlay BIT, IsExistFGLG BIT, IsExistHTFGLG BIT, SettlementStatusID TINYINT
+		, IsExistAutoBettypes BIT, IsExistAutoBettypesParlay BIT
+		,IsRunningAutoBettypes			BIT
+		,IsRunningAutoBettypesParlay	BIT)
 
 	;WITH SingleTicket AS (
 		SELECT matchid, MIN(IsCalculating) AS IsCalculating
@@ -53,7 +56,7 @@ BEGIN
 		GROUP BY matchid 
 	)
 	
-	INSERT INTO @TempMatch(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay, IsExistFGLG, IsExistHTFGLG, IsExistAutoBettypes, IsExistAutoBettypesParlay)
+	INSERT INTO @TempMatch(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay, IsExistFGLG, IsExistHTFGLG, IsExistAutoBettypes, IsExistAutoBettypesParlay ,IsRunningAutoBettypes,IsRunningAutoBettypesParlay)
 	SELECT ISNULL(sg.matchid, pl.matchid) AS MatchId
 		, sg.IsCalculating AS SingleStatus
 		, pl.IsCalculating AS ParlayStatus
@@ -63,6 +66,8 @@ BEGIN
 		, CONVERT(BIT, 0) AS IsExistHTFGLG
 		, 0 AS IsExistAutoBettypes
 		, 0 AS IsExistAutoBettypesParlay
+		, 0 AS IsRunningAutoBettypes
+		, 0 AS IsRunningAutoBettypesParlay
 	FROM SingleTicket sg
 		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid
 	
@@ -89,13 +94,13 @@ BEGIN
 			GROUP BY r.MatchID
 		) rs
 	
-	CREATE TABLE #tblBetStatus (matchid INT, groupId TINYINT ,IsParlay	 BIT)
+	CREATE TABLE #tblBetStatus (matchid INT, isRunning INT, groupId TINYINT ,IsParlay	 BIT)
 	
-	INSERT INTO #tblBetStatus (matchid, groupId, IsParlay)
-	SELECT b.matchid, f.GroupId, 0
+	INSERT INTO #tblBetStatus (matchid, isRunning, groupId, IsParlay)
+	SELECT b.matchid, b.IsRunning, f.GroupId, 0
 	FROM dbo.f_Set_GetGroupBettypes() f
 		INNER JOIN (
-			SELECT  b.matchid, b.bettype
+			SELECT  b.matchid, b.bettype, SUM (CASE WHEN b.statusID = 0 THEN 1 ELSE 0 END) AS IsRunning
 			FROM	dbo.bettrans b WITH (NOLOCK)
 			WHERE matchid IN (SELECT matchid FROM @TempMatch)
 				AND 1 = CASE 
@@ -109,18 +114,13 @@ BEGIN
 			ON	f.BetType = b.bettype
 	WHERE f.GroupId IN (3,4,8)
 
-	INSERT INTO #tblBetStatus (matchid, groupId, IsParlay)
-	SELECT bm.matchid, f.GroupId, 1
+	INSERT INTO #tblBetStatus (matchid, isRunning, groupId, IsParlay)
+	SELECT bm.matchid, bm.IsRunning, f.GroupId, 1
 	FROM dbo.f_Set_GetGroupBettypes() f
 		INNER JOIN (
-			SELECT  bm.matchid, bm.bettype
+			SELECT  bm.matchid, bm.bettype, SUM (CASE WHEN bm.statusID = 0 THEN 1 ELSE 0 END) AS IsRunning
 			FROM	dbo.bettransm bm WITH (NOLOCK)
 			WHERE matchid IN (SELECT matchid FROM @TempMatch)
-				AND 1 = CASE 
-							WHEN bettype IN (14,127) THEN 1
-							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
-							ELSE 0 
-						END
 				AND bm.statusID NOT IN (101, 102)
 			GROUP BY bm.matchid, bm.bettype
 		) bm
@@ -134,12 +134,16 @@ BEGIN
 			,MAX(CASE WHEN groupId = 4 THEN 1 ELSE 0 END) AS IsExistFGLG
 			,MAX(CASE WHEN groupId = 8 AND IsParlay = 0 THEN 1 ELSE 0 END) AS IsExistAutoBettypes
 			,MAX(CASE WHEN groupId = 8 AND IsParlay = 1 THEN 1 ELSE 0 END) AS IsExistAutoBettypesParlay
+			,MAX(CASE WHEN groupId = 8 AND IsParlay = 0 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsExistAutoBettypes
+			,MAX(CASE WHEN groupId = 8 AND IsParlay = 1 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsExistAutoBettypesParlay
 		FROM #tblBetStatus
 		GROUP BY matchid
 	)
 	UPDATE t
 	SET IsExistFGLG = CASE WHEN tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
 		,IsExistHTFGLG = CASE WHEN tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypes = CASE WHEN tt.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypesParlay = CASE WHEN tt.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
 		,IsExistAutoBettypes = CASE WHEN tt.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
 		,IsExistAutoBettypesParlay = CASE WHEN tt.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
 	FROM @TempMatch t
@@ -171,9 +175,11 @@ BEGIN
 		, tm.SingleStatus AS IsCalculatingSingle
 		, tm.ParlayStatus AS IsCalculatingMP
 		, CASE WHEN tm.SettlementStatusID IS NULL AND tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay = 0 THEN 'N/A'
-				WHEN tm.SettlementStatusID = 0 OR tm.IsExistAutoBettypes > 0 THEN 'Running'
-				WHEN tm.SettlementStatusID > 0 THEN 'Completed'
-				WHEN tm.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN tm.SettlementStatusID = 0 OR tm.IsRunningAutoBettypes > 0 THEN 'Running'
+				WHEN tm.SettlementStatusID > 0 
+					OR (tm.IsExistAutoBettypes > 0 AND tm.IsRunningAutoBettypes = 0)
+					OR (tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay > 0 AND tm.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
+				WHEN tm.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
 			ELSE '' END AS AutoSettleResultStatus
 	FROM dbo.match m WITH(NOLOCK)
 		INNER JOIN @TempMatch tm ON m.matchid = tm.matchid
@@ -202,6 +208,7 @@ BEGIN
 	END
 
 END
+
 
 
 

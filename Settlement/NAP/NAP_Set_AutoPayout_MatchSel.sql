@@ -123,6 +123,8 @@ BEGIN
 		, IsExistRunningHTFGLG BIT
 		, IsExistAutoBettypes BIT
 		, IsExistAutoBettypesParlay BIT
+		, IsRunningAutoBettypes BIT
+		, IsRunningAutoBettypesParlay BIT
 		, WinOdds MONEY
 		, PlaceOdds MONEY
 		, AutoSetting TINYINT
@@ -200,6 +202,8 @@ BEGIN
 		, 0 AS IsExistRunningHTFGLG
 		, 0 AS IsExistAutoBettypes
 		, 0 AS IsExistAutoBettypesParlay
+		, 0 AS IsRunningAutoBettypes
+		, 0 AS IsRunningAutoBettypesParlay
 		, 0 AS WinOdds
 		, 0 AS PlaceOdds
 		, ISNULL(m.AutoSetting, ISNULL(l.AutoSetting, 0)) AS AutoSetting
@@ -276,11 +280,6 @@ BEGIN
 						,COUNT(1) AS betCount
 				FROM dbo.bettrans b WITH(NOLOCK)
 				WHERE b.matchid = m.MatchId
-					AND 1 = CASE 
-							WHEN bettype IN (14,127) THEN 1
-							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
-							ELSE 0 
-						END
 					AND b.statusID NOT IN (101, 102)
 				GROUP BY b.bettype
 			) AS b
@@ -300,6 +299,7 @@ BEGIN
 				, SUM(CASE WHEN f.GroupId = 1 AND f.IsUsedGoalRecordValue = 1 AND b.runningBet > 0 THEN 1 ELSE 0 END) AS IsExistRunningUseGoalRecordHT
 				, SUM(CASE WHEN f.GroupId = 2 AND f.IsUsedGoalRecordValue = 1 AND b.runningBet > 0 THEN 1 ELSE 0 END) AS IsExistRunningUseGoalRecordFT
 				, SUM(CASE WHEN f.GroupId = 8 THEN 1 ELSE 0 END) AS IsExistAutoBettypes
+				, MAX(CASE WHEN f.GroupId = 8 AND b.runningBet > 0 THEN 1 ELSE 0 END) AS IsRunningAutoBettypes
 			from #tempBettrans b
 				INNER JOIN dbo.f_Set_GetGroupBettypes() f 
 				ON b.bettype = f.BetType
@@ -316,6 +316,7 @@ BEGIN
 			, IsEnabledGoalRecordHT = CASE WHEN tt.IsEnabledGoalRecordHT > 0 THEN 1 ELSE 0 END
 			, IsEnabledGoalRecordFT = CASE WHEN tt.IsEnabledGoalRecordFT > 0 THEN 1 ELSE 0 END
 			, IsExistAutoBettypes = CASE WHEN tt.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
+			, IsRunningAutoBettypes = CASE WHEN tt.IsRunningAutoBettypes = 1 THEN 1 ELSE 0 END
 			, BetCount = tt.BetCount
 		FROM #matchList t
 			INNER JOIN BetStatus tt ON t.matchid = tt.matchid
@@ -351,11 +352,6 @@ BEGIN
 									WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',',',' + @strBettypesParlay + ',') > 0 THEN 1
 									ELSE 0
 								END
-						AND 1 = CASE 
-							WHEN bettype IN (14,127) THEN 1
-							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
-							ELSE 0 
-						END
 						AND b.statusID NOT IN (101, 102)
 				GROUP BY b.bettype
 			) AS b
@@ -368,6 +364,7 @@ BEGIN
 				, SUM(CASE WHEN f.GroupId = 4 AND (b.runningBet > 0) THEN 1 ELSE 0 END) AS IsExistRunningFGLG
 				, SUM(CASE WHEN f.GroupId = 3 AND (b.runningBet > 0) THEN 1 ELSE 0 END) AS IsExistRunningHTFGLG
 				, SUM(CASE WHEN f.GroupId = 8 AND (b.betCount > 0) THEN 1 ELSE 0 END) AS IsExistAutoBettypesParlay
+				, MAX(CASE WHEN f.GroupId = 8 AND b.runningBet > 0 THEN 1 ELSE 0 END) AS IsRunningAutoBettypesParlay
 			FROM #tempBettrans b WITH(NOLOCK)
 				INNER JOIN dbo.f_Set_GetGroupBettypes() f 
 				ON b.bettype = f.BetType AND b.IsParlay = 1
@@ -381,6 +378,7 @@ BEGIN
 			, IsExistRunningFGLG = CASE WHEN t.IsExistRunningFGLG = 1 OR tt.IsExistRunningFGLG > 0 THEN 1 ELSE 0 END
 			, IsExistRunningHTFGLG = CASE WHEN t.IsExistRunningHTFGLG = 1 OR tt.IsExistRunningHTFGLG > 0 THEN 1 ELSE 0 END
 			, IsExistAutoBettypesParlay = CASE WHEN tt.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
+			, IsRunningAutoBettypesParlay = CASE WHEN tt.IsRunningAutoBettypesParlay = 1 THEN 1 ELSE 0 END
 		FROM #matchList t
 			INNER JOIN BetStatusM tt 
 			ON t.matchid = tt.matchid
@@ -630,9 +628,11 @@ BEGIN
 		, t.IsCalculatingSingle
 		, t.IsCalculatingMP
 		, CASE WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
-				WHEN a.SettlementStatusID = 0 OR m.IsExistAutoBettypes > 0 THEN 'Running'
-				WHEN a.SettlementStatusID > 0 THEN 'Completed'
-				WHEN m.IsExistAutoBettypesParlay > 0 THEN 'Parlay Running'				
+				WHEN a.SettlementStatusID = 0 OR m.IsRunningAutoBettypes > 0 THEN 'Running'
+				WHEN a.SettlementStatusID > 0
+					OR (m.IsExistAutoBettypes > 0 AND m.IsRunningAutoBettypes = 0)
+					OR (m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0 AND m.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
+				WHEN m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'				
 			ELSE '' END AS AutoSettleResultStatus
 		, AutoSetting
 		, IsNeedToCalculateFGLG
@@ -674,6 +674,7 @@ BEGIN
 	DROP TABLE #InstMatchInfo
 	DROP TABLE #tempBettrans
 END
+
 
 
 
