@@ -249,20 +249,20 @@ BEGIN
 			  Matchid,
 			  ProductID
 	        )	
-	SELECT b.recommend, b.custid,
+	SELECT b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END AS custid,
 				COUNT(CASE WHEN b.statusID IN (111, 112, 113) THEN b.transid ELSE NULL END) AS BetCount, b.currency,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) AS TotalBets,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) AS TotalWins,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+				SUM((CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
 								
 				SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
@@ -287,7 +287,7 @@ BEGIN
 			OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 			OR @HousePTType = 0)
 		AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
-	GROUP BY b.recommend, b.custid, b.currency, s.RefTable, s.EvenType, b.matchid, s.ProductID	
+	GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency, s.RefTable, s.EvenType, b.matchid, s.ProductID	
 
 	--- Check condition 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID NOT IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
@@ -355,20 +355,20 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.recommend, b.custid,
+		SELECT	b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END AS custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.currency, 
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) AS TotalBets,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) AS TotalWins,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+				SUM((CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
 								
 				- SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
 				- SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
@@ -391,7 +391,7 @@ BEGIN
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
 			AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
-		GROUP BY b.recommend, b.custid, b.currency
+		GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency
 		
 		-- 2b. By Bettype for Casino Product
 		INSERT INTO #Data
@@ -412,20 +412,20 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.recommend, b.custid,
+		SELECT	b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END AS custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) AS TotalBets,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) AS TotalWins,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+				SUM((CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
 								
 				- SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
 				- SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
@@ -448,7 +448,7 @@ BEGIN
 				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
 				OR @HousePTType = 0) 
 			AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
-		GROUP BY b.recommend, b.custid, b.currency		
+		GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency		
 	END
 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID IN (3, 4, 5))

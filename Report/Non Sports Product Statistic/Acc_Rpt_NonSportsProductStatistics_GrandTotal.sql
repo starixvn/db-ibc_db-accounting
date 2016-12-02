@@ -30,6 +30,26 @@ AS
 	Revisions:
 
 	Param's Explanation:
+		- @username: search keyword
+		- @Site: List of Company filter
+			'ALL'	: All sites (MBC + Licensees)
+			'MBC'	: MBC sites only
+			'12bet' : Specific Licensee Name 
+		- @ProductID: string filter by Product 
+		- @BetType: string filter by bettype
+		- @LeagueId: string filter by LeagueId (only use for ProductID = 3 - Number Game get LeagueId)  
+		- @Sporttype: string filter by Sporttype (only use for ProductID = 5 - Virtual Sports get Sporttype)
+		- @GameTableId: filter by specific game table (only use for ProductID = 4 - Live Casino get leagueID)
+		- @currency: 
+			-1: All convert to RM currency
+			 0: All original currencyID
+			>0: Filter by original currencyID  
+		- @TotalBetType, @GameIncomeType, @HousePTType: 
+			 1: >=
+			-1: <=
+		- @TotalBetValue: Value to compare with SUM(actual_stake)
+		- @GameIncomeValue: Value to compare with SUM(winlost-actual_stake)
+		- @HousePTValue: Value to compare with 1-tpositiontaking
 */
 
 BEGIN
@@ -189,7 +209,7 @@ BEGIN
 				RefTable, EvenType, Matchid, ProductID, statusID
 			)
 			SELECT
-				b.custid,
+				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
 				SUM(actual_stake * actualrate) AS TotalBets,
@@ -211,10 +231,10 @@ BEGIN
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 				AND (
 					@HousePTType = 0
-					OR (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-					OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
+					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY b.custid, b.currency, s.EvenType, b.matchid, s.ProductID,
+			GROUP BY CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END, b.currency, s.EvenType, b.matchid, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 
@@ -233,7 +253,7 @@ BEGIN
 				RefTable, ProductID, statusID
 			)
 			SELECT
-				b.custid,
+				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
 				SUM(actual_stake * actualrate) AS TotalBets,
@@ -254,10 +274,10 @@ BEGIN
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 				AND (
 					@HousePTType = 0
-					OR (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-					OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				) 
-			GROUP BY b.custid, b.currency, s.ProductID,
+					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+				)
+			GROUP BY CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END, b.currency, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 		
@@ -276,7 +296,7 @@ BEGIN
 				RefTable, ProductID, statusID
 			)
 			SELECT
-				b.custid,
+				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
 				SUM(actual_stake * actualrate) AS TotalBets,
@@ -297,10 +317,10 @@ BEGIN
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 				AND (
 					@HousePTType = 0
-					OR (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-					OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				) 
-			GROUP BY b.custid, b.currency, s.ProductID,
+					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+				)
+			GROUP BY CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END, b.currency, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 	END
@@ -321,7 +341,7 @@ BEGIN
 				RefTable, EvenType, matchid, ProductID, statusID
 			)
 			SELECT
-				b.custid,
+				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
 				SUM(actual_stake * actualrate) AS TotalBets,
@@ -342,10 +362,10 @@ BEGIN
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 				AND (
 					@HousePTType = 0
-					OR (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-					OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
+					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY custid, b.currency, s.EvenType, b.matchid, s.ProductID,
+			GROUP BY CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END, b.currency, s.EvenType, b.matchid, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 
@@ -364,7 +384,7 @@ BEGIN
 				RefTable, ProductID, statusID
 			)
 			SELECT
-				b.custid,
+				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
 				SUM(actual_stake * actualrate) AS TotalBets,
@@ -384,10 +404,10 @@ BEGIN
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 				AND (
 					@HousePTType = 0
-					OR (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-					OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				) 
-			GROUP BY b.custid, b.currency, s.ProductID,
+					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+				)
+			GROUP BY CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END, b.currency, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 
@@ -406,7 +426,7 @@ BEGIN
 				RefTable, ProductID, statusID
 			)
 			SELECT
-				b.custid,
+				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
 				SUM(actual_stake * actualrate) AS TotalBets,
@@ -426,10 +446,10 @@ BEGIN
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 				AND (
 					@HousePTType = 0
-					OR (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-					OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				) 
-			GROUP BY b.custid, b.currency, s.ProductID,
+					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+				)
+			GROUP BY CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END, b.currency, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 	END
@@ -555,6 +575,18 @@ BEGIN
 			SUM(CompanyComm) AS CompanyComm
 		FROM #Data
 		GROUP BY CurrencyID
+		HAVING
+			(
+				@TotalBetType = 0
+				OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
+				OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
+			)
+			AND
+			(
+				@GameIncomeType = 0
+				OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
+				OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
+			)
 	)
 	SELECT
 		NoOfPlayers,
@@ -581,6 +613,18 @@ BEGIN
 		SUM(CompanyGrossIncome) AS CompanyGrossIncome,
 		SUM(CompanyComm) AS CompanyComm
 	FROM #Data
+	HAVING
+		(
+			@TotalBetType = 0
+			OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
+			OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
+		)
+		AND
+		(
+			@GameIncomeType = 0
+			OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
+			OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
+		)
 
 	DROP TABLE #Data
 	DROP TABLE #SportBettype
