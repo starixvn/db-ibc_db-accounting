@@ -217,11 +217,8 @@ BEGIN
 		(20,'ACCMMK',1,44,'',0.0300000),
 
 		-- NG2
-		(13,'ACCIRR',23,0,'',0.05000000),
-		(14,'ACCUT2',23,0,'',0.05000000),
 		(15,'ACCYEN789',23,0,'',0.05000000),
 		(16,'ACCYEN889',23,0,'',0.05000000),
-		(17,'ACCNTD',23,0,'',0.05000000),
 		(19,'ACCUT',23,0,'',0.05000000)
 
 	INSERT INTO @ExtraPTGroup(GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT)
