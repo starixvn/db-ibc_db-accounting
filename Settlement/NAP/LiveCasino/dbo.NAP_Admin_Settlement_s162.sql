@@ -1,6 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s162]    Script Date: 12/17/2015 14:53:05 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -27,6 +26,7 @@ AS
 		- 20150421@Kathy: Offer New Game Type "No Card Baccarat" (1106) [Redmine:#31630]
 		- 20150716@Patrick: Support Gold Deluxe
 		- 20150807@Kathy: Using new balance table (BalCreditCasinoPending,BalDebitCasinoPending) [Redmine:#40125]
+		- 20161201@Kathy: Company win limit [Redmine:#66599]
 
 	Param explanation:
 		@CardsResult: 
@@ -192,7 +192,7 @@ BEGIN
 		INSERT INTO #BalanceAfter
 		SELECT	custid
 				,SUM(winlost-actual_stake+playercomm)
-				,SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END)
+				,SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake ELSE 0 END)
 		FROM	dbo.bettrans with (rowlock)
 		WHERE	matchid = @matchid 
 				--AND bettype = @Bettype
@@ -223,12 +223,6 @@ BEGIN
 
 		SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
 
-
-		--INSERT INTO dbo.BalancePendingDebit (custid, balance)
-		--SELECT	custid, ABS(balance)
-		--FROM	#Balance
-		--WHERE	Increased = 0
-		
 		INSERT INTO @tblDebitPending (custID, balance)
 		SELECT	custid, ABS(balance)
 		FROM	#Balance
@@ -238,11 +232,6 @@ BEGIN
 			EXEC dbo.Dot_BalancePendingDebitIns 
 				@BalancePending = @tblDebitPending
 				,@Type			= 3 -- Casino
-
-		--INSERT INTO dbo.BalancePendingCredit (custid, balance)
-		--SELECT	custid, balance
-		--FROM	#Balance
-		--WHERE	Increased = 1
 		
 		INSERT INTO @tblCreditPending (custID, balance)
 		SELECT	custid, balance
@@ -280,11 +269,13 @@ BEGIN
 				,winlostdate
 				,balance
 				,bettype
+				,GameTypeID
 		)
 		SELECT	custid
 				,@eventdate
 				,ABS(balance)
 				,1101
+				,@Bettype
 		FROM	#BalanceGame
 		WHERE	Increased = 0
 
@@ -293,11 +284,13 @@ BEGIN
 				,winlostdate
 				,balance
 				,bettype
+				,GameTypeID
 		)
 		SELECT	custid
 				,@eventdate
 				,balance
 				,1101
+				,@Bettype
 		FROM	#BalanceGame
 		WHERE	Increased = 1
 
