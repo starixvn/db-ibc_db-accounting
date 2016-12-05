@@ -28,6 +28,8 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
+	DECLARE @MBCGroup_Name VARCHAR(50) = 'MBC Group'
+	
 	DECLARE @SearchSingle BIT
 		  , @SearchParlay BIT
 	
@@ -79,7 +81,7 @@ BEGIN
 	SELECT ss.val
 	FROM dbo.strSplit(@LicenseeNames, ',') ss
 	
-	DELETE FROM #t_LicenseeNames WHERE LicenseeName = 'MBCGroup'
+	DELETE FROM #t_LicenseeNames WHERE LicenseeName = @MBCGroup_Name
 	IF @@ROWCOUNT > 0
 		INSERT INTO #t_LicenseeNames(LicenseeName)
 		SELECT [site]
@@ -167,7 +169,7 @@ BEGIN
 				b.TransDate,
 				b.TransDesc,
 				b.TransId,
-				ci.username AS UserName,
+				b.UserName,
 				b.WinLost,
 				c.site AS GroupName,
 				
@@ -186,9 +188,7 @@ BEGIN
 			 INNER JOIN #t_LicenseeNames tl WITH (NOLOCK)
 					 ON tl.LicenseeName = c.site -- filter for @LicenseeIDs	
 			 INNER JOIN match m WITH (NOLOCK)
-					 ON b.matchid = m.matchid
-			 INNER JOIN CustDB.dbo.custInfo ci WITH(NOLOCK)
-					 ON b.custid = ci.custid				 		 
+					 ON b.matchid = m.matchid							 		 
 		WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND b.bettype NOT IN (9, 29) -- single
 			AND b.bettype < 19001
@@ -266,7 +266,7 @@ BEGIN
 				main.transdate AS TransDate,
 				main.transdesc AS TransDesc,
 				main.transid AS TransId,
-				ci.username AS UserName,
+				main.UserName,
 				main.winlost AS WinLost,
 				c.site AS GroupName,
 				
@@ -283,9 +283,7 @@ BEGIN
 			 INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK)
 					 ON main.recommend = c.custid
 			 INNER JOIN #t_LicenseeNames tl1 WITH (NOLOCK)
-					 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs
-			 INNER JOIN CustDB.dbo.custInfo ci WITH(NOLOCK)
-					 ON main.custid = ci.custid					 					 
+					 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs			 				 					 
 			 
 			 INNER JOIN dbo.bettransm sub WITH (NOLOCK)	
 					 ON main.refno = sub.refno
