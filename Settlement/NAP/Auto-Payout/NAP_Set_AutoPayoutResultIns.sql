@@ -8,7 +8,7 @@ ALTER PROCEDURE dbo.NAP_Set_AutoPayoutResultIns
 	, @HomeValue 	VARCHAR(50)
 	, @AwayValue 	VARCHAR(50)
 	, @StatusId 	TINYINT
-	, @InstKey		INT = NULL
+	, @InstantKey		INT = NULL
 	, @ErrCode 		INT = 0 OUTPUT
 	, @ErrMsg NVARCHAR(200) = '' OUTPUT
 	
@@ -35,7 +35,7 @@ BEGIN
 		, @AutoPayoutResultId 	INT
 		, @InstKeyValue			VARCHAR(50)
 	
-	SET @InstKeyValue 			= CAST(ISNULL(@InstKey,0) AS VARCHAR(50))
+	SET @InstKeyValue 			= CAST(ISNULL(@InstantKey,0) AS VARCHAR(50))
 	
 	SELECT TOP 1 @AutoPayoutResultId = AutoPayoutResultId
 		, @StatusIdCheck = StatusId 
@@ -90,7 +90,7 @@ BEGIN
 		UPDATE rs
 		SET IsConfirmed = 1
 		FROM dbo.ProviderResultDetail rs WITH(ROWLOCK,UPDLOCK)
-		WHERE rs.ProviderResultDetailId = @InstKey
+		WHERE rs.ProviderResultDetailId = @InstantKey
 			OR (
 				MatchId 		= @MatchId 
 				AND AwayValue 	= @InstKeyValue

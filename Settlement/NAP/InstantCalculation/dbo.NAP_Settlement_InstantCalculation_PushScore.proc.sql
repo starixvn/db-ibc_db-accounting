@@ -28,7 +28,7 @@ BEGIN
 	DECLARE @TypeId 	TINYINT
 		, @SourceId		TINYINT
 		, @RefInfo		VARCHAR(50)
-		, @InstKey		INT
+		, @InstantKey	INT
 		, @CreatedDate	DATETIME
 		
 	SELECT @TypeId 		=  CASE WHEN @IsHTScore = 1 THEN 101 
@@ -68,11 +68,11 @@ BEGIN
 			, 0
 		
 		-- SET Instant Key Information
-		SET @InstKey = SCOPE_IDENTITY()
+		SET @InstantKey = SCOPE_IDENTITY()
 		
-		IF(@InstId> 0 AND @GoalRecord <> '')
+		IF(@InstantKey> 0 AND @GoalRecord <> '')
 		BEGIN
-			SET @RefInfo = CAST(@InstKey AS VARCHAR(20))
+			SET @RefInfo = CAST(@InstantKey AS VARCHAR(20))
 			INSERT INTO dbo.ProviderResultDetail (
 				MatchId
 				, SourceId

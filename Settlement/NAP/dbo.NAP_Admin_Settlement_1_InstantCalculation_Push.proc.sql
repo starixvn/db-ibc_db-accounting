@@ -4,10 +4,11 @@ GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_InstantCalculation_Push] 
 	@AdminId 			INT
     , @MatchId			INT
-	, @InstKey			INT
+	, @InstantKey		INT
     , @HomeScore		VARCHAR(50)
 	, @AwayScore		VARCHAR(50)
     , @Action			VARCHAR(10)
+	, @Mode				VARCHAR(10)
     , @IP				VARCHAR(15)     = ''
     , @ErrCode			INT             = 0     OUTPUT
     , @ErrMsg			NVARCHAR(200)   = ''    OUTPUT
@@ -18,9 +19,12 @@ AS
     DB: DBTXN/BODB02
 	Original:
 
-    Revisions:        
+    Revisions:
+		- 20161128@Bobby: #67760 - Implement IS for FGLG bet types
+		
     Param's Explanation:
-		- @Action: ['INST-HT', 'INST-FT']
+		- @Action: ['CAL', 'UNDO']
+		- @Mode: ['INST-HT', 'INST-FT']
         
 */
 BEGIN
@@ -35,8 +39,8 @@ BEGIN
 		, @InstantCompleted	BIT
 	
 	SELECT @CalculationType	= CASE 
-								WHEN @Action = 'INST-HT' THEN 101
-								WHEN @Action = 'INST-FT' THEN 102
+								WHEN @Mode = 'INST-HT' THEN 101
+								WHEN @Mode = 'INST-FT' THEN 102
 								ELSE 0
 							END
 	SELECT @sporttype 	= m.sporttype
@@ -46,13 +50,23 @@ BEGIN
 	WHERE m.matchid = @matchid
 	
 	-- checking for instant match validation
-	EXEC dbo.NAP_Settlement_InstantCalculation_Checking 
+	IF(@Action = 'CAL')
+	BEGIN
+		EXEC dbo.NAP_Settlement_InstantCalculation_Checking 
 		@MatchId 			= @MatchId
-		, @InstKey			= @InstKey
+		, @InstantKey		= @InstantKey
 		, @Action 			= @Action
         , @ErrCode 			= @ErrCode OUTPUT
         , @ErrMsg 			= @ErrMsg OUTPUT
-		, @InstantCompleted	= @InstantCompleted	OUTPUT
+	END
+	ELSE IF (@Action = 'UNDO')
+	BEGIN
+		--DOUBLE CHECK match status
+		EXEC dbo.NAP_Settlement_InstantCalculation_UndoChecking
+		@MatchId			= @MatchId
+		, @ErrCode 			= @ErrCode OUTPUT
+		, @ErrMsg			= @ErrMsg OUTPUT
+	END
         
     IF (@ErrCode <> 0)
     BEGIN
@@ -75,41 +89,59 @@ BEGIN
     END
     
     SELECT @ErrCode = 0, @ErrMsg = '', @procName = OBJECT_NAME(@@PROCID)
-		, @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_InstantCalculation] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
+	
+	IF(@Action = 'CAL')
+	BEGIN
+		SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_InstantCalculation] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
                             + ', @Creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
-                            + ', @Action = ''' + ISNULL(CONVERT(NVARCHAR(50), @Action), 'NULL') + ''''
-							+ ', @InstKey = ''' + ISNULL(CONVERT(NVARCHAR(50), @InstKey), 'NULL') + ''''
+                            + ', @Action = ''' + ISNULL(CONVERT(NVARCHAR(50), @Mode), 'NULL') + ''''
+							+ ', @InstantKey = ' + ISNULL(CONVERT(NVARCHAR(50), @InstantKey), 'NULL') + ''
 							+ ', @HomeScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @HomeScore), 'NULL') + ''''
 							+ ', @AwayScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @AwayScore), 'NULL') + ''''
-							+ ', @InstantCompleted = ''' + ISNULL(CONVERT(NVARCHAR(50), @InstantCompleted), 'NULL') + ''''
                             + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
                             + ', @ErrCode = @ErrCode OUTPUT' 
                             + ', @ErrMsg = @ErrMsg OUTPUT'
                                                          
-    IF LEN(@sqlCommand)> 1000 --Max Field 
+	
+		--insert into table AutoPayoutResult
+		EXEC DBPRO.bodb02.dbo.NAP_Set_AutoPayoutResultIns 
+			@MatchId 		= @matchid
+			, @SourceId 	= 100
+			, @TypeId 		= @CalculationType
+			, @InstantKey	= @InstantKey
+			, @HomeValue 	= @HomeScore
+			, @AwayValue 	= @AwayScore
+			, @StatusId 	= 1 --waiting
+			, @ErrCode 		= @ErrCode OUTPUT
+			, @ErrMsg		= @ErrMsg OUTPUT
+		
+		IF @ErrCode <> 0
+		BEGIN
+			RETURN
+		END
+	END
+	ELSE IF(@Action = 'UNDO')
+	BEGIN
+		SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_InstantCalculation_Undo] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
+                            + ', @Creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
+                            + ', @Action = ''' + ISNULL(CONVERT(NVARCHAR(50), @Mode), 'NULL') + ''''
+							+ ', @InstantKey = ' + ISNULL(CONVERT(NVARCHAR(50), @InstantKey), 'NULL') + ''
+							+ ', @HomeScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @HomeScore), 'NULL') + ''''
+							+ ', @AwayScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @AwayScore), 'NULL') + ''''
+                            + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
+                            + ', @ErrCode = @ErrCode OUTPUT' 
+                            + ', @ErrMsg = @ErrMsg OUTPUT'
+	END
+	
+	IF LEN(@sqlCommand) > 1000 --Max Field 
     BEGIN
         SELECT @ErrCode = 1001010
 			, @ErrMsg  = 'There are too many inputted results to proceed at one time. Please select each one to execute separately.'    
         RETURN 
     END
 	
-	--insert into table AutoPayoutResult
-	EXEC DBPRO.bodb02.dbo.NAP_Set_AutoPayoutResultIns 
-		@MatchId 		= @matchid
-		, @SourceId 	= 100
-		, @TypeId 		= @CalculationType
-		, @InstKey		= @InstKey
-		, @HomeValue 	= @HomeScore
-		, @AwayValue 	= @AwayScore
-		, @StatusId 	= 1 --waiting
-		, @ErrCode 		= @ErrCode OUTPUT
-		, @ErrMsg		= @ErrMsg OUTPUT
-	
-	IF @ErrCode <> 0
-    BEGIN
-        RETURN
-    END
-	
+	SELECT @sqlCommand
+	/*
     IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_' -- UAT1 -->UAT9
     BEGIN
         DECLARE	@ActionId INT
@@ -132,7 +164,7 @@ BEGIN
 			, AdminId, IP, Action, sqlCommand, execTime)
         SELECT @MatchId, @matchcode, 0 AS IsCalculating, @leagueid, @sporttype
 			, @AdminId, @IP, @Action, @sqlCommand, NULL
-    END
+    END*/
 END
 
 GO

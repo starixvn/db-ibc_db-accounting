@@ -1,0 +1,122 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Settlement_InstantCalculation_UndoChecking]    Script Date: 12/2/2016 3:46:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Settlement_InstantCalculation_UndoChecking]
+	@MatchId			INT
+	, @ErrCode 			INT = 0 OUTPUT
+	, @ErrMsg 			VARCHAR(250) = '' OUTPUT
+AS
+/*
+	Creator: 20161201@Bobby
+	Task: #68128 - Implement Uncalculate instant settlement process
+	DB: DBPRO/bodb02
+	Revisions:
+		
+	Param's Explanation:
+
+*/
+BEGIN
+	SET NOCOUNT ON
+	
+	DECLARE @evenstatus		VARCHAR(30)
+		,@homeScore			VARCHAR(30)
+		,@awayScore			VARCHAR(30)
+		,@goalRecord		VARCHAR(30)
+		,@isHT				BIT
+		,@InstantKey		INT
+		,@livehomescore		INT
+		,@liveawayscore		INT
+		,@hScore			INT
+		,@aScore			INT
+		
+	
+	SELECT @ErrCode		= 0
+		, @ErrMsg		= ''
+		
+	SELECT TOP(1)
+		@evenstatus 			= m.eventstatus
+		, @livehomescore		= m.livehomescore
+		, @liveawayscore		= m.liveawayscore
+	FROM dbo.match m WITH(NOLOCK)
+	WHERE m.matchid = @MatchId
+		--AND m.evenstatus = 'running'
+		AND EXISTS (
+			SELECT TOP 1 1 
+			FROM dbo.AutoPayoutResult rs WITH(NOLOCK)
+			WHERE rs.matchid = m.matchid
+			AND rs.CalculationType BETWEEN 101 AND 103
+			AND rs.StatusId = 2 -- completed
+			
+		)
+	IF(@evenstatus IS NULL)
+	BEGIN
+		SELECT @ErrCode		= 1001001
+			, @ErrMsg		= 'This match has no instant calculation process.'
+		
+		RETURN;
+	END
+	
+	IF(@evenstatus = 'completed' OR @evenstatus <> 'running')
+	BEGIN
+		SELECT @ErrCode		= 1001002
+			, @ErrMsg		= 'Instant Settlement cannot be uncalculated because the match has already been completed' 
+							+ CASE WHEN @evenstatus <> 'completed' THEN ' or not being running match.' ELSE '.' END
+		
+		RETURN;
+	END
+	
+	-- OUTPUT the currenct scores and GoalRecord
+	SELECT TOP(1)
+		@homeScore 		= rs.HomeValue
+		,@awayScore 	= rs.AwayValue
+		,@goalRecord 	= ISNULL(fgng.GoalRecord, '')
+		,@IsHT  		= CASE WHEN rs.TypeId = 101 THEN 1 ELSE 0 END
+		,@InstantKey	= rs.ProviderResultDetailId
+		
+	FROM dbo.ProviderResultDetail rs WITH(NOLOCK)
+		OUTER APPLY (
+			SELECT HomeValue AS GoalRecord
+			FROM dbo.ProviderResultDetail gr WITH(NOLOCK)
+			WHERE gr.matchid 	= @MatchId
+				AND TypeId 		= 103 --FGNG
+				AND AwayValue 	= CAST(rs.ProviderResultDetailId AS VARCHAR(30))
+		) AS fgng
+	WHERE rs.matchid = @MatchId
+		AND rs.TypeId BETWEEN 101 AND 102 
+		AND rs.IsConfirmed 		= 0
+	ORDER  BY ProviderResultDetailId DESC
+	
+	
+	SELECT @hScore		= CAST(@homeScore AS INT)
+		, @aScore		= CAST(@awayScore AS INT)
+	
+	IF (
+		@hScore 		<> @livehomescore
+		OR @aScore 		<> @liveawayscore
+	)
+	BEGIN
+		SELECT @ErrCode		= 1001001
+			, @ErrMsg		= 'The current score has just been updated. Are you sure you want to uncalculate Instant Settlement in comparison with the current score ' 
+							+ @HomeScore + '-' + @AwayScore + '[' + @GoalRecord + '] (' + CASE WHEN @IsHT = 1 THEN '1H' ELSE '2H' END + ')'
+		
+		RETURN
+	END
+	
+	SELECT @homeScore 	AS HomeScore
+		,@awayScore 	AS AwayScore
+		,@goalRecord 	AS GoalRecord
+		,@IsHT  		AS IsHT
+		,@InstantKey	AS InstantKey
+	
+	RETURN
+END
+GO
+GRANT EXECUTE ON [dbo].[NAP_Settlement_InstantCalculation_UndoChecking] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_Settlement_InstantCalculation_UndoChecking] TO [vnteam] AS [dbo]
+GO

@@ -1,9 +1,17 @@
 USE [bodb02]
 GO
 
-ALTER PROCEDURE dbo.NAP_Settlement_InstantCalculation_Checking
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Settlement_InstantCalculation_Checking]    Script Date: 12/2/2016 12:46:09 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[NAP_Settlement_InstantCalculation_Checking]
 	@MatchId			INT
-	, @InstKey			INT
+	, @InstantKey		INT
 	, @HomeScore		VARCHAR(50) = ''
 	, @AwayScore		VARCHAR(50) = ''
     , @Action			VARCHAR(10)
@@ -19,6 +27,7 @@ AS
 		- 20160930@Bobby: #65003 - Check validation of instant process 
 		- 20161031@Bobby: #66484 - Allow score [0-0] to do Inst.Calc
 		- 20161128@Bobby: #67760 - Implement IS for FGLG bet types
+		
 	Param's Explanation:
 		- @Action: ['INST-HT', 'INST-FT']
 
@@ -48,11 +57,11 @@ BEGIN
 		, @htawayscore		TINYINT
 		, @FGNG				VARCHAR(50)		
 		, @GoalRecord		VARCHAR(50)
-		, @InstKeyValue		VARCHAR(50)
+		, @InstantKeyValue		VARCHAR(50)
 		
 	CREATE TABLE #instantBettype (bettype SMALLINT)
 	
-	SET @InstKeyValue		= CAST(@InstKey AS VARCHAR(50))
+	SET @InstantKeyValue		= CAST(@InstantKey AS VARCHAR(50))
 	
 	SELECT
 		@HomeScore			= ps.HomeValue
@@ -63,11 +72,11 @@ BEGIN
 			SELECT HomeValue AS GoalRecord
 			FROM DBPRO.bodb02.dbo.ProviderResultDetail ps WITH (NOLOCK) 
 			WHERE MatchId 			= @MatchId
-				AND CalculationType = 103 --FGNG
-				AND AwayValue 		= @InstKeyValue
+				AND TypeId			= 103 --FGNG
+				AND AwayValue 		= @InstantKeyValue
 				
 		) AS fgng
-	WHERE ProviderResultDetailId = @InstKey
+	WHERE ProviderResultDetailId = @InstantKey
 	
 	SELECT @ErrCode			= 0
 		, @ErrMsg			= ''
@@ -145,17 +154,17 @@ BEGIN
 			SELECT TOP 1 
 				CAST(HomeValue AS TINYINT) AS HomeScore
 				,CAST(AwayValue AS TINYINT) AS AwayScore
-				,gc.GoalRecord
+				,ISNULL(gc.GoalRecord, '') AS GoalRecord
 			FROM DBPRO.bodb02.dbo.AutoPayoutResult aps WITH (NOLOCK)
-				CROSS APPLY (
-					SELECT HomeValue AS GoalRecord
-					FROM DBPRO.bodb02.dbo.AutoPayoutResult aps WITH (NOLOCK)
-					WHERE matchid 			= @matchid
-						AND CalculationType = 103 -- FGNG
-						AND StatusId		= 2 -- completed
-					ORDER BY AutoPayoutResultId DESC
+				OUTER APPLY (
+					SELECT TOP 1 HomeValue AS GoalRecord
+					FROM DBPRO.bodb02.dbo.ProviderResultDetail ps WITH (NOLOCK)
+					WHERE matchid 			= @MatchId
+						AND TypeId 			= 103 -- FGNG
+						AND IsConfirmed		= 1 -- completed
+					ORDER BY ProviderResultDetailId DESC
 				) AS gc
-			WHERE matchid 			= @matchid
+			WHERE matchid 			= @MatchId
 				AND CalculationType = @CalculationType
 				AND StatusId		= 2 -- completed
 			ORDER BY AutoPayoutResultId DESC
@@ -179,8 +188,8 @@ BEGIN
 		BEGIN			
 			--select instant bettype
 			;WITH instantTicketCheck AS (
-				SELECT transid
-					, statusID
+				SELECT b.transid
+					, b.statusID
 					, CASE 
 						WHEN @totalGoal = 0 THEN 0 --abnormal case -> change from [x-y] to [0-0] -> reset all to running
 						WHEN ods.modds >= 0.5 THEN 112 --WON
@@ -188,8 +197,7 @@ BEGIN
 						ELSE 0
 					END AS statusCheck
 				FROM dbo.bettrans b WITH(NOLOCK)
-					CROSS APPLY (
-						SELECT [dbo].[f_Set_GetGroupBettypes](
+					CROSS APPLY [dbo].[f_Set_Instant_CalModds] (
 																b.bettype
 																, b.betteam
 																, b.hdp1
@@ -199,9 +207,8 @@ BEGIN
 																, @totalGoal2H
 																, @FGNG
 																, @CalculationType
-															) AS modds
-					) AS ods
-				WHERE matchid 	= @matchid 
+															) AS ods
+				WHERE b.matchid 	= @matchid 
 					AND (b.custid NOT IN (50057, 879241, 103873, 78761, 851668, 878902, 2331, 1077687, 115770, 15523642) AND b.recommend <> 1688156) --exclude betdaq/betfair
 					AND EXISTS (SELECT TOP 1 1 FROM #instantBettype ib WHERE ib.bettype = b.bettype)
 					AND b.statusId IN (112, 113)

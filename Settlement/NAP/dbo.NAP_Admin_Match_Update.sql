@@ -42,7 +42,7 @@ AS
 		- 20160225@Kathy: Update eventstatus, betstatus when the match is settled
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		- 20160907@bobby: #63765 - Update betstatus when doing refund HT/FT/ALL
-		- 20161118@Bobby: #67551 - Update changes for refunding SDT - ABANDONED match
+		- 20161118@Bobby: #67551 - Update changes for refunding SDT - Abandoned match
 		- 20161128@Bobby: #67760 - Implement IS for FGLG bet types
 		
 	Parameters Explanation:    
@@ -50,7 +50,10 @@ AS
 	
 */
 BEGIN
-	SET NOCOUNT ON 
+	SET NOCOUNT ON
+	
+	DECLARE @Sporttype INT 
+	 
 	SET @BetStatus = ISNULL(@BetStatus, N'')
 	
 	IF @Command = 'NAP_Admin_Settlement_1-UNDO'
@@ -100,7 +103,6 @@ BEGIN
 	END
 	IF @Command = 'NAP_Admin_Settlement_Refund_All'
 	BEGIN
-		DECLARE @Sporttype INT 
 		
 		SELECT @Sporttype = sporttype
 		FROM match with(NOLOCK)
@@ -191,10 +193,8 @@ BEGIN
 			WHERE matchid=@MatchID
 		END
 	END
-	IF @Command = 'NAP_Admin_Settlement_Refund_All-ABANDONED'
-	BEGIN
-		DECLARE @Sporttype INT 
-		
+	IF @Command = 'NAP_Admin_Settlement_Refund_All-Abandoned'
+	BEGIN		
 		SET @betstatus = ISNULL(@betstatus, '')
 		
 		SELECT @Sporttype = sporttype
@@ -210,9 +210,9 @@ BEGIN
 				, finalawayscore	= NULL
 				, hthomescore 		= @HTHome
 				, htawayscore 		= @HTAway
-				, betstatus 		= 'ABANDONED 1H;' + CASE 
-											WHEN CHARINDEX('ABANDONED 2H;',@betstatus) > 0 THEN REPLACE(@betstatus,'ABANDONED 2H;','')
-											WHEN CHARINDEX('ABANDONED 1H;',@betstatus) > 0 THEN REPLACE(@betstatus,'ABANDONED 1H;','')
+				, betstatus 		= 'Abandoned 1H;' + CASE 
+											WHEN CHARINDEX('Abandoned 2H;',@betstatus) > 0 THEN REPLACE(@betstatus,'Abandoned 2H;','')
+											WHEN CHARINDEX('Abandoned 1H;',@betstatus) > 0 THEN REPLACE(@betstatus,'Abandoned 1H;','')
 											ELSE @betstatus
 										END
 				,GoalRecord = @GoalRecord
@@ -249,7 +249,7 @@ BEGIN
 		--- get rowcount
 		SET @RowCount = @@ROWCOUNT
 	END
-	IF @Command = 'NAP_Admin_Settlement_RefundFT-ABANDONED'
+	IF @Command = 'NAP_Admin_Settlement_RefundFT-Abandoned'
 	BEGIN
 		
 		SET @betstatus = ISNULL(@betstatus, '')
@@ -258,10 +258,10 @@ BEGIN
 		SET finalhomescore		= @FTHome
 			, finalawayscore	= @FTAway
 			, betstatus 		= CASE 
-									WHEN CHARINDEX('ABANDONED;', betstatus) > 0 THEN betstatus 
-									ELSE 'ABANDONED 2H;' + CASE 
-															WHEN CHARINDEX('ABANDONED 1H;',@betstatus) > 0 THEN REPLACE(@betstatus, 'ABANDONED 1H;', '') 
-															WHEN CHARINDEX('ABANDONED 2H;',@betstatus) > 0 THEN REPLACE(@betstatus, 'ABANDONED 2H;', '') 
+									WHEN CHARINDEX('Abandoned;', betstatus) > 0 THEN betstatus 
+									ELSE 'Abandoned 2H;' + CASE 
+															WHEN CHARINDEX('Abandoned 1H;',@betstatus) > 0 THEN REPLACE(@betstatus, 'Abandoned 1H;', '') 
+															WHEN CHARINDEX('Abandoned 2H;',@betstatus) > 0 THEN REPLACE(@betstatus, 'Abandoned 2H;', '') 
 															ELSE @betstatus
 														END
 						END
@@ -455,20 +455,28 @@ BEGIN
 	END
 	IF @Command = 'NAP_Admin_Settlement_1_InstantCalculation'
 	BEGIN
-		DECLARE @Sporttype INT 
 		
 		SET @betstatus = ISNULL(@betstatus, '')
 		
-		SELECT @Sporttype = sporttype
+		SELECT @Sporttype	= sporttype
+			, @betstatus	= ISNULL(betstatus, '') + @betstatus
 		FROM dbo.match WITH(NOLOCK)
 		WHERE matchid = @matchid
 
 		IF @sporttype =  1 
 		BEGIN
 			UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
-			SET betstatus 	= betstatus + @betstatus
+			SET betstatus 	= @betstatus
 			WHERE matchid	= @MatchID
 		END 
+	END
+	IF @Command = 'NAP_Admin_Settlement_1_InstantCalculation_Undo'
+	BEGIN		
+		SET @betstatus = ISNULL(@betstatus, '')
+		
+		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
+		SET betstatus 	= @betstatus
+		WHERE matchid	= @MatchID
 	END
 END
 

@@ -26,23 +26,34 @@ AS
 */
 
 RETURN (
-    SELECT CAST(3 AS SMALLINT) AS bettype
-		, CAST(3 AS TINYINT) AS InstantType
-	UNION ALL SELECT 8 , 1
-	UNION ALL SELECT 14 , 3
-	UNION ALL SELECT 18 , 2
-	UNION ALL SELECT 127 , 1
-	UNION ALL SELECT 178 , 2
-	UNION ALL SELECT 189 , 2
-	UNION ALL SELECT 190 , 3
-	UNION ALL SELECT 401 , 3
-	UNION ALL SELECT 402 , 3
-	UNION ALL SELECT 403 , 1
-	UNION ALL SELECT 404 , 1
-	UNION ALL SELECT 434 , 2
-	UNION ALL SELECT 434 , 3
+	SELECT ib.bettype
+		, ib.InstantType
+		--, bt.typenamee
+	FROM (
+		SELECT CAST(3 AS SMALLINT) AS bettype
+			, CAST(3 AS TINYINT) AS InstantType
+		UNION ALL SELECT 8 , 1
+		UNION ALL SELECT 14 , 3
+		UNION ALL SELECT 18 , 2
+		UNION ALL SELECT 127 , 1
+		UNION ALL SELECT 178 , 2
+		UNION ALL SELECT 189 , 2
+		UNION ALL SELECT 190 , 3
+		UNION ALL SELECT 401 , 3
+		UNION ALL SELECT 402 , 3
+		UNION ALL SELECT 403 , 1
+		UNION ALL SELECT 404 , 1
+		UNION ALL SELECT 434 , 2
+		UNION ALL SELECT 435 , 3
+	) AS ib
+	--INNER JOIN dbo.bettype bt WITH(NOLOCK) ON ib.bettype = bt.typeid
+	--WHERE EXISTS (
+	--	SELECT 1
+	--	FROM [dbo].[f_Set_GetGroupBettypes] () sb 
+	--	WHERE sb.bettype = ib.bettype AND sb.IsDetermined = 1
 )
 GO
 SELECT *
-FROM [dbo].[f_Set_GetInstantBettypes] ()
-WHERE InstantType & 1 = 1
+FROM [dbo].[f_Set_Instant_GetBettypes] ()
+--WHERE InstantType & 2 = 2
+ORDER BY InstantType
