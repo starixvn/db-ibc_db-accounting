@@ -20,7 +20,7 @@ AS
 		- 20160427@Percy: Support ComboParlay [Redmine: #56572]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 		- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
-
+		- 20161206@Percy: Integrate Fast Market [RedmineID: #56803]
 	Param's explanation:		
 	
 */
@@ -116,6 +116,7 @@ Begin
 			m.matchcode,
 			bt.liveindicator,
 			bt.hdp1,
+			bt.hdp2,
 			bt.oddstype,
 			bt.tpositiontaking, 
 			bt.status as NewStatus, 
@@ -146,6 +147,7 @@ Begin
 			m.matchcode,
 			bt.liveindicator,
 			bt.hdp1,
+			bt.hdp2,
 			bt.oddstype,
 			bt.tpositiontaking, 
 			bt.status as NewStatus, 

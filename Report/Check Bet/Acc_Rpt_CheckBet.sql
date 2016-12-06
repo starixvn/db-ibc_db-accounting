@@ -17,8 +17,8 @@ AS
 		- 20141224@Dom: Apply Sport Bettype Matrix 
 		- 20150724@Sophia: Exclude data of Bettrade [#38815]
 		- 20160427@Percy: Support ComboParlay [Redmine: #56572]
-		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)		
-
+		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+		- 20161206@Percy: Integrate Fast Market [RedmineID: #56803]	
 	Param's explanation:
 		- SQL execution: exec Acc_Rpt_CheckBet @winlostdate='Aug  13 2012 12:00:00:000AM'
 	
@@ -57,6 +57,7 @@ Begin
 				or (bt.betteam<>b.betteam and bt.bettype NOT IN (SELECT bettype FROM @SportBettype WHERE (ProductID=2) OR (ProductID=5 AND EventType =3))) --NOT IN (31,32,33,41,42,43, 1231,1232,1233,1237,1238)
 				or ((bt.matchid<>b.matchid) AND ((s.ProductID=2) OR (s.ProductID = 1 AND s.EventType = 2))) --IN (31,32,33,41,42,43,10)
 				or ((bt.oddsid<>b.oddsid) AND (s.ProductID = 5 AND s.EventType = 3))---- bt.bettype IN (1231,1232,1233,1237,1238))
+				OR (bt.hdp2<>b.hdp2 AND bt.bettype BETWEEN 221 AND 225) -- Fast Market
 				)	
 		
 	select @CheckRejectBet = count(1)
