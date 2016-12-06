@@ -146,7 +146,8 @@ BEGIN
 	)
 	
 	-- Pay to Supplier using OANDA rate (CurrencyID = 2 => MYR)
-	DECLARE @DailyPayAmt TABLE (RptDate DATE, ParentID INT, AmountDaily MONEY, LicenseeWL MONEY, AGCRate FLOAT)
+	DECLARE @DailyPayAmt TABLE (RptDate DATE, ParentID INT, AmountDaily MONEY, 
+								LicenseeWL MONEY, AGCRate FLOAT)
 	
 	INSERT INTO @DailyPayAmt (RptDate, ParentID, AmountDaily, LicenseeWL, AGCRate)
 	SELECT d.RptDate, p.ParentID, SUM(d.WinLoss * oanda.MYR * p.AGCRate), SUM(d.LicenseeWL * oanda.MYR), p.AGCRate
@@ -159,9 +160,9 @@ BEGIN
 	DECLARE @PayToSupplier MONEY
 	SET @PayToSupplier = (	SELECT SUM(PayForEach)
 							FROM (
-									SELECT (AGCRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END) PayForEach 
+									SELECT ParentID, AGCRate * CASE WHEN SUM(LicenseeWL) < 0 THEN 0 ELSE SUM(LicenseeWL) END AS PayForEach 
 									FROM @DailyPayAmt 
-									GROUP BY AGCRate
+									GROUP BY ParentID, AGCRate
 								 ) AS t )
 	
 	CREATE TABLE #FeeData (
