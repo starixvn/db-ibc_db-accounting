@@ -629,10 +629,11 @@ BEGIN
 		, t.IsCalculatingMP
 		, CASE WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
 				WHEN a.SettlementStatusID = 0 OR m.IsRunningAutoBettypes > 0 THEN 'Running'
+				WHEN m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN a.SettlementStatusID > 0
 					OR (m.IsExistAutoBettypes > 0 AND m.IsRunningAutoBettypes = 0)
 					OR (m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0 AND m.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
-				WHEN m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'				
+				
 			ELSE '' END AS AutoSettleResultStatus
 		, AutoSetting
 		, IsNeedToCalculateFGLG
