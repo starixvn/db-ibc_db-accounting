@@ -140,8 +140,8 @@ BEGIN
         RETURN 
     END
 	
-	SELECT @sqlCommand
-	/*
+	--SELECT @sqlCommand
+	
     IF @procName LIKE '%_xtest' OR @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_' -- UAT1 -->UAT9
     BEGIN
         DECLARE	@ActionId INT
@@ -164,7 +164,7 @@ BEGIN
 			, AdminId, IP, Action, sqlCommand, execTime)
         SELECT @MatchId, @matchcode, 0 AS IsCalculating, @leagueid, @sporttype
 			, @AdminId, @IP, @Action, @sqlCommand, NULL
-    END*/
+    END
 END
 
 GO
