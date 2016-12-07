@@ -712,7 +712,7 @@ BEGIN
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
 		
 	SELECT  Betfrom AS ReportById,
-		Device AS ReportById, 
+		Device AS ReportBy, 
 		NoOfPlayers,
 		BetCount,
 		CurrencyId,
