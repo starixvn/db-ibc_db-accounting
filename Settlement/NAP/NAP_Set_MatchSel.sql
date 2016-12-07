@@ -151,6 +151,7 @@ BEGIN
 		,IsExistAutoBettypesParlay BIT
 		,IsRunningAutoBettypes BIT
 		,IsRunningAutoBettypesParlay BIT
+		,MissingAutoResult BIT
 	)
 
 	DECLARE @strmatchid VARCHAR(MAX)
@@ -188,7 +189,7 @@ BEGIN
 		WHEN 0 THEN ''
 		ELSE (
 				SELECT username
-				FROM dbo.custinfo WITH (NOLOCK)
+				FROM CustDB.dbo.custinfo WITH (NOLOCK)
 				WHERE custid = mr.ConfirmHT
 				)
 		END suspenderHT
@@ -196,7 +197,7 @@ BEGIN
 			WHEN 0 THEN ''
 			ELSE (
 					SELECT username
-					FROM dbo.custinfo WITH (NOLOCK)
+					FROM CustDB.dbo.custinfo WITH (NOLOCK)
 					WHERE custid = mr.ConfirmFT
 					)
 		END suspenderFT
@@ -213,6 +214,7 @@ BEGIN
 		,0 AS IsExistAutoBettypesParlay
 		,0 AS IsRunningAutoBettypes
 		,0 AS IsRunningAutoBettypesParlay
+		,0 AS MissingAutoResult
 	FROM (
 			SELECT hthomescore
 				,htawayscore			
@@ -353,7 +355,7 @@ BEGIN
 	FROM #matchList m
 		INNER JOIN MatchExtraStatusParlay ext 
 		ON m.matchid = ext.matchid
-	
+			
 	;WITH SingleTicket AS
 	(
 		SELECT matchid, MIN(IsCalculating)  IsCalculating
@@ -379,8 +381,7 @@ BEGIN
 	CREATE TABLE #tmpAutoSettle1s(
 		 MatchID		INT
 		,SettlementStatusID	TINYINT 
-	)
-	
+	)	
 	;WITH cteAutoResultDetail
 	AS(
 		SELECT	CASE 
@@ -399,7 +400,31 @@ BEGIN
 	WHERE	@Sporttype IN(0,1)
 			AND MatchID IN (SELECT MatchID FROM #matchList)
 	GROUP BY MatchID 
-
+	
+	;WITH cteAutoBettypes
+	AS(
+		SELECT	CASE 
+					WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+				,BetType
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	GroupId = 8
+	)	
+	UPDATE m
+		SET MissingAutoResult = t.MissingAutoResult
+	FROM #matchList m
+		INNER JOIN (
+			SELECT  b.matchid, COUNT(1) MissingAutoResult
+			FROM	#BettypeExtraStatus b
+				INNER JOIN cteAutoBettypes c
+					ON b.bettype = c.bettype
+			WHERE	IsParLay = 1		
+					AND NOT EXISTS (SELECT TOP 1 1 FROM DBPRO.bodb02.dbo.ResultDetail WITH(NOLOCK) WHERE b.matchid = MatchId AND ResourceId LIKE c.ResourceId)
+			GROUP BY b.matchid
+	) t
+		ON m.matchid = t.matchid
+		
 	IF @AutoSettlementOnly = 1 --Running Auto bettypes ONLY ( BETRADAR USED)
 	BEGIN
 		DELETE FROM #matchList
@@ -468,10 +493,10 @@ BEGIN
 		,t.IsCalculatingMP
 		,CASE	WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
 				WHEN a.SettlementStatusID = 0 OR m.IsRunningAutoBettypes > 0 THEN 'Running'
-				WHEN m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN ISNULL(m.MissingAutoResult,0) > 0 AND m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN a.SettlementStatusID > 0 
 					OR (m.IsExistAutoBettypes > 0 AND m.IsRunningAutoBettypes = 0)
-					OR (m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0 AND m.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
+					OR (m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0 AND m.IsRunningAutoBettypesParlay = 0) THEN 'Completed'				
 				ELSE '' END AS AutoSettleResultStatus
 	FROM	#matchList m
 			LEFT JOIN #tempmatch t ON t.matchid = m.matchid
@@ -518,12 +543,6 @@ BEGIN
 		SELECT GETDATE(), @SqlCommand, @StartTime, @EndTime
 	END
 END
-
-
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSel] TO [bodbAdminNet] AS [dbo]

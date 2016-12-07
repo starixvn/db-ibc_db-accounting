@@ -125,6 +125,7 @@ BEGIN
 		, IsExistAutoBettypesParlay BIT
 		, IsRunningAutoBettypes BIT
 		, IsRunningAutoBettypesParlay BIT
+		, MissingAutoResult	BIT
 		, WinOdds MONEY
 		, PlaceOdds MONEY
 		, AutoSetting TINYINT
@@ -204,6 +205,7 @@ BEGIN
 		, 0 AS IsExistAutoBettypesParlay
 		, 0 AS IsRunningAutoBettypes
 		, 0 AS IsRunningAutoBettypesParlay
+		, 0 AS MissingAutoResult
 		, 0 AS WinOdds
 		, 0 AS PlaceOdds
 		, ISNULL(m.AutoSetting, ISNULL(l.AutoSetting, 0)) AS AutoSetting
@@ -432,8 +434,31 @@ BEGIN
 				ON	rs.ResourceId LIKE c.ResourceId
 	WHERE @Sporttype IN (0, 1)
 		AND rs.MatchID IN (SELECT MatchID FROM #matchList)	
-	GROUP BY rs.matchid
+	GROUP BY rs.matchid	
 	
+	;WITH cteAutoBettypes
+	AS(
+		SELECT	CASE 
+					WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+				,BetType
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	GroupId = 8
+	)	
+	UPDATE m
+		SET MissingAutoResult = t.MissingAutoResult
+	FROM #matchList m
+		INNER JOIN (
+			SELECT  b.matchid, COUNT(1) MissingAutoResult
+			FROM	#tempBettrans b
+				INNER JOIN cteAutoBettypes c
+					ON b.bettype = c.bettype
+			WHERE	IsParLay = 1		
+					AND NOT EXISTS (SELECT TOP 1 1 FROM DBPRO.bodb02.dbo.ResultDetail WITH(NOLOCK) WHERE b.matchid = MatchId AND ResourceId LIKE c.ResourceId)
+			GROUP BY b.matchid
+	) t
+		ON m.matchid = t.matchid
 	
 	IF @AutoSettlementOnly = 1 --Running Auto bettypes ONLY ( BETRADAR USED)
 	BEGIN
@@ -629,11 +654,10 @@ BEGIN
 		, t.IsCalculatingMP
 		, CASE WHEN a.SettlementStatusID IS NULL AND m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay = 0 THEN 'N/A'
 				WHEN a.SettlementStatusID = 0 OR m.IsRunningAutoBettypes > 0 THEN 'Running'
-				WHEN m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN ISNULL(m.MissingAutoResult,0) > 0 AND m.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'				
 				WHEN a.SettlementStatusID > 0
 					OR (m.IsExistAutoBettypes > 0 AND m.IsRunningAutoBettypes = 0)
 					OR (m.IsExistAutoBettypes = 0 AND m.IsExistAutoBettypesParlay > 0 AND m.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
-				
 			ELSE '' END AS AutoSettleResultStatus
 		, AutoSetting
 		, IsNeedToCalculateFGLG
@@ -675,6 +699,7 @@ BEGIN
 	DROP TABLE #InstMatchInfo
 	DROP TABLE #tempBettrans
 END
+
 
 
 
