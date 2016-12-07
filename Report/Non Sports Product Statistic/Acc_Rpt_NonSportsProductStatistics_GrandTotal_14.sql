@@ -18,7 +18,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_GrandTotal_14]
 	@GameIncomeType	SMALLINT = 0,
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
-	@HousePTValue   MONEY = 0
+	@HousePTValue   MONEY = 0,
+	@CasinoType		TINYINT = -1
 AS
 
 /*
@@ -50,6 +51,11 @@ AS
 		- @TotalBetValue: Value to compare with SUM(actual_stake)
 		- @GameIncomeValue: Value to compare with SUM(winlost-actual_stake)
 		- @HousePTValue: Value to compare with 1-tpositiontaking
+		- @CasinoType:
+			-1: all
+			0: non casino and live casino
+			1: casino
+			2: live casino
 */
 
 BEGIN
@@ -109,12 +115,26 @@ BEGIN
 
 	CREATE TABLE #SportBettype (ProductID INT, Bettype INT, EvenType INT, RefTable SMALLINT)
 	
-	INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
-	SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
-	FROM
-		dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
-		INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
-		INNER JOIN #tmp_BetType b ON s.BetType = b.Bettype
+	IF @CasinoType = -1
+	BEGIN
+		INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
+		SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
+		FROM
+			dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
+			INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
+			INNER JOIN #tmp_BetType b ON s.BetType = b.Bettype
+	END
+	ELSE
+	BEGIN
+		INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
+		SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
+		FROM
+			dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
+			INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
+			INNER JOIN #tmp_BetType b ON s.BetType = b.Bettype
+			INNER JOIN dbo.Products ps WITH(NOLOCK) ON p.ProductID = ps.ProductID
+		WHERE ps.CasinoType = @CasinoType
+	END
 
 	INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
 	SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
