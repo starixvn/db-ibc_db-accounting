@@ -711,8 +711,8 @@ BEGIN
 	END	
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
 		
-	SELECT  Betfrom,
-		Device, 
+	SELECT  Betfrom AS ReportById,
+		Device AS ReportBy, 
 		NoOfPlayers,
 		BetCount,
 		CurrencyId,
