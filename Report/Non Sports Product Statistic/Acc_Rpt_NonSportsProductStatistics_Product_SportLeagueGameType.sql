@@ -762,6 +762,16 @@ BEGIN
 					)
 	END	
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
+	DECLARE @NoOfPlayers BIGINT
+	SELECT  @NoOfPlayers = COUNT(DISTINCT custid) FROM #Data
+	HAVING (@TotalBetType = 0
+				OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
+				OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
+					)
+				AND (@GameIncomeType = 0
+				OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
+				OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
+					)
 
 	SELECT  Bettype AS ReportById,
 			BettypeName AS ReportBy, 
@@ -780,7 +790,7 @@ BEGIN
 
 	SELECT
         'GrandTotal' AS ReportBy,
-        SUM(c.NoOfPlayers) NoOfPlayers,
+        ISNULL(@NoOfPlayers, 0) AS NoOfPlayers,
         SUM(c.BetCount) BetCount,
         2 as CurrencyId, 
         'RM' AS Currency,

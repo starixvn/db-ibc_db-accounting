@@ -405,7 +405,7 @@ BEGIN
 		CompanyGrossIncomeBase MONEY,
 		CompanyComm MONEY,
 		CompanyCommBase MONEY,
-		RefTable TINYINT, EvenType INT DEFAULT (-1), Matchid INT DEFAULT (-1), ProductID INT
+		EvenType INT DEFAULT (-1), Matchid INT DEFAULT (-1), ProductID INT
 	)
 
 	IF EXISTS (SELECT TOP 1 1 FROM #tmp_MemIDs) -- has filter custid
@@ -430,7 +430,7 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				RefTable, EvenType, Matchid, ProductID
+				EvenType, Matchid, ProductID
 			)
 			SELECT
 				b.srecommend,
@@ -449,7 +449,7 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				0 AS RefTable, s.EvenType, b.matchid, s.ProductID
+				s.EvenType, b.matchid, s.ProductID
 			FROM  dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
@@ -488,7 +488,7 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				RefTable, ProductID
+				ProductID
 			)
 			SELECT
 				b.srecommend,
@@ -507,7 +507,7 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				1 AS RefTable, s.ProductID
+				s.ProductID
 			FROM dbo.bettransRnG14 b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
@@ -545,7 +545,7 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				RefTable, ProductID
+				ProductID
 			)
 			SELECT
 				b.srecommend,
@@ -564,7 +564,7 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				1 AS RefTable, s.ProductID
+				s.ProductID
 			FROM dbo.bettransLC14 b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
@@ -604,7 +604,7 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				RefTable, EvenType, matchid, ProductID
+				EvenType, matchid, ProductID
 			)
 			SELECT
 				b.srecommend,
@@ -623,7 +623,7 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				0 AS RefTable, s.EvenType, b.matchid, s.ProductID
+				s.EvenType, b.matchid, s.ProductID
 			FROM  dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate = @WLDate
@@ -661,7 +661,7 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				RefTable, ProductID
+				ProductID
 			)
 			SELECT
 				b.srecommend,
@@ -680,7 +680,7 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				1 AS RefTable, s.ProductID
+				s.ProductID
 			FROM dbo.bettransRnG14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
@@ -717,7 +717,7 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				RefTable, ProductID
+				ProductID
 			)
 			SELECT
 				b.srecommend,
@@ -736,7 +736,7 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				2 AS RefTable, s.ProductID
+				s.ProductID
 			FROM dbo.bettransLC14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate

@@ -566,7 +566,7 @@ BEGIN
 			- SUM(CASE WHEN statusID = 112 THEN CompanyGrossIncome ELSE 0 END) AS CompanyGrossIncome,
 			- SUM(CASE WHEN statusID = 112 THEN CompanyComm ELSE 0 END) AS CompanyComm
 		FROM  #tmp_bettrans b
-			INNER JOIN dbo.match m WITH (NOLOCK) ON m.matchid = b.matchid
+			INNER JOIN dbo.match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 		WHERE ProductID IN (3, 4, 5) AND b.EvenType = 1
 			AND (
 				(b.ProductID = 3 AND (@LeagueId = '' OR (EXISTS (SELECT 1 FROM #tmp_LeagueID l WHERE l.LeagueID = m.leagueid)))) OR
@@ -634,7 +634,7 @@ BEGIN
 	)
 	SELECT
 		NoOfPlayers,
-		e.currency,
+		e.Currency,
 		r.BetCount,
 		r.TotalBets,
 		r.TotalWins,
@@ -644,7 +644,7 @@ BEGIN
 		r.CompanyComm
 	FROM Result r
 		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
-	ORDER BY e.currency
+	ORDER BY e.Currency
 
 	--- Total
 	SELECT

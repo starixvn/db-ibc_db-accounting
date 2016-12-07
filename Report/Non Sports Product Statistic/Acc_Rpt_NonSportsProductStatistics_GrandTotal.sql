@@ -636,7 +636,7 @@ BEGIN
 	)
 	SELECT
 		NoOfPlayers,
-		e.currency,
+		e.Currency,
 		r.BetCount,
 		r.TotalBets,
 		r.TotalWins,
@@ -646,7 +646,7 @@ BEGIN
 		r.CompanyComm
 	FROM Result r
 		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
-	ORDER BY e.currency
+	ORDER BY e.Currency
 
 	--- Total
 	SELECT
