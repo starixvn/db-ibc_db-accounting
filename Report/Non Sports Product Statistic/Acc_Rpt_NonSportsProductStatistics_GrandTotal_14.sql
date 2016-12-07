@@ -19,7 +19,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_GrandTotal_14]
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
-	@CasinoType		TINYINT = -1
+	@CasinoType		INT = -1
 AS
 
 /*
