@@ -744,27 +744,7 @@ BEGIN
 					)
 	END	
 	------------------------------------------IV. Return Total Rows ------------------------------------------------------
-
-	IF @CasinoType = -1 
-	BEGIN
-		SELECT  ProductID AS ReportById,
-				ProductName AS ReportBy, 
-				NoOfPlayers,
-				BetCount,
-				CurrencyId,
-				Currency,
-				TotalBets,
-				TotalWins,
-				TotalRefund,
-				CompanyTurnOver,
-				CompanyGrossIncome,
-				CompanyComm 
-		FROM #Result	
-		ORDER BY ProductName, Currency		
-	END
-	ELSE
-	BEGIN
-		SELECT  ProductID AS ReportById,
+	SELECT  ProductID AS ReportById,
 			ProductName AS ReportBy, 
 			NoOfPlayers,
 			BetCount,
@@ -776,10 +756,9 @@ BEGIN
 			CompanyTurnOver,
 			CompanyGrossIncome,
 			CompanyComm 
-		FROM #Result	
-		ORDER BY ProductName, Currency	
-	END	
-
+	FROM #Result	
+	ORDER BY ProductName, Currency		
+	
 	SELECT
         'GrandTotal' AS ReportBy,
         SUM(c.NoOfPlayers) NoOfPlayers,

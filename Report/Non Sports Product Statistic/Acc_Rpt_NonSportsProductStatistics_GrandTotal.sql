@@ -39,7 +39,9 @@ AS
 		- @ProductID: string filter by Product 
 		- @BetType: string filter by bettype
 		- @LeagueId: string filter by LeagueId (only use for ProductID = 3 - Number Game get LeagueId)  
-		- @Sporttype: string filter by Sporttype (only use for ProductID = 5 - Virtual Sports get Sporttype)
+		- @Sporttype: string filter by Sporttype
+			- Multiple Sporttype for productID = 5 - Virtual Sports get Sporttype
+			- Single Sporttype for single ProductID - drilldown bettype from Sporttype
 		- @GameTableId: filter by specific game table (only use for ProductID = 4 - Live Casino get leagueID)
 		- @currency: 
 			-1: All convert to RM currency
@@ -115,33 +117,57 @@ BEGIN
 
 	CREATE TABLE #SportBettype (ProductID INT, Bettype INT, EvenType INT, RefTable SMALLINT)
 	
-	IF @CasinoType = -1
+	IF (SELECT COUNT(*) FROM #tmp_SportType) = 1
 	BEGIN
 		INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
-		SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
-		FROM
-			dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
+		SELECT DISTINCT s.ProductID, s.BetType, s.EventType, s.RefTable
+		FROM dbo.SportBettypeMatrix s WITH(NOLOCK)
 			INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
+			INNER JOIN #tmp_SportType st ON s.SportType = st.Sporttype
 			INNER JOIN #tmp_BetType b ON s.BetType = b.Bettype
+		WHERE p.ProductID NOT IN (3, 5) -- Number Game, Virtual Sport (input @bettype = '')
+
+		INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
+		SELECT DISTINCT s.ProductID, s.BetType, s.EventType, s.RefTable
+		FROM dbo.SportBettypeMatrix s WITH(NOLOCK)
+			INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
+			INNER JOIN #tmp_SportType st ON s.SportType = st.Sporttype
+		WHERE p.ProductID IN (3, 5) -- Number Game, Virtual Sport (input @bettype = '')
 	END
 	ELSE
 	BEGIN
-		INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
-		SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
-		FROM
-			dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
-			INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
-			INNER JOIN #tmp_BetType b ON s.BetType = b.Bettype
-			INNER JOIN dbo.Products ps WITH(NOLOCK) ON p.ProductID = ps.ProductID
-		WHERE ps.CasinoType = @CasinoType
-	END
+		IF @CasinoType = -1
+		BEGIN
+			INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
+			SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
+			FROM
+				dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
+				INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
+				INNER JOIN #tmp_BetType b ON s.BetType = b.Bettype
+			WHERE p.ProductID NOT IN (3, 5) -- Number Game, Virtual Sport (input @bettype = '')
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
+			SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
+			FROM
+				dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
+				INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
+				INNER JOIN #tmp_BetType b ON s.BetType = b.Bettype
+				INNER JOIN dbo.Products ps WITH(NOLOCK) ON p.ProductID = ps.ProductID
+			WHERE ps.CasinoType = @CasinoType AND p.ProductID NOT IN (3, 5) -- Number Game, Virtual Sport (input @bettype = '')
+		END
 
-	INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
-	SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
-	FROM
-		dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
-		INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
-	WHERE p.ProductID IN (3, 5) -- Number Game, Virtual Sport (input @bettype = '')
+		IF @CasinoType IN (0, -1)
+		BEGIN
+			INSERT INTO #SportBettype (ProductID, Bettype, EvenType, RefTable)
+			SELECT s.ProductID, s.BetType, s.EventType, s.RefTable
+			FROM
+				dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
+				INNER JOIN #tmp_ProductID p ON s.ProductID = p.ProductID
+			WHERE p.ProductID IN (3, 5) -- Number Game, Virtual Sport (input @bettype = '')
+		END
+	END
 
 	DROP TABLE #tmp_ProductID
 	DROP TABLE #tmp_BetType
