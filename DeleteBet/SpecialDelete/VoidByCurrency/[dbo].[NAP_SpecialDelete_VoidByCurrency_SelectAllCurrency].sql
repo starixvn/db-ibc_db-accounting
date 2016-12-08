@@ -1,4 +1,4 @@
-USE [bodb02]
+USE [CustDB]
 GO
 /****** Object:  StoredProcedure [dbo].[NAP_SpecialDelete_VoidByCurrency_SelectAllCurrency]    Script Date: 04/25/2016 09:31:50 ******/
 SET ANSI_NULLS ON
@@ -10,7 +10,7 @@ AS
 /*
 	Created: Kent
 	Date: 20161205
-	DB: DBTXN/bodb02
+	DB: DBCUST/CustDB
 
 	Revisions: 		
 		- 20161205@Kent: Get all currency [Redmine:#67987]		
@@ -19,7 +19,7 @@ BEGIN
 	SET NOCOUNT ON
 	
 	SELECT exchangeid AS Id, currency AS CurrencyCode
-	FROM CustDB.dbo.exchange WITH(NOLOCK)
+	FROM dbo.exchange WITH(NOLOCK)
 	WHERE [Description] IS NULL OR [Description] <> 'Unused'
 	ORDER BY CASE WHEN Code = 'CNY' THEN 0 ELSE 1 END, Code
 	

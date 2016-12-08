@@ -42,6 +42,7 @@ BEGIN
 			BetType				SMALLINT,
 			CurrencyCode		NVARCHAR(50),
 			Creator				INT,
+			creatorName			VARCHAR(30),
 			Hdp1				SMALLMONEY,
 			Hdp2				SMALLMONEY,
 			HomeId				INT,
@@ -72,29 +73,29 @@ BEGIN
 			SubOdds				MONEY
 		)			
 				
-	CREATE TABLE #t_LicenseeNames(LicenseeName VARCHAR(100))
+	CREATE TABLE #t_LicenseeNames(LicenseeName VARCHAR(100), GroupName VARCHAR(10))
 	CREATE CLUSTERED INDEX t_IDX_LicenseeNames_LicenseeName ON #t_LicenseeNames(LicenseeName)	
 	
 	CREATE TABLE #t_exchanges(exchangeid INT, currency NVARCHAR(50))
 	
-	INSERT INTO #t_LicenseeNames(LicenseeName)
-	SELECT ss.val
-	FROM dbo.strSplit(@LicenseeNames, ',') ss
+	INSERT INTO #t_LicenseeNames(LicenseeName, GroupName)
+	SELECT ss.val AS LicenseeName, ss.val AS GroupName
+	FROM dbo.strSplit(@LicenseeNames, ',') ss		
 	
 	DELETE FROM #t_LicenseeNames WHERE LicenseeName = @MBCGroup_Name
 	IF @@ROWCOUNT > 0
-		INSERT INTO #t_LicenseeNames(LicenseeName)
-		SELECT [site]
+		INSERT INTO #t_LicenseeNames(LicenseeName, GroupName)
+		SELECT [site] AS LicenseeName, @MBCGroup_Name AS GroupName
 		FROM DBCUST.CUSTDB.dbo.Site WITH(NOLOCK) 
 		WHERE isLicensee = 0
 		  and SpecialGroup = 0 
-		  and isActive = 1	
+		  and isActive = 1		  			  
 	
 	INSERT INTO #t_exchanges(exchangeid, currency)
 	SELECT e.exchangeid, e.currency
 	FROM dbo.strSplit(@CurrencyIDs, ',') ss
 		 INNER JOIN CustDB.dbo.exchange e WITH(NOLOCK)
-				 ON CAST(ss.val AS INT) = e.exchangeid
+				 ON CAST(ss.val AS INT) = e.exchangeid				 				 
 	
 	SELECT @SearchSingle = 0, @SearchParlay = 0
 	IF @TicketType = 'All'	
@@ -115,6 +116,7 @@ BEGIN
 					BetType,
 					CurrencyCode,
 					Creator,
+					creatorName,
 					Hdp1,
 					Hdp2,
 					HomeId,
@@ -152,6 +154,7 @@ BEGIN
 				b.BetType,
 				te.currency AS CurrencyCode,
 				b.Creator,
+				cr.username AS creatorName,
 				b.Hdp1,
 				b.Hdp2,
 				m.HomeId,
@@ -171,7 +174,7 @@ BEGIN
 				b.TransId,
 				b.UserName,
 				b.WinLost,
-				c.site AS GroupName,
+				tl.GroupName AS GroupName,
 				
 				NULL AS SubTransId,
 				NULL AS SubBetCheck,
@@ -188,13 +191,15 @@ BEGIN
 			 INNER JOIN #t_LicenseeNames tl WITH (NOLOCK)
 					 ON tl.LicenseeName = c.site -- filter for @LicenseeIDs	
 			 INNER JOIN match m WITH (NOLOCK)
-					 ON b.matchid = m.matchid							 		 
+					 ON b.matchid = m.matchid
+			 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
+					 ON b.creator = cr.custid							 		 
 		WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND b.bettype NOT IN (9, 29) -- single
 			AND b.bettype < 19001
 			AND b.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
-			AND b.bettype BETWEEN 901 AND 910 -- BT subticket
+			AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket
 			AND b.bettype NOT BETWEEN 1501 AND 1599	-- NOT IN Keno
 			AND NOT (b.Username like '%bettrade%' AND b.betdaqid = 0) -- current owner is not member bettrade			
 			AND b.statusID NOT IN (101, 102) -- reject, void
@@ -212,6 +217,7 @@ BEGIN
 					BetType,
 					CurrencyCode,
 					Creator,
+					creatorName,
 					Hdp1,
 					Hdp2,
 					HomeId,
@@ -249,6 +255,7 @@ BEGIN
 				main.BetType,
 				te.currency AS CurrencyCode,
 				main.Creator,
+				cr.username AS creatorName,
 				main.Hdp1,
 				main.Hdp2,
 				m.HomeId,
@@ -268,7 +275,7 @@ BEGIN
 				main.transid AS TransId,
 				main.UserName,
 				main.winlost AS WinLost,
-				c.site AS GroupName,
+				tl1.GroupName AS GroupName,
 				
 				sub.transid AS SubTransId,
 				sub.betcheck AS SubBetCheck,
@@ -283,7 +290,9 @@ BEGIN
 			 INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK)
 					 ON main.recommend = c.custid
 			 INNER JOIN #t_LicenseeNames tl1 WITH (NOLOCK)
-					 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs			 				 					 
+					 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs
+			 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
+					 ON main.creator = cr.custid			 				 					 
 			 
 			 INNER JOIN dbo.bettransm sub WITH (NOLOCK)	
 					 ON main.refno = sub.refno
@@ -298,53 +307,49 @@ BEGIN
 			AND sub.bettype < 19001
 			AND sub.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
 			AND sub.bettype NOT BETWEEN 801 AND 806-- MG
-			AND sub.bettype BETWEEN 901 AND 910 -- BT subticket
+			AND sub.bettype NOT BETWEEN 901 AND 910 -- BT subticket
 			AND sub.bettype NOT BETWEEN 1501 AND 1599	-- NOT IN Keno
-			AND sub.matchid = @matchid
+			AND sub.matchid = @matchid -- filer for @MatchID
 			AND sub.statusID NOT IN (101, 102) -- reject, void
 			AND sub.betfrom <> 'P' -- exclude phone betting			
 		
-	SELECT  Stake,
-			AwayId,
-			BetCheck,
-			BetId,
-			BetTeam,
-			BetType,
-			CurrencyCode,
-			Creator,
-			Hdp1,
-			Hdp2,
-			HomeId,
-			IsLiveIndicator,
-			IsNeutral,
-			IsSecondAcceptFlag,
-			LiveAwayScore,
-			LiveHomeScore,
-			Odds,
-			IsMixParlay,
-			OddsType,
-			RefNo,
-			SportType,
-			Status,
-			TransDate,
-			TransDesc,
-			TransId,
-			UserName,
-			WinLost,
-			GroupName,
+	SELECT  s.Stake,
+			s.AwayId,
+			s.BetCheck,
+			s.BetId,
+			s.BetTeam,
+			s.BetType,
+			s.CurrencyCode,
+			s.creatorName AS Creator,
+			s.Hdp1,
+			s.Hdp2,
+			s.HomeId,
+			s.IsLiveIndicator,
+			s.IsNeutral,
+			s.IsSecondAcceptFlag,
+			s.LiveAwayScore,
+			s.LiveHomeScore,
+			s.Odds,
+			s.IsMixParlay,
+			s.OddsType,
+			s.RefNo,
+			s.SportType,
+			s.Status,
+			s.TransDate,
+			s.TransDesc,
+			s.TransId,
+			s.UserName,
+			s.WinLost,
+			s.GroupName,
 			
-			SubTransId,
-			SubBetCheck,
-			SubBetTeam,
-			SubBetType,
-			SubHdp1,
-			SubHdp2,
-			SubOdds
-	FROM	#SpecialDeleteBets s		
-		
-	DROP TABLE #SpecialDeleteBets	
-	DROP TABLE #t_LicenseeNames
-	DROP TABLE #t_exchanges
+			s.SubTransId,
+			s.SubBetCheck,
+			s.SubBetTeam,
+			s.SubBetType,
+			s.SubHdp1,
+			s.SubHdp2,
+			s.SubOdds
+	FROM	#SpecialDeleteBets s			
 			
 	SET NOCOUNT OFF
 END
