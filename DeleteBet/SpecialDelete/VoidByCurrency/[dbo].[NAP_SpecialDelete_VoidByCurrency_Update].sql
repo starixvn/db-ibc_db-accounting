@@ -52,15 +52,8 @@ BEGIN
 	DECLARE @isExistOutright 			BIT = 0
 		  , @isExistMatch				BIT = 0
 		  , @KeyID						INT
-		  
-		  , @AvaiableProcess_Single		BIT
-		  , @ErrCode_Concurrent_Single	INT = 0 
-		  , @ErrMsg_Concurrent_Single	NVARCHAR(200) = '' 		  
-		  , @isLocked_Single			BIT	= 0
-		  
-		  , @AvaiableProcess_Parlay		BIT
-		  , @ErrCode_Concurrent_Parlay	INT = 0 
-		  , @ErrMsg_Concurrent_Parlay	NVARCHAR(200) = '' 		  
+		  , @AvaiableProcess			BIT = 1		  		  		  
+		  , @isLocked_Single			BIT	= 0		  		  	  
 		  , @isLocked_Parlay			BIT	= 0
 	
 	DECLARE @tblMainTransIds TABLE (transid BIGINT)
@@ -210,79 +203,43 @@ BEGIN
 	BEGIN	
 		SELECT @SearchSingle = 1, @SearchParlay = 1
 		
-		-------> Check concurrent single
-		IF EXISTS(SELECT TOP 1 1 FROM #SpecialDeleteBets WHERE bettype = 10) -- bettype 10: outright
-		BEGIN 	
-			SELECT @KeyID 			= 2
-				 , @isExistOutright 	= 1
-				 , @isExistMatch		= 0
-		END
-		ELSE
-		BEGIN 	
-			SELECT @KeyID 			= 1
-				 , @isExistOutright 	= 0
-				 , @isExistMatch		= 1
-		END
+		-------> Check concurrent single, parlay
+		SELECT @KeyID 			= 1
+			 , @isExistOutright 	= 0
+			 , @isExistMatch		= 1
 		
 		INSERT INTO #tblMatchProcess (matchid, KeyID)
 		SELECT @matchid AS matchid
 			 , @KeyID 	AS KeyID
 			 
-		-- checking SD proccess
 		EXEC dbo.NAP_Admin_CheckingProcess
-			@isExistOutright 	= @isExistOutright
-			, @isExistMatch		= @isExistMatch
-			, @avaiableProcess 	= @AvaiableProcess_Single OUTPUT
-			, @ErrCode			= @ErrCode_Concurrent_Single OUTPUT
-			, @ErrMsg			= @ErrMsg_Concurrent_Single OUTPUT
-		SET @isLocked_Single = 1			
+			  @IsReleased	= 0
 			
-		IF(@ErrCode_Concurrent_Single <> 0 OR @AvaiableProcess_Single = 0) 
+			, @isExistOutright 	= @isExistOutright
+			, @isExistMatch		= @isExistMatch
+			
+			, @IsExistParlay	= 1
+			
+			, @avaiableProcess 	= @AvaiableProcess OUTPUT
+			, @ErrCode			= @ErrCode OUTPUT
+			, @ErrMsg			= @ErrMsg OUTPUT
+		SELECT @isLocked_Single = 1, @isLocked_Parlay = 1			
+			
+		IF(@ErrCode <> 0 OR @AvaiableProcess = 0) 
 		BEGIN
 			SELECT * FROM #t			
 			
 			RETURN
-		END	
-		
-		-------> Check concurrent parlay
-		EXEC [dbo].[NAP_Admin_CheckingProcess]
-			@IsExistParlay = 1			
-		  , @IsReleased	= 0
-		  , @AvaiableProcess = @AvaiableProcess_Parlay OUTPUT
-		  , @ErrCode = @ErrCode_Concurrent_Parlay OUTPUT
-		  , @ErrMsg	= @ErrMsg_Concurrent_Parlay OUTPUT	
-		SET @isLocked_Parlay = 1
-		
-		IF (@ErrCode_Concurrent_Parlay <> 0 OR @AvaiableProcess_Parlay = 0)
-		BEGIN	
-			SELECT * FROM #t
-			
-			-------> Release process single
-			EXEC dbo.NAP_Admin_CheckingProcess
-				@isExistOutright 	= @isExistOutright
-				, @isExistMatch		= @isExistMatch
-				, @IsReleased		= 1				
-						 
-			RETURN		 
-		END					 
+		END								 
 	END
 	ELSE IF @TicketType = 'SingleTicket'
 	BEGIN
 		SET @SearchSingle = 1
 		
 		-------> Check concurrent single
-		IF EXISTS(SELECT TOP 1 1 FROM #SpecialDeleteBets WHERE bettype = 10) -- bettype 10: outright
-		BEGIN 	
-			SELECT @KeyID 			= 2
-				 , @isExistOutright 	= 1
-				 , @isExistMatch		= 0
-		END
-		ELSE
-		BEGIN 	
-			SELECT @KeyID 			= 1
-				 , @isExistOutright 	= 0
-				 , @isExistMatch		= 1
-		END
+		SELECT @KeyID 			= 1
+			 , @isExistOutright 	= 0
+			 , @isExistMatch		= 1
 		
 		INSERT INTO #tblMatchProcess (matchid, KeyID)
 		SELECT @matchid AS matchid
@@ -292,12 +249,12 @@ BEGIN
 		EXEC dbo.NAP_Admin_CheckingProcess
 			@isExistOutright 	= @isExistOutright
 			, @isExistMatch		= @isExistMatch
-			, @avaiableProcess 	= @AvaiableProcess_Single OUTPUT
-			, @ErrCode			= @ErrCode_Concurrent_Single OUTPUT
-			, @ErrMsg			= @ErrMsg_Concurrent_Single OUTPUT
+			, @avaiableProcess 	= @AvaiableProcess OUTPUT
+			, @ErrCode			= @ErrCode OUTPUT
+			, @ErrMsg			= @ErrMsg OUTPUT
 		SET @isLocked_Single = 1			
 			
-		IF(@ErrCode_Concurrent_Single <> 0 OR @AvaiableProcess_Single = 0) 
+		IF(@ErrCode <> 0 OR @AvaiableProcess = 0) 
 		BEGIN
 			SELECT * FROM #t			
 			
@@ -312,12 +269,12 @@ BEGIN
 		EXEC [dbo].[NAP_Admin_CheckingProcess]
 			@IsExistParlay = 1			
 		  , @IsReleased	= 0
-		  , @AvaiableProcess = @AvaiableProcess_Parlay OUTPUT
-		  , @ErrCode = @ErrCode_Concurrent_Parlay OUTPUT
-		  , @ErrMsg	= @ErrMsg_Concurrent_Parlay OUTPUT	
+		  , @AvaiableProcess = @AvaiableProcess OUTPUT
+		  , @ErrCode = @ErrCode OUTPUT
+		  , @ErrMsg	= @ErrMsg OUTPUT	
 		SET @isLocked_Parlay = 1
 		
-		IF (@ErrCode_Concurrent_Parlay <> 0 OR @AvaiableProcess_Parlay = 0)
+		IF (@ErrCode <> 0 OR @AvaiableProcess = 0)
 		BEGIN	
 			SELECT * FROM #t										
 						 
@@ -582,14 +539,20 @@ BEGIN
 		IF @CountSingle + @CountParlay = 0
 		BEGIN
 			-------> Release process
-			--> Release single
-			IF @isLocked_Single = 1
+			IF @isLocked_Single = 1 AND @isLocked_Parlay = 1 -- Release single, parlay
+				EXEC dbo.NAP_Admin_CheckingProcess
+					  @isExistOutright 	= @isExistOutright
+					, @isExistMatch		= @isExistMatch
+					
+					, @isExistParlay  = 1 
+					
+					, @IsReleased		= 1
+			ELSE IF @isLocked_Single = 1 -- Release single only
 				EXEC dbo.NAP_Admin_CheckingProcess
 					@isExistOutright 	= @isExistOutright
 					, @isExistMatch		= @isExistMatch
 					, @IsReleased		= 1
-			--> Release parlay
-			IF @isLocked_Parlay = 1
+			ELSE IF @isLocked_Parlay = 1 -- Release parlay only
 				EXEC dbo.NAP_Admin_CheckingProcess  
 					@isExistParlay  = 1  
 					, @IsReleased  = 1
@@ -625,7 +588,7 @@ BEGIN
 				b.winlostdate, b.betfrom, b.betcheck, b.checktime, b.matchid, b.bettype  
 		FROM	dbo.bettransm AS b WITH (nolock)  
 			INNER JOIN #SpecialDeleteBets AS r 
-				ON	r.transid=b.transid 
+				ON	r.SubTransId=b.transid 
 		WHERE r.IsMixParlay = 1  
 
 		--BackUp tickets of bettransm  
@@ -637,7 +600,7 @@ BEGIN
 				b.winlostdate, b.betfrom, b.betcheck, b.checktime, b.matchid, b.bettype  
 		FROM	dbo.bettransm AS b WITH (nolock)  
 			INNER JOIN #SpecialDeleteBets AS r 
-				ON	r.transid=b.transid
+				ON	r.SubTransId=b.transid
 		WHERE r.IsMixParlay = 1				
 		
 		-------> Capture before balance
@@ -883,17 +846,23 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		-------> Release process
-		--> Release single
-		IF @isLocked_Single = 1
+		IF @isLocked_Single = 1 AND @isLocked_Parlay = 1 -- Release single, parlay
+			EXEC dbo.NAP_Admin_CheckingProcess
+				  @isExistOutright 	= @isExistOutright
+				, @isExistMatch		= @isExistMatch
+				
+				, @isExistParlay  = 1 
+				
+				, @IsReleased		= 1
+		ELSE IF @isLocked_Single = 1 -- Release single only
 			EXEC dbo.NAP_Admin_CheckingProcess
 				@isExistOutright 	= @isExistOutright
 				, @isExistMatch		= @isExistMatch
 				, @IsReleased		= 1
-		--> Release parlay
-		IF @isLocked_Parlay = 1
+		ELSE IF @isLocked_Parlay = 1 -- Release parlay only
 			EXEC dbo.NAP_Admin_CheckingProcess  
 				@isExistParlay  = 1  
-				, @IsReleased  = 1		  
+				, @IsReleased  = 1			  
 	
 		SELECT @ErrCode = 100,
 				@ErrMsg = @GeneralErrMsg
@@ -904,17 +873,23 @@ BEGIN
 	END CATCH
 	
 	-------> Release process
-	--> Release single
-	IF @isLocked_Single = 1
+	IF @isLocked_Single = 1 AND @isLocked_Parlay = 1 -- Release single, parlay
+		EXEC dbo.NAP_Admin_CheckingProcess
+			  @isExistOutright 	= @isExistOutright
+			, @isExistMatch		= @isExistMatch
+			
+			, @isExistParlay  = 1 
+			
+			, @IsReleased		= 1
+	ELSE IF @isLocked_Single = 1 -- Release single only
 		EXEC dbo.NAP_Admin_CheckingProcess
 			@isExistOutright 	= @isExistOutright
 			, @isExistMatch		= @isExistMatch
 			, @IsReleased		= 1
-	--> Release parlay
-	IF @isLocked_Parlay = 1
+	ELSE IF @isLocked_Parlay = 1 -- Release parlay only
 		EXEC dbo.NAP_Admin_CheckingProcess  
 			@isExistParlay  = 1  
-			, @IsReleased  = 1
+			, @IsReleased  = 1	
 			
 	SET NOCOUNT OFF
 END
