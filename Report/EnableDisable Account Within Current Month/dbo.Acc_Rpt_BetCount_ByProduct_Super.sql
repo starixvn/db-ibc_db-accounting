@@ -96,8 +96,7 @@ BEGIN
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
 			OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 			OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-			OR b.bettype BETWEEN 2501 AND (CASE WHEN @SportType = 213 AND b.StatusID <> 0 THEN 2699 ELSE 0 END) -- NG2			
-			OR b.bettype BETWEEN 1011 AND (CASE WHEN @SportType = 219 AND b.StatusID <> 0 THEN 1020 ELSE 0 END) -- Fishing World			
+			OR b.bettype BETWEEN 2501 AND (CASE WHEN @SportType = 213 AND b.StatusID <> 0 THEN 2699 ELSE 0 END) -- NG2						
 		) 
 		AND ( 
 				----b.status IN ('WON','LOSE','DRAW','running') 
@@ -107,7 +106,7 @@ BEGIN
 		GROUP BY b.custid,b.[status]
 		
 		-- Get data from bettransRnG
-		IF @sportType IN (251, 212)
+		IF @sportType IN (251, 212, 219)
 		BEGIN
 			INSERT INTO #AvailableMember
 			SELECT b.custid,b.[status],COUNT(1) 
@@ -116,6 +115,7 @@ BEGIN
 			AND (
 					b.gameID BETWEEN 2101 AND CASE WHEN @sportType=251 THEN 2399 ELSE 0 END 	
 					OR b.gameID BETWEEN 4001 AND CASE WHEN @sportType=212 THEN 7999 ELSE 0 END 	
+					OR b.gameID BETWEEN 1011 AND CASE WHEN @sportType=219 THEN 1020 ELSE 0 END -- Fishing World			
 				) 
 			AND (
 					b.statusId IN (111,112,113,0) 
