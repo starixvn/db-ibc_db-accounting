@@ -18,8 +18,7 @@ GO
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel] @ProductId           INT,
                                                          @SiteId              INT,
                                                          @IsCreditSite        BIT = 0,
-                                                         @CurrencyId          INT = 0,
-                                                         @ExcludeTestCurrency BIT = 0
+                                                         @CurrencyId          INT = 0
 AS
 
 /*
@@ -82,8 +81,6 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                         WHERE s.siteid = @SiteId
                               AND (@CurrencyId = 0
                                    OR lc.Currency = @CurrencyId)
-                              AND (@ExcludeTestCurrency = 0
-                                   OR lc.CurrencyName NOT IN('UUS'))
                              AND lc.CurrencyName NOT IN('H', 'C');
              END;
          ELSE
@@ -95,8 +92,6 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                         FROM dbo.exchange ex WITH (NOLOCK)
                         WHERE(@CurrencyId = 0
                               OR ex.exchangeid = @CurrencyId)
-                             AND (@ExcludeTestCurrency = 0
-                                  OR ex.currency NOT IN('UUS'))
                         AND ex.currency NOT IN('H', 'C');
              END;
      END;

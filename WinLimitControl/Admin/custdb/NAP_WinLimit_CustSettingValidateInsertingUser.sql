@@ -19,7 +19,6 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingValidateInsertingUser] @Username        VARCHAR(100)  = '',
-                                                                       @ExcludeTestData BIT           = 1,
                                                                        @ErrorCode       INT           = 0 OUTPUT,
                                                                        @ErrorMessage    NVARCHAR(200) = '' OUTPUT
 AS
@@ -40,7 +39,7 @@ declare @p2 int
 set @p2=0
 declare @p4 nvarchar(200)
 set @p4=0
-exec NAP_WinLimit_CustSettingValidateInsertingUser @Username='166HK488',@ErrorCode=@p2 output,@ExcludeTestData=0,@ErrorMessage=@p4 output
+exec NAP_WinLimit_CustSettingValidateInsertingUser @Username='166HK488',@ErrorCode=@p2 output, @ErrorMessage=@p4 output
 select @p2, @p4
 
 
@@ -55,8 +54,6 @@ select @p2, @p4
                 @AgentId = c.recommend
          FROM dbo.Customer c WITH (NOLOCK)
               INNER JOIN dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
-                                                         AND (@ExcludeTestData = 0
-                                                              OR e.currency NOT IN('UUS'))
          WHERE c.username = @Username
                AND c.roleid = 1;
          IF @CustID IS NULL

@@ -21,8 +21,7 @@ GO
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel] @UserName            NVARCHAR(100) = '',
                                                            @SiteID              INT           = 0,
                                                            @CurrencyID          INT           = 0,
-                                                           @ProductID           TINYINT       = 0,
-                                                           @ExcludeTestCurrency BIT           = 1
+                                                           @ProductID           TINYINT       = 0
 AS
 	
 /*
@@ -38,7 +37,7 @@ Revisions:
 Parameters Explanation:
 
 Example: 
-EXEC [NAP_WinLimit_CustSettingSel] @ExcludeTestCurrency = 0
+EXEC [NAP_WinLimit_CustSettingSel]
 
 */
 
@@ -77,8 +76,6 @@ EXEC [NAP_WinLimit_CustSettingSel] @ExcludeTestCurrency = 0
                OR c.username = @UserName)
               AND (@CurrencyID = 0
                    OR c.currency = @CurrencyID)
-              AND (@ExcludeTestCurrency = 0
-                   OR c.currency NOT IN(20, 27, 28))
               AND (@SiteID = 0
                    OR @SiteID = S.siteid)
          ORDER BY c.Username;
