@@ -14,10 +14,10 @@ ALTER PROCEDURE [dbo].[NAP_Settlement_InstantCalculation_Checking]
 	, @InstantKey		INT
 	, @HomeScore		VARCHAR(50) = ''
 	, @AwayScore		VARCHAR(50) = ''
-    , @Action			VARCHAR(10)
+    , @Action			VARCHAR(10) = 'CAL'
+	, @Mode				VARCHAR(10)
 	, @ErrCode 			INT = 0 OUTPUT
 	, @ErrMsg 			VARCHAR(250) = '' OUTPUT
-	, @InstantCompleted	BIT = 0 OUTPUT
 AS
 /*
 	Creator: 20160930@Bobby
@@ -29,7 +29,8 @@ AS
 		- 20161128@Bobby: #67760 - Implement IS for FGLG bet types
 		
 	Param's Explanation:
-		- @Action: ['INST-HT', 'INST-FT']
+		- @Action: ['CAL']
+		- @Mode: ['INST-HT', 'INST-FT']
 
 */
 BEGIN
@@ -80,11 +81,10 @@ BEGIN
 	
 	SELECT @ErrCode			= 0
 		, @ErrMsg			= ''
-		, @InstantCompleted	= 0
 		, @instantCheck		= 0
 		, @CalculationType	= CASE 
-								WHEN @Action = 'INST-HT' THEN 101
-								WHEN @Action = 'INST-FT' THEN 102
+								WHEN @Mode = 'INST-HT' THEN 101
+								WHEN @Mode = 'INST-FT' THEN 102
 								ELSE 0
 							END
 		, @hScore			= CAST(@HomeScore AS INT)
@@ -144,10 +144,13 @@ BEGIN
 		, @aScore2H		= CASE WHEN @CalculationType = 102 THEN @aScore-@aScore1H ELSE 0 END
 		, @totalGoal1H	= @hScore1H + @aScore1H
 		, @totalGoal2H	= @hScore2H + @aScore2H
+		, @GoalRecord	= CASE WHEN LEFT(@GoalRecord, 1) = ';' THEN SUBSTRING(@GoalRecord,2,LEN(@GoalRecord) - 1) ELSE @GoalRecord END
 		, @FGNG			= CASE 
 							WHEN LEFT(@GoalRecord, 1) = 'H' THEN '1'  
 							WHEN LEFT(@GoalRecord, 1) = 'A' THEN '2'  
-							END + ':1'
+							ELSE ''
+						END 
+		, @FGNG			= CASE WHEN @FGNG <> '' THEN @FGNG + ':1' ELSE '' END
 							
 	BEGIN TRY
 		;WITH InstMatchResult AS (
@@ -174,7 +177,7 @@ BEGIN
 		FROM InstMatchResult
 		
 		-- CHECK any instant scores has been completed
-		SET @InstantCompleted = CASE WHEN ISNULL(@totalGoalCheck, 0) > 0 THEN 1 ELSE 0 END
+		SELECT @goalRecordCheck = CASE WHEN LEFT(@goalRecordCheck, 1) = ';' THEN SUBSTRING(@goalRecordCheck,2,LEN(@goalRecordCheck) - 1) ELSE @goalRecordCheck END
 		
 		-- CHECK for abandoned case
 		IF (

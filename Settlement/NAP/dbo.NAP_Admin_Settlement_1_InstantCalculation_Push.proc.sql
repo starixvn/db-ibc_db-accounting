@@ -64,6 +64,7 @@ BEGIN
 		--DOUBLE CHECK match status
 		EXEC dbo.NAP_Settlement_InstantCalculation_UndoChecking
 		@MatchId			= @MatchId
+		, @InstantCheck		= @InstantKey
 		, @ErrCode 			= @ErrCode OUTPUT
 		, @ErrMsg			= @ErrMsg OUTPUT
 	END

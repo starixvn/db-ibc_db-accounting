@@ -8,6 +8,7 @@ GO
 
 ALTER PROCEDURE [dbo].[NAP_Settlement_InstantCalculation_UndoChecking]
 	@MatchId			INT
+	, @InstantCheck		INT = NULL
 	, @ErrCode 			INT = 0 OUTPUT
 	, @ErrMsg 			VARCHAR(250) = '' OUTPUT
 AS
@@ -26,9 +27,9 @@ BEGIN
 	DECLARE @evenstatus		VARCHAR(30)
 		,@homeScore			VARCHAR(30)
 		,@awayScore			VARCHAR(30)
+		,@InstantKey		INT
 		,@goalRecord		VARCHAR(30)
 		,@isHT				BIT
-		,@InstantKey		INT
 		,@livehomescore		INT
 		,@liveawayscore		INT
 		,@hScore			INT
@@ -56,55 +57,61 @@ BEGIN
 	IF(@evenstatus IS NULL)
 	BEGIN
 		SELECT @ErrCode		= 1001001
-			, @ErrMsg		= 'This match has no instant calculation process.'
+			, @ErrMsg		= 'Instant calculation has not been executed on the match.'
 		
-		RETURN;
 	END
 	
-	IF(@evenstatus = 'completed' OR @evenstatus <> 'running')
+	IF(@ErrCode = 0 AND @evenstatus = 'completed' OR @evenstatus <> 'running')
 	BEGIN
 		SELECT @ErrCode		= 1001002
 			, @ErrMsg		= 'Instant Settlement cannot be uncalculated because the match has already been completed' 
 							+ CASE WHEN @evenstatus <> 'completed' THEN ' or not being running match.' ELSE '.' END
 		
-		RETURN;
 	END
 	
 	-- OUTPUT the currenct scores and GoalRecord
-	SELECT TOP(1)
-		@homeScore 		= rs.HomeValue
-		,@awayScore 	= rs.AwayValue
-		,@goalRecord 	= ISNULL(fgng.GoalRecord, '')
-		,@IsHT  		= CASE WHEN rs.TypeId = 101 THEN 1 ELSE 0 END
-		,@InstantKey	= rs.ProviderResultDetailId
-		
-	FROM dbo.ProviderResultDetail rs WITH(NOLOCK)
-		OUTER APPLY (
-			SELECT HomeValue AS GoalRecord
-			FROM dbo.ProviderResultDetail gr WITH(NOLOCK)
-			WHERE gr.matchid 	= @MatchId
-				AND TypeId 		= 103 --FGNG
-				AND AwayValue 	= CAST(rs.ProviderResultDetailId AS VARCHAR(30))
-		) AS fgng
-	WHERE rs.matchid = @MatchId
-		AND rs.TypeId BETWEEN 101 AND 102 
-		AND rs.IsConfirmed 		= 0
-	ORDER  BY ProviderResultDetailId DESC
-	
-	
-	SELECT @hScore		= CAST(@homeScore AS INT)
-		, @aScore		= CAST(@awayScore AS INT)
-	
-	IF (
-		@hScore 		<> @livehomescore
-		OR @aScore 		<> @liveawayscore
-	)
+	IF(@ErrCode = 0)
 	BEGIN
-		SELECT @ErrCode		= 1001001
-			, @ErrMsg		= 'The current score has just been updated. Are you sure you want to uncalculate Instant Settlement in comparison with the current score ' 
-							+ @HomeScore + '-' + @AwayScore + '[' + @GoalRecord + '] (' + CASE WHEN @IsHT = 1 THEN '1H' ELSE '2H' END + ')'
-		
-		RETURN
+	
+		SELECT TOP(1)
+			@homeScore 		= rs.HomeValue
+			,@awayScore 	= rs.AwayValue
+			,@goalRecord 	= ISNULL(fgng.GoalRecord, '')
+			,@IsHT  		= CASE WHEN rs.TypeId = 101 THEN 1 ELSE 0 END
+			,@InstantKey	= rs.ProviderResultDetailId
+			
+		FROM dbo.ProviderResultDetail rs WITH(NOLOCK)
+			OUTER APPLY (
+				SELECT HomeValue AS GoalRecord
+				FROM dbo.ProviderResultDetail gr WITH(NOLOCK)
+				WHERE gr.matchid 	= @MatchId
+					AND TypeId 		= 103 --FGNG
+					AND AwayValue 	= CAST(rs.ProviderResultDetailId AS VARCHAR(30))
+			) AS fgng
+		WHERE rs.matchid = @MatchId
+			AND rs.TypeId BETWEEN 101 AND 102 
+			AND rs.IsConfirmed 		= 0
+			AND rs.ProviderResultDetailId = ISNULL(@InstantCheck, rs.ProviderResultDetailId)
+			
+		ORDER  BY rs.ProviderResultDetailId DESC
+	
+	
+		IF( @InstantCheck > 0 )
+		BEGIN
+			SELECT @hScore		= CAST(@homeScore AS INT)
+				, @aScore		= CAST(@awayScore AS INT)
+			
+			IF (
+				@hScore 		<> @livehomescore
+				OR @aScore 		<> @liveawayscore
+			)
+			BEGIN
+				SELECT @ErrCode		= 1001003
+					, @ErrMsg		= 'The current score has just been updated. Are you sure you want to uncalculate Instant Settlement in comparison with the current score ' 
+									+ @HomeScore + '-' + @AwayScore + '[' + @GoalRecord + '] (' + CASE WHEN @IsHT = 1 THEN 'HT' ELSE 'FT' END + ')'
+				
+			END
+		END
 	END
 	
 	SELECT @homeScore 	AS HomeScore
