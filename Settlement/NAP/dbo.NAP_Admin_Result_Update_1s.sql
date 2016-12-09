@@ -507,10 +507,15 @@ BEGIN
 				);	 		
 		
 		-- UPDATE OtherInfo
-		SELECT @OtherInfo = CASE WHEN OtherInfo IS NULL THEN '' ELSE OtherInfo + ';' END + 'SDT:' + CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50))
+		SELECT @OtherInfo = ISNULL(OtherInfo,'')
 		FROM dbo.ResultDetail WITH(NOLOCK)
 		WHERE matchid 		= @matchid 
 			AND ResourceID 	= '01' --HT
+		
+		SET @OtherInfo = CASE 
+							WHEN CHARINDEX('SDT:',@OtherInfo) > 0 THEN REPLACE(@OtherInfo,SUBSTRING(@OtherInfo,CHARINDEX('SDT:',@OtherInfo) + 4, 1),CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50))) 
+							ELSE @OtherInfo + 'SDT:' + CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50)) + ';'  
+						END
 		
 		UPDATE dbo.ResultDetail WITH(ROWLOCK,UPDLOCK)
 		SET OtherInfo 		=  @OtherInfo
