@@ -173,7 +173,7 @@ BEGIN
 
 	-- Get Site	
 	CREATE TABLE #tmp_Site (Site VARCHAR(50))
-	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), srecommend INT PRIMARY KEY)
+	CREATE TABLE #tmp_Company (srecommend INT PRIMARY KEY)
 	CREATE TABLE #tmp_MemIDs (CustID INT PRIMARY KEY)	
 	
 	IF @Site <> 'ALL'
@@ -181,12 +181,24 @@ BEGIN
 		INSERT INTO #tmp_Site (Site)
 		SELECT RTRIM(LTRIM(val)) FROM dbo.strSplit(@Site, ',')
 
-		INSERT INTO #tmp_Company (SiteName, Srecommend)
-		SELECT s.Site, c.srecommend
-		FROM #tmp_Site s
-			INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
-			INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
-		WHERE c.roleid = 4
+		IF EXISTS (SELECT TOP 1 1 FROM #tmp_Site WHERE Site IN ('MBC Group'))
+		BEGIN
+			INSERT INTO #tmp_Company (srecommend)
+			SELECT c.custid
+			FROM dbo.Customer c WITH(NOLOCK)
+				LEFT JOIN dbo.Dep_CustSuper d WITH(NOLOCK) ON c.custid = d.custid
+			WHERE c.roleid = 4 AND d.custid IS NULL
+		END
+
+		IF EXISTS (SELECT TOP 1 1 FROM #tmp_Site WHERE Site NOT IN ('MBC Group'))
+		BEGIN
+			INSERT INTO #tmp_Company (srecommend)
+			SELECT c.srecommend
+			FROM #tmp_Site s
+				INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
+				INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
+			WHERE c.roleid = 4
+		END
 
 		IF @Username <> ''
 		BEGIN
@@ -399,7 +411,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
 				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
-				AND s.RefTable = 1		
+				AND s.RefTable = 2		
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 				AND (b.currency = @Currency OR @Currency IN (0, -1))
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
@@ -734,19 +746,19 @@ BEGIN
 	END
 
 	-- Return Data
-	;WITH Result AS (
+	IF (@Currency = -1) -- BaseRM
+	BEGIN
 		SELECT
 			COUNT(DISTINCT custid) AS NoOfPlayers,
 			SUM(BetCount) AS BetCount,
-			CurrencyID,
-			SUM(TotalBets)  AS TotalBets,
-			SUM(TotalWins) AS TotalWins,
-			SUM(TotalRefund) AS TotalRefund,
-			SUM(CompanyTurnover) AS CompanyTurnover,		
-			SUM(CompanyGrossIncome) AS CompanyGrossIncome,
-			SUM(CompanyComm) AS CompanyComm
+			'RM' AS Currency,
+			SUM(TotalBetsBase)  AS TotalBets,
+			SUM(TotalWinsBase) AS TotalWins,
+			SUM(TotalRefundBase) AS TotalRefund,
+			SUM(CompanyTurnoverBase) AS CompanyTurnover,		
+			SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
+			SUM(CompanyCommBase) AS CompanyComm
 		FROM #Data
-		GROUP BY CurrencyID
 		HAVING
 			(
 				@TotalBetType = 0
@@ -759,21 +771,50 @@ BEGIN
 				OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
 				OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
 			)
-	)
-	SELECT
-		NoOfPlayers,
-		e.Currency,
-		r.BetCount,
-		r.TotalBets,
-		r.TotalWins,
-		r.TotalRefund,
-		r.CompanyTurnover,
-		r.CompanyGrossIncome,
-		r.CompanyComm
-	FROM Result r
-		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
-	ORDER BY e.Currency
-
+	END
+	ELSE
+	BEGIN
+		;WITH Result AS (
+			SELECT
+				COUNT(DISTINCT custid) AS NoOfPlayers,
+				SUM(BetCount) AS BetCount,
+				CurrencyID,
+				SUM(TotalBets)  AS TotalBets,
+				SUM(TotalWins) AS TotalWins,
+				SUM(TotalRefund) AS TotalRefund,
+				SUM(CompanyTurnover) AS CompanyTurnover,		
+				SUM(CompanyGrossIncome) AS CompanyGrossIncome,
+				SUM(CompanyComm) AS CompanyComm
+			FROM #Data
+			GROUP BY CurrencyID
+			HAVING
+				(
+					@TotalBetType = 0
+					OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
+					OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
+				)
+				AND
+				(
+					@GameIncomeType = 0
+					OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
+					OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
+				)
+		)
+		SELECT
+			NoOfPlayers,
+			e.Currency,
+			r.BetCount,
+			r.TotalBets,
+			r.TotalWins,
+			r.TotalRefund,
+			r.CompanyTurnover,
+			r.CompanyGrossIncome,
+			r.CompanyComm
+		FROM Result r
+			INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
+		ORDER BY e.Currency
+	END
+	
 	--- Total
 	SELECT
 		COUNT(DISTINCT custid) AS NoOfPlayers,

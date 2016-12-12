@@ -289,9 +289,11 @@ BEGIN
 		AND ( @Site = 'ALL'
 				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
-		AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-			OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-			OR @HousePTType = 0)
+		AND (
+			@HousePTType = 0
+			OR (@HousePTType = -1 AND b.tpositiontaking >= 1 - @HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+			OR (@HousePTType = 1 AND b.tpositiontaking <= 1 - @HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+			)
 		AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
 	GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency, s.RefTable, s.EvenType, b.matchid, s.ProductID	
 
@@ -393,9 +395,11 @@ BEGIN
 			AND ( @Site = 'ALL'
 				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
-			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				OR @HousePTType = 0) 
+			AND (
+				@HousePTType = 0
+				OR (@HousePTType = -1 AND b.tpositiontaking >= 1 - @HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+				OR (@HousePTType = 1 AND b.tpositiontaking <= 1 - @HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+				) 
 			AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
 		GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency
 		
@@ -450,9 +454,11 @@ BEGIN
 			AND ( @Site = 'ALL'
 				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
-			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				OR @HousePTType = 0) 
+			AND (
+				@HousePTType = 0
+				OR (@HousePTType = -1 AND b.tpositiontaking >= 1 - @HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+				OR (@HousePTType = 1 AND b.tpositiontaking <= 1 - @HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+				)
 			AND (@DrillDownCurrency = 0 OR b.currency = @DrillDownCurrency)
 		GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency
 	END
