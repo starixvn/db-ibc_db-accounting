@@ -319,8 +319,8 @@ BEGIN
 		,(a.winlost - b.winlost) AS Balance
 		,81
 		,a.gametypeid
-	FROM #BeforeUpd b
-		INNER JOIN #AfterUpd a 
+	FROM #BalanceBefore b
+		INNER JOIN #BalanceAfter a 
 			ON	a.custid = b.custid
 				AND a.winlostdate = b.winlostdate
 				AND a.gametypeid = b.gametypeid
@@ -338,8 +338,8 @@ BEGIN
 		,ABS(a.winlost - b.winlost) AS Balance
 		,81
 		,a.gametypeid
-	FROM #BeforeUpd b
-		INNER JOIN #AfterUpd a 
+	FROM #BalanceBefore b
+		INNER JOIN #BalanceAfter a 
 			ON	a.custid = b.custid
 				AND a.winlostdate = b.winlostdate
 				AND a.gametypeid = b.gametypeid
@@ -438,7 +438,6 @@ BEGIN
 		END
 	END
 END
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s161] TO [bodbAdminNet] AS [dbo]
 GO

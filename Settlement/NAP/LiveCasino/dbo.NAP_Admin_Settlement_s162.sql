@@ -118,7 +118,7 @@ BEGIN
 				,@TotalAccount_BalanceUpdate	INT
 			
 		INSERT INTO #BalanceBefore
-		SELECT	custid, SUM(winlost-actual_stake+playercomm), SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END)
+		SELECT	custid, SUM(winlost-actual_stake+playercomm), SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake ELSE 0 END)
 		FROM	dbo.bettrans with (rowlock)
 		WHERE	matchid = @matchid 
 				--AND bettype = @Bettype
