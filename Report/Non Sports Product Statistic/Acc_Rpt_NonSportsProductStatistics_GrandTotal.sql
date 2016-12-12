@@ -231,10 +231,15 @@ BEGIN
 		BetCount BIGINT,
 		CurrencyID INT,
 		TotalBets MONEY,
+		TotalBetsBase MONEY,
 		TotalWins MONEY,
+		TotalWinsBase MONEY,
 		CompanyTurnover MONEY,
+		CompanyTurnoverBase MONEY,
 		CompanyGrossIncome MONEY,
+		CompanyGrossIncomeBase MONEY,
 		CompanyComm MONEY,
+		CompanyCommBase MONEY,
 		RefTable TINYINT, EvenType INT DEFAULT (-1), Matchid INT DEFAULT (-1), ProductID INT, statusID TINYINT
 	)
 
@@ -252,17 +257,30 @@ BEGIN
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				CompanyTurnoverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase,
 				RefTable, EvenType, Matchid, ProductID, statusID
 			)
 			SELECT
 				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
-				SUM(actual_stake * actualrate) AS TotalBets,
-				SUM(winlost * actualrate) AS TotalWins,
-				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnover,		
-				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncome,
-				SUM(scomm *actualrate) AS CompanyComm,
+
+				SUM(actual_stake) AS TotalBets,
+				SUM(winlost) AS TotalWins,
+				SUM((1- b.tpositiontaking) * b.stake) AS CompanyTurnover,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)) AS CompanyGrossIncome,
+				SUM(scomm) AS CompanyComm,
+
+				SUM(actual_stake * actualrate) AS TotalBetsBase,
+				SUM(winlost * actualrate) AS TotalWinsBase,
+				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnoverBase,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
+				SUM(scomm * actualrate) AS CompanyCommBase,
+
 				0 AS RefTable, s.EvenType, b.matchid, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM  dbo.bettrans b WITH (NOLOCK)
@@ -296,17 +314,30 @@ BEGIN
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				CompanyTurnoverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase,
 				RefTable, ProductID, statusID
 			)
 			SELECT
 				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
-				SUM(actual_stake * actualrate) AS TotalBets,
-				SUM(winlost * actualrate) AS TotalWins,
-				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnover,		
-				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncome,
-				SUM(scomm *actualrate) AS CompanyComm,
+
+				SUM(actual_stake) AS TotalBets,
+				SUM(winlost) AS TotalWins,
+				SUM((1- b.tpositiontaking) * b.stake) AS CompanyTurnover,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)) AS CompanyGrossIncome,
+				SUM(scomm) AS CompanyComm,
+
+				SUM(actual_stake * actualrate) AS TotalBetsBase,
+				SUM(winlost * actualrate) AS TotalWinsBase,
+				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnoverBase,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
+				SUM(scomm * actualrate) AS CompanyCommBase,
+
 				1 AS RefTable, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransRnG b WITH (NOLOCK)
@@ -339,17 +370,30 @@ BEGIN
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				CompanyTurnoverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase,
 				RefTable, ProductID, statusID
 			)
 			SELECT
 				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
-				SUM(actual_stake * actualrate) AS TotalBets,
-				SUM(winlost * actualrate) AS TotalWins,
-				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnover,		
-				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncome,
-				SUM(scomm *actualrate) AS CompanyComm,
+
+				SUM(actual_stake) AS TotalBets,
+				SUM(winlost) AS TotalWins,
+				SUM((1- b.tpositiontaking) * b.stake) AS CompanyTurnover,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)) AS CompanyGrossIncome,
+				SUM(scomm) AS CompanyComm,
+
+				SUM(actual_stake * actualrate) AS TotalBetsBase,
+				SUM(winlost * actualrate) AS TotalWinsBase,
+				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnoverBase,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
+				SUM(scomm * actualrate) AS CompanyCommBase,
+
 				1 AS RefTable, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransLC b WITH (NOLOCK)
@@ -384,17 +428,30 @@ BEGIN
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				CompanyTurnoverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase,
 				RefTable, EvenType, matchid, ProductID, statusID
 			)
 			SELECT
 				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
-				SUM(actual_stake * actualrate) AS TotalBets,
-				SUM(winlost * actualrate) AS TotalWins,
-				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnover,		
-				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncome,
-				SUM(scomm *actualrate) AS CompanyComm,
+
+				SUM(actual_stake) AS TotalBets,
+				SUM(winlost) AS TotalWins,
+				SUM((1- b.tpositiontaking) * b.stake) AS CompanyTurnover,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)) AS CompanyGrossIncome,
+				SUM(scomm) AS CompanyComm,
+
+				SUM(actual_stake * actualrate) AS TotalBetsBase,
+				SUM(winlost * actualrate) AS TotalWinsBase,
+				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnoverBase,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
+				SUM(scomm *actualrate) AS CompanyCommBase,
+
 				0 AS RefTable, s.EvenType, b.matchid, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM  dbo.bettrans b WITH (NOLOCK)
@@ -427,17 +484,30 @@ BEGIN
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				CompanyTurnoverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase,
 				RefTable, ProductID, statusID
 			)
 			SELECT
 				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
-				SUM(actual_stake * actualrate) AS TotalBets,
-				SUM(winlost * actualrate) AS TotalWins,
-				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnover,		
-				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncome,
-				SUM(scomm *actualrate) AS CompanyComm,
+
+				SUM(actual_stake) AS TotalBets,
+				SUM(winlost) AS TotalWins,
+				SUM((1- b.tpositiontaking) * b.stake) AS CompanyTurnover,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)) AS CompanyGrossIncome,
+				SUM(scomm) AS CompanyComm,
+
+				SUM(actual_stake * actualrate) AS TotalBetsBase,
+				SUM(winlost * actualrate) AS TotalWinsBase,
+				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnoverBase,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
+				SUM(scomm *actualrate) AS CompanyCommBase,
+
 				1 AS RefTable, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransRnG b WITH (NOLOCK)
@@ -469,17 +539,30 @@ BEGIN
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				CompanyTurnoverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase,
 				RefTable, ProductID, statusID
 			)
 			SELECT
 				CASE WHEN b.StatusID IN (111,112,113) THEN b.CustID ELSE NULL END AS CustID,
 				COUNT(b.transid) AS BetCount,
 				b.currency,
-				SUM(actual_stake * actualrate) AS TotalBets,
-				SUM(winlost * actualrate) AS TotalWins,
-				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnover,		
-				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncome,
-				SUM(scomm *actualrate) AS CompanyComm,
+
+				SUM(actual_stake) AS TotalBets,
+				SUM(winlost) AS TotalWins,
+				SUM((1- b.tpositiontaking) * b.stake) AS CompanyTurnover,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)) AS CompanyGrossIncome,
+				SUM(scomm) AS CompanyComm,
+
+				SUM(actual_stake * actualrate) AS TotalBetsBase,
+				SUM(winlost * actualrate) AS TotalWinsBase,
+				SUM((1- b.tpositiontaking) * b.stake * actualrate) AS CompanyTurnoverBase,		
+				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
+				SUM(scomm *actualrate) AS CompanyCommBase,
+
 				2 AS RefTable, s.ProductID,
 				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransLC b WITH (NOLOCK)
@@ -507,11 +590,17 @@ BEGIN
 		BetCount INT,
 		CurrencyID INT,
 		TotalBets MONEY,
+		TotalBetsBase MONEY,
 		TotalWins MONEY,
+		TotalWinsBase MONEY,
 		TotalRefund MONEY,
+		TotalRefundBase MONEY,
 		CompanyTurnover MONEY,
+		CompanyTurnoverBase MONEY,
 		CompanyGrossIncome MONEY,
-		CompanyComm MONEY
+		CompanyGrossIncomeBase MONEY,
+		CompanyComm MONEY,
+		CompanyCommBase MONEY
 	)
 	--- Check condition 
 	IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE ProductID NOT IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
@@ -526,7 +615,13 @@ BEGIN
 			TotalRefund,
 			CompanyTurnover,
 			CompanyGrossIncome,
-			CompanyComm
+			CompanyComm,
+			TotalBetsBase,
+			TotalWinsBase,
+			TotalRefundBase,
+			CompanyTurnoverBase,
+			CompanyGrossIncomeBase,
+			CompanyCommBase
 		)
 		SELECT
 			custid,
@@ -537,7 +632,14 @@ BEGIN
 			SUM(CASE WHEN statusID = 103 THEN TotalBets ELSE 0 END) AS TotalRefund,
 			SUM(CASE WHEN statusID = 112 THEN CompanyTurnover ELSE 0 END) AS CompanyTurnover,		
 			- SUM(CASE WHEN statusID = 112 THEN CompanyGrossIncome ELSE 0 END) AS CompanyGrossIncome,
-			- SUM(CASE WHEN statusID = 112 THEN CompanyComm ELSE 0 END) AS CompanyComm
+			- SUM(CASE WHEN statusID = 112 THEN CompanyComm ELSE 0 END) AS CompanyComm,
+
+			SUM(CASE WHEN statusID = 112 THEN TotalBetsBase ELSE 0 END) AS TotalBets,
+			SUM(CASE WHEN statusID = 112 THEN TotalWinsBase ELSE 0 END) AS TotalWins,
+			SUM(CASE WHEN statusID = 103 THEN TotalBetsBase ELSE 0 END) AS TotalRefund,
+			SUM(CASE WHEN statusID = 112 THEN CompanyTurnoverBase ELSE 0 END) AS CompanyTurnover,		
+			- SUM(CASE WHEN statusID = 112 THEN CompanyGrossIncomeBase ELSE 0 END) AS CompanyGrossIncome,
+			- SUM(CASE WHEN statusID = 112 THEN CompanyCommBase ELSE 0 END) AS CompanyComm
 		FROM  #tmp_bettrans
 		WHERE ProductID NOT IN (3, 4, 5)
 		GROUP BY custid, CurrencyID
@@ -555,7 +657,13 @@ BEGIN
 			TotalRefund,
 			CompanyTurnover,
 			CompanyGrossIncome,
-			CompanyComm
+			CompanyComm,
+			TotalBetsBase,
+			TotalWinsBase,
+			TotalRefundBase,
+			CompanyTurnoverBase,
+			CompanyGrossIncomeBase,
+			CompanyCommBase
 		)
 		SELECT
 			custid,
@@ -566,7 +674,14 @@ BEGIN
 			SUM(CASE WHEN statusID = 103 THEN TotalBets ELSE 0 END) AS TotalRefund,
 			SUM(CASE WHEN statusID = 112 THEN CompanyTurnover ELSE 0 END) AS CompanyTurnover,		
 			- SUM(CASE WHEN statusID = 112 THEN CompanyGrossIncome ELSE 0 END) AS CompanyGrossIncome,
-			- SUM(CASE WHEN statusID = 112 THEN CompanyComm ELSE 0 END) AS CompanyComm
+			- SUM(CASE WHEN statusID = 112 THEN CompanyComm ELSE 0 END) AS CompanyComm,
+
+			SUM(CASE WHEN statusID = 112 THEN b.TotalBetsBase ELSE 0 END) AS TotalBetsBase,
+			SUM(CASE WHEN statusID = 112 THEN b.TotalWinsBase ELSE 0 END) AS TotalWinsBase,
+			SUM(CASE WHEN statusID = 103 THEN b.TotalBetsBase ELSE 0 END) AS TotalRefundBase,
+			SUM(CASE WHEN statusID = 112 THEN b.CompanyTurnoverBase ELSE 0 END) AS CompanyTurnoverBase,		
+			- SUM(CASE WHEN statusID = 112 THEN b.CompanyGrossIncomeBase ELSE 0 END) AS CompanyGrossIncomeBase,
+			- SUM(CASE WHEN statusID = 112 THEN b.CompanyCommBase ELSE 0 END) AS CompanyCommBase
 		FROM  #tmp_bettrans b
 			INNER JOIN dbo.match m WITH (NOLOCK) ON m.matchid = b.matchid
 		WHERE ProductID IN (3, 4, 5) AND b.EvenType = 1
@@ -588,18 +703,32 @@ BEGIN
 			TotalRefund,
 			CompanyTurnover,
 			CompanyGrossIncome,
-			CompanyComm
+			CompanyComm,
+			TotalBetsBase,
+			TotalWinsBase,
+			TotalRefundBase,
+			CompanyTurnoverBase,
+			CompanyGrossIncomeBase,
+			CompanyCommBase
 		)
 		SELECT
 			custid,
 			SUM(CASE WHEN statusID = 112 THEN BetCount ELSE 0 END) AS BetCount,
 			CurrencyID,
+
 			SUM(CASE WHEN statusID = 112 THEN TotalBets ELSE 0 END) AS TotalBets,
 			SUM(CASE WHEN statusID = 112 THEN TotalWins ELSE 0 END) AS TotalWins,
 			SUM(CASE WHEN statusID = 103 THEN TotalBets ELSE 0 END) AS TotalRefund,
 			SUM(CASE WHEN statusID = 112 THEN CompanyTurnover ELSE 0 END) AS CompanyTurnover,		
 			- SUM(CASE WHEN statusID = 112 THEN CompanyGrossIncome ELSE 0 END) AS CompanyGrossIncome,
-			- SUM(CASE WHEN statusID = 112 THEN CompanyComm ELSE 0 END) AS CompanyComm
+			- SUM(CASE WHEN statusID = 112 THEN CompanyComm ELSE 0 END) AS CompanyComm,
+
+			SUM(CASE WHEN statusID = 112 THEN b.TotalBetsBase ELSE 0 END) AS TotalBetsBase,
+			SUM(CASE WHEN statusID = 112 THEN b.TotalWinsBase ELSE 0 END) AS TotalWinsBase,
+			SUM(CASE WHEN statusID = 103 THEN b.TotalBetsBase ELSE 0 END) AS TotalRefundBase,
+			SUM(CASE WHEN statusID = 112 THEN b.CompanyTurnoverBase ELSE 0 END) AS CompanyTurnoverBase,		
+			- SUM(CASE WHEN statusID = 112 THEN b.CompanyGrossIncomeBase ELSE 0 END) AS CompanyGrossIncomeBase,
+			- SUM(CASE WHEN statusID = 112 THEN b.CompanyCommBase ELSE 0 END) AS CompanyCommBase
 		FROM  #tmp_bettrans b
 			INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
 		WHERE b.ProductID = 5 AND b.EvenType = 3
@@ -652,12 +781,13 @@ BEGIN
 	SELECT
 		COUNT(DISTINCT custid) AS NoOfPlayers,
 		SUM(BetCount) AS BetCount,
-		SUM(TotalBets)  AS TotalBets,
-		SUM(TotalWins) AS TotalWins,
-		SUM(TotalRefund) AS TotalRefund,
-		SUM(CompanyTurnover) AS CompanyTurnover,		
-		SUM(CompanyGrossIncome) AS CompanyGrossIncome,
-		SUM(CompanyComm) AS CompanyComm
+		'RM' AS Currency,
+		SUM(TotalBetsBase)  AS TotalBets,
+		SUM(TotalWinsBase) AS TotalWins,
+		SUM(TotalRefundBase) AS TotalRefund,
+		SUM(CompanyTurnoverBase) AS CompanyTurnover,		
+		SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
+		SUM(CompanyCommBase) AS CompanyComm
 	FROM #Data
 	HAVING
 		(
