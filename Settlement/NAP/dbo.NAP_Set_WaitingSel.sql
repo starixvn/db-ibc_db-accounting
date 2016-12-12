@@ -25,6 +25,7 @@ AS
 		- 20160805@Kathy: Write log duration
 		- 20160811@Patrick: Rearrange code & remove link server to DBPRO
 		- 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
+		- 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
 		- 20160509@Kathy: Fast Market integration [Remine:#56367]
 	
 	Param's explanation:  
@@ -40,7 +41,23 @@ BEGIN
 	IF ISNUMERIC(@MatchCode) = 1
 		SET @matchid = CAST(@MatchCode AS INT)
 	
-	DECLARE @TempMatch TABLE (MatchId INT, SingleStatus INT, ParlayStatus INT, IsSingle BIT, IsMixParlay BIT, IsExistFGLG BIT, IsExistHTFGLG BIT, AutoSettleResultStatus VARCHAR(50), AutoSettleFastMarket VARCHAR(50))
+	DECLARE @TempMatch TABLE (MatchId INT
+		,SingleStatus 					INT
+		,ParlayStatus 					INT
+		,IsSingle 						BIT
+		,IsMixParlay 					BIT
+		,IsExistFGLG 					BIT
+		,IsExistHTFGLG 					BIT
+		,SettlementStatusID 			TINYINT
+		,FM_SettlementStatusID 			TINYINT
+		,IsExistAutoBettypes 			BIT
+		,IsExistAutoBettypesParlay 		BIT
+		,IsRunningAutoBettypes			BIT
+		,IsRunningAutoBettypesParlay	BIT
+		,MissingAutoResult				BIT
+		,IsExistFM						BIT
+		,IsRunningFM					BIT
+	)
 
 	;WITH SingleTicket AS (
 		SELECT matchid, MIN(IsCalculating) AS IsCalculating
@@ -54,7 +71,10 @@ BEGIN
 		GROUP BY matchid 
 	)
 	
-	INSERT INTO @TempMatch(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay, IsExistFGLG, IsExistHTFGLG, AutoSettleResultStatus, AutoSettleFastMarket)
+	INSERT INTO @TempMatch(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay, IsExistFGLG, IsExistHTFGLG
+		, IsExistAutoBettypes, IsExistAutoBettypesParlay, IsRunningAutoBettypes, IsRunningAutoBettypesParlay, MissingAutoResult
+		, IsExistFM, IsRunningFM
+	)
 	SELECT ISNULL(sg.matchid, pl.matchid) AS MatchId
 		, sg.IsCalculating AS SingleStatus
 		, pl.IsCalculating AS ParlayStatus
@@ -62,12 +82,16 @@ BEGIN
 		, CAST(ISNULL(pl.IsCalculating, 0) AS BIT) AS IsMixParlay
 		, CONVERT(BIT, 0) AS IsExistFGLG
 		, CONVERT(BIT, 0) AS IsExistHTFGLG
-		, CONVERT(VARCHAR(50), 'N/A') AS AutoSettleResultStatus
-		, CONVERT(VARCHAR(50), 'N/A') AS AutoSettleFastMarket
+		, 0 AS IsExistAutoBettypes
+		, 0 AS IsExistAutoBettypesParlay
+		, 0 AS IsRunningAutoBettypes
+		, 0 AS IsRunningAutoBettypesParlay
+		, 0 AS MissingAutoResult
+		, 0 AS IsExistFM
+		, 0 AS IsRunningFM
 	FROM SingleTicket sg
 		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid
 	
-	DECLARE @TmpAutoSettle1s TABLE (MatchId INT, SettlementStatusID INT, FM_SettlementStatusID INT)
 	;WITH cteAutoResultDetail
 	AS(
 		SELECT	CASE 
@@ -78,55 +102,103 @@ BEGIN
 		FROM	dbo.f_Set_GetGroupBettypes()
 		WHERE	IsAuto = 1
 	)
-	INSERT INTO @TmpAutoSettle1s(MatchId, SettlementStatusID, FM_SettlementStatusID)
-	SELECT	r.MatchId
-			,r.SettlementStatusID
-			,r.FM_SettlementStatusID
+	UPDATE	m
+		SET SettlementStatusID = rs.SettlementStatusID
+			,FM_SettlementStatusID = rs.FM_SettlementStatusID
 	FROM	@TempMatch m
 		CROSS APPLY (
-			SELECT	TOP 1 r.matchid
+			SELECT	TOP 1 r.MatchID
 					,MIN(CASE WHEN c.groupId = 8 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS SettlementStatusID
 					,MIN(CASE WHEN c.groupId = 9 AND r.ResourceId % 100 = 0 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS FM_SettlementStatusID
 			FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
 				INNER JOIN cteAutoResultDetail c
-					ON	r.ResourceId LIKE c.ResourceId
-			WHERE	r.MatchId = m.matchid
-					AND @sporttype IN (0,1)
-			GROUP BY r.MatchId
-		)r
+					ON	r.MatchId = m.MatchId
+						AND r.ResourceId LIKE c.ResourceId
+			GROUP BY r.MatchID
+		) rs
 	
+	CREATE TABLE #tblBetStatus (matchid INT, bettype SMALLINT, isRunning INT, groupId TINYINT ,IsParlay	 BIT)
 	
-	UPDATE t
-	SET AutoSettleResultStatus = CASE	
-									WHEN tt.SettlementStatusID IS NULL THEN 'N/A'
-									WHEN tt.SettlementStatusID = 0 THEN 'Running'
-									WHEN tt.SettlementStatusID > 0 THEN 'Completed'
-									ELSE '' 
-								END
-		,AutoSettleFastMarket = CASE 
-									WHEN tt.FM_SettlementStatusID IS NULL THEN 'N/A'
-									WHEN tt.FM_SettlementStatusID = 0 THEN 'Running'
-									WHEN tt.FM_SettlementStatusID > 0 THEN 'Completed'
-									ELSE ''
-								END
-	FROM @TempMatch t
-	INNER JOIN @TmpAutoSettle1s tt ON t.MatchId = tt.MatchId
-		
-	DECLARE @TmpBetCount TABLE (MatchId INT, IsExistFGLG INT, IsExistHTFGLG INT)
-	INSERT INTO @TmpBetCount(MatchId, IsExistFGLG, IsExistHTFGLG)
-	SELECT b.matchid
-		, SUM(CASE WHEN b.bettype = 14 THEN 1 ELSE 0 END) AS IsExistFGLG
-		, SUM(CASE WHEN b.bettype = 127 THEN 1 ELSE 0 END) AS IsExistHTFGLG
-	FROM dbo.bettrans b WITH(NOLOCK)
-	WHERE b.matchid IN (SELECT MatchId FROM @TempMatch)
-		AND b.bettype IN (14 , 127)
-	GROUP BY b.matchid
+	INSERT INTO #tblBetStatus (matchid, bettype, isRunning, groupId, IsParlay)
+	SELECT b.matchid, b.bettype, b.IsRunning, f.GroupId, 0
+	FROM dbo.f_Set_GetGroupBettypes() f
+		INNER JOIN (
+			SELECT  b.matchid, b.bettype, SUM (CASE WHEN b.statusID = 0 THEN 1 ELSE 0 END) AS IsRunning
+			FROM	dbo.bettrans b WITH (NOLOCK)
+			WHERE matchid IN (SELECT matchid FROM @TempMatch)
+				AND 1 = CASE 
+							WHEN bettype IN (14,127) THEN 1
+							WHEN bettype NOT IN (14,127) AND statusid = 0 THEN 1
+							ELSE 0 
+						END
+				AND b.statusID NOT IN (101, 102)
+			GROUP BY b.matchid, b.bettype
+		) b
+			ON	f.BetType = b.bettype
+	WHERE f.GroupId IN (3,4,8,9)
 
+	INSERT INTO #tblBetStatus (matchid, bettype, isRunning, groupId, IsParlay)
+	SELECT bm.matchid, bm.bettype, bm.IsRunning, f.GroupId, 1
+	FROM dbo.f_Set_GetGroupBettypes() f
+		INNER JOIN (
+			SELECT  bm.matchid, bm.bettype, SUM (CASE WHEN bm.statusID = 0 THEN 1 ELSE 0 END) AS IsRunning
+			FROM	dbo.bettransm bm WITH (NOLOCK)
+			WHERE matchid IN (SELECT matchid FROM @TempMatch)
+				AND bm.statusID NOT IN (101, 102)
+			GROUP BY bm.matchid, bm.bettype
+		) bm
+			ON	f.BetType = bm.bettype
+	WHERE f.GroupId = 8
+
+	;WITH cteBetStatus
+	AS(
+		SELECT matchid
+			,MAX(CASE WHEN groupId = 3 THEN 1 ELSE 0 END) AS IsExistHTFGLG
+			,MAX(CASE WHEN groupId = 4 THEN 1 ELSE 0 END) AS IsExistFGLG
+			,MAX(CASE WHEN groupId = 8 AND IsParlay = 0 THEN 1 ELSE 0 END) AS IsExistAutoBettypes
+			,MAX(CASE WHEN groupId = 8 AND IsParlay = 1 THEN 1 ELSE 0 END) AS IsExistAutoBettypesParlay
+			,MAX(CASE WHEN groupId = 8 AND IsParlay = 0 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsRunningAutoBettypes
+			,MAX(CASE WHEN groupId = 8 AND IsParlay = 1 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsRunningAutoBettypesParlay
+			,MAX(CASE WHEN groupId = 9 AND IsParlay = 0 THEN 1 ELSE 0 END) AS IsExistFM
+			,MAX(CASE WHEN groupId = 9 AND IsParlay = 0 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsRunningFM
+		FROM #tblBetStatus
+		GROUP BY matchid
+	)
 	UPDATE t
-	SET IsExistFGLG = CASE WHEN t.IsExistFGLG > 0 THEN 1 ELSE 0 END
-		, IsExistHTFGLG = CASE WHEN t.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
+	SET IsExistFGLG = CASE WHEN tt.IsExistFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistHTFGLG = CASE WHEN tt.IsExistHTFGLG > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypes = CASE WHEN tt.IsExistAutoBettypes > 0 THEN 1 ELSE 0 END
+		,IsExistAutoBettypesParlay = CASE WHEN tt.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
+		,IsRunningAutoBettypes = CASE WHEN tt.IsRunningAutoBettypes > 0 THEN 1 ELSE 0 END
+		,IsRunningAutoBettypesParlay = CASE WHEN tt.IsRunningAutoBettypesParlay > 0 THEN 1 ELSE 0 END
+		,IsExistFM = CASE WHEN tt.IsExistFM > 0 THEN 1 ELSE 0 END
+		,IsRunningFM = CASE WHEN tt.IsRunningFM > 0 THEN 1 ELSE 0 END
 	FROM @TempMatch t
-	INNER JOIN @TmpBetCount tt ON t.MatchId = tt.MatchId
+	INNER JOIN cteBetStatus tt ON t.MatchId = tt.MatchId	
+	
+	;WITH cteAutoBettypes
+	AS(
+		SELECT	CASE 
+					WHEN BetType IN (160,164,169,180,216) THEN CAST(BetType AS VARCHAR(20)) + '__'
+					ELSE CAST(BetType AS VARCHAR(20))
+				END AS ResourceId
+				,BetType
+		FROM	dbo.f_Set_GetGroupBettypes()
+		WHERE	GroupId = 8
+	)	
+	UPDATE m
+		SET MissingAutoResult = t.MissingAutoResult
+	FROM @TempMatch m
+		INNER JOIN (
+			SELECT  b.matchid, COUNT(1) MissingAutoResult
+			FROM	#tblBetStatus b
+				INNER JOIN cteAutoBettypes c
+					ON b.bettype = c.bettype
+			WHERE	IsParLay = 1		
+					AND NOT EXISTS (SELECT TOP 1 1 FROM DBPRO.bodb02.dbo.ResultDetail WITH(NOLOCK) WHERE b.matchid = MatchId AND ResourceId LIKE c.ResourceId)
+			GROUP BY b.matchid
+	) t
+		ON m.matchid = t.matchid
 	
 	SELECT m.matchid, m.leagueid, m.homeid, m.awayid, m.matchcode, m.finalhomescore, m.finalawayscore
 		, m.betstatus, m.sporttype, m.goalrecord
@@ -153,8 +225,19 @@ BEGIN
 		, IsExistHTFGLG
 		, tm.SingleStatus AS IsCalculatingSingle
 		, tm.ParlayStatus AS IsCalculatingMP
-		, AutoSettleResultStatus
-		, tm.AutoSettleFastMarket
+		, CASE WHEN tm.SettlementStatusID IS NULL AND tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay = 0 THEN 'N/A'
+				WHEN tm.SettlementStatusID = 0 OR tm.IsRunningAutoBettypes > 0 THEN 'Running'
+				WHEN ISNULL(tm.MissingAutoResult,0) > 0 AND tm.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN tm.SettlementStatusID > 0 
+					OR (tm.IsExistAutoBettypes > 0 AND tm.IsRunningAutoBettypes = 0)
+					OR (tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay > 0 AND tm.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
+			ELSE '' END AS AutoSettleResultStatus
+		, CASE
+			WHEN tm.FM_SettlementStatusId IS NULL AND tm.IsExistFM = 0 THEN 'N/A'
+			WHEN tm.FM_SettlementStatusId = 0 OR tm.IsRunningFM > 0 THEN 'Running'
+			WHEN tm.FM_SettlementStatusId > 0 OR (tm.IsExistFM > 0 AND tm.IsRunningFM = 0) THEN 'Completed'
+			ELSE ''
+		END AS AutoSettleFastMarket
 	FROM dbo.match m WITH(NOLOCK)
 		INNER JOIN @TempMatch tm ON m.matchid = tm.matchid
 		LEFT JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid

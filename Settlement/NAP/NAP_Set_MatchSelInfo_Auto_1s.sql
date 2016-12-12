@@ -19,7 +19,20 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON 
-
+	
+	DECLARE @IsExistFGLG 		BIT = 0 OUTPUT
+			,@IsExistHTFGLG  	BIT = 0 OUTPUT
+	
+	IF EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.bettrans b WITH (NOLOCK) WHERE matchid = @matchId AND StatusId NOT IN (101, 102) AND Bettype = 14)
+		SET @IsExistFGLG = 1
+	ELSE EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.bettransm bm WITH (NOLOCK) WHERE matchid = @matchId AND StatusId NOT IN (101, 102) AND Bettype = 14)
+		SET @IsExistFGLG = 1
+		
+	IF EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.bettrans b WITH (NOLOCK) WHERE matchid = @matchId AND StatusId NOT IN (101, 102) AND Bettype = 127)
+		SET @IsExistHTFGLG = 1
+	ELSE EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.bettransm bm WITH (NOLOCK) WHERE matchid = @matchId AND StatusId NOT IN (101, 102) AND Bettype = 127)
+		SET @IsExistHTFGLG = 1
+		
 	-- Match Info 
 	SELECT	m.LeagueID
 			,m.MatchID
@@ -28,10 +41,14 @@ BEGIN
 			,playTime = datediff(minute, m.kickofftime, CURRENT_TIMESTAMP) 
 			,m.homeid
 			,m.awayid
+			,m.betstatus
+			,m.GoalRecord
 			,m.hthomescore AS HalfTimeHomeScore
 			,m.htawayscore AS HalfTimeAwayScore
 			,m.finalhomescore
 			,m.finalawayscore
+			,@IsExistFgLg AS IsExistFgLg
+            ,@IsExistHtFgLg AS IsExistHtFgLg
 	FROM	dbo.Match m WITH (NOLOCK)
 	WHERE	MatchID = @MatchID
 

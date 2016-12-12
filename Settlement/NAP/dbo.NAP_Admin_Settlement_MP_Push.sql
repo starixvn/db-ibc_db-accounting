@@ -53,18 +53,6 @@ BEGIN
 						  ,hta SMALLINT
 						 )
 						 
-	DECLARE @tblExcludingResourceIds TABLE (ResourceId VARCHAR(20))
-	INSERT INTO @tblExcludingResourceIds (ResourceId)
-	SELECT	CAST(BetType AS VARCHAR) + '__' AS ResourceId
-	FROM	dbo.f_Set_GetGroupBettypes()
-	WHERE	GroupId = 9
-	
-	INSERT INTO @tblExcludingResourceIds (ResourceId)
-	SELECT	CAST(BetType AS VARCHAR) + '__' AS ResourceId
-	FROM	dbo.f_Set_GetGroupBettypes()
-	WHERE	GroupId = 9
-	
-	INSERT INTO @tblExcludingResourceIds (ResourceId) VALUES ('00'), ('01'), ('08')
 	
 	SELECT	 @ErrCode = 0
 			,@ErrMsg = ''
@@ -117,7 +105,7 @@ BEGIN
 	IF EXISTS (SELECT 1
 				FROM @match
 				WHERE fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL ) AND @action <> 'UNDO'
-		OR EXISTS (SELECT 1
+		OR EXISTS (SELECT TOP 1 1
 					FROM @tblRunningAutoSettle
 				)				
 	BEGIN
@@ -290,16 +278,8 @@ BEGIN
 END
 
 
-GO
 
-SET QUOTED_IDENTIFIER OFF 
 GO
-SET ANSI_NULLS ON 
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
 GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [vnteam] AS [dbo]
