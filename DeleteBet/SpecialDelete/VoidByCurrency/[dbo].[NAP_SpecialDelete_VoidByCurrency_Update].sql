@@ -443,8 +443,7 @@ BEGIN
 				 INNER JOIN match m WITH (NOLOCK)
 						 ON sub.matchid = m.matchid
 			WHERE main.matchid IN (9, 29) AND main.bettype IN (9, 29) -- parlay
-				AND main.statusID NOT IN (101, 102) -- reject, void
-				AND NOT (main.Username like '%bettrade%' AND main.betdaqid = 0) -- current owner is not member bettrade
+				AND main.statusID NOT IN (101, 102) -- reject, void				
 				AND main.betfrom <> 'P' -- exclude phone betting
 				
 				AND m.sporttype BETWEEN 1 AND 99 -- sportbook only				
