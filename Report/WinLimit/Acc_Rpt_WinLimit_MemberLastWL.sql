@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-ALTER PROCEDURE Acc_Rpt_WinLimit_MemberLastWL
+ALTER PROCEDURE [dbo].[Acc_Rpt_WinLimit_MemberLastWL]
 	@ReachedDate	DATETIME,
 	@ProductID		VARCHAR(MAX) = '',
 	@Username		VARCHAR(MAX) = ''
@@ -85,7 +85,7 @@ BEGIN
 			  b.CurrencyName
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_WinLimit_MemberLastWL] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinLimit_MemberLastWL] TO [vnteam]
 GO

@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-ALTER PROCEDURE Acc_Rpt_WinLimit_HandHistory_LiveCasino
+ALTER PROCEDURE [dbo].[Acc_Rpt_WinLimit_HandHistory_LiveCasino]
 	@CustID INT,
 	@ReachedDate DATETIME,
 	@BetType INT
@@ -148,7 +148,7 @@ BEGIN
 
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_WinLimit_HandHistory_LiveCasino] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_DailyWLDirect_Soccer_Bettype] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinLimit_HandHistory_LiveCasino] TO [vnteam]
 GO
