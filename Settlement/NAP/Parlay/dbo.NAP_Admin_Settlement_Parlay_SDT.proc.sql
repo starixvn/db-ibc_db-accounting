@@ -29,23 +29,30 @@ BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE 
-		@totalGoal 			TINYINT
-		, @totalGoal1H 		TINYINT
-		, @totalGoal2H 		TINYINT
+		@hScore1H			TINYINT
+		, @aScore1H			TINYINT
+		, @hScore2H			TINYINT
+		, @aScore2H			TINYINT
 		, @FGNG				VARCHAR(50)
-		--conners result
-		, @hthCorners		TINYINT
-		, @htaCorners		TINYINT
-		, @fthCorners		TINYINT
-		, @ftaCorners		TINYINT
-		, @ftFCorner		VARCHAR(1)
-		, @htFCorner		VARCHAR(1)
+		, @IsHT				BIT
 		
-		, @totalConner		TINYINT
-		, @totalConner1H 	TINYINT
+	--conners result
+	DECLARE @hthCorners			TINYINT
+		, @htaCorners			TINYINT
+		, @fthCorners			TINYINT
+		, @ftaCorners			TINYINT
+		, @ftFCorner			VARCHAR(1)
+		, @htFCorner			VARCHAR(1)
 		
-		, @rsQuery			NVARCHAR(MAX)
-		
+		, @totalConner			TINYINT
+		, @totalConner1H 		TINYINT
+	
+	--BetRadar result
+	DECLARE @NextGoal			NVARCHAR(MAX)
+		, @GoalScorerAnytime	NVARCHAR(MAX)
+	
+	DECLARE @rsQuery			NVARCHAR(MAX)
+	
 	DECLARE @tempSDTBatch TABLE (transid BIGINT, statusId TINYINT)
 	CREATE TABLE #tempSDTTickets (transid BIGINT PRIMARY KEY, statusId TINYINT)
 	
@@ -55,19 +62,18 @@ BEGIN
 		, AwayValue 	VARCHAR(50)
 	)	
 	
-	--@GoalRecord = [1H=1-0=>H;]
-	SELECT @totalGoal 		= CASE 
-								WHEN @Mode = 'ABANDONED-1H' THEN (@hthomescore + @htawayscore)
-								WHEN @Mode = 'ABANDONED-2H' THEN (@fthomescore + @ftawayscore)
-							END
-		, @totalGoal1H 		= (@hthomescore + @htawayscore)
-		, @totalGoal2H		= CASE WHEN @Mode = 'ABANDONED-2H' THEN (@fthomescore + @ftawayscore) - (@hthomescore + @htawayscore) ELSE 0 END
+	SELECT @IsHT			=  CASE WHEN @Mode = 'ABANDONED-1H' THEN 1 ELSE 0 END
+		, @hScore1H 		= @hthomescore
+		, @aScore1H 		= @htawayscore
+		, @hScore2H			= CASE WHEN @Mode = 'ABANDONED-2H' THEN @fthomescore - @hthomescore ELSE NULL END
+		, @aScore2H			= CASE WHEN @Mode = 'ABANDONED-2H' THEN @ftawayscore - @htawayscore ELSE NULL END
 		, @GoalRecord		= CASE WHEN LEFT(@GoalRecord, 1) = ';' THEN SUBSTRING(@GoalRecord,2,LEN(@GoalRecord) - 1) ELSE @GoalRecord END
 		, @FGNG				= CASE 	WHEN LEFT(@GoalRecord, 1) = 'H' THEN '1'  
 									WHEN LEFT(@GoalRecord, 1) = 'A' THEN '2'  
 									ELSE ''
 								END 
 		, @FGNG				= CASE WHEN @FGNG <> '' THEN @FGNG + ':1' ELSE '' END
+		
 		--conners--------------
 		, @hthCorners		= 0
 		, @htaCorners		= 0
@@ -123,15 +129,30 @@ BEGIN
 	(
 		SELECT bm.transid, bm.bettype, odds.StatusId
 		FROM dbo.bettransm bm WITH(NOLOCK)
-			CROSS APPLY [dbo].[f_Set_Parlay_CalModds](
+			CROSS APPLY
+			(
+				SELECT modds, StatusId 
+				FROM [dbo].[f_Set_Parlay_CalModds](
 					bm.bettype
 					, bm.betteam
 					, bm.hdp1
 					, bm.hdp2
-					, @totalGoal
-					, @totalGoal1H
-					, @totalGoal2H
+					, @hScore1H
+					, @aScore1H
+					, @hScore2H
+					, @aScore2H
 					, @FGNG
+					, bm.transdesc
+					, @IsHT
+				)
+				WHERE modds IS NOT NULL
+				UNION ALL
+				SELECT modds, StatusId 
+				FROM [dbo].[f_Set_Parlay_CalModds_Corner](
+					bm.bettype
+					, bm.betteam
+					, bm.hdp1
+					, bm.hdp2
 					, @totalConner
 					, @totalConner1H
 					, @ftFCorner
@@ -141,7 +162,20 @@ BEGIN
 					, @fthCorners
 					, @ftaCorners
 					, @Mode
-				)  AS odds
+				)
+				WHERE modds IS NOT NULL
+				UNION ALL
+				SELECT modds, StatusId 
+				FROM [dbo].[f_Set_Parlay_CalModds_BetRadar](
+					bm.bettype
+					, bm.betteam
+					, bm.betcheck
+					, @NextGoal
+					, @GoalScorerAnytime
+					, @Mode
+				)
+				WHERE modds IS NOT NULL
+			)  AS odds
 			
 		WHERE bm.matchid = @matchid
 			AND bm.statusID IN (0)
