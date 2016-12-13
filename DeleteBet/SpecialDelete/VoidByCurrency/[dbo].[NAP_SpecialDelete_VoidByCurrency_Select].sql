@@ -195,12 +195,8 @@ BEGIN
 			 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
 					 ON b.creator = cr.custid							 		 
 		WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only			
-			AND b.bettype NOT IN (9, 29) -- single
-			AND b.bettype < 19001
-			AND b.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
-			AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket
-			AND b.bettype NOT BETWEEN 1501 AND 1599	-- NOT IN Keno
+			AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket			
 			AND NOT (b.Username like '%bettrade%' AND b.betdaqid = 0) -- current owner is not member bettrade			
 			AND b.statusID NOT IN (101, 102) -- reject, void
 			AND b.betfrom <> 'P' -- exclude phone betting
@@ -303,12 +299,7 @@ BEGIN
 			AND NOT (main.Username like '%bettrade%' AND main.betdaqid = 0) -- current owner is not member bettrade
 			AND main.betfrom <> 'P' -- exclude phone betting
 			
-			AND m.sporttype BETWEEN 1 AND 99 -- sportbook only						
-			AND sub.bettype < 19001
-			AND sub.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
-			AND sub.bettype NOT BETWEEN 801 AND 806-- MG
-			AND sub.bettype NOT BETWEEN 901 AND 910 -- BT subticket
-			AND sub.bettype NOT BETWEEN 1501 AND 1599	-- NOT IN Keno
+			AND m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND sub.matchid = @matchid -- filer for @MatchID
 			AND sub.statusID NOT IN (101, 102) -- reject, void
 			AND sub.betfrom <> 'P' -- exclude phone betting			

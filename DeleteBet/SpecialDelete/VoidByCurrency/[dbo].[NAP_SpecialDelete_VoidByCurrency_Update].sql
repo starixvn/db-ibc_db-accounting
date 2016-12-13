@@ -49,12 +49,11 @@ BEGIN
 		  , @SearchParlay				BIT
 		  , @CountParlay				INT
 		  
-	DECLARE @isExistOutright 			BIT = 0
+	DECLARE @IsExistParlay				BIT = 0
+		  , @isExistOutright 			BIT = 0
 		  , @isExistMatch				BIT = 0
 		  , @KeyID						INT
-		  , @AvaiableProcess			BIT = 1		  		  		  
-		  , @isLocked_Single			BIT	= 0		  		  	  
-		  , @isLocked_Parlay			BIT	= 0
+		  , @AvaiableProcess			BIT = 1		  	  
 	
 	DECLARE @tblMainTransIds TABLE (transid BIGINT)
 	
@@ -67,6 +66,8 @@ BEGIN
 	DECLARE @tblCreditPending TVP_BalanceList
 	
 	CREATE TABLE #SpecialDeleteBets (
+			id					INT IDENTITY,
+	
 			Stake				MONEY,
 			AwayId				INT,
 			BetCheck			NVARCHAR(50),
@@ -84,8 +85,7 @@ BEGIN
 			IsSecondAcceptFlag	BIT, 
 			LiveAwayScore		SMALLINT,
 			LiveHomeScore		SMALLINT,
-			Odds				MONEY,
-			IsMixParlay			BIT,
+			Odds				MONEY,			
 			OddsType			INT,
 			RefNo				BIGINT,
 			SportType			SMALLINT,
@@ -110,6 +110,13 @@ BEGIN
 			SubOdds				MONEY
 		)
 		
+	SELECT * INTO #SpecialDeleteBets_Single FROM #SpecialDeleteBets WHERE 1 = 0	
+	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Single_custid ON #SpecialDeleteBets_Single(custid)
+	
+	SELECT * INTO #SpecialDeleteBets_Parlay FROM #SpecialDeleteBets WHERE 1 = 0
+	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Parlay_custid ON #SpecialDeleteBets_Parlay(custid)	
+	CREATE INDEX IDX_SpecialDeleteBets_Parlay_id_TransId ON #SpecialDeleteBets_Parlay(id, TransId)	
+		
 	SELECT  s.Stake,
 			s.AwayId,
 			s.BetCheck,
@@ -127,7 +134,7 @@ BEGIN
 			s.LiveAwayScore,
 			s.LiveHomeScore,
 			s.Odds,
-			s.IsMixParlay,
+			CAST(1 AS BIT) AS IsMixParlay,
 			s.OddsType,
 			s.RefNo,
 			s.SportType,
@@ -199,94 +206,19 @@ BEGIN
 	END						 	  
 		
 	SELECT @SearchSingle = 0, @SearchParlay = 0
-	IF @TicketType = 'All'
-	BEGIN	
-		SELECT @SearchSingle = 1, @SearchParlay = 1
-		
-		-------> Check concurrent single, parlay
-		SELECT @KeyID 			= 1
-			 , @isExistOutright 	= 0
-			 , @isExistMatch		= 1
-		
-		INSERT INTO #tblMatchProcess (matchid, KeyID)
-		SELECT @matchid AS matchid
-			 , @KeyID 	AS KeyID
-			 
-		EXEC dbo.NAP_Admin_CheckingProcess
-			  @IsReleased	= 0
-			
-			, @isExistOutright 	= @isExistOutright
-			, @isExistMatch		= @isExistMatch
-			
-			, @IsExistParlay	= 1
-			
-			, @avaiableProcess 	= @AvaiableProcess OUTPUT
-			, @ErrCode			= @ErrCode OUTPUT
-			, @ErrMsg			= @ErrMsg OUTPUT
-		SELECT @isLocked_Single = 1, @isLocked_Parlay = 1			
-			
-		IF(@ErrCode <> 0 OR @AvaiableProcess = 0) 
-		BEGIN
-			SELECT * FROM #t			
-			
-			RETURN
-		END								 
-	END
-	ELSE IF @TicketType = 'SingleTicket'
-	BEGIN
-		SET @SearchSingle = 1
-		
-		-------> Check concurrent single
-		SELECT @KeyID 			= 1
-			 , @isExistOutright 	= 0
-			 , @isExistMatch		= 1
-		
-		INSERT INTO #tblMatchProcess (matchid, KeyID)
-		SELECT @matchid AS matchid
-			 , @KeyID 	AS KeyID
-			 
-		-- checking SD proccess
-		EXEC dbo.NAP_Admin_CheckingProcess
-			@isExistOutright 	= @isExistOutright
-			, @isExistMatch		= @isExistMatch
-			, @avaiableProcess 	= @AvaiableProcess OUTPUT
-			, @ErrCode			= @ErrCode OUTPUT
-			, @ErrMsg			= @ErrMsg OUTPUT
-		SET @isLocked_Single = 1			
-			
-		IF(@ErrCode <> 0 OR @AvaiableProcess = 0) 
-		BEGIN
-			SELECT * FROM #t			
-			
-			RETURN
-		END
-	END
-	ELSE IF @TicketType = 'ParlayTicket'
-	BEGIN
-		SET @SearchParlay = 1
-		
-		-------> Check concurrent parlay
-		EXEC [dbo].[NAP_Admin_CheckingProcess]
-			@IsExistParlay = 1			
-		  , @IsReleased	= 0
-		  , @AvaiableProcess = @AvaiableProcess OUTPUT
-		  , @ErrCode = @ErrCode OUTPUT
-		  , @ErrMsg	= @ErrMsg OUTPUT	
-		SET @isLocked_Parlay = 1
-		
-		IF (@ErrCode <> 0 OR @AvaiableProcess = 0)
-		BEGIN	
-			SELECT * FROM #t										
-						 
-			RETURN		 
-		END
-	END
+	IF @TicketType = 'All'	
+		SELECT @SearchSingle = 1
+			 , @SearchParlay = 1	
+	ELSE IF @TicketType = 'SingleTicket'	
+		SELECT @SearchSingle = 1			 			 			 				 			 			
+	ELSE IF @TicketType = 'ParlayTicket'	
+		SELECT @SearchParlay = 1			 		 
 	ELSE
 	BEGIN	
 		SELECT * FROM #t										
 					 
 		RETURN		 
-	END	
+	END			
 	
 	-------> Build @LogData
 	SET @CurrencyCodes = ''
@@ -302,7 +234,7 @@ BEGIN
 		SET @CountSingle = 0
 		IF @SearchSingle = 1
 		BEGIN
-			INSERT INTO #SpecialDeleteBets(
+			INSERT INTO #SpecialDeleteBets_Single(
 						Stake,
 						AwayId,
 						BetCheck,
@@ -320,8 +252,7 @@ BEGIN
 						IsSecondAcceptFlag,
 						LiveAwayScore,
 						LiveHomeScore,
-						Odds,
-						IsMixParlay,
+						Odds,						
 						OddsType,
 						RefNo,
 						SportType,
@@ -362,8 +293,7 @@ BEGIN
 					b.SecAcceptFlag AS IsSecondAcceptFlag,
 					b.LiveAwayScore,
 					b.LiveHomeScore,
-					b.Odds,
-					0 AS IsMixParlay,
+					b.Odds,					
 					b.OddsType,
 					b.RefNo,
 					m.SportType,
@@ -399,13 +329,9 @@ BEGIN
 						 ON b.matchid = m.matchid
 				 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
 						 ON b.creator = cr.custid							 		 
-			WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only			
-				AND b.bettype NOT IN (9, 29) -- single
-				AND b.bettype < 19001
-				AND b.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
+			WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only				
 				AND b.bettype NOT BETWEEN 801 AND 806-- MG
-				AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket
-				AND b.bettype NOT BETWEEN 1501 AND 1599	-- NOT IN Keno
+				AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket				
 				AND NOT (b.Username like '%bettrade%' AND b.betdaqid = 0) -- current owner is not member bettrade			
 				AND b.statusID NOT IN (101, 102) -- reject, void
 				AND b.betfrom <> 'P' -- exclude phone betting
@@ -418,7 +344,7 @@ BEGIN
 		SET @CountParlay = 0
 		IF @SearchParlay = 1
 		BEGIN
-			INSERT INTO #SpecialDeleteBets(
+			INSERT INTO #SpecialDeleteBets_Parlay(
 						Stake,
 						AwayId,
 						BetCheck,
@@ -436,8 +362,7 @@ BEGIN
 						IsSecondAcceptFlag,
 						LiveAwayScore,
 						LiveHomeScore,
-						Odds,
-						IsMixParlay,
+						Odds,						
 						OddsType,
 						RefNo,
 						SportType,
@@ -478,8 +403,7 @@ BEGIN
 					main.SecAcceptFlag AS IsSecondAcceptFlag,
 					main.LiveAwayScore,
 					main.LiveHomeScore,
-					main.Odds,
-					1 AS IsMixParlay,
+					main.Odds,					
 					main.OddsType,
 					main.RefNo,
 					m.SportType,
@@ -523,12 +447,7 @@ BEGIN
 				AND NOT (main.Username like '%bettrade%' AND main.betdaqid = 0) -- current owner is not member bettrade
 				AND main.betfrom <> 'P' -- exclude phone betting
 				
-				AND m.sporttype BETWEEN 1 AND 99 -- sportbook only						
-				AND sub.bettype < 19001
-				AND sub.bettype NOT IN (31,32,33,71,72,73)	-- NOT IN [Racing, Casino]
-				AND sub.bettype NOT BETWEEN 801 AND 806-- MG
-				AND sub.bettype NOT BETWEEN 901 AND 910 -- BT subticket
-				AND sub.bettype NOT BETWEEN 1501 AND 1599	-- NOT IN Keno
+				AND m.sporttype BETWEEN 1 AND 99 -- sportbook only				
 				AND sub.matchid = @matchid -- filer for @MatchID
 				AND sub.statusID NOT IN (101, 102) -- reject, void
 				AND sub.betfrom <> 'P' -- exclude phone betting
@@ -536,175 +455,201 @@ BEGIN
 			SET @CountParlay = @@ROWCOUNT
 		END
 		
+		-------> Check No ticket found
 		IF @CountSingle + @CountParlay = 0
-		BEGIN
-			-------> Release process
-			IF @isLocked_Single = 1 AND @isLocked_Parlay = 1 -- Release single, parlay
-				EXEC dbo.NAP_Admin_CheckingProcess
-					  @isExistOutright 	= @isExistOutright
-					, @isExistMatch		= @isExistMatch
-					
-					, @isExistParlay  = 1 
-					
-					, @IsReleased		= 1
-			ELSE IF @isLocked_Single = 1 -- Release single only
-				EXEC dbo.NAP_Admin_CheckingProcess
-					@isExistOutright 	= @isExistOutright
-					, @isExistMatch		= @isExistMatch
-					, @IsReleased		= 1
-			ELSE IF @isLocked_Parlay = 1 -- Release parlay only
-				EXEC dbo.NAP_Admin_CheckingProcess  
-					@isExistParlay  = 1  
-					, @IsReleased  = 1
-					
+		BEGIN					
 			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
 			
 			SELECT * FROM #t		
 			
 			RETURN
 		END
+		ELSE
+		BEGIN
+			IF @CountSingle > 0
+			BEGIN
+				SELECT @KeyID = 1
+					 , @isExistOutright	= 0
+					 , @isExistMatch = 1			 			 
+							
+				INSERT INTO #tblMatchProcess (matchid, KeyID)
+				SELECT @matchid AS matchid
+					 , @KeyID 	AS KeyID
+			END
+			
+			IF @CountParlay > 0
+				SET @IsExistParlay = 1
+				
+			-------> Check concurrent single, parlay
+			EXEC dbo.NAP_Admin_CheckingProcess
+				  @IsReleased	= 0
+				
+				, @isExistOutright 	= @isExistOutright
+				, @isExistMatch		= @isExistMatch
+				
+				, @IsExistParlay	= @IsExistParlay
+				
+				, @avaiableProcess 	= @AvaiableProcess OUTPUT
+				, @ErrCode			= @ErrCode OUTPUT
+				, @ErrMsg			= @ErrMsg OUTPUT				
+				
+			IF(@ErrCode <> 0 OR @AvaiableProcess = 0) 
+			BEGIN
+				SELECT * FROM #t			
+				
+				RETURN
+			END									
+		END
 		
 		-------> Insert backups	
 		--> backups for single
-		INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
-					winlost,livehomescore,liveawayscore,liveindicator,betteam,creator, refno, 
-					winlostdate,betfrom,betcheck,checktime,matchid, bettype)
-		SELECT  main.transid, main.custid, CURRENT_TIMESTAMP, main.oddsid, main.hdp1, main.hdp2, main.odds, main.stake, main.status, 
-				main.winlost, main.livehomescore, main.liveawayscore, main.liveindicator, main.betteam, main.creator , main.refno, 
-				main.winlostdate, main.betfrom, main.betcheck, main.checktime, main.matchid, main.bettype
-		FROM dbo.bettrans main WITH (nolock)
-			 INNER JOIN #SpecialDeleteBets tmpmain 
-				ON	main.transid = tmpmain.transid
-		WHERE tmpmain.IsMixParlay = 0
+		IF @CountSingle > 0
+		BEGIN
+			INSERT INTO zzzbettrans (transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,
+						winlost,livehomescore,liveawayscore,liveindicator,betteam,creator, refno, 
+						winlostdate,betfrom,betcheck,checktime,matchid, bettype)
+			SELECT  main.transid, main.custid, CURRENT_TIMESTAMP, main.oddsid, main.hdp1, main.hdp2, main.odds, main.stake, main.status, 
+					main.winlost, main.livehomescore, main.liveawayscore, main.liveindicator, main.betteam, main.creator , main.refno, 
+					main.winlostdate, main.betfrom, main.betcheck, main.checktime, main.matchid, main.bettype
+			FROM #SpecialDeleteBets_Single tmpmain
+				 INNER JOIN dbo.bettrans main WITH (nolock)
+					ON	tmpmain.transid = main.transid			
+		END
 		
 		--> backups for parlay	
-		-- BackUp bettransm tickets into zzzbettrans  
-		INSERT INTO zzzbettrans (transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status,   
-				winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno,   
-				winlostdate, betfrom, betcheck, checktime, matchid, bettype
-		)  
-		SELECT	b.transid, b.custid, CURRENT_TIMESTAMP, b.oddsid, b.hdp1, b.hdp2, b.odds, b.stake, b.status,  
-				b.winlost, b.livehomescore, b.liveawayscore, b.liveindicator, b.betteam, b.creator , b.refno,  
-				b.winlostdate, b.betfrom, b.betcheck, b.checktime, b.matchid, b.bettype  
-		FROM	dbo.bettransm AS b WITH (nolock)  
-			INNER JOIN #SpecialDeleteBets AS r 
-				ON	r.SubTransId=b.transid 
-		WHERE r.IsMixParlay = 1  
+		IF @CountParlay > 0
+		BEGIN
+			-- BackUp bettransm tickets into zzzbettrans  
+			INSERT INTO zzzbettrans (transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status,   
+					winlost, livehomescore, liveawayscore, liveindicator, betteam, creator , refno,   
+					winlostdate, betfrom, betcheck, checktime, matchid, bettype
+			)  
+			SELECT	b.transid, b.custid, CURRENT_TIMESTAMP, b.oddsid, b.hdp1, b.hdp2, b.odds, b.stake, b.status,  
+					b.winlost, b.livehomescore, b.liveawayscore, b.liveindicator, b.betteam, b.creator , b.refno,  
+					b.winlostdate, b.betfrom, b.betcheck, b.checktime, b.matchid, b.bettype  
+			FROM #SpecialDeleteBets_Parlay AS r 	  
+				INNER JOIN dbo.bettransm AS b WITH (nolock)
+					ON	r.SubTransId = b.transid			 
 
-		--BackUp tickets of bettransm  
-		INSERT INTO zzzbettransm (transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status,   
-				 winlost, livehomescore, liveawayscore, liveINdicator, betteam, creator , refno,   
-				 winlostdate, betfrom, betcheck, checktime, matchid, bettype)  
-		SELECT	b.transid, b.custid, CURRENT_TIMESTAMP, b.oddsid, b.hdp1, b.hdp2, b.odds, b.stake, b.status,   
-				b.winlost, b.livehomescore, b.liveawayscore, b.liveindicator, b.betteam, b.creator , b.refno,   
-				b.winlostdate, b.betfrom, b.betcheck, b.checktime, b.matchid, b.bettype  
-		FROM	dbo.bettransm AS b WITH (nolock)  
-			INNER JOIN #SpecialDeleteBets AS r 
-				ON	r.SubTransId=b.transid
-		WHERE r.IsMixParlay = 1				
+			--BackUp tickets of bettransm  
+			INSERT INTO zzzbettransm (transid, custid, transdate, oddsid, hdp1, hdp2, odds, stake, status,   
+					 winlost, livehomescore, liveawayscore, liveINdicator, betteam, creator , refno,   
+					 winlostdate, betfrom, betcheck, checktime, matchid, bettype)  
+			SELECT	b.transid, b.custid, CURRENT_TIMESTAMP, b.oddsid, b.hdp1, b.hdp2, b.odds, b.stake, b.status,   
+					b.winlost, b.livehomescore, b.liveawayscore, b.liveindicator, b.betteam, b.creator , b.refno,   
+					b.winlostdate, b.betfrom, b.betcheck, b.checktime, b.matchid, b.bettype  
+			FROM #SpecialDeleteBets_Parlay AS r	 
+				INNER JOIN dbo.bettransm AS b WITH (nolock)  
+					ON	r.SubTransId=b.transid						
+		END
 		
 		-------> Capture before balance
 		INSERT INTO @tblBeforeBalance (custid, balance)
-		SELECT	t.custid
-				,SUM(t.balance) balance
-		FROM #SpecialDeleteBets t					
-		GROUP BY t.CustID
+		SELECT T.custid, SUM(T.balance) balance
+		FROM (
+				  SELECT t.custid
+						,SUM(t.balance) balance
+				  FROM #SpecialDeleteBets_Single t					
+				  GROUP BY t.CustID
+				  UNION ALL
+				  SELECT t.custid
+						,SUM(t.balance) balance
+				  FROM #SpecialDeleteBets_Parlay t					
+				  GROUP BY t.CustID
+			 ) AS T
+		GROUP BY T.custid
 		
 		-------> update status for tickets to void
 		--> update status for single
-		UPDATE	main
-			SET winlost		= main.actual_stake
-				,ruben			= 1
-				,statuswinlost	= 6
-				,creator		= @UserID
-				,awinlost		= 0
-				,mwinlost		= 0
-				,swinlost		= 0
-				,playercomm		= 0
-				,comm			= 0
-				,acomm			= 0
-				,scomm			= 0
-				,statusID		= 102       
-				,status			= 'VOID'
-		FROM	dbo.bettrans main WITH (ROWLOCK, UPDLOCK)
-			INNER JOIN #SpecialDeleteBets tmpmain
-				ON	main.transid = tmpmain.transid					
-					AND main.matchid = @matchid	
-					AND tmpmain.IsMixParlay = 0
+		IF @CountSingle > 0
+		BEGIN
+			UPDATE	main
+				SET winlost		= main.actual_stake
+					,ruben			= 1
+					,statuswinlost	= 6
+					,creator		= @UserID
+					,awinlost		= 0
+					,mwinlost		= 0
+					,swinlost		= 0
+					,playercomm		= 0
+					,comm			= 0
+					,acomm			= 0
+					,scomm			= 0
+					,statusID		= 102       
+					,status			= 'VOID'
+			FROM	dbo.bettrans main WITH (ROWLOCK, UPDLOCK)
+				INNER JOIN #SpecialDeleteBets_Single tmpmain
+					ON	main.transid = tmpmain.transid					
+						AND main.matchid = @matchid						
+		END				
 		
 		--> update status for parlay
-		DECLARE @matchdate		DATETIME
-				,@match_tmp		VARCHAR(20)
-				,@rowcount		INT
-				,@step			INT
-				,@transid_tmp	VARCHAR(2000) 		
-		DECLARE @transids_29 VARCHAR(MAX) = ''  
-			  , @refnos_29  VARCHAR(MAX) = '' 
-			  
-		DECLARE @transtbl TABLE (id INT IDENTITY, transid BIGINT)			  			  		   		
-		
-		SELECT	@matchdate = eventdate,  
-				@match_tmp = CONVERT(VARCHAR(20),matchid),  
-				@step = 0  
-		FROM	match WITH(NOLOCK)   
-		WHERE	matchid = @matchid
-		
-		SELECT	@transids_29 = @transids_29 + CONVERT(VARCHAR(20), transid) + ','
-			  , @refnos_29 = @refnos_29 + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid) + ','  
-		FROM	#SpecialDeleteBets  
-		WHERE IsMixParlay = 1
-		
-		INSERT INTO @transtbl (transid)  
-		SELECT	SubTransId  
-		FROM	#SpecialDeleteBets
-		WHERE IsMixParlay = 1
-		
-		-- update bettransm,BetParlayDetail		
-		SELECT @rowcount = @@ROWCOUNT 
-		
-		WHILE @step < @rowcount  
-		BEGIN  
-			SET @transid_tmp = ''  
+		IF @CountParlay > 0
+		BEGIN
+			DECLARE @matchdate		DATETIME				
+					,@rowcount		INT
+					,@step			INT
+					,@transid_tmp	VARCHAR(2000) 		
+			DECLARE @transids_29 VARCHAR(MAX) = ''  
+				  , @refnos_29  VARCHAR(MAX) = ''				  						  			  		   		
+			
+			SELECT	@matchdate = eventdate,  				  
+					@step = 0  
+			FROM	match WITH(NOLOCK)   
+			WHERE	matchid = @matchid
+			
+			SELECT	@transids_29 = @transids_29 + CONVERT(VARCHAR(20), transid) + ','
+				  , @refnos_29 = @refnos_29 + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid) + ','  
+			FROM	#SpecialDeleteBets_Parlay									
+			
+			-- update bettransm,BetParlayDetail			
+			WHILE @step < @CountParlay  
+			BEGIN  
+				SET @transid_tmp = ''  
 
-			SELECT	@transid_tmp  = @transid_tmp + CONVERT(VARCHAR(20),transid)  + ','   
-			FROM	@transtbl  
-			WHERE	id > @step 
-					AND id <= @step + @VoidPatchSize  
-			 
-			SET @step = @step + @VoidPatchSize  
+				SELECT	@transid_tmp  = @transid_tmp + CONVERT(VARCHAR(20),SubTransId)  + ','   
+				FROM	#SpecialDeleteBets_Parlay  
+				WHERE	id > @step 
+						AND id <= @step + @VoidPatchSize  
+				 
+				SET @step = @step + @VoidPatchSize  
 
-			EXEC dbo.NAP_Admin_Calculate_MP_broker @matchid = @matchId  
-			,@fth = 0  
-			,@fta = 0  
-			,@hth = 0  
-			,@hta = 0  
-			,@matchdate = @matchdate  
-			,@mode = 'VOID'  
-			,@VoidTransID = @transid_tmp  
-			,@UserId = @UserId  
-			 
-		END
-		
-		-- call pre-cal-29: update BetParlayResult		  
-		EXEC dbo.NAP_Admin_Calculate_MP_broker   
-			@matchid = @matchid  
-			,@matchdate = @matchdate  
-			,@strXML = @transids_29  
-			,@mode  = 'PRECAL-29'
-		
-		-- call cal_29: update bettrans
-		EXEC dbo.NAP_Admin_Calculate_MP_broker
-			@matchdate = @MatchDate
-			,@strXML	= @refnos_29  -- main transid + refno: refno|transid,refno|transid...
-			,@mode		= '29' 
+				EXEC dbo.NAP_Admin_Calculate_MP_broker @matchid = @matchId  
+				,@fth = 0  
+				,@fta = 0  
+				,@hth = 0  
+				,@hta = 0  
+				,@matchdate = @matchdate  
+				,@mode = 'VOID'  
+				,@VoidTransID = @transid_tmp  
+				,@UserId = @UserId				 
+			END
+			
+			-- call pre-cal-29: update BetParlayResult		  
+			EXEC dbo.NAP_Admin_Calculate_MP_broker   
+				@matchid = @matchid  
+				,@matchdate = @matchdate  
+				,@strXML = @transids_29  
+				,@mode  = 'PRECAL-29'
+			
+			-- call cal_29: update bettrans
+			EXEC dbo.NAP_Admin_Calculate_MP_broker
+				@matchdate = @MatchDate
+				,@strXML	= @refnos_29  -- main transid + refno: refno|transid,refno|transid...
+				,@mode		= '29' 
+		END		
 		
 		-------> Capture after balance
 		INSERT INTO @tblAfterBalance (custid, balance)
 		SELECT	t.custid
 				,SUM (b.winlost - b.actual_stake + b.playercomm) balance
-		FROM #SpecialDeleteBets t	
+		FROM (
+				SELECT custid, TransId FROM #SpecialDeleteBets_Single
+				UNION ALL
+				SELECT custid, TransId FROM #SpecialDeleteBets_Parlay
+			 ) t	
 			INNER JOIN bettrans b WITH (NOLOCK) 
-				ON t.transid = b.transid		
+					ON t.transid = b.transid		
 		GROUP BY t.CustID				
 		
 		-------> Update balance for members	
@@ -742,21 +687,15 @@ BEGIN
 		,awaytotal = awaytotal - (CASE WHEN b.betteam = 'a' THEN CASE WHEN abs(b.odds) > 1 THEN b.stake * e.actualrate * abs(b.odds) * (1 - b.tpositiontaking)  
 					  ELSE b.stake * e.actualrate * (1 - b.tpositiontaking) END  
 				ELSE 0 END)  
-		FROM dbo.odds o WITH (ROWLOCK,UPDLOCK)  
-			INNER JOIN dbo.bettrans b WITH (NOLOCK) 
+		FROM #SpecialDeleteBets_Single AS bd
+			INNER JOIN dbo.bettrans b WITH (NOLOCK)
+				ON bd.TransID  = b.transid
+			INNER JOIN dbo.odds o WITH (ROWLOCK,UPDLOCK)   
 				ON o.matchid = b.matchid 
 				   AND o.oddsid = b.oddsid  
 				   AND b.matchid = @MatchID			
 			INNER JOIN CustDB.dbo.customer c WITH (NOLOCK) ON c.custid = b.custid  
-			INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid	
-		WHERE EXISTS ( 
-				SELECT TOP 1 1   
-				FROM #SpecialDeleteBets AS bd
-				WHERE bd.TransID  = b.transid
-					AND bd.Bettype NOT IN (9, 29)
-					AND bd.Bettype NOT BETWEEN 801 AND 899 --Metric Gaming Super Live
-					AND bd.Bettype NOT IN (901,902,903)  --BetTrade subtickets  
-		   )  																			
+			INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON c.currency = e.exchangeid																				
 		
 		-------> write log		
 		EXEC WriteLog_UserLog 
@@ -832,7 +771,11 @@ BEGIN
 				END AS IsItSupport,
 				s.betfrom,
 				CURRENT_TIMESTAMP AS [DateTime]
-		FROM #SpecialDeleteBets s
+		FROM (
+				SELECT CAST(0 AS BIT) AS IsMixParlay, * FROM #SpecialDeleteBets_Single
+				UNION ALL
+				SELECT CAST(1 AS BIT) AS IsMixParlay, * FROM #SpecialDeleteBets_Parlay
+			 ) s
 			 OUTER APPLY (SELECT TOP 1 1 AS a
 						  FROM CustDB.dbo.Customer c WITH(NOLOCK) 
 						  WHERE c.currency <> 20 
@@ -846,23 +789,13 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		-------> Release process
-		IF @isLocked_Single = 1 AND @isLocked_Parlay = 1 -- Release single, parlay
-			EXEC dbo.NAP_Admin_CheckingProcess
-				  @isExistOutright 	= @isExistOutright
-				, @isExistMatch		= @isExistMatch
-				
-				, @isExistParlay  = 1 
-				
-				, @IsReleased		= 1
-		ELSE IF @isLocked_Single = 1 -- Release single only
-			EXEC dbo.NAP_Admin_CheckingProcess
-				@isExistOutright 	= @isExistOutright
-				, @isExistMatch		= @isExistMatch
-				, @IsReleased		= 1
-		ELSE IF @isLocked_Parlay = 1 -- Release parlay only
-			EXEC dbo.NAP_Admin_CheckingProcess  
-				@isExistParlay  = 1  
-				, @IsReleased  = 1			  
+		EXEC dbo.NAP_Admin_CheckingProcess
+			  @IsReleased		= 1
+			
+			, @isExistOutright 	= @isExistOutright
+			, @isExistMatch		= @isExistMatch
+			
+			, @isExistParlay  = @isExistParlay			  
 	
 		SELECT @ErrCode = 100,
 				@ErrMsg = @GeneralErrMsg
@@ -873,23 +806,13 @@ BEGIN
 	END CATCH
 	
 	-------> Release process
-	IF @isLocked_Single = 1 AND @isLocked_Parlay = 1 -- Release single, parlay
-		EXEC dbo.NAP_Admin_CheckingProcess
-			  @isExistOutright 	= @isExistOutright
-			, @isExistMatch		= @isExistMatch
-			
-			, @isExistParlay  = 1 
-			
-			, @IsReleased		= 1
-	ELSE IF @isLocked_Single = 1 -- Release single only
-		EXEC dbo.NAP_Admin_CheckingProcess
-			@isExistOutright 	= @isExistOutright
-			, @isExistMatch		= @isExistMatch
-			, @IsReleased		= 1
-	ELSE IF @isLocked_Parlay = 1 -- Release parlay only
-		EXEC dbo.NAP_Admin_CheckingProcess  
-			@isExistParlay  = 1  
-			, @IsReleased  = 1	
+	EXEC dbo.NAP_Admin_CheckingProcess
+		  @IsReleased		= 1
+		
+		, @isExistOutright 	= @isExistOutright
+		, @isExistMatch		= @isExistMatch
+		
+		, @isExistParlay  = @isExistParlay	
 			
 	SET NOCOUNT OFF
 END
