@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Select]
 	@MatchID		INT,
 	@LicenseeNames	VARCHAR(MAX),
 	@TicketType		VARCHAR(100),
-	@CurrencyIDs	VARCHAR(100)
+	@CurrencyIDs	VARCHAR(MAX)
 AS
 /*
 	Created: Kent

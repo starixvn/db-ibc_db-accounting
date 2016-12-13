@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Update]
 	@MatchID		INT,
 	@LicenseeNames	VARCHAR(MAX),
 	@TicketType		VARCHAR(100),
-	@CurrencyIDs	VARCHAR(100),
+	@CurrencyIDs	VARCHAR(MAX),
 	@MainTransIDs	VARCHAR(MAX),		
 
 	@UserID			INT,  
