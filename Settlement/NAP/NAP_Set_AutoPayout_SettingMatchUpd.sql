@@ -14,6 +14,7 @@ AS
 	
 	Revisions:
 		- 20160930@Bobby: #65003 - Merge Auto Payout and Inst CAL setting
+		- 20161212@Bobby: #67760 - Implement IS for FGLG bet types
 		
 	Param's Explanation:
 		- @AutoType: TINYINT 
@@ -59,7 +60,6 @@ BEGIN
 	--check concurrency users
 	IF (
 		@AutoSetting = @AutoSetting_Old
-		OR @AutoType = 2 --disable for updating instant setting temporary
 	)
 	BEGIN
 		RETURN

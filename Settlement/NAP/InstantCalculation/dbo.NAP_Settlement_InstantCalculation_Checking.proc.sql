@@ -39,13 +39,10 @@ BEGIN
 	DECLARE @matchcode		VARCHAR(30)
 		, @leagueid			INT
 		, @totalGoal		TINYINT
-		, @totalGoal1H		TINYINT
-		, @totalGoal2H		TINYINT
 		, @totalGoalCheck	TINYINT
 		, @goalRecordCheck	VARCHAR(50)
 		, @isPending		BIT
 		, @isUnDecided		BIT
-		, @comparedValue 	SMALLMONEY
 		, @instantCheck		BIT
 		, @CalculationType	TINYINT
 		, @hScore			TINYINT
@@ -90,7 +87,6 @@ BEGIN
 		, @hScore			= CAST(@HomeScore AS INT)
 		, @aScore			= CAST(@AwayScore AS INT)
 		, @totalGoal		= @hScore + @aScore
-		, @comparedValue	= @totalGoal - 0.5
 	
 	INSERT INTO #instantBettype (bettype)
 	SELECT bettype
@@ -142,8 +138,6 @@ BEGIN
 		, @aScore1H		= CASE WHEN @CalculationType = 101 THEN @aScore ELSE @htawayscore END 
 		, @hScore2H		= CASE WHEN @CalculationType = 102 THEN @hScore-@hScore1H ELSE 0 END
 		, @aScore2H		= CASE WHEN @CalculationType = 102 THEN @aScore-@aScore1H ELSE 0 END
-		, @totalGoal1H	= @hScore1H + @aScore1H
-		, @totalGoal2H	= @hScore2H + @aScore2H
 		, @GoalRecord	= CASE WHEN LEFT(@GoalRecord, 1) = ';' THEN SUBSTRING(@GoalRecord,2,LEN(@GoalRecord) - 1) ELSE @GoalRecord END
 		, @FGNG			= CASE 
 							WHEN LEFT(@GoalRecord, 1) = 'H' THEN '1'  
@@ -205,9 +199,10 @@ BEGIN
 																, b.betteam
 																, b.hdp1
 																, b.hdp2
-																, @totalGoal
-																, @totalGoal1H
-																, @totalGoal2H
+																, @hScore1H
+																, @aScore1H
+																, @hScore2H
+																, @aScore2H
 																, @FGNG
 																, @CalculationType
 															) AS ods
@@ -216,7 +211,7 @@ BEGIN
 					AND EXISTS (SELECT TOP 1 1 FROM #instantBettype ib WHERE ib.bettype = b.bettype)
 					AND b.statusId IN (112, 113)
 			)
-			SELECT @instantCheck = SUM(1)
+			SELECT TOP(1) @instantCheck = 1
 			FROM instantTicketCheck
 			WHERE statusCheck 	<> statusID
 			

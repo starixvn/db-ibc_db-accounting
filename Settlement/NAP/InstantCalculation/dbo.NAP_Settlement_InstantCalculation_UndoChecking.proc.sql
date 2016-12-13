@@ -90,7 +90,7 @@ BEGIN
 			) AS fgng
 		WHERE rs.matchid = @MatchId
 			AND rs.TypeId BETWEEN 101 AND 102 
-			AND rs.IsConfirmed 		= 0
+			--AND rs.IsConfirmed 		= 0
 			AND rs.ProviderResultDetailId = ISNULL(@InstantCheck, rs.ProviderResultDetailId)
 			
 		ORDER  BY rs.ProviderResultDetailId DESC

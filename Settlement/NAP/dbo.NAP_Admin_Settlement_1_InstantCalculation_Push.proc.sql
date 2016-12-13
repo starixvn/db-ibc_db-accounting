@@ -56,6 +56,7 @@ BEGIN
 		@MatchId 			= @MatchId
 		, @InstantKey		= @InstantKey
 		, @Action 			= @Action
+		, @Mode				= @Mode
         , @ErrCode 			= @ErrCode OUTPUT
         , @ErrMsg 			= @ErrMsg OUTPUT
 	END
