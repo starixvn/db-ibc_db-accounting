@@ -62,7 +62,7 @@ BEGIN
     UPDATE sb
     SET sb.SportType = s.SportType
     FROM @SportBettype sb
-	   INNER JOIN SportBettypeMatrix s WITH(NOLOCK) ON sb.BetType = s.BetType AND s.ProductID IN (23, 24) -- NG2 & Fishing World
+	   INNER JOIN SportBettypeMatrix s WITH(NOLOCK) ON sb.BetType = s.BetType AND s.ProductID IN (23) -- NG2
 
 	SELECT distinct winlostdate cnt FROM bettrans with (nolock) WHERE winlostdate = @winlostdate AND bettype < 19999
 	IF @@ROWCOUNT = 1
@@ -346,12 +346,12 @@ BEGIN
 		AND bodb_Report.dbo.rptWinlost.winlostdate = @winlostdate
 		AND bodb_Report.dbo.rptWinlost.bettype in (1231, 1232, 1233, 1237, 1238)			
 
-		--NG2 & Fishing World
+		--NG2
 		UPDATE rpt
 		SET rpt.SportType = sb.SportType
 		FROM bodb_Report.dbo.rptWinlost rpt WITH(NOLOCK)
 		  INNER JOIN @SportBettype sb on  rpt.bettype = sb.Bettype
-		WHERE sb.ProductID IN (23, 24) 
+		WHERE sb.ProductID IN (23) 
 		AND rpt.winlostdate =  @winlostdate
 	END
 	ELSE
