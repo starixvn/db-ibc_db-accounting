@@ -1,6 +1,5 @@
 USE [bodb02]
 GO
-
 ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Products]
 	 @StartDate SMALLDATETIME,
       @EndDate   SMALLDATETIME
@@ -16,15 +15,13 @@ AS
 		 
 		- 20160915@Percy: Integrate NG2 [RedmineID: #63460]
 		- 20160922@Percy: Use local parameter to prevent bad parameter sniffing [RedmindID: #64573]
+		- 20161213@Sophia: Remove parameter @winlostdate, use @StartDate to obtain parameter sniffing [RedmindID: #68634]
 	Explanation's Param:
 	
 */
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE @winlostdate DATETIME
-	SELECT  @winlostdate = @StartDate
-		
 	------Get Sport Bettype Matrix------
 	-- Check SP Version	 
 	DECLARE @isTest BIT = 0
@@ -107,7 +104,7 @@ BEGIN
 	INSERT INTO #ExtraPT_Sel (ProductID, Sporttype, SubProduct, SuperID, ExtraPT) 
 	SELECT	ProductID, SportType, SubProduct, SuperId, SUM(ExtraPT) AS ExtraPT 
 	FROM	bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
-	WHERE	@winlostdate BETWEEN FromDate AND Todate
+	WHERE	@StartDate BETWEEN FromDate AND Todate
 	GROUP BY ProductID, SportType, SubProduct, SuperId
 
 	
@@ -167,7 +164,7 @@ BEGIN
 			INNER JOIN LeagueDetail p WITH (NOLOCK) ON o.LeagueId = p.LeagueId AND p.programDate = o.programDate
 			INNER JOIN RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.LeagueId
 			INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
-	WHERE	o.EventDate = @winlostdate
+	WHERE	o.EventDate = @StartDate
 	
 	
 	----------------------------------- 
@@ -203,27 +200,28 @@ BEGIN
 	WHERE	b.ruben = 1 
 			and s.ProductID = 2
 			and b.MatchId >0
-			and b.winlostdate = @winlostdate 
+			and b.winlostdate = @StartDate 
 			and b.statusID not in (101,102,103,121)	
 	GROUP BY  case when dep.custid is null then 1 else 2 end
 
 	-------------------------------------- End of Racing -------------------------------------------------
- 
-
-	CREATE TABLE #Match (MatchId INT, sporttype smallint, type varchar(10), primary key(MatchId, type))
+	CREATE TABLE #Match (MatchId INT, sporttype smallint, [type] tinyint)--, primary key(MatchId, type))
 	INSERT INTO #Match 
 	SELECT	m.MatchId, 
 			s.sporttype,
 			m.type
 	FROM (
-			SELECT MatchId, LeagueId, exrisk, MatchCode, 'match' as type FROM match WITH (NOLOCK) WHERE EventDate = @winlostdate
+			SELECT MatchId, LeagueId, exrisk, MatchCode, 0 as type --'match'
+			FROM match WITH (NOLOCK) WHERE EventDate = @StartDate
 			UNION ALL
-			SELECT orid, LeagueId, 0, MatchCode, 'outright' as type FROM outright WITH (NOLOCK) WHERE EventDate = @winlostdate
+			SELECT orid, LeagueId, 0, MatchCode, 1 as type --'outright'
+			FROM outright WITH (NOLOCK) WHERE EventDate = @StartDate
 			)m	
 	INNER JOIN league l WITH (NOLOCK) ON m.LeagueId = l.LeagueId	
 	INNER JOIN Sports s WITH (NOLOCK) ON l.sporttype = s.sporttype 
 
-
+	CREATE CLUSTERED INDEX CIX_MatchID ON #Match (MatchID, [Type])
+	
 	--------------------------------------------------------------------------------
 	---1. Sportsbook only and outright (not Parlay)
 	INSERT INTO #src (srecommend ,site, SportType, winlost_actualrate , winlost_virtualrate , position_actualrate , position_virtualrate , commission_actualrate , commission_virtualrate , 
@@ -245,14 +243,14 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
 			1 As ProductId   
-	FROM bettrans b WITH (READPAST)
+	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId 		
-	WHERE winlostdate = @winlostdate
+	WHERE winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
-		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
+		AND m.type = CASE WHEN b.bettype = 10 THEN 1 ELSE 0 END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
 		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm','BT-Winloss') 
@@ -261,8 +259,7 @@ BEGIN
 				 WHEN m.Sporttype = 1 THEN 1				
 				 ELSE 2
 				 END
-
-
+				 
 	------ BARM (only)
 	INSERT INTO #src (srecommend ,site, SportType, winlost_actualrate , winlost_virtualrate , position_actualrate , position_virtualrate , commission_actualrate , commission_virtualrate , 
 					  Linetotal_actualrate , Linetotal_virtualrate , turnover_actualrate , turnover_virtualrate, ProductId )
@@ -283,15 +280,15 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*actualrate) turnover_actualrate, 
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
 			1 As ProductId   
-	FROM bettrans b WITH (READPAST)
+	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend = 5707545 
-		AND	b.winlostdate = @winlostdate
+		AND	b.winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
-		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
+		AND m.type = CASE WHEN b.bettype = 10 THEN 1 ELSE 0 END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
 		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm','BT-Winloss') 
@@ -339,9 +336,9 @@ BEGIN
 			SUM((1-tpositiontaking)*ABS(stake)*virtualrate) turnover_virtualrate,
 			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 WHEN 'BT-Winloss' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END AS ProductID,
 			s.CasinoType
-	FROM bettrans b WITH (READPAST)
+	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype
-	WHERE winlostdate = @winlostdate
+	WHERE winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103,121) 
 		AND b.ruben = 1	
@@ -352,8 +349,7 @@ BEGIN
 			)	
 	GROUP BY srecommend ,
 			CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 WHEN 'BT-Comm' THEN -2 WHEN 'BT-Winloss' THEN -2 ELSE CASE WHEN s.EventType = 0 AND ProductID = 1 THEN -3 ELSE s.ProductID END END,
-			s.CasinoType
-   
+			s.CasinoType   
 
 	----3. Get from Detail table ----------
 	-- Get bettransRNG data	
@@ -374,7 +370,7 @@ BEGIN
 			s.ProductID, s.CasinoType
 	FROM bettransRNG b WITH(NOLOCK)
 		INNER JOIN #SportBettype s ON b.gameid = s.bettype	
-	WHERE winlostdate = @winlostdate
+	WHERE winlostdate = @StartDate
 		----AND s.ProductID IN (6,17,22) 	---- OW RNG(6), Microgaming - RNG Casino (17), Voidbridge (22)
 		AND s.RefTable = 1  --- Use Table BettransRNG
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
@@ -400,7 +396,7 @@ BEGIN
 			s.ProductID, s.CasinoType
 	FROM bettransLC b WITH(NOLOCK)	
 		INNER JOIN #SportBettype s ON b.gameid = s.bettype
-	WHERE winlostdate = @winlostdate
+	WHERE winlostdate = @StartDate
 		----AND s.ProductID = 21  ---- AllBet (21)
 		AND s.RefTable = 2  --- Use Table BettransLC
 		AND b.statusID NOT IN (0, 1, 101,102,103,121)
@@ -632,15 +628,15 @@ BEGIN
 			SUM ((1-tpositiontaking)*ABS(stake)) RealTurnover,
 			SUM ((1-tpositiontaking)*ABS(stake)) VirtualTurnover,	
 			0 as ExtraPT  
-	FROM bettrans b WITH (READPAST)
+	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend IN (52466, 5707545)
-		AND	b.winlostdate = @winlostdate
+		AND	b.winlostdate = @StartDate
 		AND b.bettype < 19001
 		AND b.statusID NOT IN (101,102,103) 
 		AND b.ruben = 1	
-		AND m.type = CASE WHEN b.bettype = 10 THEN 'outright' ELSE 'match' END 
+		AND m.type = CASE WHEN b.bettype = 10 THEN 1 ELSE 0 END 
 		AND s.productID = 1
 		AND s.EventType IN (1,2)
 		AND s.SubProduct NOT IN ('MG-SuperLive','BT-Sold','BT-Bought','BT-Comm','BT-Winloss') 
