@@ -1,6 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Set_WaitingSel]    Script Date: 10/31/2016 11:06:02 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -49,14 +48,14 @@ BEGIN
 		,IsExistFGLG 					BIT
 		,IsExistHTFGLG 					BIT
 		,SettlementStatusID 			TINYINT
-		,FM_SettlementStatusID 			TINYINT
 		,IsExistAutoBettypes 			BIT
 		,IsExistAutoBettypesParlay 		BIT
 		,IsRunningAutoBettypes			BIT
 		,IsRunningAutoBettypesParlay	BIT
-		,MissingAutoResult				BIT
-		,IsExistFM						BIT
-		,IsRunningFM					BIT
+		,IsMissingAutoResult			BIT
+		,IsExistFastMarket				BIT
+		,IsRunningFastMarket			BIT
+		,IsExistFastMarletResult		BIT
 	)
 
 	;WITH SingleTicket AS (
@@ -72,8 +71,8 @@ BEGIN
 	)
 	
 	INSERT INTO @TempMatch(MatchId, SingleStatus, ParlayStatus, IsSingle, IsMixParlay, IsExistFGLG, IsExistHTFGLG
-		, IsExistAutoBettypes, IsExistAutoBettypesParlay, IsRunningAutoBettypes, IsRunningAutoBettypesParlay, MissingAutoResult
-		, IsExistFM, IsRunningFM
+		, IsExistAutoBettypes, IsExistAutoBettypesParlay, IsRunningAutoBettypes, IsRunningAutoBettypesParlay, IsMissingAutoResult
+		, IsExistFastMarket, IsRunningFastMarket, IsExistFastMarletResult
 	)
 	SELECT ISNULL(sg.matchid, pl.matchid) AS MatchId
 		, sg.IsCalculating AS SingleStatus
@@ -86,9 +85,10 @@ BEGIN
 		, 0 AS IsExistAutoBettypesParlay
 		, 0 AS IsRunningAutoBettypes
 		, 0 AS IsRunningAutoBettypesParlay
-		, 0 AS MissingAutoResult
-		, 0 AS IsExistFM
-		, 0 AS IsRunningFM
+		, 0 AS IsMissingAutoResult
+		, 0 AS IsExistFastMarket
+		, 0 AS IsRunningFastMarket
+		, 0 AS IsExistFastMarletResult
 	FROM SingleTicket sg
 		FULL OUTER JOIN ParlayTicket pl ON sg.matchid = pl.matchid
 	
@@ -104,12 +104,12 @@ BEGIN
 	)
 	UPDATE	m
 		SET SettlementStatusID = rs.SettlementStatusID
-			,FM_SettlementStatusID = rs.FM_SettlementStatusID
+			,IsExistFastMarletResult = rs.IsExistFastMarletResult
 	FROM	@TempMatch m
 		CROSS APPLY (
 			SELECT	TOP 1 r.MatchID
 					,MIN(CASE WHEN c.groupId = 8 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS SettlementStatusID
-					,MIN(CASE WHEN c.groupId = 9 AND r.ResourceId % 100 = 0 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS FM_SettlementStatusID
+					,MAX(CASE WHEN c.groupId = 9 THEN 1 ELSE 0 END) AS IsExistFastMarletResult
 			FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
 				INNER JOIN cteAutoResultDetail c
 					ON	r.MatchId = m.MatchId
@@ -159,8 +159,8 @@ BEGIN
 			,MAX(CASE WHEN groupId = 8 AND IsParlay = 1 THEN 1 ELSE 0 END) AS IsExistAutoBettypesParlay
 			,MAX(CASE WHEN groupId = 8 AND IsParlay = 0 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsRunningAutoBettypes
 			,MAX(CASE WHEN groupId = 8 AND IsParlay = 1 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsRunningAutoBettypesParlay
-			,MAX(CASE WHEN groupId = 9 AND IsParlay = 0 THEN 1 ELSE 0 END) AS IsExistFM
-			,MAX(CASE WHEN groupId = 9 AND IsParlay = 0 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsRunningFM
+			,MAX(CASE WHEN groupId = 9 AND IsParlay = 0 THEN 1 ELSE 0 END) AS IsExistFastMarket
+			,MAX(CASE WHEN groupId = 9 AND IsParlay = 0 AND isRunning > 0 THEN 1 ELSE 0 END) AS IsRunningFastMarket
 		FROM #tblBetStatus
 		GROUP BY matchid
 	)
@@ -171,8 +171,8 @@ BEGIN
 		,IsExistAutoBettypesParlay = CASE WHEN tt.IsExistAutoBettypesParlay > 0 THEN 1 ELSE 0 END
 		,IsRunningAutoBettypes = CASE WHEN tt.IsRunningAutoBettypes > 0 THEN 1 ELSE 0 END
 		,IsRunningAutoBettypesParlay = CASE WHEN tt.IsRunningAutoBettypesParlay > 0 THEN 1 ELSE 0 END
-		,IsExistFM = CASE WHEN tt.IsExistFM > 0 THEN 1 ELSE 0 END
-		,IsRunningFM = CASE WHEN tt.IsRunningFM > 0 THEN 1 ELSE 0 END
+		,IsExistFastMarket = CASE WHEN tt.IsExistFastMarket > 0 THEN 1 ELSE 0 END
+		,IsRunningFastMarket = CASE WHEN tt.IsRunningFastMarket > 0 THEN 1 ELSE 0 END
 	FROM @TempMatch t
 	INNER JOIN cteBetStatus tt ON t.MatchId = tt.MatchId	
 	
@@ -187,7 +187,7 @@ BEGIN
 		WHERE	GroupId = 8
 	)	
 	UPDATE m
-		SET MissingAutoResult = t.MissingAutoResult
+		SET IsMissingAutoResult = CASE WHEN t.MissingAutoResult > 0 THEN 1 ELSE 0 END
 	FROM @TempMatch m
 		INNER JOIN (
 			SELECT  b.matchid, COUNT(1) MissingAutoResult
@@ -227,15 +227,15 @@ BEGIN
 		, tm.ParlayStatus AS IsCalculatingMP
 		, CASE WHEN tm.SettlementStatusID IS NULL AND tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay = 0 THEN 'N/A'
 				WHEN tm.SettlementStatusID = 0 OR tm.IsRunningAutoBettypes > 0 THEN 'Running'
-				WHEN ISNULL(tm.MissingAutoResult,0) > 0 AND tm.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
+				WHEN ISNULL(tm.IsMissingAutoResult,0) > 0 AND tm.IsRunningAutoBettypesParlay > 0 THEN 'Parlay Running'
 				WHEN tm.SettlementStatusID > 0 
 					OR (tm.IsExistAutoBettypes > 0 AND tm.IsRunningAutoBettypes = 0)
 					OR (tm.IsExistAutoBettypes = 0 AND tm.IsExistAutoBettypesParlay > 0 AND tm.IsRunningAutoBettypesParlay = 0) THEN 'Completed'
 			ELSE '' END AS AutoSettleResultStatus
 		, CASE
-			WHEN tm.FM_SettlementStatusId IS NULL AND tm.IsExistFM = 0 THEN 'N/A'
-			WHEN tm.FM_SettlementStatusId = 0 OR tm.IsRunningFM > 0 THEN 'Running'
-			WHEN tm.FM_SettlementStatusId > 0 OR (tm.IsExistFM > 0 AND tm.IsRunningFM = 0) THEN 'Completed'
+			WHEN tm.IsExistFastMarletResult = 0 AND tm.IsExistFastMarket = 0 THEN 'N/A'
+			WHEN tm.IsRunningFastMarket > 0 THEN 'Running'
+			WHEN tm.IsExistFastMarket > 0 AND tm.IsRunningFastMarket = 0 THEN 'Completed'
 			ELSE ''
 		END AS AutoSettleFastMarket
 	FROM dbo.match m WITH(NOLOCK)
@@ -265,8 +265,6 @@ BEGIN
 	END
 
 END
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet] AS [dbo]
 GO

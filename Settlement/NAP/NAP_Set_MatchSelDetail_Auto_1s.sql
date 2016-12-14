@@ -38,13 +38,6 @@ BEGIN
         ,InRunning			INT
         ,GroupId			SMALLINT
     )
-    
-    DECLARE    @tmpTicketStatusParlay TABLE(
-         ResourceID			VARCHAR(20)
-        ,BetCount			INT
-        ,InRunning			INT
-        ,GroupId			SMALLINT
-    )
 
 	DECLARE @tmpAutoBettypes TABLE (bettype SMALLINT PRIMARY KEY, ResourceId VARCHAR(20), IsDetermined BIT)
 	
@@ -109,34 +102,8 @@ BEGIN
                 WHEN bm.bettype IN (160, 164, 169, 180) THEN SUBSTRING(CAST(bm.betcheck AS VARCHAR(20)),2,5) 
                 ELSE bm.bettype 
             END
-    GROUP BY  CASE
-                WHEN bm.bettype IN (160, 164, 169, 180) THEN SUBSTRING(CAST(bm.betcheck AS VARCHAR(20)),2,5) 
-                ELSE bm.bettype 
-            END
-	
-	IF EXISTS (SELECT TOP 1 1 FROM @tmpTicketStatus WHERE GroupId = 3)
-		SET @IsExistHtFgLg = 1
-	ELSE IF EXISTS (SELECT TOP 1 1 FROM @tmpTicketStatusParlay WHERE GroupId = 3)
-		SET @IsExistHtFgLg = 1
-	
-	IF EXISTS (SELECT TOP 1 1 FROM @tmpTicketStatus WHERE GroupId = 4)
-		SET @IsExistFgLg = 1
-	ELSE IF EXISTS (SELECT TOP 1 1 FROM @tmpTicketStatusParlay WHERE GroupId = 4)
-		SET @IsExistFgLg = 1
-	
-	
 	
     -- Detail 
-    SELECT    
-		 ResourceID = CASE WHEN COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) ='216' THEN '21601' ELSE COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) END 
-            ,TicketStatus = CASE 
-								WHEN ISNULL(t.BetCount,0) = 0 AND ISNULL(p.BetCount,0) = 0 THEN 'No Ticket'
-								WHEN t.InRunning > 0 THEN 'Running'
-								WHEN ISNULL(t.BetCount,0) = 0 AND p.InRunning > 0 THEN 'Parlay Running'
-                                ELSE 'Calculated'
-                            END
-		WHERE	GroupId = 8
-    )           
     SELECT    
 		 ResourceID = CASE WHEN COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) ='216' THEN '21601' ELSE COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) END 
             ,TicketStatus = CASE 
@@ -161,7 +128,6 @@ BEGIN
                         ,r.OtherInfo
                         ,r.ResultStatusID
                         ,r.SettlementStatusID                      
-                        ,c.GroupId
                 FROM    DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
 					INNER JOIN	@tmpAutoBettypes f
 						ON	r.MatchID = @MatchID
@@ -170,10 +136,6 @@ BEGIN
     ORDER BY CASE WHEN COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) ='216' THEN '21601' ELSE COALESCE(r.ResourceID,t.ResourceID,p.ResourceID) END  ASC 
 
 END
-
-
-
-
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelDetail_Auto_1s] TO [bodbAdminNet] AS [dbo]
 GO

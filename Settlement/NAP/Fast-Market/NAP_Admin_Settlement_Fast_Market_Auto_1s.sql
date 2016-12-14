@@ -151,13 +151,6 @@ BEGIN
 	SET @rowcount = @@rowcount
 	
 	BEGIN TRY
-		-- Mark this match as running
-		IF @Action = 'UNDO'
-			EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_Completed @MatchId = @matchid
-					,@IsFastMarketCompleted = 0
-					,@AdminId = @AdminId
-					,@IP = @IP
-
 		-- update resultstatus
 		EXEC DBPRO.bodb02.dbo.NAP_Set_FastMarket_ResultDetailUpd @MatchId = @MatchId
 			,@Results = @Results
