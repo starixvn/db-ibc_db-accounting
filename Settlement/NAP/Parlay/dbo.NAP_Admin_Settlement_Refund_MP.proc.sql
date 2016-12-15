@@ -23,21 +23,16 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @start				DATETIME		
-			,@stop				DATETIME		
-			,@ActionID			INT
-			,@IsDetermined		BIT
-			,@Mode				VARCHAR(20)
-			
-	-- for Tennis/VolleyBall/Badminton/Squash
-	DECLARE @TennisTotal INT = NULL, @TotalGameHomeMatch INT = NULL, @TotalGameAwayMatch INT = NULL
-	DECLARE @resultConner 		VARCHAR(MAX) -- for cornersBets
-		, @resultSS 			VARCHAR(MAX) -- sporttingSolution
-		, @resultBetRadar 		VARCHAR(MAX) -- for betRadar
-		, @SelectedSetCAL 		VARCHAR(50)
-		, @SelectedSetREFUND 	VARCHAR(50)				
+DECLARE @start DATETIME
+	, @stop DATETIME
+	, @ActionID INT
+	, @IsDetermined BIT
+	, @resultDetail_cb VARCHAR(MAX) = NULL -- for corners bets
+	, @resultDetail_ss VARCHAR(MAX)
+	, @SelectedSetCAL VARCHAR(50)
+	, @SelectedSetREFUND VARCHAR(50)
 	
-		
+	DECLARE @TennisTotal INT = NULL, @TotalGameHomeMatch INT = NULL, @TotalGameAwayMatch INT = NULL
 
 	SELECT @ActionID 	= CASE 
 						WHEN @action IN ('ABANDONED-2H', 'REFUND-FT') THEN 106
@@ -46,7 +41,7 @@ BEGIN
 						ELSE NULL
 					END
 		, @IsDetermined = CASE WHEN @action IN ('ABANDONED-1H', 'ABANDONED-2H') THEN 1 ELSE 0 END
-		, @start = CURRENT_TIMESTAMP
+		, @start 		= CURRENT_TIMESTAMP
 	
 	-- match info
 	DECLARE 
@@ -83,38 +78,79 @@ BEGIN
 	
 	IF @Sporttype = 1
 	BEGIN
-		EXEC dbo.NAP_Admin_Settlement_2 @mode = 'cornersBets'
+		EXEC dbo.NAP_Admin_Settlement_2 
+			@mode 				= 'cornersBets'
+			,@matchid 			= @matchID
+			,@str_resultDetail 	= @resultDetail_cb OUTPUT
+	END
+	
+	IF @Sporttype = 5
+	BEGIN
+		EXEC dbo.NAP_Admin_Settlement_2 @mode = 'sporttingSolution'
 			,@matchid = @matchID
-			,@str_resultDetail = @resultConner OUTPUT
-		
-		--need to settle auto first for either calculate or refund action (of course, only if there is autobet ticket)
-		IF (EXISTS (
-					SELECT TOP 1 1
-					FROM DBPRO.bodb02.dbo.ResultDetail WITH(NOLOCK)
-					WHERE matchid = @matchid
-						AND SettlementStatusID > 0
-						AND (ResourceId IN (SELECT CAST(BetType AS VARCHAR(20)) FROM dbo.f_Set_GetGroupBettypes() WHERE GroupId = 8)
-							OR len(ResourceID) = 5 AND SUBSTRING(ResourceID, 1, 3) IN ('160', '164', '169', '180', '216')
-						)
+			,@Total = @TennisTotal OUTPUT
+			,@TotalHome = @TotalGameHomeMatch OUTPUT
+			,@TotalAway = @TotalGameAwayMatch OUTPUT
+			,@str_resultDetail = @resultDetail_ss OUTPUT	
+	END
+	
+	--CHECK Auto-Bettype first if any
+	IF (EXISTS (
+			SELECT TOP 1 1
+			FROM dbo.bettransm bm (NOLOCK)
+			WHERE bm.matchid = @matchId
+				AND EXISTS (
+					SELECT TOP 1 1 
+					FROM dbo.f_Set_GetGroupBettypes() AS f 
+					WHERE f.GroupId 	= 8 
+						AND f.bettype 	= bm.bettype
 				)
-		) AND @action IN ('CAL','REFUND-HT','REFUND-FT','REFUND') --Soccer Auto Bets Radar 
-		BEGIN		
-			EXEC dbo.NAP_Admin_Settlement_2 @mode = 'betradar'
-				,@matchid = @matchID
-				,@str_resultDetail = @resultBetRadar OUTPUT
-				
-
+			)
+	)
+	BEGIN		
+		EXEC dbo.NAP_Admin_Settlement_Parlay_Betradar
+			@MatchId			= @MatchId
+			,@matchdate			= @matchdate
+			,@Mode				= @Action
+	END	
+	
+	--CHECK for CAL fisrt
+	IF(@action IN ('REFUND-HT', 'ABANDONED-2H', 'REFUND-FT'))
+	BEGIN
+		/*IF(@action IN ('REFUND-HT')) --REFUND Is3x30 AND CAL the REST
+		BEGIN
+			TODO
 		END
-	END		
+		IF(@action IN ('ABANDONED-2H', 'REFUND-FT')) --CAL-HT and REFUND/ABANDONED the REST
+		BEGIN
+			TODO
+		END*/
+		
+		--DO calculation
+		EXEC dbo.NAP_Admin_Settlement_Parlay_Calculate
+			@MatchId			= @MatchId
+			,@matchdate			= @matchdate
+			,@mode				= @Action
+			,@hth		 		= @hthomescore
+			,@hta		 		= @htawayscore
+			,@fth				= @fthomescore
+			,@fta				= @ftawayscore
+			,@Sporttype			= @Sporttype
+			,@betstatus 		= @betstatus
+			,@GoalSequence 		= @GoalRecord
+			,@resultDetail_cb	= @resultDetail_cb
+			,@resultDetail_ss	= @resultDetail_ss
+			
+	END
 	
 	--CALL settle determinable first
 	IF(@IsDetermined = 1)
 	BEGIN
-		
+		--DO settle determined
 		EXEC dbo.NAP_Admin_Settlement_Parlay_SDT
 			@MatchId			= @MatchId
 			,@matchdate			= @matchdate
-			,@Mode				= @action
+			,@mode				= @Action
 			,@hthomescore 		= @hthomescore
 			,@htawayscore 		= @htawayscore
 			,@fthomescore		= @fthomescore
@@ -123,21 +159,15 @@ BEGIN
 			,@betstatus 		= @betstatus
 			,@GoalRecord 		= @GoalRecord
 	END
-	
-	SELECT @mode = CASE 
-					WHEN @action IN ('ABANDONED-2H') THEN 'REFUND-FT'
-					WHEN @action IN ('ABANDONED-1H') THEN 'REFUND'
-					ELSE @action
-				END
-				
-	--REFUND the rest
-	EXEC dbo.NAP_Admin_Settlement_Parlay_Refund
-		@MatchId			= @MatchId
-		,@matchdate			= @matchdate
-		,@Mode				= @mode
-		,@IsDetermined		= @IsDetermined
-		,@ResultBetRadar	= @resultBetRadar
-	
+	ELSE
+	BEGIN
+		--REFUND all tickets
+		EXEC dbo.NAP_Admin_Settlement_Parlay_Refund
+			@MatchId			= @MatchId
+			,@matchdate			= @matchdate
+			,@mode				= @Action
+			,@IsRefundHT		= @IsRefundHT
+	END
 	return
 	
 	--CAL main tickets by refno
@@ -355,8 +385,5 @@ BEGIN
 	END --END: WRITE LOG ----------------------------------
 	
 	RETURN
-	
-END
-
-	
+END	
 GO 

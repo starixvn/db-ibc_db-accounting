@@ -418,7 +418,8 @@ BEGIN
 	BEGIN
 		
 		INSERT INTO @tmpResultDetail(ResourceID,HomeValue,AwayValue)
-		SELECT '01', 'NA', 'NA' 
+		--SELECT '01', 'NA', 'NA' 
+		SELECT '01', CAST(@hth AS VARCHAR(50)), CAST(@hta AS VARCHAR(50))
 		UNION ALL
 		SELECT '04', NULL, NULL 
 		WHERE @isExistTotalCorner = 1
@@ -601,7 +602,8 @@ BEGIN
 	BEGIN
 				
 		INSERT INTO @tmpResultDetail(ResourceID,HomeValue,AwayValue)
-		SELECT '00', 'NA', 'NA'
+		--SELECT '00', 'NA', 'NA'
+		SELECT'00', CAST(@fth AS VARCHAR(50)), CAST(@fta AS VARCHAR(50)) 
 		UNION ALL 
 		SELECT '04', CAST(@fthCorners AS VARCHAR(50)), CAST(@ftaCorners AS VARCHAR(50))
 		WHERE @isExistTotalCorner = 1 
@@ -666,10 +668,15 @@ BEGIN
 				);	
 		
 		--UPDATE OtherInfo
-		SELECT @OtherInfo = CASE WHEN OtherInfo IS NULL THEN '' ELSE OtherInfo + ';' END + 'SDT:' + CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50))
+		SELECT @OtherInfo = ISNULL(OtherInfo,'')
 		FROM dbo.ResultDetail WITH(NOLOCK)
 		WHERE matchid 		= @matchid 
-			AND ResourceID 	= '00' --HT
+			AND ResourceID 	= '00' --FT
+		
+		SET @OtherInfo = CASE 
+							WHEN CHARINDEX('SDT:',@OtherInfo) > 0 THEN REPLACE(@OtherInfo,SUBSTRING(@OtherInfo,CHARINDEX('SDT:',@OtherInfo) + 4, 1),CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50))) 
+							ELSE @OtherInfo + 'SDT:' + CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50)) + ';'  
+						END
 		
 		UPDATE dbo.ResultDetail WITH(ROWLOCK,UPDLOCK)
 		SET OtherInfo 		= @OtherInfo

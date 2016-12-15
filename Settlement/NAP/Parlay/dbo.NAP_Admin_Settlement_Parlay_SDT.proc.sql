@@ -1,7 +1,7 @@
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_SDT] (
 	@matchId 			INT
 	, @matchdate		SMALLDATETIME
-	, @Mode 			VARCHAR(20)
+	, @Mode				VARCHAR(20)
 	, @fthomescore		SMALLINT
 	, @ftawayscore		SMALLINT
 	, @hthomescore		SMALLINT
@@ -28,13 +28,11 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE 
-		@hScore1H			TINYINT
+	DECLARE @IsHT 			BIT
+		, @hScore1H			TINYINT
 		, @aScore1H			TINYINT
 		, @hScore2H			TINYINT
 		, @aScore2H			TINYINT
-		, @FGNG				VARCHAR(50)
-		, @IsHT				BIT
 		
 	--conners result
 	DECLARE @hthCorners			TINYINT
@@ -62,18 +60,12 @@ BEGIN
 		, AwayValue 	VARCHAR(50)
 	)	
 	
-	SELECT @IsHT			=  CASE WHEN @Mode = 'ABANDONED-1H' THEN 1 ELSE 0 END
+	SELECT @IsHT			= CASE WHEN @Mode IN ('ABANDONED-1H') THEN 1 ELSE 0 END 
 		, @hScore1H 		= @hthomescore
 		, @aScore1H 		= @htawayscore
-		, @hScore2H			= CASE WHEN @Mode = 'ABANDONED-2H' THEN @fthomescore - @hthomescore ELSE NULL END
-		, @aScore2H			= CASE WHEN @Mode = 'ABANDONED-2H' THEN @ftawayscore - @htawayscore ELSE NULL END
-		, @GoalRecord		= CASE WHEN LEFT(@GoalRecord, 1) = ';' THEN SUBSTRING(@GoalRecord,2,LEN(@GoalRecord) - 1) ELSE @GoalRecord END
-		, @FGNG				= CASE 	WHEN LEFT(@GoalRecord, 1) = 'H' THEN '1'  
-									WHEN LEFT(@GoalRecord, 1) = 'A' THEN '2'  
-									ELSE ''
-								END 
-		, @FGNG				= CASE WHEN @FGNG <> '' THEN @FGNG + ':1' ELSE '' END
-		
+		, @hScore2H			= CASE WHEN @IsHT = 0 THEN @fthomescore - @hthomescore ELSE 0 END
+		, @aScore2H			= CASE WHEN @IsHT = 0 THEN @ftawayscore - @htawayscore ELSE 0 END
+								
 		--conners--------------
 		, @hthCorners		= 0
 		, @htaCorners		= 0
@@ -89,7 +81,7 @@ BEGIN
 		FROM bodb02.dbo.ResultDetail rs WITH(NOLOCK)
 		WHERE matchid = '+CAST(@matchid AS VARCHAR(10))+' 
 			AND SettlementStatusID = ' + 
-			CASE WHEN @Mode = 'ABANDONED-1H' THEN '5' ELSE '6' END
+			CASE WHEN @IsHT = 1 THEN '5' ELSE '6' END
 			+ ''') AS rs'
 	
 	EXEC sp_executesql @rsQuery
@@ -106,7 +98,7 @@ BEGIN
 		FROM #tmpResultDetail
 	END
 	
-	SELECT @totalConner			= CASE WHEN @Mode = 'ABANDONED-1H' THEN (@hthCorners + @htaCorners) ELSE (@fthCorners + @ftaCorners) END
+	SELECT @totalConner			= CASE WHEN @IsHT = 1 THEN (@hthCorners + @htaCorners) ELSE (@fthCorners + @ftaCorners) END
 		, @totalConner1H 		= (@hthCorners + @htaCorners)
 	
 	;WITH cteBettypes
@@ -116,18 +108,19 @@ BEGIN
 		FROM dbo.f_Set_GetGroupBettypes() f
 		WHERE f.IsDetermined = 1 -- support to settle determined tickets
 				AND 1 = CASE 
-							WHEN @Mode = 'ABANDONED-2H' AND f.GroupId IN (2,4,6)  THEN 1 -- FT, FT corner, HTFT-FGLG
-							WHEN @Mode = 'ABANDONED-1H' THEN 1
+							WHEN @IsHT = 0 AND f.GroupId IN (2,4,6)  THEN 1 -- FT, FT corner, HTFT-FGLG
+							WHEN @IsHT = 1 THEN 1
 							ELSE 0
 						END
 				AND f.GroupId <> 8 -- auto betradar
 	)
 	INSERT INTO #tempSDTTickets (transid, statusId)
-	SELECT b.transid
-		, b.statusId
+	SELECT t.transid
+		, t.statusId
 	FROM
 	(
-		SELECT bm.transid, bm.bettype, odds.StatusId
+		SELECT bm.transid
+			, odds.StatusId
 		FROM dbo.bettransm bm WITH(NOLOCK)
 			CROSS APPLY
 			(
@@ -141,11 +134,10 @@ BEGIN
 					, @aScore1H
 					, @hScore2H
 					, @aScore2H
-					, @FGNG
 					, bm.transdesc
 					, @IsHT
 				)
-				WHERE modds IS NOT NULL
+				WHERE StatusId IN (112,113)
 				UNION ALL
 				SELECT modds, StatusId 
 				FROM [dbo].[f_Set_Parlay_CalModds_Corner](
@@ -161,27 +153,27 @@ BEGIN
 					, @htaCorners
 					, @fthCorners
 					, @ftaCorners
-					, @Mode
+					, @IsHT
 				)
-				WHERE modds IS NOT NULL
+				WHERE StatusId IN (112,113)
 				UNION ALL
 				SELECT modds, StatusId 
-				FROM [dbo].[f_Set_Parlay_CalModds_BetRadar](
+				FROM [dbo].[f_Set_Parlay_CalModds_GoalRecord](
 					bm.bettype
 					, bm.betteam
-					, bm.betcheck
-					, @NextGoal
-					, @GoalScorerAnytime
-					, @Mode
+					, @GoalRecord
+					, @IsHT
 				)
-				WHERE modds IS NOT NULL
+				WHERE StatusId IN (112,113)
+				UNION ALL --103-REFUND
+				SELECT NULL AS modds
+					, 103 AS StatusId 
 			)  AS odds
 			
 		WHERE bm.matchid = @matchid
 			AND bm.statusID IN (0)
-			AND odds.statusID IN (112,113)
-	) AS b
-	WHERE b.bettype IN (SELECT bettype FROM cteBettypes)
+			AND bm.bettype IN (SELECT bettype FROM cteBettypes)
+	) AS t
 	
 	DECLARE @batchNo		INT
 		,@batchCount		INT
@@ -214,7 +206,7 @@ BEGIN
 		EXEC dbo.NAP_Admin_Calculate_MP_broker 
 			@matchid 		= @matchid
 			,@matchdate		= @matchdate
-			,@mode 			= @Mode
+			,@mode 			= 'ABANDONED'
 			,@action 		= 'REFUND'
 			,@strTransIds	= @strSDTTicket
 			
