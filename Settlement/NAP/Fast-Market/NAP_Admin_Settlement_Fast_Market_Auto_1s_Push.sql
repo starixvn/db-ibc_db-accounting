@@ -114,14 +114,14 @@ BEGIN
 							FROM	DBPRO.bodb02.dbo.ResultDetail r WITH(NOLOCK)
 							WHERE	r.matchid = @matchid
 									AND t.ResourceId = r.ResourceId
-									AND	'5' = (SELECT TOP 1 [char] FROM dbo.f_Set_GetChar(CASE WHEN t.Position <=44 THEN r.HomeValue ELSE r.AwayValue END
+									AND	(SELECT TOP 1 [char] FROM dbo.f_Set_GetChar(CASE WHEN t.Position <=44 THEN r.HomeValue ELSE r.AwayValue END
 																						 ,CASE WHEN t.Position <=44 THEN t.Position ELSE t.Position - 45 END 
-																							))
+																							)) IN ('3','5','6') -- UNDO, CAL (manually), REFUND
 						) r
 		)
 		BEGIN
 			SELECT	 @ErrCode	= 1001012
-					,@ErrMsg	= 'The auto-settlement failed due to a result that has been settled previously by manual.' 
+					,@ErrMsg	= 'The auto-settlement failed due to a result that has been settled or unsettled previously by manual.' 
 
 			RETURN
 		END
