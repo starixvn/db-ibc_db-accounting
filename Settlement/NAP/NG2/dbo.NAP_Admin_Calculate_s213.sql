@@ -9,7 +9,7 @@ AS
 	DB: DBTXN/BODB02
 	
 	Revisions:
-	
+		- 20161214@Johnson: correct comm value [redmine:#68766]
 	Parameter's Explanation:
 	
 */
@@ -62,10 +62,10 @@ BEGIN
 			aWinlost = (payout - stake)*-apositiontaking,
 			mWinlost = (payout - stake)*-mpositiontaking,
 			sWinlost = (payout - stake)*-spositiontaking,
-			PlayerComm = CASE WHEN @statusid IN (112,113) THEN playerdiscount * stake END,
-			comm = CASE WHEN @statusid IN (112,113) THEN discount * stake * (1-apositiontaking) END,
-			acomm = CASE WHEN @statusid IN (112,113) THEN adiscount * stake * (1-(mpositiontaking+apositiontaking)) END,
-			scomm = CASE WHEN @statusid IN (112,113) THEN sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) END			
+			PlayerComm = CASE WHEN @statusid IN (112,113) THEN playerdiscount * stake ELSE 0 END,
+			comm = CASE WHEN @statusid IN (112,113) THEN discount * stake * (1-apositiontaking) ELSE 0 END,
+			acomm = CASE WHEN @statusid IN (112,113) THEN adiscount * stake * (1-(mpositiontaking+apositiontaking)) ELSE 0 END,
+			scomm = CASE WHEN @statusid IN (112,113) THEN sdiscount * stake * (1-(spositiontaking+mpositiontaking+apositiontaking)) ELSE 0 END			
 		FROM bettrans b WITH(NOLOCK)
 			INNER JOIN #tmpTrans t ON b.transid = t.transid
 		
