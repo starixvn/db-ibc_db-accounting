@@ -98,7 +98,7 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 4, @CustId = 1368173
                 h.ActionName,
                 CASE
                     WHEN h.ModifiedBy IS NULL
-                    THEN ''
+                    THEN 'System'
                     ELSE
          (
              SELECT c.username
