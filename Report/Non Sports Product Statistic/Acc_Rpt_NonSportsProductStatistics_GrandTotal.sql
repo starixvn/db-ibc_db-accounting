@@ -188,8 +188,8 @@ BEGIN
 			INSERT INTO #tmp_Company (srecommend)
 			SELECT c.custid
 			FROM dbo.Customer c WITH(NOLOCK)
-				LEFT JOIN dbo.Dep_CustSuper d WITH(NOLOCK) ON c.custid = d.custid
-			WHERE c.roleid = 4 AND d.custid IS NULL
+			WHERE c.roleid = 4
+				AND NOT EXISTS (SELECT TOP 1 1 FROM dbo.Dep_CustSuper s WHERE c.custid = s.custid)
 		END
 
 		IF EXISTS (SELECT TOP 1 1 FROM #tmp_Site WHERE Site NOT IN ('MBC Group'))
@@ -200,6 +200,7 @@ BEGIN
 				INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
 				INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
 			WHERE c.roleid = 4
+				AND EXISTS (SELECT TOP 1 1 FROM dbo.Dep_CustSuper s WHERE c.custid = s.custid)
 		END
 
 		IF @Username <> ''
