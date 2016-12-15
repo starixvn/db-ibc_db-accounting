@@ -116,7 +116,9 @@ BEGIN
 	
 	SELECT * INTO #SpecialDeleteBets_Parlay FROM #SpecialDeleteBets WHERE 1 = 0
 	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Parlay_custid ON #SpecialDeleteBets_Parlay(custid)	
-	CREATE INDEX IDX_SpecialDeleteBets_Parlay_id_TransId ON #SpecialDeleteBets_Parlay(id, TransId)	
+	CREATE INDEX IDX_SpecialDeleteBets_Parlay_id_TransId ON #SpecialDeleteBets_Parlay(id, TransId)
+	
+	CREATE TABLE #t_CustID(custid INT PRIMARY KEY)
 		
 	SELECT  s.Stake,
 			s.AwayId,
@@ -507,6 +509,11 @@ BEGIN
 			END									
 		END
 		
+		INSERT INTO #t_CustID(custid)
+		SELECT custid FROM #SpecialDeleteBets_Single
+		UNION
+		SELECT custid FROM #SpecialDeleteBets_Parlay
+		
 		-------> Insert backups	
 		--> backups for single
 		IF @CountSingle > 0
@@ -565,16 +572,11 @@ BEGIN
 				  -- Cricket charge comm
 				  UNION ALL
 				  SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm) balance
-				  FROM dbo.bettrans b WITH (NOLOCK)				   	   
+				  FROM #t_CustID t
+					   INNER JOIN dbo.bettrans b WITH (NOLOCK)
+							   ON t.custid = b.custid
 				  WHERE b.bettype = 500
-				    AND b.matchid = @MatchID
-					AND EXISTS (
-							SELECT TOP 1 1 
-							FROM (SELECT custid FROM #SpecialDeleteBets_Single
-								  UNION ALL
-								  SELECT custid FROM #SpecialDeleteBets_Parlay) d 
-							WHERE b.custid = d.custid
-						)
+				    AND b.matchid = @MatchID					
 				  GROUP BY b.CustID
 			 ) AS T
 		GROUP BY T.custid
@@ -691,17 +693,12 @@ BEGIN
 				UNION ALL
 				-- Cricket charge comm			  
 			    SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm) balance
-			    FROM dbo.bettrans b WITH (NOLOCK)				   	   
-			    WHERE b.bettype = 500
-			      AND b.matchid = @MatchID
-				  AND EXISTS (
-						  SELECT TOP 1 1 
-						  FROM (SELECT custid FROM #SpecialDeleteBets_Single
-							    UNION ALL
-							    SELECT custid FROM #SpecialDeleteBets_Parlay) d 
-						  WHERE b.custid = d.custid
-					  )
-			    GROUP BY b.CustID
+				FROM #t_CustID t
+					 INNER JOIN dbo.bettrans b WITH (NOLOCK)
+							 ON t.custid = b.custid
+				WHERE b.bettype = 500
+				  AND b.matchid = @MatchID					
+				GROUP BY b.CustID
 			 )	AS T
 		GROUP BY T.custid
 		
