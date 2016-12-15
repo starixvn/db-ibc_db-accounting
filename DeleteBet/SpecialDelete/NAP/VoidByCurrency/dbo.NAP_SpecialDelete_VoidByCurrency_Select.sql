@@ -41,8 +41,7 @@ BEGIN
 			BetTeam				NVARCHAR(10),
 			BetType				SMALLINT,
 			CurrencyCode		NVARCHAR(50),
-			Creator				INT,
-			creatorName			VARCHAR(30),
+			Creator				INT,			
 			Hdp1				SMALLMONEY,
 			Hdp2				SMALLMONEY,
 			HomeId				INT,
@@ -62,6 +61,7 @@ BEGIN
 			TransId				BIGINT,
 			UserName			VARCHAR(30),
 			WinLost				MONEY,
+			srecommend			INT,
 			GroupName			VARCHAR(10),
 			
 			SubTransId			BIGINT,
@@ -115,8 +115,7 @@ BEGIN
 					BetTeam,
 					BetType,
 					CurrencyCode,
-					Creator,
-					creatorName,
+					Creator,					
 					Hdp1,
 					Hdp2,
 					HomeId,
@@ -136,6 +135,7 @@ BEGIN
 					TransId,
 					UserName,
 					WinLost,
+					srecommend,
 					GroupName,
 					
 					SubTransId,
@@ -153,8 +153,7 @@ BEGIN
 				b.BetTeam,
 				b.BetType,
 				te.currency AS CurrencyCode,
-				b.Creator,
-				cr.username AS creatorName,
+				b.Creator,				
 				b.Hdp1,
 				b.Hdp2,
 				m.HomeId,
@@ -174,6 +173,7 @@ BEGIN
 				b.TransId,
 				b.UserName,
 				b.WinLost,
+				b.srecommend,
 				tl.GroupName AS GroupName,
 				
 				NULL AS SubTransId,
@@ -191,16 +191,15 @@ BEGIN
 			 INNER JOIN #t_LicenseeNames tl WITH (NOLOCK)
 					 ON tl.LicenseeName = c.site -- filter for @LicenseeIDs	
 			 INNER JOIN match m WITH (NOLOCK)
-					 ON b.matchid = m.matchid
-			 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
-					 ON b.creator = cr.custid							 		 
+					 ON b.matchid = m.matchid			 							 		 
 		WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
 			AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket			
 			AND NOT (b.Username like '%bettrade%' AND b.betdaqid = 0) -- current owner is not member bettrade			
 			AND b.statusID NOT IN (101, 102) -- reject, void
 			AND b.betfrom <> 'P' -- exclude phone betting
-			AND b.matchid = @MatchID -- filer for @MatchID						
+			AND b.matchid = @MatchID -- filer for @MatchID	
+			AND b.bettype <> 500 -- exclude charge comm				
 		
 	--> parlay
 	IF @SearchParlay = 1	
@@ -212,8 +211,7 @@ BEGIN
 					BetTeam,
 					BetType,
 					CurrencyCode,
-					Creator,
-					creatorName,
+					Creator,					
 					Hdp1,
 					Hdp2,
 					HomeId,
@@ -233,6 +231,7 @@ BEGIN
 					TransId,
 					UserName,
 					WinLost,
+					srecommend,
 					GroupName,
 					
 					SubTransId,
@@ -250,8 +249,7 @@ BEGIN
 				main.BetTeam,
 				main.BetType,
 				te.currency AS CurrencyCode,
-				main.Creator,
-				cr.username AS creatorName,
+				main.Creator,				
 				main.Hdp1,
 				main.Hdp2,
 				m.HomeId,
@@ -271,6 +269,7 @@ BEGIN
 				main.transid AS TransId,
 				main.UserName,
 				main.winlost AS WinLost,
+				main.srecommend,
 				tl1.GroupName AS GroupName,
 				
 				sub.transid AS SubTransId,
@@ -286,9 +285,7 @@ BEGIN
 			 INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK)
 					 ON main.recommend = c.custid
 			 INNER JOIN #t_LicenseeNames tl1 WITH (NOLOCK)
-					 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs
-			 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
-					 ON main.creator = cr.custid			 				 					 
+					 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs			 			 				 					 
 			 
 			 INNER JOIN dbo.bettransm sub WITH (NOLOCK)	
 					 ON main.refno = sub.refno
@@ -301,7 +298,8 @@ BEGIN
 			AND m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND sub.matchid = @matchid -- filer for @MatchID
 			AND sub.statusID NOT IN (101, 102) -- reject, void
-			AND sub.betfrom <> 'P' -- exclude phone betting			
+			AND sub.betfrom <> 'P' -- exclude phone betting	
+			AND sub.bettype <> 500 -- exclude charge comm		
 		
 	SELECT  s.Stake,
 			s.AwayId,
@@ -310,7 +308,7 @@ BEGIN
 			s.BetTeam,
 			s.BetType,
 			s.CurrencyCode,
-			s.creatorName AS Creator,
+			cr.username AS Creator,
 			s.Hdp1,
 			s.Hdp2,
 			s.HomeId,
@@ -321,6 +319,7 @@ BEGIN
 			s.LiveHomeScore,
 			s.Odds,
 			s.IsMixParlay,
+			CASE WHEN s.bettype = 501 AND T1.IsDeposit = 0 THEN 1 ELSE 0 END AS IsCricket,
 			s.OddsType,
 			s.RefNo,
 			s.SportType,
@@ -329,7 +328,7 @@ BEGIN
 			s.TransDesc,
 			s.TransId,
 			s.UserName,
-			s.WinLost,
+			s.WinLost,			
 			s.GroupName,
 			
 			s.SubTransId,
@@ -339,7 +338,16 @@ BEGIN
 			s.SubHdp1,
 			s.SubHdp2,
 			s.SubOdds
-	FROM	#SpecialDeleteBets s			
+	FROM #SpecialDeleteBets s			
+		 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
+				 ON s.creator = cr.custid
+		 CROSS APPLY (SELECT CASE
+									WHEN EXISTS (SELECT d.custid 
+												 FROM CustDB.dbo.Dep_CustSuper d WITH(NOLOCK) 
+												 WHERE d.custid = s.srecommend)
+											THEN 1
+									ELSE 0
+							 END AS IsDeposit) AS T1
 			
 	SET NOCOUNT OFF
 END

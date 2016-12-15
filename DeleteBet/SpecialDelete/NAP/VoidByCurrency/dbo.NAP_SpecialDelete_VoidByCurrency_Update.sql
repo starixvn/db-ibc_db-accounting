@@ -17,8 +17,8 @@ ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Update]
 	@UserPassword   NVARCHAR(50),  
 	@Reason			NVARCHAR(500) = '',  
 	@IP				VARCHAR(15)  = '',  
-	@ErrMsg			NVARCHAR(200) = '' OUTPUT,  
-	@ErrCode		INT    = 0  OUTPUT  
+	@ErrorMsg			NVARCHAR(200) = '' OUTPUT,  
+	@ErrorCode		INT    = 0  OUTPUT  
 AS
 /*
 	Created: Kent
@@ -75,14 +75,12 @@ BEGIN
 			BetTeam				NVARCHAR(10),
 			BetType				SMALLINT,
 			CurrencyCode		NVARCHAR(50),
-			Creator				INT,
-			creatorName			VARCHAR(30),
+			Creator				INT,			
 			Hdp1				SMALLMONEY,
 			Hdp2				SMALLMONEY,
 			HomeId				INT,
 			IsLiveIndicator		BIT, 
-			IsNeutral			BIT, 
-			IsSecondAcceptFlag	BIT, 
+			IsNeutral			BIT,			
 			LiveAwayScore		SMALLINT,
 			LiveHomeScore		SMALLINT,
 			Odds				MONEY,			
@@ -98,6 +96,8 @@ BEGIN
 			site				VARCHAR(10),
 			betfrom				NVARCHAR(1),
 			srecommend			INT,
+			mrecommend			INT,
+			recommend			INT,
 			custid				INT,
 			balance				MONEY,
 			
@@ -111,7 +111,8 @@ BEGIN
 		)
 		
 	SELECT * INTO #SpecialDeleteBets_Single FROM #SpecialDeleteBets WHERE 1 = 0	
-	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Single_custid ON #SpecialDeleteBets_Single(custid)
+	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Single_custid ON #SpecialDeleteBets_Single(custid)	
+	CREATE INDEX IDX_SpecialDeleteBets_Single_BetType_CustId ON #SpecialDeleteBets_Single(BetType, custid)	
 	
 	SELECT * INTO #SpecialDeleteBets_Parlay FROM #SpecialDeleteBets WHERE 1 = 0
 	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Parlay_custid ON #SpecialDeleteBets_Parlay(custid)	
@@ -124,13 +125,12 @@ BEGIN
 			s.BetTeam,
 			s.BetType,
 			s.CurrencyCode,
-			s.creatorName AS Creator,
+			CAST('' AS VARCHAR(50)) AS Creator,
 			s.Hdp1,
 			s.Hdp2,
 			s.HomeId,
 			s.IsLiveIndicator,
-			s.IsNeutral,
-			s.IsSecondAcceptFlag,
+			s.IsNeutral,				
 			s.LiveAwayScore,
 			s.LiveHomeScore,
 			s.Odds,
@@ -143,8 +143,17 @@ BEGIN
 			s.TransDesc,
 			s.TransId,
 			s.UserName,
-			s.WinLost,
+			s.WinLost,				
 			CAST('' AS VARCHAR(50)) AS EmailGroup,
+			s.site,
+			CAST(1 AS BIT) AS IsDeposit,
+			s.custid,
+			s.recommend,
+			CAST('' AS VARCHAR(30)) AS AgUserName,
+			s.mrecommend,
+			CAST('' AS VARCHAR(30)) AS MagUserName,
+			s.srecommend,
+			CAST('' AS VARCHAR(30)) AS SagUserName,
 			
 			s.SubTransId,
 			s.SubBetCheck,
@@ -198,7 +207,7 @@ BEGIN
 	
 	IF @@ROWCOUNT = 0
 	BEGIN		
-		SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+		SELECT @ErrorCode = 99, @ErrorMsg = 'No ticket found.'
 		
 		SELECT * FROM #t		
 		
@@ -242,14 +251,12 @@ BEGIN
 						BetTeam,
 						BetType,
 						CurrencyCode,
-						Creator,
-						creatorName,
+						Creator,						
 						Hdp1,
 						Hdp2,
 						HomeId,
 						IsLiveIndicator,
-						IsNeutral,
-						IsSecondAcceptFlag,
+						IsNeutral,						
 						LiveAwayScore,
 						LiveHomeScore,
 						Odds,						
@@ -265,6 +272,8 @@ BEGIN
 						site,
 						betfrom,
 						srecommend,
+						mrecommend,
+						recommend,
 						custid,
 						balance,
 						
@@ -283,14 +292,12 @@ BEGIN
 					b.BetTeam,
 					b.BetType,
 					te.currency AS CurrencyCode,
-					b.Creator,
-					cr.username AS creatorName,
+					b.Creator,					
 					b.Hdp1,
 					b.Hdp2,
 					m.HomeId,
 					b.LiveIndicator AS IsLiveIndicator,
-					ISNULL(m.IsNeutral, CONVERT(BIT, 0)) AS IsNeutral,
-					b.SecAcceptFlag AS IsSecondAcceptFlag,
+					ISNULL(m.IsNeutral, CONVERT(BIT, 0)) AS IsNeutral,					
 					b.LiveAwayScore,
 					b.LiveHomeScore,
 					b.Odds,					
@@ -306,6 +313,8 @@ BEGIN
 					c.site,
 					b.betfrom,
 					b.srecommend,
+					b.mrecommend,
+					b.recommend,
 					b.custid,
 					b.winlost - b.actual_stake + b.playercomm AS balance,
 					
@@ -326,9 +335,7 @@ BEGIN
 				 INNER JOIN #t_LicenseeNames tl WITH (NOLOCK)
 						 ON tl.LicenseeName = c.site -- filter for @LicenseeIDs	
 				 INNER JOIN match m WITH (NOLOCK)
-						 ON b.matchid = m.matchid
-				 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
-						 ON b.creator = cr.custid							 		 
+						 ON b.matchid = m.matchid				 							 		 
 			WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only				
 				AND b.bettype NOT BETWEEN 801 AND 806-- MG
 				AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket				
@@ -336,6 +343,7 @@ BEGIN
 				AND b.statusID NOT IN (101, 102) -- reject, void
 				AND b.betfrom <> 'P' -- exclude phone betting
 				AND b.matchid = @MatchID -- filer for @MatchID
+				AND b.bettype <> 500 -- exclude charge comm
 		
 			SET @CountSingle = @@ROWCOUNT
 		END
@@ -352,14 +360,12 @@ BEGIN
 						BetTeam,
 						BetType,
 						CurrencyCode,
-						Creator,
-						creatorName,
+						Creator,						
 						Hdp1,
 						Hdp2,
 						HomeId,
 						IsLiveIndicator,
-						IsNeutral,
-						IsSecondAcceptFlag,
+						IsNeutral,						
 						LiveAwayScore,
 						LiveHomeScore,
 						Odds,						
@@ -375,6 +381,8 @@ BEGIN
 						site,
 						betfrom,
 						srecommend,
+						mrecommend,
+						recommend,
 						custid,
 						balance,
 						
@@ -393,14 +401,12 @@ BEGIN
 					main.BetTeam,
 					main.BetType,
 					te.currency AS CurrencyCode,
-					main.Creator,
-					cr.username AS creatorName,
+					main.Creator,					
 					main.Hdp1,
 					main.Hdp2,
 					m.HomeId,
 					main.LiveIndicator AS IsLiveIndicator,
-					ISNULL(m.IsNeutral, CONVERT(BIT, 0)) AS IsNeutral,
-					main.SecAcceptFlag AS IsSecondAcceptFlag,
+					ISNULL(m.IsNeutral, CONVERT(BIT, 0)) AS IsNeutral,					
 					main.LiveAwayScore,
 					main.LiveHomeScore,
 					main.Odds,					
@@ -416,6 +422,8 @@ BEGIN
 					c.site,
 					main.betfrom,
 					main.srecommend,
+					main.mrecommend,
+					main.recommend,
 					main.custid,
 					main.winlost - main.actual_stake + main.playercomm AS balance,
 					
@@ -434,9 +442,7 @@ BEGIN
 				 INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK)
 						 ON main.recommend = c.custid
 				 INNER JOIN #t_LicenseeNames tl1 WITH (NOLOCK)
-						 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs
-				 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
-						 ON main.creator = cr.custid						 			 				 					 
+						 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs				 						 			 				 					 
 				 
 				 INNER JOIN dbo.bettransm sub WITH (NOLOCK)	
 						 ON main.refno = sub.refno
@@ -450,14 +456,15 @@ BEGIN
 				AND sub.matchid = @matchid -- filer for @MatchID
 				AND sub.statusID NOT IN (101, 102) -- reject, void
 				AND sub.betfrom <> 'P' -- exclude phone betting
+				AND sub.bettype <> 500 -- exclude charge comm
 			
 			SET @CountParlay = @@ROWCOUNT
-		END
+		END				
 		
 		-------> Check No ticket found
 		IF @CountSingle + @CountParlay = 0
 		BEGIN					
-			SELECT @ErrCode = 99, @ErrMsg = 'No ticket found.'
+			SELECT @ErrorCode = 99, @ErrorMsg = 'No ticket found.'
 			
 			SELECT * FROM #t		
 			
@@ -489,10 +496,10 @@ BEGIN
 				, @IsExistParlay	= @IsExistParlay
 				
 				, @avaiableProcess 	= @AvaiableProcess OUTPUT
-				, @ErrCode			= @ErrCode OUTPUT
-				, @ErrMsg			= @ErrMsg OUTPUT				
+				, @ErrCode			= @ErrorCode OUTPUT
+				, @ErrMsg			= @ErrorMsg OUTPUT				
 				
-			IF(@ErrCode <> 0 OR @AvaiableProcess = 0) 
+			IF(@ErrorCode <> 0 OR @AvaiableProcess = 0) 
 			BEGIN
 				SELECT * FROM #t			
 				
@@ -542,7 +549,7 @@ BEGIN
 					ON	r.SubTransId=b.transid						
 		END
 		
-		-------> Capture before balance
+		-------> Capture before balance		
 		INSERT INTO @tblBeforeBalance (custid, balance)
 		SELECT T.custid, SUM(T.balance) balance
 		FROM (
@@ -555,10 +562,24 @@ BEGIN
 						,SUM(t.balance) balance
 				  FROM #SpecialDeleteBets_Parlay t					
 				  GROUP BY t.CustID
+				  -- Cricket charge comm
+				  UNION ALL
+				  SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm) balance
+				  FROM dbo.bettrans b WITH (NOLOCK)				   	   
+				  WHERE b.bettype = 500
+				    AND b.matchid = @MatchID
+					AND EXISTS (
+							SELECT TOP 1 1 
+							FROM (SELECT custid FROM #SpecialDeleteBets_Single
+								  UNION ALL
+								  SELECT custid FROM #SpecialDeleteBets_Parlay) d 
+							WHERE b.custid = d.custid
+						)
+				  GROUP BY b.CustID
 			 ) AS T
 		GROUP BY T.custid
 		
-		-------> update status for tickets to void
+		-------> update status for tickets to void		
 		--> update status for single
 		IF @CountSingle > 0
 		BEGIN
@@ -636,20 +657,53 @@ BEGIN
 				@matchdate = @MatchDate
 				,@strXML	= @refnos_29  -- main transid + refno: refno|transid,refno|transid...
 				,@mode		= '29' 
-		END		
+		END	
 		
-		-------> Capture after balance
+		--> re-calculate Cricket - charge comm	
+		DECLARE @CustIds VARCHAR(MAX)
+		IF EXISTS (SELECT TOP 1 1
+				   FROM #SpecialDeleteBets_Single
+				   WHERE Bettype = 501)
+		BEGIN
+			SET @CustIds = STUFF((SELECT ',' + CAST(CustId AS VARCHAR(50))
+								  FROM #SpecialDeleteBets_Single tt
+								  FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')
+									
+			EXEC dbo.NAP_Admin_Calculate_500 @MatchId	= @MatchID
+						, @Action = 'VOID'
+						, @CustIds = @CustIds									
+		END
+		
+		-------> Capture after balance		
 		INSERT INTO @tblAfterBalance (custid, balance)
-		SELECT	t.custid
-				,SUM (b.winlost - b.actual_stake + b.playercomm) balance
+		SELECT T.custid, SUM(T.balance) balance
 		FROM (
-				SELECT custid, TransId FROM #SpecialDeleteBets_Single
+				SELECT	t.custid
+						,SUM (b.winlost - b.actual_stake + b.playercomm) balance
+				FROM (
+						SELECT custid, TransId FROM #SpecialDeleteBets_Single
+						UNION ALL
+						SELECT custid, TransId FROM #SpecialDeleteBets_Parlay
+					 ) t	
+					INNER JOIN bettrans b WITH (NOLOCK) 
+							ON t.transid = b.transid		
+				GROUP BY t.CustID
 				UNION ALL
-				SELECT custid, TransId FROM #SpecialDeleteBets_Parlay
-			 ) t	
-			INNER JOIN bettrans b WITH (NOLOCK) 
-					ON t.transid = b.transid		
-		GROUP BY t.CustID				
+				-- Cricket charge comm			  
+			    SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm) balance
+			    FROM dbo.bettrans b WITH (NOLOCK)				   	   
+			    WHERE b.bettype = 500
+			      AND b.matchid = @MatchID
+				  AND EXISTS (
+						  SELECT TOP 1 1 
+						  FROM (SELECT custid FROM #SpecialDeleteBets_Single
+							    UNION ALL
+							    SELECT custid FROM #SpecialDeleteBets_Parlay) d 
+						  WHERE b.custid = d.custid
+					  )
+			    GROUP BY b.CustID
+			 )	AS T
+		GROUP BY T.custid
 		
 		-------> Update balance for members	
 		--> update credit balance of cust
@@ -715,13 +769,12 @@ BEGIN
 				s.BetTeam,
 				s.BetType,
 				s.CurrencyCode,
-				s.creatorName AS Creator,
+				cr.username AS Creator,
 				s.Hdp1,
 				s.Hdp2,
 				s.HomeId,
 				s.IsLiveIndicator,
-				s.IsNeutral,
-				s.IsSecondAcceptFlag,
+				s.IsNeutral,				
 				s.LiveAwayScore,
 				s.LiveHomeScore,
 				s.Odds,
@@ -734,11 +787,26 @@ BEGIN
 				s.TransDesc,
 				s.TransId,
 				s.UserName,
-				s.WinLost,
+				s.WinLost,				
 				CASE 
 					WHEN s.custid IN (1077687,2331,115770,15523642,15042477,16041068,16041058) THEN 'Betfair' 
 					ELSE s.site 
 				END AS EmailGroup,
+				s.site,
+				CASE
+					WHEN EXISTS (SELECT d.custid 
+								 FROM CustDB.dbo.Dep_CustSuper d WITH(NOLOCK) 
+								 WHERE d.custid = s.srecommend)
+							THEN 1
+					ELSE 0
+				END AS IsDeposit,
+				s.custid,
+				s.recommend,
+				ac.username AS AgUserName,
+				s.mrecommend,
+				mc.username AS MagUserName,
+				s.srecommend,
+				sc.username AS SagUserName,
 				
 				s.SubTransId,
 				s.SubBetCheck,
@@ -769,22 +837,32 @@ BEGIN
 					ELSE CAST(0 AS BIT)							
 				END AS IsItSupport,
 				s.betfrom,
-				CURRENT_TIMESTAMP AS [DateTime]
+				CURRENT_TIMESTAMP AS [DateTime]				
 		FROM (
 				SELECT CAST(0 AS BIT) AS IsMixParlay, * FROM #SpecialDeleteBets_Single
 				UNION ALL
 				SELECT CAST(1 AS BIT) AS IsMixParlay, * FROM #SpecialDeleteBets_Parlay
 			 ) s
-			 OUTER APPLY (SELECT TOP 1 1 AS a
-						  FROM CustDB.dbo.Customer c WITH(NOLOCK) 
-						  WHERE c.currency <> 20 
-							AND c.roleid = 4 
-							AND c.custid = s.srecommend) AS T2
-			 OUTER APPLY (SELECT TOP 1 1 AS a
-						  FROM CustDB.dbo.Customer c WITH(NOLOCK) 
-						  WHERE c.currency = 20 
-							AND c.roleid = 4 
-							AND c.custid = s.srecommend) AS T3		
+			 LEFT JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
+					 ON s.creator = cr.custid
+			 LEFT JOIN CustDB.dbo.Customer sc WITH(NOLOCK)
+					 ON s.srecommend = sc.custid
+			 LEFT JOIN CustDB.dbo.Customer mc WITH(NOLOCK)
+					 ON s.mrecommend = mc.custid
+			 LEFT JOIN CustDB.dbo.Customer ac WITH(NOLOCK)
+					 ON s.recommend = ac.custid
+			 OUTER APPLY (SELECT CASE
+									WHEN sc.currency <> 20 
+										 AND sc.roleid = 4 
+											THEN 1
+									ELSE NULL
+								 END AS a) AS T2			 						  
+			 OUTER APPLY (SELECT CASE
+									WHEN sc.currency = 20 
+										 AND sc.roleid = 4 
+											THEN 1
+									ELSE NULL
+								 END AS a) AS T3		
 	END TRY
 	BEGIN CATCH
 		-------> Release process
@@ -796,8 +874,8 @@ BEGIN
 			
 			, @isExistParlay  = @isExistParlay			  
 	
-		SELECT @ErrCode = 100,
-				@ErrMsg = @GeneralErrMsg
+		SELECT @ErrorCode = 100,
+				@ErrorMsg = @GeneralErrMsg
 				
 		SELECT * FROM #t		
 							
