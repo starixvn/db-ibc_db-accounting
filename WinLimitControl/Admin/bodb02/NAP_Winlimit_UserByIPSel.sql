@@ -36,7 +36,7 @@ EXEC [NAP_Winlimit_UserByIPSel] @IP = '127.0.0.1'
      SELECT @Today = CONVERT( DATE, GETDATE());
      SELECT CustId,
             winlostdate LastAccessedDate,
-            IP
+            @IP AS IP
      FROM dbo.bettrans AS b WITH (NOLOCK)
      WHERE winlostdate = @Today
            AND ip = @IP;
