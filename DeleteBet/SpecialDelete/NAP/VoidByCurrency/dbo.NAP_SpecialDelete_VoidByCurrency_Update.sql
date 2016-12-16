@@ -181,6 +181,19 @@ BEGIN
 	
 	CREATE TABLE #tblMatchProcess (matchid INT, KeyID TINYINT)
 	
+	IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.Customer WITH(NOLOCK) WHERE userpwd = @UserPassword AND custid = @userId AND roleid >=5)
+	BEGIN
+		SELECT @ErrorMsg = 'Sorry. You cannot process void bets due to either wrong password or insufficient permission!'  
+				,@ErrorCode = 101  
+		
+		SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID AS VARCHAR(10)) + ' betlist: ' 
+							+ cast(@MainTransIDs AS VARCHAR(8000)) + ' - Username: ' + @username + ' - reason: ' + @reason  
+		  
+		EXEC [dbo].[WriteLog_UserLog] @UserID = @UserID ,@Doing = @LogData
+		
+		RETURN
+	END
+	
 	-------> Parse @LicenseeNames	
 	INSERT INTO #t_LicenseeNames(LicenseeName)
 	SELECT ss.val
@@ -345,7 +358,7 @@ BEGIN
 				AND b.statusID NOT IN (101, 102) -- reject, void
 				AND b.betfrom <> 'P' -- exclude phone betting
 				AND b.matchid = @MatchID -- filer for @MatchID
-				AND b.bettype <> 500 -- exclude charge comm
+				AND b.bettype <> 500 -- exclude charge comm						
 		
 			SET @CountSingle = @@ROWCOUNT
 		END
