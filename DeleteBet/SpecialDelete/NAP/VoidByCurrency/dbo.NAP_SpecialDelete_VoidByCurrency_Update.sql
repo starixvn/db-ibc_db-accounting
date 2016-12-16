@@ -191,6 +191,8 @@ BEGIN
 		  
 		EXEC [dbo].[WriteLog_UserLog] @UserID = @UserID ,@Doing = @LogData
 		
+		SELECT * FROM #t
+		
 		RETURN
 	END
 	
