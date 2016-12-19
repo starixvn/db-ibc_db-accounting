@@ -60,7 +60,7 @@ BEGIN
 			TransDesc			NVARCHAR(1000),
 			TransId				BIGINT,
 			UserName			VARCHAR(30),
-			WinLost				MONEY,
+			NetWinLost				MONEY,
 			srecommend			INT,
 			GroupName			VARCHAR(10),
 			
@@ -134,7 +134,7 @@ BEGIN
 					TransDesc,
 					TransId,
 					UserName,
-					WinLost,
+					NetWinLost,
 					srecommend,
 					GroupName,
 					
@@ -172,7 +172,7 @@ BEGIN
 				b.TransDesc,
 				b.TransId,
 				b.UserName,
-				b.WinLost,
+				b.WinLost - b.actual_stake AS NetWinLost,
 				b.srecommend,
 				tl.GroupName AS GroupName,
 				
@@ -230,7 +230,7 @@ BEGIN
 					TransDesc,
 					TransId,
 					UserName,
-					WinLost,
+					NetWinLost,
 					srecommend,
 					GroupName,
 					
@@ -268,7 +268,7 @@ BEGIN
 				main.transdesc AS TransDesc,
 				main.transid AS TransId,
 				main.UserName,
-				main.winlost AS WinLost,
+				main.winlost - main.actual_stake AS NetWinLost,
 				main.srecommend,
 				tl1.GroupName AS GroupName,
 				
@@ -328,7 +328,7 @@ BEGIN
 			s.TransDesc,
 			s.TransId,
 			s.UserName,
-			s.WinLost,			
+			s.NetWinLost AS WinLost,			
 			s.GroupName,
 			
 			s.SubTransId,
