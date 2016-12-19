@@ -1,11 +1,12 @@
-﻿ALTER PROC [dbo].[Acc_ExchangeIns]	
+﻿USE [CustDB]
+GO
+
+ALTER PROC [dbo].[Acc_ExchangeIns]	
 	@exchangeid INT OUTPUT,
 	@actualrate FLOAT,
 	@minbet FLOAT = 0,
 	@minbetlive FLOAT = 0,
 	@GBPRate FLOAT = NULL,
-	@AUDRate FLOAT = NULL,
-	@ZARRate FLOAT = NULL,	
 	@EURORate  FLOAT = NULL,
 	@US$Rate  FLOAT  = NULL,
 	@currency NVARCHAR(50),
@@ -21,7 +22,7 @@ SET NOCOUNT ON
 /*
 Created: 
 Task : Insert new currency
-DB: DBTXN/bodb02
+DB: DBCUST.CustDB
 Original:
 
 Revisions:
@@ -30,6 +31,7 @@ Revisions:
 	- 20100127@Khoa: add columns @GBPRate AUDRate, ZARRate, EURORate , US$Rate   
 	- 20110506@Johnson: Add columns @Description, @MultipliedBy, @Code 
 	- 20130822@Lukas: change alias for DB03
+	- 20161219@Percy: Remove AUDRate and ZARRate columns [RedmineID: #68649]
 Param's Explanation:
 	• @actualrate: specIFy exchange-rate of the currency
 	• @minbet: specIFy minbet of the currency
@@ -48,8 +50,8 @@ BEGIN
 	RETURN
 END
 
-INSERT INTO exchange(actualrate, creator, currency, minbet, minbetlive, GBPRate, AUDRate, ZARRate, EURORate, US$Rate, Description, MultipliedBy, Code)
-VALUES (@actualrate, @UserID, @currency, @minbet, @minbetlive, @GBPRate, @AUDRate, @ZARRate, @EURORate, @US$Rate, @Description, @MultipliedBy, @Code)
+INSERT INTO exchange(actualrate, creator, currency, minbet, minbetlive, GBPRate, EURORate, US$Rate, Description, MultipliedBy, Code)
+VALUES (@actualrate, @UserID, @currency, @minbet, @minbetlive, @GBPRate, @EURORate, @US$Rate, @Description, @MultipliedBy, @Code)
 
 
 SELECT @exchangeid=@@IDENTITY
@@ -61,8 +63,6 @@ SELECT @LogData = 'Add exchange rate:'
 	+  ' ,minbet='+ ISNULL(convert(VARCHAR(10), @minbet),'') 
 	+  ' ,minbetlive='+ ISNULL(convert(VARCHAR(10), @minbetlive),'') 
 	+  ' ,GBPRate='+ ISNULL(convert(VARCHAR(10), @GBPRate),'') 
-	+  ' ,AUDRate='+ ISNULL(convert(VARCHAR(10), @AUDRate),'') 
-	+  ' ,ZARRate='+ ISNULL(convert(VARCHAR(10), @ZARRate),'') 
 	+  ' ,EURORate='+ ISNULL(convert(VARCHAR(10), @EURORate),'') 
 	+  ' ,US$Rate='+ ISNULL(convert(VARCHAR(10), @US$Rate),'')
 	+  ' ,Description='+ ISNULL(@Description,'')
