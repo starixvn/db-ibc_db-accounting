@@ -6,9 +6,9 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Update] 
-	@MatchID		INT,
+	@MatchID		INT = 0,
 	@LicenseeNames	VARCHAR(MAX),
-	@TicketType		VARCHAR(100),
+	@TicketType		VARCHAR(100) = 'All',
 	@CurrencyIDs	VARCHAR(MAX),
 	@MainTransIDs	VARCHAR(MAX),		
 
@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Update]
 	@UserPassword   NVARCHAR(50),  
 	@Reason			NVARCHAR(500) = '',  
 	@IP				VARCHAR(15)  = '',  
-	@ErrorMsg			NVARCHAR(200) = '' OUTPUT,  
+	@ErrorMsg		NVARCHAR(200) = '' OUTPUT,  
 	@ErrorCode		INT    = 0  OUTPUT  
 AS
 /*
@@ -44,10 +44,10 @@ BEGIN
 		  , @GeneralErrMsg				NVARCHAR(200) = 'Unable to void these tickets'
 		  , @CurrencyCodes				VARCHAR(MAX)
 		  , @UserIDNotInITGroup			BIT
-		  , @SearchSingle				BIT
-		  , @CountSingle				INT
-		  , @SearchParlay				BIT
-		  , @CountParlay				INT
+		  , @SearchSingle				BIT = 0
+		  , @CountSingle				INT = 0
+		  , @SearchParlay				BIT = 0
+		  , @CountParlay				INT = 0
 		  
 	DECLARE @IsExistParlay				BIT = 0
 		  , @isExistOutright 			BIT = 0
@@ -230,8 +230,7 @@ BEGIN
 		
 		RETURN
 	END						 	  
-		
-	SELECT @SearchSingle = 0, @SearchParlay = 0
+			
 	IF @TicketType = 'All'	
 		SELECT @SearchSingle = 1
 			 , @SearchParlay = 1	
@@ -256,8 +255,7 @@ BEGIN
 	
 	BEGIN TRY
 		-------> Get tickets to void
-		--> Get single tickets
-		SET @CountSingle = 0
+		--> Get single tickets		
 		IF @SearchSingle = 1
 		BEGIN
 			INSERT INTO #SpecialDeleteBets_Single(
@@ -365,8 +363,7 @@ BEGIN
 			SET @CountSingle = @@ROWCOUNT
 		END
 		
-		--> Get parlay tickets
-		SET @CountParlay = 0
+		--> Get parlay tickets		
 		IF @SearchParlay = 1
 		BEGIN
 			INSERT INTO #SpecialDeleteBets_Parlay(
