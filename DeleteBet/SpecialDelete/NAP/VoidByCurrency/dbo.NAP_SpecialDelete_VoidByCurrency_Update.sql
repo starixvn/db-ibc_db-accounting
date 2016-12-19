@@ -37,7 +37,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE @MBCGroup_Name VARCHAR(50) = 'MBC Group'
+	DECLARE @MBCGroup_Name VARCHAR(50) = 'MBC Group'		  
 		  , @VoidPatchSize INT = 100
 	
 	DECLARE @LogData					NVARCHAR(500) = ''
@@ -208,7 +208,7 @@ BEGIN
 		FROM DBCUST.CUSTDB.dbo.Site WITH(NOLOCK) 
 		WHERE isLicensee = 0		   
 		  AND isActive = 1	
-		  AND [site] <> '789y'
+		  AND [site] <> '789y' -- '789y' is treated as special licensee as 'MBC Group'
 	
 	-------> Parse @CurrencyIDs	  
 	INSERT INTO #t_exchanges(exchangeid, currency)
