@@ -19,7 +19,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Daily_14]
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
-	@IsDrillDown	BIT = 0
+	@IsDrillDown	BIT = 0,
+	@IsGrandTotal	BIT = 0 -- dont need to use in this report
 
 
 AS

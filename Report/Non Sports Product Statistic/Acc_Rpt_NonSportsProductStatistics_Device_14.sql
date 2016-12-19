@@ -19,7 +19,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Device_14]
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
-	@IsDrillDown	BIT = 0
+	@IsDrillDown	BIT = 0,
+	@IsGrandTotal	BIT =0
 AS
 /*
 	Created	: 20161118@Harper

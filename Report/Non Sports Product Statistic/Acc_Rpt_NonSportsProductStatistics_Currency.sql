@@ -19,7 +19,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Currency]
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
-	@DrillDownCurrency	SMALLINT = 0
+	@DrillDownCurrency	SMALLINT = 0,
+	@IsGrandTotal	BIT = 0 -- don't need to use in this report
 AS
 /*
 	Created	: 20161114@Harper

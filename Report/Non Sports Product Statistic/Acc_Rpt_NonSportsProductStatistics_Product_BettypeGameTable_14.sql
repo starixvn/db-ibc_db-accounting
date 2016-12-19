@@ -163,7 +163,7 @@ BEGIN
 	FROM #SportBettype s
 	WHERE s.ProductID NOT IN (3, 5) -- NumberGame, Virtual Sport
 		AND NOT EXISTS (SELECT b.Bettype FROM #tmp_BetType b WHERE b.Bettype = s.Bettype)
-	
+
 	DECLARE @IsDrillDownFromRM INT
 	SELECT @IsDrillDownFromRM = COUNT (*) FROM #tmp_BetType
 
@@ -588,107 +588,55 @@ BEGIN
 	------------------------------------------III. Drill down data ------------------------------------------------------
 
 	IF @Currency = -1 -- BaseRM
-	BEGIN
-		IF @IsDrillDown = 0
-		BEGIN
-			INSERT INTO #Result
-			    (	Bettype,
-					BettypeName ,
-			        NoOfPlayers ,
-			        BetCount ,
-			        CurrencyID ,
-			        Currency ,
-			        TotalBets ,
-			        TotalWins ,
-			        TotalRefund ,
-			        CompanyTurnOver ,
-			        CompanyGrossIncome ,
-			        CompanyComm,
-					TotalBetsBase,
-					TotalWinsBase,
-					TotalRefundBase,
-					CompanyTurnOverBase,
-					CompanyGrossIncomeBase,
-					CompanyCommBase
-			        )
-			SELECT b.Bettype, b.BettypeName,
-				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
-				SUM(b.BetCount) AS BetCount,
-				-1 AS CurrencyID,
-				'RM' AS Currency,
-				SUM(b.TotalBetsBase) AS TotalBets,
-				SUM(b.TotalWinsBase) AS TotalWins,
-				SUM(b.TotalRefundBase) AS TotalRefund,
-				SUM(b.CompanyTurnOverBase) AS CompanyTurnOver,
-				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncome,            
-				SUM(b.CompanyCommBase) AS CompanyComm,
-				SUM(b.TotalBetsBase) AS TotalBetsBase,
-				SUM(b.TotalWinsBase) AS TotalWinsBase,
-				SUM(b.TotalRefundBase) AS TotalRefundBase,
-				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
-				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
-				SUM(b.CompanyCommBase) AS CompanyCommBase
-			FROM #Data b
-			GROUP BY b.Bettype, b.BettypeName
-			HAVING (@TotalBetType = 0
-				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
-				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
-					)
-				AND (@GameIncomeType = 0
-				OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
-				OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
-					)
-		END
-		ELSE -- @Currency = -1, @IsDrillDown = 1
-		BEGIN
-			INSERT INTO #Result
-			    (	Bettype,
-					BettypeName ,
-			        NoOfPlayers ,
-			        BetCount ,
-			        CurrencyID ,
-			        Currency ,
-			        TotalBets ,
-			        TotalWins ,
-			        TotalRefund ,
-			        CompanyTurnOver ,
-			        CompanyGrossIncome ,
-			        CompanyComm,
-					TotalBetsBase,
-					TotalWinsBase,
-					TotalRefundBase,
-					CompanyTurnOverBase,
-					CompanyGrossIncomeBase,
-					CompanyCommBase
-			        )
-			SELECT b.Bettype, b.BettypeName,
-				COUNT(DISTINCT b.custid) NoOfPlayers,
-				SUM(b.BetCount) BetCount,
-				b.CurrencyId AS CurrencyId,
-				b.currency AS Currency,				
-				SUM(b.TotalBetsBase) AS TotalBets,
-				SUM(b.TotalWinsBase) AS TotalWins,
-				SUM(b.TotalRefundBase) AS TotalRefund,
-				SUM(b.CompanyTurnOverBase) AS CompanyTurnOver,
-				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncome,            
-				SUM(b.CompanyCommBase) AS CompanyComm,
-				SUM(b.TotalBetsBase) AS TotalBetsBase,
-				SUM(b.TotalWinsBase) AS TotalWinsBase,
-				SUM(b.TotalRefundBase) AS TotalRefundBase,
-				SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
-				SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
-				SUM(b.CompanyCommBase) AS CompanyCommBase
-			FROM #Data b
-			GROUP BY b.Bettype, b.BettypeName, b.CurrencyID, b.Currency
-			HAVING (@TotalBetType = 0
-				OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
-				OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
-					)
-				AND (@GameIncomeType = 0
-				OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
-				OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
-					)
-		END
+	BEGIN		
+		INSERT INTO #Result
+			(	Bettype,
+				BettypeName ,
+			    NoOfPlayers ,
+			    BetCount ,
+			    CurrencyID ,
+			    Currency ,
+			    TotalBets ,
+			    TotalWins ,
+			    TotalRefund ,
+			    CompanyTurnOver ,
+			    CompanyGrossIncome ,
+			    CompanyComm,
+				TotalBetsBase,
+				TotalWinsBase,
+				TotalRefundBase,
+				CompanyTurnOverBase,
+				CompanyGrossIncomeBase,
+				CompanyCommBase
+			    )
+		SELECT b.Bettype, b.BettypeName,
+			COUNT(DISTINCT b.CustID) AS NoOfPlayers,
+			SUM(b.BetCount) AS BetCount,
+			-1 AS CurrencyID,
+			'RM' AS Currency,
+			SUM(b.TotalBetsBase) AS TotalBets,
+			SUM(b.TotalWinsBase) AS TotalWins,
+			SUM(b.TotalRefundBase) AS TotalRefund,
+			SUM(b.CompanyTurnOverBase) AS CompanyTurnOver,
+			SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncome,            
+			SUM(b.CompanyCommBase) AS CompanyComm,
+			SUM(b.TotalBetsBase) AS TotalBetsBase,
+			SUM(b.TotalWinsBase) AS TotalWinsBase,
+			SUM(b.TotalRefundBase) AS TotalRefundBase,
+			SUM(b.CompanyTurnOverBase) AS CompanyTurnOverBase,
+			SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,            
+			SUM(b.CompanyCommBase) AS CompanyCommBase
+		FROM #Data b
+		GROUP BY b.Bettype, b.BettypeName
+		HAVING (@TotalBetType = 0
+			OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
+			OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
+				)
+			AND (@GameIncomeType = 0
+			OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
+			OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
+				)
+		
 	END
 	ELSE -- @Currency <> -1 => Original Currency
 	BEGIN
@@ -700,11 +648,11 @@ BEGIN
 		        CurrencyID ,
 		        Currency ,
 		        TotalBets ,
-			    TotalWins ,
-			    TotalRefund ,
-			    CompanyTurnOver ,
-			    CompanyGrossIncome ,
-			    CompanyComm,
+		        TotalWins ,
+		        TotalRefund ,
+		        CompanyTurnOver ,
+		        CompanyGrossIncome ,
+		        CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
 				TotalRefundBase,
@@ -740,10 +688,11 @@ BEGIN
 				OR (@GameIncomeType = -1 AND SUM(b.TotalBets - b.TotalWins) <= @GameIncomeValue)
 					)
 	END	
-	------------------------------------------IV. Return Total Rows ------------------------------------------------------
+
+	-- Return Detail
 	IF @IsGrandTotal = 0
-	BEGIN
-		IF @IsDrillDown = 0 OR @IsDrillDownFromRM = 1
+	BEGIN		
+		IF @IsDrillDown = 0
 		BEGIN
 			SELECT  Bettype AS ReportById,
 					BettypeName AS ReportBy, 
@@ -760,27 +709,32 @@ BEGIN
 			FROM #Result	
 			ORDER BY BettypeName, Currency		
 		END
-		ELSE IF @IsDrillDown = 1 AND @IsDrillDownFromRM <> 1
+		ELSE
 		BEGIN
-			SELECT 	SUM(NoOfPlayers) AS NoOfPlayers,
-					SUM(BetCount) AS BetCount,
-					CurrencyId AS CurrencyId,
-					Currency AS Currency,
-					SUM(TotalBets) AS TotalBets,
-					SUM(TotalWins) AS TotalWins,
-					SUM(TotalRefund) AS TotalRefund,
-					SUM(CompanyTurnOver) AS CompanyTurnOver,
-					SUM(CompanyGrossIncome) AS CompanyGrossIncome,
-					SUM(CompanyComm) AS CompanyComm
-			FROM #Result	
-			GROUP BY CurrencyId, Currency
-			ORDER BY Currency		
+			SELECT b.Bettype AS ReportById,
+				b.BettypeName AS ReportBy,
+				COUNT(b.CustID) AS NoOfPlayers,
+				SUM(b.BetCount) AS BetCount,
+				b.CurrencyID,
+				b.Currency,
+				SUM(b.TotalBets) AS TotalBets,
+				SUM(b.TotalWins) AS TotalWins,
+				SUM(b.TotalRefund) AS TotalRefund,
+				SUM(b.CompanyTurnOver) AS CompanyTurnOver,
+				SUM(b.CompanyGrossIncome) AS CompanyGrossIncome,
+				SUM(b.CompanyComm) AS CompanyComm
+			FROM #Data b	
+				INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.BettypeName = r.BettypeName	
+			GROUP BY b.Bettype, b.BettypeName, b.CurrencyID , b.Currency	
+			ORDER BY b.Currency
 		END
-	END
+	END		
 	ELSE
 	BEGIN
 		SELECT  d.CurrencyId AS ReportById,
 				d.Currency AS ReportBy, 
+				d.CurrencyId,
+				d.Currency,
 				COUNT(DISTINCT d.CustID) AS NoOfPlayers,
 				SUM(d.BetCount) AS BetCount,
 				SUM(d.TotalBets) AS TotalBets,
@@ -790,14 +744,15 @@ BEGIN
 				SUM(d.CompanyGrossIncome) AS CompanyGrossIncome,
 				SUM(d.CompanyComm) AS CompanyComm
 		FROM #Result r
-			INNER JOIN #Data d ON (r.CurrencyID = -1 OR r.CurrencyID = d.CurrencyID) AND r.Bettype = d.Bettype
-		GROUP BY r.CurrencyId, r.Currency
+			INNER JOIN #Data d ON (r.CurrencyID = -1 OR r.CurrencyID = d.CurrencyID) AND d.BettypeName = r.BettypeName
+		GROUP BY d.CurrencyId, d.Currency
 		ORDER BY ReportBy
-	END
-
+	END	
+	
+	------------------------------------------IV. Return Total Rows ------------------------------------------------------
 	SELECT
         'GrandTotal' AS ReportBy,
-        COUNT(DISTINCT d.CustID) AS NoOfPlayers,
+        SUM(d.NoOfPlayers) AS NoOfPlayers,
         SUM(d.BetCount) BetCount,
         2 as CurrencyId, 
         'RM' AS Currency,
@@ -807,8 +762,8 @@ BEGIN
         SUM(d.CompanyTurnOverBase) CompanyTurnOver,
 		SUM(d.CompanyGrossIncomeBase) CompanyGrossIncome,
 		SUM(d.CompanyCommBase) CompanyComm
-    FROM #Result r
-		INNER JOIN #Data d ON (r.CurrencyID = -1 OR r.CurrencyID = d.CurrencyID) AND r.Bettype = d.Bettype
+    FROM #Result d
+		--INNER JOIN #Data d ON (r.CurrencyID = -1 OR r.CurrencyID = d.CurrencyID) AND r.Bettype = d.Bettype
 
 	DROP TABLE #Data
 	DROP TABLE #Result

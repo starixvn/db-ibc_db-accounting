@@ -19,7 +19,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Device]
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
-	@IsDrillDown	BIT = 0
+	@IsDrillDown	BIT = 0,
+	@IsGrandTotal	BIT = 0
 AS
 /*
 	Created	: 20161118@Harper
@@ -69,7 +70,7 @@ BEGIN
 	DECLARE @WLDate DATETIME
 	SELECT @WLDate = @WinlostDate
 
-	CREATE TABLE #Data ( Betfrom NVARCHAR(5), Device NVARCHAR(50), CustID INT,
+	CREATE TABLE #Data ( Betfrom NVARCHAR(5), Device NVARCHAR(50), DeviceGroup VARCHAR(50), CustID INT,
 						 BetCount INT, CurrencyID INT, Currency NVARCHAR(50),
 						 TotalBets MONEY, TotalBetsBase MONEY,
 						 TotalWins MONEY, TotalWinsBase MONEY,
@@ -78,7 +79,7 @@ BEGIN
 						 CompanyGrossIncome MONEY, CompanyGrossIncomeBase MONEY,
 						 CompanyComm MONEY, CompanyCommBase MONEY
 						)
-	CREATE TABLE #Result (  Betfrom NVARCHAR(5), Device NVARCHAR(50), NoOfPlayers INT,
+	CREATE TABLE #Result (  Betfrom NVARCHAR(5), Device NVARCHAR(50), DeviceGroup VARCHAR(50), NoOfPlayers INT,
 							BetCount INT, CurrencyID INT, Currency NVARCHAR(50)	,
 							TotalBets MONEY, TotalBetsBase MONEY,
 							TotalWins MONEY, TotalWinsBase MONEY,
@@ -543,7 +544,8 @@ BEGIN
 	
 	-- Get Device
 	UPDATE d
-	SET d.Device = CASE WHEN d.Betfrom IN ('i', 'f') THEN 'Internet' ELSE f.fullname END
+	SET d.Device = CASE WHEN d.Betfrom IN ('i', 'f') THEN 'Internet' ELSE f.fullname END,
+		d.DeviceGroup = f.DeviceGroup
 	FROM #Data d
 		INNER JOIN DBDW2.bodb_Account.dbo.tbl_Betfrom f ON f.betfrom = d.Betfrom
 
