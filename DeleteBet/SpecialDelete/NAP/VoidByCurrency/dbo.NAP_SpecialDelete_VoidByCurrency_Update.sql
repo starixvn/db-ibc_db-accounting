@@ -38,7 +38,7 @@ BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE @MBCGroup_Name VARCHAR(50) = 'MBC Group'
-		  , @VoidPatchSize INT = 100	
+		  , @VoidPatchSize INT = 100
 	
 	DECLARE @LogData					NVARCHAR(500) = ''
 		  , @GeneralErrMsg				NVARCHAR(200) = 'Unable to void these tickets'
@@ -206,9 +206,9 @@ BEGIN
 		INSERT INTO #t_LicenseeNames(LicenseeName)
 		SELECT [site]
 		FROM DBCUST.CUSTDB.dbo.Site WITH(NOLOCK) 
-		WHERE isLicensee = 0
-		  and SpecialGroup = 0 
-		  and isActive = 1	
+		WHERE isLicensee = 0		   
+		  AND isActive = 1	
+		  AND [site] <> '789y'
 	
 	-------> Parse @CurrencyIDs	  
 	INSERT INTO #t_exchanges(exchangeid, currency)
