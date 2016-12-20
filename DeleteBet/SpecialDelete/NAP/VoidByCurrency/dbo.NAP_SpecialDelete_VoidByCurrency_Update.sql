@@ -319,7 +319,11 @@ BEGIN
 					b.OddsType,
 					b.RefNo,
 					m.SportType,
-					b.STATUS,
+					CASE 
+						WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP 
+							THEN 'waiting'
+						ELSE b.status 
+					END AS STATUS,
 					b.TransDate,
 					b.TransDesc,
 					b.TransId,
@@ -427,7 +431,11 @@ BEGIN
 					main.OddsType,
 					main.RefNo,
 					m.SportType,
-					main.status AS Status,
+					CASE 
+						WHEN main.status = 'running' AND ISNULL(main.SecAcceptFlag, 0) = 1 AND ISNULL(main.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP 
+							THEN 'waiting'
+						ELSE main.status 
+					END AS STATUS,
 					main.transdate AS TransDate,
 					main.transdesc AS TransDesc,
 					main.transid AS TransId,
