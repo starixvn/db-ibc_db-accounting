@@ -306,8 +306,7 @@ BEGIN
 			AND m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND sub.matchid = @matchid -- filer for @MatchID
 			AND sub.statusID NOT IN (101, 102) -- reject, void
-			AND sub.betfrom <> 'P' -- exclude phone betting	
-			AND sub.bettype <> 500 -- exclude charge comm		
+			AND sub.betfrom <> 'P' -- exclude phone betting				
 		
 	SELECT  s.Stake,
 			s.AwayId,
