@@ -65,7 +65,7 @@ BEGIN
 
 	IF @IsGrandTotal = 1 AND @RoleID <> 0 -- click grand total not from associated link
 	BEGIN
-		EXEC dbo.Acc_Rpt_NonSportsProductStatistics_GrandTotal_14
+		EXEC dbo.Acc_Rpt_NonSportsProductStatistics_GrandTotal
 				@WinlostDate = @WinlostDate,
 				@ProductId = @ProductId,
 				@Username = @Username,
@@ -204,7 +204,7 @@ BEGIN
 			INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
 		WHERE c.roleid = 4
 
-		IF @Username <> ''
+		IF @UrsName <> ''
 		BEGIN
 			IF @IsDrillDown = 0
 			BEGIN
@@ -304,7 +304,7 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		IF @Username <> ''
+		IF @UrsName <> ''
 		BEGIN
 			IF @IsDrillDown = 0
 			BEGIN
@@ -386,7 +386,7 @@ BEGIN
 	DROP TABLE #tmp_Company
 	-- End Get Site --
 
-	-- Select temp data of bettrans
+	-- Select temp data of bettrans14
 	CREATE TABLE #tmp_bettrans
 	(
 		srecommend INT,
@@ -405,7 +405,8 @@ BEGIN
 		CompanyGrossIncomeBase MONEY,
 		CompanyComm MONEY,
 		CompanyCommBase MONEY,
-		EvenType INT DEFAULT (-1), Matchid INT DEFAULT (-1), ProductID INT
+		EvenType INT DEFAULT (-1), Matchid INT DEFAULT (-1), ProductID INT,
+		tpositiontaking SMALLMONEY
 	)
 
 	IF EXISTS (SELECT TOP 1 1 FROM #tmp_MemIDs) -- has filter custid
@@ -430,7 +431,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				EvenType, Matchid, ProductID
+				EvenType, Matchid, ProductID,
+				tpositiontaking
 			)
 			SELECT
 				b.srecommend,
@@ -449,7 +451,8 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				s.EvenType, b.matchid, s.ProductID
+				s.EvenType, b.matchid, s.ProductID,
+				AVG(b.tpositiontaking) AS tpositiontaking
 			FROM  dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
@@ -488,7 +491,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				ProductID
+				ProductID,
+				tpositiontaking
 			)
 			SELECT
 				b.srecommend,
@@ -507,7 +511,8 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				s.ProductID
+				s.ProductID,
+				AVG(b.tpositiontaking) AS tpositiontaking
 			FROM dbo.bettransRnG14 b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
@@ -545,7 +550,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				ProductID
+				ProductID,
+				tpositiontaking
 			)
 			SELECT
 				b.srecommend,
@@ -564,7 +570,8 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				s.ProductID
+				s.ProductID,
+				AVG(b.tpositiontaking) AS tpositiontaking
 			FROM dbo.bettransLC14 b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
@@ -604,7 +611,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				EvenType, matchid, ProductID
+				EvenType, matchid, ProductID,
+				tpositiontaking
 			)
 			SELECT
 				b.srecommend,
@@ -623,7 +631,8 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				s.EvenType, b.matchid, s.ProductID
+				s.EvenType, b.matchid, s.ProductID,
+				AVG(b.tpositiontaking) AS tpositiontaking
 			FROM  dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate = @WLDate
@@ -661,7 +670,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				ProductID
+				ProductID,
+				tpositiontaking
 			)
 			SELECT
 				b.srecommend,
@@ -680,7 +690,8 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				s.ProductID
+				s.ProductID,
+				AVG(b.tpositiontaking) AS tpositiontaking
 			FROM dbo.bettransRnG14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
@@ -717,7 +728,8 @@ BEGIN
 				CompanyGrossIncomeBase,
 				CompanyComm,
 				CompanyCommBase,
-				ProductID
+				ProductID,
+				tpositiontaking
 			)
 			SELECT
 				b.srecommend,
@@ -736,7 +748,8 @@ BEGIN
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost) * actualrate) AS CompanyGrossIncomeBase,
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
-				s.ProductID
+				s.ProductID,
+				AVG(b.tpositiontaking) AS tpositiontaking
 			FROM dbo.bettransLC14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
@@ -772,7 +785,8 @@ BEGIN
 		CompanyGrossIncome MONEY,
 		CompanyGrossIncomeBase MONEY,
 		CompanyComm MONEY,
-		CompanyCommBase MONEY
+		CompanyCommBase MONEY,
+		tpositiontaking SMALLMONEY
 	)
 	--- Check condition 
 	IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE ProductID NOT IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
@@ -794,7 +808,8 @@ BEGIN
 			CompanyGrossIncome,
 			CompanyGrossIncomeBase,
 			CompanyComm,
-			CompanyCommBase
+			CompanyCommBase,
+			tpositiontaking
 		)
 		SELECT
 			srecommend,
@@ -812,7 +827,8 @@ BEGIN
 			- SUM(CompanyGrossIncome) AS CompanyGrossIncome,
 			- SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
 			- SUM(CompanyComm) AS CompanyComm,
-			- SUM(CompanyCommBase) AS CompanyCommBase
+			- SUM(CompanyCommBase) AS CompanyCommBase,
+			AVG(tpositiontaking) AS tpositiontaking
 		FROM  #tmp_bettrans
 		WHERE ProductID NOT IN (3, 4, 5)
 		GROUP BY srecommend, mrecommend, recommend, custid, CurrencyID
@@ -837,7 +853,8 @@ BEGIN
 			CompanyGrossIncome,
 			CompanyGrossIncomeBase,
 			CompanyComm,
-			CompanyCommBase
+			CompanyCommBase,
+			tpositiontaking
 		)
 		SELECT
 			srecommend,
@@ -855,7 +872,8 @@ BEGIN
 			- SUM(CompanyGrossIncome) AS CompanyGrossIncome,
 			- SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
 			- SUM(CompanyComm) AS CompanyComm,
-			- SUM(CompanyCommBase) AS CompanyCommBase
+			- SUM(CompanyCommBase) AS CompanyCommBase,
+			AVG(tpositiontaking) AS tpositiontaking
 		FROM  #tmp_bettrans b
 			INNER JOIN dbo.match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 		WHERE ProductID IN (3, 4, 5) AND b.EvenType = 1
@@ -884,7 +902,8 @@ BEGIN
 			CompanyGrossIncome,
 			CompanyGrossIncomeBase,
 			CompanyComm,
-			CompanyCommBase
+			CompanyCommBase,
+			tpositiontaking
 		)
 		SELECT
 			srecommend,
@@ -902,7 +921,8 @@ BEGIN
 			- SUM(CompanyGrossIncome) AS CompanyGrossIncome,
 			- SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
 			- SUM(CompanyComm) AS CompanyComm,
-			- SUM(CompanyCommBase) AS CompanyCommBase
+			- SUM(CompanyCommBase) AS CompanyCommBase,
+			AVG(tpositiontaking) AS tpositiontaking
 		FROM  #tmp_bettrans b
 			INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
 		WHERE b.ProductID = 5 AND b.EvenType = 3
@@ -934,7 +954,8 @@ BEGIN
 					SUM(TotalWinsBase) AS TotalWins,
 					SUM(CompanyTurnoverBase) AS CompanyTurnover,		
 					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
-					SUM(CompanyCommBase) AS CompanyComm
+					SUM(CompanyCommBase) AS CompanyComm,
+					AVG(tpositiontaking) AS tpositiontaking
 				FROM #Data
 				GROUP BY CASE @roleID
 						WHEN 1 THEN custid
@@ -968,7 +989,7 @@ BEGIN
 				r.CompanyTurnover,
 				r.CompanyGrossIncome,
 				r.CompanyComm,
-				0.05 AS HousePT
+				1-tpositiontaking AS HousePT
 			FROM Result r
 				INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
 				INNER JOIN dbo.Customer c WITH (NOLOCK) ON r.custid = c.custid
@@ -990,7 +1011,8 @@ BEGIN
 					SUM(TotalWins) AS TotalWins,
 					SUM(CompanyTurnover) AS CompanyTurnover,		
 					SUM(CompanyGrossIncome) AS CompanyGrossIncome,
-					SUM(CompanyComm) AS CompanyComm
+					SUM(CompanyComm) AS CompanyComm,
+					AVG(tpositiontaking) AS tpositiontaking
 				FROM #Data
 				GROUP BY CASE @roleID
 						WHEN 1 THEN custid
@@ -1024,7 +1046,7 @@ BEGIN
 				r.CompanyTurnover,
 				r.CompanyGrossIncome,
 				r.CompanyComm,
-				0.05 AS HousePT
+				1-tpositiontaking AS HousePT
 			FROM Result r
 				INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
 				INNER JOIN dbo.Customer c WITH (NOLOCK) ON r.custid = c.custid
@@ -1044,7 +1066,8 @@ BEGIN
 					SUM(TotalWinsBase) AS TotalWins,
 					SUM(CompanyTurnoverBase) AS CompanyTurnover,		
 					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
-					SUM(CompanyCommBase) AS CompanyComm
+					SUM(CompanyCommBase) AS CompanyComm,
+					AVG(tpositiontaking) AS tpositiontaking
 				FROM #Data d
 					INNER JOIN #CustUser c
 						ON c.CustID = CASE c.roleID
@@ -1080,7 +1103,7 @@ BEGIN
 				r.CompanyTurnover,
 				r.CompanyGrossIncome,
 				r.CompanyComm,
-				0.05 AS HousePT
+				1-tpositiontaking AS HousePT
 			FROM Result r
 				INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
 				INNER JOIN dbo.Customer c WITH (NOLOCK) ON r.custid = c.custid
@@ -1097,7 +1120,8 @@ BEGIN
 					SUM(TotalWins) AS TotalWins,
 					SUM(CompanyTurnover) AS CompanyTurnover,		
 					SUM(CompanyGrossIncome) AS CompanyGrossIncome,
-					SUM(CompanyComm) AS CompanyComm
+					SUM(CompanyComm) AS CompanyComm,
+					AVG(tpositiontaking) AS tpositiontaking
 				FROM #Data d
 					INNER JOIN #CustUser c
 						ON c.CustID = CASE c.roleID
@@ -1133,7 +1157,7 @@ BEGIN
 				r.CompanyTurnover,
 				r.CompanyGrossIncome,
 				r.CompanyComm,
-				0.05 AS HousePT
+				1-tpositiontaking AS HousePT
 			FROM Result r
 				INNER JOIN dbo.Exchange e WITH (NOLOCK) ON r.CurrencyID = e.exchangeid
 				INNER JOIN dbo.Customer c WITH (NOLOCK) ON r.custid = c.custid
@@ -1151,7 +1175,8 @@ BEGIN
 		SUM(TotalWinsBase) AS TotalWins,
 		SUM(CompanyTurnoverBase) AS CompanyTurnover,		
 		SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
-		SUM(CompanyCommBase) AS CompanyComm
+		SUM(CompanyCommBase) AS CompanyComm,
+		1-AVG(tpositiontaking) AS HousePT
 	FROM #Data
 	HAVING
 		(
