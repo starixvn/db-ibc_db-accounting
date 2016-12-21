@@ -8,7 +8,7 @@ GO
 ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Select] 
 	@MatchID		INT,
 	@LicenseeNames	VARCHAR(MAX),
-	@TicketType		VARCHAR(100),
+	@TicketType		VARCHAR(100) = 'All',
 	@CurrencyIDs	VARCHAR(MAX)
 AS
 /*
@@ -60,9 +60,10 @@ BEGIN
 			TransDesc			NVARCHAR(1000),
 			TransId				BIGINT,
 			UserName			VARCHAR(30),
-			NetWinLost				MONEY,
+			NetWinLost			MONEY,
 			srecommend			INT,
 			GroupName			VARCHAR(10),
+			IsBettrade			BIT,
 			
 			SubTransId			BIGINT,
 			SubBetCheck			NVARCHAR(50),
@@ -107,6 +108,7 @@ BEGIN
 	
 	--> single
 	IF @SearchSingle = 1
+	BEGIN
 		INSERT INTO #SpecialDeleteBets(
 					Stake,
 					AwayId,
@@ -137,6 +139,7 @@ BEGIN
 					NetWinLost,
 					srecommend,
 					GroupName,
+					IsBettrade,
 					
 					SubTransId,
 					SubBetCheck,
@@ -179,6 +182,11 @@ BEGIN
 				b.WinLost - b.actual_stake AS NetWinLost,
 				b.srecommend,
 				tl.GroupName AS GroupName,
+				CASE
+					WHEN (b.Username like '%bettrade%' AND b.betdaqid = 0) -- current owner is not member bettrade
+							THEN 1
+					ELSE 0
+				END AS IsBettrade,
 				
 				NULL AS SubTransId,
 				NULL AS SubBetCheck,
@@ -199,11 +207,97 @@ BEGIN
 		WHERE m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND b.bettype NOT BETWEEN 801 AND 806-- MG
 			AND b.bettype NOT BETWEEN 901 AND 910 -- BT subticket			
-			AND NOT (b.Username like '%bettrade%' AND b.betdaqid = 0) -- current owner is not member bettrade			
 			AND b.statusID NOT IN (101, 102) -- reject, void
 			AND b.betfrom <> 'P' -- exclude phone betting
 			AND b.matchid = @MatchID -- filer for @MatchID	
-			AND b.bettype <> 500 -- exclude charge comm				
+			AND b.bettype <> 500 -- exclude charge comm
+		
+		-- get sold records for bettrade tickets	
+		INSERT INTO #SpecialDeleteBets(
+					Stake,
+					AwayId,
+					BetCheck,
+					BetId,
+					BetTeam,
+					BetType,
+					CurrencyCode,
+					Creator,					
+					Hdp1,
+					Hdp2,
+					HomeId,
+					IsLiveIndicator,
+					IsNeutral,
+					IsSecondAcceptFlag,
+					LiveAwayScore,
+					LiveHomeScore,
+					Odds,
+					IsMixParlay,
+					OddsType,
+					RefNo,
+					SportType,
+					Status,
+					TransDate,
+					TransDesc,
+					TransId,
+					UserName,
+					NetWinLost,
+					srecommend,
+					GroupName,
+					IsBettrade,
+					
+					SubTransId,
+					SubBetCheck,
+					SubBetTeam,
+					SubBetType,
+					SubHdp1,
+					SubHdp2,
+					SubOdds		
+				)
+		SELECT  main.Stake,
+				main.AwayId,
+				main.BetCheck,
+				sub.BetId,
+				main.BetTeam,
+				main.BetType,
+				main.CurrencyCode,
+				main.Creator,					
+				main.Hdp1,
+				main.Hdp2,
+				main.HomeId,
+				main.IsLiveIndicator,
+				main.IsNeutral,
+				main.IsSecondAcceptFlag,
+				main.LiveAwayScore,
+				main.LiveHomeScore,
+				main.Odds,
+				main.IsMixParlay,
+				main.OddsType,
+				sub.RefNo,
+				main.SportType,
+				'SOLD' AS Status,
+				sub.TransDate,
+				main.TransDesc,
+				sub.TransId,
+				sub.UserName,
+				sub.winlost - sub.actual_stake AS NetWinLost,
+				sub.srecommend,
+				main.GroupName,
+				main.IsBettrade,
+				
+				NULL AS SubTransId,
+				NULL AS SubBetCheck,
+				NULL AS SubBetTeam,
+				NULL AS SubBetType,
+				NULL AS SubHdp1,
+				NULL AS SubHdp2,
+				NULL AS SubOdds	
+		FROM #SpecialDeleteBets main
+			 INNER JOIN bettrans sub WITH (NOLOCK)
+					 ON	main.TransId = sub.refno			 
+		WHERE main.IsBettrade = 1
+		  AND sub.matchid = @MatchID -- filer for @MatchID
+		  AND sub.bettype = 901 -- get only sold records
+	END
 		
 	--> parlay
 	IF @SearchParlay = 1	
@@ -237,6 +331,7 @@ BEGIN
 					NetWinLost,
 					srecommend,
 					GroupName,
+					IsBettrade,
 					
 					SubTransId,
 					SubBetCheck,
@@ -279,6 +374,7 @@ BEGIN
 				main.winlost - main.actual_stake AS NetWinLost,
 				main.srecommend,
 				tl1.GroupName AS GroupName,
+				CAST(0 AS BIT) AS IsBettrade,
 				
 				sub.transid AS SubTransId,
 				sub.betcheck AS SubBetCheck,
